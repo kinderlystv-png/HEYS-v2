@@ -26006,16 +26006,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const fn = window.HEYS?.store?.decompress;
             try { return fn ? fn(raw) : JSON.parse(raw); } catch (_) { return null; }
         };
-        // Scoped → legacy fallback. Считаем валидным только профиль с хотя бы
-        // одним полем. Пустой объект {} в scoped LS встречается у клиентов
-        // унаследовавших stale state от прошлых багов; в этом случае legacy
-        // heys_profile содержит реальные данные (cloud audit подтвердил).
-        let parsed = tryDecompress(localStorage.getItem(`heys_${clientId}_profile`));
-        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-            return parsed;
-        }
-        parsed = tryDecompress(localStorage.getItem('heys_profile'));
-        return (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) ? parsed : null;
+        // Subscription-only профиль (4 поля без personal) — это в процессе sync.
+        // Ждём полного профиля: считаем валидным только при наличии personal полей.
+        const isProfileShape = (p) => p && typeof p === 'object' &&
+            (p.age || p.weight || p.height || p.firstName || p.profileCompleted === true);
+        const scopedParsed = tryDecompress(localStorage.getItem(`heys_${clientId}_profile`));
+        if (isProfileShape(scopedParsed)) return scopedParsed;
+        const legacyParsed = tryDecompress(localStorage.getItem('heys_profile'));
+        return isProfileShape(legacyParsed) ? legacyParsed : null;
     }
 
     const useMorningCheckinSync = ({ React, isInitializing, clientId }) => {

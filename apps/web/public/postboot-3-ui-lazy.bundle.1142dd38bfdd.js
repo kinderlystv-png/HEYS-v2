@@ -23848,18 +23848,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const fn = global.HEYS?.store?.decompress;
       try { return fn ? fn(raw) : JSON.parse(raw); } catch (_) { return null; }
     };
-    // 1. Scoped key. Считаем валидным только профиль с хотя бы одним полем.
-    // Пустой объект {} в scoped LS встречается у некоторых клиентов (исторически
-    // — broken decompress в legacy migration до commit 87215fa6, либо stale state
-    // от Phase A skip-on-pending). В этом случае fallback на legacy подбирает
-    // настоящий профиль (см. SQL audit: cloud содержит только legacy heys_profile).
-    let parsed = tryDecompress(localStorage.getItem(`heys_${clientId}_profile`));
-    if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-      return parsed;
-    }
-    // 2. Fallback на legacy heys_profile.
-    parsed = tryDecompress(localStorage.getItem('heys_profile'));
-    return (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) ? parsed : null;
+    // Профиль считается "валидным" ТОЛЬКО при наличии personal-полей.
+    // Просто `Object.keys.length > 0` недостаточно: между Phase A моментами
+    // scoped LS может содержать ТОЛЬКО subscription-поля (subscription_status,
+    // trial_started_at, ...) без personal данных (см. diagnostic logs где
+    // scopedKeys=4 subscription-only, scopedRawLen=171 vs позже 1192/12 fields).
+    // Тот же критерий что в HOT-sync guard saveClientKey ~9893.
+    const isProfileShape = (p) => p && typeof p === 'object' &&
+      (p.age || p.weight || p.height || p.firstName || p.profileCompleted === true);
+    const scopedParsed = tryDecompress(localStorage.getItem(`heys_${clientId}_profile`));
+    if (isProfileShape(scopedParsed)) return scopedParsed;
+    const legacyParsed = tryDecompress(localStorage.getItem('heys_profile'));
+    return isProfileShape(legacyParsed) ? legacyParsed : null;
   }
 
   function getCurrentClientId() {
@@ -24386,6 +24386,40 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Регистрационные шаги (profile-personal, profile-body, etc.) обязательны для новых пользователей
     // Force-raw read минуя Store.get memory cache (закрывает race под VPN).
     const profile = readProfileForceRawScoped(currentClientId) || readStoredValue('heys_profile', {}) || {};
+
+    // 🛡️ Sync-in-progress guard для давних клиентов. На ранней стадии boot'а
+    // scoped LS может содержать ТОЛЬКО subscription-поля (subscription_status,
+    // trial_started_at, ...) ДО того, как полный профиль приземлится из cloud
+    // в LS. В этом окне visualy профиль "incomplete" (нет firstName/etc.), но
+    // данные в облаке есть — race синхронизации. Отказываемся открывать
+    // регистрационный визард в этот момент: следующий вызов shouldShow (после
+    // dispatchForegroundHotSyncCompleted) увидит полный профиль.
+    //
+    // Time-based ограничение: для новых клиентов без cloud-профиля subscription-
+    // only-состояние постоянное. После 8 сек после initial sync defer не
+    // блокирует — wizard legitimately открывается для регистрации.
+    const _scopedRaw = currentClientId ? localStorage.getItem(`heys_${currentClientId}_profile`) : null;
+    let _scopedRawProfile = null;
+    if (_scopedRaw) {
+      const _fn = HEYS.store?.decompress;
+      try { _scopedRawProfile = _fn ? _fn(_scopedRaw) : JSON.parse(_scopedRaw); } catch (_) { _scopedRawProfile = null; }
+    }
+    const _hasSubscriptionMarker = _scopedRawProfile && (_scopedRawProfile.subscription_status || _scopedRawProfile.trial_started_at);
+    const _hasPersonalMarker = _scopedRawProfile && (_scopedRawProfile.firstName || _scopedRawProfile.age || _scopedRawProfile.weight || _scopedRawProfile.height || _scopedRawProfile.profileCompleted === true);
+    if (_hasSubscriptionMarker && !_hasPersonalMarker) {
+      const _syncAt = (window.HEYS && window.HEYS.cloud && window.HEYS.cloud._syncCompletedAt) || 0;
+      const _syncAge = _syncAt ? (Date.now() - _syncAt) : Infinity;
+      if (_syncAge < 8000) {
+        console.warn('[MorningCheckin] 🛡️ partial subscription-only profile — sync in progress, deferring wizard', {
+          clientId: currentClientId?.slice(0, 8),
+          scopedKeys: Object.keys(_scopedRawProfile).slice(0, 8),
+          syncAge: _syncAge,
+        });
+        return false;
+      }
+      // sync завершился >8s назад, personal данных так и нет — это новый
+      // клиент без cloud-профиля → wizard legitimately открывается ниже.
+    }
 
     if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
       if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
