@@ -25070,7 +25070,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           const row = yandexItems[pj];
           if (!row) continue;
           if (typeof row.v === 'string' && row.v.startsWith('¤Z¤')) continue;
-          if (row.v === null || typeof row.v !== 'object' || Array.isArray(row.v)) continue;
+          if (row.v === null || typeof row.v !== 'object') continue;
+          // Arrays from products-family keys go through dedicated slim/compress path above —
+          // skip them here. Other arrays (e.g. heys_products_overlay_v2 ~470KB) need wire compress
+          // to fit into RPC payload budget; without this they trigger 413 and stall the queue.
+          if (Array.isArray(row.v) && isProductsFamilyRpcKey(row.k)) continue;
           const sz0 = itemWireBytes(row);
           if (sz0 < LARGE_ITEM_PRECOMPRESS_BYTES) continue;
           try {
