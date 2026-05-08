@@ -20881,6 +20881,41 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     rt.clientQueue = clientQ ? JSON.parse(clientQ).length : 0;
                     rt.inflightQueue = inflightQ ? JSON.parse(inflightQ).length : 0;
                 } catch (_) { }
+                // Per-key sizing of pending queue + last upload error
+                const fmtKB = (b) => b >= 0 ? (b / 1024).toFixed(1) + 'KB' : '?';
+                let pendingDetailLines = [];
+                try {
+                    const det = HEYS?.cloud?.getPendingItemsDetail?.();
+                    if (det) {
+                        const fmtRow = (r) => `  ${r.k}: ${fmtKB(r.sizeBytes)} (${r.vKind}${r.compressed ? ' ¤Z¤' : ''})`;
+                        if (det.queue.length > 0) {
+                            pendingDetailLines.push(`-- queue (${det.queue.length}):`);
+                            const sorted = [...det.queue].sort((a, b) => (b.sizeBytes || 0) - (a.sizeBytes || 0));
+                            sorted.forEach(r => pendingDetailLines.push(fmtRow(r)));
+                        }
+                        if (det.inflight.length > 0) {
+                            pendingDetailLines.push(`-- inflight (${det.inflight.length}):`);
+                            det.inflight.forEach(r => pendingDetailLines.push(fmtRow(r)));
+                        }
+                        pendingDetailLines.push(`-- total in pending: ${fmtKB(det.totalSizeBytes)}`);
+                    }
+                } catch (_) { /* noop */ }
+                let lastErrLines = [];
+                try {
+                    const diag = HEYS?.cloud?.getLastUploadDiag?.();
+                    if (diag) {
+                        const ago = Math.floor((Date.now() - diag.ts) / 1000);
+                        lastErrLines.push(`kind: ${diag.kind} code: ${diag.code || '—'} (${ago}s ago)`);
+                        lastErrLines.push(`error: ${String(diag.error || '').slice(0, 240)}`);
+                        lastErrLines.push(`failed chunk: ${fmtKB(diag.chunkBytes)} (${diag.chunkLen} items)`);
+                        if (Array.isArray(diag.items)) {
+                            const sorted = [...diag.items].sort((a, b) => (b.bytes || 0) - (a.bytes || 0));
+                            sorted.forEach(r => lastErrLines.push(`  ${r.k}: ${fmtKB(r.bytes)} (${r.kind})`));
+                        }
+                    } else {
+                        lastErrLines.push('(no upload errors recorded)');
+                    }
+                } catch (_) { /* noop */ }
                 const lines = [
                     `=== HEYS Sync Debug Snapshot @ ${ts} ===`,
                     `status:       ${rt.status}`,
@@ -20890,6 +20925,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     `pending:      ${rt.pending}  ${rt.pendingDet ? JSON.stringify(rt.pendingDet) : ''}`,
                     `clientQueue:  ${rt.clientQueue}  inflight: ${rt.inflightQueue}`,
                     `lastSyncTs:   ${rt.lastSyncTs || '—'}`,
+                    '',
+                    `=== Pending Queue Detail ===`,
+                    ...(pendingDetailLines.length ? pendingDetailLines : ['(empty)']),
+                    '',
+                    `=== Last Upload Diag ===`,
+                    ...lastErrLines,
                     '',
                     `=== Sync Log (${logLines.length} entries) ===`,
                     ...(logLines.length ? logLines : ['[HEYS.sync] (пусто)']),

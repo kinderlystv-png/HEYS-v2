@@ -3145,6 +3145,58 @@
     global.localStorage.removeItem(SYNC_LOG_KEY);
   };
 
+  // Last upload diagnostic — held in memory only, exposed via cloud.getLastUploadDiag()
+  // for badge-tap snapshot to surface real cause of upload failures (413 etc).
+  let _lastUploadDiag = null;
+  function recordUploadDiag(info) {
+    try {
+      _lastUploadDiag = { ts: Date.now(), ...info };
+    } catch (_) { /* noop */ }
+  }
+  cloud.getLastUploadDiag = function () { return _lastUploadDiag; };
+
+  // Inspect pending queue: for each item return { k, sizeBytes, compressed, vKind }.
+  // Used by debug snapshot. Reads stored JSON from localStorage.
+  cloud.getPendingItemsDetail = function () {
+    const out = { queue: [], inflight: [], totalSizeBytes: 0 };
+    const PENDING_KEYS = ['heys_pending_client_sync_queue', 'heys_pending_client_sync_inflight_queue'];
+    const TARGETS = ['queue', 'inflight'];
+    for (let i = 0; i < PENDING_KEYS.length; i++) {
+      const raw = global.localStorage.getItem(PENDING_KEYS[i]);
+      if (!raw) continue;
+      let arr;
+      try { arr = JSON.parse(raw); } catch (_) { continue; }
+      if (!Array.isArray(arr)) continue;
+      for (let j = 0; j < arr.length; j++) {
+        const it = arr[j];
+        if (!it) continue;
+        const v = it.v;
+        let sizeBytes = 0;
+        let compressed = false;
+        let vKind = 'unknown';
+        try {
+          if (typeof v === 'string') {
+            sizeBytes = v.length;
+            compressed = v.startsWith('¤Z¤');
+            vKind = compressed ? 'compressed-string' : 'string';
+          } else if (Array.isArray(v)) {
+            sizeBytes = JSON.stringify(v).length;
+            vKind = `array[${v.length}]`;
+          } else if (v && typeof v === 'object') {
+            sizeBytes = JSON.stringify(v).length;
+            vKind = 'object';
+          } else {
+            sizeBytes = JSON.stringify(v ?? null).length;
+            vKind = String(typeof v);
+          }
+        } catch (_) { sizeBytes = -1; vKind = 'serialize-fail'; }
+        out[TARGETS[i]].push({ k: it.k, sizeBytes, compressed, vKind, updated_at: it.updated_at });
+        if (sizeBytes > 0) out.totalSizeBytes += sizeBytes;
+      }
+    }
+    return out;
+  };
+
   /** Событие для UI об изменении pending count */
   const _notifyPendingRafFn = global.requestAnimationFrame
     ? global.requestAnimationFrame.bind(global)
@@ -5818,6 +5870,29 @@
             if (isProductsBaseKey(chunk[ui]?.k)) didSaveProductsMain = true;
           }
           return { success: true, saved: res.saved || chunk.length };
+        }
+        if (isPayloadTooLargeRpc(res.error)) {
+          try {
+            const chunkBytes = JSON.stringify(chunk).length;
+            const items = chunk.map(it => {
+              let bytes = 0; let kind = 'unknown';
+              try {
+                if (typeof it.v === 'string') { bytes = it.v.length; kind = it.v.startsWith('¤Z¤') ? 'compressed' : 'string'; }
+                else if (Array.isArray(it.v)) { bytes = JSON.stringify(it.v).length; kind = `array[${it.v.length}]`; }
+                else if (it.v && typeof it.v === 'object') { bytes = JSON.stringify(it.v).length; kind = 'object'; }
+                else { bytes = JSON.stringify(it.v ?? null).length; }
+              } catch (_) { /* noop */ }
+              return { k: it.k, bytes, kind };
+            });
+            recordUploadDiag({
+              kind: '413',
+              chunkBytes,
+              chunkLen: chunk.length,
+              items,
+              error: String(res?.error?.message || res?.error || ''),
+              code: res?.error?.code || res?.error?.status,
+            });
+          } catch (_) { /* noop */ }
         }
         if (isPayloadTooLargeRpc(res.error) && chunk.length > 1) {
           const mid = Math.ceil(chunk.length / 2);
