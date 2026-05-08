@@ -100,6 +100,62 @@ Current architecture:
 Boot order:
 `shared catalog ready → applyCloudSnapshot from cloud → orphan recovery (only TypeB customs from diary, gated by curator session — curator sessions skip recovery to avoid cross-client stamp pollution from foreign dayv2 keys)`.
 
+#### PIN vs curator session — products contract (post-2026-05-08)
+
+**Same path for both.** Products data is loaded identically: cloud is the single
+source of truth, `applyCloudSnapshot` is the only entry point, no migration
+top-up from legacy `heys_products` (legacy is dead-data after overlay rollout —
+only kept as a backward-compat mirror via interceptor).
+
+| Aspect                     | PIN session                                                | Curator session                                                     |
+| -------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
+| Cloud entry                | `applyCloudSnapshot`                                       | `applyCloudSnapshot`                                                |
+| Migration on boot          | skipped if overlay non-empty (cloud-canonical)             | same                                                                |
+| HOT-sync overlay key       | yes (`heys_products_overlay_v2` in `CLIENT_SPECIFIC_KEYS`) | same                                                                |
+| BroadcastChannel           | clientId-isolated (foreign clientId messages ignored)      | same — prevents PIN tab + curator tab cross-talk                    |
+| `addFromShared` race       | `readRaw()` check, independent of shared cache             | same                                                                |
+| Orphan recovery from dayv2 | runs (only TypeB customs)                                  | **skipped** — curator's dayv2 scan would pull foreign-client stamps |
+| RationTab content          | personal subtab only                                       | personal + shared catalog + moderation subtabs                      |
+| Auto-sync of writes        | debounced 2s via `writeRaw`                                | same                                                                |
+
+**Curator-only extras:**
+
+- Sees shared catalog + moderation subtabs in RationTab
+  ([heys_core_v12.js](apps/web/heys_core_v12.js) `RationTab` subtab gate
+  `!isCurator || activeSubtab === 'personal'` for personal-only content).
+- Orphan-recovery is gated by `HEYS.auth.isCuratorSession()` (with
+  `HEYS.Bootstrap` and `window.isCuratorSession` fallbacks). Curator's
+  `autoRecoverOnLoad` would otherwise scan all dayv2 keys in LS, including
+  stamps from previously-viewed clients, and pollute the current client's
+  overlay with foreign products.
+
+**Why cloud-canonical (and not "merge from legacy on boot"):** After overlay
+rollout, the migration TOP-UP path was the primary corruption source. When LS
+overlay was small (e.g., fresh incognito boot at 12 rows mid-bootstrap) and
+legacy `heys_products` was large (e.g., 150 rows from a stale snapshot), TOP-UP
+would push the legacy 150 into overlay, then push that 150 to cloud — clobbering
+the real 297-row overlay there. Removed entirely. Now: if overlay LS has rows →
+trust cloud snapshot, never repopulate from legacy. The interceptor's
+cloud-canonical gate
+([heys_storage_supabase_v1.js](apps/web/heys_storage_supabase_v1.js)
+`interceptSetItem` `_overlayCanonical` check) blocks legacy → overlay migration
+paths when overlay is non-empty.
+
+**Verifying for both sessions:**
+
+```js
+HEYS.diagnostics.overlay(); // expect total=297 (or whatever client has),
+// typeA dedup count = 0
+```
+
+And cloud:
+
+```sql
+SELECT jsonb_array_length(v) FROM client_kv_store
+WHERE k = 'heys_products_overlay_v2' AND client_id = '<cid>';
+-- should match overlay length, no oscillation across logins
+```
+
 #### Temporary patch (will be removed once stable):
 
 `OVERLAY GUARD` in `interceptSetItem` (`heys_storage_supabase_v1.js:3866`)
@@ -266,6 +322,64 @@ was a **double race condition**:
    the freshest snapshot.
 
 Both fixes are needed together — fixing only one leaves the other path open.
+
+## State-sync clobber pattern (post-2026-05-08)
+
+A recurring class of bug across multiple LS-backed user-state keys:
+
+1. Module A explicitly writes a shared LS key (e.g., `saveProfileSafe` in
+   supplements writing `heys_profile`).
+2. Module A dispatches a NARROW event (e.g., `heys:supplements-updated`) but not
+   the broader `heys:profile-updated`.
+3. React component B (e.g., `UserTabBase` in `heys_user_v12.js`) holds the same
+   key in React state and listens ONLY for the broader event.
+4. Component B's stale state isn't refreshed.
+5. User edits any field in component B → its debounced auto-save (300ms for
+   norms, 1000ms for profile/zones) writes the ENTIRE stale state back, with a
+   fresh `updatedAt` → uploaded to cloud, clobbering the writer's changes.
+
+Symptom: a setting silently reverts after the user touches an unrelated field in
+the user tab — sometimes minutes later, sometimes after a sync roundtrip from
+another device.
+
+**Confirmed via cloud DB audit** for `plannedSupplements`:
+`profile.plannedSupplements: []` while
+`dayv2.supplementsPlanned: ["omega3","b12"]` persisted in day data — the user's
+plan was actively synced to days but the profile field was overwritten by a
+stale UserTab state via debounced save.
+
+**Fix template** (already applied to `heys_profile`, `heys_norms`,
+`heys_hr_zones`):
+
+1. **Writer side** — every explicit writer dispatches the canonical event
+   (`heys:<key>-updated`) immediately after LS write. Includes:
+   wizard/onboarding paths, cloud-import paths, supplement UI's own
+   `saveProfileSafe`. Detail object: `{ field?, fields?, source }`.
+2. **HOT-sync interceptor** — `dispatchForegroundHotSyncProfileEvents` in
+   [heys_storage_supabase_v1.js](apps/web/heys_storage_supabase_v1.js)
+   automatically dispatches `heys:<key>-updated` for `heys_profile`,
+   `heys_norms`, `heys_hr_zones` whenever HOT-sync writes them — covers
+   cross-device cloud sync without each writer having to know.
+3. **Listener side** — every component holding the key in React state subscribes
+   to `heys:<key>-updated` and refreshes via `updatedAt` timestamp compare
+   (`prevTs > newTs ? prev : incoming`) so concurrent user edits don't get
+   clobbered by older external writes.
+
+**Where to look when adding a new shared LS-backed setting:**
+
+1. Search for `setTimeout` + `lsSet`/`writeStoredValue` near the new key —
+   that's the auto-save site.
+2. Confirm there's a paired `addEventListener('heys:<key>-updated')` that
+   refreshes state.
+3. Confirm every external writer of the key dispatches `heys:<key>-updated`.
+4. If HOT-sync syncs the key, extend `dispatchForegroundHotSyncProfileEvents`.
+
+**Already-vulnerable spots that may still need this template** (audit
+2026-05-08): `heys_grams_history` (multiple meal-module writers, no event
+dispatch — currently no React-state holder so safe today, but track if a future
+component caches it). Also legacy `heysAdviceSettingsChanged` event naming
+inconsistency — rename to `heys:advice-settings-updated` if a listener is ever
+added.
 
 ## Morning-checkin wizard / scoped profile race (post-2026-05-08)
 
