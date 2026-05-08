@@ -459,6 +459,13 @@
     }
     queueSupplementsCloudSave('heys_profile', profile);
     emitSupplementsDataSaved({ key: 'heys_profile', type: 'profile', field, source: 'supplements-profile-save' });
+    // CRITICAL: also fire heys:profile-updated so consumers like UserTab
+    // (heys_user_v12.js) refresh their React state with the new plannedSupplements.
+    // Without this, UserTab's stale `profile` state would clobber our changes via
+    // its debounced auto-save when the user edits any other field.
+    window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+      detail: { field, fields: field ? [field] : [], source: 'supplements-profile-save' }
+    }));
     if (field) {
       window.dispatchEvent(new CustomEvent('heys:supplements-updated', { detail: { field } }));
     }
