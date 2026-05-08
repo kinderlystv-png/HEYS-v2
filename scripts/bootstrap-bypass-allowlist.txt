@@ -161,10 +161,14 @@ apps/web/heys_products_overlay_v1.js:798
 apps/web/heys_products_overlay_v1.js:799
 apps/web/heys_products_overlay_v1.js:858
 apps/web/heys_profile_step_v1.js:1033
+apps/web/heys_profile_step_v1.js:1038
 apps/web/heys_profile_step_v1.js:1165
+apps/web/heys_profile_step_v1.js:1175
 apps/web/heys_profile_step_v1.js:1604
+apps/web/heys_profile_step_v1.js:1614
 apps/web/heys_profile_step_v1.js:1638
 apps/web/heys_profile_step_v1.js:1641
+apps/web/heys_profile_step_v1.js:1651
 apps/web/heys_profile_step_v1.js:436
 apps/web/heys_pwa_module_v1.js:68
 apps/web/heys_ratio_zones_v1.js:73
@@ -193,6 +197,7 @@ apps/web/heys_ui_onboarding_v1.js:173
 apps/web/heys_ui_onboarding_v1.js:775
 apps/web/heys_user_tab_impl_v1.js:378
 apps/web/heys_user_tab_impl_v1.js:572
+apps/web/heys_user_tab_impl_v1.js:590
 apps/web/heys_user_v12.js:147
 apps/web/heys_user_v12.js:158
 apps/web/heys_weekly_reports_v2.js:36
