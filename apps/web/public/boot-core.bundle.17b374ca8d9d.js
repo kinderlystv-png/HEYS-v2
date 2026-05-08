@@ -23247,7 +23247,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           const isOverlayKey = keyStr.endsWith('_products_overlay_v2') || keyStr === 'heys_products_overlay_v2';
           const isPreOverlay = keyStr.indexOf('heys_products_pre_overlay_') === 0;
           const isProductsKey = /^heys_.*products$/.test(keyStr) && !/(_hidden_products|_favorite_products|_deleted_products|_rpc_tail)/.test(keyStr);
-          if (isProductsKey && !isOverlayKey && !isPreOverlay
+          // Cloud-canonical guard: после первичной миграции overlay = source of truth.
+          // Любая запись в legacy heys_products (через cloud-sync setAll, orphan-recovery
+          // setAll, и т.п.) НЕ должна перестраивать overlay. Overlay управляется только
+          // через applyCloudSnapshot / upsertRow / addFromShared. Эта ветка ранее затирала
+          // 285 TypeA строк когда cloud присылал stale legacy 150 — пропускаем целиком.
+          // Если overlay пустой (свежий клиент, ещё не было миграции) — даём dual-write
+          // отработать, чтобы первичный bootstrap из legacy сработал.
+          let _overlayCanonical = false;
+          try {
+            if (global.HEYS && global.HEYS.OverlayStore
+                && typeof global.HEYS.OverlayStore.readRaw === 'function') {
+              const _existingOverlay = global.HEYS.OverlayStore.readRaw();
+              _overlayCanonical = Array.isArray(_existingOverlay) && _existingOverlay.length > 0;
+            }
+          } catch (_) { /* noop */ }
+          if (_overlayCanonical && isProductsKey && !isOverlayKey && !isPreOverlay) {
+            try { console.info('[HEYS.products] interceptor skipped: overlay non-empty, cloud-canonical', { keyTail: keyStr.slice(-30) }); } catch (_) {}
+          } else if (isProductsKey && !isOverlayKey && !isPreOverlay
               && global.HEYS && global.HEYS.flags
               && global.HEYS.flags.isEnabled && global.HEYS.flags.isEnabled('dual_write_legacy')
               && global.localStorage.getItem('heys_overlay_migration_status') === 'success'
@@ -25716,6 +25733,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                     logCritical(`🛡️ [PHASE A] Skip pending local mutation for ${normalizedSyncKey}`);
                     return;
                   }
+                  // 🛡️ Anti-empty-profile guard: симметрично с saveClientKey (~9893).
+                  // Если cloud row для profile-ключа пустой объект, а local LS уже
+                  // содержит валидный профиль — не клобберим. Cloud мог отдать {}
+                  // из-за past corruption / partial state; local здесь авторитетен.
+                  const isProfileKey = row.k === 'heys_profile' || /^heys_[0-9a-f-]+_profile$/i.test(row.k || '');
+                  if (isProfileKey) {
+                    const v = row.v;
+                    const isValidCloudProfile = v && typeof v === 'object' &&
+                      (v.age || v.weight || v.height || v.firstName || v.profileCompleted === true);
+                    if (!isValidCloudProfile) {
+                      try {
+                        const existingRaw = lsPhaseA.getItem(pKey);
+                        if (existingRaw) {
+                          const decompressFn = global.HEYS?.store?.decompress;
+                          const existing = decompressFn ? decompressFn(existingRaw) : JSON.parse(existingRaw);
+                          if (existing && typeof existing === 'object' && Object.keys(existing).length > 0) {
+                            logCritical(`🛡️ [PHASE A] BLOCKED empty profile from cloud (${pKey}); local has ${Object.keys(existing).length} fields`);
+                            return;
+                          }
+                        }
+                      } catch (_) { /* fall through — пишем как есть */ }
+                    }
+                  }
                   try { lsPhaseA.setItem(pKey, JSON.stringify(row.v)); } catch (_) { }
                 });
                 muteMirror = false;
@@ -25979,6 +26019,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               let valueToStore = __decompDelta.value;
               // Пропускаем null dayv2
               if (key.includes('dayv2_') && (valueToStore == null || valueToStore === 'null')) return;
+
+              // 🛡️ Anti-empty-profile guard (симметрично с Phase A ~6410 и saveClientKey ~9893):
+              // если cloud отдал {} для profile-ключа, а local LS уже содержит валидный
+              // профиль — не клобберим.
+              const isProfileKey = row.k === 'heys_profile' || /^heys_[0-9a-f-]+_profile$/i.test(row.k || '');
+              if (isProfileKey) {
+                const isValidCloudProfile = valueToStore && typeof valueToStore === 'object' &&
+                  (valueToStore.age || valueToStore.weight || valueToStore.height ||
+                   valueToStore.firstName || valueToStore.profileCompleted === true);
+                if (!isValidCloudProfile) {
+                  try {
+                    const existingRaw = ls.getItem(key);
+                    if (existingRaw) {
+                      const decompressFn = global.HEYS?.store?.decompress;
+                      const existing = decompressFn ? decompressFn(existingRaw) : JSON.parse(existingRaw);
+                      if (existing && typeof existing === 'object' && Object.keys(existing).length > 0) {
+                        logCritical(`🛡️ [DELTA LIGHT] BLOCKED empty profile from cloud (${key}); local has ${Object.keys(existing).length} fields`);
+                        return;
+                      }
+                    }
+                  } catch (_) { /* fall through */ }
+                }
+              }
 
               ls.setItem(key, JSON.stringify(valueToStore));
               logProductsCloudWrite('delta-light', key, valueToStore);
@@ -27427,6 +27490,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                       }
                     }
                   } catch (e) { /* ignore parse errors */ }
+                }
+
+                // 🛡️ Anti-empty-profile guard (симметрично с Phase A ~6410, delta-light ~6699,
+                // saveClientKey ~9893): не клобберим валидный local профиль пустым из cloud.
+                const _isProfileKeyHeavy = row.k === 'heys_profile' || /^heys_[0-9a-f-]+_profile$/i.test(row.k || '');
+                if (_isProfileKeyHeavy) {
+                  const _isValidCloudProfile = valueToSave && typeof valueToSave === 'object' &&
+                    (valueToSave.age || valueToSave.weight || valueToSave.height ||
+                     valueToSave.firstName || valueToSave.profileCompleted === true);
+                  if (!_isValidCloudProfile) {
+                    try {
+                      const _existingRaw = ls.getItem(key);
+                      if (_existingRaw) {
+                        const _decompressFn = global.HEYS?.store?.decompress;
+                        const _existing = _decompressFn ? _decompressFn(_existingRaw) : JSON.parse(_existingRaw);
+                        if (_existing && typeof _existing === 'object' && Object.keys(_existing).length > 0) {
+                          logCritical(`🛡️ [FULL SYNC] BLOCKED empty profile from cloud (${key}); local has ${Object.keys(_existing).length} fields`);
+                          return;
+                        }
+                      }
+                    } catch (_) { /* fall through */ }
+                  }
                 }
 
                 // 🧷 Backup перед возможной перезаписью dayv2
