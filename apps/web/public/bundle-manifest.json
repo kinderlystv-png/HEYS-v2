@@ -1,11 +1,11 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.082520a4417b.js",
-    "hash": "082520a4417b",
-    "sourceFingerprint": "91e94bf3fa72",
+    "file": "boot-core.bundle.d832c972875d.js",
+    "hash": "d832c972875d",
+    "sourceFingerprint": "84d2058c1225",
     "fileCount": 36,
-    "size": 1675053,
-    "builtAt": "2026-05-07T20:37:30.725Z"
+    "size": 1683615,
+    "builtAt": "2026-05-08T02:35:46.957Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.6d2b281b3ddf.js",

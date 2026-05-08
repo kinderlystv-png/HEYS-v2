@@ -128,6 +128,7 @@
   const CLIENT_SPECIFIC_KEYS = [
     // Основные данные клиента
     'heys_products',
+    'heys_products_overlay_v2',  // Overlay (TypeA + TypeB) — нужен для real-time sync удалений между устройствами
     'heys_profile',
     'heys_hr_zones',
     'heys_norms',
@@ -7523,9 +7524,10 @@
               if (key.includes('_products_overlay_v2') && !key.includes('_products_pre_overlay_')) {
                 try {
                   if (Array.isArray(row.v)) {
-                    // Skip pull if overlay was recently self-healed to a smaller count.
-                    // Prevents dirty cloud data from overwriting the healed LS value while
-                    // the cloud upload is still in flight (upload drains async, may take a few boots).
+                    // Self-heal guard: пока OVERLAY GUARD ещё в коде (Шаг 5 плана его уберёт),
+                    // дублируем skip-логику здесь чтобы applyCloudSnapshot не получил dirty
+                    // cloud data до того как self-heal upload долетит. Удалить вместе с
+                    // OVERLAY GUARD после стабилизации.
                     try {
                       const _healMarker = global.localStorage.getItem('heys_overlay_self_healed_at');
                       if (_healMarker) {
@@ -7539,8 +7541,19 @@
                         }
                       }
                     } catch (_) { /* noop */ }
-                    ls.setItem(key, JSON.stringify(row.v));
-                    logCritical(`✅ [OVERLAY-V2 PULL] Saved ${row.v.length} rows to LS: ${key.slice(-50)}`);
+                    // Канонический путь: applyCloudSnapshot делает dedup TypeA по
+                    // shared_origin_id, фильтрует tombstones, сохраняет pending-local
+                    // customs, и пишет через writeRaw(skipCloudSync:true) чтобы не было
+                    // round-trip cloud → LS → cloud.
+                    if (global.HEYS && global.HEYS.OverlayStore
+                        && typeof global.HEYS.OverlayStore.applyCloudSnapshot === 'function') {
+                      const _r = global.HEYS.OverlayStore.applyCloudSnapshot(row.v, { source: 'bootstrap-paginated' });
+                      logCritical(`✅ [OVERLAY-V2 PULL] applyCloudSnapshot: ${JSON.stringify(_r)} key=…${key.slice(-50)}`);
+                    } else {
+                      // Fallback: OverlayStore ещё не загружен (очень ранний boot).
+                      ls.setItem(key, JSON.stringify(row.v));
+                      logCritical(`✅ [OVERLAY-V2 PULL] Saved ${row.v.length} rows to LS (fallback): ${key.slice(-50)}`);
+                    }
                   }
                 } catch (e) { /* noop */ }
                 return;
@@ -10774,6 +10787,23 @@
   function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync') {
     if (!clientId || !baseKey || value == null) return false;
     if (isSensitiveSessionStorageKey(baseKey)) return false;
+
+    // Overlay key — канонический real-time канал sync продуктов между устройствами.
+    // Без этой ветки удаление продукта на телефоне не попадёт на планшет до полного
+    // bootstrap (overlay key не было в HOT-sync ранее). applyCloudSnapshot делает
+    // dedup TypeA, фильтрует tombstones, сохраняет pending-local customs.
+    if (baseKey === 'heys_products_overlay_v2' || baseKey.endsWith('_products_overlay_v2')) {
+      try {
+        if (global.HEYS && global.HEYS.OverlayStore
+            && typeof global.HEYS.OverlayStore.applyCloudSnapshot === 'function'
+            && Array.isArray(value)) {
+          const _r = global.HEYS.OverlayStore.applyCloudSnapshot(value, { source: 'hot-sync-overlay' });
+          try { logCritical(`[HOT-sync overlay] applyCloudSnapshot: ${JSON.stringify(_r)}`); } catch (_) {}
+          return true;
+        }
+      } catch (_) { /* noop */ }
+      return false;
+    }
 
     // Phase ε: drop incoming HOT-sync of legacy heys_products when overlay is canonical.
     // Cloud copy of this key is no longer being pushed by us; whatever sits in cloud is

@@ -19432,6 +19432,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const CLIENT_SPECIFIC_KEYS = [
     // Основные данные клиента
     'heys_products',
+    'heys_products_overlay_v2',  // Overlay (TypeA + TypeB) — нужен для real-time sync удалений между устройствами
     'heys_profile',
     'heys_hr_zones',
     'heys_norms',
@@ -26827,9 +26828,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               if (key.includes('_products_overlay_v2') && !key.includes('_products_pre_overlay_')) {
                 try {
                   if (Array.isArray(row.v)) {
-                    // Skip pull if overlay was recently self-healed to a smaller count.
-                    // Prevents dirty cloud data from overwriting the healed LS value while
-                    // the cloud upload is still in flight (upload drains async, may take a few boots).
+                    // Self-heal guard: пока OVERLAY GUARD ещё в коде (Шаг 5 плана его уберёт),
+                    // дублируем skip-логику здесь чтобы applyCloudSnapshot не получил dirty
+                    // cloud data до того как self-heal upload долетит. Удалить вместе с
+                    // OVERLAY GUARD после стабилизации.
                     try {
                       const _healMarker = global.localStorage.getItem('heys_overlay_self_healed_at');
                       if (_healMarker) {
@@ -26843,8 +26845,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                         }
                       }
                     } catch (_) { /* noop */ }
-                    ls.setItem(key, JSON.stringify(row.v));
-                    logCritical(`✅ [OVERLAY-V2 PULL] Saved ${row.v.length} rows to LS: ${key.slice(-50)}`);
+                    // Канонический путь: applyCloudSnapshot делает dedup TypeA по
+                    // shared_origin_id, фильтрует tombstones, сохраняет pending-local
+                    // customs, и пишет через writeRaw(skipCloudSync:true) чтобы не было
+                    // round-trip cloud → LS → cloud.
+                    if (global.HEYS && global.HEYS.OverlayStore
+                        && typeof global.HEYS.OverlayStore.applyCloudSnapshot === 'function') {
+                      const _r = global.HEYS.OverlayStore.applyCloudSnapshot(row.v, { source: 'bootstrap-paginated' });
+                      logCritical(`✅ [OVERLAY-V2 PULL] applyCloudSnapshot: ${JSON.stringify(_r)} key=…${key.slice(-50)}`);
+                    } else {
+                      // Fallback: OverlayStore ещё не загружен (очень ранний boot).
+                      ls.setItem(key, JSON.stringify(row.v));
+                      logCritical(`✅ [OVERLAY-V2 PULL] Saved ${row.v.length} rows to LS (fallback): ${key.slice(-50)}`);
+                    }
                   }
                 } catch (e) { /* noop */ }
                 return;
@@ -30078,6 +30091,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync') {
     if (!clientId || !baseKey || value == null) return false;
     if (isSensitiveSessionStorageKey(baseKey)) return false;
+
+    // Overlay key — канонический real-time канал sync продуктов между устройствами.
+    // Без этой ветки удаление продукта на телефоне не попадёт на планшет до полного
+    // bootstrap (overlay key не было в HOT-sync ранее). applyCloudSnapshot делает
+    // dedup TypeA, фильтрует tombstones, сохраняет pending-local customs.
+    if (baseKey === 'heys_products_overlay_v2' || baseKey.endsWith('_products_overlay_v2')) {
+      try {
+        if (global.HEYS && global.HEYS.OverlayStore
+            && typeof global.HEYS.OverlayStore.applyCloudSnapshot === 'function'
+            && Array.isArray(value)) {
+          const _r = global.HEYS.OverlayStore.applyCloudSnapshot(value, { source: 'hot-sync-overlay' });
+          try { logCritical(`[HOT-sync overlay] applyCloudSnapshot: ${JSON.stringify(_r)}`); } catch (_) {}
+          return true;
+        }
+      } catch (_) { /* noop */ }
+      return false;
+    }
 
     // Phase ε: drop incoming HOT-sync of legacy heys_products when overlay is canonical.
     // Cloud copy of this key is no longer being pushed by us; whatever sits in cloud is
@@ -36731,7 +36761,24 @@ NOVA: 1-4
     }
   }
 
-  function writeRaw(rows) {
+  // Auto-sync overlay → cloud (debounced 2s). Любая запись в overlay через
+  // upsertRow/addFromShared/removeRow/migration уходит в cloud. Закрывает
+  // проблему "overlay обновился локально, но в cloud не попал".
+  let _cloudSyncTimer = null;
+  function _scheduleCloudSync(rows) {
+    try { clearTimeout(_cloudSyncTimer); } catch (_) { /* noop */ }
+    _cloudSyncTimer = setTimeout(function () {
+      try {
+        const cid = (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function')
+          ? HEYS.cloud.getCurrentClientId() : null;
+        if (cid && HEYS.cloud && typeof HEYS.cloud.saveClientKey === 'function') {
+          HEYS.cloud.saveClientKey(cid, 'heys_products_overlay_v2', rows);
+        }
+      } catch (_) { /* noop */ }
+    }, 2000);
+  }
+
+  function writeRaw(rows, opts) {
     if (!Array.isArray(rows)) return false;
     try {
       if (HEYS.store && HEYS.store.set) {
@@ -36739,12 +36786,101 @@ NOVA: 1-4
         invalidateMergedView();
         // γ.3: notify other tabs that overlay changed.
         _broadcastOverlayWrite(rows.length);
+        // skipCloudSync=true пропускает upload — используется applyCloudSnapshot
+        // (данные пришли ИЗ cloud, нет смысла отправлять обратно).
+        if (!(opts && opts.skipCloudSync)) {
+          _scheduleCloudSync(rows);
+        }
         return true;
       }
     } catch (e) {
       console.warn('[OverlayStore] writeRaw failed:', e && e.message);
     }
     return false;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // applyCloudSnapshot — единственная точка входа из облака.
+  //
+  // Вызывают: bootstrapClientSync paginated, applyForegroundHotSyncValue (overlay).
+  // Гарантии:
+  //   1. Dedup TypeA по shared_origin_id (защита от грязного cloud).
+  //   2. Tombstone filter — удалённые id/name не возвращаются.
+  //   3. Pending-local merge — TypeB customs которых нет в incoming сохраняются.
+  //   4. skipCloudSync — чтобы не было roundtrip cloud → LS → cloud.
+  //
+  // Возвращает: { applied, before, after, pendingCustoms } — pendingCustoms > 0
+  // означает что есть несинхронизированные локальные customs; вызывающий может
+  // явно триггернуть upload (или дождаться следующего user write).
+  // ─────────────────────────────────────────────────────────────────────
+  function applyCloudSnapshot(incomingRows, opts) {
+    if (!Array.isArray(incomingRows)) return { applied: false, reason: 'not-array' };
+    const source = (opts && opts.source) || 'unknown';
+
+    // 1. Dedup incoming TypeA по shared_origin_id.
+    const seenSO = new Set();
+    let deduped = incomingRows.filter(function (r) {
+      if (!r) return false;
+      if (r._custom === true) return true;
+      const k = String(r.shared_origin_id != null ? r.shared_origin_id : (r.id != null ? r.id : ''));
+      if (!k || seenSO.has(k)) return false;
+      seenSO.add(k);
+      return true;
+    });
+
+    // 2. Tombstone filter (parity с toMergedView).
+    let _tombIds = null;
+    let _tombNames = null;
+    try {
+      const _ts = HEYS.store && HEYS.store.get ? HEYS.store.get('heys_deleted_ids') : null;
+      if (Array.isArray(_ts) && _ts.length > 0) {
+        _tombIds = new Set(_ts.map(function (t) { return t && t.id != null ? String(t.id) : ''; }).filter(Boolean));
+        _tombNames = new Set(_ts.map(function (t) { return t && t.name ? String(t.name).trim().toLowerCase() : ''; }).filter(Boolean));
+      }
+    } catch (_) { /* noop */ }
+    if (_tombIds || _tombNames) {
+      const beforeTomb = deduped.length;
+      deduped = deduped.filter(function (r) {
+        if (!r) return false;
+        if (_tombIds && r.id != null && _tombIds.has(String(r.id))) return false;
+        if (_tombNames && r.name && _tombNames.has(String(r.name).trim().toLowerCase())) return false;
+        return true;
+      });
+      if (beforeTomb !== deduped.length) {
+        try { console.info('[OverlayStore] applyCloudSnapshot tombstoned', beforeTomb - deduped.length); } catch (_) {}
+      }
+    }
+
+    // 3. Pending-local customs: TypeB которые есть в LS но нет в incoming.
+    const current = readRaw();
+    const incomingIds = new Set(deduped.map(function (r) { return String(r && r.id != null ? r.id : ''); }));
+    const pendingLocalCustoms = Array.isArray(current)
+      ? current.filter(function (r) {
+          return r && r._custom === true && !incomingIds.has(String(r.id));
+        })
+      : [];
+
+    const merged = deduped.concat(pendingLocalCustoms);
+
+    // 4. skipCloudSync — данные ИЗ cloud, не отправляем обратно.
+    writeRaw(merged, { skipCloudSync: true });
+
+    try {
+      console.info('[OverlayStore] applyCloudSnapshot', {
+        source: source,
+        incomingLen: incomingRows.length,
+        deduped: deduped.length,
+        pendingLocalCustoms: pendingLocalCustoms.length,
+        finalLen: merged.length,
+      });
+    } catch (_) { /* noop */ }
+
+    return {
+      applied: true,
+      before: Array.isArray(current) ? current.length : 0,
+      after: merged.length,
+      pendingCustoms: pendingLocalCustoms.length,
+    };
   }
 
   // γ.3: cross-tab overlay sync via BroadcastChannel (mirrors heys_day_updates pattern).
@@ -36761,6 +36897,13 @@ NOVA: 1-4
         _bc.onmessage = (ev) => {
           try {
             if (!ev || !ev.data || ev.data.tabId === _bcSendingTabId) return;
+            // ClientId isolation: канал общий для всех вкладок браузера, но
+            // если одна вкладка — куратор клиента A, а другая — PIN-сессия
+            // клиента B, broadcast от A не должен инвалидировать MergedView
+            // у B (там другая база). Игнорируем сообщения от чужих clientId.
+            const myCid = (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function')
+              ? HEYS.cloud.getCurrentClientId() : null;
+            if (ev.data.clientId && myCid && String(ev.data.clientId) !== String(myCid)) return;
             if (ev.data.type === 'overlay-write') {
               invalidateMergedView();
               // boot_optimized_v1 / S4: bump content-version counter so React useMemo
@@ -36784,8 +36927,16 @@ NOVA: 1-4
   function _broadcastOverlayWrite(rowCount) {
     const ch = _initBroadcastChannel();
     if (!ch) return;
+    const cid = (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function')
+      ? HEYS.cloud.getCurrentClientId() : null;
     try {
-      ch.postMessage({ type: 'overlay-write', tabId: _bcSendingTabId, rows: rowCount, ts: Date.now() });
+      ch.postMessage({
+        type: 'overlay-write',
+        tabId: _bcSendingTabId,
+        clientId: cid,
+        rows: rowCount,
+        ts: Date.now(),
+      });
     } catch (_) { /* noop */ }
   }
 
@@ -37402,6 +37553,7 @@ NOVA: 1-4
     STORE_KEY,
     readRaw,
     writeRaw,
+    applyCloudSnapshot,
     upsertRow,
     removeRow,
     getRowById,
