@@ -3877,7 +3877,13 @@
       React.createElement('div', {
         key: `ration-subtab-${activeSubtab}`,
         className: 'ration-subtab-content'
-      }, activeSubtab === 'personal' ? (
+      },
+        // PIN-сессия НИКОГДА не показывает общую базу — даже если LS-ключ
+        // ration_subtab остался в 'shared' от предыдущей кураторской сессии
+        // под этим же clientId. Кнопка переключиться скрыта (isCurator gate),
+        // но контент рендерился по activeSubtab без проверки isCurator —
+        // PIN-юзер видел 365 shared products вместо своих ~297.
+        (!isCurator || activeSubtab === 'personal') ? (
         // ============================================
         // 👤 ПОДВКЛАДКА: Продукты клиента
         // ============================================
