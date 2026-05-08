@@ -1,13 +1,18 @@
 {
   "releases": [
     {
-      "version": "2026.05.08.3abc81cb",
-      "buildHash": "3abc81cb",
+      "version": "2026.05.08.a7c3042d",
+      "buildHash": "a7c3042d",
       "date": "2026-05-08",
       "kind": "technical",
       "profile": "technical-general",
-      "title": "Документация: morning-checkin race fix",
+      "title": "Документация: PIN vs curator контракт + state-sync паттерн",
       "items": [
+        {
+          "type": "chore",
+          "title": "Задокументировали как работает база продуктов в PIN и кураторе",
+          "description": "Внутреннее: добавили в CLAUDE.md явный контракт PIN vs curator для продуктов и описание state-sync clobber паттерна (который вызвал потерю витаминного курса), чтобы будущие баги этого класса было быстрее находить и фиксить."
+        },
         {
           "type": "chore",
           "title": "Документация фикса гонки регистрационного визарда",
