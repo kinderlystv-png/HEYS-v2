@@ -5092,7 +5092,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.05.05.2007.8e25854f'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.05.09.0045.f4418fa0'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -19912,20 +19912,35 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const isProductsTailRpcKey = (k) => String(k || '') === HEYS_PRODUCTS_RPC_TAIL_K
     || String(k || '').startsWith(`${HEYS_PRODUCTS_RPC_TAIL_K}_`);
 
-  function mergeProductsRpcTailRawClientRows(rows, clientId) {
+  /** Шард overlay v2 при 413 на RPC — мержится с heys_products_overlay_v2 при download. */
+  const HEYS_OVERLAY_RPC_TAIL_K = 'heys_products_overlay_v2_rpc_tail';
+  const isOverlayBaseKey = (k) => String(k || '') === 'heys_products_overlay_v2';
+  const isOverlayTailRpcKey = (k) => String(k || '') === HEYS_OVERLAY_RPC_TAIL_K
+    || String(k || '').startsWith(`${HEYS_OVERLAY_RPC_TAIL_K}_`);
+  const MAX_TAIL_SHARDS = 16;
+
+  // Numeric sort by trailing _N — fixes localeCompare bug where _tail_10 < _tail_2.
+  const tailIndexFromKey = (k) => {
+    const m = /_(\d+)$/.exec(String(k || ''));
+    return m ? parseInt(m[1], 10) : 0;
+  };
+  const sortByTailIndex = (a, b, getter) => tailIndexFromKey(getter(a)) - tailIndexFromKey(getter(b));
+
+  // Generic raw-rows tail merger — works for both products and overlay families.
+  function mergeRpcTailRawClientRows(rows, clientId, isTailKey, mainKey) {
     if (!Array.isArray(rows) || rows.length === 0 || !clientId) return rows;
     const tailIdxs = [];
     let mainIdx = -1;
     for (let i = 0; i < rows.length; i++) {
       const nk = normalizeKeyForSupabase(rows[i]?.k, clientId);
-      if (isProductsTailRpcKey(nk)) tailIdxs.push(i);
-      if (nk === 'heys_products') mainIdx = i;
+      if (isTailKey(nk)) tailIdxs.push(i);
+      if (nk === mainKey) mainIdx = i;
     }
     if (tailIdxs.length === 0) return rows;
     const tailSet = new Set(tailIdxs);
     const tailRows = tailIdxs
       .map((idx) => rows[idx])
-      .sort((a, b) => String(a?.k || '').localeCompare(String(b?.k || '')));
+      .sort((a, b) => sortByTailIndex(a, b, (r) => r?.k));
     const tailArr = [];
     for (let i = 0; i < tailRows.length; i++) {
       const arr = Array.isArray(tailRows[i]?.v) ? tailRows[i].v : [];
@@ -19941,24 +19956,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return out;
     }
     const tr = tailRows[0] || rows[tailIdxs[0]];
-    out.push({ ...tr, k: 'heys_products', v: tailArr });
+    out.push({ ...tr, k: mainKey, v: tailArr });
     return out;
   }
 
-  function mergeProductsRpcTailDeduped(deduped, client_id) {
+  function mergeRpcTailDeduped(deduped, client_id, isTailKey, mainKey) {
     if (!Array.isArray(deduped) || !client_id) return deduped;
-    const mainScoped = scopeKeyForClientStorage('heys_products', client_id);
+    const mainScoped = scopeKeyForClientStorage(mainKey, client_id);
     const tailIdxs = [];
     for (let i = 0; i < deduped.length; i++) {
       const scopedKey = String(deduped[i]?.scopedKey || '');
       const normalized = normalizeKeyForSupabase(scopedKey, client_id);
-      if (isProductsTailRpcKey(normalized)) tailIdxs.push(i);
+      if (isTailKey(normalized)) tailIdxs.push(i);
     }
     if (tailIdxs.length === 0) return deduped;
     const tailSet = new Set(tailIdxs);
     const tailEntries = tailIdxs
       .map((idx) => deduped[idx])
-      .sort((a, b) => String(a?.row?.k || '').localeCompare(String(b?.row?.k || '')));
+      .sort((a, b) => sortByTailIndex(a, b, (e) => e?.row?.k));
     const tailArr = [];
     for (let i = 0; i < tailEntries.length; i++) {
       const arr = Array.isArray(tailEntries[i]?.row?.v) ? tailEntries[i].row.v : [];
@@ -19974,9 +19989,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
     withoutTail.push({
       scopedKey: mainScoped,
-      row: { ...(tailEntries[0]?.row || {}), k: 'heys_products', v: tailArr }
+      row: { ...(tailEntries[0]?.row || {}), k: mainKey, v: tailArr }
     });
     return withoutTail;
+  }
+
+  function mergeProductsRpcTailRawClientRows(rows, clientId) {
+    return mergeRpcTailRawClientRows(rows, clientId, isProductsTailRpcKey, 'heys_products');
+  }
+
+  function mergeProductsRpcTailDeduped(deduped, client_id) {
+    return mergeRpcTailDeduped(deduped, client_id, isProductsTailRpcKey, 'heys_products');
+  }
+
+  function mergeOverlayRpcTailRawClientRows(rows, clientId) {
+    return mergeRpcTailRawClientRows(rows, clientId, isOverlayTailRpcKey, 'heys_products_overlay_v2');
+  }
+
+  function mergeOverlayRpcTailDeduped(deduped, client_id) {
+    return mergeRpcTailDeduped(deduped, client_id, isOverlayTailRpcKey, 'heys_products_overlay_v2');
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -24793,7 +24824,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
       }
 
-      const syncRowsMerged = mergeProductsRpcTailRawClientRows(Array.isArray(data) ? data.slice() : [], clientId);
+      let syncRowsMerged = mergeProductsRpcTailRawClientRows(Array.isArray(data) ? data.slice() : [], clientId);
+      syncRowsMerged = mergeOverlayRpcTailRawClientRows(syncRowsMerged, clientId);
 
       // Собираем список ключей, пришедших из облака (нормализованные)
       const remoteKeys = new Set(syncRowsMerged.map(row => row?.k).filter(Boolean));
@@ -25008,6 +25040,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const s = String(k || '');
         return isProductsBaseKey(s) || isProductsTailRpcKey(s);
       };
+      const isOverlayFamilyRpcKey = (k) => {
+        const s = String(k || '');
+        return isOverlayBaseKey(s) || isOverlayTailRpcKey(s);
+      };
+      const isIsolatedRpcKey = (k) => isProductsFamilyRpcKey(k) || isOverlayFamilyRpcKey(k);
 
       const slimProductsForRpcUpload = (products, tier) => {
         if (!Array.isArray(products)) return products;
@@ -25149,7 +25186,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         const rest = [];
         for (let i = 0; i < yandexItems.length; i++) {
           const it = yandexItems[i];
-          if (isProductsFamilyRpcKey(it.k)) isolated.push([it]);
+          if (isIsolatedRpcKey(it.k)) isolated.push([it]);
           else rest.push(it);
         }
         const out = [];
@@ -25182,12 +25219,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
       let didSaveProductsMain = false;
       let didSplitProductsUpload = false;
+      let didSaveOverlayMain = false;
+      let didSplitOverlayUpload = false;
 
       const uploadChunkResilient = async (chunk) => {
         let res = await YandexAPI.batchSaveKV(clientId, chunk);
         if (res.success) {
           for (let ui = 0; ui < chunk.length; ui++) {
-            if (isProductsBaseKey(chunk[ui]?.k)) didSaveProductsMain = true;
+            const k = chunk[ui]?.k;
+            if (isProductsBaseKey(k)) didSaveProductsMain = true;
+            if (isOverlayBaseKey(k)) didSaveOverlayMain = true;
           }
           return { success: true, saved: res.saved || chunk.length };
         }
@@ -25242,6 +25283,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 const w = await tryWireUpload(c);
                 if (w.ok) {
                   if (isProductsBaseKey(it.k)) didSaveProductsMain = true;
+                  if (isOverlayBaseKey(it.k)) didSaveOverlayMain = true;
                   return { success: true, saved: w.saved || 1 };
                 }
               }
@@ -25267,6 +25309,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               if (arr.length >= 2) {
                 // Жёсткий fallback при 413: бьём products на N шардов фиксированного размера
                 // и сохраняем как heys_products + heys_products_rpc_tail_1..N.
+                // Atomic order: пишем tails ПЕРВЫМИ (от хвоста к началу), main — последним
+                // как commit-marker. Если хвост падает — main не обновляется, старая версия
+                // в облаке остаётся консистентной, retry повторит весь сценарий.
                 const shardTargetBytes = 42 * 1024;
                 const slim = slimProductsForRpcUpload(arr, 3);
                 const shards = [];
@@ -25289,18 +25334,19 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 const mainShard = shards[0];
                 const tails = shards.slice(1);
 
-                const t2 = await YandexAPI.saveKV(clientId, it.k, mainShard);
-                if (!t2.success) return { success: false, saved: 0, error: t2.error || res.error };
-
-                for (let ti = 0; ti < tails.length; ti++) {
+                // 1. Tails first (reverse order — N..1)
+                for (let ti = tails.length - 1; ti >= 0; ti--) {
                   const tailKey = `${HEYS_PRODUCTS_RPC_TAIL_K}_${ti + 1}`;
                   const tr = await YandexAPI.saveKV(clientId, tailKey, tails[ti]);
                   if (!tr.success) return { success: false, saved: 0, error: tr.error || res.error };
                 }
+                // 2. Main last (commit marker)
+                const t2 = await YandexAPI.saveKV(clientId, it.k, mainShard);
+                if (!t2.success) return { success: false, saved: 0, error: t2.error || res.error };
 
                 // best-effort cleanup неиспользуемых старых tail-ключей
                 if (typeof YandexAPI.deleteKV === 'function') {
-                  for (let ci = tails.length + 1; ci <= 12; ci++) {
+                  for (let ci = tails.length + 1; ci <= MAX_TAIL_SHARDS; ci++) {
                     YandexAPI.deleteKV(clientId, `${HEYS_PRODUCTS_RPC_TAIL_K}_${ci}`).catch(() => { });
                   }
                 }
@@ -25309,6 +25355,62 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 logCritical(`📑 [YANDEX SAVE] Split heys_products RPC: ${shards.length} shard(s), total=${arr.length} items (413 fallback)`);
                 return { success: true, saved: 1 };
               }
+            }
+          }
+
+          // Overlay v2 shard fallback (parity with products family).
+          // Overlay rows have rich nutrient data per item (~1.5KB raw / ~0.5KB compressed)
+          // — slim is unsafe (would lose user nutrients) so we shard the array as-is.
+          // Atomic order: tails first (reverse), main last as commit-marker.
+          if (isOverlayBaseKey(it.k) && Store) {
+            const arr = productsArrayFromClientKvValue(it.v);
+            if (Array.isArray(arr) && arr.length >= 2) {
+              const shardTargetBytes = 42 * 1024;
+              const shards = [];
+              let cur = [];
+              let curBytes = 0;
+              for (let si = 0; si < arr.length; si++) {
+                const one = arr[si];
+                const oneBytes = Math.max(1, JSON.stringify(one).length + 1);
+                if (cur.length > 0 && curBytes + oneBytes > shardTargetBytes) {
+                  shards.push(cur);
+                  cur = [];
+                  curBytes = 0;
+                }
+                cur.push(one);
+                curBytes += oneBytes;
+              }
+              if (cur.length > 0) shards.push(cur);
+              if (shards.length === 0) shards.push([]);
+
+              const mainShard = shards[0];
+              const tails = shards.slice(1);
+
+              if (tails.length > MAX_TAIL_SHARDS) {
+                logCritical(`⚠️ [YANDEX SAVE] Overlay v2 has ${tails.length + 1} shards, exceeds MAX_TAIL_SHARDS (${MAX_TAIL_SHARDS}). Aborting split.`);
+                return { success: false, saved: 0, error: res.error };
+              }
+
+              // 1. Tails first (reverse order)
+              for (let ti = tails.length - 1; ti >= 0; ti--) {
+                const tailKey = `${HEYS_OVERLAY_RPC_TAIL_K}_${ti + 1}`;
+                const tr = await YandexAPI.saveKV(clientId, tailKey, tails[ti]);
+                if (!tr.success) return { success: false, saved: 0, error: tr.error || res.error };
+              }
+              // 2. Main last (commit marker)
+              const tm = await YandexAPI.saveKV(clientId, it.k, mainShard);
+              if (!tm.success) return { success: false, saved: 0, error: tm.error || res.error };
+
+              // best-effort cleanup unused tail keys
+              if (typeof YandexAPI.deleteKV === 'function') {
+                for (let ci = tails.length + 1; ci <= MAX_TAIL_SHARDS; ci++) {
+                  YandexAPI.deleteKV(clientId, `${HEYS_OVERLAY_RPC_TAIL_K}_${ci}`).catch(() => { });
+                }
+              }
+              didSaveOverlayMain = true;
+              didSplitOverlayUpload = tails.length > 0;
+              logCritical(`📑 [YANDEX SAVE] Split heys_products_overlay_v2 RPC: ${shards.length} shard(s), total=${arr.length} rows (413 fallback)`);
+              return { success: true, saved: 1 };
             }
           }
 
@@ -25364,8 +25466,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       if (didSaveProductsMain && !didSplitProductsUpload && typeof YandexAPI.deleteKV === 'function') {
         queueMicrotask(() => {
           YandexAPI.deleteKV(clientId, HEYS_PRODUCTS_RPC_TAIL_K).catch(() => { });
-          for (let ci = 1; ci <= 12; ci++) {
+          for (let ci = 1; ci <= MAX_TAIL_SHARDS; ci++) {
             YandexAPI.deleteKV(clientId, `${HEYS_PRODUCTS_RPC_TAIL_K}_${ci}`).catch(() => { });
+          }
+        });
+      }
+      // Symmetric cleanup for overlay v2: when it goes through non-shard path
+      // (compressed string fits the budget), delete any leftover tails from previous splits.
+      if (didSaveOverlayMain && !didSplitOverlayUpload && typeof YandexAPI.deleteKV === 'function') {
+        queueMicrotask(() => {
+          YandexAPI.deleteKV(clientId, HEYS_OVERLAY_RPC_TAIL_K).catch(() => { });
+          for (let ci = 1; ci <= MAX_TAIL_SHARDS; ci++) {
+            YandexAPI.deleteKV(clientId, `${HEYS_OVERLAY_RPC_TAIL_K}_${ci}`).catch(() => { });
           }
         });
       }
@@ -26081,7 +26193,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           const lightCloudGarbage = createCloudGarbageCollector();
           let lightKeysWritten = 0;
           const lightSyncedKeys = [];
-          const lightRows = mergeProductsRpcTailRawClientRows(Array.isArray(data) ? data.slice() : [], client_id);
+          let lightRows = mergeProductsRpcTailRawClientRows(Array.isArray(data) ? data.slice() : [], client_id);
+          lightRows = mergeOverlayRpcTailRawClientRows(lightRows, client_id);
           lightRows.forEach(row => {
             try {
               if (isSensitiveSessionStorageKey(row?.k)) {
@@ -26249,7 +26362,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // clearNamespace стирал все локальные данные, включая продукты!
         // Теперь просто перезаписываем только те ключи, что пришли с сервера
 
-        const dataForDedup = mergeProductsRpcTailRawClientRows(Array.isArray(data) ? data.slice() : [], client_id);
+        let dataForDedup = mergeProductsRpcTailRawClientRows(Array.isArray(data) ? data.slice() : [], client_id);
+        dataForDedup = mergeOverlayRpcTailRawClientRows(dataForDedup, client_id);
 
         // 🔄 ФАЗ 1: ДЕДУПЛИКАЦИЯ — если несколько ключей в БД превращаются в один scoped key,
         // берём самый свежий по updated_at (поле БД, не JSON)
@@ -26488,7 +26602,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           return String(a.scopedKey || '').localeCompare(String(b.scopedKey || ''));
         });
 
-        const dedupedForPhase2 = mergeProductsRpcTailDeduped(deduped, client_id);
+        const dedupedForPhase2 = mergeOverlayRpcTailDeduped(
+          mergeProductsRpcTailDeduped(deduped, client_id),
+          client_id
+        );
 
         log(`📊 [DEDUP] ${data?.length || 0} DB keys → ${dedupedForPhase2.length} unique scoped keys`);
 
@@ -26983,7 +27100,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               // НЕТ top-level name, поэтому legacy-фильтр `p.name` всегда уничтожал бы их.
               // Имя приходит из shared-каталога при merge во view, поэтому здесь не валидируем.
               // Tombstone-фильтрация делается в OverlayStore.toMergedView, не здесь.
-              if (key.includes('_products_overlay_v2') && !key.includes('_products_pre_overlay_')) {
+              if (key.includes('_products_overlay_v2') && !key.includes('_products_pre_overlay_') && !key.includes('_overlay_v2_rpc_tail')) {
                 try {
                   if (Array.isArray(row.v)) {
                     // Self-heal guard: пока OVERLAY GUARD ещё в коде (Шаг 5 плана его уберёт),
@@ -30305,6 +30422,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
       } catch (_) { /* noop */ }
       return false;
+    }
+
+    // Overlay v2 RPC tail shards: ignore in HOT-sync (no LS persistence).
+    // Tails are only meaningful when reassembled in download paths via
+    // mergeOverlayRpcTailRawClientRows / mergeOverlayRpcTailDeduped.
+    // applyCloudSnapshot's pendingLocalTypeA preserves local TypeA when
+    // a partial main shard arrives, so HOT-sync stays consistent without
+    // tail handling. Full reassembly happens on next bootstrap/full sync.
+    if (isOverlayTailRpcKey(baseKey)) {
+      return true; // mark handled — don't write to LS as garbage key
     }
 
     // Phase ε: drop incoming HOT-sync of legacy heys_products when overlay is canonical.
