@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.09.4fb395cf",
+      "buildHash": "4fb395cf",
+      "date": "2026-05-09",
+      "kind": "technical",
+      "profile": "technical-infra-tests",
+      "title": "Технические улучшения качества",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Улучшили внутренние процессы",
+          "description": "Мы обновили внутренние инструменты и проверки, чтобы релизы были стабильнее и предсказуемее."
+        }
+      ]
+    },
+    {
       "version": "2026.05.09.7810fbeb",
       "buildHash": "7810fbeb",
       "date": "2026-05-09",
