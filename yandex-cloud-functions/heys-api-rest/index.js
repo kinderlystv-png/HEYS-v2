@@ -641,6 +641,102 @@ module.exports.handler = async function (event, context) {
         };
       }
 
+      // 🔐 P3.1: PATCH — UPDATE для разрешённых writable таблиц (moderation status updates)
+      case 'PATCH': {
+        if (!isWriteAllowed) {
+          return {
+            statusCode: 405,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'PATCH not allowed for this table.' })
+          };
+        }
+
+        const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+        const params = { ...event.queryStringParameters };
+        delete params.table;
+        const selectParam = params.select;
+        delete params.select;
+
+        if (!body || typeof body !== 'object' || Array.isArray(body)) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'PATCH body must be a JSON object' })
+          };
+        }
+
+        const updateCols = Object.keys(body);
+        if (updateCols.length === 0) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'PATCH body is empty' })
+          };
+        }
+
+        // Allowed columns for this table
+        const allowedCols = ALLOWED_COLUMNS[tableName] || [];
+        const values = [];
+        let i = 1;
+
+        // Build SET clause
+        const setClauses = [];
+        for (const col of updateCols) {
+          if (!allowedCols.includes(col)) {
+            return {
+              statusCode: 400,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: `Column "${col}" not allowed for update` })
+            };
+          }
+          setClauses.push(`"${col}" = $${i++}`);
+          values.push(body[col]);
+        }
+
+        // Build WHERE clause from query params (same logic as GET)
+        const conditions = [];
+        for (const [key, value] of Object.entries(params)) {
+          if (key.startsWith('eq.')) {
+            const col = key.replace('eq.', '');
+            conditions.push(`"${col}" = $${i++}`);
+            values.push(value);
+          } else if (typeof value === 'string' && value.startsWith('eq.')) {
+            conditions.push(`"${key}" = $${i++}`);
+            values.push(value.replace('eq.', ''));
+          } else if (!['order', 'limit', 'offset'].includes(key)) {
+            conditions.push(`"${key}" = $${i++}`);
+            values.push(value);
+          }
+        }
+
+        if (conditions.length === 0) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'PATCH requires at least one filter' })
+          };
+        }
+
+        let query = `UPDATE "${tableName}" SET ${setClauses.join(', ')} WHERE ${conditions.join(' AND ')}`;
+
+        if (selectParam) {
+          const sanitized = sanitizeSelectColumns(selectParam, tableName);
+          if (sanitized) {
+            query += ` RETURNING ${sanitized}`;
+          }
+        }
+
+        console.log('[REST PATCH]', { table: tableName, setCols: updateCols, conditions: conditions.length });
+        result = await client.query(query, values);
+
+        const responseBody = selectParam ? result.rows : { success: true, rowCount: result.rowCount };
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify(responseBody)
+        };
+      }
+
       // 🔐 P3.1: DELETE — только для разрешённых writable таблиц
       case 'DELETE': {
         if (!isWriteAllowed) {
