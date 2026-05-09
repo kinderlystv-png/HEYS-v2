@@ -14930,13 +14930,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (result.recovered > 0 && !cancelled) {
                         const updatedProducts = window.HEYS.utils.lsGet('heys_products', []);
                         safeSetProducts(Array.isArray(updatedProducts) ? updatedProducts : []);
-
-                        if (window.HEYS.Toast?.success) {
-                            const msg = result.recovered === 1
-                                ? '🔄 Восстановлен 1 продукт из истории'
-                                : `🔄 Восстановлено ${result.recovered} продуктов из истории`;
-                            window.HEYS.Toast.success(msg);
-                        }
+                        // Toast «Восстановлено N» убран: теперь продукты пишутся в overlay
+                        // напрямую (TypeB) и синхронятся через cloud overlay → нет отдельного
+                        // recovery-flow с in-memory кэшем.
                     }
 
                     // ──────────────────────────────────────────────────────────

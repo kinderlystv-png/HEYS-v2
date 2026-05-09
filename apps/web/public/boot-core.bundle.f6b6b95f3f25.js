@@ -9695,31 +9695,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   function RationTab(props) {
     const { setProducts } = props;
-    // 🛡️ Включаем stamp-recovered продукты в personal-таблицу.
-    // По архитектуре orphan-recovery (heys_day_utils.js:1346) такие продукты не пишутся
-    // в heys_products/overlay (чтобы не загрязнять neutrient aggregation), а живут
-    // в side-cache `HEYS.orphanProducts._stampResolutionCache`. Без этого юзер не видит
-    // в личной базе те продукты, которые реально использовал в днях (включая custom).
-    const [_stampVer, _setStampVer] = React.useState(0);
-    React.useEffect(() => {
-      const refresh = () => _setStampVer(v => v + 1);
-      window.addEventListener('heys:orphans-recovered', refresh);
-      return () => window.removeEventListener('heys:orphans-recovered', refresh);
-    }, []);
-    const products = (() => {
-      const arr = Array.isArray(props.products) ? props.products : [];
-      try {
-        const cache = window.HEYS?.orphanProducts?._stampResolutionCache;
-        if (!(cache instanceof Map) || cache.size === 0) return arr;
-        const ids = new Set(arr.filter(p => p && p.id != null).map(p => String(p.id)));
-        const extras = [];
-        for (const p of cache.values()) {
-          if (p && p.id != null && !ids.has(String(p.id))) extras.push(p);
-        }
-        return extras.length > 0 ? arr.concat(extras) : arr;
-      } catch (_) { /* noop */ }
-      return arr;
-    })();
+    // Single source of truth: overlay merged view (через props.products).
+    // Раньше тут склеивали stamp-recovered cache, чтобы юзер видел продукты из истории.
+    // Теперь orphan-recovery пишет их прямо в overlay TypeB → cache не нужен.
+    const products = Array.isArray(props.products) ? props.products : [];
 
     // Сохранять продукты в облако и localStorage при каждом изменении (через HEYS.utils для namespace)
     React.useEffect(() => {
@@ -14426,20 +14405,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       }
     };
 
-    // Final fallback: stamp-only resolution cache populated by autoRecoverOnLoad.
-    // Used when day-render asks for a product_id that was never persisted to
-    // overlay/legacy (orphan from stamps without a shared match). Returns macro-only
-    // shape derived from the meal stamp — enough for day rendering, not for global lists.
-    function _resolveFromStampCache(id) {
-      try {
-        const cache = HEYS.orphanProducts && HEYS.orphanProducts._stampResolutionCache;
-        if (cache && typeof cache.get === 'function' && id != null) {
-          return cache.get(String(id)) || null;
-        }
-      } catch (_) { /* noop */ }
-      return null;
-    }
-
     // 🪦 Tombstone helper: проверяет, есть ли продукт (по id/name) в heys_deleted_ids.
     // Используется в getById чтобы согласовать поведение с toMergedView/getAll —
     // если product юзером удалён (tombstone), getById тоже должен возвращать null,
@@ -14467,23 +14432,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         && HEYS.flags.isEnabled('overlay_products_v2');
       if (!enabled) {
         const legacy = _origGetById(id);
-        if (legacy && _isProductTombstoned(legacy)) return _resolveFromStampCache(id);
-        return legacy || _resolveFromStampCache(id);
+        if (legacy && _isProductTombstoned(legacy)) return null;
+        return legacy || null;
       }
 
       try {
         const Overlay = HEYS.OverlayStore;
-        if (!Overlay) return _origGetById(id) || _resolveFromStampCache(id);
+        if (!Overlay) return _origGetById(id) || null;
         // Special-case: getById must consult overlay for items NOT in_my_list
         // (so dayv2 stamps can resolve products user has soft-removed).
         const raw = Overlay.getRowById(id);
         if (raw) {
           // 🪦 Tombstone check: если row tombstoned, считаем не найденным.
-          // Stamp-cache подхватит как orphan → banner покажет выбор «восстановить»/«разовым».
           // Для Type B проверяем по name. Для Type A — резолвим shared name и проверяем.
           if (raw._custom) {
             if (_isProductTombstoned(raw)) {
-              return _resolveFromStampCache(id);
+              return null;
             }
             return raw;
           }
@@ -14499,23 +14463,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
               user_modified: !!raw.user_modified,
             });
             if (_isProductTombstoned(merged)) {
-              return _resolveFromStampCache(id);
+              return null;
             }
             return merged;
           }
           // Type A overlay row but shared cache empty → bare overlay shape lacks nutrients.
           // Fall through to legacy (which has full snapshot) instead of returning broken row.
           const legacy = _origGetById(id);
-          if (legacy && _isProductTombstoned(legacy)) return _resolveFromStampCache(id);
-          return legacy || _resolveFromStampCache(id);
+          if (legacy && _isProductTombstoned(legacy)) return null;
+          return legacy || null;
         }
         // Fall through to legacy lookup if no overlay row.
         const legacy = _origGetById(id);
-        if (legacy && _isProductTombstoned(legacy)) return _resolveFromStampCache(id);
-        return legacy || _resolveFromStampCache(id);
+        if (legacy && _isProductTombstoned(legacy)) return null;
+        return legacy || null;
       } catch (e) {
         console.warn('[HEYS.products] overlay getById failed; fallback to legacy:', e && e.message);
-        return _origGetById(id) || _resolveFromStampCache(id);
+        return _origGetById(id) || null;
       }
     };
 
@@ -37181,6 +37145,28 @@ NOVA: 1-4
 
     // 3. Pending-local customs: TypeB которые есть в LS но нет в incoming.
     const current = readRaw();
+
+    // 3a. TypeA preference: если локально есть TypeA для id, который в cloud пришёл как TypeB —
+    // предпочитаем локальный TypeA (он — результат миграции, более развитая форма).
+    // Применяется ко всем источникам (bootstrap + HOT-sync): TypeB в cloud значит
+    // upload ещё не дошёл — локальный TypeA актуальнее.
+    if (Array.isArray(current)) {
+      // Строим карту id → локальный TypeA
+      var _localTypeAById = {};
+      current.forEach(function (r) {
+        if (r && !r._custom && r.shared_origin_id != null && r.id != null) {
+          _localTypeAById[String(r.id)] = r;
+        }
+      });
+      // Заменяем cloud TypeB на локальный TypeA там, где id совпадает
+      deduped = deduped.map(function (r) {
+        if (r && r._custom === true && r.id != null && _localTypeAById[String(r.id)]) {
+          return _localTypeAById[String(r.id)];
+        }
+        return r;
+      });
+    }
+
     const incomingIds = new Set(deduped.map(function (r) { return String(r && r.id != null ? r.id : ''); }));
     const pendingLocalCustoms = Array.isArray(current)
       ? current.filter(function (r) {
@@ -37191,15 +37177,16 @@ NOVA: 1-4
     // 3b. Pending-local TypeA: строки добавленные локально, ещё не подтверждённые cloud.
     // Защита от race: migration пишет TypeA в LS → debounce 2s → HOT-sync успевает
     // прийти с пустым cloud (0 TypeA) → merged = 0 → overlay затирается.
+    // incomingTypeAById: если cloud уже имеет TypeA для этого id (но с другим SO — из
+    // старой миграции с другим маппингом), локальный TypeA не добавляем как pending —
+    // cloud TypeA выигрывает (source of truth), не создаём дублей 150+150=300.
     const incomingSO = new Set(deduped.filter(function (r) { return r && !r._custom && r.shared_origin_id != null; }).map(function (r) { return String(r.shared_origin_id); }));
-    // incomingIds уже объявлен выше (строка ~144) — все id из deduped (TypeA и TypeB).
-    // Если local TypeA имеет тот же id что и incoming TypeB — это результат миграции
-    // (TypeB → TypeA), а не новый локальный ряд. Добавлять поверх cloud TypeB нельзя.
+    const incomingTypeAById = new Set(deduped.filter(function (r) { return r && !r._custom && r.shared_origin_id != null && r.id != null; }).map(function (r) { return String(r.id); }));
     const pendingLocalTypeA = Array.isArray(current)
       ? current.filter(function (r) {
           if (!r || r._custom || r.shared_origin_id == null) return false;
           if (incomingSO.has(String(r.shared_origin_id))) return false;
-          if (r.id != null && incomingIds.has(String(r.id))) return false;
+          if (r.id != null && incomingTypeAById.has(String(r.id))) return false;
           if (_tombIds && r.id != null && _tombIds.has(String(r.id))) return false;
           if (_tombNames && r.name && _tombNames.has(String(r.name).trim().toLowerCase())) return false;
           return true;

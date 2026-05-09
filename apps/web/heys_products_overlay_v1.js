@@ -141,6 +141,28 @@
 
     // 3. Pending-local customs: TypeB которые есть в LS но нет в incoming.
     const current = readRaw();
+
+    // 3a. TypeA preference: если локально есть TypeA для id, который в cloud пришёл как TypeB —
+    // предпочитаем локальный TypeA (он — результат миграции, более развитая форма).
+    // Применяется ко всем источникам (bootstrap + HOT-sync): TypeB в cloud значит
+    // upload ещё не дошёл — локальный TypeA актуальнее.
+    if (Array.isArray(current)) {
+      // Строим карту id → локальный TypeA
+      var _localTypeAById = {};
+      current.forEach(function (r) {
+        if (r && !r._custom && r.shared_origin_id != null && r.id != null) {
+          _localTypeAById[String(r.id)] = r;
+        }
+      });
+      // Заменяем cloud TypeB на локальный TypeA там, где id совпадает
+      deduped = deduped.map(function (r) {
+        if (r && r._custom === true && r.id != null && _localTypeAById[String(r.id)]) {
+          return _localTypeAById[String(r.id)];
+        }
+        return r;
+      });
+    }
+
     const incomingIds = new Set(deduped.map(function (r) { return String(r && r.id != null ? r.id : ''); }));
     const pendingLocalCustoms = Array.isArray(current)
       ? current.filter(function (r) {
@@ -151,15 +173,16 @@
     // 3b. Pending-local TypeA: строки добавленные локально, ещё не подтверждённые cloud.
     // Защита от race: migration пишет TypeA в LS → debounce 2s → HOT-sync успевает
     // прийти с пустым cloud (0 TypeA) → merged = 0 → overlay затирается.
+    // incomingTypeAById: если cloud уже имеет TypeA для этого id (но с другим SO — из
+    // старой миграции с другим маппингом), локальный TypeA не добавляем как pending —
+    // cloud TypeA выигрывает (source of truth), не создаём дублей 150+150=300.
     const incomingSO = new Set(deduped.filter(function (r) { return r && !r._custom && r.shared_origin_id != null; }).map(function (r) { return String(r.shared_origin_id); }));
-    // incomingIds уже объявлен выше (строка ~144) — все id из deduped (TypeA и TypeB).
-    // Если local TypeA имеет тот же id что и incoming TypeB — это результат миграции
-    // (TypeB → TypeA), а не новый локальный ряд. Добавлять поверх cloud TypeB нельзя.
+    const incomingTypeAById = new Set(deduped.filter(function (r) { return r && !r._custom && r.shared_origin_id != null && r.id != null; }).map(function (r) { return String(r.id); }));
     const pendingLocalTypeA = Array.isArray(current)
       ? current.filter(function (r) {
           if (!r || r._custom || r.shared_origin_id == null) return false;
           if (incomingSO.has(String(r.shared_origin_id))) return false;
-          if (r.id != null && incomingIds.has(String(r.id))) return false;
+          if (r.id != null && incomingTypeAById.has(String(r.id))) return false;
           if (_tombIds && r.id != null && _tombIds.has(String(r.id))) return false;
           if (_tombNames && r.name && _tombNames.has(String(r.name).trim().toLowerCase())) return false;
           return true;

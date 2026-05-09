@@ -1413,21 +1413,40 @@
         }
       } catch (_) { /* noop */ }
 
-      // 4. Phase ε / lazy stamp resolution.
-      // Stamp-recovered products carry only macros (no iron/calcium/vitamins) — pushing them
-      // into heys_products / overlay would (a) silently degrade nutrient counts on aggregation,
-      // (b) inflate the per-user product list with rows the user never created, (c) keep cycling
-      // them through cloud on every reload. Instead we keep them in a side cache and resolve
-      // lazily via getById from day-render. Cache is rebuilt every boot from current stamps.
+      // 4. Stamp-recovered → overlay TypeB rows (single source of truth).
+      // Раньше stamp-recovered кешировались в _stampResolutionCache (lazy resolution).
+      // Теперь пишем напрямую в overlay как TypeB чтобы:
+      //   - модалка == таблица == облако (нет расхождений)
+      //   - продукты доступны на других устройствах через cloud sync
+      //   - нет «Восстановлено N из истории» баннера на каждый cold start
+      // Дедуп по нормализованному имени против merged view предотвращает дубли с TypeA.
       const stampOnly = recovered.filter(p => p._recoveredFrom === 'stamp');
-      if (stampOnly.length > 0) {
-        if (!HEYS.orphanProducts._stampResolutionCache
-            || typeof HEYS.orphanProducts._stampResolutionCache.set !== 'function') {
-          HEYS.orphanProducts._stampResolutionCache = new Map();
-        }
-        const cache = HEYS.orphanProducts._stampResolutionCache;
+      if (stampOnly.length > 0 && global.HEYS?.OverlayStore?.upsertRow) {
+        const Overlay = global.HEYS.OverlayStore;
+        const sharedById = global.HEYS.cloud?.getSharedIndex?.();
+        const merged = Overlay.toMergedView ? (Overlay.toMergedView(sharedById) || []) : [];
+        const existingNamesLower = new Set();
+        merged.forEach(r => {
+          if (r && r.name) existingNamesLower.add(normalizeName(r.name));
+        });
+        let upserted = 0;
         for (const p of stampOnly) {
-          if (p && p.id != null) cache.set(String(p.id), p);
+          if (!p || p.id == null || !p.name) continue;
+          if (existingNamesLower.has(normalizeName(p.name))) continue; // skip — уже есть в overlay
+          const typeBRow = Object.assign({}, p, {
+            _custom: true,
+            in_my_list: true,
+            gi: p.gi != null ? p.gi : 50,
+            harm: p.harm != null ? p.harm : 0,
+          });
+          try {
+            Overlay.upsertRow(typeBRow);
+            existingNamesLower.add(normalizeName(p.name));
+            upserted++;
+          } catch (_) { /* noop */ }
+        }
+        if (upserted > 0) {
+          console.info('[HEYS.products] orphan-recovery → overlay TypeB upserted:', upserted);
         }
       }
       // Shared-recovered (full nutrients) already went through addFromShared → setAll above.
