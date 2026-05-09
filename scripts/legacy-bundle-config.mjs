@@ -91,6 +91,7 @@ export const LEGACY_BUNDLES = {
         'heys_day_edit_grams_state.js',
         'heys_day_caloric_display_state.js',
         'heys_day_page_shell.js',
+        'heys_day_low_cal_banner_v1.js',
         'heys_day_engagement_effects.js',
         'heys_day_calendar_metrics.js',
         'heys_day_calendar_block_v1.js',

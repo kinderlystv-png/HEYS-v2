@@ -113,6 +113,7 @@
             isMobile: ctx.isMobile,
             mobileSubTab: ctx.mobileSubTab,
             orphanAlert: ctx.orphanAlert,
+            lowCalBanner: ctx.lowCalBanner,
             statsBlock: ctx.statsBlock,
             waterCard: ctx.waterCard,
             compactActivity: ctx.compactActivity,

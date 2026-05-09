@@ -1714,6 +1714,16 @@
         // === Phase 13A Integration: Use extracted orphan alert renderer ===
         const orphanAlert = HEYS.dayOrphanAlert?.renderOrphanAlert?.({ orphanCount, date }) || false;
 
+        // === Low-cal banner: дни с ratio < 50% без верификации (fasting/incomplete) ===
+        const todayKey = fmtDate(new Date());
+        const lowCalBanner = HEYS.dayLowCalBanner?.renderLowCalBanner?.({
+            date,
+            day,
+            eatenKcal,
+            displayOptimum,
+            isToday: date === todayKey
+        }) || false;
+
         // === Hero display (tour override + colors + deficit) — extracted ===
         if (!HEYS.dayHeroDisplay?.buildHeroDisplay) {
             throw new Error('[heys_day_v12] HEYS.dayHeroDisplay not loaded before heys_day_v12.js');
@@ -1968,6 +1978,7 @@
             isMobile,
             mobileSubTab,
             orphanAlert,
+            lowCalBanner,
             statsBlock,
             waterCard,
             compactActivity,

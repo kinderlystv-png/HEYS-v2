@@ -59,6 +59,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             isMobile,
             mobileSubTab,
             orphanAlert,
+            lowCalBanner,
             statsBlock,
             waterCard,
             compactActivity,
@@ -374,6 +375,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 ),
 
                 (!isMobile || mobileSubTab === 'stats') && orphanAlert,
+                (!isMobile || mobileSubTab === 'stats') && lowCalBanner,
                 (!isMobile || mobileSubTab === 'stats') && statsBlock,
                 (!isMobile || mobileSubTab === 'stats') && waterCard,
                 (!isMobile || mobileSubTab === 'stats') && compactActivity,
