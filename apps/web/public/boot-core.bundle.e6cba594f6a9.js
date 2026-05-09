@@ -37192,10 +37192,14 @@ NOVA: 1-4
     // Защита от race: migration пишет TypeA в LS → debounce 2s → HOT-sync успевает
     // прийти с пустым cloud (0 TypeA) → merged = 0 → overlay затирается.
     const incomingSO = new Set(deduped.filter(function (r) { return r && !r._custom && r.shared_origin_id != null; }).map(function (r) { return String(r.shared_origin_id); }));
+    // incomingIds уже объявлен выше (строка ~144) — все id из deduped (TypeA и TypeB).
+    // Если local TypeA имеет тот же id что и incoming TypeB — это результат миграции
+    // (TypeB → TypeA), а не новый локальный ряд. Добавлять поверх cloud TypeB нельзя.
     const pendingLocalTypeA = Array.isArray(current)
       ? current.filter(function (r) {
           if (!r || r._custom || r.shared_origin_id == null) return false;
           if (incomingSO.has(String(r.shared_origin_id))) return false;
+          if (r.id != null && incomingIds.has(String(r.id))) return false;
           if (_tombIds && r.id != null && _tombIds.has(String(r.id))) return false;
           if (_tombNames && r.name && _tombNames.has(String(r.name).trim().toLowerCase())) return false;
           return true;
