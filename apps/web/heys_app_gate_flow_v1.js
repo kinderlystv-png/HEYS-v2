@@ -905,6 +905,201 @@
         return React.createElement(React.Fragment, null, triggerBtn, modalOverlay);
     }
 
+    // Бейдж для таба «Заявки» — подгружает количество pending при монтировании
+    // и обновляется по событию heys:pending-products-updated
+    function PendingProductsBadge({ children }) {
+        const [count, setCount] = React.useState(0);
+        React.useEffect(() => {
+            const load = async () => {
+                try {
+                    const res = await window.HEYS?.cloud?.getPendingProducts?.();
+                    setCount(res?.data?.length || 0);
+                } catch (_) {}
+            };
+            load();
+            window.addEventListener('heys:pending-products-updated', load);
+            return () => window.removeEventListener('heys:pending-products-updated', load);
+        }, []);
+        return React.createElement(React.Fragment, null,
+            children,
+            count > 0 && React.createElement('span', {
+                style: {
+                    marginLeft: 6,
+                    background: '#ef4444',
+                    color: '#fff',
+                    borderRadius: 10,
+                    padding: '1px 6px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    verticalAlign: 'middle',
+                    lineHeight: 1
+                }
+            }, count)
+        );
+    }
+
+    // Таб модерации — загружает полный список, показывает имя клиента, approve/reject
+    function ModerationTab({ clients }) {
+        const [pending, setPending] = React.useState([]);
+        const [loading, setLoading] = React.useState(true);
+
+        const load = React.useCallback(async () => {
+            setLoading(true);
+            try {
+                const res = await window.HEYS?.cloud?.getPendingProducts?.();
+                setPending(res?.data || []);
+            } catch (_) {}
+            setLoading(false);
+        }, []);
+
+        React.useEffect(() => {
+            load();
+        }, [load]);
+
+        const clientMap = React.useMemo(() => {
+            const m = {};
+            (clients || []).forEach(c => {
+                m[c.id] = c.name || c.phone_normalized || c.id.slice(0, 8);
+            });
+            return m;
+        }, [clients]);
+
+        const notifyUpdated = () => {
+            try { window.dispatchEvent(new CustomEvent('heys:pending-products-updated')); } catch (_) {}
+        };
+
+        const approvePending = async (item) => {
+            try {
+                const result = await window.HEYS?.cloud?.approvePendingProduct?.(item.id, item.product_data);
+                if (result?.status === 'race') {
+                    window.HEYS?.Toast?.warning?.(result.message || 'Заявка уже обработана другим куратором');
+                    setPending(prev => prev.filter(p => p.id !== item.id));
+                    notifyUpdated();
+                    return;
+                }
+                if (result?.error) {
+                    const msg = result.error?.message || (typeof result.error === 'string' ? result.error : 'неизвестная ошибка');
+                    window.HEYS?.Toast?.error?.('Ошибка: ' + msg) || alert('Ошибка: ' + msg);
+                    return;
+                }
+                setPending(prev => prev.filter(p => p.id !== item.id));
+                const name = item.product_data?.name || item.name_norm;
+                if (result?.existing) {
+                    window.HEYS?.Toast?.info?.(`Продукт "${name}" уже существует в общей базе`);
+                } else {
+                    window.HEYS?.Toast?.success?.(`Продукт "${name}" добавлен в общую базу!`);
+                }
+                notifyUpdated();
+            } catch (err) {
+                window.HEYS?.Toast?.error?.('Ошибка при подтверждении: ' + err.message) || alert('Ошибка: ' + err.message);
+            }
+        };
+
+        const rejectPending = async (item) => {
+            const reason = prompt('Причина отклонения (опционально):');
+            if (reason === null) return;
+            try {
+                const result = await window.HEYS?.cloud?.rejectPendingProduct?.(item.id, reason);
+                if (result?.status === 'race') {
+                    window.HEYS?.Toast?.warning?.(result.message || 'Заявка уже обработана другим куратором');
+                    setPending(prev => prev.filter(p => p.id !== item.id));
+                    notifyUpdated();
+                    return;
+                }
+                if (result?.error) {
+                    const msg = result.error?.message || (typeof result.error === 'string' ? result.error : 'неизвестная ошибка');
+                    window.HEYS?.Toast?.error?.('Ошибка: ' + msg) || alert('Ошибка: ' + msg);
+                    return;
+                }
+                setPending(prev => prev.filter(p => p.id !== item.id));
+                window.HEYS?.Toast?.info?.(`Заявка "${item.product_data?.name || item.name_norm}" отклонена`);
+                notifyUpdated();
+            } catch (err) {
+                window.HEYS?.Toast?.error?.('Ошибка при отклонении: ' + err.message) || alert('Ошибка: ' + err.message);
+            }
+        };
+
+        const calcKcal = (p) => {
+            const prot = p.protein100 || 0;
+            const carb = (p.simple100 || 0) + (p.complex100 || 0);
+            const fat = (p.badFat100 || 0) + (p.goodFat100 || 0) + (p.trans100 || 0);
+            return Math.round(prot * 4 + carb * 4 + fat * 9);
+        };
+
+        if (loading) {
+            return React.createElement('div', {
+                style: { padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 14 }
+            }, '⏳ Загрузка заявок...');
+        }
+
+        if (pending.length === 0) {
+            return React.createElement('div', {
+                style: { padding: '48px 24px', textAlign: 'center' }
+            },
+                React.createElement('div', { style: { fontSize: 48, marginBottom: 12 } }, '✅'),
+                React.createElement('div', { style: { fontSize: 15, color: 'rgba(15,23,42,0.6)' } }, 'Нет заявок на модерацию')
+            );
+        }
+
+        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+            pending.map(item => {
+                const p = item.product_data || {};
+                const clientName = clientMap[item.client_id] || item.client_id?.slice(0, 8) || '—';
+                return React.createElement('div', {
+                    key: item.id,
+                    style: {
+                        background: '#fff',
+                        borderRadius: 12,
+                        padding: '14px 16px',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                        border: '1px solid rgba(148,163,184,0.2)'
+                    }
+                },
+                    React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
+                        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                            React.createElement('div', {
+                                style: { fontWeight: 600, fontSize: 15, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+                            }, p.name || item.name_norm),
+                            React.createElement('div', {
+                                style: { fontSize: 12, color: '#64748b', display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 4 }
+                            },
+                                React.createElement('span', null, `${calcKcal(p)} ккал`),
+                                React.createElement('span', null, `Б:${p.protein100 || 0}`),
+                                React.createElement('span', null, `У:${(p.simple100 || 0) + (p.complex100 || 0)}`),
+                                React.createElement('span', null, `Ж:${(p.badFat100 || 0) + (p.goodFat100 || 0) + (p.trans100 || 0)}`),
+                                p.gi && React.createElement('span', null, `ГИ:${p.gi}`)
+                            ),
+                            React.createElement('div', { style: { fontSize: 11, color: '#94a3b8', display: 'flex', gap: 10 } },
+                                React.createElement('span', null, `👤 ${clientName}`),
+                                React.createElement('span', null, `📅 ${new Date(item.created_at).toLocaleDateString('ru-RU')}`)
+                            )
+                        ),
+                        React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0 } },
+                            React.createElement('button', {
+                                onClick: () => approvePending(item),
+                                title: 'Одобрить',
+                                style: {
+                                    width: 36, height: 36, borderRadius: 8, border: 'none',
+                                    background: '#dcfce7', cursor: 'pointer', fontSize: 16,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }
+                            }, '✅'),
+                            React.createElement('button', {
+                                onClick: () => rejectPending(item),
+                                title: 'Отклонить',
+                                style: {
+                                    width: 36, height: 36, borderRadius: 8, border: 'none',
+                                    background: '#fee2e2', cursor: 'pointer', fontSize: 16,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }
+                            }, '❌')
+                        )
+                    )
+                );
+            })
+        );
+    }
+
     function buildGate(props) {
         const {
             clientId,
@@ -1211,6 +1406,28 @@
                                             HEYS.TrialQueue?.NewLeadsBadge
                                                 ? React.createElement(HEYS.TrialQueue.NewLeadsBadge, null, '📋 Очередь')
                                                 : '📋 Очередь'
+                                        ),
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                onClick: () => {
+                                                    console.info('[HEYS.gate] 🔘 Переключение на таб Заявки');
+                                                    setCuratorTab('moderation');
+                                                },
+                                                style: {
+                                                    flex: 1,
+                                                    padding: '8px 14px',
+                                                    border: 'none',
+                                                    borderRadius: 8,
+                                                    fontSize: 13,
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    background: curatorTab === 'moderation' ? 'rgba(255,255,255,0.95)' : 'transparent',
+                                                    color: curatorTab === 'moderation' ? '#0f172a' : 'rgba(255,255,255,0.8)'
+                                                }
+                                            },
+                                            React.createElement(PendingProductsBadge, null, '✅ Заявки')
                                         )
                                     ),
                                     // Warnings (cache/error) в хедере
@@ -1525,7 +1742,10 @@
                                     ),
 
                                     // === TAB: QUEUE (Очередь на триал) ===
-                                    curatorTab === 'queue' && React.createElement(HEYS.TrialQueue.TrialQueueAdmin)
+                                    curatorTab === 'queue' && React.createElement(HEYS.TrialQueue.TrialQueueAdmin),
+
+                                    // === TAB: MODERATION (Заявки на продукты) ===
+                                    curatorTab === 'moderation' && React.createElement(ModerationTab, { clients })
                                 ),
 
                                 // FOOTER: Кнопка создания (прибита к низу)

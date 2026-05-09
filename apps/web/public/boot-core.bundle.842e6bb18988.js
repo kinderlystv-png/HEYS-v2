@@ -13083,28 +13083,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             onClick: () => {
               if (activeSubtab !== 'shared') setActiveSubtab('shared');
             },
-            style: { flex: 1, borderRadius: '6px', position: 'relative' }
-          },
-            '🌐 Общая база',
-            // Бейдж pending
-            pendingProducts.length > 0 && React.createElement('span', {
-              style: {
-                position: 'absolute',
-                top: '-4px',
-                right: '-4px',
-                background: '#ef4444',
-                color: '#fff',
-                borderRadius: '50%',
-                minWidth: '18px',
-                height: '18px',
-                fontSize: '11px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }
-            }, pendingProducts.length)
-          )
+            style: { flex: 1, borderRadius: '6px' }
+          }, '🌐 Общая база')
         )
       ),
 
@@ -13320,73 +13300,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         // 🌐 ПОДВКЛАДКА: Общая база (Curator-only)
         // ============================================
         React.createElement(React.Fragment, null,
-          // Блок Pending-заявок
-          React.createElement('div', { className: 'card', style: { marginBottom: '8px' } },
-            React.createElement('div', {
-              className: 'section-title',
-              style: { display: 'flex', alignItems: 'center', gap: '8px' }
-            },
-              '🆕 Ожидают подтверждения',
-              pendingProducts.length > 0 && React.createElement('span', {
-                style: {
-                  background: '#ef4444',
-                  color: '#fff',
-                  borderRadius: '12px',
-                  padding: '2px 8px',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }
-              }, pendingProducts.length)
-            ),
-            pendingLoading ? (
-              React.createElement('div', { style: { padding: '16px', textAlign: 'center', color: 'var(--text-muted)' } }, '⏳ Загрузка заявок...')
-            ) : pendingProducts.length === 0 ? (
-              React.createElement('div', { style: { padding: '16px', textAlign: 'center', color: 'var(--text-muted)' } }, '✅ Нет заявок на модерацию')
-            ) : (
-              React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-                pendingProducts.map(pending => {
-                  const p = pending.product_data || {};
-                  return React.createElement('div', {
-                    key: pending.id,
-                    className: 'card',
-                    style: { padding: '12px', background: 'var(--bg-secondary, #f9fafb)', border: '1px solid var(--border-color, #e5e5e5)' }
-                  },
-                    React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' } },
-                      React.createElement('div', { style: { flex: 1 } },
-                        React.createElement('div', { style: { fontWeight: '500', marginBottom: '4px' } }, p.name || pending.name_norm),
-                        React.createElement('div', { style: { fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-                          React.createElement('span', null, `${Math.round(getDerivedKcal(p))} ккал`),
-                          React.createElement('span', null, `Б:${p.protein100 || 0}`),
-                          React.createElement('span', null, `У:${(p.simple100 || 0) + (p.complex100 || 0)}`),
-                          React.createElement('span', null, `Ж:${(p.badFat100 || 0) + (p.goodFat100 || 0) + (p.trans100 || 0)}`),
-                          p.gi && React.createElement('span', null, `ГИ:${p.gi}`)
-                        ),
-                        React.createElement('div', { style: { fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' } },
-                          `📅 ${new Date(pending.created_at).toLocaleDateString('ru-RU')}`
-                        )
-                      ),
-                      React.createElement('div', { style: { display: 'flex', gap: '4px' } },
-                        React.createElement('button', {
-                          className: 'btn acc',
-                          onClick: () => approvePending(pending),
-                          style: { padding: '6px 10px', fontSize: '12px' }
-                        }, '✅'),
-                        React.createElement('button', {
-                          className: 'btn',
-                          onClick: () => {
-                            const reason = prompt('Причина отклонения (опционально):');
-                            if (reason !== null) rejectPending(pending, reason);
-                          },
-                          style: { padding: '6px 10px', fontSize: '12px' }
-                        }, '❌')
-                      )
-                    )
-                  );
-                })
-              )
-            )
-          ),
-
           // Таблица ВСЕХ продуктов общей базы (как в личной вкладке)
           // === ТАБЛИЦА ПРОДУКТОВ (Shared) ===
           React.createElement('div', { className: 'card tone-blue' },
