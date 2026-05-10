@@ -13009,7 +13009,171 @@ NOVA: 1
         }, [state]);
 
         if (!state) return null;
+        if (state.mode === 'recent-list') {
+            return React.createElement(RecentMealsListView, state);
+        }
         return React.createElement(CopyMealView, state);
+    }
+
+    // === Helper: emoji для типа приёма ===
+    function getMealEmoji(meal) {
+        if (!meal) return '🍽️';
+        if (meal.mealType === 'breakfast') return '🌅';
+        if (meal.mealType === 'lunch') return '🌞';
+        if (meal.mealType === 'dinner') return '🌆';
+        if (meal.mealType === 'snack') return '🍎';
+        const t = (meal.time || '').split(':')[0];
+        const h = parseInt(t, 10);
+        if (Number.isFinite(h)) {
+            if (h >= 6 && h < 11) return '🌅';
+            if (h >= 11 && h < 16) return '🌞';
+            if (h >= 16 && h < 21) return '🌆';
+        }
+        return '🍎';
+    }
+
+    // === UI: список недавних приёмов ===
+    function RecentMealsListView({ recentEntries, onPick }) {
+        const entries = (recentEntries || []);
+
+        const handleBackdropClick = (e) => {
+            if (e.target === e.currentTarget) hide();
+        };
+
+        const handlePick = (entry) => {
+            hide();
+            if (typeof onPick === 'function') onPick(entry.meal, entry.dateStr);
+        };
+
+        const header = React.createElement('div', {
+            style: {
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '14px 20px 12px',
+                borderBottom: '1px solid var(--border, #e2e8f0)',
+                flexShrink: 0,
+            },
+        },
+            React.createElement('div', {
+                style: {
+                    flex: '1 1 auto', minWidth: 0,
+                    fontSize: '16px', fontWeight: 600,
+                    color: 'var(--text, #111827)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                },
+            }, 'Повторить недавний приём'),
+            React.createElement('button', {
+                type: 'button',
+                onClick: () => hide(),
+                'aria-label': 'Закрыть',
+                style: {
+                    flexShrink: 0, width: '32px', height: '32px',
+                    borderRadius: '50%', border: 'none',
+                    background: 'var(--border, #f1f5f9)',
+                    color: 'var(--muted, #64748b)',
+                    fontSize: '16px', cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                },
+            }, '✕'),
+        );
+
+        const body = React.createElement('div', {
+            style: {
+                flex: '1 1 auto', minHeight: 0, overflowY: 'auto',
+                padding: '12px 20px 16px',
+                display: 'flex', flexDirection: 'column', gap: '10px',
+            },
+        },
+            entries.length === 0
+                ? React.createElement('div', {
+                    style: { padding: '24px 12px', fontSize: '14px', color: 'var(--muted, #94a3b8)', fontStyle: 'italic', textAlign: 'center' },
+                }, 'За последние 2 дня нет приёмов с продуктами')
+                : entries.map((entry, idx) => {
+                    const m = entry.meal;
+                    const items = m.items || [];
+                    const totalKcal = items.reduce((s, it) => s + Math.round(((Number(it.kcal100) || 0) * (Number(it.grams) || 0)) / 100), 0);
+                    const emoji = getMealEmoji(m);
+                    const previewItems = items.slice(0, 5);
+                    const moreCount = items.length - previewItems.length;
+                    const headerLine = `${emoji} ${m.name || 'Приём'}${m.time ? ' · ' + m.time : ''} · ${entry.dateLabel}`;
+                    return React.createElement('button', {
+                        key: `${entry.dateStr}_${m.id || idx}`,
+                        type: 'button',
+                        onClick: () => handlePick(entry),
+                        style: {
+                            display: 'flex', flexDirection: 'column', gap: '6px',
+                            padding: '12px 14px',
+                            borderRadius: '14px',
+                            border: '1px solid var(--border, #e2e8f0)',
+                            background: 'var(--card, #fff)',
+                            cursor: 'pointer', textAlign: 'left', minWidth: 0,
+                            transition: 'background 0.15s, border 0.15s',
+                        },
+                    },
+                        React.createElement('div', {
+                            style: {
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                fontSize: '14px', fontWeight: 600,
+                                color: 'var(--text, #111827)',
+                            },
+                        },
+                            React.createElement('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, headerLine),
+                            React.createElement('span', {
+                                style: { flexShrink: 0, fontSize: '12px', color: 'var(--muted, #64748b)', fontVariantNumeric: 'tabular-nums' },
+                            }, `${totalKcal}к · ${items.length} прод.`),
+                        ),
+                        React.createElement('div', {
+                            style: { display: 'flex', flexDirection: 'column', gap: '2px' },
+                        },
+                            previewItems.map((it, i) => {
+                                const g = Number(it.grams) || 0;
+                                const k = Math.round(((Number(it.kcal100) || 0) * g) / 100);
+                                return React.createElement('div', {
+                                    key: it.id || i,
+                                    style: { display: 'flex', gap: '6px', fontSize: '12px', color: 'var(--muted, #64748b)' },
+                                },
+                                    React.createElement('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.name || '—'),
+                                    React.createElement('span', { style: { flexShrink: 0, fontVariantNumeric: 'tabular-nums' } }, `${g}г · ${k}к`),
+                                );
+                            }),
+                            moreCount > 0 && React.createElement('div', {
+                                style: { fontSize: '11px', color: 'var(--muted, #94a3b8)', fontStyle: 'italic' },
+                            }, `и ещё ${moreCount} продукта(ов)`),
+                        ),
+                        React.createElement('div', {
+                            style: { fontSize: '12px', fontWeight: 600, color: 'var(--acc, #3b82f6)', alignSelf: 'flex-end' },
+                        }, 'Повторить →'),
+                    );
+                }),
+        );
+
+        return React.createElement('div', {
+            className: 'copy-meal-modal-backdrop',
+            onClick: handleBackdropClick,
+            style: {
+                position: 'fixed', inset: 0,
+                background: 'rgba(0, 0, 0, 0.55)',
+                backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 'calc(20px + var(--safe-area-top, 0px)) calc(16px + var(--safe-area-right, 0px)) calc(32px + var(--safe-area-bottom, 0px)) calc(16px + var(--safe-area-left, 0px))',
+                zIndex: 10000,
+                animation: 'copyMealFadeIn 0.15s ease-out',
+            },
+        },
+            React.createElement('div', {
+                className: 'copy-meal-modal',
+                onClick: (e) => e.stopPropagation(),
+                style: {
+                    width: '100%', maxWidth: '480px',
+                    height: '100%', maxHeight: 'calc(100dvh - 52px - var(--safe-area-top, 0px) - var(--safe-area-bottom, 0px))',
+                    display: 'flex', flexDirection: 'column',
+                    background: 'var(--card, #fff)',
+                    borderRadius: '20px',
+                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+                    overflow: 'hidden',
+                    animation: 'copyMealScaleIn 0.18s ease-out',
+                },
+            }, header, body),
+        );
     }
 
     // === UI ===
@@ -13472,7 +13636,20 @@ NOVA: 1
         if (setModalState) setModalState(null);
     }
 
-    HEYS.CopyMealModal = { show, hide, close: hide };
+    function showRecentList(options = {}) {
+        ensureRoot();
+        ensureAnimations();
+        if (HEYS.ModalManager) {
+            modalCleanup = HEYS.ModalManager.register('copy-meal-modal', () => hide(true));
+        }
+        const apply = () => {
+            if (setModalState) setModalState({ mode: 'recent-list', ...options });
+            else setTimeout(apply, 16);
+        };
+        apply();
+    }
+
+    HEYS.CopyMealModal = { show, showRecentList, hide, close: hide };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => { ensureRoot(); ensureAnimations(); });

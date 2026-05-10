@@ -17195,6 +17195,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
     }
 
+    // Today's local ISO date (matches heys_app_date_state_v1.js::getTodayISO — <3am = yesterday)
+    function _getTodayISO() {
+        const d = new Date();
+        if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+        return d.getFullYear()
+            + '-' + String(d.getMonth() + 1).padStart(2, '0')
+            + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
     // =========================
     // MealCard
     // =========================
@@ -17412,23 +17421,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const isCurrentMeal = displayIndex === 0 && !isStale;
 
         // «Повторить как вчера» — загружаем данные только для пустых приёмов на сегодня
-        const isToday = date === ((HEYS.utils && HEYS.utils.getTodayStr && HEYS.utils.getTodayStr()) || '');
+        const isToday = date === _getTodayISO();
         const isEmpty = (meal.items || []).length === 0;
         const canRepeatYesterday = isToday && isEmpty && typeof onRepeatYesterday === 'function';
 
         const [yesterdayMeal, setYesterdayMeal] = React.useState(null);
+        const [hasRecentMeals, setHasRecentMeals] = React.useState(false);
         React.useEffect(() => {
-            if (!canRepeatYesterday) { setYesterdayMeal(null); return; }
+            if (!canRepeatYesterday) {
+                setYesterdayMeal(null);
+                setHasRecentMeals(false);
+                return;
+            }
             try {
-                const parts = date.split('-');
-                const d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
-                d.setDate(d.getDate() - 1);
-                const yStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-                const yDay = (U.lsGet || (() => null))(_scopedDayKey(yStr), null);
-                const yMeal = yDay && yDay.meals ? findYesterdayEquivalent(meal, yDay.meals) : null;
-                setYesterdayMeal((yMeal && (yMeal.items || []).length > 0) ? yMeal : null);
-            } catch (e) { setYesterdayMeal(null); }
+                const recent = loadRecentMealsForDate(date, 2);
+                setHasRecentMeals(recent.length > 0);
+                const yMeals = recent.filter(e => e.dateLabel === 'вчера').map(e => e.meal);
+                const yMatch = findYesterdayEquivalent(meal, yMeals);
+                setYesterdayMeal((yMatch && (yMatch.items || []).length > 0) ? yMatch : null);
+            } catch (e) {
+                setYesterdayMeal(null);
+                setHasRecentMeals(false);
+            }
         }, [canRepeatYesterday, meal.name, meal.mealType, meal.time, date]);
+
+        const handleOpenRecentList = React.useCallback((e) => {
+            if (e && e.stopPropagation) e.stopPropagation();
+            const recent = loadRecentMealsForDate(date, 2);
+            if (!recent.length) {
+                HEYS.Toast?.info?.('За последние 2 дня нет приёмов с продуктами');
+                return;
+            }
+            if (!HEYS.CopyMealModal || !HEYS.CopyMealModal.showRecentList) return;
+            HEYS.CopyMealModal.showRecentList({
+                recentEntries: recent,
+                onPick: (pickedMeal) => {
+                    if (typeof onRepeatYesterday === 'function') onRepeatYesterday(mealIndex, pickedMeal);
+                },
+            });
+        }, [date, mealIndex, onRepeatYesterday]);
 
         const mealActivityContext = React.useMemo(() => {
             if (!HEYS.InsulinWave?.calculateActivityContext) return null;
@@ -17813,7 +17844,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 ),
             )),
             React.createElement('div', { className: 'mobile-products-list' },
-                canRepeatYesterday && yesterdayMeal && React.createElement('div', {
+                canRepeatYesterday && (yesterdayMeal || hasRecentMeals) && React.createElement('div', {
                     className: 'repeat-yesterday-suggestion',
                     style: {
                         margin: '0 0 10px',
@@ -17823,20 +17854,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         overflow: 'hidden',
                     },
                 },
-                    React.createElement('button', {
-                        type: 'button',
-                        onClick: () => onRepeatYesterday(mealIndex, yesterdayMeal),
-                        style: {
-                            width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '10px 14px 8px', background: 'transparent', border: 'none',
-                            cursor: 'pointer', textAlign: 'left',
-                        },
-                    },
-                        React.createElement('span', { style: { fontSize: '14px' } }, '↩'),
-                        React.createElement('span', { style: { flex: '1 1 auto', minWidth: 0, fontSize: '13px', fontWeight: 600, color: 'var(--acc, #3b82f6)' } },
-                            `Повторить вчерашний «${yesterdayMeal.name || 'Приём'}»`),
-                    ),
                     React.createElement('div', {
+                        style: { display: 'flex', gap: '6px', padding: '8px 10px', flexWrap: 'wrap' },
+                    },
+                        yesterdayMeal && React.createElement('button', {
+                            type: 'button',
+                            onClick: () => onRepeatYesterday(mealIndex, yesterdayMeal),
+                            title: 'Скопировать вчерашний приём',
+                            style: {
+                                flex: '1 1 200px', minWidth: 0,
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                padding: '8px 12px', borderRadius: '10px',
+                                border: 'none', background: 'rgba(59,130,246,0.08)',
+                                color: 'var(--acc, #3b82f6)', fontSize: '13px', fontWeight: 600,
+                                cursor: 'pointer', textAlign: 'left',
+                            },
+                        },
+                            React.createElement('span', { style: { flexShrink: 0 } }, '↩'),
+                            React.createElement('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+                                `Вчерашний «${yesterdayMeal.name || 'Приём'}»`),
+                        ),
+                        hasRecentMeals && React.createElement('button', {
+                            type: 'button',
+                            onClick: handleOpenRecentList,
+                            title: 'Выбрать из недавних приёмов',
+                            style: {
+                                flex: yesterdayMeal ? '0 0 auto' : '1 1 auto', minWidth: 0,
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                padding: '8px 12px', borderRadius: '10px',
+                                border: '1px solid var(--border, #e2e8f0)',
+                                background: 'var(--card, #fff)',
+                                color: 'var(--text, #374151)', fontSize: '13px', fontWeight: 600,
+                                cursor: 'pointer', textAlign: 'left',
+                            },
+                        },
+                            React.createElement('span', { style: { flexShrink: 0 } }, '📋'),
+                            React.createElement('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+                                'Повторить приём из недавних'),
+                        ),
+                    ),
+                    yesterdayMeal && React.createElement('div', {
                         style: { padding: '0 14px 10px', display: 'flex', flexDirection: 'column', gap: '2px' },
                     },
                         (yesterdayMeal.items || []).slice(0, 4).map((it, idx) => {
@@ -20453,6 +20510,43 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             });
     }
 
+    function loadRecentMealsForDate(targetDate, daysBack) {
+        if (!targetDate) return [];
+        const back = Math.max(1, Math.min(7, +daysBack || 2));
+        const parts = targetDate.split('-');
+        if (parts.length !== 3) return [];
+        const baseD = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+        const labels = ['вчера', 'позавчера', '3 дня назад', '4 дня назад', '5 дней назад', '6 дней назад', '7 дней назад'];
+        const out = [];
+        const lsGetFn = (U && U.lsGet) || (() => null);
+        for (let i = 1; i <= back; i++) {
+            const d = new Date(baseD);
+            d.setDate(d.getDate() - i);
+            const dStr = d.getFullYear()
+                + '-' + String(d.getMonth() + 1).padStart(2, '0')
+                + '-' + String(d.getDate()).padStart(2, '0');
+            try {
+                const dayData = lsGetFn(_scopedDayKey(dStr), null);
+                if (!dayData || !Array.isArray(dayData.meals)) continue;
+                const label = labels[i - 1] || dStr;
+                dayData.meals.forEach(m => {
+                    if (!m || !(m.items || []).length) return;
+                    out.push({ dateStr: dStr, dateLabel: label, meal: m });
+                });
+            } catch (e) { /* ignore */ }
+        }
+        const toMins = (U && U.timeToMinutes) || ((t) => {
+            if (!t) return -1;
+            const p = (t || '').split(':');
+            return p.length >= 2 ? +p[0] * 60 + +p[1] : -1;
+        });
+        out.sort((a, b) => {
+            if (a.dateStr !== b.dateStr) return a.dateStr < b.dateStr ? 1 : -1;
+            return (toMins(b.meal.time) || 0) - (toMins(a.meal.time) || 0);
+        });
+        return out;
+    }
+
     function findYesterdayEquivalent(todayMeal, yesterdayMeals) {
         if (!yesterdayMeals || !yesterdayMeals.length) return null;
         const withItems = yesterdayMeals.filter(m => m && (m.items || []).length > 0);
@@ -20824,6 +20918,43 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 return;
                             }
 
+                            // Подгружаем недавние приёмы — для опциональной кнопки «Повторить из недавних».
+                            // Только когда новый приём ещё пуст и у нас есть что предложить за последние 2 дня.
+                            const currentMealForFlow = HEYS.Day?.getDay?.()?.meals?.[mealIndex];
+                            const newMealIsEmpty = !((currentMealForFlow?.items || []).length);
+                            const recentMealsForFlow = newMealIsEmpty ? loadRecentMealsForDate(date, 2) : [];
+
+                            const handleFlowRepeatRecent = () => {
+                                window.HEYS.ConfirmModal.hide();
+                                const actualIdx = findMealIndex();
+                                if (actualIdx < 0) return;
+                                const fresh = loadRecentMealsForDate(date, 2);
+                                if (!fresh.length) {
+                                    HEYS.Toast?.info?.('За последние 2 дня нет приёмов с продуктами');
+                                    return;
+                                }
+                                if (!HEYS.CopyMealModal?.showRecentList) return;
+                                setTimeout(() => {
+                                    HEYS.CopyMealModal.showRecentList({
+                                        recentEntries: fresh,
+                                        onPick: (pickedMeal) => {
+                                            if (!pickedMeal || !(pickedMeal.items || []).length) return;
+                                            const cloned = pickedMeal.items.map(it => ({ ...it, id: uid('it_') }));
+                                            markUndoWindow(3000);
+                                            setDay(prevDay => {
+                                                const newMeals = (prevDay.meals || []).map((m, i) =>
+                                                    i === actualIdx ? { ...m, items: [...(m.items || []), ...cloned] } : m
+                                                );
+                                                const updated = { ...prevDay, meals: newMeals, updatedAt: Date.now() };
+                                                persistDayData(updated, 'flow_repeat_recent_meal');
+                                                return updated;
+                                            });
+                                            HEYS.Toast?.success?.(`Скопировано продуктов: ${cloned.length}`);
+                                        },
+                                    });
+                                }, 100);
+                            };
+
                             window.HEYS.ConfirmModal.show({
                                 icon: '🍽️',
                                 title: `Добавить продукты в ${mealName}`,
@@ -20835,6 +20966,34 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                         margin: '8px 0'
                                     }
                                 },
+                                    // Кнопка "↩ Повторить приём из недавних" — фиолетовый, только если есть недавние и приём пуст
+                                    recentMealsForFlow.length > 0 && React.createElement('button', {
+                                        className: 'flow-selection-btn flow-selection-btn--repeat-recent',
+                                        style: {
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            padding: '14px 16px',
+                                            border: 'none',
+                                            borderRadius: '12px',
+                                            background: '#6366f1',
+                                            color: '#ffffff',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            transition: 'all 0.15s ease'
+                                        },
+                                        onClick: handleFlowRepeatRecent
+                                    },
+                                        React.createElement('span', { style: { fontSize: '28px' } }, '↩'),
+                                        React.createElement('div', { style: { flex: 1 } },
+                                            React.createElement('div', {
+                                                style: { fontWeight: '700', color: '#ffffff', fontSize: '15px' }
+                                            }, 'Повторить приём из недавних'),
+                                            React.createElement('div', {
+                                                style: { fontSize: '12px', color: 'rgba(255,255,255,0.85)', marginTop: '2px' }
+                                            }, 'Скопировать продукты из приёма за последние 2 дня')
+                                        )
+                                    ),
                                     // Кнопка "Быстро добавить 1 продукт" — синий primary fill (как в summary)
                                     React.createElement('button', {
                                         className: 'flow-selection-btn flow-selection-btn--quick',
@@ -21381,8 +21540,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
 
             // Целевой день = всегда сегодня
-            const todayStr = (HEYS.utils && HEYS.utils.getTodayStr && HEYS.utils.getTodayStr())
-                || new Date().toISOString().slice(0, 10);
+            const todayStr = _getTodayISO();
             const sourceDate = date;
             const targetDay = (todayStr === date)
                 ? dayRef.current

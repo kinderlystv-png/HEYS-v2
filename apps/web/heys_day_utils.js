@@ -1413,13 +1413,11 @@
         }
       } catch (_) { /* noop */ }
 
-      // 4. Stamp-recovered → overlay TypeB rows (single source of truth).
-      // Раньше stamp-recovered кешировались в _stampResolutionCache (lazy resolution).
-      // Теперь пишем напрямую в overlay как TypeB чтобы:
-      //   - модалка == таблица == облако (нет расхождений)
-      //   - продукты доступны на других устройствах через cloud sync
-      //   - нет «Восстановлено N из истории» баннера на каждый cold start
-      // Дедуп по нормализованному имени против merged view предотвращает дубли с TypeA.
+      // 4. Stamp-recovered → overlay (single source of truth).
+      // Если имя совпадает с продуктом из shared catalog → создаём TypeA-ссылку
+      // (через addFromShared), а не TypeB. Это критично — иначе при попадании
+      // продукта в общую базу позже у юзера остаётся «осиротевший» TypeB-дубликат.
+      // Если совпадения нет → создаём TypeB (truly custom).
       const stampOnly = recovered.filter(p => p._recoveredFrom === 'stamp');
       if (stampOnly.length > 0 && global.HEYS?.OverlayStore?.upsertRow) {
         const Overlay = global.HEYS.OverlayStore;
@@ -1429,10 +1427,35 @@
         merged.forEach(r => {
           if (r && r.name) existingNamesLower.add(normalizeName(r.name));
         });
-        let upserted = 0;
+        // Build name → shared product index from full catalog (not just merged view)
+        // — иначе пропускаем продукты из shared, которых ещё нет в overlay этого юзера.
+        const sharedByName = new Map();
+        if (sharedById && typeof sharedById.forEach === 'function') {
+          sharedById.forEach((sharedProd) => {
+            if (sharedProd && sharedProd.name) {
+              sharedByName.set(normalizeName(sharedProd.name), sharedProd);
+            }
+          });
+        }
+        let upsertedTypeA = 0;
+        let upsertedTypeB = 0;
         for (const p of stampOnly) {
           if (!p || p.id == null || !p.name) continue;
-          if (existingNamesLower.has(normalizeName(p.name))) continue; // skip — уже есть в overlay
+          const nameLower = normalizeName(p.name);
+          if (existingNamesLower.has(nameLower)) continue; // skip — уже есть в overlay
+
+          // Проверяем shared catalog: если имя совпадает → TypeA link
+          const sharedMatch = sharedByName.get(nameLower);
+          if (sharedMatch && global.HEYS?.products?.addFromShared) {
+            try {
+              global.HEYS.products.addFromShared(sharedMatch);
+              existingNamesLower.add(nameLower);
+              upsertedTypeA++;
+              continue;
+            } catch (_) { /* fall through to TypeB */ }
+          }
+
+          // Иначе — TypeB (truly custom)
           const typeBRow = Object.assign({}, p, {
             _custom: true,
             in_my_list: true,
@@ -1441,12 +1464,13 @@
           });
           try {
             Overlay.upsertRow(typeBRow);
-            existingNamesLower.add(normalizeName(p.name));
-            upserted++;
+            existingNamesLower.add(nameLower);
+            upsertedTypeB++;
           } catch (_) { /* noop */ }
         }
-        if (upserted > 0) {
-          console.info('[HEYS.products] orphan-recovery → overlay TypeB upserted:', upserted);
+        if (upsertedTypeA + upsertedTypeB > 0) {
+          console.info('[HEYS.products] orphan-recovery → overlay:',
+            { typeA: upsertedTypeA, typeB: upsertedTypeB });
         }
       }
       // Shared-recovered (full nutrients) already went through addFromShared → setAll above.

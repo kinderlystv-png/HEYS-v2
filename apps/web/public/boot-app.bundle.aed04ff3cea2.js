@@ -12700,7 +12700,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
-        const NON_BLOCKING_SYNC_DELAY = 15000;
+        const NON_BLOCKING_SYNC_DELAY = 10000;
         const SYNC_STATUS_POLL_ACTIVE_MS = 1200;
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
         const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
@@ -20966,10 +20966,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 : '1 изменение ждёт синхронизации';
         const pendingSyncBannerSummary = pendingBreakdownText
             ? (isBackgroundPendingSync
-                ? `${pendingBreakdownText} · ничего не потеряется`
+                ? `${pendingBreakdownText} · ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.`
                 : `${pendingBreakdownText} · можно нажать на облако`)
             : (isBackgroundPendingSync
-                ? 'Если интернет тормозит — ничего не потеряется.'
+                ? 'Если интернет тормозит — ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.'
                 : 'Нажми на облако, чтобы подтолкнуть отправку.');
         const pad2 = (n) => String(n).padStart(2, '0');
         const formatLocalISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
