@@ -14378,11 +14378,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // Не автовыбираем клиента — куратор должен выбрать сам через модалку
                 // clientId остаётся null → показывается модалка выбора клиента
 
-                const rawProducts = Array.isArray(readStoredValue('heys_products', []))
-                    ? readStoredValue('heys_products', [])
-                    : [];
+                const rawProducts = window.HEYS?.products?.getAll?.() || [];
                 const loadedProducts = migrateProductsKcalNetAtwater(rawProducts);
-                if (loadedProducts !== rawProducts) writeStoredValue('heys_products', loadedProducts);
+                if (loadedProducts !== rawProducts) {
+                    window.HEYS?.products?.setAll?.(loadedProducts, { source: 'atwater-migration' });
+                }
                 setProducts(loadedProducts);
                 setSyncVer((v) => v + 1);
             } catch (e) {

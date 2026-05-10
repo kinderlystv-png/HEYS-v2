@@ -773,7 +773,7 @@
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
-        const NON_BLOCKING_SYNC_DELAY = 10000;
+        const NON_BLOCKING_SYNC_DELAY = 15000;
         const SYNC_STATUS_POLL_ACTIVE_MS = 1200;
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
         const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
@@ -2451,11 +2451,11 @@
                 // Не автовыбираем клиента — куратор должен выбрать сам через модалку
                 // clientId остаётся null → показывается модалка выбора клиента
 
-                const rawProducts = Array.isArray(readStoredValue('heys_products', []))
-                    ? readStoredValue('heys_products', [])
-                    : [];
+                const rawProducts = window.HEYS?.products?.getAll?.() || [];
                 const loadedProducts = migrateProductsKcalNetAtwater(rawProducts);
-                if (loadedProducts !== rawProducts) writeStoredValue('heys_products', loadedProducts);
+                if (loadedProducts !== rawProducts) {
+                    window.HEYS?.products?.setAll?.(loadedProducts, { source: 'atwater-migration' });
+                }
                 setProducts(loadedProducts);
                 setSyncVer((v) => v + 1);
             } catch (e) {

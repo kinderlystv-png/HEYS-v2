@@ -5924,8 +5924,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.products.setAll(nextProducts, { source: 'edit-product' });
     } else if (HEYS.store?.set) {
       HEYS.store.set('heys_products', nextProducts);
-    } else if (U.lsSet) {
-      U.lsSet('heys_products', nextProducts);
     }
 
     console.info('[HEYS.portions] 📣 Отправляем событие heys:local-product-updated', {
@@ -5981,8 +5979,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.products.setAll(nextProducts, { source: 'mark-user-modified' });
     } else if (HEYS.store?.set) {
       HEYS.store.set('heys_products', nextProducts);
-    } else if (U.lsSet) {
-      U.lsSet('heys_products', nextProducts);
     }
 
     if (idx !== -1) {
@@ -6168,10 +6164,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           HEYS.products.setAll(updatedProducts, { source: 'portions-sync-shared' });
         } else if (HEYS.store?.set) {
           HEYS.store.set('heys_products', updatedProducts);
-        } else if (U.lsSet) {
-          U.lsSet('heys_products', updatedProducts);
-        } else {
-          writeRawValue('heys_products', updatedProducts);
         }
       } else {
         console.warn('[HEYS.portions] ⚠️ Не найден локальный продукт для синхронизации', { sharedId, sharedName });
@@ -6388,8 +6380,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.products.setAll(nextProducts, { source: 'create-product-step' });
     } else if (HEYS.store?.set) {
       HEYS.store.set('heys_products', nextProducts);
-    } else if (U.lsSet) {
-      U.lsSet('heys_products', nextProducts);
     }
 
     // v4.8.0: Cascade update to MealItems in all days
@@ -8863,9 +8853,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           HEYS.products.setAll(filtered, { source: 'delete-product', allowShrink: true });
         } else if (HEYS.store?.set) {
           HEYS.store.set('heys_products', filtered);
-        } else if (U.lsSet) {
-          U.lsSet('heys_products', filtered);
-          console.warn('[AddProductStep] ⚠️ Продукт удалён только локально (нет HEYS.store)');
         }
 
         setProductsVersion(v => v + 1);

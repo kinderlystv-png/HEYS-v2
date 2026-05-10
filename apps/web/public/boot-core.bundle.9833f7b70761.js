@@ -9734,9 +9734,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
       if (Array.isArray(products) && window.HEYS && window.HEYS.store && typeof window.HEYS.store.set === 'function') {
         window.HEYS.store.set('heys_products', products);
-      } else if (window.HEYS && window.HEYS.utils && typeof window.HEYS.utils.lsSet === 'function') {
-        // fallback
-        window.HEYS.utils.lsSet('heys_products', products);
       }
     }, [products]);
 
@@ -9777,9 +9774,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         if (window.HEYS?.store?.set) {
           window.HEYS.store.set('heys_products', patched);
           console.info('[baza] 🆔 migrate ids: localStorage обновлён синхронно (HEYS.store.set)');
-        } else if (window.HEYS?.utils?.lsSet) {
-          window.HEYS.utils.lsSet('heys_products', patched);
-          console.info('[baza] 🆔 migrate ids: localStorage обновлён синхронно (lsSet)');
         }
         setProducts(patched);
       } else if (cleaned.length < products.length) {
@@ -11215,9 +11209,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         if (window.HEYS.store && typeof window.HEYS.store.set === 'function') {
           window.HEYS.store.set('heys_products', filtered);
           lsWriteMethod = 'HEYS.store.set';
-        } else if (window.HEYS.utils && typeof window.HEYS.utils.lsSet === 'function') {
-          window.HEYS.utils.lsSet('heys_products', filtered);
-          lsWriteMethod = 'HEYS.utils.lsSet';
         }
       }
       const lsAfter = (window.HEYS?.store?.get?.('heys_products', null))
@@ -12107,8 +12098,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           HEYS.products.setAll(mergedProducts, { source: 'import-pasted' });
         } else if (HEYS.store?.set) {
           HEYS.store.set('heys_products', mergedProducts);
-        } else if (HEYS.utils?.lsSet) {
-          HEYS.utils.lsSet('heys_products', mergedProducts);
         }
 
         // 11. Обновить UI
@@ -13734,7 +13723,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         if (Array.isArray(recovered) && recovered.length > 0) {
           console.info('[HEYS.products] getAll self-heal', { len: recovered.length });
           if (HEYS.store?.set) HEYS.store.set('heys_products', recovered);
-          else if (HEYS.utils?.lsSet) HEYS.utils.lsSet('heys_products', recovered);
           result = recovered;
         }
       }
@@ -13767,8 +13755,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           if (best && bestLen > result.length) {
             if (HEYS.store?.set) {
               HEYS.store.set('heys_products', best);
-            } else if (HEYS.utils?.lsSet) {
-              HEYS.utils.lsSet('heys_products', best);
             }
             result = best;
           }
@@ -13929,8 +13915,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             samplePortions: verify.find(p => p?.portions?.length > 0)?.portions
           });
         }
-      } else if (HEYS.utils && HEYS.utils.lsSet) {
-        HEYS.utils.lsSet('heys_products', arr);
       }
       try {
         // Compact setAll log only when length changes meaningfully OR shrink path.
