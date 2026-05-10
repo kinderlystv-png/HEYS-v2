@@ -21564,9 +21564,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
                                 // Fallback chain для products
                                 const effectiveProducts = (products && products.length > 0) ? products
-                                    : (window.HEYS.products?.getAll?.() || [])
-                                        .length > 0 ? window.HEYS.products.getAll()
-                                        : (U.lsGet?.('heys_products', []) || []);
+                                    : (window.HEYS.products?.getAll?.() || []);
                                 // Fallback chain для profile
                                 const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
                                 if (!getActiveDaysForMonthFn || !clientId || effectiveProducts.length === 0) {
@@ -27579,14 +27577,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     if (Array.isArray(stateProducts) && stateProducts.length > 0) {
                         backup.products = stateProducts;
                         console.log('[BACKUP] Products from HEYS.products.getAll():', stateProducts.length);
-                    }
-                }
-
-                // Fallback на HEYS.store.get (корректно декомпрессирует данные)
-                if (!backup.products || backup.products.length === 0) {
-                    if (HEYS.store && typeof HEYS.store.get === 'function') {
-                        backup.products = HEYS.store.get('heys_products', []);
-                        console.log('[BACKUP] Products from HEYS.store.get:', backup.products.length);
                     }
                 }
 

@@ -52,14 +52,6 @@
                     }
                 }
 
-                // Fallback на HEYS.store.get (корректно декомпрессирует данные)
-                if (!backup.products || backup.products.length === 0) {
-                    if (HEYS.store && typeof HEYS.store.get === 'function') {
-                        backup.products = HEYS.store.get('heys_products', []);
-                        console.log('[BACKUP] Products from HEYS.store.get:', backup.products.length);
-                    }
-                }
-
                 // Профиль — через HEYS.store.get (учитывает memory cache и scoped keys)
                 if (HEYS.store && typeof HEYS.store.get === 'function') {
                     backup.profile = HEYS.store.get('heys_profile', null);

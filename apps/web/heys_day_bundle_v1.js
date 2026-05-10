@@ -5135,12 +5135,7 @@
   }) {
     const getLatestProducts = React.useCallback(() => {
       const fromHeys = HEYS.products?.getAll?.() || [];
-      const fromStore = HEYS.store?.get?.('heys_products', []) || [];
-      const fromLs = U.lsGet ? U.lsGet('heys_products', []) : [];
-
       if (fromHeys.length > 0) return fromHeys;
-      if (fromStore.length > 0) return fromStore;
-      if (fromLs.length > 0) return fromLs;
       return Array.isArray(products) ? products : [];
     }, [products]);
 
@@ -6111,6 +6106,7 @@
         onChangeStress,
         onRemoveMeal,
         onCopyMeal,
+        onSaveAsPreset,
         onRepeatYesterday,
         openEditGramsModal,
         openTimeEditor,
@@ -7857,6 +7853,29 @@
                             transition: 'transform 0.15s, background 0.15s',
                         },
                     }, '📋 Копировать'),
+                    typeof onSaveAsPreset === 'function' && React.createElement('button', {
+                        className: 'meal-save-preset-btn',
+                        onClick: () => onSaveAsPreset(mealIndex),
+                        title: 'Сохранить приём как набор',
+                        disabled: !((meal.items || []).length),
+                        style: {
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: '#f0fdf4',
+                            color: '#15803d',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: (meal.items || []).length ? 'pointer' : 'not-allowed',
+                            opacity: (meal.items || []).length ? 1 : 0.4,
+                            flexShrink: 0,
+                            marginRight: '4px',
+                            transition: 'transform 0.15s, background 0.15s',
+                        },
+                    }, '💾 Шаблон'),
                     React.createElement('button', {
                         className: 'meal-delete-btn',
                         onClick: () => onRemoveMeal(mealIndex),
@@ -8153,6 +8172,7 @@
             changeMealStress,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             openEditGramsModal,
             openTimeEditor,
@@ -8276,6 +8296,7 @@
                     onChangeStress: changeMealStress,
                     onRemoveMeal: removeMeal,
                     onCopyMeal: openCopyMealModal,
+                    onSaveAsPreset: saveAsPreset,
                     onRepeatYesterday: repeatYesterdayMeal,
                     openEditGramsModal,
                     openTimeEditor,
@@ -8349,6 +8370,7 @@
             changeMealStress,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             openEditGramsModal,
             openTimeEditor,
@@ -8481,6 +8503,7 @@
                 changeMealStress,
                 removeMeal,
                 openCopyMealModal,
+                saveAsPreset,
                 repeatYesterdayMeal,
                 openEditGramsModal,
                 openTimeEditor,
@@ -8575,6 +8598,7 @@
             removeItem,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             loadMoreMeals,
             setShowAllLoadedMeals,
@@ -10232,6 +10256,21 @@
             HEYS.Toast?.success?.(`Повторено: ${cloned.length} продуктов из вчера`);
         }, [setDay, markUndoWindow, persistDayData]);
 
+        const saveAsPreset = React.useCallback((mealIndex) => {
+            const meal = (day.meals || [])[mealIndex];
+            if (!meal || !(meal.items || []).length) {
+                HEYS.Toast?.info?.('Приём пуст — нечего сохранять');
+                return;
+            }
+            HEYS.AddProductStep?.show?.({
+                mealIndex,
+                day,
+                dateKey: date,
+                openPresetsCreate: true,
+                onAdd: addProductToMeal,
+            });
+        }, [day, date, addProductToMeal]);
+
         // Helpers для копирования в произвольную дату (today, обычно)
         const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
             const setSel = window.__heysSetSelectedDate;
@@ -10516,6 +10555,7 @@
             addProductToMeal,
             copyItemsToMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             setGrams,
             removeItem,

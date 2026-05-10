@@ -285,12 +285,7 @@
   }) {
     const getLatestProducts = React.useCallback(() => {
       const fromHeys = HEYS.products?.getAll?.() || [];
-      const fromStore = HEYS.store?.get?.('heys_products', []) || [];
-      const fromLs = U.lsGet ? U.lsGet('heys_products', []) : [];
-
       if (fromHeys.length > 0) return fromHeys;
-      if (fromStore.length > 0) return fromStore;
-      if (fromLs.length > 0) return fromLs;
       return Array.isArray(products) ? products : [];
     }, [products]);
 

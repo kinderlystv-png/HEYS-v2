@@ -915,9 +915,7 @@
         try { return JSON.parse(raw); } catch { return null; }
       };
 
-      const products = Array.isArray(HEYS.products?.getAll?.())
-        ? HEYS.products.getAll()
-        : (Array.isArray(lsGet('heys_products', [])) ? lsGet('heys_products', []) : []);
+      const products = HEYS.products?.getAll?.() || [];
       const productsMap = new Map();
       const productsById = new Map();
       products.forEach((p) => {
@@ -1134,7 +1132,7 @@
       // 1. Собираем текущие продукты в Map по id и по name (normalized)
       // 🆕 v4.9.0: Используем HEYS.products.getAll() вместо localStorage напрямую
       // чтобы не потерять продукты которые уже загружены в память
-      const products = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+      const products = HEYS.products?.getAll?.() || [];
       const productsById = new Map();
       const productsByName = new Map();
       const productsByFingerprint = new Map(); // 🆕 v4.6.0: Индекс по fingerprint

@@ -8665,9 +8665,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         try { return JSON.parse(raw); } catch { return null; }
       };
 
-      const products = Array.isArray(HEYS.products?.getAll?.())
-        ? HEYS.products.getAll()
-        : (Array.isArray(lsGet('heys_products', [])) ? lsGet('heys_products', []) : []);
+      const products = HEYS.products?.getAll?.() || [];
       const productsMap = new Map();
       const productsById = new Map();
       products.forEach((p) => {
@@ -8884,7 +8882,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       // 1. Собираем текущие продукты в Map по id и по name (normalized)
       // 🆕 v4.9.0: Используем HEYS.products.getAll() вместо localStorage напрямую
       // чтобы не потерять продукты которые уже загружены в память
-      const products = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+      const products = HEYS.products?.getAll?.() || [];
       const productsById = new Map();
       const productsByName = new Map();
       const productsByFingerprint = new Map(); // 🆕 v4.6.0: Индекс по fingerprint
@@ -17171,12 +17169,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
   }) {
     const getLatestProducts = React.useCallback(() => {
       const fromHeys = HEYS.products?.getAll?.() || [];
-      const fromStore = HEYS.store?.get?.('heys_products', []) || [];
-      const fromLs = U.lsGet ? U.lsGet('heys_products', []) : [];
-
       if (fromHeys.length > 0) return fromHeys;
-      if (fromStore.length > 0) return fromStore;
-      if (fromLs.length > 0) return fromLs;
       return Array.isArray(products) ? products : [];
     }, [products]);
 
@@ -18147,6 +18140,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         onChangeStress,
         onRemoveMeal,
         onCopyMeal,
+        onSaveAsPreset,
         onRepeatYesterday,
         openEditGramsModal,
         openTimeEditor,
@@ -19893,6 +19887,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                             transition: 'transform 0.15s, background 0.15s',
                         },
                     }, '📋 Копировать'),
+                    typeof onSaveAsPreset === 'function' && React.createElement('button', {
+                        className: 'meal-save-preset-btn',
+                        onClick: () => onSaveAsPreset(mealIndex),
+                        title: 'Сохранить приём как набор',
+                        disabled: !((meal.items || []).length),
+                        style: {
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: '#f0fdf4',
+                            color: '#15803d',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: (meal.items || []).length ? 'pointer' : 'not-allowed',
+                            opacity: (meal.items || []).length ? 1 : 0.4,
+                            flexShrink: 0,
+                            marginRight: '4px',
+                            transition: 'transform 0.15s, background 0.15s',
+                        },
+                    }, '💾 Шаблон'),
                     React.createElement('button', {
                         className: 'meal-delete-btn',
                         onClick: () => onRemoveMeal(mealIndex),
@@ -20189,6 +20206,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             changeMealStress,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             openEditGramsModal,
             openTimeEditor,
@@ -20312,6 +20330,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     onChangeStress: changeMealStress,
                     onRemoveMeal: removeMeal,
                     onCopyMeal: openCopyMealModal,
+                    onSaveAsPreset: saveAsPreset,
                     onRepeatYesterday: repeatYesterdayMeal,
                     openEditGramsModal,
                     openTimeEditor,
@@ -20385,6 +20404,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             changeMealStress,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             openEditGramsModal,
             openTimeEditor,
@@ -20517,6 +20537,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 changeMealStress,
                 removeMeal,
                 openCopyMealModal,
+                saveAsPreset,
                 repeatYesterdayMeal,
                 openEditGramsModal,
                 openTimeEditor,
@@ -20611,6 +20632,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             removeItem,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             loadMoreMeals,
             setShowAllLoadedMeals,
@@ -22268,6 +22290,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             HEYS.Toast?.success?.(`Повторено: ${cloned.length} продуктов из вчера`);
         }, [setDay, markUndoWindow, persistDayData]);
 
+        const saveAsPreset = React.useCallback((mealIndex) => {
+            const meal = (day.meals || [])[mealIndex];
+            if (!meal || !(meal.items || []).length) {
+                HEYS.Toast?.info?.('Приём пуст — нечего сохранять');
+                return;
+            }
+            HEYS.AddProductStep?.show?.({
+                mealIndex,
+                day,
+                dateKey: date,
+                openPresetsCreate: true,
+                onAdd: addProductToMeal,
+            });
+        }, [day, date, addProductToMeal]);
+
         // Helpers для копирования в произвольную дату (today, обычно)
         const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
             const setSel = window.__heysSetSelectedDate;
@@ -22552,6 +22589,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             addProductToMeal,
             copyItemsToMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             setGrams,
             removeItem,
@@ -23801,12 +23839,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
   }) {
     const getLatestProducts = React.useCallback(() => {
       const fromHeys = HEYS.products?.getAll?.() || [];
-      const fromStore = HEYS.store?.get?.('heys_products', []) || [];
-      const fromLs = U.lsGet ? U.lsGet('heys_products', []) : [];
-
       if (fromHeys.length > 0) return fromHeys;
-      if (fromStore.length > 0) return fromStore;
-      if (fromLs.length > 0) return fromLs;
       return Array.isArray(products) ? products : [];
     }, [products]);
 

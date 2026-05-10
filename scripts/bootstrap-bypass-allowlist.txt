@@ -83,10 +83,8 @@ apps/web/heys_core_v12.js:1930
 apps/web/heys_core_v12.js:4270
 apps/web/heys_core_v12.js:5166
 apps/web/heys_cycle_v1.js:44
-apps/web/heys_day_add_product.js:674
-apps/web/heys_day_add_product.js:689
-apps/web/heys_day_add_product.js:701
-apps/web/heys_day_add_product.js:716
+apps/web/heys_day_add_product.js:696
+apps/web/heys_day_add_product.js:711
 apps/web/heys_day_core_bundle_v1.js:2036
 apps/web/heys_day_core_bundle_v1.js:3849
 apps/web/heys_day_core_bundle_v1.js:404
@@ -205,10 +203,10 @@ apps/web/heys_widgets_core_v1.js:386
 apps/web/heys_widgets_ui_v1.js:4799
 apps/web/heys_widgets_ui_v1.js:7028
 apps/web/heys_yandex_api_v1.js:804
-apps/web/heys_yesterday_verify_v1.js:1127
-apps/web/heys_yesterday_verify_v1.js:1129
+apps/web/heys_yesterday_verify_v1.js:1112
+apps/web/heys_yesterday_verify_v1.js:1114
 apps/web/heys_yesterday_verify_v1.js:36
-apps/web/heys_yesterday_verify_v1.js:389
+apps/web/heys_yesterday_verify_v1.js:382
 apps/web/insights/pi_early_warning.js:1029
 apps/web/insights/pi_early_warning.js:1503
 apps/web/insights/pi_early_warning.js:627

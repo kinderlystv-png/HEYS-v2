@@ -38,12 +38,6 @@
     // Safe products index builder (buildIndex is not always available on HEYS.products)
     const getProductsList = (lsGet) => {
       let products = HEYS.products?.getAll?.() || [];
-      if (!Array.isArray(products) || products.length === 0) {
-        const storeGet = HEYS?.store?.get;
-        if (storeGet) products = storeGet('heys_products', []);
-        else if (lsGet) products = lsGet('heys_products', []);
-        else products = HEYS?.utils?.lsGet?.('heys_products', []) || [];
-      }
       if (products && !Array.isArray(products) && Array.isArray(products.products)) {
         products = products.products;
       }

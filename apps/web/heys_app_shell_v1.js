@@ -1777,9 +1777,7 @@
                                 const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
                                 // Fallback chain для products
                                 const effectiveProducts = (products && products.length > 0) ? products
-                                    : (window.HEYS.products?.getAll?.() || [])
-                                        .length > 0 ? window.HEYS.products.getAll()
-                                        : (U.lsGet?.('heys_products', []) || []);
+                                    : (window.HEYS.products?.getAll?.() || []);
                                 // Fallback chain для profile
                                 const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
                                 if (!getActiveDaysForMonthFn || !clientId || effectiveProducts.length === 0) {

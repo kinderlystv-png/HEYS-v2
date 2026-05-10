@@ -222,14 +222,7 @@
 
     let productsAvailable = false;
     let productsList = [];
-    try {
-      const storedProducts = lsGet('heys_products', []) || [];
-      if (Array.isArray(storedProducts) && storedProducts.length > 0) {
-        productsAvailable = true;
-        productsList = storedProducts;
-      }
-    } catch (e) { }
-    if (!productsAvailable && HEYS.products?.getAll) {
+    if (HEYS.products?.getAll) {
       const list = HEYS.products.getAll();
       if (Array.isArray(list) && list.length > 0) {
         productsAvailable = true;
@@ -447,10 +440,7 @@
     if (HEYS.products?.getById) {
       return HEYS.products.getById(productId);
     }
-
-    // Fallback: ищем в localStorage
-    const products = lsGet('heys_products', []);
-    return products.find(p => p.id === productId || p.id === String(productId));
+    return null;
   }
 
   /**
@@ -687,12 +677,7 @@
   }
 
   function getProductsListForEstimation() {
-    if (HEYS.products?.getAll) {
-      const list = HEYS.products.getAll();
-      if (Array.isArray(list) && list.length > 0) return list;
-    }
-    const stored = lsGet('heys_products', []) || [];
-    return Array.isArray(stored) ? stored : [];
+    return HEYS.products?.getAll?.() || [];
   }
 
   function getReferenceDayNutritionTotals(dayData, pIndex) {

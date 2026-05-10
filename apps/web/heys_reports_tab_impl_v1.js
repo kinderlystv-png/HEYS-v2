@@ -946,11 +946,7 @@
         const propsProducts = props.products || [];
         const products = useMemo(() => {
             if (propsProducts.length > 0) return propsProducts;
-            const fromStore = global.HEYS?.products?.getAll?.() || [];
-            if (fromStore.length > 0) return fromStore;
-            const U = (global.HEYS && HEYS.utils) || { lsGet: (k, d) => d };
-            const rawLs = U.lsGet?.('heys_products', []) || [];
-            return Array.isArray(rawLs) ? rawLs : [];
+            return global.HEYS?.products?.getAll?.() || [];
         }, [propsProducts]);
         const prodIndex = useMemo(() => buildProductIndex(products), [products]);
 

@@ -16101,11 +16101,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const _candidateProducts = React.useMemo(() => {
             if (localProductsOverride && localProductsOverride.length > 0) return localProductsOverride;
             if (safePropsProducts.length > 0) return safePropsProducts;
-            const fromStore = ctx.products?.getAll?.() || [];
-            if (Array.isArray(fromStore) && fromStore.length > 0) return fromStore;
-            const U = ctx.utils || {};
-            const lsData = U.lsGet?.('heys_products', []) || [];
-            return Array.isArray(lsData) ? lsData : [];
+            return ctx.products?.getAll?.() || [];
         }, [safePropsProducts, localProductsOverride]);
 
         const _candidateSig = React.useMemo(() => productsSignature(_candidateProducts), [_candidateProducts]);
@@ -17333,6 +17329,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         onChangeStress,
         onRemoveMeal,
         onCopyMeal,
+        onSaveAsPreset,
         onRepeatYesterday,
         openEditGramsModal,
         openTimeEditor,
@@ -19079,6 +19076,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             transition: 'transform 0.15s, background 0.15s',
                         },
                     }, '📋 Копировать'),
+                    typeof onSaveAsPreset === 'function' && React.createElement('button', {
+                        className: 'meal-save-preset-btn',
+                        onClick: () => onSaveAsPreset(mealIndex),
+                        title: 'Сохранить приём как набор',
+                        disabled: !((meal.items || []).length),
+                        style: {
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: '#f0fdf4',
+                            color: '#15803d',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: (meal.items || []).length ? 'pointer' : 'not-allowed',
+                            opacity: (meal.items || []).length ? 1 : 0.4,
+                            flexShrink: 0,
+                            marginRight: '4px',
+                            transition: 'transform 0.15s, background 0.15s',
+                        },
+                    }, '💾 Шаблон'),
                     React.createElement('button', {
                         className: 'meal-delete-btn',
                         onClick: () => onRemoveMeal(mealIndex),
@@ -19375,6 +19395,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             changeMealStress,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             openEditGramsModal,
             openTimeEditor,
@@ -19498,6 +19519,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     onChangeStress: changeMealStress,
                     onRemoveMeal: removeMeal,
                     onCopyMeal: openCopyMealModal,
+                    onSaveAsPreset: saveAsPreset,
                     onRepeatYesterday: repeatYesterdayMeal,
                     openEditGramsModal,
                     openTimeEditor,
@@ -19571,6 +19593,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             changeMealStress,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             openEditGramsModal,
             openTimeEditor,
@@ -19703,6 +19726,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 changeMealStress,
                 removeMeal,
                 openCopyMealModal,
+                saveAsPreset,
                 repeatYesterdayMeal,
                 openEditGramsModal,
                 openTimeEditor,
@@ -19797,6 +19821,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             removeItem,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             loadMoreMeals,
             setShowAllLoadedMeals,
@@ -21454,6 +21479,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             HEYS.Toast?.success?.(`Повторено: ${cloned.length} продуктов из вчера`);
         }, [setDay, markUndoWindow, persistDayData]);
 
+        const saveAsPreset = React.useCallback((mealIndex) => {
+            const meal = (day.meals || [])[mealIndex];
+            if (!meal || !(meal.items || []).length) {
+                HEYS.Toast?.info?.('Приём пуст — нечего сохранять');
+                return;
+            }
+            HEYS.AddProductStep?.show?.({
+                mealIndex,
+                day,
+                dateKey: date,
+                openPresetsCreate: true,
+                onAdd: addProductToMeal,
+            });
+        }, [day, date, addProductToMeal]);
+
         // Helpers для копирования в произвольную дату (today, обычно)
         const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
             const setSel = window.__heysSetSelectedDate;
@@ -21738,6 +21778,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             addProductToMeal,
             copyItemsToMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             setGrams,
             removeItem,
@@ -22735,6 +22776,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             addProductToMeal,
             copyItemsToMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             setGrams,
             removeItem,
@@ -23100,6 +23142,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             changeMealStress,
             removeMeal,
             openCopyMealModal,
+            saveAsPreset,
             repeatYesterdayMeal,
             removePhoto,
             openEditGramsModal,

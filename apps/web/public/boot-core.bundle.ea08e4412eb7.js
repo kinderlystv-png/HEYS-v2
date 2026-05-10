@@ -18925,6 +18925,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             normalizedKey === 'heys_norms' ||
             normalizedKey === 'heys_hr_zones' ||
             normalizedKey === 'heys_products' ||
+            normalizedKey === 'heys_products_overlay_v2' ||
+            normalizedKey === 'heys_client_current' ||
+            normalizedKey === 'heys_subscription_status' ||
             normalizedKey.includes('widget_layout')
         );
     }
@@ -22382,6 +22385,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     } catch (_) { /* noop */ }
   }
   cloud.getLastUploadDiag = function () { return _lastUploadDiag; };
+
+  // Tracks ms duration of last successful upload — used for adaptive slow-mode batching.
+  let _lastSuccessfulUploadMs = 0;
+  cloud.getLastSuccessfulUploadMs = function () { return _lastSuccessfulUploadMs; };
 
   // Inspect pending queue: for each item return { k, sizeBytes, compressed, vKind }.
   // Used by debug snapshot. Reads stored JSON from localStorage.
@@ -28455,7 +28462,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // �️ v61 FIX: Исключаем heys_game из обычного sync
     // Gamification модуль синхронизирует свои данные сам с проверкой XP
     const gamificationKeys = ['heys_game', 'heys_gamification', 'heys_sound_settings'];
-    const filteredBatch = batch.filter(item => {
+    let filteredBatch = batch.filter(item => {
       const normalizedKey = item.k?.replace(/^heys_[0-9a-f-]+_/, 'heys_');
       return !gamificationKeys.includes(normalizedKey)
         && !gamificationKeys.includes(item.k)
@@ -28471,6 +28478,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       notifySyncCompletedIfDrained();
       return;
     }
+
+    // Priority split: если batch смешан (critical + burst) — critical уходит сейчас,
+    // burst возвращается в очередь. scheduleClientPush() в конце doClientUpload
+    // автоматически подберёт burst при clientUpsertQueue.length > 0.
+    try {
+      const _rp = global.HEYS?.syncQueueRuntimePure;
+      const _isCrit = typeof _rp?.isCriticalSyncKey === 'function'
+        ? _rp.isCriticalSyncKey.bind(_rp)
+        : null;
+      if (_isCrit && filteredBatch.length > 1) {
+        const normKey = (it) => it.k?.replace(/^heys_[0-9a-f-]+_/, 'heys_') || it.k || '';
+        const criticalItems = filteredBatch.filter(it => _isCrit(normKey(it)));
+        const burstItems = filteredBatch.filter(it => !_isCrit(normKey(it)));
+        if (criticalItems.length > 0 && burstItems.length > 0) {
+          clientUpsertQueue = requeueInFlightBatch({
+            queue: clientUpsertQueue,
+            batch: burstItems,
+            compactQueue: (items) => compactPendingQueue(items, PENDING_CLIENT_QUEUE_KEY),
+          });
+          persistClientQueueDurabilityState();
+          notifyPendingChange();
+          filteredBatch = criticalItems;
+        }
+      }
+    } catch (_) { /* не ломаем upload */ }
 
     // 🔄 Помечаем что данные "в полёте"
     _uploadInProgress = true;
@@ -28650,7 +28682,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           resetRetry();
           _clientUpload413BackoffUntil = 0;
           logUploadSummaryBuffered(totalSaved);
-          addSyncLogEntry('upload_ok', { n: totalSaved, keys: _syncKeySummary, ms: Date.now() - (_uploadStartTs || 0) });
+          const _uploadDurationMs = Date.now() - (_uploadStartTs || 0);
+          addSyncLogEntry('upload_ok', { n: totalSaved, keys: _syncKeySummary, ms: _uploadDurationMs });
+          _lastSuccessfulUploadMs = _uploadDurationMs;
           clearClientInFlightBatch({ notify: false });
         }
 
@@ -28910,6 +28944,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         notifyPendingChange();
         return;
       }
+
+      // Slow mode: если последний upload был медленным — ограничить batch size,
+      // чтобы при retry терялось меньше за раз. НЕ применяется в doImmediateClientUpload.
+      const _SLOW_THRESHOLD_MS = 8000;
+      const _SLOW_BATCH_MAX = 3;
+      try {
+        if (_lastSuccessfulUploadMs > _SLOW_THRESHOLD_MS && batch.length > _SLOW_BATCH_MAX) {
+          const _rp = global.HEYS?.syncQueueRuntimePure;
+          const _isCrit = typeof _rp?.isCriticalSyncKey === 'function'
+            ? _rp.isCriticalSyncKey.bind(_rp)
+            : null;
+          const normK = (it) => it.k?.replace(/^heys_[0-9a-f-]+_/, 'heys_') || it.k || '';
+          const sorted = _isCrit
+            ? [
+                ...batch.filter(it => _isCrit(normK(it))),
+                ...batch.filter(it => !_isCrit(normK(it))),
+              ]
+            : batch;
+          clientUpsertQueue.unshift(...sorted.slice(_SLOW_BATCH_MAX));
+          persistClientQueueDurabilityState();
+          batch.length = 0;
+          batch.push(...sorted.slice(0, _SLOW_BATCH_MAX));
+        }
+      } catch (_) { /* не ломаем upload */ }
 
       setClientInFlightBatch(batch);
       await doClientUpload(batch);

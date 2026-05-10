@@ -42,11 +42,7 @@
         const _candidateProducts = React.useMemo(() => {
             if (localProductsOverride && localProductsOverride.length > 0) return localProductsOverride;
             if (safePropsProducts.length > 0) return safePropsProducts;
-            const fromStore = ctx.products?.getAll?.() || [];
-            if (Array.isArray(fromStore) && fromStore.length > 0) return fromStore;
-            const U = ctx.utils || {};
-            const lsData = U.lsGet?.('heys_products', []) || [];
-            return Array.isArray(lsData) ? lsData : [];
+            return ctx.products?.getAll?.() || [];
         }, [safePropsProducts, localProductsOverride]);
 
         const _candidateSig = React.useMemo(() => productsSignature(_candidateProducts), [_candidateProducts]);

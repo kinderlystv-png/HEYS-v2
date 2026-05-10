@@ -578,7 +578,7 @@
       try {
         // 🔧 Fix: buildIndex через dayUtils (HEYS.products.buildIndex не существует)
         const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
-        const prods = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+        const prods = HEYS.products?.getAll?.() || [];
         const pIndex = buildIdx ? buildIdx(prods) : { byId: new Map() };
         const getProductFromItem = (item, idx) => {
           if (!item) return null;
@@ -820,7 +820,7 @@
     const today = new Date();
     // 🔧 Fix: buildIndex через dayUtils
     const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
-    const prods = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+    const prods = HEYS.products?.getAll?.() || [];
     const pIndex = buildIdx ? buildIdx(prods) : { byId: new Map() };
 
     for (let i = 0; i < daysBack; i++) {
@@ -871,7 +871,7 @@
     // 🔧 Fix: buildIndex fallback — HEYS.products.buildIndex не существует
     const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
     console.info('[HEYS.Metabolic] 🔍 buildIdx available:', !!buildIdx, 'dayUtils:', !!HEYS.dayUtils?.buildProductIndex, 'models:', !!HEYS.models?.buildProductIndex);
-    const products = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+    const products = HEYS.products?.getAll?.() || [];
     console.info('[HEYS.Metabolic] 🔍 products count:', Array.isArray(products) ? products.length : 'not-array');
     const defaultPIndex = buildIdx
       ? buildIdx(products)
@@ -2080,7 +2080,7 @@
     const profile = lsGet('heys_profile', {});
     // 🔧 Fix: buildIndex через dayUtils
     const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
-    const prods = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+    const prods = HEYS.products?.getAll?.() || [];
     const pIndex = buildIdx ? buildIdx(prods) : null;
 
     // Собираем статусы за каждый день
@@ -2350,7 +2350,7 @@
     const profile = lsGet('heys_profile', {});
     // 🔧 Fix: buildIndex через dayUtils
     const buildIdx = HEYS.dayUtils?.buildProductIndex || HEYS.models?.buildProductIndex;
-    const prods = HEYS.products?.getAll?.() || lsGet('heys_products', []);
+    const prods = HEYS.products?.getAll?.() || [];
     const pIndex = buildIdx ? buildIdx(prods) : null;
     const analysis = HEYS.PredictiveInsights.analyze({
       daysBack: 60,
