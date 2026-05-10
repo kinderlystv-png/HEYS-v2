@@ -1179,10 +1179,10 @@
                 : '1 изменение ждёт синхронизации';
         const pendingSyncBannerSummary = pendingBreakdownText
             ? (isBackgroundPendingSync
-                ? `${pendingBreakdownText} · ничего не потеряется`
+                ? `${pendingBreakdownText} · ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.`
                 : `${pendingBreakdownText} · можно нажать на облако`)
             : (isBackgroundPendingSync
-                ? 'Если интернет тормозит — ничего не потеряется.'
+                ? 'Если интернет тормозит — ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.'
                 : 'Нажми на облако, чтобы подтолкнуть отправку.');
         const pad2 = (n) => String(n).padStart(2, '0');
         const formatLocalISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;

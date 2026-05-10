@@ -17844,7 +17844,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 ),
             )),
             React.createElement('div', { className: 'mobile-products-list' },
-                canRepeatYesterday && (yesterdayMeal || hasRecentMeals) && React.createElement('div', {
+                canRepeatYesterday && yesterdayMeal && React.createElement('div', {
                     className: 'repeat-yesterday-suggestion',
                     style: {
                         margin: '0 0 10px',
@@ -17854,46 +17854,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         overflow: 'hidden',
                     },
                 },
-                    React.createElement('div', {
-                        style: { display: 'flex', gap: '6px', padding: '8px 10px', flexWrap: 'wrap' },
+                    React.createElement('button', {
+                        type: 'button',
+                        onClick: () => onRepeatYesterday(mealIndex, yesterdayMeal),
+                        title: 'Скопировать вчерашний приём',
+                        style: {
+                            width: '100%',
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '10px 14px 8px',
+                            background: 'transparent', border: 'none',
+                            cursor: 'pointer', textAlign: 'left',
+                        },
                     },
-                        yesterdayMeal && React.createElement('button', {
-                            type: 'button',
-                            onClick: () => onRepeatYesterday(mealIndex, yesterdayMeal),
-                            title: 'Скопировать вчерашний приём',
-                            style: {
-                                flex: '1 1 200px', minWidth: 0,
-                                display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '8px 12px', borderRadius: '10px',
-                                border: 'none', background: 'rgba(59,130,246,0.08)',
-                                color: 'var(--acc, #3b82f6)', fontSize: '13px', fontWeight: 600,
-                                cursor: 'pointer', textAlign: 'left',
-                            },
-                        },
-                            React.createElement('span', { style: { flexShrink: 0 } }, '↩'),
-                            React.createElement('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
-                                `Вчерашний «${yesterdayMeal.name || 'Приём'}»`),
-                        ),
-                        hasRecentMeals && React.createElement('button', {
-                            type: 'button',
-                            onClick: handleOpenRecentList,
-                            title: 'Выбрать из недавних приёмов',
-                            style: {
-                                flex: yesterdayMeal ? '0 0 auto' : '1 1 auto', minWidth: 0,
-                                display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '8px 12px', borderRadius: '10px',
-                                border: '1px solid var(--border, #e2e8f0)',
-                                background: 'var(--card, #fff)',
-                                color: 'var(--text, #374151)', fontSize: '13px', fontWeight: 600,
-                                cursor: 'pointer', textAlign: 'left',
-                            },
-                        },
-                            React.createElement('span', { style: { flexShrink: 0 } }, '📋'),
-                            React.createElement('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
-                                'Повторить приём из недавних'),
-                        ),
+                        React.createElement('span', { style: { flexShrink: 0 } }, '↩'),
+                        React.createElement('span', {
+                            style: { flex: '1 1 auto', minWidth: 0, fontSize: '13px', fontWeight: 600, color: 'var(--acc, #3b82f6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+                        }, `Повторить вчерашний «${yesterdayMeal.name || 'Приём'}»`),
                     ),
-                    yesterdayMeal && React.createElement('div', {
+                    React.createElement('div', {
                         style: { padding: '0 14px 10px', display: 'flex', flexDirection: 'column', gap: '2px' },
                     },
                         (yesterdayMeal.items || []).slice(0, 4).map((it, idx) => {
@@ -17911,6 +17889,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             style: { fontSize: '11px', color: 'var(--muted, #94a3b8)', fontStyle: 'italic' },
                         }, `и ещё ${(yesterdayMeal.items || []).length - 4} продукта(ов)`),
                     ),
+                ),
+                canRepeatYesterday && hasRecentMeals && React.createElement('button', {
+                    type: 'button',
+                    onClick: handleOpenRecentList,
+                    className: 'repeat-recent-meal-btn',
+                    title: 'Выбрать из недавних приёмов',
+                    style: {
+                        margin: '0 0 10px',
+                        width: '100%',
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border, #e2e8f0)',
+                        background: 'var(--card, #fff)',
+                        color: 'var(--text, #374151)',
+                        fontSize: '13px', fontWeight: 600,
+                        cursor: 'pointer', textAlign: 'left',
+                    },
+                },
+                    React.createElement('span', { style: { flexShrink: 0 } }, '📋'),
+                    React.createElement('span', {
+                        style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+                    }, 'Повторить приём из недавних'),
                 ),
                 React.createElement('div', { className: 'mpc-toggle-add-row' + ((meal.items || []).length === 0 ? ' single' : '') },
                     (meal.items || []).length > 0 && React.createElement('div', {

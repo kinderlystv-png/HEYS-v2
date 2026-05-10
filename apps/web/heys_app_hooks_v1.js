@@ -773,7 +773,7 @@
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
-        const NON_BLOCKING_SYNC_DELAY = 15000;
+        const NON_BLOCKING_SYNC_DELAY = 10000;
         const SYNC_STATUS_POLL_ACTIVE_MS = 1200;
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
         const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
