@@ -630,7 +630,7 @@
     const pIndexForWave = useMemo(() => {
       if (context?.pIndex) return context.pIndex;
       if (HEYS.dayUtils?.buildProductIndex) {
-        const products = HEYS.products?.getAll?.() || safeLsGet('heys_products', []);
+        const products = HEYS.products?.getAll?.() || [];
         return HEYS.dayUtils.buildProductIndex(products);
       }
       return null;

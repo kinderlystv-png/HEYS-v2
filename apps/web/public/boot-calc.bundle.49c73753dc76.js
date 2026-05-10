@@ -8798,12 +8798,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           return { success: false, count: 0, products: [], error: 'BLOCKED_DATA_LOSS' };
         }
 
-        if (HEYS.products?.setAll) {
-          HEYS.products.setAll(newProducts, { source: 'button-restore-orphans' });
-        } else {
-          lsSet('heys_products', newProducts);
-          console.warn('[HEYS] ⚠️ Products saved via lsSet only (no cloud sync)');
-        }
+        HEYS.products.setAll(newProducts, { source: 'button-restore-orphans' });
 
         if (HEYS.cloud?.flushPendingQueue) {
           try {

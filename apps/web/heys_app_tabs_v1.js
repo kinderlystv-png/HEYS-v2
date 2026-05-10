@@ -324,12 +324,7 @@
         const getLatestProducts = (event) => {
             const fromEvent = event?.detail?.products;
             if (Array.isArray(fromEvent)) return fromEvent;
-            const fromService = window.HEYS?.products?.getAll?.();
-            if (Array.isArray(fromService)) return fromService;
-            const fromStore = window.HEYS.store?.get?.('heys_products', []);
-            if (Array.isArray(fromStore)) return fromStore;
-            const fromLs = window.HEYS.utils?.lsGet?.('heys_products', []);
-            return Array.isArray(fromLs) ? fromLs : [];
+            return window.HEYS?.products?.getAll?.() || [];
         };
 
         // 🔐 Не рендерим Ration пока нет клиента
@@ -470,8 +465,8 @@
                     ...options
                 }).then(result => {
                     if (result.recovered > 0 && !cancelled) {
-                        const updatedProducts = window.HEYS.utils.lsGet('heys_products', []);
-                        safeSetProducts(Array.isArray(updatedProducts) ? updatedProducts : []);
+                        const updatedProducts = window.HEYS.products?.getAll?.() || [];
+                        safeSetProducts(updatedProducts);
                         // Toast «Восстановлено N» убран: теперь продукты пишутся в overlay
                         // напрямую (TypeB) и синхронятся через cloud overlay → нет отдельного
                         // recovery-flow с in-memory кэшем.

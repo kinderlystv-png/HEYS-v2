@@ -38,9 +38,7 @@
         // Обновление products при смене clientId (без bootstrap — его делают wrapper'ы)
         useEffect(() => {
             if (clientId) {
-                const loadedProducts = Array.isArray(window.HEYS?.utils?.lsGet?.('heys_products', []))
-                    ? window.HEYS.utils.lsGet('heys_products', [])
-                    : [];
+                const loadedProducts = window.HEYS?.products?.getAll?.() || [];
                 setProducts(loadedProducts);
                 setSyncVer((v) => v + 1);
             }

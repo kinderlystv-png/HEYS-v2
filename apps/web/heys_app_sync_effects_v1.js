@@ -116,15 +116,11 @@
                                     if (Array.isArray(prev) && prev.length === productsBeforeSync.length) return prev;
                                     return productsBeforeSync;
                                 });
-                                if (window.HEYS?.products?.setAll) {
-                                    window.HEYS.products.setAll(productsBeforeSync, {
-                                        source: 'cloud-sync-fallback',
-                                        skipNotify: true,
-                                        skipCloud: true
-                                    });
-                                } else {
-                                    window.HEYS.utils.lsSet('heys_products', productsBeforeSync);
-                                }
+                                window.HEYS.products.setAll(productsBeforeSync, {
+                                    source: 'cloud-sync-fallback',
+                                    skipNotify: true,
+                                    skipCloud: true
+                                });
                             } else {
                                 // 🔄 v4.8.7: Проверяем качество данных вместо длины
                                 // Сравниваем количество продуктов с микронутриентами (iron) вместо общей длины

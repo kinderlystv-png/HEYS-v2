@@ -14782,12 +14782,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const getLatestProducts = (event) => {
             const fromEvent = event?.detail?.products;
             if (Array.isArray(fromEvent)) return fromEvent;
-            const fromService = window.HEYS?.products?.getAll?.();
-            if (Array.isArray(fromService)) return fromService;
-            const fromStore = window.HEYS.store?.get?.('heys_products', []);
-            if (Array.isArray(fromStore)) return fromStore;
-            const fromLs = window.HEYS.utils?.lsGet?.('heys_products', []);
-            return Array.isArray(fromLs) ? fromLs : [];
+            return window.HEYS?.products?.getAll?.() || [];
         };
 
         // 🔐 Не рендерим Ration пока нет клиента
@@ -14928,8 +14923,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     ...options
                 }).then(result => {
                     if (result.recovered > 0 && !cancelled) {
-                        const updatedProducts = window.HEYS.utils.lsGet('heys_products', []);
-                        safeSetProducts(Array.isArray(updatedProducts) ? updatedProducts : []);
+                        const updatedProducts = window.HEYS.products?.getAll?.() || [];
+                        safeSetProducts(updatedProducts);
                         // Toast «Восстановлено N» убран: теперь продукты пишутся в overlay
                         // напрямую (TypeB) и синхронятся через cloud overlay → нет отдельного
                         // recovery-flow с in-memory кэшем.
@@ -26832,15 +26827,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     if (Array.isArray(prev) && prev.length === productsBeforeSync.length) return prev;
                                     return productsBeforeSync;
                                 });
-                                if (window.HEYS?.products?.setAll) {
-                                    window.HEYS.products.setAll(productsBeforeSync, {
-                                        source: 'cloud-sync-fallback',
-                                        skipNotify: true,
-                                        skipCloud: true
-                                    });
-                                } else {
-                                    window.HEYS.utils.lsSet('heys_products', productsBeforeSync);
-                                }
+                                window.HEYS.products.setAll(productsBeforeSync, {
+                                    source: 'cloud-sync-fallback',
+                                    skipNotify: true,
+                                    skipCloud: true
+                                });
                             } else {
                                 // 🔄 v4.8.7: Проверяем качество данных вместо длины
                                 // Сравниваем количество продуктов с микронутриентами (iron) вместо общей длины
@@ -28069,9 +28060,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         // Обновление products при смене clientId (без bootstrap — его делают wrapper'ы)
         useEffect(() => {
             if (clientId) {
-                const loadedProducts = Array.isArray(window.HEYS?.utils?.lsGet?.('heys_products', []))
-                    ? window.HEYS.utils.lsGet('heys_products', [])
-                    : [];
+                const loadedProducts = window.HEYS?.products?.getAll?.() || [];
                 setProducts(loadedProducts);
                 setSyncVer((v) => v + 1);
             }
@@ -28159,9 +28148,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 try {
                     var effectiveProducts = (products && products.length > 0) ? products
-                        : ((window.HEYS && window.HEYS.products && window.HEYS.products.getAll) ? window.HEYS.products.getAll() : []).length > 0
-                            ? window.HEYS.products.getAll()
-                            : (readStoredValue('heys_products', []) || []);
+                        : (window.HEYS?.products?.getAll?.() || []);
 
                     if (effectiveProducts.length === 0) {
                         if (tokenRef.current === token) setActiveDays(function () { return new Map(); });

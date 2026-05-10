@@ -74,9 +74,7 @@
 
                 try {
                     var effectiveProducts = (products && products.length > 0) ? products
-                        : ((window.HEYS && window.HEYS.products && window.HEYS.products.getAll) ? window.HEYS.products.getAll() : []).length > 0
-                            ? window.HEYS.products.getAll()
-                            : (readStoredValue('heys_products', []) || []);
+                        : (window.HEYS?.products?.getAll?.() || []);
 
                     if (effectiveProducts.length === 0) {
                         if (tokenRef.current === token) setActiveDays(function () { return new Map(); });
