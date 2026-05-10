@@ -14,6 +14,9 @@
             normalizedKey === 'heys_norms' ||
             normalizedKey === 'heys_hr_zones' ||
             normalizedKey === 'heys_products' ||
+            normalizedKey === 'heys_products_overlay_v2' ||
+            normalizedKey === 'heys_client_current' ||
+            normalizedKey === 'heys_subscription_status' ||
             normalizedKey.includes('widget_layout')
         );
     }

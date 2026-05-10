@@ -150,7 +150,7 @@
                 // 🛠️ Миграция legacy ключей без clientId → scoped (PIN flow)
                 try {
                     const clientId = pinAuthClient;
-                    const keysToMigrate = ['heys_profile', 'heys_products', 'heys_norms', 'heys_hr_zones', 'heys_game'];
+                    const keysToMigrate = ['heys_profile', 'heys_norms', 'heys_hr_zones', 'heys_game'];
                     keysToMigrate.forEach((baseKey) => {
                         const scopedKey = `heys_${clientId}_${baseKey.replace(/^heys_/, '')}`;
                         const hasScoped = !!localStorage.getItem(scopedKey);

@@ -24925,7 +24925,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             keysToProcess.forEach((key) => {
                 let data = null;
                 try {
-                    data = U && typeof U.lsGet === 'function' ? U.lsGet(key, null) : null;
+                    data = (key === 'heys_products' && window.HEYS?.products?.getAll)
+                        ? window.HEYS.products.getAll()
+                        : (U && typeof U.lsGet === 'function' ? U.lsGet(key, null) : null);
                 } catch (error) {
                     HEYS.analytics?.trackError?.(error, { context: 'backupAllKeys', key });
                     data = null;
@@ -25033,7 +25035,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     return;
                 }
                 if (key === 'heys_products') {
-                    setProducts(Array.isArray(snapshot.data) ? snapshot.data : []);
+                    const restoredProducts = Array.isArray(snapshot.data) ? snapshot.data : [];
+                    if (window.HEYS?.products?.setAll) {
+                        window.HEYS.products.setAll(restoredProducts, { source: 'backup-restore' });
+                    }
+                    setProducts(restoredProducts);
                 } else if (U && typeof U.lsSet === 'function') {
                     U.lsSet(key, snapshot.data);
                 } else if (window.HEYS?.store?.set) {
@@ -25730,7 +25736,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // 🛠️ Миграция legacy ключей без clientId → scoped (PIN flow)
                 try {
                     const clientId = pinAuthClient;
-                    const keysToMigrate = ['heys_profile', 'heys_products', 'heys_norms', 'heys_hr_zones', 'heys_game'];
+                    const keysToMigrate = ['heys_profile', 'heys_norms', 'heys_hr_zones', 'heys_game'];
                     keysToMigrate.forEach((baseKey) => {
                         const scopedKey = `heys_${clientId}_${baseKey.replace(/^heys_/, '')}`;
                         const hasScoped = !!localStorage.getItem(scopedKey);
@@ -27012,6 +27018,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }
             saveTimerRef.current = setTimeout(() => {
                 try {
+                    // overlay clients: writeRaw handles cloud sync; skip redundant legacy save
+                    if (window.HEYS?.flags?.isEnabled?.('overlay_products_v2')) return;
                     window.HEYS.saveClientKey('heys_products', products);
                 } catch (e) {
                     console.error('Error saving products:', e);

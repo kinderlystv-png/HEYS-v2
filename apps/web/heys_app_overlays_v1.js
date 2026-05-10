@@ -294,6 +294,12 @@
                         'div',
                         { className: 'sync-lock-overlay__hint' },
                         'Похоже, интернет нестабильный — приложению просто нужно чуть больше времени на синхронизацию.'
+                    ),
+                    shouldShowSlowInternetHint && React.createElement(
+                        'div',
+                        { className: 'sync-lock-overlay__vpn-badge' },
+                        React.createElement('span', { className: 'sync-lock-overlay__vpn-badge-icon', 'aria-hidden': 'true' }, '🔒'),
+                        React.createElement('span', { className: 'sync-lock-overlay__vpn-badge-text' }, 'Включён VPN? Попробуйте отключить — ускорит синхронизацию')
                     )
                 )
             ),

@@ -301,6 +301,8 @@
             }
             saveTimerRef.current = setTimeout(() => {
                 try {
+                    // overlay clients: writeRaw handles cloud sync; skip redundant legacy save
+                    if (window.HEYS?.flags?.isEnabled?.('overlay_products_v2')) return;
                     window.HEYS.saveClientKey('heys_products', products);
                 } catch (e) {
                     console.error('Error saving products:', e);

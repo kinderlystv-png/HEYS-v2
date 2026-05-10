@@ -90,7 +90,9 @@
             keysToProcess.forEach((key) => {
                 let data = null;
                 try {
-                    data = U && typeof U.lsGet === 'function' ? U.lsGet(key, null) : null;
+                    data = (key === 'heys_products' && window.HEYS?.products?.getAll)
+                        ? window.HEYS.products.getAll()
+                        : (U && typeof U.lsGet === 'function' ? U.lsGet(key, null) : null);
                 } catch (error) {
                     HEYS.analytics?.trackError?.(error, { context: 'backupAllKeys', key });
                     data = null;
@@ -198,7 +200,11 @@
                     return;
                 }
                 if (key === 'heys_products') {
-                    setProducts(Array.isArray(snapshot.data) ? snapshot.data : []);
+                    const restoredProducts = Array.isArray(snapshot.data) ? snapshot.data : [];
+                    if (window.HEYS?.products?.setAll) {
+                        window.HEYS.products.setAll(restoredProducts, { source: 'backup-restore' });
+                    }
+                    setProducts(restoredProducts);
                 } else if (U && typeof U.lsSet === 'function') {
                     U.lsSet(key, snapshot.data);
                 } else if (window.HEYS?.store?.set) {

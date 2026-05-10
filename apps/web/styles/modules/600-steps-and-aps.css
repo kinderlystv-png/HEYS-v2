@@ -1332,16 +1332,17 @@
 
 .mpr-search-result-item {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
   padding: 9px 12px;
   background: var(--color-bg-primary, #fff);
   border: none;
   border-top: 1px solid var(--color-border, #f1f5f9);
   cursor: pointer;
   text-align: left;
-  gap: 8px;
+  gap: 2px;
   transition: background 0.12s;
+  width: 100%;
 }
 
 .mpr-search-result-item:hover {
@@ -1356,14 +1357,25 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-primary, #0f172a);
-  flex: 1;
   word-break: break-word;
+  text-align: left;
+}
+
+.mpr-search-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .mpr-search-result-kcal {
   font-size: 11px;
   color: var(--color-text-secondary, #64748b);
-  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.mpr-search-result-macros {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #94a3b8);
 }
 
 [data-theme="dark"] .mpr-search-row {
@@ -1395,8 +1407,8 @@
 
 .mpr-preview-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   padding: 10px 12px;
   background: var(--color-bg-secondary, #f8fafc);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -1408,24 +1420,31 @@
   opacity: 0.4;
 }
 
-.mpr-preview-item-info {
-  flex: 1;
-  min-width: 0;
+.mpr-preview-item-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mpr-preview-item-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .mpr-preview-item-name {
+  flex: 1;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-primary, #0f172a);
-  white-space: normal;
   word-break: break-word;
   line-height: 1.3;
 }
 
 .mpr-preview-item-kcal {
+  flex: 1;
   font-size: 11px;
   color: var(--color-text-secondary, #64748b);
-  margin-top: 2px;
 }
 
 .mpr-preview-item-grams {
@@ -1433,7 +1452,6 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  flex-wrap: nowrap;
 }
 
 .mpr-grams-btn {
@@ -1582,12 +1600,24 @@
 
 .mpr-create-item {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   padding: 10px 12px;
   background: var(--color-bg-secondary, #f8fafc);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 10px;
+}
+
+.mpr-create-item-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mpr-create-item-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .mpr-create-item-name {
@@ -1596,7 +1626,13 @@
   font-weight: 600;
   color: var(--color-text-primary, #0f172a);
   word-break: break-word;
-  padding-top: 2px;
+  line-height: 1.3;
+}
+
+.mpr-create-item-kcal {
+  flex: 1;
+  font-size: 11px;
+  color: var(--color-text-secondary, #64748b);
 }
 
 .mpr-save-btn {
