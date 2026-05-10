@@ -150,6 +150,7 @@ export const LEGACY_BUNDLES = {
         'heys_app_client_management_v1.js',
         'heys_app_backup_actions_v1.js',
         'heys_app_backup_export_v1.js',
+        'heys_app_backup_import_v1.js',
         'heys_app_update_checks_v1.js',
         'heys_app_update_notifications_v1.js',
         'heys_app_cloud_init_v1.js',

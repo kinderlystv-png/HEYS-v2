@@ -11703,6 +11703,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     // Функция восстановления продуктов из общей базы (для всех клиентов)
     async function restoreFromSharedBase() {
+      if (HEYS._syncingFromShared) {
+        HEYS.Toast?.warning?.('Синхронизация уже выполняется');
+        return;
+      }
+      HEYS._syncingFromShared = true;
       try {
         const debugLog = (step, payload) => {
           const entry = { ts: new Date().toISOString(), step, payload };
@@ -12129,6 +12134,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       } catch (err) {
         HEYS.analytics?.trackError?.(err, { context: 'ration:restoreFromSharedBase' });
         HEYS.Toast?.error('Ошибка восстановления: ' + (err.message || err)) || alert('Ошибка восстановления: ' + (err.message || err));
+      } finally {
+        HEYS._syncingFromShared = false;
       }
     }
 
@@ -13134,10 +13141,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                     className: 'btn acc',
                     onClick: async () => {
                       if (window.HEYS && window.HEYS.exportFullBackup) {
-                        const result = await window.HEYS.exportFullBackup();
-                        if (result && result.ok) {
-                          HEYS.Toast?.success(`✅ Бэкап сохранён!\n📦 Продуктов: ${result.products}\n🌐 Общих: ${result.sharedProducts || 0}\n📅 Дней: ${result.days}`);
-                        }
+                        // exportFullBackup сам выводит прогресс/success/error toast'ы.
+                        await window.HEYS.exportFullBackup();
                       } else {
                         HEYS.Toast?.warning('Функция экспорта недоступна');
                       }
@@ -13165,12 +13170,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                     '📂 Выбрать файл',
                     React.createElement('input', {
                       type: 'file',
-                      accept: '.json,application/json',
+                      accept: '.json,.gz,application/json,application/gzip',
                       style: { display: 'none' },
                       onChange: (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          importFromFile(file);
+                          if (window.HEYS?.AppBackupImport?.importFromFile) {
+                            window.HEYS.AppBackupImport.importFromFile(file);
+                          } else {
+                            importFromFile(file);
+                          }
                           e.target.value = '';
                         }
                       }

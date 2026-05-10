@@ -27527,191 +27527,312 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
 
 /* ===== heys_app_backup_export_v1.js ===== */
-// heys_app_backup_export_v1.js — export backup helper extracted from heys_app_v12.js
+// heys_app_backup_export_v1.js — full-state backup export.
+//
+// Schema v2 (см. .claude/plans/misty-booping-quilt.md):
+//   • Raw overlay (heys_products_overlay_v2) — источник правды для продуктов.
+//   • Все dayv2_* без лимита 90 дней (cap 1825).
+//   • Все user-state ключи из CLIENT_SPECIFIC_KEYS + heys_milestone_* + heys_last_grams_*.
+//   • Auth deny-list (heys_supabase_auth_token, heys_pin_auth_client, sb-*).
+//   • gzip через CompressionStream (fallback на raw JSON).
+//   • clientId сверяется с auth.
 
-(function () {
+; (function () {
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppBackupExport = HEYS.AppBackupExport || {};
 
+    const SCHEMA_VERSION = 2;
+    const DAYS_CAP = 1825; // ~5 лет
+
+    const FORBIDDEN_KEY_NAMES = new Set([
+        'heys_supabase_auth_token',
+        'heys_pin_auth_client',
+    ]);
+    function isForbiddenKey(k) {
+        if (!k) return false;
+        if (FORBIDDEN_KEY_NAMES.has(k)) return true;
+        if (k.startsWith('sb-')) return true;
+        return false;
+    }
+    HEYS.AppBackupExport._isForbiddenKey = isForbiddenKey;
+
+    function readStoreSafe(key, fallback) {
+        try {
+            if (HEYS.store && typeof HEYS.store.get === 'function') {
+                const v = HEYS.store.get(key, fallback);
+                return v === undefined ? fallback : v;
+            }
+        } catch (e) {
+            console.warn('[BACKUP] store.get failed for', key, e && e.message);
+        }
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw == null) return fallback;
+            return JSON.parse(raw);
+        } catch (e) {
+            console.warn('[BACKUP] raw read/parse failed for', key, e && e.message);
+            return fallback;
+        }
+    }
+
+    function readScopedProfileLike(plainKey, clientId) {
+        // profile/norms/hrZones имеют scoped вариант heys_${cid}_${tail}.
+        // Берём через store.get (даёт scoped+legacy fallback) — но дополнительно
+        // явно читаем scoped, потому что store.get для глобального ключа может
+        // не покрывать scoped storage.
+        const direct = readStoreSafe(plainKey, null);
+        if (direct) return direct;
+        if (!clientId) return null;
+        const scopedKey = 'heys_' + clientId + '_' + plainKey.replace(/^heys_/, '');
+        const raw = localStorage.getItem(scopedKey);
+        if (!raw) return null;
+        try { return JSON.parse(raw); }
+        catch (e) {
+            console.warn('[BACKUP] scoped parse failed:', scopedKey, e && e.message);
+            return null;
+        }
+    }
+
+    function collectLsKeys(predicate) {
+        const out = {};
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!k || isForbiddenKey(k)) continue;
+                if (!predicate(k)) continue;
+                const raw = localStorage.getItem(k);
+                if (raw == null) continue;
+                try {
+                    // Используем store.get для декомпрессии если ключ известен.
+                    const v = HEYS.store && HEYS.store.get ? HEYS.store.get(k, null) : null;
+                    out[k] = v != null ? v : JSON.parse(raw);
+                } catch (e) {
+                    // Файл хранит сырое значение — лучше так, чем тереть.
+                    out[k] = raw;
+                }
+            }
+        } catch (e) {
+            console.warn('[BACKUP] collectLsKeys failed', e && e.message);
+        }
+        return out;
+    }
+
+    function safeFnv1a(str) {
+        let h = 0x811c9dc5;
+        for (let i = 0; i < str.length; i++) {
+            h ^= str.charCodeAt(i);
+            h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+        }
+        return h.toString(16);
+    }
+
+    async function compressIfPossible(json) {
+        if (typeof CompressionStream === 'undefined') {
+            return { blob: new Blob([json], { type: 'application/json' }), compressed: false };
+        }
+        try {
+            const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+            const blob = await new Response(stream).blob();
+            return { blob: new Blob([blob], { type: 'application/gzip' }), compressed: true };
+        } catch (e) {
+            console.warn('[BACKUP] gzip failed, falling back to raw JSON:', e && e.message);
+            return { blob: new Blob([json], { type: 'application/json' }), compressed: false };
+        }
+    }
+
     HEYS.AppBackupExport.init = function () {
-        // === Экспорт бэкапа всех данных в JSON ===
-        // Используется из DayTab для кнопки "Скачать бэкап"
         HEYS.exportFullBackup = async function () {
-            let clientId = localStorage.getItem('heys_client_current');
+            const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+
+            let lsClientId = localStorage.getItem('heys_client_current');
+            if (lsClientId && lsClientId.startsWith('"') && lsClientId.endsWith('"')) {
+                lsClientId = lsClientId.slice(1, -1);
+            }
+            const authClientId = HEYS.currentClientId
+                || (HEYS.auth && typeof HEYS.auth.getClientId === 'function' ? HEYS.auth.getClientId() : null);
+            const clientId = authClientId || lsClientId;
+
             if (!clientId) {
                 HEYS.Toast?.warning('Нет активного клиента') || alert('Нет активного клиента');
                 return { ok: false, error: 'no_client' };
             }
-
-            // Убираем лишние кавычки если есть (legacy bug)
-            if (clientId.startsWith('"') && clientId.endsWith('"')) {
-                clientId = clientId.slice(1, -1);
+            if (lsClientId && authClientId && lsClientId !== authClientId) {
+                console.warn('[BACKUP] clientId mismatch — auth=' + authClientId + ' ls=' + lsClientId + ' (using auth)');
             }
 
-            console.log('[BACKUP] Client ID:', clientId);
-
-            // Debug: показать все ключи localStorage для этого клиента
-            const allKeys = Object.keys(localStorage);
-            const clientKeys = allKeys.filter(k => k.includes(clientId) || k.includes('heys_'));
-            console.log('[BACKUP] Found localStorage keys:', clientKeys);
+            console.log('[BACKUP] Starting full-state export. clientId=' + clientId.slice(0, 8));
 
             try {
-                // Собираем все данные клиента
+                HEYS.Toast?.info?.('Собираем бэкап…');
+
                 const backup = {
+                    schemaVersion: SCHEMA_VERSION,
                     exportedAt: new Date().toISOString(),
                     clientId: clientId,
                     appVersion: window.APP_VERSION || 'unknown',
-                    products: [],
-                    sharedProducts: [],
-                    profile: null,
-                    norms: null,
-                    hrZones: null,
-                    days: {},
-                    water: null,
-                    scheduledAdvices: null,
                 };
 
-                // Продукты — сначала из React state, потом localStorage
-                // React state приоритетнее т.к. localStorage может быть повреждён
-                if (HEYS.products && typeof HEYS.products.getAll === 'function') {
-                    const stateProducts = HEYS.products.getAll();
-                    if (Array.isArray(stateProducts) && stateProducts.length > 0) {
-                        backup.products = stateProducts;
-                        console.log('[BACKUP] Products from HEYS.products.getAll():', stateProducts.length);
+                // ─────────────────────────────────────────
+                // Products: raw overlay (источник правды)
+                // ─────────────────────────────────────────
+                backup.overlayProducts = readStoreSafe('heys_products_overlay_v2', null);
+
+                // Legacy snapshot (для импорта на старых клиентах без overlay flag).
+                // Не источник правды — только fallback для совместимости.
+                try {
+                    if (HEYS.products && typeof HEYS.products.getAll === 'function') {
+                        const merged = HEYS.products.getAll();
+                        backup.legacyProductsSnapshot = Array.isArray(merged) ? merged : [];
+                    } else {
+                        backup.legacyProductsSnapshot = [];
                     }
+                } catch (e) {
+                    console.warn('[BACKUP] legacyProductsSnapshot failed:', e && e.message);
+                    backup.legacyProductsSnapshot = [];
                 }
 
-                // Профиль — через HEYS.store.get (учитывает memory cache и scoped keys)
-                if (HEYS.store && typeof HEYS.store.get === 'function') {
-                    backup.profile = HEYS.store.get('heys_profile', null);
-                    console.log('[BACKUP] Profile from HEYS.store.get:', backup.profile ? 'found' : 'NOT FOUND');
-                }
-                // Fallback на прямой localStorage
-                if (!backup.profile) {
-                    let profileKey = `heys_${clientId}_profile`;
-                    let profileRaw = localStorage.getItem(profileKey);
-                    if (!profileRaw) {
-                        profileKey = 'heys_profile';
-                        profileRaw = localStorage.getItem(profileKey);
-                    }
-                    console.log('[BACKUP] Profile key:', profileKey, '→', profileRaw ? 'found' : 'NOT FOUND');
-                    if (profileRaw) {
-                        try { backup.profile = JSON.parse(profileRaw); } catch (e) { }
-                    }
-                }
+                // Tombstones / hidden / removed
+                backup.deletedIds = readStoreSafe('heys_deleted_ids', []);
+                backup.removedFromMyList = readStoreSafe('heys_removed_from_my_list', []);
+                backup.hiddenProducts = readStoreSafe('heys_hidden_products', []);
 
-                // Нормы — через HEYS.store.get
-                if (HEYS.store && typeof HEYS.store.get === 'function') {
-                    backup.norms = HEYS.store.get('heys_norms', null);
-                    console.log('[BACKUP] Norms from HEYS.store.get:', backup.norms ? 'found' : 'NOT FOUND');
+                // Граммовки
+                backup.gramsHistory = readStoreSafe('heys_grams_history', null);
+                backup.lastGramsByProduct = collectLsKeys(k => k.startsWith('heys_last_grams_'));
+
+                // ─────────────────────────────────────────
+                // User state (scoped + legacy fallback)
+                // ─────────────────────────────────────────
+                backup.profile = readScopedProfileLike('heys_profile', clientId);
+                backup.norms = readScopedProfileLike('heys_norms', clientId);
+                backup.hrZones = readScopedProfileLike('heys_hr_zones', clientId);
+                backup.ratioZones = readStoreSafe('heys_ratio_zones', null);
+
+                // ─────────────────────────────────────────
+                // Days (все доступные, cap 1825)
+                // ─────────────────────────────────────────
+                const dayKeys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (!k) continue;
+                    if (isForbiddenKey(k)) continue;
+                    // Поддерживаем heys_dayv2_YYYY-MM-DD и scoped heys_{cid}_dayv2_YYYY-MM-DD.
+                    if (k.indexOf('dayv2_') !== -1 && k.startsWith('heys_')) dayKeys.push(k);
                 }
-                if (!backup.norms) {
-                    let normsKey = `heys_${clientId}_norms`;
-                    let normsRaw = localStorage.getItem(normsKey);
-                    if (!normsRaw) {
-                        normsKey = 'heys_norms';
-                        normsRaw = localStorage.getItem(normsKey);
-                    }
-                    console.log('[BACKUP] Norms key:', normsKey, '→', normsRaw ? 'found' : 'NOT FOUND');
-                    if (normsRaw) {
-                        try { backup.norms = JSON.parse(normsRaw); } catch (e) { }
-                    }
-                }
-
-                // Пульсовые зоны — через HEYS.store.get
-                if (HEYS.store && typeof HEYS.store.get === 'function') {
-                    backup.hrZones = HEYS.store.get('heys_hr_zones', null);
-                    console.log('[BACKUP] HR Zones from HEYS.store.get:', backup.hrZones ? 'found' : 'NOT FOUND');
-                }
-                if (!backup.hrZones) {
-                    let hrKey = `heys_${clientId}_hr_zones`;
-                    let hrRaw = localStorage.getItem(hrKey);
-                    if (!hrRaw) {
-                        hrKey = 'heys_hr_zones';
-                        hrRaw = localStorage.getItem(hrKey);
-                    }
-                    console.log('[BACKUP] HR Zones key:', hrKey, '→', hrRaw ? 'found' : 'NOT FOUND');
-                    if (hrRaw) {
-                        try { backup.hrZones = JSON.parse(hrRaw); } catch (e) { }
-                    }
-                }
-
-                // Вода (используем HEYS.store.get для декомпрессии)
-                if (HEYS.store && typeof HEYS.store.get === 'function') {
-                    backup.water = HEYS.store.get('heys_water_history', null);
-                    console.log('[BACKUP] Water from HEYS.store.get:', backup.water ? 'found' : 'NOT FOUND');
-                }
-
-                // Советы (используем HEYS.store.get для декомпрессии)
-                if (HEYS.store && typeof HEYS.store.get === 'function') {
-                    backup.scheduledAdvices = HEYS.store.get('heys_scheduled_advices', []);
-                }
-
-                // Shared products — хранятся в памяти (кэш из PostgreSQL), не в localStorage!
-                backup.sharedProducts = HEYS.cloud?.getCachedSharedProducts?.() || [];
-                console.log('[BACKUP] Shared products (from cache):', backup.sharedProducts?.length || 0);
-
-                // Fallback: если кэш ещё не прогрузился — забираем напрямую из API
-                if ((!backup.sharedProducts || backup.sharedProducts.length === 0) && HEYS.YandexAPI?.rest) {
-                    HEYS.Toast?.info('Загружаем общие продукты…');
-                    try {
-                        const { data, error } = await HEYS.YandexAPI.rest('shared_products');
-                        if (error) {
-                            console.log('[BACKUP] Shared products API error:', error);
-                            HEYS.Toast?.warning('Не удалось загрузить общие продукты. Попробуй экспорт ещё раз.');
-                        } else if (Array.isArray(data) && data.length > 0) {
-                            backup.sharedProducts = data;
-                            console.log('[BACKUP] Shared products (from API):', data.length);
-                            HEYS.Toast?.success?.('Общие продукты загружены. Экспортируем…');
-                        } else {
-                            HEYS.Toast?.warning('Общие продукты ещё не готовы. Повтори экспорт через пару секунд.');
-                        }
-                    } catch (e) {
-                        console.log('[BACKUP] Shared products API failed:', e?.message || e);
-                        HEYS.Toast?.warning('Не удалось загрузить общие продукты. Попробуй экспорт ещё раз.');
-                    }
-                }
-
-                // Дни (за последние 90 дней) - используем HEYS.store.get для декомпрессии
-                const today = new Date();
-                console.log('[BACKUP] Starting days collection for 90 days from:', today.toISOString().slice(0, 10));
-                console.log('[BACKUP] HEYS.store available:', !!HEYS.store, 'HEYS.store.get:', typeof HEYS.store?.get);
-                console.log('[BACKUP] currentClientId:', HEYS.currentClientId);
-
-                // Debug: показать какие ключи есть в localStorage с dayv2
-                const dayv2Keys = Object.keys(localStorage).filter(k => k.includes('dayv2_'));
-                console.log('[BACKUP] Found dayv2 keys in localStorage:', dayv2Keys.slice(0, 10));
-
+                backup.days = {};
                 let daysFound = 0;
-                let daysChecked = 0;
-                for (let i = 0; i < 90; i++) {
-                    const d = new Date(today);
-                    d.setDate(d.getDate() - i);
-                    const dateStr = d.toISOString().slice(0, 10);
-                    daysChecked++;
-
-                    if (HEYS.store && typeof HEYS.store.get === 'function') {
-                        const dayData = HEYS.store.get('heys_dayv2_' + dateStr, null);
-                        if (dayData) {
-                            backup.days[dateStr] = dayData;
-                            daysFound++;
-                            if (daysFound <= 3) {
-                                console.log(`[BACKUP] ✅ Found day ${dateStr}:`, typeof dayData, dayData?.meals?.length || 0, 'meals');
-                            }
-                        }
+                let daysSkipped = 0;
+                for (const k of dayKeys) {
+                    if (daysFound >= DAYS_CAP) { daysSkipped++; continue; }
+                    const v = readStoreSafe(k, null);
+                    if (v != null) {
+                        // Нормализуем ключ: всегда сохраняем как heys_dayv2_YYYY-MM-DD.
+                        // Scoped имеют форму heys_{cid}_dayv2_YYYY-MM-DD; обрезаем prefix.
+                        const m = k.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+                        const normKey = m ? 'heys_dayv2_' + m[1] : k;
+                        backup.days[normKey] = v;
+                        daysFound++;
                     }
                 }
-                console.log(`[BACKUP] Days scan complete: checked ${daysChecked}, found ${daysFound}`);
+                if (daysSkipped > 0) {
+                    HEYS.Toast?.warning?.(`Пропущено ${daysSkipped} дней (превышен лимит ${DAYS_CAP}).`);
+                }
 
-                // Статистика
-                const daysCount = Object.keys(backup.days).length;
-                const productsCount = backup.products?.length || 0;
+                // ─────────────────────────────────────────
+                // Misc per-client
+                // ─────────────────────────────────────────
+                backup.water = readStoreSafe('heys_water_history', null);
+                backup.scheduledAdvices = readStoreSafe('heys_scheduled_advices', null);
+                backup.supplements = readStoreSafe('heys_supplements', null);
+                backup.plannedSupplements = readStoreSafe('heys_planned_supplements', null);
 
-                // Скачиваем файл
-                const fileName = `heys-backup-${clientId.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.json`;
-                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                // ─────────────────────────────────────────
+                // Gamification
+                // ─────────────────────────────────────────
+                backup.gamification = {
+                    game: readStoreSafe('heys_game', null),
+                    bestStreak: readStoreSafe('heys_best_streak', null),
+                    weeklyWrapViewCount: readStoreSafe('heys_weekly_wrap_view_count', null),
+                    milestones: collectLsKeys(k => k.startsWith('heys_milestone_')),
+                };
+
+                // ─────────────────────────────────────────
+                // Planning
+                // ─────────────────────────────────────────
+                backup.planning = {
+                    projects: readStoreSafe('heys_planning_projects', null),
+                    tasks: readStoreSafe('heys_planning_tasks', null),
+                    slots: readStoreSafe('heys_planning_slots', null),
+                    links: readStoreSafe('heys_planning_links_v1', null),
+                };
+
+                // ─────────────────────────────────────────
+                // Advice subsystem
+                // ─────────────────────────────────────────
+                backup.adviceSettings = readStoreSafe('heys_advice_settings', null);
+                backup.adviceReadToday = readStoreSafe('heys_advice_read_today', null);
+                backup.adviceHiddenToday = readStoreSafe('heys_advice_hidden_today', null);
+                backup.adviceFlags = {
+                    firstMealTip: readStoreSafe('heys_first_meal_tip', null),
+                    bestDayLastCheck: readStoreSafe('heys_best_day_last_check', null),
+                    eveningSnackerCheck: readStoreSafe('heys_evening_snacker_check', null),
+                    morningSkipperCheck: readStoreSafe('heys_morning_skipper_check', null),
+                    lastVisit: readStoreSafe('heys_last_visit', null),
+                };
+
+                // Insights feedback — может быть до 970 KB.
+                const insightsFeedback = collectLsKeys(k => /insights_feedback/.test(k));
+                const insightsFeedbackSize = JSON.stringify(insightsFeedback).length;
+                backup.insightsFeedback = insightsFeedback;
+                backup._warnLargeInsights = insightsFeedbackSize > 200 * 1024;
+
+                // ─────────────────────────────────────────
+                // Onboarding & tours
+                // ─────────────────────────────────────────
+                backup.onboardingFlags = {
+                    tourCompleted: readStoreSafe('heys_tour_completed', null),
+                    insightsTourCompleted: readStoreSafe('heys_insights_tour_completed', null),
+                    tourInterruptedStep: readStoreSafe('heys_tour_interrupted_step', null),
+                    onboardingComplete: readStoreSafe('heys_onboarding_complete', null),
+                };
+
+                backup.morningCheckin = collectLsKeys(k => k.startsWith('heys_morning_checkin'));
+
+                // ─────────────────────────────────────────
+                // Shared catalog hash (для проверки совместимости при import)
+                // ─────────────────────────────────────────
+                try {
+                    const cachedShared = HEYS.cloud?.getCachedSharedProducts?.();
+                    if (Array.isArray(cachedShared) && cachedShared.length > 0) {
+                        const ids = cachedShared.map(p => String(p && p.id != null ? p.id : '')).filter(Boolean).sort().join('|');
+                        backup.sharedCatalogHash = safeFnv1a(ids) + ':' + cachedShared.length;
+                    } else {
+                        backup.sharedCatalogHash = null;
+                    }
+                } catch (e) {
+                    backup.sharedCatalogHash = null;
+                }
+
+                // ─────────────────────────────────────────
+                // Финальная проверка: нет ли auth-токенов в собранных данных
+                // ─────────────────────────────────────────
+                const leakProbe = JSON.stringify(backup);
+                if (/heys_supabase_auth_token|heys_pin_auth_client|"sb-[a-z0-9-]+"/.test(leakProbe)) {
+                    console.error('[BACKUP] 🚨 SECURITY: auth-token-like substring detected in backup; aborting.');
+                    HEYS.Toast?.error('Экспорт отменён: обнаружены auth-токены');
+                    return { ok: false, error: 'auth_token_leak_protected' };
+                }
+
+                // ─────────────────────────────────────────
+                // Compress + download
+                // ─────────────────────────────────────────
+                HEYS.Toast?.info?.('Сжимаем бэкап…');
+                const json = JSON.stringify(backup);
+                const { blob, compressed } = await compressIfPossible(json);
+
+                const ext = compressed ? '.json.gz' : '.json';
+                const fileName = `heys-backup-${clientId.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}${ext}`;
                 const url = URL.createObjectURL(blob);
-
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = fileName;
@@ -27720,18 +27841,513 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                const sharedCount = backup.sharedProducts?.length || 0;
-                console.log(`[BACKUP] ✅ Exported: ${productsCount} products, ${sharedCount} shared, ${daysCount} days`);
-                return { ok: true, products: productsCount, sharedProducts: sharedCount, days: daysCount, fileName };
+                const t1 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+                const stats = {
+                    overlayRows: Array.isArray(backup.overlayProducts) ? backup.overlayProducts.length : 0,
+                    legacyProducts: backup.legacyProductsSnapshot.length,
+                    days: Object.keys(backup.days).length,
+                    insightsFeedbackKB: Math.round(insightsFeedbackSize / 1024),
+                    rawJsonKB: Math.round(json.length / 1024),
+                    blobKB: Math.round(blob.size / 1024),
+                    compressed,
+                    elapsedMs: Math.round(t1 - t0),
+                };
+                console.log('[BACKUP] ✅ Exported', fileName, stats);
+                HEYS.Toast?.success?.(`✅ Бэкап сохранён (${stats.blobKB} КБ${compressed ? ', gzip' : ''})`);
+
+                return {
+                    ok: true,
+                    fileName,
+                    products: stats.overlayRows || stats.legacyProducts,
+                    days: stats.days,
+                    sharedProducts: 0,
+                    stats,
+                };
             } catch (err) {
                 console.error('[BACKUP] Export failed:', err);
-                HEYS.Toast?.error('Ошибка экспорта: ' + err.message) || alert('Ошибка экспорта: ' + err.message);
-                return { ok: false, error: err.message };
+                HEYS.Toast?.error('Ошибка экспорта: ' + (err && err.message ? err.message : err))
+                    || alert('Ошибка экспорта');
+                return { ok: false, error: err && err.message ? err.message : String(err) };
             }
         };
     };
 
     HEYS.AppBackupExport.init();
+})();
+
+
+/* ===== heys_app_backup_import_v1.js ===== */
+// heys_app_backup_import_v1.js — full-state backup restore.
+//
+// Поддерживает:
+//   • schemaVersion=2 — full state (overlay + days + profile + ...): новый путь.
+//   • schemaVersion=1 или undefined — legacy products-only: совместимость со старыми бэкапами.
+//   • .json и .json.gz (через DecompressionStream).
+//
+// Public API: HEYS.AppBackupImport.importFromFile(file).
+// План: .claude/plans/misty-booping-quilt.md (Phase B).
+
+; (function () {
+    const HEYS = window.HEYS = window.HEYS || {};
+    HEYS.AppBackupImport = HEYS.AppBackupImport || {};
+
+    const MAX_FILE_BYTES = 50 * 1024 * 1024;       // 50 MB raw input
+    const MAX_OVERLAY_ROWS = 10000;
+    const MAX_DAYS = 1825;
+    const SUPPORTED_SCHEMA_VERSIONS = new Set([1, 2]);
+
+    function isForbiddenKey(k) {
+        return HEYS.AppBackupExport && HEYS.AppBackupExport._isForbiddenKey
+            ? HEYS.AppBackupExport._isForbiddenKey(k)
+            : (k === 'heys_supabase_auth_token' || k === 'heys_pin_auth_client' || (typeof k === 'string' && k.startsWith('sb-')));
+    }
+
+    async function readFileBytes(file) {
+        if (file.size > MAX_FILE_BYTES) {
+            throw new Error(`Файл слишком большой (${Math.round(file.size / 1024)} КБ, лимит ${Math.round(MAX_FILE_BYTES / 1024)} КБ)`);
+        }
+        const buf = await file.arrayBuffer();
+        const u8 = new Uint8Array(buf);
+        // gzip magic: 1f 8b
+        const isGzip = u8.length >= 2 && u8[0] === 0x1f && u8[1] === 0x8b;
+        if (!isGzip) {
+            return new TextDecoder('utf-8').decode(u8);
+        }
+        if (typeof DecompressionStream === 'undefined') {
+            throw new Error('Файл сжат gzip, но браузер не поддерживает DecompressionStream');
+        }
+        const ds = new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'));
+        const text = await new Response(ds).text();
+        return text;
+    }
+
+    function parseSafe(text) {
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            throw new Error('Файл не является валидным JSON: ' + (e && e.message ? e.message : e));
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Pre-validation (RAM-only; ничего не пишет в LS)
+    // ─────────────────────────────────────────────────────────────────────
+    function validateV2(data) {
+        const errors = [];
+        const counts = {};
+
+        if (data.schemaVersion !== 2) errors.push('schemaVersion должна быть 2');
+        if (!data.clientId || typeof data.clientId !== 'string') errors.push('clientId отсутствует или не строка');
+
+        // overlay
+        if (data.overlayProducts != null) {
+            if (!Array.isArray(data.overlayProducts)) {
+                errors.push('overlayProducts должен быть массивом');
+            } else if (data.overlayProducts.length > MAX_OVERLAY_ROWS) {
+                errors.push(`overlayProducts слишком много (${data.overlayProducts.length} > ${MAX_OVERLAY_ROWS})`);
+            } else {
+                for (const r of data.overlayProducts) {
+                    if (!r || typeof r !== 'object') { errors.push('overlay: строка не объект'); break; }
+                    if (r._custom !== true && r.shared_origin_id == null) {
+                        // TypeA должен иметь shared_origin_id; иначе это плохая запись
+                        errors.push('overlay: TypeA строка без shared_origin_id (' + (r.name || r.id) + ')');
+                        break;
+                    }
+                }
+                counts.overlayTotal = data.overlayProducts.length;
+                counts.overlayTypeA = data.overlayProducts.filter(r => r && r._custom !== true).length;
+                counts.overlayTypeB = data.overlayProducts.filter(r => r && r._custom === true).length;
+            }
+        }
+
+        // days
+        if (data.days != null && typeof data.days !== 'object') errors.push('days должен быть объектом');
+        if (data.days && typeof data.days === 'object') {
+            const dayKeys = Object.keys(data.days);
+            if (dayKeys.length > MAX_DAYS) errors.push(`days слишком много (${dayKeys.length} > ${MAX_DAYS})`);
+            counts.days = dayKeys.length;
+            for (const k of dayKeys) {
+                if (!/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(k)) {
+                    errors.push('days: некорректный ключ ' + k);
+                    break;
+                }
+            }
+        }
+
+        counts.profile = data.profile ? 1 : 0;
+        counts.norms = data.norms ? 1 : 0;
+        counts.hrZones = data.hrZones ? 1 : 0;
+        counts.ratioZones = data.ratioZones ? 1 : 0;
+        counts.supplements = data.supplements ? 1 : 0;
+        counts.plannedSupplements = Array.isArray(data.plannedSupplements) ? data.plannedSupplements.length : (data.plannedSupplements ? 1 : 0);
+        counts.hiddenProducts = Array.isArray(data.hiddenProducts) ? data.hiddenProducts.length : 0;
+        counts.deletedIds = Array.isArray(data.deletedIds) ? data.deletedIds.length : 0;
+        counts.lastGramsKeys = data.lastGramsByProduct ? Object.keys(data.lastGramsByProduct).length : 0;
+        counts.gamification = data.gamification && (data.gamification.game || data.gamification.bestStreak) ? 1 : 0;
+        counts.planning = data.planning && (data.planning.projects || data.planning.tasks) ? 1 : 0;
+        counts.adviceSettings = data.adviceSettings ? 1 : 0;
+        counts.insightsFeedbackKeys = data.insightsFeedback ? Object.keys(data.insightsFeedback).length : 0;
+
+        return { ok: errors.length === 0, errors, counts };
+    }
+
+    function buildPreviewMessage(data, validation) {
+        const c = validation.counts;
+        const lines = [];
+        lines.push(`📦 Будет восстановлено из бэкапа от ${new Date(data.exportedAt).toLocaleString('ru-RU')}:`);
+        lines.push('');
+        if (c.overlayTotal) {
+            lines.push(`• Продукты (overlay): ${c.overlayTotal} (TypeA: ${c.overlayTypeA}, custom: ${c.overlayTypeB})`);
+        }
+        if (c.days) lines.push(`• Дни дневника: ${c.days}`);
+        if (c.profile) lines.push(`• Профиль: ✓`);
+        if (c.norms) lines.push(`• Нормы: ✓`);
+        if (c.hrZones) lines.push(`• HR-зоны: ✓`);
+        if (c.ratioZones) lines.push(`• Ratio-зоны: ✓`);
+        if (c.supplements || c.plannedSupplements) lines.push(`• Добавки: ${c.plannedSupplements || 0} запланированных`);
+        if (c.hiddenProducts) lines.push(`• Скрытые продукты: ${c.hiddenProducts}`);
+        if (c.deletedIds) lines.push(`• Tombstones: ${c.deletedIds}`);
+        if (c.lastGramsKeys) lines.push(`• История граммовок: ${c.lastGramsKeys}`);
+        if (c.gamification) lines.push(`• Gamification (XP, achievements): ✓`);
+        if (c.planning) lines.push(`• Planning (проекты/задачи): ✓`);
+        if (c.adviceSettings) lines.push(`• Advice settings: ✓`);
+        if (c.insightsFeedbackKeys) lines.push(`• Insights feedback: ${c.insightsFeedbackKeys} ключей`);
+        lines.push('');
+        lines.push('⚠️ Текущие данные будут объединены с бэкапом (overlay-merge не теряет локальные customs).');
+        lines.push('Дни и settings будут перезаписаны там, где они есть в бэкапе.');
+        return lines.join('\n');
+    }
+
+    function dispatchUpdate(eventName, detail) {
+        try {
+            window.dispatchEvent(new CustomEvent(eventName, { detail: detail || {} }));
+        } catch (_) { /* noop */ }
+    }
+
+    async function safeSet(key, value, opts) {
+        opts = opts || {};
+        if (value == null && !opts.allowNull) return false;
+        if (isForbiddenKey(key)) return false;
+        if (!HEYS.store || typeof HEYS.store.set !== 'function') {
+            console.warn('[IMPORT] HEYS.store.set unavailable; skipping', key);
+            return false;
+        }
+        try {
+            HEYS.store.set(key, value);
+            return true;
+        } catch (e) {
+            console.warn('[IMPORT] safeSet failed:', key, e && e.message);
+            return false;
+        }
+    }
+
+    async function applyOverlay(rows) {
+        if (!Array.isArray(rows)) return { applied: false };
+        if (!HEYS.OverlayStore || typeof HEYS.OverlayStore.applyCloudSnapshot !== 'function') {
+            // Fallback: пишем напрямую в LS под нужным ключом.
+            await safeSet('heys_products_overlay_v2', rows);
+            return { applied: true, fallback: true, after: rows.length };
+        }
+        return HEYS.OverlayStore.applyCloudSnapshot(rows, { source: 'restore-from-file' });
+    }
+
+    function notifyProductsContentBump() {
+        try {
+            if (HEYS.products) {
+                HEYS.products.contentVersion = (HEYS.products.contentVersion || 0) + 1;
+            }
+        } catch (_) { /* noop */ }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Restore v2 (full-state)
+    // ─────────────────────────────────────────────────────────────────────
+    async function restoreV2(data, validation) {
+        const stats = {
+            overlayApplied: 0, days: 0, lastGrams: 0,
+            scalarKeys: 0, insightsKeys: 0, milestonesKeys: 0,
+            errors: [],
+        };
+
+        // 1. Profile-family (с dispatch events для React-listener'ов).
+        if (data.profile) {
+            await safeSet('heys_profile', data.profile);
+            dispatchUpdate('heys:profile-updated', { source: 'restore' });
+            stats.scalarKeys++;
+        }
+        if (data.norms) {
+            await safeSet('heys_norms', data.norms);
+            dispatchUpdate('heys:norms-updated', { source: 'restore' });
+            stats.scalarKeys++;
+        }
+        if (data.hrZones) {
+            await safeSet('heys_hr_zones', data.hrZones);
+            dispatchUpdate('heys:hr_zones-updated', { source: 'restore' });
+            stats.scalarKeys++;
+        }
+        if (data.ratioZones) {
+            await safeSet('heys_ratio_zones', data.ratioZones);
+            dispatchUpdate('heys:ratio-zones-updated', { source: 'restore' });
+            stats.scalarKeys++;
+        }
+
+        // 2. Overlay (единая точка через OverlayStore).
+        if (Array.isArray(data.overlayProducts) && data.overlayProducts.length > 0) {
+            const r = await applyOverlay(data.overlayProducts);
+            stats.overlayApplied = (r && r.after) || data.overlayProducts.length;
+        }
+
+        // 3. Tombstones / hidden / removed.
+        if (Array.isArray(data.deletedIds))         { await safeSet('heys_deleted_ids', data.deletedIds); stats.scalarKeys++; }
+        if (Array.isArray(data.removedFromMyList))  { await safeSet('heys_removed_from_my_list', data.removedFromMyList); stats.scalarKeys++; }
+        if (Array.isArray(data.hiddenProducts))     { await safeSet('heys_hidden_products', data.hiddenProducts); stats.scalarKeys++; }
+
+        // 4. Grams history.
+        if (data.gramsHistory != null) { await safeSet('heys_grams_history', data.gramsHistory); stats.scalarKeys++; }
+        if (data.lastGramsByProduct && typeof data.lastGramsByProduct === 'object') {
+            for (const k of Object.keys(data.lastGramsByProduct)) {
+                if (!k.startsWith('heys_last_grams_')) continue;
+                if (await safeSet(k, data.lastGramsByProduct[k], { allowNull: false })) stats.lastGrams++;
+            }
+        }
+
+        // 5. Days (нормализованные ключи heys_dayv2_YYYY-MM-DD; Store.set применит scoping автоматически).
+        if (data.days && typeof data.days === 'object') {
+            const dayKeys = Object.keys(data.days);
+            const total = dayKeys.length;
+            let done = 0;
+            for (const k of dayKeys) {
+                const v = data.days[k];
+                if (v == null) continue;
+                if (await safeSet(k, v)) {
+                    stats.days++;
+                    done++;
+                    if (done % 25 === 0 || done === total) {
+                        try { HEYS.Toast?.info?.(`Восстановление дней ${done}/${total}…`); } catch (_) { }
+                    }
+                }
+            }
+            // Trigger React subscribers для текущего открытого дня.
+            dispatchUpdate('heys:day-updated', { source: 'restore', batch: true });
+        }
+
+        // 6. Misc.
+        if (data.water != null) { await safeSet('heys_water_history', data.water); stats.scalarKeys++; }
+        if (data.scheduledAdvices != null) { await safeSet('heys_scheduled_advices', data.scheduledAdvices); stats.scalarKeys++; }
+        if (data.supplements != null) {
+            await safeSet('heys_supplements', data.supplements);
+            dispatchUpdate('heys:supplements-updated', { source: 'restore' });
+            stats.scalarKeys++;
+        }
+        if (data.plannedSupplements != null) {
+            await safeSet('heys_planned_supplements', data.plannedSupplements);
+            stats.scalarKeys++;
+        }
+
+        // 7. Gamification.
+        if (data.gamification && typeof data.gamification === 'object') {
+            const g = data.gamification;
+            if (g.game != null)                 { await safeSet('heys_game', g.game); stats.scalarKeys++; }
+            if (g.bestStreak != null)           { await safeSet('heys_best_streak', g.bestStreak); stats.scalarKeys++; }
+            if (g.weeklyWrapViewCount != null)  { await safeSet('heys_weekly_wrap_view_count', g.weeklyWrapViewCount); stats.scalarKeys++; }
+            if (g.milestones && typeof g.milestones === 'object') {
+                for (const k of Object.keys(g.milestones)) {
+                    if (!k.startsWith('heys_milestone_')) continue;
+                    if (await safeSet(k, g.milestones[k])) stats.milestonesKeys++;
+                }
+            }
+        }
+
+        // 8. Planning.
+        if (data.planning && typeof data.planning === 'object') {
+            const p = data.planning;
+            if (p.projects != null) { await safeSet('heys_planning_projects', p.projects); stats.scalarKeys++; }
+            if (p.tasks != null)    { await safeSet('heys_planning_tasks', p.tasks); stats.scalarKeys++; }
+            if (p.slots != null)    { await safeSet('heys_planning_slots', p.slots); stats.scalarKeys++; }
+            if (p.links != null)    { await safeSet('heys_planning_links_v1', p.links); stats.scalarKeys++; }
+        }
+
+        // 9. Advice.
+        if (data.adviceSettings != null) {
+            await safeSet('heys_advice_settings', data.adviceSettings);
+            dispatchUpdate('heys:advice-settings-updated', { source: 'restore' });
+            stats.scalarKeys++;
+        }
+        if (data.adviceReadToday != null)   { await safeSet('heys_advice_read_today', data.adviceReadToday); stats.scalarKeys++; }
+        if (data.adviceHiddenToday != null) { await safeSet('heys_advice_hidden_today', data.adviceHiddenToday); stats.scalarKeys++; }
+        if (data.adviceFlags && typeof data.adviceFlags === 'object') {
+            const f = data.adviceFlags;
+            if (f.firstMealTip != null)         { await safeSet('heys_first_meal_tip', f.firstMealTip); stats.scalarKeys++; }
+            if (f.bestDayLastCheck != null)     { await safeSet('heys_best_day_last_check', f.bestDayLastCheck); stats.scalarKeys++; }
+            if (f.eveningSnackerCheck != null)  { await safeSet('heys_evening_snacker_check', f.eveningSnackerCheck); stats.scalarKeys++; }
+            if (f.morningSkipperCheck != null)  { await safeSet('heys_morning_skipper_check', f.morningSkipperCheck); stats.scalarKeys++; }
+            if (f.lastVisit != null)            { await safeSet('heys_last_visit', f.lastVisit); stats.scalarKeys++; }
+        }
+
+        // 10. Insights feedback (cloudSync='merge' — пишем сырыми ключами).
+        if (data.insightsFeedback && typeof data.insightsFeedback === 'object') {
+            for (const k of Object.keys(data.insightsFeedback)) {
+                if (!/insights_feedback/.test(k)) continue;
+                if (await safeSet(k, data.insightsFeedback[k])) stats.insightsKeys++;
+            }
+        }
+
+        // 11. Onboarding / morning checkin.
+        if (data.onboardingFlags && typeof data.onboardingFlags === 'object') {
+            const o = data.onboardingFlags;
+            if (o.tourCompleted != null)         { await safeSet('heys_tour_completed', o.tourCompleted); stats.scalarKeys++; }
+            if (o.insightsTourCompleted != null) { await safeSet('heys_insights_tour_completed', o.insightsTourCompleted); stats.scalarKeys++; }
+            if (o.tourInterruptedStep != null)   { await safeSet('heys_tour_interrupted_step', o.tourInterruptedStep); stats.scalarKeys++; }
+            if (o.onboardingComplete != null)    { await safeSet('heys_onboarding_complete', o.onboardingComplete); stats.scalarKeys++; }
+        }
+        if (data.morningCheckin && typeof data.morningCheckin === 'object') {
+            for (const k of Object.keys(data.morningCheckin)) {
+                if (!k.startsWith('heys_morning_checkin')) continue;
+                if (await safeSet(k, data.morningCheckin[k])) stats.scalarKeys++;
+            }
+        }
+
+        notifyProductsContentBump();
+
+        return stats;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Legacy restore (schemaVersion=1 / undefined): products-only через
+    // HEYS.products.setAll, чтобы сохранить совместимость со старыми бэкапами.
+    // ─────────────────────────────────────────────────────────────────────
+    async function restoreLegacyProducts(data) {
+        let incoming = [];
+        if (Array.isArray(data)) incoming = data;
+        else if (Array.isArray(data && data.products)) incoming = data.products;
+        else throw new Error('Файл не содержит массива продуктов');
+
+        // Минимальная валидация name.
+        const valid = incoming.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
+            .map(p => Object.assign({}, p, { name: String(p.name).slice(0, 200) }));
+        if (valid.length === 0) throw new Error('Не найдено валидных продуктов в файле');
+
+        // Подтверждение.
+        const ok = await (HEYS.ConfirmModal?.confirm?.({
+            title: '📤 Импорт продуктов (legacy формат)',
+            message: `В файле ${valid.length} продуктов. Старый формат — будет импортирован только список продуктов (профиль/дни/настройки в файле отсутствуют). Продолжить?`,
+            confirmText: `Импортировать (${valid.length})`,
+            cancelText: 'Отмена',
+        }) ?? Promise.resolve(window.confirm(`В файле ${valid.length} продуктов. Импортировать?`)));
+        if (!ok) return { ok: false, cancelled: true };
+
+        // Merge через HEYS.products.setAll (use existing API).
+        if (!HEYS.products || typeof HEYS.products.setAll !== 'function' || typeof HEYS.products.getAll !== 'function') {
+            throw new Error('HEYS.products API недоступен — нельзя импортировать legacy формат');
+        }
+        const current = HEYS.products.getAll() || [];
+        const norm = (s) => String(s || '').trim().toLowerCase();
+        const byName = new Map();
+        current.forEach((p, i) => byName.set(norm(p.name), { p, i }));
+        const merged = current.slice();
+        let added = 0, updated = 0;
+        for (const incomingP of valid) {
+            const key = norm(incomingP.name);
+            const existing = byName.get(key);
+            if (existing) {
+                merged[existing.i] = Object.assign({}, existing.p, incomingP, { id: existing.p.id });
+                updated++;
+            } else {
+                merged.push(incomingP);
+                byName.set(key, { p: incomingP, i: merged.length - 1 });
+                added++;
+            }
+        }
+        HEYS.products.setAll(merged, { source: 'restore-from-file-legacy' });
+        notifyProductsContentBump();
+        return { ok: true, added, updated, total: merged.length };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Public entry
+    // ─────────────────────────────────────────────────────────────────────
+    HEYS.AppBackupImport.importFromFile = async function importFromFile(file) {
+        if (!file) return { ok: false, error: 'no_file' };
+        if (HEYS._restoringBackup) {
+            HEYS.Toast?.warning?.('Восстановление уже выполняется');
+            return { ok: false, error: 'already_restoring' };
+        }
+        HEYS._restoringBackup = true;
+        const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+        try {
+            HEYS.Toast?.info?.('Читаем файл…');
+            const text = await readFileBytes(file);
+            const data = parseSafe(text);
+
+            // Routing по schemaVersion.
+            const ver = data && typeof data === 'object' ? data.schemaVersion : undefined;
+            const isV2 = ver === 2;
+            const isLegacy = (ver === undefined || ver === 1) || Array.isArray(data);
+
+            if (ver !== undefined && !SUPPORTED_SCHEMA_VERSIONS.has(ver) && ver !== 2) {
+                throw new Error(`Неподдерживаемый schemaVersion=${ver}. Обновите приложение.`);
+            }
+
+            if (isV2) {
+                const validation = validateV2(data);
+                if (!validation.ok) {
+                    console.error('[IMPORT] validation failed', validation.errors);
+                    throw new Error('Файл не прошёл валидацию: ' + validation.errors.slice(0, 3).join('; '));
+                }
+                // sharedCatalogHash compatibility hint.
+                if (data.sharedCatalogHash) {
+                    try {
+                        const cur = HEYS.cloud?.getCachedSharedProducts?.();
+                        if (Array.isArray(cur) && cur.length > 0) {
+                            const ids = cur.map(p => String(p && p.id != null ? p.id : '')).filter(Boolean).sort().join('|');
+                            // Хеш считается так же как в export, но мы не вызываем _safeFnv1a здесь —
+                            // достаточно сравнить хвост ":count" для приблизительной проверки совместимости.
+                            const tail = String(data.sharedCatalogHash).split(':').pop();
+                            if (tail && Number(tail) > cur.length * 1.5) {
+                                HEYS.Toast?.warning?.('⚠️ Бэкап использовал более широкий shared-каталог; TypeA связки могут устареть.');
+                            }
+                        }
+                    } catch (_) { /* noop */ }
+                }
+                const previewMsg = buildPreviewMessage(data, validation);
+                const ok = await (HEYS.ConfirmModal?.confirm?.({
+                    title: '📤 Восстановление из бэкапа',
+                    message: previewMsg,
+                    confirmText: 'Восстановить',
+                    cancelText: 'Отмена',
+                }) ?? Promise.resolve(window.confirm(previewMsg)));
+                if (!ok) {
+                    console.log('[IMPORT] cancelled by user');
+                    return { ok: false, cancelled: true };
+                }
+                HEYS.Toast?.info?.('Восстанавливаем…');
+                const stats = await restoreV2(data, validation);
+                const t1 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+                stats.elapsedMs = Math.round(t1 - t0);
+                console.log('[IMPORT] ✅ restore v2 complete', stats);
+                HEYS.Toast?.success?.(`✅ Восстановлено: ${stats.overlayApplied} продуктов, ${stats.days} дней, ${stats.scalarKeys + stats.lastGrams + stats.milestonesKeys + stats.insightsKeys} ключей`);
+                HEYS.analytics?.trackDataOperation?.('backup-restore-v2', stats.overlayApplied);
+                return { ok: true, schemaVersion: 2, stats };
+            }
+
+            if (isLegacy) {
+                const r = await restoreLegacyProducts(data);
+                if (r.ok) HEYS.Toast?.success?.(`✅ Импорт (legacy): +${r.added}, ↻${r.updated}`);
+                HEYS.analytics?.trackDataOperation?.('backup-restore-legacy', r.total || 0);
+                return r;
+            }
+
+            throw new Error('Неизвестный формат файла');
+        } catch (err) {
+            console.error('[IMPORT] failed:', err);
+            HEYS.Toast?.error?.('Ошибка восстановления: ' + (err && err.message ? err.message : err))
+                || alert('Ошибка восстановления: ' + (err && err.message ? err.message : err));
+            HEYS.analytics?.trackError?.(err, { context: 'backup-import' });
+            return { ok: false, error: err && err.message ? err.message : String(err) };
+        } finally {
+            HEYS._restoringBackup = false;
+        }
+    };
 })();
 
 
