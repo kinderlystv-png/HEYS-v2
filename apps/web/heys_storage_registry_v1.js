@@ -67,6 +67,7 @@
   const NEVER_TOUCH = [
     /^heys_supabase_auth_token$/,
     /^heys_pin_auth_client$/,
+    /^heys_session_token$/,
     /^sb-/,
   ];
 

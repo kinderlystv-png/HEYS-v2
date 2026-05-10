@@ -23680,11 +23680,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           if (isExpired) {
             const hoursAgo = Math.round((now - expiresAt) / 3600);
             logCritical(`⏰ Токен истёк ${hoursAgo}ч назад, требуется перелогин`);
-            // Удаляем просроченный токен и PIN auth флаг
-            // Иначе система включит PIN auth режим вместо показа экрана входа
+            // Удаляем только просроченный Supabase-токен.
+            // heys_pin_auth_client НЕ трогаем: если пользователь вошёл по PIN,
+            // его сессия независима от Supabase JWT. Auth init (heys_app_auth_init_v1.js)
+            // определит нужный путь (PIN vs curator) по наличию heys_pin_auth_client.
             try {
               localStorage.removeItem('heys_supabase_auth_token');
-              localStorage.removeItem('heys_pin_auth_client');
             } catch (_) { }
             return { user: null };
           }
@@ -29153,23 +29154,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // 🔐 PIN-авторизация: работаем без user
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
     if (!user && !isPinAuth) {
-      // � FIX: Явный warning для products — это критический путь синхронизации
-      const isProducts = k && (k.includes('products') || k === 'heys_products');
-      if (isProducts) {
-        console.warn(`[HEYS] 🚨 PRODUCTS SYNC BLOCKED: No auth! user=${!!user}, isPinAuth=${isPinAuth}, _pinAuthClientId=${_pinAuthClientId?.slice(0, 8)}, client_id=${client_id?.slice(0, 8)}`);
-      }
-      // �🔍 DEBUG: Логируем когда сохранение блокируется
-      log(`🚫 [SAVE BLOCKED] No auth for key '${k}': user=${!!user}, _pinAuthClientId=${_pinAuthClientId}, client_id=${client_id}, isPinAuth=${isPinAuth}`);
-
-      // 🔥 INSTANT FEEDBACK: Если нет авторизации, это критическая ошибка сохранения
-      if (global.dispatchEvent) {
-        global.dispatchEvent(new CustomEvent('heys:sync-error', {
-          detail: {
-            error: 'auth_required',
-            persistent: true
-          }
-        }));
-      }
+      // Сохранение заблокировано: нет auth-контекста.
+      // Данные уже в clientUpsertQueue (через interceptSetItem) или в LS — не потеряются.
+      // НЕ диспатчим auth_required: это транзиентное состояние (boot race / client switch),
+      // а не реальная ошибка сессии. Реальные auth-ошибки перехватываются в doClientUpload
+      // и cloud.syncClient (heys_app_auth_init_v1.js).
+      logCritical(`🚫 [SAVE BLOCKED] No auth for key '${k}': _pinAuthClientId=${_pinAuthClientId?.slice(0, 8)}, client_id=${client_id?.slice(0, 8)}`);
       return;
     }
 
@@ -35690,6 +35680,7 @@ NOVA: 1-4
   const NEVER_TOUCH = [
     /^heys_supabase_auth_token$/,
     /^heys_pin_auth_client$/,
+    /^heys_session_token$/,
     /^sb-/,
   ];
 
