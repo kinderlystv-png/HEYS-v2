@@ -12700,7 +12700,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const MIN_SYNCING_DURATION = 1500;
         const SYNCING_DELAY = 400;
-        const NON_BLOCKING_SYNC_DELAY = 10000;
+        const NON_BLOCKING_SYNC_DELAY = 15000;
         const SYNC_STATUS_POLL_ACTIVE_MS = 1200;
         const SYNC_STATUS_POLL_IDLE_MS = 2200;
         const SYNC_STATUS_POLL_HIDDEN_MS = 4000;
@@ -22804,6 +22804,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         'div',
                         { className: 'sync-lock-overlay__hint' },
                         'Похоже, интернет нестабильный — приложению просто нужно чуть больше времени на синхронизацию.'
+                    ),
+                    shouldShowSlowInternetHint && React.createElement(
+                        'div',
+                        { className: 'sync-lock-overlay__vpn-badge' },
+                        React.createElement('span', { className: 'sync-lock-overlay__vpn-badge-icon', 'aria-hidden': 'true' }, '🔒'),
+                        React.createElement('span', { className: 'sync-lock-overlay__vpn-badge-text' }, 'Включён VPN? Попробуйте отключить — ускорит синхронизацию')
                     )
                 )
             ),

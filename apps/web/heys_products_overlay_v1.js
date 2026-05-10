@@ -163,6 +163,36 @@
       });
     }
 
+    // 3.1. TypeB→TypeA auto-link по имени каталога.
+    // Если TypeB из cloud совпадает по _normalizeName с shared_products — конвертируем в TypeA.
+    // Предотвращает накопление TypeB-дублей при будущих снапшотах.
+    var _autolinkedCount = 0;
+    try {
+      var _sharedIdx = global.HEYS && global.HEYS.cloud && typeof global.HEYS.cloud.getSharedIndex === 'function'
+        ? global.HEYS.cloud.getSharedIndex() : null;
+      if (_sharedIdx && _sharedIdx.size > 0) {
+        var _autoAux = _getSharedAuxIndexes(_sharedIdx);
+        var _autoCoveredSO = new Set(
+          deduped
+            .filter(function (r) { return r && !r._custom && r.shared_origin_id != null; })
+            .map(function (r) { return String(r.shared_origin_id); })
+        );
+        deduped = deduped.map(function (r) {
+          if (!r || r._custom !== true || !r.name) return r;
+          var sm = _autoAux.byName.get(_normalizeName(r.name));
+          if (!sm) return r;
+          var sid = String(sm.id);
+          if (_autoCoveredSO.has(sid)) return r; // уже есть TypeA с таким SO — не дублируем
+          _autoCoveredSO.add(sid);
+          _autolinkedCount++;
+          var nr = Object.assign({}, r);
+          delete nr._custom;
+          nr.shared_origin_id = sm.id;
+          return nr;
+        });
+      }
+    } catch (_al) { try { console.warn('[OverlayStore] autolink err', _al); } catch (_) {} }
+
     const incomingIds = new Set(deduped.map(function (r) { return String(r && r.id != null ? r.id : ''); }));
     const pendingLocalCustoms = Array.isArray(current)
       ? current.filter(function (r) {
@@ -199,6 +229,7 @@
         source: source,
         incomingLen: incomingRows.length,
         deduped: deduped.length,
+        autolinked: _autolinkedCount,
         pendingLocalCustoms: pendingLocalCustoms.length,
         pendingLocalTypeA: pendingLocalTypeA.length,
         finalLen: merged.length,
