@@ -108,8 +108,8 @@
         const initLocalData = (opts = {}) => {
             const skipClientRestore = opts.skipClientRestore === true;
             const skipPinAuthRestore = opts.skipPinAuthRestore === true;
-            // Загружаем продукты из localStorage
-            const storedProducts = readStoredValue('heys_products', []);
+            // Загружаем продукты через canonical overlay (не legacy heys_products)
+            const storedProducts = window.HEYS?.products?.getAll?.() || readStoredValue('heys_products', []);
             if (Array.isArray(storedProducts)) {
                 setProducts(storedProducts);
             }

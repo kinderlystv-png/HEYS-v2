@@ -65,7 +65,9 @@
                         console.info('[HEYS.sync] ⏭️ useEffect: switchClient in progress, skipping duplicate sync');
                         return;
                     }
-                    const productsBeforeSync = products.length > 0 ? products : window.HEYS.utils.lsGet('heys_products', []);
+                    const productsBeforeSync = products.length > 0
+                        ? products
+                        : (window.HEYS?.products?.getAll?.() || []);
 
                     cloud.syncClient(clientId)
                         .then(() => {
