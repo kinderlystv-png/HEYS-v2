@@ -25706,14 +25706,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             logCritical(`⏭️ [SYNC] Skip flush for fresh client sync (${pendingCount} pending items from previous context)`);
           }
 
-          // 🧹 Очистка невалидных продуктов перед синхронизацией (локальные)
-          cloud.cleanupProducts();
-
-          // 🧹 Очистка невалидных продуктов в ОБЛАКЕ (с дедупликацией, не чаще раз в 5 минут)
-          if (!cloud._lastCloudCleanup || (now - cloud._lastCloudCleanup) > 300000) {
-            cloud._lastCloudCleanup = now;
-            cloud.cleanupCloudProducts().catch(e => console.warn('[CLOUD CLEANUP] Error:', e));
-          }
+          // 🚨 2026-05-11 DISABLED: cleanup classifies overlay TypeA rows as "invalid"
+          // because they lack `.name` field by design (name lives in shared catalog,
+          // referenced via shared_origin_id). Also wrongly deletes `heys_hidden_products`
+          // and `heys_favorite_products` which are arrays of IDs (strings), not objects.
+          // Observed destruction: 366 overlay rows → 28 in one cleanup pass on Poplanton client.
+          // Re-enable only after rewriting cleanupProductRecord to recognize overlay shape.
+          // cloud.cleanupProducts();
+          // if (!cloud._lastCloudCleanup || (now - cloud._lastCloudCleanup) > 300000) {
+          //   cloud._lastCloudCleanup = now;
+          //   cloud.cleanupCloudProducts().catch(e => console.warn('[CLOUD CLEANUP] Error:', e));
+          // }
 
           // Проверяем что клиент существует (без автосоздания)
           const _exists = await cloud.ensureClient(client_id);
@@ -27903,19 +27906,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           global.HEYS.store.flushMemory();
         }
 
-        // 🧹 Однократная очистка облака от невалидных продуктов (после первой синхронизации)
-        if (!cloud._cloudCleanupDone) {
-          cloud._cloudCleanupDone = true;
-          setTimeout(() => {
-            cloud.cleanupCloudProducts().then(result => {
-              if (result.cleaned > 0) {
-                logCritical(`☁️ [AUTO CLOUD CLEANUP] Cleaned ${result.cleaned} invalid products from cloud`);
-              }
-            }).catch(e => {
-              console.error('[AUTO CLOUD CLEANUP] Error:', e);
-            });
-          }, 2000); // Задержка 2 сек чтобы не блокировать UI
-        }
+        // 🚨 2026-05-11 DISABLED: auto cleanup wrongly classifies overlay rows as
+        // invalid (no `.name` field on TypeA). See bootstrap cleanup at ~6516 for
+        // full context. Re-enable only after rewrite.
+        // if (!cloud._cloudCleanupDone) {
+        //   cloud._cloudCleanupDone = true;
+        //   setTimeout(() => {
+        //     cloud.cleanupCloudProducts().then(result => {
+        //       if (result.cleaned > 0) {
+        //         logCritical(`☁️ [AUTO CLOUD CLEANUP] Cleaned ${result.cleaned} invalid products from cloud`);
+        //       }
+        //     }).catch(e => {
+        //       console.error('[AUTO CLOUD CLEANUP] Error:', e);
+        //     });
+        //   }, 2000);
+        // }
 
         const runNonCriticalPostSyncTail = async () => {
           // � v6: Shared products теперь грузятся ПАРАЛЛЕЛЬНО с sync (см. начало _syncInProgress)
