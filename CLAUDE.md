@@ -11,9 +11,12 @@ Compact agent reference. Detailed architecture in
 ## Communication
 
 - **Русский для объяснений**, английский для кода и идентификаторов.
-- **Сначала суть в одном предложении, потом детали.**
-- Простые слова, аналогии, конкретные примеры. Без формального жаргона где
-  возможно.
+- **Простыми словами, всегда.** Через аналогии и конкретные примеры. Без
+  формального жаргона где можно его избежать. Это касается любых объяснений,
+  резюме, отчётов о сделанной работе, ответов на вопросы. Технический термин
+  можно использовать только если он короче и понятнее аналогии.
+- **Сначала суть в одном предложении, потом детали.** Если задача тривиальная —
+  вообще без деталей.
 
 ## Working principles
 
@@ -103,6 +106,10 @@ To skip a hook the user must explicitly authorize. Default: do not
 
 - **DB access pattern** (Lockbox + psql + Yandex Postgres): memory
   `reference_db_migration.md`.
+- **DB inspection scripts**: [scripts/db/](scripts/db/) — `psql.sh` обёртка
+  (auto-loads password from Lockbox) + готовые аудиты (`audit-clients.sql`,
+  `audit-products.sql`, `audit-orphans.sql`, `inspect-client.sh <cid8>`).
+  Используй их вместо ручного писания SQL и передачи пароля.
 - **User profile / preferences**: memory `user_*.md`, `feedback_*.md`.
 - **Project context** specific to this codebase: memory `project_*.md`.
 
