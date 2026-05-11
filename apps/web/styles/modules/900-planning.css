@@ -43,6 +43,13 @@
     border: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+    /* Контейнер прозрачен для кликов — только сами кнопки навигации ловят таппинг.
+       Иначе пустая область между кнопками subnav перекрывает контент задач. */
+    pointer-events: none;
+}
+
+.planning-subnav__item {
+    pointer-events: auto;
 }
 
 .planning-subnav__inner {
@@ -195,12 +202,37 @@
 }
 
 .planning-tab:has(.planning-tasks-screen) .planning-subnav-shell {
-    flex: 0 0 calc(var(--planning-subnav-height, 68px) + 8px);
-    min-height: calc(var(--planning-subnav-height, 68px) + 8px);
+    /* Резерв = ровно под главные табы. Подменю и scale-fab pointer-events:none —
+       они визуально накладываются на низ контента, но клики проходят сквозь них. */
+    flex: 0 0 var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px)));
+    min-height: var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px)));
+}
+
+/* Фоновая полоса под FAB-рядом (подменю слева + scale-fab справа) — чтобы контент
+   задач при скролле не просвечивал сквозь полупрозрачные кнопки. Сидит сразу над
+   главными табами, под FAB-элементами (z-index 940). */
+.planning-tab:has(.planning-tasks-screen)::before {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px)));
+    height: calc(var(--planning-fab-size, 36px) + 8px);
+    background: rgba(255, 255, 255, 0.94);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-top: 0.5px solid rgba(0, 0, 0, 0.06);
+    z-index: 939;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .planning-tab:has(.planning-tasks-screen)::before {
+    background: rgba(28, 28, 30, 0.94);
+    border-top-color: rgba(255, 255, 255, 0.08);
 }
 
 .planning-tasks-screen {
-    padding: 4px 8px 8px;
+    padding: 4px 8px 16px;
 }
 
 .planning-tasks-header {
@@ -1531,6 +1563,7 @@
     align-items: center;
     justify-content: center;
     padding: 0;
+    position: relative;
 }
 
 .planning-task-row__delete:hover {
@@ -1583,6 +1616,7 @@
     padding: 0;
     font-size: 14px;
     line-height: 1;
+    position: relative;
 }
 
 .planning-icon-btn--subtask {
@@ -1625,6 +1659,17 @@
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
     border-color: rgba(239, 68, 68, 0.16);
+}
+
+/* Расширенная зона тапа на тач-устройствах: визуальный размер не меняется,
+   но палец попадает легко даже при zoom: 0.8 на .planning-tasks-screen. */
+@media (pointer: coarse) {
+    .planning-icon-btn::before,
+    .planning-task-row__delete::before {
+        content: '';
+        position: absolute;
+        inset: -10px -2px;
+    }
 }
 
 .planning-task-swipe.swipeable-container {
@@ -1684,6 +1729,13 @@
     line-height: 1;
     -webkit-user-select: none;
     user-select: none;
+    /* Контейнер прозрачен для кликов — только сами кнопки +/- ловят таппинг,
+       чтобы FAB не перехватывал клики по задачам, которые скроллятся позади него. */
+    pointer-events: none;
+}
+
+.planning-tasks-scale-fab__btn {
+    pointer-events: auto;
 }
 
 .planning-tasks-scale-fab__btn {

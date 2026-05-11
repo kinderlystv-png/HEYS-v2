@@ -881,6 +881,12 @@ body.planning-tab-active .meal-fab {
   transform: translateY(10px) scale(0.98) !important;
 }
 
+/* Контейнер .fab-group остаётся в DOM с layout-боксом размером в его (скрытых) детей —
+   его z-index:1001 перехватывал клики по задачам планировщика. Отключаем pointer-events. */
+body.planning-tab-active .fab-group {
+  pointer-events: none !important;
+}
+
 /* 💧 Анимация добавления воды около FAB */
 .water-fab-anim {
   position: absolute;

@@ -399,6 +399,7 @@
         isToday: d.isToday, dayNum, date: d.date, isPerfect,
         isUnknown: d.isUnknown || false, // флаг неизвестного дня
         hasTraining: d.hasTraining, trainingTypes: d.trainingTypes || [],
+        morningActivationCount: d.morningActivationCount || 0,
         trainingMinutes: d.trainingMinutes || 0,
         isWeekend: isWeekendDay, sleepQuality: d.sleepQuality || 0,
         sleepHours: d.sleepHours || 0, dayScore: d.dayScore || 0,
@@ -1527,8 +1528,15 @@
           });
         }).filter(Boolean),
         // Аннотации тренировок — пунктирные линии вниз к точкам (появляются синхронно с точкой)
+        // Зарядки (morningActivationCount) визуально считаются как 'strength', но рисуются отдельно
+        // под точкой, поэтому исключаем ровно N штук 'strength' из верхнего ряда иконок.
         points.map((p, i) => {
-          if (!p.hasTraining || !p.trainingTypes.length) return null;
+          let leftMorning = p.morningActivationCount || 0;
+          const topTypes = (p.trainingTypes || []).filter(t => {
+            if (leftMorning > 0 && t === 'strength') { leftMorning--; return false; }
+            return true;
+          });
+          if (!p.hasTraining || !topTypes.length) return null;
           const lineDelay = 2.6; // все сразу
           return React.createElement('line', {
             key: 'train-line-' + i,
@@ -1543,7 +1551,12 @@
         // Аннотации тренировок — иконки в одну линию сверху
         // Используем SVG <image> с Twemoji CDN напрямую
         points.map((p, i) => {
-          if (!p.hasTraining || !p.trainingTypes.length) return null;
+          let leftMorning = p.morningActivationCount || 0;
+          const topTypes = (p.trainingTypes || []).filter(t => {
+            if (leftMorning > 0 && t === 'strength') { leftMorning--; return false; }
+            return true;
+          });
+          if (!p.hasTraining || !topTypes.length) return null;
           // Маппинг типов на Twemoji codepoints
           const typeCodepoint = {
             cardio: '1f3c3',      // 🏃
@@ -1552,7 +1565,7 @@
           };
           const emojiDelay = 2.6;
           const emojiSize = 16;
-          const emojiCount = p.trainingTypes.length;
+          const emojiCount = topTypes.length;
           const totalWidth = emojiCount * emojiSize;
           const startX = p.x - totalWidth / 2;
 
@@ -1561,7 +1574,7 @@
             className: 'sparkline-annotation sparkline-annotation-training',
             style: { '--delay': emojiDelay + 's' }
           },
-            p.trainingTypes.map((t, j) => {
+            topTypes.map((t, j) => {
               const code = typeCodepoint[t] || '1f3c3';
               const url = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/' + code + '.svg';
               return React.createElement('image', {
@@ -1573,6 +1586,32 @@
                 height: emojiSize
               });
             })
+          );
+        }).filter(Boolean),
+        // Зарядка — отдельные молнии ⚡ под точкой (Twemoji 26a1)
+        points.map((p, i) => {
+          const count = p.morningActivationCount || 0;
+          if (!count) return null;
+          const emojiDelay = 2.6;
+          const emojiSize = 12;
+          const totalWidth = count * emojiSize;
+          const startX = p.x - totalWidth / 2;
+          const url = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a1.svg';
+          return React.createElement('g', {
+            key: 'morning-' + i,
+            className: 'sparkline-annotation sparkline-annotation-morning',
+            style: { '--delay': emojiDelay + 's' }
+          },
+            Array.from({ length: count }, (_, j) =>
+              React.createElement('image', {
+                key: j,
+                href: url,
+                x: startX + j * emojiSize,
+                y: p.y + 4, // прямо под точкой
+                width: emojiSize,
+                height: emojiSize
+              })
+            )
           );
         }).filter(Boolean),
         // Слайдер — вертикальная линия

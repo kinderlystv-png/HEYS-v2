@@ -1,13 +1,14 @@
 # HEYS — Активные задачи
 
-> Обновлено: 2026-05-11
+> Обновлено: 2026-05-11 (вечер)
 
 ---
 
 ## ✅ Сегодня закрыто (2026-05-10 / 2026-05-11)
 
 Большая сессия по retirement legacy `heys_products` + сопутствующая чистка
-облака + крупный refactor backup + DB-миграция против утечки данных.
+облака + крупный refactor backup + DB-миграция против утечки данных + schema
+v3 + восстановление per-client cloud-backup функции.
 
 **Закоммичено (push'нуто в main):**
 
@@ -23,6 +24,35 @@
 - `1f45ee5f` — DB migration `2026-05-11_kv_store_cascade.sql` (applied to prod):
   FK `client_kv_store → clients ON DELETE CASCADE` + EXISTS-guard in
   `fn_bump_change_marker`
+
+**В работе (не закоммичено пока):**
+
+- **Backup schema v3 — allow-by-default + deny-list** (план
+  `.claude/plans/misty-booping-quilt.md`):
+  - `heys_app_backup_export_v1.js` — переписан под scan localStorage + 47-regex
+    deny-list. Покрытие данных: ~62% (v2) → ~100% (v3). Закрывает инцидент с
+    `heys_favorite_products` (потерян cleanup'ом, не было в whitelist).
+  - `heys_app_backup_import_v1.js` — добавлен `restoreV3` с защитами: HOT-sync
+    silence 60s, `heys_restore_in_progress` LS-marker, cloud queue bypass через
+    `cloud.writeLocalKvWithoutMirror` + manual scoping, финальный
+    `cloud.flushPendingQueue(30000)`, boot-time aborted-restore detector.
+    EVENT_DISPATCH_MAP из grep'а кода (фикс `heys:hr-zones-updated` — был баг с
+    подчёркиванием в v2). Routing v1/v2/v3 backward-compat.
+  - `whats-new.json` — user-facing entry.
+  - Bundle пересобран, lint clean, 0 violations.
+
+**Восстановлено (отдельный инцидент):**
+
+- **`heys-client-daily-backup`** (per-client cloud snapshot function) — 28 дней
+  не работала из-за устаревшего `PG_PASSWORD` в env vars (старый
+  `HeysAdmin2025`, реальный — ротированный 24-char в Lockbox). Передеплоена с
+  актуальным паролем + CA cert встроен в zip + deploy через Object Storage
+  bucket (1.7 MB вместо 3.5 MB лимита). Manual invoke: `success:2/total:2`.
+  Файлы за 2026-05-11 в `s3://heys-backups/client-daily/`. Дыра 14.04–10.05
+  невосстановима без cluster restore.
+
+- **Yandex Postgres backup retention 7 → 14 дней** через
+  `yc managed-postgresql cluster update --backup-retain-period-days 14`.
 
 **Чистка облака (manual SQL transaction):**
 
@@ -59,11 +89,14 @@
 
 **Что осталось из задач (приоритет ↓):**
 
-1. **Phase 3 — снять interceptor** (~день-два). Полное снятие dual-write
+1. **Закоммитить schema v3** — bundle + код v3 готовы локально. Smoke roundtrip
+   на реальной странице желателен перед push.
+2. **Phase 3 — снять interceptor** (~день-два). Полное снятие dual-write
    `overlay → legacy`. Описано ниже в секции «🧹 Legacy heys_products». Делать
-   ТОЛЬКО после ~суток стабильности в проде.
-2. **Backup v2 — мелкие доработки** (1-2 часа, non-urgent). Описано в секции «🔄
-   Backup v2».
+   ТОЛЬКО после ~суток стабильности в проде (то есть **не раньше 2026-05-12
+   вечером**).
+3. **Backup v2 мелкие доработки** — ✅ закрыто через schema v3
+   (`cloud.flushPendingQueue` + `heys:products-updated` dispatch в restoreV3).
 
 ---
 
@@ -274,23 +307,43 @@
 > **Предусловие**: дать Phase 2б/2в/seed-fix + DB-миграцию (commit `1f45ee5f`)
 > пожить ~сутки в проде без регрессий, потом приступать.
 
-- [ ] **Удалить interceptor-блок** в
-      [apps/web/heys_storage_supabase_v1.js](apps/web/heys_storage_supabase_v1.js)
-      (строки ~4022–4155) + legacy migration reference на строке ~4994
-- [ ] Убрать feature flag `dual_write_legacy`
-- [ ] **[heys_app_auth_init_v1.js:112](apps/web/heys_app_auth_init_v1.js#L112)**
-      — `initLocalData` сейчас читает `readStoredValue('heys_products', [])` как
-      fallback (overlay wrapper там ещё не установлен). После снятия interceptor
-      переключить на прямое чтение overlay LS ключа `heys_products_overlay_v2`
-      (доступен раньше wrapper'a).
-- [ ] **[heys_app_backup_v1.js](apps/web/heys_app_backup_v1.js)** (старый legacy
-      backup модуль, ныне fallback) — убрать `U.lsGet('heys_products')` fallback
-      в чтении: после Phase 3 ключ будет пустым, читать только
-      `HEYS.products.getAll()`
-- [ ] _(опционально)_ Почистить RPC sharding инфраструктуру для legacy ключа в
-      `heys_storage_supabase_v1.js`: `HEYS_PRODUCTS_RPC_TAIL_K`,
-      `isProductsTailRpcKey` (строки ~591-596). Overlay имеет свой shard path
-      `heys_products_overlay_v2_rpc_tail`.
+**Конкретный changelog (свериться перед push, файлы проверены 2026-05-11):**
+
+1. [heys_storage_supabase_v1.js](apps/web/heys_storage_supabase_v1.js) — удалить
+   interceptor блок ~строки **4015-4155** (комментарий начинается с «pre_overlay
+   snapshots…», заканчивается closing блоком legacy mirror). Внутри:
+   `dual_write_legacy` flag check (~4046), весь блок `isProductsKey` handling,
+   mirror upsert в legacy ключ.
+
+2. [heys_app_auth_init_v1.js:112](apps/web/heys_app_auth_init_v1.js#L112) —
+   `initLocalData`: заменить
+
+   ```js
+   const storedProducts =
+     window.HEYS?.products?.getAll?.() || readStoredValue('heys_products', []);
+   ```
+
+   на прямое чтение overlay LS-ключа `heys_products_overlay_v2` (доступен раньше
+   overlay-wrapper).
+
+3. [heys_app_backup_v1.js:6,93,101,121,166,196,202](apps/web/heys_app_backup_v1.js)
+   — старый legacy backup модуль (наш schema v3 заменил его публичный API, но в
+   `heys_app_backup_v1.js` ещё остался ручной fallback на `'heys_products'`). 7
+   site'ов — заменить на чтение через `HEYS.products.getAll()` либо удалить
+   fallback ветки (после Phase 3 ключ будет пустым).
+
+4. Убрать feature flag `dual_write_legacy` — поиск всех usages
+   (`grep -rn 'dual_write_legacy' apps/web/`).
+
+5. _(опционально)_ RPC sharding для legacy ключа:
+   [heys_storage_supabase_v1.js:591-682,5726,6027,6038,6156,6158](apps/web/heys_storage_supabase_v1.js#L591)
+   — константы `HEYS_PRODUCTS_RPC_TAIL_K`, `isProductsTailRpcKey`, и
+   merge-функции. Overlay имеет свой shard path
+   `heys_products_overlay_v2_rpc_tail`, эта инфраструктура для legacy ключа
+   более не нужна.
+
+6. После всего — `pnpm bundle:legacy`, `pnpm lint:storage`, проверить что bundle
+   hash меняется и lint clean.
 
 ### Verification после Phase 3 (свежая инкогнито-сессия)
 
@@ -343,29 +396,6 @@ localStorage.getItem('heys_products'); // null или ''
 **Recovery после отключённого cleanup**: бэкапы лежат в облаке
 (`*_BACKUP_20260510`, `*_BACKUP_20260511`). Можно дропать через ~30 дней после
 Phase 3, если регрессий не будет.
-
----
-
-## 🔄 Backup v2 — мелкие доработки restore _(non-urgent)_
-
-> **Контекст**: коммит 4db42ac1 (2026-05-10) — backup переработан на schema v2
-> (полный snapshot + gzip). Restore-путь работает, но есть отклонения от плана
-> `~/.claude/plans/misty-booping-quilt.md` Phase B п.7-8. Не блокеры — debounced
-> auto-sync покрывает основной кейс. Доделать когда руки дойдут.
-
-- [ ] **Финальный flush очереди облака** после restore:
-      `await HEYS.cloud?.flushPendingUploads?.()` (или явное ожидание ~3s с
-      toast «Завершаем синхронизацию…»). Сейчас debounced auto-sync доедет за
-      2-5 секунд, но если пользователь закроет вкладку раньше — последние ключи
-      могут не уехать в облако.
-- [ ] **Invalidate products cache** в конце `restoreV2`:
-      `HEYS.products.invalidateCache?.()` +
-      `setProducts(HEYS.products.getAll())`. Сейчас только
-      `notifyProductsContentBump` (контент-версия). Без явного `setProducts`
-      пользователь может видеть старое состояние до F5.
-- **Файл**:
-  [apps/web/heys_app_backup_import_v1.js](apps/web/heys_app_backup_import_v1.js)
-  функция `restoreV2`
 
 ---
 

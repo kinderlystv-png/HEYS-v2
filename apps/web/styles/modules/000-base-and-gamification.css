@@ -3559,6 +3559,7 @@ td:first-child input {
 
 .wrap.wrap--no-header {
   padding-top: 0;
+  padding-bottom: 0;
   /* Tasks tab: keep shell within the viewport so inner .planning-tab height: 100%
      resolves to a real pixel height. Otherwise the page grows with the calendar
      and the document scrolls — sticky nav / density bar scroll away. */
@@ -10302,6 +10303,7 @@ body:has(.offline-banner) .wrap {
     justify-content: center;
     background: var(--color-red-500);
     border-radius: 6px;
+    pointer-events: none;
   }
 
   .swipeable-delete-btn {
@@ -10312,6 +10314,7 @@ body:has(.offline-banner) .wrap {
     border: none;
     padding: 8px 16px;
     cursor: pointer;
+    pointer-events: auto;
   }
 
   .swipeable-content {

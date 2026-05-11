@@ -673,6 +673,16 @@
               )
             )
           ),
+          React.createElement('div', { className: 'kcal-sparkline-legend' },
+            React.createElement('span', { className: 'kcal-sparkline-legend-item' },
+              React.createElement('img', {
+                className: 'kcal-sparkline-legend-icon',
+                src: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a1.svg',
+                alt: ''
+              }),
+              '— была зарядка'
+            )
+          ),
           React.createElement('div', {
             className: chartTransitioning ? 'sparkline-transitioning' : '',
             style: vmComputed.sparklineContainerStyle

@@ -134,6 +134,7 @@
             const todayTrainings = (day.trainings || []).filter((t) => t && t.z && t.z.some((z) => z > 0));
             const hasTraining = todayTrainings.length > 0;
             const trainingTypes = todayTrainings.map((t) => t.type || 'cardio');
+            const morningActivationCount = todayTrainings.filter((t) => t?.source === 'morning_activation').length;
             let trainingMinutes = 0;
             todayTrainings.forEach((t) => {
               if (t.z && Array.isArray(t.z)) trainingMinutes += t.z.reduce((s, m) => s + (+m || 0), 0);
@@ -168,6 +169,7 @@
               isIncomplete: day.isIncomplete || false,
               hasTraining,
               trainingTypes,
+              morningActivationCount,
               trainingMinutes,
               sleepHours,
               steps: +day.steps || 0, // 🆕 Шаги для текущего дня
@@ -194,6 +196,7 @@
               isToday: false,
               hasTraining: dayInfo.hasTraining || false,
               trainingTypes: dayInfo.trainingTypes || [],
+              morningActivationCount: dayInfo.morningActivationCount || 0,
               trainingMinutes: dayInfo.trainingMinutes || 0,
               sleepHours: dayInfo.sleepHours || 0,
               sleepQuality: dayInfo.sleepQuality || 0,
@@ -275,6 +278,7 @@
               isToday: false,
               hasTraining: dayTrainings.length > 0,
               trainingTypes: dayTrainings.map((t) => t.type || 'cardio'),
+              morningActivationCount: dayTrainings.filter((t) => t?.source === 'morning_activation').length,
               sleepHours: fallbackSleepHours,
               sleepQuality: +dayData.sleepQuality || 0,
               dayScore: +dayData.dayScore || 0,

@@ -36,9 +36,10 @@
 
     function readSavedTasksUiScale() {
         try {
-            const raw = window.localStorage.getItem(TASKS_UI_SCALE_STORAGE_KEY);
-            if (raw == null) return TASKS_UI_SCALE_DEFAULT;
-            return clampTasksUiScale(Number.parseFloat(raw));
+            const value = (HEYS.utils && typeof HEYS.utils.lsGet === 'function')
+                ? HEYS.utils.lsGet(TASKS_UI_SCALE_STORAGE_KEY, TASKS_UI_SCALE_DEFAULT)
+                : TASKS_UI_SCALE_DEFAULT;
+            return clampTasksUiScale(Number(value));
         } catch (_) {
             return TASKS_UI_SCALE_DEFAULT;
         }
@@ -2292,7 +2293,11 @@
         const [tasksUiScale, setTasksUiScale] = useState(readSavedTasksUiScale);
 
         React.useEffect(() => {
-            try { window.localStorage.setItem(TASKS_UI_SCALE_STORAGE_KEY, String(tasksUiScale)); } catch (_) {}
+            try {
+                if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                    HEYS.utils.lsSet(TASKS_UI_SCALE_STORAGE_KEY, tasksUiScale);
+                }
+            } catch (_) {}
             const planningTab = typeof document !== 'undefined' ? document.querySelector('.planning-tab') : null;
             if (!planningTab) return undefined;
             planningTab.style.setProperty('--planning-tasks-ui-scale', String(tasksUiScale));
