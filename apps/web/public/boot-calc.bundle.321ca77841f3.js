@@ -4363,7 +4363,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 if (dayInfo.kcal < threshold && hasCycleDay) {
                     daysData.set(dateStr, {
                         kcal: 0, target: 0, ratio: 0,
-                        hasTraining: false, trainingTypes: [], trainingMinutes: 0,
+                        hasTraining: false, trainingTypes: [], morningActivationCount: 0, trainingMinutes: 0,
                         moodAvg: null, sleepHours: 0, dayScore: 0,
                         prot: 0, fat: 0, carbs: 0,
                         cycleDay: dayInfo.cycleDay
@@ -4394,9 +4394,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки
 
                 // Собираем типы тренировок с реальными минутами
-                const trainingTypes = trainings
-                    .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0))
-                    .map(t => t.type || 'cardio');
+                const activeTrainings = trainings
+                    .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0));
+                const trainingTypes = activeTrainings.map(t => t.type || 'cardio');
+                const morningActivationCount = activeTrainings.filter(t => t?.source === 'morning_activation').length;
                 const hasTraining = trainingTypes.length > 0;
 
                 trainings.forEach((t, tIdx) => {
@@ -4444,7 +4445,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 daysData.set(dateStr, {
                     kcal, target, ratio, // 🔧 FIX: kcal теперь использует savedEatenKcal если есть
                     baseTarget: calculatedTarget, // 🔧 Базовая норма БЕЗ долга — для расчёта caloricDebt
-                    hasTraining, trainingTypes, trainingMinutes,
+                    hasTraining, trainingTypes, morningActivationCount, trainingMinutes,
                     moodAvg, sleepHours, dayScore,
                     prot, fat, carbs,
                     steps, waterMl, weightMorning, // 🆕 Добавлены для персонализированных инсайтов
@@ -10741,7 +10742,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         if (dayInfo.kcal < threshold && hasCycleDay) {
           daysData.set(dateStr, {
             kcal: 0, target: 0, ratio: 0,
-            hasTraining: false, trainingTypes: [], trainingMinutes: 0,
+            hasTraining: false, trainingTypes: [], morningActivationCount: 0, trainingMinutes: 0,
             moodAvg: null, sleepHours: 0, dayScore: 0,
             prot: 0, fat: 0, carbs: 0,
             cycleDay: dayInfo.cycleDay
@@ -10763,9 +10764,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки
 
         // Собираем типы тренировок с реальными минутами
-        const trainingTypes = trainings
-          .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0))
-          .map(t => t.type || 'cardio');
+        const activeTrainings = trainings
+          .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0));
+        const trainingTypes = activeTrainings.map(t => t.type || 'cardio');
+        const morningActivationCount = activeTrainings.filter(t => t?.source === 'morning_activation').length;
         const hasTraining = trainingTypes.length > 0;
 
         const dayForTdee = { ...dayInfo, date: dayInfo.date || dateStr };
@@ -10813,7 +10815,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
           kcal, target, ratio, // 🔧 FIX: kcal теперь использует savedEatenKcal если есть
           baseTarget: calculatedBaseTarget, // 🔧 Базовая норма БЕЗ долга — для расчёта caloricDebt
           spent: tdee, // 🆕 v5.0: Затраты дня (TDEE) для расчета дефицита/профицита
-          hasTraining, trainingTypes, trainingMinutes,
+          hasTraining, trainingTypes, morningActivationCount, trainingMinutes,
           moodAvg, sleepHours, dayScore,
           prot, fat, carbs,
           steps, waterMl, weightMorning, // 🆕 Добавлены для персонализированных инсайтов

@@ -346,6 +346,12 @@ const CURATOR_ONLY_FUNCTIONS = [
   'log_gamification_event_by_curator',
   'get_gamification_events_by_curator',
   'delete_gamification_events_by_curator', // Удаление дубликатов из audit log
+
+  // === KV STORAGE (curator, JWT-auth) ===
+  // Куратор пишет данные клиента через горячий heys-api-rpc вместо
+  // холодного heys-api-rest (cold start parity с PIN-путём).
+  // Безопасность: SQL функция проверяет ownership (clients.user_id = curator).
+  'batch_upsert_client_kv_by_curator',
 ];
 
 // Маппинг параметров (если нужно)
@@ -1994,6 +2000,12 @@ module.exports.handler = async function (event, context) {
         'p_pin_salt': '::text',
         'p_pin_hash': '::text',
         'p_curator_id': '::uuid'
+      },
+      // 🚀 Curator batch KV upsert (replaces cold heys-api-rest path)
+      'batch_upsert_client_kv_by_curator': {
+        'p_curator_id': '::uuid',
+        'p_client_id': '::uuid',
+        'p_items': '::jsonb'
       }
     };
 

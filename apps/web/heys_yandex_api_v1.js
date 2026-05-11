@@ -240,6 +240,11 @@
     'log_gamification_event_by_curator',
     'get_gamification_events_by_curator',
     'delete_gamification_events_by_curator',
+
+    // === KV STORAGE (curator, JWT-auth) — warm-path parity with PIN ===
+    // Куратор шлёт данные через горячий heys-api-rpc вместо холодного
+    // heys-api-rest. rpc() автоматически положит JWT в Authorization.
+    'batch_upsert_client_kv_by_curator',
   ];
 
   /**
@@ -1270,10 +1275,51 @@
         };
       }
 
-      // 🔐 v56 Path 2: Fallback на REST для куратора
+      // 🚀 Path 2: Куратор → горячий heys-api-rpc (warm-path parity с PIN)
+      // SQL функция batch_upsert_client_kv_by_curator валидирует ownership
+      // через clients.user_id = curator_id (тот же контракт что REST WHERE user_id).
+      const curatorToken = getCuratorToken();
+      if (curatorToken) {
+        try {
+          const result = await rpc('batch_upsert_client_kv_by_curator', {
+            p_client_id: clientId,
+            p_items: items,
+            // p_curator_id проставит RPC handler автоматически из JWT
+          });
+
+          if (!result.error) {
+            const data = result.data;
+            const success = data?.success !== false;
+            // Если SQL вернул success:true — отдаём как есть
+            if (success && !data?.error) {
+              return {
+                success: true,
+                saved: data?.saved || 0,
+              };
+            }
+            // Если SQL вернул success:false с ownership-ошибкой — это
+            // конфигурационная ошибка, REST с тем же кураторским токеном
+            // тоже не пройдёт. Возвращаем как есть.
+            if (data?.error === 'curator_does_not_own_client') {
+              err('[curator-rpc] ownership check failed for client', clientId?.slice(0, 8));
+              return { success: false, saved: 0, error: data.error };
+            }
+            // Иные SQL-ошибки — fallback на REST
+            log(`[curator-rpc] SQL returned non-success, falling back to REST: ${data?.error || 'unknown'}`);
+          } else {
+            // Сетевая/RPC ошибка — fallback на REST
+            log(`[curator-rpc] RPC error, falling back to REST: ${result.error?.message || result.error}`);
+          }
+        } catch (rpcErr) {
+          log(`[curator-rpc] exception, falling back to REST: ${rpcErr.message}`);
+        }
+      }
+
+      // 🔐 Path 3 (last resort): REST на heys-api-rest. Холодный путь,
+      // используется только если RPC недоступен или нет JWT (но есть user_id).
       const curatorUserId = getCuratorUserId();
       if (curatorUserId) {
-        log(`[v56] No session token, trying REST path (curator=${curatorUserId?.slice(0, 8)})`);
+        log(`[v56] Falling back to REST path (curator=${curatorUserId?.slice(0, 8)})`);
         return await batchSaveKVviaREST(curatorUserId, clientId, items);
       }
 
