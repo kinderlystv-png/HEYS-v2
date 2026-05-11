@@ -2236,6 +2236,154 @@
   };
 
   // ═══════════════════════════════════════════════════════════════════
+  // 📝 SWITCH AUDIT LOG (v74) — облачный «чёрный ящик» для смен клиентов
+  //
+  // Пишем 1 запись в массив `heys_curator_switch_log_v1` под обоих клиентов
+  // (OLD + NEW). Limit 50 последних. Помогает увидеть момент cross-client
+  // утечки если она повторится — точные значения до/после, кол-во leak-blocked
+  // событий, флаг contaminationMatch.
+  // ═══════════════════════════════════════════════════════════════════
+
+  const SWITCH_AUDIT_KEY = 'heys_curator_switch_log_v1';
+  const SWITCH_AUDIT_LIMIT = 50;
+
+  // Безопасное чтение профиля/дня клиента из cloud-side (через прямой LS read,
+  // т.к. оба клиента уже scoped в LS).
+  function _readClientProfileBasics(cid) {
+    if (!cid) return null;
+    try {
+      const raw = global.localStorage.getItem('heys_' + cid + '_profile');
+      if (!raw) return null;
+      let p = null;
+      try { p = JSON.parse(raw); } catch (_) {}
+      if (typeof p === 'string') { try { p = JSON.parse(p); } catch (_) { p = null; } }
+      if (!p || typeof p !== 'object') return null;
+      return {
+        name: p.firstName || p.name || null,
+        weight: typeof p.weight === 'number' ? p.weight : (Number(p.weight) || null),
+        baseWeight: typeof p.baseWeight === 'number' ? p.baseWeight : (Number(p.baseWeight) || null),
+        gender: p.gender || null,
+      };
+    } catch (_) { return null; }
+  }
+
+  function _countTodayMeals(cid) {
+    if (!cid) return null;
+    try {
+      const today = new Date();
+      const dateStr = today.getFullYear() + '-'
+        + String(today.getMonth() + 1).padStart(2, '0') + '-'
+        + String(today.getDate()).padStart(2, '0');
+      const raw = global.localStorage.getItem('heys_' + cid + '_dayv2_' + dateStr);
+      if (!raw) return 0;
+      let d = null;
+      try { d = JSON.parse(raw); } catch (_) {}
+      if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
+      if (!d || !Array.isArray(d.meals)) return 0;
+      return d.meals.reduce((sum, m) => sum + (Array.isArray(m && m.items) ? m.items.length : 0), 0);
+    } catch (_) { return null; }
+  }
+
+  // Подсчёт сколько раз сработал v74 leak-blocked для текущей смены клиента
+  function _countRecentLeakBlocked(startedAtMs) {
+    try {
+      const log = (global.HEYS && global.HEYS._syncDebug) || [];
+      if (!Array.isArray(log)) return 0;
+      let cnt = 0;
+      for (let i = log.length - 1; i >= 0; i--) {
+        const e = log[i];
+        if (!e || e.step !== 'leak-blocked') continue;
+        const tms = e.ts ? Date.parse(e.ts) : 0;
+        if (tms >= startedAtMs) cnt++;
+        else break;
+      }
+      return cnt;
+    } catch (_) { return 0; }
+  }
+
+  cloud._writeSwitchAuditLog = function (oldCid, newCid, meta) {
+    if (!newCid) return;
+    try {
+      const oldBasics = _readClientProfileBasics(oldCid);
+      const newBasics = _readClientProfileBasics(newCid);
+      const oldMeals = _countTodayMeals(oldCid);
+      const newMeals = _countTodayMeals(newCid);
+
+      // Contamination check: вес NEW совпадает с OLD (как в v67 на 12411)?
+      let contaminationMatch = false;
+      if (oldBasics && newBasics
+          && oldBasics.weight && newBasics.weight
+          && oldBasics.weight === newBasics.weight
+          && oldBasics.baseWeight === newBasics.baseWeight) {
+        contaminationMatch = true;
+      }
+
+      const entry = {
+        ts: new Date().toISOString(),
+        type: 'switch',
+        from: oldCid ? { id: oldCid, name: oldBasics?.name || null, weight: oldBasics?.weight || null, baseWeight: oldBasics?.baseWeight || null, todayMealsItems: oldMeals } : null,
+        to: { id: newCid, name: newBasics?.name || null, weight: newBasics?.weight || null, baseWeight: newBasics?.baseWeight || null, todayMealsItems: newMeals },
+        leakBlocked: _countRecentLeakBlocked((meta && meta.startedAtMs) || 0),
+        durationMs: meta && meta.durationMs,
+        contaminationMatch,
+        deferredKeys: (meta && Array.isArray(meta.deferredKeys)) ? meta.deferredKeys.slice(0, 10) : [],
+      };
+
+      // Append-to-tail с rotation, пишем под обоих клиентов.
+      // Используем cloud.saveClientKey напрямую — не идёт через scoped(),
+      // не зависит от текущего currentClientId.
+      function appendUnder(cid) {
+        if (!cid) return;
+        try {
+          // Read current log (scoped LS) и append.
+          const lsKey = 'heys_' + cid + '_' + SWITCH_AUDIT_KEY;
+          let arr = [];
+          try {
+            const raw = global.localStorage.getItem(lsKey);
+            if (raw) {
+              let parsed = JSON.parse(raw);
+              if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch (_) {} }
+              if (Array.isArray(parsed)) arr = parsed;
+            }
+          } catch (_) {}
+          arr.push(entry);
+          if (arr.length > SWITCH_AUDIT_LIMIT) arr = arr.slice(-SWITCH_AUDIT_LIMIT);
+          // LS write через originalSetItem (минуя interceptor)
+          if (typeof originalSetItem === 'function') {
+            originalSetItem(lsKey, JSON.stringify(arr));
+          } else {
+            global.localStorage.setItem(lsKey, JSON.stringify(arr));
+          }
+          // Cloud push
+          try { cloud.saveClientKey(cid, SWITCH_AUDIT_KEY, arr); } catch (_) {}
+        } catch (e) {
+          try { console.warn('[SWITCH-AUDIT] append failed:', cid, e && e.message); } catch (_) {}
+        }
+      }
+
+      appendUnder(oldCid);
+      appendUnder(newCid);
+
+      try {
+        console.info('[SWITCH-AUDIT]', JSON.stringify({
+          ts: entry.ts,
+          from: entry.from?.id?.slice(0, 8) + ' ' + (entry.from?.name || '?') + ' w=' + entry.from?.weight,
+          to: entry.to?.id?.slice(0, 8) + ' ' + (entry.to?.name || '?') + ' w=' + entry.to?.weight,
+          leakBlocked: entry.leakBlocked,
+          contaminationMatch,
+        }));
+      } catch (_) {}
+
+      // Если контаминация поймана — дополнительный warn (видно даже без раскрытия `sync` группы).
+      if (contaminationMatch) {
+        try { console.warn('[SWITCH-AUDIT] ⚠️ CONTAMINATION MATCH — weight совпадает у old/new:', entry); } catch (_) {}
+      }
+    } catch (e) {
+      try { console.warn('[SWITCH-AUDIT] write failed:', e && e.message); } catch (_) {}
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
   // 🧹 QUOTA MANAGEMENT — ЗАЩИТА ОТ ПЕРЕПОЛНЕНИЯ STORAGE
   // ═══════════════════════════════════════════════════════════════════
 
@@ -12162,6 +12310,17 @@
     // 🔧 v63 FIX #1: Ставим флаг чтобы React useEffect не запускал параллельный syncClient
     cloud._switchClientInProgress = true;
 
+    // 🔧 v74 FIX: Snapshot OLD/NEW для re-scoping deferred writes под OLD scope.
+    // Без него Store.set во время switch'а scope'ит ключи через ns() (HEYS.currentClientId),
+    // который меняется на newClientId на строке 12219 ниже — задолго до конца switch.
+    // Это приводит к cross-client data leak: stale React state OLD клиента deferr'ится
+    // под NEW scope и потом replay пишет его в LS+cloud NEW клиента.
+    cloud._switchSnapshot = {
+      oldCid: oldClientId,
+      newCid: newClientId,
+      startedAtMs: Date.now(),
+    };
+
     console.info(`[HEYS.sync] 🔄 Переключение клиента: ${oldClientId?.substring(0, 8) || 'нет'} → ${newClientId.substring(0, 8)}`);
 
     // 1. Сначала синхронизируем текущие данные в облако (если есть pending)
@@ -12460,9 +12619,31 @@
     } finally {
       // 🔧 v63 FIX #1: Снимаем флаг после завершения (успех или ошибка)
       cloud._switchClientInProgress = false;
+      // Capture deferred keys before replay clears the map (для audit-лога).
+      let _deferredKeysSnapshot = [];
+      try {
+        const dm = cloud._deferredStoreWriteMap;
+        if (dm && typeof dm.keys === 'function') {
+          for (const k of dm.keys()) _deferredKeysSnapshot.push(String(k).slice(0, 60));
+        }
+      } catch (_) { }
       try {
         cloud._flushDeferredWritesAfterSwitch(newClientId, oldClientId);
       } catch (_) { }
+      // 📝 Switch audit log — пишем после replay чтобы видеть финальное состояние.
+      try {
+        const startedAtMs = (cloud._switchSnapshot && cloud._switchSnapshot.startedAtMs) || 0;
+        const durationMs = startedAtMs ? (Date.now() - startedAtMs) : null;
+        cloud._writeSwitchAuditLog(oldClientId, newClientId, {
+          startedAtMs,
+          durationMs,
+          deferredKeys: _deferredKeysSnapshot,
+        });
+      } catch (_) { }
+      // 🔧 v74 FIX: Очищаем snapshot ПОСЛЕ replay deferred writes — snapshot
+      // нужен был только во время `_switchClientInProgress`, чтобы Store.set
+      // мог scope'ить под OLD.
+      cloud._switchSnapshot = null;
       // Dedupe pending client rows (same client_id + k) after burst merges / deferred replay
       try {
         if (Array.isArray(clientUpsertQueue) && clientUpsertQueue.length > 1) {

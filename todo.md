@@ -89,14 +89,122 @@ v3 + восстановление per-client cloud-backup функции.
 
 **Что осталось из задач (приоритет ↓):**
 
-1. **Закоммитить schema v3** — bundle + код v3 готовы локально. Smoke roundtrip
-   на реальной странице желателен перед push.
+1. **Закоммитить schema v3 + v74 switchClient fix** — bundle + код готовы
+   локально. Smoke roundtrip на реальной странице желателен перед push.
 2. **Phase 3 — снять interceptor** (~день-два). Полное снятие dual-write
    `overlay → legacy`. Описано ниже в секции «🧹 Legacy heys_products». Делать
    ТОЛЬКО после ~суток стабильности в проде (то есть **не раньше 2026-05-12
    вечером**).
 3. **Backup v2 мелкие доработки** — ✅ закрыто через schema v3
    (`cloud.flushPendingQueue` + `heys:products-updated` dispatch в restoreV3).
+4. **Cross-client data leak — наблюдение 2 недели** (см. раздел ниже).
+
+---
+
+## 🔍 Cross-client data leak при switchClient — наблюдение (открыто 2026-05-11)
+
+### Что случилось
+
+Куратор переключился с клиента Poplanton
+(`ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a`) на Александру
+(`4545ee50-4f5f-4fc0-b862-7ca45fa1bafc`). После переключения у Александры:
+
+- вес Poplanton'а в `heys_profile`
+- сегодняшние приёмы Poplanton'а в `heys_dayv2_2026-05-11`
+
+Пользователь поправил вес вручную в 22:34 МСК.
+
+### Что подтверждено по данным cloud
+
+| Источник                         | Поле   | Значение | updated_at                        |
+| -------------------------------- | ------ | -------- | --------------------------------- |
+| snapshot Александры за 11:47 МСК | weight | 52.5     | 2026-05-10 00:35 МСК (чистая)     |
+| cloud сейчас (22:34) Александра  | weight | 52.3     | 2026-05-11 22:34 МСК (исправлено) |
+| cloud Poplanton                  | weight | 91.3     | 2026-05-11 19:10 МСК              |
+
+Утечка случилась **между 11:47 и ~22:00 МСК** 11 мая. Точные значения утекших
+данных не сохранились — пользовательское исправление их перезаписало.
+
+### Что мы пофиксили (commit готов, push отдельно)
+
+\*\*v74 FIX в
+[heys_storage_supabase_v1.js:12163](apps/web/heys_storage_supabase_v1.js#L12163)
+
+- [heys_storage_layer_v1.js:560-577](apps/web/heys_storage_layer_v1.js#L560).**
+  Корень: внутри `switchClient` на строке 12219 `HEYS.currentClientId` меняется
+  на newClientId **пока `_switchClientInProgress=true`\*\*. `scoped(k)` в
+  Store.set читает этот глобал и scope'ит ключи под NEW. Defer-map копит записи
+  stale React state'а с NEW scope'ом. После switchClient
+  `__replayDeferredSwitchWrites` видит `lead === newClientId` → пишет stale
+  данные в LS+cloud NEW клиента.
+
+**Что меняли:**
+
+1. При старте `switchClient` запоминаем
+   `cloud._switchSnapshot = { oldCid, newCid, startedAtMs }`.
+2. В Store.set guard'е во время `_switchClientInProgress`: re-scope defer key с
+   `heys_<newCid>_…` → `heys_<oldCid>_…`. Replay тогда идёт в ветку
+   `lead === oldC` — пишет в OLD scope, утечка не происходит.
+3. Telemetry: каждый случай пишется в `HEYS._syncDebug` как
+   `{ step: 'leak-blocked', payload: { keyShape, oldCid, newCid } }` +
+   console.warn.
+
+### Что НЕ покрыто этим фиксом
+
+Пользователь **не делал быстрых правок** перед сменой клиента — значит debounced
+auto-save **не должен был сработать** (нет таймера в очереди если не было user
+input). Но утечка произошла. Значит **есть второй путь**:
+
+- **Гипотеза 1**: React useEffect компонента UserTab после смены
+  `currentClientId` делает ре-render и сохраняет state Poplanton'а (state ещё
+  старый, useEffect считает что профиль "обновился"). Срабатывает уже **после**
+  того как `_switchClientInProgress = false` снят → защита не активна.
+- **Гипотеза 2**: фоновый писатель (gamification, insights, какой-то
+  периодический flush) пишет данные через прямой `localStorage.setItem` или
+  `cloud.saveClientKey`, минуя Store.set.
+- **Гипотеза 3**: HOT-sync приходит с дисфункционального cloud (если cloud
+  Александры уже был ранее загрязнён — оно просто читается). Но snapshot за
+  11:47 показывает что облако было чистым — эта гипотеза менее вероятна.
+
+### План наблюдения (следующие 2 недели)
+
+- [ ] После каждого переключения в куратор-режиме открывать DevTools и проверять
+      `HEYS._syncDebug.filter(x => x.step === 'leak-blocked').length` — должно
+      быть 0 (если ничего не печатал до переключения) или >0 если печатал.
+- [ ] Воспроизвести «вхолостую» (ничего не делал → клик на другого клиента) и
+      проверить: появилась ли утечка? Если да — фикс **не покрыл** этот случай,
+      нужно копать в гипотезы 1/2/3.
+- [ ] Сохранить snapshot Александры через `HEYS.exportFullBackup()` сразу после
+      следующего переключения. Сравнить вес/приёмы с предыдущим snapshot.
+- [ ] Если утечка повторилась — собрать данные:
+  - `HEYS._syncDebug` (полный лог)
+  - значения в LS до и после переключения (через
+    `Object.fromEntries(Object.entries(localStorage).filter(([k])=>k.startsWith('heys_<новый-cid>')))`)
+  - запрос cloud:
+    `SELECT k, length(v::text), updated_at FROM client_kv_store WHERE client_id='<новый-cid>' ORDER BY updated_at DESC LIMIT 20;`
+- [ ] Через 2 недели наблюдения: если новых случаев нет — закрыть как решённое.
+      Если есть — расследование по гипотезам.
+
+### Доп. идеи усиления если повторится
+
+1. **Покрасить scoped key уровнем «доверия»**: при Store.set во время switch
+   фиксировать source = 'react-state', при бутстрапе hydration — source =
+   'hydration'. В replay писать только hydration, react-state не доверять.
+2. **Перенести `currentClientId = newClientId`** в конец `switchClient` — самый
+   корневой фикс, но требует проверить что внутренние подпроцессы не зависят от
+   раннего обновления глобала (см. `.claude/plans/misty-booping-quilt.md` — там
+   это было «Вариант B», отложен из-за риска).
+3. **Активная блокировка контаминации**: если в новый профиль попадает значение
+   которое совпадает с OLD профилем (через `_oldProfileBasics` на
+   [12190](apps/web/heys_storage_supabase_v1.js#L12190)) — не логировать, а
+   **отвергать запись + alert**.
+
+### Files
+
+- `apps/web/heys_storage_supabase_v1.js` — `_switchSnapshot` setup/cleanup
+- `apps/web/heys_storage_layer_v1.js` — defer re-scoping under OLD
+- `.claude/plans/misty-booping-quilt.md` — полный план фикса (root cause +
+  alternatives)
 
 ---
 

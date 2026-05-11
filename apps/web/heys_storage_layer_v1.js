@@ -570,9 +570,44 @@
           if (!c._deferredStoreWriteMap || typeof c._deferredStoreWriteMap.set !== 'function') {
             c._deferredStoreWriteMap = new Map();
           }
-          c._deferredStoreWriteMap.set(sk, { sk, v });
+          // 🔧 v74 FIX: Re-scope defer key под OLD client.
+          // Во время switchClient `ns()` уже возвращает newClientId (выставлен
+          // на строке 12219 в heys_storage_supabase_v1.js), поэтому `sk` уже
+          // scoped под NEW. Но любой Store.set здесь — это stale React state
+          // OLD клиента (debounced autosave из profile/norms/hr-zones/day).
+          // Re-scope под OLD, чтобы replay в __replayDeferredSwitchWrites
+          // отправил данные в OLD scope (LS+cloud), а не утёк в NEW.
+          let deferSk = sk;
+          const snap = c._switchSnapshot;
+          const oldCid = snap && snap.oldCid;
+          const curCid = ns();
+          if (oldCid && oldCid !== curCid && curCid) {
+            // sk имеет вид 'heys_<curCid>_<tail>'. Меняем curCid → oldCid.
+            const reHasNew = new RegExp('^heys_' + curCid + '_');
+            if (reHasNew.test(sk)) {
+              deferSk = sk.replace(reHasNew, 'heys_' + oldCid + '_');
+            }
+          }
+          c._deferredStoreWriteMap.set(deferSk, { sk: deferSk, v });
+          if (deferSk !== sk) {
+            try {
+              global.HEYS._syncDebug = global.HEYS._syncDebug || [];
+              global.HEYS._syncDebug.push({
+                ts: new Date().toISOString(),
+                step: 'leak-blocked',
+                payload: {
+                  keyShape: String(k).slice(0, 40),
+                  oldCid: oldCid && oldCid.slice(0, 8),
+                  newCid: curCid && curCid.slice(0, 8),
+                },
+              });
+              if (global.HEYS._syncDebug.length > 200) global.HEYS._syncDebug.shift();
+            } catch (_) { /* noop */ }
+            console.warn('[Store.set] 🛡️ LEAK-BLOCKED re-scoped to OLD:', k, '→', deferSk);
+          } else {
+            console.warn('[Store.set] 🛡️ DEFERRED during switchClient:', k);
+          }
         } catch (_) { }
-        console.warn('[Store.set] 🛡️ DEFERRED during switchClient:', k);
         return;
       }
     }
