@@ -27527,27 +27527,114 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
 
 /* ===== heys_app_backup_export_v1.js ===== */
-// heys_app_backup_export_v1.js — full-state backup export.
+// heys_app_backup_export_v1.js — full-state backup export (schema v3).
 //
-// Schema v2 (см. .claude/plans/misty-booping-quilt.md):
-//   • Raw overlay (heys_products_overlay_v2) — источник правды для продуктов.
-//   • Все dayv2_* без лимита 90 дней (cap 1825).
-//   • Все user-state ключи из CLIENT_SPECIFIC_KEYS + heys_milestone_* + heys_last_grams_*.
-//   • Auth deny-list (heys_supabase_auth_token, heys_pin_auth_client, sb-*).
+// Schema v3 (allow-by-default + deny-list):
+//   • Сканируем localStorage, исключаем явный чёрный список (auth, debug,
+//     transient, caches, migration markers, test fixtures).
+//   • Новые фичи автоматически попадают в backup без обновления whitelist.
+//   • Специальные секции (overlay, days) выходят из общего kv{} — у них своя
+//     обработка при restore (applyCloudSnapshot, batch).
+//   • Auth-tokens отдельным leak-probe на финальном JSON.
+//   • Foreign-client scoped ключи отфильтровываются (защита у curator).
 //   • gzip через CompressionStream (fallback на raw JSON).
-//   • clientId сверяется с auth.
+//   • Storage-registry signal: если ключ registered c cloudSync='never' или
+//     maxSize=0 — исключаем дополнительно (защита на будущее).
+//
+// План: .claude/plans/misty-booping-quilt.md (Schema v3).
 
 ; (function () {
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppBackupExport = HEYS.AppBackupExport || {};
 
-    const SCHEMA_VERSION = 2;
-    const DAYS_CAP = 1825; // ~5 лет
+    const SCHEMA_VERSION = 3;
+    const DENY_LIST_VERSION = '2026-05-11';
+    const DAYS_CAP = 1825;        // ~5 лет
+    const KV_CAP = 5000;          // safety threshold для k/v секции
+    const MAX_RAW_BYTES = 5 * 1024 * 1024; // 5 MB до gzip — порог предупреждения
 
+    // ─────────────────────────────────────────────────────────────────────
+    // Deny-list — что НЕ попадает в backup.
+    //
+    // 1. Auth/security: токены и сессии (нельзя выгружать никогда).
+    // 2. Boot/session/debug: state ранней загрузки, лог-каналы, ID-мэппинги.
+    // 3. PWA / update / what's new: lifecycle managed by app, не пользовательские.
+    // 4. Subscription/trial: source of truth — сервер, локально только snapshot.
+    // 5. Caches: переразвернутся сами после restore.
+    // 6. Migration markers: одноразовые stamp'ы.
+    // 7. Test fixtures.
+    // 8. Special section duplicates: overlay/days обрабатываются отдельно.
+    // ─────────────────────────────────────────────────────────────────────
+    const BACKUP_DENY_PATTERNS = [
+        // 1. Auth/security
+        /^heys_supabase_auth_token$/,
+        /^heys_pin_auth_client$/,
+        /^heys_session_token$/,
+        /^heys_curator_session$/,
+        /^sb-/,
+
+        // 2. Boot/session/debug
+        /^heys_debug_/,
+        /^heys_boot_/,
+        /^heys_sync_log$/,
+        /^heys_sync_deep_diagnostics$/,
+        /^heys_pending_sync_/,
+        /^heys_last_(visit|sync_ts|client_id|user_client_id)$/i,
+        /^heys_lastUserClientId$/,
+        /^heys_client_(current|phone)$/,
+        /^heys_clients$/,
+        /^heys_ab_variant$/,
+        /^heys_remember_/,
+        /^heys_app_version$/,
+        /^heys_connection_mode$/,
+        /^heys_registration_in_progress$/,
+        /^heys_disable_(hot_sync|batch|markers|screen_aware)$/,
+        /^heys_log_groups_v1$/,
+        /^heys_log_verbose$/,
+
+        // 3. PWA / update / what's new
+        /^heys_pwa_/,
+        /^heys_update_/,
+        /^heys_whats_new_/,
+
+        // 4. Subscription / trial (server-managed)
+        /^heys_subscription_status$/,
+        /^heys_trial_/,
+
+        // 5. Caches (re-derived after restore)
+        /^heys_xp_cache_/,
+        /^heys_iw_config_cache/,
+        /^heys_perf_log/,
+        /^heys_dayv2_cache_v1$/,
+        /^heys_lru_cache_v1$/,
+        /^heys_shared_products_cache_v1$/,
+        /^heys_insights_cache$/,
+        /^heys_pending_count_cache$/,
+        /^heys_docs_cache_version$/,
+
+        // 6. Migration markers / audit infra
+        /^heys_overlay_(migrated_at|migration_status|migration_version|migration_aborted|migration_lock|health|phase_alpha_perf|self_healed_at)$/,
+        /^heys_storage_audit_/,
+        /^heys_storage_cleanup_active$/,
+        /_migrated$/,
+        /^heys_restore_in_progress$/, // marker для aborted-restore detection — runtime only
+
+        // 7. Test fixtures
+        /^test_/,
+
+        // 8. Special sections (handled separately as overlayProducts/days)
+        /^heys_products_overlay_v2$/,
+        /^heys_dayv2_/,
+    ];
+
+    // Hard never-touch: всегда блокируется, даже если паттерн пропустил.
     const FORBIDDEN_KEY_NAMES = new Set([
         'heys_supabase_auth_token',
         'heys_pin_auth_client',
+        'heys_session_token',
+        'heys_curator_session',
     ]);
+
     function isForbiddenKey(k) {
         if (!k) return false;
         if (FORBIDDEN_KEY_NAMES.has(k)) return true;
@@ -27556,65 +27643,65 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     }
     HEYS.AppBackupExport._isForbiddenKey = isForbiddenKey;
 
+    function isDenied(k) {
+        if (isForbiddenKey(k)) return true;
+        for (const re of BACKUP_DENY_PATTERNS) {
+            if (re.test(k)) return true;
+        }
+        return false;
+    }
+    HEYS.AppBackupExport._isDenied = isDenied;
+    HEYS.AppBackupExport._denyPatterns = BACKUP_DENY_PATTERNS;
+
+    // Storage-registry signal — дополнительная защита: если ключ зарегистрирован
+    // и явно помечен как 'never' sync'нуть или maxSize=0 (forbidden) — исключаем.
+    function isRegistryExcluded(k) {
+        try {
+            const reg = HEYS.storageRegistry;
+            if (!reg || typeof reg.match !== 'function') return false;
+            const policy = reg.match(k);
+            if (!policy) return false;
+            if (policy.cloudSync === 'never') return true;
+            if (policy.maxSize === 0) return true;
+            return false;
+        } catch (_) { return false; }
+    }
+
+    // Foreign-client scoped — защита у curator: ключи другого клиента не попадают.
+    function isForeignClientKey(k, currentClientId) {
+        if (!currentClientId) return false;
+        // Pattern: heys_<other-cid>_*. UUIDs ~36 chars but accept flexible.
+        const m = /^heys_([0-9a-f-]{8,})_/i.exec(k);
+        if (!m) return false;
+        const scoped = m[1].toLowerCase();
+        return scoped !== currentClientId.toLowerCase();
+    }
+
+    // Безопасное чтение значения по ключу через Store.readSafe (декомпрессия ¤Z¤).
+    // Возвращает fallback при ошибках или null.
     function readStoreSafe(key, fallback) {
         try {
+            if (HEYS.store && typeof HEYS.store.readSafe === 'function') {
+                const v = HEYS.store.readSafe(key, fallback);
+                return v === undefined ? fallback : v;
+            }
+            // Fallback (старая логика на случай если readSafe не загружен).
             if (HEYS.store && typeof HEYS.store.get === 'function') {
                 const v = HEYS.store.get(key, fallback);
                 return v === undefined ? fallback : v;
             }
         } catch (e) {
-            console.warn('[BACKUP] store.get failed for', key, e && e.message);
+            console.warn('[BACKUP] readStoreSafe failed for', key, e && e.message);
         }
+        // Last-resort: raw read. НЕ парсим ¤Z¤ — отдаём fallback, иначе мусор.
         try {
             const raw = localStorage.getItem(key);
             if (raw == null) return fallback;
+            if (typeof raw === 'string' && raw.startsWith('¤Z¤')) return fallback;
             return JSON.parse(raw);
         } catch (e) {
-            console.warn('[BACKUP] raw read/parse failed for', key, e && e.message);
             return fallback;
         }
-    }
-
-    function readScopedProfileLike(plainKey, clientId) {
-        // profile/norms/hrZones имеют scoped вариант heys_${cid}_${tail}.
-        // Берём через store.get (даёт scoped+legacy fallback) — но дополнительно
-        // явно читаем scoped, потому что store.get для глобального ключа может
-        // не покрывать scoped storage.
-        const direct = readStoreSafe(plainKey, null);
-        if (direct) return direct;
-        if (!clientId) return null;
-        const scopedKey = 'heys_' + clientId + '_' + plainKey.replace(/^heys_/, '');
-        const raw = localStorage.getItem(scopedKey);
-        if (!raw) return null;
-        try { return JSON.parse(raw); }
-        catch (e) {
-            console.warn('[BACKUP] scoped parse failed:', scopedKey, e && e.message);
-            return null;
-        }
-    }
-
-    function collectLsKeys(predicate) {
-        const out = {};
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
-                if (!k || isForbiddenKey(k)) continue;
-                if (!predicate(k)) continue;
-                const raw = localStorage.getItem(k);
-                if (raw == null) continue;
-                try {
-                    // Используем store.get для декомпрессии если ключ известен.
-                    const v = HEYS.store && HEYS.store.get ? HEYS.store.get(k, null) : null;
-                    out[k] = v != null ? v : JSON.parse(raw);
-                } catch (e) {
-                    // Файл хранит сырое значение — лучше так, чем тереть.
-                    out[k] = raw;
-                }
-            }
-        } catch (e) {
-            console.warn('[BACKUP] collectLsKeys failed', e && e.message);
-        }
-        return out;
     }
 
     function safeFnv1a(str) {
@@ -27640,6 +27727,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         }
     }
 
+    // Нормализация day key: scoped → unscoped, для стабильного восстановления.
+    function normalizeDayKey(k) {
+        const m = k.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+        return m ? 'heys_dayv2_' + m[1] : null;
+    }
+
     HEYS.AppBackupExport.init = function () {
         HEYS.exportFullBackup = async function () {
             const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
@@ -27660,175 +27753,166 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 console.warn('[BACKUP] clientId mismatch — auth=' + authClientId + ' ls=' + lsClientId + ' (using auth)');
             }
 
-            console.log('[BACKUP] Starting full-state export. clientId=' + clientId.slice(0, 8));
+            console.log('[BACKUP] Starting export schema v3. clientId=' + clientId.slice(0, 8));
 
             try {
                 HEYS.Toast?.info?.('Собираем бэкап…');
 
                 const backup = {
                     schemaVersion: SCHEMA_VERSION,
+                    denyListVersion: DENY_LIST_VERSION,
                     exportedAt: new Date().toISOString(),
                     clientId: clientId,
                     appVersion: window.APP_VERSION || 'unknown',
+                    overlayProducts: null,
+                    days: {},
+                    kv: {},
+                    sharedCatalogHash: null,
+                    stats: null,
                 };
 
                 // ─────────────────────────────────────────
-                // Products: raw overlay (источник правды)
+                // Scan localStorage (один проход).
                 // ─────────────────────────────────────────
-                backup.overlayProducts = readStoreSafe('heys_products_overlay_v2', null);
-
-                // Legacy snapshot (для импорта на старых клиентах без overlay flag).
-                // Не источник правды — только fallback для совместимости.
+                const allKeys = [];
                 try {
-                    if (HEYS.products && typeof HEYS.products.getAll === 'function') {
-                        const merged = HEYS.products.getAll();
-                        backup.legacyProductsSnapshot = Array.isArray(merged) ? merged : [];
-                    } else {
-                        backup.legacyProductsSnapshot = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if (k) allKeys.push(k);
                     }
                 } catch (e) {
-                    console.warn('[BACKUP] legacyProductsSnapshot failed:', e && e.message);
-                    backup.legacyProductsSnapshot = [];
+                    console.warn('[BACKUP] localStorage.key() iteration failed:', e && e.message);
                 }
 
-                // Tombstones / hidden / removed
-                backup.deletedIds = readStoreSafe('heys_deleted_ids', []);
-                backup.removedFromMyList = readStoreSafe('heys_removed_from_my_list', []);
-                backup.hiddenProducts = readStoreSafe('heys_hidden_products', []);
+                const seenStats = {
+                    total: allKeys.length,
+                    deniedCount: 0,
+                    foreignCount: 0,
+                    registryExcluded: 0,
+                    daysCount: 0,
+                    kvCount: 0,
+                };
 
-                // Граммовки
-                backup.gramsHistory = readStoreSafe('heys_grams_history', null);
-                backup.lastGramsByProduct = collectLsKeys(k => k.startsWith('heys_last_grams_'));
+                for (const k of allKeys) {
+                    // Только heys_ префикс — всё остальное (sb-, test_, vite-, _next-) пропускаем.
+                    if (!k.startsWith('heys_')) {
+                        // Auth deny-list ловит sb-* отдельно — это блокировка, не пропуск.
+                        if (isForbiddenKey(k)) seenStats.deniedCount++;
+                        continue;
+                    }
 
-                // ─────────────────────────────────────────
-                // User state (scoped + legacy fallback)
-                // ─────────────────────────────────────────
-                backup.profile = readScopedProfileLike('heys_profile', clientId);
-                backup.norms = readScopedProfileLike('heys_norms', clientId);
-                backup.hrZones = readScopedProfileLike('heys_hr_zones', clientId);
-                backup.ratioZones = readStoreSafe('heys_ratio_zones', null);
+                    // 1. Foreign-client scoped (heys_<other-cid>_*) — пропускаем.
+                    if (isForeignClientKey(k, clientId)) {
+                        seenStats.foreignCount++;
+                        continue;
+                    }
 
-                // ─────────────────────────────────────────
-                // Days (все доступные, cap 1825)
-                // ─────────────────────────────────────────
-                const dayKeys = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const k = localStorage.key(i);
-                    if (!k) continue;
-                    if (isForbiddenKey(k)) continue;
-                    // Поддерживаем heys_dayv2_YYYY-MM-DD и scoped heys_{cid}_dayv2_YYYY-MM-DD.
-                    if (k.indexOf('dayv2_') !== -1 && k.startsWith('heys_')) dayKeys.push(k);
-                }
-                backup.days = {};
-                let daysFound = 0;
-                let daysSkipped = 0;
-                for (const k of dayKeys) {
-                    if (daysFound >= DAYS_CAP) { daysSkipped++; continue; }
+                    // 2. Deny-list.
+                    if (isDenied(k)) {
+                        seenStats.deniedCount++;
+                        continue;
+                    }
+
+                    // 3. Registry signal.
+                    if (isRegistryExcluded(k)) {
+                        seenStats.registryExcluded++;
+                        continue;
+                    }
+
+                    // 4. Special section: overlay (handled separately).
+                    if (k === 'heys_products_overlay_v2'
+                        || k.endsWith('_heys_products_overlay_v2')) {
+                        // Handled below by direct read.
+                        continue;
+                    }
+
+                    // 5. Special section: days.
+                    if (k.indexOf('dayv2_') !== -1) {
+                        if (seenStats.daysCount >= DAYS_CAP) {
+                            // soft cap — пропускаем лишние, warn в конце.
+                            continue;
+                        }
+                        const normKey = normalizeDayKey(k);
+                        if (!normKey) continue;
+                        const v = readStoreSafe(k, null);
+                        if (v != null) {
+                            backup.days[normKey] = v;
+                            seenStats.daysCount++;
+                        }
+                        continue;
+                    }
+
+                    // 6. Regular kv. Unscope для нормализации (стабильный формат файла).
+                    let normalizedKey = k;
+                    const scopedPrefix = 'heys_' + clientId + '_';
+                    if (k.startsWith(scopedPrefix)) {
+                        normalizedKey = 'heys_' + k.substring(scopedPrefix.length);
+                    }
+
                     const v = readStoreSafe(k, null);
-                    if (v != null) {
-                        // Нормализуем ключ: всегда сохраняем как heys_dayv2_YYYY-MM-DD.
-                        // Scoped имеют форму heys_{cid}_dayv2_YYYY-MM-DD; обрезаем prefix.
-                        const m = k.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
-                        const normKey = m ? 'heys_dayv2_' + m[1] : k;
-                        backup.days[normKey] = v;
-                        daysFound++;
+                    if (v == null) continue;
+                    backup.kv[normalizedKey] = v;
+                    seenStats.kvCount++;
+                    if (seenStats.kvCount > KV_CAP) {
+                        console.warn('[BACKUP] KV cap exceeded (' + KV_CAP + '); stopping kv collection');
+                        break;
                     }
                 }
-                if (daysSkipped > 0) {
-                    HEYS.Toast?.warning?.(`Пропущено ${daysSkipped} дней (превышен лимит ${DAYS_CAP}).`);
+
+                // ─────────────────────────────────────────
+                // Overlay (raw heys_products_overlay_v2 — source of truth).
+                // Также читаем scoped вариант, если есть.
+                // ─────────────────────────────────────────
+                backup.overlayProducts = readStoreSafe('heys_products_overlay_v2', null);
+                if (!Array.isArray(backup.overlayProducts) || backup.overlayProducts.length === 0) {
+                    // Попробуем scoped (heys_<cid>_products_overlay_v2).
+                    const scopedOverlayKey = 'heys_' + clientId + '_products_overlay_v2';
+                    const scoped = readStoreSafe(scopedOverlayKey, null);
+                    if (Array.isArray(scoped)) backup.overlayProducts = scoped;
                 }
 
                 // ─────────────────────────────────────────
-                // Misc per-client
-                // ─────────────────────────────────────────
-                backup.water = readStoreSafe('heys_water_history', null);
-                backup.scheduledAdvices = readStoreSafe('heys_scheduled_advices', null);
-                backup.supplements = readStoreSafe('heys_supplements', null);
-                backup.plannedSupplements = readStoreSafe('heys_planned_supplements', null);
-
-                // ─────────────────────────────────────────
-                // Gamification
-                // ─────────────────────────────────────────
-                backup.gamification = {
-                    game: readStoreSafe('heys_game', null),
-                    bestStreak: readStoreSafe('heys_best_streak', null),
-                    weeklyWrapViewCount: readStoreSafe('heys_weekly_wrap_view_count', null),
-                    milestones: collectLsKeys(k => k.startsWith('heys_milestone_')),
-                };
-
-                // ─────────────────────────────────────────
-                // Planning
-                // ─────────────────────────────────────────
-                backup.planning = {
-                    projects: readStoreSafe('heys_planning_projects', null),
-                    tasks: readStoreSafe('heys_planning_tasks', null),
-                    slots: readStoreSafe('heys_planning_slots', null),
-                    links: readStoreSafe('heys_planning_links_v1', null),
-                };
-
-                // ─────────────────────────────────────────
-                // Advice subsystem
-                // ─────────────────────────────────────────
-                backup.adviceSettings = readStoreSafe('heys_advice_settings', null);
-                backup.adviceReadToday = readStoreSafe('heys_advice_read_today', null);
-                backup.adviceHiddenToday = readStoreSafe('heys_advice_hidden_today', null);
-                backup.adviceFlags = {
-                    firstMealTip: readStoreSafe('heys_first_meal_tip', null),
-                    bestDayLastCheck: readStoreSafe('heys_best_day_last_check', null),
-                    eveningSnackerCheck: readStoreSafe('heys_evening_snacker_check', null),
-                    morningSkipperCheck: readStoreSafe('heys_morning_skipper_check', null),
-                    lastVisit: readStoreSafe('heys_last_visit', null),
-                };
-
-                // Insights feedback — может быть до 970 KB.
-                const insightsFeedback = collectLsKeys(k => /insights_feedback/.test(k));
-                const insightsFeedbackSize = JSON.stringify(insightsFeedback).length;
-                backup.insightsFeedback = insightsFeedback;
-                backup._warnLargeInsights = insightsFeedbackSize > 200 * 1024;
-
-                // ─────────────────────────────────────────
-                // Onboarding & tours
-                // ─────────────────────────────────────────
-                backup.onboardingFlags = {
-                    tourCompleted: readStoreSafe('heys_tour_completed', null),
-                    insightsTourCompleted: readStoreSafe('heys_insights_tour_completed', null),
-                    tourInterruptedStep: readStoreSafe('heys_tour_interrupted_step', null),
-                    onboardingComplete: readStoreSafe('heys_onboarding_complete', null),
-                };
-
-                backup.morningCheckin = collectLsKeys(k => k.startsWith('heys_morning_checkin'));
-
-                // ─────────────────────────────────────────
-                // Shared catalog hash (для проверки совместимости при import)
+                // Shared catalog hash (для compat-hint при import).
                 // ─────────────────────────────────────────
                 try {
                     const cachedShared = HEYS.cloud?.getCachedSharedProducts?.();
                     if (Array.isArray(cachedShared) && cachedShared.length > 0) {
                         const ids = cachedShared.map(p => String(p && p.id != null ? p.id : '')).filter(Boolean).sort().join('|');
                         backup.sharedCatalogHash = safeFnv1a(ids) + ':' + cachedShared.length;
-                    } else {
-                        backup.sharedCatalogHash = null;
                     }
-                } catch (e) {
-                    backup.sharedCatalogHash = null;
-                }
+                } catch (_) { /* noop */ }
 
                 // ─────────────────────────────────────────
-                // Финальная проверка: нет ли auth-токенов в собранных данных
+                // Leak-probe: финальная проверка перед сериализацией.
                 // ─────────────────────────────────────────
                 const leakProbe = JSON.stringify(backup);
-                if (/heys_supabase_auth_token|heys_pin_auth_client|"sb-[a-z0-9-]+"/.test(leakProbe)) {
+                if (/heys_supabase_auth_token|heys_pin_auth_client|heys_session_token|heys_curator_session|"sb-[a-z0-9-]+"/.test(leakProbe)) {
                     console.error('[BACKUP] 🚨 SECURITY: auth-token-like substring detected in backup; aborting.');
-                    HEYS.Toast?.error('Экспорт отменён: обнаружены auth-токены');
+                    HEYS.Toast?.error?.('Экспорт отменён: обнаружены auth-токены');
                     return { ok: false, error: 'auth_token_leak_protected' };
                 }
 
                 // ─────────────────────────────────────────
-                // Compress + download
+                // Stats + compress + download.
                 // ─────────────────────────────────────────
+                const rawBytes = leakProbe.length;
+                if (rawBytes > MAX_RAW_BYTES) {
+                    console.warn('[BACKUP] raw size ' + Math.round(rawBytes / 1024) + ' KB exceeds threshold');
+                }
+
                 HEYS.Toast?.info?.('Сжимаем бэкап…');
-                const json = JSON.stringify(backup);
-                const { blob, compressed } = await compressIfPossible(json);
+                const { blob, compressed } = await compressIfPossible(leakProbe);
+
+                backup.stats = {
+                    overlayRows: Array.isArray(backup.overlayProducts) ? backup.overlayProducts.length : 0,
+                    daysCount: seenStats.daysCount,
+                    kvKeys: seenStats.kvCount,
+                    foreignSkipped: seenStats.foreignCount,
+                    deniedSkipped: seenStats.deniedCount,
+                    registrySkipped: seenStats.registryExcluded,
+                    rawJsonBytes: rawBytes,
+                    gzippedBytes: blob.size,
+                };
 
                 const ext = compressed ? '.json.gz' : '.json';
                 const fileName = `heys-backup-${clientId.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}${ext}`;
@@ -27842,30 +27926,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 URL.revokeObjectURL(url);
 
                 const t1 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
-                const stats = {
-                    overlayRows: Array.isArray(backup.overlayProducts) ? backup.overlayProducts.length : 0,
-                    legacyProducts: backup.legacyProductsSnapshot.length,
-                    days: Object.keys(backup.days).length,
-                    insightsFeedbackKB: Math.round(insightsFeedbackSize / 1024),
-                    rawJsonKB: Math.round(json.length / 1024),
-                    blobKB: Math.round(blob.size / 1024),
+                const stats = Object.assign({}, backup.stats, {
                     compressed,
+                    rawKB: Math.round(rawBytes / 1024),
+                    blobKB: Math.round(blob.size / 1024),
                     elapsedMs: Math.round(t1 - t0),
-                };
+                });
                 console.log('[BACKUP] ✅ Exported', fileName, stats);
-                HEYS.Toast?.success?.(`✅ Бэкап сохранён (${stats.blobKB} КБ${compressed ? ', gzip' : ''})`);
+                HEYS.Toast?.success?.(`✅ Бэкап сохранён (${stats.blobKB} КБ${compressed ? ', gzip' : ''}, ${stats.kvKeys} ключей + ${stats.daysCount} дней + ${stats.overlayRows} продуктов)`);
 
                 return {
                     ok: true,
                     fileName,
-                    products: stats.overlayRows || stats.legacyProducts,
-                    days: stats.days,
-                    sharedProducts: 0,
+                    schemaVersion: SCHEMA_VERSION,
+                    products: stats.overlayRows,
+                    days: stats.daysCount,
+                    kvKeys: stats.kvKeys,
                     stats,
                 };
             } catch (err) {
                 console.error('[BACKUP] Export failed:', err);
-                HEYS.Toast?.error('Ошибка экспорта: ' + (err && err.message ? err.message : err))
+                HEYS.Toast?.error?.('Ошибка экспорта: ' + (err && err.message ? err.message : err))
                     || alert('Ошибка экспорта');
                 return { ok: false, error: err && err.message ? err.message : String(err) };
             }
@@ -27879,36 +27960,75 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 /* ===== heys_app_backup_import_v1.js ===== */
 // heys_app_backup_import_v1.js — full-state backup restore.
 //
-// Поддерживает:
-//   • schemaVersion=2 — full state (overlay + days + profile + ...): новый путь.
-//   • schemaVersion=1 или undefined — legacy products-only: совместимость со старыми бэкапами.
-//   • .json и .json.gz (через DecompressionStream).
+// Schema routing:
+//   • v3 — allow-by-default scan: backup.kv{} + overlayProducts + days.
+//   • v2 — full state с группировками (gamification, planning, etc.) — legacy.
+//   • v1 / undefined / Array — products-only legacy.
 //
-// Public API: HEYS.AppBackupImport.importFromFile(file).
-// План: .claude/plans/misty-booping-quilt.md (Phase B).
+// Schema v3 защиты:
+//   • HOT-sync silence (60 sec) пока идёт restore.
+//   • restore-in-progress LS marker для детекции crash на boot.
+//   • Cloud queue bypass через cloud.writeLocalKvWithoutMirror — 800 ключей
+//     не повесят сеть как при обычном Store.set.
+//   • Финальный flush через cloud.flushPendingQueue(30000).
+//   • EVENT_DISPATCH_MAP с правильными именами событий из grep'а кода.
+//
+// План: .claude/plans/misty-booping-quilt.md (Schema v3 — backup-v3).
 
 ; (function () {
     const HEYS = window.HEYS = window.HEYS || {};
     HEYS.AppBackupImport = HEYS.AppBackupImport || {};
 
-    const MAX_FILE_BYTES = 50 * 1024 * 1024;       // 50 MB raw input
+    const MAX_FILE_BYTES = 50 * 1024 * 1024;
     const MAX_OVERLAY_ROWS = 10000;
     const MAX_DAYS = 1825;
-    const SUPPORTED_SCHEMA_VERSIONS = new Set([1, 2]);
+    const MAX_KV_KEYS = 5000;
+    const SUPPORTED_SCHEMA_VERSIONS = new Set([1, 2, 3]);
+    const HOT_SYNC_QUIET_MS = 60000;
+    const RESTORE_PROGRESS_LS_KEY = 'heys_restore_in_progress';
+
+    // Полный список из grep'а dispatchEvent('heys:*-updated') и addEventListener в коде.
+    // ВНИМАНИЕ: дефис в hr-zones (не подчёркивание), planning-updated диспатчится
+    // на ВСЕ planning-ключи одним общим событием, deleted_ids/removed → один общий event.
+    const EVENT_DISPATCH_MAP = {
+        heys_profile: 'heys:profile-updated',
+        heys_norms: 'heys:norms-updated',
+        heys_hr_zones: 'heys:hr-zones-updated',
+        heys_supplements: 'heys:supplements-updated',
+        heys_planning_projects: 'heys:planning-updated',
+        heys_planning_tasks: 'heys:planning-updated',
+        heys_planning_slots: 'heys:planning-updated',
+        heys_planning_links_v1: 'heys:planning-updated',
+        heys_planning_inbox_v1: 'heys:planning-updated',
+        heys_deleted_ids: 'heys:deleted-products-changed',
+        heys_removed_from_my_list: 'heys:deleted-products-changed',
+        heys_widget_layout_v1: 'heys:widget-layout-updated',
+    };
 
     function isForbiddenKey(k) {
         return HEYS.AppBackupExport && HEYS.AppBackupExport._isForbiddenKey
             ? HEYS.AppBackupExport._isForbiddenKey(k)
-            : (k === 'heys_supabase_auth_token' || k === 'heys_pin_auth_client' || (typeof k === 'string' && k.startsWith('sb-')));
+            : (k === 'heys_supabase_auth_token'
+                || k === 'heys_pin_auth_client'
+                || k === 'heys_session_token'
+                || k === 'heys_curator_session'
+                || (typeof k === 'string' && k.startsWith('sb-')));
+    }
+    function isDenied(k) {
+        return HEYS.AppBackupExport && typeof HEYS.AppBackupExport._isDenied === 'function'
+            ? HEYS.AppBackupExport._isDenied(k)
+            : isForbiddenKey(k);
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // Чтение и парсинг файла (.json или .json.gz).
+    // ─────────────────────────────────────────────────────────────────────
     async function readFileBytes(file) {
         if (file.size > MAX_FILE_BYTES) {
             throw new Error(`Файл слишком большой (${Math.round(file.size / 1024)} КБ, лимит ${Math.round(MAX_FILE_BYTES / 1024)} КБ)`);
         }
         const buf = await file.arrayBuffer();
         const u8 = new Uint8Array(buf);
-        // gzip magic: 1f 8b
         const isGzip = u8.length >= 2 && u8[0] === 0x1f && u8[1] === 0x8b;
         if (!isGzip) {
             return new TextDecoder('utf-8').decode(u8);
@@ -27917,29 +28037,40 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             throw new Error('Файл сжат gzip, но браузер не поддерживает DecompressionStream');
         }
         const ds = new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'));
-        const text = await new Response(ds).text();
-        return text;
+        return await new Response(ds).text();
     }
 
     function parseSafe(text) {
-        try {
-            return JSON.parse(text);
-        } catch (e) {
-            throw new Error('Файл не является валидным JSON: ' + (e && e.message ? e.message : e));
-        }
+        try { return JSON.parse(text); }
+        catch (e) { throw new Error('Файл не является валидным JSON: ' + (e && e.message ? e.message : e)); }
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Pre-validation (RAM-only; ничего не пишет в LS)
+    // Manual scoping для cloud.writeLocalKvWithoutMirror — он НЕ scope'ит сам.
+    // Зеркалит логику scoped() из heys_storage_layer_v1.js.
     // ─────────────────────────────────────────────────────────────────────
-    function validateV2(data) {
+    function scopeKey(k, clientId) {
+        if (!clientId) return k;
+        // Global keys — без scope.
+        if (/^heys_(clients|client_current|sound_settings)$/i.test(k)) return k;
+        // Уже scoped — не дублируем.
+        if (k.indexOf(clientId) !== -1) return k;
+        if (k.startsWith('heys_')) {
+            return 'heys_' + clientId + '_' + k.substring(5);
+        }
+        return 'heys_' + clientId + '_' + k;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Validation
+    // ─────────────────────────────────────────────────────────────────────
+    function validateV3(data) {
         const errors = [];
         const counts = {};
 
-        if (data.schemaVersion !== 2) errors.push('schemaVersion должна быть 2');
+        if (data.schemaVersion !== 3) errors.push('schemaVersion должна быть 3');
         if (!data.clientId || typeof data.clientId !== 'string') errors.push('clientId отсутствует или не строка');
 
-        // overlay
         if (data.overlayProducts != null) {
             if (!Array.isArray(data.overlayProducts)) {
                 errors.push('overlayProducts должен быть массивом');
@@ -27949,7 +28080,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 for (const r of data.overlayProducts) {
                     if (!r || typeof r !== 'object') { errors.push('overlay: строка не объект'); break; }
                     if (r._custom !== true && r.shared_origin_id == null) {
-                        // TypeA должен иметь shared_origin_id; иначе это плохая запись
                         errors.push('overlay: TypeA строка без shared_origin_id (' + (r.name || r.id) + ')');
                         break;
                     }
@@ -27960,7 +28090,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }
         }
 
-        // days
         if (data.days != null && typeof data.days !== 'object') errors.push('days должен быть объектом');
         if (data.days && typeof data.days === 'object') {
             const dayKeys = Object.keys(data.days);
@@ -27974,81 +28103,96 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }
         }
 
-        counts.profile = data.profile ? 1 : 0;
-        counts.norms = data.norms ? 1 : 0;
-        counts.hrZones = data.hrZones ? 1 : 0;
-        counts.ratioZones = data.ratioZones ? 1 : 0;
-        counts.supplements = data.supplements ? 1 : 0;
-        counts.plannedSupplements = Array.isArray(data.plannedSupplements) ? data.plannedSupplements.length : (data.plannedSupplements ? 1 : 0);
-        counts.hiddenProducts = Array.isArray(data.hiddenProducts) ? data.hiddenProducts.length : 0;
-        counts.deletedIds = Array.isArray(data.deletedIds) ? data.deletedIds.length : 0;
-        counts.lastGramsKeys = data.lastGramsByProduct ? Object.keys(data.lastGramsByProduct).length : 0;
-        counts.gamification = data.gamification && (data.gamification.game || data.gamification.bestStreak) ? 1 : 0;
-        counts.planning = data.planning && (data.planning.projects || data.planning.tasks) ? 1 : 0;
-        counts.adviceSettings = data.adviceSettings ? 1 : 0;
-        counts.insightsFeedbackKeys = data.insightsFeedback ? Object.keys(data.insightsFeedback).length : 0;
+        if (data.kv != null && typeof data.kv !== 'object') errors.push('kv должен быть объектом');
+        if (data.kv && typeof data.kv === 'object') {
+            const kvKeys = Object.keys(data.kv);
+            if (kvKeys.length > MAX_KV_KEYS) errors.push(`kv слишком много (${kvKeys.length} > ${MAX_KV_KEYS})`);
+            counts.kvKeys = kvKeys.length;
+            // Защита от malicious файла: проверяем deny-list на каждый ключ.
+            let blockedCount = 0;
+            for (const k of kvKeys) {
+                if (isDenied(k)) blockedCount++;
+            }
+            if (blockedCount > 0) {
+                console.warn('[IMPORT] ' + blockedCount + ' kv keys are denied (will be filtered)');
+                counts.kvBlocked = blockedCount;
+            }
+        }
 
         return { ok: errors.length === 0, errors, counts };
     }
 
-    function buildPreviewMessage(data, validation) {
+    // Legacy validators остаются для v2/v1 без изменений.
+    function validateV2(data) {
+        const errors = [];
+        const counts = {};
+        if (data.schemaVersion !== 2) errors.push('schemaVersion должна быть 2');
+        if (!data.clientId || typeof data.clientId !== 'string') errors.push('clientId отсутствует');
+        if (data.overlayProducts != null) {
+            if (!Array.isArray(data.overlayProducts)) errors.push('overlayProducts должен быть массивом');
+            else if (data.overlayProducts.length > MAX_OVERLAY_ROWS) errors.push('overlayProducts слишком много');
+            else {
+                counts.overlayTotal = data.overlayProducts.length;
+                counts.overlayTypeA = data.overlayProducts.filter(r => r && r._custom !== true).length;
+                counts.overlayTypeB = data.overlayProducts.filter(r => r && r._custom === true).length;
+            }
+        }
+        if (data.days && typeof data.days === 'object') {
+            counts.days = Object.keys(data.days).length;
+            if (counts.days > MAX_DAYS) errors.push('days слишком много');
+        }
+        counts.profile = data.profile ? 1 : 0;
+        counts.norms = data.norms ? 1 : 0;
+        counts.hrZones = data.hrZones ? 1 : 0;
+        counts.ratioZones = data.ratioZones ? 1 : 0;
+        counts.lastGramsKeys = data.lastGramsByProduct ? Object.keys(data.lastGramsByProduct).length : 0;
+        counts.insightsFeedbackKeys = data.insightsFeedback ? Object.keys(data.insightsFeedback).length : 0;
+        return { ok: errors.length === 0, errors, counts };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Preview сообщения.
+    // ─────────────────────────────────────────────────────────────────────
+    function buildPreviewV3(data, validation) {
         const c = validation.counts;
         const lines = [];
-        lines.push(`📦 Будет восстановлено из бэкапа от ${new Date(data.exportedAt).toLocaleString('ru-RU')}:`);
+        const exported = data.exportedAt ? new Date(data.exportedAt).toLocaleString('ru-RU') : '—';
+        lines.push(`📦 Будет восстановлено из бэкапа от ${exported}:`);
         lines.push('');
         if (c.overlayTotal) {
             lines.push(`• Продукты (overlay): ${c.overlayTotal} (TypeA: ${c.overlayTypeA}, custom: ${c.overlayTypeB})`);
         }
         if (c.days) lines.push(`• Дни дневника: ${c.days}`);
+        if (c.kvKeys) lines.push(`• Хранилище данных: ${c.kvKeys} ключей`);
+        if (c.kvBlocked) lines.push(`  (${c.kvBlocked} опасных ключей будут отфильтрованы)`);
+        lines.push('');
+        lines.push('⚠️ Текущие данные будут объединены с бэкапом.');
+        lines.push('  Overlay merge не теряет локальные customs.');
+        lines.push('  Дни и settings заменены там, где есть в бэкапе.');
+        return lines.join('\n');
+    }
+
+    function buildPreviewV2(data, validation) {
+        const c = validation.counts;
+        const lines = [];
+        lines.push(`📦 Будет восстановлено из бэкапа (формат v2) от ${new Date(data.exportedAt).toLocaleString('ru-RU')}:`);
+        lines.push('');
+        if (c.overlayTotal) lines.push(`• Продукты (overlay): ${c.overlayTotal}`);
+        if (c.days) lines.push(`• Дни дневника: ${c.days}`);
         if (c.profile) lines.push(`• Профиль: ✓`);
         if (c.norms) lines.push(`• Нормы: ✓`);
         if (c.hrZones) lines.push(`• HR-зоны: ✓`);
         if (c.ratioZones) lines.push(`• Ratio-зоны: ✓`);
-        if (c.supplements || c.plannedSupplements) lines.push(`• Добавки: ${c.plannedSupplements || 0} запланированных`);
-        if (c.hiddenProducts) lines.push(`• Скрытые продукты: ${c.hiddenProducts}`);
-        if (c.deletedIds) lines.push(`• Tombstones: ${c.deletedIds}`);
         if (c.lastGramsKeys) lines.push(`• История граммовок: ${c.lastGramsKeys}`);
-        if (c.gamification) lines.push(`• Gamification (XP, achievements): ✓`);
-        if (c.planning) lines.push(`• Planning (проекты/задачи): ✓`);
-        if (c.adviceSettings) lines.push(`• Advice settings: ✓`);
         if (c.insightsFeedbackKeys) lines.push(`• Insights feedback: ${c.insightsFeedbackKeys} ключей`);
         lines.push('');
-        lines.push('⚠️ Текущие данные будут объединены с бэкапом (overlay-merge не теряет локальные customs).');
-        lines.push('Дни и settings будут перезаписаны там, где они есть в бэкапе.');
+        lines.push('⚠️ Текущие данные будут объединены с бэкапом.');
         return lines.join('\n');
     }
 
     function dispatchUpdate(eventName, detail) {
-        try {
-            window.dispatchEvent(new CustomEvent(eventName, { detail: detail || {} }));
-        } catch (_) { /* noop */ }
-    }
-
-    async function safeSet(key, value, opts) {
-        opts = opts || {};
-        if (value == null && !opts.allowNull) return false;
-        if (isForbiddenKey(key)) return false;
-        if (!HEYS.store || typeof HEYS.store.set !== 'function') {
-            console.warn('[IMPORT] HEYS.store.set unavailable; skipping', key);
-            return false;
-        }
-        try {
-            HEYS.store.set(key, value);
-            return true;
-        } catch (e) {
-            console.warn('[IMPORT] safeSet failed:', key, e && e.message);
-            return false;
-        }
-    }
-
-    async function applyOverlay(rows) {
-        if (!Array.isArray(rows)) return { applied: false };
-        if (!HEYS.OverlayStore || typeof HEYS.OverlayStore.applyCloudSnapshot !== 'function') {
-            // Fallback: пишем напрямую в LS под нужным ключом.
-            await safeSet('heys_products_overlay_v2', rows);
-            return { applied: true, fallback: true, after: rows.length };
-        }
-        return HEYS.OverlayStore.applyCloudSnapshot(rows, { source: 'restore-from-file' });
+        try { window.dispatchEvent(new CustomEvent(eventName, { detail: detail || {} })); }
+        catch (_) { /* noop */ }
     }
 
     function notifyProductsContentBump() {
@@ -28059,153 +28203,196 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         } catch (_) { /* noop */ }
     }
 
+    async function applyOverlay(rows, source) {
+        if (!Array.isArray(rows)) return { applied: false };
+        if (!HEYS.OverlayStore || typeof HEYS.OverlayStore.applyCloudSnapshot !== 'function') {
+            // Fallback: пишем в LS прямо. Scope не нужен (overlay key is global).
+            try { HEYS.store?.set?.('heys_products_overlay_v2', rows); } catch (_) {}
+            return { applied: true, fallback: true, after: rows.length };
+        }
+        return HEYS.OverlayStore.applyCloudSnapshot(rows, { source: source || 'restore-from-file' });
+    }
+
     // ─────────────────────────────────────────────────────────────────────
-    // Restore v2 (full-state)
+    // Restore v3 — bypass cloud queue, batch flush, защитные механизмы.
     // ─────────────────────────────────────────────────────────────────────
-    async function restoreV2(data, validation) {
+    async function restoreV3(data) {
+        const clientId = HEYS.currentClientId || data.clientId;
         const stats = {
-            overlayApplied: 0, days: 0, lastGrams: 0,
-            scalarKeys: 0, insightsKeys: 0, milestonesKeys: 0,
+            overlayApplied: 0,
+            days: 0,
+            kvKeys: 0,
+            kvSkipped: 0,
             errors: [],
         };
 
-        // 1. Profile-family (с dispatch events для React-listener'ов).
-        if (data.profile) {
-            await safeSet('heys_profile', data.profile);
-            dispatchUpdate('heys:profile-updated', { source: 'restore' });
-            stats.scalarKeys++;
-        }
-        if (data.norms) {
-            await safeSet('heys_norms', data.norms);
-            dispatchUpdate('heys:norms-updated', { source: 'restore' });
-            stats.scalarKeys++;
-        }
-        if (data.hrZones) {
-            await safeSet('heys_hr_zones', data.hrZones);
-            dispatchUpdate('heys:hr_zones-updated', { source: 'restore' });
-            stats.scalarKeys++;
-        }
-        if (data.ratioZones) {
-            await safeSet('heys_ratio_zones', data.ratioZones);
-            dispatchUpdate('heys:ratio-zones-updated', { source: 'restore' });
-            stats.scalarKeys++;
+        // ── Pre-restore safety ──────────────────────────────────────────
+        // 1. HOT-sync silence: 60s окно. interceptForegroundHotSyncValue() в
+        //    heys_storage_supabase_v1.js проверяет cloud._hotSyncQuietUntilMs.
+        if (HEYS.cloud) {
+            HEYS.cloud._hotSyncQuietUntilMs = Date.now() + HOT_SYNC_QUIET_MS;
+            console.log('[IMPORT] HOT-sync silenced for ' + (HOT_SYNC_QUIET_MS / 1000) + 's');
         }
 
-        // 2. Overlay (единая точка через OverlayStore).
-        if (Array.isArray(data.overlayProducts) && data.overlayProducts.length > 0) {
-            const r = await applyOverlay(data.overlayProducts);
-            stats.overlayApplied = (r && r.after) || data.overlayProducts.length;
+        // 2. Restore-in-progress LS marker (для детекции aborted restore на boot).
+        const totalKeys = (data.kv ? Object.keys(data.kv).length : 0)
+            + (data.days ? Object.keys(data.days).length : 0)
+            + (Array.isArray(data.overlayProducts) && data.overlayProducts.length > 0 ? 1 : 0);
+        const startedAt = Date.now();
+        let completedKeys = 0;
+        try {
+            localStorage.setItem(RESTORE_PROGRESS_LS_KEY, JSON.stringify({
+                startedAt,
+                totalKeys,
+                completedKeys: 0,
+                schemaVersion: 3,
+            }));
+        } catch (_) { /* noop */ }
+
+        function updateProgressMarker(done) {
+            try {
+                localStorage.setItem(RESTORE_PROGRESS_LS_KEY, JSON.stringify({
+                    startedAt,
+                    totalKeys,
+                    completedKeys: done,
+                    schemaVersion: 3,
+                }));
+            } catch (_) { /* noop */ }
         }
 
-        // 3. Tombstones / hidden / removed.
-        if (Array.isArray(data.deletedIds))         { await safeSet('heys_deleted_ids', data.deletedIds); stats.scalarKeys++; }
-        if (Array.isArray(data.removedFromMyList))  { await safeSet('heys_removed_from_my_list', data.removedFromMyList); stats.scalarKeys++; }
-        if (Array.isArray(data.hiddenProducts))     { await safeSet('heys_hidden_products', data.hiddenProducts); stats.scalarKeys++; }
+        // restoreSet: bypass cloud queue. Scoping вручную.
+        // Сжимает большие values через Store.compress — без этого огромные
+        // ключи (heys_insights_feedback_default ~970 KB, heys_advice_trace_day_v1
+        // ~289 KB) попадут в LS несжатыми и могут не влезть в браузерную квоту
+        // или вытеснить другие данные.
+        // Возвращает true если запись прошла.
+        function restoreSet(k, v) {
+            if (v == null) return false;
+            if (isDenied(k)) {
+                stats.kvSkipped++;
+                console.warn('[IMPORT] denied key in backup, skipping:', k);
+                return false;
+            }
+            try {
+                if (HEYS.cloud?.writeLocalKvWithoutMirror) {
+                    const scoped = scopeKey(k, clientId);
+                    // Сжимаем большие values (>4 KB) если есть Store.compress.
+                    // Маленькие пропускаем — overhead сжатия больше выгоды.
+                    let payload = v;
+                    try {
+                        const json = typeof v === 'string' ? v : JSON.stringify(v);
+                        if (json.length > 4096 && typeof HEYS.store?.compress === 'function') {
+                            payload = HEYS.store.compress(json); // returns '¤Z¤...' string
+                        } else {
+                            // writeLocalKvWithoutMirror сам сделает JSON.stringify
+                            payload = v;
+                        }
+                    } catch (_) { payload = v; /* fallback */ }
+                    HEYS.cloud.writeLocalKvWithoutMirror(scoped, payload);
+                    return true;
+                }
+                // Fallback: Store.set (scope сам, но в cloud queue).
+                if (HEYS.store?.set) {
+                    HEYS.store.set(k, v);
+                    return true;
+                }
+            } catch (e) {
+                console.warn('[IMPORT] restoreSet failed:', k, e && e.message);
+                stats.errors.push({ key: k, error: String(e && e.message || e) });
+            }
+            return false;
+        }
 
-        // 4. Grams history.
-        if (data.gramsHistory != null) { await safeSet('heys_grams_history', data.gramsHistory); stats.scalarKeys++; }
-        if (data.lastGramsByProduct && typeof data.lastGramsByProduct === 'object') {
-            for (const k of Object.keys(data.lastGramsByProduct)) {
-                if (!k.startsWith('heys_last_grams_')) continue;
-                if (await safeSet(k, data.lastGramsByProduct[k], { allowNull: false })) stats.lastGrams++;
+        // ── 1. Profile-family первыми (с dispatch events) ───────────────
+        const PRIORITY_KEYS = ['heys_profile', 'heys_norms', 'heys_hr_zones', 'heys_ratio_zones'];
+        if (data.kv && typeof data.kv === 'object') {
+            for (const k of PRIORITY_KEYS) {
+                if (data.kv[k] == null) continue;
+                if (restoreSet(k, data.kv[k])) {
+                    stats.kvKeys++;
+                    const ev = EVENT_DISPATCH_MAP[k];
+                    if (ev) dispatchUpdate(ev, { source: 'restore-v3' });
+                    completedKeys++;
+                }
             }
         }
 
-        // 5. Days (нормализованные ключи heys_dayv2_YYYY-MM-DD; Store.set применит scoping автоматически).
+        // ── 2. Overlay через applyCloudSnapshot (dedup + tombstones) ───
+        if (Array.isArray(data.overlayProducts) && data.overlayProducts.length > 0) {
+            try {
+                const r = await applyOverlay(data.overlayProducts, 'restore-v3');
+                stats.overlayApplied = (r && r.after) || data.overlayProducts.length;
+                completedKeys++;
+                updateProgressMarker(completedKeys);
+                dispatchUpdate('heys:products-updated', { source: 'restore-v3' });
+            } catch (e) {
+                console.error('[IMPORT] overlay restore failed:', e);
+                stats.errors.push({ key: 'overlay', error: String(e && e.message || e) });
+            }
+        }
+
+        // ── 3. Days batch ───────────────────────────────────────────────
         if (data.days && typeof data.days === 'object') {
             const dayKeys = Object.keys(data.days);
             const total = dayKeys.length;
             let done = 0;
             for (const k of dayKeys) {
-                const v = data.days[k];
-                if (v == null) continue;
-                if (await safeSet(k, v)) {
+                if (restoreSet(k, data.days[k])) {
                     stats.days++;
                     done++;
+                    completedKeys++;
                     if (done % 25 === 0 || done === total) {
                         try { HEYS.Toast?.info?.(`Восстановление дней ${done}/${total}…`); } catch (_) { }
+                        updateProgressMarker(completedKeys);
                     }
                 }
             }
-            // Trigger React subscribers для текущего открытого дня.
-            dispatchUpdate('heys:day-updated', { source: 'restore', batch: true });
+            if (total > 0) dispatchUpdate('heys:day-updated', { source: 'restore-v3', batch: true });
         }
 
-        // 6. Misc.
-        if (data.water != null) { await safeSet('heys_water_history', data.water); stats.scalarKeys++; }
-        if (data.scheduledAdvices != null) { await safeSet('heys_scheduled_advices', data.scheduledAdvices); stats.scalarKeys++; }
-        if (data.supplements != null) {
-            await safeSet('heys_supplements', data.supplements);
-            dispatchUpdate('heys:supplements-updated', { source: 'restore' });
-            stats.scalarKeys++;
-        }
-        if (data.plannedSupplements != null) {
-            await safeSet('heys_planned_supplements', data.plannedSupplements);
-            stats.scalarKeys++;
-        }
-
-        // 7. Gamification.
-        if (data.gamification && typeof data.gamification === 'object') {
-            const g = data.gamification;
-            if (g.game != null)                 { await safeSet('heys_game', g.game); stats.scalarKeys++; }
-            if (g.bestStreak != null)           { await safeSet('heys_best_streak', g.bestStreak); stats.scalarKeys++; }
-            if (g.weeklyWrapViewCount != null)  { await safeSet('heys_weekly_wrap_view_count', g.weeklyWrapViewCount); stats.scalarKeys++; }
-            if (g.milestones && typeof g.milestones === 'object') {
-                for (const k of Object.keys(g.milestones)) {
-                    if (!k.startsWith('heys_milestone_')) continue;
-                    if (await safeSet(k, g.milestones[k])) stats.milestonesKeys++;
+        // ── 4. Все остальные kv ключи ───────────────────────────────────
+        if (data.kv && typeof data.kv === 'object') {
+            const dispatchedEvents = new Set();
+            const kvKeys = Object.keys(data.kv);
+            const total = kvKeys.length;
+            let done = 0;
+            for (const k of kvKeys) {
+                if (PRIORITY_KEYS.indexOf(k) !== -1) continue; // already restored
+                if (restoreSet(k, data.kv[k])) {
+                    stats.kvKeys++;
+                    completedKeys++;
+                    done++;
+                    // Defer event dispatch до конца batch — несколько ключей-членов
+                    // одной группы (planning_projects + planning_tasks → planning-updated)
+                    // одним событием.
+                    const ev = EVENT_DISPATCH_MAP[k];
+                    if (ev) dispatchedEvents.add(ev);
+                    if (done % 50 === 0 || done === total) {
+                        updateProgressMarker(completedKeys);
+                    }
                 }
             }
+            for (const ev of dispatchedEvents) dispatchUpdate(ev, { source: 'restore-v3', batch: true });
         }
 
-        // 8. Planning.
-        if (data.planning && typeof data.planning === 'object') {
-            const p = data.planning;
-            if (p.projects != null) { await safeSet('heys_planning_projects', p.projects); stats.scalarKeys++; }
-            if (p.tasks != null)    { await safeSet('heys_planning_tasks', p.tasks); stats.scalarKeys++; }
-            if (p.slots != null)    { await safeSet('heys_planning_slots', p.slots); stats.scalarKeys++; }
-            if (p.links != null)    { await safeSet('heys_planning_links_v1', p.links); stats.scalarKeys++; }
-        }
-
-        // 9. Advice.
-        if (data.adviceSettings != null) {
-            await safeSet('heys_advice_settings', data.adviceSettings);
-            dispatchUpdate('heys:advice-settings-updated', { source: 'restore' });
-            stats.scalarKeys++;
-        }
-        if (data.adviceReadToday != null)   { await safeSet('heys_advice_read_today', data.adviceReadToday); stats.scalarKeys++; }
-        if (data.adviceHiddenToday != null) { await safeSet('heys_advice_hidden_today', data.adviceHiddenToday); stats.scalarKeys++; }
-        if (data.adviceFlags && typeof data.adviceFlags === 'object') {
-            const f = data.adviceFlags;
-            if (f.firstMealTip != null)         { await safeSet('heys_first_meal_tip', f.firstMealTip); stats.scalarKeys++; }
-            if (f.bestDayLastCheck != null)     { await safeSet('heys_best_day_last_check', f.bestDayLastCheck); stats.scalarKeys++; }
-            if (f.eveningSnackerCheck != null)  { await safeSet('heys_evening_snacker_check', f.eveningSnackerCheck); stats.scalarKeys++; }
-            if (f.morningSkipperCheck != null)  { await safeSet('heys_morning_skipper_check', f.morningSkipperCheck); stats.scalarKeys++; }
-            if (f.lastVisit != null)            { await safeSet('heys_last_visit', f.lastVisit); stats.scalarKeys++; }
-        }
-
-        // 10. Insights feedback (cloudSync='merge' — пишем сырыми ключами).
-        if (data.insightsFeedback && typeof data.insightsFeedback === 'object') {
-            for (const k of Object.keys(data.insightsFeedback)) {
-                if (!/insights_feedback/.test(k)) continue;
-                if (await safeSet(k, data.insightsFeedback[k])) stats.insightsKeys++;
+        // ── 5. Final flush cloud queue ──────────────────────────────────
+        // writeLocalKvWithoutMirror НЕ ставит в очередь, но overlay restore через
+        // applyCloudSnapshot может оставить debounced 2s sync. Дожидаемся.
+        try {
+            if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
+                HEYS.Toast?.info?.('Синхронизируем с облаком…');
+                const flushResult = await HEYS.cloud.flushPendingQueue(30000);
+                console.log('[IMPORT] flushPendingQueue result:', flushResult);
             }
+        } catch (e) {
+            console.warn('[IMPORT] flushPendingQueue failed (non-fatal):', e && e.message);
         }
 
-        // 11. Onboarding / morning checkin.
-        if (data.onboardingFlags && typeof data.onboardingFlags === 'object') {
-            const o = data.onboardingFlags;
-            if (o.tourCompleted != null)         { await safeSet('heys_tour_completed', o.tourCompleted); stats.scalarKeys++; }
-            if (o.insightsTourCompleted != null) { await safeSet('heys_insights_tour_completed', o.insightsTourCompleted); stats.scalarKeys++; }
-            if (o.tourInterruptedStep != null)   { await safeSet('heys_tour_interrupted_step', o.tourInterruptedStep); stats.scalarKeys++; }
-            if (o.onboardingComplete != null)    { await safeSet('heys_onboarding_complete', o.onboardingComplete); stats.scalarKeys++; }
-        }
-        if (data.morningCheckin && typeof data.morningCheckin === 'object') {
-            for (const k of Object.keys(data.morningCheckin)) {
-                if (!k.startsWith('heys_morning_checkin')) continue;
-                if (await safeSet(k, data.morningCheckin[k])) stats.scalarKeys++;
-            }
-        }
+        // ── 6. Cleanup ──────────────────────────────────────────────────
+        try { localStorage.removeItem(RESTORE_PROGRESS_LS_KEY); } catch (_) {}
+        // Hot-sync silence — позволяем естественно истечь (Date.now() уже прошёл
+        // ~30s выше, осталось ~30s до окончания), либо явно снимаем.
+        if (HEYS.cloud) HEYS.cloud._hotSyncQuietUntilMs = 0;
 
         notifyProductsContentBump();
 
@@ -28213,8 +28400,121 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Legacy restore (schemaVersion=1 / undefined): products-only через
-    // HEYS.products.setAll, чтобы сохранить совместимость со старыми бэкапами.
+    // Restore v2 (full-state legacy с группировками).
+    // Сохранён без изменений для backward compat со старыми пользовательскими
+    // backup'ами. Минимальный fix: heys:hr-zones-updated с дефисом.
+    // ─────────────────────────────────────────────────────────────────────
+    async function restoreV2(data) {
+        const stats = { overlayApplied: 0, days: 0, lastGrams: 0, scalarKeys: 0, insightsKeys: 0, milestonesKeys: 0, errors: [] };
+        async function safeSet(key, value, opts) {
+            opts = opts || {};
+            if (value == null && !opts.allowNull) return false;
+            if (isForbiddenKey(key)) return false;
+            if (!HEYS.store || typeof HEYS.store.set !== 'function') return false;
+            try { HEYS.store.set(key, value); return true; }
+            catch (e) { console.warn('[IMPORT v2] safeSet failed:', key, e && e.message); return false; }
+        }
+
+        if (data.profile) { await safeSet('heys_profile', data.profile); dispatchUpdate('heys:profile-updated', { source: 'restore-v2' }); stats.scalarKeys++; }
+        if (data.norms) { await safeSet('heys_norms', data.norms); dispatchUpdate('heys:norms-updated', { source: 'restore-v2' }); stats.scalarKeys++; }
+        if (data.hrZones) { await safeSet('heys_hr_zones', data.hrZones); dispatchUpdate('heys:hr-zones-updated', { source: 'restore-v2' }); stats.scalarKeys++; }
+        if (data.ratioZones) { await safeSet('heys_ratio_zones', data.ratioZones); stats.scalarKeys++; }
+
+        if (Array.isArray(data.overlayProducts) && data.overlayProducts.length > 0) {
+            const r = await applyOverlay(data.overlayProducts, 'restore-v2');
+            stats.overlayApplied = (r && r.after) || data.overlayProducts.length;
+        }
+
+        if (Array.isArray(data.deletedIds)) { await safeSet('heys_deleted_ids', data.deletedIds); stats.scalarKeys++; }
+        if (Array.isArray(data.removedFromMyList)) { await safeSet('heys_removed_from_my_list', data.removedFromMyList); stats.scalarKeys++; }
+        if (Array.isArray(data.hiddenProducts)) { await safeSet('heys_hidden_products', data.hiddenProducts); stats.scalarKeys++; }
+        dispatchUpdate('heys:deleted-products-changed', { source: 'restore-v2' });
+
+        if (data.gramsHistory != null) { await safeSet('heys_grams_history', data.gramsHistory); stats.scalarKeys++; }
+        if (data.lastGramsByProduct && typeof data.lastGramsByProduct === 'object') {
+            for (const k of Object.keys(data.lastGramsByProduct)) {
+                if (!k.startsWith('heys_last_grams_')) continue;
+                if (await safeSet(k, data.lastGramsByProduct[k])) stats.lastGrams++;
+            }
+        }
+
+        if (data.days && typeof data.days === 'object') {
+            const dayKeys = Object.keys(data.days);
+            const total = dayKeys.length;
+            let done = 0;
+            for (const k of dayKeys) {
+                if (data.days[k] == null) continue;
+                if (await safeSet(k, data.days[k])) {
+                    stats.days++; done++;
+                    if (done % 25 === 0 || done === total) {
+                        try { HEYS.Toast?.info?.(`Восстановление дней ${done}/${total}…`); } catch (_) { }
+                    }
+                }
+            }
+            dispatchUpdate('heys:day-updated', { source: 'restore-v2', batch: true });
+        }
+
+        if (data.water != null) { await safeSet('heys_water_history', data.water); stats.scalarKeys++; }
+        if (data.scheduledAdvices != null) { await safeSet('heys_scheduled_advices', data.scheduledAdvices); stats.scalarKeys++; }
+        if (data.supplements != null) { await safeSet('heys_supplements', data.supplements); dispatchUpdate('heys:supplements-updated', { source: 'restore-v2' }); stats.scalarKeys++; }
+        if (data.plannedSupplements != null) { await safeSet('heys_planned_supplements', data.plannedSupplements); stats.scalarKeys++; }
+
+        if (data.gamification && typeof data.gamification === 'object') {
+            const g = data.gamification;
+            if (g.game != null) { await safeSet('heys_game', g.game); stats.scalarKeys++; }
+            if (g.bestStreak != null) { await safeSet('heys_best_streak', g.bestStreak); stats.scalarKeys++; }
+            if (g.weeklyWrapViewCount != null) { await safeSet('heys_weekly_wrap_view_count', g.weeklyWrapViewCount); stats.scalarKeys++; }
+            if (g.milestones && typeof g.milestones === 'object') {
+                for (const k of Object.keys(g.milestones)) {
+                    if (!k.startsWith('heys_milestone_')) continue;
+                    if (await safeSet(k, g.milestones[k])) stats.milestonesKeys++;
+                }
+            }
+        }
+        if (data.planning && typeof data.planning === 'object') {
+            const p = data.planning;
+            if (p.projects != null) { await safeSet('heys_planning_projects', p.projects); stats.scalarKeys++; }
+            if (p.tasks != null) { await safeSet('heys_planning_tasks', p.tasks); stats.scalarKeys++; }
+            if (p.slots != null) { await safeSet('heys_planning_slots', p.slots); stats.scalarKeys++; }
+            if (p.links != null) { await safeSet('heys_planning_links_v1', p.links); stats.scalarKeys++; }
+            dispatchUpdate('heys:planning-updated', { source: 'restore-v2', batch: true });
+        }
+        if (data.adviceSettings != null) { await safeSet('heys_advice_settings', data.adviceSettings); stats.scalarKeys++; }
+        if (data.adviceReadToday != null) { await safeSet('heys_advice_read_today', data.adviceReadToday); stats.scalarKeys++; }
+        if (data.adviceHiddenToday != null) { await safeSet('heys_advice_hidden_today', data.adviceHiddenToday); stats.scalarKeys++; }
+        if (data.adviceFlags && typeof data.adviceFlags === 'object') {
+            const f = data.adviceFlags;
+            if (f.firstMealTip != null) { await safeSet('heys_first_meal_tip', f.firstMealTip); stats.scalarKeys++; }
+            if (f.bestDayLastCheck != null) { await safeSet('heys_best_day_last_check', f.bestDayLastCheck); stats.scalarKeys++; }
+            if (f.eveningSnackerCheck != null) { await safeSet('heys_evening_snacker_check', f.eveningSnackerCheck); stats.scalarKeys++; }
+            if (f.morningSkipperCheck != null) { await safeSet('heys_morning_skipper_check', f.morningSkipperCheck); stats.scalarKeys++; }
+            if (f.lastVisit != null) { await safeSet('heys_last_visit', f.lastVisit); stats.scalarKeys++; }
+        }
+        if (data.insightsFeedback && typeof data.insightsFeedback === 'object') {
+            for (const k of Object.keys(data.insightsFeedback)) {
+                if (!/insights_feedback/.test(k)) continue;
+                if (await safeSet(k, data.insightsFeedback[k])) stats.insightsKeys++;
+            }
+        }
+        if (data.onboardingFlags && typeof data.onboardingFlags === 'object') {
+            const o = data.onboardingFlags;
+            if (o.tourCompleted != null) { await safeSet('heys_tour_completed', o.tourCompleted); stats.scalarKeys++; }
+            if (o.insightsTourCompleted != null) { await safeSet('heys_insights_tour_completed', o.insightsTourCompleted); stats.scalarKeys++; }
+            if (o.tourInterruptedStep != null) { await safeSet('heys_tour_interrupted_step', o.tourInterruptedStep); stats.scalarKeys++; }
+            if (o.onboardingComplete != null) { await safeSet('heys_onboarding_complete', o.onboardingComplete); stats.scalarKeys++; }
+        }
+        if (data.morningCheckin && typeof data.morningCheckin === 'object') {
+            for (const k of Object.keys(data.morningCheckin)) {
+                if (!k.startsWith('heys_morning_checkin')) continue;
+                if (await safeSet(k, data.morningCheckin[k])) stats.scalarKeys++;
+            }
+        }
+        notifyProductsContentBump();
+        return stats;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Legacy products-only (v1 / array / undefined schemaVersion).
     // ─────────────────────────────────────────────────────────────────────
     async function restoreLegacyProducts(data) {
         let incoming = [];
@@ -28222,21 +28522,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         else if (Array.isArray(data && data.products)) incoming = data.products;
         else throw new Error('Файл не содержит массива продуктов');
 
-        // Минимальная валидация name.
         const valid = incoming.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)
             .map(p => Object.assign({}, p, { name: String(p.name).slice(0, 200) }));
         if (valid.length === 0) throw new Error('Не найдено валидных продуктов в файле');
 
-        // Подтверждение.
         const ok = await (HEYS.ConfirmModal?.confirm?.({
             title: '📤 Импорт продуктов (legacy формат)',
-            message: `В файле ${valid.length} продуктов. Старый формат — будет импортирован только список продуктов (профиль/дни/настройки в файле отсутствуют). Продолжить?`,
+            message: `В файле ${valid.length} продуктов. Старый формат — будет импортирован только список продуктов. Продолжить?`,
             confirmText: `Импортировать (${valid.length})`,
             cancelText: 'Отмена',
         }) ?? Promise.resolve(window.confirm(`В файле ${valid.length} продуктов. Импортировать?`)));
         if (!ok) return { ok: false, cancelled: true };
 
-        // Merge через HEYS.products.setAll (use existing API).
         if (!HEYS.products || typeof HEYS.products.setAll !== 'function' || typeof HEYS.products.getAll !== 'function') {
             throw new Error('HEYS.products API недоступен — нельзя импортировать legacy формат');
         }
@@ -28266,6 +28563,43 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     // ─────────────────────────────────────────────────────────────────────
     // Public entry
     // ─────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // Boot-time aborted-restore detector.
+    // Срабатывает один раз на load этого модуля. Если предыдущий restore
+    // прервался (crash / refresh / close tab посреди записи) — LS содержит
+    // heys_restore_in_progress marker. Показываем пользователю warning toast.
+    // Не удаляем marker автоматически — пользователь решает сам (либо повторит
+    // restore, либо явно очистит через DevTools).
+    // ─────────────────────────────────────────────────────────────────────
+    try {
+        const raw = localStorage.getItem(RESTORE_PROGRESS_LS_KEY);
+        if (raw) {
+            const meta = JSON.parse(raw);
+            const ageSec = Math.round((Date.now() - (meta.startedAt || 0)) / 1000);
+            const done = meta.completedKeys || 0;
+            const total = meta.totalKeys || 0;
+            console.warn('[BACKUP] Aborted restore detected', {
+                startedAt: meta.startedAt ? new Date(meta.startedAt).toISOString() : null,
+                completedKeys: done,
+                totalKeys: total,
+                ageSec,
+                schemaVersion: meta.schemaVersion,
+            });
+            // Defer toast slightly — Toast компонент монтируется в React,
+            // на load этого модуля может ещё не быть готов.
+            setTimeout(() => {
+                try {
+                    if (HEYS.Toast && typeof HEYS.Toast.warning === 'function') {
+                        HEYS.Toast.warning(
+                            `⚠️ Прошлое восстановление прервалось. Записано ${done}/${total} ключей. ` +
+                            'Данные могут быть в смешанном состоянии — повторите восстановление.'
+                        );
+                    }
+                } catch (_) { /* noop */ }
+            }, 3000);
+        }
+    } catch (_) { /* noop — non-critical */ }
+
     HEYS.AppBackupImport.importFromFile = async function importFromFile(file) {
         if (!file) return { ok: false, error: 'no_file' };
         if (HEYS._restoringBackup) {
@@ -28279,29 +28613,46 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const text = await readFileBytes(file);
             const data = parseSafe(text);
 
-            // Routing по schemaVersion.
             const ver = data && typeof data === 'object' ? data.schemaVersion : undefined;
-            const isV2 = ver === 2;
-            const isLegacy = (ver === undefined || ver === 1) || Array.isArray(data);
-
-            if (ver !== undefined && !SUPPORTED_SCHEMA_VERSIONS.has(ver) && ver !== 2) {
+            if (ver !== undefined && !SUPPORTED_SCHEMA_VERSIONS.has(ver)) {
                 throw new Error(`Неподдерживаемый schemaVersion=${ver}. Обновите приложение.`);
             }
 
-            if (isV2) {
-                const validation = validateV2(data);
+            if (ver === 3) {
+                const validation = validateV3(data);
                 if (!validation.ok) {
-                    console.error('[IMPORT] validation failed', validation.errors);
+                    console.error('[IMPORT] validation v3 failed:', validation.errors);
                     throw new Error('Файл не прошёл валидацию: ' + validation.errors.slice(0, 3).join('; '));
                 }
-                // sharedCatalogHash compatibility hint.
+                const previewMsg = buildPreviewV3(data, validation);
+                const ok = await (HEYS.ConfirmModal?.confirm?.({
+                    title: '📤 Восстановление из бэкапа (v3)',
+                    message: previewMsg,
+                    confirmText: 'Восстановить',
+                    cancelText: 'Отмена',
+                }) ?? Promise.resolve(window.confirm(previewMsg)));
+                if (!ok) return { ok: false, cancelled: true };
+
+                HEYS.Toast?.info?.('Восстанавливаем…');
+                const stats = await restoreV3(data);
+                const t1 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+                stats.elapsedMs = Math.round(t1 - t0);
+                console.log('[IMPORT] ✅ restore v3 complete', stats);
+                HEYS.Toast?.success?.(`✅ Восстановлено: ${stats.overlayApplied} продуктов, ${stats.days} дней, ${stats.kvKeys} ключей`);
+                HEYS.analytics?.trackDataOperation?.('backup-restore-v3', stats.overlayApplied);
+                return { ok: true, schemaVersion: 3, stats };
+            }
+
+            if (ver === 2) {
+                const validation = validateV2(data);
+                if (!validation.ok) {
+                    console.error('[IMPORT] validation v2 failed:', validation.errors);
+                    throw new Error('Файл не прошёл валидацию: ' + validation.errors.slice(0, 3).join('; '));
+                }
                 if (data.sharedCatalogHash) {
                     try {
                         const cur = HEYS.cloud?.getCachedSharedProducts?.();
                         if (Array.isArray(cur) && cur.length > 0) {
-                            const ids = cur.map(p => String(p && p.id != null ? p.id : '')).filter(Boolean).sort().join('|');
-                            // Хеш считается так же как в export, но мы не вызываем _safeFnv1a здесь —
-                            // достаточно сравнить хвост ":count" для приблизительной проверки совместимости.
                             const tail = String(data.sharedCatalogHash).split(':').pop();
                             if (tail && Number(tail) > cur.length * 1.5) {
                                 HEYS.Toast?.warning?.('⚠️ Бэкап использовал более широкий shared-каталог; TypeA связки могут устареть.');
@@ -28309,19 +28660,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         }
                     } catch (_) { /* noop */ }
                 }
-                const previewMsg = buildPreviewMessage(data, validation);
+                const previewMsg = buildPreviewV2(data, validation);
                 const ok = await (HEYS.ConfirmModal?.confirm?.({
-                    title: '📤 Восстановление из бэкапа',
+                    title: '📤 Восстановление из бэкапа (v2)',
                     message: previewMsg,
                     confirmText: 'Восстановить',
                     cancelText: 'Отмена',
                 }) ?? Promise.resolve(window.confirm(previewMsg)));
-                if (!ok) {
-                    console.log('[IMPORT] cancelled by user');
-                    return { ok: false, cancelled: true };
-                }
-                HEYS.Toast?.info?.('Восстанавливаем…');
-                const stats = await restoreV2(data, validation);
+                if (!ok) return { ok: false, cancelled: true };
+
+                HEYS.Toast?.info?.('Восстанавливаем (v2)…');
+                const stats = await restoreV2(data);
                 const t1 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
                 stats.elapsedMs = Math.round(t1 - t0);
                 console.log('[IMPORT] ✅ restore v2 complete', stats);
@@ -28330,19 +28679,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 return { ok: true, schemaVersion: 2, stats };
             }
 
-            if (isLegacy) {
-                const r = await restoreLegacyProducts(data);
-                if (r.ok) HEYS.Toast?.success?.(`✅ Импорт (legacy): +${r.added}, ↻${r.updated}`);
-                HEYS.analytics?.trackDataOperation?.('backup-restore-legacy', r.total || 0);
-                return r;
-            }
-
-            throw new Error('Неизвестный формат файла');
+            // Legacy: v1 or undefined or bare Array.
+            const r = await restoreLegacyProducts(data);
+            if (r.ok) HEYS.Toast?.success?.(`✅ Импорт (legacy): +${r.added}, ↻${r.updated}`);
+            HEYS.analytics?.trackDataOperation?.('backup-restore-legacy', r.total || 0);
+            return r;
         } catch (err) {
             console.error('[IMPORT] failed:', err);
             HEYS.Toast?.error?.('Ошибка восстановления: ' + (err && err.message ? err.message : err))
                 || alert('Ошибка восстановления: ' + (err && err.message ? err.message : err));
             HEYS.analytics?.trackError?.(err, { context: 'backup-import' });
+            // Не снимаем restore-in-progress marker — пользователь увидит на reload.
             return { ok: false, error: err && err.message ? err.message : String(err) };
         } finally {
             HEYS._restoringBackup = false;
