@@ -30,6 +30,12 @@ Compact agent reference. Detailed architecture in
   serializers, loading states often need to move together.
 - **One-file fixes are suspect.** Justify why other layers are unaffected.
 - **Keep changes proportional.** Bug fix doesn't need surrounding cleanup.
+- **Never write cleanup/garbage-collection by shape inference.** Functions that
+  decide "valid vs invalid" by checking the presence of fields like `.name` or
+  `.id` will inevitably break when data shape evolves (overlay v2 → TypeA rows
+  have no `.name`; tombstone arrays hold IDs not objects). Use explicit
+  tombstones / versioning / migrations instead. See `BUGS_HISTORY.md` cloud
+  cleanup destruction (2026-05-11) for the cost.
 
 ## Local dev
 

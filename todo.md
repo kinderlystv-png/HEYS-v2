@@ -304,6 +304,48 @@ localStorage.getItem('heys_products'); // null или ''
 
 ---
 
+## 🧪 Переписать cleanup-функции под новый формат данных _(low priority)_
+
+> **Контекст**: 2026-05-11 коммитом `78d9136e` отключены три точки запуска
+> `cleanupCloudProducts` / `cleanupProductRecord` в
+> [heys_storage_supabase_v1.js](apps/web/heys_storage_supabase_v1.js) (~6516,
+> ~8714). Они классифицировали валидные overlay TypeA-строки и массивы ID
+> (`heys_hidden_products`, `heys_favorite_products`) как «мусор» и удаляли из
+> облака. Подробности — `apps/web/BUGS_HISTORY.md` секция «Cloud cleanup
+> destroying overlay data».
+
+Когда захочется вернуть автоматическую чистку — переписать
+`cleanupProductRecord` так чтобы знал про:
+
+- [ ] **Overlay v2 shape** — `{id, shared_origin_id, overrides, in_my_list}` для
+      TypeA (без `.name` — имя в shared catalog); `{id, _custom:true, ...}` для
+      TypeB.
+- [ ] **Pure-ID arrays** — `heys_hidden_products`, `heys_favorite_products`
+      хранят `string[]` (id'шки). Cleanup должен распознавать их по имени ключа,
+      а не пытаться проверять у строки `.name`.
+- [ ] **Backup-key skip list** — игнорировать ключи матчащиеся `_BACKUP_*`,
+      `*_archive_*`, чтобы случайно не подрезать резервные копии.
+- [ ] **Tombstones и empty arrays** — для overlay пустой массив значит «всё
+      удалено пользователем», не мусор. Удалять только записи реально
+      повреждённые (например невалидный JSON).
+- [ ] **Гайки безопасности** — dry-run флаг по умолчанию, лог всегда показывает
+      diff (до/после) с примерами удаляемых строк, abort если to-delete > 50% от
+      исходного размера.
+
+**Альтернатива** (рекомендуемая) — не возвращать cleanup вообще. Использовать:
+
+- Storage registry уже умеет сжимать legacy ключи (см.
+  `apps/web/ARCHITECTURE.md` раздел Storage management).
+- Audit `HEYS.diagnostics.storageAudit()` показывает violations — пусть юзер
+  явно очищает то что нужно.
+- Tombstones и migration версии для оверлея.
+
+**Recovery после отключённого cleanup**: бэкапы лежат в облаке
+(`*_BACKUP_20260510`, `*_BACKUP_20260511`). Можно дропать через ~30 дней после
+Phase 3, если регрессий не будет.
+
+---
+
 ## 🔄 Backup v2 — мелкие доработки restore _(non-urgent)_
 
 > **Контекст**: коммит 4db42ac1 (2026-05-10) — backup переработан на schema v2

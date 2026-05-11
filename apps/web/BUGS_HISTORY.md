@@ -258,3 +258,60 @@ reference):
 **Pattern to watch**: when adding a new table that references `clients(id)`,
 always include `ON DELETE CASCADE`. Audit other tables periodically — any
 missing FK is a future orphan leak.
+
+---
+
+## Cloud cleanup destroying overlay data (2026-05-11)
+
+Symptom: curator opened Poplanton client and table showed 139 products instead
+of 366. Hard reload restored to 366. Logs revealed `[CLOUD CLEANUP]` silently
+deleting valid data on every switch and once per boot.
+
+**Root cause**: `cleanupProductRecord` in
+[heys_storage_supabase_v1.js:5228](heys_storage_supabase_v1.js#L5228) decides
+"valid vs invalid" by checking `.name` field:
+
+```js
+const cleaned = products.filter(
+  (p) => p && typeof p.name === 'string' && p.name.trim().length > 0,
+);
+```
+
+This logic predates the overlay v2 rollout. The breakage:
+
+1. **Overlay TypeA rows** have shape
+   `{id, shared_origin_id, overrides, in_my_list}` — `.name` lives in the shared
+   catalog, denormalized at read time. Cleanup classifies all TypeA rows as
+   garbage. Observed: 366 → 28 (338 rows wiped in single pass).
+2. **`heys_hidden_products`** is an array of product IDs (strings). Strings have
+   no `.name`. Cleanup deletes the whole key as "garbage".
+3. **`heys_favorite_products`** — same shape, same fate.
+4. **Backup keys** (`*_BACKUP_*`) get matched by the cleanup's regex and pruned
+   too.
+
+Affected for Poplanton (`ccfe6ea3`):
+
+- `heys_hidden_products`: 289 IDs → deleted entirely
+- `heys_favorite_products`: 4 IDs → deleted entirely
+- `heys_products_overlay_v2`: temporarily 366 → 28 (LS restored on next sync)
+- `heys_products_overlay_v2_BACKUP`: 433 → 139 (cleanup pruned the backup)
+
+The overlay destruction was not permanent because LS still held the 366 rows and
+pushed them back to cloud via auto-sync. If user had cleared LS first, data
+would be lost.
+
+**Fix** (commit `78d9136e`): disabled all three `cleanupProductRecord` /
+`cleanupCloudProducts` call sites (bootstrap clientSync ~6516, full-sync
+post-completion ~8714). Left explicit comments naming the breakage modes.
+Restored `heys_hidden_products` for Poplanton from `_BACKUP_20260510` by
+re-running the object→ID conversion that worked the day before.
+
+**Pattern**: never write cleanup / GC functions that decide validity by **shape
+inference** (presence of fields). Any future data shape evolution
+(normalization, ID-only tombstones, schema version bump) makes the old shape
+look like garbage to the cleanup. Use explicit tombstones, version numbers, or
+migrations instead.
+
+**Still owed** (see [todo.md](../../todo.md)): rewrite cleanup to handle overlay
+v2 shape + pure-ID arrays + backup-key skip list. Until then, the function stays
+disabled.
