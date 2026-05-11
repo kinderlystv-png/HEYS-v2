@@ -87,8 +87,8 @@ apps/web/heys_core_v12.js:5159
 apps/web/heys_cycle_v1.js:44
 apps/web/heys_day_add_product.js:696
 apps/web/heys_day_add_product.js:711
-apps/web/heys_day_core_bundle_v1.js:2036
-apps/web/heys_day_core_bundle_v1.js:3849
+apps/web/heys_day_core_bundle_v1.js:2037
+apps/web/heys_day_core_bundle_v1.js:3850
 apps/web/heys_day_core_bundle_v1.js:404
 apps/web/heys_day_core_bundle_v1.js:52
 apps/web/heys_day_effects.js:736
@@ -204,7 +204,7 @@ apps/web/heys_widgets_core_v1.js:1049
 apps/web/heys_widgets_core_v1.js:386
 apps/web/heys_widgets_ui_v1.js:4799
 apps/web/heys_widgets_ui_v1.js:7028
-apps/web/heys_yandex_api_v1.js:804
+apps/web/heys_yandex_api_v1.js:809
 apps/web/heys_yesterday_verify_v1.js:1112
 apps/web/heys_yesterday_verify_v1.js:1114
 apps/web/heys_yesterday_verify_v1.js:36
