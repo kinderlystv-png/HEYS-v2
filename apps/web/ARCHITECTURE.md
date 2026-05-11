@@ -199,6 +199,50 @@ Phase 2+ audit strategies skip them.
 | [insights/pi_feedback_loop.js:534-549](insights/pi_feedback_loop.js#L534-L549) | Canonical `pruneHistoryToStorageBudget` (sliding-window)                              |
 | [insights/pi_feedback_loop.js:573-596](insights/pi_feedback_loop.js#L573-L596) | Canonical `trimLegacyRecords` (schema upgrader)                                       |
 
+### Navigating `heys_storage_supabase_v1.js` (~13k LOC)
+
+This file is huge and gets re-read across sessions. Don't load the whole file —
+jump straight to the area:
+
+| Area                                     | Approx line | What's there                                                             |
+| ---------------------------------------- | ----------- | ------------------------------------------------------------------------ |
+| Constants / setup                        | 1-600       | `CLIENT_SPECIFIC_KEYS`, RPC tail constants, helpers                      |
+| Queue / pending                          | 1500-3500   | `enqueueClientUpsertForUpload`, `flushPendingQueue`, persistence         |
+| `interceptSetItem`                       | 3800-4200   | Universal LS hook: cloud-canonical gate, overlay guard, legacy mirror    |
+| `safeSetItem`                            | 4400-4700   | 3-tier reactive recovery on quota errors                                 |
+| Phase A / full-sync guards               | 6300-6800   | Profile-empty guards (Phase A 6397, full-sync 6700)                      |
+| Delta-light                              | 8100-8300   | `delta-light` profile guard 8174                                         |
+| `applyForegroundHotSyncValue`            | 10700-11000 | HOT-sync per-key router; overlay branch ~10791                           |
+| `dispatchForegroundHotSyncProfileEvents` | nearby      | Auto-dispatch `heys:*-updated` events                                    |
+| `cloud.saveClientKey`                    | 9800-10100  | Direct save API; `isValidProfile` guard at 9893                          |
+| `cloud.switchClient`                     | 12100-12400 | Client switching: emit stages, flush queue, cleanup other-client LS keys |
+
+Use `grep -n 'function name'` to find exact lines — addresses drift with edits.
+
+---
+
+## Day / meal feature ownership
+
+When working on the diary / meal-add / meal-edit flow, these files own what:
+
+| File                                                             | Owns                                                                                           |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [day/\_meals.js](day/_meals.js)                                  | Meal rendering, meal-row UI, meal calculations. **SOURCE** for `heys_day_meals_bundle_v1.js`.  |
+| [day/\_advice.js](day/_advice.js)                                | Advice toasts on day tab. **SOURCE** for `heys_advice_bundle_v1.js`.                           |
+| [heys_day_core_bundle_v1.js](heys_day_core_bundle_v1.js)         | `useDayAutosave`, `flush`, day-trace pipeline (4c, 5)                                          |
+| [heys_day_add_product.js](heys_day_add_product.js)               | `handleAdd` for meal-add; `MealAddProduct` callback                                            |
+| [heys_add_product_step_v1.js](heys_add_product_step_v1.js)       | Add-product modal: search, grams, harm-select, portions sync                                   |
+| [heys_day_copy_meal_modal_v1.js](heys_day_copy_meal_modal_v1.js) | Copy-meal modal: target picker, gram tweaks, calorie preview                                   |
+| [heys_day_effects.js](heys_day_effects.js)                       | Day state replacement after external update (`heys:day-updated` listener)                      |
+| [heys_day_utils.js](heys_day_utils.js)                           | `autoRecoverOnLoad`, day-key parsing, scoped read helpers                                      |
+| [heys_gamification_v1.js](heys_gamification_v1.js)               | XP/missions writes that touch `dayv2` — **gotcha source** (see day-write race in BUGS_HISTORY) |
+
+**Important**: `heys_day_bundle_v1.js`, `heys_day_meals_bundle_v1.js`,
+`heys_advice_bundle_v1.js` are **auto-generated** from `day/*.js` via
+`apps/web/scripts/bundle-day.cjs` and `bundle-meals.cjs`. Direct edits to the
+bundle files will be overwritten on next `pnpm bundle:legacy`. Edit [day/](day/)
+sources only.
+
 ---
 
 ## Database schema

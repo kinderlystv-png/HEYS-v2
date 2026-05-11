@@ -86,6 +86,50 @@ each.
 To skip a hook the user must explicitly authorize. Default: do not
 `--no-verify`.
 
+### How to react when a hook fires
+
+**`prepare-release:check` failed (no whats-new entry)** — add an entry to
+[apps/web/public/whats-new.json](apps/web/public/whats-new.json) at the top of
+`releases[]`:
+
+```json
+{
+  "version": "2026.05.11.<HASH>",
+  "buildHash": "<HASH>",
+  "date": "<YYYY-MM-DD>",
+  "kind": "technical", // or "user-facing"
+  "profile": "technical-infra", // or "user-facing-general", etc.
+  "title": "Short user-friendly title",
+  "items": [
+    {
+      "type": "fix|improvement|chore",
+      "title": "...",
+      "description": "..."
+    }
+  ]
+}
+```
+
+The `<HASH>` is the **short SHA of the source-bearing commit** (not the docs
+commit). Get it via `git log -1 --format=%h`. Then make a fresh
+`chore(release): bump whats-new build hash to <HASH>` commit. The check is
+re-run on push.
+
+**`lint-direct-localstorage-writes` failed (new direct setItem)** — preferred
+fix: refactor the new call site to `HEYS.utils.lsSet(key, value)` or
+`HEYS.store.set(key, value)`. If the call must stay direct (bootstrap-time
+before Store loads), add the new line as `relative/path:line` to
+[scripts/bootstrap-bypass-allowlist.txt](scripts/bootstrap-bypass-allowlist.txt).
+**Common surprise**: editing a file shifts other lines, breaking existing
+allowlist entries with stale line numbers. The hook output names exactly which
+lines to update — just re-sync.
+
+**`legacy-sync` regenerated bundles** — this is normal. The hook auto-stages the
+rebuilt `apps/web/public/boot-*.bundle.<hash>.js` + manifest + index.html
+
+- sw.js. Just commit them together with the source change. Never hand-edit those
+  generated files.
+
 ---
 
 ## Working with code
