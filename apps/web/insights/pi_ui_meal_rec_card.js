@@ -1888,37 +1888,41 @@
         // Other scenarios: show if has macros
         const remainingKcal = macros?.remainingKcal || 0;
 
-        // R8-B: water-card показываем когда:
-        //   1) Goal achieved (явно GOAL_REACHED scenario) — независимо от того
-        //      что planner вернул через mealsPlan (например stable snapshot
-        //      может протолкнуть устаревший meal на 338 ккал).
+        // R8-B / R10-B: water-card показываем когда:
+        //   1) Goal achieved (явно GOAL_REACHED scenario)
         //   2) Budget exhausted (остаток <50 ккал ИЛИ ноль белка+углеводов).
-        const shouldShowWater = isGoalReached || remainingKcal < 50 || (macros?.protein <= 0 && macros?.carbs <= 0);
+        //   3) Planner вернул пустой план (R10-B plannerEmptyPlan flag)
+        const isPlannerEmptyPlan = !!macros?.plannerEmptyPlan;
+        const shouldShowWater = isGoalReached || isPlannerEmptyPlan || remainingKcal < 50 || (macros?.protein <= 0 && macros?.carbs <= 0);
         if (shouldShowWater) {
             console.info(`${LOG_PREFIX} ℹ️ Budget exhausted — showing water card:`, {
                 scenario,
                 isGoalReached,
+                isPlannerEmptyPlan,
                 remainingKcal,
                 protein: macros?.protein,
                 carbs: macros?.carbs
             });
+            // R10-B: разный заголовок и текст для GOAL_REACHED vs empty plan
+            const isTooLate = isPlannerEmptyPlan && !isGoalReached;
+            const titleText = isTooLate ? 'Сегодня уже поздно есть' : 'Цель дня выполнена!';
+            const bodyText = isTooLate
+                ? (macros?.plannerEmptyReason || 'До сна слишком мало времени для нового приёма. Если очень голодно — лёгкий белковый перекус (творог/казеин). Иначе — вода и спокойного сна.')
+                : 'Вы набрали достаточно калорий и нутриентов на сегодня. Дальше — только вода. Хороший день!';
             // Show "goal complete, drink water" card instead of hiding
             return h('div', {
                 className: 'meal-rec-card widget widget--meal-rec-diary-water p-4 rounded-2xl',
                 style: { position: 'relative' }
             },
                 h('div', { className: 'flex items-center gap-3 mb-2' },
-                    h('span', { className: 'text-3xl' }, '💧'),
+                    h('span', { className: 'text-3xl' }, isTooLate ? '🌙' : '💧'),
                     h('div', null,
                         h('div', { className: 'meal-rec-card__badge mb-1' }, 'Планнер'),
-                        h('div', { className: 'font-semibold text-blue-800 text-base' }, 'Цель дня выполнена!'),
+                        h('div', { className: 'font-semibold text-blue-800 text-base' }, titleText),
                     )
                 ),
                 h('div', { className: 'text-sm text-blue-700 leading-relaxed' },
-                    'Вы набрали достаточно калорий и нутриентов на сегодня. ',
-                    'Дальше — только вода ',
-                    h('span', { className: 'text-base' }, '💧'),
-                    '. Хороший день!'
+                    bodyText
                 ),
                 // Незаметная точка диагностики (как в основной карточке)
                 h('span', {

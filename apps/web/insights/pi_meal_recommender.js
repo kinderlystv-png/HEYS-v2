@@ -903,6 +903,28 @@
             console.info(`${LOG_PREFIX} [MEALREC.planner] ❌ Conditions NOT met for multi-meal planning`);
         }
 
+        // R10-B: planner вернул пустой план (`meals: []` с reason типа
+        // "Недостаточно времени до сна") — но recommender уже посчитал свои
+        // macros (например 904 ккал). Без sync header показал бы 904 ккал
+        // и противоречил пустому таймлайну. Обнуляем макросы и помечаем.
+        if (mealsPlan?.available && Array.isArray(mealsPlan.meals) && mealsPlan.meals.length === 0) {
+            const noPlanReason = mealsPlan.summary?.reason || 'planner returned no meals';
+            console.info(`${LOG_PREFIX} [MEALREC.planner] ⚠️ Empty plan from planner — zeroing header macros to avoid contradiction:`, {
+                reason: noPlanReason,
+                wasMacros: { protein: macrosRec.protein, carbs: macrosRec.carbs, fat: macrosRec.fat, kcal: macrosRec.kcal }
+            });
+            macrosRec.protein = 0;
+            macrosRec.carbs = 0;
+            macrosRec.fat = 0;
+            macrosRec.kcal = 0;
+            macrosRec.proteinRange = '0-0';
+            macrosRec.carbsRange = '0-0';
+            macrosRec.kcalRange = '0-0';
+            macrosRec.plannerSynced = true;
+            macrosRec.plannerEmptyPlan = true;
+            macrosRec.plannerEmptyReason = noPlanReason;
+        }
+
         // R1-15: двусторонний timing sync. Раньше обновляли только если planner вернул
         // ПОЗЖЕ recommender'а — но planner всегда авторитетен (он учёл волну, жиросжигание,
         // deadline до сна). Если он вернул раньше — это тоже его решение.
@@ -949,14 +971,16 @@
                 });
             }
 
-            // R6-B: scenario sync. Если planner сохранил specific scenario от
-            // recommender (например MICRONUTRIENT_FOCUS) — header остаётся как есть.
-            // Если planner выбрал свой baseline scenario (PRE_SLEEP, BALANCED) —
-            // header тоже должен показывать его, иначе будет рассинхрон с timeline.
+            // R6-B / R11: scenario sync. Если planner сохранил specific scenario
+            // от recommender (MICRONUTRIENT_FOCUS, MOOD_SUPPORT_BREAKFAST) —
+            // header уже совпадает с meal. Если planner выбрал свой baseline
+            // (PRE_SLEEP, BALANCED) ИЛИ применил R1-8 light fallback —
+            // header тоже должен показывать его, иначе рассинхрон с timeline.
             const plannerScenario = firstPlannedMeal.scenario;
             const plannerScenarioSource = firstPlannedMeal.scenarioSource;
-            if (plannerScenario && plannerScenarioSource === 'planner' && plannerScenario !== contextAnalysis.scenario) {
-                console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Scenario sync: header ${contextAnalysis.scenario} → ${plannerScenario} (planner авторитетен для конкретного meal)`);
+            const plannerOwnsScenario = plannerScenarioSource === 'planner' || plannerScenarioSource === 'planner_light';
+            if (plannerScenario && plannerOwnsScenario && plannerScenario !== contextAnalysis.scenario) {
+                console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Scenario sync: header ${contextAnalysis.scenario} → ${plannerScenario} (source: ${plannerScenarioSource}, planner авторитетен для конкретного meal)`);
                 contextAnalysis.scenario = plannerScenario;
                 contextAnalysis.icon = SCENARIO_ICONS[plannerScenario] || contextAnalysis.icon;
                 contextAnalysis.scenarioSyncedToPlanner = true;

@@ -25517,14 +25517,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 });
             }
 
-            // R6-B: scenario sync. Если planner сохранил specific scenario от
-            // recommender (например MICRONUTRIENT_FOCUS) — header остаётся как есть.
-            // Если planner выбрал свой baseline scenario (PRE_SLEEP, BALANCED) —
-            // header тоже должен показывать его, иначе будет рассинхрон с timeline.
+            // R6-B / R11: scenario sync. Если planner сохранил specific scenario
+            // от recommender (MICRONUTRIENT_FOCUS, MOOD_SUPPORT_BREAKFAST) —
+            // header уже совпадает с meal. Если planner выбрал свой baseline
+            // (PRE_SLEEP, BALANCED) ИЛИ применил R1-8 light fallback —
+            // header тоже должен показывать его, иначе рассинхрон с timeline.
             const plannerScenario = firstPlannedMeal.scenario;
             const plannerScenarioSource = firstPlannedMeal.scenarioSource;
-            if (plannerScenario && plannerScenarioSource === 'planner' && plannerScenario !== contextAnalysis.scenario) {
-                console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Scenario sync: header ${contextAnalysis.scenario} → ${plannerScenario} (planner авторитетен для конкретного meal)`);
+            const plannerOwnsScenario = plannerScenarioSource === 'planner' || plannerScenarioSource === 'planner_light';
+            if (plannerScenario && plannerOwnsScenario && plannerScenario !== contextAnalysis.scenario) {
+                console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Scenario sync: header ${contextAnalysis.scenario} → ${plannerScenario} (source: ${plannerScenarioSource}, planner авторитетен для конкретного meal)`);
                 contextAnalysis.scenario = plannerScenario;
                 contextAnalysis.icon = SCENARIO_ICONS[plannerScenario] || contextAnalysis.icon;
                 contextAnalysis.scenarioSyncedToPlanner = true;

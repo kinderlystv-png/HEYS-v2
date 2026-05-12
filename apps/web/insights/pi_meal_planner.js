@@ -861,15 +861,28 @@
             }
 
             if (!hungerTradeoffApplied) {
-                // R1-8: малый дефицит (50-400 kcal) + остаётся ≥2ч до сна → один лёгкий
-                // белковый приём вместо пустоты. Лечь с дырой в 200 kcal "под рукой" —
-                // это голодная ночь без причины, а казеин/творог перед сном не вредят
-                // (Kinsey & Ormsbee 2015 — pre-sleep protein, MPS overnight).
+                // R1-8: остаётся ≥2ч до сна → один лёгкий белковый приём вместо
+                // пустоты. Лечь голодным без причины плохо, казеин/творог перед
+                // сном не вредят (Kinsey & Ormsbee 2015 — pre-sleep protein, MPS).
+                // R9: clamp макросов чтобы приём был реально лёгким (cap 250 ккал),
+                // и kcal согласован с БЖУ (раньше kcal = quickBudgetKcal давал
+                // расхождение 500+ ккал когда дефицит большой).
                 const hoursToSleep = sleepTarget - currentTimeHours;
-                if (quickBudgetKcal >= 50 && hoursToSleep >= 2.0 && hoursToSleep <= 4.0) {
-                    const lightStart = Math.max(currentTimeHours + 0.25, sleepTarget - 2.5);
-                    const lightEnd = Math.min(sleepTarget - 1.5, lightStart + 0.5);
-                    const protTarget = Math.min(25, Math.max(15, Math.round(quickBudgetKcal * 0.6 / 4)));
+                // R10-A: порог понижен с 2.0h до 1.5h. Лучше дать лёгкий
+                // белковый приём за 1ч до сна (cap 250 ккал, в основном белок)
+                // чем оставить юзера с пустым планом + противоречивым header.
+                // 1.5h до сна = тот же буфер что в severe hunger tradeoff.
+                if (quickBudgetKcal >= 50 && hoursToSleep >= 1.5 && hoursToSleep <= 4.0) {
+                    const lightStart = Math.max(currentTimeHours + 0.1, sleepTarget - 1.8);
+                    const lightEnd = Math.min(sleepTarget - 1.0, lightStart + 0.5);
+                    const LIGHT_MEAL_KCAL_CAP = 250;
+                    // Целевые БЖУ: cap по белку (15-25г), углеводы и жиры скромные
+                    const lightKcalTarget = Math.min(quickBudgetKcal, LIGHT_MEAL_KCAL_CAP);
+                    const protTarget = Math.min(25, Math.max(15, Math.round(lightKcalTarget * 0.6 / 4)));
+                    const carbsTarget = Math.max(5, Math.round(lightKcalTarget * 0.2 / 4));
+                    const fatTarget = Math.max(3, Math.round(lightKcalTarget * 0.2 / 9));
+                    // R9-A: kcal = P*4 + C*4 + F*9 (согласован с БЖУ)
+                    const lightKcalActual = protTarget * 4 + carbsTarget * 4 + fatTarget * 9;
                     const lightMeal = {
                         index: 0,
                         timeStart: formatTime(lightStart),
@@ -878,20 +891,26 @@
                         fatBurnWindow: { start: formatTime(lightStart + 1.5), end: formatTime(lightStart + 2.0) },
                         macros: {
                             prot: protTarget,
-                            carbs: Math.max(5, Math.round(quickBudgetKcal * 0.2 / 4)),
-                            fat: Math.max(3, Math.round(quickBudgetKcal * 0.2 / 9)),
-                            kcal: Math.round(quickBudgetKcal),
-                            effectiveKcal: protTarget * 3 + Math.round(quickBudgetKcal * 0.2 / 4) * 4 + Math.round(quickBudgetKcal * 0.2 / 9) * 9
+                            carbs: carbsTarget,
+                            fat: fatTarget,
+                            kcal: lightKcalActual,
+                            effectiveKcal: protTarget * 3 + carbsTarget * 4 + fatTarget * 9
                         },
                         isActionable: true,
                         isLast: true,
                         scenario: 'PRE_SLEEP',
+                        // R9-B: явно метим источник — UI/diag показывают «planner_light»
+                        scenarioSource: 'planner_light',
+                        scenarioBaseline: 'PRE_SLEEP',
                         hoursToSleep: sleepTarget - lightStart,
                         targetGL: GL_TARGET_PRE_SLEEP,
                         sleepFriendlyCategories: SLEEP_FRIENDLY_CATEGORIES,
+                        presleepCapped: lightKcalActual >= LIGHT_MEAL_KCAL_CAP - 10, // флаг что cap применён
                         stableId: `light|${formatTime(lightStart)}|PRE_SLEEP|0`
                     };
-                    console.info(`${LOG_PREFIX} [PLANNER.light] 🥛 Tiny deficit ${Math.round(quickBudgetKcal)} kcal + ${hoursToSleep.toFixed(1)}h to sleep → single light protein meal`);
+                    const deficitLabel = quickBudgetKcal >= 400 ? 'Large deficit (capped to light meal)' :
+                                         quickBudgetKcal >= 200 ? 'Moderate deficit' : 'Small deficit';
+                    console.info(`${LOG_PREFIX} [PLANNER.light] 🥛 ${deficitLabel} ${Math.round(quickBudgetKcal)} kcal + ${hoursToSleep.toFixed(1)}h to sleep → single light protein meal (${lightKcalActual} kcal: P${protTarget} C${carbsTarget} F${fatTarget})`);
                     return {
                         available: true,
                         meals: [lightMeal],
@@ -899,10 +918,12 @@
                             totalMeals: 1,
                             timelineStart: lightMeal.timeStart,
                             timelineEnd: lightMeal.timeEnd,
-                            totalMacros: { prot: lightMeal.macros.prot, carbs: lightMeal.macros.carbs, kcal: lightMeal.macros.kcal },
+                            totalMacros: { prot: protTarget, carbs: carbsTarget, kcal: lightKcalActual },
                             sleepTarget: formatTime(sleepTarget),
                             lastMealDeadline: formatTime(sleepTarget - 1.5),
-                            reason: 'Лёгкий белковый приём перед сном (малый остаток)'
+                            reason: quickBudgetKcal >= 400
+                                ? `Лёгкий белковый приём перед сном (дефицит ${Math.round(quickBudgetKcal)} ккал, но cap ${LIGHT_MEAL_KCAL_CAP} ккал — не перегружать сон)`
+                                : 'Лёгкий белковый приём перед сном (малый остаток)'
                         }
                     };
                 }
