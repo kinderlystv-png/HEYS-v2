@@ -23625,7 +23625,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             isRefeedDay = false,
             stressMoodSignals = null,
             waveOverlapPct = null,
-            scenarioHint = null // R5-D: recommender scenario (MICRONUTRIENT_FOCUS, MOOD_SUPPORT_BREAKFAST)
+            scenarioHint = null, // R5-D: recommender scenario (MICRONUTRIENT_FOCUS, MOOD_SUPPORT_BREAKFAST)
+            // R12-B: история GL и sugar dependency для адаптации targetGL
+            glycemicLoadHistory = null,
+            addedSugarHistory = null,
+            // R12-D: история клетчатки для boost категорий
+            fiberRegularityScore = null,
+            // R12-C: pattern impact hints от recommender для advisories
+            patternImpactHints = null,
+            // R12-E: phenotype для timing adjustment
+            phenotypeApplied = null
         } = params;
 
         // R2-6: нормализуем входные данные. Незаданные поля приводим к 0, а не undefined,
@@ -23789,7 +23798,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             explicitSleepStart: daySleepStart,
             currentTimeHours
         });
-        let lastMealDeadline = sleepTarget - PRE_SLEEP_BUFFER_HOURS;
+        // R12-E: phenotype-aware buffer. insulin_resistant → ужин раньше на 30 мин
+        // (углеводы + инсулин перед сном плохо для них). metabolic_syndrome_risk —
+        // ещё раньше (1ч). Не трогаем sleepTarget — меняем именно deadline.
+        let phenotypeBuffer = 0;
+        if (phenotypeApplied?.metabolic === 'insulin_resistant') {
+            phenotypeBuffer = 0.5;
+        } else if (phenotypeApplied?.metabolic === 'metabolic_syndrome_risk') {
+            phenotypeBuffer = 1.0;
+        }
+        let lastMealDeadline = sleepTarget - PRE_SLEEP_BUFFER_HOURS - phenotypeBuffer;
+        if (phenotypeBuffer > 0) {
+            console.info(`${LOG_PREFIX} [PLANNER.phenotype] 🧬 Phenotype ${phenotypeApplied.metabolic} → deadline сдвинут на ${phenotypeBuffer}ч раньше`);
+        }
         let hungerTradeoffApplied = false;
         let effectiveBuffer = PRE_SLEEP_BUFFER_HOURS;
 
@@ -24179,13 +24200,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         for (let i = 0; i < plannedMeals.length; i++) {
             plannedMeals[i].macros = finalBudgets[i];
             // S3: Glycemic Load target (Ludwig, 2002)
+            // R12-B: GL_TARGET override для юзеров с high-GL history или SUGAR_RESET сценарием.
+            // - glycemicLoadHistory.score < 0.5 (юзер регулярно ест high-GL) → дневной target 15 вместо 20
+            // - scenarioHint === SUGAR_RESET → жёсткий target 10 (даже для не-pre-sleep)
+            let dayGLTarget = GL_TARGET_DAY;
+            if (scenarioHint === 'SUGAR_RESET') {
+                dayGLTarget = 10;
+            } else if (glycemicLoadHistory?.score !== undefined && glycemicLoadHistory.score < 0.5) {
+                dayGLTarget = 15;
+            }
             plannedMeals[i].targetGL = plannedMeals[i].hoursToSleep < PRE_SLEEP_BUFFER_HOURS
                 ? GL_TARGET_PRE_SLEEP
-                : GL_TARGET_DAY;
+                : dayGLTarget;
             // S5: sleep-friendly categories hint
-            plannedMeals[i].sleepFriendlyCategories = plannedMeals[i].hoursToSleep < PRE_SLEEP_BUFFER_HOURS
+            // R12-D: при low fiber history (<0.4) boost'ить vegetables/legumes
+            // даже для non-pre-sleep meals — picker увидит и отдаст приоритет.
+            let cats = plannedMeals[i].hoursToSleep < PRE_SLEEP_BUFFER_HOURS
                 ? SLEEP_FRIENDLY_CATEGORIES
                 : null;
+            const isFirstMealOfPlan = i === 0;
+            if (fiberRegularityScore !== null && fiberRegularityScore < 0.4 && !plannedMeals[i].isLast && isFirstMealOfPlan) {
+                cats = ['vegetables', 'legumes', ...(cats || [])];
+            }
+            plannedMeals[i].sleepFriendlyCategories = cats;
             // R5-D / R6-B: detectMealScenario может перезаписать recommender scenario.
             // Сохраняем оригинал. Для первого приёма (actionable) — приоритет scenarioHint
             // от recommender если он более специфичен (нести смысл, которого нет в
@@ -24343,7 +24380,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
 
         // === Шаг 7: Формирование summary ===
-        // R4-6: advisories — диагностические подсказки из истории паттернов.
+        // R4-6 / R12-C: advisories — подсказки из истории паттернов + объяснения
+        // почему recommender применил конкретные модификаторы. Юзер видит ПОЧЕМУ
+        // планнер выбрал такие БЖУ, не воспринимает как «магия».
         const advisories = [];
         if (Number.isFinite(waveOverlapPct) && waveOverlapPct > 40) {
             advisories.push({
@@ -24357,6 +24396,67 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 key: 'high_stress',
                 severity: 'medium',
                 text: 'Высокий стресс — лёгкий ужин и магний-богатые продукты улучшат сон.'
+            });
+        }
+        // R12-C: объясняем patternImpact от recommender
+        if (Array.isArray(patternImpactHints)) {
+            patternImpactHints.forEach((p) => {
+                if (p.pattern === 'C15') {
+                    advisories.push({
+                        key: 'c15_insulin_sensitivity',
+                        severity: 'low',
+                        text: 'Снижены углеводы из-за низкой инсулиновой чувствительности (по истории).'
+                    });
+                } else if (p.pattern === 'C35') {
+                    advisories.push({
+                        key: 'c35_protein_distribution',
+                        severity: 'low',
+                        text: 'Повышен белок для лучшего распределения по дню (история — мало белка в утренних приёмах).'
+                    });
+                } else if (p.pattern === 'C06') {
+                    advisories.push({
+                        key: 'c06_sleep_hunger',
+                        severity: 'low',
+                        text: 'Учтён плохой сон последних дней — больше белка, меньше простых углеводов.'
+                    });
+                } else if (p.pattern === 'C14') {
+                    advisories.push({
+                        key: 'c14_nutrient_timing',
+                        severity: 'low',
+                        text: 'Углеводы/белок подстроены под окно тренировки.'
+                    });
+                }
+            });
+        }
+        // R12-A + R4-8: advisory о recovery после тренировки
+        if (workoutRecoveryFactor > 0 && !recentWorkout && lastWorkout) {
+            const recoveryPct = Math.round(workoutRecoveryFactor * 100);
+            advisories.push({
+                key: 'workout_recovery',
+                severity: 'low',
+                text: `+${recoveryPct}% белка для восстановления после ${isStrength ? 'силовой' : isCardio ? 'кардио' : ''} тренировки (${hoursAfterWorkout.toFixed(1)}ч назад).`
+            });
+        }
+        // R12-B: SUGAR_RESET / glycemicLoad advisories
+        if (scenarioHint === 'SUGAR_RESET') {
+            advisories.push({
+                key: 'sugar_reset',
+                severity: 'medium',
+                text: 'Reset после сладкого: следующий приём — низкий GL (<10) и без добавленного сахара.'
+            });
+        } else if (glycemicLoadHistory?.score !== undefined && glycemicLoadHistory.score < 0.5) {
+            advisories.push({
+                key: 'high_gl_history',
+                severity: 'low',
+                text: `Средняя дневная GL у тебя ${glycemicLoadHistory.dailyClass || 'высокая'} — таргет для приёмов снижен (15 вместо 20).`
+            });
+        }
+        // R12-D: fiber advisory
+        if (fiberRegularityScore !== null && fiberRegularityScore < 0.4) {
+            advisories.push({
+                key: 'low_fiber_history',
+                severity: 'low',
+                text: 'Мало клетчатки в истории — в этом приёме в приоритете овощи и бобовые.'
             });
         }
 
@@ -24640,6 +24740,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         PROTEIN_DEFICIT: 'PROTEIN_DEFICIT',
         MICRONUTRIENT_FOCUS: 'MICRONUTRIENT_FOCUS', // R4-4: при 2+ серьёзных дефицитах
         MOOD_SUPPORT_BREAKFAST: 'MOOD_SUPPORT_BREAKFAST', // R4-5: low mood + morning
+        SUGAR_RESET: 'SUGAR_RESET', // R12-B: после сладкого приёма у юзера с sugar dependency
         STRESS_EATING: 'STRESS_EATING',
         BALANCED: 'BALANCED'
     };
@@ -24655,6 +24756,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         [SCENARIOS.PROTEIN_DEFICIT]: '🥩',
         [SCENARIOS.MICRONUTRIENT_FOCUS]: '🥬', // R4-4
         [SCENARIOS.MOOD_SUPPORT_BREAKFAST]: '🌅', // R4-5
+        [SCENARIOS.SUGAR_RESET]: '🚫🍬', // R12-B
         [SCENARIOS.STRESS_EATING]: '🧘',
         [SCENARIOS.BALANCED]: '🍽️'
     };
@@ -25036,6 +25138,34 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             };
         }
 
+        // R12-B: SUGAR_RESET — после сладкого приёма у юзера с sugar dependency risk
+        // Активируется если: (a) есть зависимость по истории, (b) последний приём содержал
+        // >15г простых углеводов. Цель — следующий приём со низким GL (<10) и без added sugar.
+        const sugarDependencyRisk = !!patternHints?.addedSugarDependency?.dependencyRisk;
+        const lastMealSimpleSugar = Number(context?.lastMeal?.totals?.simple) || 0;
+        const sugarResetApplicable = sugarDependencyRisk && lastMealSimpleSugar > 15 && remainingKcal > 150;
+        scenarioCandidates.push({
+            priority: 6.7,
+            scenario: SCENARIOS.SUGAR_RESET,
+            applicable: sugarResetApplicable,
+            reason: sugarResetApplicable
+                ? `Сладкий приём (${Math.round(lastMealSimpleSugar)}г сахара) + sugar dependency risk`
+                : (!sugarDependencyRisk ? 'нет sugar dependency' : `simple sugar в последнем приёме ${Math.round(lastMealSimpleSugar)}г ≤ 15`),
+            metadata: { sugarDependencyRisk, lastMealSimpleSugar }
+        });
+        if (sugarResetApplicable) {
+            scenarioCandidates[scenarioCandidates.length - 1].winner = true;
+            console.group(`${LOG_PREFIX} 🏆 Scenario evaluation: Winner: ${SCENARIOS.SUGAR_RESET} (priority 6.7)`);
+            console.table(scenarioCandidates);
+            console.groupEnd();
+            return {
+                scenario: SCENARIOS.SUGAR_RESET,
+                reason: `Reset после сладкого (${Math.round(lastMealSimpleSugar)}г сахара)`,
+                icon: SCENARIO_ICONS[SCENARIOS.SUGAR_RESET],
+                metadata: { hint: 'низкий GL (<10), без added sugar, белок + клетчатка', lastMealSimpleSugar }
+            };
+        }
+
         // 7. PROTEIN_DEFICIT (< 50% of daily target)
         // v3.7.0: When no meals eaten today (eatenKcal < 100), this is NOT a "protein deficit" —
         // every nutrient is at 0%. Use BALANCED instead for proper meal sizing.
@@ -25276,6 +25406,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     // специфичные сценарии (MICRONUTRIENT_FOCUS, MOOD_SUPPORT_BREAKFAST)
                     // для первого meal вместо generic PRE_SLEEP от detectMealScenario.
                     scenarioHint: contextAnalysis?.scenario || null,
+                    // R12-A: currentDay (тренировки + контекст дня) для R4-8 recovery factor
+                    // и POST_WORKOUT scenario. Без этого вся работа Раунда 4-8 по recovery
+                    // была неактивна в production (R4-8 ищет params.currentDay?.workouts).
+                    currentDay: context.currentDay || null,
+                    // R12-B: glycemicLoad history для GL_TARGET_DAY override и SUGAR_RESET
+                    glycemicLoadHistory: patternHints?.glycemicLoad || null,
+                    addedSugarHistory: patternHints?.addedSugarDependency || null,
+                    fiberRegularityScore: patternHints?.fiberRegularity?.score ?? null,
+                    // R12-C: patternImpact + phenotype чтобы planner мог объяснить решения
+                    patternImpactHints: Array.isArray(patternImpact)
+                        ? patternImpact.filter((p) => ['C15', 'C35', 'C06', 'C14'].includes(p.pattern))
+                        : null,
+                    phenotypeApplied: profile?.phenotype || null,
                     replanReason,
                     previousPlanState,
                     lockedMeals: previousPlanState?.lockedMeals || []
@@ -28970,7 +29113,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
         }
 
-        // Ближайшая тренировка
+        // Ближайшая тренировка + полный массив для planner R4-8 (R12-A)
         const trainings = day.trainings || [];
         const training = trainings.length > 0 ? trainings[0] : null;
 
@@ -29078,6 +29221,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 time: training.time,
                 type: training.type || 'general'
             } : null,
+            // R12-A: полный массив тренировок дня для R4-8 recovery factor в planner.
+            // Раньше передавалось только trainings[0], в результате planner не знал
+            // когда тренировка закончилась, recovery factor никогда не активировался.
+            currentDay: {
+                trainings: trainings,
+                workouts: trainings.map((t) => ({
+                    ...t,
+                    endTime: t.endTime || t.time
+                })),
+                sleepQuality: day.sleepQuality,
+                waterMl: day.waterMl,
+                stressAvg: day.stressAvg,
+                householdMin: day.householdMin,
+                steps: day.steps
+            },
             sleepTarget,
             // R1-3: явный сигнал «время сна задано пользователем сегодня».
             // Planner будет использовать как высший приоритет sleepTarget.

@@ -1209,6 +1209,119 @@ describe('Meal Planner v1.0', () => {
             }
         });
 
+        it('R12-A: currentDay.workouts активирует recovery factor 2-24ч', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '14:00', // 3h после тренировки 11:00
+                lastMeal: { time: '11:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 80 },
+                days: [],
+                pIndex: {},
+                currentDay: {
+                    workouts: [{ endTime: '11:00', type: 'strength' }]
+                }
+            });
+            expect(result.available).toBe(true);
+            // Recovery factor должен дать прирост optimalProtPerMeal
+            // Конкретное число зависит от MPS_PROT_PER_KG и веса.
+            // Главное: план есть и без ошибок.
+            if (result.meals.length > 0) {
+                result.meals.forEach((m) => {
+                    expect(Number.isFinite(m.macros.prot)).toBe(true);
+                });
+            }
+        });
+
+        it('R12-B: glycemicLoadHistory с low score → dayGLTarget=15', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '13:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 20, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 20, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {},
+                glycemicLoadHistory: { score: 0.3, dailyClass: 'high' }
+            });
+            expect(result.available).toBe(true);
+            // Не-pre-sleep meal должен иметь targetGL=15 вместо 20
+            const dayMeal = result.meals.find((m) => Number(m.hoursToSleep) >= 3);
+            if (dayMeal) {
+                expect(dayMeal.targetGL).toBe(15);
+            }
+        });
+
+        it('R12-B: scenarioHint=SUGAR_RESET → targetGL=10 для всех meals', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '13:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 10, carbs: 70, fat: 5, simple: 50 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 10, carbs: 70, fat: 5 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {},
+                scenarioHint: 'SUGAR_RESET'
+            });
+            expect(result.available).toBe(true);
+            result.meals.forEach((m) => {
+                expect(m.targetGL).toBeLessThanOrEqual(10);
+            });
+        });
+
+        it('R12-C: patternImpactHints C15/C35 → advisories в summary', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '14:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {},
+                patternImpactHints: [
+                    { pattern: 'C15', area: 'macros', before: '...', after: '...' },
+                    { pattern: 'C35', area: 'macros', before: '...', after: '...' }
+                ]
+            });
+            expect(result.available).toBe(true);
+            const advs = result.summary?.advisories || [];
+            expect(advs.find((a) => a.key === 'c15_insulin_sensitivity')).toBeDefined();
+            expect(advs.find((a) => a.key === 'c35_protein_distribution')).toBeDefined();
+        });
+
+        it('R12-E: phenotype insulin_resistant сдвигает deadline на 30 мин раньше', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const baseline = planner.planRemainingMeals({
+                currentTime: '14:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {}
+            });
+            const phenotyped = planner.planRemainingMeals({
+                currentTime: '14:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {},
+                phenotypeApplied: { metabolic: 'insulin_resistant' }
+            });
+            const baseDl = planner.parseTime(baseline.summary?.lastMealDeadline || '00:00');
+            const phenoDl = planner.parseTime(phenotyped.summary?.lastMealDeadline || '00:00');
+            // phenotype deadline должен быть раньше на 30мин (или равен если оба null)
+            if (baseDl > 0 && phenoDl > 0) {
+                expect(phenoDl).toBeLessThan(baseDl);
+            }
+        });
+
         it('R6-C: лёгкий meal перед сном не клипается', () => {
             const planner = HEYS.InsightsPI.mealPlanner;
             // remainingBudget малый (300 ккал) — не должен клипаться

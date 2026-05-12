@@ -509,7 +509,7 @@
             }
         }
 
-        // Ближайшая тренировка
+        // Ближайшая тренировка + полный массив для planner R4-8 (R12-A)
         const trainings = day.trainings || [];
         const training = trainings.length > 0 ? trainings[0] : null;
 
@@ -617,6 +617,21 @@
                 time: training.time,
                 type: training.type || 'general'
             } : null,
+            // R12-A: полный массив тренировок дня для R4-8 recovery factor в planner.
+            // Раньше передавалось только trainings[0], в результате planner не знал
+            // когда тренировка закончилась, recovery factor никогда не активировался.
+            currentDay: {
+                trainings: trainings,
+                workouts: trainings.map((t) => ({
+                    ...t,
+                    endTime: t.endTime || t.time
+                })),
+                sleepQuality: day.sleepQuality,
+                waterMl: day.waterMl,
+                stressAvg: day.stressAvg,
+                householdMin: day.householdMin,
+                steps: day.steps
+            },
             sleepTarget,
             // R1-3: явный сигнал «время сна задано пользователем сегодня».
             // Planner будет использовать как высший приоритет sleepTarget.

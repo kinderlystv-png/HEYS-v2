@@ -94,6 +94,7 @@
         PROTEIN_DEFICIT: 'PROTEIN_DEFICIT',
         MICRONUTRIENT_FOCUS: 'MICRONUTRIENT_FOCUS', // R4-4: при 2+ серьёзных дефицитах
         MOOD_SUPPORT_BREAKFAST: 'MOOD_SUPPORT_BREAKFAST', // R4-5: low mood + morning
+        SUGAR_RESET: 'SUGAR_RESET', // R12-B: после сладкого приёма у юзера с sugar dependency
         STRESS_EATING: 'STRESS_EATING',
         BALANCED: 'BALANCED'
     };
@@ -109,6 +110,7 @@
         [SCENARIOS.PROTEIN_DEFICIT]: '🥩',
         [SCENARIOS.MICRONUTRIENT_FOCUS]: '🥬', // R4-4
         [SCENARIOS.MOOD_SUPPORT_BREAKFAST]: '🌅', // R4-5
+        [SCENARIOS.SUGAR_RESET]: '🚫🍬', // R12-B
         [SCENARIOS.STRESS_EATING]: '🧘',
         [SCENARIOS.BALANCED]: '🍽️'
     };
@@ -490,6 +492,34 @@
             };
         }
 
+        // R12-B: SUGAR_RESET — после сладкого приёма у юзера с sugar dependency risk
+        // Активируется если: (a) есть зависимость по истории, (b) последний приём содержал
+        // >15г простых углеводов. Цель — следующий приём со низким GL (<10) и без added sugar.
+        const sugarDependencyRisk = !!patternHints?.addedSugarDependency?.dependencyRisk;
+        const lastMealSimpleSugar = Number(context?.lastMeal?.totals?.simple) || 0;
+        const sugarResetApplicable = sugarDependencyRisk && lastMealSimpleSugar > 15 && remainingKcal > 150;
+        scenarioCandidates.push({
+            priority: 6.7,
+            scenario: SCENARIOS.SUGAR_RESET,
+            applicable: sugarResetApplicable,
+            reason: sugarResetApplicable
+                ? `Сладкий приём (${Math.round(lastMealSimpleSugar)}г сахара) + sugar dependency risk`
+                : (!sugarDependencyRisk ? 'нет sugar dependency' : `simple sugar в последнем приёме ${Math.round(lastMealSimpleSugar)}г ≤ 15`),
+            metadata: { sugarDependencyRisk, lastMealSimpleSugar }
+        });
+        if (sugarResetApplicable) {
+            scenarioCandidates[scenarioCandidates.length - 1].winner = true;
+            console.group(`${LOG_PREFIX} 🏆 Scenario evaluation: Winner: ${SCENARIOS.SUGAR_RESET} (priority 6.7)`);
+            console.table(scenarioCandidates);
+            console.groupEnd();
+            return {
+                scenario: SCENARIOS.SUGAR_RESET,
+                reason: `Reset после сладкого (${Math.round(lastMealSimpleSugar)}г сахара)`,
+                icon: SCENARIO_ICONS[SCENARIOS.SUGAR_RESET],
+                metadata: { hint: 'низкий GL (<10), без added sugar, белок + клетчатка', lastMealSimpleSugar }
+            };
+        }
+
         // 7. PROTEIN_DEFICIT (< 50% of daily target)
         // v3.7.0: When no meals eaten today (eatenKcal < 100), this is NOT a "protein deficit" —
         // every nutrient is at 0%. Use BALANCED instead for proper meal sizing.
@@ -730,6 +760,19 @@
                     // специфичные сценарии (MICRONUTRIENT_FOCUS, MOOD_SUPPORT_BREAKFAST)
                     // для первого meal вместо generic PRE_SLEEP от detectMealScenario.
                     scenarioHint: contextAnalysis?.scenario || null,
+                    // R12-A: currentDay (тренировки + контекст дня) для R4-8 recovery factor
+                    // и POST_WORKOUT scenario. Без этого вся работа Раунда 4-8 по recovery
+                    // была неактивна в production (R4-8 ищет params.currentDay?.workouts).
+                    currentDay: context.currentDay || null,
+                    // R12-B: glycemicLoad history для GL_TARGET_DAY override и SUGAR_RESET
+                    glycemicLoadHistory: patternHints?.glycemicLoad || null,
+                    addedSugarHistory: patternHints?.addedSugarDependency || null,
+                    fiberRegularityScore: patternHints?.fiberRegularity?.score ?? null,
+                    // R12-C: patternImpact + phenotype чтобы planner мог объяснить решения
+                    patternImpactHints: Array.isArray(patternImpact)
+                        ? patternImpact.filter((p) => ['C15', 'C35', 'C06', 'C14'].includes(p.pattern))
+                        : null,
+                    phenotypeApplied: profile?.phenotype || null,
                     replanReason,
                     previousPlanState,
                     lockedMeals: previousPlanState?.lockedMeals || []
