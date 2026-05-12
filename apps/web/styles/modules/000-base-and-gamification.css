@@ -10299,11 +10299,16 @@ body:has(.offline-banner) .wrap {
     bottom: 0;
     width: 100px;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: flex-end;
     background: var(--color-red-500);
     border-radius: 6px;
     pointer-events: none;
+    overflow: hidden;
+  }
+
+  .swipeable-background--multi {
+    background: transparent;
   }
 
   .swipeable-delete-btn {
@@ -10315,6 +10320,39 @@ body:has(.offline-banner) .wrap {
     padding: 8px 16px;
     cursor: pointer;
     pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .swipeable-background--multi .swipeable-delete-btn {
+    background: var(--color-red-500);
+  }
+
+  .swipeable-action-btn {
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.15;
+    background: transparent;
+    border: none;
+    padding: 8px 6px;
+    cursor: pointer;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .swipeable-action-btn--move {
+    background: #f59e0b;
+    color: #1f2937;
+  }
+
+  .swipeable-action-btn--copy {
+    background: #2563eb;
   }
 
   .swipeable-content {

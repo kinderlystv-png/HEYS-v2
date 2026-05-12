@@ -156,6 +156,7 @@
         onChangeStress,
         onRemoveMeal,
         onCopyMeal,
+        onMoveMeal,
         onSaveAsPreset,
         onRepeatYesterday,
         openEditGramsModal,
@@ -163,6 +164,8 @@
         openMoodEditor,
         setGrams,
         removeItem,
+        moveItem,
+        copyItem,
         removePhoto,
         isMealStale,
         allMeals,
@@ -1492,9 +1495,23 @@
                     );
 
                     if (isMobile && HEYS.SwipeableRow) {
+                        const swipeActions = [];
+                        if (typeof moveItem === 'function') {
+                            swipeActions.push({
+                                key: 'move', label: 'Переместить', color: 'move',
+                                onAction: () => moveItem(mealIndex, it.id),
+                            });
+                        }
+                        if (typeof copyItem === 'function') {
+                            swipeActions.push({
+                                key: 'copy', label: 'Копировать', color: 'copy',
+                                onAction: () => copyItem(mealIndex, it.id),
+                            });
+                        }
                         return React.createElement(HEYS.SwipeableRow, {
                             key: it.id,
                             onDelete: () => removeItem(mealIndex, it.id),
+                            actions: swipeActions.length > 0 ? swipeActions : undefined,
                         }, cardContent);
                     }
 
@@ -1903,6 +1920,29 @@
                             transition: 'transform 0.15s, background 0.15s',
                         },
                     }, '📋 Копировать'),
+                    typeof onMoveMeal === 'function' && React.createElement('button', {
+                        className: 'meal-move-btn',
+                        onClick: () => onMoveMeal(mealIndex),
+                        title: 'Переместить приём на другой день',
+                        disabled: !((meal.items || []).length),
+                        style: {
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: '#fef3c7',
+                            color: '#b45309',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: (meal.items || []).length ? 'pointer' : 'not-allowed',
+                            opacity: (meal.items || []).length ? 1 : 0.4,
+                            flexShrink: 0,
+                            marginRight: '4px',
+                            transition: 'transform 0.15s, background 0.15s',
+                        },
+                    }, '🔀 Переместить'),
                     typeof onSaveAsPreset === 'function' && React.createElement('button', {
                         className: 'meal-save-preset-btn',
                         onClick: () => onSaveAsPreset(mealIndex),
@@ -2222,6 +2262,7 @@
             changeMealStress,
             removeMeal,
             openCopyMealModal,
+            openMoveMealModal,
             saveAsPreset,
             repeatYesterdayMeal,
             openEditGramsModal,
@@ -2229,6 +2270,8 @@
             openMoodEditor,
             setGrams,
             removeItem,
+            moveItem,
+            copyItem,
             removePhoto,
             isNewItem,
             optimum,
@@ -2346,6 +2389,7 @@
                     onChangeStress: changeMealStress,
                     onRemoveMeal: removeMeal,
                     onCopyMeal: openCopyMealModal,
+                    onMoveMeal: openMoveMealModal,
                     onSaveAsPreset: saveAsPreset,
                     onRepeatYesterday: repeatYesterdayMeal,
                     openEditGramsModal,
@@ -2353,6 +2397,8 @@
                     openMoodEditor,
                     setGrams,
                     removeItem,
+                    moveItem,
+                    copyItem,
                     removePhoto,
                     isMealStale,
                     allMeals: sourceMeals,
@@ -2420,6 +2466,7 @@
             changeMealStress,
             removeMeal,
             openCopyMealModal,
+            openMoveMealModal,
             saveAsPreset,
             repeatYesterdayMeal,
             openEditGramsModal,
@@ -2427,6 +2474,8 @@
             openMoodEditor,
             setGrams,
             removeItem,
+            moveItem,
+            copyItem,
             removePhoto,
             isNewItem,
             optimum,
@@ -2553,6 +2602,7 @@
                 changeMealStress,
                 removeMeal,
                 openCopyMealModal,
+                openMoveMealModal,
                 saveAsPreset,
                 repeatYesterdayMeal,
                 openEditGramsModal,
@@ -2560,6 +2610,8 @@
                 openMoodEditor,
                 setGrams,
                 removeItem,
+                moveItem,
+                copyItem,
                 isNewItem,
                 optimum,
                 setMealQualityPopup,
@@ -2646,8 +2698,11 @@
             hiddenTopMealsCount,
             hasMoreMeals,
             removeItem,
+            moveItem,
+            copyItem,
             removeMeal,
             openCopyMealModal,
+            openMoveMealModal,
             saveAsPreset,
             repeatYesterdayMeal,
             loadMoreMeals,
@@ -3363,9 +3418,10 @@
             });
     }
 
-    function loadRecentMealsForDate(targetDate, daysBack) {
+    function loadRecentMealsForDate(targetDate, daysBack, options) {
         if (!targetDate) return [];
         const back = Math.max(1, Math.min(7, +daysBack || 2));
+        const includeEmpty = !!(options && options.includeEmpty);
         const parts = targetDate.split('-');
         if (parts.length !== 3) return [];
         const baseD = new Date(+parts[0], +parts[1] - 1, +parts[2]);
@@ -3383,7 +3439,8 @@
                 if (!dayData || !Array.isArray(dayData.meals)) continue;
                 const label = labels[i - 1] || dStr;
                 dayData.meals.forEach(m => {
-                    if (!m || !(m.items || []).length) return;
+                    if (!m) return;
+                    if (!includeEmpty && !(m.items || []).length) return;
                     out.push({ dateStr: dStr, dateLabel: label, meal: m });
                 });
             } catch (e) { /* ignore */ }
@@ -4491,6 +4548,320 @@
             });
         }, [date, pIndex, getProductFromItem, prof, isMobile, copyItemsToMeal, setDay, markUndoWindow, persistDayData, navigateAndScrollToMeal]);
 
+        const buildDaysWithMeals = React.useCallback((opts) => {
+            const includeEmpty = !!(opts && opts.includeEmpty);
+            const today = _getTodayISO();
+            const parts = today.split('-');
+            if (parts.length !== 3) return [];
+            const baseD = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+            const labels = ['Сегодня', 'Вчера', 'Позавчера'];
+            const result = [];
+            for (let i = 0; i < 3; i++) {
+                const d = new Date(baseD);
+                d.setDate(d.getDate() - i);
+                const dStr = d.getFullYear()
+                    + '-' + String(d.getMonth() + 1).padStart(2, '0')
+                    + '-' + String(d.getDate()).padStart(2, '0');
+                let dayData = null;
+                if (dStr === date) dayData = dayRef.current;
+                else dayData = lsGet(_scopedDayKey(dStr), null);
+                const rawMeals = (dayData && Array.isArray(dayData.meals)) ? dayData.meals : [];
+                const meals = includeEmpty ? rawMeals : rawMeals.filter(m => m && (m.items || []).length > 0);
+                result.push({ dateStr: dStr, dateLabel: labels[i], meals });
+            }
+            return result;
+        }, [date]);
+
+        const readDay = React.useCallback((dStr) => {
+            if (dStr === date) return dayRef.current;
+            return lsGet(_scopedDayKey(dStr), null) || { date: dStr, meals: [] };
+        }, [date]);
+
+        const writeDay = React.useCallback((dStr, mutator, action) => {
+            if (dStr === date) {
+                markUndoWindow(3000);
+                setDay((prevDay) => {
+                    const next = mutator(prevDay);
+                    if (!next) return prevDay;
+                    persistDayData(next, action);
+                    return next;
+                });
+                return true;
+            }
+            const key = _scopedDayKey(dStr);
+            const existing = lsGet(key, null) || { date: dStr, meals: [] };
+            const next = mutator(existing);
+            if (!next) return false;
+            try { lsSet(key, next); } catch (e) {
+                trackError(e, { source: 'day/_meals.js', action: action || 'cross_day_write' });
+                return false;
+            }
+            window.dispatchEvent(new CustomEvent('heys:day-updated', { detail: { date: dStr, source: action || 'move' } }));
+            return true;
+        }, [date, setDay, markUndoWindow, persistDayData]);
+
+        const moveItem = React.useCallback((srcMealIndex, srcItemId) => {
+            if (!HEYS.MoveModal || !HEYS.MoveModal.show) {
+                HEYS.Toast?.info?.('Модалка ещё загружается — попробуй через секунду');
+                return;
+            }
+            const srcMeal = dayRef.current?.meals?.[srcMealIndex];
+            if (!srcMeal) return;
+            const srcItems = srcMeal.items || [];
+            const srcItemIndex = srcItems.findIndex(it => it.id === srcItemId);
+            if (srcItemIndex < 0) return;
+            const srcItem = srcItems[srcItemIndex];
+            const srcDate = date;
+            const srcMealId = srcMeal.id;
+
+            const itemKcal = (() => {
+                const product = (typeof getProductFromItem === 'function')
+                    ? (getProductFromItem(srcItem, pIndex) || {}) : (srcItem || {});
+                const kcal100 = +product.kcal100 || +srcItem.kcal100 || 0;
+                const g = +srcItem.grams || 0;
+                return Math.round(kcal100 * g / 100);
+            })();
+
+            const daysWithMeals = buildDaysWithMeals({ includeEmpty: true });
+
+            HEYS.MoveModal.show({
+                mode: 'product-move',
+                sourceDate: srcDate,
+                sourceMealIndex: srcMealIndex,
+                sourceLabel: `Переносим: ${srcItem.name || 'Продукт'}, ${srcItem.grams || 0}г${itemKcal ? ', ~' + itemKcal + ' ккал' : ''}`,
+                daysWithMeals,
+                pIndex,
+                getProductFromItem,
+                onPick: ({ dstDate, dstMealIndex, dstMealId }) => {
+                    if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+                        HEYS.Paywall.showBlockedToast?.('Перенос недоступен');
+                        return;
+                    }
+                    const dstItem = { ...srcItem, id: uid('it_') };
+
+                    const writeOk = writeDay(dstDate, (existing) => {
+                        const meals = existing.meals || [];
+                        const idx = dstMealId
+                            ? meals.findIndex(m => m && m.id === dstMealId)
+                            : dstMealIndex;
+                        if (idx == null || idx < 0 || !meals[idx]) return null;
+                        const newMeals = meals.map((m, i) => i === idx
+                            ? { ...m, items: [...(m.items || []), dstItem] } : m);
+                        return { ...existing, date: dstDate, meals: newMeals, updatedAt: Date.now() };
+                    }, 'move_item_to_target');
+
+                    if (!writeOk) {
+                        HEYS.Toast?.error?.('Не удалось записать в целевой приём');
+                        return;
+                    }
+
+                    writeDay(srcDate, (existing) => {
+                        const meals = (existing.meals || []).map(m => m && m.id === srcMealId
+                            ? { ...m, items: (m.items || []).filter(it => it.id !== srcItemId) } : m);
+                        return { ...existing, meals, updatedAt: Date.now() };
+                    }, 'move_item_from_source');
+
+                    haptic('medium');
+                    recalculateOrphanProducts();
+
+                    const dstLabel = daysWithMeals.find(d => d.dateStr === dstDate)?.dateLabel || dstDate;
+                    let undone = false;
+                    const undo = () => {
+                        if (undone) return;
+                        undone = true;
+                        writeDay(dstDate, (existing) => {
+                            const meals = (existing.meals || []).map(m => ({
+                                ...m,
+                                items: (m.items || []).filter(it => it.id !== dstItem.id),
+                            }));
+                            return { ...existing, meals, updatedAt: Date.now() };
+                        }, 'undo_move_item_target');
+                        writeDay(srcDate, (existing) => {
+                            const meals = (existing.meals || []).map(m => {
+                                if (!m || m.id !== srcMealId) return m;
+                                const items = [...(m.items || [])];
+                                if (items.some(it => it.id === srcItemId)) return m;
+                                items.splice(Math.max(0, Math.min(srcItemIndex, items.length)), 0, srcItem);
+                                return { ...m, items };
+                            });
+                            return { ...existing, meals, updatedAt: Date.now() };
+                        }, 'undo_move_item_source');
+                        HEYS.Toast?.info?.('Возвращено');
+                    };
+
+                    HEYS.Toast?.show?.({
+                        type: 'success',
+                        message: `Переместили в ${dstLabel}`,
+                        duration: 4000,
+                        action: { label: 'Отменить', onClick: undo },
+                    });
+                },
+            });
+        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, recalculateOrphanProducts]);
+
+        const copyItem = React.useCallback((srcMealIndex, srcItemId) => {
+            if (!HEYS.MoveModal || !HEYS.MoveModal.show) {
+                HEYS.Toast?.info?.('Модалка ещё загружается — попробуй через секунду');
+                return;
+            }
+            const srcMeal = dayRef.current?.meals?.[srcMealIndex];
+            if (!srcMeal) return;
+            const srcItem = (srcMeal.items || []).find(it => it.id === srcItemId);
+            if (!srcItem) return;
+            const srcDate = date;
+
+            const itemKcal = (() => {
+                const product = (typeof getProductFromItem === 'function')
+                    ? (getProductFromItem(srcItem, pIndex) || {}) : (srcItem || {});
+                const kcal100 = +product.kcal100 || +srcItem.kcal100 || 0;
+                const g = +srcItem.grams || 0;
+                return Math.round(kcal100 * g / 100);
+            })();
+
+            const daysWithMeals = buildDaysWithMeals({ includeEmpty: true });
+
+            HEYS.MoveModal.show({
+                mode: 'product-copy',
+                sourceDate: srcDate,
+                sourceMealIndex: srcMealIndex,
+                sourceLabel: `Копируем: ${srcItem.name || 'Продукт'}, ${srcItem.grams || 0}г${itemKcal ? ', ~' + itemKcal + ' ккал' : ''}`,
+                daysWithMeals,
+                pIndex,
+                getProductFromItem,
+                onPick: ({ dstDate, dstMealIndex, dstMealId }) => {
+                    if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+                        HEYS.Paywall.showBlockedToast?.('Копирование недоступно');
+                        return;
+                    }
+                    const dstItem = { ...srcItem, id: uid('it_') };
+                    const writeOk = writeDay(dstDate, (existing) => {
+                        const meals = existing.meals || [];
+                        const idx = dstMealId
+                            ? meals.findIndex(m => m && m.id === dstMealId)
+                            : dstMealIndex;
+                        if (idx == null || idx < 0 || !meals[idx]) return null;
+                        const newMeals = meals.map((m, i) => i === idx
+                            ? { ...m, items: [...(m.items || []), dstItem] } : m);
+                        return { ...existing, date: dstDate, meals: newMeals, updatedAt: Date.now() };
+                    }, 'copy_item_to_target');
+
+                    if (!writeOk) {
+                        HEYS.Toast?.error?.('Не удалось записать в целевой приём');
+                        return;
+                    }
+
+                    haptic('light');
+
+                    const dstLabel = daysWithMeals.find(d => d.dateStr === dstDate)?.dateLabel || dstDate;
+                    let undone = false;
+                    const undo = () => {
+                        if (undone) return;
+                        undone = true;
+                        writeDay(dstDate, (existing) => {
+                            const meals = (existing.meals || []).map(m => ({
+                                ...m,
+                                items: (m.items || []).filter(it => it.id !== dstItem.id),
+                            }));
+                            return { ...existing, meals, updatedAt: Date.now() };
+                        }, 'undo_copy_item');
+                        HEYS.Toast?.info?.('Копия удалена');
+                    };
+
+                    HEYS.Toast?.show?.({
+                        type: 'success',
+                        message: `Скопировано в ${dstLabel}`,
+                        duration: 4000,
+                        action: { label: 'Отменить', onClick: undo },
+                    });
+                },
+            });
+        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay]);
+
+        const moveMealToDate = React.useCallback((srcMealIndex, dstDate) => {
+            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+                HEYS.Paywall.showBlockedToast?.('Перенос приёма недоступен');
+                return;
+            }
+            const srcMeal = dayRef.current?.meals?.[srcMealIndex];
+            if (!srcMeal) return;
+            const srcDate = date;
+            if (dstDate === srcDate) {
+                HEYS.Toast?.info?.('Приём уже здесь');
+                return;
+            }
+            const srcMealId = srcMeal.id;
+            const srcMealClone = JSON.parse(JSON.stringify(srcMeal));
+            const dstMeal = {
+                ...srcMeal,
+                id: uid('m_'),
+                items: (srcMeal.items || []).map(it => ({ ...it, id: uid('it_') })),
+            };
+
+            const writeOk = writeDay(dstDate, (existing) => {
+                const newMeals = sortMealsByTime([...(existing.meals || []), dstMeal]);
+                return { ...existing, date: dstDate, meals: newMeals, updatedAt: Date.now() };
+            }, 'move_meal_to_target');
+
+            if (!writeOk) {
+                HEYS.Toast?.error?.('Не удалось записать в целевой день');
+                return;
+            }
+
+            writeDay(srcDate, (existing) => {
+                const meals = (existing.meals || []).filter(m => m && m.id !== srcMealId);
+                return { ...existing, meals, updatedAt: Date.now() };
+            }, 'move_meal_from_source');
+
+            haptic('medium');
+
+            const labels = buildDaysWithMeals({ includeEmpty: true });
+            const dstLabel = labels.find(d => d.dateStr === dstDate)?.dateLabel || dstDate;
+
+            let undone = false;
+            const undo = () => {
+                if (undone) return;
+                undone = true;
+                writeDay(dstDate, (existing) => {
+                    const meals = (existing.meals || []).filter(m => m && m.id !== dstMeal.id);
+                    return { ...existing, meals, updatedAt: Date.now() };
+                }, 'undo_move_meal_target');
+                writeDay(srcDate, (existing) => {
+                    const meals = sortMealsByTime([...(existing.meals || []), srcMealClone]);
+                    return { ...existing, meals, updatedAt: Date.now() };
+                }, 'undo_move_meal_source');
+                HEYS.Toast?.info?.('Приём возвращён');
+            };
+
+            HEYS.Toast?.show?.({
+                type: 'success',
+                message: `Приём перемещён в ${dstLabel}`,
+                duration: 4000,
+                action: { label: 'Отменить', onClick: undo },
+            });
+        }, [date, haptic, buildDaysWithMeals, writeDay]);
+
+        const openMoveMealModal = React.useCallback((srcMealIndex) => {
+            if (!HEYS.MoveModal || !HEYS.MoveModal.show) {
+                HEYS.Toast?.info?.('Модалка ещё загружается — попробуй через секунду');
+                return;
+            }
+            const meal = dayRef.current?.meals?.[srcMealIndex];
+            if (!meal || !(meal.items || []).length) {
+                HEYS.Toast?.info?.('Пустой приём — нечего переносить');
+                return;
+            }
+            const itemCount = (meal.items || []).length;
+            const sourceLabel = `Переносим: ${meal.name || 'Приём'}${meal.time ? ' (' + meal.time + ')' : ''}, ${itemCount} ${itemCount === 1 ? 'продукт' : (itemCount < 5 ? 'продукта' : 'продуктов')}`;
+
+            HEYS.MoveModal.show({
+                mode: 'meal-move',
+                sourceDate: date,
+                sourceLabel,
+                daysWithMeals: buildDaysWithMeals({ includeEmpty: true }),
+                onPick: ({ dstDate }) => moveMealToDate(srcMealIndex, dstDate),
+            });
+        }, [date, buildDaysWithMeals, moveMealToDate]);
+
         const removePhoto = React.useCallback(async (mi, photoId, options = {}) => {
             const sourceMeal = dayRef.current.meals?.[mi];
             if (!sourceMeal) return false;
@@ -4609,6 +4980,10 @@
             repeatYesterdayMeal,
             setGrams,
             removeItem,
+            moveItem,
+            copyItem,
+            openMoveMealModal,
+            moveMealToDate,
             removePhoto,
             updateMealField,
             changeMealMood,

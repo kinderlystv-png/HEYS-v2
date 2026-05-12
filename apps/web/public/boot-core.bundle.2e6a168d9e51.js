@@ -38857,25 +38857,37 @@ NOVA: 1-4
   /**
    * SwipeableRow — обёртка для элементов с поддержкой swipe-to-delete
    * @param {Object} props
-   * @param {Function} props.onDelete - Callback при удалении
+   * @param {Function} props.onDelete - Callback при удалении (красная кнопка)
+   * @param {Array<{key:string,label:string,color?:string,onAction:Function}>} [props.actions]
+   *   Доп. кнопки слева от Удалить. Если переданы — auto-delete по полному свайпу
+   *   ОТКЛЮЧАЕТСЯ (защита от случайного удаления через 3 кнопки).
    * @param {ReactNode} props.children - Содержимое строки
    * @param {string} [props.className] - Дополнительные классы
    */
-  function SwipeableRow({ onDelete, children, className = '' }) {
+  function SwipeableRow({ onDelete, actions, children, className = '' }) {
     const rowRef = React.useRef(null);
     const [translateX, setTranslateX] = React.useState(0);
     const [isDeleting, setIsDeleting] = React.useState(false);
+
+    const actionsRef = React.useRef(actions);
+    actionsRef.current = actions;
+    const onDeleteRef = React.useRef(onDelete);
+    onDeleteRef.current = onDelete;
 
     const touchState = React.useRef({
       startX: 0,
       startY: 0,
       currentX: 0,
       isTracking: false,
-      isVerticalScroll: null // null = не определено, true = вертикальный скролл
+      isVerticalScroll: null
     });
 
-    const DELETE_THRESHOLD = 100; // Порог для показа кнопки удаления (увеличен для меньшей чувствительности)
-    const DELETE_FULL_THRESHOLD = 180; // Порог для автоматического удаления
+    const hasActions = Array.isArray(actions) && actions.length > 0;
+    const ACTION_BTN_WIDTH = 88;
+    const DELETE_BTN_WIDTH = 100;
+    const REVEAL_WIDTH = (hasActions ? actions.length * ACTION_BTN_WIDTH : 0) + DELETE_BTN_WIDTH;
+    const REVEAL_THRESHOLD = hasActions ? 60 : 100;
+    const DELETE_FULL_THRESHOLD = 180;
     const revealProgress = isDeleting
       ? 1
       : Math.max(0, Math.min(1, Math.abs(translateX) / 36));
@@ -38904,51 +38916,45 @@ NOVA: 1-4
         const deltaX = touch.clientX - touchState.current.startX;
         const deltaY = touch.clientY - touchState.current.startY;
 
-        // Определяем направление скролла при первом движении (увеличен порог 5→15)
         if (touchState.current.isVerticalScroll === null && (Math.abs(deltaX) > 15 || Math.abs(deltaY) > 15)) {
           touchState.current.isVerticalScroll = Math.abs(deltaY) > Math.abs(deltaX);
         }
 
-        // Если вертикальный скролл — не мешаем
         if (touchState.current.isVerticalScroll) return;
 
-        // Горизонтальный swipe — предотвращаем скролл страницы
         e.preventDefault();
 
         touchState.current.currentX = touch.clientX;
 
-        // Только влево (отрицательные значения)
         let newX = deltaX;
-        if (newX > 0) newX = 0; // Не даём свайпить вправо
-        if (newX < -DELETE_FULL_THRESHOLD * 1.2) {
-          newX = -DELETE_FULL_THRESHOLD * 1.2; // Ограничиваем максимум
+        if (newX > 0) newX = 0;
+        if (hasActions) {
+          if (newX < -REVEAL_WIDTH) newX = -REVEAL_WIDTH;
+        } else {
+          if (newX < -DELETE_FULL_THRESHOLD * 1.2) {
+            newX = -DELETE_FULL_THRESHOLD * 1.2;
+          }
         }
 
         setTranslateX(newX);
       };
 
-      const handleTouchEnd = (e) => {
+      const handleTouchEnd = () => {
         if (!touchState.current.isTracking || isDeleting) return;
         touchState.current.isTracking = false;
 
         const finalX = translateX;
 
-        if (finalX < -DELETE_FULL_THRESHOLD) {
-          // Полный свайп — удаляем
+        if (!hasActions && finalX < -DELETE_FULL_THRESHOLD) {
           setIsDeleting(true);
           setTranslateX(-window.innerWidth);
-
-          // Haptic feedback
           if (navigator.vibrate) navigator.vibrate(20);
-
           setTimeout(() => {
-            onDelete();
+            onDeleteRef.current && onDeleteRef.current();
           }, 200);
-        } else if (finalX < -DELETE_THRESHOLD) {
-          // Частичный свайп — показываем кнопку
-          setTranslateX(-DELETE_THRESHOLD);
+        } else if (finalX < -REVEAL_THRESHOLD) {
+          setTranslateX(-REVEAL_WIDTH);
         } else {
-          // Недостаточный свайп — возвращаем
           setTranslateX(0);
         }
       };
@@ -38962,33 +38968,55 @@ NOVA: 1-4
         el.removeEventListener('touchmove', handleTouchMove);
         el.removeEventListener('touchend', handleTouchEnd);
       };
-    }, [translateX, isDeleting, onDelete]);
+    }, [translateX, isDeleting, hasActions, REVEAL_WIDTH, REVEAL_THRESHOLD]);
 
-    // Клик по кнопке удаления
     const handleDeleteClick = () => {
       setIsDeleting(true);
       setTranslateX(-window.innerWidth);
       if (navigator.vibrate) navigator.vibrate(20);
       setTimeout(() => {
-        onDelete();
+        onDeleteRef.current && onDeleteRef.current();
       }, 200);
     };
 
-    // Клик на контент — закрыть если открыто
+    const handleActionClick = (action) => {
+      if (navigator.vibrate) navigator.vibrate(10);
+      setTranslateX(0);
+      setTimeout(() => {
+        try { action.onAction && action.onAction(); } catch (e) { /* swallow */ }
+      }, 50);
+    };
+
     const handleContentClick = () => {
       if (translateX < 0) {
         setTranslateX(0);
       }
     };
 
+    const isOpen = translateX <= -REVEAL_THRESHOLD;
+
+    const renderActionButtons = () => {
+      if (!hasActions) return null;
+      return actions.map((action) => (
+        React.createElement('button', {
+          key: action.key,
+          className: 'swipeable-action-btn swipeable-action-btn--' + (action.color || 'default'),
+          tabIndex: isOpen ? 0 : -1,
+          'aria-hidden': isOpen ? 'false' : 'true',
+          onClick: () => handleActionClick(action),
+          style: { width: ACTION_BTN_WIDTH + 'px' },
+        }, action.label)
+      ));
+    };
+
     return React.createElement('div', {
       className: 'swipeable-container ' + className,
       ref: rowRef
     },
-      // Фон с кнопкой удаления
       React.createElement('div', {
-        className: 'swipeable-background',
+        className: 'swipeable-background' + (hasActions ? ' swipeable-background--multi' : ''),
         style: {
+          width: hasActions ? REVEAL_WIDTH + 'px' : undefined,
           opacity: revealProgress,
           transform: `translateX(${(1 - revealProgress) * 12}px)`,
           transition: touchState.current.isTracking
@@ -38996,14 +39024,15 @@ NOVA: 1-4
             : 'opacity 0.18s ease, transform 0.18s ease'
         }
       },
+        renderActionButtons(),
         React.createElement('button', {
           className: 'swipeable-delete-btn',
-          tabIndex: translateX <= -DELETE_THRESHOLD ? 0 : -1,
-          'aria-hidden': translateX <= -DELETE_THRESHOLD ? 'false' : 'true',
-          onClick: handleDeleteClick
+          tabIndex: isOpen ? 0 : -1,
+          'aria-hidden': isOpen ? 'false' : 'true',
+          onClick: handleDeleteClick,
+          style: hasActions ? { width: DELETE_BTN_WIDTH + 'px' } : undefined,
         }, 'Удалить')
       ),
-      // Контент
       React.createElement('div', {
         className: 'swipeable-content' + (isDeleting ? ' deleting' : ''),
         style: {
