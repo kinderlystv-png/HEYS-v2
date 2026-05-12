@@ -214,6 +214,6 @@ apps/web/insights/pi_early_warning.js:1503
 apps/web/insights/pi_early_warning.js:627
 apps/web/insights/pi_early_warning.js:965
 apps/web/insights/pi_meal_rec_feedback.js:192
-apps/web/insights/pi_ui_meal_rec_card.js:1018
-apps/web/insights/pi_ui_meal_rec_card.js:1276
-apps/web/insights/pi_ui_meal_rec_card.js:2000
+apps/web/insights/pi_ui_meal_rec_card.js:1027
+apps/web/insights/pi_ui_meal_rec_card.js:1285
+apps/web/insights/pi_ui_meal_rec_card.js:2009
