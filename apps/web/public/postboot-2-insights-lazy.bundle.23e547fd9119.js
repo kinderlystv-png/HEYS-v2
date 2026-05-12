@@ -29023,10 +29023,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     /**
-     * Текущая локальная дата в формате YYYY-MM-DD (для сверки day.date)
+     * Текущая локальная дата в формате YYYY-MM-DD (для сверки day.date).
+     * Использует HEYS.models.todayISO когда доступен — он учитывает ночной
+     * порог приложения (00:00-02:59 → ещё «вчера»). Без него после полуночи
+     * планнер ошибочно прятался для текущего активного дня.
      */
     function todayISO() {
+        const modelsToday = global.HEYS?.models?.todayISO;
+        if (typeof modelsToday === 'function') {
+            try { return modelsToday(); } catch (e) { /* fallback below */ }
+        }
         const d = new Date();
+        // Локальный fallback с тем же ночным порогом 3:00
+        if (d.getHours() < 3) d.setDate(d.getDate() - 1);
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
