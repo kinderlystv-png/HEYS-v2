@@ -299,7 +299,7 @@
       sparklinePerfectPopupMeta: buildSparklinePerfectPopupMeta(sparklinePopup) || { styles: {} },
       weightPopupMeta: buildWeightPopupMeta(sparklinePopup) || { styles: {} },
       weightForecastPopupMeta: buildWeightForecastPopupMeta(sparklinePopup) || { styles: {} },
-      macroRingsMeta: buildMacroRingsMeta(day, dayTot, normAbs, dayTargetDef, train1k, train2k) || { styles: {} },
+      macroRingsMeta: buildMacroRingsMeta(day, dayTot, normAbs, dayTargetDef, train1k, train2k, displayOptimum) || { styles: {} },
       tdeePopupMeta: buildTdeePopupMeta(tdeePopup) || { styles: {}, bmrBarStyle: {}, actBarStyle: {}, bmrPct: 0, actPct: 0, trainMinutes: [0, 0, 0] },
       goalPopupMeta: buildGoalPopupMeta(goalPopup) || { styles: {} },
       tefInfoPopupMeta: buildTefInfoPopupMeta(tefInfoDeps) || { styles: {} },
@@ -963,11 +963,27 @@
     return { pct, styles };
   }
 
-  function buildMacroRingsMeta(day, dayTot, normAbs, dayTargetDef, train1k, train2k) {
+  function buildMacroRingsMeta(day, dayTot, normAbs, dayTargetDef, train1k, train2k, displayOptimum) {
     if (!dayTot || !normAbs) return null;
 
     const hasDeficit = (dayTargetDef || 0) < 0;
     const hasTraining = (day?.trainings && day.trainings.length > 0) || ((train1k || 0) + (train2k || 0) > 0);
+
+    // Унификация колец БЖУ с шапкой и виджетами: target пересчитываем
+    // от displayOptimum (включает рефид/dailyBoost/dailyReduction).
+    // Базовый normAbs остаётся для других мест DayTab — кольца берут displayNormAbs.
+    let displayNormAbs = null;
+    if (Number.isFinite(displayOptimum) && displayOptimum > 0
+        && HEYS.dayCalculations && typeof HEYS.dayCalculations.computeDailyNorms === 'function') {
+      const _normPerc = (HEYS.utils && typeof HEYS.utils.lsGet === 'function') ? (HEYS.utils.lsGet('heys_norms', {}) || {}) : {};
+      try {
+        const _calc = HEYS.dayCalculations.computeDailyNorms(displayOptimum, _normPerc);
+        if (_calc) {
+          displayNormAbs = _calc;
+          normAbs = _calc; // переопределяем для всех расчётов ниже (ratio, color, overData, ringStrokeStyle)
+        }
+      } catch (_) { /* fallback на базовый normAbs */ }
+    }
 
     const getProteinColor = (actual, norm, hasTrainingFlag) => {
       if (!norm || norm === 0) return '#6b7280';
@@ -1029,9 +1045,16 @@
     const fatRatio = (dayTot.fat || 0) / (normAbs.fat || 1);
     const carbsRatio = (dayTot.carbs || 0) / (normAbs.carbs || 1);
 
-    const protColor = getProteinColor(dayTot.prot || 0, normAbs.prot, hasTraining);
-    const fatColor = getFatColor(dayTot.fat || 0, normAbs.fat);
-    const carbsColor = getCarbsColor(dayTot.carbs || 0, normAbs.carbs, hasDeficit);
+    // Унифицированный источник цветов — HEYS.MacroRings.computeRingData (heys_macro_rings_core_v1.js).
+    // Виджеты и недельный отчёт дёргают то же — кольца перестают расходиться между вкладками.
+    // Inline getProteinColor/getFatColor/getCarbsColor остаются как fallback для случаев когда
+    // core ещё не загружен (PWA cold start, неверный порядок бандлов).
+    const _ringsCore = (HEYS.MacroRings && HEYS.MacroRings.computeRingData)
+      ? HEYS.MacroRings.computeRingData({ dayTot, normAbs, hasTraining, hasDeficit })
+      : null;
+    const protColor = _ringsCore ? _ringsCore.protein.color : getProteinColor(dayTot.prot || 0, normAbs.prot, hasTraining);
+    const fatColor = _ringsCore ? _ringsCore.fat.color : getFatColor(dayTot.fat || 0, normAbs.fat);
+    const carbsColor = _ringsCore ? _ringsCore.carbs.color : getCarbsColor(dayTot.carbs || 0, normAbs.carbs, hasDeficit);
 
     const protBadges = getBadges(protColor, true, protRatio, hasTraining ? '🏋️' : null, 'Сегодня тренировка — белок важнее!');
     const fatBadges = getBadges(fatColor, false, fatRatio, null, null);
@@ -1086,7 +1109,8 @@
       protOverData,
       fatOverData,
       carbsOverData,
-      styles
+      styles,
+      displayNormAbs, // null если displayOptimum не передан/невалиден — рендер использует базовый normAbs
     };
   }
 

@@ -3387,10 +3387,21 @@
       const hasOver = ratio > 1;
       const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
       const overPct = Math.max(0, overPctRaw - ringCapCompPct);
-      const gradientId = `widget-macro-ring-${widget?.id || '0'}-${toneClass}`;
-      const gradientStops = toneClass === 'protein'
+      // Динамические градиенты по соблюдению нормы (берём цвет из HEYS.MacroRings):
+      // красный/жёлтый/зелёный/серый. Если core не загружен — fallback на статичный по toneClass.
+      const _coreColor = (data && data._rings && data._rings[toneClass]) ? data._rings[toneClass].color : null;
+      const _DYNAMIC_GRADIENTS = {
+        '#ef4444': ['#fecaca', '#ef4444'], // red
+        '#f59e0b': ['#fde68a', '#f59e0b'], // amber
+        '#22c55e': ['#bbf7d0', '#22c55e'], // green
+        '#6b7280': ['#d1d5db', '#6b7280'], // gray (no norm)
+      };
+      const _staticGradient = toneClass === 'protein'
         ? ['#fecaca', '#ef4444']
         : (toneClass === 'fat' ? ['#fde68a', '#f59e0b'] : ['#bbf7d0', '#22c55e']);
+      const gradientStops = (_coreColor && _DYNAMIC_GRADIENTS[_coreColor]) || _staticGradient;
+      const gradientId = `widget-macro-ring-${widget?.id || '0'}-${toneClass}-${(_coreColor || 'default').replace('#', '')}`;
+      const _isWarning = _coreColor === '#ef4444';
       const getRingDotPos = (ringPct) => {
         if (!ringPct || ringPct <= 0) return null;
         const dotPct = Math.max(0, ringPct - 3);
@@ -3413,7 +3424,7 @@
       const percentBadge = hidePercentBadge ? null : (showPercentage && resolvedCenterMode === 'grams' ? `${normalizedPct}%` : null);
 
       return React.createElement('div', { key: `${toneClass}-${label}`, className: 'macro-ring-item' },
-        React.createElement('div', { className: `macro-ring ${toneClass}${hasOver ? ' macro-ring--over' : ''}` },
+        React.createElement('div', { className: `macro-ring ${toneClass}${hasOver ? ' macro-ring--over' : ''}${_isWarning ? ' macro-ring-pulse' : ''}` },
           React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
             React.createElement('defs', null,
               React.createElement('linearGradient', {

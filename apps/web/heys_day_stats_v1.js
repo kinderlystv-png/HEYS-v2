@@ -3054,6 +3054,10 @@
         // Макро-бар БЖУ (в стиле Apple Watch колец)
         (() => {
           const macroRingsMeta = vmComputed.macroRingsMeta;
+          // Унификация target БЖУ с шапкой и виджетами: target от displayOptimum
+          // (учитывает рефид/dailyBoost/dailyReduction). Используем normAbs из macroRingsMeta
+          // (он там уже пересчитан с displayOptimum). Если нет — fallback на базовый.
+          const normAbs = macroRingsMeta.displayNormAbs || vmContext.normAbs;
           const protRatio = macroRingsMeta.protRatio ?? ((dayTot.prot || 0) / (normAbs.prot || 1));
           const fatRatio = macroRingsMeta.fatRatio ?? ((dayTot.fat || 0) / (normAbs.fat || 1));
           const carbsRatio = macroRingsMeta.carbsRatio ?? ((dayTot.carbs || 0) / (normAbs.carbs || 1));

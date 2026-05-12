@@ -658,6 +658,32 @@
         };
       }
 
+      // Унифицированный расчёт через HEYS.MacroRings — даёт тот же optimum/target/цвета
+      // что DayTab и Weekly (с учётом рефида и savedDisplayOptimum). Это устраняет
+      // главное расхождение виджета с другими вкладками.
+      const core = (typeof HEYS !== 'undefined') ? HEYS.MacroRings : null;
+      if (core && core.computeDayRingData) {
+        try {
+          const day = this._getDay() || {};
+          const profile = this._getProfile() || {};
+          const products = HEYS.products?.getAll?.() || [];
+          const pIndex = HEYS.dayUtils?.buildProductIndex ? HEYS.dayUtils.buildProductIndex(products) : null;
+          const normPerc = this._getNorms();
+          const r = core.computeDayRingData(day, profile, pIndex, { normPerc });
+          return {
+            protein: r.protein.value,
+            fat: r.fat.value,
+            carbs: r.carbs.value,
+            proteinTarget: r.protein.target,
+            fatTarget: r.fat.target,
+            carbsTarget: r.carbs.target,
+            cascade: this.getCascadeData(),
+            _rings: r, // дополнительное поле — для использования в MacrosWidgetContent (color, gradientStops, overflowColor)
+          };
+        } catch (_) { /* fall through to legacy path */ }
+      }
+
+      // Fallback: старый расчёт (используется если core не загружен)
       const dayTot = this._getDayTotals();
       const normAbs = this._getNormAbs();
 

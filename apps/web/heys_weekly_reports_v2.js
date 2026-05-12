@@ -601,9 +601,6 @@
             const ringStartOffsetPct = 9; // чуть больше (~32°)
             const ringCapCompPct = 5; // компенсация скруглённых концов
             const overColor = toneClass === 'protein' ? '#22c55e' : '#ef4444';
-            const ringColor = toneClass === 'protein'
-                ? '#ef4444'
-                : (toneClass === 'fat' ? '#f59e0b' : '#22c55e');
             const ratio = norm > 0 ? value / norm : 0;
             const dotColor = ratio > 1 ? '#ef4444' : '#22c55e';
             // Основная дуга: от 0 до min(100%, ratio)
@@ -613,10 +610,33 @@
             const hasOver = ratio > 1;
             const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0; // max 150% визуально
             const overPct = Math.max(0, overPctRaw - ringCapCompPct);
-            const gradientId = 'macro-ring-gradient-' + toneClass;
-            const gradientStops = toneClass === 'protein'
+            // Динамические градиенты по соблюдению нормы (берём цвет из HEYS.MacroRings).
+            // В weekly — без training-сигнала (он день-специфичный). hasDeficit — из профиля.
+            let _coreColor = null;
+            try {
+                if (HEYS.MacroRings && HEYS.MacroRings.computeRingData) {
+                    const _hasDef = +(profile?.deficitPctTarget) < 0;
+                    const _slot = HEYS.MacroRings.computeRingData({
+                        dayTot: { prot: toneClass === 'protein' ? value : 0, fat: toneClass === 'fat' ? value : 0, carbs: toneClass === 'carbs' ? value : 0 },
+                        normAbs: { prot: toneClass === 'protein' ? norm : 0, fat: toneClass === 'fat' ? norm : 0, carbs: toneClass === 'carbs' ? norm : 0 },
+                        hasTraining: false,
+                        hasDeficit: _hasDef,
+                    });
+                    _coreColor = _slot[toneClass] && _slot[toneClass].color;
+                }
+            } catch (_) { /* fallback на статичный градиент */ }
+            const _DYNAMIC_GRADIENTS = {
+                '#ef4444': ['#fecaca', '#ef4444'],
+                '#f59e0b': ['#fde68a', '#f59e0b'],
+                '#22c55e': ['#bbf7d0', '#22c55e'],
+                '#6b7280': ['#d1d5db', '#6b7280'],
+            };
+            const _staticGradient = toneClass === 'protein'
                 ? ['#fecaca', '#ef4444']
                 : (toneClass === 'fat' ? ['#fde68a', '#f59e0b'] : ['#bbf7d0', '#22c55e']);
+            const gradientStops = (_coreColor && _DYNAMIC_GRADIENTS[_coreColor]) || _staticGradient;
+            const gradientId = 'macro-ring-gradient-' + toneClass + '-' + (_coreColor ? _coreColor.replace('#', '') : 'def');
+            const _isWarning = _coreColor === '#ef4444';
             const getRingDotPos = (pct) => {
                 if (!pct || pct <= 0) return null;
                 const dotPct = Math.max(0, pct - 3); // слегка смещаем точку назад
@@ -630,7 +650,7 @@
             const dot = getRingDotPos(basePct);
 
             return h('div', { className: 'macro-ring-item' },
-                h('div', { className: 'macro-ring ' + toneClass + (hasOver ? ' macro-ring--over' : '') },
+                h('div', { className: 'macro-ring ' + toneClass + (hasOver ? ' macro-ring--over' : '') + (_isWarning ? ' macro-ring-pulse' : '') },
                     h('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                         h('defs', null,
                             h('linearGradient', {

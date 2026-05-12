@@ -30319,7 +30319,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 carbs: macros?.carbs
             });
             // Show "goal complete, drink water" card instead of hiding
-            return h('div', { className: 'meal-rec-card widget widget--meal-rec-diary-water p-4 rounded-2xl' },
+            return h('div', {
+                className: 'meal-rec-card widget widget--meal-rec-diary-water p-4 rounded-2xl',
+                style: { position: 'relative' }
+            },
                 h('div', { className: 'flex items-center gap-3 mb-2' },
                     h('span', { className: 'text-3xl' }, '💧'),
                     h('div', null,
@@ -30332,7 +30335,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     'Дальше — только вода ',
                     h('span', { className: 'text-base' }, '💧'),
                     '. Хороший день!'
-                )
+                ),
+                // Незаметная точка диагностики (как в основной карточке)
+                h('span', {
+                    className: 'meal-rec-card__diag-dot',
+                    style: { position: 'absolute', top: 8, right: 10 },
+                    onClick: (e) => { e.stopPropagation(); handleCopyDiagnostics(); },
+                    title: diagCopyStatus === 'ok' ? 'Диагностика скопирована' :
+                           diagCopyStatus === 'err' ? 'Не удалось скопировать' :
+                           'Скопировать диагностику',
+                    'data-status': diagCopyStatus || '',
+                    'aria-label': 'Скопировать диагностику планнера'
+                }, diagCopyStatus === 'ok' ? '✓' : diagCopyStatus === 'err' ? '✕' : '·')
             );
         }
 
