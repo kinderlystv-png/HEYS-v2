@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.05.12.14f0237f",
-      "buildHash": "14f0237f",
+      "version": "2026.05.12.5fe0c9a2",
+      "buildHash": "5fe0c9a2",
       "date": "2026-05-12",
       "kind": "user-facing",
       "profile": "user-facing-general",
