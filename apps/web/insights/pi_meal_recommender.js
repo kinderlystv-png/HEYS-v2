@@ -768,9 +768,13 @@
                     glycemicLoadHistory: patternHints?.glycemicLoad || null,
                     addedSugarHistory: patternHints?.addedSugarDependency || null,
                     fiberRegularityScore: patternHints?.fiberRegularity?.score ?? null,
-                    // R12-C: patternImpact + phenotype чтобы planner мог объяснить решения
+                    // R12-C: patternImpact + phenotype чтобы planner мог объяснить решения.
+                    // Расширили фильтр: добавили C01 (meal timing), C10 (fiber),
+                    // C34 (glycemic load), C37 (added sugar) — раньше эти 4
+                    // паттерна молча терялись по пути от recommender к planner,
+                    // их advisories не доходили до раскрытой карточки.
                     patternImpactHints: Array.isArray(patternImpact)
-                        ? patternImpact.filter((p) => ['C15', 'C35', 'C06', 'C14'].includes(p.pattern))
+                        ? patternImpact.filter((p) => ['C01', 'C06', 'C10', 'C14', 'C15', 'C34', 'C35', 'C37'].includes(p.pattern))
                         : null,
                     phenotypeApplied: profile?.phenotype || null,
                     replanReason,

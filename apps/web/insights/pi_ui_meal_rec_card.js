@@ -607,11 +607,16 @@
             dayTarget: {
                 kcal: targetKcalRaw,
                 protein: normAbs.prot || 0,
-                carbs: normAbs.carb || 0,
+                // calculateNormAbs (heys_metabolic_intelligence_v1.js:806) и
+                // heys_advice_bundle_v1.js используют поле "carbs" (plural).
+                // Локальный читал ".carb" → undefined → 0. Это давало
+                // dayTarget.carbs=0 в логах планнера при том что юзер реально
+                // ест 200г углеводов.
+                carbs: normAbs.carbs || normAbs.carb || 0,
                 fat: normAbs.fat || 0,
                 // Aliases for planner
                 prot: normAbs.prot || 0,
-                carb: normAbs.carb || 0
+                carb: normAbs.carbs || normAbs.carb || 0
             },
             dayEaten: {
                 kcal: eaten.kcal,

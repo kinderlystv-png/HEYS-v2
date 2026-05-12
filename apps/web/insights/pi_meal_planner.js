@@ -806,14 +806,24 @@
         // распределении). Также различаем strength (priority белок) vs cardio
         // (priority углеводы).
         const allWorkouts = params.currentDay?.workouts || params.currentDay?.trainings || [];
-        // Найти последнюю тренировку в окне 24ч
+        // Найти последнюю тренировку в окне 24ч.
+        // Ночные часы (HEYS-день 03:00→03:00): после полуночи currentTimeHours
+        // (например 1.25 для 01:15), но тренировка была "сегодня" утром/днём
+        // (например 10.67 для 10:40) → delta=-9.42, тренировка не находилась
+        // и весь R4-8 recovery factor молчал. Учитываем wraparound.
+        const isAfterMidnight = currentTimeHours < 3;
         let lastWorkout = null;
         let hoursAfterWorkout = null;
         for (const w of allWorkouts) {
             const wTime = w.endTime || w.time;
             if (!wTime) continue;
             const wHours = parseTime(wTime);
-            const delta = currentTimeHours - wHours;
+            let delta = currentTimeHours - wHours;
+            // Ночной wraparound: тренировка днём предыдущего календарного дня,
+            // но того же HEYS-дня (03:00→03:00) → дельта отрицательная, поправляем.
+            if (delta < 0 && isAfterMidnight && wHours >= 3) {
+                delta += 24;
+            }
             if (delta >= 0 && delta < 24) {
                 if (!lastWorkout || delta < hoursAfterWorkout) {
                     lastWorkout = w;
@@ -1380,6 +1390,30 @@
                         key: 'c14_nutrient_timing',
                         severity: 'low',
                         text: 'Углеводы/белок подстроены под окно тренировки.'
+                    });
+                } else if (p.pattern === 'C01') {
+                    advisories.push({
+                        key: 'c01_meal_timing',
+                        severity: 'low',
+                        text: 'Время приёма смещено по твоему обычному ритму (история).'
+                    });
+                } else if (p.pattern === 'C10') {
+                    advisories.push({
+                        key: 'c10_fiber_low',
+                        severity: 'low',
+                        text: 'В первый приём добавлены овощи/бобовые — за неделю клетчатки было мало.'
+                    });
+                } else if (p.pattern === 'C34') {
+                    advisories.push({
+                        key: 'c34_gl_high',
+                        severity: 'low',
+                        text: 'Целевой GL снижен — в среднем гликемическая нагрузка за день была высокой.'
+                    });
+                } else if (p.pattern === 'C37') {
+                    advisories.push({
+                        key: 'c37_sugar_dependency',
+                        severity: 'medium',
+                        text: 'Есть зависимость от добавленного сахара — выбран приём с низким GL.'
                     });
                 }
             });
