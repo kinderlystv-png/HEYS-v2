@@ -38,8 +38,8 @@ apps/web/advice/_outcomes.js:170
 apps/web/heys_add_product_step_v1.js:71
 apps/web/heys_app_auth_init_v1.js:147
 apps/web/heys_app_auth_init_v1.js:160
-apps/web/heys_app_auth_init_v1.js:299
-apps/web/heys_app_auth_init_v1.js:462
+apps/web/heys_app_auth_init_v1.js:310
+apps/web/heys_app_auth_init_v1.js:473
 apps/web/heys_app_gate_flow_v1.js:47
 apps/web/heys_app_hooks_v1.js:202
 apps/web/heys_app_hooks_v1.js:203
@@ -124,7 +124,7 @@ apps/web/heys_gamification_v1.js:39
 apps/web/heys_gamification_v1.js:41
 apps/web/heys_gamification_v1.js:5940
 apps/web/heys_gamification_v1.js:5943
-apps/web/heys_insulin_wave_v1.js:866
+apps/web/heys_insulin_wave_v1.js:874
 apps/web/heys_iw_config_loader.js:146
 apps/web/heys_iw_config_loader.js:148
 apps/web/heys_iw_lipolysis.js:58
@@ -202,8 +202,8 @@ apps/web/heys_weekly_reports_v2.js:36
 apps/web/heys_whats_new_modal_v1.js:70
 apps/web/heys_widgets_core_v1.js:1049
 apps/web/heys_widgets_core_v1.js:386
-apps/web/heys_widgets_ui_v1.js:4799
-apps/web/heys_widgets_ui_v1.js:7028
+apps/web/heys_widgets_ui_v1.js:4810
+apps/web/heys_widgets_ui_v1.js:7039
 apps/web/heys_yandex_api_v1.js:809
 apps/web/heys_yesterday_verify_v1.js:1112
 apps/web/heys_yesterday_verify_v1.js:1114
@@ -214,5 +214,6 @@ apps/web/insights/pi_early_warning.js:1503
 apps/web/insights/pi_early_warning.js:627
 apps/web/insights/pi_early_warning.js:965
 apps/web/insights/pi_meal_rec_feedback.js:192
-apps/web/insights/pi_ui_meal_rec_card.js:652
-apps/web/insights/pi_ui_meal_rec_card.js:910
+apps/web/insights/pi_ui_meal_rec_card.js:1003
+apps/web/insights/pi_ui_meal_rec_card.js:1261
+apps/web/insights/pi_ui_meal_rec_card.js:1981
