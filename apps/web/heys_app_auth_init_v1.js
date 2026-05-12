@@ -398,8 +398,10 @@
                     devWarn('[App] ❌ Ошибка восстановления PIN-сессии:', err);
                     trackError(err, { scope: 'AppAuthInit', action: 'restore_pin_session' });
                     if (isPinRestoreAuthError(err)) {
-                        // Реально невалидная auth/session — сбрасываем PIN-сессию
-                        __heysShowGateLogin();
+                        // PIN-путь не ставит cloudUser, так что после setIsInitializing(false)
+                        // в .finally() React сам смонтирует LoginScreen и удалит HTML-гейт через
+                        // buildGate. Восстанавливать HTML-гейт здесь не нужно — это давало лишний
+                        // флэш кадра перед заменой на React-форму.
                         removeGlobalValue('heys_pin_auth_client');
                         // Stage 1: при auth-error чистим тоже session_token —
                         // он либо протух, либо отозван. Иначе следующий boot
@@ -429,25 +431,12 @@
                 });
         } else {
             console.info('[HEYS.entry] ➡️ Branch: no session (show login)');
-            // Нет сохранённой сессии — показываем экран логина
+            // Нет сохранённой сессии — показываем экран логина. cloudUser в этой ветке не
+            // ставится (нет storedUser), так что buildGate уйдёт в `!cloudUser` ветку, удалит
+            // скрытый HTML-гейт и смoнтирует React LoginScreen сразу после setIsInitializing(false).
             initLocalData();
             setStatus('offline');
-
-            // v12: Если __heysReturningUser но сессия пропала — восстанавливаем форму
-            __heysShowGateLogin();
-
-            // v9.11: For users with no session, transition to React LoginScreen quickly.
-            // Previous 2s safety timer caused AppLoader → LoginScreen flash that reset curator form.
-            // Now: if no session detected at HTML level, skip the timer entirely.
-            var _loginGate = document.getElementById('heys-login-gate');
-            if (!_loginGate || _loginGate.style.display === 'none' || !window.__heysHasSession) {
-                // No gate, gate hidden, or no session — mount React LoginScreen immediately
-                setIsInitializing(false);
-            } else {
-                // Gate visible AND has session — auth completing or user logging in. Safety fallback after 2s.
-                var _safetyTimer = setTimeout(function () { setIsInitializing(false); }, 2000);
-                window.addEventListener('heys-auth-ready', function () { clearTimeout(_safetyTimer); }, { once: true });
-            }
+            setIsInitializing(false);
         }
 
         // ─── Static Login Handoff (v11: no-reload) ──────────────────────────────
@@ -476,9 +465,12 @@
                     .catch(function (err) {
                         devWarn('[AuthInit] static client login sync error:', err);
                         if (isPinRestoreAuthError(err)) {
+                            // PIN-логин не ставит cloudUser; setIsInitializing(false)
+                            // в .finally() приведёт к монтированию React LoginScreen, и
+                            // buildGate удалит HTML-гейт. Восстановление гейта здесь
+                            // создавало одноразовый флэш кадра.
                             removeGlobalValue('heys_pin_auth_client');
                             setClientId(null);
-                            __heysShowGateLogin();
                         } else {
                             initLocalData();
                             setStatus('offline');

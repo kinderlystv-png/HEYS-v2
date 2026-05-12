@@ -39,7 +39,7 @@ apps/web/heys_add_product_step_v1.js:71
 apps/web/heys_app_auth_init_v1.js:147
 apps/web/heys_app_auth_init_v1.js:160
 apps/web/heys_app_auth_init_v1.js:310
-apps/web/heys_app_auth_init_v1.js:473
+apps/web/heys_app_auth_init_v1.js:462
 apps/web/heys_app_gate_flow_v1.js:47
 apps/web/heys_app_hooks_v1.js:202
 apps/web/heys_app_hooks_v1.js:203
@@ -216,4 +216,4 @@ apps/web/insights/pi_early_warning.js:965
 apps/web/insights/pi_meal_rec_feedback.js:192
 apps/web/insights/pi_ui_meal_rec_card.js:1003
 apps/web/insights/pi_ui_meal_rec_card.js:1261
-apps/web/insights/pi_ui_meal_rec_card.js:1981
+apps/web/insights/pi_ui_meal_rec_card.js:1985
