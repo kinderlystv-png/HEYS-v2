@@ -28202,9 +28202,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const ringStartOffsetPct = 9; // чуть больше (~32°)
             const ringCapCompPct = 5; // компенсация скруглённых концов
             const overColor = toneClass === 'protein' ? '#22c55e' : '#ef4444';
-            const ringColor = toneClass === 'protein'
-                ? '#ef4444'
-                : (toneClass === 'fat' ? '#f59e0b' : '#22c55e');
             const ratio = norm > 0 ? value / norm : 0;
             const dotColor = ratio > 1 ? '#ef4444' : '#22c55e';
             // Основная дуга: от 0 до min(100%, ratio)
@@ -28214,10 +28211,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const hasOver = ratio > 1;
             const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0; // max 150% визуально
             const overPct = Math.max(0, overPctRaw - ringCapCompPct);
-            const gradientId = 'macro-ring-gradient-' + toneClass;
-            const gradientStops = toneClass === 'protein'
+            // Динамические градиенты по соблюдению нормы (берём цвет из HEYS.MacroRings).
+            // В weekly — без training-сигнала (он день-специфичный). hasDeficit — из профиля.
+            let _coreColor = null;
+            try {
+                if (HEYS.MacroRings && HEYS.MacroRings.computeRingData) {
+                    const _hasDef = +(profile?.deficitPctTarget) < 0;
+                    const _slot = HEYS.MacroRings.computeRingData({
+                        dayTot: { prot: toneClass === 'protein' ? value : 0, fat: toneClass === 'fat' ? value : 0, carbs: toneClass === 'carbs' ? value : 0 },
+                        normAbs: { prot: toneClass === 'protein' ? norm : 0, fat: toneClass === 'fat' ? norm : 0, carbs: toneClass === 'carbs' ? norm : 0 },
+                        hasTraining: false,
+                        hasDeficit: _hasDef,
+                    });
+                    _coreColor = _slot[toneClass] && _slot[toneClass].color;
+                }
+            } catch (_) { /* fallback на статичный градиент */ }
+            const _DYNAMIC_GRADIENTS = {
+                '#ef4444': ['#fecaca', '#ef4444'],
+                '#f59e0b': ['#fde68a', '#f59e0b'],
+                '#22c55e': ['#bbf7d0', '#22c55e'],
+                '#6b7280': ['#d1d5db', '#6b7280'],
+            };
+            const _staticGradient = toneClass === 'protein'
                 ? ['#fecaca', '#ef4444']
                 : (toneClass === 'fat' ? ['#fde68a', '#f59e0b'] : ['#bbf7d0', '#22c55e']);
+            const gradientStops = (_coreColor && _DYNAMIC_GRADIENTS[_coreColor]) || _staticGradient;
+            const gradientId = 'macro-ring-gradient-' + toneClass + '-' + (_coreColor ? _coreColor.replace('#', '') : 'def');
+            const _isWarning = _coreColor === '#ef4444';
             const getRingDotPos = (pct) => {
                 if (!pct || pct <= 0) return null;
                 const dotPct = Math.max(0, pct - 3); // слегка смещаем точку назад
@@ -28231,7 +28251,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const dot = getRingDotPos(basePct);
 
             return h('div', { className: 'macro-ring-item' },
-                h('div', { className: 'macro-ring ' + toneClass + (hasOver ? ' macro-ring--over' : '') },
+                h('div', { className: 'macro-ring ' + toneClass + (hasOver ? ' macro-ring--over' : '') + (_isWarning ? ' macro-ring-pulse' : '') },
                     h('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
                         h('defs', null,
                             h('linearGradient', {
@@ -33969,6 +33989,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
       }
 
+      // Унифицированный расчёт через HEYS.MacroRings — даёт тот же optimum/target/цвета
+      // что DayTab и Weekly (с учётом рефида и savedDisplayOptimum). Это устраняет
+      // главное расхождение виджета с другими вкладками.
+      const core = (typeof HEYS !== 'undefined') ? HEYS.MacroRings : null;
+      if (core && core.computeDayRingData) {
+        try {
+          const day = this._getDay() || {};
+          const profile = this._getProfile() || {};
+          const products = HEYS.products?.getAll?.() || [];
+          const pIndex = HEYS.dayUtils?.buildProductIndex ? HEYS.dayUtils.buildProductIndex(products) : null;
+          const normPerc = this._getNorms();
+          const r = core.computeDayRingData(day, profile, pIndex, { normPerc });
+          return {
+            protein: r.protein.value,
+            fat: r.fat.value,
+            carbs: r.carbs.value,
+            proteinTarget: r.protein.target,
+            fatTarget: r.fat.target,
+            carbsTarget: r.carbs.target,
+            cascade: this.getCascadeData(),
+            _rings: r, // дополнительное поле — для использования в MacrosWidgetContent (color, gradientStops, overflowColor)
+          };
+        } catch (_) { /* fall through to legacy path */ }
+      }
+
+      // Fallback: старый расчёт (используется если core не загружен)
       const dayTot = this._getDayTotals();
       const normAbs = this._getNormAbs();
 
@@ -38367,10 +38413,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const hasOver = ratio > 1;
       const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
       const overPct = Math.max(0, overPctRaw - ringCapCompPct);
-      const gradientId = `widget-macro-ring-${widget?.id || '0'}-${toneClass}`;
-      const gradientStops = toneClass === 'protein'
+      // Динамические градиенты по соблюдению нормы (берём цвет из HEYS.MacroRings):
+      // красный/жёлтый/зелёный/серый. Если core не загружен — fallback на статичный по toneClass.
+      const _coreColor = (data && data._rings && data._rings[toneClass]) ? data._rings[toneClass].color : null;
+      const _DYNAMIC_GRADIENTS = {
+        '#ef4444': ['#fecaca', '#ef4444'], // red
+        '#f59e0b': ['#fde68a', '#f59e0b'], // amber
+        '#22c55e': ['#bbf7d0', '#22c55e'], // green
+        '#6b7280': ['#d1d5db', '#6b7280'], // gray (no norm)
+      };
+      const _staticGradient = toneClass === 'protein'
         ? ['#fecaca', '#ef4444']
         : (toneClass === 'fat' ? ['#fde68a', '#f59e0b'] : ['#bbf7d0', '#22c55e']);
+      const gradientStops = (_coreColor && _DYNAMIC_GRADIENTS[_coreColor]) || _staticGradient;
+      const gradientId = `widget-macro-ring-${widget?.id || '0'}-${toneClass}-${(_coreColor || 'default').replace('#', '')}`;
+      const _isWarning = _coreColor === '#ef4444';
       const getRingDotPos = (ringPct) => {
         if (!ringPct || ringPct <= 0) return null;
         const dotPct = Math.max(0, ringPct - 3);
@@ -38393,7 +38450,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const percentBadge = hidePercentBadge ? null : (showPercentage && resolvedCenterMode === 'grams' ? `${normalizedPct}%` : null);
 
       return React.createElement('div', { key: `${toneClass}-${label}`, className: 'macro-ring-item' },
-        React.createElement('div', { className: `macro-ring ${toneClass}${hasOver ? ' macro-ring--over' : ''}` },
+        React.createElement('div', { className: `macro-ring ${toneClass}${hasOver ? ' macro-ring--over' : ''}${_isWarning ? ' macro-ring-pulse' : ''}` },
           React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
             React.createElement('defs', null,
               React.createElement('linearGradient', {

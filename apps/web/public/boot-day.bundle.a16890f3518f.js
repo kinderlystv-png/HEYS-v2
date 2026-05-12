@@ -13685,6 +13685,459 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 })(window);
 
 
+/* ===== heys_macro_rings_core_v1.js ===== */
+// heys_macro_rings_core_v1.js — единый расчёт данных для колец БЖУ.
+// Используется DayTab, виджетом макросов и недельным отчётом.
+// Расчёт цветов и порогов — канон из buildMacroRingsMeta (heys_day_stats_vm_v1.js:972-1007).
+
+; (function (global) {
+  'use strict';
+
+  const HEYS = global.HEYS = global.HEYS || {};
+
+  const MACRO_COLORS = Object.freeze({
+    red: '#ef4444',
+    amber: '#f59e0b',
+    green: '#22c55e',
+    gray: '#6b7280',
+  });
+
+  // Градиентные пары (оригинал из widgets/weekly): [light, dark]
+  const GRADIENT_STOPS = Object.freeze({
+    protein: ['#fecaca', '#ef4444'],
+    fat: ['#fde68a', '#f59e0b'],
+    carbs: ['#bbf7d0', '#22c55e'],
+  });
+
+  // Перебор-цвет: для белка зелёный (норм), для жира/углей — красный (плохо).
+  const OVERFLOW_COLORS = Object.freeze({
+    protein: MACRO_COLORS.green,
+    fat: MACRO_COLORS.red,
+    carbs: MACRO_COLORS.red,
+  });
+
+  function getProteinColor(actual, norm, hasTraining) {
+    if (!norm || norm <= 0) return MACRO_COLORS.gray;
+    const ratio = actual / norm;
+    const minOk = hasTraining ? 0.7 : 0.6;
+    const minGood = hasTraining ? 1.0 : 0.9;
+    if (ratio < minOk) return MACRO_COLORS.red;
+    if (ratio < minGood) return MACRO_COLORS.amber;
+    return MACRO_COLORS.green;
+  }
+
+  function getFatColor(actual, norm) {
+    if (!norm || norm <= 0) return MACRO_COLORS.gray;
+    const ratio = actual / norm;
+    if (ratio < 0.5) return MACRO_COLORS.red;
+    if (ratio < 0.8) return MACRO_COLORS.amber;
+    if (ratio <= 1.2) return MACRO_COLORS.green;
+    if (ratio <= 1.5) return MACRO_COLORS.amber;
+    return MACRO_COLORS.red;
+  }
+
+  function getCarbsColor(actual, norm, hasDeficit) {
+    if (!norm || norm <= 0) return MACRO_COLORS.gray;
+    const ratio = actual / norm;
+    if (hasDeficit) {
+      if (ratio < 0.3) return MACRO_COLORS.amber;
+      if (ratio <= 1.0) return MACRO_COLORS.green;
+      if (ratio <= 1.2) return MACRO_COLORS.amber;
+      return MACRO_COLORS.red;
+    }
+    if (ratio < 0.5) return MACRO_COLORS.red;
+    if (ratio < 0.8) return MACRO_COLORS.amber;
+    if (ratio <= 1.1) return MACRO_COLORS.green;
+    if (ratio <= 1.3) return MACRO_COLORS.amber;
+    return MACRO_COLORS.red;
+  }
+
+  function buildSlot(kind, value, target, hasTraining, hasDeficit) {
+    const safeValue = Number.isFinite(value) ? value : 0;
+    const safeTarget = Number.isFinite(target) && target > 0 ? target : 0;
+    const ratio = safeTarget > 0 ? safeValue / safeTarget : 0;
+    const pct = Math.max(0, Math.round(ratio * 100));
+    let color;
+    if (kind === 'protein') color = getProteinColor(safeValue, safeTarget, hasTraining);
+    else if (kind === 'fat') color = getFatColor(safeValue, safeTarget);
+    else color = getCarbsColor(safeValue, safeTarget, hasDeficit);
+
+    const hasOver = ratio > 1;
+    // overPct: сколько % сверх нормы (cap 50%), без компенсации скругления (это слой view)
+    const overPct = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
+
+    return {
+      kind,
+      value: safeValue,
+      target: safeTarget,
+      ratio,
+      pct,
+      color,
+      overflowColor: OVERFLOW_COLORS[kind],
+      gradientStops: GRADIENT_STOPS[kind].slice(),
+      hasOver,
+      overPct,
+    };
+  }
+
+  /**
+   * Pure-функция: посчитать кольца по уже готовым dayTot/normAbs и сигналам.
+   * Используется для unit-тестируемости и из weekly-усреднителя.
+   */
+  function computeRingData(args) {
+    const a = args || {};
+    const dayTot = a.dayTot || {};
+    const normAbs = a.normAbs || {};
+    const hasTraining = !!a.hasTraining;
+    const hasDeficit = !!a.hasDeficit;
+    return {
+      protein: buildSlot('protein', dayTot.prot || 0, normAbs.prot || 0, hasTraining, hasDeficit),
+      fat:     buildSlot('fat',     dayTot.fat  || 0, normAbs.fat  || 0, false,       hasDeficit),
+      carbs:   buildSlot('carbs',   dayTot.carbs|| 0, normAbs.carbs|| 0, false,       hasDeficit),
+      hasTraining,
+      hasDeficit,
+    };
+  }
+
+  /**
+   * Резолв optimum для дня по приоритету:
+   *   1. явный параметр (caller вычислил displayOptimum сам — DayTab)
+   *   2. day.savedDisplayOptimum (содержит зафиксированный displayOptimum)
+   *   3. fallback: TDEE.calculate + refeed (без знания caloricDebt — он React state)
+   *
+   * Возвращает число калорий (>=0).
+   */
+  function resolveDayOptimum(day, profile, explicitOptimum) {
+    if (Number.isFinite(explicitOptimum) && explicitOptimum > 0) return explicitOptimum;
+    if (Number.isFinite(day && day.savedDisplayOptimum) && day.savedDisplayOptimum > 0) {
+      return day.savedDisplayOptimum;
+    }
+    let optimum = 0;
+    if (HEYS.TDEE && typeof HEYS.TDEE.calculate === 'function') {
+      try {
+        const res = HEYS.TDEE.calculate(day || {}, profile || {}, {}) || {};
+        optimum = +res.optimum || 0;
+      } catch (_) { /* fall through */ }
+    }
+    if (day && day.isRefeedDay && HEYS.Refeed && typeof HEYS.Refeed.getRefeedOptimum === 'function') {
+      try { optimum = HEYS.Refeed.getRefeedOptimum(optimum, true) || optimum; } catch (_) { }
+    }
+    return optimum;
+  }
+
+  function hasTrainingForDay(day) {
+    if (!day) return false;
+    if (Array.isArray(day.trainings) && day.trainings.length > 0) return true;
+    const t1 = +day.train1k || 0;
+    const t2 = +day.train2k || 0;
+    return (t1 + t2) > 0;
+  }
+
+  function hasDeficitFromProfile(profile, opts) {
+    if (opts && typeof opts.hasDeficit === 'boolean') return opts.hasDeficit;
+    if (Number.isFinite(opts && opts.dayTargetDef)) return opts.dayTargetDef < 0;
+    const p = profile || {};
+    const def = +p.deficitPctTarget || +p.deficitPct || 0;
+    return def < 0;
+  }
+
+  /**
+   * Главный wrapper: данные колец на конкретный день.
+   *
+   * @param {Object} day      — объект дня (с meals, isRefeedDay, savedDisplayOptimum, trainings…)
+   * @param {Object} profile  — профиль клиента (вес, рост, deficitPctTarget…)
+   * @param {Object} pIndex   — индекс продуктов (HEYS.dayUtils.buildProductIndex)
+   * @param {Object} [opts]
+   * @param {Object} [opts.normPerc]    — проценты Б/Ж/У (из heys_norms), иначе читается из LS
+   * @param {number} [opts.optimum]     — готовый displayOptimum (DayTab передаёт сюда)
+   * @param {boolean}[opts.hasTraining] — явный сигнал (иначе выводится из day.trainings)
+   * @param {boolean}[opts.hasDeficit]  — явный сигнал (иначе выводится из profile)
+   * @param {number} [opts.dayTargetDef]— альтернатива hasDeficit (отрицательное значение → дефицит)
+   */
+  function computeDayRingData(day, profile, pIndex, opts) {
+    const o = opts || {};
+    const normPerc = o.normPerc || readNormsFromLS();
+    const optimum = resolveDayOptimum(day, profile, o.optimum);
+
+    let dayTot = { prot: 0, fat: 0, carbs: 0 };
+    if (HEYS.dayCalculations && typeof HEYS.dayCalculations.calculateDayTotals === 'function' && day) {
+      try { dayTot = HEYS.dayCalculations.calculateDayTotals(day, pIndex) || dayTot; } catch (_) { }
+    }
+
+    let normAbs = { prot: 0, fat: 0, carbs: 0 };
+    if (HEYS.dayCalculations && typeof HEYS.dayCalculations.computeDailyNorms === 'function') {
+      try { normAbs = HEYS.dayCalculations.computeDailyNorms(optimum, normPerc) || normAbs; } catch (_) { }
+    }
+
+    const hasTraining = typeof o.hasTraining === 'boolean' ? o.hasTraining : hasTrainingForDay(day);
+    const hasDeficit = hasDeficitFromProfile(profile, o);
+
+    const slots = computeRingData({ dayTot, normAbs, hasTraining, hasDeficit });
+    return Object.assign(slots, { optimum, normPerc, dayTot, normAbs });
+  }
+
+  function readNormsFromLS() {
+    try {
+      if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+        return HEYS.utils.lsGet('heys_norms', {}) || {};
+      }
+      if (global.localStorage) {
+        const raw = global.localStorage.getItem('heys_norms');
+        if (raw) return JSON.parse(raw) || {};
+      }
+    } catch (_) { }
+    return {};
+  }
+
+  /**
+   * Обёртка для уже посчитанных средних значений (Weekly уже умеет фильтровать
+   * visibleDays по shouldIncludeDay и делить на daysWithData). Передаёт средние
+   * в computeRingData и возвращает структуру с цветами без training-сигнала.
+   *
+   * @param {Object} avgValues  — { prot, fat, carbs } средние факта по неделе
+   * @param {Object} avgTargets — { prot, fat, carbs } средние нормы по неделе
+   * @param {Object} [opts]
+   * @param {boolean}[opts.hasDeficit] — режим дефицита (для цвета углеводов)
+   * @param {number} [opts.daysWithData] — для информационного поля результата
+   */
+  function buildWeeklyRingData(avgValues, avgTargets, opts) {
+    const o = opts || {};
+    const hasDeficit = !!o.hasDeficit;
+    const slots = computeRingData({
+      dayTot:  { prot: (avgValues && avgValues.prot)  || 0, fat: (avgValues && avgValues.fat)  || 0, carbs: (avgValues && avgValues.carbs)  || 0 },
+      normAbs: { prot: (avgTargets && avgTargets.prot) || 0, fat: (avgTargets && avgTargets.fat) || 0, carbs: (avgTargets && avgTargets.carbs) || 0 },
+      hasTraining: false, // training-сигнал на неделю не применяется
+      hasDeficit,
+    });
+    return Object.assign(slots, { daysWithData: Number.isFinite(o.daysWithData) ? o.daysWithData : null });
+  }
+
+  HEYS.MacroRings = {
+    MACRO_COLORS,
+    GRADIENT_STOPS,
+    OVERFLOW_COLORS,
+    computeRingData,
+    computeDayRingData,
+    buildWeeklyRingData,
+    resolveDayOptimum,
+  };
+
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
+/* ===== heys_macro_ring_view_v1.js ===== */
+// heys_macro_ring_view_v1.js — единый React-компонент для рендера кольца БЖУ.
+// Используется DayTab, виджетами и недельным отчётом.
+//
+// Намеренно использует существующие CSS-классы `.macro-ring*` из
+// styles/modules/100-metrics-and-graphs.css — там лежат:
+//   • keyframes macroRingFillIn / macroRingOverFillIn (анимация)
+//   • dark-mode правила
+//   • цвета фона, точки, переменные --ring-dasharray и т.п.
+// Дублировать всё это в новый namespace дорого и рискованно (есть шансы
+// разъехаться с dark-mode). Дополнительный класс-маркер `.heys-macro-ring`
+// добавляется на корневой <div> для идентификации (отладка, будущие стили).
+
+; (function (global) {
+  'use strict';
+
+  const HEYS = global.HEYS = global.HEYS || {};
+  const ringPrefix = 'heys-mr-grad-';
+  let gradUid = 0;
+
+  const RING_START_OFFSET_PCT = 9; // используется и в widgets, и в weekly; для DayTab можно переопределить через customStyles
+  const RING_CAP_COMP_PCT = 5;
+
+  function buildStrokeStyle(slot, gradientId, offsetOverride) {
+    const ratio = Number.isFinite(slot.ratio) ? slot.ratio : 0;
+    const basePct = Math.max(0, Math.min(100, Math.round(ratio * 100)) - RING_CAP_COMP_PCT);
+    const offset = Number.isFinite(offsetOverride) ? offsetOverride : RING_START_OFFSET_PCT;
+    return {
+      strokeDasharray: basePct + ' 100',
+      '--ring-dasharray': basePct + ' 100',
+      '--ring-start-offset': -offset,
+      stroke: 'url(#' + gradientId + ')',
+    };
+  }
+
+  function getRingDotPos(slot, offsetOverride) {
+    const ratio = Number.isFinite(slot.ratio) ? slot.ratio : 0;
+    const basePct = Math.max(0, Math.min(100, Math.round(ratio * 100)) - RING_CAP_COMP_PCT);
+    if (basePct <= 3) return null;
+    const dotPct = basePct - 3;
+    const offset = Number.isFinite(offsetOverride) ? offsetOverride : RING_START_OFFSET_PCT;
+    const angle = ((dotPct + offset) / 100) * Math.PI * 2;
+    return {
+      x: 18 + 15.5 * Math.cos(angle),
+      y: 18 + 15.5 * Math.sin(angle),
+    };
+  }
+
+  /**
+   * Главный рендер одного кольца.
+   *
+   * @param {Object} props
+   * @param {Object} props.slot         — данные из core: { value, target, ratio, pct, color, overflowColor, gradientStops, hasOver, overPct, kind }
+   * @param {string} props.toneClass    — 'protein' | 'fat' | 'carbs' (для CSS-класса)
+   * @param {string} props.label        — 'Белки' | 'Жиры' | 'Углеводы'
+   * @param {string} [props.shortLabel] — 'Б' | 'Ж' | 'У' (для innerShortLabel)
+   * @param {string} [props.centerMode] — 'grams' (default) | 'pct'
+   * @param {boolean}[props.hideTarget] — спрятать «/ Nг» под центром
+   * @param {boolean}[props.hidePercentBadge] — спрятать боковой бейдж процента
+   * @param {boolean}[props.innerShortLabel]  — отрисовать «Б»/«Ж»/«У» возле центра (виджет 3×1)
+   * @param {Function}[props.onClick]   — клик по кольцу (DayTab popup)
+   * @param {Array}  [props.badges]     — бейджи под кольцом
+   * @param {string|Function}[props.valueColor] — тонировка центрального значения
+   * @param {string} [props.ariaLabel]
+   * @param {Object} [props.rootStyle]  — inline-стиль корневого .macro-ring (DayTab ringButton style)
+   * @param {Object} [props.valueStyle] — inline-стиль центрального значения (DayTab styles.value(color))
+   * @param {boolean}[props.pulse]      — авто-пульсация если color===red (default true)
+   * @param {string} [props.gradientId] — кастомный id градиента (иначе авто)
+   * @param {number} [props.ringStartOffsetPct] — кастомный offset (DayTab 7, остальные 9)
+   * @param {string} [props.keySuffix]  — суффикс ключа (для list внутри map)
+   */
+  function renderRing(props) {
+    const React = global.React;
+    if (!React) {
+      // Если React ещё не загружен — возвращаем placeholder. Не падаем.
+      return null;
+    }
+    const p = props || {};
+    const slot = p.slot || {};
+    const tone = p.toneClass || slot.kind || 'protein';
+    const value = slot.value || 0;
+    const target = slot.target || 0;
+    const pct = slot.pct || 0;
+    const color = slot.color || '#6b7280';
+    const overflowColor = slot.overflowColor || '#ef4444';
+    const gradStops = Array.isArray(slot.gradientStops) ? slot.gradientStops : ['#fecaca', '#ef4444'];
+    const hasOver = !!slot.hasOver;
+    const overPctRaw = Number.isFinite(slot.overPct) ? slot.overPct : 0;
+    const overPctCapped = Math.max(0, overPctRaw - RING_CAP_COMP_PCT);
+
+    const gradientId = p.gradientId || (ringPrefix + tone + '-' + (++gradUid));
+    const offsetOverride = p.ringStartOffsetPct;
+
+    const strokeStyle = buildStrokeStyle(slot, gradientId, offsetOverride);
+    const dot = getRingDotPos(slot, offsetOverride);
+    const dotColor = (slot.ratio || 0) > 1 ? '#ef4444' : '#22c55e';
+    const pulseEnabled = p.pulse !== false && color === '#ef4444';
+
+    const centerMode = p.centerMode || 'grams';
+    let centerText;
+    if (centerMode === 'pct') {
+      centerText = Math.min(999, Math.round(pct)) + '%';
+    } else {
+      centerText = Math.round(value);
+    }
+    const targetText = (centerMode === 'grams' && !p.hideTarget && target > 0)
+      ? ('/ ' + Math.round(target) + 'г')
+      : null;
+    const showPctBadge = !p.hidePercentBadge && centerMode === 'grams';
+
+    const valueStyle = p.valueStyle
+      || (typeof p.valueColor === 'function' ? { color: p.valueColor(color) } : (p.valueColor ? { color: p.valueColor } : undefined));
+
+    const ringClassName = [
+      'macro-ring',
+      tone,
+      hasOver ? 'macro-ring--over' : null,
+      pulseEnabled ? 'macro-ring-pulse' : null,
+    ].filter(Boolean).join(' ');
+
+    const ariaLabel = p.ariaLabel || (p.label
+      ? (p.label + ': ' + Math.round(value) + (target > 0 ? (' из ' + Math.round(target) + ' грамм') : ''))
+      : undefined);
+
+    const ringNode = React.createElement('div',
+      {
+        className: ringClassName,
+        onClick: p.onClick,
+        style: p.rootStyle,
+        role: p.onClick ? 'button' : 'img',
+        'aria-label': ariaLabel,
+        tabIndex: p.onClick ? 0 : undefined,
+      },
+      React.createElement('svg', { viewBox: '0 0 36 36', className: 'macro-ring-svg' },
+        React.createElement('defs', null,
+          React.createElement('linearGradient',
+            { id: gradientId, x1: '0%', y1: '0%', x2: '100%', y2: '100%' },
+            React.createElement('stop', { offset: '0%', stopColor: gradStops[0] }),
+            React.createElement('stop', { offset: '100%', stopColor: gradStops[1] }),
+          ),
+        ),
+        React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
+        React.createElement('circle', {
+          className: 'macro-ring-fill',
+          cx: 18, cy: 18, r: 15.5, pathLength: 100,
+          style: strokeStyle,
+        }),
+        hasOver && React.createElement('circle', {
+          className: 'macro-ring-fill--over',
+          cx: 18, cy: 18, r: 15.5, pathLength: 100,
+          style: {
+            strokeDasharray: overPctCapped + ' ' + (100 - overPctCapped),
+            '--over-dasharray': overPctCapped + ' ' + (100 - overPctCapped),
+            '--over-offset': -(100 - overPctCapped),
+            stroke: overflowColor,
+          },
+        }),
+        dot && React.createElement('circle', {
+          className: 'macro-ring-dot',
+          cx: dot.x, cy: dot.y, r: 2.2,
+          style: { '--macro-ring-dot': dotColor, fill: dotColor },
+        }),
+      ),
+      React.createElement('span',
+        { className: 'macro-ring-value', style: valueStyle },
+        centerText,
+      ),
+      p.innerShortLabel && p.shortLabel
+        ? React.createElement('span', { className: 'macro-ring-inner-label' }, p.shortLabel)
+        : null,
+      showPctBadge
+        ? React.createElement('span', { className: 'widget-macros__ring-pct' }, Math.min(999, Math.round(pct)) + '%')
+        : null,
+    );
+
+    const labelNode = p.label
+      ? React.createElement('span', { className: 'macro-ring-label' }, p.label)
+      : null;
+    let targetNode = null;
+    if (targetText) {
+      targetNode = React.createElement('span', { className: 'macro-ring-target' }, targetText);
+    } else if (p.keepEmptyTargetSlot) {
+      // виджет 3×1 ожидает пустой span для layout-выравнивания
+      targetNode = React.createElement('span', { className: 'macro-ring-target macro-ring-target--empty' }, ' ');
+    }
+    const badgesNode = (Array.isArray(p.badges) && p.badges.length > 0)
+      ? React.createElement('div', { className: 'macro-ring-badges' },
+          p.badges.map((b, i) => React.createElement('span',
+            { key: i, className: 'macro-ring-badge', title: b && b.desc },
+            b && b.emoji,
+          )),
+        )
+      : null;
+
+    return React.createElement('div',
+      {
+        key: p.keySuffix ? (tone + '-' + p.keySuffix) : undefined,
+        className: 'macro-ring-item heys-macro-ring heys-macro-ring--' + tone,
+      },
+      ringNode,
+      labelNode,
+      targetNode,
+      badgesNode,
+    );
+  }
+
+  HEYS.MacroRings = HEYS.MacroRings || {};
+  HEYS.MacroRings.renderRing = renderRing;
+  HEYS.MacroRings._ringInternals = { buildStrokeStyle, getRingDotPos, RING_START_OFFSET_PCT, RING_CAP_COMP_PCT };
+
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
 /* ===== heys_day_page_shell.js ===== */
 // heys_day_page_shell.js — DayTab page shell renderer
 if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();

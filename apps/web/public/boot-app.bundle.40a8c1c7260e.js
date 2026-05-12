@@ -25857,10 +25857,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }
             var rl = document.getElementById('hlg-returning');
             if (rl) rl.remove();
-            var cs = document.getElementById('hlg-screen-client');
-            var cu = document.getElementById('hlg-screen-curator');
-            if (cs) cs.style.display = '';
-            if (cu) cu.style.display = '';
+            // Restore canonical single-screen state via gate's helper (handles
+            // both display flags correctly). Fallback for the unlikely case
+            // hlgShowScreen isn't defined yet (e.g., gate script hasn't parsed).
+            if (typeof window.hlgShowScreen === 'function') {
+                window.hlgShowScreen(window.__hlgCurrentScreen === 'curator' ? 'curator' : 'client');
+            } else {
+                var cs = document.getElementById('hlg-screen-client');
+                var cu = document.getElementById('hlg-screen-curator');
+                if (cs) cs.style.display = '';
+                if (cu) cu.style.display = 'none';
+            }
+            // Сессия признана невалидной — снимаем флаг, чтобы no-session
+            // fast-path в строках 438-441 сразу отдал управление React
+            // LoginScreen без 2s safety-таймера и AppLoader-флэша.
+            window.__heysHasSession = false;
             window.__heysReturningUser = false;
         }
 

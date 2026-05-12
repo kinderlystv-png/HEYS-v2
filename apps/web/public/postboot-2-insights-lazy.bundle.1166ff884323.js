@@ -23191,8 +23191,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
      * @returns {string} - "HH:MM"
      */
     function formatTime(hours) {
-        const h = Math.floor(hours);
-        const m = Math.round((hours - h) * 60);
+        let h = Math.floor(hours);
+        let m = Math.round((hours - h) * 60);
+        // R5-A: carry minutes→hours при rounding edge case (24.999... → 24:60 → 25:00)
+        if (m >= 60) { h += 1; m = 0; }
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
 
@@ -23340,6 +23342,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (mealTimes?.length >= mealsCount) {
             const chronoRaw = mealTimes.slice(0, mealsCount).map(t => getChronoRatio(t));
             const chronoSum = chronoRaw.reduce((a, b) => a + b, 0);
+            // R1-12: guard от деления на ноль (теоретически все ratio могут быть 0 при сломанных mealTimes)
+            if (!Number.isFinite(chronoSum) || chronoSum <= 0) {
+                console.warn(`${LOG_PREFIX} [PLANNER.split] ⚠️ chronoSum=0, skipping chrono blend (equal split)`);
+                // продолжим без chrono blend — ratio останется adaptive
+                // Заполним budgets ниже как обычно
+                const budgets = [];
+                for (let i = 0; i < mealsCount; i++) {
+                    const r = ratio[i] || (1 / mealsCount);
+                    budgets.push({
+                        prot: Math.round(remainingBudget.prot * r),
+                        carbs: Math.round(remainingBudget.carbs * r),
+                        fat: Math.round(remainingBudget.fat * r),
+                        kcal: Math.round(remainingBudget.kcal * r),
+                        effectiveKcal: Math.round(remainingBudget.prot * r) * 3 + Math.round(remainingBudget.carbs * r) * 4 + Math.round(remainingBudget.fat * r) * 9
+                    });
+                }
+                return budgets;
+            }
             const chronoNorm = chronoRaw.map(r => r / chronoSum); // нормализация → сумма = 1.0
             const chronoMin = Math.min(...chronoNorm);
             const chronoMax = Math.max(...chronoNorm);
@@ -23385,11 +23405,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             // Halton & Hu, 2004: protein TEF is 20-30%; HEYS convention uses 3 kcal/g
             // effectiveKcal represents net metabolic energy available after digestion
             const effectiveKcal = mealProt * 3 + mealCarbs * 4 + mealFat * 9;
+            // R5-B: kcal должен соответствовать БЖУ. Раньше брался independent
+            // remainingBudget.kcal*r → расхождение с P*4+C*4+F*9 (юзер видел разные
+            // цифры). Теперь kcal = P*4+C*4+F*9 — всегда согласован с макросами.
+            const mealKcalFromMacros = mealProt * 4 + mealCarbs * 4 + mealFat * 9;
             budgets.push({
                 prot: mealProt,
                 carbs: mealCarbs,
                 fat: mealFat,
-                kcal: Math.round(remainingBudget.kcal * r),
+                kcal: mealKcalFromMacros,
                 effectiveKcal // S7: TEF-adjusted energy (protein=3kcal/g)
             });
         }
@@ -23435,15 +23459,57 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     /**
+     * R1-10: вес юзера в кг с fallback цепочкой.
+     * Разные клиенты сохраняют его по разному (`weight`, `weightKg`, `bodyMassKg`).
+     */
+    function getWeightKg(profile) {
+        const candidates = [profile?.weight, profile?.weightKg, profile?.bodyMassKg];
+        for (const c of candidates) {
+            const n = Number(c);
+            if (Number.isFinite(n) && n > 20 && n < 400) return n;
+        }
+        return 70;
+    }
+
+    /**
+     * R1-7: преобразовать sleepStart "HH:MM" в decimal hours относительно "вчера или сегодня".
+     * Если час < 12 — считаем "после полуночи" (например, 01:30 → 25.5h).
+     */
+    function sleepStartToHours(t) {
+        if (!t || typeof t !== 'string' || !t.includes(':')) return null;
+        const [h, m] = t.split(':').map(Number);
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+        return h < 12 ? (h + 24) + m / 60 : h + m / 60;
+    }
+
+    /**
      * Получить среднее время сна из исторических данных
      * @param {Array<object>} days - исторические дни
      * @param {object} profile - профиль пользователя
+     * @param {object} [opts] - { explicitSleepStart, currentTimeHours }
      * @returns {number} - среднее время сна в часах (decimal)
      */
-    function estimateSleepTarget(days, profile) {
+    function estimateSleepTarget(days, profile, opts) {
+        const explicit = opts?.explicitSleepStart;
+
+        // R1-3 / R1-14: явный sleepStart, заявленный пользователем СЕГОДНЯ, имеет
+        // высший приоритет. Это не предсказание — это план самого юзера на этот день.
+        if (explicit && typeof explicit === 'string' && explicit.includes(':')) {
+            const explicitHours = sleepStartToHours(explicit);
+            if (Number.isFinite(explicitHours)) {
+                const clamped = Math.min(26.0, Math.max(22.0, explicitHours));
+                console.info(`${LOG_PREFIX} 📊 Sleep target from EXPLICIT day.sleepStart:`, {
+                    raw: explicit,
+                    sleepTarget: formatTime(clamped),
+                    source: 'day_sleepStart_explicit'
+                });
+                return clamped;
+            }
+        }
+
         // === Попытка 0 (v1.9): Среднее sleepStart из данных чек-ина (самый точный источник) ===
-        // Аналог getAverageBedtime() из advice_bundle — реальное время засыпания
-        // Если пользователь ложится в 1-2 ночи, это будет правильно учтено
+        // R1-7: разделяем выборку на "после полуночи" / "до полуночи" — иначе среднее
+        // 23:50 + 01:10 = 12:30 → бессмыслица. Решаем кластер по большинству.
         if (days.length >= 3) {
             const sleepStarts = days
                 .slice(-14) // 2 недели для надёжности
@@ -23451,21 +23517,41 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 .filter(t => t && typeof t === 'string' && t.includes(':'));
 
             if (sleepStarts.length >= 3) {
-                const minutesFromMidnight = sleepStarts.map(t => {
+                const afterMidnight = []; // часы < 12, прибавим 24
+                const beforeMidnight = []; // часы >= 12
+                sleepStarts.forEach((t) => {
                     const [h, m] = t.split(':').map(Number);
-                    // h < 12 = после полуночи (01:00 → 25ч, 02:00 → 26ч)
-                    return h < 12 ? (h + 24) * 60 + m : h * 60 + m;
+                    const minutes = h * 60 + m;
+                    if (h < 12) afterMidnight.push((h + 24) * 60 + m);
+                    else beforeMidnight.push(minutes);
                 });
-                const avgMinutes = minutesFromMidnight.reduce((a, b) => a + b, 0) / minutesFromMidnight.length;
-                const sleepHours = avgMinutes / 60; // в десятичных часах (25.0 = 01:00)
-                // Clamp [22:00, 02:00] — разумные пределы даже для сов
+                // Берём кластер большинства. Если поровну — тот, что ближе к currentTime.
+                let chosen;
+                let source;
+                if (afterMidnight.length > beforeMidnight.length) {
+                    chosen = afterMidnight; source = 'after_midnight_cluster';
+                } else if (beforeMidnight.length > afterMidnight.length) {
+                    chosen = beforeMidnight; source = 'before_midnight_cluster';
+                } else {
+                    // Tie — выбираем кластер, к которому ближе currentTime (если задан)
+                    const currentH = Number(opts?.currentTimeHours);
+                    if (Number.isFinite(currentH) && currentH < 12) {
+                        chosen = afterMidnight; source = 'tie_resolved_by_current_time';
+                    } else {
+                        chosen = beforeMidnight; source = 'tie_default_evening';
+                    }
+                }
+                const avgMinutes = chosen.reduce((a, b) => a + b, 0) / chosen.length;
+                const sleepHours = avgMinutes / 60;
                 const clamped = Math.min(26.0, Math.max(22.0, sleepHours));
                 console.info(`${LOG_PREFIX} 📊 Sleep target from check-in data (sleepStart):`, {
                     sampleSize: sleepStarts.length,
+                    afterMidnightCount: afterMidnight.length,
+                    beforeMidnightCount: beforeMidnight.length,
                     avgSleepTime: formatTime(sleepHours),
                     sleepTarget: formatTime(clamped),
                     wasClamped: Math.abs(sleepHours - clamped) > 0.01,
-                    source: 'sleepStart_checkin'
+                    source
                 });
                 return clamped;
             }
@@ -23485,10 +23571,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
             if (lastMealTimes.length >= 3) {
                 const avgLastMeal = lastMealTimes.reduce((a, b) => a + b) / lastMealTimes.length;
-                // sleepTarget ≈ последний приём + 3ч
                 const estimatedRaw = avgLastMeal + 3;
-                // v1.9: raised upper clamp from 00:30 to 02:00 for late sleepers
-                // 26.0 = 02:00 next day (upper), 22.0 = 22:00 (lower)
                 const estimated = Math.min(26.0, Math.max(22.0, estimatedRaw));
                 console.info(`${LOG_PREFIX} 📊 Estimated sleep target from meal data:`, {
                     avgLastMeal: formatTime(avgLastMeal),
@@ -23502,12 +23585,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
         }
 
-        // Попытка 2: из profile.sleepTarget если есть
+        // R3-3: при cold start (мало истории) явный profile.sleepTarget важнее дефолта.
         if (profile?.sleepTarget) {
+            console.info(`${LOG_PREFIX} 📊 Sleep target from profile.sleepTarget (cold start):`, {
+                value: profile.sleepTarget,
+                source: 'profile_default'
+            });
             return parseTime(profile.sleepTarget);
         }
 
         // Фоллбек: 23:00
+        console.info(`${LOG_PREFIX} 📊 Sleep target fallback 23:00 (no history, no profile setting)`);
         return 23.0;
     }
 
@@ -23528,12 +23616,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const {
             currentTime,
             lastMeal,
-            dayTarget = {},
+            dayTarget: dayTargetRaw = {},
             dayEaten = {},
             profile = {},
             days = [],
-            pIndex = {}
+            pIndex = {},
+            daySleepStart = null,
+            isRefeedDay = false,
+            stressMoodSignals = null,
+            waveOverlapPct = null,
+            scenarioHint = null // R5-D: recommender scenario (MICRONUTRIENT_FOCUS, MOOD_SUPPORT_BREAKFAST)
         } = params;
+
+        // R2-6: нормализуем входные данные. Незаданные поля приводим к 0, а не undefined,
+        // чтобы избежать NaN в дальнейших вычислениях.
+        const dayTarget = {
+            kcal: Number(dayTargetRaw?.kcal) || 0,
+            prot: Number(dayTargetRaw?.prot) || Number(dayTargetRaw?.protein) || 0,
+            carbs: Number(dayTargetRaw?.carbs) || Number(dayTargetRaw?.carb) || 0,
+            fat: Number(dayTargetRaw?.fat) || 0
+        };
 
         console.info(`${LOG_PREFIX} [PLANNER.entry] 🍽️ planRemainingMeals called:`, {
             currentTime,
@@ -23542,7 +23644,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             hasInsulinWave: !!HEYS.InsulinWave,
             daysCount: days.length,
             dayTarget,
-            dayEaten
+            dayEaten,
+            daySleepStart: daySleepStart || 'inherit',
+            isRefeedDay
         });
 
         // Validate
@@ -23552,15 +23656,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         // v2.3.0: Support "first meal of day" — no lastMeal means no active wave
-        const hasLastMeal = !!lastMeal?.time;
+        let hasLastMeal = !!lastMeal?.time;
 
         if (!HEYS.InsulinWave?.calculate) {
             console.warn(`${LOG_PREFIX} ❌ InsulinWave module not available`);
             return { available: false, error: 'InsulinWave module missing' };
         }
 
+        // R2-6: без kcal-таргета planner не может ничего полезного сделать.
+        // Возвращаем явный сигнал — UI покажет fallback на single-meal рекомендацию.
+        if (!dayTarget.kcal || dayTarget.kcal < 500) {
+            console.warn(`${LOG_PREFIX} ❌ dayTarget.kcal missing or implausibly low (${dayTarget.kcal}). Planner skipped.`);
+            return { available: false, error: 'NO_TARGET' };
+        }
+
         const currentTimeHours = parseTime(currentTime);
-        const lastMealTimeHours = hasLastMeal ? parseTime(lastMeal.time) : null;
+        let lastMealTimeHours = hasLastMeal ? parseTime(lastMeal.time) : null;
+
+        // R3-1: если последний приём был вчера вечером (≥20:00), а сейчас утро (<12:00),
+        // волна давно закончилась — между ними была ночь. Программа должна считать
+        // это "first meal of day", а не тащить волну с прошлого вечера.
+        if (hasLastMeal && lastMealTimeHours >= 20 && currentTimeHours < 12) {
+            console.info(`${LOG_PREFIX} [PLANNER.wave] 🌙→☀️ Late dinner crossed night: lastMeal=${lastMeal.time}, current=${currentTime}. Wave reset (first meal of new day).`);
+            hasLastMeal = false;
+            lastMealTimeHours = null;
+        }
 
         // === Шаг 1: Рассчитать конец текущей инсулиновой волны ===
         let currentWaveEnd = null;
@@ -23568,47 +23688,64 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         if (hasLastMeal) {
             try {
-                // Подготовка нутриентов последнего приёма
-                const lastMealNutrients = {
-                    kcal: lastMeal.totals?.kcal || 0,
-                    protein: lastMeal.totals?.prot || 0,
-                    carbs: lastMeal.totals?.carbs || 0,
-                    fat: lastMeal.totals?.fat || 0,
-                    glycemicLoad: lastMeal.totals?.glycemicLoad || 0
+                // R-WAVE-API: правильный API HEYS.InsulinWave.calculate ожидает
+                // { meals: [...], pIndex, baseWaveHours, trainings, dayData }, а не
+                // { lastMealTime, nutrients, ... }. Раньше всегда срабатывал fallback на 3ч.
+                const getProductFromItem = (item) => {
+                    if (pIndex?.byId?.get) return pIndex.byId.get(item?.productId || item?.product_id) || item;
+                    if (pIndex && typeof pIndex === 'object' && pIndex[item?.productId]) return pIndex[item.productId];
+                    return item;
                 };
 
                 currentWaveData = HEYS.InsulinWave.calculate({
-                    lastMealTime: lastMeal.time,
-                    nutrients: lastMealNutrients,
-                    profile: profile,
-                    baseWaveHours: profile?.insulinWaveHours || 3
+                    meals: [lastMeal],
+                    pIndex,
+                    getProductFromItem,
+                    baseWaveHours: profile?.insulinWaveHours || 3,
+                    trainings: params.currentDay?.workouts || params.currentDay?.trainings || [],
+                    dayData: {
+                        sleepHours: profile?.sleepHours,
+                        sleepQuality: params.currentDay?.sleepQuality,
+                        waterMl: params.currentDay?.waterMl,
+                        stressAvg: params.currentDay?.stressAvg,
+                        householdMin: params.currentDay?.householdMin,
+                        steps: params.currentDay?.steps,
+                        profile
+                    }
                 });
 
                 if (currentWaveData?.duration) {
-                    const waveEndMinutes = HEYS.utils?.timeToMinutes(lastMeal.time) + currentWaveData.duration;
-                    currentWaveEnd = minutesToHours(waveEndMinutes);
+                    // R-WAVE-API: duration в МИНУТАХ от InsulinWave. Преобразуем
+                    // в часы через locale parseTime (HEYS.utils.timeToMinutes не существует).
+                    currentWaveEnd = parseTime(lastMeal.time) + currentWaveData.duration / 60;
                     console.info(`${LOG_PREFIX} [PLANNER.wave] 📊 Current insulin wave calculated:`, {
                         lastMeal: lastMeal.time,
                         waveDuration: currentWaveData.duration,
+                        waveHours: (currentWaveData.duration / 60).toFixed(2),
                         waveEnd: formatTime(currentWaveEnd),
                         remaining: currentWaveData.remaining,
-                        progress: currentWaveData.progress?.toFixed(1) + '%',
+                        progress: typeof currentWaveData.progress === 'number' ? currentWaveData.progress.toFixed(1) + '%' : '?',
                         endTimeDisplay: currentWaveData.endTimeDisplay,
-                        nutrients: lastMealNutrients
+                        baseWaveHours: currentWaveData.baseWaveHours,
+                        finalMultiplier: currentWaveData.finalMultiplier
                     });
                 }
             } catch (err) {
                 console.warn(`${LOG_PREFIX} ⚠️ Failed to calculate current wave:`, err.message);
             }
 
-            // Фоллбек: если не удалось рассчитать, берём базовую длину волны
+            // R2-7: явный лог fallback'а волны. Раньше "молча" использовался дефолт 3ч —
+            // невозможно было понять, почему планнер ошибается с волной у конкретного юзера.
             if (!currentWaveEnd) {
-                const baseWave = profile?.insulinWaveHours || 3;
+                const personalWave = Number(profile?.insulinWaveHours);
+                const baseWave = Number.isFinite(personalWave) && personalWave > 0 ? personalWave : 3;
                 currentWaveEnd = lastMealTimeHours + baseWave;
-                console.info(`${LOG_PREFIX} 📊 Using fallback wave estimate:`, {
+                console.warn(`${LOG_PREFIX} ⚠️ [PLANNER.wave] InsulinWave.calculate fallback used:`, {
                     lastMeal: formatTime(lastMealTimeHours),
                     waveEnd: formatTime(currentWaveEnd),
-                    baseWaveHours: baseWave
+                    baseWaveHours: baseWave,
+                    sourceOfBaseWave: Number.isFinite(personalWave) ? 'profile.insulinWaveHours' : 'hardcoded_default_3h',
+                    reason: 'currentWaveData?.duration was undefined or InsulinWave throw'
                 });
             }
         } else {
@@ -23619,39 +23756,116 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // === Шаг 2: +30 мин жиросжигания ===
         // v2.3.0: When no lastMeal, skip fat burn window — just start from currentTime
         const fatBurnEnd = currentWaveEnd ? currentWaveEnd + minutesToHours(FAT_BURN_WINDOW_MIN) : currentTimeHours;
-        const nextMealEarliest = Math.max(currentTimeHours, fatBurnEnd);
+        let nextMealEarliest = Math.max(currentTimeHours, fatBurnEnd);
+
+        // R3-4: интервальное голодание. Если у юзера задан profile.fastingWindow,
+        // первый приём не может быть раньше окончания окна голодания.
+        // Поддерживаемые формы: { start: 'HH:MM', end: 'HH:MM' } или { eatStart, eatEnd }.
+        const fw = profile?.fastingWindow || profile?.fasting;
+        if (fw) {
+            const eatStartStr = fw.eatStart || fw.end || fw.windowStart;
+            const eatStartHours = parseTime(eatStartStr);
+            // Если ещё не наступило окно еды (current до eatStart) и eatStart разумен (>currentTime, <currentTime+12h)
+            if (Number.isFinite(eatStartHours) && eatStartHours > currentTimeHours && eatStartHours - currentTimeHours < 12) {
+                if (eatStartHours > nextMealEarliest) {
+                    console.info(`${LOG_PREFIX} [PLANNER.fasting] ⏳ IF window: eatStart=${eatStartStr}, shifting nextMealEarliest ${formatTime(nextMealEarliest)} → ${formatTime(eatStartHours)}`);
+                    nextMealEarliest = eatStartHours;
+                }
+            }
+        }
 
         console.info(`${LOG_PREFIX} [PLANNER.fatburn] 🔥 Fat burn window calculated:`, {
             waveEnd: formatTime(currentWaveEnd),
             fatBurnWindowMin: FAT_BURN_WINDOW_MIN,
             fatBurnEnd: formatTime(fatBurnEnd),
             currentTime: formatTime(currentTimeHours),
-            nextMealEarliest: formatTime(nextMealEarliest)
+            nextMealEarliest: formatTime(nextMealEarliest),
+            fastingApplied: !!fw
         });
 
         // === Шаг 3: Определить время сна и deadline последнего приёма ===
-        const sleepTarget = estimateSleepTarget(days, profile);
+        // R1-3 / R1-14: явный daySleepStart от UI имеет высший приоритет над усреднением.
+        const sleepTarget = estimateSleepTarget(days, profile, {
+            explicitSleepStart: daySleepStart,
+            currentTimeHours
+        });
         let lastMealDeadline = sleepTarget - PRE_SLEEP_BUFFER_HOURS;
         let hungerTradeoffApplied = false;
         let effectiveBuffer = PRE_SLEEP_BUFFER_HOURS;
 
+        // R4-5: moderate stress + late evening → сдвигаем deadline раньше на 30 мин.
+        // Стресс + поздняя еда → кортизол + пик инсулина перед сном → плохой сон
+        // (Halson 2014). Высокий stress уже захвачен STRESS_EATING сценарием;
+        // здесь корректируем для moderate уровня.
+        // R6-A: применяем shift только если после сдвига остаётся время поесть
+        // (deadline > currentTime). Иначе получим availableWindow с negative
+        // длиной (deadline в прошлом) — приходится откатывать через hunger
+        // tradeoff. Если сдвиг ломает план — пропускаем его.
+        if (stressMoodSignals?.stressLevel === 'moderate' && currentTimeHours >= 20) {
+            const shiftedDeadline = lastMealDeadline - 0.5;
+            if (shiftedDeadline > currentTimeHours) {
+                lastMealDeadline = shiftedDeadline;
+                effectiveBuffer = PRE_SLEEP_BUFFER_HOURS + 0.5;
+                console.info(`${LOG_PREFIX} [PLANNER.sleep] 🧘 Moderate stress + late evening → deadline сдвинут на 30 мин раньше`);
+            } else {
+                console.info(`${LOG_PREFIX} [PLANNER.sleep] 🧘 Moderate stress shift пропущен: shifted deadline (${formatTime(shiftedDeadline)}) уже в прошлом от currentTime (${formatTime(currentTimeHours)})`);
+            }
+        }
+
         console.info(`${LOG_PREFIX} [PLANNER.sleep] 🌙 Sleep planning:`, {
             sleepTarget: formatTime(sleepTarget),
-            preSleepBuffer: PRE_SLEEP_BUFFER_HOURS,
+            preSleepBuffer: effectiveBuffer,
             lastMealDeadline: formatTime(lastMealDeadline),
-            availableWindow: `${formatTime(nextMealEarliest)} → ${formatTime(lastMealDeadline)}`
+            availableWindow: `${formatTime(nextMealEarliest)} → ${formatTime(lastMealDeadline)}`,
+            stressLevel: stressMoodSignals?.stressLevel,
+            moodLevel: stressMoodSignals?.moodLevel
         });
 
         // === S4: POST_WORKOUT detection (Ivy, 2004) ===
-        // Анаболическое окно 2ч: 0.35 г/кг белка + 1.0 г/кг углеводов
-        const recentWorkout = params.currentDay?.workouts?.find(
-            w => w.endTime && (currentTimeHours - parseTime(w.endTime)) >= 0 && (currentTimeHours - parseTime(w.endTime)) < 2
-        );
-        if (recentWorkout) {
-            console.info(`${LOG_PREFIX} [workout] 💪 Recent workout detected (anabolic window active):`, {
-                endTime: recentWorkout.endTime,
-                hoursAgo: (currentTimeHours - parseTime(recentWorkout.endTime)).toFixed(1),
-                type: recentWorkout.type || 'unknown'
+        // R4-8: расширенное окно recovery. Ivy 2004 говорит про 2ч anabolic
+        // window, но Areta et al. 2013 показывает что MPS повышен до 24-48ч.
+        // Делаем градиент: full POST_WORKOUT в 0-2ч, плавно снижающийся
+        // recoveryFactor в 2-24ч (применяется к MPS_PROT_PER_KG в финальном
+        // распределении). Также различаем strength (priority белок) vs cardio
+        // (priority углеводы).
+        const allWorkouts = params.currentDay?.workouts || params.currentDay?.trainings || [];
+        // Найти последнюю тренировку в окне 24ч
+        let lastWorkout = null;
+        let hoursAfterWorkout = null;
+        for (const w of allWorkouts) {
+            const wTime = w.endTime || w.time;
+            if (!wTime) continue;
+            const wHours = parseTime(wTime);
+            const delta = currentTimeHours - wHours;
+            if (delta >= 0 && delta < 24) {
+                if (!lastWorkout || delta < hoursAfterWorkout) {
+                    lastWorkout = w;
+                    hoursAfterWorkout = delta;
+                }
+            }
+        }
+        // POST_WORKOUT scenario (0-2ч) — для применения к meal[0]
+        const recentWorkout = lastWorkout && hoursAfterWorkout < 2 ? lastWorkout : null;
+        // Recovery factor: 1.0 в 0-2ч, плавно снижается до 0 в 24ч
+        let workoutRecoveryFactor = 0;
+        if (lastWorkout && hoursAfterWorkout !== null) {
+            if (hoursAfterWorkout < 2) workoutRecoveryFactor = 1.0;
+            else if (hoursAfterWorkout < 6) workoutRecoveryFactor = 0.15;
+            else if (hoursAfterWorkout < 12) workoutRecoveryFactor = 0.10;
+            else if (hoursAfterWorkout < 24) workoutRecoveryFactor = 0.05;
+        }
+        const workoutType = (lastWorkout?.type || 'unknown').toLowerCase();
+        const isStrength = ['strength', 'силовая', 'sila', 'resistance'].some(s => workoutType.includes(s));
+        const isCardio = ['cardio', 'кардио', 'run', 'cycling', 'bike'].some(s => workoutType.includes(s));
+        if (lastWorkout) {
+            console.info(`${LOG_PREFIX} [PLANNER.recovery] 💪 Workout recovery:`, {
+                endTime: lastWorkout.endTime || lastWorkout.time,
+                hoursAgo: hoursAfterWorkout.toFixed(1),
+                type: workoutType,
+                recoveryFactor: workoutRecoveryFactor.toFixed(2),
+                scenario: recentWorkout ? 'POST_WORKOUT (full)' : 'recovery tail (gradient)',
+                isStrength,
+                isCardio
             });
         }
 
@@ -23691,7 +23905,52 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }
 
             if (!hungerTradeoffApplied) {
-                console.info(`${LOG_PREFIX} ℹ️ No time for additional meals (nextMeal >= deadline, deficit ${Math.round(quickBudgetKcal || 0)} kcal)`);
+                // R1-8: малый дефицит (50-400 kcal) + остаётся ≥2ч до сна → один лёгкий
+                // белковый приём вместо пустоты. Лечь с дырой в 200 kcal "под рукой" —
+                // это голодная ночь без причины, а казеин/творог перед сном не вредят
+                // (Kinsey & Ormsbee 2015 — pre-sleep protein, MPS overnight).
+                const hoursToSleep = sleepTarget - currentTimeHours;
+                if (quickBudgetKcal >= 50 && hoursToSleep >= 2.0 && hoursToSleep <= 4.0) {
+                    const lightStart = Math.max(currentTimeHours + 0.25, sleepTarget - 2.5);
+                    const lightEnd = Math.min(sleepTarget - 1.5, lightStart + 0.5);
+                    const protTarget = Math.min(25, Math.max(15, Math.round(quickBudgetKcal * 0.6 / 4)));
+                    const lightMeal = {
+                        index: 0,
+                        timeStart: formatTime(lightStart),
+                        timeEnd: formatTime(lightEnd),
+                        estimatedWaveEnd: formatTime(lightStart + 1.5),
+                        fatBurnWindow: { start: formatTime(lightStart + 1.5), end: formatTime(lightStart + 2.0) },
+                        macros: {
+                            prot: protTarget,
+                            carbs: Math.max(5, Math.round(quickBudgetKcal * 0.2 / 4)),
+                            fat: Math.max(3, Math.round(quickBudgetKcal * 0.2 / 9)),
+                            kcal: Math.round(quickBudgetKcal),
+                            effectiveKcal: protTarget * 3 + Math.round(quickBudgetKcal * 0.2 / 4) * 4 + Math.round(quickBudgetKcal * 0.2 / 9) * 9
+                        },
+                        isActionable: true,
+                        isLast: true,
+                        scenario: 'PRE_SLEEP',
+                        hoursToSleep: sleepTarget - lightStart,
+                        targetGL: GL_TARGET_PRE_SLEEP,
+                        sleepFriendlyCategories: SLEEP_FRIENDLY_CATEGORIES,
+                        stableId: `light|${formatTime(lightStart)}|PRE_SLEEP|0`
+                    };
+                    console.info(`${LOG_PREFIX} [PLANNER.light] 🥛 Tiny deficit ${Math.round(quickBudgetKcal)} kcal + ${hoursToSleep.toFixed(1)}h to sleep → single light protein meal`);
+                    return {
+                        available: true,
+                        meals: [lightMeal],
+                        summary: {
+                            totalMeals: 1,
+                            timelineStart: lightMeal.timeStart,
+                            timelineEnd: lightMeal.timeEnd,
+                            totalMacros: { prot: lightMeal.macros.prot, carbs: lightMeal.macros.carbs, kcal: lightMeal.macros.kcal },
+                            sleepTarget: formatTime(sleepTarget),
+                            lastMealDeadline: formatTime(sleepTarget - 1.5),
+                            reason: 'Лёгкий белковый приём перед сном (малый остаток)'
+                        }
+                    };
+                }
+                console.info(`${LOG_PREFIX} ℹ️ No time for additional meals (nextMeal >= deadline, deficit ${Math.round(quickBudgetKcal || 0)} kcal, hoursToSleep ${hoursToSleep.toFixed(1)}h)`);
                 return {
                     available: true,
                     meals: [],
@@ -23749,15 +24008,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             };
         }
 
-        // === S6: Adaptive wave from personal history (estimate) ===
-        const personalWaveHours = estimatePersonalWaveHours(days);
-        const effectiveProfile = personalWaveHours
-            ? { ...profile, insulinWaveHours: personalWaveHours }
-            : profile;
-        if (personalWaveHours) {
-            console.info(`${LOG_PREFIX} [wave] 🧬 Personal wave estimated from history:`, {
-                personalWaveHours: personalWaveHours.toFixed(2),
-                defaultWave: DEFAULT_WAVE_ESTIMATE_HOURS,
+        // R4-2: `estimatePersonalWaveHours` считает медиану ГЭПОВ между приёмами,
+        // а не длительность инсулиновой волны. Gap = wave + пауза без еды.
+        // Раньше эта медиана override-ила `profile.insulinWaveHours`, искажая
+        // расчёт волны для будущих приёмов (планнер растягивал план).
+        // Теперь: считаем медиану как user meal gap median (для информации в логах),
+        // но НЕ переопределяем insulinWaveHours. Будущие волны считаются через
+        // estimateWaveDuration → реальные модификаторы по составу.
+        const userMealGapMedian = estimatePersonalWaveHours(days);
+        const effectiveProfile = profile; // R4-2: больше не подменяем insulinWaveHours
+        if (userMealGapMedian) {
+            console.info(`${LOG_PREFIX} [wave] 🧬 User meal gap median (НЕ длительность волны):`, {
+                userMealGapMedianHours: userMealGapMedian.toFixed(2),
+                note: 'used for diagnostics only — wave duration comes from estimateWaveDuration per meal',
                 sampleDays: Math.min(days.length, PERSONAL_WAVE_DAYS_LOOKBACK)
             });
         }
@@ -23813,17 +24076,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 fatBurnEnd: formatTime(fatBurnWindowEnd)
             });
 
-            // Проверка: влезает ли ещё один приём после этого?
-            // S8 (v2.1.0): When forceMultiMeal on first iteration, use a minimum fixed gap (2h)
-            // instead of waiting for full wave + fat burn. Rationale:
-            // - Eating 1465 kcal in one sitting → excessive insulin spike, poor MPS distribution
-            // - Two meals with 2h gap → partial insulin overlap, but MUCH better protein synthesis
-            //   and glycemic load distribution (Areta et al., 2013; Ludwig, 2002)
-            // - Personal wave (median meal gap) INCLUDES fat burn + buffer already → double-counting
-            // The min gap of 2h allows ~50% insulin decay before second meal (sufficient for physiology)
-            const MIN_FORCE_MULTI_GAP_H = 2.0;
+            // R1-9 / R3-2: Динамический gap для forceMultiMeal. Раньше был фикс 2ч,
+            // что для тяжёлого приёма (большая волна) недостаточно — следующая волна
+            // накладывается на предыдущую перед сном. Теперь gap = max(2ч, 75% волны).
+            // Это сохраняет wave-aware физиологию, не возвращаясь к жёсткой константе.
+            const MIN_FORCE_MULTI_GAP_H_FLOOR = 2.0;
+            const dynamicForceGap = Math.max(MIN_FORCE_MULTI_GAP_H_FLOOR, estimatedWave * 0.75);
             const nextPossibleStart = forceMultiMeal && plannedMeals.length === 0
-                ? cursor + Math.min(estimatedWave, MIN_FORCE_MULTI_GAP_H)  // S8: tight 2h gap
+                ? cursor + Math.min(estimatedWave, dynamicForceGap)
                 : fatBurnWindowEnd;
             // 🆕 v1.4: Корректный критерий:
             //   1. nextPossibleStart должен быть ДО deadline (sleepTarget - 3h)
@@ -23885,7 +24145,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             });
             console.info(`${LOG_PREFIX} [PLANNER.loop.${iteration}] ✅ Added meal, moving cursor forward`);
 
-            // Двигаем курсор — S8: use same tight gap as fitsAnotherMeal check
+            // Двигаем курсор — R1-9: используем тот же dynamicForceGap, что и в fitsAnotherMeal check
             cursor = forceMultiMeal ? nextPossibleStart : fatBurnWindowEnd;
         }
 
@@ -23905,40 +24165,142 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             plannedMeals[i].sleepFriendlyCategories = plannedMeals[i].hoursToSleep < PRE_SLEEP_BUFFER_HOURS
                 ? SLEEP_FRIENDLY_CATEGORIES
                 : null;
-            // Обновить сценарий
-            plannedMeals[i].scenario = detectMealScenario(
+            // R5-D / R6-B: detectMealScenario может перезаписать recommender scenario.
+            // Сохраняем оригинал. Для первого приёма (actionable) — приоритет scenarioHint
+            // от recommender если он более специфичен (нести смысл, которого нет в
+            // generic PRE_SLEEP/LIGHT_SNACK/PROTEIN_DEFICIT/BALANCED).
+            const baselineScenario = detectMealScenario(
                 i,
                 plannedMeals.length,
                 finalBudgets[i],
                 plannedMeals[i].hoursToSleep
             );
+            const isFirstMeal = i === 0;
+            // R6-B: расширили список специфичных сценариев. Все scenario от
+            // recommender кроме generic BALANCED — несут осмысленную нагрузку.
+            const genericScenarios = ['BALANCED', 'PRE_SLEEP', 'LIGHT_SNACK', 'PROTEIN_DEFICIT'];
+            const isSpecificHint = scenarioHint && !genericScenarios.includes(scenarioHint);
+            if (isFirstMeal && isSpecificHint) {
+                plannedMeals[i].scenario = scenarioHint;
+                plannedMeals[i].scenarioBaseline = baselineScenario;
+                plannedMeals[i].scenarioSource = 'recommender';
+            } else {
+                plannedMeals[i].scenario = baselineScenario;
+                plannedMeals[i].scenarioSource = 'planner';
+            }
         }
 
         // S2: Protein-per-Meal MPS Optimization (Areta et al., 2013)
-        const optimalProtPerMeal = Math.min(MPS_PROT_MAX_G, Math.round((profile.weight || 70) * MPS_PROT_PER_KG));
+        // R1-10: используем getWeightKg с fallback цепочкой вместо profile.weight || 70
+        // R4-8: при recovery (>2ч после strength) повышаем target белка на 5-15%
+        // для распределённого MPS (Areta 2013: повышенный MPS до 24-48ч).
+        const weightKg = getWeightKg(profile);
+        let mpsProtPerKgEffective = MPS_PROT_PER_KG;
+        if (workoutRecoveryFactor > 0 && !recentWorkout) {
+            // post-workout 0-2ч обрабатывается отдельно ниже (POST_WORKOUT override)
+            // здесь — recovery tail для всех meals
+            const boost = isStrength ? 0.15 : isCardio ? 0.05 : 0.10;
+            mpsProtPerKgEffective = MPS_PROT_PER_KG * (1 + boost * workoutRecoveryFactor);
+            console.info(`${LOG_PREFIX} [PLANNER.recovery] 💪 MPS_PROT_PER_KG boosted ${MPS_PROT_PER_KG.toFixed(2)} → ${mpsProtPerKgEffective.toFixed(2)} (recovery tail, ${isStrength ? 'strength' : isCardio ? 'cardio' : 'mixed'})`);
+        }
+        const optimalProtPerMeal = Math.min(MPS_PROT_MAX_G, Math.round(weightKg * mpsProtPerKgEffective));
         let mpsBoostCount = 0;
         for (const meal of plannedMeals) {
             if (meal.macros.prot < optimalProtPerMeal && meal.macros.kcal > 200) {
                 const protDelta = Math.min(optimalProtPerMeal - meal.macros.prot, 15); // cap delta
                 meal.macros.prot += protDelta;
+                // R1-11: вычитая углеводы, мы теряли ~4 ккал/г, а добавленный белок даёт
+                // +4 ккал/г → нетто 0 (углевод и белок изоэнергетичны).
+                // Поправка: убираем меньше углеводов, чтобы общий kcal не падал.
+                // 1 г белка = 4 ккал, 1 г углеводов = 4 ккал → 1:1 замена.
+                const carbsBefore = meal.macros.carbs;
                 meal.macros.carbs = Math.max(10, meal.macros.carbs - protDelta);
+                const actualCarbsRemoved = carbsBefore - meal.macros.carbs;
+                // Если потеряли меньше углеводов чем добавили белка (упёрлись в минимум 10г) —
+                // компенсируем разницу из жиров чтобы kcal не вырос.
+                if (actualCarbsRemoved < protDelta) {
+                    const kcalSurplus = (protDelta - actualCarbsRemoved) * 4; // лишние ккал от белка
+                    const fatToTrim = Math.min(Math.round(kcalSurplus / 9), Math.max(0, meal.macros.fat - 3));
+                    if (fatToTrim > 0) {
+                        meal.macros.fat -= fatToTrim;
+                    }
+                }
+                // Пересчёт kcal из БЖУ — чтобы summary не разъезжалось с фактическими макросами
+                meal.macros.kcal = meal.macros.prot * 4 + meal.macros.carbs * 4 + meal.macros.fat * 9;
+                meal.macros.effectiveKcal = meal.macros.prot * 3 + meal.macros.carbs * 4 + meal.macros.fat * 9;
                 mpsBoostCount++;
             }
         }
         if (mpsBoostCount > 0) {
-            console.info(`${LOG_PREFIX} [mps] 💪 MPS protein boost (${optimalProtPerMeal}г/приём) applied to ${mpsBoostCount} meals`);
+            console.info(`${LOG_PREFIX} [mps] 💪 MPS protein boost (${optimalProtPerMeal}г/приём, weight ${weightKg}кг) applied to ${mpsBoostCount} meals; kcal preserved`);
         }
 
         // S4: POST_WORKOUT — override first meal if anabolic window active (Ivy, 2004)
         if (recentWorkout && plannedMeals.length > 0) {
-            const postProt = Math.min(Math.round((profile.weight || 70) * 0.35), Math.round(remainingBudget.prot * 0.85));
-            const postCarbs = Math.min(Math.round((profile.weight || 70) * 1.0), Math.round(remainingBudget.carbs * 0.85));
+            // R1-10: тот же getWeightKg вместо profile.weight || 70
+            const postProt = Math.min(Math.round(weightKg * 0.35), Math.round(remainingBudget.prot * 0.85));
+            const postCarbs = Math.min(Math.round(weightKg * 1.0), Math.round(remainingBudget.carbs * 0.85));
             plannedMeals[0].macros.prot = postProt;
             plannedMeals[0].macros.carbs = postCarbs;
             plannedMeals[0].scenario = 'POST_WORKOUT';
             console.info(`${LOG_PREFIX} [workout] 🏋️ POST_WORKOUT macros applied to meal 1:`, {
                 prot: postProt, carbs: postCarbs, hoursAgo: (currentTimeHours - parseTime(recentWorkout.endTime)).toFixed(1)
             });
+        }
+
+        // R6-C: heavy meal pre-sleep cap. При hoursToSleep < PRE_SLEEP_BUFFER_HOURS
+        // (3ч) hunger tradeoff может пропустить тяжёлый ужин близко к сну. Такой
+        // приём даёт инсулиновую волну во время сна → плохой сон (Halson 2014).
+        // Клиппинг: если kcal > 400 И hoursToSleep < 3 → урезаем kcal до 400,
+        // приоритет белку (для MPS overnight), углеводы и жиры пропорционально
+        // вниз. Лишний дефицит лучше тяжёлой ночи.
+        const PRE_SLEEP_HEAVY_KCAL_CAP = 400;
+        for (const meal of plannedMeals) {
+            const hSleep = Number(meal.hoursToSleep) || 0;
+            if (hSleep > 0 && hSleep < PRE_SLEEP_BUFFER_HOURS && (meal.macros.kcal || 0) > PRE_SLEEP_HEAVY_KCAL_CAP) {
+                const beforeKcal = meal.macros.kcal;
+                // Сохраняем белок (важен для overnight MPS), масштабируем углеводы и жиры
+                const proteinKcal = (meal.macros.prot || 0) * 4;
+                const remainingCapKcal = Math.max(0, PRE_SLEEP_HEAVY_KCAL_CAP - proteinKcal);
+                const currentCarbsKcal = (meal.macros.carbs || 0) * 4;
+                const currentFatKcal = (meal.macros.fat || 0) * 9;
+                const currentNonProteinKcal = currentCarbsKcal + currentFatKcal;
+                if (currentNonProteinKcal > 0) {
+                    const scale = remainingCapKcal / currentNonProteinKcal;
+                    meal.macros.carbs = Math.round((meal.macros.carbs || 0) * scale);
+                    meal.macros.fat = Math.round((meal.macros.fat || 0) * scale);
+                }
+                console.info(`${LOG_PREFIX} [PLANNER.presleep] 🛌 Heavy pre-sleep cap: meal ${formatTime(parseTime(meal.timeStart))}, hoursToSleep=${hSleep.toFixed(1)}, kcal ${Math.round(beforeKcal)} → cap ${PRE_SLEEP_HEAVY_KCAL_CAP}. Белок сохранён, carbs/fat урезаны.`);
+                meal.presleepCapped = true;
+
+                // R7-A: пересчитать estimatedWaveEnd и fatBurnWindow под новый
+                // (меньший) приём. Иначе UI показывает «волна до 01:17» от старого
+                // тяжёлого расчёта — пугает юзера, противоречит факту cap'а.
+                try {
+                    const newWaveHours = estimateWaveDuration(meal.macros, effectiveProfile);
+                    const mealStart = parseTime(meal.timeStart);
+                    const newWaveEnd = mealStart + newWaveHours;
+                    const newFatBurnEnd = newWaveEnd + minutesToHours(FAT_BURN_WINDOW_MIN);
+                    meal.estimatedWaveEnd = formatTime(newWaveEnd);
+                    meal.fatBurnWindow = {
+                        start: formatTime(newWaveEnd),
+                        end: formatTime(newFatBurnEnd)
+                    };
+                    console.info(`${LOG_PREFIX} [PLANNER.presleep] 🌊 Wave recomputed for capped meal: waveEnd ${meal.estimatedWaveEnd}, fatBurn ${meal.fatBurnWindow.start} → ${meal.fatBurnWindow.end} (${newWaveHours.toFixed(1)}ч)`);
+                } catch (e) {
+                    console.warn(`${LOG_PREFIX} [PLANNER.presleep] ⚠️ wave recompute failed: ${e.message}`);
+                }
+            }
+        }
+
+        // R5-B: финальный guard — после всех модификаций (POST_WORKOUT, MPS-бус,
+        // R6-C presleep cap) гарантируем что meal.macros.kcal согласован с БЖУ.
+        for (const meal of plannedMeals) {
+            const recomputed = (meal.macros.prot || 0) * 4 + (meal.macros.carbs || 0) * 4 + (meal.macros.fat || 0) * 9;
+            if (Math.abs(recomputed - (meal.macros.kcal || 0)) > 5) {
+                console.info(`${LOG_PREFIX} [PLANNER.kcal] 🔧 kcal recomputed from macros: ${Math.round(meal.macros.kcal)} → ${recomputed} (P${meal.macros.prot}*4+C${meal.macros.carbs}*4+F${meal.macros.fat}*9)`);
+            }
+            meal.macros.kcal = recomputed;
         }
 
         console.info(`${LOG_PREFIX} [PLANNER.result] ✅ Planned meals:`, {
@@ -23960,6 +24322,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
 
         // === Шаг 7: Формирование summary ===
+        // R4-6: advisories — диагностические подсказки из истории паттернов.
+        const advisories = [];
+        if (Number.isFinite(waveOverlapPct) && waveOverlapPct > 40) {
+            advisories.push({
+                key: 'wave_overlap',
+                severity: waveOverlapPct > 60 ? 'high' : 'medium',
+                text: `Часто ешь до окончания волны (${Math.round(waveOverlapPct)}% дней). Попробуй держать gap ≥4ч между приёмами для жиросжигания.`
+            });
+        }
+        if (stressMoodSignals?.stressLevel === 'high') {
+            advisories.push({
+                key: 'high_stress',
+                severity: 'medium',
+                text: 'Высокий стресс — лёгкий ужин и магний-богатые продукты улучшат сон.'
+            });
+        }
+
         const summary = {
             totalMeals: plannedMeals.length,
             timelineStart: plannedMeals[0]?.timeStart,
@@ -23970,7 +24349,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 kcal: finalBudgets.reduce((sum, b) => sum + b.kcal, 0)
             },
             sleepTarget: formatTime(sleepTarget),
-            lastMealDeadline: formatTime(lastMealDeadline)
+            lastMealDeadline: formatTime(lastMealDeadline),
+            advisories: advisories.length > 0 ? advisories : undefined
         };
 
         return {
@@ -24237,6 +24617,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         PRE_WORKOUT: 'PRE_WORKOUT',
         POST_WORKOUT: 'POST_WORKOUT',
         PROTEIN_DEFICIT: 'PROTEIN_DEFICIT',
+        MICRONUTRIENT_FOCUS: 'MICRONUTRIENT_FOCUS', // R4-4: при 2+ серьёзных дефицитах
+        MOOD_SUPPORT_BREAKFAST: 'MOOD_SUPPORT_BREAKFAST', // R4-5: low mood + morning
         STRESS_EATING: 'STRESS_EATING',
         BALANCED: 'BALANCED'
     };
@@ -24250,6 +24632,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         [SCENARIOS.PRE_WORKOUT]: '⚡',
         [SCENARIOS.POST_WORKOUT]: '💪',
         [SCENARIOS.PROTEIN_DEFICIT]: '🥩',
+        [SCENARIOS.MICRONUTRIENT_FOCUS]: '🥬', // R4-4
+        [SCENARIOS.MOOD_SUPPORT_BREAKFAST]: '🌅', // R4-5
         [SCENARIOS.STRESS_EATING]: '🧘',
         [SCENARIOS.BALANCED]: '🍽️'
     };
@@ -24264,7 +24648,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 timeEnd: meal?.timeEnd,
                 macros: meal?.macros,
                 scenario: meal?.scenario,
-                locked: !!meal?.locked
+                locked: !!meal?.locked,
+                // R8-C: сохраняем остальные поля meal чтобы restore возвращал
+                // полноценный объект, а не «scenario:? hoursToSleep:? wave end:?»
+                scenarioSource: meal?.scenarioSource || null,
+                scenarioBaseline: meal?.scenarioBaseline || null,
+                hoursToSleep: meal?.hoursToSleep,
+                targetGL: meal?.targetGL,
+                sleepFriendlyCategories: meal?.sleepFriendlyCategories || null,
+                estimatedWaveEnd: meal?.estimatedWaveEnd,
+                fatBurnWindow: meal?.fatBurnWindow ? { ...meal.fatBurnWindow } : null,
+                isActionable: !!meal?.isActionable,
+                isLast: !!meal?.isLast,
+                presleepCapped: !!meal?.presleepCapped
             })),
             summary: mealsPlan.summary || null
         };
@@ -24385,7 +24781,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
      * @returns {object} - Scenario + metadata
      * @private
      */
-    function analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds) {
+    function analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds, patternHints = null) {
         const targetKcal = dayTarget.kcal || profile.optimum || 2000;
         const targetProtein = dayTarget.protein || profile.norm?.prot || 120;
         const eatenKcal = dayEaten.kcal || 0;
@@ -24539,7 +24935,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             };
         }
 
+        // R4-5: MOOD_SUPPORT_BREAKFAST (priority 5.5) — low mood + morning.
+        // Идёт ВЫШЕ STRESS_EATING потому что для утра нет смысла в anti-stress,
+        // нужны триптофановые продукты для серотонина (молочное, бананы, орехи).
+        const moodSupportBreakfastApplicable = mood <= 2 && currentHour < 11 && remainingKcal > 200;
+        scenarioCandidates.push({
+            priority: 5.5,
+            scenario: SCENARIOS.MOOD_SUPPORT_BREAKFAST,
+            applicable: moodSupportBreakfastApplicable,
+            reason: moodSupportBreakfastApplicable ? `Утро + низкое настроение (mood ${mood}/5)` : `mood ${mood}/5, час ${currentHour}`,
+            metadata: { mood, currentHour }
+        });
+        if (moodSupportBreakfastApplicable) {
+            scenarioCandidates[scenarioCandidates.length - 1].winner = true;
+            console.group(`${LOG_PREFIX} 🏆 Scenario evaluation: Winner: ${SCENARIOS.MOOD_SUPPORT_BREAKFAST} (priority 5.5)`);
+            console.table(scenarioCandidates);
+            console.groupEnd();
+            return {
+                scenario: SCENARIOS.MOOD_SUPPORT_BREAKFAST,
+                reason: `Утро + поддержка настроения`,
+                icon: SCENARIO_ICONS[SCENARIOS.MOOD_SUPPORT_BREAKFAST],
+                metadata: { mood, currentHour, hint: 'триптофан: молочное, бананы, орехи' }
+            };
+        }
+
         // 6. STRESS_EATING (higher priority than PROTEIN_DEFICIT)
+        // R4-5: остаётся бинарным (stress≥4 OR mood≤2 после морнинга). Градация
+        // moderate-stress применяется в planner для сдвига deadline (R4-5 ниже).
         const stressEatingApplicable = stress >= 4 || mood <= 2;
         scenarioCandidates.push({
             priority: 6,
@@ -24558,6 +24980,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 reason: stress >= 4 ? 'Высокий стресс' : 'Низкое настроение',
                 icon: SCENARIO_ICONS[SCENARIOS.STRESS_EATING],
                 metadata: { stress, mood }
+            };
+        }
+
+        // R4-4: MICRONUTRIENT_FOCUS — 2+ серьёзных дефицита из истории
+        // (iron/magnesium/zinc/calcium < 50%). Активен для не-последних приёмов.
+        // R5-X: при low-carb профиле (dayTarget.carbs = 0) этот сценарий
+        // ставит 200г углеводов, которые safety net потом скейлит вниз и
+        // planner перезатирает на floor 40г. Чтобы не плодить путаницу — отключаем.
+        const micronutrientDeficits = patternHints?.micronutrients?.deficits || [];
+        const seriousDeficits = micronutrientDeficits.filter((d) => Number(d?.avgPct) < 50);
+        const isLikelyLastMeal = remainingKcal < 700 && currentHour >= 19;
+        const isLowCarbProfile = (Number(dayTarget?.carbs) || Number(dayTarget?.carb) || 0) < 30;
+        const micronutrientFocusApplicable = seriousDeficits.length >= 2 && remainingKcal > 200 && !isLikelyLastMeal && !isLowCarbProfile;
+        scenarioCandidates.push({
+            priority: 6.5,
+            scenario: SCENARIOS.MICRONUTRIENT_FOCUS,
+            applicable: micronutrientFocusApplicable,
+            reason: micronutrientFocusApplicable
+                ? `${seriousDeficits.length} дефицита: ${seriousDeficits.map((d) => `${d.nutrient} ${Math.round(d.avgPct)}%`).join(', ')}`
+                : (seriousDeficits.length < 2 ? `только ${seriousDeficits.length} серьёзных дефицит(ов)` : (isLikelyLastMeal ? 'последний приём дня — отложено' : 'мало бюджета')),
+            metadata: { seriousDeficits: seriousDeficits.map((d) => d.nutrient), deficitsCount: seriousDeficits.length }
+        });
+        if (micronutrientFocusApplicable) {
+            scenarioCandidates[scenarioCandidates.length - 1].winner = true;
+            console.group(`${LOG_PREFIX} 🏆 Scenario evaluation: Winner: ${SCENARIOS.MICRONUTRIENT_FOCUS} (priority 6.5)`);
+            console.table(scenarioCandidates);
+            console.groupEnd();
+            return {
+                scenario: SCENARIOS.MICRONUTRIENT_FOCUS,
+                reason: `Дефицит: ${seriousDeficits.map((d) => d.nutrient).join(', ')}`,
+                icon: SCENARIO_ICONS[SCENARIOS.MICRONUTRIENT_FOCUS],
+                metadata: { targetMicronutrients: seriousDeficits.map((d) => d.nutrient) }
             };
         }
 
@@ -24676,7 +25130,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const patternHints = loadPatternHints(days, profile, pIndex);
 
         // Analyze context → determine scenario (v2.4 feature)
-        const contextAnalysis = analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds);
+        const contextAnalysis = analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds, patternHints);
         console.info(`${LOG_PREFIX} 🎯 Scenario detected:`, {
             scenario: contextAnalysis.scenario,
             reason: contextAnalysis.reason,
@@ -24771,6 +25225,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 mode: hasLastMealTime ? 'wave-aware' : 'first-meal-of-day'
             });
             try {
+                // R4-5: gradient stress/mood для сдвига deadline в planner.
+                // moderate stress (≥3) + late evening + low mood ухудшает качество сна.
+                const _stress = Number(context.lastMeal?.stress) || Number(context?.stress) || 3;
+                const _mood = Number(context.lastMeal?.mood) || Number(context?.mood) || 3;
+                const stressMoodSignals = {
+                    stressLevel: _stress >= 4 ? 'high' : _stress >= 3 ? 'moderate' : 'low',
+                    moodLevel: _mood <= 2 ? 'low' : _mood >= 4 ? 'high' : 'neutral'
+                };
+                // R4-6: передать waveOverlap в planner для advisory
+                const _waveOverlap = patternHints?.waveOverlap?.avgOverlapPct;
+
                 const plannerInput = {
                     currentTime: context.currentTime || getCurrentTime(),
                     lastMeal: lastMeal,
@@ -24779,6 +25244,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     profile: profile,
                     days: days,
                     pIndex: pIndex,
+                    // R1-14: явный sleepStart дня имеет приоритет над усреднением истории
+                    daySleepStart: context.daySleepStart || null,
+                    isRefeedDay: !!context.isRefeedDay,
+                    // R4-5: gradient stress/mood signals
+                    stressMoodSignals,
+                    // R4-6: waveOverlap для adaptive gap и advisory
+                    waveOverlapPct: Number.isFinite(_waveOverlap) ? _waveOverlap : null,
+                    // R5-D: передаём scenario от recommender чтобы planner мог сохранить
+                    // специфичные сценарии (MICRONUTRIENT_FOCUS, MOOD_SUPPORT_BREAKFAST)
+                    // для первого meal вместо generic PRE_SLEEP от detectMealScenario.
+                    scenarioHint: contextAnalysis?.scenario || null,
                     replanReason,
                     previousPlanState,
                     lockedMeals: previousPlanState?.lockedMeals || []
@@ -24794,12 +25270,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     mealsPlan = HEYS.InsightsPI.mealPlanner.planRemainingMeals(plannerInput);
                 }
 
-                if (!isPlanValid(mealsPlan, dayTarget, dayEaten) && previousPlanState?.lastStablePlan) {
+                // R8-A: НЕ восстанавливать stable snapshot если текущий scenario
+                // — терминальный (GOAL_REACHED). Юзер достиг цели → старый план
+                // (от момента когда цель была не выполнена) неактуален. Иначе
+                // карточка покажет «🎯 Цель достигнута» + meal с макросами поверх.
+                const isTerminalScenario = contextAnalysis?.scenario === SCENARIOS.GOAL_REACHED;
+                if (!isPlanValid(mealsPlan, dayTarget, dayEaten) && previousPlanState?.lastStablePlan && !isTerminalScenario) {
                     const restored = restoreStablePlanSnapshot(previousPlanState.lastStablePlan, 'FULL_PLAN_INVALID_RESTORED');
                     if (restored) {
                         plannerMeta = { ...plannerMeta, fallbackUsed: true, fallbackType: 'restore_last_stable' };
                         mealsPlan = restored;
                     }
+                } else if (isTerminalScenario && previousPlanState?.lastStablePlan) {
+                    console.info(`${LOG_PREFIX} [MEALREC.planner] 🎯 GOAL_REACHED — stable snapshot НЕ восстанавливается (терминальный сценарий)`);
                 }
 
                 if (isIncrementalReplan && replanControls.shadowCompareEnabled) {
@@ -24931,7 +25414,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 }
             } catch (err) {
                 console.warn(`${LOG_PREFIX} [MEALREC.planner] ⚠️ Failed to generate meal plan:`, err.message);
-                const restored = restoreStablePlanSnapshot(previousPlanState?.lastStablePlan, 'PLANNER_EXCEPTION_RESTORED');
+                // R8-A: тот же guard для exception path
+                const isTerminalScenarioErr = contextAnalysis?.scenario === SCENARIOS.GOAL_REACHED;
+                const restored = isTerminalScenarioErr ? null : restoreStablePlanSnapshot(previousPlanState?.lastStablePlan, 'PLANNER_EXCEPTION_RESTORED');
                 if (restored) {
                     plannerMeta = { ...plannerMeta, fallbackUsed: true, fallbackType: 'planner_exception_restore' };
                     mealsPlan = restored;
@@ -24943,26 +25428,63 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             console.info(`${LOG_PREFIX} [MEALREC.planner] ❌ Conditions NOT met for multi-meal planning`);
         }
 
-        // v4.0.6: Synchronize timing with planner's first meal if planner computed a later start
-        // This ensures the card header shows wave-aware timing instead of naive gap-based timing
+        // R1-15: двусторонний timing sync. Раньше обновляли только если planner вернул
+        // ПОЗЖЕ recommender'а — но planner всегда авторитетен (он учёл волну, жиросжигание,
+        // deadline до сна). Если он вернул раньше — это тоже его решение.
         if (mealsPlan?.available && mealsPlan.meals?.length > 0) {
             const firstPlannedMeal = mealsPlan.meals[0];
             if (firstPlannedMeal.timeStart) {
                 const plannerStartHours = parseTime(firstPlannedMeal.timeStart);
-                if (plannerStartHours > timingRec.idealStart) {
-                    const plannerEndHours = firstPlannedMeal.timeEnd ? parseTime(firstPlannedMeal.timeEnd) : plannerStartHours + 1;
-                    console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Timing sync: planner start is later than recommender`, {
+                const plannerEndHours = firstPlannedMeal.timeEnd ? parseTime(firstPlannedMeal.timeEnd) : plannerStartHours + 1;
+                const driftHours = plannerStartHours - (timingRec.idealStart || plannerStartHours);
+                if (Math.abs(driftHours) > 0.01) {
+                    console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Timing sync (bidirectional):`, {
                         recommenderTiming: timingRec.ideal,
                         plannerStart: firstPlannedMeal.timeStart,
                         plannerEnd: firstPlannedMeal.timeEnd,
-                        action: 'updating timingRec to planner timing'
+                        driftHours: driftHours.toFixed(2),
+                        direction: driftHours > 0 ? 'planner_later' : 'planner_earlier'
                     });
-                    timingRec.idealStart = plannerStartHours;
-                    timingRec.idealEnd = plannerEndHours;
-                    timingRec.ideal = `${formatTime(plannerStartHours)}-${formatTime(plannerEndHours)}`;
-                    timingRec.reason = `Планировщик: после инсулиновой волны + жиросжигание`;
-                    timingRec.plannerSynced = true;
                 }
+                timingRec.idealStart = plannerStartHours;
+                timingRec.idealEnd = plannerEndHours;
+                timingRec.ideal = `${formatTime(plannerStartHours)}-${formatTime(plannerEndHours)}`;
+                timingRec.reason = `Планировщик: после инсулиновой волны + жиросжигание`;
+                timingRec.plannerSynced = true;
+            }
+
+            // R4-1: macros sync. Раньше header показывал recommender.macros (618 kcal от
+            // LAST MEAL OVERRIDE = 90% бюджета), а planner возвращал 686 kcal после
+            // MPS-буста. Юзер видел разные цифры. Planner — авторитетный источник
+            // физиологии (учёл MPS, POST_WORKOUT, distributeBudget). Синхронизируем.
+            const m0 = firstPlannedMeal.macros;
+            if (m0 && Number.isFinite(m0.kcal)) {
+                const before = { protein: macrosRec.protein, carbs: macrosRec.carbs, fat: macrosRec.fat, kcal: macrosRec.kcal };
+                macrosRec.protein = Math.round(m0.prot || 0);
+                macrosRec.carbs = Math.round(m0.carbs || 0);
+                macrosRec.fat = Math.round(m0.fat || 0);
+                macrosRec.kcal = Math.round(m0.kcal || 0);
+                // Перерасчёт ranges от синхронизированных макросов
+                macrosRec.proteinRange = `${Math.max(0, macrosRec.protein - 5)}-${macrosRec.protein + 5}`;
+                macrosRec.carbsRange = `${Math.max(0, macrosRec.carbs - 10)}-${macrosRec.carbs + 10}`;
+                macrosRec.kcalRange = `${Math.max(0, macrosRec.kcal - 50)}-${macrosRec.kcal + 50}`;
+                macrosRec.plannerSynced = true;
+                console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Macros sync (planner = source of truth):`, {
+                    before, after: { protein: macrosRec.protein, carbs: macrosRec.carbs, fat: macrosRec.fat, kcal: macrosRec.kcal }
+                });
+            }
+
+            // R6-B: scenario sync. Если planner сохранил specific scenario от
+            // recommender (например MICRONUTRIENT_FOCUS) — header остаётся как есть.
+            // Если planner выбрал свой baseline scenario (PRE_SLEEP, BALANCED) —
+            // header тоже должен показывать его, иначе будет рассинхрон с timeline.
+            const plannerScenario = firstPlannedMeal.scenario;
+            const plannerScenarioSource = firstPlannedMeal.scenarioSource;
+            if (plannerScenario && plannerScenarioSource === 'planner' && plannerScenario !== contextAnalysis.scenario) {
+                console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Scenario sync: header ${contextAnalysis.scenario} → ${plannerScenario} (planner авторитетен для конкретного meal)`);
+                contextAnalysis.scenario = plannerScenario;
+                contextAnalysis.icon = SCENARIO_ICONS[plannerScenario] || contextAnalysis.icon;
+                contextAnalysis.scenarioSyncedToPlanner = true;
             }
         }
 
@@ -25440,10 +25962,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         // P0 Fix: Ensure timing never in past
         if (idealStart < currentTime) {
+            const phaseAOverridden = phaseATimingShiftMin > 0;
             console.warn(`[${LOG_FILTER}] ⚠️ Adjusted timing to current time (was in past):`, {
                 originalStart: formatTime(idealStart),
                 adjustedStart: formatTime(currentTime),
-                hoursSinceLastMeal: hoursSinceLastMeal.toFixed(1)
+                hoursSinceLastMeal: hoursSinceLastMeal.toFixed(1),
+                phaseAShiftWastedMin: phaseAOverridden ? phaseATimingShiftMin : 0,
+                note: phaseAOverridden ? 'Phase A shift был применён но затёрся currentTime guard — пользователь зашёл позже optimal' : undefined
             });
             idealStart = currentTime;
             idealEnd = Math.max(idealEnd, currentTime + 0.5);
@@ -28050,6 +28575,189 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const DEFAULT_REPLAN_REASON = 'INITIAL_LOAD';
     const REPLAN_DEBOUNCE_MS = 220;
 
+    // === Diagnostics ring buffer ===
+    // Кольцевой буфер логов планнера для копирования юзером.
+    // Перехватываем console.info/warn/error и фильтруем по префиксам
+    // [PLANNER, [MEALREC, [mps, [wave, [chrono, [workout, [HEYS.mealRec.
+    const PLANNER_LOG_BUFFER_SIZE = 400;
+    const plannerLogBuffer = [];
+    function pushPlannerLog(level, args) {
+        if (!args || !args.length) return;
+        const first = args[0];
+        if (typeof first !== 'string') return;
+        // Захватываем только релевантные планнеру логи
+        if (!/\[(MEALREC|HEYS\.mealRec|PLANNER\.|mps|wave|workout|chrono|MEALREC\.)/i.test(first)) return;
+        try {
+            const formattedArgs = args.slice(1).map((a) => {
+                if (a === null || a === undefined) return String(a);
+                if (typeof a === 'string' || typeof a === 'number' || typeof a === 'boolean') return String(a);
+                try { return JSON.stringify(a); } catch (e) { return '[unserializable]'; }
+            });
+            plannerLogBuffer.push({
+                t: Date.now(),
+                level,
+                msg: first.replace(/\[MEALREC\]\[HEYS\.mealRec\.[a-z]+\]\s*/, '').trim(),
+                args: formattedArgs
+            });
+            if (plannerLogBuffer.length > PLANNER_LOG_BUFFER_SIZE) {
+                plannerLogBuffer.splice(0, plannerLogBuffer.length - PLANNER_LOG_BUFFER_SIZE);
+            }
+        } catch (e) { /* ignore buffer errors */ }
+    }
+    if (!global.__heysPlannerLogPatched) {
+        global.__heysPlannerLogPatched = true;
+        const origInfo = console.info.bind(console);
+        const origWarn = console.warn.bind(console);
+        const origError = console.error.bind(console);
+        console.info = function (...args) { pushPlannerLog('info', args); return origInfo(...args); };
+        console.warn = function (...args) { pushPlannerLog('warn', args); return origWarn(...args); };
+        console.error = function (...args) { pushPlannerLog('error', args); return origError(...args); };
+    }
+    global.__heysPlannerLogBuffer = plannerLogBuffer; // для отладки через DevTools
+
+    /**
+     * Собрать диагностический отчёт по текущему состоянию Планнера.
+     * Возвращает многострочный текст для копирования в буфер обмена.
+     */
+    function buildPlannerDiagnosticReport({ day, prof, dayTot, normAbs, optimum, pIndex, recommendation }) {
+        const lines = [];
+        const sep = '═'.repeat(64);
+        const dash = '─'.repeat(64);
+        lines.push('HEYS PLANNER DIAGNOSTIC REPORT');
+        lines.push(sep);
+        lines.push(`Time: ${new Date().toISOString()}`);
+        lines.push(`Day: ${day?.date || '(no date)'} ${day?.isRefeedDay ? '⚠ REFEED' : ''}`);
+        lines.push(`Client: ${global.HEYS?.currentClientId || '(unknown)'}`);
+        lines.push('');
+
+        // 1) Входной контекст
+        lines.push('▼ INPUT CONTEXT');
+        lines.push(dash);
+        const meals = Array.isArray(day?.meals) ? day.meals : [];
+        const sortedMeals = meals.filter((m) => m && m.time).slice().sort((a, b) => {
+            const pa = (a.time || '').split(':').map(Number); const pb = (b.time || '').split(':').map(Number);
+            return (pa[0] || 0) * 60 + (pa[1] || 0) - ((pb[0] || 0) * 60 + (pb[1] || 0));
+        });
+        const lastMeal = sortedMeals[sortedMeals.length - 1] || null;
+        lines.push(`Current time: ${new Date().toTimeString().slice(0, 5)}`);
+        lines.push(`Meals today: ${meals.length} (sorted: ${sortedMeals.map((m) => m.time).join(', ') || '(none)'})`);
+        lines.push(`Last meal: ${lastMeal?.time || '(none — first meal of day)'}`);
+        if (lastMeal?.items?.length) {
+            try {
+                const lmTotals = global.HEYS?.models?.mealTotals?.(lastMeal, pIndex);
+                if (lmTotals) {
+                    lines.push(`  → totals: ${Math.round(lmTotals.kcal)} kcal, P${Math.round(lmTotals.prot)}г C${Math.round(lmTotals.carb || lmTotals.carbs)}г F${Math.round(lmTotals.fat)}г`);
+                }
+            } catch (e) {}
+        }
+        lines.push('');
+        lines.push(`Sleep target source: ${day?.sleepStart ? `day.sleepStart=${day.sleepStart}` : (prof?.sleepTarget ? `profile=${prof.sleepTarget}` : 'default 23:00')}`);
+        lines.push(`Profile weight: ${prof?.weight || prof?.weightKg || prof?.bodyMassKg || '70 (fallback)'} кг`);
+        lines.push(`Profile fastingWindow: ${prof?.fastingWindow ? JSON.stringify(prof.fastingWindow) : '(not set)'}`);
+        lines.push(`Day check-in: sleepStart=${day?.sleepStart || '(not set)'}, refeedDay=${!!day?.isRefeedDay}`);
+        lines.push('');
+        lines.push(`Day target: ${Math.round(optimum || normAbs?.kcal || 0)} kcal (optimum=${optimum || 'N/A'}, normAbs=${normAbs?.kcal || 'N/A'})`);
+        lines.push(`            P${Math.round(normAbs?.prot || 0)}г C${Math.round(normAbs?.carb || 0)}г F${Math.round(normAbs?.fat || 0)}г`);
+        lines.push(`Day eaten:  ${Math.round(dayTot?.kcal || 0)} kcal, P${Math.round(dayTot?.prot || 0)}г C${Math.round(dayTot?.carb || 0)}г F${Math.round(dayTot?.fat || 0)}г`);
+        const supplements = Array.isArray(day?.supplements) ? day.supplements.filter((s) => s && s.taken !== false && s.consumed !== false) : [];
+        if (supplements.length) {
+            lines.push(`Supplements: ${supplements.length} active`);
+            supplements.forEach((s) => {
+                const m = s.macros || s.totals || s.nutrition || {};
+                const total = (Number(m.kcal) || 0) + (Number(m.prot) || 0) + (Number(m.protein) || 0);
+                lines.push(`  - ${s.name || s.title || s.id || '?'}: ${total ? `${Math.round(m.kcal || 0)} kcal / ${Math.round(m.prot || m.protein || 0)}г белка` : '(no macros)'}`);
+            });
+        }
+        const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+        if (trainings.length) {
+            lines.push(`Trainings: ${trainings.map((t) => `${t.time || '?'} ${t.type || ''}`).join('; ')}`);
+        }
+        lines.push('');
+
+        // 2) Выход планнера
+        lines.push('▼ RECOMMENDATION OUTPUT');
+        lines.push(dash);
+        if (!recommendation) {
+            lines.push('(no recommendation — see logs below)');
+        } else {
+            lines.push(`Scenario: ${recommendation.scenario || '?'} ${recommendation.scenarioIcon || ''}`);
+            lines.push(`Confidence: ${recommendation.confidence !== undefined ? (recommendation.confidence * 100).toFixed(0) + '%' : '?'}`);
+            lines.push(`Mode: ${recommendation.mode || '?'} (suggestions=${recommendation.suggestions?.length || 0}, groups=${recommendation.groups?.length || 0})`);
+            if (recommendation.timing) {
+                lines.push(`Timing: ${recommendation.timing.ideal || '?'} (plannerSynced=${!!recommendation.timing.plannerSynced})`);
+                if (recommendation.timing.reason) lines.push(`  reason: ${recommendation.timing.reason}`);
+            }
+            if (recommendation.macros) {
+                const m = recommendation.macros;
+                lines.push(`Macros: ${Math.round(m.kcal || 0)} kcal · P${Math.round(m.protein || m.prot || 0)}г C${Math.round(m.carbs || 0)}г F${Math.round(m.fat || 0)}г · remaining ${Math.round(m.remainingKcal || 0)} kcal`);
+            }
+            if (recommendation.replanMeta) {
+                lines.push(`Replan: mode=${recommendation.replanMeta.mode} fallbackUsed=${!!recommendation.replanMeta.fallbackUsed} fallbackType=${recommendation.replanMeta.fallbackType || '-'}`);
+            }
+            lines.push('');
+
+            const mp = recommendation.mealsPlan;
+            if (mp?.available && mp.meals?.length > 0) {
+                lines.push(`Multi-meal plan: ${mp.meals.length} meals`);
+                lines.push(`  Timeline: ${mp.summary?.timelineStart || '?'} → ${mp.summary?.timelineEnd || '?'}`);
+                lines.push(`  Sleep target: ${mp.summary?.sleepTarget || '?'}, last meal deadline: ${mp.summary?.lastMealDeadline || '?'}`);
+                if (mp.summary?.totalMacros) {
+                    const tm = mp.summary.totalMacros;
+                    lines.push(`  Total macros: ${Math.round(tm.kcal || 0)} kcal · P${Math.round(tm.prot || 0)}г C${Math.round(tm.carbs || 0)}г`);
+                }
+                lines.push('');
+                mp.meals.forEach((m, i) => {
+                    lines.push(`  Meal ${i + 1}: ${m.timeStart}-${m.timeEnd}`);
+                    lines.push(`    macros:  P${Math.round(m.macros?.prot || 0)}г C${Math.round(m.macros?.carbs || 0)}г F${Math.round(m.macros?.fat || 0)}г · ${Math.round(m.macros?.kcal || 0)} kcal`);
+                    lines.push(`    scenario: ${m.scenario || '?'} (source: ${m.scenarioSource || '?'})${m.scenarioBaseline ? `, baseline: ${m.scenarioBaseline}` : ''}`);
+                    lines.push(`    targets: GL ${m.targetGL ?? '-'}, hoursToSleep ${m.hoursToSleep != null ? Number(m.hoursToSleep).toFixed(1) + 'ч' : '?'}${m.presleepCapped ? ' [⚠ presleep capped]' : ''}`);
+                    lines.push(`    wave end: ${m.estimatedWaveEnd || '?'}, fat burn: ${m.fatBurnWindow?.start || '?'} → ${m.fatBurnWindow?.end || '?'}`);
+                    lines.push(`    actionable: ${!!m.isActionable}, locked: ${!!m.locked}, last: ${!!m.isLast}`);
+                });
+
+                // R6-D: показать advisories от planner (overlap волн, стресс, дефициты)
+                const advs = mp.summary?.advisories;
+                if (Array.isArray(advs) && advs.length > 0) {
+                    lines.push('');
+                    lines.push('  Advisories:');
+                    advs.forEach((a) => {
+                        const sev = a.severity === 'high' ? '🔴' : a.severity === 'medium' ? '🟡' : '🟢';
+                        lines.push(`    ${sev} [${a.key}] ${a.text}`);
+                    });
+                }
+            } else {
+                lines.push('No multi-meal plan (single-meal mode or planner skipped)');
+                if (mp?.summary?.reason) lines.push(`  reason: ${mp.summary.reason}`);
+            }
+        }
+        lines.push('');
+
+        // 3) Лог последних расчётов
+        const nowMs = Date.now();
+        let recent = plannerLogBuffer.filter((entry) => nowMs - entry.t < 300_000).slice(-200);
+        let logSource = 'last 5 min';
+        if (!recent.length && plannerLogBuffer.length > 0) {
+            // Fallback: показать всё что есть (возможно последний расчёт был давно)
+            recent = plannerLogBuffer.slice(-200);
+            logSource = 'all buffer (no recent activity)';
+        }
+        lines.push(`▼ PLANNER LOGS (${logSource})`);
+        lines.push(dash);
+        if (!recent.length) {
+            lines.push('(buffer empty — open the Diary tab and reload to capture logs)');
+        } else {
+            recent.forEach((entry) => {
+                const elapsed = ((nowMs - entry.t) / 1000).toFixed(1);
+                const lvl = entry.level === 'warn' ? '⚠' : entry.level === 'error' ? '❌' : ' ';
+                lines.push(`[-${elapsed}s] ${lvl} ${entry.msg}${entry.args.length ? ' ' + entry.args.join(' ') : ''}`);
+            });
+        }
+        lines.push('');
+        lines.push(sep);
+        lines.push('Скопируйте этот текст разработчику для дебага планнера.');
+        return lines.join('\n');
+    }
+
     function buildReplanSignal(day, dayTot, normAbs, optimum, prof, pIndex, thresholdsUpdateTick) {
         const meals = day?.meals || [];
         const lastMeal = meals[meals.length - 1] || null;
@@ -28127,6 +28835,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     /**
+     * Текущая локальная дата в формате YYYY-MM-DD (для сверки day.date)
+     */
+    function todayISO() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    /**
+     * Парс HH:MM → decimal hours. Возвращает null для невалидных значений.
+     */
+    function parseTimeStr(t) {
+        if (!t || typeof t !== 'string' || !t.includes(':')) return null;
+        const [h, m] = t.split(':').map(Number);
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+        return h + m / 60;
+    }
+
+    /**
      * Собрать контекст для recommend() из данных дня
      */
     function buildRecommendationContext(day, dayTot, normAbs, prof, optimum, pIndex) {
@@ -28148,13 +28877,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return null;
         }
 
+        // R4-3: pIndex может быть пустым в момент инициализации (продукты ещё
+        // загружаются через cloud sync / shared catalog). В этом случае mealTotals
+        // вернёт 0 для всех нутриентов и закеширует невалидный результат —
+        // sodium плавает между сессиями, harm тоже. Откладываем расчёт до прихода
+        // products.
+        const pIndexSize = pIndex?.byId?.size ?? 0;
+        const hasMeals = (day?.meals?.length || 0) > 0;
+        if (hasMeals && pIndexSize === 0) {
+            console.warn(`${LOG_PREFIX} ⚠️ [PLANNER.context] pIndex empty (race?) — deferring recommendation until products load`);
+            return null;
+        }
+
         const currentTime = new Date();
         const currentHour = currentTime.getHours();
         const currentMinute = currentTime.getMinutes();
         const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
 
-        // Последний приём пищи
-        const meals = day.meals || [];
+        // R1-2: сортируем приёмы по времени, чтобы lastMeal был действительно поздним.
+        const rawMeals = Array.isArray(day.meals) ? day.meals : [];
+        const meals = rawMeals
+            .filter((m) => m && typeof m.time === 'string' && m.time.includes(':'))
+            .slice()
+            .sort((a, b) => (parseTimeStr(a.time) || 0) - (parseTimeStr(b.time) || 0));
         const lastMeal = meals.length > 0 ? meals[meals.length - 1] : null;
 
         // Вычислить totals для lastMeal (если есть items)
@@ -28184,8 +28929,66 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const trainings = day.trainings || [];
         const training = trainings.length > 0 ? trainings[0] : null;
 
-        // Целевое время сна
-        const sleepTarget = prof?.sleepTarget || '23:00';
+        // R1-3: целевое время сна — сначала чек-ин дня (day.sleepStart),
+        // потом профиль, потом дефолт. day.sleepStart всегда побеждает,
+        // если планируем СЕГОДНЯ — это явная заявка пользователя на этот день.
+        const daySleepStart = (typeof day.sleepStart === 'string' && day.sleepStart.includes(':'))
+            ? day.sleepStart
+            : null;
+        const sleepTarget = daySleepStart || prof?.sleepTarget || '23:00';
+
+        // R2-3: пересчитываем dayEaten из day.meals напрямую. Не доверяем входному
+        // dayTot — он может отстать после быстрых add/remove (debounce + async LS).
+        let eaten = { kcal: dayTot.kcal || 0, prot: dayTot.prot || 0, carb: dayTot.carb || 0, fat: dayTot.fat || 0 };
+        if (global.HEYS?.models?.mealTotals && pIndex && rawMeals.length > 0) {
+            const recomputed = { kcal: 0, prot: 0, carb: 0, fat: 0 };
+            for (const m of rawMeals) {
+                try {
+                    const mt = global.HEYS.models.mealTotals(m, pIndex);
+                    recomputed.kcal += mt?.kcal || 0;
+                    recomputed.prot += mt?.prot || 0;
+                    recomputed.carb += mt?.carb || 0;
+                    recomputed.fat += mt?.fat || 0;
+                } catch (e) { /* skip broken meal */ }
+            }
+            if (recomputed.kcal > 0 || recomputed.prot > 0 || recomputed.carb > 0 || recomputed.fat > 0) {
+                eaten = recomputed;
+            }
+        }
+
+        // R2-1: supplements учитываются в dayEaten, если у них есть macros или totals.
+        // Структура supplements не унифицирована между клиентами — поддерживаем оба варианта.
+        const supplements = Array.isArray(day.supplements) ? day.supplements : [];
+        const supplementsImpact = { kcal: 0, prot: 0, carb: 0, fat: 0 };
+        for (const s of supplements) {
+            if (!s) continue;
+            // Принимаем явное поле .taken/.consumed=true либо отсутствие флага (значит принято).
+            if (s.taken === false || s.consumed === false) continue;
+            const m = s.macros || s.totals || s.nutrition || {};
+            supplementsImpact.kcal += Number(m.kcal) || 0;
+            supplementsImpact.prot += Number(m.prot) || Number(m.protein) || 0;
+            supplementsImpact.carb += Number(m.carb) || Number(m.carbs) || 0;
+            supplementsImpact.fat += Number(m.fat) || 0;
+        }
+        if (supplementsImpact.kcal || supplementsImpact.prot || supplementsImpact.carb || supplementsImpact.fat) {
+            eaten = {
+                kcal: eaten.kcal + supplementsImpact.kcal,
+                prot: eaten.prot + supplementsImpact.prot,
+                carb: eaten.carb + supplementsImpact.carb,
+                fat: eaten.fat + supplementsImpact.fat
+            };
+            console.info(`${LOG_PREFIX} [PLANNER.context] 💊 supplements added: ${Math.round(supplementsImpact.kcal)} kcal, ${Math.round(supplementsImpact.prot)}g prot`);
+        }
+
+        // R2-2/R2-5: dayTarget учитывает рифид и тренировочный boost.
+        // optimum, поступающий из day-stats, уже включает refeed/workout-коррекции —
+        // используем его как авторитетный источник ккал. normAbs.kcal — сырая дневная норма.
+        const targetKcalRaw = Number.isFinite(optimum) && optimum > 0
+            ? optimum
+            : (Number(normAbs.kcal) || 0);
+        if (day.isRefeedDay && Number.isFinite(optimum) && optimum > (normAbs.kcal || 0)) {
+            console.info(`${LOG_PREFIX} [PLANNER.context] 🔄 Refeed day: target ${Math.round(targetKcalRaw)} kcal (raw norm ${Math.round(normAbs.kcal || 0)})`);
+        }
 
         const resolvedLsGet =
             (typeof global.U?.lsGet === 'function' && global.U.lsGet.bind(global.U)) ||
@@ -28209,7 +29012,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 totals: lastMealTotals || {}
             } : null,
             dayTarget: {
-                kcal: optimum || normAbs.kcal || 0,
+                kcal: targetKcalRaw,
                 protein: normAbs.prot || 0,
                 carbs: normAbs.carb || 0,
                 fat: normAbs.fat || 0,
@@ -28218,19 +29021,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 carb: normAbs.carb || 0
             },
             dayEaten: {
-                kcal: dayTot.kcal || 0,
-                protein: dayTot.prot || 0,
-                carbs: dayTot.carb || 0,
-                fat: dayTot.fat || 0,
+                kcal: eaten.kcal,
+                protein: eaten.prot,
+                carbs: eaten.carb,
+                fat: eaten.fat,
                 // Aliases for planner
-                prot: dayTot.prot || 0,
-                carb: dayTot.carb || 0
+                prot: eaten.prot,
+                carb: eaten.carb
             },
             training: training ? {
                 time: training.time,
                 type: training.type || 'general'
             } : null,
             sleepTarget,
+            // R1-3: явный сигнал «время сна задано пользователем сегодня».
+            // Planner будет использовать как высший приоритет sleepTarget.
+            daySleepStart,
+            isRefeedDay: !!day.isRefeedDay,
             lsGet: resolvedLsGet,
             sharedProducts: global.HEYS?.products?.getAll?.() || []
         };
@@ -28241,8 +29048,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             lastMealItems: lastMeal?.items?.length || 0,
             lastMealTotals: lastMealTotals,
             mealsToday: meals.length,
-            dayEaten: `${Math.round(dayTot.kcal)}ккал, ${Math.round(dayTot.prot)}г белка`,
-            dayTarget: `${Math.round(optimum || normAbs.kcal)}ккал (optimum=${optimum || 'N/A'}, normAbs=${normAbs.kcal}), ${Math.round(normAbs.prot)}г белка`,
+            dayEaten: `${Math.round(eaten.kcal)}ккал, ${Math.round(eaten.prot)}г белка`,
+            dayTarget: `${Math.round(targetKcalRaw)}ккал (optimum=${optimum || 'N/A'}, normAbs=${normAbs.kcal}, refeed=${!!day.isRefeedDay}), ${Math.round(normAbs.prot)}г белка`,
+            sleepTarget,
+            daySleepStart: daySleepStart || 'inherit',
             hasTraining: !!training,
             trainingTime: training?.time || 'none',
             hasLsGet: typeof context.lsGet === 'function',
@@ -28275,7 +29084,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var _mealRecCardRenderCount = 0;
 
     function MealRecommenderCard({ React, day, prof, pIndex, dayTot, normAbs, optimum }) {
-        const [expanded, setExpanded] = useState(false);
+        // R1-1: для прошлых/будущих дат планнер не имеет смысла — currentTime всегда
+        // относится к "сегодня", а deadline по сну не применим. Скрываем карточку,
+        // чтобы не показывать пользователю фейковые промежутки.
+        const isToday = !day?.date || day.date === todayISO();
+        if (!isToday) {
+            return null;
+        }
+
+        const [expanded, setExpanded] = useState(() => {
+            // R1-6: восстанавливаем состояние expanded из LS, чтобы оно не сбрасывалось
+            // при пересчёте плана после добавления продукта.
+            try {
+                const raw = localStorage.getItem('heys_meal_planner_expanded_v1');
+                return raw === '1' || raw === 'true';
+            } catch (e) { return false; }
+        });
         const [showProductsModal, setShowProductsModal] = useState(false);
         const [userFeedback, setUserFeedback] = useState(null); // null | 'positive' | 'negative'
         const [checkedProducts, setCheckedProducts] = useState({}); // v27: { productId: boolean } for grouped mode
@@ -28283,6 +29107,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const [recommendation, setRecommendation] = useState(null); // 🚀 PERF v6.0: Асинхронный расчет
         const [isCalculating, setIsCalculating] = useState(true); // 🚀 PERF v6.0: Состояние загрузки
         const [externalReplanReason, setExternalReplanReason] = useState(null);
+        const [diagCopyStatus, setDiagCopyStatus] = useState(null); // null | 'ok' | 'err'
 
         useEffect(() => {
             if (!showProductsModal) return;
@@ -28292,6 +29117,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 document.body.style.overflow = prevOverflow;
             };
         }, [showProductsModal]);
+
+        // R5-C: пока карточка раскрыта — рефрешим план каждые 60 сек.
+        // currentTime фиксируется в момент расчёта, и через несколько минут
+        // план может показывать «timing 20:49-20:50», когда уже 20:53.
+        useEffect(() => {
+            if (!expanded) return;
+            const interval = setInterval(() => {
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:planner-replan-request', {
+                        detail: { reason: 'EXPANDED_TICK', source: 'periodic_refresh' }
+                    }));
+                } catch (e) {}
+            }, 60_000);
+            return () => clearInterval(interval);
+        }, [expanded]);
 
         // Listen for SWR background updates
         useEffect(() => {
@@ -28306,11 +29146,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         useEffect(() => {
             const handlePlannerReplanRequest = (event) => {
                 const reason = event?.detail?.reason || 'EXTERNAL_REPLAN_REQUEST';
-                if (lastAppliedExternalReasonRef.current === reason) return;
+                // R2-4: между событием и срабатыванием debounce юзер мог
+                // успеть add+delete продукт — тогда reason тот же, но meals изменились.
+                // Заменяем "reason"-кэш на хэш самих meals, чтобы пересчёт срабатывал.
+                const mealsHash = `${day?.meals?.length || 0}|${day?.meals?.map((m) => `${m?.id || ''}:${m?.items?.length || 0}`).join(',') || ''}`;
+                const cacheKey = `${reason}|${mealsHash}`;
+                if (lastAppliedExternalReasonRef.current === cacheKey) return;
                 if (replanEventDebounceRef.current) clearTimeout(replanEventDebounceRef.current);
                 replanEventDebounceRef.current = setTimeout(() => {
-                    lastAppliedExternalReasonRef.current = reason;
-                    console.info(`${LOG_PREFIX} 🔁 External replan request:`, reason);
+                    // Проверим хэш ещё раз ВНУТРИ debounce — если meals изменились
+                    // между регистрацией события и срабатыванием, обновим cache key.
+                    const currentMealsHash = `${day?.meals?.length || 0}|${day?.meals?.map((m) => `${m?.id || ''}:${m?.items?.length || 0}`).join(',') || ''}`;
+                    lastAppliedExternalReasonRef.current = `${reason}|${currentMealsHash}`;
+                    console.info(`${LOG_PREFIX} 🔁 External replan request:`, { reason, mealsHashAtDebounceStart: mealsHash, mealsHashAtRun: currentMealsHash, changed: mealsHash !== currentMealsHash });
                     setExternalReplanReason(reason);
                 }, REPLAN_DEBOUNCE_MS);
             };
@@ -28319,7 +29167,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 if (replanEventDebounceRef.current) clearTimeout(replanEventDebounceRef.current);
                 window.removeEventListener('heys:planner-replan-request', handlePlannerReplanRequest);
             };
-        }, []);
+        }, [day]);
 
         useEffect(() => {
             const handleReplanMetrics = (event) => {
@@ -28372,6 +29220,34 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const eatenKcal = replanSignal.eatenKcal;
         const eatenProt = replanSignal.eatenProt;
         const targetKcal = replanSignal.targetKcal;
+
+        // Handler копирования диагностики планнера
+        const handleCopyDiagnostics = async () => {
+            try {
+                const report = buildPlannerDiagnosticReport({
+                    day, prof, dayTot, normAbs, optimum, pIndex, recommendation
+                });
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(report);
+                } else {
+                    // Фоллбек для старых браузеров
+                    const ta = document.createElement('textarea');
+                    ta.value = report;
+                    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                setDiagCopyStatus('ok');
+                console.info(`${LOG_PREFIX} 📋 Diagnostic report copied to clipboard (${report.length} chars)`);
+                setTimeout(() => setDiagCopyStatus(null), 2500);
+            } catch (err) {
+                console.error(`${LOG_PREFIX} ❌ Failed to copy diagnostics:`, err);
+                setDiagCopyStatus('err');
+                setTimeout(() => setDiagCopyStatus(null), 2500);
+            }
+        };
 
         // Handler для feedback кнопок (R2.7)
         const handleFeedback = (rating) => {
@@ -29428,9 +30304,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Other scenarios: show if has macros
         const remainingKcal = macros?.remainingKcal || 0;
 
-        if (!isGoalReached && (remainingKcal < 50 || (macros?.protein <= 0 && macros?.carbs <= 0))) {
+        // R8-B: water-card показываем когда:
+        //   1) Goal achieved (явно GOAL_REACHED scenario) — независимо от того
+        //      что planner вернул через mealsPlan (например stable snapshot
+        //      может протолкнуть устаревший meal на 338 ккал).
+        //   2) Budget exhausted (остаток <50 ккал ИЛИ ноль белка+углеводов).
+        const shouldShowWater = isGoalReached || remainingKcal < 50 || (macros?.protein <= 0 && macros?.carbs <= 0);
+        if (shouldShowWater) {
             console.info(`${LOG_PREFIX} ℹ️ Budget exhausted — showing water card:`, {
                 scenario,
+                isGoalReached,
                 remainingKcal,
                 protein: macros?.protein,
                 carbs: macros?.carbs
@@ -29476,7 +30359,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const mealsCount = mealsPlan.meals.length;
             const pluralMeals = mealsCount === 2 ? 'приёма' : mealsCount >= 5 ? 'приёмов' : 'приёма';
             headerTitle = `${mealsCount} ${pluralMeals} до сна`;
-            headerTimeRange = `${mealsPlan.summary.timelineStart}-${mealsPlan.summary.timelineEnd}`;
+            // R1-5: timeline берём из самих meals — summary не пересчитывается после timing-sync,
+            // а meals содержат итоговые времена (включая корректировки planner'а).
+            const firstStart = mealsPlan.meals[0]?.timeStart || mealsPlan.summary?.timelineStart;
+            const lastEnd = mealsPlan.meals[mealsPlan.meals.length - 1]?.timeEnd || mealsPlan.summary?.timelineEnd;
+            headerTimeRange = (firstStart && lastEnd) ? `${firstStart}-${lastEnd}` : null;
             headerSubtitle = 'Следуйте плану — и ваш день будет идеальным по питанию';
         } else {
             headerTitle = scenarioTitle;
@@ -29490,7 +30377,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             className: 'meal-rec-card__header',
             'data-perf-id': 'meal-rec-card',
             // R15: defer heavy re-render out of click handler
-            onClick: () => setTimeout(() => React.startTransition(() => setExpanded(prev => !prev)), 0)
+            onClick: () => setTimeout(() => React.startTransition(() => setExpanded(prev => {
+                const next = !prev;
+                // R1-6: persist в LS чтобы пережить пересчёт плана
+                try { localStorage.setItem('heys_meal_planner_expanded_v1', next ? '1' : '0'); } catch (e) {}
+                // R5-C: при ОТКРЫТИИ карточки триггерим replan — план мог
+                // устареть пока юзер смотрел на другие места приложения.
+                if (next === true) {
+                    try {
+                        window.dispatchEvent(new CustomEvent('heys:planner-replan-request', {
+                            detail: { reason: 'CARD_EXPANDED', source: 'user_open' }
+                        }));
+                    } catch (e) {}
+                }
+                return next;
+            })), 0)
         },
             h('div', { className: 'meal-rec-card__title' },
                 h('div', { className: 'meal-rec-card__badge-wrap' },
@@ -29579,10 +30480,72 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'STRESS_EATING': { text: 'Антистресс', mod: 'balanced' },
         };
 
+        // R1-4: timeline-лента всех приёмов плана в раскрытом виде.
+        // Каждая метка = один meal с timeStart, БЖУ и подсветкой по hoursToSleep.
+        let plannerTimeline = null;
+        if (expanded && isMultiMeal && mealsPlan?.meals?.length > 0) {
+            const allMeals = mealsPlan.meals;
+            // Парс HH:MM в decimal для расчёта позиции на ленте
+            const _ph = (t) => {
+                if (!t || typeof t !== 'string') return null;
+                const [hh, mm] = t.split(':').map(Number);
+                return Number.isFinite(hh) && Number.isFinite(mm) ? hh + mm / 60 : null;
+            };
+            const startHours = _ph(allMeals[0].timeStart) || 0;
+            const endHours = _ph(allMeals[allMeals.length - 1].timeEnd) || (startHours + 1);
+            const span = Math.max(0.5, endHours - startHours);
+            plannerTimeline = h('div', { className: 'meal-rec-card__timeline' },
+                h('div', { className: 'meal-rec-card__timeline-header' },
+                    h('span', { className: 'meal-rec-card__timeline-label' }, 'План приёмов'),
+                    h('span', { className: 'meal-rec-card__timeline-range' }, `${allMeals[0].timeStart} → ${allMeals[allMeals.length - 1].timeEnd}`)
+                ),
+                h('div', { className: 'meal-rec-card__timeline-track' },
+                    ...allMeals.map((m, i) => {
+                        const t = _ph(m.timeStart) || startHours;
+                        const pct = ((t - startHours) / span) * 100;
+                        const hSleep = Number(m.hoursToSleep) || 0;
+                        // Цветовая подсветка: <2ч — красный, 2-3.5ч — жёлтый, >3.5ч — зелёный
+                        let tone = 'good';
+                        if (hSleep > 0 && hSleep < 2) tone = 'danger';
+                        else if (hSleep > 0 && hSleep < 3.5) tone = 'warn';
+                        const isActionable = !!m.isActionable;
+                        return h('div', {
+                            key: i,
+                            className: `meal-rec-card__timeline-dot meal-rec-card__timeline-dot--${tone} ${isActionable ? 'meal-rec-card__timeline-dot--actionable' : ''}`,
+                            style: { left: `${Math.max(0, Math.min(100, pct))}%` },
+                            title: `${m.timeStart}-${m.timeEnd} · Б${Math.round(m.macros?.prot || 0)}г У${Math.round(m.macros?.carbs || 0)}г · ${Math.round(m.macros?.kcal || 0)} ккал · ${hSleep > 0 ? hSleep.toFixed(1) + 'ч до сна' : ''}`
+                        },
+                            h('div', { className: 'meal-rec-card__timeline-dot-time' }, m.timeStart),
+                            h('div', { className: 'meal-rec-card__timeline-dot-kcal' }, `${Math.round(m.macros?.kcal || 0)}`),
+                            hSleep > 0 && h('div', { className: 'meal-rec-card__timeline-dot-sleep' }, `-${hSleep.toFixed(1)}ч`)
+                        );
+                    })
+                )
+            );
+        }
+
+        // R4-6: advisories из planner.summary — рекомендации по паттернам
+        // (overlap волн, стресс, дефициты). Показываем как мягкие подсказки.
+        let plannerAdvisories = null;
+        const advisories = mealsPlan?.summary?.advisories || [];
+        if (expanded && advisories.length > 0) {
+            plannerAdvisories = h('div', { className: 'meal-rec-card__advisories' },
+                ...advisories.map((adv, i) => h('div', {
+                    key: i,
+                    className: `meal-rec-card__advisory meal-rec-card__advisory--${adv.severity || 'low'}`
+                },
+                    h('span', { className: 'meal-rec-card__advisory-icon' }, '💡'),
+                    h('span', { className: 'meal-rec-card__advisory-text' }, adv.text)
+                ))
+            );
+        }
+
         // Expanded details — v26: multi-meal support или original compact layout
         let expandedDetails = null;
         if (expanded) {
             expandedDetails = h('div', { className: 'meal-rec-card__details meal-rec-card__details--expanded' },
+                plannerTimeline,
+                plannerAdvisories,
                 h('div', { className: 'meal-rec-card__logic-summary' },
                     h('div', { className: 'meal-rec-card__logic-row' },
                         h('span', { className: 'meal-rec-card__logic-label' }, 'Что лучше сейчас:'),
@@ -29623,6 +30586,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     confidence !== undefined && h('span', { className: 'meal-rec-card__confidence' },
                         `${Math.round(confidence * 100)}%`
                     ),
+                    h('span', {
+                        className: 'meal-rec-card__diag-dot',
+                        onClick: (e) => { e.stopPropagation(); handleCopyDiagnostics(); },
+                        title: diagCopyStatus === 'ok' ? 'Диагностика скопирована' :
+                               diagCopyStatus === 'err' ? 'Не удалось скопировать' :
+                               'Скопировать диагностику',
+                        'data-status': diagCopyStatus || '',
+                        'aria-label': 'Скопировать диагностику планнера'
+                    }, diagCopyStatus === 'ok' ? '✓' : diagCopyStatus === 'err' ? '✕' : '·'),
                     h('div', { className: 'meal-rec-card__feedback-inline' },
                         !userFeedback && h('span', { className: 'meal-rec-card__feedback-label' }, 'Полезно?'),
                         h('button', {

@@ -27905,7 +27905,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
    * @returns {Object} { total, gi, protein, fiber, carbs, fat, gl, glCategory, liquid, insulinogenic, foodForm }
    */
 
-  const calculateMultiplier = (gi, protein, fiber, carbs = null, fat = null, gl = null, hasLiquid = false, insulinogenicBonus = 0, foodForm = null, proteinType = 'mixed') => {
+  const calculateMultiplier = (gi, protein, fiber, carbs = null, fat = null, gl = null, hasLiquid = false, insulinogenicBonus = 0, foodForm = null, proteinType = 'mixed', simpleRatio = null, mealKcal = null) => {
     const giCat = utils.getGICategory(gi);
 
     // 📊 Гликемическая нагрузка — v3.0.0: используем плавную формулу
@@ -28009,8 +28009,29 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     // При GL < 5: glMultiplier = 0.5 → волна в 2 раза короче
     const carbsMult = glMultiplier;
 
+    // R4-7: simpleRatio — доля простых углеводов укорачивает волну
+    // Mayer 1995, Brand-Miller 2003: высокий simpleRatio → быстрый пик + быстрый спад.
+    // >60% простых сахаров — волна короче на ~15%.
+    let simpleMult = 1.0;
+    if (simpleRatio !== null && simpleRatio > 0.6 && carbs && carbs > 5) {
+      simpleMult = 0.85;
+    } else if (simpleRatio !== null && simpleRatio > 0.4 && carbs && carbs > 5) {
+      // плавный переход 0.4-0.6
+      simpleMult = 1.0 - ((simpleRatio - 0.4) / 0.2) * 0.15;
+    }
+
+    // R4-7: kcal scaling — Louis-Sylvestre & Le Magnen 1980 (sublinear).
+    // Маленькие приёмы (<200 ккал) дают более короткую волну.
+    let kcalScaleMult = 1.0;
+    if (mealKcal !== null && Number.isFinite(mealKcal)) {
+      if (mealKcal < 100) kcalScaleMult = 0.75;
+      else if (mealKcal < 200) kcalScaleMult = 0.9;
+      else if (mealKcal < 300) kcalScaleMult = 0.95;
+      // ≥300 — нормальный приём, без коррекции
+    }
+
     return {
-      total: baseMult * carbsMult * liquidMult * foodFormMult,
+      total: baseMult * carbsMult * liquidMult * foodFormMult * simpleMult * kcalScaleMult,
       gi: giMult,
       protein: proteinBonus,
       proteinMeta, // 🆕 v4.0.0: Тип белка (animal/plant/whey/mixed)
@@ -28020,6 +28041,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       liquid: liquidMult,
       foodForm: foodFormMult,  // 🆕 v3.2.0
       insulinogenic: insBonus,
+      simpleRatioMult: simpleMult, // R4-7: для отладки
+      kcalScaleMult,               // R4-7: для отладки
       glCategory,
       glScaleFactor, // 🆕 Для отладки
       category: giCat
@@ -30987,6 +31010,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       if (hasResistantStarch(prod)) hasResistantStarchInMeal = true;
     }
 
+    // R4-7: kcal приёма = P*4 + C*4 + F*9 для kcalScaleMult в multiplier
+    const _mealKcal = (nutrients.totalProtein || 0) * 4 + (nutrients.totalCarbs || 0) * 4 + (nutrients.totalFat || 0) * 9;
     const multipliers = calculateMultiplier(
       nutrients.avgGI,
       nutrients.totalProtein,
@@ -30997,7 +31022,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       nutrients.hasLiquid,
       nutrients.insulinogenicBonus,
       mealFoodForm,  // 🆕 v3.2.0
-      nutrients.dominantProteinType || 'mixed' // 🆕 v4.2.3: реальный тип белка
+      nutrients.dominantProteinType || 'mixed', // 🆕 v4.2.3: реальный тип белка
+      nutrients.simpleRatio, // R4-7: укорачивает волну при >60%
+      _mealKcal              // R4-7: маленькие приёмы → короче волна
     );
 
     // 🏃 Workout бонус (общий за день)
@@ -31377,6 +31404,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         else if (itemForm === 'whole' && !historyFoodForm) historyFoodForm = 'whole';
       }
 
+      // R4-7: kcal приёма для kcalScaleMult
+      const _mealKcalHist = (mealNutrients.totalProtein || 0) * 4 + (mealNutrients.totalCarbs || 0) * 4 + (mealNutrients.totalFat || 0) * 9;
       const mealMult = calculateMultiplier(
         mealNutrients.avgGI,
         mealNutrients.totalProtein,
@@ -31387,7 +31416,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         mealNutrients.hasLiquid,
         mealNutrients.insulinogenicBonus,
         historyFoodForm,  // 🆕 v3.2.0
-        mealNutrients.dominantProteinType || 'mixed' // 🆕 v4.2.3
+        mealNutrients.dominantProteinType || 'mixed', // 🆕 v4.2.3
+        mealNutrients.simpleRatio, // R4-7
+        _mealKcalHist              // R4-7
       );
 
       // 🆕 v4.2.3: Activity Context для каждого приёма в истории — вычисляем заранее,
