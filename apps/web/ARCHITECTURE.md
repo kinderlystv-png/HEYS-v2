@@ -245,6 +245,103 @@ sources only.
 
 ---
 
+## Meal Planner card (badge «Планнер» в Дневнике)
+
+Карточка `MealRecCard` в diary-секции — мульти-приём рекомендер на оставшийся
+день до сна. Подключена через `HEYS.MealRecCard.renderCard()` между `refeedCard`
+и `supplementsCard` ([heys_day_diary_section.js](heys_day_diary_section.js)).
+
+### Слои
+
+1. **UI**: [insights/pi_ui_meal_rec_card.js](insights/pi_ui_meal_rec_card.js)
+   - `buildRecommendationContext(day, dayTot, normAbs, prof, optimum, pIndex)` —
+     собирает context.
+   - **Не рендерит карточку для прошлых дат** (`day.date !== todayISO()`):
+     `currentTime = new Date()` не имеет смысла для исторических записей.
+2. **Recommender**:
+   [insights/pi_meal_recommender.js](insights/pi_meal_recommender.js)
+   - `recommendNextMeal(context, profile, pIndex, days)` — single-meal scenario
+     detection + multi-meal mode по условию.
+   - Вызывает planner если `days.length >= 3` И есть `planRemainingMeals`.
+   - После planner — **двусторонний timing sync** (`timingRec.idealStart` ←
+     `meals[0].timeStart`).
+3. **Planner**: [insights/pi_meal_planner.js](insights/pi_meal_planner.js)
+   - `planRemainingMeals({...})` → `{ available, meals[], summary }` или
+     `{ available: false, error: 'NO_TARGET'|'InsulinWave module missing'|... }`.
+   - `replanRemainingMeals(...)` — incremental с поддержкой `lockedMeals`.
+
+### Источники истины
+
+| Поле                     | Источник                                                                                             | Замечания                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------- |
+| `currentTime`            | `new Date()`                                                                                         | Только для сегодняшнего `day.date`.                                                        |
+| `lastMeal`               | `day.meals` отсортированы по `time` ASC, берётся последний                                           | Сортировка обязательна — meals могут быть not-in-order.                                    |
+| `dayEaten`               | Пересчитан из `day.meals` через `HEYS.models.mealTotals`                                             | Не доверяем входному `dayTot` — может отстать в гонке add/remove.                          |
+| `dayEaten` + supplements | `day.supplements[*]` с `macros`/`totals`/`nutrition` (не `taken=false`)                              | Без этого протеиновый шейк не считается.                                                   |
+| `dayTarget.kcal`         | `optimum                                                                                             |                                                                                            | normAbs.kcal` | `optimum` уже включает workout boost и refeed-надбавку из [heys_day_stats_vm_v1.js](heys_day_stats_vm_v1.js). |
+| `sleepTarget`            | приоритет: `day.sleepStart` → среднее из истории `days[].sleepStart` → `profile.sleepTarget` → 23:00 | Кластеризация до/после полуночи в `estimateSleepTarget` (избегаем смешения 23:50 и 01:30). |
+| `profile.weight`         | `getWeightKg(profile)`: weight → weightKg → bodyMassKg → 70                                          | Для MPS и POST_WORKOUT (Areta 2013, Ivy 2004).                                             |
+
+### Адаптивные ветви
+
+- **Late dinner → morning**: если `lastMeal.time >= 20:00` И
+  `currentTime < 12:00`, волна сбрасывается (`hasLastMeal = false`) — это новый
+  день.
+- **Hunger trade-off** (Kinsey & Ormsbee 2015): дефицит ≥800 ккал → буфер до сна
+  1.5ч; ≥400 → 2ч; <400 + ≥2ч до сна → одиночный лёгкий белковый приём (15-25г,
+  ~150 ккал).
+- **Fasting window** (`profile.fastingWindow = { eatStart, eatEnd }`): первый
+  приём не раньше `eatStart`.
+- **forceMultiMeal** (остаток >900 ккал): gap = `max(2ч, 0.75 × estimatedWave)`
+  — wave-aware, не фиксированные 2ч.
+
+### Сценарии (R4-обновлено)
+
+Порядок проверки в `analyzeCurrentContext`:
+
+1. GOAL_REACHED — цели достигнуты
+2. PRE_WORKOUT — тренировка ≤2ч впереди
+3. POST_WORKOUT — тренировка ≤2ч назад (полный режим)
+4. LIGHT_SNACK — мало бюджета
+5. LATE_EVENING — после `lateEatingHour` 5.5. **MOOD_SUPPORT_BREAKFAST** (R4-5)
+   — mood ≤2 + утро (<11:00) → триптофановые продукты
+6. STRESS_EATING — stress ≥4 OR mood ≤2 (после морнинга) 6.5.
+   **MICRONUTRIENT_FOCUS** (R4-4) — 2+ серьёзных дефицита (iron/Mg/Zn/Ca <50%),
+   не последний приём
+7. PROTEIN_DEFICIT — белок <50% от цели
+8. BALANCED — fallback
+
+### Recovery factor после тренировки (R4-8)
+
+```
+0-2ч:    POST_WORKOUT scenario (0.35 г/кг прот + 1.0 г/кг карб → meal[0])
+2-6ч:    MPS_PROT_PER_KG × 1.15 (strength) / 1.05 (cardio) / 1.10 (mixed)
+6-12ч:   MPS_PROT_PER_KG × 1.10
+12-24ч:  MPS_PROT_PER_KG × 1.05
+24ч+:    baseline
+```
+
+### Advisories (R4-6)
+
+Planner возвращает `summary.advisories[]` с soft-рекомендациями по паттернам:
+
+- `wave_overlap` — если juvel ест до окончания волны >40% дней истории
+- `high_stress` — при высоком стрессе текущего дня
+
+UI рендерит в раскрытой карточке как `meal-rec-card__advisory` блоки.
+
+### Что НЕ учитывается (намеренно или roadmap)
+
+- Привычное персональное время приёмов (chrono-pattern detection).
+- Различие типов тренировок (силовая vs кардио).
+- Активность днём кроме явных `day.workouts`.
+- Food-from-pantry / time-to-cook / стоимость / кофеин.
+- Cloud-sync текущего плана между устройствами.
+
+См. roadmap в [todo.md](../../todo.md) (раздел «Meal Planner roadmap»).
+
+---
+
 ## Database schema
 
 Production: Yandex Cloud Managed Postgres (`heys-production` cluster).

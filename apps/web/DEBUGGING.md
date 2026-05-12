@@ -183,3 +183,115 @@ while (node) {
   node = node.return;
 }
 ```
+
+---
+
+## Meal Planner (карточка «Планнер» в Дневнике)
+
+Все логи планнера префиксованы `[MEALREC]` — фильтр в DevTools.
+
+### Ключевые лог-теги
+
+| Тег                 | Источник    | Что показывает                                                       |
+| ------------------- | ----------- | -------------------------------------------------------------------- |
+| `[PLANNER.entry]`   | planner     | Входные параметры (currentTime, lastMeal, target, eaten, sleepStart) |
+| `[PLANNER.wave]`    | planner     | Расчёт инсулиновой волны после lastMeal                              |
+| `[PLANNER.fatburn]` | planner     | Окно жиросжигания (+30 мин после волны)                              |
+| `[PLANNER.sleep]`   | planner     | sleepTarget + deadline последнего приёма                             |
+| `[PLANNER.hunger]`  | planner     | Hunger trade-off (буфер 3ч → 2ч/1.5ч)                                |
+| `[PLANNER.fasting]` | planner     | IF: сдвиг nextMealEarliest до eatStart                               |
+| `[PLANNER.budget]`  | planner     | Оставшийся бюджет БЖУ + ккал                                         |
+| `[PLANNER.split]`   | planner     | forceMultiMeal (остаток >900 ккал)                                   |
+| `[PLANNER.loop.N]`  | planner     | Каждая итерация цикла размещения                                     |
+| `[PLANNER.light]`   | planner     | Fallback на один лёгкий приём перед сном                             |
+| `[PLANNER.context]` | UI          | supplements добавлены в dayEaten, refeed применён                    |
+| `[MEALREC.planner]` | recommender | Switch single↔multi, timing sync, per-meal products                 |
+| `[MEALREC.shadow]`  | recommender | Shadow-сравнение incremental vs full replan                          |
+
+### Команды отладки в DevTools
+
+```js
+// Прямой вызов планнера с текущими данными (для воспроизведения багов)
+const today = new Date().toISOString().slice(0, 10);
+const day =
+  HEYS.dayCache?.getDay(today) ||
+  JSON.parse(localStorage.getItem(`heys_dayv2_${today}`));
+const profile = HEYS.profile?.get();
+const pIndex = HEYS.models?.buildProductIndex?.(HEYS.products?.getAll() || []);
+
+const plan = HEYS.InsightsPI.mealPlanner.planRemainingMeals({
+  currentTime: new Date().toTimeString().slice(0, 5),
+  lastMeal: day.meals?.[day.meals.length - 1] || null,
+  dayTarget: {
+    kcal: profile?.norm?.kcal || 2000,
+    prot: 130,
+    carbs: 200,
+    fat: 60,
+  },
+  dayEaten: { kcal: 0, prot: 0, carbs: 0, fat: 0 },
+  profile,
+  days: [],
+  pIndex,
+  daySleepStart: day.sleepStart || null,
+  isRefeedDay: !!day.isRefeedDay,
+});
+console.table(
+  plan.meals?.map((m) => ({
+    time: `${m.timeStart}-${m.timeEnd}`,
+    ...m.macros,
+    scenario: m.scenario,
+  })),
+);
+```
+
+### Incremental replan rollout (R4-9)
+
+По умолчанию весь трафик идёт на `mode: 'full'` — incremental replan скрыт за
+двумя feature flags и rollout-bucket'ом.
+
+**Проверить состояние** (в DevTools консоли):
+
+```js
+HEYS.featureFlags?.isEnabled?.('adaptiveReplanEnabled');
+HEYS.featureFlags?.isEnabled?.('incrementalReplanEnabled');
+localStorage.getItem('heys_adaptive_replan_rollout_pct'); // дефолт '0' → bucketAllowed = false
+```
+
+**Включить на текущей сессии** (для тестирования):
+
+```js
+localStorage.setItem('heys_adaptive_replan_rollout_pct', '100');
+// Перезагрузить страницу
+```
+
+Если включено, в diagnostic report должно появиться `Replan: mode=incremental`.
+При отказе валидации — fallback на `full` (видно в логе
+`[MEALREC.shadow] 🪞 incremental/full drift`).
+
+**Включить shadow compare** (параллельно считать оба варианта для метрик
+дрифта):
+
+```js
+// Через feature flag adminUI или напрямую:
+HEYS.featureFlags?.set?.('shadowCompareEnabled', true);
+```
+
+**Что мониторить перед полным rollout**:
+
+- `heysMealReplanComputed` event → detail.incremental, detail.fallbackUsed
+- `[MEALREC.shadow] 🪞 incremental/full drift` → kcalDiff, protDiff,
+  mealsCountDiff
+- Если drift стабильно <50 ккал и <5г белка — можно поднимать `rolloutPct`
+  поэтапно (10→25→50→100).
+
+### Типичные симптомы и куда смотреть
+
+| Симптом                                                   | Что смотреть                                                                         |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| «Промежутки времени неверные»                             | `[PLANNER.sleep]` (sleepTarget), `[PLANNER.wave]` (волна), `daySleepStart` в context |
+| «Карточка показывается на вчерашний день»                 | `day.date` vs `todayISO()` — должна return null                                      |
+| «План пустой, хотя есть бюджет»                           | `[PLANNER.hunger]` (tradeoff не сработал?), `[PLANNER.light]` (одиночный приём?)     |
+| «NO_TARGET ошибка»                                        | `dayTarget.kcal < 500` — проверить `optimum` и `normAbs.kcal` в context              |
+| «InsulinWave fallback» (warn)                             | `[PLANNER.wave]` source: `hardcoded_default_3h` — проблема в `InsulinWave.calculate` |
+| «kcal приёма не равна БЖУ-сумме»                          | MPS-бус (R1-11) — kcal пересчитывается из БЖУ; rounding до ~10% допустим             |
+| «Раскрытая карточка свернулась после добавления продукта» | `localStorage.getItem('heys_meal_planner_expanded_v1')` — должно быть `'1'`          |
