@@ -159,6 +159,189 @@
     const DEFAULT_REPLAN_REASON = 'INITIAL_LOAD';
     const REPLAN_DEBOUNCE_MS = 220;
 
+    // === Diagnostics ring buffer ===
+    // Кольцевой буфер логов планнера для копирования юзером.
+    // Перехватываем console.info/warn/error и фильтруем по префиксам
+    // [PLANNER, [MEALREC, [mps, [wave, [chrono, [workout, [HEYS.mealRec.
+    const PLANNER_LOG_BUFFER_SIZE = 400;
+    const plannerLogBuffer = [];
+    function pushPlannerLog(level, args) {
+        if (!args || !args.length) return;
+        const first = args[0];
+        if (typeof first !== 'string') return;
+        // Захватываем только релевантные планнеру логи
+        if (!/\[(MEALREC|HEYS\.mealRec|PLANNER\.|mps|wave|workout|chrono|MEALREC\.)/i.test(first)) return;
+        try {
+            const formattedArgs = args.slice(1).map((a) => {
+                if (a === null || a === undefined) return String(a);
+                if (typeof a === 'string' || typeof a === 'number' || typeof a === 'boolean') return String(a);
+                try { return JSON.stringify(a); } catch (e) { return '[unserializable]'; }
+            });
+            plannerLogBuffer.push({
+                t: Date.now(),
+                level,
+                msg: first.replace(/\[MEALREC\]\[HEYS\.mealRec\.[a-z]+\]\s*/, '').trim(),
+                args: formattedArgs
+            });
+            if (plannerLogBuffer.length > PLANNER_LOG_BUFFER_SIZE) {
+                plannerLogBuffer.splice(0, plannerLogBuffer.length - PLANNER_LOG_BUFFER_SIZE);
+            }
+        } catch (e) { /* ignore buffer errors */ }
+    }
+    if (!global.__heysPlannerLogPatched) {
+        global.__heysPlannerLogPatched = true;
+        const origInfo = console.info.bind(console);
+        const origWarn = console.warn.bind(console);
+        const origError = console.error.bind(console);
+        console.info = function (...args) { pushPlannerLog('info', args); return origInfo(...args); };
+        console.warn = function (...args) { pushPlannerLog('warn', args); return origWarn(...args); };
+        console.error = function (...args) { pushPlannerLog('error', args); return origError(...args); };
+    }
+    global.__heysPlannerLogBuffer = plannerLogBuffer; // для отладки через DevTools
+
+    /**
+     * Собрать диагностический отчёт по текущему состоянию Планнера.
+     * Возвращает многострочный текст для копирования в буфер обмена.
+     */
+    function buildPlannerDiagnosticReport({ day, prof, dayTot, normAbs, optimum, pIndex, recommendation }) {
+        const lines = [];
+        const sep = '═'.repeat(64);
+        const dash = '─'.repeat(64);
+        lines.push('HEYS PLANNER DIAGNOSTIC REPORT');
+        lines.push(sep);
+        lines.push(`Time: ${new Date().toISOString()}`);
+        lines.push(`Day: ${day?.date || '(no date)'} ${day?.isRefeedDay ? '⚠ REFEED' : ''}`);
+        lines.push(`Client: ${global.HEYS?.currentClientId || '(unknown)'}`);
+        lines.push('');
+
+        // 1) Входной контекст
+        lines.push('▼ INPUT CONTEXT');
+        lines.push(dash);
+        const meals = Array.isArray(day?.meals) ? day.meals : [];
+        const sortedMeals = meals.filter((m) => m && m.time).slice().sort((a, b) => {
+            const pa = (a.time || '').split(':').map(Number); const pb = (b.time || '').split(':').map(Number);
+            return (pa[0] || 0) * 60 + (pa[1] || 0) - ((pb[0] || 0) * 60 + (pb[1] || 0));
+        });
+        const lastMeal = sortedMeals[sortedMeals.length - 1] || null;
+        lines.push(`Current time: ${new Date().toTimeString().slice(0, 5)}`);
+        lines.push(`Meals today: ${meals.length} (sorted: ${sortedMeals.map((m) => m.time).join(', ') || '(none)'})`);
+        lines.push(`Last meal: ${lastMeal?.time || '(none — first meal of day)'}`);
+        if (lastMeal?.items?.length) {
+            try {
+                const lmTotals = global.HEYS?.models?.mealTotals?.(lastMeal, pIndex);
+                if (lmTotals) {
+                    lines.push(`  → totals: ${Math.round(lmTotals.kcal)} kcal, P${Math.round(lmTotals.prot)}г C${Math.round(lmTotals.carb || lmTotals.carbs)}г F${Math.round(lmTotals.fat)}г`);
+                }
+            } catch (e) {}
+        }
+        lines.push('');
+        lines.push(`Sleep target source: ${day?.sleepStart ? `day.sleepStart=${day.sleepStart}` : (prof?.sleepTarget ? `profile=${prof.sleepTarget}` : 'default 23:00')}`);
+        lines.push(`Profile weight: ${prof?.weight || prof?.weightKg || prof?.bodyMassKg || '70 (fallback)'} кг`);
+        lines.push(`Profile fastingWindow: ${prof?.fastingWindow ? JSON.stringify(prof.fastingWindow) : '(not set)'}`);
+        lines.push(`Day check-in: sleepStart=${day?.sleepStart || '(not set)'}, refeedDay=${!!day?.isRefeedDay}`);
+        lines.push('');
+        lines.push(`Day target: ${Math.round(optimum || normAbs?.kcal || 0)} kcal (optimum=${optimum || 'N/A'}, normAbs=${normAbs?.kcal || 'N/A'})`);
+        lines.push(`            P${Math.round(normAbs?.prot || 0)}г C${Math.round(normAbs?.carb || 0)}г F${Math.round(normAbs?.fat || 0)}г`);
+        lines.push(`Day eaten:  ${Math.round(dayTot?.kcal || 0)} kcal, P${Math.round(dayTot?.prot || 0)}г C${Math.round(dayTot?.carb || 0)}г F${Math.round(dayTot?.fat || 0)}г`);
+        const supplements = Array.isArray(day?.supplements) ? day.supplements.filter((s) => s && s.taken !== false && s.consumed !== false) : [];
+        if (supplements.length) {
+            lines.push(`Supplements: ${supplements.length} active`);
+            supplements.forEach((s) => {
+                const m = s.macros || s.totals || s.nutrition || {};
+                const total = (Number(m.kcal) || 0) + (Number(m.prot) || 0) + (Number(m.protein) || 0);
+                lines.push(`  - ${s.name || s.title || s.id || '?'}: ${total ? `${Math.round(m.kcal || 0)} kcal / ${Math.round(m.prot || m.protein || 0)}г белка` : '(no macros)'}`);
+            });
+        }
+        const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+        if (trainings.length) {
+            lines.push(`Trainings: ${trainings.map((t) => `${t.time || '?'} ${t.type || ''}`).join('; ')}`);
+        }
+        lines.push('');
+
+        // 2) Выход планнера
+        lines.push('▼ RECOMMENDATION OUTPUT');
+        lines.push(dash);
+        if (!recommendation) {
+            lines.push('(no recommendation — see logs below)');
+        } else {
+            lines.push(`Scenario: ${recommendation.scenario || '?'} ${recommendation.scenarioIcon || ''}`);
+            lines.push(`Confidence: ${recommendation.confidence !== undefined ? (recommendation.confidence * 100).toFixed(0) + '%' : '?'}`);
+            lines.push(`Mode: ${recommendation.mode || '?'} (suggestions=${recommendation.suggestions?.length || 0}, groups=${recommendation.groups?.length || 0})`);
+            if (recommendation.timing) {
+                lines.push(`Timing: ${recommendation.timing.ideal || '?'} (plannerSynced=${!!recommendation.timing.plannerSynced})`);
+                if (recommendation.timing.reason) lines.push(`  reason: ${recommendation.timing.reason}`);
+            }
+            if (recommendation.macros) {
+                const m = recommendation.macros;
+                lines.push(`Macros: ${Math.round(m.kcal || 0)} kcal · P${Math.round(m.protein || m.prot || 0)}г C${Math.round(m.carbs || 0)}г F${Math.round(m.fat || 0)}г · remaining ${Math.round(m.remainingKcal || 0)} kcal`);
+            }
+            if (recommendation.replanMeta) {
+                lines.push(`Replan: mode=${recommendation.replanMeta.mode} fallbackUsed=${!!recommendation.replanMeta.fallbackUsed} fallbackType=${recommendation.replanMeta.fallbackType || '-'}`);
+            }
+            lines.push('');
+
+            const mp = recommendation.mealsPlan;
+            if (mp?.available && mp.meals?.length > 0) {
+                lines.push(`Multi-meal plan: ${mp.meals.length} meals`);
+                lines.push(`  Timeline: ${mp.summary?.timelineStart || '?'} → ${mp.summary?.timelineEnd || '?'}`);
+                lines.push(`  Sleep target: ${mp.summary?.sleepTarget || '?'}, last meal deadline: ${mp.summary?.lastMealDeadline || '?'}`);
+                if (mp.summary?.totalMacros) {
+                    const tm = mp.summary.totalMacros;
+                    lines.push(`  Total macros: ${Math.round(tm.kcal || 0)} kcal · P${Math.round(tm.prot || 0)}г C${Math.round(tm.carbs || 0)}г`);
+                }
+                lines.push('');
+                mp.meals.forEach((m, i) => {
+                    lines.push(`  Meal ${i + 1}: ${m.timeStart}-${m.timeEnd}`);
+                    lines.push(`    macros:  P${Math.round(m.macros?.prot || 0)}г C${Math.round(m.macros?.carbs || 0)}г F${Math.round(m.macros?.fat || 0)}г · ${Math.round(m.macros?.kcal || 0)} kcal`);
+                    lines.push(`    scenario: ${m.scenario || '?'} (source: ${m.scenarioSource || '?'})${m.scenarioBaseline ? `, baseline: ${m.scenarioBaseline}` : ''}`);
+                    lines.push(`    targets: GL ${m.targetGL ?? '-'}, hoursToSleep ${m.hoursToSleep != null ? Number(m.hoursToSleep).toFixed(1) + 'ч' : '?'}${m.presleepCapped ? ' [⚠ presleep capped]' : ''}`);
+                    lines.push(`    wave end: ${m.estimatedWaveEnd || '?'}, fat burn: ${m.fatBurnWindow?.start || '?'} → ${m.fatBurnWindow?.end || '?'}`);
+                    lines.push(`    actionable: ${!!m.isActionable}, locked: ${!!m.locked}, last: ${!!m.isLast}`);
+                });
+
+                // R6-D: показать advisories от planner (overlap волн, стресс, дефициты)
+                const advs = mp.summary?.advisories;
+                if (Array.isArray(advs) && advs.length > 0) {
+                    lines.push('');
+                    lines.push('  Advisories:');
+                    advs.forEach((a) => {
+                        const sev = a.severity === 'high' ? '🔴' : a.severity === 'medium' ? '🟡' : '🟢';
+                        lines.push(`    ${sev} [${a.key}] ${a.text}`);
+                    });
+                }
+            } else {
+                lines.push('No multi-meal plan (single-meal mode or planner skipped)');
+                if (mp?.summary?.reason) lines.push(`  reason: ${mp.summary.reason}`);
+            }
+        }
+        lines.push('');
+
+        // 3) Лог последних расчётов
+        const nowMs = Date.now();
+        let recent = plannerLogBuffer.filter((entry) => nowMs - entry.t < 300_000).slice(-200);
+        let logSource = 'last 5 min';
+        if (!recent.length && plannerLogBuffer.length > 0) {
+            // Fallback: показать всё что есть (возможно последний расчёт был давно)
+            recent = plannerLogBuffer.slice(-200);
+            logSource = 'all buffer (no recent activity)';
+        }
+        lines.push(`▼ PLANNER LOGS (${logSource})`);
+        lines.push(dash);
+        if (!recent.length) {
+            lines.push('(buffer empty — open the Diary tab and reload to capture logs)');
+        } else {
+            recent.forEach((entry) => {
+                const elapsed = ((nowMs - entry.t) / 1000).toFixed(1);
+                const lvl = entry.level === 'warn' ? '⚠' : entry.level === 'error' ? '❌' : ' ';
+                lines.push(`[-${elapsed}s] ${lvl} ${entry.msg}${entry.args.length ? ' ' + entry.args.join(' ') : ''}`);
+            });
+        }
+        lines.push('');
+        lines.push(sep);
+        lines.push('Скопируйте этот текст разработчику для дебага планнера.');
+        return lines.join('\n');
+    }
+
     function buildReplanSignal(day, dayTot, normAbs, optimum, prof, pIndex, thresholdsUpdateTick) {
         const meals = day?.meals || [];
         const lastMeal = meals[meals.length - 1] || null;
@@ -236,6 +419,27 @@
     }
 
     /**
+     * Текущая локальная дата в формате YYYY-MM-DD (для сверки day.date)
+     */
+    function todayISO() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    /**
+     * Парс HH:MM → decimal hours. Возвращает null для невалидных значений.
+     */
+    function parseTimeStr(t) {
+        if (!t || typeof t !== 'string' || !t.includes(':')) return null;
+        const [h, m] = t.split(':').map(Number);
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+        return h + m / 60;
+    }
+
+    /**
      * Собрать контекст для recommend() из данных дня
      */
     function buildRecommendationContext(day, dayTot, normAbs, prof, optimum, pIndex) {
@@ -257,13 +461,29 @@
             return null;
         }
 
+        // R4-3: pIndex может быть пустым в момент инициализации (продукты ещё
+        // загружаются через cloud sync / shared catalog). В этом случае mealTotals
+        // вернёт 0 для всех нутриентов и закеширует невалидный результат —
+        // sodium плавает между сессиями, harm тоже. Откладываем расчёт до прихода
+        // products.
+        const pIndexSize = pIndex?.byId?.size ?? 0;
+        const hasMeals = (day?.meals?.length || 0) > 0;
+        if (hasMeals && pIndexSize === 0) {
+            console.warn(`${LOG_PREFIX} ⚠️ [PLANNER.context] pIndex empty (race?) — deferring recommendation until products load`);
+            return null;
+        }
+
         const currentTime = new Date();
         const currentHour = currentTime.getHours();
         const currentMinute = currentTime.getMinutes();
         const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
 
-        // Последний приём пищи
-        const meals = day.meals || [];
+        // R1-2: сортируем приёмы по времени, чтобы lastMeal был действительно поздним.
+        const rawMeals = Array.isArray(day.meals) ? day.meals : [];
+        const meals = rawMeals
+            .filter((m) => m && typeof m.time === 'string' && m.time.includes(':'))
+            .slice()
+            .sort((a, b) => (parseTimeStr(a.time) || 0) - (parseTimeStr(b.time) || 0));
         const lastMeal = meals.length > 0 ? meals[meals.length - 1] : null;
 
         // Вычислить totals для lastMeal (если есть items)
@@ -293,8 +513,66 @@
         const trainings = day.trainings || [];
         const training = trainings.length > 0 ? trainings[0] : null;
 
-        // Целевое время сна
-        const sleepTarget = prof?.sleepTarget || '23:00';
+        // R1-3: целевое время сна — сначала чек-ин дня (day.sleepStart),
+        // потом профиль, потом дефолт. day.sleepStart всегда побеждает,
+        // если планируем СЕГОДНЯ — это явная заявка пользователя на этот день.
+        const daySleepStart = (typeof day.sleepStart === 'string' && day.sleepStart.includes(':'))
+            ? day.sleepStart
+            : null;
+        const sleepTarget = daySleepStart || prof?.sleepTarget || '23:00';
+
+        // R2-3: пересчитываем dayEaten из day.meals напрямую. Не доверяем входному
+        // dayTot — он может отстать после быстрых add/remove (debounce + async LS).
+        let eaten = { kcal: dayTot.kcal || 0, prot: dayTot.prot || 0, carb: dayTot.carb || 0, fat: dayTot.fat || 0 };
+        if (global.HEYS?.models?.mealTotals && pIndex && rawMeals.length > 0) {
+            const recomputed = { kcal: 0, prot: 0, carb: 0, fat: 0 };
+            for (const m of rawMeals) {
+                try {
+                    const mt = global.HEYS.models.mealTotals(m, pIndex);
+                    recomputed.kcal += mt?.kcal || 0;
+                    recomputed.prot += mt?.prot || 0;
+                    recomputed.carb += mt?.carb || 0;
+                    recomputed.fat += mt?.fat || 0;
+                } catch (e) { /* skip broken meal */ }
+            }
+            if (recomputed.kcal > 0 || recomputed.prot > 0 || recomputed.carb > 0 || recomputed.fat > 0) {
+                eaten = recomputed;
+            }
+        }
+
+        // R2-1: supplements учитываются в dayEaten, если у них есть macros или totals.
+        // Структура supplements не унифицирована между клиентами — поддерживаем оба варианта.
+        const supplements = Array.isArray(day.supplements) ? day.supplements : [];
+        const supplementsImpact = { kcal: 0, prot: 0, carb: 0, fat: 0 };
+        for (const s of supplements) {
+            if (!s) continue;
+            // Принимаем явное поле .taken/.consumed=true либо отсутствие флага (значит принято).
+            if (s.taken === false || s.consumed === false) continue;
+            const m = s.macros || s.totals || s.nutrition || {};
+            supplementsImpact.kcal += Number(m.kcal) || 0;
+            supplementsImpact.prot += Number(m.prot) || Number(m.protein) || 0;
+            supplementsImpact.carb += Number(m.carb) || Number(m.carbs) || 0;
+            supplementsImpact.fat += Number(m.fat) || 0;
+        }
+        if (supplementsImpact.kcal || supplementsImpact.prot || supplementsImpact.carb || supplementsImpact.fat) {
+            eaten = {
+                kcal: eaten.kcal + supplementsImpact.kcal,
+                prot: eaten.prot + supplementsImpact.prot,
+                carb: eaten.carb + supplementsImpact.carb,
+                fat: eaten.fat + supplementsImpact.fat
+            };
+            console.info(`${LOG_PREFIX} [PLANNER.context] 💊 supplements added: ${Math.round(supplementsImpact.kcal)} kcal, ${Math.round(supplementsImpact.prot)}g prot`);
+        }
+
+        // R2-2/R2-5: dayTarget учитывает рифид и тренировочный boost.
+        // optimum, поступающий из day-stats, уже включает refeed/workout-коррекции —
+        // используем его как авторитетный источник ккал. normAbs.kcal — сырая дневная норма.
+        const targetKcalRaw = Number.isFinite(optimum) && optimum > 0
+            ? optimum
+            : (Number(normAbs.kcal) || 0);
+        if (day.isRefeedDay && Number.isFinite(optimum) && optimum > (normAbs.kcal || 0)) {
+            console.info(`${LOG_PREFIX} [PLANNER.context] 🔄 Refeed day: target ${Math.round(targetKcalRaw)} kcal (raw norm ${Math.round(normAbs.kcal || 0)})`);
+        }
 
         const resolvedLsGet =
             (typeof global.U?.lsGet === 'function' && global.U.lsGet.bind(global.U)) ||
@@ -318,7 +596,7 @@
                 totals: lastMealTotals || {}
             } : null,
             dayTarget: {
-                kcal: optimum || normAbs.kcal || 0,
+                kcal: targetKcalRaw,
                 protein: normAbs.prot || 0,
                 carbs: normAbs.carb || 0,
                 fat: normAbs.fat || 0,
@@ -327,19 +605,23 @@
                 carb: normAbs.carb || 0
             },
             dayEaten: {
-                kcal: dayTot.kcal || 0,
-                protein: dayTot.prot || 0,
-                carbs: dayTot.carb || 0,
-                fat: dayTot.fat || 0,
+                kcal: eaten.kcal,
+                protein: eaten.prot,
+                carbs: eaten.carb,
+                fat: eaten.fat,
                 // Aliases for planner
-                prot: dayTot.prot || 0,
-                carb: dayTot.carb || 0
+                prot: eaten.prot,
+                carb: eaten.carb
             },
             training: training ? {
                 time: training.time,
                 type: training.type || 'general'
             } : null,
             sleepTarget,
+            // R1-3: явный сигнал «время сна задано пользователем сегодня».
+            // Planner будет использовать как высший приоритет sleepTarget.
+            daySleepStart,
+            isRefeedDay: !!day.isRefeedDay,
             lsGet: resolvedLsGet,
             sharedProducts: global.HEYS?.products?.getAll?.() || []
         };
@@ -350,8 +632,10 @@
             lastMealItems: lastMeal?.items?.length || 0,
             lastMealTotals: lastMealTotals,
             mealsToday: meals.length,
-            dayEaten: `${Math.round(dayTot.kcal)}ккал, ${Math.round(dayTot.prot)}г белка`,
-            dayTarget: `${Math.round(optimum || normAbs.kcal)}ккал (optimum=${optimum || 'N/A'}, normAbs=${normAbs.kcal}), ${Math.round(normAbs.prot)}г белка`,
+            dayEaten: `${Math.round(eaten.kcal)}ккал, ${Math.round(eaten.prot)}г белка`,
+            dayTarget: `${Math.round(targetKcalRaw)}ккал (optimum=${optimum || 'N/A'}, normAbs=${normAbs.kcal}, refeed=${!!day.isRefeedDay}), ${Math.round(normAbs.prot)}г белка`,
+            sleepTarget,
+            daySleepStart: daySleepStart || 'inherit',
             hasTraining: !!training,
             trainingTime: training?.time || 'none',
             hasLsGet: typeof context.lsGet === 'function',
@@ -384,7 +668,22 @@
     var _mealRecCardRenderCount = 0;
 
     function MealRecommenderCard({ React, day, prof, pIndex, dayTot, normAbs, optimum }) {
-        const [expanded, setExpanded] = useState(false);
+        // R1-1: для прошлых/будущих дат планнер не имеет смысла — currentTime всегда
+        // относится к "сегодня", а deadline по сну не применим. Скрываем карточку,
+        // чтобы не показывать пользователю фейковые промежутки.
+        const isToday = !day?.date || day.date === todayISO();
+        if (!isToday) {
+            return null;
+        }
+
+        const [expanded, setExpanded] = useState(() => {
+            // R1-6: восстанавливаем состояние expanded из LS, чтобы оно не сбрасывалось
+            // при пересчёте плана после добавления продукта.
+            try {
+                const raw = localStorage.getItem('heys_meal_planner_expanded_v1');
+                return raw === '1' || raw === 'true';
+            } catch (e) { return false; }
+        });
         const [showProductsModal, setShowProductsModal] = useState(false);
         const [userFeedback, setUserFeedback] = useState(null); // null | 'positive' | 'negative'
         const [checkedProducts, setCheckedProducts] = useState({}); // v27: { productId: boolean } for grouped mode
@@ -392,6 +691,7 @@
         const [recommendation, setRecommendation] = useState(null); // 🚀 PERF v6.0: Асинхронный расчет
         const [isCalculating, setIsCalculating] = useState(true); // 🚀 PERF v6.0: Состояние загрузки
         const [externalReplanReason, setExternalReplanReason] = useState(null);
+        const [diagCopyStatus, setDiagCopyStatus] = useState(null); // null | 'ok' | 'err'
 
         useEffect(() => {
             if (!showProductsModal) return;
@@ -401,6 +701,21 @@
                 document.body.style.overflow = prevOverflow;
             };
         }, [showProductsModal]);
+
+        // R5-C: пока карточка раскрыта — рефрешим план каждые 60 сек.
+        // currentTime фиксируется в момент расчёта, и через несколько минут
+        // план может показывать «timing 20:49-20:50», когда уже 20:53.
+        useEffect(() => {
+            if (!expanded) return;
+            const interval = setInterval(() => {
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:planner-replan-request', {
+                        detail: { reason: 'EXPANDED_TICK', source: 'periodic_refresh' }
+                    }));
+                } catch (e) {}
+            }, 60_000);
+            return () => clearInterval(interval);
+        }, [expanded]);
 
         // Listen for SWR background updates
         useEffect(() => {
@@ -415,11 +730,19 @@
         useEffect(() => {
             const handlePlannerReplanRequest = (event) => {
                 const reason = event?.detail?.reason || 'EXTERNAL_REPLAN_REQUEST';
-                if (lastAppliedExternalReasonRef.current === reason) return;
+                // R2-4: между событием и срабатыванием debounce юзер мог
+                // успеть add+delete продукт — тогда reason тот же, но meals изменились.
+                // Заменяем "reason"-кэш на хэш самих meals, чтобы пересчёт срабатывал.
+                const mealsHash = `${day?.meals?.length || 0}|${day?.meals?.map((m) => `${m?.id || ''}:${m?.items?.length || 0}`).join(',') || ''}`;
+                const cacheKey = `${reason}|${mealsHash}`;
+                if (lastAppliedExternalReasonRef.current === cacheKey) return;
                 if (replanEventDebounceRef.current) clearTimeout(replanEventDebounceRef.current);
                 replanEventDebounceRef.current = setTimeout(() => {
-                    lastAppliedExternalReasonRef.current = reason;
-                    console.info(`${LOG_PREFIX} 🔁 External replan request:`, reason);
+                    // Проверим хэш ещё раз ВНУТРИ debounce — если meals изменились
+                    // между регистрацией события и срабатыванием, обновим cache key.
+                    const currentMealsHash = `${day?.meals?.length || 0}|${day?.meals?.map((m) => `${m?.id || ''}:${m?.items?.length || 0}`).join(',') || ''}`;
+                    lastAppliedExternalReasonRef.current = `${reason}|${currentMealsHash}`;
+                    console.info(`${LOG_PREFIX} 🔁 External replan request:`, { reason, mealsHashAtDebounceStart: mealsHash, mealsHashAtRun: currentMealsHash, changed: mealsHash !== currentMealsHash });
                     setExternalReplanReason(reason);
                 }, REPLAN_DEBOUNCE_MS);
             };
@@ -428,7 +751,7 @@
                 if (replanEventDebounceRef.current) clearTimeout(replanEventDebounceRef.current);
                 window.removeEventListener('heys:planner-replan-request', handlePlannerReplanRequest);
             };
-        }, []);
+        }, [day]);
 
         useEffect(() => {
             const handleReplanMetrics = (event) => {
@@ -481,6 +804,34 @@
         const eatenKcal = replanSignal.eatenKcal;
         const eatenProt = replanSignal.eatenProt;
         const targetKcal = replanSignal.targetKcal;
+
+        // Handler копирования диагностики планнера
+        const handleCopyDiagnostics = async () => {
+            try {
+                const report = buildPlannerDiagnosticReport({
+                    day, prof, dayTot, normAbs, optimum, pIndex, recommendation
+                });
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(report);
+                } else {
+                    // Фоллбек для старых браузеров
+                    const ta = document.createElement('textarea');
+                    ta.value = report;
+                    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                setDiagCopyStatus('ok');
+                console.info(`${LOG_PREFIX} 📋 Diagnostic report copied to clipboard (${report.length} chars)`);
+                setTimeout(() => setDiagCopyStatus(null), 2500);
+            } catch (err) {
+                console.error(`${LOG_PREFIX} ❌ Failed to copy diagnostics:`, err);
+                setDiagCopyStatus('err');
+                setTimeout(() => setDiagCopyStatus(null), 2500);
+            }
+        };
 
         // Handler для feedback кнопок (R2.7)
         const handleFeedback = (rating) => {
@@ -1537,15 +1888,25 @@
         // Other scenarios: show if has macros
         const remainingKcal = macros?.remainingKcal || 0;
 
-        if (!isGoalReached && (remainingKcal < 50 || (macros?.protein <= 0 && macros?.carbs <= 0))) {
+        // R8-B: water-card показываем когда:
+        //   1) Goal achieved (явно GOAL_REACHED scenario) — независимо от того
+        //      что planner вернул через mealsPlan (например stable snapshot
+        //      может протолкнуть устаревший meal на 338 ккал).
+        //   2) Budget exhausted (остаток <50 ккал ИЛИ ноль белка+углеводов).
+        const shouldShowWater = isGoalReached || remainingKcal < 50 || (macros?.protein <= 0 && macros?.carbs <= 0);
+        if (shouldShowWater) {
             console.info(`${LOG_PREFIX} ℹ️ Budget exhausted — showing water card:`, {
                 scenario,
+                isGoalReached,
                 remainingKcal,
                 protein: macros?.protein,
                 carbs: macros?.carbs
             });
             // Show "goal complete, drink water" card instead of hiding
-            return h('div', { className: 'meal-rec-card widget widget--meal-rec-diary-water p-4 rounded-2xl' },
+            return h('div', {
+                className: 'meal-rec-card widget widget--meal-rec-diary-water p-4 rounded-2xl',
+                style: { position: 'relative' }
+            },
                 h('div', { className: 'flex items-center gap-3 mb-2' },
                     h('span', { className: 'text-3xl' }, '💧'),
                     h('div', null,
@@ -1558,7 +1919,18 @@
                     'Дальше — только вода ',
                     h('span', { className: 'text-base' }, '💧'),
                     '. Хороший день!'
-                )
+                ),
+                // Незаметная точка диагностики (как в основной карточке)
+                h('span', {
+                    className: 'meal-rec-card__diag-dot',
+                    style: { position: 'absolute', top: 8, right: 10 },
+                    onClick: (e) => { e.stopPropagation(); handleCopyDiagnostics(); },
+                    title: diagCopyStatus === 'ok' ? 'Диагностика скопирована' :
+                           diagCopyStatus === 'err' ? 'Не удалось скопировать' :
+                           'Скопировать диагностику',
+                    'data-status': diagCopyStatus || '',
+                    'aria-label': 'Скопировать диагностику планнера'
+                }, diagCopyStatus === 'ok' ? '✓' : diagCopyStatus === 'err' ? '✕' : '·')
             );
         }
 
@@ -1585,7 +1957,11 @@
             const mealsCount = mealsPlan.meals.length;
             const pluralMeals = mealsCount === 2 ? 'приёма' : mealsCount >= 5 ? 'приёмов' : 'приёма';
             headerTitle = `${mealsCount} ${pluralMeals} до сна`;
-            headerTimeRange = `${mealsPlan.summary.timelineStart}-${mealsPlan.summary.timelineEnd}`;
+            // R1-5: timeline берём из самих meals — summary не пересчитывается после timing-sync,
+            // а meals содержат итоговые времена (включая корректировки planner'а).
+            const firstStart = mealsPlan.meals[0]?.timeStart || mealsPlan.summary?.timelineStart;
+            const lastEnd = mealsPlan.meals[mealsPlan.meals.length - 1]?.timeEnd || mealsPlan.summary?.timelineEnd;
+            headerTimeRange = (firstStart && lastEnd) ? `${firstStart}-${lastEnd}` : null;
             headerSubtitle = 'Следуйте плану — и ваш день будет идеальным по питанию';
         } else {
             headerTitle = scenarioTitle;
@@ -1599,7 +1975,21 @@
             className: 'meal-rec-card__header',
             'data-perf-id': 'meal-rec-card',
             // R15: defer heavy re-render out of click handler
-            onClick: () => setTimeout(() => React.startTransition(() => setExpanded(prev => !prev)), 0)
+            onClick: () => setTimeout(() => React.startTransition(() => setExpanded(prev => {
+                const next = !prev;
+                // R1-6: persist в LS чтобы пережить пересчёт плана
+                try { localStorage.setItem('heys_meal_planner_expanded_v1', next ? '1' : '0'); } catch (e) {}
+                // R5-C: при ОТКРЫТИИ карточки триггерим replan — план мог
+                // устареть пока юзер смотрел на другие места приложения.
+                if (next === true) {
+                    try {
+                        window.dispatchEvent(new CustomEvent('heys:planner-replan-request', {
+                            detail: { reason: 'CARD_EXPANDED', source: 'user_open' }
+                        }));
+                    } catch (e) {}
+                }
+                return next;
+            })), 0)
         },
             h('div', { className: 'meal-rec-card__title' },
                 h('div', { className: 'meal-rec-card__badge-wrap' },
@@ -1688,10 +2078,72 @@
             'STRESS_EATING': { text: 'Антистресс', mod: 'balanced' },
         };
 
+        // R1-4: timeline-лента всех приёмов плана в раскрытом виде.
+        // Каждая метка = один meal с timeStart, БЖУ и подсветкой по hoursToSleep.
+        let plannerTimeline = null;
+        if (expanded && isMultiMeal && mealsPlan?.meals?.length > 0) {
+            const allMeals = mealsPlan.meals;
+            // Парс HH:MM в decimal для расчёта позиции на ленте
+            const _ph = (t) => {
+                if (!t || typeof t !== 'string') return null;
+                const [hh, mm] = t.split(':').map(Number);
+                return Number.isFinite(hh) && Number.isFinite(mm) ? hh + mm / 60 : null;
+            };
+            const startHours = _ph(allMeals[0].timeStart) || 0;
+            const endHours = _ph(allMeals[allMeals.length - 1].timeEnd) || (startHours + 1);
+            const span = Math.max(0.5, endHours - startHours);
+            plannerTimeline = h('div', { className: 'meal-rec-card__timeline' },
+                h('div', { className: 'meal-rec-card__timeline-header' },
+                    h('span', { className: 'meal-rec-card__timeline-label' }, 'План приёмов'),
+                    h('span', { className: 'meal-rec-card__timeline-range' }, `${allMeals[0].timeStart} → ${allMeals[allMeals.length - 1].timeEnd}`)
+                ),
+                h('div', { className: 'meal-rec-card__timeline-track' },
+                    ...allMeals.map((m, i) => {
+                        const t = _ph(m.timeStart) || startHours;
+                        const pct = ((t - startHours) / span) * 100;
+                        const hSleep = Number(m.hoursToSleep) || 0;
+                        // Цветовая подсветка: <2ч — красный, 2-3.5ч — жёлтый, >3.5ч — зелёный
+                        let tone = 'good';
+                        if (hSleep > 0 && hSleep < 2) tone = 'danger';
+                        else if (hSleep > 0 && hSleep < 3.5) tone = 'warn';
+                        const isActionable = !!m.isActionable;
+                        return h('div', {
+                            key: i,
+                            className: `meal-rec-card__timeline-dot meal-rec-card__timeline-dot--${tone} ${isActionable ? 'meal-rec-card__timeline-dot--actionable' : ''}`,
+                            style: { left: `${Math.max(0, Math.min(100, pct))}%` },
+                            title: `${m.timeStart}-${m.timeEnd} · Б${Math.round(m.macros?.prot || 0)}г У${Math.round(m.macros?.carbs || 0)}г · ${Math.round(m.macros?.kcal || 0)} ккал · ${hSleep > 0 ? hSleep.toFixed(1) + 'ч до сна' : ''}`
+                        },
+                            h('div', { className: 'meal-rec-card__timeline-dot-time' }, m.timeStart),
+                            h('div', { className: 'meal-rec-card__timeline-dot-kcal' }, `${Math.round(m.macros?.kcal || 0)}`),
+                            hSleep > 0 && h('div', { className: 'meal-rec-card__timeline-dot-sleep' }, `-${hSleep.toFixed(1)}ч`)
+                        );
+                    })
+                )
+            );
+        }
+
+        // R4-6: advisories из planner.summary — рекомендации по паттернам
+        // (overlap волн, стресс, дефициты). Показываем как мягкие подсказки.
+        let plannerAdvisories = null;
+        const advisories = mealsPlan?.summary?.advisories || [];
+        if (expanded && advisories.length > 0) {
+            plannerAdvisories = h('div', { className: 'meal-rec-card__advisories' },
+                ...advisories.map((adv, i) => h('div', {
+                    key: i,
+                    className: `meal-rec-card__advisory meal-rec-card__advisory--${adv.severity || 'low'}`
+                },
+                    h('span', { className: 'meal-rec-card__advisory-icon' }, '💡'),
+                    h('span', { className: 'meal-rec-card__advisory-text' }, adv.text)
+                ))
+            );
+        }
+
         // Expanded details — v26: multi-meal support или original compact layout
         let expandedDetails = null;
         if (expanded) {
             expandedDetails = h('div', { className: 'meal-rec-card__details meal-rec-card__details--expanded' },
+                plannerTimeline,
+                plannerAdvisories,
                 h('div', { className: 'meal-rec-card__logic-summary' },
                     h('div', { className: 'meal-rec-card__logic-row' },
                         h('span', { className: 'meal-rec-card__logic-label' }, 'Что лучше сейчас:'),
@@ -1732,6 +2184,15 @@
                     confidence !== undefined && h('span', { className: 'meal-rec-card__confidence' },
                         `${Math.round(confidence * 100)}%`
                     ),
+                    h('span', {
+                        className: 'meal-rec-card__diag-dot',
+                        onClick: (e) => { e.stopPropagation(); handleCopyDiagnostics(); },
+                        title: diagCopyStatus === 'ok' ? 'Диагностика скопирована' :
+                               diagCopyStatus === 'err' ? 'Не удалось скопировать' :
+                               'Скопировать диагностику',
+                        'data-status': diagCopyStatus || '',
+                        'aria-label': 'Скопировать диагностику планнера'
+                    }, diagCopyStatus === 'ok' ? '✓' : diagCopyStatus === 'err' ? '✕' : '·'),
                     h('div', { className: 'meal-rec-card__feedback-inline' },
                         !userFeedback && h('span', { className: 'meal-rec-card__feedback-label' }, 'Полезно?'),
                         h('button', {

@@ -196,6 +196,8 @@
       if (hasResistantStarch(prod)) hasResistantStarchInMeal = true;
     }
 
+    // R4-7: kcal приёма = P*4 + C*4 + F*9 для kcalScaleMult в multiplier
+    const _mealKcal = (nutrients.totalProtein || 0) * 4 + (nutrients.totalCarbs || 0) * 4 + (nutrients.totalFat || 0) * 9;
     const multipliers = calculateMultiplier(
       nutrients.avgGI,
       nutrients.totalProtein,
@@ -206,7 +208,9 @@
       nutrients.hasLiquid,
       nutrients.insulinogenicBonus,
       mealFoodForm,  // 🆕 v3.2.0
-      nutrients.dominantProteinType || 'mixed' // 🆕 v4.2.3: реальный тип белка
+      nutrients.dominantProteinType || 'mixed', // 🆕 v4.2.3: реальный тип белка
+      nutrients.simpleRatio, // R4-7: укорачивает волну при >60%
+      _mealKcal              // R4-7: маленькие приёмы → короче волна
     );
 
     // 🏃 Workout бонус (общий за день)
@@ -586,6 +590,8 @@
         else if (itemForm === 'whole' && !historyFoodForm) historyFoodForm = 'whole';
       }
 
+      // R4-7: kcal приёма для kcalScaleMult
+      const _mealKcalHist = (mealNutrients.totalProtein || 0) * 4 + (mealNutrients.totalCarbs || 0) * 4 + (mealNutrients.totalFat || 0) * 9;
       const mealMult = calculateMultiplier(
         mealNutrients.avgGI,
         mealNutrients.totalProtein,
@@ -596,7 +602,9 @@
         mealNutrients.hasLiquid,
         mealNutrients.insulinogenicBonus,
         historyFoodForm,  // 🆕 v3.2.0
-        mealNutrients.dominantProteinType || 'mixed' // 🆕 v4.2.3
+        mealNutrients.dominantProteinType || 'mixed', // 🆕 v4.2.3
+        mealNutrients.simpleRatio, // R4-7
+        _mealKcalHist              // R4-7
       );
 
       // 🆕 v4.2.3: Activity Context для каждого приёма в истории — вычисляем заранее,

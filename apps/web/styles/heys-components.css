@@ -9541,6 +9541,174 @@ body.tour-active .ios-pwa-banner {
   animation: meal-rec-skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
+/* R1-4: Timeline-лента приёмов плана (expanded view) */
+.meal-rec-card__timeline {
+  padding: 12px 14px 8px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(34, 197, 94, 0.18);
+}
+.meal-rec-card__timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+.meal-rec-card__timeline-label {
+  color: #065f46;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.meal-rec-card__timeline-range {
+  color: #4b5563;
+  font-variant-numeric: tabular-nums;
+}
+.meal-rec-card__timeline-track {
+  position: relative;
+  height: 70px;
+  margin: 0 12px;
+  background: linear-gradient(to right, #d1fae5 0%, #fef3c7 60%, #fee2e2 100%);
+  border-radius: 9999px;
+}
+.meal-rec-card__timeline-track::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.06);
+}
+.meal-rec-card__timeline-dot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 2px solid #d1d5db;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.meal-rec-card__timeline-dot--good { border-color: #10b981; }
+.meal-rec-card__timeline-dot--warn { border-color: #f59e0b; }
+.meal-rec-card__timeline-dot--danger { border-color: #ef4444; }
+.meal-rec-card__timeline-dot--actionable {
+  background: #ecfdf5;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16), 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+.meal-rec-card__timeline-dot-time {
+  font-weight: 700;
+  color: #111827;
+}
+.meal-rec-card__timeline-dot-kcal {
+  color: #6b7280;
+  font-size: 10px;
+}
+.meal-rec-card__timeline-dot-sleep {
+  color: #9ca3af;
+  font-size: 9px;
+}
+[data-theme="dark"] .meal-rec-card__timeline {
+  background: rgba(2, 44, 34, 0.55);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+[data-theme="dark"] .meal-rec-card__timeline-label { color: #6ee7b7; }
+[data-theme="dark"] .meal-rec-card__timeline-range { color: #9ca3af; }
+[data-theme="dark"] .meal-rec-card__timeline-dot {
+  background: #0b1b16;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+[data-theme="dark"] .meal-rec-card__timeline-dot-time { color: #f3f4f6; }
+[data-theme="dark"] .meal-rec-card__timeline-dot--actionable {
+  background: #064e3b;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* R4-6: advisories — подсказки от планнера */
+.meal-rec-card__advisories {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+.meal-rec-card__advisory {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(251, 191, 36, 0.08);
+  border-left: 3px solid #fbbf24;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #78350f;
+}
+.meal-rec-card__advisory--high {
+  background: rgba(239, 68, 68, 0.08);
+  border-left-color: #ef4444;
+  color: #7f1d1d;
+}
+.meal-rec-card__advisory--medium {
+  background: rgba(245, 158, 11, 0.08);
+  border-left-color: #f59e0b;
+  color: #78350f;
+}
+.meal-rec-card__advisory-icon { flex-shrink: 0; }
+.meal-rec-card__advisory-text { flex: 1; }
+[data-theme="dark"] .meal-rec-card__advisory {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fde68a;
+}
+[data-theme="dark"] .meal-rec-card__advisory--high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fecaca;
+}
+
+/* Точка-кнопка копирования диагностики Планнера — намеренно незаметна */
+.meal-rec-card__diag-dot {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  line-height: 16px;
+  text-align: center;
+  margin: 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #9ca3af;
+  opacity: 0.45;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 50%;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.meal-rec-card__diag-dot:hover {
+  opacity: 0.95;
+  color: #4b5563;
+  background: rgba(0, 0, 0, 0.05);
+}
+.meal-rec-card__diag-dot[data-status="ok"] {
+  opacity: 0.85;
+  color: #10b981;
+}
+.meal-rec-card__diag-dot[data-status="err"] {
+  opacity: 0.85;
+  color: #ef4444;
+}
+[data-theme="dark"] .meal-rec-card__diag-dot { color: #6b7280; }
+[data-theme="dark"] .meal-rec-card__diag-dot:hover { color: #9ca3af; }
+
 /* SPRINT 9: Science Badge (Top-Right) */
 .meal-rec-card__science-corner {
   position: absolute;

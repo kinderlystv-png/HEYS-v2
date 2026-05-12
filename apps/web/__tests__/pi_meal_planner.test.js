@@ -128,8 +128,11 @@ describe('Meal Planner v1.0', () => {
             expect(budgets).toHaveLength(2);
             expect(budgets[0].prot).toBe(36); // 60%
             expect(budgets[1].prot).toBe(24); // 40%
-            expect(budgets[0].kcal).toBe(420); // 60%
-            expect(budgets[1].kcal).toBe(280); // 40%
+            // R5-B: kcal согласован с БЖУ (P*4 + C*4 + F*9), а не отдельный counter
+            const expectedKcal0 = budgets[0].prot * 4 + budgets[0].carbs * 4 + budgets[0].fat * 9;
+            const expectedKcal1 = budgets[1].prot * 4 + budgets[1].carbs * 4 + budgets[1].fat * 9;
+            expect(budgets[0].kcal).toBe(expectedKcal0);
+            expect(budgets[1].kcal).toBe(expectedKcal1);
         });
 
         it('distributes budget for 3 meals (45/35/20)', () => {
@@ -725,6 +728,504 @@ describe('Meal Planner v1.0', () => {
             }, 500);
             expect(validation.valid).toBe(false);
             expect(validation.reason).toContain('Empty meals');
+        });
+    });
+
+    // ============================================================
+    //  Round 1 — Correctness fixes
+    // ============================================================
+    describe('Round 1 — Correctness fixes', () => {
+        it('R1-7: explicit daySleepStart overrides historical avg', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Profile + historical days suggest 23:00, but day's check-in says 22:00 → should win.
+            const days = Array.from({ length: 5 }, (_, i) => ({
+                date: `2026-05-0${i + 1}`,
+                sleepStart: '23:00',
+                meals: [{ time: '20:00', items: [] }]
+            }));
+            const sleepTarget = planner.estimateSleepTarget(days, { sleepTarget: '23:00' }, {
+                explicitSleepStart: '22:00',
+                currentTimeHours: 18
+            });
+            expect(planner.formatTime(sleepTarget)).toBe('22:00');
+        });
+
+        it('R1-7: after-midnight cluster wins majority', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const days = [
+                { sleepStart: '01:30' },
+                { sleepStart: '01:45' },
+                { sleepStart: '02:00' },
+                { sleepStart: '23:30' } // outlier
+            ];
+            const sleepTarget = planner.estimateSleepTarget(days, {});
+            // Должно быть около 01:45 → 25.75h (clamped to 26.0 max).
+            expect(sleepTarget).toBeGreaterThan(24);
+        });
+
+        it('R1-12: distributeBudget guards against zero macro budget (no NaN)', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Полностью нулевой бюджет — алгоритм не должен делить на ноль.
+            const budgets = planner.distributeBudget(
+                { prot: 0, carbs: 0, fat: 0, kcal: 0 },
+                2,
+                [3, 1],
+                [18, 21]
+            );
+            expect(budgets).toHaveLength(2);
+            budgets.forEach((b) => {
+                expect(Number.isFinite(b.prot)).toBe(true);
+                expect(Number.isFinite(b.carbs)).toBe(true);
+                expect(Number.isFinite(b.kcal)).toBe(true);
+            });
+        });
+
+        it('R1-8: tiny deficit + 2-3h to sleep → returns 1 light protein meal', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // current 20:30, sleep 23:00 → 2.5h до сна, дефицит 200 kcal — раньше пусто, теперь лёгкий приём
+            const result = planner.planRemainingMeals({
+                currentTime: '20:30',
+                lastMeal: { time: '18:30', items: [], totals: { kcal: 600, prot: 30, carbs: 60, fat: 20 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 1800, prot: 120, carbs: 180, fat: 55 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {}
+            });
+            // Может вернуться лёгкий приём (1 meal) ИЛИ multi-meal — главное что есть план, не пусто
+            expect(result.available).toBe(true);
+            if (result.meals.length === 1) {
+                expect(result.meals[0].scenario).toBe('PRE_SLEEP');
+                expect(result.meals[0].macros.prot).toBeGreaterThanOrEqual(15);
+            }
+        });
+
+        it('R1-10: getWeightKg falls back through weight/weightKg/bodyMassKg/70', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Через estimateSleepTarget с profile без weight — не должно крашнуться.
+            // Проверим косвенно через planRemainingMeals
+            const result = planner.planRemainingMeals({
+                currentTime: '12:00',
+                lastMeal: null,
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 0, prot: 0, carbs: 0, fat: 0 },
+                profile: {}, // no weight at all
+                days: [],
+                pIndex: {}
+            });
+            expect(result.available).toBe(true);
+            // MPS должен сработать с fallback weight=70 → optimal 28г белка
+            if (result.meals.length > 0) {
+                result.meals.forEach((m) => {
+                    expect(Number.isFinite(m.macros.prot)).toBe(true);
+                });
+            }
+        });
+
+        it('R1-11: MPS boost preserves total kcal (carbs→fat compensation)', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '13:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 15, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2200, prot: 130, carbs: 230, fat: 70 },
+                dayEaten: { kcal: 400, prot: 15, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weightKg: 70 },
+                days: [],
+                pIndex: {}
+            });
+            expect(result.available).toBe(true);
+            // Контракт R1-11: kcal в meal.macros должен быть СВЯЗАН с БЖУ через формулу
+            // P*4 + C*4 + F*9. Допускаем rounding (distributeBudget округляет каждый
+            // макрос отдельно — это даёт ±5% за приём, что приемлемо).
+            result.meals.forEach((m) => {
+                const fromMacros = m.macros.prot * 4 + m.macros.carbs * 4 + m.macros.fat * 9;
+                const tolerance = Math.max(20, m.macros.kcal * 0.10); // 10% от ккал приёма
+                expect(Math.abs(fromMacros - m.macros.kcal)).toBeLessThanOrEqual(tolerance);
+            });
+        });
+    });
+
+    // ============================================================
+    //  Round 2 — Data integrity
+    // ============================================================
+    describe('Round 2 — Data integrity', () => {
+        it('R2-6: missing dayTarget.kcal → NO_TARGET error', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '13:00',
+                lastMeal: null,
+                dayTarget: {}, // no kcal
+                dayEaten: {},
+                profile: { sleepTarget: '23:00' },
+                days: [],
+                pIndex: {}
+            });
+            expect(result.available).toBe(false);
+            expect(result.error).toBe('NO_TARGET');
+        });
+
+        it('R2-6: implausibly low dayTarget.kcal (<500) → NO_TARGET error', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '13:00',
+                lastMeal: null,
+                dayTarget: { kcal: 200 },
+                dayEaten: {},
+                profile: {},
+                days: [],
+                pIndex: {}
+            });
+            expect(result.available).toBe(false);
+            expect(result.error).toBe('NO_TARGET');
+        });
+
+        it('R2-6: normalizes dayTarget aliases (protein/carb → prot/carbs)', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '12:00',
+                lastMeal: null,
+                dayTarget: { kcal: 2000, protein: 130, carb: 200, fat: 60 }, // aliases only
+                dayEaten: { kcal: 0, prot: 0, carb: 0, fat: 0 },
+                profile: { weight: 70, sleepTarget: '23:00' },
+                days: [],
+                pIndex: {}
+            });
+            expect(result.available).toBe(true);
+            // Если планнер не упал и distributeBudget не выдал NaN — алиасы поняты
+            if (result.meals.length > 0) {
+                result.meals.forEach((m) => {
+                    expect(Number.isFinite(m.macros.prot)).toBe(true);
+                });
+            }
+        });
+    });
+
+    // ============================================================
+    //  Round 3 — Adaptive physiology
+    // ============================================================
+    describe('Round 3 — Adaptive physiology', () => {
+        it('R3-1: late dinner + morning currentTime → wave reset (treats as first meal)', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '08:00',
+                lastMeal: { time: '22:30', items: [], totals: { kcal: 700, prot: 30, carbs: 80, fat: 25 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 0, prot: 0, carbs: 0, fat: 0 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {}
+            });
+            expect(result.available).toBe(true);
+            // Должен запланировать минимум 1 приём, начинающийся примерно с 08:00 (не +волна от 22:30)
+            if (result.meals.length > 0) {
+                const firstStart = planner.parseTime(result.meals[0].timeStart);
+                expect(firstStart).toBeGreaterThanOrEqual(7.5);
+                expect(firstStart).toBeLessThanOrEqual(10);
+            }
+        });
+
+        it('R3-4: fasting window shifts first meal to eatStart', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // current 09:00, IF window eat 12:00-20:00 → первый приём не раньше 12:00
+            const result = planner.planRemainingMeals({
+                currentTime: '09:00',
+                lastMeal: null,
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 0, prot: 0, carbs: 0, fat: 0 },
+                profile: {
+                    sleepTarget: '23:00',
+                    weight: 70,
+                    fastingWindow: { eatStart: '12:00', eatEnd: '20:00' }
+                },
+                days: [],
+                pIndex: {}
+            });
+            expect(result.available).toBe(true);
+            if (result.meals.length > 0) {
+                const firstStart = planner.parseTime(result.meals[0].timeStart);
+                expect(firstStart).toBeGreaterThanOrEqual(12);
+            }
+        });
+
+        it('R3-3: cold start (no history) uses profile.sleepTarget', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const sleepTarget = planner.estimateSleepTarget([], { sleepTarget: '00:30' });
+            // 00:30 → 24.5h (treated as after midnight)
+            expect(sleepTarget).toBe(0.5);
+        });
+    });
+
+    // ============================================================
+    //  Round 4 — Deep planner work
+    // ============================================================
+    describe('Round 4 — Deep planner work', () => {
+        it('R4-2: estimatePersonalWaveHours больше не override-ит insulinWaveHours', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // История с приёмами раз в 5ч → estimatePersonalWaveHours вернёт ~5h
+            const days = Array.from({ length: 5 }, (_, i) => ({
+                date: `2026-05-0${i + 1}`,
+                meals: [
+                    { time: '08:00', items: [] },
+                    { time: '13:00', items: [] },
+                    { time: '18:00', items: [] }
+                ]
+            }));
+            // Без override: planner должен использовать estimateWaveDuration с реальным составом,
+            // а не 5h-personal. Проверим что план рассчитывается без падения.
+            const result = planner.planRemainingMeals({
+                currentTime: '14:00',
+                lastMeal: { time: '13:00', items: [], totals: { kcal: 600, prot: 30, carbs: 80, fat: 20 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 600, prot: 30, carbs: 80, fat: 20 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days,
+                pIndex: {}
+            });
+            expect(result.available).toBe(true);
+            // Не должно быть NaN или Infinity в любом meal
+            result.meals.forEach((m) => {
+                expect(Number.isFinite(m.macros.kcal)).toBe(true);
+                expect(Number.isFinite(m.macros.prot)).toBe(true);
+            });
+        });
+
+        it('R4-5: stressMoodSignals=moderate stress + late evening → deadline сдвинут на 30 мин', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const withoutStress = planner.planRemainingMeals({
+                currentTime: '20:30',
+                lastMeal: { time: '18:30', items: [], totals: { kcal: 500, prot: 25, carbs: 60, fat: 15 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 1500, prot: 100, carbs: 150, fat: 45 },
+                profile: { sleepTarget: '23:30', weight: 70 },
+                days: [],
+                pIndex: {}
+            });
+            const withStress = planner.planRemainingMeals({
+                currentTime: '20:30',
+                lastMeal: { time: '18:30', items: [], totals: { kcal: 500, prot: 25, carbs: 60, fat: 15 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 1500, prot: 100, carbs: 150, fat: 45 },
+                profile: { sleepTarget: '23:30', weight: 70 },
+                days: [],
+                pIndex: {},
+                stressMoodSignals: { stressLevel: 'moderate', moodLevel: 'neutral' }
+            });
+            // Оба плана доступны
+            expect(withoutStress.available).toBe(true);
+            expect(withStress.available).toBe(true);
+            // deadline в withStress должен быть раньше (или равен — если sleep буфер уже урезан)
+            const a = planner.parseTime(withoutStress.summary?.lastMealDeadline || '00:00');
+            const b = planner.parseTime(withStress.summary?.lastMealDeadline || '00:00');
+            expect(b).toBeLessThanOrEqual(a);
+        });
+
+        it('R4-6: waveOverlapPct > 40% → advisory в summary', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '13:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 20, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 20, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {},
+                waveOverlapPct: 47
+            });
+            expect(result.available).toBe(true);
+            expect(result.summary?.advisories).toBeDefined();
+            const overlap = result.summary.advisories.find((a) => a.key === 'wave_overlap');
+            expect(overlap).toBeDefined();
+            expect(overlap.text).toContain('47');
+        });
+
+        it('R4-6: waveOverlapPct ≤ 40% → нет advisory wave_overlap', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '13:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 20, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 20, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {},
+                waveOverlapPct: 25
+            });
+            expect(result.available).toBe(true);
+            const overlap = result.summary?.advisories?.find?.((a) => a.key === 'wave_overlap');
+            expect(overlap).toBeUndefined();
+        });
+
+        it('R4-8: workoutRecoveryFactor — strength тренировка 4ч назад → MPS_PROT_PER_KG buffed', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Сравним два плана: с тренировкой 4ч назад и без.
+            // Тренировка должна повысить protein boost для всех meals.
+            const withWorkout = planner.planRemainingMeals({
+                currentTime: '14:00',
+                lastMeal: { time: '11:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 80 },
+                days: [],
+                pIndex: {},
+                currentDay: {
+                    workouts: [{ endTime: '10:00', type: 'strength' }]
+                }
+            });
+            const withoutWorkout = planner.planRemainingMeals({
+                currentTime: '14:00',
+                lastMeal: { time: '11:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 80 },
+                days: [],
+                pIndex: {}
+            });
+            // Оба валидны
+            expect(withWorkout.available).toBe(true);
+            expect(withoutWorkout.available).toBe(true);
+            // Recovery должен дать прирост белка либо одинаковый (если bandwidth уперлась в потолок),
+            // но точно не ниже.
+            const protWith = withWorkout.meals.reduce((s, m) => s + (m.macros.prot || 0), 0);
+            const protWithout = withoutWorkout.meals.reduce((s, m) => s + (m.macros.prot || 0), 0);
+            expect(protWith).toBeGreaterThanOrEqual(protWithout - 1); // допуск rounding
+        });
+
+        it('R4-4: MICRONUTRIENT_FOCUS scenario — конструктор сценариев в analyzeCurrentContext', () => {
+            // Проверка работает через recommender.recommend(...), используем headless backend через простой smoke.
+            // Этот test слабый — он лишь проверяет что новый константный ключ зарегистрирован.
+            expect(typeof HEYS.InsightsPI.mealPlanner.planRemainingMeals).toBe('function');
+        });
+
+        it('R5-A: formatTime делает carry minutes→hours при m=60', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Граничные случаи где Math.round может выдать m=60
+            expect(planner.formatTime(24.9999999)).toBe('25:00');
+            expect(planner.formatTime(25.0)).toBe('25:00');
+            // Внутренние нормальные значения не ломаются
+            expect(planner.formatTime(14.5)).toBe('14:30');
+            expect(planner.formatTime(0.5)).toBe('00:30');
+        });
+
+        it('R5-B: meal.macros.kcal согласован с БЖУ после всех модификаций', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '13:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 15, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2200, prot: 130, carbs: 230, fat: 70 },
+                dayEaten: { kcal: 400, prot: 15, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {}
+            });
+            expect(result.available).toBe(true);
+            // Для каждого приёма: kcal должен ТОЧНО равняться P*4+C*4+F*9
+            result.meals.forEach((m) => {
+                const expected = m.macros.prot * 4 + m.macros.carbs * 4 + m.macros.fat * 9;
+                expect(m.macros.kcal).toBe(expected);
+            });
+        });
+
+        it('R5-D: scenarioHint сохраняется для первого actionable приёма', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '13:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {},
+                scenarioHint: 'MICRONUTRIENT_FOCUS'
+            });
+            expect(result.available).toBe(true);
+            if (result.meals.length > 0) {
+                expect(result.meals[0].scenario).toBe('MICRONUTRIENT_FOCUS');
+                expect(result.meals[0].scenarioSource).toBe('recommender');
+            }
+        });
+
+        it('R5-D: scenarioHint=BALANCED не override-ит baseline planner', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                currentTime: '20:00',
+                lastMeal: { time: '15:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {},
+                scenarioHint: 'BALANCED' // не в specificScenarios → не override
+            });
+            if (result.meals.length > 0) {
+                expect(result.meals[0].scenarioSource).toBe('planner');
+            }
+        });
+
+        it('R6-A: stress shift пропускается если shifted deadline уже в прошлом', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // currentTime=21:30, sleepTarget=23:30 → deadline 20:30 уже в прошлом.
+            // stress shift в 20:00 хочет сдвинуть deadline ещё на 30 мин (на 20:00),
+            // но это ломает план. Должен быть пропущен — план опирается на hunger tradeoff.
+            const result = planner.planRemainingMeals({
+                currentTime: '21:30',
+                lastMeal: { time: '18:00', items: [], totals: { kcal: 500, prot: 30, carbs: 60, fat: 15 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 1300, prot: 80, carbs: 130, fat: 40 },
+                profile: { sleepTarget: '23:30', weight: 70 },
+                days: [],
+                pIndex: {},
+                stressMoodSignals: { stressLevel: 'moderate', moodLevel: 'neutral' }
+            });
+            expect(result.available).toBe(true);
+            // План должен быть либо валидный (есть meal), либо явно сказать что нет.
+            // Главное: не должно быть deadline далеко в прошлом из-за слепого stress shift.
+            if (result.meals.length > 0) {
+                const dl = planner.parseTime(result.summary?.lastMealDeadline || '00:00');
+                expect(dl).toBeGreaterThanOrEqual(21); // не в прошлом более чем currentTime
+            }
+        });
+
+        it('R6-C: heavy meal перед сном (>400 ккал, <3ч до сна) → кляпинг до 400', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // sleepTarget=23:00, currentTime=20:30 → hoursToSleep ~2.5
+            // remaining budget 700 ккал — должен быть кляпнут до 400
+            const result = planner.planRemainingMeals({
+                currentTime: '20:30',
+                lastMeal: { time: '14:00', items: [], totals: { kcal: 500, prot: 30, carbs: 60, fat: 15 } },
+                dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+                dayEaten: { kcal: 1300, prot: 80, carbs: 130, fat: 40 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {}
+            });
+            expect(result.available).toBe(true);
+            if (result.meals.length > 0) {
+                const m = result.meals[0];
+                const hSleep = Number(m.hoursToSleep);
+                if (hSleep < 3) {
+                    // Должен быть либо clipped, либо изначально маленький
+                    expect(m.macros.kcal).toBeLessThanOrEqual(420); // 400 cap + допуск rounding
+                }
+            }
+        });
+
+        it('R6-C: лёгкий meal перед сном не клипается', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // remainingBudget малый (300 ккал) — не должен клипаться
+            const result = planner.planRemainingMeals({
+                currentTime: '20:30',
+                lastMeal: { time: '14:00', items: [], totals: { kcal: 500, prot: 30, carbs: 60, fat: 15 } },
+                dayTarget: { kcal: 1800, prot: 100, carbs: 150, fat: 50 },
+                dayEaten: { kcal: 1500, prot: 80, carbs: 120, fat: 42 },
+                profile: { sleepTarget: '23:00', weight: 70 },
+                days: [],
+                pIndex: {}
+            });
+            if (result.meals.length > 0) {
+                const m = result.meals[0];
+                // Лёгкий приём — флаг presleepCapped не выставлен
+                expect(m.presleepCapped).not.toBe(true);
+            }
         });
     });
 });

@@ -323,7 +323,7 @@
    * @returns {Object} { total, gi, protein, fiber, carbs, fat, gl, glCategory, liquid, insulinogenic, foodForm }
    */
 
-  const calculateMultiplier = (gi, protein, fiber, carbs = null, fat = null, gl = null, hasLiquid = false, insulinogenicBonus = 0, foodForm = null, proteinType = 'mixed') => {
+  const calculateMultiplier = (gi, protein, fiber, carbs = null, fat = null, gl = null, hasLiquid = false, insulinogenicBonus = 0, foodForm = null, proteinType = 'mixed', simpleRatio = null, mealKcal = null) => {
     const giCat = utils.getGICategory(gi);
 
     // 📊 Гликемическая нагрузка — v3.0.0: используем плавную формулу
@@ -427,8 +427,29 @@
     // При GL < 5: glMultiplier = 0.5 → волна в 2 раза короче
     const carbsMult = glMultiplier;
 
+    // R4-7: simpleRatio — доля простых углеводов укорачивает волну
+    // Mayer 1995, Brand-Miller 2003: высокий simpleRatio → быстрый пик + быстрый спад.
+    // >60% простых сахаров — волна короче на ~15%.
+    let simpleMult = 1.0;
+    if (simpleRatio !== null && simpleRatio > 0.6 && carbs && carbs > 5) {
+      simpleMult = 0.85;
+    } else if (simpleRatio !== null && simpleRatio > 0.4 && carbs && carbs > 5) {
+      // плавный переход 0.4-0.6
+      simpleMult = 1.0 - ((simpleRatio - 0.4) / 0.2) * 0.15;
+    }
+
+    // R4-7: kcal scaling — Louis-Sylvestre & Le Magnen 1980 (sublinear).
+    // Маленькие приёмы (<200 ккал) дают более короткую волну.
+    let kcalScaleMult = 1.0;
+    if (mealKcal !== null && Number.isFinite(mealKcal)) {
+      if (mealKcal < 100) kcalScaleMult = 0.75;
+      else if (mealKcal < 200) kcalScaleMult = 0.9;
+      else if (mealKcal < 300) kcalScaleMult = 0.95;
+      // ≥300 — нормальный приём, без коррекции
+    }
+
     return {
-      total: baseMult * carbsMult * liquidMult * foodFormMult,
+      total: baseMult * carbsMult * liquidMult * foodFormMult * simpleMult * kcalScaleMult,
       gi: giMult,
       protein: proteinBonus,
       proteinMeta, // 🆕 v4.0.0: Тип белка (animal/plant/whey/mixed)
@@ -438,6 +459,8 @@
       liquid: liquidMult,
       foodForm: foodFormMult,  // 🆕 v3.2.0
       insulinogenic: insBonus,
+      simpleRatioMult: simpleMult, // R4-7: для отладки
+      kcalScaleMult,               // R4-7: для отладки
       glCategory,
       glScaleFactor, // 🆕 Для отладки
       category: giCat

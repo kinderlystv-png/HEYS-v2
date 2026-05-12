@@ -92,6 +92,8 @@
         PRE_WORKOUT: 'PRE_WORKOUT',
         POST_WORKOUT: 'POST_WORKOUT',
         PROTEIN_DEFICIT: 'PROTEIN_DEFICIT',
+        MICRONUTRIENT_FOCUS: 'MICRONUTRIENT_FOCUS', // R4-4: при 2+ серьёзных дефицитах
+        MOOD_SUPPORT_BREAKFAST: 'MOOD_SUPPORT_BREAKFAST', // R4-5: low mood + morning
         STRESS_EATING: 'STRESS_EATING',
         BALANCED: 'BALANCED'
     };
@@ -105,6 +107,8 @@
         [SCENARIOS.PRE_WORKOUT]: '⚡',
         [SCENARIOS.POST_WORKOUT]: '💪',
         [SCENARIOS.PROTEIN_DEFICIT]: '🥩',
+        [SCENARIOS.MICRONUTRIENT_FOCUS]: '🥬', // R4-4
+        [SCENARIOS.MOOD_SUPPORT_BREAKFAST]: '🌅', // R4-5
         [SCENARIOS.STRESS_EATING]: '🧘',
         [SCENARIOS.BALANCED]: '🍽️'
     };
@@ -119,7 +123,19 @@
                 timeEnd: meal?.timeEnd,
                 macros: meal?.macros,
                 scenario: meal?.scenario,
-                locked: !!meal?.locked
+                locked: !!meal?.locked,
+                // R8-C: сохраняем остальные поля meal чтобы restore возвращал
+                // полноценный объект, а не «scenario:? hoursToSleep:? wave end:?»
+                scenarioSource: meal?.scenarioSource || null,
+                scenarioBaseline: meal?.scenarioBaseline || null,
+                hoursToSleep: meal?.hoursToSleep,
+                targetGL: meal?.targetGL,
+                sleepFriendlyCategories: meal?.sleepFriendlyCategories || null,
+                estimatedWaveEnd: meal?.estimatedWaveEnd,
+                fatBurnWindow: meal?.fatBurnWindow ? { ...meal.fatBurnWindow } : null,
+                isActionable: !!meal?.isActionable,
+                isLast: !!meal?.isLast,
+                presleepCapped: !!meal?.presleepCapped
             })),
             summary: mealsPlan.summary || null
         };
@@ -240,7 +256,7 @@
      * @returns {object} - Scenario + metadata
      * @private
      */
-    function analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds) {
+    function analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds, patternHints = null) {
         const targetKcal = dayTarget.kcal || profile.optimum || 2000;
         const targetProtein = dayTarget.protein || profile.norm?.prot || 120;
         const eatenKcal = dayEaten.kcal || 0;
@@ -394,7 +410,33 @@
             };
         }
 
+        // R4-5: MOOD_SUPPORT_BREAKFAST (priority 5.5) — low mood + morning.
+        // Идёт ВЫШЕ STRESS_EATING потому что для утра нет смысла в anti-stress,
+        // нужны триптофановые продукты для серотонина (молочное, бананы, орехи).
+        const moodSupportBreakfastApplicable = mood <= 2 && currentHour < 11 && remainingKcal > 200;
+        scenarioCandidates.push({
+            priority: 5.5,
+            scenario: SCENARIOS.MOOD_SUPPORT_BREAKFAST,
+            applicable: moodSupportBreakfastApplicable,
+            reason: moodSupportBreakfastApplicable ? `Утро + низкое настроение (mood ${mood}/5)` : `mood ${mood}/5, час ${currentHour}`,
+            metadata: { mood, currentHour }
+        });
+        if (moodSupportBreakfastApplicable) {
+            scenarioCandidates[scenarioCandidates.length - 1].winner = true;
+            console.group(`${LOG_PREFIX} 🏆 Scenario evaluation: Winner: ${SCENARIOS.MOOD_SUPPORT_BREAKFAST} (priority 5.5)`);
+            console.table(scenarioCandidates);
+            console.groupEnd();
+            return {
+                scenario: SCENARIOS.MOOD_SUPPORT_BREAKFAST,
+                reason: `Утро + поддержка настроения`,
+                icon: SCENARIO_ICONS[SCENARIOS.MOOD_SUPPORT_BREAKFAST],
+                metadata: { mood, currentHour, hint: 'триптофан: молочное, бананы, орехи' }
+            };
+        }
+
         // 6. STRESS_EATING (higher priority than PROTEIN_DEFICIT)
+        // R4-5: остаётся бинарным (stress≥4 OR mood≤2 после морнинга). Градация
+        // moderate-stress применяется в planner для сдвига deadline (R4-5 ниже).
         const stressEatingApplicable = stress >= 4 || mood <= 2;
         scenarioCandidates.push({
             priority: 6,
@@ -413,6 +455,38 @@
                 reason: stress >= 4 ? 'Высокий стресс' : 'Низкое настроение',
                 icon: SCENARIO_ICONS[SCENARIOS.STRESS_EATING],
                 metadata: { stress, mood }
+            };
+        }
+
+        // R4-4: MICRONUTRIENT_FOCUS — 2+ серьёзных дефицита из истории
+        // (iron/magnesium/zinc/calcium < 50%). Активен для не-последних приёмов.
+        // R5-X: при low-carb профиле (dayTarget.carbs = 0) этот сценарий
+        // ставит 200г углеводов, которые safety net потом скейлит вниз и
+        // planner перезатирает на floor 40г. Чтобы не плодить путаницу — отключаем.
+        const micronutrientDeficits = patternHints?.micronutrients?.deficits || [];
+        const seriousDeficits = micronutrientDeficits.filter((d) => Number(d?.avgPct) < 50);
+        const isLikelyLastMeal = remainingKcal < 700 && currentHour >= 19;
+        const isLowCarbProfile = (Number(dayTarget?.carbs) || Number(dayTarget?.carb) || 0) < 30;
+        const micronutrientFocusApplicable = seriousDeficits.length >= 2 && remainingKcal > 200 && !isLikelyLastMeal && !isLowCarbProfile;
+        scenarioCandidates.push({
+            priority: 6.5,
+            scenario: SCENARIOS.MICRONUTRIENT_FOCUS,
+            applicable: micronutrientFocusApplicable,
+            reason: micronutrientFocusApplicable
+                ? `${seriousDeficits.length} дефицита: ${seriousDeficits.map((d) => `${d.nutrient} ${Math.round(d.avgPct)}%`).join(', ')}`
+                : (seriousDeficits.length < 2 ? `только ${seriousDeficits.length} серьёзных дефицит(ов)` : (isLikelyLastMeal ? 'последний приём дня — отложено' : 'мало бюджета')),
+            metadata: { seriousDeficits: seriousDeficits.map((d) => d.nutrient), deficitsCount: seriousDeficits.length }
+        });
+        if (micronutrientFocusApplicable) {
+            scenarioCandidates[scenarioCandidates.length - 1].winner = true;
+            console.group(`${LOG_PREFIX} 🏆 Scenario evaluation: Winner: ${SCENARIOS.MICRONUTRIENT_FOCUS} (priority 6.5)`);
+            console.table(scenarioCandidates);
+            console.groupEnd();
+            return {
+                scenario: SCENARIOS.MICRONUTRIENT_FOCUS,
+                reason: `Дефицит: ${seriousDeficits.map((d) => d.nutrient).join(', ')}`,
+                icon: SCENARIO_ICONS[SCENARIOS.MICRONUTRIENT_FOCUS],
+                metadata: { targetMicronutrients: seriousDeficits.map((d) => d.nutrient) }
             };
         }
 
@@ -531,7 +605,7 @@
         const patternHints = loadPatternHints(days, profile, pIndex);
 
         // Analyze context → determine scenario (v2.4 feature)
-        const contextAnalysis = analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds);
+        const contextAnalysis = analyzeCurrentContext(context, dayTarget, dayEaten, profile, currentTime, thresholds, patternHints);
         console.info(`${LOG_PREFIX} 🎯 Scenario detected:`, {
             scenario: contextAnalysis.scenario,
             reason: contextAnalysis.reason,
@@ -626,6 +700,17 @@
                 mode: hasLastMealTime ? 'wave-aware' : 'first-meal-of-day'
             });
             try {
+                // R4-5: gradient stress/mood для сдвига deadline в planner.
+                // moderate stress (≥3) + late evening + low mood ухудшает качество сна.
+                const _stress = Number(context.lastMeal?.stress) || Number(context?.stress) || 3;
+                const _mood = Number(context.lastMeal?.mood) || Number(context?.mood) || 3;
+                const stressMoodSignals = {
+                    stressLevel: _stress >= 4 ? 'high' : _stress >= 3 ? 'moderate' : 'low',
+                    moodLevel: _mood <= 2 ? 'low' : _mood >= 4 ? 'high' : 'neutral'
+                };
+                // R4-6: передать waveOverlap в planner для advisory
+                const _waveOverlap = patternHints?.waveOverlap?.avgOverlapPct;
+
                 const plannerInput = {
                     currentTime: context.currentTime || getCurrentTime(),
                     lastMeal: lastMeal,
@@ -634,6 +719,17 @@
                     profile: profile,
                     days: days,
                     pIndex: pIndex,
+                    // R1-14: явный sleepStart дня имеет приоритет над усреднением истории
+                    daySleepStart: context.daySleepStart || null,
+                    isRefeedDay: !!context.isRefeedDay,
+                    // R4-5: gradient stress/mood signals
+                    stressMoodSignals,
+                    // R4-6: waveOverlap для adaptive gap и advisory
+                    waveOverlapPct: Number.isFinite(_waveOverlap) ? _waveOverlap : null,
+                    // R5-D: передаём scenario от recommender чтобы planner мог сохранить
+                    // специфичные сценарии (MICRONUTRIENT_FOCUS, MOOD_SUPPORT_BREAKFAST)
+                    // для первого meal вместо generic PRE_SLEEP от detectMealScenario.
+                    scenarioHint: contextAnalysis?.scenario || null,
                     replanReason,
                     previousPlanState,
                     lockedMeals: previousPlanState?.lockedMeals || []
@@ -649,12 +745,19 @@
                     mealsPlan = HEYS.InsightsPI.mealPlanner.planRemainingMeals(plannerInput);
                 }
 
-                if (!isPlanValid(mealsPlan, dayTarget, dayEaten) && previousPlanState?.lastStablePlan) {
+                // R8-A: НЕ восстанавливать stable snapshot если текущий scenario
+                // — терминальный (GOAL_REACHED). Юзер достиг цели → старый план
+                // (от момента когда цель была не выполнена) неактуален. Иначе
+                // карточка покажет «🎯 Цель достигнута» + meal с макросами поверх.
+                const isTerminalScenario = contextAnalysis?.scenario === SCENARIOS.GOAL_REACHED;
+                if (!isPlanValid(mealsPlan, dayTarget, dayEaten) && previousPlanState?.lastStablePlan && !isTerminalScenario) {
                     const restored = restoreStablePlanSnapshot(previousPlanState.lastStablePlan, 'FULL_PLAN_INVALID_RESTORED');
                     if (restored) {
                         plannerMeta = { ...plannerMeta, fallbackUsed: true, fallbackType: 'restore_last_stable' };
                         mealsPlan = restored;
                     }
+                } else if (isTerminalScenario && previousPlanState?.lastStablePlan) {
+                    console.info(`${LOG_PREFIX} [MEALREC.planner] 🎯 GOAL_REACHED — stable snapshot НЕ восстанавливается (терминальный сценарий)`);
                 }
 
                 if (isIncrementalReplan && replanControls.shadowCompareEnabled) {
@@ -786,7 +889,9 @@
                 }
             } catch (err) {
                 console.warn(`${LOG_PREFIX} [MEALREC.planner] ⚠️ Failed to generate meal plan:`, err.message);
-                const restored = restoreStablePlanSnapshot(previousPlanState?.lastStablePlan, 'PLANNER_EXCEPTION_RESTORED');
+                // R8-A: тот же guard для exception path
+                const isTerminalScenarioErr = contextAnalysis?.scenario === SCENARIOS.GOAL_REACHED;
+                const restored = isTerminalScenarioErr ? null : restoreStablePlanSnapshot(previousPlanState?.lastStablePlan, 'PLANNER_EXCEPTION_RESTORED');
                 if (restored) {
                     plannerMeta = { ...plannerMeta, fallbackUsed: true, fallbackType: 'planner_exception_restore' };
                     mealsPlan = restored;
@@ -798,26 +903,63 @@
             console.info(`${LOG_PREFIX} [MEALREC.planner] ❌ Conditions NOT met for multi-meal planning`);
         }
 
-        // v4.0.6: Synchronize timing with planner's first meal if planner computed a later start
-        // This ensures the card header shows wave-aware timing instead of naive gap-based timing
+        // R1-15: двусторонний timing sync. Раньше обновляли только если planner вернул
+        // ПОЗЖЕ recommender'а — но planner всегда авторитетен (он учёл волну, жиросжигание,
+        // deadline до сна). Если он вернул раньше — это тоже его решение.
         if (mealsPlan?.available && mealsPlan.meals?.length > 0) {
             const firstPlannedMeal = mealsPlan.meals[0];
             if (firstPlannedMeal.timeStart) {
                 const plannerStartHours = parseTime(firstPlannedMeal.timeStart);
-                if (plannerStartHours > timingRec.idealStart) {
-                    const plannerEndHours = firstPlannedMeal.timeEnd ? parseTime(firstPlannedMeal.timeEnd) : plannerStartHours + 1;
-                    console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Timing sync: planner start is later than recommender`, {
+                const plannerEndHours = firstPlannedMeal.timeEnd ? parseTime(firstPlannedMeal.timeEnd) : plannerStartHours + 1;
+                const driftHours = plannerStartHours - (timingRec.idealStart || plannerStartHours);
+                if (Math.abs(driftHours) > 0.01) {
+                    console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Timing sync (bidirectional):`, {
                         recommenderTiming: timingRec.ideal,
                         plannerStart: firstPlannedMeal.timeStart,
                         plannerEnd: firstPlannedMeal.timeEnd,
-                        action: 'updating timingRec to planner timing'
+                        driftHours: driftHours.toFixed(2),
+                        direction: driftHours > 0 ? 'planner_later' : 'planner_earlier'
                     });
-                    timingRec.idealStart = plannerStartHours;
-                    timingRec.idealEnd = plannerEndHours;
-                    timingRec.ideal = `${formatTime(plannerStartHours)}-${formatTime(plannerEndHours)}`;
-                    timingRec.reason = `Планировщик: после инсулиновой волны + жиросжигание`;
-                    timingRec.plannerSynced = true;
                 }
+                timingRec.idealStart = plannerStartHours;
+                timingRec.idealEnd = plannerEndHours;
+                timingRec.ideal = `${formatTime(plannerStartHours)}-${formatTime(plannerEndHours)}`;
+                timingRec.reason = `Планировщик: после инсулиновой волны + жиросжигание`;
+                timingRec.plannerSynced = true;
+            }
+
+            // R4-1: macros sync. Раньше header показывал recommender.macros (618 kcal от
+            // LAST MEAL OVERRIDE = 90% бюджета), а planner возвращал 686 kcal после
+            // MPS-буста. Юзер видел разные цифры. Planner — авторитетный источник
+            // физиологии (учёл MPS, POST_WORKOUT, distributeBudget). Синхронизируем.
+            const m0 = firstPlannedMeal.macros;
+            if (m0 && Number.isFinite(m0.kcal)) {
+                const before = { protein: macrosRec.protein, carbs: macrosRec.carbs, fat: macrosRec.fat, kcal: macrosRec.kcal };
+                macrosRec.protein = Math.round(m0.prot || 0);
+                macrosRec.carbs = Math.round(m0.carbs || 0);
+                macrosRec.fat = Math.round(m0.fat || 0);
+                macrosRec.kcal = Math.round(m0.kcal || 0);
+                // Перерасчёт ranges от синхронизированных макросов
+                macrosRec.proteinRange = `${Math.max(0, macrosRec.protein - 5)}-${macrosRec.protein + 5}`;
+                macrosRec.carbsRange = `${Math.max(0, macrosRec.carbs - 10)}-${macrosRec.carbs + 10}`;
+                macrosRec.kcalRange = `${Math.max(0, macrosRec.kcal - 50)}-${macrosRec.kcal + 50}`;
+                macrosRec.plannerSynced = true;
+                console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Macros sync (planner = source of truth):`, {
+                    before, after: { protein: macrosRec.protein, carbs: macrosRec.carbs, fat: macrosRec.fat, kcal: macrosRec.kcal }
+                });
+            }
+
+            // R6-B: scenario sync. Если planner сохранил specific scenario от
+            // recommender (например MICRONUTRIENT_FOCUS) — header остаётся как есть.
+            // Если planner выбрал свой baseline scenario (PRE_SLEEP, BALANCED) —
+            // header тоже должен показывать его, иначе будет рассинхрон с timeline.
+            const plannerScenario = firstPlannedMeal.scenario;
+            const plannerScenarioSource = firstPlannedMeal.scenarioSource;
+            if (plannerScenario && plannerScenarioSource === 'planner' && plannerScenario !== contextAnalysis.scenario) {
+                console.info(`${LOG_PREFIX} [MEALREC.planner] 🔄 Scenario sync: header ${contextAnalysis.scenario} → ${plannerScenario} (planner авторитетен для конкретного meal)`);
+                contextAnalysis.scenario = plannerScenario;
+                contextAnalysis.icon = SCENARIO_ICONS[plannerScenario] || contextAnalysis.icon;
+                contextAnalysis.scenarioSyncedToPlanner = true;
             }
         }
 
@@ -1295,10 +1437,13 @@
 
         // P0 Fix: Ensure timing never in past
         if (idealStart < currentTime) {
+            const phaseAOverridden = phaseATimingShiftMin > 0;
             console.warn(`[${LOG_FILTER}] ⚠️ Adjusted timing to current time (was in past):`, {
                 originalStart: formatTime(idealStart),
                 adjustedStart: formatTime(currentTime),
-                hoursSinceLastMeal: hoursSinceLastMeal.toFixed(1)
+                hoursSinceLastMeal: hoursSinceLastMeal.toFixed(1),
+                phaseAShiftWastedMin: phaseAOverridden ? phaseATimingShiftMin : 0,
+                note: phaseAOverridden ? 'Phase A shift был применён но затёрся currentTime guard — пользователь зашёл позже optimal' : undefined
             });
             idealStart = currentTime;
             idealEnd = Math.max(idealEnd, currentTime + 0.5);
