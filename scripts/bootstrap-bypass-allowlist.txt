@@ -125,8 +125,8 @@ apps/web/heys_gamification_v1.js:41
 apps/web/heys_gamification_v1.js:5940
 apps/web/heys_gamification_v1.js:5943
 apps/web/heys_insulin_wave_v1.js:875
-apps/web/heys_iw_config_loader.js:146
-apps/web/heys_iw_config_loader.js:148
+apps/web/heys_iw_config_loader.js:149
+apps/web/heys_iw_config_loader.js:151
 apps/web/heys_iw_lipolysis.js:58
 apps/web/heys_iw_lipolysis.js:94
 apps/web/heys_leaderboard_v1.js:98
