@@ -23634,7 +23634,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             // R12-C: pattern impact hints от recommender для advisories
             patternImpactHints = null,
             // R12-E: phenotype для timing adjustment
-            phenotypeApplied = null
+            phenotypeApplied = null,
+            // R13-G: список названий дефицитных микронутриентов (iron/magnesium/zinc/calcium)
+            micronutrientDeficits = [],
+            // R13-E: список early warnings от HEYS.InsightsPI.earlyWarning.detect()
+            earlyWarnings = [],
+            // R13-F: причинно-следственные цепочки от earlyWarning/causalChains
+            causalChains = [],
+            // R13-C: snapshot состояния каскада (window.HEYS._lastCrs)
+            cascadeState = null
         } = params;
 
         // R2-6: нормализуем входные данные. Незаданные поля приводим к 0, а не undefined,
@@ -23822,14 +23830,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // (deadline > currentTime). Иначе получим availableWindow с negative
         // длиной (deadline в прошлом) — приходится откатывать через hunger
         // tradeoff. Если сдвиг ломает план — пропускаем его.
-        if (stressMoodSignals?.stressLevel === 'moderate' && currentTimeHours >= 20) {
+        // R13-A: sentinel для anti-double-shift (R4-5 moderate stress vs R13-A poor sleep).
+        // R13-D: stress_anorexic фенотип защищается от moderate-shift (риск катаболизма).
+        let lastMealDeadlineShifted = false;
+        const isStressAnorexicWithDeficit = (params.phenotypeApplied?.stress === 'stress_anorexic')
+            && (stressMoodSignals?.stressLevel === 'high')
+            && ((dayTarget.kcal || 0) - (dayEaten.kcal || 0) > 600);
+        if (stressMoodSignals?.stressLevel === 'moderate' && currentTimeHours >= 20 && !isStressAnorexicWithDeficit) {
             const shiftedDeadline = lastMealDeadline - 0.5;
             if (shiftedDeadline > currentTimeHours) {
                 lastMealDeadline = shiftedDeadline;
                 effectiveBuffer = PRE_SLEEP_BUFFER_HOURS + 0.5;
+                lastMealDeadlineShifted = true;
                 console.info(`${LOG_PREFIX} [PLANNER.sleep] 🧘 Moderate stress + late evening → deadline сдвинут на 30 мин раньше`);
             } else {
                 console.info(`${LOG_PREFIX} [PLANNER.sleep] 🧘 Moderate stress shift пропущен: shifted deadline (${formatTime(shiftedDeadline)}) уже в прошлом от currentTime (${formatTime(currentTimeHours)})`);
+            }
+        }
+
+        // R13-A: poor sleep + late evening → ещё 15 минут раньше (но только если
+        // R4-5 уже не сдвинул — anti-double-shift). Sentinel выше отслеживает.
+        if (stressMoodSignals?.sleepQualityLevel === 'poor' && currentTimeHours >= 20 && !lastMealDeadlineShifted) {
+            const shiftedDeadline = lastMealDeadline - 0.25;
+            if (shiftedDeadline > currentTimeHours) {
+                lastMealDeadline = shiftedDeadline;
+                effectiveBuffer = PRE_SLEEP_BUFFER_HOURS + 0.25;
+                lastMealDeadlineShifted = true;
+                console.info(`${LOG_PREFIX} [PLANNER.sleep] 😴 Poor sleep + late evening → deadline -15 мин (R13-A)`);
             }
         }
 
@@ -23839,7 +23866,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             lastMealDeadline: formatTime(lastMealDeadline),
             availableWindow: `${formatTime(nextMealEarliest)} → ${formatTime(lastMealDeadline)}`,
             stressLevel: stressMoodSignals?.stressLevel,
-            moodLevel: stressMoodSignals?.moodLevel
+            moodLevel: stressMoodSignals?.moodLevel,
+            sleepQualityLevel: stressMoodSignals?.sleepQualityLevel || 'unknown',
+            moodAvgLevel: stressMoodSignals?.moodAvgLevel || 'unknown',
+            deadlineShifted: lastMealDeadlineShifted
         });
 
         // === S4: POST_WORKOUT detection (Ivy, 2004) ===
@@ -23884,6 +23914,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             else if (hoursAfterWorkout < 6) workoutRecoveryFactor = 0.15;
             else if (hoursAfterWorkout < 12) workoutRecoveryFactor = 0.10;
             else if (hoursAfterWorkout < 24) workoutRecoveryFactor = 0.05;
+        }
+        // R13-A: плохой сон ухудшает MPS (Dattilo 2011) — компенсируем +15% recovery boost.
+        if (workoutRecoveryFactor > 0 && stressMoodSignals?.sleepQualityLevel === 'poor') {
+            workoutRecoveryFactor *= 1.15;
+            console.info(`${LOG_PREFIX} [PLANNER.recovery] 😴 Poor sleep × workout → recoveryFactor +15% (R13-A)`);
         }
         const workoutType = (lastWorkout?.type || 'unknown').toLowerCase();
         const isStrength = ['strength', 'силовая', 'sila', 'resistance'].some(s => workoutType.includes(s));
@@ -24493,6 +24528,190 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 text: 'Мало клетчатки в истории — в этом приёме в приоритете овощи и бобовые.'
             });
         }
+
+        // === R13: Dead signals activation ===
+        const isFirstMealOfDay = !hasLastMeal || (lastMealTimeHours === null);
+        const phenoSatiety = params.phenotypeApplied?.satiety;
+        const phenoStress = params.phenotypeApplied?.stress;
+
+        // R13-A: poor sleep advisory
+        if (stressMoodSignals?.sleepQualityLevel === 'poor') {
+            const sq = stressMoodSignals.sleepQualityScore;
+            const hasBoost = workoutRecoveryFactor > 0 && lastWorkout;
+            advisories.push({
+                key: 'r13a_poor_sleep',
+                severity: 'medium',
+                text: sq !== null
+                    ? `Сон был плохим (${sq}/10) — ${hasBoost ? 'добавили белок для восстановления' : 'фокус на белок и сложные углеводы'}.`
+                    : 'Сон был плохим — фокус на белок и сложные углеводы.'
+            });
+        }
+
+        // R13-B: low moodAvg advisory + scenario hint
+        if (stressMoodSignals?.moodAvgLevel === 'low') {
+            advisories.push({
+                key: 'r13b_mood_support',
+                severity: 'low',
+                text: 'Настроение последних дней низкое — приоритет на омега-3, триптофан (индейка, яйца, бананы).'
+            });
+        }
+
+        // R13-D: phenotype satiety + stress advisories
+        if (phenoSatiety === 'volume_eater') {
+            advisories.push({
+                key: 'r13d_volume_eater',
+                severity: 'low',
+                text: 'Лучше насыщаешься объёмом — приоритет овощам и супам в этом приёме.'
+            });
+        } else if (phenoSatiety === 'low_satiety') {
+            advisories.push({
+                key: 'r13d_low_satiety',
+                severity: 'low',
+                text: 'Тебе трудно насыщаться — белок + клетчатка в начале приёма.'
+            });
+        }
+        if (phenoStress === 'stress_eater' && stressMoodSignals?.stressLevel === 'high') {
+            advisories.push({
+                key: 'r13d_stress_eater',
+                severity: 'medium',
+                text: 'Твой фенотип — стресс-едок: при высоком стрессе особенно важен лёгкий ужин.'
+            });
+        }
+        if (isStressAnorexicWithDeficit) {
+            advisories.push({
+                key: 'r13d_stress_anorexic',
+                severity: 'high',
+                text: 'В стрессе ты обычно недоедаешь — постарайся не пропустить этот приём.'
+            });
+        }
+
+        // R13-G: micronutrient deficits advisories (деструктурировано выше)
+        const microDeficits = Array.isArray(micronutrientDeficits) ? micronutrientDeficits : [];
+        if (microDeficits.length >= 2 && isFirstMealOfDay) {
+            advisories.push({
+                key: 'r13g_micronutrient_focus',
+                severity: 'medium',
+                text: `Дефицит ${microDeficits.slice(0, 3).join(', ')} по неделе — добавь источники: красное мясо, печень, тыквенные семечки, шпинат.`
+            });
+        }
+        if (microDeficits.includes('iron') && microDeficits.includes('calcium')) {
+            advisories.push({
+                key: 'r13g_iron_calcium_timing',
+                severity: 'low',
+                text: 'Развести железо и кальций по разным приёмам (≥3ч gap) — кальций блокирует абсорбцию железа.'
+            });
+        }
+
+        // R13-I: hydration advisory
+        const waterMl = Number(params.currentDay?.waterMl) || 0;
+        const profileWeight = Number(params.profile?.weight) || 70;
+        const waterGoalMl = profileWeight * 30;
+        if (waterMl > 0 && waterMl < waterGoalMl * 0.4 && currentTimeHours >= 18) {
+            advisories.push({
+                key: 'r13i_dehydration',
+                severity: 'medium',
+                text: `Воды сегодня мало (${waterMl}/${Math.round(waterGoalMl)} мл) — добавь стакан перед едой: меньше ложного голода, лучше насыщение.`
+            });
+        }
+
+        // R13-H: high NEAT advisory
+        const todaySteps = Number(params.currentDay?.steps) || 0;
+        const todayHousehold = Number(params.currentDay?.householdMin) || 0;
+        if (todaySteps >= 15000 || todayHousehold >= 60) {
+            const neatParts = [];
+            if (todaySteps >= 15000) neatParts.push(`${todaySteps} шагов`);
+            if (todayHousehold >= 60) neatParts.push(`${todayHousehold} мин быта`);
+            advisories.push({
+                key: 'r13h_high_neat',
+                severity: 'low',
+                text: `Сегодня высокая активность вне тренировок (${neatParts.join(' + ')}) — допустим небольшой запас углеводов в этом приёме.`
+            });
+        }
+
+        // R13-E: early warnings bridge (earlyWarnings уже деструктурирован выше)
+        const ewList = Array.isArray(earlyWarnings) ? earlyWarnings : [];
+        const ewTypes = new Set(ewList.map(w => w?.type).filter(Boolean));
+        if (ewTypes.has('BINGE_RISK')) {
+            advisories.push({
+                key: 'r13e_binge_risk',
+                severity: 'medium',
+                text: 'Растёт риск переедания — этот приём стабилизирует сахар: низкий GL + белок.'
+            });
+        }
+        if (ewTypes.has('PROTEIN_DEFICIT')) {
+            advisories.push({
+                key: 'r13e_protein_deficit',
+                severity: 'medium',
+                text: 'Дефицит белка по неделе — приоритет белок:углеводы = 2:1.'
+            });
+        }
+        if (ewTypes.has('CALORIC_DEBT')) {
+            advisories.push({
+                key: 'r13e_caloric_debt',
+                severity: 'medium',
+                text: 'Большой накопленный дефицит — не пропускай приём.'
+            });
+        }
+        if (ewTypes.has('STRESS_ACCUMULATION')
+            && !advisories.some(a => a.key === 'high_stress' || a.key === 'r13d_stress_eater')) {
+            advisories.push({
+                key: 'r13e_stress_accumulation',
+                severity: 'medium',
+                text: 'Стресс копится за последние дни — лёгкий ужин и магний-богатые продукты.'
+            });
+        }
+
+        // R13-F: causal chains (causalChains уже деструктурирован выше)
+        const chainList = Array.isArray(causalChains) ? causalChains : [];
+        const chainTypes = new Set(chainList.map(c => c?.type || c?.id).filter(Boolean));
+        if (chainTypes.has('SLEEP_STRESS_BINGE') || chainTypes.has('SLEEP→STRESS→BINGE')) {
+            advisories.push({
+                key: 'r13f_chain_sleep_stress',
+                severity: 'high',
+                text: 'Цепочка: плохой сон → стресс → переедание. Этот приём — точка разрыва: лёгкий, белковый, без сахара.'
+            });
+        }
+
+        // R13-C: cascade state (cascadeState деструктурирован выше)
+        const cascade = cascadeState || null;
+        const cascadeBrokenMode = cascade?.state === 'BROKEN';
+        if (cascade) {
+            if (cascade.state === 'BROKEN') {
+                advisories.push({
+                    key: 'r13c_cascade_broken',
+                    severity: 'high',
+                    text: 'Каскад сломался — приоритет: попадание в калории и белок (не идеал, а возврат на трек).'
+                });
+            } else if (cascade.state === 'STRONG' && (cascade.daysAtPeak || 0) >= 7) {
+                advisories.push({
+                    key: 'r13c_cascade_strong',
+                    severity: 'low',
+                    text: `${cascade.daysAtPeak} дней на пике каскада — придерживаемся текущей схемы.`
+                });
+            }
+            if (Number.isFinite(cascade.todayContrib) && cascade.todayContrib < -0.15) {
+                advisories.push({
+                    key: 'r13c_today_at_risk',
+                    severity: 'medium',
+                    text: 'Сегодня каскад под угрозой — этот приём критичен для возврата на курс.'
+                });
+            }
+        }
+
+        // === R13 finalization: dedup + cap + BROKEN filter ===
+        const seenKeys = new Set();
+        const severityRank = { high: 3, medium: 2, low: 1 };
+        let finalAdvisories = advisories.filter((a) => {
+            if (!a || !a.key || seenKeys.has(a.key)) return false;
+            seenKeys.add(a.key);
+            // При BROKEN — скрываем low severity (фокус юзера на главном)
+            if (cascadeBrokenMode && a.severity === 'low') return false;
+            return true;
+        });
+        finalAdvisories.sort((a, b) => (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0));
+        if (finalAdvisories.length > 8) finalAdvisories = finalAdvisories.slice(0, 8);
+        advisories.length = 0;
+        finalAdvisories.forEach((a) => advisories.push(a));
 
         const summary = {
             totalMeals: plannedMeals.length,
@@ -25414,12 +25633,70 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 // moderate stress (≥3) + late evening + low mood ухудшает качество сна.
                 const _stress = Number(context.lastMeal?.stress) || Number(context?.stress) || 3;
                 const _mood = Number(context.lastMeal?.mood) || Number(context?.mood) || 3;
+                // R13-A: sleepQuality из morning checkin (число 1-10, может быть строкой).
+                // R13-B: moodAvg — дневной агрегат настроения (отдельный сигнал от per-meal mood).
+                const _sleepQuality = Number(context?.currentDay?.sleepQuality);
+                const _moodAvg = Number(context?.currentDay?.moodAvg);
                 const stressMoodSignals = {
                     stressLevel: _stress >= 4 ? 'high' : _stress >= 3 ? 'moderate' : 'low',
-                    moodLevel: _mood <= 2 ? 'low' : _mood >= 4 ? 'high' : 'neutral'
+                    moodLevel: _mood <= 2 ? 'low' : _mood >= 4 ? 'high' : 'neutral',
+                    sleepQualityLevel: !Number.isFinite(_sleepQuality) ? null
+                        : _sleepQuality <= 3 ? 'poor'
+                            : _sleepQuality >= 7 ? 'good' : 'neutral',
+                    sleepQualityScore: Number.isFinite(_sleepQuality) ? _sleepQuality : null,
+                    moodAvgLevel: !Number.isFinite(_moodAvg) ? null
+                        : _moodAvg <= 4 ? 'low' : 'neutral',
+                    moodAvgScore: Number.isFinite(_moodAvg) ? _moodAvg : null
                 };
                 // R4-6: передать waveOverlap в planner для advisory
                 const _waveOverlap = patternHints?.waveOverlap?.avgOverlapPct;
+
+                // R13-G: micronutrient deficits список имён нутриентов из patternHints
+                const _micronutrientDeficits = Array.isArray(patternHints?.micronutrients?.deficits)
+                    ? patternHints.micronutrients.deficits.map(d => d?.nutrient).filter(Boolean)
+                    : [];
+
+                // R13-E/F: early warnings + causal chains через кэш (TTL 10 мин).
+                // Защита от спама вычислений на каждом replan.
+                let _earlyWarnings = [];
+                let _causalChains = [];
+                try {
+                    const now = Date.now();
+                    const cached = (typeof window !== 'undefined') ? window.__heysEwCache : null;
+                    if (cached && (now - cached.ts < 600000)) {
+                        _earlyWarnings = cached.warnings || [];
+                        _causalChains = cached.chains || [];
+                    } else if (HEYS?.InsightsPI?.earlyWarning?.detect) {
+                        const ewResult = HEYS.InsightsPI.earlyWarning.detect(days, profile, pIndex);
+                        const allowedTypes = new Set(['BINGE_RISK', 'CALORIC_DEBT', 'STRESS_ACCUMULATION', 'PROTEIN_DEFICIT']);
+                        _earlyWarnings = Array.isArray(ewResult?.warnings)
+                            ? ewResult.warnings.filter(w => allowedTypes.has(w?.type))
+                            : [];
+                        _causalChains = Array.isArray(ewResult?.causalChains) ? ewResult.causalChains : [];
+                        if (typeof window !== 'undefined') {
+                            window.__heysEwCache = { ts: now, warnings: _earlyWarnings, chains: _causalChains };
+                        }
+                    }
+                } catch (e) {
+                    // EW module недоступен — не критично, planner работает без него
+                }
+
+                // R13-C: snapshot состояния каскада из global state.
+                // Cascade card сама обновляет window.HEYS._lastCrs при пересчётах.
+                let _cascadeState = null;
+                try {
+                    const lastCrs = (typeof window !== 'undefined') ? window.HEYS?._lastCrs : null;
+                    if (lastCrs && typeof lastCrs === 'object') {
+                        _cascadeState = {
+                            state: lastCrs.state || null,
+                            crs: Number.isFinite(lastCrs.crs) ? lastCrs.crs : null,
+                            daysAtPeak: Number(lastCrs.daysAtPeak) || 0,
+                            todayContrib: Number.isFinite(lastCrs.dailyContribution) ? lastCrs.dailyContribution : null
+                        };
+                    }
+                } catch (e) {
+                    // Cascade не загружен — нейтральное поведение
+                }
 
                 const plannerInput = {
                     currentTime: context.currentTime || getCurrentTime(),
@@ -25457,6 +25734,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         ? patternImpact.filter((p) => ['C01', 'C06', 'C10', 'C14', 'C15', 'C34', 'C35', 'C37'].includes(p.pattern))
                         : null,
                     phenotypeApplied: profile?.phenotype || null,
+                    // R13-G: micronutrient deficits для advisories в planner
+                    micronutrientDeficits: _micronutrientDeficits,
+                    // R13-E + R13-F: early warnings + causal chains bridge
+                    earlyWarnings: _earlyWarnings,
+                    causalChains: _causalChains,
+                    // R13-C: cascade state snapshot
+                    cascadeState: _cascadeState,
                     replanReason,
                     previousPlanState,
                     lockedMeals: previousPlanState?.lockedMeals || []
@@ -29286,7 +29570,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 waterMl: day.waterMl,
                 stressAvg: day.stressAvg,
                 householdMin: day.householdMin,
-                steps: day.steps
+                steps: day.steps,
+                // R13-B: дневной агрегат настроения для mood support advisory
+                moodAvg: day.moodAvg
             },
             sleepTarget,
             // R1-3: явный сигнал «время сна задано пользователем сегодня».
@@ -36299,64 +36585,71 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               })
             ),
 
-            // Phenotype Card (HIGH) — отдельная expandable карточка
-            // В демо-режиме показываем placeholder если компонент ещё не загружен
-            shouldShowSection('HIGH') && h('div', {
-              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-              id: 'tour-insights-phenotype' // 🎯 Mini-tour target
-            },
-              HEYS.Phenotype?.PhenotypeExpandableCard
-                ? h(HEYS.Phenotype.PhenotypeExpandableCard, { profile })
-                : showDemoMode && h('div', {
-                  className: 'insights-card insights-tab__phenotype-placeholder'
-                },
-                  h('div', { className: 'insights-tab__phenotype-placeholder-header' },
-                    h('span', { className: 'insights-tab__phenotype-placeholder-icon' }, '🧬'),
-                    h('span', { className: 'insights-tab__phenotype-placeholder-title' }, 'Метаболический фенотип')
-                  ),
-                  h('div', { className: 'insights-tab__phenotype-placeholder-text' },
+            // Phenotype Card (HIGH) — свёрнуто по умолчанию (R-INS-1: разгрузка экрана)
+            shouldShowSection('HIGH') && h('div', { id: 'tour-insights-phenotype' },
+              h(CollapsibleSection, {
+                title: 'Метаболический фенотип',
+                icon: '🧬',
+                defaultOpen: false,
+                priority: 'HIGH'
+              },
+                HEYS.Phenotype?.PhenotypeExpandableCard
+                  ? h(HEYS.Phenotype.PhenotypeExpandableCard, { profile })
+                  : h('div', { className: 'insights-tab__phenotype-placeholder-text' },
                     'После анализа ваших данных за 7+ дней система определит ваш метаболический тип и даст персональные рекомендации.'
                   )
-                )
+              )
             ),
 
-            // Advanced Analytics (HIGH) — собственный заголовок внутри
-            shouldShowSection('HIGH') && h('div', {
-              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-              id: 'tour-insights-analytics' // 🎯 Mini-tour target
-            },
-              h(AdvancedAnalyticsCard, {
-                lsGet,
-                profile,
-                pIndex,
-                selectedDate
-              })
+            // Advanced Analytics (HIGH) — свёрнуто по умолчанию
+            shouldShowSection('HIGH') && h('div', { id: 'tour-insights-analytics' },
+              h(CollapsibleSection, {
+                title: 'Продвинутая аналитика',
+                icon: '🔬',
+                defaultOpen: false,
+                priority: 'HIGH'
+              },
+                h(AdvancedAnalyticsCard, {
+                  lsGet,
+                  profile,
+                  pIndex,
+                  selectedDate
+                })
+              )
             ),
 
-            // Metabolism Section (HIGH) — собственный заголовок внутри
-            shouldShowSection('HIGH') && h('div', {
-              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-              id: 'tour-insights-metabolism' // 🎯 Mini-tour target
-            },
-              h(MetabolismSection, {
-                lsGet,
-                profile,
-                pIndex,
-                selectedDate
-              })
+            // Metabolism Section (HIGH) — свёрнуто по умолчанию
+            shouldShowSection('HIGH') && h('div', { id: 'tour-insights-metabolism' },
+              h(CollapsibleSection, {
+                title: 'Метаболизм',
+                icon: '⚡',
+                defaultOpen: false,
+                priority: 'HIGH'
+              },
+                h(MetabolismSection, {
+                  lsGet,
+                  profile,
+                  pIndex,
+                  selectedDate
+                })
+              )
             ),
 
-            // Meal Timing (HIGH) — собственный заголовок внутри
-            shouldShowSection('HIGH') && h('div', {
-              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-              id: 'tour-insights-timing' // 🎯 Mini-tour target
-            },
-              h(MealTimingCard, {
-                lsGet,
-                profile,
-                pIndex,
-                selectedDate
-              })
+            // Meal Timing (HIGH) — свёрнуто по умолчанию
+            shouldShowSection('HIGH') && h('div', { id: 'tour-insights-timing' },
+              h(CollapsibleSection, {
+                title: 'Время приёма пищи',
+                icon: '⏰',
+                defaultOpen: false,
+                priority: 'HIGH'
+              },
+                h(MealTimingCard, {
+                  lsGet,
+                  profile,
+                  pIndex,
+                  selectedDate
+                })
+              )
             ),
 
             // Divider между важными и средними
@@ -36369,12 +36662,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             // 🟡 СРЕДНИЙ ПРИОРИТЕТ — Полезный контекст
             // ═══════════════════════════════════════════════════════════
 
-            // What-If (MEDIUM)
+            // What-If (MEDIUM) — свёрнуто по умолчанию (R-INS-1: разгрузка экрана)
             shouldShowSection('MEDIUM') && h(CollapsibleSection, {
               title: 'Что если...',
               icon: '🎯',
               badge: insights.whatIf?.length > 0 ? `${insights.whatIf.length} сценариев` : null,
-              defaultOpen: true,
+              defaultOpen: false,
               infoKey: 'WHATIF',
               priority: 'MEDIUM'
             },

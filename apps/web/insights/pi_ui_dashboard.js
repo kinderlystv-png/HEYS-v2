@@ -2394,64 +2394,71 @@
               })
             ),
 
-            // Phenotype Card (HIGH) — отдельная expandable карточка
-            // В демо-режиме показываем placeholder если компонент ещё не загружен
-            shouldShowSection('HIGH') && h('div', {
-              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-              id: 'tour-insights-phenotype' // 🎯 Mini-tour target
-            },
-              HEYS.Phenotype?.PhenotypeExpandableCard
-                ? h(HEYS.Phenotype.PhenotypeExpandableCard, { profile })
-                : showDemoMode && h('div', {
-                  className: 'insights-card insights-tab__phenotype-placeholder'
-                },
-                  h('div', { className: 'insights-tab__phenotype-placeholder-header' },
-                    h('span', { className: 'insights-tab__phenotype-placeholder-icon' }, '🧬'),
-                    h('span', { className: 'insights-tab__phenotype-placeholder-title' }, 'Метаболический фенотип')
-                  ),
-                  h('div', { className: 'insights-tab__phenotype-placeholder-text' },
+            // Phenotype Card (HIGH) — свёрнуто по умолчанию (R-INS-1: разгрузка экрана)
+            shouldShowSection('HIGH') && h('div', { id: 'tour-insights-phenotype' },
+              h(CollapsibleSection, {
+                title: 'Метаболический фенотип',
+                icon: '🧬',
+                defaultOpen: false,
+                priority: 'HIGH'
+              },
+                HEYS.Phenotype?.PhenotypeExpandableCard
+                  ? h(HEYS.Phenotype.PhenotypeExpandableCard, { profile })
+                  : h('div', { className: 'insights-tab__phenotype-placeholder-text' },
                     'После анализа ваших данных за 7+ дней система определит ваш метаболический тип и даст персональные рекомендации.'
                   )
-                )
+              )
             ),
 
-            // Advanced Analytics (HIGH) — собственный заголовок внутри
-            shouldShowSection('HIGH') && h('div', {
-              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-              id: 'tour-insights-analytics' // 🎯 Mini-tour target
-            },
-              h(AdvancedAnalyticsCard, {
-                lsGet,
-                profile,
-                pIndex,
-                selectedDate
-              })
+            // Advanced Analytics (HIGH) — свёрнуто по умолчанию
+            shouldShowSection('HIGH') && h('div', { id: 'tour-insights-analytics' },
+              h(CollapsibleSection, {
+                title: 'Продвинутая аналитика',
+                icon: '🔬',
+                defaultOpen: false,
+                priority: 'HIGH'
+              },
+                h(AdvancedAnalyticsCard, {
+                  lsGet,
+                  profile,
+                  pIndex,
+                  selectedDate
+                })
+              )
             ),
 
-            // Metabolism Section (HIGH) — собственный заголовок внутри
-            shouldShowSection('HIGH') && h('div', {
-              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-              id: 'tour-insights-metabolism' // 🎯 Mini-tour target
-            },
-              h(MetabolismSection, {
-                lsGet,
-                profile,
-                pIndex,
-                selectedDate
-              })
+            // Metabolism Section (HIGH) — свёрнуто по умолчанию
+            shouldShowSection('HIGH') && h('div', { id: 'tour-insights-metabolism' },
+              h(CollapsibleSection, {
+                title: 'Метаболизм',
+                icon: '⚡',
+                defaultOpen: false,
+                priority: 'HIGH'
+              },
+                h(MetabolismSection, {
+                  lsGet,
+                  profile,
+                  pIndex,
+                  selectedDate
+                })
+              )
             ),
 
-            // Meal Timing (HIGH) — собственный заголовок внутри
-            shouldShowSection('HIGH') && h('div', {
-              className: 'insights-tab__section insights-tab__section--high insights-tab__section--no-header',
-              id: 'tour-insights-timing' // 🎯 Mini-tour target
-            },
-              h(MealTimingCard, {
-                lsGet,
-                profile,
-                pIndex,
-                selectedDate
-              })
+            // Meal Timing (HIGH) — свёрнуто по умолчанию
+            shouldShowSection('HIGH') && h('div', { id: 'tour-insights-timing' },
+              h(CollapsibleSection, {
+                title: 'Время приёма пищи',
+                icon: '⏰',
+                defaultOpen: false,
+                priority: 'HIGH'
+              },
+                h(MealTimingCard, {
+                  lsGet,
+                  profile,
+                  pIndex,
+                  selectedDate
+                })
+              )
             ),
 
             // Divider между важными и средними
@@ -2464,12 +2471,12 @@
             // 🟡 СРЕДНИЙ ПРИОРИТЕТ — Полезный контекст
             // ═══════════════════════════════════════════════════════════
 
-            // What-If (MEDIUM)
+            // What-If (MEDIUM) — свёрнуто по умолчанию (R-INS-1: разгрузка экрана)
             shouldShowSection('MEDIUM') && h(CollapsibleSection, {
               title: 'Что если...',
               icon: '🎯',
               badge: insights.whatIf?.length > 0 ? `${insights.whatIf.length} сценариев` : null,
-              defaultOpen: true,
+              defaultOpen: false,
               infoKey: 'WHATIF',
               priority: 'MEDIUM'
             },
