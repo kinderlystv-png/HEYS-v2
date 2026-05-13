@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.13.cde285c2",
+      "buildHash": "cde285c2",
+      "date": "2026-05-13",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Allowlist sync after insulin-wave audit edits",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Line drift",
+          "description": "After step A audit edits insulin-wave line numbers shifted."
+        }
+      ]
+    },
+    {
       "version": "2026.05.13.84e43935",
       "buildHash": "84e43935",
       "date": "2026-05-13",
