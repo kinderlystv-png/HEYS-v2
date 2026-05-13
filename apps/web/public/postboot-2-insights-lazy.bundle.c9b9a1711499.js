@@ -4800,7 +4800,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
             formula: SCIENCE_INFO?.NUTRIENT_TIMING?.formula || 'nutrient timing score',
             debug: {
                 dailyData: dailyData.slice(0, 3),
-                source: SCIENCE_INFO?.NUTRIENT_TIMING?.source || 'Arble et al., 2009'
+                // v4.3: fallback цитата исправлена. Arble 2009 (PMID 19730426) — мышиное
+                // циркадное исследование, нерелевантно post-workout nutrient timing.
+                // Корректные источники: Mamerow 2014 (PMID 24477298) для morning protein,
+                // Kerksick 2017 ISSN (PMID 28919842) для post-workout carbs.
+                source: SCIENCE_INFO?.NUTRIENT_TIMING?.source || 'Mamerow et al., 2014 (PMID 24477298); Kerksick et al., 2017 (ISSN)'
             }
         };
     }
@@ -26913,14 +26917,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
 
         // Phase B: C12 Mood↔Food enhancement for STRESS_EATING
+        // v4.3 (2026-05-13): обоснование переписано.
+        // ⚠ ПРЕЖНЯЯ ВЕРСИЯ: «serotonin optimization» через комплексные углеводы.
+        // Серотониновая гипотеза депрессии в умбрелла-обзоре Moncrieff 2022
+        // (Mol Psychiatry, doi:10.1038/s41380-022-01661-0) фактически отозвана —
+        // нет последовательных доказательств связи диетического tryptophan / carb
+        // intake → улучшение mood в day-to-day сценарии. «Comfort carbs»
+        // (Wurtman) — популярная теория, плохо реплицируется.
+        // СОХРАНЯЕМ механику (умеренный +10% carbs / +5% protein при сильной
+        // mood-food корреляции), но как ПРАКТИЧЕСКИЙ stress-paring (углеводы и
+        // умеренный белок хорошо переносятся при стрессе), без медицинских
+        // утверждений про серотонин.
         if (patternHints?.moodFood && scenario === SCENARIOS.STRESS_EATING) {
             const moodCorr = Math.abs(patternHints.moodFood.correlation || 0);
             const before = { protein: mealProtein, carbs: mealCarbs };
 
-            // Strong mood-food correlation → optimize for serotonin boost (complex carbs + omega-3)
+            // Strong mood-food correlation → balanced carb/protein bias (stress-friendly mix)
             if (moodCorr > 0.4) {
-                mealCarbs = Math.round(mealCarbs * 1.1); // +10% carbs (complex for serotonin)
-                mealProtein = Math.round(mealProtein * 1.05); // +5% protein (amino acids)
+                mealCarbs = Math.round(mealCarbs * 1.1); // +10% carbs (stress-friendly portion)
+                mealProtein = Math.round(mealProtein * 1.05); // +5% protein (amino-acid floor)
                 console.info(`${LOG_PREFIX} [MEALREC / macros] 🧮 Phase B C12 (mood-food):`, {
                     scenario,
                     moodCorrelation: moodCorr,
@@ -26931,7 +26946,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     area: 'macros',
                     before: `P${before.protein}/C${before.carbs}`,
                     after: `P${mealProtein}/C${mealCarbs}`,
-                    reason: `moodFood correlation=${moodCorr} (serotonin optimization)`
+                    reason: `moodFood correlation=${moodCorr} (stress-friendly macro shift, NOT serotonin claim)`
                 });
             }
         }

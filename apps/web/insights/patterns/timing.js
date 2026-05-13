@@ -390,7 +390,11 @@
             formula: SCIENCE_INFO?.NUTRIENT_TIMING?.formula || 'nutrient timing score',
             debug: {
                 dailyData: dailyData.slice(0, 3),
-                source: SCIENCE_INFO?.NUTRIENT_TIMING?.source || 'Arble et al., 2009'
+                // v4.3: fallback цитата исправлена. Arble 2009 (PMID 19730426) — мышиное
+                // циркадное исследование, нерелевантно post-workout nutrient timing.
+                // Корректные источники: Mamerow 2014 (PMID 24477298) для morning protein,
+                // Kerksick 2017 ISSN (PMID 28919842) для post-workout carbs.
+                source: SCIENCE_INFO?.NUTRIENT_TIMING?.source || 'Mamerow et al., 2014 (PMID 24477298); Kerksick et al., 2017 (ISSN)'
             }
         };
     }

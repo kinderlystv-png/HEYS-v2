@@ -1884,14 +1884,25 @@
         }
 
         // Phase B: C12 Mood↔Food enhancement for STRESS_EATING
+        // v4.3 (2026-05-13): обоснование переписано.
+        // ⚠ ПРЕЖНЯЯ ВЕРСИЯ: «serotonin optimization» через комплексные углеводы.
+        // Серотониновая гипотеза депрессии в умбрелла-обзоре Moncrieff 2022
+        // (Mol Psychiatry, doi:10.1038/s41380-022-01661-0) фактически отозвана —
+        // нет последовательных доказательств связи диетического tryptophan / carb
+        // intake → улучшение mood в day-to-day сценарии. «Comfort carbs»
+        // (Wurtman) — популярная теория, плохо реплицируется.
+        // СОХРАНЯЕМ механику (умеренный +10% carbs / +5% protein при сильной
+        // mood-food корреляции), но как ПРАКТИЧЕСКИЙ stress-paring (углеводы и
+        // умеренный белок хорошо переносятся при стрессе), без медицинских
+        // утверждений про серотонин.
         if (patternHints?.moodFood && scenario === SCENARIOS.STRESS_EATING) {
             const moodCorr = Math.abs(patternHints.moodFood.correlation || 0);
             const before = { protein: mealProtein, carbs: mealCarbs };
 
-            // Strong mood-food correlation → optimize for serotonin boost (complex carbs + omega-3)
+            // Strong mood-food correlation → balanced carb/protein bias (stress-friendly mix)
             if (moodCorr > 0.4) {
-                mealCarbs = Math.round(mealCarbs * 1.1); // +10% carbs (complex for serotonin)
-                mealProtein = Math.round(mealProtein * 1.05); // +5% protein (amino acids)
+                mealCarbs = Math.round(mealCarbs * 1.1); // +10% carbs (stress-friendly portion)
+                mealProtein = Math.round(mealProtein * 1.05); // +5% protein (amino-acid floor)
                 console.info(`${LOG_PREFIX} [MEALREC / macros] 🧮 Phase B C12 (mood-food):`, {
                     scenario,
                     moodCorrelation: moodCorr,
@@ -1902,7 +1913,7 @@
                     area: 'macros',
                     before: `P${before.protein}/C${before.carbs}`,
                     after: `P${mealProtein}/C${mealCarbs}`,
-                    reason: `moodFood correlation=${moodCorr} (serotonin optimization)`
+                    reason: `moodFood correlation=${moodCorr} (stress-friendly macro shift, NOT serotonin claim)`
                 });
             }
         }

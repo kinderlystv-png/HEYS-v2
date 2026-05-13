@@ -57,9 +57,13 @@ describe('Cycle Module (Critical)', () => {
       expect(phase.id).toBe('ovulation');
     });
 
-    it('should return null for Luteal phase (days 15+ not tracked)', () => {
+    it('should identify Luteal phase (days 15-28) — added v4.3', () => {
+      // v4.3: лютеиновая фаза добавлена (Valdes 1991 — Si падает на 20-50%).
+      // Прежде возвращался null → половина цикла шла с ×1.0 множителем.
       const phase = Cycle.getCyclePhase(20);
-      expect(phase).toBeNull();
+      expect(phase).not.toBeNull();
+      expect(phase.id).toBe('luteal');
+      expect(phase.insulinWaveMultiplier).toBeGreaterThan(1.0);
     });
   });
 
