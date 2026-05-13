@@ -1,6 +1,81 @@
 {
   "releases": [
     {
+      "version": "2026.05.14.35e7d09c",
+      "buildHash": "35e7d09c",
+      "date": "2026-05-14",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Раунд 14: финальный научный аудит инсулиновой волны",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Удалены 9 цитат «ChatGPT Research» как источника",
+          "description": "В heys_iw_constants.js были комментарии вида «🔬 НАУЧНЫЙ АУДИТ 2025-12-10 (ChatGPT Research)» — недопустимый маркер источника для health-related app. Сами числа в большинстве мест валидны (рядом стоят Nuttall 1984, Floyd 1966, Holt 1997, Jenkins 1978 и др), маркер заменён на v4.3 атрибутирование с PMID."
+        },
+        {
+          "type": "improvement",
+          "title": "IR Score архитектурно проверен — уже per-day, не per-meal",
+          "description": "Подозрение что irScoreMultiplier вычисляется на каждый приём пищи (что было бы семантически неверно — IR это хроническое состояние) опровергнуто verification grep'ом. calculateIRScore вызывается ОДИН раз в calculate() который сам вызывается per-day. Добавлен явный комментарий + regression-тест что подтверждает инвариант."
+        },
+        {
+          "type": "improvement",
+          "title": "Wave scoring помечен как авторская эвристика",
+          "description": "Composite score (peak ×0.25 + duration ×0.20 + shape ×0.20 + AUC ×0.20 + context ×0.15) и пороги excellent ≥85 / good ≥70 / fair ≥50 — нет научных источников. Brouns 2005 (PMID 16034360) рекомендует iAUC как единичную метрику. Composite оставлен для UI, но в коде явно помечен HEURISTIC."
+        },
+        {
+          "type": "improvement",
+          "title": "Caumo «hepatic» компонента: документирован misnomer",
+          "description": "Caumo 2000 (PMID 10780864) описывает 2-фазную секрецию инсулина; 3-я компонента — печёночный КЛИРЕНС (экспоненциальный спад), не Gaussian peak как сейчас в коде. Практический impact мал (вклад 5%). Refactor отложен в R15 (требует переделки visualisation)."
+        },
+        {
+          "type": "improvement",
+          "title": "PERSONAL_BASELINE: явные transfer comments",
+          "description": "Градиенты возраст/BMI/пол (DeFronzo 1979 PMID 510806 → 0.4%/year, Kahn & Flier 2000 PMID 10953022 → 1.5%/unit BMI, Nuutila 1995 PMID 7860732 → ±5-8%/gender) консервативно снижены от литературных магнитуд. Теперь это явно задокументировано в коде."
+        },
+        {
+          "type": "improvement",
+          "title": "WAVE_PHASES: уточнено что моделируется инсулин, не глюкоза",
+          "description": "rise=20мин относится к ИНСУЛИНОВОМУ peak (1-я фаза секреции, Caumo 2000), а не глюкозному peak (OGTT 30-45 мин). Раньше это было неясно из комментариев."
+        },
+        {
+          "type": "improvement",
+          "title": "LIPOLYSIS_THRESHOLDS получил полные PMID",
+          "description": "Пороги 5/15/50/100 µEd/mL для full/partial/suppressed/blocked lipolysis теперь с конкретными ссылками: Jensen 1989 (PMID 2649512), Campbell 1992 (PMID 1476177), Nurjhan 1992 (PMID 1396721)."
+        },
+        {
+          "type": "improvement",
+          "title": "Pattern thresholds (C01/C02/C10/C29/C37) помечены как эвристики",
+          "description": "Mealtiming wave overlap, NOVA quality breakpoints (50%/25%/10%), added sugar dependency penalty multipliers — все помечены HEURISTIC с указанием реальных источников где они есть (Wolever 2006, Monteiro 2019, Lane 2024 BMJ для NOVA, WHO 2015 для sugar limit)."
+        },
+        {
+          "type": "fix",
+          "title": "Hydration магнитуды снижены — Carroll 2018 показал ~0% эффект у здоровых",
+          "description": "severe 0.08 → 0.05, moderate 0.05 → 0.03, mild 0.03 → 0.01. Carroll 2018 (PMID 30496706, n=16): 1.9% body mass loss дал NULL effect на glucose/insulin OGTT. Trigger threshold (30 мл/кг) аннотирован: IOM 2004 = total water (вода+еда+чай), а не чистая питьевая → срабатывает ложно-часто."
+        },
+        {
+          "type": "fix",
+          "title": "NDTE порог тренировки 200 → 300 ккал",
+          "description": "Magkos 2008 (PMID 17635103): значимый HOMA-IR effect только выше ~3.77 МДж (≈900 ккал). 200 ккал давало ложно-позитивный bonus за бытовую активность (быстрая прогулка). 300 ккал — консервативная середина, истинное плато ~500-900."
+        },
+        {
+          "type": "fix",
+          "title": "Spicy multiplier 0.96 (-4%) → 0.99 (-1%)",
+          "description": "Ludy/Mattes/Moore 2012 meta (PMC3257466): «no significant effects on 2-h postprandial blood glucose». -4% было верхней границей допустимого; -1% оставляем символически. Кандидат на полное удаление в R15."
+        },
+        {
+          "type": "improvement",
+          "title": "FOOD_FORM_BONUS получил PMID",
+          "description": "Liquid×1.30/processed×1.15/whole×0.85 теперь привязаны к Flood-Obbagy 2009 (PMID 19110017), Nutrients 2022 (PMID 36364827), EJN 2003 (PMID 12519741). Магнитуды помечены как heuristic калибровка — точные значения зависят от food matrix."
+        },
+        {
+          "type": "chore",
+          "title": "Early Warning: TODO severity grading + DOI",
+          "description": "Добавлены комментарии что (1) текущий severity не градирован по длительности (3-7-30 дней) и (2) science-тексты содержат конкретные проценты без точной атрибуции к PMID. Полная реализация требует UI изменений — отложено в R15."
+        }
+      ]
+    },
+    {
       "version": "2026.05.13.3ad9c14e",
       "buildHash": "3ad9c14e",
       "date": "2026-05-13",
