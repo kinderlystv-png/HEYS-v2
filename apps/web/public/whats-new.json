@@ -1,6 +1,17 @@
 {
   "releases": [
     {
+      "version": "2026.05.13.be1c04ed",
+      "buildHash": "be1c04ed",
+      "date": "2026-05-13",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Синхронизация allowlist после правки carbs",
+      "items": [
+        { "type": "chore", "title": "allowlist line numbers synced", "description": "Line drift after carbs fix edit." }
+      ]
+    },
+    {
       "version": "2026.05.13.edc5e5be",
       "buildHash": "edc5e5be",
       "date": "2026-05-13",
