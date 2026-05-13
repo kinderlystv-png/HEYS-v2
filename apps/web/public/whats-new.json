@@ -1,6 +1,15 @@
 {
   "releases": [
     {
+      "version": "2026.05.13.3ad9c14e",
+      "buildHash": "3ad9c14e",
+      "date": "2026-05-13",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Allowlist sync after lifestyle stack cap",
+      "items": [{ "type": "chore", "title": "Line drift", "description": "insulin-wave line numbers shifted." }]
+    },
+    {
       "version": "2026.05.13.c6158b17",
       "buildHash": "c6158b17",
       "date": "2026-05-13",
