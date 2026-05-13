@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.13.1990b6b3",
+      "buildHash": "1990b6b3",
+      "date": "2026-05-13",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Фикс зеркалирования дней 12 и 13 мая",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Day date mismatch cross-contamination",
+          "description": "Fixed critical bug where corrupted LS data (v.date != key date) caused day.date mismatch, making flush() write to wrong key and mirroring today's edits into a previous day."
+        }
+      ]
+    },
+    {
       "version": "2026.05.13.509ac6e4",
       "buildHash": "509ac6e4",
       "date": "2026-05-13",
