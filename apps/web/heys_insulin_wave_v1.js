@@ -152,7 +152,15 @@
     }
 
     // 🆕 v4.0.0: IR Score — объединённый показатель инсулинорезистентности
-    // Комбинирует BMI, сон, стресс, возраст в единый мультипликатор
+    // Комбинирует BMI, сон, стресс, возраст в единый мультипликатор.
+    //
+    // ⚠ v4.3 (2026-05-14): архитектурное замечание.
+    // calculateIRScore вычисляется ОДИН раз на вызов calculate() — то есть на день.
+    // Это правильно: IR — хроническое состояние, не должно меняться от приёма к приёму.
+    // Текущая реализация: hook useInsulinWave (line 1289) вызывает calculate() один
+    // раз на rerender, который в типичном UI составляет 1 раз в минуту. Все meals
+    // одного дня получают одинаковый irScoreMultiplier (применяется в line 517 для
+    // current meal и в line 757 для historical waves).
     const irScore = I?.calculateIRScore(profile, dayData);
     const irScoreMultiplier = irScore?.waveMultiplier || 1.0;
 

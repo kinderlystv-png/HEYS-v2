@@ -211,6 +211,48 @@ describe('Insulin Wave Module (Critical)', () => {
       expect(sb.medium.bonus).toBeLessThanOrEqual(0.05);
     });
 
+    it('R14-1A: ChatGPT Research tags removed from constants', () => {
+      // v4.3: 9 цитат «(ChatGPT Research)» были помечены как источник.
+      // Заменены на v4.3 атрибутирование (рядом стоят настоящие cite — Nuttall, Holt, etc).
+      const constantsPath = path.resolve(__dirname, '../heys_iw_constants.js');
+      const src = fs.readFileSync(constantsPath, 'utf8');
+      // Не должно быть активного use «ChatGPT Research» как источника.
+      const matches = src.match(/ChatGPT Research/g);
+      expect(matches).toBeNull();
+    });
+
+    it('R14-1B: IR Score computed once per day (not per-meal)', () => {
+      // Архитектурная проверка: irScore должен считаться один раз внутри
+      // calculate() и применяться ко всем приёмам. Если бы это было per-meal
+      // (например, в цикле по meals), тест поймал бы N вызовов.
+      let irScoreCallCount = 0;
+      const originalCalc = I.calculateIRScore;
+      I.calculateIRScore = (...args) => {
+        irScoreCallCount++;
+        return originalCalc(...args);
+      };
+      // Симулируем день с 4 приёмами через calculate() — это один вызов
+      try {
+        IW.calculate({
+          meals: [
+            { id: 'm1', time: '08:00', items: [] },
+            { id: 'm2', time: '12:00', items: [] },
+            { id: 'm3', time: '16:00', items: [] },
+            { id: 'm4', time: '20:00', items: [] }
+          ],
+          pIndex: { byId: new Map() },
+          getProductFromItem: () => null,
+          baseWaveHours: 3,
+          dayData: { profile: { age: 35, weight: 70, height: 175 }, sleepHours: 7, stressAvg: 4 }
+        });
+      } catch (e) {
+        // OK if calculate fails on empty items — мы только проверяем call count
+      }
+      I.calculateIRScore = originalCalc;
+      // calculateIRScore должен быть вызван 0 или 1 раз — НЕ 4 раза (per-meal).
+      expect(irScoreCallCount).toBeLessThanOrEqual(1);
+    });
+
     it('sleep deprivation moderate (4-5h) calibrated to +12%', () => {
       // v4.2: +15%. v4.3: +12% (между Donga 2010 -25% для 4ч и Buxton 2010 -11% для 5ч недели).
       const slb = I.SLEEP_BONUS;

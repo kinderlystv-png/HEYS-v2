@@ -41,6 +41,12 @@
      * @param {object} thresholds - Adaptive thresholds
      * @returns {object}
      */
+    // ⚠ THRESHOLD JUSTIFICATION (v4.3 audit):
+    //   - Trigger «wave overlap»: gapMinutes < waveMinutes — heuristic.
+    //     Концепт overlap корректен (Wolever 2006 «second meal effect»),
+    //     но конкретный порог «полное перекрытие = плохо» — авторская оценка.
+    //   - Severity: overlapPct (доля dnей с overlap) — без научной нормативы.
+    //     Используется как поведенческий ориентир, не клинический критерий.
     function analyzeMealTiming(days, profile, thresholds = {}) {
         const waveHours = profile?.insulinWaveHours || 3;
         const idealGapMin = thresholds.idealMealGapMin || (waveHours * 60);

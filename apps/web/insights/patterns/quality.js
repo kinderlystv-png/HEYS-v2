@@ -609,6 +609,14 @@
         const ultraProcessedPct = novaDistribution[4];
         const livingFoodsPct = Math.round(((fermentedKcal + rawKcal) / totalKcal) * 1000) / 10;
 
+        // ⚠ THRESHOLD JUSTIFICATION (v4.3 audit):
+        //   - NOVA classification (Monteiro 2019, PMID 30630554) defines 4 categories
+        //     of food processing, but does NOT specify cutoffs like ">50% of kcal".
+        //   - 50%/25%/10% breakpoints + score formula (100 - ultra×0.8 + living×0.5) —
+        //     HEURISTIC for UI traffic light. Не валидировано против health outcomes.
+        //   - Direction is evidence-supported (Lane 2024 BMJ meta-analysis 388:e077310:
+        //     UPF intake associated with all-cause mortality, T2D, CVD), но конкретные
+        //     percent thresholds — авторская норма для дневника.
         let score = 100 - (ultraProcessedPct * 0.8);
         score += Math.min(livingFoodsPct * 0.5, 10);
         score = Math.max(0, Math.min(100, Math.round(score)));

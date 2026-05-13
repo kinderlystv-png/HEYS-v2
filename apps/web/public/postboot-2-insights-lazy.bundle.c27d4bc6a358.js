@@ -4451,6 +4451,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
      * @param {object} thresholds - Adaptive thresholds
      * @returns {object}
      */
+    // ⚠ THRESHOLD JUSTIFICATION (v4.3 audit):
+    //   - Trigger «wave overlap»: gapMinutes < waveMinutes — heuristic.
+    //     Концепт overlap корректен (Wolever 2006 «second meal effect»),
+    //     но конкретный порог «полное перекрытие = плохо» — авторская оценка.
+    //   - Severity: overlapPct (доля dnей с overlap) — без научной нормативы.
+    //     Используется как поведенческий ориентир, не клинический критерий.
     function analyzeMealTiming(days, profile, thresholds = {}) {
         const waveHours = profile?.insulinWaveHours || 3;
         const idealGapMin = thresholds.idealMealGapMin || (waveHours * 60);
@@ -9144,6 +9150,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
         const ultraProcessedPct = novaDistribution[4];
         const livingFoodsPct = Math.round(((fermentedKcal + rawKcal) / totalKcal) * 1000) / 10;
 
+        // ⚠ THRESHOLD JUSTIFICATION (v4.3 audit):
+        //   - NOVA classification (Monteiro 2019, PMID 30630554) defines 4 categories
+        //     of food processing, but does NOT specify cutoffs like ">50% of kcal".
+        //   - 50%/25%/10% breakpoints + score formula (100 - ultra×0.8 + living×0.5) —
+        //     HEURISTIC for UI traffic light. Не валидировано против health outcomes.
+        //   - Direction is evidence-supported (Lane 2024 BMJ meta-analysis 388:e077310:
+        //     UPF intake associated with all-cause mortality, T2D, CVD), но конкретные
+        //     percent thresholds — авторская норма для дневника.
         let score = 100 - (ultraProcessedPct * 0.8);
         score += Math.min(livingFoodsPct * 0.5, 10);
         score = Math.max(0, Math.min(100, Math.round(score)));
@@ -9767,6 +9781,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
      * @param {object} pIndex - Product index.
      * @returns {object} Pattern result.
      */
+    // ⚠ THRESHOLD JUSTIFICATION (v4.3 audit):
+    //   - Sugar limit 25g/day: WHO 2015 guideline (≤10% energy from free sugars,
+    //     ~25g для 2000ккал диеты). Source: WHO/NMH/NHD/15.2.
+    //   - Penalty multiplier 1.5×, streak penalties (10/20) — HEURISTIC behavioral.
+    //     Не из addiction model в литературе. Пороги выбраны эмпирически.
+    //   - Streak ≥3/≥5 дней — heuristic behavioral nudge, не clinical addiction criterion.
     function analyzeAddedSugarDependency(days, pIndex) {
         const pattern = PATTERNS.ADDED_SUGAR_DEPENDENCY || 'added_sugar_dependency';
         const minDays = 7;
@@ -14944,6 +14964,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Human-friendly pattern descriptions (v1.0)
     // Формат: простое название + дружелюбное описание + научная база
+    // ⚠ v4.3 (2026-05-14): SCIENCE TEXTS — DOI/PMID coverage notes.
+    // Тексты ниже содержат конкретные проценты («+40% риска ожирения», «-15%
+    // лептина») без точной атрибуции к одному PMID. Для health-related app
+    // это юридически рискованно. TODO R15: каждое утверждение → 1 конкретный
+    // {author, year, journal, PMID}. Сейчас тексты — обобщения literature
+    // консенсуса (мета-анализы Spiegel 2004, Tasali 2008, etc), но без точной
+    // привязки конкретных %ов к конкретным работам. Не выдавать как клинические
+    // факты — только как образовательный контекст.
+    //
+    // SEVERITY GRADING TODO R15:
+    // Сейчас severity = 'high'/'medium'/'low' определяется однократно от величины
+    // отклонения. Лучше градация по длительности паттерна:
+    //   - 3 дня → 'watch'
+    //   - 7-14 дней → 'warning'
+    //   - 30+ дней → 'high risk'
+    // Это требует расширения структуры warning + UI badges.
     const PATTERN_HUMAN_MESSAGES = {
         // C1-C10: Timing & Behavior
         'meal_timing': {

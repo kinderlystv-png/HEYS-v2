@@ -425,6 +425,12 @@
      * @param {object} pIndex - Product index.
      * @returns {object} Pattern result.
      */
+    // ⚠ THRESHOLD JUSTIFICATION (v4.3 audit):
+    //   - Sugar limit 25g/day: WHO 2015 guideline (≤10% energy from free sugars,
+    //     ~25g для 2000ккал диеты). Source: WHO/NMH/NHD/15.2.
+    //   - Penalty multiplier 1.5×, streak penalties (10/20) — HEURISTIC behavioral.
+    //     Не из addiction model в литературе. Пороги выбраны эмпирически.
+    //   - Streak ≥3/≥5 дней — heuristic behavioral nudge, не clinical addiction criterion.
     function analyzeAddedSugarDependency(days, pIndex) {
         const pattern = PATTERNS.ADDED_SUGAR_DEPENDENCY || 'added_sugar_dependency';
         const minDays = 7;

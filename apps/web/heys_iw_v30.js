@@ -76,10 +76,27 @@
    * @param {Object} profile - профиль { age, weight, height, gender }
    * @returns {Object} { baseHours, factors, formula }
    */
+  // ⚠ v4.3 (2026-05-14): TRANSFER FUNCTIONS — heuristic gradients.
+  // Source magnitudes from literature vs values used here:
+  //
+  // AGE (DeFronzo 1979, PMID 510806): 10-15% Si decline per decade = 1-1.5%/year.
+  //   We use ~0.4%/year as CONSERVATIVE estimate to avoid over-penalizing age,
+  //   since lifestyle factors (BMI, sleep) dominate over chronological age.
+  //
+  // BMI (Kahn & Flier 2000, PMID 10953022): obesity (BMI≥30) increases IR by
+  //   20-40%. Per-unit gradient is non-linear; we use ~1.5%/unit above BMI=25
+  //   as smooth approximation (= 7.5% at BMI 30, 15% at BMI 35).
+  //
+  // GENDER (Nuutila 1995, PMID 7860732): women have 5-15% higher Si than men
+  //   matched for BMI. We use -8%/+5% (female/male) as midrange estimate.
+  //
+  // Эти градиенты ЭВРИСТИЧЕСКИЕ — они МЕНЬШЕ литературных магнитуд, выбраны
+  // консервативно. Корректное значение зависит от индивидуальной чувствительности
+  // (HOMA-IR, OGTT), которую дневник не измеряет.
   const calculatePersonalBaselineWave = (profile = {}) => {
     let baseHours = PERSONAL_BASELINE.defaultWaveHours;
     const factors = [];
-    
+
     // 👴 Возраст
     const age = profile.age || 0;
     let ageFactor = 0;
