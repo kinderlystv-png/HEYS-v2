@@ -484,17 +484,19 @@
     // 🆕 v3.8.0: Добавлены temperatureBonus и largePortionBonus
     const otherBonuses = metabolicBonuses + personalBonuses + mealStackingBonus + resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus + temperatureBonus + largePortionBonus.bonus;
     const foodMultiplier = multipliers.total + otherBonuses;
-    // 🆕 v3.8.0: Insulin Index Wave Modifier — молочка укорачивает волну
+    // v4.3 (2026-05-13): waveMultiplier инвертирован к >1.0 для молочки.
+    // До v4.3 был <1.0 (волна короче), что противоречило литературе:
+    // Toffolon 2021 (PMID 34618402): молочный напиток держит инсулин 240 мин.
+    // Henry 2024 (PMID 39019167): молочный белок к углеводам +64% инсулин AUC.
+    // Костыль liquidDairyCompensation=1.08 (v4.2.3) удалён — он гасил двойной
+    // штраф между liquid 0.75 и устаревшим dairy 0.85; после инверсии не нужен.
     const insulinIndexWaveMult = insulinIndexModifier.waveMultiplier || 1.0;
-    // 🆕 v4.2.3: компенсация пересечения liquid + liquidDairy (избегаем двойного штрафа длительности)
-    const liquidDairyCompensation = (nutrients.hasLiquid && nutrients.insulinogenicType === 'liquidDairy') ? 1.08 : 1.0;
     const activityMultiplier = Math.max(0.1, 1.0 + activityBonuses); // min 10% от волны
 
     // 🆕 v3.6.0: NDTE применяется как отдельный множитель (независимо от состава еды)
-    // 🆕 v3.8.0: Insulin Index Wave Mult — молочка делает волну КОРОЧЕ (Holt 1997)
     // 🆕 v3.8.5: Simple Ratio Mult — сахар = быстрее пик, короче волна
     // 🆕 v4.0.0: IR Score — объединённый мультипликатор инсулинорезистентности
-    let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * insulinIndexWaveMult * simpleRatioMultiplier * irScoreMultiplier * liquidDairyCompensation;
+    let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * insulinIndexWaveMult * simpleRatioMultiplier * irScoreMultiplier;
 
     // 🔬 v3.7.5: Физиологический лимит — волна не может быть больше ×1.5 от базы
     // Научное обоснование: реальные исследования показывают что даже при
@@ -731,11 +733,10 @@
       else if (mealSimpleRatio < 0.2 && mealNutrients.totalCarbs > 20) mealSimpleRatioMult = 1.05;
 
       // irScoreMultiplier доступен из внешней области видимости (вычислен на уровне всего дня)
-      // liquidDairyCompensation: компенсирует пересечение liquidMult (из mealMult.total) и mealInsIndexWaveMult
-      const liquidDairyCompensation = (mealNutrients.hasLiquid && mealNutrients.insulinogenicType === 'liquidDairy') ? 1.08 : 1.0;
+      // v4.3: liquidDairyCompensation удалён — больше нет двойного штрафа.
 
-      // Единая формула — идентична основному расчёту (v4.2.4)
-      let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * mealInsIndexWaveMult * mealSimpleRatioMult * irScoreMultiplier * liquidDairyCompensation;
+      // Единая формула — идентична основному расчёту (v4.3)
+      let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * mealInsIndexWaveMult * mealSimpleRatioMult * irScoreMultiplier;
 
       // 🆕 v4.2.5: MAX_MULTIPLIER cap для waveHistory (ранее применялся только к основному расчёту)
       if (finalMultiplier > 1.50) finalMultiplier = 1.50;

@@ -24376,30 +24376,37 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   // - peakMultiplier: увеличивает ПИКОВЫЙ инсулин (для визуализации)
   // - waveMultiplier: уменьшает ДЛИНУ волны (быстрее спад)
   // - glBoost: умеренное увеличение effectiveGL (для корректного расчёта)
+  // ⚠️ ВАЖНО: до v4.3 waveMultiplier для молочки был <1.0 (волна короче).
+  // Это противоречит литературе: Toffolon 2021 (PMID 34618402) — молочный напиток
+  // держит инсулин и инкретины повышенными на протяжении 240 мин (плато до конца
+  // наблюдения). Henry 2024 (PMID 39019167, 154 RCT) — молочный белок к
+  // углеводам ПОВЫШАЕТ инсулиновый AUC на 64%, глюкозный СНИЖАЕТ на 52%.
+  // Механизм: казеин = "slow protein", лейцин + GLP-1/GIP пролонгируют секрецию.
+  // v4.3 (2026-05-13): waveMultiplier инвертирован к >1.0.
   I.INSULIN_INDEX_FACTORS = C?.INSULIN_INDEX_FACTORS || {
     // Множители для разных типов продуктов
     liquidDairy: {
-      glBoost: 1.5,          // GL ×1.5 (не ×3.0 — слишком агрессивно)
-      peakMultiplier: 1.35,  // Пик инсулина +35%
-      waveMultiplier: 0.85,  // Волна -15% (быстрее спад)
-      desc: 'Молоко, кефир — быстрый пик, короткая волна'
+      glBoost: 1.5,          // GL ×1.5 (Holt 1997: II молока ~3× его GI)
+      peakMultiplier: 1.35,  // Пик инсулина +35% (Holt 1997)
+      waveMultiplier: 1.10,  // Волна +10% (Toffolon 2021: 240-мин плато инсулина)
+      desc: 'Молоко, кефир — высокий пик И пролонгированная волна'
     },
     softDairy: {
       glBoost: 1.3,          // GL ×1.3
       peakMultiplier: 1.25,  // Пик +25%
-      waveMultiplier: 0.90,  // Волна -10%
+      waveMultiplier: 1.05,  // Волна +5% (йогурт = казеин + ферментация, ещё медленнее)
       desc: 'Йогурт, творог'
     },
     hardDairy: {
       glBoost: 1.1,          // GL ×1.1
       peakMultiplier: 1.10,  // Пик +10%
-      waveMultiplier: 0.95,  // Волна -5%
-      desc: 'Сыр — медленнее усваивается'
+      waveMultiplier: 1.05,  // Волна +5% (сыр + жир = медленное опорожнение желудка)
+      desc: 'Сыр — медленное усвоение'
     },
     pureProtein: {
       glBoost: 1.2,          // GL ×1.2 (белок даёт инсулин без углеводов)
       peakMultiplier: 1.15,  // Пик +15%
-      waveMultiplier: 0.92,  // Волна -8%
+      waveMultiplier: 1.0,   // Волна нейтрально (мясо/рыба — данных мало, без BCAA-burst как у whey)
       desc: 'Мясо, рыба — умеренный II'
     },
     highFiber: {
@@ -24531,12 +24538,23 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     ]
   };
 
-  // 🍷 ALCOHOL — алкоголь замедляет метаболизм и блокирует липолиз
-  // Печень переключается на переработку алкоголя, инсулин дольше в крови
+  // 🍷 ALCOHOL — v4.3 (2026-05-13): знаки инвертированы.
+  // До v4.3 утверждалось «инсулин дольше в крови» — это фактическая ошибка.
+  // У здоровых острый этанол подавляет глюконеогенез на ≈45% (через сдвиг NAD/NADH;
+  // классическая работа Krebs/Williamson 1967, AJP Endo 1998), глюкоза в крови
+  // СНИЖАЕТСЯ, не растёт. Brand-Miller 2007 (AJCN): алкогольные напитки понижают
+  // postprandial glycemia на 16-37%. Sierksma 2004 (Diabetes Care, PMID 14693987):
+  // 40г этанола 17 дней → +21% к Si у IR-subgroup. Davies 2002: острый алкоголь
+  // улучшает insulin action у T2DM.
+  // Эффект на волну инсулина у пива/сладких коктейлей идёт от УГЛЕВОДОВ (мальтоза,
+  // GI пива ~66), не от этанола. Крепкое (водка, GI=0) — нейтрально или слегка
+  // снижает волну. Поэтому ранжирование перевёрнуто: strong → ~0, medium (вино) → ~0,
+  // weak (пиво) → +5% (через мальтозу). + ОТДЕЛЬНЫЙ риск: отложенная гипогликемия
+  // через 6-12ч у IR/диабетиков.
   I.ALCOHOL_BONUS = C?.ALCOHOL_BONUS || {
-    high: { bonus: 0.25 },    // Крепкие напитки, много
-    medium: { bonus: 0.18 },  // Вино, пиво
-    low: { bonus: 0.10 },     // Слабоалкогольные
+    high: { bonus: 0.0 },     // Крепкие (vodka/whisky/gin): нейтрально на волну, эффект через гипо-риск
+    medium: { bonus: 0.0 },   // Вино (GI ~0-5): нейтрально, Davies 2002 даже улучшает Si
+    low: { bonus: 0.05 },     // Пиво/сидр (GI ~66): прирост от углеводов в напитке, не от этанола
     patterns: [
       /водка/i, /виски/i, /whisky/i, /whiskey/i, /коньяк/i, /cognac/i,
       /ром/i, /rum/i, /текила/i, /tequila/i, /джин/i, /gin/i,
@@ -31298,17 +31316,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     // 🆕 v3.8.0: Добавлены temperatureBonus и largePortionBonus
     const otherBonuses = metabolicBonuses + personalBonuses + mealStackingBonus + resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus + temperatureBonus + largePortionBonus.bonus;
     const foodMultiplier = multipliers.total + otherBonuses;
-    // 🆕 v3.8.0: Insulin Index Wave Modifier — молочка укорачивает волну
+    // v4.3 (2026-05-13): waveMultiplier инвертирован к >1.0 для молочки.
+    // До v4.3 был <1.0 (волна короче), что противоречило литературе:
+    // Toffolon 2021 (PMID 34618402): молочный напиток держит инсулин 240 мин.
+    // Henry 2024 (PMID 39019167): молочный белок к углеводам +64% инсулин AUC.
+    // Костыль liquidDairyCompensation=1.08 (v4.2.3) удалён — он гасил двойной
+    // штраф между liquid 0.75 и устаревшим dairy 0.85; после инверсии не нужен.
     const insulinIndexWaveMult = insulinIndexModifier.waveMultiplier || 1.0;
-    // 🆕 v4.2.3: компенсация пересечения liquid + liquidDairy (избегаем двойного штрафа длительности)
-    const liquidDairyCompensation = (nutrients.hasLiquid && nutrients.insulinogenicType === 'liquidDairy') ? 1.08 : 1.0;
     const activityMultiplier = Math.max(0.1, 1.0 + activityBonuses); // min 10% от волны
 
     // 🆕 v3.6.0: NDTE применяется как отдельный множитель (независимо от состава еды)
-    // 🆕 v3.8.0: Insulin Index Wave Mult — молочка делает волну КОРОЧЕ (Holt 1997)
     // 🆕 v3.8.5: Simple Ratio Mult — сахар = быстрее пик, короче волна
     // 🆕 v4.0.0: IR Score — объединённый мультипликатор инсулинорезистентности
-    let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * insulinIndexWaveMult * simpleRatioMultiplier * irScoreMultiplier * liquidDairyCompensation;
+    let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * insulinIndexWaveMult * simpleRatioMultiplier * irScoreMultiplier;
 
     // 🔬 v3.7.5: Физиологический лимит — волна не может быть больше ×1.5 от базы
     // Научное обоснование: реальные исследования показывают что даже при
@@ -31545,11 +31565,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       else if (mealSimpleRatio < 0.2 && mealNutrients.totalCarbs > 20) mealSimpleRatioMult = 1.05;
 
       // irScoreMultiplier доступен из внешней области видимости (вычислен на уровне всего дня)
-      // liquidDairyCompensation: компенсирует пересечение liquidMult (из mealMult.total) и mealInsIndexWaveMult
-      const liquidDairyCompensation = (mealNutrients.hasLiquid && mealNutrients.insulinogenicType === 'liquidDairy') ? 1.08 : 1.0;
+      // v4.3: liquidDairyCompensation удалён — больше нет двойного штрафа.
 
-      // Единая формула — идентична основному расчёту (v4.2.4)
-      let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * mealInsIndexWaveMult * mealSimpleRatioMult * irScoreMultiplier * liquidDairyCompensation;
+      // Единая формула — идентична основному расчёту (v4.3)
+      let finalMultiplier = foodMultiplier * activityMultiplier * ndteMultiplier * scaledCircadian * spicyMultiplier * mealInsIndexWaveMult * mealSimpleRatioMult * irScoreMultiplier;
 
       // 🆕 v4.2.5: MAX_MULTIPLIER cap для waveHistory (ранее применялся только к основному расчёту)
       if (finalMultiplier > 1.50) finalMultiplier = 1.50;
