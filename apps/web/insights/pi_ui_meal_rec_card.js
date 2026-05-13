@@ -241,8 +241,8 @@
         lines.push(`Day check-in: sleepStart=${day?.sleepStart || '(not set)'}, refeedDay=${!!day?.isRefeedDay}`);
         lines.push('');
         lines.push(`Day target: ${Math.round(optimum || normAbs?.kcal || 0)} kcal (optimum=${optimum || 'N/A'}, normAbs=${normAbs?.kcal || 'N/A'})`);
-        lines.push(`            P${Math.round(normAbs?.prot || 0)}г C${Math.round(normAbs?.carb || 0)}г F${Math.round(normAbs?.fat || 0)}г`);
-        lines.push(`Day eaten:  ${Math.round(dayTot?.kcal || 0)} kcal, P${Math.round(dayTot?.prot || 0)}г C${Math.round(dayTot?.carb || 0)}г F${Math.round(dayTot?.fat || 0)}г`);
+        lines.push(`            P${Math.round(normAbs?.prot || 0)}г C${Math.round(normAbs?.carbs || normAbs?.carb || 0)}г F${Math.round(normAbs?.fat || 0)}г`);
+        lines.push(`Day eaten:  ${Math.round(dayTot?.kcal || 0)} kcal, P${Math.round(dayTot?.prot || 0)}г C${Math.round(dayTot?.carbs || dayTot?.carb || 0)}г F${Math.round(dayTot?.fat || 0)}г`);
         const supplements = Array.isArray(day?.supplements) ? day.supplements.filter((s) => s && s.taken !== false && s.consumed !== false) : [];
         if (supplements.length) {
             lines.push(`Supplements: ${supplements.length} active`);
@@ -355,11 +355,11 @@
             lastMealItemsCount: lastMeal?.items?.length || 0,
             eatenKcal: Math.round(dayTot?.kcal || 0),
             eatenProt: Math.round(dayTot?.prot || 0),
-            eatenCarbs: Math.round(dayTot?.carb || 0),
+            eatenCarbs: Math.round(dayTot?.carbs || dayTot?.carb || 0),
             eatenFat: Math.round(dayTot?.fat || 0),
             targetKcal: Math.round(optimum || normAbs?.kcal || 0),
             targetProt: Math.round(normAbs?.prot || 0),
-            targetCarbs: Math.round(normAbs?.carb || 0),
+            targetCarbs: Math.round(normAbs?.carbs || normAbs?.carb || 0),
             targetFat: Math.round(normAbs?.fat || 0),
             sleepTarget: prof?.sleepTarget || '23:00',
             trainingTime: training?.time || '',
@@ -532,7 +532,9 @@
 
         // R2-3: пересчитываем dayEaten из day.meals напрямую. Не доверяем входному
         // dayTot — он может отстать после быстрых add/remove (debounce + async LS).
-        let eaten = { kcal: dayTot.kcal || 0, prot: dayTot.prot || 0, carb: dayTot.carb || 0, fat: dayTot.fat || 0 };
+        // mealTotals (heys_models_v1.js:836) возвращает .carbs (plural), не .carb.
+        // dayTot тоже использует .carbs. Фоллбэк на .carb для совместимости.
+        let eaten = { kcal: dayTot.kcal || 0, prot: dayTot.prot || 0, carb: dayTot.carbs || dayTot.carb || 0, fat: dayTot.fat || 0 };
         if (global.HEYS?.models?.mealTotals && pIndex && rawMeals.length > 0) {
             const recomputed = { kcal: 0, prot: 0, carb: 0, fat: 0 };
             for (const m of rawMeals) {
@@ -540,7 +542,7 @@
                     const mt = global.HEYS.models.mealTotals(m, pIndex);
                     recomputed.kcal += mt?.kcal || 0;
                     recomputed.prot += mt?.prot || 0;
-                    recomputed.carb += mt?.carb || 0;
+                    recomputed.carb += mt?.carbs || mt?.carb || 0;
                     recomputed.fat += mt?.fat || 0;
                 } catch (e) { /* skip broken meal */ }
             }
