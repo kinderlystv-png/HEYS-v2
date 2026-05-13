@@ -482,7 +482,25 @@
 
     // Разделяем бонусы: еда/метаболизм vs активность
     // 🆕 v3.8.0: Добавлены temperatureBonus и largePortionBonus
-    const otherBonuses = metabolicBonuses + personalBonuses + mealStackingBonus + resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus + temperatureBonus + largePortionBonus.bonus;
+    // v4.3 (2026-05-13): diminishing returns на lifestyle-стек (supplements +
+    // cold + autophagy + resistant starch). Без cap'а комбо «уксус + корица +
+    // берберин + холодный душ + аутофагия» давало -57% к волне, что
+    // физиологически невозможно (одна волна не может быть короче 0.4 базы).
+    // Применяем экспоненциальный smooth cap к НЕГАТИВНЫМ lifestyle-бонусам:
+    // sumNegative → 1 - exp(-|sum|), что при -0.10 ≈ -0.095, при -0.30 ≈ -0.26,
+    // при -0.60 ≈ -0.45. То есть кап мягкий пока бонусы небольшие, и жёсткий
+    // когда их много.
+    const rawLifestyleSum = (coldExposureBonus < 0 ? coldExposureBonus : 0)
+                          + (supplementsBonusValue < 0 ? supplementsBonusValue : 0)
+                          + (autophagyBonus < 0 ? autophagyBonus : 0)
+                          + (resistantStarchBonus < 0 ? resistantStarchBonus : 0);
+    let lifestyleAdjustment = 0; // дельта, которая будет добавлена обратно
+    if (rawLifestyleSum < -0.10) {
+        const smoothCapped = -(1 - Math.exp(rawLifestyleSum)); // exp(negative)→[0,1]
+        lifestyleAdjustment = smoothCapped - rawLifestyleSum; // положительная коррекция (бонус был "слишком отрицательный")
+        console.info('[insulinWave] 🛡️ Lifestyle stack cap:', { rawSum: rawLifestyleSum.toFixed(3), smoothCapped: smoothCapped.toFixed(3), adjustment: lifestyleAdjustment.toFixed(3) });
+    }
+    const otherBonuses = metabolicBonuses + personalBonuses + mealStackingBonus + resistantStarchBonus + coldExposureBonus + supplementsBonusValue + autophagyBonus + temperatureBonus + largePortionBonus.bonus + lifestyleAdjustment;
     const foodMultiplier = multipliers.total + otherBonuses;
     // v4.3 (2026-05-13): waveMultiplier инвертирован к >1.0 для молочки.
     // До v4.3 был <1.0 (волна короче), что противоречило литературе:

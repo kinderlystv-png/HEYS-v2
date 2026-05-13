@@ -1973,6 +1973,46 @@
             });
         }
 
+        // v4.3 (2026-05-13): Stacking cap — phenotype + pattern hints могут
+        // мультипликативно сложиться и выйти за безопасную nudge-зону. Например
+        // insulin_resistant phenotype (carbs ×0.85) + C15 hint (carbs ×0.9) +
+        // C06 sleep hunger (carbs ×0.92) → суммарно carbs × 0.704 = -30%, что
+        // превращает «мягкий совет» в клиническую интервенцию без оснований.
+        // Лимиты выбраны как макс ±25-40% от baseline (beforePhenotype):
+        //   • carbs не ниже -25% (×0.75)
+        //   • protein не выше +40% (×1.40)
+        //   • fat не ниже -30% (×0.70) — fat иногда срезается каскадно
+        // Эвристические границы из audit'а (см. patches в whats-new).
+        const STACK_CAP_CARBS_MIN = 0.75;
+        const STACK_CAP_PROTEIN_MAX = 1.40;
+        const STACK_CAP_FAT_MIN = 0.70;
+        const stackCapApplied = [];
+        if (mealCarbs < beforePhenotype.carbs * STACK_CAP_CARBS_MIN) {
+            const capped = Math.round(beforePhenotype.carbs * STACK_CAP_CARBS_MIN);
+            stackCapApplied.push(`carbs ${mealCarbs}→${capped} (-25% floor)`);
+            mealCarbs = capped;
+        }
+        if (mealProtein > beforePhenotype.protein * STACK_CAP_PROTEIN_MAX) {
+            const capped = Math.round(beforePhenotype.protein * STACK_CAP_PROTEIN_MAX);
+            stackCapApplied.push(`protein ${mealProtein}→${capped} (+40% ceiling)`);
+            mealProtein = capped;
+        }
+        if (mealFat < beforePhenotype.fat * STACK_CAP_FAT_MIN) {
+            const capped = Math.round(beforePhenotype.fat * STACK_CAP_FAT_MIN);
+            stackCapApplied.push(`fat ${mealFat}→${capped} (-30% floor)`);
+            mealFat = capped;
+        }
+        if (stackCapApplied.length > 0) {
+            console.info(`${LOG_PREFIX} [MEALREC / macros] 🛡️ Stack cap engaged:`, stackCapApplied.join(', '));
+            patternImpact.push({
+                pattern: 'STACK_CAP',
+                area: 'macros',
+                before: `pre-cap accumulated shifts`,
+                after: `clamped to ±25-40% of baseline`,
+                reason: stackCapApplied.join('; ')
+            });
+        }
+
         // P5 fix (v3.3.1): Physiological protein cap — max 100g absorbed per meal (Areta et al., 2013)
         const PROTEIN_CAP_PER_MEAL_G = 100;
         if (mealProtein > PROTEIN_CAP_PER_MEAL_G) {
