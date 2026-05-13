@@ -1341,4 +1341,229 @@ describe('Meal Planner v1.0', () => {
             }
         });
     });
+
+    describe('Round 13 — Dead signals activation', () => {
+        const baseParams = {
+            currentTime: '14:00',
+            lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+            dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+            dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+            profile: { sleepTarget: '23:00', weight: 70 },
+            days: [],
+            pIndex: {}
+        };
+
+        const getAdvisoryByKey = (result, key) => {
+            const advisories = result?.summary?.advisories || [];
+            return advisories.find((a) => a?.key === key) || null;
+        };
+
+        it('R13-A: poor sleep + workout → recovery factor boost + advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                currentTime: '14:00',
+                currentDay: {
+                    sleepQuality: 2,
+                    workouts: [{ time: '10:00', type: 'strength' }]
+                },
+                stressMoodSignals: { sleepQualityLevel: 'poor', sleepQualityScore: 2 }
+            });
+            expect(getAdvisoryByKey(result, 'r13a_poor_sleep')).not.toBeNull();
+        });
+
+        it('R13-A: poor sleep advisory без shift при отсутствии late evening', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                stressMoodSignals: { sleepQualityLevel: 'poor', sleepQualityScore: 2 }
+            });
+            expect(getAdvisoryByKey(result, 'r13a_poor_sleep')).not.toBeNull();
+        });
+
+        it('R13-A: anti-double-shift — moderate stress + poor sleep НЕ удваивают сдвиг', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const onlyStress = planner.planRemainingMeals({
+                ...baseParams,
+                currentTime: '20:30',
+                dayEaten: { kcal: 1000, prot: 60, carbs: 120, fat: 30 },
+                stressMoodSignals: { stressLevel: 'moderate' }
+            });
+            const both = planner.planRemainingMeals({
+                ...baseParams,
+                currentTime: '20:30',
+                dayEaten: { kcal: 1000, prot: 60, carbs: 120, fat: 30 },
+                stressMoodSignals: {
+                    stressLevel: 'moderate',
+                    sleepQualityLevel: 'poor',
+                    sleepQualityScore: 2
+                }
+            });
+            const stressDl = planner.parseTime(onlyStress.summary?.lastMealDeadline || '00:00');
+            const bothDl = planner.parseTime(both.summary?.lastMealDeadline || '00:00');
+            // оба deadline должны быть одинаковыми — R13-A не накладывается на R4-5
+            expect(bothDl).toBe(stressDl);
+        });
+
+        it('R13-B: low moodAvg → mood support advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                stressMoodSignals: { moodAvgLevel: 'low', moodAvgScore: 3 }
+            });
+            expect(getAdvisoryByKey(result, 'r13b_mood_support')).not.toBeNull();
+        });
+
+        it('R13-D: phenotype.satiety=volume_eater → advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                phenotypeApplied: { satiety: 'volume_eater' }
+            });
+            expect(getAdvisoryByKey(result, 'r13d_volume_eater')).not.toBeNull();
+        });
+
+        it('R13-D: phenotype.satiety=low_satiety → advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                phenotypeApplied: { satiety: 'low_satiety' }
+            });
+            expect(getAdvisoryByKey(result, 'r13d_low_satiety')).not.toBeNull();
+        });
+
+        it('R13-D: stress_anorexic + high + большой deficit → защитный advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                currentTime: '20:30',
+                dayEaten: { kcal: 800, prot: 40, carbs: 80, fat: 20 },
+                stressMoodSignals: { stressLevel: 'high' },
+                phenotypeApplied: { stress: 'stress_anorexic' }
+            });
+            expect(getAdvisoryByKey(result, 'r13d_stress_anorexic')).not.toBeNull();
+        });
+
+        it('R13-G: ≥2 micronutrient deficits + first meal → advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                lastMeal: null,
+                dayEaten: { kcal: 0, prot: 0, carbs: 0, fat: 0 },
+                micronutrientDeficits: ['iron', 'zinc']
+            });
+            expect(getAdvisoryByKey(result, 'r13g_micronutrient_focus')).not.toBeNull();
+        });
+
+        it('R13-G: iron + calcium deficits → timing advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                lastMeal: null,
+                dayEaten: { kcal: 0, prot: 0, carbs: 0, fat: 0 },
+                micronutrientDeficits: ['iron', 'calcium']
+            });
+            expect(getAdvisoryByKey(result, 'r13g_iron_calcium_timing')).not.toBeNull();
+        });
+
+        it('R13-I: low water + evening (>=18:00) → dehydration advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                currentTime: '19:00',
+                dayEaten: { kcal: 1000, prot: 60, carbs: 120, fat: 30 },
+                currentDay: { waterMl: 400 }
+            });
+            expect(getAdvisoryByKey(result, 'r13i_dehydration')).not.toBeNull();
+        });
+
+        it('R13-I: low water + morning → НЕТ advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                currentTime: '10:00',
+                currentDay: { waterMl: 200 }
+            });
+            expect(getAdvisoryByKey(result, 'r13i_dehydration')).toBeNull();
+        });
+
+        it('R13-H: high steps → NEAT advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                currentDay: { steps: 17000 }
+            });
+            expect(getAdvisoryByKey(result, 'r13h_high_neat')).not.toBeNull();
+        });
+
+        it('R13-E: BINGE_RISK warning → advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                earlyWarnings: [{ type: 'BINGE_RISK', severity: 'medium' }]
+            });
+            expect(getAdvisoryByKey(result, 'r13e_binge_risk')).not.toBeNull();
+        });
+
+        it('R13-E: PROTEIN_DEFICIT warning → advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                earlyWarnings: [{ type: 'PROTEIN_DEFICIT' }]
+            });
+            expect(getAdvisoryByKey(result, 'r13e_protein_deficit')).not.toBeNull();
+        });
+
+        it('R13-F: SLEEP_STRESS_BINGE chain → high-severity advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                causalChains: [{ type: 'SLEEP_STRESS_BINGE' }]
+            });
+            const a = getAdvisoryByKey(result, 'r13f_chain_sleep_stress');
+            expect(a).not.toBeNull();
+            expect(a?.severity).toBe('high');
+        });
+
+        it('R13-C: cascade BROKEN → advisory + low-severity advisories отфильтрованы', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                cascadeState: { state: 'BROKEN', crs: 0.5, daysAtPeak: 0, todayContrib: -0.2 },
+                stressMoodSignals: { moodAvgLevel: 'low', moodAvgScore: 3 }
+            });
+            const broken = getAdvisoryByKey(result, 'r13c_cascade_broken');
+            expect(broken).not.toBeNull();
+            expect(broken?.severity).toBe('high');
+            // low-severity moodAvg отфильтрован при BROKEN
+            expect(getAdvisoryByKey(result, 'r13b_mood_support')).toBeNull();
+        });
+
+        it('R13-C: cascade STRONG + 7 дней → maintenance advisory', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                cascadeState: { state: 'STRONG', crs: 0.9, daysAtPeak: 8, todayContrib: 0.5 }
+            });
+            expect(getAdvisoryByKey(result, 'r13c_cascade_strong')).not.toBeNull();
+        });
+
+        it('R13-C: cascadeState отсутствует → silent (regression baseline)', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals(baseParams);
+            expect(getAdvisoryByKey(result, 'r13c_cascade_broken')).toBeNull();
+            expect(getAdvisoryByKey(result, 'r13c_cascade_strong')).toBeNull();
+        });
+
+        it('R13 dedup: одинаковые keys не дублируются', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                earlyWarnings: [{ type: 'BINGE_RISK' }, { type: 'BINGE_RISK' }]
+            });
+            const advisories = result?.summary?.advisories || [];
+            const bingeCount = advisories.filter(a => a.key === 'r13e_binge_risk').length;
+            expect(bingeCount).toBeLessThanOrEqual(1);
+        });
+    });
 });

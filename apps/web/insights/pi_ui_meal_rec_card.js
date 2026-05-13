@@ -644,7 +644,9 @@
                 waterMl: day.waterMl,
                 stressAvg: day.stressAvg,
                 householdMin: day.householdMin,
-                steps: day.steps
+                steps: day.steps,
+                // R13-B: дневной агрегат настроения для mood support advisory
+                moodAvg: day.moodAvg
             },
             sleepTarget,
             // R1-3: явный сигнал «время сна задано пользователем сегодня».

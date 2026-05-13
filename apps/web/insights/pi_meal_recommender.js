@@ -734,12 +734,70 @@
                 // moderate stress (≥3) + late evening + low mood ухудшает качество сна.
                 const _stress = Number(context.lastMeal?.stress) || Number(context?.stress) || 3;
                 const _mood = Number(context.lastMeal?.mood) || Number(context?.mood) || 3;
+                // R13-A: sleepQuality из morning checkin (число 1-10, может быть строкой).
+                // R13-B: moodAvg — дневной агрегат настроения (отдельный сигнал от per-meal mood).
+                const _sleepQuality = Number(context?.currentDay?.sleepQuality);
+                const _moodAvg = Number(context?.currentDay?.moodAvg);
                 const stressMoodSignals = {
                     stressLevel: _stress >= 4 ? 'high' : _stress >= 3 ? 'moderate' : 'low',
-                    moodLevel: _mood <= 2 ? 'low' : _mood >= 4 ? 'high' : 'neutral'
+                    moodLevel: _mood <= 2 ? 'low' : _mood >= 4 ? 'high' : 'neutral',
+                    sleepQualityLevel: !Number.isFinite(_sleepQuality) ? null
+                        : _sleepQuality <= 3 ? 'poor'
+                            : _sleepQuality >= 7 ? 'good' : 'neutral',
+                    sleepQualityScore: Number.isFinite(_sleepQuality) ? _sleepQuality : null,
+                    moodAvgLevel: !Number.isFinite(_moodAvg) ? null
+                        : _moodAvg <= 4 ? 'low' : 'neutral',
+                    moodAvgScore: Number.isFinite(_moodAvg) ? _moodAvg : null
                 };
                 // R4-6: передать waveOverlap в planner для advisory
                 const _waveOverlap = patternHints?.waveOverlap?.avgOverlapPct;
+
+                // R13-G: micronutrient deficits список имён нутриентов из patternHints
+                const _micronutrientDeficits = Array.isArray(patternHints?.micronutrients?.deficits)
+                    ? patternHints.micronutrients.deficits.map(d => d?.nutrient).filter(Boolean)
+                    : [];
+
+                // R13-E/F: early warnings + causal chains через кэш (TTL 10 мин).
+                // Защита от спама вычислений на каждом replan.
+                let _earlyWarnings = [];
+                let _causalChains = [];
+                try {
+                    const now = Date.now();
+                    const cached = (typeof window !== 'undefined') ? window.__heysEwCache : null;
+                    if (cached && (now - cached.ts < 600000)) {
+                        _earlyWarnings = cached.warnings || [];
+                        _causalChains = cached.chains || [];
+                    } else if (HEYS?.InsightsPI?.earlyWarning?.detect) {
+                        const ewResult = HEYS.InsightsPI.earlyWarning.detect(days, profile, pIndex);
+                        const allowedTypes = new Set(['BINGE_RISK', 'CALORIC_DEBT', 'STRESS_ACCUMULATION', 'PROTEIN_DEFICIT']);
+                        _earlyWarnings = Array.isArray(ewResult?.warnings)
+                            ? ewResult.warnings.filter(w => allowedTypes.has(w?.type))
+                            : [];
+                        _causalChains = Array.isArray(ewResult?.causalChains) ? ewResult.causalChains : [];
+                        if (typeof window !== 'undefined') {
+                            window.__heysEwCache = { ts: now, warnings: _earlyWarnings, chains: _causalChains };
+                        }
+                    }
+                } catch (e) {
+                    // EW module недоступен — не критично, planner работает без него
+                }
+
+                // R13-C: snapshot состояния каскада из global state.
+                // Cascade card сама обновляет window.HEYS._lastCrs при пересчётах.
+                let _cascadeState = null;
+                try {
+                    const lastCrs = (typeof window !== 'undefined') ? window.HEYS?._lastCrs : null;
+                    if (lastCrs && typeof lastCrs === 'object') {
+                        _cascadeState = {
+                            state: lastCrs.state || null,
+                            crs: Number.isFinite(lastCrs.crs) ? lastCrs.crs : null,
+                            daysAtPeak: Number(lastCrs.daysAtPeak) || 0,
+                            todayContrib: Number.isFinite(lastCrs.dailyContribution) ? lastCrs.dailyContribution : null
+                        };
+                    }
+                } catch (e) {
+                    // Cascade не загружен — нейтральное поведение
+                }
 
                 const plannerInput = {
                     currentTime: context.currentTime || getCurrentTime(),
@@ -777,6 +835,13 @@
                         ? patternImpact.filter((p) => ['C01', 'C06', 'C10', 'C14', 'C15', 'C34', 'C35', 'C37'].includes(p.pattern))
                         : null,
                     phenotypeApplied: profile?.phenotype || null,
+                    // R13-G: micronutrient deficits для advisories в planner
+                    micronutrientDeficits: _micronutrientDeficits,
+                    // R13-E + R13-F: early warnings + causal chains bridge
+                    earlyWarnings: _earlyWarnings,
+                    causalChains: _causalChains,
+                    // R13-C: cascade state snapshot
+                    cascadeState: _cascadeState,
                     replanReason,
                     previousPlanState,
                     lockedMeals: previousPlanState?.lockedMeals || []
