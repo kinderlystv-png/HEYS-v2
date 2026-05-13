@@ -1580,4 +1580,78 @@ describe('Meal Planner v1.0', () => {
             expect(bingeCount).toBeLessThanOrEqual(1);
         });
     });
+
+    describe('Kcal-macro gap fill', () => {
+        const gapBase = {
+            currentTime: '14:00',
+            lastMeal: { time: '13:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 10 } },
+            dayTarget: { kcal: 2000, prot: 130, carbs: 200, fat: 60 },
+            dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 10 },
+            profile: { sleepTarget: '23:00', weight: 70 },
+            days: [],
+            pIndex: {}
+        };
+
+        it('gap > 15% kcal → fat increased to close the gap', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Симулируем сценарий жены: углеводы почти выбраны, остаток ккал 835,
+            // но макро-сумма (П 38.7 × 4 + У 39.5 × 4 + Ж 25.3 × 9) = 540 ккал.
+            // Gap = 295 ккал → ожидаем добавку ~33г жира.
+            const result = planner.planRemainingMeals({
+                ...gapBase,
+                currentTime: '14:30',
+                lastMeal: { time: '13:55', items: [], totals: { kcal: 494, prot: 42, carbs: 64, fat: 12 } },
+                dayTarget: { kcal: 1484, prot: 86.6, carbs: 123.7, fat: 44 },
+                dayEaten: { kcal: 649, prot: 48, carbs: 84.2, fat: 18.7 },
+                profile: { weight: 52.1 },
+                daySleepStart: '01:30'
+            });
+            expect(result.available).toBe(true);
+            const totalFatInPlan = result.meals.reduce((s, m) => s + (m.macros?.fat || 0), 0);
+            // До фикса было ~25г жира (только остаток). С фиксом должно стать > 40г.
+            expect(totalFatInPlan).toBeGreaterThan(40);
+            // Sanity: суммарные ккал плана значительно ближе к остатку ккал (835), чем
+            // к чистой макро-сумме (540). Cap 50% не даёт закрыть весь gap, но
+            // существенно сокращает дефицит.
+            const totalKcalInPlan = result.meals.reduce((s, m) => s + (m.macros?.kcal || 0), 0);
+            expect(totalKcalInPlan).toBeGreaterThan(700);
+        });
+
+        it('macro-сумма уже близка к ккал → gap-fill не срабатывает', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Нормальный сценарий начала дня — макро ≈ ккал.
+            const result = planner.planRemainingMeals({
+                ...gapBase,
+                currentTime: '12:00',
+                lastMeal: { time: '08:00', items: [], totals: { kcal: 400, prot: 25, carbs: 50, fat: 12 } },
+                dayTarget: { kcal: 1800, prot: 110, carbs: 220, fat: 60 },
+                dayEaten: { kcal: 400, prot: 25, carbs: 50, fat: 12 }
+            });
+            // Остаток: 1400 ккал; макро = 85×4 + 170×4 + 48×9 = 340+680+432 = 1452 ккал.
+            // Это близко к ккал (gap отрицательный), фикс не должен сработать.
+            expect(result.available).toBe(true);
+            const totalFatInPlan = result.meals.reduce((s, m) => s + (m.macros?.fat || 0), 0);
+            // Без фикса было бы ~48г, с фиксом тоже ~48г.
+            expect(totalFatInPlan).toBeLessThan(60);
+        });
+
+        it('cap 50% kcal от жира — большой gap не выстреливает в перегрузку', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Экстремальный сценарий — gap огромный.
+            const result = planner.planRemainingMeals({
+                ...gapBase,
+                currentTime: '17:00',
+                lastMeal: { time: '12:00', items: [], totals: { kcal: 200, prot: 5, carbs: 90, fat: 5 } },
+                dayTarget: { kcal: 2000, prot: 60, carbs: 100, fat: 40 },
+                dayEaten: { kcal: 200, prot: 5, carbs: 90, fat: 5 }
+            });
+            // Остаток: 1800 ккал. Макро: 55×4 + 10×4 + 35×9 = 220+40+315 = 575 ккал.
+            // Gap = 1225 ккал → 136г жира хочется добавить. Cap = 50% × 1800 / 9 = 100г.
+            // Headroom = 100 - 35 = 65г → итого ~100г жира суммарно.
+            expect(result.available).toBe(true);
+            const totalFatInPlan = result.meals.reduce((s, m) => s + (m.macros?.fat || 0), 0);
+            // ≤ ~100г суммарно по плану (cap отрабатывает).
+            expect(totalFatInPlan).toBeLessThanOrEqual(105);
+        });
+    });
 });

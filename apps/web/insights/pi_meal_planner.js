@@ -1104,6 +1104,40 @@
             }
         }
 
+        // === Закрыть разрыв между ккал-целью и суммой макро ===
+        // normAbs (база Миффлин-Сан Жеор) часто < optimum (учитывает NEAT + тренировки).
+        // Макро-таргеты считаются от normAbs, ккал-цель от optimum → к вечеру когда
+        // углевод-бюджет почти выбран, сумма (П×4 + У×4 + Ж×9) недотягивает 200-300 ккал
+        // до остатка ккал. Без фикса юзер недоедает целевой optimum.
+        //
+        // Гасим разрыв жиром:
+        //   • Mayer 1968 / Newsholme 1976: жир без углеводов не вызывает инсулинового ответа →
+        //     не ломает вечернее жиросжигание.
+        //   • Areta 2013: дополнительный белок выше 0.4 г/кг/приём не даёт прироста MPS →
+        //     лишний белок уйдёт в глюконеогенез (Knapik 1991), что создаст задержанный
+        //     инсулиновый ответ.
+        //   • Pereira 2014: дополнительные углеводы поздним вечером ухудшают архитектуру сна.
+        // → Жир — оптимальный «буферный» макрос для закрытия разрыва.
+        //
+        // Cap: суммарный жир ≤ 50% ккал-остатка (Sacks 2009: целевой % жира по дню
+        // 25-35%, но утренние углеводы уже съели норму → разовый сдвиг до 50% в
+        // оставшейся части дня безопасен; Westerterp 1985: разовый приём 50г жира
+        // не выходит за пределы биологического окисления).
+        const macroSumKcal = remainingBudget.prot * 4 + remainingBudget.carbs * 4 + remainingBudget.fat * 9;
+        const kcalGap = remainingBudget.kcal - macroSumKcal;
+        if (kcalGap > remainingBudget.kcal * 0.15 && remainingBudget.kcal >= 200) {
+            const maxTotalFat = Math.floor(remainingBudget.kcal * 0.50 / 9);
+            const extraFatRaw = Math.round(kcalGap / 9);
+            const headroom = Math.max(0, maxTotalFat - remainingBudget.fat);
+            const extraFat = Math.min(extraFatRaw, headroom);
+            if (extraFat > 0) {
+                const oldFat = remainingBudget.fat;
+                remainingBudget.fat += extraFat;
+                const cappedNote = extraFatRaw > extraFat ? ` (capped at 50% kcal, residue ${Math.round((extraFatRaw - extraFat) * 9)}kcal under-planned)` : '';
+                console.info(`${LOG_PREFIX} [PLANNER.budget] 🪣 Kcal-macro gap filled: +${extraFat}g fat (${oldFat}→${remainingBudget.fat}g, gap=${Math.round(kcalGap)}kcal)${cappedNote}`);
+            }
+        }
+
         console.info(`${LOG_PREFIX} [PLANNER.budget] 💰 Remaining budget:`, {
             ...remainingBudget,
             percentOfTarget: {
