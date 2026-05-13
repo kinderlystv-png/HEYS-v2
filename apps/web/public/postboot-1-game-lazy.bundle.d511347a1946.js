@@ -23036,9 +23036,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         if (patterns.ALCOHOL_BONUS) {
             cfg.ALCOHOL_BONUS = cfg.ALCOHOL_BONUS || {};
             cfg.ALCOHOL_BONUS.patterns = compileRegexList(patterns.ALCOHOL_BONUS.patterns || []);
-            cfg.ALCOHOL_BONUS.strong = compileRegexList(patterns.ALCOHOL_BONUS.strong || []);
-            cfg.ALCOHOL_BONUS.medium = compileRegexList(patterns.ALCOHOL_BONUS.medium || []);
-            cfg.ALCOHOL_BONUS.weak = compileRegexList(patterns.ALCOHOL_BONUS.weak || []);
+            // v4.3: *Patterns ключи — раньше были strong/medium/weak но дублировались
+            // с bonus-объектами под теми же именами (JS keeps last). Принимаем оба
+            // имени из конфигов для обратной совместимости.
+            cfg.ALCOHOL_BONUS.strongPatterns = compileRegexList(patterns.ALCOHOL_BONUS.strongPatterns || patterns.ALCOHOL_BONUS.strong || []);
+            cfg.ALCOHOL_BONUS.mediumPatterns = compileRegexList(patterns.ALCOHOL_BONUS.mediumPatterns || patterns.ALCOHOL_BONUS.medium || []);
+            cfg.ALCOHOL_BONUS.weakPatterns = compileRegexList(patterns.ALCOHOL_BONUS.weakPatterns || patterns.ALCOHOL_BONUS.weak || []);
         }
 
         if (patterns.CAFFEINE_BONUS?.patterns) {
@@ -24554,6 +24557,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   // снижает волну. Поэтому ранжирование перевёрнуто: strong → ~0, medium (вино) → ~0,
   // weak (пиво) → +5% (через мальтозу). + ОТДЕЛЬНЫЙ риск: отложенная гипогликемия
   // через 6-12ч у IR/диабетиков.
+  // v4.3: пре-существующий баг исправлен — было дублирование ключей `medium`
+  // (объект bonus + массив regex). JS оставляет последний → `.medium.bonus`
+  // всегда был undefined, что давало NaN в финальном multiplier для вина.
+  // Решение: регекс-массивы перенесены в *Patterns ключи.
   I.ALCOHOL_BONUS = C?.ALCOHOL_BONUS || {
     high: { bonus: 0.0 },     // Крепкие (vodka/whisky/gin): нейтрально на волну, эффект через гипо-риск
     medium: { bonus: 0.0 },   // Вино (GI ~0-5): нейтрально, Davies 2002 даже улучшает Si
@@ -24567,10 +24574,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       /мартини/i, /вермут/i, /vermouth/i,
       /коктейль.*алкогол/i, /алкогол.*коктейль/i
     ],
-    // Категории крепости
-    strong: [/водка/i, /виски/i, /коньяк/i, /ром/i, /текила/i, /джин/i],
-    medium: [/вино/i, /шампанское/i, /просекко/i, /мартини/i, /вермут/i],
-    weak: [/пиво/i, /сидр/i, /эль/i]
+    // Категории крепости (переименованы в *Patterns чтобы не конфликтовать с .medium объектом выше)
+    strongPatterns: [/водка/i, /виски/i, /коньяк/i, /ром/i, /текила/i, /джин/i],
+    mediumPatterns: [/вино/i, /шампанское/i, /просекко/i, /мартини/i, /вермут/i],
+    weakPatterns: [/пиво/i, /сидр/i, /эль/i]
   };
 
   // ⚠️ Важно: RegExp без границ слова даёт ложные совпадения.
@@ -26073,13 +26080,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       }
     }
 
-    if (testPatterns(I.ALCOHOL_BONUS?.strong, n)) {
+    // v4.3: переименованные ключи *Patterns; fallback на старые strong/medium/weak
+    // для конфигов которые могут ещё прилетать в старом формате.
+    if (testPatterns(I.ALCOHOL_BONUS?.strongPatterns || I.ALCOHOL_BONUS?.strong, n)) {
       return { bonus: I.ALCOHOL_BONUS.high.bonus, type: 'high' };
     }
-    if (testPatterns(I.ALCOHOL_BONUS?.medium, n)) {
+    if (testPatterns(I.ALCOHOL_BONUS?.mediumPatterns, n)) {
       return { bonus: I.ALCOHOL_BONUS.medium.bonus, type: 'medium' };
     }
-    if (testPatterns(I.ALCOHOL_BONUS?.weak, n)) {
+    if (testPatterns(I.ALCOHOL_BONUS?.weakPatterns || I.ALCOHOL_BONUS?.weak, n)) {
       return { bonus: I.ALCOHOL_BONUS.low.bonus, type: 'low' };
     }
 

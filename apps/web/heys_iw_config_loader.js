@@ -87,9 +87,12 @@
         if (patterns.ALCOHOL_BONUS) {
             cfg.ALCOHOL_BONUS = cfg.ALCOHOL_BONUS || {};
             cfg.ALCOHOL_BONUS.patterns = compileRegexList(patterns.ALCOHOL_BONUS.patterns || []);
-            cfg.ALCOHOL_BONUS.strong = compileRegexList(patterns.ALCOHOL_BONUS.strong || []);
-            cfg.ALCOHOL_BONUS.medium = compileRegexList(patterns.ALCOHOL_BONUS.medium || []);
-            cfg.ALCOHOL_BONUS.weak = compileRegexList(patterns.ALCOHOL_BONUS.weak || []);
+            // v4.3: *Patterns ключи — раньше были strong/medium/weak но дублировались
+            // с bonus-объектами под теми же именами (JS keeps last). Принимаем оба
+            // имени из конфигов для обратной совместимости.
+            cfg.ALCOHOL_BONUS.strongPatterns = compileRegexList(patterns.ALCOHOL_BONUS.strongPatterns || patterns.ALCOHOL_BONUS.strong || []);
+            cfg.ALCOHOL_BONUS.mediumPatterns = compileRegexList(patterns.ALCOHOL_BONUS.mediumPatterns || patterns.ALCOHOL_BONUS.medium || []);
+            cfg.ALCOHOL_BONUS.weakPatterns = compileRegexList(patterns.ALCOHOL_BONUS.weakPatterns || patterns.ALCOHOL_BONUS.weak || []);
         }
 
         if (patterns.CAFFEINE_BONUS?.patterns) {

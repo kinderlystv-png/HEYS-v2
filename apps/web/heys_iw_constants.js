@@ -1391,6 +1391,10 @@
   // снижает волну. Поэтому ранжирование перевёрнуто: strong → ~0, medium (вино) → ~0,
   // weak (пиво) → +5% (через мальтозу). + ОТДЕЛЬНЫЙ риск: отложенная гипогликемия
   // через 6-12ч у IR/диабетиков.
+  // v4.3: пре-существующий баг исправлен — было дублирование ключей `medium`
+  // (объект bonus + массив regex). JS оставляет последний → `.medium.bonus`
+  // всегда был undefined, что давало NaN в финальном multiplier для вина.
+  // Решение: регекс-массивы перенесены в *Patterns ключи.
   I.ALCOHOL_BONUS = C?.ALCOHOL_BONUS || {
     high: { bonus: 0.0 },     // Крепкие (vodka/whisky/gin): нейтрально на волну, эффект через гипо-риск
     medium: { bonus: 0.0 },   // Вино (GI ~0-5): нейтрально, Davies 2002 даже улучшает Si
@@ -1404,10 +1408,10 @@
       /мартини/i, /вермут/i, /vermouth/i,
       /коктейль.*алкогол/i, /алкогол.*коктейль/i
     ],
-    // Категории крепости
-    strong: [/водка/i, /виски/i, /коньяк/i, /ром/i, /текила/i, /джин/i],
-    medium: [/вино/i, /шампанское/i, /просекко/i, /мартини/i, /вермут/i],
-    weak: [/пиво/i, /сидр/i, /эль/i]
+    // Категории крепости (переименованы в *Patterns чтобы не конфликтовать с .medium объектом выше)
+    strongPatterns: [/водка/i, /виски/i, /коньяк/i, /ром/i, /текила/i, /джин/i],
+    mediumPatterns: [/вино/i, /шампанское/i, /просекко/i, /мартини/i, /вермут/i],
+    weakPatterns: [/пиво/i, /сидр/i, /эль/i]
   };
 
   // ⚠️ Важно: RegExp без границ слова даёт ложные совпадения.
@@ -2910,13 +2914,15 @@
       }
     }
 
-    if (testPatterns(I.ALCOHOL_BONUS?.strong, n)) {
+    // v4.3: переименованные ключи *Patterns; fallback на старые strong/medium/weak
+    // для конфигов которые могут ещё прилетать в старом формате.
+    if (testPatterns(I.ALCOHOL_BONUS?.strongPatterns || I.ALCOHOL_BONUS?.strong, n)) {
       return { bonus: I.ALCOHOL_BONUS.high.bonus, type: 'high' };
     }
-    if (testPatterns(I.ALCOHOL_BONUS?.medium, n)) {
+    if (testPatterns(I.ALCOHOL_BONUS?.mediumPatterns, n)) {
       return { bonus: I.ALCOHOL_BONUS.medium.bonus, type: 'medium' };
     }
-    if (testPatterns(I.ALCOHOL_BONUS?.weak, n)) {
+    if (testPatterns(I.ALCOHOL_BONUS?.weakPatterns || I.ALCOHOL_BONUS?.weak, n)) {
       return { bonus: I.ALCOHOL_BONUS.low.bonus, type: 'low' };
     }
 

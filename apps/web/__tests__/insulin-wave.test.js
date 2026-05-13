@@ -155,6 +155,71 @@ describe('Insulin Wave Module (Critical)', () => {
     });
   });
 
+  describe('v4.3 — Scientific audit corrections', () => {
+    it('dairy waveMultiplier > 1.0 (prolongs wave per Toffolon 2021 / Henry 2024)', () => {
+      // v4.2 был < 1.0 (укорачивал волну, что противоречило литературе).
+      // v4.3: все 4 типа dairy + pureProtein должны быть >= 1.0
+      const factors = I.INSULIN_INDEX_FACTORS;
+      expect(factors).toBeDefined();
+      expect(factors.liquidDairy.waveMultiplier).toBeGreaterThanOrEqual(1.05);
+      expect(factors.softDairy.waveMultiplier).toBeGreaterThanOrEqual(1.0);
+      expect(factors.hardDairy.waveMultiplier).toBeGreaterThanOrEqual(1.0);
+      expect(factors.pureProtein.waveMultiplier).toBeGreaterThanOrEqual(1.0);
+    });
+
+    it('liquidDairyCompensation no longer applied (band-aid removed)', () => {
+      // Костыль `liquidDairyCompensation=1.08` удалён в обоих местах.
+      // grep его не должен найти как активное выражение (только в комментариях).
+      const mainPath = path.resolve(__dirname, '../heys_insulin_wave_v1.js');
+      const src = fs.readFileSync(mainPath, 'utf8');
+      // Не должно быть строки с присваиванием = ... liquidDairyCompensation (vars + assign)
+      // и не должно быть умножения на эту переменную в finalMultiplier.
+      const activeAssignments = src.match(/^[\s]*const liquidDairyCompensation = /gm);
+      expect(activeAssignments).toBeNull();
+      // В finalMultiplier нет ссылки
+      expect(src).not.toMatch(/finalMultiplier\s*=.*\*\s*liquidDairyCompensation/);
+    });
+
+    it('alcohol bonuses ranking inverted (strong = neutral, beer = mild +5%)', () => {
+      // Прежде: strong +25%, medium +18%, weak +10%. Этанол подавляет глюконеогенез,
+      // глюкоза падает, не растёт (Brand-Miller 2007, Davies 2002).
+      // Новые значения отражают что прирост волны идёт от УГЛЕВОДОВ в напитке.
+      const ab = I.ALCOHOL_BONUS;
+      expect(ab).toBeDefined();
+      expect(ab.high.bonus).toBeLessThanOrEqual(0.05); // крепкое не должно увеличивать волну
+      expect(ab.medium.bonus).toBeLessThanOrEqual(0.05); // вино не должно увеличивать волну
+      expect(ab.low.bonus).toBeLessThanOrEqual(0.10); // пиво — маленький бонус от мальтозы
+      // Старое ранжирование "крепче = больше волна" перевёрнуто
+      expect(ab.high.bonus).toBeLessThanOrEqual(ab.low.bonus);
+    });
+
+    it('GL giMult ramp starts at GL=10 (Atkinson 2008), GL_CATEGORIES в low зоне ≤10', () => {
+      // Atkinson 2008 (PMID 18835944): low ≤10, medium 11-19, high ≥20.
+      // Проверяем что GL_CATEGORIES соответствует консенсусу — `low.max=10`.
+      const cats = I.GL_CATEGORIES;
+      expect(cats).toBeDefined();
+      expect(cats.low.max).toBe(10);    // low ≤10
+      expect(cats.medium.max).toBe(20); // medium <20 → 10-19
+      expect(cats.high.max).toBe(30);   // high <30 → 20-29 + veryHigh ≥30
+    });
+
+    it('stress bonus magnitudes calibrated (high=8%, medium=4%)', () => {
+      // v4.2 был +15%/+8% (без источника). v4.3: +8%/+4% (Yan 2020 + общая критика).
+      const sb = I.STRESS_BONUS;
+      expect(sb).toBeDefined();
+      expect(sb.high.bonus).toBeLessThanOrEqual(0.10);
+      expect(sb.medium.bonus).toBeLessThanOrEqual(0.05);
+    });
+
+    it('sleep deprivation moderate (4-5h) calibrated to +12%', () => {
+      // v4.2: +15%. v4.3: +12% (между Donga 2010 -25% для 4ч и Buxton 2010 -11% для 5ч недели).
+      const slb = I.SLEEP_BONUS;
+      expect(slb).toBeDefined();
+      expect(slb.severe.bonus).toBeCloseTo(0.20, 2); // <4ч: Donga 2010
+      expect(slb.moderate.bonus).toBeLessThanOrEqual(0.13); // 4-5ч: 12%
+    });
+  });
+
   describe('4. Kcal-based Wave Reduction (v3.5.0)', () => {
     it('should reduce wave significantly for high-kcal workout (POST)', () => {
       // Mock internal helper if needed, or test via calculateActivityContext
