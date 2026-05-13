@@ -116,11 +116,19 @@
     const MPS_PROT_PER_KG = 0.4; // г/кг на приём для оптимального MPS
     const MPS_PROT_MAX_G = 40;  // потолок эффективности (>40г не лучше)
 
-    // S3: Glycemic Load — Ludwig, 2002
-    const GL_TARGET_DAY = 20; // GL < 20 на дневной приём
-    const GL_TARGET_PRE_SLEEP = 10; // GL < 10 за ≤ 3ч до сна
+    // S3: Glycemic Load targets — Atkinson 2008 (Diabetes Care, PMID 18835944):
+    //   low ≤10, medium 11-19, high ≥20. v4.3 (2026-05-13): GL_TARGET_DAY снижен
+    //   с 20 (= верхняя граница medium / нижняя high) до 15 (середина medium) —
+    //   даёт безопасный запас до high зоны.
+    // Ludwig 2002: связь high-GL с инсулинорезистентностью.
+    const GL_TARGET_DAY = 15; // целимся в середину medium (10-19), не в high (≥20)
+    const GL_TARGET_PRE_SLEEP = 10; // граница low/medium, эвристика для пресонного приёма
+    //   (Halson 2014 говорит про GI, не про GL — прямой ссылки на «GL≤10 перед сном» нет;
+    //   значение 10 = «оставаться в low зоне Atkinson 2008»)
 
-    // S5: Sleep-quality foods — Halson, 2014
+    // S5: Sleep-friendly product categories — общая нутриент-логика
+    //   (казеин, триптофан, магний). Halson 2014 GSSI SSE #116 — обзор без
+    //   жёстких количественных порогов; используется как качественный ориентир.
     const SLEEP_FRIENDLY_CATEGORIES = ['dairy', 'nuts', 'legumes', 'poultry'];
 
     // S6: Personal wave estimation
@@ -945,7 +953,11 @@
             else if (hoursAfterWorkout < 12) workoutRecoveryFactor = 0.10;
             else if (hoursAfterWorkout < 24) workoutRecoveryFactor = 0.05;
         }
-        // R13-A: плохой сон ухудшает MPS (Dattilo 2011) — компенсируем +15% recovery boost.
+        // R13-A: плохой сон ухудшает MPS — компенсируем +15% recovery boost.
+        //   Dattilo 2011 (Med Hypotheses, PMID 21550729) — это hypothesis paper,
+        //   а не RCT; цифры 15% в оригинале нет. Гипотеза верна качественно
+        //   (sleep debt → ↑cortisol, ↓testosterone/IGF-1 → catabolic shift),
+        //   но магнитуда 15% — внутренняя эвристика, не из источника.
         if (workoutRecoveryFactor > 0 && stressMoodSignals?.sleepQualityLevel === 'poor') {
             workoutRecoveryFactor *= 1.15;
             console.info(`${LOG_PREFIX} [PLANNER.recovery] 😴 Poor sleep × workout → recoveryFactor +15% (R13-A)`);

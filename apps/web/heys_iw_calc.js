@@ -349,21 +349,25 @@
     }
 
     // GI множитель — применяется пропорционально GL
-    // 🔬 v3.8.0: GI НЕ ВЛИЯЕТ при GL<7 (Mayer 1995)
-    // Научное обоснование: при <7г доступных углеводов инсулиновый ответ минимален
-    // Mayer 1995: "glycemic index is not important when GL<7"
-    // Brand-Miller 2003: GL является более значимым предиктором чем GI
+    // v4.3 (2026-05-13): порог GL ramp сдвинут с 7 на 10. Цитата исправлена:
+    // Salmerón 1997 (JAMA 277:472, "Dietary fiber, GL, and risk of NIDDM") —
+    // эпидемиология GL/диабета, без буквального тезиса «GL<7 не важно».
+    // Brand-Miller 2003 (Nutr Rev 61:S49): GL — более значимый предиктор чем GI,
+    // и при низкой carb-нагрузке влияние GI на постпрандиальный ответ минимально.
+    // Atkinson, Foster-Powell, Brand-Miller 2008 (Diabetes Care, PMID 18835944):
+    // консенсусные категории GL — low≤10, medium 11-19, high≥20. Порог 10 (low/medium)
+    // согласован с этим консенсусом; до v4.3 был произвольный 7.
     let giMult = 1.0;
     if (gl === null || gl >= 20) {
-      // Полный GI только при GL≥20 (достаточная углеводная нагрузка)
+      // Полный GI только при GL≥20 (high зона по Atkinson 2008)
       giMult = giCat.multiplier;
-    } else if (gl >= 7) {
-      // 🆕 v3.8.0: Плавный переход только от GL≥7 (не от GL≥5)
-      // GL=7→0%, GL=13.5→50%, GL=20→100%
-      const giWeight = (gl - 7) / 13;
+    } else if (gl >= 10) {
+      // Плавный переход для medium GL (10-19): GL=10→0%, GL=15→50%, GL=20→100%
+      const giWeight = (gl - 10) / 10;
       giMult = 1.0 + (giCat.multiplier - 1.0) * giWeight;
     }
-    // При GL<7: giMult остаётся 1.0 (GI не влияет — Mayer 1995)
+    // При GL<10 (low по Atkinson 2008): giMult остаётся 1.0 — GI слабо влияет
+    // на постпрандиальный ответ при малой углеводной нагрузке (Brand-Miller 2003).
 
     // Бонусы от нутриентов — масштабируются по glScaleFactor
     // 🆕 v4.0.0: Белок v2 — animal/plant дифференциация
@@ -428,7 +432,8 @@
     const carbsMult = glMultiplier;
 
     // R4-7: simpleRatio — доля простых углеводов укорачивает волну
-    // Mayer 1995, Brand-Miller 2003: высокий simpleRatio → быстрый пик + быстрый спад.
+    // Brand-Miller 2003 (Nutr Rev 61:S49): high-simple-carb meal даёт быстрый
+    // глюкозный пик и быстрый спад (короткая insulin envelope).
     // >60% простых сахаров — волна короче на ~15%.
     let simpleMult = 1.0;
     if (simpleRatio !== null && simpleRatio > 0.6 && carbs && carbs > 5) {

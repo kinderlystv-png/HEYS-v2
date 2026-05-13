@@ -24250,12 +24250,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   // GL = GI × углеводы / 100 (Brand-Miller et al., 2003)
   // Пример: арбуз GI=72 высокий, но 100г арбуза = 6г углеводов → GL=4.3 (низкая!)
   // Пример: белый рис GI=73, 150г = 45г углеводов → GL=33 (очень высокая!)
-  // Стандартные пороги: низкая <10, средняя 10-20, высокая >20
-  // 
-  // 🔬 НАУЧНЫЙ АУДИТ 2025-12-09 v2:
-  // При GL < 10 инсулиновый ответ МИНИМАЛЕН — волна короткая (1-2ч максимум)
-  // Mayer (1995): при <10г доступных углеводов инсулин возвращается к базовому за 1-2ч
-  // Brand-Miller (2003): GL — лучший предиктор постпрандиальной гликемии
+  // Стандартные пороги (Atkinson, Foster-Powell, Brand-Miller 2008,
+  // Diabetes Care, PMID 18835944): low ≤10, medium 11-19, high ≥20.
+  //
+  // 🔬 НАУЧНЫЙ АУДИТ:
+  // При GL < 10 (low по Atkinson 2008) инсулиновый ответ слабый — волна короче.
+  // Brand-Miller (2003, Nutr Rev 61:S49): GL — более значимый предиктор
+  // постпрандиальной гликемии, чем GI.
+  // (v4.3: убрана несуществующая цитата «Mayer 1995». Реальная — Salmerón 1997
+  // JAMA 277:472, эпидемиология GL/диабета, без буквального тезиса про GL<7-10.)
   // 
   // КЛЮЧЕВАЯ КОРРЕКЦИЯ: Множители снижены для GL < 10
   // Пример: 35г блина (GL=7) → волна ~1.5ч, НЕ 2.3ч
@@ -24636,33 +24639,43 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     ]
   };
 
-  // 😰 STRESS — кортизол повышает инсулин и инсулинорезистентность
-  // Высокий стресс = дольше инсулиновая волна
+  // 😰 STRESS — острый психологический стресс на инсулиновую волну
+  // v4.3 (2026-05-13): магнитуды снижены с +15%/+8% до +8%/+4%.
+  // Yan 2020 (PMID 32670417, cohort): cortisol положительно ассоциирован с
+  // HOMA-IR, но это корреляция, не магнитуда «на 1 день». Hydrocortisone
+  // infusion у здоровых худых даёт незначимый эффект на SI в первые часы.
+  // Острый stress-induced cortisol bump у здоровых обычно даёт <5-10% сдвига SI.
+  // Прежние +15% были без источника — это была эвристика «много стресса = плохо».
   // ⚠️ Шкала стресса в HEYS: 1-10 (не 1-5!)
   I.STRESS_BONUS = C?.STRESS_BONUS || {
-    high: { threshold: 7, bonus: 0.15 },    // Стресс 7-10 → +15%
-    medium: { threshold: 5, bonus: 0.08 },  // Стресс 5-6 → +8%
+    high: { threshold: 7, bonus: 0.08 },    // Стресс 7-10 → +8% (было +15%)
+    medium: { threshold: 5, bonus: 0.04 },  // Стресс 5-6 → +4% (было +8%)
     low: { threshold: 3, bonus: 0.00 }      // Стресс 1-4 → нет эффекта
   };
 
   // 😴 SLEEP DEPRIVATION — недосып повышает инсулинорезистентность
-  // Даже одна ночь плохого сна увеличивает инсулинорезистентность на 20-30%
+  // Donga 2010 (JCEM, PMID 20371664, euglycemic clamp, n=9): 4ч сна одну ночь →
+  //   glucose disposal -20%, infusion rate -25%, hepatic IR ↑.
+  // Buxton 2010 (Diabetes, PMID 20585000, n=20): 5ч × 7 ночей → clamp SI -11%.
+  // v4.3: moderate 4-5ч снижен +15% → +12% (это всё ещё на верхней границе
+  // разумного — Donga даёт -25% при 4ч, а 5ч — между Donga и Buxton).
   I.SLEEP_BONUS = C?.SLEEP_BONUS || {
-    severe: { maxHours: 4, bonus: 0.20 },   // <4ч сна → +20%
-    moderate: { maxHours: 5, bonus: 0.15 }, // 4-5ч → +15%
-    mild: { maxHours: 6, bonus: 0.08 },     // 5-6ч → +8%
+    severe: { maxHours: 4, bonus: 0.20 },   // <4ч → +20% (Donga 2010 PMID 20371664)
+    moderate: { maxHours: 5, bonus: 0.12 }, // 4-5ч → +12% (было +15%; между Donga и Buxton)
+    mild: { maxHours: 6, bonus: 0.08 },     // 5-6ч → +8% (экстраполяция Buxton 2010)
     normal: { maxHours: 24, bonus: 0.00 }   // 6+ часов → нет эффекта
   };
 
   // 🌟 SLEEP QUALITY — качество сна влияет независимо от продолжительности
-  // Плохой сон (частые пробуждения, неглубокий) увеличивает инсулинорезистентность
-  // Tasali et al. (2008): фрагментированный сон = +23% инсулинорезистентности
-  // 🔬 v3.7.4: Скорректировано — +23% это для КЛИНИЧЕСКИ плохого сна в лаборатории
-  // Для обычного бытового плохого сна эффект ~8%
+  // Tasali 2008 (PNAS 105:1044, PMID 18172212, n=9): 3 ночи СЕЛЕКТИВНОГО
+  // ПОДАВЛЕНИЯ глубокого сна (SWS) → SI -25%. Это лабораторная модель, не
+  // эквивалент «бытовому плохому сну». Перенос: 1-4/10 ощущаемого качества ≈
+  // консервативно +8% (transfer-функция, эмпирически взятая v3.7.4).
+  // ⚠️ source: -25% Si; used: +8% bonus to wave, transfer because PSG ≠ self-report.
   // ⚠️ Шкала качества в HEYS: 1-10
   I.SLEEP_QUALITY_BONUS = C?.SLEEP_QUALITY_BONUS || {
-    poor: { maxQuality: 4, bonus: 0.08 },      // Качество 1-4 → +8% (было +12%)
-    mediocre: { maxQuality: 6, bonus: 0.04 },  // Качество 5-6 → +4% (было +6%)
+    poor: { maxQuality: 4, bonus: 0.08 },      // Качество 1-4 → +8%
+    mediocre: { maxQuality: 6, bonus: 0.04 },  // Качество 5-6 → +4%
     good: { maxQuality: 10, bonus: 0.00 }      // Качество 7-10 → нет эффекта
   };
 
@@ -27949,21 +27962,25 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     }
 
     // GI множитель — применяется пропорционально GL
-    // 🔬 v3.8.0: GI НЕ ВЛИЯЕТ при GL<7 (Mayer 1995)
-    // Научное обоснование: при <7г доступных углеводов инсулиновый ответ минимален
-    // Mayer 1995: "glycemic index is not important when GL<7"
-    // Brand-Miller 2003: GL является более значимым предиктором чем GI
+    // v4.3 (2026-05-13): порог GL ramp сдвинут с 7 на 10. Цитата исправлена:
+    // Salmerón 1997 (JAMA 277:472, "Dietary fiber, GL, and risk of NIDDM") —
+    // эпидемиология GL/диабета, без буквального тезиса «GL<7 не важно».
+    // Brand-Miller 2003 (Nutr Rev 61:S49): GL — более значимый предиктор чем GI,
+    // и при низкой carb-нагрузке влияние GI на постпрандиальный ответ минимально.
+    // Atkinson, Foster-Powell, Brand-Miller 2008 (Diabetes Care, PMID 18835944):
+    // консенсусные категории GL — low≤10, medium 11-19, high≥20. Порог 10 (low/medium)
+    // согласован с этим консенсусом; до v4.3 был произвольный 7.
     let giMult = 1.0;
     if (gl === null || gl >= 20) {
-      // Полный GI только при GL≥20 (достаточная углеводная нагрузка)
+      // Полный GI только при GL≥20 (high зона по Atkinson 2008)
       giMult = giCat.multiplier;
-    } else if (gl >= 7) {
-      // 🆕 v3.8.0: Плавный переход только от GL≥7 (не от GL≥5)
-      // GL=7→0%, GL=13.5→50%, GL=20→100%
-      const giWeight = (gl - 7) / 13;
+    } else if (gl >= 10) {
+      // Плавный переход для medium GL (10-19): GL=10→0%, GL=15→50%, GL=20→100%
+      const giWeight = (gl - 10) / 10;
       giMult = 1.0 + (giCat.multiplier - 1.0) * giWeight;
     }
-    // При GL<7: giMult остаётся 1.0 (GI не влияет — Mayer 1995)
+    // При GL<10 (low по Atkinson 2008): giMult остаётся 1.0 — GI слабо влияет
+    // на постпрандиальный ответ при малой углеводной нагрузке (Brand-Miller 2003).
 
     // Бонусы от нутриентов — масштабируются по glScaleFactor
     // 🆕 v4.0.0: Белок v2 — animal/plant дифференциация
@@ -28028,7 +28045,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     const carbsMult = glMultiplier;
 
     // R4-7: simpleRatio — доля простых углеводов укорачивает волну
-    // Mayer 1995, Brand-Miller 2003: высокий simpleRatio → быстрый пик + быстрый спад.
+    // Brand-Miller 2003 (Nutr Rev 61:S49): high-simple-carb meal даёт быстрый
+    // глюкозный пик и быстрый спад (короткая insulin envelope).
     // >60% простых сахаров — волна короче на ~15%.
     let simpleMult = 1.0;
     if (simpleRatio !== null && simpleRatio > 0.6 && carbs && carbs > 5) {
