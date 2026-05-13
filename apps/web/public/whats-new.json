@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.14.808744c1",
+      "buildHash": "808744c1",
+      "date": "2026-05-14",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Allowlist sync after R14 line shifts",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Line drift",
+          "description": "After R14 audit edits insulin-wave + early-warning line numbers shifted."
+        }
+      ]
+    },
+    {
       "version": "2026.05.14.35e7d09c",
       "buildHash": "35e7d09c",
       "date": "2026-05-14",
