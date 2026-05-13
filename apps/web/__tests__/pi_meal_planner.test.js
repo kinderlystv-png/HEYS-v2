@@ -1555,6 +1555,20 @@ describe('Meal Planner v1.0', () => {
             expect(getAdvisoryByKey(result, 'r13c_cascade_strong')).toBeNull();
         });
 
+        it('R13: empty-plan ветка (цель выполнена) тоже отдаёт advisories', () => {
+            const planner = HEYS.InsightsPI.mealPlanner;
+            // Симулируем: цель выполнена, бюджет < 50 ккал, времени ещё есть
+            const result = planner.planRemainingMeals({
+                ...baseParams,
+                currentTime: '15:00',
+                dayEaten: { kcal: 1990, prot: 130, carbs: 200, fat: 60 },
+                cascadeState: { state: 'STRONG', crs: 0.9, daysAtPeak: 10, todayContrib: 0.5 }
+            });
+            expect(result.available).toBe(true);
+            expect(result.meals.length).toBe(0);
+            expect(getAdvisoryByKey(result, 'r13c_cascade_strong')).not.toBeNull();
+        });
+
         it('R13 dedup: одинаковые keys не дублируются', () => {
             const planner = HEYS.InsightsPI.mealPlanner;
             const result = planner.planRemainingMeals({

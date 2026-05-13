@@ -428,6 +428,80 @@
     }
 
     /**
+     * R13: собрать advisories для empty-plan ветки (цель выполнена, <50 ккал).
+     * Не все R13 имеют смысл без приёма (skip R13-A workout boost, R13-G first-meal-only),
+     * но cascade/EW/phenotype/hydration советы юзеру нужны и при выполненной цели.
+     */
+    function buildR13EmptyPlanAdvisories({ stressMoodSignals, phenotypeApplied, cascadeState, earlyWarnings, causalChains, params, currentTimeHours }) {
+        const out = [];
+        const cascadeBrokenMode = cascadeState?.state === 'BROKEN';
+        // R13-B mood
+        if (stressMoodSignals?.moodAvgLevel === 'low') {
+            out.push({ key: 'r13b_mood_support', severity: 'low', text: 'Настроение последних дней низкое — приоритет на омега-3, триптофан (индейка, яйца, бананы).' });
+        }
+        // R13-D phenotype
+        if (phenotypeApplied?.satiety === 'volume_eater') {
+            out.push({ key: 'r13d_volume_eater', severity: 'low', text: 'Лучше насыщаешься объёмом — приоритет овощам и супам.' });
+        } else if (phenotypeApplied?.satiety === 'low_satiety') {
+            out.push({ key: 'r13d_low_satiety', severity: 'low', text: 'Тебе трудно насыщаться — белок + клетчатка в начале приёма.' });
+        }
+        // R13-I water — особенно важно при выполненной цели вечером
+        const waterMl = Number(params?.currentDay?.waterMl) || 0;
+        const profileWeight = Number(params?.profile?.weight) || 70;
+        const waterGoalMl = profileWeight * 30;
+        if (waterMl > 0 && waterMl < waterGoalMl * 0.4 && currentTimeHours >= 18) {
+            out.push({ key: 'r13i_dehydration', severity: 'medium', text: `Воды сегодня мало (${waterMl}/${Math.round(waterGoalMl)} мл) — добавь стакан перед сном.` });
+        }
+        // R13-H NEAT
+        const todaySteps = Number(params?.currentDay?.steps) || 0;
+        const todayHousehold = Number(params?.currentDay?.householdMin) || 0;
+        if (todaySteps >= 15000 || todayHousehold >= 60) {
+            const parts = [];
+            if (todaySteps >= 15000) parts.push(`${todaySteps} шагов`);
+            if (todayHousehold >= 60) parts.push(`${todayHousehold} мин быта`);
+            out.push({ key: 'r13h_high_neat', severity: 'low', text: `Сегодня высокая активность (${parts.join(' + ')}) — хороший день.` });
+        }
+        // R13-E early warnings (даже если цель выполнена — предупреждения важны)
+        const ewArr = Array.isArray(earlyWarnings) ? earlyWarnings : [];
+        const ewTypes = new Set(ewArr.map(w => w?.type).filter(Boolean));
+        if (ewTypes.has('BINGE_RISK')) {
+            out.push({ key: 'r13e_binge_risk', severity: 'medium', text: 'Растёт риск переедания — следи за импульсивными перекусами на ночь.' });
+        }
+        if (ewTypes.has('PROTEIN_DEFICIT')) {
+            out.push({ key: 'r13e_protein_deficit', severity: 'medium', text: 'Дефицит белка по неделе — завтра приоритет белок:углеводы = 2:1.' });
+        }
+        // R13-F causal chains
+        const cArr = Array.isArray(causalChains) ? causalChains : [];
+        const chainTypes = new Set(cArr.map(c => c?.type || c?.id).filter(Boolean));
+        if (chainTypes.has('SLEEP_STRESS_BINGE') || chainTypes.has('SLEEP→STRESS→BINGE')) {
+            out.push({ key: 'r13f_chain_sleep_stress', severity: 'high', text: 'Цепочка: плохой сон → стресс → переедание. Закрой день на воде, не еде.' });
+        }
+        // R13-C cascade — самое мотивационное при выполненной цели
+        if (cascadeState) {
+            if (cascadeState.state === 'BROKEN') {
+                out.push({ key: 'r13c_cascade_broken', severity: 'high', text: 'Каскад сломался — но цель дня выполнена. Это хороший шанс на восстановление с завтра.' });
+            } else if (cascadeState.state === 'STRONG' && (cascadeState.daysAtPeak || 0) >= 7) {
+                out.push({ key: 'r13c_cascade_strong', severity: 'low', text: `${cascadeState.daysAtPeak} дней на пике — отличный ритм, держи.` });
+            }
+            if (Number.isFinite(cascadeState.todayContrib) && cascadeState.todayContrib < -0.15) {
+                out.push({ key: 'r13c_today_at_risk', severity: 'medium', text: 'Сегодня каскад под угрозой — спокойно закрой день, не сорвись на ночной перекус.' });
+            }
+        }
+        // dedup + filter low при BROKEN + sort + cap
+        const seenKeys = new Set();
+        const severityRank = { high: 3, medium: 2, low: 1 };
+        let final = out.filter((a) => {
+            if (!a || !a.key || seenKeys.has(a.key)) return false;
+            seenKeys.add(a.key);
+            if (cascadeBrokenMode && a.severity === 'low') return false;
+            return true;
+        });
+        final.sort((a, b) => (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0));
+        if (final.length > 6) final = final.slice(0, 6);
+        return final;
+    }
+
+    /**
      * R1-7: преобразовать sleepStart "HH:MM" в decimal hours относительно "вчера или сегодня".
      * Если час < 12 — считаем "после полуночи" (например, 01:30 → 25.5h).
      */
@@ -1038,15 +1112,25 @@
             }
         });
 
-        // Если бюджет <50 kcal → не планируем
+        // Если бюджет <50 kcal → не планируем (но R13 advisories всё равно полезны)
         if (remainingBudget.kcal < 50) {
             console.info(`${LOG_PREFIX} ℹ️ Insufficient remaining budget (< 50 kcal)`);
+            const emptyPlanAdvisories = buildR13EmptyPlanAdvisories({
+                stressMoodSignals,
+                phenotypeApplied,
+                cascadeState,
+                earlyWarnings,
+                causalChains,
+                params,
+                currentTimeHours
+            });
             return {
                 available: true,
                 meals: [],
                 summary: {
                     totalMeals: 0,
-                    reason: 'Дневная цель практически выполнена'
+                    reason: 'Дневная цель практически выполнена',
+                    advisories: emptyPlanAdvisories.length > 0 ? emptyPlanAdvisories : undefined
                 }
             };
         }
