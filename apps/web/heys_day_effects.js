@@ -159,7 +159,7 @@
                         mealsCount: (v.meals || []).length
                     });
                 }
-                if (v && v.date) {
+                if (v && v.date === date) {
                     // ЗАЩИТА: не перезаписываем более свежие данные
                     // handleDayUpdated может уже загрузить sync данные
                     if (v.updatedAt && lastLoadedUpdatedAtRef.current > 0 && v.updatedAt < lastLoadedUpdatedAtRef.current) {
@@ -445,7 +445,7 @@
                             mealsCount: (v.meals || []).length
                         });
                     }
-                    if (v && v.date) {
+                    if (v && v.date === date) {
                         const storageMeaningful = isMeaningfulDayData(v);
                         // Проверяем: данные из storage новее текущих?
                         const storageUpdatedAt = v.updatedAt || 0;

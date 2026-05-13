@@ -23,7 +23,7 @@
         const unscopedKey = 'heys_dayv2_' + date;
         const v = (scopedKey ? lsGet(scopedKey, null) : null) || lsGet(unscopedKey, null);
 
-        if (v && v.date) {
+        if (v && v.date === date) {
             const normalizedTrainings = safeNormalize(v.trainings);
             const cleanedTrainings = safeClean(normalizedTrainings);
             const migratedDay = { ...v, trainings: cleanedTrainings };

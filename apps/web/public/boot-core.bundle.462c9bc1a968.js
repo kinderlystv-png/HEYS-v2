@@ -20680,7 +20680,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
     const merged = {
       ...remote, // База — remote
-      date: local.date || remote.date,
+      date: remote.date || local.date, // remote (cloud) is canonical — prevents corrupted local.date propagation
       updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0, Date.now()),
       _mergedAt: Date.now(),
     };

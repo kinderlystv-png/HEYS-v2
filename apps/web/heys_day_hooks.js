@@ -383,15 +383,15 @@
     const flush = React.useCallback((options = {}) => {
       const force = options && options.force === true;
       if (!force && (disabled || isUnmountedRef.current)) return;
-      if (!day || !day.date) return;
+      if (!day || !date) return;
 
       if (force) {
-        const key = getKey(day.date);
+        const key = getKey(date);
         const existing = readExisting(key);
         if (isMeaningfulDayData(existing) && !isMeaningfulDayData(day)) return;
       }
 
-      const freshestPersistedDay = getFreshestPersistedDay(day.date);
+      const freshestPersistedDay = getFreshestPersistedDay(date);
       const freshestUpdatedAt = freshestPersistedDay?.updatedAt || 0;
       let daySnap;
       let freshestDaySnap = null;
@@ -411,7 +411,7 @@
 
       const shouldPreserveFreshestPersistedDay = !!(
         freshestPersistedDay &&
-        freshestPersistedDay.date === day.date &&
+        freshestPersistedDay.date === date &&
         (
           freshestUpdatedAt > updatedAt ||
           (
@@ -439,7 +439,7 @@
       };
       if (payload.isFastingDay || payload.isIncomplete) {
         console.info('[HEYS.dayRealData] 💾 flush day payload', {
-          date: day.date,
+          date,
           updatedAt,
           flags: {
             isFastingDay: !!payload.isFastingDay,
@@ -448,10 +448,10 @@
           mealsCount: (payload.meals || []).length
         });
       }
-      saveToDate(day.date, payload);
+      saveToDate(date, payload);
       prevStoredSnapRef.current = JSON.stringify(payload);
       prevDaySnapRef.current = daySnap;
-    }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay]);
+    }, [day, date, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay]);
 
     React.useEffect(() => {
       // 🔒 ЗАЩИТА: Не инициализируем prevDaySnapRef до гидратации!
