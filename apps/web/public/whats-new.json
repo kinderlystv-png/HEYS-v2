@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.13.edc5e5be",
+      "buildHash": "edc5e5be",
+      "date": "2026-05-13",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Фикс: углеводы в дневном балансе показывались 0",
+      "items": [
+        {
+          "type": "fix",
+          "title": "dayEaten.carbs всегда было 0 из-за опечатки .carb vs .carbs",
+          "description": "mealTotals() возвращает поле .carbs (plural), а recompute-цикл читал .carb (singular) — всегда undefined. В результате углеводы в съеденном за день всегда были 0. Планнер считал что углеводный бюджет полностью свободен и выдавал заниженные цифры. Также исправлено в diagnostic display строках и eatenCarbs/targetCarbs summary."
+        }
+      ]
+    },
+    {
       "version": "2026.05.13.101cde95",
       "buildHash": "101cde95",
       "date": "2026-05-13",
