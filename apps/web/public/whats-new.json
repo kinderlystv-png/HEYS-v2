@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.13.bda4dea1",
+      "buildHash": "bda4dea1",
+      "date": "2026-05-13",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Allowlist sync after iw_config_loader audit edits",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Line drift",
+          "description": "iw_config_loader line numbers shifted after alcohol pattern rename."
+        }
+      ]
+    },
+    {
       "version": "2026.05.13.75e35d4f",
       "buildHash": "75e35d4f",
       "date": "2026-05-13",
