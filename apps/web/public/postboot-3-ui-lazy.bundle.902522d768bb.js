@@ -15028,6 +15028,54 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       result.priorityActions = [];
     }
 
+    // R-INS-LEVEL-UP-1: Streak counter (gamification motivator)
+    const generateStreaks = HEYS.InsightsPI?.advanced?.generateStreaks;
+    if (typeof generateStreaks === 'function') {
+      try {
+        result.streaks = generateStreaks(days, profile);
+      } catch (e) {
+        console.warn('[PI] generateStreaks failed:', e);
+        result.streaks = [];
+      }
+    } else {
+      result.streaks = [];
+    }
+
+    // R-INS-LEVEL-UP-2: Score delta vs previous week (если есть history)
+    // Используем уже посчитанные WeeklyWrap stats — там есть scoreChange.
+    if (result.weeklyWrap && typeof result.weeklyWrap.scoreChange === 'number') {
+      result.scoreDelta = {
+        change: result.weeklyWrap.scoreChange,
+        significant: !!(result.weeklyWrap.weekOverWeekStats?.significant),
+        hasData: true
+      };
+    } else {
+      result.scoreDelta = { change: 0, significant: false, hasData: false };
+    }
+
+    // R-INS-LEVEL-UP-3: Score history для sparkline (последние 14 дней)
+    // Извлекаем daily scores из days — если есть `dayScore` или вычисляем proxy.
+    try {
+      const scoreHistory = days
+        .slice(-14)
+        .filter(d => d && d.date)
+        .map(d => {
+          // Если есть сохранённый dayScore — используем. Иначе fallback к kcal ratio как proxy.
+          const score = Number(d.dayScore);
+          if (Number.isFinite(score) && score > 0) return { date: d.date, score };
+          // Fallback: грубая оценка из meal completeness + sleep + stress
+          let proxy = 50;
+          if (Array.isArray(d.meals) && d.meals.length >= 3) proxy += 15;
+          if (Number(d.sleepHours) >= 7) proxy += 15;
+          if (Number(d.stressAvg) > 0 && Number(d.stressAvg) <= 5) proxy += 10;
+          if (Number(d.weight) > 0) proxy += 10;
+          return { date: d.date, score: Math.min(100, proxy) };
+        });
+      result.scoreHistory = scoreHistory;
+    } catch (e) {
+      result.scoreHistory = [];
+    }
+
     HEYS.PredictiveInsights.debug.lastAnalysis = result;
 
     _cache = {

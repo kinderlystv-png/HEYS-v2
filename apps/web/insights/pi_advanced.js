@@ -1017,6 +1017,121 @@
     return resolved.slice(0, 3);
   }
 
+  /**
+   * R-INS-LEVEL-UP-1: Streak counter — gamification мотиватор.
+   *
+   * Считает текущие streaks (подряд идущих дней) для ключевых метрик:
+   * - белок в норме (≥ goal-aware target)
+   * - сон ≥7 часов
+   * - нет поздних приёмов (≤21:00)
+   * - стресс ≤6/10
+   *
+   * Возвращает top-3 активных streak (где streak ≥ 3 дня — иначе не показываем).
+   * Идём от сегодня назад: ищем первый «провал», считаем что было до него.
+   *
+   * @param {Array} days - дни (отсортированы по дате ASC)
+   * @param {object} profile
+   * @returns {Array<{type, count, label, icon}>} top-3 active streaks
+   */
+  function generateStreaks(days, profile) {
+    if (!Array.isArray(days) || days.length < 3) return [];
+
+    const safeProfile = profile || {};
+    const weightKg = safeProfile.weight || safeProfile.weightKg || 70;
+    const goal = safeProfile.goal || 'maintenance';
+    const proteinCoef = { cut: 1.8, maintenance: 1.4, bulk: 1.6 }[goal] || 1.4;
+    const proteinTarget = weightKg * proteinCoef;
+
+    // Sort newest first
+    const sorted = [...days].filter(d => d && d.date).sort((a, b) =>
+      new Date(b.date) - new Date(a.date)
+    );
+
+    // Помощник: посчитать streak в начале sorted, пока predicate(day) === true.
+    // Пропускает дни без meals (логированных нет — считаем нейтрально, не ломает streak).
+    function countStreak(predicate, requireData) {
+      let streak = 0;
+      for (const day of sorted) {
+        const hasData = requireData(day);
+        if (!hasData) {
+          // День без данных — НЕ ломаем streak, просто не считаем
+          // (юзер мог пропустить логирование, не значит что съел плохо)
+          // НО: если 3+ дня подряд без данных — streak в принципе сбрасывается
+          continue;
+        }
+        if (predicate(day)) {
+          streak++;
+        } else {
+          break; // первый провал — стоп
+        }
+      }
+      return streak;
+    }
+
+    // Predicates
+    const proteinOK = (day) => {
+      const meals = Array.isArray(day.meals) ? day.meals : [];
+      if (meals.length === 0) return false;
+      let total = 0;
+      for (const m of meals) {
+        if (m.items) for (const it of m.items) {
+          total += (it.protein100 || 0) * (it.grams || 0) / 100;
+        }
+      }
+      return total >= proteinTarget;
+    };
+    const hasMeals = (day) => Array.isArray(day.meals) && day.meals.length > 0;
+
+    const sleepOK = (day) => Number(day.sleepHours) >= 7;
+    const hasSleep = (day) => Number(day.sleepHours) > 0;
+
+    const noLateEating = (day) => {
+      const meals = Array.isArray(day.meals) ? day.meals : [];
+      if (meals.length === 0) return false;
+      return !meals.some(m => {
+        if (!m.time || typeof m.time !== 'string') return false;
+        const [h] = m.time.split(':').map(Number);
+        return Number.isFinite(h) && h >= 21;
+      });
+    };
+
+    const lowStress = (day) => Number(day.stressAvg) > 0 && Number(day.stressAvg) <= 6;
+    const hasStress = (day) => Number(day.stressAvg) > 0;
+
+    const candidates = [
+      {
+        type: 'protein',
+        count: countStreak(proteinOK, hasMeals),
+        label: 'дней подряд белок в норме',
+        icon: '💪'
+      },
+      {
+        type: 'sleep',
+        count: countStreak(sleepOK, hasSleep),
+        label: 'дней подряд сон ≥7ч',
+        icon: '😴'
+      },
+      {
+        type: 'no_late_eating',
+        count: countStreak(noLateEating, hasMeals),
+        label: 'дней подряд без поздней еды',
+        icon: '🌙'
+      },
+      {
+        type: 'stress',
+        count: countStreak(lowStress, hasStress),
+        label: 'дней подряд стресс под контролем',
+        icon: '🧘'
+      }
+    ];
+
+    // Только streaks ≥3 дней (иначе не интересно), top-3 по count desc
+    return candidates
+      .filter(s => s.count >= 3)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  }
+
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.advanced = {
     calculateHealthScore,
@@ -1024,7 +1139,8 @@
     predictWeight,
     generateWeeklyWrap,
     generateMonthlyWrap,    // R-INS-4B
-    generatePriorityActions // R-INS-2A
+    generatePriorityActions,// R-INS-2A
+    generateStreaks         // R-INS-LEVEL-UP-1
   };
 
   // Fallback для прямого доступа

@@ -11993,6 +11993,121 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return resolved.slice(0, 3);
   }
 
+  /**
+   * R-INS-LEVEL-UP-1: Streak counter — gamification мотиватор.
+   *
+   * Считает текущие streaks (подряд идущих дней) для ключевых метрик:
+   * - белок в норме (≥ goal-aware target)
+   * - сон ≥7 часов
+   * - нет поздних приёмов (≤21:00)
+   * - стресс ≤6/10
+   *
+   * Возвращает top-3 активных streak (где streak ≥ 3 дня — иначе не показываем).
+   * Идём от сегодня назад: ищем первый «провал», считаем что было до него.
+   *
+   * @param {Array} days - дни (отсортированы по дате ASC)
+   * @param {object} profile
+   * @returns {Array<{type, count, label, icon}>} top-3 active streaks
+   */
+  function generateStreaks(days, profile) {
+    if (!Array.isArray(days) || days.length < 3) return [];
+
+    const safeProfile = profile || {};
+    const weightKg = safeProfile.weight || safeProfile.weightKg || 70;
+    const goal = safeProfile.goal || 'maintenance';
+    const proteinCoef = { cut: 1.8, maintenance: 1.4, bulk: 1.6 }[goal] || 1.4;
+    const proteinTarget = weightKg * proteinCoef;
+
+    // Sort newest first
+    const sorted = [...days].filter(d => d && d.date).sort((a, b) =>
+      new Date(b.date) - new Date(a.date)
+    );
+
+    // Помощник: посчитать streak в начале sorted, пока predicate(day) === true.
+    // Пропускает дни без meals (логированных нет — считаем нейтрально, не ломает streak).
+    function countStreak(predicate, requireData) {
+      let streak = 0;
+      for (const day of sorted) {
+        const hasData = requireData(day);
+        if (!hasData) {
+          // День без данных — НЕ ломаем streak, просто не считаем
+          // (юзер мог пропустить логирование, не значит что съел плохо)
+          // НО: если 3+ дня подряд без данных — streak в принципе сбрасывается
+          continue;
+        }
+        if (predicate(day)) {
+          streak++;
+        } else {
+          break; // первый провал — стоп
+        }
+      }
+      return streak;
+    }
+
+    // Predicates
+    const proteinOK = (day) => {
+      const meals = Array.isArray(day.meals) ? day.meals : [];
+      if (meals.length === 0) return false;
+      let total = 0;
+      for (const m of meals) {
+        if (m.items) for (const it of m.items) {
+          total += (it.protein100 || 0) * (it.grams || 0) / 100;
+        }
+      }
+      return total >= proteinTarget;
+    };
+    const hasMeals = (day) => Array.isArray(day.meals) && day.meals.length > 0;
+
+    const sleepOK = (day) => Number(day.sleepHours) >= 7;
+    const hasSleep = (day) => Number(day.sleepHours) > 0;
+
+    const noLateEating = (day) => {
+      const meals = Array.isArray(day.meals) ? day.meals : [];
+      if (meals.length === 0) return false;
+      return !meals.some(m => {
+        if (!m.time || typeof m.time !== 'string') return false;
+        const [h] = m.time.split(':').map(Number);
+        return Number.isFinite(h) && h >= 21;
+      });
+    };
+
+    const lowStress = (day) => Number(day.stressAvg) > 0 && Number(day.stressAvg) <= 6;
+    const hasStress = (day) => Number(day.stressAvg) > 0;
+
+    const candidates = [
+      {
+        type: 'protein',
+        count: countStreak(proteinOK, hasMeals),
+        label: 'дней подряд белок в норме',
+        icon: '💪'
+      },
+      {
+        type: 'sleep',
+        count: countStreak(sleepOK, hasSleep),
+        label: 'дней подряд сон ≥7ч',
+        icon: '😴'
+      },
+      {
+        type: 'no_late_eating',
+        count: countStreak(noLateEating, hasMeals),
+        label: 'дней подряд без поздней еды',
+        icon: '🌙'
+      },
+      {
+        type: 'stress',
+        count: countStreak(lowStress, hasStress),
+        label: 'дней подряд стресс под контролем',
+        icon: '🧘'
+      }
+    ];
+
+    // Только streaks ≥3 дней (иначе не интересно), top-3 по count desc
+    return candidates
+      .filter(s => s.count >= 3)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  }
+
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.advanced = {
     calculateHealthScore,
@@ -12000,7 +12115,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     predictWeight,
     generateWeeklyWrap,
     generateMonthlyWrap,    // R-INS-4B
-    generatePriorityActions // R-INS-2A
+    generatePriorityActions,// R-INS-2A
+    generateStreaks         // R-INS-LEVEL-UP-1
   };
 
   // Fallback для прямого доступа
@@ -35555,6 +35671,112 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     /**
+     * R-INS-LEVEL-UP-1: StreakCounter — gamification badge на top-3 active streaks.
+     * Не показывается если streaks.length === 0 (нечего показывать).
+     */
+    function StreakCounter({ streaks }) {
+      if (!Array.isArray(streaks) || streaks.length === 0) return null;
+      return h('div', { className: 'insights-streaks', role: 'list', 'aria-label': 'Серии достижений' },
+        streaks.map((s, idx) =>
+          h('div', {
+            key: s.type || idx,
+            className: 'insights-streak',
+            role: 'listitem',
+            title: `${s.count} ${s.label}`
+          },
+            h('span', { className: 'insights-streak__icon', 'aria-hidden': 'true' }, '🔥'),
+            h('span', { className: 'insights-streak__emoji', 'aria-hidden': 'true' }, s.icon),
+            h('span', { className: 'insights-streak__count' }, s.count),
+            h('span', { className: 'insights-streak__label' }, s.label)
+          )
+        )
+      );
+    }
+
+    /**
+     * R-INS-LEVEL-UP-2: ScoreDeltaBadge — изменение Score vs прошлая неделя.
+     * Видна только если hasData=true (есть прошлая неделя для сравнения).
+     */
+    function ScoreDeltaBadge({ delta }) {
+      if (!delta || !delta.hasData) return null;
+      const change = delta.change;
+      if (Math.abs(change) < 0.5) {
+        return h('div', { className: 'insights-score-delta insights-score-delta--stable' },
+          h('span', null, '→ '),
+          'Стабильно vs прошлая неделя'
+        );
+      }
+      const direction = change > 0 ? 'up' : 'down';
+      const arrow = change > 0 ? '↑' : '↓';
+      const sign = change > 0 ? '+' : '';
+      const sigSuffix = delta.significant ? ' (значимо)' : '';
+      return h('div', {
+        className: `insights-score-delta insights-score-delta--${direction}`,
+        title: delta.significant
+          ? 'Статистически значимое изменение (p<0.05)'
+          : 'Изменение в пределах нормальных колебаний'
+      },
+        h('span', { className: 'insights-score-delta__arrow' }, arrow),
+        h('span', null, `${sign}${Math.round(change)} `),
+        h('span', { className: 'insights-score-delta__label' }, `vs прошлая неделя${sigSuffix}`)
+      );
+    }
+
+    /**
+     * R-INS-LEVEL-UP-3: ScoreSparkline — SVG mini-chart Score history.
+     * 14-точечный тренд под основным Score number. Тонкая полоска шириной 100px.
+     */
+    function ScoreSparkline({ history }) {
+      if (!Array.isArray(history) || history.length < 2) return null;
+      const scores = history.map(p => Number(p.score) || 0);
+      const W = 100;
+      const H = 24;
+      const PAD = 2;
+      const min = Math.min(...scores);
+      const max = Math.max(...scores);
+      const range = Math.max(1, max - min);
+      // X = равномерное распределение, Y = инвертированное (низ = 0, верх = 100)
+      const points = scores.map((s, i) => {
+        const x = PAD + ((W - 2 * PAD) * i) / (scores.length - 1);
+        const y = PAD + (H - 2 * PAD) * (1 - (s - min) / range);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      // Trend direction: первый vs последний
+      const trend = scores[scores.length - 1] - scores[0];
+      const trendClass = trend > 2 ? 'up' : trend < -2 ? 'down' : 'stable';
+      const lineColor = trend > 2 ? '#22c55e' : trend < -2 ? '#ef4444' : '#94a3b8';
+
+      return h('svg', {
+        className: `insights-score-sparkline insights-score-sparkline--${trendClass}`,
+        width: W,
+        height: H,
+        viewBox: `0 0 ${W} ${H}`,
+        role: 'img',
+        'aria-label': `Тренд Score за ${scores.length} дней: ${trend > 0 ? '+' : ''}${Math.round(trend)} баллов`
+      },
+        h('polyline', {
+          points,
+          fill: 'none',
+          stroke: lineColor,
+          'stroke-width': '1.5',
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round'
+        }),
+        // Marker для последней точки — circle
+        scores.length > 0 && (() => {
+          const lastX = PAD + ((W - 2 * PAD) * (scores.length - 1)) / Math.max(1, scores.length - 1);
+          const lastY = PAD + (H - 2 * PAD) * (1 - (scores[scores.length - 1] - min) / range);
+          return h('circle', {
+            cx: lastX.toFixed(1),
+            cy: lastY.toFixed(1),
+            r: '2',
+            fill: lineColor
+          });
+        })()
+      );
+    }
+
+    /**
      * R-INS-5E: SkeletonCard — placeholder во время загрузки insights.
      *
      * Используется для async-операций (например, при первом расчёте EWS
@@ -37553,6 +37775,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     'aria-live': 'polite'
                   }, txt);
                 })(),
+
+                // R-INS-LEVEL-UP: row с sparkline + delta badge под interpretation
+                h('div', { className: 'insights-tab__score-trend' },
+                  h(ScoreSparkline, { history: insights.scoreHistory }),
+                  h(ScoreDeltaBadge, { delta: insights.scoreDelta })
+                ),
+
+                // R-INS-LEVEL-UP-1: Streak counter (gamification motivator)
+                h(StreakCounter, { streaks: insights.streaks }),
+
                 h('div', { className: 'insights-tab__rings' },
                   h(HealthRingsGrid, {
                     healthScore: insights.healthScore,
@@ -40245,6 +40477,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       MonthlyWrap,
       PriorityActions,
       SkeletonCard,
+      StreakCounter,     // R-INS-LEVEL-UP-1
+      ScoreDeltaBadge,   // R-INS-LEVEL-UP-2
+      ScoreSparkline,    // R-INS-LEVEL-UP-3
       WeightPrediction,
       // Filters & Bars
       PriorityFilterBar,
