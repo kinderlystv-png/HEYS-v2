@@ -2340,7 +2340,31 @@
                 h('div', { className: 'insights-tab__rings' },
                   h(HealthRingsGrid, {
                     healthScore: insights.healthScore,
-                    onCategoryClick: setSelectedCategory,
+                    // R-INS-1C: при клике на кольцо категории — открыть Score Explainer
+                    // С выбранной категорией И проскроллить к соответствующей секции.
+                    // Раньше клик на кольцо ничего не делал на главном экране (только в модале).
+                    onCategoryClick: (cat) => {
+                      setSelectedCategory(cat);
+                      // Map category → tour-insights section id
+                      const sectionMap = {
+                        nutrition: 'tour-insights-metabolism',
+                        timing: 'tour-insights-timing',
+                        activity: 'tour-insights-metabolism',
+                        recovery: 'tour-insights-metabolic'
+                      };
+                      const targetId = sectionMap[cat];
+                      if (targetId) {
+                        setTimeout(() => {
+                          const el = document.getElementById(targetId);
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            // Подсветить секцию briefly чтобы юзер видел "что открылось"
+                            el.classList.add('insights-tab__section--highlight');
+                            setTimeout(() => el.classList.remove('insights-tab__section--highlight'), 1800);
+                          }
+                        }, 100);
+                      }
+                    },
                     compact: true
                   })
                 ),

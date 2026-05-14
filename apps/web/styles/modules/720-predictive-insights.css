@@ -1491,6 +1491,16 @@ body:has(.insights-tab) .hdr::after {
 [data-theme="dark"] .insights-tab__score-interpretation--poor { color: #fdba74; }
 [data-theme="dark"] .insights-tab__score-interpretation--critical { color: #fca5a5; }
 
+/* R-INS-1C: highlight target section after clicking a category ring */
+.insights-tab__section--highlight {
+  animation: insights-section-highlight 1.8s ease-out;
+}
+@keyframes insights-section-highlight {
+  0% { background-color: rgba(59, 130, 246, 0.15); }
+  50% { background-color: rgba(59, 130, 246, 0.08); }
+  100% { background-color: transparent; }
+}
+
 .insights-tab__score-label {
   position: absolute;
   top: 50%;
