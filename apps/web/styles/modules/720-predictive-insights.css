@@ -2540,6 +2540,46 @@ body:has(.insights-tab) .hdr::after {
   margin-bottom: 16px;
 }
 
+/* R-INS-5A (2026-05-14): Severity borders для разделения карточек по приоритету.
+ * Раньше все карточки были одинаково серыми — юзер не различал критичное от информационного.
+ * Cap top-N=3 red — реализуется через CSS-only: ограничиваем CRITICAL применение к первым 3
+ * .insights-tab__section--critical в layout (см. nth-of-type правило ниже).
+ */
+.insights-tab__section--critical {
+  border-left: 4px solid #ef4444;
+  border-radius: 0 10px 10px 0;
+  padding-left: 12px;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.04), transparent 40%);
+}
+/* Cap top-3: четвёртая и далее critical секции downgrade до amber */
+.insights-tab__section--critical:nth-of-type(n+4) {
+  border-left-color: #f59e0b;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.04), transparent 40%);
+}
+.insights-tab__section--high {
+  border-left: 4px solid #f59e0b;
+  border-radius: 0 10px 10px 0;
+  padding-left: 12px;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.03), transparent 40%);
+}
+.insights-tab__section--medium {
+  border-left: 3px solid #9ca3af;
+  border-radius: 0 8px 8px 0;
+  padding-left: 11px;
+}
+.insights-tab__section--low {
+  border-left: 2px solid #d1d5db;
+  border-radius: 0 6px 6px 0;
+  padding-left: 10px;
+  opacity: 0.92;
+}
+[data-theme="dark"] .insights-tab__section--critical {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), transparent 40%);
+}
+[data-theme="dark"] .insights-tab__section--high {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.06), transparent 40%);
+}
+
 .insights-tab__section-title {
   font-size: 13px;
   font-weight: 700;
