@@ -246,6 +246,37 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Оранжевая капсула «НЕ СЕГОДНЯ» — показывается вместо имени клиента,
+   когда selectedDate отличается от today. Клик возвращает на today. */
+.hdr-not-today-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #fff;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(234, 88, 12, 0.35);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hdr-not-today-badge:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.45);
+}
+
+.hdr-not-today-badge:active {
+  transform: scale(0.96);
+  box-shadow: 0 1px 2px rgba(234, 88, 12, 0.4);
+}
+
 /* Date group in header */
 .hdr-date-group {
   display: flex;
