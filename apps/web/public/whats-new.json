@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.14.b4e1d4ec",
+      "buildHash": "b4e1d4ec",
+      "date": "2026-05-14",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "R-INS-3C/2C: трекинг «✅ Решено» + резолвер конфликтов советов",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Предупреждения теперь имеют статус — «активно / решено / устаревшее»",
+          "description": "Раньше когда warning исчезал из текущего анализа — он молча пропадал. Юзер не видел «ага, починил!» или «не понял что произошло, когда отвалилось». Теперь каждый warning имеет status: active (есть сейчас), resolved (был, не виден 1-14 дней), stale (15-30 дней). TTL 30 дней — старше не показываем чтобы не захламлять (P13). UI может рендерить «✅ Решено N дней назад» в отдельной мотивационной секции «Прогресс»."
+        },
+        {
+          "type": "improvement",
+          "title": "Резолвер конфликтов советов (фундамент для R-INS-2A)",
+          "description": "Pattern-based рекомендации от разных источников могут противоречить: STRESS_EATING говорит «ешь больше углеводов для серотонина», ADDED_SUGAR_DEPENDENCY говорит «избегай быстрых углеводов». Раньше юзер видел оба сразу — путаница. Создан pi_conflict_resolver.js: группирует по domain × direction (P8: timing и quality НЕ конфликтуют с increase/decrease — C09 «больше белка» + C35 «распредели белок» оба остаются). При конфликте — phenotype override (insulin_resistant favor decrease carbs), иначе precedence score (phenotype > ews > pattern, + confidence + severity). Дедуп по Levenshtein similarity > 0.8 — если два совета почти идентичны, оставляется тот что с большим precedence. 16 unit тестов. Модуль standalone, consumer R-INS-2A интегрирует позже."
+        }
+      ]
+    },
+    {
       "version": "2026.05.14.b9edb1b1",
       "buildHash": "b9edb1b1",
       "date": "2026-05-14",
