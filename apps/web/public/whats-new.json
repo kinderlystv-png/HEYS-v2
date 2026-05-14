@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.05.14.3d3fef2c",
-      "buildHash": "3d3fef2c",
+      "version": "2026.05.14.a391d8e5",
+      "buildHash": "a391d8e5",
       "date": "2026-05-14",
       "kind": "user-facing",
       "profile": "user-facing-general",
@@ -27,21 +27,11 @@
           "type": "fix",
           "title": "Можно удалить рекомендованную порцию в редакторе продуктов",
           "description": "В шаге выбора порций кнопка × не удаляла авто-рекомендованную порцию — она тут же возвращалась. Теперь удаление работает: убрал — порция исчезла окончательно, в т.ч. в базе."
-        }
-      ]
-    },
-    {
-      "version": "2026.05.14.a391d8e5",
-      "buildHash": "a391d8e5",
-      "date": "2026-05-14",
-      "kind": "technical",
-      "profile": "technical-infra",
-      "title": "Allowlist sync after push module added",
-      "items": [
+        },
         {
           "type": "chore",
-          "title": "Line drift",
-          "description": "consents line numbers shifted (my notifications block + other edits); heys_push_v1.js:12 added — fallback localStorage.setItem before HEYS.utils is loaded."
+          "title": "Тех-инфра: allowlist sync",
+          "description": "heys_consents_v1.js: 328→333, 914→956 (line drift). heys_push_v1.js:12 добавлен — bootstrap-bypass для подписки на push до загрузки HEYS.utils."
         }
       ]
     },
