@@ -638,6 +638,7 @@
      */
     function EarlyWarningCard({ lsGet, profile, pIndex }) {
       const [warnings, setWarnings] = useState([]);
+      const [resolvedWarnings, setResolvedWarnings] = useState([]); // R-INS-3C
       const [loading, setLoading] = useState(true);
       const [panelOpen, setPanelOpen] = useState(false);
 
@@ -707,11 +708,17 @@
             if (result.available && result.warnings) {
               setWarnings(result.warnings);
 
+              // R-INS-3C: resolved warnings (warnings которые недавно «потухли»)
+              if (Array.isArray(result.resolvedWarnings)) {
+                setResolvedWarnings(result.resolvedWarnings);
+              }
+
               console.info('[EarlyWarningCard] ✅ Warnings loaded:', {
                 total: result.warnings.length,
                 high: result.warnings.filter(w => w.severity === 'high').length,
                 medium: result.warnings.filter(w => w.severity === 'medium').length,
-                low: result.warnings.filter(w => w.severity === 'low').length
+                low: result.warnings.filter(w => w.severity === 'low').length,
+                resolved: result.resolvedWarnings?.length || 0  // R-INS-3C
               });
             }
 
@@ -732,14 +739,30 @@
         };
       }, [lsGet, profile, pIndex]);
 
+      // R-INS-3C: компактный «✅ Прогресс» badge для resolved warnings
+      const resolvedBadge = resolvedWarnings && resolvedWarnings.length > 0
+        ? h('div', {
+            className: 'early-warning-card__resolved',
+            title: `Решено за последние 14 дней: ${resolvedWarnings.map(r => `${r.type} (${r.daysSince}д назад)`).join(', ')}`
+          },
+            h('span', { className: 'early-warning-card__resolved-icon' }, '✅'),
+            h('span', { className: 'early-warning-card__resolved-text' },
+              `Прогресс: ${resolvedWarnings.length} ${resolvedWarnings.length === 1 ? 'предупреждение решено' : 'предупреждений решено'}`
+            )
+          )
+        : null;
+
       // Don't show card if no module or no warnings
       if (!HEYS.InsightsPI?.earlyWarning) return null;
       if (loading) return null;
       if (warnings.length === 0) {
-        // Show success state briefly
-        return h('div', { className: 'early-warning-card early-warning-card--success' },
-          h('div', { className: 'early-warning-card__icon' }, '✅'),
-          h('div', { className: 'early-warning-card__text' }, 'Всё отлично! Нет активных предупреждений')
+        // Show success state briefly + resolved badge
+        return h('div', null,
+          h('div', { className: 'early-warning-card early-warning-card--success' },
+            h('div', { className: 'early-warning-card__icon' }, '✅'),
+            h('div', { className: 'early-warning-card__text' }, 'Всё отлично! Нет активных предупреждений')
+          ),
+          resolvedBadge
         );
       }
 
@@ -777,6 +800,9 @@
             'Смотреть подробнее →'
           )
         ),
+
+        // R-INS-3C: badge с прогрессом — даже когда есть active warnings показываем resolved
+        resolvedBadge,
 
         // Early Warning Panel Modal
         panelOpen && HEYS.EarlyWarningPanel && h(HEYS.EarlyWarningPanel, {
