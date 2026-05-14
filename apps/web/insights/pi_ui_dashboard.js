@@ -2305,10 +2305,24 @@
                   className: 'insights-tab__tab' + (activeTab === 'today' ? ' active' : ''),
                   onClick: () => setActiveTab('today')
                 }, '7д'),
-                h('button', {
-                  className: 'insights-tab__tab' + (activeTab === 'week' ? ' active' : ''),
-                  onClick: () => setActiveTab('week')
-                }, '30д')
+                // R-INS audit P15: 30д таб disabled когда <30 дней данных.
+                // Юзер не видит пустой 30д view → подсказываем сколько ещё нужно.
+                (() => {
+                  const daysWithData = realInsights?.daysWithData ?? realInsights?.daysAnalyzed ?? 0;
+                  const has30Days = daysWithData >= 30;
+                  const daysLeft = Math.max(0, 30 - daysWithData);
+                  return h('button', {
+                    className: 'insights-tab__tab'
+                      + (activeTab === 'week' ? ' active' : '')
+                      + (has30Days ? '' : ' insights-tab__tab--disabled'),
+                    onClick: () => { if (has30Days) setActiveTab('week'); },
+                    disabled: !has30Days,
+                    title: has30Days ? '30 дней анализа' : `Доступно после 30 дней данных (осталось ${daysLeft})`
+                  },
+                    '30д',
+                    !has30Days && h('span', { className: 'insights-tab__tab-hint' }, ` (${daysLeft})`)
+                  );
+                })()
               )
             ),
 
@@ -2350,9 +2364,11 @@
           h('div', { className: 'insights-tab__content' },
 
             // L0: Status 0-100 Card (dynamic priority)
+            // R-INS audit P11: data-critical-index=0 (первый CRITICAL в layout)
             shouldShowSection(statusSectionPriority) && h('div', {
               className: `insights-tab__section insights-tab__section--${statusSectionPriority.toLowerCase()}`,
-              id: 'tour-insights-status' // 🎯 Mini-tour target
+              id: 'tour-insights-status', // 🎯 Mini-tour target
+              'data-critical-index': statusSectionPriority === 'CRITICAL' ? '0' : undefined
             },
               h('div', { className: 'insights-tab__section-badge' },
                 h(PriorityBadge, {
@@ -2671,9 +2687,12 @@
             ),
 
             // Metabolic Status + Risk (CRITICAL) — собственный заголовок внутри
+            // R-INS audit P11: data-critical-index — 1 если статус выше тоже CRITICAL,
+            // иначе 0 (это первый и единственный CRITICAL).
             shouldShowSection('CRITICAL') && h('div', {
               className: 'insights-tab__section insights-tab__section--critical insights-tab__section--no-header',
-              id: 'tour-insights-metabolic' // 🎯 Mini-tour target
+              id: 'tour-insights-metabolic', // 🎯 Mini-tour target
+              'data-critical-index': statusSectionPriority === 'CRITICAL' ? '1' : '0'
             },
               h(MetabolicQuickStatus, {
                 lsGet,

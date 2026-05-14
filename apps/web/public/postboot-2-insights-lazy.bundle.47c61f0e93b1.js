@@ -11070,6 +11070,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param {Object} profile - профиль с deficitPctTarget
    */
   function calculateHealthScore(patterns, profile) {
+    // R-INS audit P2: защита от null/undefined inputs.
+    // Раньше передача null давала TypeError "patterns is not iterable".
+    // Теперь — нормализуем к пустому массиву / пустому объекту.
+    if (!Array.isArray(patterns)) patterns = [];
+    if (!profile || typeof profile !== 'object') profile = {};
     const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
     /**
@@ -11966,7 +11971,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
     }
 
-    // Apply conflict resolver if available (R-INS-2C integration)
+    // Apply conflict resolver if available (R-INS-2C integration).
+    // R-INS audit P10: useMemo не нужен — эта функция вызывается из
+    // EarlyWarningCard.useEffect (line 881 pi_ui_dashboard.js) только при
+    // изменении [lsGet, profile, pIndex] либо event 'day-updated'/'heysSyncCompleted'.
+    // На каждый render React НЕ запускает её. Levenshtein O(n²) при n≤10
+    // (max top-3 actions × 10 candidates) = 100 ops — moot.
     let resolved = drafts;
     const resolver = HEYS?.InsightsPI?.conflictResolver?.resolveConflicts;
     if (typeof resolver === 'function' && drafts.length > 1) {
@@ -17712,7 +17722,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
      * @returns {object|null}
      */
     function checkProteinDeficit(days, profile, pIndex) {
-        // v2.0: Phenotype-aware protein target
+        // v2.0: Phenotype-aware protein target.
+        // ⚠ R-INS audit P4: эта формула НЕЗАВИСИМА от R-INS-6C WeeklyWrap.targetProtein.
+        // PROTEIN_DEFICIT warning использует physiological minimum 1.2 g/kg как critical
+        // threshold (Phillips 2016 — minimum for muscle preservation), а WeeklyWrap
+        // использует goal-aware target (cut 1.8, maint 1.4, bulk 1.6) как «нормальный
+        // уровень». Это разные пороги: 1.2 = «опасно низко», 1.4-1.8 = «целевой».
+        // Поэтому изменение WeeklyWrap formula НЕ требует bump TRENDS storage version.
         const proteinMultiplier = getEwsThreshold('proteinTarget', 1.0, profile);
         const targetProtein = 1.2 * proteinMultiplier; // g/kg (minimum for muscle preservation)
 
@@ -33689,7 +33705,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         visiblePatterns.map((p, i) =>
           h(PatternCard, { key: p.pattern || i, pattern: p })
         ),
-        // Toggle строка только если есть что показывать/прятать
+        // R-INS audit P14: toggle с явным badge для hidden count.
+        // Раньше count был частью текста кнопки → не заметен. Теперь —
+        // отдельный pill badge для visual hierarchy.
         (hiddenCount > 0 || showAll) && h('button', {
           type: 'button',
           className: 'insights-patterns__toggle',
@@ -33698,9 +33716,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           title: showAll
             ? 'Скрыть низкоуверенные паттерны'
             : `Показать ${hiddenCount} паттернов с низкой уверенностью или требующих данных`
-        }, showAll
-          ? '↑ Скрыть низкоуверенные'
-          : `↓ Показать все паттерны (${hiddenCount} скрыто)`
+        },
+          h('span', { className: 'insights-patterns__toggle-arrow' }, showAll ? '↑' : '↓'),
+          h('span', { className: 'insights-patterns__toggle-label' },
+            showAll ? 'Скрыть низкоуверенные' : 'Показать все паттерны'
+          ),
+          hiddenCount > 0 && !showAll && h('span', {
+            className: 'insights-patterns__toggle-badge',
+            'aria-label': `${hiddenCount} паттернов скрыто`
+          }, `${hiddenCount} скрыто`)
         )
       );
     }
@@ -37209,10 +37233,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   className: 'insights-tab__tab' + (activeTab === 'today' ? ' active' : ''),
                   onClick: () => setActiveTab('today')
                 }, '7д'),
-                h('button', {
-                  className: 'insights-tab__tab' + (activeTab === 'week' ? ' active' : ''),
-                  onClick: () => setActiveTab('week')
-                }, '30д')
+                // R-INS audit P15: 30д таб disabled когда <30 дней данных.
+                // Юзер не видит пустой 30д view → подсказываем сколько ещё нужно.
+                (() => {
+                  const daysWithData = realInsights?.daysWithData ?? realInsights?.daysAnalyzed ?? 0;
+                  const has30Days = daysWithData >= 30;
+                  const daysLeft = Math.max(0, 30 - daysWithData);
+                  return h('button', {
+                    className: 'insights-tab__tab'
+                      + (activeTab === 'week' ? ' active' : '')
+                      + (has30Days ? '' : ' insights-tab__tab--disabled'),
+                    onClick: () => { if (has30Days) setActiveTab('week'); },
+                    disabled: !has30Days,
+                    title: has30Days ? '30 дней анализа' : `Доступно после 30 дней данных (осталось ${daysLeft})`
+                  },
+                    '30д',
+                    !has30Days && h('span', { className: 'insights-tab__tab-hint' }, ` (${daysLeft})`)
+                  );
+                })()
               )
             ),
 
@@ -37254,9 +37292,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           h('div', { className: 'insights-tab__content' },
 
             // L0: Status 0-100 Card (dynamic priority)
+            // R-INS audit P11: data-critical-index=0 (первый CRITICAL в layout)
             shouldShowSection(statusSectionPriority) && h('div', {
               className: `insights-tab__section insights-tab__section--${statusSectionPriority.toLowerCase()}`,
-              id: 'tour-insights-status' // 🎯 Mini-tour target
+              id: 'tour-insights-status', // 🎯 Mini-tour target
+              'data-critical-index': statusSectionPriority === 'CRITICAL' ? '0' : undefined
             },
               h('div', { className: 'insights-tab__section-badge' },
                 h(PriorityBadge, {
@@ -37575,9 +37615,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ),
 
             // Metabolic Status + Risk (CRITICAL) — собственный заголовок внутри
+            // R-INS audit P11: data-critical-index — 1 если статус выше тоже CRITICAL,
+            // иначе 0 (это первый и единственный CRITICAL).
             shouldShowSection('CRITICAL') && h('div', {
               className: 'insights-tab__section insights-tab__section--critical insights-tab__section--no-header',
-              id: 'tour-insights-metabolic' // 🎯 Mini-tour target
+              id: 'tour-insights-metabolic', // 🎯 Mini-tour target
+              'data-critical-index': statusSectionPriority === 'CRITICAL' ? '1' : '0'
             },
               h(MetabolicQuickStatus, {
                 lsGet,

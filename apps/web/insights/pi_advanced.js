@@ -94,6 +94,11 @@
    * @param {Object} profile - профиль с deficitPctTarget
    */
   function calculateHealthScore(patterns, profile) {
+    // R-INS audit P2: защита от null/undefined inputs.
+    // Раньше передача null давала TypeError "patterns is not iterable".
+    // Теперь — нормализуем к пустому массиву / пустому объекту.
+    if (!Array.isArray(patterns)) patterns = [];
+    if (!profile || typeof profile !== 'object') profile = {};
     const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
     /**
@@ -990,7 +995,12 @@
       });
     }
 
-    // Apply conflict resolver if available (R-INS-2C integration)
+    // Apply conflict resolver if available (R-INS-2C integration).
+    // R-INS audit P10: useMemo не нужен — эта функция вызывается из
+    // EarlyWarningCard.useEffect (line 881 pi_ui_dashboard.js) только при
+    // изменении [lsGet, profile, pIndex] либо event 'day-updated'/'heysSyncCompleted'.
+    // На каждый render React НЕ запускает её. Levenshtein O(n²) при n≤10
+    // (max top-3 actions × 10 candidates) = 100 ops — moot.
     let resolved = drafts;
     const resolver = HEYS?.InsightsPI?.conflictResolver?.resolveConflicts;
     if (typeof resolver === 'function' && drafts.length > 1) {

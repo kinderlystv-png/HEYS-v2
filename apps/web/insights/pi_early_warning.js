@@ -2631,7 +2631,13 @@
      * @returns {object|null}
      */
     function checkProteinDeficit(days, profile, pIndex) {
-        // v2.0: Phenotype-aware protein target
+        // v2.0: Phenotype-aware protein target.
+        // ⚠ R-INS audit P4: эта формула НЕЗАВИСИМА от R-INS-6C WeeklyWrap.targetProtein.
+        // PROTEIN_DEFICIT warning использует physiological minimum 1.2 g/kg как critical
+        // threshold (Phillips 2016 — minimum for muscle preservation), а WeeklyWrap
+        // использует goal-aware target (cut 1.8, maint 1.4, bulk 1.6) как «нормальный
+        // уровень». Это разные пороги: 1.2 = «опасно низко», 1.4-1.8 = «целевой».
+        // Поэтому изменение WeeklyWrap formula НЕ требует bump TRENDS storage version.
         const proteinMultiplier = getEwsThreshold('proteinTarget', 1.0, profile);
         const targetProtein = 1.2 * proteinMultiplier; // g/kg (minimum for muscle preservation)
 

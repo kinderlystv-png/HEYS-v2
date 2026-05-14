@@ -1163,7 +1163,9 @@
         visiblePatterns.map((p, i) =>
           h(PatternCard, { key: p.pattern || i, pattern: p })
         ),
-        // Toggle строка только если есть что показывать/прятать
+        // R-INS audit P14: toggle с явным badge для hidden count.
+        // Раньше count был частью текста кнопки → не заметен. Теперь —
+        // отдельный pill badge для visual hierarchy.
         (hiddenCount > 0 || showAll) && h('button', {
           type: 'button',
           className: 'insights-patterns__toggle',
@@ -1172,9 +1174,15 @@
           title: showAll
             ? 'Скрыть низкоуверенные паттерны'
             : `Показать ${hiddenCount} паттернов с низкой уверенностью или требующих данных`
-        }, showAll
-          ? '↑ Скрыть низкоуверенные'
-          : `↓ Показать все паттерны (${hiddenCount} скрыто)`
+        },
+          h('span', { className: 'insights-patterns__toggle-arrow' }, showAll ? '↑' : '↓'),
+          h('span', { className: 'insights-patterns__toggle-label' },
+            showAll ? 'Скрыть низкоуверенные' : 'Показать все паттерны'
+          ),
+          hiddenCount > 0 && !showAll && h('span', {
+            className: 'insights-patterns__toggle-badge',
+            'aria-label': `${hiddenCount} паттернов скрыто`
+          }, `${hiddenCount} скрыто`)
         )
       );
     }
