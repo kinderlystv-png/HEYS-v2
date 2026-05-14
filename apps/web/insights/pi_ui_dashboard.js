@@ -321,6 +321,20 @@
      * WeeklyWrap — итоги недели
      * v3.22.0: Интеграция Extended Analytics summary
      */
+    // R-INS-6C (2026-05-14): goal-aware target protein.
+    // Раньше `targetProtein = dayKcal * 0.25 / 4` — одна формула для cut/maintenance/bulk.
+    // Реальные коэффициенты из pi_thresholds.js:419-422 (cut: 1.8, maintenance: 1.4, bulk: 1.6 г/кг).
+    // Fallback `'maintenance'` если goal не задан (защита от undefined × NaN — pitfall P3).
+    function calcGoalAwareDailyProtein(profile, dayKcal) {
+      const goal = profile?.goal || 'maintenance';
+      const weight = Number(profile?.weight) || 0;
+      const coefficients = { cut: 1.8, maintenance: 1.4, bulk: 1.6 };
+      const gPerKg = coefficients[goal] || 1.4;
+      // Если вес есть — используем g/kg. Иначе fallback на kcal*0.25/4 (старая формула).
+      if (weight > 0) return weight * gPerKg;
+      return (dayKcal * 0.25) / 4;
+    }
+
     function WeeklyWrap({ wrap, lsGet }) {
       if (!wrap) return null;
 
@@ -362,7 +376,8 @@
           }
         }
 
-        const targetProtein = (dayKcal * 0.25) / 4;
+        // R-INS-6C: goal-aware target (cut 1.8, maint 1.4, bulk 1.6 г/кг).
+        const targetProtein = calcGoalAwareDailyProtein(profile, dayKcal);
         if (targetProtein > 0 && dayProtein < targetProtein * 0.8) {
           proteinDeficitDays++;
         }
@@ -900,7 +915,8 @@
               today,
               profile,
               kcalPct: optimum ? dayTot.kcal / optimum : 0,
-              proteinPct: dayTot.prot ? dayTot.prot / ((optimum || 2000) * 0.25 / 4) : 0
+              // R-INS-6C: goal-aware protein target вместо kcal*0.25/4
+              proteinPct: dayTot.prot ? dayTot.prot / (calcGoalAwareDailyProtein(profile, optimum || 2000) || 1) : 0
             });
             currentRisk = riskData?.risk || 0;
           } catch (e) { }

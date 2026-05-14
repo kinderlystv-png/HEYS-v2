@@ -170,6 +170,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
   const SECTIONS_CONFIG = {
     STATUS_SCORE: { id: 'status_score', component: 'StatusScoreCard', priority: 'CRITICAL', dynamicPriority: true, order: 1, alwaysShow: true, title: 'Метаболический статус', icon: '🎯' },
     CRASH_RISK: { id: 'crash_risk', component: 'MetabolicQuickStatus', priority: 'CRITICAL', dynamicPriority: true, order: 2, alwaysShow: true, title: 'Риск срыва', icon: '⚠️' },
+    // R-INS-2 (2026-05-14, не реализовано в R-INS round): PRIORITY_ACTIONS зарегистрирован
+    // здесь как layout slot, но компонент PriorityActions не имплементирован. Прежде чем
+    // его строить, нужен conflict resolver (pi_conflict_resolver.js) — чтобы агрегатор
+    // не показывал противоречия типа STRESS_EATING «ешь углеводы» + ADDED_SUGAR_DEPENDENCY
+    // «избегай быстрых углеводов» одновременно. См. план R-INS-2A/B/C.
     PRIORITY_ACTIONS: { id: 'priority_actions', component: 'PriorityActions', priority: 'CRITICAL', dynamicPriority: true, order: 3, alwaysShow: true, title: 'Действия сейчас', icon: '⚡' },
     PREDICTIVE_DASHBOARD: { id: 'predictive_dashboard', component: 'PredictiveDashboard', priority: 'HIGH', order: 10, title: 'Прогнозы на сегодня', icon: '🔮' },
     ADVANCED_ANALYTICS: { id: 'advanced_analytics', component: 'AdvancedAnalyticsCard', priority: 'HIGH', order: 11, title: 'Продвинутая аналитика', icon: '📊' },

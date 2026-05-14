@@ -172,6 +172,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
   const SECTIONS_CONFIG = {
     STATUS_SCORE: { id: 'status_score', component: 'StatusScoreCard', priority: 'CRITICAL', dynamicPriority: true, order: 1, alwaysShow: true, title: 'Метаболический статус', icon: '🎯' },
     CRASH_RISK: { id: 'crash_risk', component: 'MetabolicQuickStatus', priority: 'CRITICAL', dynamicPriority: true, order: 2, alwaysShow: true, title: 'Риск срыва', icon: '⚠️' },
+    // R-INS-2 (2026-05-14, не реализовано в R-INS round): PRIORITY_ACTIONS зарегистрирован
+    // здесь как layout slot, но компонент PriorityActions не имплементирован. Прежде чем
+    // его строить, нужен conflict resolver (pi_conflict_resolver.js) — чтобы агрегатор
+    // не показывал противоречия типа STRESS_EATING «ешь углеводы» + ADDED_SUGAR_DEPENDENCY
+    // «избегай быстрых углеводов» одновременно. См. план R-INS-2A/B/C.
     PRIORITY_ACTIONS: { id: 'priority_actions', component: 'PriorityActions', priority: 'CRITICAL', dynamicPriority: true, order: 3, alwaysShow: true, title: 'Действия сейчас', icon: '⚡' },
     PREDICTIVE_DASHBOARD: { id: 'predictive_dashboard', component: 'PredictiveDashboard', priority: 'HIGH', order: 10, title: 'Прогнозы на сегодня', icon: '🔮' },
     ADVANCED_ANALYTICS: { id: 'advanced_analytics', component: 'AdvancedAnalyticsCard', priority: 'HIGH', order: 11, title: 'Продвинутая аналитика', icon: '📊' },
@@ -34738,6 +34743,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
      * WeeklyWrap — итоги недели
      * v3.22.0: Интеграция Extended Analytics summary
      */
+    // R-INS-6C (2026-05-14): goal-aware target protein.
+    // Раньше `targetProtein = dayKcal * 0.25 / 4` — одна формула для cut/maintenance/bulk.
+    // Реальные коэффициенты из pi_thresholds.js:419-422 (cut: 1.8, maintenance: 1.4, bulk: 1.6 г/кг).
+    // Fallback `'maintenance'` если goal не задан (защита от undefined × NaN — pitfall P3).
+    function calcGoalAwareDailyProtein(profile, dayKcal) {
+      const goal = profile?.goal || 'maintenance';
+      const weight = Number(profile?.weight) || 0;
+      const coefficients = { cut: 1.8, maintenance: 1.4, bulk: 1.6 };
+      const gPerKg = coefficients[goal] || 1.4;
+      // Если вес есть — используем g/kg. Иначе fallback на kcal*0.25/4 (старая формула).
+      if (weight > 0) return weight * gPerKg;
+      return (dayKcal * 0.25) / 4;
+    }
+
     function WeeklyWrap({ wrap, lsGet }) {
       if (!wrap) return null;
 
@@ -34779,7 +34798,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
         }
 
-        const targetProtein = (dayKcal * 0.25) / 4;
+        // R-INS-6C: goal-aware target (cut 1.8, maint 1.4, bulk 1.6 г/кг).
+        const targetProtein = calcGoalAwareDailyProtein(profile, dayKcal);
         if (targetProtein > 0 && dayProtein < targetProtein * 0.8) {
           proteinDeficitDays++;
         }
@@ -35317,7 +35337,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               today,
               profile,
               kcalPct: optimum ? dayTot.kcal / optimum : 0,
-              proteinPct: dayTot.prot ? dayTot.prot / ((optimum || 2000) * 0.25 / 4) : 0
+              // R-INS-6C: goal-aware protein target вместо kcal*0.25/4
+              proteinPct: dayTot.prot ? dayTot.prot / (calcGoalAwareDailyProtein(profile, optimum || 2000) || 1) : 0
             });
             currentRisk = riskData?.risk || 0;
           } catch (e) { }
