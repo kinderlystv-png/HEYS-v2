@@ -118,6 +118,7 @@ export const LEGACY_BUNDLES = {
         'heys_day_v12.js',
     ],
     'boot-app': [
+        'heys_push_v1.js',
         'heys_user_tab_impl_v1.js',
         'heys_user_v12.js',
         'heys_auth_v1.js',

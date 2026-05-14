@@ -1369,6 +1369,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     )
                 ), // end ProfileSection norms
 
+                // === СЕКЦИЯ: Уведомления (push) ===
+                React.createElement(ProfileSection, {
+                    id: 'notifications',
+                    icon: '🔔',
+                    title: 'Уведомления',
+                    subtitle: 'Напоминания, итог дня, стрики',
+                    tone: 'cyan',
+                    expanded: expandedSections.notifications,
+                    onToggle: () => toggleSection('notifications')
+                },
+                    React.createElement('div', { className: 'profile-section__fields' },
+                        React.createElement(HEYS_PushSettingsCard, null)
+                    )
+                ),
+
                 // === СЕКЦИЯ 4: Безопасность (PIN) ===
                 React.createElement(ProfileSection, {
                     id: 'security',
@@ -2162,6 +2177,249 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         );
     }
 
+
+    // === Push-уведомления (новая секция) ===
+    function HEYS_PushSettingsCard() {
+        const isCurator = (() => {
+            try {
+                return !!localStorage.getItem('heys_curator_session') ||
+                    !!localStorage.getItem('heys_supabase_auth_token');
+            } catch { return false; }
+        })();
+
+        const defaults = isCurator
+            ? { enabled: true, quiet_start: '22:00', quiet_end: '08:00', inactive_client_enabled: true }
+            : {
+                enabled: true,
+                quiet_start: '23:00', quiet_end: '09:00',
+                meal_reminder_enabled: true, meal_reminder_gap_hours: 4,
+                evening_summary_enabled: true, evening_summary_time: '21:00',
+                streak_celebration_enabled: true
+            };
+
+        const [prefs, setPrefs] = React.useState(() => {
+            const stored = lsGet('heys_push_prefs', null) || {};
+            return { ...defaults, ...stored };
+        });
+        const [status, setStatus] = React.useState(null);
+        const [busy, setBusy] = React.useState(false);
+        const [testResult, setTestResult] = React.useState(null);
+
+        // Refresh статуса при монтировании.
+        React.useEffect(() => {
+            if (!HEYS.push) return;
+            HEYS.push.getStatus().then(setStatus).catch(() => {});
+        }, []);
+
+        const refreshStatus = async () => {
+            if (!HEYS.push) return;
+            try { setStatus(await HEYS.push.getStatus()); } catch {}
+        };
+
+        const update = (patch) => {
+            const next = { ...prefs, ...patch };
+            setPrefs(next);
+            // Локально сразу — синк с бэком debounced ниже.
+            lsSet('heys_push_prefs', next);
+            // Шлём на бэк (если есть подписка).
+            if (HEYS.push && status?.subscribed) {
+                HEYS.push.savePrefs(patch).catch((err) =>
+                    console.warn('[push.prefs] save failed:', err?.message)
+                );
+            }
+        };
+
+        const handleEnableClick = async () => {
+            if (!HEYS.push) return;
+            setBusy(true);
+            try {
+                const r = await HEYS.push.subscribe();
+                if (!r.ok) {
+                    if (r.reason === 'ios_needs_install') {
+                        alert('На iPhone уведомления работают только из установленного PWA. Поделиться → На экран Домой, потом запусти HEYS с домашнего экрана.');
+                    } else if (r.reason === 'permission_blocked') {
+                        alert('Уведомления заблокированы в браузере. Разблокируй их в настройках сайта (значок замка в адресной строке).');
+                    } else if (r.reason === 'permission_denied') {
+                        alert('Без разрешения уведомления не работают. Можно включить позже из этого окна.');
+                    } else if (r.reason === 'not_capable') {
+                        alert('Браузер не поддерживает push-уведомления.');
+                    }
+                }
+            } finally {
+                setBusy(false);
+                await refreshStatus();
+            }
+        };
+
+        const handleDisableClick = async () => {
+            if (!HEYS.push) return;
+            if (!confirm('Отключить push-уведомления полностью?')) return;
+            setBusy(true);
+            try { await HEYS.push.unsubscribe(); } finally {
+                setBusy(false);
+                await refreshStatus();
+            }
+        };
+
+        const handleTest = async () => {
+            if (!HEYS.push) return;
+            setTestResult(null);
+            setBusy(true);
+            try {
+                const r = await HEYS.push.sendTest();
+                if (r?.success && r.sent > 0) setTestResult(`✓ Отправлено на ${r.sent} устройств(а). Должен прилететь через пару секунд.`);
+                else if (r?.error === 'no_subscriptions') setTestResult('⚠ Нет активных подписок. Включи уведомления.');
+                else setTestResult(`⚠ ${r?.error || 'не отправлено'}`);
+            } catch (e) {
+                setTestResult(`❌ ${e.message}`);
+            } finally { setBusy(false); }
+        };
+
+        // Не-capable браузер.
+        if (status && !status.capable) {
+            return React.createElement('div', { style: { padding: '12px', color: '#71717a' } },
+                'Этот браузер не поддерживает push-уведомления (нужен Chrome/Edge/Firefox/Safari 16.4+).'
+            );
+        }
+
+        // iOS не-standalone — баннер про установку.
+        if (status?.needsInstall) {
+            return React.createElement('div', {
+                style: {
+                    padding: '14px', borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                    color: 'white'
+                }
+            },
+                React.createElement('div', { style: { fontWeight: 600, marginBottom: '6px' } },
+                    '📲 Сначала установи HEYS на домашний экран'),
+                React.createElement('div', { style: { fontSize: '14px', opacity: 0.9 } },
+                    'На iPhone уведомления работают только из установленного приложения. Нажми ' +
+                    'Поделиться → «На экран Домой», запусти HEYS с домашнего экрана и вернись сюда.')
+            );
+        }
+
+        const Toggle = ({ value, onChange }) =>
+            React.createElement('input', {
+                type: 'checkbox', checked: !!value, onChange: (e) => onChange(e.target.checked),
+                style: { width: '20px', height: '20px', cursor: 'pointer' }
+            });
+
+        const TimeInput = ({ value, onChange }) =>
+            React.createElement('input', {
+                type: 'time', value: value || '', onChange: (e) => onChange(e.target.value),
+                style: { padding: '4px 8px', borderRadius: '6px', border: '1px solid #d4d4d8' }
+            });
+
+        const NumberInput = ({ value, min, max, onChange }) =>
+            React.createElement('input', {
+                type: 'number', value: value || '', min, max,
+                onChange: (e) => onChange(Math.max(min, Math.min(max, Number(e.target.value) || min))),
+                style: { padding: '4px 8px', borderRadius: '6px', border: '1px solid #d4d4d8', width: '60px' }
+            });
+
+        const Row = (label, control) =>
+            React.createElement('div', {
+                style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', gap: '12px' }
+            },
+                React.createElement('span', { style: { color: '#3f3f46', fontSize: '14px' } }, label),
+                control
+            );
+
+        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+            // Статус + главная кнопка
+            React.createElement('div', {
+                style: {
+                    padding: '12px', borderRadius: '10px',
+                    background: status?.subscribed ? '#dcfce7' : '#f4f4f5',
+                    border: status?.subscribed ? '1px solid #22c55e' : '1px solid #e4e4e7',
+                    marginBottom: '8px'
+                }
+            },
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                    React.createElement('div', null,
+                        React.createElement('div', { style: { fontWeight: 600 } },
+                            status?.subscribed ? '✓ Уведомления включены' : 'Уведомления выключены'),
+                        React.createElement('div', { style: { fontSize: '12px', color: '#71717a', marginTop: '2px' } },
+                            'Permission: ', status?.permission || '—')
+                    ),
+                    status?.subscribed
+                        ? React.createElement('button', {
+                            onClick: handleDisableClick, disabled: busy,
+                            style: { padding: '6px 14px', borderRadius: '6px', background: 'transparent', border: '1px solid #71717a', color: '#71717a', cursor: 'pointer' }
+                        }, 'Отключить')
+                        : React.createElement('button', {
+                            onClick: handleEnableClick, disabled: busy,
+                            style: { padding: '6px 14px', borderRadius: '6px', background: '#22c55e', border: 'none', color: 'white', fontWeight: 500, cursor: 'pointer' }
+                        }, busy ? '…' : 'Включить')
+                )
+            ),
+
+            // Тонкие настройки (только если подписан и включён общий тумблер).
+            status?.subscribed && Row(
+                isCurator
+                    ? 'Алерт о пропавших клиентах (2+ дня)'
+                    : 'Напоминание о записи еды',
+                React.createElement(Toggle, {
+                    value: isCurator ? prefs.inactive_client_enabled : prefs.meal_reminder_enabled,
+                    onChange: (v) => update(isCurator
+                        ? { inactive_client_enabled: v }
+                        : { meal_reminder_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && prefs.meal_reminder_enabled && Row(
+                'Через сколько часов без записи',
+                React.createElement(NumberInput, {
+                    value: prefs.meal_reminder_gap_hours, min: 3, max: 6,
+                    onChange: (v) => update({ meal_reminder_gap_hours: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Вечерний итог дня',
+                React.createElement(Toggle, {
+                    value: prefs.evening_summary_enabled,
+                    onChange: (v) => update({ evening_summary_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && prefs.evening_summary_enabled && Row(
+                'Время итога',
+                React.createElement(TimeInput, {
+                    value: prefs.evening_summary_time,
+                    onChange: (v) => update({ evening_summary_time: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Похвала за 7 дней без пропусков',
+                React.createElement(Toggle, {
+                    value: prefs.streak_celebration_enabled,
+                    onChange: (v) => update({ streak_celebration_enabled: v })
+                })
+            ),
+            status?.subscribed && Row(
+                'Тишина с',
+                React.createElement(TimeInput, {
+                    value: prefs.quiet_start,
+                    onChange: (v) => update({ quiet_start: v })
+                })
+            ),
+            status?.subscribed && Row(
+                'до',
+                React.createElement(TimeInput, {
+                    value: prefs.quiet_end,
+                    onChange: (v) => update({ quiet_end: v })
+                })
+            ),
+
+            // Тестовая кнопка
+            status?.subscribed && React.createElement('div', { style: { marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e4e4e7' } },
+                React.createElement('button', {
+                    onClick: handleTest, disabled: busy,
+                    style: { padding: '8px 16px', borderRadius: '8px', background: '#3b82f6', border: 'none', color: 'white', cursor: 'pointer' }
+                }, 'Отправить тестовый пуш'),
+                testResult && React.createElement('div', { style: { marginTop: '8px', fontSize: '13px', color: '#3f3f46' } }, testResult)
+            )
+        );
+    }
 
     // === Нормы (встроенный блок) ===
     function HEYS_NormsCard() {
