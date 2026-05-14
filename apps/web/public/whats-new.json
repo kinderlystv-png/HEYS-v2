@@ -1,6 +1,41 @@
 {
   "releases": [
     {
+      "version": "2026.05.14.69454c04",
+      "buildHash": "69454c04",
+      "date": "2026-05-14",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "🔐 152-ФЗ: удаление аккаунта, отзыв согласий, cookie-баннер",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Можно удалить аккаунт полностью",
+          "description": "В Профиле появилась кнопка «Удалить аккаунт» — стирает health-данные, согласия и все локальные следы (LS, SW-кэш, sessionStorage). Это реализация права на забвение (152-ФЗ ст. 21)."
+        },
+        {
+          "type": "improvement",
+          "title": "Отзыв согласия на health-данные",
+          "description": "Если передумал — отдельная кнопка «Отозвать согласие на обработку медицинских данных» удаляет именно health-данные, но оставляет аккаунт активным."
+        },
+        {
+          "type": "improvement",
+          "title": "Cookie-баннер при первом визите на сайт",
+          "description": "На лендинге появился прозрачный баннер с обязательным согласием на cookies (только при первом заходе, потом запоминается). Описание разделено на технические vs маркетинговые."
+        },
+        {
+          "type": "improvement",
+          "title": "Обновлённые правовые страницы",
+          "description": "Cookie Policy, Privacy Policy, Agreements — переписаны с учётом 152-ФЗ. В форме триала — явный чекбокс согласия на маркетинг (раздельно от обработки)."
+        },
+        {
+          "type": "chore",
+          "title": "Backend инфраструктура",
+          "description": "3 SQL миграции (account_deletion_health_purge, leads_consent_fields, security_alerts_log) + cron-функция мониторинга подозрительных паттернов + новые RPC revoke_consent / purge_health_data / delete_my_account. Внутренняя документация для оператора в docs/legal/operator/."
+        }
+      ]
+    },
+    {
       "version": "2026.05.14.a391d8e5",
       "buildHash": "a391d8e5",
       "date": "2026-05-14",
