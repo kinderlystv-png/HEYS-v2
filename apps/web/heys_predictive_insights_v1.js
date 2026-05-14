@@ -900,6 +900,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Weekly Wrap - сигнатура: (days, patterns, healthScore, weightPrediction)
     const weeklyWrap = generateWeeklyWrap(days, patterns, healthScore, weightPrediction, profile);
 
+    // R-INS-4B: Monthly Wrap — итоги месяца (требует ≥14 дней реальных данных)
+    const generateMonthlyWrap = (HEYS.InsightsPI?.advanced?.generateMonthlyWrap) || null;
+    const monthlyWrap = (generateMonthlyWrap && days.length >= 14)
+      ? generateMonthlyWrap(days, patterns, healthScore, weightPrediction, profile)
+      : null;
+
     // Сохраняем в кэш
     const result = {
       available: true,
@@ -911,6 +917,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       whatIf: whatIfScenarios,
       weightPrediction,
       weeklyWrap,
+      monthlyWrap,  // R-INS-4B
       generatedAt: now
     };
 

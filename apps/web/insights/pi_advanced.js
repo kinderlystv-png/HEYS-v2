@@ -746,12 +746,144 @@
   }
 
 
+  /**
+   * R-INS-4B: Monthly Wrap — итоги месяца (30+ дней).
+   *
+   * Считаем aggregates за весь период: % дней где белок в норме (≥1.6 г/кг),
+   * % дней где сон ≥7ч, % дней с поздними приёмами (>21:00), вес δ за месяц.
+   * Из этих aggregates выбираем 1 главный progress + 1 главный challenge
+   * + 1 рекомендацию на следующий месяц.
+   *
+   * @param {Array} days - все дни (30+)
+   * @param {Array} patterns - паттерны (для weighted progress check)
+   * @param {object} healthScore - текущий health score
+   * @param {object} weightPrediction - прогноз веса
+   * @param {object} profile - профиль юзера (weight, goal, normAbs)
+   * @returns {object|null} monthlyWrap данные или null если <14 дней
+   */
+  function generateMonthlyWrap(days, patterns, healthScore, weightPrediction, profile) {
+    if (!Array.isArray(days) || days.length < 14) return null;
+
+    const safeProfile = profile || {};
+    const weightKg = safeProfile.weight || safeProfile.weightKg || 70;
+    const proteinTargetMin = weightKg * 1.4; // maintenance baseline (g)
+
+    let daysWithMeals = 0;
+    let daysProteinOk = 0;
+    let daysSleepOk = 0;
+    let daysWithSleep = 0;
+    let lateEatingDays = 0;
+    let highStressDays = 0;
+    let daysWithStress = 0;
+
+    for (const day of days) {
+      const meals = Array.isArray(day.meals) ? day.meals : [];
+      const hasMeals = meals.length > 0;
+      if (hasMeals) daysWithMeals++;
+
+      // Белок дня
+      if (hasMeals) {
+        let dayProtein = 0;
+        for (const m of meals) {
+          if (m.items) for (const it of m.items) {
+            dayProtein += (it.protein100 || 0) * (it.grams || 0) / 100;
+          }
+        }
+        if (dayProtein >= proteinTargetMin) daysProteinOk++;
+
+        // Поздняя еда (после 21:00)
+        const hasLate = meals.some(m => {
+          if (!m.time || typeof m.time !== 'string') return false;
+          const [h] = m.time.split(':').map(Number);
+          return Number.isFinite(h) && h >= 21;
+        });
+        if (hasLate) lateEatingDays++;
+      }
+
+      // Сон
+      const sleepH = Number(day.sleepHours);
+      if (Number.isFinite(sleepH) && sleepH > 0) {
+        daysWithSleep++;
+        if (sleepH >= 7) daysSleepOk++;
+      }
+
+      // Стресс
+      const stress = Number(day.stressAvg);
+      if (Number.isFinite(stress) && stress > 0) {
+        daysWithStress++;
+        if (stress >= 7) highStressDays++;
+      }
+    }
+
+    const totalDays = days.length;
+    const proteinPct = daysWithMeals > 0 ? Math.round((daysProteinOk / daysWithMeals) * 100) : 0;
+    const sleepPct = daysWithSleep > 0 ? Math.round((daysSleepOk / daysWithSleep) * 100) : 0;
+    const latePct = daysWithMeals > 0 ? Math.round((lateEatingDays / daysWithMeals) * 100) : 0;
+    const stressPct = daysWithStress > 0 ? Math.round((highStressDays / daysWithStress) * 100) : 0;
+
+    // Главный прогресс — что юзер делает хорошо (≥75% дней)
+    const progresses = [];
+    if (proteinPct >= 75) progresses.push({ pct: proteinPct, text: `Белок в норме (≥${Math.round(proteinTargetMin)}г) в ${proteinPct}% дней` });
+    if (sleepPct >= 75) progresses.push({ pct: sleepPct, text: `Сон ≥7ч в ${sleepPct}% дней` });
+    if (latePct < 25 && daysWithMeals >= 14) progresses.push({ pct: 100 - latePct, text: `Поздних приёмов почти нет (только ${latePct}% дней)` });
+    if (stressPct < 25 && daysWithStress >= 7) progresses.push({ pct: 100 - stressPct, text: `Стресс под контролем (<7/10 в ${100 - stressPct}% дней)` });
+    const mainProgress = progresses.sort((a, b) => b.pct - a.pct)[0] || null;
+
+    // Главный вызов — что нужно подтянуть (≥40% дней с проблемой)
+    const challenges = [];
+    if (proteinPct < 50 && daysWithMeals >= 14) challenges.push({ urgency: 100 - proteinPct, text: `Белок ниже нормы в ${100 - proteinPct}% дней` });
+    if (sleepPct < 50 && daysWithSleep >= 7) challenges.push({ urgency: 100 - sleepPct, text: `Сон <7ч в ${100 - sleepPct}% дней` });
+    if (latePct >= 40) challenges.push({ urgency: latePct, text: `Поздние приёмы в ${latePct}% дней (после 21:00)` });
+    if (stressPct >= 40) challenges.push({ urgency: stressPct, text: `Высокий стресс в ${stressPct}% дней` });
+    const mainChallenge = challenges.sort((a, b) => b.urgency - a.urgency)[0] || null;
+
+    // Рекомендация на следующий месяц — на основе главного challenge
+    let nextMonthRecommendation = null;
+    if (mainChallenge) {
+      if (mainChallenge.text.includes('Белок')) {
+        nextMonthRecommendation = 'Цель: 25-30г белка к каждому приёму. Начни с завтрака — это даёт +30% к норме без напряга.';
+      } else if (mainChallenge.text.includes('Сон')) {
+        nextMonthRecommendation = 'Цель: 7+ часов сна 25 дней из 30. Сдвинь отбой на 30 мин раньше — лёгкая привычка с большим эффектом.';
+      } else if (mainChallenge.text.includes('Поздние')) {
+        nextMonthRecommendation = 'Цель: последний приём до 20:00 в 80% дней. Пользы для сна и метаболизма больше всех других правок.';
+      } else if (mainChallenge.text.includes('стресс')) {
+        nextMonthRecommendation = 'Цель: 1 стресс-разрядка ежедневно (прогулка, дыхание, спорт). Стресс — главный триггер срывов диеты.';
+      }
+    } else if (mainProgress) {
+      nextMonthRecommendation = 'Главное — не сбиваться. Продолжай поддерживать текущие привычки в течение следующего месяца.';
+    }
+
+    // Вес δ за период
+    let weightDelta = null;
+    const weights = days.filter(d => Number(d.weight) > 0).sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (weights.length >= 2) {
+      weightDelta = +(weights[weights.length - 1].weight - weights[0].weight).toFixed(1);
+    }
+
+    return {
+      available: true,
+      totalDays,
+      daysWithData: daysWithMeals,
+      aggregates: {
+        proteinPct,
+        sleepPct,
+        latePct,
+        stressPct
+      },
+      weightDelta,
+      mainProgress,
+      mainChallenge,
+      nextMonthRecommendation
+    };
+  }
+
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.advanced = {
     calculateHealthScore,
     generateWhatIfScenarios,
     predictWeight,
-    generateWeeklyWrap
+    generateWeeklyWrap,
+    generateMonthlyWrap  // R-INS-4B
   };
 
   // Fallback для прямого доступа

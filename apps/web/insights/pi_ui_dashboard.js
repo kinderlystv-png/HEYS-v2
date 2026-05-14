@@ -627,6 +627,76 @@
     }
 
     /**
+     * R-INS-4B: MonthlyWrap — итоги месяца (требует ≥14 дней данных).
+     * Показывает 1 главный прогресс + 1 главный вызов + рекомендацию.
+     * Видна только на табе «Неделя» (daysBack=30) когда есть достаточно данных.
+     */
+    function MonthlyWrap({ wrap }) {
+      if (!wrap || !wrap.available) return null;
+
+      return h('div', { className: 'insights-monthly-wrap' },
+        h('div', { className: 'insights-monthly-wrap__header' },
+          h('span', { className: 'insights-monthly-wrap__icon' }, '🗓️'),
+          h('div', { className: 'insights-monthly-wrap__title' },
+            'Итоги месяца',
+            h('span', { className: 'insights-monthly-wrap__period' },
+              ` (${wrap.totalDays} дней, данные за ${wrap.daysWithData})`
+            )
+          )
+        ),
+
+        // Aggregate metrics row
+        h('div', { className: 'insights-monthly-wrap__metrics' },
+          h('div', { className: 'insights-monthly-wrap__metric' },
+            h('div', { className: 'insights-monthly-wrap__metric-value' }, `${wrap.aggregates.proteinPct}%`),
+            h('div', { className: 'insights-monthly-wrap__metric-label' }, 'дней с белком ≥нормы')
+          ),
+          h('div', { className: 'insights-monthly-wrap__metric' },
+            h('div', { className: 'insights-monthly-wrap__metric-value' }, `${wrap.aggregates.sleepPct}%`),
+            h('div', { className: 'insights-monthly-wrap__metric-label' }, 'дней со сном ≥7ч')
+          ),
+          h('div', { className: 'insights-monthly-wrap__metric' },
+            h('div', { className: 'insights-monthly-wrap__metric-value' }, `${wrap.aggregates.latePct}%`),
+            h('div', { className: 'insights-monthly-wrap__metric-label' }, 'дней с поздней едой')
+          ),
+          wrap.weightDelta !== null && h('div', { className: 'insights-monthly-wrap__metric' },
+            h('div', { className: 'insights-monthly-wrap__metric-value' },
+              `${wrap.weightDelta > 0 ? '+' : ''}${wrap.weightDelta} кг`
+            ),
+            h('div', { className: 'insights-monthly-wrap__metric-label' }, 'вес δ за период')
+          )
+        ),
+
+        // Main progress
+        wrap.mainProgress && h('div', { className: 'insights-monthly-wrap__highlight insights-monthly-wrap__highlight--progress' },
+          h('span', { className: 'insights-monthly-wrap__highlight-icon' }, '✅'),
+          h('div', { className: 'insights-monthly-wrap__highlight-content' },
+            h('div', { className: 'insights-monthly-wrap__highlight-title' }, 'Главный прогресс'),
+            h('div', { className: 'insights-monthly-wrap__highlight-text' }, wrap.mainProgress.text)
+          )
+        ),
+
+        // Main challenge
+        wrap.mainChallenge && h('div', { className: 'insights-monthly-wrap__highlight insights-monthly-wrap__highlight--challenge' },
+          h('span', { className: 'insights-monthly-wrap__highlight-icon' }, '⚠️'),
+          h('div', { className: 'insights-monthly-wrap__highlight-content' },
+            h('div', { className: 'insights-monthly-wrap__highlight-title' }, 'Главный вызов'),
+            h('div', { className: 'insights-monthly-wrap__highlight-text' }, wrap.mainChallenge.text)
+          )
+        ),
+
+        // Recommendation for next month
+        wrap.nextMonthRecommendation && h('div', { className: 'insights-monthly-wrap__recommendation' },
+          h('span', { className: 'insights-monthly-wrap__recommendation-icon' }, '🎯'),
+          h('div', { className: 'insights-monthly-wrap__recommendation-content' },
+            h('div', { className: 'insights-monthly-wrap__recommendation-title' }, 'На следующий месяц'),
+            h('div', { className: 'insights-monthly-wrap__recommendation-text' }, wrap.nextMonthRecommendation)
+          )
+        )
+      );
+    }
+
+    /**
      * EarlyWarningCard — компактная карточка с предупреждениями под Health Score Ring
      * 
      * Показывает summary warnings count с severity badges.
@@ -2668,6 +2738,19 @@
                       anchorDate: selectedDate
                     })
                   )
+            ),
+
+            // R-INS-4B: Monthly Wrap — итоги месяца (≥14 дней данных, только на табе "Неделя" = 30д).
+            // Дополняет WeeklyWrap monthly aggregates: % дней с белком в норме, % сон ≥7ч, % поздних
+            // приёмов, вес δ; + 1 главный прогресс + 1 главный вызов + рекомендация.
+            shouldShowSection('LOW') && activeTab === 'week' && insights.monthlyWrap && h(CollapsibleSection, {
+              title: 'Итоги месяца',
+              icon: '🗓️',
+              defaultOpen: false,
+              infoKey: 'MONTHLY_WRAP',
+              priority: 'LOW'
+            },
+              h(MonthlyWrap, { wrap: insights.monthlyWrap })
             ),
 
             // Data Completeness (LOW)
@@ -5100,6 +5183,7 @@
       PredictiveDashboard,
       // Weekly/Weight
       WeeklyWrap,
+      MonthlyWrap,
       WeightPrediction,
       // Filters & Bars
       PriorityFilterBar,
