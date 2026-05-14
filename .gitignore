@@ -192,6 +192,8 @@ tsup.config.bundled_*.mjs
 
 # Git worktrees
 .worktrees/
+.claude/worktrees/
+.claude/scheduled_tasks.lock
 
 # Cloud Functions local bundle (shared/ MUST be tracked — required for deploy!)
 # yandex-cloud-functions/heys-api-rpc/shared/  # ← НЕ игнорировать! Нужен для деплоя
