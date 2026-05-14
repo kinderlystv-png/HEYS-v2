@@ -304,4 +304,80 @@ describe('Early Warning System', () => {
         const statusWarning = result.warnings.find(w => w.type === 'STATUS_SCORE_DECLINE');
         expect(statusWarning).toBeUndefined(); // Should NOT warn for small decline
     });
+
+    // R-INS-P2-4: goal/phenotype-aware re-ranking
+    describe('R-INS-P2-4: goal/phenotype-aware priority ranking', () => {
+        it('cutting goal: PROTEIN_DEFICIT priority boosted (×1.5)', () => {
+            const prioritize = global.HEYS.InsightsPI.earlyWarning.prioritize;
+            const warnings = [
+                { type: 'PROTEIN_DEFICIT', severity: 'high' },
+                { type: 'WEIGHT_SPIKE', severity: 'high' }
+            ];
+            const trendsData = { trends: {} };
+
+            const cuttingResult = prioritize(warnings, trendsData, { goal: 'cutting' });
+            const maintResult = prioritize(warnings, trendsData, { goal: 'maintenance' });
+
+            const cuttingProtein = cuttingResult.find(w => w.type === 'PROTEIN_DEFICIT');
+            const maintProtein = maintResult.find(w => w.type === 'PROTEIN_DEFICIT');
+            expect(cuttingProtein.priorityScore).toBeGreaterThan(maintProtein.priorityScore);
+            expect(cuttingProtein.rankingMultiplier).toBeCloseTo(1.5, 1);
+        });
+
+        it('cutting goal: WEIGHT_SPIKE deprioritized (×0.8)', () => {
+            const prioritize = global.HEYS.InsightsPI.earlyWarning.prioritize;
+            const warnings = [{ type: 'WEIGHT_SPIKE', severity: 'high' }];
+            const trendsData = { trends: {} };
+
+            const cuttingResult = prioritize(warnings, trendsData, { goal: 'cutting' });
+            const maintResult = prioritize(warnings, trendsData, { goal: 'maintenance' });
+
+            expect(cuttingResult[0].priorityScore).toBeLessThan(maintResult[0].priorityScore);
+            expect(cuttingResult[0].rankingMultiplier).toBeCloseTo(0.8, 1);
+        });
+
+        it('insulin_resistant phenotype: SUGAR_DEPENDENCY boosted (×1.5)', () => {
+            const prioritize = global.HEYS.InsightsPI.earlyWarning.prioritize;
+            const warnings = [{ type: 'SUGAR_DEPENDENCY', severity: 'medium' }];
+            const trendsData = { trends: {} };
+
+            const irResult = prioritize(warnings, trendsData, { phenotype: { metabolic: 'insulin_resistant' } });
+            const normalResult = prioritize(warnings, trendsData, {});
+
+            expect(irResult[0].priorityScore).toBeGreaterThan(normalResult[0].priorityScore);
+        });
+
+        it('P3 fallback: profile.goal undefined → maintenance default (no NaN)', () => {
+            const prioritize = global.HEYS.InsightsPI.earlyWarning.prioritize;
+            const warnings = [{ type: 'PROTEIN_DEFICIT', severity: 'high' }];
+            const trendsData = { trends: {} };
+
+            const undefResult = prioritize(warnings, trendsData, undefined);
+            const emptyProfileResult = prioritize(warnings, trendsData, {});
+            const explicitMaint = prioritize(warnings, trendsData, { goal: 'maintenance' });
+
+            expect(Number.isFinite(undefResult[0].priorityScore)).toBe(true);
+            expect(Number.isFinite(emptyProfileResult[0].priorityScore)).toBe(true);
+            // Все три должны дать одинаковый score (default → maintenance)
+            expect(undefResult[0].priorityScore).toBe(emptyProfileResult[0].priorityScore);
+            expect(emptyProfileResult[0].priorityScore).toBe(explicitMaint[0].priorityScore);
+        });
+
+        it('combined goal + phenotype: multipliers stack within cap [0.3, 3.0]', () => {
+            const prioritize = global.HEYS.InsightsPI.earlyWarning.prioritize;
+            const warnings = [{ type: 'SUGAR_DEPENDENCY', severity: 'high' }];
+            const trendsData = { trends: {} };
+
+            const result = prioritize(warnings, trendsData, {
+                goal: 'cutting',
+                phenotype: { metabolic: 'insulin_resistant', stress: 'stress_eater' }
+            });
+
+            // SUGAR_DEPENDENCY: cutting нет специального, insulin_resistant 1.5
+            // → ranking multiplier ~1.5
+            expect(result[0].rankingMultiplier).toBeGreaterThanOrEqual(0.3);
+            expect(result[0].rankingMultiplier).toBeLessThanOrEqual(3.0);
+            expect(result[0].rankingMultiplier).toBeGreaterThan(1.0);
+        });
+    });
 });
