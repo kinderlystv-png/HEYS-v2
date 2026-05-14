@@ -35531,6 +35531,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     /**
+     * R-INS-5E: SkeletonCard — placeholder во время загрузки insights.
+     *
+     * Используется для async-операций (например, при первом расчёте EWS
+     * который занимает > 200ms). По умолчанию — серый блок с shimmer-анимацией.
+     *
+     * @param {string} variant - 'card' (default) | 'ring' | 'list' | 'badge'
+     * @param {number} lines - количество текстовых строк (для variant=card)
+     * @param {string} height - кастомная высота
+     */
+    function SkeletonCard({ variant = 'card', lines = 3, height }) {
+      const baseClass = `insights-skeleton insights-skeleton--${variant}`;
+      const style = height ? { minHeight: height } : null;
+
+      if (variant === 'ring') {
+        return h('div', { className: baseClass, style },
+          h('div', { className: 'insights-skeleton__ring' }),
+          h('div', { className: 'insights-skeleton__ring-label' })
+        );
+      }
+      if (variant === 'badge') {
+        return h('div', { className: baseClass, style });
+      }
+      // 'card' or 'list' — N text lines
+      const linesArr = Array.from({ length: Math.max(1, lines) }, (_, i) => i);
+      return h('div', { className: baseClass, style },
+        h('div', { className: 'insights-skeleton__header' },
+          h('div', { className: 'insights-skeleton__title' }),
+          h('div', { className: 'insights-skeleton__icon' })
+        ),
+        linesArr.map(idx =>
+          h('div', {
+            key: idx,
+            className: 'insights-skeleton__line',
+            style: { width: `${100 - (idx * 15) % 30}%` }
+          })
+        )
+      );
+    }
+
+    /**
      * R-INS-2A: PriorityActions — top-3 actionable советы с triple-line context.
      * Каждое действие: Action + Why + Forecast.
      * Использует pi_conflict_resolver для устранения противоречий (R-INS-2C).
@@ -35796,7 +35836,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // Don't show card if no module or no warnings
       if (!HEYS.InsightsPI?.earlyWarning) return null;
-      if (loading) return null;
+      // R-INS-5E: skeleton placeholder при загрузке EWS вместо blank.
+      if (loading) return h(SkeletonCard, { variant: 'card', lines: 2, height: '64px' });
       if (warnings.length === 0) {
         // Show success state briefly + resolved badge
         return h('div', null,
@@ -40160,6 +40201,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       WeeklyWrap,
       MonthlyWrap,
       PriorityActions,
+      SkeletonCard,
       WeightPrediction,
       // Filters & Bars
       PriorityFilterBar,
