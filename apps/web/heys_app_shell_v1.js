@@ -1288,8 +1288,22 @@
                         React.createElement(
                             'div',
                             { className: 'hdr-client-info' },
-                            // Единый источник имени: currentClientName
+                            // Если выбран не сегодняшний день — показываем оранжевую капсулу
+                            // «НЕ СЕГОДНЯ» вместо имени. Клик возвращает на today (без открытия дропдауна).
                             (() => {
+                                const todayKey = typeof todayISO === 'function' ? todayISO() : todayISO;
+                                const isToday = !selectedDate || selectedDate === todayKey;
+                                if (!isToday) {
+                                    return React.createElement('button', {
+                                        type: 'button',
+                                        className: 'hdr-not-today-badge',
+                                        title: 'Вернуться на сегодня',
+                                        onClick: (e) => {
+                                            e.stopPropagation();
+                                            selectDateWithPrefetch(todayKey, { reason: 'not-today-badge' });
+                                        }
+                                    }, 'НЕ СЕГОДНЯ');
+                                }
                                 const fullName = (currentClientName || '').trim();
                                 const parts = fullName.split(' ').filter(Boolean);
                                 return [

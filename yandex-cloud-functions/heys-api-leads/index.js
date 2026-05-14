@@ -179,6 +179,7 @@ module.exports.handler = async function (event, context) {
       intent,
       plan,
       website, // 🍯 honeypot (P0.13) — должно быть пустым
+      consent, // 152-ФЗ ст. 9: согласие на обработку ПДн
     } = body;
 
     // 🍯 Honeypot (P0.13): боты обычно заполняют все поля. Если website непустой —
@@ -212,6 +213,37 @@ module.exports.handler = async function (event, context) {
         body: JSON.stringify({ success: false, error: 'Invalid email format' }),
       };
     }
+
+    // 152-ФЗ ст. 9: оператор обязан подтвердить факт получения согласия.
+    // UI уже валидирует checkbox; сервер дополнительно отбрасывает запросы
+    // без consent-поля (защита от подмены клиента и backwards-compat для
+    // старых сборок landing, которые могут отправлять заявку без поля).
+    if (
+      !consent ||
+      typeof consent !== 'object' ||
+      !consent.privacy_version ||
+      !consent.method
+    ) {
+      console.warn('[Leads] REJECTED missing consent payload');
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: 'Consent required',
+          message: 'Необходимо принять политику конфиденциальности',
+        }),
+      };
+    }
+
+    const consentAcceptedAt = consent.accepted_at
+      ? new Date(consent.accepted_at)
+      : new Date();
+    const consentUserAgent = consent.user_agent
+      ? String(consent.user_agent).slice(0, 500)
+      : event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
+    const consentPrivacyVersion = String(consent.privacy_version).slice(0, 32);
+    const consentMethod = String(consent.method).slice(0, 32);
 
     // IP клиента для rate-limit
     const clientIp =
@@ -285,10 +317,25 @@ module.exports.handler = async function (event, context) {
         // имеет активный лид (status IN 'new'/'contacted'/'trial_started').
         try {
           const result = await client.query(`
-            INSERT INTO leads (name, phone, email, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page, ip_address)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            INSERT INTO leads (
+              name, phone, email, messenger,
+              utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+              referrer, landing_page, ip_address,
+              consent_privacy_version, consent_accepted_at, consent_method, consent_user_agent
+            )
+            VALUES (
+              $1, $2, $3, $4,
+              $5, $6, $7, $8, $9,
+              $10, $11, $12,
+              $13, $14, $15, $16
+            )
             RETURNING id
-          `, [name, normalizedPhone, email || null, messenger, utm_source, utm_medium, utm_campaign, utm_term, utm_content, referrer, landing_page, clientIp]);
+          `, [
+            name, normalizedPhone, email || null, messenger,
+            utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+            referrer, landing_page, clientIp,
+            consentPrivacyVersion, consentAcceptedAt, consentMethod, consentUserAgent,
+          ]);
 
           leadId = result.rows[0].id;
         } catch (insErr) {

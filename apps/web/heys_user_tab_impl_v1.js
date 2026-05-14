@@ -1543,7 +1543,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
                                 )
                             )
-                            : null
+                            : null,
+
+                        // 🔒 Конфиденциальность (152-ФЗ ст. 21): отзыв согласия + удаление аккаунта
+                        React.createElement(PrivacySettingsCard, null)
                     ) // end profile-section__fields
                 ) // end ProfileSection system
 
@@ -2592,6 +2595,139 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             React.createElement('div', { className: 'muted', style: { marginTop: '6px' } },
                 'Все значения сохраняются автоматически. Жиры считаются из 9 ккал/г, клетчатка — в граммах на 1000 ккал.'
             )
+        );
+    }
+
+    // === Приватность (152-ФЗ ст. 21) ===
+    // Отзыв согласия на обработку данных о здоровье + удаление аккаунта.
+    function PrivacySettingsCard() {
+        const Consents = window.HEYS?.Consents;
+        if (!Consents) return null;
+
+        const [revokeBusy, setRevokeBusy] = React.useState(false);
+        const [deleteStage, setDeleteStage] = React.useState('idle'); // idle → confirming → busy
+        const [message, setMessage] = React.useState('');
+
+        const handleRevokeHealth = async function () {
+            const clientId = (window.HEYS && window.HEYS.currentClientId) ||
+                localStorage.getItem('heys_client_current') || '';
+            if (!clientId) {
+                setMessage('Не удалось определить аккаунт. Войдите заново.');
+                return;
+            }
+            const confirmed = window.confirm(
+                'Отозвать согласие на обработку данных о здоровье?\n\n' +
+                'После отзыва будут удалены:\n' +
+                '• дневник питания\n' +
+                '• данные о весе и динамике\n' +
+                '• данные об активности, сне, цикле, самочувствии\n\n' +
+                'Дальнейшее использование сервиса станет невозможным до повторного согласия.'
+            );
+            if (!confirmed) return;
+            setRevokeBusy(true);
+            setMessage('');
+            try {
+                const res = await Consents.revokeHealthDataAndPurge(clientId);
+                if (res.success) {
+                    setMessage('✅ Согласие отозвано, данные о здоровье удалены' +
+                        (res.deleted_keys ? ' (записей: ' + res.deleted_keys + ')' : '') +
+                        '. Перезагрузите страницу для применения изменений.');
+                } else {
+                    setMessage('❌ Ошибка: ' + (res.error || 'не удалось отозвать согласие'));
+                }
+            } catch (e) {
+                setMessage('❌ Ошибка: ' + e.message);
+            } finally {
+                setRevokeBusy(false);
+            }
+        };
+
+        const handleDeleteAccount = async function () {
+            if (deleteStage === 'idle') {
+                setDeleteStage('confirming');
+                setMessage('');
+                return;
+            }
+            if (deleteStage === 'confirming') {
+                const typed = window.prompt(
+                    'Это удалит ваш аккаунт и ВСЕ связанные данные навсегда.\n' +
+                    'Действие необратимо.\n\n' +
+                    'Для подтверждения введите слово: УДАЛИТЬ'
+                );
+                if ((typed || '').trim().toUpperCase() !== 'УДАЛИТЬ') {
+                    setDeleteStage('idle');
+                    setMessage('Удаление отменено.');
+                    return;
+                }
+                setDeleteStage('busy');
+                setMessage('');
+                try {
+                    const res = await Consents.deleteAccount();
+                    if (res.success) {
+                        setMessage('✅ Аккаунт удалён. Перенаправление...');
+                        setTimeout(function () { window.location.href = '/'; }, 1200);
+                    } else {
+                        setDeleteStage('idle');
+                        setMessage('❌ Ошибка: ' + (res.error || 'не удалось удалить аккаунт'));
+                    }
+                } catch (e) {
+                    setDeleteStage('idle');
+                    setMessage('❌ Ошибка: ' + e.message);
+                }
+                return;
+            }
+        };
+
+        return React.createElement('div', { className: 'profile-field-group' },
+            React.createElement('div', { className: 'profile-field-group__header' },
+                React.createElement('span', { className: 'profile-field-group__icon' }, '🔒'),
+                React.createElement('span', { className: 'profile-field-group__title' }, 'Конфиденциальность')
+            ),
+            React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
+                'Управление согласиями на обработку персональных данных (152-ФЗ).'
+            ),
+            React.createElement('div', { style: { marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' } },
+                React.createElement('button', {
+                    type: 'button',
+                    onClick: handleRevokeHealth,
+                    disabled: revokeBusy || deleteStage === 'busy',
+                    style: {
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #f59e0b',
+                        background: '#fffbeb',
+                        color: '#92400e',
+                        cursor: revokeBusy ? 'wait' : 'pointer',
+                        fontWeight: 500,
+                        opacity: revokeBusy ? 0.7 : 1
+                    }
+                }, revokeBusy ? 'Отзываю...' : 'Отозвать согласие на данные о здоровье'),
+                React.createElement('button', {
+                    type: 'button',
+                    onClick: handleDeleteAccount,
+                    disabled: revokeBusy || deleteStage === 'busy',
+                    style: {
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #dc2626',
+                        background: deleteStage === 'confirming' ? '#dc2626' : '#fef2f2',
+                        color: deleteStage === 'confirming' ? '#fff' : '#991b1b',
+                        cursor: deleteStage === 'busy' ? 'wait' : 'pointer',
+                        fontWeight: 500,
+                        opacity: deleteStage === 'busy' ? 0.7 : 1
+                    }
+                },
+                    deleteStage === 'busy' ? 'Удаляю аккаунт...' :
+                    deleteStage === 'confirming' ? 'Точно удалить? Нажмите ещё раз' :
+                    'Удалить аккаунт'
+                )
+            ),
+            message
+                ? React.createElement('div', {
+                    className: 'muted',
+                    style: { marginTop: '10px', fontSize: '13px', whiteSpace: 'pre-line' }
+                }, message)
+                : null
         );
     }
 

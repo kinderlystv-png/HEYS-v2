@@ -300,6 +300,10 @@ const ALLOWED_FUNCTIONS = [
   'revoke_consent',                   // Отзыв согласия
   'get_client_consents',              // Получение всех согласий клиента
 
+  // === ACCOUNT LIFECYCLE (152-ФЗ ст. 21 — права субъекта ПДн) ===
+  'purge_health_data',                // Удаление health-данных из KV после отзыва health_data согласия
+  'delete_my_account',                // Полное удаление аккаунта клиента (session-проверка внутри)
+
   // ❌ УБРАНО (SECURITY RISK — были доступны публично!):
   // 'reset_client_pin'                 — только через куратора/админ-API
   // 'get_curator_clients'              — только через админ-API

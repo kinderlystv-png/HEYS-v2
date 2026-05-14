@@ -1816,6 +1816,31 @@
     }
   }
 
+  // 152-ФЗ ст. 21 — отзыв согласия на специальную категорию (здоровье).
+  // Сначала отзывается consent (revoke_consent), затем фактически удаляются
+  // health-данные из KV. Обе RPC SECURITY DEFINER.
+  async function purgeHealthData(clientId) {
+    try {
+      log(`purgeHealthData: clientId=${clientId}`);
+      return await rpc('purge_health_data', { p_client_id: clientId });
+    } catch (e) {
+      err('purgeHealthData failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  // 152-ФЗ ст. 21 — полное удаление аккаунта по требованию субъекта.
+  // Принимает session_token, проверяет внутри функции, удаляет cascade.
+  async function deleteMyAccount(sessionToken) {
+    try {
+      log('deleteMyAccount');
+      return await rpc('delete_my_account', { p_session_token: sessionToken });
+    } catch (e) {
+      err('deleteMyAccount failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // 🏭 SHARED PRODUCTS МЕТОДЫ
   // ═══════════════════════════════════════════════════════════════════
@@ -2072,6 +2097,8 @@
     logConsents,
     checkRequiredConsents,
     revokeConsent,
+    purgeHealthData,
+    deleteMyAccount,
 
     // 🏭 Products
     getSharedProducts,

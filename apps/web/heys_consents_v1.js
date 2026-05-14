@@ -236,6 +236,74 @@
     },
 
     /**
+     * Отзыв согласия на обработку health-данных + удаление самих данных
+     * (152-ФЗ ст. 21). revoke_consent сам по себе только помечает consents
+     * как revoked — фактическое удаление делает purge_health_data.
+     */
+    async revokeHealthDataAndPurge(clientId) {
+      try {
+        if (!HEYS.YandexAPI) return { success: false, error: 'No API client' };
+
+        const revokeRes = await HEYS.YandexAPI.revokeConsent(clientId, 'health_data');
+        if (revokeRes.error) throw new Error(revokeRes.error?.message || revokeRes.error);
+
+        const purgeRes = await HEYS.YandexAPI.purgeHealthData(clientId);
+        if (purgeRes.error) throw new Error(purgeRes.error?.message || purgeRes.error);
+
+        const deletedKeys = purgeRes.data?.purge_health_data?.deleted_keys ?? 0;
+        console.log('[Consents] ✅ Health-data revoked + purged:', deletedKeys, 'keys');
+        return { success: true, deleted_keys: deletedKeys };
+      } catch (err) {
+        console.error('[Consents] ❌ Error revoking health-data:', err);
+        return { success: false, error: err.message };
+      }
+    },
+
+    /**
+     * Полное удаление аккаунта (152-ФЗ ст. 21). Проверка сессии
+     * выполняется внутри RPC. После успеха клиент должен быть выкинут
+     * на экран login.
+     */
+    async deleteAccount() {
+      try {
+        if (!HEYS.YandexAPI) return { success: false, error: 'No API client' };
+
+        // Тот же паттерн, что в heys_add_product_step_v1.js: HEYS.auth API
+        // как источник session_token для session-safe RPC.
+        const sessionToken =
+          (HEYS.auth && typeof HEYS.auth.getSessionToken === 'function'
+            ? HEYS.auth.getSessionToken()
+            : null) || null;
+        if (!sessionToken) return { success: false, error: 'No session token' };
+
+        const res = await HEYS.YandexAPI.deleteMyAccount(sessionToken);
+        if (res.error) throw new Error(res.error?.message || res.error);
+
+        const success = res.data?.delete_my_account?.success ?? false;
+        if (success) {
+          // Чистим локальные следы — кэш SW, localStorage, sessionStorage.
+          try {
+            const keysToKeep = new Set(['heys_cookie_info_seen']);
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+              const k = localStorage.key(i);
+              if (k && !keysToKeep.has(k)) localStorage.removeItem(k);
+            }
+            sessionStorage.clear();
+            if (window.caches && typeof window.caches.keys === 'function') {
+              const keys = await window.caches.keys();
+              await Promise.all(keys.map((k) => window.caches.delete(k)));
+            }
+          } catch (_) { /* best-effort */ }
+          console.log('[Consents] ✅ Account deleted, local state cleared');
+        }
+        return { success, raw: res.data };
+      } catch (err) {
+        console.error('[Consents] ❌ Error deleting account:', err);
+        return { success: false, error: err.message };
+      }
+    },
+
+    /**
      * Локальная проверка (из localStorage)
      */
     hasLocalConsent(clientId) {

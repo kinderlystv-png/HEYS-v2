@@ -1,0 +1,9 @@
+{
+  "name": "heys-cron-security-alerts",
+  "version": "1.0.0",
+  "description": "Periodic detection of suspicious security_events with Telegram alerts (152-ФЗ ст. 22.3)",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}
