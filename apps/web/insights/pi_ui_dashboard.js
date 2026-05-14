@@ -2321,6 +2321,22 @@
                     } // 🔍 Открыть Pattern Transparency Modal с диагностикой
                   })
                 ),
+                // R-INS-1B (2026-05-14): human interpretation одной строкой
+                // под главным Score. Раньше юзер видел просто число «80» без
+                // контекста — это много или мало?
+                (() => {
+                  const s = insights.healthScore.total || 0;
+                  let txt = '', cls = '';
+                  if (s >= 85) { txt = 'Отличное состояние — продолжай в том же духе'; cls = 'excellent'; }
+                  else if (s >= 70) { txt = 'Хорошая неделя, но есть что улучшить'; cls = 'good'; }
+                  else if (s >= 55) { txt = 'Средне — фокус на слабые зоны (см. ниже)'; cls = 'fair'; }
+                  else if (s >= 40) { txt = 'Тренд снижается — нужно скорректировать привычки'; cls = 'poor'; }
+                  else { txt = 'Низкий тренд — пересмотри 1-2 главных привычки'; cls = 'critical'; }
+                  return h('div', {
+                    className: `insights-tab__score-interpretation insights-tab__score-interpretation--${cls}`,
+                    'aria-live': 'polite'
+                  }, txt);
+                })(),
                 h('div', { className: 'insights-tab__rings' },
                   h(HealthRingsGrid, {
                     healthScore: insights.healthScore,

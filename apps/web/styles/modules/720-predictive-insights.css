@@ -1447,6 +1447,50 @@ body:has(.insights-tab) .hdr::after {
   justify-content: center;
 }
 
+/* R-INS-1B: Human interpretation under Hero Score */
+.insights-tab__score-interpretation {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.insights-tab__score-interpretation--excellent {
+  background: rgba(34, 197, 94, 0.10);
+  color: #166534;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+.insights-tab__score-interpretation--good {
+  background: rgba(132, 204, 22, 0.10);
+  color: #3f6212;
+  border: 1px solid rgba(132, 204, 22, 0.25);
+}
+.insights-tab__score-interpretation--fair {
+  background: rgba(234, 179, 8, 0.10);
+  color: #854d0e;
+  border: 1px solid rgba(234, 179, 8, 0.25);
+}
+.insights-tab__score-interpretation--poor {
+  background: rgba(249, 115, 22, 0.10);
+  color: #9a3412;
+  border: 1px solid rgba(249, 115, 22, 0.30);
+}
+.insights-tab__score-interpretation--critical {
+  background: rgba(239, 68, 68, 0.10);
+  color: #991b1b;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+[data-theme="dark"] .insights-tab__score-interpretation--excellent { color: #86efac; }
+[data-theme="dark"] .insights-tab__score-interpretation--good { color: #bef264; }
+[data-theme="dark"] .insights-tab__score-interpretation--fair { color: #fde047; }
+[data-theme="dark"] .insights-tab__score-interpretation--poor { color: #fdba74; }
+[data-theme="dark"] .insights-tab__score-interpretation--critical { color: #fca5a5; }
+
 .insights-tab__score-label {
   position: absolute;
   top: 50%;
