@@ -596,6 +596,127 @@
   margin-bottom: 12px;
 }
 
+/* R-INS-2A: Priority Actions — top-3 actionable с triple-line context */
+.insights-priority-actions {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(139, 92, 246, 0.04));
+  border-left: 4px solid #6366f1;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.insights-priority-actions__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.insights-priority-actions__icon {
+  font-size: 22px;
+}
+
+.insights-priority-actions__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.insights-priority-actions__subtitle {
+  font-weight: 400;
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+}
+
+.insights-priority-actions__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insights-priority-action {
+  display: flex;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.insights-priority-action--severity-high {
+  border-left: 3px solid #ef4444;
+}
+.insights-priority-action--severity-medium {
+  border-left: 3px solid #f59e0b;
+}
+.insights-priority-action--severity-low {
+  border-left: 3px solid #94a3b8;
+}
+
+.insights-priority-action__rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.insights-priority-action__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.insights-priority-action__text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.insights-priority-action__why,
+.insights-priority-action__forecast {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.insights-priority-action__why-label,
+.insights-priority-action__forecast-label {
+  margin-right: 2px;
+}
+
+.insights-priority-action__simulate {
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: transparent;
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  min-height: 32px;
+}
+
+.insights-priority-action__simulate:hover,
+.insights-priority-action__simulate:focus-visible {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.5);
+  outline: none;
+}
+
+[data-theme="dark"] .insights-priority-action {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 /* R-INS-4B: Monthly Wrap — итоги месяца */
 .insights-monthly-wrap {
   padding: 16px;

@@ -627,6 +627,58 @@
     }
 
     /**
+     * R-INS-2A: PriorityActions — top-3 actionable советы с triple-line context.
+     * Каждое действие: Action + Why + Forecast.
+     * Использует pi_conflict_resolver для устранения противоречий (R-INS-2C).
+     */
+    function PriorityActions({ actions, onSimulate }) {
+      if (!actions || actions.length === 0) return null;
+
+      return h('div', { className: 'insights-priority-actions' },
+        h('div', { className: 'insights-priority-actions__header' },
+          h('span', { className: 'insights-priority-actions__icon' }, '⚡'),
+          h('div', { className: 'insights-priority-actions__title' },
+            'Сделай сегодня',
+            h('span', { className: 'insights-priority-actions__subtitle' },
+              ` — топ ${actions.length} ${actions.length === 1 ? 'действие' : actions.length < 5 ? 'действия' : 'действий'}`
+            )
+          )
+        ),
+        h('div', { className: 'insights-priority-actions__list' },
+          actions.map((a, idx) =>
+            h('div', {
+              key: a.id || idx,
+              className: `insights-priority-action insights-priority-action--severity-${a.severity || 'medium'}`
+            },
+              h('div', { className: 'insights-priority-action__rank' }, idx + 1),
+              h('div', { className: 'insights-priority-action__content' },
+                // ACTION — что делать
+                h('div', { className: 'insights-priority-action__text' }, a.text),
+                // WHY — почему важно
+                a.why && h('div', { className: 'insights-priority-action__why' },
+                  h('span', { className: 'insights-priority-action__why-label' }, '💡 '),
+                  a.why
+                ),
+                // FORECAST — что даст
+                a.forecast && h('div', { className: 'insights-priority-action__forecast' },
+                  h('span', { className: 'insights-priority-action__forecast-label' }, '📈 '),
+                  a.forecast
+                ),
+                // R-INS-2B тизер: simulate button если есть onSimulate handler
+                onSimulate && h('button', {
+                  type: 'button',
+                  className: 'insights-priority-action__simulate',
+                  onClick: () => onSimulate(a),
+                  title: 'Симулировать эффект в What-If'
+                }, 'Симулируй →')
+              )
+            )
+          )
+        )
+      );
+    }
+
+    /**
      * R-INS-4B: MonthlyWrap — итоги месяца (требует ≥14 дней данных).
      * Показывает 1 главный прогресс + 1 главный вызов + рекомендацию.
      * Видна только на табе «Неделя» (daysBack=30) когда есть достаточно данных.
@@ -709,6 +761,7 @@
     function EarlyWarningCard({ lsGet, profile, pIndex }) {
       const [warnings, setWarnings] = useState([]);
       const [resolvedWarnings, setResolvedWarnings] = useState([]); // R-INS-3C
+      const [priorityActions, setPriorityActions] = useState([]); // R-INS-2A
       const [loading, setLoading] = useState(true);
       const [panelOpen, setPanelOpen] = useState(false);
 
@@ -783,12 +836,27 @@
                 setResolvedWarnings(result.resolvedWarnings);
               }
 
+              // R-INS-2A: вычисляем priority actions на основе ews результата +
+              // прогоняем через conflict_resolver (R-INS-2C).
+              const generatePA = HEYS.InsightsPI?.advanced?.generatePriorityActions;
+              if (typeof generatePA === 'function') {
+                try {
+                  // Передаём { ews: result } чтобы fn видел warnings внутри
+                  const actions = generatePA({ available: true, ews: result }, profile);
+                  setPriorityActions(Array.isArray(actions) ? actions : []);
+                } catch (e) {
+                  console.warn('[EarlyWarningCard] PriorityActions failed:', e);
+                  setPriorityActions([]);
+                }
+              }
+
               console.info('[EarlyWarningCard] ✅ Warnings loaded:', {
                 total: result.warnings.length,
                 high: result.warnings.filter(w => w.severity === 'high').length,
                 medium: result.warnings.filter(w => w.severity === 'medium').length,
                 low: result.warnings.filter(w => w.severity === 'low').length,
-                resolved: result.resolvedWarnings?.length || 0  // R-INS-3C
+                resolved: result.resolvedWarnings?.length || 0,  // R-INS-3C
+                priorityActions: 0  // log filled later when state propagates
               });
             }
 
@@ -870,6 +938,9 @@
             'Смотреть подробнее →'
           )
         ),
+
+        // R-INS-2A: Priority Actions (top-3 actionable с triple-line context)
+        priorityActions.length > 0 && h(PriorityActions, { actions: priorityActions }),
 
         // R-INS-3C: badge с прогрессом — даже когда есть active warnings показываем resolved
         resolvedBadge,
@@ -5184,6 +5255,7 @@
       // Weekly/Weight
       WeeklyWrap,
       MonthlyWrap,
+      PriorityActions,
       WeightPrediction,
       // Filters & Bars
       PriorityFilterBar,

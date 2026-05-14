@@ -15014,6 +15014,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       generatedAt: now
     };
 
+    // R-INS-2A: Priority Actions (top-3 actionable, использует conflict_resolver)
+    // Вычисляем в конце — нужен полный result для контекста.
+    const generatePriorityActions = HEYS.InsightsPI?.advanced?.generatePriorityActions;
+    if (typeof generatePriorityActions === 'function') {
+      try {
+        result.priorityActions = generatePriorityActions(result, profile);
+      } catch (e) {
+        console.warn('[PI] generatePriorityActions failed:', e);
+        result.priorityActions = [];
+      }
+    } else {
+      result.priorityActions = [];
+    }
+
     HEYS.PredictiveInsights.debug.lastAnalysis = result;
 
     _cache = {

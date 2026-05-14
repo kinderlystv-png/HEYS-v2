@@ -11839,13 +11839,144 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
   }
 
+  /**
+   * R-INS-2A: Priority Actions — top-3 actionable из active warnings + patterns.
+   *
+   * Каждое действие имеет triple-line context:
+   *   - action: что делать («Добавь 20г белка»)
+   *   - why: почему важно («Белок ниже нормы в N% дней»)
+   *   - forecast: ожидаемый эффект («+8 к Score»)
+   *
+   * Используется conflict_resolver если доступен (resolve противоречий
+   * между patterns).
+   *
+   * @param {object} insights - результат PredictiveInsights.analyze
+   * @param {object} profile - профиль юзера
+   * @returns {Array} top 3 priority actions (или пустой массив)
+   */
+  function generatePriorityActions(insights, profile) {
+    if (!insights || !insights.available) return [];
+
+    const profileSafe = profile || {};
+    const ewsResult = insights.ews || null;
+    const activeWarnings = (ewsResult && Array.isArray(ewsResult.warnings))
+      ? ewsResult.warnings.filter(w => !w.status || w.status === 'active')
+      : [];
+
+    // Map warning type → action template
+    const ACTION_TEMPLATES = {
+      PROTEIN_DEFICIT: {
+        action: 'Добавь 20-30г белка к ближайшему приёму',
+        domain: 'protein',
+        direction: 'increase',
+        forecast: '+8 к Score за неделю + лучшая сытость'
+      },
+      SLEEP_DEBT: {
+        action: 'Сегодня лечь спать на 30 мин раньше',
+        domain: 'sleep',
+        direction: 'increase',
+        forecast: '+12 к Score, ↓ риска срыва на 25%'
+      },
+      CALORIC_DEBT: {
+        action: 'Не пропускай приёмы — есть риск переедания вечером',
+        domain: 'calories',
+        direction: 'timing',
+        forecast: 'Снижает риск binge на 30%'
+      },
+      STRESS_ACCUMULATION: {
+        action: '10 мин прогулки или дыхания — снизить стресс',
+        domain: 'stress',
+        direction: 'decrease',
+        forecast: '↓ риска эмоциональной еды на 25%'
+      },
+      BINGE_RISK: {
+        action: 'Лёгкий перекус с белком вечером, не пропускай ужин',
+        domain: 'eating_behavior',
+        direction: 'timing',
+        forecast: 'Стабилизирует уровень глюкозы → меньше тяги'
+      },
+      HYDRATION_DEFICIT: {
+        action: 'Выпей стакан воды сейчас + ещё 1.5 л за день',
+        domain: 'hydration',
+        direction: 'increase',
+        forecast: 'Меньше ложного голода и усталости'
+      },
+      WEIGHT_PLATEAU: {
+        action: 'Пересмотри дефицит — возможно нужна корректировка ±100 ккал',
+        domain: 'calories',
+        direction: 'timing',
+        forecast: 'Сдвиг с плато за 1-2 недели'
+      },
+      SUGAR_DEPENDENCY: {
+        action: 'Замени сладкий перекус на белковый (творог/яйца/орехи)',
+        domain: 'carbs',
+        direction: 'decrease',
+        forecast: '↓ insulin spike, стабильная энергия'
+      },
+      FIBER_DEFICIT: {
+        action: 'Добавь овощи или цельные злаки к 2 приёмам',
+        domain: 'fiber',
+        direction: 'increase',
+        forecast: 'Лучше пищеварение + насыщение'
+      },
+      LOGGING_GAP: {
+        action: 'Запиши пропущенный приём — даже примерно',
+        domain: 'logging',
+        direction: 'increase',
+        forecast: 'Точнее анализ + меньше impulse eating'
+      }
+    };
+
+    // Build draft actions from active warnings
+    const drafts = [];
+    for (const w of activeWarnings) {
+      const tmpl = ACTION_TEMPLATES[w.type];
+      if (!tmpl) continue;
+      const freq = w.frequency14d || 1;
+      const why = freq > 1
+        ? `Повторяется ${freq} раз${freq >= 5 ? '' : freq >= 2 ? 'а' : ''} за 14 дней`
+        : 'Первое срабатывание — пора реагировать';
+
+      drafts.push({
+        id: `pa_${w.type}`,
+        text: tmpl.action,
+        why,
+        forecast: tmpl.forecast,
+        domain: tmpl.domain,
+        direction: tmpl.direction,
+        severity: w.severity || 'medium',
+        confidence: 0.8,
+        priorityScore: w.priorityScore || 0,
+        source: `ews:${w.type}`,
+        type: w.type
+      });
+    }
+
+    // Apply conflict resolver if available (R-INS-2C integration)
+    let resolved = drafts;
+    const resolver = HEYS?.InsightsPI?.conflictResolver?.resolveConflicts;
+    if (typeof resolver === 'function' && drafts.length > 1) {
+      try {
+        resolved = resolver(drafts, profileSafe);
+      } catch (e) {
+        console.warn('[PriorityActions] conflict resolver failed:', e);
+        resolved = drafts;
+      }
+    }
+
+    // Sort by priorityScore desc, take top 3
+    resolved.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
+    return resolved.slice(0, 3);
+  }
+
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.advanced = {
     calculateHealthScore,
     generateWhatIfScenarios,
     predictWeight,
     generateWeeklyWrap,
-    generateMonthlyWrap  // R-INS-4B
+    generateMonthlyWrap,    // R-INS-4B
+    generatePriorityActions // R-INS-2A
   };
 
   // Fallback для прямого доступа
@@ -35377,6 +35508,58 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     /**
+     * R-INS-2A: PriorityActions — top-3 actionable советы с triple-line context.
+     * Каждое действие: Action + Why + Forecast.
+     * Использует pi_conflict_resolver для устранения противоречий (R-INS-2C).
+     */
+    function PriorityActions({ actions, onSimulate }) {
+      if (!actions || actions.length === 0) return null;
+
+      return h('div', { className: 'insights-priority-actions' },
+        h('div', { className: 'insights-priority-actions__header' },
+          h('span', { className: 'insights-priority-actions__icon' }, '⚡'),
+          h('div', { className: 'insights-priority-actions__title' },
+            'Сделай сегодня',
+            h('span', { className: 'insights-priority-actions__subtitle' },
+              ` — топ ${actions.length} ${actions.length === 1 ? 'действие' : actions.length < 5 ? 'действия' : 'действий'}`
+            )
+          )
+        ),
+        h('div', { className: 'insights-priority-actions__list' },
+          actions.map((a, idx) =>
+            h('div', {
+              key: a.id || idx,
+              className: `insights-priority-action insights-priority-action--severity-${a.severity || 'medium'}`
+            },
+              h('div', { className: 'insights-priority-action__rank' }, idx + 1),
+              h('div', { className: 'insights-priority-action__content' },
+                // ACTION — что делать
+                h('div', { className: 'insights-priority-action__text' }, a.text),
+                // WHY — почему важно
+                a.why && h('div', { className: 'insights-priority-action__why' },
+                  h('span', { className: 'insights-priority-action__why-label' }, '💡 '),
+                  a.why
+                ),
+                // FORECAST — что даст
+                a.forecast && h('div', { className: 'insights-priority-action__forecast' },
+                  h('span', { className: 'insights-priority-action__forecast-label' }, '📈 '),
+                  a.forecast
+                ),
+                // R-INS-2B тизер: simulate button если есть onSimulate handler
+                onSimulate && h('button', {
+                  type: 'button',
+                  className: 'insights-priority-action__simulate',
+                  onClick: () => onSimulate(a),
+                  title: 'Симулировать эффект в What-If'
+                }, 'Симулируй →')
+              )
+            )
+          )
+        )
+      );
+    }
+
+    /**
      * R-INS-4B: MonthlyWrap — итоги месяца (требует ≥14 дней данных).
      * Показывает 1 главный прогресс + 1 главный вызов + рекомендацию.
      * Видна только на табе «Неделя» (daysBack=30) когда есть достаточно данных.
@@ -35459,6 +35642,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     function EarlyWarningCard({ lsGet, profile, pIndex }) {
       const [warnings, setWarnings] = useState([]);
       const [resolvedWarnings, setResolvedWarnings] = useState([]); // R-INS-3C
+      const [priorityActions, setPriorityActions] = useState([]); // R-INS-2A
       const [loading, setLoading] = useState(true);
       const [panelOpen, setPanelOpen] = useState(false);
 
@@ -35533,12 +35717,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 setResolvedWarnings(result.resolvedWarnings);
               }
 
+              // R-INS-2A: вычисляем priority actions на основе ews результата +
+              // прогоняем через conflict_resolver (R-INS-2C).
+              const generatePA = HEYS.InsightsPI?.advanced?.generatePriorityActions;
+              if (typeof generatePA === 'function') {
+                try {
+                  // Передаём { ews: result } чтобы fn видел warnings внутри
+                  const actions = generatePA({ available: true, ews: result }, profile);
+                  setPriorityActions(Array.isArray(actions) ? actions : []);
+                } catch (e) {
+                  console.warn('[EarlyWarningCard] PriorityActions failed:', e);
+                  setPriorityActions([]);
+                }
+              }
+
               console.info('[EarlyWarningCard] ✅ Warnings loaded:', {
                 total: result.warnings.length,
                 high: result.warnings.filter(w => w.severity === 'high').length,
                 medium: result.warnings.filter(w => w.severity === 'medium').length,
                 low: result.warnings.filter(w => w.severity === 'low').length,
-                resolved: result.resolvedWarnings?.length || 0  // R-INS-3C
+                resolved: result.resolvedWarnings?.length || 0,  // R-INS-3C
+                priorityActions: 0  // log filled later when state propagates
               });
             }
 
@@ -35620,6 +35819,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'Смотреть подробнее →'
           )
         ),
+
+        // R-INS-2A: Priority Actions (top-3 actionable с triple-line context)
+        priorityActions.length > 0 && h(PriorityActions, { actions: priorityActions }),
 
         // R-INS-3C: badge с прогрессом — даже когда есть active warnings показываем resolved
         resolvedBadge,
@@ -39934,6 +40136,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // Weekly/Weight
       WeeklyWrap,
       MonthlyWrap,
+      PriorityActions,
       WeightPrediction,
       // Filters & Bars
       PriorityFilterBar,

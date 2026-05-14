@@ -877,13 +877,144 @@
     };
   }
 
+  /**
+   * R-INS-2A: Priority Actions — top-3 actionable из active warnings + patterns.
+   *
+   * Каждое действие имеет triple-line context:
+   *   - action: что делать («Добавь 20г белка»)
+   *   - why: почему важно («Белок ниже нормы в N% дней»)
+   *   - forecast: ожидаемый эффект («+8 к Score»)
+   *
+   * Используется conflict_resolver если доступен (resolve противоречий
+   * между patterns).
+   *
+   * @param {object} insights - результат PredictiveInsights.analyze
+   * @param {object} profile - профиль юзера
+   * @returns {Array} top 3 priority actions (или пустой массив)
+   */
+  function generatePriorityActions(insights, profile) {
+    if (!insights || !insights.available) return [];
+
+    const profileSafe = profile || {};
+    const ewsResult = insights.ews || null;
+    const activeWarnings = (ewsResult && Array.isArray(ewsResult.warnings))
+      ? ewsResult.warnings.filter(w => !w.status || w.status === 'active')
+      : [];
+
+    // Map warning type → action template
+    const ACTION_TEMPLATES = {
+      PROTEIN_DEFICIT: {
+        action: 'Добавь 20-30г белка к ближайшему приёму',
+        domain: 'protein',
+        direction: 'increase',
+        forecast: '+8 к Score за неделю + лучшая сытость'
+      },
+      SLEEP_DEBT: {
+        action: 'Сегодня лечь спать на 30 мин раньше',
+        domain: 'sleep',
+        direction: 'increase',
+        forecast: '+12 к Score, ↓ риска срыва на 25%'
+      },
+      CALORIC_DEBT: {
+        action: 'Не пропускай приёмы — есть риск переедания вечером',
+        domain: 'calories',
+        direction: 'timing',
+        forecast: 'Снижает риск binge на 30%'
+      },
+      STRESS_ACCUMULATION: {
+        action: '10 мин прогулки или дыхания — снизить стресс',
+        domain: 'stress',
+        direction: 'decrease',
+        forecast: '↓ риска эмоциональной еды на 25%'
+      },
+      BINGE_RISK: {
+        action: 'Лёгкий перекус с белком вечером, не пропускай ужин',
+        domain: 'eating_behavior',
+        direction: 'timing',
+        forecast: 'Стабилизирует уровень глюкозы → меньше тяги'
+      },
+      HYDRATION_DEFICIT: {
+        action: 'Выпей стакан воды сейчас + ещё 1.5 л за день',
+        domain: 'hydration',
+        direction: 'increase',
+        forecast: 'Меньше ложного голода и усталости'
+      },
+      WEIGHT_PLATEAU: {
+        action: 'Пересмотри дефицит — возможно нужна корректировка ±100 ккал',
+        domain: 'calories',
+        direction: 'timing',
+        forecast: 'Сдвиг с плато за 1-2 недели'
+      },
+      SUGAR_DEPENDENCY: {
+        action: 'Замени сладкий перекус на белковый (творог/яйца/орехи)',
+        domain: 'carbs',
+        direction: 'decrease',
+        forecast: '↓ insulin spike, стабильная энергия'
+      },
+      FIBER_DEFICIT: {
+        action: 'Добавь овощи или цельные злаки к 2 приёмам',
+        domain: 'fiber',
+        direction: 'increase',
+        forecast: 'Лучше пищеварение + насыщение'
+      },
+      LOGGING_GAP: {
+        action: 'Запиши пропущенный приём — даже примерно',
+        domain: 'logging',
+        direction: 'increase',
+        forecast: 'Точнее анализ + меньше impulse eating'
+      }
+    };
+
+    // Build draft actions from active warnings
+    const drafts = [];
+    for (const w of activeWarnings) {
+      const tmpl = ACTION_TEMPLATES[w.type];
+      if (!tmpl) continue;
+      const freq = w.frequency14d || 1;
+      const why = freq > 1
+        ? `Повторяется ${freq} раз${freq >= 5 ? '' : freq >= 2 ? 'а' : ''} за 14 дней`
+        : 'Первое срабатывание — пора реагировать';
+
+      drafts.push({
+        id: `pa_${w.type}`,
+        text: tmpl.action,
+        why,
+        forecast: tmpl.forecast,
+        domain: tmpl.domain,
+        direction: tmpl.direction,
+        severity: w.severity || 'medium',
+        confidence: 0.8,
+        priorityScore: w.priorityScore || 0,
+        source: `ews:${w.type}`,
+        type: w.type
+      });
+    }
+
+    // Apply conflict resolver if available (R-INS-2C integration)
+    let resolved = drafts;
+    const resolver = HEYS?.InsightsPI?.conflictResolver?.resolveConflicts;
+    if (typeof resolver === 'function' && drafts.length > 1) {
+      try {
+        resolved = resolver(drafts, profileSafe);
+      } catch (e) {
+        console.warn('[PriorityActions] conflict resolver failed:', e);
+        resolved = drafts;
+      }
+    }
+
+    // Sort by priorityScore desc, take top 3
+    resolved.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
+    return resolved.slice(0, 3);
+  }
+
   // === ЭКСПОРТ ===
   HEYS.InsightsPI.advanced = {
     calculateHealthScore,
     generateWhatIfScenarios,
     predictWeight,
     generateWeeklyWrap,
-    generateMonthlyWrap  // R-INS-4B
+    generateMonthlyWrap,    // R-INS-4B
+    generatePriorityActions // R-INS-2A
   };
 
   // Fallback для прямого доступа
