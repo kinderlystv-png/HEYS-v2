@@ -122,6 +122,12 @@ get_function_config() {
             echo "nodejs18 index.handler 256m 15s" ;;
         "heys-cron-trial-drip")
             echo "nodejs18 index.handler 256m 60s" ;;
+        "heys-cron-security-alerts")
+            echo "nodejs18 index.handler 256m 60s" ;;
+        "heys-api-push")
+            echo "nodejs18 index.handler 256m 30s" ;;
+        "heys-cron-reminders")
+            echo "nodejs18 index.handler 512m 120s" ;;
         "heys-client-daily-backup")
             echo "nodejs18 index.handler 256m 300s" ;;
         "heys-backup")
@@ -148,8 +154,8 @@ build_env_flags() {
         env_flags+=" --environment PG_SSL=$PG_SSL"
     fi
     
-    # Telegram settings (for leads, auth, backup, maintenance)
-    if [[ "$func_name" =~ (leads|auth|backup|maintenance) ]]; then
+    # Telegram settings (for leads, auth, backup, maintenance, security-alerts)
+    if [[ "$func_name" =~ (leads|auth|backup|maintenance|security-alerts) ]]; then
         if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
             env_flags+=" --environment TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
         fi
@@ -224,7 +230,25 @@ build_env_flags() {
             env_flags+=" --environment APP_URL=$APP_URL"
         fi
     fi
-    
+
+    # Web Push (VAPID) — для api-push и cron-reminders
+    if [[ "$func_name" =~ (push|reminders) ]]; then
+        if [ -n "$VAPID_PUBLIC_KEY" ]; then
+            env_flags+=" --environment VAPID_PUBLIC_KEY=$VAPID_PUBLIC_KEY"
+        fi
+        if [ -n "$VAPID_PRIVATE_KEY" ]; then
+            env_flags+=" --environment VAPID_PRIVATE_KEY=$VAPID_PRIVATE_KEY"
+        fi
+        if [ -n "$VAPID_SUBJECT" ]; then
+            env_flags+=" --environment VAPID_SUBJECT=$VAPID_SUBJECT"
+        fi
+    fi
+
+    # heys-api-push также читает JWT_SECRET для распознавания курятор-токена
+    if [[ "$func_name" == "heys-api-push" ]]; then
+        env_flags+=" --environment JWT_SECRET=$JWT_SECRET"
+    fi
+
     echo "$env_flags"
 }
 

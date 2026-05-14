@@ -350,6 +350,71 @@ paths:
         function_id: d4e0rqplbonspm84pk3n
 
   # ═══════════════════════════════════════════════════════════════
+  # Push notifications — heys-api-push
+  # ⚠️ Замени REPLACE_AFTER_DEPLOY на реальный function_id после
+  #    `yc serverless function get heys-api-push --format json | jq -r .id`
+  # ═══════════════════════════════════════════════════════════════
+  /push/vapid-key:
+    get:
+      summary: Get public VAPID key (для subscribe на фронте)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+
+  /push/subscribe:
+    post:
+      summary: Save push subscription for client or curator
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+
+  /push/unsubscribe:
+    post:
+      summary: Remove push subscription
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+
+  /push/prefs:
+    post:
+      summary: Save notification preferences (per-client or per-curator)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+
+  /push/test:
+    post:
+      summary: Send a test push to current user's subscriptions
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e2d7p20llki46ctf2b
+
+  # ═══════════════════════════════════════════════════════════════
   # Supabase-compatible routes (для совместимости)
   # ═══════════════════════════════════════════════════════════════
 

@@ -1,0 +1,10 @@
+{
+  "name": "heys-api-push",
+  "version": "1.0.0",
+  "description": "HEYS Web Push API — subscribe / unsubscribe / send / prefs",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3",
+    "web-push": "^3.6.7"
+  }
+}

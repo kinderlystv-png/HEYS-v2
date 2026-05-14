@@ -1,0 +1,10 @@
+{
+  "name": "heys-cron-reminders",
+  "version": "1.0.0",
+  "description": "HEYS Cron — periodic push notification checks (5 scenarios)",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3",
+    "web-push": "^3.6.7"
+  }
+}
