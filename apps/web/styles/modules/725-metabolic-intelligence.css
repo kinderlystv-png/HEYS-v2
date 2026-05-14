@@ -4282,6 +4282,31 @@
   padding: 6px 12px;
   justify-content: center;
   flex-wrap: wrap;
+  /* R-INS-5D (2026-05-14): sticky priority filters — не теряются при скроллинге.
+   * env(safe-area-inset-top) для iOS notch (P12 mitigation: WebKit safari edge).
+   * Высокий z-index чтобы перекрывал контент при сильном скролле.
+   */
+  position: sticky;
+  top: env(safe-area-inset-top, 0);
+  z-index: 10;
+  background: var(--heys-bg-primary, #fff);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+@supports not (top: env(safe-area-inset-top)) {
+  .priority-filter-bar { top: 0; }
+}
+[data-theme="dark"] .priority-filter-bar {
+  background: rgba(17, 24, 39, 0.85);
+}
+
+/* R-INS-5F (2026-05-14): focus-visible outline для accessibility (WCAG 2.4.7).
+ * Раньше клавиатурная навигация не показывала где фокус — нарушение a11y.
+ */
+.priority-filter-bar__btn:focus-visible,
+.category-filter-bar__btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
 
 .priority-filter-bar__btn {
