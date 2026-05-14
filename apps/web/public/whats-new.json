@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.14.402bcd9a",
+      "buildHash": "402bcd9a",
+      "date": "2026-05-14",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "R-INS-P2-3/P2-4: умные паттерны и goal-aware приоритеты",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Шумные паттерны скрыты по умолчанию",
+          "description": "Раньше в Паттернах показывались все detected — включая те которые требуют данных, которые юзеры обычно не вводят: Hypertrophy (нужны замеры бицепса/бедра), Heart Health (нужен холестерин), Body Composition (нужны фото), Hydration (редко вводят воду), Mood Trajectory (редко заполняют настроение), Omega Balance (нужен детальный PUFA). Плюс Wave Overlap — actionability=0 при 5+ приёмов/день. Теперь они скрыты по умолчанию + паттерны с confidence < 50%. Опытные юзеры могут включить toggle «↓ Показать все паттерны (N скрыто)» — выбор сохраняется."
+        },
+        {
+          "type": "improvement",
+          "title": "Приоритет предупреждений учитывает твою цель",
+          "description": "Раньше Early Warning сортировал по severity × frequency без учёта профиля. Для cutting юзера WEIGHT_SPIKE мог быть в #1, хотя вес flux при дефиците ожидаем. Теперь применяется goal-aware multiplier: для cutting — PROTEIN_DEFICIT (×1.5) и WEIGHT_PLATEAU (×1.5) поднимаются наверх, WEIGHT_SPIKE (×0.8) опускается. Для bulking — наоборот: CALORIC_DEBT критичен (×1.5), а WEIGHT_SPIKE ожидаем (×0.7). Plus phenotype multipliers: insulin_resistant — SUGAR_DEPENDENCY ×1.5; stress_eater — STRESS_ACCUMULATION ×1.5; evening_chronotype — CIRCADIAN_DISRUPTION ×0.7 (это норма для них). Hard cap [0.3, 3.0] защищает от runaway stacking. P3 защита: profile.goal undefined → maintenance default (no NaN)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.14.7d644f9b",
       "buildHash": "7d644f9b",
       "date": "2026-05-14",
