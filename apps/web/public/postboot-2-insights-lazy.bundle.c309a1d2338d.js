@@ -2333,6 +2333,18 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     return typeof value === 'number' ? value : parseFloat(value) || null;
   };
 
+  // R-INS-6D: user experience level helper.
+  // Profile может содержать `userLevel: 'beginner'|'intermediate'|'advanced'`.
+  // Default fallback: 'intermediate' (текущее поведение).
+  // Используется для определения сколько информации показывать по умолчанию.
+  const USER_LEVELS = ['beginner', 'intermediate', 'advanced'];
+  function getUserLevel(profile) {
+    const lvl = profile && typeof profile.userLevel === 'string'
+      ? profile.userLevel.toLowerCase()
+      : null;
+    return USER_LEVELS.includes(lvl) ? lvl : 'intermediate';
+  }
+
   HEYS.InsightsPI.constants = {
     CONFIG,
     PRIORITY_LEVELS,
@@ -2352,7 +2364,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     SCIENCE_INFO,
     PATTERNS,
     UNIT_REGISTRY,       // NEW: Phase 0
-    normalizeToUnit      // NEW: Phase 0
+    normalizeToUnit,     // NEW: Phase 0
+    USER_LEVELS,         // R-INS-6D
+    getUserLevel         // R-INS-6D
   };
 
   // Экспорт в глобальную область для повторного использования/диагностики
@@ -33638,11 +33652,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     function PatternsList({ patterns }) {
       if (!patterns || patterns.length === 0) return null;
 
+      // R-INS-6D: advanced юзер по умолчанию видит ВСЕ паттерны (low-signal тоже).
+      // beginner/intermediate — скрыты по дефолту, можно включить toggle.
       const [showAll, setShowAll] = React.useState(() => {
         try {
           const utils = HEYS?.utils;
+          // Сначала смотрим explicit user choice в LS — он перебивает default.
           const raw = utils?.lsGet ? utils.lsGet(SHOW_ALL_LS_KEY) : localStorage.getItem(SHOW_ALL_LS_KEY);
-          return raw === '1' || raw === true;
+          if (raw === '1' || raw === true) return true;
+          if (raw === '0' || raw === false) return false;
+          // Нет explicit выбора → default по userLevel.
+          const profile = utils?.lsGet ? utils.lsGet('heys_profile', {}) : {};
+          const getUserLevel = HEYS?.InsightsPI?.constants?.getUserLevel;
+          const level = typeof getUserLevel === 'function' ? getUserLevel(profile) : 'intermediate';
+          return level === 'advanced';
         } catch (e) { return false; }
       });
 

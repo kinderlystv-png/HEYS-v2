@@ -2331,6 +2331,18 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     return typeof value === 'number' ? value : parseFloat(value) || null;
   };
 
+  // R-INS-6D: user experience level helper.
+  // Profile может содержать `userLevel: 'beginner'|'intermediate'|'advanced'`.
+  // Default fallback: 'intermediate' (текущее поведение).
+  // Используется для определения сколько информации показывать по умолчанию.
+  const USER_LEVELS = ['beginner', 'intermediate', 'advanced'];
+  function getUserLevel(profile) {
+    const lvl = profile && typeof profile.userLevel === 'string'
+      ? profile.userLevel.toLowerCase()
+      : null;
+    return USER_LEVELS.includes(lvl) ? lvl : 'intermediate';
+  }
+
   HEYS.InsightsPI.constants = {
     CONFIG,
     PRIORITY_LEVELS,
@@ -2350,7 +2362,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     SCIENCE_INFO,
     PATTERNS,
     UNIT_REGISTRY,       // NEW: Phase 0
-    normalizeToUnit      // NEW: Phase 0
+    normalizeToUnit,     // NEW: Phase 0
+    USER_LEVELS,         // R-INS-6D
+    getUserLevel         // R-INS-6D
   };
 
   // Экспорт в глобальную область для повторного использования/диагностики

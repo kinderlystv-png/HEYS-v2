@@ -1126,11 +1126,20 @@
     function PatternsList({ patterns }) {
       if (!patterns || patterns.length === 0) return null;
 
+      // R-INS-6D: advanced юзер по умолчанию видит ВСЕ паттерны (low-signal тоже).
+      // beginner/intermediate — скрыты по дефолту, можно включить toggle.
       const [showAll, setShowAll] = React.useState(() => {
         try {
           const utils = HEYS?.utils;
+          // Сначала смотрим explicit user choice в LS — он перебивает default.
           const raw = utils?.lsGet ? utils.lsGet(SHOW_ALL_LS_KEY) : localStorage.getItem(SHOW_ALL_LS_KEY);
-          return raw === '1' || raw === true;
+          if (raw === '1' || raw === true) return true;
+          if (raw === '0' || raw === false) return false;
+          // Нет explicit выбора → default по userLevel.
+          const profile = utils?.lsGet ? utils.lsGet('heys_profile', {}) : {};
+          const getUserLevel = HEYS?.InsightsPI?.constants?.getUserLevel;
+          const level = typeof getUserLevel === 'function' ? getUserLevel(profile) : 'intermediate';
+          return level === 'advanced';
         } catch (e) { return false; }
       });
 
