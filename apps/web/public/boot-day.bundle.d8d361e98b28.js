@@ -18102,6 +18102,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 style: qualityLineColor !== 'transparent'
                     ? { background: qualityLineColor + '1F' }
                     : undefined,
+                onClick: (e) => {
+                    // Тап по бару → скролл к началу карточки приёма. Игнорируем клики
+                    // по интерактивным детям (время-бэйдж, dropdown типа приёма).
+                    if (e.target.closest('select, .meal-time-badge-inside, .meal-type-wrapper, .meal-type-select')) return;
+                    const card = e.currentTarget.closest('.meal-card');
+                    if (!card) return;
+                    const cardTop = card.getBoundingClientRect().top + window.scrollY;
+                    // Offset = такой же top, на котором паркуется sticky-бар. После
+                    // скролла card.top ≈ 100px в viewport, sticky-бар в естественной
+                    // позиции (не "стуck"), пользователь видит начало карточки чисто.
+                    window.scrollTo({ top: Math.max(0, cardTop - 100), behavior: 'smooth' });
+                },
             },
                 React.createElement('div', {
                     className: 'meal-header-main-row',

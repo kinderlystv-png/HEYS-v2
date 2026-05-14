@@ -1,4 +1,258 @@
 
+/* ===== heys_push_v1.js ===== */
+// heys_push_v1.js — Web Push клиент HEYS
+// Подписка / отписка / настройки / тестовый пуш.
+// HEYS.push.* — публичный API, используется heys_consents_v1 и heys_user_tab_impl_v1.
+
+(function (global) {
+  'use strict';
+
+  const HEYS = global.HEYS = global.HEYS || {};
+  const lsGet = (k, d) => (HEYS.utils?.lsGet ? HEYS.utils.lsGet(k, d) : (() => {
+    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; }
+  })());
+  const lsSet = (k, v) => (HEYS.utils?.lsSet ? HEYS.utils.lsSet(k, v) : localStorage.setItem(k, JSON.stringify(v)));
+
+  // ── API base URL (та же логика что в heys_yandex_api_v1) ──────────────
+  const isLocalBrowserDev =
+    typeof location !== 'undefined' &&
+    /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  const API_URL = isLocalBrowserDev ? 'http://localhost:4001' : 'https://api.heyslab.ru';
+
+  // ── Get bearer token (клиентский session или JWT куратора) ───────────
+  function getBearerToken() {
+    // 1) Клиентская сессия (PIN-auth)
+    try {
+      if (HEYS.auth && typeof HEYS.auth.getSessionToken === 'function') {
+        const t = HEYS.auth.getSessionToken();
+        if (t) return t;
+      }
+    } catch (e) { /* ignore */ }
+    try {
+      const raw = localStorage.getItem('heys_session_token');
+      if (raw) { try { return JSON.parse(raw); } catch { return raw; } }
+    } catch (e) { /* ignore */ }
+
+    // 2) JWT куратора
+    try {
+      const curatorSession = localStorage.getItem('heys_curator_session');
+      if (curatorSession) return curatorSession;
+    } catch (e) { /* ignore */ }
+    try {
+      const raw = localStorage.getItem('heys_supabase_auth_token');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.access_token) return parsed.access_token;
+      }
+    } catch (e) { /* ignore */ }
+
+    return null;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function isCapable() {
+    return (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      'serviceWorker' in navigator &&
+      'PushManager' in window
+    );
+  }
+
+  function isStandalone() {
+    return (
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      window.navigator?.standalone === true
+    );
+  }
+
+  function isIosSafari() {
+    const ua = navigator.userAgent || '';
+    const isIos = /iPhone|iPad|iPod/i.test(ua);
+    const isWebkit = /WebKit/.test(ua) && !/CriOS|FxiOS|EdgiOS|YaBrowser/.test(ua);
+    return isIos && isWebkit;
+  }
+
+  // urlBase64ToUint8Array — VAPID public key из base64url в Uint8Array (для applicationServerKey).
+  function urlBase64ToUint8Array(base64) {
+    const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+    const normalized = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(normalized);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  // ── API calls ─────────────────────────────────────────────────────────
+  async function api(method, path, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = getBearerToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    let json = null;
+    try { json = await res.json(); } catch { /* ignore */ }
+    if (!res.ok) {
+      const err = new Error(json?.error || `http_${res.status}`);
+      err.statusCode = res.status;
+      err.response = json;
+      throw err;
+    }
+    return json;
+  }
+
+  async function fetchVapidPublicKey() {
+    const cached = lsGet('heys_push_vapid_pk', null);
+    if (cached) return cached;
+    const res = await fetch(`${API_URL}/push/vapid-key`);
+    if (!res.ok) throw new Error('vapid_key_fetch_failed');
+    const json = await res.json();
+    if (json?.publicKey) {
+      lsSet('heys_push_vapid_pk', json.publicKey);
+      return json.publicKey;
+    }
+    throw new Error('vapid_key_missing');
+  }
+
+  // ── Status ────────────────────────────────────────────────────────────
+  async function getStatus() {
+    const capable = isCapable();
+    const standalone = isStandalone();
+    const ios = isIosSafari();
+    const permission = capable ? Notification.permission : 'unsupported';
+    let subscription = null;
+    if (capable) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        subscription = await reg.pushManager.getSubscription();
+      } catch (e) { /* ignore */ }
+    }
+    // На iOS Safari пуши работают только из standalone PWA.
+    const needsInstall = ios && !standalone;
+    return { capable, ios, standalone, needsInstall, permission, subscribed: !!subscription };
+  }
+
+  // ── Subscribe / unsubscribe ───────────────────────────────────────────
+  async function subscribe(opts = {}) {
+    if (!isCapable()) {
+      return { ok: false, reason: 'not_capable' };
+    }
+    // iOS без install — пуши не приедут, нет смысла подписываться.
+    if (isIosSafari() && !isStandalone()) {
+      return { ok: false, reason: 'ios_needs_install' };
+    }
+
+    if (Notification.permission === 'default') {
+      const result = await Notification.requestPermission();
+      if (result !== 'granted') {
+        lsSet('heys_push_onboarded', { state: 'denied', at: Date.now() });
+        return { ok: false, reason: 'permission_denied' };
+      }
+    } else if (Notification.permission === 'denied') {
+      lsSet('heys_push_onboarded', { state: 'denied', at: Date.now() });
+      return { ok: false, reason: 'permission_blocked' };
+    }
+
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const publicKey = await fetchVapidPublicKey();
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+
+    const json = sub.toJSON();
+    await api('POST', '/push/subscribe', {
+      endpoint: json.endpoint,
+      keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+    });
+
+    lsSet('heys_push_onboarded', { state: 'granted', at: Date.now() });
+    return { ok: true };
+  }
+
+  async function unsubscribe() {
+    if (!isCapable()) return { ok: false, reason: 'not_capable' };
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await api('POST', '/push/unsubscribe', { endpoint: sub.endpoint });
+        await sub.unsubscribe();
+      }
+      lsSet('heys_push_onboarded', { state: 'unsubscribed', at: Date.now() });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: e.message };
+    }
+  }
+
+  async function savePrefs(prefs) {
+    const res = await api('POST', '/push/prefs', { prefs });
+    if (res?.prefs) lsSet('heys_push_prefs', res.prefs);
+    return res;
+  }
+
+  async function sendTest() {
+    return api('POST', '/push/test', {});
+  }
+
+  // ── Resubscribe листенер (триггерится из SW при pushsubscriptionchange) ─
+  if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener('message', async (event) => {
+      if (event.data?.type === 'heys-push-resubscribe') {
+        try {
+          await subscribe();
+          console.info('[HEYS.push] resubscribed after pushsubscriptionchange');
+        } catch (e) {
+          console.warn('[HEYS.push] resubscribe failed:', e.message);
+        }
+      }
+    });
+  }
+
+  // ── Auto-resubscribe при заходе (если permission=granted но subscription пропала) ─
+  async function maybeAutoResubscribe() {
+    if (!isCapable()) return;
+    if (Notification.permission !== 'granted') return;
+    const onboarded = lsGet('heys_push_onboarded', null);
+    if (onboarded?.state !== 'granted') return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        await subscribe();
+        console.info('[HEYS.push] auto-resubscribed (was granted, no subscription)');
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // ── Public API ────────────────────────────────────────────────────────
+  HEYS.push = {
+    isCapable,
+    isStandalone,
+    isIosSafari,
+    getStatus,
+    subscribe,
+    unsubscribe,
+    savePrefs,
+    sendTest,
+    maybeAutoResubscribe,
+    fetchVapidPublicKey,
+  };
+
+  // Авто-проверка на старте — через небольшой timeout, чтобы SW успел встать.
+  if (typeof window !== 'undefined') {
+    setTimeout(() => { maybeAutoResubscribe().catch(() => {}); }, 3000);
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
 /* ===== heys_user_tab_impl_v1.js ===== */
 // heys_user_tab_impl_v1.js — User profile, BMI/BMR calculations, HR zones (extracted)
 // 🆕 PERF v9.2: Метка момента когда boot-app начал исполняться
@@ -1371,6 +1625,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     )
                 ), // end ProfileSection norms
 
+                // === СЕКЦИЯ: Уведомления (push) ===
+                React.createElement(ProfileSection, {
+                    id: 'notifications',
+                    icon: '🔔',
+                    title: 'Уведомления',
+                    subtitle: 'Напоминания, итог дня, стрики',
+                    tone: 'cyan',
+                    expanded: expandedSections.notifications,
+                    onToggle: () => toggleSection('notifications')
+                },
+                    React.createElement('div', { className: 'profile-section__fields' },
+                        React.createElement(HEYS_PushSettingsCard, null)
+                    )
+                ),
+
                 // === СЕКЦИЯ 4: Безопасность (PIN) ===
                 React.createElement(ProfileSection, {
                     id: 'security',
@@ -2167,6 +2436,249 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         );
     }
 
+
+    // === Push-уведомления (новая секция) ===
+    function HEYS_PushSettingsCard() {
+        const isCurator = (() => {
+            try {
+                return !!localStorage.getItem('heys_curator_session') ||
+                    !!localStorage.getItem('heys_supabase_auth_token');
+            } catch { return false; }
+        })();
+
+        const defaults = isCurator
+            ? { enabled: true, quiet_start: '22:00', quiet_end: '08:00', inactive_client_enabled: true }
+            : {
+                enabled: true,
+                quiet_start: '23:00', quiet_end: '09:00',
+                meal_reminder_enabled: true, meal_reminder_gap_hours: 4,
+                evening_summary_enabled: true, evening_summary_time: '21:00',
+                streak_celebration_enabled: true
+            };
+
+        const [prefs, setPrefs] = React.useState(() => {
+            const stored = lsGet('heys_push_prefs', null) || {};
+            return { ...defaults, ...stored };
+        });
+        const [status, setStatus] = React.useState(null);
+        const [busy, setBusy] = React.useState(false);
+        const [testResult, setTestResult] = React.useState(null);
+
+        // Refresh статуса при монтировании.
+        React.useEffect(() => {
+            if (!HEYS.push) return;
+            HEYS.push.getStatus().then(setStatus).catch(() => {});
+        }, []);
+
+        const refreshStatus = async () => {
+            if (!HEYS.push) return;
+            try { setStatus(await HEYS.push.getStatus()); } catch {}
+        };
+
+        const update = (patch) => {
+            const next = { ...prefs, ...patch };
+            setPrefs(next);
+            // Локально сразу — синк с бэком debounced ниже.
+            lsSet('heys_push_prefs', next);
+            // Шлём на бэк (если есть подписка).
+            if (HEYS.push && status?.subscribed) {
+                HEYS.push.savePrefs(patch).catch((err) =>
+                    console.warn('[push.prefs] save failed:', err?.message)
+                );
+            }
+        };
+
+        const handleEnableClick = async () => {
+            if (!HEYS.push) return;
+            setBusy(true);
+            try {
+                const r = await HEYS.push.subscribe();
+                if (!r.ok) {
+                    if (r.reason === 'ios_needs_install') {
+                        alert('На iPhone уведомления работают только из установленного PWA. Поделиться → На экран Домой, потом запусти HEYS с домашнего экрана.');
+                    } else if (r.reason === 'permission_blocked') {
+                        alert('Уведомления заблокированы в браузере. Разблокируй их в настройках сайта (значок замка в адресной строке).');
+                    } else if (r.reason === 'permission_denied') {
+                        alert('Без разрешения уведомления не работают. Можно включить позже из этого окна.');
+                    } else if (r.reason === 'not_capable') {
+                        alert('Браузер не поддерживает push-уведомления.');
+                    }
+                }
+            } finally {
+                setBusy(false);
+                await refreshStatus();
+            }
+        };
+
+        const handleDisableClick = async () => {
+            if (!HEYS.push) return;
+            if (!confirm('Отключить push-уведомления полностью?')) return;
+            setBusy(true);
+            try { await HEYS.push.unsubscribe(); } finally {
+                setBusy(false);
+                await refreshStatus();
+            }
+        };
+
+        const handleTest = async () => {
+            if (!HEYS.push) return;
+            setTestResult(null);
+            setBusy(true);
+            try {
+                const r = await HEYS.push.sendTest();
+                if (r?.success && r.sent > 0) setTestResult(`✓ Отправлено на ${r.sent} устройств(а). Должен прилететь через пару секунд.`);
+                else if (r?.error === 'no_subscriptions') setTestResult('⚠ Нет активных подписок. Включи уведомления.');
+                else setTestResult(`⚠ ${r?.error || 'не отправлено'}`);
+            } catch (e) {
+                setTestResult(`❌ ${e.message}`);
+            } finally { setBusy(false); }
+        };
+
+        // Не-capable браузер.
+        if (status && !status.capable) {
+            return React.createElement('div', { style: { padding: '12px', color: '#71717a' } },
+                'Этот браузер не поддерживает push-уведомления (нужен Chrome/Edge/Firefox/Safari 16.4+).'
+            );
+        }
+
+        // iOS не-standalone — баннер про установку.
+        if (status?.needsInstall) {
+            return React.createElement('div', {
+                style: {
+                    padding: '14px', borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                    color: 'white'
+                }
+            },
+                React.createElement('div', { style: { fontWeight: 600, marginBottom: '6px' } },
+                    '📲 Сначала установи HEYS на домашний экран'),
+                React.createElement('div', { style: { fontSize: '14px', opacity: 0.9 } },
+                    'На iPhone уведомления работают только из установленного приложения. Нажми ' +
+                    'Поделиться → «На экран Домой», запусти HEYS с домашнего экрана и вернись сюда.')
+            );
+        }
+
+        const Toggle = ({ value, onChange }) =>
+            React.createElement('input', {
+                type: 'checkbox', checked: !!value, onChange: (e) => onChange(e.target.checked),
+                style: { width: '20px', height: '20px', cursor: 'pointer' }
+            });
+
+        const TimeInput = ({ value, onChange }) =>
+            React.createElement('input', {
+                type: 'time', value: value || '', onChange: (e) => onChange(e.target.value),
+                style: { padding: '4px 8px', borderRadius: '6px', border: '1px solid #d4d4d8' }
+            });
+
+        const NumberInput = ({ value, min, max, onChange }) =>
+            React.createElement('input', {
+                type: 'number', value: value || '', min, max,
+                onChange: (e) => onChange(Math.max(min, Math.min(max, Number(e.target.value) || min))),
+                style: { padding: '4px 8px', borderRadius: '6px', border: '1px solid #d4d4d8', width: '60px' }
+            });
+
+        const Row = (label, control) =>
+            React.createElement('div', {
+                style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', gap: '12px' }
+            },
+                React.createElement('span', { style: { color: '#3f3f46', fontSize: '14px' } }, label),
+                control
+            );
+
+        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+            // Статус + главная кнопка
+            React.createElement('div', {
+                style: {
+                    padding: '12px', borderRadius: '10px',
+                    background: status?.subscribed ? '#dcfce7' : '#f4f4f5',
+                    border: status?.subscribed ? '1px solid #22c55e' : '1px solid #e4e4e7',
+                    marginBottom: '8px'
+                }
+            },
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                    React.createElement('div', null,
+                        React.createElement('div', { style: { fontWeight: 600 } },
+                            status?.subscribed ? '✓ Уведомления включены' : 'Уведомления выключены'),
+                        React.createElement('div', { style: { fontSize: '12px', color: '#71717a', marginTop: '2px' } },
+                            'Permission: ', status?.permission || '—')
+                    ),
+                    status?.subscribed
+                        ? React.createElement('button', {
+                            onClick: handleDisableClick, disabled: busy,
+                            style: { padding: '6px 14px', borderRadius: '6px', background: 'transparent', border: '1px solid #71717a', color: '#71717a', cursor: 'pointer' }
+                        }, 'Отключить')
+                        : React.createElement('button', {
+                            onClick: handleEnableClick, disabled: busy,
+                            style: { padding: '6px 14px', borderRadius: '6px', background: '#22c55e', border: 'none', color: 'white', fontWeight: 500, cursor: 'pointer' }
+                        }, busy ? '…' : 'Включить')
+                )
+            ),
+
+            // Тонкие настройки (только если подписан и включён общий тумблер).
+            status?.subscribed && Row(
+                isCurator
+                    ? 'Алерт о пропавших клиентах (2+ дня)'
+                    : 'Напоминание о записи еды',
+                React.createElement(Toggle, {
+                    value: isCurator ? prefs.inactive_client_enabled : prefs.meal_reminder_enabled,
+                    onChange: (v) => update(isCurator
+                        ? { inactive_client_enabled: v }
+                        : { meal_reminder_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && prefs.meal_reminder_enabled && Row(
+                'Через сколько часов без записи',
+                React.createElement(NumberInput, {
+                    value: prefs.meal_reminder_gap_hours, min: 3, max: 6,
+                    onChange: (v) => update({ meal_reminder_gap_hours: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Вечерний итог дня',
+                React.createElement(Toggle, {
+                    value: prefs.evening_summary_enabled,
+                    onChange: (v) => update({ evening_summary_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && prefs.evening_summary_enabled && Row(
+                'Время итога',
+                React.createElement(TimeInput, {
+                    value: prefs.evening_summary_time,
+                    onChange: (v) => update({ evening_summary_time: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Похвала за 7 дней без пропусков',
+                React.createElement(Toggle, {
+                    value: prefs.streak_celebration_enabled,
+                    onChange: (v) => update({ streak_celebration_enabled: v })
+                })
+            ),
+            status?.subscribed && Row(
+                'Тишина с',
+                React.createElement(TimeInput, {
+                    value: prefs.quiet_start,
+                    onChange: (v) => update({ quiet_start: v })
+                })
+            ),
+            status?.subscribed && Row(
+                'до',
+                React.createElement(TimeInput, {
+                    value: prefs.quiet_end,
+                    onChange: (v) => update({ quiet_end: v })
+                })
+            ),
+
+            // Тестовая кнопка
+            status?.subscribed && React.createElement('div', { style: { marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e4e4e7' } },
+                React.createElement('button', {
+                    onClick: handleTest, disabled: busy,
+                    style: { padding: '8px 16px', borderRadius: '8px', background: '#3b82f6', border: 'none', color: 'white', cursor: 'pointer' }
+                }, 'Отправить тестовый пуш'),
+                testResult && React.createElement('div', { style: { marginTop: '8px', fontSize: '13px', color: '#3f3f46' } }, testResult)
+            )
+        );
+    }
 
     // === Нормы (встроенный блок) ===
     function HEYS_NormsCard() {

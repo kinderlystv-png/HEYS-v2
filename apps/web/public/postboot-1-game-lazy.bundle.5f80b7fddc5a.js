@@ -36423,6 +36423,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         link: null,
         required: false
       },
+      notifications: {
+        label: 'Получать напоминания, чтобы не забывать записывать еду',
+        link: null,
+        required: false
+      },
       payment_oferta: {
         label: 'Нажимая «Оплатить», принимаю условия Публичной оферты и Политики конфиденциальности',
         link: 'https://heyslab.ru/legal/user-agreement',
@@ -36703,6 +36708,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       health_data: false,
       marketing: false
     });
+    // notifications — отдельный preference, НЕ 152-ФЗ согласие.
+    // Default ON: пользователь явно решил включить уведомления при онбординге.
+    const [notificationsOptIn, setNotificationsOptIn] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showFullText, setShowFullText] = useState(null);
@@ -36803,6 +36811,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         // Сохраняем локально
         consentsAPI.saveLocal(clientId, consentList);
 
+        // Push opt-in (если пользователь согласился во время онбординга).
+        if (notificationsOptIn && HEYS.push) {
+          HEYS.push.subscribe().catch((err) =>
+            console.warn('[Consents] push.subscribe failed:', err?.message)
+          );
+        }
+
         // Успех!
         onComplete?.(consentList);
       } catch (err) {
@@ -36811,7 +36826,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       } finally {
         setLoading(false);
       }
-    }, [clientId, phone, code, consents, onComplete, onError]);
+    }, [clientId, phone, code, consents, notificationsOptIn, onComplete, onError]);
 
     // Переход к шагу верификации
     const handleProceedToVerify = useCallback(async () => {
@@ -36834,6 +36849,16 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           if (!result.success) throw new Error(result.error || 'Ошибка сохранения согласий');
 
           consentsAPI.saveLocal(clientId, consentList);
+
+          // Push opt-in: если пользователь согласился — подписываемся.
+          // Не блокируем onComplete если подписка не получится (например, iOS без install).
+          if (notificationsOptIn && HEYS.push) {
+            HEYS.push.subscribe().then(
+              (r) => console.info('[Consents] push.subscribe →', r),
+              (err) => console.warn('[Consents] push.subscribe failed:', err?.message)
+            );
+          }
+
           onComplete?.(consentList);
         } catch (err) {
           setError(err.message || 'Неизвестная ошибка');
@@ -36877,6 +36902,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         // Сохраняем локально
         consentsAPI.saveLocal(clientId, consentList);
 
+        // Push opt-in (если пользователь согласился во время онбординга).
+        if (notificationsOptIn && HEYS.push) {
+          HEYS.push.subscribe().catch((err) =>
+            console.warn('[Consents] push.subscribe failed:', err?.message)
+          );
+        }
+
         // Успех!
         onComplete?.(consentList);
       } catch (err) {
@@ -36885,7 +36917,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       } finally {
         setLoading(false);
       }
-    }, [clientId, consents, allRequiredAccepted, onComplete, onError]);
+    }, [clientId, consents, allRequiredAccepted, notificationsOptIn, onComplete, onError]);
 
     return React.createElement('div', {
       className: 'fixed inset-0 z-50 flex flex-col',
@@ -36979,6 +37011,16 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
               checked: consents.marketing,
               onChange: () => handleToggle('marketing'),
               config: CONSENT_TEXTS.checkboxes.marketing
+            }),
+
+            // Push-уведомления (preference, не 152-ФЗ).
+            // Default ON; пользователь может снять галочку, и тогда мы НЕ
+            // запросим Notification.requestPermission().
+            React.createElement(ConsentCheckbox, {
+              type: 'notifications',
+              checked: notificationsOptIn,
+              onChange: () => setNotificationsOptIn(v => !v),
+              config: CONSENT_TEXTS.checkboxes.notifications
             })
           ),
 

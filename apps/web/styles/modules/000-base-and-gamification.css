@@ -9475,6 +9475,9 @@ body:has(.offline-banner) .wrap {
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  /* Тап по бару → скролл к началу приёма. Интерактивные дети (время, dropdown)
+   * имеют свой курсор и обработчики — onClick на баре их игнорирует. */
+  cursor: pointer;
 }
 
 /* iOS safe-area для устройств с notch (env() работает только под @supports) */
