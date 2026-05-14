@@ -400,6 +400,30 @@
   margin-top: 16px;
 }
 
+/* R-INS-P2-3: toggle для скрытых low-signal patterns */
+.insights-patterns__toggle {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  min-height: 44px;
+}
+
+.insights-patterns__toggle:hover,
+.insights-patterns__toggle:focus-visible {
+  background: rgba(0, 0, 0, 0.06);
+  color: #374151;
+  border-color: rgba(0, 0, 0, 0.25);
+  outline: none;
+}
+
 .insights-pattern {
   display: flex;
   align-items: flex-start;

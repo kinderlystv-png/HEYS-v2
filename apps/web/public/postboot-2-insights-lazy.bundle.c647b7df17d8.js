@@ -14989,6 +14989,76 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         low: 1
     };
 
+    // R-INS-P2-4: goal-aware priority multipliers.
+    // Применяются к priorityScore. >1.0 = поднять в выдаче, <1.0 = опустить.
+    // Default 1.0 для пар (goal, warningType) которых нет в lookup.
+    const GOAL_RANKING_MULTIPLIERS = {
+        cutting: {
+            PROTEIN_DEFICIT: 1.5,        // критично при дефиците
+            WEIGHT_PLATEAU: 1.5,         // главная проблема cut'a
+            SLEEP_DEBT: 1.2,             // сон → правильная потеря жира
+            CALORIC_DEBT: 0.8,           // дефицит ОЖИДАЕМЫЙ для cut, не панический
+            WEIGHT_SPIKE: 0.8            // вес может flux, не критично
+        },
+        bulking: {
+            PROTEIN_DEFICIT: 1.5,        // критично для роста
+            CALORIC_DEBT: 1.5,           // ломает bulk → срочно фиксить
+            WEIGHT_PLATEAU: 0.8,         // менее тревожно, ожидаемо
+            WEIGHT_SPIKE: 0.7            // ОК при bulk
+        },
+        maintenance: {} // все 1.0
+    };
+
+    // R-INS-P2-4: phenotype-aware priority multipliers
+    const PHENOTYPE_RANKING_MULTIPLIERS = {
+        // profile.phenotype.metabolic === 'insulin_resistant'
+        insulin_resistant: {
+            SUGAR_DEPENDENCY: 1.5,        // главная проблема для IR
+            CIRCADIAN_DISRUPTION: 1.3,    // вечерняя insulin sensitivity ниже
+            MEAL_TIMING_DRIFT: 1.2,
+            FIBER_DEFICIT: 1.2            // клетчатка снижает GL
+        },
+        // profile.phenotype.stress === 'stress_eater'
+        stress_eater: {
+            STRESS_ACCUMULATION: 1.5,
+            BINGE_RISK: 1.5,
+            MOOD_WELLBEING_DECLINE: 1.3
+        },
+        // profile.phenotype.circadian === 'evening' (chronotype)
+        evening_chronotype: {
+            CIRCADIAN_DISRUPTION: 0.7,    // это норма для них, не патология
+            SLEEP_DEBT: 0.8               // позже спят, но не недосыпают
+        }
+    };
+
+    /**
+     * R-INS-P2-4: Apply goal/phenotype-aware ranking multipliers to priorityScore.
+     * P3 mitigation: fallback `profile.goal || 'maintenance'`.
+     */
+    function applyGoalPhenotypeRanking(warningType, baseScore, profile) {
+        const goal = (profile && profile.goal) || 'maintenance';
+        const goalMul = GOAL_RANKING_MULTIPLIERS[goal] && GOAL_RANKING_MULTIPLIERS[goal][warningType];
+        let multiplier = (typeof goalMul === 'number' && Number.isFinite(goalMul)) ? goalMul : 1.0;
+
+        const phen = profile && profile.phenotype;
+        if (phen) {
+            const phenKeys = [];
+            if (phen.metabolic) phenKeys.push(phen.metabolic);
+            if (phen.stress) phenKeys.push(phen.stress);
+            if (phen.circadian === 'evening') phenKeys.push('evening_chronotype');
+            for (const key of phenKeys) {
+                const phenMul = PHENOTYPE_RANKING_MULTIPLIERS[key] && PHENOTYPE_RANKING_MULTIPLIERS[key][warningType];
+                if (typeof phenMul === 'number' && Number.isFinite(phenMul)) {
+                    multiplier *= phenMul;
+                }
+            }
+        }
+        // Hard cap для защиты от runaway: 0.3..3.0
+        if (multiplier < 0.3) multiplier = 0.3;
+        if (multiplier > 3.0) multiplier = 3.0;
+        return baseScore * multiplier;
+    }
+
     // Human-friendly pattern descriptions (v1.0)
     // Формат: простое название + дружелюбное описание + научная база
     // ⚠ v4.3 (2026-05-14): SCIENCE TEXTS — DOI/PMID coverage notes.
@@ -15578,10 +15648,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
      * @param {Object} trendsData - Trends data with frequency information
      * @returns {Array} Prioritized warnings with priority scores
      */
-    function prioritizeWarnings(warnings, trendsData) {
+    function prioritizeWarnings(warnings, trendsData, profile) {
         console.info('ews / priority 🚀 start:', {
             warningsCount: warnings.length,
-            hasTrends: !!trendsData
+            hasTrends: !!trendsData,
+            hasProfile: !!profile,
+            goal: (profile && profile.goal) || 'maintenance',
+            phenotype: profile && profile.phenotype ? Object.keys(profile.phenotype).filter(k => profile.phenotype[k]).join(',') : 'none'
         });
 
         if (!warnings || warnings.length === 0) {
@@ -15596,7 +15669,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         console.info('ews / priority 🧮 compute:', {
             phase: 'calculating_scores',
-            formula: 'severity_weight × frequency14d × health_impact'
+            formula: 'severity × frequency × health_impact × goal_phenotype_mult (P2-4)'
         });
 
         // Calculate priority score for each warning
@@ -15607,11 +15680,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             const frequency14d = trendsData?.trends?.[warningType]?.frequency14d || 1; // at least 1 (today)
 
             // Priority formula: severity (1-3) × frequency (1-14) × health impact (0-100)
-            const priorityScore = severityWeight * frequency14d * healthImpact;
+            const baseScore = severityWeight * frequency14d * healthImpact;
+            // R-INS-P2-4: применить goal/phenotype-aware multiplier
+            const priorityScore = applyGoalPhenotypeRanking(warningType, baseScore, profile);
+            const rankingMultiplier = baseScore > 0 ? (priorityScore / baseScore) : 1.0;
 
             return {
                 ...warning,
                 priorityScore,
+                baseScore,
+                rankingMultiplier,
                 frequency14d,
                 healthImpact,
                 severityWeight
@@ -19236,7 +19314,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const trendsResult = trackWarningTrends(warnings);
 
         // Prioritize warnings by severity × frequency × health impact (v3.1)
-        const prioritizedWarnings = prioritizeWarnings(warnings, trendsResult.allTrends);
+        // R-INS-P2-4: + goal/phenotype-aware multiplier
+        const prioritizedWarnings = prioritizeWarnings(warnings, trendsResult.allTrends, profile);
 
         // Calculate EWS Global Score (v4.0)
         const globalScoreResult = calculateEwsGlobalScore(prioritizedWarnings, trendsResult);
@@ -33233,14 +33312,62 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     /**
      * Patterns List — список всех паттернов
      */
+    // R-INS-P2-3: паттерны которые часто шумят (требуют данных которых обычно нет,
+    // или actionability=0). По умолчанию скрыты, юзер может включить toggle'ом.
+    const LOW_SIGNAL_PATTERN_IDS = [
+      'wave_overlap',       // C02 — actionability=0 при 5+ приёмов/день
+      'hypertrophy',        // C12 — требует замеров бицепса/бедра
+      'heart_health',       // C9 — требует холестерина/Na/K
+      'body_composition',   // B4 — требует фото
+      'hydration',          // B3 — редко вводят воду
+      'mood_trajectory',    // C6 — редко заполняют настроение
+      'omega_balancer'      // C8 — требует детального PUFA анализа
+    ];
+    const SHOW_ALL_LS_KEY = 'heys_insights_show_all_patterns';
+
     function PatternsList({ patterns }) {
       if (!patterns || patterns.length === 0) return null;
 
+      const [showAll, setShowAll] = React.useState(() => {
+        try {
+          const utils = HEYS?.utils;
+          const raw = utils?.lsGet ? utils.lsGet(SHOW_ALL_LS_KEY) : localStorage.getItem(SHOW_ALL_LS_KEY);
+          return raw === '1' || raw === true;
+        } catch (e) { return false; }
+      });
+
       const availablePatterns = patterns.filter(p => p.available);
+      // R-INS-P2-3: low-signal pattern если в списке ИЛИ confidence < 0.5
+      const isLowSignal = (p) => LOW_SIGNAL_PATTERN_IDS.includes(p.pattern) || (typeof p.confidence === 'number' && p.confidence < 0.5);
+      const visiblePatterns = showAll ? availablePatterns : availablePatterns.filter(p => !isLowSignal(p));
+      const hiddenCount = availablePatterns.length - visiblePatterns.length;
+
+      const toggleShowAll = () => {
+        const next = !showAll;
+        setShowAll(next);
+        try {
+          const utils = HEYS?.utils;
+          if (utils?.lsSet) utils.lsSet(SHOW_ALL_LS_KEY, next ? '1' : '0');
+          else localStorage.setItem(SHOW_ALL_LS_KEY, next ? '1' : '0');
+        } catch (e) { /* noop */ }
+      };
 
       return h('div', { className: 'insights-patterns' },
-        availablePatterns.map((p, i) =>
+        visiblePatterns.map((p, i) =>
           h(PatternCard, { key: p.pattern || i, pattern: p })
+        ),
+        // Toggle строка только если есть что показывать/прятать
+        (hiddenCount > 0 || showAll) && h('button', {
+          type: 'button',
+          className: 'insights-patterns__toggle',
+          onClick: toggleShowAll,
+          'aria-pressed': showAll ? 'true' : 'false',
+          title: showAll
+            ? 'Скрыть низкоуверенные паттерны'
+            : `Показать ${hiddenCount} паттернов с низкой уверенностью или требующих данных`
+        }, showAll
+          ? '↑ Скрыть низкоуверенные'
+          : `↓ Показать все паттерны (${hiddenCount} скрыто)`
         )
       );
     }

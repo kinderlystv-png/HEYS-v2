@@ -1110,14 +1110,62 @@
     /**
      * Patterns List — список всех паттернов
      */
+    // R-INS-P2-3: паттерны которые часто шумят (требуют данных которых обычно нет,
+    // или actionability=0). По умолчанию скрыты, юзер может включить toggle'ом.
+    const LOW_SIGNAL_PATTERN_IDS = [
+      'wave_overlap',       // C02 — actionability=0 при 5+ приёмов/день
+      'hypertrophy',        // C12 — требует замеров бицепса/бедра
+      'heart_health',       // C9 — требует холестерина/Na/K
+      'body_composition',   // B4 — требует фото
+      'hydration',          // B3 — редко вводят воду
+      'mood_trajectory',    // C6 — редко заполняют настроение
+      'omega_balancer'      // C8 — требует детального PUFA анализа
+    ];
+    const SHOW_ALL_LS_KEY = 'heys_insights_show_all_patterns';
+
     function PatternsList({ patterns }) {
       if (!patterns || patterns.length === 0) return null;
 
+      const [showAll, setShowAll] = React.useState(() => {
+        try {
+          const utils = HEYS?.utils;
+          const raw = utils?.lsGet ? utils.lsGet(SHOW_ALL_LS_KEY) : localStorage.getItem(SHOW_ALL_LS_KEY);
+          return raw === '1' || raw === true;
+        } catch (e) { return false; }
+      });
+
       const availablePatterns = patterns.filter(p => p.available);
+      // R-INS-P2-3: low-signal pattern если в списке ИЛИ confidence < 0.5
+      const isLowSignal = (p) => LOW_SIGNAL_PATTERN_IDS.includes(p.pattern) || (typeof p.confidence === 'number' && p.confidence < 0.5);
+      const visiblePatterns = showAll ? availablePatterns : availablePatterns.filter(p => !isLowSignal(p));
+      const hiddenCount = availablePatterns.length - visiblePatterns.length;
+
+      const toggleShowAll = () => {
+        const next = !showAll;
+        setShowAll(next);
+        try {
+          const utils = HEYS?.utils;
+          if (utils?.lsSet) utils.lsSet(SHOW_ALL_LS_KEY, next ? '1' : '0');
+          else localStorage.setItem(SHOW_ALL_LS_KEY, next ? '1' : '0');
+        } catch (e) { /* noop */ }
+      };
 
       return h('div', { className: 'insights-patterns' },
-        availablePatterns.map((p, i) =>
+        visiblePatterns.map((p, i) =>
           h(PatternCard, { key: p.pattern || i, pattern: p })
+        ),
+        // Toggle строка только если есть что показывать/прятать
+        (hiddenCount > 0 || showAll) && h('button', {
+          type: 'button',
+          className: 'insights-patterns__toggle',
+          onClick: toggleShowAll,
+          'aria-pressed': showAll ? 'true' : 'false',
+          title: showAll
+            ? 'Скрыть низкоуверенные паттерны'
+            : `Показать ${hiddenCount} паттернов с низкой уверенностью или требующих данных`
+        }, showAll
+          ? '↑ Скрыть низкоуверенные'
+          : `↓ Показать все паттерны (${hiddenCount} скрыто)`
         )
       );
     }
