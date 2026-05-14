@@ -31722,7 +31722,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   /**
    * Total Health Score — большое центральное кольцо (v2.0: с InfoButton)
    */
-  function TotalHealthRing({ score, label = 'Trend Score', size = 120, strokeWidth = 20, debugData, onClick }) {
+  // R-INS-1A (2026-05-14): default label сменен с «Trend Score» на «Здоровье 7д»
+  // — явное отличие от Status Score (метаболизм сейчас) в MetabolicQuickStatus.
+  // Юзер теперь различит долгосрочный тренд vs сиюминутный метаболический статус.
+  function TotalHealthRing({ score, label = 'Здоровье 7д', size = 120, strokeWidth = 20, debugData, onClick }) {
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const progress = Math.min(100, Math.max(0, score || 0));
@@ -37737,7 +37740,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               ),
               h(getInfoButton(), { infoKey: 'STATUS_SCORE', size: 'small' })
             ),
-            h('div', { className: 'metabolic-quick-status__score-label' }, 'Метаболизм'),
+            h('div', { className: 'metabolic-quick-status__score-label' }, 'Метаболизм сейчас'),
             phase && h('div', { className: 'metabolic-quick-status__phase' },
               h('span', { className: 'metabolic-quick-status__phase-emoji' }, phase.emoji || '⚡'),
               h('span', { className: 'metabolic-quick-status__phase-text' }, phase.label || phase.phase)

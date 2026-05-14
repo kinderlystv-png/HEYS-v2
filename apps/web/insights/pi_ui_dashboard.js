@@ -3323,7 +3323,7 @@
               ),
               h(getInfoButton(), { infoKey: 'STATUS_SCORE', size: 'small' })
             ),
-            h('div', { className: 'metabolic-quick-status__score-label' }, 'Метаболизм'),
+            h('div', { className: 'metabolic-quick-status__score-label' }, 'Метаболизм сейчас'),
             phase && h('div', { className: 'metabolic-quick-status__phase' },
               h('span', { className: 'metabolic-quick-status__phase-emoji' }, phase.emoji || '⚡'),
               h('span', { className: 'metabolic-quick-status__phase-text' }, phase.label || phase.phase)
