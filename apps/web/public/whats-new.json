@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.14.a391d8e5",
+      "buildHash": "a391d8e5",
+      "date": "2026-05-14",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Allowlist sync after push module added",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Line drift",
+          "description": "consents line numbers shifted (my notifications block + other edits); heys_push_v1.js:12 added — fallback localStorage.setItem before HEYS.utils is loaded."
+        }
+      ]
+    },
+    {
       "version": "2026.05.14.d2af6276",
       "buildHash": "d2af6276",
       "date": "2026-05-14",
