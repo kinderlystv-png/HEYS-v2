@@ -8,12 +8,12 @@
     "builtAt": "2026-05-13T23:32:52.140Z"
   },
   "postboot-2-insights-lazy": {
-    "file": "postboot-2-insights-lazy.bundle.95a87d660874.js",
-    "hash": "95a87d660874",
-    "sourceFingerprint": "7eec7d16722c",
+    "file": "postboot-2-insights-lazy.bundle.b1e92e4a41f4.js",
+    "hash": "b1e92e4a41f4",
+    "sourceFingerprint": "a31010cb5bbe",
     "fileCount": 39,
-    "size": 2013273,
-    "builtAt": "2026-05-14T15:33:02.666Z"
+    "size": 2013693,
+    "builtAt": "2026-05-14T15:34:38.178Z"
   },
   "postboot-3-ui-lazy": {
     "file": "postboot-3-ui-lazy.bundle.355db6470d31.js",

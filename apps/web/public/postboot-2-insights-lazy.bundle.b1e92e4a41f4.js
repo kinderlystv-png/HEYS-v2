@@ -37260,27 +37260,32 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             // 🟢 НИЗКИЙ ПРИОРИТЕТ — Дополнительная информация
             // ═══════════════════════════════════════════════════════════
 
-            // Weekly Report Card (LOW — только на вкладке "Неделя")
-            shouldShowSection('LOW') && activeTab === 'week' && HEYS.weeklyReports?.WeeklyReportCard && h('div', {
-              className: 'insights-tab__section insights-tab__section--low'
-            },
-              h(HEYS.weeklyReports.WeeklyReportCard, {
-                lsGet,
-                profile,
-                pIndex,
-                anchorDate: selectedDate
-              })
-            ),
-
-            // Weekly Wrap (LOW — только на вкладке "Неделя")
-            shouldShowSection('LOW') && activeTab === 'week' && insights.weeklyWrap && h(CollapsibleSection, {
-              title: 'Итоги недели',
-              icon: '📋',
-              defaultOpen: true,
-              infoKey: 'WEEKLY_WRAP',
-              priority: 'LOW'
-            },
-              h(WeeklyWrap, { wrap: insights.weeklyWrap })
+            // R-INS-4A: слили Weekly Report + Weekly Wrap в одну секцию.
+            // До: показывались две почти идентичные карточки (WeeklyReportCard и
+            // WeeklyWrap) на week табе → визуальный дубль.
+            // Теперь: если insights.weeklyWrap есть — приоритетно его (modern UI),
+            // иначе fallback на WeeklyReportCard (legacy реализация).
+            shouldShowSection('LOW') && activeTab === 'week' && (
+              insights.weeklyWrap
+                ? h(CollapsibleSection, {
+                    title: 'Итоги недели',
+                    icon: '📋',
+                    defaultOpen: true,
+                    infoKey: 'WEEKLY_WRAP',
+                    priority: 'LOW'
+                  },
+                    h(WeeklyWrap, { wrap: insights.weeklyWrap })
+                  )
+                : HEYS.weeklyReports?.WeeklyReportCard && h('div', {
+                    className: 'insights-tab__section insights-tab__section--low'
+                  },
+                    h(HEYS.weeklyReports.WeeklyReportCard, {
+                      lsGet,
+                      profile,
+                      pIndex,
+                      anchorDate: selectedDate
+                    })
+                  )
             ),
 
             // Data Completeness (LOW)
