@@ -14684,6 +14684,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return [];
         }
 
+        // R-INS-3D (2026-05-14): Защита от false positives на малых выборках.
+        // Причинно-следственные цепочки требуют хотя бы 14 дней данных — иначе
+        // r=0.6 на 5 днях расценивается как валидная связь, что физиологически
+        // некорректно (шум).
+        // ⚠ P6 mitigation: показываем не пустой массив, а массив-с-маркером
+        // что данные собираются, чтобы UI мог отрисовать «Нужно 14 дней, у тебя X».
+        const MIN_DAYS_FOR_CAUSAL = 14;
+        if (warnings.length < MIN_DAYS_FOR_CAUSAL) {
+            console.info(`${LOG_PREFIX} ✅ result`, {
+                chains: 0,
+                reason: 'insufficient_data',
+                haveWarnings: warnings.length,
+                needWarnings: MIN_DAYS_FOR_CAUSAL,
+                daysRemaining: MIN_DAYS_FOR_CAUSAL - warnings.length
+            });
+            return Object.assign([], {
+                __insufficient: true,
+                __have: warnings.length,
+                __need: MIN_DAYS_FOR_CAUSAL,
+                __remaining: MIN_DAYS_FOR_CAUSAL - warnings.length
+            });
+        }
+
         const detectedChains = [];
         const warningTypesSet = new Set(warnings.map(w => w.type));
 
