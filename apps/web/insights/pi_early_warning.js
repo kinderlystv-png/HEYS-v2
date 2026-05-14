@@ -725,6 +725,10 @@
      * @param {Array} warnings - Current warnings from detectEarlyWarnings
      * @returns {Object} Top chronic warnings with frequency data
      */
+    // R-INS-P2-cont: TTL для resolved warnings (P13). Старше — stale, не показываем.
+    const RESOLVED_WARNING_TTL_DAYS = 30;
+    const ACTIVE_TO_RESOLVED_THRESHOLD_DAYS = 14;
+
     function trackWarningTrends(warnings) {
         console.info('ews / trends 🚀 start:', {
             currentWarnings: warnings.length,
@@ -735,6 +739,34 @@
         const trendsData = loadTrends();
         const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
         const todayTimestamp = new Date(today).getTime();
+
+        // R-INS-P2-cont: вычисляем resolved warnings — типы которые есть в trends, но нет в current.
+        // lastSeenDate = последний occurrence; resolved если 1-14 дней назад, stale если >14 дней.
+        const currentTypes = new Set(warnings.map(w => w.type));
+        const resolvedWarnings = [];
+        Object.entries(trendsData.trends || {}).forEach(([warningType, trend]) => {
+            if (currentTypes.has(warningType)) return; // active, не resolved
+            const lastOcc = trend.occurrences && trend.occurrences.length > 0
+                ? trend.occurrences[trend.occurrences.length - 1]
+                : null;
+            if (!lastOcc) return;
+            const lastSeenTimestamp = lastOcc.timestamp || new Date(lastOcc.date).getTime();
+            const daysSince = Math.floor((todayTimestamp - lastSeenTimestamp) / (24 * 60 * 60 * 1000));
+            // TTL — старше 30 дней не показываем как resolved
+            if (daysSince > RESOLVED_WARNING_TTL_DAYS) return;
+            // Если последний раз видели сегодня — пропускаем (warning только что закрылся)
+            if (daysSince < 1) return;
+            const status = daysSince <= ACTIVE_TO_RESOLVED_THRESHOLD_DAYS ? 'resolved' : 'stale';
+            resolvedWarnings.push({
+                type: warningType,
+                status,
+                lastSeenDate: lastOcc.date,
+                daysSince,
+                lastSeverity: lastOcc.severity || 'medium',
+                resolvedDate: today,
+                priorOccurrences: trend.frequency30d || trend.occurrences.length
+            });
+        });
 
         console.info('ews / trends 📥 input:', {
             date: today,
@@ -832,9 +864,18 @@
             chronicDisplayed: chronicWarnings.length
         });
 
+        // R-INS-P2-cont: log resolved warnings для мотивационного UI
+        if (resolvedWarnings.length > 0) {
+            console.info('ews / trends ✅ resolved:', {
+                count: resolvedWarnings.length,
+                types: resolvedWarnings.map(r => `${r.type} (${r.daysSince}d ago, ${r.status})`)
+            });
+        }
+
         return {
             chronicWarnings,
-            allTrends: trendsData.trends
+            allTrends: trendsData.trends,
+            resolvedWarnings  // R-INS-P2-cont
         };
     }
 
@@ -4559,15 +4600,21 @@
             console.info('ews / causal_chain ⚠️ skipped', { reason: 'module_not_loaded' });
         }
 
+        // R-INS-P2-cont: пометить все current warnings как status='active'
+        const activeWarnings = prioritizedWarnings.map(w => ({ ...w, status: 'active' }));
+        // Resolved warnings (status='resolved' или 'stale') приходят из trendsResult
+        const resolvedWarnings = trendsResult.resolvedWarnings || [];
+
         return {
             available: true,
-            count: warnings.length,
-            warnings: prioritizedWarnings, // Prioritized warnings with scores
-            summary: warnings.length === 0
+            count: activeWarnings.length,
+            warnings: activeWarnings, // Prioritized warnings with scores + status='active'
+            resolvedWarnings,  // R-INS-P2-cont: warnings которые недавно «потухли»
+            summary: activeWarnings.length === 0
                 ? '✅ Негативных трендов не обнаружено'
-                : `⚠️ Обнаружено ${warnings.length} warning signal${warnings.length > 1 ? 's' : ''}`,
-            highSeverityCount: warnings.filter(w => w.severity === 'high').length,
-            mediumSeverityCount: warnings.filter(w => w.severity === 'medium').length,
+                : `⚠️ Обнаружено ${activeWarnings.length} warning signal${activeWarnings.length > 1 ? 's' : ''}`,
+            highSeverityCount: activeWarnings.filter(w => w.severity === 'high').length,
+            mediumSeverityCount: activeWarnings.filter(w => w.severity === 'medium').length,
             // Trends tracking (v3.1)
             trends: {
                 chronicWarnings: trendsResult.chronicWarnings,

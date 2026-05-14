@@ -363,6 +363,34 @@ describe('Early Warning System', () => {
             expect(emptyProfileResult[0].priorityScore).toBe(explicitMaint[0].priorityScore);
         });
 
+        it('R-INS-P2-cont: warnings get status="active" field', () => {
+            const detect = global.HEYS.InsightsPI.earlyWarning.detect;
+            const pIndex = makePIndex();
+
+            const days = Array.from({ length: 14 }, (_, i) => makeDay(
+                `2026-02-${String(i + 1).padStart(2, '0')}`,
+                { kcal: 1000, healthScore: 30, statusScore: 30 }
+            ));
+
+            const result = detect(days, { optimum: 2000 }, pIndex);
+            expect(result.available).toBe(true);
+            // All current warnings must have status='active'
+            if (result.warnings.length > 0) {
+                result.warnings.forEach(w => {
+                    expect(w.status).toBe('active');
+                });
+            }
+        });
+
+        it('R-INS-P2-cont: resolvedWarnings array returned (even if empty)', () => {
+            const detect = global.HEYS.InsightsPI.earlyWarning.detect;
+            const pIndex = makePIndex();
+            const days = Array.from({ length: 14 }, (_, i) => makeDay(`2026-02-${String(i + 1).padStart(2, '0')}`, { kcal: 2000, healthScore: 80, statusScore: 80 }));
+
+            const result = detect(days, { optimum: 2000 }, pIndex);
+            expect(Array.isArray(result.resolvedWarnings)).toBe(true);
+        });
+
         it('combined goal + phenotype: multipliers stack within cap [0.3, 3.0]', () => {
             const prioritize = global.HEYS.InsightsPI.earlyWarning.prioritize;
             const warnings = [{ type: 'SUGAR_DEPENDENCY', severity: 'high' }];
