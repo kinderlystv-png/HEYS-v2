@@ -7833,7 +7833,11 @@ body:has(.offline-banner) .wrap {
   position: relative;
   contain: style;
   overflow-anchor: none;
-  overflow: hidden;
+  /* 🎯 R-DAY-STICKY (2026-05-14): clip вместо hidden — клипает контент при slide-анимации
+   * без создания scroll-container reference для дочерних position: sticky. overflow: hidden
+   * заставил бы sticky-элементы считать этот контейнер своей "scrolling box" → sticky
+   * не работала бы (sticky должна ссылаться на viewport через document scroll). */
+  overflow: clip;
   /* layout-containment, как и transform, ломает position: fixed для FAB */
   /* GPU acceleration включается только при анимации через will-change */
 }
@@ -9447,6 +9451,90 @@ body:has(.offline-banner) .wrap {
 }
 
 .meal-header-inside.meal-type-night .meal-kcal-badge-inside {
+  background: #eef2ff;
+  color: #3b82f6;
+}
+
+/* 🎯 R-DAY-STICKY (2026-05-14): прилипающая шапка приёма пищи.
+ * Когда верх .meal-card уходит за viewport, .meal-sticky-bar остаётся
+ * приклеенной под .hdr (top: 100px). При переходе к следующему приёму
+ * браузер сам "выталкивает" предыдущий sticky-бар (iOS-паттерн section header).
+ */
+.meal-sticky-bar {
+  position: sticky;
+  top: 100px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -6px -12px 8px -12px;
+  padding: 12px 16px;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* iOS safe-area для устройств с notch (env() работает только под @supports) */
+@supports (top: env(safe-area-inset-top)) {
+  .meal-sticky-bar {
+    top: calc(env(safe-area-inset-top, 0px) + 100px);
+  }
+}
+
+/* Per-meal-type gradients — мирорят .meal-header-inside.meal-type-X выше */
+.meal-sticky-bar.meal-type-breakfast {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-bottom-color: #fed7aa;
+}
+
+.meal-sticky-bar.meal-type-breakfast .meal-kcal-badge-inside {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.meal-sticky-bar.meal-type-lunch {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-bottom-color: #bbf7d0;
+}
+
+.meal-sticky-bar.meal-type-lunch .meal-kcal-badge-inside {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.meal-sticky-bar.meal-type-dinner {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-bottom-color: #bfdbfe;
+}
+
+.meal-sticky-bar.meal-type-dinner .meal-kcal-badge-inside {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.meal-sticky-bar.meal-type-snack1,
+.meal-sticky-bar.meal-type-snack2,
+.meal-sticky-bar.meal-type-snack3 {
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-bottom-color: #e5e7eb;
+}
+
+.meal-sticky-bar.meal-type-snack1 .meal-kcal-badge-inside,
+.meal-sticky-bar.meal-type-snack2 .meal-kcal-badge-inside,
+.meal-sticky-bar.meal-type-snack3 .meal-kcal-badge-inside {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.meal-sticky-bar.meal-type-night {
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  border-bottom-color: #c7d2fe;
+}
+
+.meal-sticky-bar.meal-type-night .meal-kcal-badge-inside {
   background: #eef2ff;
   color: #3b82f6;
 }

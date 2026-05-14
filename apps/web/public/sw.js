@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1778779705988';
+const CACHE_VERSION = 'heys-1778781782580';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -899,5 +899,67 @@ function openShareDB() {
     };
   });
 }
+
+// === PUSH NOTIFICATIONS ===
+// Сервер шлёт пуш через web-push с payload вида:
+//   { title, body, icon?, badge?, tag?, url? }
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: 'HEYS', body: event.data?.text() || '' };
+  }
+
+  const title = data.title || 'HEYS';
+  const options = {
+    body: data.body || '',
+    icon: data.icon || '/icon-192.png',
+    badge: data.badge || '/icon-192.png',
+    // tag — дедуп: новый пуш с тем же tag заменит предыдущий (а не плодит стопку)
+    tag: data.tag || 'heys-default',
+    renotify: !!data.renotify,
+    data: { url: data.url || '/' },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      // Если уже открыта вкладка с приложением — фокус + навигация.
+      const existing = windows.find((w) => w.url.includes(self.registration.scope));
+      if (existing) {
+        existing.focus();
+        if ('navigate' in existing) {
+          try { existing.navigate(targetUrl); } catch (e) { /* ignore */ }
+        }
+        return;
+      }
+      // Иначе открываем новое окно.
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+
+// Браузер может протухнуть endpoint и попросить пересоздать subscription.
+// Передаём управление странице (если открыта) через postMessage, она
+// делает subscribe заново.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  console.log('[SW] pushsubscriptionchange — broadcasting to clients');
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      for (const w of windows) {
+        try { w.postMessage({ type: 'heys-push-resubscribe' }); } catch (e) { /* ignore */ }
+      }
+    })
+  );
+});
 
 console.log('[SW] Service Worker loaded, version:', CACHE_VERSION);

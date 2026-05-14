@@ -7364,17 +7364,52 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             mealIndex: context?.mealIndex ?? null,
             grams: item.grams,
             productId: product.id ?? product.product_id ?? null,
-            productName: product.name || null
+            productName: product.name || null,
+            // 🆕 R-INS-PRESET-AS-ONE (2026-05-14): пометка для внешнего onAdd
+            // что элемент пришёл из пресета. Day flow может скрыть summary-модалку
+            // на промежуточных items (показать только после последнего).
+            _presetBatch: { index: idx, total: itemsToAdd.length }
           });
           context?.onAdd?.({
             product,
             grams: item.grams,
             mealIndex: context?.mealIndex,
             _traceId: traceId,
-            _origin: 'preset-apply'
+            _origin: 'preset-apply',
+            _presetBatch: { index: idx, total: itemsToAdd.length }
           });
         });
-        console.info('[HEYS.presets] ✅ Applied preset:', { name: selectedPreset?.name, count: itemsToAdd.length });
+        const itemCount = itemsToAdd.length;
+        const presetName = selectedPreset?.name;
+        console.info('[HEYS.presets] ✅ Applied preset:', { name: presetName, count: itemCount });
+
+        // 🆕 R-INS-PRESET-AS-ONE: набор считается за ОДИН выбор продукта,
+        // а не за N (N = items в наборе). Юзер указал «добавить 3» и выбрал
+        // набор из 3 продуктов — раньше счётчик падал до 0 после применения
+        // набора и модалка закрывалась. Теперь:
+        //   1. consumeAutoRepeatStep() вызывается 1 раз (минус 1 от целевого N)
+        //   2. Если remaining > 0 — закрываем ТОЛЬКО overlay пресетов (onClose),
+        //      модалка AddProductStep остаётся открытой → юзер выбирает ещё.
+        //   3. Если remaining <= 0 — закрываем всю модалку.
+        // Для multiProductMode без autoRepeat — тоже возвращаем юзера к выбору
+        // (он сам решит когда закрыть через X).
+        const hasAutoRepeat = !!context?.hasAutoRepeat;
+        const isMultiMode = !!context?.multiProductMode;
+        if (hasAutoRepeat && typeof context?.consumeAutoRepeatStep === 'function') {
+          const remaining = context.consumeAutoRepeatStep();
+          if (remaining > 0) {
+            console.info('[HEYS.presets] 🔁 Preset = 1 step, remaining:', remaining);
+            onClose?.(); // закрыть только overlay пресетов, AddProductStep остаётся
+            return;
+          }
+        } else if (isMultiMode) {
+          // multi mode без autoRepeat — после набора возвращаем к выбору продукта,
+          // юзер сам закроет модал когда захочет.
+          onClose?.();
+          return;
+        }
+
+        // autoRepeat исчерпан ИЛИ обычный режим → закрываем всю модалку
         if (HEYS.StepModal?.hide) {
           HEYS.StepModal.hide({ scrollToDiary: true });
         } else {

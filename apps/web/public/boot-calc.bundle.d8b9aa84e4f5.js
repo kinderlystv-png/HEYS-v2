@@ -18412,20 +18412,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             'data-meal-time': meal?.time || '',
             style: mealCardStyle,
         },
+            // 🎯 R-DAY-STICKY (2026-05-14): main-row вынесен прямым потомком .meal-card,
+            // чтобы position: sticky имел containing block = карточка целиком, а не маленькая шапка.
+            // Браузер сам разруливает "перекатывание" sticky-баров между соседними приёмами пищи.
             React.createElement('div', {
-                className: 'meal-header-inside meal-type-' + mealTypeInfo.type,
-                style: {
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    position: 'relative',
-                    background: qualityLineColor !== 'transparent'
-                        ? qualityLineColor + '1F'
-                        : undefined,
-                    borderRadius: '10px 10px 0 0',
-                    margin: '-12px -12px 8px -4px',
-                    padding: '12px 16px 12px 8px',
-                },
+                className: 'meal-sticky-bar meal-type-' + mealTypeInfo.type,
+                style: qualityLineColor !== 'transparent'
+                    ? { background: qualityLineColor + '1F' }
+                    : undefined,
             },
                 React.createElement('div', {
                     className: 'meal-header-main-row',
@@ -18472,7 +18466,24 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         mealKcal > 0 ? (mealKcal + ' ккал') : '0 ккал',
                     ),
                 ),
-                (resolvedActivityContext && resolvedActivityContext.type !== 'none' || mealQuality?.mealRoleStatus) && React.createElement('div', {
+            ),
+            // .meal-header-inside остаётся для бэйджей (activity context, role status).
+            // Рендерится только если есть что показать — иначе пустой div визуально лишний.
+            (resolvedActivityContext && resolvedActivityContext.type !== 'none' || mealQuality?.mealRoleStatus) && React.createElement('div', {
+                className: 'meal-header-inside meal-header-inside--badges-only meal-type-' + mealTypeInfo.type,
+                style: {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    position: 'relative',
+                    background: qualityLineColor !== 'transparent'
+                        ? qualityLineColor + '1F'
+                        : undefined,
+                    margin: '0 -12px 8px -4px',
+                    padding: '8px 16px 12px 8px',
+                },
+            },
+                React.createElement('div', {
                     className: 'meal-header-badges-row',
                     style: {
                         display: 'flex',
