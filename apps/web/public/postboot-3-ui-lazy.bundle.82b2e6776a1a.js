@@ -10588,9 +10588,14 @@ NOVA: 1
       return [];
     });
     const [error, setError] = useState('');
+    // Защита от ре-инициализации авто-порциями после ручного удаления.
+    // Why: useEffect ниже срабатывает каждый раз когда portions.length становится 0,
+    // из-за чего удаление единственной рекомендованной порции мгновенно её возвращает.
+    const userTouchedRef = useRef(false);
 
     useEffect(() => {
       if (!product) return;
+      if (userTouchedRef.current) return;
       if (portions.length > 0) return;
 
       if (product?.portions?.length) {
@@ -10605,6 +10610,7 @@ NOVA: 1
 
     const handleAddPortion = useCallback(() => {
       haptic('light');
+      userTouchedRef.current = true;
       setPortions((prev) => {
         const next = [...prev, { name: '', grams: '' }];
         console.info('[HEYS.portions] ➕ Добавить порцию', {
@@ -10618,6 +10624,7 @@ NOVA: 1
 
     const handleRemovePortion = useCallback((index) => {
       haptic('light');
+      userTouchedRef.current = true;
       console.info('[HEYS.portions] ➖ Удалить порцию', {
         productId: product?.id ?? product?.product_id ?? null,
         index
@@ -10627,6 +10634,7 @@ NOVA: 1
 
     const handleUpdatePortion = useCallback((index, field, value) => {
       console.info('[HEYS.portions] ✏️ handleUpdatePortion', { index, field, value });
+      userTouchedRef.current = true;
       setPortions((prev) => {
         const next = prev.map((p, i) => {
           if (i !== index) return p;
@@ -10643,6 +10651,7 @@ NOVA: 1
     const handleApplyAuto = useCallback(() => {
       if (!autoPortions?.length) return;
       haptic('light');
+      userTouchedRef.current = true;
       setPortions(toEditablePortions(autoPortions));
     }, [autoPortions, toEditablePortions]);
 
@@ -10682,9 +10691,11 @@ NOVA: 1
         isCurator: isCuratorUser()
       });
 
+      // Why: всегда применяем normalized (в т.ч. пустой массив), иначе spread `...product`
+      // переносит старые portions при удалении всех порций в edit-mode.
       const updatedProduct = {
         ...product,
-        ...(normalized.length > 0 ? { portions: normalized } : {})
+        portions: normalized
       };
 
       onChange({
@@ -10712,7 +10723,8 @@ NOVA: 1
         });
       }
 
-      if (context?.isEditMode && normalized.length > 0) {
+      if (context?.isEditMode) {
+        // Why: сохраняем пустой массив тоже — это явное действие юзера «убрать все порции».
         saveProductPortions(updatedProduct, normalized);
       }
 
