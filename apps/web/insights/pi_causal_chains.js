@@ -146,12 +146,16 @@
             return [];
         }
 
-        // R-INS-3D (2026-05-14): Защита от false positives на малых выборках.
-        // Причинно-следственные цепочки требуют хотя бы 14 дней данных — иначе
-        // r=0.6 на 5 днях расценивается как валидная связь, что физиологически
-        // некорректно (шум).
-        // ⚠ P6 mitigation: показываем не пустой массив, а массив-с-маркером
-        // что данные собираются, чтобы UI мог отрисовать «Нужно 14 дней, у тебя X».
+        // R-INS-3D (2026-05-14, refined в R-INS-P2-1 2026-05-14):
+        // Защита от false positives на малых выборках. Причинно-следственные
+        // цепочки требуют хотя бы 14 дней данных — иначе r=0.6 на 5 днях
+        // расценивается как валидная связь, что физиологически некорректно (шум).
+        //
+        // Изначальный R-INS-3D return-метаданные `__insufficient/__have/__need/
+        // __remaining` через Object.assign([], ...). Но grep по консьюмерам показал
+        // что chains используются ТОЛЬКО в planner advisories (pi_meal_planner.js:482
+        // и :1751) — никакой UI секции для chains нет, метаданные никто не читал.
+        // Поэтому возвращаем простой пустой массив + лог с прогрессом (debug only).
         const MIN_DAYS_FOR_CAUSAL = 14;
         if (warnings.length < MIN_DAYS_FOR_CAUSAL) {
             console.info(`${LOG_PREFIX} ✅ result`, {
@@ -161,12 +165,7 @@
                 needWarnings: MIN_DAYS_FOR_CAUSAL,
                 daysRemaining: MIN_DAYS_FOR_CAUSAL - warnings.length
             });
-            return Object.assign([], {
-                __insufficient: true,
-                __have: warnings.length,
-                __need: MIN_DAYS_FOR_CAUSAL,
-                __remaining: MIN_DAYS_FOR_CAUSAL - warnings.length
-            });
+            return [];
         }
 
         const detectedChains = [];
