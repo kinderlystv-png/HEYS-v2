@@ -13,6 +13,11 @@ declare global {
 type FormState = 'idle' | 'loading' | 'success' | 'error'
 type Messenger = 'telegram' | 'whatsapp' | 'max'
 
+// Версия privacy-policy на момент сбора согласия. При обновлении документа
+// бампать здесь и заново показывать согласие активным лидам, если это
+// потребуется для compliance.
+const PRIVACY_POLICY_VERSION = '1.4'
+
 // UTM параметры
 interface UTMParams {
   utm_source?: string
@@ -119,7 +124,15 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           ...utmParams,
           // Технические данные
           referrer: typeof document !== 'undefined' ? document.referrer : undefined,
-          landing_page: typeof window !== 'undefined' ? window.location.pathname : undefined
+          landing_page: typeof window !== 'undefined' ? window.location.pathname : undefined,
+          // Согласие на обработку ПДн (152-ФЗ ст. 9). UI-checkbox уже
+          // провалидирован выше; сюда поле уходит для фиксации в БД.
+          consent: {
+            privacy_version: PRIVACY_POLICY_VERSION,
+            method: 'checkbox',
+            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+            accepted_at: new Date().toISOString(),
+          },
         })
       })
 

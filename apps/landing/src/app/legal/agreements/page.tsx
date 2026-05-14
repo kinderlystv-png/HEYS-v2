@@ -35,6 +35,13 @@ export default function AgreementsPage() {
             description: 'Сроки и порядок возврата средств за оплаченные подписки тарифов Base, Pro, Pro+.',
             icon: '💰',
         },
+        {
+            title: 'Политика использования cookies',
+            href: '/legal/cookie-policy',
+            version: '1.0',
+            description: 'Какие файлы cookie использует сайт, какая аналитика подключена и как ими управлять.',
+            icon: '🍪',
+        },
     ];
 
     return (

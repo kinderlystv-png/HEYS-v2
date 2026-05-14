@@ -16,7 +16,7 @@ export default function FooterSSR() {
             </div>
 
             {/* Links */}
-            <div className="flex gap-6 text-sm">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm justify-center md:justify-end">
               <a
                 href="/legal/user-agreement"
                 className="text-gray-400 hover:text-white transition-colors"
@@ -28,6 +28,12 @@ export default function FooterSSR() {
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 Политика конфиденциальности
+              </a>
+              <a
+                href="/legal/cookie-policy"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                Cookies
               </a>
             </div>
           </div>

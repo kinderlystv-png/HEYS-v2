@@ -51,6 +51,10 @@ export default function LegalLayout({
             <a href="/legal/health-data-consent" className="hover:text-gray-700 transition-colors">
               Данные о здоровье
             </a>
+            {' · '}
+            <a href="/legal/cookie-policy" className="hover:text-gray-700 transition-colors">
+              Cookies
+            </a>
           </p>
         </div>
       </footer>

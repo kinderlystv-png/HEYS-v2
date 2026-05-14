@@ -3,6 +3,7 @@ import { Open_Sans } from 'next/font/google'
 import Script from 'next/script'
 
 import { ABTestSwitcher } from '@/components/ABTestSwitcher'
+import CookieInfoBanner from '@/components/CookieInfoBanner'
 import { ScrollToTopFAB } from '@/components/ScrollToTopFAB'
 
 import '../styles/globals.css'
@@ -112,21 +113,14 @@ export const metadata: Metadata = {
   // },
 }
 
-// Env variables для аналитики
-// ⚠️ ОТКЛЮЧЕНО 2025-12-24: GA4 + Meta Pixel = трансграничная передача ПДн (ст.12 152-ФЗ)
-// Для включения требуется:
-// 1. Уведомление РКН о трансграничной передаче (до начала!)
-// 2. Обновление Политики конфиденциальности с описанием передачи
-// 3. Обновление Cookie-политики (сейчас: "только технические")
-// 4. Добавление opt-in cookie consent banner
-// 
-// TODO: После compliance включить обратно:
-// const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID
-// const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
-const GA4_ID = null; // disabled for 152-FZ compliance
-const META_PIXEL_ID = null; // disabled for 152-FZ compliance
+// GA4 + Meta Pixel отключены: трансграничная передача ПДн (ст. 12 152-ФЗ)
+// требует отдельного уведомления РКН и согласия пользователя.
+const GA4_ID = null;
+const META_PIXEL_ID = null;
 
-// Яндекс.Метрика — 152-ФЗ safe (данные в РФ)
+// Яндекс.Метрика — российский счётчик, данные в РФ.
+// Подключение раскрыто в privacy-policy.md §10. Webvisor отключён,
+// чтобы счётчик собирал только обезличенную статистику посещений.
 const YM_ID = process.env.NEXT_PUBLIC_YM_ID || null;
 
 export default function RootLayout({
@@ -137,7 +131,6 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <head>
-        {/* Яндекс.Метрика — 152-ФЗ compliant */}
         {YM_ID && (
           <Script id="yandex-metrika" strategy="afterInteractive">
             {`
@@ -150,7 +143,7 @@ export default function RootLayout({
                 clickmap:true,
                 trackLinks:true,
                 accurateTrackBounce:true,
-                webvisor:true
+                webvisor:false
               });
             `}
           </Script>
@@ -199,6 +192,7 @@ export default function RootLayout({
         {children}
         <ScrollToTopFAB />
         <ABTestSwitcher />
+        <CookieInfoBanner />
 
         {/* Яндекс.Метрика noscript fallback */}
         {YM_ID && (
