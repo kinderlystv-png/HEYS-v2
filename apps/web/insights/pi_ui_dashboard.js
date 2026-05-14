@@ -2012,8 +2012,16 @@
         return () => clearTimeout(timer);
       }, []); // Только при первом монтировании
 
-      // EmptyState если мало данных И тур уже пройден
-      if (!insights.available && insightsTourCompleted) {
+      // R-INS-P2-2 (2026-05-14): EmptyState порог поднят с 3 до 7 дней.
+      // При 3-6 днях юзер раньше видел 12 виджетов с пустыми/половинными
+      // данными — теперь видит unified EmptyState с прогрессом «4 из 7».
+      // CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS = 7 (pi_constants.js:14).
+      // Дополнительный guard: даже если insights.available=true, при
+      // daysWithData < 7 показываем EmptyState (preference UX > completeness).
+      const daysWithData = realInsights.daysAnalyzed || realInsights.daysWithData || 0;
+      const MIN_DAYS_FOR_FULL = 7;
+      const shouldShowEmptyState = !insights.available || daysWithData < MIN_DAYS_FOR_FULL;
+      if (shouldShowEmptyState && insightsTourCompleted) {
         return h(InsightsErrorBoundary, null,
           h('div', { className: 'insights-tab' },
             h('div', { className: 'insights-tab__hero' },
@@ -2023,8 +2031,8 @@
             ),
             h('div', { className: 'insights-tab__content' },
               h(EmptyState, {
-                daysAnalyzed: realInsights.daysAnalyzed || realInsights.daysWithData || 0,
-                minRequired: realInsights.minDaysRequired || 3
+                daysAnalyzed: daysWithData,
+                minRequired: realInsights.minDaysRequired || MIN_DAYS_FOR_FULL
               })
             )
           )
