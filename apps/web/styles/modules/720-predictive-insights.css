@@ -5905,6 +5905,59 @@ body:has(.insights-tab) .hdr::after {
   color: var(--text-primary, #1f2937);
 }
 
+/* R-INS-5C: tips section в EmptyState — actionable советы пока собираем данные */
+.insights-empty__tips {
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 16px;
+  padding: 14px 16px;
+  text-align: left;
+  margin-bottom: 12px;
+}
+
+.insights-empty__tips-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent, #3b82f6);
+  margin-bottom: 10px;
+}
+
+.insights-empty__tip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insights-empty__tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary, #1f2937);
+}
+
+.insights-empty__tip-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.insights-empty__tip-text {
+  flex: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .insights-empty__tips {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.28);
+  }
+}
+[data-theme="dark"] .insights-empty__tips {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
 /* Dark Mode */
 .dark .insights-empty {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));

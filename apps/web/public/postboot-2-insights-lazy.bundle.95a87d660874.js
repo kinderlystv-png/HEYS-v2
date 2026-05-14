@@ -35447,6 +35447,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return 'Данные собраны! Анализируем...';
       };
 
+      // R-INS-5C: контекстные tips на основе прогресса.
+      // Цель — дать актуальный совет пока юзер ждёт полного анализа.
+      const getTips = () => {
+        if (daysAnalyzed === 0) {
+          return [
+            { icon: '🍽️', text: 'Запиши первый приём пищи — даже примерно' },
+            { icon: '⚖️', text: 'Отметь вес сегодня — это база для прогноза' }
+          ];
+        }
+        if (daysAnalyzed <= 2) {
+          return [
+            { icon: '📋', text: 'Записывай 4-5 продуктов в день — точнее анализ' },
+            { icon: '😴', text: 'Не забудь отметить сон — главный рычаг здоровья' }
+          ];
+        }
+        if (daysAnalyzed <= 4) {
+          return [
+            { icon: '🎯', text: 'Регулярность важнее точности — записывай каждый день' },
+            { icon: '💧', text: 'Норма воды: 30мл на кг веса. Отмечай — увидишь связь' }
+          ];
+        }
+        return [
+          { icon: '⚡', text: 'Почти готово! Ещё пара дней и появятся персональные паттерны' },
+          { icon: '🧬', text: 'Через 14 дней откроются причинные цепочки (сон→стресс→еда)' }
+        ];
+      };
+
       return h('div', { className: 'insights-empty' },
         // Анимированная иконка
         h('div', { className: 'insights-empty__icon' }, '🔮'),
@@ -35474,6 +35501,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           h('div', { style: { textAlign: 'center' } },
             h('div', { className: 'insights-empty__stat-value insights-empty__stat-value--secondary' }, daysLeft),
             h('div', { className: 'insights-empty__stat-label' }, 'осталось')
+          )
+        ),
+
+        // R-INS-5C: контекстные tips — что делать ПОКА собираем данные
+        h('div', { className: 'insights-empty__tips' },
+          h('div', { className: 'insights-empty__tips-title' }, '💡 Пока собираем — попробуй:'),
+          h('div', { className: 'insights-empty__tip-list' },
+            getTips().map((tip, idx) =>
+              h('div', { key: idx, className: 'insights-empty__tip-item' },
+                h('span', { className: 'insights-empty__tip-icon' }, tip.icon),
+                h('span', { className: 'insights-empty__tip-text' }, tip.text)
+              )
+            )
           )
         ),
 
