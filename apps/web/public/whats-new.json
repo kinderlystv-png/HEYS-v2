@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.14.b9edb1b1",
+      "buildHash": "b9edb1b1",
+      "date": "2026-05-14",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Allowlist sync after R-INS-P2-3/P2-4",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Line drift",
+          "description": "pi_early_warning + pi_ui_cards line numbers shifted."
+        }
+      ]
+    },
+    {
       "version": "2026.05.14.402bcd9a",
       "buildHash": "402bcd9a",
       "date": "2026-05-14",
