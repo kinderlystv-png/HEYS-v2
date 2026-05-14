@@ -79,8 +79,17 @@
         const deltaX = touch.clientX - touchState.current.startX;
         const deltaY = touch.clientY - touchState.current.startY;
 
-        if (touchState.current.isVerticalScroll === null && (Math.abs(deltaX) > 15 || Math.abs(deltaY) > 15)) {
-          touchState.current.isVerticalScroll = Math.abs(deltaY) > Math.abs(deltaX);
+        // 🎯 R-SWIPE-SENSITIVITY (2026-05-14): на чувствительных экранах (iPhone)
+        // при вертикальной прокрутке мелкое горизонтальное дрожание пальца раньше
+        // триггерило свайп-меню. Чиним двумя загрузками:
+        //   1. Поднимаем gate-порог распознавания жеста с 15px до 18px (меньше
+        //      шанс распознать микродвижение как намеренный жест).
+        //   2. Горизонтальный режим включается ТОЛЬКО если |dx| > 1.6 × |dy|
+        //      (угол < ~32° от горизонтали). Любое менее очевидное движение —
+        //      классифицируется как вертикальный скролл и swipe-меню не блокирует
+        //      прокрутку. Раньше было |dy| > |dx| (диагональ 45° могла уйти не туда).
+        if (touchState.current.isVerticalScroll === null && (Math.abs(deltaX) > 18 || Math.abs(deltaY) > 18)) {
+          touchState.current.isVerticalScroll = !(Math.abs(deltaX) > 1.6 * Math.abs(deltaY));
         }
 
         if (touchState.current.isVerticalScroll) return;
