@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.14.0edf5d77",
+      "buildHash": "0edf5d77",
+      "date": "2026-05-14",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Allowlist sync after R-INS-3C status field",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Line drift",
+          "description": "pi_early_warning line numbers shifted after status logic added."
+        }
+      ]
+    },
+    {
       "version": "2026.05.14.b4e1d4ec",
       "buildHash": "b4e1d4ec",
       "date": "2026-05-14",
