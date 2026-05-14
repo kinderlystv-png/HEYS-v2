@@ -453,7 +453,7 @@
         console[method](`[HEYS.addTrace] ${event}`, payload);
       };
 
-      const handleAdd = ({ product, grams, mealIndex, _traceId, _origin }) => {
+      const handleAdd = ({ product, grams, mealIndex, _traceId, _origin, _presetBatch }) => {
         const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         // 🔬 [HEYS.day-trace] 1/8 entry — modal-driven add (handleAdd in heys_day_add_product.js).
         try {
@@ -715,6 +715,12 @@
 
         // 🆕 autoRepeat: молчаливое повторение N раз — пропускаем summary, AddProductStep сам делает goToStep(0)
         if (activeAutoRepeatActive) {
+          return;
+        }
+
+        // 🆕 R-INS-PRESET-AS-ONE (2026-05-14): preset items handled by handleAddAll —
+        // оно само закрывает overlay/модалку, не нужно показывать summary N раз.
+        if (_presetBatch) {
           return;
         }
 
