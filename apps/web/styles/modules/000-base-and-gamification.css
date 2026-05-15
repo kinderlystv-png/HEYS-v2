@@ -7246,7 +7246,7 @@ svg.date-picker-icon {
   line-height: 1.1;
 }
 
-.date-picker-main--today {
+.date-picker-main.date-picker-main--today {
   font-size: 9px;
   font-weight: 400;
   color: #ef4444;
@@ -7254,7 +7254,7 @@ svg.date-picker-icon {
   white-space: nowrap;
 }
 
-.date-picker-sub--today {
+.date-picker-sub.date-picker-sub--today {
   font-size: 12px;
   font-weight: 600;
   color: #1f2937;
@@ -7673,11 +7673,11 @@ svg.date-picker-icon {
     font-size: 12px;
   }
 
-  .date-picker-main--today {
+  .date-picker-main.date-picker-main--today {
     font-size: 9px;
   }
 
-  .date-picker-sub--today {
+  .date-picker-sub.date-picker-sub--today {
     font-size: 12px;
   }
 
@@ -9583,6 +9583,71 @@ svg.date-picker-icon {
   border-radius: 8px;
   font-weight: 700;
   font-size: 12px;
+}
+
+/* Per-meal-type фоновые градиенты (мирорят .meal-header-inside.meal-type-X).
+ * rgba-вариант чтобы сохранить ощущение прозрачности под backdrop-blur. */
+.meal-sticky-bar.meal-type-breakfast {
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.92) 0%, rgba(255, 237, 213, 0.92) 100%);
+  border-color: rgba(254, 215, 170, 0.6);
+}
+.meal-sticky-bar.meal-type-breakfast .meal-sticky-bar__time {
+  background: #fff7ed;
+  color: #c2410c;
+}
+.meal-sticky-bar.meal-type-breakfast .meal-sticky-bar__kcal {
+  background: rgba(255, 255, 255, 0.7);
+  color: #c2410c;
+}
+
+.meal-sticky-bar.meal-type-lunch {
+  background: linear-gradient(135deg, rgba(240, 253, 244, 0.92) 0%, rgba(220, 252, 231, 0.92) 100%);
+  border-color: rgba(187, 247, 208, 0.6);
+}
+.meal-sticky-bar.meal-type-lunch .meal-sticky-bar__time {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.meal-sticky-bar.meal-type-dinner {
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.92) 0%, rgba(219, 234, 254, 0.92) 100%);
+  border-color: rgba(191, 219, 254, 0.6);
+}
+.meal-sticky-bar.meal-type-dinner .meal-sticky-bar__time {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.meal-sticky-bar.meal-type-dinner .meal-sticky-bar__kcal {
+  background: rgba(255, 255, 255, 0.7);
+  color: #1d4ed8;
+}
+
+.meal-sticky-bar.meal-type-snack1,
+.meal-sticky-bar.meal-type-snack2,
+.meal-sticky-bar.meal-type-snack3,
+.meal-sticky-bar.meal-type-snack {
+  background: linear-gradient(135deg, rgba(249, 250, 251, 0.92) 0%, rgba(243, 244, 246, 0.92) 100%);
+  border-color: rgba(229, 231, 235, 0.6);
+}
+.meal-sticky-bar.meal-type-snack1 .meal-sticky-bar__time,
+.meal-sticky-bar.meal-type-snack2 .meal-sticky-bar__time,
+.meal-sticky-bar.meal-type-snack3 .meal-sticky-bar__time,
+.meal-sticky-bar.meal-type-snack .meal-sticky-bar__time {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.meal-sticky-bar.meal-type-night {
+  background: linear-gradient(135deg, rgba(238, 242, 255, 0.92) 0%, rgba(224, 231, 255, 0.92) 100%);
+  border-color: rgba(199, 210, 254, 0.6);
+}
+.meal-sticky-bar.meal-type-night .meal-sticky-bar__time {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+.meal-sticky-bar.meal-type-night .meal-sticky-bar__kcal {
+  background: rgba(255, 255, 255, 0.7);
+  color: #4f46e5;
 }
 
 /* На десктопе бар не нужен — есть достаточно места */

@@ -20319,6 +20319,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         let timeText = '';
         let typeText = '';
         let kcalText = '';
+        let mealType = ''; // breakfast/lunch/dinner/snack1/snack2/snack3/night — для CSS-варианта
         if (meal) {
             // Используем канонический HEYS.dayUtils.getMealType (возвращает {type, name, icon}),
             // а не локальный getMealType из этого файла (тот возвращает старый формат
@@ -20336,6 +20337,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             timeText = meal.time || '';
             typeText = (mealTypeInfo.icon || '🍽️') + ' ' + (mealTypeInfo.name || 'Приём');
             kcalText = kcal + ' ккал';
+            mealType = mealTypeInfo.type || '';
         }
 
         const onClick = () => {
@@ -20347,7 +20349,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         };
 
         return React.createElement('div', {
-            className: 'meal-sticky-bar' + (visible ? ' meal-sticky-bar--visible' : ''),
+            className: 'meal-sticky-bar'
+                + (visible ? ' meal-sticky-bar--visible' : '')
+                + (mealType ? ' meal-type-' + mealType : ''),
             onClick: visible ? onClick : undefined,
             role: visible ? 'button' : 'presentation',
             'aria-hidden': !visible,
