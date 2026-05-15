@@ -11204,9 +11204,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       });
     };
     
-    // На today показываем одной строкой «сегодня 15 мая» (без числа в иконке).
+    // На today показываем одной строкой «Сегодня, 15 мая» (без числа в иконке).
     // Иконка — чистый SVG-календарь без вшитой даты (📅 на iOS показывает «17»).
+    // Дата идёт в родительном падеже («мая», не «май») — toLocaleDateString
+    // с day+month=long корректно склоняет, в отличие от {month:'short'} отдельно.
     const isTodaySelected = (valueISO || todayISO()) === todayISO();
+    const todayLongDate = parseISO(valueISO || todayISO())
+      .toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
     const calendarIcon = React.createElement('svg', {
       className: 'date-picker-icon',
       viewBox: '0 0 24 24',
@@ -11235,7 +11239,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         calendarIcon,
         React.createElement('span', { className: 'date-picker-text' },
           isTodaySelected
-            ? React.createElement('span', { className: 'date-picker-main date-picker-main--today' }, `Сегодня, ${dateInfo.sub}`)
+            ? [
+                React.createElement('span', { key: 'main', className: 'date-picker-main date-picker-main--today' }, 'сегодня'),
+                React.createElement('span', { key: 'sub', className: 'date-picker-sub date-picker-sub--today' }, todayLongDate)
+              ]
             : [
                 React.createElement('span', { key: 'main', className: 'date-picker-main' }, dateInfo.label),
                 React.createElement('span', { key: 'sub', className: 'date-picker-sub' }, dateInfo.sub)
@@ -20257,6 +20264,95 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     HEYS.dayComponents.MealCard = MealCard;
 
     // =========================
+    // MealStickyBar — отдельный JS-bar поверх списка приёмов.
+    // НЕ трогает DOM шапки приёмов (которая ломалась при попытке sticky).
+    // Один fixed-bar сверху, IntersectionObserver-style scroll listener
+    // определяет какой приём «активен» (его верх ушёл выше viewport y=100,
+    // а низ ещё ниже) и подменяет содержимое бара.
+    // =========================
+    const STICKY_BAR_LINE = 100; // px от верха viewport (под .hdr)
+
+    function MealStickyBar({ day, pIndex, isMobile }) {
+        const [currentIdx, setCurrentIdx] = React.useState(null);
+        const rafRef = React.useRef(null);
+
+        React.useEffect(() => {
+            // Только мобильный — на десктопе не нужно (нет scroll problem).
+            if (!isMobile) return undefined;
+
+            const updateCurrent = () => {
+                rafRef.current = null;
+                const cards = document.querySelectorAll('.meal-card[data-meal-index]');
+                let active = null;
+                for (const card of cards) {
+                    const rect = card.getBoundingClientRect();
+                    // Карточка «активна» когда её верх прошёл sticky-линию,
+                    // а низ ещё ниже линии (т.е. карточка пересекает y=100).
+                    if (rect.top <= STICKY_BAR_LINE && rect.bottom > STICKY_BAR_LINE) {
+                        active = parseInt(card.dataset.mealIndex, 10);
+                    }
+                }
+                setCurrentIdx((prev) => (prev === active ? prev : active));
+            };
+
+            const onScroll = () => {
+                if (rafRef.current != null) return;
+                rafRef.current = requestAnimationFrame(updateCurrent);
+            };
+
+            window.addEventListener('scroll', onScroll, { passive: true });
+            updateCurrent(); // initial check
+
+            return () => {
+                window.removeEventListener('scroll', onScroll);
+                if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+            };
+        }, [isMobile, day?.meals?.length]);
+
+        // Не рендерим вообще на десктопе.
+        if (!isMobile) return null;
+
+        const meals = day?.meals || [];
+        const meal = currentIdx != null ? meals[currentIdx] : null;
+        const visible = !!meal;
+
+        let timeText = '';
+        let typeText = '';
+        let kcalText = '';
+        if (meal) {
+            const mealTypeInfo = getMealType(currentIdx, meal, meals, pIndex);
+            const totals = (M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 });
+            const kcal = Math.round(totals.kcal || 0);
+            timeText = meal.time || '';
+            typeText = mealTypeInfo.icon + ' ' + mealTypeInfo.name;
+            kcalText = kcal + ' ккал';
+        }
+
+        const onClick = () => {
+            if (currentIdx == null) return;
+            const card = document.querySelector('.meal-card[data-meal-index="' + currentIdx + '"]');
+            if (!card) return;
+            const top = card.getBoundingClientRect().top + window.scrollY;
+            window.scrollTo({ top: Math.max(0, top - STICKY_BAR_LINE), behavior: 'smooth' });
+        };
+
+        return React.createElement('div', {
+            className: 'meal-sticky-bar' + (visible ? ' meal-sticky-bar--visible' : ''),
+            onClick: visible ? onClick : undefined,
+            role: visible ? 'button' : 'presentation',
+            'aria-hidden': !visible,
+            'aria-label': visible ? 'Перейти к началу: ' + typeText : undefined,
+            title: visible ? 'Тап → к началу приёма' : undefined,
+        },
+            React.createElement('span', { className: 'meal-sticky-bar__time' }, timeText),
+            React.createElement('span', { className: 'meal-sticky-bar__type' }, typeText),
+            React.createElement('span', { className: 'meal-sticky-bar__kcal' }, kcalText),
+        );
+    }
+
+    HEYS.dayComponents.MealStickyBar = MealStickyBar;
+
+    // =========================
     // Meals list
     // =========================
     function renderMealsList(params) {
@@ -23687,6 +23783,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                         }
                     }, '+ Добавить приём')
                 ),
+                // 🎯 R-DAY-STICKY-V2 (2026-05-15): отдельный fixed-bar поверх списка.
+                // НЕ трогает шапки приёмов (sticky на них ломал layout). Один общий
+                // bar показывает данные текущего приёма в момент скролла, через
+                // scroll listener + data-meal-index lookup.
+                isMobile && HEYS.dayComponents?.MealStickyBar && React.createElement(HEYS.dayComponents.MealStickyBar, {
+                    day,
+                    pIndex,
+                    isMobile,
+                    key: 'meal-sticky-bar',
+                }),
                 mealsUI,
                 daySummary,
                 React.createElement('div', { className: 'row desktop-only', style: { justifyContent: 'flex-start', marginTop: '8px' } },

@@ -7233,17 +7233,23 @@ svg.date-picker-icon {
   height: 16px;
 }
 
-/* Когда выбран today — текст однострочный («сегодня 15 мая»),
-   убираем колонку и центрируем по вертикали. */
-.date-picker-trigger--today .date-picker-text {
-  flex-direction: row;
-  align-items: center;
+/* Когда выбран today — две строки в той же высоте триггера (34px):
+   тонкая мелкая подпись «сегодня» сверху, дата снизу как основная. */
+.date-picker-main--today {
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  text-transform: lowercase;
+  color: var(--color-gray-500);
+  line-height: 1;
+  margin-bottom: 1px;
 }
 
-.date-picker-main--today {
+.date-picker-sub--today {
   font-size: 13px;
   font-weight: 600;
   color: #1f2937;
+  line-height: 1.1;
 }
 
 .date-picker-text {
@@ -7642,10 +7648,10 @@ svg.date-picker-icon {
     gap: 4px;
   }
 
-  /* В today-режиме нужен запас под «сегодня 15 мая» в одной строке */
+  /* В today-режиме нужен запас под две строки «сегодня» / «15 мая» */
   .date-picker-trigger--today {
     max-width: none;
-    padding: 0 10px;
+    padding: 0 8px;
   }
 
   .date-picker-icon {
@@ -7657,12 +7663,18 @@ svg.date-picker-icon {
   }
 
   .date-picker-main--today {
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .date-picker-sub--today {
     font-size: 12px;
     white-space: nowrap;
   }
 
-  /* Скрываем дополнительную строку даты — экономим место в шапке */
-  .date-picker-sub {
+  /* Скрываем дополнительную строку даты — экономим место в шапке.
+     Исключение — today-вариант, где sub содержит саму дату «15 мая». */
+  .date-picker-sub:not(.date-picker-sub--today) {
     display: none;
   }
 
@@ -9491,6 +9503,82 @@ svg.date-picker-icon {
   overflow: visible;
   content-visibility: auto;
   contain-intrinsic-size: auto 120px;
+}
+
+/* 🎯 R-DAY-STICKY-V2 (2026-05-15): отдельный fixed-bar поверх списка приёмов.
+ * Подменяет содержимое (время / тип / ккал) через scroll listener в JS.
+ * Бар всегда отрисован в DOM, но opacity:0 + pointer-events:none когда
+ * нет активного приёма → плавный fade при появлении/исчезновении. */
+.meal-sticky-bar {
+  position: fixed;
+  top: 100px;
+  left: 12px;
+  right: 12px;
+  z-index: 50;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: default;
+}
+
+.meal-sticky-bar--visible {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+@supports (top: env(safe-area-inset-top)) {
+  .meal-sticky-bar {
+    top: calc(env(safe-area-inset-top, 0px) + 100px);
+  }
+}
+
+.meal-sticky-bar__time {
+  flex-shrink: 0;
+  background: #fef3c7;
+  color: #b45309;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.meal-sticky-bar__type {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meal-sticky-bar__kcal {
+  flex-shrink: 0;
+  background: #f0fdf4;
+  color: #15803d;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* На десктопе бар не нужен — есть достаточно места */
+@media (min-width: 769px) {
+  .meal-sticky-bar { display: none; }
 }
 
 /* Название продукта: фиксированная ширина с переносами */
