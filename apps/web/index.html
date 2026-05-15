@@ -791,10 +791,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.16ae539a6f49.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.6d9ef27489f4.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.9a493cab0080.js" as="script" />
     <link rel="preload" href="boot-day.bundle.f3ebc78bb072.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.3537a9c5e436.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.048746f69a73.js" as="script" />
     <link rel="preload" href="boot-init.bundle.b3be0dcff0e8.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -2937,13 +2937,29 @@
                 var g = params.get('gender') === 'female' ? 'female' : 'male';
                 window.__HEYS_DEMO_MODE__ = { enabled: true, gender: g };
                 try {
-                    // Set fake client up-front so isClientAuthorized() passes and PIN form is skipped.
-                    // The full per-account snapshot (products, days, profile, etc.) is loaded later
-                    // by HEYS.demoMode.loadSnapshot() before React renders.
-                    localStorage.setItem('heys_pin_auth_client', 'demo-client-id');
-                    localStorage.setItem('heys_client_current', 'demo-client-id');
-                    console.info('[DEMO_MODE] Active —', g);
-                } catch (e) {}
+                    // Set fake client up-front so isClientAuthorized() passes and the
+                    // PIN form is skipped. HEYS reads these keys via JSON.parse, so we
+                    // must store JSON-encoded strings, not raw strings.
+                    var demoClientId = 'demo-client-' + g;
+                    localStorage.setItem('heys_pin_auth_client', JSON.stringify(demoClientId));
+                    localStorage.setItem('heys_client_current', JSON.stringify(demoClientId));
+                    // Mark current client so HEYS day-keys resolve to the same scope as
+                    // the snapshot keys we load in heys_demo_mode_v1.js.
+                    window.HEYS = window.HEYS || {};
+                    window.HEYS.currentClientId = demoClientId;
+                    // Kill the static HTML login overlay — it sits above React and would
+                    // hide the demo UI even after React mounts.
+                    var killGate = function () {
+                        var g1 = document.getElementById('heys-login-gate');
+                        if (g1 && g1.parentNode) g1.parentNode.removeChild(g1);
+                    };
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', killGate, { once: true });
+                    } else {
+                        killGate();
+                    }
+                    console.info('[DEMO_MODE] Active —', g, '(client', demoClientId + ')');
+                } catch (e) { console.error('[DEMO_MODE] bootstrap failed:', e); }
             } else {
                 window.__HEYS_DEMO_MODE__ = { enabled: false };
             }
@@ -2961,10 +2977,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.16ae539a6f49.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.6d9ef27489f4.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.9a493cab0080.js"></script>
     <script defer src="boot-day.bundle.f3ebc78bb072.js"></script>
-    <script defer src="boot-app.bundle.3537a9c5e436.js"></script>
+    <script defer src="boot-app.bundle.048746f69a73.js"></script>
     <script defer src="boot-init.bundle.b3be0dcff0e8.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

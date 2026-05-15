@@ -2230,6 +2230,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             try { setStatus(await HEYS.push.getStatus()); } catch {}
         };
 
+        const [savedHint, setSavedHint] = React.useState(null);
+        const savedTimerRef = React.useRef(null);
+
         const update = (patch) => {
             const next = { ...prefs, ...patch };
             setPrefs(next);
@@ -2241,6 +2244,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     console.warn('[push.prefs] save failed:', err?.message)
                 );
             }
+            // Маленький подтверждающий toast «✓ сохранено» в углу карточки.
+            setSavedHint('✓ Сохранено');
+            if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+            savedTimerRef.current = setTimeout(() => setSavedHint(null), 1500);
         };
 
         const handleEnableClick = async () => {
@@ -2506,6 +2513,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     onChange: (v) => update({ quiet_end: v })
                 })
             ),
+
+            // Toast «✓ Сохранено» — мягкое подтверждение для тогглов
+            savedHint && React.createElement('div', {
+                style: {
+                    position: 'fixed', bottom: '20px', right: '20px',
+                    padding: '8px 14px', borderRadius: '8px',
+                    background: '#22c55e', color: 'white', fontSize: '13px',
+                    fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    zIndex: 100, opacity: 0.95, pointerEvents: 'none'
+                }
+            }, savedHint),
 
             // Тестовая кнопка
             status?.subscribed && React.createElement('div', { style: { marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e4e4e7' } },

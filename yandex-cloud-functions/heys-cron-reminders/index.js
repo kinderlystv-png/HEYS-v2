@@ -364,27 +364,29 @@ async function getLastMealMedian(client, clientId) {
 /**
  * Серия дней подряд (включая сегодня и предыдущие) где kcal в диапазоне
  * [normKcal × 0.9, normKcal × 1.05] — клиент «держит план питания».
- * Возвращает { streak, endDate } — длина серии и дата последнего дня
- * (формат YYYY-MM-DD). endDate используется как sentinel для повторных
- * поздравлений: каждая новая 7+-дневная серия → новый sentinel → новый push.
+ * Возвращает { streak, startDate } — длина серии и дата ПЕРВОГО дня
+ * (самый старый день серии, формат YYYY-MM-DD). startDate используется как
+ * sentinel — пока серия не порвётся, startDate стабилен → один push на серию.
+ * Когда серия порвалась и начался новый счёт с другой даты — новый
+ * startDate → новый sentinel → новый push.
  */
 async function getCalStreak(client, clientId, normKcal) {
-  if (!normKcal || normKcal <= 0) return { streak: 0, endDate: null };
+  if (!normKcal || normKcal <= 0) return { streak: 0, startDate: null };
   const lo = normKcal * 0.9;
   const hi = normKcal * 1.05;
   let streak = 0;
-  let endDate = null;
+  let startDate = null;
   for (let i = 0; i < 14; i++) {
     const dateStr = isoDateNDaysAgoMsk(i);
     const v = await loadKv(client, clientId, `heys_dayv2_${dateStr}`);
     const k = sumDayMacros(v).kcal;
     if (k <= 0) break; // ни одной записи — серия прерывается
     if (k >= lo && k <= hi) {
-      if (endDate === null) endDate = dateStr; // самый свежий день в серии
+      startDate = dateStr; // обновляется на самый старый день в серии (i растёт назад)
       streak++;
     } else break;
   }
-  return { streak, endDate };
+  return { streak, startDate };
 }
 
 /** Hour-bucket для воды: чтобы пуш о воде шёл не чаще раз в 4 часа. */
@@ -954,11 +956,13 @@ async function jobCalStreak(client) {
     const norms = await getNorms(client, clientId);
     if (!norms || !norms.kcal) continue;
 
-    const { streak, endDate } = await getCalStreak(client, clientId, norms.kcal);
-    if (streak < 7 || !endDate) continue;
+    const { streak, startDate } = await getCalStreak(client, clientId, norms.kcal);
+    if (streak < 7 || !startDate) continue;
 
-    // Sentinel включает endDate — каждая новая 7+-дневная серия даёт новый push.
-    const key = `cal_streak:${clientId}:${endDate}`;
+    // Sentinel = startDate серии. Пока серия не порвётся — startDate стабилен,
+    // sentinel один → один push. Серия порвалась и началась новая → новая
+    // startDate → новый sentinel → новый push.
+    const key = `cal_streak:${clientId}:${startDate}`;
     if (!(await claimIdempotency(client, key))) continue;
 
     const prefs = await getCuratorPrefs(client, r.curator_id);
@@ -995,8 +999,16 @@ async function jobEwsAlerts(client) {
     const snapshot = await loadKv(client, clientId, 'heys_ews_snapshot');
     if (!Array.isArray(snapshot) || snapshot.length === 0) continue;
 
-    // Фильтр: критичные паттерны где trend_delta ≤ -0.2 за 7 дней
-    const critical = snapshot.filter((p) => Number(p.trend_delta) <= -0.2);
+    // Фильтр: критичные паттерны где trend_delta ≤ -0.2 за 7 дней.
+    // Также отбрасываем протухшие snapshot (computed_at > 7 дней назад) —
+    // клиент давно не заходил, EWS-данные устарели, не шлём ложные алёрты.
+    const staleCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const critical = snapshot.filter((p) => {
+      if (Number(p.trend_delta) > -0.2) return false;
+      const computedTs = p.computed_at ? new Date(p.computed_at).getTime() : 0;
+      if (!computedTs || computedTs < staleCutoff) return false;
+      return true;
+    });
     if (critical.length === 0) continue;
 
     for (const p of critical) {
