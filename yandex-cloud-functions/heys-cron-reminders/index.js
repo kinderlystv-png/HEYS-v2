@@ -1,20 +1,30 @@
 /**
- * heys-cron-reminders — периодические push-уведомления (5 сценариев).
+ * heys-cron-reminders — периодические push-уведомления.
  *
  * Запуск: Yandex Cloud Timer Trigger каждые 15 минут.
  *
- * Сценарии:
- *   a) Курятор-батчинг: client_data_changelog (pending > 1 min) → 1 пуш клиенту
- *   b) 4ч без еды: heys_dayv2_<today>.meals — если последний meal > N часов
- *      и сейчас не quiet hours → пуш-напоминалка
- *   c) Inactive client → куратору: client_kv_store последняя запись heys_dayv2_*
- *      старше 2 дней → пуш куратору
- *   d) Вечерний итог: в локальное время evening_summary_time (±7 мин) →
- *      пуш с цифрами съеденного
- *   e) Стрик 7 дней: 7 дней подряд с непустым meals[] → пуш-похвала
+ * Существующие 5 сценариев (a–e) + 11 новых (1–11):
  *
- * Idempotency: для каждого сценария свой ключ в push_idempotency. INSERT с
- * ON CONFLICT DO NOTHING гарантирует, что один и тот же пуш не уйдёт дважды.
+ *   a) Куратор-батчинг: client_data_changelog (pending > 1 min) → 1 пуш клиенту
+ *   b) 4ч без еды → клиенту
+ *   c) Inactive client (>2 дней без логов) → куратору
+ *   d) Вечерний итог в evening_summary_time
+ *   e) Стрик 7 дней
+ *
+ *   1) Утренний завтрак (12:00 ±7мин если нет meals)
+ *   2) Утренний чек-ин — взвесься (через 1ч после среднего пробуждения)
+ *   3) Утренние витамины (10 мин после чек-ина, если есть plannedSupplements)
+ *   4) 4ч без воды (эвристика: отстаёт от пропорции к дневной норме)
+ *   5) 90% дневной нормы калорий
+ *   6) Превышение нормы Б/Ж/У
+ *   7) 3 дня подряд переедание (>110%) → разгрузка
+ *   8) Поздний приём пищи (позже медианы последних 14 дней)
+ *   9) Достиг цели по весу (≤ weightGoal+0.5, 7 дней подряд) → куратору
+ *  10) EWS-критичный паттерн (из client snapshot, trend_delta ≤ -0.2)
+ *  11) Подписка истекает (trial < 3д / active < 7д / просрочка) → куратору
+ *
+ * Idempotency: каждый сценарий имеет свой ключ в push_idempotency.
+ * Тон сообщений: дружелюбный с эмодзи.
  */
 
 const { getPool } = require('./shared/db-pool');
@@ -179,6 +189,195 @@ async function getCuratorPrefs(client, curatorId) {
   } catch {
     return { ...DEFAULT_CURATOR_PREFS };
   }
+}
+
+// ─── Templates (дружелюбный тон с эмодзи) ─────────────────────────────
+
+const T = {
+  morningBreakfast: () => ({
+    title: '🍳 HEYS — пора завтракать',
+    body: 'Самое время добавить первый приём пищи ☀️',
+  }),
+  morningCheckin: () => ({
+    title: '⚖️ HEYS — утренний чек-ин',
+    body: 'Доброе утро! Время взвеситься и отметить как спалось',
+  }),
+  morningVitamins: (list) => ({
+    title: '💊 HEYS — утренние витамины',
+    body: list && list.length ? `Не забудь: ${list.join(', ')}` : 'Не забудь утренние витамины',
+  }),
+  waterHint: (deficitMl) => ({
+    title: '💧 HEYS — попей воды',
+    body: deficitMl > 0
+      ? `Сегодня не хватает ~${deficitMl} мл воды. Попей стакан 🥤`
+      : 'Давно не пил воды — попей стакан 🥤',
+  }),
+  cal90: (leftKcal) => ({
+    title: '⚠️ HEYS — почти достиг нормы',
+    body: leftKcal > 0
+      ? `Осталось ${leftKcal} ккал до дневной нормы`
+      : 'Уже на 90% дневной нормы — следи за порциями',
+  }),
+  macroOverP: () => ({ title: '🥩 HEYS — превышение белка',     body: 'Сегодня перебор по белку. Завтра — больше овощей' }),
+  macroOverF: () => ({ title: '🥑 HEYS — превышение жиров',     body: 'Сегодня перебор по жирам — попробуй лёгкий ужин' }),
+  macroOverC: () => ({ title: '🍞 HEYS — превышение углеводов', body: 'Сегодня перебор по углеводам — добавь белок и клетчатку' }),
+  overeat3d: () => ({
+    title: '🌿 HEYS — пора на разгрузку',
+    body: '3 дня перебор — попробуй сегодня разгрузочный день',
+  }),
+  lateMeal: () => ({
+    title: '🌙 HEYS — поздно поел',
+    body: 'Сегодня позднее обычного. Попробуй завтра ужинать пораньше',
+  }),
+  goalReachedCurator: (clientName, kg) => ({
+    title: '🏆 HEYS — клиент достиг цели!',
+    body: `${clientName || 'Клиент'} держит целевой вес ${kg} кг уже 7 дней. Время обновить план.`,
+  }),
+  ewsCurator: (clientName, patternName) => ({
+    title: '⚠️ HEYS — алёрт EWS',
+    body: `${clientName || 'Клиент'}: ухудшение паттерна «${patternName}»`,
+  }),
+  ewsClient: (patternName) => ({
+    title: '💛 HEYS — мягкий намёк',
+    body: `Заметили ухудшение в «${patternName}». Загляни в инсайты`,
+  }),
+  subscriptionTrialEnding: (clientName, daysLeft) => ({
+    title: '💳 HEYS — пробный истекает',
+    body: `${clientName || 'Клиент'}: пробный период истекает через ${daysLeft} дн.`,
+  }),
+  subscriptionEnding: (clientName, daysLeft) => ({
+    title: '💳 HEYS — подписка истекает',
+    body: `${clientName || 'Клиент'}: подписка истекает через ${daysLeft} дн.`,
+  }),
+  subscriptionExpired: (clientName) => ({
+    title: '💳 HEYS — подписка истекла',
+    body: `${clientName || 'Клиент'}: подписка истекла. Время связаться.`,
+  }),
+};
+
+// ─── Серверные helpers для новых сценариев ────────────────────────────
+
+/** Сумма kcal/протеин/жир/углеводы за день из dayv2.meals[]. */
+function sumDayMacros(dayJson) {
+  let kcal = 0, protein = 0, fat = 0, carbs = 0;
+  if (!dayJson || !Array.isArray(dayJson.meals)) return { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+  for (const meal of dayJson.meals) {
+    if (!Array.isArray(meal.items)) continue;
+    for (const item of meal.items) {
+      const grams = Number(item.grams || 0);
+      if (item.kcal100 != null) kcal += (Number(item.kcal100) * grams) / 100;
+      else if (item.kcal != null) kcal += Number(item.kcal);
+      if (item.protein100 != null) protein += (Number(item.protein100) * grams) / 100;
+      else if (item.protein != null) protein += Number(item.protein);
+      if (item.fat100 != null) fat += (Number(item.fat100) * grams) / 100;
+      else if (item.fat != null) fat += Number(item.fat);
+      if (item.carbs100 != null) carbs += (Number(item.carbs100) * grams) / 100;
+      else if (item.carbs != null) carbs += Number(item.carbs);
+    }
+  }
+  return { kcal: Math.round(kcal), protein: Math.round(protein), fat: Math.round(fat), carbs: Math.round(carbs) };
+}
+
+/** Загрузить один KV-ключ клиента (heys_*). null если нет. */
+async function loadKv(client, clientId, k) {
+  const r = await client.query(
+    `SELECT v FROM client_kv_store WHERE client_id = $1 AND k = $2 LIMIT 1`,
+    [clientId, k]
+  );
+  return r.rows[0]?.v || null;
+}
+
+/** Норма kcal/Б/Ж/У/вода. Читает heys_norms + heys_profile, возвращает абсолютные значения. */
+async function getNorms(client, clientId) {
+  const norms = (await loadKv(client, clientId, 'heys_norms')) || {};
+  const profile = (await loadKv(client, clientId, 'heys_profile')) || {};
+  // Абсолютная дневная норма kcal из profile (поля могут разные — пробуем).
+  const kcal = Number(profile.dailyKcal || profile.kcalGoal || profile.targetKcal || norms.kcal || 0);
+  if (kcal <= 0) return null;
+  // Проценты Б/У из heys_norms (или fallback на profile). Жиры = 100 - Б - У.
+  const proteinPct = Number(norms.proteinPct || profile.proteinPct || 25);
+  const carbsPct = Number(norms.carbsPct || profile.carbsPct || 45);
+  const fatPct = Math.max(0, 100 - proteinPct - carbsPct);
+  // 1 г белка = 4 ккал, углевода = 4 ккал, жира = 9 ккал.
+  const protein = Math.round((kcal * proteinPct) / 100 / 4);
+  const carbs = Math.round((kcal * carbsPct) / 100 / 4);
+  const fat = Math.round((kcal * fatPct) / 100 / 9);
+  // Вода: heys_norms.water или fallback 2000 мл.
+  const water = Number(norms.water || profile.waterGoal || 2000);
+  return { kcal, protein, fat, carbs, water };
+}
+
+/** Получить kcal за каждый из последних N дней (включая сегодня). */
+async function getLastNDaysKcal(client, clientId, n) {
+  const keys = [];
+  for (let i = 0; i < n; i++) keys.push(`heys_dayv2_${isoDateNDaysAgoMsk(i)}`);
+  const r = await client.query(
+    `SELECT k, v FROM client_kv_store
+      WHERE client_id = $1 AND k = ANY($2::text[])`,
+    [clientId, keys]
+  );
+  const map = new Map();
+  for (const row of r.rows) map.set(row.k, row.v);
+  return keys.map((k) => sumDayMacros(map.get(k) || null).kcal);
+}
+
+/** Среднее время пробуждения (sleepEnd) за 7 дней. Возвращает minutes-of-day или null. */
+async function getWakeAvgMinutes(client, clientId) {
+  const keys = [];
+  for (let i = 0; i < 7; i++) keys.push(`heys_dayv2_${isoDateNDaysAgoMsk(i)}`);
+  const r = await client.query(
+    `SELECT v FROM client_kv_store
+      WHERE client_id = $1 AND k = ANY($2::text[])`,
+    [clientId, keys]
+  );
+  const minutes = [];
+  for (const row of r.rows) {
+    const t = row.v?.sleepEnd;
+    if (typeof t !== 'string') continue;
+    const m = parseHHMM(t);
+    if (m !== null) minutes.push(m);
+  }
+  if (minutes.length < 5) return null; // мало данных — fallback на client logic
+  return Math.round(minutes.reduce((a, b) => a + b, 0) / minutes.length);
+}
+
+/** Медиана minutes-of-day последнего приёма пищи за 14 дней. null если мало данных. */
+async function getLastMealMedian(client, clientId) {
+  const keys = [];
+  for (let i = 1; i <= 14; i++) keys.push(`heys_dayv2_${isoDateNDaysAgoMsk(i)}`); // не включаем сегодня
+  const r = await client.query(
+    `SELECT v FROM client_kv_store
+      WHERE client_id = $1 AND k = ANY($2::text[])`,
+    [clientId, keys]
+  );
+  const minutes = [];
+  for (const row of r.rows) {
+    const m = lastMealMinutesOfDay(row.v);
+    if (m !== null) minutes.push(m);
+  }
+  if (minutes.length < 7) return null;
+  minutes.sort((a, b) => a - b);
+  const mid = Math.floor(minutes.length / 2);
+  return minutes.length % 2 ? minutes[mid] : Math.round((minutes[mid - 1] + minutes[mid]) / 2);
+}
+
+/** Подряд N дней (включая сегодня и предыдущие) где weightMorning ≤ weightGoal + 0.5. */
+async function getDaysAtGoal(client, clientId, weightGoal, tolerance = 0.5) {
+  if (typeof weightGoal !== 'number' || !isFinite(weightGoal)) return 0;
+  let streak = 0;
+  for (let i = 0; i < 14; i++) {
+    const v = await loadKv(client, clientId, `heys_dayv2_${isoDateNDaysAgoMsk(i)}`);
+    const w = Number(v?.weightMorning);
+    if (!isFinite(w) || w <= 0) break;
+    if (w <= weightGoal + tolerance) streak++;
+    else break;
+  }
+  return streak;
+}
+
+/** Hour-bucket для воды: чтобы пуш о воде шёл не чаще раз в 4 часа. */
+function waterHourBucket(currentMinutes) {
+  return Math.floor(currentMinutes / 60 / 4); // 0..5 в течение суток
 }
 
 // ─── a) Курятор-батчинг ────────────────────────────────────────────────
@@ -443,6 +642,438 @@ async function jobStreakCelebration(client) {
   return { total };
 }
 
+// ─── 1) Утренний завтрак (12:00 ±7мин если нет meals) ──────────────────
+
+async function jobMorningBreakfast(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+  const target = 12 * 60; // 12:00
+  if (Math.abs(cur - target) > 7) return { total: 0, skipped: 'window' };
+
+  const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const prefs = await getClientPrefs(client, clientId);
+    if (!prefs.enabled || prefs.morning_breakfast_enabled === false) continue;
+    if (isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) continue;
+
+    const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
+    const lastMeal = lastMealMinutesOfDay(day);
+    if (lastMeal !== null) continue; // уже есть приём пищи
+
+    const key = `morning_breakfast:${today}:${clientId}`;
+    if (!(await claimIdempotency(client, key))) continue;
+
+    const res = await sendToClient(client, clientId, { ...T.morningBreakfast(), tag: 'morning-breakfast', url: '/' });
+    total += res.sent;
+  }
+  return { total };
+}
+
+// ─── 2) Утренний чек-ин (взвесься/сон) ─────────────────────────────────
+
+async function jobMorningCheckin(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+
+  const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const prefs = await getClientPrefs(client, clientId);
+    if (!prefs.enabled || prefs.morning_checkin_enabled === false) continue;
+    if (isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) continue;
+
+    const wakeAvg = await getWakeAvgMinutes(client, clientId);
+    const target = (wakeAvg !== null ? wakeAvg : 8 * 60) + 60; // wake + 1 час
+    if (Math.abs(cur - target) > 7) continue;
+
+    // Если weightMorning уже заполнен — не шлём.
+    const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
+    if (day?.weightMorning && Number(day.weightMorning) > 0) continue;
+
+    const key = `morning_checkin:${today}:${clientId}`;
+    if (!(await claimIdempotency(client, key))) continue;
+
+    const res = await sendToClient(client, clientId, { ...T.morningCheckin(), tag: 'morning-checkin', url: '/' });
+    total += res.sent;
+  }
+  return { total };
+}
+
+// ─── 3) Утренние витамины (10 мин после чек-ина) ───────────────────────
+
+async function jobMorningVitamins(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+
+  const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const prefs = await getClientPrefs(client, clientId);
+    if (!prefs.enabled || prefs.morning_vitamins_enabled === false) continue;
+    if (isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) continue;
+
+    const wakeAvg = await getWakeAvgMinutes(client, clientId);
+    const target = (wakeAvg !== null ? wakeAvg : 8 * 60) + 60 + 10; // wake + 1ч + 10мин
+    if (Math.abs(cur - target) > 7) continue;
+
+    // Витамины — только если есть plannedSupplements
+    const profile = await loadKv(client, clientId, 'heys_profile');
+    const supplements = Array.isArray(profile?.plannedSupplements) ? profile.plannedSupplements : [];
+    if (supplements.length === 0) continue;
+
+    // И только если чек-ин уже сделан
+    const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
+    if (!day?.weightMorning) continue;
+
+    const key = `morning_vitamins:${today}:${clientId}`;
+    if (!(await claimIdempotency(client, key))) continue;
+
+    // Соберём список названий
+    const names = supplements
+      .map((s) => s.name || s.id || '')
+      .filter(Boolean)
+      .slice(0, 3); // не более 3 в тексте
+
+    const res = await sendToClient(client, clientId, { ...T.morningVitamins(names), tag: 'morning-vitamins', url: '/' });
+    total += res.sent;
+  }
+  return { total };
+}
+
+// ─── 4) 4ч без воды (эвристика) ────────────────────────────────────────
+
+async function jobWaterHint(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+
+  const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const prefs = await getClientPrefs(client, clientId);
+    if (!prefs.enabled || prefs.water_hint_enabled === false) continue;
+    if (isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) continue;
+
+    const norms = await getNorms(client, clientId);
+    if (!norms || !norms.water) continue;
+
+    const wakeAvg = (await getWakeAvgMinutes(client, clientId)) ?? 8 * 60;
+    const hoursSinceWake = Math.max(1, (cur - wakeAvg) / 60);
+    const totalActiveHours = Math.max(1, (20 * 60 - wakeAvg) / 60); // активно до 20:00
+    const expected = Math.min(norms.water, norms.water * (hoursSinceWake / totalActiveHours));
+
+    const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
+    const actual = Number(day?.water || 0);
+    const deficit = expected - actual;
+    if (deficit < norms.water * 0.3) continue; // отстаём <30% — норм
+
+    const bucket = waterHourBucket(cur);
+    const key = `water_hint:${today}:${bucket}:${clientId}`;
+    if (!(await claimIdempotency(client, key))) continue;
+
+    const res = await sendToClient(client, clientId, { ...T.waterHint(Math.round(deficit)), tag: 'water-hint', url: '/' });
+    total += res.sent;
+  }
+  return { total };
+}
+
+// ─── 5) 90% дневной нормы калорий ──────────────────────────────────────
+
+async function jobCal90(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+
+  const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const prefs = await getClientPrefs(client, clientId);
+    if (!prefs.enabled || prefs.cal_90_enabled === false) continue;
+    if (isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) continue;
+
+    const norms = await getNorms(client, clientId);
+    if (!norms || !norms.kcal) continue;
+
+    const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
+    const macros = sumDayMacros(day);
+    const pct = macros.kcal / norms.kcal;
+    if (pct < 0.9 || pct >= 1.0) continue; // 90–100%
+
+    const key = `cal_90:${today}:${clientId}`;
+    if (!(await claimIdempotency(client, key))) continue;
+
+    const left = Math.max(0, norms.kcal - macros.kcal);
+    const res = await sendToClient(client, clientId, { ...T.cal90(left), tag: 'cal-90', url: '/' });
+    total += res.sent;
+  }
+  return { total };
+}
+
+// ─── 6) Превышение нормы Б/Ж/У ─────────────────────────────────────────
+
+async function jobMacroOver(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+
+  const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const prefs = await getClientPrefs(client, clientId);
+    if (!prefs.enabled || prefs.macro_over_enabled === false) continue;
+    if (isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) continue;
+
+    const norms = await getNorms(client, clientId);
+    if (!norms) continue;
+
+    const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
+    const macros = sumDayMacros(day);
+
+    const checks = [
+      { code: 'p', val: macros.protein, norm: norms.protein, tpl: T.macroOverP },
+      { code: 'f', val: macros.fat,     norm: norms.fat,     tpl: T.macroOverF },
+      { code: 'c', val: macros.carbs,   norm: norms.carbs,   tpl: T.macroOverC },
+    ];
+    for (const c of checks) {
+      if (!c.norm || c.val < c.norm) continue;
+      const key = `macro_over_${c.code}:${today}:${clientId}`;
+      if (!(await claimIdempotency(client, key))) continue;
+      const res = await sendToClient(client, clientId, { ...c.tpl(), tag: `macro-over-${c.code}`, url: '/' });
+      total += res.sent;
+    }
+  }
+  return { total };
+}
+
+// ─── 7) 3 дня переедание → разгрузка (в 09:00) ─────────────────────────
+
+async function jobOvereat3d(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+  if (Math.abs(cur - 9 * 60) > 7) return { total: 0, skipped: 'window' };
+
+  const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const prefs = await getClientPrefs(client, clientId);
+    if (!prefs.enabled || prefs.overeat_3d_enabled === false) continue;
+    if (isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) continue;
+
+    const norms = await getNorms(client, clientId);
+    if (!norms || !norms.kcal) continue;
+
+    // Последние 3 дня (вчера, позавчера, поза-позавчера)
+    const keys = [];
+    for (let i = 1; i <= 3; i++) keys.push(`heys_dayv2_${isoDateNDaysAgoMsk(i)}`);
+    const dRes = await client.query(
+      `SELECT k, v FROM client_kv_store WHERE client_id = $1 AND k = ANY($2::text[])`,
+      [clientId, keys]
+    );
+    if (dRes.rows.length < 3) continue;
+    const allOver = dRes.rows.every((row) => sumDayMacros(row.v).kcal > norms.kcal * 1.10);
+    if (!allOver) continue;
+
+    const key = `overeat_3d:${today}:${clientId}`;
+    if (!(await claimIdempotency(client, key))) continue;
+
+    const res = await sendToClient(client, clientId, { ...T.overeat3d(), tag: 'overeat-3d', url: '/' });
+    total += res.sent;
+  }
+  return { total };
+}
+
+// ─── 8) Поздний приём пищи (по медиане) ────────────────────────────────
+
+async function jobLateMeal(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+  if (cur < 21 * 60) return { total: 0, skipped: 'window' };
+
+  const rows = await client.query(`SELECT DISTINCT client_id FROM push_subscriptions`);
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const prefs = await getClientPrefs(client, clientId);
+    if (!prefs.enabled || prefs.late_meal_enabled === false) continue;
+    if (isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) continue;
+
+    const median = await getLastMealMedian(client, clientId);
+    if (median === null) continue;
+
+    const day = await loadKv(client, clientId, `heys_dayv2_${today}`);
+    const lastToday = lastMealMinutesOfDay(day);
+    if (lastToday === null) continue;
+    if (lastToday < median + 30) continue;
+
+    const key = `late_meal:${today}:${clientId}`;
+    if (!(await claimIdempotency(client, key))) continue;
+
+    const res = await sendToClient(client, clientId, { ...T.lateMeal(), tag: 'late-meal', url: '/' });
+    total += res.sent;
+  }
+  return { total };
+}
+
+// ─── 9) Достиг цели → куратору (один раз навсегда) ─────────────────────
+
+async function jobGoalReached(client) {
+  const today = todayDateMsk();
+  const rows = await client.query(
+    `SELECT c.id AS client_id, c.name, c.curator_id
+       FROM clients c
+      WHERE c.curator_id IS NOT NULL`
+  );
+
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const profile = await loadKv(client, clientId, 'heys_profile');
+    const goal = Number(profile?.weightGoal);
+    if (!isFinite(goal) || goal <= 0) continue;
+
+    const streak = await getDaysAtGoal(client, clientId, goal);
+    if (streak < 7) continue;
+
+    const key = `goal_reached:${clientId}`; // без даты — один раз навсегда
+    if (!(await claimIdempotency(client, key))) continue;
+
+    const prefs = await getCuratorPrefs(client, r.curator_id);
+    if (!prefs.enabled) continue;
+    // Достижение цели — не quiet-hours sensitive, шлём.
+
+    const res = await sendToCurator(client, r.curator_id, {
+      ...T.goalReachedCurator(r.name, goal),
+      tag: `goal-reached-${clientId}`,
+      url: '/curator',
+    });
+    total += res.sent;
+    void today; // eslint-disable-line no-unused-expressions
+  }
+  return { total };
+}
+
+// ─── 10) EWS-критичный паттерн (читает client snapshot) ────────────────
+
+async function jobEwsAlerts(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+  // Проверяем раз в день в 10:00 ±7 мин (sentinel + раз в 3 дня)
+  if (Math.abs(cur - 10 * 60) > 7) return { total: 0, skipped: 'window' };
+
+  const rows = await client.query(
+    `SELECT c.id AS client_id, c.name, c.curator_id
+       FROM clients c
+      WHERE c.curator_id IS NOT NULL`
+  );
+
+  let total = 0;
+  for (const r of rows.rows) {
+    const clientId = r.client_id;
+    const snapshot = await loadKv(client, clientId, 'heys_ews_snapshot');
+    if (!Array.isArray(snapshot) || snapshot.length === 0) continue;
+
+    // Фильтр: критичные паттерны где trend_delta ≤ -0.2 за 7 дней
+    const critical = snapshot.filter((p) => Number(p.trend_delta) <= -0.2);
+    if (critical.length === 0) continue;
+
+    for (const p of critical) {
+      // sentinel раз в 3 дня
+      const day3 = Math.floor(Date.now() / (1000 * 60 * 60 * 24 * 3));
+      const key = `ews:${p.pattern_id || p.id}:${clientId}:${day3}`;
+      if (!(await claimIdempotency(client, key))) continue;
+
+      // Куратору — полный текст
+      const curatorPrefs = await getCuratorPrefs(client, r.curator_id);
+      if (curatorPrefs.enabled) {
+        const res = await sendToCurator(client, r.curator_id, {
+          ...T.ewsCurator(r.name, p.name || p.pattern_id || 'паттерн'),
+          tag: `ews-${p.pattern_id}-${clientId}`,
+          url: '/curator',
+        });
+        total += res.sent;
+      }
+      // Клиенту — мягкий намёк
+      const prefs = await getClientPrefs(client, clientId);
+      if (prefs.enabled && prefs.ews_client_hint_enabled !== false) {
+        if (!isInQuietHours(cur, prefs.quiet_start, prefs.quiet_end)) {
+          const res = await sendToClient(client, clientId, {
+            ...T.ewsClient(p.name || p.pattern_id || 'паттерн'),
+            tag: `ews-client-${p.pattern_id}`,
+            url: '/',
+          });
+          total += res.sent;
+        }
+      }
+    }
+    void today; // eslint-disable-line no-unused-expressions
+  }
+  return { total };
+}
+
+// ─── 11) Подписка истекает (в 10:00) ───────────────────────────────────
+
+async function jobSubscriptionExpiry(client) {
+  const today = todayDateMsk();
+  const now = nowInMsk();
+  const cur = minutesOfDay(now);
+  if (Math.abs(cur - 10 * 60) > 7) return { total: 0, skipped: 'window' };
+
+  // Берём всех клиентов с куратором и активной/триал-подпиской
+  const rows = await client.query(
+    `SELECT c.id AS client_id, c.name, c.curator_id, c.subscription_status,
+            s.trial_ends_at, s.active_until
+       FROM clients c
+       LEFT JOIN subscriptions s ON s.client_id = c.id
+      WHERE c.curator_id IS NOT NULL`
+  );
+
+  let total = 0;
+  for (const r of rows.rows) {
+    if (!r.curator_id) continue;
+    const status = r.subscription_status;
+    const now = Date.now();
+    let kind = null, daysLeft = 0, tpl = null;
+
+    if (status === 'trial' && r.trial_ends_at) {
+      daysLeft = Math.ceil((new Date(r.trial_ends_at).getTime() - now) / (1000 * 60 * 60 * 24));
+      if (daysLeft >= 0 && daysLeft <= 3) { kind = 'trial_ending'; tpl = T.subscriptionTrialEnding; }
+    } else if (status === 'active' && r.active_until) {
+      daysLeft = Math.ceil((new Date(r.active_until).getTime() - now) / (1000 * 60 * 60 * 24));
+      if (daysLeft >= 0 && daysLeft <= 7) { kind = 'active_ending'; tpl = T.subscriptionEnding; }
+    } else if (status === 'expired' || status === 'cancelled') {
+      kind = 'expired';
+      tpl = T.subscriptionExpired;
+    }
+
+    if (!kind || !tpl) continue;
+
+    const key = `subscription_${kind}:${today}:${r.client_id}`;
+    if (!(await claimIdempotency(client, key))) continue;
+
+    const payload = kind === 'expired'
+      ? { ...tpl(r.name), tag: `subscription-${kind}-${r.client_id}`, url: '/curator' }
+      : { ...tpl(r.name, daysLeft), tag: `subscription-${kind}-${r.client_id}`, url: '/curator' };
+
+    const res = await sendToCurator(client, r.curator_id, payload);
+    total += res.sent;
+  }
+  return { total };
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────
 
 module.exports.handler = async function (event, context) {
@@ -458,6 +1089,18 @@ module.exports.handler = async function (event, context) {
     stats.inactiveClients = await jobInactiveClients(client);
     stats.eveningSummary = await jobEveningSummary(client);
     stats.streakCelebration = await jobStreakCelebration(client);
+    // ─── Новые сценарии (1–11) ──────────────────
+    stats.morningBreakfast = await jobMorningBreakfast(client);
+    stats.morningCheckin = await jobMorningCheckin(client);
+    stats.morningVitamins = await jobMorningVitamins(client);
+    stats.waterHint = await jobWaterHint(client);
+    stats.cal90 = await jobCal90(client);
+    stats.macroOver = await jobMacroOver(client);
+    stats.overeat3d = await jobOvereat3d(client);
+    stats.lateMeal = await jobLateMeal(client);
+    stats.goalReached = await jobGoalReached(client);
+    stats.ewsAlerts = await jobEwsAlerts(client);
+    stats.subscriptionExpiry = await jobSubscriptionExpiry(client);
   } catch (err) {
     console.error('[cron-reminders] error:', err.message, err.stack);
     stats.error = err.message;
