@@ -11240,7 +11240,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         React.createElement('span', { className: 'date-picker-text' },
           isTodaySelected
             ? [
-                React.createElement('span', { key: 'main', className: 'date-picker-main date-picker-main--today' }, 'сегодня'),
+                React.createElement('span', { key: 'main', className: 'date-picker-main date-picker-main--today' }, 'Сегодня'),
                 React.createElement('span', { key: 'sub', className: 'date-picker-sub date-picker-sub--today' }, todayLongDate)
               ]
             : [
@@ -20270,7 +20270,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
     // определяет какой приём «активен» (его верх ушёл выше viewport y=100,
     // а низ ещё ниже) и подменяет содержимое бара.
     // =========================
-    const STICKY_BAR_LINE = 100; // px от верха viewport (под .hdr)
+    const STICKY_BAR_LINE = 130; // px от верха viewport (под .hdr с воздухом)
 
     function MealStickyBar({ day, pIndex, isMobile }) {
         const [currentIdx, setCurrentIdx] = React.useState(null);
@@ -20320,11 +20320,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         let typeText = '';
         let kcalText = '';
         if (meal) {
-            const mealTypeInfo = getMealType(currentIdx, meal, meals, pIndex);
+            // Используем канонический HEYS.dayUtils.getMealType (возвращает {type, name, icon}),
+            // а не локальный getMealType из этого файла (тот возвращает старый формат
+            // {type, label, emoji} → undefined undefined в баре).
+            // Также учитываем ручной mealType юзера через MEAL_TYPES.
+            const manualType = meal.mealType;
+            const autoTypeInfo = U.getMealType
+                ? U.getMealType(currentIdx, meal, meals, pIndex)
+                : null;
+            const mealTypeInfo = manualType && U.MEAL_TYPES && U.MEAL_TYPES[manualType]
+                ? { type: manualType, ...U.MEAL_TYPES[manualType] }
+                : (autoTypeInfo || { type: 'snack', name: 'Приём', icon: '🍽️' });
             const totals = (M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 });
             const kcal = Math.round(totals.kcal || 0);
             timeText = meal.time || '';
-            typeText = mealTypeInfo.icon + ' ' + mealTypeInfo.name;
+            typeText = (mealTypeInfo.icon || '🍽️') + ' ' + (mealTypeInfo.name || 'Приём');
             kcalText = kcal + ' ккал';
         }
 

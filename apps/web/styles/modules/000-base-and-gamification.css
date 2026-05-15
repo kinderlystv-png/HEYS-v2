@@ -7233,23 +7233,33 @@ svg.date-picker-icon {
   height: 16px;
 }
 
-/* Когда выбран today — две строки в той же высоте триггера (34px):
-   тонкая мелкая подпись «сегодня» сверху, дата снизу как основная. */
+/* Когда выбран today — две строки по тому же принципу, что и имя/фамилия слева:
+   тонкая мелкая подпись сверху, основной текст снизу. gap=0, line-height 1.1,
+   без letter-spacing — компактно. «Сегодня» красным, дата — основным тёмным. */
+.date-picker-trigger--today {
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.date-picker-trigger--today .date-picker-text {
+  gap: 0;
+  line-height: 1.1;
+}
+
 .date-picker-main--today {
   font-size: 9px;
   font-weight: 400;
-  letter-spacing: 0.2px;
-  text-transform: lowercase;
-  color: var(--color-gray-500);
-  line-height: 1;
-  margin-bottom: 1px;
+  color: #ef4444;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .date-picker-sub--today {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: #1f2937;
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .date-picker-text {
@@ -7648,10 +7658,11 @@ svg.date-picker-icon {
     gap: 4px;
   }
 
-  /* В today-режиме нужен запас под две строки «сегодня» / «15 мая» */
+  /* В today-режиме нужен запас под две строки «Сегодня» / «15 мая» */
   .date-picker-trigger--today {
     max-width: none;
-    padding: 0 8px;
+    padding: 0 10px;
+    gap: 6px;
   }
 
   .date-picker-icon {
@@ -7664,12 +7675,10 @@ svg.date-picker-icon {
 
   .date-picker-main--today {
     font-size: 9px;
-    white-space: nowrap;
   }
 
   .date-picker-sub--today {
     font-size: 12px;
-    white-space: nowrap;
   }
 
   /* Скрываем дополнительную строку даты — экономим место в шапке.
@@ -9511,7 +9520,7 @@ svg.date-picker-icon {
  * нет активного приёма → плавный fade при появлении/исчезновении. */
 .meal-sticky-bar {
   position: fixed;
-  top: 100px;
+  top: 120px;
   left: 12px;
   right: 12px;
   z-index: 50;
@@ -9544,7 +9553,7 @@ svg.date-picker-icon {
 
 @supports (top: env(safe-area-inset-top)) {
   .meal-sticky-bar {
-    top: calc(env(safe-area-inset-top, 0px) + 100px);
+    top: calc(env(safe-area-inset-top, 0px) + 120px);
   }
 }
 
