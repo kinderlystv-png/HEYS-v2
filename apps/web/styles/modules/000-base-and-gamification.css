@@ -7867,11 +7867,7 @@ svg.date-picker-icon {
   position: relative;
   contain: style;
   overflow-anchor: none;
-  /* 🎯 R-DAY-STICKY (2026-05-14): clip вместо hidden — клипает контент при slide-анимации
-   * без создания scroll-container reference для дочерних position: sticky. overflow: hidden
-   * заставил бы sticky-элементы считать этот контейнер своей "scrolling box" → sticky
-   * не работала бы (sticky должна ссылаться на viewport через document scroll). */
-  overflow: clip;
+  overflow: hidden;
   /* layout-containment, как и transform, ломает position: fixed для FAB */
   /* GPU acceleration включается только при анимации через will-change */
 }
@@ -9489,23 +9485,12 @@ svg.date-picker-icon {
   color: #3b82f6;
 }
 
-/* 🎯 R-DAY-STICKY (2026-05-15): прилипающая шапка приёма пищи.
- * .meal-header-inside получает position:sticky через inline style в _meals.js.
- * iOS safe-area для устройств с notch — поверх через @supports. */
-@supports (top: env(safe-area-inset-top)) {
-  .meal-header-inside {
-    top: calc(env(safe-area-inset-top, 0px) + 100px) !important;
-  }
-}
-
 .meal-card {
   padding-top: 6px;
   padding-bottom: 6px;
   overflow: visible;
-  /* 🎯 R-DAY-STICKY: content-visibility: auto убран — он создаёт implicit
-   * containment box, который ломает поведение position: sticky у потомков
-   * во время скролла (известный edge-case Chrome/Safari, sticky не "catch"
-   * когда карточка быстро входит во вьюпорт). */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 /* Название продукта: фиксированная ширина с переносами */

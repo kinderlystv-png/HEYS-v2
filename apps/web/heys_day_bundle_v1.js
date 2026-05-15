@@ -6381,37 +6381,25 @@
             'data-meal-time': meal?.time || '',
             style: mealCardStyle,
         },
-            // 🎯 R-DAY-STICKY (2026-05-14 → 2026-05-15): единая sticky-шапка.
-            // Раньше разделял main-row и badges-row на 2 блока — визуально разваливалось.
-            // Возвращаю одной .meal-header-inside (как до правки), но делаю весь блок
-            // position: sticky. Containing block = .meal-card → шапка остаётся прилипшей
-            // пока вся карточка в viewport, при подходе следующей карточки её шапка
-            // "выталкивает" предыдущую (нативный CSS sticky).
+            // 🚫 R-DAY-STICKY REVERTED (2026-05-15): sticky на .meal-header-inside
+            // ломает раскладку (CSS .meal-header-inside имеет flex-wrap: wrap, который
+            // в комбинации с inline flex-direction:column + position:sticky производит
+            // непредсказуемое поведение — у юзера элементы шапки и соседи (Показать,
+            // Добавить N, + Добавить несколько) рендерятся вперемешку). Возвращаю
+            // оригинальное position: relative — шапка работает как раньше, но без sticky.
             React.createElement('div', {
                 className: 'meal-header-inside meal-type-' + mealTypeInfo.type,
                 style: {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
-                    position: 'sticky',
-                    top: '100px',
-                    zIndex: 5,
+                    position: 'relative',
                     background: qualityLineColor !== 'transparent'
                         ? qualityLineColor + '1F'
                         : undefined,
                     borderRadius: '10px 10px 0 0',
                     margin: '-12px -12px 8px -4px',
                     padding: '12px 16px 12px 8px',
-                    cursor: 'pointer',
-                },
-                onClick: (e) => {
-                    // Тап по шапке → скролл к началу карточки приёма. Игнорируем клики
-                    // по интерактивным детям (время-бэйдж, dropdown типа, бэйджи качества).
-                    if (e.target.closest('select, .meal-time-badge-inside, .meal-type-wrapper, .meal-type-select, .activity-context-badge, .meal-role-status-badge-header')) return;
-                    const card = e.currentTarget.closest('.meal-card');
-                    if (!card) return;
-                    const cardTop = card.getBoundingClientRect().top + window.scrollY;
-                    window.scrollTo({ top: Math.max(0, cardTop - 100), behavior: 'smooth' });
                 },
             },
                 React.createElement('div', {
