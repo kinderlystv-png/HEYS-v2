@@ -229,9 +229,9 @@ const T = {
     title: '🌙 HEYS — поздно поел',
     body: 'Сегодня позднее обычного. Попробуй завтра ужинать пораньше',
   }),
-  goalReachedCurator: (clientName, kg) => ({
-    title: '🏆 HEYS — клиент достиг цели!',
-    body: `${clientName || 'Клиент'} держит целевой вес ${kg} кг уже 7 дней. Время обновить план.`,
+  calStreakCurator: (clientName, days) => ({
+    title: '🏆 HEYS — клиент держит план!',
+    body: `${clientName || 'Клиент'} ${days} дней подряд укладывается в норму калорий. Время обновить план.`,
   }),
   ewsCurator: (clientName, patternName) => ({
     title: '⚠️ HEYS — алёрт EWS',
@@ -361,18 +361,30 @@ async function getLastMealMedian(client, clientId) {
   return minutes.length % 2 ? minutes[mid] : Math.round((minutes[mid - 1] + minutes[mid]) / 2);
 }
 
-/** Подряд N дней (включая сегодня и предыдущие) где weightMorning ≤ weightGoal + 0.5. */
-async function getDaysAtGoal(client, clientId, weightGoal, tolerance = 0.5) {
-  if (typeof weightGoal !== 'number' || !isFinite(weightGoal)) return 0;
+/**
+ * Серия дней подряд (включая сегодня и предыдущие) где kcal в диапазоне
+ * [normKcal × 0.9, normKcal × 1.05] — клиент «держит план питания».
+ * Возвращает { streak, endDate } — длина серии и дата последнего дня
+ * (формат YYYY-MM-DD). endDate используется как sentinel для повторных
+ * поздравлений: каждая новая 7+-дневная серия → новый sentinel → новый push.
+ */
+async function getCalStreak(client, clientId, normKcal) {
+  if (!normKcal || normKcal <= 0) return { streak: 0, endDate: null };
+  const lo = normKcal * 0.9;
+  const hi = normKcal * 1.05;
   let streak = 0;
+  let endDate = null;
   for (let i = 0; i < 14; i++) {
-    const v = await loadKv(client, clientId, `heys_dayv2_${isoDateNDaysAgoMsk(i)}`);
-    const w = Number(v?.weightMorning);
-    if (!isFinite(w) || w <= 0) break;
-    if (w <= weightGoal + tolerance) streak++;
-    else break;
+    const dateStr = isoDateNDaysAgoMsk(i);
+    const v = await loadKv(client, clientId, `heys_dayv2_${dateStr}`);
+    const k = sumDayMacros(v).kcal;
+    if (k <= 0) break; // ни одной записи — серия прерывается
+    if (k >= lo && k <= hi) {
+      if (endDate === null) endDate = dateStr; // самый свежий день в серии
+      streak++;
+    } else break;
   }
-  return streak;
+  return { streak, endDate };
 }
 
 /** Hour-bucket для воды: чтобы пуш о воде шёл не чаще раз в 4 часа. */
@@ -516,7 +528,7 @@ async function jobInactiveClients(client) {
       title: 'HEYS — клиент пропал',
       body: `${row.name || 'Клиент'} не логирует еду 2+ дня. Стоит выйти на связь.`,
       tag: `inactive-${row.client_id}`,
-      url: '/curator',
+      url: `/curator?client=${row.client_id}`,
     };
     const res = await sendToCurator(client, row.curator_id, payload);
     total += res.sent;
@@ -927,10 +939,9 @@ async function jobLateMeal(client) {
   return { total };
 }
 
-// ─── 9) Достиг цели → куратору (один раз навсегда) ─────────────────────
+// ─── 9) Держит план питания 7 дней → куратору (на каждую серию заново) ─
 
-async function jobGoalReached(client) {
-  const today = todayDateMsk();
+async function jobCalStreak(client) {
   const rows = await client.query(
     `SELECT c.id AS client_id, c.name, c.curator_id
        FROM clients c
@@ -940,27 +951,25 @@ async function jobGoalReached(client) {
   let total = 0;
   for (const r of rows.rows) {
     const clientId = r.client_id;
-    const profile = await loadKv(client, clientId, 'heys_profile');
-    const goal = Number(profile?.weightGoal);
-    if (!isFinite(goal) || goal <= 0) continue;
+    const norms = await getNorms(client, clientId);
+    if (!norms || !norms.kcal) continue;
 
-    const streak = await getDaysAtGoal(client, clientId, goal);
-    if (streak < 7) continue;
+    const { streak, endDate } = await getCalStreak(client, clientId, norms.kcal);
+    if (streak < 7 || !endDate) continue;
 
-    const key = `goal_reached:${clientId}`; // без даты — один раз навсегда
+    // Sentinel включает endDate — каждая новая 7+-дневная серия даёт новый push.
+    const key = `cal_streak:${clientId}:${endDate}`;
     if (!(await claimIdempotency(client, key))) continue;
 
     const prefs = await getCuratorPrefs(client, r.curator_id);
     if (!prefs.enabled) continue;
-    // Достижение цели — не quiet-hours sensitive, шлём.
 
     const res = await sendToCurator(client, r.curator_id, {
-      ...T.goalReachedCurator(r.name, goal),
-      tag: `goal-reached-${clientId}`,
-      url: '/curator',
+      ...T.calStreakCurator(r.name, streak),
+      tag: `cal-streak-${clientId}`,
+      url: `/curator?client=${clientId}`,
     });
     total += res.sent;
-    void today; // eslint-disable-line no-unused-expressions
   }
   return { total };
 }
@@ -1002,7 +1011,7 @@ async function jobEwsAlerts(client) {
         const res = await sendToCurator(client, r.curator_id, {
           ...T.ewsCurator(r.name, p.name || p.pattern_id || 'паттерн'),
           tag: `ews-${p.pattern_id}-${clientId}`,
-          url: '/curator',
+          url: `/curator?client=${clientId}`,
         });
         total += res.sent;
       }
@@ -1065,8 +1074,8 @@ async function jobSubscriptionExpiry(client) {
     if (!(await claimIdempotency(client, key))) continue;
 
     const payload = kind === 'expired'
-      ? { ...tpl(r.name), tag: `subscription-${kind}-${r.client_id}`, url: '/curator' }
-      : { ...tpl(r.name, daysLeft), tag: `subscription-${kind}-${r.client_id}`, url: '/curator' };
+      ? { ...tpl(r.name), tag: `subscription-${kind}-${r.client_id}`, url: `/curator?client=${r.client_id}` }
+      : { ...tpl(r.name, daysLeft), tag: `subscription-${kind}-${r.client_id}`, url: `/curator?client=${r.client_id}` };
 
     const res = await sendToCurator(client, r.curator_id, payload);
     total += res.sent;
@@ -1098,7 +1107,7 @@ module.exports.handler = async function (event, context) {
     stats.macroOver = await jobMacroOver(client);
     stats.overeat3d = await jobOvereat3d(client);
     stats.lateMeal = await jobLateMeal(client);
-    stats.goalReached = await jobGoalReached(client);
+    stats.calStreak = await jobCalStreak(client);
     stats.ewsAlerts = await jobEwsAlerts(client);
     stats.subscriptionExpiry = await jobSubscriptionExpiry(client);
   } catch (err) {

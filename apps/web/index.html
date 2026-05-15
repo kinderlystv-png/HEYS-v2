@@ -791,11 +791,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.f30327c5b51e.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.1f0811d21578.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.d4d924ed8aed.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.0be42009076c.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.46510c7f505f.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.16ae539a6f49.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.9a493cab0080.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.f3ebc78bb072.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.3537a9c5e436.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.b3be0dcff0e8.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
 
@@ -2922,6 +2922,33 @@
     <!-- ВАЖНО: Загружается СИНХРОННО перед defer-скриптами (blocking script) -->
     <!-- Собирается: npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify -->
     <script src="react-bundle.js"></script>
+    <!-- DEMO_MODE flag — must be set BEFORE any boot-bundle runs.
+         Hardcoded hostname check: only activates on the demo subdomain
+         (try.heyslab.ru) or local dev override (try.heyslab.local). On
+         app.heyslab.ru the ?demo=… query is ignored entirely. -->
+    <script>
+        (function () {
+            var h = window.location.hostname;
+            var onDemoHost = h === 'try.heyslab.ru'
+                          || h === 'try.heyslab.local'
+                          || h === 'try-heyslab-ru.website.yandexcloud.net';
+            if (onDemoHost) {
+                var params = new URLSearchParams(window.location.search);
+                var g = params.get('gender') === 'female' ? 'female' : 'male';
+                window.__HEYS_DEMO_MODE__ = { enabled: true, gender: g };
+                try {
+                    // Set fake client up-front so isClientAuthorized() passes and PIN form is skipped.
+                    // The full per-account snapshot (products, days, profile, etc.) is loaded later
+                    // by HEYS.demoMode.loadSnapshot() before React renders.
+                    localStorage.setItem('heys_pin_auth_client', 'demo-client-id');
+                    localStorage.setItem('heys_client_current', 'demo-client-id');
+                    console.info('[DEMO_MODE] Active —', g);
+                } catch (e) {}
+            } else {
+                window.__HEYS_DEMO_MODE__ = { enabled: false };
+            }
+        })();
+    </script>
     <!-- Dark theme interceptor — patches React.createElement for CSS var colors -->
     <script src="heys_dark_theme_interceptor.js"></script>
     <!-- Supabase CDN — УДАЛЁН 2025-12-24 (152-ФЗ compliance)
@@ -2934,11 +2961,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.f30327c5b51e.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.1f0811d21578.js"></script>
-    <script defer src="boot-day.bundle.d4d924ed8aed.js"></script>
-    <script defer src="boot-app.bundle.0be42009076c.js"></script>
-    <script defer src="boot-init.bundle.46510c7f505f.js"
+    <script defer src="boot-core.bundle.16ae539a6f49.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.9a493cab0080.js"></script>
+    <script defer src="boot-day.bundle.f3ebc78bb072.js"></script>
+    <script defer src="boot-app.bundle.3537a9c5e436.js"></script>
+    <script defer src="boot-init.bundle.b3be0dcff0e8.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->

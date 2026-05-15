@@ -13910,6 +13910,7 @@ NOVA: 1
         const {
             mode, sourceDate, sourceMealIndex, sourceLabel,
             daysWithMeals, onPick, pIndex, getProductFromItem,
+            todayDateStr,
         } = state;
 
         const isCopy = mode === 'product-copy';
@@ -13935,9 +13936,17 @@ NOVA: 1
             }
         };
 
+        const handleCreateNew = (dstDate) => {
+            hide();
+            if (typeof onPick === 'function') {
+                onPick({ dstDate, createNewMeal: true });
+            }
+        };
+
         const sections = (daysWithMeals || []).map((day) => {
             const isExpanded = !!expandedDates[day.dateStr];
             const meals = Array.isArray(day.meals) ? day.meals : [];
+            const isToday = todayDateStr && day.dateStr === todayDateStr;
 
             const header = React.createElement('button', {
                 onClick: () => toggleDate(day.dateStr),
@@ -13964,54 +13973,85 @@ NOVA: 1
                 ),
             );
 
+            const mealButtons = meals.map((meal, mi) => {
+                const isSource = day.dateStr === sourceDate && mi === sourceMealIndex;
+                const kcal = calcMealKcal(meal, pIndex, getProductFromItem);
+                const itemCount = (meal.items || []).length;
+                const emoji = getMealEmoji(meal);
+                const name = meal.name || 'Приём';
+                return React.createElement('button', {
+                    key: meal.id || (day.dateStr + '_' + mi),
+                    onClick: isSource ? undefined : () => handlePick(day.dateStr, mi, meal.id),
+                    disabled: isSource,
+                    style: {
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '10px 12px',
+                        border: '1px solid ' + (isSource ? '#e2e8f0' : '#dbeafe'),
+                        background: isSource ? '#f8fafc' : '#fff',
+                        borderRadius: '8px',
+                        cursor: isSource ? 'not-allowed' : 'pointer',
+                        opacity: isSource ? 0.5 : 1,
+                        textAlign: 'left',
+                        width: '100%',
+                    },
+                },
+                    React.createElement('span', { style: { fontSize: '18px' } }, emoji),
+                    React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                        React.createElement('div', {
+                            style: { fontSize: '14px', fontWeight: 600, color: '#0f172a' },
+                        },
+                            meal.time ? meal.time + ' · ' : '',
+                            name,
+                            isSource ? ' (откуда)' : '',
+                        ),
+                        React.createElement('div', {
+                            style: { fontSize: '11px', color: '#64748b', marginTop: '2px' },
+                        },
+                            itemCount + ' ' + (itemCount === 1 ? 'продукт' : (itemCount < 5 ? 'продукта' : 'продуктов')),
+                            kcal > 0 ? ' · ~' + kcal + ' ккал' : '',
+                        ),
+                    ),
+                );
+            });
+
+            const emptyHint = (meals.length === 0 && !isToday)
+                ? React.createElement('div', {
+                    key: '_empty_',
+                    style: { padding: '10px 14px', color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' },
+                }, 'Приёмов нет')
+                : null;
+
+            const newMealBtn = isToday
+                ? React.createElement('button', {
+                    key: '_new_meal_',
+                    onClick: () => handleCreateNew(day.dateStr),
+                    style: {
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '10px 12px',
+                        border: '1px dashed #3b82f6',
+                        background: '#eff6ff',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        width: '100%',
+                        color: '#1d4ed8',
+                    },
+                },
+                    React.createElement('span', { style: { fontSize: '18px' } }, '➕'),
+                    React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                        React.createElement('div', {
+                            style: { fontSize: '14px', fontWeight: 600 },
+                        }, 'Новый приём'),
+                        React.createElement('div', {
+                            style: { fontSize: '11px', color: '#64748b', marginTop: '2px' },
+                        }, 'выбрать время и оценки'),
+                    ),
+                )
+                : null;
+
             const list = isExpanded && React.createElement('div', {
                 style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px', paddingLeft: '4px' },
-            },
-                meals.length === 0
-                    ? React.createElement('div', {
-                        style: { padding: '10px 14px', color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' },
-                    }, 'Приёмов нет')
-                    : meals.map((meal, mi) => {
-                        const isSource = day.dateStr === sourceDate && mi === sourceMealIndex;
-                        const kcal = calcMealKcal(meal, pIndex, getProductFromItem);
-                        const itemCount = (meal.items || []).length;
-                        const emoji = getMealEmoji(meal);
-                        const name = meal.name || 'Приём';
-                        return React.createElement('button', {
-                            key: meal.id || (day.dateStr + '_' + mi),
-                            onClick: isSource ? undefined : () => handlePick(day.dateStr, mi, meal.id),
-                            disabled: isSource,
-                            style: {
-                                display: 'flex', alignItems: 'center', gap: '10px',
-                                padding: '10px 12px',
-                                border: '1px solid ' + (isSource ? '#e2e8f0' : '#dbeafe'),
-                                background: isSource ? '#f8fafc' : '#fff',
-                                borderRadius: '8px',
-                                cursor: isSource ? 'not-allowed' : 'pointer',
-                                opacity: isSource ? 0.5 : 1,
-                                textAlign: 'left',
-                                width: '100%',
-                            },
-                        },
-                            React.createElement('span', { style: { fontSize: '18px' } }, emoji),
-                            React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                                React.createElement('div', {
-                                    style: { fontSize: '14px', fontWeight: 600, color: '#0f172a' },
-                                },
-                                    meal.time ? meal.time + ' · ' : '',
-                                    name,
-                                    isSource ? ' (откуда)' : '',
-                                ),
-                                React.createElement('div', {
-                                    style: { fontSize: '11px', color: '#64748b', marginTop: '2px' },
-                                },
-                                    itemCount + ' ' + (itemCount === 1 ? 'продукт' : (itemCount < 5 ? 'продукта' : 'продуктов')),
-                                    kcal > 0 ? ' · ~' + kcal + ' ккал' : '',
-                                ),
-                            ),
-                        );
-                    }),
-            );
+            }, emptyHint, ...mealButtons, newMealBtn);
 
             return React.createElement('div', { key: day.dateStr }, header, list);
         });

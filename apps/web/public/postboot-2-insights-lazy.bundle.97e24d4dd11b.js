@@ -19818,6 +19818,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Resolved warnings (status='resolved' или 'stale') приходят из trendsResult
         const resolvedWarnings = trendsResult.resolvedWarnings || [];
 
+        // Сохраняем snapshot критичных паттернов для server-side push (cron-reminders
+        // читает heys_ews_snapshot из client_kv_store и шлёт push куратору + клиенту).
+        // Только высокая/средняя severity, чтобы не спамить.
+        try {
+            const criticalSnapshot = activeWarnings
+                .filter(w => (w.type === 'CRITICAL_PATTERN_DEGRADATION' || w.severity === 'high'))
+                .map(w => ({
+                    pattern_id: w.pattern || w.type,
+                    name: w.patternName || w.pattern || w.type,
+                    score: typeof w.currentScore === 'number' ? w.currentScore : null,
+                    trend_delta: typeof w.relativeChange === 'number' ? w.relativeChange / 100 : null,
+                    severity: w.severity || 'medium',
+                    computed_at: new Date().toISOString(),
+                }));
+            if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                HEYS.utils.lsSet('heys_ews_snapshot', criticalSnapshot);
+                console.info('ews / snapshot ✅ saved:', { count: criticalSnapshot.length });
+            }
+        } catch (e) {
+            console.warn('ews / snapshot ❌ failed:', e?.message);
+        }
+
         return {
             available: true,
             count: activeWarnings.length,

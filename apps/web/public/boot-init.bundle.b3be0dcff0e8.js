@@ -9693,10 +9693,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             useCloudClients,
         } = AppHooks;
 
+        // DEMO_MODE: skip cloud init + health ping. Snapshot loaded separately.
+        const isDemoMode = window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled;
+
         // init cloud (safe if no cloud module)
         // 🇷🇺 Основной трафик идёт через Yandex Cloud API (api.heyslab.ru)
         // Legacy cloud модуль оставлен для обратной совместимости
-        if (AppCloudInit.initCloud) {
+        if (isDemoMode) {
+            // No-op: cloud is stubbed in heys_storage_supabase_v1.js,
+            // snapshot is loaded by HEYS.demoMode.loadSnapshot() in bootstrap.
+        } else if (AppCloudInit.initCloud) {
             AppCloudInit.initCloud();
         } else if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
             const isLocalBrowserDev = typeof window !== 'undefined'
@@ -9911,9 +9917,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Debug panel + badge API moved to heys_app_gates_v1.js
 
         const AppInitializer = HEYS.AppInitializer;
-        const initializeApp = AppInitializer?.initializeApp || (() => {
+        const rawInitializeApp = AppInitializer?.initializeApp || (() => {
             window.__heysLog && window.__heysLog('[APP] AppInitializer missing, init skipped');
         });
+
+        // DEMO_MODE: load snapshot into LS before running initializeApp.
+        // Snapshot fetch is the only network call in demo mode.
+        const initializeApp = function () {
+            const demo = window.__HEYS_DEMO_MODE__;
+            if (demo && demo.enabled && HEYS.demoMode && typeof HEYS.demoMode.loadSnapshot === 'function') {
+                HEYS.demoMode.loadSnapshot(demo.gender)
+                    .then(() => {
+                        console.info('[DEMO_MODE] snapshot loaded — starting app');
+                        rawInitializeApp();
+                    })
+                    .catch((err) => {
+                        console.error('[DEMO_MODE] snapshot load failed:', err);
+                        // Fall through — render whatever is in LS, even if empty
+                        rawInitializeApp();
+                    });
+                return;
+            }
+            rawInitializeApp();
+        };
 
         // Start initialization
         const startDependencyLoader = HEYS.AppDependencyLoader?.start;

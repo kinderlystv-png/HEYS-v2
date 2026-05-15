@@ -22655,7 +22655,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
 
                     // 100ms — даём CopyMealModal закрыться (visual smoothness перед открытием MealStep)
                     setTimeout(() => {
-                        if (isMobile && HEYS.MealStep && HEYS.MealStep.showAddMeal) {
+                        if (HEYS.MealStep && HEYS.MealStep.showAddMeal) {
                             HEYS.MealStep.showAddMeal({
                                 dateKey: todayStr,
                                 meals: targetMeals,
@@ -22668,7 +22668,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                                 onComplete: completeWithItems,
                             });
                         } else {
-                            // Desktop fallback: silent create по паттерну addMeal desktop-ветки
+                            // Fallback если MealStep ещё не загружен
                             completeWithItems({
                                 id: uid('m_'),
                                 name: 'Приём',
@@ -22682,7 +22682,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     }, 100);
                 },
             });
-        }, [date, pIndex, getProductFromItem, prof, isMobile, copyItemsToMeal, setDay, markUndoWindow, persistDayData, navigateAndScrollToMeal]);
+        }, [date, pIndex, getProductFromItem, prof, copyItemsToMeal, setDay, markUndoWindow, persistDayData, navigateAndScrollToMeal]);
 
         const buildDaysWithMeals = React.useCallback((opts) => {
             const includeEmpty = !!(opts && opts.includeEmpty);
@@ -22736,6 +22736,100 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
             return true;
         }, [date, setDay, markUndoWindow, persistDayData]);
 
+        const createNewMealAndAddItem = React.useCallback((params) => {
+            const { srcDate, srcMealId, srcItem, srcItemIndex, mode, todayStr } = params;
+            const dstItem = { ...srcItem, id: uid('it_') };
+
+            const completeWithNewMeal = (newMealRaw) => {
+                const newMeal = { ...newMealRaw, items: [dstItem] };
+
+                const writeOk = writeDay(todayStr, (existing) => {
+                    const meals = sortMealsByTime([...(existing.meals || []), newMeal]);
+                    return { ...existing, date: todayStr, meals, updatedAt: Date.now() };
+                }, mode + '_item_to_new_meal');
+
+                if (!writeOk) {
+                    HEYS.Toast?.error?.('Не удалось создать новый приём');
+                    return;
+                }
+
+                if (mode === 'move') {
+                    writeDay(srcDate, (existing) => {
+                        const meals = (existing.meals || []).map(m => m && m.id === srcMealId
+                            ? { ...m, items: (m.items || []).filter(it => it.id !== srcItem.id) } : m);
+                        return { ...existing, meals, updatedAt: Date.now() };
+                    }, 'move_item_from_source');
+                    recalculateOrphanProducts();
+                }
+
+                haptic(mode === 'move' ? 'medium' : 'light');
+
+                let undone = false;
+                const undo = () => {
+                    if (undone) return;
+                    undone = true;
+                    writeDay(todayStr, (existing) => {
+                        const meals = (existing.meals || []).filter(m => m && m.id !== newMeal.id);
+                        return { ...existing, meals, updatedAt: Date.now() };
+                    }, 'undo_create_new_meal');
+                    if (mode === 'move') {
+                        writeDay(srcDate, (existing) => {
+                            const meals = (existing.meals || []).map(m => {
+                                if (!m || m.id !== srcMealId) return m;
+                                const items = [...(m.items || [])];
+                                if (items.some(it => it.id === srcItem.id)) return m;
+                                items.splice(Math.max(0, Math.min(srcItemIndex, items.length)), 0, srcItem);
+                                return { ...m, items };
+                            });
+                            return { ...existing, meals, updatedAt: Date.now() };
+                        }, 'undo_move_item_source');
+                    }
+                    HEYS.Toast?.info?.('Возвращено');
+                };
+
+                HEYS.Toast?.show?.({
+                    type: 'success',
+                    message: mode === 'move' ? 'Перемещено в новый приём' : 'Скопировано в новый приём',
+                    duration: 4000,
+                    action: { label: 'Отменить', onClick: undo },
+                });
+
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                navigateAndScrollToMeal(todayStr, newMeal.id);
+            };
+
+            const todayDay = (todayStr === date)
+                ? dayRef.current
+                : (lsGet(_scopedDayKey(todayStr), null) || { date: todayStr, meals: [] });
+
+            // 100ms — даём MoveModal закрыться (visual smoothness)
+            setTimeout(() => {
+                if (HEYS.MealStep && HEYS.MealStep.showAddMeal) {
+                    HEYS.MealStep.showAddMeal({
+                        dateKey: todayStr,
+                        meals: todayDay?.meals || [],
+                        pIndex,
+                        getProductFromItem,
+                        trainings: todayDay?.trainings || [],
+                        deficitPct: Number(todayDay?.deficitPct ?? prof?.deficitPctTarget ?? 0),
+                        prof,
+                        dayData: todayDay,
+                        onComplete: completeWithNewMeal,
+                    });
+                } else {
+                    completeWithNewMeal({
+                        id: uid('m_'),
+                        name: 'Приём',
+                        time: '',
+                        mood: '',
+                        wellbeing: '',
+                        stress: '',
+                        items: [],
+                    });
+                }
+            }, 100);
+        }, [date, writeDay, pIndex, getProductFromItem, prof, navigateAndScrollToMeal, recalculateOrphanProducts, haptic]);
+
         const moveItem = React.useCallback((srcMealIndex, srcItemId) => {
             if (!HEYS.MoveModal || !HEYS.MoveModal.show) {
                 HEYS.Toast?.info?.('Модалка ещё загружается — попробуй через секунду');
@@ -22766,11 +22860,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 sourceMealIndex: srcMealIndex,
                 sourceLabel: `Переносим: ${srcItem.name || 'Продукт'}, ${srcItem.grams || 0}г${itemKcal ? ', ~' + itemKcal + ' ккал' : ''}`,
                 daysWithMeals,
+                todayDateStr: _getTodayISO(),
                 pIndex,
                 getProductFromItem,
-                onPick: ({ dstDate, dstMealIndex, dstMealId }) => {
+                onPick: ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
                     if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                         HEYS.Paywall.showBlockedToast?.('Перенос недоступен');
+                        return;
+                    }
+                    if (createNewMeal) {
+                        createNewMealAndAddItem({
+                            srcDate,
+                            srcMealId,
+                            srcItem,
+                            srcItemIndex,
+                            mode: 'move',
+                            todayStr: dstDate,
+                        });
                         return;
                     }
                     const dstItem = { ...srcItem, id: uid('it_') };
@@ -22833,7 +22939,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     });
                 },
             });
-        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, recalculateOrphanProducts]);
+        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, recalculateOrphanProducts, createNewMealAndAddItem]);
 
         const copyItem = React.useCallback((srcMealIndex, srcItemId) => {
             if (!HEYS.MoveModal || !HEYS.MoveModal.show) {
@@ -22862,11 +22968,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                 sourceMealIndex: srcMealIndex,
                 sourceLabel: `Копируем: ${srcItem.name || 'Продукт'}, ${srcItem.grams || 0}г${itemKcal ? ', ~' + itemKcal + ' ккал' : ''}`,
                 daysWithMeals,
+                todayDateStr: _getTodayISO(),
                 pIndex,
                 getProductFromItem,
-                onPick: ({ dstDate, dstMealIndex, dstMealId }) => {
+                onPick: ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
                     if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
                         HEYS.Paywall.showBlockedToast?.('Копирование недоступно');
+                        return;
+                    }
+                    if (createNewMeal) {
+                        createNewMealAndAddItem({
+                            srcDate,
+                            srcMealId: srcMeal.id,
+                            srcItem,
+                            srcItemIndex: -1,
+                            mode: 'copy',
+                            todayStr: dstDate,
+                        });
                         return;
                     }
                     const dstItem = { ...srcItem, id: uid('it_') };
@@ -22911,7 +23029,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
                     });
                 },
             });
-        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay]);
+        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, createNewMealAndAddItem]);
 
         const moveMealToDate = React.useCallback((srcMealIndex, dstDate) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {

@@ -2527,14 +2527,18 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     // ❌ НЕ регистрируем SW на localhost — мешает разработке (HMR, updatefound и т.д.)
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      console.log('[SW] ⏭️ Skipped on localhost (dev mode)');
-      bootLog('skipped (localhost)');
-      // Удаляем существующий SW если есть (чтобы не мешал разработке)
+    // ❌ НЕ регистрируем SW в demo-режиме — иначе бандлы demo закэшируются у посетителей
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isDemoMode = window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled;
+    if (isLocalhost || isDemoMode) {
+      const reason = isDemoMode ? 'demo mode' : 'localhost';
+      console.log('[SW] ⏭️ Skipped (' + reason + ')');
+      bootLog('skipped (' + reason + ')');
+      // Удаляем существующий SW если есть (чтобы не мешал)
       navigator.serviceWorker.getRegistrations().then(registrations => {
         registrations.forEach(reg => {
           reg.unregister().then(() => {
-            console.log('[SW] 🗑️ Unregistered SW on localhost');
+            console.log('[SW] 🗑️ Unregistered SW (' + reason + ')');
           });
         });
       });
@@ -5092,7 +5096,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.05.12.0000.e2eae684'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.05.15.2305.edb1a090'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -5198,6 +5202,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
+
+  // DEMO_MODE: no-op analytics. Skips global error listeners and counter machinery —
+  // demo iframe должен быть тихим, без раздувания счётчиков на тестовых действиях.
+  if (global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.enabled) {
+    const noop = function () {};
+    HEYS.analytics = {
+      trackSearch: noop, trackApiCall: noop, trackDataOperation: noop,
+      trackEvent: noop, trackError: noop, trackInteraction: noop,
+      startMeasure: noop, endMeasure: noop,
+      startPerformanceAudit: noop, stopPerformanceAudit: noop,
+      getStats: function () { return {}; },
+      exportMetrics: function () { return {}; },
+      trackModuleLoad: noop, trackComponentRender: noop,
+      trackUserInteraction: noop, startTracking: noop, stopTracking: noop,
+    };
+    return;
+  }
 
   // ==================== КОНСТАНТЫ ====================
 
@@ -19292,6 +19313,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   const cloud = HEYS.cloud = HEYS.cloud || {};
+
+  // DEMO_MODE: short-circuit the whole storage layer with stubs.
+  // No cloud writes, no shared-index lookups, no bootstrap sync. Snapshot is
+  // loaded directly into LS by HEYS.demoMode.loadSnapshot() during bootstrap.
+  if (global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.enabled) {
+    (global.console || console).info('[HEYS.sinhron] DEMO_MODE — cloud methods stubbed');
+    const resolved = function () { return Promise.resolve(); };
+    cloud.init = function () { return Promise.resolve({ initialized: false, reason: 'demo-mode' }); };
+    cloud.signIn = resolved;
+    cloud.signOut = resolved;
+    cloud.saveClientKey = resolved;
+    cloud.bootstrapClientSync = function () { return Promise.resolve({ keys: [], total: 0, source: 'demo' }); };
+    cloud.syncClientViaRPC = function () { return Promise.resolve({ keys: [], total: 0, source: 'demo' }); };
+    cloud.getSharedIndex = function () { return new Map(); };
+    cloud.getCachedSharedProducts = function () { return []; };
+    cloud.getCurrentClientId = function () { return 'demo-client-id'; };
+    cloud.getCurrentUser = function () { return null; };
+    cloud.scheduleClientPush = function () { /* no-op */ };
+    cloud.flushPendingSync = resolved;
+    cloud.applyAuditAck = function () { /* no-op */ };
+    return;
+  }
+
   const DEV = global.DEV || {};
   const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
   const devWarn = typeof DEV.warn === 'function' ? DEV.warn.bind(DEV) : function () { };
@@ -32749,6 +32793,92 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
   };
 
+})(window);
+
+
+/* ===== heys_demo_mode_v1.js ===== */
+/**
+ * HEYS Demo Mode v1.0
+ *
+ * Activates only on try.heyslab.ru subdomain (gated by inline script in
+ * index.html that sets window.__HEYS_DEMO_MODE__). On the production app
+ * domain this module's loadSnapshot() is never called.
+ *
+ * Responsibilities:
+ *   - fetch the per-gender snapshot.json from the public S3 bucket
+ *   - write each key from snapshot.lsKeys into localStorage
+ *   - feed snapshot.products into HEYS.OverlayStore.applyCloudSnapshot() so
+ *     the products catalog renders correctly without a live cloud sync
+ *
+ * Snapshot source: https://storage.yandexcloud.net/heys-public-snapshot/snapshot-<gender>.json
+ * For local dev (try.heyslab.local) override via window.__HEYS_DEMO_SNAPSHOT_URL__.
+ */
+
+(function (global) {
+  'use strict';
+
+  const HEYS = global.HEYS = global.HEYS || {};
+  HEYS.demoMode = HEYS.demoMode || {};
+
+  const DEFAULT_BASE = 'https://storage.yandexcloud.net/heys-public-snapshot';
+
+  HEYS.demoMode.loadSnapshot = async function loadSnapshot(gender) {
+    const safeGender = gender === 'female' ? 'female' : 'male';
+    const base = global.__HEYS_DEMO_SNAPSHOT_URL__ || DEFAULT_BASE;
+    const url = `${base}/snapshot-${safeGender}.json`;
+
+    let snapshot;
+    try {
+      const res = await fetch(url, { cache: 'default' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      snapshot = await res.json();
+    } catch (err) {
+      console.error('[DEMO_MODE] failed to fetch snapshot:', url, err);
+      throw err;
+    }
+
+    // 1) Push each LS key from snapshot. We let localStorage.setItem
+    //    go through the regular path — the storage interceptor is already
+    //    no-op'd by heys_storage_supabase_v1.js DEMO_MODE branch.
+    const ls = snapshot.lsKeys || {};
+    let writeCount = 0;
+    for (const key of Object.keys(ls)) {
+      try {
+        const value = ls[key];
+        localStorage.setItem(
+          key,
+          typeof value === 'string' ? value : JSON.stringify(value),
+        );
+        writeCount++;
+      } catch (err) {
+        // Quota / disabled storage / Safari ITP — bail loudly so the caller
+        // can show a fallback "open in full screen" UI.
+        console.error('[DEMO_MODE] localStorage.setItem failed for', key, err);
+        throw err;
+      }
+    }
+
+    // 2) Feed products into the overlay store. This is the same entry point
+    //    cloud bootstrap uses, so the UI behaves identically.
+    const products = Array.isArray(snapshot.products) ? snapshot.products : [];
+    if (HEYS.OverlayStore && typeof HEYS.OverlayStore.applyCloudSnapshot === 'function') {
+      HEYS.OverlayStore.applyCloudSnapshot(products, { source: 'demo-snapshot' });
+    } else {
+      // OverlayStore not loaded yet — fall back to the legacy LS key. The
+      // overlay module will pick it up on init.
+      try {
+        localStorage.setItem('heys_products_overlay_v2', JSON.stringify(products));
+      } catch (err) {
+        console.error('[DEMO_MODE] failed to seed products overlay:', err);
+      }
+    }
+
+    console.info('[DEMO_MODE] snapshot applied:',
+      `${writeCount} ls keys, ${products.length} products,`,
+      `pseudonym=${snapshot.pseudonym}, generatedAt=${snapshot.generatedAt}`);
+
+    return { writeCount, productCount: products.length };
+  };
 })(window);
 
 

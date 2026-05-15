@@ -2195,9 +2195,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             : {
                 enabled: true,
                 quiet_start: '23:00', quiet_end: '09:00',
+                // существующие 3:
                 meal_reminder_enabled: true, meal_reminder_gap_hours: 4,
                 evening_summary_enabled: true, evening_summary_time: '21:00',
-                streak_celebration_enabled: true
+                streak_celebration_enabled: true,
+                // 11 новых (по умолчанию все включены):
+                morning_breakfast_enabled: true,
+                morning_checkin_enabled: true,
+                morning_vitamins_enabled: true,
+                water_hint_enabled: true,
+                cal_90_enabled: true,
+                macro_over_enabled: true,
+                overeat_3d_enabled: true,
+                late_meal_enabled: true,
+                ews_client_hint_enabled: true,
             };
 
         const [prefs, setPrefs] = React.useState(() => {
@@ -2398,6 +2409,89 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     onChange: (v) => update({ streak_celebration_enabled: v })
                 })
             ),
+
+            // ── Группа: Утро ────────────────────────────────────
+            !isCurator && status?.subscribed && React.createElement('div', {
+                style: { fontWeight: 600, fontSize: '12px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '4px' }
+            }, '☀️ Утро'),
+            !isCurator && status?.subscribed && Row(
+                'Напоминание про завтрак (если нет к 12:00)',
+                React.createElement(Toggle, {
+                    value: prefs.morning_breakfast_enabled !== false,
+                    onChange: (v) => update({ morning_breakfast_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Утренний чек-ин (взвесься + сон)',
+                React.createElement(Toggle, {
+                    value: prefs.morning_checkin_enabled !== false,
+                    onChange: (v) => update({ morning_checkin_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Напоминание про витамины',
+                React.createElement(Toggle, {
+                    value: prefs.morning_vitamins_enabled !== false,
+                    onChange: (v) => update({ morning_vitamins_enabled: v })
+                })
+            ),
+
+            // ── Группа: В течение дня ──────────────────────────
+            !isCurator && status?.subscribed && React.createElement('div', {
+                style: { fontWeight: 600, fontSize: '12px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '4px' }
+            }, '🌤 В течение дня'),
+            !isCurator && status?.subscribed && Row(
+                'Напоминание про воду',
+                React.createElement(Toggle, {
+                    value: prefs.water_hint_enabled !== false,
+                    onChange: (v) => update({ water_hint_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Когда осталось 10% до нормы калорий',
+                React.createElement(Toggle, {
+                    value: prefs.cal_90_enabled !== false,
+                    onChange: (v) => update({ cal_90_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Превышение нормы Б/Ж/У',
+                React.createElement(Toggle, {
+                    value: prefs.macro_over_enabled !== false,
+                    onChange: (v) => update({ macro_over_enabled: v })
+                })
+            ),
+
+            // ── Группа: Тренды ─────────────────────────────────
+            !isCurator && status?.subscribed && React.createElement('div', {
+                style: { fontWeight: 600, fontSize: '12px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '4px' }
+            }, '📊 Тренды'),
+            !isCurator && status?.subscribed && Row(
+                '3 дня переедания → разгрузка',
+                React.createElement(Toggle, {
+                    value: prefs.overeat_3d_enabled !== false,
+                    onChange: (v) => update({ overeat_3d_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Поздний ужин (позже обычного)',
+                React.createElement(Toggle, {
+                    value: prefs.late_meal_enabled !== false,
+                    onChange: (v) => update({ late_meal_enabled: v })
+                })
+            ),
+            !isCurator && status?.subscribed && Row(
+                'Мягкие алёрты по здоровью (EWS)',
+                React.createElement(Toggle, {
+                    value: prefs.ews_client_hint_enabled !== false,
+                    onChange: (v) => update({ ews_client_hint_enabled: v })
+                })
+            ),
+
+            // ── Quiet hours ────────────────────────────────────
+            status?.subscribed && React.createElement('div', {
+                style: { fontWeight: 600, fontSize: '12px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '4px' }
+            }, '🌙 Тихие часы'),
             status?.subscribed && Row(
                 'Тишина с',
                 React.createElement(TimeInput, {

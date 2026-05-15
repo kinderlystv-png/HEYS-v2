@@ -1,43 +1,43 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.f30327c5b51e.js",
-    "hash": "f30327c5b51e",
-    "sourceFingerprint": "f4716870271c",
-    "fileCount": 36,
-    "size": 1718779,
-    "builtAt": "2026-05-15T10:48:12.709Z"
+    "file": "boot-core.bundle.16ae539a6f49.js",
+    "hash": "16ae539a6f49",
+    "sourceFingerprint": "e7e170640d43",
+    "fileCount": 37,
+    "size": 1724567,
+    "builtAt": "2026-05-15T20:29:48.421Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.1f0811d21578.js",
-    "hash": "1f0811d21578",
-    "sourceFingerprint": "1581c7b1c8de",
+    "file": "boot-calc.bundle.9a493cab0080.js",
+    "hash": "9a493cab0080",
+    "sourceFingerprint": "c0b5a2460a1e",
     "fileCount": 19,
-    "size": 1224783,
-    "builtAt": "2026-05-15T10:49:19.020Z"
+    "size": 1230342,
+    "builtAt": "2026-05-15T20:29:07.373Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.d4d924ed8aed.js",
-    "hash": "d4d924ed8aed",
-    "sourceFingerprint": "48b061adcb29",
+    "file": "boot-day.bundle.f3ebc78bb072.js",
+    "hash": "f3ebc78bb072",
+    "sourceFingerprint": "9336be94e418",
     "fileCount": 57,
-    "size": 1173861,
-    "builtAt": "2026-05-15T10:48:13.013Z"
+    "size": 1179420,
+    "builtAt": "2026-05-15T20:29:07.528Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.0be42009076c.js",
-    "hash": "0be42009076c",
-    "sourceFingerprint": "a8945127baff",
+    "file": "boot-app.bundle.3537a9c5e436.js",
+    "hash": "3537a9c5e436",
+    "sourceFingerprint": "271a8d2fec91",
     "fileCount": 54,
-    "size": 1531271,
-    "builtAt": "2026-05-15T10:48:52.437Z"
+    "size": 1536933,
+    "builtAt": "2026-05-15T20:36:56.666Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.46510c7f505f.js",
-    "hash": "46510c7f505f",
-    "sourceFingerprint": "f4cee66fc7a6",
+    "file": "boot-init.bundle.b3be0dcff0e8.js",
+    "hash": "b3be0dcff0e8",
+    "sourceFingerprint": "b38f0964600b",
     "fileCount": 8,
-    "size": 442684,
-    "builtAt": "2026-05-15T10:48:13.283Z"
+    "size": 443984,
+    "builtAt": "2026-05-15T20:29:07.797Z"
   },
   "postboot-1-game-eager": {
     "file": "postboot-1-game-eager.bundle.12640debd1c9.js",
@@ -45,7 +45,7 @@
     "sourceFingerprint": "db9e5da88a76",
     "fileCount": 1,
     "size": 3141,
-    "builtAt": "2026-05-15T10:48:13.360Z"
+    "builtAt": "2026-05-15T20:29:07.871Z"
   },
   "postboot-1-game-lazy": {
     "file": "postboot-1-game-lazy.bundle.97ba61545cd9.js",
@@ -53,7 +53,7 @@
     "sourceFingerprint": "f2c02484b3cb",
     "fileCount": 31,
     "size": 1763895,
-    "builtAt": "2026-05-15T10:49:19.164Z"
+    "builtAt": "2026-05-15T20:29:08.038Z"
   },
   "postboot-2-insights-eager": {
     "file": "postboot-2-insights-eager.bundle.a0a7ac600be1.js",
@@ -61,15 +61,15 @@
     "sourceFingerprint": "b4c34ccae976",
     "fileCount": 1,
     "size": 3670,
-    "builtAt": "2026-05-15T10:48:13.614Z"
+    "builtAt": "2026-05-15T20:29:08.110Z"
   },
   "postboot-2-insights-lazy": {
-    "file": "postboot-2-insights-lazy.bundle.f0969e528ccc.js",
-    "hash": "f0969e528ccc",
-    "sourceFingerprint": "9411c5cc9171",
+    "file": "postboot-2-insights-lazy.bundle.97e24d4dd11b.js",
+    "hash": "97e24d4dd11b",
+    "sourceFingerprint": "161b55bb375f",
     "fileCount": 39,
-    "size": 2051144,
-    "builtAt": "2026-05-15T10:48:13.798Z"
+    "size": 2052463,
+    "builtAt": "2026-05-15T20:36:56.867Z"
   },
   "postboot-3-ui-eager": {
     "file": "postboot-3-ui-eager.bundle.54dd0b5be5b6.js",
@@ -77,14 +77,14 @@
     "sourceFingerprint": "d9aac19a5fe4",
     "fileCount": 2,
     "size": 8099,
-    "builtAt": "2026-05-15T10:48:13.886Z"
+    "builtAt": "2026-05-15T20:29:08.367Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.5af8a62e3019.js",
-    "hash": "5af8a62e3019",
-    "sourceFingerprint": "ccafd1eabe09",
+    "file": "postboot-3-ui-lazy.bundle.d252c6444e4a.js",
+    "hash": "d252c6444e4a",
+    "sourceFingerprint": "f796940ca52d",
     "fileCount": 42,
-    "size": 2431340,
-    "builtAt": "2026-05-15T10:48:14.103Z"
+    "size": 2432777,
+    "builtAt": "2026-05-15T20:29:08.578Z"
   }
 }
