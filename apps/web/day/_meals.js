@@ -425,24 +425,36 @@
             'data-meal-time': meal?.time || '',
             style: mealCardStyle,
         },
-            // 🎯 R-DAY-STICKY (2026-05-14): main-row вынесен прямым потомком .meal-card,
-            // чтобы position: sticky имел containing block = карточка целиком, а не маленькая шапка.
-            // Браузер сам разруливает "перекатывание" sticky-баров между соседними приёмами пищи.
+            // 🎯 R-DAY-STICKY (2026-05-14 → 2026-05-15): единая sticky-шапка.
+            // Раньше разделял main-row и badges-row на 2 блока — визуально разваливалось.
+            // Возвращаю одной .meal-header-inside (как до правки), но делаю весь блок
+            // position: sticky. Containing block = .meal-card → шапка остаётся прилипшей
+            // пока вся карточка в viewport, при подходе следующей карточки её шапка
+            // "выталкивает" предыдущую (нативный CSS sticky).
             React.createElement('div', {
-                className: 'meal-sticky-bar meal-type-' + mealTypeInfo.type,
-                style: qualityLineColor !== 'transparent'
-                    ? { background: qualityLineColor + '1F' }
-                    : undefined,
+                className: 'meal-header-inside meal-type-' + mealTypeInfo.type,
+                style: {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    position: 'sticky',
+                    top: '100px',
+                    zIndex: 5,
+                    background: qualityLineColor !== 'transparent'
+                        ? qualityLineColor + '1F'
+                        : undefined,
+                    borderRadius: '10px 10px 0 0',
+                    margin: '-12px -12px 8px -4px',
+                    padding: '12px 16px 12px 8px',
+                    cursor: 'pointer',
+                },
                 onClick: (e) => {
-                    // Тап по бару → скролл к началу карточки приёма. Игнорируем клики
-                    // по интерактивным детям (время-бэйдж, dropdown типа приёма).
-                    if (e.target.closest('select, .meal-time-badge-inside, .meal-type-wrapper, .meal-type-select')) return;
+                    // Тап по шапке → скролл к началу карточки приёма. Игнорируем клики
+                    // по интерактивным детям (время-бэйдж, dropdown типа, бэйджи качества).
+                    if (e.target.closest('select, .meal-time-badge-inside, .meal-type-wrapper, .meal-type-select, .activity-context-badge, .meal-role-status-badge-header')) return;
                     const card = e.currentTarget.closest('.meal-card');
                     if (!card) return;
                     const cardTop = card.getBoundingClientRect().top + window.scrollY;
-                    // Offset = такой же top, на котором паркуется sticky-бар. После
-                    // скролла card.top ≈ 100px в viewport, sticky-бар в естественной
-                    // позиции (не "стуck"), пользователь видит начало карточки чисто.
                     window.scrollTo({ top: Math.max(0, cardTop - 100), behavior: 'smooth' });
                 },
             },
@@ -491,24 +503,7 @@
                         mealKcal > 0 ? (mealKcal + ' ккал') : '0 ккал',
                     ),
                 ),
-            ),
-            // .meal-header-inside остаётся для бэйджей (activity context, role status).
-            // Рендерится только если есть что показать — иначе пустой div визуально лишний.
-            (resolvedActivityContext && resolvedActivityContext.type !== 'none' || mealQuality?.mealRoleStatus) && React.createElement('div', {
-                className: 'meal-header-inside meal-header-inside--badges-only meal-type-' + mealTypeInfo.type,
-                style: {
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    position: 'relative',
-                    background: qualityLineColor !== 'transparent'
-                        ? qualityLineColor + '1F'
-                        : undefined,
-                    margin: '0 -12px 8px -4px',
-                    padding: '8px 16px 12px 8px',
-                },
-            },
-                React.createElement('div', {
+                (resolvedActivityContext && resolvedActivityContext.type !== 'none' || mealQuality?.mealRoleStatus) && React.createElement('div', {
                     className: 'meal-header-badges-row',
                     style: {
                         display: 'flex',

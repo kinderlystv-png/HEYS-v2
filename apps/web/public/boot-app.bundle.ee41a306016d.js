@@ -22172,8 +22172,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 ]),                    // Кнопки "Вчера" + "Сегодня" + DatePicker
                 (tab === 'stats' || tab === 'diary' || tab === 'insights' || tab === 'month' || tab === 'widgets') && window.HEYS.DatePicker
                     ? React.createElement('div', { className: 'hdr-date-group' },
-                        // Кнопка быстрого перехода на вчера
-                        React.createElement('button', {
+                        // Кнопка вчера — скрываем когда мы НЕ в сегодняшнем дне
+                        // (вернуться можно через капсулу «НЕ СЕГОДНЯ» слева или DatePicker).
+                        selectedDate === todayISO() && React.createElement('button', {
                             className: 'yesterday-quick-btn' + (selectedDate === (() => {
                                 const d = new Date();
                                 if (d.getHours() < 3) d.setDate(d.getDate() - 1);
@@ -22197,16 +22198,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             d.setDate(d.getDate() - 1);
                             return d.getDate();
                         })()),
-                        // Кнопка быстрого перехода на сегодня (учитываем ночной порог)
-                        React.createElement('button', {
-                            className: 'today-quick-btn' + (selectedDate === todayISO() ? ' active' : ''),
+                        // Кнопка быстрого перехода на сегодня — показывается только когда
+                        // выбран НЕ-сегодняшний день. На today она избыточна (мы уже там)
+                        // и DatePicker уже показывает «сегодня 15 мая».
+                        selectedDate !== todayISO() && React.createElement('button', {
+                            className: 'today-quick-btn today-quick-btn--labelled',
                             onClick: () => selectDateWithPrefetch(todayISO(), { reason: 'quick-today' }),
                             title: 'Перейти на сегодня'
                         }, (() => {
                             // До 3:00 — показываем вчерашнее число
                             const d = new Date();
                             if (d.getHours() < 3) d.setDate(d.getDate() - 1);
-                            return d.getDate();
+                            return [
+                                React.createElement('span', { key: 'lbl', className: 'today-quick-btn__label' }, 'сегодня'),
+                                React.createElement('span', { key: 'num', className: 'today-quick-btn__num' }, d.getDate())
+                            ];
                         })()),
                         // DatePicker
                         React.createElement(window.HEYS.DatePicker, {
