@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.05.15.731fdc83",
-      "buildHash": "731fdc83",
+      "version": "2026.05.15.edb1a090",
+      "buildHash": "edb1a090",
       "date": "2026-05-15",
       "kind": "technical",
       "profile": "technical-infra",
