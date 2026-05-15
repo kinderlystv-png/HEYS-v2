@@ -7233,12 +7233,39 @@ svg.date-picker-icon {
   height: 16px;
 }
 
-/* Когда выбран today — две строки по тому же принципу, что и имя/фамилия слева:
-   тонкая мелкая подпись сверху, основной текст снизу. gap=0, line-height 1.1,
-   без letter-spacing — компактно. «Сегодня» красным, дата — основным тёмным. */
+/* Когда выбран today — голубоватый фон триггера + синяя иконка. Две строки
+   по тому же принципу, что и имя/фамилия слева: тонкая подпись сверху,
+   основной текст снизу. gap=0, line-height 1.1, без letter-spacing. */
 .date-picker-trigger--today {
   gap: 8px;
   padding: 0 12px;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.date-picker-trigger--today:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.date-picker-trigger--today .date-picker-icon {
+  color: #3b82f6;
+}
+
+/* Парный жёлтый фон для любой НЕ-сегодняшней даты (визуально согласован
+   с капсулой «НЕ СЕГОДНЯ» слева и yesterday-quick-btn). */
+.date-picker-trigger--not-today {
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.date-picker-trigger--not-today:hover {
+  background: #fde68a;
+  border-color: #fcd34d;
+}
+
+.date-picker-trigger--not-today .date-picker-icon {
+  color: #b45309;
 }
 
 .date-picker-trigger--today .date-picker-text {
@@ -7248,7 +7275,7 @@ svg.date-picker-icon {
 
 .date-picker-main.date-picker-main--today {
   font-size: 9px;
-  font-weight: 400;
+  font-weight: 500;
   color: #ef4444;
   line-height: 1.1;
   white-space: nowrap;
@@ -7691,11 +7718,26 @@ svg.date-picker-icon {
     font-size: 10px;
   }
 
-  /* Компактная кнопка быстрого перехода */
-  .today-quick-btn {
+  /* Компактная кнопка быстрого перехода — только для обычной (числовой) формы.
+     Двустрочный --goto вариант должен сохранять расширенную ширину. */
+  .today-quick-btn:not(.today-quick-btn--goto) {
     width: 32px;
     height: 32px;
     font-size: 13px;
+  }
+
+  .today-quick-btn--goto {
+    height: 34px;
+    min-width: 84px;
+    padding: 0 10px;
+  }
+
+  .today-quick-btn__line1 {
+    font-size: 9px;
+  }
+
+  .today-quick-btn__line2 {
+    font-size: 11px;
   }
 
   /* Компактная кнопка темы */
@@ -9995,11 +10037,12 @@ svg.date-picker-icon {
   background: #cbd5e1;
 }
 
-/* Кнопка быстрого перехода на вчера (в header рядом с DatePicker) */
+/* Кнопка быстрого перехода на вчера (в header рядом с DatePicker) —
+   мягкий жёлтый фон, чтобы визуально парно с голубым today-триггером. */
 .yesterday-quick-btn {
-  border: 1px solid var(--color-slate-200);
-  background: white;
-  color: #374151;
+  border: 1px solid #fde68a;
+  background: #fef3c7;
+  color: #78350f;
   min-width: 33px;
   height: 33px;
   padding: 0 8px;
@@ -10014,8 +10057,8 @@ svg.date-picker-icon {
 }
 
 .yesterday-quick-btn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: #fde68a;
+  border-color: #fcd34d;
 }
 
 .yesterday-quick-btn:active {
@@ -10062,24 +10105,28 @@ svg.date-picker-icon {
   box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
 }
 
-/* Расширенный вариант кнопки «сегодня <число>» — показывается, когда
-   выбран НЕ-сегодняшний день, чтобы быстрее найти выход обратно. */
-.today-quick-btn--labelled {
-  gap: 5px;
-  padding: 0 10px;
+/* Двустрочный вариант «Перейти в / сегодня» — показывается, когда выбран
+   НЕ-сегодняшний день, чтобы быстрее вернуться. Высота та же, что у обычной
+   кнопки (34px), внутри две прижатые строки. */
+.today-quick-btn--goto {
+  flex-direction: column;
+  gap: 0;
+  padding: 0 12px;
+  line-height: 1.05;
+  min-width: 92px;
 }
 
-.today-quick-btn__label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  text-transform: lowercase;
-  opacity: 0.95;
+.today-quick-btn__line1 {
+  font-size: 9px;
+  font-weight: 500;
+  opacity: 0.85;
+  white-space: nowrap;
 }
 
-.today-quick-btn__num {
-  font-size: 13px;
+.today-quick-btn__line2 {
+  font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .cal-today-btn {

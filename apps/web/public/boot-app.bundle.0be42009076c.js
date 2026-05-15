@@ -21718,22 +21718,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         React.createElement(
                             'div',
                             { className: 'hdr-client-info' },
-                            // Если выбран не сегодняшний день — показываем оранжевую капсулу
-                            // «НЕ СЕГОДНЯ» вместо имени. Клик возвращает на today (без открытия дропдауна).
+                            // Единый источник имени: currentClientName
                             (() => {
-                                const todayKey = typeof todayISO === 'function' ? todayISO() : todayISO;
-                                const isToday = !selectedDate || selectedDate === todayKey;
-                                if (!isToday) {
-                                    return React.createElement('button', {
-                                        type: 'button',
-                                        className: 'hdr-not-today-badge',
-                                        title: 'Вернуться на сегодня',
-                                        onClick: (e) => {
-                                            e.stopPropagation();
-                                            selectDateWithPrefetch(todayKey, { reason: 'not-today-badge' });
-                                        }
-                                    }, 'НЕ СЕГОДНЯ');
-                                }
                                 const fullName = (currentClientName || '').trim();
                                 const parts = fullName.split(' ').filter(Boolean);
                                 return [
@@ -22198,22 +22184,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             d.setDate(d.getDate() - 1);
                             return d.getDate();
                         })()),
-                        // Кнопка быстрого перехода на сегодня — показывается только когда
-                        // выбран НЕ-сегодняшний день. На today она избыточна (мы уже там)
-                        // и DatePicker уже показывает «сегодня 15 мая».
+                        // Кнопка «Перейти в сегодня» — показывается только когда
+                        // выбран НЕ-сегодняшний день. На today она избыточна.
                         selectedDate !== todayISO() && React.createElement('button', {
-                            className: 'today-quick-btn today-quick-btn--labelled',
+                            className: 'today-quick-btn today-quick-btn--goto',
                             onClick: () => selectDateWithPrefetch(todayISO(), { reason: 'quick-today' }),
-                            title: 'Перейти на сегодня'
-                        }, (() => {
-                            // До 3:00 — показываем вчерашнее число
-                            const d = new Date();
-                            if (d.getHours() < 3) d.setDate(d.getDate() - 1);
-                            return [
-                                React.createElement('span', { key: 'lbl', className: 'today-quick-btn__label' }, 'сегодня'),
-                                React.createElement('span', { key: 'num', className: 'today-quick-btn__num' }, d.getDate())
-                            ];
-                        })()),
+                            title: 'Перейти в сегодня'
+                        },
+                            React.createElement('span', { className: 'today-quick-btn__line1' }, 'Перейти в'),
+                            React.createElement('span', { className: 'today-quick-btn__line2' }, 'сегодня')
+                        ),
                         // DatePicker
                         React.createElement(window.HEYS.DatePicker, {
                             valueISO: selectedDate,

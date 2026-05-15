@@ -153,9 +153,13 @@
       });
     };
     
-    // На today показываем одной строкой «сегодня 15 мая» (без числа в иконке).
+    // На today показываем одной строкой «Сегодня, 15 мая» (без числа в иконке).
     // Иконка — чистый SVG-календарь без вшитой даты (📅 на iOS показывает «17»).
+    // Дата идёт в родительном падеже («мая», не «май») — toLocaleDateString
+    // с day+month=long корректно склоняет, в отличие от {month:'short'} отдельно.
     const isTodaySelected = (valueISO || todayISO()) === todayISO();
+    const todayLongDate = parseISO(valueISO || todayISO())
+      .toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
     const calendarIcon = React.createElement('svg', {
       className: 'date-picker-icon',
       viewBox: '0 0 24 24',
@@ -178,13 +182,16 @@
       // Кнопка-триггер
       React.createElement('button', {
         ref: triggerRef,
-        className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ''),
+        className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ' date-picker-trigger--not-today'),
         onClick: () => setIsOpen(!isOpen)
       },
         calendarIcon,
         React.createElement('span', { className: 'date-picker-text' },
           isTodaySelected
-            ? React.createElement('span', { className: 'date-picker-main date-picker-main--today' }, `сегодня ${dateInfo.sub}`)
+            ? [
+                React.createElement('span', { key: 'main', className: 'date-picker-main date-picker-main--today' }, 'Сегодня'),
+                React.createElement('span', { key: 'sub', className: 'date-picker-sub date-picker-sub--today' }, todayLongDate)
+              ]
             : [
                 React.createElement('span', { key: 'main', className: 'date-picker-main' }, dateInfo.label),
                 React.createElement('span', { key: 'sub', className: 'date-picker-sub' }, dateInfo.sub)

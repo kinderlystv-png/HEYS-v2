@@ -11233,7 +11233,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
       // Кнопка-триггер
       React.createElement('button', {
         ref: triggerRef,
-        className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ''),
+        className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ' date-picker-trigger--not-today'),
         onClick: () => setIsOpen(!isOpen)
       },
         calendarIcon,
