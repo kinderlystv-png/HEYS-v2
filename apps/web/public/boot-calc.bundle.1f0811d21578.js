@@ -10227,6 +10227,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         }
       });
 
+      // Stale-flag guard: пользователь мог пометить день «дозаполню позже» через
+      // утренний чекин (isIncomplete=true), а потом дозаполнить через обычный
+      // дневник дня — обычный flow сохранения meal'а не сбрасывает флаг. Если
+      // данные фактически есть (kcal>0 + приёмы непустые), флаг считаем
+      // устаревшим, чтобы день вернулся в статистику.
+      const hasRealContent = totalKcal > 0 && Array.isArray(dayData.meals) && dayData.meals.length > 0;
+      const isIncompleteResolved = hasRealContent ? false : !!dayData.isIncomplete;
+
       return {
         kcal: Math.round(totalKcal),
         savedEatenKcal: +dayData.savedEatenKcal || 0, // 🆕 Сохранённые калории (приоритет над пересчитанными)
@@ -10250,7 +10258,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-calc: execute start');
         savedDisplayOptimum: +dayData.savedDisplayOptimum || 0,
         // 🆕 v1.1: Флаги верификации низкокалорийных дней
         isFastingDay: dayData.isFastingDay || false, // Осознанное голодание — данные корректны
-        isIncomplete: dayData.isIncomplete || false, // Не заполнен — исключить из статистик
+        isIncomplete: isIncompleteResolved, // Не заполнен — исключить из статистик (с stale-flag guard)
         meals: dayData.meals || [] // 🆕 v1.1: Для определения пустого дня
       };
     } catch (e) {

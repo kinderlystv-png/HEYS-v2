@@ -34550,10 +34550,19 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
   function isExplicitlyVerified(dayData) {
     if (!dayData || typeof dayData !== 'object') return false;
-    if (dayData.yesterdayVerifyAt || dayData.yesterdayVerifyAction) return true;
+    // Hard verify markers — осознанные «закрывающие» решения юзера,
+    // после которых чекин навсегда перестаёт спрашивать про день:
+    //   • isFastingDay=true (markFasting из low-cal-banner или 'confirm_real_data' через applyDayStatusAction)
+    //   • action ∈ {confirm_real_data, clear_day, estimated_fill}
+    //   • estimatedDayFill из morning-checkin (квик-заполнение)
     if (dayData.isFastingDay === true) return true;
-    if (dayData.isIncomplete === true) return true;
+    const action = dayData.yesterdayVerifyAction;
+    if (action === 'confirm_real_data' || action === 'clear_day' || action === 'estimated_fill') return true;
     if (dayData.estimatedDayFill?.source === 'morning-checkin') return true;
+    // Soft markers — 'fill_later' и одиночный isIncomplete=true.
+    // Они НЕ блокируют повторный вопрос: на следующее утро день
+    // пере-оценивается по содержимому в isPendingPastDay(). Если ratio<0.5 —
+    // чекин снова спросит «дозаполни / голодание / очистить».
     return false;
   }
 
@@ -35910,10 +35919,15 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
       }
 
       if (data.incompleteAction === 'fill_later') {
-        dayData.isIncomplete = true;
-        markYesterdayVerified(dayData, 'fill_later', nowTs);
-        dayData.updatedAt = nowTs;
-        lsSet(`heys_dayv2_${dateKey}`, dayData);
+        const nextDayData = applyDayStatusAction
+          ? applyDayStatusAction(dayData, 'fill_later', { nowTs })
+          : (() => {
+            dayData.isIncomplete = true;
+            dayData.updatedAt = nowTs;
+            return dayData;
+          })();
+        markYesterdayVerified(nextDayData, 'fill_later', nowTs);
+        lsSet(`heys_dayv2_${dateKey}`, nextDayData);
         try {
           HEYS.analytics?.trackDataOperation?.('yesterday_verify_fill_later', 1, {
             date: dateKey,
