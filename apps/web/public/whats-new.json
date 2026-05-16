@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.16.f32d218c",
+      "buildHash": "f32d218c",
+      "date": "2026-05-16",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Demo-режим: try.heyslab.ru + DemoSection на лендинге",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Интерактивное демо HEYS на лендинге",
+          "description": "Новый поддомен try.heyslab.ru показывает живой HEYS с реальными данными из snapshot. Облачные вызовы заглушены, SW не регистрируется, все действия только локальны."
+        },
+        {
+          "type": "fix",
+          "title": "Планировщик загружается в demo-режиме",
+          "description": "DayTab (React.memo) не пересчитывал mealRecReady после загрузки lazy-чанка. pi_facade теперь диспатчит heys-deferred-module-loaded дополнительно к heys:postboot-lazy-ready."
+        }
+      ]
+    },
+    {
       "version": "2026.05.16.2b64ee9e",
       "buildHash": "2b64ee9e",
       "date": "2026-05-16",
