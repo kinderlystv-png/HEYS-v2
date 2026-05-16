@@ -372,9 +372,10 @@
         const handlePushBadgeClick = async () => {
             if (!window.HEYS?.push) return;
             if (pushStatus?.subscribed) {
-                // Уже включено — открываем профиль с детальными настройками
+                // Уже включено — переходим на вкладку Профиль и скроллим к секции уведомлений
                 if (typeof haptic === 'function') haptic('light');
-                window.dispatchEvent(new CustomEvent('heys:open-push-settings'));
+                switchTabWithUndoCommit('user', 'push-settings-badge');
+                setTimeout(() => window.dispatchEvent(new CustomEvent('heys:scroll-to-push-settings')), 80);
                 return;
             }
             if (pushStatus?.permission === 'denied') {

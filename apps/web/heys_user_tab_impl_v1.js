@@ -305,7 +305,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             expanded ? 'profile-section--expanded' : 'profile-section--collapsed'
         ].join(' ');
 
-        return React.createElement('div', { className: sectionClass },
+        return React.createElement('div', { className: sectionClass, id: id ? `profile-section-${id}` : undefined },
             // Header (always visible)
             React.createElement('div', {
                 className: 'profile-section__header',
@@ -380,6 +380,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 return next;
             });
         };
+
+        // Переключение на секцию уведомлений из колокольчика в шапке
+        React.useEffect(() => {
+            const handler = () => {
+                setExpandedSections(prev => {
+                    if (prev.notifications) return prev;
+                    const next = { ...prev, notifications: true };
+                    try {
+                        if (HEYS.store?.set) HEYS.store.set(SECTIONS_KEY, next);
+                        else if (lsSet) lsSet(SECTIONS_KEY, next);
+                    } catch { }
+                    return next;
+                });
+                requestAnimationFrame(() => {
+                    const el = document.getElementById('profile-section-notifications');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            };
+            window.addEventListener('heys:scroll-to-push-settings', handler);
+            return () => window.removeEventListener('heys:scroll-to-push-settings', handler);
+        }, []);
 
         const getCurrentClientId = () => {
             let cid = (window.HEYS && window.HEYS.currentClientId) || localStorage.getItem('heys_client_current') || '';
