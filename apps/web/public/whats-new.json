@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.16.6a9e87f8",
+      "buildHash": "6a9e87f8",
+      "date": "2026-05-16",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Fix: колокольчик теперь виден сразу",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Бейдж push виден без ожидания SW",
+          "description": "Колокольчик в шапке теперь появляется сразу при загрузке, не ждёт serviceWorker.ready."
+        }
+      ]
+    },
+    {
       "version": "2026.05.16.89052462",
       "buildHash": "89052462",
       "date": "2026-05-16",
