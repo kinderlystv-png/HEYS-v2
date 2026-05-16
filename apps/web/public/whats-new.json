@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.16.2b64ee9e",
+      "buildHash": "2b64ee9e",
+      "date": "2026-05-16",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Lint: allowlist обновлён для demo seedToday",
+      "items": [
+        {
+          "type": "chore",
+          "title": "bootstrap-bypass-allowlist",
+          "description": "Добавлены строки seedToday() из heys_demo_mode_v1.js в allowlist прямых localStorage.setItem вызовов."
+        }
+      ]
+    },
+    {
       "version": "2026.05.16.689e7145",
       "buildHash": "689e7145",
       "date": "2026-05-16",
