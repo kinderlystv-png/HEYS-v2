@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.17.a4fabff5",
+      "buildHash": "a4fabff5",
+      "date": "2026-05-17",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Landing: чище нижняя плашка demo",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Светлая action-плашка под demo",
+          "description": "Полоса с кнопками «Попробовать триал» / × теперь белая с тенью сверху — выглядит как родной toolbar приложения, а не чёрный обрез. Кнопка × стала светло-серой, чтобы не выбиваться на белом."
+        },
+        {
+          "type": "fix",
+          "title": "AB-переключатель не закрывает demo",
+          "description": "Dev-инструмент A/B-выбора hero-текста скрывается на время открытого demo (раньше его круглая 🧪-кнопка перекрывала action-плашку)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.16.37aea841",
       "buildHash": "37aea841",
       "date": "2026-05-16",
