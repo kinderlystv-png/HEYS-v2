@@ -84,6 +84,8 @@ apps/web/heys_demo_mode_v1.js:58
 apps/web/heys_demo_mode_v1.js:60
 apps/web/heys_demo_mode_v1.js:63
 apps/web/heys_demo_mode_v1.js:83
+apps/web/heys_demo_mode_v1.js:123
+apps/web/heys_demo_mode_v1.js:124
 apps/web/heys_core_v12.js:218
 apps/web/heys_core_v12.js:833
 apps/web/heys_core_v12.js:1924
