@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.16.689e7145",
+      "buildHash": "689e7145",
+      "date": "2026-05-16",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Fix: бесконечный цикл синка BACKUP-ключей",
+      "items": [
+        {
+          "type": "fix",
+          "title": "BACKUP-ключи продуктов исключены из облачного синка",
+          "description": "heys_products_BACKUP_YYYYMMDD — локальные страховочные снимки, которые не должны уходить в облако. Добавлено в LOCAL_ONLY список, бесконечный 500ms retry устранён."
+        }
+      ]
+    },
+    {
       "version": "2026.05.16.6a9e87f8",
       "buildHash": "6a9e87f8",
       "date": "2026-05-16",
