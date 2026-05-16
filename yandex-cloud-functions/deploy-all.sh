@@ -132,6 +132,8 @@ get_function_config() {
             echo "nodejs18 index.handler 256m 300s" ;;
         "heys-backup")
             echo "nodejs18 index.handler 512m 300s" ;;
+        "heys-snapshot-demo")
+            echo "nodejs18 index.handler 512m 300s" ;;
         "heys-maintenance")
             echo "nodejs18 index.handler 256m 30s" ;;
         *)
@@ -154,8 +156,8 @@ build_env_flags() {
         env_flags+=" --environment PG_SSL=$PG_SSL"
     fi
     
-    # Telegram settings (for leads, auth, backup, maintenance, security-alerts)
-    if [[ "$func_name" =~ (leads|auth|backup|maintenance|security-alerts) ]]; then
+    # Telegram settings (for leads, auth, backup, snapshot-demo, maintenance, security-alerts)
+    if [[ "$func_name" =~ (leads|auth|backup|snapshot-demo|maintenance|security-alerts) ]]; then
         if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
             env_flags+=" --environment TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
         fi
@@ -164,14 +166,19 @@ build_env_flags() {
         fi
     fi
     
-    # S3 settings (for backup functions)
-    if [[ "$func_name" =~ (backup) ]]; then
+    # S3 settings (for backup + snapshot-demo functions)
+    if [[ "$func_name" =~ (backup|snapshot-demo) ]]; then
         if [ -n "$S3_ACCESS_KEY_ID" ]; then
             env_flags+=" --environment S3_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID"
         fi
         if [ -n "$S3_SECRET_ACCESS_KEY" ]; then
             env_flags+=" --environment S3_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY"
         fi
+    fi
+
+    # Demo snapshot: override S3_BUCKET so it doesn't fall back to heys-backups
+    if [[ "$func_name" == "heys-snapshot-demo" ]]; then
+        env_flags+=" --environment S3_BUCKET=heys-public-snapshot"
     fi
 
     # SMS API key (for sms function)

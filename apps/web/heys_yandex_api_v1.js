@@ -6,6 +6,33 @@
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
+
+  // DEMO_MODE: replace YandexAPI with a no-op surface. Any call to .rpc/.rest/
+  // .from()/etc. resolves to an empty result so HEYS code paths that touch the
+  // API (e.g. heys_cloud_shared_v1.js) don't hit the network at all.
+  if (global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.enabled) {
+    const empty = function () { return Promise.resolve({ data: [], error: null }); };
+    const chain = function () {
+      const obj = {};
+      const fn = function () { return obj; };
+      const methods = ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'in',
+        'gt', 'lt', 'gte', 'lte', 'order', 'limit', 'range', 'single', 'maybeSingle'];
+      methods.forEach(function (m) { obj[m] = fn; });
+      obj.then = function (resolve) { return Promise.resolve({ data: [], error: null }).then(resolve); };
+      return obj;
+    };
+    HEYS.YandexAPI = {
+      rpc: empty,
+      rest: empty,
+      sms: empty,
+      from: function () { return chain(); },
+      setAuthToken: function () {},
+      clearAuthToken: function () {},
+      getAuthToken: function () { return null; },
+    };
+    (global.console || console).info('[HEYS.YandexAPI] DEMO_MODE — no-op stub installed');
+    return;
+  }
   const isLocalBrowserDev =
     typeof window !== 'undefined' &&
     typeof location !== 'undefined' &&

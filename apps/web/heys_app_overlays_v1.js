@@ -272,7 +272,7 @@
             // Toast убран — отвлекает
             // Основной контент — скрыт во время Morning Check-in, Consent Screen или когда показывается gate (login/client select)
             React.createElement(AppShell, appShellProps),
-            !isConsentBlocking && !isMorningCheckinBlocking && !showWhatsNew && showSyncLockOverlay && React.createElement(
+            !isConsentBlocking && !isMorningCheckinBlocking && !showWhatsNew && showSyncLockOverlay && !(typeof window !== 'undefined' && window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) && React.createElement(
                 'div',
                 {
                     className: 'sync-lock-overlay',
@@ -304,7 +304,7 @@
                 )
             ),
             // === PWA Install Banner for Android/Desktop (только после Morning Check-in) ===
-            !isMorningCheckinBlocking && showPwaBanner && React.createElement(
+            !isMorningCheckinBlocking && showPwaBanner && !(typeof window !== 'undefined' && window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) && React.createElement(
                 'div',
                 { className: 'pwa-install-banner' },
                 React.createElement('div', { className: 'pwa-banner-content' },
@@ -326,7 +326,7 @@
                 )
             ),
             // === iOS Safari PWA Banner ===
-            !isMorningCheckinBlocking && showIosPwaBanner && React.createElement(
+            !isMorningCheckinBlocking && showIosPwaBanner && !(typeof window !== 'undefined' && window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) && React.createElement(
                 'div',
                 { className: 'pwa-install-banner ios-pwa-banner' },
                 React.createElement('div', { className: 'pwa-banner-content ios-banner-content' },

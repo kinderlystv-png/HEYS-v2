@@ -698,14 +698,18 @@
     }
 
     // ❌ НЕ регистрируем SW на localhost — мешает разработке (HMR, updatefound и т.д.)
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      console.log('[SW] ⏭️ Skipped on localhost (dev mode)');
-      bootLog('skipped (localhost)');
-      // Удаляем существующий SW если есть (чтобы не мешал разработке)
+    // ❌ НЕ регистрируем SW в demo-режиме — иначе бандлы demo закэшируются у посетителей
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isDemoMode = window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled;
+    if (isLocalhost || isDemoMode) {
+      const reason = isDemoMode ? 'demo mode' : 'localhost';
+      console.log('[SW] ⏭️ Skipped (' + reason + ')');
+      bootLog('skipped (' + reason + ')');
+      // Удаляем существующий SW если есть (чтобы не мешал)
       navigator.serviceWorker.getRegistrations().then(registrations => {
         registrations.forEach(reg => {
           reg.unregister().then(() => {
-            console.log('[SW] 🗑️ Unregistered SW on localhost');
+            console.log('[SW] 🗑️ Unregistered SW (' + reason + ')');
           });
         });
       });

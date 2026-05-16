@@ -4,7 +4,6 @@ import Script from 'next/script'
 
 import { ABTestSwitcher } from '@/components/ABTestSwitcher'
 import CookieInfoBanner from '@/components/CookieInfoBanner'
-import { ScrollToTopFAB } from '@/components/ScrollToTopFAB'
 
 import '../styles/globals.css'
 
@@ -190,7 +189,6 @@ export default function RootLayout({
       </head>
       <body className={openSans.className}>
         {children}
-        <ScrollToTopFAB />
         <ABTestSwitcher />
         <CookieInfoBanner />
 

@@ -56,6 +56,8 @@
                           || h === 'try.heyslab.local'
                           || h === 'try-heyslab-ru.website.yandexcloud.net';
             if (onDemoHost) {
+                // T0 — анчор перф-таймера, выставляем как можно раньше.
+                window.__HEYS_DEMO_T0__ = Date.now();
                 var params = new URLSearchParams(window.location.search);
                 var g = params.get('gender') === 'female' ? 'female' : 'male';
                 window.__HEYS_DEMO_MODE__ = { enabled: true, gender: g };
@@ -74,7 +76,8 @@
                     } else {
                         killGate();
                     }
-                    console.info('[DEMO_MODE] Active —', g, '(client', demoClientId + ')');
+                    console.info('[DEMO_MODE] Active —', g, '(client', demoClientId + '), T0=' + window.__HEYS_DEMO_T0__);
+                    console.info('[DEMO_PERF] +    0ms — T0: hostname=' + h + ' gender=' + g);
                 } catch (e) { console.error('[DEMO_MODE] bootstrap failed:', e); }
             } else {
                 window.__HEYS_DEMO_MODE__ = { enabled: false };
@@ -826,10 +829,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.c5a1b648fe25.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.9a493cab0080.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.f3ebc78bb072.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.1ae259999f83.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.19fdc7c11374.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.d07b2956bb81.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.f4c359c6f28d.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.74bbfeabc763.js" as="script" />
     <link rel="preload" href="boot-init.bundle.b3be0dcff0e8.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -2969,10 +2972,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.c5a1b648fe25.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.9a493cab0080.js"></script>
-    <script defer src="boot-day.bundle.f3ebc78bb072.js"></script>
-    <script defer src="boot-app.bundle.1ae259999f83.js"></script>
+    <script defer src="boot-core.bundle.19fdc7c11374.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.d07b2956bb81.js"></script>
+    <script defer src="boot-day.bundle.f4c359c6f28d.js"></script>
+    <script defer src="boot-app.bundle.74bbfeabc763.js"></script>
     <script defer src="boot-init.bundle.b3be0dcff0e8.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -3003,7 +3006,7 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game-eager.bundle.12640debd1c9.js',
-                'postboot-2-insights-eager.bundle.a0a7ac600be1.js',
+                'postboot-2-insights-eager.bundle.a8263d7b3fea.js',
                 'postboot-3-ui-eager.bundle.54dd0b5be5b6.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';

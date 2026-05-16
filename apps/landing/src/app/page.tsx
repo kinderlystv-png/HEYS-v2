@@ -7,6 +7,7 @@ import { Metadata } from 'next'
 import HeroSSR from '@/components/HeroSSR'
 import {
   ComparisonSection,
+  DemoSection,
   HowItWorksSection,
   NavigatorSection,
   ObjectionsSection,
@@ -34,7 +35,10 @@ export default function Home() {
       {/* 1. SSR Hero — первый экран, CTA, навигация */}
       <HeroSSR content={content} variant="A" />
 
-      {/* 2. Боль — «Знакомо?» 5 болевых точек */}
+      {/* 2. Интерактивное демо — живой HEYS в iframe (try.heyslab.ru) */}
+      <DemoSection />
+
+      {/* 3. Боль — «Знакомо?» 5 болевых точек */}
       <PainSection />
 
       {/* 3. Как это работает — 4 шага: ВИЖУ → ПОНИМАЮ → НЕ ОДИН → РЕЗУЛЬТАТ */}

@@ -5,6 +5,11 @@
     HEYS.AppCloudInit = HEYS.AppCloudInit || {};
 
     HEYS.AppCloudInit.initCloud = function ({ fetcher } = {}) {
+        // DEMO_MODE: do not init cloud, no health ping. Snapshot will be loaded
+        // by heys_app_initialize_v1.js via HEYS.demoMode.loadSnapshot().
+        if (window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) {
+            return { initialized: false, reason: 'demo-mode' };
+        }
         if (!HEYS.cloud || typeof HEYS.cloud.init !== 'function') {
             return { initialized: false, reason: 'no-cloud' };
         }

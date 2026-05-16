@@ -8,6 +8,23 @@
 
   const HEYS = global.HEYS = global.HEYS || {};
 
+  // DEMO_MODE: no-op analytics. Skips global error listeners and counter machinery —
+  // demo iframe должен быть тихим, без раздувания счётчиков на тестовых действиях.
+  if (global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.enabled) {
+    const noop = function () {};
+    HEYS.analytics = {
+      trackSearch: noop, trackApiCall: noop, trackDataOperation: noop,
+      trackEvent: noop, trackError: noop, trackInteraction: noop,
+      startMeasure: noop, endMeasure: noop,
+      startPerformanceAudit: noop, stopPerformanceAudit: noop,
+      getStats: function () { return {}; },
+      exportMetrics: function () { return {}; },
+      trackModuleLoad: noop, trackComponentRender: noop,
+      trackUserInteraction: noop, startTracking: noop, stopTracking: noop,
+    };
+    return;
+  }
+
   // ==================== КОНСТАНТЫ ====================
 
   // Пороги для предупреждений о медленных операциях (в миллисекундах)

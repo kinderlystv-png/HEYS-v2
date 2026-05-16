@@ -26,6 +26,7 @@ export const LEGACY_BUNDLES = {
         'heys_sync_queue_runtime_pure_v1.js',
         'heys_perf_main_thread_v1.js',
         'heys_storage_supabase_v1.js',
+        'heys_demo_mode_v1.js',
         'heys_models_v1.js',
         'heys_storage_layer_v1.js',
         'heys_storage_registry_v1.js',

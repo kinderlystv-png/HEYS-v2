@@ -48,6 +48,13 @@
                             window.dispatchEvent(new CustomEvent('heys:postboot-lazy-ready', {
                                 detail: { bundle: 'postboot-2-insights' }
                             }));
+                            // DayTab is React.memo — it skips re-renders from AppShell's
+                            // _tickPostboot tick. Dispatch heys-deferred-module-loaded so
+                            // useDeferredModuleEffect() inside DayTab forces a re-render,
+                            // which re-evaluates mealRecReady and renders the planner card.
+                            window.dispatchEvent(new CustomEvent('heys-deferred-module-loaded', {
+                                detail: { module: 'insights-lazy' }
+                            }));
                         } catch (_) {}
                         resolve();
                     };

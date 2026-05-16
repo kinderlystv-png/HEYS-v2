@@ -31,9 +31,29 @@
         // Debug panel + badge API moved to heys_app_gates_v1.js
 
         const AppInitializer = HEYS.AppInitializer;
-        const initializeApp = AppInitializer?.initializeApp || (() => {
+        const rawInitializeApp = AppInitializer?.initializeApp || (() => {
             window.__heysLog && window.__heysLog('[APP] AppInitializer missing, init skipped');
         });
+
+        // DEMO_MODE: load snapshot into LS before running initializeApp.
+        // Snapshot fetch is the only network call in demo mode.
+        const initializeApp = function () {
+            const demo = window.__HEYS_DEMO_MODE__;
+            if (demo && demo.enabled && HEYS.demoMode && typeof HEYS.demoMode.loadSnapshot === 'function') {
+                HEYS.demoMode.loadSnapshot(demo.gender)
+                    .then(() => {
+                        console.info('[DEMO_MODE] snapshot loaded — starting app');
+                        rawInitializeApp();
+                    })
+                    .catch((err) => {
+                        console.error('[DEMO_MODE] snapshot load failed:', err);
+                        // Fall through — render whatever is in LS, even if empty
+                        rawInitializeApp();
+                    });
+                return;
+            }
+            rawInitializeApp();
+        };
 
         // Start initialization
         const startDependencyLoader = HEYS.AppDependencyLoader?.start;

@@ -11577,6 +11577,15 @@
             if (!window.__heysLoggedMealRecRendered) {
                 window.__heysLoggedMealRecRendered = true;
                 console.info('[HEYS.diary] ✅ Meal rec card rendered');
+                // Demo-perf marker: this is the last heavy card on the diary;
+                // when it renders we can say the demo is fully loaded.
+                try {
+                    if (window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) {
+                        window.dispatchEvent(new CustomEvent('heys:diary-rendered', {
+                            detail: { mealRecRendered: true },
+                        }));
+                    }
+                } catch (_) {}
             }
         } else if (mealRecReady) {
             // Only log when module loaded but no recommendation (not when still loading)

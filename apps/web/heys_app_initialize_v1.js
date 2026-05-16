@@ -68,10 +68,16 @@
             useCloudClients,
         } = AppHooks;
 
+        // DEMO_MODE: skip cloud init + health ping. Snapshot loaded separately.
+        const isDemoMode = window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled;
+
         // init cloud (safe if no cloud module)
         // 🇷🇺 Основной трафик идёт через Yandex Cloud API (api.heyslab.ru)
         // Legacy cloud модуль оставлен для обратной совместимости
-        if (AppCloudInit.initCloud) {
+        if (isDemoMode) {
+            // No-op: cloud is stubbed in heys_storage_supabase_v1.js,
+            // snapshot is loaded by HEYS.demoMode.loadSnapshot() in bootstrap.
+        } else if (AppCloudInit.initCloud) {
             AppCloudInit.initCloud();
         } else if (window.HEYS.cloud && typeof HEYS.cloud.init === 'function') {
             const isLocalBrowserDev = typeof window !== 'undefined'
