@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.16.89052462",
+      "buildHash": "89052462",
+      "date": "2026-05-16",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Lint allowlist update",
+      "items": [
+        {
+          "type": "chore",
+          "title": "localStorage lint allowlist",
+          "description": "Обновлены номера строк в allowlist после сдвига кода и добавлены новые demo-mode записи."
+        }
+      ]
+    },
+    {
       "version": "2026.05.16.9c105c95",
       "buildHash": "9c105c95",
       "date": "2026-05-16",
