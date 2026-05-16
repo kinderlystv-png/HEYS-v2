@@ -80,6 +80,10 @@ apps/web/heys_cloud_storage_utils_v1.js:108
 apps/web/heys_consents_v1.js:333
 apps/web/heys_consents_v1.js:956
 apps/web/heys_push_v1.js:12
+apps/web/heys_demo_mode_v1.js:58
+apps/web/heys_demo_mode_v1.js:60
+apps/web/heys_demo_mode_v1.js:63
+apps/web/heys_demo_mode_v1.js:83
 apps/web/heys_core_v12.js:218
 apps/web/heys_core_v12.js:833
 apps/web/heys_core_v12.js:1924
@@ -173,6 +177,7 @@ apps/web/heys_pwa_module_v1.js:68
 apps/web/heys_ratio_zones_v1.js:73
 apps/web/heys_refeed_v1.js:76
 apps/web/heys_simple_analytics.js:106
+apps/web/heys_simple_analytics.js:123
 apps/web/heys_simple_analytics.js:130
 apps/web/heys_smart_search_v2.js:801
 apps/web/heys_smart_search_v2.js:872
@@ -197,6 +202,7 @@ apps/web/heys_ui_onboarding_v1.js:775
 apps/web/heys_user_tab_impl_v1.js:378
 apps/web/heys_user_tab_impl_v1.js:572
 apps/web/heys_user_tab_impl_v1.js:590
+apps/web/heys_user_tab_impl_v1.js:611
 apps/web/heys_user_v12.js:147
 apps/web/heys_user_v12.js:158
 apps/web/heys_weekly_reports_v2.js:36
@@ -206,6 +212,7 @@ apps/web/heys_widgets_core_v1.js:386
 apps/web/heys_widgets_ui_v1.js:4810
 apps/web/heys_widgets_ui_v1.js:7039
 apps/web/heys_yandex_api_v1.js:809
+apps/web/heys_yandex_api_v1.js:836
 apps/web/heys_yesterday_verify_v1.js:1121
 apps/web/heys_yesterday_verify_v1.js:1123
 apps/web/heys_yesterday_verify_v1.js:36
