@@ -14741,6 +14741,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     // Куратор шлёт данные через горячий heys-api-rpc вместо холодного
     // heys-api-rest. rpc() автоматически положит JWT в Authorization.
     'batch_upsert_client_kv_by_curator',
+    'merge_save_client_kv_by_curator', // 🔀 Server-side merge для dayv2/norms/profile (curator path)
   ];
 
   /**
@@ -15829,6 +15830,71 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   }
 
   /**
+   * 🔀 Server-side merge save для одного KV-ключа (dayv2/norms/profile).
+   * Атомарно мержит incoming с текущей облачной версией внутри Postgres-транзакции
+   * (FOR UPDATE), возвращает финальный merged blob. Клиент должен записать
+   * возвращённое значение в LS чтобы local совпал с облаком.
+   *
+   * @param {string} clientId - target client UUID
+   * @param {string} k - storage key (e.g. heys_dayv2_2026-05-17)
+   * @param {object} v - value to merge into cloud
+   * @param {number} lastSeenUpdatedAt - client's last-known cloud updatedAt (optimistic concurrency token)
+   * @returns {Promise<{success: boolean, v?: object, outcome?: string, error?: string}>}
+   */
+  async function mergeSaveKV(clientId, k, v, lastSeenUpdatedAt = 0) {
+    if (!k || v == null) {
+      return { success: false, error: 'invalid_params' };
+    }
+    try {
+      // Path 1: session token (PIN auth)
+      const sessionToken = getSessionTokenForKV();
+      if (sessionToken) {
+        const result = await rpc('merge_save_client_kv_by_session', {
+          p_session_token: sessionToken,
+          p_key: k,
+          p_value: v,
+          p_last_seen_updated_at: lastSeenUpdatedAt,
+        });
+        if (result.error) {
+          err('[mergeSaveKV] session RPC error:', result.error?.message || result.error);
+          return { success: false, error: result.error.message || String(result.error) };
+        }
+        const data = result.data;
+        if (data?.ok === false) {
+          return { success: false, error: data.error || 'merge_failed' };
+        }
+        return { success: true, v: data?.v, outcome: data?.outcome };
+      }
+
+      // Path 2: curator JWT
+      const curatorToken = getCuratorToken();
+      if (curatorToken) {
+        const result = await rpc('merge_save_client_kv_by_curator', {
+          p_client_id: clientId,
+          p_key: k,
+          p_value: v,
+          p_last_seen_updated_at: lastSeenUpdatedAt,
+        });
+        if (result.error) {
+          err('[mergeSaveKV] curator RPC error:', result.error?.message || result.error);
+          return { success: false, error: result.error.message || String(result.error) };
+        }
+        const data = result.data;
+        if (data?.ok === false) {
+          return { success: false, error: data.error || 'merge_failed' };
+        }
+        return { success: true, v: data?.v, outcome: data?.outcome };
+      }
+
+      err('[mergeSaveKV] No auth token (neither session nor curator)');
+      return { success: false, error: 'No auth token available' };
+    } catch (e) {
+      err('[mergeSaveKV] exception:', e.message);
+      return { success: false, error: e.message };
+    }
+  }
+
+  /**
    * 🔐 v56: Удалить KV через REST API (для куратора)
    * @param {string} userId - ID куратора
    * @param {string} clientId - ID клиента
@@ -16610,6 +16676,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     getAllKV,
     getAllKVByCurator,
     batchSaveKV,
+    mergeSaveKV,
     deleteKV,
 
     // Алиасы для совместимости с Supabase SDK
@@ -19311,6 +19378,415 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 })(typeof window !== 'undefined' ? window : globalThis);
 
 
+/* ===== heys_sync_merge_v1.js ===== */
+/**
+ * heys_sync_merge_v1.js — Pure merge logic for HEYS day/scalar KV blobs.
+ *
+ * Used by:
+ *   - Browser: HEYS.sync.mergeDayData (called from bootstrapClientSync during
+ *     cloud→local pull and from save-time routing).
+ *   - Server: yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.js
+ *     (same file copied at deploy time; merges incoming with current cloud
+ *     version inside a Postgres transaction).
+ *
+ * Pure functions — no side effects on window/global. Optional helpers passed
+ * via options (logFn, hashFn, workoutLogHasTrackableContent).
+ *
+ * UMD wrapper so the same file works as <script> (registers HEYS.sync) and
+ * as `require('./heys_sync_merge_v1.js')` from Node.
+ */
+(function (root, factory) {
+  'use strict';
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    const api = factory();
+    root.HEYS = root.HEYS || {};
+    root.HEYS.sync = Object.assign(root.HEYS.sync || {}, api);
+  }
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this), function () {
+  'use strict';
+
+  // ─── mergeItemsById ──────────────────────────────────────────────────────
+  function mergeItemsById(remoteItems = [], localItems = [], preferLocal = true) {
+    if (!preferLocal) {
+      // preferRemote: only remote items survive — required for cross-device deletions on pull-refresh
+      return remoteItems.filter((item) => item && item.id);
+    }
+    const itemsMap = new Map();
+    remoteItems.forEach((item) => {
+      if (item && item.id) itemsMap.set(item.id, item);
+    });
+    localItems.forEach((item) => {
+      if (item && item.id) itemsMap.set(item.id, item);
+    });
+    return Array.from(itemsMap.values());
+  }
+
+  // ─── stripStaleSavedDisplayNutrientsIfEmptyDiary ─────────────────────────
+  // Removes cached display nutrients when meals/items are empty (same invariant
+  // as dayMealsIntegrity).
+  function stripStaleSavedDisplayNutrientsIfEmptyDiary(dayObj) {
+    if (!dayObj || typeof dayObj !== 'object') return dayObj;
+    const meals = Array.isArray(dayObj.meals) ? dayObj.meals : [];
+    const hasItems = meals.some((m) => Array.isArray(m && m.items) && m.items.length > 0);
+    if (hasItems) return dayObj;
+    const next = { ...dayObj };
+    delete next.savedEatenKcal;
+    delete next.savedDisplayOptimum;
+    delete next.savedEatenProt;
+    delete next.savedEatenCarbs;
+    delete next.savedEatenFat;
+    delete next.savedEatenFiber;
+    return next;
+  }
+
+  // ─── mergeDayData ────────────────────────────────────────────────────────
+  //
+  // Options:
+  //   forceKeepAll: bool — pull-to-refresh mode, keep ALL meals (no deletion detection)
+  //   preferRemote: bool — pull-to-refresh, remote wins for items/meals
+  //   logFn: function — optional logger (defaults to no-op)
+  //   hashFn: function(day) → string — optional content hash to skip identical merges
+  //   workoutLogHasTrackableContent: function(workoutLog) → bool — optional richness check
+  //
+  function mergeDayData(local, remote, options) {
+    options = options || {};
+    const forceKeepAll = !!options.forceKeepAll;
+    const preferRemote = !!options.preferRemote;
+    const logFn = typeof options.logFn === 'function' ? options.logFn : function () {};
+    const hashFn = typeof options.hashFn === 'function' ? options.hashFn : null;
+    const workoutLogHasTrackableContent =
+      typeof options.workoutLogHasTrackableContent === 'function'
+        ? options.workoutLogHasTrackableContent
+        : null;
+
+    // Normalize trainings (quality/feelAfter → mood/wellbeing/stress)
+    const normalizeTrainings = (trainings) =>
+      (trainings || []).map((t) => {
+        t = t || {};
+        if (t.quality !== undefined || t.feelAfter !== undefined) {
+          const { quality, feelAfter, ...rest } = t;
+          return {
+            ...rest,
+            mood: rest.mood !== undefined ? rest.mood : (quality !== undefined ? quality : 5),
+            wellbeing:
+              rest.wellbeing !== undefined ? rest.wellbeing : (feelAfter !== undefined ? feelAfter : 5),
+            stress: rest.stress !== undefined ? rest.stress : 5,
+          };
+        }
+        return t;
+      });
+
+    if (!local || !remote) return null;
+
+    local = { ...local, trainings: normalizeTrainings(local && local.trainings) };
+    remote = { ...remote, trainings: normalizeTrainings(remote && remote.trainings) };
+
+    // Skip if content-identical
+    if (hashFn) {
+      const localHash = hashFn(local);
+      const remoteHash = hashFn(remote);
+      if (localHash === remoteHash) return null;
+    } else {
+      const localJson = JSON.stringify({ ...local, updatedAt: 0, _sourceId: '' });
+      const remoteJson = JSON.stringify({ ...remote, updatedAt: 0, _sourceId: '' });
+      if (localJson === remoteJson) return null;
+    }
+
+    const merged = {
+      ...remote,
+      date: remote.date || local.date,
+      updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0, Date.now()),
+      _mergedAt: Date.now(),
+    };
+
+    // Numeric fields: steps/water → max; householdMin → freshest
+    merged.steps = Math.max(local.steps || 0, remote.steps || 0);
+    merged.waterMl = Math.max(local.waterMl || 0, remote.waterMl || 0);
+
+    if ((local.updatedAt || 0) >= (remote.updatedAt || 0)) {
+      merged.householdMin = local.householdMin != null ? local.householdMin : (remote.householdMin != null ? remote.householdMin : 0);
+      merged.householdTime = local.householdTime != null ? local.householdTime : (remote.householdTime != null ? remote.householdTime : '');
+      merged.householdActivities = local.householdActivities || remote.householdActivities || undefined;
+    } else {
+      merged.householdMin = remote.householdMin != null ? remote.householdMin : (local.householdMin != null ? local.householdMin : 0);
+      merged.householdTime = remote.householdTime != null ? remote.householdTime : (local.householdTime != null ? local.householdTime : '');
+      merged.householdActivities = remote.householdActivities || local.householdActivities || undefined;
+    }
+
+    // Morning weight: prefer non-zero, prefer freshest if both set
+    if (local.weightMorning && remote.weightMorning) {
+      merged.weightMorning =
+        (local.updatedAt || 0) >= (remote.updatedAt || 0) ? local.weightMorning : remote.weightMorning;
+    } else {
+      merged.weightMorning = local.weightMorning || remote.weightMorning || 0;
+    }
+
+    // Sleep: non-empty wins
+    merged.sleepStart = local.sleepStart || remote.sleepStart || '';
+    merged.sleepEnd = local.sleepEnd || remote.sleepEnd || '';
+    merged.sleepQuality = local.sleepQuality || remote.sleepQuality || '';
+    merged.sleepNote = local.sleepNote || remote.sleepNote || '';
+
+    // Day score: manual override wins
+    if (local.dayScoreManual) {
+      merged.dayScore = local.dayScore;
+      merged.dayScoreManual = true;
+    } else if (remote.dayScoreManual) {
+      merged.dayScore = remote.dayScore;
+      merged.dayScoreManual = true;
+    } else {
+      merged.dayScore = local.dayScore || remote.dayScore || '';
+    }
+    merged.dayComment = local.dayComment || remote.dayComment || '';
+
+    // Cycle: explicit null reset preserved if it came from the fresher side
+    if (local.cycleDay === null && (local.updatedAt || 0) >= (remote.updatedAt || 0)) {
+      merged.cycleDay = null;
+    } else if (remote.cycleDay === null && (remote.updatedAt || 0) > (local.updatedAt || 0)) {
+      merged.cycleDay = null;
+    } else {
+      merged.cycleDay = local.cycleDay || remote.cycleDay || null;
+    }
+
+    // ─── Meals: merge by id with deletion detection ────────────────────────
+    const localMeals = local.meals || [];
+    const remoteMeals = remote.meals || [];
+    const mealsMap = new Map();
+    const localMealIds = new Set(localMeals.filter((m) => m && m.id).map((m) => m.id));
+    const localIsNewer = (local.updatedAt || 0) >= (remote.updatedAt || 0);
+
+    // morningActivation: 'done'/'missed' status takes priority
+    {
+      const localMA = local.morningActivation || null;
+      const remoteMA = remote.morningActivation || null;
+      const localMAStatus = localMA && localMA.status;
+      const remoteMAStatus = remoteMA && remoteMA.status;
+      if (localMAStatus === 'done' || localMAStatus === 'missed') {
+        merged.morningActivation = localMA;
+      } else if (remoteMAStatus === 'done' || remoteMAStatus === 'missed') {
+        merged.morningActivation = remoteMA;
+      } else if (localIsNewer) {
+        merged.morningActivation = localMA != null ? localMA : (remoteMA != null ? remoteMA : null);
+      } else {
+        merged.morningActivation = remoteMA != null ? remoteMA : (localMA != null ? localMA : null);
+      }
+    }
+
+    // Remote meals first (will be overwritten by local if collision)
+    remoteMeals.forEach((meal) => {
+      if (!meal || !meal.id) return;
+      if (!forceKeepAll && !preferRemote && localIsNewer && !localMealIds.has(meal.id)) {
+        // Local is fresher and this meal isn't in local → deleted by user
+        logFn(`🗑️ [MERGE] Meal ${meal.id} deleted locally, skipping from remote`);
+        return;
+      }
+      mealsMap.set(meal.id, meal);
+    });
+
+    // Local meals: merge items if both sides have the meal
+    localMeals.forEach((meal) => {
+      if (!meal || !meal.id) return;
+      const existing = mealsMap.get(meal.id);
+      if (!existing) {
+        mealsMap.set(meal.id, meal);
+      } else {
+        // ─── meal-level merge ────────────────────────────────────────────
+        // Use meal.updatedAt for finer-grained "who edited THIS meal more recently"
+        // (Phase 2). Falls back to day.updatedAt for legacy data without meal.updatedAt.
+        const localMealTs = meal.updatedAt || local.updatedAt || 0;
+        const remoteMealTs = existing.updatedAt || remote.updatedAt || 0;
+        const mealLocalIsNewer = localMealTs >= remoteMealTs;
+        const preferLocal = preferRemote ? false : mealLocalIsNewer;
+
+        const mergedItems = mergeItemsById(existing.items || [], meal.items || [], preferLocal);
+
+        const mergedMeal = preferRemote
+          ? { ...meal, ...existing, items: mergedItems }
+          : mealLocalIsNewer
+            ? { ...existing, ...meal, items: mergedItems }
+            : { ...meal, ...existing, items: mergedItems };
+        // Preserve the freshest meal-level updatedAt
+        mergedMeal.updatedAt = Math.max(localMealTs, remoteMealTs) || undefined;
+        mealsMap.set(meal.id, mergedMeal);
+      }
+    });
+
+    merged.meals = Array.from(mealsMap.values()).sort((a, b) =>
+      (a.time || '').localeCompare(b.time || '')
+    );
+
+    // ─── Trainings: position-indexed merge ────────────────────────────────
+    const localTrainings = local.trainings || [];
+    const remoteTrainings = remote.trainings || [];
+    merged.trainings = [];
+    const localIsNewerForTrainings = (local.updatedAt || 0) >= (remote.updatedAt || 0);
+
+    const isMorningActivationTrainingRow = (t) => {
+      if (!t || typeof t !== 'object') return false;
+      if (t.source === 'morning_activation') return true;
+      const lab = String(t.activityLabel || '').trim().toLowerCase();
+      return lab === 'зарядка';
+    };
+    const localMaStatusForTrainings = local.morningActivation && local.morningActivation.status;
+    const protectLocalMorningActivationRow =
+      localMaStatusForTrainings === 'done' || localMaStatusForTrainings === 'missed';
+
+    const workoutLogRichness = (t) => {
+      if (!t || !t.workoutLog || typeof t.workoutLog !== 'object') return 0;
+      const wl = t.workoutLog;
+      const n = Array.isArray(wl.exercises) ? wl.exercises.length : 0;
+      let score = n * 10;
+      if (n > 1) score += 5;
+      if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.some((m) => +m > 0)) score += 100;
+      try {
+        if (workoutLogHasTrackableContent && workoutLogHasTrackableContent(wl)) score += 1000;
+      } catch (e) {
+        /* noop */
+      }
+      return score;
+    };
+
+    const maxTrainings = Math.max(localTrainings.length, remoteTrainings.length, 3);
+    for (let i = 0; i < maxTrainings; i++) {
+      const lt = localTrainings[i] || { z: [0, 0, 0, 0] };
+      const rt = remoteTrainings[i] || { z: [0, 0, 0, 0] };
+      const ltSum = (lt.z || []).reduce((a, b) => a + (b || 0), 0);
+      const rtSum = (rt.z || []).reduce((a, b) => a + (b || 0), 0);
+
+      let winner;
+      if (localIsNewerForTrainings) {
+        winner = lt;
+      } else if (ltSum === 0 && rtSum > 0) {
+        winner = rt;
+      } else if (rtSum === 0 && ltSum > 0) {
+        winner = lt;
+      } else if (ltSum === 0 && rtSum === 0) {
+        const lRich = workoutLogRichness(lt);
+        const rRich = workoutLogRichness(rt);
+        if (lRich > rRich) winner = lt;
+        else if (rRich > lRich) winner = rt;
+        else if (lRich > 0 && rRich > 0) winner = lt;
+        else if (
+          protectLocalMorningActivationRow &&
+          isMorningActivationTrainingRow(lt) &&
+          !isMorningActivationTrainingRow(rt)
+        ) {
+          winner = lt;
+        } else {
+          winner = rt;
+        }
+      } else {
+        if (
+          protectLocalMorningActivationRow &&
+          isMorningActivationTrainingRow(lt) &&
+          !isMorningActivationTrainingRow(rt)
+        ) {
+          winner = lt;
+        } else {
+          winner = rt;
+        }
+      }
+      const loser = winner === lt ? rt : lt;
+
+      const getMergedRating = (field) => {
+        const wVal = winner[field];
+        const lVal = loser[field];
+        if (wVal !== undefined) return wVal;
+        if (lVal !== undefined) return lVal;
+        return undefined;
+      };
+
+      winner = {
+        ...winner,
+        mood: getMergedRating('mood'),
+        wellbeing: getMergedRating('wellbeing'),
+        stress: getMergedRating('stress'),
+        quality: undefined,
+        feelAfter: undefined,
+      };
+
+      merged.trainings.push(winner);
+    }
+
+    logFn('🔀 [MERGE] Result:', {
+      meals: merged.meals.length,
+      steps: merged.steps,
+      water: merged.waterMl,
+      trainings: merged.trainings.filter((t) => t.z && t.z.some((z) => z > 0)).length,
+    });
+
+    return stripStaleSavedDisplayNutrientsIfEmptyDiary(merged);
+  }
+
+  // ─── mergeScalarKv ───────────────────────────────────────────────────────
+  // Generic shallow merge for KV blobs like heys_norms, heys_profile.
+  // Each top-level field's "winner" is decided by parent-level updatedAt:
+  //   - Object values: deep-merge (newer overlay on older, retains both halves)
+  //   - Scalar/array values: pick from whichever side has fresher updatedAt
+  //
+  // Both sides must have `updatedAt` at the root (caller's responsibility).
+  // For backward compat: if a side has no `updatedAt`, treats it as 0 (so the
+  // other side always wins).
+  function mergeScalarKv(incoming, current) {
+    if (incoming == null) return current;
+    if (current == null) return incoming;
+    if (typeof incoming !== 'object' || typeof current !== 'object') {
+      // Non-object → newer wins
+      const incomingTs = (incoming && incoming.updatedAt) || 0;
+      const currentTs = (current && current.updatedAt) || 0;
+      return incomingTs >= currentTs ? incoming : current;
+    }
+    if (Array.isArray(incoming) || Array.isArray(current)) {
+      // Arrays → fresher wins atomically (no positional merging)
+      const incomingTs = (incoming && incoming.updatedAt) || 0;
+      const currentTs = (current && current.updatedAt) || 0;
+      return incomingTs >= currentTs ? incoming : current;
+    }
+
+    const incomingTs = incoming.updatedAt || 0;
+    const currentTs = current.updatedAt || 0;
+    const incomingIsNewer = incomingTs >= currentTs;
+
+    // Start from the older side, then overlay fresher fields.
+    const base = incomingIsNewer ? current : incoming;
+    const overlay = incomingIsNewer ? incoming : current;
+    const merged = { ...base };
+
+    Object.keys(overlay).forEach((key) => {
+      if (key === '_meta' || key === '_sourceId') return; // skip metadata
+      const overlayVal = overlay[key];
+      const baseVal = base[key];
+      if (
+        overlayVal &&
+        baseVal &&
+        typeof overlayVal === 'object' &&
+        typeof baseVal === 'object' &&
+        !Array.isArray(overlayVal) &&
+        !Array.isArray(baseVal)
+      ) {
+        // Nested object → recursive (treat as scalar siblings of their parent)
+        merged[key] = { ...baseVal, ...overlayVal };
+      } else {
+        // Scalar / array → take from overlay (fresher side)
+        merged[key] = overlayVal;
+      }
+    });
+
+    merged.updatedAt = Math.max(incomingTs, currentTs, Date.now());
+    return merged;
+  }
+
+  return {
+    mergeDayData,
+    mergeItemsById,
+    mergeScalarKv,
+    stripStaleSavedDisplayNutrientsIfEmptyDiary,
+  };
+});
+
+
 /* ===== heys_storage_supabase_v1.js ===== */
 ﻿// heys_storage_supabase_v1.js — cloud storage bridge (HISTORICAL NAME)
 //
@@ -20683,31 +21159,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    *                                если false, берём ТОЛЬКО remote items (для pull-to-refresh)
    * @returns {Array} объединённый массив items
    */
+  // Delegated to HEYS.sync.mergeItemsById ([heys_sync_merge_v1.js](heys_sync_merge_v1.js))
+  // so server-side Cloud Function and client share the same implementation.
   function mergeItemsById(remoteItems = [], localItems = [], preferLocal = true) {
-    // 🆕 При preferLocal=false (preferRemote): берём ТОЛЬКО remote items
-    // Это нужно чтобы удаления с других устройств применялись при pull-to-refresh
-    if (!preferLocal) {
-      return remoteItems.filter(item => item && item.id);
+    const impl = global.HEYS && global.HEYS.sync && global.HEYS.sync.mergeItemsById;
+    if (!impl) {
+      // Defensive fallback if shared module hasn't loaded yet (boot-core ordering bug).
+      console.warn('[HEYS.cloud] HEYS.sync.mergeItemsById not loaded — using legacy fallback');
+      if (!preferLocal) return (remoteItems || []).filter((item) => item && item.id);
+      const itemsMap = new Map();
+      (remoteItems || []).forEach((item) => { if (item && item.id) itemsMap.set(item.id, item); });
+      (localItems || []).forEach((item) => { if (item && item.id) itemsMap.set(item.id, item); });
+      return Array.from(itemsMap.values());
     }
-
-    // preferLocal=true: объединяем оба списка, local версии перезаписывают remote
-    const itemsMap = new Map();
-
-    // Добавляем remote items
-    remoteItems.forEach(item => {
-      if (item && item.id) {
-        itemsMap.set(item.id, item);
-      }
-    });
-
-    // Добавляем/заменяем local items
-    localItems.forEach(item => {
-      if (item && item.id) {
-        itemsMap.set(item.id, item);
-      }
-    });
-
-    return Array.from(itemsMap.values());
+    return impl(remoteItems, localItems, preferLocal);
   }
 
   /**
@@ -20743,316 +21208,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * @param {boolean} options.forceKeepAll - при true НЕ считать meals "удалёнными", объединять ВСЕ
    * @param {boolean} options.preferRemote - при true, remote items/meals побеждают (для pull-to-refresh)
    */
+  // Delegated to HEYS.sync.mergeDayData (heys_sync_merge_v1.js). Same shared
+  // module also runs server-side in heys-api-rpc Cloud Function during local→cloud
+  // saves — that's how server-side merge prevents lost updates when two clients
+  // edit different meals concurrently.
   function mergeDayData(local, remote, options = {}) {
-    const forceKeepAll = options.forceKeepAll || false;
-    const preferRemote = options.preferRemote || false; // 🆕 Для pull-to-refresh: remote побеждает
-    // Приводим тренировки к новой схеме (quality/feelAfter → mood/wellbeing/stress)
-    const normalizeTrainings = (trainings = []) => trainings.map((t = {}) => {
-      if (t.quality !== undefined || t.feelAfter !== undefined) {
-        const { quality, feelAfter, ...rest } = t;
-        return {
-          ...rest,
-          mood: rest.mood ?? quality ?? 5,
-          wellbeing: rest.wellbeing ?? feelAfter ?? 5,
-          stress: rest.stress ?? 5
-        };
-      }
-      return t;
+    const impl = global.HEYS && global.HEYS.sync && global.HEYS.sync.mergeDayData;
+    if (!impl) {
+      console.error('[HEYS.cloud] HEYS.sync.mergeDayData not loaded — skipping merge');
+      return null;
+    }
+    const ch = global.HEYS && global.HEYS.contentHash;
+    const dayCalcs = global.HEYS && global.HEYS.dayCalculations;
+    return impl(local, remote, {
+      ...options,
+      logFn: log,
+      hashFn: ch && typeof ch.hashDay === 'function' ? ch.hashDay.bind(ch) : null,
+      workoutLogHasTrackableContent:
+        dayCalcs && typeof dayCalcs.workoutLogHasTrackableContent === 'function'
+          ? dayCalcs.workoutLogHasTrackableContent
+          : null,
     });
-
-    local = {
-      ...local,
-      trainings: normalizeTrainings(local?.trainings)
-    };
-    remote = {
-      ...remote,
-      trainings: normalizeTrainings(remote?.trainings)
-    };
-
-    if (!local || !remote) return null;
-
-    // PERF #8 + Foundation 0: content-hash вместо двойного JSON.stringify.
-    // Раньше: O(meals + trainings + supplements) sequenся на каждый sync-tick.
-    // Теперь: hashDay использует cached _h полей → O(1) после первой инициализации.
-    // Fallback на stringify сохранён, если contentHash не загружен (load-order edge).
-    const ch = global.HEYS?.contentHash;
-    if (ch && typeof ch.hashDay === 'function') {
-      // Hash без updatedAt — оба объекта проходят те же шаги hash, updatedAt не входит в primitives части
-      const localHash = ch.hashDay(local);
-      const remoteHash = ch.hashDay(remote);
-      if (localHash === remoteHash) return null;
-    } else {
-      const localJson = JSON.stringify({ ...local, updatedAt: 0, _sourceId: '' });
-      const remoteJson = JSON.stringify({ ...remote, updatedAt: 0, _sourceId: '' });
-      if (localJson === remoteJson) return null;
-    }
-
-    const merged = {
-      ...remote, // База — remote
-      date: remote.date || local.date, // remote (cloud) is canonical — prevents corrupted local.date propagation
-      updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0, Date.now()),
-      _mergedAt: Date.now(),
-    };
-
-    // 📊 Числовые поля: для шагов/воды берём максимум, для householdMin — свежее
-    // Логика шаги/вода: если на одном устройстве ввели 5000 шагов, а на другом 8000 — значит 8000 актуальнее
-    // Логика householdMin: это редактируемое значение, берём свежее
-    merged.steps = Math.max(local.steps || 0, remote.steps || 0);
-    merged.waterMl = Math.max(local.waterMl || 0, remote.waterMl || 0);
-
-    // householdMin — берём свежее значение (редактируемое поле)
-    // householdActivities — массив активностей
-    if ((local.updatedAt || 0) >= (remote.updatedAt || 0)) {
-      merged.householdMin = local.householdMin ?? remote.householdMin ?? 0;
-      merged.householdTime = local.householdTime ?? remote.householdTime ?? '';
-      merged.householdActivities = local.householdActivities || remote.householdActivities || undefined;
-    } else {
-      merged.householdMin = remote.householdMin ?? local.householdMin ?? 0;
-      merged.householdTime = remote.householdTime ?? local.householdTime ?? '';
-      merged.householdActivities = remote.householdActivities || local.householdActivities || undefined;
-    }
-
-    // 📊 Вес: берём ЛЮБОЕ ненулевое значение (приоритет — свежему)
-    // ВАЖНО: вес может быть 0 у нового пустого дня, поэтому приоритет ненулевому
-    if (local.weightMorning && remote.weightMorning) {
-      // Оба есть — берём свежее
-      merged.weightMorning = (local.updatedAt || 0) >= (remote.updatedAt || 0)
-        ? local.weightMorning
-        : remote.weightMorning;
-    } else {
-      // Берём любое ненулевое
-      merged.weightMorning = local.weightMorning || remote.weightMorning || 0;
-    }
-
-    // 😴 Сон: берём непустые значения (приоритет свежему только если оба заполнены)
-    merged.sleepStart = local.sleepStart || remote.sleepStart || '';
-    merged.sleepEnd = local.sleepEnd || remote.sleepEnd || '';
-    merged.sleepQuality = local.sleepQuality || remote.sleepQuality || '';
-    merged.sleepNote = local.sleepNote || remote.sleepNote || '';
-
-    // ⭐ Оценка дня: приоритет вручную установленной
-    if (local.dayScoreManual) {
-      merged.dayScore = local.dayScore;
-      merged.dayScoreManual = true;
-    } else if (remote.dayScoreManual) {
-      merged.dayScore = remote.dayScore;
-      merged.dayScoreManual = true;
-    } else {
-      merged.dayScore = local.dayScore || remote.dayScore || '';
-    }
-    merged.dayComment = local.dayComment || remote.dayComment || '';
-
-    // 🌸 Cycle: намеренный сброс (null) имеет приоритет если local свежее
-    // cycleDay: 1-7 = день цикла, null = сброшено, undefined = не было данных
-    if (local.cycleDay === null && (local.updatedAt || 0) >= (remote.updatedAt || 0)) {
-      // Намеренный сброс — local свежее и явно установил null
-      merged.cycleDay = null;
-    } else if (remote.cycleDay === null && (remote.updatedAt || 0) > (local.updatedAt || 0)) {
-      // Remote свежее и сбросил
-      merged.cycleDay = null;
-    } else {
-      // Берём непустое значение
-      merged.cycleDay = local.cycleDay || remote.cycleDay || null;
-    }
-
-    // �🍽️ Meals: merge по ID с учётом УДАЛЕНИЙ
-    // Если local свежее и meal отсутствует в local — значит удалён!
-    // НО: при forceKeepAll — объединяем ВСЁ (для pull-to-refresh после фикса багов)
-    const localMeals = local.meals || [];
-    const remoteMeals = remote.meals || [];
-    const mealsMap = new Map();
-    const localMealIds = new Set(localMeals.filter(m => m?.id).map(m => m.id));
-    const localIsNewer = (local.updatedAt || 0) >= (remote.updatedAt || 0);
-
-    // morningActivation: merge by freshness, but 'done'/'missed' status takes priority
-    // NOTE: This block must appear AFTER 'const localIsNewer' to avoid TDZ ReferenceError
-    {
-      const localMA = local.morningActivation || null;
-      const remoteMA = remote.morningActivation || null;
-      const localMAStatus = localMA?.status;
-      const remoteMAStatus = remoteMA?.status;
-      if (localMAStatus === 'done' || localMAStatus === 'missed') {
-        // Local status confirmed — always take local
-        merged.morningActivation = localMA;
-      } else if (remoteMAStatus === 'done' || remoteMAStatus === 'missed') {
-        // Remote confirmed, local not — take remote
-        merged.morningActivation = remoteMA;
-      } else if (localIsNewer) {
-        merged.morningActivation = localMA ?? remoteMA ?? null;
-      } else {
-        merged.morningActivation = remoteMA ?? localMA ?? null;
-      }
-    }
-
-    // Добавляем remote meals, но ТОЛЬКО если:
-    // 1. forceKeepAll = true (pull-to-refresh: берём ВСЕ meals), ИЛИ
-    // 2. Local НЕ свежее (remote приоритетнее), ИЛИ
-    // 3. Meal присутствует в local (не был удалён)
-    remoteMeals.forEach(meal => {
-      if (!meal || !meal.id) return;
-
-      if (!forceKeepAll && !preferRemote && localIsNewer && !localMealIds.has(meal.id)) {
-        // Local свежее и этого meal нет в local = УДАЛЁН пользователем
-        log(`🗑️ [MERGE] Meal ${meal.id} deleted locally, skipping from remote`);
-        return;
-      }
-
-      mealsMap.set(meal.id, meal);
-    });
-
-    // Потом local meals — если ID совпадает, берём ЛОКАЛЬНУЮ версию (она более свежая)
-    // ВАЖНО: При удалении item из приёма — locаl имеет меньше items, но это правильно!
-    // При ДОБАВЛЕНИИ item — нужен merge items по ID чтобы не терять данные с других устройств
-    // 🆕 При preferRemote — remote items побеждают (для pull-to-refresh)
-    localMeals.forEach(meal => {
-      if (!meal || !meal.id) return;
-      const existing = mealsMap.get(meal.id);
-      if (!existing) {
-        // 🆕 При preferRemote: если meal нет в remote — это может быть локальное добавление
-        // которое ещё не синкнулось. Оставляем его.
-        mealsMap.set(meal.id, meal);
-      } else {
-        // Конфликт по ID — MERGE items внутри meal!
-        // 🆕 При preferRemote: remote items имеют приоритет (удаления применяются)
-        const preferLocal = preferRemote ? false : localIsNewer;
-
-        if (preferRemote) {
-          // 🔇 PERF: Отключено — слишком много логов при merge
-          // logCritical(`🔄 [MERGE] preferRemote: meal "${meal.name}" | local items: ${meal.items?.length || 0} | remote items: ${existing.items?.length || 0} → using remote`);
-        }
-
-        const mergedItems = mergeItemsById(existing.items || [], meal.items || [], preferLocal);
-
-        // Берём остальные поля из более свежей версии
-        // 🆕 При preferRemote: берём remote как базу
-        const mergedMeal = preferRemote
-          ? { ...meal, ...existing, items: mergedItems } // remote (existing) поля поверх local
-          : localIsNewer
-            ? { ...existing, ...meal, items: mergedItems }
-            : { ...meal, ...existing, items: mergedItems };
-
-        mealsMap.set(meal.id, mergedMeal);
-      }
-    });
-
-    merged.meals = Array.from(mealsMap.values())
-      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-
-    // 🏋️ Trainings: merge по индексу, берём свежую версию
-    const localTrainings = local.trainings || [];
-    const remoteTrainings = remote.trainings || [];
-    merged.trainings = [];
-
-    // Local свежее — берём local тренировки как базу
-    const localIsNewerForTrainings = (local.updatedAt || 0) >= (remote.updatedAt || 0);
-
-    const isMorningActivationTrainingRow = (t) => {
-      if (!t || typeof t !== 'object') return false;
-      if (t.source === 'morning_activation') return true;
-      const lab = String(t.activityLabel || '').trim().toLowerCase();
-      return lab === 'зарядка';
-    };
-    const localMaStatusForTrainings = local.morningActivation?.status;
-    const protectLocalMorningActivationRow =
-      localMaStatusForTrainings === 'done' || localMaStatusForTrainings === 'missed';
-
-    /** Для workout_builder сумма z часто 0 — без этого remote «пустышка» затирает локальный дневник. */
-    const workoutLogRichness = (t) => {
-      if (!t || !t.workoutLog || typeof t.workoutLog !== 'object') return 0;
-      const wl = t.workoutLog;
-      const n = Array.isArray(wl.exercises) ? wl.exercises.length : 0;
-      let score = n * 10;
-      if (n > 1) score += 5;
-      if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.some((m) => +m > 0)) score += 100;
-      try {
-        const fn = global.HEYS && global.HEYS.dayCalculations && typeof global.HEYS.dayCalculations.workoutLogHasTrackableContent === 'function'
-          ? global.HEYS.dayCalculations.workoutLogHasTrackableContent
-          : null;
-        if (fn && fn(wl)) score += 1000;
-      } catch (e) { /* noop */ }
-      return score;
-    };
-
-    const maxTrainings = Math.max(localTrainings.length, remoteTrainings.length, 3);
-    for (let i = 0; i < maxTrainings; i++) {
-      const lt = localTrainings[i] || { z: [0, 0, 0, 0] };
-      const rt = remoteTrainings[i] || { z: [0, 0, 0, 0] };
-
-      // Берём тренировку из более свежего источника
-      const ltSum = (lt.z || []).reduce((a, b) => a + (b || 0), 0);
-      const rtSum = (rt.z || []).reduce((a, b) => a + (b || 0), 0);
-
-      // Выбираем базовую версию по updatedAt
-      // ВАЖНО: если local свежее и пустая — это НАМЕРЕННОЕ удаление!
-      let winner;
-      if (localIsNewerForTrainings) {
-        // Local свежее — всегда берём local (даже если пустая = удалена)
-        winner = lt;
-      } else if (ltSum === 0 && rtSum > 0) {
-        // Local не свежее и пустая — берём remote
-        winner = rt;
-      } else if (rtSum === 0 && ltSum > 0) {
-        // Remote пустая, local непустая — берём local
-        winner = lt;
-      } else if (ltSum === 0 && rtSum === 0) {
-        const lRich = workoutLogRichness(lt);
-        const rRich = workoutLogRichness(rt);
-        if (lRich > rRich) {
-          winner = lt;
-        } else if (rRich > lRich) {
-          winner = rt;
-        } else if (lRich > 0 && rRich > 0) {
-          // Одинаковый «вес» дневника — не отдаём приоритет устаревшему remote только из‑за дня
-          winner = lt;
-        } else if (protectLocalMorningActivationRow && isMorningActivationTrainingRow(lt) && !isMorningActivationTrainingRow(rt)) {
-          winner = lt;
-        } else {
-          winner = rt;
-        }
-      } else {
-        // Обе непустые, remote свежее — по умолчанию remote; но не затираем строку «Зарядка»,
-        // если в облаке на том же слоте ещё старая тренировка (лаг синка после done/missed).
-        if (protectLocalMorningActivationRow && isMorningActivationTrainingRow(lt) && !isMorningActivationTrainingRow(rt)) {
-          winner = lt;
-        } else {
-          winner = rt;
-        }
-      }
-      const loser = winner === lt ? rt : lt;
-
-      // ВСЕГДА объединяем оценки (mood/wellbeing/stress) из обеих версий
-      // Берём значение которое ЗАДАНО (не undefined), предпочитаем winner
-      const getMergedRating = (field) => {
-        const wVal = winner[field];
-        const lVal = loser[field];
-        // Предпочитаем значение от winner если оно задано (включая 0!)
-        if (wVal !== undefined) return wVal;
-        if (lVal !== undefined) return lVal;
-        return undefined; // Не задано ни там ни там
-      };
-
-      winner = {
-        ...winner,
-        // Объединяем оценки — берём заданные из любой версии
-        mood: getMergedRating('mood'),
-        wellbeing: getMergedRating('wellbeing'),
-        stress: getMergedRating('stress'),
-        // Удаляем старые поля если они пустые
-        quality: undefined,
-        feelAfter: undefined
-      };
-
-      merged.trainings.push(winner);
-    }
-
-    log('🔀 [MERGE] Result:', {
-      meals: merged.meals.length,
-      steps: merged.steps,
-      water: merged.waterMl,
-      trainings: merged.trainings.filter(t => t.z?.some(z => z > 0)).length
-    });
-
-    return stripStaleSavedDisplayNutrientsIfEmptyDiary(merged);
   }
 
   /**
@@ -25210,10 +25386,73 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     try {
       // Преобразуем items в формат для YandexAPI
       const yandexItems = items.map(item => ({
+        originalKey: item.k, // preserve scoped key for LS write-back
         k: normalizeKeyForSupabase(item.k, clientId),
         v: item.v,
         updated_at: item.updated_at || new Date().toISOString()
       }));
+
+      // 🔀 Server-side merge routing for keys where two clients may collide:
+      //   - heys_dayv2_YYYY-MM-DD (curator + client editing different meals)
+      //   - heys_norms, heys_profile (settings edited from multiple devices)
+      // Each mergeable item is sent through merge_save_client_kv_by_session/_by_curator
+      // which atomically merges incoming with current cloud (FOR UPDATE), then returns
+      // the merged blob. We write the merged blob back to LS so local matches truth.
+      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile)$/;
+      const mergeableItems = yandexItems.filter(it => MERGEABLE_KEY_RE.test(it.k));
+      const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
+
+      let mergeSavedCount = 0;
+      let firstMergeError = null;
+      const lsSetRaw = originalSetItem || (typeof global !== 'undefined' && global.localStorage ? global.localStorage.setItem.bind(global.localStorage) : null);
+
+      for (const it of mergeableItems) {
+        try {
+          const lastSeen = Number((it.v && it.v.updatedAt) || 0);
+          const result = await YandexAPI.mergeSaveKV(clientId, it.k, it.v, lastSeen);
+          if (result.success && result.v) {
+            // Apply server-merged blob back to LS (skip interceptor → avoid mirror loop).
+            // muteMirror is also set by interceptSetItem dedup, but originalSetItem bypasses it entirely.
+            if (lsSetRaw && it.originalKey) {
+              try {
+                lsSetRaw(it.originalKey, JSON.stringify(result.v));
+              } catch (lsErr) {
+                console.warn('[merge-save] LS write-back failed for', it.originalKey, lsErr.message);
+              }
+            }
+            // Notify UI for day keys
+            const dateMatch = it.k.match(/^heys_dayv2_(\d{4}-\d{2}-\d{2})$/);
+            if (dateMatch && typeof global.dispatchEvent === 'function') {
+              try {
+                global.dispatchEvent(new CustomEvent('heys:day-updated', {
+                  detail: { date: dateMatch[1], source: 'server-merge', outcome: result.outcome }
+                }));
+              } catch (_) { /* noop */ }
+            }
+            mergeSavedCount++;
+          } else {
+            firstMergeError = firstMergeError || result.error || 'merge_save_failed';
+            log('⚠️ [merge-save] failed for', it.k, '→', firstMergeError);
+          }
+        } catch (e) {
+          firstMergeError = firstMergeError || e.message;
+          log('⚠️ [merge-save] exception for', it.k, '→', e.message);
+        }
+      }
+
+      // Restore yandexItems to only the non-mergeable ones for the rest of the pipeline.
+      yandexItems.length = 0;
+      for (const it of nonMergeableItems) {
+        yandexItems.push({ k: it.k, v: it.v, updated_at: it.updated_at });
+      }
+
+      // If all items were mergeable, we're done. Return aggregated result.
+      if (yandexItems.length === 0) {
+        if (firstMergeError) {
+          return { success: false, saved: mergeSavedCount, error: firstMergeError };
+        }
+        return { success: true, saved: mergeSavedCount };
+      }
 
       const Store = global.HEYS?.store;
       const isProductsBaseKey = (k) => {
@@ -25669,8 +25908,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         });
       }
 
-      logCritical(`☁️ [YANDEX SAVE] Сохранено ${totalSaved} записей (${jsonSizeKB}KB) для клиента ${clientId.slice(0, 8)}`);
-      return { success: true, saved: totalSaved };
+      logCritical(`☁️ [YANDEX SAVE] Сохранено ${totalSaved} записей (${jsonSizeKB}KB) для клиента ${clientId.slice(0, 8)}` + (mergeSavedCount ? ` (+${mergeSavedCount} через merge)` : ''));
+      return { success: true, saved: totalSaved + mergeSavedCount };
 
     } catch (e) {
       logCritical(`❌ [YANDEX SAVE] Exception: ${e.message}`);

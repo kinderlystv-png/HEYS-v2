@@ -272,6 +272,7 @@
     // Куратор шлёт данные через горячий heys-api-rpc вместо холодного
     // heys-api-rest. rpc() автоматически положит JWT в Authorization.
     'batch_upsert_client_kv_by_curator',
+    'merge_save_client_kv_by_curator', // 🔀 Server-side merge для dayv2/norms/profile (curator path)
   ];
 
   /**
@@ -1360,6 +1361,71 @@
   }
 
   /**
+   * 🔀 Server-side merge save для одного KV-ключа (dayv2/norms/profile).
+   * Атомарно мержит incoming с текущей облачной версией внутри Postgres-транзакции
+   * (FOR UPDATE), возвращает финальный merged blob. Клиент должен записать
+   * возвращённое значение в LS чтобы local совпал с облаком.
+   *
+   * @param {string} clientId - target client UUID
+   * @param {string} k - storage key (e.g. heys_dayv2_2026-05-17)
+   * @param {object} v - value to merge into cloud
+   * @param {number} lastSeenUpdatedAt - client's last-known cloud updatedAt (optimistic concurrency token)
+   * @returns {Promise<{success: boolean, v?: object, outcome?: string, error?: string}>}
+   */
+  async function mergeSaveKV(clientId, k, v, lastSeenUpdatedAt = 0) {
+    if (!k || v == null) {
+      return { success: false, error: 'invalid_params' };
+    }
+    try {
+      // Path 1: session token (PIN auth)
+      const sessionToken = getSessionTokenForKV();
+      if (sessionToken) {
+        const result = await rpc('merge_save_client_kv_by_session', {
+          p_session_token: sessionToken,
+          p_key: k,
+          p_value: v,
+          p_last_seen_updated_at: lastSeenUpdatedAt,
+        });
+        if (result.error) {
+          err('[mergeSaveKV] session RPC error:', result.error?.message || result.error);
+          return { success: false, error: result.error.message || String(result.error) };
+        }
+        const data = result.data;
+        if (data?.ok === false) {
+          return { success: false, error: data.error || 'merge_failed' };
+        }
+        return { success: true, v: data?.v, outcome: data?.outcome };
+      }
+
+      // Path 2: curator JWT
+      const curatorToken = getCuratorToken();
+      if (curatorToken) {
+        const result = await rpc('merge_save_client_kv_by_curator', {
+          p_client_id: clientId,
+          p_key: k,
+          p_value: v,
+          p_last_seen_updated_at: lastSeenUpdatedAt,
+        });
+        if (result.error) {
+          err('[mergeSaveKV] curator RPC error:', result.error?.message || result.error);
+          return { success: false, error: result.error.message || String(result.error) };
+        }
+        const data = result.data;
+        if (data?.ok === false) {
+          return { success: false, error: data.error || 'merge_failed' };
+        }
+        return { success: true, v: data?.v, outcome: data?.outcome };
+      }
+
+      err('[mergeSaveKV] No auth token (neither session nor curator)');
+      return { success: false, error: 'No auth token available' };
+    } catch (e) {
+      err('[mergeSaveKV] exception:', e.message);
+      return { success: false, error: e.message };
+    }
+  }
+
+  /**
    * 🔐 v56: Удалить KV через REST API (для куратора)
    * @param {string} userId - ID куратора
    * @param {string} clientId - ID клиента
@@ -2141,6 +2207,7 @@
     getAllKV,
     getAllKVByCurator,
     batchSaveKV,
+    mergeSaveKV,
     deleteKV,
 
     // Алиасы для совместимости с Supabase SDK

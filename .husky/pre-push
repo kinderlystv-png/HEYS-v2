@@ -75,6 +75,7 @@ echo "🧪 Запуск критических тестов sync/auth/storage/pr
 (cd apps/web && node_modules/.bin/vitest run \
   __tests__/sync-race-condition.test.js \
   __tests__/merge-day-data.test.js \
+  __tests__/sync-merge-shared.test.js \
   __tests__/auth-session.test.js \
   __tests__/storage-layer.test.js \
   __tests__/products-protection.test.js \

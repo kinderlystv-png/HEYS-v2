@@ -394,6 +394,17 @@
             };
         }, [date]);
 
+        // 🔀 Live-refresh: polling cloud day every 30s while tab is visible.
+        // Without this, edits from another device (e.g. curator) stay invisible
+        // until next bootstrap. See heys_day_live_refresh_v1.js for the polling loop.
+        useEffect(() => {
+            const liveRefresh = HEYS.dayLiveRefresh;
+            const clientId = HEYS.currentClientId;
+            if (!liveRefresh || !clientId || !date) return;
+            liveRefresh.start({ date, clientId });
+            return () => liveRefresh.stop();
+        }, [date]);
+
         // Ref для отслеживания предыдущей даты (нужен для flush перед сменой)
         const prevDateRef = React.useRef(date);
 

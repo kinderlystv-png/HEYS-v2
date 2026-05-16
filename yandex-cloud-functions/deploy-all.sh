@@ -284,6 +284,24 @@ deploy_function() {
         cp "$SCRIPT_DIR/.ycignore" .
     fi
 
+    # 🔀 Sync shared sync-merge module before deploy (heys-api-rpc only).
+    # Source of truth: apps/web/heys_sync_merge_v1.js (UMD; same file runs in browser).
+    # Destination uses .cjs extension because Node treats .js as ESM here without it.
+    if [[ "$func_name" == "heys-api-rpc" ]]; then
+        ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+        SRC="$ROOT_DIR/apps/web/heys_sync_merge_v1.js"
+        DST_DIR="$SCRIPT_DIR/$func_name/lib"
+        DST="$DST_DIR/heys_sync_merge_v1.cjs"
+        if [ -f "$SRC" ]; then
+            mkdir -p "$DST_DIR"
+            cp "$SRC" "$DST"
+            echo -e "${BLUE}ℹ️  Synced merge module: lib/heys_sync_merge_v1.cjs${NC}"
+        else
+            echo -e "${RED}❌ ERROR: merge source not found at $SRC${NC}"
+            exit 1
+        fi
+    fi
+
     # Validate required secrets for this function
     validate_function_env "$func_name"
 

@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { getPool } = require('./shared/db-pool');
+const { mergeDayData, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔐 P0 SECURITY: Conditional logging (never log env in production)
@@ -253,6 +254,7 @@ const ALLOWED_FUNCTIONS = [
   'get_client_kv_by_session',             // 🔐 P1: чтение KV (session-safe)
   'upsert_client_kv_by_session',          // 🔐 P1: запись KV (session-safe)
   'batch_upsert_client_kv_by_session',    // 🔐 P1: пакетная запись (session-safe)
+  'merge_save_client_kv_by_session',      // 🔀 Server-side merge для dayv2/norms/profile (lost-update fix)
   'batch_get_client_kv_by_session',       // 🔐 Phase 1a: пакетное чтение (hot-sync optimization)
   'get_change_markers_by_session',        // 🔐 Phase 1b: scoped change markers (conditional sync)
   'delete_client_kv_by_session',          // 🔐 P1: удаление KV (session-safe)
@@ -356,6 +358,7 @@ const CURATOR_ONLY_FUNCTIONS = [
   // холодного heys-api-rest (cold start parity с PIN-путём).
   // Безопасность: SQL функция проверяет ownership (clients.user_id = curator).
   'batch_upsert_client_kv_by_curator',
+  'merge_save_client_kv_by_curator',      // 🔀 Server-side merge — куратор пишет данные клиента
 ];
 
 // Маппинг параметров (если нужно)
@@ -1665,6 +1668,191 @@ module.exports.handler = async function (event, context) {
     // 🔐 TEMP: Возможность отключить шифрование на уровне сессии (plaintext mode)
     if (process.env.HEYS_ENCRYPTION_DISABLED === '1') {
       await client.query("SET heys.encryption_disabled = '1'");
+    }
+
+    // 🔀 Server-side merge для устранения lost-update коллизий
+    // (когда куратор и клиент одновременно правят разные приёмы пищи одного дня).
+    //
+    // Алгоритм:
+    //   1. Резолвим caller → client_id (через session_token или curator JWT + ownership)
+    //   2. BEGIN TX + SELECT FOR UPDATE — блокируем строку от параллельных мержей
+    //   3. Если в облаке нет данных или клиентский last_seen_updated_at >= server.updated_at:
+    //      пишем incoming как есть (нет конфликта).
+    //   4. Если server.updated_at > last_seen_updated_at — конфликт. Запускаем mergeDayData/mergeScalarKv:
+    //      meals/items объединяются по id, скаляры по max(updatedAt).
+    //   5. UPSERT merged + return клиенту, чтобы local LS совпал с облаком.
+    if (fnName === 'merge_save_client_kv_by_session' || fnName === 'merge_save_client_kv_by_curator') {
+      const isCurator = fnName === 'merge_save_client_kv_by_curator';
+      const k = params.p_key || params.k;
+      const incomingValue = params.p_value || params.v;
+      const lastSeenUpdatedAt = Number(params.p_last_seen_updated_at || params.last_seen_updated_at || 0);
+
+      if (!k || typeof k !== 'string') {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'Missing p_key' })
+        };
+      }
+      if (incomingValue == null || typeof incomingValue !== 'object') {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'Missing or invalid p_value (must be JSON object)' })
+        };
+      }
+
+      // Resolve client_id from auth context.
+      let resolvedClientId;
+      if (isCurator) {
+        const targetClientId = params.p_client_id || params.client_id;
+        if (!targetClientId) {
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ ok: false, error: 'Missing p_client_id for curator merge' })
+          };
+        }
+        // Ownership guard: curator must own this client.
+        const ownerCheck = await client.query(
+          'SELECT 1 FROM clients WHERE id = $1::uuid AND curator_id = $2::uuid',
+          [targetClientId, curatorId]
+        );
+        if (ownerCheck.rows.length === 0) {
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 403,
+            headers: corsHeaders,
+            body: JSON.stringify({ ok: false, error: 'Curator does not own this client' })
+          };
+        }
+        resolvedClientId = targetClientId;
+      } else {
+        const sessionToken = params.p_session_token;
+        if (!sessionToken) {
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ ok: false, error: 'Missing p_session_token' })
+          };
+        }
+        const sessionRes = await client.query(
+          `SELECT client_id FROM client_sessions
+           WHERE token_hash = digest($1, 'sha256')
+             AND expires_at > now()
+             AND revoked_at IS NULL`,
+          [sessionToken]
+        );
+        resolvedClientId = sessionRes.rows?.[0]?.client_id;
+        if (!resolvedClientId) {
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({ ok: false, error: 'invalid_session' })
+          };
+        }
+      }
+
+      // Transaction with row-level lock to serialize concurrent merges on the same (client_id, k).
+      let mergeOutcome = 'incoming_wins'; // for audit
+      let mergedValue;
+      try {
+        await client.query('BEGIN');
+
+        const cur = await client.query(
+          'SELECT v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text FOR UPDATE',
+          [resolvedClientId, k]
+        );
+
+        if (cur.rows.length === 0) {
+          // Row doesn't exist → incoming wins outright
+          mergedValue = incomingValue;
+        } else {
+          const currentValue = cur.rows[0].v;
+          const currentUpdatedAt = (cur.rows[0].updated_at instanceof Date)
+            ? cur.rows[0].updated_at.getTime()
+            : Date.parse(cur.rows[0].updated_at);
+          const cloudInternalTs = Number(currentValue && currentValue.updatedAt) || 0;
+          // Concurrency conflict if cloud version was modified after the client's last-known timestamp.
+          const noConflict = lastSeenUpdatedAt > 0 && lastSeenUpdatedAt >= cloudInternalTs;
+
+          if (noConflict) {
+            mergedValue = incomingValue;
+          } else if (/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(k)) {
+            // forceKeepAll: client may not have seen the latest cloud-side meals yet,
+            // so treating absence as "deleted" would lose other side's edits. Conservative: keep both.
+            const merged = mergeDayData(incomingValue, currentValue, { forceKeepAll: true });
+            if (merged) {
+              mergedValue = merged;
+              mergeOutcome = 'day_merged';
+            } else {
+              mergedValue = incomingValue; // identical content
+            }
+          } else if (k === 'heys_norms' || k === 'heys_profile') {
+            mergedValue = mergeScalarKv(incomingValue, currentValue);
+            mergeOutcome = 'scalar_merged';
+          } else {
+            mergedValue = incomingValue;
+          }
+        }
+
+        // UPSERT with NOW() so future merges see a monotonic timestamp.
+        // user_id is curator_id for curator path, NULL for session path.
+        const userIdForRow = isCurator ? curatorId : null;
+        await client.query(
+          `INSERT INTO client_kv_store(client_id, k, v, updated_at, user_id)
+           VALUES ($1::uuid, $2::text, $3::jsonb, NOW(), $4)
+           ON CONFLICT (client_id, k) DO UPDATE SET v = EXCLUDED.v, updated_at = NOW()`,
+          [resolvedClientId, k, JSON.stringify(mergedValue), userIdForRow]
+        );
+
+        await client.query('COMMIT');
+
+        // Best-effort audit: only when actual merge happened (don't spam on every save).
+        if (mergeOutcome === 'day_merged' || mergeOutcome === 'scalar_merged') {
+          try {
+            await client.query(
+              `INSERT INTO data_loss_audit (client_id, key, action, existing_meals, new_meals, allowed, reason)
+               VALUES ($1::uuid, $2::text, 'merge_applied', $3, $4, TRUE, $5)`,
+              [
+                resolvedClientId,
+                k,
+                Array.isArray(cur.rows[0]?.v?.meals) ? cur.rows[0].v.meals.length : null,
+                Array.isArray(incomingValue.meals) ? incomingValue.meals.length : null,
+                mergeOutcome === 'day_merged' ? 'concurrent_edit_merged' : 'scalar_merged'
+              ]
+            );
+          } catch (auditErr) {
+            // Audit failure shouldn't fail the actual save.
+            console.warn('[merge_save] audit insert failed:', auditErr.message);
+          }
+        }
+      } catch (mergeErr) {
+        try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+        try { client.release(true); } catch (_) { /* noop */ }
+        console.error('[merge_save] error:', mergeErr.message);
+        return {
+          statusCode: 500,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'merge_failed', message: mergeErr.message })
+        };
+      }
+
+      try { client.release(); } catch (_) { /* ignore */ }
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: true,
+          v: mergedValue,
+          outcome: mergeOutcome
+        })
+      };
     }
 
     // 🛟 SAFE FALLBACK: get_client_data_by_session

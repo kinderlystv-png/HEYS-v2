@@ -25,6 +25,7 @@ export const LEGACY_BUNDLES = {
         'heys_pending_queue_pure_v1.js',
         'heys_sync_queue_runtime_pure_v1.js',
         'heys_perf_main_thread_v1.js',
+        'heys_sync_merge_v1.js',
         'heys_storage_supabase_v1.js',
         'heys_demo_mode_v1.js',
         'heys_models_v1.js',
@@ -60,6 +61,8 @@ export const LEGACY_BUNDLES = {
         'heys_day_global_exports_v1.js',
     ],
     'boot-day': [
+        'heys_day_mutations_v1.js',
+        'heys_day_live_refresh_v1.js',
         'heys_exercise_catalog_v1.js',
         'heys_day_stats_bundle_loader_v1.js',
         'heys_day_realdata_actions_v1.js',
