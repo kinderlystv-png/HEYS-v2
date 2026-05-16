@@ -137,7 +137,7 @@ export default function DemoSection() {
                           <button
                               type="button"
                               onClick={() => setGender(null)}
-                              className="flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 bg-pink-500 hover:bg-pink-600 text-white rounded-full shadow-lg active:scale-95 transition-all shrink-0"
+                              className="flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 bg-gray-700/80 hover:bg-gray-700 text-white rounded-2xl shadow-md active:scale-95 transition-all shrink-0"
                               aria-label="Выйти из демо"
                           >
                               <svg
