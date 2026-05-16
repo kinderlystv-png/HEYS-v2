@@ -5096,7 +5096,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.05.15.2336.3c4e5c40'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.05.15.2344.63c79072'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -14475,6 +14475,33 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
+
+  // DEMO_MODE: replace YandexAPI with a no-op surface. Any call to .rpc/.rest/
+  // .from()/etc. resolves to an empty result so HEYS code paths that touch the
+  // API (e.g. heys_cloud_shared_v1.js) don't hit the network at all.
+  if (global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.enabled) {
+    const empty = function () { return Promise.resolve({ data: [], error: null }); };
+    const chain = function () {
+      const obj = {};
+      const fn = function () { return obj; };
+      const methods = ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'in',
+        'gt', 'lt', 'gte', 'lte', 'order', 'limit', 'range', 'single', 'maybeSingle'];
+      methods.forEach(function (m) { obj[m] = fn; });
+      obj.then = function (resolve) { return Promise.resolve({ data: [], error: null }).then(resolve); };
+      return obj;
+    };
+    HEYS.YandexAPI = {
+      rpc: empty,
+      rest: empty,
+      sms: empty,
+      from: function () { return chain(); },
+      setAuthToken: function () {},
+      clearAuthToken: function () {},
+      getAuthToken: function () { return null; },
+    };
+    (global.console || console).info('[HEYS.YandexAPI] DEMO_MODE — no-op stub installed');
+    return;
+  }
   const isLocalBrowserDev =
     typeof window !== 'undefined' &&
     typeof location !== 'undefined' &&
@@ -19319,20 +19346,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // loaded directly into LS by HEYS.demoMode.loadSnapshot() during bootstrap.
   if (global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.enabled) {
     (global.console || console).info('[HEYS.sinhron] DEMO_MODE — cloud methods stubbed');
-    const resolved = function () { return Promise.resolve(); };
-    cloud.init = function () { return Promise.resolve({ initialized: false, reason: 'demo-mode' }); };
-    cloud.signIn = resolved;
-    cloud.signOut = resolved;
-    cloud.saveClientKey = resolved;
-    cloud.bootstrapClientSync = function () { return Promise.resolve({ keys: [], total: 0, source: 'demo' }); };
-    cloud.syncClientViaRPC = function () { return Promise.resolve({ keys: [], total: 0, source: 'demo' }); };
-    cloud.getSharedIndex = function () { return new Map(); };
-    cloud.getCachedSharedProducts = function () { return []; };
-    cloud.getCurrentClientId = function () { return 'demo-client-id'; };
-    cloud.getCurrentUser = function () { return null; };
-    cloud.scheduleClientPush = function () { /* no-op */ };
-    cloud.flushPendingSync = resolved;
-    cloud.applyAuditAck = function () { /* no-op */ };
+    const demoGender = global.__HEYS_DEMO_MODE__.gender;
+    const demoClientId = 'demo-client-' + demoGender;
+    // Catch-all: any cloud method that we don't explicitly know about returns
+    // a no-op so HEYS code paths that call new/random helpers don't throw.
+    const knownNonFn = {
+      getSharedIndex: function () { return new Map(); },
+      getCachedSharedProducts: function () { return []; },
+      getCurrentClientId: function () { return demoClientId; },
+      getUser: function () { return null; },
+      getCurrentUser: function () { return null; },
+      getStatus: function () { return 'demo'; },
+      getSyncTrace: function () { return []; },
+      isReady: function () { return true; },
+    };
+    const cloudProxy = new Proxy(cloud, {
+      get(target, prop) {
+        if (prop in target) return target[prop];
+        if (prop in knownNonFn) return knownNonFn[prop];
+        // Any other accessor — return a no-op resolving promise, but only
+        // when CALLED. Returning a function transparently lets feature checks
+        // like `typeof cloud.x === 'function'` pass.
+        return function noopDemo() { return Promise.resolve(); };
+      },
+    });
+    HEYS.cloud = cloudProxy;
     return;
   }
 

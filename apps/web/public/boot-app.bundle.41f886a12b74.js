@@ -20891,6 +20891,57 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         // 🚨 EWS Badge State (v1.0)
         const [ewsData, setEWSData] = React.useState(null);
+
+        // 🔔 Push notifications badge — статус подписки и permission.
+        // null = ещё не загрузили, { subscribed, permission, capable, needsInstall, busy }
+        const [pushStatus, setPushStatus] = React.useState(null);
+        const [pushBusy, setPushBusy] = React.useState(false);
+        React.useEffect(() => {
+            if (!window.HEYS?.push) return;
+            let cancelled = false;
+            const refresh = async () => {
+                try {
+                    const s = await window.HEYS.push.getStatus();
+                    if (!cancelled) setPushStatus(s);
+                } catch { /* ignore */ }
+            };
+            void refresh();
+            // Перепроверять при возврате фокуса (юзер мог изменить permission в браузере)
+            const onFocus = () => { void refresh(); };
+            window.addEventListener('focus', onFocus);
+            return () => { cancelled = true; window.removeEventListener('focus', onFocus); };
+        }, []);
+        const handlePushBadgeClick = async () => {
+            if (!window.HEYS?.push) return;
+            if (pushStatus?.subscribed) {
+                // Уже включено — открываем профиль с детальными настройками
+                if (typeof haptic === 'function') haptic('light');
+                window.dispatchEvent(new CustomEvent('heys:open-push-settings'));
+                return;
+            }
+            if (pushStatus?.permission === 'denied') {
+                alert('Уведомления заблокированы в браузере. Разблокируй их в настройках сайта (значок замка рядом с адресом).');
+                return;
+            }
+            if (pushStatus?.needsInstall) {
+                alert('На iPhone уведомления работают только из установленного приложения. Поделиться → На экран Домой, потом запусти HEYS с домашнего экрана.');
+                return;
+            }
+            if (!pushStatus?.capable) return;
+            setPushBusy(true);
+            try {
+                const r = await window.HEYS.push.subscribe();
+                if (r && r.ok === false && r.reason === 'permission_denied') {
+                    alert('Без разрешения уведомления не работают. Можно включить позже из этого окна.');
+                }
+                const s = await window.HEYS.push.getStatus();
+                setPushStatus(s);
+            } catch (e) {
+                console.warn('[push.badge] subscribe failed:', e?.message);
+            } finally {
+                setPushBusy(false);
+            }
+        };
         const clientDropdownAnchorRef = React.useRef(null);
         const [clientDropdownMaxHeight, setClientDropdownMaxHeight] = React.useState(320);
         const [clientDropdownWidth, setClientDropdownWidth] = React.useState(360);
@@ -22267,7 +22318,42 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }, [
                     React.createElement('span', { className: 'ews-badge__icon' }, ewsData.count === 0 ? '✅' : '⚠️'),
                     ewsData.count > 0 && React.createElement('span', { className: 'ews-badge__count' }, ewsData.count)
-                ]),                    // Кнопки "Вчера" + "Сегодня" + DatePicker
+                ]),
+
+                // 🔔 Push notifications indicator (рядом с EWS, в одной строке шапки)
+                // Не рендерим если браузер вообще не поддерживает push.
+                pushStatus && pushStatus.capable !== false && React.createElement('div', {
+                    key: 'pushbadge',
+                    className: 'push-badge' + (
+                        pushStatus.subscribed ? ' push-badge--on' :
+                        (pushStatus.permission === 'denied' || pushStatus.needsInstall) ? ' push-badge--blocked' :
+                        ' push-badge--off'
+                    ),
+                    title: pushStatus.subscribed
+                        ? '🔔 Уведомления включены — тап для настроек'
+                        : pushStatus.needsInstall
+                            ? '📲 Добавь HEYS на главный экран чтобы включить уведомления'
+                            : pushStatus.permission === 'denied'
+                                ? '🔕 Уведомления заблокированы в браузере'
+                                : '🔕 Уведомления выключены — тап чтобы включить',
+                    onClick: pushBusy ? undefined : handlePushBadgeClick,
+                    style: {
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: '28px', height: '28px', borderRadius: '8px',
+                        cursor: pushBusy ? 'wait' : 'pointer',
+                        background: pushStatus.subscribed ? '#dcfce7'
+                            : (pushStatus.permission === 'denied' || pushStatus.needsInstall) ? '#f4f4f5'
+                                : '#fef3c7',
+                        border: '1px solid ' + (pushStatus.subscribed ? '#86efac'
+                            : (pushStatus.permission === 'denied' || pushStatus.needsInstall) ? '#d4d4d8'
+                                : '#fcd34d'),
+                        fontSize: '14px',
+                        opacity: pushBusy ? 0.6 : 1,
+                        marginLeft: '4px'
+                    }
+                }, pushStatus.subscribed ? '🔔' : '🔕'),
+
+                                   // Кнопки "Вчера" + "Сегодня" + DatePicker
                 (tab === 'stats' || tab === 'diary' || tab === 'insights' || tab === 'month' || tab === 'widgets') && window.HEYS.DatePicker
                     ? React.createElement('div', { className: 'hdr-date-group' },
                         // Кнопка вчера — скрываем когда мы НЕ в сегодняшнем дне
