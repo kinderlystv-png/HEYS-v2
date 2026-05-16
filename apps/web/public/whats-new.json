@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.16.86abc742",
+      "buildHash": "86abc742",
+      "date": "2026-05-16",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Demo: планер подтягивается на try.heyslab.ru",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Planner-данные в demo-snapshot",
+          "description": "Cloud function heys-snapshot-demo теперь тянет ключи heys_planning_{projects,tasks,slots,links_v1} в публичный snapshot. На try.heyslab.ru у обоих демо-аккаунтов планер показывает проекты и задачи без облака."
+        }
+      ]
+    },
+    {
       "version": "2026.05.16.64975219",
       "buildHash": "64975219",
       "date": "2026-05-16",
