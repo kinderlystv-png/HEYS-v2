@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.16.006d27ed",
+      "buildHash": "006d27ed",
+      "date": "2026-05-16",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Landing: спокойная кнопка закрытия demo",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Кнопка выхода из demo больше не конкурирует с CTA",
+          "description": "Розовая круглая кнопка × рядом с «Попробовать бесплатный триал» заменена на серую rounded-2xl — visually парная к синей CTA, не отвлекает внимание."
+        }
+      ]
+    },
+    {
       "version": "2026.05.16.ef58afa6",
       "buildHash": "ef58afa6",
       "date": "2026-05-16",
