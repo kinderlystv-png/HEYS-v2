@@ -71,8 +71,8 @@ node scripts/lint-direct-localstorage-writes.mjs || {
 
 echo "🧪 Запуск критических тестов sync/auth/storage/products/models..."
 
-# Запускаем тесты для синхронизации, авторизации, storage layer, защиты продуктов и моделей данных
-pnpm --filter @heys/web test -- \
+# Прямой вызов vitest (экономит ~2s по сравнению с pnpm --filter @heys/web test)
+(cd apps/web && node_modules/.bin/vitest run \
   __tests__/sync-race-condition.test.js \
   __tests__/merge-day-data.test.js \
   __tests__/auth-session.test.js \
@@ -84,9 +84,8 @@ pnpm --filter @heys/web test -- \
   __tests__/events-sync.test.js \
   __tests__/pwa-update-logic.test.js \
   __tests__/insulin-wave.test.js \
-  __tests__/cycle.test.js
+  __tests__/cycle.test.js)
 
-# Проверяем код выхода
 if [ $? -ne 0 ]; then
   echo "❌ Тесты не прошли! Push отменён."
   exit 1
