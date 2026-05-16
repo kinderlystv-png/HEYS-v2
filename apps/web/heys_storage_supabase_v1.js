@@ -26,6 +26,40 @@
   if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   const cloud = HEYS.cloud = HEYS.cloud || {};
+
+  // DEMO_MODE: short-circuit the whole storage layer with stubs.
+  // No cloud writes, no shared-index lookups, no bootstrap sync. Snapshot is
+  // loaded directly into LS by HEYS.demoMode.loadSnapshot() during bootstrap.
+  if (global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.enabled) {
+    (global.console || console).info('[HEYS.sinhron] DEMO_MODE — cloud methods stubbed');
+    const demoGender = global.__HEYS_DEMO_MODE__.gender;
+    const demoClientId = 'demo-client-' + demoGender;
+    // Catch-all: any cloud method that we don't explicitly know about returns
+    // a no-op so HEYS code paths that call new/random helpers don't throw.
+    const knownNonFn = {
+      getSharedIndex: function () { return new Map(); },
+      getCachedSharedProducts: function () { return []; },
+      getCurrentClientId: function () { return demoClientId; },
+      getUser: function () { return null; },
+      getCurrentUser: function () { return null; },
+      getStatus: function () { return 'demo'; },
+      getSyncTrace: function () { return []; },
+      isReady: function () { return true; },
+    };
+    const cloudProxy = new Proxy(cloud, {
+      get(target, prop) {
+        if (prop in target) return target[prop];
+        if (prop in knownNonFn) return knownNonFn[prop];
+        // Any other accessor — return a no-op resolving promise, but only
+        // when CALLED. Returning a function transparently lets feature checks
+        // like `typeof cloud.x === 'function'` pass.
+        return function noopDemo() { return Promise.resolve(); };
+      },
+    });
+    HEYS.cloud = cloudProxy;
+    return;
+  }
+
   const DEV = global.DEV || {};
   const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
   const devWarn = typeof DEV.warn === 'function' ? DEV.warn.bind(DEV) : function () { };
@@ -2068,6 +2102,7 @@
   const LOCAL_ONLY_STORAGE_PREFIXES = [
     'heys_products_pre_overlay_',  // β: rollback snapshots, never sync to cloud
     'heys_overlay_',               // β/γ: overlay-specific markers (migrated_at, status, etc.)
+    'heys_products_BACKUP_',       // date-stamped product backups — local-only safety nets
   ];
 
   function isLocalOnlyStorageKey(key) {
@@ -2075,7 +2110,9 @@
     if (!normalizedKey) return false;
     if (LOCAL_ONLY_STORAGE_EXACT_KEYS.has(normalizedKey)) return true;
     if (LOCAL_ONLY_STORAGE_PREFIXES.some((prefix) => normalizedKey.startsWith(prefix))) return true;
-    return LOCAL_ONLY_STORAGE_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix));
+    if (LOCAL_ONLY_STORAGE_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix))) return true;
+    // covers client-scoped variants: heys_{uuid}_products_BACKUP_YYYYMMDD
+    return normalizedKey.includes('_products_BACKUP_');
   }
 
   function filterLocalOnlyPendingQueueItems(queue, storageKey, options = {}) {

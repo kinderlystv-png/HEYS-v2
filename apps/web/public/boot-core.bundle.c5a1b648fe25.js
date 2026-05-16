@@ -5096,7 +5096,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.05.16.0938.9c105c95'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.05.16.0955.6a9e87f8'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -21416,6 +21416,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   const LOCAL_ONLY_STORAGE_PREFIXES = [
     'heys_products_pre_overlay_',  // β: rollback snapshots, never sync to cloud
     'heys_overlay_',               // β/γ: overlay-specific markers (migrated_at, status, etc.)
+    'heys_products_BACKUP_',       // date-stamped product backups — local-only safety nets
   ];
 
   function isLocalOnlyStorageKey(key) {
@@ -21423,7 +21424,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     if (!normalizedKey) return false;
     if (LOCAL_ONLY_STORAGE_EXACT_KEYS.has(normalizedKey)) return true;
     if (LOCAL_ONLY_STORAGE_PREFIXES.some((prefix) => normalizedKey.startsWith(prefix))) return true;
-    return LOCAL_ONLY_STORAGE_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix));
+    if (LOCAL_ONLY_STORAGE_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix))) return true;
+    // covers client-scoped variants: heys_{uuid}_products_BACKUP_YYYYMMDD
+    return normalizedKey.includes('_products_BACKUP_');
   }
 
   function filterLocalOnlyPendingQueueItems(queue, storageKey, options = {}) {
@@ -32922,6 +32925,47 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         console.error('[DEMO_MODE] failed to seed products overlay:', err);
       }
     }
+
+    // 3) Ensure today has content so the demo diary isn't empty on first open.
+    // The cron snapshot only includes days up to the last completed day. We
+    // copy the most recent snapshot day as the current demo "today" so the
+    // user immediately sees a real diary instead of "Начните вести дневник".
+    (function seedToday() {
+      try {
+        // Compute today's date string the same way HEYS does (<3am = yesterday).
+        const now = new Date();
+        if (now.getHours() < 3) now.setDate(now.getDate() - 1);
+        const todayStr = now.getFullYear() + '-'
+          + String(now.getMonth() + 1).padStart(2, '0') + '-'
+          + String(now.getDate()).padStart(2, '0');
+
+        // Skip if the snapshot already has today's data.
+        if (ls['heys_dayv2_' + todayStr]) return;
+
+        // Find the most recent day key from snapshot.
+        const sortedDayKeys = Object.keys(ls)
+          .filter(function (k) { return DAY_KEY_RE.test(k); })
+          .sort();
+        const latestKey = sortedDayKeys[sortedDayKeys.length - 1];
+        if (!latestKey) return;
+
+        const rawValue = ls[latestKey];
+        let serialized;
+        try {
+          // Update the stored date to today so HEYS date-checks pass.
+          const parsed = typeof rawValue === 'object' ? rawValue : JSON.parse(rawValue);
+          if (parsed && typeof parsed === 'object') parsed.date = todayStr;
+          serialized = JSON.stringify(parsed);
+        } catch (_) {
+          serialized = typeof rawValue === 'string' ? rawValue : JSON.stringify(rawValue);
+        }
+
+        localStorage.setItem('heys_' + demoClientId + '_dayv2_' + todayStr, serialized);
+        localStorage.setItem('heys_dayv2_' + todayStr, serialized);
+      } catch (e) {
+        console.warn('[DEMO_MODE] seedToday failed:', e);
+      }
+    })();
 
     console.info('[DEMO_MODE] snapshot applied:',
       `${writeCount} ls keys, ${products.length} products,`,
