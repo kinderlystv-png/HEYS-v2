@@ -59,6 +59,9 @@ export default function DemoSection() {
         } else {
             document.body.style.overflow = ''
         }
+        window.dispatchEvent(
+            new CustomEvent('heys:demo-toggle', { detail: { open: inDemo } })
+        )
         return () => {
             document.body.style.overflow = ''
         }
@@ -150,7 +153,7 @@ export default function DemoSection() {
                       </div>
 
                       {/* Bottom action bar — Trial CTA + close X */}
-                      <div className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 shrink-0">
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 shrink-0 bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.08)] border-t border-gray-100">
                           <a
                               href="#trial"
                               onClick={() => setGender(null)}
@@ -161,7 +164,7 @@ export default function DemoSection() {
                           <button
                               type="button"
                               onClick={() => setGender(null)}
-                              className="flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 bg-gray-700/80 hover:bg-gray-700 text-white rounded-2xl shadow-md active:scale-95 transition-all shrink-0"
+                              className="flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-2xl shadow-sm active:scale-95 transition-all shrink-0"
                               aria-label="Выйти из демо"
                           >
                               <svg

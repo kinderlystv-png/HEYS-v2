@@ -13,6 +13,7 @@ export function ABTestSwitcher() {
     const [isOpen, setIsOpen] = useState(false)
     const [current, setCurrent] = useState<string | null>(null)
     const [isVisible, setIsVisible] = useState(false)
+    const [demoOpen, setDemoOpen] = useState(false)
 
     useEffect(() => {
         // Показываем только на localhost или если есть спец. флаг в localStorage
@@ -26,7 +27,15 @@ export function ABTestSwitcher() {
         }
     }, [])
 
-    if (!isVisible) return null
+    useEffect(() => {
+        const handler = (e: Event) => {
+            setDemoOpen(!!(e as CustomEvent).detail?.open)
+        }
+        window.addEventListener('heys:demo-toggle', handler)
+        return () => window.removeEventListener('heys:demo-toggle', handler)
+    }, [])
+
+    if (!isVisible || demoOpen) return null
 
     const setVariant = (v: string | null) => {
         if (v) {
