@@ -5096,7 +5096,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.05.16.1608.2b64ee9e'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.05.17.0242.d05c3e4a'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -25403,8 +25403,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
 
       let mergeSavedCount = 0;
-      let firstMergeError = null;
       const lsSetRaw = originalSetItem || (typeof global !== 'undefined' && global.localStorage ? global.localStorage.setItem.bind(global.localStorage) : null);
+
+      const fallbackToBatch = []; // items that failed merge — retry via batch path
+      // Recognized errors that mean "server doesn't support merge yet" → fall back transparently.
+      // Anything else (network, auth) goes to fallback too so we don't lose data, with a warning.
+      const isServerLacksMergeEndpoint = (err) => {
+        const msg = String(err || '').toLowerCase();
+        return msg.includes('not allowed') || msg.includes('not implemented') || msg.includes('unknown function');
+      };
 
       for (const it of mergeableItems) {
         try {
@@ -25412,7 +25419,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
           const result = await YandexAPI.mergeSaveKV(clientId, it.k, it.v, lastSeen);
           if (result.success && result.v) {
             // Apply server-merged blob back to LS (skip interceptor → avoid mirror loop).
-            // muteMirror is also set by interceptSetItem dedup, but originalSetItem bypasses it entirely.
             if (lsSetRaw && it.originalKey) {
               try {
                 lsSetRaw(it.originalKey, JSON.stringify(result.v));
@@ -25420,7 +25426,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
                 console.warn('[merge-save] LS write-back failed for', it.originalKey, lsErr.message);
               }
             }
-            // Notify UI for day keys
             const dateMatch = it.k.match(/^heys_dayv2_(\d{4}-\d{2}-\d{2})$/);
             if (dateMatch && typeof global.dispatchEvent === 'function') {
               try {
@@ -25431,26 +25436,32 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
             }
             mergeSavedCount++;
           } else {
-            firstMergeError = firstMergeError || result.error || 'merge_save_failed';
-            log('⚠️ [merge-save] failed for', it.k, '→', firstMergeError);
+            // Server-side merge unavailable (deploy lag, network blip) → fall back to plain batch upsert.
+            // No data lost: item flows through the existing batch pipeline as before.
+            if (isServerLacksMergeEndpoint(result.error)) {
+              log('ℹ️ [merge-save] endpoint unavailable, falling back to batch for', it.k);
+            } else {
+              console.warn('[merge-save] error for', it.k, '→', result.error, '— falling back to batch');
+            }
+            fallbackToBatch.push({ k: it.k, v: it.v, updated_at: it.updated_at });
           }
         } catch (e) {
-          firstMergeError = firstMergeError || e.message;
-          log('⚠️ [merge-save] exception for', it.k, '→', e.message);
+          console.warn('[merge-save] exception for', it.k, '→', e.message, '— falling back to batch');
+          fallbackToBatch.push({ k: it.k, v: it.v, updated_at: it.updated_at });
         }
       }
 
-      // Restore yandexItems to only the non-mergeable ones for the rest of the pipeline.
+      // Restore yandexItems with non-mergeable items + any mergeable items that fell back.
       yandexItems.length = 0;
       for (const it of nonMergeableItems) {
         yandexItems.push({ k: it.k, v: it.v, updated_at: it.updated_at });
       }
+      for (const it of fallbackToBatch) {
+        yandexItems.push(it);
+      }
 
-      // If all items were mergeable, we're done. Return aggregated result.
+      // If all items were merged successfully (and none fell back), we're done.
       if (yandexItems.length === 0) {
-        if (firstMergeError) {
-          return { success: false, saved: mergeSavedCount, error: firstMergeError };
-        }
         return { success: true, saved: mergeSavedCount };
       }
 
