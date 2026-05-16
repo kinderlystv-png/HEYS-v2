@@ -22,10 +22,19 @@ export default function DemoSection() {
     const [gender, setGender] = useState<'male' | 'female' | null>(null)
     const [mounted, setMounted] = useState(false)
     const [scale, setScale] = useState(1)
+    const [isMobile, setIsMobile] = useState(false)
     const sectionRef = useRef<HTMLElement>(null)
 
     useEffect(() => {
         setMounted(true)
+    }, [])
+
+    useEffect(() => {
+        const mql = window.matchMedia('(max-width: 639px)')
+        const update = () => setIsMobile(mql.matches)
+        update()
+        mql.addEventListener('change', update)
+        return () => mql.removeEventListener('change', update)
     }, [])
 
     useEffect(() => {
@@ -65,8 +74,9 @@ export default function DemoSection() {
     }, [inDemo])
 
     // Compute scale so the 393×852 iframe + 20px border + actions row fit the viewport.
+    // Desktop only — on mobile the iframe is fullscreen without a frame.
     useEffect(() => {
-        if (!inDemo) return
+        if (!inDemo || isMobile) return
         const compute = () => {
             const vw = window.innerWidth
             const vh = window.innerHeight
@@ -81,7 +91,7 @@ export default function DemoSection() {
         compute()
         window.addEventListener('resize', compute)
         return () => window.removeEventListener('resize', compute)
-    }, [inDemo])
+    }, [inDemo, isMobile])
 
     const iframeSrc = inDemo ? `${DEMO_BASE_URL}/?gender=${gender}` : null
 
@@ -92,41 +102,55 @@ export default function DemoSection() {
     const overlay =
         inDemo && mounted
             ? createPortal(
-                  <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex flex-col items-center justify-center gap-3 sm:gap-4 p-3 sm:p-4">
-                      {/* iPhone frame — outer box is scaled visual size */}
-                      <div
-                          className="relative"
-                          style={{ width: outerW, height: outerH }}
-                      >
-                          {/* Inner wrapper at native iPhone 15 size, scaled to fit */}
-                          <div
-                              className="absolute top-0 left-0 rounded-[44px] border-[10px] border-black bg-black shadow-2xl overflow-hidden"
-                              style={{
-                                  width: NATIVE_W + 20,
-                                  height: NATIVE_H + 20,
-                                  transform: `scale(${scale})`,
-                                  transformOrigin: 'top left',
-                              }}
-                          >
-                              {/* Dynamic island */}
-                              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-full z-10" />
-                              {iframeSrc && (
+                  <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex flex-col">
+                      {/* Viewport area — fills available space above the action bar */}
+                      <div className="flex-1 min-h-0 flex items-center justify-center sm:p-4">
+                          {isMobile ? (
+                              // Mobile: fullscreen iframe, no frame
+                              iframeSrc && (
                                   <iframe
                                       src={iframeSrc}
                                       title="HEYS Demo"
                                       sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                                      className="absolute inset-0 bg-white border-0"
-                                      style={{
-                                          width: NATIVE_W,
-                                          height: NATIVE_H,
-                                      }}
+                                      className="w-full h-full bg-white border-0"
                                   />
-                              )}
-                          </div>
+                              )
+                          ) : (
+                              // Desktop: iPhone frame with scale
+                              <div
+                                  className="relative"
+                                  style={{ width: outerW, height: outerH }}
+                              >
+                                  <div
+                                      className="absolute top-0 left-0 rounded-[44px] border-[10px] border-black bg-black shadow-2xl overflow-hidden"
+                                      style={{
+                                          width: NATIVE_W + 20,
+                                          height: NATIVE_H + 20,
+                                          transform: `scale(${scale})`,
+                                          transformOrigin: 'top left',
+                                      }}
+                                  >
+                                      {/* Dynamic island */}
+                                      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-full z-10" />
+                                      {iframeSrc && (
+                                          <iframe
+                                              src={iframeSrc}
+                                              title="HEYS Demo"
+                                              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                                              className="absolute inset-0 bg-white border-0"
+                                              style={{
+                                                  width: NATIVE_W,
+                                                  height: NATIVE_H,
+                                              }}
+                                          />
+                                      )}
+                                  </div>
+                              </div>
+                          )}
                       </div>
 
-                      {/* Bottom actions — Trial CTA + pink close X */}
-                      <div className="flex items-center gap-2 sm:gap-3">
+                      {/* Bottom action bar — Trial CTA + close X */}
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 shrink-0">
                           <a
                               href="#trial"
                               onClick={() => setGender(null)}
