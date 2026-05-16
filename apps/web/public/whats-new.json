@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.16.37aea841",
+      "buildHash": "37aea841",
+      "date": "2026-05-16",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Landing: demo на мобиле во весь экран",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Fullscreen demo на телефоне",
+          "description": "На мобильных экранах (< 640px) demo iframe растягивается во весь экран — без iPhone-рамки, как реально открытое приложение. На десктопе рамка остаётся (мобильный PWA, имеет смысл показать корпус)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.16.006d27ed",
       "buildHash": "006d27ed",
       "date": "2026-05-16",
