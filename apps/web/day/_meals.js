@@ -4997,12 +4997,15 @@
                     HEYS.Toast?.show?.({
                         type: 'success',
                         message: `Скопировано в ${dstLabel}`,
-                        duration: 4000,
-                        action: { label: 'Отменить', onClick: undo },
+                        duration: 5000,
+                        actions: [
+                            { label: 'Перейти', onClick: () => navigateAndScrollToMeal(dstDate, dstMealId) },
+                            { label: 'Отменить', onClick: undo },
+                        ],
                     });
                 },
             });
-        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, createNewMealAndAddItem]);
+        }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, createNewMealAndAddItem, navigateAndScrollToMeal]);
 
         const moveMealToDate = React.useCallback((srcMealIndex, dstDate) => {
             if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
