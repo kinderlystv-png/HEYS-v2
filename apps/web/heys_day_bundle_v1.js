@@ -10936,29 +10936,22 @@
                     haptic('light');
 
                     const dstLabel = daysWithMeals.find(d => d.dateStr === dstDate)?.dateLabel || dstDate;
-                    let undone = false;
-                    const undo = () => {
-                        if (undone) return;
-                        undone = true;
-                        writeDay(dstDate, (existing) => {
-                            const meals = (existing.meals || []).map(m => ({
-                                ...m,
-                                items: (m.items || []).filter(it => it.id !== dstItem.id),
-                            }));
-                            return { ...existing, meals, updatedAt: Date.now() };
-                        }, 'undo_copy_item');
-                        HEYS.Toast?.info?.('Копия удалена');
-                    };
 
-                    HEYS.Toast?.show?.({
-                        type: 'success',
-                        message: `Скопировано в ${dstLabel}`,
-                        duration: 5000,
-                        actions: [
-                            { label: 'Перейти', onClick: () => navigateAndScrollToMeal(dstDate, dstMealId) },
-                            { label: 'Отменить', onClick: undo },
-                        ],
-                    });
+                    if (HEYS.ConfirmModal && typeof HEYS.ConfirmModal.show === 'function') {
+                        HEYS.ConfirmModal.show({
+                            icon: '✅',
+                            title: `Скопировано в ${dstLabel}`,
+                            text: 'Перейти в приём, куда скопировали, или остаться в текущем?',
+                            confirmText: 'Перейти',
+                            cancelText: 'Остаться',
+                            confirmStyle: 'primary',
+                            confirmVariant: 'fill',
+                            cancelStyle: 'neutral',
+                            onConfirm: () => navigateAndScrollToMeal(dstDate, dstMealId),
+                        });
+                    } else {
+                        HEYS.Toast?.success?.(`Скопировано в ${dstLabel}`);
+                    }
                 },
             });
         }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, createNewMealAndAddItem, navigateAndScrollToMeal]);

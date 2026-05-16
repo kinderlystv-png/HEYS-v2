@@ -81,7 +81,7 @@
 
   // === СОЗДАНИЕ TOAST ЭЛЕМЕНТА ===
   function createToastElement(options) {
-    const { type = 'info', title, message, icon, duration, action, actions } = options;
+    const { type = 'info', title, message, icon, duration, action } = options;
     const typeConfig = TOAST_TYPES[type] || TOAST_TYPES.info;
     const displayIcon = icon || typeConfig.icon;
 
@@ -149,42 +149,34 @@
 
     toast.appendChild(content);
 
-    // Кнопки действий (поддерживает и actions:[] и обратно совместимый action:{})
-    const actionList = actions || (action ? [action] : []);
-    if (actionList.length > 0) {
-      const makeBtn = (act) => {
-        const btn = document.createElement('button');
-        btn.style.cssText = `
-          padding: 6px 12px;
-          background: rgba(255, 255, 255, 0.25);
-          color: white;
-          font-size: 12px;
-          font-weight: 600;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          flex-shrink: 0;
-          transition: background 0.15s;
-        `;
-        btn.textContent = act.label;
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          act.onClick?.();
-          hideToast(toast);
-        });
-        btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255, 255, 255, 0.35)'; });
-        btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(255, 255, 255, 0.25)'; });
-        return btn;
-      };
-
-      if (actionList.length === 1) {
-        toast.appendChild(makeBtn(actionList[0]));
-      } else {
-        const row = document.createElement('div');
-        row.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;';
-        actionList.forEach(act => row.appendChild(makeBtn(act)));
-        content.appendChild(row);
-      }
+    // Кнопка действия (опционально)
+    if (action) {
+      const actionBtn = document.createElement('button');
+      actionBtn.style.cssText = `
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+        font-size: 12px;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background 0.15s;
+      `;
+      actionBtn.textContent = action.label;
+      actionBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        action.onClick?.();
+        hideToast(toast);
+      });
+      actionBtn.addEventListener('mouseenter', () => {
+        actionBtn.style.background = 'rgba(255, 255, 255, 0.35)';
+      });
+      actionBtn.addEventListener('mouseleave', () => {
+        actionBtn.style.background = 'rgba(255, 255, 255, 0.25)';
+      });
+      toast.appendChild(actionBtn);
     }
 
     // Закрытие по клику
