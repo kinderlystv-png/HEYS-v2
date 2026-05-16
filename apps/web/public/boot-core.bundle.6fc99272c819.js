@@ -5096,7 +5096,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.05.15.2344.63c79072'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.05.16.0938.9c105c95'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -32879,15 +32879,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     //    go through the regular path — the storage interceptor is already
     //    no-op'd by heys_storage_supabase_v1.js DEMO_MODE branch.
     const ls = snapshot.lsKeys || {};
+    const demoClientId = 'demo-client-' + safeGender;
+    // dayv2 keys are scoped by clientId in this version of HEYS:
+    // heys_<clientId>_dayv2_YYYY-MM-DD. Write both forms so all read
+    // paths (scoped via _scopedDayKey + any legacy unscoped reads) work.
+    const DAY_KEY_RE = /^heys_dayv2_(\d{4}-\d{2}-\d{2})$/;
     let writeCount = 0;
     for (const key of Object.keys(ls)) {
       try {
         const value = ls[key];
-        localStorage.setItem(
-          key,
-          typeof value === 'string' ? value : JSON.stringify(value),
-        );
-        writeCount++;
+        const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+        const dayMatch = key.match(DAY_KEY_RE);
+        if (dayMatch) {
+          // Write scoped key (primary path HEYS reads)
+          localStorage.setItem('heys_' + demoClientId + '_dayv2_' + dayMatch[1], serialized);
+          // Also keep unscoped for legacy/fallback reads
+          localStorage.setItem(key, serialized);
+          writeCount += 2;
+        } else {
+          localStorage.setItem(key, serialized);
+          writeCount++;
+        }
       } catch (err) {
         // Quota / disabled storage / Safari ITP — bail loudly so the caller
         // can show a fallback "open in full screen" UI.

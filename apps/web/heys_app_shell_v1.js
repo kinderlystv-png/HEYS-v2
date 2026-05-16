@@ -356,6 +356,20 @@
         const [pushBusy, setPushBusy] = React.useState(false);
         React.useEffect(() => {
             if (!window.HEYS?.push) return;
+            // Синхронная проверка capable — показываем бейдж сразу, не ждём SW.ready
+            const capable = window.HEYS.push.isCapable();
+            if (capable) {
+                const ios = window.HEYS.push.isIosSafari?.() ?? false;
+                const standalone = window.HEYS.push.isStandalone?.() ?? false;
+                setPushStatus({
+                    capable: true,
+                    subscribed: false,
+                    permission: 'Notification' in window ? Notification.permission : 'unsupported',
+                    needsInstall: ios && !standalone,
+                    ios,
+                    standalone,
+                });
+            }
             let cancelled = false;
             const refresh = async () => {
                 try {

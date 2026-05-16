@@ -46,6 +46,41 @@
         })();
     </script>
     <!-- �🔍 PWA Debug: Boot timing logger (saved to localStorage for mobile diagnosis) -->
+    <!-- DEMO_MODE flag — runs first so the prefetch block below can skip API calls.
+         Hardcoded hostname check: activates only on the demo subdomain (try.heyslab.ru)
+         or local dev (try.heyslab.local). The ?demo= query is ignored on app.heyslab.ru. -->
+    <script>
+        (function () {
+            var h = window.location.hostname;
+            var onDemoHost = h === 'try.heyslab.ru'
+                          || h === 'try.heyslab.local'
+                          || h === 'try-heyslab-ru.website.yandexcloud.net';
+            if (onDemoHost) {
+                var params = new URLSearchParams(window.location.search);
+                var g = params.get('gender') === 'female' ? 'female' : 'male';
+                window.__HEYS_DEMO_MODE__ = { enabled: true, gender: g };
+                try {
+                    var demoClientId = 'demo-client-' + g;
+                    localStorage.setItem('heys_pin_auth_client', JSON.stringify(demoClientId));
+                    localStorage.setItem('heys_client_current', JSON.stringify(demoClientId));
+                    window.HEYS = window.HEYS || {};
+                    window.HEYS.currentClientId = demoClientId;
+                    var killGate = function () {
+                        var g1 = document.getElementById('heys-login-gate');
+                        if (g1 && g1.parentNode) g1.parentNode.removeChild(g1);
+                    };
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', killGate, { once: true });
+                    } else {
+                        killGate();
+                    }
+                    console.info('[DEMO_MODE] Active —', g, '(client', demoClientId + ')');
+                } catch (e) { console.error('[DEMO_MODE] bootstrap failed:', e); }
+            } else {
+                window.__HEYS_DEMO_MODE__ = { enabled: false };
+            }
+        })();
+    </script>
     <script>
         (function () {
             window.__heysBootLog = [];
@@ -437,7 +472,7 @@
             // 🚀 SPECULATIVE PREFETCH: запускаем НАСТОЯЩИЙ delta fetch при парсинге HTML
             // Не ждём React (+0.9с) — начинаем запрос к API сразу → экономим ~1с
             // Если clientId/lastSyncTs нет — fallback на тёплый /health
-            try {
+            if (!(window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled)) try {
                 var rawCid = localStorage.getItem('heys_client_current');
                 var cid = rawCid ? JSON.parse(rawCid) : null;
                 if (cid) {
@@ -489,7 +524,7 @@
                     fetch(API_BASE + '/health', { mode: 'cors', cache: 'no-store' }).catch(function () { });
                     fetch(API_BASE + '/rest/v1/shared_products?select=id&limit=1', { mode: 'cors', cache: 'no-store' }).catch(function () { });
                 } catch (e2) { }
-            }
+            } // end if (!demoMode)
 
             // Check if PWA standalone mode
             var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
@@ -791,10 +826,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.d0a6a9a6ce4b.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.6fc99272c819.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.9a493cab0080.js" as="script" />
     <link rel="preload" href="boot-day.bundle.f3ebc78bb072.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.147e0b2bb260.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.1ae259999f83.js" as="script" />
     <link rel="preload" href="boot-init.bundle.b3be0dcff0e8.js" as="script" />
 
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
@@ -2922,49 +2957,6 @@
     <!-- ВАЖНО: Загружается СИНХРОННО перед defer-скриптами (blocking script) -->
     <!-- Собирается: npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify -->
     <script src="react-bundle.js"></script>
-    <!-- DEMO_MODE flag — must be set BEFORE any boot-bundle runs.
-         Hardcoded hostname check: only activates on the demo subdomain
-         (try.heyslab.ru) or local dev override (try.heyslab.local). On
-         app.heyslab.ru the ?demo=… query is ignored entirely. -->
-    <script>
-        (function () {
-            var h = window.location.hostname;
-            var onDemoHost = h === 'try.heyslab.ru'
-                          || h === 'try.heyslab.local'
-                          || h === 'try-heyslab-ru.website.yandexcloud.net';
-            if (onDemoHost) {
-                var params = new URLSearchParams(window.location.search);
-                var g = params.get('gender') === 'female' ? 'female' : 'male';
-                window.__HEYS_DEMO_MODE__ = { enabled: true, gender: g };
-                try {
-                    // Set fake client up-front so isClientAuthorized() passes and the
-                    // PIN form is skipped. HEYS reads these keys via JSON.parse, so we
-                    // must store JSON-encoded strings, not raw strings.
-                    var demoClientId = 'demo-client-' + g;
-                    localStorage.setItem('heys_pin_auth_client', JSON.stringify(demoClientId));
-                    localStorage.setItem('heys_client_current', JSON.stringify(demoClientId));
-                    // Mark current client so HEYS day-keys resolve to the same scope as
-                    // the snapshot keys we load in heys_demo_mode_v1.js.
-                    window.HEYS = window.HEYS || {};
-                    window.HEYS.currentClientId = demoClientId;
-                    // Kill the static HTML login overlay — it sits above React and would
-                    // hide the demo UI even after React mounts.
-                    var killGate = function () {
-                        var g1 = document.getElementById('heys-login-gate');
-                        if (g1 && g1.parentNode) g1.parentNode.removeChild(g1);
-                    };
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', killGate, { once: true });
-                    } else {
-                        killGate();
-                    }
-                    console.info('[DEMO_MODE] Active —', g, '(client', demoClientId + ')');
-                } catch (e) { console.error('[DEMO_MODE] bootstrap failed:', e); }
-            } else {
-                window.__HEYS_DEMO_MODE__ = { enabled: false };
-            }
-        })();
-    </script>
     <!-- Dark theme interceptor — patches React.createElement for CSS var colors -->
     <script src="heys_dark_theme_interceptor.js"></script>
     <!-- Supabase CDN — УДАЛЁН 2025-12-24 (152-ФЗ compliance)
@@ -2977,10 +2969,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.d0a6a9a6ce4b.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.6fc99272c819.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.9a493cab0080.js"></script>
     <script defer src="boot-day.bundle.f3ebc78bb072.js"></script>
-    <script defer src="boot-app.bundle.147e0b2bb260.js"></script>
+    <script defer src="boot-app.bundle.1ae259999f83.js"></script>
     <script defer src="boot-init.bundle.b3be0dcff0e8.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
