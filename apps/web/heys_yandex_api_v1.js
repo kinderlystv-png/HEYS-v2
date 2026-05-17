@@ -858,28 +858,46 @@
    */
   async function saveKV(clientId, key, value) {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
-        return { success: false, error: 'No session token' };
+      // 🛡️ CRITICAL FIX (2026-05-17): curator path FIRST.
+      // Без этого stale session token от прошлой PIN-сессии резолвил бы
+      // client_id из session → save попадал бы не туда. Используем
+      // batch_upsert_client_kv_by_curator с одним item — SQL функция уже
+      // имеет ownership guard через clients.curator_id = caller.
+      const curatorToken = getCuratorToken();
+      if (curatorToken) {
+        const result = await rpc('batch_upsert_client_kv_by_curator', {
+          p_client_id: clientId,
+          p_items: [{ k: key, v: value }],
+        });
+        if (!result.error) {
+          const data = result.data;
+          const success = data?.success !== false;
+          if (success && !data?.error) {
+            return { success: true };
+          }
+          return { success: false, error: data?.error || 'Curator save failed' };
+        }
+        // Curator RPC ошибка — НЕ fallback на session (риск wrong-client write).
+        return { success: false, error: result.error.message || String(result.error) };
       }
 
-      // 🔐 P1: Используем session-версию (client_id извлекается на сервере!)
+      // Fallback: PIN auth client (no curator token).
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) {
+        return { success: false, error: 'No auth token (neither curator nor session)' };
+      }
       const result = await rpc('upsert_client_kv_by_session', {
         p_session_token: sessionToken,
         p_key: key,
         p_value: value
       });
-
       if (result.error) {
         return { success: false, error: result.error.message || result.error };
       }
-
-      // RPC возвращает {success: true/false, error?: string}
       const data = result.data;
       if (data?.success === false) {
         return { success: false, error: data.error || 'Unknown error' };
       }
-
       return { success: true };
     } catch (e) {
       err('saveKV failed:', e.message);
@@ -895,6 +913,23 @@
    */
   async function getKV(clientId, key = null) {
     try {
+      // 🛡️ CRITICAL FIX (2026-05-17): curator path FIRST через getKVBatchByCurator.
+      // Without this, stale session token routes READ to the wrong client's row,
+      // and any subsequent write-back to LS corrupts curator's local state.
+      // Real incident vector: Phase 5 polling fetchCloudDay read wrong-client day
+      // and wrote it into LS scoped under the "correct" client_id.
+      const curatorToken = getCuratorToken();
+      if (curatorToken && key && clientId) {
+        const result = await getKVBatchByCurator(clientId, [key]);
+        if (result.error) {
+          return { data: null, error: result.error };
+        }
+        if (Array.isArray(result.data) && result.data.length > 0) {
+          return { data: result.data[0].v };
+        }
+        return { data: null }; // not found
+      }
+
       const sessionToken = getSessionTokenForKV();
       if (!sessionToken) {
         return { data: null, error: 'No session token' };
@@ -946,13 +981,20 @@
    */
   async function getKVBatch(clientId, keys) {
     try {
+      if (!Array.isArray(keys) || keys.length === 0) {
+        return { data: [], error: null };
+      }
+
+      // 🛡️ CRITICAL FIX (2026-05-17): curator path FIRST.
+      // getKVBatchByCurator уже использует REST с явным client_id — безопасно.
+      const curatorToken = getCuratorToken();
+      if (curatorToken && clientId) {
+        return await getKVBatchByCurator(clientId, keys);
+      }
+
       const sessionToken = getSessionTokenForKV();
       if (!sessionToken) {
         return { data: null, error: 'No session token' };
-      }
-
-      if (!Array.isArray(keys) || keys.length === 0) {
-        return { data: [], error: null };
       }
 
       const result = await rpc('batch_get_client_kv_by_session', {
@@ -986,11 +1028,26 @@
 
   /**
    * Phase 1b: Получить scoped change markers для клиента (session-safe).
+   *
+   * ⚠️ PIN-ONLY (2026-05-17 incident): эта функция работает только для
+   * PIN-клиентов через session token. Куратор должен использовать
+   * `getChangeMarkersByCurator(clientId, since)` напрямую — иначе stale
+   * session token резолвит client_id из чужой PIN-сессии и куратор
+   * получит markers не того клиента.
+   *
    * @param {string|null} [since] - ISO timestamp, если null вернёт все маркеры
    * @returns {Promise<{data: Object|null, error?: string}>}
    */
   async function getChangeMarkers(since) {
     try {
+      // 🛡️ Guard: если есть curator token — это значит куратор. Curator должен
+      // вызвать getChangeMarkersByCurator явно. Возвращаем early-error чтобы
+      // обнаружить misuse в логах и заставить callers переключиться.
+      if (getCuratorToken()) {
+        warn('getChangeMarkers called in curator context — use getChangeMarkersByCurator(clientId, since) instead');
+        return { data: null, error: 'curator_should_use_getChangeMarkersByCurator' };
+      }
+
       const sessionToken = getSessionTokenForKV();
       if (!sessionToken) {
         return { data: null, error: 'No session token' };
@@ -1168,6 +1225,15 @@
 
     try {
       log(`getAllKV: Loading ${since ? 'delta' : 'all'} data for client ${clientId.slice(0, 8)}...${since ? ' (since ' + since + ')' : ''}`);
+
+      // 🛡️ CRITICAL FIX (2026-05-17): curator path FIRST. Without this, stale
+      // session token would load wrong-client data into curator's LS during
+      // bootstrapClientSync. getAllKVByCurator uses REST with explicit client_id
+      // + curator JWT — server validates ownership via clients.curator_id.
+      const curatorToken = getCuratorToken();
+      if (curatorToken) {
+        return getAllKVByCurator(clientId, options);
+      }
 
       const sessionToken = getSessionTokenForKV();
       if (!sessionToken) {
@@ -1478,29 +1544,30 @@
    */
   async function deleteKV(clientId, key) {
     try {
-      // 🔐 Путь 1: RPC с session token (для PIN auth клиентов)
+      // 🛡️ CRITICAL FIX (2026-05-17): curator REST path FIRST — это destructive
+      // operation. Stale session token от прошлой PIN-сессии превратит delete
+      // в silent data loss для другого клиента того же куратора. Same incident
+      // pattern as mergeSaveKV — см. комментарий там.
+      const curatorUserId = getCuratorUserId();
+      if (curatorUserId && clientId) {
+        log(`[deleteKV] curator REST path (curator=${curatorUserId?.slice(0, 8)} client=${clientId?.slice(0, 8)})`);
+        return await deleteKVviaREST(curatorUserId, clientId, key);
+      }
+
+      // Fallback: PIN auth client (no curator token). Session resolves to a
+      // single bound client_id — safe for PIN.
       const sessionToken = getSessionTokenForKV();
       if (sessionToken) {
         const result = await rpc('delete_client_kv_by_session', {
           p_session_token: sessionToken,
           p_key: key
         });
-
         if (result.error) {
           return { success: false, error: result.error.message || result.error };
         }
-
         return { success: result.data?.success !== false };
       }
 
-      // 🔐 Путь 2 (v56): REST DELETE для куратора
-      const curatorUserId = getCuratorUserId();
-      if (curatorUserId && clientId) {
-        log(`[v56] No session token, trying REST DELETE (curator=${curatorUserId?.slice(0, 8)})`);
-        return await deleteKVviaREST(curatorUserId, clientId, key);
-      }
-
-      // Ни session token, ни curator — ошибка
       return { success: false, error: 'No auth token available' };
     } catch (e) {
       err('deleteKV failed:', e.message);

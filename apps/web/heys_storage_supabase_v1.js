@@ -11437,10 +11437,15 @@
       try {
         let markerResult = null;
 
-        if (hasSessionToken && typeof YandexAPI.getChangeMarkers === 'function') {
-          markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs);
-        } else if (isCuratorMode && typeof YandexAPI.getChangeMarkersByCurator === 'function') {
+        // 🛡️ FIX (2026-05-17): curator-mode FIRST. Раньше hasSessionToken
+        // имел приоритет — но у куратора может быть stale session token от
+        // прошлой PIN-сессии, и getChangeMarkers (session path) вернул бы
+        // markers не того клиента. Теперь при curator-mode явно идём через
+        // by_curator endpoint с explicit clientId.
+        if (isCuratorMode && typeof YandexAPI.getChangeMarkersByCurator === 'function') {
           markerResult = await YandexAPI.getChangeMarkersByCurator(clientId, _lastMarkerCheckTs);
+        } else if (hasSessionToken && typeof YandexAPI.getChangeMarkers === 'function') {
+          markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs);
         }
 
         if (markerResult && !markerResult.error && markerResult.data) {
@@ -12120,6 +12125,18 @@
 
     // 🔧 v63 FIX #1: Ставим флаг чтобы React useEffect не запускал параллельный syncClient
     cloud._switchClientInProgress = true;
+
+    // 🛡️ P0 hygiene (2026-05-17 incident): clear stale heys_session_token from
+    // any previous PIN session. Без этого, любой code path который проверяет
+    // session token до curator JWT (или session-only функция) резолвил бы
+    // client_id из старой PIN-сессии на сервере, попадая не туда. Безопасно
+    // для PIN клиентов — они никогда не вызывают switchClient (один client_id).
+    try { localStorage.removeItem('heys_session_token'); } catch (_) {}
+
+    // 🛡️ Stop live-refresh polling for OLD client to prevent stale-closure
+    // pollOnce from firing after currentClientId changed. DayTab useEffect
+    // will restart polling for the new client on next render.
+    try { (global.HEYS && global.HEYS.dayLiveRefresh && global.HEYS.dayLiveRefresh.stop) && global.HEYS.dayLiveRefresh.stop(); } catch (_) {}
 
     // 🔧 v74 FIX: Snapshot OLD/NEW для re-scoping deferred writes под OLD scope.
     // Без него Store.set во время switch'а scope'ит ключи через ns() (HEYS.currentClientId),

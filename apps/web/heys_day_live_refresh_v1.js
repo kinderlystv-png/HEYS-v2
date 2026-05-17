@@ -40,20 +40,25 @@
     const YandexAPI = HEYS.YandexAPI;
     if (!YandexAPI) return null;
     try {
-      // Try session path first (PIN clients)
-      const res = await YandexAPI.getKV(clientId, key);
-      if (res && res.data) return res.data;
-      if (res && res.error && res.error !== 'No session token') {
-        // Real error (not just missing session) — bail.
-        return null;
-      }
-      // Fallback to curator path
-      if (typeof YandexAPI.getKVBatchByCurator === 'function') {
+      // 🛡️ CRITICAL FIX (2026-05-17): curator path FIRST.
+      // Without this, stale PIN session token from a previous client made polling
+      // return the WRONG client's day, and mergeDayData wrote it into LS scoped
+      // under the "correct" client_id — direct LS corruption.
+      const isCurator = HEYS.auth && typeof HEYS.auth.isCuratorSession === 'function'
+        ? HEYS.auth.isCuratorSession() === true
+        : false;
+      if (isCurator && typeof YandexAPI.getKVBatchByCurator === 'function') {
         const batch = await YandexAPI.getKVBatchByCurator(clientId, [key]);
         if (batch && Array.isArray(batch.data) && batch.data.length > 0) {
           return batch.data[0].v;
         }
+        // Curator mode but row not found / error — do NOT fall back to session
+        // (would risk reading wrong client). Just return null and try again next tick.
+        return null;
       }
+      // PIN-only path
+      const res = await YandexAPI.getKV(clientId, key);
+      if (res && res.data) return res.data;
       return null;
     } catch (e) {
       console.warn('[HEYS.live] fetchCloudDay error:', e.message);
