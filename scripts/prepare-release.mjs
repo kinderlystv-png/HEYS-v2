@@ -24,10 +24,17 @@ const CLI_ARGS = process.argv.slice(2);
 const RELEASE_META_FILE_PATTERNS = [
     /^apps\/web\/public\/whats-new\.json$/,
     /^apps\/web\/public\/whats-new\//,
+    /^apps\/web\/public\/build-meta\.json$/,
     /^scripts\/prepare-release\.mjs$/,
     /^scripts\/release-prepare-and-commit\.mjs$/,
     /^\.github\/workflows\/whats-new-guard\.yml$/,
 ];
+
+const TECHNICAL_COMMIT_TYPES = new Set([
+    'chore', 'ci', 'build', 'docs', 'style', 'refactor', 'test', 'revert',
+]);
+
+const USER_FACING_COMMIT_TYPES = new Set(['feat', 'fix', 'perf']);
 
 const TECHNICAL_FILE_PATTERNS = [
     /^docs\//,
@@ -376,6 +383,79 @@ function getCommitFiles(ref = 'HEAD') {
     const output = runGitCommand(`git diff-tree --no-commit-id --name-only -r ${ref}`);
     if (!output) return [];
     return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+function getCommitMessage(ref = 'HEAD') {
+    return runGitCommand(`git log -1 --format=%s ${ref}`);
+}
+
+function parseConventionalCommitType(message) {
+    const match = (message || '').match(/^(\w+)(\([^)]*\))?:/);
+    return match ? match[1].toLowerCase() : null;
+}
+
+// Returns array of commit SHAs that are about to be pushed.
+// Three-tier fallback to handle fresh branches and detached HEAD safely:
+//   1. @{upstream}..HEAD — works for tracked branches (most common).
+//   2. origin/main..HEAD — works for fresh branches without upstream
+//      (without this, "feat → chore(lint) → push" on a new branch would
+//      fall through to HEAD only and silently skip feat without entry).
+//   3. HEAD only — detached HEAD or no `origin/main` ref.
+function getCommitsBeingPushed() {
+    let range = runGitCommand('git rev-list @{upstream}..HEAD 2>/dev/null');
+    if (range) return range.split(/\r?\n/).filter(Boolean);
+
+    range = runGitCommand('git rev-list origin/main..HEAD 2>/dev/null');
+    if (range) return range.split(/\r?\n/).filter(Boolean);
+
+    const head = getShortHash('HEAD');
+    return head ? [head] : [];
+}
+
+// Aggregates info across ALL commits in range — single feat/fix/perf commit
+// forces hasUserFacing=true; single non-release-meta file forces hasNonReleaseMeta=true.
+// Used by both Phase A skip-check (pre-push) and Phase B fast-path (CI).
+function classifyPushKind(shas) {
+    let hasUserFacing = false;
+    let hasNonReleaseMeta = false;
+    let hasNonTechnical = false;
+
+    for (const sha of shas) {
+        const type = parseConventionalCommitType(getCommitMessage(sha));
+        if (type && USER_FACING_COMMIT_TYPES.has(type)) hasUserFacing = true;
+
+        const files = getCommitFiles(sha);
+        for (const file of files) {
+            if (!isReleaseMetaOnlyFile(file)) hasNonReleaseMeta = true;
+            if (!isTechnicalFile(file)) hasNonTechnical = true;
+        }
+    }
+    return { hasUserFacing, hasNonReleaseMeta, hasNonTechnical, commitCount: shas.length };
+}
+
+// Phase A: returns reason-string if the push is safe to skip whats-new check,
+// or null if the user must add an entry.
+// Skip conditions (all must hold):
+//   - At least one commit modifies code (otherwise it's a pure release-bump
+//     and the existing resolveReleaseTargetRef() path handles it).
+//   - No feat/fix/perf in the push range (those always require entry by convention).
+//   - All non-release-meta files match TECHNICAL_FILE_PATTERNS.
+//   - HEAD commit's conventional-commit type is in TECHNICAL_COMMIT_TYPES
+//     (sanity: don't skip on Merge commits or commits with unconventional msgs).
+function shouldSkipWhatsNewForTechnical() {
+    const shas = getCommitsBeingPushed();
+    if (shas.length === 0) return null;
+
+    const { hasUserFacing, hasNonReleaseMeta, hasNonTechnical, commitCount } = classifyPushKind(shas);
+
+    if (!hasNonReleaseMeta) return null;
+    if (hasUserFacing) return null;
+    if (hasNonTechnical) return null;
+
+    const headType = parseConventionalCommitType(getCommitMessage('HEAD'));
+    if (!headType || !TECHNICAL_COMMIT_TYPES.has(headType)) return null;
+
+    return `${commitCount} commit(s) all technical, HEAD type '${headType}'`;
 }
 
 function resolveReleaseTargetRef() {
@@ -895,6 +975,15 @@ function ask(rl, question, defaultValue = '') {
 }
 
 function runCheck() {
+    // Skip whats-new requirement for technical-only commits. User-facing
+    // types (feat/fix/perf) always require entry — even on technical files —
+    // because the author tagged them as user-impacting.
+    const skipReason = shouldSkipWhatsNewForTechnical();
+    if (skipReason) {
+        writeLine(`✅ Whats-new check skipped: ${skipReason}`);
+        return 0;
+    }
+
     const data = loadWhatsNew();
     const { gitHash, currentHeadHash, releaseVersion } = getCurrentReleaseMeta();
 
@@ -1253,15 +1342,24 @@ function runAuto() {
     return 0;
 }
 
-if (hasCliFlag('--check')) {
-    process.exit(runCheck());
-} else if (hasCliFlag('--preview')) {
-    process.exit(runPreview());
-} else if (hasCliFlag('--auto')) {
-    process.exit(runAuto());
-} else {
-    runInteractive().catch((error) => {
-        writeError(`Ошибка: ${error?.stack || error}`);
-        process.exit(1);
-    });
+// Named exports for unit-testing (pure functions). Production code still calls
+// these via the CLI dispatch below; tests can `import` them without triggering it.
+export { parseConventionalCommitType, classifyPushKind, isReleaseMetaOnlyFile, isTechnicalFile };
+
+// Only run CLI dispatch when this file is invoked directly via `node`,
+// not when imported by a test runner.
+const isEntryPoint = import.meta.url === `file://${process.argv[1]}`;
+if (isEntryPoint) {
+    if (hasCliFlag('--check')) {
+        process.exit(runCheck());
+    } else if (hasCliFlag('--preview')) {
+        process.exit(runPreview());
+    } else if (hasCliFlag('--auto')) {
+        process.exit(runAuto());
+    } else {
+        runInteractive().catch((error) => {
+            writeError(`Ошибка: ${error?.stack || error}`);
+            process.exit(1);
+        });
+    }
 }

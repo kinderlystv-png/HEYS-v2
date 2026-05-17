@@ -136,6 +136,17 @@ each.
 - **prepare-release:check** (pre-push): every code-bearing commit needs a
   `whats-new.json` entry with matching `buildHash`. For docs/release-only
   commits the hash auto-resolves to the previous meaningful commit.
+  - **Super-technical push'и пропускают check автоматически.** Если все коммиты
+    в push'е (`@{upstream}..HEAD`) имеют тип
+    `chore|ci|build|docs|style|refactor|test|revert` И все изменённые файлы
+    подпадают под `TECHNICAL_FILE_PATTERNS` (`/scripts/`, `/.github/`,
+    `/.husky/`, `/tools/`, `/docs/`, `__tests__/`, `*.md`, `*.yml`, `*.sql`,
+    etc.) — pre-push пропускает push без whats-new entry.
+  - **User-facing типы (`feat`, `fix`, `perf`) ВСЕГДА требуют entry** — даже
+    если файлы технические. Автор тэгом подтверждает: правка влияет на UX.
+    Например: `fix(deploy-frontend): missing postboot bundles` затрагивает
+    только `/scripts/`, но fix может повлиять на пользователя через сборку →
+    entry нужен. А `chore(deploy-frontend): tidy retry comment` — не нужен.
 - **lint-direct-localstorage-writes** (pre-push, warn-only): new
   `localStorage.setItem` outside the allowlist blocks the push. Allowlist:
   [scripts/bootstrap-bypass-allowlist.txt](scripts/bootstrap-bypass-allowlist.txt).
