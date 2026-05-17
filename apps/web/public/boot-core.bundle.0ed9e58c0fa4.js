@@ -15748,33 +15748,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     }
 
     try {
-      // 🔐 Path 1: Попытка через session token (PIN auth клиент)
-      const sessionToken = getSessionTokenForKV();
-      // 🔇 v4.7.0: DEBUG логи отключены
-      if (sessionToken) {
-        const result = await rpc('batch_upsert_client_kv_by_session', {
-          p_session_token: sessionToken,
-          p_items: items
-        });
-
-        // 🔇 v4.7.0: DEBUG логи отключены
-
-        if (result.error) {
-          console.error('[YandexAPI] batchSaveKV RPC ERROR:', result.error);
-          return { success: false, saved: 0, error: result.error.message || result.error };
-        }
-
-        const data = result.data;
-        return {
-          success: data?.success !== false,
-          saved: data?.saved || 0,
-          error: data?.error
-        };
-      }
-
-      // 🚀 Path 2: Куратор → горячий heys-api-rpc (warm-path parity с PIN)
-      // SQL функция batch_upsert_client_kv_by_curator валидирует ownership
-      // через clients.user_id = curator_id (тот же контракт что REST WHERE user_id).
+      // 🛡️ CRITICAL FIX (2026-05-17): curator JWT path MUST be checked BEFORE
+      // session token path. Otherwise stale `heys_session_token` from a previous
+      // PIN session takes over: server resolves session → wrong client_id →
+      // save lands under wrong client. Same incident as mergeSaveKV — see that
+      // comment for full context.
       const curatorToken = getCuratorToken();
       if (curatorToken) {
         try {
@@ -15812,16 +15790,36 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         }
       }
 
-      // 🔐 Path 3 (last resort): REST на heys-api-rest. Холодный путь,
-      // используется только если RPC недоступен или нет JWT (но есть user_id).
+      // 🔐 Path 3: REST на heys-api-rest. Холодный путь для куратора,
+      // используется если RPC недоступен но curator user_id есть.
       const curatorUserId = getCuratorUserId();
       if (curatorUserId) {
         log(`[v56] Falling back to REST path (curator=${curatorUserId?.slice(0, 8)})`);
         return await batchSaveKVviaREST(curatorUserId, clientId, items);
       }
 
-      // Нет ни session token, ни curator token
-      err('[v56] batchSaveKV: No auth token available (neither session nor curator)');
+      // 🔐 Path 4: PIN auth client (no curator token at all). Session token
+      // resolves to a single client_id server-side — safe because PIN sessions
+      // are bound to one client.
+      const sessionToken = getSessionTokenForKV();
+      if (sessionToken) {
+        const result = await rpc('batch_upsert_client_kv_by_session', {
+          p_session_token: sessionToken,
+          p_items: items
+        });
+        if (result.error) {
+          console.error('[YandexAPI] batchSaveKV RPC ERROR:', result.error);
+          return { success: false, saved: 0, error: result.error.message || result.error };
+        }
+        const data = result.data;
+        return {
+          success: data?.success !== false,
+          saved: data?.saved || 0,
+          error: data?.error
+        };
+      }
+
+      err('[v56] batchSaveKV: No auth token available (neither curator nor session)');
       return { success: false, saved: 0, error: 'No auth token available' };
     } catch (e) {
       err('batchSaveKV failed:', e.message);
@@ -15846,27 +15844,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       return { success: false, error: 'invalid_params' };
     }
     try {
-      // Path 1: session token (PIN auth)
-      const sessionToken = getSessionTokenForKV();
-      if (sessionToken) {
-        const result = await rpc('merge_save_client_kv_by_session', {
-          p_session_token: sessionToken,
-          p_key: k,
-          p_value: v,
-          p_last_seen_updated_at: lastSeenUpdatedAt,
-        });
-        if (result.error) {
-          err('[mergeSaveKV] session RPC error:', result.error?.message || result.error);
-          return { success: false, error: result.error.message || String(result.error) };
-        }
-        const data = result.data;
-        if (data?.ok === false) {
-          return { success: false, error: data.error || 'merge_failed' };
-        }
-        return { success: true, v: data?.v, outcome: data?.outcome };
-      }
-
-      // Path 2: curator JWT
+      // 🛡️ CRITICAL FIX (2026-05-17): curator JWT path MUST be checked BEFORE
+      // session token path. Otherwise stale `heys_session_token` left in LS by
+      // a previous PIN session (e.g. another client of the same curator) takes
+      // over: server resolves session → wrong client_id → save lands under the
+      // wrong client. Real incident: curator added meals to Александра, they
+      // ended up in Poplanton's day because Poplanton's old PIN session token
+      // was still in LS. Phase 4 made every dayv2 save go through this path,
+      // which exposed the latent bug at high frequency.
       const curatorToken = getCuratorToken();
       if (curatorToken) {
         const result = await rpc('merge_save_client_kv_by_curator', {
@@ -15886,7 +15871,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         return { success: true, v: data?.v, outcome: data?.outcome };
       }
 
-      err('[mergeSaveKV] No auth token (neither session nor curator)');
+      // Fallback: PIN-auth client (no curator JWT). Session token resolves to
+      // exactly one client_id on server side — safe because PIN sessions are
+      // bound to a single client.
+      const sessionToken = getSessionTokenForKV();
+      if (sessionToken) {
+        const result = await rpc('merge_save_client_kv_by_session', {
+          p_session_token: sessionToken,
+          p_key: k,
+          p_value: v,
+          p_last_seen_updated_at: lastSeenUpdatedAt,
+        });
+        if (result.error) {
+          err('[mergeSaveKV] session RPC error:', result.error?.message || result.error);
+          return { success: false, error: result.error.message || String(result.error) };
+        }
+        const data = result.data;
+        if (data?.ok === false) {
+          return { success: false, error: data.error || 'merge_failed' };
+        }
+        return { success: true, v: data?.v, outcome: data?.outcome };
+      }
+
+      err('[mergeSaveKV] No auth token (neither curator nor session)');
       return { success: false, error: 'No auth token available' };
     } catch (e) {
       err('[mergeSaveKV] exception:', e.message);
