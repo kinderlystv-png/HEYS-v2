@@ -14,6 +14,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isReleaseMetaOnlyFile } from './prepare-release.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -118,6 +119,24 @@ function main() {
     if (!hasStagedWhatsNewChanges()) {
         writeLine('ℹ️ Нет новых staged-изменений в What\'s New — отдельный commit не нужен.');
         return;
+    }
+
+    // 🛡️ CI fast-path contract: release-bump commit MUST contain only files
+    // matched by isReleaseMetaOnlyFile(). Otherwise GitHub Actions detect job
+    // would silently fall back to full build for what should be a fast-path push.
+    // Better to abort early with a clear error than ship a degraded commit.
+    const stagedRaw = execSync('git diff --cached --name-only', { cwd: ROOT_DIR, encoding: 'utf8' });
+    const stagedFiles = stagedRaw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    const nonMetaStaged = stagedFiles.filter((f) => !isReleaseMetaOnlyFile(f));
+    if (nonMetaStaged.length > 0) {
+        writeError('❌ Release-bump commit нарушает CI fast-path контракт:');
+        writeError('   следующие staged файлы НЕ matches isReleaseMetaOnlyFile():');
+        nonMetaStaged.forEach((f) => writeError(`   - ${f}`));
+        writeError('');
+        writeError('   Эти файлы заставят GitHub Actions запустить full build (~4 мин)');
+        writeError('   вместо fast-path (~30с). Либо unstage их, либо обнови');
+        writeError('   RELEASE_META_FILE_PATTERNS в scripts/prepare-release.mjs.');
+        process.exit(1);
     }
 
     const release = getLatestRelease();

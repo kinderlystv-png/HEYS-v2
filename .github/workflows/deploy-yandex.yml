@@ -642,6 +642,22 @@ jobs:
               --endpoint-url "${{ env.YC_ENDPOINT }}"
           fi
 
+      - name: Sync whats-new/ assets (release-note screenshots)
+        # isReleaseMetaOnlyFile() matches `apps/web/public/whats-new/` ⇒ release-bump
+        # с новыми скриншотами проходит через fast-path. Без этого шага картинки
+        # молча терялись бы: detect="release-only" → fast-path → скрины не в S3.
+        # `aws s3 sync` идемпотентен и дёшев — без изменений в директории ничего не загружает.
+        run: |
+          if [ -d apps/web/public/whats-new ]; then
+            echo "⬆️ Syncing whats-new/ assets..."
+            aws s3 sync apps/web/public/whats-new/ \
+              "s3://${{ env.YC_BUCKET_PWA }}/whats-new/" \
+              --cache-control "public, max-age=31536000, immutable" \
+              --endpoint-url "${{ env.YC_ENDPOINT }}"
+          else
+            echo "ℹ️  apps/web/public/whats-new/ directory absent — nothing to sync"
+          fi
+
       - name: Invalidate CDN cache
         continue-on-error: true
         env:
