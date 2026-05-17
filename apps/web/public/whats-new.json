@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.17.a418822c",
+      "buildHash": "a418822c",
+      "date": "2026-05-17",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Server-side защита от misuse session-endpoint'ов",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Сервер теперь явно отказывает на session-вызов с curator JWT",
+          "description": "Дополнительная страховка: если client из-за регрессии попытается вызвать session-endpoint с curator JWT в заголовке — сервер вернёт 400 вместо тихой записи под чужого клиента. Невидимо для пользователей, защищает от любой будущей похожей дыры."
+        }
+      ]
+    },
+    {
       "version": "2026.05.17.20d12a56",
       "buildHash": "20d12a56",
       "date": "2026-05-17",
