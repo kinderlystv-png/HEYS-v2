@@ -902,6 +902,26 @@ module.exports.handler = async function (event, context) {
     };
   }
 
+  // 🛡️ Defense-in-depth (2026-05-17 incident): если caller имеет curator JWT
+  // и пытается вызвать `*_by_session` endpoint — это признак misconfigured
+  // client (stale session token живёт рядом с curator auth). Server резолвит
+  // session → wrong client. Reject explicitly чтобы заставить client использовать
+  // `*_by_curator` endpoint с явным p_client_id (ownership validated в SQL).
+  if (fnName.endsWith('_by_session')) {
+    const authHeaderEarly = event.headers?.['authorization'] || event.headers?.['Authorization'];
+    if (authHeaderEarly && authHeaderEarly.startsWith('Bearer ')) {
+      console.warn('[RPC] ⚠️ Rejecting session-endpoint call with JWT header present:', fnName);
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'use_curator_endpoint_when_authenticated',
+          message: `Use *_by_curator endpoint instead of ${fnName} when JWT is present`
+        })
+      };
+    }
+  }
+
   // 🔐 Для curator-only функций требуется JWT
   let curatorId = null;
   if (isCuratorFunction) {
