@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.17.PLACEHOLDER",
+      "buildHash": "PLACEHOLDER",
+      "date": "2026-05-17",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Fix: demo-guard в heys_demo_mode + sync rollout completion",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Подавление утреннего чек-ина больше не утекает на production",
+          "description": "heys_demo_mode_v1.js теперь делает ранний выход если хост не demo-субдомен. Без этой гарды флаг HEYS.ui.suppressMorningCheckin срабатывал бы и на app.heyslab.ru, скрывая утренний чек-ин у реальных пользователей."
+        },
+        {
+          "type": "chore",
+          "title": "Bundle rebuild после rollout server-side merge",
+          "description": "boot-core пересобран с включёнными в Phase 4 fallback safety net (если merge endpoint вернёт ошибку — items транзитом через старый batch путь, без потери данных)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.17.d05c3e4a",
       "buildHash": "d05c3e4a",
       "date": "2026-05-17",

@@ -5096,7 +5096,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.05.17.0242.d05c3e4a'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.05.17.0255.b2066e0a'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
@@ -33110,6 +33110,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
 
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.demoMode = HEYS.demoMode || {};
+
+  // Этот модуль грузится в boot-core для всех хостов. Все side-effects ниже
+  // должны срабатывать только на demo-субдомене (флаг проставляется inline-скриптом
+  // в index.html). Без этой гарды утренний чек-ин был бы подавлен и на app.heyslab.ru.
+  const isDemo = !!(global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.enabled);
+  if (!isDemo) return;
 
   // Suppress morning check-in modal in demo — visitors shouldn't see "enter your weight".
   HEYS.ui = HEYS.ui || {};

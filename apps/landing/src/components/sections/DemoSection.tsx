@@ -157,9 +157,14 @@ export default function DemoSection() {
                           <a
                               href="#trial"
                               onClick={() => setGender(null)}
-                              className="inline-flex items-center justify-center px-5 py-3 sm:px-6 sm:py-3.5 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-[13px] sm:text-[15px] tracking-wide shadow-lg shadow-blue-600/30 whitespace-nowrap"
+                              className="inline-flex flex-col items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 active:scale-95 transition-all tracking-wide shadow-lg shadow-blue-600/30 whitespace-nowrap leading-tight"
                           >
-                              Попробовать бесплатный триал
+                              <span className="font-semibold text-[13px] sm:text-[15px]">
+                                  Попробовать бесплатный триал
+                              </span>
+                              <span className="text-[10px] sm:text-[11px] opacity-80 mt-0.5">
+                                  Pro · поддержка куратора
+                              </span>
                           </a>
                           <button
                               type="button"

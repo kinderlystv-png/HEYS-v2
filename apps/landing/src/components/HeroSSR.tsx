@@ -7,8 +7,6 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
 import { LandingVariant, VariantContent } from '@/config/landing-variants'
-import { getHeroHeadline, getHeroSubheadline } from '@/lib/ab-test'
-import { useABTest } from '@/lib/useABTest'
 
 interface HeroSSRProps {
   content: VariantContent
@@ -19,9 +17,6 @@ export default function HeroSSR({ content }: HeroSSRProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const heroCopyVariant = useABTest('hero_copy')
-  const abHeadline = getHeroHeadline(heroCopyVariant)
-  const abSubheadline = getHeroSubheadline(heroCopyVariant)
 
   // Trigger animations after mount
   useEffect(() => {
@@ -153,30 +148,26 @@ export default function HeroSSR({ content }: HeroSSRProps) {
             <div className="text-center lg:text-left order-2 lg:order-1 lg:mt-10">
 
               {/* H1 */}
-              <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[42px] font-semibold text-[#111827] mb-8 md:mb-10 leading-[1.15] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[42px] font-semibold text-[#111827] mb-6 md:mb-8 leading-[1.15] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
                 }`} style={{ transitionDelay: '400ms' }}>
-                {abHeadline}
+                HEYS — приложение и живой человек рядом
               </h1>
 
               {/* H2 */}
-              <h2 className={`text-[14px] md:text-[16px] text-[#6b7280] font-normal mb-6 md:mb-16 leading-[1.6] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              <h2 className={`text-[14px] md:text-[16px] text-[#6b7280] font-normal mb-6 md:mb-12 leading-[1.6] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
                 }`} style={{ transitionDelay: '800ms' }}>
-                {abSubheadline.split('\n').map((line, i) => (
-                  <span key={i}>
-                    {i > 0 && <br />}
-                    {line}
-                  </span>
-                ))}
+                Внутри — суперапп: дневник, советы, навигатор.<br />
+                Рядом — куратор. Не бот.
               </h2>
 
               {/* CTA — две кнопки */}
               <div className={`flex flex-row flex-wrap gap-3 mb-4 justify-center lg:justify-start transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
                 }`} style={{ transitionDelay: '1200ms' }}>
                 <a
-                  href="#pain"
+                  href="#demo"
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-[14px] tracking-wide shadow-lg shadow-blue-600/25"
                 >
-                  Как это работает?
+                  Открыть демо
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M12 5v12m0 0 6-6m-6 6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -185,7 +176,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                   href="#trial"
                   className="inline-flex items-center justify-center px-6 py-3 border border-[#111827]/20 text-[#374151] font-normal rounded-2xl hover:border-[#111827]/40 hover:text-[#111827] hover:bg-[#f9fafb] active:scale-95 transition-all text-[14px] tracking-wide"
                 >
-                  Начать бесплатно
+                  Триал Pro+куратор
                 </a>
               </div>
 

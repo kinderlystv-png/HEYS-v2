@@ -21,6 +21,12 @@
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.demoMode = HEYS.demoMode || {};
 
+  // Этот модуль грузится в boot-core для всех хостов. Все side-effects ниже
+  // должны срабатывать только на demo-субдомене (флаг проставляется inline-скриптом
+  // в index.html). Без этой гарды утренний чек-ин был бы подавлен и на app.heyslab.ru.
+  const isDemo = !!(global.__HEYS_DEMO_MODE__ && global.__HEYS_DEMO_MODE__.enabled);
+  if (!isDemo) return;
+
   // Suppress morning check-in modal in demo — visitors shouldn't see "enter your weight".
   HEYS.ui = HEYS.ui || {};
   HEYS.ui.suppressMorningCheckin = true;
