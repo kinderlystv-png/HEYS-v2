@@ -974,6 +974,37 @@ function ask(rl, question, defaultValue = '') {
     });
 }
 
+// Phase B: classify a GitHub Actions push (BEFORE/AFTER refs) — used by CI
+// detect job to choose between fast-path (whats-new only deploy ~30s) vs
+// full build (~4min). Exit 0 if every commit in the range touches ONLY
+// release-meta files; exit 1 otherwise.
+function runIsReleaseOnlyPush(beforeSha, afterSha) {
+    let range;
+    if (!beforeSha || /^0+$/.test(beforeSha)) {
+        // First push to branch (BEFORE = zeros) or missing arg → fall back to HEAD only.
+        range = 'HEAD~1..HEAD';
+    } else {
+        range = `${beforeSha}..${afterSha || 'HEAD'}`;
+    }
+
+    const log = runGitCommand(`git log --format=%H ${range}`);
+    if (!log) {
+        // Empty range (rebase replay / force-push with BEFORE == AFTER) → safer
+        // default is "not release-only" → caller runs full build.
+        writeLine('⚠️ Empty push detected — treating as non-release-only (safe default)');
+        return 1;
+    }
+
+    const shas = log.split(/\r?\n/).filter(Boolean);
+    const { hasNonReleaseMeta } = classifyPushKind(shas);
+    if (hasNonReleaseMeta) {
+        writeLine(`📦 ${shas.length} commit(s) include non-release-meta files → not release-only`);
+        return 1;
+    }
+    writeLine(`✅ All ${shas.length} commits touch only release-meta files → release-only`);
+    return 0;
+}
+
 function runCheck() {
     // Skip whats-new requirement for technical-only commits. User-facing
     // types (feat/fix/perf) always require entry — even on technical files —
@@ -1350,7 +1381,10 @@ export { parseConventionalCommitType, classifyPushKind, isReleaseMetaOnlyFile, i
 // not when imported by a test runner.
 const isEntryPoint = import.meta.url === `file://${process.argv[1]}`;
 if (isEntryPoint) {
-    if (hasCliFlag('--check')) {
+    if (hasCliFlag('--is-release-only-push')) {
+        const idx = CLI_ARGS.indexOf('--is-release-only-push');
+        process.exit(runIsReleaseOnlyPush(CLI_ARGS[idx + 1], CLI_ARGS[idx + 2]));
+    } else if (hasCliFlag('--check')) {
         process.exit(runCheck());
     } else if (hasCliFlag('--preview')) {
         process.exit(runPreview());

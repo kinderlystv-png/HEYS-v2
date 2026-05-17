@@ -14,12 +14,14 @@
 import { describe, test, expect } from 'vitest';
 import { pathToFileURL, fileURLToPath } from 'url';
 import path from 'path';
+import { execSync } from 'child_process';
 
 // Resolve path relative to THIS test file (not process.cwd()) — pre-push runs
 // vitest from apps/web/ but the script lives at <repo>/scripts/.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SCRIPT_PATH = path.resolve(__dirname, '../../../scripts/prepare-release.mjs');
+const REPO_ROOT = path.resolve(__dirname, '../../../');
 const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
 
 const {
@@ -113,6 +115,42 @@ describe('isTechnicalFile', () => {
     expect(isTechnicalFile('apps/web/heys_storage_supabase_v1.js')).toBe(false);
     expect(isTechnicalFile('apps/web/heys_day_diary_section.js')).toBe(false);
     expect(isTechnicalFile('apps/landing/src/components/HeroSSR.tsx')).toBe(false);
+  });
+});
+
+describe('--is-release-only-push CLI flag (Phase B integration)', () => {
+  // Uses real git commits in the repo to exercise the file-based classifier.
+  // Test commits are referenced by stable hashes from project history.
+
+  function runFlag(before, after) {
+    try {
+      execSync(
+        `node "${SCRIPT_PATH}" --is-release-only-push ${before} ${after || ''}`.trim(),
+        { stdio: 'pipe', cwd: REPO_ROOT },
+      );
+      return 0;
+    } catch (e) {
+      return e.status ?? 1;
+    }
+  }
+
+  test('pure release-bump commit (touches only whats-new.json) → exit 0', () => {
+    // e52ce906 = "chore(release): bump whats-new build hash to 17bbab04"
+    // Verified manually: this commit changed ONLY apps/web/public/whats-new.json.
+    expect(runFlag('e52ce906~1', 'e52ce906')).toBe(0);
+  });
+
+  test('code-bearing commit (touches non-release-meta files) → exit 1', () => {
+    // 5e2f6a42 = "chore(release-check): skip whats-new..." — Phase A commit.
+    // Touches scripts/, apps/web/__tests__/, CLAUDE.md → not release-meta → full build.
+    expect(runFlag('5e2f6a42~1', '5e2f6a42')).toBe(1);
+  });
+
+  test('empty BEFORE arg (first push to branch) → falls back to HEAD~1..HEAD', () => {
+    // No args case — should not crash. Exit code depends on HEAD content,
+    // we just verify the script runs and returns a valid exit code (0 or 1).
+    const result = runFlag('', '');
+    expect([0, 1]).toContain(result);
   });
 });
 

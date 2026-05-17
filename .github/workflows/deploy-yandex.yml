@@ -14,8 +14,44 @@ env:
   YC_ENDPOINT: https://storage.yandexcloud.net
 
 jobs:
+  # Classify push: full build vs fast-path (whats-new only).
+  # Calls prepare-release.mjs --is-release-only-push which uses isReleaseMetaOnlyFile()
+  # as single source of truth — same logic as Phase A pre-push check.
+  detect:
+    name: Detect push kind
+    runs-on: ubuntu-latest
+    outputs:
+      release_only: ${{ steps.classify.outputs.release_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 needed because pushes >2 commits would otherwise fail
+          # `git log $BEFORE..$AFTER` with shallow clone. Dynamic depth via
+          # `commits.length` unreliable: GitHub API caps the array at 20.
+          # Trade-off: +5-15s per push, but fast-path saves 3-4min on release-bumps.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - id: classify
+        name: Classify push (release-only vs code-bearing)
+        run: |
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+          if node scripts/prepare-release.mjs --is-release-only-push "$BEFORE" "$AFTER"; then
+            echo "release_only=true" >> $GITHUB_OUTPUT
+            echo "✅ Fast-path: only release-meta files changed"
+          else
+            echo "release_only=false" >> $GITHUB_OUTPUT
+            echo "📦 Full build: push contains code changes"
+          fi
+
   build-and-deploy:
     name: Build & Deploy to Yandex Cloud
+    needs: detect
+    if: needs.detect.outputs.release_only != 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -553,6 +589,88 @@ jobs:
           echo "| PWA | https://app.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
           echo "| Landing | https://heyslab.ru |" >> $GITHUB_STEP_SUMMARY
           echo "| API | https://api.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
+
+  # Fast-path: для release-only push'ей (только apps/web/public/whats-new.json
+  # и build-meta.json) пересборка 11.84MB бандлов не нужна. Загружаем 2 файла,
+  # purge'аем их в CDN — деплой за ~30с вместо 4 минут.
+  fast-release-bump:
+    name: Fast Deploy (whats-new only)
+    needs: detect
+    if: needs.detect.outputs.release_only == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate whats-new structure
+        run: |
+          node -e "
+            const data = require('./apps/web/public/whats-new.json');
+            if (!Array.isArray(data.releases) || data.releases.length === 0) {
+              console.error('❌ whats-new.json invalid: missing releases array');
+              process.exit(1);
+            }
+            console.log('✅ whats-new.json valid, top release:', data.releases[0].version);
+          "
+
+      - name: Setup AWS CLI for Yandex S3
+        # Secret names синхронизированы с build-and-deploy job (line 218) —
+        # YC_ACCESS_KEY_ID / YC_SECRET_ACCESS_KEY, не S3_KEY_ID/SECRET.
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.YC_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.YC_SECRET_ACCESS_KEY }}
+          aws configure set default.region ru-central1
+
+      - name: Upload whats-new.json + build-meta.json to PWA bucket
+        run: |
+          echo "⬆️ Uploading whats-new.json..."
+          aws s3 cp apps/web/public/whats-new.json \
+            "s3://${{ env.YC_BUCKET_PWA }}/whats-new.json" \
+            --content-type "application/json" \
+            --cache-control "no-cache, must-revalidate" \
+            --endpoint-url "${{ env.YC_ENDPOINT }}"
+
+          # build-meta.json не всегда меняется в release-bump'ах, но грузим его
+          # тоже — idempotent + дешёво (~1KB).
+          if [ -f apps/web/public/build-meta.json ]; then
+            echo "⬆️ Uploading build-meta.json..."
+            aws s3 cp apps/web/public/build-meta.json \
+              "s3://${{ env.YC_BUCKET_PWA }}/build-meta.json" \
+              --content-type "application/json" \
+              --cache-control "no-cache, must-revalidate" \
+              --endpoint-url "${{ env.YC_ENDPOINT }}"
+          fi
+
+      - name: Invalidate CDN cache
+        continue-on-error: true
+        env:
+          YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
+          YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
+          # Same CDN_PWA_ID as in build-and-deploy job (line 436)
+          CDN_PWA_ID: bc8rvrvenqslkmti5yts
+        run: |
+          if [ -z "$YC_TOKEN" ]; then
+            echo "⏭️ Skipping CDN invalidation (no YC_OAUTH_TOKEN)"
+            exit 0
+          fi
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          export PATH="$HOME/yandex-cloud/bin:$PATH"
+          yc config set token "$YC_TOKEN"
+          yc config set folder-id "$YC_FOLDER"
+
+          yc cdn cache purge --resource-id "$CDN_PWA_ID" \
+            --path "/whats-new.json" \
+            --path "/build-meta.json" || true
+
+      - name: Fast-path summary
+        run: |
+          echo "## ⚡ Fast Release-Bump Deploy" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Only whats-new.json (and build-meta.json if present) deployed." >> $GITHUB_STEP_SUMMARY
+          echo "Full bundles unchanged — skipped 11.84MB rebuild + upload." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: \`${GITHUB_SHA::7}\`" >> $GITHUB_STEP_SUMMARY
 
   # Cloud Functions деплоятся отдельным workflow: .github/workflows/cloud-functions-deploy.yml
   # Это предотвращает параллельный двойной деплой при push в main.
