@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.05.17.PLACEHOLDER",
-      "buildHash": "PLACEHOLDER",
+      "version": "2026.05.17.307f8860",
+      "buildHash": "307f8860",
       "date": "2026-05-17",
       "kind": "technical",
       "profile": "technical-infra",
