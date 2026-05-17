@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.17.17bbab04",
+      "buildHash": "17bbab04",
+      "date": "2026-05-17",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Fix: deploy-frontend пропускал postboot/sw.js + параллельный upload",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Локальный production deploy не загружал postboot-eager/lazy и sw.js",
+          "description": "Glob postboot-1-game.bundle.* не матчил реальные имена postboot-1-game-eager.bundle.HASH.js и -lazy. После локального deploy users видели вчерашние postboot и старый sw.js на app.heyslab.ru до следующего CI push. Заменено на find + postboot-*.js. Также добавлены sw.js и lazy-manifest.json в upload list."
+        },
+        {
+          "type": "improvement",
+          "title": "Параллельный upload в deploy-frontend.sh",
+          "description": "xargs -P 6 + retry×3 на 503 — тот же паттерн что в deploy-demo.sh и deploy-landing.sh после вчерашней параллелизации. Локальный production deploy: ~3-5 мин → ~1-2 мин."
+        }
+      ]
+    },
+    {
       "version": "2026.05.17.f781f29d",
       "buildHash": "f781f29d",
       "date": "2026-05-17",
