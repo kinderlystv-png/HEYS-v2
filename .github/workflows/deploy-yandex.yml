@@ -5,6 +5,15 @@ on:
     branches: [main]
   workflow_dispatch: # Ручной запуск
 
+# Сериализуем deploy'и на main: два одновременных push'а (или push + ручной
+# workflow_dispatch) пойдут в очередь, не параллельно. cancel-in-progress: false
+# чтобы текущий deploy дозавершился — иначе риск частичной загрузки в S3.
+# Без этого блока race: fast-path может закончиться позже full build от
+# предыдущего push'а и затереть свежие бандлы старым whats-new.json.
+concurrency:
+  group: deploy-yandex-main
+  cancel-in-progress: false
+
 env:
   NODE_VERSION: "18"
   PNPM_VERSION: "8"
@@ -675,9 +684,15 @@ jobs:
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
+          # Базовые 2 файла + директория whats-new/* для скриншотов релиз-заметок.
+          # CDN-провайдер интерпретирует /whats-new/* как wildcard на префикс —
+          # инвалидирует все объекты под этим путём. Иначе при замене существующего
+          # скрина с тем же именем CDN бы отдавал старую версию до естественной
+          # экспирации (cache-control: immutable max-age=1y).
           yc cdn cache purge --resource-id "$CDN_PWA_ID" \
             --path "/whats-new.json" \
-            --path "/build-meta.json" || true
+            --path "/build-meta.json" \
+            --path "/whats-new/*" || true
 
       - name: Fast-path summary
         run: |
