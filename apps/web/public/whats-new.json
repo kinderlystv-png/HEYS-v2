@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.17.14259202",
+      "buildHash": "14259202",
+      "date": "2026-05-17",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "CI: fast-path для release-only push'ей",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Pre-push больше не требует whats-new для технических коммитов",
+          "description": "chore/ci/build/docs/style/refactor/test/revert коммиты с файлами в /scripts/, /.github/, /.husky/, /tools/, /docs/, __tests__/, *.md, *.yml — теперь проходят pre-push без entry в whats-new. feat/fix/perf всегда требуют entry."
+        },
+        {
+          "type": "improvement",
+          "title": "Release-bump push'и больше не пересобирают бандлы в CI",
+          "description": "GitHub Actions detect job классифицирует push: если все файлы только release-meta (whats-new.json, build-meta.json) — fast-path job деплоит 2 файла за ~30с вместо 4 минут. Экономит ~45 мин CI-времени в день."
+        }
+      ]
+    },
+    {
       "version": "2026.05.17.17bbab04",
       "buildHash": "17bbab04",
       "date": "2026-05-17",
