@@ -122,6 +122,14 @@
     if (scopedKey) {
       const scopedData = lsGet(scopedKey, null);
       if (scopedData && typeof scopedData === 'object') return scopedData;
+      // 🛡️ P0 (2026-05-18 incident): если есть scoped key — НЕ делаем fallback
+      // на unscoped `heys_dayv2_<date>`. Unscoped key — global LS shared между
+      // всеми клиентами одного браузера. Для curator с двумя клиентами это
+      // приводило к contamination: curator на Poplanton делает checkin → пишет
+      // unscoped + scoped Poplanton. Switch на Александру → её scoped пуст →
+      // fallback читает unscoped (Poplanton's data) → setDay → upload в Александра's
+      // cloud. Возвращаем fallback (empty) — лучше пустой день чем чужие данные.
+      return fallback;
     }
     return lsGet(getUnscopedDayKey(dateKey), fallback) || fallback;
   }
@@ -261,8 +269,16 @@
       } else {
         lsSet(scopedKey, dayData);
       }
+      // 🛡️ P0 (2026-05-18 incident): когда scoped key есть, НЕ пишем unscoped.
+      // Unscoped — global LS shared между всеми клиентами одного браузера.
+      // Раньше делали dual-write для backward compat с legacy модулями, но
+      // это создавало cross-client contamination когда curator работает с
+      // несколькими клиентами в одной сессии. Legacy модули которые читают
+      // unscoped должны быть обновлены на scoped path (через HEYS.store).
+      return;
     }
-    // Backward compatibility: часть legacy-модулей всё ещё читает unscoped day key.
+    // Только если нет client-scope (нет авторизации/инициализации) — пишем
+    // unscoped как fallback. Это редкий случай — обычно scope есть.
     if (HEYS.store?.set) {
       HEYS.store.set(getUnscopedDayKey(dateKey), dayData);
     } else {

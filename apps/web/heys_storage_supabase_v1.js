@@ -12138,6 +12138,34 @@
     // will restart polling for the new client on next render.
     try { (global.HEYS && global.HEYS.dayLiveRefresh && global.HEYS.dayLiveRefresh.stop) && global.HEYS.dayLiveRefresh.stop(); } catch (_) {}
 
+    // 🛡️ P0 incident (2026-05-18): clear legacy UNSCOPED `heys_dayv2_*` keys.
+    // saveDayData (heys_steps_v1.js:266-270) dual-writes ВСЕ day data в:
+    //   1) scoped `heys_<clientId>_dayv2_<date>` — правильный путь
+    //   2) UNSCOPED `heys_dayv2_<date>` — backward compat, BUT this is a GLOBAL
+    //      LS key shared between all clients!
+    // readDayData (heys_steps_v1.js:120-126) для новой даты у нового клиента
+    // (где scoped пустой) делает fallback на unscoped → читает данные предыдущего
+    // клиента → setDay → пишет их под scope нового клиента → upload в cloud.
+    // Реальный сценарий: curator на Poplanton делает checkin (вес 89.9 + кофе)
+    // → switch на Александру → её day-18 пуст → fallback читает unscoped =
+    // Poplanton's day → upload в cloud Александры. Cross-client contamination.
+    // Также есть `heys_dayv2_date` marker — тоже global, надо чистить.
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && /^heys_dayv2_(\d{4}-\d{2}-\d{2}|date)$/.test(k)) {
+          keysToRemove.push(k);
+        }
+      }
+      for (const k of keysToRemove) {
+        try { localStorage.removeItem(k); } catch (_) {}
+      }
+      if (keysToRemove.length > 0) {
+        log(`🧹 switchClient: cleared ${keysToRemove.length} legacy unscoped heys_dayv2_* keys to prevent cross-client leak`);
+      }
+    } catch (_) {}
+
     // 🔧 v74 FIX: Snapshot OLD/NEW для re-scoping deferred writes под OLD scope.
     // Без него Store.set во время switch'а scope'ит ключи через ns() (HEYS.currentClientId),
     // который меняется на newClientId на строке 12219 ниже — задолго до конца switch.
