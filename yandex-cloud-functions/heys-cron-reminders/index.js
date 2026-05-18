@@ -29,6 +29,7 @@
 
 const { getPool } = require('./shared/db-pool');
 const webpush = require('web-push');
+const { collapseNetChange, bucketize, formatBody } = require('./curator-action-format');
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
@@ -161,6 +162,7 @@ const DEFAULT_CLIENT_PREFS = {
   evening_summary_enabled: true,
   evening_summary_time: '21:00',
   streak_celebration_enabled: true,
+  curator_actions_enabled: true, // 📝 Privacy split: гейтит push о действиях куратора
 };
 
 const DEFAULT_CURATOR_PREFS = {
@@ -397,8 +399,15 @@ function waterHourBucket(currentMinutes) {
 // ─── a) Курятор-батчинг ────────────────────────────────────────────────
 
 async function jobCuratorBatching(client) {
+  // 📝 v2: агрегируем `actions` payload через jsonb_agg, формируем
+  // динамический body ("+2 приёма пищи, вес 89→90") через format helpers.
+  // Если actions колонки пустые (legacy rows до миграции 2026-05-18) — fallback
+  // на старый generic body.
   const pending = await client.query(
-    `SELECT client_id, COUNT(*)::int AS cnt, MIN(created_at) AS first_at
+    `SELECT client_id,
+            COUNT(*)::int AS cnt,
+            MIN(created_at) AS first_at,
+            jsonb_agg(actions) AS actions_array
        FROM client_data_changelog
       WHERE notified_at IS NULL
         AND created_at < NOW() - INTERVAL '1 minute'
@@ -409,17 +418,49 @@ async function jobCuratorBatching(client) {
   for (const row of pending.rows) {
     const prefs = await getClientPrefs(client, row.client_id);
     if (!prefs.enabled) continue;
+    if (prefs.curator_actions_enabled === false) {
+      // 📝 Privacy split: клиент отключил уведомления о действиях куратора.
+      // Маркируем notified_at чтобы не накапливать pending — banner всё равно
+      // покажет это в приложении (banner читает acked_at, а не notified_at).
+      await client.query(
+        `UPDATE client_data_changelog
+            SET notified_at = NOW()
+          WHERE client_id = $1 AND notified_at IS NULL
+            AND created_at < NOW() - INTERVAL '1 minute'`,
+        [row.client_id]
+      );
+      continue;
+    }
     const now = nowInMsk();
     if (isInQuietHours(minutesOfDay(now), prefs.quiet_start, prefs.quiet_end)) {
       // Не шлём в тишину, но и не помечаем notified_at — отложится до следующего слота.
       continue;
     }
 
+    // Flatten все actions из всех pending rows этого клиента.
+    let body = 'Загляни в приложение, чтобы посмотреть изменения.';
+    try {
+      const flat = [];
+      const arr = Array.isArray(row.actions_array) ? row.actions_array : [];
+      for (const entry of arr) {
+        if (!entry) continue;
+        const acts = Array.isArray(entry.actions) ? entry.actions : [];
+        flat.push(...acts);
+      }
+      if (flat.length > 0) {
+        const collapsed = collapseNetChange(flat);
+        const buckets = bucketize(collapsed);
+        body = formatBody(buckets);
+      }
+    } catch (formatErr) {
+      console.warn('[curator-batching] body format failed:', formatErr.message);
+    }
+
     const payload = {
-      title: 'HEYS — куратор обновил твой день',
-      body: 'Загляни в приложение, чтобы посмотреть изменения.',
+      title: 'Куратор обновил твой день',
+      body,
       tag: 'curator-update',
-      url: '/',
+      url: '/?openCuratorFeed=1',
     };
     const res = await sendToClient(client, row.client_id, payload);
     if (res.sent > 0) total += res.sent;

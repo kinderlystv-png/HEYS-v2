@@ -10,6 +10,7 @@ const path = require('path');
 
 const { getPool } = require('./shared/db-pool');
 const { mergeDayData, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
+const { computeCuratorActionPayload } = require('./curator-action-diff');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔐 P0 SECURITY: Conditional logging (never log env in production)
@@ -258,6 +259,10 @@ const ALLOWED_FUNCTIONS = [
   'batch_get_client_kv_by_session',       // 🔐 Phase 1a: пакетное чтение (hot-sync optimization)
   'get_change_markers_by_session',        // 🔐 Phase 1b: scoped change markers (conditional sync)
   'delete_client_kv_by_session',          // 🔐 P1: удаление KV (session-safe)
+
+  // === CURATOR ACTIONS FEED (📝 in-app banner + push body) ===
+  'get_my_curator_changelog_since',       // 📝 client reads curator-changes since last-seen
+  'ack_curator_changelog',                // 📝 client marks changelog as read
 
   // === EWS WEEKLY SNAPSHOTS (🔐 Wave 3.1: облачная синхронизация) ===
   'upsert_weekly_snapshot_by_session',    // 🔐 Сохранение weekly snapshot
@@ -1852,6 +1857,29 @@ module.exports.handler = async function (event, context) {
             console.warn('[merge_save] audit insert failed:', auditErr.message);
           }
         }
+
+        // 📝 Curator-actions feed: log semantic diff for in-app banner + push body.
+        // Only for curator path. Best-effort: changelog INSERT must NOT fail the save.
+        if (isCurator) {
+          try {
+            const oldV = cur.rows[0]?.v ?? null;
+            const payload = computeCuratorActionPayload(oldV, mergedValue, k);
+            if (payload && Array.isArray(payload.actions) && payload.actions.length > 0) {
+              await client.query(
+                `INSERT INTO client_data_changelog (client_id, curator_id, keys_updated, actions)
+                 VALUES ($1::uuid, $2::uuid, $3::text[], $4::jsonb)`,
+                [
+                  resolvedClientId,
+                  curatorId,
+                  [k],
+                  JSON.stringify(payload),
+                ]
+              );
+            }
+          } catch (changelogErr) {
+            console.warn('[merge_save] changelog insert failed:', changelogErr.message);
+          }
+        }
       } catch (mergeErr) {
         try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
         try { client.release(true); } catch (_) { /* noop */ }
@@ -1872,6 +1900,265 @@ module.exports.handler = async function (event, context) {
           v: mergedValue,
           outcome: mergeOutcome
         })
+      };
+    }
+
+    // 📝 SPECIAL: get_my_curator_changelog_since
+    // Возвращает curator-actions для текущей сессии PIN-клиента, начиная с
+    // последнего ack (clients.curator_actions_last_seen_at) или явного p_since.
+    if (fnName === 'get_my_curator_changelog_since') {
+      const sessionToken = params.p_session_token;
+      const explicitSince = params.p_since || null;
+      if (!sessionToken) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'Missing p_session_token' })
+        };
+      }
+      const sessRes = await client.query(
+        `SELECT client_id FROM client_sessions
+          WHERE token_hash = digest($1, 'sha256')
+            AND expires_at > now()
+            AND revoked_at IS NULL`,
+        [sessionToken]
+      );
+      const resolvedClientId = sessRes.rows?.[0]?.client_id;
+      if (!resolvedClientId) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'invalid_session' })
+        };
+      }
+
+      // Determine since: explicit > last_seen > 30 days ago fallback.
+      let sinceTs;
+      if (explicitSince) {
+        sinceTs = explicitSince;
+      } else {
+        const lastSeenRes = await client.query(
+          'SELECT curator_actions_last_seen_at FROM clients WHERE id = $1::uuid',
+          [resolvedClientId]
+        );
+        const lastSeen = lastSeenRes.rows?.[0]?.curator_actions_last_seen_at;
+        sinceTs = lastSeen
+          ? (lastSeen instanceof Date ? lastSeen.toISOString() : lastSeen)
+          : new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+      }
+
+      const rowsRes = await client.query(
+        `SELECT id, curator_id, keys_updated, actions, created_at
+           FROM client_data_changelog
+          WHERE client_id = $1::uuid
+            AND acked_at IS NULL
+            AND created_at > $2::timestamptz
+          ORDER BY created_at DESC
+          LIMIT 100`,
+        [resolvedClientId, sinceTs]
+      );
+
+      try { client.release(); } catch (_) { /* ignore */ }
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: true,
+          since: sinceTs,
+          entries: rowsRes.rows.map((r) => ({
+            id: r.id,
+            curator_id: r.curator_id,
+            keys: r.keys_updated,
+            actions: r.actions && typeof r.actions === 'object' ? r.actions : { actions: [] },
+            created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+          })),
+        })
+      };
+    }
+
+    // 📝 SPECIAL: ack_curator_changelog
+    // Клиент отмечает изменения куратора как прочитанные.
+    // Идемпотентно: апдейтит last_seen_at = GREATEST(coalesce, p_until_ts).
+    if (fnName === 'ack_curator_changelog') {
+      const sessionToken = params.p_session_token;
+      const untilTsRaw = params.p_until_ts;
+      if (!sessionToken) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'Missing p_session_token' })
+        };
+      }
+      const sessRes = await client.query(
+        `SELECT client_id FROM client_sessions
+          WHERE token_hash = digest($1, 'sha256')
+            AND expires_at > now()
+            AND revoked_at IS NULL`,
+        [sessionToken]
+      );
+      const resolvedClientId = sessRes.rows?.[0]?.client_id;
+      if (!resolvedClientId) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'invalid_session' })
+        };
+      }
+
+      const untilTs = untilTsRaw || new Date().toISOString();
+      await client.query('BEGIN');
+      try {
+        await client.query(
+          `UPDATE clients
+              SET curator_actions_last_seen_at = GREATEST(
+                COALESCE(curator_actions_last_seen_at, 'epoch'::timestamptz),
+                $2::timestamptz
+              )
+            WHERE id = $1::uuid`,
+          [resolvedClientId, untilTs]
+        );
+        await client.query(
+          `UPDATE client_data_changelog
+              SET acked_at = NOW()
+            WHERE client_id = $1::uuid
+              AND acked_at IS NULL
+              AND created_at <= $2::timestamptz`,
+          [resolvedClientId, untilTs]
+        );
+        await client.query('COMMIT');
+      } catch (ackErr) {
+        try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+        try { client.release(true); } catch (_) { /* noop */ }
+        console.error('[ack_curator_changelog] failed:', ackErr.message);
+        return {
+          statusCode: 500,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: ackErr.message })
+        };
+      }
+
+      try { client.release(); } catch (_) { /* ignore */ }
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ ok: true, acked_until: untilTs })
+      };
+    }
+
+    // 📝 SPECIAL: batch_upsert_client_kv_by_curator
+    // SQL функция делает UPSERT, но НЕ пишет changelog — это делается здесь
+    // с семантическим diff'ом (computeCuratorActionPayload) по каждому ключу.
+    if (fnName === 'batch_upsert_client_kv_by_curator') {
+      const targetClientId = params.p_client_id || params.client_id;
+      const items = Array.isArray(params.p_items) ? params.p_items : [];
+      if (!targetClientId || !curatorId) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'Missing p_client_id or curator auth' })
+        };
+      }
+      if (items.length === 0) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ success: true, saved: 0 })
+        };
+      }
+
+      // 1) Pre-SELECT OLD values одним запросом для diff'a.
+      const keysList = items.map(it => it && it.k).filter(k => typeof k === 'string');
+      let oldByKey = new Map();
+      if (keysList.length > 0) {
+        try {
+          const oldRows = await client.query(
+            'SELECT k, v FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])',
+            [targetClientId, keysList]
+          );
+          for (const row of oldRows.rows) {
+            oldByKey.set(row.k, row.v);
+          }
+        } catch (selErr) {
+          // Если SELECT упал — продолжаем без OLD (diff покажет всё как added).
+          console.warn('[batch_upsert] OLD select failed:', selErr.message);
+        }
+      }
+
+      // 2) Вызываем PL/pgSQL функцию (она делает ownership check + UPSERT).
+      let upsertResult;
+      try {
+        const r = await client.query(
+          'SELECT * FROM batch_upsert_client_kv_by_curator(p_curator_id => $1::uuid, p_client_id => $2::uuid, p_items => $3::jsonb)',
+          [curatorId, targetClientId, JSON.stringify(items)]
+        );
+        upsertResult = r.rows[0]?.batch_upsert_client_kv_by_curator || r.rows[0] || {};
+      } catch (upsertErr) {
+        try { client.release(true); } catch (_) { /* noop */ }
+        console.error('[batch_upsert] upsert failed:', upsertErr.message);
+        return {
+          statusCode: 500,
+          headers: corsHeaders,
+          body: JSON.stringify({ success: false, saved: 0, error: upsertErr.message })
+        };
+      }
+
+      // 3) Если ownership упал — не пишем changelog.
+      if (upsertResult && upsertResult.success === false) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify(upsertResult)
+        };
+      }
+
+      // 4) Best-effort: compute diff и INSERT в changelog.
+      try {
+        const allActions = [];
+        const loggedKeys = [];
+        for (const it of items) {
+          if (!it || typeof it.k !== 'string') continue;
+          const oldV = oldByKey.has(it.k) ? oldByKey.get(it.k) : null;
+          const newV = it.v;
+          const payload = computeCuratorActionPayload(oldV, newV, it.k);
+          if (payload && Array.isArray(payload.actions) && payload.actions.length > 0) {
+            allActions.push(...payload.actions);
+            loggedKeys.push(it.k);
+          }
+        }
+        if (allActions.length > 0) {
+          const ACTIONS_CAP = 50;
+          let finalActions = allActions;
+          if (allActions.length > ACTIONS_CAP) {
+            finalActions = allActions.slice(0, ACTIONS_CAP - 1);
+            finalActions.push({ type: 'truncated', count: allActions.length - finalActions.length });
+          }
+          await client.query(
+            `INSERT INTO client_data_changelog (client_id, curator_id, keys_updated, actions)
+             VALUES ($1::uuid, $2::uuid, $3::text[], $4::jsonb)`,
+            [
+              targetClientId,
+              curatorId,
+              loggedKeys,
+              JSON.stringify({ actions: finalActions }),
+            ]
+          );
+        }
+      } catch (changelogErr) {
+        console.warn('[batch_upsert] changelog insert failed:', changelogErr.message);
+      }
+
+      try { client.release(); } catch (_) { /* ignore */ }
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify(upsertResult)
       };
     }
 

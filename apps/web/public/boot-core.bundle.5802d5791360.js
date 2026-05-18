@@ -15905,6 +15905,65 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
    * @param {number} lastSeenUpdatedAt - client's last-known cloud updatedAt (optimistic concurrency token)
    * @returns {Promise<{success: boolean, v?: object, outcome?: string, error?: string}>}
    */
+  // ─── Curator Actions Feed (in-app banner) ──────────────────────────
+  /**
+   * Получить changelog действий куратора с момента последнего ack.
+   * Session-only (PIN-клиент). Возвращает { ok, since, entries: [...] }.
+   * Каждая entry: { id, curator_id, keys, actions: {actions:[...]}, created_at }.
+   */
+  async function getMyCuratorChangelogSince(p_since = null) {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { ok: false, error: 'No session token', entries: [] };
+      const result = await rpc('get_my_curator_changelog_since', {
+        p_session_token: sessionToken,
+        p_since
+      });
+      if (result.error) {
+        return { ok: false, error: result.error.message || result.error, entries: [] };
+      }
+      let data = result.data;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const keys = Object.keys(data);
+        if (keys.length === 1 && data[keys[0]] && typeof data[keys[0]] === 'object') {
+          data = data[keys[0]];
+        }
+      }
+      if (!data || data.ok === false) return { ok: false, error: data?.error || 'unknown', entries: [] };
+      return { ok: true, since: data.since, entries: Array.isArray(data.entries) ? data.entries : [] };
+    } catch (e) {
+      return { ok: false, error: e.message, entries: [] };
+    }
+  }
+
+  /**
+   * Подтвердить просмотр curator-changes до момента p_until_ts (ISO).
+   * Идемпотентно. Возвращает { ok, acked_until }.
+   */
+  async function ackCuratorChangelog(p_until_ts = null) {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { ok: false, error: 'No session token' };
+      const result = await rpc('ack_curator_changelog', {
+        p_session_token: sessionToken,
+        p_until_ts: p_until_ts || new Date().toISOString()
+      });
+      if (result.error) {
+        return { ok: false, error: result.error.message || result.error };
+      }
+      let data = result.data;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const keys = Object.keys(data);
+        if (keys.length === 1 && data[keys[0]] && typeof data[keys[0]] === 'object') {
+          data = data[keys[0]];
+        }
+      }
+      return data || { ok: false, error: 'no_response' };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+
   async function mergeSaveKV(clientId, k, v, lastSeenUpdatedAt = 0) {
     if (!k || v == null) {
       return { success: false, error: 'invalid_params' };
@@ -16752,6 +16811,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     batchSaveKV,
     mergeSaveKV,
     deleteKV,
+
+    // 📝 Curator Actions Feed
+    getMyCuratorChangelogSince,
+    ackCuratorChangelog,
 
     // Алиасы для совместимости с Supabase SDK
     from: (table) => ({
