@@ -403,6 +403,8 @@ async function jobCuratorBatching(client) {
   // динамический body ("+2 приёма пищи, вес 89→90") через format helpers.
   // Если actions колонки пустые (legacy rows до миграции 2026-05-18) — fallback
   // на старый generic body.
+  // 🛡️ acked_at IS NULL — если юзер УЖЕ нажал "Понял" в banner до того как
+  // cron успел отправить push, пуш больше не нужен (шумит впустую).
   const pending = await client.query(
     `SELECT client_id,
             COUNT(*)::int AS cnt,
@@ -410,6 +412,7 @@ async function jobCuratorBatching(client) {
             jsonb_agg(actions) AS actions_array
        FROM client_data_changelog
       WHERE notified_at IS NULL
+        AND acked_at IS NULL
         AND created_at < NOW() - INTERVAL '1 minute'
       GROUP BY client_id`
   );
@@ -426,6 +429,7 @@ async function jobCuratorBatching(client) {
         `UPDATE client_data_changelog
             SET notified_at = NOW()
           WHERE client_id = $1 AND notified_at IS NULL
+            AND acked_at IS NULL
             AND created_at < NOW() - INTERVAL '1 minute'`,
         [row.client_id]
       );
@@ -465,11 +469,14 @@ async function jobCuratorBatching(client) {
     const res = await sendToClient(client, row.client_id, payload);
     if (res.sent > 0) total += res.sent;
 
-    // Помечаем все pending события этого клиента как notified.
+    // Помечаем pending события этого клиента как notified.
+    // Гард `acked_at IS NULL` — если юзер успел ack'нуть параллельно с этим
+    // RPC-tick'ом, мы не перетираем notified_at (хотя на практике уже отправили).
     await client.query(
       `UPDATE client_data_changelog
           SET notified_at = NOW()
         WHERE client_id = $1 AND notified_at IS NULL
+          AND acked_at IS NULL
           AND created_at < NOW() - INTERVAL '1 minute'`,
       [row.client_id]
     );
