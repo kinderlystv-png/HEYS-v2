@@ -18,16 +18,24 @@
 
 const ACTIONS_CAP = 50;
 
-// Список служебных ключей которые не логируются (синхронизировано с
-// database/2026-05-14_push_notifications.sql:170-172).
-const SERVICE_KEY_PREFIXES = ['heys_push_', 'heys_ui_', 'heys_log_'];
-
-function isServiceKey(key) {
-  if (typeof key !== 'string') return true;
-  for (const p of SERVICE_KEY_PREFIXES) {
-    if (key.startsWith(p)) return true;
-  }
+// 📝 v2 (2026-05-18): whitelist подход.
+// В client_kv_store десятки служебных ключей (heys_advice_*, heys_ews_*,
+// heys_debug_*, heys_cascade_*, heys_last_grams_*, и т.д.) — они автогенерируются
+// при работе curator-вкладки и НЕ являются "действиями куратора" в человеческом
+// смысле. Раньше фильтр был blacklist (только heys_push_, heys_ui_, heys_log_)
+// и весь мусор протекал в фид. Теперь логируем только семантически значимые ключи.
+function isLoggableKey(key) {
+  if (typeof key !== 'string') return false;
+  if (/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(key)) return true;
+  if (key === 'heys_profile') return true;
+  if (key === 'heys_norms') return true;
+  if (key.startsWith('heys_planning_')) return true; // тренировочный план / задачи
   return false;
+}
+
+// Backward-compat alias (использовался в тестах). Возвращает true для НЕ-loggable.
+function isServiceKey(key) {
+  return !isLoggableKey(key);
 }
 
 // ─── Утилиты ─────────────────────────────────────────────────────────
@@ -283,20 +291,19 @@ function deepEqual(a, b) {
 // ─── Public API ──────────────────────────────────────────────────────
 
 function computeCuratorActionPayload(oldV, newV, key) {
-  if (isServiceKey(key)) return { actions: [] };
+  if (!isLoggableKey(key)) return { actions: [] };
   const actions = [];
 
-  if (typeof key === 'string' && /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(key)) {
+  if (/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(key)) {
     diffDayv2(oldV, newV, actions);
   } else if (key === 'heys_profile') {
     diffObjectFields(oldV, newV, 'profile_changed', actions);
   } else if (key === 'heys_norms') {
     diffObjectFields(oldV, newV, 'norms_changed', actions);
-  } else {
-    // Generic value-changed для прочих non-service ключей (planning, etc.).
-    // Не делаем deep diff — просто факт изменения.
+  } else if (key.startsWith('heys_planning_')) {
+    // Planning: показываем факт правки без детализации (структура сложная).
     if (!deepEqual(oldV, newV)) {
-      actions.push({ type: 'other_changed', key });
+      actions.push({ type: 'planning_changed' });
     }
   }
 
@@ -320,6 +327,7 @@ module.exports = {
     parseHHMM,
     deepEqual,
     isServiceKey,
+    isLoggableKey,
     mealKey,
     isEmptyTraining,
   },

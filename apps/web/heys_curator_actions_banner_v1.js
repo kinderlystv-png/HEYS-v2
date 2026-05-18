@@ -57,15 +57,24 @@
   }
 
   // Aggregate actions across all entries into a short banner-summary.
+  // Возвращает null если после дедупа+фильтра нет видимых действий.
   function summarizeEntries(entries) {
-    let mealsAdded = 0, mealsRemoved = 0, trainAdded = 0, trainRemoved = 0;
-    let weight = null, normsTouched = false, profileTouched = false;
-    let totalActions = 0;
+    const rawByDate = new Map();
     for (const e of entries) {
+      const d = (e.created_at || '').slice(0, 10);
       const acts = (e && e.actions && Array.isArray(e.actions.actions)) ? e.actions.actions : [];
-      totalActions += acts.length;
-      for (const a of acts) {
+      if (!rawByDate.has(d)) rawByDate.set(d, []);
+      rawByDate.get(d).push(...acts);
+    }
+    let mealsAdded = 0, mealsRemoved = 0, trainAdded = 0, trainRemoved = 0;
+    let weight = null, normsTouched = false, profileTouched = false, planningTouched = false;
+    let visibleTotal = 0;
+    for (const acts of rawByDate.values()) {
+      const collapsed = dedupAndCollapse(acts);
+      for (const a of collapsed) {
         if (!a) continue;
+        if (!actionText(a)) continue; // неизвестный/невидимый тип
+        visibleTotal++;
         if (a.type === 'meal_added') mealsAdded++;
         else if (a.type === 'meal_removed') mealsRemoved++;
         else if (a.type === 'training_added') trainAdded++;
@@ -73,21 +82,24 @@
         else if (a.type === 'weight_set') weight = a;
         else if (a.type === 'norms_changed') normsTouched = true;
         else if (a.type === 'profile_changed') profileTouched = true;
+        else if (a.type === 'planning_changed') planningTouched = true;
       }
     }
+    if (visibleTotal === 0) return null;
     const parts = [];
     if (mealsAdded > 0) parts.push(`+${mealsAdded} ${pluralRu(mealsAdded, 'приём пищи', 'приёма пищи', 'приёмов пищи')}`);
     if (mealsRemoved > 0) parts.push(`−${mealsRemoved} ${pluralRu(mealsRemoved, 'приём', 'приёма', 'приёмов')}`);
     if (trainAdded > 0) parts.push(`+${trainAdded} ${pluralRu(trainAdded, 'тренировка', 'тренировки', 'тренировок')}`);
     if (weight) {
-      if (weight.from != null) parts.push(`вес ${trimNum(weight.from)}→${trimNum(weight.to)}`);
-      else parts.push(`вес ${trimNum(weight.to)}`);
+      if (weight.from != null) parts.push(`вес ${trimNum(weight.from)}→${trimNum(weight.to)} кг`);
+      else parts.push(`вес ${trimNum(weight.to)} кг`);
     }
     if (normsTouched) parts.push('нормы');
     if (profileTouched) parts.push('профиль');
-    if (parts.length === 0) parts.push(`${totalActions} ${pluralRu(totalActions, 'правка', 'правки', 'правок')}`);
+    if (planningTouched) parts.push('план');
+    if (parts.length === 0) parts.push(`${visibleTotal} ${pluralRu(visibleTotal, 'правка', 'правки', 'правок')}`);
     if (parts.length > 3) {
-      return `${entries.length} ${pluralRu(entries.length, 'изменение', 'изменения', 'изменений')} от куратора`;
+      return `${visibleTotal} ${pluralRu(visibleTotal, 'изменение', 'изменения', 'изменений')} от куратора`;
     }
     return parts.join(', ');
   }
@@ -95,21 +107,89 @@
   function actionText(a) {
     if (!a || typeof a !== 'object') return '—';
     switch (a.type) {
-      case 'meal_added':       return `Приём пищи: ${a.name || ''}${a.kcal ? ` (${a.kcal} ккал)` : ''}`;
+      case 'meal_added': {
+        const parts = [`Приём пищи: ${a.name || ''}`];
+        if (a.kcal) parts.push(`${a.kcal} ккал`);
+        return parts.join(' · ');
+      }
       case 'meal_removed':     return `Удалён приём: ${a.name || ''}`;
-      case 'meal_item_added':  return `Добавлено в «${a.meal_name || 'приём'}»: ${a.count || 1} ${pluralRu(a.count || 1, 'продукт', 'продукта', 'продуктов')}`;
-      case 'training_added':   return `Тренировка: ${a.kind || ''}${a.duration_min ? ` (${a.duration_min} мин)` : ''}`;
+      case 'meal_item_added':  return `В «${a.meal_name || 'приём'}» добавлено ${a.count || 1} ${pluralRu(a.count || 1, 'продукт', 'продукта', 'продуктов')}`;
+      case 'training_added':   return `Тренировка: ${a.kind || ''}${a.duration_min ? ` · ${a.duration_min} мин` : ''}`;
       case 'training_removed': return `Удалена тренировка: ${a.kind || ''}`;
-      case 'weight_set':       return a.from != null ? `Вес: ${trimNum(a.from)} → ${trimNum(a.to)}` : `Вес: ${trimNum(a.to)}`;
+      case 'weight_set':       return a.from != null ? `Вес: ${trimNum(a.from)} → ${trimNum(a.to)} кг` : `Вес: ${trimNum(a.to)} кг`;
       case 'sleep_set':        return `Сон: ${trimNum(a.to)} ч`;
       case 'steps_set':        return `Шаги: ${a.to}`;
       case 'water_set':        return `Вода: ${a.to} мл`;
-      case 'norms_changed':    return `Обновлены нормы (${(a.fields || []).join(', ')})`;
-      case 'profile_changed':  return `Обновлён профиль (${(a.fields || []).join(', ')})`;
-      case 'other_changed':    return `Изменения: ${a.key}`;
+      case 'norms_changed':    return `Обновлены нормы${a.fields && a.fields.length ? ` (${a.fields.join(', ')})` : ''}`;
+      case 'profile_changed':  return `Обновлён профиль${a.fields && a.fields.length ? ` (${a.fields.join(', ')})` : ''}`;
+      case 'planning_changed': return 'Обновлён план/задачи';
       case 'truncated':        return `…и ещё ${a.count} изменений`;
-      default:                 return `${a.type}`;
+      default:                 return null; // неизвестный тип — скрываем
     }
+  }
+
+  // Дедуп + агрегация actions за одну дату чтобы избежать шума типа
+  // "Вода: 500 мл / Вода: 1000 мл" (отдельные set'ы → показываем последний)
+  // и слипания одинаковых meal_added дублей.
+  function dedupAndCollapse(actions) {
+    const out = [];
+    let weight = null, sleep = null, steps = null, water = null;
+    const mealAddedByName = new Map();   // name → kcal (последний)
+    const mealItemsByMeal = new Map();   // meal_name → count (sum)
+    const mealRemovedByName = new Set();
+    const trainAddedByKey = new Map();   // kind+duration → action
+    const trainRemovedByKind = new Set();
+    const normsFields = new Set();
+    const profileFields = new Set();
+    let planningChanged = false;
+    let truncatedCount = 0;
+
+    for (const a of (actions || [])) {
+      if (!a || typeof a !== 'object') continue;
+      switch (a.type) {
+        case 'weight_set':      weight = a; break;
+        case 'sleep_set':       sleep = a; break;
+        case 'steps_set':       steps = a; break;
+        case 'water_set':       water = a; break;
+        case 'meal_added':      mealAddedByName.set(a.name || '?', a.kcal || null); break;
+        case 'meal_removed':    mealRemovedByName.add(a.name || '?'); break;
+        case 'meal_item_added': {
+          const mn = a.meal_name || 'приём';
+          mealItemsByMeal.set(mn, (mealItemsByMeal.get(mn) || 0) + (a.count || 1));
+          break;
+        }
+        case 'training_added': {
+          const k = `${a.kind || ''}|${a.duration_min || ''}`;
+          if (!trainAddedByKey.has(k)) trainAddedByKey.set(k, a);
+          break;
+        }
+        case 'training_removed': trainRemovedByKind.add(a.kind || '?'); break;
+        case 'norms_changed':   (a.fields || []).forEach(f => normsFields.add(f)); break;
+        case 'profile_changed': (a.fields || []).forEach(f => profileFields.add(f)); break;
+        case 'planning_changed': planningChanged = true; break;
+        case 'truncated':       truncatedCount += (a.count || 0); break;
+      }
+    }
+
+    // Reconstruct в стабильном порядке.
+    for (const [name, kcal] of mealAddedByName.entries()) {
+      out.push({ type: 'meal_added', name, ...(kcal ? { kcal } : {}) });
+    }
+    for (const [mn, count] of mealItemsByMeal.entries()) {
+      out.push({ type: 'meal_item_added', meal_name: mn, count });
+    }
+    for (const name of mealRemovedByName) out.push({ type: 'meal_removed', name });
+    for (const a of trainAddedByKey.values()) out.push(a);
+    for (const kind of trainRemovedByKind) out.push({ type: 'training_removed', kind });
+    if (weight)  out.push(weight);
+    if (sleep)   out.push(sleep);
+    if (steps)   out.push(steps);
+    if (water)   out.push(water);
+    if (normsFields.size > 0)   out.push({ type: 'norms_changed', fields: Array.from(normsFields) });
+    if (profileFields.size > 0) out.push({ type: 'profile_changed', fields: Array.from(profileFields) });
+    if (planningChanged)        out.push({ type: 'planning_changed' });
+    if (truncatedCount > 0)     out.push({ type: 'truncated', count: truncatedCount });
+    return out;
   }
 
   function groupByDate(entries) {
@@ -161,6 +241,12 @@
     if (isDismissed() && !_forceOpenOnce) return;
 
     const summary = summarizeEntries(_entries);
+    if (!summary) {
+      // Все видимые actions отфильтрованы (только служебные ключи) — auto-ack
+      // чтобы не дёргать пользователя зря на каждом boot.
+      autoAckSilent();
+      return;
+    }
     const el = document.createElement('div');
     el.className = 'ca-banner';
     el.setAttribute('role', 'button');
@@ -197,15 +283,23 @@
     removeExistingModal();
     const groups = groupByDate(_entries);
     const groupsHtml = groups.map(([date, entries]) => {
-      const allActions = entries.flatMap(e => (e.actions && e.actions.actions) || []);
-      const items = allActions.map(a => `<li class="ca-modal__item">${escapeHtml(actionText(a))}</li>`).join('');
+      const raw = entries.flatMap(e => (e.actions && e.actions.actions) || []);
+      const collapsed = dedupAndCollapse(raw);
+      const items = collapsed
+        .map(a => {
+          const txt = actionText(a);
+          return txt ? `<li class="ca-modal__item">${escapeHtml(txt)}</li>` : '';
+        })
+        .filter(Boolean)
+        .join('');
+      if (!items) return '';
       return `
         <div class="ca-modal__group">
           <div class="ca-modal__date">${escapeHtml(ymdLabel(date))}</div>
           <ul class="ca-modal__items">${items}</ul>
         </div>
       `;
-    }).join('');
+    }).filter(Boolean).join('');
 
     const backdrop = document.createElement('div');
     backdrop.className = 'ca-modal-backdrop ca-modal-backdrop--visible';
@@ -258,6 +352,16 @@
   function openModal() {
     if (_entries.length === 0) return;
     renderModal();
+  }
+
+  async function autoAckSilent() {
+    try {
+      const latestTs = getLatestEntryTs();
+      if (HEYS.YandexAPI?.ackCuratorChangelog && latestTs) {
+        await HEYS.YandexAPI.ackCuratorChangelog(latestTs);
+      }
+    } catch (_) {}
+    _entries = [];
   }
 
   // ─── Public API & boot ────────────────────────────────────────────

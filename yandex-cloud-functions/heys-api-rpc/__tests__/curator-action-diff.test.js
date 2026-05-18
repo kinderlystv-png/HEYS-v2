@@ -10,13 +10,39 @@ const {
   _internal,
 } = require('../curator-action-diff');
 
-// ─── service keys ───────────────────────────────────────────────────
+// ─── whitelist filter ───────────────────────────────────────────────
 
-test('service keys → empty actions', () => {
-  for (const k of ['heys_push_prefs', 'heys_ui_settings', 'heys_log_debug']) {
+test('non-whitelist keys → empty actions (auto-generated / служебные)', () => {
+  const ignored = [
+    'heys_push_prefs',
+    'heys_ui_settings',
+    'heys_log_debug',
+    'heys_advice_stats',
+    'heys_advice_outcomes_v1',
+    'heys_ews_weekly_v1',
+    'heys_debug_events',
+    'heys_cascade_dcs_v9',
+    'heys_deleted_products_ignore_list',
+    'heys_last_grams_p_1779122310656_b4uk9h',
+    'heys_adaptive_thresholds',
+    'heys_products_overlay_v2',
+    'heys_product_draft',
+  ];
+  for (const k of ignored) {
     const r = computeCuratorActionPayload({}, { x: 1 }, k);
-    assert.deepStrictEqual(r.actions, []);
+    assert.deepStrictEqual(r.actions, [], `${k} should be ignored`);
   }
+});
+
+test('whitelisted keys are recognized', () => {
+  const { isLoggableKey } = _internal;
+  assert.equal(isLoggableKey('heys_dayv2_2026-05-18'), true);
+  assert.equal(isLoggableKey('heys_profile'), true);
+  assert.equal(isLoggableKey('heys_norms'), true);
+  assert.equal(isLoggableKey('heys_planning_tasks'), true);
+  assert.equal(isLoggableKey('heys_planning_v1'), true);
+  assert.equal(isLoggableKey('heys_advice_stats'), false);
+  assert.equal(isLoggableKey('random_key'), false);
 });
 
 // ─── meals: added ───────────────────────────────────────────────────
@@ -225,11 +251,10 @@ test('norms_changed: kcal+prot updated', () => {
 
 // ─── other keys / cap ───────────────────────────────────────────────
 
-test('non-recognized key → other_changed if value differs', () => {
+test('planning_changed if planning value differs', () => {
   const { actions: a1 } = computeCuratorActionPayload({ x: 1 }, { x: 2 }, 'heys_planning_tasks');
   assert.equal(a1.length, 1);
-  assert.equal(a1[0].type, 'other_changed');
-  assert.equal(a1[0].key, 'heys_planning_tasks');
+  assert.equal(a1[0].type, 'planning_changed');
 
   const { actions: a2 } = computeCuratorActionPayload({ x: 1 }, { x: 1 }, 'heys_planning_tasks');
   assert.equal(a2.length, 0);
