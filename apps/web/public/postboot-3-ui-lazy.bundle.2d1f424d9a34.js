@@ -43869,10 +43869,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     for (const acts of rawByDate.values()) {
       const collapsed = dedupAndCollapse(acts);
       for (const a of collapsed) {
-        if (!a) continue;
-        if (!actionText(a)) continue; // неизвестный/невидимый тип
+        if (!isVisibleAction(a)) continue;
         visibleTotal++;
-        if (a.type === 'meal_added') mealsAdded++;
+        if (a.type === 'meal_card' && a.kind === 'added') mealsAdded++;
+        else if (a.type === 'meal_card' && a.kind === 'items_added') mealsAdded++;
         else if (a.type === 'meal_removed') mealsRemoved++;
         else if (a.type === 'training_added') trainAdded++;
         else if (a.type === 'training_removed') trainRemoved++;
@@ -43901,17 +43901,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return parts.join(', ');
   }
 
+  // Возвращает строку для обычных action'ов; для meal_card — null (его рендерит
+  // renderMealCard как мульти-line карточку).
   function actionText(a) {
     if (!a || typeof a !== 'object') return '—';
     switch (a.type) {
-      case 'meal_added': {
-        const parts = [`Приём пищи: ${a.name || ''}`];
-        if (a.kcal) parts.push(`${a.kcal} ккал`);
-        return parts.join(' · ');
-      }
+      case 'meal_card':        return null; // спец-рендеринг
+      case 'meal_added':       return `Приём пищи: ${a.meal_label || a.name || ''}`; // legacy / fallback
       case 'meal_removed':     return `Удалён приём: ${a.name || ''}`;
-      case 'meal_item_added':  return `В «${a.meal_name || 'приём'}» добавлено ${a.count || 1} ${pluralRu(a.count || 1, 'продукт', 'продукта', 'продуктов')}`;
-      case 'training_added':   return `Тренировка: ${a.kind || ''}${a.duration_min ? ` · ${a.duration_min} мин` : ''}`;
+      case 'meal_item_added':  return `В «${a.meal_name || a.meal_label || 'приём'}» добавлено ${a.count || 1} ${pluralRu(a.count || 1, 'продукт', 'продукта', 'продуктов')}`;
+      case 'training_added':   return `Тренировка: ${a.kind || ''}${a.duration_min ? ` · ${a.duration_min} мин` : ''}${a.time ? ` (${a.time})` : ''}`;
       case 'training_removed': return `Удалена тренировка: ${a.kind || ''}`;
       case 'weight_set':       return a.from != null ? `Вес: ${trimNum(a.from)} → ${trimNum(a.to)} кг` : `Вес: ${trimNum(a.to)} кг`;
       case 'sleep_set':        return `Сон: ${trimNum(a.to)} ч`;
@@ -43921,25 +43920,68 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       case 'profile_changed':  return `Обновлён профиль${a.fields && a.fields.length ? ` (${a.fields.join(', ')})` : ''}`;
       case 'planning_changed': return 'Обновлён план/задачи';
       case 'truncated':        return `…и ещё ${a.count} изменений`;
-      default:                 return null; // неизвестный тип — скрываем
+      default:                 return null;
     }
   }
 
-  // Дедуп + агрегация actions за одну дату чтобы избежать шума типа
-  // "Вода: 500 мл / Вода: 1000 мл" (отдельные set'ы → показываем последний)
-  // и слипания одинаковых meal_added дублей.
+  function isVisibleAction(a) {
+    if (!a) return false;
+    if (a.type === 'meal_card') return true; // отдельный рендер
+    return !!actionText(a);
+  }
+
+  function renderMealCardHtml(a) {
+    const headParts = [];
+    headParts.push(a.meal_label || 'Приём пищи');
+    if (a.time) headParts.push(`в ${a.time}`);
+    let kcalStr = '';
+    if (a.kcal != null) kcalStr = ` — ${a.kcal} ккал`;
+    const prefix = a.kind === 'items_added' ? '+ ' : '';
+    const head = `${prefix}${headParts.join(' ')}${kcalStr}`;
+    const itemsArr = Array.isArray(a.items) ? a.items : [];
+    const items = itemsArr.map(it => {
+      const name = escapeHtml(it.name || '?');
+      const grams = (it.grams != null) ? ` <span class="ca-modal__item-grams">${escapeHtml(String(it.grams))} г</span>` : '';
+      return `<li class="ca-modal__meal-product">${name}${grams}</li>`;
+    }).join('');
+    return `
+      <li class="ca-modal__meal-card">
+        <div class="ca-modal__meal-head">${escapeHtml(head)}</div>
+        ${items ? `<ul class="ca-modal__meal-products">${items}</ul>` : ''}
+      </li>
+    `;
+  }
+
+  // Дедуп + агрегация actions за одну дату.
+  // Meal'ы группируются по `meal_label + time`: последний add побеждает (берём
+  // последний time/kcal), items объединяются с дедупом по name+grams.
+  // Скаляры (weight/water/sleep/steps) — оставляем последнее установленное значение.
   function dedupAndCollapse(actions) {
     const out = [];
     let weight = null, sleep = null, steps = null, water = null;
-    const mealAddedByName = new Map();   // name → kcal (последний)
-    const mealItemsByMeal = new Map();   // meal_name → count (sum)
+    // mealByKey: key = meal_label+time, value = {meal_label, time, items: Map(name|grams → item), kcal_max}
+    const mealAddedByKey = new Map();
+    const mealItemsAddedByKey = new Map(); // те же ключи — append items с дедупом
     const mealRemovedByName = new Set();
-    const trainAddedByKey = new Map();   // kind+duration → action
+    const trainAddedByKey = new Map();
     const trainRemovedByKind = new Set();
     const normsFields = new Set();
     const profileFields = new Set();
     let planningChanged = false;
     let truncatedCount = 0;
+
+    function mealCompositeKey(a) {
+      return `${a.meal_label || a.name || '?'}|${a.time || ''}`;
+    }
+
+    function mergeMealItems(target, items) {
+      const arr = Array.isArray(items) ? items : [];
+      for (const it of arr) {
+        if (!it) continue;
+        const k = `${it.name || '?'}|${it.grams != null ? it.grams : '?'}`;
+        if (!target.has(k)) target.set(k, it);
+      }
+    }
 
     for (const a of (actions || [])) {
       if (!a || typeof a !== 'object') continue;
@@ -43948,15 +43990,43 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         case 'sleep_set':       sleep = a; break;
         case 'steps_set':       steps = a; break;
         case 'water_set':       water = a; break;
-        case 'meal_added':      mealAddedByName.set(a.name || '?', a.kcal || null); break;
-        case 'meal_removed':    mealRemovedByName.add(a.name || '?'); break;
-        case 'meal_item_added': {
-          const mn = a.meal_name || 'приём';
-          mealItemsByMeal.set(mn, (mealItemsByMeal.get(mn) || 0) + (a.count || 1));
+        case 'meal_added': {
+          const key = mealCompositeKey(a);
+          const prev = mealAddedByKey.get(key);
+          if (!prev) {
+            mealAddedByKey.set(key, {
+              meal_label: a.meal_label || a.name || 'Приём пищи',
+              time: a.time || null,
+              kcal: a.kcal || null,
+              items: new Map(),
+            });
+          }
+          const obj = mealAddedByKey.get(key);
+          if (a.kcal != null && (obj.kcal == null || a.kcal > obj.kcal)) obj.kcal = a.kcal;
+          if (a.time && !obj.time) obj.time = a.time;
+          mergeMealItems(obj.items, a.items);
           break;
         }
+        case 'meal_item_added': {
+          const key = mealCompositeKey(a);
+          // Если этот meal уже учтён в meal_added — приклеим items туда (один блок).
+          if (mealAddedByKey.has(key)) {
+            mergeMealItems(mealAddedByKey.get(key).items, a.items);
+          } else {
+            if (!mealItemsAddedByKey.has(key)) {
+              mealItemsAddedByKey.set(key, {
+                meal_label: a.meal_label || a.meal_name || 'Приём',
+                time: a.time || null,
+                items: new Map(),
+              });
+            }
+            mergeMealItems(mealItemsAddedByKey.get(key).items, a.items);
+          }
+          break;
+        }
+        case 'meal_removed':    mealRemovedByName.add(a.name || '?'); break;
         case 'training_added': {
-          const k = `${a.kind || ''}|${a.duration_min || ''}`;
+          const k = `${a.kind || ''}|${a.duration_min || ''}|${a.time || ''}`;
           if (!trainAddedByKey.has(k)) trainAddedByKey.set(k, a);
           break;
         }
@@ -43968,12 +44038,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }
 
-    // Reconstruct в стабильном порядке.
-    for (const [name, kcal] of mealAddedByName.entries()) {
-      out.push({ type: 'meal_added', name, ...(kcal ? { kcal } : {}) });
+    // Reconstruct.
+    for (const obj of mealAddedByKey.values()) {
+      out.push({
+        type: 'meal_card',
+        kind: 'added',
+        meal_label: obj.meal_label,
+        time: obj.time,
+        kcal: obj.kcal,
+        items: Array.from(obj.items.values()),
+      });
     }
-    for (const [mn, count] of mealItemsByMeal.entries()) {
-      out.push({ type: 'meal_item_added', meal_name: mn, count });
+    for (const obj of mealItemsAddedByKey.values()) {
+      out.push({
+        type: 'meal_card',
+        kind: 'items_added',
+        meal_label: obj.meal_label,
+        time: obj.time,
+        items: Array.from(obj.items.values()),
+      });
     }
     for (const name of mealRemovedByName) out.push({ type: 'meal_removed', name });
     for (const a of trainAddedByKey.values()) out.push(a);
@@ -44054,6 +44137,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       <div class="ca-banner__content">
         <div class="ca-banner__title">Куратор внёс изменения</div>
         <div class="ca-banner__summary"></div>
+        <div class="ca-banner__hint">Нажми, чтобы посмотреть подробнее →</div>
       </div>
       <button class="ca-banner__dismiss" type="button" aria-label="Скрыть">✕</button>
     `;
@@ -44082,18 +44166,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const groupsHtml = groups.map(([date, entries]) => {
       const raw = entries.flatMap(e => (e.actions && e.actions.actions) || []);
       const collapsed = dedupAndCollapse(raw);
-      const items = collapsed
+      const itemsHtml = collapsed
         .map(a => {
+          if (a.type === 'meal_card') return renderMealCardHtml(a);
           const txt = actionText(a);
           return txt ? `<li class="ca-modal__item">${escapeHtml(txt)}</li>` : '';
         })
         .filter(Boolean)
         .join('');
-      if (!items) return '';
+      if (!itemsHtml) return '';
       return `
         <div class="ca-modal__group">
           <div class="ca-modal__date">${escapeHtml(ymdLabel(date))}</div>
-          <ul class="ca-modal__items">${items}</ul>
+          <ul class="ca-modal__items">${itemsHtml}</ul>
         </div>
       `;
     }).filter(Boolean).join('');

@@ -33,7 +33,6 @@ function isLoggableKey(key) {
   return false;
 }
 
-// Backward-compat alias (использовался в тестах). Возвращает true для НЕ-loggable.
 function isServiceKey(key) {
   return !isLoggableKey(key);
 }
@@ -80,35 +79,81 @@ function trainingDurationMin(t) {
   return null;
 }
 
-// Имя приёма пищи для отображения. Если meal.name типичный ("Приём", "Завтрак" и т.д.)
-// и есть items с продуктом — берём первый продукт как описание.
-function mealLabel(m) {
-  if (!m) return 'приём пищи';
+// ─── Meal payload helpers ────────────────────────────────────────────
+
+// Человеческое имя приёма по mealType. fallback на meal.name если type незнакомый.
+const MEAL_TYPE_LABELS = {
+  breakfast: 'Завтрак',
+  lunch: 'Обед',
+  dinner: 'Ужин',
+  snack: 'Перекус',
+  snack1: 'Перекус',
+  snack2: 'Перекус',
+  snack3: 'Перекус',
+};
+
+function mealTypeLabel(m) {
+  if (!m) return 'Приём пищи';
+  const byType = MEAL_TYPE_LABELS[m.mealType];
+  if (byType) return byType;
   const name = (m.name || '').trim();
-  const items = safeArr(m.items);
-  if (items.length > 0) {
-    const first = items[0];
-    const pname = first?.product?.name || first?.name || first?.title;
-    if (pname) {
-      const qty = first.quantity || first.grams;
-      const qtyStr = isNumber(qty) ? ` ${qty} г` : '';
-      return `${pname}${qtyStr}`;
-    }
-  }
-  return name || 'приём пищи';
+  return name || 'Приём пищи';
 }
 
-// Считаем kcal для meal'a из items (если есть). Optional.
-function mealKcal(m) {
+// Совместимость со старым кодом (используется в тестах).
+function mealLabel(m) {
+  return mealTypeLabel(m);
+}
+
+// Расчёт kcal для одного item. Реальная структура HEYS:
+//   item.kcal100 * item.grams / 100 (основной путь)
+//   item.kcal (если уже посчитан)
+//   item.product.kcal100 (legacy fallback)
+function computeItemKcal(it) {
+  if (!it) return null;
+  if (isNumber(it.kcal)) return it.kcal;
+  const kcal100 = it.kcal100 ?? it.product?.kcal100;
+  const grams = it.grams ?? it.quantity;
+  if (isNumber(kcal100) && isNumber(grams)) return (kcal100 * grams) / 100;
+  if (isNumber(it.calories)) return it.calories;
+  return null;
+}
+
+function mealTotalKcal(m) {
   const items = safeArr(m?.items);
   if (items.length === 0) return null;
   let sum = 0;
   let any = false;
   for (const it of items) {
-    const k = it?.kcal ?? it?.calories ?? it?.product?.kcal;
+    const k = computeItemKcal(it);
     if (isNumber(k)) { sum += k; any = true; }
   }
   return any ? Math.round(sum) : null;
+}
+
+// Сохраняем для backward-compat — возвращает то же что mealTotalKcal.
+function mealKcal(m) {
+  return mealTotalKcal(m);
+}
+
+function itemName(it) {
+  return it?.product?.name || it?.name || it?.title || '?';
+}
+
+function itemGrams(it) {
+  const g = it?.grams ?? it?.quantity;
+  return isNumber(g) ? g : null;
+}
+
+// Сжатый список items для payload: name + grams, без 30 жиро-витаминных полей.
+function mealItemsSummary(items, maxItems = 12) {
+  const arr = safeArr(items);
+  return arr.slice(0, maxItems).map((it) => {
+    const obj = { name: itemName(it) };
+    const g = itemGrams(it);
+    if (g !== null) obj.grams = g;
+    return obj;
+  });
 }
 
 // ─── dayv2 diff ──────────────────────────────────────────────────────
@@ -129,35 +174,60 @@ function diffMeals(oldMeals, newMeals, actions) {
     if (!k) continue;
     newKeys.add(k);
     const oldMeal = oldMap.get(k);
+    const newItems = safeArr(nm.items);
+    const newItemsLen = newItems.length;
+
     if (!oldMeal) {
-      // Meal added (only counts if has any items, иначе пустой "Приём" не event)
-      if (safeArr(nm.items).length > 0) {
-        const a = { type: 'meal_added', name: mealLabel(nm) };
-        const kc = mealKcal(nm);
-        if (kc !== null) a.kcal = kc;
+      // Meal added (только если есть items, иначе пустой плейсхолдер).
+      if (newItemsLen > 0) {
+        const a = {
+          type: 'meal_added',
+          meal_label: mealTypeLabel(nm),
+          name: mealTypeLabel(nm), // backward-compat для banner / push
+          items: mealItemsSummary(newItems),
+        };
+        if (nm.time) a.time = nm.time;
+        const total = mealTotalKcal(nm);
+        if (total !== null) a.kcal = total;
         actions.push(a);
       }
       continue;
     }
-    // Diff items внутри meal'a (added items).
-    const oldItemsLen = safeArr(oldMeal.items).length;
-    const newItemsLen = safeArr(nm.items).length;
+
+    const oldItems = safeArr(oldMeal.items);
+    const oldItemsLen = oldItems.length;
+
     if (oldItemsLen === 0 && newItemsLen > 0) {
-      // Был пустой meal — стал с едой, это "added" а не "item_added"
-      const a = { type: 'meal_added', name: mealLabel(nm) };
-      const kc = mealKcal(nm);
-      if (kc !== null) a.kcal = kc;
+      // Был пустой meal — стал заполнен → "added"
+      const a = {
+        type: 'meal_added',
+        meal_label: mealTypeLabel(nm),
+        name: mealTypeLabel(nm),
+        items: mealItemsSummary(newItems),
+      };
+      if (nm.time) a.time = nm.time;
+      const total = mealTotalKcal(nm);
+      if (total !== null) a.kcal = total;
       actions.push(a);
     } else if (newItemsLen > oldItemsLen) {
-      // Добавлены items к существующему meal'у — фиксируем разницу
-      const added = newItemsLen - oldItemsLen;
-      actions.push({
+      // Добавлены items к уже непустому meal'у — дописываем какие именно.
+      const oldItemKeys = new Set(oldItems.map((it) => `${itemName(it)}|${itemGrams(it)}`));
+      const added = [];
+      for (const it of newItems) {
+        const key = `${itemName(it)}|${itemGrams(it)}`;
+        if (!oldItemKeys.has(key)) added.push(it);
+      }
+      const a = {
         type: 'meal_item_added',
-        meal_name: nm.name || mealLabel(nm),
-        count: added,
-      });
+        meal_label: mealTypeLabel(nm),
+        meal_name: nm.name || mealTypeLabel(nm),
+        items: mealItemsSummary(added),
+        count: added.length || (newItemsLen - oldItemsLen),
+      };
+      if (nm.time) a.time = nm.time;
+      actions.push(a);
     } else if (newItemsLen < oldItemsLen && newItemsLen === 0) {
-      actions.push({ type: 'meal_removed', name: mealLabel(oldMeal) });
+      actions.push({ type: 'meal_removed', name: mealTypeLabel(oldMeal) });
     }
   }
 
@@ -166,9 +236,8 @@ function diffMeals(oldMeals, newMeals, actions) {
     const k = mealKey(om);
     if (!k) continue;
     if (newKeys.has(k)) continue;
-    // Считаем как removed только если had items.
     if (safeArr(om.items).length > 0) {
-      actions.push({ type: 'meal_removed', name: mealLabel(om) });
+      actions.push({ type: 'meal_removed', name: mealTypeLabel(om) });
     }
   }
 }
@@ -186,11 +255,11 @@ function diffTrainings(oldTr, newTr, actions) {
       const a = { type: 'training_added', kind: trainingLabel(n) };
       const d = trainingDurationMin(n);
       if (d) a.duration_min = d;
+      if (n && n.time) a.time = n.time;
       actions.push(a);
     } else if (!oEmpty && nEmpty) {
       actions.push({ type: 'training_removed', kind: trainingLabel(o) });
     }
-    // Изменение существующей тренировки (без add/remove) не репортим — слишком гранулярно.
   }
 }
 
@@ -215,7 +284,6 @@ function diffDayv2(oldV, newV, actions) {
   diffTrainings(oldDay.trainings, newDay.trainings, actions);
   diffScalar(oldDay.weightMorning, newDay.weightMorning, 'weight_set', actions, { numericTolerance: 0.05 });
   diffScalar(oldDay.stepsCount, newDay.stepsCount, 'steps_set', actions, { numericTolerance: 50 });
-  // sleep: считаем часы из sleepStart/sleepEnd ИЛИ из sleepHours напрямую если есть.
   const oSleepH = computeSleepHours(oldDay);
   const nSleepH = computeSleepHours(newDay);
   diffScalar(oSleepH, nSleepH, 'sleep_set', actions, { numericTolerance: 0.1 });
@@ -261,7 +329,7 @@ function diffObjectFields(oldV, newV, type, actions, opts = {}) {
     if (!deepEqual(oldVal, newVal)) changed.push(k);
   }
   if (changed.length > 0) {
-    actions.push({ type, fields: changed.slice(0, 10) }); // cap fields list
+    actions.push({ type, fields: changed.slice(0, 10) });
   }
 }
 
@@ -301,7 +369,6 @@ function computeCuratorActionPayload(oldV, newV, key) {
   } else if (key === 'heys_norms') {
     diffObjectFields(oldV, newV, 'norms_changed', actions);
   } else if (key.startsWith('heys_planning_')) {
-    // Planning: показываем факт правки без детализации (структура сложная).
     if (!deepEqual(oldV, newV)) {
       actions.push({ type: 'planning_changed' });
     }
@@ -318,7 +385,6 @@ function computeCuratorActionPayload(oldV, newV, key) {
 
 module.exports = {
   computeCuratorActionPayload,
-  // exported for tests
   _internal: {
     diffDayv2,
     diffMeals,
@@ -329,6 +395,11 @@ module.exports = {
     isServiceKey,
     isLoggableKey,
     mealKey,
+    mealTypeLabel,
+    mealLabel,
+    mealTotalKcal,
+    mealKcal,
+    mealItemsSummary,
     isEmptyTraining,
   },
 };

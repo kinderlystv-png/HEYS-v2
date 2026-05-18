@@ -47,23 +47,43 @@ test('whitelisted keys are recognized', () => {
 
 // ─── meals: added ───────────────────────────────────────────────────
 
-test('meal added (new meal with items)', () => {
+test('meal added: rich payload (meal_label, time, kcal, items)', () => {
   const oldV = { meals: [] };
   const newV = {
     meals: [
       {
         id: 'm_1',
-        name: 'Завтрак',
-        time: '08:00',
-        items: [{ product: { name: 'Овсянка' }, quantity: 120, kcal: 145 }],
+        mealType: 'dinner',
+        name: 'Ужин',
+        time: '20:34',
+        items: [
+          { name: 'Овсянка', grams: 120, kcal100: 350 },
+          { name: 'Молоко 2,5', grams: 200, kcal100: 50 },
+        ],
       },
     ],
   };
   const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
   assert.equal(actions.length, 1);
-  assert.equal(actions[0].type, 'meal_added');
-  assert.match(actions[0].name, /Овсянка/);
-  assert.equal(actions[0].kcal, 145);
+  const a = actions[0];
+  assert.equal(a.type, 'meal_added');
+  assert.equal(a.meal_label, 'Ужин');
+  assert.equal(a.time, '20:34');
+  // 350 * 1.2 + 50 * 2 = 420 + 100 = 520
+  assert.equal(a.kcal, 520);
+  assert.deepStrictEqual(a.items, [
+    { name: 'Овсянка', grams: 120 },
+    { name: 'Молоко 2,5', grams: 200 },
+  ]);
+});
+
+test('meal mealType=lunch → label "Обед"', () => {
+  const oldV = { meals: [] };
+  const newV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', name: 'Обед', items: [{ name: 'X', grams: 100 }] }],
+  };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
+  assert.equal(actions[0].meal_label, 'Обед');
 });
 
 test('meal NOT counted as added if no items (placeholder)', () => {
@@ -85,21 +105,31 @@ test('meal removed', () => {
   assert.equal(actions[0].type, 'meal_removed');
 });
 
-test('meal items added (existing meal got more items)', () => {
+test('meal items added: payload includes only NEW items list', () => {
   const oldV = {
     meals: [
-      { id: 'm_1', name: 'Обед', items: [{ name: 'Суп' }] },
+      { id: 'm_1', mealType: 'lunch', name: 'Обед', items: [{ name: 'Суп', grams: 300 }] },
     ],
   };
   const newV = {
     meals: [
-      { id: 'm_1', name: 'Обед', items: [{ name: 'Суп' }, { name: 'Хлеб' }, { name: 'Яблоко' }] },
+      { id: 'm_1', mealType: 'lunch', name: 'Обед', items: [
+        { name: 'Суп', grams: 300 },
+        { name: 'Хлеб', grams: 50 },
+        { name: 'Яблоко', grams: 150 },
+      ] },
     ],
   };
   const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
   assert.equal(actions.length, 1);
-  assert.equal(actions[0].type, 'meal_item_added');
-  assert.equal(actions[0].count, 2);
+  const a = actions[0];
+  assert.equal(a.type, 'meal_item_added');
+  assert.equal(a.meal_label, 'Обед');
+  assert.equal(a.count, 2);
+  assert.deepStrictEqual(a.items, [
+    { name: 'Хлеб', grams: 50 },
+    { name: 'Яблоко', grams: 150 },
+  ]);
 });
 
 test('meal fallback key (time+name) when no id', () => {
