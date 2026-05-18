@@ -657,12 +657,18 @@
         return trimPendingActionQueue(nextQueue);
     };
 
-    /** PIN + API proxy: later full-screen lock and "slow internet" hint (extra hop, dev-friendly). */
+    /** PIN + API proxy: later full-screen lock and "slow internet" hint (extra hop, dev-friendly).
+     *
+     * 🔧 (2026-05-18): bumped thresholds. 3с было слишком агрессивно для фоновых
+     * sync-тиков (live-refresh polling каждые 30с делает merge → upload даже на
+     * чистом скролле без правок). Модалка всплывала при базовом скроллинге,
+     * блокируя UI на секунду. 6с даёт обычному upload (<2с на хорошей сети)
+     * комфортный запас, а реально зависшие save'ы всё равно ловятся. */
     const getPinProxySyncOverlayDelaysMs = () => {
-        const DEFAULT_LOCK_MS = 3000;
-        const DEFAULT_HINT_MS = 5000;
-        const PIN_PROXY_LOCK_MS = 4500;
-        const PIN_PROXY_HINT_MS = 10000;
+        const DEFAULT_LOCK_MS = 6000;   // было 3000
+        const DEFAULT_HINT_MS = 8000;   // было 5000 — поднял пропорционально
+        const PIN_PROXY_LOCK_MS = 7500; // было 4500
+        const PIN_PROXY_HINT_MS = 12000; // было 10000
         try {
             const cloud = HEYS.cloud;
             if (cloud?.isPinAuthClient?.() === true && cloud?.isUsingDirectConnection?.() === false) {
