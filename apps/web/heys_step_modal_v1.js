@@ -43,6 +43,26 @@
     return new Date().getHours();
   }
 
+  // 🛡️ iOS-fix (2026-05-18): unified whitelist для touch handlers.
+  // На iOS Safari preventDefault() в touchmove между touchstart и touchend на
+  // элементе может ОТМЕНИТЬ click event (особенно если палец слегка двигается
+  // при тапе — это часто бывает на сенсорных экранах). Раньше whitelist в
+  // touchmove handler был узкий: только слайдеры/wheel-picker/mood-card.
+  // Кнопки "Далее", preset-кнопки, progress-dots не были покрыты — их клики
+  // могли терятся, отсюда жалобы "много раз надо нажать Далее".
+  // Покрываем все интерактивные элементы — общий helper, чтобы все три
+  // handler'а (touchstart/touchmove/touchend) были согласованы.
+  function isInteractiveTouchTarget(target) {
+    if (!target || !target.closest) return false;
+    // Native interactives: button, input, a, label, textarea, select, summary.
+    if (target.closest('button, input, a[href], label, textarea, select, summary')) return true;
+    // App-specific scrollable / draggable widgets.
+    if (target.closest('.mc-quality-slider, .mood-rating-card, .mc-wheel-picker, .mc-progress-dot, .mc-header-btn')) return true;
+    // role="button" / contenteditable areas.
+    if (target.closest('[role="button"], [contenteditable="true"]')) return true;
+    return false;
+  }
+
   function getTimeBasedGreeting() {
     const hour = getCurrentHour();
     if (hour >= 5 && hour < 12) return 'Доброе утро! ☀️';
@@ -598,42 +618,47 @@
         return;
       }
 
-      setTimeout(() => {
-        if (currentStepIndex < totalSteps - 1) {
-          goToStep(currentStepIndex + 1, 'left');
-        } else {
-          // Сохраняем все данные
-          visibleStepConfigs.forEach(config => {
-            if (config.save) {
-              // Передаём: данные этого шага, context, и все данные всех шагов
-              config.save(stepData[config.id], context, stepData);
-            }
-          });
-
-          // XP за чек-ин
-          if (HEYS.gamification) {
-            try {
-              visibleStepConfigs.forEach(config => {
-                if (config.xpAction) {
-                  HEYS.gamification.addXP(config.xpAction);
-                }
-              });
-            } catch (e) {
-              console.warn('Gamification XP error:', e);
-            }
+      // 🛡️ iOS-fix (2026-05-18): убрали внешний `setTimeout(..., 0)`-обёртку.
+      // На iOS Safari в режиме PWA setTimeout(0) может откладываться до
+      // следующего idle slot — особенно если event-loop занят rerender'ом
+      // после updateField (mood-step pulse-анимация). Это давало "Далее
+      // нажимаешь — а ничего не происходит, нажимаешь снова". Validate тут
+      // синхронный, goToStep уже сам управляет анимацией через свой
+      // setTimeout(200), второй внешний wrapper избыточен.
+      if (currentStepIndex < totalSteps - 1) {
+        goToStep(currentStepIndex + 1, 'left');
+      } else {
+        // Сохраняем все данные
+        visibleStepConfigs.forEach(config => {
+          if (config.save) {
+            // Передаём: данные этого шага, context, и все данные всех шагов
+            config.save(stepData[config.id], context, stepData);
           }
+        });
 
-          // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
-          // MealStep сам управляет обновлением дня через onComplete
-          if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
-            window.dispatchEvent(new CustomEvent('heys:day-updated', {
-              detail: { date: getTodayKey(), source: 'step-modal' }
-            }));
+        // XP за чек-ин
+        if (HEYS.gamification) {
+          try {
+            visibleStepConfigs.forEach(config => {
+              if (config.xpAction) {
+                HEYS.gamification.addXP(config.xpAction);
+              }
+            });
+          } catch (e) {
+            console.warn('Gamification XP error:', e);
           }
-
-          onComplete && onComplete(stepData);
         }
-      }, 0);
+
+        // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
+        // MealStep сам управляет обновлением дня через onComplete
+        if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: { date: getTodayKey(), source: 'step-modal' }
+          }));
+        }
+
+        onComplete && onComplete(stepData);
+      }
     }, [currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete]);
 
     const handlePrev = useCallback(() => {
@@ -653,14 +678,10 @@
     const handleTouchStart = useCallback((e) => {
       if (!stepAllowSwipe) return;
 
-      // Не перехватываем touch на слайдерах — проверяем сам элемент и родителей
-      const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
-      const hasRangeParent = e.target.closest && e.target.closest('input[type="range"]');
-      const isOnSlider = e.target.closest && e.target.closest('.mc-quality-slider, .mood-rating-card input[type="range"]');
-
-      if (isRangeInput || hasRangeParent || isOnSlider) {
-        return;
-      }
+      // Не перехватываем touch на интерактивных элементах — слайдеры, кнопки, инпуты.
+      // 🛡️ iOS-fix: tap на кнопке "Далее" с лёгким сдвигом пальца не должен
+      // регистрироваться как старт свайпа и затем глотаться preventDefault'ом.
+      if (isInteractiveTouchTarget(e.target)) return;
 
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
@@ -673,20 +694,11 @@
       if (!container) return;
 
       const handleTouchMove = (e) => {
-        // Разрешаем touch на range inputs (слайдерах) — проверяем ВСЕ возможные варианты
-        const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
-        const hasRangeClass = e.target.classList && e.target.classList.contains('mc-quality-slider');
-        const closestRange = e.target.closest ? e.target.closest('input[type="range"]') : null;
-        const closestSliderClass = e.target.closest ? e.target.closest('.mc-quality-slider') : null;
-        const closestMoodCard = e.target.closest ? e.target.closest('.mood-rating-card') : null;
-
-        // Разрешаем touch на wheel picker (для выбора времени)
-        const closestWheelPicker = e.target.closest ? e.target.closest('.mc-wheel-picker') : null;
-
-        // Если это слайдер или внутри mood-rating-card или wheel-picker — НЕ блокируем
-        if (isRangeInput || hasRangeClass || closestRange || closestSliderClass || closestMoodCard || closestWheelPicker) {
-          return;
-        }
+        // 🛡️ iOS-fix (2026-05-18): preventDefault на touchmove между touchstart и
+        // touchend на кнопке может ОТМЕНИТЬ click event (особенно если палец
+        // слегка смещается при тапе). Исключаем все интерактивные элементы —
+        // кнопки, инпуты, ссылки, слайдеры, wheel-pickers, mood-rating-card.
+        if (isInteractiveTouchTarget(e.target)) return;
 
         // Находим ближайший scrollable элемент
         let target = e.target;
@@ -702,8 +714,7 @@
           target = target.parentElement;
         }
 
-        // Не внутри scrollable — блокируем scroll на backdrop
-        console.log('[TouchMove NATIVE] BLOCKED — вызываем preventDefault');
+        // Не внутри scrollable и не интерактивный — блокируем body-scroll на backdrop.
         e.preventDefault();
       };
 
@@ -714,12 +725,8 @@
     const handleTouchEnd = useCallback((e) => {
       if (!stepAllowSwipe) return;
 
-      // Не перехватываем свайп на слайдерах — проверяем сам элемент и родителей
-      const isRangeInput = e.target.tagName === 'INPUT' && e.target.type === 'range';
-      const isOnSlider = e.target.closest && e.target.closest('.mc-quality-slider, .mood-rating-card input[type="range"]');
-      if (isRangeInput || isOnSlider) {
-        return;
-      }
+      // Не перехватываем свайп на интерактивных элементах.
+      if (isInteractiveTouchTarget(e.target)) return;
 
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
       const deltaY = e.changedTouches[0].clientY - touchStartY.current;
