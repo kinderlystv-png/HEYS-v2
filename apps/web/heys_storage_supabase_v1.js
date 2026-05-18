@@ -12127,17 +12127,20 @@
     cloud._switchClientInProgress = true;
 
     // 🛡️ P0 hygiene (2026-05-17 incident): clear stale heys_session_token from
-    // a previous PIN session — но ТОЛЬКО на curator-пути.
+    // a previous PIN session — но ТОЛЬКО на curator-пути ПРИ переключении между
+    // уже существующими клиентами.
     // ⚠️ PIN clients ALSO call switchClient (heys_app_gate_flow_v1.js:1244 при PIN login).
     // На PIN-пути heys_session_token — это только что записанный валидный токен
     // нового юзера. Если его очистить — sync уйдёт в цикл "No auth token available".
-    // Аналогично unscoped-cleanup нужен только при switch'е между clients у curator'a;
-    // PIN-юзер один, у него нет чужого unscoped мусора.
+    // Гард: должен быть curator JWT И уже выбран какой-то предыдущий клиент.
+    // oldClientId === null означает первый switchClient за сессию (login flow);
+    // в этой точке у curator clear не нужен (server-side Phase C + client curator-first
+    // защиты уже отсекут stale session token от прошлой PIN-сессии).
     let _isCuratorSwitch = false;
     try {
       const hasCuratorJwt = !!localStorage.getItem('heys_curator_session');
       const hasSupabaseAuth = !!localStorage.getItem('heys_supabase_auth_token');
-      _isCuratorSwitch = hasCuratorJwt || hasSupabaseAuth;
+      _isCuratorSwitch = (hasCuratorJwt || hasSupabaseAuth) && !!oldClientId;
     } catch (_) {}
 
     if (_isCuratorSwitch) {
