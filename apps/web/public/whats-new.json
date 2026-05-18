@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.18.82fa059f",
+      "buildHash": "82fa059f",
+      "date": "2026-05-18",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Усилили условие очистки токенов при смене клиента",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "switchClient cleanup теперь требует уже выбранного клиента",
+          "description": "Дополнительный гард к фиксу из d5fcb0c6: cleanup stale-токенов и legacy LS-ключей срабатывает только когда есть oldClientId, т.е. реальное переключение между клиентами у куратора. Первый switchClient за сессию (любой login flow) cleanup'а не получает — это защищает PIN-юзеров от потенциального ложного срабатывания если в LS остались чужие stale curator-токены."
+        }
+      ]
+    },
+    {
       "version": "2026.05.18.d5fcb0c6",
       "buildHash": "d5fcb0c6",
       "date": "2026-05-18",
