@@ -31991,11 +31991,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     cloud._switchClientInProgress = true;
 
     // 🛡️ P0 hygiene (2026-05-17 incident): clear stale heys_session_token from
-    // any previous PIN session. Без этого, любой code path который проверяет
-    // session token до curator JWT (или session-only функция) резолвил бы
-    // client_id из старой PIN-сессии на сервере, попадая не туда. Безопасно
-    // для PIN клиентов — они никогда не вызывают switchClient (один client_id).
-    try { localStorage.removeItem('heys_session_token'); } catch (_) {}
+    // a previous PIN session — но ТОЛЬКО на curator-пути.
+    // ⚠️ PIN clients ALSO call switchClient (heys_app_gate_flow_v1.js:1244 при PIN login).
+    // На PIN-пути heys_session_token — это только что записанный валидный токен
+    // нового юзера. Если его очистить — sync уйдёт в цикл "No auth token available".
+    // Аналогично unscoped-cleanup нужен только при switch'е между clients у curator'a;
+    // PIN-юзер один, у него нет чужого unscoped мусора.
+    let _isCuratorSwitch = false;
+    try {
+      const hasCuratorJwt = !!localStorage.getItem('heys_curator_session');
+      const hasSupabaseAuth = !!localStorage.getItem('heys_supabase_auth_token');
+      _isCuratorSwitch = hasCuratorJwt || hasSupabaseAuth;
+    } catch (_) {}
+
+    if (_isCuratorSwitch) {
+      try { localStorage.removeItem('heys_session_token'); } catch (_) {}
+    }
 
     // 🛡️ Stop live-refresh polling for OLD client to prevent stale-closure
     // pollOnce from firing after currentClientId changed. DayTab useEffect
@@ -32003,32 +32014,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     try { (global.HEYS && global.HEYS.dayLiveRefresh && global.HEYS.dayLiveRefresh.stop) && global.HEYS.dayLiveRefresh.stop(); } catch (_) {}
 
     // 🛡️ P0 incident (2026-05-18): clear legacy UNSCOPED `heys_dayv2_*` keys.
-    // saveDayData (heys_steps_v1.js:266-270) dual-writes ВСЕ day data в:
-    //   1) scoped `heys_<clientId>_dayv2_<date>` — правильный путь
-    //   2) UNSCOPED `heys_dayv2_<date>` — backward compat, BUT this is a GLOBAL
-    //      LS key shared between all clients!
-    // readDayData (heys_steps_v1.js:120-126) для новой даты у нового клиента
-    // (где scoped пустой) делает fallback на unscoped → читает данные предыдущего
-    // клиента → setDay → пишет их под scope нового клиента → upload в cloud.
-    // Реальный сценарий: curator на Poplanton делает checkin (вес 89.9 + кофе)
-    // → switch на Александру → её day-18 пуст → fallback читает unscoped =
-    // Poplanton's day → upload в cloud Александры. Cross-client contamination.
-    // Также есть `heys_dayv2_date` marker — тоже global, надо чистить.
-    try {
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && /^heys_dayv2_(\d{4}-\d{2}-\d{2}|date)$/.test(k)) {
-          keysToRemove.push(k);
+    // saveDayData дописывал unscoped key, и readDayData при пустом scoped делал
+    // fallback на unscoped → читал данные предыдущего клиента → upload в cloud
+    // нового. Релевантно ТОЛЬКО для curator switches между клиентами.
+    if (_isCuratorSwitch) {
+      try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && /^heys_dayv2_(\d{4}-\d{2}-\d{2}|date)$/.test(k)) {
+            keysToRemove.push(k);
+          }
         }
-      }
-      for (const k of keysToRemove) {
-        try { localStorage.removeItem(k); } catch (_) {}
-      }
-      if (keysToRemove.length > 0) {
-        log(`🧹 switchClient: cleared ${keysToRemove.length} legacy unscoped heys_dayv2_* keys to prevent cross-client leak`);
-      }
-    } catch (_) {}
+        for (const k of keysToRemove) {
+          try { localStorage.removeItem(k); } catch (_) {}
+        }
+        if (keysToRemove.length > 0) {
+          log(`🧹 switchClient: cleared ${keysToRemove.length} legacy unscoped heys_dayv2_* keys to prevent cross-client leak`);
+        }
+      } catch (_) {}
+    }
 
     // 🔧 v74 FIX: Snapshot OLD/NEW для re-scoping deferred writes под OLD scope.
     // Без него Store.set во время switch'а scope'ит ключи через ns() (HEYS.currentClientId),
