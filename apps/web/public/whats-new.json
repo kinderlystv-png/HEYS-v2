@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.05.19.500ee758",
-      "buildHash": "500ee758",
+      "version": "2026.05.19.deb38d8d",
+      "buildHash": "deb38d8d",
       "date": "2026-05-19",
       "kind": "technical",
       "profile": "technical-security",
