@@ -832,7 +832,10 @@
       }
     }
 
-    // 3) 🔧 v58: Ещё один fallback — ищем под namespaced ключом
+    // 3) 🔧 v58: namespaced-fallback. PR-C (2026-05-20): миграцию в
+    // глобальный ключ убрали — новые сессии живут в HttpOnly cookie,
+    // а старые namespaced-токены тоже естественно истекут через 30
+    // дней. Просто читаем и удаляем устаревший namespaced-ключ.
     const pinClient = localStorage.getItem('heys_pin_auth_client');
     const currentClient = localStorage.getItem('heys_client_current');
     const clientId = (pinClient || currentClient || '').replace(/"/g, '');
@@ -841,8 +844,6 @@
       const namespacedKey = `heys_${clientId}_session_token`;
       const namespacedRaw = localStorage.getItem(namespacedKey);
       if (namespacedRaw) {
-        // Мигрируем в глобальный ключ (одноразово)
-        localStorage.setItem('heys_session_token', namespacedRaw);
         localStorage.removeItem(namespacedKey);
         try {
           return JSON.parse(namespacedRaw);

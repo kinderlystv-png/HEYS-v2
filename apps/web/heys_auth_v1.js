@@ -407,58 +407,31 @@
   // === Session Token Management ===
 
   /**
-   * Получить текущий session_token
-   * 🔧 v55 FIX: миграция из старого namespaced ключа в глобальный
+   * Получить текущий session_token.
+   *
+   * PR-C (2026-05-20): после перехода на HttpOnly cookie токен в JS не
+   * доступен. Функция возвращает то, что осталось в localStorage от
+   * сессий, выданных ДО этого деплоя (legacy), и `null` для всех
+   * новых сессий — тогда heys-api-rpc сам подставит токен из cookie
+   * на сервере. Legacy LS-токены естественно истекут через 30 дней.
    */
   function getSessionToken() {
-    // 1) Пробуем глобальный ключ (новый формат после v55)
-    let token = U.lsGet('heys_session_token', null);
-    if (token) return token;
-
-    // 2) Миграция: ищем токен под старым namespaced ключом
-    //    Формат был: heys_{clientId}_session_token
-    try {
-      // 🔐 Миграция только для PIN auth (не для куратора)
-      const clientId = localStorage.getItem('heys_pin_auth_client');
-      if (clientId) {
-        const cid = clientId.replace(/"/g, ''); // убираем кавычки если JSON.stringify
-        const oldKey = `heys_${cid}_session_token`;
-        const oldToken = localStorage.getItem(oldKey);
-        if (oldToken) {
-          // Мигрируем в новый глобальный ключ
-          try {
-            const parsed = JSON.parse(oldToken);
-            localStorage.setItem('heys_session_token', oldToken);
-            localStorage.removeItem(oldKey); // удаляем старый
-            return parsed;
-          } catch (e) {
-            localStorage.setItem('heys_session_token', oldToken);
-            localStorage.removeItem(oldKey);
-            return oldToken;
-          }
-        }
-      }
-    } catch (e) {
-      // Migration error - ignore
-    }
-
-    return null;
+    return U.lsGet('heys_session_token', null);
   }
 
   /**
-   * Установить session token (для внутреннего использования)
-   * @param {string} token - Session token
+   * Установить session token.
+   *
+   * PR-C (2026-05-20): после успешного PIN-входа сервер (verify_client_pin_v3
+   * через heys-api-rpc) ставит токен в HttpOnly cookie `heys_session_token`,
+   * который JS не может прочитать. Сюда токен больше не пишем — это и был
+   * параллельный JS-доступ, который ловила XSS. Функция оставлена как no-op
+   * чтобы старые caller'ы (если такие найдутся) не падали.
+   *
+   * @param {string} token - Session token (игнорируется)
    */
-  function setSessionToken(token) {
-    if (!token) {
-      return;
-    }
-    try {
-      localStorage.setItem('heys_session_token', JSON.stringify(token));
-    } catch (_) { }
-    try {
-      U.lsSet('heys_session_token', token);
-    } catch (_) { }
+  function setSessionToken(_token) {
+    // no-op intentionally — credential carriage is the HttpOnly cookie now.
   }
 
   /**

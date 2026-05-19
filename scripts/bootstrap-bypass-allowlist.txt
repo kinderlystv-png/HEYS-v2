@@ -67,10 +67,7 @@ apps/web/heys_auth_v1.js:16
 apps/web/heys_auth_v1.js:285
 apps/web/heys_auth_v1.js:289
 apps/web/heys_auth_v1.js:292
-apps/web/heys_auth_v1.js:431
-apps/web/heys_auth_v1.js:435
 apps/web/heys_auth_v1.js:439
-apps/web/heys_auth_v1.js:457
 apps/web/heys_cascade_card_v1.js:1245
 apps/web/heys_cascade_card_v1.js:3612
 apps/web/heys_cascade_card_v1.js:3621
@@ -216,7 +213,6 @@ apps/web/heys_widgets_core_v1.js:1049
 apps/web/heys_widgets_core_v1.js:386
 apps/web/heys_widgets_ui_v1.js:4810
 apps/web/heys_widgets_ui_v1.js:7039
-apps/web/heys_yandex_api_v1.js:845
 apps/web/heys_yesterday_verify_v1.js:1121
 apps/web/heys_yesterday_verify_v1.js:1123
 apps/web/heys_yesterday_verify_v1.js:36
