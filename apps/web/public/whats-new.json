@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.19.500ee758",
+      "buildHash": "500ee758",
+      "date": "2026-05-19",
+      "kind": "technical",
+      "profile": "technical-security",
+      "title": "Сессия клиента теперь живёт в HttpOnly-куки",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Токен сессии переехал из localStorage в защищённую от JS куку",
+          "description": "Раньше после успешного ввода PIN сервер возвращал session_token только в теле ответа, и фронт сохранял его в localStorage. Любой XSS в legacy IIFE-бандле мог прочитать токен и захватить сессию клиента на 30 дней. Теперь heys-api-rpc дополнительно ставит cookie heys_session_token с флагами HttpOnly + Secure + SameSite=Lax и Domain=.heyslab.ru — JS из браузера к нему не дотянется. Сервер на каждом запросе автоматически достаёт токен из cookie если в теле его нет, поэтому ~30 RPC-функций *_by_session работают через cookie без правок. Старый flow (токен в теле) пока продолжает работать — это переходный период, пока на клиенте не выкинут чтение из localStorage. Параллельно rpc() на клиенте начинает слать credentials: 'include', иначе кросс-подоменная кука не приходит."
+        }
+      ]
+    },
+    {
       "version": "2026.05.19.31405e98",
       "buildHash": "31405e98",
       "date": "2026-05-19",
