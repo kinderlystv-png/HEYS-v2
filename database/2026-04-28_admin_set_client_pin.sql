@@ -39,7 +39,7 @@ BEGIN
     END IF;
 
     UPDATE clients
-    SET pin_hash = crypt(p_pin, gen_salt('bf')),
+    SET pin_hash = crypt(p_pin, gen_salt('bf', 12)),
         pin_salt = NULL,
         pin_failed_attempts = 0,
         pin_locked_until = NULL,

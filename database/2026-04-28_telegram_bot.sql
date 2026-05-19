@@ -94,7 +94,7 @@ BEGIN
 
     -- Криптослучайный 4-значный PIN
     v_pin := LPAD(((random() * 9000)::INT + 1000)::TEXT, 4, '0');
-    v_pin_hash := crypt(v_pin, gen_salt('bf'));
+    v_pin_hash := crypt(v_pin, gen_salt('bf', 12));
 
     INSERT INTO clients (
         id, name, phone, phone_normalized, email, pin_hash, curator_id,
@@ -174,7 +174,7 @@ BEGIN
     END IF;
 
     v_pin := LPAD(((random() * 9000)::INT + 1000)::TEXT, 4, '0');
-    v_pin_hash := crypt(v_pin, gen_salt('bf'));
+    v_pin_hash := crypt(v_pin, gen_salt('bf', 12));
 
     UPDATE clients
     SET pin_hash = v_pin_hash,
