@@ -1,8 +1,23 @@
 {
   "releases": [
     {
-      "version": "2026.05.20.4b79d741",
-      "buildHash": "4b79d741",
+      "version": "2026.05.20.d94ebfc9",
+      "buildHash": "d94ebfc9",
+      "date": "2026-05-20",
+      "kind": "technical",
+      "profile": "technical-security",
+      "title": "Клиентский session_token больше не пишется в localStorage",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Убрали JS-доступную копию клиентского session_token из localStorage",
+          "description": "Phase C (commit 500ee758) добавила HttpOnly cookie carrier для клиентского session_token и научила heys-api-rpc принимать токен из куки. Но JS параллельно продолжал записывать тот же токен в localStorage — это оставляло XSS-читаемую копию, которая обнуляла защиту HttpOnly. Сегодня закрыли последний канал: setSessionToken() в heys_auth_v1.js — теперь no-op, миграции namespaced-ключей в глобальный — убраны. Сессии, выданные ДО этого деплоя, продолжают работать через свой LS-токен до естественного истечения 30-дневного TTL. Все НОВЫЕ логины уходят в cookie-only — XSS в любом IIFE-бандле больше не имеет доступа к клиентскому токену."
+        }
+      ]
+    },
+    {
+      "version": "2026.05.20.769738b1",
+      "buildHash": "769738b1",
       "date": "2026-05-20",
       "kind": "technical",
       "profile": "technical-security",
@@ -11,7 +26,7 @@
         {
           "type": "fix",
           "title": "Curator JWT теперь дополнительно передаётся через HttpOnly cookie",
-          "description": "Раньше токен куратора жил только в localStorage и подставлялся в каждый запрос как Authorization-заголовок. XSS на любой странице мог украсть этот токен и получить полный админ-доступ ко всем клиентам этого куратора — это была более чувствительная мишень, чем клиентские PIN-сессии. Сегодня heys-api-auth дополнительно ставит heys_curator_jwt как HttpOnly+Secure+SameSite=Lax cookie на домене .heyslab.ru, а heys-api-rpc принимает токен либо из заголовка, либо из этой куки. Кука недоступна JavaScript-у, так что XSS больше не угоняет сессию даже если запустится. Внутреннее поведение JS пока не меняется (двойная подача — заголовок + кука), полное снятие localStorage будет отдельным PR после прогона в production."
+          "description": "Раньше токен куратора жил только в localStorage и подставлялся в каждый запрос как Authorization-заголовок. XSS на любой странице мог украсть этот токен и получить полный админ-доступ ко всем клиентам этого куратора — это была более чувствительная мишень, чем клиентские PIN-сессии. Сегодня heys-api-auth дополнительно ставит heys_curator_jwt как HttpOnly+Secure+SameSite=Lax cookie на домене .heyslab.ru, а heys-api-rpc принимает токен либо из заголовка, либо из этой куки. Кука недоступна JavaScript-у, так что XSS больше не угоняет сессию даже если запустится."
         }
       ]
     },
