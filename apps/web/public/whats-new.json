@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.19.31405e98",
+      "buildHash": "31405e98",
+      "date": "2026-05-19",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Восстановили вход клиентов по PIN",
+      "items": [
+        {
+          "type": "fix",
+          "title": "После правильного PIN'а сервер всё равно отвечал «неверный PIN»",
+          "description": "В функции verify_client_pin_v3 на этапе создания сессии шла попытка INSERT в колонку session_token, которой в текущей схеме client_sessions нет — таблица хранит token_hash (SHA-256 от UUID). Любой успешный PIN-матч валился внутрь функции с ошибкой колонки, наружу шло обобщённое invalid_credentials, и клиент видел «неверный PIN» при правильном вводе. Перевели INSERT на token_hash + digest(...,'sha256'), как и читающий хелпер require_client_id. Полный логин-флоу проверен на реальном клиенте, дальше работает как прежде."
+        }
+      ]
+    },
+    {
       "version": "2026.05.19.bd7f4100",
       "buildHash": "bd7f4100",
       "date": "2026-05-19",
