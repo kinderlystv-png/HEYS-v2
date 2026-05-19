@@ -43815,7 +43815,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const HEYS = (window.HEYS = window.HEYS || {});
 
   const LS_DISMISS_PREFIX = 'heys_curator_banner_dismissed_';
-  const VERIFY_MARK = '2026-05-18-curator-actions-feed-v1';
+  const LS_LOCAL_ACKED_KEY = 'heys_curator_actions_local_acked_until_ts';
+  const VERIFY_MARK = '2026-05-19-curator-actions-feed-v3';
 
   // ─── State ────────────────────────────────────────────────────────
 
@@ -44115,6 +44116,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     try { localStorage.setItem(dismissKey(), '1'); } catch (_) {}
   }
 
+  // 🛡️ Local-ack guard (2026-05-19): после клика "Понял" сохраняем latestTs
+  // СРАЗУ в LS. Если ack-RPC ещё в полёте или вернул стейл-данные при
+  // следующем heysSyncCompleted (race), мы фильтруем entries по этому TS
+  // и не показываем banner повторно. После того как сервер реально закоммитит
+  // last_seen_at и пришлёт пустой entries — флаг можно сбросить.
+  function getLocalAckedTs() {
+    try {
+      const raw = localStorage.getItem(LS_LOCAL_ACKED_KEY);
+      return raw || null;
+    } catch (_) { return null; }
+  }
+
+  function setLocalAckedTs(ts) {
+    if (!ts) return;
+    try {
+      const current = getLocalAckedTs();
+      if (!current || ts > current) {
+        localStorage.setItem(LS_LOCAL_ACKED_KEY, ts);
+      }
+    } catch (_) {}
+  }
+
+  function clearLocalAckedTs() {
+    try { localStorage.removeItem(LS_LOCAL_ACKED_KEY); } catch (_) {}
+  }
+
+  function filterEntriesAfterLocalAck(entries) {
+    const localTs = getLocalAckedTs();
+    if (!localTs) return entries;
+    return entries.filter(e => (e.created_at || '') > localTs);
+  }
+
   function renderBanner() {
     removeExistingBanner();
     if (_entries.length === 0) return;
@@ -44202,19 +44235,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     backdrop.querySelector('.ca-modal__close').addEventListener('click', () => {
       removeExistingModal();
     });
-    backdrop.querySelector('.ca-modal__ack-btn').addEventListener('click', async () => {
-      const btn = backdrop.querySelector('.ca-modal__ack-btn');
-      btn.disabled = true;
-      btn.textContent = 'Сохраняю…';
-      try {
-        const latestTs = getLatestEntryTs();
-        await HEYS.YandexAPI?.ackCuratorChangelog?.(latestTs);
-      } catch (e) {
-        console.warn('[HEYS.curatorBanner] ack failed:', e?.message);
-      }
+    backdrop.querySelector('.ca-modal__ack-btn').addEventListener('click', () => {
+      const latestTs = getLatestEntryTs();
+      // 🛡️ Сначала — local-LS гард, мгновенно блокирует повторный показ
+      // даже если RPC заглохнет или вернёт стейл при следующем heysSyncCompleted.
+      if (latestTs) setLocalAckedTs(latestTs);
       _entries = [];
       removeExistingModal();
       removeExistingBanner();
+      // RPC fire-and-forget — UI не блокируем, сервер обновит last_seen_at в фоне.
+      if (latestTs && HEYS.YandexAPI?.ackCuratorChangelog) {
+        HEYS.YandexAPI.ackCuratorChangelog(latestTs).then((res) => {
+          if (res && res.ok === false) {
+            console.warn('[HEYS.curatorBanner] ack rpc returned error:', res.error);
+          }
+        }).catch((e) => {
+          console.warn('[HEYS.curatorBanner] ack rpc failed:', e?.message);
+        });
+      }
     });
     backdrop.addEventListener('click', (e) => {
       if (e.target === backdrop) {
@@ -44237,8 +44275,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   async function autoAckSilent() {
+    const latestTs = getLatestEntryTs();
+    // Local guard первым делом — даже если RPC упадёт, повторный boot не покажет.
+    if (latestTs) setLocalAckedTs(latestTs);
     try {
-      const latestTs = getLatestEntryTs();
       if (HEYS.YandexAPI?.ackCuratorChangelog && latestTs) {
         await HEYS.YandexAPI.ackCuratorChangelog(latestTs);
       }
@@ -44260,8 +44300,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
         return;
       }
-      _entries = Array.isArray(res.entries) ? res.entries : [];
+      const rawEntries = Array.isArray(res.entries) ? res.entries : [];
+      _entries = filterEntriesAfterLocalAck(rawEntries);
+
+      // Если сервер сам отдал пустой массив (server-side last_seen уже
+      // покрывает) — local-LS гард больше не нужен, чистим его.
+      if (rawEntries.length === 0) {
+        clearLocalAckedTs();
+        removeExistingBanner();
+        return;
+      }
       if (_entries.length === 0) {
+        // local-LS гард отсёк всё — banner не показываем, но local флаг
+        // оставляем (сервер ещё может присылать стейл).
         removeExistingBanner();
         return;
       }
