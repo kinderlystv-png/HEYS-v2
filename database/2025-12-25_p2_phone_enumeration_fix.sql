@@ -161,14 +161,18 @@ BEGIN
   v_session_token := gen_random_uuid();
   v_session_expires := NOW() + INTERVAL '30 days';
   
+  -- Хранилище — SHA-256 хеш токена (схема client_sessions.token_hash BYTEA).
+  -- См. 2025-12-24_subscriptions_and_sessions.sql require_client_id:
+  --   WHERE s.token_hash = digest(p_session_token, 'sha256')
+  -- Клиент получает plain UUID v_session_token; в БД лежит только хеш.
   INSERT INTO public.client_sessions (
-    session_token,
+    token_hash,
     client_id,
     ip_address,
     user_agent,
     expires_at
   ) VALUES (
-    v_session_token,
+    digest(v_session_token::text, 'sha256'),
     v_client.id,
     v_ip,
     p_user_agent,
