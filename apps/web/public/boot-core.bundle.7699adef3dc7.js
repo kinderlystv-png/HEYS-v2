@@ -14774,7 +14774,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
       const response = await fetchWithRetry(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(params)
+        body: JSON.stringify(params),
+        // Phase C (2026-05-19): send/receive HttpOnly cookies for cross-
+        // subdomain (app.heyslab.ru → api.heyslab.ru). Without `include`
+        // the browser drops the cookie even though CORS allows credentials.
+        credentials: 'include'
       });
 
       const data = await response.json();

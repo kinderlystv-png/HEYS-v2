@@ -1000,6 +1000,33 @@ module.exports.handler = async function (event, context) {
   }
   params = mappedParams;
 
+  // Phase C (2026-05-19): cookie-based session token carriage.
+  // Parses `heys_session_token` from the incoming Cookie header and uses it
+  // as `p_session_token` when the body did not supply one. Lets cookie-only
+  // clients call any *_by_session RPC transparently; legacy JS that still
+  // puts the token in the body is unchanged. Domain=.heyslab.ru covers both
+  // app.heyslab.ru (frontend) and api.heyslab.ru (this Function).
+  const cookieHeader = event.headers?.cookie || event.headers?.Cookie || '';
+  let cookieSessionToken = null;
+  if (cookieHeader && typeof cookieHeader === 'string') {
+    for (const part of cookieHeader.split(';')) {
+      const eqIdx = part.indexOf('=');
+      if (eqIdx === -1) continue;
+      const name = part.slice(0, eqIdx).trim();
+      if (name === 'heys_session_token') {
+        try {
+          cookieSessionToken = decodeURIComponent(part.slice(eqIdx + 1).trim());
+        } catch (_e) {
+          cookieSessionToken = part.slice(eqIdx + 1).trim();
+        }
+        break;
+      }
+    }
+  }
+  if (cookieSessionToken && !params.p_session_token) {
+    params.p_session_token = cookieSessionToken;
+  }
+
   // API-first ingest endpoint (custom handler, not direct SQL function wrapper)
   if (fnName === 'planning_context_ingest' || fnName === 'planning_context_agent_ingest') {
     let kv;
@@ -2549,10 +2576,41 @@ module.exports.handler = async function (event, context) {
     // 🔐 P2 FIX: Освобождаем клиент в pool ДО return (serverless best practice)
     client.release();
 
+    // Phase C (2026-05-19): HttpOnly cookie carriage for client session.
+    // On a successful `verify_client_pin_v3` response we mint
+    // `heys_session_token` as HttpOnly + Secure + SameSite=Lax (Strict
+    // blocks app.heyslab.ru → api.heyslab.ru in some browsers) so XSS in
+    // the legacy IIFE bundles can no longer pluck the token from
+    // localStorage. The body still returns the plain UUID for legacy JS
+    // until we drop localStorage on the client; both paths interoperate.
+    // `revoke_session` success clears the same cookie with Max-Age=0.
+    const responseBody = result.rows.length === 1 ? result.rows[0] : result.rows;
+    const finalHeaders = { ...corsHeaders };
+
+    // pg returns scalar-functions wrapped as `{ <fnName>: <value> }`, so we
+    // unwrap once before inspecting `success` / `session_token`.
+    const inner = (responseBody && typeof responseBody === 'object' && fnName in responseBody)
+      ? responseBody[fnName]
+      : responseBody;
+
+    if (fnName === 'verify_client_pin_v3'
+        && inner && typeof inner === 'object'
+        && inner.success === true
+        && typeof inner.session_token === 'string') {
+      const tok = encodeURIComponent(inner.session_token);
+      finalHeaders['Set-Cookie'] =
+        `heys_session_token=${tok}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`;
+    } else if (fnName === 'revoke_session'
+        && inner && typeof inner === 'object'
+        && (inner.success === true || inner.revoked === true)) {
+      finalHeaders['Set-Cookie'] =
+        'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+    }
+
     return {
       statusCode: 200,
-      headers: corsHeaders,
-      body: JSON.stringify(result.rows.length === 1 ? result.rows[0] : result.rows)
+      headers: finalHeaders,
+      body: JSON.stringify(responseBody)
     };
 
   } catch (error) {
