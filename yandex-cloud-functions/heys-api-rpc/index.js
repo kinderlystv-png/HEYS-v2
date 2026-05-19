@@ -932,7 +932,35 @@ module.exports.handler = async function (event, context) {
   if (isCuratorFunction) {
     const authHeader = event.headers?.['authorization'] || event.headers?.['Authorization'];
 
-    if (!authHeader?.startsWith('Bearer ')) {
+    // PR-B (2026-05-20): JWT принимается из Authorization: Bearer (legacy
+    // путь через localStorage в JS) ИЛИ из HttpOnly cookie heys_curator_jwt
+    // (новый путь, XSS-safe). Cookie выставляется handler'ом heys-api-auth
+    // на curator login. Когда все legacy-callers перейдут на cookie,
+    // Authorization-путь можно будет удалить.
+    let token = null;
+    if (authHeader?.startsWith('Bearer ')) {
+      const candidate = authHeader.slice(7).trim();
+      if (candidate.length > 0) token = candidate;
+    }
+    if (!token) {
+      const cookieHdr = event.headers?.cookie || event.headers?.Cookie || '';
+      if (cookieHdr && typeof cookieHdr === 'string') {
+        for (const part of cookieHdr.split(';')) {
+          const eqIdx = part.indexOf('=');
+          if (eqIdx === -1) continue;
+          if (part.slice(0, eqIdx).trim() === 'heys_curator_jwt') {
+            try {
+              token = decodeURIComponent(part.slice(eqIdx + 1).trim());
+            } catch (_e) {
+              token = part.slice(eqIdx + 1).trim();
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    if (!token) {
       return {
         statusCode: 401,
         headers: corsHeaders,
@@ -951,7 +979,6 @@ module.exports.handler = async function (event, context) {
       };
     }
 
-    const token = authHeader.slice(7);
     console.info('[RPC] ℹ️ JWT token received, length:', token.length, 'first 20 chars:', token.substring(0, 20));
     const jwtResult = verifyJwt(token, JWT_SECRET);
 

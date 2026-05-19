@@ -300,9 +300,23 @@ async function handleLogin(body, jwtSecret, ip) {
       role: 'curator'
     }, jwtSecret);
 
-    // Формируем ответ в формате совместимом с Supabase
+    // Формируем ответ в формате совместимом с Supabase.
+    //
+    // PR-B (2026-05-20): дополнительно выставляем JWT в HttpOnly cookie
+    // `heys_curator_jwt`. Это defense-in-depth: пока legacy-код всё ещё
+    // читает access_token из тела и сохраняет в localStorage, server-side
+    // путь уже умеет принимать тот же токен из cookie через handler
+    // heys-api-rpc. После того как все legacy-callers переведут на
+    // cookie-only, JWT из тела ответа можно будет убрать (Phase 2).
+    //
+    // Domain=.heyslab.ru — frontend на app.heyslab.ru, API на api.heyslab.ru
+    // (разные поддомены одного зарегистрированного домена).
+    // SameSite=Lax — Strict ломает cross-subdomain в некоторых браузерах.
     return {
       statusCode: 200,
+      headers: {
+        'Set-Cookie': `heys_curator_jwt=${encodeURIComponent(accessToken)}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${JWT_EXPIRES_IN}`
+      },
       body: JSON.stringify({
         access_token: accessToken,
         token_type: 'bearer',

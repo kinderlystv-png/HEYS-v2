@@ -14983,7 +14983,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
+        // PR-B (2026-05-20): принимаем Set-Cookie от heys-api-auth
+        // (heys_curator_jwt, HttpOnly, Domain=.heyslab.ru). credentials:'include'
+        // обязателен для cross-subdomain cookie carriage.
+        credentials: 'include'
       });
 
       const data = await response.json();
