@@ -2741,6 +2741,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const [deleteStage, setDeleteStage] = React.useState('idle'); // idle → confirming → busy
         const [message, setMessage] = React.useState('');
 
+        // Состояние push-разрешения. Если denied — показываем мини-инструкцию
+        // как разблокировать в настройках браузера (юзер сам отказал или
+        // нажал «Block» в нативном попапе).
+        const [pushPermission, setPushPermission] = React.useState(() => {
+            try { return typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'; }
+            catch (_) { return 'unsupported'; }
+        });
+        React.useEffect(function () {
+            const tick = setInterval(function () {
+                try {
+                    const p = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+                    setPushPermission(function (prev) { return prev === p ? prev : p; });
+                } catch (_) { /* noop */ }
+            }, 5000);
+            return function () { clearInterval(tick); };
+        }, []);
+
         const handleRevokeHealth = async function () {
             const clientId = (window.HEYS && window.HEYS.currentClientId) ||
                 localStorage.getItem('heys_client_current') || '';
@@ -2819,6 +2836,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
                 'Управление согласиями на обработку персональных данных (152-ФЗ).'
             ),
+            // Если пользователь заблокировал push в браузере — мини-инструкция
+            // как разблокировать. Чтобы не «пропадать» из-за разового отказа.
+            pushPermission === 'denied'
+                ? React.createElement('div', {
+                    style: {
+                        marginTop: '10px',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #fde68a',
+                        background: '#fffbeb',
+                        color: '#92400e',
+                        fontSize: '13px',
+                        lineHeight: '1.5',
+                    }
+                },
+                    React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px' } },
+                        '🔕 Уведомления отключены'),
+                    React.createElement('div', null,
+                        'Чтобы получать напоминания и сообщения куратора — разрешите уведомления ' +
+                        'в настройках сайта (значок 🔒/ⓘ рядом с адресом → «Уведомления» → «Разрешить»).')
+                )
+                : null,
             React.createElement('div', { style: { marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' } },
                 React.createElement('button', {
                     type: 'button',

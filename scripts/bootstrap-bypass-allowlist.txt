@@ -75,7 +75,10 @@ apps/web/heys_app_backup_import_v1.js:284
 apps/web/heys_app_backup_import_v1.js:294
 apps/web/heys_cloud_storage_utils_v1.js:108
 apps/web/heys_consents_v1.js:333
-apps/web/heys_consents_v1.js:956
+apps/web/heys_consents_v1.js:468
+apps/web/heys_consents_v1.js:514
+apps/web/heys_consents_v1.js:570
+apps/web/heys_consents_v1.js:973
 apps/web/heys_push_v1.js:12
 apps/web/heys_demo_mode_v1.js:106
 apps/web/heys_demo_mode_v1.js:108

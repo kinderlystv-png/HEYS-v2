@@ -173,6 +173,8 @@
     });
 
     lsSet('heys_push_onboarded', { state: 'granted', at: Date.now() });
+    // Подписка получена — сбрасываем pending-install флаг, если он был.
+    try { localStorage.removeItem('heys_push_pending_install'); } catch (_) { /* noop */ }
     return { ok: true };
   }
 
@@ -232,6 +234,25 @@
     } catch (e) { /* ignore */ }
   }
 
+  // ── iOS PWA: после установки на главный экран — допросить разрешение ──
+  // Если юзер на iOS Safari в онбординге согласился на push, но subscribe
+  // вернул `ios_needs_install` — мы сохранили флаг `heys_push_pending_install`.
+  // При первом запуске standalone-PWA на iOS этот хелпер пробует подписаться.
+  async function maybePromptIosAfterInstall() {
+    if (!isCapable()) return;
+    if (!isIosSafari() || !isStandalone()) return;
+    if (Notification.permission !== 'default') return; // уже спрашивали
+    let pending = null;
+    try { pending = localStorage.getItem('heys_push_pending_install'); } catch (_) { /* noop */ }
+    if (pending !== '1') return;
+    try {
+      const r = await subscribe();
+      console.info('[HEYS.push] iOS PWA prompt →', r);
+    } catch (e) {
+      console.warn('[HEYS.push] iOS PWA prompt failed:', e?.message);
+    }
+  }
+
   // ── Public API ────────────────────────────────────────────────────────
   HEYS.push = {
     isCapable,
@@ -243,12 +264,16 @@
     savePrefs,
     sendTest,
     maybeAutoResubscribe,
+    maybePromptIosAfterInstall,
     fetchVapidPublicKey,
   };
 
   // Авто-проверка на старте — через небольшой timeout, чтобы SW успел встать.
   if (typeof window !== 'undefined') {
-    setTimeout(() => { maybeAutoResubscribe().catch(() => {}); }, 3000);
+    setTimeout(() => {
+      maybeAutoResubscribe().catch(() => {});
+      maybePromptIosAfterInstall().catch(() => {});
+    }, 3000);
   }
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -2997,6 +3022,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const [deleteStage, setDeleteStage] = React.useState('idle'); // idle → confirming → busy
         const [message, setMessage] = React.useState('');
 
+        // Состояние push-разрешения. Если denied — показываем мини-инструкцию
+        // как разблокировать в настройках браузера (юзер сам отказал или
+        // нажал «Block» в нативном попапе).
+        const [pushPermission, setPushPermission] = React.useState(() => {
+            try { return typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'; }
+            catch (_) { return 'unsupported'; }
+        });
+        React.useEffect(function () {
+            const tick = setInterval(function () {
+                try {
+                    const p = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+                    setPushPermission(function (prev) { return prev === p ? prev : p; });
+                } catch (_) { /* noop */ }
+            }, 5000);
+            return function () { clearInterval(tick); };
+        }, []);
+
         const handleRevokeHealth = async function () {
             const clientId = (window.HEYS && window.HEYS.currentClientId) ||
                 localStorage.getItem('heys_client_current') || '';
@@ -3075,6 +3117,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
                 'Управление согласиями на обработку персональных данных (152-ФЗ).'
             ),
+            // Если пользователь заблокировал push в браузере — мини-инструкция
+            // как разблокировать. Чтобы не «пропадать» из-за разового отказа.
+            pushPermission === 'denied'
+                ? React.createElement('div', {
+                    style: {
+                        marginTop: '10px',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #fde68a',
+                        background: '#fffbeb',
+                        color: '#92400e',
+                        fontSize: '13px',
+                        lineHeight: '1.5',
+                    }
+                },
+                    React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px' } },
+                        '🔕 Уведомления отключены'),
+                    React.createElement('div', null,
+                        'Чтобы получать напоминания и сообщения куратора — разрешите уведомления ' +
+                        'в настройках сайта (значок 🔒/ⓘ рядом с адресом → «Уведомления» → «Разрешить»).')
+                )
+                : null,
             React.createElement('div', { style: { marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' } },
                 React.createElement('button', {
                     type: 'button',

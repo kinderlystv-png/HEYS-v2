@@ -171,6 +171,8 @@
     });
 
     lsSet('heys_push_onboarded', { state: 'granted', at: Date.now() });
+    // Подписка получена — сбрасываем pending-install флаг, если он был.
+    try { localStorage.removeItem('heys_push_pending_install'); } catch (_) { /* noop */ }
     return { ok: true };
   }
 
@@ -230,6 +232,25 @@
     } catch (e) { /* ignore */ }
   }
 
+  // ── iOS PWA: после установки на главный экран — допросить разрешение ──
+  // Если юзер на iOS Safari в онбординге согласился на push, но subscribe
+  // вернул `ios_needs_install` — мы сохранили флаг `heys_push_pending_install`.
+  // При первом запуске standalone-PWA на iOS этот хелпер пробует подписаться.
+  async function maybePromptIosAfterInstall() {
+    if (!isCapable()) return;
+    if (!isIosSafari() || !isStandalone()) return;
+    if (Notification.permission !== 'default') return; // уже спрашивали
+    let pending = null;
+    try { pending = localStorage.getItem('heys_push_pending_install'); } catch (_) { /* noop */ }
+    if (pending !== '1') return;
+    try {
+      const r = await subscribe();
+      console.info('[HEYS.push] iOS PWA prompt →', r);
+    } catch (e) {
+      console.warn('[HEYS.push] iOS PWA prompt failed:', e?.message);
+    }
+  }
+
   // ── Public API ────────────────────────────────────────────────────────
   HEYS.push = {
     isCapable,
@@ -241,11 +262,15 @@
     savePrefs,
     sendTest,
     maybeAutoResubscribe,
+    maybePromptIosAfterInstall,
     fetchVapidPublicKey,
   };
 
   // Авто-проверка на старте — через небольшой timeout, чтобы SW успел встать.
   if (typeof window !== 'undefined') {
-    setTimeout(() => { maybeAutoResubscribe().catch(() => {}); }, 3000);
+    setTimeout(() => {
+      maybeAutoResubscribe().catch(() => {});
+      maybePromptIosAfterInstall().catch(() => {});
+    }, 3000);
   }
 })(typeof window !== 'undefined' ? window : globalThis);

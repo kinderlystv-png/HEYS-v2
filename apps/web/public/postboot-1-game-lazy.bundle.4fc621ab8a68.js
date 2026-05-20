@@ -36438,7 +36438,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         required: false
       },
       notifications: {
-        label: 'Получать напоминания, чтобы не забывать записывать еду',
+        label: 'Напоминания и важные события (статус триала, новые сообщения куратора)',
         link: null,
         required: false
       },
@@ -36827,7 +36827,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
         // Push opt-in (если пользователь согласился во время онбординга).
         if (notificationsOptIn && HEYS.push) {
-          HEYS.push.subscribe().catch((err) =>
+          HEYS.push.subscribe().then((r) => {
+            // iOS Safari вне PWA — нельзя подписаться. Запоминаем, что юзер
+            // хотел уведомления, и попросим заново после установки PWA.
+            if (r && r.reason === 'ios_needs_install') {
+              try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
+            }
+          }).catch((err) =>
             console.warn('[Consents] push.subscribe failed:', err?.message)
           );
         }
@@ -36868,7 +36874,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           // Не блокируем onComplete если подписка не получится (например, iOS без install).
           if (notificationsOptIn && HEYS.push) {
             HEYS.push.subscribe().then(
-              (r) => console.info('[Consents] push.subscribe →', r),
+              (r) => {
+                console.info('[Consents] push.subscribe →', r);
+                if (r && r.reason === 'ios_needs_install') {
+                  try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
+                }
+              },
               (err) => console.warn('[Consents] push.subscribe failed:', err?.message)
             );
           }
@@ -36918,7 +36929,13 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
         // Push opt-in (если пользователь согласился во время онбординга).
         if (notificationsOptIn && HEYS.push) {
-          HEYS.push.subscribe().catch((err) =>
+          HEYS.push.subscribe().then((r) => {
+            // iOS Safari вне PWA — нельзя подписаться. Запоминаем, что юзер
+            // хотел уведомления, и попросим заново после установки PWA.
+            if (r && r.reason === 'ios_needs_install') {
+              try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
+            }
+          }).catch((err) =>
             console.warn('[Consents] push.subscribe failed:', err?.message)
           );
         }
