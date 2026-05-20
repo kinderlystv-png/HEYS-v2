@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.20.e424b0c2",
+      "buildHash": "e424b0c2",
+      "date": "2026-05-20",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: PNG-fallback мокапа телефона теперь в репозитории",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Зафиксировали hero-phone-mockup.png в git",
+          "description": "Папка apps/landing/public/ исторически в gitignore (тяжёлые ассеты подтягиваются с локальной dev-машины при next build). Но PNG-fallback к hero-mockup-у достаточно лёгкий (~328 KB на 600px ширине) — добавили его через force-add, чтобы деплой работал с любой машины без ручной подготовки. Современные браузеры по-прежнему загружают только webp, PNG скачивается только как fallback."
+        }
+      ]
+    },
+    {
       "version": "2026.05.20.ce055e9f",
       "buildHash": "ce055e9f",
       "date": "2026-05-20",
