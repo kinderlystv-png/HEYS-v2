@@ -37,6 +37,14 @@ export default function DemoSection() {
         return () => mql.removeEventListener('change', update)
     }, [])
 
+    // External trigger: Hero CTA dispatches 'heys:open-demo' to skip the
+    // scroll-to-section + click-on-preview steps and jump straight to the gender modal.
+    useEffect(() => {
+        const handler = () => setModalOpen(true)
+        window.addEventListener('heys:open-demo', handler)
+        return () => window.removeEventListener('heys:open-demo', handler)
+    }, [])
+
     useEffect(() => {
         const observer = new IntersectionObserver(
             ([entry]) => {
@@ -197,7 +205,11 @@ export default function DemoSection() {
             <section
                 ref={sectionRef}
                 id="demo"
-                className="relative bg-[#fafafa] py-12 sm:py-16 lg:py-20"
+                className="relative py-12 sm:py-16 lg:py-20"
+                style={{
+                    background:
+                        'linear-gradient(180deg, #FAE5D5 0%, #FAE5D5 20%, #FCFBF9 55%, #ffffff 100%)',
+                }}
             >
                 <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6">
                     {/* Header */}
@@ -208,17 +220,12 @@ export default function DemoSection() {
                                 : 'opacity-0 translate-y-6'
                         }`}
                     >
-                        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full mb-4">
-                            02 — ПОТРОГАЙ ЖИВОЙ HEYS
-                        </span>
                         <h2 className="text-[24px] sm:text-[28px] md:text-[34px] font-semibold text-[#111827] mb-3 leading-[1.2]">
                             Не скрин — настоящее приложение
                         </h2>
                         <p className="text-[14px] sm:text-[15px] text-[#6b7280] max-w-xl mx-auto leading-relaxed">
                             Реальный день, реальные продукты, реальный рацион.
-                            Можешь добавлять, менять, листать. Всё, что
-                            сделаешь — останется только здесь, в облако не
-                            уйдёт.
+                            Вы можете добавлять, менять, листать.
                         </p>
                     </div>
 

@@ -1,6 +1,6 @@
 // ComparisonSection.tsx — Секция "Отличие"
 // Anchor: #comparison
-// 6-строчная таблица: обычное приложение vs HEYS
+// 4-строчная таблица: обычное приложение vs HEYS (doing → knowing → feeling → lasting)
 
 'use client'
 
@@ -9,27 +9,19 @@ import { useEffect, useRef, useState } from 'react'
 const comparisonRows = [
     {
         usual: 'Взвешиваете еду и сами вбиваете каждый грамм',
-        heys: 'Просто отправляете фото или аудио — всё остальное делает куратор',
+        heys: 'Шлёте куратору фото с весов или текст — дневник ведёт он',
     },
     {
-        usual: 'Вся аналитика — это сухие цифры и график веса',
-        heys: 'Понимаете реальные причины: «вес встал из-за недосыпа, а не из-за торта»',
+        usual: 'Сухие цифры и график веса',
+        heys: 'Научные причины на ваших данных: «вес встал из-за недосыпа, а не из-за торта»',
     },
     {
-        usual: 'Перебор калорий — видите «красную зону» и испытываете стыд',
-        heys: 'Куратор мягко корректирует план: никаких «отработок» и чувства вины',
+        usual: 'Сорвались — приложение шлёт push-напоминание',
+        heys: 'Сорвались — куратор без оценок ищет причину и подстраивает план',
     },
     {
-        usual: 'Сорвались и всё бросили — приложению всё равно',
-        heys: 'Система видит риск выгорания, а наставник помогает пройти сложный момент',
-    },
-    {
-        usual: 'Мотивация — это шаблонные push-уведомления',
-        heys: 'Вас поддерживает живой человек, которому искренне важен ваш результат',
-    },
-    {
-        usual: 'Очередная диета, где нужно терпеть и бороться с собой',
-        heys: 'Формирование здоровых привычек с заботой о вашей психике',
+        usual: 'Очередная диета — терпеть и бороться с собой',
+        heys: 'Устойчивый режим — рядом человек, которому не всё равно. Без даты окончания.',
     },
 ]
 
@@ -60,7 +52,7 @@ export default function ComparisonSection() {
 
             {/* Sticky Header Badge */}
             <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">03 — ОТЛИЧИЕ ОТ ДИЕТ</span>
+                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">04 — ОТЛИЧИЕ ОТ ДИЕТ</span>
             </div>
             <div className="container mx-auto px-4 md:px-6">
                 <div className="max-w-4xl mx-auto">

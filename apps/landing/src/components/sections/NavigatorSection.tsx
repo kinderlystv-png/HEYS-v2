@@ -1,4 +1,4 @@
-// NavigatorSection.tsx — Секция "Поведенческий навигатор"
+// NavigatorSection.tsx — Секция "Под капотом" (5-я секция, поведенческий анализ)
 // Anchor: #navigator
 // Главная продающая секция: CRS-шкала, причины, без наказания, инсулиновая волна
 
@@ -11,9 +11,9 @@ import { useEffect, useRef, useState } from 'react'
 const crsLevels = [
     { color: 'bg-green-500', label: '🟢 Всё хорошо', desc: 'ваш день идёт отлично, продолжайте' },
     { color: 'bg-yellow-400', label: '🟡 Внимание', desc: 'небольшой перекос, вот что поможет его выровнять' },
-    { color: 'bg-orange-500', label: '🟠 Предупреждение', desc: 'формируется негативный паттерн, вот 3 конкретных действия' },
-    { color: 'bg-red-500', label: '🔴 Нужен разворот', desc: 'стоп, давайте развернём ситуацию прямо сейчас' },
-    { color: 'bg-purple-500', label: '🟣 Поддержка', desc: 'подключается куратор для персональной помощи' },
+    { color: 'bg-orange-500', label: '🟠 Предупреждение', desc: 'ритм начинает сбиваться, вот 3 конкретных шага вернуться' },
+    { color: 'bg-red-500', label: '🔴 Срочная коррекция', desc: 'ритм сильно отклонился, нужны крупные изменения, разбираем вместе' },
+    { color: 'bg-purple-500', label: '🟣 Поддержка', desc: 'куратор переключает приоритет на вас, разбираем причины и план' },
 ]
 
 function CRSScaleBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, isOpen: boolean, onToggle: () => void }) {
@@ -37,20 +37,17 @@ function CRSScaleBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, is
                         </p>
                     </div>
                 </div>
-                <div className="flex-shrink-0 flex flex-col items-center gap-1.5 mt-1">
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 ${isOpen ? 'bg-indigo-100 border-indigo-200 text-indigo-700' : 'bg-white/70 border-indigo-200 text-indigo-500 hover:bg-indigo-50'}`}>
-                        <span className="text-xs font-semibold whitespace-nowrap">{isOpen ? 'Свернуть' : 'Подробнее'}</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-500 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </div>
+                <div className="flex-shrink-0 mt-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-all duration-500 ${isOpen ? 'rotate-180 text-indigo-600' : 'rotate-0 text-indigo-400'}`}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                 </div>
             </div>
 
             <div className={`grid transition-all duration-500 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100 mt-6' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
                 <div className="overflow-hidden">
                     <p className="text-gray-600 mb-4 leading-relaxed">
-                        Обычные фитнес-приложения сравнивают вас с шаблонным «идеалом». HEYS оценивает 10 факторов (от качества сна до гормезиса), изучает <strong className="font-semibold text-gray-900">ваши последние 14 дней</strong> и строит персональный baseline. Ваш «импульс» высчитывается непрерывно.
+                        Обычные фитнес-приложения сравнивают вас с шаблонным «идеалом». HEYS оценивает 10 факторов — от качества сна до уровня стресса — изучает <strong className="font-semibold text-gray-900">ваши последние 14 дней</strong> и строит персональную точку отсчёта. Дальше любые сдвиги в вашем ритме видны непрерывно.
                     </p>
 
                     {/* CRS Scale — animated bars */}
@@ -78,8 +75,7 @@ function CRSScaleBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, is
                     </div>
 
                     <p className="mt-6 text-sm text-gray-500 italic bg-white/50 p-5 rounded-xl border border-white/60">
-                        Обычное приложение жестко говорит: «сегодня ты молодец, а вчера плохой».
-                        Система каскадов HEYS изучает непрерывные графики: мы видим перекосы кортизола и спасаем вас без жестких диет.
+                        Обычное приложение оценивает каждый день отдельно — сегодня хороший, вчера плохой. HEYS смотрит непрерывный график недели: видит сдвиги в биохимии и помогает скорректировать ритм без жёстких диет.
                     </p>
                 </div>
             </div>
@@ -96,7 +92,7 @@ const causeExamples = [
     },
     {
         icon: '📉',
-        text: '«Вы недоели вчера и позавчера. Тело включило режим экономии. Поэтому вечером раздражение и тяга к еде.»',
+        text: '«Вы недоели вчера и позавчера. Организм включил режим экономии. Поэтому вечером раздражение и тяга к еде.»',
     },
     {
         icon: '🔄',
@@ -125,20 +121,17 @@ function CausesBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, isOp
                         </p>
                     </div>
                 </div>
-                <div className="flex-shrink-0 flex flex-col items-center gap-1.5 mt-1">
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 ${isOpen ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-white/70 border-emerald-200 text-emerald-600 hover:bg-emerald-50'}`}>
-                        <span className="text-xs font-semibold whitespace-nowrap">{isOpen ? 'Свернуть' : 'Подробнее'}</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-500 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </div>
+                <div className="flex-shrink-0 mt-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-all duration-500 ${isOpen ? 'rotate-180 text-emerald-600' : 'rotate-0 text-emerald-400'}`}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                 </div>
             </div>
 
             <div className={`grid transition-all duration-500 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100 mt-6' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
                 <div className="overflow-hidden">
                     <p className="text-gray-600 mb-4 leading-relaxed">
-                        Калорий в вакууме не существует. Алгоритм учитывает вашу <strong className="font-semibold text-gray-900">аллостатическую нагрузку</strong> (накопленный стресс) и гормональные ритмы:
+                        Калории — это только часть картины. Алгоритм учитывает накопленный стресс, гормональные ритмы и качество сна:
                     </p>
 
                     <div className="space-y-3">
@@ -171,12 +164,12 @@ const noPunishmentItems = [
     {
         icon: '🍽',
         title: 'Переели?',
-        text: 'Система НЕ заставит вас голодать завтра. Коррекция настолько мягкая, что вы её не заметитите — и большую часть система предложит компенсировать через активность.',
+        text: 'Система НЕ заставит вас голодать завтра. Коррекция настолько мягкая, что вы её не заметите — и большую часть система предложит компенсировать через активность.',
     },
     {
         icon: '📊',
         title: 'Недоели вчера?',
-        text: 'Система восполнит дефицит плавно. Потому что тело уже в режиме стресса — если резко добавить еды, запустится каскад запасания в жир.',
+        text: 'Система восполнит дефицит плавно. Потому что организм уже в режиме стресса — если резко добавить еды, запустится каскад запасания в жир.',
     },
     {
         icon: '🎉',
@@ -211,20 +204,17 @@ function NoPunishmentBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean
                         </p>
                     </div>
                 </div>
-                <div className="flex-shrink-0 flex flex-col items-center gap-1.5 mt-1">
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 ${isOpen ? 'bg-amber-100 border-amber-200 text-amber-700' : 'bg-white/70 border-amber-200 text-amber-600 hover:bg-amber-50'}`}>
-                        <span className="text-xs font-semibold whitespace-nowrap">{isOpen ? 'Свернуть' : 'Подробнее'}</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-500 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </div>
+                <div className="flex-shrink-0 mt-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-all duration-500 ${isOpen ? 'rotate-180 text-amber-600' : 'rotate-0 text-amber-400'}`}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                 </div>
             </div>
 
             <div className={`grid transition-all duration-500 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100 mt-6' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
                 <div className="overflow-hidden">
                     <p className="text-gray-600 mb-4 leading-relaxed">
-                        Доказано: резкая компенсация недоедания уйдет в жир, а упреки приведут к срыву. Оценивая кумулятивный стресс, мы рассчитываем <strong className="font-semibold text-gray-900">Crash Risk Score</strong> за 3 дня до потенциальной ямы:
+                        Резкая компенсация недоедания уходит в жир, а упрёки приводят к срыву. Оценивая накопленный стресс, мы рассчитываем <strong className="font-semibold text-gray-900">Crash Risk Score</strong> за 3 дня до потенциальной ямы:
                     </p>
 
                     <div className="grid sm:grid-cols-2 gap-5">
@@ -280,7 +270,7 @@ function InsulinWaveBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean,
             <div className="flex justify-between items-start gap-5">
                 <div>
                     <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-                        Инсулиновая волна: точная математика жиросжигания.
+                        Инсулиновая волна: точная математика сжигания жира.
                     </h3>
                     <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100 mt-2'}`}>
                         <p className="text-gray-600 text-sm md:text-base overflow-hidden">
@@ -288,13 +278,10 @@ function InsulinWaveBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean,
                         </p>
                     </div>
                 </div>
-                <div className="flex-shrink-0 flex flex-col items-center gap-1.5 mt-1">
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 ${isOpen ? 'bg-sky-100 border-sky-200 text-sky-700' : 'bg-white/70 border-sky-200 text-sky-600 hover:bg-sky-50'}`}>
-                        <span className="text-xs font-semibold whitespace-nowrap">{isOpen ? 'Свернуть' : 'Подробнее'}</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-500 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </div>
+                <div className="flex-shrink-0 mt-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-all duration-500 ${isOpen ? 'rotate-180 text-sky-600' : 'rotate-0 text-sky-400'}`}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                 </div>
             </div>
 
@@ -303,7 +290,7 @@ function InsulinWaveBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean,
                     <div className="flex flex-col xl:flex-row gap-8 items-start">
                         <div className="flex-1">
                             <p className="text-gray-600 mb-4 leading-relaxed mt-2">
-                                После каждого приёма пищи тело сначала запасает энергию, а потом возвращается к сжиганию жира. Обычные диеты говорят: «не ешь после 18:00» или «окошко 2 часа».
+                                После каждого приёма пищи организм сначала запасает энергию, а потом возвращается к сжиганию жира. Обычные диеты говорят: «не ешь после 18:00» или «окошко 2 часа».
                             </p>
                             <p className="text-gray-600 mb-4 leading-relaxed">
                                 HEYS не гадает. Система выстраивает <strong className="font-semibold text-gray-900">Инсулиновую волну</strong> индивидуально для каждого приёма пищи по <strong className="font-semibold text-gray-900">37 параметрам</strong>
@@ -324,7 +311,7 @@ function InsulinWaveBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean,
                                 </li>
                             </ul>
                             <p className="text-sm text-gray-600 italic border-l-2 border-sky-300 pl-3">
-                                Вы точно знаете, когда уровень инсулина опустится, и тело начнёт работать на вас.
+                                Вы точно знаете, когда уровень инсулина опустится, и организм начнёт работать на вас.
                             </p>
                         </div>
 
@@ -344,7 +331,7 @@ function InsulinWaveBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean,
                             <div className="bg-[#3B82F6] rounded-2xl p-6 text-white shadow-lg relative z-10">
                                 <div className="text-center mb-4">
                                     <div className="text-blue-100 text-sm font-medium mb-4 flex items-center justify-center gap-1.5">
-                                        ⏱ Жиросжигание начнётся через
+                                        ⏱ Сжигание жира начнётся через
                                     </div>
                                     <div className="flex items-end justify-center gap-1 font-mono font-bold tracking-tight">
                                         <div className="flex flex-col items-center">
@@ -428,6 +415,7 @@ export default function NavigatorSection() {
     const [isVisible, setIsVisible] = useState(false)
     const [openIndex, setOpenIndex] = useState<number>(-1)
     const sectionRef = useRef<HTMLElement>(null)
+    const blockRefs = useRef<(HTMLDivElement | null)[]>([])
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -444,7 +432,21 @@ export default function NavigatorSection() {
     }, [])
 
     const toggleAccordion = (index: number) => {
+        const wasOpen = openIndex === index
         setOpenIndex(prev => prev === index ? -1 : index)
+
+        // При открытии новой карточки — плавный скролл к её верху
+        // Ждём 520ms (длительность CSS-transition аккордеона), чтобы layout стабилизировался
+        // после сворачивания старой карточки — иначе scroll проскакивает мимо
+        // Используем scrollIntoView + CSS scroll-margin-top на wrapper div (см. JSX ниже)
+        if (!wasOpen) {
+            setTimeout(() => {
+                const el = blockRefs.current[index]
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+            }, 520)
+        }
     }
 
     return (
@@ -455,7 +457,7 @@ export default function NavigatorSection() {
         >
             {/* Sticky Header Badge */}
             <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">04 — ПОД КАПОТОМ</span>
+                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">05 — ПОД КАПОТОМ</span>
             </div>
             <div className="container mx-auto px-4 md:px-6 pt-10">
                 <div className="max-w-4xl mx-auto">
@@ -463,39 +465,47 @@ export default function NavigatorSection() {
                     <h2
                         className={`text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                     >
-                        Мы видим, куда движется ваше поведение.<br />
-                        <span className="text-blue-600">И разворачиваем его вовремя.</span>
+                        Куратор видит, как складывается ваш ритм.<br />
+                        <span className="text-blue-600">И помогает мягко скорректировать — заранее, до проблем.</span>
                     </h2>
                     <p
                         className={`text-gray-600 text-center mb-12 max-w-2xl mx-auto leading-relaxed transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                         style={{ transitionDelay: '100ms' }}
                     >
-                        HEYS отслеживает не только что вы едите, а какой паттерн поведения у вас
-                        формируется прямо сейчас — положительный или отрицательный. И вмешивается до того, как всё выйдет из-под контроля.
+                        Не просто что вы едите — а как складывается ваш ритм прямо сейчас: сон, активность, стресс, восстановление. Куратор видит сдвиги за 2-3 дня до того, как вы их почувствуете — и пишет первым.
                     </p>
 
                     {/* 4 blocks (Accordion) */}
+                    {/* scroll-mt-20 = 80px scroll-margin-top — учитывает sticky-плашку секции */}
                     <div className="space-y-3">
-                        <CRSScaleBlock
-                            isVisible={isVisible}
-                            isOpen={openIndex === 0}
-                            onToggle={() => toggleAccordion(0)}
-                        />
-                        <CausesBlock
-                            isVisible={isVisible}
-                            isOpen={openIndex === 1}
-                            onToggle={() => toggleAccordion(1)}
-                        />
-                        <NoPunishmentBlock
-                            isVisible={isVisible}
-                            isOpen={openIndex === 2}
-                            onToggle={() => toggleAccordion(2)}
-                        />
-                        <InsulinWaveBlock
-                            isVisible={isVisible}
-                            isOpen={openIndex === 3}
-                            onToggle={() => toggleAccordion(3)}
-                        />
+                        <div ref={(el) => { blockRefs.current[0] = el }} className="scroll-mt-20">
+                            <CRSScaleBlock
+                                isVisible={isVisible}
+                                isOpen={openIndex === 0}
+                                onToggle={() => toggleAccordion(0)}
+                            />
+                        </div>
+                        <div ref={(el) => { blockRefs.current[1] = el }} className="scroll-mt-20">
+                            <CausesBlock
+                                isVisible={isVisible}
+                                isOpen={openIndex === 1}
+                                onToggle={() => toggleAccordion(1)}
+                            />
+                        </div>
+                        <div ref={(el) => { blockRefs.current[2] = el }} className="scroll-mt-20">
+                            <NoPunishmentBlock
+                                isVisible={isVisible}
+                                isOpen={openIndex === 2}
+                                onToggle={() => toggleAccordion(2)}
+                            />
+                        </div>
+                        <div ref={(el) => { blockRefs.current[3] = el }} className="scroll-mt-20">
+                            <InsulinWaveBlock
+                                isVisible={isVisible}
+                                isOpen={openIndex === 3}
+                                onToggle={() => toggleAccordion(3)}
+                            />
+                        </div>
                     </div>
 
                     {/* CTA */}

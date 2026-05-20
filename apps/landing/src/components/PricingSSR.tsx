@@ -17,9 +17,9 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
     {
       id: 'base',
       name: 'Base',
-      price: '1 990',
+      price: '2 990',
       period: '₽/мес',
-      description: 'Самостоятельный контроль + мощная аналитика HEYS',
+      description: 'Самостоятельный контроль + ревью от куратора раз в неделю.',
       features: [
         'Вы ведете дневник питания сами',
         'Полный доступ к приложению и виджетам',
@@ -33,15 +33,15 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
     {
       id: 'pro',
       name: 'Pro',
-      price: '12 990',
+      price: '7 990',
       period: '₽/мес',
-      description: 'Максимальный результат. Вы живёте — куратор берёт рутину на себя.',
+      description: 'Куратор ведёт ваш дневник каждый день и держит ритм недели вместе с вами.',
       features: [
-        'Куратор сам ведёт ваш дневник (по фото/аудио)',
-        'Чат 09:00–21:00: живой наставник, не бот',
+        'Куратор ведёт ваш дневник — вы шлёте фото с весов, текст или голос',
+        'Чат 09:00–21:00: живой человек, не бот',
         'Анти-срыв: подхватываем до того, как вы сдадитесь',
-        'Ответы в течение 30 минут',
-        'Еженедельный видео-созвон 20–45 минут',
+        'Без SLA — обычно отвечаем за час-два в рабочее время',
+        'Еженедельный видеосозвон — разбор недели и план на следующую',
         'Выходные: дежурный режим',
       ],
       cta: 'Попробовать неделю (0 ₽)', hasTrial: true, directCta: 'Оформить подписку',
@@ -51,15 +51,16 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
     {
       id: 'pro-plus',
       name: 'Pro+',
-      price: '19 990',
+      price: '14 990',
       period: '₽/мес',
-      description: 'Премиум-поддержка 7/7 без выходных + приоритет',
+      description: 'Полная поддержка + сопровождение тренировок как у личного тренера.',
       features: [
         'Все опции тарифа Pro',
-        '09:00–21:00 — полная поддержка без выходных',
-        'Приоритет в очереди ответов (реакция мгновенная)',
-        'Дополнительный разбор состояний посреди недели',
-        'Персональная онлайн-тренировка 1 раз в неделю (контроль техники по видео)',
+        '09:00–21:00 семь дней в неделю (включая выходные)',
+        'Приоритет в очереди — отвечают вам первым',
+        'Дополнительный созвон в середине недели',
+        'Сопровождение тренировок: куратор онлайн или разбирает запись выполнения',
+        'Корректирует технику, нагрузку и темп — как личный тренер',
       ],
       cta: 'Попробовать Pro (0 ₽)', hasTrial: true, directCta: 'Выбрать Pro+',
       featured: false,
@@ -72,13 +73,16 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
 
       {/* Sticky Header Badge */}
       <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">08 — ТАРИФЫ</span>
+        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">09 — ТАРИФЫ</span>
       </div>
       <div className="container mx-auto px-6 pt-10">
         <div className="max-w-5xl mx-auto">
           {/* Section header */}
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{pricing.intro}</h2>
+            <p className="text-gray-600 max-w-xl mx-auto">
+              Во всех тарифах с вами работает куратор, не алгоритм. Разница — в глубине сопровождения.
+            </p>
           </div>
 
           {/* Pricing cards */}

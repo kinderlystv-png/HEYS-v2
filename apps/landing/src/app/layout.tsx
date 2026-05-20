@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Open_Sans } from 'next/font/google'
 import Script from 'next/script'
 
-import { ABTestSwitcher } from '@/components/ABTestSwitcher'
+// import { ABTestSwitcher } from '@/components/ABTestSwitcher' // временно скрыто
 import CookieInfoBanner from '@/components/CookieInfoBanner'
 
 import '../styles/globals.css'
@@ -189,7 +189,7 @@ export default function RootLayout({
       </head>
       <body className={openSans.className}>
         {children}
-        <ABTestSwitcher />
+        {/* <ABTestSwitcher /> — временно скрыт пока обкатываем новое позиционирование Hero */}
         <CookieInfoBanner />
 
         {/* Яндекс.Метрика noscript fallback */}

@@ -126,20 +126,20 @@ export default function HeroSSR({ content }: HeroSSRProps) {
       {/* Hero Content — unified grid: left=all text, right=phone */}
       <div className="relative w-full flex-1 flex items-center">
         <div className="mx-auto w-full max-w-[1024px] px-4 md:px-6 pt-4 pb-6 md:pt-8 md:pb-24">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6 lg:gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6 lg:gap-14 items-center">
 
-            {/* Mobile: Phone — above text */}
-            <div className={`flex lg:hidden justify-center order-1 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+            {/* Mobile: Phone — above text, bleeds off right edge, bottom cropped */}
+            <div className={`flex lg:hidden justify-end order-1 -mr-4 md:-mr-6 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
               }`} style={{ transitionDelay: '200ms' }}>
-              <div className="relative w-full max-w-[180px] sm:max-w-[210px]">
+              <div className="relative w-[85%] sm:w-[80%] max-w-[440px] sm:max-w-[520px]">
                 <Image
-                  src="/phone3.jpg"
-                  alt="HEYS App Interface"
-                  width={210}
-                  height={420}
+                  src="/hero-phone-mockup.webp"
+                  alt="HEYS приложение на телефоне"
+                  width={800}
+                  height={1033}
                   priority
-                  className="w-full h-auto object-contain drop-shadow-xl"
-                  style={{ maxHeight: 'max(36vh, 280px)', height: 'auto' }}
+                  sizes="(max-width: 640px) 100vw, 640px"
+                  className="w-full h-auto"
                 />
               </div>
             </div>
@@ -148,58 +148,55 @@ export default function HeroSSR({ content }: HeroSSRProps) {
             <div className="text-center lg:text-left order-2 lg:order-1 lg:mt-10">
 
               {/* H1 */}
-              <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[42px] font-semibold text-[#111827] mb-6 md:mb-8 leading-[1.15] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              <h1 className={`text-[26px] sm:text-[28px] md:text-[36px] lg:text-[42px] font-semibold text-[#111827] mb-6 md:mb-8 leading-[1.15] text-balance transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
                 }`} style={{ transitionDelay: '400ms' }}>
-                HEYS — приложение и живой человек рядом
+                HEYS — приложение <span className="whitespace-nowrap">и живой человек</span> рядом
               </h1>
 
               {/* H2 */}
               <h2 className={`text-[14px] md:text-[16px] text-[#6b7280] font-normal mb-6 md:mb-12 leading-[1.6] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
                 }`} style={{ transitionDelay: '800ms' }}>
-                Внутри — суперапп: дневник, советы, навигатор.<br />
-                Рядом — куратор. Не бот.
+                Внутри — приложение: дневник, разборы, аналитика.<br />
+                Рядом — куратор, который смотрит каждый день. Не бот.
               </h2>
 
-              {/* CTA — две кнопки */}
-              <div className={`flex flex-row flex-wrap gap-3 mb-4 justify-center lg:justify-start transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              {/* CTA — один primary + secondary text link */}
+              <div className={`flex flex-row flex-wrap items-center gap-x-6 gap-y-3 mb-4 justify-center lg:justify-start transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
                 }`} style={{ transitionDelay: '1200ms' }}>
                 <a
-                  href="#demo"
+                  href="#trial"
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 active:scale-95 transition-all text-[14px] tracking-wide shadow-lg shadow-blue-600/25"
                 >
-                  Открыть демо
+                  Записаться на 7 дней (0 ₽)
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M12 5v12m0 0 6-6m-6 6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M5 12h14m-7-7 7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </a>
                 <a
-                  href="#trial"
-                  className="inline-flex items-center justify-center px-6 py-3 border border-[#111827]/20 text-[#374151] font-normal rounded-2xl hover:border-[#111827]/40 hover:text-[#111827] hover:bg-[#f9fafb] active:scale-95 transition-all text-[14px] tracking-wide"
+                  href="#demo"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    window.dispatchEvent(new CustomEvent('heys:open-demo'))
+                  }}
+                  className="text-[14px] text-[#374151] hover:text-[#111827] underline underline-offset-4 transition-colors"
                 >
-                  Триал Pro+куратор
+                  Открыть демо ↓
                 </a>
               </div>
-
-              {/* Microtext */}
-              <p className={`text-[12px] text-[#9ca3af] leading-[1.5] transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-                }`} style={{ transitionDelay: '1600ms' }}>
-                {content.hero.microtext}
-              </p>
 
             </div>
 
             {/* Right Column — Phone (desktop only) */}
             <div className={`hidden lg:flex order-2 justify-center items-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'
               }`} style={{ transitionDelay: '600ms' }}>
-              <div className="relative w-full max-w-[220px]">
+              <div className="relative w-full max-w-[400px]">
                 <Image
-                  src="/phone3.jpg"
-                  alt="HEYS App Interface"
-                  width={220}
-                  height={440}
+                  src="/hero-phone-mockup.webp"
+                  alt="HEYS приложение на телефоне"
+                  width={800}
+                  height={1200}
                   priority
-                  className="w-full h-auto object-contain drop-shadow-2xl"
-                  style={{ height: 'auto' }}
+                  className="w-full h-auto object-contain"
                 />
               </div>
             </div>

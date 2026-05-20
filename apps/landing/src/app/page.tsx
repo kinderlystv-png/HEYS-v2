@@ -6,7 +6,9 @@ import { Metadata } from 'next'
 
 import HeroSSR from '@/components/HeroSSR'
 import {
+  AuthorSection,
   ComparisonSection,
+  CuratorSection,
   DemoSection,
   HowItWorksSection,
   NavigatorSection,
@@ -38,25 +40,31 @@ export default function Home() {
       {/* 2. Интерактивное демо — живой HEYS в iframe (try.heyslab.ru) */}
       <DemoSection />
 
-      {/* 3. Боль — «Знакомо?» 5 болевых точек */}
+      {/* 3. Куратор (01) — раскрытие 2-й колонны обещания Hero (приложение + человек) */}
+      <CuratorSection />
+
+      {/* 4. Боль (02) — «Знакомо?» 5 болевых точек */}
       <PainSection />
 
-      {/* 3. Как это работает — 4 шага: ВИЖУ → ПОНИМАЮ → НЕ ОДИН → РЕЗУЛЬТАТ */}
+      {/* 5. Ваш первый месяц (03) — timeline: ДЕНЬ 1 → ДНИ 2-7 → НЕДЕЛЯ 2 → МЕСЯЦ+ */}
       <HowItWorksSection />
 
-      {/* 4. Сравнение — 6-строчная таблица vs обычных приложений */}
+      {/* 6. Сравнение (04) — 6-строчная таблица vs обычных приложений */}
       <ComparisonSection />
 
-      {/* 5. Навигатор — CRS-шкала, причины, без наказания, инсулиновая волна */}
+      {/* 7. Под капотом (05) — CRS-шкала, причины, без наказания, инсулиновая волна */}
       <NavigatorSection />
 
-      {/* 6. Доверие — куратор, наука, 3 принципа */}
+      {/* 8. Доверие (06) — наука + 3 принципа */}
       <TrustSection />
 
-      {/* 7. Возражения — 4 частых сомнения в аккордеоне */}
+      {/* 9. Личное обращение от создателя — мостик от substance к коммерции */}
+      <AuthorSection />
+
+      {/* 10. Возражения (07) — частые сомнения в аккордеоне */}
       <ObjectionsSection />
 
-      {/* 8-12. Форматы → Прайсинг → Триал → FAQ → Футер */}
+      {/* 10-13. Форматы (08) → Прайсинг (09) → Триал (10) → FAQ (11) → Футер */}
       <VariantLandingSectionsSSR content={content} variant="A" />
     </main>
   )
