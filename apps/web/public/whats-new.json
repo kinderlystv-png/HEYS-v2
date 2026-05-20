@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "2026.05.20.d78427b0",
+      "buildHash": "d78427b0",
+      "date": "2026-05-20",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Уведомления стали понятнее и работают на iPhone",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Более ясный чекбокс push-уведомлений в онбординге",
+          "description": "В экране согласий чекбокс «Получать напоминания, чтобы не забывать записывать еду» заменили на «Напоминания и важные события (статус триала, новые сообщения куратора)» — теперь сразу понятно, что приходит не только про дневник, но и важные системные сообщения."
+        },
+        {
+          "type": "fix",
+          "title": "Push-уведомления на iPhone теперь активируются после установки PWA",
+          "description": "На iOS Safari push не работает вне установленного приложения. Раньше клиент ставил галку в онбординге, видел подсказку «Поделиться → На экран Домой», устанавливал PWA — но push не подключался. Теперь система запоминает желание клиента и автоматически просит разрешения при первом запуске PWA с домашнего экрана."
+        },
+        {
+          "type": "improvement",
+          "title": "Подсказка в Профиле, если уведомления случайно заблокированы",
+          "description": "Если клиент нажал «Блокировать» в браузерном попапе или отключил уведомления в системе — в разделе «Конфиденциальность» появляется ненавязчивая инструкция, как заново разрешить уведомления через настройки сайта. Не мешает работе, появляется автоматически и только в нужном случае."
+        }
+      ]
+    },
+    {
       "version": "2026.05.20.7f50cd01",
       "buildHash": "7f50cd01",
       "date": "2026-05-20",
@@ -988,7 +1013,11 @@
       "profile": "technical-infra",
       "title": "Allowlist sync after R-INS level-up",
       "items": [
-        { "type": "chore", "title": "Line drift", "description": "consents + pi_ui_cards line numbers shifted." }
+        {
+          "type": "chore",
+          "title": "Line drift",
+          "description": "consents + pi_ui_cards line numbers shifted."
+        }
       ]
     },
     {
@@ -1283,7 +1312,13 @@
       "kind": "technical",
       "profile": "technical-infra",
       "title": "Allowlist sync after lifestyle stack cap",
-      "items": [{ "type": "chore", "title": "Line drift", "description": "insulin-wave line numbers shifted." }]
+      "items": [
+        {
+          "type": "chore",
+          "title": "Line drift",
+          "description": "insulin-wave line numbers shifted."
+        }
+      ]
     },
     {
       "version": "2026.05.13.c6158b17",
@@ -1443,7 +1478,11 @@
       "profile": "technical-infra",
       "title": "Синхронизация allowlist после правки carbs",
       "items": [
-        { "type": "chore", "title": "allowlist line numbers synced", "description": "Line drift after carbs fix edit." }
+        {
+          "type": "chore",
+          "title": "allowlist line numbers synced",
+          "description": "Line drift after carbs fix edit."
+        }
       ]
     },
     {
