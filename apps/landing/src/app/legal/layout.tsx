@@ -12,7 +12,7 @@ export default function LegalLayout({
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <header className="sticky top-0 z-50 bg-white/95 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <a
             href="/"

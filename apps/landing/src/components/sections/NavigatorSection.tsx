@@ -22,6 +22,7 @@ function CRSScaleBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, is
             className={`rounded-[2rem] bg-indigo-50/40 border border-indigo-100 p-5 sm:p-6 transition-all duration-700 ease-out cursor-pointer hover:shadow-md hover:bg-indigo-50/70 hover:border-indigo-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
             style={{ transitionDelay: '200ms' }}
             onClick={onToggle}
+            onMouseDown={(e) => e.preventDefault()}
             aria-expanded={isOpen}
             role="button"
             tabIndex={0}
@@ -106,6 +107,7 @@ function CausesBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, isOp
             className={`rounded-[2rem] bg-emerald-50/40 border border-emerald-100 p-5 sm:p-6 transition-all duration-700 ease-out cursor-pointer hover:shadow-md hover:bg-emerald-50/70 hover:border-emerald-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
             style={{ transitionDelay: '300ms' }}
             onClick={onToggle}
+            onMouseDown={(e) => e.preventDefault()}
             aria-expanded={isOpen}
             role="button"
             tabIndex={0}
@@ -189,6 +191,7 @@ function NoPunishmentBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean
             className={`rounded-[2rem] bg-amber-50/40 border border-amber-100 p-5 sm:p-6 transition-all duration-700 ease-out cursor-pointer hover:shadow-md hover:bg-amber-50/70 hover:border-amber-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
             style={{ transitionDelay: '400ms' }}
             onClick={onToggle}
+            onMouseDown={(e) => e.preventDefault()}
             aria-expanded={isOpen}
             role="button"
             tabIndex={0}
@@ -263,6 +266,7 @@ function InsulinWaveBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean,
             className={`rounded-[2rem] bg-sky-50/40 border border-sky-100 p-5 sm:p-6 transition-all duration-700 ease-out cursor-pointer hover:shadow-md hover:bg-sky-50/70 hover:border-sky-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
             style={{ transitionDelay: '500ms' }}
             onClick={onToggle}
+            onMouseDown={(e) => e.preventDefault()}
             aria-expanded={isOpen}
             role="button"
             tabIndex={0}
@@ -416,6 +420,7 @@ export default function NavigatorSection() {
     const [openIndex, setOpenIndex] = useState<number>(-1)
     const sectionRef = useRef<HTMLElement>(null)
     const blockRefs = useRef<(HTMLDivElement | null)[]>([])
+    const headerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -433,30 +438,73 @@ export default function NavigatorSection() {
 
     const toggleAccordion = (index: number) => {
         const wasOpen = openIndex === index
-        setOpenIndex(prev => prev === index ? -1 : index)
 
-        // При открытии новой карточки — плавный скролл к её верху
-        // Ждём 520ms (длительность CSS-transition аккордеона), чтобы layout стабилизировался
-        // после сворачивания старой карточки — иначе scroll проскакивает мимо
-        // Используем scrollIntoView + CSS scroll-margin-top на wrapper div (см. JSX ниже)
+        // ПРЕДСКАЗЫВАЕМ финальный scrollY ДО изменения state — пока старая
+        // открытая карточка ещё измерима в expanded-форме. Идея: один smooth
+        // scrollTo к правильному месту = ноль доскролок в конце.
+        //
+        // Если выше нашего target есть открытая карточка — она сожмётся на
+        // примерно (open_height - typical_closed_height) пикселей, и target
+        // поднимется в потоке на эту же величину. Учитываем это.
+        //
+        // [overflow-anchor:none] на section ниже отключает браузерный scroll-
+        // anchoring — иначе он бы конкурировал с нашим smooth scroll'ом.
+        let predictedScrollY: number | null = null
         if (!wasOpen) {
-            setTimeout(() => {
-                const el = blockRefs.current[index]
-                if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            const targetEl = blockRefs.current[index]
+            const header = headerRef.current
+            if (targetEl && header) {
+                const headerH = header.offsetHeight
+                const targetAbsTop = targetEl.getBoundingClientRect().top + window.scrollY
+
+                let collapseAmount = 0
+                if (openIndex >= 0 && openIndex < index) {
+                    const prevOpenEl = blockRefs.current[openIndex]
+                    let closedRef = 0
+                    for (let i = 0; i < blockRefs.current.length; i++) {
+                        if (i === openIndex || i === index) continue
+                        const h = blockRefs.current[i]?.offsetHeight ?? 0
+                        if (h > 0) { closedRef = h; break }
+                    }
+                    if (prevOpenEl && closedRef > 0) {
+                        collapseAmount = Math.max(0, prevOpenEl.offsetHeight - closedRef)
+                    }
                 }
-            }, 520)
+
+                predictedScrollY = targetAbsTop - collapseAmount - headerH - 12
+            }
         }
+
+        setOpenIndex(prev => prev === index ? -1 : index)
+        if (wasOpen || predictedScrollY === null) return
+
+        // RAF-анимация scrollY на 500ms (совпадает с CSS grid-transition'ом
+        // карточек) — синхронизация даёт ощущение ОДНОГО непрерывного движения.
+        // Browser-native smooth scroll имеет неконтролируемую длительность
+        // (300-500ms в зависимости от расстояния) — не годится для точной синхр.
+        const startY = window.scrollY
+        const finalY = Math.max(0, predictedScrollY) // защита от отрицательного scrollY
+        const deltaY = finalY - startY
+        if (Math.abs(deltaY) < 1) return
+        const t0 = performance.now()
+        const durationMs = 500
+        const step = (now: number) => {
+            const p = Math.min(1, (now - t0) / durationMs)
+            const eased = 1 - Math.pow(1 - p, 4) // ease-out quart — мягче в конце чем cubic, паттерн из kinderly pricing
+            window.scrollTo({ top: startY + deltaY * eased, behavior: 'instant' })
+            if (p < 1) requestAnimationFrame(step)
+        }
+        requestAnimationFrame(step)
     }
 
     return (
         <section
             ref={sectionRef}
             id="navigator"
-            className="pb-16 md:pb-20 bg-white relative"
+            className="pb-16 md:pb-20 bg-white relative [overflow-anchor:none]"
         >
             {/* Sticky Header Badge */}
-            <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
+            <div ref={headerRef} className="sticky top-0 z-[100] bg-white/95 border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
                 <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">05 — ПОД КАПОТОМ</span>
             </div>
             <div className="container mx-auto px-4 md:px-6 pt-10">
@@ -475,8 +523,8 @@ export default function NavigatorSection() {
                         Не просто что вы едите — а как складывается ваш ритм прямо сейчас: сон, активность, стресс, восстановление. Куратор видит сдвиги за 2-3 дня до того, как вы их почувствуете — и пишет первым.
                     </p>
 
-                    {/* 4 blocks (Accordion) */}
-                    {/* scroll-mt-20 = 80px scroll-margin-top — учитывает sticky-плашку секции */}
+                    {/* 4 blocks (Accordion). Scroll-on-open реализован в toggleAccordion */}
+                    {/* через window.scrollTo с замером headerRef.offsetHeight. */}
                     <div className="space-y-3">
                         <div ref={(el) => { blockRefs.current[0] = el }} className="scroll-mt-20">
                             <CRSScaleBlock

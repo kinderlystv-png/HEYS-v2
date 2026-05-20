@@ -13,6 +13,10 @@ html {
 
 body {
   -webkit-font-smoothing: antialiased;
+  /* Блокирует "цепной" overscroll (родитель скроллится когда внутренний дошёл
+     до края) и нативный pull-to-refresh на mobile. Даёт предсказуемое поведение
+     на iOS Safari и Android Chrome. Паттерн из HEYS app. */
+  overscroll-behavior: contain;
 }
 
 /* Gradient text */
