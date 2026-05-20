@@ -18,6 +18,7 @@
 | [rkn-notification-heys.md](rkn-notification-heys.md)         | Тексты полей для подачи уведомления об обработке ПДн в реестр РКН по HEYS | Открыть на portal.rkn.gov.ru → новое уведомление → копи-паст полей |
 | [rkn-notification-kinderly.md](rkn-notification-kinderly.md) | То же для Kinderly                                                        | Отдельная подача (цели обработки различаются)                      |
 | [internal-policy-pdn.md](internal-policy-pdn.md)             | Положение об обработке ПДн ИП Поплавского А. С.                           | Распечатать, подписать, хранить                                    |
+| [archived-versions-policy.md](archived-versions-policy.md)   | Политика работы с архивными снимками legal-документов (frozen snapshots)  | Reference для будущих правок                                       |
 
 ## Юридическая основа
 
