@@ -35,7 +35,7 @@ export default function HeroSSR({ content }: HeroSSRProps) {
   }, [])
 
   return (
-    <section className="relative h-screen overflow-hidden flex flex-col">
+    <section className="relative h-dvh min-h-[600px] overflow-hidden flex flex-col">
       {/* Background */}
       <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #8EBFE0 0%, #D8ECF8 50%, #FCFBF9 90%, #FAE5D5 100%)' }} aria-hidden="true" />
 
@@ -132,15 +132,18 @@ export default function HeroSSR({ content }: HeroSSRProps) {
             <div className={`flex lg:hidden justify-end order-1 -mr-4 md:-mr-6 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
               }`} style={{ transitionDelay: '200ms' }}>
               <div className="relative w-[85%] sm:w-[80%] max-w-[440px] sm:max-w-[520px]">
-                <Image
-                  src="/hero-phone-mockup.webp"
-                  alt="HEYS приложение на телефоне"
-                  width={800}
-                  height={1033}
-                  priority
-                  sizes="(max-width: 640px) 100vw, 640px"
-                  className="w-full h-auto"
-                />
+                {/* <picture> вместо next/image: в Telegram Android webview бывают
+                    осечки с webp — PNG-fallback гарантирует, что картинка покажется. */}
+                <picture>
+                  <source srcSet="/hero-phone-mockup.webp" type="image/webp" />
+                  <img
+                    src="/hero-phone-mockup.png"
+                    alt="HEYS приложение на телефоне"
+                    width={800}
+                    height={1033}
+                    className="w-full h-auto"
+                  />
+                </picture>
               </div>
             </div>
 
@@ -176,11 +179,39 @@ export default function HeroSSR({ content }: HeroSSRProps) {
                   href="#demo"
                   onClick={(e) => {
                     e.preventDefault()
-                    window.dispatchEvent(new CustomEvent('heys:open-demo'))
+                    const target = document.getElementById('demo')
+                    if (!target) {
+                      window.dispatchEvent(new CustomEvent('heys:open-demo'))
+                      return
+                    }
+                    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                    if (reducedMotion) {
+                      target.scrollIntoView({ behavior: 'auto', block: 'start' })
+                      window.dispatchEvent(new CustomEvent('heys:open-demo'))
+                      return
+                    }
+                    // Плавный скрол → дождаться конца → пауза 250мс
+                    // (юзер успевает «увидеть» секцию) → открыть модалку.
+                    // scrollend поддерживается в Chrome 114+/Safari 17.5+;
+                    // fallback-таймер на 1200мс для старых браузеров.
+                    let fired = false
+                    const fire = () => {
+                      if (fired) return
+                      fired = true
+                      window.removeEventListener('scrollend', onScrollEnd)
+                      clearTimeout(fallbackTimer)
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('heys:open-demo'))
+                      }, 250)
+                    }
+                    const onScrollEnd = () => fire()
+                    window.addEventListener('scrollend', onScrollEnd)
+                    const fallbackTimer = setTimeout(fire, 1200)
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
                   }}
                   className="text-[14px] text-[#374151] hover:text-[#111827] underline underline-offset-4 transition-colors"
                 >
-                  Открыть демо ↓
+                  Открыть приложение ↓
                 </a>
               </div>
 
@@ -190,46 +221,21 @@ export default function HeroSSR({ content }: HeroSSRProps) {
             <div className={`hidden lg:flex order-2 justify-center items-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'
               }`} style={{ transitionDelay: '600ms' }}>
               <div className="relative w-full max-w-[400px]">
-                <Image
-                  src="/hero-phone-mockup.webp"
-                  alt="HEYS приложение на телефоне"
-                  width={800}
-                  height={1200}
-                  priority
-                  className="w-full h-auto object-contain"
-                />
+                <picture>
+                  <source srcSet="/hero-phone-mockup.webp" type="image/webp" />
+                  <img
+                    src="/hero-phone-mockup.png"
+                    alt="HEYS приложение на телефоне"
+                    width={800}
+                    height={1033}
+                    className="w-full h-auto object-contain"
+                  />
+                </picture>
               </div>
             </div>
 
           </div>
         </div>
-      </div>
-
-      {/* Scroll cue — fixed at bottom of viewport (Mobile: hidden) */}
-      <div className={`hidden pointer-events-none fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-700 ease-out ${mounted && !scrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-        }`} style={{ transitionDelay: scrolled ? '0ms' : '3000ms' }}>
-        <a
-          href="#pain"
-          aria-label="Прокрутить вниз"
-          className="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#111827]/15 bg-white/80 text-[#111827] shadow-sm backdrop-blur-sm transition-all hover:translate-y-[2px] hover:border-[#111827]/25 hover:bg-white hover:shadow-md active:scale-95"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <path
-              d="M12 5v12m0 0 6-6m-6 6-6-6"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </a>
       </div>
 
       {/* Scroll cue — fixed at bottom of viewport (Desktop: 5000ms delay) */}

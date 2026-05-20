@@ -178,7 +178,7 @@ export default function DemoSection() {
                               type="button"
                               onClick={() => setGender(null)}
                               className="flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-2xl shadow-sm active:scale-95 transition-all shrink-0"
-                              aria-label="Выйти из демо"
+                              aria-label="Закрыть приложение"
                           >
                               <svg
                                   width="18"
@@ -246,8 +246,12 @@ export default function DemoSection() {
                             />
                         </div>
 
-                        {/* Mobile preview frame — fits 9/19.5 aspect on phones */}
-                        <div className="md:hidden relative w-full max-w-[400px] aspect-[9/19.5] rounded-[32px] border-[6px] border-black bg-black shadow-2xl overflow-hidden">
+                        {/* Mobile preview frame — fits 9/19.5 aspect on phones.
+                            Width clamped so the mockup height (via aspect-ratio)
+                            never exceeds visible viewport minus header — иначе
+                            на узких/коротких экранах (URL-бар + любой webview)
+                            нижняя половина mockup'а с CTA уезжает за обрез. */}
+                        <div className="md:hidden relative mx-auto aspect-[9/19.5] w-[min(400px,calc(100vw-32px),calc((100dvh-280px)*9/19.5))] rounded-[32px] border-[6px] border-black bg-black shadow-2xl overflow-hidden">
                             <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-5 bg-black rounded-full z-10" />
                             <PreviewButton
                                 onClick={() => setModalOpen(true)}
@@ -274,7 +278,7 @@ function PreviewButton({ onClick }: { onClick: () => void }) {
             type="button"
             onClick={onClick}
             className="absolute inset-0 w-full h-full flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-[#8EBFE0] via-[#D8ECF8] to-[#FAE5D5] cursor-pointer group"
-            aria-label="Запустить интерактивное демо HEYS"
+            aria-label="Открыть интерактивное приложение HEYS"
         >
             <div className="w-20 h-20 rounded-full bg-white/80 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -283,7 +287,7 @@ function PreviewButton({ onClick }: { onClick: () => void }) {
             </div>
             <div className="text-center px-4">
                 <div className="text-[15px] font-semibold text-[#111827] mb-1">
-                    Запустить демо
+                    Открыть приложение
                 </div>
                 <div className="text-[12px] text-[#374151]/80">
                     нажми, чтобы выбрать рацион
