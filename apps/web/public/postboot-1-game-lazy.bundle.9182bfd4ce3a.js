@@ -36388,9 +36388,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   };
 
   const CURRENT_VERSIONS = {
-    user_agreement: '1.2',
-    personal_data: '1.2',
-    health_data: '1.0',  // Отдельный документ согласия на данные о здоровье
+    user_agreement: '1.5',
+    personal_data: '1.5',
+    health_data: '1.3',  // Отдельный документ согласия на данные о здоровье
     marketing: '1.2',
     payment_oferta: '1.2'  // Акцепт оферты при оплате (ст. 438 ГК РФ)
   };
@@ -38177,9 +38177,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
           return true;
         }
 
+        // payment_oferta = акцепт публичной оферты (user-agreement) при оплате.
+        // Версия должна совпадать с актуальной версией документа в Consents.
         const consentData = [{
           type: 'payment_oferta',
-          version: '1.2',
+          version: window.HEYS?.Consents?.VERSIONS?.user_agreement || '1.5',
           granted: true,
           signature_method: 'checkbox'
         }];
@@ -38196,7 +38198,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
         console.info('[HEYS.subscriptions] ✅ payment_oferta consent записан:', {
           clientId,
           plan: selectedPlan,
-          version: '1.4'
+          version: consentData[0].version
         });
         return true;
       } catch (err) {

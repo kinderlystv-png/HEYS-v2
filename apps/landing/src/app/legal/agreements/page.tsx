@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { LEGAL_DOCS, OPERATOR, SUPPORT_CONTACTS } from '@/config/legal-versions';
+
 export const metadata: Metadata = {
     title: 'Юридические документы — HEYS',
     description: 'Пользовательское соглашение, Политика конфиденциальности и другие юридические документы сервиса HEYS',
@@ -10,35 +12,35 @@ export default function AgreementsPage() {
         {
             title: 'Пользовательское соглашение (Оферта)',
             href: '/legal/user-agreement',
-            version: '1.4',
+            version: LEGAL_DOCS.userAgreement.version,
             description: 'Условия использования сервиса HEYS, тарифы, права и обязанности сторон, медицинский дисклеймер.',
             icon: '🤝',
         },
         {
             title: 'Политика конфиденциальности',
             href: '/legal/privacy-policy',
-            version: '1.4',
+            version: LEGAL_DOCS.privacyPolicy.version,
             description: 'Какие данные мы собираем, как обрабатываем и защищаем. Соответствие 152-ФЗ.',
             icon: '🔒',
         },
         {
             title: 'Согласие на обработку данных о здоровье',
             href: '/legal/health-data-consent',
-            version: '1.2',
+            version: LEGAL_DOCS.healthDataConsent.version,
             description: 'Отдельное согласие на обработку специальной категории персональных данных (ст. 10 152-ФЗ).',
             icon: '❤️',
         },
         {
             title: 'Условия возврата денежных средств',
             href: '/legal/refund',
-            version: '1.0',
+            version: LEGAL_DOCS.refund.version,
             description: 'Сроки и порядок возврата средств за оплаченные подписки тарифов Base, Pro, Pro+.',
             icon: '💰',
         },
         {
             title: 'Политика использования cookies',
             href: '/legal/cookie-policy',
-            version: '1.0',
+            version: LEGAL_DOCS.cookiePolicy.version,
             description: 'Какие файлы cookie использует сайт, какая аналитика подключена и как ими управлять.',
             icon: '🍪',
         },
@@ -93,18 +95,18 @@ export default function AgreementsPage() {
             <h2>Оператор персональных данных</h2>
 
             <p>
-                ИП Поплавский Антон Сергеевич<br />
-                ИНН: 263517141102<br />
-                ОГРНИП: 320265100094118<br />
-                Адрес: 355041, г. Ставрополь, ул. Краснофлотская, д. 88/1, кв. 56
+                {OPERATOR.fullName}<br />
+                ИНН: {OPERATOR.inn}<br />
+                ОГРНИП: {OPERATOR.ogrnip}<br />
+                Адрес: {OPERATOR.address}
             </p>
 
             <h2>Контакты</h2>
 
             <ul>
-                <li><strong>Общие вопросы:</strong> <a href="mailto:support@heys.app">support@heys.app</a></li>
-                <li><strong>Персональные данные:</strong> <a href="mailto:privacy@heys.app">privacy@heys.app</a></li>
-                <li><strong>Telegram:</strong> <a href="https://t.me/heyslab_support" target="_blank" rel="noopener noreferrer">@heyslab_support</a></li>
+                <li><strong>Общие вопросы:</strong> <a href={`mailto:${SUPPORT_CONTACTS.generalEmail}`}>{SUPPORT_CONTACTS.generalEmail}</a></li>
+                <li><strong>Персональные данные:</strong> <a href={`mailto:${SUPPORT_CONTACTS.privacyEmail}`}>{SUPPORT_CONTACTS.privacyEmail}</a></li>
+                <li><strong>Telegram:</strong> <a href={SUPPORT_CONTACTS.telegramUrl} target="_blank" rel="noopener noreferrer">{SUPPORT_CONTACTS.telegramHandle}</a></li>
             </ul>
 
             <hr />

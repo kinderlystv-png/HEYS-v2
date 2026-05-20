@@ -481,9 +481,11 @@
           return true;
         }
 
+        // payment_oferta = акцепт публичной оферты (user-agreement) при оплате.
+        // Версия должна совпадать с актуальной версией документа в Consents.
         const consentData = [{
           type: 'payment_oferta',
-          version: '1.2',
+          version: window.HEYS?.Consents?.VERSIONS?.user_agreement || '1.5',
           granted: true,
           signature_method: 'checkbox'
         }];
@@ -500,7 +502,7 @@
         console.info('[HEYS.subscriptions] ✅ payment_oferta consent записан:', {
           clientId,
           plan: selectedPlan,
-          version: '1.4'
+          version: consentData[0].version
         });
         return true;
       } catch (err) {

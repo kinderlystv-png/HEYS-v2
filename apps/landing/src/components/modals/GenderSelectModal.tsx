@@ -42,7 +42,7 @@ export default function GenderSelectModal({ isOpen, onClose, onSelect }: GenderS
             onClick={onClose}
             role="dialog"
             aria-modal="true"
-            aria-label="Выбор пола для демо"
+            aria-label="Выбор пола для приложения"
         >
             <div
                 className="relative w-full max-w-md rounded-3xl bg-white p-6 sm:p-8 shadow-2xl"
@@ -59,7 +59,7 @@ export default function GenderSelectModal({ isOpen, onClose, onSelect }: GenderS
                 </button>
 
                 <h2 className="text-[20px] sm:text-[22px] font-semibold text-[#111827] mb-2 pr-8">
-                    Покажи демо под себя
+                    Покажи приложение под себя
                 </h2>
                 <p className="text-[14px] text-[#6b7280] mb-6 leading-relaxed">
                     Загрузим живой день и продукты подходящего рациона. Всё, что ты сделаешь —

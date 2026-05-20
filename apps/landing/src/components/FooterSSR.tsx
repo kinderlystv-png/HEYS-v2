@@ -30,10 +30,28 @@ export default function FooterSSR() {
                 Политика конфиденциальности
               </a>
               <a
+                href="/legal/health-data-consent"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                Данные о здоровье
+              </a>
+              <a
+                href="/legal/refund"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                Возврат
+              </a>
+              <a
                 href="/legal/cookie-policy"
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 Cookies
+              </a>
+              <a
+                href="/legal/agreements"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                Все документы
               </a>
             </div>
           </div>
@@ -41,9 +59,7 @@ export default function FooterSSR() {
           {/* Disclaimer */}
           <div className="mt-8 pt-8 border-t border-gray-800">
             <p className="text-gray-500 text-sm text-center">
-              HEYS — сервис сопровождения питания. Не является медицинской услугой.
-              Куратор — специалист по питанию, не врач. При наличии заболеваний
-              проконсультируйтесь с врачом.
+              HEYS — сервис сопровождения по режиму питания, привычкам и образу жизни. Не оказывает медицинских услуг и не заменяет консультацию врача. При наличии заболеваний обратитесь к врачу.
             </p>
             <p className="text-gray-600 text-sm text-center mt-4">
               © {new Date().getFullYear()} HEYS. Все права защищены.

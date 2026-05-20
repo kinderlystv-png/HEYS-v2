@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 
+import { LEGAL_DOCS, OPERATOR, SUPPORT_CONTACTS } from '@/config/legal-versions';
+
+const DOC = LEGAL_DOCS.privacyPolicy;
+
 export const metadata: Metadata = {
   title: 'Политика конфиденциальности — HEYS',
   description: 'Политика обработки персональных данных сервиса HEYS',
@@ -11,7 +15,7 @@ export default function PrivacyPolicyPage() {
       <h1>Политика обработки персональных данных</h1>
 
       <p className="text-sm text-gray-500">
-        Версия: 1.4 · Дата вступления в силу: 22 декабря 2025 г. · Последнее обновление: 25 декабря 2025 г.
+        Версия: {DOC.version} · Дата вступления в силу: {DOC.effectiveDate} · Последнее обновление: {DOC.lastUpdated}
       </p>
 
       <hr />
@@ -26,11 +30,11 @@ export default function PrivacyPolicyPage() {
 
       <p>
         1.2. <strong>Оператор персональных данных:</strong><br />
-        ИП Поплавский Антон Сергеевич<br />
-        ИНН: 263517141102<br />
-        ОГРНИП: 320265100094118<br />
-        Адрес: 355041, г. Ставрополь, ул. Краснофлотская, д. 88/1, кв. 56<br />
-        Email: privacy@heys.app
+        {OPERATOR.fullName}<br />
+        ИНН: {OPERATOR.inn}<br />
+        ОГРНИП: {OPERATOR.ogrnip}<br />
+        Адрес: {OPERATOR.address}<br />
+        Email: {SUPPORT_CONTACTS.privacyEmail}
       </p>
 
       <p>
@@ -200,14 +204,14 @@ export default function PrivacyPolicyPage() {
         </thead>
         <tbody>
           <tr>
-            <td>Российский хостинг-провайдер</td>
+            <td>Yandex.Cloud</td>
             <td>База данных, авторизация, хранилище</td>
-            <td>Россия</td>
+            <td>Российская Федерация</td>
           </tr>
           <tr>
-            <td>ЮKassa</td>
+            <td>ООО НКО «ЮMoney» (ЮKassa)</td>
             <td>Обработка платежей</td>
-            <td>Россия</td>
+            <td>Российская Федерация</td>
           </tr>
         </tbody>
       </table>
@@ -218,7 +222,24 @@ export default function PrivacyPolicyPage() {
         Федерального закона № 152-ФЗ.
       </p>
 
-      <h3>6.3. Мы НЕ передаём данные</h3>
+      <h3>6.3. Трансграничная передача</h3>
+      <p>
+        По состоянию на дату публикации настоящей Политики, вся обработка персональных
+        данных осуществляется на серверах, расположенных на территории Российской
+        Федерации (Yandex.Cloud). В случае привлечения сервисов с серверами за пределами
+        РФ (например, для доставки email-уведомлений), мы минимизируем объём передаваемых
+        данных и предварительно уведомляем Роскомнадзор в порядке ст. 12 152-ФЗ.
+      </p>
+
+      <h3>6.4. Telegram-уведомления</h3>
+      <p>
+        При отправке заявки через лендинг куратор получает уведомление в Telegram.
+        Уведомления содержат <strong>только внутренний идентификатор заявки</strong>
+        (lead_id), без персональных данных. Имя и телефон клиента куратор видит только
+        в защищённой админ-панели на территории РФ.
+      </p>
+
+      <h3>6.5. Мы НЕ передаём данные</h3>
       <ul>
         <li>Рекламным сетям</li>
         <li>Брокерам данных</li>
@@ -322,7 +343,7 @@ export default function PrivacyPolicyPage() {
       </table>
 
       <p>
-        <strong>Для реализации прав</strong> напишите на privacy@heys.app.
+        <strong>Для реализации прав</strong> напишите на {SUPPORT_CONTACTS.privacyEmail}.
       </p>
       <p>
         <strong>Срок ответа:</strong> 10 рабочих дней с момента получения запроса. В случае
@@ -383,7 +404,7 @@ export default function PrivacyPolicyPage() {
 
       <p>
         <strong>По вопросам персональных данных:</strong><br />
-        Email: privacy@heys.app
+        Email: {SUPPORT_CONTACTS.privacyEmail}
       </p>
 
       <p>
@@ -394,7 +415,7 @@ export default function PrivacyPolicyPage() {
       <hr />
 
       <p className="text-sm text-gray-500 italic">
-        Последнее обновление: 25 декабря 2025 г.
+        Последнее обновление: {DOC.lastUpdated}
       </p>
     </article>
   );

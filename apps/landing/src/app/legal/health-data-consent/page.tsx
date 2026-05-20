@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 
+import { LEGAL_DOCS, OPERATOR, SUPPORT_CONTACTS } from '@/config/legal-versions';
+
+const DOC = LEGAL_DOCS.healthDataConsent;
+
 export const metadata: Metadata = {
     title: 'Согласие на обработку данных о здоровье — HEYS',
     description: 'Согласие на обработку данных о состоянии здоровья в сервисе HEYS',
@@ -11,7 +15,7 @@ export default function HealthDataConsentPage() {
             <h1>Согласие на обработку данных о здоровье</h1>
 
             <p className="text-sm text-gray-500">
-                Версия: 1.2 · Дата вступления в силу: 24 декабря 2025 г. · Последнее обновление: 25 декабря 2025 г.
+                Версия: {DOC.version} · Дата вступления в силу: {DOC.effectiveDate} · Последнее обновление: {DOC.lastUpdated}
             </p>
 
             <hr />
@@ -19,11 +23,11 @@ export default function HealthDataConsentPage() {
             <h2>Оператор персональных данных</h2>
 
             <p>
-                ИП Поплавский Антон Сергеевич<br />
-                ИНН: 263517141102<br />
-                ОГРНИП: 320265100094118<br />
-                Адрес: 355041, г. Ставрополь, ул. Краснофлотская, д. 88/1, кв. 56<br />
-                Email: privacy@heys.app
+                {OPERATOR.fullName}<br />
+                ИНН: {OPERATOR.inn}<br />
+                ОГРНИП: {OPERATOR.ogrnip}<br />
+                Адрес: {OPERATOR.address}<br />
+                Email: {SUPPORT_CONTACTS.privacyEmail}
             </p>
 
             <hr />
@@ -40,6 +44,13 @@ export default function HealthDataConsentPage() {
             <p>
                 Настоящее согласие оформляется <strong>отдельно от иных документов</strong> и действует
                 независимо от согласий на обработку общих персональных данных.
+            </p>
+
+            <p>
+                <strong>Возрастное ограничение.</strong> Настоящее согласие может предоставить
+                только лицо, достигшее 18 лет. Сервис не предназначен для несовершеннолетних
+                и не собирает данные о здоровье детей. Если вы узнали, что несовершеннолетний
+                использует Сервис — сообщите оператору на {SUPPORT_CONTACTS.privacyEmail}.
             </p>
 
             <hr />
@@ -150,7 +161,7 @@ export default function HealthDataConsentPage() {
 
             <p>
                 Для реализации прав обратитесь на{' '}
-                <a href="mailto:privacy@heys.app">privacy@heys.app</a>.
+                <a href={`mailto:${SUPPORT_CONTACTS.privacyEmail}`}>{SUPPORT_CONTACTS.privacyEmail}</a>.
             </p>
 
             <hr />
@@ -205,8 +216,8 @@ export default function HealthDataConsentPage() {
 
             <p>По вопросам обработки данных о здоровье обращайтесь:</p>
             <ul>
-                <li><strong>Email:</strong> <a href="mailto:privacy@heys.app">privacy@heys.app</a></li>
-                <li><strong>Почта:</strong> 355041, г. Ставрополь, ул. Краснофлотская, д. 88/1, кв. 56</li>
+                <li><strong>Email:</strong> <a href={`mailto:${SUPPORT_CONTACTS.privacyEmail}`}>{SUPPORT_CONTACTS.privacyEmail}</a></li>
+                <li><strong>Почта:</strong> {OPERATOR.address}</li>
             </ul>
 
             <hr />
@@ -216,7 +227,7 @@ export default function HealthDataConsentPage() {
             </p>
 
             <p className="text-sm text-gray-500 italic">
-                Последнее обновление: 25 декабря 2025 г.
+                Последнее обновление: {DOC.lastUpdated}
             </p>
         </article>
     );

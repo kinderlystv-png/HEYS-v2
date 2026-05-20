@@ -4,3 +4,4 @@
 pnpm exec lint-staged
 node scripts/auto-sync-legacy-bundles.mjs
 node scripts/lint-lazy-chunk-constant-access.mjs
+node scripts/check-pricing-sync.cjs

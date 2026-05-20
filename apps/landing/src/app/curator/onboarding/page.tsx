@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
+import { PRICING } from '@/config/pricing';
+
 export const metadata: Metadata = {
     title: 'Старт работы куратора — HEYS',
     description: 'Краткая инструкция для нового куратора HEYS: как обрабатывать заявки, выдавать триалы, передавать доступ клиентам и работать с подписками.',
@@ -78,7 +80,7 @@ const STEPS = [
             <>
                 Триал истекает → клиент автоматически переходит в <code>read_only</code> →
                 видит красную плашку «Доступ ограничен». Внутри приложения есть pay-wall с
-                тремя тарифами (Base 2 990 ₽ / Pro 7 990 ₽ / Pro+ 14 990 ₽). После оплаты
+                тремя тарифами ({PRICING.base.name} {PRICING.base.price} ₽ / {PRICING.pro.name} {PRICING.pro.price} ₽ / {PRICING.proPlus.name} {PRICING.proPlus.price} ₽). После оплаты
                 ЮKassa-webhook сам активирует подписку.
             </>
         ),

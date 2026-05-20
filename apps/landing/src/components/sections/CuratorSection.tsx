@@ -136,7 +136,7 @@ export default function CuratorSection() {
 
                 {/* Microprinciple */}
                 <div
-                    className={`text-center max-w-2xl mx-auto mb-8 sm:mb-10 transition-all duration-700 ease-out ${
+                    className={`text-center max-w-2xl mx-auto mb-6 sm:mb-8 transition-all duration-700 ease-out ${
                         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
                     }`}
                     style={{ transitionDelay: '850ms' }}
@@ -146,6 +146,18 @@ export default function CuratorSection() {
                         <span className="text-blue-600">
                             Куратор — человек, который помогает применить их именно к вашей ситуации.
                         </span>
+                    </p>
+                </div>
+
+                {/* Format declaration — тихая декларация формата работы */}
+                <div
+                    className={`text-center max-w-xl mx-auto mb-8 sm:mb-10 transition-all duration-700 ease-out ${
+                        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                    }`}
+                    style={{ transitionDelay: '925ms' }}
+                >
+                    <p className="text-[13px] sm:text-sm text-gray-500 italic leading-relaxed">
+                        Один куратор держит ваш контекст в голове целиком: дневник, тренировки, сон, ритм. Поэтому берём ограниченное число людей одновременно.
                     </p>
                 </div>
 

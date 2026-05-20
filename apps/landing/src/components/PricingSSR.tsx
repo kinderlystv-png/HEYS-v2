@@ -4,6 +4,7 @@
 import PurchaseButton from './PurchaseButton'
 
 import type { LandingVariant, VariantContent } from '@/config/landing-variants'
+import { PRICING } from '@/config/pricing'
 
 interface PricingSSRProps {
   content: VariantContent
@@ -16,9 +17,9 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
   const plans = [
     {
       id: 'base',
-      name: 'Base',
-      price: '2 990',
-      period: '₽/мес',
+      name: PRICING.base.name,
+      price: PRICING.base.price,
+      period: PRICING.base.period,
       description: 'Самостоятельный контроль + ревью от куратора раз в неделю.',
       features: [
         'Вы ведете дневник питания сами',
@@ -32,9 +33,9 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
     },
     {
       id: 'pro',
-      name: 'Pro',
-      price: '7 990',
-      period: '₽/мес',
+      name: PRICING.pro.name,
+      price: PRICING.pro.price,
+      period: PRICING.pro.period,
       description: 'Куратор ведёт ваш дневник каждый день и держит ритм недели вместе с вами.',
       features: [
         'Куратор ведёт ваш дневник — вы шлёте фото с весов, текст или голос',
@@ -50,9 +51,9 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
     },
     {
       id: 'pro-plus',
-      name: 'Pro+',
-      price: '14 990',
-      period: '₽/мес',
+      name: PRICING.proPlus.name,
+      price: PRICING.proPlus.price,
+      period: PRICING.proPlus.period,
       description: 'Полная поддержка + сопровождение тренировок как у личного тренера.',
       features: [
         'Все опции тарифа Pro',

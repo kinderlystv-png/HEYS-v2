@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
 
+import { LEGAL_DOCS, OPERATOR, SUPPORT_CONTACTS, SUPPORT_HOURS } from '@/config/legal-versions';
+import { PRICING } from '@/config/pricing';
+
+const DOC = LEGAL_DOCS.userAgreement;
+
 export const metadata: Metadata = {
   title: 'Пользовательское соглашение — HEYS',
   description: 'Пользовательское соглашение (Оферта) сервиса HEYS',
@@ -11,7 +16,7 @@ export default function UserAgreementPage() {
       <h1>Пользовательское соглашение (Оферта)</h1>
 
       <p className="text-sm text-gray-500">
-        Версия: 1.4 · Дата вступления в силу: 22 декабря 2025 г. · Последнее обновление: 25 декабря 2025 г.
+        Версия: {DOC.version} · Дата вступления в силу: {DOC.effectiveDate} · Последнее обновление: {DOC.lastUpdated}
       </p>
 
       <hr />
@@ -23,7 +28,7 @@ export default function UserAgreementPage() {
         отношения между:
       </p>
       <ul>
-        <li><strong>Исполнителем</strong>: ИП Поплавский Антон Сергеевич (ИНН: 263517141102, ОГРНИП: 320265100094118, адрес: 355041, г. Ставрополь, ул. Краснофлотская, д. 88/1, кв. 56)</li>
+        <li><strong>Исполнителем</strong>: {OPERATOR.fullName} (ИНН: {OPERATOR.inn}, ОГРНИП: {OPERATOR.ogrnip}, адрес: {OPERATOR.address})</li>
         <li><strong>Пользователем</strong>: физическим лицом, принявшим условия настоящего Соглашения</li>
       </ul>
 
@@ -71,19 +76,19 @@ export default function UserAgreementPage() {
         </thead>
         <tbody>
           <tr>
-            <td><strong>Base</strong></td>
-            <td>2 990 ₽/мес</td>
+            <td><strong>{PRICING.base.name}</strong></td>
+            <td>{PRICING.base.price} {PRICING.base.period}</td>
             <td>Приложение + умные подсказки + 1 обратная связь/неделю</td>
           </tr>
           <tr>
-            <td><strong>Pro</strong></td>
-            <td>7 990 ₽/мес</td>
+            <td><strong>{PRICING.pro.name}</strong></td>
+            <td>{PRICING.pro.price} {PRICING.pro.period}</td>
             <td>Всё из Base + ведение дневника куратором + чат + созвон/неделю</td>
           </tr>
           <tr>
-            <td><strong>Pro+</strong></td>
-            <td>14 990 ₽/мес</td>
-            <td>Всё из Pro + режим 7/7 + приоритетный SLA + созвон в середине недели + сопровождение тренировок (куратор онлайн или по записи)</td>
+            <td><strong>{PRICING.proPlus.name}</strong></td>
+            <td>{PRICING.proPlus.price} {PRICING.proPlus.period}</td>
+            <td>Всё из Pro + режим 7/7 + приоритетный режим ответа + созвон в середине недели + сопровождение тренировок (куратор онлайн или по записи)</td>
           </tr>
         </tbody>
       </table>
@@ -104,8 +109,10 @@ export default function UserAgreementPage() {
 
       <h3>3.4. Возврат средств</h3>
       <ul>
-        <li>При отказе от услуг возврат производится пропорционально неиспользованным дням</li>
-        <li>Для возврата необходимо обратиться в поддержку</li>
+        <li>Тариф <strong>Base</strong> — возврат в течение 14 календарных дней с момента оплаты, если подписка не использовалась активно (Закон РФ № 2300-1 «О защите прав потребителей»)</li>
+        <li>Тарифы <strong>Pro</strong> и <strong>Pro+</strong> — возврат пропорционально неиспользованным дням за вычетом фактической стоимости оказанных услуг куратора</li>
+        <li>Возврат производится на ту же банковскую карту, которой была произведена оплата, в течение 7–10 рабочих дней через платёжного агента ООО НКО «ЮMoney» (ЮKassa)</li>
+        <li>Подробные условия и порядок обращения — в отдельном документе <a href="/legal/refund">«Условия возврата денежных средств»</a></li>
       </ul>
 
       <hr />
@@ -116,7 +123,7 @@ export default function UserAgreementPage() {
       <ul>
         <li>Обеспечивать доступ к Сервису в соответствии с выбранным тарифом</li>
         <li>Обрабатывать персональные данные в соответствии с Политикой конфиденциальности</li>
-        <li>Отвечать на обращения в рабочее время (09:00–21:00)</li>
+        <li>Отвечать на обращения в рабочее время ({SUPPORT_HOURS})</li>
       </ul>
 
       <h3>4.2. Пользователь обязуется:</h3>
@@ -156,9 +163,17 @@ export default function UserAgreementPage() {
 
       <h3>5.3. Время работы</h3>
       <ul>
-        <li><strong>Pro</strong>: 09:00–21:00 (время Пользователя), дежурный режим в выходные</li>
-        <li><strong>Pro+</strong>: 09:00–21:00, полный режим 7 дней в неделю</li>
+        <li><strong>Pro</strong>: {SUPPORT_HOURS} (время Пользователя), дежурный режим в выходные</li>
+        <li><strong>Pro+</strong>: {SUPPORT_HOURS}, полный режим 7 дней в неделю</li>
       </ul>
+
+      <h3>5.4. Подменный куратор</h3>
+      <p>
+        На время отсутствия основного куратора (отпуск, выходные, болезнь) сопровождение
+        может временно вести подменный куратор, связанный теми же обязанностями
+        конфиденциальности. Подменный куратор имеет доступ к данным дневника и
+        переписке, необходимым для непрерывного сопровождения.
+      </p>
 
       <hr />
 
@@ -280,8 +295,8 @@ export default function UserAgreementPage() {
       <h2>13. Контакты</h2>
 
       <ul>
-        <li><strong>Email</strong>: <a href="mailto:support@heys.app">support@heys.app</a></li>
-        <li><strong>Telegram</strong>: <a href="https://t.me/heys_support" target="_blank" rel="noopener noreferrer">@heys_support</a></li>
+        <li><strong>Email</strong>: <a href={`mailto:${SUPPORT_CONTACTS.generalEmail}`}>{SUPPORT_CONTACTS.generalEmail}</a></li>
+        <li><strong>Telegram</strong>: <a href={SUPPORT_CONTACTS.telegramUrl} target="_blank" rel="noopener noreferrer">{SUPPORT_CONTACTS.telegramHandle}</a></li>
       </ul>
 
       <hr />
@@ -292,7 +307,7 @@ export default function UserAgreementPage() {
       </p>
 
       <p className="text-sm text-gray-500 italic">
-        Последнее обновление: 25 декабря 2025 г.
+        Последнее обновление: {DOC.lastUpdated}
       </p>
     </article>
   );

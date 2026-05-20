@@ -22,9 +22,9 @@
   };
 
   const CURRENT_VERSIONS = {
-    user_agreement: '1.2',
-    personal_data: '1.2',
-    health_data: '1.0',  // Отдельный документ согласия на данные о здоровье
+    user_agreement: '1.5',
+    personal_data: '1.5',
+    health_data: '1.3',  // Отдельный документ согласия на данные о здоровье
     marketing: '1.2',
     payment_oferta: '1.2'  // Акцепт оферты при оплате (ст. 438 ГК РФ)
   };

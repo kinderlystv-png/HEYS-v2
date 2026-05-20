@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 
-// Расширяем Window для аналитики
+import { LEGAL_DOCS, SUPPORT_CONTACTS, SUPPORT_HOURS } from '@/config/legal-versions'
+
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void
@@ -12,11 +13,6 @@ declare global {
 
 type FormState = 'idle' | 'loading' | 'success' | 'error'
 type Messenger = 'telegram' | 'whatsapp' | 'max'
-
-// Версия privacy-policy на момент сбора согласия. При обновлении документа
-// бампать здесь и заново показывать согласие активным лидам, если это
-// потребуется для compliance.
-const PRIVACY_POLICY_VERSION = '1.4'
 
 // UTM параметры
 interface UTMParams {
@@ -128,7 +124,8 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           // Согласие на обработку ПДн (152-ФЗ ст. 9). UI-checkbox уже
           // провалидирован выше; сюда поле уходит для фиксации в БД.
           consent: {
-            privacy_version: PRIVACY_POLICY_VERSION,
+            privacy_version: LEGAL_DOCS.privacyPolicy.version,
+            user_agreement_version: LEGAL_DOCS.userAgreement.version,
             method: 'checkbox',
             user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
             accepted_at: new Date().toISOString(),
@@ -183,11 +180,11 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         <div className="text-5xl mb-4">🎉</div>
         <h3 className="text-2xl font-bold text-gray-900 mb-2">Заявка отправлена!</h3>
         <p className="text-gray-600 mb-4">
-          Ваш куратор свяжется с вами в рабочее время (с 10:00 до 20:00)
+          Ваш куратор свяжется с вами в рабочее время ({SUPPORT_HOURS})
           {messenger === 'telegram' ? ' в Telegram' : messenger === 'whatsapp' ? ' в WhatsApp' : ' в MAX'}
         </p>
         <p className="text-gray-500 text-sm">
-          Если не получили сообщение — проверьте папку «Запросы» или напишите нам: @heys_support
+          Если не получили сообщение — проверьте папку «Запросы» или напишите нам: {SUPPORT_CONTACTS.telegramHandle}
         </p>
       </div>
     )

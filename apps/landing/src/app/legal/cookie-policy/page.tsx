@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 
+import { LEGAL_DOCS, OPERATOR, SUPPORT_CONTACTS } from '@/config/legal-versions';
+
+const DOC = LEGAL_DOCS.cookiePolicy;
+
 export const metadata: Metadata = {
   title: 'Политика использования cookies — HEYS',
   description: 'Какие файлы cookie использует сайт HEYS и как ими управлять',
@@ -11,7 +15,7 @@ export default function CookiePolicyPage() {
       <h1>Политика использования файлов cookie</h1>
 
       <p className="text-sm text-gray-500">
-        Версия: 1.0 · Дата вступления в силу: 14 мая 2026 г.
+        Версия: {DOC.version} · Дата вступления в силу: {DOC.effectiveDate}
       </p>
 
       <hr />
@@ -25,9 +29,9 @@ export default function CookiePolicyPage() {
       </p>
 
       <p>
-        Оператор сайта heyslab.ru — ИП Поплавский Антон Сергеевич
-        (ИНН 263517141102, ОГРНИП 320265100094118), контакт:{' '}
-        <a href="mailto:privacy@heys.app">privacy@heys.app</a>.
+        Оператор сайта heyslab.ru — {OPERATOR.fullName}
+        {' '}(ИНН {OPERATOR.inn}, ОГРНИП {OPERATOR.ogrnip}), контакт:{' '}
+        <a href={`mailto:${SUPPORT_CONTACTS.privacyEmail}`}>{SUPPORT_CONTACTS.privacyEmail}</a>.
       </p>
 
       <hr />
@@ -162,7 +166,7 @@ export default function CookiePolicyPage() {
 
       <p>
         Вопросы — на{' '}
-        <a href="mailto:privacy@heys.app">privacy@heys.app</a>.
+        <a href={`mailto:${SUPPORT_CONTACTS.privacyEmail}`}>{SUPPORT_CONTACTS.privacyEmail}</a>.
       </p>
     </article>
   );

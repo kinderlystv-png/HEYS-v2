@@ -6,7 +6,6 @@ import { Metadata } from 'next'
 
 import HeroSSR from '@/components/HeroSSR'
 import {
-  AuthorSection,
   ComparisonSection,
   CuratorSection,
   DemoSection,
@@ -37,7 +36,7 @@ export default function Home() {
       {/* 1. SSR Hero — первый экран, CTA, навигация */}
       <HeroSSR content={content} variant="A" />
 
-      {/* 2. Интерактивное демо — живой HEYS в iframe (try.heyslab.ru) */}
+      {/* 2. Интерактивное приложение — живой HEYS в iframe (try.heyslab.ru) */}
       <DemoSection />
 
       {/* 3. Куратор (01) — раскрытие 2-й колонны обещания Hero (приложение + человек) */}
@@ -58,10 +57,7 @@ export default function Home() {
       {/* 8. Доверие (06) — наука + 3 принципа */}
       <TrustSection />
 
-      {/* 9. Личное обращение от создателя — мостик от substance к коммерции */}
-      <AuthorSection />
-
-      {/* 10. Возражения (07) — частые сомнения в аккордеоне */}
+      {/* 9. Возражения (07) — частые сомнения в аккордеоне */}
       <ObjectionsSection />
 
       {/* 10-13. Форматы (08) → Прайсинг (09) → Триал (10) → FAQ (11) → Футер */}

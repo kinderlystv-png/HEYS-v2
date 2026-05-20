@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { LEGAL_DOCS } from '../../config/legal-versions'
 import { logger } from '../../lib/logger'
 
 type FormState = 'idle' | 'loading' | 'success' | 'error'
@@ -30,6 +31,7 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
     const [formState, setFormState] = useState<FormState>('idle')
     const [errorMessage, setErrorMessage] = useState('')
     const [utmParams, setUtmParams] = useState<UTMParams>({})
+    const [consentAccepted, setConsentAccepted] = useState(false)
 
     // Парсим UTM при открытии
     useEffect(() => {
@@ -73,8 +75,14 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setFormState('loading')
         setErrorMessage('')
+
+        if (!consentAccepted) {
+            setErrorMessage('Необходимо принять политику конфиденциальности')
+            return
+        }
+
+        setFormState('loading')
 
         try {
             const response = await fetch('https://api.heyslab.ru/leads', {
@@ -90,7 +98,14 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
                     plan: planName,
                     ...utmParams,
                     referrer: typeof document !== 'undefined' ? document.referrer : undefined,
-                    landing_page: typeof window !== 'undefined' ? window.location.pathname : undefined
+                    landing_page: typeof window !== 'undefined' ? window.location.pathname : undefined,
+                    consent: {
+                        privacy_version: LEGAL_DOCS.privacyPolicy.version,
+                        user_agreement_version: LEGAL_DOCS.userAgreement.version,
+                        method: 'checkbox',
+                        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+                        accepted_at: new Date().toISOString(),
+                    },
                 })
             })
 
@@ -285,10 +300,25 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
                                 )}
                             </button>
 
-                            <p className="text-xs text-center text-slate-400 mt-4 leading-relaxed">
-                                Нажимая кнопку, вы соглашаетесь с{' '}
-                                <a href="/legal/agreements" className="underline hover:text-slate-600" target="_blank">условиями обработки персональных данных</a>.
-                            </p>
+                            <label className="mt-4 flex items-start gap-3 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    checked={consentAccepted}
+                                    onChange={e => setConsentAccepted(e.target.checked)}
+                                    disabled={formState === 'loading'}
+                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-slate-500 text-xs leading-5">
+                                    Даю согласие на обработку персональных данных в соответствии с{' '}
+                                    <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+                                        политикой конфиденциальности
+                                    </a>{' '}
+                                    и принимаю{' '}
+                                    <a href="/legal/user-agreement" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+                                        условия использования
+                                    </a>
+                                </span>
+                            </label>
                         </form>
                     )}
                 </div>

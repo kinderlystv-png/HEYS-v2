@@ -49,18 +49,25 @@ export default function TrustSection() {
             className="pb-16 md:pb-20 bg-slate-50 relative"
         >
             {/* Sticky Header Badge */}
-            <div className="sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
-                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">06 — ФУНДАМЕНТ РЕЗУЛЬТАТА</span>
+            <div className="sticky top-0 z-[100] bg-white/95 border-y border-gray-100/50 py-3 mb-8 px-6 text-center shadow-sm w-full">
+                <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-[11px] font-bold tracking-widest uppercase rounded-full">06 — ПРИНЦИПЫ РАБОТЫ</span>
             </div>
             <div className="container mx-auto px-4 md:px-6 pt-10">
                 <div className="max-w-4xl mx-auto">
                     {/* Section header */}
                     <h2
-                        className={`text-lg md:text-2xl lg:text-3xl font-bold text-gray-900 mb-8 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                        className={`text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-center transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                             }`}
                     >
                         Принципы работы
                     </h2>
+                    <p
+                        className={`text-gray-600 text-center mb-12 max-w-2xl mx-auto leading-relaxed transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                            }`}
+                        style={{ transitionDelay: '100ms' }}
+                    >
+                        Наука и три принципа, на которых держится формат.
+                    </p>
 
                     {/* Block 1 — Science */}
                     <div

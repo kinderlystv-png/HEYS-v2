@@ -1,12 +1,16 @@
 import type { Metadata } from 'next';
 
+import { LEGAL_DOCS, OPERATOR, SUPPORT_CONTACTS } from '@/config/legal-versions';
+import { PRICING } from '@/config/pricing';
+
+const DOC = LEGAL_DOCS.refund;
+const VERSION = DOC.version;
+const EFFECTIVE_DATE = DOC.effectiveDate;
+
 export const metadata: Metadata = {
     title: 'Условия возврата денежных средств — HEYS',
     description: 'Политика возврата при оплате подписки HEYS. Условия, сроки и порядок возврата средств в соответствии с законодательством РФ.',
 };
-
-const VERSION = '1.0';
-const EFFECTIVE_DATE = '28 апреля 2026 г.';
 
 export default function RefundPolicyPage() {
     return (
@@ -30,13 +34,13 @@ export default function RefundPolicyPage() {
 
             <h2>2. Тарифы и условия возврата</h2>
 
-            <h3>2.1. Тариф «Base» (2 990 ₽/мес)</h3>
+            <h3>2.1. Тариф «{PRICING.base.name}» ({PRICING.base.price} {PRICING.base.period})</h3>
             <p>
                 Самостоятельный доступ к приложению без услуг куратора. Возврат возможен в течение <strong>14 календарных дней</strong> с момента оплаты при
                 условии, что услуга не была оказана в полном объёме (т. е. подписка не была активно использована).
             </p>
 
-            <h3>2.2. Тарифы «Pro» (7 990 ₽/мес) и «Pro+» (14 990 ₽/мес)</h3>
+            <h3>2.2. Тарифы «{PRICING.pro.name}» ({PRICING.pro.price} {PRICING.pro.period}) и «{PRICING.proPlus.name}» ({PRICING.proPlus.price} {PRICING.proPlus.period})</h3>
             <p>
                 Тарифы включают персональную работу куратора. Возврат рассчитывается пропорционально неиспользованным дням оплаченного периода за вычетом
                 фактической стоимости услуг куратора, уже оказанных к моменту обращения. Возврат за полный месяц возможен только при отсутствии каких-либо
@@ -55,7 +59,7 @@ export default function RefundPolicyPage() {
             <h2>4. Порядок обращения за возвратом</h2>
 
             <ol>
-                <li>Связаться с куратором или с поддержкой по адресу <a href="mailto:support@heys.app">support@heys.app</a> с указанием контактного телефона
+                <li>Связаться с куратором или с поддержкой по адресу <a href={`mailto:${SUPPORT_CONTACTS.generalEmail}`}>{SUPPORT_CONTACTS.generalEmail}</a> с указанием контактного телефона
                     и причины возврата.</li>
                 <li>Поддержка проверяет обращение в течение <strong>3 рабочих дней</strong> и направляет решение клиенту.</li>
                 <li>При положительном решении сумма возвращается на ту же платёжную карту, которой была произведена оплата, в течение <strong>7-10 рабочих
@@ -81,17 +85,17 @@ export default function RefundPolicyPage() {
             <h2>Реквизиты Исполнителя</h2>
 
             <p>
-                ИП Поплавский Антон Сергеевич<br />
-                ИНН: 263517141102<br />
-                ОГРНИП: 320265100094118<br />
-                Адрес: 355041, г. Ставрополь, ул. Краснофлотская, д. 88/1, кв. 56
+                {OPERATOR.fullName}<br />
+                ИНН: {OPERATOR.inn}<br />
+                ОГРНИП: {OPERATOR.ogrnip}<br />
+                Адрес: {OPERATOR.address}
             </p>
 
             <h2>Контакты для возврата</h2>
 
             <ul>
-                <li><strong>Email:</strong> <a href="mailto:support@heys.app">support@heys.app</a></li>
-                <li><strong>Telegram:</strong> <a href="https://t.me/heyslab_support" target="_blank" rel="noopener noreferrer">@heyslab_support</a></li>
+                <li><strong>Email:</strong> <a href={`mailto:${SUPPORT_CONTACTS.generalEmail}`}>{SUPPORT_CONTACTS.generalEmail}</a></li>
+                <li><strong>Telegram:</strong> <a href={SUPPORT_CONTACTS.telegramUrl} target="_blank" rel="noopener noreferrer">{SUPPORT_CONTACTS.telegramHandle}</a></li>
             </ul>
 
             <p className="text-sm text-gray-500 italic">
