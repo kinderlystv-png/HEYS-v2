@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.20.a5d1de56",
+      "buildHash": "a5d1de56",
+      "date": "2026-05-20",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: пересинхрон allowlist line-numbers",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Обновили номера строк в bootstrap-bypass-allowlist для двух файлов",
+          "description": "После предыдущих коммитов в heys_curator_actions_banner_v1.js и heys_subscriptions_v1.js сместились номера строк у уже разрешённых прямых localStorage.setItem вызовов. Allowlist указывает на те же самые вызовы — просто синхронизировали с новой нумерацией. Без функциональных изменений."
+        }
+      ]
+    },
+    {
       "version": "2026.05.20.c07f7f35",
       "buildHash": "c07f7f35",
       "date": "2026-05-20",
