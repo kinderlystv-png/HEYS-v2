@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.20.7f50cd01",
+      "buildHash": "7f50cd01",
+      "date": "2026-05-20",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: ещё один пересинхрон allowlist line-numbers",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Обновили номера строк allowlist для heys_subscriptions_v1.js",
+          "description": "Предыдущий коммит про цены добавил несколько строк в файле подписки, из-за чего номера двух уже разрешённых прямых localStorage.setItem вызовов снова сместились. Пересинхронизировали allowlist — те же вызовы, новая нумерация. Без функциональных изменений."
+        }
+      ]
+    },
+    {
       "version": "2026.05.20.e424b0c2",
       "buildHash": "e424b0c2",
       "date": "2026-05-20",
