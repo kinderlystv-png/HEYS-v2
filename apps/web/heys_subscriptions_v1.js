@@ -23,6 +23,15 @@
   // КОНФИГУРАЦИЯ
   // =====================================================
 
+  // Цены тарифов — единый источник для paywall и subscriptions модулей.
+  // Должны совпадать с apps/landing/src/config/pricing.ts.
+  HEYS.config = HEYS.config || {};
+  HEYS.config.prices = HEYS.config.prices || {
+    base: 2990,
+    pro: 7990,
+    proPlus: 14990,
+  };
+
   const CONFIG = {
     TRIAL_DAYS: 7,
     PAYMENT_CHECK_INTERVAL: 3000, // Проверка статуса каждые 3 секунды
@@ -32,7 +41,7 @@
       base: {
         id: 'base',
         name: 'Base',
-        price: 1990,
+        price: HEYS.config.prices.base,
         currency: 'RUB',
         features: [
           'Приложение + умные подсказки',
@@ -42,7 +51,7 @@
       pro: {
         id: 'pro',
         name: 'Pro',
-        price: 12990,
+        price: HEYS.config.prices.pro,
         currency: 'RUB',
         recommended: true,
         features: [
@@ -55,7 +64,7 @@
       proplus: {
         id: 'proplus',
         name: 'Pro+',
-        price: 19990,
+        price: HEYS.config.prices.proPlus,
         currency: 'RUB',
         features: [
           'Всё из Pro',
@@ -1000,7 +1009,7 @@
     HEYS.config.paymentsEnabled = false;
   }
   if (typeof HEYS.config.curatorContactUrl !== 'string') {
-    HEYS.config.curatorContactUrl = 'https://t.me/heyslab_support';
+    HEYS.config.curatorContactUrl = (HEYS.support && HEYS.support.telegramUrl) || 'https://t.me/heyslab_support';
   }
 
   /**
@@ -1009,7 +1018,7 @@
    * через HEYS.config.paymentsEnabled = true.
    */
   function ContactCuratorScreen({ onClose, isReadOnly }) {
-    const contactUrl = HEYS.config.curatorContactUrl || 'https://t.me/heyslab_support';
+    const contactUrl = HEYS.config.curatorContactUrl || (HEYS.support && HEYS.support.telegramUrl);
 
     return h('div', {
       style: { padding: '24px 20px', textAlign: 'center', maxWidth: 380, margin: '0 auto' }
@@ -1077,7 +1086,7 @@
       return;
     }
     // Fallback: открываем напрямую Telegram куратора в новой вкладке
-    const url = HEYS.config.curatorContactUrl || 'https://t.me/heyslab_support';
+    const url = HEYS.config.curatorContactUrl || (HEYS.support && HEYS.support.telegramUrl);
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 

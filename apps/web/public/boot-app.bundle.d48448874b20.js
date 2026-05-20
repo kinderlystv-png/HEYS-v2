@@ -9243,18 +9243,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
   // КОНСТАНТЫ
   // ========================================
 
+  HEYS.support = HEYS.support || {
+    telegramHandle: '@heyslab_support',
+    telegramUrl: 'https://t.me/heyslab_support',
+    email: 'pay@heyslab.ru',
+  };
+
+  // Цены тарифов — единый источник для paywall и subscriptions модулей.
+  // Должны совпадать с apps/landing/src/config/pricing.ts.
+  HEYS.config = HEYS.config || {};
+  HEYS.config.prices = HEYS.config.prices || {
+    base: 2990,
+    pro: 7990,
+    proPlus: 14990,
+  };
+
   const PAYWALL_CONFIG = {
-    // Цены (в рублях)
-    prices: {
-      base: 1990,
-      pro: 12990,
-      proPlus: 19990
-    },
-    // Триал
+    prices: HEYS.config.prices,
     trialDays: 7,
-    // Контакты для оплаты (пока без ЮKassa)
-    contactTelegram: '@heyslab_support',
-    contactEmail: 'pay@heyslab.ru'
+    contactTelegram: HEYS.support.telegramHandle,
+    contactEmail: HEYS.support.email,
   };
 
   // ========================================
@@ -9637,7 +9645,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
       } else {
         // Fallback — Telegram для связи
         const message = encodeURIComponent(`Привет! Хочу оформить подписку ${selectedPlan.toUpperCase()} на HEYS`);
-        window.open(`https://t.me/heyslab_support?text=${message}`, '_blank');
+        window.open(`${HEYS.support.telegramUrl}?text=${message}`, '_blank');
         if (onSelectPlan) onSelectPlan(selectedPlan);
       }
     };
@@ -9747,7 +9755,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         // Footer
         React.createElement('div', { className: 'paywall-footer' },
           'Возникли вопросы? ',
-          React.createElement('a', { href: 'https://t.me/heyslab_support', target: '_blank' }, 'Напиши нам')
+          React.createElement('a', { href: HEYS.support.telegramUrl, target: '_blank' }, 'Напиши нам')
         )
       )
     );
