@@ -215,17 +215,13 @@ build_env_flags() {
         fi
     fi
 
-    # Telegram-бот для клиентов (P0.7)
+    # Telegram-бот для клиентов (P0.7) — секреты через Lockbox
+    # (heys-app-secrets: TELEGRAM_CLIENT_BOT_TOKEN, INTERNAL_CRON_TOKEN, APP_URL,
+    # CLIENT_BOT_USERNAME). Функция привязана к SA heys-function-invoker,
+    # SA имеет lockbox.payloadViewer на этом секрете. Fallback на env
+    # сохраняется в коде на случай аварии с Lockbox.
     if [[ "$func_name" == "heys-bot-client" ]]; then
-        if [ -n "$TELEGRAM_CLIENT_BOT_TOKEN" ]; then
-            env_flags+=" --environment TELEGRAM_CLIENT_BOT_TOKEN=$TELEGRAM_CLIENT_BOT_TOKEN"
-        fi
-        if [ -n "$INTERNAL_CRON_TOKEN" ]; then
-            env_flags+=" --environment INTERNAL_CRON_TOKEN=$INTERNAL_CRON_TOKEN"
-        fi
-        if [ -n "$APP_URL" ]; then
-            env_flags+=" --environment APP_URL=$APP_URL"
-        fi
+        env_flags+=" --environment LOCKBOX_APP_SECRET_ID=e6qrvefs3vn66jiamfk4"
     fi
 
     # Cron drip-уведомлений (Phase 1, P0.7) — нужны pg + INTERNAL_CRON_TOKEN + APP_URL
@@ -318,7 +314,13 @@ deploy_function() {
     
     # Build environment flags
     env_flags=$(build_env_flags "$func_name")
-    
+
+    # Service account (для функций, которые читают секреты из Lockbox)
+    sa_flag=""
+    if [[ "$func_name" == "heys-bot-client" ]]; then
+        sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
+    fi
+
     # Deploy function
     eval yc serverless function version create \
         --function-name "$func_name" \
@@ -326,6 +328,7 @@ deploy_function() {
         --entrypoint "$entrypoint" \
         --memory "$memory" \
         --execution-timeout "$timeout" \
+        $sa_flag \
         --source-path . \
         $env_flags
     

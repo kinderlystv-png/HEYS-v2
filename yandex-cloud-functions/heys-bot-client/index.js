@@ -7,23 +7,54 @@
  *                        сообщения по chat_id с проверкой INTERNAL_CRON_TOKEN)
  *   GET  /bot/health   — health check
  *
- * Env:
+ * Источник секретов — Lockbox (если задан LOCKBOX_APP_SECRET_ID и функции
+ * привязан SA с lockbox.payloadViewer), с fallback на env-переменные:
  *   TELEGRAM_CLIENT_BOT_TOKEN — токен бота (отдельный от куратор-канала!)
  *   APP_URL                   — куда вести клиента (default: https://app.heyslab.ru)
  *   INTERNAL_CRON_TOKEN       — общий с heys-api-payments, для /bot/send
- *   PG_*                      — БД
+ *   PG_*                      — БД (пока только env, не в Lockbox)
  */
 
 const { getPool } = require('./shared/db-pool');
+const { getSecret } = require('./shared/lockbox-client');
 const crypto = require('crypto');
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_CLIENT_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
-const APP_URL = process.env.APP_URL || 'https://app.heyslab.ru';
-const INTERNAL_CRON_TOKEN = process.env.INTERNAL_CRON_TOKEN;
+// Конфиг загружается лениво в ensureConfig() — первый запрос дергает Lockbox
+// (если задан LOCKBOX_APP_SECRET_ID), остальные используют кеш модуля.
+let TELEGRAM_BOT_TOKEN = null;
+let APP_URL = null;
+let INTERNAL_CRON_TOKEN = null;
+let TELEGRAM_API = null;
+let configLoaded = false;
+let configPromise = null;
 
-const TELEGRAM_API = TELEGRAM_BOT_TOKEN
-  ? `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
-  : null;
+async function ensureConfig() {
+  if (configLoaded) return;
+  if (!configPromise) {
+    configPromise = (async () => {
+      const lockboxSecretId = process.env.LOCKBOX_APP_SECRET_ID;
+      const secrets = lockboxSecretId ? await getSecret(lockboxSecretId) : null;
+
+      const pick = (key) => {
+        const v = secrets && secrets[key];
+        return v && String(v).length > 0 ? v : process.env[key];
+      };
+
+      TELEGRAM_BOT_TOKEN = pick('TELEGRAM_CLIENT_BOT_TOKEN') || process.env.TELEGRAM_BOT_TOKEN;
+      APP_URL = pick('APP_URL') || 'https://app.heyslab.ru';
+      INTERNAL_CRON_TOKEN = pick('INTERNAL_CRON_TOKEN');
+
+      TELEGRAM_API = TELEGRAM_BOT_TOKEN
+        ? `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
+        : null;
+
+      configLoaded = true;
+      console.log('[heys-bot-client] config loaded',
+        { from: secrets ? 'lockbox' : 'env', hasToken: !!TELEGRAM_BOT_TOKEN });
+    })();
+  }
+  await configPromise;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -219,6 +250,8 @@ async function handleInternalSend(body, headers) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 module.exports.handler = async function (event) {
+  await ensureConfig();
+
   const path = event?.path || event?.url || '';
   const method = event?.httpMethod || 'GET';
 
@@ -232,7 +265,12 @@ module.exports.handler = async function (event) {
   }
 
   if (method === 'GET' && (path === '/bot/health' || path.endsWith('/health'))) {
-    return jsonResponse(200, { service: 'heys-bot-client', ok: true, hasToken: !!TELEGRAM_BOT_TOKEN });
+    return jsonResponse(200, {
+      service: 'heys-bot-client',
+      ok: true,
+      hasToken: !!TELEGRAM_BOT_TOKEN,
+      configSource: process.env.LOCKBOX_APP_SECRET_ID ? 'lockbox' : 'env',
+    });
   }
 
   if (method === 'POST' && path.includes('/webhook')) {
