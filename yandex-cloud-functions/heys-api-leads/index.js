@@ -4,6 +4,7 @@
  */
 
 const { getPool } = require('./shared/db-pool');
+const { getSecret } = require('./shared/lockbox-client');
 const fs = require('fs');
 const path = require('path');
 
@@ -26,8 +27,32 @@ const PG_CONFIG = {
   }
 };
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+// Telegram-токены загружаются лениво из Lockbox (LOCKBOX_APP_SECRET_ID),
+// с fallback на env. См. shared/lockbox-client.js.
+let TELEGRAM_BOT_TOKEN = null;
+let TELEGRAM_CHAT_ID = null;
+let configLoaded = false;
+let configPromise = null;
+
+async function ensureConfig() {
+  if (configLoaded) return;
+  if (!configPromise) {
+    configPromise = (async () => {
+      const lockboxId = process.env.LOCKBOX_APP_SECRET_ID;
+      const secrets = lockboxId ? await getSecret(lockboxId) : null;
+      const pick = (key) => {
+        const v = secrets && secrets[key];
+        return v && String(v).length > 0 ? v : process.env[key];
+      };
+      TELEGRAM_BOT_TOKEN = pick('TELEGRAM_BOT_TOKEN');
+      TELEGRAM_CHAT_ID = pick('TELEGRAM_CHAT_ID');
+      configLoaded = true;
+      console.log('[heys-api-leads] tg config loaded',
+        { from: secrets ? 'lockbox' : 'env', hasToken: !!TELEGRAM_BOT_TOKEN, hasChat: !!TELEGRAM_CHAT_ID });
+    })();
+  }
+  await configPromise;
+}
 
 // Окно дедупликации (30 минут)
 const DEDUPLICATION_WINDOW_MINUTES = 30;
@@ -139,6 +164,8 @@ ${lead.utm_source ? `📊 UTM: ${lead.utm_source}` : ''}
 }
 
 module.exports.handler = async function (event, context) {
+  await ensureConfig();
+
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const corsHeaders = getCorsHeaders(origin);
 

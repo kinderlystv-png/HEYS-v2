@@ -156,14 +156,24 @@ build_env_flags() {
         env_flags+=" --environment PG_SSL=$PG_SSL"
     fi
     
-    # Telegram settings (for leads, auth, backup, snapshot-demo, maintenance, security-alerts)
-    if [[ "$func_name" =~ (leads|auth|backup|snapshot-demo|maintenance|security-alerts) ]]; then
+    # Telegram settings.
+    # Функции, мигрированные на Lockbox (heys-app-secrets — содержит
+    # TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID), получают только LOCKBOX_APP_SECRET_ID
+    # и SA-привязку (см. блок ниже). Остальные старые функции (auth, backup,
+    # snapshot-demo) пока продолжают читать из env — мигрируем поэтапно.
+    if [[ "$func_name" =~ (auth|backup|snapshot-demo) ]]; then
         if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
             env_flags+=" --environment TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
         fi
         if [ -n "$TELEGRAM_CHAT_ID" ]; then
             env_flags+=" --environment TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID"
         fi
+    fi
+
+    # Lockbox-мигрированные функции (TELEGRAM, INTERNAL_CRON, APP_URL):
+    # читают через SA + lockbox.payloadViewer на heys-app-secrets.
+    if [[ "$func_name" =~ (heys-bot-client|heys-api-leads|heys-cron-security-alerts|heys-maintenance) ]]; then
+        env_flags+=" --environment LOCKBOX_APP_SECRET_ID=e6qrvefs3vn66jiamfk4"
     fi
     
     # S3 settings (for backup + snapshot-demo functions)
@@ -213,15 +223,6 @@ build_env_flags() {
         if [ -n "$INTERNAL_CRON_TOKEN" ]; then
             env_flags+=" --environment INTERNAL_CRON_TOKEN=$INTERNAL_CRON_TOKEN"
         fi
-    fi
-
-    # Telegram-бот для клиентов (P0.7) — секреты через Lockbox
-    # (heys-app-secrets: TELEGRAM_CLIENT_BOT_TOKEN, INTERNAL_CRON_TOKEN, APP_URL,
-    # CLIENT_BOT_USERNAME). Функция привязана к SA heys-function-invoker,
-    # SA имеет lockbox.payloadViewer на этом секрете. Fallback на env
-    # сохраняется в коде на случай аварии с Lockbox.
-    if [[ "$func_name" == "heys-bot-client" ]]; then
-        env_flags+=" --environment LOCKBOX_APP_SECRET_ID=e6qrvefs3vn66jiamfk4"
     fi
 
     # Cron drip-уведомлений (Phase 1, P0.7) — нужны pg + INTERNAL_CRON_TOKEN + APP_URL
@@ -315,9 +316,10 @@ deploy_function() {
     # Build environment flags
     env_flags=$(build_env_flags "$func_name")
 
-    # Service account (для функций, которые читают секреты из Lockbox)
+    # Service account (для функций, которые читают секреты из Lockbox).
+    # SA heys-function-invoker имеет роль lockbox.payloadViewer на heys-app-secrets.
     sa_flag=""
-    if [[ "$func_name" == "heys-bot-client" ]]; then
+    if [[ "$func_name" =~ (heys-bot-client|heys-api-leads|heys-cron-security-alerts|heys-maintenance) ]]; then
         sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
     fi
 

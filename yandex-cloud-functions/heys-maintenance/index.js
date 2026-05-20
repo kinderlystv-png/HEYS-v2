@@ -9,6 +9,7 @@
  */
 
 const { Pool } = require('pg');
+const { getSecret } = require('./shared/lockbox-client');
 
 // Database configuration
 const pool = new Pool({
@@ -23,9 +24,31 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000,
 });
 
-// Telegram configuration (без ПДн — только lead_id)
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+// Telegram-токены из Lockbox (lazy), с fallback на env.
+let TELEGRAM_BOT_TOKEN = null;
+let TELEGRAM_CHAT_ID = null;
+let configLoaded = false;
+let configPromise = null;
+
+async function ensureConfig() {
+  if (configLoaded) return;
+  if (!configPromise) {
+    configPromise = (async () => {
+      const lockboxId = process.env.LOCKBOX_APP_SECRET_ID;
+      const secrets = lockboxId ? await getSecret(lockboxId) : null;
+      const pick = (key) => {
+        const v = secrets && secrets[key];
+        return v && String(v).length > 0 ? v : process.env[key];
+      };
+      TELEGRAM_BOT_TOKEN = pick('TELEGRAM_BOT_TOKEN');
+      TELEGRAM_CHAT_ID = pick('TELEGRAM_CHAT_ID');
+      configLoaded = true;
+      console.log('[heys-maintenance] tg config loaded',
+        { from: secrets ? 'lockbox' : 'env', hasToken: !!TELEGRAM_BOT_TOKEN, hasChat: !!TELEGRAM_CHAT_ID });
+    })();
+  }
+  await configPromise;
+}
 
 /**
  * Send Telegram notification (минимум ПДн — только ID)
@@ -141,9 +164,11 @@ async function cleanupSecurityLogs(client) {
  * - daily_cleanup: Security logs cleanup (daily at 03:00 UTC)
  */
 module.exports.handler = async (event, context) => {
+  await ensureConfig();
+
   const triggerId = event.messages?.[0]?.details?.trigger_id || 'default';
   console.log(`[Maintenance] Starting task: ${triggerId}`);
-  
+
   let client;
   try {
     client = await pool.connect();

@@ -16,12 +16,35 @@
  */
 
 const { getPool } = require('./shared/db-pool');
+const { getSecret } = require('./shared/lockbox-client');
 
 const COOLDOWN_MINUTES = 30;
 const WINDOW_MINUTES = 60;
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+let TELEGRAM_BOT_TOKEN = null;
+let TELEGRAM_CHAT_ID = null;
+let configLoaded = false;
+let configPromise = null;
+
+async function ensureConfig() {
+  if (configLoaded) return;
+  if (!configPromise) {
+    configPromise = (async () => {
+      const lockboxId = process.env.LOCKBOX_APP_SECRET_ID;
+      const secrets = lockboxId ? await getSecret(lockboxId) : null;
+      const pick = (key) => {
+        const v = secrets && secrets[key];
+        return v && String(v).length > 0 ? v : process.env[key];
+      };
+      TELEGRAM_BOT_TOKEN = pick('TELEGRAM_BOT_TOKEN');
+      TELEGRAM_CHAT_ID = pick('TELEGRAM_CHAT_ID');
+      configLoaded = true;
+      console.log('[heys-cron-security-alerts] tg config loaded',
+        { from: secrets ? 'lockbox' : 'env', hasToken: !!TELEGRAM_BOT_TOKEN, hasChat: !!TELEGRAM_CHAT_ID });
+    })();
+  }
+  await configPromise;
+}
 
 // Правила детектирования. Каждое — SQL-запрос, возвращающий 0 или 1+ строк.
 // Если есть строки → правило сработало.
@@ -154,6 +177,8 @@ async function sendTelegram(rule, rows) {
 }
 
 module.exports.handler = async function () {
+  await ensureConfig();
+
   const pool = getPool();
   const client = await pool.connect();
   const results = [];
