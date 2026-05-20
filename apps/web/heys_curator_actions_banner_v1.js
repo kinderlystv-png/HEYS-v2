@@ -242,6 +242,16 @@
       }
     }
 
+    // Если для одного key пришли и meal_added, и meal_item_added (в любом
+    // порядке) — items из items_added сливаем в added-карточку, чтобы не
+    // рендерились две одинаковые "Ночной приём в 23:05" подряд.
+    for (const [key, obj] of mealItemsAddedByKey) {
+      if (mealAddedByKey.has(key)) {
+        mergeMealItems(mealAddedByKey.get(key).items, Array.from(obj.items.values()));
+        mealItemsAddedByKey.delete(key);
+      }
+    }
+
     // Reconstruct.
     for (const obj of mealAddedByKey.values()) {
       out.push({
