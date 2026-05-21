@@ -29,6 +29,10 @@ export default defineConfig({
       '.github/skills/**',
       'TOOLS/templates/**',
       'TESTS/example.test.js',
+      // Не сканируем git worktree'и параллельных AI-агентов — у них
+      // свои незакоммиченные изменения которые могут ломать тесты
+      // основного репо при vitest run.
+      '.claude/worktrees/**',
     ],
     // Setup files for mocking browser APIs
     setupFiles: ['./vitest.setup.ts'],
