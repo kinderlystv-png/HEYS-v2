@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.d154494a",
+      "buildHash": "d154494a",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: cookie session-token прокидывается только в нужные RPC",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Серверный фикс инъекции session-token из cookie",
+          "description": "Сервер heys-api-rpc раньше прокидывал session_token из cookie во ВСЕ RPC, у которых нет этого параметра в теле — это ломало функции, которые такой параметр не принимают (verify_client_pin_v3, log_consents, check_required_consents). Теперь инъекция применяется только к функциям с суффиксом _by_session. Клиент дополнительно skip-ает сетевой запрос для get_my_curator_changelog_since / ack_curator_changelog когда токена в params нет — раньше получал 400 от сервера."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.01677816",
       "buildHash": "01677816",
       "date": "2026-05-22",
