@@ -586,10 +586,8 @@
             }
 
             function setRecoveryButtonsDisabled(disabled) {
-                var reloadBtn = document.getElementById('heys-recovery-reload');
-                var clearBtn = document.getElementById('heys-recovery-clear');
-                if (reloadBtn) reloadBtn.disabled = !!disabled;
-                if (clearBtn) clearBtn.disabled = !!disabled;
+                var fixBtn = document.getElementById('heys-recovery-fix');
+                if (fixBtn) fixBtn.disabled = !!disabled;
             }
 
             function showRecoveryUI(errorMsg, options) {
@@ -600,16 +598,23 @@
                 }
                 window.__heysLog && window.__heysLog('[CRITICAL] Recovery UI: ' + errorMsg);
 
+                // Единая кнопка «Починить» вместо двух раздельных (Обновить /
+                // Сбросить кэш). Раньше user'у приходилось гадать: «Обновить»
+                // в реальном crash-сценарии бесполезен (тот же кэш — тот же
+                // crash), а «Сбросить кэш» звучит страшно. Теперь одна
+                // кнопка делает всё что нужно для гарантированного recovery:
+                // unregister SW, drop CacheStorage, clear sessionStorage,
+                // reload через cache-busted URL (обходит HTTP-cache на
+                // iOS Safari).
                 document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;padding:20px;background:#f3f4f6">' +
                     '<div style="background:white;padding:32px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-width:400px;text-align:center">' +
                     '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
                     '<h2 style="margin:0 0 8px;font-size:20px">Ошибка загрузки</h2>' +
                     '<p style="margin:0 0 24px;color:#6b7280;font-size:14px">' + (errorMsg || 'Произошла критическая ошибка') + '</p>' +
                     '<div id="heys-recovery-status" style="margin:0 0 16px;color:#6b7280;font-size:12px"></div>' +
-                    '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">' +
-                    '<button id="heys-recovery-reload" onclick="window.__heysReloadApp && window.__heysReloadApp()" style="padding:12px 24px;border-radius:8px;border:none;background:#10b981;color:white;font-weight:500;cursor:pointer">🔄 Обновить</button>' +
-                    '<button id="heys-recovery-clear" onclick="clearCacheAndReload()" style="padding:12px 24px;border-radius:8px;border:1px solid #d1d5db;background:white;color:#374151;font-weight:500;cursor:pointer">🗑️ Сбросить кэш</button>' +
-                    '</div></div></div>';
+                    '<button id="heys-recovery-fix" onclick="window.__heysFixAndReload && window.__heysFixAndReload()" style="padding:14px 24px;border-radius:8px;border:none;background:#10b981;color:white;font-weight:500;font-size:16px;cursor:pointer;width:100%">🔧 Починить</button>' +
+                    '<div style="margin-top:12px;color:#9ca3af;font-size:12px">Локальные данные не пострадают</div>' +
+                    '</div></div>';
             }
 
             window.__heysShowRecoveryUI = showRecoveryUI;
@@ -636,21 +641,16 @@
                 }, nextCrashCount === 1 ? 150 : 250);
             };
 
-            window.__heysReloadApp = function () {
+            // Главная (и единственная) recovery-функция. Делает максимум для
+            // гарантированного перезапуска: чистит CacheStorage, unregister-ит
+            // все SW, чистит sessionStorage (НЕ localStorage — там данные
+            // пользователя), и грузит index.html по cache-busted URL чтобы
+            // обойти HTTP-cache (важно для iOS Safari, который может отдать
+            // старый index.html с broken bundle hash даже после SW unregister).
+            window.__heysFixAndReload = async function () {
                 if (window.__heysRecoveryBusy) return;
                 window.__heysRecoveryBusy = true;
-                clearBootCrashCount();
-                setRecoveryStatus('Перезагрузка приложения…');
-                setRecoveryButtonsDisabled(true);
-                setTimeout(function () {
-                    location.reload();
-                }, 250);
-            };
-
-            window.clearCacheAndReload = async function () {
-                if (window.__heysRecoveryBusy) return;
-                window.__heysRecoveryBusy = true;
-                setRecoveryStatus('Очистка кэша и перезапуск…');
+                setRecoveryStatus('Чистим кэш и перезапускаем…');
                 setRecoveryButtonsDisabled(true);
                 try {
                     clearBootCrashCount();
@@ -664,12 +664,19 @@
                     }
                     sessionStorage.clear();
                 } catch (e) {
-                    window.__heysLog && window.__heysLog('[RECOVERY] cache clear failed: ' + (e && e.message ? e.message : String(e)));
+                    window.__heysLog && window.__heysLog('[RECOVERY] fix failed: ' + (e && e.message ? e.message : String(e)));
                 }
                 setTimeout(function () {
-                    location.reload();
+                    var base = location.origin + location.pathname;
+                    location.replace(base + '?_recover=' + Date.now());
                 }, 350);
             };
+
+            // Backward-compat aliases: старые имена могут дёргаться из других
+            // bundle'ов / ext-кода / sw-сообщений. Теперь все ведут в одну
+            // и ту же гарантированную recovery-процедуру.
+            window.__heysReloadApp = window.__heysFixAndReload;
+            window.clearCacheAndReload = window.__heysFixAndReload;
 
             // Global error handler
             window.onerror = function (msg, url, line, col, error) {
