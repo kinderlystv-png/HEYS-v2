@@ -1,12 +1,14 @@
 #!/usr/bin/env node
-// Pre-commit guard: цены в docs/legal/*.md должны совпадать с PRICING из
-// apps/landing/src/config/pricing.ts. Source of truth — TS-конфиг; .md-файлы
-// держим вручную в синхроне, чтобы юристы могли читать читабельный markdown.
+// Pre-commit guard: цены в docs/legal/*.md И в legacy/cloud JS-конфигах должны
+// совпадать с PRICING из apps/landing/src/config/pricing.ts. Source of truth —
+// TS-конфиг.
 //
-// Триггерится, если в .md встречается «<тариф> <цена>» с ценой, которая
-// отсутствует в PRICING. Не пытается парсить .md семантически — просто
-// сверяет, что все упомянутые в TS цены живут в .md, и наоборот для трёх
-// известных тарифов.
+// .md-файлы держим в синхроне вручную (юристы читают markdown).
+// JS-конфиги: HEYS.config.prices в legacy bundle + PLANS в cloud function.
+//
+// История: 2026-05-20 ловили рассинхрон, где лендинг показывал 2990/7990/14990,
+// а paywall в приложении и платёжная cloud function — старые 1990/12990/19990.
+// Клиент видел одну цену, ЮKassa могла бы списать другую — нарушение оферты.
 
 const fs = require('fs');
 const path = require('path');
@@ -15,6 +17,24 @@ const ROOT = path.resolve(__dirname, '..');
 const PRICING_TS = path.join(ROOT, 'apps/landing/src/config/pricing.ts');
 const MD_FILES = [
   'docs/legal/user-agreement.md',
+];
+
+// JS-файлы с захардкоженными ценами. Для каждого — regex с тремя capture-
+// группами в порядке base/pro/proPlus. Если структура файла изменится — regex
+// нужно обновить вручную (хук скажет «не нашли паттерн»).
+const JS_TARGETS = [
+  {
+    path: 'apps/web/heys_paywall_v1.js',
+    regex: /HEYS\.config\.prices\s*=\s*HEYS\.config\.prices\s*\|\|\s*\{\s*base:\s*(\d+),\s*pro:\s*(\d+),\s*proPlus:\s*(\d+)/,
+  },
+  {
+    path: 'apps/web/heys_subscriptions_v1.js',
+    regex: /HEYS\.config\.prices\s*=\s*HEYS\.config\.prices\s*\|\|\s*\{\s*base:\s*(\d+),\s*pro:\s*(\d+),\s*proPlus:\s*(\d+)/,
+  },
+  {
+    path: 'yandex-cloud-functions/heys-api-payments/index.js',
+    regex: /base:\s*\{\s*price:\s*(\d+)[^}]*\}[\s,]*\n\s*pro:\s*\{\s*price:\s*(\d+)[^}]*\}[\s,]*\n\s*proplus:\s*\{\s*price:\s*(\d+)/,
+  },
 ];
 
 function readPricingFromTs() {
@@ -65,20 +85,55 @@ function checkMdFile(relPath, pricing) {
   return errors;
 }
 
+// Превращаем '2 990' / '2 990' (с неразрывным пробелом) в число 2990.
+function priceStrToNumber(s) {
+  return Number(String(s).replace(/[\s ]/g, ''));
+}
+
+function checkJsFile(target, pricing) {
+  const abs = path.join(ROOT, target.path);
+  if (!fs.existsSync(abs)) return [];
+  const text = fs.readFileSync(abs, 'utf8');
+  const m = target.regex.exec(text);
+  if (!m) {
+    return [
+      `${target.path}: не нашли паттерн цен (regex не сматчился). ` +
+      `Если структура файла изменилась — обнови regex в scripts/check-pricing-sync.cjs.`,
+    ];
+  }
+  const errors = [];
+  const order = ['base', 'pro', 'proPlus'];
+  for (let i = 0; i < order.length; i++) {
+    const key = order[i];
+    const found = Number(m[i + 1]);
+    const expected = priceStrToNumber(pricing[key].price);
+    if (found !== expected) {
+      errors.push(
+        `${target.path}: цена тарифа "${pricing[key].name}" = ${found}, ` +
+        `ожидалось ${expected} (из pricing.ts).`
+      );
+    }
+  }
+  return errors;
+}
+
 function main() {
   const pricing = readPricingFromTs();
   const allErrors = [];
   for (const mdRel of MD_FILES) {
     allErrors.push(...checkMdFile(mdRel, pricing));
   }
+  for (const target of JS_TARGETS) {
+    allErrors.push(...checkJsFile(target, pricing));
+  }
 
   if (allErrors.length > 0) {
-    console.error('\n❌ check-pricing-sync: цены в docs/legal/*.md рассинхронизированы с pricing.ts:\n');
+    console.error('\n❌ check-pricing-sync: цены рассинхронизированы с pricing.ts:\n');
     for (const e of allErrors) {
       console.error('  • ' + e);
     }
     console.error(
-      '\nПочини .md-файлы или обнови apps/landing/src/config/pricing.ts, ' +
+      '\nПочини файлы или обнови apps/landing/src/config/pricing.ts, ' +
       'чтобы значения совпали.\n'
     );
     process.exit(1);
