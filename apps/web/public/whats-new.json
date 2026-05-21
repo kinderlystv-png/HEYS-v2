@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.b9cc3c10",
+      "buildHash": "b9cc3c10",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: отключена и убрана инфраструктура SMS-верификации",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Cloud function heys-api-sms удалена, SMS_API_KEY вычищен из env",
+          "description": "SMS-верификация была отключена флагом с момента релиза модуля, cloud function за всё время не получила ни одного вызова — удалили её и вычистили ключ из env-шаблона. В внутренних legal-документах формулировки про «ПЭП через SMS» заменены на «checkbox + аудит-лог». На UX не влияет: пользователи как подписывали согласия чекбоксами, так и продолжат. Публичные user-agreement и health-data-consent не менялись."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.eabd06e3",
       "buildHash": "eabd06e3",
       "date": "2026-05-22",
