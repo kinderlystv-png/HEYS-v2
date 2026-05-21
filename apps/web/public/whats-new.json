@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.21.3e9194d1",
+      "buildHash": "3e9194d1",
+      "date": "2026-05-21",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: pricing-sync скрипт расширен",
+      "items": [
+        {
+          "type": "chore",
+          "title": "check-pricing-sync теперь сверяет цены в legacy bundle и cloud function",
+          "description": "Скрипт проверки синхронности тарифов между landing/web app/cloud function расширен — раньше проверял только landing+app, теперь также сверяет heys-api-payments PLANS. Это предотвратит расхождение тарифов в трёх точках, которое нарушает п.4.2 user-agreement."
+        }
+      ]
+    },
+    {
       "version": "2026.05.21.4fdbccf3",
       "buildHash": "4fdbccf3",
       "date": "2026-05-21",
