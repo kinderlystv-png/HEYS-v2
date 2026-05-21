@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.ba99764d",
+      "buildHash": "ba99764d",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: тесты для миграции gantt-планирования",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Покрытие тестами idempotent-backfill в heys_planning_gantt_migration_v1.js",
+          "description": "Добавлены unit-тесты на скрипт обратной совместимости gantt-задач (progress/isMilestone): миграция не повторяется на уже мигрированных задачах, корректно обрабатывает пустой набор, не теряет данные. На UX не влияет."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.3be51b4c",
       "buildHash": "3be51b4c",
       "date": "2026-05-22",
