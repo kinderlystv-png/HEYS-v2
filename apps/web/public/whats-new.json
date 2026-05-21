@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.eabd06e3",
+      "buildHash": "eabd06e3",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: синхронизация allowlist прямых localStorage-вызовов",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Bootstrap-bypass allowlist пересинхронизирован после рефакторинга auth",
+          "description": "Линтер проверяет, что новые прямые вызовы localStorage.setItem (вне нашего стандартного wrapper'а HEYS.utils.lsSet) явно перечислены в allowlist. После рефакторинга validatePin в heys_auth_v1.js строки сместились — обновили номера в allowlist. На приложение не влияет."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.ba99764d",
       "buildHash": "ba99764d",
       "date": "2026-05-22",
