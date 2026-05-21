@@ -807,6 +807,26 @@
   // ═══════════════════════════════════════════════════════════════════
 
   /**
+   * PR-C (2026-05-20) перенёс client session_token в HttpOnly cookie. JS его
+   * прочитать не может, поэтому `getSessionTokenForKV()` возвращает null для
+   * всех post-deploy логинов. Чтобы upload не упирался в "No auth token
+   * available", session-RPC вызываются здесь: если LS-токен есть — передаём
+   * его явно (legacy путь до естественного истечения 30-дневного TTL); если
+   * нет, но есть PIN-сессия (cookie carrier) — делаем RPC без
+   * `p_session_token`, и heys-api-rpc подставляет токен из cookie
+   * (см. yandex-cloud-functions/heys-api-rpc/index.js, cookie-based session
+   * carriage). Возвращает {ok, rpcParams} либо {ok: false} если ни LS, ни
+   * cookie не доступны.
+   */
+  function buildSessionRpcParams(extra = {}) {
+    const token = getSessionTokenForKV();
+    if (token) return { ok: true, params: { ...extra, p_session_token: token } };
+    const hasCookieSession = !!global?.HEYS?.cloud?.isPinAuthClient?.();
+    if (hasCookieSession) return { ok: true, params: { ...extra } };
+    return { ok: false, params: null };
+  }
+
+  /**
    * Получить session_token для KV операций
    * @returns {string|null}
    * 🔧 v58 FIX: Улучшенная диагностика и fallback на heys_pin_auth_client
@@ -890,16 +910,13 @@
         return { success: false, error: result.error.message || String(result.error) };
       }
 
-      // Fallback: PIN auth client (no curator token).
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
+      // Fallback: PIN auth client (no curator token). Post PR-C cookie-only —
+      // buildSessionRpcParams даёт безтокенный body для cookie carrier.
+      const sessionRpc = buildSessionRpcParams({ p_key: key, p_value: value });
+      if (!sessionRpc.ok) {
         return { success: false, error: 'No auth token (neither curator nor session)' };
       }
-      const result = await rpc('upsert_client_kv_by_session', {
-        p_session_token: sessionToken,
-        p_key: key,
-        p_value: value
-      });
+      const result = await rpc('upsert_client_kv_by_session', sessionRpc.params);
       if (result.error) {
         return { success: false, error: result.error.message || result.error };
       }
@@ -939,23 +956,18 @@
         return { data: null }; // not found
       }
 
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
-        return { data: null, error: 'No session token' };
-      }
-
-      // 🔐 P1: Используем session-версию
-      // Примечание: для "все ключи" пока нет session-версии, возвращаем ошибку
+      // Post PR-C cookie-only через buildSessionRpcParams.
       if (!key) {
         // TODO: Создать get_all_client_kv_by_session если нужно
         warn('getKV without key not supported in session mode');
         return { data: [], error: null };
       }
+      const sessionRpc = buildSessionRpcParams({ p_key: key });
+      if (!sessionRpc.ok) {
+        return { data: null, error: 'No session token' };
+      }
 
-      const result = await rpc('get_client_kv_by_session', {
-        p_session_token: sessionToken,
-        p_key: key
-      });
+      const result = await rpc('get_client_kv_by_session', sessionRpc.params);
 
       if (result.error) {
         return { data: null, error: result.error.message || result.error };
@@ -1001,15 +1013,12 @@
         return await getKVBatchByCurator(clientId, keys);
       }
 
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
+      const sessionRpc = buildSessionRpcParams({ p_keys: keys });
+      if (!sessionRpc.ok) {
         return { data: null, error: 'No session token' };
       }
 
-      const result = await rpc('batch_get_client_kv_by_session', {
-        p_session_token: sessionToken,
-        p_keys: keys
-      });
+      const result = await rpc('batch_get_client_kv_by_session', sessionRpc.params);
 
       if (result.error) {
         return { data: null, error: result.error.message || result.error };
@@ -1057,12 +1066,12 @@
         return { data: null, error: 'curator_should_use_getChangeMarkersByCurator' };
       }
 
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
+      const sessionRpc = buildSessionRpcParams({});
+      if (!sessionRpc.ok) {
         return { data: null, error: 'No session token' };
       }
 
-      const params = { p_session_token: sessionToken };
+      const params = sessionRpc.params;
       if (since) params.p_since = since;
 
       const result = await rpc('get_change_markers_by_session', params);
@@ -1244,14 +1253,15 @@
         return getAllKVByCurator(clientId, options);
       }
 
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
+      // Post PR-C cookie-only: если LS-токена нет и мы не PIN-cookie-сессия —
+      // упадём к curator-REST fallback'у (download уже работает через него).
+      // Если PIN cookie carrier — отправим RPC без p_session_token.
+      const sessionRpc = buildSessionRpcParams({});
+      if (!sessionRpc.ok) {
         return getAllKVByCurator(clientId, options);
       }
 
-      const rpcParams = {
-        p_session_token: sessionToken,
-      };
+      const rpcParams = sessionRpc.params;
       // 🚀 Delta Sync: передаём p_since для RPC
       if (since) {
         rpcParams.p_since = since;
@@ -1406,13 +1416,12 @@
 
       // 🔐 Path 4: PIN auth client (no curator token at all). Session token
       // resolves to a single client_id server-side — safe because PIN sessions
-      // are bound to one client.
-      const sessionToken = getSessionTokenForKV();
-      if (sessionToken) {
-        const result = await rpc('batch_upsert_client_kv_by_session', {
-          p_session_token: sessionToken,
-          p_items: items
-        });
+      // are bound to one client. Post PR-C: токен может быть только в HttpOnly
+      // cookie — buildSessionRpcParams отдаст RPC-параметры без
+      // p_session_token, и heys-api-rpc заполнит из cookie.
+      const sessionRpc = buildSessionRpcParams({ p_items: items });
+      if (sessionRpc.ok) {
+        const result = await rpc('batch_upsert_client_kv_by_session', sessionRpc.params);
         if (result.error) {
           console.error('[YandexAPI] batchSaveKV RPC ERROR:', result.error);
           return { success: false, saved: 0, error: result.error.message || result.error };
@@ -1453,12 +1462,9 @@
    */
   async function getMyCuratorChangelogSince(p_since = null) {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { ok: false, error: 'No session token', entries: [] };
-      const result = await rpc('get_my_curator_changelog_since', {
-        p_session_token: sessionToken,
-        p_since
-      });
+      const sessionRpc = buildSessionRpcParams({ p_since });
+      if (!sessionRpc.ok) return { ok: false, error: 'No session token', entries: [] };
+      const result = await rpc('get_my_curator_changelog_since', sessionRpc.params);
       if (result.error) {
         return { ok: false, error: result.error.message || result.error, entries: [] };
       }
@@ -1482,12 +1488,11 @@
    */
   async function ackCuratorChangelog(p_until_ts = null) {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { ok: false, error: 'No session token' };
-      const result = await rpc('ack_curator_changelog', {
-        p_session_token: sessionToken,
-        p_until_ts: p_until_ts || new Date().toISOString()
+      const sessionRpc = buildSessionRpcParams({
+        p_until_ts: p_until_ts || new Date().toISOString(),
       });
+      if (!sessionRpc.ok) return { ok: false, error: 'No session token' };
+      const result = await rpc('ack_curator_changelog', sessionRpc.params);
       if (result.error) {
         return { ok: false, error: result.error.message || result.error };
       }
@@ -1538,15 +1543,15 @@
 
       // Fallback: PIN-auth client (no curator JWT). Session token resolves to
       // exactly one client_id on server side — safe because PIN sessions are
-      // bound to a single client.
-      const sessionToken = getSessionTokenForKV();
-      if (sessionToken) {
-        const result = await rpc('merge_save_client_kv_by_session', {
-          p_session_token: sessionToken,
-          p_key: k,
-          p_value: v,
-          p_last_seen_updated_at: lastSeenUpdatedAt,
-        });
+      // bound to a single client. Post PR-C cookie-only через
+      // buildSessionRpcParams.
+      const sessionRpc = buildSessionRpcParams({
+        p_key: k,
+        p_value: v,
+        p_last_seen_updated_at: lastSeenUpdatedAt,
+      });
+      if (sessionRpc.ok) {
+        const result = await rpc('merge_save_client_kv_by_session', sessionRpc.params);
         if (result.error) {
           err('[mergeSaveKV] session RPC error:', result.error?.message || result.error);
           return { success: false, error: result.error.message || String(result.error) };
@@ -1623,13 +1628,10 @@
       }
 
       // Fallback: PIN auth client (no curator token). Session resolves to a
-      // single bound client_id — safe for PIN.
-      const sessionToken = getSessionTokenForKV();
-      if (sessionToken) {
-        const result = await rpc('delete_client_kv_by_session', {
-          p_session_token: sessionToken,
-          p_key: key
-        });
+      // single bound client_id — safe for PIN. Cookie-only after PR-C.
+      const sessionRpc = buildSessionRpcParams({ p_key: key });
+      if (sessionRpc.ok) {
+        const result = await rpc('delete_client_kv_by_session', sessionRpc.params);
         if (result.error) {
           return { success: false, error: result.error.message || result.error };
         }
@@ -2077,6 +2079,146 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════
+  // 🆕 COMPLIANCE OVERHAUL 2026-05-20 — version-aware consents, DSAR,
+  // proof-of-consent, age gate, restriction, revoke curator
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * 🔐 Session-safe v2: version-aware проверка согласий.
+   * Передаём ожидаемые версии — сервер сравнивает с подписанными,
+   * запускает grace 7д или блокирует если истёк.
+   * @param {object} expectedVersions - например HEYS.LegalVersions
+   * @returns {Promise<{data: {valid, missing, outdated, grace_status, must_block}, error}>}
+   */
+  async function checkRequiredConsentsBySession(expectedVersions) {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
+
+      return await rpc('check_required_consents_by_session', {
+        p_session_token: sessionToken,
+        p_expected_versions: JSON.stringify(expectedVersions || {})
+      });
+    } catch (e) {
+      err('checkRequiredConsentsBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
+   * 🔐 Список своих согласий для UI "Мои согласия и данные".
+   */
+  async function getMyConsentsBySession() {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
+      return await rpc('get_my_consents_by_session', { p_session_token: sessionToken });
+    } catch (e) {
+      err('getMyConsentsBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
+   * 🔐 Доказательство подписи конкретного типа consent (для скачивания).
+   * @param {string} consentType - 'user_agreement','personal_data','health_data','marketing','payment_oferta','push_notifications','curator_access'
+   */
+  async function getConsentProofBySession(consentType) {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
+      return await rpc('get_consent_proof_by_session', {
+        p_session_token: sessionToken,
+        p_consent_type: consentType
+      });
+    } catch (e) {
+      err('getConsentProofBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
+   * 🔐 DSAR — выгрузка всех данных клиента (152-ФЗ ст.14 / GDPR Art.15).
+   */
+  async function exportMyDataBySession() {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
+      return await rpc('export_my_data_by_session', { p_session_token: sessionToken });
+    } catch (e) {
+      err('exportMyDataBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
+   * 🔐 18+ gate. Передаём год рождения; сервер валидирует >= 18 лет.
+   */
+  async function confirmAgeBySession(birthYear) {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
+      return await rpc('confirm_age_by_session', {
+        p_session_token: sessionToken,
+        p_birth_year: birthYear
+      });
+    } catch (e) {
+      err('confirmAgeBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
+   * 🔐 Право на ограничение обработки (152-ФЗ ст.21.3 / GDPR Art.18).
+   * Когда active=true — KV writes блокируются триггером.
+   */
+  async function requestRestrictionBySession(active) {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
+      return await rpc('request_restriction_by_session', {
+        p_session_token: sessionToken,
+        p_active: !!active
+      });
+    } catch (e) {
+      err('requestRestrictionBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
+   * 🔐 Право на возражение: убрать куратора без удаления аккаунта.
+   */
+  async function revokeCuratorAccessBySession() {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
+      return await rpc('revoke_curator_access_by_session', { p_session_token: sessionToken });
+    } catch (e) {
+      err('revokeCuratorAccessBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
+   * 🔐 Session-safe отзыв одного согласия. Для health_data/personal_data
+   * сервер дополнительно kill всех активных сессий клиента.
+   */
+  async function revokeConsentBySession(consentType) {
+    try {
+      const sessionToken = getSessionTokenForKV();
+      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
+      return await rpc('revoke_consent_by_session', {
+        p_session_token: sessionToken,
+        p_consent_type: consentType
+      });
+    } catch (e) {
+      err('revokeConsentBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
   // 🏭 SHARED PRODUCTS МЕТОДЫ
   // ═══════════════════════════════════════════════════════════════════
 
@@ -2330,10 +2472,20 @@
 
     // �📝 Consents
     logConsents,
+    logConsentsBySession,
     checkRequiredConsents,
+    checkRequiredConsentsBySession,
     revokeConsent,
+    revokeConsentBySession,
     purgeHealthData,
     deleteMyAccount,
+    // 🆕 Compliance overhaul 2026-05-20
+    getMyConsentsBySession,
+    getConsentProofBySession,
+    exportMyDataBySession,
+    confirmAgeBySession,
+    requestRestrictionBySession,
+    revokeCuratorAccessBySession,
 
     // 🏭 Products
     getSharedProducts,

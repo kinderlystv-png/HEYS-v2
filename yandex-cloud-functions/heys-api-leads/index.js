@@ -207,6 +207,8 @@ module.exports.handler = async function (event, context) {
       plan,
       website, // 🍯 honeypot (P0.13) — должно быть пустым
       consent, // 152-ФЗ ст. 9: согласие на обработку ПДн
+      birth_year, // 152-ФЗ ст.9.5: 18+ gate (compliance overhaul 2026-05-20)
+      marketing_accepted_at, // 152-ФЗ ст.15: опциональное маркетинговое согласие
     } = body;
 
     // 🍯 Honeypot (P0.13): боты обычно заполняют все поля. Если website непустой —
@@ -271,6 +273,30 @@ module.exports.handler = async function (event, context) {
       : event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
     const consentPrivacyVersion = String(consent.privacy_version).slice(0, 32);
     const consentMethod = String(consent.method).slice(0, 32);
+
+    // 152-ФЗ ст.9.5 серверная валидация 18+ (UI уже проверил, но не доверяем).
+    // Старые сборки landing могут не присылать birth_year — допускаем для backwards-compat,
+    // но логируем для мониторинга. После rollout landing >2 недель — сделать REJECTED.
+    const birthYearNum = Number.isInteger(birth_year) ? birth_year
+      : (typeof birth_year === 'string' ? parseInt(birth_year, 10) : null);
+    const currentYear = new Date().getFullYear();
+    if (birthYearNum != null) {
+      if (birthYearNum < 1900 || birthYearNum > currentYear) {
+        return { statusCode: 400, headers: corsHeaders,
+          body: JSON.stringify({ success: false, error: 'Invalid birth_year' }) };
+      }
+      if (currentYear - birthYearNum < 18) {
+        return { statusCode: 400, headers: corsHeaders,
+          body: JSON.stringify({ success: false, error: 'Under 18 not allowed',
+            message: 'Сервис доступен только лицам старше 18 лет (152-ФЗ ст.9.5).' }) };
+      }
+    } else {
+      console.warn('[Leads] WARN birth_year missing (legacy landing build)');
+    }
+
+    const consentMarketingAt = marketing_accepted_at
+      ? new Date(marketing_accepted_at)
+      : null;
 
     // IP клиента для rate-limit
     const clientIp =
@@ -348,13 +374,15 @@ module.exports.handler = async function (event, context) {
               name, phone, email, messenger,
               utm_source, utm_medium, utm_campaign, utm_term, utm_content,
               referrer, landing_page, ip_address,
-              consent_privacy_version, consent_accepted_at, consent_method, consent_user_agent
+              consent_privacy_version, consent_accepted_at, consent_method, consent_user_agent,
+              birth_year, consent_marketing_accepted_at
             )
             VALUES (
               $1, $2, $3, $4,
               $5, $6, $7, $8, $9,
               $10, $11, $12,
-              $13, $14, $15, $16
+              $13, $14, $15, $16,
+              $17, $18
             )
             RETURNING id
           `, [
@@ -362,6 +390,7 @@ module.exports.handler = async function (event, context) {
             utm_source, utm_medium, utm_campaign, utm_term, utm_content,
             referrer, landing_page, clientIp,
             consentPrivacyVersion, consentAcceptedAt, consentMethod, consentUserAgent,
+            birthYearNum, consentMarketingAt,
           ]);
 
           leadId = result.rows[0].id;

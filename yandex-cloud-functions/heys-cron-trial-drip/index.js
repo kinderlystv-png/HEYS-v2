@@ -23,12 +23,15 @@ const BOT_API_URL = process.env.BOT_API_URL || 'https://api.heyslab.ru';
 const INTERNAL_CRON_TOKEN = process.env.INTERNAL_CRON_TOKEN;
 const APP_URL = process.env.APP_URL || 'https://app.heyslab.ru';
 
-function dripText(stage, name, daysLeft) {
-  const safeName = name || 'там';
+// ⚠️ 152-ФЗ: имя клиента (ПДн) НЕ передаём через Telegram API
+// (серверы api.telegram.org за пределами РФ). Текст обезличен, поэтому
+// исходящий трафик в Telegram содержит только статус подписки и chat_id —
+// не считается передачей ПДн оператором.
+function dripText(stage, daysLeft) {
   switch (stage) {
     case 'welcome':
       return (
-        `<b>${safeName}</b>, добро пожаловать в HEYS! 🎉\n\n` +
+        '<b>Добро пожаловать в HEYS!</b> 🎉\n\n' +
         'Триал активирован на 7 дней. За это время вы успеете:\n' +
         '• Завести дневник питания\n' +
         '• Получить первые рекомендации алгоритма\n' +
@@ -37,26 +40,26 @@ function dripText(stage, name, daysLeft) {
       );
     case 'mid':
       return (
-        `<b>${safeName}</b>, прошло половина триала.\n\n` +
+        '<b>Половина триала позади.</b>\n\n' +
         `До конца — ${daysLeft} дн.\n\n` +
         'Если есть вопросы по работе с приложением — напишите вашему куратору, ' +
         'мы поможем разобраться.'
       );
     case 'prepay':
       return (
-        `<b>${safeName}</b>, до конца триала ${daysLeft} дн.\n\n` +
+        `<b>До конца триала ${daysLeft} дн.</b>\n\n` +
         'Чтобы продолжить пользоваться HEYS, свяжитесь с вашим куратором — ' +
         'он подберёт тариф и оформит подписку.'
       );
     case 'lastcall':
       return (
-        `<b>${safeName}</b>, последний день триала ⏰\n\n` +
+        '<b>Сегодня последний день триала</b> ⏰\n\n' +
         'Завтра доступ к редактированию будет ограничен. ' +
         'Если хотите продолжить — напишите куратору сегодня.'
       );
     case 'expired':
       return (
-        `<b>${safeName}</b>, триал-период завершён.\n\n` +
+        '<b>Триал-период завершён.</b>\n\n' +
         'Доступ к редактированию данных временно ограничен. ' +
         'Чтобы вернуться к полному функционалу — свяжитесь с куратором, ' +
         'он оформит подписку индивидуально.'
@@ -119,7 +122,7 @@ module.exports.handler = async function (event, context) {
     for (const row of targets.rows) {
       processed += 1;
       const stage = row.drip_stage;
-      const text = dripText(stage, row.name, row.days_left);
+      const text = dripText(stage, row.days_left);
       if (!text) {
         skipped += 1;
         continue;

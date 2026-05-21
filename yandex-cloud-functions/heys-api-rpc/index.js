@@ -302,10 +302,20 @@ const ALLOWED_FUNCTIONS = [
   // === CONSENTS ===
   'log_consents',                     // Логирование согласий с ПЭП
   'log_consents_by_session',          // 🔐 Session-safe: client_id из сессии (IDOR protection)
-  'check_required_consents',          // Проверка обязательных согласий
+  'check_required_consents',          // Проверка обязательных согласий (legacy)
+  'check_required_consents_by_session', // 🔐 v2 version-aware: re-consent при bump версии (compliance overhaul 2026-05-20)
   'check_payment_consent_by_session', // 🔐 Session-safe: проверка payment_oferta перед оплатой
-  'revoke_consent',                   // Отзыв согласия
+  'revoke_consent',                   // Отзыв согласия (legacy)
+  'revoke_consent_by_session',        // 🔐 Session-safe revoke + kill sessions при health/personal (2026-05-20)
   'get_client_consents',              // Получение всех согласий клиента
+  'get_my_consents_by_session',       // 🔐 Self-view: список своих согласий для UI "Мои согласия" (2026-05-20)
+  'get_consent_proof_by_session',     // 🔐 Self-view: proof-of-consent для скачивания PDF/JSON (2026-05-20)
+
+  // === DSAR / СУБЪЕКТНЫЕ ПРАВА (152-ФЗ ст.14 / GDPR Art.15-18, 2026-05-20) ===
+  'export_my_data_by_session',        // 🔐 DSAR: выгрузка всех своих данных JSON-ом
+  'confirm_age_by_session',           // 🔐 18+ gate: установка birth_year для старых клиентов
+  'request_restriction_by_session',   // 🔐 Right to restriction: заморозка/разморозка обработки
+  'revoke_curator_access_by_session', // 🔐 Right to object: убрать куратора без удаления аккаунта
 
   // === ACCOUNT LIFECYCLE (152-ФЗ ст. 21 — права субъекта ПДн) ===
   'purge_health_data',                // Удаление health-данных из KV после отзыва health_data согласия

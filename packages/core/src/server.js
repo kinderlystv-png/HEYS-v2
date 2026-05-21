@@ -160,10 +160,25 @@ async function proxyToProd(req, res) {
       if (hopByHop.has(lower)) return;
       if (skipUpstreamCors.has(lower)) return;
       if (skipAfterDecode.has(lower)) return;
+      // Set-Cookie handled separately below: upstream sets Domain=.heyslab.ru +
+      // Secure, which the browser rejects on http://localhost. Strip those
+      // attributes so cookies (heys_session_token / heys_curator_jwt) actually
+      // persist when developing against the dev proxy.
+      if (lower === 'set-cookie') return;
       try {
         res.setHeader(key, value);
       } catch (_) { /* ignore duplicate / invalid */ }
     });
+
+    const upstreamCookies = typeof proxyRes.headers.getSetCookie === 'function'
+      ? proxyRes.headers.getSetCookie()
+      : [];
+    if (upstreamCookies.length > 0) {
+      const rewritten = upstreamCookies.map((cookie) => cookie
+        .replace(/;\s*Domain=[^;]+/gi, '')
+        .replace(/;\s*Secure(?=;|$)/gi, ''));
+      res.setHeader('Set-Cookie', rewritten);
+    }
 
     // Стриминг в браузер — не ждём полного тела от апстрима в памяти Node (быстрее bootstrap на больших JSON)
     if (proxyRes.body) {

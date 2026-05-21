@@ -1469,6 +1469,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     )
                 ), // end ProfileSection security
 
+                // === СЕКЦИЯ 4.5: Мои согласия и данные (152-ФЗ ст.14/21, GDPR Art.15-18) ===
+                React.createElement(ProfileSection, {
+                    id: 'consents',
+                    icon: '📋',
+                    title: 'Мои согласия и данные',
+                    subtitle: 'Просмотр, отзыв, экспорт по 152-ФЗ',
+                    tone: 'blue',
+                    expanded: !!expandedSections.consents,
+                    onToggle: () => toggleSection('consents')
+                },
+                    React.createElement('div', { className: 'profile-section__fields' },
+                        React.createElement(MyConsentsAndDataCard, null)
+                    )
+                ),
+
                 // === СЕКЦИЯ 5: Подписка (новый модуль HEYS.Subscription) ===
                 React.createElement(ProfileSection, {
                     id: 'subscription',
@@ -2728,6 +2743,295 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             React.createElement('div', { className: 'muted', style: { marginTop: '6px' } },
                 'Все значения сохраняются автоматически. Жиры считаются из 9 ккал/г, клетчатка — в граммах на 1000 ккал.'
             )
+        );
+    }
+
+    // === МОИ СОГЛАСИЯ И ДАННЫЕ (152-ФЗ ст.14/21, GDPR Art.15-18) ===
+    // Compliance overhaul 2026-05-20: страница для просмотра согласий, скачивания
+    // proof-of-consent, DSAR-экспорта, restriction обработки, отзыва куратора.
+    function MyConsentsAndDataCard() {
+        const Consents = window.HEYS?.Consents;
+        const [consentsList, setConsentsList] = React.useState([]);
+        const [loading, setLoading] = React.useState(true);
+        const [busy, setBusy] = React.useState(null);
+        const [message, setMessage] = React.useState('');
+        const [restrictionActive, setRestrictionActive] = React.useState(false);
+
+        const refresh = React.useCallback(async function () {
+            if (!Consents?.api?.getMyConsents) return;
+            setLoading(true);
+            const res = await Consents.api.getMyConsents();
+            if (res.success) {
+                // Группируем по типу — показываем только последнюю запись каждого типа
+                const byType = {};
+                (res.consents || []).forEach(function (c) {
+                    if (!byType[c.type] || new Date(c.created_at) > new Date(byType[c.type].created_at)) {
+                        byType[c.type] = c;
+                    }
+                });
+                setConsentsList(Object.values(byType));
+            }
+            setLoading(false);
+        }, [Consents]);
+
+        React.useEffect(function () { refresh(); }, [refresh]);
+
+        if (!Consents?.api?.getMyConsents) {
+            return React.createElement('div', { className: 'muted' },
+                'Модуль согласий не загружен');
+        }
+
+        const labels = Consents.TEXTS?.checkboxes || {};
+        const versionLabels = (window.HEYS?.LegalVersions?.labels) || {};
+        const REQUIRED = ['user_agreement', 'personal_data', 'health_data'];
+
+        const handleRevoke = async function (consentType, isRequired) {
+            const docName = versionLabels[consentType] || consentType;
+            let msg;
+            if (consentType === 'health_data') {
+                msg = 'Отозвать согласие "' + docName + '"?\n\n' +
+                      'Будут удалены все данные о здоровье (дневник питания, вес, активность). ' +
+                      'Дальнейшее использование сервиса станет невозможным до повторного согласия.';
+            } else if (isRequired) {
+                msg = 'Отозвать обязательное согласие "' + docName + '"?\n\n' +
+                      'Это равнозначно удалению аккаунта — без этого согласия пользоваться сервисом нельзя.';
+            } else {
+                msg = 'Отозвать согласие "' + docName + '"?';
+            }
+            if (!window.confirm(msg)) return;
+
+            setBusy(consentType);
+            setMessage('');
+            try {
+                let res;
+                if (consentType === 'health_data') {
+                    res = await Consents.api.revokeHealthDataAndPurge(window.HEYS.currentClientId || '');
+                } else {
+                    res = await Consents.api.revokeConsentBySession(consentType);
+                }
+                if (res?.success) {
+                    setMessage('✅ Согласие отозвано. Обновите страницу.');
+                    await refresh();
+                } else {
+                    setMessage('❌ ' + (res?.error || 'Не удалось отозвать'));
+                }
+            } catch (e) {
+                setMessage('❌ ' + e.message);
+            } finally {
+                setBusy(null);
+            }
+        };
+
+        const handleDownloadProof = async function (consentType) {
+            setBusy('proof_' + consentType);
+            const r = await Consents.api.downloadConsentProofAsFile(consentType);
+            setBusy(null);
+            if (!r.success) setMessage('❌ ' + (r.error || 'Ошибка'));
+        };
+
+        const handleDownloadData = async function () {
+            setBusy('dsar');
+            setMessage('');
+            const r = await Consents.api.downloadMyDataAsFile();
+            setBusy(null);
+            if (r.success) {
+                setMessage('✅ Файл с вашими данными скачан');
+            } else {
+                setMessage('❌ ' + (r.error || 'Ошибка экспорта'));
+            }
+        };
+
+        const handleRestriction = async function () {
+            const next = !restrictionActive;
+            const msg = next
+                ? 'Запросить ограничение обработки данных?\n\n' +
+                  'Пока ограничение активно, новые данные не будут записываться (дневник, веса, активность). ' +
+                  'Существующие данные сохранятся. Куратор не сможет вносить изменения. ' +
+                  'Можно отключить в любой момент.'
+                : 'Возобновить обработку данных?';
+            if (!window.confirm(msg)) return;
+            setBusy('restriction');
+            setMessage('');
+            const r = await Consents.api.requestRestriction(next);
+            setBusy(null);
+            if (r?.success) {
+                setRestrictionActive(next);
+                setMessage(next ? '✅ Ограничение обработки активировано' : '✅ Обработка возобновлена');
+            } else {
+                setMessage('❌ ' + (r?.error || 'Не удалось'));
+            }
+        };
+
+        const handleRevokeCurator = async function () {
+            if (!window.confirm(
+                'Убрать куратора?\n\n' +
+                'Куратор больше не сможет видеть и редактировать ваш дневник. ' +
+                'Сервис останется доступен в режиме self-service. ' +
+                'Это действие можно отменить только обратившись в поддержку.'
+            )) return;
+            setBusy('curator');
+            setMessage('');
+            const r = await Consents.api.revokeCuratorAccess();
+            setBusy(null);
+            if (r?.success) {
+                setMessage('✅ Куратор отключён');
+            } else {
+                setMessage('❌ ' + (r?.error || 'Не удалось'));
+            }
+        };
+
+        const marketingConsent = consentsList.find(function (c) { return c.type === 'marketing'; });
+        const pushConsent = consentsList.find(function (c) { return c.type === 'push_notifications'; });
+
+        const handleToggleMarketing = async function () {
+            const next = !(marketingConsent && marketingConsent.granted);
+            setBusy('marketing');
+            setMessage('');
+            const r = await Consents.api.setMarketingConsent(next);
+            setBusy(null);
+            if (r?.success) { await refresh(); setMessage(next ? '✅ Подписаны на рассылку' : '✅ Отписаны от рассылки'); }
+            else setMessage('❌ ' + (r?.error || 'Не удалось'));
+        };
+
+        const handleTogglePush = async function () {
+            const next = !(pushConsent && pushConsent.granted);
+            setBusy('push');
+            setMessage('');
+            const r = await Consents.api.setPushConsent(next);
+            setBusy(null);
+            if (r?.success) { await refresh(); setMessage(next ? '✅ Push включены' : '✅ Push отключены'); }
+            else setMessage('❌ ' + (r?.error || 'Не удалось'));
+        };
+
+        const formatDate = function (iso) {
+            if (!iso) return '—';
+            try { return new Date(iso).toLocaleDateString('ru-RU'); } catch (e) { return iso; }
+        };
+
+        return React.createElement('div', { className: 'profile-field-group' },
+            React.createElement('div', { className: 'profile-field-group__header' },
+                React.createElement('span', { className: 'profile-field-group__icon' }, '📋'),
+                React.createElement('span', { className: 'profile-field-group__title' }, 'Мои согласия')
+            ),
+            React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
+                'Какие согласия я подписал, когда и какой версии. Здесь же — отзыв, экспорт данных и право на ограничение обработки (152-ФЗ ст.14/21).'),
+
+            // ── Список согласий ─────────────────────────────────────────
+            loading
+                ? React.createElement('div', { className: 'muted', style: { marginTop: 12 } }, '⏳ Загрузка...')
+                : (consentsList.length === 0
+                    ? React.createElement('div', { className: 'muted', style: { marginTop: 12 } },
+                        'Согласий пока нет. Они появятся после первого входа.')
+                    : React.createElement('div', { style: { marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 } },
+                        consentsList.map(function (c) {
+                            const isRequired = REQUIRED.indexOf(c.type) >= 0;
+                            const label = versionLabels[c.type] || (labels[c.type]?.label) || c.type;
+                            const statusColor = c.granted ? '#16a34a' : '#71717a';
+                            const statusText = c.granted ? 'Активно' : 'Отозвано';
+                            return React.createElement('div', {
+                                key: c.id,
+                                style: {
+                                    padding: '10px 12px', borderRadius: 8,
+                                    border: '1px solid ' + (c.granted ? '#d1fae5' : '#e5e7eb'),
+                                    background: c.granted ? '#f0fdf4' : '#f9fafb'
+                                }
+                            },
+                                React.createElement('div', { style: { fontWeight: 500, fontSize: 14 } }, label),
+                                React.createElement('div', { className: 'muted', style: { fontSize: 12, marginTop: 4 } },
+                                    'Версия ', c.version || '—',
+                                    ' • Подписано ', formatDate(c.created_at),
+                                    ' • Способ: ', c.signature_method || 'checkbox',
+                                    ' • ', React.createElement('span', { style: { color: statusColor, fontWeight: 500 } }, statusText)),
+                                React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' } },
+                                    React.createElement('button', {
+                                        className: 'btn btn--secondary',
+                                        disabled: busy === ('proof_' + c.type),
+                                        onClick: function () { return handleDownloadProof(c.type); },
+                                        style: { fontSize: 12, padding: '4px 10px' }
+                                    }, busy === ('proof_' + c.type) ? '⏳' : '📄 Скачать подтверждение'),
+                                    c.granted && React.createElement('button', {
+                                        className: 'btn',
+                                        disabled: busy === c.type,
+                                        onClick: function () { return handleRevoke(c.type, isRequired); },
+                                        style: {
+                                            fontSize: 12, padding: '4px 10px',
+                                            background: isRequired ? '#fef2f2' : '#fff',
+                                            color: isRequired ? '#dc2626' : '#3f3f46',
+                                            border: '1px solid ' + (isRequired ? '#fecaca' : '#d4d4d8')
+                                        }
+                                    }, busy === c.type ? '⏳' : '🚫 Отозвать' + (isRequired ? ' (= удалить аккаунт)' : ''))
+                                )
+                            );
+                        })
+                    )),
+
+            // ── Toggles: marketing & push ───────────────────────────────
+            React.createElement('div', {
+                style: { marginTop: 16, padding: '12px', borderTop: '1px solid #e5e7eb' }
+            },
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } },
+                    React.createElement('div', null,
+                        React.createElement('div', { style: { fontSize: 14, fontWeight: 500 } }, 'Маркетинговая рассылка'),
+                        React.createElement('div', { className: 'muted', style: { fontSize: 12 } },
+                            'Полезные советы и информация об акциях. Не чаще 1-2 раз в неделю.')),
+                    React.createElement('label', { className: 'toggle-switch' },
+                        React.createElement('input', {
+                            type: 'checkbox',
+                            checked: !!(marketingConsent && marketingConsent.granted),
+                            onChange: handleToggleMarketing,
+                            disabled: busy === 'marketing'
+                        }),
+                        React.createElement('span', { className: 'toggle-slider' })
+                    )
+                ),
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                    React.createElement('div', null,
+                        React.createElement('div', { style: { fontSize: 14, fontWeight: 500 } }, 'Push-уведомления'),
+                        React.createElement('div', { className: 'muted', style: { fontSize: 12 } },
+                            'Напоминания, статус триала, новые сообщения куратора.')),
+                    React.createElement('label', { className: 'toggle-switch' },
+                        React.createElement('input', {
+                            type: 'checkbox',
+                            checked: !!(pushConsent && pushConsent.granted),
+                            onChange: handleTogglePush,
+                            disabled: busy === 'push'
+                        }),
+                        React.createElement('span', { className: 'toggle-slider' })
+                    )
+                )
+            ),
+
+            // ── Actions: DSAR / restriction / revoke curator ────────────
+            React.createElement('div', {
+                style: { marginTop: 16, padding: '12px 0', borderTop: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', gap: 8 }
+            },
+                React.createElement('button', {
+                    className: 'btn btn--secondary btn--full',
+                    onClick: handleDownloadData,
+                    disabled: busy === 'dsar',
+                    style: { justifyContent: 'center' }
+                }, busy === 'dsar' ? '⏳ Готовим...' : '⬇️ Скачать мои данные (DSAR, 152-ФЗ ст.14)'),
+                React.createElement('button', {
+                    className: 'btn btn--secondary btn--full',
+                    onClick: handleRestriction,
+                    disabled: busy === 'restriction',
+                    style: { justifyContent: 'center' }
+                }, busy === 'restriction' ? '⏳' : (restrictionActive ? '▶️ Возобновить обработку' : '⏸ Запросить ограничение обработки')),
+                React.createElement('button', {
+                    className: 'btn btn--secondary btn--full',
+                    onClick: handleRevokeCurator,
+                    disabled: busy === 'curator',
+                    style: { justifyContent: 'center' }
+                }, busy === 'curator' ? '⏳' : '👤 Убрать куратора (остаться в self-service)')
+            ),
+
+            message && React.createElement('div', {
+                className: 'muted',
+                style: { marginTop: 10, padding: '8px 12px', borderRadius: 6,
+                         background: message.startsWith('✅') ? '#f0fdf4' : '#fef2f2',
+                         color: message.startsWith('✅') ? '#166534' : '#dc2626',
+                         fontSize: 13 }
+            }, message)
         );
     }
 

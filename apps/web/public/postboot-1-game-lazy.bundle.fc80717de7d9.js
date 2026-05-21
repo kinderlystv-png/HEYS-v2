@@ -37681,10 +37681,327 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
   }
 
   // =====================================================
+  // 🆕 COMPLIANCE OVERHAUL 2026-05-20 — extensions
+  // =====================================================
+
+  // Источник версий — единый, читаем из HEYS.LegalVersions (см.
+  // apps/web/heys_legal_versions_v1.js). Fallback на локальный
+  // CURRENT_VERSIONS если legal-versions модуль не загрузился.
+  function getCurrentLegalVersions() {
+    if (typeof HEYS.LegalVersions === 'object' && HEYS.LegalVersions) {
+      return HEYS.LegalVersions;
+    }
+    return CURRENT_VERSIONS;
+  }
+
+  // ── Version-aware check (re-consent на bump) ────────────────────────────
+  consentsAPI.checkRequiredVersioned = async function () {
+    try {
+      if (!HEYS.YandexAPI || !HEYS.YandexAPI.checkRequiredConsentsBySession) {
+        return { valid: false, missing: REQUIRED_CONSENTS, error: 'API not ready' };
+      }
+      const versions = getCurrentLegalVersions();
+      const result = await HEYS.YandexAPI.checkRequiredConsentsBySession(versions);
+      if (result.error) throw new Error(result.error?.message || result.error);
+      const data = result.data?.check_required_consents_by_session || result.data;
+      return {
+        valid: data?.valid ?? false,
+        missing: data?.missing || [],
+        outdated: data?.outdated || [],
+        graceExpiresAt: data?.grace_expires_at || null,
+        graceStatus: data?.grace_status || 'none',
+        mustBlock: data?.must_block ?? false
+      };
+    } catch (err) {
+      console.error('[Consents] checkRequiredVersioned failed:', err);
+      return { valid: false, missing: REQUIRED_CONSENTS, error: err.message };
+    }
+  };
+
+  // ── My consents list (для UI «Мои согласия») ────────────────────────────
+  consentsAPI.getMyConsents = async function () {
+    try {
+      if (!HEYS.YandexAPI?.getMyConsentsBySession) return { success: false, error: 'API not ready' };
+      const r = await HEYS.YandexAPI.getMyConsentsBySession();
+      if (r.error) throw new Error(r.error?.message || r.error);
+      const data = r.data?.get_my_consents_by_session || r.data;
+      return { success: true, consents: data?.consents || [] };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  // ── Proof of consent (скачать как файл) ──────────────────────────────────
+  consentsAPI.getConsentProof = async function (consentType) {
+    try {
+      if (!HEYS.YandexAPI?.getConsentProofBySession) return { success: false, error: 'API not ready' };
+      const r = await HEYS.YandexAPI.getConsentProofBySession(consentType);
+      if (r.error) throw new Error(r.error?.message || r.error);
+      const data = r.data?.get_consent_proof_by_session || r.data;
+      return { success: true, proof: data };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  consentsAPI.downloadConsentProofAsFile = async function (consentType) {
+    const res = await consentsAPI.getConsentProof(consentType);
+    if (!res.success) return res;
+    const blob = new Blob([JSON.stringify(res.proof, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `heys-consent-${consentType}-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { success: true };
+  };
+
+  // ── DSAR (152-ФЗ ст.14 / GDPR Art.15) ────────────────────────────────────
+  consentsAPI.exportMyData = async function () {
+    try {
+      if (!HEYS.YandexAPI?.exportMyDataBySession) return { success: false, error: 'API not ready' };
+      const r = await HEYS.YandexAPI.exportMyDataBySession();
+      if (r.error) throw new Error(r.error?.message || r.error);
+      const data = r.data?.export_my_data_by_session || r.data;
+      return { success: true, export: data };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  consentsAPI.downloadMyDataAsFile = async function () {
+    const res = await consentsAPI.exportMyData();
+    if (!res.success) return res;
+    const blob = new Blob([JSON.stringify(res.export, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `heys-my-data-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { success: true };
+  };
+
+  // ── Setters / toggles ────────────────────────────────────────────────────
+  consentsAPI.setMarketingConsent = async function (granted) {
+    try {
+      if (!HEYS.YandexAPI?.logConsentsBySession) return { success: false, error: 'API not ready' };
+      const versions = getCurrentLegalVersions();
+      const r = await HEYS.YandexAPI.logConsentsBySession([
+        { type: 'marketing', granted: !!granted, version: versions.marketing || '1.2' }
+      ]);
+      if (r.error) throw new Error(r.error?.message || r.error);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  consentsAPI.setPushConsent = async function (granted) {
+    try {
+      if (!HEYS.YandexAPI?.logConsentsBySession) return { success: false, error: 'API not ready' };
+      const versions = getCurrentLegalVersions();
+      const r = await HEYS.YandexAPI.logConsentsBySession([
+        { type: 'push_notifications', granted: !!granted, version: versions.push_notifications || '1.0' }
+      ]);
+      if (r.error) throw new Error(r.error?.message || r.error);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  consentsAPI.confirmAge = async function (birthYear) {
+    try {
+      if (!HEYS.YandexAPI?.confirmAgeBySession) return { success: false, error: 'API not ready' };
+      const r = await HEYS.YandexAPI.confirmAgeBySession(birthYear);
+      if (r.error) throw new Error(r.error?.message || r.error);
+      const data = r.data?.confirm_age_by_session || r.data;
+      return data;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  consentsAPI.requestRestriction = async function (active) {
+    try {
+      if (!HEYS.YandexAPI?.requestRestrictionBySession) return { success: false, error: 'API not ready' };
+      const r = await HEYS.YandexAPI.requestRestrictionBySession(!!active);
+      if (r.error) throw new Error(r.error?.message || r.error);
+      const data = r.data?.request_restriction_by_session || r.data;
+      return data;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  consentsAPI.revokeCuratorAccess = async function () {
+    try {
+      if (!HEYS.YandexAPI?.revokeCuratorAccessBySession) return { success: false, error: 'API not ready' };
+      const r = await HEYS.YandexAPI.revokeCuratorAccessBySession();
+      if (r.error) throw new Error(r.error?.message || r.error);
+      const data = r.data?.revoke_curator_access_by_session || r.data;
+      return data;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  consentsAPI.revokeConsentBySession = async function (consentType) {
+    try {
+      if (!HEYS.YandexAPI?.revokeConsentBySession) return { success: false, error: 'API not ready' };
+      const r = await HEYS.YandexAPI.revokeConsentBySession(consentType);
+      if (r.error) throw new Error(r.error?.message || r.error);
+      const data = r.data?.revoke_consent_by_session || r.data;
+      return data;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  // ── ConsentOutdatedBanner (sticky top, мягкий призыв пере-подписать) ────
+  function ConsentOutdatedBanner({ outdatedTypes, graceExpiresAt, onClick }) {
+    if (!outdatedTypes || outdatedTypes.length === 0) return null;
+    const expDate = graceExpiresAt ? new Date(graceExpiresAt) : null;
+    const daysLeft = expDate ? Math.max(0, Math.ceil((expDate - new Date()) / 86400000)) : null;
+    const labels = (HEYS.LegalVersions?.labels) || {};
+    const typeNames = (Array.isArray(outdatedTypes) ? outdatedTypes : [])
+      .map(t => labels[t?.type || t] || (t?.type || t))
+      .join(', ');
+
+    return React.createElement('div', {
+      role: 'alert',
+      style: {
+        position: 'sticky', top: 0, zIndex: 100,
+        background: '#fef3c7', borderBottom: '1px solid #fbbf24',
+        padding: '10px 16px', color: '#92400e',
+        fontSize: '14px', textAlign: 'center', cursor: 'pointer'
+      },
+      onClick
+    },
+      React.createElement('strong', null, '📋 Документы обновлены: '),
+      'мы обновили ', typeNames, '. Пожалуйста, ознакомьтесь и подпишите.',
+      daysLeft !== null && React.createElement('span', null,
+        ' Осталось дней: ', React.createElement('strong', null, daysLeft), '.'),
+      React.createElement('span', { style: { textDecoration: 'underline', marginLeft: 8 } }, 'Открыть')
+    );
+  }
+
+  // ── AgeGateModal (18+ для старых клиентов без birth_year) ───────────────
+  function AgeGateModal({ onConfirm, onDismiss }) {
+    const [year, setYear] = useState('');
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const currentYear = new Date().getFullYear();
+
+    const submit = async () => {
+      const y = parseInt(year, 10);
+      if (!Number.isInteger(y) || y < 1900 || y > currentYear) {
+        setError('Введите корректный год рождения');
+        return;
+      }
+      if (currentYear - y < 18) {
+        setError('Сервис доступен только лицам старше 18 лет (152-ФЗ ст.9.5).');
+        return;
+      }
+      setLoading(true);
+      const res = await consentsAPI.confirmAge(y);
+      setLoading(false);
+      if (res?.success) {
+        onConfirm && onConfirm(y);
+      } else {
+        setError(res?.error || res?.message || 'Не удалось сохранить');
+      }
+    };
+
+    return React.createElement('div', {
+      style: {
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,0.6)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', padding: 16
+      }
+    },
+      React.createElement('div', {
+        style: {
+          background: '#fff', borderRadius: 16, padding: '24px',
+          maxWidth: 420, width: '100%'
+        }
+      },
+        React.createElement('h2', { style: { marginTop: 0, fontSize: 20 } },
+          '🎂 Подтвердите возраст'),
+        React.createElement('p', { style: { color: '#52525b', fontSize: 14 } },
+          'По требованиям 152-ФЗ ст.9.5 сервисом могут пользоваться только лица старше 18 лет. Пожалуйста, укажите ваш год рождения.'),
+        React.createElement('input', {
+          type: 'number', placeholder: 'Год рождения (например, 1990)',
+          value: year,
+          onChange: e => setYear(e.target.value),
+          style: {
+            width: '100%', padding: '12px', fontSize: 16,
+            border: '1px solid #d4d4d8', borderRadius: 8, marginTop: 12
+          }
+        }),
+        error && React.createElement('div', {
+          style: { color: '#dc2626', fontSize: 13, marginTop: 8 }
+        }, error),
+        React.createElement('button', {
+          onClick: submit,
+          disabled: loading,
+          style: {
+            marginTop: 16, padding: '12px 20px', width: '100%',
+            background: '#22c55e', color: '#fff', border: 'none',
+            borderRadius: 8, fontSize: 16, cursor: 'pointer'
+          }
+        }, loading ? '⏳ Сохранение...' : 'Подтвердить'),
+        onDismiss && React.createElement('button', {
+          onClick: onDismiss,
+          style: {
+            marginTop: 8, padding: '10px', width: '100%',
+            background: 'transparent', color: '#71717a',
+            border: 'none', fontSize: 14, cursor: 'pointer'
+          }
+        }, 'Напомнить позже')
+      )
+    );
+  }
+
+  // ── Self-service ConsentScreen wrapper для re-consent flow ─────────────
+  // Простая обёртка: пере-используем существующий ConsentScreen,
+  // передаём clientId из текущей сессии, после complete — closе.
+  function ReConsentScreen({ outdatedTypes, onComplete, onDismiss }) {
+    const clientId =
+      (window.HEYS && window.HEYS.currentClientId) ||
+      localStorage.getItem('heys_client_current') || '';
+
+    return React.createElement('div', { style: { position: 'fixed', inset: 0, zIndex: 9998 } },
+      React.createElement('div', {
+        style: {
+          position: 'absolute', top: 0, left: 0, right: 0,
+          padding: '12px 16px', background: '#fef3c7',
+          color: '#92400e', textAlign: 'center', fontSize: 14
+        }
+      }, '📋 Мы обновили документы. Пожалуйста, ознакомьтесь и подпишите.'),
+      React.createElement(ConsentScreen, {
+        clientId,
+        phone: null,  // re-consent flow без SMS verify
+        onComplete: onComplete,
+        onCancel: onDismiss,
+        onError: () => { /* swallow */ }
+      })
+    );
+  }
+
+  // Экспорт компонентов и обновлённого API
+  HEYS.Consents.ConsentOutdatedBanner = ConsentOutdatedBanner;
+  HEYS.Consents.AgeGateModal = AgeGateModal;
+  HEYS.Consents.ReConsentScreen = ReConsentScreen;
+  HEYS.Consents.getCurrentLegalVersions = getCurrentLegalVersions;
+
+  // =====================================================
   // Экспорт
   // =====================================================
 
-  HEYS.Consents = {
+  HEYS.Consents = Object.assign(HEYS.Consents || {}, {
     // Константы
     TYPES: CONSENT_TYPES,
     REQUIRED: REQUIRED_CONSENTS,
@@ -37700,10 +38017,16 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     DisclaimerBanner,
     NotMedicineBadge,
     FullTextModal,
+    ConsentOutdatedBanner,
+    AgeGateModal,
+    ReConsentScreen,
 
     // Hook
-    useConsentsRequired
-  };
+    useConsentsRequired,
+
+    // Utils
+    getCurrentLegalVersions
+  });
 
   // Verbose init log removed
 

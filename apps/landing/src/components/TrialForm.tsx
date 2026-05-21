@@ -36,6 +36,11 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
   const [errorMessage, setErrorMessage] = useState('')
   const [utmParams, setUtmParams] = useState<UTMParams>({})
   const [consentAccepted, setConsentAccepted] = useState(false)
+  // 152-ФЗ ст.9.5: возрастной gate. Храним только год для минимизации.
+  const [birthYear, setBirthYear] = useState('')
+  // Опциональный consent на маркетинговые материалы (отдельно от обязательной
+  // privacy/user-agreement галки). Без этого нельзя слать рассылку.
+  const [marketingAccepted, setMarketingAccepted] = useState(false)
   // 🍯 Honeypot (P0.13): скрытое поле, которое настоящие пользователи не видят.
   // Боты часто заполняют все поля автоматически — если website непустой, отбраковываем.
   const [website, setWebsite] = useState('')
@@ -92,6 +97,18 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       return false
     }
 
+    // 18+ gate (152-ФЗ ст.9.5)
+    const currentYear = new Date().getFullYear()
+    const yearNum = parseInt(birthYear, 10)
+    if (!Number.isInteger(yearNum) || yearNum < 1900 || yearNum > currentYear) {
+      setErrorMessage('Укажите корректный год рождения')
+      return false
+    }
+    if (currentYear - yearNum < 18) {
+      setErrorMessage('Сервис доступен только лицам старше 18 лет (152-ФЗ ст.9.5)')
+      return false
+    }
+
     return true
   }
 
@@ -116,13 +133,14 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           email: email.trim() || undefined,
           messenger,
           website, // honeypot — должен быть пустым
+          // 152-ФЗ ст.9.5: возрастной gate. Минимизация — только год.
+          birth_year: parseInt(birthYear, 10),
           // UTM параметры
           ...utmParams,
           // Технические данные
           referrer: typeof document !== 'undefined' ? document.referrer : undefined,
           landing_page: typeof window !== 'undefined' ? window.location.pathname : undefined,
-          // Согласие на обработку ПДн (152-ФЗ ст. 9). UI-checkbox уже
-          // провалидирован выше; сюда поле уходит для фиксации в БД.
+          // Согласие на обработку ПДн (152-ФЗ ст. 9).
           consent: {
             privacy_version: LEGAL_DOCS.privacyPolicy.version,
             user_agreement_version: LEGAL_DOCS.userAgreement.version,
@@ -130,6 +148,9 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
             accepted_at: new Date().toISOString(),
           },
+          // Опциональное согласие на маркетинговые материалы (152-ФЗ ст.15).
+          // Если null — рассылку слать нельзя. Сервер пишет в leads.consent_marketing_accepted_at.
+          marketing_accepted_at: marketingAccepted ? new Date().toISOString() : null,
         })
       })
 
@@ -345,6 +366,28 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         )}
       </button>
 
+      {/* Год рождения — 18+ gate (152-ФЗ ст.9.5) */}
+      <div className="mt-4">
+        <label htmlFor="birth_year" className="block text-sm font-medium text-gray-700 mb-2">
+          Год рождения
+        </label>
+        <input
+          id="birth_year"
+          type="number"
+          min={1900}
+          max={new Date().getFullYear()}
+          value={birthYear}
+          onChange={e => setBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          disabled={formState === 'loading'}
+          placeholder="Например, 1990"
+          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          required
+        />
+        <p className="text-gray-500 text-xs mt-1">
+          Сервис доступен только лицам старше 18 лет.
+        </p>
+      </div>
+
       {/* Согласие */}
       <label className="mt-4 flex items-start gap-3 cursor-pointer select-none">
         <input
@@ -363,6 +406,20 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           <a href="/legal/user-agreement" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
             условия использования
           </a>
+        </span>
+      </label>
+
+      {/* Маркетинговое согласие — опционально (152-ФЗ ст.15) */}
+      <label className="mt-3 flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={marketingAccepted}
+          onChange={e => setMarketingAccepted(e.target.checked)}
+          disabled={formState === 'loading'}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span className="text-gray-500 text-xs leading-5">
+          Хочу получать полезные материалы и информацию об акциях. Можно отписаться в любой момент.
         </span>
       </label>
     </form>
