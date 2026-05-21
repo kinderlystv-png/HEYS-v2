@@ -56,11 +56,33 @@ function createHarness() {
     };
 }
 
-// Flush 3 microtask ticks to drain: fetch → json → manifest .then → script injected
+// Drain microtasks until the fetch → r.json() → manifest .then chain settles
+// and the facade injects the <script> tag (or until a hard cap if something
+// is genuinely stuck).
+//
+// The chain in the facade is:
+//   fetch() → .then(r => r.json()) → .then(manifest => new Promise(... createElement)).catch(...)
+//
+// On modern V8 (Node 24 / happy-dom) each promise resolution costs ~2 microtasks
+// due to internal Promise-unwrap steps, so the script tag appears after ~6 awaits.
+// Hard-coding "3 ticks" (the original implementation) was tight enough to work
+// on older runtimes but breaks here — and the failure mode is silent: the spy
+// just returns undefined, every assertion downstream looks like a feature bug.
+//
+// `getScript` is the variant we use when we explicitly need the latest script
+// (post-injection): it waits up to ~16 microtask ticks for the facade chain
+// to complete. `flushFetch` is kept as a back-compat alias.
+async function flushUntilScript(scriptGetter, maxTicks = 16) {
+    for (let i = 0; i < maxTicks; i++) {
+        await Promise.resolve();
+        if (scriptGetter && scriptGetter()) return;
+    }
+}
+
 async function flushFetch() {
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    // Without a getter we cannot wait conditionally — just drain enough ticks
+    // to comfortably exceed the 6-tick observed chain.
+    for (let i = 0; i < 8; i++) await Promise.resolve();
 }
 
 // ─── game facade ─────────────────────────────────────────────────────────────
