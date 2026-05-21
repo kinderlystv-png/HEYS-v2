@@ -169,7 +169,11 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
             expect(r).toEqual({ ok: false, error: 'api_not_ready' });
         });
 
-        it('calls reset_client_pin with client id, salt and hash', async () => {
+        it('calls admin_set_client_pin with client id and plain pin (bcrypt-on-server)', async () => {
+            // Phase 1 hotfix (heys_auth_v1.js:365): resetClientPin переключён с
+            // legacy `reset_client_pin` (SHA256-в-JS) на `admin_set_client_pin`,
+            // который хеширует через bcrypt на сервере (crypt()) и совместим с
+            // verify_client_pin_v3. JS теперь шлёт plain PIN, не salt+hash.
             rpc.mockResolvedValue({ data: { ok: true }, error: null });
 
             const r = await window.HEYS.auth.resetClientPin({
@@ -180,10 +184,11 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
             expect(r).toEqual({ ok: true });
             expect(rpc).toHaveBeenCalledTimes(1);
             const [fn, params] = rpc.mock.calls[0];
-            expect(fn).toBe('reset_client_pin');
-            expect(params.p_client_id).toBe('client-uuid-9');
-            expect(params.p_pin_salt).toMatch(/^[a-f0-9]{32}$/);
-            expect(params.p_pin_hash).toMatch(/^[a-f0-9]{64}$/);
+            expect(fn).toBe('admin_set_client_pin');
+            expect(params).toEqual({
+                p_client_id: 'client-uuid-9',
+                p_pin: '9876',
+            });
         });
 
         it('maps RPC error to server_error', async () => {

@@ -69,7 +69,7 @@ function mealTotals(meal, idx) {
 }
 
 function loadMealScoring() {
-    const filePath = path.resolve(process.cwd(), 'apps/web/day/_meal_quality.js');
+    const filePath = path.resolve(__dirname, '../day/_meal_quality.js');
     const source = fs.readFileSync(filePath, 'utf8');
 
     const sandboxWindow = {

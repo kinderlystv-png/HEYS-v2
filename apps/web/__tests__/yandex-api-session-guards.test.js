@@ -96,16 +96,27 @@ describe('HEYS.YandexAPI session-safe access', () => {
     });
   });
 
-  it('saveKV does not call network when session token is missing', async () => {
+  it('saveKV does not call network when no curator token, no session token, and no PIN cookie session', async () => {
     const api = loadYandexAPI();
 
     const result = await api.saveKV('ignored-client', 'heys_profile', { calories: 1800 });
 
-    expect(result).toEqual({ success: false, error: 'No session token' });
+    // PR-C cookie-only update: error message reflects all three auth paths
+    // (curator JWT / LS session token / cookie session). buildSessionRpcParams
+    // returns ok:false only when none of them are present.
+    expect(result).toEqual({
+      success: false,
+      error: 'No auth token (neither curator nor session)',
+    });
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('migrates namespaced session token before protected KV RPC', async () => {
+  it('reads legacy namespaced session token for protected KV RPC (one-shot, не мигрирует в LS)', async () => {
+    // PR-C (d94ebfc9, 2026-05-20) умышленно убрал migration namespaced→global,
+    // чтобы XSS-доступный LS-key не появлялся в JS снова. Legacy namespaced
+    // токен читается из LS, удаляется (cleanup), и подставляется в body RPC
+    // для одного запроса. Cookie carrier для post-PR-C сессий обходит этот
+    // путь полностью.
     const api = loadYandexAPI({
       storageSeed: {
         heys_pin_auth_client: 'client-42',
@@ -119,12 +130,13 @@ describe('HEYS.YandexAPI session-safe access', () => {
     const result = await api.saveKV('ignored-client', 'heys_dayv2_2026-04-12', { meals: [] });
 
     expect(result).toEqual({ success: true });
-    expect(global.localStorage.setItem).toHaveBeenCalledWith(
-      'heys_session_token',
-      '"namespaced-token"',
-    );
+    // Namespaced key consumed and removed — no migration to global LS key.
     expect(global.localStorage.removeItem).toHaveBeenCalledWith(
       'heys_client-42_session_token',
+    );
+    expect(global.localStorage.setItem).not.toHaveBeenCalledWith(
+      'heys_session_token',
+      expect.anything(),
     );
 
     const [, options] = global.fetch.mock.calls[0];

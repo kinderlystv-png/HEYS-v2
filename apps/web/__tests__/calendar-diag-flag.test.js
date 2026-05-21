@@ -101,8 +101,13 @@ describe('calendar_diag flag gate', () => {
     });
 
     it('source file contains the _diagEnabled flag gate (static check)', () => {
-        // Guards against accidental removal of the gate from source
-        expect(SRC).toContain("isEnabled?.('calendar_diag')");
+        // Guards against accidental removal of the gate from source.
+        // Pattern updated from `isEnabled?.('calendar_diag')` to explicit
+        // truthy-then-call (`isEnabled && isEnabled('calendar_diag')`) when
+        // boot-time scripts moved away from optional chaining for legacy
+        // browser support — check for the underlying intent instead of
+        // a specific syntactic form.
+        expect(SRC).toMatch(/isEnabled.{0,40}['"]calendar_diag['"]/);
         expect(SRC).toContain('if (_diagEnabled)');
     });
 

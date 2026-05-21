@@ -159,7 +159,7 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         });
     });
 
-    it('on success persists session_token, pin client, optional name, clears supabase curator token, dispatches event', async () => {
+    it('on success persists pin client + name, clears supabase curator token, dispatches event, does NOT write session_token to LS (PR-C cookie-only)', async () => {
         mockStorage.setItem('heys_supabase_auth_token', JSON.stringify({ access_token: 'x' }));
 
         rpc.mockResolvedValue({
@@ -178,6 +178,8 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         await flushLoginDelay();
         const result = await p;
 
+        // sessionToken всё ещё возвращается в response body — backward-compat для
+        // caller'ов которые читали его из payload. Не значит что он осел в LS.
         expect(result).toEqual({
             ok: true,
             clientId: 'client-uuid-1',
@@ -186,17 +188,20 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         });
 
         expect(mockStorage.removeItem).toHaveBeenCalledWith('heys_supabase_auth_token');
-        expect(mockStorage.setItem).toHaveBeenCalledWith(
-            'heys_session_token',
-            JSON.stringify('session-token-abc'),
-        );
         expect(mockStorage.setItem).toHaveBeenCalledWith('heys_pin_auth_client', 'client-uuid-1');
         expect(mockStorage.setItem).toHaveBeenCalledWith(
             'heys_pending_client_name',
             JSON.stringify('Иван'),
         );
         expect(window.dispatchEvent).toHaveBeenCalled();
-        expect(window.HEYS.auth.getSessionToken()).toBe('session-token-abc');
+
+        // PR-C (d94ebfc9, 2026-05-20): setSessionToken — no-op. Токен живёт в
+        // HttpOnly cookie heys_session_token, JS его не пишет и не читает.
+        expect(mockStorage.setItem).not.toHaveBeenCalledWith(
+            'heys_session_token',
+            expect.anything(),
+        );
+        expect(window.HEYS.auth.getSessionToken()).toBe(null);
     });
 
     it('rate limits locally after 10 failed RPC attempts (11th does not call RPC)', async () => {

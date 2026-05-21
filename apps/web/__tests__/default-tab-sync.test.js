@@ -92,7 +92,7 @@ function createProfileUtils(initialProfile = {}) {
 }
 
 function loadTabStateModule() {
-    const filePath = path.resolve(process.cwd(), 'apps/web/heys_app_tab_state_v1.js');
+    const filePath = path.resolve(__dirname, '../heys_app_tab_state_v1.js');
     const source = fs.readFileSync(filePath, 'utf8');
     eval(source);
 }

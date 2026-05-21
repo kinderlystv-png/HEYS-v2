@@ -48,6 +48,12 @@ function installPerformanceObserverMock() {
 }
 
 function loadAnalyticsModule() {
+  // shouldEnablePerfAudit() читает флаг через HEYS.store.readSafe / HEYS.utils.lsGet
+  // (см. heys_simple_analytics.js:108-114). В тесте ни того ни другого нет —
+  // и без forceEnabled sampleRate падает до PROD_SAMPLE_RATE (≪ 1), и
+  // `perfState.enabled = Math.random() <= sampleRate` становится flaky.
+  // Глобальный флаг — детерминированный path к `forceEnabled = true`.
+  global.__HEYS_FORCE_PERF_AUDIT = true;
   const modulePath = path.resolve(__dirname, '../heys_simple_analytics.js');
   const source = fs.readFileSync(modulePath, 'utf8');
   eval(source);
@@ -93,6 +99,7 @@ describe('heys_simple_analytics perf audit', () => {
     try {
       window.HEYS?.analytics?.stopPerformanceAudit?.();
     } catch (e) { }
+    delete global.__HEYS_FORCE_PERF_AUDIT;
     nowSpy?.mockRestore();
     vi.restoreAllMocks();
     window.HEYS = originalHEYS;

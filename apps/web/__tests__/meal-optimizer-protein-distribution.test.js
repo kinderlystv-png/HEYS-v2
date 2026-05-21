@@ -80,7 +80,7 @@ function mealTotals(meal, idx) {
 }
 
 function loadMealOptimizer() {
-    const filePath = path.resolve(process.cwd(), 'apps/web/heys_meal_optimizer_v1.js');
+    const filePath = path.resolve(__dirname, '../heys_meal_optimizer_v1.js');
     const source = fs.readFileSync(filePath, 'utf8');
 
     const sandboxWindow = {

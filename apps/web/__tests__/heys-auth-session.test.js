@@ -66,18 +66,29 @@ describe('HEYS.auth session + logout', () => {
         window.HEYS = originalHEYS;
     });
 
-    it('getSessionToken migrates namespaced token to global key', () => {
+    it('getSessionToken returns only the global key — namespaced lookup removed in PR-C', () => {
+        // PR-C (d94ebfc9, 2026-05-20): session_token живёт в HttpOnly cookie,
+        // а HEYS.auth.getSessionToken() читает только legacy `heys_session_token`
+        // ключ (для in-flight pre-PR-C сессий до их естественного истечения).
+        // Namespaced-fallback больше нет — он бы создал JS-readable копию
+        // токена в обход HttpOnly cookie, что и пыталась убрать PR-C.
         mockStorage._store.heys_pin_auth_client = 'client-abc';
-        mockStorage._store['heys_client-abc_session_token'] = JSON.stringify('migrated-token');
+        mockStorage._store['heys_client-abc_session_token'] = JSON.stringify('namespaced-token');
 
-        const token = window.HEYS.auth.getSessionToken();
-
-        expect(token).toBe('migrated-token');
-        expect(mockStorage.setItem).toHaveBeenCalledWith(
+        expect(window.HEYS.auth.getSessionToken()).toBe(null);
+        expect(mockStorage.setItem).not.toHaveBeenCalledWith(
             'heys_session_token',
-            JSON.stringify('migrated-token'),
+            expect.anything(),
         );
-        expect(mockStorage.removeItem).toHaveBeenCalledWith('heys_client-abc_session_token');
+        // Legacy namespaced ключ остаётся как есть — естественно истечёт через 30д.
+        expect(mockStorage.removeItem).not.toHaveBeenCalledWith('heys_client-abc_session_token');
+    });
+
+    it('getSessionToken returns the legacy global token if present', () => {
+        // Pre-PR-C сессии всё ещё имеют LS-токен под `heys_session_token` —
+        // это путь backward-compat пока 30-дневные сессии не истекут.
+        mockStorage._store.heys_session_token = JSON.stringify('legacy-token');
+        expect(window.HEYS.auth.getSessionToken()).toBe('legacy-token');
     });
 
     it('clearSessionToken removes global session key', () => {
