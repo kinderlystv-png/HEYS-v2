@@ -64,8 +64,8 @@ apps/web/heys_app_update_notifications_v1.js:17
 apps/web/heys_audio_v1.js:15
 apps/web/heys_audio_v1.js:75
 apps/web/heys_auth_v1.js:16
-apps/web/heys_auth_v1.js:306
-apps/web/heys_auth_v1.js:313
+apps/web/heys_auth_v1.js:316
+apps/web/heys_auth_v1.js:323
 apps/web/heys_cascade_card_v1.js:1245
 apps/web/heys_cascade_card_v1.js:3612
 apps/web/heys_cascade_card_v1.js:3621
