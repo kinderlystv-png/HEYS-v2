@@ -177,6 +177,11 @@ async function createPayment(body, clientId) {
   const planInfo = PLANS[plan];
   const idempotenceKey = uuidv4();
 
+  // Текущая версия оферты — должна совпадать с CURRENT_VERSIONS.payment_oferta
+  // в apps/web/heys_consents_v1.js (источник истины для legal-документов).
+  // Если бампается версия оферты — обновить здесь.
+  const PAYMENT_OFERTA_VERSION = '1.2';
+
   // 1. Создаём запись платежа в БД (pending) через connection pool
   // + получаем телефон клиента для чека 54-ФЗ
   const pool = getPool();
@@ -186,6 +191,31 @@ async function createPayment(body, clientId) {
   let clientEmail = null;
 
   try {
+    // 152-ФЗ ст.9 + ст.437-438 ГК РФ: акцепт оферты должен быть зафиксирован
+    // ДО списания. Проверяем активный consent payment_oferta нужной версии.
+    // Если нет — отбрасываем без создания payment-записи и без обращения к ЮKassa.
+    const consentRes = await client.query(
+      `SELECT EXISTS (
+         SELECT 1 FROM consents
+          WHERE client_id = $1
+            AND consent_type = 'payment_oferta'
+            AND granted = true
+            AND is_active = true
+            AND document_version = $2
+            AND revoked_at IS NULL
+       ) AS has_consent`,
+      [clientId, PAYMENT_OFERTA_VERSION]
+    );
+
+    if (!consentRes.rows[0]?.has_consent) {
+      console.warn(`[PAYMENTS] BLOCKED no payment_oferta v${PAYMENT_OFERTA_VERSION} for client=${clientId}`);
+      return errorResponse(
+        400,
+        'Необходимо принять условия публичной оферты',
+        'PAYMENT_OFERTA_REQUIRED'
+      );
+    }
+
     // Получаем телефон + email клиента для чека 54-ФЗ
     const clientResult = await client.query(`
       SELECT phone, email FROM clients WHERE id = $1
@@ -200,7 +230,10 @@ async function createPayment(body, clientId) {
       INSERT INTO payments (client_id, amount, plan, status, payment_provider, metadata)
       VALUES ($1, $2, $3, 'pending', 'yukassa', $4)
       RETURNING id
-    `, [clientId, planInfo.price, plan, JSON.stringify({ idempotence_key: idempotenceKey })]);
+    `, [clientId, planInfo.price, plan, JSON.stringify({
+      idempotence_key: idempotenceKey,
+      oferta_version_accepted: PAYMENT_OFERTA_VERSION,
+    })]);
 
     paymentId = insertResult.rows[0].id;
     console.log(`[PAYMENTS] Created pending payment: ${paymentId} for client ${clientId}`);
