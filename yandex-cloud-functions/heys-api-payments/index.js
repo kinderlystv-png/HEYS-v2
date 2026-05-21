@@ -62,11 +62,13 @@ function isYukassaIp(rawIp) {
   );
 }
 
-// Тарифные планы (цены в копейках для точности, в рублях для API)
+// Тарифные планы. Цены ОБЯЗАНЫ совпадать с apps/landing/src/config/pricing.ts
+// и HEYS.config.prices в apps/web/heys_paywall_v1.js — иначе клиент покажет
+// одну сумму, а ЮKassa спишет другую (нарушение оферты, п. 4.2 user-agreement).
 const PLANS = {
-  base: { price: 1990, name: 'Base', description: 'HEYS Base подписка на 1 месяц' },
-  pro: { price: 12990, name: 'Pro', description: 'HEYS Pro подписка на 1 месяц' },
-  proplus: { price: 19990, name: 'Pro+', description: 'HEYS Pro+ подписка на 1 месяц' }
+  base: { price: 2990, name: 'Base', description: 'HEYS Base подписка на 1 месяц' },
+  pro: { price: 7990, name: 'Pro', description: 'HEYS Pro подписка на 1 месяц' },
+  proplus: { price: 14990, name: 'Pro+', description: 'HEYS Pro+ подписка на 1 месяц' }
 };
 
 // PostgreSQL config — читаем из env
