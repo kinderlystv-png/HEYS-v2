@@ -6215,7 +6215,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     return WEAK_PINS.has(String(pin || ''));
   }
 
+  // Только формат (4 цифры). Используется в login flow — клиенту с уже
+  // выданным «слабым» PIN мы не отказываем во входе, чтобы не выкинуть
+  // существующих пользователей при бампе правил.
   function validatePin(pin) {
+    const s = String(pin || '');
+    return /^\d{4}$/.test(s);
+  }
+
+  // Формат + блок-лист слабых PIN. Используется ТОЛЬКО при создании или
+  // смене PIN (createClientWithPin / resetClientPin / PinChangeCard).
+  function validatePinStrict(pin) {
     const s = String(pin || '');
     if (!/^\d{4}$/.test(s)) return false;
     if (isWeakPin(s)) return false;
@@ -6477,7 +6487,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     if (!isValidPhone(phoneNorm)) {
       return { ok: false, error: 'invalid_phone' };
     }
-    if (!validatePin(pin)) {
+    if (!validatePinStrict(pin)) {
       return { ok: false, error: 'invalid_pin' };
     }
 
@@ -6517,7 +6527,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
   async function resetClientPin({ clientId, newPin }) {
     if (!clientId) return { ok: false, error: 'missing_client_id' };
-    if (!validatePin(newPin)) return { ok: false, error: 'invalid_pin' };
+    if (!validatePinStrict(newPin)) return { ok: false, error: 'invalid_pin' };
 
     const api = HEYS.YandexAPI;
     if (!api) {
@@ -6662,6 +6672,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     isValidPhone,
     formatPhone,
     validatePin,
+    validatePinStrict,
     isWeakPin,
     generateSalt,
     hashPin,
@@ -26076,18 +26087,39 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             checkingConsent,
             setNeedsConsent,
             setShowMorningCheckin,
+            // Compliance overhaul 2026-05-20
+            outdatedTypes = [],
+            graceExpiresAt = null,
+            mustBlockReconsent = false,
+            needsAgeGate = false,
+            setOutdatedTypes,
+            setMustBlockReconsent,
+            setNeedsAgeGate,
         } = props;
 
         const clientPhone = typeof localStorage !== 'undefined' ? readGlobalValue('heys_client_phone', null) : null;
+        const baseEligible = !gate && !desktopGate && !cloudUser && clientId && !checkingConsent;
 
-        return !gate && !desktopGate && !cloudUser && clientId && needsConsent && !checkingConsent && HEYS.Consents?.ConsentScreen
-            ? React.createElement(HEYS.Consents.ConsentScreen, {
+        // Diagnostic (debug-only, не засоряет prod console)
+        if (needsConsent && !baseEligible) {
+            console.debug('[CONSENTS GATE] needsConsent=true но baseEligible=false:',
+                { hasGate: !!gate, hasDesktopGate: !!desktopGate, cloudUser: !!cloudUser, clientId: !!clientId, checkingConsent });
+        }
+        if (baseEligible && (needsConsent || mustBlockReconsent) && !HEYS.Consents?.ConsentScreen) {
+            console.debug('[CONSENTS GATE] ConsentScreen компонент ещё не загружен');
+        }
+
+        // ── Сценарий A: блокирующий ConsentScreen (отсутствуют согласия ИЛИ
+        // grace expired — re-consent обязателен прямо сейчас).
+        if (baseEligible && (needsConsent || mustBlockReconsent) && HEYS.Consents?.ConsentScreen) {
+            return React.createElement(HEYS.Consents.ConsentScreen, {
                 clientId: clientId,
                 phone: clientPhone,
                 onComplete: () => {
                     console.log('[CONSENTS] ✅ Согласия приняты');
                     setNeedsConsent(false);
-                    // 🔄 v1.14c: Обновляем глобальный флаг для tryStartOnboardingTour
+                    setMustBlockReconsent && setMustBlockReconsent(false);
+                    setOutdatedTypes && setOutdatedTypes([]);
                     HEYS._consentsValid = true;
                     // 🎓 v1.10: После принятия согласий — проверяем профиль и запускаем нужный флоу
                     setTimeout(() => {
@@ -26127,8 +26159,40 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     setClientId(null);
                     window.location.reload();
                 }
-            })
-            : null;
+            });
+        }
+
+        // ── Сценарий B: AgeGateModal (старый клиент без birth_year, но
+        // основные согласия в порядке). Показываем поверх приложения.
+        if (baseEligible && needsAgeGate && HEYS.Consents?.AgeGateModal) {
+            return React.createElement(HEYS.Consents.AgeGateModal, {
+                key: 'age-gate',
+                onConfirm: () => {
+                    console.log('[CONSENTS] ✅ Возраст подтверждён (18+)');
+                    setNeedsAgeGate && setNeedsAgeGate(false);
+                },
+                onDismiss: () => {
+                    setNeedsAgeGate && setNeedsAgeGate(false);
+                },
+            });
+        }
+
+        // ── Сценарий C: мягкий банан outdated (grace ещё активен).
+        // Не блокирует — добавляет sticky-баннер сверху, по клику открывает
+        // ConsentScreen в re-consent режиме.
+        if (baseEligible && (outdatedTypes || []).length > 0 && HEYS.Consents?.ConsentOutdatedBanner) {
+            return React.createElement(HEYS.Consents.ConsentOutdatedBanner, {
+                key: 'outdated-banner',
+                outdatedTypes: outdatedTypes,
+                graceExpiresAt: graceExpiresAt,
+                onClick: () => {
+                    // Открываем re-consent блокирующий экран по требованию пользователя
+                    setMustBlockReconsent && setMustBlockReconsent(true);
+                },
+            });
+        }
+
+        return null;
     }
 
     HEYS.AppGateFlow = {
@@ -27877,11 +27941,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         return { widgetsEditMode, setWidgetsEditMode };
     };
 
-    const useConsentCheck = ({ React, clientId, cloudUser, setNeedsConsent, setCheckingConsent }) => {
+    const useConsentCheck = ({
+        React, clientId, cloudUser,
+        setNeedsConsent, setCheckingConsent,
+        // Compliance overhaul 2026-05-20 — optional setters. Если родитель их не
+        // передал — расширенная логика skip'ается, legacy flow остаётся.
+        setOutdatedTypes,
+        setGraceExpiresAt,
+        setMustBlockReconsent,
+        setNeedsAgeGate,
+    }) => {
         React.useEffect(() => {
             if (!clientId) {
                 setNeedsConsent(false);
                 setCheckingConsent(false);
+                setOutdatedTypes && setOutdatedTypes([]);
+                setMustBlockReconsent && setMustBlockReconsent(false);
+                setNeedsAgeGate && setNeedsAgeGate(false);
                 HEYS._consentsChecked = false;
                 HEYS._consentsValid = false;
                 return;
@@ -27893,27 +27969,62 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 HEYS._consentsValid = true;
                 return;
             }
-            if (HEYS.Consents?.api?.checkRequired) {
-                setCheckingConsent(true);
-                HEYS.Consents.api.checkRequired(clientId).then((result) => {
-                    setNeedsConsent(!result.valid);
-                    setCheckingConsent(false);
-                    HEYS._consentsChecked = true;
-                    HEYS._consentsValid = result.valid;
-                    if (!result.valid) {
-                        console.log('[CONSENTS] Client needs to accept consents:', result.missing);
-                    } else {
-                        console.log('[CONSENTS] ✅ All consents are valid');
+
+            const versioned = HEYS.Consents?.api?.checkRequiredVersioned;
+            const legacy = HEYS.Consents?.api?.checkRequired;
+
+            setCheckingConsent(true);
+
+            // Утилита: нормализовать legacy-ответ в shape v2.
+            const legacyAsV2 = (clientIdArg) => legacy(clientIdArg).then(r => ({
+                valid: r.valid, missing: r.missing || [],
+                outdated: [], graceExpiresAt: null, graceStatus: 'none',
+                mustBlock: false, ageConfirmed: true,
+            }));
+
+            // versioned() требует session-токен; при login токен появляется ПОЗЖЕ
+            // чем clientId. Поэтому если versioned вернул error (No session token /
+            // network) — fallback на legacy (clientId-based, без токена).
+            const promise = versioned
+                ? versioned().then(r => {
+                    if (r?.error && legacy) {
+                        console.log('[CONSENTS] versioned failed (' + r.error + ') — fallback to legacy');
+                        return legacyAsV2(clientId);
                     }
-                }).catch((err) => {
-                    console.error('[CONSENTS] Error checking consents:', err);
-                    setCheckingConsent(false);
-                    setNeedsConsent(false);
-                    HEYS._consentsChecked = true;
-                    HEYS._consentsValid = true;
-                });
-            }
-        }, [clientId, cloudUser, setNeedsConsent, setCheckingConsent]);
+                    return r;
+                  })
+                : legacy
+                    ? legacyAsV2(clientId)
+                    : Promise.resolve({ valid: true, missing: [], outdated: [], mustBlock: false, ageConfirmed: true });
+
+            promise.then((r) => {
+                const needs = !r.valid;
+                setNeedsConsent(needs);
+                setCheckingConsent(false);
+                setOutdatedTypes && setOutdatedTypes(r.outdated || []);
+                setGraceExpiresAt && setGraceExpiresAt(r.graceExpiresAt || null);
+                setMustBlockReconsent && setMustBlockReconsent(!!r.mustBlock);
+                // Age-gate показываем только когда основные согласия в порядке —
+                // иначе сначала ConsentScreen, потом age.
+                setNeedsAgeGate && setNeedsAgeGate(!r.ageConfirmed && !needs);
+                HEYS._consentsChecked = true;
+                HEYS._consentsValid = r.valid;
+                if (needs) {
+                    console.log('[CONSENTS] Client needs to accept consents:', r.missing, 'outdated:', r.outdated);
+                } else if ((r.outdated || []).length) {
+                    console.log('[CONSENTS] ⚠ Outdated docs, grace until:', r.graceExpiresAt);
+                } else {
+                    console.log('[CONSENTS] ✅ All consents are valid');
+                }
+            }).catch((err) => {
+                console.error('[CONSENTS] Error checking consents:', err);
+                setCheckingConsent(false);
+                setNeedsConsent(false);
+                HEYS._consentsChecked = true;
+                HEYS._consentsValid = true;
+            });
+        }, [clientId, cloudUser, setNeedsConsent, setCheckingConsent,
+            setOutdatedTypes, setGraceExpiresAt, setMustBlockReconsent, setNeedsAgeGate]);
     };
 
     const useBadgeSync = ({ React }) => {
@@ -30840,6 +30951,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         setShowMorningCheckin,
         isInitializing,
         tab,
+        // 2026-05-20 compliance overhaul — optional state из useRuntimeState
+        complianceState,
     }) {
         const gate = AppGateFlow.buildGate ? AppGateFlow.buildGate({
             clientId,
@@ -30905,6 +31018,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             checkingConsent,
             setNeedsConsent,
             setShowMorningCheckin,
+            // Compliance overhaul 2026-05-20 — re-consent + age gate state
+            outdatedTypes: complianceState?.outdatedTypes,
+            graceExpiresAt: complianceState?.graceExpiresAt,
+            mustBlockReconsent: complianceState?.mustBlockReconsent,
+            needsAgeGate: complianceState?.needsAgeGate,
+            setOutdatedTypes: complianceState?.setOutdatedTypes,
+            setMustBlockReconsent: complianceState?.setMustBlockReconsent,
+            setNeedsAgeGate: complianceState?.setNeedsAgeGate,
         }) : null;
 
         return {
@@ -31216,9 +31337,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }));
         const widgetsEditState = useWidgetsEditMode({ React });
 
+        // Compliance overhaul 2026-05-20 — локальное расширение state для re-consent grace,
+        // outdated types, must-block, age-gate. Передаём setters в useConsentCheck и
+        // возвращаем через complianceState — root_impl пробросит в buildConsentGate.
+        const [outdatedTypes, setOutdatedTypes] = React.useState([]);
+        const [graceExpiresAt, setGraceExpiresAt] = React.useState(null);
+        const [mustBlockReconsent, setMustBlockReconsent] = React.useState(false);
+        const [needsAgeGate, setNeedsAgeGate] = React.useState(false);
+
         const useConsentCheck = AppRuntimeEffects?.useConsentCheck
             || (({ React: HookReact }) => HookReact.useEffect(() => { }, []));
-        useConsentCheck({ React, clientId, cloudUser, setNeedsConsent, setCheckingConsent });
+        useConsentCheck({
+            React, clientId, cloudUser, setNeedsConsent, setCheckingConsent,
+            setOutdatedTypes, setGraceExpiresAt, setMustBlockReconsent, setNeedsAgeGate,
+        });
 
         const swipeState = AppSwipeNav?.useSwipeNavigation
             ? AppSwipeNav.useSwipeNavigation({ React, tab, setTab })
@@ -31240,6 +31372,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         return {
             ...widgetsEditState,
             swipeState,
+            // 2026-05-20 compliance overhaul — extras для buildConsentGate
+            complianceState: {
+                outdatedTypes,
+                graceExpiresAt,
+                mustBlockReconsent,
+                needsAgeGate,
+                setOutdatedTypes,
+                setGraceExpiresAt,
+                setMustBlockReconsent,
+                setNeedsAgeGate,
+            },
         };
     };
 })();
@@ -31876,6 +32019,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 setShowMorningCheckin,
                 isInitializing,
                 tab,
+                // 2026-05-20 compliance overhaul — пробрасываем из runtimeState в buildConsentGate
+                complianceState: runtimeState?.complianceState,
             });
             const { gate, desktopGate, consentGate } = gateState;
             const hasBlockingGate = Boolean(gate || desktopGate || consentGate);

@@ -88,7 +88,7 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
             const r = await window.HEYS.auth.createClientWithPin({
                 name: 'Test',
                 phone: '+7 999 111-22-33',
-                pin: '1234',
+                pin: '5827',
             });
             expect(r).toEqual({ ok: false, error: 'api_not_ready' });
         });
@@ -102,13 +102,13 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
             const r = await window.HEYS.auth.createClientWithPin({
                 name: '  Ann  ',
                 phone: '+7 999 111-22-33',
-                pin: '5678',
+                pin: '5827',
             });
 
             expect(r.ok).toBe(true);
             expect(r.clientId).toBe('new-client-1');
             expect(r.phone).toBe('79991112233');
-            expect(r.pin).toBe('5678');
+            expect(r.pin).toBe('5827');
             expect(rpc).toHaveBeenCalledTimes(1);
             const [fn, params] = rpc.mock.calls[0];
             expect(fn).toBe('create_client_with_pin');
@@ -127,7 +127,7 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
             const r = await window.HEYS.auth.createClientWithPin({
                 name: 'X',
                 phone: '+7 999 111-22-33',
-                pin: '1234',
+                pin: '5827',
             });
             expect(r.clientId).toBe('from-array');
         });
@@ -140,7 +140,7 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
             const r = await window.HEYS.auth.createClientWithPin({
                 name: 'X',
                 phone: '+7 999 111-22-33',
-                pin: '1234',
+                pin: '5827',
             });
             expect(r).toEqual({
                 ok: false,
@@ -165,7 +165,7 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
 
         it('returns api_not_ready without YandexAPI', async () => {
             delete window.HEYS.YandexAPI;
-            const r = await window.HEYS.auth.resetClientPin({ clientId: 'c1', newPin: '1234' });
+            const r = await window.HEYS.auth.resetClientPin({ clientId: 'c1', newPin: '5827' });
             expect(r).toEqual({ ok: false, error: 'api_not_ready' });
         });
 
@@ -178,7 +178,7 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
 
             const r = await window.HEYS.auth.resetClientPin({
                 clientId: 'client-uuid-9',
-                newPin: '9876',
+                newPin: '5827',
             });
 
             expect(r).toEqual({ ok: true });
@@ -187,7 +187,7 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
             expect(fn).toBe('admin_set_client_pin');
             expect(params).toEqual({
                 p_client_id: 'client-uuid-9',
-                p_pin: '9876',
+                p_pin: '5827',
             });
         });
 
@@ -198,7 +198,7 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
             });
             const r = await window.HEYS.auth.resetClientPin({
                 clientId: 'c1',
-                newPin: '1234',
+                newPin: '5827',
             });
             expect(r).toEqual({
                 ok: false,

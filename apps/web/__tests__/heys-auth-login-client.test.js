@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const originalLocalStorage = window.localStorage;
 const originalHEYS = window.HEYS;
+const originalLocation = window.location;
 
 function createMockStorage() {
     const store = {};
@@ -51,6 +52,15 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
             configurable: true,
         });
 
+        // Тест проверяет production-поведение setSessionToken (PR-C cookie-only).
+        // happy-dom по умолчанию ставит hostname=localhost — это активирует
+        // dev-fallback в setSessionToken и ломает контракт. Стабим на prod-host.
+        Object.defineProperty(window, 'location', {
+            value: { ...originalLocation, hostname: 'app.heyslab.ru' },
+            writable: true,
+            configurable: true,
+        });
+
         rpc = vi.fn();
         window.HEYS = {
             YandexAPI: { rpc },
@@ -65,6 +75,11 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         vi.restoreAllMocks();
         Object.defineProperty(window, 'localStorage', {
             value: originalLocalStorage,
+            writable: true,
+            configurable: true,
+        });
+        Object.defineProperty(window, 'location', {
+            value: originalLocation,
             writable: true,
             configurable: true,
         });

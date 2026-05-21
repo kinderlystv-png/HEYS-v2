@@ -74,7 +74,17 @@
     return WEAK_PINS.has(String(pin || ''));
   }
 
+  // Только формат (4 цифры). Используется в login flow — клиенту с уже
+  // выданным «слабым» PIN мы не отказываем во входе, чтобы не выкинуть
+  // существующих пользователей при бампе правил.
   function validatePin(pin) {
+    const s = String(pin || '');
+    return /^\d{4}$/.test(s);
+  }
+
+  // Формат + блок-лист слабых PIN. Используется ТОЛЬКО при создании или
+  // смене PIN (createClientWithPin / resetClientPin / PinChangeCard).
+  function validatePinStrict(pin) {
     const s = String(pin || '');
     if (!/^\d{4}$/.test(s)) return false;
     if (isWeakPin(s)) return false;
@@ -336,7 +346,7 @@
     if (!isValidPhone(phoneNorm)) {
       return { ok: false, error: 'invalid_phone' };
     }
-    if (!validatePin(pin)) {
+    if (!validatePinStrict(pin)) {
       return { ok: false, error: 'invalid_pin' };
     }
 
@@ -376,7 +386,7 @@
 
   async function resetClientPin({ clientId, newPin }) {
     if (!clientId) return { ok: false, error: 'missing_client_id' };
-    if (!validatePin(newPin)) return { ok: false, error: 'invalid_pin' };
+    if (!validatePinStrict(newPin)) return { ok: false, error: 'invalid_pin' };
 
     const api = HEYS.YandexAPI;
     if (!api) {
@@ -521,6 +531,7 @@
     isValidPhone,
     formatPhone,
     validatePin,
+    validatePinStrict,
     isWeakPin,
     generateSalt,
     hashPin,
