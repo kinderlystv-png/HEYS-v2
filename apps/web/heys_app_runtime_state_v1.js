@@ -23,9 +23,20 @@
             }));
         const widgetsEditState = useWidgetsEditMode({ React });
 
+        // Compliance overhaul 2026-05-20 — локальное расширение state для re-consent grace,
+        // outdated types, must-block, age-gate. Передаём setters в useConsentCheck и
+        // возвращаем через complianceState — root_impl пробросит в buildConsentGate.
+        const [outdatedTypes, setOutdatedTypes] = React.useState([]);
+        const [graceExpiresAt, setGraceExpiresAt] = React.useState(null);
+        const [mustBlockReconsent, setMustBlockReconsent] = React.useState(false);
+        const [needsAgeGate, setNeedsAgeGate] = React.useState(false);
+
         const useConsentCheck = AppRuntimeEffects?.useConsentCheck
             || (({ React: HookReact }) => HookReact.useEffect(() => { }, []));
-        useConsentCheck({ React, clientId, cloudUser, setNeedsConsent, setCheckingConsent });
+        useConsentCheck({
+            React, clientId, cloudUser, setNeedsConsent, setCheckingConsent,
+            setOutdatedTypes, setGraceExpiresAt, setMustBlockReconsent, setNeedsAgeGate,
+        });
 
         const swipeState = AppSwipeNav?.useSwipeNavigation
             ? AppSwipeNav.useSwipeNavigation({ React, tab, setTab })
@@ -47,6 +58,17 @@
         return {
             ...widgetsEditState,
             swipeState,
+            // 2026-05-20 compliance overhaul — extras для buildConsentGate
+            complianceState: {
+                outdatedTypes,
+                graceExpiresAt,
+                mustBlockReconsent,
+                needsAgeGate,
+                setOutdatedTypes,
+                setGraceExpiresAt,
+                setMustBlockReconsent,
+                setNeedsAgeGate,
+            },
         };
     };
 })();

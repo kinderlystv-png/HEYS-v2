@@ -1821,18 +1821,39 @@
             checkingConsent,
             setNeedsConsent,
             setShowMorningCheckin,
+            // Compliance overhaul 2026-05-20
+            outdatedTypes = [],
+            graceExpiresAt = null,
+            mustBlockReconsent = false,
+            needsAgeGate = false,
+            setOutdatedTypes,
+            setMustBlockReconsent,
+            setNeedsAgeGate,
         } = props;
 
         const clientPhone = typeof localStorage !== 'undefined' ? readGlobalValue('heys_client_phone', null) : null;
+        const baseEligible = !gate && !desktopGate && !cloudUser && clientId && !checkingConsent;
 
-        return !gate && !desktopGate && !cloudUser && clientId && needsConsent && !checkingConsent && HEYS.Consents?.ConsentScreen
-            ? React.createElement(HEYS.Consents.ConsentScreen, {
+        // Diagnostic (debug-only, не засоряет prod console)
+        if (needsConsent && !baseEligible) {
+            console.debug('[CONSENTS GATE] needsConsent=true но baseEligible=false:',
+                { hasGate: !!gate, hasDesktopGate: !!desktopGate, cloudUser: !!cloudUser, clientId: !!clientId, checkingConsent });
+        }
+        if (baseEligible && (needsConsent || mustBlockReconsent) && !HEYS.Consents?.ConsentScreen) {
+            console.debug('[CONSENTS GATE] ConsentScreen компонент ещё не загружен');
+        }
+
+        // ── Сценарий A: блокирующий ConsentScreen (отсутствуют согласия ИЛИ
+        // grace expired — re-consent обязателен прямо сейчас).
+        if (baseEligible && (needsConsent || mustBlockReconsent) && HEYS.Consents?.ConsentScreen) {
+            return React.createElement(HEYS.Consents.ConsentScreen, {
                 clientId: clientId,
                 phone: clientPhone,
                 onComplete: () => {
                     console.log('[CONSENTS] ✅ Согласия приняты');
                     setNeedsConsent(false);
-                    // 🔄 v1.14c: Обновляем глобальный флаг для tryStartOnboardingTour
+                    setMustBlockReconsent && setMustBlockReconsent(false);
+                    setOutdatedTypes && setOutdatedTypes([]);
                     HEYS._consentsValid = true;
                     // 🎓 v1.10: После принятия согласий — проверяем профиль и запускаем нужный флоу
                     setTimeout(() => {
@@ -1872,8 +1893,40 @@
                     setClientId(null);
                     window.location.reload();
                 }
-            })
-            : null;
+            });
+        }
+
+        // ── Сценарий B: AgeGateModal (старый клиент без birth_year, но
+        // основные согласия в порядке). Показываем поверх приложения.
+        if (baseEligible && needsAgeGate && HEYS.Consents?.AgeGateModal) {
+            return React.createElement(HEYS.Consents.AgeGateModal, {
+                key: 'age-gate',
+                onConfirm: () => {
+                    console.log('[CONSENTS] ✅ Возраст подтверждён (18+)');
+                    setNeedsAgeGate && setNeedsAgeGate(false);
+                },
+                onDismiss: () => {
+                    setNeedsAgeGate && setNeedsAgeGate(false);
+                },
+            });
+        }
+
+        // ── Сценарий C: мягкий банан outdated (grace ещё активен).
+        // Не блокирует — добавляет sticky-баннер сверху, по клику открывает
+        // ConsentScreen в re-consent режиме.
+        if (baseEligible && (outdatedTypes || []).length > 0 && HEYS.Consents?.ConsentOutdatedBanner) {
+            return React.createElement(HEYS.Consents.ConsentOutdatedBanner, {
+                key: 'outdated-banner',
+                outdatedTypes: outdatedTypes,
+                graceExpiresAt: graceExpiresAt,
+                onClick: () => {
+                    // Открываем re-consent блокирующий экран по требованию пользователя
+                    setMustBlockReconsent && setMustBlockReconsent(true);
+                },
+            });
+        }
+
+        return null;
     }
 
     HEYS.AppGateFlow = {

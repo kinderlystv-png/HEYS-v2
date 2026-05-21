@@ -229,7 +229,10 @@
       if (HEYS.YandexAPI) {
         const sessionToken = HEYS.auth?.getSessionToken?.();
         if (!sessionToken) {
-          throw new Error('No session token available');
+          // Нет токена — PIN-flow ещё не завершён ИЛИ в dev cookie не доставлен.
+          // Это нормальное состояние, НЕ ошибка. Возвращаем safe default.
+          devWarn('[Subscriptions] no session token yet, returning safe default');
+          return { success: false, status: 'unknown', can_edit: true, _noToken: true };
         }
 
         const result = await HEYS.YandexAPI.rpc('get_subscription_status_by_session', {
@@ -255,7 +258,10 @@
       };
     } catch (err) {
       devWarn('[Subscriptions] getStatus error:', err);
-      trackError(err, { scope: 'Subscriptions', action: 'getStatus' });
+      // trackError только для НЕИЗВЕСТНЫХ ошибок (не для "нет токена" — это нормально)
+      if (!/no session token/i.test(err.message || '')) {
+        trackError(err, { scope: 'Subscriptions', action: 'getStatus' });
+      }
       return { success: false, error: err.message, can_edit: true };
     }
   }

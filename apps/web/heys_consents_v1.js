@@ -446,6 +446,7 @@
         const consentList = Object.entries(consents).map(([type, granted]) => ({
           type,
           granted,
+          version: CURRENT_VERSIONS[type] || '1.0',  // 2026-05-21 fix: без version SQL ставил дефолт 1.1
           signature_method: type === 'health_data' ? 'sms_code' : 'checkbox'
         }));
 
@@ -496,6 +497,7 @@
           const consentList = Object.entries(consents).map(([type, granted]) => ({
             type,
             granted,
+            version: CURRENT_VERSIONS[type] || '1.0',  // 2026-05-21 fix: без version SQL ставил дефолт 1.1
             signature_method: 'checkbox'
           }));
 
@@ -1344,11 +1346,22 @@
         outdated: data?.outdated || [],
         graceExpiresAt: data?.grace_expires_at || null,
         graceStatus: data?.grace_status || 'none',
-        mustBlock: data?.must_block ?? false
+        mustBlock: data?.must_block ?? false,
+        // 2026-05-21 fix4: возвращаем age_confirmed для AgeGateModal trigger
+        ageConfirmed: data?.age_confirmed ?? true,
       };
     } catch (err) {
-      console.error('[Consents] checkRequiredVersioned failed:', err);
-      return { valid: false, missing: REQUIRED_CONSENTS, error: err.message };
+      // 'No session token' — это race в начале PIN-flow (token ещё в process
+      // of becoming доступным). НЕ error — useConsentCheck сделает fallback
+      // на legacy checkRequired который не требует токена.
+      const msg = String(err?.message || '');
+      const isExpectedRace = /no session token/i.test(msg);
+      if (isExpectedRace) {
+        console.warn('[Consents] checkRequiredVersioned: no token (fallback will handle)');
+      } else {
+        console.error('[Consents] checkRequiredVersioned failed:', err);
+      }
+      return { valid: false, missing: REQUIRED_CONSENTS, error: err.message, ageConfirmed: true };
     }
   };
 
@@ -1504,15 +1517,41 @@
       .map(t => labels[t?.type || t] || (t?.type || t))
       .join(', ');
 
-    return React.createElement('div', {
+    const handleClick = function (e) {
+      // Защита: если что-то выше в DOM поймало event — всё равно срабатываем
+      try { e?.preventDefault?.(); e?.stopPropagation?.(); } catch (_) {}
+      try { onClick && onClick(e); } catch (err) {
+        console.error('[ConsentOutdatedBanner] onClick error:', err);
+      }
+    };
+
+    // <button> вместо <div onClick> — нативный target для клика, не теряет
+    // events на mobile/tap-zone, accessibility-friendly. z-index 2147483000
+    // чтобы наверняка перекрыть все остальные оверлеи (но ниже max-int чтобы
+    // toast/modal могли быть выше при необходимости).
+    return React.createElement('button', {
+      type: 'button',
       role: 'alert',
+      onClick: handleClick,
+      onTouchEnd: handleClick,
       style: {
-        position: 'sticky', top: 0, zIndex: 100,
-        background: '#fef3c7', borderBottom: '1px solid #fbbf24',
-        padding: '10px 16px', color: '#92400e',
-        fontSize: '14px', textAlign: 'center', cursor: 'pointer'
-      },
-      onClick
+        position: 'fixed', top: 0, left: 0, right: 0,
+        zIndex: 2147483000,
+        width: '100%',
+        background: '#fef3c7',
+        border: 'none',
+        borderBottom: '1px solid #fbbf24',
+        padding: '12px 16px',
+        color: '#92400e',
+        fontSize: '14px',
+        textAlign: 'center',
+        cursor: 'pointer',
+        font: 'inherit',
+        display: 'block',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+        WebkitTapHighlightColor: 'rgba(146,64,14,0.15)',
+        pointerEvents: 'auto',
+      }
     },
       React.createElement('strong', null, '📋 Документы обновлены: '),
       'мы обновили ', typeNames, '. Пожалуйста, ознакомьтесь и подпишите.',

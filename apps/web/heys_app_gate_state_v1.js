@@ -41,6 +41,8 @@
         setShowMorningCheckin,
         isInitializing,
         tab,
+        // 2026-05-20 compliance overhaul — optional state из useRuntimeState
+        complianceState,
     }) {
         const gate = AppGateFlow.buildGate ? AppGateFlow.buildGate({
             clientId,
@@ -106,6 +108,14 @@
             checkingConsent,
             setNeedsConsent,
             setShowMorningCheckin,
+            // Compliance overhaul 2026-05-20 — re-consent + age gate state
+            outdatedTypes: complianceState?.outdatedTypes,
+            graceExpiresAt: complianceState?.graceExpiresAt,
+            mustBlockReconsent: complianceState?.mustBlockReconsent,
+            needsAgeGate: complianceState?.needsAgeGate,
+            setOutdatedTypes: complianceState?.setOutdatedTypes,
+            setMustBlockReconsent: complianceState?.setMustBlockReconsent,
+            setNeedsAgeGate: complianceState?.setNeedsAgeGate,
         }) : null;
 
         return {

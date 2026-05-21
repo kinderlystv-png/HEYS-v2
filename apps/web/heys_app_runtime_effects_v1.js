@@ -23,11 +23,23 @@
         return { widgetsEditMode, setWidgetsEditMode };
     };
 
-    const useConsentCheck = ({ React, clientId, cloudUser, setNeedsConsent, setCheckingConsent }) => {
+    const useConsentCheck = ({
+        React, clientId, cloudUser,
+        setNeedsConsent, setCheckingConsent,
+        // Compliance overhaul 2026-05-20 — optional setters. Если родитель их не
+        // передал — расширенная логика skip'ается, legacy flow остаётся.
+        setOutdatedTypes,
+        setGraceExpiresAt,
+        setMustBlockReconsent,
+        setNeedsAgeGate,
+    }) => {
         React.useEffect(() => {
             if (!clientId) {
                 setNeedsConsent(false);
                 setCheckingConsent(false);
+                setOutdatedTypes && setOutdatedTypes([]);
+                setMustBlockReconsent && setMustBlockReconsent(false);
+                setNeedsAgeGate && setNeedsAgeGate(false);
                 HEYS._consentsChecked = false;
                 HEYS._consentsValid = false;
                 return;
@@ -39,27 +51,62 @@
                 HEYS._consentsValid = true;
                 return;
             }
-            if (HEYS.Consents?.api?.checkRequired) {
-                setCheckingConsent(true);
-                HEYS.Consents.api.checkRequired(clientId).then((result) => {
-                    setNeedsConsent(!result.valid);
-                    setCheckingConsent(false);
-                    HEYS._consentsChecked = true;
-                    HEYS._consentsValid = result.valid;
-                    if (!result.valid) {
-                        console.log('[CONSENTS] Client needs to accept consents:', result.missing);
-                    } else {
-                        console.log('[CONSENTS] ✅ All consents are valid');
+
+            const versioned = HEYS.Consents?.api?.checkRequiredVersioned;
+            const legacy = HEYS.Consents?.api?.checkRequired;
+
+            setCheckingConsent(true);
+
+            // Утилита: нормализовать legacy-ответ в shape v2.
+            const legacyAsV2 = (clientIdArg) => legacy(clientIdArg).then(r => ({
+                valid: r.valid, missing: r.missing || [],
+                outdated: [], graceExpiresAt: null, graceStatus: 'none',
+                mustBlock: false, ageConfirmed: true,
+            }));
+
+            // versioned() требует session-токен; при login токен появляется ПОЗЖЕ
+            // чем clientId. Поэтому если versioned вернул error (No session token /
+            // network) — fallback на legacy (clientId-based, без токена).
+            const promise = versioned
+                ? versioned().then(r => {
+                    if (r?.error && legacy) {
+                        console.log('[CONSENTS] versioned failed (' + r.error + ') — fallback to legacy');
+                        return legacyAsV2(clientId);
                     }
-                }).catch((err) => {
-                    console.error('[CONSENTS] Error checking consents:', err);
-                    setCheckingConsent(false);
-                    setNeedsConsent(false);
-                    HEYS._consentsChecked = true;
-                    HEYS._consentsValid = true;
-                });
-            }
-        }, [clientId, cloudUser, setNeedsConsent, setCheckingConsent]);
+                    return r;
+                  })
+                : legacy
+                    ? legacyAsV2(clientId)
+                    : Promise.resolve({ valid: true, missing: [], outdated: [], mustBlock: false, ageConfirmed: true });
+
+            promise.then((r) => {
+                const needs = !r.valid;
+                setNeedsConsent(needs);
+                setCheckingConsent(false);
+                setOutdatedTypes && setOutdatedTypes(r.outdated || []);
+                setGraceExpiresAt && setGraceExpiresAt(r.graceExpiresAt || null);
+                setMustBlockReconsent && setMustBlockReconsent(!!r.mustBlock);
+                // Age-gate показываем только когда основные согласия в порядке —
+                // иначе сначала ConsentScreen, потом age.
+                setNeedsAgeGate && setNeedsAgeGate(!r.ageConfirmed && !needs);
+                HEYS._consentsChecked = true;
+                HEYS._consentsValid = r.valid;
+                if (needs) {
+                    console.log('[CONSENTS] Client needs to accept consents:', r.missing, 'outdated:', r.outdated);
+                } else if ((r.outdated || []).length) {
+                    console.log('[CONSENTS] ⚠ Outdated docs, grace until:', r.graceExpiresAt);
+                } else {
+                    console.log('[CONSENTS] ✅ All consents are valid');
+                }
+            }).catch((err) => {
+                console.error('[CONSENTS] Error checking consents:', err);
+                setCheckingConsent(false);
+                setNeedsConsent(false);
+                HEYS._consentsChecked = true;
+                HEYS._consentsValid = true;
+            });
+        }, [clientId, cloudUser, setNeedsConsent, setCheckingConsent,
+            setOutdatedTypes, setGraceExpiresAt, setMustBlockReconsent, setNeedsAgeGate]);
     };
 
     const useBadgeSync = ({ React }) => {

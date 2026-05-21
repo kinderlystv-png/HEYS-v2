@@ -548,6 +548,8 @@
                 setShowMorningCheckin,
                 isInitializing,
                 tab,
+                // 2026-05-20 compliance overhaul — пробрасываем из runtimeState в buildConsentGate
+                complianceState: runtimeState?.complianceState,
             });
             const { gate, desktopGate, consentGate } = gateState;
             const hasBlockingGate = Boolean(gate || desktopGate || consentGate);
