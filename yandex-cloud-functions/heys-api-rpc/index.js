@@ -1060,7 +1060,12 @@ module.exports.handler = async function (event, context) {
       }
     }
   }
-  if (cookieSessionToken && !params.p_session_token) {
+  // 🔧 FIX 2026-05-21: инъекция только для *_by_session функций.
+  // Раньше токен прокидывался во все RPC — это ломало функции которые
+  // p_session_token не принимают (verify_client_pin_v3, log_consents,
+  // check_required_consents и т.д.) с 42883 undefined_function, когда
+  // в cookie оставался токен от прошлой сессии.
+  if (cookieSessionToken && !params.p_session_token && fnName.endsWith('_by_session')) {
     params.p_session_token = cookieSessionToken;
   }
 
