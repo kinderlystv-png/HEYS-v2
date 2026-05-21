@@ -609,7 +609,25 @@
         React.createElement(
           'div',
           { className: 'heys-auth-meta mt-6 space-y-3 text-center text-sm' },
-          React.createElement('div', null, 'Нет доступа? Обратитесь в поддержку:'),
+          // Подсказка по сбросу PIN — без отдельного UI flow (минимальная
+          // реализация P0-G). Клиент пишет куратору в Telegram-личку,
+          // куратор сбрасывает PIN через админ-панель.
+          React.createElement(
+            'div',
+            { className: 'heys-auth-meta-strong' },
+            'Не помните PIN? Напишите куратору — он его сбросит:',
+          ),
+          React.createElement(
+            'a',
+            {
+              href: (window.HEYS && window.HEYS.support && window.HEYS.support.telegramUrl) || 'https://t.me/heyslab_support',
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              className: 'heys-auth-link block',
+            },
+            (window.HEYS && window.HEYS.support && window.HEYS.support.telegramHandle) || '@heyslab_support',
+          ),
+          React.createElement('div', { className: 'mt-4' }, 'Или позвоните в поддержку:'),
           React.createElement(
             'a',
             {

@@ -429,9 +429,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 return;
             }
 
-            if (!auth.validatePin(pinForm.pin) || !auth.validatePin(pinForm.confirm)) {
+            // Сначала проверка формата (ровно 4 цифры), отдельным сообщением.
+            if (!/^\d{4}$/.test(String(pinForm.pin)) || !/^\d{4}$/.test(String(pinForm.confirm))) {
                 setPinStatus('error');
                 setPinMessage('PIN должен состоять из 4 цифр.');
+                return;
+            }
+
+            // Затем проверка на «слабый» PIN — отдельным сообщением, чтобы
+            // куратор понимал почему отказ.
+            if (typeof auth.isWeakPin === 'function' && (auth.isWeakPin(pinForm.pin) || auth.isWeakPin(pinForm.confirm))) {
+                setPinStatus('error');
+                setPinMessage('Слишком простой PIN. Не используйте 0000, 1234, повторяющиеся цифры или клавиатурные паттерны.');
+                return;
+            }
+
+            // Финальная валидация (комбинированная — на случай если правила расширены).
+            if (!auth.validatePin(pinForm.pin) || !auth.validatePin(pinForm.confirm)) {
+                setPinStatus('error');
+                setPinMessage('PIN не прошёл проверку. Выберите другой.');
                 return;
             }
 

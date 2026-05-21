@@ -55,9 +55,30 @@
     return `+7 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 8)}-${d.slice(8, 10)}`;
   }
 
+  // Список явно слабых PIN. Не претендуем на полную защиту от подбора —
+  // отсекаем самые очевидные паттерны, которые куратор может случайно
+  // выдать или клиент запросить. Все 10 идентичных + восходящие/нисходящие
+  // последовательности + распространённые keypad-паттерны.
+  const WEAK_PINS = new Set([
+    // 10 одинаковых
+    '0000','1111','2222','3333','4444','5555','6666','7777','8888','9999',
+    // Восходящие последовательности
+    '0123','1234','2345','3456','4567','5678','6789',
+    // Нисходящие последовательности
+    '9876','8765','7654','6543','5432','4321','3210',
+    // Распространённые keypad-паттерны
+    '2580','0852','1379','9731','1397','7913',
+  ]);
+
+  function isWeakPin(pin) {
+    return WEAK_PINS.has(String(pin || ''));
+  }
+
   function validatePin(pin) {
     const s = String(pin || '');
-    return /^\d{4}$/.test(s);
+    if (!/^\d{4}$/.test(s)) return false;
+    if (isWeakPin(s)) return false;
+    return true;
   }
 
   function randomHex(bytes) {
@@ -423,15 +444,29 @@
    * Установить session token.
    *
    * PR-C (2026-05-20): после успешного PIN-входа сервер (verify_client_pin_v3
-   * через heys-api-rpc) ставит токен в HttpOnly cookie `heys_session_token`,
-   * который JS не может прочитать. Сюда токен больше не пишем — это и был
-   * параллельный JS-доступ, который ловила XSS. Функция оставлена как no-op
-   * чтобы старые caller'ы (если такие найдутся) не падали.
+   * через heys-api-rpc) ставит токен в HttpOnly cookie `heys_session_token`
+   * (Domain=.heyslab.ru). JS читать не может — это и был параллельный JS-
+   * доступ, который ловила XSS.
    *
-   * @param {string} token - Session token (игнорируется)
+   * Dev-fix (2026-05-21): cookie с `Domain=.heyslab.ru` НЕ доставляется на
+   * `localhost:4001` (domain mismatch). Без LS-fallback всё что зовёт
+   * `getSessionToken()` падает с "No session token" в dev (Subscriptions,
+   * Consents.checkRequiredVersioned, curator-actions banner). В production
+   * (app.heyslab.ru) — по-прежнему no-op, security не ослаблена.
+   *
+   * @param {string} token - Session token (в prod — игнорируется)
    */
-  function setSessionToken(_token) {
-    // no-op intentionally — credential carriage is the HttpOnly cookie now.
+  function setSessionToken(token) {
+    if (!token) return;
+    try {
+      const host = typeof window !== 'undefined' && window.location
+        ? window.location.hostname : '';
+      const isDev = host === 'localhost' || host === '127.0.0.1';
+      if (isDev) {
+        U.lsSet('heys_session_token', token);
+      }
+      // production: no-op (credential carriage = HttpOnly cookie)
+    } catch (_) { /* noop */ }
   }
 
   /**
@@ -486,6 +521,7 @@
     isValidPhone,
     formatPhone,
     validatePin,
+    isWeakPin,
     generateSalt,
     hashPin,
     loginClient,

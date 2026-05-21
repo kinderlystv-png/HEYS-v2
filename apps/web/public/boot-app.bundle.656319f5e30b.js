@@ -710,9 +710,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 return;
             }
 
-            if (!auth.validatePin(pinForm.pin) || !auth.validatePin(pinForm.confirm)) {
+            // Сначала проверка формата (ровно 4 цифры), отдельным сообщением.
+            if (!/^\d{4}$/.test(String(pinForm.pin)) || !/^\d{4}$/.test(String(pinForm.confirm))) {
                 setPinStatus('error');
                 setPinMessage('PIN должен состоять из 4 цифр.');
+                return;
+            }
+
+            // Затем проверка на «слабый» PIN — отдельным сообщением, чтобы
+            // куратор понимал почему отказ.
+            if (typeof auth.isWeakPin === 'function' && (auth.isWeakPin(pinForm.pin) || auth.isWeakPin(pinForm.confirm))) {
+                setPinStatus('error');
+                setPinMessage('Слишком простой PIN. Не используйте 0000, 1234, повторяющиеся цифры или клавиатурные паттерны.');
+                return;
+            }
+
+            // Финальная валидация (комбинированная — на случай если правила расширены).
+            if (!auth.validatePin(pinForm.pin) || !auth.validatePin(pinForm.confirm)) {
+                setPinStatus('error');
+                setPinMessage('PIN не прошёл проверку. Выберите другой.');
                 return;
             }
 
@@ -6180,9 +6196,30 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     return `+7 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 8)}-${d.slice(8, 10)}`;
   }
 
+  // Список явно слабых PIN. Не претендуем на полную защиту от подбора —
+  // отсекаем самые очевидные паттерны, которые куратор может случайно
+  // выдать или клиент запросить. Все 10 идентичных + восходящие/нисходящие
+  // последовательности + распространённые keypad-паттерны.
+  const WEAK_PINS = new Set([
+    // 10 одинаковых
+    '0000','1111','2222','3333','4444','5555','6666','7777','8888','9999',
+    // Восходящие последовательности
+    '0123','1234','2345','3456','4567','5678','6789',
+    // Нисходящие последовательности
+    '9876','8765','7654','6543','5432','4321','3210',
+    // Распространённые keypad-паттерны
+    '2580','0852','1379','9731','1397','7913',
+  ]);
+
+  function isWeakPin(pin) {
+    return WEAK_PINS.has(String(pin || ''));
+  }
+
   function validatePin(pin) {
     const s = String(pin || '');
-    return /^\d{4}$/.test(s);
+    if (!/^\d{4}$/.test(s)) return false;
+    if (isWeakPin(s)) return false;
+    return true;
   }
 
   function randomHex(bytes) {
@@ -6548,15 +6585,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
    * Установить session token.
    *
    * PR-C (2026-05-20): после успешного PIN-входа сервер (verify_client_pin_v3
-   * через heys-api-rpc) ставит токен в HttpOnly cookie `heys_session_token`,
-   * который JS не может прочитать. Сюда токен больше не пишем — это и был
-   * параллельный JS-доступ, который ловила XSS. Функция оставлена как no-op
-   * чтобы старые caller'ы (если такие найдутся) не падали.
+   * через heys-api-rpc) ставит токен в HttpOnly cookie `heys_session_token`
+   * (Domain=.heyslab.ru). JS читать не может — это и был параллельный JS-
+   * доступ, который ловила XSS.
    *
-   * @param {string} token - Session token (игнорируется)
+   * Dev-fix (2026-05-21): cookie с `Domain=.heyslab.ru` НЕ доставляется на
+   * `localhost:4001` (domain mismatch). Без LS-fallback всё что зовёт
+   * `getSessionToken()` падает с "No session token" в dev (Subscriptions,
+   * Consents.checkRequiredVersioned, curator-actions banner). В production
+   * (app.heyslab.ru) — по-прежнему no-op, security не ослаблена.
+   *
+   * @param {string} token - Session token (в prod — игнорируется)
    */
-  function setSessionToken(_token) {
-    // no-op intentionally — credential carriage is the HttpOnly cookie now.
+  function setSessionToken(token) {
+    if (!token) return;
+    try {
+      const host = typeof window !== 'undefined' && window.location
+        ? window.location.hostname : '';
+      const isDev = host === 'localhost' || host === '127.0.0.1';
+      if (isDev) {
+        U.lsSet('heys_session_token', token);
+      }
+      // production: no-op (credential carriage = HttpOnly cookie)
+    } catch (_) { /* noop */ }
   }
 
   /**
@@ -6611,6 +6662,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     isValidPhone,
     formatPhone,
     validatePin,
+    isWeakPin,
     generateSalt,
     hashPin,
     loginClient,
@@ -11210,7 +11262,25 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         React.createElement(
           'div',
           { className: 'heys-auth-meta mt-6 space-y-3 text-center text-sm' },
-          React.createElement('div', null, 'Нет доступа? Обратитесь в поддержку:'),
+          // Подсказка по сбросу PIN — без отдельного UI flow (минимальная
+          // реализация P0-G). Клиент пишет куратору в Telegram-личку,
+          // куратор сбрасывает PIN через админ-панель.
+          React.createElement(
+            'div',
+            { className: 'heys-auth-meta-strong' },
+            'Не помните PIN? Напишите куратору — он его сбросит:',
+          ),
+          React.createElement(
+            'a',
+            {
+              href: (window.HEYS && window.HEYS.support && window.HEYS.support.telegramUrl) || 'https://t.me/heyslab_support',
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              className: 'heys-auth-link block',
+            },
+            (window.HEYS && window.HEYS.support && window.HEYS.support.telegramHandle) || '@heyslab_support',
+          ),
+          React.createElement('div', { className: 'mt-4' }, 'Или позвоните в поддержку:'),
           React.createElement(
             'a',
             {

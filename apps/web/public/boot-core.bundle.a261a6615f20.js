@@ -15981,6 +15981,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
     try {
       const sessionRpc = buildSessionRpcParams({ p_since });
       if (!sessionRpc.ok) return { ok: false, error: 'No session token', entries: [] };
+      // get_my_curator_changelog_since НЕ заканчивается на _by_session —
+      // серверный cookie-inject (heys-api-rpc/index.js:1068) её не покрывает.
+      // Если в params нет p_session_token (только cookie-fallback от
+      // buildSessionRpcParams), сервер вернёт 400. Skip сетевой запрос.
+      if (!sessionRpc.params?.p_session_token) {
+        return { ok: false, error: 'No session token', entries: [] };
+      }
       const result = await rpc('get_my_curator_changelog_since', sessionRpc.params);
       if (result.error) {
         return { ok: false, error: result.error.message || result.error, entries: [] };
@@ -16009,6 +16016,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-core: execute start');
         p_until_ts: p_until_ts || new Date().toISOString(),
       });
       if (!sessionRpc.ok) return { ok: false, error: 'No session token' };
+      // ack_curator_changelog НЕ _by_session — server cookie-inject не покрывает.
+      // Без p_session_token в body сервер 400 → acked_at не обновится →
+      // banner покажется снова. Skip если токена нет.
+      if (!sessionRpc.params?.p_session_token) {
+        return { ok: false, error: 'No session token in params' };
+      }
       const result = await rpc('ack_curator_changelog', sessionRpc.params);
       if (result.error) {
         return { ok: false, error: result.error.message || result.error };
