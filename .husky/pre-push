@@ -69,28 +69,18 @@ node scripts/lint-direct-localstorage-writes.mjs || {
   exit 1
 }
 
-echo "🧪 Запуск критических тестов sync/auth/storage/products/models..."
+echo "🧪 Запуск полного test suite..."
 
-# Прямой вызов vitest (экономит ~2s по сравнению с pnpm --filter @heys/web test)
-(cd apps/web && node_modules/.bin/vitest run \
-  __tests__/sync-race-condition.test.js \
-  __tests__/merge-day-data.test.js \
-  __tests__/sync-merge-shared.test.js \
-  __tests__/prepare-release-skip.test.js \
-  __tests__/auth-session.test.js \
-  __tests__/storage-layer.test.js \
-  __tests__/products-protection.test.js \
-  __tests__/data-models.test.js \
-  __tests__/storage-quota.test.js \
-  __tests__/storage-compress.test.js \
-  __tests__/events-sync.test.js \
-  __tests__/pwa-update-logic.test.js \
-  __tests__/insulin-wave.test.js \
-  __tests__/cycle.test.js)
+# До 2026-05-21 здесь был whitelist из 14 «критических» файлов. За время его
+# существования в extended suite незаметно накопилось 32 падающих теста
+# (см. коммиты 4bda3d76, 39bf818e — расследование и фикс). Прогон полного
+# suite дороже всего на ~3 сек (4s → 7s), но ловит регрессии вроде
+# stale-моков и path-багов на pre-push, а не через жалобы клиентов.
+(cd apps/web && node_modules/.bin/vitest run)
 
 if [ $? -ne 0 ]; then
   echo "❌ Тесты не прошли! Push отменён."
   exit 1
 fi
 
-echo "✅ Все критические тесты прошли!"
+echo "✅ Все тесты прошли!"
