@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.21.consents-init-fix",
+      "buildHash": "consents-init-fix",
+      "date": "2026-05-21",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Фикс «Ошибка загрузки» при открытии приложения",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Приложение снова открывается у всех клиентов",
+          "description": "Вчерашний релиз compliance overhaul содержал регрессию: модуль согласий пытался записать `HEYS.Consents.ConsentOutdatedBanner = ...` ДО того, как namespace `HEYS.Consents` был создан. На любом устройстве это давало TypeError на старте и показывало экран «Ошибка загрузки» (TypeError: undefined is not an object). После фикса все четыре компонента (ConsentOutdatedBanner, AgeGateModal, ReConsentScreen, getCurrentLegalVersions) экспортируются единым блоком Object.assign — namespace создаётся первым."
+        }
+      ]
+    },
+    {
       "version": "2026.05.20.8d40d31f",
       "buildHash": "8d40d31f",
       "date": "2026-05-20",

@@ -37991,15 +37991,14 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
     );
   }
 
-  // Экспорт компонентов и обновлённого API
-  HEYS.Consents.ConsentOutdatedBanner = ConsentOutdatedBanner;
-  HEYS.Consents.AgeGateModal = AgeGateModal;
-  HEYS.Consents.ReConsentScreen = ReConsentScreen;
-  HEYS.Consents.getCurrentLegalVersions = getCurrentLegalVersions;
-
   // =====================================================
   // Экспорт
   // =====================================================
+  // ⚠️ Регрессия 2026-05-20 (8d40d31f): отдельные присваивания
+  // `HEYS.Consents.X = X` ниже выполнялись ДО блока Object.assign,
+  // что вызывало TypeError "undefined is not an object" на первой
+  // загрузке у всех клиентов (HEYS.Consents ещё не существовал).
+  // Теперь Object.assign идёт первым и создаёт namespace.
 
   HEYS.Consents = Object.assign(HEYS.Consents || {}, {
     // Константы
