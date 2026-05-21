@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.05.21.recovery-ui",
-      "buildHash": "recovery-ui",
+      "version": "2026.05.21.265392c1",
+      "buildHash": "265392c1",
       "date": "2026-05-21",
       "kind": "user-facing",
       "profile": "user-facing-general",
