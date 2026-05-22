@@ -1,6 +1,79 @@
 # ✅ DONE — HEYS v2
 
-> **Выполненные задачи** | Обновлено: 2026-01-17
+> **Выполненные задачи** | Обновлено: 2026-05-22
+
+---
+
+## 🎉 Май 2026
+
+### 🔐 Lockbox-миграция + concurrency=2 + cleanup (2026-05-22)
+
+Большая сессия по infrastructure hardening — закрыли 5 audit-pунктов за один
+день.
+
+**Закоммичено в `main`:**
+
+- `fa52d923` — refactor(secrets) phase 3: 10 секретов из .env уехали в Lockbox,
+  retention 14 дней YC PG built-in заменил dead-on-arrival heys-backup cloud
+  function, deploy-all.sh DRY (130 → 93 строк), vitest isolate:true (5 runs
+  зелёные)
+- `a4b307a4` — fix(deploy) pre-zip source (yc CLI игнорировал .ycignore на >4000
+  файлов node_modules → heys-client-daily-backup deploy ломался)
+- `497bb9b9` — fix(monitoring) concurrency_watch через YC Monitoring API
+  (predecessor пытался читать логи через gRPC Reader → socket hang up)
+- `4261eade` — feat(monitoring) concurrency_watch rule
+- Серия release-bump'ов
+
+**Что в итоге работает:**
+
+- `.env` содержит **плейсхолдеры** `__IN_LOCKBOX__heys-*__` для 10 секретов;
+  настоящие живут только в Yandex Lockbox
+- 13 cloud functions при cold start подтягивают секреты из Lockbox с retry (5s ×
+  2 attempts)
+- 5 API-функций (rpc/rest/auth/leads/push) на `concurrency=2`
+- `heys-cron-security-alerts` следит за пиком памяти через YC Monitoring
+  API; >90% лимита → Telegram-алерт куратору
+- `deploy-all.sh` сам собирает zip + auto-копирует certs/root.crt
+- `vitest isolate:true` — 0 flake'ов на 5 прогонах подряд (7s → 23s)
+- 8 docs обновлены ссылаться на YC Managed PG built-in backup вместо удалённой
+  `heys-backup`
+
+**Что осталось в активных задачах** (см. todo.md):
+
+- Phase 3 cleanup: удалить `.env.backup-*` через 48ч (≈2026-05-24)
+- Возможный откат concurrency=2 → 1 если придёт alert
+- Cleanup на 2026-06-10: дропнуть `client_kv_store_archive_20260511` + 5
+  `_BACKUP_2026051X` ключей
+
+### 🧹 Backup schema v3 + cross-client leak fix + DB cleanup (2026-05-10/11)
+
+Сессия 10-11 мая закрыла большой блок:
+
+- `d381b5cf` — refactor(backup) schema v3: allow-by-default scan + 8-категорий
+  deny-list. Покрытие данных 62% (v2) → ~100% (v3). Закрыло инцидент с
+  `heys_favorite_products`. См. `apps/web/heys_app_backup_export_v1.js` +
+  `_import_v1.js → restoreV3()`.
+- Серия commit'ов фикса cross-client data leak в `switchClient`:
+  `_switchSnapshot` setup/cleanup в
+  `heys_storage_supabase_v1.js:12242,12559,12570`, defer re-scoping под OLD
+  scope в `heys_storage_layer_v1.js:581,597`. Telemetry `HEYS._syncDebug` с
+  `leak-blocked` событиями.
+- `4b78dcc8` — Phase 2б: removed 13 dead `else lsSet` fallback branches
+- `2796d4da` — Phase 2в: auth_init keysToMigrate, sync_effects guard, backup
+  reads → overlay API
+- `f6415481` — initLocalData + sync rollback seed from overlay
+- `1f45ee5f` — DB migration `2026-05-11_kv_store_cascade.sql`: FK
+  `client_kv_store → clients ON DELETE CASCADE` + EXISTS-guard в
+  `fn_bump_change_marker`
+- `heys-client-daily-backup` восстановлена после 28 дней простоя
+- Yandex PG backup retention 7 → 14 дней
+- 48 orphan client_ids → `client_kv_store_archive_20260511` (556 строк, держим
+  до 2026-06-10)
+- 2 активных клиента приведены к canonical overlay
+
+**Cross-client leak observation 2026-05-11 → 2026-05-25** — на 11-й день
+(2026-05-22) повторений в `HEYS._syncDebug` не зарегистрировано. Закроется
+естественно 25 мая если ничего не появится.
 
 ---
 
@@ -12,27 +85,29 @@
 
 **Что сделано:**
 
-| Модуль | До | После | Статус |
-|--------|-----|-------|--------|
-| `heys_app_v12.js` | 2,500+ LOC | 11 LOC (thin wrapper) | ✅ |
-| `heys_day_v12.js` | 6,400+ LOC | 12 LOC (thin wrapper) | ✅ |
-| `heys_predictive_insights_v1.js` | 10,100 LOC | Декомпозирован | ✅ |
-| `heys_insulin_wave_v1.js` | 4,500+ LOC | Декомпозирован | ✅ |
+| Модуль                           | До         | После                 | Статус |
+| -------------------------------- | ---------- | --------------------- | ------ |
+| `heys_app_v12.js`                | 2,500+ LOC | 11 LOC (thin wrapper) | ✅     |
+| `heys_day_v12.js`                | 6,400+ LOC | 12 LOC (thin wrapper) | ✅     |
+| `heys_predictive_insights_v1.js` | 10,100 LOC | Декомпозирован        | ✅     |
+| `heys_insulin_wave_v1.js`        | 4,500+ LOC | Декомпозирован        | ✅     |
 
 **Решения по оставшимся файлам:**
 
-| Файл | LOC | Решение | Причина |
-|------|-----|---------|---------|
-| `heys_storage_supabase_v1.js` | 5,909 | ❌ Не трогать | Была неудачная попытка; стабильно работает |
-| `heys_day_meals_bundle_v1.js` | 4,533 | ✅ Оставить как есть | Осознанный бандл из 6 модулей, не монолит |
+| Файл                          | LOC   | Решение              | Причина                                    |
+| ----------------------------- | ----- | -------------------- | ------------------------------------------ |
+| `heys_storage_supabase_v1.js` | 5,909 | ❌ Не трогать        | Была неудачная попытка; стабильно работает |
+| `heys_day_meals_bundle_v1.js` | 4,533 | ✅ Оставить как есть | Осознанный бандл из 6 модулей, не монолит  |
 
 **Архитектура после рефакторинга:**
+
 - **137 модулей** (45 app + 92 day)
 - **Thin wrappers** для обратной совместимости
 - **Чёткое разделение** по функциональности
 - **Документация** актуализирована
 
 **Файлы-обёртки:**
+
 - `heys_app_v12.js` — импортирует 45 модулей из `app/`
 - `heys_day_v12.js` — импортирует 92 модуля из `day/`
 
@@ -41,17 +116,20 @@
 ### 🧩 Рефакторинг heys_predictive_insights_v1.js ✅ (2026-01-10)
 
 - [x] Задача закрыта, промпт перенесён в архив
-- [x] Архив: [2026-01-10-refactor-predictive-insights.md](./docs/tasks/archive/2026-01-10-refactor-predictive-insights.md)
+- [x] Архив:
+      [2026-01-10-refactor-predictive-insights.md](./docs/tasks/archive/2026-01-10-refactor-predictive-insights.md)
 
 ### 🧪 Рефакторинг heys_insulin_wave_v1.js ✅ (2026-01-10)
 
 - [x] Задача закрыта, промпт перенесён в архив
-- [x] Архив: [2026-01-10-refactor-insulin-wave.md](./docs/tasks/archive/2026-01-10-refactor-insulin-wave.md)
+- [x] Архив:
+      [2026-01-10-refactor-insulin-wave.md](./docs/tasks/archive/2026-01-10-refactor-insulin-wave.md)
 
 ### 🧱 Рефакторинг heys_day_v12.js ✅ (2026-01-10)
 
 - [x] Задача закрыта, промпт перенесён в архив
-- [x] Архив: [2026-01-10-heys-day-v12-refactoring.md](./docs/tasks/archive/2026-01-10-heys-day-v12-refactoring.md)
+- [x] Архив:
+      [2026-01-10-heys-day-v12-refactoring.md](./docs/tasks/archive/2026-01-10-heys-day-v12-refactoring.md)
 
 ## 🎉 Декабрь 2025
 

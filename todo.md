@@ -101,13 +101,42 @@ OOM/pool issues»** с указанием функции и количества
 2. Нет утечек: проверить если PG_PASSWORD / JWT_SECRET случайно не закоммитились
    куда-то (`git log -p --all -- '*.env*' | grep -iE 'password|secret'`).
 3. SA `aje85rjgpj4nk9m384ek` имеет только нужные роли (lockbox.payloadViewer +
-   logging.reader + serverless.functions.invoker — других быть не должно).
+   logging.reader + monitoring.viewer + serverless.functions.invoker — других
+   быть не должно).
 4. Чеклист в
    [LOCKBOX_MIGRATION_GUIDE.md](yandex-cloud-functions/LOCKBOX_MIGRATION_GUIDE.md)
    → "Чеклист миграции" → "Запланировал quarterly audit секретов".
 
 Опционально: ротация секретов (создать новую версию secret'а с новым значением,
 функции автоматически подтянут через 5 минут или при cold start).
+
+---
+
+### Item 4 — cleanup archive + BACKUP-ключей (2026-06-10)
+
+**Когда:** 2026-06-10 (≈30 дней после миграции от 2026-05-11).
+
+**Что:** удалить остатки чистки облака от 11 мая когда были регрессий не
+зарегистрировано:
+
+1. Таблица `client_kv_store_archive_20260511` (556 строк, данные 48 удалённых
+   клиентов, ~3.2 MB) — source of truth для recovery, держали 30 дней:
+
+   ```sql
+   DROP TABLE client_kv_store_archive_20260511;
+   ```
+
+2. 5 `_BACKUP_2026051X` ключей в `client_kv_store` (≈1.5 MB):
+   - `heys_hidden_products_BACKUP_20260510` (443 KB)
+   - `heys_products_BACKUP_20260510` (291 KB)
+   - `heys_products_BACKUP_20260511` (584 KB)
+   - `heys_products_overlay_v2_BACKUP_20260510_165251` × 2 (278 KB суммарно)
+
+   ```sql
+   DELETE FROM client_kv_store WHERE k LIKE '%BACKUP_2026051%';
+   ```
+
+Скажи «дропни архив» — сделаю.
 
 ---
 
@@ -131,104 +160,30 @@ PSD-мокап с Photoshop smart-object.
 
 ---
 
-## ✅ Сегодня закрыто (2026-05-10 / 2026-05-11)
+## ✅ Сессия 2026-05-10/11 → перенесена в done.md
 
-Большая сессия по retirement legacy `heys_products` + сопутствующая чистка
-облака + крупный refactor backup + DB-миграция против утечки данных + schema
-v3 + восстановление per-client cloud-backup функции.
+Большая сессия по retirement legacy `heys_products` + backup schema v3 + DB
+cleanup + cross-client leak fix + восстановление `heys-client-daily-backup` —
+**перенесено в [done.md](done.md) → «Май 2026»** (2026-05-22, после верификации
+что всё закоммичено в `main`: `d381b5cf`, `4b78dcc8`, `2796d4da`, `f6415481`,
+`1f45ee5f`, и серия cross-client fix'ов в storage_supabase/layer).
 
-**Закоммичено (push'нуто в main):**
+**Из оригинальной сессии осталось только 2 активных пункта:**
 
-- `4b78dcc8` — Phase 2б: removed 13 dead `else lsSet` fallback branches
-- `2796d4da` — Phase 2в: auth_init keysToMigrate, sync_effects guard, backup
-  reads switched to overlay API
-- `f6415481` — initLocalData + sync rollback seed from overlay (fix curator
-  table showing 390/443 instead of 367 — stale legacy in cloud)
-- `4db42ac1` — backup refactor schema v2: full state snapshot (overlay + days +
-  profile + gamification + planning + advice + ...), gzip via CompressionStream
-  (~5× smaller), import .json/.json.gz routing, auth deny-list, idempotency
-  locks
-- `1f45ee5f` — DB migration `2026-05-11_kv_store_cascade.sql` (applied to prod):
-  FK `client_kv_store → clients ON DELETE CASCADE` + EXISTS-guard in
-  `fn_bump_change_marker`
-
-**В работе (не закоммичено пока):**
-
-- **Backup schema v3 — allow-by-default + deny-list** (план
-  `.claude/plans/misty-booping-quilt.md`):
-  - `heys_app_backup_export_v1.js` — переписан под scan localStorage + 47-regex
-    deny-list. Покрытие данных: ~62% (v2) → ~100% (v3). Закрывает инцидент с
-    `heys_favorite_products` (потерян cleanup'ом, не было в whitelist).
-  - `heys_app_backup_import_v1.js` — добавлен `restoreV3` с защитами: HOT-sync
-    silence 60s, `heys_restore_in_progress` LS-marker, cloud queue bypass через
-    `cloud.writeLocalKvWithoutMirror` + manual scoping, финальный
-    `cloud.flushPendingQueue(30000)`, boot-time aborted-restore detector.
-    EVENT_DISPATCH_MAP из grep'а кода (фикс `heys:hr-zones-updated` — был баг с
-    подчёркиванием в v2). Routing v1/v2/v3 backward-compat.
-  - `whats-new.json` — user-facing entry.
-  - Bundle пересобран, lint clean, 0 violations.
-
-**Восстановлено (отдельный инцидент):**
-
-- **`heys-client-daily-backup`** (per-client cloud snapshot function) — 28 дней
-  не работала из-за устаревшего `PG_PASSWORD` в env vars (старый
-  `HeysAdmin2025`, реальный — ротированный 24-char в Lockbox). Передеплоена с
-  актуальным паролем + CA cert встроен в zip + deploy через Object Storage
-  bucket (1.7 MB вместо 3.5 MB лимита). Manual invoke: `success:2/total:2`.
-  Файлы за 2026-05-11 в `s3://heys-backups/client-daily/`. Дыра 14.04–10.05
-  невосстановима без cluster restore.
-
-- **Yandex Postgres backup retention 7 → 14 дней** через
-  `yc managed-postgresql cluster update --backup-retain-period-days 14`.
-
-**Чистка облака (manual SQL transaction):**
-
-- Архив: `client_kv_store_archive_20260511` содержит данные 48 удалённых
-  клиентов (556 строк, 3.2 MB) — на случай отката, можно дропнуть через ~30 дней
-- Активный клиент `ccfe6ea3`: удалён stale legacy `heys_products` (был от
-  2026-05-09 на 443 продукта), `heys_hidden_products` сконвертирован из битого
-  формата (300 объектов, 433 KB) в правильный (289 ID, 7 KB)
-- Активный клиент `4545ee50`: удалён stale legacy `heys_products` (151 строка,
-  45 KB), бэкап в `heys_products_BACKUP_20260511`
-- Удалены 48 orphan client_ids целиком (через временные заглушки в `clients` для
-  обхода триггера — теперь после миграции это уже не нужно)
-- В облаке остались **только 2 активных клиента**, оба на canonical overlay
-  (367 + 301 строк)
-
-**Что нужно сделать тебе после reload:**
-
-1. Hard reload браузера (Cmd+Shift+R или incognito)
-2. Зайти как куратор → переключиться между обоими клиентами
-3. Убедиться что в «Личной базе» число продуктов стабильное и совпадает с
-   модалкой добавления приёма
-4. Добавить/удалить тестовый продукт — синхронизация должна идти через overlay
-   (cloud sync key `heys_products_overlay_v2`)
-
-Если что-то поломается — быстрые откаты:
-
-- DB:
-  `ALTER TABLE client_kv_store DROP CONSTRAINT client_kv_store_client_id_fkey;`
-  - восстановить старую `fn_bump_change_marker` из
-    `database/2026-03-30_change_markers.sql`
-- Код: `git revert <hash>` для нужных коммитов
-- Архив orphan-клиентов в `client_kv_store_archive_20260511` — source of truth
-  для recovery
-
-**Что осталось из задач (приоритет ↓):**
-
-1. **Закоммитить schema v3 + v74 switchClient fix** — bundle + код готовы
-   локально. Smoke roundtrip на реальной странице желателен перед push.
-2. **Phase 3 — снять interceptor** (~день-два). Полное снятие dual-write
-   `overlay → legacy`. Описано ниже в секции «🧹 Legacy heys_products». Делать
-   ТОЛЬКО после ~суток стабильности в проде (то есть **не раньше 2026-05-12
-   вечером**).
-3. **Backup v2 мелкие доработки** — ✅ закрыто через schema v3
-   (`cloud.flushPendingQueue` + `heys:products-updated` dispatch в restoreV3).
-4. **Cross-client data leak — наблюдение 2 недели** (см. раздел ниже).
+1. **Phase 3 — снять `dual_write_legacy` interceptor**. См. секцию «🧹 Legacy
+   heys_products» ниже. Прошло 11 дней стабильности — можно делать в отдельную
+   сессию. Подтверждено грепом 2026-05-22: `dual_write_legacy` flag всё ещё
+   активен в `heys_storage_supabase_v1.js:3931`.
+2. **Cross-client leak — наблюдение** (см. секцию ниже). На 2026-05-22 11-й день
+   из 14. Повторений не было.
 
 ---
 
-## 🔍 Cross-client data leak при switchClient — наблюдение (открыто 2026-05-11)
+## 🔍 Cross-client data leak при switchClient — наблюдение (открыто 2026-05-11, day 11/14)
+
+> **Status 2026-05-22**: 11-й день из 14-дневного окна наблюдения. Повторений
+> утечки не зарегистрировано. План: 25 мая если в `HEYS._syncDebug` нет
+> `leak-blocked` событий и пользователь не жаловался — закрыть в done.md.
 
 ### Что случилось
 
@@ -319,8 +274,9 @@ input). Но утечка произошла. Значит **есть второ
    'hydration'. В replay писать только hydration, react-state не доверять.
 2. **Перенести `currentClientId = newClientId`** в конец `switchClient` — самый
    корневой фикс, но требует проверить что внутренние подпроцессы не зависят от
-   раннего обновления глобала (см. `.claude/plans/misty-booping-quilt.md` — там
-   это было «Вариант B», отложен из-за риска).
+   раннего обновления глобала. (Ранее план описан в
+   `.claude/plans/misty-booping-quilt.md`, файл удалён 2026-05-22 —
+   стейл-ссылка.)
 3. **Активная блокировка контаминации**: если в новый профиль попадает значение
    которое совпадает с OLD профилем (через `_oldProfileBasics` на
    [12190](apps/web/heys_storage_supabase_v1.js#L12190)) — не логировать, а
@@ -328,10 +284,11 @@ input). Но утечка произошла. Значит **есть второ
 
 ### Files
 
-- `apps/web/heys_storage_supabase_v1.js` — `_switchSnapshot` setup/cleanup
-- `apps/web/heys_storage_layer_v1.js` — defer re-scoping under OLD
-- `.claude/plans/misty-booping-quilt.md` — полный план фикса (root cause +
-  alternatives)
+- `apps/web/heys_storage_supabase_v1.js:12242,12559,12570` — `_switchSnapshot`
+  setup/cleanup
+- `apps/web/heys_storage_layer_v1.js:581,597` — defer re-scoping under OLD +
+  leak-blocked telemetry
+- ~~`.claude/plans/misty-booping-quilt.md`~~ — план удалён 2026-05-22
 
 ---
 
@@ -503,11 +460,13 @@ input). Но утечка произошла. Значит **есть второ
 > maintenance-задачи. Ниже — не must-have, а усиление контура при росте
 > нагрузки/рисков.
 
-- [ ] **2.2** Security burst alerting в maintenance _(low priority)_
-  - `checkSecurityAlerts()`: >10 событий/час → Telegram alert
-  - Имеет смысл добавлять, если реально есть риск brute-force/abuse или нужен
-    отдельный security-signal вне обычных health checks
-  - **Файл**: `yandex-cloud-functions/heys-maintenance/index.js`
+- [x] **2.2** Security burst alerting — **базовый контур есть** _(2026-05-22)_
+  - `heys-cron-security-alerts` каждые 15 мин проверяет 4 правила:
+    `brute_force_ip`, `coordinated_locks`, `mass_account_deletion`,
+    `concurrency_watch`. Все шлют Telegram куратору с cooldown 30 мин.
+  - Расширения если понадобятся: общий `>10 событий/час` алерт по всем
+    failed-auth (опционально, не критично сейчас).
+  - **Файл**: `yandex-cloud-functions/heys-cron-security-alerts/index.js`
 - [ ] **2.3** External uptime monitor _(low priority)_
   - UptimeRobot / аналог как независимый внешний монитор `/health`
   - Полезно, если нужен alerting вне GitHub/Yandex контура; не критично при
@@ -695,9 +654,16 @@ Phase 3, если регрессий не будет.
 
 ### 5. Синхронизировать docs с архитектурой
 
-- [ ] `NEXT_STEPS.md` — убрать «Complete Supabase integration» (Supabase удалён
-      2025-12-24)
+- [ ] `docs/plans/NEXT_STEPS.md:42` — убрать «Complete Supabase integration»
+      (Supabase удалён 2025-12-24). **Подтверждено грепом 2026-05-22** — строка
+      ещё в файле, плюс весь NEXT_STEPS.md выглядит orphaned (last updated
+      2025-08-30, мог быть полностью deprecated)
 - [ ] Проверить остальные docs на stale references
+- [x] 8 backup-doc'ов обновлены 2026-05-22 (DB_RESILIENCE_SUMMARY,
+      DISASTER_RECOVERY_RUNBOOK, LOCKBOX_MIGRATION_GUIDE, BACKUP_CONSOLE_GUIDE,
+      HEYS_BRIEF, DEPLOYMENT_GUIDE, backup-retention, heys-client-daily-backup
+      README) — ссылаются на YC Managed PG built-in вместо удалённой
+      `heys-backup`
 - **Effort**: ~1 час текстовой работы
 
 ### 6. Покрыть critical legacy e2e ⭐ _начать с этого_
@@ -717,10 +683,13 @@ Phase 3, если регрессий не будет.
 
 ### 8. Ввести UI performance budget
 
-- [ ] Lighthouse CI в GitHub Actions на каждый PR
-- [ ] Bundle size guard (fail PR если bundle растёт >5%)
-- [ ] Документировать baseline метрики
-- **Effort**: ~4 часа настройки CI
+- [ ] Lighthouse CI в GitHub Actions на каждый PR (не настроено)
+- [x] **Bundle size guard** — `scripts/lint-bundle-size.mjs` в
+      [.husky/pre-push:73](.husky/pre-push#L73), fail-push если bundle >+5% от
+      baseline. Baseline в `apps/web/__perf_baselines__/`
+- [ ] Документировать baseline метрики (есть в `__perf_baselines__/`, но без
+      отдельного README)
+- **Effort**: ~2 часа осталось (Lighthouse + doc README)
 
 ### 9. Почистить auth legacy хвосты
 
