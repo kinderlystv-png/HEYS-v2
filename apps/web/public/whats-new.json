@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.4261eade",
+      "buildHash": "4261eade",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: авто-мониторинг concurrency=2 на API-функциях",
+      "items": [
+        {
+          "type": "feat",
+          "title": "heys-cron-security-alerts теперь следит за памятью и БД-пулом 5 API-функций",
+          "description": "После повышения concurrency=2 на API нужно отлавливать ошибки памяти или БД-пула на ранней стадии. К существующим SQL-правилам безопасности добавлено 4-е (log-based): функция каждые 15 минут читает логи 5 API-функций за последние 60 мин через YC Logging API и ищет паттерны OOM / pool exhausted / too many connections. Если найдено — приходит Telegram-алерт в куратор-канал с указанием какая функция и сколько ошибок. Cooldown 30 мин между алертами чтобы не спамить. Если алерт прилетит — откатить concurrency на 1. На UX не влияет."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.53fb5233",
       "buildHash": "53fb5233",
       "date": "2026-05-22",
