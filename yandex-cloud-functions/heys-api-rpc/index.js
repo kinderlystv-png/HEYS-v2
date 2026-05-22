@@ -342,6 +342,35 @@ const CURATOR_ONLY_FUNCTIONS = [
   'merge_save_client_kv_by_curator',      // 🔀 Server-side merge — куратор пишет данные клиента
 ];
 
+// === P1-B: Curator audit middleware (2026-05-22) =============================
+// 152-ФЗ ст.18.1 — оператор обязан вести учёт обработки ПДн. Каждое чтение/
+// запись health-data клиента курaтором фиксируется в data_access_audit_log
+// через log_data_access SQL-функцию (compliance_overhaul §1.8).
+//
+// CURATOR_AUDIT_SKIP — функции БЕЗ конкретного target client_id (списки,
+// агрегаты, глобальные настройки). Их audit не нужен — нет «чьи именно ПДн
+// прочёл куратор». Логировать их = шум.
+const CURATOR_AUDIT_SKIP = new Set([
+  'get_curator_clients',
+  'admin_get_all_clients',
+  'admin_get_trial_queue_list',
+  'admin_get_leads',
+  'admin_get_queue_stats',
+  'admin_update_queue_settings',
+  'create_client_with_pin',          // новый клиент — нет existing target
+  'delete_gamification_events_by_curator',  // bulk delete по event_ids, не client
+]);
+
+// CURATOR_AUDIT_HEALTH — функции которые читают/пишут health-data (питание,
+// вес, диета, gamification XP). is_health_data=true для GDPR special category
+// классификации в audit log.
+const CURATOR_AUDIT_HEALTH = new Set([
+  'batch_upsert_client_kv_by_curator',
+  'merge_save_client_kv_by_curator',
+  'log_gamification_event_by_curator',
+  'get_gamification_events_by_curator',
+]);
+
 // Маппинг параметров (если нужно)
 // Клиент передаёт короткие имена → маппим на p_* для PostgreSQL функций
 const PARAM_MAPPING = {
@@ -827,6 +856,50 @@ function isPlanningAgentClientIdAllowed(clientId) {
       .filter(Boolean),
   );
   return allowed.has(String(clientId).toLowerCase());
+}
+
+/**
+ * P1-B: fire-and-forget audit log записи доступа куратора к данным клиента.
+ *
+ * Вызывается ПОСЛЕ успешного query, ПЕРЕД return ответа. Использует свежий
+ * client из pool — не блокирует основной поток. Ошибка логирования НЕ
+ * влияет на ответ пользователю (graceful degradation: миссы в audit log
+ * приемлемы, чем падение endpoint'а).
+ *
+ * @param {object} pool — pg pool из getPool()
+ * @param {string} fnName — имя RPC (admin_extend_subscription и т.п.)
+ * @param {string} curatorId — UUID куратора из JWT
+ * @param {object} params — params уже с маппингом (p_client_id, ...)
+ * @param {string|null} ip
+ * @param {string|null} userAgent
+ */
+function logCuratorAccessFireAndForget(pool, fnName, curatorId, params, ip, userAgent) {
+  if (!curatorId || CURATOR_AUDIT_SKIP.has(fnName)) return;
+
+  // Достаём target client_id из стандартных параметров
+  const targetClientId = params?.p_client_id || params?.p_target_client_id || null;
+  if (!targetClientId) return;  // нет target — нечего логировать
+
+  const isHealth = CURATOR_AUDIT_HEALTH.has(fnName);
+
+  // Fire-and-forget: не await'им. Ошибки ловим, чтобы unhandled rejection
+  // не убил процесс. Yandex Function freeze не страшен — запрос успевает
+  // улететь до return (INSERT ~5-30ms).
+  (async () => {
+    let auditClient;
+    try {
+      auditClient = await pool.connect();
+      await auditClient.query(
+        'SELECT log_data_access($1, $2::uuid, $3::uuid, $4, NULL, $5::boolean, $6, $7, $8::jsonb)',
+        ['curator', curatorId, targetClientId, fnName, isHealth, ip, userAgent, '{}'],
+      );
+    } catch (err) {
+      // Audit miss НЕ должен срывать API. Логируем для post-mortem.
+      console.warn('[AUDIT] log_data_access failed:', fnName, err.message);
+    } finally {
+      try { auditClient?.release(); } catch (_) { /* ignore */ }
+    }
+  })();
 }
 
 module.exports.handler = async function (event, context) {
@@ -1928,6 +2001,15 @@ module.exports.handler = async function (event, context) {
       }
 
       try { client.release(); } catch (_) { /* ignore */ }
+
+      // P1-B audit: merge_save_client_kv_by_curator — куратор пишет health-data
+      if (fnName === 'merge_save_client_kv_by_curator') {
+        logCuratorAccessFireAndForget(
+          getPool('heys-api-rpc'), fnName, curatorId, params, clientIp,
+          event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null,
+        );
+      }
+
       return {
         statusCode: 200,
         headers: corsHeaders,
@@ -2191,6 +2273,13 @@ module.exports.handler = async function (event, context) {
       }
 
       try { client.release(); } catch (_) { /* ignore */ }
+
+      // P1-B audit: batch_upsert_client_kv_by_curator — куратор пишет health-data
+      logCuratorAccessFireAndForget(
+        getPool('heys-api-rpc'), fnName, curatorId, params, clientIp,
+        event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null,
+      );
+
       return {
         statusCode: 200,
         headers: corsHeaders,
@@ -2584,6 +2673,19 @@ module.exports.handler = async function (event, context) {
 
     // 🔐 P2 FIX: Освобождаем клиент в pool ДО return (serverless best practice)
     client.release();
+
+    // P1-B (2026-05-22): audit-log если это curator-action на конкретного
+    // клиента (152-ФЗ ст.18.1). Fire-and-forget — не блокирует ответ.
+    if (isCuratorFunction) {
+      logCuratorAccessFireAndForget(
+        getPool('heys-api-rpc'),
+        fnName,
+        curatorId,
+        params,
+        clientIp,
+        event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null,
+      );
+    }
 
     // Phase C (2026-05-19): HttpOnly cookie carriage for client session.
     // On a successful `verify_client_pin_v3` response we mint
