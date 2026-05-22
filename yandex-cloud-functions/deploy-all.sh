@@ -300,6 +300,19 @@ deploy_function() {
         cp "$SCRIPT_DIR/.ycignore" .
     fi
 
+    # Ensure certs/root.crt exists for SSL to Yandex Postgres.
+    # Top-level certs/ is the source of truth; per-function certs/ is gitignored
+    # (https://github.com/.../.gitignore line 220: `yandex-cloud-functions/*/certs/`),
+    # so свежий clone не имеет копии. Авто-копирование убирает шаг "ручная установка"
+    # из onboarding. Пропускаем функции без БД (heys-api-health, heys-api-sms).
+    if [[ ! "$func_name" =~ (health|sms) ]] && [ -f "$SCRIPT_DIR/certs/root.crt" ]; then
+        if [ ! -f certs/root.crt ]; then
+            echo -e "${BLUE}ℹ️  Copying certs/root.crt to $func_name (was missing locally)...${NC}"
+            mkdir -p certs
+            cp "$SCRIPT_DIR/certs/root.crt" certs/root.crt
+        fi
+    fi
+
     # 🔀 Sync shared sync-merge module before deploy (heys-api-rpc only).
     # Source of truth: apps/web/heys_sync_merge_v1.js (UMD; same file runs in browser).
     # Destination uses .cjs extension because Node treats .js as ESM here without it.

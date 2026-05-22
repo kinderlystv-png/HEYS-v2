@@ -37,27 +37,16 @@ const { Pool } = require('pg');
 // Configuration
 // ═══════════════════════════════════════════════════════════════════
 
+// CONFIG: только non-secret константы. Секреты читаются из process.env лениво
+// в getPool/getS3/sendAlert ниже, так как initSecrets() (Lockbox overlay)
+// выполняется ВНУТРИ handler, а CONFIG раньше захватывал значения при require
+// модуля — до того как Lockbox-значения попадут в process.env.
 const CONFIG = {
-    pg: {
-        host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
-        port: parseInt(process.env.PG_PORT || '6432', 10),
-        database: process.env.PG_DATABASE || 'heys_production',
-        user: process.env.PG_USER || 'heys_admin',
-        password: process.env.PG_PASSWORD,
-    },
-    s3: {
-        endpoint: process.env.S3_ENDPOINT || 'https://storage.yandexcloud.net',
-        region: 'ru-central1',
-        bucket: process.env.S3_BUCKET || 'heys-backups',
-        prefix: process.env.S3_PREFIX || 'client-daily',
-        accessKeyId: process.env.S3_ACCESS_KEY_ID,
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-    },
+    s3Endpoint: process.env.S3_ENDPOINT || 'https://storage.yandexcloud.net',
+    s3Region: 'ru-central1',
+    s3Bucket: process.env.S3_BUCKET || 'heys-backups',
+    s3Prefix: process.env.S3_PREFIX || 'client-daily',
     retentionDays: parseInt(process.env.RETENTION_DAYS || '365', 10),
-    telegram: {
-        botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId: process.env.TELEGRAM_CHAT_ID,
-    },
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -84,11 +73,11 @@ function getPool() {
 
     const ca = loadCACert();
     pool = new Pool({
-        host: CONFIG.pg.host,
-        port: CONFIG.pg.port,
-        database: CONFIG.pg.database,
-        user: CONFIG.pg.user,
-        password: CONFIG.pg.password,
+        host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
+        port: parseInt(process.env.PG_PORT || '6432', 10),
+        database: process.env.PG_DATABASE || 'heys_production',
+        user: process.env.PG_USER || 'heys_admin',
+        password: process.env.PG_PASSWORD,
         ssl: ca
             ? { rejectUnauthorized: true, ca }
             : { rejectUnauthorized: true },
@@ -115,11 +104,11 @@ let s3 = null;
 function getS3() {
     if (s3) return s3;
     s3 = new S3Client({
-        endpoint: CONFIG.s3.endpoint,
-        region: CONFIG.s3.region,
+        endpoint: CONFIG.s3Endpoint,
+        region: CONFIG.s3Region,
         credentials: {
-            accessKeyId: CONFIG.s3.accessKeyId,
-            secretAccessKey: CONFIG.s3.secretAccessKey,
+            accessKeyId: process.env.S3_ACCESS_KEY_ID,
+            secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
         },
     });
     return s3;
@@ -130,7 +119,8 @@ function getS3() {
 // ═══════════════════════════════════════════════════════════════════
 
 async function sendAlert(message, isError = true) {
-    const { botToken, chatId } = CONFIG.telegram;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
     if (!botToken || !chatId) return;
 
     const emoji = isError ? '🚨' : '✅';
@@ -304,12 +294,12 @@ async function snapshotClientAccount(dbClient, clientId) {
  * Layout: <prefix>/YYYY-MM-DD/<clientId>.json.gz
  */
 function objectKey(businessDate, clientId) {
-    return `${CONFIG.s3.prefix}/${businessDate}/${clientId}.json.gz`;
+    return `${CONFIG.s3Prefix}/${businessDate}/${clientId}.json.gz`;
 }
 
 async function uploadSnapshot(key, gzippedBuffer) {
     const cmd = new PutObjectCommand({
-        Bucket: CONFIG.s3.bucket,
+        Bucket: CONFIG.s3Bucket,
         Key: key,
         Body: gzippedBuffer,
         ContentType: 'application/gzip',
@@ -333,8 +323,8 @@ async function cleanupOldSnapshots() {
     do {
         const list = await client.send(
             new ListObjectsV2Command({
-                Bucket: CONFIG.s3.bucket,
-                Prefix: CONFIG.s3.prefix + '/',
+                Bucket: CONFIG.s3Bucket,
+                Prefix: CONFIG.s3Prefix + '/',
                 ContinuationToken: continuationToken,
             }),
         );
@@ -350,7 +340,7 @@ async function cleanupOldSnapshots() {
             // DeleteObjects supports up to 1000 keys per call
             await client.send(
                 new DeleteObjectsCommand({
-                    Bucket: CONFIG.s3.bucket,
+                    Bucket: CONFIG.s3Bucket,
                     Delete: { Objects: toDelete, Quiet: true },
                 }),
             );
@@ -373,13 +363,13 @@ module.exports.handler = async function handler(_event, _context) {
     console.log('[ClientBackup] Starting daily client backup...');
 
     // ── Validate config ──────────────────────────────────────────────
-    if (!CONFIG.pg.password) {
+    if (!process.env.PG_PASSWORD) {
         const msg = 'PG_PASSWORD not configured';
         console.error('[ClientBackup]', msg);
         await sendAlert(msg);
         return { statusCode: 500, body: JSON.stringify({ error: msg }) };
     }
-    if (!CONFIG.s3.accessKeyId || !CONFIG.s3.secretAccessKey) {
+    if (!process.env.S3_ACCESS_KEY_ID || !process.env.S3_SECRET_ACCESS_KEY) {
         const msg = 'S3 credentials not configured';
         console.error('[ClientBackup]', msg);
         await sendAlert(msg);
@@ -462,7 +452,7 @@ module.exports.handler = async function handler(_event, _context) {
 
             console.log(
                 `[ClientBackup] ${clientId}: ${keyCount} keys, ` +
-                `${(gzipped.length / 1024).toFixed(1)} KB → s3://${CONFIG.s3.bucket}/${key}`,
+                `${(gzipped.length / 1024).toFixed(1)} KB → s3://${CONFIG.s3Bucket}/${key}`,
             );
             results.success++;
         } catch (err) {

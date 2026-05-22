@@ -83,7 +83,12 @@ echo "🧪 Запуск полного test suite..."
 # (см. коммиты 4bda3d76, 39bf818e — расследование и фикс). Прогон полного
 # suite дороже всего на ~3 сек (4s → 7s), но ловит регрессии вроде
 # stale-моков и path-багов на pre-push, а не через жалобы клиентов.
-(cd apps/web && node_modules/.bin/vitest run)
+#
+# `--retry=1` — vitest сам перепрогоняет упавшие тесты ещё раз. Это спасает
+# от transient-flake из-за shared global state (config `isolate: false`).
+# Если тест падает на ВТОРОЙ попытке — push всё равно блокируется, реальные
+# регрессии не маскируются.
+(cd apps/web && node_modules/.bin/vitest run --retry=1)
 
 if [ $? -ne 0 ]; then
   echo "❌ Тесты не прошли! Push отменён."

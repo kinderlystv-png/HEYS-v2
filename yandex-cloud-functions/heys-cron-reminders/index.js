@@ -32,14 +32,20 @@ const { initSecrets } = require('./shared/secrets');
 const webpush = require('web-push');
 const { collapseNetChange, bucketize, formatBody } = require('./curator-action-format');
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:noreply@heyslab.ru';
-
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-} else {
-  console.error('[cron-reminders] FATAL: VAPID keys not configured');
+// VAPID config: лениво, после initSecrets() — иначе на cold start читаем
+// плейсхолдер `__IN_LOCKBOX__heys-app-secrets__` из env и setVapidDetails ломается.
+let vapidConfigured = false;
+function ensureVapid() {
+  if (vapidConfigured) return;
+  const pub = process.env.VAPID_PUBLIC_KEY;
+  const priv = process.env.VAPID_PRIVATE_KEY;
+  const subject = process.env.VAPID_SUBJECT || 'mailto:noreply@heyslab.ru';
+  if (pub && priv && !pub.startsWith('__IN_LOCKBOX__') && !priv.startsWith('__IN_LOCKBOX__')) {
+    webpush.setVapidDetails(subject, pub, priv);
+    vapidConfigured = true;
+  } else {
+    console.error('[cron-reminders] FATAL: VAPID keys not configured (lockbox load failed?)');
+  }
 }
 
 // Все юзеры считаются в MSK (UTC+3). User prefs хранят HH:MM в MSK.
@@ -1148,6 +1154,7 @@ async function jobSubscriptionExpiry(client) {
 
 module.exports.handler = async function (event, context) {
   await initSecrets();
+  ensureVapid();
   const startedAt = Date.now();
   console.log('[cron-reminders] start', { trigger: event?.messages?.[0]?.event_metadata?.event_type || 'manual' });
 

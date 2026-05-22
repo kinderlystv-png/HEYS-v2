@@ -5,31 +5,10 @@
 
 const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
-const fs = require('fs');
-const path = require('path');
 
-// Загрузка CA сертификата Yandex Cloud
-const CA_CERT_PATH = path.join(__dirname, 'certs', 'root.crt');
-const CA_CERT = fs.existsSync(CA_CERT_PATH) ? fs.readFileSync(CA_CERT_PATH, 'utf8') : null;
-
-// Конфигурация PostgreSQL
-const PG_CONFIG = {
-  host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
-  port: parseInt(process.env.PG_PORT || '6432'),
-  database: process.env.PG_DATABASE || 'heys_production',
-  user: process.env.PG_USER || 'heys_admin',
-  password: process.env.PG_PASSWORD,
-  ssl: CA_CERT ? {
-    rejectUnauthorized: true,
-    ca: CA_CERT
-  } : {
-    rejectUnauthorized: false
-  }
-};
-
-// Telegram-токены подтягиваются initSecrets() из Lockbox (LOCKBOX_APP_SECRET_ID)
-// в process.env.TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID — читаем напрямую внутри
-// handler-функций (sendTelegramNotification ниже).
+// PostgreSQL: используем shared/db-pool (он сам грузит CA cert и собирает config).
+// Telegram-токены: initSecrets() кладёт их в process.env при cold start, читаем
+// напрямую в sendTelegramNotification ниже.
 
 // Окно дедупликации (30 минут)
 const DEDUPLICATION_WINDOW_MINUTES = 30;

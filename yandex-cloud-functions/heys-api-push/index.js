@@ -19,16 +19,20 @@ const { initSecrets } = require('./shared/secrets');
 const webpush = require('web-push');
 const crypto = require('crypto');
 
-// ── VAPID config ─────────────────────────────────────────────────────────
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:noreply@heyslab.ru';
-const JWT_SECRET = process.env.JWT_SECRET || '';
-
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-} else {
-  console.error('[push] FATAL: VAPID keys not configured');
+// ── VAPID config: лениво, после initSecrets() — иначе на cold start читаем
+// плейсхолдер `__IN_LOCKBOX__heys-app-secrets__` из env и setVapidDetails ломается.
+let vapidConfigured = false;
+function ensureVapid() {
+  if (vapidConfigured) return;
+  const pub = process.env.VAPID_PUBLIC_KEY;
+  const priv = process.env.VAPID_PRIVATE_KEY;
+  const subject = process.env.VAPID_SUBJECT || 'mailto:noreply@heyslab.ru';
+  if (pub && priv && !pub.startsWith('__IN_LOCKBOX__') && !priv.startsWith('__IN_LOCKBOX__')) {
+    webpush.setVapidDetails(subject, pub, priv);
+    vapidConfigured = true;
+  } else {
+    console.error('[push] FATAL: VAPID keys not configured (lockbox load failed?)');
+  }
 }
 
 // ── CORS ─────────────────────────────────────────────────────────────────
@@ -92,8 +96,8 @@ async function resolveIdentity(authHeader) {
 
   // JWT имеет 3 точки — это курятор.
   const looksLikeJwt = token.split('.').length === 3 && token.includes('.');
-  if (looksLikeJwt && JWT_SECRET) {
-    const res = verifyJwt(token, JWT_SECRET);
+  if (looksLikeJwt && process.env.JWT_SECRET) {
+    const res = verifyJwt(token, process.env.JWT_SECRET);
     if (res.valid && res.payload?.role === 'curator' && res.payload?.sub) {
       return { kind: 'curator', id: res.payload.sub };
     }
@@ -124,7 +128,7 @@ async function resolveIdentity(authHeader) {
 // ── Endpoint handlers ───────────────────────────────────────────────────
 
 async function handleVapidKey() {
-  return { statusCode: 200, body: { publicKey: VAPID_PUBLIC_KEY } };
+  return { statusCode: 200, body: { publicKey: process.env.VAPID_PUBLIC_KEY || '' } };
 }
 
 async function handleSubscribe(identity, body, userAgent) {
@@ -334,6 +338,7 @@ async function handleTest(identity) {
 // ── Main handler ────────────────────────────────────────────────────────
 module.exports.handler = async function (event) {
   await initSecrets();
+  ensureVapid();
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const cors = corsHeaders(origin);
 

@@ -33,29 +33,32 @@ const path = require('path');
 // Configuration
 // ═══════════════════════════════════════════════════════════════════════════
 
+// CONFIG: секреты через getters → читаются ПРИ ОБРАЩЕНИИ, а не при require модуля.
+// Это критично потому что initSecrets() (Lockbox overlay) вызывается ВНУТРИ handler,
+// и значения попадают в process.env уже после загрузки модуля.
 const CONFIG = {
   pg: {
-    host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
-    port: process.env.PG_PORT || '6432',
-    database: process.env.PG_DATABASE || 'heys_production',
-    user: process.env.PG_USER || 'heys_admin',
-    password: process.env.PG_PASSWORD
+    get host() { return process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net'; },
+    get port() { return process.env.PG_PORT || '6432'; },
+    get database() { return process.env.PG_DATABASE || 'heys_production'; },
+    get user() { return process.env.PG_USER || 'heys_admin'; },
+    get password() { return process.env.PG_PASSWORD; },
   },
   s3: {
-    endpoint: process.env.S3_ENDPOINT || 'https://storage.yandexcloud.net',
+    get endpoint() { return process.env.S3_ENDPOINT || 'https://storage.yandexcloud.net'; },
     region: 'ru-central1',
-    bucket: process.env.S3_BUCKET || 'heys-backups',
-    accessKeyId: process.env.S3_ACCESS_KEY_ID,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY
+    get bucket() { return process.env.S3_BUCKET || 'heys-backups'; },
+    get accessKeyId() { return process.env.S3_ACCESS_KEY_ID; },
+    get secretAccessKey() { return process.env.S3_SECRET_ACCESS_KEY; },
   },
   backup: {
-    retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS || '7'),
-    tmpDir: '/tmp'
+    get retentionDays() { return parseInt(process.env.BACKUP_RETENTION_DAYS || '7'); },
+    tmpDir: '/tmp',
   },
   telegram: {
-    botToken: process.env.TELEGRAM_BOT_TOKEN,
-    chatId: process.env.TELEGRAM_CHAT_ID
-  }
+    get botToken() { return process.env.TELEGRAM_BOT_TOKEN; },
+    get chatId() { return process.env.TELEGRAM_CHAT_ID; },
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

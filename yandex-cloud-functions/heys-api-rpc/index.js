@@ -6,8 +6,6 @@
 
 const crypto = require('crypto');
 const { initSecrets } = require('./shared/secrets');
-const fs = require('fs');
-const path = require('path');
 
 const { getPool } = require('./shared/db-pool');
 const { mergeDayData, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
@@ -67,40 +65,7 @@ function normalizeEncryptionKey(rawKey) {
 infoLog('[RPC Init] Starting... LOG_LEVEL=' + LOG_LEVEL);
 debugLog('[RPC Init] Debug mode enabled (never enable in production!)');
 
-// Загрузка CA сертификата Yandex Cloud
-const CA_CERT_PATH = path.join(__dirname, 'certs', 'root.crt');
-let CA_CERT = null;
-try {
-  if (fs.existsSync(CA_CERT_PATH)) {
-    CA_CERT = fs.readFileSync(CA_CERT_PATH, 'utf8');
-    debugLog('[RPC Init] CA cert loaded');
-  } else {
-    // 🔐 Это ошибка конфигурации, логируем всегда
-    console.error('[RPC Init] CA cert NOT FOUND at:', CA_CERT_PATH);
-  }
-} catch (e) {
-  console.error('[RPC Init] CA cert error:', e.message);
-}
-
-// Конфигурация PostgreSQL
-const PG_CONFIG = {
-  host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
-  port: parseInt(process.env.PG_PORT || '6432'),
-  database: process.env.PG_DATABASE || 'heys_production',
-  user: process.env.PG_USER || 'heys_admin',
-  password: process.env.PG_PASSWORD,
-  ssl: CA_CERT ? {
-    rejectUnauthorized: true,
-    ca: CA_CERT
-  } : {
-    rejectUnauthorized: false
-  },
-  // Таймауты
-  connectionTimeoutMillis: 5000,
-  query_timeout: 10000
-};
-
-debugLog('[RPC Init] PG_CONFIG ssl:', CA_CERT ? 'verify-full with cert' : 'no verify');
+// PostgreSQL: shared/db-pool сам грузит CA cert и собирает config с verify-full SSL.
 
 /**
  * 🔐 Извлечение реального IP клиента из заголовков

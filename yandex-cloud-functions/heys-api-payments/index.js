@@ -21,8 +21,6 @@ const {
 } = require('./shared/auth-helpers');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🔧 КОНФИГУРАЦИЯ
@@ -72,21 +70,7 @@ const PLANS = {
   proplus: { price: 14990, name: 'Pro+', description: 'HEYS Pro+ подписка на 1 месяц' }
 };
 
-// PostgreSQL config — читаем из env
-const PG_CONFIG = {
-  host: process.env.PG_HOST,
-  port: parseInt(process.env.PG_PORT || '6432'),
-  database: process.env.PG_DATABASE,
-  user: process.env.PG_USER,
-  password: process.env.PG_PASSWORD,
-  ssl: {
-    rejectUnauthorized: true,
-    ca: fs.existsSync(path.join(__dirname, 'certs', 'root.crt'))
-      ? fs.readFileSync(path.join(__dirname, 'certs', 'root.crt'), 'utf8')
-      : undefined
-  },
-  connectionTimeoutMillis: 5000
-};
+// PostgreSQL — используем shared/db-pool (getPool() ниже), он сам грузит CA cert.
 
 // CORS headers — whitelist only production origins
 const ALLOW_LOCALHOST_ORIGINS = process.env.ALLOW_LOCALHOST_ORIGINS === '1';

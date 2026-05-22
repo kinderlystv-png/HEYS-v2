@@ -42,20 +42,21 @@ const { Pool } = require('pg');
 // Configuration
 // ═══════════════════════════════════════════════════════════════════
 
+// CONFIG: секреты через getters — лениво, чтобы initSecrets() успел overlay Lockbox.
 const CONFIG = {
   pg: {
-    host: process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net',
-    port: parseInt(process.env.PG_PORT || '6432', 10),
-    database: process.env.PG_DATABASE || 'heys_production',
-    user: process.env.PG_USER || 'heys_admin',
-    password: process.env.PG_PASSWORD,
+    get host() { return process.env.PG_HOST || 'rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net'; },
+    get port() { return parseInt(process.env.PG_PORT || '6432', 10); },
+    get database() { return process.env.PG_DATABASE || 'heys_production'; },
+    get user() { return process.env.PG_USER || 'heys_admin'; },
+    get password() { return process.env.PG_PASSWORD; },
   },
   s3: {
-    endpoint: process.env.S3_ENDPOINT || 'https://storage.yandexcloud.net',
+    get endpoint() { return process.env.S3_ENDPOINT || 'https://storage.yandexcloud.net'; },
     region: 'ru-central1',
-    bucket: process.env.S3_BUCKET || 'heys-public-snapshot',
-    accessKeyId: process.env.S3_ACCESS_KEY_ID,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    get bucket() { return process.env.S3_BUCKET || 'heys-public-snapshot'; },
+    get accessKeyId() { return process.env.S3_ACCESS_KEY_ID; },
+    get secretAccessKey() { return process.env.S3_SECRET_ACCESS_KEY; },
   },
   demoAccounts: [
     {
@@ -87,8 +88,8 @@ const CONFIG = {
   ],
   daysToInclude: parseInt(process.env.DAYS_TO_INCLUDE || '30', 10),
   telegram: {
-    botToken: process.env.TELEGRAM_BOT_TOKEN,
-    chatId: process.env.TELEGRAM_CHAT_ID,
+    get botToken() { return process.env.TELEGRAM_BOT_TOKEN; },
+    get chatId() { return process.env.TELEGRAM_CHAT_ID; },
   },
 };
 
