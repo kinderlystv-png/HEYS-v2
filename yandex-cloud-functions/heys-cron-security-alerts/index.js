@@ -101,6 +101,54 @@ const RULES = [
       HAVING COUNT(*) > 2
     `,
   },
+  // P1-L (2026-05-22): DSAR SLA-tracker — 152-ФЗ ст.21 ч.4, 10 рабочих дней.
+  // Игнорируем $1 (WINDOW_MINUTES) — здесь окно не имеет смысла, проверяем
+  // абсолютный дедлайн. Cooldown берёт на себя isOnCooldown по rule_key.
+  {
+    key: 'dsar_sla_warning',
+    label: '🟡 DSAR-запрос: 2 дня до дедлайна',
+    description:
+      'Есть необработанные запросы субъектов ПДн с дедлайном через ≤2 дня. ' +
+      '152-ФЗ ст.21 ч.4 — рассмотреть в 10 рабочих дней. Просрочка = риск штрафа.',
+    sql: `
+      SELECT $1::text AS _window_unused,
+        id::text AS request_id,
+        request_type,
+        source,
+        COALESCE(client_id::text, 'no-client') AS client_id,
+        requested_at,
+        sla_deadline,
+        EXTRACT(EPOCH FROM (sla_deadline - now()))/86400 AS days_left
+      FROM data_subject_requests
+      WHERE processed_at IS NULL
+        AND sla_deadline > now()
+        AND sla_deadline <= now() + INTERVAL '2 days'
+      ORDER BY sla_deadline
+      LIMIT 10
+    `,
+  },
+  {
+    key: 'dsar_sla_breach',
+    label: '🔴 DSAR-запрос: дедлайн ПРОСРОЧЕН',
+    description:
+      'Запрос субъекта ПДн НЕ обработан в срок 10 рабочих дней (152-ФЗ ст.21 ч.4). ' +
+      'Срочно: обработать + быть готовым ответить РКН при жалобе.',
+    sql: `
+      SELECT $1::text AS _window_unused,
+        id::text AS request_id,
+        request_type,
+        source,
+        COALESCE(client_id::text, 'no-client') AS client_id,
+        requested_at,
+        sla_deadline,
+        EXTRACT(EPOCH FROM (now() - sla_deadline))/86400 AS days_overdue
+      FROM data_subject_requests
+      WHERE processed_at IS NULL
+        AND sla_deadline < now()
+      ORDER BY sla_deadline
+      LIMIT 10
+    `,
+  },
 ];
 
 async function isOnCooldown(client, ruleKey) {
