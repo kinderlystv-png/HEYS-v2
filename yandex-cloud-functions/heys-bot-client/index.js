@@ -41,7 +41,9 @@ async function ensureConfig() {
         return v && String(v).length > 0 ? v : process.env[key];
       };
 
-      TELEGRAM_BOT_TOKEN = pick('TELEGRAM_CLIENT_BOT_TOKEN') || process.env.TELEGRAM_BOT_TOKEN;
+      // ⚠️ Только TELEGRAM_CLIENT_BOT_TOKEN — это отдельный клиент-бот,
+      // куратор-бот (TELEGRAM_BOT_TOKEN) сюда не подставлять: уйдёт в чужой чат.
+      TELEGRAM_BOT_TOKEN = pick('TELEGRAM_CLIENT_BOT_TOKEN');
       APP_URL = pick('APP_URL') || 'https://app.heyslab.ru';
       INTERNAL_CRON_TOKEN = pick('INTERNAL_CRON_TOKEN');
 
@@ -50,6 +52,9 @@ async function ensureConfig() {
         : null;
 
       configLoaded = true;
+      if (!TELEGRAM_BOT_TOKEN) {
+        console.error('[heys-bot-client] TELEGRAM_CLIENT_BOT_TOKEN not configured — sendMessage will throw');
+      }
       console.log('[heys-bot-client] config loaded',
         { from: secrets ? 'lockbox' : 'env', hasToken: !!TELEGRAM_BOT_TOKEN });
     })();
