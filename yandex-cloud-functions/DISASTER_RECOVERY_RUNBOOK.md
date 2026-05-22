@@ -161,32 +161,37 @@ yc managed-postgresql user update heys_admin \
 
 ### Immediate Actions (10 minutes)
 
-1. **Check backup function logs**
+1. **Проверить что Yandex Managed PG backup продолжает идти**
 
    ```bash
-   yc serverless function logs heys-backup --since 24h
+   yc managed-postgresql cluster list-backups c9qk0squejja8jast509 --format json \
+     | jq -r '.[0] | "latest:\(.created_at) size:\(.size)"'
+   # Если latest старше 36ч — реальная проблема.
    ```
 
-2. **Verify S3 bucket access**
+2. **Проверить per-client KV-snapshot функцию (heys-client-daily-backup)**
 
    ```bash
-   aws s3 ls s3://heys-backups/ --endpoint-url https://storage.yandexcloud.net
+   yc serverless function logs heys-client-daily-backup --since 36h
+   aws s3 ls s3://heys-backups/client-daily/$(date +%Y-%m-%d)/ \
+     --endpoint-url https://storage.yandexcloud.net
    ```
 
-3. **Check disk space on database**
+3. **Размер БД**
 
    ```sql
-   SELECT pg_database_size('heys_production') / 1024 / 1024 / 1024 as size_gb;
+   SELECT pg_database_size('heys_production') / 1024 / 1024 / 1024 AS size_gb;
    ```
 
-4. **Manual backup if needed**
+4. **Manual one-off backup (если YC автомат сломан)**
 
    ```bash
-   # Run backup function manually
-   yc serverless function invoke heys-backup
+   # Запрос внеочередного backup через YC CLI:
+   yc managed-postgresql cluster backup c9qk0squejja8jast509
 
-   # Or manual pg_dump
-   pg_dump -h <host> -p 6432 -U heys_admin -F c -b heys_production > manual_backup_$(date +%Y%m%d_%H%M%S).dump
+   # Или ручной pg_dump:
+   pg_dump -h <host> -p 6432 -U heys_admin -F c -b heys_production \
+     > manual_backup_$(date +%Y%m%d_%H%M%S).dump
    ```
 
 ### Root Cause Investigation
@@ -194,16 +199,14 @@ yc managed-postgresql user update heys_admin \
 **Check common issues:**
 
 ```bash
-# 1. S3 credentials expired?
-aws s3 ls s3://heys-backups/ --endpoint-url https://storage.yandexcloud.net
+# 1. YC quota issues?
+yc compute quota list --format json | jq '.[] | select(.metric=="managed-postgresql.backupStorageSize")'
 
-# 2. Timeout (database too large)?
-yc serverless function version list --function-name heys-backup | grep timeout
+# 2. Cluster status?
+yc managed-postgresql cluster get c9qk0squejja8jast509 --format json \
+  | jq '{status, health, config: .config.backup_window_start}'
 
-# 3. Disk space in /tmp?
-# Check logs for "No space left on device"
-
-# 4. PostgreSQL locks?
+# 3. PostgreSQL locks?
 SELECT * FROM pg_locks WHERE NOT granted;
 ```
 
@@ -254,26 +257,28 @@ psql -h <new-cluster-host> -p 6432 -U heys_admin -d heys_production -c "SELECT C
 # 6. Update DNS or reconfigure functions to point to new cluster
 ```
 
-### Recovery from S3 Backup
+### Recovery from per-client KV snapshot (heys-client-daily-backup)
+
+> Это восстановление **только** данных одного клиента из ежедневного снапшота
+> KV. Для восстановления **всей БД** используй YC Managed PG restore (раздел
+> выше "Recovery from Yandex Managed PG backup").
 
 ```bash
-# 1. Download latest backup
-aws s3 cp s3://heys-backups/heys-production-latest.dump.gz /tmp/ \
+# 1. Find snapshot for desired client and date
+aws s3 ls s3://heys-backups/client-daily/<YYYY-MM-DD>/ \
+  --endpoint-url https://storage.yandexcloud.net | grep <CLIENT_UUID>
+
+# 2. Download
+aws s3 cp s3://heys-backups/client-daily/<YYYY-MM-DD>/<clientId>.json.gz /tmp/ \
   --endpoint-url https://storage.yandexcloud.net
 
-# 2. Decompress
-gunzip /tmp/heys-production-latest.dump.gz
+# 3. Decompress and review
+gunzip /tmp/<clientId>.json.gz
+cat /tmp/<clientId>.json | jq .
 
-# 3. Restore to database
-pg_restore \
-  -h <host> \
-  -p 6432 \
-  -U heys_admin \
-  -d heys_production \
-  --clean \
-  --if-exists \
-  --verbose \
-  /tmp/heys-production-latest.dump
+# 4. Restore via existing script (see heys-client-daily-backup/restore-client-backup.js — TODO: пересоздать если был удалён)
+node yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js \
+  --client-id=<UUID> --snapshot=/tmp/<clientId>.json
 
 # 4. Verify restoration
 psql -h <host> -p 6432 -U heys_admin -d heys_production -c "

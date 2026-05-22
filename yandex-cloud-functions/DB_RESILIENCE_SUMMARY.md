@@ -9,11 +9,14 @@
 
 ## 📋 Executive Summary
 
-Successfully implemented database resilience solution for HEYS v2 to address connection exhaustion issues and establish robust backup infrastructure. All 8 tasks from Phase 1 have been completed.
+Successfully implemented database resilience solution for HEYS v2 to address
+connection exhaustion issues and establish robust backup infrastructure. All 8
+tasks from Phase 1 have been completed.
 
 ### Key Achievements
 
-1. **Connection Pooling**: All 5 Cloud Functions refactored to use shared connection pool
+1. **Connection Pooling**: All 5 Cloud Functions refactored to use shared
+   connection pool
 2. **Backup Strategy**: Dual backup approach (Managed PostgreSQL + Custom S3)
 3. **Cost Optimization**: 7-day retention, cold storage, gzip compression
 4. **Monitoring**: Telegram notifications for backup failures
@@ -28,6 +31,7 @@ Successfully implemented database resilience solution for HEYS v2 to address con
 **Location**: `yandex-cloud-functions/shared/db-pool.js`
 
 **Features**:
+
 - Singleton pattern for pool management
 - Max 3 concurrent connections (Yandex Cloud limit)
 - 10-second idle timeout for fast resource release
@@ -35,6 +39,7 @@ Successfully implemented database resilience solution for HEYS v2 to address con
 - Helper functions: `getPool()`, `withClient()`, `closePool()`
 
 **Configuration**:
+
 ```javascript
 {
   max: 3,                      // Max connections
@@ -49,17 +54,18 @@ Successfully implemented database resilience solution for HEYS v2 to address con
 
 All functions migrated from `new Client()` to `pool.connect()`:
 
-| Function | File | Changes |
-|----------|------|---------|
-| heys-api-rpc | `heys-api-rpc/index.js` | 1 connection point |
-| heys-api-rest | `heys-api-rest/index.js` | 1 connection point |
-| heys-api-auth | `heys-api-auth/index.js` | 6 connection points |
-| heys-api-leads | `heys-api-leads/index.js` | 1 connection point |
+| Function          | File                         | Changes             |
+| ----------------- | ---------------------------- | ------------------- |
+| heys-api-rpc      | `heys-api-rpc/index.js`      | 1 connection point  |
+| heys-api-rest     | `heys-api-rest/index.js`     | 1 connection point  |
+| heys-api-auth     | `heys-api-auth/index.js`     | 6 connection points |
+| heys-api-leads    | `heys-api-leads/index.js`    | 1 connection point  |
 | heys-api-payments | `heys-api-payments/index.js` | 5 connection points |
 
 **Total**: 14 connection points refactored
 
 **Key Changes**:
+
 - `new Client(config)` → `await pool.connect()`
 - `await client.end()` → `client.release()`
 - Added try-finally blocks for guaranteed release
@@ -70,6 +76,7 @@ All functions migrated from `new Client()` to `pool.connect()`:
 #### 3.1 Managed PostgreSQL Auto-Backup
 
 **Configuration** (via Yandex Cloud Console):
+
 - **Backup Window**: 03:00 UTC
 - **Retention**: 7 days (free tier)
 - **Type**: Incremental (full + deltas)
@@ -77,31 +84,28 @@ All functions migrated from `new Client()` to `pool.connect()`:
 
 **Guide**: `yandex-cloud-functions/BACKUP_CONSOLE_GUIDE.md`
 
-#### 3.2 Custom Backup Cloud Function
+#### 3.2 Per-Client KV Snapshots (heys-client-daily-backup)
 
-**Location**: `yandex-cloud-functions/heys-backup/`
+**Location**: `yandex-cloud-functions/heys-client-daily-backup/`
 
 **Pipeline**:
+
 ```
-PostgreSQL → pg_dump → gzip → S3 Bucket → cleanup old backups
+client_kv_store → SELECT per client → JSON → gzip → S3
 ```
 
 **Features**:
-- Custom format pg_dump with compression
-- gzip level 9 for maximum compression (~70% reduction)
-- Upload to Yandex Object Storage (S3-compatible)
-- Cold storage class for cost efficiency
-- Automatic cleanup of backups older than 7 days
-- Telegram notifications (errors always, success weekly)
 
-**Cron Trigger**: Daily at 03:00 UTC
+- Per-client snapshot (один файл `<clientId>.json.gz` на клиента)
+- Yandex Object Storage, retention 365 дней
+- Telegram alerts (только при ошибках)
+- Cron trigger: daily 01:00 UTC (после закрытия HEYS-дня в 03:00 MSK)
 
-**Dependencies**:
-- `@aws-sdk/client-s3` for S3 operations
-- Native Node.js https module for Telegram
-- PostgreSQL client tools (pg_dump)
-
-**Deployment**: Automated via `deploy.sh` script
+> **Заметка 2026-05-22:** ранее здесь была описана функция `heys-backup` (full
+> pg_dump → S3, retention 7 дней). Удалена — была не задеплоена и дублировала
+> встроенный механизм Yandex Managed PostgreSQL (см. раздел 3.1 выше). Точка
+> восстановления через `yc managed-postgresql cluster restore`, retention 14
+> дней, поддерживает PITR.
 
 ---
 
@@ -110,12 +114,14 @@ PostgreSQL → pg_dump → gzip → S3 Bucket → cleanup old backups
 ### Before Implementation
 
 **Problems**:
+
 - Each request created new DB connection
 - Connection pool exhaustion under load
 - No automated backups beyond Yandex defaults
 - Single point of failure for data recovery
 
 **Metrics** (estimated):
+
 - Peak concurrent connections: ~20-30
 - Connection creation time: ~100-200ms per request
 - Backup strategy: Manual only
@@ -123,12 +129,14 @@ PostgreSQL → pg_dump → gzip → S3 Bucket → cleanup old backups
 ### After Implementation
 
 **Improvements**:
+
 - Max 3 concurrent connections per function (controlled)
 - Connection reuse reduces overhead
 - Dual backup strategy with automation
 - 7-day Point-in-Time Recovery capability
 
 **Metrics** (projected):
+
 - Peak concurrent connections: ≤3 per function
 - Connection reuse: ~90% of requests
 - Backup frequency: Daily at 03:00 UTC
@@ -137,11 +145,13 @@ PostgreSQL → pg_dump → gzip → S3 Bucket → cleanup old backups
 ### Cost Impact
 
 **Connection Pooling**:
+
 - Infrastructure cost: **$0** (no additional resources)
 - Performance improvement: ~50-100ms per request saved
 - Reduced DB load: ~70% fewer connection operations
 
 **Backup Storage**:
+
 - Managed PostgreSQL backup: **Free** (7 days)
 - Object Storage (5GB × 7 days): **~$0.50/month**
 - Total: **~$6/year**
@@ -190,35 +200,37 @@ Follow `BACKUP_CONSOLE_GUIDE.md`:
 4. Enable auto-backup: 03:00 UTC, 7 days retention
 5. Save changes
 
-#### Step 3: Deploy Backup Function
+#### Step 3: Verify YC Managed PG Auto-Backup
 
 ```bash
-cd yandex-cloud-functions/heys-backup
+# Cluster ID:
+CLUSTER=c9qk0squejja8jast509
 
-# Set environment variables
-export YC_FOLDER_ID="your-folder-id"
-export PG_PASSWORD="your-pg-password"
-export S3_ACCESS_KEY_ID="your-s3-key"
-export S3_SECRET_ACCESS_KEY="your-s3-secret"
-export TELEGRAM_BOT_TOKEN="your-telegram-token"  # optional
-export TELEGRAM_CHAT_ID="your-telegram-chat-id"  # optional
+# Текущая retention policy
+yc managed-postgresql cluster get $CLUSTER --format json | jq '.config | {backup_retain_period_days, backup_window_start}'
 
-# Deploy
-./deploy.sh
+# Список существующих backup'ов (сортировка по времени)
+yc managed-postgresql cluster list-backups $CLUSTER --format json | jq -r '.[] | "\(.created_at) \(.size)"' | head -10
 ```
 
-#### Step 4: Verify Deployment
+#### Step 4: Restore from backup (если нужно)
 
 ```bash
-# Test backup function
-yc serverless function invoke heys-backup --folder-id=$YC_FOLDER_ID
+# Найти ID нужного backup
+yc managed-postgresql cluster list-backups $CLUSTER
 
-# Check logs
-yc serverless function logs heys-backup --follow
-
-# Verify S3 backups
-aws s3 ls s3://heys-backups/ --endpoint-url https://storage.yandexcloud.net
+# Восстановить в НОВЫЙ кластер (production не трогается):
+yc managed-postgresql cluster restore \
+  --backup-id=<BACKUP_ID> \
+  --name=heys-production-restored \
+  --resource-preset=s2.medium \
+  --disk-type=network-ssd \
+  --disk-size=20 \
+  --network-name=default
 ```
+
+PITR (Point-in-Time Recovery) поддерживается — можно восстановить на любую
+секунду внутри 14-дневного retention окна через UI YC Console.
 
 ---
 
@@ -227,15 +239,18 @@ aws s3 ls s3://heys-backups/ --endpoint-url https://storage.yandexcloud.net
 ### Health Checks
 
 **Daily**:
+
 - [ ] Check Telegram notifications for backup failures
 - [ ] Monitor Cloud Functions logs for pool errors
 
 **Weekly**:
+
 - [ ] Verify backup files in S3 bucket
 - [ ] Check backup file sizes (should be consistent)
 - [ ] Review Managed PostgreSQL backup status in Console
 
 **Monthly**:
+
 - [ ] Test backup restoration (to separate cluster)
 - [ ] Review connection pool metrics
 - [ ] Analyze cost trends
@@ -264,8 +279,8 @@ aws s3 ls s3://heys-backups/ --endpoint-url https://storage.yandexcloud.net
 # Connection pool logs (debug mode)
 yc serverless function logs heys-api-rpc --filter "[DB-Pool]"
 
-# Backup logs
-yc serverless function logs heys-backup --filter "[Backup]"
+# Per-client snapshot backup logs
+yc serverless function logs heys-client-daily-backup --filter "[ClientBackup]"
 
 # Error logs across all functions
 yc serverless function logs --filter "ERROR"
@@ -282,7 +297,7 @@ yc serverless function logs --filter "ERROR"
 ✅ **Service Account permissions**: Minimal required (storage.editor)  
 ✅ **Secrets in environment variables**: Not hardcoded  
 ✅ **No PII in Telegram**: Only backup status, no data  
-✅ **Connection pooling**: Prevents resource exhaustion attacks  
+✅ **Connection pooling**: Prevents resource exhaustion attacks
 
 ### Recommendations
 
@@ -290,20 +305,18 @@ yc serverless function logs --filter "ERROR"
 ⚠️ **Enable S3 versioning**: For backup file corruption protection  
 ⚠️ **Rotate credentials**: Every 90 days  
 ⚠️ **Implement backup encryption**: At-rest in S3  
-⚠️ **Set up monitoring alerts**: For anomalous connection patterns  
+⚠️ **Set up monitoring alerts**: For anomalous connection patterns
 
 ---
 
 ## 📚 Documentation
 
-| Document | Location | Purpose |
-|----------|----------|---------|
-| Connection Pool Module | `shared/db-pool.js` | Source code with inline docs |
-| Backup Function | `heys-backup/index.js` | Source code with inline docs |
-| Backup README | `heys-backup/README.md` | Deployment and recovery guide |
-| Console Configuration | `BACKUP_CONSOLE_GUIDE.md` | Manual setup steps |
-| Deployment Script | `heys-backup/deploy.sh` | Automated deployment |
-| This Summary | `DB_RESILIENCE_SUMMARY.md` | Complete overview |
+| Document               | Location                            | Purpose                                          |
+| ---------------------- | ----------------------------------- | ------------------------------------------------ |
+| Connection Pool Module | `shared/db-pool.js`                 | Source code with inline docs                     |
+| Per-Client KV Backup   | `heys-client-daily-backup/index.js` | Daily per-client snapshot to S3                  |
+| Console Configuration  | `BACKUP_CONSOLE_GUIDE.md`           | Manual setup steps (Managed PG backup retention) |
+| This Summary           | `DB_RESILIENCE_SUMMARY.md`          | Complete overview                                |
 
 ---
 
@@ -316,7 +329,7 @@ yc serverless function logs --filter "ERROR"
 ✅ **Connection Release**: Properly returns to pool  
 ✅ **Error Handling**: Releases connection on error  
 ✅ **Idle Timeout**: Closes after 10 seconds  
-✅ **Debug Logging**: Only enabled with LOG_LEVEL=debug  
+✅ **Debug Logging**: Only enabled with LOG_LEVEL=debug
 
 ### Backup Function Tests
 
@@ -326,7 +339,7 @@ yc serverless function logs --filter "ERROR"
 ✅ **Cleanup Logic**: Old backups removed correctly  
 ✅ **Telegram Notifications**: Sent on failure  
 ✅ **Weekly Success Notification**: Sent on Sundays  
-✅ **Error Recovery**: Cleans up temp files on failure  
+✅ **Error Recovery**: Cleans up temp files on failure
 
 ### Integration Tests
 
@@ -334,7 +347,7 @@ yc serverless function logs --filter "ERROR"
 ✅ **Performance**: No degradation observed  
 ✅ **Concurrent Requests**: Handled correctly  
 ✅ **Function Cold Starts**: Pool initialized properly  
-✅ **Long-Running Queries**: Timeout enforced at 10s  
+✅ **Long-Running Queries**: Timeout enforced at 10s
 
 ---
 
@@ -364,8 +377,8 @@ yc serverless function set-tag \
 3. Manual backups can be taken if needed
 
 ```bash
-# Disable trigger
-yc serverless trigger delete heys-backup-daily
+# Disable per-client daily backup trigger (если нужно)
+yc serverless trigger delete heys-client-daily-backup-trigger
 ```
 
 ---
@@ -397,15 +410,15 @@ yc serverless trigger delete heys-backup-daily
 
 ## 🎯 Success Criteria
 
-| Metric | Target | Status |
-|--------|--------|--------|
-| Connection exhaustion incidents | 0 per month | ✅ On track |
-| Backup success rate | >99% | ✅ Implemented |
-| Recovery Time Objective (RTO) | <30 minutes | ✅ Achieved |
-| Recovery Point Objective (RPO) | <24 hours | ✅ Achieved |
-| Cost increase | <$10/month | ✅ Within budget |
-| Performance degradation | <5% | ✅ No degradation |
-| Deployment complexity | Minimal | ✅ Automated |
+| Metric                          | Target      | Status            |
+| ------------------------------- | ----------- | ----------------- |
+| Connection exhaustion incidents | 0 per month | ✅ On track       |
+| Backup success rate             | >99%        | ✅ Implemented    |
+| Recovery Time Objective (RTO)   | <30 minutes | ✅ Achieved       |
+| Recovery Point Objective (RPO)  | <24 hours   | ✅ Achieved       |
+| Cost increase                   | <$10/month  | ✅ Within budget  |
+| Performance degradation         | <5%         | ✅ No degradation |
+| Deployment complexity           | Minimal     | ✅ Automated      |
 
 ---
 
@@ -439,22 +452,33 @@ yc serverless trigger delete heys-backup-daily
 
 ### Quick Wins (5 минут)
 
-1. **Add pool size monitoring metric** - Currently we log pool events but don't expose metrics. Add a simple counter for active connections.
-2. **Create backup verification script** - Add a script to verify backup file integrity without full restore.
-3. **Document connection pool tuning** - Add guide for adjusting pool size based on load patterns.
+1. **Add pool size monitoring metric** - Currently we log pool events but don't
+   expose metrics. Add a simple counter for active connections.
+2. **Create backup verification script** - Add a script to verify backup file
+   integrity without full restore.
+3. **Document connection pool tuning** - Add guide for adjusting pool size based
+   on load patterns.
 
 ### Стратегические улучшения
 
-1. **Implement connection pool per-function metrics** - Track pool performance for each function separately to identify bottlenecks.
-2. **Add backup encryption at rest** - Currently backups are not encrypted in S3. Consider using S3 server-side encryption.
-3. **Create disaster recovery runbook** - Document step-by-step procedures for various failure scenarios.
-4. **Evaluate Yandex Lockbox migration** - Move secrets from environment variables to proper secret management service.
+1. **Implement connection pool per-function metrics** - Track pool performance
+   for each function separately to identify bottlenecks.
+2. **Add backup encryption at rest** - Currently backups are not encrypted in
+   S3. Consider using S3 server-side encryption.
+3. **Create disaster recovery runbook** - Document step-by-step procedures for
+   various failure scenarios.
+4. **Evaluate Yandex Lockbox migration** - Move secrets from environment
+   variables to proper secret management service.
 
 ### Потенциальные баги
 
-1. **Pool exhaustion under extreme load** - With max 3 connections, if queries are slow (>10s), pool could still exhaust. Monitor query performance.
-2. **Backup function timeout** - If database is very large (>50GB), pg_dump might exceed 600s timeout. Consider increasing timeout or using streaming approach.
-3. **S3 credentials expiration** - Static access keys don't expire, but if rotated manually, backup will fail silently. Add credential validation check.
+1. **Pool exhaustion under extreme load** - With max 3 connections, if queries
+   are slow (>10s), pool could still exhaust. Monitor query performance.
+2. **Backup function timeout** - If database is very large (>50GB), pg_dump
+   might exceed 600s timeout. Consider increasing timeout or using streaming
+   approach.
+3. **S3 credentials expiration** - Static access keys don't expire, but if
+   rotated manually, backup will fail silently. Add credential validation check.
 
 ---
 
@@ -463,4 +487,3 @@ yc serverless trigger delete heys-backup-daily
 **Authors**: GitHub Copilot AI Agent  
 **Reviewers**: [To be assigned]  
 **Status**: ✅ APPROVED FOR PRODUCTION
-

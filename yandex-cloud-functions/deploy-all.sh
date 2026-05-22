@@ -130,8 +130,6 @@ get_function_config() {
             echo "nodejs18 index.handler 512m 120s" ;;
         "heys-client-daily-backup")
             echo "nodejs18 index.handler 256m 300s" ;;
-        "heys-backup")
-            echo "nodejs18 index.handler 512m 300s" ;;
         "heys-snapshot-demo")
             echo "nodejs18 index.handler 512m 300s" ;;
         "heys-maintenance")
@@ -146,130 +144,96 @@ build_env_flags() {
     local func_name=$1
     local env_flags=""
     
-    # Common PostgreSQL settings (for all functions except health and sms)
-    if [[ ! "$func_name" =~ (health|sms) ]]; then
-        env_flags+=" --environment PG_HOST=$PG_HOST"
-        env_flags+=" --environment PG_PORT=$PG_PORT"
-        env_flags+=" --environment PG_DATABASE=$PG_DATABASE"
-        env_flags+=" --environment PG_USER=$PG_USER"
-        env_flags+=" --environment PG_PASSWORD=$PG_PASSWORD"
-        env_flags+=" --environment PG_SSL=$PG_SSL"
-    fi
-    
-    # Telegram settings (env fallback — пока .env активен).
-    # Backup/snapshot-demo всё ещё читают TG напрямую (нет initSecrets refactor).
-    if [[ "$func_name" =~ (backup|snapshot-demo) ]]; then
-        if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-            env_flags+=" --environment TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
-        fi
-        if [ -n "$TELEGRAM_CHAT_ID" ]; then
-            env_flags+=" --environment TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID"
-        fi
-    fi
+    # Helpers (dynamic scope: append to outer env_flags).
+    # _add: добавляет переменную только если её значение непустое (опциональные).
+    # _add_required: добавляет всегда, даже если пусто (для required env-vars).
+    _add() {
+        local k=$1
+        if [ -n "${!k}" ]; then env_flags+=" --environment $k=${!k}"; fi
+    }
+    _add_required() {
+        local k=$1
+        env_flags+=" --environment $k=${!k}"
+    }
 
-    # Lockbox secret IDs.
+    # Lockbox secret IDs (constants).
     # heys-app-secrets: TELEGRAM_*, INTERNAL_CRON_TOKEN, APP_URL, JWT_SECRET,
     #                   SESSION_SECRET, HEYS_ENCRYPTION_KEY, VAPID_PRIVATE_KEY.
-    # heys-database: PG_PASSWORD.
-    # heys-s3: S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY.
+    # heys-database: PG_PASSWORD. heys-s3: S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY.
     # SA aje85rjgpj4nk9m384ek (heys-function-invoker) имеет lockbox.payloadViewer
     # на все три секрета (granted 2026-05-22).
-    LOCKBOX_APP_ID="e6qrvefs3vn66jiamfk4"
-    LOCKBOX_DB_ID="e6q7gdshieo5udoet10f"
-    LOCKBOX_S3_ID="e6qnjm2ks2n1ubiaiki6"
+    local LOCKBOX_APP_ID="e6qrvefs3vn66jiamfk4"
+    local LOCKBOX_DB_ID="e6q7gdshieo5udoet10f"
+    local LOCKBOX_S3_ID="e6qnjm2ks2n1ubiaiki6"
 
-    # DB secret — для всех функций с PostgreSQL (кроме health и sms).
+    # PG + LOCKBOX_DB_SECRET_ID — для всех функций с БД (кроме health/sms)
     if [[ ! "$func_name" =~ (health|sms) ]]; then
+        local k
+        for k in PG_HOST PG_PORT PG_DATABASE PG_USER PG_PASSWORD PG_SSL; do
+            _add_required "$k"
+        done
         env_flags+=" --environment LOCKBOX_DB_SECRET_ID=$LOCKBOX_DB_ID"
     fi
 
-    # App secret — для функций, читающих какие-либо application-секреты.
-    # Все функции кроме health получают, чтобы initSecrets() мог overlay'ить env
-    # любым ключом из heys-app-secrets (TG, JWT, SESSION, HEYS_ENC, VAPID, ...).
+    # LOCKBOX_APP_SECRET_ID — для всех функций кроме health (initSecrets
+    # overlay'ит env любым ключом из heys-app-secrets при cold start).
     if [[ "$func_name" != "heys-api-health" ]]; then
         env_flags+=" --environment LOCKBOX_APP_SECRET_ID=$LOCKBOX_APP_ID"
     fi
 
-    # S3 secret — для backup-функций.
+    # Backup-функции (heys-client-daily-backup, heys-snapshot-demo): S3 + TG
+    # (env fallback пока .env активен — initSecrets overlay'ит Lockbox значениями)
     if [[ "$func_name" =~ (backup|snapshot-demo) ]]; then
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
-    fi
-    
-    # S3 settings (for backup + snapshot-demo functions)
-    if [[ "$func_name" =~ (backup|snapshot-demo) ]]; then
-        if [ -n "$S3_ACCESS_KEY_ID" ]; then
-            env_flags+=" --environment S3_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID"
-        fi
-        if [ -n "$S3_SECRET_ACCESS_KEY" ]; then
-            env_flags+=" --environment S3_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY"
-        fi
+        local k
+        for k in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY; do
+            _add "$k"
+        done
     fi
 
-    # Demo snapshot: override S3_BUCKET so it doesn't fall back to heys-backups
+    # heys-snapshot-demo: override S3_BUCKET (default bucket "heys-backups"
+    # содержит client-daily; для demo нужен отдельный публичный bucket)
     if [[ "$func_name" == "heys-snapshot-demo" ]]; then
         env_flags+=" --environment S3_BUCKET=heys-public-snapshot"
     fi
 
-    # SMS API key (for sms function)
+    # SMS API key (heys-api-sms)
     if [[ "$func_name" == "heys-api-sms" ]]; then
-        if [ -n "$SMS_API_KEY" ]; then
-            env_flags+=" --environment SMS_API_KEY=$SMS_API_KEY"
-        fi
+        _add SMS_API_KEY
     fi
 
-    # JWT/Session secrets (for rpc/auth)
-    if [[ "$func_name" =~ (rpc|auth) ]]; then
-        env_flags+=" --environment JWT_SECRET=$JWT_SECRET"
+    # JWT_SECRET — для rpc, auth, и push (push читает curator-JWT в push-recipient endpoint)
+    if [[ "$func_name" =~ (rpc|auth) ]] || [[ "$func_name" == "heys-api-push" ]]; then
+        _add_required JWT_SECRET
     fi
 
+    # SESSION_SECRET — только auth
     if [[ "$func_name" == "heys-api-auth" ]]; then
-        env_flags+=" --environment SESSION_SECRET=$SESSION_SECRET"
+        _add_required SESSION_SECRET
     fi
 
-    # Payment secrets (for payments function)
+    # Payments: YUKASSA_* + INTERNAL_CRON_TOKEN (poll-фолбэк P0.4)
     if [[ "$func_name" == "heys-api-payments" ]]; then
-        if [ -n "$YUKASSA_SHOP_ID" ]; then
-            env_flags+=" --environment YUKASSA_SHOP_ID=$YUKASSA_SHOP_ID"
-        fi
-        if [ -n "$YUKASSA_SECRET_KEY" ]; then
-            env_flags+=" --environment YUKASSA_SECRET_KEY=$YUKASSA_SECRET_KEY"
-        fi
-        # HMAC-секрет webhook'ов ЮKassa (опциональный — без него работает IP-only)
-        if [ -n "$YUKASSA_WEBHOOK_SECRET" ]; then
-            env_flags+=" --environment YUKASSA_WEBHOOK_SECRET=$YUKASSA_WEBHOOK_SECRET"
-        fi
-        # Internal cron token для poll-фолбэка (P0.4)
-        if [ -n "$INTERNAL_CRON_TOKEN" ]; then
-            env_flags+=" --environment INTERNAL_CRON_TOKEN=$INTERNAL_CRON_TOKEN"
-        fi
+        local k
+        for k in YUKASSA_SHOP_ID YUKASSA_SECRET_KEY YUKASSA_WEBHOOK_SECRET INTERNAL_CRON_TOKEN; do
+            _add "$k"
+        done
     fi
 
-    # Cron drip-уведомлений (Phase 1, P0.7) — нужны pg + INTERNAL_CRON_TOKEN + APP_URL
+    # Cron drip-уведомлений (Phase 1, P0.7)
     if [[ "$func_name" == "heys-cron-trial-drip" ]]; then
-        if [ -n "$INTERNAL_CRON_TOKEN" ]; then
-            env_flags+=" --environment INTERNAL_CRON_TOKEN=$INTERNAL_CRON_TOKEN"
-        fi
-        if [ -n "$APP_URL" ]; then
-            env_flags+=" --environment APP_URL=$APP_URL"
-        fi
+        local k
+        for k in INTERNAL_CRON_TOKEN APP_URL; do
+            _add "$k"
+        done
     fi
 
-    # Web Push (VAPID) — для api-push и cron-reminders
+    # Web Push (VAPID) — api-push и cron-reminders
     if [[ "$func_name" =~ (push|reminders) ]]; then
-        if [ -n "$VAPID_PUBLIC_KEY" ]; then
-            env_flags+=" --environment VAPID_PUBLIC_KEY=$VAPID_PUBLIC_KEY"
-        fi
-        if [ -n "$VAPID_PRIVATE_KEY" ]; then
-            env_flags+=" --environment VAPID_PRIVATE_KEY=$VAPID_PRIVATE_KEY"
-        fi
-        if [ -n "$VAPID_SUBJECT" ]; then
-            env_flags+=" --environment VAPID_SUBJECT=$VAPID_SUBJECT"
-        fi
-    fi
-
-    # heys-api-push также читает JWT_SECRET для распознавания курятор-токена
-    if [[ "$func_name" == "heys-api-push" ]]; then
-        env_flags+=" --environment JWT_SECRET=$JWT_SECRET"
+        local k
+        for k in VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT; do
+            _add "$k"
+        done
     fi
 
     echo "$env_flags"
@@ -357,6 +321,16 @@ deploy_function() {
         sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
     fi
 
+    # Concurrency: API-функции получают concurrency=2 — один контейнер
+    # обслуживает до двух параллельных запросов, что уменьшает количество
+    # cold start'ов под нагрузкой. Memory 512m / 2 = 256m на запрос (запас
+    # есть), DB pool max=3 (см. shared/db-pool.js:96) — 2 concurrent fit'ам.
+    # Кроны остаются на default=1 (триггер запускает по одной задаче за раз).
+    local concurrency_flag=""
+    if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push)$ ]]; then
+        concurrency_flag="--concurrency 2"
+    fi
+
     # Pre-build zip with explicit exclusions.
     # Раньше yc CLI 0.184.0 при `--source-path .` читал .ycignore и сам исключал
     # node_modules. Но для функций с большим node_modules (>4000 файлов, e.g.
@@ -383,6 +357,7 @@ deploy_function() {
         --memory "$memory" \
         --execution-timeout "$timeout" \
         $sa_flag \
+        $concurrency_flag \
         --source-path "$DEPLOY_ZIP" \
         $env_flags
     YC_EXIT=$?

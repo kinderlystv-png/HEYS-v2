@@ -117,7 +117,7 @@ yc serverless trigger create timer \
   --name heys-client-daily-backup-trigger \
   --cron-expression "0 1 * * ? *" \
   --invoke-function-name heys-client-daily-backup \
-  --invoke-function-service-account-name heys-backup-sa
+  --invoke-function-service-account-name heys-function-invoker
 ```
 
 This fires at **01:00 UTC = 04:00 MSK** every day.
@@ -174,13 +174,16 @@ echo "Computed: $COMPUTED"
 - Ключевые метрики в response body: `total`, `success`, `failed`, `durationSec`,
   `cleaned`
 
-## Отличия от heys-backup (pg_dump)
+## Отличия от YC Managed PG built-in backup
 
-|             | heys-backup (pg_dump)  | heys-client-daily-backup        |
-| ----------- | ---------------------- | ------------------------------- |
-| Scope       | Вся БД                 | Per-client KV                   |
-| Format      | PostgreSQL custom dump | JSON.gz                         |
-| Restore     | pg_restore целой БД    | Upsert KV конкретного клиента   |
-| Retention   | 7 дней                 | 365 дней                        |
-| Granularity | Один файл на всю БД    | Один файл на клиента на день    |
-| Use case    | Disaster recovery      | Точечное восстановление клиента |
+|             | YC Managed PG (built-in)  | heys-client-daily-backup        |
+| ----------- | ------------------------- | ------------------------------- |
+| Scope       | Вся БД                    | Per-client KV                   |
+| Format      | Внутренний YC формат      | JSON.gz                         |
+| Restore     | yc cluster restore (PITR) | Upsert KV конкретного клиента   |
+| Retention   | 14 дней                   | 365 дней                        |
+| Granularity | Снапшот всей БД           | Один файл на клиента на день    |
+| Use case    | Disaster recovery         | Точечное восстановление клиента |
+
+> Ранее сравнение было с самописной функцией `heys-backup` (pg_dump → S3).
+> Удалена 2026-05-22 — заменена встроенным YC backup'ом (см. выше).

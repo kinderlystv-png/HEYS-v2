@@ -253,8 +253,11 @@ sleep 10
 | `heys-api-leads`    | nodejs18 | Лиды с лендинга               |
 | `heys-api-health`   | nodejs18 | Health check                  |
 | `heys-api-payments` | nodejs18 | Платежи ЮKassa                |
-| `heys-backup`       | —        | Бэкапы и восстановление       |
 | `heys-maintenance`  | —        | Служебные скрипты             |
+
+> Бэкапы БД делает встроенный механизм Yandex Managed PostgreSQL (ежедневно,
+> retention 14 дней, point-in-time recovery). Cloud function `heys-backup` не
+> используется — удалена 2026-05-22.
 
 ### 4. Database (Yandex Cloud PostgreSQL 16)
 

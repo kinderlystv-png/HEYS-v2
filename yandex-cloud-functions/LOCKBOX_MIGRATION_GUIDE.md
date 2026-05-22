@@ -392,7 +392,7 @@ async function getPool(functionName = null) {
 
 ### 5.1 Порядок миграции (от менее критичных к более критичным):
 
-1. ✅ heys-backup (можно откатить без impact)
+1. ✅ heys-snapshot-demo (демо, низкая критичность)
 2. ✅ heys-api-leads (низкая нагрузка)
 3. ✅ heys-api-payments (важная, но редкая)
 4. ✅ heys-api-auth (средняя критичность)
@@ -402,7 +402,7 @@ async function getPool(functionName = null) {
 ### 5.2 Deployment с Lockbox для каждой функции:
 
 ```bash
-FUNCTION_NAME="heys-backup"
+FUNCTION_NAME="heys-api-leads"
 
 # Deploy with Lockbox environment variable
 yc serverless function version create \
@@ -446,7 +446,7 @@ yc serverless function set-tag \
 
 ```bash
 # После подтверждения что Lockbox работает 24+ часа
-for FUNC in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-payments heys-backup; do
+for FUNC in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-payments heys-snapshot-demo; do
   echo "Removing env vars from $FUNC..."
   yc serverless function version create \
     --function-name=$FUNC \
@@ -540,7 +540,7 @@ yc lockbox secret activate-version heys-database --version-id <previous-version-
 - [ ] Создал lockbox-client.js helper
 - [ ] Обновил db-pool.js для поддержки Lockbox
 - [ ] Протестировал на staging окружении
-- [ ] Мигрировал heys-backup (наименее критичная)
+- [ ] Мигрировал heys-snapshot-demo (наименее критичная)
 - [ ] Мониторил 24 часа - OK
 - [ ] Мигрировал heys-api-leads
 - [ ] Мониторил 24 часа - OK
@@ -549,11 +549,6 @@ yc lockbox secret activate-version heys-database --version-id <previous-version-
 - [ ] Настроил алерты на Lockbox errors
 - [ ] Документировал процесс ротации
 - [ ] Запланировал quarterly audit секретов
-
----
-
-**Последнее обновление**: 2026-05-22 **Версия**: 1.1 **Статус**: Phase 1–2
-deployed; Phase 3 (env removal) pending 24h watch
 
 ---
 
@@ -616,10 +611,8 @@ deployed; Phase 3 (env removal) pending 24h watch
      ~16
    - [heys-maintenance/index.js](heys-maintenance/index.js) —
      `const pool = new Pool(...)` line ~15
-   - [heys-backup/index.js](heys-backup/index.js) —
-     `const CONFIG = { pg: {...}, s3: {...}, telegram: {...} }` line ~35
-   - [heys-snapshot-demo/index.js](heys-snapshot-demo/index.js) — same pattern
-     line ~45
+   - [heys-snapshot-demo/index.js](heys-snapshot-demo/index.js) —
+     `const CONFIG = { pg: {...}, s3: {...}, telegram: {...} }` pattern line ~45
    - [heys-client-daily-backup/index.js](heys-client-daily-backup/index.js) —
      same line ~40
    - [heys-api-push/index.js](heys-api-push/index.js) —
@@ -654,5 +647,42 @@ deployed; Phase 3 (env removal) pending 24h watch
 
 ---
 
-**Последнее обновление**: 2026-05-22 **Версия**: 1.1 **Статус**: Phase 1–2
-deployed; Phase 3 (env removal) pending 24h watch
+## Phase 3 — completed (2026-05-22 evening)
+
+Все шаги Phase 3 выполнены:
+
+1. ✅ Module-level reads рефакторены (dead PG_CONFIG в 3 функциях удалён, VAPID
+   lazy в 2, CONFIG-getters в backup-функциях).
+2. ✅ `.env` swap: 10 секретов заменены на плейсхолдеры
+   (`__IN_LOCKBOX__<secret-name>__`). Backup создан в
+   `yandex-cloud-functions/.env.backup-before-phase3-20260522-185935`
+   (gitignored). **Удалить файл ~2026-05-24 22:00 MSK** (после 48ч стабильной
+   работы Lockbox-overlay).
+3. ✅ Re-deploy всех 13 функций с placeholder env.
+4. ✅ Retry-loaded lockbox-client (5s × 2 attempts) — handles cold-start
+   transient timeouts из YC metadata API.
+5. ✅ `secrets.js` `stripPlaceholders()` — если Lockbox недоступен на cold
+   start, плейсхолдеры удаляются из process.env вместо того чтобы быть
+   отправленными как валидные значения downstream (Telegram токен, HMAC ключ и
+   т.д.).
+
+**Команда для удаления backup-файла после 48h watch:**
+
+```bash
+# 1. Verify нет lockbox-fail'ов за последние 48ч
+for fn in $(yc serverless function list --format json | jq -r '.[].name' | grep '^heys-'); do
+  yc serverless function logs "$fn" --since 48h 2>&1 | grep -i 'Failed to load secret.*after 2 attempts'
+done
+# Empty output = OK
+
+# 2. Удалить backup
+rm yandex-cloud-functions/.env.backup-before-phase3-*
+
+# 3. Обновить статус в этом файле
+```
+
+---
+
+**Последнее обновление**: 2026-05-22 **Версия**: 1.2 **Статус**: Phase 1–3
+deployed (env-removal done 2026-05-22, backup-file deletion scheduled
+~2026-05-24)
