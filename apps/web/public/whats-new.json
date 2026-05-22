@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.7c48b218",
+      "buildHash": "7c48b218",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: pre-existing SSL-баг в крон-сервисе + flaky-тест + чистка дубль-кода после Lockbox",
+      "items": [
+        {
+          "type": "fix",
+          "title": "heys-maintenance больше не падает с 'ssl is required' — мигрирован на shared/db-pool",
+          "description": "У scheduled-задачи в cloud function heys-maintenance был pre-existing баг: inline pool config сравнивал PG_SSL с буквальной строкой 'require', но в env лежит 'verify-full', из-за чего pool создавался без SSL и сразу падал на подключении. Крон тихо не работал какое-то время. Перевели на тот же shared/db-pool, что используют все остальные функции — там корректный verify-full SSL с CA-сертификатом."
+        },
+        {
+          "type": "fix",
+          "title": "Тестовый flake в heys_relapse_risk: тест больше не зависит от порядка выполнения других тестов",
+          "description": "Из-за конфига vitest isolate:false (антирасход памяти) тесты делят глобальное состояние. Семь других тестов делают `global.HEYS = {}`, что стирало HEYS.dayMealsIntegrity, который relapse_risk тесту нужен. Иногда тест падал на push'е без видимой причины. Теперь тест сам выставляет нужную зависимость в setup, не полагаясь на чужие импорты."
+        },
+        {
+          "type": "chore",
+          "title": "Убран дубль-код ensureConfig() в 3 функциях после Lockbox-миграции",
+          "description": "После того как initSecrets() стал перетекать секреты из Lockbox в process.env при холодном старте, локальные ensureConfig() в heys-api-leads, heys-cron-security-alerts и heys-maintenance делали ту же работу повторно. Удалили дубль (~30 строк на функцию), теперь они просто читают process.env.TELEGRAM_BOT_TOKEN напрямую. Поведение для пользователей не меняется."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.3ea3b5fd",
       "buildHash": "3ea3b5fd",
       "date": "2026-05-22",
