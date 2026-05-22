@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.14013cbe",
+      "buildHash": "14013cbe",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: deploy-скрипт перестал спотыкаться на больших функциях",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Cloud function deploy перестал падать на функциях с большим node_modules",
+          "description": "У одной из функций (бэкап клиентских данных) в зависимостях @aws-sdk — это ~4000 файлов. yc CLI 0.184 при таком количестве файлов внутри node_modules видимо натыкается на тайм-аут traversal'а и игнорирует .ycignore — пытается загрузить всё и падает с лимитом 3.5 MB. Каждый раз приходилось вручную убирать node_modules перед деплоем. Теперь deploy-all.sh сам пакует zip с правильными исключениями (всё что должно было быть в .ycignore — node_modules, .git, секреты, временные скрипты), и yc подхватывает npm-зависимости из package.json уже на cloud-стороне при cold start. Размер пакета теперь виден в логе деплоя."
+        },
+        {
+          "type": "chore",
+          "title": ".gitignore теперь покрывает .env.backup-* (бэкапы при swap'е секретов)",
+          "description": "После Phase 3 Lockbox-миграции deploy-скрипты создают локальные бэкапы .env с РЕАЛЬНЫМИ секретами перед swap'ом на плейсхолдеры. Раньше такой файл мог случайно попасть в git add . Теперь pattern .env.backup-* в .gitignore это исключает."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.fa52d923",
       "buildHash": "fa52d923",
       "date": "2026-05-22",
