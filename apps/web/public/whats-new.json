@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.0a0d8a83",
+      "buildHash": "0a0d8a83",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: миграция секретов Cloud Functions в Yandex Lockbox",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Phase 1+2 Lockbox-миграции: 13 функций теперь подтягивают PG_PASSWORD, JWT_SECRET, SESSION_SECRET, HEYS_ENCRYPTION_KEY, VAPID_PRIVATE_KEY, S3-ключи из Lockbox через Service Account вместо чтения только из env",
+          "description": "Создан helper shared/secrets.js, который при cold start функции дёргает Lockbox и наслаивает значения в process.env. Существующий код, читающий process.env.X, продолжает работать без изменений. .env пока остаётся как fallback — реальные значения секретов в нём заменятся на плейсхолдеры после 24ч наблюдения за стабильностью (Phase 3). На пользователя не влияет: ни UX, ни API-контракты не менялись."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.b9cc3c10",
       "buildHash": "b9cc3c10",
       "date": "2026-05-22",
