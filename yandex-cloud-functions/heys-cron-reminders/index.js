@@ -28,6 +28,7 @@
  */
 
 const { getPool } = require('./shared/db-pool');
+const { initSecrets } = require('./shared/secrets');
 const webpush = require('web-push');
 const { collapseNetChange, bucketize, formatBody } = require('./curator-action-format');
 
@@ -1146,6 +1147,7 @@ async function jobSubscriptionExpiry(client) {
 // ─── Main ──────────────────────────────────────────────────────────────
 
 module.exports.handler = async function (event, context) {
+  await initSecrets();
   const startedAt = Date.now();
   console.log('[cron-reminders] start', { trigger: event?.messages?.[0]?.event_metadata?.event_type || 'manual' });
 

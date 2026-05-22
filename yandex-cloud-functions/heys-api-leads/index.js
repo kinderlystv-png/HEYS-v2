@@ -5,6 +5,7 @@
 
 const { getPool } = require('./shared/db-pool');
 const { getSecret } = require('./shared/lockbox-client');
+const { initSecrets } = require('./shared/secrets');
 const fs = require('fs');
 const path = require('path');
 
@@ -164,6 +165,7 @@ ${lead.utm_source ? `📊 UTM: ${lead.utm_source}` : ''}
 }
 
 module.exports.handler = async function (event, context) {
+  await initSecrets();
   await ensureConfig();
 
   const origin = event.headers?.origin || event.headers?.Origin || '';

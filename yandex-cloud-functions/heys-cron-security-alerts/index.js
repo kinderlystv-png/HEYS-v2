@@ -16,6 +16,7 @@
  */
 
 const { getPool } = require('./shared/db-pool');
+const { initSecrets } = require('./shared/secrets');
 const { getSecret } = require('./shared/lockbox-client');
 
 const COOLDOWN_MINUTES = 30;
@@ -177,6 +178,7 @@ async function sendTelegram(rule, rows) {
 }
 
 module.exports.handler = async function () {
+  await initSecrets();
   await ensureConfig();
 
   const pool = getPool();

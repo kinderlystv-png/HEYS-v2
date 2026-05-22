@@ -1,4 +1,16 @@
+# Yandex Cloud Functions Ignore File
+node_modules/
+.env
+.env.*
+*.zip
+*.log
+coverage/
+.git/
+.DS_Store
 deploy.sh
 README.md
 restore-client-backup.js
-.env
+apply_*.js
+check_*.js
+test_*.js
+docs/

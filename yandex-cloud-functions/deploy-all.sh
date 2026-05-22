@@ -156,12 +156,9 @@ build_env_flags() {
         env_flags+=" --environment PG_SSL=$PG_SSL"
     fi
     
-    # Telegram settings.
-    # Функции, мигрированные на Lockbox (heys-app-secrets — содержит
-    # TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID), получают только LOCKBOX_APP_SECRET_ID
-    # и SA-привязку (см. блок ниже). Остальные старые функции (auth, backup,
-    # snapshot-demo) пока продолжают читать из env — мигрируем поэтапно.
-    if [[ "$func_name" =~ (auth|backup|snapshot-demo) ]]; then
+    # Telegram settings (env fallback — пока .env активен).
+    # Backup/snapshot-demo всё ещё читают TG напрямую (нет initSecrets refactor).
+    if [[ "$func_name" =~ (backup|snapshot-demo) ]]; then
         if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
             env_flags+=" --environment TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
         fi
@@ -170,10 +167,32 @@ build_env_flags() {
         fi
     fi
 
-    # Lockbox-мигрированные функции (TELEGRAM, INTERNAL_CRON, APP_URL):
-    # читают через SA + lockbox.payloadViewer на heys-app-secrets.
-    if [[ "$func_name" =~ (heys-bot-client|heys-api-leads|heys-cron-security-alerts|heys-maintenance) ]]; then
-        env_flags+=" --environment LOCKBOX_APP_SECRET_ID=e6qrvefs3vn66jiamfk4"
+    # Lockbox secret IDs.
+    # heys-app-secrets: TELEGRAM_*, INTERNAL_CRON_TOKEN, APP_URL, JWT_SECRET,
+    #                   SESSION_SECRET, HEYS_ENCRYPTION_KEY, VAPID_PRIVATE_KEY.
+    # heys-database: PG_PASSWORD.
+    # heys-s3: S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY.
+    # SA aje85rjgpj4nk9m384ek (heys-function-invoker) имеет lockbox.payloadViewer
+    # на все три секрета (granted 2026-05-22).
+    LOCKBOX_APP_ID="e6qrvefs3vn66jiamfk4"
+    LOCKBOX_DB_ID="e6q7gdshieo5udoet10f"
+    LOCKBOX_S3_ID="e6qnjm2ks2n1ubiaiki6"
+
+    # DB secret — для всех функций с PostgreSQL (кроме health и sms).
+    if [[ ! "$func_name" =~ (health|sms) ]]; then
+        env_flags+=" --environment LOCKBOX_DB_SECRET_ID=$LOCKBOX_DB_ID"
+    fi
+
+    # App secret — для функций, читающих какие-либо application-секреты.
+    # Все функции кроме health получают, чтобы initSecrets() мог overlay'ить env
+    # любым ключом из heys-app-secrets (TG, JWT, SESSION, HEYS_ENC, VAPID, ...).
+    if [[ "$func_name" != "heys-api-health" ]]; then
+        env_flags+=" --environment LOCKBOX_APP_SECRET_ID=$LOCKBOX_APP_ID"
+    fi
+
+    # S3 secret — для backup-функций.
+    if [[ "$func_name" =~ (backup|snapshot-demo) ]]; then
+        env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
     fi
     
     # S3 settings (for backup + snapshot-demo functions)
@@ -316,10 +335,12 @@ deploy_function() {
     # Build environment flags
     env_flags=$(build_env_flags "$func_name")
 
-    # Service account (для функций, которые читают секреты из Lockbox).
-    # SA heys-function-invoker имеет роль lockbox.payloadViewer на heys-app-secrets.
+    # Service account для чтения Lockbox. Прикрепляется ко ВСЕМ функциям кроме
+    # heys-api-health (она ничего не читает из Lockbox).
+    # SA heys-function-invoker имеет lockbox.payloadViewer на heys-app-secrets,
+    # heys-database, heys-s3.
     sa_flag=""
-    if [[ "$func_name" =~ (heys-bot-client|heys-api-leads|heys-cron-security-alerts|heys-maintenance) ]]; then
+    if [[ "$func_name" != "heys-api-health" ]]; then
         sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
     fi
 

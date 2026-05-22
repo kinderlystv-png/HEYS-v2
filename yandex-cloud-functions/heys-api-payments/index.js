@@ -13,6 +13,7 @@
  */
 
 const { getPool } = require('./shared/db-pool');
+const { initSecrets } = require('./shared/secrets');
 const {
   extractBearerToken,
   verifyClientSession,
@@ -900,6 +901,7 @@ async function authenticateClientRequest(event, requestedClientId) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module.exports.handler = async function (event, context) {
+  await initSecrets();
   // Set CORS headers based on request origin
   const requestOrigin = event.headers?.['origin'] || event.headers?.['Origin'] || '';
   _currentCorsHeaders = getCorsHeaders(requestOrigin);

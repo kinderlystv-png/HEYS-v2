@@ -20,6 +20,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const { initSecrets } = require('./secrets');
 const { readFileSync, existsSync } = require('fs');
 const { join } = require('path');
 const { gzipSync } = require('zlib');
@@ -367,6 +368,7 @@ async function cleanupOldSnapshots() {
 // ═══════════════════════════════════════════════════════════════════
 
 module.exports.handler = async function handler(_event, _context) {
+  await initSecrets();
     const startTime = Date.now();
     console.log('[ClientBackup] Starting daily client backup...');
 

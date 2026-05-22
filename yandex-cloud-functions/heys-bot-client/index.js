@@ -16,6 +16,7 @@
  */
 
 const { getPool } = require('./shared/db-pool');
+const { initSecrets } = require('./shared/secrets');
 const { getSecret } = require('./shared/lockbox-client');
 const crypto = require('crypto');
 
@@ -250,6 +251,7 @@ async function handleInternalSend(body, headers) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 module.exports.handler = async function (event) {
+  await initSecrets();
   await ensureConfig();
 
   const path = event?.path || event?.url || '';

@@ -12,6 +12,7 @@
  */
 
 const { getPool } = require('./shared/db-pool');
+const { initSecrets } = require('./shared/secrets');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -884,6 +885,7 @@ async function handleRegister(body, jwtSecret) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 module.exports.handler = async function (event, context) {
+  await initSecrets();
   // 🔐 Извлекаем origin и строим CORS headers
   const origin = event.headers?.origin || event.headers?.Origin || null;
   const corsHeaders = getCorsHeaders(origin);

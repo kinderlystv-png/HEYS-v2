@@ -2,10 +2,12 @@
 
 ## Обзор
 
-Руководство по миграции секретов из environment variables в Yandex Lockbox (managed secret storage).
+Руководство по миграции секретов из environment variables в Yandex Lockbox
+(managed secret storage).
 
 **Текущая ситуация**: Секреты хранятся в environment variables Cloud Functions  
-**Целевая архитектура**: Секреты в Yandex Lockbox с доступом через Service Account
+**Целевая архитектура**: Секреты в Yandex Lockbox с доступом через Service
+Account
 
 ## Зачем нужна миграция?
 
@@ -174,7 +176,7 @@ echo "✓ Granted access to all secrets"
 ```javascript
 /**
  * HEYS Yandex Lockbox Client
- * 
+ *
  * Unified interface for reading secrets from Yandex Lockbox.
  * Automatically caches secrets in memory for performance.
  */
@@ -193,21 +195,25 @@ async function getIamToken() {
     const options = {
       hostname: '169.254.169.254',
       path: '/computeMetadata/v1/instance/service-accounts/default/token',
-      headers: { 'Metadata-Flavor': 'Google' }
+      headers: { 'Metadata-Flavor': 'Google' },
     };
 
-    https.get(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          resolve(parsed.access_token);
-        } catch (e) {
-          reject(e);
-        }
-      });
-    }).on('error', reject);
+    https
+      .get(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            resolve(parsed.access_token);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      })
+      .on('error', reject);
   });
 }
 
@@ -220,38 +226,42 @@ async function getSecretPayload(secretId, iamToken) {
       hostname: 'payload.lockbox.api.cloud.yandex.net',
       path: `/lockbox/v1/secrets/${secretId}/payload`,
       headers: {
-        'Authorization': `Bearer ${iamToken}`
-      }
+        Authorization: `Bearer ${iamToken}`,
+      },
     };
 
-    https.get(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`Lockbox API error: ${res.statusCode} ${data}`));
-          return;
-        }
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(e);
-        }
-      });
-    }).on('error', reject);
+    https
+      .get(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            reject(new Error(`Lockbox API error: ${res.statusCode} ${data}`));
+            return;
+          }
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      })
+      .on('error', reject);
   });
 }
 
 /**
  * Получает секреты из Lockbox с кэшированием
- * 
+ *
  * @param {string} secretId - ID секрета в Lockbox
  * @returns {Promise<Object>} Object с ключами и значениями
  */
 async function getSecrets(secretId) {
   // Проверяем кэш
   const cached = secretsCache.get(secretId);
-  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     console.log(`[Lockbox] Using cached secrets for ${secretId}`);
     return cached.data;
   }
@@ -271,13 +281,13 @@ async function getSecrets(secretId) {
     // Сохраняем в кэш
     secretsCache.set(secretId, {
       data: secrets,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     return secrets;
   } catch (error) {
     console.error('[Lockbox] Failed to fetch secrets:', error.message);
-    
+
     // Fallback на env vars если Lockbox недоступен
     console.warn('[Lockbox] Falling back to environment variables');
     return null;
@@ -293,7 +303,7 @@ function clearCache() {
 
 module.exports = {
   getSecrets,
-  clearCache
+  clearCache,
 };
 ```
 
@@ -309,12 +319,12 @@ const { getSecrets } = require('./lockbox-client');
 async function createPoolConfig() {
   // Если указан LOCKBOX_SECRET_ID, используем Lockbox
   const lockboxSecretId = process.env.LOCKBOX_DB_SECRET_ID;
-  
+
   let dbConfig;
   if (lockboxSecretId) {
     console.log('[DB-Pool] Loading credentials from Lockbox');
     const secrets = await getSecrets(lockboxSecretId);
-    
+
     if (!secrets) {
       // Fallback на env vars
       console.warn('[DB-Pool] Lockbox unavailable, using env vars');
@@ -323,7 +333,7 @@ async function createPoolConfig() {
         port: parseInt(process.env.PG_PORT || '6432'),
         database: process.env.PG_DATABASE,
         user: process.env.PG_USER,
-        password: process.env.PG_PASSWORD
+        password: process.env.PG_PASSWORD,
       };
     } else {
       dbConfig = {
@@ -331,7 +341,7 @@ async function createPoolConfig() {
         port: parseInt(secrets.PG_PORT || '6432'),
         database: secrets.PG_DATABASE,
         user: secrets.PG_USER,
-        password: secrets.PG_PASSWORD
+        password: secrets.PG_PASSWORD,
       };
     }
   } else {
@@ -341,25 +351,27 @@ async function createPoolConfig() {
       port: parseInt(process.env.PG_PORT || '6432'),
       database: process.env.PG_DATABASE || 'heys_production',
       user: process.env.PG_USER || 'heys_admin',
-      password: process.env.PG_PASSWORD
+      password: process.env.PG_PASSWORD,
     };
   }
-  
+
   const CA_CERT = loadCACert();
-  
+
   return {
     ...dbConfig,
-    ssl: CA_CERT ? {
-      rejectUnauthorized: true,
-      ca: CA_CERT
-    } : {
-      rejectUnauthorized: false
-    },
+    ssl: CA_CERT
+      ? {
+          rejectUnauthorized: true,
+          ca: CA_CERT,
+        }
+      : {
+          rejectUnauthorized: false,
+        },
     max: 3,
     idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 5000,
     query_timeout: 10000,
-    allowExitOnIdle: true
+    allowExitOnIdle: true,
   };
 }
 
@@ -494,7 +506,8 @@ yc lockbox secret add-version heys-database \
 # Функции автоматически подхватят новый пароль при следующем запросе к Lockbox
 ```
 
-**Важно**: Lockbox поддерживает версионирование, можно откатить на предыдущую версию:
+**Важно**: Lockbox поддерживает версионирование, можно откатить на предыдущую
+версию:
 
 ```bash
 # Rollback к предыдущей версии
@@ -507,10 +520,12 @@ yc lockbox secret activate-version heys-database --version-id <previous-version-
 ## Стоимость
 
 **Yandex Lockbox pricing**:
+
 - Хранение секретов: **Бесплатно** до 5 секретов
 - API запросы: 1.20₽ за 10,000 запросов
 
 **Расчёт для HEYS**:
+
 - 3 секрета (database, s3, telegram)
 - 5 функций × 100 req/day × 30 days = 15,000 requests/month
 - Кэш снижает запросы на 90% → 1,500 actual requests/month
@@ -537,6 +552,107 @@ yc lockbox secret activate-version heys-database --version-id <previous-version-
 
 ---
 
-**Последнее обновление**: 2026-01-23  
-**Версия**: 1.0  
-**Статус**: Ready for implementation
+**Последнее обновление**: 2026-05-22 **Версия**: 1.1 **Статус**: Phase 1–2
+deployed; Phase 3 (env removal) pending 24h watch
+
+---
+
+## Sprint Log 2026-05-22 — Phase 1+2 rollout
+
+### Сделано в этой сессии
+
+1. **Lockbox-секреты созданы / расширены:**
+   - `heys-database` (id `e6q7gdshieo5udoet10f`) — `PG_PASSWORD`
+   - `heys-s3` (id `e6qnjm2ks2n1ubiaiki6`) — `S3_ACCESS_KEY_ID`,
+     `S3_SECRET_ACCESS_KEY`
+   - `heys-app-secrets` (id `e6qrvefs3vn66jiamfk4`) — добавлены `JWT_SECRET`,
+     `SESSION_SECRET`, `HEYS_ENCRYPTION_KEY`, `VAPID_PRIVATE_KEY` (поверх
+     существующих `TELEGRAM_*`, `INTERNAL_CRON_TOKEN`, `APP_URL`,
+     `CLIENT_BOT_USERNAME`)
+   - `SMS_API_KEY` пропущен — пустое значение в `.env`, добавится когда SMS
+     подключим
+
+2. **Service Account `aje85rjgpj4nk9m384ek` (heys-function-invoker):** выдан
+   `lockbox.payloadViewer` на `heys-database` и `heys-s3`. Доступ к
+   `heys-app-secrets` уже был.
+
+3. **Shared helper [shared/secrets.js](shared/secrets.js):** lazy env-overlay,
+   подтягивает Lockbox в `process.env` при cold start. Скопирован в каждую
+   функцию (в `shared/` либо в корень — зависит от layout).
+
+4. **Patch handler-ов:** во все 15 функций добавлено `await initSecrets()`
+   первой строкой внутри handler.
+
+5. **`deploy-all.sh`:** все DB-функции теперь получают `LOCKBOX_DB_SECRET_ID`,
+   все приложения — `LOCKBOX_APP_SECRET_ID`, backup-функции —
+   `LOCKBOX_S3_SECRET_ID`, и SA-привязку (`aje85rjgpj4nk9m384ek`). Исключение:
+   `heys-api-health`.
+
+6. **Deployed:** 13 функций (heys-api-rpc, -rest, -auth, -leads, -push, -health,
+   -bot-client, -client-daily-backup,
+   -cron-{reminders,security-alerts,trial-drip}, -maintenance, -snapshot-demo).
+
+7. **Verified:** `./health-check.sh` зелёная по всем endpoint'ам (RPC, REST,
+   Auth, Leads, RPC→DB). SMS 502 — функция ещё не существует в YC, не связано с
+   миграцией.
+
+### Что осталось (Phase 3 — следующая сессия после 24ч stability watch)
+
+После 24+ ч стабильной работы (мониторить ошибки
+`[lockbox] Failed to load secret` в логах функций):
+
+1. **Refactor module-level reads** — функции, которые читают
+   `process.env.PG_PASSWORD` / `VAPID_PRIVATE_KEY` / `JWT_SECRET` на
+   module-level (вне handler-функции), сломаются когда соответствующее значение
+   будет жить ТОЛЬКО в Lockbox. Их нужно мигрировать на lazy lookup (см.
+   [heys-api-rest/index.js](heys-api-rest/index.js) — `getPgConfig()` как
+   образец).
+
+   Затронутые файлы:
+   - [heys-api-rpc/index.js](heys-api-rpc/index.js) — `const PG_CONFIG` line ~85
+   - [heys-api-payments/index.js](heys-api-payments/index.js) —
+     `const PG_CONFIG` line ~75
+   - [heys-api-leads/index.js](heys-api-leads/index.js) — `const PG_CONFIG` line
+     ~16
+   - [heys-maintenance/index.js](heys-maintenance/index.js) —
+     `const pool = new Pool(...)` line ~15
+   - [heys-backup/index.js](heys-backup/index.js) —
+     `const CONFIG = { pg: {...}, s3: {...}, telegram: {...} }` line ~35
+   - [heys-snapshot-demo/index.js](heys-snapshot-demo/index.js) — same pattern
+     line ~45
+   - [heys-client-daily-backup/index.js](heys-client-daily-backup/index.js) —
+     same line ~40
+   - [heys-api-push/index.js](heys-api-push/index.js) —
+     `const VAPID_PRIVATE_KEY = ...` line ~23
+   - [heys-cron-reminders/index.js](heys-cron-reminders/index.js) —
+     `const VAPID_PRIVATE_KEY = ...` line ~35
+   - [heys-bot-client/index.js](heys-bot-client/index.js) —
+     `TELEGRAM_BOT_TOKEN = pick(...) || process.env.TELEGRAM_BOT_TOKEN` line ~43
+
+2. **Заменить значения в `.env` на плейсхолдеры:**
+   - `PG_PASSWORD` → `__IN_LOCKBOX__heys-database__`
+   - `JWT_SECRET` → `__IN_LOCKBOX__heys-app-secrets__`
+   - `SESSION_SECRET` → `__IN_LOCKBOX__heys-app-secrets__`
+   - `HEYS_ENCRYPTION_KEY` → `__IN_LOCKBOX__heys-app-secrets__`
+   - `VAPID_PRIVATE_KEY` → `__IN_LOCKBOX__heys-app-secrets__`
+   - `S3_ACCESS_KEY_ID` → `__IN_LOCKBOX__heys-s3__`
+   - `S3_SECRET_ACCESS_KEY` → `__IN_LOCKBOX__heys-s3__`
+   - `INTERNAL_CRON_TOKEN` → `__IN_LOCKBOX__heys-app-secrets__` (был добавлен в
+     Lockbox раньше)
+   - `CLIENT_BOT_USERNAME` → `__IN_LOCKBOX__heys-app-secrets__`
+   - `APP_URL` → `__IN_LOCKBOX__heys-app-secrets__`
+
+3. **Re-deploy всех функций** с новой `.env`, чтобы Cloud Function
+   env-переменные тоже содержали плейсхолдеры. После этого реальные значения
+   секретов будут жить ТОЛЬКО в Lockbox.
+
+4. **Чеклист для будущей ротации секретов:**
+   - Через `yc lockbox secret add-version --id <id> --payload '...'`
+   - Старая версия остаётся доступной до явного `schedule-version-destruction`
+   - Кеш `secrets.js` живёт 5 минут — функции автоматически подтянут новое
+     значение через 5 мин (или при cold start)
+
+---
+
+**Последнее обновление**: 2026-05-22 **Версия**: 1.1 **Статус**: Phase 1–2
+deployed; Phase 3 (env removal) pending 24h watch

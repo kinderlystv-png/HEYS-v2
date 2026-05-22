@@ -18,6 +18,7 @@
  */
 
 const { getPool } = require('./shared/db-pool');
+const { initSecrets } = require('./shared/secrets');
 
 const BOT_API_URL = process.env.BOT_API_URL || 'https://api.heyslab.ru';
 const INTERNAL_CRON_TOKEN = process.env.INTERNAL_CRON_TOKEN;
@@ -92,6 +93,7 @@ async function sendBotMessage(chatId, text, replyMarkup) {
 }
 
 module.exports.handler = async function (event, context) {
+  await initSecrets();
   const started = Date.now();
   console.log(`[CRON-DRIP] started at ${new Date().toISOString()}`);
 

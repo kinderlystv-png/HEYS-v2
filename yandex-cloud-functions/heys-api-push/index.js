@@ -15,6 +15,7 @@
  */
 
 const { getPool } = require('./shared/db-pool');
+const { initSecrets } = require('./shared/secrets');
 const webpush = require('web-push');
 const crypto = require('crypto');
 
@@ -332,6 +333,7 @@ async function handleTest(identity) {
 
 // ── Main handler ────────────────────────────────────────────────────────
 module.exports.handler = async function (event) {
+  await initSecrets();
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const cors = corsHeaders(origin);
 

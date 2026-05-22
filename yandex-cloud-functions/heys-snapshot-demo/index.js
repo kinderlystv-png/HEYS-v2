@@ -33,6 +33,7 @@
 'use strict';
 
 const { readFileSync, existsSync } = require('fs');
+const { initSecrets } = require('./secrets');
 const { join } = require('path');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { Pool } = require('pg');
@@ -304,6 +305,7 @@ async function uploadSnapshot(gender, snapshot) {
 exports._internal = { buildAccountSnapshot, fetchPlainKvKeys, fetchDenormalizedProducts, CONFIG };
 
 exports.handler = async () => {
+  await initSecrets();
   const startTime = Date.now();
   const results = { success: [], failed: [] };
 

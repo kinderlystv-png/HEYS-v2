@@ -3,7 +3,11 @@
  * Отправка SMS через SMS.ru
  */
 
-const SMS_API_KEY = process.env.SMS_API_KEY;
+const { initSecrets } = require('./secrets');
+
+// SMS_API_KEY читается лениво внутри handler (после initSecrets() Lockbox-overlay).
+// Module-level чтение в const сломается когда значение будет жить только в Lockbox.
+function getSmsApiKey() { return process.env.SMS_API_KEY; }
 
 const ALLOW_LOCALHOST_ORIGINS = process.env.ALLOW_LOCALHOST_ORIGINS === '1';
 const ALLOWED_ORIGINS = [
@@ -37,6 +41,7 @@ function getCorsHeaders(origin) {
 }
 
 module.exports.handler = async function (event, context) {
+  await initSecrets();
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const corsHeaders = getCorsHeaders(origin);
 
@@ -58,7 +63,8 @@ module.exports.handler = async function (event, context) {
     };
   }
 
-  if (!SMS_API_KEY) {
+  const smsApiKey = getSmsApiKey();
+  if (!smsApiKey) {
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -88,7 +94,7 @@ module.exports.handler = async function (event, context) {
 
     // Формируем URL для SMS.ru
     const params = new URLSearchParams({
-      api_id: SMS_API_KEY,
+      api_id: smsApiKey,
       to: to,
       msg: msg,
       ip: clientIP,  // IP пользователя для защиты от спама

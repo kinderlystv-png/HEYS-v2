@@ -4,6 +4,7 @@
  */
 
 const { getPool } = require('./db-pool');
+const { initSecrets } = require('./secrets');
 const fs = require('fs');
 const path = require('path');
 
@@ -190,6 +191,7 @@ function getCorsHeaders(origin) {
 }
 
 module.exports.handler = async function (event, context) {
+  await initSecrets();
   const origin = event.headers?.origin || event.headers?.Origin || null;
   const corsHeaders = getCorsHeaders(origin);
 

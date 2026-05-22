@@ -23,6 +23,7 @@
  */
 
 const { spawn } = require('child_process');
+const { initSecrets } = require('./secrets');
 const { createReadStream, createWriteStream, unlinkSync, existsSync } = require('fs');
 const { createGzip } = require('zlib');
 const { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
@@ -263,6 +264,7 @@ async function cleanupOldBackups() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 module.exports.handler = async function(event, context) {
+  await initSecrets();
   const startTime = Date.now();
   console.log('[Backup] Starting backup process...');
 

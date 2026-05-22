@@ -9,6 +9,7 @@
  */
 
 const { Pool } = require('pg');
+const { initSecrets } = require('./shared/secrets');
 const { getSecret } = require('./shared/lockbox-client');
 
 // Database configuration
@@ -164,6 +165,7 @@ async function cleanupSecurityLogs(client) {
  * - daily_cleanup: Security logs cleanup (daily at 03:00 UTC)
  */
 module.exports.handler = async (event, context) => {
+  await initSecrets();
   await ensureConfig();
 
   const triggerId = event.messages?.[0]?.details?.trigger_id || 'default';

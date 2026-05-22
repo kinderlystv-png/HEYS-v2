@@ -5,6 +5,7 @@
  */
 
 const crypto = require('crypto');
+const { initSecrets } = require('./shared/secrets');
 const fs = require('fs');
 const path = require('path');
 
@@ -864,6 +865,7 @@ function isPlanningAgentClientIdAllowed(clientId) {
 }
 
 module.exports.handler = async function (event, context) {
+  await initSecrets();
   // 🔐 P0: Conditional logging — no request details in production
   debugLog('[RPC Handler] Request received');
   debugLog('[RPC Handler] Method:', event.httpMethod);
