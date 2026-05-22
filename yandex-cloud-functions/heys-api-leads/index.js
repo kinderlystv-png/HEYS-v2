@@ -4,7 +4,6 @@
  */
 
 const { getPool } = require('./shared/db-pool');
-const { getSecret } = require('./shared/lockbox-client');
 const { initSecrets } = require('./shared/secrets');
 const fs = require('fs');
 const path = require('path');
@@ -28,32 +27,9 @@ const PG_CONFIG = {
   }
 };
 
-// Telegram-токены загружаются лениво из Lockbox (LOCKBOX_APP_SECRET_ID),
-// с fallback на env. См. shared/lockbox-client.js.
-let TELEGRAM_BOT_TOKEN = null;
-let TELEGRAM_CHAT_ID = null;
-let configLoaded = false;
-let configPromise = null;
-
-async function ensureConfig() {
-  if (configLoaded) return;
-  if (!configPromise) {
-    configPromise = (async () => {
-      const lockboxId = process.env.LOCKBOX_APP_SECRET_ID;
-      const secrets = lockboxId ? await getSecret(lockboxId) : null;
-      const pick = (key) => {
-        const v = secrets && secrets[key];
-        return v && String(v).length > 0 ? v : process.env[key];
-      };
-      TELEGRAM_BOT_TOKEN = pick('TELEGRAM_BOT_TOKEN');
-      TELEGRAM_CHAT_ID = pick('TELEGRAM_CHAT_ID');
-      configLoaded = true;
-      console.log('[heys-api-leads] tg config loaded',
-        { from: secrets ? 'lockbox' : 'env', hasToken: !!TELEGRAM_BOT_TOKEN, hasChat: !!TELEGRAM_CHAT_ID });
-    })();
-  }
-  await configPromise;
-}
+// Telegram-токены подтягиваются initSecrets() из Lockbox (LOCKBOX_APP_SECRET_ID)
+// в process.env.TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID — читаем напрямую внутри
+// handler-функций (sendTelegramNotification ниже).
 
 // Окно дедупликации (30 минут)
 const DEDUPLICATION_WINDOW_MINUTES = 30;
@@ -114,7 +90,9 @@ function getCorsHeaders(origin) {
 }
 
 async function sendTelegramNotification(lead) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) {
     console.log('[Telegram] Not configured, skipping notification');
     return;
   }
@@ -146,11 +124,11 @@ ${lead.utm_source ? `📊 UTM: ${lead.utm_source}` : ''}
   };
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
+        chat_id: chatId,
         text: text,
         parse_mode: 'Markdown',
         reply_markup: keyboard
@@ -166,7 +144,6 @@ ${lead.utm_source ? `📊 UTM: ${lead.utm_source}` : ''}
 
 module.exports.handler = async function (event, context) {
   await initSecrets();
-  await ensureConfig();
 
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const corsHeaders = getCorsHeaders(origin);

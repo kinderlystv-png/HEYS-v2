@@ -21,6 +21,19 @@ beforeAll(async () => {
     return Math.round((diff / 60) * 10) / 10;
   };
 
+  // dayMealsIntegrity обычно регистрируется heys_models_v1.js при первом импорте.
+  // Но vitest config держит `isolate: false`, и если другой тест ранее сделал
+  // `global.HEYS = {}` (есть 7 таких в __tests__), повторный import возвращает
+  // кэшированный модуль БЕЗ повторного выполнения IIFE → HEYS.dayMealsIntegrity
+  // остаётся undefined и dayHasMealLinesForRisk возвращает false. Поэтому
+  // выставляем явно, не полагаясь на сайд-эффект импорта.
+  global.HEYS.dayMealsIntegrity = global.HEYS.dayMealsIntegrity || {
+    hasAnyMealLines(day) {
+      const meals = (day && Array.isArray(day.meals)) ? day.meals : [];
+      return meals.some((m) => Array.isArray(m?.items) && m.items.length > 0);
+    },
+  };
+
   await import('../heys_models_v1.js');
   await import('../heys_relapse_risk_v1.js');
   await import('../heys_risk_radar_v1.js');

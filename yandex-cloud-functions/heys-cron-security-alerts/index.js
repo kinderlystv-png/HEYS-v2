@@ -17,35 +17,12 @@
 
 const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
-const { getSecret } = require('./shared/lockbox-client');
 
 const COOLDOWN_MINUTES = 30;
 const WINDOW_MINUTES = 60;
 
-let TELEGRAM_BOT_TOKEN = null;
-let TELEGRAM_CHAT_ID = null;
-let configLoaded = false;
-let configPromise = null;
-
-async function ensureConfig() {
-  if (configLoaded) return;
-  if (!configPromise) {
-    configPromise = (async () => {
-      const lockboxId = process.env.LOCKBOX_APP_SECRET_ID;
-      const secrets = lockboxId ? await getSecret(lockboxId) : null;
-      const pick = (key) => {
-        const v = secrets && secrets[key];
-        return v && String(v).length > 0 ? v : process.env[key];
-      };
-      TELEGRAM_BOT_TOKEN = pick('TELEGRAM_BOT_TOKEN');
-      TELEGRAM_CHAT_ID = pick('TELEGRAM_CHAT_ID');
-      configLoaded = true;
-      console.log('[heys-cron-security-alerts] tg config loaded',
-        { from: secrets ? 'lockbox' : 'env', hasToken: !!TELEGRAM_BOT_TOKEN, hasChat: !!TELEGRAM_CHAT_ID });
-    })();
-  }
-  await configPromise;
-}
+// Telegram-токены подтягиваются initSecrets() из Lockbox в process.env —
+// читаем напрямую в sendAlert ниже.
 
 // Правила детектирования. Каждое — SQL-запрос, возвращающий 0 или 1+ строк.
 // Если есть строки → правило сработало.
@@ -130,7 +107,9 @@ async function recordAlert(client, ruleKey, payload, sent, messageId) {
 }
 
 async function sendTelegram(rule, rows) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) {
     return { sent: false, messageId: null, reason: 'telegram not configured' };
   }
 
@@ -150,12 +129,12 @@ async function sendTelegram(rule, rows) {
 
   try {
     const resp = await fetch(
-      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
+          chat_id: chatId,
           text,
           parse_mode: 'Markdown',
         }),
@@ -179,7 +158,6 @@ async function sendTelegram(rule, rows) {
 
 module.exports.handler = async function () {
   await initSecrets();
-  await ensureConfig();
 
   const pool = getPool();
   const client = await pool.connect();

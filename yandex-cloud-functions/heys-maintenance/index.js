@@ -8,64 +8,31 @@
  * Trigger: Timer (every 5 minutes for trial queue, daily for cleanup)
  */
 
-const { Pool } = require('pg');
+const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
-const { getSecret } = require('./shared/lockbox-client');
 
-// Database configuration
-const pool = new Pool({
-  host: process.env.PG_HOST,
-  port: parseInt(process.env.PG_PORT || '6432'),
-  database: process.env.PG_DATABASE,
-  user: process.env.PG_USER,
-  password: process.env.PG_PASSWORD,
-  ssl: process.env.PG_SSL === 'require' ? { rejectUnauthorized: false } : false,
-  max: 1,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
-});
+// DB pool — shared canonical implementation (CA-cert verify-full SSL).
 
-// Telegram-токены из Lockbox (lazy), с fallback на env.
-let TELEGRAM_BOT_TOKEN = null;
-let TELEGRAM_CHAT_ID = null;
-let configLoaded = false;
-let configPromise = null;
-
-async function ensureConfig() {
-  if (configLoaded) return;
-  if (!configPromise) {
-    configPromise = (async () => {
-      const lockboxId = process.env.LOCKBOX_APP_SECRET_ID;
-      const secrets = lockboxId ? await getSecret(lockboxId) : null;
-      const pick = (key) => {
-        const v = secrets && secrets[key];
-        return v && String(v).length > 0 ? v : process.env[key];
-      };
-      TELEGRAM_BOT_TOKEN = pick('TELEGRAM_BOT_TOKEN');
-      TELEGRAM_CHAT_ID = pick('TELEGRAM_CHAT_ID');
-      configLoaded = true;
-      console.log('[heys-maintenance] tg config loaded',
-        { from: secrets ? 'lockbox' : 'env', hasToken: !!TELEGRAM_BOT_TOKEN, hasChat: !!TELEGRAM_CHAT_ID });
-    })();
-  }
-  await configPromise;
-}
+// Telegram-токены подтягиваются initSecrets() из Lockbox в process.env —
+// читаем напрямую в sendTelegramNotification ниже.
 
 /**
  * Send Telegram notification (минимум ПДн — только ID)
  */
 async function sendTelegramNotification(message) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) {
     console.log('[Telegram] Not configured, skipping');
     return;
   }
-  
+
   try {
-    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
+        chat_id: chatId,
         text: message,
         parse_mode: 'Markdown',
       })
@@ -166,13 +133,13 @@ async function cleanupSecurityLogs(client) {
  */
 module.exports.handler = async (event, context) => {
   await initSecrets();
-  await ensureConfig();
 
   const triggerId = event.messages?.[0]?.details?.trigger_id || 'default';
   console.log(`[Maintenance] Starting task: ${triggerId}`);
 
   let client;
   try {
+    const pool = getPool();
     client = await pool.connect();
     
     const results = {};
