@@ -61,9 +61,6 @@
     const MealAddProduct = HEYS.dayComponents?.MealAddProduct;
     const ProductRow = HEYS.dayComponents?.ProductRow;
 
-    // === Import MealCard from dayComponents module ===
-    const MealCard = HEYS.dayComponents?.MealCard;
-
     // === Day helpers (storage/sound/guards/init/effects) ===
     if (!HEYS.dayStorage?.lsGet || !HEYS.dayStorage?.lsSet) {
         throw new Error('[heys_day_v12] HEYS.dayStorage not loaded before heys_day_v12.js');
@@ -133,11 +130,10 @@
     // === Import models module ===
     const M = HEYS.models || {};
 
-    // === MealOptimizerSection (extracted) ===
-    if (!HEYS.dayMealOptimizerSection?.MealOptimizerSection) {
-        throw new Error('[heys_day_v12] HEYS.dayMealOptimizerSection not loaded before heys_day_v12.js');
-    }
-    const MealOptimizerSection = HEYS.dayMealOptimizerSection.MealOptimizerSection;
+    // P0-D-stretch (2026-05-22): MealOptimizerSection теперь в lazy meals bundle.
+    // Local const был unused dead code, throw мешал boot-day парсингу пока chunk
+    // ещё не приехал. Компонент используется внутри meals bundle (heys_day_meals_bundle_v1.js),
+    // там доступен runtime через HEYS.dayMealOptimizerSection.MealOptimizerSection.
 
     function logMealExpandMissing(phase) {
         try {
@@ -260,7 +256,8 @@
         const [mealsDepsReady, setMealsDepsReady] = useState(() => {
             return !!(HEYSRef.dayMealExpandState?.useMealExpandState
                 && HEYSRef.dayMealHandlers?.createMealHandlers
-                && HEYSRef.dayMealHandlers?.sortMealsByTime);
+                && HEYSRef.dayMealHandlers?.sortMealsByTime
+                && HEYSRef.dayMealsDisplay?.useMealsDisplay);
         });
 
         useEffect(() => {
@@ -276,6 +273,10 @@
                     name: 'dayMealHandlers',
                     check: () => !!(HEYSRef.dayMealHandlers?.createMealHandlers && HEYSRef.dayMealHandlers?.sortMealsByTime),
                 },
+                {
+                    name: 'dayMealsDisplay',
+                    check: () => !!HEYSRef.dayMealsDisplay?.useMealsDisplay,
+                },
             ], () => {
                 setMealsDepsReady(true);
             }, {
@@ -285,6 +286,28 @@
                     logMealExpandMissing('waitForDeps_timeout');
                 },
             });
+        }, [mealsDepsReady]);
+
+        // P0-D-stretch: meals chunk теперь в postboot-3-ui-lazy.
+        // Flip mealsDepsReady когда lazy chunk прибыл — listener надёжнее чем
+        // waitForDeps (тот сейчас no-op'ит, Fact #4 plan'а).
+        useEffect(() => {
+            if (mealsDepsReady) return;
+            const checkAndFlip = () => {
+                if (HEYSRef.dayMealExpandState?.useMealExpandState
+                    && HEYSRef.dayMealHandlers?.createMealHandlers
+                    && HEYSRef.dayMealHandlers?.sortMealsByTime
+                    && HEYSRef.dayMealsDisplay?.useMealsDisplay) {
+                    setMealsDepsReady(true);
+                }
+            };
+            window.addEventListener('heys:postboot-lazy-ready', checkAndFlip);
+            window.addEventListener('heys:lazy-chunk-failed', checkAndFlip);
+            checkAndFlip();
+            return () => {
+                window.removeEventListener('heys:postboot-lazy-ready', checkAndFlip);
+                window.removeEventListener('heys:lazy-chunk-failed', checkAndFlip);
+            };
         }, [mealsDepsReady]);
 
         // === EARLY RETURN: защита при logout/auth clearing ===

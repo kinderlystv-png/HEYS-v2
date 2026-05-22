@@ -5,7 +5,10 @@
  * Validates:
  * - apps/web/bundle-manifest.json ↔ apps/web/public/bundle-manifest.json
  * - Each manifest entry: file exists under public/, hash matches filename
- * - index.html: boot defer scripts + preloads + POST_BOOT_BUNDLES match manifest
+ * - index.html: boot defer scripts + preloads match manifest
+ * - index.html POST_BOOT_BUNDLES contains only EAGER postboot bundles
+ *   (lazy chunks load via facade + lazy-manifest.json, not from POST_BOOT_BUNDLES)
+ * - lazy-manifest.json hashes match bundle-manifest.json for lazy chunks
  *
  * Run: pnpm verify:legacy-bundles
  * Optional: --fix-hint (default true) append rebuild commands on failure
@@ -28,7 +31,9 @@ const INDEX_HTML = resolve(WEB_DIR, 'index.html');
 
 const BUNDLE_NAMES = Object.keys(LEGACY_BUNDLES);
 const BOOT_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('boot-'));
-const POSTBOOT_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('postboot-'));
+const POSTBOOT_EAGER_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('postboot-') && n.endsWith('-eager'));
+const POSTBOOT_LAZY_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('postboot-') && n.endsWith('-lazy'));
+const LAZY_MANIFEST = resolve(PUB_DIR, 'lazy-manifest.json');
 
 const SHOW_FIX_HINT = !process.argv.includes('--no-fix-hint');
 
@@ -253,14 +258,47 @@ function main() {
             );
         }
 
-        const expectedPost = POSTBOOT_NAMES.map(n => manifest[n]?.file).filter(Boolean);
+        // POST_BOOT_BUNDLES в index.html содержит ТОЛЬКО eager-стаб бандлы.
+        // Lazy чанки (postboot-*-lazy) грузятся через facade (heys_game_facade,
+        // heys_postboot3_facade, pi_facade) через lazy-manifest.json.
+        const expectedPostEager = POSTBOOT_EAGER_NAMES.map(n => manifest[n]?.file).filter(Boolean);
         const pb = extractPostBootBundles(html);
         if (pb.error) {
             errors.push(pb.error);
-        } else if (!arraysEqual(pb.files, expectedPost)) {
+        } else if (!arraysEqual(pb.files, expectedPostEager)) {
             errors.push(
-                `index.html POST_BOOT_BUNDLES mismatch.\n  expected: ${JSON.stringify(expectedPost)}\n  actual:   ${JSON.stringify(pb.files)}`,
+                `index.html POST_BOOT_BUNDLES eager bundles mismatch.\n  expected: ${JSON.stringify(expectedPostEager)}\n  actual:   ${JSON.stringify(pb.files)}`,
             );
+        }
+
+        // Lazy бандлы проверяем через lazy-manifest.json (читается facade'ми
+        // в рантайме). Хеши должны совпадать с bundle-manifest.json.
+        const lazyM = readJson(LAZY_MANIFEST);
+        if (lazyM.error) {
+            errors.push(`lazy-manifest.json: ${lazyM.error}`);
+        } else {
+            for (const name of POSTBOOT_LAZY_NAMES) {
+                const expected = manifest[name];
+                const actual = lazyM.data[name];
+                if (!expected) continue; // already reported above
+                if (!actual) {
+                    errors.push(`lazy-manifest.json missing entry for "${name}"`);
+                    continue;
+                }
+                if (actual.file !== expected.file) {
+                    errors.push(
+                        `lazy-manifest.json "${name}" file mismatch.\n  bundle-manifest: ${expected.file}\n  lazy-manifest:   ${actual.file}`,
+                    );
+                }
+            }
+            // Extra keys in lazy-manifest (e.g. stale lazy bundle from older
+            // build) are a soft mismatch.
+            const lazyExtras = Object.keys(lazyM.data).filter(
+                k => !POSTBOOT_LAZY_NAMES.includes(k),
+            );
+            for (const k of lazyExtras) {
+                errors.push(`lazy-manifest.json has unknown bundle key "${k}"`);
+            }
         }
     }
 

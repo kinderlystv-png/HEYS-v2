@@ -271,6 +271,7 @@ export const LEGACY_BUNDLES = {
         'heys_postboot3_facade_v1.js',
     ],
     'postboot-3-ui-lazy': [
+        'heys_day_meals_bundle_v1.js',
         'heys_step_modal_v1.js',
         'heys_morning_activation_calendar_v1.js',
         'heys_steps_v1.js',
