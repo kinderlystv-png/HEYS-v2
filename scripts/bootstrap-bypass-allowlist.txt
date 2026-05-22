@@ -72,11 +72,11 @@ apps/web/heys_cascade_card_v1.js:3621
 apps/web/heys_app_backup_import_v1.js:284
 apps/web/heys_app_backup_import_v1.js:294
 apps/web/heys_cloud_storage_utils_v1.js:108
-apps/web/heys_consents_v1.js:333
-apps/web/heys_consents_v1.js:469
-apps/web/heys_consents_v1.js:516
-apps/web/heys_consents_v1.js:572
-apps/web/heys_consents_v1.js:975
+apps/web/heys_consents_v1.js:345
+apps/web/heys_consents_v1.js:481
+apps/web/heys_consents_v1.js:528
+apps/web/heys_consents_v1.js:584
+apps/web/heys_consents_v1.js:987
 apps/web/heys_push_v1.js:12
 apps/web/heys_demo_mode_v1.js:106
 apps/web/heys_demo_mode_v1.js:108
