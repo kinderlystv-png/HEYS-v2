@@ -1,12 +1,12 @@
 {
   "releases": [
     {
-      "version": "2026.05.22.1637b5b7",
-      "buildHash": "1637b5b7",
+      "version": "2026.05.22.546c35ee",
+      "buildHash": "546c35ee",
       "date": "2026-05-22",
       "kind": "technical",
       "profile": "technical-infra",
-      "title": "Внутреннее: документация — quota audit + post-Lockbox follow-up items в todo",
+      "title": "Внутреннее: документация + удалён dangling legacy shim heys_day_meals_list.js",
       "items": [
         {
           "type": "chore",
