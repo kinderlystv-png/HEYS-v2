@@ -28,20 +28,26 @@ const WINDOW_MINUTES = 60;
 // читаем напрямую в sendAlert ниже.
 
 // ── Concurrency watch (rolled out 2026-05-22) ─────────────────────────────
-// 5 API-функций переведены на concurrency=2. Этот блок сканирует логи в
-// поисках ошибок памяти / БД-пула и шлёт Telegram-алерт если они появятся.
-// Если алерт прилетел → откатить concurrency на 1 в deploy-all.sh и
-// передеплоить (см. plan 1-5-cheeky-micali.md → Item 2).
-const API_FUNCTION_IDS = {
-  'heys-api-rpc': 'd4e9e90es31bgjp87j8i',
-  'heys-api-rest': 'd4ea4j7eh05rtkjubipt',
-  'heys-api-auth': 'd4ef3c4o67vdg7o4c4d3',
-  'heys-api-leads': 'd4eml8vh341v41642cdu',
-  'heys-api-push': 'd4e2d7p20llki46ctf2b',
-};
-const LOG_GROUP_ID = 'e23ndggvq798r3v3eepq';  // default log group
-const CONCURRENCY_ERROR_PATTERN =
-  /out of memory|OOM|memory size limit exceeded|pool exhausted|too many connections|too many clients/i;
+// 5 API-функций переведены на concurrency=2. Этот блок проверяет пиковую
+// память (used_memory_bytes) через YC Monitoring API. Если приближается к
+// лимиту → Telegram-алерт. OOM = верный признак что concurrency=2 не
+// вытягивает; нужно откатить на 1 (см. todo.md → Item 2 / plan
+// 1-5-cheeky-micali.md → Item 2).
+//
+// ⚠️ Изначально пытался читать логи через Cloud Logging Reader API, но он
+// gRPC-only без HTTP/JSON gateway → "socket hang up". Перевёл на Monitoring
+// API metric (HTTP) с порогом по памяти.
+const API_FUNCTIONS = [
+  { name: 'heys-api-rpc', memory_mb: 512 },
+  { name: 'heys-api-rest', memory_mb: 512 },
+  { name: 'heys-api-auth', memory_mb: 256 },
+  { name: 'heys-api-leads', memory_mb: 256 },
+  { name: 'heys-api-push', memory_mb: 256 },
+];
+// Алертим если used_memory > 90% от лимита (memory_mb * 0.9 * 1MB).
+const MEMORY_WARN_THRESHOLD_RATIO = 0.9;
+const MONITORING_API_HOST = 'monitoring.api.cloud.yandex.net';
+const FOLDER_ID = 'b1gnv1a4q8i6de6atl6n';
 
 // Правила детектирования. Каждое — SQL-запрос, возвращающий 0 или 1+ строк.
 // Если есть строки → правило сработало.
@@ -129,6 +135,13 @@ async function recordAlert(client, ruleKey, payload, sent, messageId) {
 
 function fetchJson(transport, options, body) {
   return new Promise((resolve, reject) => {
+    // Precompute body + set Content-Length, иначе YC API закрывает соединение
+    // ("socket hang up") при chunked-encoded POST'ах от Node.js.
+    const bodyStr = body ? JSON.stringify(body) : null;
+    if (bodyStr) {
+      options.headers = options.headers || {};
+      options.headers['Content-Length'] = Buffer.byteLength(bodyStr);
+    }
     const req = transport.request(options, (res) => {
       let chunks = '';
       res.on('data', (c) => { chunks += c; });
@@ -143,7 +156,7 @@ function fetchJson(transport, options, body) {
     });
     req.on('error', reject);
     req.setTimeout(5000, () => req.destroy(new Error('Request timeout')));
-    if (body) req.write(JSON.stringify(body));
+    if (bodyStr) req.write(bodyStr);
     req.end();
   });
 }
@@ -171,27 +184,36 @@ async function getIamTokenForLogging() {
   return meta.access_token;
 }
 
-async function readFunctionLogs(functionId, sinceMinutes, iamToken) {
-  const since = new Date(Date.now() - sinceMinutes * 60 * 1000).toISOString();
+async function readPeakMemory(functionName, sinceMinutes, iamToken) {
+  // Query Monitoring API для max(used_memory_bytes) за окно.
+  // Возвращает максимум по всем версиям/bin'ам за window.
+  const now = new Date();
+  const since = new Date(now.getTime() - sinceMinutes * 60 * 1000);
   const body = {
-    log_group_id: LOG_GROUP_ID,
-    criteria: {
-      since,
-      resource_types: ['serverless.functions'],
-      resource_ids: [functionId],
-      page_size: 100,
-      levels: ['ERROR', 'FATAL', 'WARN'],
-    },
+    query:
+      `"serverless.functions.used_memory_bytes"{service="serverless-functions", function="${functionName}"}`,
+    fromTime: since.toISOString(),
+    toTime: now.toISOString(),
+    downsampling: { maxPoints: 10, aggregation: 'MAX' },
   };
-  return fetchJson(https, {
+  const resp = await fetchJson(https, {
     method: 'POST',
-    hostname: 'reader.logging.yandexcloud.net',
-    path: '/logging/v1/log-events:read',
+    hostname: MONITORING_API_HOST,
+    path: `/monitoring/v2/data/read?folderId=${FOLDER_ID}`,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${iamToken}`,
     },
   }, body);
+  let peak = 0;
+  for (const m of resp.metrics || []) {
+    const values = m.timeseries?.doubleValues || [];
+    for (const v of values) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > peak) peak = n;
+    }
+  }
+  return peak;  // bytes
 }
 
 async function checkConcurrencyIssues() {
@@ -203,20 +225,23 @@ async function checkConcurrencyIssues() {
   }
 
   const issues = [];
-  for (const [fnName, fnId] of Object.entries(API_FUNCTION_IDS)) {
+  for (const fn of API_FUNCTIONS) {
     try {
-      const resp = await readFunctionLogs(fnId, WINDOW_MINUTES, iamToken);
-      const entries = Array.isArray(resp?.events) ? resp.events : [];
-      const matches = entries.filter((e) => CONCURRENCY_ERROR_PATTERN.test(e?.message || ''));
-      if (matches.length > 0) {
+      const peakBytes = await readPeakMemory(fn.name, WINDOW_MINUTES, iamToken);
+      const peakMB = peakBytes / 1024 / 1024;
+      const limitMB = fn.memory_mb;
+      const ratio = peakMB / limitMB;
+      console.log(`[concurrency-watch] ${fn.name}: peak ${peakMB.toFixed(1)}MB / ${limitMB}MB (${(ratio * 100).toFixed(1)}%)`);
+      if (ratio >= MEMORY_WARN_THRESHOLD_RATIO) {
         issues.push({
-          function: fnName,
-          count: matches.length,
-          samples: matches.slice(0, 3).map((m) => (m.message || '').slice(0, 200)),
+          function: fn.name,
+          peak_mb: Math.round(peakMB),
+          limit_mb: limitMB,
+          ratio_pct: Math.round(ratio * 100),
         });
       }
     } catch (err) {
-      console.error(`[concurrency-watch] log read failed for ${fnName}:`, err.message);
+      console.error(`[concurrency-watch] metric read failed for ${fn.name}:`, err.message);
     }
   }
   return issues;
