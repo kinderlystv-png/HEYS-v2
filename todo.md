@@ -32,14 +32,13 @@ AgeGate, consents UI, marketing checkbox, retention cron). Ниже — то, ч
 
 ### 🟡 Мои задачи по триггерам
 
-| #    | Что                                                                                                                                                                                                                                                                                      | Время  | Триггер                                       | Файлы                                                                                                      |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| P1-B | Curator audit middleware: обернуть generic curator-RPC в `log_data_access('curator_action', curator_id, client_id, ...)`. SQL-функция уже есть, нужно вызвать из middleware heys-api-rpc. Без этого — нет audit trail кто из кураторов читал чьи данные                                  | 2ч     | До регистрации **второго** куратора           | [heys-api-rpc/index.js](yandex-cloud-functions/heys-api-rpc/index.js), `log_data_access` SQL fn существует |
-| P1-N | Direct cancellation UI: кнопка «Отменить подписку» в Profile → вызывает revoke `payment_oferta` → SQL trigger `cancel_sub_on_payment_oferta_revoke` автоматически выставит `subscriptions.canceled_at`. Сейчас клиент сам отменить не может, только через куратора                       | 2ч     | После запуска ЮKassa                          | [heys_user_tab_impl_v1.js](apps/web/heys_user_tab_impl_v1.js) (Profile), trigger уже в БД                  |
-| P1-O | Refund 14-day window в `refundPayment`: запретить refund если `payment.completed_at < now() - 14 days` ИЛИ pro-rata для остатка периода. Сейчас куратор может вернуть любую сумму в любое время                                                                                          | 1ч     | После запуска ЮKassa                          | [heys-api-payments/index.js:647](yandex-cloud-functions/heys-api-payments/index.js#L647) `refundPayment()` |
-| P1-L | SLA-tracker DSAR (10 раб. дней по 152-ФЗ ст.21): таблица `data_subject_requests(id, client_id, request_type, requested_at, processed_at, sla_deadline)` + cron в heys-cron-security-alerts: если `requested_at > 8 раб. дней` и `processed_at IS NULL` → Telegram-алерт «осталось 2 дня» | 3ч     | Когда придёт **первый** DSAR-запрос           | новая SQL миграция + dop в heys-cron-security-alerts                                                       |
-| P0-D | Bundle optimization (5 sprintов, см. секцию ниже). Текущий initial load = 3.06 MB eager + 4.69 MB lazy. Industry standard ≤1.5 MB initial                                                                                                                                                | 15-20ч | Жалобы мобильных юзеров на медленную загрузку | apps/web/, см. P0-D Roadmap                                                                                |
-| —    | Удалить `.env.backup-before-phase3-*`                                                                                                                                                                                                                                                    | 5 мин  | 48ч после Lockbox swap (~2026-05-24 22:00)    | см. Item 1 ниже                                                                                            |
+| #        | Что                                                                                                                                                                                                                                                                                                                                                 | Время | Триггер                                    | Файлы                                                                                                                                                                                 |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~P1-B~~ | ✅ DONE 2026-05-22 (commit 5de73b5e). Curator audit middleware пишет в `data_access_audit_log` через fire-and-forget `log_data_access` после успешного curator-RPC. Skip-list для list-операций; health-flag для KV/gamification                                                                                                                    | —     | —                                          | [heys-api-rpc/index.js](yandex-cloud-functions/heys-api-rpc/index.js) — `logCuratorAccessFireAndForget`                                                                               |
+| P1-N     | Direct cancellation UI: кнопка «Отменить подписку» в Profile → вызывает revoke `payment_oferta` → SQL trigger `cancel_sub_on_payment_oferta_revoke` автоматически выставит `subscriptions.canceled_at`. Сейчас клиент сам отменить не может, только через куратора                                                                                  | 2ч    | После запуска ЮKassa                       | [heys_user_tab_impl_v1.js](apps/web/heys_user_tab_impl_v1.js) (Profile), trigger уже в БД                                                                                             |
+| P1-O     | Refund 14-day window в `refundPayment`: запретить refund если `payment.completed_at < now() - 14 days` ИЛИ pro-rata для остатка периода. Сейчас куратор может вернуть любую сумму в любое время                                                                                                                                                     | 1ч    | После запуска ЮKassa                       | [heys-api-payments/index.js:647](yandex-cloud-functions/heys-api-payments/index.js#L647) `refundPayment()`                                                                            |
+| ~~P1-L~~ | ✅ DONE 2026-05-22 (commit ed6068cc). Таблица `data_subject_requests` + `add_working_days` + RPC `record_offline_dsar`/`log_api_dsar`/`complete_dsar` + 2 cron-правила (`dsar_sla_warning` 2 дня до, `dsar_sla_breach` после). Когда придёт первый offline-DSAR — curator вызывает `record_offline_dsar` через psql или Curator-tab (если будет UI) | —     | —                                          | [database/2026-05-22_dsar_sla_tracker.sql](database/2026-05-22_dsar_sla_tracker.sql), [heys-cron-security-alerts/index.js](yandex-cloud-functions/heys-cron-security-alerts/index.js) |
+| —        | Удалить `.env.backup-before-phase3-*`                                                                                                                                                                                                                                                                                                               | 5 мин | 48ч после Lockbox swap (~2026-05-24 22:00) | см. Item 1 ниже                                                                                                                                                                       |
 
 ### 🟢 Твои операционные задачи (не блокеры)
 
@@ -194,92 +193,60 @@ OOM/pool issues»** с указанием функции и количества
 
 ---
 
-## ⏸️ P0-D Roadmap (отложен 2026-05-22) — 5 sprintов оптимизации после Stretch-2
+## 📜 P0-D Bundle Optimization — финальный итог (закрыто 2026-05-22)
 
-**Контекст:** после Track A (-46% bundle) + Track B (loading progress UI) +
-Stretch-2 (Phase A batching + SW postboot precache + backup UI lazy) — прод в
-industry-tier зоне (FCP ~2.8s, TTI ~4.5s на Fast 3G, login jank 174-227ms vs
-667ms baseline). Юзер: «как сейчас работает — нравится». Дальнейшие sprintы дают
-marginal user-visible эффект (gzip economy < 100 KB на 700 KB существующих), при
-non-trivial regression risk. **Отложено до конкретных триггеров.**
+**Что уже в проде** (Track A + Track B + Stretch-2):
 
-**Возвращаться когда:**
+- Critical JS: **6.21 MB → 3.12 MB raw (-50%)**, gzip **1.32 MB → ~700 KB
+  (-47%)**
+- Login jank (message handler): **667ms → 174-227ms (-66%)**
+- Returning user cold reload: 2-3 сек network → ~0 ms из SW cache
+- Молчаливых фаз загрузки: 3 окна → 0 (loading progress UI)
 
-- реальные клиенты пожалуются на скорость (особенно slow 3G / Android budget)
-- аналитика покажет конкретный bottleneck
-- появится window без других приоритетов
+**Дальнейшие sprintы НЕ делаем.** Roadmap из 5 направлений (meals retry,
+gamification-bar lazy, localStorage compression, trial-queue lazy, insulin-wave
+profile-gated) был **проверен попытками в той же сессии** — каждая попытка
+выявила скрытые trade-offs которые не были видны на этапе планирования:
 
-**Полный план** с verified Facts Table, file:line refactor рецептами и
-verification template per sprint:
-`/Users/poplavskijanton/.claude/plans/p0-quick-wins-frolicking-rose.md`
+- **Sprint 1 (meals retry)** — реализован локально 2026-05-22 через
+  `DayTab/DayTabContent` wrapper split. Откачен (не запушен): добавлял +120ms
+  skeleton "Загрузка дневника…" на cold load которого раньше не было — UX
+  trade-off отрицательный.
+- **Sprint 3 (localStorage compression shared_products)** — реализован локально
+  2026-05-22. Откачен: `Store.compress` на 600+ KB JSON делает 20 pattern-
+  replacement passes по строке — это 150-300ms синхронной работы на main thread
+  при каждом save. User сообщил визуальный "tipping". Real cost > LS benefit.
+- **Sprint 2 (gamification-bar)** — high risk (7/10). Module-load snapshots в
+  `heys_app_initialize_v1.js:25` + `heys_app_root_impl_v1.js:44` + render через
+  `React.createElement(GamificationBar)` в `heys_app_shell_v1.js:1328`. Тот же
+  класс bug что в meals retry попытках — мы видели 2 раза recovery UI.
+- **Sprint 4 (trial-queue)** + **Sprint 5 (insulin-wave)** — trivial gains
+  (-20KB и -10KB gzip respectively), не оправдывают sprint overhead.
 
-### Sprint 1 — meals retry через DayTab/DayTabContent wrapper split
+**Урок:** на текущем размере приложения и audience все дальнейшие bundle
+optimizations дают marginal user-visible эффект (<10% gzip), при том что
+**каждая реальная попытка** выявляет hidden cost. Прод после Stretch-2 — peak
+текущей архитектуры. Дальнейшие wins пойдут от **новых типов оптимизации** когда
+придут конкретные user triggers:
 
-**Экономия:** boot-calc -218 KB raw (~31%), gzip ~50 KB. **Реализован локально
-2026-05-22, откачен (не запушен)** — юзер сказал прод нравится как есть,
-marginal UX gain не стоит ~120ms нового skeleton "Загрузка дневника…" и +280 KB
-на postboot-3. Архитектура работает (proved через локальный smoke), но
-кардинального user-visible эффекта нет.
+- Web Worker offloading для cascade compute (если жалобы на main-thread jank)
+- Server-side rendering / static prerendering (если жалобы на TTI на slow
+  Android)
+- Image optimization (если bandwidth analytics покажет high image weight)
 
-**Если вернёмся:** план готов — split `HEYS.DayTab` (wrapper с 2 фиксированными
-хуками) + `DayTabContent` (отдельный function declaration со всеми 42+ hooks).
-Удалить 4 dead-snapshot блока в outer scope (lines 60-65 + 136-141 на момент
-2026-05-22). `bundle-day.cjs`: убрать `heys_day_meals_bundle_v1.js`, оставить
-`day/_meal_quality.js` eager (критичный нюанс — destructuring `HEYS.mealScoring`
-на module-load).
+**Возвращаться к bundle-optimization roadmap'у НЕ нужно** — кроме случая когда
+реальные пользователи пожалуются на скорость на конкретной сети/устройстве с
+metrics-trace. Тогда — нацельтесь на конкретное bottleneck, не на абстрактный
+"еще немного KB lazy".
 
-### Sprint 2 — gamification-bar lazy (118 KB, 60% audience)
+**Архивные ссылки** (для исторической справки):
 
-**Risk: 7/10** — `heys_app_initialize_v1.js:25` + `heys_app_root_impl_v1.js:44`
-делают module-load snapshots, `heys_app_shell_v1.js:1328` рендерит. Тот же класс
-bug что Sprint 1 dead snapshots — если не убрать предварительно, будет crash.
-
-**Если вернёмся:** Sprint 2 имеет те же подводные камни что Sprint 1 (snapshot
-timing). Лучше делать после Sprint 1 (proven pattern). Без Sprint 1 — Sprint 2
-оверкилл.
-
-### Sprint 3 — localStorage Option A: compress shared_products cache
-
-**Экономия:** освобождает 200-400 KB LS → 28 dayv2 cloud-only вмещаются локально
-→ instant open старых дней (vs 300-1200ms cloud read на 3G).
-
-**Risk: LOW** — compression infrastructure уже proven (pending queues, dayv2
-v2). Backward compat через try/catch `decompress → JSON.parse fallback`.
-
-**Файлы:** `apps/web/heys_storage_supabase_v1.js` (2 места: 12694-12704 read,
-12825-12838 write).
-
-**Это самый безопасный sprint из roadmap'а** — не трогает React/bundle/RoH.
-Реально влияет только на returning users с большой history (28+ дней).
-
-### Sprint 4 — trial-queue lazy (92 KB, 70-80% audience)
-
-**Risk: LOW-MEDIUM** — все consumers через `?.` кроме одного места:
-`heys_app_gate_flow_v1.js:1745` (TrialQueueAdmin direct access без `?.`).
-Patch + перенести в postboot-3-ui-lazy.
-
-### Sprint 5 — insulin-wave UI profile-gated lazy (45 KB, 80% audience)
-
-**Risk: 2/10** — все 3 consumer call-sites уже через `?.`. Profile-gated через
-`profile.phenotype.metabolic === 'insulin_resistant'`.
-
-**Самый легкий sprint.** Возможно стоит сделать первым если решим вернуться к
-roadmap'у — proves pattern без серьёзного риска.
-
-### Audit-doc на localStorage quota
-
-Создан в `apps/web/__perf_baselines__/storage-quota-audit-2026-05-22.md` —
-описывает 4 options (A: compress shared products; B: TTL 60d; C: split-read; D:
-drop cascade cache). Option D **invented в audit** (cascadeState НЕ в dayv2 —
-verified `grep cascadeState` → 0 matches). Реальная экономия Option D = 2-5 KB
-через `heys_ceb_*` cleanup — не стоит отдельного sprint'а.
-
-### Если решишь начать с одного sprint'а
-
-**Рекомендация:** Sprint 3 (localStorage compression) — самый безопасный + самый
-реальный user-visible win (для returning users с large history). Подразумевает
-фактическую пользу без RoH рисков. Sprint 1/2/4/5 — все требуют React/bundle
-careful refactor.
+- Полный roadmap-план:
+  `/Users/poplavskijanton/.claude/plans/p0-quick-wins-frolicking-rose.md`
+- Audit-doc на localStorage quota:
+  `apps/web/__perf_baselines__/storage-quota-audit-2026-05-22.md` (Option D
+  invented — cascadeState не в dayv2; Option A с compression в реальности даёт
+  perf-regression при write).
 
 ---
 
