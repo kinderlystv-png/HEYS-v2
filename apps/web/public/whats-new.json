@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.366f5feb",
+      "buildHash": "366f5feb",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: исправлен URL портала РКН в legal-документах",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Заменён несуществующий portal.rkn.gov.ru на pd.rkn.gov.ru",
+          "description": "Во внутренних документах об уведомлении в Роскомнадзор был указан несуществующий поддомен portal.rkn.gov.ru (DNS NXDOMAIN). Заменён на актуальный портал персональных данных Роскомнадзора — https://pd.rkn.gov.ru/operators-registry/notification/. Изменения касаются только operator-документации (rkn-notification-*.md, internal-policy-pdn.md, README), на пользовательскую часть приложения не влияет."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.8a1a2358",
       "buildHash": "8a1a2358",
       "date": "2026-05-22",
