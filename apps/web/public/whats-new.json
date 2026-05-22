@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.53fb5233",
+      "buildHash": "53fb5233",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: пост-Lockbox cleanup, тестовая изоляция и параллелизм API",
+      "items": [
+        {
+          "type": "refactor",
+          "title": "5 пунктов аудит-плана 1-5 выполнено за одну сессию",
+          "description": "(1) heys-backup удалена — дублировала YC Managed PG built-in backup (retention 14 дней, PITR); 8 docs обновлены ссылаться на YC. (2) deploy-all.sh build_env_flags() сокращён со 130 до 93 строк через helper-функции. (3) vitest вернули isolate:true — каждый test-file свой fork, +16s но 0 flake'ов на 5 прогонах подряд. (4) 5 API-функций (rpc/rest/auth/leads/push) переведены на concurrency=2 — меньше cold start'ов под нагрузкой. (5) Удаление .env.backup-* (содержит реальные секреты) запланировано на ~2026-05-24 после 48ч стабильности Lockbox. На UX не влияет."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.50c7d364",
       "buildHash": "50c7d364",
       "date": "2026-05-22",
