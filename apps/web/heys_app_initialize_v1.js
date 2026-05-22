@@ -169,6 +169,12 @@
                     console.info('[HEYS.skeleton] 🦴 Skeleton was visible for ' + (skelDur / 1000).toFixed(1) + 's → React takes over');
                 }
                 window.__heysPerfMark && window.__heysPerfMark('ReactDOM.createRoot: begin');
+                // P1-R: signal react-mount phase before createRoot blocks the thread.
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:progress', {
+                        detail: { phase: 'react-mount', percent: 92, message: 'Готовим интерфейс...' }
+                    }));
+                } catch (_) { /* best-effort */ }
                 const root = ReactDOM.createRoot(rootElement);
                 root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
                 window.__heysPerfMark && window.__heysPerfMark('root.render: called → __heysAppReady');
@@ -181,6 +187,12 @@
 
                 // Флаг для watchdog
                 window.__heysAppReady = true;
+                // P1-R: progress 100% → loading UI hides itself.
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:progress', {
+                        detail: { phase: 'ready', percent: 100, message: 'Готово' }
+                    }));
+                } catch (_) { /* best-effort */ }
                 // Сброс crash-loop counter — загрузка успешна
                 try { sessionStorage.removeItem('heys_boot_crash_count'); } catch (e) { /* private browsing */ }
             };

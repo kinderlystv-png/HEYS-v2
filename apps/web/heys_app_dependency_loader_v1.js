@@ -76,20 +76,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-init: execute start');
                 }
             }
 
-            if (!document.getElementById('heys-init-loader') && depsElapsedMs >= INIT_LOADER_DELAY_MS) {
-                bootLog('showing loader (waiting for deps)');
-                if (window.__heysInitLoaderState !== 'show_loader') {
-                    console.info('[HEYS.sceleton] 🦴 init_show_loader', {
-                        elapsedMs: depsElapsedMs,
-                        delayMs: INIT_LOADER_DELAY_MS
-                    });
-                    window.__heysInitLoaderState = 'show_loader';
-                }
-                const loader = document.createElement('div');
-                loader.id = 'heys-init-loader';
-                loader.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;z-index:99999';
-                loader.innerHTML = '<div style="width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
-                document.body.appendChild(loader);
+            if (depsElapsedMs >= INIT_LOADER_DELAY_MS && window.__heysInitLoaderState !== 'show_loader') {
+                // P1-R: spinner заменён на heys_loading_progress_v1.js (DOM bar + chip).
+                // Здесь только диспатчим прогресс-событие. Сам spinner-элемент
+                // больше не создаём — progress UI уже показывает фазу "Загружаем модули..."
+                bootLog('deps slow — notifying progress UI');
+                console.info('[HEYS.sceleton] 🦴 init_show_loader', {
+                    elapsedMs: depsElapsedMs,
+                    delayMs: INIT_LOADER_DELAY_MS
+                });
+                window.__heysInitLoaderState = 'show_loader';
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:progress', {
+                        detail: {
+                            phase: 'bundles-loading',
+                            percent: 20,
+                            message: 'Загружаем модули...',
+                            detail: 'depsWait ' + (depsElapsedMs / 1000).toFixed(1) + 's'
+                        }
+                    }));
+                } catch (_) { /* best-effort */ }
             }
 
             // 🆕 PERF v9.2: логируем первый момент готовности React и HEYS независимо

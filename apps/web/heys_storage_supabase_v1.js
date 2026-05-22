@@ -6718,6 +6718,23 @@
             if (isDebugSync()) {
               logCritical(`🔍 [SYNC PAGINATED] page offset=0, rows=${firstRows.length}, total=${allData.length}`);
             }
+            // P1-R: progress dispatch — после первой страницы знаем минимум загрузки;
+            // total известен только если page неполная.
+            try {
+              const totalKnown = firstRows.length < PAGE_SIZE ? firstRows.length : null;
+              window.dispatchEvent(new CustomEvent('heys:progress', {
+                detail: {
+                  phase: 'sync-fetch',
+                  percent: 55,
+                  message: 'Загружаем продукты и историю...',
+                  loaded: allData.length,
+                  total: totalKnown,
+                  detail: totalKnown
+                    ? `загружено ${allData.length} записей`
+                    : `загружено ${allData.length}+ записей...`
+                }
+              }));
+            } catch (_) { /* progress is best-effort */ }
             if (firstRows.length >= PAGE_SIZE) {
               let nextOffset = PAGE_SIZE;
               let done = false;
@@ -6738,6 +6755,25 @@
                   if (isDebugSync()) {
                     logCritical(`🔍 [SYNC PAGINATED] page offset=${offsets[i]}, rows=${rows.length}, total=${allData.length}`);
                   }
+                  // P1-R: progress dispatch для каждой страницы FAN_OUT.
+                  // Percent поднимается 55→85 по pages count, чтобы не уйти выше
+                  // 85 до завершения парсинга.
+                  try {
+                    const isLast = rows.length < PAGE_SIZE;
+                    const pct = Math.min(85, 55 + paginatedFetchPages * 4);
+                    window.dispatchEvent(new CustomEvent('heys:progress', {
+                      detail: {
+                        phase: 'sync-fetch',
+                        percent: pct,
+                        message: 'Загружаем продукты и историю...',
+                        loaded: allData.length,
+                        total: isLast ? allData.length : null,
+                        detail: isLast
+                          ? `загружено ${allData.length} записей`
+                          : `загружено ${allData.length}+ записей...`
+                      }
+                    }));
+                  } catch (_) { /* best-effort */ }
                   // Останавливаемся на первой неполной странице.
                   // Остальные параллельные запросы из этой пачки уже отработали —
                   // их данные могут быть лишними (если там были записи), но не теряются:

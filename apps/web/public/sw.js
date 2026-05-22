@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1779463169622';
+const CACHE_VERSION = 'heys-1779463897019';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -52,6 +52,7 @@ const PRECACHE_URLS = [
   '/icon-192.png',
   '/icon-512.png',
   '/react-bundle.js',
+  '/heys_loading_progress_v1.js',
 ];
 
 // CDN ресурсы — кэшируем при первом запросе.
