@@ -9,7 +9,7 @@
 - ИНН: 263517141102
 - ОГРНИП: 320265100094118
 - Адрес: 355041, г. Ставрополь, ул. Краснофлотская, д. 88/1, кв. 56
-- Email: privacy@heys.app (HEYS), privacy@kinderly26.ru (Kinderly)
+- Email: poplanton@mail.ru (единый контактный email для HEYS и Kinderly)
 
 ## Состав документов
 

@@ -180,7 +180,7 @@ export default function PrivacyPolicyPage() {
       </p>
 
       <p>
-        5.3. Вы можете отозвать согласие в любой момент, написав на privacy@heys.app.
+        5.3. Вы можете отозвать согласие в любой момент, написав на poplanton@mail.ru.
       </p>
 
       <hr />

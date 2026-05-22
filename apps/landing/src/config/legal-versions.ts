@@ -38,8 +38,8 @@ export const LEGAL_DOCS = {
 } as const satisfies Record<string, LegalDocMeta>
 
 export const SUPPORT_CONTACTS = {
-  generalEmail: 'support@heys.app',
-  privacyEmail: 'privacy@heys.app',
+  generalEmail: 'poplanton@mail.ru',
+  privacyEmail: 'poplanton@mail.ru',
   telegramHandle: '@heyslab_support',
   telegramUrl: 'https://t.me/heyslab_support',
 } as const
