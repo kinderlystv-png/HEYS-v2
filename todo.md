@@ -1,6 +1,113 @@
 # HEYS — Активные задачи
 
-> Обновлено: 2026-05-17
+> Обновлено: 2026-05-22
+
+---
+
+## 🔭 После Lockbox + concurrency=2 rollout (2026-05-22)
+
+### Item 1 — удалить .env.backup-\* (через 48ч стабильности)
+
+**Когда:** ~2026-05-24 22:00 MSK или позже.
+
+**Что:** в `yandex-cloud-functions/.env.backup-before-phase3-20260522-185935`
+лежат **реальные** PG_PASSWORD / JWT_SECRET / SESSION_SECRET /
+HEYS_ENCRYPTION_KEY / VAPID_PRIVATE_KEY / S3-keys в открытом виде. Создан как
+safety-net при Phase 3 Lockbox swap. После 48ч стабильной работы — можно
+удалять.
+
+**Команда** (сначала verify что Lockbox не падал, потом rm):
+
+```bash
+# 1. Verify нет lockbox-fail'ов за 48ч
+for fn in $(yc serverless function list --format json | jq -r '.[].name' | grep '^heys-'); do
+  yc serverless function logs "$fn" --since 48h 2>&1 | grep -i 'Failed to load secret.*after 2 attempts'
+done
+# Empty output = OK
+
+# 2. Удалить backup
+rm yandex-cloud-functions/.env.backup-before-phase3-*
+
+# 3. Обновить статус в LOCKBOX_MIGRATION_GUIDE.md → "Phase 3 completed"
+```
+
+Или скажи мне «удали backup» — я сам прогоню verify и удалю.
+
+---
+
+### Item 2 — если concurrency=2 сломается, как откатить
+
+**Симптом:** приходит Telegram-алерт от куратор-бота вида **«⚠️ Concurrency=2:
+OOM/pool issues»** с указанием функции и количества ошибок. Триггер:
+автомониторинг в `heys-cron-security-alerts` каждые 15 минут (rule
+`concurrency_watch`).
+
+**Что значит:** один из 5 API-контейнеров (rpc/rest/auth/leads/push) не
+вытягивает 2 параллельных запроса — либо памяти не хватает (512MB / 2 = 256MB на
+запрос), либо БД-pool max=3 исчерпан.
+
+**Откат за 2 минуты:**
+
+1. Открыть `yandex-cloud-functions/deploy-all.sh`, найти строки 328-331:
+
+   ```bash
+   local concurrency_flag=""
+   if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push)$ ]]; then
+       concurrency_flag="--concurrency 2"
+   fi
+   ```
+
+2. Заменить `2` на `1` (на одной строке `concurrency_flag="--concurrency 1"`)
+   ИЛИ убрать regex имени функции которая сломалась если только одна проблемная.
+
+3. Передеплоить затронутые функции:
+
+   ```bash
+   cd yandex-cloud-functions
+   for fn in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-push; do
+     ./deploy-all.sh "$fn" --skip-checks --skip-health
+   done
+   ```
+
+4. Verify откат:
+
+   ```bash
+   for fn in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-push; do
+     yc serverless function version list --function-name "$fn" --format json \
+       | jq -r "[\"$fn\", .[0].concurrency] | @tsv"
+   done
+   # Должно показать concurrency=1 у всех
+   ```
+
+5. Cooldown rule `concurrency_watch` 30 мин — новый алерт может прилететь только
+   через 30 мин (или вручную делать
+   `UPDATE security_alerts_log SET sent_at = NULL WHERE rule_key = 'concurrency_watch'`).
+
+**Не паникуй**: на пике сейчас 0-1 запросов в минуту на API. Если concurrency=2
+сломается — это будет single-request OOM, легко чинится откатом за 2 минуты.
+Никакого outage'а не должно быть.
+
+**Или скажи мне «откати concurrency»** — я сам проделаю все 5 шагов.
+
+---
+
+### Item 3 — quarterly audit секретов в Lockbox
+
+**Когда:** 2026-08-22, 2026-11-22, и т.д. (раз в 3 месяца).
+
+**Что:** проверить что:
+
+1. Все секреты в `heys-app-secrets` (e6qrvefs3vn66jiamfk4) ещё нужны и активны.
+2. Нет утечек: проверить если PG_PASSWORD / JWT_SECRET случайно не закоммитились
+   куда-то (`git log -p --all -- '*.env*' | grep -iE 'password|secret'`).
+3. SA `aje85rjgpj4nk9m384ek` имеет только нужные роли (lockbox.payloadViewer +
+   logging.reader + serverless.functions.invoker — других быть не должно).
+4. Чеклист в
+   [LOCKBOX_MIGRATION_GUIDE.md](yandex-cloud-functions/LOCKBOX_MIGRATION_GUIDE.md)
+   → "Чеклист миграции" → "Запланировал quarterly audit секретов".
+
+Опционально: ротация секретов (создать новую версию secret'а с новым значением,
+функции автоматически подтянут через 5 минут или при cold start).
 
 ---
 
