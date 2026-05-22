@@ -69,6 +69,13 @@ node scripts/lint-direct-localstorage-writes.mjs || {
   exit 1
 }
 
+echo "📦 Проверка bundle size budget (P0-D, +5% guard)..."
+node scripts/lint-bundle-size.mjs || {
+  echo "❌ Bundle size guard: critical-path бандл вырос >+5% от baseline. Push отменён."
+  echo "💡 Если рост оправдан — добавь [bundle-size-ok] в commit message."
+  exit 1
+}
+
 echo "🧪 Запуск полного test suite..."
 
 # До 2026-05-21 здесь был whitelist из 14 «критических» файлов. За время его

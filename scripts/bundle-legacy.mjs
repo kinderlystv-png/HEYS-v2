@@ -25,6 +25,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
+import { minify } from 'terser';
+
 import { LEGACY_BUNDLES } from './legacy-bundle-config.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -37,6 +39,7 @@ const INDEX_HTML = resolve(WEB_DIR, 'index.html');
 const LAZY_MANIFEST = resolve(PUB_DIR, 'lazy-manifest.json');
 
 const DRY_RUN = process.argv.includes('--dry-run');
+const NO_MINIFY = process.argv.includes('--no-minify');
 const SELECTED_BUNDLES = (() => {
     const raw = (process.argv.find(a => a.startsWith('--bundle=')) ?? '').slice(9);
     if (!raw) return [];
@@ -93,9 +96,35 @@ function readExistingManifest() {
     }
 }
 
+// ─── Minify one bundle ─────────────────────────────────────────────────────
+// Conservative Terser config: drops console.log/info/debug + dead code + comments
+// + whitespace, but DOES NOT mangle (boot bundles populate window.HEYS.* by
+// string-named globals across IIFE files — top-level mangling would break the
+// global API contract). Use --no-minify CLI flag to skip for debugging.
+
+async function minifyBundle(name, source) {
+    const result = await minify(source, {
+        compress: {
+            drop_console: ['log', 'info', 'debug'], // keep warn/error для recovery UI
+            drop_debugger: true,
+            pure_funcs: ['console.log', 'console.info', 'console.debug'],
+            passes: 1,
+            unsafe: false,           // legacy bundles не дают type-safety гарантий
+            dead_code: true,
+            unused: false,           // top-level IIFE-side-effect модули
+        },
+        mangle: false,               // window.HEYS.* контракт по строковым именам
+        format: { comments: false, ascii_only: true },
+    });
+    if (!result || typeof result.code !== 'string' || !result.code) {
+        throw new Error(`${name}: terser returned empty result`);
+    }
+    return result.code;
+}
+
 // ─── Build one bundle ──────────────────────────────────────────────────────
 
-function buildBundle(name, files) {
+async function buildBundle(name, files) {
     const parts = [];
     const missing = [];
     let srcFingerprint = null;
@@ -114,7 +143,19 @@ function buildBundle(name, files) {
         throw new Error(`${name}: ${missing.length} file(s) missing`);
     }
 
-    const content = parts.join('\n');
+    const rawContent = parts.join('\n');
+    const rawSize = Buffer.byteLength(rawContent, 'utf8');
+    let content;
+    if (NO_MINIFY) {
+        content = rawContent;
+    } else {
+        try {
+            content = await minifyBundle(name, rawContent);
+        } catch (err) {
+            console.error(`\n[bundle-legacy] ❌ Terser failed on ${name}: ${err.message}`);
+            throw err;
+        }
+    }
     const hash = contentHash(content);
     srcFingerprint = sourceFingerprint(files);
     const outName = `${name}.bundle.${hash}.js`;
@@ -154,7 +195,7 @@ function buildBundle(name, files) {
         }
     }
 
-    return { name, file: outName, hash, sourceFingerprint: srcFingerprint, fileCount: files.length, size };
+    return { name, file: outName, hash, sourceFingerprint: srcFingerprint, fileCount: files.length, size, rawSize };
 }
 
 // ─── Clean stale bundles ───────────────────────────────────────────────────
@@ -223,6 +264,8 @@ async function main() {
     console.info(`  web dir : ${WEB_DIR}`);
     console.info(`  output  : ${PUB_DIR}`);
     if (DRY_RUN) console.info('  mode    : DRY RUN (no files written)');
+    if (NO_MINIFY) console.info('  minify  : DISABLED (--no-minify)');
+    else console.info('  minify  : ENABLED (terser, mangle:false, drop_console:log/info/debug)');
     if (SELECTED_BUNDLES.length) console.info(`  filter  : ${SELECTED_BUNDLES.join(', ')}`);
 
     if (!DRY_RUN) {
@@ -244,7 +287,7 @@ async function main() {
 
     for (const [name, files] of toRun) {
         process.stdout.write(`  📦 ${name.padEnd(22)} (${String(files.length).padStart(3)} files) ... `);
-        const r = buildBundle(name, files);   // throws on missing files → exits
+        const r = await buildBundle(name, files);   // throws on missing files → exits
         const entry = {
             file: r.file,
             hash: r.hash,
@@ -255,7 +298,12 @@ async function main() {
         };
         builtEntries[r.name] = entry;
         manifest[r.name] = entry;
-        console.info(`✅ ${r.file}  ${fmtSize(r.size)}`);
+        if (!NO_MINIFY && r.rawSize > r.size) {
+            const savedPct = (100 - (r.size / r.rawSize) * 100).toFixed(0);
+            console.info(`✅ ${r.file}  ${fmtSize(r.size)}  (was ${fmtSize(r.rawSize)}, -${savedPct}%)`);
+        } else {
+            console.info(`✅ ${r.file}  ${fmtSize(r.size)}`);
+        }
     }
 
     if (!DRY_RUN) {
