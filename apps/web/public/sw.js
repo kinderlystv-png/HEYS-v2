@@ -122,28 +122,32 @@ self.addEventListener('install', (event) => {
               );
             })
             .then(() => {
-              // 🚀 Proactive boot bundle precache из bundle-manifest.json
-              // На СЛЕДУЮЩИЙ визит пользователь получит все boot-бандлы из кэша (~0ms vs 30s)
+              // 🚀 Proactive bundle precache из bundle-manifest.json
+              // На СЛЕДУЮЩИЙ визит пользователь получит все бандлы из кэша (~0ms vs 30s)
+              // P0-D-stretch-2: расширено с boot-* до boot-* + postboot-* — раньше
+              // постbootы кешировались только on-demand (~2-3 сек загрузки на cold
+              // app launch для returning users). Теперь они проактивно подтягиваются
+              // в фоне после Phase 2 boot precache.
               return fetch('/bundle-manifest.json', { cache: 'no-store' })
                 .then(r => r.ok ? r.json() : Promise.reject(new Error('manifest HTTP ' + r.status)))
                 .then(manifest => {
-                  const bootUrls = Object.entries(manifest)
-                    .filter(([name]) => name.startsWith('boot-'))
+                  const allBundleUrls = Object.entries(manifest)
+                    .filter(([name]) => name.startsWith('boot-') || name.startsWith('postboot-'))
                     .map(([, entry]) => '/' + entry.file);
-                  console.log('[SW] 📦 Precaching boot bundles:', bootUrls.length, bootUrls);
+                  console.log('[SW] 📦 Precaching bundles (boot + postboot):', allBundleUrls.length, allBundleUrls);
                   return caches.open(STATIC_CACHE).then(c =>
                     Promise.allSettled(
-                      bootUrls.map(url =>
+                      allBundleUrls.map(url =>
                         Promise.race([
                           c.add(url),
                           new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), 60000))
-                        ]).catch(err => console.warn('[SW] ⚠️ Boot cache skip:', url, err.message))
+                        ]).catch(err => console.warn('[SW] ⚠️ Bundle cache skip:', url, err.message))
                       )
                     )
                   );
                 })
-                .then(() => console.log('[SW] ✅ Boot bundles precached'))
-                .catch(err => console.warn('[SW] ⚠️ Boot precache failed (non-fatal):', err.message));
+                .then(() => console.log('[SW] ✅ Bundles precached (boot + postboot)'))
+                .catch(err => console.warn('[SW] ⚠️ Bundle precache failed (non-fatal):', err.message));
             })
             .then(() => console.log('[SW] ✅ Background precache complete'))
             .catch(err => console.warn('[SW] Precache error:', err));
