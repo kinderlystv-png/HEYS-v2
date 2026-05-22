@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.497bb9b9",
+      "buildHash": "497bb9b9",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: исправлен concurrency-watch (был сломан в первой реализации)",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Мониторинг concurrency=2 теперь реально работает (был socket hang up)",
+          "description": "Предыдущая версия мониторинга пыталась читать логи через YC Cloud Logging API по HTTPS — оказалось эндпоинт только gRPC, HTTP/JSON gateway отдаёт socket hang up. Переписал на YC Monitoring API (HTTP, работает): следит за пиком памяти каждой из 5 API-функций. Если память приближается к 90% лимита (что предшествует OOM-падению) → Telegram-алерт. На UX не влияет, прод стабилен."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.546c35ee",
       "buildHash": "546c35ee",
       "date": "2026-05-22",
