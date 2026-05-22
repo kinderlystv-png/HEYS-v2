@@ -136,10 +136,6 @@
     
     // Обработчик hover для tooltip
     const handleDayHover = (e, dayData, dateStr) => {
-      // P0-D-stretch: тригерим preload meals chunk при первом hover на ячейку.
-      // Между hover и click обычно 100-500ms — chunk успеет начать качаться.
-      // MealsPreload идемпотентен — реальная работа только на первом вызове.
-      try { window.HEYS && window.HEYS.MealsPreload && window.HEYS.MealsPreload.requestChunk(); } catch (_) {}
       if (!dayData) {
         setTooltip(null);
         return;
@@ -276,12 +272,7 @@
               style: cellStyle,
               onClick: () => { onSelect(dateStr); setIsOpen(false); setTooltip(null); },
               onMouseEnter: (e) => handleDayHover(e, dayData, dateStr),
-              onMouseLeave: () => setTooltip(null),
-              // P0-D-stretch: на mobile mouseenter не fires — preload через touchstart.
-              // Срабатывает за 100-300ms до click → chunk начинает грузиться раньше.
-              onTouchStart: () => {
-                try { window.HEYS && window.HEYS.MealsPreload && window.HEYS.MealsPreload.requestChunk(); } catch (_) {}
-              }
+              onMouseLeave: () => setTooltip(null)
             }, 
               React.createElement('span', { className: 'day-number' }, dt.getDate()),
               statusEmoji && React.createElement('span', { className: 'day-status' }, statusEmoji),

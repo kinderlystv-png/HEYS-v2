@@ -1,23 +1,31 @@
 {
   "_comment": "Boot performance baselines for Phase 2-3 bundle split (plan gleaming-pondering-dewdrop.md). Checked by scripts/perf-baseline-check.mjs (CI, PR-only).",
   "_updated": "2026-05-22",
+
   "eager_stub_size_max_bytes": 50000,
+
   "lazy_chunk_load_p95_slow_4g_ms": 2500,
   "lazy_chunk_load_p95_4g_ms": 800,
+
   "boot_warm_total_p95_ms": 500,
   "boot_cold_total_p95_ms": 3500,
+
   "calendar_diag_skipped_when_flag_off": true,
+
   "first_render_components_max": 60,
+
   "eager_stub_sizes_actual": {
     "postboot-1-game-eager": 2600,
     "postboot-2-insights-eager": 3200,
     "postboot-3-ui-eager": 7900
   },
+
   "lazy_chunk_sizes_actual": {
     "postboot-1-game-lazy": 1640000,
     "postboot-2-insights-lazy": 1780000,
     "postboot-3-ui-lazy": 2210000
   },
+
   "_p0d_comment": "Bundle optimization sprint P0-D (2026-05-22). 'p0d_pre_optimization' = snapshot BEFORE work began. 'p0d_post_optimization' = current red line, used by scripts/lint-bundle-size.mjs as +5% guard reference. Update via `pnpm bundle:legacy && node scripts/lint-bundle-size.mjs --update-baseline`.",
   "p0d_pre_optimization": {
     "boot_bundles_uncompressed": {
@@ -39,12 +47,12 @@
     "console_calls_total": 1357
   },
   "p0d_post_optimization": {
-    "_captured": "2026-05-22 (baseline updated via --update-baseline)",
+    "_captured": "2026-05-22 after Terser minify + cascade/supplements/meals moves",
     "boot_bundles_uncompressed": {
-      "boot-init": 19754,
-      "boot-core": 1019329,
-      "boot-calc": 482693,
-      "boot-day": 573029,
+      "boot-init": 19610,
+      "boot-core": 1018025,
+      "boot-calc": 706013,
+      "boot-day": 572603,
       "boot-app": 940684
     },
     "boot_bundles_gzip": {
@@ -54,7 +62,7 @@
       "boot-day": 126212,
       "boot-app": 196668
     },
-    "boot_total_uncompressed": 3035489,
+    "boot_total_uncompressed": 3256935,
     "boot_total_gzip": 718200,
     "savings_vs_pre_percent": 48
   },

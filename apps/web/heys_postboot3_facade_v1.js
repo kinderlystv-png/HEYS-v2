@@ -62,24 +62,6 @@
     var HEYS = window.HEYS = window.HEYS || {};
     HEYS.__loadPostboot3Ui = _loadLazyChunk;
 
-    // P0-D-stretch (2026-05-22): MealsPreload — public API для DatePicker
-    // hover/touchstart. Идемпотентный: no-op после первого вызова или если
-    // chunk уже загружен. Использует существующий __loadPostboot3Ui.
-    HEYS.MealsPreload = (function () {
-        var _triggered = false;
-        return {
-            requestChunk: function () {
-                if (_triggered) return;
-                if (HEYS.dayMealsDisplay && HEYS.dayMealsDisplay.useMealsDisplay) {
-                    _triggered = true;
-                    return;
-                }
-                _triggered = true;
-                try { _loadLazyChunk(); } catch (_) { _triggered = false; }
-            }
-        };
-    })();
-
     if (typeof requestIdleCallback === 'function') {
         requestIdleCallback(_loadLazyChunk, { timeout: 2000 });
     } else {
