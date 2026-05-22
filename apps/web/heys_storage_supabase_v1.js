@@ -6572,23 +6572,31 @@
               if (!phaseAError && phaseAData && phaseAData.length > 0) {
                 muteMirror = true;
                 const lsPhaseA = global.localStorage;
-                phaseAData.forEach(row => {
-                  if (row.v == null) return;
+                // P0-D-stretch-2: pre-compile regex + cache decompressFn — раньше
+                // компилировалось на каждой row, теперь один раз. Также two-phase
+                // loop (guards → writes) делит CPU vs LS-work fazы — на профиле в DevTools
+                // меньше длинных interleaved spans.
+                const PROFILE_KEY_REGEX = /^heys_[0-9a-f-]+_profile$/i;
+                const decompressFn = global.HEYS?.store?.decompress;
+                const writePairs = [];
+                for (let i = 0; i < phaseAData.length; i++) {
+                  const row = phaseAData[i];
+                  if (row.v == null) continue;
                   const pKey = scopeKeyForClientStorage(row.k, client_id);
                   const normalizedSyncKey = normalizeKeyForSupabase(row.k, client_id);
                   // 🛡️ v65 FIX: skip foreign-scoped keys in Phase A too
-                  if (isForeignClientScopedKey(pKey, client_id)) return;
+                  if (isForeignClientScopedKey(pKey, client_id)) continue;
                   // 🛡️ P2: write-time isolation guard
-                  if (!assertSyncWriteOwnership(pKey, client_id, 'phase-a')) return;
+                  if (!assertSyncWriteOwnership(pKey, client_id, 'phase-a')) continue;
                   if (normalizedSyncKey && cloud.getSyncStatus(normalizedSyncKey) === 'pending') {
                     logCritical(`🛡️ [PHASE A] Skip pending local mutation for ${normalizedSyncKey}`);
-                    return;
+                    continue;
                   }
                   // 🛡️ Anti-empty-profile guard: симметрично с saveClientKey (~9893).
                   // Если cloud row для profile-ключа пустой объект, а local LS уже
                   // содержит валидный профиль — не клобберим. Cloud мог отдать {}
                   // из-за past corruption / partial state; local здесь авторитетен.
-                  const isProfileKey = row.k === 'heys_profile' || /^heys_[0-9a-f-]+_profile$/i.test(row.k || '');
+                  const isProfileKey = row.k === 'heys_profile' || PROFILE_KEY_REGEX.test(row.k || '');
                   if (isProfileKey) {
                     const v = row.v;
                     const isValidCloudProfile = v && typeof v === 'object' &&
@@ -6597,18 +6605,22 @@
                       try {
                         const existingRaw = lsPhaseA.getItem(pKey);
                         if (existingRaw) {
-                          const decompressFn = global.HEYS?.store?.decompress;
                           const existing = decompressFn ? decompressFn(existingRaw) : JSON.parse(existingRaw);
                           if (existing && typeof existing === 'object' && Object.keys(existing).length > 0) {
                             logCritical(`🛡️ [PHASE A] BLOCKED empty profile from cloud (${pKey}); local has ${Object.keys(existing).length} fields`);
-                            return;
+                            continue;
                           }
                         }
                       } catch (_) { /* fall through — пишем как есть */ }
                     }
                   }
-                  try { lsPhaseA.setItem(pKey, JSON.stringify(row.v)); } catch (_) { }
-                });
+                  // Все гарды прошли — serializeem и queue write
+                  writePairs.push([pKey, JSON.stringify(row.v)]);
+                }
+                // Tight write loop — только LS.setItem без сторонней работы
+                for (let i = 0; i < writePairs.length; i++) {
+                  try { lsPhaseA.setItem(writePairs[i][0], writePairs[i][1]); } catch (_) { }
+                }
                 muteMirror = false;
 
                 // 🔓 Разблокируем UI — критичные данные готовы
@@ -6619,12 +6631,24 @@
                 if (global.HEYS?.store?.flushMemory) global.HEYS.store.flushMemory();
                 // 🆕 PERF v9.2: Фаза A завершена — первый sync done
                 window.__heysPerfMark && window.__heysPerfMark('heysSyncCompleted: phaseA dispatch');
+                // P0-D-stretch-2: defer event dispatch до next frame чтобы
+                // browser успел repaint UI (skeleton → разблокированный first render)
+                // прежде чем cascade/MorningCheckin/AppRoot re-render chain сработает.
+                // Раньше 667ms message-handler violation наблюдался когда всё bundled
+                // в одну sync task. requestAnimationFrame даёт ~16ms paint slot.
                 if (typeof window !== 'undefined' && window.dispatchEvent) {
-                  window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
-                    detail: { clientId: client_id, phaseA: true }
-                  }));
+                  const dispatchPhaseA = () => {
+                    window.dispatchEvent(new CustomEvent('heysSyncCompleted', {
+                      detail: { clientId: client_id, phaseA: true }
+                    }));
+                  };
+                  if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(dispatchPhaseA);
+                  } else {
+                    setTimeout(dispatchPhaseA, 0);
+                  }
                 }
-                console.info(`[HEYS.sync] ✅ Фаза A: ${phaseAData.length} критичных ключей загружено, UI разблокирован`);
+                console.info(`[HEYS.sync] ✅ Фаза A: ${phaseAData.length} критичных ключей загружено (записано ${writePairs.length}), UI разблокирован`);
               }
             } catch (phaseAErr) {
               muteMirror = false;
