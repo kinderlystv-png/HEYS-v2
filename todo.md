@@ -13,7 +13,8 @@ AgeGate, consents UI, marketing checkbox, retention cron). Ниже — то, ч
 
 ### 🔴 Твои задачи — до публичного запуска (закрывает риск штрафа)
 
-1. **Подать 2 уведомления в РКН** через portal.rkn.gov.ru.
+1. **Подать 2 уведомления в РКН** через
+   pd.rkn.gov.ru/operators-registry/notification/.
    - Тексты готовы для копирования:
      [rkn-notification-heys.md](docs/legal/operator/rkn-notification-heys.md),
      [rkn-notification-kinderly.md](docs/legal/operator/rkn-notification-kinderly.md)
