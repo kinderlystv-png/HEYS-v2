@@ -357,6 +357,24 @@ deploy_function() {
         sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
     fi
 
+    # Pre-build zip with explicit exclusions.
+    # Раньше yc CLI 0.184.0 при `--source-path .` читал .ycignore и сам исключал
+    # node_modules. Но для функций с большим node_modules (>4000 файлов, e.g.
+    # heys-client-daily-backup с @aws-sdk) yc игнорирует .ycignore — видимо
+    # таймаут на traversal. Чтобы поведение было предсказуемым для ВСЕХ функций,
+    # упаковываем zip сами с теми же исключениями что в .ycignore и передаём как
+    # --source-path. yc auto-устанавливает npm-deps из package.json на cold
+    # start, поэтому node_modules в zip не нужен.
+    DEPLOY_ZIP="/tmp/${func_name}-deploy-$$.zip"
+    rm -f "$DEPLOY_ZIP"
+    zip -qr "$DEPLOY_ZIP" . \
+        -x 'node_modules/*' '*.zip' '.env' '.env.*' '*.log' \
+           'coverage/*' '.git/*' '.DS_Store' 'docs/*' \
+           'apply_*.js' 'check_*.js' 'test_*.js' 'deploy.sh' \
+           '.ycignore' 'README.md'
+    ZIP_SIZE=$(du -k "$DEPLOY_ZIP" | awk '{print $1}')
+    echo -e "${BLUE}ℹ️  Packaged $func_name → ${ZIP_SIZE}KB${NC}"
+
     # Deploy function
     eval yc serverless function version create \
         --function-name "$func_name" \
@@ -365,8 +383,12 @@ deploy_function() {
         --memory "$memory" \
         --execution-timeout "$timeout" \
         $sa_flag \
-        --source-path . \
+        --source-path "$DEPLOY_ZIP" \
         $env_flags
+    YC_EXIT=$?
+    rm -f "$DEPLOY_ZIP"
+    # Restore original exit code so downstream check works.
+    (exit $YC_EXIT)
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✅ $func_name deployed successfully${NC}"
