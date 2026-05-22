@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.22.fa52d923",
+      "buildHash": "fa52d923",
+      "date": "2026-05-22",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: Lockbox-миграция завершена — секретов в .env больше нет",
+      "items": [
+        {
+          "type": "refactor",
+          "title": "13 cloud functions теперь читают PG_PASSWORD/JWT/SESSION/S3-keys/VAPID/TELEGRAM_TOKEN только из Lockbox",
+          "description": "Раньше секреты дублировались в .env и подтягивались в YC env-variables — если репо или диск утекли, секреты тоже утекли. Теперь в .env вместо реальных значений стоят плейсхолдеры (например, __IN_LOCKBOX__heys-database__), и единственным источником истины стал Yandex Lockbox с гранулярным IAM-доступом через Service Account. Cloud function на cold start подтягивает секреты из Lockbox с retry, кеширует на 5 мин, потом работает как раньше. Безопасность улучшилась — на UX это не влияет вообще."
+        },
+        {
+          "type": "fix",
+          "title": "pre-push тесты теперь переживают одноразовый flake (--retry=1)",
+          "description": "Тесты иногда падали на push'е из-за shared globals между тестами (vitest config: isolate:false для экономии памяти). Теперь vitest пере-запускает каждый упавший тест ещё раз. Реальные регрессии всё равно блокируют — второй падёж не маскируется."
+        }
+      ]
+    },
+    {
       "version": "2026.05.22.a47c20a8",
       "buildHash": "a47c20a8",
       "date": "2026-05-22",
