@@ -4,6 +4,60 @@
 
 ---
 
+## 🔴 Compliance follow-up — после deep audit 2026-05-22
+
+Источник: deep audit с Facts Table в этой сессии. Подтверждено собственным
+grep'ом, не agent-only claim'ами. Большинство P0/P1 закрыто (Lockbox, DSAR,
+AgeGate, consents UI, marketing checkbox, retention cron). Ниже — то, что
+реально осталось.
+
+### 🔴 Твои задачи — до публичного запуска (закрывает риск штрафа)
+
+1. **Подать 2 уведомления в РКН** через portal.rkn.gov.ru.
+   - Тексты готовы для копирования:
+     [rkn-notification-heys.md](docs/legal/operator/rkn-notification-heys.md),
+     [rkn-notification-kinderly.md](docs/legal/operator/rkn-notification-kinderly.md)
+   - Получишь регистрационные номера → пришли мне → добавлю строку
+     «Регистрационный номер в реестре операторов: NXXXXXXX» в privacy-policy
+     §1.2 (это **добавление новой строки**, не замена плейсхолдера — в RKN-doc
+     §239-243 описана точная процедура)
+   - **Без этого** — ст. 19.7 КоАП РФ + ты технически нелегальный оператор ПДн
+
+2. **Распечатать + подписать
+   [internal-policy-pdn.md](docs/legal/operator/internal-policy-pdn.md)** —
+   «Положение об обработке ПДн».
+   - В PDF/Word, дата утверждения, подпись
+   - Хранить с уставными документами ИП (бумажный + скан)
+   - При проверке РКН — формальное нарушение ст. 18.1 152-ФЗ без него
+
+### 🟡 Мои задачи по триггерам
+
+| #    | Что                                                                                                                                                                                                                                                                                      | Время  | Триггер                                       | Файлы                                                                                                      |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| P1-B | Curator audit middleware: обернуть generic curator-RPC в `log_data_access('curator_action', curator_id, client_id, ...)`. SQL-функция уже есть, нужно вызвать из middleware heys-api-rpc. Без этого — нет audit trail кто из кураторов читал чьи данные                                  | 2ч     | До регистрации **второго** куратора           | [heys-api-rpc/index.js](yandex-cloud-functions/heys-api-rpc/index.js), `log_data_access` SQL fn существует |
+| P1-N | Direct cancellation UI: кнопка «Отменить подписку» в Profile → вызывает revoke `payment_oferta` → SQL trigger `cancel_sub_on_payment_oferta_revoke` автоматически выставит `subscriptions.canceled_at`. Сейчас клиент сам отменить не может, только через куратора                       | 2ч     | После запуска ЮKassa                          | [heys_user_tab_impl_v1.js](apps/web/heys_user_tab_impl_v1.js) (Profile), trigger уже в БД                  |
+| P1-O | Refund 14-day window в `refundPayment`: запретить refund если `payment.completed_at < now() - 14 days` ИЛИ pro-rata для остатка периода. Сейчас куратор может вернуть любую сумму в любое время                                                                                          | 1ч     | После запуска ЮKassa                          | [heys-api-payments/index.js:647](yandex-cloud-functions/heys-api-payments/index.js#L647) `refundPayment()` |
+| P1-L | SLA-tracker DSAR (10 раб. дней по 152-ФЗ ст.21): таблица `data_subject_requests(id, client_id, request_type, requested_at, processed_at, sla_deadline)` + cron в heys-cron-security-alerts: если `requested_at > 8 раб. дней` и `processed_at IS NULL` → Telegram-алерт «осталось 2 дня» | 3ч     | Когда придёт **первый** DSAR-запрос           | новая SQL миграция + dop в heys-cron-security-alerts                                                       |
+| P0-D | Bundle optimization (5 sprintов, см. секцию ниже). Текущий initial load = 3.06 MB eager + 4.69 MB lazy. Industry standard ≤1.5 MB initial                                                                                                                                                | 15-20ч | Жалобы мобильных юзеров на медленную загрузку | apps/web/, см. P0-D Roadmap                                                                                |
+| —    | Удалить `.env.backup-before-phase3-*`                                                                                                                                                                                                                                                    | 5 мин  | 48ч после Lockbox swap (~2026-05-24 22:00)    | см. Item 1 ниже                                                                                            |
+
+### 🟢 Твои операционные задачи (не блокеры)
+
+3. **Yandex Cloud billing alerts** — защита от cost-overrun при DDoS / багнутом
+   cron. CLI этого не умеет, только UI.
+   - YC консоль → Billing → Notifications → создать threshold-alerts
+   - Рекомендую: 500 ₽/день — warning, 2000 ₽/день — critical
+   - 30 минут
+
+4. **DPA с подрядчиками** (организационно):
+   - **ЮKassa**: найти на `https://yookassa.ru/legal` публичную оферту-DPA →
+     сохранить PDF в `docs/legal/operator/dpa/yookassa.pdf` (папку создашь
+     первым файлом)
+   - **Yandex Cloud**: публичный DPA ссылка уже есть в privacy-policy
+   - При проверке РКН: «Где DPA с обработчиками?» — должны быть на руках
+
+---
+
 ## 🔭 После Lockbox + concurrency=2 rollout (2026-05-22)
 
 ### Item 1 — удалить .env.backup-\* (через 48ч стабильности)
@@ -137,6 +191,95 @@ OOM/pool issues»** с указанием функции и количества
    ```
 
 Скажи «дропни архив» — сделаю.
+
+---
+
+## ⏸️ P0-D Roadmap (отложен 2026-05-22) — 5 sprintов оптимизации после Stretch-2
+
+**Контекст:** после Track A (-46% bundle) + Track B (loading progress UI) +
+Stretch-2 (Phase A batching + SW postboot precache + backup UI lazy) — прод в
+industry-tier зоне (FCP ~2.8s, TTI ~4.5s на Fast 3G, login jank 174-227ms vs
+667ms baseline). Юзер: «как сейчас работает — нравится». Дальнейшие sprintы дают
+marginal user-visible эффект (gzip economy < 100 KB на 700 KB существующих), при
+non-trivial regression risk. **Отложено до конкретных триггеров.**
+
+**Возвращаться когда:**
+
+- реальные клиенты пожалуются на скорость (особенно slow 3G / Android budget)
+- аналитика покажет конкретный bottleneck
+- появится window без других приоритетов
+
+**Полный план** с verified Facts Table, file:line refactor рецептами и
+verification template per sprint:
+`/Users/poplavskijanton/.claude/plans/p0-quick-wins-frolicking-rose.md`
+
+### Sprint 1 — meals retry через DayTab/DayTabContent wrapper split
+
+**Экономия:** boot-calc -218 KB raw (~31%), gzip ~50 KB. **Реализован локально
+2026-05-22, откачен (не запушен)** — юзер сказал прод нравится как есть,
+marginal UX gain не стоит ~120ms нового skeleton "Загрузка дневника…" и +280 KB
+на postboot-3. Архитектура работает (proved через локальный smoke), но
+кардинального user-visible эффекта нет.
+
+**Если вернёмся:** план готов — split `HEYS.DayTab` (wrapper с 2 фиксированными
+хуками) + `DayTabContent` (отдельный function declaration со всеми 42+ hooks).
+Удалить 4 dead-snapshot блока в outer scope (lines 60-65 + 136-141 на момент
+2026-05-22). `bundle-day.cjs`: убрать `heys_day_meals_bundle_v1.js`, оставить
+`day/_meal_quality.js` eager (критичный нюанс — destructuring `HEYS.mealScoring`
+на module-load).
+
+### Sprint 2 — gamification-bar lazy (118 KB, 60% audience)
+
+**Risk: 7/10** — `heys_app_initialize_v1.js:25` + `heys_app_root_impl_v1.js:44`
+делают module-load snapshots, `heys_app_shell_v1.js:1328` рендерит. Тот же класс
+bug что Sprint 1 dead snapshots — если не убрать предварительно, будет crash.
+
+**Если вернёмся:** Sprint 2 имеет те же подводные камни что Sprint 1 (snapshot
+timing). Лучше делать после Sprint 1 (proven pattern). Без Sprint 1 — Sprint 2
+оверкилл.
+
+### Sprint 3 — localStorage Option A: compress shared_products cache
+
+**Экономия:** освобождает 200-400 KB LS → 28 dayv2 cloud-only вмещаются локально
+→ instant open старых дней (vs 300-1200ms cloud read на 3G).
+
+**Risk: LOW** — compression infrastructure уже proven (pending queues, dayv2
+v2). Backward compat через try/catch `decompress → JSON.parse fallback`.
+
+**Файлы:** `apps/web/heys_storage_supabase_v1.js` (2 места: 12694-12704 read,
+12825-12838 write).
+
+**Это самый безопасный sprint из roadmap'а** — не трогает React/bundle/RoH.
+Реально влияет только на returning users с большой history (28+ дней).
+
+### Sprint 4 — trial-queue lazy (92 KB, 70-80% audience)
+
+**Risk: LOW-MEDIUM** — все consumers через `?.` кроме одного места:
+`heys_app_gate_flow_v1.js:1745` (TrialQueueAdmin direct access без `?.`).
+Patch + перенести в postboot-3-ui-lazy.
+
+### Sprint 5 — insulin-wave UI profile-gated lazy (45 KB, 80% audience)
+
+**Risk: 2/10** — все 3 consumer call-sites уже через `?.`. Profile-gated через
+`profile.phenotype.metabolic === 'insulin_resistant'`.
+
+**Самый легкий sprint.** Возможно стоит сделать первым если решим вернуться к
+roadmap'у — proves pattern без серьёзного риска.
+
+### Audit-doc на localStorage quota
+
+Создан в `apps/web/__perf_baselines__/storage-quota-audit-2026-05-22.md` —
+описывает 4 options (A: compress shared products; B: TTL 60d; C: split-read; D:
+drop cascade cache). Option D **invented в audit** (cascadeState НЕ в dayv2 —
+verified `grep cascadeState` → 0 matches). Реальная экономия Option D = 2-5 KB
+через `heys_ceb_*` cleanup — не стоит отдельного sprint'а.
+
+### Если решишь начать с одного sprint'а
+
+**Рекомендация:** Sprint 3 (localStorage compression) — самый безопасный + самый
+реальный user-visible win (для returning users с large history). Подразумевает
+фактическую пользу без RoH рисков. Sprint 1/2/4/5 — все требуют React/bundle
+careful refactor.
 
 ---
 
