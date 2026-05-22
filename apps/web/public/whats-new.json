@@ -1,17 +1,22 @@
 {
   "releases": [
     {
-      "version": "2026.05.22.52ad6e07",
-      "buildHash": "52ad6e07",
+      "version": "2026.05.22.1637b5b7",
+      "buildHash": "1637b5b7",
       "date": "2026-05-22",
       "kind": "technical",
       "profile": "technical-infra",
-      "title": "Внутреннее: документ-аудит про localStorage quota (для планирования будущего sprint'а)",
+      "title": "Внутреннее: документация — quota audit + post-Lockbox follow-up items в todo",
       "items": [
         {
           "type": "chore",
           "title": "Добавлен audit-doc apps/web/__perf_baselines__/storage-quota-audit-2026-05-22.md",
           "description": "Документирует наблюдение что у активного клиента 28 dayv2 ключей (3 месяца истории) не помещаются в localStorage и каждый раз дочитываются из cloud. Описывает existing infrastructure (safeSetItem quota guard, compression в pending queues, LRU memory cache, fetchDays batch dedup) и 4 опции для будущего sprint'а (shared products compression, TTL eviction, split-read model, drop redundant cascade cache из dayv2). Сам код не меняется — это документ для решения когда возвращаться к этой задаче. Текущий impact на пользователей частичный (старые дни открываются на 300-1200мс дольше на 3G) — не emergency. На UX в данный момент не влияет."
+        },
+        {
+          "type": "chore",
+          "title": "todo.md: post-Lockbox/concurrency follow-up items + rollback instructions",
+          "description": "Параллельный документационный коммит — добавлены follow-up items в todo.md по результатам Lockbox-миграции и нового concurrency_watch правила в heys-cron-security-alerts. На пользователей не влияет."
         }
       ]
     },
