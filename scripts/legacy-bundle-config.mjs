@@ -143,7 +143,7 @@ export const LEGACY_BUNDLES = {
         'heys_client_switch_overlay_v1.js',
         'heys_app_overlays_v1.js',
         'heys_app_gate_flow_v1.js',
-        'heys_app_backup_v1.js',
+        // P0-D-stretch-2: heys_app_backup_v1.js → postboot-3-ui-lazy
         'heys_app_shortcuts_v1.js',
         'heys_app_onboarding_v1.js',
         'heys_app_auth_init_v1.js',
@@ -155,9 +155,7 @@ export const LEGACY_BUNDLES = {
         'heys_app_sync_effects_v1.js',
         'heys_app_tab_state_v1.js',
         'heys_app_client_management_v1.js',
-        'heys_app_backup_actions_v1.js',
-        'heys_app_backup_export_v1.js',
-        'heys_app_backup_import_v1.js',
+        // P0-D-stretch-2: 3x heys_app_backup_{actions,export,import}_v1.js → postboot-3-ui-lazy
         'heys_app_update_checks_v1.js',
         'heys_app_update_notifications_v1.js',
         'heys_app_cloud_init_v1.js',
@@ -168,7 +166,7 @@ export const LEGACY_BUNDLES = {
         'heys_app_overlays_props_v1.js',
         'heys_app_gate_state_v1.js',
         'heys_app_global_bindings_v1.js',
-        'heys_app_backup_state_v1.js',
+        // P0-D-stretch-2: heys_app_backup_state_v1.js → postboot-3-ui-lazy
         'heys_app_banner_state_v1.js',
         'heys_app_client_init_v1.js',
         'heys_app_twemoji_effect_v1.js',
@@ -271,6 +269,17 @@ export const LEGACY_BUNDLES = {
         'heys_postboot3_facade_v1.js',
     ],
     'postboot-3-ui-lazy': [
+        // P0-D-stretch-2 (2026-05-22): backup UI вынесен из boot-app сюда.
+        // Все consumers через getModule('AppBackup')/getStableHook fallback
+        // pattern (heys_app_root_impl_v1.js:10-71) — undefined deps возвращают
+        // empty {} / no-op stubs без RoH violation. Backup это manual action
+        // (click "Скачать backup"), к моменту нажатия chunk загружен через
+        // postboot-3 facade. Освободили ~86KB raw из критического boot-app.
+        'heys_app_backup_v1.js',
+        'heys_app_backup_state_v1.js',
+        'heys_app_backup_actions_v1.js',
+        'heys_app_backup_export_v1.js',
+        'heys_app_backup_import_v1.js',
         'heys_step_modal_v1.js',
         'heys_morning_activation_calendar_v1.js',
         'heys_steps_v1.js',
