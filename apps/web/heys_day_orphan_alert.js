@@ -105,6 +105,45 @@
       return false;
     }
 
+    // 🪦 F13 (plan 2026-05-24): cross-boot счётчик «стойких» orphan-ов.
+    // Если конкретный orphan не резолвится 3+ boot подряд — это сигнал, что
+    // shared-аналог был удалён админом (или name изменился). UI получает hint
+    // показать акцент на CTA «Сделать разовым» вместо обычного «Восстановить».
+    // Ключ без `heys_` префикса → interceptor не зеркалит в облако (per-device hint).
+    const PERSISTENT_MISS_THRESHOLD = 3;
+    let persistentMissCounts = {};
+    try {
+      const raw = global.localStorage.getItem('__heys_orphan_miss_counts__v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') persistentMissCounts = parsed;
+      }
+    } catch (_) { /* noop */ }
+    let _missCountsTouched = false;
+    const persistentOrphans = new Set();
+    for (const o of trulyUnresolved) {
+      const key = String(o?.name || '').trim().toLowerCase();
+      if (!key) continue;
+      const next = (persistentMissCounts[key] || 0) + 1;
+      persistentMissCounts[key] = next;
+      _missCountsTouched = true;
+      if (next >= PERSISTENT_MISS_THRESHOLD) persistentOrphans.add(key);
+    }
+    // Чистим counter для orphan-ов, которых больше нет в trulyUnresolved
+    const currentKeys = new Set(trulyUnresolved.map((o) => String(o?.name || '').trim().toLowerCase()));
+    for (const k of Object.keys(persistentMissCounts)) {
+      if (!currentKeys.has(k)) {
+        delete persistentMissCounts[k];
+        _missCountsTouched = true;
+      }
+    }
+    if (_missCountsTouched) {
+      try {
+        global.localStorage.setItem('__heys_orphan_miss_counts__v1', JSON.stringify(persistentMissCounts));
+      } catch (_) { /* noop — quota issue не должна ронять render */ }
+    }
+    const hasPersistentOrphans = persistentOrphans.size > 0;
+
     // Warning IS rendering in DOM — log once with the unresolved sample so we know
     // exactly which products show up and why suppression couldn't catch them.
     try {
@@ -115,7 +154,9 @@
           name: o?.name,
           productId: o?.product_id ?? o?.productId,
           hasInlineData: !!o?.hasInlineData,
+          missCount: persistentMissCounts[String(o?.name || '').trim().toLowerCase()] || 0,
         })),
+        persistentOrphansCount: persistentOrphans.size,
       });
     } catch (_) { /* noop */ }
     
@@ -145,15 +186,27 @@
           const n = trulyUnresolved.length;
           return `${n} продукт${n === 1 ? '' : n < 5 ? 'а' : 'ов'} не найден${n === 1 ? '' : 'о'} в базе`;
         })()),
-        React.createElement('div', { 
-          style: { 
-            color: '#a16207', 
+        React.createElement('div', {
+          style: {
+            color: '#a16207',
             fontSize: '12px',
             lineHeight: '1.4'
-          } 
+          }
         }, date
           ? `Калории считаются по сохранённым данным за выбранный день (${date}). Нажми чтобы увидеть список.`
           : 'Калории считаются по сохранённым данным. Нажми чтобы увидеть список.'),
+        // F13: hint если orphan-ы persistent (3+ boot подряд не резолвятся в shared)
+        hasPersistentOrphans && React.createElement('div', {
+          style: {
+            color: '#9a3412',
+            fontSize: '11px',
+            lineHeight: '1.4',
+            marginTop: '4px',
+            fontWeight: 500,
+          }
+        }, persistentOrphans.size === trulyUnresolved.length
+          ? '🕰️ Этих продуктов давно нет в общей базе — вероятно, удалены. Рекомендуется «Сделать разовыми» (данные останутся в истории приёмов).'
+          : `🕰️ ${persistentOrphans.size} из ${trulyUnresolved.length} давно не находятся в общей базе — вероятно, удалены. «Сделать разовыми» — рекомендуемый выбор.`),
         // Список orphan-продуктов
         React.createElement('details', { 
           style: { marginTop: '8px' }
@@ -174,16 +227,21 @@
               color: '#78350f'
             } 
           },
-            trulyUnresolved.map((o, i) =>
-              React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
+            trulyUnresolved.map((o, i) => {
+              const _key = String(o?.name || '').trim().toLowerCase();
+              const _isPersistent = persistentOrphans.has(_key);
+              return React.createElement('li', { key: o.name || i, style: { marginBottom: '4px' } },
                 React.createElement('strong', null, o.name),
                 ` — ${o.hasInlineData ? '✓ можно восстановить' : '⚠️ нет данных'}`,
+                _isPersistent && React.createElement('span', {
+                  style: { marginLeft: '6px', fontSize: '10px', color: '#9a3412', fontWeight: 600 }
+                }, '· 🕰️ давно нет в общей базе'),
                 // Показываем даты использования
                 o.usedInDays && o.usedInDays.length > 0 && React.createElement('div', {
                   style: { fontSize: '11px', color: '#92400e', marginTop: '2px' }
                 }, `📅 ${o.usedInDays.slice(0, 5).join(', ')}${o.usedInDays.length > 5 ? ` и ещё ${o.usedInDays.length - 5}...` : ''}`)
-              )
-            )
+              );
+            })
           ),
           // Контейнер с двумя кнопками: «Восстановить в базу» + «Сделать разовыми»
           React.createElement('div', {

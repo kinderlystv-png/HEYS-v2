@@ -514,17 +514,56 @@
     const itemNameNorm = normalizeProductName(itemName);
     const itemNameLower = itemName.toLowerCase();
 
-    return list.find((product) => {
-      if (!product || typeof product !== 'object') return false;
-      const productIdMatch = productId != null
-        && String(product.id ?? product.product_id ?? '') === String(productId);
-      if (productIdMatch) return true;
-      if (itemFingerprint && product.fingerprint && product.fingerprint === itemFingerprint) return true;
+    // 🪦 F14 (plan 2026-05-24): best-match priority вместо list.find (первый попавшийся).
+    // Раньше при дубликатах в shared_products (модератор продублировал) find возвращал
+    // первый по индексу — недетерминированно. Это давало плохие auto-clone target'ы.
+    // Приоритет: id > fingerprint > name. Среди name-match'ей tiebreaker — created_at
+    // старше (более устоявшаяся запись), затем — первая по списку.
+    let idMatch = null;
+    let fpMatch = null;
+    const nameMatches = [];
+    for (let i = 0; i < list.length; i++) {
+      const product = list[i];
+      if (!product || typeof product !== 'object') continue;
+      if (!idMatch && productId != null
+          && String(product.id ?? product.product_id ?? '') === String(productId)) {
+        idMatch = product;
+        break; // id-match — наивысший приоритет, сразу выходим
+      }
+      if (!fpMatch && itemFingerprint && product.fingerprint && product.fingerprint === itemFingerprint) {
+        fpMatch = product;
+      }
       const productName = String(product.name || '').trim();
-      if (!productName) return false;
-      const productNameLower = productName.toLowerCase();
-      return productNameLower === itemNameLower || normalizeProductName(productName) === itemNameNorm;
-    }) || null;
+      if (productName) {
+        const productNameLower = productName.toLowerCase();
+        if (productNameLower === itemNameLower || normalizeProductName(productName) === itemNameNorm) {
+          nameMatches.push(product);
+        }
+      }
+    }
+    if (idMatch) return idMatch;
+    if (fpMatch) return fpMatch;
+    if (nameMatches.length === 0) return null;
+    if (nameMatches.length === 1) return nameMatches[0];
+    // 2+ name match → tiebreaker по created_at (старше предпочтительнее), потом первый.
+    let best = nameMatches[0];
+    let bestTs = _coerceTs(best.created_at ?? best.createdAt);
+    for (let k = 1; k < nameMatches.length; k++) {
+      const cand = nameMatches[k];
+      const ts = _coerceTs(cand.created_at ?? cand.createdAt);
+      if (ts != null && (bestTs == null || ts < bestTs)) {
+        best = cand;
+        bestTs = ts;
+      }
+    }
+    return best;
+  }
+
+  function _coerceTs(v) {
+    if (v == null) return null;
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    const parsed = Date.parse(String(v));
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   function isSyntheticEstimatedItem(item) {
