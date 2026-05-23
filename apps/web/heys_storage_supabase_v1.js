@@ -6559,7 +6559,14 @@
                 // toggle советов / звука / прочитанные подсказки. Один RPC, тот же
                 // round-trip, не добавляет latency. Закрывает race когда тосты вылезали
                 // с дефолтным toastsEnabled=true до прихода реального флага из cloud.
-                'heys_advice_settings', 'heys_advice_read_today'
+                'heys_advice_settings', 'heys_advice_read_today',
+                // Stage 3 (2026-05-23): gamification core. Без этого ключа
+                // gamification-bar при cold-start показывала default totalXP=0 /
+                // event-based partial fallback (~25) — пользователь видел "сброс"
+                // прогресса до тех пор пока full sync не приземлит heys_game (порой
+                // 5-20 сек на cellular). Размер ~18-20KB на клиента — приемлемо
+                // для Phase A.
+                'heys_game'
               ];
               const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
               const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];
