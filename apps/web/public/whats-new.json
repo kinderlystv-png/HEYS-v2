@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.d4a98d21",
+      "buildHash": "d4a98d21",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: обновлён lint-allowlist после правок защиты продуктов",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Сдвиг строк в lint-allowlist + новая местная audit-запись",
+          "description": "После правок прошлых коммитов (метод _reloadFromStorage в HEYS.deletedProducts, audit-счётчик «стойких» orphan-ов) сдвинулись номера строк существующих записей в bootstrap-bypass-allowlist; обновлены. Заодно переписан комментарий, который ложно срабатывал на lint-проверку прямых localStorage.setItem. На UX не влияет."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.7d4b10ca",
       "buildHash": "7d4b10ca",
       "date": "2026-05-24",
