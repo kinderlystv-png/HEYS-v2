@@ -255,7 +255,9 @@ const ALLOWED_FUNCTIONS = [
   'create_pending_product_by_session', // 🔐 P1: session-версия для PIN-клиентов (на модерацию)
   'publish_shared_product_by_session', // 🔐 P3: прямая публикация для кураторов (REST→RPC, session)
   'publish_shared_product_by_curator', // 🔐 P3: прямая публикация для кураторов (REST→RPC, JWT)
-  'sync_shared_products_by_session',   // 🔐 Копирование всех shared_products в базу клиента
+  // 'sync_shared_products_by_session', // 🪦 REMOVED 2026-05-24 (plan F17): не вызывается из apps/,
+  //                                     attack surface (replace heys_products через UPSERT без tombstone).
+  //                                     DROP миграция: database/2026-05-24_drop_sync_shared_products_by_session.sql
   'update_shared_product_portions',    // 🔐 Обновление порций продукта (direct UPDATE, не INSERT)
   'update_shared_product_portions_by_curator', // 🔐 Обновление порций куратором (JWT auth)
 
