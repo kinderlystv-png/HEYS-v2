@@ -8825,6 +8825,12 @@
     // that ran before overlay was hydrated. Filter listForUi by what's actually
     // unresolvable now via getById + stamp cache. If everything resolves, the
     // tracker is stale — silently clean it and skip the warning.
+    // 🪦 F6 (plan 2026-05-24): дополнительно резолвим через shared cache —
+    // без этого баннер показывал orphan'ов, чьё имя точно матчится в общей базе
+    // (race с подгрузкой shared-кеша на boot).
+    const sharedForFilter = (HEYS.cloud && typeof HEYS.cloud.getCachedSharedProducts === 'function')
+      ? (HEYS.cloud.getCachedSharedProducts() || [])
+      : [];
     const trulyUnresolved = [];
     for (const o of listForUi) {
       // ⚡ Defense in depth: разовые продукты by design не в БД, не показываем алерт.
@@ -8852,6 +8858,19 @@
           try { HEYS.orphanProducts.remove(o.name); } catch (_) { /* noop */ }
         }
         continue;
+      }
+      // F6: фолбэк в shared cache. Если name/fingerprint/id matchится с общей базой —
+      // продукт резолвим, не показываем в баннере. Tracker чистим (recalculate может
+      // быть не запущен на этот render).
+      if (sharedForFilter.length > 0 && typeof HEYS.orphanProducts?._resolveByItem === 'function') {
+        let foundInShared = null;
+        try { foundInShared = HEYS.orphanProducts._resolveByItem(o, sharedForFilter); } catch (_) { foundInShared = null; }
+        if (foundInShared) {
+          if (typeof HEYS.orphanProducts.remove === 'function') {
+            try { HEYS.orphanProducts.remove(o.name); } catch (_) { /* noop */ }
+          }
+          continue;
+        }
       }
       trulyUnresolved.push(o);
     }

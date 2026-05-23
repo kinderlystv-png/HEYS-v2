@@ -460,6 +460,49 @@
   const normalizeProductName = HEYS.models?.normalizeProductName
     || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
 
+  // 🪦 F8 helper (plan 2026-05-24): rate-limited auto-clone shared → personal overlay.
+  // Module-scope Set держит id-метки уже-клонированных shared-продуктов за boot,
+  // чтобы re-render'ы не зацикливали клонирование. Сбрасывается только при reload.
+  const _autoClonedSharedIds = new Set();
+  function _scheduleAutoCloneFromShared(sharedProduct) {
+    if (!sharedProduct || !sharedProduct.id) return;
+    const sid = String(sharedProduct.id);
+    if (_autoClonedSharedIds.has(sid)) return;
+    _autoClonedSharedIds.add(sid);
+    // Гейт куратора: в курaторской сессии в LS лежат данные нескольких клиентов,
+    // авто-clone может полить чужой overlay чужим продуктом. Manual orphan-restore
+    // в UI остаётся доступным.
+    try {
+      const isCurator =
+        (typeof HEYS.auth?.isCuratorSession === 'function' && HEYS.auth.isCuratorSession()) ||
+        (typeof HEYS.Bootstrap?.isCuratorSession === 'function' && HEYS.Bootstrap.isCuratorSession()) ||
+        (typeof global.isCuratorSession === 'function' && global.isCuratorSession()) ||
+        false;
+      if (isCurator) {
+        console.info('[HEYS.orphan-autoclone] skip: curator session', { id: sid, name: sharedProduct.name });
+        return;
+      }
+    } catch (_) { /* noop */ }
+    if (typeof HEYS.products?.addFromShared !== 'function') return;
+    // Async, чтобы не блокировать getDayData calc; addFromShared сам делает
+    // tombstone-check по name (heys_core_v12.js:4751-4764) — если продукт явно
+    // удалён юзером, addFromShared вернёт null и клон не появится.
+    setTimeout(() => {
+      try {
+        const cloned = HEYS.products.addFromShared(sharedProduct);
+        if (cloned) {
+          console.info('[HEYS.orphan-autoclone] cloned shared → personal', {
+            id: sid,
+            name: sharedProduct.name,
+            cloneId: cloned.id,
+          });
+        }
+      } catch (e) {
+        console.warn('[HEYS.orphan-autoclone] failed:', e?.message || e);
+      }
+    }, 0);
+  }
+
   function resolveProductByItem(item, productsList) {
     if (!item) return null;
     const list = Array.isArray(productsList) ? productsList : [];
@@ -673,6 +716,14 @@
         // Также пробуем lowercase
         orphanProductsMap.delete(name.toLowerCase());
       }
+    },
+
+    // 🪦 F6 (plan 2026-05-24): экспорт resolveProductByItem для renderOrphanAlert.
+    // orphan_alert импортируется отдельным IIFE (heys_day_orphan_alert.js), не
+    // имеет доступа к локальной resolveProductByItem из heys_day_utils.js scope.
+    // Без этой обёртки баннер не мог проверить shared cache на финальной фильтрации.
+    _resolveByItem(item, productsList) {
+      return resolveProductByItem(item, productsList);
     },
 
     // Пересчитать orphan-продукты на основе актуальной базы
@@ -2376,6 +2427,17 @@
               if (orphanProductsMap.has(itemName)) orphanProductsMap.delete(itemName);
               if (itemNameNorm && orphanProductsMap.has(itemNameNorm)) orphanProductsMap.delete(itemNameNorm);
               if (orphanProductsMap.has(itemNameLower)) orphanProductsMap.delete(itemNameLower);
+              // 🪦 F8 (plan 2026-05-24): авто-clone shared → personal overlay.
+              // Если резолв через shared прошёл, кладём personal clone в overlay — на
+              // следующий boot getById сработает напрямую, баннер не появится, orphan
+              // tracker не сработает. Закрывает корневую причину дрейфа (день держит
+              // dangling product_id, потому что cloud-merge не клонирует).
+              // Rate-limit: не чаще 1 клона на product_id за boot (Set в module scope).
+              // НЕ клонируем в curator session — там legacy/overlay принадлежит другому
+              // клиенту, addFromShared зальёт чужой клон в нашу базу.
+              try {
+                _scheduleAutoCloneFromShared(fromSharedEarly);
+              } catch (_) { /* noop — auto-clone не должен ронять calc */ }
             }
           }
 
@@ -2427,8 +2489,21 @@
             // 🔧 v3.19.0: Также ищем в shared products
             const foundInShared = resolveProductByItem(item, sharedProducts);
 
+            // 🪦 F7 (plan 2026-05-24): defensive re-check shared cache прямо перед track.
+            // sharedProducts читается выше в скоупе функции, но между этим моментом и
+            // моментом track-decision shared cache мог обновиться (async populate). Если
+            // shared теперь не пустой и резолвит item — НЕ трекаем (защита от race, когда
+            // shared загрузился между двумя render'ами и first track всё равно сработал).
+            let foundInSharedRecheck = foundInShared;
+            if (!foundInSharedRecheck) {
+              const sharedNow = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
+              if (sharedNow.length > 0 && sharedNow !== sharedProducts) {
+                foundInSharedRecheck = resolveProductByItem(item, sharedNow);
+              }
+            }
+
             // Трекаем только если база загружена И продукт реально не найден в обеих базах
-            if (hasProductsLoaded && !foundInFresh && !foundInShared) {
+            if (hasProductsLoaded && !foundInFresh && !foundInSharedRecheck) {
               if (shouldLogOrphanTrace()) {
                 console.info('[HEYS.orphan-trace] getDayData orphan miss', {
                   dateStr,
@@ -2441,7 +2516,7 @@
                 });
               }
               trackOrphanProduct(item, dateStr);
-            } else if (foundInFresh || foundInShared) {
+            } else if (foundInFresh || foundInSharedRecheck) {
               const n = String(item.name || '').trim();
               if (n && orphanProductsMap.has(n)) orphanProductsMap.delete(n);
               if (itemNameNorm && orphanProductsMap.has(itemNameNorm)) orphanProductsMap.delete(itemNameNorm);
