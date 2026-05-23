@@ -2128,13 +2128,26 @@ module.exports.handler = async function (event, context) {
       }
 
       const untilTs = untilTsRaw || new Date().toISOString();
+      // 🛡️ FIX 2026-05-23: precision-mismatch JS↔PG.
+      // JS Date.toISOString() режет timestamp до миллисекунд (.566Z), PG хранит
+      // микросекунды (.566961). Клиент шлёт last entry.created_at в untilTs:
+      // если pg-driver вернул created_at как JS Date, точность УЖЕ потеряна в Node
+      // (см. строку 2093 — r.created_at.toISOString()). Сервер делает UPDATE с
+      // untilTs = .566Z, сравнение `created_at <= .566000` пропускает .566961 —
+      // запись остаётся unacked, на следующем запросе возвращается снова,
+      // банер показывается повторно после каждого "Понял".
+      // Лечим +1мс tolerance к obоим сравнениям:
+      //  - acked_at: захватываем записи с микросекундами в пределах той же ms.
+      //  - last_seen_at: устанавливаем на 1мс позже, чтобы следующий SELECT
+      //    (`created_at > last_seen_at`) не вернул только что acked записи.
+      const untilTsTolerantSql = `($2::timestamptz + INTERVAL '1 millisecond')`;
       await client.query('BEGIN');
       try {
         await client.query(
           `UPDATE clients
               SET curator_actions_last_seen_at = GREATEST(
                 COALESCE(curator_actions_last_seen_at, 'epoch'::timestamptz),
-                $2::timestamptz
+                ${untilTsTolerantSql}
               )
             WHERE id = $1::uuid`,
           [resolvedClientId, untilTs]
@@ -2144,7 +2157,7 @@ module.exports.handler = async function (event, context) {
               SET acked_at = NOW()
             WHERE client_id = $1::uuid
               AND acked_at IS NULL
-              AND created_at <= $2::timestamptz`,
+              AND created_at <= ${untilTsTolerantSql}`,
           [resolvedClientId, untilTs]
         );
         await client.query('COMMIT');

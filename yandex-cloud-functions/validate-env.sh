@@ -137,8 +137,52 @@ fi
 
 # ─── Step 4: Live DB connectivity test ──────────────────────────────
 echo -e "${BLUE}📋 Step 4: Database connectivity${NC}"
+
+# Phase 3 (Lockbox migration): PG_PASSWORD в .env может быть плейсхолдером вида
+# `__IN_LOCKBOX__heys-database__`. Runtime cloud function resolve'ит реальный
+# пароль через Lockbox (initSecrets), но deploy-time psql тест с плейсхолдером
+# гарантированно фейлится. Если видим плейсхолдер — пытаемся resolve через yc
+# CLI (тот же путь использует scripts/db/psql.sh), и только если это не вышло —
+# фолбэк на skip с warning.
+EFFECTIVE_PG_PASSWORD="$PG_PASSWORD"
+if [[ "$PG_PASSWORD" == __IN_LOCKBOX__* ]]; then
+    echo -e "${BLUE}   PG_PASSWORD is Lockbox placeholder — resolving via yc CLI...${NC}"
+    if command -v yc &> /dev/null; then
+        # LOCKBOX_DB_SECRET_ID должен быть в .env (см. environment функций)
+        LOCKBOX_ID="${LOCKBOX_DB_SECRET_ID:-e6q7gdshieo5udoet10f}"
+        # В Lockbox разные секреты используют разные имена ключей:
+        #   e6q7gdshieo5udoet10f (heys-database, cloud-functions) → key='PG_PASSWORD'
+        #   e6qr1rm1hm2n9a2pmsnl (scripts/db/get-pg-password.sh)  → key='postgresql_password'
+        # Пробуем оба варианта чтобы быть устойчивым к ротации/реорганизации.
+        RESOLVED_PASS=$(yc lockbox payload get --id "$LOCKBOX_ID" --format json 2>/dev/null \
+            | python3 -c "
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    for e in d.get('entries', []):
+        if e.get('key') in ('PG_PASSWORD', 'postgresql_password'):
+            print(e.get('text_value', ''))
+            sys.exit(0)
+except Exception:
+    pass
+" 2>/dev/null) || RESOLVED_PASS=""
+        if [ -n "$RESOLVED_PASS" ]; then
+            EFFECTIVE_PG_PASSWORD="$RESOLVED_PASS"
+            echo -e "${GREEN}   ✅ Resolved from Lockbox (id=${LOCKBOX_ID})${NC}"
+        else
+            echo -e "${YELLOW}   ⚠️  Failed to resolve from Lockbox — will skip DB check${NC}"
+            SKIP_DB=true
+            WARNINGS=$((WARNINGS+1))
+        fi
+    else
+        echo -e "${YELLOW}   ⚠️  yc CLI not found — cannot resolve Lockbox placeholder, skipping DB check${NC}"
+        SKIP_DB=true
+        WARNINGS=$((WARNINGS+1))
+    fi
+fi
+
 if [ "$SKIP_DB" = true ]; then
-    echo -e "${YELLOW}⏭️  DB check skipped (--skip-db flag)${NC}"
+    echo -e "${YELLOW}⏭️  DB check skipped${NC}"
 elif ! command -v psql &> /dev/null; then
     echo -e "${YELLOW}⚠️  psql not found — skipping DB connectivity test${NC}"
     echo -e "${YELLOW}   Install: brew install libpq (macOS) or apt install postgresql-client${NC}"
@@ -146,7 +190,7 @@ elif ! command -v psql &> /dev/null; then
 else
     # Test actual connection to the database
     echo -e "${BLUE}   Connecting to $PG_HOST:$PG_PORT/$PG_DATABASE...${NC}"
-    DB_RESULT=$(PGPASSWORD="$PG_PASSWORD" PGCONNECT_TIMEOUT=5 PGSSLMODE="${PG_SSL:-prefer}" psql \
+    DB_RESULT=$(PGPASSWORD="$EFFECTIVE_PG_PASSWORD" PGCONNECT_TIMEOUT=5 PGSSLMODE="${PG_SSL:-prefer}" psql \
         -h "$PG_HOST" \
         -p "$PG_PORT" \
         -U "$PG_USER" \

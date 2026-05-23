@@ -86,6 +86,10 @@
         + '.no-swipe-zone, [type="range"], [data-no-pull-refresh], '
         + '.planning-tab, .planning-content, .planning-subnav, .planning-subnav-shell, '
         + '.date-picker-backdrop, .time-picker-backdrop, .zone-formula-backdrop, '
+        // Morning checkin wheel pickers (вес, часы/минуты сна и т.д.) — крутятся как
+        // scroll-container, без этого их свайп ловит pull-refresh.
+        + '.mc-wheel-picker, .mc-wheel-values, .mc-time-pickers, .mood-rating-card, '
+        + '.mc-quality-slider, '
         // 🚀 PERF R49: ignore tab bar touches — pull-refresh setState triggers re-render cascade (95ms)
         + '.tabs'
       );

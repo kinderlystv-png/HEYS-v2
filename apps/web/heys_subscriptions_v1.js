@@ -279,14 +279,30 @@
         return result;
       }
 
-      // Fallback: сохраняем локально
+      // Fallback: сохраняем локально (YandexAPI недоступен)
       const now = new Date();
       const trialEnd = new Date(now.getTime() + CONFIG.TRIAL_DAYS * 24 * 60 * 60 * 1000);
 
+      // 🛡️ FIX 2026-05-23: тот же guard как в refreshProfileSubscription —
+      // не пишем subscription portion если local профиль ещё не приземлился
+      // (incomplete). Иначе lsSet через nsKey() затрёт scoped LS subscription-only
+      // объектом и сломает следующий cloud sync merge.
       const profile = HEYS.utils?.lsGet?.('heys_profile') || {};
+      const hasPersonalMarkers = profile.firstName || profile.age || profile.weight
+        || profile.height || profile.profileCompleted === true;
+      if (!hasPersonalMarkers) {
+        devWarn('[Subscriptions] startTrial fallback: skipping LS write — profile incomplete');
+        return {
+          success: true,
+          trial_started_at: now.toISOString(),
+          trial_ends_at: trialEnd.toISOString(),
+          note: 'local_profile_incomplete_no_write'
+        };
+      }
       profile.subscription_status = 'trial';
       profile.trial_started_at = now.toISOString();
       profile.trial_ends_at = trialEnd.toISOString();
+      profile.updatedAt = now.getTime();
       HEYS.utils?.lsSet?.('heys_profile', profile);
 
       return {
@@ -318,15 +334,28 @@
         return result;
       }
 
-      // Fallback: сохраняем локально
+      // Fallback: сохраняем локально (YandexAPI недоступен)
       const now = new Date();
       const expiresAt = new Date(now.getTime() + months * 30 * 24 * 60 * 60 * 1000);
 
+      // 🛡️ FIX 2026-05-23: см. startTrial — тот же guard.
       const profile = HEYS.utils?.lsGet?.('heys_profile') || {};
+      const hasPersonalMarkers = profile.firstName || profile.age || profile.weight
+        || profile.height || profile.profileCompleted === true;
+      if (!hasPersonalMarkers) {
+        devWarn('[Subscriptions] activateSubscription fallback: skipping LS write — profile incomplete');
+        return {
+          success: true,
+          plan: plan,
+          expires_at: expiresAt.toISOString(),
+          note: 'local_profile_incomplete_no_write'
+        };
+      }
       profile.subscription_status = 'active';
       profile.subscription_plan = plan;
       profile.subscription_started_at = now.toISOString();
       profile.subscription_expires_at = expiresAt.toISOString();
+      profile.updatedAt = now.getTime();
       HEYS.utils?.lsSet?.('heys_profile', profile);
 
       return {
@@ -1426,13 +1455,54 @@
    * и выпустить heys:profile-updated. Используется после успешного PIN-login,
    * чтобы canEdit-проверки сразу видели свежий subscription_status='trial'
    * без ожидания page reload.
+   *
+   * 🛡️ FIX 2026-05-23: race с Phase A cloud sync. lsSet('heys_profile', ...)
+   * через nsKey() скоупится в heys_${cid}_profile. Если в этот момент local LS
+   * пустой (incognito cold start, HEYS.store memory cache отдаёт null/{}) —
+   * мы пишем туда subscription-only объект (4 поля), затирая результат Phase A
+   * (32 поля). Лечим так: читаем raw LS (минуя cache), и если в local профиле
+   * пока нет personal markers (firstName/age/weight/height/profileCompleted) —
+   * не трогаем heys_profile вообще. Subscription portion всё равно лежит
+   * в той же row.v в БД и приземлится через cloud sync. Для срочного UI status
+   * используем отдельный cache key `heys_subscription_status`.
    */
   async function refreshProfileSubscription() {
     try {
       const status = await getStatus();
       if (!status || status.success === false) return;
 
-      const profile = (HEYS.utils?.lsGet?.('heys_profile')) || {};
+      const cid = (HEYS.utils?.getCurrentClientId?.()) || HEYS.currentClientId || '';
+      const decompress = HEYS.store?.decompress;
+      const tryDecompress = (raw) => {
+        if (!raw) return null;
+        try { return decompress ? decompress(raw) : JSON.parse(raw); } catch (_) { return null; }
+      };
+      // Force-raw read scoped first, затем legacy. Минуем HEYS.store memory cache,
+      // которая может отдать stale {} даже если Phase A уже записал полный профиль.
+      const profile = (cid && tryDecompress(localStorage.getItem(`heys_${cid}_profile`)))
+        || tryDecompress(localStorage.getItem('heys_profile'))
+        || {};
+
+      const hasPersonalMarkers = profile.firstName || profile.age || profile.weight
+        || profile.height || profile.profileCompleted === true;
+
+      if (!hasPersonalMarkers) {
+        // Cloud sync ещё не приземлил профиль (или новый клиент без personal данных).
+        // Не пишем в heys_profile: иначе затрём Phase A результат subscription-only объектом.
+        // Subscription portion в БД уже включает status/trial_*, придёт через cloud sync.
+        // UI получит свежий status из отдельного cache key.
+        try {
+          if (status.status) {
+            HEYS.utils?.lsSet?.('heys_subscription_status', { status: status.status, ts: Date.now() });
+          }
+        } catch (_) { /* noop */ }
+        window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+          detail: { source: 'auth-changed', subscription_status: status.status },
+        }));
+        devLog('[Subscriptions] refreshProfileSubscription: skipped heys_profile write — local profile incomplete, deferring to cloud sync');
+        return;
+      }
+
       const updated = {
         ...profile,
         subscription_status: status.status || profile.subscription_status,
