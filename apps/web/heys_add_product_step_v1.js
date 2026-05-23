@@ -3089,7 +3089,55 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       const name = product.name || 'продукт';
       const pid = String(product.id ?? product.product_id ?? product.name);
-      if (!confirm(`Удалить "${name}" из базы?\n\nПосле удаления появится кнопка отмены.`)) return;
+      const fpForUsage = product.fingerprint || null;
+      const nameLowerForUsage = String(name || '').trim().toLowerCase();
+
+      // 🪦 F12 (plan 2026-05-24): подсчёт использований в dayv2 перед confirm.
+      // Пользователь должен понимать: удаление породит orphan-баннеры на N днях.
+      // Скан scoped только под текущего клиента (паттерн как в autoRecoverOnLoad).
+      let usageDays = 0;
+      try {
+        const _clientId = (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function')
+          ? HEYS.cloud.getCurrentClientId()
+          : (typeof HEYS.utils?.getCurrentClientId === 'function' ? HEYS.utils.getCurrentClientId() : '');
+        const scopedPrefix = _clientId ? `heys_${_clientId}_dayv2_` : '';
+        const legacyPrefix = 'heys_dayv2_';
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          const isScopedMatch = scopedPrefix && k.startsWith(scopedPrefix);
+          const isLegacyMatch = !scopedPrefix && k.startsWith(legacyPrefix);
+          if (!isScopedMatch && !isLegacyMatch) continue;
+          let raw = localStorage.getItem(k);
+          if (!raw) continue;
+          let day;
+          try {
+            if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
+              raw = HEYS.store.decompress(raw);
+            }
+            day = JSON.parse(raw);
+          } catch (_) { continue; }
+          if (!day || !Array.isArray(day.meals)) continue;
+          const hasUsage = day.meals.some((meal) =>
+            Array.isArray(meal?.items) && meal.items.some((it) => {
+              if (!it) return false;
+              const itId = String(it.product_id ?? it.productId ?? '');
+              if (itId && itId === pid) return true;
+              if (fpForUsage && it.fingerprint === fpForUsage) return true;
+              const itNameLower = String(it.name || '').trim().toLowerCase();
+              if (nameLowerForUsage && itNameLower === nameLowerForUsage) return true;
+              return false;
+            })
+          );
+          if (hasUsage) usageDays++;
+        }
+      } catch (_) { /* defensive — счётчик не должен ронять удаление */ }
+
+      const usageLine = usageDays > 0
+        ? `\n\n⚠️ Продукт используется в ${usageDays} ${usageDays === 1 ? 'дне' : usageDays < 5 ? 'днях' : 'днях'}. На этих днях появится оранжевый баннер «продукт не найден в базе».`
+        : '';
+      const confirmMsg = `Удалить "${name}" из базы?${usageLine}\n\nПосле удаления появится кнопка отмены.`;
+      if (!confirm(confirmMsg)) return;
 
       haptic('medium');
 
