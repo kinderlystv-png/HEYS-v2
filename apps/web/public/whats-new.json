@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.23.3231f7ae",
+      "buildHash": "3231f7ae",
+      "date": "2026-05-23",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: автоматическая проверка здоровья БД",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Ежедневный health-check и еженедельный cleanup БД работают сами",
+          "description": "В cloud-функцию heys-maintenance добавлены два регулярных задания: ежедневный health-check мониторит 5 индикаторов аномалий (застрявшие записи куратора, zombie кэши, race-индикаторы) и шлёт алерт в Telegram только если что-то выглядит подозрительно; еженедельный cleanup по воскресеньям удаляет устаревшие backup-ы, debug-записи, legacy дубликаты. На UX не влияет — это серверная инфра."
+        }
+      ]
+    },
+    {
       "version": "2026.05.23.da249c9e",
       "buildHash": "da249c9e",
       "date": "2026-05-23",
