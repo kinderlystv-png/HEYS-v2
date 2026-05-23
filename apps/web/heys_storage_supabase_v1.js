@@ -2379,11 +2379,18 @@
   function cleanupOptionalPreferenceStorage() {
     try {
       const optionalKeys = [];
+      // 🪦 F11 (plan 2026-05-24): tombstone hard-allowlist. Эти ключи НЕЛЬЗЯ
+      // aggressive-cleanup'ить даже при quota-exceeded — без них cloud-sync merge
+      // не отфильтрует «воскрешённые» продукты (см. mergeProductsData isDeletedProduct
+      // на :1495-1503), и удалённые продукты вернутся из облака при первом sync.
+      // Аналогично hard-allowlist для auth keys (см. isSensitiveSessionStorageKey).
+      // Также убраны соответствующие suffix matchers (`_deleted_products`) ниже.
+      // Если quota всё равно мала — лучше упасть с QuotaExceeded, чем потерять tombstone.
       const exactKeys = new Set([
         'heys_hidden_products',
         'heys_favorite_products',
-        'heys_deleted_products',
-        'heys_deleted_products_ignore_list',
+        // 'heys_deleted_products',                  // ← F11 hard-allowlist
+        // 'heys_deleted_products_ignore_list',      // ← F11 hard-allowlist
         'heys_grams_history',
         'heys_advice_trace_day_v1',
         'test_large'
@@ -2391,7 +2398,7 @@
       const suffixMatchers = [
         '_hidden_products',
         '_favorite_products',
-        '_deleted_products',
+        // '_deleted_products',                       // ← F11 hard-allowlist (per-client tombstones)
         '_advice_trace_day_v1'
       ];
 

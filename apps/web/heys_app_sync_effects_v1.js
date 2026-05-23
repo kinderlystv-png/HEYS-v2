@@ -2,6 +2,38 @@
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
 
+    // 🪦 F10 (plan 2026-05-24): multi-tab tombstone listener.
+    // Когда в одном табе пользователь удалил продукт (или восстановил), HEYS.store.set('heys_deleted_ids', ...)
+    // + localStorage.setItem('heys_deleted_products_ignore_list', ...) пишут в LS, но
+    // у других табов нет триггера на это. До F10 второй таб узнавал об изменении
+    // только при следующем cloud-sync (могло занять секунды-минуты), в этом окне
+    // второй таб мог автоматически восстановить продукт из shared (F8). Слушаем
+    // оба key — они синхронизированы через HEYS.deletedProducts.add.
+    // Storage event срабатывает кросс-табно (НЕ в табе-инициаторе) — это правильно:
+    // инициатор уже в курсе изменений через прямой setItem.
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        try {
+            const TOMBSTONE_LS_KEYS = new Set([
+                'heys_deleted_ids',
+                'heys_deleted_products_ignore_list',
+            ]);
+            window.addEventListener('storage', (e) => {
+                if (!e || !TOMBSTONE_LS_KEYS.has(e.key)) return;
+                try {
+                    if (typeof window.HEYS?.deletedProducts?._reloadFromStorage === 'function') {
+                        window.HEYS.deletedProducts._reloadFromStorage();
+                    }
+                    if (typeof window.HEYS?.orphanProducts?.recalculate === 'function') {
+                        window.HEYS.orphanProducts.recalculate();
+                    }
+                    console.info('[HEYS.sync] 🪦 multi-tab tombstone reload: ' + e.key + ' changed in another tab');
+                } catch (err) {
+                    console.warn('[HEYS.sync] multi-tab tombstone handler failed:', err?.message || err);
+                }
+            });
+        } catch (_) { /* noop */ }
+    }
+
     function buildProductsFingerprint(list) {
         if (!Array.isArray(list) || list.length === 0) return '0:0';
         let hash = 2166136261 >>> 0;

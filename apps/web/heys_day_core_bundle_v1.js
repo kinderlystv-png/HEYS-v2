@@ -84,6 +84,15 @@
 
     // 🆕 v4.8.0: API для управления игнор-листом удалённых продуктов (v2)
     HEYS.deletedProducts = {
+        // 🪦 F10 (plan 2026-05-24): перечитать blocklist из LS — используется multi-tab
+        // storage event handler, чтобы синхронизировать удаление сделанное в другом табе.
+        _reloadFromStorage() {
+            try {
+                deletedProductsData = loadDeletedProductsList();
+            } catch (e) {
+                console.warn('[HEYS] deletedProducts._reloadFromStorage failed:', e?.message || e);
+            }
+        },
         add(name, id, fingerprint) {
             if (!name) return;
             const key = normalizeDeletedKey(name);
