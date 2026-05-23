@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.126918ad",
+      "buildHash": "126918ad",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: исправлено извлечение payload в heys-maintenance",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Cloud-функция периодического обслуживания теперь корректно различает свои задания",
+          "description": "Yandex timer trigger кладёт payload в details.payload (а не event.payload как мы изначально читали), плюс автоматически заполняет details.trigger_id своим внутренним UUID. После фикса handler сначала смотрит payload, потом отфильтровывает UUID-формат, и тогда определяет какое именно задание запустить (kv_health / kv_cleanup / trial_queue). Подтверждено реальным fire триггера: payload подхватывается, health-check выполняется. На пользовательскую часть приложения не влияет — серверная инфра."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.74edc095",
       "buildHash": "74edc095",
       "date": "2026-05-24",
