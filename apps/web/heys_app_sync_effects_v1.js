@@ -3,9 +3,9 @@
     const HEYS = window.HEYS = window.HEYS || {};
 
     // 🪦 F10 (plan 2026-05-24): multi-tab tombstone listener.
-    // Когда в одном табе пользователь удалил продукт (или восстановил), HEYS.store.set('heys_deleted_ids', ...)
-    // + localStorage.setItem('heys_deleted_products_ignore_list', ...) пишут в LS, но
-    // у других табов нет триггера на это. До F10 второй таб узнавал об изменении
+    // Когда в одном табе пользователь удалил продукт (или восстановил), оба tombstone-store
+    // записывают в LS (heys_deleted_ids через HEYS.store + heys_deleted_products_ignore_list
+    // через saveDeletedProductsData), но у других табов нет триггера на это. До F10 второй таб узнавал об изменении
     // только при следующем cloud-sync (могло занять секунды-минуты), в этом окне
     // второй таб мог автоматически восстановить продукт из shared (F8). Слушаем
     // оба key — они синхронизированы через HEYS.deletedProducts.add.

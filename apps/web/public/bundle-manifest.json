@@ -26,10 +26,10 @@
   "boot-app": {
     "file": "boot-app.bundle.01ef8ccd8745.js",
     "hash": "01ef8ccd8745",
-    "sourceFingerprint": "383498fe01d9",
+    "sourceFingerprint": "3bc53d0916cf",
     "fileCount": 49,
     "size": 884285,
-    "builtAt": "2026-05-23T23:13:07.523Z"
+    "builtAt": "2026-05-23T23:50:52.612Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.a261f6f72353.js",
