@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.7d4b10ca",
+      "buildHash": "7d4b10ca",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: regression-тесты на защиту продуктовой базы",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Добавлены 26 unit-тестов на shrink-guard и best-match resolver",
+          "description": "Новый файл apps/web/__tests__/shrink-guard.test.js закрывает классы регрессии в логике защиты от исчезновения продуктов: tombstone-aware shrink-guard в setAll и OverlayStore.writeRaw, tombstone-aware shrink-tolerance в cloud-sync merge, best-match priority в resolveProductByItem (id > fingerprint > name с tiebreaker по created_at). Pure-logic симуляция, не загружает IIFE-bundle. На UX не влияет — серверная защита от будущих случайных изменений."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.bd25eee8",
       "buildHash": "bd25eee8",
       "date": "2026-05-24",
