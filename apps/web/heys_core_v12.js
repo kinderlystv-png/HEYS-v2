@@ -4585,6 +4585,72 @@
         });
       }
 
+      // 🪦 SHRINK-GUARD (plan F3 + F19, 2026-05-24): tombstone-aware блокировка
+      // тихого удаления продуктов через setAll(allowShrink:true) из недоверенных
+      // источников. Замысел: если кто-то добавит новый shape-inference фильтр или
+      // зальёт меньший массив, и для удалённых id нет tombstone в heys_deleted_ids —
+      // запись блокируется. Allowlist: delete-product (UI-handler сам ставит
+      // tombstone), deduplicate (это merge, не удаление), cloud-sync (есть свой
+      // shrink-tolerance 5% gate в cloud-sync merge код, F9 заменит на
+      // tombstone-aware).
+      const TOMBSTONE_BYPASS_SOURCES = new Set(['delete-product', 'deduplicate', 'cloud-sync']);
+      if (opts.allowShrink && !TOMBSTONE_BYPASS_SOURCES.has(source)) {
+        const prevProducts = HEYS.products.getAll?.() || [];
+        const prevLenForGuard = prevProducts.length;
+        if (prevLenForGuard > 0 && newLen < prevLenForGuard) {
+          const newIds = new Set(
+            (Array.isArray(arr) ? arr : [])
+              .map((p) => String(p?.id ?? p?.product_id ?? ''))
+              .filter(Boolean)
+          );
+          const removed = [];
+          for (const p of prevProducts) {
+            const pid = String(p?.id ?? p?.product_id ?? '');
+            if (pid && !newIds.has(pid)) removed.push({ id: pid, name: p?.name });
+          }
+          if (removed.length > 0) {
+            let tombstoneCovered = 0;
+            const untombstoned = [];
+            for (const r of removed) {
+              const tombstoned = (typeof _isProductTombstoned === 'function')
+                ? _isProductTombstoned({ id: r.id, name: r.name })
+                : false;
+              if (tombstoned) tombstoneCovered++;
+              else untombstoned.push(r);
+            }
+            if (untombstoned.length > 0) {
+              console.warn('[HEYS.products] setAll BLOCKED — silent product loss attempted', {
+                source,
+                prevLen: prevLenForGuard,
+                attemptedNow: newLen,
+                removedCount: removed.length,
+                tombstoneCovered,
+                untombstonedSample: untombstoned.slice(0, 3).map((r) => ({ id: r.id, name: r.name })),
+                stack: new Error().stack?.split('\n').slice(1, 5).map((s) => s.trim()).join(' <- '),
+              });
+              _writeSetAllAudit({
+                source,
+                prevLen: prevLenForGuard,
+                newLen,
+                removedIdsSample: removed.slice(0, 3).map((r) => r.id),
+                blocked: true,
+                tombstoneCovered,
+              });
+              return;
+            }
+            // Все удаления tombstoned — пропускаем, но фиксируем в audit для observability.
+            _writeSetAllAudit({
+              source,
+              prevLen: prevLenForGuard,
+              newLen,
+              removedIdsSample: removed.slice(0, 3).map((r) => r.id),
+              blocked: false,
+              tombstoneCovered,
+            });
+          }
+        }
+      }
+
       // 🛡️ ЗАЩИТА: Не перезаписываем большее количество меньшим без явного разрешения
       // Это предотвращает race condition когда sync перезаписывает восстановленные продукты
       // ВАЖНО: Проверяем ОБА источника — store (memory) И localStorage напрямую!
@@ -5076,6 +5142,38 @@
       } catch (_) { /* noop */ }
       return false;
     }
+
+    // 📊 F19: rolling audit log для setAll-shrink (последние 50 entry).
+    // Ключ `__heys_setall_audit__v1` НЕ начинается с `heys_` → interceptor
+    // (isOurKey) его пропускает → audit живёт только локально, не зеркалится
+    // в облако. Используется для расследования инцидентов «исчезают продукты».
+    // Reader: `HEYS.diagnostics.setAllAudit()` (см. ниже).
+    function _writeSetAllAudit(entry) {
+      try {
+        const key = '__heys_setall_audit__v1';
+        let arr = [];
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) arr = parsed;
+          }
+        } catch (_) { arr = []; }
+        arr.unshift({ ts: Date.now(), ...entry });
+        if (arr.length > 50) arr = arr.slice(0, 50);
+        localStorage.setItem(key, JSON.stringify(arr));
+      } catch (_) { /* noop — диагностика не должна крашить запись */ }
+    }
+
+    HEYS.diagnostics = HEYS.diagnostics || {};
+    HEYS.diagnostics.setAllAudit = function () {
+      try {
+        const raw = localStorage.getItem('__heys_setall_audit__v1');
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) { return []; }
+    };
 
     HEYS.products.getById = function (id) {
       const enabled = HEYS.flags && typeof HEYS.flags.isEnabled === 'function'
