@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.23.da249c9e",
+      "buildHash": "da249c9e",
+      "date": "2026-05-23",
+      "kind": "technical",
+      "profile": "technical-sync-storage",
+      "title": "Внутреннее: архитектурный hardening после серии фиксов",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Закрыли несколько мелких архитектурных дыр в storage layer",
+          "description": "Backup-snapshot виджетных продуктов (heys_products_overlay_v2_BACKUP_*) больше не зеркалится в облако (раньше был gap в blocklist). Server-side merge защищает теперь и nested metadata-поля. В быстрой первой партии данных при cold-start теперь есть и раскладка виджетов — без мигания дефолтной сетки. Добавлены regression-тесты, документация в BUGS_HISTORY.md, и SQL-скрипты для periodic cleanup и мониторинга. На пользовательскую часть приложения не влияет — это пакет внутренних улучшений."
+        }
+      ]
+    },
+    {
       "version": "2026.05.23.913ca448",
       "buildHash": "913ca448",
       "date": "2026-05-23",
