@@ -6574,7 +6574,14 @@
                 // прогресса до тех пор пока full sync не приземлит heys_game (порой
                 // 5-20 сек на cellular). Размер ~18-20KB на клиента — приемлемо
                 // для Phase A.
-                'heys_game'
+                'heys_game',
+                // Stage 4 (2026-05-23): subscription status cache (~250-300 байт).
+                // canWriteSync() в paywall_v1 читает HEYS.Subscription.getCachedStatus()
+                // синхронно при каждом write attempt. На cold-start без cache он
+                // возвращает true (fail-open) — пользователь с истёкшим триалом мог
+                // успеть сделать write до приземления реального статуса. С этим
+                // ключом в Phase A canWriteSync видит реальный status сразу.
+                'heys_subscription_status'
               ];
               const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
               const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];
