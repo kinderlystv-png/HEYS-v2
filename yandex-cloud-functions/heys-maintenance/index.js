@@ -259,17 +259,47 @@ module.exports.handler = async (event, context) => {
   await initSecrets();
 
   // Source of trigger_id (по убыванию приоритета):
-  //   1. Message Queue trigger: event.messages[0].details.trigger_id
-  //   2. Timer trigger с --payload '{"trigger_id":"..."}' → event.payload (string)
-  //   3. Manual invoke с body/data: event.trigger_id напрямую
-  let triggerId = event.messages?.[0]?.details?.trigger_id;
-  if (!triggerId && typeof event.payload === 'string') {
+  //   1. Timer trigger с --payload: messages[0].details.payload — string JSON
+  //   2. Manual invoke с {"messages":[{"details":{"trigger_id":"..."}}]}:
+  //      details.trigger_id строкой (для backward-compat manual debug)
+  //   3. Top-level event.trigger_id (тоже manual invoke)
+  //   4. Default fallback
+  //
+  // 🛡️ Yandex timer trigger без --payload АВТОМАТИЧЕСКИ заполняет
+  // details.trigger_id значением UUID самого триггера. Это значит
+  // напрямую использовать details.trigger_id как task name НЕЛЬЗЯ —
+  // отфильтровываем UUID-формат (выглядит как 'a1s...19chars').
+  const details = event.messages?.[0]?.details;
+  let triggerId;
+
+  // 1. Payload-based (рекомендуемый путь для timer trigger)
+  if (details && typeof details.payload === 'string' && details.payload) {
     try {
-      const parsed = JSON.parse(event.payload);
-      triggerId = parsed.trigger_id;
+      const parsed = JSON.parse(details.payload);
+      triggerId = parsed && parsed.trigger_id;
     } catch (_) { /* payload not JSON */ }
   }
-  if (!triggerId) triggerId = event.trigger_id || 'default';
+  // 2. Manual / Message Queue trigger_id (только если не UUID)
+  if (!triggerId && details && typeof details.trigger_id === 'string') {
+    const tid = details.trigger_id;
+    // Yandex trigger IDs выглядят как 'a1s' + ~16 alnum chars. Custom
+    // имена task (kv_health, trial_queue, etc.) — короче, snake_case.
+    const looksLikeYcId = /^[a-z0-9]{17,}$/i.test(tid);
+    if (!looksLikeYcId) triggerId = tid;
+  }
+  // 3. Top-level (manual invoke)
+  if (!triggerId) triggerId = event.trigger_id;
+  // 4. Default
+  if (!triggerId) triggerId = 'default';
+
+  // Diagnostic (одноразово полезно при отладке timer payload routing)
+  console.log('[Maintenance] event keys:',
+    JSON.stringify({
+      hasMessages: !!event.messages,
+      detailsKeys: details ? Object.keys(details) : null,
+      payloadType: details ? typeof details.payload : null,
+      resolvedTriggerId: triggerId,
+    }));
   console.log(`[Maintenance] Starting task: ${triggerId}`);
 
   let client;
