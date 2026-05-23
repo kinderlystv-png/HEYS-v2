@@ -69,6 +69,68 @@
   function writeRaw(rows, opts) {
     if (!Array.isArray(rows)) return false;
     try {
+      // 🪦 SHRINK-GUARD (plan F4, 2026-05-24): дублирующая защита уровня overlay.
+      // setAll имеет такой же guard (heys_core_v12.js), но removeRow/upsertRow/
+      // migrate пишут НАПРЯМУЮ в writeRaw, минуя setAll → guard нужен здесь тоже.
+      // Caller обязан передать opts.allowShrink:true, если уменьшение легитимно
+      // и tombstones уже проставлены (applyCloudSnapshot — встроенный tombstone
+      // filter; UI delete-product — добавляет в deletedProducts до writeRaw).
+      const allowShrink = !!(opts && opts.allowShrink);
+      if (!allowShrink) {
+        try {
+          const prevRows = HEYS.store && HEYS.store.get
+            ? (HEYS.store.get(STORE_KEY) || [])
+            : [];
+          const prevLen = Array.isArray(prevRows) ? prevRows.length : 0;
+          if (prevLen > 0 && rows.length < prevLen) {
+            const newIds = new Set(
+              rows.map(function (r) { return String(r && r.id != null ? r.id : ''); }).filter(Boolean)
+            );
+            const removed = [];
+            for (var i = 0; i < prevRows.length; i++) {
+              var r = prevRows[i];
+              var pid = String(r && r.id != null ? r.id : '');
+              if (pid && !newIds.has(pid)) removed.push({ id: pid, name: r && r.name });
+            }
+            if (removed.length > 0) {
+              var isTomb = function (item) {
+                try {
+                  if (global.HEYS && global.HEYS.deletedProducts && typeof global.HEYS.deletedProducts.isProductDeleted === 'function') {
+                    return !!global.HEYS.deletedProducts.isProductDeleted(item);
+                  }
+                  var tombs = HEYS.store && HEYS.store.get ? HEYS.store.get('heys_deleted_ids') : null;
+                  if (Array.isArray(tombs) && tombs.length > 0) {
+                    var pidStr = item.id != null ? String(item.id) : null;
+                    var pnameNorm = item.name ? String(item.name).trim().toLowerCase() : null;
+                    for (var j = 0; j < tombs.length; j++) {
+                      var t = tombs[j];
+                      if (!t) continue;
+                      if (pidStr && t.id != null && String(t.id) === pidStr) return true;
+                      if (pnameNorm && t.name && String(t.name).trim().toLowerCase() === pnameNorm) return true;
+                    }
+                  }
+                } catch (_) { /* noop */ }
+                return false;
+              };
+              var untombstoned = removed.filter(function (it) { return !isTomb(it); });
+              if (untombstoned.length > 0) {
+                try {
+                  console.warn('[OverlayStore] writeRaw BLOCKED — silent product loss attempted', {
+                    source: (opts && opts.source) || 'unknown',
+                    prevLen: prevLen,
+                    attemptedNow: rows.length,
+                    removedCount: removed.length,
+                    untombstonedSample: untombstoned.slice(0, 3),
+                    stack: new Error().stack && new Error().stack.split('\n').slice(1, 5).map(function (s) { return s.trim(); }).join(' <- '),
+                  });
+                } catch (_) { /* noop */ }
+                return false;
+              }
+            }
+          }
+        } catch (_e) { /* defensive: guard не должен ронять writeRaw */ }
+      }
+
       if (HEYS.store && HEYS.store.set) {
         HEYS.store.set(STORE_KEY, rows);
         invalidateMergedView();
@@ -222,7 +284,12 @@
     const merged = deduped.concat(pendingLocalCustoms).concat(pendingLocalTypeA);
 
     // 4. skipCloudSync — данные ИЗ cloud, не отправляем обратно.
-    writeRaw(merged, { skipCloudSync: true });
+    // allowShrink — applyCloudSnapshot встроенно tombstone-aware (см. блок 2 выше:
+    // `_tombIds`/`_tombNames` фильтрует tombstoned записи ДО merge). Передаём
+    // allowShrink:true в writeRaw, чтобы guard F4 не блокировал легитимный
+    // cloud-merge с меньшим количеством продуктов (другое устройство удалило с
+    // tombstone — наш applyCloudSnapshot его учёл).
+    writeRaw(merged, { skipCloudSync: true, allowShrink: true, source: 'applyCloudSnapshot:' + source });
 
     try {
       console.info('[OverlayStore] applyCloudSnapshot', {
