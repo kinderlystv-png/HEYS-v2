@@ -1829,6 +1829,55 @@
     return /_products_overlay_v2_BACKUP_/.test(normalizedKey);
   }
 
+  // 🪦 F9 helper (plan 2026-05-24): для cloud-sync shrink-tolerance gate.
+  // Возвращает true, если ВСЕ исчезающие записи (есть в prevArr, нет в newArr)
+  // имеют tombstone в heys_deleted_ids (или в HEYS.deletedProducts). Используется
+  // чтобы пропустить legitimate shrink через cloud-sync (другое устройство удалило
+  // с tombstone) даже если он больше 5% threshold — без этого было infinite
+  // retry loop, sync не проходил никогда.
+  function _allShrinkRemovalsTombstoned(prevArr, newArr) {
+    if (!Array.isArray(prevArr) || !Array.isArray(newArr)) return false;
+    const newIds = new Set();
+    for (let i = 0; i < newArr.length; i++) {
+      const p = newArr[i];
+      const pid = String((p && (p.id != null ? p.id : p.product_id)) || '');
+      if (pid) newIds.add(pid);
+    }
+    const removed = [];
+    for (let i = 0; i < prevArr.length; i++) {
+      const p = prevArr[i];
+      const pid = String((p && (p.id != null ? p.id : p.product_id)) || '');
+      if (pid && !newIds.has(pid)) removed.push({ id: pid, name: p && p.name });
+    }
+    if (removed.length === 0) return true;
+    try {
+      const dp = global.HEYS && global.HEYS.deletedProducts;
+      const tombs = global.HEYS && global.HEYS.store && typeof global.HEYS.store.get === 'function'
+        ? (global.HEYS.store.get('heys_deleted_ids') || [])
+        : [];
+      const tombIds = new Set();
+      const tombNames = new Set();
+      if (Array.isArray(tombs)) {
+        for (let i = 0; i < tombs.length; i++) {
+          const t = tombs[i];
+          if (!t) continue;
+          if (t.id != null) tombIds.add(String(t.id));
+          if (t.name) tombNames.add(String(t.name).trim().toLowerCase());
+        }
+      }
+      for (let i = 0; i < removed.length; i++) {
+        const r = removed[i];
+        if (dp && typeof dp.isProductDeleted === 'function' && dp.isProductDeleted(r)) continue;
+        if (r.id && tombIds.has(String(r.id))) continue;
+        if (r.name && tombNames.has(String(r.name).trim().toLowerCase())) continue;
+        return false; // нашли untombstoned — не пропускаем
+      }
+      return true;
+    } catch (_) {
+      return false; // ошибка в проверке — fallback на старое поведение (skip setAll)
+    }
+  }
+
   function filterLocalOnlyPendingQueueItems(queue, storageKey, options = {}) {
     const safeQueue = Array.isArray(queue) ? queue : [];
     const filtered = safeQueue.filter((item) => {
@@ -7870,12 +7919,17 @@
                     const memoryNow = global.HEYS?.products?.getAll?.()?.length || 0;
                     if (localDeduped.length < memoryNow) {
                       // v4.8.2: Разрешаем дедупликацию если разница <= 5%
+                      // 🪦 F9 (plan 2026-05-24): если ВСЕ исчезающие записи tombstoned —
+                      // пропускаем независимо от shrinkPct. Иначе раньше при legitimate
+                      // удалении другим устройством >5% — sync навечно skip'ался.
                       const shrinkPct = ((memoryNow - localDeduped.length) / memoryNow) * 100;
-                      if (shrinkPct > 5) {
-                        log(`⚠️ [PRODUCTS] Skip setAll: localDeduped (${localDeduped.length}) significantly < memory (${memoryNow}), ${shrinkPct.toFixed(1)}%`);
+                      const prevSnap = global.HEYS?.products?.getAll?.() || [];
+                      const allTomb = _allShrinkRemovalsTombstoned(prevSnap, localDeduped);
+                      if (shrinkPct > 5 && !allTomb) {
+                        log(`⚠️ [PRODUCTS] Skip setAll: localDeduped (${localDeduped.length}) significantly < memory (${memoryNow}), ${shrinkPct.toFixed(1)}% — untombstoned removals`);
                         return;
                       }
-                      log(`🧹 [PRODUCTS] Allowing dedup shrink: ${memoryNow} → ${localDeduped.length} (−${shrinkPct.toFixed(1)}%)`);
+                      log(`🧹 [PRODUCTS] Allowing dedup shrink: ${memoryNow} → ${localDeduped.length} (−${shrinkPct.toFixed(1)}%${allTomb ? ', all tombstoned' : ''})`);
                     }
                     if (global.HEYS?.products?.setAll) {
                       global.HEYS.products.setAll(localDeduped, { source: 'cloud-sync', skipNotify: true, skipCloud: true, allowShrink: true });
@@ -7949,12 +8003,19 @@
                     : (global.HEYS?.products?.getAll?.()?.length || 0);
                   if (merged.length < currentInMemory) {
                     // v4.8.2: Разрешаем уменьшение если это дедупликация (разница <= 5%)
+                    // 🪦 F9 (plan 2026-05-24): если ВСЕ исчезающие записи tombstoned —
+                    // пропускаем независимо от shrinkPct. Закрывает infinite retry loop
+                    // при legitimate >5% удалении другим устройством.
                     const shrinkPct = ((currentInMemory - merged.length) / currentInMemory) * 100;
-                    if (shrinkPct > 5) {
-                      log(`⚠️ [PRODUCTS] Skipping setAll: merged (${merged.length}) significantly < memory (${currentInMemory}), ${shrinkPct.toFixed(1)}%`);
+                    const prevSnapForGate = global.HEYS?.flags?.isEnabled?.('overlay_products_v2')
+                      ? currentLocal
+                      : (global.HEYS?.products?.getAll?.() || []);
+                    const allTombMerge = _allShrinkRemovalsTombstoned(prevSnapForGate, merged);
+                    if (shrinkPct > 5 && !allTombMerge) {
+                      log(`⚠️ [PRODUCTS] Skipping setAll: merged (${merged.length}) significantly < memory (${currentInMemory}), ${shrinkPct.toFixed(1)}% — untombstoned removals`);
                       return;
                     }
-                    log(`🧹 [PRODUCTS] Allowing merge shrink: ${currentInMemory} → ${merged.length} (−${shrinkPct.toFixed(1)}%, dedup)`);
+                    log(`🧹 [PRODUCTS] Allowing merge shrink: ${currentInMemory} → ${merged.length} (−${shrinkPct.toFixed(1)}%${allTombMerge ? ', all tombstoned' : ', dedup'})`);
                   }
 
                   if (global.HEYS?.products?.setAll) {
