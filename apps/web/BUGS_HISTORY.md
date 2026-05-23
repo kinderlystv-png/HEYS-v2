@@ -7,6 +7,70 @@ broken, what was fixed, and the pattern to watch for.
 
 ---
 
+## Orphan-баннер + cleanup hardening (2026-05-24)
+
+День `2026-05-23` (клиент `4545ee50…`) показывал баннер «1 продукт не найден в
+базе» на штатной сессии без видимой причины. Расследование вскрыло **класс
+проблем** одновременно:
+
+### Что нашли
+
+1. **Три product_id из meal-items вообще отсутствуют в personal overlay** —
+   `p_1769271889662_72os3b`, `p_1769271889661_x9nqxy`, `p_1769271889661_ina83q`
+   (хлеб, творожный сыр, твёрдый сыр). Формат `p_<timestamp>_<random6>` —
+   typical для `restoreFromSharedBase`
+   ([heys_core_v12.js:2780](heys_core_v12.js#L2780)), массового импорта shared →
+   personal. Timestamp 1769271889661 = 24 января.
+2. В overlay-снимке от 10 мая (backup-key) этих 3 id **уже не было** — значит
+   удалены до 10 мая. **Tombstone не проставлен** (отсутствуют в
+   `heys_deleted_ids`).
+3. Имена точно совпадают с тремя записями в `shared_products`. Только 2 из 3
+   успевают резолвиться через shared-кеш — один остаётся в orphan-tracker из-за
+   race между `getDayData` inline-tracking (на каждый re-render) и
+   `recalculate()` (запускается только на shared cache load /
+   heysProductsUpdated / date change).
+4. `renderOrphanAlert.trulyUnresolved` фильтр
+   ([heys_day_orphan_alert.js:50](heys_day_orphan_alert.js#L50)) использует
+   только `HEYS.products.getById()` без fallback в shared cache — поэтому баннер
+   показывает даже разрешимых orphan'ов.
+
+### Корневая причина исчезновения 3 продуктов
+
+`cloud.cleanupProducts()`
+([heys_storage_supabase_v1.js](heys_storage_supabase_v1.js)) и мёртвый
+`cleanupProductRecord` использовали shape-inference filter
+`.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0)` —
+тот же класс бага, что снёс 366 → 28 продуктов в инциденте 2026-05-11 (cloud
+cleanup destruction). Эти функции активно вызывались из `bootstrapSync`,
+full-sync defer'ов и могли удалить любую запись с нестандартной shape (overlay
+TypeA, transient import-pasted объекты), **не проставляя tombstone**.
+
+### Fix (план rustling-dazzling-bentley.md, Wave 1)
+
+- **F1**: `cloud.cleanupProducts()` → no-op + лог. Все 3 caller-а уже обёрнуты в
+  try/catch.
+- **F2**: `cloud.cleanupCloudProducts()` + `cleanupProductRecord()` (мёртвый
+  код, callers закомментированы после 2026-05-11) → no-op. Уменьшение surface
+  для случайной реактивации.
+
+Дальнейшие волны (Wave 2-4): централизованный shrink-guard в
+`HEYS.products.setAll()` + `OverlayStore.writeRaw()`; shared-fallback в
+renderOrphanAlert; defensive re-check в getDayData; авто-clone из shared при
+тихом resolve; tombstone-aware shrink-tolerance в cloud-sync (закрывает live bug
+— раньше >5% shrink REJECT в infinite loop, теперь pass если все исчезновения
+tombstoned).
+
+### Урок
+
+Cleanup-функции с shape-inference filter — **antipattern**. Форма данных в LS
+эволюционирует (overlay TypeA, tombstone-only arrays, deserialization
+transients), любое «удалить если поля X нет» неизбежно убивает legitimate
+записи. Единственный безопасный путь — **явный tombstone-список** (или versioned
+migration). См. также CLAUDE.md правило «Never write cleanup/garbage-collection
+by shape inference».
+
+---
+
 ## Серия архитектурных hack'ов (2026-05-23)
 
 Один день — пять связанных багов, все с одним метакорнем: **то что код заявляет

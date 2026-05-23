@@ -4878,68 +4878,18 @@
     }
   };
 
-  /**
-   * Очищает невалидные продукты из localStorage (без name)
-   * Вызывать для восстановления после бага с undefined продуктами
-   */
+  // 🪦 NEUTRALIZED 2026-05-24 (plan F1): shape-inference cleanup `.filter(p => p.name)`
+  // удаляет overlay TypeA rows (без локального .name), массивы ID и любую запись,
+  // которую интерпретатор не распознаёт по форме. Это тот же класс бага, что
+  // снёс 366 → 28 продуктов в BUGS_HISTORY.md 2026-05-11 (cloud cleanup destruction).
+  // Все 3 caller (bootstrapSync, full-sync defer) обёрнуты в try/catch — no-op
+  // безопасен. Функция оставлена как точка расширения для будущего tombstone-aware
+  // cleanup'а: новая реализация ОБЯЗАНА читать heys_deleted_ids перед удалением.
   cloud.cleanupProducts = function () {
     try {
-      const clientId = HEYS.utils?.getCurrentClientId?.() || '';
-      // Ключ продуктов в localStorage всегда heys_{clientId}_products
-      const key = clientId ? `heys_${clientId}_products` : 'heys_products';
-      const raw = localStorage.getItem(key);
-
-      // Если ключ не найден — попробуем без clientId (legacy)
-      if (!raw && clientId) {
-        const legacyRaw = localStorage.getItem('heys_products');
-        if (legacyRaw) {
-          // Миграция: скопировать в ключ с clientId
-          try {
-            const parsed = JSON.parse(legacyRaw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              localStorage.setItem(key, legacyRaw);
-              // 🔇 v4.7.1: Лог миграции отключён
-            }
-          } catch (_) { }
-        }
-      }
-
-      const finalRaw = localStorage.getItem(key);
-      if (!finalRaw) return { cleaned: 0, total: 0 };
-
-      // Защита от повреждённых данных (не-JSON)
-      let products;
-      try {
-        products = tryParse(finalRaw);
-      } catch (parseError) {
-        products = null;
-      }
-
-      if (!Array.isArray(products)) {
-        // Данные временно некорректны (возможно race condition при записи)
-        // НЕ удаляем — пусть следующий sync перезапишет
-        console.warn(`⚠️ [CLEANUP] Temporary parse error for ${key}, skipping (will retry)`);
-        return { cleaned: 0, total: 0, parseError: true };
-      }
-
-      if (!Array.isArray(products)) return { cleaned: 0, total: 0 };
-
-      const before = products.length;
-      const cleaned = products.filter(p =>
-        p && typeof p.name === 'string' && p.name.trim().length > 0
-      );
-      const after = cleaned.length;
-
-      if (after < before) {
-        localStorage.setItem(key, JSON.stringify(cleaned));
-        logCritical(`🧹 [CLEANUP] Removed ${before - after} invalid products (${before} → ${after})`);
-      }
-
-      return { cleaned: before - after, total: after };
-    } catch (e) {
-      console.error('[CLEANUP] Error:', e);
-      return { error: e.message };
-    }
+      console.info('[CLEANUP] disabled — see BUGS_HISTORY 2026-05-11 + plan rustling-dazzling-bentley.md F1');
+    } catch (_) { /* noop */ }
+    return { cleaned: 0, total: 0, disabled: true };
   };
 
   /**
@@ -5024,157 +4974,18 @@
     return { daysAffected, itemsRemoved };
   };
 
-  /**
-   * Очищает невалидные продукты в ОБЛАКЕ (client_kv_store).
-   * kv_store больше не в whitelist heys-api-rest (только RPC) — REST-очистку legacy kv_store не вызываем, иначе 404.
-   */
+  // 🪦 NEUTRALIZED 2026-05-24 (plan F2): cleanupCloudProducts + cleanupProductRecord
+  // используют тот же shape-inference filter, что снёс 366 → 28 продуктов в инциденте
+  // 2026-05-11 (BUGS_HISTORY.md). Все 2 caller-а закомментированы (~6445, ~8723),
+  // функции были мёртвым кодом. Удалены, чтобы не было риска случайной активации
+  // в обход shrink-guard'ов. Если потребуется cloud-side cleanup — переписать через
+  // tombstone-aware diff (см. план F3/F4).
   cloud.cleanupCloudProducts = async function () {
     try {
-      if (!user) return { error: 'Not authenticated' };
-
-      // Сохраняем user.id локально — user может стать null во время async операций
-      const userId = user.id;
-      if (!userId) return { error: 'No userId' };
-
-      const clientId = HEYS.utils?.getCurrentClientId?.() || '';
-      if (!clientId) return { error: 'No clientId' };
-
-      let totalCleaned = 0;
-      let totalAfter = 0;
-      let totalDeleted = 0;
-      let totalRecords = 0;
-
-      // ===== 1. ОЧИСТКА client_kv_store (данные клиента) =====
-      const { data: clientData, error: clientError } = await YandexAPI.from('client_kv_store')
-        .select('k,v')
-        .eq('client_id', clientId)
-        .like('k', '%products%');
-
-      if (clientError) {
-        logCritical('☁️ [CLOUD CLEANUP] client_kv_store error:', clientError.message);
-      } else if (clientData && clientData.length > 0) {
-        totalRecords += clientData.length;
-        for (const row of clientData) {
-          // Проверяем что user ещё авторизован (мог logout во время цикла)
-          if (!user) {
-            log('☁️ [CLOUD CLEANUP] Aborted — user logged out');
-            return { error: 'User logged out during cleanup' };
-          }
-          const result = await cleanupProductRecord('client_kv_store', row, { client_id: clientId }, clientId);
-          totalCleaned += result.cleaned;
-          totalAfter += result.kept;
-          if (result.deleted) totalDeleted++;
-        }
-      }
-
-      // Логируем только если были изменения или много записей
-      if (totalDeleted > 0 || totalCleaned > 0) {
-        logCritical(`☁️ [CLOUD CLEANUP] Done: ${totalRecords} records, deleted ${totalDeleted} empty, cleaned ${totalCleaned} invalid, kept ${totalAfter} valid`);
-      } else if (totalRecords > 0) {
-        log(`☁️ [CLOUD CLEANUP] OK: ${totalRecords} records, ${totalAfter} products`);
-      }
-
-      return { cleaned: totalCleaned, deleted: totalDeleted, total: totalAfter };
-    } catch (e) {
-      console.error('[CLOUD CLEANUP] Error:', e);
-      return { error: e.message };
-    }
+      console.info('[CLOUD CLEANUP] disabled — see BUGS_HISTORY 2026-05-11 + plan rustling-dazzling-bentley.md F2');
+    } catch (_) { /* noop */ }
+    return { cleaned: 0, deleted: 0, total: 0, disabled: true };
   };
-
-  /**
-   * Хелпер: очистка одной записи продуктов
-   * - Удаляет записи с 0 продуктами (мусор)
-   * - Удаляет невалидные продукты из записей
-   * - Тихий режим для OK записей
-   */
-  async function cleanupProductRecord(table, row, filters, clientId) {
-    // Защита от race condition при logout (YandexAPI mode — no Supabase client)
-    if (!user) {
-      return { cleaned: 0, kept: 0, error: 'Not authenticated' };
-    }
-
-    // 🔧 FIX 2025-12-26: Декомпрессируем row.v если это сжатая строка
-    let products = row.v;
-    const Store = global.HEYS?.store;
-    if (typeof products === 'string' && products.startsWith('¤Z¤')) {
-      try {
-        if (Store && typeof Store.decompress === 'function') {
-          products = Store.decompress(products);
-        }
-      } catch (e) {
-        logCritical(`⚠️ [DECOMPRESS] Failed in cleanupProductRecord: ${e.message}`);
-      }
-    }
-
-    // Пустой массив или не массив — удаляем запись
-    if (!Array.isArray(products) || products.length === 0) {
-      // Строим filters объект для YandexAPI.rest()
-      const deleteFilters = {};
-      for (const [key, val] of Object.entries(filters)) {
-        deleteFilters[`eq.${key}`] = val;
-      }
-      deleteFilters['eq.k'] = row.k;
-
-      const { error: deleteError } = await YandexAPI.rest(table, { method: 'DELETE', filters: deleteFilters });
-
-      if (!deleteError) {
-        logCritical(`☁️ [CLOUD CLEANUP] DELETED empty ${table}.${row.k}`);
-      }
-      return { cleaned: 0, kept: 0, deleted: true };
-    }
-
-    const before = products.length;
-    const cleaned = products.filter(p => p && typeof p.name === 'string' && p.name.trim().length > 0);
-    const after = cleaned.length;
-
-    // Все продукты валидные — тихий OK (не логируем каждую запись)
-    if (after === before) {
-      return { cleaned: 0, kept: after };
-    }
-
-    // 🚨 Если ВСЕ продукты невалидные — удаляем запись полностью!
-    if (after === 0) {
-      // Строим filters объект для YandexAPI.rest()
-      const deleteFilters = {};
-      for (const [key, val] of Object.entries(filters)) {
-        deleteFilters[`eq.${key}`] = val;
-      }
-      deleteFilters['eq.k'] = row.k;
-
-      const { error: deleteError } = await YandexAPI.rest(table, { method: 'DELETE', filters: deleteFilters });
-
-      if (deleteError) {
-        logCritical(`☁️ [CLOUD CLEANUP] Failed to delete ${table}.${row.k}:`, deleteError.message);
-        return { cleaned: 0, kept: 0 };
-      } else {
-        logCritical(`☁️ [CLOUD CLEANUP] DELETED garbage ${table}.${row.k} (had ${before} invalid)`);
-        return { cleaned: before, kept: 0, deleted: true };
-      }
-    }
-
-    // Сохраняем очищенные обратно
-    const upsertData = {
-      ...filters,
-      k: table === 'client_kv_store' && clientId ? normalizeKeyForSupabase(row.k, clientId) : row.k,
-      v: cleaned,
-      updated_at: new Date().toISOString()
-    };
-    // client_kv_store требует client_id
-    if (table === 'client_kv_store' && !upsertData.client_id) {
-      upsertData.client_id = clientId;
-    }
-
-    const onConflict = table === 'kv_store' ? 'user_id,k' : 'client_id,k';
-    const { error: upsertError } = await YandexAPI.from(table).upsert(upsertData, { onConflict });
-
-    if (upsertError) {
-      logCritical(`☁️ [CLOUD CLEANUP] Failed to save ${table}.${row.k}:`, upsertError.message);
-      return { cleaned: 0, kept: after };
-    } else {
-      logCritical(`☁️ [CLOUD CLEANUP] ${table}.${row.k}: Cleaned ${before - after} invalid (${before} → ${after})`);
-      return { cleaned: before - after, kept: after };
-    }
-  }
 
   cloud.bootstrapSync = async function () {
     try {
