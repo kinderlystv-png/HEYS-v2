@@ -1505,7 +1505,14 @@
    */
   let _ensureAuditLastRun = 0; // ⏱️ v5.1: Throttle — не чаще 1 раза в 30 сек независимо от _auditRebuildDone
 
-  // 🚀 PERF: Local-only XP cache key (not synced to cloud, survives cloud overwrites)
+  // 🚀 PERF: Local-only XP cache key. Хранит { xp, count, ts, dailyRebuilt? } —
+  // dailyRebuilt блокирует full audit rebuild (1014 events × 3 RPC) на каждом
+  // cold-start. Ключ matches префикс `heys_xp_cache_` который занесён в
+  // LOCAL_ONLY_STORAGE_PREFIXES (heys_storage_supabase_v1.js) — interceptor
+  // не зеркалит его в облако, поэтому флаг и cache переживают cloud overwrites.
+  // 🛡️ FIX 2026-05-23: до этой правки cache попадал в client_kv_store через
+  // mirror и расходился с heys_game.totalXP (stale данные у Александры месяц
+  // назад). Source of truth для XP остаётся `heys_game.totalXP`.
   function _getXPCacheKey() {
     const cid = HEYS.currentClientId ||
       HEYS.utils?.getCurrentClientId?.() ||
@@ -1519,8 +1526,10 @@
     try {
       const prev = _loadXPCache() || {};
       const data = { xp: totalXP, count: eventCount, ts: Date.now() };
-      // 🚀 PERF v2.5: dailyRebuilt flag persists in local-only cache (NOT synced to cloud)
-      // Prevents full audit rebuild (1014 events, 3 RPC pages) on every app entry
+      // 🚀 PERF v2.5: dailyRebuilt флаг гарантированно local-only с момента
+      // добавления `heys_xp_cache_` в LOCAL_ONLY_STORAGE_PREFIXES (см.
+      // heys_storage_supabase_v1.js). Блокирует full audit rebuild
+      // (1014 events × 3 RPC pages) на каждом cold-start.
       if (opts && opts.dailyRebuilt) data.dailyRebuilt = true;
       else if (prev.dailyRebuilt) data.dailyRebuilt = true; // preserve existing flag
       localStorage.setItem(_getXPCacheKey(), JSON.stringify(data));
@@ -1598,8 +1607,10 @@
       });
 
       if (xpConsistent && countConsistent) {
-        // 🚀 PERF v2.5: Проверяем dailyRebuilt через XP cache (local-only, НЕ перезаписывается cloud sync)
-        // Раньше _dailyXPRebuiltV1 в game data стирался при cloud sync → rebuild 1014 events на КАЖДЫЙ вход
+        // 🚀 PERF v2.5: dailyRebuilt живёт в xp_cache (LOCAL_ONLY_STORAGE_PREFIXES
+        // в heys_storage_supabase_v1.js → не зеркалится в облако и не стирается
+        // cloud-sync overwrite'ами). Изначально пробовали `_dailyXPRebuiltV1` внутри
+        // game data — стиралось при cloud sync → rebuild 1014 events на КАЖДЫЙ вход.
         const _xpCacheDR = _loadXPCache();
         if (!(_xpCacheDR && _xpCacheDR.dailyRebuilt) && cachedXP > 0) {
           console.info('[🎮 GAME SYNC]', trigger, '— XP consistent ✅ but dailyXP not yet rebuilt, restoring from audit...');

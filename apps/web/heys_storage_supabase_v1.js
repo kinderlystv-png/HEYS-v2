@@ -1803,6 +1803,14 @@
     'heys_products_pre_overlay_',  // β: rollback snapshots, never sync to cloud
     'heys_overlay_',               // β/γ: overlay-specific markers (migrated_at, status, etc.)
     'heys_products_BACKUP_',       // date-stamped product backups — local-only safety nets
+    // gamification XP cache (heys_xp_cache_<cid>, см. heys_gamification_v1.js
+    // _getXPCacheKey). Inline-cid в имени — outlier vs scoped namespace pattern.
+    // Изначальный замысел — local-only (см. backup-export blocklist), но
+    // interceptSetItem зеркалил в облако из-за heys_* prefix → cache в БД
+    // расходился с heys_game.totalXP. Здесь делаем декларацию правдой.
+    // dailyRebuilt флаг защищён от cloud overwrite, cold-start на новом
+    // устройстве строит cache локально из heys_game через ensureAuditConsistency.
+    'heys_xp_cache_',
   ];
 
   function isLocalOnlyStorageKey(key) {
