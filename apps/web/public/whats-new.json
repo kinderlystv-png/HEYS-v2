@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.74edc095",
+      "buildHash": "74edc095",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-sync-storage",
+      "title": "Внутреннее: защита от тихого удаления — второй слой",
+      "items": [
+        {
+          "type": "fix",
+          "title": "OverlayStore теперь тоже не даст молча сократить базу продуктов",
+          "description": "В прошлом коммите setAll стал tombstone-aware — но OverlayStore (нижний слой, через который идут cloud-merge и удаление-по-id) пишет напрямую, минуя setAll. Теперь writeRaw тоже проверяет: если исчезают продукты без tombstone и caller не объявил allowShrink — запись блокируется. applyCloudSnapshot (легитимный путь cloud→local merge) объявляет allowShrink явно — он сам встроенно фильтрует tombstoned продукты до записи. На UX не влияет, срабатывает только при попытке потери данных."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.c923d9d0",
       "buildHash": "c923d9d0",
       "date": "2026-05-24",
