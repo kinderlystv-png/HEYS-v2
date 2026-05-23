@@ -374,7 +374,7 @@
     const merged = { ...base };
 
     Object.keys(overlay).forEach((key) => {
-      if (key === '_meta' || key === '_sourceId') return; // skip metadata
+      if (key === '_meta' || key === '_sourceId') return; // skip metadata on root
       const overlayVal = overlay[key];
       const baseVal = base[key];
       if (
@@ -385,8 +385,18 @@
         !Array.isArray(overlayVal) &&
         !Array.isArray(baseVal)
       ) {
-        // Nested object → recursive (treat as scalar siblings of their parent)
-        merged[key] = { ...baseVal, ...overlayVal };
+        // Nested object → shallow merge. 🛡️ FIX 2026-05-23: ранее использовался
+        // прямой `{ ...baseVal, ...overlayVal }` — overlay затирал nested
+        // `_meta`/`_sourceId` который должен быть locally-controlled (как и
+        // на root-level). Теперь стартуем с base (все его поля включая
+        // metadata), оверлеем только non-metadata keys из overlay.
+        // Это симметрично с root-level skip на строке 377.
+        const nestedMerged = { ...baseVal };
+        Object.keys(overlayVal).forEach((nk) => {
+          if (nk === '_meta' || nk === '_sourceId') return;
+          nestedMerged[nk] = overlayVal[nk];
+        });
+        merged[key] = nestedMerged;
       } else {
         // Scalar / array → take from overlay (fresher side)
         merged[key] = overlayVal;

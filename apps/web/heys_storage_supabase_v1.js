@@ -1819,8 +1819,14 @@
     if (LOCAL_ONLY_STORAGE_EXACT_KEYS.has(normalizedKey)) return true;
     if (LOCAL_ONLY_STORAGE_PREFIXES.some((prefix) => normalizedKey.startsWith(prefix))) return true;
     if (LOCAL_ONLY_STORAGE_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix))) return true;
-    // covers client-scoped variants: heys_{uuid}_products_BACKUP_YYYYMMDD
-    return normalizedKey.includes('_products_BACKUP_');
+    // covers client-scoped variants:
+    //   heys_{uuid}_products_BACKUP_YYYYMMDD,
+    //   heys_hidden_products_BACKUP_YYYYMMDD (substring matches _products_BACKUP_)
+    if (normalizedKey.includes('_products_BACKUP_')) return true;
+    // 🛡️ FIX 2026-05-23: overlay_v2 snapshots ранее не покрывались — между
+    // `products` и `BACKUP` стоит `_overlay_v2_`, поэтому includes('_products_BACKUP_')
+    // mismatched. Они зеркалились в облако и накапливались (~270 KB на snapshot).
+    return /_products_overlay_v2_BACKUP_/.test(normalizedKey);
   }
 
   function filterLocalOnlyPendingQueueItems(queue, storageKey, options = {}) {
@@ -6581,7 +6587,11 @@
                 // возвращает true (fail-open) — пользователь с истёкшим триалом мог
                 // успеть сделать write до приземления реального статуса. С этим
                 // ключом в Phase A canWriteSync видит реальный status сразу.
-                'heys_subscription_status'
+                'heys_subscription_status',
+                // Stage 5 (2026-05-23): widget layout (~2-3 KB). Читается синхронно
+                // при первом рендере dashboard — без него виджеты раскладываются по
+                // дефолту и перестраиваются когда полный sync приземлит layout.
+                'heys_widget_layout_v1', 'heys_widget_layout_meta_v1'
               ];
               const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
               const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];

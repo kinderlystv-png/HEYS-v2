@@ -7,6 +7,113 @@ broken, what was fixed, and the pattern to watch for.
 
 ---
 
+## Серия архитектурных hack'ов (2026-05-23)
+
+Один день — пять связанных багов, все с одним метакорнем: **то что код заявляет
+о своём поведении и то что реально делает интерсептор — расходятся**.
+
+### 1. `refreshProfileSubscription` race с Phase A
+
+[heys_subscriptions_v1.js:1430](heys_subscriptions_v1.js#L1430). На
+`heys:auth-changed` через 200ms читал legacy `heys_profile` через `lsGet`
+(memory cache возвращал stale `{}`), спредил, через `lsSet` → `nsKey()` скоупил
+в `heys_<cid>_profile` → затирал результат Phase A (32-полевый профиль из БД)
+4-полевым subscription-only объектом.
+
+`shouldShowMorningCheckin` видел «incomplete» профиль и открывал wizard с
+регистрационными шагами повторно после каждого reload.
+
+**Fix**: force-raw read scoped LS + guard на `hasPersonalMarkers` — не пишем
+`heys_profile` пока cloud sync не приземлил personal-поля. Subscription portion
+придёт сам из той же row.v.
+
+### 2. `ack_curator_changelog` precision-mismatch JS↔PG
+
+[heys-api-rpc/index.js:2130-2160](../../yandex-cloud-functions/heys-api-rpc/index.js#L2130).
+`Date.toISOString()` режет timestamp до миллисекунд (`.566Z`), Postgres хранит
+микросекунды (`.566961`). Сравнение `created_at <= untilTs` пропускало записи с
+µs, `last_seen_at` обновлялся до ms-precision, следующий запрос возвращал ту же
+запись → банер показывался повторно после каждого «Понял».
+
+**Fix**: `+ INTERVAL '1 millisecond'` tolerance к обоим UPDATE.
+
+### 3. `heys_xp_cache_<cid>` zombie mirror
+
+[heys_gamification_v1.js:1508](heys_gamification_v1.js#L1508). Comment заявлял
+«Local-only XP cache (not synced to cloud, survives cloud overwrites)», но ключ
+начинался с `heys_*` → `isOurKey()` → mirror через interceptor. В БД у клиента
+1.5-месяцев старая копия XP, на cold-start на новом устройстве она приземлялась
+в LS через Phase A loop и UI 30+ сек показывала неправильное число.
+
+**Fix**: добавлен `'heys_xp_cache_'` в `LOCAL_ONLY_STORAGE_PREFIXES`
+([heys_storage_supabase_v1.js:1813](heys_storage_supabase_v1.js#L1813)). Comment
+теперь правда.
+
+### 4. `heys_products_overlay_v2_BACKUP_*` тот же gap
+
+Аналогично п.3, но новый outlier: gap в
+[`isLocalOnlyStorageKey`](heys_storage_supabase_v1.js#L1816) —
+`includes('_products_BACKUP_')` ловил `heys_products_BACKUP_` и
+`heys_hidden_products_BACKUP_`, но **не** `heys_products_overlay_v2_BACKUP_*`
+(между `products` и `BACKUP` стоит `_overlay_v2_`).
+
+**Fix**: добавлена явная regex-проверка `/_products_overlay_v2_BACKUP_/`.
+
+### 5. Phase A не приземлял `heys_game` / `heys_subscription_status`
+
+[heys_storage_supabase_v1.js:6555-6580](heys_storage_supabase_v1.js#L6555).
+Critical keys list изначально содержал 5 ключей:
+profile/norms/products/hr_zones/today.
+
+- `heys_game` (XP/level/badges) не входил → gamification-bar на cold-start
+  показывала default totalXP=0 или ~25 (event-based partial fallback) пока full
+  sync через 5-20 сек не приземлит.
+- `heys_subscription_status` тоже не входил → `paywall.canWriteSync()`
+  fail-open: пользователь с истёкшим триалом мог сделать write до приземления.
+
+**Fix**: оба добавлены в Phase A. Плюс `heys_widget_layout_v1` для устранения
+flash дефолтной сетки виджетов.
+
+### Общие уроки
+
+1. **Comment-claim ≠ runtime behavior**. Любой
+   `localStorage.setItem('heys_*', ...)` зеркалится в облако через interceptor —
+   это **default**, локальность нужно ОБЪЯВЛЯТЬ через
+   `LOCAL_ONLY_STORAGE_PREFIXES`/`SUFFIXES`/`EXACT_KEYS`. Если comment говорит
+   «local-only», но имя key начинается с `heys_` и ничего не занесено в
+   blocklist — comment врёт.
+
+2. **Race `lsGet → mutate → lsSet`** — паттерн где module читает LS, добавляет
+   одно поле и пишет обратно. Если LS не приземлён cloud sync'ом — write создаёт
+   частичный объект. Защита: либо force-raw read из scoped LS, либо guard на
+   необходимые поля, либо server-side `mergeScalarKv` (field-level merge
+   сохраняет existing).
+
+3. **JS↔PG timestamp precision**. `Date.toISOString()` режет до миллисекунд,
+   Postgres хранит микросекунды. Любое сравнение `WHERE col <= $ts` где `$ts`
+   пришёл от клиента — добавлять `+ INTERVAL '1 millisecond'` tolerance.
+
+4. **Phase A critical keys** = быстрый UI cold-start. Если UI читает ключ
+   синхронно при первом рендере (gamification-bar, paywall gate, widget layout)
+   — он должен быть в Phase A. Сейчас в списке 9 base-keys (~80-100 KB payload),
+   запас ещё есть.
+
+5. **Inline-cid в имени key** = архитектурный outlier. Все scoped ключи должны
+   иметь форму `heys_<cid>_<base>` (prefix scope). Если cid в суффиксе
+   (`heys_xp_cache_<cid>`, `heys_insights_feedback_<cid>`) — это double-scope и
+   потенциальный bug при Phase A loop'е. Лечить через rename или
+   `LOCAL_ONLY_STORAGE_PREFIXES`.
+
+**Pattern to watch**: ревью любого нового `localStorage.setItem('heys_*', ...)`
+писателя должно отвечать на 3 вопроса:
+
+- Это action user-initiated или background sync?
+- Объявлен ли ключ как local-only явно через `LOCAL_ONLY_STORAGE_*`?
+- Защищён ли writer от race с cloud sync (force-raw read + guard или server-side
+  merge)?
+
+---
+
 ## Day-write race fix (2026-04-26)
 
 Symptom: adding a product to a meal silently disappeared after refresh.
