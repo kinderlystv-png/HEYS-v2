@@ -1,6 +1,63 @@
 # HEYS — Активные задачи
 
-> Обновлено: 2026-05-22
+> Обновлено: 2026-05-23
+
+---
+
+## 🩺 KV Storage automated maintenance — проверять работает ли (2026-05-23)
+
+После серии фиксов 2026-05-23 (race-bug в refreshProfileSubscription,
+precision-mismatch в curator_changelog ack, zombie xp_cache, paywall fail-open,
+LOCAL_ONLY gap для overlay_v2_BACKUP) — настроена автоматическая maintenance в
+Cloud Function `heys-maintenance`:
+
+| Trigger                                      | Расписание                        | Что делает                                                                                                        |
+| -------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `heys-maintenance-daily` (existing)          | 03:00 UTC ежедневно               | `trial_queue` + `kv_health` — мониторит 5 индикаторов аномалий, шлёт Telegram alert при findings                  |
+| `heys-maintenance-kv-cleanup-weekly` (новый) | 02:00 UTC воскресенье (05:00 MSK) | `kv_cleanup` — удаляет zombie xp_cache, legacy insights_feedback, backup snapshots, advice_trace, debug/test rows |
+
+### Что должно отправляться в Telegram
+
+- **Daily**: alert приходит **только если** аномалия найдена. Молчание = всё
+  чисто.
+- **Weekly cleanup**: alert приходит **только если** удалено >100 row или >1 MB.
+  Иначе тихо.
+
+### 🛎 Как тебе периодически просить меня проверять
+
+**Раз в месяц** (или после любого подозрения что что-то не так) напиши Claude
+одну из фраз:
+
+- **«проверь работает ли auto-maintenance»** — Claude посмотрит логи
+  `heys-maintenance` за последние 30 дней, проверит что daily/weekly триггеры
+  отрабатывали без ошибок, и запустит KV health-check сам чтобы убедиться что
+  индикаторы аномалий по нулям.
+- **«покажи health-check БД»** — Claude вручную дёрнет
+  `yc serverless function invoke --name heys-maintenance --data '{"trigger_id":"kv_health"}'`
+  и расшифрует summary человеческим языком.
+- **«запусти cleanup сейчас»** — если Claude увидит что что-то накапливается,
+  можно дёрнуть `kv_cleanup` руками не дожидаясь воскресенья.
+
+### Где смотреть логи
+
+- Yandex Cloud Functions Console → `heys-maintenance` → Logs
+- Или через CLI:
+  `yc serverless function logs --name heys-maintenance --since 24h`
+
+### Что делать если приходит Telegram alert
+
+См.
+[apps/web/BUGS_HISTORY.md#серия-архитектурных-hackов-2026-05-23](apps/web/BUGS_HISTORY.md)
+— там для каждого индикатора расписан root-cause и как лечить.
+
+### Manual scripts (как fallback)
+
+Если нужно вручную (например при разборе инцидента):
+
+```bash
+bash scripts/db/psql.sh -f scripts/db/monitor-stuck-rows.sql   # 7 проверок
+bash scripts/db/psql.sh -f scripts/db/cleanup-zombie-keys.sql  # cleanup
+```
 
 ---
 
