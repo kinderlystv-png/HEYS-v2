@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.3ac74307",
+      "buildHash": "3ac74307",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: защита от тихого удаления продуктов Wave 2",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Auto-tombstone при shrink через setAll без allowShrink",
+          "description": "Если setAll пытается записать меньший массив и у исчезающих продуктов нет tombstone — guard автоматически ставит tombstone (вместо тихой блокировки), чтобы orphan-дни корректно отображали баннер выбора."
+        },
+        {
+          "type": "fix",
+          "title": "removeRow в OverlayStore теперь передаёт allowShrink:true",
+          "description": "UI delete-product handler ставит tombstone до вызова removeRow — shrink-guard в writeRaw теперь правильно это пропускает без ложного блока."
+        },
+        {
+          "type": "improvement",
+          "title": "deletedProducts.add() принимает 4-й параметр reason",
+          "description": "Поле reason (например 'auto-guard-shrink') сохраняется в tombstone-запись и помогает диагностировать откуда пришло удаление."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.72f6f0da",
       "buildHash": "72f6f0da",
       "date": "2026-05-24",
