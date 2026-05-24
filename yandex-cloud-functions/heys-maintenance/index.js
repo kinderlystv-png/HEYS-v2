@@ -217,6 +217,85 @@ async function kvHealthCheck(client) {
 }
 
 /**
+ * Ежедневный отчёт в Telegram — активность клиентов + trial queue + KV health summary.
+ * Trigger: daily_report (07:00 МСК = 04:00 UTC).
+ */
+async function dailyReport(client) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow', day: 'numeric', month: 'long' });
+
+  // 1. Активность за 24 часа из client_event_log
+  let activityBlock = '';
+  try {
+    const actRes = await client.query(`
+      SELECT
+        count(DISTINCT client_id)::int        AS unique_clients,
+        count(*)::int                          AS total_events,
+        count(*) FILTER (WHERE kind = 'meal-add')::int          AS meal_add,
+        count(*) FILTER (WHERE kind = 'supplement-mark')::int   AS supplement_mark,
+        count(*) FILTER (WHERE kind = 'product-delete')::int    AS product_delete,
+        count(*) FILTER (WHERE kind = 'sync-products')::int     AS sync_products
+      FROM public.client_event_log
+      WHERE ts > now() - interval '24 hours'
+    `);
+    const a = actRes.rows[0];
+    if (a.total_events > 0) {
+      activityBlock =
+        `👥 *Активность за 24 часа*\n` +
+        `Клиентов: *${a.unique_clients}* · Событий: *${a.total_events}*\n` +
+        `🍽 meal-add: ${a.meal_add} · 💊 supps: ${a.supplement_mark}` +
+        (a.product_delete > 0 ? ` · 🗑 del: ${a.product_delete}` : '') +
+        (a.sync_products > 0 ? ` · 🔄 sync: ${a.sync_products}` : '');
+    } else {
+      activityBlock = `👥 *Активность за 24 часа*\nСобытий нет (event log пуст или не применена миграция)`;
+    }
+  } catch (e) {
+    activityBlock = `👥 *Активность*: ⚠️ ${e.message.slice(0, 80)}`;
+  }
+
+  // 2. Trial queue stats
+  let trialBlock = '';
+  try {
+    const tRes = await client.query(`
+      SELECT
+        count(*) FILTER (WHERE status = 'queued')::int   AS queued,
+        count(*) FILTER (WHERE status = 'offer')::int    AS offers,
+        count(*) FILTER (WHERE status = 'assigned')::int AS assigned
+      FROM trial_queue
+    `);
+    const t = tRes.rows[0];
+    trialBlock = `🎟 *Trial Queue*: очередь ${t.queued} · офферов ${t.offers} · назначено всего ${t.assigned}`;
+  } catch (e) {
+    trialBlock = `🎟 *Trial Queue*: ⚠️ ${e.message.slice(0, 80)}`;
+  }
+
+  // 3. KV health — краткий итог (всегда, не только при аномалиях)
+  let healthBlock = '';
+  try {
+    const { findings, summary } = await kvHealthCheck(client);
+    if (findings.length === 0) {
+      const heaviest = summary.heaviest_key
+        ? `; самый жирный ключ \`${summary.heaviest_key.k}\` ${Math.round(summary.heaviest_key.bytes / 1024)} KB`
+        : '';
+      healthBlock = `🩺 *KV Health*: ✅ без аномалий${heaviest}`;
+    } else {
+      healthBlock = `🩺 *KV Health*: ⚠️ ${findings.length} аномали${findings.length === 1 ? 'я' : 'и'} (алерт уже отправлен выше)`;
+    }
+  } catch (e) {
+    healthBlock = `🩺 *KV Health*: ⚠️ ${e.message.slice(0, 80)}`;
+  }
+
+  const message =
+    `📊 *Утренний отчёт HEYS* — ${dateStr}\n\n` +
+    `${activityBlock}\n\n` +
+    `${trialBlock}\n\n` +
+    `${healthBlock}`;
+
+  await sendTelegramNotification(message);
+  return { sent: true };
+}
+
+/**
  * Periodic cleanup zombie KV rows — выполняет SQL из scripts/db/cleanup-zombie-keys.sql.
  * Запускается раз в неделю (отдельный trigger).
  */
@@ -334,6 +413,8 @@ module.exports.handler = async (event, context) => {
     const runKVHealth = triggerId === 'kv_health' || triggerId === 'all' || triggerId === 'default';
     // KV cleanup: ТОЛЬКО по weekly trigger (никогда default — destructive)
     const runKVCleanup = triggerId === 'kv_cleanup' || triggerId === 'all';
+    // Daily report: только по явному trigger (07:00 МСК = 04:00 UTC)
+    const runDailyReport = triggerId === 'daily_report' || triggerId === 'all';
 
     // Process trial queue
     if (runTrialQueue) {
@@ -363,6 +444,16 @@ module.exports.handler = async (event, context) => {
       } catch (kvErr) {
         console.error('[Maintenance] kv_health failed:', kvErr.message);
         results.kv_health = { error: kvErr.message };
+      }
+    }
+
+    // Daily morning report
+    if (runDailyReport) {
+      try {
+        results.daily_report = await dailyReport(client);
+      } catch (drErr) {
+        console.error('[Maintenance] daily_report failed:', drErr.message);
+        results.daily_report = { error: drErr.message };
       }
     }
 
