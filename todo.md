@@ -957,3 +957,11 @@ _Архив выполненного — в `done.md`._
 
 - [x] `grep -rn "sync_shared_products_by_session" apps/web/` → пусто. DROP
       сделан корректно, нет клиентских вызовов. Безопасно.
+
+### Inheritance fast-path в prepare-release (закрыто 2026-05-25)
+
+- [x] Fast-path в `runCheck()` через `canInheritEntryFrom()`: если все commits
+      между HEAD и last entry — type ∈ TECHNICAL_COMMIT_TYPES И все файлы под
+      TECHNICAL_FILE_PATTERNS/RELEASE_META_FILE_PATTERNS — entry наследуется без
+      bump. Защита: достаточно одного feat/fix/perf или одного non-technical
+      файла → fail.
