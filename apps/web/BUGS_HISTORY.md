@@ -7,6 +7,54 @@ broken, what was fixed, and the pattern to watch for.
 
 ---
 
+## Parallel worktree merge: bundle/allowlist drift (2026-05-24)
+
+Не баг продакшена — урок разработки. Запустили **два параллельных subagent'a в
+worktree isolation**: Wave 2 (shrink-guard в `heys_core_v12.js` +
+`heys_products_overlay_v1.js`) и Wave 5.5 (unit-тесты для event log SDK). Оба
+агента отработали успешно, оба закоммитили в свои ветки.
+
+При попытке `git push` после merge — **pre-push hook упал дважды**:
+
+1. **`lint-direct-localstorage-writes`** — Wave 2 добавил код в
+   `heys_core_v12.js`, `heys_day_utils.js`, `heys_products_overlay_v1.js`, и
+   строки 5174/5285, 421/423, 927/928/929/988 в
+   `scripts/bootstrap-bypass-allowlist.txt` теперь указывали на неправильные
+   места (нужны были 5253/5364, 425/427, 930/931/932/991). 8 violations.
+2. **`prepare-release:check`** — `legacy-sync` пересобрал bundle с новым hash
+   (`b55e7d83…` → `90eea2a4…`), но `whats-new.json` ссылался на старый. Нужен
+   `chore(release): bump whats-new build hash`.
+
+### Урок
+
+Worktree isolation защищает агентов друг от друга **во время работы**, но при
+merge в main срабатывают cross-cutting эффекты:
+
+- **Line numbers** в allowlist привязаны к абсолютной позиции в файле —
+  параллельные правки в верхней части файла сдвинут все entries из нижней части.
+- **Bundle hashes** генерируются из контента — изменение в любом source-файле →
+  новый hash → старая `whats-new.json` entry становится stale.
+- **whats-new entries** в `releases[]` массиве — два агента могут добавить
+  entries параллельно, git merge оставит оба, но порядок может быть неверный.
+
+### Workflow для будущих parallel merges
+
+После merge всех worktree, **до push**, последовательно:
+
+1. `node scripts/lint-direct-localstorage-writes.mjs` — если ❌, вручную
+   обновить line numbers в `scripts/bootstrap-bypass-allowlist.txt`.
+2. `git log -1 --format=%h` — посчитать новый hash, добавить `whats-new.json`
+   entry, commit `chore(release): bump whats-new build hash to <HASH>`.
+3. `pnpm test && pnpm lint && pnpm tsc` — финальный gate.
+4. `git push` — теперь pre-push hook пройдёт.
+
+Это документировано в `CLAUDE.md` → «Parallel agents: HEYS-specific post-merge».
+Правило `Parallel-first execution` в user-level `~/.claude/CLAUDE.md` обязывает
+делать post-merge pre-flight check как часть workflow, а не вспоминать когда
+упал push.
+
+---
+
 ## Orphan-баннер + cleanup hardening (2026-05-24)
 
 День `2026-05-23` (клиент `4545ee50…`) показывал баннер «1 продукт не найден в

@@ -223,6 +223,37 @@ rebuilt `apps/web/public/boot-*.bundle.<hash>.js` + manifest + index.html
 
 ---
 
+## Parallel agents: HEYS-specific post-merge
+
+User-level CLAUDE.md описывает общее правило `Parallel-first execution`
+(pre-flight план + worktree isolation + post-merge pre-flight check). В HEYS
+post-merge check ловит **три специфических drift'а**, которые ломают push если
+их не закрыть:
+
+1. **localStorage allowlist drift** — параллельные агенты сдвигают строки в
+   `heys_core_v12.js`, `heys_day_utils.js`, `heys_products_overlay_v1.js`, и
+   старые entries в `scripts/bootstrap-bypass-allowlist.txt` указывают на
+   неправильные строки. Pre-push hook `lint-direct-localstorage-writes`
+   блокирует push. **Fix**: `node scripts/lint-direct-localstorage-writes.mjs` →
+   видишь точные line numbers → правишь entries в allowlist.
+2. **Bundle hash regenerated** — если legacy-sync hook сработал в одном из
+   агентов, бандл получает новый hash → `prepare-release:check` требует
+   `whats-new.json` entry с этим новым hash. Старый entry от агента уже не
+   совпадает. **Fix**: `git log -1 --format=%h` → bump `whats-new.json` с новым
+   hash → commit `chore(release): bump whats-new build hash to <HASH>`.
+3. **whats-new merge conflicts** — два агента могли добавить entries в начало
+   `releases[]`. Git merge оставит оба, но порядок может быть неверный (более
+   старый коммит сверху). Проверь руками.
+
+**Финальный gate** перед push: `pnpm push:ready` (если есть) или
+`pnpm test && pnpm lint && pnpm tsc`.
+
+Этот чек-лист отработан в реальном инциденте 2026-05-24 (parallel Wave 2
+
+- Wave 5.5 merge) — см. `apps/web/BUGS_HISTORY.md` → «Parallel worktree merge».
+
+---
+
 ## Working with code
 
 - **Prefer editing existing files** — НЕ создавай новые модули без явной
