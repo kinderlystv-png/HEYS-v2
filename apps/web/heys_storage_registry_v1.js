@@ -64,11 +64,15 @@
 
   // Hard never-touch allowlist (regardless of any other policy match).
   // Auth keys: deleting them logs the user out.
+  // 🪦 F11 (plan 2026-05-24): tombstone key — агрессивный cleanup при quota-exceeded
+  // не должен сносить heys_deleted_ids: без него mergeProductsData не отфильтрует
+  // «воскрешённые» удалённые продукты, и они вернутся из облака при первом sync.
   const NEVER_TOUCH = [
     /^heys_supabase_auth_token$/,
     /^heys_pin_auth_client$/,
     /^heys_session_token$/,
     /^sb-/,
+    /^heys_deleted_ids$/,
   ];
 
   function isNeverTouch(key) {
