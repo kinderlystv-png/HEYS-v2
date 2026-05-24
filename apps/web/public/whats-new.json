@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.25.d1a9bc93",
+      "buildHash": "d1a9bc93",
+      "date": "2026-05-25",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Документация диагностики + tombstone maxSize todo",
+      "items": [
+        {
+          "type": "chore",
+          "title": "DEBUGGING.md: новые диагностические входы",
+          "description": "Добавлена секция Products/orphan/tombstones с шорткатами для HEYS.diagnostics.setAllAudit(), HEYS.deletedProducts.list(), emergency kill-switch shrink-guard через localStorage, и шаблоном psql-query для client_event_log. Когда что использовать — таблица симптом → инструмент."
+        },
+        {
+          "type": "chore",
+          "title": "todo.md: открытые edge cases tombstones/event_log",
+          "description": "Записаны heys_deleted_ids maxSize policy (cap 5000 + FIFO, риск низкий, отложено на 6-12 мес), Wave 5 sample rate calibration checkpoint через 24-48h, F17 verification (DROP подтверждён через grep)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.25.1154358f",
       "buildHash": "1154358f",
       "date": "2026-05-25",
