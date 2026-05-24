@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.43b8f05e",
+      "buildHash": "43b8f05e",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Wave 3a: shared fallback в баннере + multi-tab tombstone sync (F6+F10+F11)",
+      "items": [
+        {
+          "type": "fix",
+          "title": "F6: shared cache fallback в renderOrphanAlert",
+          "description": "Баннер orphan-продуктов теперь проверяет shared cache перед показом: продукт, найденный в общей базе, не считается orphan и убирается из tracker'а. Устраняет ложные баннеры при гонке с подгрузкой shared-кеша на boot."
+        },
+        {
+          "type": "fix",
+          "title": "F10: multi-tab tombstone sync через storage event",
+          "description": "Удаление продукта в одном табе теперь мгновенно отражается в других: слушатель storage-event перезагружает tombstone registry и пересчитывает orphans без ожидания следующего cloud-sync."
+        },
+        {
+          "type": "fix",
+          "title": "F11: hard-allowlist heys_deleted_ids в storage registry",
+          "description": "Ключ tombstone'ов добавлен в NEVER_TOUCH list: агрессивная quota-exceeded очистка больше не сносит heys_deleted_ids, и удалённые продукты не воскресают из облака при нехватке localStorage."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.26f93508",
       "buildHash": "26f93508",
       "date": "2026-05-24",
