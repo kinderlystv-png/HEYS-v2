@@ -261,6 +261,9 @@ const ALLOWED_FUNCTIONS = [
   'update_shared_product_portions',    // 🔐 Обновление порций продукта (direct UPDATE, не INSERT)
   'update_shared_product_portions_by_curator', // 🔐 Обновление порций куратором (JWT auth)
 
+  // === DEBUG / OBSERVABILITY ===
+  'log_client_event_by_session',       // 📝 Append-only event log для debug (plan Wave 5 F-EL2,F-EL3)
+
   // === LEADERBOARD (🏆 global opt-in leaderboard) ===
   'toggle_leaderboard_sharing_by_session',
   'publish_leaderboard_snapshot_by_session',
