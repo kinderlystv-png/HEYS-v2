@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.c8a309a8",
+      "buildHash": "c8a309a8",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: ежедневный утренний отчёт в Telegram",
+      "items": [
+        {
+          "type": "feat",
+          "title": "Автоотчёт 07:00 МСК: активность клиентов + trial queue + KV health",
+          "description": "Каждое утро в 07:00 МСК в Telegram-бот heyslab_support приходит краткий дайджест: сколько клиентов были активны за 24 часа (из event log), статус trial-очереди и результат KV health check. Раньше KV health уведомлял только при аномалиях — теперь всегда даёт подтверждение «всё ок» или краткий итог."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.cb8dff19",
       "buildHash": "cb8dff19",
       "date": "2026-05-24",
