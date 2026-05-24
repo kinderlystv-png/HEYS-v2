@@ -965,3 +965,29 @@ _Архив выполненного — в `done.md`._
       TECHNICAL_FILE_PATTERNS/RELEASE_META_FILE_PATTERNS — entry наследуется без
       bump. Защита: достаточно одного feat/fix/perf или одного non-technical
       файла → fail.
+
+---
+
+## 📊 Compliance / docs hygiene reminders
+
+### 2026-06-08 (через 2 недели): измерить parallel-first compliance
+
+- [ ] Scheduled task `parallel-first-compliance-check` создан (fires 2026-06-08
+      09:00 МСК). Через `mcp__ccd_session_mgmt__search_session_transcripts`
+      найдёт non-trivial sessions за 14 дней, подсчитает hit-rate
+      `Parallelization plan` блока.
+- [ ] **Threshold**: `<50%` → text rule не работает, candidate на hook. `50-70%`
+      → усилить триггер. `>70%` → оставить.
+- [ ] Backup на случай если scheduled task не сработает: вручную
+      `grep -rn "Parallelization plan" ~/.claude/projects/` и сравнить с
+      количеством sessions за 2 недели.
+
+### 2026-07-24 (через 2 месяца): CLAUDE.md compaction pass
+
+- [ ] Scheduled task `claude-md-compaction-pass` создан (fires 2026-07-24 09:00
+      МСК). Проанализирует user-level + project CLAUDE.md, найдёт
+      редко-применяемые разделы, дубли между файлами, stale info.
+- [ ] Активирует skill `consolidate-memory` для feedback files (сейчас 16 штук в
+      HEYS-v2 memory) — merge дублей, проверка stale claims.
+- [ ] **Целевая компрессия**: 20-30% строк без потери enforcement. Выведет план
+      compaction, НЕ применит сам — требует подтверждения.
