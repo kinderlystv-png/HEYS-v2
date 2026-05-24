@@ -246,6 +246,24 @@ async function kvZombieCleanup(client) {
     );
     stats[label] = res.rows[0];
   }
+
+  // 📝 client_event_log retention (plan Wave 5.4, F-EL6): удаляем events старше 7 дней.
+  // Это отдельная таблица (не client_kv_store), но логически тот же weekly cleanup job.
+  try {
+    const elRes = await client.query(
+      `WITH del AS (
+         DELETE FROM public.client_event_log
+         WHERE ts < (NOW() - INTERVAL '7 days')
+         RETURNING length(summary) + length(coalesce(payload::text, '')) AS sz
+       )
+       SELECT count(*)::int AS rows, coalesce(sum(sz),0)::bigint AS bytes FROM del`
+    );
+    stats.client_event_log_retention = elRes.rows[0];
+  } catch (elErr) {
+    // Table may not exist yet (если миграция не применена) — fail-safe
+    stats.client_event_log_retention = { rows: 0, bytes: 0, error: elErr.message };
+  }
+
   return stats;
 }
 

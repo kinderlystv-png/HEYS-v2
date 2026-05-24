@@ -622,6 +622,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.store.set('heys_products', nextProducts);
     }
 
+    // 📝 Event log (plan Wave 5.3, F-EL Batch C): product-create or product-edit
+    try {
+      const eventKind = shouldMarkModified ? 'product-edit' : 'product-create';
+      window.HEYS?.eventLog?.write(
+        eventKind,
+        `${nextProducts[idx]?.name || 'product'} ${shouldMarkModified ? 'updated' : 'created'}`,
+        { productId: nextProducts[idx]?.id, name: nextProducts[idx]?.name },
+        'create-product-step'
+      );
+    } catch (_) { /* noop */ }
+
     // v4.8.0: Cascade update to MealItems in all days
     cascadeMealItemsOnProductUpdate(existing, nextProducts[idx]);
   };
@@ -3162,6 +3173,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const U = HEYS.utils || {};
         const allProducts = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
         const fingerprint = product.fingerprint || null;
+
+        // 📝 Event log (plan Wave 5.3, F-EL Batch C): product-delete — критичный
+        try {
+          window.HEYS?.eventLog?.write(
+            'product-delete',
+            `${name} (${pid}) удалён, usedInDays=${usageDays}`,
+            { productId: pid, name, fingerprint, count: usageDays },
+            'handleDeleteProduct'
+          );
+        } catch (_) { /* noop */ }
 
         if (HEYS.deletedProducts?.add) {
           HEYS.deletedProducts.add(name, pid, fingerprint);

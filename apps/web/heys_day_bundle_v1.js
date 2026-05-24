@@ -5188,6 +5188,16 @@
 
         try { navigator.vibrate?.(10); } catch (e) { }
 
+        try {
+          const mealName = activeMeal?.name || `meal${mealIndex}`;
+          window.HEYS?.eventLog?.write(
+            'meal-photo',
+            `Photo добавлен в ${mealName} ${date || '?'}`,
+            { dateKey: date, mealIndex, mealName },
+            'handleAddPhoto'
+          );
+        } catch (_) { /* noop */ }
+
         // Асинхронно загружаем в облако
         if (HEYS.cloud?.uploadPhoto) {
           try {

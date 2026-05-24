@@ -1099,6 +1099,18 @@
     const step3 = allStepsData['profile-goals'] || {};
     const step4 = allStepsData['profile-metabolism'] || {};
 
+    // 📝 Event log (plan Wave 5.3, F-EL Batch D): profile-edit (без sensitive values)
+    try {
+      const filledSteps = ['profile-personal', 'profile-body', 'profile-goals', 'profile-metabolism']
+        .filter((k) => allStepsData[k] && Object.keys(allStepsData[k]).length > 0);
+      window.HEYS?.eventLog?.write(
+        'profile-edit',
+        `Profile saved (${filledSteps.length} steps filled)`,
+        { count: filledSteps.length },
+        'saveProfileFromStepData'
+      );
+    } catch (_) { /* noop */ }
+
     console.log('[saveProfileFromStepData] Saving with data:', { step1, step2, step3, step4 });
 
     const profile = lsGet('heys_profile', {}) || {};

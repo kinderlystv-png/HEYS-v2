@@ -132,6 +132,17 @@
                             const loadedIron = filteredProducts.filter(p => p?.iron && +p.iron > 0).length;
                             console.info(`[HEYS.sync] 🔍 After sync: loadedProducts.length=${loadedProducts.length} (${filteredProducts.length} after tombstone filter), withIron=${loadedIron}`);
 
+                            // 📝 Event log (plan Wave 5.3, F-EL Batch D): sync-products — sample 0.5
+                            try {
+                                const _beforeLen = Array.isArray(productsBeforeSync) ? productsBeforeSync.length : 0;
+                                window.HEYS?.eventLog?.write(
+                                    'sync-products',
+                                    `Cloud merge: was=${_beforeLen} loaded=${loadedProducts.length} after_tombstone=${filteredProducts.length}`,
+                                    { before: _beforeLen, after: filteredProducts.length, count: filteredProducts.length - _beforeLen },
+                                    'handleProductsUpdate'
+                                );
+                            } catch (_) { /* noop */ }
+
                             if (filteredProducts.length === 0 && Array.isArray(productsBeforeSync) && productsBeforeSync.length > 0) {
                                 // 🔇 v4.7.1: Лог отключён
                                 // 🛡️ v4.7.2: Перед fallback проверяем что productsBeforeSync не меньше текущих

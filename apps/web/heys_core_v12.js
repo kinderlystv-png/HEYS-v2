@@ -4976,6 +4976,16 @@
       const newProducts = [...products, withDerived];
       HEYS.products.setAll(newProducts, { source: 'add-from-shared' });
 
+      // 📝 Event log (plan Wave 5.3, F-EL Batch C): product-clone-shared
+      try {
+        window.HEYS?.eventLog?.write(
+          'product-clone-shared',
+          `${withDerived.name} clone (shared_origin=${sharedProduct.id})`,
+          { productId: withDerived.id, name: withDerived.name, sharedOriginId: sharedProduct.id },
+          'addFromShared'
+        );
+      } catch (_) { /* noop */ }
+
       // 🔇 v4.7.1: Лог отключён
       return withDerived;
     },
@@ -5163,6 +5173,24 @@
         if (arr.length > 50) arr = arr.slice(0, 50);
         localStorage.setItem(key, JSON.stringify(arr));
       } catch (_) { /* noop — диагностика не должна крашить запись */ }
+
+      // 📝 Event log (plan Wave 5.3, F-EL Batch D): setall-shrink — критичный, всегда логируется
+      try {
+        if (typeof window !== 'undefined' && window.HEYS?.eventLog?.write) {
+          window.HEYS.eventLog.write(
+            'setall-shrink',
+            `${entry.source} ${entry.prevLen}→${entry.newLen}, removed=${(entry.removedIdsSample || []).join(',')} blocked=${entry.blocked}`,
+            {
+              source: entry.source,
+              before: entry.prevLen,
+              after: entry.newLen,
+              removedCount: (entry.prevLen || 0) - (entry.newLen || 0),
+              tombstoneCovered: entry.tombstoneCovered,
+            },
+            entry.source
+          );
+        }
+      } catch (_) { /* noop */ }
     }
 
     HEYS.diagnostics = HEYS.diagnostics || {};

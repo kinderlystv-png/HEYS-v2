@@ -162,6 +162,15 @@
                     setDay(prev => ({ ...prev, steps: finalSteps, updatedAt: Date.now() }));
                     if (finalSteps !== lastDispatchedStepsRef.current) {
                         lastDispatchedStepsRef.current = finalSteps;
+                        // 📝 Event log (plan Wave 5.3, F-EL Batch B): day-edit steps
+                        try {
+                            window.HEYS?.eventLog?.write(
+                                'day-edit',
+                                `steps=${finalSteps} (${date})`,
+                                { dateKey: date, name: 'steps', count: finalSteps },
+                                'steps-slider'
+                            );
+                        } catch (_) { /* noop */ }
                         window.dispatchEvent(new CustomEvent('heysStepsUpdated', {
                             detail: { steps: finalSteps }
                         }));

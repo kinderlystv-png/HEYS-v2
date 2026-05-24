@@ -867,6 +867,16 @@
    * @param {boolean} taken - принять или снять (default true)
    */
   function markSupplementsTaken(dateKey, suppIds, taken = true) {
+    // 📝 Event log (plan Wave 5.3, F-EL Batch B): supplement-mark — критичный, всегда логируется
+    try {
+      window.HEYS?.eventLog?.write(
+        'supplement-mark',
+        `[${(Array.isArray(suppIds) ? suppIds : []).join(',')}] taken=${taken} для ${dateKey}`,
+        { dateKey, suppIds, count: Array.isArray(suppIds) ? suppIds.length : 0 },
+        'markSupplementsTaken'
+      );
+    } catch (_) { /* noop */ }
+
     // 🪦 Diagnostic trace (2026-05-24): один и тот же tap может непреднамеренно
     // mark витамины на не тот day (UTC vs night-shift, multi-tab race, скрытый
     // batch-button). Лог даёт stack trace caller'а — следующий случай покажет
@@ -1296,6 +1306,16 @@
     const shouldSyncDay = options.syncDay !== false;
     const targetDateKey = options.dateKey || new Date().toISOString().slice(0, 10);
 
+    // 📝 Event log (plan Wave 5.3, F-EL Batch B): supplement-plan
+    try {
+      window.HEYS?.eventLog?.write(
+        'supplement-plan',
+        `Plan updated: ${normalizedSupplements.length} supps для ${targetDateKey}`,
+        { dateKey: targetDateKey, suppIds: normalizedSupplements, count: normalizedSupplements.length },
+        options.source || 'savePlannedSupplements'
+      );
+    } catch (_) { /* noop */ }
+
     if (!arePlannedSupplementsEqual(normalizedSupplements, profile.plannedSupplements)) {
       profile.plannedSupplements = normalizedSupplements;
       saveProfileSafe(profile, 'plannedSupplements');
@@ -1332,6 +1352,16 @@
    * Отметить витамин как принятый
    */
   function markSupplementTaken(dateKey, suppId, taken = true) {
+    // 📝 Event log (plan Wave 5.3, F-EL Batch B): supplement-mark single
+    try {
+      window.HEYS?.eventLog?.write(
+        'supplement-mark',
+        `[${suppId}] taken=${taken} для ${dateKey}`,
+        { dateKey, suppId, suppIds: [suppId], count: 1 },
+        'markSupplementTaken'
+      );
+    } catch (_) { /* noop */ }
+
     // 🪦 Diagnostic trace (2026-05-24, см. markSupplementsTaken выше).
     try {
       console.info('[supplements.markSupplementTaken] trace', {

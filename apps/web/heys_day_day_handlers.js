@@ -296,6 +296,15 @@
           // Мгновенное обновление UI через setDay
           if (weightData && (weightData.weightKg !== undefined || weightData.weightG !== undefined)) {
             const newWeight = (weightData.weightKg || 70) + (weightData.weightG || 0) / 10;
+            // 📝 Event log (plan Wave 5.3, F-EL Batch B): day-edit weight (значение НЕ логируется — sensitive)
+            try {
+              window.HEYS?.eventLog?.write(
+                'day-edit',
+                `weightMorning set ${date}`,
+                { dateKey: date, name: 'weightMorning' },
+                'openWeightPicker'
+              );
+            } catch (_) { /* noop */ }
             setDay(prev => ({ ...prev, weightMorning: newWeight, updatedAt: Date.now() }));
           }
         });
@@ -367,6 +376,15 @@
       const liveDay = getLatestDaySnapshot();
       const prevWater = liveDay.waterMl || 0;
       const newWater = prevWater + ml;
+      // 📝 Event log (plan Wave 5.3, F-EL Batch B): day-edit water — изменение, не value
+      try {
+        window.HEYS?.eventLog?.write(
+          'day-edit',
+          `water +${ml}ml (${date})`,
+          { dateKey: date, name: 'waterMl', count: ml },
+          options.source || 'water-add'
+        );
+      } catch (_) { /* noop */ }
       const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
       const newUpdatedAt = Date.now();
       const blockUntil = newUpdatedAt + 3000;
@@ -609,6 +627,15 @@
      * Update training zone minutes
      */
     function updateTraining(i, zi, mins) {
+      // 📝 Event log (plan Wave 5.3, F-EL Batch B): training-edit
+      try {
+        window.HEYS?.eventLog?.write(
+          'training-edit',
+          `training ${i} zone ${zi} updated (${date})`,
+          { dateKey: date, mealIndex: i, count: mins },
+          'updateTraining'
+        );
+      } catch (_) { /* noop */ }
       setDay(prevDay => {
         const arr = (prevDay.trainings || []).map((t, idx) => {
           if (idx !== i) return t;
