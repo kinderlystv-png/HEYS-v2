@@ -1005,6 +1005,35 @@ function runIsReleaseOnlyPush(beforeSha, afterSha) {
     return 0;
 }
 
+// Inheritance check: returns reason-string if entry for `latestHash` can cover
+// current HEAD because every commit between HEAD and latestHash is purely
+// technical (chore/docs/ci/test/build/style/refactor/revert) AND touches only
+// technical or release-meta files. Returns null otherwise.
+//
+// Защита: достаточно одного feat/fix/perf коммита или одного non-technical
+// файла между HEAD и latestHash → fail, нужен новый entry.
+function canInheritEntryFrom(latestHash) {
+    if (!latestHash) return null;
+    // Sanity: latestHash должен существовать в git history
+    const exists = runGitCommand(`git cat-file -t ${latestHash}`);
+    if (!exists || exists !== 'commit') return null;
+
+    const intermediateOutput = runGitCommand(`git rev-list ${latestHash}..HEAD`);
+    if (!intermediateOutput) return null; // HEAD == latestHash или ahead irrelevant
+    const intermediateShas = intermediateOutput.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    if (intermediateShas.length === 0) return null;
+
+    for (const sha of intermediateShas) {
+        const type = parseConventionalCommitType(getCommitMessage(sha));
+        if (!type || !TECHNICAL_COMMIT_TYPES.has(type)) return null;
+        const files = getCommitFiles(sha);
+        for (const file of files) {
+            if (!isReleaseMetaOnlyFile(file) && !isTechnicalFile(file)) return null;
+        }
+    }
+    return `${intermediateShas.length} intermediate commit(s) all technical (chore/docs/ci/test) — entry for ${latestHash} covers HEAD`;
+}
+
 function runCheck() {
     // Skip whats-new requirement for technical-only commits. User-facing
     // types (feat/fix/perf) always require entry — even on technical files —
@@ -1029,6 +1058,16 @@ function runCheck() {
     const latestMatchesCurrent = latestHash === gitHash || latest.version === releaseVersion;
 
     if (!latestMatchesCurrent) {
+        // Inheritance fast-path: если между HEAD и latestHash только technical
+        // коммиты (docs/chore/ci/test) с technical файлами — entry достаточен.
+        // Это устраняет ~30-40% лишних bump-коммитов в workflow.
+        const inheritReason = canInheritEntryFrom(latestHash);
+        if (inheritReason) {
+            writeLine(`✅ Whats-new entry для ${latestHash} наследуется на HEAD: ${inheritReason}`);
+            writeLine(`   Entry: ${latest.version} — "${latest.title}"`);
+            return 0;
+        }
+
         writeLine('⚠️  Для текущего commit нет актуального changelog entry.');
         writeLine(`   Текущий build hash: ${gitHash}`);
         writeLine(`   Ожидаемая release version: ${releaseVersion}`);
