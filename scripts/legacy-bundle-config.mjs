@@ -28,6 +28,7 @@ export const LEGACY_BUNDLES = {
         'heys_perf_main_thread_v1.js',
         'heys_sync_merge_v1.js',
         'heys_storage_supabase_v1.js',
+        'heys_event_log_v1.js',          // 📝 Event log SDK (plan Wave 5 F-EL4) — после YandexAPI/supabase
         'heys_demo_mode_v1.js',
         'heys_models_v1.js',
         'heys_storage_layer_v1.js',
