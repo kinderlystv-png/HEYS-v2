@@ -89,8 +89,8 @@ apps/web/heys_core_v12.js:218
 apps/web/heys_core_v12.js:833
 apps/web/heys_core_v12.js:1924
 apps/web/heys_core_v12.js:4268
-apps/web/heys_core_v12.js:5174
-apps/web/heys_core_v12.js:5285
+apps/web/heys_core_v12.js:5253
+apps/web/heys_core_v12.js:5364
 apps/web/heys_cycle_v1.js:44
 apps/web/heys_day_add_product.js:706
 apps/web/heys_day_add_product.js:721
@@ -113,8 +113,8 @@ apps/web/heys_day_meals_chart_ui_v1.js:367
 apps/web/heys_day_storage_v1.js:28
 apps/web/heys_day_utils.js:1365
 apps/web/heys_day_utils.js:371
-apps/web/heys_day_utils.js:421
-apps/web/heys_day_utils.js:423
+apps/web/heys_day_utils.js:425
+apps/web/heys_day_utils.js:427
 apps/web/heys_day_utils.js:63
 apps/web/heys_day_utils.js:771
 apps/web/heys_dev_utils.js:22
@@ -163,10 +163,10 @@ apps/web/heys_platform_apis_v1.js:177
 apps/web/heys_platform_apis_v1.js:581
 apps/web/heys_predictive_insights_v1.js:48
 apps/web/heys_products_overlay_v1.js:510
-apps/web/heys_products_overlay_v1.js:927
-apps/web/heys_products_overlay_v1.js:928
-apps/web/heys_products_overlay_v1.js:929
-apps/web/heys_products_overlay_v1.js:988
+apps/web/heys_products_overlay_v1.js:930
+apps/web/heys_products_overlay_v1.js:931
+apps/web/heys_products_overlay_v1.js:932
+apps/web/heys_products_overlay_v1.js:991
 apps/web/heys_profile_step_v1.js:1033
 apps/web/heys_profile_step_v1.js:1038
 apps/web/heys_profile_step_v1.js:1187
