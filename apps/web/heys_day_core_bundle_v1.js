@@ -93,17 +93,17 @@
                 console.warn('[HEYS] deletedProducts._reloadFromStorage failed:', e?.message || e);
             }
         },
-        add(name, id, fingerprint) {
+        add(name, id, fingerprint, reason) {
             if (!name) return;
             const key = normalizeDeletedKey(name);
             const now = Date.now();
 
-            deletedProductsData.entries[key] = { name, id: id || null, fingerprint: fingerprint || null, deletedAt: now };
-            if (id) deletedProductsData.entries[String(id)] = { name, id, fingerprint: fingerprint || null, deletedAt: now, _isIdKey: true };
-            if (fingerprint) deletedProductsData.entries[String(fingerprint)] = { name, id: id || null, fingerprint, deletedAt: now, _isFingerprintKey: true };
+            deletedProductsData.entries[key] = { name, id: id || null, fingerprint: fingerprint || null, deletedAt: now, ...(reason ? { reason } : {}) };
+            if (id) deletedProductsData.entries[String(id)] = { name, id, fingerprint: fingerprint || null, deletedAt: now, _isIdKey: true, ...(reason ? { reason } : {}) };
+            if (fingerprint) deletedProductsData.entries[String(fingerprint)] = { name, id: id || null, fingerprint, deletedAt: now, _isFingerprintKey: true, ...(reason ? { reason } : {}) };
 
             saveDeletedProductsData(deletedProductsData);
-            console.log(`[HEYS] 🚫 Продукт добавлен в игнор-лист: "${name}"`);
+            console.log(`[HEYS] 🚫 Продукт добавлен в игнор-лист: "${name}"${reason ? ` reason=${reason}` : ''}`);
         },
         isDeleted(nameOrId) {
             if (!nameOrId) return false;

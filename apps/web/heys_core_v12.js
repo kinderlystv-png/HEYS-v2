@@ -4585,15 +4585,22 @@
         });
       }
 
-      // 🪦 SHRINK-GUARD (plan F3 + F19, 2026-05-24): tombstone-aware блокировка
+      // 🪦 SHRINK-GUARD (plan F3 + F19, Wave 2, 2026-05-24): tombstone-aware блокировка
       // тихого удаления продуктов через setAll(allowShrink:true) из недоверенных
       // источников. Замысел: если кто-то добавит новый shape-inference фильтр или
       // зальёт меньший массив, и для удалённых id нет tombstone в heys_deleted_ids —
-      // запись блокируется. Allowlist: delete-product (UI-handler сам ставит
-      // tombstone), deduplicate (это merge, не удаление), cloud-sync (есть свой
-      // shrink-tolerance 5% gate в cloud-sync merge код, F9 заменит на
-      // tombstone-aware).
-      const TOMBSTONE_BYPASS_SOURCES = new Set(['delete-product', 'deduplicate', 'cloud-sync']);
+      // записывается auto-tombstone (не block — caller уже принял решение).
+      // Allowlist (trusted): delete-product уже ставит tombstone в UI-handler до вызова
+      // setAll; cloud-sync/deduplicate/cloud-recovery — имеют собственные tombstone-aware
+      // gate'ы (F9); backup-guard / cloud-sync-fallback — rollback/restore, не shrink.
+      const TOMBSTONE_BYPASS_SOURCES = new Set([
+        'delete-product',       // UI-handler ставит tombstone до setAll
+        'deduplicate',          // merge, не удаление
+        'cloud-sync',           // tombstone-aware gate в cloud-sync (F9)
+        'cloud-recovery',       // восстановление, имеет свой gate
+        'cloud-sync-fallback',  // rollback на productsBeforeSync (≥ current), не shrink
+        'backup-guard',         // restore из backup — явное действие
+      ]);
       if (opts.allowShrink && !TOMBSTONE_BYPASS_SOURCES.has(source)) {
         const prevProducts = HEYS.products.getAll?.() || [];
         const prevLenForGuard = prevProducts.length;
@@ -4635,6 +4642,7 @@
                 removedIdsSample: removed.slice(0, 3).map((r) => r.id),
                 blocked: true,
                 tombstoneCovered,
+                tombstoneReason: 'allowShrink-non-trusted-blocked',
               });
               return;
             }
@@ -4646,6 +4654,7 @@
               removedIdsSample: removed.slice(0, 3).map((r) => r.id),
               blocked: false,
               tombstoneCovered,
+              tombstoneReason: 'allowShrink-all-tombstoned',
             });
           }
         }
@@ -4656,6 +4665,10 @@
       // ВАЖНО: Проверяем ОБА источника — store (memory) И localStorage напрямую!
       // Memory cache может быть устаревшим если sync писал через ls.setItem
       // v4.8.2: allowShrink для cloud-sync с проверенным merge (удаление дубликатов)
+      // 🪦 Wave 2 / F3 (2026-05-24): anti-shrink теперь tombstone-aware. Если у всех
+      // исчезающих продуктов есть tombstone — запись разрешается. Если есть untombstoned —
+      // auto-tombstone их (guard, не block) + пишем в audit. Kill-switch:
+      // localStorage.__heys_disable_shrink_guard__ === '1'.
       if (!opts.allowShrink) {
         // 1. Проверяем memory cache через getAll
         const fromGetAll = HEYS.products.getAll?.() || [];
@@ -4712,15 +4725,81 @@
           : Math.max(fromGetAll.length, fromLocalStorage.length); // legacy: max of both
 
         if (currentLen > 0 && newLen < currentLen) {
-          console.warn('[HEYS.products] setAll BLOCKED', {
-            source: opts.source || 'unknown',
-            was: currentLen,
-            attemptedNow: newLen,
-            fromGetAll: fromGetAll.length,
-            fromLocalStorage: fromLocalStorage.length,
-            stack: new Error().stack?.split('\n').slice(1, 5).map(s => s.trim()).join(' <- '),
-          });
-          return; // НЕ перезаписываем!
+          // 🪦 Wave 2 / F3: tombstone-aware anti-shrink — вместо тихой блокировки
+          // проверяем каждый исчезнувший id. Есть tombstone → легитимное удаление,
+          // пропускаем блок. Нет tombstone → auto-tombstone + warn + продолжаем запись
+          // (не блокируем: caller уже принял решение, наша задача — защитить orphan-дни).
+          // Kill-switch: __heys_disable_shrink_guard__ === '1' → старое поведение (block).
+          let _shrinkGuardHandled = false;
+          try {
+            if (localStorage.getItem('__heys_disable_shrink_guard__') !== '1') {
+              const _prevSnap = fromGetAll.length > 0 ? fromGetAll : fromLocalStorage;
+              if (_prevSnap.length > 0) {
+                const _nextIds = new Set(
+                  (Array.isArray(arr) ? arr : [])
+                    .map((p) => String(p?.id ?? p?.product_id ?? ''))
+                    .filter(Boolean)
+                );
+                const _removedItems = [];
+                for (const p of _prevSnap) {
+                  const pid = String(p?.id ?? p?.product_id ?? '');
+                  if (pid && !_nextIds.has(pid)) _removedItems.push({ id: pid, name: p?.name, fingerprint: p?.fingerprint });
+                }
+                if (_removedItems.length > 0) {
+                  const _untombstoned = _removedItems.filter((r) =>
+                    typeof _isProductTombstoned === 'function'
+                      ? !_isProductTombstoned({ id: r.id, name: r.name })
+                      : true
+                  );
+                  if (_untombstoned.length > 0) {
+                    // Auto-tombstone untombstoned — ставим tombstone и продолжаем запись
+                    _untombstoned.forEach((r) => {
+                      try {
+                        if (HEYS.deletedProducts && typeof HEYS.deletedProducts.add === 'function') {
+                          HEYS.deletedProducts.add(r.name || r.id, r.id, r.fingerprint || null, 'auto-guard-shrink');
+                        }
+                      } catch (_) { /* noop */ }
+                    });
+                    console.warn('[HEYS.products] setAll shrink: auto-tombstoned untombstoned removals', {
+                      source,
+                      was: currentLen,
+                      attemptedNow: newLen,
+                      autoTombstoned: _untombstoned.length,
+                      sample: _untombstoned.slice(0, 3).map((r) => ({ id: r.id, name: r.name })),
+                    });
+                    _writeSetAllAudit({
+                      source,
+                      prevLen: currentLen,
+                      newLen,
+                      removedIdsSample: _untombstoned.slice(0, 3).map((r) => r.id),
+                      blocked: false,
+                      tombstoneCovered: _removedItems.length - _untombstoned.length,
+                      tombstoneReason: 'auto-guard-shrink',
+                    });
+                  } else {
+                    // Все исчезнувшие tombstoned → легитимно, просто логируем
+                    console.info('[HEYS.products] setAll shrink allowed — all removals tombstoned', {
+                      source, was: currentLen, now: newLen, tombstonedCount: _removedItems.length,
+                    });
+                  }
+                  _shrinkGuardHandled = true; // разрешаем запись
+                }
+              }
+            }
+          } catch (_guardErr) { /* defensive: guard не должен ронять setAll */ }
+
+          if (!_shrinkGuardHandled) {
+            // Старое поведение: блокировка (kill-switch или ошибка в guard)
+            console.warn('[HEYS.products] setAll BLOCKED', {
+              source: opts.source || 'unknown',
+              was: currentLen,
+              attemptedNow: newLen,
+              fromGetAll: fromGetAll.length,
+              fromLocalStorage: fromLocalStorage.length,
+              stack: new Error().stack?.split('\n').slice(1, 5).map(s => s.trim()).join(' <- '),
+            });
+            return; // НЕ перезаписываем!
+          }
         }
       }
 

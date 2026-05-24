@@ -109,8 +109,9 @@
      * @param {string} name - Название продукта
      * @param {string} [id] - ID продукта (опционально)
      * @param {string} [fingerprint] - Fingerprint продукта (опционально)
+     * @param {string} [reason] - Причина удаления (опционально, для audit/observability)
      */
-    add(name, id, fingerprint) {
+    add(name, id, fingerprint, reason) {
       if (!name) return;
       const key = normalizeDeletedKey(name);
       const now = Date.now();
@@ -119,7 +120,8 @@
         name: name,
         id: id || null,
         fingerprint: fingerprint || null,
-        deletedAt: now
+        deletedAt: now,
+        ...(reason ? { reason } : {}),
       };
 
       // Также добавляем по ID и fingerprint для быстрого поиска
@@ -129,7 +131,8 @@
           id: id,
           fingerprint: fingerprint || null,
           deletedAt: now,
-          _isIdKey: true
+          _isIdKey: true,
+          ...(reason ? { reason } : {}),
         };
       }
       if (fingerprint) {
@@ -138,12 +141,13 @@
           id: id || null,
           fingerprint: fingerprint,
           deletedAt: now,
-          _isFingerprintKey: true
+          _isFingerprintKey: true,
+          ...(reason ? { reason } : {}),
         };
       }
 
       saveDeletedProductsData(deletedProductsData);
-      console.log(`[HEYS] 🚫 Продукт добавлен в игнор-лист: "${name}"${id ? ` (id: ${id.slice(0, 8)}...)` : ''}`);
+      console.log(`[HEYS] 🚫 Продукт добавлен в игнор-лист: "${name}"${id ? ` (id: ${id.slice(0, 8)}...)` : ''}${reason ? ` reason=${reason}` : ''}`);
 
       // Диспатчим событие для синхронизации с облаком
       if (typeof window !== 'undefined' && window.dispatchEvent) {

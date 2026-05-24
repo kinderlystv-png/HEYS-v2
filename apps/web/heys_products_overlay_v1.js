@@ -540,7 +540,10 @@
     const sid = String(id);
     const filtered = rows.filter(r => r && String(r.id) !== sid);
     if (filtered.length === rows.length) return false;
-    return writeRaw(filtered);
+    // 🪦 Wave 2 / F4: caller (UI delete-product handler) уже проставил tombstone до
+    // вызова removeRow. Передаём allowShrink:true чтобы writeRaw shrink-guard не
+    // блокировал легитимное удаление (tombstone уже есть — guard пропустит).
+    return writeRaw(filtered, { allowShrink: true, source: 'remove-row' });
   }
 
   function getRowById(id) {
