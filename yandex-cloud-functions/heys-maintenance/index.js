@@ -19,12 +19,30 @@ const { initSecrets } = require('./shared/secrets');
 /**
  * Send Telegram notification (минимум ПДн — только ID)
  */
+// Markdown-safe escape: parse_mode='Markdown' — только _ * [ ` \ специальные.
+function _mdEscape(str) {
+  return String(str).replace(/[_*[`\\]/g, '\\$&');
+}
+
+// Форматирует список с обрезкой: первые maxVisible + «и ещё N».
+function _truncateList(items, maxVisible, formatFn) {
+  if (!items.length) return '';
+  const visible = items.slice(0, maxVisible).map(formatFn).join(', ');
+  const rest = items.length - maxVisible;
+  return rest > 0 ? `${visible} и ещё ${rest}` : visible;
+}
+
 async function sendTelegramNotification(message) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) {
     console.log('[Telegram] Not configured, skipping');
     return;
+  }
+
+  // 4096-char limit guard
+  if (message.length > 4000) {
+    message = message.slice(0, 3900) + '\n\n…_(сообщение обрезано, >4000 символов)_';
   }
 
   try {
@@ -269,7 +287,66 @@ async function dailyReport(client) {
     trialBlock = `🎟 *Trial Queue*: ⚠️ ${e.message.slice(0, 80)}`;
   }
 
-  // 3. KV health — краткий итог (всегда, не только при аномалиях)
+  // 3. Новые регистрации за 24ч
+  let newClientsBlock = '';
+  try {
+    const ncRes = await client.query(`
+      SELECT count(*)::int AS new_clients FROM clients
+      WHERE created_at > now() - interval '24 hours'
+    `);
+    const nc = ncRes.rows[0].new_clients;
+    if (nc > 0) newClientsBlock = `🆕 *Новых сегодня*: ${nc}`;
+  } catch (e) {
+    newClientsBlock = `🆕 *Новых*: ⚠️ ${e.message.slice(0, 60)}`;
+  }
+
+  // 4. Churn risk — нет активности 3+ дней.
+  // Dependency: требует Wave 5.3 (client_event_log populated).
+  // До заполнения → 0 строк (false negative, безопасно).
+  let churnBlock = '';
+  try {
+    const churnRes = await client.query(`
+      SELECT c.name,
+             EXTRACT(day FROM now() - MAX(e.ts))::int AS days_inactive
+      FROM clients c
+      JOIN client_event_log e ON e.client_id = c.id
+      WHERE c.subscription_status IN ('trial', 'active')
+      GROUP BY c.id, c.name
+      HAVING MAX(e.ts) < now() - interval '3 days'
+      ORDER BY MAX(e.ts) ASC
+      LIMIT 7
+    `);
+    if (churnRes.rows.length === 0) {
+      churnBlock = `✅ *Churn risk*: все активны`;
+    } else {
+      const list = _truncateList(churnRes.rows, 5, r => `${_mdEscape(r.name)} ${r.days_inactive}д`);
+      churnBlock = `⚠️ *Churn risk (3+ дней)*: ${list}`;
+    }
+  } catch (e) {
+    churnBlock = `⚠️ *Churn risk*: ⚠️ ${e.message.slice(0, 60)}`;
+  }
+
+  // 5. Подписки истекают в 7 дней
+  let expiringBlock = '';
+  try {
+    const expRes = await client.query(`
+      SELECT c.name,
+             EXTRACT(day FROM COALESCE(c.subscription_expires_at, c.trial_ends_at) - now())::int AS days_left
+      FROM clients c
+      WHERE c.subscription_status IN ('trial', 'active')
+        AND COALESCE(c.subscription_expires_at, c.trial_ends_at) BETWEEN now() AND now() + interval '7 days'
+      ORDER BY COALESCE(c.subscription_expires_at, c.trial_ends_at) ASC
+      LIMIT 5
+    `);
+    if (expRes.rows.length > 0) {
+      const list = _truncateList(expRes.rows, 3, r => `${_mdEscape(r.name)} ${r.days_left}д`);
+      expiringBlock = `⏰ *Истекают в 7 дней*: ${list}`;
+    }
+  } catch (e) {
+    expiringBlock = `⏰ *Истекают*: ⚠️ ${e.message.slice(0, 60)}`;
+  }
+
+  // 6. KV health — краткий итог (всегда, не только при аномалиях)
   let healthBlock = '';
   try {
     const { findings, summary } = await kvHealthCheck(client);
@@ -285,13 +362,85 @@ async function dailyReport(client) {
     healthBlock = `🩺 *KV Health*: ⚠️ ${e.message.slice(0, 80)}`;
   }
 
-  const message =
-    `📊 *Утренний отчёт HEYS* — ${dateStr}\n\n` +
-    `${activityBlock}\n\n` +
-    `${trialBlock}\n\n` +
-    `${healthBlock}`;
+  const parts = [
+    `📊 *Утренний отчёт HEYS* — ${dateStr}`,
+    activityBlock,
+    newClientsBlock,
+    churnBlock,
+    expiringBlock,
+    trialBlock,
+    healthBlock,
+  ].filter(Boolean);
 
-  await sendTelegramNotification(message);
+  await sendTelegramNotification(parts.join('\n\n'));
+  return { sent: true };
+}
+
+/**
+ * Еженедельный дайджест — воскресенье 19:00 МСК.
+ * Trial→paid конверсии + новые клиенты + drip-воронка + push-статистика за 7 дней.
+ */
+async function weeklyReport(client) {
+  const now = new Date();
+  const endStr = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Europe/Moscow' });
+  const weekAgo = new Date(now - 7 * 86400e3);
+  const startStr = weekAgo.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Europe/Moscow' });
+  const header = `📈 *Еженедельный дайджест HEYS* — ${startStr}–${endStr}`;
+
+  // A: Trial → paid конверсии за 7 дней
+  let conversionsBlock = '';
+  try {
+    const cRes = await client.query(`
+      SELECT count(*)::int AS conversions FROM trial_queue_events
+      WHERE event_type = 'purchased' AND created_at > now() - interval '7 days'
+    `);
+    conversionsBlock = `💰 *Конверсии trial → paid*: ${cRes.rows[0].conversions}`;
+  } catch (e) {
+    conversionsBlock = `💰 *Конверсии*: ⚠️ ${e.message.slice(0, 60)}`;
+  }
+
+  // B: Новые клиенты за неделю
+  let newClientsBlock = '';
+  try {
+    const ncRes = await client.query(`
+      SELECT count(*)::int AS new_clients FROM clients
+      WHERE created_at > now() - interval '7 days'
+    `);
+    newClientsBlock = `🆕 *Новых клиентов*: ${ncRes.rows[0].new_clients}`;
+  } catch (e) {
+    newClientsBlock = `🆕 *Новых клиентов*: ⚠️ ${e.message.slice(0, 60)}`;
+  }
+
+  // C: Push за неделю
+  let pushBlock = '';
+  try {
+    const pRes = await client.query(`
+      SELECT count(*)::int AS pushes_sent FROM client_data_changelog
+      WHERE notified_at > now() - interval '7 days'
+    `);
+    pushBlock = `📱 *Push-уведомлений*: ${pRes.rows[0].pushes_sent}`;
+  } catch (e) {
+    pushBlock = `📱 *Push*: ⚠️ ${e.message.slice(0, 60)}`;
+  }
+
+  // D: Drip-воронка (общая статистика)
+  let funnelBlock = '';
+  try {
+    const fRes = await client.query(`
+      SELECT
+        count(*) FILTER (WHERE status = 'queued')::int               AS queued,
+        count(*) FILTER (WHERE status IN ('offer','assigned'))::int  AS engaged,
+        count(*) FILTER (WHERE status = 'canceled_by_purchase')::int AS converted_ever
+      FROM trial_queue
+    `);
+    const f = fRes.rows[0];
+    funnelBlock = `🎟 *Trial воронка*:\nОчередь: ${f.queued} → Вовлечены: ${f.engaged} → Конвертировано всего: ${f.converted_ever}`;
+  } catch (e) {
+    funnelBlock = `🎟 *Trial воронка*: ⚠️ ${e.message.slice(0, 60)}`;
+  }
+
+  const parts = [header, conversionsBlock, newClientsBlock, pushBlock, funnelBlock].filter(Boolean);
+  await sendTelegramNotification(parts.join('\n\n'));
   return { sent: true };
 }
 
@@ -415,6 +564,8 @@ module.exports.handler = async (event, context) => {
     const runKVCleanup = triggerId === 'kv_cleanup' || triggerId === 'all';
     // Daily report: только по явному trigger (07:00 МСК = 04:00 UTC)
     const runDailyReport = triggerId === 'daily_report' || triggerId === 'all';
+    // Weekly digest: воскресенье 19:00 МСК = 16:00 UTC
+    const runWeeklyReport = triggerId === 'weekly_report' || triggerId === 'all';
 
     // Process trial queue
     if (runTrialQueue) {
@@ -454,6 +605,16 @@ module.exports.handler = async (event, context) => {
       } catch (drErr) {
         console.error('[Maintenance] daily_report failed:', drErr.message);
         results.daily_report = { error: drErr.message };
+      }
+    }
+
+    // Weekly digest (Sunday 19:00 MSK = 16:00 UTC)
+    if (runWeeklyReport) {
+      try {
+        results.weekly_report = await weeklyReport(client);
+      } catch (wrErr) {
+        console.error('[Maintenance] weekly_report failed:', wrErr.message);
+        results.weekly_report = { error: wrErr.message };
       }
     }
 
