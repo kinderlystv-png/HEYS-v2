@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.25.1154358f",
+      "buildHash": "1154358f",
+      "date": "2026-05-25",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Privacy filter для summary в client_event_log (152-ФЗ guard)",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Маскировка health_data в summary event log",
+          "description": "Поле summary в client_event_log ранее проходило только slice(0, 500) без content-фильтра — случайно положенные значения с единицами измерения (200г, 1200 ккал, 75кг, 8ч сна) уходили в облако напрямую. Добавлен _sanitizeSummary с regex /\\d+\\s*(г|гр|kcal|ккал|kg|кг|мл|ml|ч|h|мин|min)(?!\\w)/gi — маскирует число+единица на '<n>'. Использует lookahead (?!\\w) вместо \\b, потому что \\b не работает с кириллицей в JS."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.43b8f05e",
       "buildHash": "43b8f05e",
       "date": "2026-05-24",
