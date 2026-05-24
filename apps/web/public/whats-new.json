@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.cb8dff19",
+      "buildHash": "cb8dff19",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Внутреннее: обновлён lint-allowlist после Wave 5.3",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Обновлены позиции прямых localStorage.setItem в allowlist",
+          "description": "После добавления event log в 17 точек мутации строки сдвинулись: 7 записей обновлены. На UX не влияет."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.c092fd8c",
       "buildHash": "c092fd8c",
       "date": "2026-05-24",
