@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.72f6f0da",
+      "buildHash": "72f6f0da",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Автоматические Telegram-отчёты: churn + подписки + weekly дайджест",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Daily отчёт: churn-риски и истекающие подписки",
+          "description": "Утренний отчёт теперь показывает клиентов без активности 3+ дней и подписки, истекающие в ближайшие 7 дней."
+        },
+        {
+          "type": "improvement",
+          "title": "Weekly дайджест по воскресеньям",
+          "description": "Еженедельный отчёт: trial→paid конверсии, новые клиенты, push-статистика, drip-воронка."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.c8a309a8",
       "buildHash": "c8a309a8",
       "date": "2026-05-24",
