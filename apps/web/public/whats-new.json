@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.24.26f93508",
+      "buildHash": "26f93508",
+      "date": "2026-05-24",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Wave 2: centralized shrink-guard для продуктов",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Shrink-guard: защита от тихой потери продуктов",
+          "description": "setAll и OverlayStore.writeRaw теперь auto-tombstone'ят продукты при уменьшении массива без явного tombstone. Unit-тесты event log SDK: 35 тестов."
+        }
+      ]
+    },
+    {
       "version": "2026.05.24.3ac74307",
       "buildHash": "3ac74307",
       "date": "2026-05-24",
