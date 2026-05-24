@@ -6,6 +6,56 @@ How to debug runtime issues in the legacy bundle. See
 
 ---
 
+## Products / orphan / tombstones (Wave 2-4, 2026-05-24)
+
+После Wave 2-4 продуктовых правок добавлены диагностические входы.
+
+```js
+// 1. SetAll audit ring — последние 50 операций уменьшения массива продуктов
+//    через HEYS.products.setAll() и OverlayStore.writeRaw().
+//    Запись: { ts, source, prevLen, newLen, removedIdsSample, blocked,
+//             tombstoneCovered, tombstoneReason }.
+//    Используй когда: «куда делся продукт» / «почему массив усох».
+HEYS.diagnostics.setAllAudit();
+
+// 2. Tombstone registry — список product_id/name, помеченных как удалённые.
+HEYS.deletedProducts.list(); // массив записей
+HEYS.deletedProducts.isProductDeleted(id); // boolean
+
+// 3. Emergency kill-switch для shrink-guard (если клиент жалуется
+//    «не могу сохранить» из-за неизвестного source). В support-chat:
+//      «Открой DevTools (F12) → Console → вставь и нажми Enter:»
+localStorage.setItem('__heys_disable_shrink_guard__', '1');
+//    После reload guard полностью отключён. После решения — удалить ключ.
+
+// 4. Event log (Wave 5) — облачный append-only лог mutation'ов на 7 дней.
+//    Каждый mutation (meal-add, supplement-mark, delete-product, etc.)
+//    пишется через debounced batch в client_event_log table.
+HEYS.eventLog.getPendingBuffer(); // не-flush'нутые события (debug)
+HEYS.eventLog.flush(); // manual flush (полезно перед reload)
+```
+
+Query event log через psql:
+
+```sh
+bash scripts/db/psql.sh -c "
+  SELECT ts, kind, summary, source
+  FROM client_event_log
+  WHERE client_id = '<cid>'
+  ORDER BY ts DESC LIMIT 50;"
+```
+
+### Когда что использовать
+
+| Симптом                          | Инструмент                                          |
+| -------------------------------- | --------------------------------------------------- |
+| «Куда делся продукт?»            | `setAllAudit()` → найти source с `prevLen > newLen` |
+| «Tombstone не сработал»          | `deletedProducts.list()` → проверить id/name        |
+| Жалоба «X отметилось не туда»    | psql query `client_event_log` за нужный день        |
+| Client stuck «не могу сохранить» | kill-switch через support-chat                      |
+
+---
+
 ## Log filtering (`__heysLogControl`)
 
 All `console.info/warn/log` calls in the app pass through a wrapper in

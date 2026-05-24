@@ -921,3 +921,39 @@ Phase 3, если регрессий не будет.
 ---
 
 _Архив выполненного — в `done.md`._
+
+---
+
+## 🪦 Tombstones / event log — открытые edge cases (2026-05-25)
+
+### `heys_deleted_ids` maxSize policy
+
+- [ ] Tombstone-список (`heys_deleted_ids` в `HEYS.store`) растёт всю жизнь
+      клиента — каждое удаление продукта добавляет entry. У активного клиента за
+      2-3 года список может вырасти до >5000 entries.
+- [ ] При размере >1MB начинает заметно влиять на LS quota (10MB лимит) →
+      QuotaExceededError → aggressive cleanup может снести свежие tombstones.
+- [ ] **Fix proposal**: cap на 5000 entries в `HEYS.deletedProducts.add()` —
+      FIFO drop oldest. Защита `heys_deleted_ids` в hard-allowlist уже сделана
+      (F11), но это про aggressive cleanup, не про сам add.
+- [ ] **Риск низкий**: клиентов с 5000+ удалениями пока нет. Можно отложить на
+      6-12 месяцев или до первой жалобы на QuotaExceededError.
+
+### Wave 5 event_log — sample rate calibration через 24-48h
+
+- [ ] **2026-05-26 / 2026-05-27 вечер**: запустить
+      `SELECT kind, count(*) FROM client_event_log GROUP BY 1 ORDER BY 2 DESC` →
+      проверить:
+  1. `sync-event` sample 0.2 — адекватен? (если >50% всех events — понизить до
+     0.1)
+  2. `meal-edit-grams` sample 0.3 — адекватен? (если >30% — проверить debounce
+     300ms в caller, понизить)
+  3. Total rows через 48h — должен соответствовать прогнозу ~340 events/active
+     client × N клиентов × 2 дня.
+- [ ] Если total >2× прогноза → расследовать flood-source через
+      `SELECT source, count(*) FROM client_event_log GROUP BY 1 ORDER BY 2`.
+
+### F17 verification (закрыто 2026-05-25)
+
+- [x] `grep -rn "sync_shared_products_by_session" apps/web/` → пусто. DROP
+      сделан корректно, нет клиентских вызовов. Безопасно.
