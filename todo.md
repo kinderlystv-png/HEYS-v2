@@ -978,6 +978,16 @@ _Архив выполненного — в `done.md`._
       `Parallelization plan` блока.
 - [ ] **Threshold**: `<50%` → text rule не работает, candidate на hook. `50-70%`
       → усилить триггер. `>70%` → оставить.
+- [ ] **Hawthorne caveat**: между baseline (2026-05-25, ~80% subjective) и check
+      (2026-06-08) добавлен explicit `delay/continuation prompts` special case +
+      `anti-creep` rule в CLAUDE.md. Если число выросло — это **может быть от
+      фикса**, не от стабильности правила. Honest verdict требует:
+  - Изоляция: посчитать compliance **до** 2026-05-25 (если есть транскрипты) —
+    это «pre-fix baseline».
+  - Сравнение: pre-fix vs post-fix отдельно, vs target threshold.
+  - Если рост только в delay-prompt cases — фикс работает, но general rule
+    stability не подтверждена. Нужен ещё цикл measurement через 2 недели без
+    новых правок.
 - [ ] Backup на случай если scheduled task не сработает: вручную
       `grep -rn "Parallelization plan" ~/.claude/projects/` и сравнить с
       количеством sessions за 2 недели.
