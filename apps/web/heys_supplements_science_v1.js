@@ -1715,7 +1715,14 @@
       action: {
         label: '✅ Принял',
         onClick: () => {
-          const dateKey = new Date().toISOString().slice(0, 10);
+          // 🌙 Night-shift: до 03:00 local "сегодня" — это ещё вчерашний день.
+          // Раньше тут было new Date().toISOString().slice(0,10) — UTC-дата без
+          // учёта night-shift convention (см. NIGHT_HOUR_THRESHOLD в heys_day_utils.js).
+          // Из-за этого тап в 02:53 MSK мог отмечать omega3 на "сегодня" (24),
+          // хотя day-view показывает 23. Теперь — единый источник истины.
+          const dateKey = HEYS.dayUtils?.todayISO?.()
+            || HEYS.utils?.getTodayKey?.()
+            || new Date().toISOString().slice(0, 10);
           if (HEYS.Supplements?.markSupplementsTaken) {
             HEYS.Supplements.markSupplementsTaken(dateKey, morningSupps);
           }
@@ -1841,7 +1848,11 @@
       action: {
         label: '✅ Принял',
         onClick: () => {
-          const dateKey = new Date().toISOString().slice(0, 10);
+          // 🌙 Night-shift: до 03:00 local "сегодня" — это ещё вчерашний день.
+          // (см. подробности в morning_supplements_reminder выше.)
+          const dateKey = HEYS.dayUtils?.todayISO?.()
+            || HEYS.utils?.getTodayKey?.()
+            || new Date().toISOString().slice(0, 10);
           // Отмечаем только вечерние витамины
           if (HEYS.Supplements?.markSupplementsTaken) {
             HEYS.Supplements.markSupplementsTaken(dateKey, eveningSupps);

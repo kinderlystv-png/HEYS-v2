@@ -867,6 +867,24 @@
    * @param {boolean} taken - принять или снять (default true)
    */
   function markSupplementsTaken(dateKey, suppIds, taken = true) {
+    // 🪦 Diagnostic trace (2026-05-24): один и тот же tap может непреднамеренно
+    // mark витамины на не тот day (UTC vs night-shift, multi-tab race, скрытый
+    // batch-button). Лог даёт stack trace caller'а — следующий случай покажет
+    // конкретное место. Если выяснится что нет ложных вызовов — снять трассировку.
+    try {
+      console.info('[supplements.markSupplementsTaken] trace', {
+        dateKey,
+        suppIds,
+        taken,
+        wallTime: new Date().toISOString(),
+        localTime: new Date().toString(),
+        nightTime: typeof HEYS.dayUtils?.isNightTime === 'function'
+          ? HEYS.dayUtils.isNightTime(new Date().toTimeString().slice(0, 5))
+          : null,
+        stack: (new Error().stack || '').split('\n').slice(1, 6).map(s => s.trim()).join(' <- '),
+      });
+    } catch (_) { /* noop */ }
+
     const dayData = readStoredValue(`heys_dayv2_${dateKey}`, {});
 
     if (!dayData.supplementsTaken) dayData.supplementsTaken = [];
@@ -1314,6 +1332,17 @@
    * Отметить витамин как принятый
    */
   function markSupplementTaken(dateKey, suppId, taken = true) {
+    // 🪦 Diagnostic trace (2026-05-24, см. markSupplementsTaken выше).
+    try {
+      console.info('[supplements.markSupplementTaken] trace', {
+        dateKey,
+        suppId,
+        taken,
+        wallTime: new Date().toISOString(),
+        stack: (new Error().stack || '').split('\n').slice(1, 6).map(s => s.trim()).join(' <- '),
+      });
+    } catch (_) { /* noop */ }
+
     const dayData = readStoredValue(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
 
     let takenList = dayData.supplementsTaken || [];
