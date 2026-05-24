@@ -81,6 +81,18 @@
     } catch (_) { return null; }
   }
 
+  // Privacy filter для summary: маскирует числовые значения с единицами,
+  // которые могут быть health_data (200г, 1200 ккал, 75кг, 8ч сна).
+  // Pattern: число + опциональный пробел + единица. Не word-boundary (\b не
+  // работает с кириллицей в JS) — используем (?!\w) lookahead.
+  const _SUMMARY_SENSITIVE_RE = /\d+\s*(г|гр|kcal|ккал|kg|кг|мл|ml|ч|h|мин|min)(?!\w)/gi;
+
+  function _sanitizeSummary(s) {
+    if (typeof s !== 'string') return '';
+    const truncated = s.length > 500 ? s.slice(0, 500) : s;
+    return truncated.replace(_SUMMARY_SENSITIVE_RE, '<n>');
+  }
+
   function _sanitizePayload(payload) {
     if (!payload || typeof payload !== 'object') return null;
     const out = {};
@@ -256,7 +268,7 @@
         const event = {
           ts: new Date().toISOString(),
           kind,
-          summary: String(summary || '').slice(0, 500),
+          summary: _sanitizeSummary(summary || ''),
           source: source ? String(source).slice(0, 100) : null,
           payload: _sanitizePayload(payload),
           meta: _buildMeta(),
