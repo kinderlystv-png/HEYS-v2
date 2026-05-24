@@ -981,6 +981,13 @@ _Архив выполненного — в `done.md`._
 - [ ] Backup на случай если scheduled task не сработает: вручную
       `grep -rn "Parallelization plan" ~/.claude/projects/` и сравнить с
       количеством sessions за 2 недели.
+- [ ] **2026-06-09 (на следующий день после fireAt)**: если в Claude Code не
+      появилось summary от `parallel-first-compliance-check` — VS Code был
+      закрыт в момент scheduled fire. Действия:
+  1. Запустить вручную через `mcp__scheduled-tasks__list_scheduled_tasks` →
+     найти `parallel-first-compliance-check` → кликнуть Run.
+  2. Или дублировать ad-hoc: попросить агента «запусти compliance check по
+     prompt'у в task SKILL.md».
 
 ### 2026-07-24 (через 2 месяца): CLAUDE.md compaction pass
 
