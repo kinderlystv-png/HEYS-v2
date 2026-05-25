@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "2026.05.26.72c99db1",
+      "buildHash": "72c99db1",
+      "date": "2026-05-26",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Telegram daily report fix: Markdown 400 + ложно-положительный sent:true",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Telegram Markdown 400 на heaviest_key с подчёркиваниями",
+          "description": "Шаблон утреннего отчёта оборачивал имя ключа в backticks `heys_products_overlay_v2`. Telegram legacy Markdown parser всё равно интерпретировал `_` внутри code span как italic opener, ломался на unclosed entity. Заменено на _mdEscape без backticks — теперь Markdown проходит. Сегодняшние утренние cron не доставили отчёт именно из-за этого."
+        },
+        {
+          "type": "fix",
+          "title": "sendTelegramNotification возвращает реальный статус",
+          "description": "Функция всегда возвращала undefined — daily_report/weekly_report ложно сообщали sent:true даже при HTTP 400 от Telegram. Теперь возвращает {ok, error?, body?}, daily_report использует реальный статус."
+        },
+        {
+          "type": "improvement",
+          "title": "Plain-text fallback при Markdown 400",
+          "description": "Если parse_mode='Markdown' возвращает 400 — retry без parse_mode (plain text). Гарантирует доставку даже если в template снова проскочит unescaped markdown char. Защитный слой."
+        }
+      ]
+    },
+    {
       "version": "2026.05.25.707d575c",
       "buildHash": "707d575c",
       "date": "2026-05-25",
