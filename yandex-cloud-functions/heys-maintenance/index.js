@@ -37,7 +37,7 @@ async function sendTelegramNotification(message) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) {
     console.log('[Telegram] Not configured, skipping');
-    return;
+    return { ok: false, error: 'not-configured' };
   }
 
   // 4096-char limit guard
@@ -45,22 +45,49 @@ async function sendTelegramNotification(message) {
     message = message.slice(0, 3900) + '\n\n…_(сообщение обрезано, >4000 символов)_';
   }
 
-  try {
+  // Первая попытка с Markdown. Если 400 — retry без parse_mode (plain text),
+  // потому что Markdown в Telegram очень строгий и любой unescaped _ или *
+  // приводит к 400. Plain text fallback гарантирует доставку.
+  const tryOnce = async (parseMode) => {
+    const body = { chat_id: chatId, text: message };
+    if (parseMode) body.parse_mode = parseMode;
     const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      })
+      body: JSON.stringify(body),
     });
-    
-    if (!response.ok) {
-      console.warn('[Telegram] Failed to send:', response.status);
+    return { status: response.status, ok: response.ok, body: response.ok ? null : await response.text() };
+  };
+
+  try {
+    const first = await tryOnce('Markdown');
+    if (first.ok) return { ok: true };
+
+    console.warn('[Telegram] Markdown send failed:', first.status, first.body?.slice(0, 300));
+
+    // Diagnostic: какой кусок сообщения сломал parser
+    const offsetMatch = first.body?.match(/byte offset (\d+)/);
+    if (offsetMatch) {
+      const offset = parseInt(offsetMatch[1], 10);
+      const ctx = message.slice(Math.max(0, offset - 40), Math.min(message.length, offset + 40));
+      console.warn('[Telegram] Markdown ctx @offset', offset, JSON.stringify(ctx));
     }
+
+    // Fallback: plain text без markdown
+    if (first.status === 400) {
+      const second = await tryOnce(null);
+      if (second.ok) {
+        console.warn('[Telegram] Plain-text fallback succeeded');
+        return { ok: true, fallback: 'plain-text' };
+      }
+      console.error('[Telegram] Plain-text fallback also failed:', second.status, second.body?.slice(0, 300));
+      return { ok: false, error: `plain-text-${second.status}`, body: second.body };
+    }
+
+    return { ok: false, error: `markdown-${first.status}`, body: first.body };
   } catch (err) {
     console.error('[Telegram] Error:', err.message);
+    return { ok: false, error: 'exception', message: err.message };
   }
 }
 
@@ -352,7 +379,7 @@ async function dailyReport(client) {
     const { findings, summary } = await kvHealthCheck(client);
     if (findings.length === 0) {
       const heaviest = summary.heaviest_key
-        ? `; самый жирный ключ \`${summary.heaviest_key.k}\` ${Math.round(summary.heaviest_key.bytes / 1024)} KB`
+        ? `; самый жирный ключ ${_mdEscape(summary.heaviest_key.k)} (${Math.round(summary.heaviest_key.bytes / 1024)} KB)`
         : '';
       healthBlock = `🩺 *KV Health*: ✅ без аномалий${heaviest}`;
     } else {
