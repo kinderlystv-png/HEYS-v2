@@ -683,15 +683,21 @@
       }
     }
 
-    // 2. Шаг веса — ВСЕГДА спрашиваем в чек-ине
+    // 2.0. 📊 Верификация пропущенных дней — РАЗБОР ПЕРВЫМ
+    // Семантика: сначала закрываем «вчера/позавчера», потом фиксируем «сегодня».
+    // Conditional push: если pending дней нет — не добавляем «пустой» слот в прогресс-бар.
+    // Источник правды о наличии pending: HEYS.YesterdayVerify.shouldShow() →
+    // getPendingPastDays().totalPendingDays > 0.
+    if (HEYS.YesterdayVerify
+      && typeof HEYS.YesterdayVerify.shouldShow === 'function'
+      && HEYS.YesterdayVerify.shouldShow()) {
+      steps.push('yesterdayVerify');
+    }
+
+    // 2.1. Шаг веса — ВСЕГДА спрашиваем в чек-ине
     // Вес в регистрации (целый) → профиль (базовый вес для расчётов)
     // Вес в чек-ине (с десятыми) → день (точное утреннее взвешивание)
     steps.push('weight');
-
-    // 2.1. 📊 Верификация данных за вчера
-    // Показывается ТОЛЬКО если вчера <50% калорий и хотя бы 1 приём пищи
-    // Спрашивает: реальное голодание или незаполненные данные?
-    steps.push('yesterdayVerify');
 
     // 3. Остальные шаги чек-ина
     steps.push('sleepTime', 'sleepQuality');

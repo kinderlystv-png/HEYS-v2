@@ -854,6 +854,39 @@
       prevWeightGRef.current = weightG;
     }, [weightG]);
 
+    // Immediate-write веса в day.weightMorning (НЕ в profile) при изменении WheelPicker.
+    // Защита от потери ввода если пользователь закроет чекин крестиком до финала
+    // (config.save вызывается только на финале StepModal handleNext).
+    // profile.weight остаётся за финальным save — «профильный вес = подтверждённое
+    // взвешивание», промежуточные slider-drag'и не должны пересчитывать TDEE/BMR.
+    const weightInitialRef = useRef(null);
+    useEffect(() => {
+      if (weightInitialRef.current === null) {
+        // Первый mount: запоминаем seed из getInitialData (lastWeight) и не пишем.
+        weightInitialRef.current = { kg: weightKg, g: weightG };
+        return;
+      }
+      if (weightKg === weightInitialRef.current.kg && weightG === weightInitialRef.current.g) {
+        // Значения совпадают с seed — пользователь не трогал slider, не пишем.
+        return;
+      }
+      const timer = setTimeout(() => {
+        const dateKey = getTodayKey();
+        const dayData = readDayData(dateKey, {});
+        const weight = (weightKg || 70) + (weightG || 0) / 10;
+        dayData.date = dateKey;
+        dayData.weightMorning = weight;
+        dayData.updatedAt = Date.now();
+        saveDayData(dateKey, dayData);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('heys:day-updated', {
+            detail: { date: dateKey, field: 'weightMorning', value: weight, source: 'weight-step-immediate' }
+          }));
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }, [weightKg, weightG]);
+
     const setWeightKg = (v) => onChange({ ...data, weightKg: v, weightG: data.weightG ?? weightG });
     const setWeightG = (v) => {
       const prevG = prevWeightGRef.current;
