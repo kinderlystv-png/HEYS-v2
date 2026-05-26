@@ -1054,16 +1054,25 @@ JSON.parse(localStorage.getItem('heys_event_log_pending') || '[]');
    (`log_client_event_by_session`, `log_gamification_event_by_session`,
    `log_gamification_event_by_curator`) пересозданы через
    `database/2026-05-26_debug_fns_raise_notice.sql`. В EXCEPTION блок перед
-   RETURN добавлен `RAISE NOTICE SQLSTATE/SQLERRM/DETAIL/HINT` — pg-логи Yandex
-   Cloud Function теперь получают полную диагностику exception'а. Семантика
-   RETURN не изменилась — клиент по-прежнему получает
-   `{success:false, error:SQLERRM}`. Verified через
-   `SELECT prosrc FROM pg_proc WHERE proname IN (...)` — RAISE NOTICE
-   присутствует в каждой (positions 1404 / 844 / 864). **Эффект на RPC 500**:
-   при следующем падении prod-лог сразу покажет реальный SQLSTATE/DETAIL.
-   Комбинируется с client-side poison-pill guard — если causa client-side,
-   очередь сама разблокируется через 5 fails; если server-side, теперь видно из
-   логов мгновенно.
+   RETURN добавлен `RAISE NOTICE SQLSTATE/SQLERRM/DETAIL/HINT`. **⚠ Post-apply
+   discovery**: Yandex Managed Postgres имеет `log_min_messages=warning`
+   (default) → **NOTICE отфильтрован**, нигде не пишется. JS код в Yandex CF не
+   subscribed на `client.on('notice')` → теряется и в CF logs. Результат:
+   applied чисто, но диагностический эффект **нулевой** на текущей конфигурации
+   pg.
+
+3b. ⚠ **Follow-up migration prepared, НЕ applied**:
+`database/2026-05-26_debug_fns_raise_warning_fix.sql` заменяет `RAISE NOTICE` →
+`RAISE WARNING` в тех же 3 функциях. WARNING проходит `log_min_messages=warning`
+→ попадает в pg server log → доступен через Yandex Console → Managed PostgreSQL
+→ Logs. Семантика RETURN не изменилась. Auto-mode classifier заблокировал
+автоприменение (новая миграция, прошлый go был на raise_notice file). **Apply**:
+`bash scripts/db/psql.sh -f database/2026-05-26_debug_fns_raise_warning_fix.sql`
+
+**Метаурок**: предыдущий план не учёл `log_min_messages` config Yandex Postgres
+— классический «частичное чтение → каскадная ошибка» (см.
+`feedback_partial_reads_cascade.md`). Должен был сначала
+`SHOW log_min_messages;` потом писать миграцию.
 
 **Чекин-фикс 4aa1ead7 не связан**: `window.dispatchEvent('heys:day-updated')` из
 нового immediate-write в WeightStepComponent — это DOM event, не запись в
