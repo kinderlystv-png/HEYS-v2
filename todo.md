@@ -1038,13 +1038,15 @@ JSON.parse(localStorage.getItem('heys_event_log_pending') || '[]');
 
 **Сопутствующие fix'ы — статус 2026-05-26:**
 
-1. ✅ **needsDetailedLog whitelist расширен** (commit 924da9ae,
+1. ✅ **needsDetailedLog whitelist расширен И ЗАДЕПЛОЕН** (commit 924da9ae,
    `yandex-cloud-functions/heys-api-rpc/index.js`). Pattern теперь `admin_*` +
    `log_*` + `get_curator_clients` — покрывает все debug/audit функции
-   автоматически. **⚠ NOT YET DEPLOYED** — cloud-functions GHA workflow упал
-   (`Service account aje85rjgpj4nk9m384ek is not available`). Нужен ручной retry
-   deploy через `cd yandex-cloud-functions && ./deploy-all.sh heys-api-rpc`
-   после починки IAM service account (отдельная задача, см. ниже).
+   автоматически. **✅ DEPLOYED 2026-05-26 18:38** через локальный
+   `./deploy-all.sh heys-api-rpc` (использует Lockbox secrets из .env).
+   Post-deploy health check показал ✅ для Health/RPC/REST/Auth/Leads endpoints.
+   SMS endpoint failed HTTP 502 — но это **другая функция**, pre-existing issue,
+   не связан с моим deploy. Cloud-functions GHA workflow остался broken (IAM
+   SA), но локальный deploy теперь подтверждённо работает как альтернатива.
 2. ✅ **Poison-pill detection реализована и задеплоена** (commit 924da9ae,
    `apps/web/heys_event_log_v1.js:67-77`). Threshold = 5 consecutive failures на
    одном fingerprint (kind+summary первые 60 chars). Head event дропается,
