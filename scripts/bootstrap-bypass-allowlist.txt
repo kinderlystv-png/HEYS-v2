@@ -99,7 +99,7 @@ apps/web/heys_day_core_bundle_v1.js:3859
 apps/web/heys_day_core_bundle_v1.js:413
 apps/web/heys_day_core_bundle_v1.js:52
 apps/web/heys_day_orphan_alert.js:142
-apps/web/heys_event_log_v1.js:157
+apps/web/heys_event_log_v1.js:179
 apps/web/heys_day_effects.js:736
 apps/web/heys_day_effects.js:737
 apps/web/heys_day_effects.js:738
