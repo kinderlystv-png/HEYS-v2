@@ -2648,6 +2648,16 @@ module.exports.handler = async function (event, context) {
         'p_curator_id': '::uuid',
         'p_client_id': '::uuid',
         'p_items': '::jsonb'
+      },
+      // 📝 Event log: p_events требует ::jsonb hint, иначе pg-driver
+      // сериализует массив объектов как Postgres array literal вместо jsonb
+      // и client.query кидает JS-уровень exception без SQLSTATE → клиент
+      // видит INTERNAL_ERROR / 500 "Database error". До этого fix'а ни одно
+      // событие не доходило до SQL функции (см. todo.md «RPC 500
+      // log_client_event_by_session», диагностика 2026-05-26).
+      'log_client_event_by_session': {
+        'p_session_token': '::text',
+        'p_events': '::jsonb'
       }
     };
 
