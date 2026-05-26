@@ -1050,16 +1050,20 @@ JSON.parse(localStorage.getItem('heys_event_log_pending') || '[]');
    одном fingerprint (kind+summary первые 60 chars). Head event дропается,
    остаток продолжает retry. Frontend deploy через `deploy-yandex.yml` успешен —
    изменение уже в проде.
-3. ⚠ **SQL migration подготовлена, НЕ applied**:
-   `database/2026-05-26_debug_fns_raise_notice.sql` (commit 924da9ae). Покрывает
-   3 debug-функции: `log_client_event_by_session`,
-   `log_gamification_event_by_session`, `log_gamification_event_by_curator`.
-   `RAISE NOTICE SQLSTATE/SQLERRM/DETAIL/HINT` добавлен в EXCEPTION блок перед
-   RETURN. Семантика RETURN не меняется (тот же
-   `{success:false, error:SQLERRM}`), но pg-логи получают полные детали.
-   **Apply**:
-   `bash scripts/db/psql.sh -f database/2026-05-26_debug_fns_raise_notice.sql`
-   (auto-mode заблокировал автоприменение — prod DB write вне scope «доделай»).
+3. ✅ **SQL migration APPLIED на проде** (2026-05-26): Все 3 debug-функции
+   (`log_client_event_by_session`, `log_gamification_event_by_session`,
+   `log_gamification_event_by_curator`) пересозданы через
+   `database/2026-05-26_debug_fns_raise_notice.sql`. В EXCEPTION блок перед
+   RETURN добавлен `RAISE NOTICE SQLSTATE/SQLERRM/DETAIL/HINT` — pg-логи Yandex
+   Cloud Function теперь получают полную диагностику exception'а. Семантика
+   RETURN не изменилась — клиент по-прежнему получает
+   `{success:false, error:SQLERRM}`. Verified через
+   `SELECT prosrc FROM pg_proc WHERE proname IN (...)` — RAISE NOTICE
+   присутствует в каждой (positions 1404 / 844 / 864). **Эффект на RPC 500**:
+   при следующем падении prod-лог сразу покажет реальный SQLSTATE/DETAIL.
+   Комбинируется с client-side poison-pill guard — если causa client-side,
+   очередь сама разблокируется через 5 fails; если server-side, теперь видно из
+   логов мгновенно.
 
 **Чекин-фикс 4aa1ead7 не связан**: `window.dispatchEvent('heys:day-updated')` из
 нового immediate-write в WeightStepComponent — это DOM event, не запись в
