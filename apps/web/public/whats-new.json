@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.26.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-26",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "День: убраны no-op ререндеры в :recv stage (perf v2)",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Skip no-op event на стадии recv (до RAF/guards)",
+          "description": "После первого perf-фикса (d8f49c8b) замер показал что 'day-updated:recv' стал новым visible bottleneck (83.6ms, отдельный source). Это handler immediately после event dispatch — до dedup/external-block guards и до RAF schedule. Если event несёт тот же updatedAt что уже в state — теперь skip rano. Применено симметрично в heys_day_effects.js и heys_day_core_bundle_v1.js. Combined effect с :raf-apply fix: 6 slow commits → ожидаем 1-2 (только реальные изменения). Kill switch тот же: localStorage.setItem('heys_skip_noop_apply', '0')."
+        }
+      ]
+    },
+    {
       "version": "2026.05.26.d8f49c8b",
       "buildHash": "d8f49c8b",
       "date": "2026-05-26",

@@ -311,6 +311,22 @@
                     }
                 } catch (_) { /* noop */ }
 
+                // PERF (2026-05-26): симметричный skip для :recv stage. Если event несёт
+                // тот же updatedAt что уже в state — игнорируем сразу, до dedup/external-block
+                // guards и до RAF schedule. Замер ?reactProfiler=1 показал :recv = 83.6ms
+                // отдельным источником после :raf-apply fix. Kill switch разделяет с :raf-apply.
+                try {
+                    const _eventUpdatedAt = (eventData && eventData.updatedAt) || e.detail?.updatedAt || 0;
+                    if (!forceReload && _eventUpdatedAt > 0 && _eventUpdatedAt === lastLoadedUpdatedAtRef.current
+                        && window.localStorage.getItem('heys_skip_noop_apply') !== '0') {
+                        console.info('[HEYS.day] ⚡ Skip recv (no-op event, same updatedAt)', {
+                            source,
+                            eventUpdatedAt: _eventUpdatedAt
+                        });
+                        return;
+                    }
+                } catch (_) { /* localStorage недоступен — продолжаем */ }
+
                 if (source === 'day-stats-real-data-cta' || eventData?.isFastingDay || eventData?.isIncomplete) {
                     try {
                         global.__HEYS_REALDATA_DEBUG = global.__HEYS_REALDATA_DEBUG || [];

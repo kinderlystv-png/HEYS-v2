@@ -3335,6 +3335,21 @@
                     }
                 } catch (_) { /* noop */ }
 
+                // PERF (2026-05-26): симметричный skip для :recv stage (см. парный fix в
+                // heys_day_effects.js). Замер ?reactProfiler=1 показал :recv = 83.6ms
+                // как отдельный source после :raf-apply fix. Kill switch shared.
+                try {
+                    const _eventUpdatedAt = (eventData && eventData.updatedAt) || e.detail?.updatedAt || 0;
+                    if (!forceReload && _eventUpdatedAt > 0 && _eventUpdatedAt === lastLoadedUpdatedAtRef.current
+                        && window.localStorage.getItem('heys_skip_noop_apply') !== '0') {
+                        console.info('[HEYS.day] ⚡ Skip recv (no-op event, same updatedAt)', {
+                            source,
+                            eventUpdatedAt: _eventUpdatedAt
+                        });
+                        return;
+                    }
+                } catch (_) { /* localStorage недоступен — продолжаем */ }
+
                 // v25.8.6.1: Handle timestamp-only sync (prevent fetchDays overwrite)
                 if (syncTimestampOnly && updatedAt) {
                     const newTimestamp = Math.max(lastLoadedUpdatedAtRef.current || 0, updatedAt);
