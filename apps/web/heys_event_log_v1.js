@@ -69,9 +69,31 @@
   let _flushInProgress = false;
   let _lastFlushFailAt = 0;
 
+  // 🧪 Poison-pill detection: если ОДИН и тот же head event падает N раз
+  // подряд — drop его и попробовать остаток. Иначе один битый event
+  // (BigInt в payload, null-byte в summary, oversize jsonb, etc) навсегда
+  // блокирует всю очередь — retry loops пожизненно на одних и тех же
+  // данных, события за ним никогда не дойдут. См. BUGS_HISTORY.md
+  // «Morning checkin: cascade diagnosis (2026-05-26)» → Урок 2 + поиск
+  // poison-pill после RPC 500 расследования.
+  let _lastFailedFingerprint = null;
+  let _consecutiveFailCount = 0;
+  const POISON_PILL_THRESHOLD = 5;
+
   // ─────────────────────────────────────────────────────────────────
   // Helpers
   // ─────────────────────────────────────────────────────────────────
+  // Fingerprint head event'a батча — для poison-pill detection. Считаем
+  // одним и тем же event если совпадают kind и первые 60 chars summary.
+  // Намеренно НЕ берём в fingerprint payload/meta — те могут содержать
+  // timestamps / случайные id, тогда idempotent retry будет иметь разный
+  // fingerprint каждый раз и poison-pill detection не сработает.
+  function _fingerprintEvent(e) {
+    if (!e || typeof e !== 'object') return '';
+    try { return (e.kind || '') + '|' + String(e.summary || '').slice(0, 60); }
+    catch (_) { return ''; }
+  }
+
   function _getSessionToken() {
     try {
       return (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
@@ -212,12 +234,35 @@
       });
 
       if (error || (data && data.error)) {
+        // 🧪 Poison-pill detection: если ОДИН и тот же head event валит batch
+        // N раз подряд — drop его и попробовать остаток. Защита от случая
+        // когда битый event (BigInt, null-byte, oversize jsonb) навсегда
+        // блокирует очередь.
+        const headFp = batch.length > 0 ? _fingerprintEvent(batch[0]) : '';
+        if (headFp && headFp === _lastFailedFingerprint) {
+          _consecutiveFailCount++;
+          if (_consecutiveFailCount >= POISON_PILL_THRESHOLD) {
+            try {
+              console.warn('[HEYS.eventLog] poison-pill detected — drop head event after',
+                _consecutiveFailCount, 'consecutive failures:', batch[0]);
+            } catch (_) { /* noop */ }
+            _savePending(remaining.concat(batch.slice(1)));
+            _consecutiveFailCount = 0;
+            _lastFailedFingerprint = null;
+            _lastFlushFailAt = Date.now();
+            return;
+          }
+        } else {
+          _lastFailedFingerprint = headFp;
+          _consecutiveFailCount = 1;
+        }
         // Network/server error → возвращаем batch в pending
         _savePending(remaining.concat(batch));
         _lastFlushFailAt = Date.now();
         try {
           console.warn('[HEYS.eventLog] flush failed, requeued', {
             batchSize: batch.length,
+            consecutiveFails: _consecutiveFailCount,
             error: error || data.error,
           });
         } catch (_) { /* noop */ }
@@ -229,6 +274,9 @@
         _clearPending();
       }
       _lastFlushFailAt = 0;
+      // 🧪 Reset poison-pill counter — успешный flush означает batch здоров
+      _lastFailedFingerprint = null;
+      _consecutiveFailCount = 0;
 
       // Если в remaining есть события — продолжаем flush'ить (другой batch)
       if (remaining.length > 0) {

@@ -2743,8 +2743,16 @@ module.exports.handler = async function (event, context) {
     };
 
   } catch (error) {
-    // Детальное логирование для admin функций и критичных функций
-    const needsDetailedLog = fnName.startsWith('admin_') || fnName === 'get_curator_clients';
+    // Детальное логирование для admin функций и критичных функций.
+    // log_* — debug/audit функции, которые сами логируют события клиента.
+    // Если ОНИ падают — нужны полные SQLSTATE/detail/hint, иначе мы не
+    // увидим что внутри функции (особенно с EXCEPTION WHEN OTHERS THEN
+    // RETURN — этот pattern глушит SQLERRM в RETURN value, но error
+    // объект в JS catch всё равно несёт SQLSTATE если pg-driver получил
+    // raw error до того как функция обернула его в JSONB).
+    const needsDetailedLog = fnName.startsWith('admin_')
+      || fnName.startsWith('log_')
+      || fnName === 'get_curator_clients';
 
     if (needsDetailedLog) {
       console.error('[RPC Error]', fnName, {

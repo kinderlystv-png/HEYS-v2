@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "2026.05.26.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-26",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Диагностика debug RPC: расширенный prod-лог + poison-pill guard в client event queue",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Yandex RPC: detailed catch-log для всех log_* функций",
+          "description": "needsDetailedLog whitelist расширен с 'admin_*' + 'get_curator_clients' на 'admin_*' + 'log_*' + 'get_curator_clients'. При ошибке любой логирующей функции (log_client_event_by_session, log_gamification_*) prod-лог Yandex Cloud Function получит SQLSTATE/detail/hint/where/query/params, а не только error.message. Раньше иронично — log-функции без полного лога самих себя."
+        },
+        {
+          "type": "improvement",
+          "title": "Poison-pill guard в client event log queue",
+          "description": "Если один и тот же head event валит batch 5 раз подряд (определяется по fingerprint kind+summary) — head event сбрасывается, остаток продолжает retry. Защита от случая когда битый event (BigInt в payload, null-byte в строке, oversize jsonb) навсегда блокирует всю очередь — без guard'а один поломанный event приводил к infinite retry на тех же данных, все последующие events никогда не доходили."
+        },
+        {
+          "type": "improvement",
+          "title": "RAISE NOTICE в SQL catch-all для debug-функций (migration prep)",
+          "description": "Подготовлена SQL migration database/2026-05-26_debug_fns_raise_notice.sql: для 3 debug-функций (log_client_event_by_session, log_gamification_event_by_session, log_gamification_event_by_curator) в EXCEPTION блоке перед RETURN добавляется RAISE NOTICE с SQLSTATE/DETAIL/HINT — попадёт в pg-лог. Семантика RETURN не меняется, клиент получает тот же {success:false, error: SQLERRM}. Migration не applied автоматически (prod DB write), требует bash scripts/db/psql.sh -f."
+        }
+      ]
+    },
+    {
       "version": "2026.05.26.4aa1ead7",
       "buildHash": "4aa1ead7",
       "date": "2026-05-26",
