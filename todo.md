@@ -1036,24 +1036,57 @@ JSON.parse(localStorage.getItem('heys_event_log_pending') || '[]');
 `error.message` от generic catch на
 [index.js:2760](yandex-cloud-functions/heys-api-rpc/index.js#L2760).
 
-**Сопутствующие fix'ы (без расследования root cause):**
+**Сопутствующие fix'ы — статус 2026-05-26:**
 
-1. **needsDetailedLog whitelist расширить** на debug-критичные RPC включая
-   `log_client_event_by_session` — иронично что log-функция в prod-логе видна
-   только как `error.message`, без code/detail/hint/where/query/params. Один
-   edit в [index.js:2748](yandex-cloud-functions/heys-api-rpc/index.js#L2748).
-2. **Poison-pill detection** в `_flush`
-   ([apps/web/heys_event_log_v1.js:181](apps/web/heys_event_log_v1.js#L181)):
-   если один и тот же batch упал ≥N раз подряд — drop'нуть head event и
-   попробовать остаток. Иначе один битый event навсегда блокирует все будущие.
-3. **Убрать `EXCEPTION WHEN OTHERS THEN RETURN`** в SQL функции (антипаттерн для
-   debug-RPC — глушит SQLSTATE/detail). Заменить на `RAISE NOTICE` + продолжить.
-   Тогда диагностика стала бы тривиальной.
+1. ✅ **needsDetailedLog whitelist расширен** (commit 924da9ae,
+   `yandex-cloud-functions/heys-api-rpc/index.js`). Pattern теперь `admin_*` +
+   `log_*` + `get_curator_clients` — покрывает все debug/audit функции
+   автоматически. **⚠ NOT YET DEPLOYED** — cloud-functions GHA workflow упал
+   (`Service account aje85rjgpj4nk9m384ek is not available`). Нужен ручной retry
+   deploy через `cd yandex-cloud-functions && ./deploy-all.sh heys-api-rpc`
+   после починки IAM service account (отдельная задача, см. ниже).
+2. ✅ **Poison-pill detection реализована и задеплоена** (commit 924da9ae,
+   `apps/web/heys_event_log_v1.js:67-77`). Threshold = 5 consecutive failures на
+   одном fingerprint (kind+summary первые 60 chars). Head event дропается,
+   остаток продолжает retry. Frontend deploy через `deploy-yandex.yml` успешен —
+   изменение уже в проде.
+3. ⚠ **SQL migration подготовлена, НЕ applied**:
+   `database/2026-05-26_debug_fns_raise_notice.sql` (commit 924da9ae). Покрывает
+   3 debug-функции: `log_client_event_by_session`,
+   `log_gamification_event_by_session`, `log_gamification_event_by_curator`.
+   `RAISE NOTICE SQLSTATE/SQLERRM/DETAIL/HINT` добавлен в EXCEPTION блок перед
+   RETURN. Семантика RETURN не меняется (тот же
+   `{success:false, error:SQLERRM}`), но pg-логи получают полные детали.
+   **Apply**:
+   `bash scripts/db/psql.sh -f database/2026-05-26_debug_fns_raise_notice.sql`
+   (auto-mode заблокировал автоприменение — prod DB write вне scope «доделай»).
 
 **Чекин-фикс 4aa1ead7 не связан**: `window.dispatchEvent('heys:day-updated')` из
 нового immediate-write в WeightStepComponent — это DOM event, не запись в
 event_log. `HEYS.eventLog.write(...)` это отдельный API, в whitelist
 `SAFE_PAYLOAD_KEYS` нет полей моего диспатча.
+
+### Cloud Functions auto-deploy GHA broken (2026-05-26)
+
+**Симптом**: `.github/workflows/cloud-functions-deploy.yml` падает на step
+`Deploy functions` с
+`ERROR: rpc error: code = InvalidArgument desc = Service account aje85rjgpj4nk9m384ek is not available`.
+Это значит **последние ≥3 commits с изменениями в
+`yandex-cloud-functions/heys-api-\*/**` НЕ задеплоены\*\* — auto-deploy
+зафейлился, manual deploy не делали.
+
+Подтверждено: `gh run list --workflow=cloud-functions-deploy.yml --limit=3`
+показывает 3 последних run'а все `failure`, начиная с 2026-05-23. То есть
+**проблема существует ~3 дня минимум**, не свежий regression.
+
+**Что нужно**: или вернуть доступ к service account `aje85rjgpj4nk9m384ek`
+(восстановить delete'нутый аккаунт; rotate keys; проверить IAM роли), или
+завести новый service account и обновить `YC_SERVICE_ACCOUNT_KEY` secret в GHA →
+`Settings → Secrets and variables → Actions`.
+
+**Срочность**: backend changes (например, расширение needsDetailedLog whitelist
+из 924da9ae) висят в коде но не активны в проде. Любой hot-fix на backend
+требует ручного `./deploy-all.sh` с правильными credentials до починки workflow.
 
 ### Wave 5 event_log — sample rate calibration через 24-48h
 
