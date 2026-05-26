@@ -236,28 +236,94 @@
       }
     };
 
+    // PERF (2026-05-27): O(N×M) → O(1) lookup через Map index.
+    // Chrome Perf trace показал resolveProductByItem self time 603ms (3.5%) — главный
+    // оставшийся JS hot path после normalizeProductName cache. Старый код делал
+    // list.find() по 300-500 products на КАЖДЫЙ meal item × множество render passes.
+    // Новый код: один раз строит Map indexes per productsList reference (~5ms build),
+    // потом O(1) lookup по id / fingerprint / lower name / normalized name.
+    // Cache invalidation: identity check productsList ref + length (covers in-place mutations).
+    let _productsIndexCache = null;
+    let _productsIndexCacheList = null;
+    let _productsIndexCacheLength = -1;
+    function _getProductsIndex(productsList) {
+      if (_productsIndexCacheList === productsList
+        && _productsIndexCache
+        && _productsIndexCacheLength === productsList.length) {
+        return _productsIndexCache;
+      }
+      const byId = new Map();
+      const byFingerprint = new Map();
+      const byNormName = new Map();
+      const byLowerName = new Map();
+      for (let i = 0; i < productsList.length; i++) {
+        const p = productsList[i];
+        if (!p || typeof p !== 'object') continue;
+        const id = p.id ?? p.product_id;
+        if (id != null) byId.set(String(id), p);
+        if (p.fingerprint) byFingerprint.set(p.fingerprint, p);
+        const name = String(p.name || '').trim();
+        if (name) {
+          const lower = name.toLowerCase();
+          if (!byLowerName.has(lower)) byLowerName.set(lower, p); // first wins при дубликатах
+          const norm = normalizeProductName(name);
+          if (!byNormName.has(norm)) byNormName.set(norm, p);
+        }
+      }
+      _productsIndexCache = { byId, byFingerprint, byNormName, byLowerName, builtAt: Date.now() };
+      _productsIndexCacheList = productsList;
+      _productsIndexCacheLength = productsList.length;
+      return _productsIndexCache;
+    }
+
     function resolveProductByItem(item, productsList) {
       if (!item) return null;
       const list = Array.isArray(productsList) ? productsList : [];
       if (!list.length) return null;
 
-      const productId = item.product_id ?? item.productId;
-      const itemFingerprint = item.fingerprint || null;
-      const itemName = String(item.name || '').trim();
-      const itemNameNorm = normalizeProductName(itemName);
-      const itemNameLower = itemName.toLowerCase();
+      const idx = _getProductsIndex(list);
 
-      return list.find((product) => {
-        if (!product || typeof product !== 'object') return false;
-        const productIdMatch = productId != null
-          && String(product.id ?? product.product_id ?? '') === String(productId);
-        if (productIdMatch) return true;
-        if (itemFingerprint && product.fingerprint && product.fingerprint === itemFingerprint) return true;
-        const productName = String(product.name || '').trim();
-        if (!productName) return false;
-        const productNameLower = productName.toLowerCase();
-        return productNameLower === itemNameLower || normalizeProductName(productName) === itemNameNorm;
-      }) || null;
+      // Priority order совпадает с оригинальной функцией: id → fingerprint → name (lower → norm)
+      const productId = item.product_id ?? item.productId;
+      if (productId != null) {
+        const p = idx.byId.get(String(productId));
+        if (p) return p;
+      }
+
+      const itemFingerprint = item.fingerprint || null;
+      if (itemFingerprint) {
+        const p = idx.byFingerprint.get(itemFingerprint);
+        if (p) return p;
+      }
+
+      const itemName = String(item.name || '').trim();
+      if (itemName) {
+        const lower = itemName.toLowerCase();
+        let p = idx.byLowerName.get(lower);
+        if (p) return p;
+        const norm = normalizeProductName(itemName);
+        p = idx.byNormName.get(norm);
+        if (p) return p;
+      }
+
+      return null;
+    }
+
+    // Diagnostics для проверки эффекта в HEYS.perf.productsIndexStats()
+    if (typeof window !== 'undefined') {
+      window.HEYS = window.HEYS || {};
+      window.HEYS.perf = window.HEYS.perf || {};
+      window.HEYS.perf.productsIndexStats = function () {
+        const stats = {
+          built: !!_productsIndexCache,
+          listLength: _productsIndexCacheLength,
+          byIdSize: _productsIndexCache ? _productsIndexCache.byId.size : 0,
+          byNormNameSize: _productsIndexCache ? _productsIndexCache.byNormName.size : 0,
+          builtAt: _productsIndexCache ? new Date(_productsIndexCache.builtAt).toISOString() : null
+        };
+        console.info('[HEYS.perf] productsIndex', stats);
+        return stats;
+      };
     }
 
     function isSyntheticEstimatedItem(item) {

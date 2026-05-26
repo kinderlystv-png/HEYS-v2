@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Производительность: O(N×M) → O(1) lookup продуктов в day-core (perf v2)",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Map index для resolveProductByItem (~600ms → ~10ms на сессию)",
+          "description": "После предыдущего fix (мемоизация normalizeProductName) Chrome Performance trace показал resolveProductByItem как новый главный JS hot path: 603ms self time (3.5%). Старая реализация делала list.find() через 300-500 products НА КАЖДЫЙ meal item × множество render passes — O(N×M) проблема. Новая: один раз при изменении productsList строятся Map indexes по id / fingerprint / lowerName / normalizedName (~5ms build), потом O(1) lookup. Cache invalidation: identity check ref + length (покрывает in-place mutations). Применено в heys_day_core_bundle_v1.js. Второй parallel impl в heys_day_utils.js (best-match с tiebreaker по created_at) НЕ изменён — refactor с preservation tiebreaker — separate task. Diagnostics: HEYS.perf.productsIndexStats()."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.42d19dc0",
       "buildHash": "42d19dc0",
       "date": "2026-05-27",
