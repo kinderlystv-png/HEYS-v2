@@ -1071,10 +1071,26 @@ Console → Managed PostgreSQL → Logs. Семантика RETURN не изме
 эффект на RPC 500**: при следующем падении pg server log получит
 SQLSTATE/SQLERRM/DETAIL/HINT, root cause локализуется мгновенно.
 
+3c. ✅ **Hotfix applied** (2026-05-26): smoke test после 3b показал что RAISE
+WARNING сам падал runtime с `column "pg_exception_detail" does not exist`.
+Причина — в plpgsql `PG_EXCEPTION_DETAIL` / `PG_EXCEPTION_HINT` доступны ТОЛЬКО
+через `GET STACKED DIAGNOSTICS`, не как идентификаторы в RAISE. Применённая
+миграция 3b сломала error-path 3 функций (happy path работал). Hotfix
+`database/2026-05-26_debug_fns_get_stacked_diagnostics_fix.sql` применён,
+переписал EXCEPTION handler через
+`GET STACKED DIAGNOSTICS v_detail = PG_EXCEPTION_DETAIL, v_hint = PG_EXCEPTION_HINT`.
+Smoke test
+(`SELECT log_gamification_event_by_session('invalid-token', 'test');`) → WARNING
+строка появилась в client output + клиент получил graceful
+`{success: false, error: 'invalid_or_expired_session'}`. End-to-end proof
+диагностики ✅.
+
 **Метаурок**: предыдущий план не учёл `log_min_messages` config Yandex Postgres
-— классический «частичное чтение → каскадная ошибка» (см.
-`feedback_partial_reads_cascade.md`). Должен был сначала
-`SHOW log_min_messages;` потом писать миграцию.
+(3b). А внутри 3b — не учёл что `PG_EXCEPTION_DETAIL` нельзя использовать
+напрямую (3c). Третий и четвёртый случай каскадной ошибки в одной сессии.
+Расширил `feedback_partial_reads_cascade.md` подкатегорией «config-dependent
+assumptions». Главный урок: **smoke test обязателен после каждого SQL migration
+apply**, не verify через SELECT prosrc (static check не ловит runtime errors).
 
 **Чекин-фикс 4aa1ead7 не связан**: `window.dispatchEvent('heys:day-updated')` из
 нового immediate-write в WeightStepComponent — это DOM event, не запись в
