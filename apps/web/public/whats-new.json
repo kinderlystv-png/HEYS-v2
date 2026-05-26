@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.26.20000a69",
+      "buildHash": "20000a69",
+      "date": "2026-05-26",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "RPC log_client_event_by_session: восстановлена запись event_log в prod",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Добавлен ::jsonb TYPE_HINTS для p_events",
+          "description": "С момента деплоя миграции client_event_log (2026-05-25) ни одно событие не записывалось через RPC: pg-driver сериализовал JS-массив объектов как Postgres array literal вместо jsonb, client.query падал JS-уровня без SQLSTATE → клиент получал generic 500 Database error. Тип-хинт ::jsonb триггерит JSON.stringify в cloud function (yandex-cloud-functions/heys-api-rpc/index.js TYPE_HINTS таблица) и pg принимает payload как jsonb. Подтверждено: после deploy первое же событие (sync-products) записалось с id=2."
+        },
+        {
+          "type": "improvement",
+          "title": "Event log снова активен — диагностика багов восстановлена",
+          "description": "Wave 5 client_event_log за сутки не получил ни одной записи. Теперь снова можно расследовать поведенческие баги через trace 'кто/когда/что/откуда'. Связано с инцидентом 2026-05-26 (потеря 91.3 Poplanton-а) — теперь подобные случаи будут видны в client_event_log."
+        }
+      ]
+    },
+    {
       "version": "2026.05.26.924da9ae",
       "buildHash": "924da9ae",
       "date": "2026-05-26",
