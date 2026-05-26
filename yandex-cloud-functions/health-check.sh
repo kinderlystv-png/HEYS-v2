@@ -74,7 +74,11 @@ run_checks() {
     # Auth endpoints (expected to reject invalid creds, but should NOT return 502/503)
     echo -e "${BLUE}── Auth endpoints ──${NC}"
     check_endpoint "Auth Login" "POST" "$API_URL/auth/login" '{"email":"test@test.com","password":"test"}' "400,401,403" || FAILED=$((FAILED+1))
-    check_endpoint "SMS" "POST" "$API_URL/sms" '{"phone":"79999999999","action":"send_pin"}' "200,400,429" || FAILED=$((FAILED+1))
+    # SMS check disabled: heys-api-sms функция отключена/удалена с прода (Yandex
+    # возвращает 404). В клиенте SMS_VERIFICATION_ENABLED=false
+    # (heys_consents_v1.js:57), вызовов в live-flow нет. Инфраструктура deploy
+    # остаётся в deploy-all.sh — если SMS вернётся, раскомментируй строку ниже.
+    # check_endpoint "SMS" "POST" "$API_URL/sms" '{"phone":"79999999999","action":"send_pin"}' "200,400,429" || FAILED=$((FAILED+1))
     check_endpoint "Leads" "POST" "$API_URL/leads" '{"name":"Test","phone":"79999999999","source":"health_check"}' "200,400,409" || FAILED=$((FAILED+1))
     
     # DB-dependent check: RPC that requires a live DB connection (catches wrong PG_PASSWORD)
