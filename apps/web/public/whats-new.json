@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.05.26.PENDING",
-      "buildHash": "PENDING",
+      "version": "2026.05.26.924da9ae",
+      "buildHash": "924da9ae",
       "date": "2026-05-26",
       "kind": "technical",
       "profile": "technical-infra",
