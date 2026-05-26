@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Производительность: ускорение product lookup (LRU cache normalizeProductName)",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Мемоизация normalizeProductName (905ms → ~5ms)",
+          "description": "Chrome Performance trace (52-сек cold-start session) показал что normalizeProductName — single biggest self-time consumer: 905ms (5.3% от total). Вызывается из resolveProductByItem на каждый meal item × каждый product в каталоге (~300-500 products × ~5-50 items в день) → миллионы вызовов с повторяющимися строками. Pure function (lowercase + trim + ё→е) — идеальный memoize candidate. Реализован LRU cache (~2000 entries, ~100KB memory, FIFO eviction). Ожидаемый hit rate ~99% после первой сотни вызовов (catalog stable, мало unique имён). Downstream бонус: resolveProductByItem (total 1,481ms / 8.7%) тоже ускорится так как вся его heavy работа — это normalize calls. Kill switch: localStorage.setItem('heys_disable_normalize_cache', '1') + reload. Диагностика: HEYS.perf.normalizeNameCacheStats()."
+        }
+      ]
+    },
+    {
       "version": "2026.05.26.99897e90",
       "buildHash": "99897e90",
       "date": "2026-05-26",
