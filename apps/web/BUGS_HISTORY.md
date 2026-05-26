@@ -7,6 +7,116 @@ broken, what was fixed, and the pattern to watch for.
 
 ---
 
+## Morning checkin: потерянный weight + cascade diagnosis (2026-05-26)
+
+Клиент Poplanton (`ccfe6ea3…`), gap 2 дня (24-25 мая). Ввёл вес 91.3 на первом
+шаге, подтвердил пресеты yesterdayVerify для 24/25, потом закрыл модалку
+крестиком (skipReasonId="no_time" — явный выбор).
+
+**Результат в БД:**
+
+- `dayv2_2026-05-26.weightMorning=""` ❌ (введённое значение потеряно)
+- `profile.weight=90.3` ❌ (старое значение, не 91.3)
+- `dayv2_2026-05-25.weightMorning=90.4` ✅ (автосреднее lifestyleAvg)
+- `morningActivation.status="missed"` — UI снова просит чекин
+
+### Первоначальный (неверный) диагноз
+
+«StepModal swipe пропускает save, потому что save живёт в handleNext, а swipe
+зовёт goToStep напрямую» (`heys_step_modal_v1.js:734-739`). Формально верно —
+save действительно в handleNext. Но не дочитали до конца: save фаерится
+**только** в else-ветке handleNext (на финале flow,
+`heys_step_modal_v1.js:628-637`). Для non-final шагов handleNext и swipe
+одинаково идут через goToStep без save. Fix «swipe → handleNext» был бесполезен
+— никакого save bypass'а через swipe нет, save просто deferred до конца для
+**всех** путей.
+
+### Реальный root cause
+
+config.save deferred to flow completion — сознательный архитектурный контракт.
+Крестик/onClose **по дизайну** не зовёт save (`heys_morning_checkin_v1.js:816` —
+явный комментарий «закрытие без сохранения»). Поэтому когда пользователь дошёл
+до weight, ввёл 91.3, и закрыл крестиком — save для weight-шага никогда не
+вызывался.
+
+yesterdayVerify устоял потому что он immediate-пишет через lsSet в
+`saveYesterdayVerify` (`heys_yesterday_verify_v1.js:1419, 1444, 1470, 1493`), не
+через deferred config.save. То есть pending дни записываются сразу при
+подтверждении пресета, независимо от завершения flow.
+
+### Fix (4aa1ead7)
+
+1. **Порядок шагов**: pending дни ПЕРВЫМИ (conditional push через
+   `HEYS.YesterdayVerify.shouldShow()`), потом weight. Прогресс-бар StepModal
+   больше не показывает пустой слот yesterdayVerify когда нет pending. См.
+   `heys_morning_checkin_v1.js:672-731`.
+2. **Weight immediate-write**: `WeightStepComponent` пишет `day.weightMorning`
+   через useEffect+debounce 500ms при изменении слайдера, с `initialRef` guard
+   против автозаписи seed-значения из `getInitialData` (иначе при открытии шага
+   без касания слайдера в day-snapshot записался бы прошлый вес из
+   `getLastKnownWeight()`). `profile.weight` остаётся за финальным config.save —
+   инвариант «профильный вес = подтверждённое взвешивание» сохранён. См.
+   `heys_steps_v1.js:917-975`.
+
+**НЕ делали:** swipe → handleNext (без эффекта, см. выше); правка onClose
+контракта (сознательный архитектурный выбор, ломать точечно только для
+критичного weight); фикс `morningActivation.status="missed"` — это по дизайну,
+отдельная задача.
+
+### Сопутствующее: RPC 500 log_client_event_by_session
+
+Параллельно расследовали 500 на boot'е (POST /rpc?fn=log*client_event*
+by_session). Гипотезы про SQL constraint / pgcrypto / jsonb size / ts cast —
+**все основаны на «SQL exception доходит до Yandex catch»**. Не дочитали
+`EXCEPTION WHEN OTHERS THEN RETURN jsonb_build_object('success', false, 'error', SQLERRM)`
+в SQL функции (`database/2026-05-25_client_event_log.sql:110-113`). Этот
+catch-all **физически блокирует** все exception'ы → клиент получил бы 200 OK с
+`{error: SQLERRM}`, не 500. Реально 500 = JS-уровень exception в Yandex функции
+(вероятно poison-pill в payload pending events). Defer'нуто, см. todo.md, commit
+48244ecf.
+
+### Урок 1: catch-all инвертирует exception-hypotheses
+
+Для утверждений «X вызывает Y» — читать тело функции X **до конца** ДО
+формулировки гипотезы. Если у X есть catch-all (`try/catch`,
+`EXCEPTION WHEN OTHERS`, fallback chain, generic error handler) — он **физически
+блокирует** все exception-based выводы «снизу-вверх». Помечать такие гипотезы
+«невозможно по конструкции» прежде чем перебирать root causes.
+
+Паттерн повторился дважды в одной сессии (swipe save + RPC 500). См. user-memory
+`feedback_partial_reads_cascade.md`.
+
+### Урок 2: `EXCEPTION WHEN OTHERS THEN RETURN` — системный паттерн
+
+Grep по `database/*.sql` нашёл **~45 occurrences в 26 файлах**. Не каждое
+использование — антипаттерн: для business RPC возврат `{success: false}` —
+правильное поведение. Но для **debug/logging/audit** функций глушение SQLSTATE /
+detail / hint / where делает диагностику из prod-логов Yandex невозможной (catch
+на index.js:2760 видит только generic `error.message`).
+
+Action items (записано в todo.md, 48244ecf):
+
+- Расширить `needsDetailedLog` whitelist в
+  `yandex-cloud-functions/heys- api-rpc/index.js:2745` на
+  `log_client_event_by_session` (иронично — log-функция без полного prod-лога).
+- Для debug-RPC (`log_client_event_by_session`, `*_audit_*`, `track_*`) —
+  добавить `RAISE NOTICE` стек-trace перед `WHEN OTHERS THEN RETURN`. Логически
+  эквивалентно, но pg-логи получат detail.
+- Poison-pill detection в client-side `_flush` (`heys_event_log_v1.js`): если
+  batch упал N раз подряд — drop'нуть head event и попробовать остаток. Иначе
+  один битый event навсегда блокирует всю очередь.
+
+### Урок 3: deferred config.save vs immediate writes — design tension
+
+StepModal config.save фаерится только на финале — сознательный контракт
+(«крестик = не сохранять»). Но для **критичных полей** (вес, замеры)
+пользователь интуитивно ожидает «ввёл — сохранилось». Решение: immediate write в
+day-snapshot (черновик), profile-level state (TDEE/BMR база) — только финалом.
+Для других полей (sleep, mood, supplements) — оставлено deferred; если
+аналогичные жалобы — применить точечно, не менять контракт глобально.
+
+---
+
 ## Parallel worktree merge: bundle/allowlist drift (2026-05-24)
 
 Не баг продакшена — урок разработки. Запустили **два параллельных subagent'a в
