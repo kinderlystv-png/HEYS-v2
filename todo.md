@@ -994,6 +994,67 @@ _Архив выполненного — в `done.md`._
 - [ ] **Риск низкий**: клиентов с 5000+ удалениями пока нет. Можно отложить на
       6-12 месяцев или до первой жалобы на QuotaExceededError.
 
+### RPC `log_client_event_by_session` падает с 500 в prod (2026-05-26)
+
+**Симптом**: клиент при boot регулярно получает
+`POST /rpc?fn=log_client_event_by_session → 500 Internal Server Error` с body
+`{error: 'Database error', message: 'Internal server error', code: 'INTERNAL_ERROR'}`.
+В dev:local proxy вторичный шум `Cannot pipe to a closed or destroyed stream` —
+это уже следствие 500-ответа от prod, не сам баг.
+
+**Что подтверждено**:
+
+- SQL функция `log_client_event_by_session` в
+  [database/2026-05-25_client_event_log.sql:73-114](database/2026-05-25_client_event_log.sql#L73-L114)
+  имеет
+  `EXCEPTION WHEN OTHERS THEN RETURN jsonb_build_object('success', false, 'error', SQLERRM)`
+  — **любой SQL exception превращается в 200 OK с body**, не может дойти до
+  Yandex JS catch. Значит constraint/digest/jsonb/ts cast/schema drift — **все
+  не виноваты**.
+- `code: 'INTERNAL_ERROR'` это fallback в
+  [yandex-cloud-functions/heys-api-rpc/index.js:2791](yandex-cloud-functions/heys-api-rpc/index.js#L2791)
+  когда `error.code` пустой. Pg-error дал бы SQLSTATE, ECONNRESET/ETIMEDOUT дал
+  бы свой code → значит **JS-уровень exception** в Yandex функции ДО или ВОКРУГ
+  `client.query`.
+- Самая вероятная причина (#2 в шорт-листе): pg-driver throw при подготовке
+  параметров — BigInt/Symbol/` ` в payload не сериализуется. Pending queue
+  накапливает «отравленный» event и шлёт **тот же payload** в каждом retry →
+  deterministic 3-retry failure pattern в логах.
+
+**Next step без prod logs**: в DevTools incognito клиента залогиниться,
+посмотреть pending payload руками:
+
+```js
+JSON.parse(localStorage.getItem('heys_event_log_pending') || '[]');
+```
+
+Искать: BigInt, ` ` в строках, undefined `kind`, гигантский nested object,
+массив-в-массиве в `meta`. Smoking gun.
+
+**Альтернатива**: получить prod-логи Yandex Cloud Function
+(`yc serverless function logs <name>` или через консоль) — там полное
+`error.message` от generic catch на
+[index.js:2760](yandex-cloud-functions/heys-api-rpc/index.js#L2760).
+
+**Сопутствующие fix'ы (без расследования root cause):**
+
+1. **needsDetailedLog whitelist расширить** на debug-критичные RPC включая
+   `log_client_event_by_session` — иронично что log-функция в prod-логе видна
+   только как `error.message`, без code/detail/hint/where/query/params. Один
+   edit в [index.js:2748](yandex-cloud-functions/heys-api-rpc/index.js#L2748).
+2. **Poison-pill detection** в `_flush`
+   ([apps/web/heys_event_log_v1.js:181](apps/web/heys_event_log_v1.js#L181)):
+   если один и тот же batch упал ≥N раз подряд — drop'нуть head event и
+   попробовать остаток. Иначе один битый event навсегда блокирует все будущие.
+3. **Убрать `EXCEPTION WHEN OTHERS THEN RETURN`** в SQL функции (антипаттерн для
+   debug-RPC — глушит SQLSTATE/detail). Заменить на `RAISE NOTICE` + продолжить.
+   Тогда диагностика стала бы тривиальной.
+
+**Чекин-фикс 4aa1ead7 не связан**: `window.dispatchEvent('heys:day-updated')` из
+нового immediate-write в WeightStepComponent — это DOM event, не запись в
+event_log. `HEYS.eventLog.write(...)` это отдельный API, в whitelist
+`SAFE_PAYLOAD_KEYS` нет полей моего диспатча.
+
 ### Wave 5 event_log — sample rate calibration через 24-48h
 
 - [ ] **2026-05-26 / 2026-05-27 вечер**: запустить
