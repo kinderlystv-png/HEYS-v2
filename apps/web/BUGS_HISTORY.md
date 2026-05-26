@@ -72,9 +72,47 @@ catch»**. Не дочитали
 `EXCEPTION WHEN OTHERS THEN RETURN jsonb_build_object('success', false, 'error', SQLERRM)`
 в SQL функции (`database/2026-05-25_client_event_log.sql:110-113`). Этот
 catch-all **физически блокирует** все exception'ы → клиент получил бы 200 OK с
-`{error: SQLERRM}`, не 500. Реально 500 = JS-уровень exception в Yandex функции
-(вероятно poison-pill в payload pending events). Defer'нуто, см. todo.md, commit
-48244ecf.
+`{error: SQLERRM}`, не 500. Реально 500 = JS-уровень exception в Yandex функции.
+Defer'нуто, см. todo.md, commit 48244ecf.
+
+#### POSTSCRIPT (через несколько часов): root cause найден — TYPE_HINTS
+
+**Реальная причина** (нашёл пользователь, не я): в
+`yandex-cloud-functions/heys-api-rpc/index.js` есть таблица `TYPE_HINTS` со
+списком RPC функций, для которых JS-массивы сериализуются как `::jsonb` (через
+`JSON.stringify` перед `client.query`). `log_client_event_by_session`
+**отсутствовал** в этой таблице. Без hint pg-driver сериализовал JS-массив
+объектов как Postgres array literal (`{1,2,3}` text), не как jsonb → pg-driver
+throws JS-уровня **без SQLSTATE** → catch на index.js:2785 возвращает generic
+`INTERNAL_ERROR` без detail → клиент видел 500.
+
+За сутки с момента деплоя миграции (2026-05-25) **ни одно событие** не
+записалось в `client_event_log` через RPC. Каждый flush батча падал
+deterministic'ом. Подтверждено в БД: при первом запросе после deploy (commit
+20000a69 = `fix(api-rpc): add jsonb type hint`) первое же событие
+(sync-products) записалось с id=2.
+
+#### Урок (4-й случай каскадной ошибки в этой же сессии)
+
+Я после «catch-all глушит SQL → значит не SQL» пошёл **горизонтально** улучшать
+диагностику (3 миграции: RAISE NOTICE → WARNING → GET STACKED DIAGNOSTICS), а не
+**вверх** — в JS Yandex функции где формируются параметры запроса. Лечение
+симптома, не root cause.
+
+Правильный путь: **catch-all поймал → exception источник в одном слое ВЫШЕ,
+читай call site**. Для SQL функции это JS код где `client.query(sql, params)`
+вызывает её — там TYPE_HINTS, prepared statement build, connection pool.
+**Большинство 500 от RPC начинается именно тут**, не в SQL.
+
+См. `feedback_partial_reads_cascade.md` (user-memory) → раздел «Расширение
+правила: один слой выше когда catch-all поймал» для полного паттерна.
+
+**Бонус ценность диагностических миграций**: «горизонтальные» фиксы не пропали
+зря — после следующего 500 в любой `log_*` функции pg server log получит полный
+SQLSTATE/DETAIL/HINT (RAISE WARNING + GET STACKED DIAGNOSTICS) + Yandex CF log
+получит detailed error info (needsDetailedLog whitelist расширен на `log_*`).
+Root cause этого инцидента fixed, но улучшенная диагностика остаётся как safety
+net для будущих похожих случаев.
 
 ### Урок 1: catch-all инвертирует exception-hypotheses
 
