@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.26.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-26",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "День: убраны лишние ререндеры при cloud sync echo (perf)",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Skip no-op apply для day-updated events",
+          "description": "Замер через ?reactProfiler=1 показал что обработчик heys:day-updated триггерил heavy work (normalizeTrainings + 2× JSON.stringify + ensureDay) avg 106ms / max 171ms даже когда данные не менялись (cloud sync echo, hot-sync re-emits). Existing fast-path внутри setDay (prev.updatedAt === new.updatedAt) уже был, но СРАБАТЫВАЛ ПОСЛЕ heavy work. Добавлен early-exit ДО normalize/stringify когда storageUpdatedAt === currentUpdatedAt. Эффект: исчезает 6 slow commits подряд при login flow (cumulative ~640ms jank в первые секунды). Применено в heys_day_effects.js и heys_day_core_bundle_v1.js (два идентичных handler'а). Kill switch: localStorage.setItem('heys_skip_noop_apply', '0') отключит fix без deploy."
+        }
+      ]
+    },
+    {
       "version": "2026.05.26.20000a69",
       "buildHash": "20000a69",
       "date": "2026-05-26",

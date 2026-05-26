@@ -467,6 +467,24 @@
                             });
                             return; // Не перезаписываем более новые данные старыми
                         }
+                        // PERF (2026-05-26): skip heavy normalize/JSON work for no-op apply.
+                        // Existing fast-path в setDay (prev.updatedAt === new.updatedAt) уже есть, но он
+                        // ПОСЛЕ normalizeTrainings + cleanEmptyTrainings + ensureDay + 2× JSON.stringify.
+                        // Эти 100ms+ выполняются даже если данные не менялись — частый случай при
+                        // cloud sync echo events, hot-sync re-emits, multiple раз RAF batch.
+                        // Замер ?reactProfiler=1 показал: 6 hits avg 106ms / max 171ms за тестовую сессию.
+                        // Kill switch: localStorage.setItem('heys_skip_noop_apply', '0') для emergency revert.
+                        try {
+                            if (!forceReload && storageUpdatedAt > 0 && storageUpdatedAt === currentUpdatedAt
+                                && window.localStorage.getItem('heys_skip_noop_apply') !== '0') {
+                                console.info('[HEYS.day] ⚡ Skip apply (no-op, identical updatedAt)', {
+                                    source,
+                                    storageUpdatedAt,
+                                    mealsCount: storageMealsCount
+                                });
+                                return;
+                            }
+                        } catch (_) { /* localStorage недоступен — продолжаем без skip */ }
                         const migratedTrainings = normalizeTrainings(v.trainings);
                         const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
                         const migratedDay = { ...v, trainings: cleanedTrainings };

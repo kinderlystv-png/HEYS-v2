@@ -3541,6 +3541,21 @@
                             });
                             return; // Не перезаписываем более новые данные старыми
                         }
+                        // PERF (2026-05-26): skip heavy normalize/JSON work for no-op apply.
+                        // См. парный fix в heys_day_effects.js (same line area).
+                        // Замер ?reactProfiler=1 показал day-updated:raf-apply: 6 hits / avg 106ms / max 171ms.
+                        // Kill switch: localStorage.setItem('heys_skip_noop_apply', '0').
+                        try {
+                            if (!forceReload && storageUpdatedAt > 0 && storageUpdatedAt === currentUpdatedAt
+                                && window.localStorage.getItem('heys_skip_noop_apply') !== '0') {
+                                console.info('[HEYS.day] ⚡ Skip apply (no-op, identical updatedAt)', {
+                                    source,
+                                    storageUpdatedAt,
+                                    mealsCount: storageMealsCount
+                                });
+                                return;
+                            }
+                        } catch (_) { /* localStorage недоступен — продолжаем без skip */ }
                         const migratedTrainings = normalizeTrainings(normalizedDay.trainings);
                         const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
                         const migratedDay = { ...normalizedDay, trainings: cleanedTrainings };
