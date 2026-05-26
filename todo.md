@@ -1063,11 +1063,13 @@ JSON.parse(localStorage.getItem('heys_event_log_pending') || '[]');
 
 3b. ⚠ **Follow-up migration prepared, НЕ applied**:
 `database/2026-05-26_debug_fns_raise_warning_fix.sql` заменяет `RAISE NOTICE` →
-`RAISE WARNING` в тех же 3 функциях. WARNING проходит `log_min_messages=warning`
-→ попадает в pg server log → доступен через Yandex Console → Managed PostgreSQL
-→ Logs. Семантика RETURN не изменилась. Auto-mode classifier заблокировал
-автоприменение (новая миграция, прошлый go был на raise_notice file). **Apply**:
-`bash scripts/db/psql.sh -f database/2026-05-26_debug_fns_raise_warning_fix.sql`
+`RAISE WARNING` в тех же 3 функциях (2026-05-26 applied ✅). WARNING проходит
+`log_min_messages=warning` → попадает в pg server log → доступен через Yandex
+Console → Managed PostgreSQL → Logs. Семантика RETURN не изменилась. Verified
+через `SELECT prosrc FROM pg_proc` — RAISE WARNING присутствует в каждой
+(positions 1216 / 844 / 864), RAISE NOTICE отсутствует (replaced). **Финальный
+эффект на RPC 500**: при следующем падении pg server log получит
+SQLSTATE/SQLERRM/DETAIL/HINT, root cause локализуется мгновенно.
 
 **Метаурок**: предыдущий план не учёл `log_min_messages` config Yandex Postgres
 — классический «частичное чтение → каскадная ошибка» (см.
