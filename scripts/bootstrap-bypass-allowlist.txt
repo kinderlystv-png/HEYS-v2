@@ -39,7 +39,7 @@ apps/web/heys_add_product_step_v1.js:71
 apps/web/heys_app_auth_init_v1.js:147
 apps/web/heys_app_auth_init_v1.js:160
 apps/web/heys_app_auth_init_v1.js:310
-apps/web/heys_app_auth_init_v1.js:462
+apps/web/heys_app_auth_init_v1.js:497
 apps/web/heys_app_gate_flow_v1.js:47
 apps/web/heys_app_hooks_v1.js:202
 apps/web/heys_app_hooks_v1.js:203
@@ -133,8 +133,7 @@ apps/web/heys_gamification_bar_v1.js:1429
 apps/web/heys_gamification_v1.js:1535
 apps/web/heys_gamification_v1.js:39
 apps/web/heys_gamification_v1.js:41
-apps/web/heys_gamification_v1.js:5954
-apps/web/heys_gamification_v1.js:5957
+apps/web/heys_gamification_v1.js:5960
 apps/web/heys_insulin_wave_v1.js:901
 apps/web/heys_iw_config_loader.js:149
 apps/web/heys_iw_config_loader.js:151
