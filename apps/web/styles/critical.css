@@ -151,7 +151,11 @@ body {
   width: 100%;
 }
 
-/* Fixed header */
+/* Fixed header
+ * PERF (2026-05-27): `contain: paint` добавлен для изоляции repaints внутри header
+ * от остального layout (раньше layout+style только). `will-change: transform` промоут
+ * на отдельный GPU layer — scroll плавнее на Android.
+ */
 .hdr {
   display: flex;
   flex-direction: column;
@@ -165,7 +169,8 @@ body {
   background: #f8f9fa;
   padding: 12px 18px 0;
   max-width: 100%;
-  contain: layout style;
+  contain: layout style paint;
+  will-change: transform;
 }
 
 /* Header top: blue gradient bar */
@@ -255,7 +260,12 @@ body {
   margin-left: auto;
 }
 
-/* Fixed bottom tabs */
+/* Fixed bottom tabs
+ * PERF (2026-05-27): backdrop-filter удалён для Android scroll smoothness.
+ * Background был rgba(255,255,255,0.97) + blur(6px) — почти solid с едва заметным blur.
+ * Замена на solid #fcfcfc (~equivalent), убирает per-frame blur recalc на каждом scroll.
+ * `contain: paint` + `will-change: transform` промоут на GPU layer = scroll не дёргается.
+ */
 .tabs {
   display: flex;
   justify-content: space-around;
@@ -263,9 +273,7 @@ body {
   gap: 0;
   padding: 8px 12px;
   margin: 0;
-  background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: #fcfcfc;
   border-top: 0.5px solid rgba(0, 0, 0, 0.1);
   position: fixed;
   bottom: 0;
@@ -275,7 +283,8 @@ body {
   box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   min-height: 58px;
-  contain: layout style;
+  contain: layout style paint;
+  will-change: transform;
 }
 
 /* Tab item */

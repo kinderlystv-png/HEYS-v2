@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Плавность скролла + меньше лишних ререндеров шапки (UX/perf)",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Tab-bar без backdrop-filter — плавный scroll на Android",
+          "description": "Нижняя навигационная панель (.tabs) использовала backdrop-filter:blur(6px) поверх background:rgba(255,255,255,0.97). На Android Chrome blur пересчитывался на каждом scroll-frame (иногда через software fallback) → видимые микро-фризы при scroll. Background был почти полностью solid (97% opacity), blur был едва заметен. Замена на solid #fcfcfc + GPU promotion через contain:layout style paint + will-change:transform. Результат: scroll плавнее, особенно на средних Android-устройствах."
+        },
+        {
+          "type": "improvement",
+          "title": "Header (.hdr) contain:paint + GPU layer",
+          "description": "Фиксированная шапка теперь изолирована для repaint (contain:paint вместо layout+style) + will-change:transform промоутит в GPU layer. Repaints внутри header не триггерят repaint остального layout = меньше work на каждый scroll."
+        },
+        {
+          "type": "fix",
+          "title": "GamificationBar не ререндерится на смене таб",
+          "description": "Компонент GamificationBar использовался через React.createElement(GamificationBar) БЕЗ props и БЕЗ React.memo. Любой rerender AppShell (например при tab switch) триггерил рендер строки геймификации заново — заметный визуальный 'мигрант' в шапке. Wrap в React.memo: shallow compare пустых props = always equal → skip render. Internal state (useState/useEffect, событийная связь с HEYS.gamification) сохраняются."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.39b91793",
       "buildHash": "39b91793",
       "date": "2026-05-27",

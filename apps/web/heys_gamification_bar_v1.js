@@ -2059,5 +2059,11 @@
         );
     }
 
-    HEYS.GamificationBar = GamificationBar;
+    // PERF (2026-05-27): React.memo wrap. Component вызывается через
+    // React.createElement(GamificationBar) БЕЗ props (heys_app_shell_v1.js:1328).
+    // Без memo каждый rerender AppShell (tab switch, любое state change в shell)
+    // триггерил перерендер GamificationBar тоже. С memo + пустыми props — React
+    // shallow compare всегда equal → skip render. Internal state (useState/useEffect)
+    // сохраняется, реактивность через global HEYS.gamification events работает как было.
+    HEYS.GamificationBar = React.memo(GamificationBar);
 })();
