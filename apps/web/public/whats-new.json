@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.76704112",
+      "buildHash": "76704112",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Мгновенное открытие приложения под VPN (stale-while-revalidate Phase A)",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Phase A bootstrap отдаётся из кэша мгновенно, свежие данные подъезжают в фоне",
+          "description": "Пользователь сообщил: HEYS PWA открывается заметно медленнее с включенным VPN. Это критично — часть пользователей в РФ работает через VPN постоянно. Причина: TLS handshake + REST roundtrip через далёкий VPN endpoint = +2-5 сек блокировки UI на каждом re-visit для Phase A bootstrap (12+12 KV-ключей с конфигом приложения). Решение: stale-while-revalidate для GET /rest/client_kv_store — на re-visit Service Worker возвращает закэшированный snapshot мгновенно (~50ms), параллельно fetch'ит свежие данные и обновляет кэш для следующего открытия. Pattern Telegram/WhatsApp: 'увидел старое сразу, новое подъехало за секунды'. Auth-paths (/auth/, /payments/, /sms, /leads) и POST /rpc остаются БЕЗ кеша — никаких breaking changes для login/save/curator-операций. После любого write (saveKV/batchSaveKV/mergeSaveKV/deleteKV) клиент шлёт INVALIDATE_KV → SW чистит API_KV_CACHE → cross-tab consistency через postMessage. Killswitch: visit ?nosw=1 + reload — кэш отключается per-device без redeploy."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.7a772c02",
       "buildHash": "7a772c02",
       "date": "2026-05-27",
