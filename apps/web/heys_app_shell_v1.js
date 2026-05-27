@@ -2605,7 +2605,16 @@
                 className: 'wrap' + (tab === 'tasks' ? ' wrap--no-header' : ''),
                 style: hideContent ? { display: 'none' } : undefined
             },
-            shouldRenderContent && tab !== 'tasks' && React.createElement(MemoAppHeader, props),
+            shouldRenderContent && React.createElement(
+                'div',
+                {
+                    className: 'app-header-wrapper',
+                    style: tab === 'tasks' ? { display: 'none' } : null,
+                    'aria-hidden': tab === 'tasks' ? 'true' : undefined,
+                    inert: tab === 'tasks' ? '' : undefined
+                },
+                React.createElement(MemoAppHeader, props)
+            ),
             shouldRenderContent && React.createElement(MemoAppTabsNav, props),
             shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
                 key: 'appTabContent_' + String(clientId || '') + '_' + profilerMountKey
