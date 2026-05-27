@@ -490,6 +490,7 @@
       waterMl: +d.waterMl || 0,
       lastWaterTime: d.lastWaterTime || undefined,
       meals: Array.isArray(d.meals) ? d.meals : [],
+      deletedMealIds: (d.deletedMealIds && typeof d.deletedMealIds === 'object' && !Array.isArray(d.deletedMealIds)) ? d.deletedMealIds : {},
       // Замеры тела (сохраняем как есть если есть)
       measurements: d.measurements || undefined,
       // Холодовое воздействие (cold_exposure шаг)

@@ -21,7 +21,7 @@ function mergeItemsById(remoteItems = [], localItems = [], preferLocal = true) {
   if (!preferLocal) {
     return remoteItems.filter(item => item && item.id);
   }
-  
+
   const itemsMap = new Map();
   remoteItems.forEach(item => {
     if (item && item.id) {
@@ -33,68 +33,97 @@ function mergeItemsById(remoteItems = [], localItems = [], preferLocal = true) {
       itemsMap.set(item.id, item);
     }
   });
-  
+
   return Array.from(itemsMap.values());
+}
+
+function unionMaxTimestamp(localMap, remoteMap) {
+  const out = { ...(remoteMap || {}) };
+  if (localMap) {
+    for (const id of Object.keys(localMap)) {
+      out[id] = Math.max(out[id] || 0, localMap[id] || 0);
+    }
+  }
+  return out;
 }
 
 function mergeDayData(local, remote, options = {}) {
   const forceKeepAll = options.forceKeepAll || false;
   const preferRemote = options.preferRemote || false;
-  
+
   if (!local || !remote) return null;
-  
+
   // Если данные идентичны — merge не нужен
   const localJson = JSON.stringify({ ...local, updatedAt: 0, _sourceId: '' });
   const remoteJson = JSON.stringify({ ...remote, updatedAt: 0, _sourceId: '' });
   if (localJson === remoteJson) return null;
-  
+
   const merged = {
     ...remote,
     date: local.date || remote.date,
     updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0, Date.now()),
     _mergedAt: Date.now(),
   };
-  
+
   // Числовые поля: берём максимум
   merged.steps = Math.max(local.steps || 0, remote.steps || 0);
   merged.waterMl = Math.max(local.waterMl || 0, remote.waterMl || 0);
-  
+
   // householdMin — берём свежее
   if ((local.updatedAt || 0) >= (remote.updatedAt || 0)) {
     merged.householdMin = local.householdMin ?? remote.householdMin ?? 0;
   } else {
     merged.householdMin = remote.householdMin ?? local.householdMin ?? 0;
   }
-  
+
   // Вес: берём любое ненулевое
   if (local.weightMorning && remote.weightMorning) {
-    merged.weightMorning = (local.updatedAt || 0) >= (remote.updatedAt || 0) 
-      ? local.weightMorning 
+    merged.weightMorning = (local.updatedAt || 0) >= (remote.updatedAt || 0)
+      ? local.weightMorning
       : remote.weightMorning;
   } else {
     merged.weightMorning = local.weightMorning || remote.weightMorning || 0;
   }
-  
+
   // Meals: merge по ID
   const localMeals = local.meals || [];
   const remoteMeals = remote.meals || [];
   const mealsMap = new Map();
   const localMealIds = new Set(localMeals.filter(m => m?.id).map(m => m.id));
   const localIsNewer = (local.updatedAt || 0) >= (remote.updatedAt || 0);
-  
+
+  // Tombstone-aware deletion handling. Applied ALWAYS (even when forceKeepAll/preferRemote)
+  // because tombstones are explicit user actions — flags only control implicit deletion heuristic.
+  const localDeletedMealIds = (local.deletedMealIds && typeof local.deletedMealIds === 'object' && !Array.isArray(local.deletedMealIds)) ? local.deletedMealIds : {};
+  const remoteDeletedMealIds = (remote.deletedMealIds && typeof remote.deletedMealIds === 'object' && !Array.isArray(remote.deletedMealIds)) ? remote.deletedMealIds : {};
+  const mergedDeletedMealIds = unionMaxTimestamp(localDeletedMealIds, remoteDeletedMealIds);
+  const dayLocalTs = local.updatedAt || 0;
+  const dayRemoteTs = remote.updatedAt || 0;
+
   remoteMeals.forEach(meal => {
     if (!meal || !meal.id) return;
-    
+    // Tombstone check
+    const tombstoneTs = mergedDeletedMealIds[meal.id];
+    const mealTs = meal.updatedAt || dayRemoteTs;
+    if (tombstoneTs && tombstoneTs >= mealTs) {
+      return;
+    }
     if (!forceKeepAll && !preferRemote && localIsNewer && !localMealIds.has(meal.id)) {
       // Удалён локально
       return;
     }
-    
+
     mealsMap.set(meal.id, meal);
   });
-  
+
   localMeals.forEach(meal => {
     if (!meal || !meal.id) return;
+    // Tombstone check
+    const tombstoneTs = mergedDeletedMealIds[meal.id];
+    const mealTs = meal.updatedAt || dayLocalTs;
+    if (tombstoneTs && tombstoneTs >= mealTs) {
+      return;
+    }
     const existing = mealsMap.get(meal.id);
     if (!existing) {
       mealsMap.set(meal.id, meal);
@@ -103,17 +132,18 @@ function mergeDayData(local, remote, options = {}) {
       const mergedItems = mergeItemsById(existing.items || [], meal.items || [], preferLocal);
       const mergedMeal = preferRemote
         ? { ...meal, ...existing, items: mergedItems }
-        : localIsNewer 
+        : localIsNewer
           ? { ...existing, ...meal, items: mergedItems }
           : { ...meal, ...existing, items: mergedItems };
-      
+
       mealsMap.set(meal.id, mergedMeal);
     }
   });
-  
+
   merged.meals = Array.from(mealsMap.values())
     .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-  
+  merged.deletedMealIds = mergedDeletedMealIds;
+
   return merged;
 }
 
@@ -388,8 +418,121 @@ describe('mergeDayData', () => {
     });
   });
   
+  describe('Meal tombstones (cross-device deletion)', () => {
+
+    test('tombstone blocks remote resurrection', () => {
+      const local = {
+        date: '2026-05-27',
+        updatedAt: 2000,
+        meals: [],
+        deletedMealIds: { 'm1': 2000 },
+      };
+      const remote = {
+        date: '2026-05-27',
+        updatedAt: 1500,
+        meals: [{ id: 'm1', updatedAt: 1500, time: '08:00' }],
+      };
+
+      const merged = mergeDayData(local, remote);
+
+      expect(merged.meals.find(m => m.id === 'm1')).toBeUndefined();
+    });
+
+    test('remote edit after local delete wins', () => {
+      const local = {
+        date: '2026-05-27',
+        updatedAt: 1000,
+        meals: [],
+        deletedMealIds: { 'm1': 1000 },
+      };
+      const remote = {
+        date: '2026-05-27',
+        updatedAt: 2500,
+        meals: [{ id: 'm1', updatedAt: 2000, time: '08:00' }],
+      };
+
+      const merged = mergeDayData(local, remote);
+
+      expect(merged.meals.find(m => m.id === 'm1')).toBeDefined();
+    });
+
+    test('tombstones merge by max timestamp', () => {
+      const local = {
+        date: '2026-05-27',
+        updatedAt: 3500,
+        meals: [],
+        deletedMealIds: { 'm1': 1000, 'm2': 3000 },
+      };
+      const remote = {
+        date: '2026-05-27',
+        updatedAt: 2500,
+        meals: [],
+        deletedMealIds: { 'm1': 2000 },
+      };
+
+      const merged = mergeDayData(local, remote);
+
+      expect(merged.deletedMealIds).toEqual({ 'm1': 2000, 'm2': 3000 });
+    });
+
+    test('forceKeepAll=true still respects tombstones', () => {
+      const local = {
+        date: '2026-05-27',
+        updatedAt: 2000,
+        meals: [],
+        deletedMealIds: { 'm1': 2000 },
+      };
+      const remote = {
+        date: '2026-05-27',
+        updatedAt: 1500,
+        meals: [{ id: 'm1', updatedAt: 1500, time: '08:00' }],
+      };
+
+      const merged = mergeDayData(local, remote, { forceKeepAll: true });
+
+      expect(merged.meals.find(m => m.id === 'm1')).toBeUndefined();
+    });
+
+    test('empty tombstones case preserves backward compatibility', () => {
+      const local = {
+        date: '2026-05-27',
+        updatedAt: 2000,
+        meals: [{ id: 'm1', time: '08:00' }],
+      };
+      const remote = {
+        date: '2026-05-27',
+        updatedAt: 1500,
+        meals: [{ id: 'm2', time: '09:00' }],
+      };
+
+      const merged = mergeDayData(local, remote);
+
+      // Local is newer, so remote-only m2 is treated as deleted locally (legacy behavior)
+      expect(merged.meals.find(m => m.id === 'm1')).toBeDefined();
+      expect(merged.deletedMealIds).toEqual({});
+    });
+
+    test('preferRemote=true still respects tombstones', () => {
+      const local = {
+        date: '2026-05-27',
+        updatedAt: 1500,
+        meals: [],
+        deletedMealIds: { 'm1': 2000 },
+      };
+      const remote = {
+        date: '2026-05-27',
+        updatedAt: 2500,
+        meals: [{ id: 'm1', updatedAt: 1500, time: '08:00' }],
+      };
+
+      const merged = mergeDayData(local, remote, { preferRemote: true });
+
+      expect(merged.meals.find(m => m.id === 'm1')).toBeUndefined();
+    });
+  });
+
   describe('Sorting', () => {
-    
+
     test('meals are sorted by time after merge when both are in result', () => {
       // remote is newer, so both meals kept
       const local = {

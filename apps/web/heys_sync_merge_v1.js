@@ -42,6 +42,20 @@
     return Array.from(itemsMap.values());
   }
 
+  // ─── unionMaxTimestamp ────────────────────────────────────────────────
+  // Merge two { id: timestamp } maps, keeping max timestamp per id.
+  // Used for meal tombstones (deletedMealIds) — both sides may have
+  // independent deletion records; merge keeps the latest deletion per id.
+  function unionMaxTimestamp(localMap, remoteMap) {
+    const out = { ...(remoteMap || {}) };
+    if (localMap) {
+      for (const id of Object.keys(localMap)) {
+        out[id] = Math.max(out[id] || 0, localMap[id] || 0);
+      }
+    }
+    return out;
+  }
+
   // ─── stripStaleSavedDisplayNutrientsIfEmptyDiary ─────────────────────────
   // Removes cached display nutrients when meals/items are empty (same invariant
   // as dayMealsIntegrity).
@@ -176,6 +190,14 @@
     const localMealIds = new Set(localMeals.filter((m) => m && m.id).map((m) => m.id));
     const localIsNewer = (local.updatedAt || 0) >= (remote.updatedAt || 0);
 
+    // Tombstone-aware deletion handling. Applied ALWAYS (even when forceKeepAll/preferRemote)
+    // because tombstones are explicit user actions — flags only control implicit deletion heuristic.
+    const localDeletedMealIds = (local.deletedMealIds && typeof local.deletedMealIds === 'object' && !Array.isArray(local.deletedMealIds)) ? local.deletedMealIds : {};
+    const remoteDeletedMealIds = (remote.deletedMealIds && typeof remote.deletedMealIds === 'object' && !Array.isArray(remote.deletedMealIds)) ? remote.deletedMealIds : {};
+    const mergedDeletedMealIds = unionMaxTimestamp(localDeletedMealIds, remoteDeletedMealIds);
+    const dayLocalTs = local.updatedAt || 0;
+    const dayRemoteTs = remote.updatedAt || 0;
+
     // morningActivation: 'done'/'missed' status takes priority
     {
       const localMA = local.morningActivation || null;
@@ -196,6 +218,13 @@
     // Remote meals first (will be overwritten by local if collision)
     remoteMeals.forEach((meal) => {
       if (!meal || !meal.id) return;
+      // Tombstone check: if explicit deletion is newer than this meal's last edit, skip it
+      const tombstoneTs = mergedDeletedMealIds[meal.id];
+      const mealTs = meal.updatedAt || dayRemoteTs;
+      if (tombstoneTs && tombstoneTs >= mealTs) {
+        logFn(`🪦 [MERGE] Meal ${meal.id} tombstoned (${tombstoneTs} >= ${mealTs}), skipping from remote`);
+        return;
+      }
       if (!forceKeepAll && !preferRemote && localIsNewer && !localMealIds.has(meal.id)) {
         // Local is fresher and this meal isn't in local → deleted by user
         logFn(`🗑️ [MERGE] Meal ${meal.id} deleted locally, skipping from remote`);
@@ -207,6 +236,13 @@
     // Local meals: merge items if both sides have the meal
     localMeals.forEach((meal) => {
       if (!meal || !meal.id) return;
+      // Tombstone check: if remote (other device) has newer deletion mark, skip local meal too
+      const tombstoneTs = mergedDeletedMealIds[meal.id];
+      const mealTs = meal.updatedAt || dayLocalTs;
+      if (tombstoneTs && tombstoneTs >= mealTs) {
+        logFn(`🪦 [MERGE] Meal ${meal.id} tombstoned (${tombstoneTs} >= ${mealTs}), skipping from local`);
+        return;
+      }
       const existing = mealsMap.get(meal.id);
       if (!existing) {
         mealsMap.set(meal.id, meal);
@@ -235,6 +271,7 @@
     merged.meals = Array.from(mealsMap.values()).sort((a, b) =>
       (a.time || '').localeCompare(b.time || '')
     );
+    merged.deletedMealIds = mergedDeletedMealIds;
 
     // ─── Trainings: position-indexed merge ────────────────────────────────
     const localTrainings = local.trainings || [];
