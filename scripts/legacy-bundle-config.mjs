@@ -316,6 +316,7 @@ export const LEGACY_BUNDLES = {
         'heys_undo_v1.js',
         'heys_whats_new_modal_v1.js',
         'heys_curator_actions_banner_v1.js',
+        'heys_curator_push_onboarding_banner_v1.js',
         'heys_planning_store_v1.js',
         'heys_planning_quick_target_v1.js',
         'heys_planning_tasks_v1.js',
