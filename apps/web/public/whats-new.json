@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Производительность: WeakMap для products index (исправление cache thrash)",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Multi-list cache для resolveProductByItem (WeakMap)",
+          "description": "Предыдущий fix (9cc7995f) кэшировал только последний productsList по identity check. Chrome Perf trace показал что reality: call sites чередуют 3 разных списка (freshProducts, sharedEarly, sharedProducts) — cache thrash'илась на каждом switch, rebuild Map'ов выходил хуже оригинала. Self time вырос 603→1048ms вместо ожидаемого снижения. Fix v2: WeakMap<list, index> хранит indexes для ВСЕХ list references одновременно. GC автоматически чистит когда list релизится. Length stored в cache entry для detection in-place mutations. Ожидание: 1048ms → ~50-100ms (true O(1) per call без rebuild). Diagnostics: HEYS.perf.productsIndexStats() покажет type=WeakMap v2."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.9cc7995f",
       "buildHash": "9cc7995f",
       "date": "2026-05-27",

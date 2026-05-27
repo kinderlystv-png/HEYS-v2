@@ -236,21 +236,18 @@
       }
     };
 
-    // PERF (2026-05-27): O(N×M) → O(1) lookup через Map index.
-    // Chrome Perf trace показал resolveProductByItem self time 603ms (3.5%) — главный
-    // оставшийся JS hot path после normalizeProductName cache. Старый код делал
-    // list.find() по 300-500 products на КАЖДЫЙ meal item × множество render passes.
-    // Новый код: один раз строит Map indexes per productsList reference (~5ms build),
-    // потом O(1) lookup по id / fingerprint / lower name / normalized name.
-    // Cache invalidation: identity check productsList ref + length (covers in-place mutations).
-    let _productsIndexCache = null;
-    let _productsIndexCacheList = null;
-    let _productsIndexCacheLength = -1;
+    // PERF (2026-05-27 v2): O(N×M) → O(1) lookup через Map index с WeakMap multi-list cache.
+    // ИСТОРИЯ: v1 кэшировал только один последний productsList (identity ===). Chrome Perf
+    // trace после v1 deploy показал что resolveProductByItem self time ВЫРОС 603→1048ms —
+    // оказалось call sites чередуют 3 разных list (freshProducts, sharedEarly, sharedProducts)
+    // и cache тhrash'ился на каждом switch, rebuild Map'ов был хуже оригинала.
+    // v2: WeakMap<list, index> хранит indexes для ВСЕХ lists одновременно, GC автоматически
+    // чистит когда list релизится. Length stored в cache entry для detection in-place mutations.
+    const _productsIndexCache = new WeakMap();
     function _getProductsIndex(productsList) {
-      if (_productsIndexCacheList === productsList
-        && _productsIndexCache
-        && _productsIndexCacheLength === productsList.length) {
-        return _productsIndexCache;
+      const cached = _productsIndexCache.get(productsList);
+      if (cached && cached.length === productsList.length) {
+        return cached;
       }
       const byId = new Map();
       const byFingerprint = new Map();
@@ -270,10 +267,9 @@
           if (!byNormName.has(norm)) byNormName.set(norm, p);
         }
       }
-      _productsIndexCache = { byId, byFingerprint, byNormName, byLowerName, builtAt: Date.now() };
-      _productsIndexCacheList = productsList;
-      _productsIndexCacheLength = productsList.length;
-      return _productsIndexCache;
+      const index = { byId, byFingerprint, byNormName, byLowerName, length: productsList.length, builtAt: Date.now() };
+      _productsIndexCache.set(productsList, index);
+      return index;
     }
 
     function resolveProductByItem(item, productsList) {
@@ -314,13 +310,9 @@
       window.HEYS = window.HEYS || {};
       window.HEYS.perf = window.HEYS.perf || {};
       window.HEYS.perf.productsIndexStats = function () {
-        const stats = {
-          built: !!_productsIndexCache,
-          listLength: _productsIndexCacheLength,
-          byIdSize: _productsIndexCache ? _productsIndexCache.byId.size : 0,
-          byNormNameSize: _productsIndexCache ? _productsIndexCache.byNormName.size : 0,
-          builtAt: _productsIndexCache ? new Date(_productsIndexCache.builtAt).toISOString() : null
-        };
+        // WeakMap не имеет .size / iterate API — stats нельзя enumerate.
+        // Diagnostic шлёт "isWeakMap: true" чтобы пользователь знал что v2 deployed.
+        const stats = { type: 'WeakMap (v2)', note: 'размер не enumerable; вместо этого проверь Chrome Perf trace resolveProductByItem self time' };
         console.info('[HEYS.perf] productsIndex', stats);
         return stats;
       };
