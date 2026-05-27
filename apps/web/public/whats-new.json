@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.bcf3b4b8",
+      "buildHash": "bcf3b4b8",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "curator",
+      "title": "Куратор снова может войти — починили CORS на /auth/login",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Вход куратора больше не падает с CORS-ошибкой",
+          "description": "Куратор не мог залогиниться — браузер блокировал запрос к api.heyslab.ru/auth/login с CORS-ошибкой про missing Allow-Credentials. Причина — регрессия из недавнего перевода curator JWT на HttpOnly-cookie: фронт стал слать запрос с credentials:'include' (чтобы куки прицепились), а ответ auth-функции не содержал заголовка Access-Control-Allow-Credentials: true. Все остальные cloud-функции (rpc, rest, push, messages, leads, sms) этот заголовок имели, а auth-функцию забыли обновить вместе с ними. Добавлен Allow-Credentials в getCorsHeaders auth-функции — preflight теперь проходит, вход работает."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.067fc99e",
       "buildHash": "067fc99e",
       "date": "2026-05-27",
