@@ -44,6 +44,16 @@
         // 2026-05-20 compliance overhaul — optional state из useRuntimeState
         complianceState,
     }) {
+        // 💬 Force re-render when MessengerAPI updates inbox cache. buildGate
+        // reads HEYS.MessengerAPI.getInboxCache() synchronously — без этого тика
+        // badges не появятся пока что-то ещё не триггернёт rerender.
+        const [, _setMessengerInboxTick] = React.useState(0);
+        React.useEffect(() => {
+            const onUpdate = () => _setMessengerInboxTick((t) => t + 1);
+            window.addEventListener('heys:messenger-inbox-updated', onUpdate);
+            return () => window.removeEventListener('heys:messenger-inbox-updated', onUpdate);
+        }, []);
+
         const gate = AppGateFlow.buildGate ? AppGateFlow.buildGate({
             clientId,
             isInitializing,

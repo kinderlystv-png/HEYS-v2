@@ -1520,9 +1520,21 @@
                                             clients.length
                                                 ? clients
                                                     .filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()))
+                                                    .slice()
+                                                    .sort((a, b) => {
+                                                        // 💬 Сначала клиенты с непрочитанными сообщениями
+                                                        const inbox = window.HEYS?.MessengerAPI?.getInboxCache?.() || {};
+                                                        const ua = inbox[a.id]?.unread_count || 0;
+                                                        const ub = inbox[b.id]?.unread_count || 0;
+                                                        return ub - ua;
+                                                    })
                                                     .map((c, idx) => {
                                                         const stats = getClientStats(c.id);
                                                         const isLast = readGlobalValue('heys_last_client_id', '') === c.id;
+                                                        const messengerInbox = window.HEYS?.MessengerAPI?.getInboxCache?.() || {};
+                                                        const msgEntry = messengerInbox[c.id];
+                                                        const unreadCount = msgEntry?.unread_count || 0;
+                                                        const lastPreview = msgEntry?.last_message_preview;
                                                         const copyClientId = async (e) => {
                                                             if (e && e.stopPropagation) e.stopPropagation();
                                                             try {
@@ -1623,26 +1635,50 @@
                                                                     }, 0);
                                                                 }
                                                             },
-                                                            // Аватар с цветом по букве
+                                                            // Аватар с цветом по букве + 💬 badge непрочитанных
                                                             React.createElement(
                                                                 'div',
-                                                                {
+                                                                { style: { position: 'relative', flexShrink: 0 } },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    {
+                                                                        style: {
+                                                                            width: 48,
+                                                                            height: 48,
+                                                                            borderRadius: '50%',
+                                                                            background: getAvatarColor(c.name),
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            color: '#fff',
+                                                                            fontWeight: 700,
+                                                                            fontSize: 18,
+                                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                                                        }
+                                                                    },
+                                                                    getClientInitials(c.name)
+                                                                ),
+                                                                unreadCount > 0 && React.createElement('div', {
+                                                                    className: 'curator-card-unread-badge',
                                                                     style: {
-                                                                        width: 48,
-                                                                        height: 48,
-                                                                        borderRadius: '50%',
-                                                                        background: getAvatarColor(c.name),
+                                                                        position: 'absolute',
+                                                                        top: -4,
+                                                                        right: -4,
+                                                                        minWidth: 20,
+                                                                        height: 20,
+                                                                        padding: '0 5px',
+                                                                        borderRadius: 10,
+                                                                        background: '#dc2626',
+                                                                        color: '#fff',
+                                                                        fontSize: 11,
+                                                                        fontWeight: 700,
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         justifyContent: 'center',
-                                                                        color: '#fff',
-                                                                        fontWeight: 700,
-                                                                        fontSize: 18,
-                                                                        flexShrink: 0,
-                                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                                                                        border: '2px solid #fff',
+                                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
                                                                     }
-                                                                },
-                                                                getClientInitials(c.name)
+                                                                }, String(unreadCount))
                                                             ),
                                                             // Контент карточки (Инфо + Кнопки)
                                                             React.createElement(
@@ -1680,6 +1716,28 @@
                                                                     ),
                                                                     // Метка "Последний"
                                                                     isLast && React.createElement('span', { style: { color: '#4285f4', fontWeight: 500, fontSize: 12 } }, '✓')
+                                                                ),
+
+                                                                // 💬 Preview последнего сообщения (если есть)
+                                                                lastPreview && React.createElement('div', {
+                                                                    className: 'curator-card-msg-preview',
+                                                                    style: {
+                                                                        fontSize: 12,
+                                                                        color: unreadCount > 0 ? 'var(--text, #111)' : 'var(--muted, #888)',
+                                                                        fontWeight: unreadCount > 0 ? 600 : 400,
+                                                                        whiteSpace: 'nowrap',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis',
+                                                                        maxWidth: '100%',
+                                                                        marginTop: 2
+                                                                    }
+                                                                },
+                                                                    '💬 ' +
+                                                                    (lastPreview.sender_role === 'curator' ? 'Ты: ' : '') +
+                                                                    (lastPreview.body ||
+                                                                     (lastPreview.intent_type === 'meal' ? 'съел...' :
+                                                                      lastPreview.intent_type === 'training' ? 'тренировался' :
+                                                                      lastPreview.intent_type === 'weight' ? 'вес' : ''))
                                                                 ),
 
                                                                 // 3. Нижний ряд: Кнопки (выровнены вправо)

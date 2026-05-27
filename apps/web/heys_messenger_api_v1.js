@@ -138,11 +138,59 @@
     return call('/messages/mark-read', { method: 'POST', body: payload });
   }
 
+  // ── Inbox cache (curator-only) ───────────────────────────────────────
+  // Кэш для синхронного чтения из не-React компонентов (buildGate карточки).
+  // Polling каждые 30 сек, старт лениво при первом getInboxCache.
+  let _inboxCache = {}; // {client_id → {unread_count, last_message_preview, last_message_at}}
+  let _inboxPollTimer = null;
+  let _inboxPolling = false;
+
+  function looksLikeCuratorToken() {
+    const token = getBearerToken();
+    if (!token) return false;
+    // JWT имеет 3 точки + длиннее обычного session token
+    return token.split('.').length === 3;
+  }
+
+  async function refreshInbox() {
+    if (!looksLikeCuratorToken()) return;
+    const res = await getInbox();
+    if (res?.success && Array.isArray(res.inbox)) {
+      const next = {};
+      for (const entry of res.inbox) {
+        if (entry?.client_id) next[entry.client_id] = entry;
+      }
+      _inboxCache = next;
+      try {
+        window.dispatchEvent(new CustomEvent('heys:messenger-inbox-updated', { detail: _inboxCache }));
+      } catch { /* ignore */ }
+    }
+  }
+
+  function startInboxPolling() {
+    if (_inboxPolling) return;
+    _inboxPolling = true;
+    void refreshInbox();
+    _inboxPollTimer = setInterval(refreshInbox, 30000);
+    // Перезагружать при смене клиента (там точно проявился новый msg)
+    window.addEventListener('heys:client-changed', refreshInbox);
+  }
+
+  function getInboxCache() {
+    // Lazy: первый вызов запускает поллинг
+    if (!_inboxPolling && looksLikeCuratorToken()) {
+      startInboxPolling();
+    }
+    return _inboxCache;
+  }
+
   HEYS.MessengerAPI = {
     send,
     getThread,
     getInbox,
     markRead,
+    getInboxCache,
+    refreshInbox,
     _getBearerToken: getBearerToken, // exposed for testing/debug
     _API_URL: API_URL,
   };
