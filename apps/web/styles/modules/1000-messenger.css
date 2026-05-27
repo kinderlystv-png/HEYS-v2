@@ -1,6 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════════
  * HEYS Messenger — стили модалки + 💬 FAB.
  * См. apps/web/heys_messenger_v1.js, apps/web/heys_messenger_api_v1.js.
+ * Использует HEYS design tokens (--heys-bg-*, --heys-text-*) — они
+ * автоматически переключаются между light/dark при смене темы HEYS.
+ * НЕ использовать prefers-color-scheme: у HEYS свой переключатель темы.
  * ═══════════════════════════════════════════════════════════════════ */
 
 /* 💬 FAB-кнопка рядом с meal-fab + water-fab */
@@ -10,7 +13,7 @@
   border-radius: 50%;
   border: none;
   font-size: 24px;
-  background: var(--accent-purple, #8b5cf6);
+  background: #8b5cf6;
   color: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   cursor: pointer;
@@ -60,7 +63,8 @@ body.planning-tab-active .fab-group .message-fab {
   max-width: 600px;
   height: 90vh;
   max-height: 720px;
-  background: var(--surface-1, #fff);
+  background: var(--heys-bg-card, #ffffff);
+  color: var(--heys-text-primary, #111827);
   border-radius: 16px 16px 0 0;
   display: flex;
   flex-direction: column;
@@ -89,14 +93,15 @@ body.planning-tab-active .fab-group .message-fab {
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
-  background: var(--surface-2, #fafafa);
+  border-bottom: 1px solid var(--heys-border, rgba(0, 0, 0, 0.08));
+  background: var(--heys-bg-subtle, #f8fafc);
+  color: var(--heys-text-primary, #111827);
 }
 
 .messenger-title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-primary, #111);
+  color: var(--heys-text-primary, #111827);
 }
 
 .messenger-close {
@@ -107,11 +112,11 @@ body.planning-tab-active .fab-group .message-fab {
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  color: var(--text-secondary, #666);
+  color: var(--heys-text-secondary, #6b7280);
 }
 
 .messenger-close:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--heys-bg-muted, rgba(0, 0, 0, 0.05));
 }
 
 .messenger-thread {
@@ -121,14 +126,14 @@ body.planning-tab-active .fab-group .message-fab {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: var(--surface-1, #fff);
+  background: var(--heys-bg-card, #ffffff);
   -webkit-overflow-scrolling: touch;
 }
 
 .messenger-loading,
 .messenger-empty {
   text-align: center;
-  color: var(--text-secondary, #777);
+  color: var(--heys-text-secondary, #6b7280);
   padding: 32px 16px;
   font-size: 14px;
 }
@@ -156,14 +161,14 @@ body.planning-tab-active .fab-group .message-fab {
 }
 
 .msg-bubble-mine {
-  background: var(--accent-blue, #2563eb);
+  background: #2563eb;
   color: #fff;
   border-bottom-right-radius: 4px;
 }
 
 .msg-bubble-theirs {
-  background: var(--surface-2, #f0f0f0);
-  color: var(--text-primary, #111);
+  background: var(--heys-bg-muted, #f1f5f9);
+  color: var(--heys-text-primary, #111827);
   border-bottom-left-radius: 4px;
 }
 
@@ -191,7 +196,7 @@ body.planning-tab-active .fab-group .message-fab {
 
 .messenger-error {
   background: rgba(220, 38, 38, 0.1);
-  color: var(--error, #dc2626);
+  color: #dc2626;
   padding: 8px 16px;
   font-size: 13px;
   border-top: 1px solid rgba(220, 38, 38, 0.2);
@@ -202,28 +207,32 @@ body.planning-tab-active .fab-group .message-fab {
   align-items: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
-  background: var(--surface-2, #fafafa);
+  border-top: 1px solid var(--heys-border, rgba(0, 0, 0, 0.08));
+  background: var(--heys-bg-subtle, #f8fafc);
   padding-bottom: max(12px, env(safe-area-inset-bottom));
 }
 
 .messenger-input {
   flex: 1;
   resize: none;
-  border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--heys-border, rgba(0, 0, 0, 0.12));
   border-radius: 12px;
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
-  background: var(--surface-1, #fff);
-  color: var(--text-primary, #111);
+  background: var(--heys-bg-card, #ffffff);
+  color: var(--heys-text-primary, #111827);
   outline: none;
   min-height: 40px;
   max-height: 120px;
 }
 
+.messenger-input::placeholder {
+  color: var(--heys-text-muted, #9ca3af);
+}
+
 .messenger-input:focus {
-  border-color: var(--accent-blue, #2563eb);
+  border-color: #2563eb;
 }
 
 .messenger-send {
@@ -231,7 +240,7 @@ body.planning-tab-active .fab-group .message-fab {
   height: 44px;
   border-radius: 50%;
   border: none;
-  background: var(--accent-blue, #2563eb);
+  background: #2563eb;
   color: #fff;
   font-size: 18px;
   cursor: pointer;
@@ -243,31 +252,10 @@ body.planning-tab-active .fab-group .message-fab {
 }
 
 .messenger-send:disabled {
-  background: var(--text-disabled, #ccc);
+  background: var(--heys-text-muted, #9ca3af);
   cursor: not-allowed;
 }
 
 .messenger-send:not(:disabled):hover {
-  background: var(--accent-blue-hover, #1d4ed8);
-}
-
-/* Dark mode tweaks */
-@media (prefers-color-scheme: dark) {
-  .messenger-modal {
-    background: #1e1e1e;
-  }
-  .messenger-header,
-  .messenger-input-row {
-    background: #252525;
-    border-color: rgba(255, 255, 255, 0.08);
-  }
-  .msg-bubble-theirs {
-    background: #2e2e2e;
-    color: #eee;
-  }
-  .messenger-input {
-    background: #1e1e1e;
-    color: #eee;
-    border-color: rgba(255, 255, 255, 0.15);
-  }
+  background: #1d4ed8;
 }
