@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.28.d4514a03",
+      "buildHash": "d4514a03",
+      "date": "2026-05-28",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Мессенджер: исправлена отправка сообщений для PIN-клиентов",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Сообщения куратору больше не падают с no_auth_token",
+          "description": "PIN-клиенты на проде получали ошибку «no_auth_token» при попытке отправить сообщение из 💬 модалки. Причина — недавняя миграция (PR-C, 2026-05-20): session token переехал в HttpOnly cookie, чтобы XSS не мог его украсть, а JS его теперь не видит. Мой мессенджер-клиент по старой памяти всё ещё пытался достать токен из localStorage и блокировал запрос до отправки. Fix: client теперь не блокирует запрос без токена в localStorage — credentials:'include' донесёт HttpOnly cookie до cloud function, а та сама вытащит токен из Cookie header (тот же паттерн что используется в основном RPC). Curator-flow с JWT в localStorage не затронут, продолжает работать как раньше."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.0dff44fc",
       "buildHash": "0dff44fc",
       "date": "2026-05-27",
