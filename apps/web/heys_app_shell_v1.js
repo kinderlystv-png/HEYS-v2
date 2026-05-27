@@ -427,6 +427,40 @@
             return value + 1;
         }, 0);
         const leaderboardRefreshRafRef = React.useRef(0);
+
+        // 💬 Messenger inbox (curator-only): unread + preview per client.
+        // Refresh on mount → каждые 30s + при heys:client-changed.
+        const [messengerInbox, setMessengerInbox] = React.useState({});
+        React.useEffect(() => {
+            if (isRpcMode) return; // только для куратора
+            let cancelled = false;
+            let timer = null;
+            const refresh = async () => {
+                try {
+                    const res = await window.HEYS?.MessengerAPI?.getInbox?.();
+                    if (cancelled) return;
+                    if (res?.success && Array.isArray(res.inbox)) {
+                        const map = {};
+                        for (const entry of res.inbox) {
+                            if (entry?.client_id) map[entry.client_id] = entry;
+                        }
+                        setMessengerInbox(map);
+                    }
+                } catch { /* ignore */ }
+            };
+            void refresh();
+            timer = setInterval(refresh, 30000);
+            const onClientChanged = () => { void refresh(); };
+            window.addEventListener('heys:client-changed', onClientChanged);
+            return () => {
+                cancelled = true;
+                if (timer) clearInterval(timer);
+                window.removeEventListener('heys:client-changed', onClientChanged);
+            };
+        }, [isRpcMode]);
+        const totalUnread = React.useMemo(() => {
+            return Object.values(messengerInbox).reduce((s, v) => s + (v?.unread_count || 0), 0);
+        }, [messengerInbox]);
         // ☁️ Cloud Sync Badge State (v2.0): auto-fade synced→idle, lastSyncedAt tracking
         const [displayStatus, setDisplayStatus] = React.useState(cloudStatus);
         const lastSyncedAtRef = React.useRef(null);
@@ -1487,7 +1521,21 @@
                                 React.createElement('div', {
                                     key: 'clients-header',
                                     className: 'curator-section-header'
-                                }, `👥 Клиенты (${clients.length})`),
+                                },
+                                    `👥 Клиенты (${clients.length})`,
+                                    totalUnread > 0 && React.createElement('span', {
+                                        className: 'curator-header-unread',
+                                        style: {
+                                            marginLeft: 8,
+                                            padding: '2px 8px',
+                                            borderRadius: 10,
+                                            background: '#dc2626',
+                                            color: '#fff',
+                                            fontSize: 12,
+                                            fontWeight: 600
+                                        }
+                                    }, `💬 ${totalUnread}`)
+                                ),
                                 // Список клиентов (скролл только для списка)
                                 React.createElement(
                                     'div',
@@ -1503,6 +1551,10 @@
                                     },
                                     [...clients]
                                         .sort((a, b) => {
+                                            // 💬 Клиенты с непрочитанными сообщениями — наверх
+                                            const unreadA = messengerInbox[a.id]?.unread_count || 0;
+                                            const unreadB = messengerInbox[b.id]?.unread_count || 0;
+                                            if (unreadA !== unreadB) return unreadB - unreadA;
                                             const lastA = readGlobalValue('heys_last_client_id', '') === a.id ? 1 : 0;
                                             const lastB = readGlobalValue('heys_last_client_id', '') === b.id ? 1 : 0;
                                             if (lastA !== lastB) return lastB - lastA;
@@ -1587,13 +1639,59 @@
                                                         flexShrink: 0
                                                     }
                                                 }, getClientInitials(c.name)),
-                                                React.createElement('span', {
+                                                React.createElement('div', {
                                                     style: {
                                                         flex: 1,
-                                                        fontWeight: c.id === clientIdValue ? 600 : 400,
-                                                        color: c.id === clientIdValue ? '#4285f4' : 'var(--text)'
+                                                        minWidth: 0,
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        gap: 2
                                                     }
-                                                }, c.name),
+                                                },
+                                                    React.createElement('div', {
+                                                        style: {
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 6
+                                                        }
+                                                    },
+                                                        React.createElement('span', {
+                                                            style: {
+                                                                fontWeight: c.id === clientIdValue ? 600 : 400,
+                                                                color: c.id === clientIdValue ? '#4285f4' : 'var(--text)'
+                                                            }
+                                                        }, c.name),
+                                                        (messengerInbox[c.id]?.unread_count || 0) > 0 && React.createElement('span', {
+                                                            className: 'client-row-unread',
+                                                            style: {
+                                                                padding: '1px 7px',
+                                                                borderRadius: 9,
+                                                                background: '#dc2626',
+                                                                color: '#fff',
+                                                                fontSize: 11,
+                                                                fontWeight: 700,
+                                                                lineHeight: '14px'
+                                                            }
+                                                        }, String(messengerInbox[c.id].unread_count))
+                                                    ),
+                                                    messengerInbox[c.id]?.last_message_preview && React.createElement('div', {
+                                                        className: 'client-row-preview',
+                                                        style: {
+                                                            fontSize: 12,
+                                                            color: 'var(--text-secondary, #888)',
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            maxWidth: '100%'
+                                                        }
+                                                    },
+                                                        (messengerInbox[c.id].last_message_preview.sender_role === 'curator' ? 'Ты: ' : '') +
+                                                        (messengerInbox[c.id].last_message_preview.body ||
+                                                         (messengerInbox[c.id].last_message_preview.intent_type === 'meal' ? '🍽️ съел...' :
+                                                          messengerInbox[c.id].last_message_preview.intent_type === 'training' ? '🏋️ тренировался' :
+                                                          messengerInbox[c.id].last_message_preview.intent_type === 'weight' ? '⚖️ вес' : ''))
+                                                    )
+                                                ),
                                                 c.id === clientIdValue && React.createElement('span', {
                                                     style: { color: '#4285f4' }
                                                 }, '✓')
