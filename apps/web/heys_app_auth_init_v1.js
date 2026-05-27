@@ -382,6 +382,40 @@
             };
             window.addEventListener('heysSyncCompleted', phaseAHandler);
 
+            // 🚀 OPTIMISTIC MOUNT (2026-05-27 VPN UX fix):
+            // Если для этого clientId уже был успешный sync (есть last_sync_ts) — у нас
+            // ВСЁ есть локально (initLocalData() выше уже подняло данные из LS в React state).
+            // Снимаем gate СРАЗУ, не ждём network roundtrip. syncClient продолжит работать в
+            // фоне и обновит данные через heysSyncCompleted listeners (React tabs ре-рендерятся).
+            // Под VPN с медленным/нестабильным каналом это убивает 60-сек белый экран.
+            const hasPriorSync = (() => {
+                try {
+                    return !!localStorage.getItem('heys_' + pinAuthClient + '_last_sync_ts');
+                } catch (_) { return false; }
+            })();
+            if (hasPriorSync) {
+                devLog('[App] ⚡ Optimistic mount (has prior sync, last_sync_ts present)');
+                gateDismissed = true;
+                initFinalized = true;
+                __heysDismissGate();
+                setIsInitializing(false);
+            }
+
+            // 🛡️ SOFT TIMEOUT backstop (2.5s):
+            // Покрывает edge case когда optimistic mount не сработал (first PIN visit на этом
+            // device / cache cleared) И syncClient висит на VPN. После 2.5с форсим render —
+            // sync продолжается в фоне (либо приземлится через event, либо timeout'нет).
+            const softTimeoutHandle = setTimeout(() => {
+                if (initFinalized) return;
+                initFinalized = true;
+                devWarn('[App] ⏰ Soft timeout (2.5s) — forcing render, sync continues in background');
+                if (!gateDismissed) {
+                    gateDismissed = true;
+                    __heysDismissGate();
+                }
+                setIsInitializing(false);
+            }, 2500);
+
             // Синхронизируем с сервером
             // Событие heysSyncCompleted отправляется ВНУТРИ syncClientViaRPC после загрузки данных
             cloudRef.syncClient(pinAuthClient)
@@ -424,6 +458,7 @@
                 })
                 .finally(() => {
                     window.removeEventListener('heysSyncCompleted', phaseAHandler);
+                    clearTimeout(softTimeoutHandle);
                     if (!initFinalized) {
                         initFinalized = true;
                         setIsInitializing(false);

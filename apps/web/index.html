@@ -848,10 +848,13 @@
     <link rel="preload" href="boot-core.bundle.9cdf2551f6a7.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.6ad5baf7d3af.js" as="script" />
     <link rel="preload" href="boot-day.bundle.04d32d092677.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.6881a01dabed.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.a482c9e8476d.js" as="script" />
     <link rel="preload" href="boot-init.bundle.a261f6f72353.js" as="script" />
-
-    <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21) -->
+    <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
+         Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
+         <script src="react-bundle.js"> (внизу body) бандл уже скачан. Sync execution сохранён
+         для совместимости с heys_dark_theme_interceptor.js (использует React.createElement). -->
+    <link rel="preload" href="react-bundle.js" as="script" />
 
     <!-- Non-critical JS prefetch deferred to idle after appReady (see postboot onAllDone) -->
 
@@ -2991,7 +2994,7 @@
     <script defer src="boot-core.bundle.9cdf2551f6a7.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.6ad5baf7d3af.js"></script>
     <script defer src="boot-day.bundle.04d32d092677.js"></script>
-    <script defer src="boot-app.bundle.6881a01dabed.js"></script>
+    <script defer src="boot-app.bundle.a482c9e8476d.js"></script>
     <script defer src="boot-init.bundle.a261f6f72353.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
