@@ -7092,16 +7092,7 @@
 
                     setDay((prevDay) => {
                         const meals = (prevDay.meals || []).filter((meal) => meal.id !== mealId);
-                        const tombstoneSrc = (prevDay.deletedMealIds && typeof prevDay.deletedMealIds === 'object' && !Array.isArray(prevDay.deletedMealIds))
-                            ? prevDay.deletedMealIds
-                            : {};
-                        let nextDeletedMealIds = { ...tombstoneSrc, [mealId]: removedUpdatedAt };
-                        const entries = Object.entries(nextDeletedMealIds);
-                        if (entries.length > 50) {
-                            entries.sort((a, b) => a[1] - b[1]); // ascending by timestamp (oldest first)
-                            nextDeletedMealIds = Object.fromEntries(entries.slice(-50)); // keep newest 50
-                        }
-                        const nextDayData = { ...prevDay, meals, deletedMealIds: nextDeletedMealIds, updatedAt: removedUpdatedAt };
+                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
                         persistDayData(nextDayData, 'remove_meal');
                         return nextDayData;
                     });
@@ -7118,11 +7109,7 @@
 
                         meals.splice(Math.max(0, Math.min(insertIndex, meals.length)), 0, ctxMeal);
                         const restoredMeals = sortMealsByTime(meals);
-                        const prevTombstones = (prevDay.deletedMealIds && typeof prevDay.deletedMealIds === 'object' && !Array.isArray(prevDay.deletedMealIds))
-                            ? prevDay.deletedMealIds
-                            : {};
-                        const { [ctxMealId]: _droppedTombstone, ...remainingTombstones } = prevTombstones;
-                        const nextDayData = { ...prevDay, meals: restoredMeals, deletedMealIds: remainingTombstones, updatedAt: undoUpdatedAt };
+                        const nextDayData = { ...prevDay, meals: restoredMeals, updatedAt: undoUpdatedAt };
                         persistDayData(nextDayData, 'undo_remove_meal');
                         return nextDayData;
                     });

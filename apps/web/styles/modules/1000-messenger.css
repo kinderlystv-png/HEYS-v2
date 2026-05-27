@@ -1,0 +1,273 @@
+/* ═══════════════════════════════════════════════════════════════════
+ * HEYS Messenger — стили модалки + 💬 FAB.
+ * См. apps/web/heys_messenger_v1.js, apps/web/heys_messenger_api_v1.js.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/* 💬 FAB-кнопка рядом с meal-fab + water-fab */
+.fab-group .message-fab {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  font-size: 24px;
+  background: var(--accent-purple, #8b5cf6);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  touch-action: manipulation;
+}
+
+.fab-group .message-fab:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.fab-group .message-fab:active {
+  transform: scale(0.95);
+}
+
+body.widgets-edit-mode .fab-group .message-fab,
+body.planning-tab-active .fab-group .message-fab {
+  visibility: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Messenger Modal (full-screen on mobile, centered card on desktop)
+ * ═══════════════════════════════════════════════════════════════════ */
+
+.messenger-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: messenger-fade-in 0.15s ease-out;
+}
+
+@keyframes messenger-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.messenger-modal {
+  width: 100%;
+  max-width: 600px;
+  height: 90vh;
+  max-height: 720px;
+  background: var(--surface-1, #fff);
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
+  animation: messenger-slide-up 0.2s ease-out;
+}
+
+@keyframes messenger-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (min-width: 768px) {
+  .messenger-overlay {
+    align-items: center;
+  }
+  .messenger-modal {
+    height: 80vh;
+    border-radius: 16px;
+  }
+}
+
+.messenger-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  background: var(--surface-2, #fafafa);
+}
+
+.messenger-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #111);
+}
+
+.messenger-close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: var(--text-secondary, #666);
+}
+
+.messenger-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.messenger-thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface-1, #fff);
+  -webkit-overflow-scrolling: touch;
+}
+
+.messenger-loading,
+.messenger-empty {
+  text-align: center;
+  color: var(--text-secondary, #777);
+  padding: 32px 16px;
+  font-size: 14px;
+}
+
+.msg-row {
+  display: flex;
+  width: 100%;
+}
+
+.msg-row-mine {
+  justify-content: flex-end;
+}
+
+.msg-row-theirs {
+  justify-content: flex-start;
+}
+
+.msg-bubble {
+  max-width: 78%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.msg-bubble-mine {
+  background: var(--accent-blue, #2563eb);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.msg-bubble-theirs {
+  background: var(--surface-2, #f0f0f0);
+  color: var(--text-primary, #111);
+  border-bottom-left-radius: 4px;
+}
+
+.msg-body {
+  white-space: pre-wrap;
+}
+
+.msg-applied {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.msg-meta {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.msg-bubble-theirs .msg-meta {
+  text-align: left;
+}
+
+.messenger-error {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--error, #dc2626);
+  padding: 8px 16px;
+  font-size: 13px;
+  border-top: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.messenger-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  background: var(--surface-2, #fafafa);
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.messenger-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--surface-1, #fff);
+  color: var(--text-primary, #111);
+  outline: none;
+  min-height: 40px;
+  max-height: 120px;
+}
+
+.messenger-input:focus {
+  border-color: var(--accent-blue, #2563eb);
+}
+
+.messenger-send {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent-blue, #2563eb);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.messenger-send:disabled {
+  background: var(--text-disabled, #ccc);
+  cursor: not-allowed;
+}
+
+.messenger-send:not(:disabled):hover {
+  background: var(--accent-blue-hover, #1d4ed8);
+}
+
+/* Dark mode tweaks */
+@media (prefers-color-scheme: dark) {
+  .messenger-modal {
+    background: #1e1e1e;
+  }
+  .messenger-header,
+  .messenger-input-row {
+    background: #252525;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .msg-bubble-theirs {
+    background: #2e2e2e;
+    color: #eee;
+  }
+  .messenger-input {
+    background: #1e1e1e;
+    color: #eee;
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}

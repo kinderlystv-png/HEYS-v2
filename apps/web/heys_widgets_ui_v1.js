@@ -7323,7 +7323,7 @@
           }, isEditMode ? '✓' : '✏️')
         ),
 
-        // Meal/Water FAB group — как на остальных вкладках (справа).
+        // Meal/Water/Message FAB group — как на остальных вкладках (справа).
         // В edit-mode прячем, чтобы не мешали перетаскиванию.
         !isEditMode && React.createElement('div', { className: 'fab-group' },
           React.createElement('button', {
@@ -7335,7 +7335,12 @@
             className: 'water-fab',
             onClick: (e) => handleAddWater(200, e.currentTarget),
             'aria-label': 'Добавить стакан воды'
-          }, '🥛')
+          }, '🥛'),
+          React.createElement('button', {
+            className: 'message-fab',
+            onClick: () => window.HEYS?.Messenger?.openModal?.(),
+            'aria-label': 'Написать куратору'
+          }, '💬')
         )
       )
     );

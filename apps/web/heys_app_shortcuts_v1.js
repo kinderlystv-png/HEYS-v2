@@ -25,10 +25,65 @@
         const action = params.get('action');
         const tabParam = params.get('tab');
         const shareReceived = params.get('share-received');
+        const switchClientParam = params.get('switch_client');
+        const openMessagesParam = params.get('open_messages');
 
         // Очищаем URL в любом случае
         const url = new URL(window.location.href);
         let needsUrlCleanup = false;
+
+        // 💬 Push deep-link: ?switch_client=<id>&open_messages=1
+        // Куратор приходит из push-нотификации → переключаемся на клиента,
+        // затем открываем модалку мессенджера.
+        if (switchClientParam || openMessagesParam === '1') {
+            needsUrlCleanup = true;
+            const targetClientId = switchClientParam;
+            const openAfter = openMessagesParam === '1';
+
+            const dispatchOpen = () => {
+                try {
+                    window.dispatchEvent(new CustomEvent('heys:open-messenger', {
+                        detail: targetClientId ? { curatorViewClientId: targetClientId } : {},
+                    }));
+                } catch (err) {
+                    console.warn('[HEYS.shortcuts] open-messenger dispatch failed:', err?.message);
+                }
+            };
+
+            if (targetClientId && HEYS.cloud?.switchClient) {
+                const currentId = HEYS.currentClientId || localStorage.getItem('heys_last_client_id');
+                if (currentId === targetClientId) {
+                    if (openAfter) setTimeout(dispatchOpen, 300);
+                } else {
+                    // Switch then wait for heys:client-changed
+                    let opened = false;
+                    const handler = () => {
+                        if (opened) return;
+                        opened = true;
+                        window.removeEventListener('heys:client-changed', handler);
+                        if (openAfter) setTimeout(dispatchOpen, 300);
+                    };
+                    window.addEventListener('heys:client-changed', handler);
+                    try {
+                        HEYS.cloud.switchClient(targetClientId, currentId);
+                    } catch (err) {
+                        console.warn('[HEYS.shortcuts] switchClient failed:', err?.message);
+                        window.removeEventListener('heys:client-changed', handler);
+                    }
+                    // Fallback: если событие не пришло за 5s — открываем
+                    setTimeout(() => {
+                        if (!opened && openAfter) {
+                            opened = true;
+                            window.removeEventListener('heys:client-changed', handler);
+                            dispatchOpen();
+                        }
+                    }, 5000);
+                }
+            } else if (openAfter) {
+                // Без switch_client: просто открыть модалку (клиент-режим)
+                setTimeout(dispatchOpen, 300);
+            }
+        }
 
         // 💳 Обработка возврата с ЮKassa (/payment-result?clientId=...)
         if (window.location.pathname === '/payment-result') {
@@ -201,6 +256,8 @@
             url.searchParams.delete('action');
             url.searchParams.delete('tab');
             url.searchParams.delete('share-received');
+            url.searchParams.delete('switch_client');
+            url.searchParams.delete('open_messages');
             window.history.replaceState({}, '', url.pathname + url.search);
         }
 

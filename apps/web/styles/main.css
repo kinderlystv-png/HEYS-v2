@@ -39,6 +39,7 @@
 @import url("./modules/730-widgets-dashboard.css");
 @import url("./modules/740-cascade-card.css");
 @import url("./modules/800-meal-optimizer.css");
+@import url("./modules/1000-messenger.css");
 
 /* Component-specific styles (BEM) */
 @import url("./heys-components.css");

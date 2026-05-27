@@ -415,7 +415,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             sourceEl: e.currentTarget
                         }),
                         'aria-label': 'Добавить стакан воды'
-                    }, '🥛')
+                    }, '🥛'),
+                    React.createElement('button', {
+                        className: 'message-fab',
+                        onClick: () => window.HEYS?.Messenger?.openModal?.(),
+                        'aria-label': 'Написать куратору'
+                    }, '💬')
                 ),
 
                 diarySection,
