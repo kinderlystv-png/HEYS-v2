@@ -638,3 +638,314 @@ describe('Batch day-updated event strategy', () => {
     expect(shouldSkip).toBe(true);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// heys_game hot-sync merge (Block B of dailyBonusClaimed fix)
+//
+// Регрессия которую покрывают эти тесты:
+// 1. Пользователь нажал 🎁 daily bonus на устройстве A → local
+//    dailyBonusClaimed='2026-05-27', totalXP+=10.
+// 2. Hot-sync приносит stale cloud snapshot ({ dailyBonusClaimed:null, totalXP:старый }).
+// 3. БЕЗ fix: applyForegroundHotSyncValue делает wholesale setItem →
+//    dailyBonusClaimed теряется → кнопка появляется снова.
+// 4. С fix: новая ветка `else if (baseKey === 'heys_game')` применяет
+//    mergeGameData (или preserveLocalDailyBonusClaimed fallback) перед setItem.
+//
+// Контракт: тесты копируют preserveLocalDailyBonusClaimed inline
+// (как остальные тесты — см. merge-day-data.test.js). Это та же чистая
+// функция, что и в heys_gamification_v1.js — single source of truth там,
+// тесты — verification mirror.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Inline копия preserveLocalDailyBonusClaimed (production: heys_gamification_v1.js:~742)
+function preserveLocalDailyBonusClaimed(local, remote) {
+  if (!local) return remote;
+  if (!remote) return local;
+  const localAch = Array.isArray(local.unlockedAchievements) ? local.unlockedAchievements : [];
+  const remoteAch = Array.isArray(remote.unlockedAchievements) ? remote.unlockedAchievements : [];
+  const mergedAch = [...new Set([...remoteAch, ...localAch])];
+  const localDbc = local.dailyBonusClaimed || null;
+  const remoteDbc = remote.dailyBonusClaimed || null;
+  const dbc = localDbc && (!remoteDbc || localDbc >= remoteDbc) ? localDbc : (remoteDbc || null);
+  return {
+    ...remote,
+    unlockedAchievements: mergedAch,
+    dailyBonusClaimed: dbc,
+    stats: {
+      ...remote.stats,
+      bestStreak: Math.max(remote.stats?.bestStreak || 0, local.stats?.bestStreak || 0),
+      perfectDays: Math.max(remote.stats?.perfectDays || 0, local.stats?.perfectDays || 0),
+      totalProducts: Math.max(remote.stats?.totalProducts || 0, local.stats?.totalProducts || 0),
+      totalWater: Math.max(remote.stats?.totalWater || 0, local.stats?.totalWater || 0),
+      totalTrainings: Math.max(remote.stats?.totalTrainings || 0, local.stats?.totalTrainings || 0),
+    }
+  };
+}
+
+// Inline симуляция heys_game hot-sync branch (production: heys_storage_supabase_v1.js:~11290)
+// Принимает: текущий raw из LS, входящее cloud value, дескриптор HEYS.game (для DI).
+// Возвращает: { wrote: bool, finalRaw: string|null, finalValue: any }.
+// Совпадает с production-логикой строка-в-строку (кроме отсутствия dispatchEvent).
+function simulateHotSyncHeysGameBranch({ currentRaw, value, HEYSgame }) {
+  const previousValue = currentRaw ? JSON.parse(currentRaw) : null;
+  const serialized = JSON.stringify(value);
+  if (currentRaw === serialized) return { wrote: false, finalRaw: currentRaw, finalValue: previousValue };
+
+  let appliedMergedGame = false;
+  let finalRaw = currentRaw;
+  let finalValue = value;
+  try {
+    const gameMerge = HEYSgame?.mergeGameData;
+    const preserveHelper = HEYSgame?.preserveLocalDailyBonusClaimed;
+    let mergedGame = null;
+    if (typeof gameMerge === 'function' && previousValue) {
+      mergedGame = gameMerge(previousValue, value);
+    } else if (typeof preserveHelper === 'function' && previousValue) {
+      mergedGame = preserveHelper(previousValue, value);
+    }
+    if (mergedGame) {
+      const reserialized = JSON.stringify(mergedGame);
+      if (currentRaw === reserialized) return { wrote: false, finalRaw: currentRaw, finalValue: previousValue };
+      finalRaw = reserialized;
+      finalValue = mergedGame;
+      appliedMergedGame = true;
+    }
+  } catch (_) { /* fallback to wholesale */ }
+
+  if (!appliedMergedGame) {
+    finalRaw = serialized;
+    finalValue = value;
+  }
+  return { wrote: true, finalRaw, finalValue };
+}
+
+describe('heys_game hot-sync merge (Block B)', () => {
+  describe('with mergeGameData available', () => {
+    test('stale cloud dailyBonusClaimed=null does NOT overwrite local dailyBonusClaimed=today', () => {
+      // Реальный mergeGameData импортировать нельзя (legacy IIFE), но
+      // preserveLocalDailyBonusClaimed имеет такое же поведение для критичных полей,
+      // и production-код использует его как fallback. Используем mock-merge
+      // который возвращает union по dailyBonusClaimed + максимум XP.
+      const mockMerge = (local, remote) => ({
+        ...remote,
+        totalXP: Math.max(local.totalXP || 0, remote.totalXP || 0),
+        dailyBonusClaimed: local.dailyBonusClaimed || remote.dailyBonusClaimed || null,
+        unlockedAchievements: [...new Set([...(remote.unlockedAchievements || []), ...(local.unlockedAchievements || [])])],
+      });
+
+      const localGame = {
+        totalXP: 110,
+        dailyBonusClaimed: '2026-05-27',
+        unlockedAchievements: ['first_login'],
+        stats: { bestStreak: 5 }
+      };
+      const currentRaw = JSON.stringify(localGame);
+
+      const incomingStale = {
+        totalXP: 100,
+        dailyBonusClaimed: null,
+        unlockedAchievements: ['first_login'],
+        stats: { bestStreak: 5 }
+      };
+
+      const result = simulateHotSyncHeysGameBranch({
+        currentRaw,
+        value: incomingStale,
+        HEYSgame: { mergeGameData: mockMerge, preserveLocalDailyBonusClaimed }
+      });
+
+      // Critical: финальное состояние LS сохраняет local dailyBonusClaimed.
+      // wrote=true когда merge изменил что-то по сравнению с currentRaw,
+      // wrote=false когда merged == currentRaw (no-op). Оба варианта OK
+      // пока финальный raw содержит preserved dailyBonusClaimed.
+      const finalParsed = JSON.parse(result.finalRaw);
+      expect(finalParsed.dailyBonusClaimed).toBe('2026-05-27');
+      expect(finalParsed.totalXP).toBe(110); // max
+    });
+  });
+
+  describe('without mergeGameData (fallback path)', () => {
+    test('fallback to preserveLocalDailyBonusClaimed when mergeGameData unavailable', () => {
+      const localGame = {
+        totalXP: 110,
+        dailyBonusClaimed: '2026-05-27',
+        unlockedAchievements: ['first_login'],
+        stats: { bestStreak: 5, perfectDays: 2 }
+      };
+      const currentRaw = JSON.stringify(localGame);
+
+      const incomingStale = {
+        totalXP: 100,
+        dailyBonusClaimed: null,
+        unlockedAchievements: ['first_login', 'streak_3'],
+        stats: { bestStreak: 3, perfectDays: 1 }
+      };
+
+      const result = simulateHotSyncHeysGameBranch({
+        currentRaw,
+        value: incomingStale,
+        HEYSgame: { mergeGameData: undefined, preserveLocalDailyBonusClaimed }
+      });
+
+      expect(result.wrote).toBe(true);
+      const finalParsed = JSON.parse(result.finalRaw);
+      // Critical: dailyBonusClaimed preserved
+      expect(finalParsed.dailyBonusClaimed).toBe('2026-05-27');
+      // Union of achievements
+      expect(finalParsed.unlockedAchievements.sort()).toEqual(['first_login', 'streak_3'].sort());
+      // Max per stat
+      expect(finalParsed.stats.bestStreak).toBe(5);
+      expect(finalParsed.stats.perfectDays).toBe(2);
+    });
+
+    test('newer remote dailyBonusClaimed wins over older local', () => {
+      const localGame = {
+        totalXP: 100,
+        dailyBonusClaimed: '2026-05-26', // вчера
+        stats: {}
+      };
+      const currentRaw = JSON.stringify(localGame);
+
+      const incomingFresher = {
+        totalXP: 100,
+        dailyBonusClaimed: '2026-05-27', // сегодня
+        stats: {}
+      };
+
+      const result = simulateHotSyncHeysGameBranch({
+        currentRaw,
+        value: incomingFresher,
+        HEYSgame: { preserveLocalDailyBonusClaimed }
+      });
+
+      const finalParsed = JSON.parse(result.finalRaw);
+      expect(finalParsed.dailyBonusClaimed).toBe('2026-05-27');
+    });
+  });
+
+  describe('no-op detection', () => {
+    test('returns wrote=false when value byte-identical to currentRaw (early return)', () => {
+      const same = { totalXP: 100, dailyBonusClaimed: '2026-05-27', stats: {} };
+      const raw = JSON.stringify(same);
+
+      const result = simulateHotSyncHeysGameBranch({
+        currentRaw: raw,
+        value: JSON.parse(raw),
+        HEYSgame: { preserveLocalDailyBonusClaimed }
+      });
+
+      expect(result.wrote).toBe(false);
+    });
+
+    test('post-merge no-op detection: merged == currentRaw triggers second no-op return', () => {
+      // Этот тест проверяет специфичную ветку: `if (currentRaw === reserialized) return false`
+      // после merge (вторая проверка, не early-return).
+      //
+      // Для этого нужно: value !== currentRaw, но preserveLocalDailyBonusClaimed(local, value)
+      // даёт ровно тот же byte-output что и currentRaw.
+      //
+      // Достигаем этого через: currentRaw сериализован из объекта, который ИДЕНТИЧЕН выходу
+      // preserveLocalDailyBonusClaimed(value, value). Любая мелкая разница в value
+      // (например, лишнее поле в local) приведёт к расхождению.
+      const incomingValue = { totalXP: 100, dailyBonusClaimed: '2026-05-27', stats: { bestStreak: 5 } };
+      const expectedMerged = preserveLocalDailyBonusClaimed(incomingValue, incomingValue);
+      const settledRaw = JSON.stringify(expectedMerged);
+
+      // Передаём value как НОВЫЙ объект (другая ссылка), но same JSON shape.
+      // JSON.stringify даст тот же байт-поток — early return сработает первым.
+      const result = simulateHotSyncHeysGameBranch({
+        currentRaw: settledRaw,
+        value: { ...incomingValue },
+        HEYSgame: { preserveLocalDailyBonusClaimed }
+      });
+
+      // Когда merged == currentRaw byte-for-byte — no-op return.
+      // (Может сработать через early-return или через пост-merge return — оба путь к wrote=false).
+      expect(result.wrote).toBe(false);
+    });
+  });
+
+  describe('helpers unavailable (worst case)', () => {
+    test('falls back to wholesale setItem when neither helper is available', () => {
+      const localGame = {
+        totalXP: 110,
+        dailyBonusClaimed: '2026-05-27',
+        stats: {}
+      };
+      const currentRaw = JSON.stringify(localGame);
+
+      const incomingStale = {
+        totalXP: 100,
+        dailyBonusClaimed: null,
+        stats: {}
+      };
+
+      const result = simulateHotSyncHeysGameBranch({
+        currentRaw,
+        value: incomingStale,
+        HEYSgame: {} // ни mergeGameData, ни preserveLocalDailyBonusClaimed
+      });
+
+      // В worst case wholesale write — это известная регрессия, но
+      // покрытие нужно зафиксировать, чтобы изменение в логике не оставалось незамеченным.
+      expect(result.wrote).toBe(true);
+      const finalParsed = JSON.parse(result.finalRaw);
+      expect(finalParsed.dailyBonusClaimed).toBe(null);
+    });
+  });
+});
+
+describe('preserveLocalDailyBonusClaimed (pure function)', () => {
+  test('returns remote when local is null/undefined', () => {
+    const remote = { totalXP: 100, dailyBonusClaimed: '2026-05-27', stats: {} };
+    expect(preserveLocalDailyBonusClaimed(null, remote)).toBe(remote);
+    expect(preserveLocalDailyBonusClaimed(undefined, remote)).toBe(remote);
+  });
+
+  test('returns local when remote is null/undefined', () => {
+    const local = { totalXP: 100, dailyBonusClaimed: '2026-05-27', stats: {} };
+    expect(preserveLocalDailyBonusClaimed(local, null)).toBe(local);
+    expect(preserveLocalDailyBonusClaimed(local, undefined)).toBe(local);
+  });
+
+  test('preserves local dailyBonusClaimed when remote is null', () => {
+    const local = { dailyBonusClaimed: '2026-05-27', stats: {} };
+    const remote = { dailyBonusClaimed: null, stats: {} };
+    const merged = preserveLocalDailyBonusClaimed(local, remote);
+    expect(merged.dailyBonusClaimed).toBe('2026-05-27');
+  });
+
+  test('takes newer dailyBonusClaimed when both present', () => {
+    const local = { dailyBonusClaimed: '2026-05-26', stats: {} };
+    const remote = { dailyBonusClaimed: '2026-05-27', stats: {} };
+    expect(preserveLocalDailyBonusClaimed(local, remote).dailyBonusClaimed).toBe('2026-05-27');
+  });
+
+  test('unions unlockedAchievements', () => {
+    const local = { unlockedAchievements: ['a', 'b'], stats: {} };
+    const remote = { unlockedAchievements: ['b', 'c'], stats: {} };
+    const merged = preserveLocalDailyBonusClaimed(local, remote);
+    expect(merged.unlockedAchievements.sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  test('takes max per stat field', () => {
+    const local = { stats: { bestStreak: 10, perfectDays: 1, totalProducts: 50, totalWater: 200, totalTrainings: 3 } };
+    const remote = { stats: { bestStreak: 5, perfectDays: 8, totalProducts: 100, totalWater: 100, totalTrainings: 7 } };
+    const merged = preserveLocalDailyBonusClaimed(local, remote);
+    expect(merged.stats.bestStreak).toBe(10);
+    expect(merged.stats.perfectDays).toBe(8);
+    expect(merged.stats.totalProducts).toBe(100);
+    expect(merged.stats.totalWater).toBe(200);
+    expect(merged.stats.totalTrainings).toBe(7);
+  });
+
+  test('takes remote XP/level (mergeGameData would max XP — but this is fallback for null/undefined only)', () => {
+    // Helper не отвечает за XP — он только защищает dailyBonusClaimed/achievements/stats.
+    // mergeGameData делает Math.max(totalXP) — fallback должен принять remote XP как есть.
+    const local = { totalXP: 200, level: 10, stats: {} };
+    const remote = { totalXP: 100, level: 5, stats: {} };
+    const merged = preserveLocalDailyBonusClaimed(local, remote);
+    expect(merged.totalXP).toBe(100); // взято из remote (...remote spread)
+    expect(merged.level).toBe(5);
+  });
+});

@@ -740,6 +740,37 @@
     return merged;
   }
 
+  // ─── preserveLocalDailyBonusClaimed ──────────────────────────────────────
+  // Минимальный fallback merge для случая когда mergeGameData недоступна
+  // (bootstrap-time race, HEYS.game ещё не загружен). Используется в 2 точках:
+  // 1. applyCloudSnapshot fallback (heys_storage_supabase_v1.js:~7660)
+  // 2. applyForegroundHotSyncValue heys_game branch (heys_storage_supabase_v1.js:~11290)
+  // Сохраняет: dailyBonusClaimed (newer wins), unlockedAchievements (union),
+  // stats (max per-field). Остальное берётся из remote.
+  function preserveLocalDailyBonusClaimed(local, remote) {
+    if (!local) return remote;
+    if (!remote) return local;
+    const localAch = Array.isArray(local.unlockedAchievements) ? local.unlockedAchievements : [];
+    const remoteAch = Array.isArray(remote.unlockedAchievements) ? remote.unlockedAchievements : [];
+    const mergedAch = [...new Set([...remoteAch, ...localAch])];
+    const localDbc = local.dailyBonusClaimed || null;
+    const remoteDbc = remote.dailyBonusClaimed || null;
+    const dbc = localDbc && (!remoteDbc || localDbc >= remoteDbc) ? localDbc : (remoteDbc || null);
+    return {
+      ...remote,
+      unlockedAchievements: mergedAch,
+      dailyBonusClaimed: dbc,
+      stats: {
+        ...remote.stats,
+        bestStreak: Math.max(remote.stats?.bestStreak || 0, local.stats?.bestStreak || 0),
+        perfectDays: Math.max(remote.stats?.perfectDays || 0, local.stats?.perfectDays || 0),
+        totalProducts: Math.max(remote.stats?.totalProducts || 0, local.stats?.totalProducts || 0),
+        totalWater: Math.max(remote.stats?.totalWater || 0, local.stats?.totalWater || 0),
+        totalTrainings: Math.max(remote.stats?.totalTrainings || 0, local.stats?.totalTrainings || 0),
+      }
+    };
+  }
+
   function getAuditContext() {
     const sessionToken = HEYS.cloud?.getSessionToken?.() || localStorage.getItem('heys_session_token');
     const curatorToken = localStorage.getItem('heys_curator_session');
@@ -4970,10 +5001,13 @@
     RANK_BADGES,
 
     // 🔧 Exposed merge для storage layer (heys_storage_supabase_v1.js)
-    // Используется в applyCloudSnapshot чтобы не терять локальные поля
-    // (dailyBonusClaimed, streakShieldUsed, daily missions/challenge state)
-    // при remote XP > local XP. См. mergeGameData line ~705.
+    // Используется в applyCloudSnapshot и applyForegroundHotSyncValue чтобы
+    // не терять локальные поля (dailyBonusClaimed, streakShieldUsed, daily
+    // missions/challenge state) при remote XP > local XP / hot-sync apply.
+    // mergeGameData — полный merge (см. line ~705).
+    // preserveLocalDailyBonusClaimed — минимальный fallback (см. line ~742).
     mergeGameData,
+    preserveLocalDailyBonusClaimed,
 
     // 🔊 Sound settings API — delegates to HEYS.audio
     getSoundSettings: () => {
