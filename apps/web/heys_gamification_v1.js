@@ -4969,6 +4969,12 @@
     XP_ACTIONS,
     RANK_BADGES,
 
+    // 🔧 Exposed merge для storage layer (heys_storage_supabase_v1.js)
+    // Используется в applyCloudSnapshot чтобы не терять локальные поля
+    // (dailyBonusClaimed, streakShieldUsed, daily missions/challenge state)
+    // при remote XP > local XP. См. mergeGameData line ~705.
+    mergeGameData,
+
     // 🔊 Sound settings API — delegates to HEYS.audio
     getSoundSettings: () => {
       if (!HEYS.audio) return loadSoundSettings();

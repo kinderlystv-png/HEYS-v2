@@ -7610,26 +7610,65 @@
                     return;
                   }
 
-                  // Если remote XP больше — берём remote, но мержим achievements
+                  // Если remote XP больше — мержим полноценно через mergeGameData
+                  // (раньше был ad-hoc merge только achievements+stats → терял
+                  //  dailyBonusClaimed/streakShieldUsed/missions/weeklyChallenge,
+                  //  из-за чего "забранный 🎁 10 XP" появлялся снова после refresh)
                   if (remoteTotalXP > localTotalXP) {
-                    const localAchievements = bestLocalGame?.unlockedAchievements || [];
-                    const remoteAchievements = row.v?.unlockedAchievements || [];
-                    const mergedAchievements = [...new Set([...remoteAchievements, ...localAchievements])];
-
-                    row.v = {
-                      ...row.v,
-                      unlockedAchievements: mergedAchievements,
-                      // Сохраняем максимальные stats
-                      stats: {
-                        ...row.v?.stats,
-                        bestStreak: Math.max(row.v?.stats?.bestStreak || 0, bestLocalGame?.stats?.bestStreak || 0),
-                        perfectDays: Math.max(row.v?.stats?.perfectDays || 0, bestLocalGame?.stats?.perfectDays || 0),
-                        totalProducts: Math.max(row.v?.stats?.totalProducts || 0, bestLocalGame?.stats?.totalProducts || 0),
-                        totalWater: Math.max(row.v?.stats?.totalWater || 0, bestLocalGame?.stats?.totalWater || 0),
-                        totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, bestLocalGame?.stats?.totalTrainings || 0)
+                    const gameMerge = typeof window !== 'undefined' && window.HEYS?.game?.mergeGameData;
+                    if (typeof gameMerge === 'function' && bestLocalGame) {
+                      try {
+                        const fullyMerged = gameMerge(bestLocalGame, row.v);
+                        row.v = fullyMerged;
+                        const mergedAchCount = Array.isArray(fullyMerged?.unlockedAchievements)
+                          ? fullyMerged.unlockedAchievements.length
+                          : 0;
+                        logCritical(`🎮 [GAME] MERGED via mergeGameData: XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchCount}, dailyBonusClaimed preserved: ${fullyMerged?.dailyBonusClaimed || 'null'}`);
+                      } catch (e) {
+                        logCritical(`🎮 [GAME] mergeGameData failed (${e?.message || e}), falling back to ad-hoc merge`);
+                        // Fallback: старый ad-hoc merge (всё ещё лучше чем pure remote)
+                        const localAchievements = bestLocalGame?.unlockedAchievements || [];
+                        const remoteAchievements = row.v?.unlockedAchievements || [];
+                        const mergedAchievements = [...new Set([...remoteAchievements, ...localAchievements])];
+                        row.v = {
+                          ...row.v,
+                          unlockedAchievements: mergedAchievements,
+                          dailyBonusClaimed: bestLocalGame?.dailyBonusClaimed && (!row.v?.dailyBonusClaimed || bestLocalGame.dailyBonusClaimed >= row.v.dailyBonusClaimed)
+                            ? bestLocalGame.dailyBonusClaimed
+                            : (row.v?.dailyBonusClaimed || null),
+                          stats: {
+                            ...row.v?.stats,
+                            bestStreak: Math.max(row.v?.stats?.bestStreak || 0, bestLocalGame?.stats?.bestStreak || 0),
+                            perfectDays: Math.max(row.v?.stats?.perfectDays || 0, bestLocalGame?.stats?.perfectDays || 0),
+                            totalProducts: Math.max(row.v?.stats?.totalProducts || 0, bestLocalGame?.stats?.totalProducts || 0),
+                            totalWater: Math.max(row.v?.stats?.totalWater || 0, bestLocalGame?.stats?.totalWater || 0),
+                            totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, bestLocalGame?.stats?.totalTrainings || 0)
+                          }
+                        };
                       }
-                    };
-                    logCritical(`🎮 [GAME] MERGED: XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchievements.length}`);
+                    } else {
+                      // mergeGameData недоступна (старый bundle / HEYS.game не загружен) — fallback
+                      const localAchievements = bestLocalGame?.unlockedAchievements || [];
+                      const remoteAchievements = row.v?.unlockedAchievements || [];
+                      const mergedAchievements = [...new Set([...remoteAchievements, ...localAchievements])];
+                      row.v = {
+                        ...row.v,
+                        unlockedAchievements: mergedAchievements,
+                        // 🛡️ Preserve local "claim today" state (минимальный fix для случая без mergeGameData)
+                        dailyBonusClaimed: bestLocalGame?.dailyBonusClaimed && (!row.v?.dailyBonusClaimed || bestLocalGame.dailyBonusClaimed >= row.v.dailyBonusClaimed)
+                          ? bestLocalGame.dailyBonusClaimed
+                          : (row.v?.dailyBonusClaimed || null),
+                        stats: {
+                          ...row.v?.stats,
+                          bestStreak: Math.max(row.v?.stats?.bestStreak || 0, bestLocalGame?.stats?.bestStreak || 0),
+                          perfectDays: Math.max(row.v?.stats?.perfectDays || 0, bestLocalGame?.stats?.perfectDays || 0),
+                          totalProducts: Math.max(row.v?.stats?.totalProducts || 0, bestLocalGame?.stats?.totalProducts || 0),
+                          totalWater: Math.max(row.v?.stats?.totalWater || 0, bestLocalGame?.stats?.totalWater || 0),
+                          totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, bestLocalGame?.stats?.totalTrainings || 0)
+                        }
+                      };
+                      logCritical(`🎮 [GAME] MERGED (no HEYS.game): XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchievements.length}, dailyBonusClaimed preserved: ${row.v.dailyBonusClaimed || 'null'}`);
+                    }
                   }
 
                   // Если оба равны нулю — ничего не делаем, пусть remote запишется
