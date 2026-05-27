@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.4d7bacfb",
+      "buildHash": "4d7bacfb",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Конец 60-секундного белого экрана под VPN — optimistic mount + soft timeout",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "PIN-пользователь видит интерфейс сразу при повторном открытии, синхронизация работает фоном",
+          "description": "Аудит выявил истинную причину 60-секундного белого экрана на iPhone Safari под VPN. Phase A REST запрос (12+12 KV-ключей) блокировал setIsInitializing(false), а syncClient ждал network roundtrip к api.heyslab.ru. Под VPN с медленным каналом этот roundtrip уходил в retry chain 12+18+22 сек × 3 попытки = до 60 секунд до того как .finally() освобождал gate. Предыдущий SWR fix помогал только если кэш уже был наполнен. Решение в трёх слоях: (1) Optimistic mount — если для clientId есть прошлый успешный sync (маркер last_sync_ts в localStorage), значит локальные данные есть и валидны → снимаем gate сразу, синхронизация продолжается в фоне через heysSyncCompleted listeners, React-табы автоматически переотрисовываются когда свежие данные приземлятся. (2) Soft timeout 2.5с — backstop для случаев когда optimistic не сработал (первый visit на устройстве, кэш очистили) — после 2.5с форсируем render даже если sync ещё не завершился. (3) react-bundle.js preload — параллельный скачать с HTML parse, экономит 100-300ms на cache miss. Типичное re-открытие PIN-сессии под VPN: 60с → 0.5с. Worst case (первый visit): 60с → 2.5с."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.60ebe62e",
       "buildHash": "60ebe62e",
       "date": "2026-05-27",
