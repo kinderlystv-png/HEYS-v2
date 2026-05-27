@@ -133,6 +133,7 @@ function getCorsHeaders(origin) {
 
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
   }
   // Если origin не разрешён — не добавляем Access-Control-Allow-Origin
   // Браузер заблокирует cross-origin запрос
