@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "UX: убран ложный баннер «Подождите синхронизации» при обычном scroll",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Pull-to-refresh не блокирует обычный scroll вниз",
+          "description": "Раньше: открыл страницу → cloud sync ещё качает данные (pending uploads > 0) → ЛЮБОЕ касание экрана при scrollY=0 (например начало обычного скролла вниз) → выскакивал overlay «Подождите. Сначала дождитесь завершения синхронизации» на 1-2 секунды. Это ломало UX каждое первое открытие дневника — пользователь видел блокирующий баннер до того как успел что-либо сделать. Причина: onTouchStart handler в heys_day_pull_refresh_v1.js preemptively показывал overlay если scrollY=0 + pending>0, не дожидаясь реального pull-down жеста. Теперь: на touchStart просто не активируем pull-tracking (native scroll работает свободно). Overlay показывается ТОЛЬКО если пользователь сделал реальный pull-down gesture (deltaY ≥ threshold) — в onTouchEnd, что корректно (там user явно попросил refresh)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.75bbe2b5",
       "buildHash": "75bbe2b5",
       "date": "2026-05-27",

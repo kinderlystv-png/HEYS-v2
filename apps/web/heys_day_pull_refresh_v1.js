@@ -375,8 +375,17 @@
         if (window.scrollY <= 0) {
           const pendingCount = getRuntimePendingCount();
           if (pendingCount > 0) {
+            // UX FIX (2026-05-27): НЕ показываем overlay на touchStart preemptively.
+            // Раньше: открыл страницу → cloud sync ещё качает (pending>0) → ЛЮБОЕ
+            // касание экрана при scrollY=0 → overlay "Подождите дождитесь синхронизации"
+            // висел секунду до того как пользователь что-либо сделал. Это ломало UX
+            // при обычном scroll вниз сразу после открытия.
+            // Теперь: просто не активируем pull-tracking когда есть pending uploads.
+            // Native scroll работает нормально. Если пользователь СДЕЛАЕТ настоящий
+            // pull-down gesture (touchend pull >= threshold) — overlay покажется
+            // в onTouchEnd handler (line ~461), что корректно — там user явно попросил
+            // refresh и нужно объяснить почему он не сработает.
             isPulling.current = false;
-            notifyPullRefreshBlocked(pendingCount);
             return;
           }
 
