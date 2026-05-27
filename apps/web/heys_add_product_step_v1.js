@@ -1285,7 +1285,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Свежесть: 1.0 для сегодня, убывает экспоненциально
     // Формула: score = frequency * recencyWeight
     // recencyWeight = 1 / (1 + daysAgo * 0.15)
+    //
+    // PERF (2026-05-27): мемоизация — Chrome Perf trace показал
+    // resolveUsageStats total 4,895ms (11.7%) на 100-сек session, главный JS hot path
+    // после normalize/resolveProduct fixes. Причина: для каждого product в sort
+    // вызывается getFreq → resolveUsageStats → usageStats.forEach (O(N) iteration
+    // через все usage entries). 300-500 products × 100+ entries × multiple sorts = много.
+    // Функция pure от (pid, name) пока usageStats не меняется (а она captured в closure
+    // и не меняется внутри одного render pass). Cache живёт в scope этой parent
+    // function — auto-cleaned когда closure released на следующем render.
+    const _resolveUsageStatsCache = new Map();
     const resolveUsageStats = (pid, name) => {
+      const cacheKey = (pid == null ? '' : String(pid)) + '|' + String(name || '');
+      if (_resolveUsageStatsCache.has(cacheKey)) {
+        return _resolveUsageStatsCache.get(cacheKey);
+      }
       const rawName = String(name || '').trim();
       const normName = normalizeName(rawName);
       const searchNorm = HEYS?.SmartSearchWithTypos?.utils?.normalizeText
@@ -1308,17 +1322,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
       }
 
-      if (!candidates.length) return null;
-
-      return candidates.reduce((best, curr) => {
-        if (!best) return curr;
-        const bc = Number(best.count) || 0;
-        const cc = Number(curr.count) || 0;
-        if (cc !== bc) return cc > bc ? curr : best;
-        const bl = Number(best.lastUsed) || 0;
-        const cl = Number(curr.lastUsed) || 0;
-        return cl > bl ? curr : best;
-      }, null);
+      let result;
+      if (!candidates.length) {
+        result = null;
+      } else {
+        result = candidates.reduce((best, curr) => {
+          if (!best) return curr;
+          const bc = Number(best.count) || 0;
+          const cc = Number(curr.count) || 0;
+          if (cc !== bc) return cc > bc ? curr : best;
+          const bl = Number(best.lastUsed) || 0;
+          const cl = Number(curr.lastUsed) || 0;
+          return cl > bl ? curr : best;
+        }, null);
+      }
+      _resolveUsageStatsCache.set(cacheKey, result);
+      return result;
     };
 
     const getFreq = (pid, name) => {

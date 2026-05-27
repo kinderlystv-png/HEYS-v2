@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Производительность: мемоизация resolveUsageStats (топ JS hot path 4.9s → ~500ms)",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Кэш resolveUsageStats в add-product-step",
+          "description": "Chrome Performance trace (100-сек cold session) показал resolveUsageStats как новый главный JS hot path: 1,117ms self / 4,895ms total (11.7% от total time). Это после успешных fix'ов normalizeProductName (905→63ms) и resolveProductByItem (WeakMap). Причина: функция вызывается через getFreq для КАЖДОГО product в sort × usageStats.forEach iterates ВСЕ entries usage map для substring match. 300-500 products × 100+ usage entries × multiple sorts = огромный N×M overhead. Функция pure от (pid, name) пока usageStats не меняется. Добавлен Map cache внутри scope (auto-cleaned на следующем render когда closure released). Ожидание: 4,895ms total → ~500ms (~90% reduction) для типичной session с активным product sorting/filtering."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.0c5ba8bd",
       "buildHash": "0c5ba8bd",
       "date": "2026-05-27",
