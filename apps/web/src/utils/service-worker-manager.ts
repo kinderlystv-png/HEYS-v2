@@ -65,6 +65,14 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
       // с полным `event.data` → Chrome `[Violation] message handler took Nms`.
       this.setupMessageListener();
 
+      // 🛑 KV cache killswitch via URL param (per-device, persistent).
+      // ?nosw=1 — отключить SWR кеш для GET /rest/client_kv_store (level-1 rollback).
+      // ?nosw=0 — снова включить (если был отключен).
+      // Применяется к active SW; первый install ждёт ready.
+      this.applyKvKillswitchFromUrl().catch((error) => {
+        log.warn('SW Manager: KV killswitch apply failed', { error });
+      });
+
       // Принудительное обновление существующего SW
       if (this.registration.waiting) {
         this.sendMessage({ type: 'SKIP_WAITING' });
@@ -219,6 +227,54 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
    */
   private isServiceWorkerReady(): boolean {
     return !!(this.registration && navigator.serviceWorker.controller);
+  }
+
+  /**
+   * Применить ?nosw=1|0 из URL — toggle KV cache killswitch на active SW.
+   * Используется как level-1 rollback (per-device, без redeploy).
+   */
+  private async applyKvKillswitchFromUrl(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    let url: URL;
+    try {
+      url = new URL(window.location.href);
+    } catch {
+      return;
+    }
+    if (!url.searchParams.has('nosw')) return;
+
+    const enable = url.searchParams.get('nosw') !== '0';
+    const messageType = enable ? 'SW_KILLSWITCH_ENABLE' : 'SW_KILLSWITCH_DISABLE';
+
+    // Ждём активный SW (controller существует после clients.claim).
+    // На первом install controller может быть null несколько мс — короткий retry.
+    const send = () => {
+      const controller = navigator.serviceWorker.controller;
+      if (controller) {
+        controller.postMessage({ type: messageType });
+        log.info('SW Manager: KV killswitch applied', { enable });
+        return true;
+      }
+      return false;
+    };
+
+    if (send()) return;
+
+    // Wait for controllerchange — fires когда SW takes control (после skipWaiting + claim).
+    try {
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => resolve(), 5000);
+        const onChange = () => {
+          clearTimeout(timeout);
+          navigator.serviceWorker.removeEventListener('controllerchange', onChange);
+          resolve();
+        };
+        navigator.serviceWorker.addEventListener('controllerchange', onChange);
+      });
+      send();
+    } catch (_) {
+      // noop
+    }
   }
 
   /**

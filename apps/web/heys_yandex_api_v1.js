@@ -105,6 +105,21 @@
   }
 
   /**
+   * 🔁 Phase A SWR invalidation: уведомить SW что cache для GET /rest/client_kv_store
+   * больше не валиден. Вызывается после успешных write-операций (saveKV / batchSaveKV /
+   * mergeSaveKV / deleteKV). SW clears API_KV_CACHE и broadcast'ит INVALIDATED в tabs.
+   * Fail-safe: noop если SW недоступен (private mode, нет controller).
+   */
+  function invalidateSwKvCache(reason) {
+    try {
+      const sw = (typeof navigator !== 'undefined') && navigator.serviceWorker;
+      if (sw && sw.controller) {
+        sw.controller.postMessage({ type: 'INVALIDATE_KV', reason: reason || 'kv_write' });
+      }
+    } catch (_) { /* noop */ }
+  }
+
+  /**
    * Выполнить fetch с таймаутом
    */
   async function fetchWithTimeout(url, options, timeoutMs = CONFIG.TIMEOUT_MS) {
@@ -902,6 +917,7 @@
           const data = result.data;
           const success = data?.success !== false;
           if (success && !data?.error) {
+            invalidateSwKvCache('saveKV_curator');
             return { success: true };
           }
           return { success: false, error: data?.error || 'Curator save failed' };
@@ -924,6 +940,7 @@
       if (data?.success === false) {
         return { success: false, error: data.error || 'Unknown error' };
       }
+      invalidateSwKvCache('saveKV_session');
       return { success: true };
     } catch (e) {
       err('saveKV failed:', e.message);
@@ -1383,6 +1400,7 @@
             const success = data?.success !== false;
             // Если SQL вернул success:true — отдаём как есть
             if (success && !data?.error) {
+              invalidateSwKvCache('batchSaveKV_curator_rpc');
               return {
                 success: true,
                 saved: data?.saved || 0,
@@ -1411,7 +1429,9 @@
       const curatorUserId = getCuratorUserId();
       if (curatorUserId) {
         log(`[v56] Falling back to REST path (curator=${curatorUserId?.slice(0, 8)})`);
-        return await batchSaveKVviaREST(curatorUserId, clientId, items);
+        const restResult = await batchSaveKVviaREST(curatorUserId, clientId, items);
+        if (restResult?.success) invalidateSwKvCache('batchSaveKV_curator_rest');
+        return restResult;
       }
 
       // 🔐 Path 4: PIN auth client (no curator token at all). Session token
@@ -1427,8 +1447,10 @@
           return { success: false, saved: 0, error: result.error.message || result.error };
         }
         const data = result.data;
+        const success = data?.success !== false;
+        if (success && !data?.error) invalidateSwKvCache('batchSaveKV_session_rpc');
         return {
-          success: data?.success !== false,
+          success,
           saved: data?.saved || 0,
           error: data?.error
         };
@@ -1551,6 +1573,7 @@
         if (data?.ok === false) {
           return { success: false, error: data.error || 'merge_failed' };
         }
+        invalidateSwKvCache('mergeSaveKV_curator');
         return { success: true, v: data?.v, outcome: data?.outcome };
       }
 
@@ -1573,6 +1596,7 @@
         if (data?.ok === false) {
           return { success: false, error: data.error || 'merge_failed' };
         }
+        invalidateSwKvCache('mergeSaveKV_session');
         return { success: true, v: data?.v, outcome: data?.outcome };
       }
 
@@ -1637,7 +1661,9 @@
       const curatorUserId = getCuratorUserId();
       if (curatorUserId && clientId) {
         log(`[deleteKV] curator REST path (curator=${curatorUserId?.slice(0, 8)} client=${clientId?.slice(0, 8)})`);
-        return await deleteKVviaREST(curatorUserId, clientId, key);
+        const restResult = await deleteKVviaREST(curatorUserId, clientId, key);
+        if (restResult?.success) invalidateSwKvCache('deleteKV_curator');
+        return restResult;
       }
 
       // Fallback: PIN auth client (no curator token). Session resolves to a
@@ -1648,7 +1674,9 @@
         if (result.error) {
           return { success: false, error: result.error.message || result.error };
         }
-        return { success: result.data?.success !== false };
+        const ok = result.data?.success !== false;
+        if (ok) invalidateSwKvCache('deleteKV_session');
+        return { success: ok };
       }
 
       return { success: false, error: 'No auth token available' };

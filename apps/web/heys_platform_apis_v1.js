@@ -853,6 +853,36 @@
           deferSwPortWork(() => {
             window.dispatchEvent(new CustomEvent('heys:sync-complete'));
           });
+          return;
+        }
+
+        // === Phase A KV SWR контракт (2026-05-27) ===
+        // First iteration: log-only. Cache served stale, user may write → SW
+        // invalidates, next visit refetches. KV_FRESH сообщает что background
+        // refresh завершился — пока не триггерим re-apply (UI уже работает с
+        // данными из localStorage / Phase A applyForegroundHotSyncValue path).
+        // Если решим добавлять re-apply — менять ТОЛЬКО эти branches, без
+        // правок в SW (контракт стабилен).
+        if (t === 'KV_INVALIDATED') {
+          deferSwPortWork(() => {
+            try {
+              if (window.__heysLogControl?.isEnabled?.('sw') === true) {
+                console.log('[SW] 🔁 KV cache invalidated:', event.data.reason || 'unknown');
+              }
+            } catch (_) { /* noop */ }
+          });
+          return;
+        }
+
+        if (t === 'KV_FRESH') {
+          deferSwPortWork(() => {
+            try {
+              if (window.__heysLogControl?.isEnabled?.('sw') === true) {
+                console.log('[SW] ✨ KV background refresh complete');
+              }
+            } catch (_) { /* noop */ }
+          });
+          return;
         }
       });
     }

@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1779867941305';
+const CACHE_VERSION = 'heys-1779869454992';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -20,6 +20,28 @@ const BOOT_FAILURE_RESET_WINDOW_MS = 10 * 60 * 1000;
 // получил свежие ассеты и по возможности не дошёл до fullscreen recovery.
 const BOOT_FAILURE_PURGE_THRESHOLD = 2;
 let updateRequiredNotified = false;
+
+// ═══════════════════════════════════════════════════════════════════
+// 🔁 SWR for Phase A (VPN speedup) — 2026-05-27
+// ═══════════════════════════════════════════════════════════════════
+// Целевой path: GET /rest/client_kv_store?... (Phase A bootstrap, 12+12 ключей).
+// Re-visit под VPN: TLS handshake + REST roundtrip = 2-5 сек блокировки UI.
+// Стратегия: stale-while-revalidate — instant cached + фоновый refresh.
+//
+// Безопасность: cache захватывает ТОЛЬКО GET к client_kv_store. Auth, RPC,
+// payments — explicit hard no-store / networkFirst, никакого touch caching.
+// client_id в query string → cache партиционируется per-user автоматически.
+const API_KV_CACHE = `${CACHE_VERSION}-api-kv`;
+const API_KV_HOSTS = ['api.heyslab.ru', 'localhost:4001'];
+const API_KV_ROUTE_RE = /\/rest\/client_kv_store(?:\?|$)/;
+const API_AUTH_ROUTE_RE = /^\/(auth|payments|sms|leads)(?:\/|$)/;
+const API_RPC_ROUTE_RE = /^\/rpc(?:\/|$|\?)/;
+// META keys для killswitch и rollout — версионируются (старые auto-expire с CACHE_VERSION)
+const KV_CACHE_KILLSWITCH_KEY = '/__kv_cache_killswitch__';
+// rollout 1.0 = 100% (reversible через redeploy с понижением до 0.0)
+const KV_CACHE_ROLLOUT_PCT = 1.0;
+// per-client rollout decision (cached в meta после первого hit, чтобы decision был стабилен)
+const KV_CACHE_ROLLOUT_DECISION_KEY = '/__kv_cache_rollout_decision__';
 
 // Ресурсы для предварительного кэширования (App Shell — минимальный набор)
 // После бандлинга: 73 отдельных JS-файла заменены на 3 бандла.
@@ -267,8 +289,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // === API запросы (Supabase) — Network First ===
+  // === API запросы (Supabase legacy) — Network First ===
   if (url.hostname.includes('supabase') || url.pathname.startsWith('/api/')) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // === API HEYS (api.heyslab.ru / localhost:4001) — explicit routing ===
+  // Безопасный контракт: ТОЛЬКО GET /rest/client_kv_store кешируется (SWR).
+  // Всё остальное — auth/payments/sms/leads → no-store; RPC → networkFirst.
+  if (API_KV_HOSTS.includes(url.host)) {
+    // Auth / payments / sms / leads — никогда не кэшировать
+    // (credentials: 'include' carrier'ы, может содержать токены)
+    if (API_AUTH_ROUTE_RE.test(url.pathname)) {
+      event.respondWith(fetch(request, { cache: 'no-store' }));
+      return;
+    }
+    // RPC (mutations + reads через /rpc) — network-first как было
+    if (API_RPC_ROUTE_RE.test(url.pathname)) {
+      event.respondWith(networkFirst(request));
+      return;
+    }
+    // GET /rest/client_kv_store?... — Phase A SWR (VPN speedup)
+    if (request.method === 'GET' && API_KV_ROUTE_RE.test(url.pathname)) {
+      event.respondWith(kvStaleWhileRevalidate(request));
+      return;
+    }
+    // Прочее на api.heyslab.ru — network-first (default, без кеша на проблемы)
     event.respondWith(networkFirst(request));
     return;
   }
@@ -435,6 +482,123 @@ async function staleWhileRevalidate(request) {
   }
 
   return new Response('Offline', { status: 503 });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 🔁 Стратегия: Stale-While-Revalidate для Phase A KV (VPN speedup)
+// ═══════════════════════════════════════════════════════════════════
+// Только для GET https://api.heyslab.ru/rest/client_kv_store?...
+// Возвращает stale cache мгновенно, фоном fetch'ит свежее, обновляет
+// cache и broadcast'ит KV_FRESH в открытые tabs.
+
+async function isKvCacheDisabled() {
+  try {
+    const flag = await getMetaText(KV_CACHE_KILLSWITCH_KEY);
+    return flag === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
+async function isKvCacheAllowedByRollout() {
+  // KV_CACHE_ROLLOUT_PCT = 1.0 → всегда true (cheap fast path)
+  if (KV_CACHE_ROLLOUT_PCT >= 1) return true;
+  if (KV_CACHE_ROLLOUT_PCT <= 0) return false;
+  try {
+    const cached = await getMetaText(KV_CACHE_ROLLOUT_DECISION_KEY);
+    if (cached === '1') return true;
+    if (cached === '0') return false;
+    const decision = Math.random() < KV_CACHE_ROLLOUT_PCT;
+    await setMetaText(KV_CACHE_ROLLOUT_DECISION_KEY, decision ? '1' : '0');
+    return decision;
+  } catch (_) {
+    return KV_CACHE_ROLLOUT_PCT >= 1;
+  }
+}
+
+async function notifyKvFresh(url) {
+  try {
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      try {
+        client.postMessage({ type: 'KV_FRESH', url });
+      } catch (_) { /* noop */ }
+    });
+  } catch (_) { /* noop */ }
+}
+
+async function invalidateKvCache(reason) {
+  try {
+    await caches.delete(API_KV_CACHE);
+    console.log('[SW] 🔁 KV cache invalidated', { reason: reason || 'unknown' });
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      try {
+        client.postMessage({ type: 'KV_INVALIDATED', reason: reason || 'unknown' });
+      } catch (_) { /* noop */ }
+    });
+  } catch (e) {
+    console.warn('[SW] KV cache invalidate failed:', e);
+  }
+}
+
+async function kvStaleWhileRevalidate(request) {
+  // Guard 1: killswitch (per-device, instant rollback без redeploy)
+  const disabled = await isKvCacheDisabled();
+  if (disabled) {
+    return fetch(request);
+  }
+  // Guard 2: rollout gate (для global Phase 2-3 throttling)
+  const allowed = await isKvCacheAllowedByRollout();
+  if (!allowed) {
+    return fetch(request);
+  }
+
+  const cache = await caches.open(API_KV_CACHE);
+  const cached = await cache.match(request);
+
+  // Параллельный fetch — независимо от наличия cache
+  const fetchPromise = fetch(request)
+    .then(async (response) => {
+      if (response && response.ok) {
+        try {
+          // Клон для cache, оригинал — caller'у
+          await cache.put(request, response.clone());
+          // Сообщаем clients о свежих данных (background refresh complete)
+          notifyKvFresh(request.url);
+        } catch (e) {
+          console.warn('[SW] kvSWR cache.put failed:', e);
+        }
+      }
+      return response;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    // Cache hit — фоновый fetch продолжается, но caller'у отдаём stale.
+    // X-HEYS-Cache-Origin header — для DevTools видимости + client-side detection.
+    try {
+      const cloned = cached.clone();
+      const headers = new Headers(cloned.headers);
+      headers.set('X-HEYS-Cache-Origin', 'sw-stale');
+      const body = await cloned.blob();
+      return new Response(body, {
+        status: cloned.status,
+        statusText: cloned.statusText,
+        headers,
+      });
+    } catch (_) {
+      return cached;
+    }
+  }
+
+  // Cache miss — ждём network (cold-start path)
+  const fresh = await fetchPromise;
+  if (fresh) return fresh;
+  return new Response(JSON.stringify({ error: 'offline_no_kv_cache' }), {
+    status: 503,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 // === Background Sync ===
@@ -749,6 +913,29 @@ self.addEventListener('message', (event) => {
 
   if (event.data && event.data.type === 'BOOT_SUCCESS') {
     event.waitUntil(handleBootSuccess());
+    return;
+  }
+
+  // === KV SWR контракт (Phase A VPN speedup) ===
+  if (event.data && event.data.type === 'INVALIDATE_KV') {
+    event.waitUntil(invalidateKvCache(event.data.reason));
+    return;
+  }
+
+  if (event.data && event.data.type === 'SW_KILLSWITCH_ENABLE') {
+    event.waitUntil(
+      setMetaText(KV_CACHE_KILLSWITCH_KEY, '1')
+        .then(() => invalidateKvCache('killswitch_enabled'))
+        .then(() => console.log('[SW] 🛑 KV cache killswitch ENABLED'))
+    );
+    return;
+  }
+
+  if (event.data && event.data.type === 'SW_KILLSWITCH_DISABLE') {
+    event.waitUntil(
+      deleteMetaKeys([KV_CACHE_KILLSWITCH_KEY])
+        .then(() => console.log('[SW] ✅ KV cache killswitch DISABLED'))
+    );
     return;
   }
 
