@@ -55,15 +55,16 @@
   }
 
   // ── Low-level fetch wrapper ──────────────────────────────────────────
+  // Token может быть null для PIN-клиентов в проде (PR-C, 2026-05-20):
+  // session token лежит в HttpOnly cookie, JS его не видит. В таком случае
+  // отправляем БЕЗ Authorization header — credentials:'include' донесёт
+  // cookie до cloud function, та прочтёт и подставит session_token.
   async function call(path, opts = {}) {
     const token = getBearerToken();
-    if (!token) {
-      return { success: false, error: 'no_auth_token' };
-    }
     const url = API_URL + path;
     const method = opts.method || 'GET';
     const headers = {
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
     };
     let res;

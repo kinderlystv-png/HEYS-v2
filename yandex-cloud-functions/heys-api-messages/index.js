@@ -94,20 +94,51 @@ function verifyJwt(token, secret) {
   }
 }
 
-// ── Identity resolution: { kind, id, sessionToken? } ─────────────────────
-// Возвращает identity + sessionToken (нужен для RPC через session-auth).
-async function resolveIdentity(authHeader) {
-  if (!authHeader) return { error: 'missing_auth' };
-  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!token) return { error: 'missing_token' };
-
-  const looksLikeJwt = token.split('.').length === 3 && token.includes('.');
-  if (looksLikeJwt && process.env.JWT_SECRET) {
-    const res = verifyJwt(token, process.env.JWT_SECRET);
-    if (res.valid && res.payload?.role === 'curator' && res.payload?.sub) {
-      return { kind: 'curator', id: res.payload.sub };
+// ── Cookie helper: heys_session_token (HttpOnly) ─────────────────────────
+// Тот же паттерн что в heys-api-rpc/index.js:1085-1107. PR-C (2026-05-20):
+// session token PIN-клиентов лежит в HttpOnly cookie, JS его не видит,
+// нужно читать на сервере.
+function parseSessionCookie(cookieHeader) {
+  if (!cookieHeader || typeof cookieHeader !== 'string') return null;
+  for (const part of cookieHeader.split(';')) {
+    const eqIdx = part.indexOf('=');
+    if (eqIdx === -1) continue;
+    const name = part.slice(0, eqIdx).trim();
+    if (name === 'heys_session_token') {
+      const raw = part.slice(eqIdx + 1).trim();
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
     }
   }
+  return null;
+}
+
+// ── Identity resolution: { kind, id, sessionToken? } ─────────────────────
+// Источники token'а (в порядке предпочтения):
+//   1. Authorization: Bearer <jwt>  — куратор
+//   2. Authorization: Bearer <session_token>  — клиент (legacy LS-session)
+//   3. Cookie: heys_session_token=<…>  — клиент (новый PR-C cookie-flow)
+async function resolveIdentity(authHeader, cookieHeader) {
+  const bearer = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+  const cookieSession = parseSessionCookie(cookieHeader);
+
+  // Bearer JWT → курятор
+  if (bearer) {
+    const looksLikeJwt = bearer.split('.').length === 3 && bearer.includes('.');
+    if (looksLikeJwt && process.env.JWT_SECRET) {
+      const res = verifyJwt(bearer, process.env.JWT_SECRET);
+      if (res.valid && res.payload?.role === 'curator' && res.payload?.sub) {
+        return { kind: 'curator', id: res.payload.sub };
+      }
+    }
+  }
+
+  // Иначе — session token (из Bearer или cookie)
+  const sessionToken = bearer || cookieSession;
+  if (!sessionToken) return { error: 'missing_auth' };
 
   const pool = getPool();
   const client = await pool.connect();
@@ -118,10 +149,10 @@ async function resolveIdentity(authHeader) {
          AND expires_at > NOW()
          AND revoked_at IS NULL
        LIMIT 1`,
-      [token]
+      [sessionToken]
     );
     if (r.rows[0]?.client_id) {
-      return { kind: 'client', id: r.rows[0].client_id, sessionToken: token };
+      return { kind: 'client', id: r.rows[0].client_id, sessionToken };
     }
     return { error: 'invalid_session' };
   } finally {
@@ -520,8 +551,11 @@ module.exports.handler = async function (event) {
   // ['messages', 'send' | 'thread' | 'inbox' | 'mark-read']
   const action = pathParts[1] || '';
 
-  // Все endpoints требуют auth
-  const identity = await resolveIdentity(event.headers?.Authorization || event.headers?.authorization);
+  // Все endpoints требуют auth (JWT, legacy LS-Bearer или HttpOnly cookie)
+  const identity = await resolveIdentity(
+    event.headers?.Authorization || event.headers?.authorization,
+    event.headers?.cookie || event.headers?.Cookie
+  );
   if (identity.error) {
     return {
       statusCode: 401,
