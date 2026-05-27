@@ -1,0 +1,10 @@
+{
+  "name": "heys-api-messages",
+  "version": "1.0.0",
+  "description": "HEYS Messenger API — send / thread / inbox / mark-read",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3",
+    "web-push": "^3.6.7"
+  }
+}

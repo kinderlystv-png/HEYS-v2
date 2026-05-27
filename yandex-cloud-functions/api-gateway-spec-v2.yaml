@@ -118,18 +118,19 @@ paths:
 
   # ═══════════════════════════════════════════════════════════════
   # SMS — Отправка SMS через SMS.ru
+  # ⚠️ Функция удалена из прода (36e96a1e), route отключён до восстановления.
   # ═══════════════════════════════════════════════════════════════
-  /sms:
-    post:
-      summary: SMS sending via SMS.ru
-      x-yc-apigateway-integration:
-        type: cloud_functions
-        function_id: d4ejimndqnd8q72r9g00
-    options:
-      summary: CORS preflight for SMS
-      x-yc-apigateway-integration:
-        type: cloud_functions
-        function_id: d4ejimndqnd8q72r9g00
+  # /sms:
+  #   post:
+  #     summary: SMS sending via SMS.ru
+  #     x-yc-apigateway-integration:
+  #       type: cloud_functions
+  #       function_id: <RECREATE_AFTER_DEPLOY>
+  #   options:
+  #     summary: CORS preflight for SMS
+  #     x-yc-apigateway-integration:
+  #       type: cloud_functions
+  #       function_id: <RECREATE_AFTER_DEPLOY>
 
   # ═══════════════════════════════════════════════════════════════
   # Leads — Лиды с лендинга
@@ -413,6 +414,57 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         function_id: d4e2d7p20llki46ctf2b
+
+  # ═══════════════════════════════════════════════════════════════
+  # Messenger — heys-api-messages (function_id: d4ep21a89307vs93b0ns)
+  # ═══════════════════════════════════════════════════════════════
+  /messages/send:
+    post:
+      summary: Send message (client → curator, or curator → client)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/thread:
+    get:
+      summary: Get messages thread (paginated, sender-aware)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/inbox:
+    get:
+      summary: Curator inbox — all client threads with unread counts + preview
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/mark-read:
+    post:
+      summary: Mark messages as read up to a timestamp
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
 
   # ═══════════════════════════════════════════════════════════════
   # Supabase-compatible routes (для совместимости)

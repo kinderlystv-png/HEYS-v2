@@ -126,6 +126,8 @@ get_function_config() {
             echo "nodejs18 index.handler 256m 60s" ;;
         "heys-api-push")
             echo "nodejs18 index.handler 256m 30s" ;;
+        "heys-api-messages")
+            echo "nodejs18 index.handler 256m 30s" ;;
         "heys-cron-reminders")
             echo "nodejs18 index.handler 512m 120s" ;;
         "heys-client-daily-backup")
@@ -202,8 +204,8 @@ build_env_flags() {
         _add SMS_API_KEY
     fi
 
-    # JWT_SECRET — для rpc, auth, и push (push читает curator-JWT в push-recipient endpoint)
-    if [[ "$func_name" =~ (rpc|auth) ]] || [[ "$func_name" == "heys-api-push" ]]; then
+    # JWT_SECRET — для rpc, auth, push, messages (curator-JWT identity resolution)
+    if [[ "$func_name" =~ (rpc|auth) ]] || [[ "$func_name" == "heys-api-push" ]] || [[ "$func_name" == "heys-api-messages" ]]; then
         _add_required JWT_SECRET
     fi
 
@@ -228,8 +230,8 @@ build_env_flags() {
         done
     fi
 
-    # Web Push (VAPID) — api-push и cron-reminders
-    if [[ "$func_name" =~ (push|reminders) ]]; then
+    # Web Push (VAPID) — api-push, cron-reminders, api-messages
+    if [[ "$func_name" =~ (push|reminders|messages) ]]; then
         local k
         for k in VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT; do
             _add "$k"
@@ -327,7 +329,7 @@ deploy_function() {
     # есть), DB pool max=3 (см. shared/db-pool.js:96) — 2 concurrent fit'ам.
     # Кроны остаются на default=1 (триггер запускает по одной задаче за раз).
     local concurrency_flag=""
-    if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push)$ ]]; then
+    if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push|messages)$ ]]; then
         concurrency_flag="--concurrency 2"
     fi
 
