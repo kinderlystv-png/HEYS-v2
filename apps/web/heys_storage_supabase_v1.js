@@ -7615,7 +7615,9 @@
                   //  dailyBonusClaimed/streakShieldUsed/missions/weeklyChallenge,
                   //  из-за чего "забранный 🎁 10 XP" появлялся снова после refresh)
                   if (remoteTotalXP > localTotalXP) {
-                    const gameMerge = typeof window !== 'undefined' && window.HEYS?.game?.mergeGameData;
+                    const HEYSgame = typeof window !== 'undefined' && window.HEYS?.game;
+                    const gameMerge = HEYSgame?.mergeGameData;
+                    const preserveHelper = HEYSgame?.preserveLocalDailyBonusClaimed;
                     if (typeof gameMerge === 'function' && bestLocalGame) {
                       try {
                         const fullyMerged = gameMerge(bestLocalGame, row.v);
@@ -7625,50 +7627,17 @@
                           : 0;
                         logCritical(`🎮 [GAME] MERGED via mergeGameData: XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchCount}, dailyBonusClaimed preserved: ${fullyMerged?.dailyBonusClaimed || 'null'}`);
                       } catch (e) {
-                        logCritical(`🎮 [GAME] mergeGameData failed (${e?.message || e}), falling back to ad-hoc merge`);
-                        // Fallback: старый ad-hoc merge (всё ещё лучше чем pure remote)
-                        const localAchievements = bestLocalGame?.unlockedAchievements || [];
-                        const remoteAchievements = row.v?.unlockedAchievements || [];
-                        const mergedAchievements = [...new Set([...remoteAchievements, ...localAchievements])];
-                        row.v = {
-                          ...row.v,
-                          unlockedAchievements: mergedAchievements,
-                          dailyBonusClaimed: bestLocalGame?.dailyBonusClaimed && (!row.v?.dailyBonusClaimed || bestLocalGame.dailyBonusClaimed >= row.v.dailyBonusClaimed)
-                            ? bestLocalGame.dailyBonusClaimed
-                            : (row.v?.dailyBonusClaimed || null),
-                          stats: {
-                            ...row.v?.stats,
-                            bestStreak: Math.max(row.v?.stats?.bestStreak || 0, bestLocalGame?.stats?.bestStreak || 0),
-                            perfectDays: Math.max(row.v?.stats?.perfectDays || 0, bestLocalGame?.stats?.perfectDays || 0),
-                            totalProducts: Math.max(row.v?.stats?.totalProducts || 0, bestLocalGame?.stats?.totalProducts || 0),
-                            totalWater: Math.max(row.v?.stats?.totalWater || 0, bestLocalGame?.stats?.totalWater || 0),
-                            totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, bestLocalGame?.stats?.totalTrainings || 0)
-                          }
-                        };
-                      }
-                    } else {
-                      // mergeGameData недоступна (старый bundle / HEYS.game не загружен) — fallback
-                      const localAchievements = bestLocalGame?.unlockedAchievements || [];
-                      const remoteAchievements = row.v?.unlockedAchievements || [];
-                      const mergedAchievements = [...new Set([...remoteAchievements, ...localAchievements])];
-                      row.v = {
-                        ...row.v,
-                        unlockedAchievements: mergedAchievements,
-                        // 🛡️ Preserve local "claim today" state (минимальный fix для случая без mergeGameData)
-                        dailyBonusClaimed: bestLocalGame?.dailyBonusClaimed && (!row.v?.dailyBonusClaimed || bestLocalGame.dailyBonusClaimed >= row.v.dailyBonusClaimed)
-                          ? bestLocalGame.dailyBonusClaimed
-                          : (row.v?.dailyBonusClaimed || null),
-                        stats: {
-                          ...row.v?.stats,
-                          bestStreak: Math.max(row.v?.stats?.bestStreak || 0, bestLocalGame?.stats?.bestStreak || 0),
-                          perfectDays: Math.max(row.v?.stats?.perfectDays || 0, bestLocalGame?.stats?.perfectDays || 0),
-                          totalProducts: Math.max(row.v?.stats?.totalProducts || 0, bestLocalGame?.stats?.totalProducts || 0),
-                          totalWater: Math.max(row.v?.stats?.totalWater || 0, bestLocalGame?.stats?.totalWater || 0),
-                          totalTrainings: Math.max(row.v?.stats?.totalTrainings || 0, bestLocalGame?.stats?.totalTrainings || 0)
+                        logCritical(`🎮 [GAME] mergeGameData failed (${e?.message || e}), falling back to preserveLocalDailyBonusClaimed`);
+                        if (typeof preserveHelper === 'function' && bestLocalGame) {
+                          row.v = preserveHelper(bestLocalGame, row.v);
                         }
-                      };
-                      logCritical(`🎮 [GAME] MERGED (no HEYS.game): XP ${localTotalXP} → ${remoteTotalXP}, achievements: ${mergedAchievements.length}, dailyBonusClaimed preserved: ${row.v.dailyBonusClaimed || 'null'}`);
+                        // (если и helper недоступен — оставляем row.v как есть, remote wins)
+                      }
+                    } else if (typeof preserveHelper === 'function' && bestLocalGame) {
+                      row.v = preserveHelper(bestLocalGame, row.v);
+                      logCritical(`🎮 [GAME] MERGED via preserveLocalDailyBonusClaimed (mergeGameData unavailable): XP ${localTotalXP} → ${remoteTotalXP}, dailyBonusClaimed preserved: ${row.v?.dailyBonusClaimed || 'null'}`);
                     }
+                    // (если helper тоже недоступен — оставляем row.v как есть, log skipped)
                   }
 
                   // Если оба равны нулю — ничего не делаем, пусть remote запишется
@@ -11287,6 +11256,33 @@
           nowTs: Date.now()
         });
         if (!wroteDay) return false;
+      } else if (baseKey === 'heys_game') {
+        // Hot-sync merge для game state — без этого hot-sync затирает свежий
+        // dailyBonusClaimed из локальной claim-action. Паттерн как у dayv2_/widget_layout,
+        // но используем mergeGameData вместо updatedAt-compare (game state не имеет
+        // монотонного updatedAt на каждое поле — нужен structural merge).
+        let appliedMergedGame = false;
+        try {
+          const HEYSgame = global.HEYS?.game;
+          const gameMerge = HEYSgame?.mergeGameData;
+          const preserveHelper = HEYSgame?.preserveLocalDailyBonusClaimed;
+          let mergedGame = null;
+          if (typeof gameMerge === 'function' && previousValue) {
+            mergedGame = gameMerge(previousValue, value);
+          } else if (typeof preserveHelper === 'function' && previousValue) {
+            mergedGame = preserveHelper(previousValue, value);
+          }
+          if (mergedGame) {
+            const reserialized = JSON.stringify(mergedGame);
+            if (currentRaw === reserialized) return false; // no-op после merge
+            global.localStorage.setItem(scopedKey, reserialized);
+            value = mergedGame; // downstream dispatchForegroundHotSyncProfileEvents использует value
+            appliedMergedGame = true;
+          }
+        } catch (_) { /* parse error — fallback to wholesale */ }
+        if (!appliedMergedGame) {
+          global.localStorage.setItem(scopedKey, serialized);
+        }
       } else {
         global.localStorage.setItem(scopedKey, serialized);
       }
