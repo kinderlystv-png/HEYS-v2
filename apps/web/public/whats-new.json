@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.27.60ebe62e",
+      "buildHash": "60ebe62e",
+      "date": "2026-05-27",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Подарок 🎁 10 XP больше не возвращается после рефреша",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Daily bonus claim сохраняется при синхронизации с облаком",
+          "description": "Пользователь жаловался: забираю 🎁 10 XP, обновляю страницу — подарок снова доступен. Причина — при apply снапшота из облака (когда облачный XP оказывался больше локального — например после пересчёта по аудиту или sync с другого устройства), код брал облачные данные как базу и мержил только список достижений и статистику. Поле dailyBonusClaimed (дата последнего получения подарка) терялось. После refresh canClaimDailyBonus() возвращал true, и кнопка появлялась снова. Fix: cloud snapshot теперь мержится через полную функцию mergeGameData, которая корректно сохраняет local дату claim'а через max(local, cloud). Заодно фиксит drift для streakShieldUsed, прогресса weekly challenge, daily missions state и графика XP за неделю — эти поля раньше тоже могли теряться при cloud apply, просто менее заметно."
+        }
+      ]
+    },
+    {
       "version": "2026.05.27.cdecf3d6",
       "buildHash": "cdecf3d6",
       "date": "2026-05-27",
