@@ -409,7 +409,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          resolve({ base64: canvas.toDataURL('image/jpeg', 0.6), width, height });
+          // WebP даёт ~30% меньше веса при том же качестве. Browser support
+          // 96%+ (Safari 14+, все остальные давно). Fallback на JPEG если
+          // canvas.toDataURL вернёт «data:image/png» (т.е. WebP не поддержан).
+          let base64 = canvas.toDataURL('image/webp', 0.6);
+          if (!base64.startsWith('data:image/webp')) {
+            base64 = canvas.toDataURL('image/jpeg', 0.6);
+          }
+          resolve({ base64, width, height });
         };
         img.onerror = () => reject(new Error('image_load_failed'));
         img.src = e.target.result;
@@ -476,7 +483,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         );
         if (newForeign && lastForeignIdRef.current !== newForeign.id) {
           lastForeignIdRef.current = newForeign.id;
-          try { window.HEYS?.audio?.play?.('notify'); } catch { /* ignore */ }
+          // Очевидный сигнал: двойной chime + вибрация (на мобиле очень
+          // заметна). HEYS.audio.preview('notify') обходит quiet hours
+          // и громче чем play() — для входящего сообщения это правильно.
+          try {
+            const audio = window.HEYS?.audio;
+            if (audio?.preview) {
+              audio.preview('notify');
+              setTimeout(() => audio.preview('notify'), 220);
+            } else if (audio?.play) {
+              audio.play('notify');
+              setTimeout(() => audio.play('notify'), 220);
+            }
+          } catch { /* ignore */ }
+          try {
+            if (navigator.vibrate) navigator.vibrate([100, 60, 100, 60, 200]);
+          } catch { /* ignore */ }
         }
         return sorted;
       });
@@ -585,12 +607,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         try {
           const compressed = await compressImageToBase64(file);
           localPreview = compressed.base64;
+          // Угадываем mime по data: URL префиксу — WebP если он реально вышел
+          const mime = compressed.base64.startsWith('data:image/webp')
+            ? 'image/webp'
+            : 'image/jpeg';
           // Optimistic preview
           setPendingPhotos((prev) => [
             ...prev,
             {
               tempId, localPreview, status: 'uploading',
               filename: file.name, width: compressed.width, height: compressed.height,
+              mime,
             },
           ]);
           // Upload в фоне
@@ -648,7 +675,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         filename: p.filename,
         width: p.width,
         height: p.height,
-        mime: 'image/jpeg',
+        mime: p.mime || 'image/jpeg',
       }));
       const payload = isCurator
         ? { client_id: curatorViewClientId || getCurrentClientId(), body: finalBody, attachments: attachmentsToSend }
