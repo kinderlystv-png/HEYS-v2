@@ -28,6 +28,10 @@
     let clientUpsertTimer = null;
     let _uploadInProgress = false;
     let _uploadInFlightCount = 0;
+    let _uploadStartedAt = 0;
+    let _lastUploadOkAt = 0;
+    let _lastUploadFailAt = 0;
+    let _clientUpsertTimerSetAt = 0;
 
     let upsertQueue = loadPendingQueue(PENDING_QUEUE_KEY);
     let upsertTimer = null;
@@ -93,6 +97,7 @@
 
       _uploadInProgress = true;
       _uploadInFlightCount = batch.length;
+      _uploadStartedAt = Date.now();
 
       // Sync trace for dayv2 items in batch
       const _dayItems = batch.filter(it => it?.k?.includes('dayv2_'));
@@ -173,6 +178,7 @@
 
           if (anyError) {
             incrementRetry();
+            _lastUploadFailAt = Date.now();
             savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
             notifyPendingChange();
 
@@ -189,6 +195,7 @@
             }
           } else {
             resetRetry();
+            _lastUploadOkAt = Date.now();
             logCritical(`☁️ [YANDEX] Сохранено в облако: ${totalSaved} записей`);
             if (_dayItems.length > 0) {
               _dayItems.forEach(it => {
@@ -238,6 +245,7 @@
         if (failedItems.length > 0) {
           clientUpsertQueue.push(...failedItems);
           incrementRetry();
+          _lastUploadFailAt = Date.now();
           savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
           notifyPendingChange();
 
@@ -253,6 +261,7 @@
           scheduleClientPush();
         } else {
           resetRetry();
+          _lastUploadOkAt = Date.now();
         }
 
         if (successItems.length > 0) {
@@ -281,6 +290,7 @@
       } catch (e) {
         clientUpsertQueue.push(...uniqueBatch);
         incrementRetry();
+        _lastUploadFailAt = Date.now();
         savePendingQueue(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue);
         notifyPendingChange();
         trackError(e instanceof Error ? e : new Error(String(e)), { source: 'heys_cloud_queue_v1.js', stage: 'doClientUpload' });
@@ -334,6 +344,7 @@
 
       const delay = navigator.onLine ? 500 : getRetryDelay();
 
+      _clientUpsertTimerSetAt = Date.now();
       clientUpsertTimer = setTimeout(async () => {
         const batch = clientUpsertQueue.splice(0, clientUpsertQueue.length);
         clientUpsertTimer = null;
@@ -422,6 +433,20 @@
 
     cloud.isUploadInProgress = function () {
       return _uploadInProgress;
+    };
+
+    cloud.getQueueDebug = function () {
+      return {
+        uploadInProgress: _uploadInProgress,
+        uploadInFlightCount: _uploadInFlightCount,
+        uploadStartedAt: _uploadStartedAt,
+        lastUploadOkAt: _lastUploadOkAt,
+        lastUploadFailAt: _lastUploadFailAt,
+        clientUpsertTimerSet: clientUpsertTimer != null,
+        clientUpsertTimerSetAt: _clientUpsertTimerSetAt,
+        clientQueueLen: clientUpsertQueue.length,
+        userQueueLen: upsertQueue.length
+      };
     };
 
     cloud.getPendingDetails = function () {

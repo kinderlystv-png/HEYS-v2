@@ -1308,9 +1308,41 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     const inflightQ = localStorage.getItem('heys_pending_client_sync_inflight_queue');
                     rt.clientQueue = clientQ ? JSON.parse(clientQ).length : 0;
                     rt.inflightQueue = inflightQ ? JSON.parse(inflightQ).length : 0;
+                    rt.queueDebug = HEYS?.cloud?.getQueueDebug?.() || null;
+                    rt.retryDebug = HEYS?.cloud?.getRetryDebug?.() || null;
+                    rt.yandexDebug = HEYS?.YandexAPI?._debug?.() || null;
                 } catch (_) { }
                 // Per-key sizing of pending queue + last upload error
                 const fmtKB = (b) => b >= 0 ? (b / 1024).toFixed(1) + 'KB' : '?';
+                const fmtAgo = (ts) => {
+                    if (!ts) return '—';
+                    const sec = Math.floor((Date.now() - ts) / 1000);
+                    if (sec < 60) return `${sec}s ago`;
+                    if (sec < 3600) return `${Math.floor(sec / 60)}m${sec % 60}s ago`;
+                    return `${Math.floor(sec / 3600)}h${Math.floor((sec % 3600) / 60)}m ago`;
+                };
+                let queueStateLines = [];
+                try {
+                    const q = rt.queueDebug;
+                    const r = rt.retryDebug;
+                    const y = rt.yandexDebug;
+                    if (q) {
+                        const hungWarn = (q.uploadInProgress && q.uploadStartedAt && (Date.now() - q.uploadStartedAt) > 30000) ? '  ⚠ HUNG?' : '';
+                        queueStateLines.push(`upload:       inProgress=${q.uploadInProgress} ${q.uploadInProgress ? `(started ${fmtAgo(q.uploadStartedAt)}, ${q.uploadInFlightCount} items)` : '(idle)'}${hungWarn}`);
+                        queueStateLines.push(`last ok:      ${fmtAgo(q.lastUploadOkAt)}`);
+                        queueStateLines.push(`last fail:    ${fmtAgo(q.lastUploadFailAt)}`);
+                        const noTimerWarn = (!q.clientUpsertTimerSet && q.clientQueueLen > 0 && !q.uploadInProgress) ? '  ⚠ NO TIMER but queue has items!' : '';
+                        queueStateLines.push(`nextPush:     timer ${q.clientUpsertTimerSet ? `SET (scheduled ${fmtAgo(q.clientUpsertTimerSetAt)})` : 'OFF'}${noTimerWarn}`);
+                    }
+                    if (r) {
+                        const capWarn = (r.retryAttempt >= r.maxRetryAttempts) ? '  ⚠ MAX CAP' : '';
+                        queueStateLines.push(`retry:        attempt=${r.retryAttempt}/${r.maxRetryAttempts}  nextDelay=${r.retryDelayMs}ms${capWarn}`);
+                        queueStateLines.push(`canSync:      rpcOnly=${r.rpcOnlyMode}  hasUser=${r.hasUser}  pin=${r.pinAuthClientId ? r.pinAuthClientId.slice(0, 8) + '***' : '—'}`);
+                    }
+                    if (y) {
+                        queueStateLines.push(`yandexApi:    online=${y.isOnline}  lastError=${y.lastError ? `"${y.lastError}" (${fmtAgo(y.lastErrorAt)})` : '— (none)'}`);
+                    }
+                } catch (_) { /* noop */ }
                 let pendingDetailLines = [];
                 try {
                     const det = HEYS?.cloud?.getPendingItemsDetail?.();
@@ -1353,6 +1385,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     `pending:      ${rt.pending}  ${rt.pendingDet ? JSON.stringify(rt.pendingDet) : ''}`,
                     `clientQueue:  ${rt.clientQueue}  inflight: ${rt.inflightQueue}`,
                     `lastSyncTs:   ${rt.lastSyncTs || '—'}`,
+                    '',
+                    `=== Queue State ===`,
+                    ...(queueStateLines.length ? queueStateLines : ['(no queue debug)']),
                     '',
                     `=== Pending Queue Detail ===`,
                     ...(pendingDetailLines.length ? pendingDetailLines : ['(empty)']),

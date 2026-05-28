@@ -2967,6 +2967,18 @@
     return getPendingQueuesSnapshot().uploadInProgress;
   };
 
+  /** Дебаг retry/auth-state (для sync diag snapshot) */
+  cloud.getRetryDebug = function () {
+    return {
+      retryAttempt: retryAttempt,
+      maxRetryAttempts: MAX_RETRY_ATTEMPTS,
+      retryDelayMs: getRetryDelay(),
+      rpcOnlyMode: _rpcOnlyMode,
+      hasUser: !!user,
+      pinAuthClientId: _pinAuthClientId || null
+    };
+  };
+
   /** Сбросить debounced pending-queue записи на диск (перед flush в облако / при уходе со страницы) */
   cloud.flushDebouncedPendingQueueWrites = flushDebouncedPendingQueueWrites;
 

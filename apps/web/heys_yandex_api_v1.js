@@ -82,6 +82,7 @@
 
   let _isOnline = true;
   let _lastError = null;
+  let _lastErrorAt = 0;
   let _curatorTokenLogged = false;
 
   // ═══════════════════════════════════════════════════════════════════
@@ -183,6 +184,7 @@
 
     _isOnline = false;
     _lastError = lastError;
+    _lastErrorAt = Date.now();
     throw lastError;
   }
 
@@ -2338,6 +2340,7 @@
     } catch (e) {
       err('createPayment failed:', e.message);
       _lastError = e.message;
+      _lastErrorAt = Date.now();
       return { data: null, error: { message: e.message } };
     }
   }
@@ -2427,6 +2430,7 @@
     } catch (e) {
       err('refundPayment failed:', e.message);
       _lastError = e.message;
+      _lastErrorAt = Date.now();
       return { data: null, error: { message: e.message } };
     }
   }
@@ -2465,6 +2469,7 @@
     } catch (e) {
       err('getPaymentStatus failed:', e.message);
       _lastError = e.message;
+      _lastErrorAt = Date.now();
       return { data: null, error: { message: e.message } };
     }
   }
@@ -2611,7 +2616,14 @@
     }),
 
     // Advanced: прямой REST доступ для сложных запросов
-    rest
+    rest,
+
+    // 🔍 Debug snapshot (sync badge)
+    _debug: () => ({
+      isOnline: _isOnline,
+      lastError: _lastError != null ? String(_lastError.message || _lastError).slice(0, 200) : null,
+      lastErrorAt: _lastErrorAt || 0
+    })
   };
 
   // Экспорт
