@@ -142,8 +142,8 @@ function createPool() {
             : { rejectUnauthorized: true },
         max: 1,
         idleTimeoutMillis: 5000,
-        connectionTimeoutMillis: 10000,
-        query_timeout: 30000,
+        connectionTimeoutMillis: 30000,
+        query_timeout: 120000,
     });
 }
 
@@ -247,10 +247,10 @@ async function downloadSnapshot(clientId, date) {
 async function computeDiff(pool, clientId, kvSnapshot, filterKeys) {
     const client = await pool.connect();
     try {
-        const { rows } = await client.query(
-            'SELECT k, v, v_encrypted, key_version, updated_at FROM client_kv_store WHERE client_id = $1 ORDER BY k',
-            [clientId],
-        );
+        const sqlBase = 'SELECT k, v, v_encrypted, key_version, updated_at FROM client_kv_store WHERE client_id = $1';
+        const { rows } = filterKeys && filterKeys.length > 0
+            ? await client.query(`${sqlBase} AND k = ANY($2) ORDER BY k`, [clientId, filterKeys])
+            : await client.query(`${sqlBase} ORDER BY k`, [clientId]);
 
         const currentMap = {};
         for (const row of rows) {
