@@ -5671,21 +5671,42 @@
           const lastSeen = Number((it.v && it.v.updatedAt) || 0);
           const result = await YandexAPI.mergeSaveKV(clientId, it.k, it.v, lastSeen);
           if (result.success && result.v) {
-            // Apply server-merged blob back to LS (skip interceptor → avoid mirror loop).
-            if (lsSetRaw && it.originalKey) {
-              try {
-                lsSetRaw(it.originalKey, JSON.stringify(result.v));
-              } catch (lsErr) {
-                console.warn('[merge-save] LS write-back failed for', it.originalKey, lsErr.message);
+            // 🛡️ Idempotency check — обрывает curator-side merge/autosave loop.
+            // Сценарий: merge_save_client_kv_by_curator возвращает merged_v с DB.updated_at,
+            // даже когда content идентичен input. Запись merged_v в LS + dispatch
+            // heys:day-updated → setDay(merged_v) → React re-render → autosave (~200ms) →
+            // снова upload → снова merge с тем же DB.updated_at → бесконечный цикл
+            // (200+ writes/секунду dayv2 в курaторе клиента). PIN-flow не страдает
+            // потому что _by_session видимо сохраняет input.updatedAt.
+            // Если content действительно изменился (server смерж с чужими правками) —
+            // write-back + dispatch проходят как раньше.
+            const stripUpdatedAt = (obj) => {
+              if (!obj || typeof obj !== 'object') return obj;
+              const { updatedAt: _u, ...rest } = obj;
+              return rest;
+            };
+            let isNoOpMerge = false;
+            try {
+              isNoOpMerge = JSON.stringify(stripUpdatedAt(it.v)) === JSON.stringify(stripUpdatedAt(result.v));
+            } catch (_) { /* noop — на ошибке сравнения ведём себя как раньше */ }
+
+            if (!isNoOpMerge) {
+              // Apply server-merged blob back to LS (skip interceptor → avoid mirror loop).
+              if (lsSetRaw && it.originalKey) {
+                try {
+                  lsSetRaw(it.originalKey, JSON.stringify(result.v));
+                } catch (lsErr) {
+                  console.warn('[merge-save] LS write-back failed for', it.originalKey, lsErr.message);
+                }
               }
-            }
-            const dateMatch = it.k.match(/^heys_dayv2_(\d{4}-\d{2}-\d{2})$/);
-            if (dateMatch && typeof global.dispatchEvent === 'function') {
-              try {
-                global.dispatchEvent(new CustomEvent('heys:day-updated', {
-                  detail: { date: dateMatch[1], source: 'server-merge', outcome: result.outcome }
-                }));
-              } catch (_) { /* noop */ }
+              const dateMatch = it.k.match(/^heys_dayv2_(\d{4}-\d{2}-\d{2})$/);
+              if (dateMatch && typeof global.dispatchEvent === 'function') {
+                try {
+                  global.dispatchEvent(new CustomEvent('heys:day-updated', {
+                    detail: { date: dateMatch[1], source: 'server-merge', outcome: result.outcome }
+                  }));
+                } catch (_) { /* noop */ }
+              }
             }
             mergeSavedCount++;
           } else if (isAuthFailure(result.error)) {
