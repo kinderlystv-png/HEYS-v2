@@ -86,9 +86,13 @@
     const headers = { 'Content-Type': 'application/json' };
     const token = getBearerToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    // credentials:'include' — для PIN-клиентов в проде session_token живёт в
+    // HttpOnly cookie (PR-C 2026-05-20), getBearerToken возвращает null.
+    // Без include cookie не доставится и cloud function вернёт 401 missing_auth.
     const res = await fetch(`${API_URL}${path}`, {
       method,
       headers,
+      credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
     });
     let json = null;
