@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.28.dc2864b4",
+      "buildHash": "dc2864b4",
+      "date": "2026-05-28",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Защита от случайного сброса VAPID-ключей при деплое",
+      "items": [
+        {
+          "type": "fix",
+          "title": "deploy-all.sh требует VAPID env для push-функций — иначе деплой падает явно",
+          "description": "Yandex Cloud CLI при деплое функции заменяет всю переменную окружения целиком, а не дополняет. Раньше скрипт деплоя в этом случае молча пропускал пустые VAPID-переменные — и push-ключи стирались из облачной функции на проде. Симптом — записи 'FATAL: VAPID keys not configured' в логах и недоставка пушей. Теперь деплой push/messages/cron-reminders падает с явной ошибкой при пустом VAPID_*, а заполненные ключи передаются через _add_required (без тихого пропуска)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.28.43053fdf",
       "buildHash": "43053fdf",
       "date": "2026-05-28",
