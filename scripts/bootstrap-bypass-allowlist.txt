@@ -133,7 +133,7 @@ apps/web/heys_gamification_bar_v1.js:1429
 apps/web/heys_gamification_v1.js:1566
 apps/web/heys_gamification_v1.js:39
 apps/web/heys_gamification_v1.js:41
-apps/web/heys_gamification_v1.js:5994
+apps/web/heys_gamification_v1.js:6001
 apps/web/heys_insulin_wave_v1.js:901
 apps/web/heys_iw_config_loader.js:149
 apps/web/heys_iw_config_loader.js:151
@@ -217,10 +217,10 @@ apps/web/heys_yesterday_verify_v1.js:1121
 apps/web/heys_yesterday_verify_v1.js:1123
 apps/web/heys_yesterday_verify_v1.js:36
 apps/web/heys_yesterday_verify_v1.js:391
-apps/web/insights/pi_early_warning.js:1101
-apps/web/insights/pi_early_warning.js:1640
+apps/web/insights/pi_early_warning.js:1120
+apps/web/insights/pi_early_warning.js:1659
 apps/web/insights/pi_early_warning.js:714
-apps/web/insights/pi_early_warning.js:1166
+apps/web/insights/pi_early_warning.js:1185
 apps/web/insights/pi_ui_cards.js:1158
 apps/web/insights/pi_meal_rec_feedback.js:192
 apps/web/insights/pi_ui_meal_rec_card.js:1036
