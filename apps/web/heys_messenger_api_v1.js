@@ -101,8 +101,9 @@
 
   /**
    * Отправить сообщение.
-   *   client → curator: { body, intent_type?, intent_payload? }
-   *   curator → client: { client_id, body }
+   *   client → curator: { body, intent_type?, intent_payload?, attachments? }
+   *   curator → client: { client_id, body, attachments? }
+   * attachments — массив {url, path, filename?, mime?, width?, height?}
    */
   async function send(payload) {
     return call('/messages/send', { method: 'POST', body: payload });

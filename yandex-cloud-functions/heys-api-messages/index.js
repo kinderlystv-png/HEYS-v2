@@ -345,12 +345,16 @@ async function handleSend(identity, body) {
       };
     }
 
-    const { body: msgBody, intent_type, intent_payload } = body || {};
-    if ((!msgBody || msgBody.trim().length === 0) && !intent_type) {
-      return { statusCode: 400, body: { error: 'body_or_intent_required' } };
+    const { body: msgBody, intent_type, intent_payload, attachments } = body || {};
+    const attachmentsArr = Array.isArray(attachments) ? attachments : [];
+    if ((!msgBody || msgBody.trim().length === 0) && !intent_type && attachmentsArr.length === 0) {
+      return { statusCode: 400, body: { error: 'body_intent_or_attachment_required' } };
     }
     if (msgBody && msgBody.length > 2000) {
       return { statusCode: 400, body: { error: 'body_too_long' } };
+    }
+    if (attachmentsArr.length > 10) {
+      return { statusCode: 400, body: { error: 'too_many_attachments' } };
     }
     const intentValidation = validateIntent(intent_type || null, intent_payload || null);
     if (!intentValidation.ok) {
@@ -362,12 +366,13 @@ async function handleSend(identity, body) {
     let rpcResult;
     try {
       const r = await conn.query(
-        `SELECT public.send_message_as_client($1, $2, $3, $4) AS result`,
+        `SELECT public.send_message_as_client($1, $2, $3, $4, $5) AS result`,
         [
           identity.sessionToken,
           msgBody || null,
           intent_type || null,
           intent_payload ? JSON.stringify(intent_payload) : null,
+          JSON.stringify(attachmentsArr),
         ]
       );
       rpcResult = r.rows[0]?.result;
@@ -381,9 +386,14 @@ async function handleSend(identity, body) {
 
     // Push куратору (best-effort, не блокирует ответ)
     const clientName = await fetchClientName(identity.id);
-    const pushBody = intent_type
+    const photoCount = attachmentsArr.length;
+    const photoBadge = photoCount > 0 ? ` 📷${photoCount > 1 ? '×' + photoCount : ''}` : '';
+    const baseBody = intent_type
       ? buildIntentPushBody(intent_type, intent_payload)
-      : (msgBody.length > 80 ? msgBody.slice(0, 77) + '...' : msgBody);
+      : msgBody
+        ? (msgBody.length > 80 ? msgBody.slice(0, 77) + '...' : msgBody)
+        : 'фото';
+    const pushBody = baseBody + photoBadge;
     const pushPayload = {
       title: `${clientName}: ${pushBody}`,
       body: 'Открыть сообщение',
@@ -401,15 +411,19 @@ async function handleSend(identity, body) {
   }
 
   // curator → client
-  const { client_id, body: msgBody } = body || {};
+  const { client_id, body: msgBody, attachments: curatorAttachments } = body || {};
+  const curatorAttachmentsArr = Array.isArray(curatorAttachments) ? curatorAttachments : [];
   if (!client_id || typeof client_id !== 'string') {
     return { statusCode: 400, body: { error: 'client_id_required' } };
   }
-  if (!msgBody || msgBody.trim().length === 0) {
-    return { statusCode: 400, body: { error: 'body_required' } };
+  if ((!msgBody || msgBody.trim().length === 0) && curatorAttachmentsArr.length === 0) {
+    return { statusCode: 400, body: { error: 'body_or_attachment_required' } };
   }
-  if (msgBody.length > 2000) {
+  if (msgBody && msgBody.length > 2000) {
     return { statusCode: 400, body: { error: 'body_too_long' } };
+  }
+  if (curatorAttachmentsArr.length > 10) {
+    return { statusCode: 400, body: { error: 'too_many_attachments' } };
   }
 
   const pool = getPool();
@@ -417,8 +431,8 @@ async function handleSend(identity, body) {
   let rpcResult;
   try {
     const r = await conn.query(
-      `SELECT public.send_message_as_curator($1, $2, $3) AS result`,
-      [identity.id, client_id, msgBody]
+      `SELECT public.send_message_as_curator($1, $2, $3, $4) AS result`,
+      [identity.id, client_id, msgBody || null, JSON.stringify(curatorAttachmentsArr)]
     );
     rpcResult = r.rows[0]?.result;
   } finally {
@@ -430,7 +444,13 @@ async function handleSend(identity, body) {
   }
 
   // Push клиенту (best-effort)
-  const pushBody = msgBody.length > 80 ? msgBody.slice(0, 77) + '...' : msgBody;
+  const curatorPhotoBadge = curatorAttachmentsArr.length > 0
+    ? ` 📷${curatorAttachmentsArr.length > 1 ? '×' + curatorAttachmentsArr.length : ''}`
+    : '';
+  const baseCuratorBody = msgBody
+    ? (msgBody.length > 80 ? msgBody.slice(0, 77) + '...' : msgBody)
+    : 'фото';
+  const pushBody = baseCuratorBody + curatorPhotoBadge;
   const pushPayload = {
     title: 'Сообщение от куратора',
     body: pushBody,

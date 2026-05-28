@@ -61,8 +61,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   }
 
+  // ── Attachments grid ─────────────────────────────────────────────────
+  function MessageAttachments({ attachments, onPhotoClick }) {
+    if (!attachments || attachments.length === 0) return null;
+    return React.createElement(
+      'div',
+      { className: `msg-attachments msg-attachments-count-${Math.min(attachments.length, 4)}` },
+      attachments.map((att, idx) =>
+        React.createElement('div', {
+          key: att.url || att.path || idx,
+          className: 'msg-attachment-item',
+          onClick: () => onPhotoClick?.(attachments, idx),
+        },
+          att.pending
+            ? React.createElement('div', { className: 'msg-attachment-pending' }, '…')
+            : null,
+          React.createElement('img', {
+            src: att.url || att.localPreview || '',
+            alt: att.filename || 'фото',
+            loading: 'lazy',
+          }),
+        ),
+      ),
+    );
+  }
+
   // ── Thread message bubble ────────────────────────────────────────────
-  function MessageBubble({ message, viewerRole, onToggleDone, onDelete, onReply, onEdit }) {
+  function MessageBubble({ message, viewerRole, onToggleDone, onDelete, onReply, onEdit, onPhotoClick }) {
     const isMine = message.sender_role === viewerRole;
     const isCurator = viewerRole === 'curator';
     const canMarkDone = isCurator && message.sender_role === 'client';
@@ -152,11 +177,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, '🗑')
       : null;
 
+    const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
     const bubble = React.createElement(
       'div',
       { className: bubbleClasses },
       parsed.quote && !editing &&
         React.createElement('div', { className: 'msg-quote' }, parsed.quote),
+      !editing && hasAttachments &&
+        React.createElement(MessageAttachments, {
+          attachments: message.attachments,
+          onPhotoClick,
+        }),
       editing
         ? React.createElement(
             'div',
@@ -333,6 +364,41 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return d.toISOString();
   }
 
+  // ── Photo compress (copy из heys_add_product_step_v1.js:3025-3066) ──
+  // Принимает File, возвращает base64 data URL после resize до 800px (long side)
+  // и JPEG re-encoding с quality 0.7.
+  async function compressImageToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX_SIDE = 800;
+          let { width, height } = img;
+          if (width > height) {
+            if (width > MAX_SIDE) {
+              height = Math.round((height * MAX_SIDE) / width);
+              width = MAX_SIDE;
+            }
+          } else if (height > MAX_SIDE) {
+            width = Math.round((width * MAX_SIDE) / height);
+            height = MAX_SIDE;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve({ base64: canvas.toDataURL('image/jpeg', 0.7), width, height });
+        };
+        img.onerror = () => reject(new Error('image_load_failed'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('file_read_failed'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   // ── Шаблоны быстрых ответов куратора ─────────────────────────────────
   const CURATOR_REPLY_TEMPLATES = [
     'Применено ✓',
@@ -350,8 +416,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [error, setError] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [showOldMessages, setShowOldMessages] = useState(false);
+    const [pendingPhotos, setPendingPhotos] = useState([]); // [{tempId, localPreview, status:'uploading'|'done'|'error', url?, path?, filename?, width?, height?}]
+    const [lightbox, setLightbox] = useState(null); // {attachments, index} | null
     const threadRef = useRef(null);
     const inputRef = useRef(null);
+    const fileInputRef = useRef(null);
     const isCurator = isCuratorMode();
     const viewerRole = isCurator ? 'curator' : 'client';
 
@@ -400,18 +469,104 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setTimeout(() => inputRef.current?.focus(), 50);
     };
 
+    const handleAttachClick = () => {
+      fileInputRef.current?.click();
+    };
+
+    const handlePhotoClick = (attachments, index) => {
+      setLightbox({ attachments, index });
+    };
+
+    // Загрузка фото: compress на клиенте → uploadPhoto через готовый
+    // HEYS.StoragePhotos API → меняем pendingPhoto на done с url/path.
+    const handleFilesSelected = async (e) => {
+      const files = Array.from(e.target.files || []);
+      e.target.value = ''; // позволить выбрать тот же файл повторно
+      if (files.length === 0) return;
+      if (pendingPhotos.length + files.length > 10) {
+        setError('Максимум 10 фото на сообщение.');
+        return;
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      const targetClientId = isCurator
+        ? (curatorViewClientId || getCurrentClientId())
+        : getCurrentClientId();
+
+      for (const file of files) {
+        const tempId = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        let localPreview;
+        try {
+          const compressed = await compressImageToBase64(file);
+          localPreview = compressed.base64;
+          // Optimistic preview
+          setPendingPhotos((prev) => [
+            ...prev,
+            {
+              tempId, localPreview, status: 'uploading',
+              filename: file.name, width: compressed.width, height: compressed.height,
+            },
+          ]);
+          // Upload в фоне
+          const dummyMealId = 'msg-' + tempId;
+          const uploadFn = window.HEYS?.StoragePhotos?.uploadPhoto;
+          if (typeof uploadFn !== 'function') {
+            throw new Error('StoragePhotos.uploadPhoto unavailable');
+          }
+          const result = await uploadFn(compressed.base64, targetClientId, today, dummyMealId);
+          if (result?.error || !result?.url) {
+            setPendingPhotos((prev) =>
+              prev.map((p) => p.tempId === tempId ? { ...p, status: 'error' } : p)
+            );
+            setError(result?.error || 'photo_upload_failed');
+            continue;
+          }
+          setPendingPhotos((prev) =>
+            prev.map((p) => p.tempId === tempId
+              ? { ...p, status: 'done', url: result.url, path: result.path }
+              : p),
+          );
+        } catch (err) {
+          setPendingPhotos((prev) =>
+            prev.map((p) => p.tempId === tempId ? { ...p, status: 'error' } : p)
+          );
+          setError(err?.message || 'photo_compress_failed');
+        }
+      }
+    };
+
+    const removePendingPhoto = (tempId) => {
+      setPendingPhotos((prev) => prev.filter((p) => p.tempId !== tempId));
+    };
+
     const handleSend = async () => {
       const trimmed = input.trim();
-      if (!trimmed || sending) return;
+      const readyAttachments = pendingPhotos.filter((p) => p.status === 'done');
+      const hasUploading = pendingPhotos.some((p) => p.status === 'uploading');
+      if (hasUploading) {
+        setError('Подожди, фото ещё загружается...');
+        return;
+      }
+      // Должно быть хоть что-то: текст или фото
+      if (!trimmed && readyAttachments.length === 0) return;
+      if (sending) return;
       setSending(true);
       setError(null);
       // Если есть quote-context — prefix body цитатой
-      const finalBody = replyTo
-        ? `> ${messagePreview(replyTo)}\n\n${trimmed}`
-        : trimmed;
+      const finalBody = trimmed
+        ? (replyTo ? `> ${messagePreview(replyTo)}\n\n${trimmed}` : trimmed)
+        : null;
+      const attachmentsToSend = readyAttachments.map((p) => ({
+        url: p.url,
+        path: p.path,
+        filename: p.filename,
+        width: p.width,
+        height: p.height,
+        mime: 'image/jpeg',
+      }));
       const payload = isCurator
-        ? { client_id: curatorViewClientId || getCurrentClientId(), body: finalBody }
-        : { body: finalBody };
+        ? { client_id: curatorViewClientId || getCurrentClientId(), body: finalBody, attachments: attachmentsToSend }
+        : { body: finalBody, attachments: attachmentsToSend };
       const res = await HEYS.MessengerAPI.send(payload);
       setSending(false);
       if (!res?.success) {
@@ -424,6 +579,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
       setInput('');
       setReplyTo(null);
+      setPendingPhotos([]);
       // Optimistic: добавим в ленту, затем перезагрузим из БД
       const optimistic = {
         id: res.message_id,
@@ -432,6 +588,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         intent_type: null,
         intent_payload: null,
         applied_at: null,
+        attachments: attachmentsToSend,
         read_at: null,
         created_at: res.created_at || new Date().toISOString(),
       };
@@ -591,6 +748,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         onDelete: handleDeleteMessage,
                         onReply: handleReply,
                         onEdit: handleEditMessage,
+                        onPhotoClick: handlePhotoClick,
                       }),
                     );
                   }
@@ -629,6 +787,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               'aria-label': 'Отменить ответ',
             }, '✕'),
           ),
+        // Pending photos preview (миниатюры до отправки)
+        pendingPhotos.length > 0 &&
+          React.createElement(
+            'div',
+            { className: 'messenger-pending-photos' },
+            pendingPhotos.map((p) =>
+              React.createElement(
+                'div',
+                { key: p.tempId, className: `messenger-pending-photo status-${p.status}` },
+                React.createElement('img', { src: p.localPreview, alt: p.filename || 'фото' }),
+                p.status === 'uploading' && React.createElement('div', { className: 'messenger-pending-spinner' }, '…'),
+                p.status === 'error' && React.createElement('div', { className: 'messenger-pending-error' }, '!'),
+                React.createElement('button', {
+                  type: 'button',
+                  className: 'messenger-pending-remove',
+                  onClick: () => removePendingPhoto(p.tempId),
+                  'aria-label': 'Убрать',
+                }, '✕'),
+              ),
+            ),
+          ),
         // Шаблоны быстрых ответов (curator-only)
         isCurator &&
           React.createElement(
@@ -648,6 +827,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement(
           'div',
           { className: 'messenger-input-row' },
+          React.createElement('input', {
+            ref: fileInputRef,
+            type: 'file',
+            accept: 'image/*',
+            multiple: true,
+            style: { display: 'none' },
+            onChange: handleFilesSelected,
+          }),
+          React.createElement('button', {
+            type: 'button',
+            className: 'messenger-attach',
+            onClick: handleAttachClick,
+            disabled: sending || pendingPhotos.length >= 10,
+            'aria-label': 'Прикрепить фото',
+            title: 'Прикрепить фото',
+          }, '📷'),
           React.createElement('textarea', {
             className: 'messenger-input',
             placeholder: isCurator ? 'Ответ клиенту...' : 'Напиши куратору...',
@@ -664,12 +859,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             {
               className: 'messenger-send',
               onClick: handleSend,
-              disabled: sending || !input.trim(),
+              disabled: sending || (!input.trim() && pendingPhotos.filter((p) => p.status === 'done').length === 0),
               'aria-label': 'Отправить',
             },
             sending ? '...' : '➤',
           ),
         ),
+        // Lightbox для фото
+        lightbox &&
+          React.createElement(
+            'div',
+            {
+              className: 'messenger-lightbox',
+              onClick: () => setLightbox(null),
+            },
+            React.createElement('img', {
+              src: lightbox.attachments[lightbox.index]?.url,
+              alt: 'фото',
+              onClick: (e) => e.stopPropagation(),
+            }),
+            React.createElement('button', {
+              type: 'button',
+              className: 'messenger-lightbox-close',
+              onClick: () => setLightbox(null),
+              'aria-label': 'Закрыть',
+            }, '✕'),
+            lightbox.attachments.length > 1 && React.createElement(
+              'div',
+              { className: 'messenger-lightbox-counter' },
+              `${lightbox.index + 1} / ${lightbox.attachments.length}`,
+            ),
+          ),
       ),
     );
   }
