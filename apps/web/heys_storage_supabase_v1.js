@@ -2979,6 +2979,21 @@
     };
   };
 
+  /** Дебаг upload-цикла очереди (для sync diag snapshot).
+   * Реальный upload-цикл живёт здесь (см. ~9398), heys_cloud_queue_v1.js — орфан. */
+  cloud.getQueueDebug = function () {
+    return {
+      uploadInProgress: _uploadInProgress,
+      uploadInFlightCount: _uploadInFlightCount,
+      uploadStartedAt: _uploadStartedAt,
+      lastUploadOkAt: _lastUploadOkAt,
+      lastUploadFailAt: _lastUploadFailAt,
+      clientUpsertTimerSet: clientUpsertTimer != null,
+      clientUpsertTimerSetAt: _clientUpsertTimerSetAt,
+      clientQueueLen: Array.isArray(clientUpsertQueue) ? clientUpsertQueue.length : 0
+    };
+  };
+
   /** Сбросить debounced pending-queue записи на диск (перед flush в облако / при уходе со страницы) */
   cloud.flushDebouncedPendingQueueWrites = flushDebouncedPendingQueueWrites;
 
@@ -9228,6 +9243,10 @@
   const _cascadeDcsEnqueueTimers = new Map();
   const _cascadeDcsEnqueueLatest = new Map();
   let _uploadInProgress = false;  // 🔄 Флаг: данные в процессе отправки (in-flight)
+  let _uploadStartedAt = 0;       // Date.now() в момент _uploadInProgress=true (для diag)
+  let _lastUploadOkAt = 0;        // Date.now() последнего успешного upload
+  let _lastUploadFailAt = 0;      // Date.now() последней upload-ошибки
+  let _clientUpsertTimerSetAt = 0; // Date.now() когда clientUpsertTimer был выставлен
   let _uploadLogTimer = null;
   let _uploadLogBufferedTotal = 0;
   let _uploadLogBufferedBatches = 0;
@@ -9398,7 +9417,8 @@
     // 🔄 Помечаем что данные "в полёте"
     _uploadInProgress = true;
     _uploadInFlightCount = filteredBatch.length;
-    const _uploadStartTs = Date.now();
+    _uploadStartedAt = Date.now();
+    const _uploadStartTs = _uploadStartedAt;
     // One progress ceiling update per upload attempt (not on every pending-change).
     try {
       updateSyncProgressTotal();
@@ -9544,6 +9564,7 @@
         if (anyError) {
           logCritical(`[SYNC] ❌ Ошибка отправки: ${anyError}`);
           addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
+          _lastUploadFailAt = Date.now();
           if (/413|payload too large|request entity too large/i.test(String(anyError))) {
             _clientUpload413BackoffUntil = Date.now() + 45000;
             try {
@@ -9576,6 +9597,7 @@
           const _uploadDurationMs = Date.now() - (_uploadStartTs || 0);
           addSyncLogEntry('upload_ok', { n: totalSaved, keys: _syncKeySummary, ms: _uploadDurationMs });
           _lastSuccessfulUploadMs = _uploadDurationMs;
+          _lastUploadOkAt = Date.now();
           clearClientInFlightBatch({ notify: false });
         }
 
@@ -9719,6 +9741,7 @@
       notifyPendingChange();
       logCritical('❌ Ошибка сохранения в облако:', e.message || e);
       addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(e?.message || e).slice(0, 80) });
+      _lastUploadFailAt = Date.now();
 
       // Авторизационные ошибки — требуем вход
       if (isAuthError(e)) {
@@ -9822,6 +9845,7 @@
       }
     } catch (_) { }
 
+    _clientUpsertTimerSetAt = Date.now();
     clientUpsertTimer = setTimeout(async () => {
       if (_uploadInProgress) {
         clientUpsertTimer = null;
