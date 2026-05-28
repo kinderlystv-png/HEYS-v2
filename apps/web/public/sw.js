@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1779983494605';
+const CACHE_VERSION = 'heys-1779983974120';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -1110,7 +1110,12 @@ self.addEventListener('push', (event) => {
     badge: data.badge || '/icon-192.png',
     // tag — дедуп: новый пуш с тем же tag заменит предыдущий (а не плодит стопку)
     tag: data.tag || 'heys-default',
-    renotify: !!data.renotify,
+    renotify: data.renotify !== false, // default true — пере-вибрировать при тех же tag
+    requireInteraction: !!data.requireInteraction,
+    // Vibrate: явный паттерн чтобы Android реально вибрировал в background.
+    // Если payload не указал — дефолт «короткая-короткая-длинная» для входящих.
+    vibrate: Array.isArray(data.vibrate) ? data.vibrate : [200, 100, 200],
+    silent: false, // не silent — нужен системный звук Android
     data: { url: data.url || '/' },
   };
 

@@ -98,8 +98,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const isCurator = viewerRole === 'curator';
     // Курaтор тапает ✓ на client-msg → done_at. Клиент тапает ✓ на curator-msg → acked_at.
     // Унифицированный «ack» в UI с разной семантикой на backend.
+    // Зелёный пузырь видят ОБА — как только любая сторона нажала ✓.
     const canMarkAck = !isMine; // ✓ только на чужих сообщениях
-    const ackAt = isCurator ? message.done_at : message.acked_at;
+    const myAckAt = isCurator ? message.done_at : message.acked_at;
+    const theirAckAt = isCurator ? message.acked_at : message.done_at;
+    const ackAt = myAckAt || theirAckAt;
     const isAcked = !!ackAt;
     const canDelete = isMine; // каждый удаляет только свои
     const canReply = !isMine; // отвечать можно только на чужие
@@ -120,11 +123,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           : message.intent_type === 'weight'
             ? `⚖️ Вес: ${message.intent_payload?.weight_kg ?? '?'} кг`
             : '';
-    const ackLabel = isAcked
-      ? (isCurator
-          ? `✓ Обработано ${formatTime(ackAt)}`
-          : `✓ Принято ${formatTime(ackAt)}`)
-      : null;
+    // Метка под пузырём: показываем что сделал каждый
+    // (если есть обе метки — обе строкой; если только одна — её)
+    const ackLabel = (() => {
+      if (!isAcked) return null;
+      const parts = [];
+      if (message.done_at) parts.push(`✓ Обработано ${formatTime(message.done_at)}`);
+      if (message.acked_at) parts.push(`✓ Принято ${formatTime(message.acked_at)}`);
+      return parts.join(' · ');
+    })();
 
     const bubbleClasses = [
       'msg-bubble',

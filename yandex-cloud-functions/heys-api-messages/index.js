@@ -399,6 +399,9 @@ async function handleSend(identity, body) {
       body: 'Открыть сообщение',
       tag: `message-from-${identity.id}`,
       url: `/?switch_client=${identity.id}&open_messages=1`,
+      vibrate: [200, 100, 200, 100, 400],
+      renotify: true,
+      requireInteraction: true,
     };
     sendPushToCurator(rpcResult.curator_id, pushPayload).catch((err) => {
       console.error('[messages] push to curator failed:', err.message);
@@ -456,6 +459,9 @@ async function handleSend(identity, body) {
     body: pushBody,
     tag: 'message-from-curator',
     url: '/?open_messages=1',
+    vibrate: [200, 100, 200, 100, 400],
+    renotify: true,
+    requireInteraction: true,
   };
   sendPushToClient(client_id, pushPayload).catch((err) => {
     console.error('[messages] push to client failed:', err.message);
