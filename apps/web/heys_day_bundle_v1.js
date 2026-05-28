@@ -2529,6 +2529,10 @@
                     adviceTrigger,
                     toastVisible,
                 });
+                // Будем называть ЭТУ же функцию из shell IIFE listener
+                // напрямую (если window dispatch не достигнет нас по race).
+                // window.__heysShowAdviceHandler = handleShowAdvice — назначим
+                // сразу после регистрации listener'а ниже.
                 // PERF R13 FIX H: wrap setState in startTransition to defer React render
                 React.startTransition(() => {
                     // Курaтор всегда видит history dropdown (даже если live
@@ -2575,7 +2579,16 @@
                 });
             };
             window.addEventListener('heysShowAdvice', handleShowAdvice);
-            return () => window.removeEventListener('heysShowAdvice', handleShowAdvice);
+            // Expose globally чтобы shell IIFE listener мог вызвать напрямую
+            // в обход event mechanism (заметено что dispatch иногда не доходит
+            // до listener'а в курaторской сессии — race condition / sync issue).
+            window.__heysShowAdviceHandler = handleShowAdvice;
+            return () => {
+                window.removeEventListener('heysShowAdvice', handleShowAdvice);
+                if (window.__heysShowAdviceHandler === handleShowAdvice) {
+                    window.__heysShowAdviceHandler = null;
+                }
+            };
         }, [totalAdviceCount, haptic, HEYSRef, date, safeBadgeAdvices, adviceTrace]);
 
         useEffect(() => {

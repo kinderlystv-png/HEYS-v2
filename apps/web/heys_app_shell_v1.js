@@ -18,6 +18,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             console.warn('[advice-tab] module-level capture click fired, dispatching heysShowAdvice');
             setTimeout(function _heysShowAdviceDispatch() {
                 try {
+                    // Bypass: вызвать handler напрямую если он зарегистрирован
+                    // через useAdviceState. Это надёжнее чем event dispatch
+                    // потому что event listener иногда не attached в курaторе.
+                    if (typeof window.__heysShowAdviceHandler === 'function') {
+                        try {
+                            console.warn('[advice-tab] direct-call window.__heysShowAdviceHandler()');
+                            window.__heysShowAdviceHandler();
+                        } catch (directErr) {
+                            console.warn('[advice-tab] direct-call failed:', directErr && directErr.message);
+                        }
+                    } else {
+                        console.warn('[advice-tab] no __heysShowAdviceHandler, falling back to event dispatch');
+                    }
+                    // Также dispatch event на случай если есть другие слушатели.
                     window.dispatchEvent(new CustomEvent('heysShowAdvice'));
                 } catch (errDispatch) {
                     console.warn('[advice-tab] dispatch failed:', errDispatch && errDispatch.message);
