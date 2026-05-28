@@ -10812,6 +10812,29 @@
     // Защита: client_kv_store принимает только client-specific ключи (см. needsClientStorage).
     // currentClientId установлен ≠ ключ принадлежит клиенту (курaтор может писать свои global ключи).
     if (clientId && needsClientStorage(normalizedKey)) {
+      // 🛡️ GATE 2026-05-28 (curator-pollution patch): только PIN-сессия для clientId
+      // имеет право писать в client_kv_store через generic saveKey.
+      // Курaтор-режим (email-login без PIN match) делает residual setItem'ы при switch'е
+      // между клиентами — они утекали в client_kv_store следующего выбранного клиента.
+      // Легитимные курaтор-actions (water_set, meal_added) идут через explicit RPC,
+      // не через saveKey, не блокируются.
+      const isPinAuthForThisClient = _pinAuthClientId && _pinAuthClientId === clientId;
+      if (!isPinAuthForThisClient) {
+        try {
+          const _stack = new Error('curator-mode write blocked').stack || '';
+          console.warn(
+            '[saveKey] 🛡️ curator-mode write BLOCKED for client_kv_store:',
+            {
+              k: normalizedKey,
+              clientId: clientId.slice(0, 8),
+              user_id: user.id ? user.id.slice(0, 8) : null,
+              pinAuth: _pinAuthClientId ? _pinAuthClientId.slice(0, 8) : null,
+            },
+            '\n' + _stack.split('\n').slice(1, 8).join('\n')
+          );
+        } catch (_) { /* logging best-effort */ }
+        return;
+      }
       const clientUpsertObj = {
         user_id: user.id,
         client_id: clientId,
