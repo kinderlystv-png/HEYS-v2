@@ -414,54 +414,125 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             window.addEventListener('focus', onFocus);
             return () => { cancelled = true; window.removeEventListener('focus', onFocus); };
         }, []);
-        const handlePushBadgeClick = async () => {
-            if (!window.HEYS?.push) {
-                alert('Модуль уведомлений не загружен. Обнови страницу.');
-                return;
+        // Собирает полный отладочный отчёт о состоянии push-подписки.
+        // Цель — пользователь может одним тапом скопировать всё в буфер и прислать.
+        const buildPushDiagnostic = async (subscribeResult, exception) => {
+            const lines = [];
+            const safe = (fn, fallback = 'n/a') => { try { return fn(); } catch { return fallback; } };
+            lines.push('=== HEYS Push Diagnostic ===');
+            lines.push('Time: ' + new Date().toISOString());
+            lines.push('URL: ' + safe(() => location.href));
+            lines.push('UA: ' + safe(() => navigator.userAgent));
+            lines.push('Standalone: ' + safe(() => window.matchMedia?.('(display-mode: standalone)').matches));
+            lines.push('iOS standalone: ' + safe(() => navigator.standalone));
+            lines.push('Notification API: ' + safe(() => 'Notification' in window));
+            lines.push('Notification.permission: ' + safe(() => Notification?.permission));
+            lines.push('ServiceWorker: ' + safe(() => 'serviceWorker' in navigator));
+            lines.push('PushManager: ' + safe(() => 'PushManager' in window));
+            lines.push('SW controller: ' + safe(() => !!navigator.serviceWorker?.controller));
+            try {
+                const reg = await navigator.serviceWorker?.ready;
+                if (reg) {
+                    const sub = await reg.pushManager.getSubscription();
+                    lines.push('SW scope: ' + reg.scope);
+                    lines.push('Subscription exists: ' + !!sub);
+                    if (sub) lines.push('Subscription endpoint host: ' + new URL(sub.endpoint).host);
+                }
+            } catch (e) {
+                lines.push('SW check error: ' + e?.message);
             }
-            if (pushStatus?.subscribed) {
+            try {
+                const status = await window.HEYS?.push?.getStatus?.();
+                lines.push('HEYS.push.getStatus: ' + JSON.stringify(status));
+            } catch (e) {
+                lines.push('getStatus error: ' + e?.message);
+            }
+            lines.push('Cached pushStatus: ' + JSON.stringify(pushStatus));
+            if (subscribeResult !== undefined) {
+                lines.push('subscribe() returned: ' + JSON.stringify(subscribeResult));
+            }
+            if (exception) {
+                lines.push('Exception: ' + exception?.message);
+                if (exception?.stack) lines.push('Stack: ' + exception.stack.split('\n').slice(0, 3).join(' | '));
+            }
+            const cl = window.HEYS?.cloud;
+            lines.push('Curator: ' + safe(() => !!cl?.currentCuratorId));
+            lines.push('Client: ' + safe(() => window.HEYS?.currentClientId || 'none'));
+            return lines.join('\n');
+        };
+
+        const copyToClipboard = async (text) => {
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                }
+            } catch { /* fallthrough */ }
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                return ok;
+            } catch { return false; }
+        };
+
+        const handlePushBadgeClick = async () => {
+            // Если уже подписан и устройство, и сервер согласны — переходим на settings.
+            if (pushStatus?.subscribed && window.HEYS?.push) {
                 if (typeof haptic === 'function') haptic('light');
                 switchTabWithUndoCommit('user', 'push-settings-badge');
                 setTimeout(() => window.dispatchEvent(new CustomEvent('heys:scroll-to-push-settings')), 80);
                 return;
             }
-            if (pushStatus?.permission === 'denied') {
-                alert('Уведомления заблокированы в браузере. Разблокируй их в настройках сайта (значок замка рядом с адресом), потом перезагрузи страницу.');
-                return;
-            }
-            if (pushStatus?.needsInstall) {
-                alert('На iPhone уведомления работают только из установленного приложения. Поделиться → На экран Домой, потом запусти HEYS с домашнего экрана.');
-                return;
-            }
-            if (!pushStatus?.capable) {
-                alert('Этот браузер не поддерживает push-уведомления. Попробуй Chrome или Firefox.');
-                return;
-            }
+
+            // Иначе пробуем подписаться и в любом случае собираем диагностику
             setPushBusy(true);
+            let subscribeResult, exception;
             try {
-                const r = await window.HEYS.push.subscribe();
-                // Показываем явное сообщение для КАЖДОГО исхода — никаких silent fail.
-                if (r?.ok === true) {
-                    alert('✅ Уведомления подключены. Тебе придёт пуш когда тебе напишут.');
-                } else if (r?.reason === 'permission_denied') {
-                    alert('❌ Без разрешения уведомления не работают. Можно включить позже.');
-                } else if (r?.reason === 'permission_blocked') {
-                    alert('❌ Уведомления заблокированы в браузере (раньше нажали «Запретить»). Разблокируй их в настройках сайта — значок замка рядом с адресом, Notifications → Allow, потом перезагрузи страницу.');
-                } else if (r?.reason === 'ios_needs_install') {
-                    alert('На iPhone уведомления работают только из установленного приложения. Поделиться → На экран Домой.');
-                } else if (r?.reason === 'not_capable') {
-                    alert('Браузер не поддерживает push-уведомления.');
-                } else if (r?.ok === false) {
-                    alert(`Не удалось подписаться: ${r?.reason || 'неизвестная ошибка'}.`);
+                if (window.HEYS?.push?.subscribe) {
+                    subscribeResult = await window.HEYS.push.subscribe();
                 }
-                const s = await window.HEYS.push.getStatus();
-                setPushStatus(s);
+                const s = await window.HEYS?.push?.getStatus?.();
+                if (s) setPushStatus(s);
             } catch (e) {
+                exception = e;
                 console.warn('[push.badge] subscribe failed:', e?.message, e);
-                alert(`Ошибка при подписке: ${e?.message || 'unknown'}. Попробуй ещё раз или обнови страницу.`);
             } finally {
                 setPushBusy(false);
             }
+
+            const report = await buildPushDiagnostic(subscribeResult, exception);
+            const copied = await copyToClipboard(report);
+
+            // Короткий человеческий summary поверх + полный отчёт уже в буфере
+            let summary;
+            if (subscribeResult?.ok === true) {
+                summary = '✅ Подписка успешно создана.';
+            } else if (subscribeResult?.reason === 'ios_needs_install') {
+                summary = 'iPhone Safari: нужно «Поделиться → На экран Домой» и запустить с иконки.';
+            } else if (subscribeResult?.reason === 'permission_denied' || subscribeResult?.reason === 'permission_blocked') {
+                summary = 'Браузер заблокировал. Site Settings → Notifications → Allow → перезагрузить.';
+            } else if (subscribeResult?.reason === 'not_capable') {
+                summary = 'Браузер не поддерживает Web Push.';
+            } else if (exception) {
+                summary = 'Ошибка: ' + (exception.message || 'unknown');
+            } else if (subscribeResult?.ok === false) {
+                summary = 'Не подписалось: ' + (subscribeResult.reason || 'unknown');
+            } else {
+                summary = 'Состояние не изменилось. Полный лог скопирован.';
+            }
+            alert(
+              summary + '\n\n' +
+              (copied ? '📋 Полный диагностический лог скопирован в буфер обмена — пришли в чат.' : '⚠ Не удалось скопировать в буфер. Лог в консоли DevTools.') +
+              '\n\nКраткая выжимка:\n' + report
+            );
+            if (!copied) console.log(report);
         };
         const clientDropdownAnchorRef = React.useRef(null);
         const [clientDropdownMaxHeight, setClientDropdownMaxHeight] = React.useState(320);
