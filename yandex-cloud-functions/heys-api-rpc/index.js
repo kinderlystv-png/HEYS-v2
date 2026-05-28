@@ -2016,11 +2016,17 @@ module.exports.handler = async function (event, context) {
 
         // UPSERT with NOW() so future merges see a monotonic timestamp.
         // user_id is curator_id for curator path, NULL for session path.
+        // ON CONFLICT обновляет user_id из EXCLUDED — иначе trigger
+        // `block_curator_write_if_locked` ловит PIN-flow updates на rows,
+        // которые ранее писались курaтором (NEW.user_id остаётся курaтор'ом,
+        // trigger raise EXCEPTION → 500 merge_failed). После этой правки
+        // PIN-writes сбрасывают user_id в NULL; курaторские writes
+        // выставляют curatorId — trigger корректно фильтрует.
         const userIdForRow = isCurator ? curatorId : null;
         await client.query(
           `INSERT INTO client_kv_store(client_id, k, v, updated_at, user_id)
            VALUES ($1::uuid, $2::text, $3::jsonb, NOW(), $4)
-           ON CONFLICT (client_id, k) DO UPDATE SET v = EXCLUDED.v, updated_at = NOW()`,
+           ON CONFLICT (client_id, k) DO UPDATE SET v = EXCLUDED.v, updated_at = NOW(), user_id = EXCLUDED.user_id`,
           [resolvedClientId, k, JSON.stringify(mergedValue), userIdForRow]
         );
 
