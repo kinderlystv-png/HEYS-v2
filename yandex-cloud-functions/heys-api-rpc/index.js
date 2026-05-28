@@ -1936,7 +1936,32 @@ module.exports.handler = async function (event, context) {
             mergedValue = mergeScalarKv(incomingValue, currentValue);
             mergeOutcome = 'scalar_merged';
           } else {
-            mergedValue = incomingValue;
+            // Ticket A v2: hybrid last-write-wins по semantic causality (v.updatedAt).
+            // Primary — device clock (момент намеренной правки в UI).
+            // Secondary — server clock fallback при равных ts (rare race).
+            // Pre-req: Ticket M v1 — все client-data writes должны нести top-level
+            // v.updatedAt. Keys без ts (heys_ews_snapshot/heys_cascade_dcs_v9/etc.)
+            // попадают в legacy fallback → incoming wins (то же поведение что до A v2).
+            const incTs = Number(incomingValue && incomingValue.updatedAt) || 0;
+            const curTs = Number(currentValue && currentValue.updatedAt) || 0;
+            if (incTs > 0 && curTs > 0) {
+              if (incTs > curTs) {
+                mergedValue = incomingValue;
+                mergeOutcome = 'hybrid_lww_inc';
+              } else if (incTs < curTs) {
+                mergedValue = currentValue;
+                mergeOutcome = 'stale_write_blocked';
+              } else {
+                // incTs === curTs — rare race, tie-breaker: incoming wins
+                // (server NOW() в UPSERT гарантирует monotonic updated_at).
+                mergedValue = incomingValue;
+                mergeOutcome = 'tie_breaker_server';
+              }
+            } else {
+              // Legacy backward-compat: один из side'ов без ts → incoming wins.
+              mergedValue = incomingValue;
+              mergeOutcome = incTs === 0 ? 'legacy_no_inc_ts' : 'legacy_no_cur_ts';
+            }
           }
         }
 
@@ -1969,6 +1994,23 @@ module.exports.handler = async function (event, context) {
           } catch (auditErr) {
             // Audit failure shouldn't fail the actual save.
             console.warn('[merge_save] audit insert failed:', auditErr.message);
+          }
+        } else if (mergeOutcome === 'stale_write_blocked') {
+          // Ticket A v2: explicit audit запись для отброшенных stale-writes.
+          // existing_updated / new_updated несут BIGINT semantic ts для forensic.
+          try {
+            await client.query(
+              `INSERT INTO data_loss_audit (client_id, key, action, existing_updated, new_updated, allowed, reason)
+               VALUES ($1::uuid, $2::text, 'stale_write_blocked', $3, $4, FALSE, 'stale_ts')`,
+              [
+                resolvedClientId,
+                k,
+                Number(cur.rows[0]?.v?.updatedAt) || null,
+                Number(incomingValue?.updatedAt) || null
+              ]
+            );
+          } catch (auditErr) {
+            console.warn('[merge_save] stale_ts audit insert failed:', auditErr.message);
           }
         }
 
