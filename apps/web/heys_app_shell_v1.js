@@ -2041,6 +2041,23 @@
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
 
+        // Native fallback на onClick для tab-advice: React synthetic events
+        // иногда не доходят до handler после повторных re-render'ов shell'а
+        // (наблюдалось 2026-05-28: native click event fires, React onClick не
+        // срабатывает, dropdown не открывается). Native listener через ref
+        // переживает любые React state-changes.
+        const adviceTabRef = React.useRef(null);
+        React.useEffect(() => {
+            const el = adviceTabRef.current;
+            if (!el) return;
+            const handler = () => {
+                console.warn('[advice-diag] 0️⃣ native ref onClick fired on tab-advice');
+                setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
+            };
+            el.addEventListener('click', handler);
+            return () => el.removeEventListener('click', handler);
+        }, []);
+
         // 🔔 Бейдж модерации на ⚙️-иконке: показываем JWT-куратору количество pending-заявок.
         // Init из sessionStorage чтобы избежать flash 0→N при reload.
         const [pendingCount, setPendingCount] = React.useState(() => {
@@ -2288,11 +2305,12 @@
             React.createElement(
                 'div',
                 {
+                    ref: adviceTabRef,
                     className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
                     onClick: () => {
                         // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler
                         // DayTabWithCloudSync is always mounted, no tab switch needed
-                        console.warn('[advice-diag] 1️⃣ tab.tab-advice clicked, dispatching heysShowAdvice');
+                        console.warn('[advice-diag] 1️⃣ tab.tab-advice clicked (React onClick), dispatching heysShowAdvice');
                         setTimeout(() => {
                             console.warn('[advice-diag] 2️⃣ dispatching heysShowAdvice CustomEvent now');
                             window.dispatchEvent(new CustomEvent('heysShowAdvice'));
