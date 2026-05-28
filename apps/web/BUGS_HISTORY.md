@@ -7,6 +7,101 @@ broken, what was fixed, and the pattern to watch for.
 
 ---
 
+## Curator-session pollution: курaтор затёр 11 KV-ключей клиента (2026-05-27)
+
+Клиентка Александра (`4545ee50-4f5f-4fc0-b862-7ca45fa1bafc`). Курaтор
+(`6d4dbb32…`) зашёл в её сессию в **18:36 MSK 27 мая**. После захода 11 ключей в
+её `client_kv_store` оказались перезаписаны значениями со стороны курaтора
+(включая курaтор-глобальные `heys_clients`, `heys_client_current` которых вообще
+не должно быть в client_kv_store клиента).
+
+### Что фактически потеряно
+
+| Ключ                                                              | До (snapshot 04:00) | После курaтора | Дельта                                                       |
+| ----------------------------------------------------------------- | ------------------- | -------------- | ------------------------------------------------------------ |
+| `heys_advice_pending_outcomes_v1`                                 | 20.8 KB             | 0.7 KB         | **−20 KB** (очередь советов схлопнулась)                     |
+| `heys_ews_trends_v1`                                              | 598 b               | 465 b          | −133 b                                                       |
+| `heys_products`                                                   | 42 KB               | 382 KB         | **+340 KB** (курaтор затолкал свою products LS под clientId) |
+| `heys_clients`, `heys_client_current`                             | (n/a)               | курaтор-LS     | курaтор-глобальные ключи в clientId Александры               |
+| `heys_debug_events`, `heys_ews_snapshot`, `heys_ews_weekly_v1`    | меньше              | больше         | курaтор-side значения                                        |
+| `heys_advice_outcomes_v1`, `heys_advice_stats`, `heys_dayv2_date` | byte-equal          | byte-equal     | без изменений                                                |
+
+**`heys_dayv2_*` не пострадали.** Воспринятое в morning checkin как «затёрто
+несколько дней» — это естественное отсутствие записей 24-26 мая (Александра эти
+дни не вводила еду; в snapshot 27 мая dayv2 за эти даты тоже отсутствуют).
+
+### Что НЕ сработало
+
+- **`data_loss_audit`** (shrink-guard): последняя запись 23 мая, на этот
+  инцидент **не сработал**. Гипотеза: shrink-guard срабатывает только на путях
+  которые проверяют `existing_meals`/`new_meals` (overlay/dayv2). Перезапись
+  `heys_advice_*`, `heys_ews_*`, `heys_products` идёт мимо shrink-guard.
+- **`client_data_changelog`**: последняя запись 18 мая. Курaтор-action на захват
+  сессии и автоматический sync не пишут в changelog (changelog — только для
+  явных курaтор-actions типа `water_set`, `meal_added`).
+
+### Root cause (гипотеза, не подтверждён)
+
+Курaтор-страница имеет свои global LS keys (`heys_products`, `heys_clients`,
+`heys_client_current`, `heys_advice_*`, `heys_ews_*`). При открытии клиента
+Александры все эти ключи попадают в её `client_kv_store` через storage
+interceptor — он не различает «это курaтор-глобальное» vs «это клиент-personal».
+Когда курaтор просто проскроллил по UI / посмотрел статистику, любой
+автоматический writeRaw отправил весь набор курaтор-LS под scope её clientId.
+
+См. инвариант №3 в [ARCHITECTURE.md](ARCHITECTURE.md): «PIN and curator sessions
+load products identically» — но `client_kv_store` write-path не описан так же
+строго.
+
+### Restore
+
+```bash
+cd yandex-cloud-functions/heys-client-daily-backup
+# S3 + PG credentials из Lockbox
+eval "$(yc lockbox payload get --id e6qnjm2ks2n1ubiaiki6 --format json | python3 -c "<exporter>")"
+source scripts/db/get-pg-password.sh
+export PG_PASSWORD="$PGPASSWORD"
+node restore-client-backup.js --client-id 4545ee50-... --date 2026-05-27 --dry-run
+node restore-client-backup.js --client-id 4545ee50-... --date 2026-05-27
+```
+
+Snapshot 27 мая 04:00 MSK (за ~14ч до инцидента) восстановил 11 ключей. Все 478
+KV ключей до restore = unchanged + 11 changed → diff чистый, никаких потерь от
+restore.
+
+### Update 2026-05-28: deep dive + mitigation deployed
+
+Расширенное расследование (см. `plans/toasty-sauteeing-porcupine.md` v5)
+показало **каскад из 4 независимых проблем**, не одну:
+
+1. **Bulk revoke 19.05 13:31:35** (87 sessions Александры разом, без
+   audit-записи) → её iPhone не мог логиниться 9 дней, но UI показывал «sync ✓».
+2. **Pre-existing whitelist gap**:
+   `heys_advice_outcomes_v1`/`_pending`/`_stats`,
+   `heys_ews_snapshot`/`_trends_v1`/`_weekly_v1`, `heys_cascade_dcs_v9` —
+   client-specific по семантике, но НЕ в `CLIENT_SPECIFIC_KEYS`.
+3. **`cloud.saveKey` ignores whitelist** (`heys_storage_supabase_v1.js:10657`):
+   если есть `currentClientId` → пишет любой `k` в `client_kv_store/{clientId}`.
+   Главный root cause курaтор-pollution.
+4. **Server merge default `incomingValue` без shrink-guard** для
+   не-dayv2/не-scalar ключей (`heys-api-rpc/index.js:1939`).
+
+**Mitigation deployed 2026-05-28**:
+[`database/2026-05-28_curator_write_lock.sql`](../../database/2026-05-28_curator_write_lock.sql)
+— колонка `clients.curator_write_locked` + триггер
+`trg_block_curator_write_on_locked`. Для Александры flag установлен в TRUE.
+Любая попытка курaторского write (`user_id IS NOT NULL`) в её `client_kv_store`
+теперь RAISE EXCEPTION на уровне БД. PIN-сессии не блокируются.
+
+### Полный план фиксов
+
+См. `plans/toasty-sauteeing-porcupine.md` — Tickets I (whitelist), J (saveKey
+fix), A (cloud shrink-guard), B (server blacklist + client defence), D (status
+code + client invalid_session handler), F (audit trigger на revoke), G (fetch
+wrapper). Deployment order: I → J → A → B → F → D → снять curator_write_locked.
+
+---
+
 ## Morning checkin: потерянный weight + cascade diagnosis (2026-05-26)
 
 Клиент Poplanton (`ccfe6ea3…`), gap 2 дня (24-25 мая). Ввёл вес 91.3 на первом
