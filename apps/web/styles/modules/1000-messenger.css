@@ -260,6 +260,29 @@ body.planning-tab-active .fab-group .message-fab {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+ * Кнопка «Показать ранее» — collapse старых дней
+ * ═══════════════════════════════════════════════════════════════════ */
+.messenger-show-older {
+  align-self: center;
+  margin: 6px 0 8px;
+  background: var(--heys-bg-muted, #f1f5f9);
+  border: 1px solid var(--heys-border, rgba(0, 0, 0, 0.08));
+  border-radius: 14px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--heys-text-secondary, #6b7280);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.messenger-show-older:hover {
+  background: var(--heys-bg-elevated, #e2e8f0);
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
  * Date separator (по центру, между группами сообщений по дню)
  * ═══════════════════════════════════════════════════════════════════ */
 .msg-date-divider {

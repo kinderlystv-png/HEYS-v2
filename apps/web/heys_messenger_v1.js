@@ -321,6 +321,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return '...';
   }
 
+  // ── Collapse старых дней ─────────────────────────────────────────────
+  // Сколько последних дней показываем сразу. Всё что старее — за кнопкой.
+  const RECENT_DAYS_LIMIT = 7;
+
+  // Возвращает ISO-timestamp cutoff: всё с created_at < cutoff = "старое".
+  function getOldCutoffISO() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - (RECENT_DAYS_LIMIT - 1)); // -1 чтобы 7 дней включая сегодня
+    return d.toISOString();
+  }
+
   // ── Шаблоны быстрых ответов куратора ─────────────────────────────────
   const CURATOR_REPLY_TEMPLATES = [
     'Применено ✓',
@@ -337,6 +349,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [input, setInput] = useState('');
     const [error, setError] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
+    const [showOldMessages, setShowOldMessages] = useState(false);
     const threadRef = useRef(null);
     const inputRef = useRef(null);
     const isCurator = isCuratorMode();
@@ -532,10 +545,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     : 'Напиши куратору что съел или о чём-то ещё.',
                 )
               : (() => {
-                  // Рендерим бабблы + вставляем date-separator между разными днями
+                  // Collapse: всё что старше RECENT_DAYS_LIMIT дней — скрываем
+                  // за кнопкой «Показать ранее (N)». Кликнул → showOldMessages=true
+                  // → всё разворачивается до конца сессии модалки.
+                  const cutoffISO = getOldCutoffISO();
+                  const oldMessages = messages.filter((m) => m.created_at < cutoffISO);
+                  const recentMessages = messages.filter((m) => m.created_at >= cutoffISO);
+                  const visibleMessages = showOldMessages
+                    ? messages
+                    : recentMessages;
+
                   const nodes = [];
+
+                  // Кнопка «Показать ранее» — если есть скрытые
+                  if (!showOldMessages && oldMessages.length > 0) {
+                    nodes.push(
+                      React.createElement('button', {
+                        key: 'show-older',
+                        type: 'button',
+                        className: 'messenger-show-older',
+                        onClick: () => setShowOldMessages(true),
+                      }, `↑ Показать ранее (${oldMessages.length})`),
+                    );
+                  }
+
+                  // Рендерим бабблы + вставляем date-separator между разными днями
                   let lastKey = null;
-                  for (const m of messages) {
+                  for (const m of visibleMessages) {
                     const k = dayKey(m.created_at);
                     if (k !== lastKey) {
                       nodes.push(
@@ -556,6 +592,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         onReply: handleReply,
                         onEdit: handleEditMessage,
                       }),
+                    );
+                  }
+                  // Пустое состояние: если рекент пуст, но есть старые сообщения
+                  if (visibleMessages.length === 0 && oldMessages.length > 0) {
+                    nodes.push(
+                      React.createElement(
+                        'div',
+                        { key: 'no-recent', className: 'messenger-empty' },
+                        `Нет сообщений за последние ${RECENT_DAYS_LIMIT} дней.`,
+                      ),
                     );
                   }
                   return nodes;
