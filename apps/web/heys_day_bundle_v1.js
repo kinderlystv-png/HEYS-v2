@@ -1330,16 +1330,33 @@
         // advice/_core.js recordAdviceOutcomeEvent + track*). Manual click
         // на 💡 в его UI открывает этот dropdown с историей.
         const _isCurator = isCuratorReadOnlyMode();
+        console.warn('[advice-diag] 5️⃣ renderManualAdviceList called', {
+            _isCurator,
+            adviceTrigger,
+            toastVisible,
+            adviceRelevantLen: Array.isArray(adviceRelevant) ? adviceRelevant.length : 'not-array',
+        });
         if (_isCurator) {
-            if (!(adviceTrigger === 'manual' && toastVisible)) return null;
-            return renderCuratorAdviceHistory({
-                React,
-                dismissToast,
-                handleAdviceListTouchStart,
-                handleAdviceListTouchMove,
-                handleAdviceListTouchEnd,
-                adviceRelevant,
-            });
+            if (!(adviceTrigger === 'manual' && toastVisible)) {
+                console.warn('[advice-diag] 6️⃣ curator gate REJECTED: adviceTrigger=' + adviceTrigger + ', toastVisible=' + toastVisible);
+                return null;
+            }
+            console.warn('[advice-diag] 7️⃣ curator gate PASSED, rendering renderCuratorAdviceHistory');
+            try {
+                const result = renderCuratorAdviceHistory({
+                    React,
+                    dismissToast,
+                    handleAdviceListTouchStart,
+                    handleAdviceListTouchMove,
+                    handleAdviceListTouchEnd,
+                    adviceRelevant,
+                });
+                console.warn('[advice-diag] 8️⃣ renderCuratorAdviceHistory returned', !!result);
+                return result;
+            } catch (renderErr) {
+                console.error('[advice-diag] ❌ renderCuratorAdviceHistory THREW:', renderErr);
+                return null;
+            }
         }
 
         if (!(adviceTrigger === 'manual' && adviceRelevant?.length > 0 && toastVisible)) return null;
@@ -2506,11 +2523,22 @@
 
         useEffect(() => {
             const handleShowAdvice = () => {
+                console.warn('[advice-diag] 3️⃣ handleShowAdvice fired', {
+                    totalAdviceCount,
+                    isCurator: isCuratorReadOnlyMode(),
+                    adviceTrigger,
+                    toastVisible,
+                });
                 // PERF R13 FIX H: wrap setState in startTransition to defer React render
                 React.startTransition(() => {
                     // Курaтор всегда видит history dropdown (даже если live
                     // totalAdviceCount=0 — у history свои данные).
                     const _curator = isCuratorReadOnlyMode();
+                    console.warn('[advice-diag] 4️⃣ inside startTransition', {
+                        totalAdviceCount,
+                        _curator,
+                        willOpenDropdown: totalAdviceCount > 0 || _curator,
+                    });
                     if (totalAdviceCount > 0 || _curator) {
                         const engineVisibleAdviceCount = Array.isArray(safeBadgeAdvices)
                             ? safeBadgeAdvices.length

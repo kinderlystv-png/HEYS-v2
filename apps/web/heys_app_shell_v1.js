@@ -2292,7 +2292,11 @@
                     onClick: () => {
                         // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler
                         // DayTabWithCloudSync is always mounted, no tab switch needed
-                        setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
+                        console.warn('[advice-diag] 1️⃣ tab.tab-advice clicked, dispatching heysShowAdvice');
+                        setTimeout(() => {
+                            console.warn('[advice-diag] 2️⃣ dispatching heysShowAdvice CustomEvent now');
+                            window.dispatchEvent(new CustomEvent('heysShowAdvice'));
+                        }, 0);
                     },
                 },
                 React.createElement('span', { className: 'tab-icon' }, '💡'),
