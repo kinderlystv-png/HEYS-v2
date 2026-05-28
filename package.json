@@ -31,7 +31,6 @@
     "changeset:version": "changeset version",
     "clean": "turbo run clean && rimraf dist node_modules/.cache",
     "css:audit": "bash scripts/css-audit.sh",
-    "deploy": "pnpm prepare-release:check && node scripts/deploy.js",
     "deps:check": "pnpm audit",
     "deps:update": "pnpm update -r",
     "dev": "cross-env PORT=3001 turbo run dev --concurrency=15",
