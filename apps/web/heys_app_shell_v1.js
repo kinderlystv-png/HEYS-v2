@@ -415,33 +415,50 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             return () => { cancelled = true; window.removeEventListener('focus', onFocus); };
         }, []);
         const handlePushBadgeClick = async () => {
-            if (!window.HEYS?.push) return;
+            if (!window.HEYS?.push) {
+                alert('Модуль уведомлений не загружен. Обнови страницу.');
+                return;
+            }
             if (pushStatus?.subscribed) {
-                // Уже включено — переходим на вкладку Профиль и скроллим к секции уведомлений
                 if (typeof haptic === 'function') haptic('light');
                 switchTabWithUndoCommit('user', 'push-settings-badge');
                 setTimeout(() => window.dispatchEvent(new CustomEvent('heys:scroll-to-push-settings')), 80);
                 return;
             }
             if (pushStatus?.permission === 'denied') {
-                alert('Уведомления заблокированы в браузере. Разблокируй их в настройках сайта (значок замка рядом с адресом).');
+                alert('Уведомления заблокированы в браузере. Разблокируй их в настройках сайта (значок замка рядом с адресом), потом перезагрузи страницу.');
                 return;
             }
             if (pushStatus?.needsInstall) {
                 alert('На iPhone уведомления работают только из установленного приложения. Поделиться → На экран Домой, потом запусти HEYS с домашнего экрана.');
                 return;
             }
-            if (!pushStatus?.capable) return;
+            if (!pushStatus?.capable) {
+                alert('Этот браузер не поддерживает push-уведомления. Попробуй Chrome или Firefox.');
+                return;
+            }
             setPushBusy(true);
             try {
                 const r = await window.HEYS.push.subscribe();
-                if (r && r.ok === false && r.reason === 'permission_denied') {
-                    alert('Без разрешения уведомления не работают. Можно включить позже из этого окна.');
+                // Показываем явное сообщение для КАЖДОГО исхода — никаких silent fail.
+                if (r?.ok === true) {
+                    alert('✅ Уведомления подключены. Тебе придёт пуш когда тебе напишут.');
+                } else if (r?.reason === 'permission_denied') {
+                    alert('❌ Без разрешения уведомления не работают. Можно включить позже.');
+                } else if (r?.reason === 'permission_blocked') {
+                    alert('❌ Уведомления заблокированы в браузере (раньше нажали «Запретить»). Разблокируй их в настройках сайта — значок замка рядом с адресом, Notifications → Allow, потом перезагрузи страницу.');
+                } else if (r?.reason === 'ios_needs_install') {
+                    alert('На iPhone уведомления работают только из установленного приложения. Поделиться → На экран Домой.');
+                } else if (r?.reason === 'not_capable') {
+                    alert('Браузер не поддерживает push-уведомления.');
+                } else if (r?.ok === false) {
+                    alert(`Не удалось подписаться: ${r?.reason || 'неизвестная ошибка'}.`);
                 }
                 const s = await window.HEYS.push.getStatus();
                 setPushStatus(s);
             } catch (e) {
-                console.warn('[push.badge] subscribe failed:', e?.message);
+                console.warn('[push.badge] subscribe failed:', e?.message, e);
+                alert(`Ошибка при подписке: ${e?.message || 'unknown'}. Попробуй ещё раз или обнови страницу.`);
             } finally {
                 setPushBusy(false);
             }
