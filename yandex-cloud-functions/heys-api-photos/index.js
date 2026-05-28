@@ -42,7 +42,7 @@ function getS3() {
 }
 
 function getBucket() {
-  return process.env.S3_PHOTOS_BUCKET || 'meal-photos';
+  return process.env.S3_PHOTOS_BUCKET || 'heys-photos';
 }
 
 function getPublicBaseUrl() {
