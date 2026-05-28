@@ -3204,6 +3204,19 @@
       _lastUploadDiag = { ts: Date.now(), ...info };
     } catch (_) { /* noop */ }
   }
+  // Классификация upload-ошибок (для diag badge-snapshot). Сетевые отказы
+  // ("Failed to fetch" — типичный VPN-toggle симптом) до этого пропадали.
+  function classifyUploadError(err) {
+    const msg = String(err?.message || err || '').toLowerCase();
+    if (!msg) return 'unknown';
+    if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed')) return 'network';
+    if (msg.includes('request timeout') || msg.includes('aborted')) return 'timeout';
+    if (msg.includes('413') || msg.includes('payload too large')) return '413';
+    if (msg.includes('429') || msg.includes('too many requests')) return 'rate-limit';
+    if (/\bserver error 50[234]\b/.test(msg) || /\b50[234]\b/.test(msg)) return '5xx';
+    if (msg.includes('401') || msg.includes('unauthorized') || msg.includes('jwt') || msg.includes('invalid token')) return 'auth';
+    return 'other';
+  }
   cloud.getLastUploadDiag = function () { return _lastUploadDiag; };
 
   // Tracks ms duration of last successful upload — used for adaptive slow-mode batching.
@@ -9565,6 +9578,14 @@
           logCritical(`[SYNC] ❌ Ошибка отправки: ${anyError}`);
           addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
           _lastUploadFailAt = Date.now();
+          recordUploadDiag({
+            kind: isAuthError ? 'auth' : classifyUploadError(anyError),
+            error: String(anyError?.message || anyError || '').slice(0, 240),
+            code: anyError?.code || anyError?.status,
+            chunkBytes: 0,
+            chunkLen: filteredBatch.length,
+            items: []
+          });
           if (/413|payload too large|request entity too large/i.test(String(anyError))) {
             _clientUpload413BackoffUntil = Date.now() + 45000;
             try {
@@ -9742,6 +9763,14 @@
       logCritical('❌ Ошибка сохранения в облако:', e.message || e);
       addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(e?.message || e).slice(0, 80) });
       _lastUploadFailAt = Date.now();
+      recordUploadDiag({
+        kind: classifyUploadError(e),
+        error: String(e?.message || e || '').slice(0, 240),
+        code: e?.code || e?.status,
+        chunkBytes: 0,
+        chunkLen: uniqueBatch.length,
+        items: []
+      });
 
       // Авторизационные ошибки — требуем вход
       if (isAuthError(e)) {
@@ -10933,6 +10962,33 @@
     addSyncLogEntry('offline', { pending: cloud.getPendingCount() });
     stopForegroundAutoSyncLoop();
   });
+
+  // 🌐 Network Information API — реагируем на смену характеристик сети
+  // (эффективный тип / downlink). Главный сценарий — VPN-toggle: при включении
+  // или выключении VPN сетевой интерфейс остаётся активным → navigator.onLine
+  // не меняется → online/offline events НЕ срабатывают, и pending тихо копятся
+  // пока пользователь не сделает что-то (focus/visibility). Connection.change
+  // — единственный браузерный сигнал об этой ситуации.
+  try {
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn && typeof conn.addEventListener === 'function') {
+      conn.addEventListener('change', function () {
+        if (!navigator.onLine) return; // offline handler разберётся сам
+        const pending = cloud.getPendingCount();
+        addSyncLogEntry('connection-change', {
+          effectiveType: conn.effectiveType || 'unknown',
+          downlink: conn.downlink || 0,
+          pending
+        });
+        if (pending > 0) {
+          resetRetry();
+          if (clientUpsertQueue.length > 0) scheduleClientPush();
+          if (upsertQueue.length > 0) schedulePush();
+          requestForegroundAutoSync('connection-change', { minGapMs: 0 }).catch(() => { });
+        }
+      });
+    }
+  } catch (_) { /* noop */ }
 
   /** Принудительный retry синхронизации */
   cloud.retrySync = function () {
