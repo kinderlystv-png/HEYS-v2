@@ -506,9 +506,16 @@
     _checkInFlight = true;
     try {
       if (!HEYS.YandexAPI?.getMyCuratorChangelogSince) return;
+      // 🚪 Banner — курaтор-only feature (показывает «куратор внёс изменения»).
+      // PIN-сессия не имеет heys_curator_session токена → RPC всегда вернёт
+      // 'No session token'. Гейтим тут, чтобы не делать пустой RPC-call и
+      // не плодить warning'и для каждого heysSyncCompleted.
+      if (!HEYS.YandexAPI.getCuratorToken?.()) return;
       const res = await HEYS.YandexAPI.getMyCuratorChangelogSince();
       if (!res || res.ok === false) {
-        if (res && res.error && res.error !== 'invalid_session') {
+        // 'No session token' уже отфильтрован гейтом выше; 'invalid_session'
+        // — by-design (логаут/expire). Любая другая ошибка — реальная.
+        if (res && res.error && res.error !== 'invalid_session' && res.error !== 'No session token') {
           console.warn('[HEYS.curatorBanner] check failed:', res.error);
         }
         return;

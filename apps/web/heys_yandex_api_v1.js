@@ -2493,6 +2493,7 @@
     verifyClientPin,
     curatorLogin,
     verifyCuratorToken,
+    getCuratorToken,  // exposed для гейта в curator-only фичах (см. heys_curator_actions_banner_v1.js)
 
     // 👥 Clients
     getClients,
