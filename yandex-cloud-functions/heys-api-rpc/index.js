@@ -2513,6 +2513,46 @@ module.exports.handler = async function (event, context) {
     // Формируем вызов RPC функции
     paramKeys = Object.keys(params);
 
+    // Ticket B follow-up: PIN-path defence-in-depth для generic dispatch.
+    // merge_save_*_by_session / batch_upsert_client_kv_by_curator уже гейтятся
+    // в specific handlers выше. Здесь покрываем single+batch PIN-write paths.
+    // delete_client_kv_by_session НЕ гейтится — удалить случайно осевший
+    // blacklisted key OK (cleanup).
+    if (fnName === 'upsert_client_kv_by_session' && isNonClientDataKey(params.p_key)) {
+      console.warn('[RPC] blocked non-client-data key (upsert_client_kv_by_session):', params.p_key);
+      try { client.release(); } catch (_) { /* ignore */ }
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({ ok: false, success: false, error: 'not_client_data', key: params.p_key })
+      };
+    }
+    if (fnName === 'batch_upsert_client_kv_by_session' && Array.isArray(params.p_items)) {
+      const _rejected = [];
+      const _filtered = [];
+      for (const it of params.p_items) {
+        if (isNonClientDataKey(it && it.k)) {
+          _rejected.push(it.k);
+        } else {
+          _filtered.push(it);
+        }
+      }
+      if (_rejected.length > 0) {
+        console.warn('[RPC] filtered non-client-data keys (batch_upsert_client_kv_by_session):', _rejected);
+        params.p_items = _filtered;
+        // Если после фильтрации items пуст — short-circuit, SQL функция всё равно
+        // вернёт пустой результат, но мы экономим один DB round-trip.
+        if (params.p_items.length === 0) {
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({ success: true, saved: 0, rejected: _rejected.length, error: 'not_client_data' })
+          };
+        }
+      }
+    }
+
     // 🔐 P2: Для некоторых функций нужны явные типы (pg передаёт unknown)
     const TYPE_HINTS = {
       'verify_client_pin_v3': {
