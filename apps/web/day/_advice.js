@@ -1326,7 +1326,7 @@
         // advice/_core.js recordAdviceOutcomeEvent + track*). Manual click
         // на 💡 в его UI открывает этот dropdown с историей.
         const _isCurator = isCuratorReadOnlyMode();
-        console.warn('[advice-diag] 5️⃣ renderManualAdviceList called', {
+        console.error('[advice-diag] 5️⃣ renderManualAdviceList called', {
             _isCurator,
             adviceTrigger,
             toastVisible,
@@ -1334,10 +1334,10 @@
         });
         if (_isCurator) {
             if (!(adviceTrigger === 'manual' && toastVisible)) {
-                console.warn('[advice-diag] 6️⃣ curator gate REJECTED: adviceTrigger=' + adviceTrigger + ', toastVisible=' + toastVisible);
+                console.error('[advice-diag] 6️⃣ curator gate REJECTED: adviceTrigger=' + adviceTrigger + ', toastVisible=' + toastVisible);
                 return null;
             }
-            console.warn('[advice-diag] 7️⃣ curator gate PASSED, rendering renderCuratorAdviceHistory');
+            console.error('[advice-diag] 7️⃣ curator gate PASSED, rendering renderCuratorAdviceHistory');
             try {
                 const result = renderCuratorAdviceHistory({
                     React,
@@ -1347,7 +1347,7 @@
                     handleAdviceListTouchEnd,
                     adviceRelevant,
                 });
-                console.warn('[advice-diag] 8️⃣ renderCuratorAdviceHistory returned', !!result);
+                console.error('[advice-diag] 8️⃣ renderCuratorAdviceHistory returned', !!result);
                 return result;
             } catch (renderErr) {
                 console.error('[advice-diag] ❌ renderCuratorAdviceHistory THREW:', renderErr);
@@ -2519,7 +2519,7 @@
 
         useEffect(() => {
             const handleShowAdvice = () => {
-                console.warn('[advice-diag] 3️⃣ handleShowAdvice fired', {
+                console.error('[advice-diag] 3️⃣ handleShowAdvice fired', {
                     totalAdviceCount,
                     isCurator: isCuratorReadOnlyMode(),
                     adviceTrigger,
@@ -2534,7 +2534,7 @@
                     // Курaтор всегда видит history dropdown (даже если live
                     // totalAdviceCount=0 — у history свои данные).
                     const _curator = isCuratorReadOnlyMode();
-                    console.warn('[advice-diag] 4️⃣ inside startTransition', {
+                    console.error('[advice-diag] 4️⃣ inside startTransition', {
                         totalAdviceCount,
                         _curator,
                         willOpenDropdown: totalAdviceCount > 0 || _curator,
