@@ -280,26 +280,184 @@ body.planning-tab-active .fab-group .message-fab {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- * Кнопка удаления своего сообщения
+ * Quote-блок в сообщении (цитата при reply)
  * ═══════════════════════════════════════════════════════════════════ */
-.msg-delete-btn {
-  background: transparent;
+.msg-quote {
+  border-left: 3px solid rgba(255, 255, 255, 0.5);
+  padding-left: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.35;
+  opacity: 0.85;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg-bubble-theirs .msg-quote {
+  border-left-color: rgba(0, 0, 0, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Кнопка Reply (↩) в meta-row
+ * ═══════════════════════════════════════════════════════════════════ */
+.msg-reply-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
   border: none;
+  background: transparent;
   color: inherit;
-  opacity: 0.55;
-  cursor: pointer;
-  padding: 0 2px;
   font-size: 13px;
   line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.msg-reply-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.msg-bubble-mine .msg-reply-btn:hover,
+.msg-bubble-done .msg-reply-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Reply preview над input (когда выбрано сообщение для ответа)
+ * ═══════════════════════════════════════════════════════════════════ */
+.messenger-reply-preview {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--heys-bg-subtle, #f8fafc);
+  border-top: 1px solid var(--heys-border, rgba(0, 0, 0, 0.08));
+}
+
+.messenger-reply-preview-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: #2563eb;
+  flex-shrink: 0;
+}
+
+.messenger-reply-preview-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.messenger-reply-preview-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.messenger-reply-preview-text {
+  font-size: 13px;
+  color: var(--heys-text-primary, #111827);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messenger-reply-preview-close {
+  background: transparent;
+  border: none;
+  color: var(--heys-text-secondary, #6b7280);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  align-self: center;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.messenger-reply-preview-close:hover {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Шаблоны быстрых ответов (curator-only chips под reply-preview)
+ * ═══════════════════════════════════════════════════════════════════ */
+.messenger-templates {
+  display: flex;
+  gap: 6px;
+  padding: 6px 16px 0;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.messenger-templates::-webkit-scrollbar {
+  display: none;
+}
+
+.messenger-template-chip {
+  flex-shrink: 0;
+  background: var(--heys-bg-muted, #f1f5f9);
+  border: 1px solid var(--heys-border, rgba(0, 0, 0, 0.08));
+  border-radius: 14px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--heys-text-primary, #111827);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.messenger-template-chip:hover {
+  background: var(--heys-bg-elevated, #e2e8f0);
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.messenger-template-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Кнопка удаления своего сообщения — вне капсулы, в той же row
+ * ═══════════════════════════════════════════════════════════════════ */
+.msg-row {
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.msg-delete-outside {
+  background: transparent;
+  border: none;
+  color: var(--heys-text-secondary, #6b7280);
+  opacity: 0.35;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 14px;
+  line-height: 1;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: opacity 0.15s ease;
   flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 6px;
 }
 
-.msg-delete-btn:hover {
-  opacity: 1;
+.msg-delete-outside:hover {
+  opacity: 0.9;
 }
 
 .messenger-error {
