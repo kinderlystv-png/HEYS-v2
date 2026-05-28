@@ -514,6 +514,18 @@ paths:
         type: cloud_functions
         function_id: d4ep21a89307vs93b0ns
 
+  /messages/toggle-acked:
+    post:
+      summary: Client toggles acked_at on a curator message
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+
   # ═══════════════════════════════════════════════════════════════
   # Photos — heys-api-photos (function_id: d4e93t0lrfu4ng62pqa1)
   # ═══════════════════════════════════════════════════════════════

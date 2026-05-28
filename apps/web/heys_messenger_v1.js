@@ -87,14 +87,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // ── Thread message bubble ────────────────────────────────────────────
-  function MessageBubble({ message, viewerRole, onToggleDone, onDelete, onReply, onEdit, onPhotoClick }) {
+  function MessageBubble({ message, viewerRole, onToggleAck, onDelete, onReply, onEdit, onPhotoClick }) {
     const isMine = message.sender_role === viewerRole;
     const isCurator = viewerRole === 'curator';
-    const canMarkDone = isCurator && message.sender_role === 'client';
+    // Курaтор тапает ✓ на client-msg → done_at. Клиент тапает ✓ на curator-msg → acked_at.
+    // Унифицированный «ack» в UI с разной семантикой на backend.
+    const canMarkAck = !isMine; // ✓ только на чужих сообщениях
+    const ackAt = isCurator ? message.done_at : message.acked_at;
+    const isAcked = !!ackAt;
     const canDelete = isMine; // каждый удаляет только свои
     const canReply = !isMine; // отвечать можно только на чужие
     const canEdit = isMine && !message.intent_type; // intent редактировать нельзя
-    const isDone = !!message.done_at;
     const [editing, setEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
     const [savingEdit, setSavingEdit] = useState(false);
@@ -111,12 +114,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           : message.intent_type === 'weight'
             ? `⚖️ Вес: ${message.intent_payload?.weight_kg ?? '?'} кг`
             : '';
-    const doneAtLabel = isDone ? `✓ Обработано ${formatTime(message.done_at)}` : null;
+    const ackLabel = isAcked
+      ? (isCurator
+          ? `✓ Обработано ${formatTime(ackAt)}`
+          : `✓ Принято ${formatTime(ackAt)}`)
+      : null;
 
     const bubbleClasses = [
       'msg-bubble',
       isMine ? 'msg-bubble-mine' : 'msg-bubble-theirs',
-      isDone ? 'msg-bubble-done' : '',
+      isAcked ? 'msg-bubble-done' : '',
     ].filter(Boolean).join(' ');
 
     const handleDeleteClick = () => {
@@ -223,8 +230,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             React.createElement('div', { className: 'msg-body' }, replyText),
       message.applied_at && !editing &&
         React.createElement('div', { className: 'msg-applied' }, '✅ Куратор применил в день'),
-      doneAtLabel && !editing &&
-        React.createElement('div', { className: 'msg-done' }, doneAtLabel),
+      ackLabel && !editing &&
+        React.createElement('div', { className: 'msg-done' }, ackLabel),
       !editing && React.createElement(
         'div',
         { className: 'msg-meta-row' },
@@ -244,14 +251,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'aria-label': 'Редактировать сообщение',
             title: 'Редактировать сообщение',
           }, '✎'),
-        canMarkDone &&
+        canMarkAck &&
           React.createElement('button', {
             type: 'button',
-            className: `msg-done-toggle ${isDone ? 'msg-done-toggle-active' : ''}`,
-            onClick: () => onToggleDone?.(message),
-            'aria-label': isDone ? 'Снять отметку' : 'Отметить как обработанное',
-            title: isDone ? 'Снять отметку «обработано»' : 'Отметить как обработанное',
-          }, isDone ? '✓' : '○'),
+            className: `msg-done-toggle ${isAcked ? 'msg-done-toggle-active' : ''}`,
+            onClick: () => onToggleAck?.(message),
+            'aria-label': isAcked ? 'Снять отметку' : (isCurator ? 'Отметить как обработанное' : 'Принять'),
+            title: isAcked
+              ? 'Снять отметку'
+              : (isCurator ? 'Отметить как обработанное' : 'Я прочитал и принял'),
+          }, isAcked ? '✓' : '○'),
         message.edited_at &&
           React.createElement('span', {
             className: 'msg-edited-marker',
@@ -644,32 +653,35 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.MessengerAPI.refreshInbox?.();
     };
 
-    // Куратор: toggle "обработано" на сообщении клиента. Оптимистично
-    // переключаем done_at в локальном state, на ошибку — откатываем.
-    const handleToggleDone = async (message) => {
-      const previousDoneAt = message.done_at || null;
-      const optimisticDoneAt = previousDoneAt ? null : new Date().toISOString();
+    // Унифицированный toggle ack для обеих ролей. Симметричная семантика:
+    //   - viewerRole='curator' тапает ✓ на client-msg → done_at (RPC toggle-done)
+    //   - viewerRole='client' тапает ✓ на curator-msg → acked_at (RPC toggle-acked)
+    // Оптимистично переключаем соответствующее поле в local state, на ошибку — rollback.
+    const handleToggleAck = async (message) => {
+      const field = isCurator ? 'done_at' : 'acked_at';
+      const prevValue = message[field] || null;
+      const optimisticValue = prevValue ? null : new Date().toISOString();
       setMessages((prev) =>
-        prev.map((m) => (m.id === message.id ? { ...m, done_at: optimisticDoneAt } : m))
+        prev.map((m) => (m.id === message.id ? { ...m, [field]: optimisticValue } : m))
       );
-      const res = await HEYS.MessengerAPI.toggleDone(message.id);
+      const res = isCurator
+        ? await HEYS.MessengerAPI.toggleDone(message.id)
+        : await HEYS.MessengerAPI.toggleAcked(message.id);
       if (!res?.success) {
-        // Rollback
         setMessages((prev) =>
-          prev.map((m) => (m.id === message.id ? { ...m, done_at: previousDoneAt } : m))
+          prev.map((m) => (m.id === message.id ? { ...m, [field]: prevValue } : m))
         );
-        setError(res?.error || 'toggle_done_failed');
+        setError(res?.error || 'toggle_ack_failed');
         return;
       }
-      // Server-truth (на случай если NOW() от сервера слегка отличается)
+      const serverValue = isCurator ? res.done_at : res.acked_at;
       setMessages((prev) =>
-        prev.map((m) => (m.id === message.id ? { ...m, done_at: res.done_at || null } : m))
+        prev.map((m) => (m.id === message.id ? { ...m, [field]: serverValue || null } : m))
       );
-      // Toggle done/undone меняет unread куратора — мгновенно обновляем badges.
-      // refreshFabUnread → 💬 FAB значок.
-      // refreshInbox → curator dropdown в шапке + CuratorPanel карточки.
+      // Меняет unread — мгновенно обновляем все badges.
       HEYS.MessengerAPI.refreshFabUnread?.();
-      HEYS.MessengerAPI.refreshInbox?.();
+      // Inbox cache актуален только для куратора (он показывает счёт по клиентам)
+      if (isCurator) HEYS.MessengerAPI.refreshInbox?.();
     };
 
     return React.createElement(
@@ -756,7 +768,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         key: m.id,
                         message: m,
                         viewerRole,
-                        onToggleDone: handleToggleDone,
+                        onToggleAck: handleToggleAck,
                         onDelete: handleDeleteMessage,
                         onReply: handleReply,
                         onEdit: handleEditMessage,

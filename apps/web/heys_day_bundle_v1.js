@@ -2528,12 +2528,13 @@
                 // напрямую (если window dispatch не достигнет нас по race).
                 // window.__heysShowAdviceHandler = handleShowAdvice — назначим
                 // сразу после регистрации listener'а ниже.
-                // PERF R13 FIX H: wrap setState in startTransition to defer React render
-                React.startTransition(() => {
-                    // Курaтор всегда видит history dropdown (даже если live
-                    // totalAdviceCount=0 — у history свои данные).
-                    const _curator = isCuratorReadOnlyMode();
-                    console.error('[advice-diag] 4️⃣ inside startTransition', {
+                // PERF R13 FIX H removed для курaторской сессии: startTransition
+                // deprioritizes updates и в курaторе они выглядят полностью
+                // потерянными (state остаётся tab_open + toastVisible=false).
+                // Используем sync setters — render будет немедленно.
+                const _curator = isCuratorReadOnlyMode();
+                const _runUpdate = () => {
+                    console.error('[advice-diag] 4️⃣ inside update', {
                         totalAdviceCount,
                         _curator,
                         willOpenDropdown: totalAdviceCount > 0 || _curator,
@@ -2573,7 +2574,14 @@
                             setAdviceTrigger(null);
                         }, 2000);
                     }
-                });
+                };
+                // Курaтор: sync update (без startTransition — тогда state updates точно
+                // не теряются). Обычные клиенты — продолжают через startTransition для perf.
+                if (_curator) {
+                    _runUpdate();
+                } else {
+                    React.startTransition(_runUpdate);
+                }
             };
             window.addEventListener('heysShowAdvice', handleShowAdvice);
             // Expose globally чтобы shell IIFE listener мог вызвать напрямую

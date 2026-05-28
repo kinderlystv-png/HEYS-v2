@@ -620,6 +620,28 @@ async function handleDelete(identity, body) {
   }
 }
 
+async function handleToggleAcked(identity, body) {
+  if (identity.kind !== 'client') {
+    return { statusCode: 403, body: { error: 'client_only' } };
+  }
+  const messageId = body?.message_id;
+  if (!messageId || typeof messageId !== 'string') {
+    return { statusCode: 400, body: { error: 'message_id_required' } };
+  }
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    const r = await conn.query(
+      `SELECT public.toggle_message_acked_as_client($1, $2) AS result`,
+      [identity.sessionToken, messageId]
+    );
+    const result = r.rows[0]?.result || { success: false, error: 'rpc_no_result' };
+    return { statusCode: result.success ? 200 : 400, body: result };
+  } finally {
+    conn.release();
+  }
+}
+
 async function handleUnreadCount(identity, query) {
   const pool = getPool();
   const conn = await pool.connect();
@@ -759,6 +781,9 @@ module.exports.handler = async function (event) {
         break;
       case 'unread-count':
         res = await handleUnreadCount(identity, query);
+        break;
+      case 'toggle-acked':
+        res = await handleToggleAcked(identity, body);
         break;
       default:
         res = { statusCode: 404, body: { error: 'unknown_action', action } };

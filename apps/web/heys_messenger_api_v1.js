@@ -152,6 +152,17 @@
   }
 
   /**
+   * Клиент подтверждает / снимает подтверждение на сообщении куратора.
+   * Симметрично toggleDone — но для клиента над курaторским сообщением.
+   */
+  async function toggleAcked(messageId) {
+    return call('/messages/toggle-acked', {
+      method: 'POST',
+      body: { message_id: messageId },
+    });
+  }
+
+  /**
    * Удалить своё сообщение (hard delete). Клиент удаляет свои client-сообщения,
    * куратор — свои curator-сообщения. Идемпотентно (повторный вызов вернёт deleted=0).
    */
@@ -282,6 +293,7 @@
     getInbox,
     markRead,
     toggleDone,
+    toggleAcked,
     deleteMessage,
     editMessage,
     getUnreadCount,
