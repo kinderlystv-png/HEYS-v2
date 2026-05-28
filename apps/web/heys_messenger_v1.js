@@ -636,7 +636,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (!res?.success) {
         setMessages(snapshot);
         setError(res?.error || 'delete_failed');
+        return;
       }
+      // Удалили — мог упасть unread (если удалили необработанное сообщение клиента).
+      // Тригерим refresh badges во всех местах сразу.
+      HEYS.MessengerAPI.refreshFabUnread?.();
+      HEYS.MessengerAPI.refreshInbox?.();
     };
 
     // Куратор: toggle "обработано" на сообщении клиента. Оптимистично
@@ -660,6 +665,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setMessages((prev) =>
         prev.map((m) => (m.id === message.id ? { ...m, done_at: res.done_at || null } : m))
       );
+      // Toggle done/undone меняет unread куратора — мгновенно обновляем badges.
+      // refreshFabUnread → 💬 FAB значок.
+      // refreshInbox → curator dropdown в шапке + CuratorPanel карточки.
+      HEYS.MessengerAPI.refreshFabUnread?.();
+      HEYS.MessengerAPI.refreshInbox?.();
     };
 
     return React.createElement(
