@@ -1330,20 +1330,10 @@
         // advice/_core.js recordAdviceOutcomeEvent + track*). Manual click
         // на 💡 в его UI открывает этот dropdown с историей.
         const _isCurator = isCuratorReadOnlyMode();
-        console.error('[advice-diag] 5️⃣ renderManualAdviceList called', {
-            _isCurator,
-            adviceTrigger,
-            toastVisible,
-            adviceRelevantLen: Array.isArray(adviceRelevant) ? adviceRelevant.length : 'not-array',
-        });
         if (_isCurator) {
-            if (!(adviceTrigger === 'manual' && toastVisible)) {
-                console.error('[advice-diag] 6️⃣ curator gate REJECTED: adviceTrigger=' + adviceTrigger + ', toastVisible=' + toastVisible);
-                return null;
-            }
-            console.error('[advice-diag] 7️⃣ curator gate PASSED, rendering renderCuratorAdviceHistory');
+            if (!(adviceTrigger === 'manual' && toastVisible)) return null;
             try {
-                const result = renderCuratorAdviceHistory({
+                return renderCuratorAdviceHistory({
                     React,
                     dismissToast,
                     handleAdviceListTouchStart,
@@ -1351,8 +1341,6 @@
                     handleAdviceListTouchEnd,
                     adviceRelevant,
                 });
-                console.error('[advice-diag] 8️⃣ renderCuratorAdviceHistory returned', !!result);
-                return result;
             } catch (renderErr) {
                 console.error('[advice-diag] ❌ renderCuratorAdviceHistory THREW:', renderErr);
                 return null;

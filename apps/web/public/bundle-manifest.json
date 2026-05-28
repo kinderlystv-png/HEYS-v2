@@ -8,12 +8,12 @@
     "builtAt": "2026-05-28T13:47:46.842Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.b56d5393179c.js",
-    "hash": "b56d5393179c",
-    "sourceFingerprint": "bc77f9942f19",
+    "file": "boot-calc.bundle.04447be641fe.js",
+    "hash": "04447be641fe",
+    "sourceFingerprint": "aab056b3ff78",
     "fileCount": 19,
-    "size": 722722,
-    "builtAt": "2026-05-28T13:51:16.819Z"
+    "size": 722145,
+    "builtAt": "2026-05-28T13:54:01.395Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.3f508bdcf6a7.js",
