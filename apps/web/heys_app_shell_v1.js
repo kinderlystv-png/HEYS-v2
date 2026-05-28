@@ -15,33 +15,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             const adviceTab = e.target.closest('.tab.tab-advice');
             if (!adviceTab) return;
             if (adviceTab.classList.contains('tab--disabled-home')) return;
-            console.error('[advice-tab] module-level capture click fired, dispatching heysShowAdvice');
             setTimeout(function _heysShowAdviceDispatch() {
                 try {
-                    // Bypass: вызвать handler напрямую если он зарегистрирован
-                    // через useAdviceState. Это надёжнее чем event dispatch
-                    // потому что event listener иногда не attached в курaторе.
+                    // Прямой вызов handler в обход event dispatch — надёжнее
+                    // в курaторской сессии где event listener иногда не attached
+                    // из-за race condition при mount/unmount DayTab.
                     if (typeof window.__heysShowAdviceHandler === 'function') {
-                        try {
-                            console.error('[advice-tab] direct-call window.__heysShowAdviceHandler()');
-                            window.__heysShowAdviceHandler();
-                        } catch (directErr) {
-                            console.error('[advice-tab] direct-call failed:', directErr && directErr.message);
-                        }
-                    } else {
-                        console.error('[advice-tab] no __heysShowAdviceHandler, falling back to event dispatch');
+                        try { window.__heysShowAdviceHandler(); } catch (_) { /* noop */ }
                     }
-                    // Также dispatch event на случай если есть другие слушатели.
+                    // Fallback dispatch — на случай других подписчиков на event.
                     window.dispatchEvent(new CustomEvent('heysShowAdvice'));
-                } catch (errDispatch) {
-                    console.error('[advice-tab] dispatch failed:', errDispatch && errDispatch.message);
-                }
+                } catch (_) { /* noop */ }
             }, 0);
-        } catch (err) {
-            console.error('[advice-tab] module-level handler error:', err && err.message);
-        }
+        } catch (_) { /* noop */ }
     }, true);
-    console.error('[advice-tab] module-level capture listener INSTALLED at script load');
 }
 
 (function () {
@@ -2352,13 +2339,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     ref: adviceTabRef,
                     className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
                     onClick: () => {
-                        // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler
-                        // DayTabWithCloudSync is always mounted, no tab switch needed
-                        console.warn('[advice-diag] 1️⃣ tab.tab-advice clicked (React onClick), dispatching heysShowAdvice');
-                        setTimeout(() => {
-                            console.warn('[advice-diag] 2️⃣ dispatching heysShowAdvice CustomEvent now');
-                            window.dispatchEvent(new CustomEvent('heysShowAdvice'));
-                        }, 0);
+                        // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler.
+                        // Дублирует module-level capture listener (в начале файла) — на случай если
+                        // в каком-то браузере document.click capture не отрабатывает.
+                        setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
                     },
                 },
                 React.createElement('span', { className: 'tab-icon' }, '💡'),

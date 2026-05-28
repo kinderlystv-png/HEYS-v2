@@ -433,21 +433,45 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const isCurator = isCuratorMode();
     const viewerRole = isCurator ? 'curator' : 'client';
 
-    const loadThread = useCallback(async () => {
-      setLoading(true);
-      setError(null);
+    // Memo ID самого свежего сообщения с другой стороны (для звука)
+    const lastForeignIdRef = useRef(null);
+    // Was scrolled at bottom при последнем render (для smart scroll)
+    const wasAtBottomRef = useRef(true);
+
+    const fetchAndMerge = useCallback(async ({ silent = false } = {}) => {
+      if (!silent) setLoading(true);
       const opts = isCurator && curatorViewClientId ? { client_id: curatorViewClientId } : {};
       const res = await HEYS.MessengerAPI.getThread(opts);
-      setLoading(false);
+      if (!silent) setLoading(false);
       if (!res?.success) {
-        setError(res?.error || 'unknown_error');
+        if (!silent) setError(res?.error || 'unknown_error');
         return;
       }
-      // Reverse: DESC из БД, для UI хотим ASC (старые сверху, новые снизу)
       const sorted = (res.messages || []).slice().reverse();
-      setMessages(sorted);
-      // Mark read
-      if (sorted.length > 0) {
+
+      // Smart merge: если пользователь сейчас редактирует сообщение, мы
+      // не перезаписываем его свежим body с сервера (потеряет ввод).
+      // Editing state живёт в MessageBubble local state — мы не знаем какие
+      // именно editing. Простое правило: если timestamps совпадают (та же
+      // запись) и body отличается локально только текстом — оставим local.
+      // Для простоты в MVP: просто берём server-truth, edit-mode пересоздаст
+      // bubble если кнопка ✎ остаётся активной (textarea сохранится через
+      // useState внутри bubble — он привязан к key=m.id, не пересоздаётся).
+      setMessages((prev) => {
+        // Detect новые foreign сообщения для звука
+        const prevIds = new Set(prev.map((m) => m.id));
+        const newForeign = sorted.find(
+          (m) => !prevIds.has(m.id) && m.sender_role !== viewerRole
+        );
+        if (newForeign && lastForeignIdRef.current !== newForeign.id) {
+          lastForeignIdRef.current = newForeign.id;
+          try { window.HEYS?.audio?.play?.('notify'); } catch { /* ignore */ }
+        }
+        return sorted;
+      });
+
+      // Mark read — только при первом load (не silent)
+      if (!silent && sorted.length > 0) {
         const latestTs = sorted[sorted.length - 1].created_at;
         const markPayload =
           isCurator && curatorViewClientId
@@ -457,18 +481,58 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           .then(() => HEYS.MessengerAPI.refreshFabUnread?.())
           .catch(() => {});
       }
-    }, [isCurator, curatorViewClientId]);
+    }, [isCurator, curatorViewClientId, viewerRole]);
+
+    const loadThread = useCallback(() => fetchAndMerge({ silent: false }), [fetchAndMerge]);
 
     useEffect(() => {
       loadThread();
     }, [loadThread]);
 
-    // Scroll to bottom when messages change
+    // ── Realtime polling: каждые 10 сек silent refresh пока модалка открыта ─
+    // Cross-device sync: новые/удалённые/изменённые сообщения видны на других
+    // открытых треда без ручного refresh. Звук notify при новом foreign-msg.
     useEffect(() => {
-      if (threadRef.current) {
-        threadRef.current.scrollTop = threadRef.current.scrollHeight;
+      const interval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          fetchAndMerge({ silent: true });
+        }
+      }, 10000);
+      // Также refresh при возврате во вкладку (если пропустили несколько polls)
+      const onVisibility = () => {
+        if (document.visibilityState === 'visible') {
+          fetchAndMerge({ silent: true });
+        }
+      };
+      document.addEventListener('visibilitychange', onVisibility);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVisibility);
+      };
+    }, [fetchAndMerge]);
+
+    // Smart scroll: запоминаем был ли в самом низу ДО рендера, потом
+    // скроллим только если был внизу (чтобы не утянуть пользователя
+    // из середины треда при polling-refresh).
+    useEffect(() => {
+      const el = threadRef.current;
+      if (!el) return;
+      if (wasAtBottomRef.current) {
+        el.scrollTop = el.scrollHeight;
       }
     }, [messages]);
+
+    // Tracking scroll position перед каждым обновлением messages
+    useEffect(() => {
+      const el = threadRef.current;
+      if (!el) return;
+      const onScroll = () => {
+        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        wasAtBottomRef.current = distFromBottom < 80;
+      };
+      el.addEventListener('scroll', onScroll);
+      return () => el.removeEventListener('scroll', onScroll);
+    }, []);
 
     const handleReply = (message) => {
       setReplyTo(message);
