@@ -3894,6 +3894,70 @@
   cloud.isNonClientDataKey = isNonClientDataKey;
 
   /**
+   * Ticket D: распознаём auth failure от сервера (invalid_session /
+   * invalid_or_expired_session — оба варианта поскольку разные SQL функции
+   * возвращают разные строки). Используется в:
+   *  - merge-save retry loop (heys_storage_supabase_v1.js ~5560+): при
+   *    auth-failure НЕ retry через batch path, а dispatch event и стоп.
+   *  - onImmediateUploadError (~9847): аналогично.
+   * Дедуп events через `_authFailureDispatched` чтобы один batch retry не
+   * шумел event'ами на каждую item.
+   */
+  function isAuthFailure(err) {
+    if (!err) return false;
+    const msg = String(err.message || err).toLowerCase();
+    return msg.includes('invalid_session') || msg.includes('invalid_or_expired_session');
+  }
+  cloud.isAuthFailure = isAuthFailure;
+
+  let _authFailureDispatched = false;
+  function dispatchSessionExpiredOnce(source, errStr) {
+    if (_authFailureDispatched) return;
+    _authFailureDispatched = true;
+    try {
+      if (typeof global !== 'undefined' && typeof global.dispatchEvent === 'function') {
+        global.dispatchEvent(new CustomEvent('heys:session-expired', {
+          detail: { source, error: String(errStr || '') }
+        }));
+        console.warn('[HEYS.sync] 🔒 heys:session-expired dispatched (source:', source, ')');
+      }
+    } catch (_) { /* noop */ }
+    // Allow re-dispatch after a cool-down (e.g., if user re-auths and session expires again later).
+    setTimeout(() => { _authFailureDispatched = false; }, 60000);
+  }
+
+  // Ticket D default safety-net handler: при session-expired чистим LS
+  // session token + триггерим стандартный logout flow (heys:auth-changed).
+  // Shell-side компоненты могут слушать heys:session-expired для
+  // pretty UI («Сессия истекла, введите PIN»). Этот handler — fallback
+  // на случай если pretty UI не подцепился (старая вкладка, lazy bundle).
+  // HEYS.auth.logout (heys_auth_v1.js) определён к моменту первого fire'a
+  // event'a, поскольку listener регистрируется на module load, а fire идёт
+  // позже из async sync-цикла.
+  try {
+    if (typeof global !== 'undefined' && typeof global.addEventListener === 'function' && !cloud._sessionExpiredListenerInstalled) {
+      cloud._sessionExpiredListenerInstalled = true;
+      global.addEventListener('heys:session-expired', (ev) => {
+        const src = ev && ev.detail && ev.detail.source;
+        console.warn('[HEYS.auth] 🔒 default session-expired handler firing. Source:', src);
+        try {
+          // Чистим session token немедленно — следующие requests увидят NULL
+          // и пойдут по PIN-re-auth flow.
+          try { localStorage.removeItem('heys_session_token'); } catch (_) { /* noop */ }
+          if (global.HEYS && global.HEYS.auth && typeof global.HEYS.auth.logout === 'function') {
+            global.HEYS.auth.logout();
+          } else {
+            // Lazy fallback: bound dispatch чтоб React listeners перерисовались.
+            global.dispatchEvent(new Event('heys:auth-changed'));
+          }
+        } catch (handlerErr) {
+          console.warn('[HEYS.auth] session-expired default handler failed:', handlerErr.message);
+        }
+      });
+    }
+  } catch (_) { /* noop */ }
+
+  /**
    * Перехват localStorage.setItem для автоматического зеркалирования в cloud
    * Зеркалирует наши ключи (heys_*, day*) в Supabase
    * Обрабатывает QuotaExceededError автоматической очисткой
@@ -5582,6 +5646,13 @@
               } catch (_) { /* noop */ }
             }
             mergeSavedCount++;
+          } else if (isAuthFailure(result.error)) {
+            // Ticket D: auth failure — НЕ retry через batch path (batch тоже упадёт).
+            // Dispatch session-expired event ONCE per batch, прерываем merge loop.
+            console.warn('[merge-save] auth failure for', it.k, '→', result.error, '— stop retry, dispatch session-expired');
+            dispatchSessionExpiredOnce('merge-save', result.error);
+            // Прерываем весь loop — последующие items в этом batch'е тоже упадут с тем же auth error.
+            break;
           } else {
             // Server-side merge unavailable (deploy lag, network blip) → fall back to plain batch upsert.
             // No data lost: item flows through the existing batch pipeline as before.
@@ -5593,6 +5664,11 @@
             fallbackToBatch.push({ k: it.k, v: it.v, updated_at: it.updated_at });
           }
         } catch (e) {
+          if (isAuthFailure(e)) {
+            console.warn('[merge-save] auth exception for', it.k, '→', e.message, '— stop retry, dispatch session-expired');
+            dispatchSessionExpiredOnce('merge-save-exception', e.message);
+            break;
+          }
           console.warn('[merge-save] exception for', it.k, '→', e.message, '— falling back to batch');
           fallbackToBatch.push({ k: it.k, v: it.v, updated_at: it.updated_at });
         }
@@ -9846,6 +9922,12 @@
       },
       onImmediateUploadError: (e) => {
         console.warn('[HEYS.sync] ⚠️ Immediate upload failed', e?.message || e);
+        // Ticket D: auth failure от immediate-upload → форсим session-expired
+        // event (тот же sink что merge-save). Shell-side handler покажет UI
+        // «Сессия истекла, введите PIN».
+        if (isAuthFailure(e)) {
+          dispatchSessionExpiredOnce('immediate-upload', e?.message || e);
+        }
       },
     });
     if (enqueueResult.shouldImmediate) {

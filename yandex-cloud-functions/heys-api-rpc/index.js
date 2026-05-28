@@ -1910,8 +1910,10 @@ module.exports.handler = async function (event, context) {
         resolvedClientId = sessionRes.rows?.[0]?.client_id;
         if (!resolvedClientId) {
           try { client.release(); } catch (_) { /* ignore */ }
+          // Ticket D: 200 → 401 чтобы fetch wrapper увидел response.ok===false
+          // и положил error в result.error (а не молча в result.data).
           return {
-            statusCode: 200,
+            statusCode: 401,
             headers: corsHeaders,
             body: JSON.stringify({ ok: false, error: 'invalid_session' })
           };
@@ -2139,8 +2141,9 @@ module.exports.handler = async function (event, context) {
       const resolvedClientId = sessRes.rows?.[0]?.client_id;
       if (!resolvedClientId) {
         try { client.release(); } catch (_) { /* ignore */ }
+        // Ticket D: 200 → 401 (см. merge_save handler выше).
         return {
-          statusCode: 200,
+          statusCode: 401,
           headers: corsHeaders,
           body: JSON.stringify({ ok: false, error: 'invalid_session' })
         };
@@ -2214,8 +2217,9 @@ module.exports.handler = async function (event, context) {
       const resolvedClientId = sessRes.rows?.[0]?.client_id;
       if (!resolvedClientId) {
         try { client.release(); } catch (_) { /* ignore */ }
+        // Ticket D: 200 → 401 (см. merge_save handler выше).
         return {
-          statusCode: 200,
+          statusCode: 401,
           headers: corsHeaders,
           body: JSON.stringify({ ok: false, error: 'invalid_session' })
         };
@@ -2459,10 +2463,12 @@ module.exports.handler = async function (event, context) {
       const clientId = sessionRes.rows?.[0]?.client_id;
       if (!clientId) {
         client.release();
+        // Ticket D: 200 → 401 (см. merge_save handler выше). Body унификация:
+        // добавлен `ok: false` для consistency с другими invalid_session-paths.
         return {
-          statusCode: 200,
+          statusCode: 401,
           headers: corsHeaders,
-          body: JSON.stringify({ error: 'invalid_session' })
+          body: JSON.stringify({ ok: false, error: 'invalid_session' })
         };
       }
 
