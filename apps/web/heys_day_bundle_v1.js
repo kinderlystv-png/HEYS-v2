@@ -1331,14 +1331,9 @@
         // на 💡 в его UI открывает этот dropdown с историей.
         const _isCurator = isCuratorReadOnlyMode();
         if (_isCurator) {
-            // Log только когда state «интересный» (manual or toastVisible) — иначе render spam
-            if (adviceTrigger === 'manual' || toastVisible) {
-                console.error('[advice-diag] 7️⃣ render with curator state', { adviceTrigger, toastVisible });
-            }
             if (!(adviceTrigger === 'manual' && toastVisible)) return null;
-            console.error('[advice-diag] 8️⃣ curator gate PASSED, will render history');
             try {
-                const result = renderCuratorAdviceHistory({
+                return renderCuratorAdviceHistory({
                     React,
                     dismissToast,
                     handleAdviceListTouchStart,
@@ -1346,10 +1341,8 @@
                     handleAdviceListTouchEnd,
                     adviceRelevant,
                 });
-                console.error('[advice-diag] 9️⃣ renderCuratorAdviceHistory returned', !!result);
-                return result;
             } catch (renderErr) {
-                console.error('[advice-diag] ❌ renderCuratorAdviceHistory THREW:', renderErr);
+                console.error('renderCuratorAdviceHistory failed:', renderErr);
                 return null;
             }
         }
@@ -2518,37 +2511,20 @@
 
         useEffect(() => {
             const handleShowAdvice = () => {
-                console.error('[advice-diag] 3️⃣ handleShowAdvice fired', {
-                    totalAdviceCount,
-                    isCurator: isCuratorReadOnlyMode(),
-                    adviceTrigger,
-                    toastVisible,
-                });
-                // Будем называть ЭТУ же функцию из shell IIFE listener
-                // напрямую (если window dispatch не достигнет нас по race).
-                // window.__heysShowAdviceHandler = handleShowAdvice — назначим
-                // сразу после регистрации listener'а ниже.
                 // PERF R13 FIX H removed для курaторской сессии: startTransition
                 // deprioritizes updates и в курaторе они выглядят полностью
                 // потерянными (state остаётся tab_open + toastVisible=false).
                 // Используем sync setters — render будет немедленно.
                 const _curator = isCuratorReadOnlyMode();
                 const _runUpdate = () => {
-                    console.error('[advice-diag] 4️⃣ inside update', {
-                        totalAdviceCount,
-                        _curator,
-                        willOpenDropdown: totalAdviceCount > 0 || _curator,
-                    });
                     if (totalAdviceCount > 0 || _curator) {
                         const engineVisibleAdviceCount = Array.isArray(safeBadgeAdvices)
                             ? safeBadgeAdvices.length
                             : 0;
-                        console.error('[advice-diag] 5️⃣ calling setAdviceTrigger(manual) + setToastVisible(true)');
                         setAdviceTrigger('manual');
                         setAdviceExpanded(true);
                         setToastVisible(true);
                         setToastDismissed(false);
-                        console.error('[advice-diag] 6️⃣ setters called, expecting re-render');
                         HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'manual_open', {
                             trigger: 'manual',
                             visibleAdviceCount: totalAdviceCount,

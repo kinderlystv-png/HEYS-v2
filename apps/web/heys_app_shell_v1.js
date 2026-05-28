@@ -2081,7 +2081,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         React.useEffect(() => {
             const handler = (e) => {
                 if (e.target && e.target.closest && e.target.closest('.tab.tab-advice')) {
-                    console.warn('[advice-diag] 0️⃣ document-level capture click on tab-advice');
                     setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
                 }
             };
