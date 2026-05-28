@@ -620,6 +620,53 @@ async function handleDelete(identity, body) {
   }
 }
 
+async function handleUnreadCount(identity, query) {
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    if (identity.kind === 'client') {
+      const r = await conn.query(
+        `SELECT public.get_my_unread_count_as_client($1) AS result`,
+        [identity.sessionToken]
+      );
+      return { statusCode: 200, body: r.rows[0]?.result || { unread_count: 0 } };
+    }
+    // curator: для указанного client_id или сумма по всем
+    const clientId = query.client_id;
+    if (clientId) {
+      const r = await conn.query(
+        `SELECT COUNT(*)::int AS cnt FROM client_messages
+         WHERE client_id = $1
+           AND curator_id = $2
+           AND sender_role = 'client'
+           AND read_at IS NULL`,
+        [clientId, identity.id]
+      );
+      // Подтверждаем ownership на лету этим же запросом (если client не курaтора — вернёт 0)
+      // Дополнительно: убедимся что курaтор владеет client_id
+      const own = await conn.query(
+        `SELECT 1 FROM clients WHERE id = $1 AND curator_id = $2`,
+        [clientId, identity.id]
+      );
+      if (!own.rows.length) {
+        return { statusCode: 403, body: { error: 'curator_does_not_own_client' } };
+      }
+      return { statusCode: 200, body: { success: true, unread_count: r.rows[0]?.cnt || 0 } };
+    }
+    // Сумма по всем клиентам куратора
+    const r = await conn.query(
+      `SELECT COUNT(*)::int AS cnt FROM client_messages
+       WHERE curator_id = $1
+         AND sender_role = 'client'
+         AND read_at IS NULL`,
+      [identity.id]
+    );
+    return { statusCode: 200, body: { success: true, unread_count: r.rows[0]?.cnt || 0 } };
+  } finally {
+    conn.release();
+  }
+}
+
 async function handleToggleDone(identity, body) {
   if (identity.kind !== 'curator') {
     return { statusCode: 403, body: { error: 'curator_only' } };
@@ -710,8 +757,8 @@ module.exports.handler = async function (event) {
       case 'toggle-done':
         res = await handleToggleDone(identity, body);
         break;
-      case 'toggle-done':
-        res = await handleToggleDone(identity, body);
+      case 'unread-count':
+        res = await handleUnreadCount(identity, query);
         break;
       default:
         res = { statusCode: 404, body: { error: 'unknown_action', action } };

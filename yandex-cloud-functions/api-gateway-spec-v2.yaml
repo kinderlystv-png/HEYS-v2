@@ -502,6 +502,18 @@ paths:
         type: cloud_functions
         function_id: d4ep21a89307vs93b0ns
 
+  /messages/unread-count:
+    get:
+      summary: Unread message count (client = from curator, curator = from client_id)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+
   # ═══════════════════════════════════════════════════════════════
   # Photos — heys-api-photos (function_id: d4e93t0lrfu4ng62pqa1)
   # ═══════════════════════════════════════════════════════════════

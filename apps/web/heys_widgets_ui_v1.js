@@ -7336,11 +7336,13 @@
             onClick: (e) => handleAddWater(200, e.currentTarget),
             'aria-label': 'Добавить стакан воды'
           }, '🥛'),
-          React.createElement('button', {
-            className: 'message-fab',
-            onClick: () => window.HEYS?.Messenger?.openModal?.(),
-            'aria-label': 'Написать куратору'
-          }, '💬')
+          window.HEYS?.Messenger?.FabButton
+            ? React.createElement(window.HEYS.Messenger.FabButton, { key: 'msg-fab' })
+            : React.createElement('button', {
+                className: 'message-fab',
+                onClick: () => window.HEYS?.Messenger?.openModal?.(),
+                'aria-label': 'Написать куратору'
+              }, '💬')
         )
       )
     );

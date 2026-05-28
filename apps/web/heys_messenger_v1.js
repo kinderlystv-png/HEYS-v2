@@ -444,7 +444,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           isCurator && curatorViewClientId
             ? { client_id: curatorViewClientId, up_to_ts: latestTs }
             : { up_to_ts: latestTs };
-        HEYS.MessengerAPI.markRead(markPayload).catch(() => {});
+        HEYS.MessengerAPI.markRead(markPayload)
+          .then(() => HEYS.MessengerAPI.refreshFabUnread?.())
+          .catch(() => {});
       }
     }, [isCurator, curatorViewClientId]);
 
@@ -952,10 +954,39 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     mountedRoot = null;
   }
 
+  // ── FAB button с badge непрочитанных ─────────────────────────────────
+  function FabButton({ className = 'message-fab', ariaLabel = 'Написать куратору' }) {
+    const [unread, setUnread] = useState(() =>
+      window.HEYS?.MessengerAPI?.getFabUnreadCount?.() || 0
+    );
+    useEffect(() => {
+      // Lazy-start polling при первом рендере FAB
+      if (window.HEYS?.MessengerAPI?.getFabUnreadCount) {
+        setUnread(window.HEYS.MessengerAPI.getFabUnreadCount());
+      }
+      const onUpdate = (e) => setUnread(e.detail || 0);
+      window.addEventListener('heys:messenger-fab-unread', onUpdate);
+      return () => window.removeEventListener('heys:messenger-fab-unread', onUpdate);
+    }, []);
+
+    return React.createElement('button', {
+      className,
+      onClick: () => window.HEYS?.Messenger?.openModal?.(),
+      'aria-label': ariaLabel,
+    },
+      React.createElement('span', { className: 'message-fab-icon' }, '💬'),
+      unread > 0 && React.createElement('span', {
+        className: 'message-fab-badge',
+        'aria-label': `${unread} непрочитанных сообщений`,
+      }, unread > 99 ? '99+' : String(unread)),
+    );
+  }
+
   HEYS.Messenger = {
     openModal,
     closeModal,
     MessengerModal,
+    FabButton,
   };
 
   // Subscribe to deep-link event from heys_app_shortcuts_v1

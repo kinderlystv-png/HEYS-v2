@@ -174,6 +174,16 @@
     });
   }
 
+  /**
+   * Получить количество непрочитанных сообщений.
+   * Для клиента — от куратора.
+   * Для куратора — от указанного client_id (или сумма по всем, если не указан).
+   */
+  async function getUnreadCount(opts = {}) {
+    const qs = opts.client_id ? `?client_id=${encodeURIComponent(opts.client_id)}` : '';
+    return call(`/messages/unread-count${qs}`);
+  }
+
   // ── Inbox cache (curator-only) ───────────────────────────────────────
   // Кэш для синхронного чтения из не-React компонентов (buildGate карточки).
   // Polling каждые 30 сек, старт лениво при первом getInboxCache.
@@ -220,6 +230,52 @@
     return _inboxCache;
   }
 
+  // ── Unread count для FAB badge (poll каждые 60 сек) ──────────────────
+  // Кэшируем последнее значение для синхронного чтения из FAB-рендера.
+  // Для куратора — unread от текущего клиента (HEYS.currentClientId).
+  // Для клиента — unread от куратора.
+  let _fabUnread = 0;
+  let _fabPollTimer = null;
+  let _fabPolling = false;
+
+  async function refreshFabUnread() {
+    try {
+      const isCurator = looksLikeCuratorToken();
+      const opts = isCurator
+        ? { client_id: window.HEYS?.currentClientId || localStorage.getItem('heys_last_client_id') }
+        : {};
+      if (isCurator && !opts.client_id) {
+        // Курaтор без выбранного клиента — счёт не показываем
+        if (_fabUnread !== 0) {
+          _fabUnread = 0;
+          window.dispatchEvent(new CustomEvent('heys:messenger-fab-unread', { detail: 0 }));
+        }
+        return;
+      }
+      const res = await getUnreadCount(opts);
+      const next = res?.success ? (res.unread_count || 0) : 0;
+      if (next !== _fabUnread) {
+        _fabUnread = next;
+        window.dispatchEvent(new CustomEvent('heys:messenger-fab-unread', { detail: next }));
+      }
+    } catch { /* ignore */ }
+  }
+
+  function startFabUnreadPolling() {
+    if (_fabPolling) return;
+    _fabPolling = true;
+    void refreshFabUnread();
+    _fabPollTimer = setInterval(refreshFabUnread, 60000);
+    // Принудительно обновлять при смене клиента (курaтор) и при focus возврата
+    window.addEventListener('heys:client-changed', refreshFabUnread);
+    window.addEventListener('focus', refreshFabUnread);
+  }
+
+  function getFabUnreadCount() {
+    if (!_fabPolling) startFabUnreadPolling();
+    return _fabUnread;
+  }
+
   HEYS.MessengerAPI = {
     send,
     getThread,
@@ -228,8 +284,11 @@
     toggleDone,
     deleteMessage,
     editMessage,
+    getUnreadCount,
     getInboxCache,
     refreshInbox,
+    getFabUnreadCount,
+    refreshFabUnread,
     _getBearerToken: getBearerToken, // exposed for testing/debug
     _API_URL: API_URL,
   };
