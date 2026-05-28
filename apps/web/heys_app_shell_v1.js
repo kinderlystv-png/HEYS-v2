@@ -1698,46 +1698,46 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                     },
                                                     onClick: () => {
                                                         if (c.id !== clientIdValue) {
-                                                            // 🔧 v69 FIX: async switch — НЕ меняем currentClientId до завершения switchClient
+                                                            // 🔒 2026-05-28 (curator anti-pollution): курaторский switch теперь идёт
+                                                            // через полную перезагрузку страницы. Причина — in-memory state
+                                                            // (React state, module caches, ews/profile/dayv2 buffers) переживала
+                                                            // прежний плавный switch и засеивала storage следующего клиента
+                                                            // курaторскими значениями. Reload — единственная 100% защита от
+                                                            // всего класса cross-client memory carryover, не требующая
+                                                            // патчить каждый модуль отдельно. Стоимость — ~1-2с белого flash'а,
+                                                            // что для switch-action (по сути смены идентичности) приемлемо.
+                                                            // Внутренние switches (бутстрап, восстановление сессии) reload НЕ
+                                                            // используют — только этот UI-клик.
                                                             setTimeout(async () => {
-                                                                commitPendingUndoBeforeContextChange('client-switch', {
-                                                                    fromClientId: clientIdValue,
-                                                                    toClientId: c.id,
-                                                                });
-
-                                                                const _prevClientId_shell = clientIdValue;
-                                                                console.info(`[HEYS.shell] 🔄 Выбор клиента: ${c.name} (${c.id.slice(0, 8)}...)`);
-
-                                                                // Блокируем запись пока switch не завершится
-                                                                if (HEYS.cloud) {
-                                                                    HEYS.cloud._switchClientInProgress = true;
+                                                                try {
+                                                                    commitPendingUndoBeforeContextChange('client-switch', {
+                                                                        fromClientId: clientIdValue,
+                                                                        toClientId: c.id,
+                                                                    });
+                                                                } catch (e) {
+                                                                    console.warn('[HEYS.shell] commitPendingUndo failed before reload:', e?.message);
                                                                 }
 
-                                                                // Уведомляем UI о начале переключения (без смены currentClientId)
-                                                                window.dispatchEvent(new CustomEvent('heys:client-switching', { detail: { clientId: c.id } }));
-
-                                                                if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                                                    try {
-                                                                        await HEYS.cloud.switchClient(c.id, _prevClientId_shell);
-                                                                    } catch (err) {
-                                                                        console.error('[HEYS.shell] ❌ Ошибка sync, retry через 3с:', err);
-                                                                        try {
-                                                                            await new Promise(r => setTimeout(r, 3000));
-                                                                            await HEYS.cloud.switchClient(c.id, _prevClientId_shell);
-                                                                        } catch (err2) {
-                                                                            console.error('[HEYS.shell] ❌ Retry failed:', err2);
-                                                                        }
+                                                                // Flush pending writes СТАРОГО клиента до reload — иначе последние
+                                                                // 100-300мс курaторских действий (правка веса, добавление еды и т.п.)
+                                                                // теряются. flushPendingQueue ждёт до 2с пока in-flight writes уйдут
+                                                                // в облако. pagehide-handler в storage:2914 — second safety net.
+                                                                try {
+                                                                    if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
+                                                                        await HEYS.cloud.flushPendingQueue(2000);
                                                                     }
+                                                                } catch (e) {
+                                                                    console.warn('[HEYS.shell] flushPendingQueue failed before reload:', e?.message);
                                                                 }
 
-                                                                // v69: switchClient завершился — безопасно обновляем ID
+                                                                console.info(`[HEYS.shell] 🔄 Hard reload для switch'а на: ${c.name} (${c.id.slice(0, 8)}...)`);
+
+                                                                // Сохраняем target в LS чтобы бутстрап подхватил после reload
                                                                 writeGlobalValue('heys_last_client_id', c.id);
                                                                 writeGlobalValue('heys_client_current', c.id);
-                                                                window.HEYS = window.HEYS || {};
-                                                                window.HEYS.currentClientId = c.id;
-                                                                setClientId(c.id);
-                                                                console.info('[HEYS.shell] ✅ Клиент переключён (после sync)', { clientId: c.id });
-                                                                window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
+
+                                                                // Полная перезагрузка — обнуляет всю in-memory state и кэши
+                                                                window.location.reload();
                                                             }, 0);
                                                         }
                                                         setShowClientDropdown(false);

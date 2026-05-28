@@ -10815,28 +10815,6 @@
     // Защита: client_kv_store принимает только client-specific ключи (см. needsClientStorage).
     // currentClientId установлен ≠ ключ принадлежит клиенту (курaтор может писать свои global ключи).
     if (clientId && needsClientStorage(normalizedKey)) {
-      // 🔍 DIAGNOSTIC 2026-05-28 (revised v2). v1 блокировала ВСЕ курaтор-mode
-      // writes (`return;`) и сломала легитимные курaторские UI-actions вроде
-      // «+ продукт в приём» — они идут через тот же setItem, без отдельного RPC.
-      // v2 только ЛОГИРУЕТ stack trace, не блокирует. Pollution временно
-      // возвращается, но мы получаем точные источники residual writes для
-      // последующего точечного фикса на уровне source-модулей.
-      const isPinAuthForThisClient = _pinAuthClientId && _pinAuthClientId === clientId;
-      if (!isPinAuthForThisClient) {
-        try {
-          const _stack = new Error('curator-mode write (diagnostic)').stack || '';
-          console.warn(
-            '[saveKey] 🔍 curator-mode write to client_kv_store (logged, NOT blocked):',
-            {
-              k: normalizedKey,
-              clientId: clientId.slice(0, 8),
-              user_id: user.id ? user.id.slice(0, 8) : null,
-              pinAuth: _pinAuthClientId ? _pinAuthClientId.slice(0, 8) : null,
-            },
-            '\n' + _stack.split('\n').slice(1, 8).join('\n')
-          );
-        } catch (_) { /* logging best-effort */ }
-      }
       const clientUpsertObj = {
         user_id: user.id,
         client_id: clientId,
