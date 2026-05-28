@@ -179,6 +179,19 @@
     'heys_morning_skipper_check',
     'heys_last_visit',
 
+    // Advice tracking (per-client outcomes & stats)
+    'heys_advice_outcomes_v1',
+    'heys_advice_pending_outcomes_v1',
+    'heys_advice_stats',
+
+    // Early Warning System (per-client snapshots)
+    'heys_ews_snapshot',
+    'heys_ews_trends_v1',
+    'heys_ews_weekly_v1',
+
+    // Cascade DCS history (per-client, см. heys_cascade_card_v1.js getCrsStorageKey)
+    'heys_cascade_dcs_v9',
+
     // Onboarding & Tours (FIX: Added missing keys)
     'heys_tour_completed',
     'heys_insights_tour_completed',
@@ -10659,8 +10672,9 @@
     // но в Supabase client_id хранится отдельно в колонке, поэтому ключ должен быть heys_products
     let normalizedKey = clientId ? normalizeKeyForSupabase(k, clientId) : k;
 
-    // Если есть client_id — используем clientUpsertQueue (сохранение в client_kv_store)
-    if (clientId) {
+    // Защита: client_kv_store принимает только client-specific ключи (см. needsClientStorage).
+    // currentClientId установлен ≠ ключ принадлежит клиенту (курaтор может писать свои global ключи).
+    if (clientId && needsClientStorage(normalizedKey)) {
       const clientUpsertObj = {
         user_id: user.id,
         client_id: clientId,
@@ -10673,7 +10687,7 @@
       return;
     }
 
-    // Fallback на user-level queue (kv_store) для данных без client_id
+    // Fallback на user-level queue (kv_store): нет client_id ИЛИ ключ не client-specific
     const upsertObj = {
       user_id: user.id,
       k: normalizedKey,
