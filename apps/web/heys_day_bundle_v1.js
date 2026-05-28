@@ -1137,7 +1137,26 @@
         const mo = String(d.getMonth() + 1).padStart(2, '0');
         return `${dd}.${mo} ${hh}:${mm}`;
     }
-    function renderCuratorAdviceHistory({ React, dismissToast, handleAdviceListTouchStart, handleAdviceListTouchMove, handleAdviceListTouchEnd }) {
+    // Категории совета: словарь id → читаемое русское имя группы. Параллелен
+     // ADVICE_CATEGORY_NAMES (heys_advice_rules_v1), но локальный — здесь
+     // используется как мелкая подпись к каждой строке истории.
+    const CURATOR_HISTORY_CATEGORY_RU = {
+        protein: 'белок', water: 'вода', sleep: 'сон', stress: 'стресс',
+        carbs: 'углеводы', fats: 'жиры', fiber: 'клетчатка', kcal: 'калории',
+        training: 'тренировка', meal: 'приёмы пищи', timing: 'тайминг',
+        achievement: 'достижение', streak: 'streak', weight: 'вес',
+        recovery: 'восстановление', mood: 'настроение', insulin: 'инсулин',
+        gi: 'ГИ', deficit: 'дефицит', surplus: 'профицит', general: 'общее',
+    };
+    function curatorHistoryCategoryRu(category) {
+        if (!category || typeof category !== 'string') return '';
+        return CURATOR_HISTORY_CATEGORY_RU[category] || category;
+    }
+
+    function renderCuratorAdviceHistory({
+        React, dismissToast, handleAdviceListTouchStart, handleAdviceListTouchMove, handleAdviceListTouchEnd,
+        adviceRelevant,
+    }) {
         let profiles = null;
         try {
             const storage = HEYS && HEYS.adviceOutcomeStorage;
@@ -1146,6 +1165,16 @@
             }
         } catch (_) { profiles = null; }
         const adviceMap = (profiles && profiles.advice && typeof profiles.advice === 'object') ? profiles.advice : {};
+
+        // Live catalog: id → { text, icon, category } из adviceRelevant.
+        // Покрывает только активные сейчас советы; для устаревших ID — humanized fallback.
+        const liveById = new Map();
+        if (Array.isArray(adviceRelevant)) {
+            for (const a of adviceRelevant) {
+                if (a && a.id) liveById.set(a.id, a);
+            }
+        }
+
         const rows = Object.entries(adviceMap)
             .map(([id, stats]) => ({
                 id,
@@ -1181,30 +1210,41 @@
                     rows.length === 0
                         ? React.createElement('div', { style: { padding: '16px 0', textAlign: 'center', opacity: 0.6, fontSize: '0.9em' } },
                             'У клиента пока нет истории показанных советов.')
-                        : rows.map((r) =>
-                            React.createElement('div', {
+                        : rows.map((r) => {
+                            const live = liveById.get(r.id) || null;
+                            const icon = (live && live.icon) || '💡';
+                            const humanTitle = (live && (live.text || live.title))
+                                ? (live.text || live.title)
+                                : humanizeAdviceId(r.id);
+                            const category = live ? (live.category || live?.expertMeta?.theme || '') : '';
+                            const isStale = !live;
+                            return React.createElement('div', {
                                 key: r.id,
                                 style: {
-                                    display: 'flex', flexDirection: 'column', gap: '4px',
+                                    display: 'flex', flexDirection: 'column', gap: '3px',
                                     padding: '10px 8px', borderBottom: '1px solid var(--heys-border, rgba(0,0,0,0.08))',
+                                    opacity: isStale ? 0.7 : 1,
                                 }
                             },
-                                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '8px' } },
-                                    React.createElement('div', { style: { fontWeight: 500, fontSize: '0.92em', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' } },
-                                        humanizeAdviceId(r.id)),
-                                    React.createElement('div', { style: { fontSize: '0.75em', opacity: 0.6, whiteSpace: 'nowrap' } },
+                                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'flex-start' } },
+                                    React.createElement('div', { style: { fontWeight: 500, fontSize: '0.92em', flex: 1, lineHeight: 1.3 } },
+                                        `${icon} ${humanTitle}`),
+                                    React.createElement('div', { style: { fontSize: '0.72em', opacity: 0.55, whiteSpace: 'nowrap', paddingTop: '2px' } },
                                         formatHistoryTime(r.lastUpdated))
                                 ),
-                                React.createElement('div', { style: { fontSize: '0.78em', opacity: 0.75, display: 'flex', gap: '12px', flexWrap: 'wrap' } },
+                                (category || isStale) && React.createElement('div', {
+                                    style: { fontSize: '0.72em', opacity: 0.55, fontStyle: 'italic' }
+                                }, isStale ? `archive · ${humanizeAdviceId(r.id)}` : curatorHistoryCategoryRu(category)),
+                                React.createElement('div', { style: { fontSize: '0.76em', opacity: 0.75, display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '2px' } },
                                     r.shown > 0 && React.createElement('span', null, `👁 ${r.shown}`),
-                                    r.read > 0 && React.createElement('span', null, `✓ прочитан ${r.read}`),
-                                    r.click > 0 && React.createElement('span', null, `▶ клик ${r.click}`),
+                                    r.read > 0 && React.createElement('span', null, `✓ ${r.read}`),
+                                    r.click > 0 && React.createElement('span', null, `▶ ${r.click}`),
                                     r.positive > 0 && React.createElement('span', { style: { color: 'var(--heys-color-success, #2e7d32)' } }, `👍 ${r.positive}`),
                                     r.negative > 0 && React.createElement('span', { style: { color: 'var(--heys-color-warning, #d32f2f)' } }, `👎 ${r.negative}`),
-                                    r.hidden > 0 && React.createElement('span', { style: { opacity: 0.5 } }, `✕ скрыто ${r.hidden}`)
+                                    r.hidden > 0 && React.createElement('span', { style: { opacity: 0.5 } }, `✕ ${r.hidden}`)
                                 )
-                            )
-                        )
+                            );
+                        })
                 )
             )
         );
@@ -1277,6 +1317,7 @@
                 handleAdviceListTouchStart,
                 handleAdviceListTouchMove,
                 handleAdviceListTouchEnd,
+                adviceRelevant,
             });
         }
 

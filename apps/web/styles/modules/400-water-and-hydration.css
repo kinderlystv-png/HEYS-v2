@@ -1007,7 +1007,9 @@ body.planning-tab-active .fab-group {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 1000;
+  /* 10000 — выше FAB'ов (мессенджер, вода, добавить приём) и других overlay'ев
+     (.messenger-overlay тоже 10000, оба full-screen — не конфликтуют). */
+  z-index: 10000;
   display: flex;
   align-items: flex-end;
   justify-content: center;
