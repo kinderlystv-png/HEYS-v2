@@ -62,7 +62,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // ── Attachments grid ─────────────────────────────────────────────────
-  function MessageAttachments({ attachments, onPhotoClick }) {
+  // eager=true для последних сообщений (в viewport при открытии) — грузятся
+  // сразу, мгновенный показ. Для остальных — lazy, чтобы не качать тысячи
+  // фото из длинной истории при каждом открытии треда.
+  function MessageAttachments({ attachments, onPhotoClick, eager }) {
     if (!attachments || attachments.length === 0) return null;
     return React.createElement(
       'div',
@@ -79,7 +82,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('img', {
             src: att.url || att.localPreview || '',
             alt: att.filename || 'фото',
-            loading: 'lazy',
+            loading: eager ? 'eager' : 'lazy',
+            decoding: 'async',
+            width: att.width || undefined,
+            height: att.height || undefined,
           }),
         ),
       ),
@@ -87,7 +93,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // ── Thread message bubble ────────────────────────────────────────────
-  function MessageBubble({ message, viewerRole, onToggleAck, onDelete, onReply, onEdit, onPhotoClick }) {
+  function MessageBubble({ message, viewerRole, onToggleAck, onDelete, onReply, onEdit, onPhotoClick, eagerPhotos }) {
     const isMine = message.sender_role === viewerRole;
     const isCurator = viewerRole === 'curator';
     // Курaтор тапает ✓ на client-msg → done_at. Клиент тапает ✓ на curator-msg → acked_at.
@@ -194,6 +200,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement(MessageAttachments, {
           attachments: message.attachments,
           onPhotoClick,
+          eager: eagerPhotos,
         }),
       editing
         ? React.createElement(
@@ -382,7 +389,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const MAX_SIDE = 800;
+          // 600px + JPEG q=0.6: ~40-80KB на типичное chat-фото вместо 80-150KB.
+          // Для пузыря в треде (max-width 320px) 600px = 2x retina, читаемо.
+          // Lightbox показывает то же фото на весь экран — на mobile 600px
+          // покрывает 100% ширины с небольшим скейлом, заметной деградации нет.
+          const MAX_SIDE = 600;
           let { width, height } = img;
           if (width > height) {
             if (width > MAX_SIDE) {
@@ -398,7 +409,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          resolve({ base64: canvas.toDataURL('image/jpeg', 0.7), width, height });
+          resolve({ base64: canvas.toDataURL('image/jpeg', 0.6), width, height });
         };
         img.onerror = () => reject(new Error('image_load_failed'));
         img.src = e.target.result;
@@ -814,8 +825,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     );
                   }
 
+                  // Eager-load фото только для последних 5 сообщений — они
+                  // в viewport при открытии. Старые на lazy чтобы не качать
+                  // тысячи фото из длинной истории.
+                  const EAGER_PHOTO_TAIL = 5;
+                  const eagerThreshold = visibleMessages.length - EAGER_PHOTO_TAIL;
                   // Рендерим бабблы + вставляем date-separator между разными днями
                   let lastKey = null;
+                  let msgIdx = 0;
                   for (const m of visibleMessages) {
                     const k = dayKey(m.created_at);
                     if (k !== lastKey) {
@@ -837,8 +854,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         onReply: handleReply,
                         onEdit: handleEditMessage,
                         onPhotoClick: handlePhotoClick,
+                        eagerPhotos: msgIdx >= eagerThreshold,
                       }),
                     );
+                    msgIdx++;
                   }
                   // Пустое состояние: если рекент пуст, но есть старые сообщения
                   if (visibleMessages.length === 0 && oldMessages.length > 0) {
