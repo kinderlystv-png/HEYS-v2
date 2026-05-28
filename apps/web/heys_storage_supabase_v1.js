@@ -215,6 +215,24 @@
     'heys_milestone_'         // Достигнутые вехи (heys_milestone_7_days, etc.)
   ];
 
+  /**
+   * Ticket B: ключи курaторской UI-сессии, которые НИКОГДА не должны попадать
+   * в `client_kv_store` — независимо от того, чей сейчас `currentClientId`.
+   * Защита от cross-client pollution: курaтор не «загрязняет» scope клиента
+   * своими session-state ключами.
+   *
+   * NB: это не «что курaтор не может менять у клиента», а «какие ключи в
+   * принципе не client-data». Курaтор может менять любые ДАННЫЕ клиента
+   * (профиль, нормы, дневник, products, advice, EWS) — через те же
+   * merge_save_*_by_curator paths.
+   */
+  const NON_CLIENT_DATA_BLACKLIST = [
+    'heys_clients',           // Список клиентов курaтора (его «записная книжка»)
+    'heys_client_current',    // Кого курaтор сейчас смотрит (UI-указатель)
+    'heys_curator_session',   // JWT курaтора
+    'heys_debug_events',      // Analytics курaторской сессии
+  ];
+
   /** Префиксы для client-specific данных */
   const CLIENT_KEY_PATTERNS = {
     DAY_V2: 'dayv2_',
@@ -2029,6 +2047,13 @@
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
           if (!row || !row.client_id || !row.k) continue;
+          // Ticket B: defence-in-depth — отбрасываем deferred non-client-data
+          // ключи курaторской сессии. cloud.saveClientKey тоже гейтит, но
+          // ранний exit здесь экономит counter bump на replay_err.
+          if (isNonClientDataKey(row.k)) {
+            bumpSmoothnessCounter('deferred_save_replay_skip_blacklist');
+            continue;
+          }
           const lead = getLeadingClientScopeId(row.k);
           if (lead) {
             if (lead !== newClientId && (!oldC || lead !== oldC)) continue;
@@ -3849,6 +3874,24 @@
     }
     return false;
   }
+
+  /**
+   * Ticket B: проверка, попадает ли ключ в blacklist курaторской UI-сессии.
+   * Такие ключи **никогда** не должны записываться в `client_kv_store` —
+   * ни через `cloud.saveClientKey`, ни через interceptor, ни через
+   * `_flushDeferredWritesAfterSwitch` replay, ни через global proxy.
+   *
+   * Проверяет и сам ключ, и `baseKey` после strip scope (защита от случайно
+   * scoped'нутых вариантов вроде `heys_{uuid}_clients`).
+   */
+  function isNonClientDataKey(k) {
+    if (!k) return false;
+    if (NON_CLIENT_DATA_BLACKLIST.includes(k)) return true;
+    const baseKey = stripClientScopePrefixes(String(k || '')).key;
+    if (NON_CLIENT_DATA_BLACKLIST.includes(baseKey)) return true;
+    return false;
+  }
+  cloud.isNonClientDataKey = isNonClientDataKey;
 
   /**
    * Перехват localStorage.setItem для автоматического зеркалирования в cloud
@@ -9873,6 +9916,18 @@
     }
 
     if (!client_id) {
+      return;
+    }
+
+    // Ticket B: defence-in-depth — non-client-data ключи (heys_clients,
+    // heys_client_current, heys_curator_session, heys_debug_events) никогда
+    // не должны попадать в client_kv_store. Server гейтит то же самое
+    // (heys-api-rpc → 403 not_client_data), client-side гейт нужен чтобы
+    // не засорять upload queue + не уходить в retry-цикл при server reject.
+    if (isNonClientDataKey(k)) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[HEYS.cloud.saveClientKey] 🚫 blocked non-client-data key:', k);
+      }
       return;
     }
 

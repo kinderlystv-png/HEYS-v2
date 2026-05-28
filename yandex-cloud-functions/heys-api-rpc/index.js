@@ -12,6 +12,27 @@ const { mergeDayData, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Ticket B: ключи курaторской UI-сессии — никогда не должны попадать в
+// `client_kv_store`. Server-side гейт для всех write-paths (merge_save_*,
+// batch_upsert_client_kv_by_curator). Mirror-copy в
+// `apps/web/heys_storage_supabase_v1.js NON_CLIENT_DATA_BLACKLIST` (client-side).
+// ═══════════════════════════════════════════════════════════════════════════
+const NON_CLIENT_DATA_BLACKLIST = [
+  'heys_clients',
+  'heys_client_current',
+  'heys_curator_session',
+  'heys_debug_events',
+];
+function stripClientScopeFromKey(key) {
+  const m = String(key || '').match(/^heys_[0-9a-f-]{36}_(.+)$/i);
+  return m ? 'heys_' + m[1] : key;
+}
+function isNonClientDataKey(k) {
+  if (typeof k !== 'string') return false;
+  return NON_CLIENT_DATA_BLACKLIST.includes(k) || NON_CLIENT_DATA_BLACKLIST.includes(stripClientScopeFromKey(k));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 🔐 P0 SECURITY: Conditional logging (never log env in production)
 // ═══════════════════════════════════════════════════════════════════════════
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';  // debug | info | warn | error
@@ -1897,6 +1918,32 @@ module.exports.handler = async function (event, context) {
         }
       }
 
+      // Ticket B: server-side blacklist — UI-state ключи курaторской сессии
+      // (см. NON_CLIENT_DATA_BLACKLIST в начале файла) никогда не должны
+      // попадать в client_kv_store, независимо от пути (by_session ИЛИ
+      // by_curator). Возвращаем 403 + best-effort audit.
+      if (isNonClientDataKey(k)) {
+        try {
+          await client.query(
+            `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+             VALUES ($1::uuid, $2::text, 'non_client_data_rejected', FALSE, $3)`,
+            [
+              resolvedClientId,
+              k,
+              isCurator ? 'blacklist_curator_path' : 'blacklist_session_path'
+            ]
+          );
+        } catch (auditErr) {
+          console.warn('[merge_save] blacklist audit insert failed:', auditErr.message);
+        }
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 403,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'not_client_data', key: k })
+        };
+      }
+
       // Transaction with row-level lock to serialize concurrent merges on the same (client_id, k).
       let mergeOutcome = 'incoming_wins'; // for audit
       let mergedValue;
@@ -2247,6 +2294,42 @@ module.exports.handler = async function (event, context) {
           statusCode: 200,
           headers: corsHeaders,
           body: JSON.stringify({ success: true, saved: 0 })
+        };
+      }
+
+      // Ticket B: server-side blacklist для batch path. Отфильтровываем
+      // non-client-data ключи из items + audit row. Не падаем — продолжаем
+      // batch с оставшимися items (legitimate client-data сохраняется).
+      const filteredItems = [];
+      const rejectedKeys = [];
+      for (const it of items) {
+        const ik = it && it.k;
+        if (isNonClientDataKey(ik)) {
+          rejectedKeys.push(ik);
+        } else {
+          filteredItems.push(it);
+        }
+      }
+      if (rejectedKeys.length > 0) {
+        try {
+          await client.query(
+            `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+             SELECT $1::uuid, unnest($2::text[]), 'non_client_data_rejected', FALSE, 'blacklist_curator_batch'`,
+            [targetClientId, rejectedKeys]
+          );
+        } catch (auditErr) {
+          console.warn('[batch_upsert] blacklist audit insert failed:', auditErr.message);
+        }
+      }
+      // Replace items with filtered set; downstream код больше не видит rejected keys.
+      items.length = 0;
+      items.push(...filteredItems);
+      if (items.length === 0) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({ success: true, saved: 0, rejected: rejectedKeys.length, error: rejectedKeys.length ? 'not_client_data' : undefined })
         };
       }
 
