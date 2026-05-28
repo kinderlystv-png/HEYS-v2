@@ -39,7 +39,9 @@
 
                 // Пропускаем если нет clientId в событии
                 if (!eventClientId) {
-                    console.warn('[MorningCheckin] ⚠️ heysSyncCompleted без clientId — пропускаем');
+                    // Defensive skip — race-window между sync-completed event'ом и
+                    // установкой clientId. Норма, не warning.
+                    console.debug('[MorningCheckin] heysSyncCompleted без clientId — пропускаем');
                     return;
                 }
 

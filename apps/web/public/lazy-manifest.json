@@ -1,11 +1,11 @@
 {
   "postboot-1-game-lazy": {
-    "file": "postboot-1-game-lazy.bundle.13d6334ee6f9.js",
-    "hash": "13d6334ee6f9",
-    "sourceFingerprint": "ce0d4fd2caf1",
+    "file": "postboot-1-game-lazy.bundle.d9075e32258f.js",
+    "hash": "d9075e32258f",
+    "sourceFingerprint": "fb6b478d6d95",
     "fileCount": 32,
-    "size": 1393040,
-    "builtAt": "2026-05-28T15:12:42.433Z"
+    "size": 1392958,
+    "builtAt": "2026-05-28T15:42:21.671Z"
   },
   "postboot-2-insights-lazy": {
     "file": "postboot-2-insights-lazy.bundle.9ebb4942a9c4.js",

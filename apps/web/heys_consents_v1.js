@@ -1369,7 +1369,8 @@
       const msg = String(err?.message || '');
       const isExpectedRace = /no session token/i.test(msg);
       if (isExpectedRace) {
-        console.warn('[Consents] checkRequiredVersioned: no token (fallback will handle)');
+        // By-design: автор отметил "fallback will handle". Норма во время PIN-handshake'а.
+        console.info('[Consents] checkRequiredVersioned: no token (fallback will handle)');
       } else {
         console.error('[Consents] checkRequiredVersioned failed:', err);
       }

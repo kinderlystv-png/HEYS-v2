@@ -1,19 +1,19 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.35b1bff65a5d.js",
-    "hash": "35b1bff65a5d",
-    "sourceFingerprint": "d1c0aea11946",
+    "file": "boot-core.bundle.f8179482246e.js",
+    "hash": "f8179482246e",
+    "sourceFingerprint": "ab23aa527a03",
     "fileCount": 40,
     "size": 1036388,
-    "builtAt": "2026-05-28T15:39:40.486Z"
+    "builtAt": "2026-05-28T15:42:14.672Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.da5d1ac16b9a.js",
-    "hash": "da5d1ac16b9a",
-    "sourceFingerprint": "394d4e8708ca",
+    "file": "boot-calc.bundle.9207f13a0e45.js",
+    "hash": "9207f13a0e45",
+    "sourceFingerprint": "aa2bdf8c90b6",
     "fileCount": 19,
-    "size": 721809,
-    "builtAt": "2026-05-28T14:32:04.713Z"
+    "size": 721714,
+    "builtAt": "2026-05-28T15:42:16.689Z"
   },
   "boot-day": {
     "file": "boot-day.bundle.3f508bdcf6a7.js",
@@ -24,12 +24,12 @@
     "builtAt": "2026-05-28T14:32:07.293Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.19e35bf2423b.js",
-    "hash": "19e35bf2423b",
-    "sourceFingerprint": "a54126825773",
+    "file": "boot-app.bundle.bc07d243024b.js",
+    "hash": "bc07d243024b",
+    "sourceFingerprint": "b85603eeac34",
     "fileCount": 51,
-    "size": 925540,
-    "builtAt": "2026-05-28T15:39:42.692Z"
+    "size": 925383,
+    "builtAt": "2026-05-28T15:42:18.837Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.a261f6f72353.js",
@@ -48,12 +48,12 @@
     "builtAt": "2026-05-28T14:32:12.070Z"
   },
   "postboot-1-game-lazy": {
-    "file": "postboot-1-game-lazy.bundle.13d6334ee6f9.js",
-    "hash": "13d6334ee6f9",
-    "sourceFingerprint": "ce0d4fd2caf1",
+    "file": "postboot-1-game-lazy.bundle.d9075e32258f.js",
+    "hash": "d9075e32258f",
+    "sourceFingerprint": "fb6b478d6d95",
     "fileCount": 32,
-    "size": 1393040,
-    "builtAt": "2026-05-28T15:12:42.433Z"
+    "size": 1392958,
+    "builtAt": "2026-05-28T15:42:21.671Z"
   },
   "postboot-2-insights-eager": {
     "file": "postboot-2-insights-eager.bundle.807cb783ab2f.js",

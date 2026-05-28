@@ -7275,7 +7275,8 @@
 
         if (dayv2DedupDropped.length > 0) {
           const uniqueDroppedDays = uniqSorted(dayv2DedupDropped);
-          window.console.warn('[HEYS.sinhron] 🔀 dayv2 дедупликация: ' + uniqueDroppedDays.length + ' дублей отброшено:', formatListForSyncLog(uniqueDroppedDays));
+          // Operational note (sync обнаружил дубли и схлопнул), не предупреждение.
+          window.console.info('[HEYS.sinhron] 🔀 dayv2 дедупликация: ' + uniqueDroppedDays.length + ' дублей отброшено:', formatListForSyncLog(uniqueDroppedDays));
         }
         const dayv2AfterDedup = uniqSorted(deduped
           .filter(d => d.scopedKey.includes('dayv2_') && !isDayv2MetaKey(d.scopedKey))

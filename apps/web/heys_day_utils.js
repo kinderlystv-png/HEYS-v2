@@ -2452,7 +2452,9 @@
                 // Throttle: не логируем чаще раза в минуту для каждого продукта
                 const lastLogged = orphanLoggedRecently.get(itemName) || 0;
                 if (Date.now() - lastLogged > 60000) {
-                  console.warn(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similar[0].name}"`);
+                  // Fuzzy-match info с suggestion — hint для дебага data-quality
+                  // (опечатка в имени продукта), не warning.
+                  console.info(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similar[0].name}"`);
                   orphanLoggedRecently.set(itemName, Date.now());
                 }
               }
