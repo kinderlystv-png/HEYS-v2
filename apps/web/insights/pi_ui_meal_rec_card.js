@@ -2011,8 +2011,8 @@
         const cardHeader = h('div', {
             className: 'meal-rec-card__header',
             'data-perf-id': 'meal-rec-card',
-            // R15: defer heavy re-render out of click handler
-            onClick: () => setTimeout(() => React.startTransition(() => setExpanded(prev => {
+            // 2026-05-28: dropped startTransition wrapper (discarded в курaторе → card expand не работал)
+            onClick: () => setExpanded(prev => {
                 const next = !prev;
                 // R1-6: persist в LS чтобы пережить пересчёт плана
                 try { localStorage.setItem('heys_meal_planner_expanded_v1', next ? '1' : '0'); } catch (e) {}
@@ -2026,7 +2026,7 @@
                     } catch (e) {}
                 }
                 return next;
-            })), 0)
+            })
         },
             h('div', { className: 'meal-rec-card__title' },
                 h('div', { className: 'meal-rec-card__badge-wrap' },

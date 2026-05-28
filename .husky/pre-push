@@ -69,6 +69,9 @@ node scripts/lint-direct-localstorage-writes.mjs || {
   exit 1
 }
 
+echo "🔍 Проверка React.startTransition counter (anti-pattern guard, warn-only)..."
+node scripts/lint-react-start-transition.mjs || true
+
 echo "📦 Проверка bundle size budget (P0-D, +5% guard)..."
 node scripts/lint-bundle-size.mjs || {
   echo "❌ Bundle size guard: critical-path бандл вырос >+5% от baseline. Push отменён."

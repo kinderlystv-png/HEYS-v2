@@ -2663,8 +2663,8 @@
           className: 'supplements-card__group-toggle' + (allGroupTaken ? ' supplements-card__group-toggle--complete' : ''),
           onClick: (e) => {
             e.stopPropagation();
-            // R14: defer heavy re-render out of click handler
-            if (!allGroupTaken) setTimeout(() => React.startTransition(() => markGroupTaken()), 0);
+            // 2026-05-28: dropped startTransition wrapper (discarded в курaторе → group toggle не работал)
+            if (!allGroupTaken) markGroupTaken();
           },
           style: {
             marginBottom: '8px',
@@ -2758,14 +2758,10 @@
               const nextTakenList = isTaken
                 ? taken.filter(takenId => takenId !== id)
                 : Array.from(new Set([...taken, id]));
-              // R14: defer heavy re-render out of click handler
-              setTimeout(() => {
-                React.startTransition(() => {
-                  if (isTaken) clearCelebrationState();
-                  toggleTaken(id);
-                  if (!isTaken) maybeAutoCollapse(nextTakenList);
-                });
-              }, 0);
+              // 2026-05-28: dropped startTransition wrapper (discarded в курaторе → toggle не работал)
+              if (isTaken) clearCelebrationState();
+              toggleTaken(id);
+              if (!isTaken) maybeAutoCollapse(nextTakenList);
             };
 
             return React.createElement('button', {

@@ -3131,13 +3131,9 @@
         }, []);
 
         const handleAdviceToggleExpand = useCallback((adviceId) => {
-            // PERF R13 FIX I: defer advice expand/collapse to avoid sync React render in click handler
+            // 2026-05-28: dropped startTransition wrapper (discarded в курaторе → expand не работал)
             haptic('light');
-            setTimeout(() => {
-                React.startTransition(() => {
-                    setExpandedAdviceId(prev => (prev === adviceId ? null : (adviceId || null)));
-                });
-            }, 0);
+            setExpandedAdviceId(prev => (prev === adviceId ? null : (adviceId || null)));
         }, [haptic]);
 
         const handleDismissAll = () => {

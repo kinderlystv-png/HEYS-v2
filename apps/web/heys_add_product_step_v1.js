@@ -5940,13 +5940,14 @@ NOVA: 1
       });
       // Режим редактирования — вызываем onSave
       if (context?.isEditMode && context?.onSave) {
-        // ⚡ startTransition: defer heavy meal recalculation re-renders
-        React.startTransition(() => {
-          context.onSave({
-            mealIndex: context.mealIndex,
-            itemId: context.itemId,
-            grams
-          });
+        // 2026-05-28: dropped startTransition wrapper. В курaторской сессии React
+        // deprioritizes/discards transition'ы → save не выполнялся. Sync вызов
+        // возвращает ~200мс freeze (известная стоимость) но надёжен.
+        // Структурный фикс: docs/REFACTOR_REACT_MEMO_DAY_TAB.md
+        context.onSave({
+          mealIndex: context.mealIndex,
+          itemId: context.itemId,
+          grams
         });
       }
       // Режим добавления — вызываем onAdd
@@ -5983,22 +5984,22 @@ NOVA: 1
           productId: productForSubmit?.id ?? productForSubmit?.product_id ?? null,
           productName: productForSubmit?.name || null
         });
-        // ⚡ startTransition: defer heavy meal recalculation re-renders
-        React.startTransition(() => {
-          try {
-            context.onAdd(payload);
-            pushAddTrace('✅ context.onAdd called (GramsStep)', {
-              traceId,
-              mealIndex: context?.mealIndex ?? null
-            });
-          } catch (error) {
-            pushAddTrace('❌ context.onAdd failed (GramsStep)', {
-              traceId,
-              mealIndex: context?.mealIndex ?? null,
-              error: error?.message || error
-            }, 'error');
-          }
-        });
+        // 2026-05-28: dropped startTransition wrapper. В курaторской сессии onAdd
+        // discarded → продукт не добавлялся в приём. Sync вызов надёжен.
+        // Структурный фикс: docs/REFACTOR_REACT_MEMO_DAY_TAB.md
+        try {
+          context.onAdd(payload);
+          pushAddTrace('✅ context.onAdd called (GramsStep)', {
+            traceId,
+            mealIndex: context?.mealIndex ?? null
+          });
+        } catch (error) {
+          pushAddTrace('❌ context.onAdd failed (GramsStep)', {
+            traceId,
+            mealIndex: context?.mealIndex ?? null,
+            error: error?.message || error
+          }, 'error');
+        }
 
         // 🔊 Harm-based feedback sound
         if (HEYS.audio) {
