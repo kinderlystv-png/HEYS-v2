@@ -127,6 +127,7 @@
                 ...profiles,
                 lastUpdated: Date.now()
             });
+            payload.updatedAt = Date.now();
 
             if (HEYS.store?.set) {
                 HEYS.store.set(OUTCOME_PROFILE_KEY, payload);
@@ -162,7 +163,8 @@
             const U = HEYS.utils || {};
             const payload = {
                 version: OUTCOME_PENDING_VERSION,
-                items: sanitizePendingOutcomeMap(pending)
+                items: sanitizePendingOutcomeMap(pending),
+                updatedAt: Date.now()
             };
             if (HEYS.store?.set) {
                 HEYS.store.set(OUTCOME_PENDING_KEY, payload);

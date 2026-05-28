@@ -710,6 +710,7 @@
         });
 
         try {
+            trendsData.updatedAt = Date.now();
             localStorage.setItem(TRENDS_STORAGE_KEY, JSON.stringify(trendsData));
             console.info('ews / trends ✅ save.success:', {
                 size: JSON.stringify(trendsData).length,
@@ -1161,6 +1162,7 @@
 
         // 1. Save to localStorage first (fast, always succeeds)
         try {
+            progressData.updatedAt = Date.now();
             localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));
             console.info('ews / weekly ✅ save.success:', {
                 size: JSON.stringify(progressData).length,

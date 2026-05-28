@@ -984,6 +984,7 @@
       const profile = lsGet('heys_profile', {});
       if (profile.weight !== weight) {
         profile.weight = weight;
+        profile.updatedAt = Date.now();
         lsSet('heys_profile', profile);
         console.log('[WeightStep] Profile weight updated:', weight, 'kg');
 
@@ -1730,6 +1731,7 @@
     save: (data) => {
       const profile = lsGet('heys_profile', {});
       profile.stepsGoal = data.stepsGoal;
+      profile.updatedAt = Date.now();
       lsSet('heys_profile', profile);
       // Диспатчим событие обновления профиля для реактивного обновления UI
       window.dispatchEvent(new CustomEvent('heys:profile-updated', {

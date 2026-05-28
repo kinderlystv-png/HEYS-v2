@@ -189,6 +189,7 @@
     const profile = lsGet('heys_profile', {}) || {};
     if (profile?.[CALENDAR_VIEW_KEY] === view) return;
     profile[CALENDAR_VIEW_KEY] = view;
+    profile.updatedAt = Date.now();
     lsSet('heys_profile', profile);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('heys:profile-updated', {

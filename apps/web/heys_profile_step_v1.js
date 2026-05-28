@@ -500,6 +500,7 @@
       profile.cycleTrackingEnabled = data.cycleTrackingEnabled;
       // Вычисляем возраст
       profile.age = calcAgeFromBirthDate(birthDate);
+      profile.updatedAt = Date.now();
       lsSet('heys_profile', profile);
 
       // 💡 Очищаем pending name от куратора после сохранения профиля
