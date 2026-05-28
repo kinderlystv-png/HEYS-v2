@@ -1327,9 +1327,14 @@
         // на 💡 в его UI открывает этот dropdown с историей.
         const _isCurator = isCuratorReadOnlyMode();
         if (_isCurator) {
+            // Log только когда state «интересный» (manual or toastVisible) — иначе render spam
+            if (adviceTrigger === 'manual' || toastVisible) {
+                console.error('[advice-diag] 7️⃣ render with curator state', { adviceTrigger, toastVisible });
+            }
             if (!(adviceTrigger === 'manual' && toastVisible)) return null;
+            console.error('[advice-diag] 8️⃣ curator gate PASSED, will render history');
             try {
-                return renderCuratorAdviceHistory({
+                const result = renderCuratorAdviceHistory({
                     React,
                     dismissToast,
                     handleAdviceListTouchStart,
@@ -1337,6 +1342,8 @@
                     handleAdviceListTouchEnd,
                     adviceRelevant,
                 });
+                console.error('[advice-diag] 9️⃣ renderCuratorAdviceHistory returned', !!result);
+                return result;
             } catch (renderErr) {
                 console.error('[advice-diag] ❌ renderCuratorAdviceHistory THREW:', renderErr);
                 return null;
@@ -2531,10 +2538,12 @@
                         const engineVisibleAdviceCount = Array.isArray(safeBadgeAdvices)
                             ? safeBadgeAdvices.length
                             : 0;
+                        console.error('[advice-diag] 5️⃣ calling setAdviceTrigger(manual) + setToastVisible(true)');
                         setAdviceTrigger('manual');
                         setAdviceExpanded(true);
                         setToastVisible(true);
                         setToastDismissed(false);
+                        console.error('[advice-diag] 6️⃣ setters called, expecting re-render');
                         HEYSRef?.advice?.recordDailyAdviceTraceEvent?.(date, 'manual_open', {
                             trigger: 'manual',
                             visibleAdviceCount: totalAdviceCount,
