@@ -2914,10 +2914,11 @@
             className: 'supplements-card__icon-btn supplements-card__collapse-btn',
             onClick: (e) => {
               e.stopPropagation();
-              // ⚡ PERF R27: Defer collapse toggle (246ms → ~0ms click processing)
+              // 2026-05-28: dropped startTransition wrapper. v1 имел 246ms freeze; transition
+              // его маскировала ценой надёжности — в курaторской сессии setCollapsed discarded
+              // → carta не сворачивалась. Sync вызов возвращает freeze, но надёжен.
               clearCelebrationState();
-              const next = !isCollapsed;
-              setTimeout(() => { React.startTransition(() => { setCollapsed(next); }); }, 0);
+              setCollapsed(!isCollapsed);
             },
             style: {
               background: 'var(--bg-secondary, #f1f5f9)',

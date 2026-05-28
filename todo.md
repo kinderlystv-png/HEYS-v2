@@ -1,6 +1,33 @@
 # HEYS — Активные задачи
 
-> Обновлено: 2026-05-23
+> Обновлено: 2026-05-28
+
+---
+
+## 🔥 HIGH PRIORITY (perf) — Refactor DayTab: React.memo для leaf-компонентов
+
+**Полный план**:
+[docs/REFACTOR_REACT_MEMO_DAY_TAB.md](docs/REFACTOR_REACT_MEMO_DAY_TAB.md)
+
+**Зачем сейчас:** За год накопилась регрессия — курaтор в своей сессии всё чаще
+видел «мёртвые» тапы (advice-модалка не открывалась → fix `65f8259c`; meals
+expand не раскрывался → fix `33f2f18f`; balance/popup'ы/supplements не работали
+→ today's drop startTransition). **Все эти фиксы — костыли**: убрали
+`React.startTransition` обёртку, надёжность вернулась, но **freeze 188-375мс на
+каждый tap** (на старых телефонах перцептивно). Чтобы убрать и freeze, и risk
+новых таких регрессий — нужен структурный refactor DayTab.
+
+**Корень проблемы:** `renderStatsBlock` (3389 строк, 622 React.createElement) +
+`statsVm.build()` не мемоизированы — любой setState в DayTab пересчитывает все
+`vmComputed.*` (новые refs) + пере-рендерит всё поддерево. `React.memo` на leaf
+не сработает пока vmComputed нестабилен.
+
+**Effort:** 8-12 часов (5 sequential steps; см. документ).
+
+**Когда:** ASAP перед следующим UX-критичным фичем, чтобы не накапливать новых
+«мёртвых тапов». До этого рефактора **избегать паттерна
+`setTimeout(0) → React.startTransition → setX`** в любом новом UI-tap path
+курaторской зоны.
 
 ---
 

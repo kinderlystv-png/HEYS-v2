@@ -307,8 +307,8 @@
                     e.stopPropagation();
                     const rect = e.target.getBoundingClientRect();
                     const pos = { x: rect.left + rect.width / 2, y: rect.bottom };
-                    // R24: defer popup setState to avoid sync DayTab re-render (188ms → ~0ms)
-                    setTimeout(() => { React.startTransition(() => setTefInfoPopup(pos)); }, 0);
+                    // 2026-05-28: dropped startTransition wrapper (transition discarded в курaторе)
+                    setTefInfoPopup(pos);
                   },
                   style: {
                     marginLeft: '6px',

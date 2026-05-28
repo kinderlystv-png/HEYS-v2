@@ -770,9 +770,12 @@
           className: 'debt-card' + (balanceCardExpanded ? ' expanded' : ''),
           onClick: (e) => {
             e.stopPropagation();
-            // PERF R13 FIX J: defer debt-card expand to avoid sync React render
-            const next = !balanceCardExpanded;
-            setTimeout(() => { React.startTransition(() => { setBalanceCardExpanded(next); }); }, 0);
+            // 2026-05-28: dropped React.startTransition wrapper — в курaторской сессии
+            // transition deprioritized, setBalanceCardExpanded discarded → tap не срабатывал.
+            // Sync setState возвращает 188-375мс freeze (известная стоимость), но tap надёжен.
+            // Полный refactor с component extraction + memo для устранения freeze см.
+            // docs/REFACTOR_DAY_TAB_MEMO_v1.md (priority в todo.md).
+            setBalanceCardExpanded(!balanceCardExpanded);
           }
         },
           // === COLLAPSED VIEW ===
@@ -1039,9 +1042,8 @@
           },
           onClick: (e) => {
             e.stopPropagation();
-            // PERF R13 FIX J: defer caloric-balance card expand to avoid sync React render
-            const next = !balanceCardExpanded;
-            setTimeout(() => { React.startTransition(() => { setBalanceCardExpanded(next); }); }, 0);
+            // 2026-05-28: dropped React.startTransition wrapper (same reason as debt-card above)
+            setBalanceCardExpanded(!balanceCardExpanded);
           }
         },
           // === HEADER (всегда виден) — компактная строка ===
@@ -2758,11 +2760,11 @@
               onClick: (e) => {
                 e.stopPropagation();
                 haptic('light');
-                // ⚡ PERF R26: Defer week-deficit popup setState (182ms → ~0ms click processing)
+                // 2026-05-28: dropped startTransition wrapper (transition discarded в курaторе)
                 const rect = e.currentTarget.getBoundingClientRect();
                 if (deficitMeta.popupData) {
                   const pos = { x: rect.left + rect.width / 2, y: rect.top, data: deficitMeta.popupData };
-                  setTimeout(() => { React.startTransition(() => { setWeekDeficitPopup(pos); }); }, 0);
+                  setWeekDeficitPopup(pos);
                 }
               }
             },
@@ -3108,8 +3110,8 @@
               y: rect.bottom
             };
             haptic('light');
-            // R25: defer popup setState to avoid sync DayTab re-render (168ms → ~0ms)
-            setTimeout(() => { React.startTransition(() => setMacroBadgePopup(payload)); }, 0);
+            // 2026-05-28: dropped startTransition wrapper (transition discarded в курaторе)
+            setMacroBadgePopup(payload);
           };
 
           // Получаем данные о переборе из ViewModel
