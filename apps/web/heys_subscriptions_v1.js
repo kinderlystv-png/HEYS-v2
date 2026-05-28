@@ -231,7 +231,8 @@
         if (!sessionToken) {
           // Нет токена — PIN-flow ещё не завершён ИЛИ в dev cookie не доставлен.
           // Это нормальное состояние, НЕ ошибка. Возвращаем safe default.
-          devWarn('[Subscriptions] no session token yet, returning safe default');
+          // Нормальное состояние во время PIN-flow handshake'а, не предупреждение.
+          devLog('[Subscriptions] no session token yet, returning safe default');
           return { success: false, status: 'unknown', can_edit: true, _noToken: true };
         }
 

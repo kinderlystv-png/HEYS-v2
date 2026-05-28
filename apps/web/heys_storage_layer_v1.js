@@ -603,9 +603,10 @@
               });
               if (global.HEYS._syncDebug.length > 200) global.HEYS._syncDebug.shift();
             } catch (_) { /* noop */ }
-            console.warn('[Store.set] 🛡️ LEAK-BLOCKED re-scoped to OLD:', k, '→', deferSk);
+            // Operational log, не warning — это нормальный flow switchClient'а.
+            console.debug('[Store.set] 🛡️ LEAK-BLOCKED re-scoped to OLD:', k, '→', deferSk);
           } else {
-            console.warn('[Store.set] 🛡️ DEFERRED during switchClient:', k);
+            console.debug('[Store.set] 🛡️ DEFERRED during switchClient:', k);
           }
         } catch (_) { }
         return;
@@ -619,6 +620,16 @@
       if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
         const cid = ns();
         if (cid) {
+          // 🛡️ Source-of-truth gate: global / non-client ключи (heys_clients,
+          // heys_client_current, heys_debug_events и т.д.) не должны идти в
+          // cloud.saveClientKey. Раньше блокировка была только на proxy-слое
+          // (heys_app_global_bindings_v1.js:27) с шумным warning'ом — теперь
+          // отсекаем здесь, до выхода из storage layer. Proxy остаётся как
+          // defence-in-depth, но больше не кричит на каждый global key.
+          if (global.HEYS.cloud && typeof global.HEYS.cloud.isNonClientDataKey === 'function'
+              && global.HEYS.cloud.isNonClientDataKey(sk)) {
+            return;
+          }
           // Передаём scoped key в облако (с clientId), чтобы ключ совпадал при загрузке
           // sk уже содержит heys_<clientId>_<key>
           // Сохраняем любые значения: объекты, массивы, boolean, числа, строки

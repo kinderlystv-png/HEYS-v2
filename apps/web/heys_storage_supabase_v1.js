@@ -4256,7 +4256,8 @@
         }
 
         if (muteMirror && isOurKey(k) && String(k).includes('dayv2_')) {
-          pushSyncTrace('MUTE_MIRROR_SKIP', { key: k }, 'warn');
+          // Trace event, не warning — это intentional skip mirror'а, поведение по дизайну.
+          pushSyncTrace('MUTE_MIRROR_SKIP', { key: k }, 'debug');
         }
         if (!muteMirror && isOurKey(k)) {
           // 🔒 Дедупликация: пропускаем повторные сохранения с тем же updatedAt
@@ -4267,7 +4268,8 @@
 
           if (lastSaved && updatedAt > 0 && lastSaved.updatedAt === updatedAt && (now - lastSaved.timestamp) < DEDUP_WINDOW_MS) {
             if (String(k).includes('dayv2_')) {
-              pushSyncTrace('INTERCEPT_DEDUP_SKIP', { key: k, updatedAt, age: now - lastSaved.timestamp }, 'warn');
+              // Dedup skip — норма (тот же payload недавно записали), не предупреждение.
+              pushSyncTrace('INTERCEPT_DEDUP_SKIP', { key: k, updatedAt, age: now - lastSaved.timestamp }, 'debug');
             }
             return;
           }
