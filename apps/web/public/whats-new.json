@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.28.a56805e4",
+      "buildHash": "a56805e4",
+      "date": "2026-05-28",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Queue State в sync-snapshot теперь реально показывает upload-цикл",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Секция Queue State показывает inProgress/last ok/last fail/nextPush",
+          "description": "В прошлой версии diag-блока в snapshot отсутствовали строки про реальный upload-цикл — оставались только retry, canSync, yandexApi. Причина: tracking был добавлен в файл heys_cloud_queue_v1.js, а тот оказался орфаном (HEYS.CloudQueue.init нигде не вызывается). Реальный цикл живёт в heys_storage_supabase_v1.js. Перенесли tracking timestamp'ов и cloud.getQueueDebug() туда — теперь snapshot полностью отображает состояние очереди: возраст текущей upload-загрузки (с маркером HUNG если висит >30с), время последнего успеха/неудачи, состояние таймера следующего push (с маркером NO TIMER если очередь не пуста, но таймер выключен)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.28.8244c2a6",
       "buildHash": "8244c2a6",
       "date": "2026-05-28",
