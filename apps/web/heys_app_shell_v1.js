@@ -2289,7 +2289,21 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         React.useEffect(() => {
             if (!window.HEYS?._lastCrs && window.HEYS?.CascadeCard?.computeCascadeState && clientId) {
                 try {
-                    const dateStr = selectedDate || window.HEYS.utils.getTodayStr();
+                    // utils.getTodayStr не существует — используем тот же fallback каскад
+                    // что heys_leaderboard_v1.js:_getTodayStr (dayUtils.todayISO →
+                    // models.todayISO → manual). Раньше тут падал TypeError и весь
+                    // CRS init крашился каждый login.
+                    const _todayISO = () => {
+                        try {
+                            if (typeof window.HEYS?.dayUtils?.todayISO === 'function') return window.HEYS.dayUtils.todayISO();
+                            if (typeof window.HEYS?.models?.todayISO === 'function') return window.HEYS.models.todayISO();
+                            if (typeof window.HEYS?.utils?.getTodayKey === 'function') return window.HEYS.utils.getTodayKey();
+                        } catch (_) { /* fallthrough */ }
+                        const d = new Date();
+                        const pad = (n) => (n < 10 ? '0' + n : '' + n);
+                        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+                    };
+                    const dateStr = selectedDate || _todayISO();
                     const day = window.HEYS.utils.lsGet('heys_dayv2_' + dateStr, {});
                     const dayTot = window.HEYS.utils.lsGet('heys_dayTot_' + dateStr, {});
                     const prof = window.HEYS.utils.lsGet('heys_profile', {});
@@ -2306,7 +2320,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         optimum: optimumInfo.optimum, normKcal: normAbs.kcal
                     });
                     const pIndex = window.HEYS.products?.getIndex ? window.HEYS.products.getIndex() : {};
-                    const todayStr = window.HEYS.utils.getTodayStr();
+                    const todayStr = _todayISO();
                     window.HEYS.CascadeCard.computeCascadeState(day, dayTot, normAbs, prof, pIndex, {
                         silent: dateStr !== todayStr
                     });

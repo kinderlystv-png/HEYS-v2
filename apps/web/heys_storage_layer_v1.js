@@ -449,6 +449,14 @@
     let replayed = 0;
     let skipped = 0;
     const oldC = oldClientId || '';
+    // 🛡️ Same blacklist gate как в Store.set: global keys (heys_clients,
+    // heys_debug_events и т.д.) не идут в cloud.saveClientKey даже из replay
+    // пути. Раньше replay обходил gate в Store.set и proxy кричал warning'и.
+    const _shouldSyncToCloud = (sk) => {
+      const c = global.HEYS && global.HEYS.cloud;
+      if (c && typeof c.isNonClientDataKey === 'function' && c.isNonClientDataKey(sk)) return false;
+      return true;
+    };
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const sk = row && row.sk;
@@ -468,7 +476,7 @@
         rawSet(sk, v);
         if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
         try {
-          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function' && newClientId) {
+          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function' && newClientId && _shouldSyncToCloud(sk)) {
             global.HEYS.saveClientKey(newClientId, sk, v);
           }
         } catch (e) { }
@@ -477,7 +485,7 @@
       }
       if (oldC && lead === oldC) {
         try {
-          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
+          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function' && _shouldSyncToCloud(sk)) {
             global.HEYS.saveClientKey(oldC, sk, v);
           }
         } catch (e) { }
@@ -489,7 +497,7 @@
         rawSet(sk, v);
         if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
         try {
-          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
+          if (global.HEYS && typeof global.HEYS.saveClientKey === 'function' && _shouldSyncToCloud(sk)) {
             global.HEYS.saveClientKey(newClientId, sk, v);
           }
         } catch (e) { }
