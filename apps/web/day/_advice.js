@@ -9,6 +9,18 @@
     const ADVICE_SWIPE_HORIZONTAL_LOCK_THRESHOLD = 18;
     const ADVICE_SWIPE_VERTICAL_LOCK_THRESHOLD = 10;
 
+    // Курaторская сессия: read-only режим. Auto-toast не показывается,
+    // dropdown показывает историю outcomes клиента, outcome-tracking
+    // gated на стороне advice/_core.js. Helper duplicated для разделения
+    // bundle scope (advice vs day) — оба бандла загружаются отдельно.
+    function isCuratorReadOnlyMode() {
+        try {
+            return !!(HEYS && HEYS.auth && typeof HEYS.auth.isCuratorSession === 'function' && HEYS.auth.isCuratorSession());
+        } catch (_) {
+            return false;
+        }
+    }
+
     function isAdviceStillRelevant(advice, advices) {
         if (!advice?.id || !Array.isArray(advices)) return false;
         return advices.some(item => item?.id === advice.id);
@@ -1098,6 +1110,102 @@
     HEYS.dayComponents = HEYS.dayComponents || {};
     HEYS.dayComponents.AdviceCard = AdviceCard;
 
+    // --- Curator read-only advice history ---
+    // Курaтор открыл клиента → дроп-down 💡 показывает не live-карточки, а
+    // историю outcomes (heys_advice_outcomes_v1 в LS клиента, downloaded
+    // bootstrap'ом). Tap по карточке raises её tally, но ничего не пишется
+    // (track* в advice/_core.js gate'нуты).
+    function humanizeAdviceId(adviceId) {
+        if (!adviceId || typeof adviceId !== 'string') return '—';
+        return adviceId.replace(/^advice[_-]/i, '').replace(/[_-]/g, ' ');
+    }
+    function formatHistoryTime(ts) {
+        if (!ts || typeof ts !== 'number') return '—';
+        const d = new Date(ts);
+        const now = new Date();
+        const sameDay = d.toDateString() === now.toDateString();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        if (sameDay) return `сегодня ${hh}:${mm}`;
+        const yest = new Date(now); yest.setDate(now.getDate() - 1);
+        if (d.toDateString() === yest.toDateString()) return `вчера ${hh}:${mm}`;
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        return `${dd}.${mo} ${hh}:${mm}`;
+    }
+    function renderCuratorAdviceHistory({ React, dismissToast, handleAdviceListTouchStart, handleAdviceListTouchMove, handleAdviceListTouchEnd }) {
+        let profiles = null;
+        try {
+            const storage = HEYS && HEYS.adviceOutcomeStorage;
+            if (storage && typeof storage.getAdviceOutcomeProfiles === 'function') {
+                profiles = storage.getAdviceOutcomeProfiles();
+            }
+        } catch (_) { profiles = null; }
+        const adviceMap = (profiles && profiles.advice && typeof profiles.advice === 'object') ? profiles.advice : {};
+        const rows = Object.entries(adviceMap)
+            .map(([id, stats]) => ({
+                id,
+                shown: (stats && stats.shown) || 0,
+                read: (stats && stats.read) || 0,
+                click: (stats && stats.click) || 0,
+                positive: (stats && stats.positive) || 0,
+                negative: (stats && stats.negative) || 0,
+                hidden: (stats && stats.hidden) || 0,
+                lastUpdated: (stats && stats.lastUpdated) || 0,
+            }))
+            .sort((a, b) => b.lastUpdated - a.lastUpdated)
+            .slice(0, 50);
+
+        return React.createElement('div', {
+            className: 'advice-list-overlay',
+            onClick: () => setTimeout(dismissToast, 0),
+        },
+            React.createElement('div', {
+                className: 'advice-list-container',
+                onClick: e => e.stopPropagation(),
+                onTouchStart: handleAdviceListTouchStart,
+                onTouchMove: handleAdviceListTouchMove,
+                onTouchEnd: handleAdviceListTouchEnd,
+            },
+                React.createElement('div', { className: 'advice-list-header' },
+                    React.createElement('div', { className: 'advice-list-header-top' },
+                        React.createElement('span', null, `📜 История советов клиента (${rows.length})`),
+                        React.createElement('span', { style: { fontSize: '0.78em', opacity: 0.7 } }, 'read-only')
+                    )
+                ),
+                React.createElement('div', { className: 'advice-list-items', style: { padding: '8px 12px' } },
+                    rows.length === 0
+                        ? React.createElement('div', { style: { padding: '16px 0', textAlign: 'center', opacity: 0.6, fontSize: '0.9em' } },
+                            'У клиента пока нет истории показанных советов.')
+                        : rows.map((r) =>
+                            React.createElement('div', {
+                                key: r.id,
+                                style: {
+                                    display: 'flex', flexDirection: 'column', gap: '4px',
+                                    padding: '10px 8px', borderBottom: '1px solid var(--heys-border, rgba(0,0,0,0.08))',
+                                }
+                            },
+                                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '8px' } },
+                                    React.createElement('div', { style: { fontWeight: 500, fontSize: '0.92em', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' } },
+                                        humanizeAdviceId(r.id)),
+                                    React.createElement('div', { style: { fontSize: '0.75em', opacity: 0.6, whiteSpace: 'nowrap' } },
+                                        formatHistoryTime(r.lastUpdated))
+                                ),
+                                React.createElement('div', { style: { fontSize: '0.78em', opacity: 0.75, display: 'flex', gap: '12px', flexWrap: 'wrap' } },
+                                    r.shown > 0 && React.createElement('span', null, `👁 ${r.shown}`),
+                                    r.read > 0 && React.createElement('span', null, `✓ прочитан ${r.read}`),
+                                    r.click > 0 && React.createElement('span', null, `▶ клик ${r.click}`),
+                                    r.positive > 0 && React.createElement('span', { style: { color: 'var(--heys-color-success, #2e7d32)' } }, `👍 ${r.positive}`),
+                                    r.negative > 0 && React.createElement('span', { style: { color: 'var(--heys-color-warning, #d32f2f)' } }, `👎 ${r.negative}`),
+                                    r.hidden > 0 && React.createElement('span', { style: { opacity: 0.5 } }, `✕ скрыто ${r.hidden}`)
+                                )
+                            )
+                        )
+                )
+            )
+        );
+    }
+
     // --- Manual advice list UI ---
     const dayAdviceListUI = {};
 
@@ -1152,6 +1260,22 @@
         ADVICE_CATEGORY_NAMES,
         AdviceCard,
     }) {
+        // Курaторская сессия: показываем read-only history клиента вместо
+        // live-карточек советов. Курaтор не пишет outcomes (гейчено в
+        // advice/_core.js recordAdviceOutcomeEvent + track*). Manual click
+        // на 💡 в его UI открывает этот dropdown с историей.
+        const _isCurator = isCuratorReadOnlyMode();
+        if (_isCurator) {
+            if (!(adviceTrigger === 'manual' && toastVisible)) return null;
+            return renderCuratorAdviceHistory({
+                React,
+                dismissToast,
+                handleAdviceListTouchStart,
+                handleAdviceListTouchMove,
+                handleAdviceListTouchEnd,
+            });
+        }
+
         if (!(adviceTrigger === 'manual' && adviceRelevant?.length > 0 && toastVisible)) return null;
 
         // 🚀 PERF A1: activeCount computed inside getSortedGroupedAdvices (no extra .filter())
@@ -2553,6 +2677,16 @@
             if (!advicePrimary) return;
 
             const isManualTrigger = adviceTrigger === 'manual' || adviceTrigger === 'manual_empty';
+
+            // Курaтор НЕ видит auto-toast popup'ов. Manual клик по 💡 — открывает
+            // history dropdown через renderManualAdviceList ниже.
+            if (!isManualTrigger && isCuratorReadOnlyMode()) {
+                setToastVisible(false);
+                setDisplayedAdvice(null);
+                setDisplayedAdviceList([]);
+                return;
+            }
+
             if (!isManualTrigger && dismissedAdvices.has(advicePrimary.id)) {
                 const suppressionKey = `${date || 'unknown'}|${adviceTrigger || 'unknown'}|${advicePrimary.id}`;
                 if (!autoSuppressionTrackedRef.current.has(suppressionKey)) {

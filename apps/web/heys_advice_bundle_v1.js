@@ -2654,6 +2654,7 @@
     }
 
     function resolvePendingAdviceOutcomes(ctx) {
+        if (isCuratorReadOnlyMode()) return getAdviceOutcomeProfiles();
         const pending = getPendingAdviceOutcomes();
         const keys = Object.keys(pending);
         if (keys.length === 0) return getAdviceOutcomeProfiles();
@@ -2689,6 +2690,7 @@
 
     function recordPendingAdviceOutcome(advice, ctx) {
         if (!advice || !ctx) return;
+        if (isCuratorReadOnlyMode()) return;
 
         const pending = getPendingAdviceOutcomes();
         const snapshot = buildAdviceOutcomeSnapshot(advice, ctx, getLastMealHour);
@@ -2702,8 +2704,23 @@
         savePendingAdviceOutcomes(pending);
     }
 
+    // Курaторская сессия открыла клиента: не трекаем советы. Курaтор только
+    // читает (см. read-only history view в renderManualAdviceList).
+    // Без этой проверки курaтор писал бы outcomes (shown/click/hidden) в
+    // heys_advice_outcomes_v1 клиента, искажая статистику и съедая advice
+    // budget. См. memory `feedback_default_on_protection`.
+    function isCuratorReadOnlyMode() {
+        try {
+            const HEYS = (typeof window !== 'undefined') ? window.HEYS : null;
+            return !!(HEYS && HEYS.auth && typeof HEYS.auth.isCuratorSession === 'function' && HEYS.auth.isCuratorSession());
+        } catch (_) {
+            return false;
+        }
+    }
+
     function recordAdviceOutcomeEvent(advice, ctx, eventType) {
         if (!advice || !eventType) return;
+        if (isCuratorReadOnlyMode()) return;
 
         const profiles = getAdviceOutcomeProfiles();
         const theme = advice?.expertMeta?.theme || advice?.category || 'general';
@@ -2720,6 +2737,7 @@
      * @param {string} adviceId
      */
     function trackAdviceShown(adviceId) {
+        if (isCuratorReadOnlyMode()) return;
         const stats = getTrackingStats();
         if (!stats[adviceId]) {
             stats[adviceId] = { shown: 0, clicked: 0, lastShown: 0 };
@@ -2734,6 +2752,7 @@
      * @param {string} adviceId
      */
     function trackAdviceClicked(adviceId) {
+        if (isCuratorReadOnlyMode()) return;
         const stats = getTrackingStats();
         if (!stats[adviceId]) {
             stats[adviceId] = { shown: 0, clicked: 0, lastShown: 0 };
