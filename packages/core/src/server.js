@@ -217,7 +217,8 @@ app.all('/rest', proxyToProd);
 app.all('/rest/*', proxyToProd);
 app.all('/auth/*', proxyToProd);
 app.all('/messages/*', proxyToProd);
-console.log(`🔀 Dev proxy: /rpc, /rest, /auth, /messages → ${PROD_API}`);
+app.all('/photos/*', proxyToProd);
+console.log(`🔀 Dev proxy: /rpc, /rest, /auth, /messages, /photos → ${PROD_API}`);
 
 // SMS Proxy endpoint (обход CORS для SMS.ru)
 app.post('/api/sms', async (req, res) => {
