@@ -233,6 +233,7 @@ async function sendPushToCurator(curatorId, payload) {
   } finally {
     client.release();
   }
+  console.log(`[messages] push→curator ${curatorId}: found ${subs.length} subs`);
   if (subs.length === 0) return { sent: 0, total: 0 };
 
   const payloadStr = JSON.stringify(payload);
@@ -244,6 +245,15 @@ async function sendPushToCurator(curatorId, payload) {
       )
     )
   );
+
+  results.forEach((r, i) => {
+    const host = (subs[i].endpoint || '').slice(0, 50);
+    if (r.status === 'fulfilled') {
+      console.log(`[messages] push→curator ok: ${host}…`);
+    } else {
+      console.log(`[messages] push→curator FAIL ${r.reason?.statusCode || '?'}: ${host}… — ${r.reason?.message || r.reason}`);
+    }
+  });
 
   const deadEndpoints = results
     .map((r, i) => (r.status === 'rejected' && r.reason?.statusCode === 410 ? subs[i].endpoint : null))
@@ -276,6 +286,7 @@ async function sendPushToClient(clientId, payload) {
   } finally {
     client.release();
   }
+  console.log(`[messages] push→client ${clientId}: found ${subs.length} subs`);
   if (subs.length === 0) return { sent: 0, total: 0 };
 
   const payloadStr = JSON.stringify(payload);
@@ -287,6 +298,15 @@ async function sendPushToClient(clientId, payload) {
       )
     )
   );
+
+  results.forEach((r, i) => {
+    const host = (subs[i].endpoint || '').slice(0, 50);
+    if (r.status === 'fulfilled') {
+      console.log(`[messages] push→client ok: ${host}…`);
+    } else {
+      console.log(`[messages] push→client FAIL ${r.reason?.statusCode || '?'}: ${host}… — ${r.reason?.message || r.reason}`);
+    }
+  });
 
   const deadEndpoints = results
     .map((r, i) => (r.status === 'rejected' && r.reason?.statusCode === 410 ? subs[i].endpoint : null))
@@ -394,14 +414,14 @@ async function handleSend(identity, body) {
         ? (msgBody.length > 80 ? msgBody.slice(0, 77) + '...' : msgBody)
         : 'фото';
     const pushBody = baseBody + photoBadge;
+    // Payload минимальный — match формату cron-reminders payload'а,
+    // который реально доезжает до Android в background. requireInteraction
+    // и renotify могут тихо подавлять показ при battery saver / minified PWA.
     const pushPayload = {
       title: `${clientName}: ${pushBody}`,
       body: 'Открыть сообщение',
       tag: `message-from-${identity.id}`,
       url: `/?switch_client=${identity.id}&open_messages=1`,
-      vibrate: [200, 100, 200, 100, 400],
-      renotify: true,
-      requireInteraction: true,
     };
     sendPushToCurator(rpcResult.curator_id, pushPayload).catch((err) => {
       console.error('[messages] push to curator failed:', err.message);
@@ -459,9 +479,6 @@ async function handleSend(identity, body) {
     body: pushBody,
     tag: 'message-from-curator',
     url: '/?open_messages=1',
-    vibrate: [200, 100, 200, 100, 400],
-    renotify: true,
-    requireInteraction: true,
   };
   sendPushToClient(client_id, pushPayload).catch((err) => {
     console.error('[messages] push to client failed:', err.message);
