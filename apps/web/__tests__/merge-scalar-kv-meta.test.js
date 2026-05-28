@@ -131,13 +131,25 @@ describe('mergeScalarKv — Phase A critical keys are listed in storage layer', 
     });
   });
 
+  // NB: hardcoded slice ranges дрейфуют при любых вставках в файл выше.
+  // Используем marker-based search по имени константы/функции — robust.
   it("LOCAL_ONLY_STORAGE_PREFIXES contains 'heys_xp_cache_'", () => {
-    const localOnlyArea = source.split('\n').slice(1795, 1830).join('\n');
-    expect(localOnlyArea).toContain("'heys_xp_cache_'");
+    const prefixesStart = source.indexOf('const LOCAL_ONLY_STORAGE_PREFIXES');
+    if (prefixesStart < 0) {
+      throw new Error('Test setup: `const LOCAL_ONLY_STORAGE_PREFIXES` not found');
+    }
+    const prefixesArea = source.slice(prefixesStart, prefixesStart + 2000);
+    expect(prefixesArea).toContain("'heys_xp_cache_'");
   });
 
   it('isLocalOnlyStorageKey covers heys_products_overlay_v2_BACKUP_*', () => {
-    const localOnlyArea = source.split('\n').slice(1815, 1835).join('\n');
-    expect(localOnlyArea).toMatch(/_products_overlay_v2_BACKUP_/);
+    const fnStart = source.indexOf('function isLocalOnlyStorageKey');
+    if (fnStart < 0) {
+      throw new Error('Test setup: `function isLocalOnlyStorageKey` not found');
+    }
+    // Сам markеr содержится в теле fn (regex/startsWith проверка).
+    // Берём щедрый диапазон чтобы охватить тело функции и predicate.
+    const fnArea = source.slice(fnStart, fnStart + 2000);
+    expect(fnArea).toMatch(/_products_overlay_v2_BACKUP_/);
   });
 });
