@@ -98,6 +98,23 @@ validate_function_env() {
             exit 1
         fi
     fi
+
+    # VAPID — для push/reminders/messages. yc CLI заменяет ВЕСЬ env на каждый
+    # deploy (не merge), поэтому пустой VAPID_* молча wipes ключи из cloud
+    # function и push notifications перестают доставляться. Fail fast, не дать
+    # задеплоить функцию без обязательных push-ключей.
+    if [[ "$func_name" =~ (push|reminders|messages) ]]; then
+        local v missing=()
+        for v in VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT; do
+            if [ -z "${!v}" ]; then missing+=("$v"); fi
+        done
+        if [ ${#missing[@]} -gt 0 ]; then
+            echo -e "${RED}❌ ERROR: VAPID env-vars missing for $func_name: ${missing[*]}${NC}"
+            echo -e "${YELLOW}   yc CLI replaces full env on each deploy. Empty VAPID would wipe push keys.${NC}"
+            echo -e "${YELLOW}   Add VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT to $ENV_FILE${NC}"
+            exit 1
+        fi
+    fi
 }
 
 # Get function configuration
@@ -241,11 +258,15 @@ build_env_flags() {
         done
     fi
 
-    # Web Push (VAPID) — api-push, cron-reminders, api-messages
+    # Web Push (VAPID) — api-push, cron-reminders, api-messages.
+    # ВАЖНО: _add_required (не _add). yc CLI заменяет ВЕСЬ env на каждый deploy,
+    # _add молча пропускает пустые vars → wipe'нет VAPID из cloud function →
+    # push notifications перестают доставляться (FATAL: VAPID keys not configured).
+    # validate_function_env выше гарантирует что переменные не пусты.
     if [[ "$func_name" =~ (push|reminders|messages) ]]; then
         local k
         for k in VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT; do
-            _add "$k"
+            _add_required "$k"
         done
     fi
 
