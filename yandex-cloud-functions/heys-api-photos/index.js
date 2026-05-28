@@ -19,7 +19,6 @@ const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const crypto = require('crypto');
 const { S3Client, DeleteObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 // ── S3 client (Yandex Object Storage) ────────────────────────────────────
 let s3Client = null;
@@ -178,6 +177,11 @@ async function handleUpload(identity, body) {
   const date = body?.date || null;
   const mealId = body?.meal_id || null;
   const contentType = body?.content_type || 'image/jpeg';
+  const dataB64 = body?.data;
+
+  if (!dataB64 || typeof dataB64 !== 'string') {
+    return { statusCode: 400, body: { error: 'data_required' } };
+  }
 
   // Курaтор может грузить от имени клиента — проверим ownership
   if (identity.kind === 'curator') {
@@ -199,35 +203,43 @@ async function handleUpload(identity, body) {
     }
   }
 
-  // Определяем расширение из content-type
-  const ext = contentType.includes('png') ? 'png'
-    : contentType.includes('webp') ? 'webp'
+  // Парсим base64 (data URL "data:image/jpeg;base64,..." или просто base64)
+  const m = dataB64.match(/^data:([^;]+);base64,(.+)$/);
+  const realB64 = m ? m[2] : dataB64;
+  const realContentType = m ? m[1] : contentType;
+
+  const buf = Buffer.from(realB64, 'base64');
+  if (buf.length === 0) {
+    return { statusCode: 400, body: { error: 'invalid_base64' } };
+  }
+  if (buf.length > 5 * 1024 * 1024) {
+    return { statusCode: 413, body: { error: 'too_large', max_bytes: 5242880 } };
+  }
+
+  const ext = realContentType.includes('png') ? 'png'
+    : realContentType.includes('webp') ? 'webp'
     : 'jpg';
 
   const key = buildKey({ clientId, date, mealId, ext });
   const bucket = getBucket();
 
-  let uploadUrl;
   try {
     const s3 = getS3();
-    const cmd = new PutObjectCommand({
+    await s3.send(new PutObjectCommand({
       Bucket: bucket,
       Key: key,
-      ContentType: contentType,
+      Body: buf,
+      ContentType: realContentType,
       ACL: 'public-read',
-    });
-    uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 600 }); // 10 минут
+    }));
   } catch (err) {
-    console.error('[photos] signed URL failed:', err.message);
-    return { statusCode: 500, body: { error: 'signed_url_failed', detail: err.message } };
+    console.error('[photos] S3 PutObject failed:', err.message);
+    return { statusCode: 500, body: { error: 's3_put_failed', detail: err.message } };
   }
 
   return {
     statusCode: 200,
     body: {
-      uploadUrl,
-      uploadMethod: 'PUT',
-      uploadHeaders: { 'Content-Type': contentType, 'x-amz-acl': 'public-read' },
       url: `${getPublicBaseUrl()}/${key}`,
       path: key,
     },

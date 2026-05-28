@@ -111,6 +111,7 @@
         const response = await fetch(`${apiBase}/photos/upload`, {
             method: 'POST',
             headers,
+            credentials: 'include',
             body: JSON.stringify(payload)
         });
 
@@ -174,6 +175,7 @@
         const response = await fetch(`${apiBase}/photos/delete`, {
             method: 'POST',
             headers,
+            credentials: 'include',
             body: JSON.stringify(payload)
         });
 
