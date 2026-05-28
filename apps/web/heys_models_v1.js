@@ -1556,6 +1556,15 @@ NOVA: 1-4
 
     const result = { ...dbProduct };
 
+    // Dedup suspicious-value warnings: один и тот же продукт normalize'ится
+    // несколько раз за boot (разные load-пути), без дедупа warning спам в
+    // консоли на × N. Ключ = `productId:field`, держим в module-scope WeakSet
+    // нельзя т.к. ключ — строка, поэтому Set с лимитом.
+    if (!normalizeExtendedProduct._warnedSuspicious) {
+      normalizeExtendedProduct._warnedSuspicious = new Set();
+    }
+    const _warnedSet = normalizeExtendedProduct._warnedSuspicious;
+
     const warnNumber = (field, value) => {
       if (value == null || !Number.isFinite(value)) return;
       const maxByField = {
@@ -1591,14 +1600,24 @@ NOVA: 1-4
         iron: 30,             // Liver, wheat bran (KPD = 10.57)
         magnesium: 700,       // Wheat bran (KPD = 611)
         phosphorus: 1500,     // Seeds, wheat bran (sunflower = 1158, KPD = 1013)
-        potassium: 1500,      // Dried fruits, wheat bran, chips (kuraga = 1162, KPD = 1182, Lay's = 1196)
+        potassium: 2000,      // Dried fruits, wheat bran, chips (kuraga = 1162, KPD = 1182, Lay's = 1196), spirulina/seaweed +30%
         zinc: 300,
         selenium: 300,
         iodine: 300
       };
       const max = maxByField[field] ?? 1000;
       if (value < 0 || value > max) {
-        console.warn('[HEYS.shared] ⚠️ Suspicious value', field, value, result?.id || 'unknown');
+        const pid = result?.id || 'unknown';
+        const dedupKey = `${pid}:${field}`;
+        if (!_warnedSet.has(dedupKey)) {
+          _warnedSet.add(dedupKey);
+          // Cap размера чтобы Set не рос бесконечно (продукт может смениться).
+          if (_warnedSet.size > 500) {
+            const firstKey = _warnedSet.values().next().value;
+            _warnedSet.delete(firstKey);
+          }
+          console.warn('[HEYS.shared] ⚠️ Suspicious value', field, value, pid);
+        }
       }
     };
 

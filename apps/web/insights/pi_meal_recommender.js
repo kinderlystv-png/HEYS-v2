@@ -2026,7 +2026,10 @@
 
         // FINAL SAFETY: Never exceed remaining kcal
         const estimatedKcal = mealProtein * 3 + mealCarbs * 4 + mealFat * 9;
-        if (estimatedKcal > remainingKcal) {
+        // Epsilon 2%: ниже этого порога scale-down — это шум округлений
+        // (Math.round'ы по белкам/углам/жирам), который раньше печатался как
+        // «Scaled down ... scale: 100%». Реально нечего показывать.
+        if (estimatedKcal > remainingKcal * 1.02) {
             const scale = remainingKcal / estimatedKcal;
             mealProtein = Math.round(mealProtein * scale);
             mealCarbs = Math.round(mealCarbs * scale);
@@ -2036,6 +2039,9 @@
                 scale: Math.round(scale * 100) + '%',
                 finalKcal: mealKcal
             });
+        } else if (estimatedKcal > remainingKcal) {
+            // Тихая корректировка под remainingKcal без warning'а.
+            mealKcal = remainingKcal;
         }
 
         console.info(`${LOG_PREFIX} ✅ Final meal macros:`, {

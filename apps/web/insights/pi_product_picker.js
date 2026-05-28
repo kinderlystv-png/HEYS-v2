@@ -217,7 +217,10 @@
                     overflow: w.glOverflow,
                     glPenaltyScore: w.glPenaltyScore,
                 }));
-            console.warn(`${LOG_PREFIX} 📊 [GL] grouped warnings:`, {
+            // Это digest-сводка предыдущих warning'ов (top-10 worst), не сам
+            // warning. Чтобы не дублировать красные крестики в консоли —
+            // info-level. Раньше был console.warn.
+            console.info(`${LOG_PREFIX} 📊 [GL] grouped warnings:`, {
                 total: cycle.glWarnings.length,
                 shown: top.length,
                 cycle: cycle.meta,

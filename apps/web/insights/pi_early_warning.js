@@ -4081,7 +4081,11 @@
         // If no phenotype module or profile, return default
         if (!HEYS.InsightsPI?.phenotype?.applyMultipliers || !profile?.phenotype) {
             if (!_phenotypeHintShown) {
-                console.warn(`%c[HEYS.ews.phenotype] ⚠️ Using DEFAULT thresholds (no phenotype set)`, 'color: #ffaa00; font-weight: bold');
+                // Info-hint, не warning: phenotype опционален по дизайну, дефолтные
+                // (общепопуляционные) пороги — корректный fallback для клиентов без
+                // фенотипа (< 30 дней истории или PIN-сессия). Раньше был console.warn,
+                // создавал ложное впечатление об ошибке.
+                console.info(`%c[HEYS.ews.phenotype] Using DEFAULT thresholds (no phenotype set)`, 'color: #ffaa00; font-weight: bold');
                 console.info(`%c  💡 Tip: Set phenotype for personalized thresholds:`, 'color: #ffaa00');
                 console.info(`     HEYS.InsightsPI.phenotype.setPreset('IR_EVENING')  // insulin resistant + evening type`);
                 console.info(`     HEYS.InsightsPI.phenotype.setPreset('OPTIMAL')     // optimal metabolism`);
