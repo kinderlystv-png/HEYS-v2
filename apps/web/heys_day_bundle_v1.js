@@ -1342,7 +1342,7 @@
                     adviceRelevant,
                 });
             } catch (renderErr) {
-                console.error('renderCuratorAdviceHistory failed:', renderErr);
+                console.error('[advice-history] render failed:', renderErr && renderErr.message);
                 return null;
             }
         }
@@ -2511,10 +2511,11 @@
 
         useEffect(() => {
             const handleShowAdvice = () => {
-                // PERF R13 FIX H removed для курaторской сессии: startTransition
-                // deprioritizes updates и в курaторе они выглядят полностью
-                // потерянными (state остаётся tab_open + toastVisible=false).
-                // Используем sync setters — render будет немедленно.
+                // Курaторская сессия: НЕ оборачиваем setters в React.startTransition.
+                // Наблюдалось 2026-05-28: startTransition deprioritizes setAdviceTrigger
+                // + setToastVisible и они теряются между другими urgent updates в курaторе
+                // → state остаётся tab_open + toastVisible=false → dropdown не открывается.
+                // Sync setters работают корректно и для курaтора, и для PIN.
                 const _curator = isCuratorReadOnlyMode();
                 const _runUpdate = () => {
                     if (totalAdviceCount > 0 || _curator) {
@@ -9633,14 +9634,16 @@
             const isStale = meal && isMealStale(meal);
 
             // R17: defer heavy re-render from product list expand/collapse
+            // 2026-05-28: drop React.startTransition — в курaторской сессии setter
+            // discarded из-за deprioritization (как в advice, см. commit 65f8259c).
+            // Кнопка «Показать N продукт» переставала реагировать на тап у курaтора.
+            // setTimeout(0) сам по себе достаточен для defer'а тяжёлого re-render'а.
             setTimeout(() => {
-                React.startTransition(() => {
-                    if (isStale) {
-                        setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
-                    } else {
-                        setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
-                    }
-                });
+                if (isStale) {
+                    setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                } else {
+                    setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                }
             }, 0);
         }, [isMealStale]);
 

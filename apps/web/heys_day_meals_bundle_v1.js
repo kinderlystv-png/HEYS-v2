@@ -6303,14 +6303,16 @@
             const isStale = meal && isMealStale(meal);
 
             // R17: defer heavy re-render from product list expand/collapse
+            // 2026-05-28: drop React.startTransition — в курaторской сессии setter
+            // discarded из-за deprioritization (как в advice, см. commit 65f8259c).
+            // Кнопка «Показать N продукт» переставала реагировать на тап у курaтора.
+            // setTimeout(0) сам по себе достаточен для defer'а тяжёлого re-render'а.
             setTimeout(() => {
-                React.startTransition(() => {
-                    if (isStale) {
-                        setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
-                    } else {
-                        setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
-                    }
-                });
+                if (isStale) {
+                    setManualExpandedStale((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                } else {
+                    setExpandedMeals((prev) => ({ ...prev, [mealIndex]: !prev[mealIndex] }));
+                }
             }, 0);
         }, [isMealStale]);
 
