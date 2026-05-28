@@ -127,7 +127,6 @@ body.planning-tab-active .fab-group .message-fab {
   flex-direction: column;
   gap: 8px;
   background: var(--heys-bg-card, #ffffff);
-  -webkit-overflow-scrolling: touch;
 }
 
 .messenger-loading,
@@ -172,6 +171,14 @@ body.planning-tab-active .fab-group .message-fab {
   border-bottom-left-radius: 4px;
 }
 
+/* Обработанные сообщения — зелёный фон, override на обе роли */
+.msg-bubble.msg-bubble-done,
+.msg-bubble-mine.msg-bubble-done,
+.msg-bubble-theirs.msg-bubble-done {
+  background: #16a34a;
+  color: #fff;
+}
+
 .msg-body {
   white-space: pre-wrap;
 }
@@ -183,15 +190,116 @@ body.planning-tab-active .fab-group .message-fab {
   font-style: italic;
 }
 
+.msg-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.msg-bubble-theirs .msg-meta-row {
+  justify-content: flex-start;
+  flex-direction: row-reverse;
+}
+
 .msg-meta {
   font-size: 11px;
   opacity: 0.7;
-  margin-top: 4px;
-  text-align: right;
 }
 
-.msg-bubble-theirs .msg-meta {
-  text-align: left;
+/* Toggle-кнопка «обработано» (видна куратору на сообщениях клиента) */
+.msg-done-toggle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.msg-done-toggle:hover {
+  opacity: 1;
+}
+
+.msg-done-toggle.msg-done-toggle-active {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+  opacity: 1;
+}
+
+/* Footer-маркер «✓ Обработано <время>» (виден обоим, когда done_at установлен) */
+.msg-done {
+  font-size: 12px;
+  margin-top: 4px;
+  color: #16a34a;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.msg-bubble-mine .msg-done {
+  color: #bbf7d0;
+}
+
+/* На зелёном фоне белый текст для .msg-done */
+.msg-bubble-done .msg-done {
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Date separator (по центру, между группами сообщений по дню)
+ * ═══════════════════════════════════════════════════════════════════ */
+.msg-date-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0 4px;
+}
+
+.msg-date-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--heys-text-secondary, #6b7280);
+  background: var(--heys-bg-muted, #f1f5f9);
+  padding: 3px 10px;
+  border-radius: 10px;
+  text-transform: lowercase;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Кнопка удаления своего сообщения
+ * ═══════════════════════════════════════════════════════════════════ */
+.msg-delete-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.msg-delete-btn:hover {
+  opacity: 1;
 }
 
 .messenger-error {

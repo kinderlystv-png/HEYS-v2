@@ -139,6 +139,28 @@
     return call('/messages/mark-read', { method: 'POST', body: payload });
   }
 
+  /**
+   * Куратор отмечает сообщение клиента как «обработанное» (toggle).
+   * Повторный вызов снимает отметку. Только для куратора.
+   */
+  async function toggleDone(messageId) {
+    return call('/messages/toggle-done', {
+      method: 'POST',
+      body: { message_id: messageId },
+    });
+  }
+
+  /**
+   * Удалить своё сообщение (hard delete). Клиент удаляет свои client-сообщения,
+   * куратор — свои curator-сообщения. Идемпотентно (повторный вызов вернёт deleted=0).
+   */
+  async function deleteMessage(messageId) {
+    return call('/messages/delete', {
+      method: 'POST',
+      body: { message_id: messageId },
+    });
+  }
+
   // ── Inbox cache (curator-only) ───────────────────────────────────────
   // Кэш для синхронного чтения из не-React компонентов (buildGate карточки).
   // Polling каждые 30 сек, старт лениво при первом getInboxCache.
@@ -190,6 +212,8 @@
     getThread,
     getInbox,
     markRead,
+    toggleDone,
+    deleteMessage,
     getInboxCache,
     refreshInbox,
     _getBearerToken: getBearerToken, // exposed for testing/debug

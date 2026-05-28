@@ -62,8 +62,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // ── Thread message bubble ────────────────────────────────────────────
-  function MessageBubble({ message, viewerRole }) {
+  function MessageBubble({ message, viewerRole, onToggleDone, onDelete }) {
     const isMine = message.sender_role === viewerRole;
+    const isCurator = viewerRole === 'curator';
+    const canMarkDone = isCurator && message.sender_role === 'client';
+    const canDelete = isMine; // каждый удаляет только свои
+    const isDone = !!message.done_at;
     const displayBody = message.body
       ? message.body
       : message.intent_type === 'meal'
@@ -73,13 +77,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           : message.intent_type === 'weight'
             ? `⚖️ Вес: ${message.intent_payload?.weight_kg ?? '?'} кг`
             : '';
+    const doneAtLabel = isDone ? `✓ Обработано ${formatTime(message.done_at)}` : null;
+
+    const bubbleClasses = [
+      'msg-bubble',
+      isMine ? 'msg-bubble-mine' : 'msg-bubble-theirs',
+      isDone ? 'msg-bubble-done' : '',
+    ].filter(Boolean).join(' ');
+
+    const handleDeleteClick = () => {
+      if (!canDelete) return;
+      if (!window.confirm('Удалить это сообщение? Восстановить не получится.')) return;
+      onDelete?.(message);
+    };
 
     return React.createElement(
       'div',
       { className: `msg-row ${isMine ? 'msg-row-mine' : 'msg-row-theirs'}` },
       React.createElement(
         'div',
-        { className: `msg-bubble ${isMine ? 'msg-bubble-mine' : 'msg-bubble-theirs'}` },
+        { className: bubbleClasses },
         React.createElement('div', { className: 'msg-body' }, displayBody),
         message.applied_at &&
           React.createElement(
@@ -87,9 +104,75 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             { className: 'msg-applied' },
             '✅ Куратор применил в день',
           ),
-        React.createElement('div', { className: 'msg-meta' }, formatTime(message.created_at)),
+        doneAtLabel &&
+          React.createElement('div', { className: 'msg-done' }, doneAtLabel),
+        React.createElement(
+          'div',
+          { className: 'msg-meta-row' },
+          canDelete &&
+            React.createElement('button', {
+              type: 'button',
+              className: 'msg-delete-btn',
+              onClick: handleDeleteClick,
+              'aria-label': 'Удалить сообщение',
+              title: 'Удалить сообщение',
+            }, '🗑'),
+          canMarkDone &&
+            React.createElement('button', {
+              type: 'button',
+              className: `msg-done-toggle ${isDone ? 'msg-done-toggle-active' : ''}`,
+              onClick: () => onToggleDone?.(message),
+              'aria-label': isDone ? 'Снять отметку' : 'Отметить как обработанное',
+              title: isDone ? 'Снять отметку «обработано»' : 'Отметить как обработанное',
+            }, isDone ? '✓' : '○'),
+          React.createElement('div', { className: 'msg-meta' }, formatTime(message.created_at)),
+        ),
       ),
     );
+  }
+
+  // ── Date separator ───────────────────────────────────────────────────
+  function DateSeparator({ label }) {
+    return React.createElement(
+      'div',
+      { className: 'msg-date-divider' },
+      React.createElement('span', { className: 'msg-date-label' }, label),
+    );
+  }
+
+  // Группа дня для разделителя: "Сегодня" / "Вчера" / "27 мая".
+  function formatDayLabel(iso) {
+    try {
+      const d = new Date(iso);
+      const today = new Date();
+      const yest = new Date(today);
+      yest.setDate(today.getDate() - 1);
+      const sameDay = (a, b) =>
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate();
+      if (sameDay(d, today)) return 'Сегодня';
+      if (sameDay(d, yest)) return 'Вчера';
+      const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+      const dayLabel = `${d.getDate()} ${months[d.getMonth()]}`;
+      // Год только если не текущий
+      if (d.getFullYear() !== today.getFullYear()) {
+        return `${dayLabel} ${d.getFullYear()}`;
+      }
+      return dayLabel;
+    } catch {
+      return '';
+    }
+  }
+
+  function dayKey(iso) {
+    try {
+      const d = new Date(iso);
+      return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    } catch {
+      return '';
+    }
   }
 
   // ── Main MessengerModal ──────────────────────────────────────────────
@@ -178,6 +261,41 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     };
 
+    // Удаление своего сообщения (hard delete). Оптимистично убираем из
+    // локального state, на ошибку — возвращаем обратно.
+    const handleDeleteMessage = async (message) => {
+      const snapshot = messages;
+      setMessages((prev) => prev.filter((m) => m.id !== message.id));
+      const res = await HEYS.MessengerAPI.deleteMessage(message.id);
+      if (!res?.success) {
+        setMessages(snapshot);
+        setError(res?.error || 'delete_failed');
+      }
+    };
+
+    // Куратор: toggle "обработано" на сообщении клиента. Оптимистично
+    // переключаем done_at в локальном state, на ошибку — откатываем.
+    const handleToggleDone = async (message) => {
+      const previousDoneAt = message.done_at || null;
+      const optimisticDoneAt = previousDoneAt ? null : new Date().toISOString();
+      setMessages((prev) =>
+        prev.map((m) => (m.id === message.id ? { ...m, done_at: optimisticDoneAt } : m))
+      );
+      const res = await HEYS.MessengerAPI.toggleDone(message.id);
+      if (!res?.success) {
+        // Rollback
+        setMessages((prev) =>
+          prev.map((m) => (m.id === message.id ? { ...m, done_at: previousDoneAt } : m))
+        );
+        setError(res?.error || 'toggle_done_failed');
+        return;
+      }
+      // Server-truth (на случай если NOW() от сервера слегка отличается)
+      setMessages((prev) =>
+        prev.map((m) => (m.id === message.id ? { ...m, done_at: res.done_at || null } : m))
+      );
+    };
+
     return React.createElement(
       'div',
       {
@@ -219,13 +337,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     ? 'Нет сообщений от этого клиента.'
                     : 'Напиши куратору что съел или о чём-то ещё.',
                 )
-              : messages.map((m) =>
-                  React.createElement(MessageBubble, {
-                    key: m.id,
-                    message: m,
-                    viewerRole,
-                  }),
-                ),
+              : (() => {
+                  // Рендерим бабблы + вставляем date-separator между разными днями
+                  const nodes = [];
+                  let lastKey = null;
+                  for (const m of messages) {
+                    const k = dayKey(m.created_at);
+                    if (k !== lastKey) {
+                      nodes.push(
+                        React.createElement(DateSeparator, {
+                          key: `sep-${k}`,
+                          label: formatDayLabel(m.created_at),
+                        }),
+                      );
+                      lastKey = k;
+                    }
+                    nodes.push(
+                      React.createElement(MessageBubble, {
+                        key: m.id,
+                        message: m,
+                        viewerRole,
+                        onToggleDone: handleToggleDone,
+                        onDelete: handleDeleteMessage,
+                      }),
+                    );
+                  }
+                  return nodes;
+                })(),
         ),
         // Error banner
         error &&

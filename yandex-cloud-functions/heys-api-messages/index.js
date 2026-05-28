@@ -535,6 +535,57 @@ async function handleMarkRead(identity, body) {
   }
 }
 
+async function handleDelete(identity, body) {
+  const messageId = body?.message_id;
+  if (!messageId || typeof messageId !== 'string') {
+    return { statusCode: 400, body: { error: 'message_id_required' } };
+  }
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    let rpcResult;
+    if (identity.kind === 'client') {
+      const r = await conn.query(
+        `SELECT public.delete_message_as_client($1, $2) AS result`,
+        [identity.sessionToken, messageId]
+      );
+      rpcResult = r.rows[0]?.result;
+    } else {
+      const r = await conn.query(
+        `SELECT public.delete_message_as_curator($1, $2) AS result`,
+        [identity.id, messageId]
+      );
+      rpcResult = r.rows[0]?.result;
+    }
+    const result = rpcResult || { success: false, error: 'rpc_no_result' };
+    return { statusCode: result.success ? 200 : 400, body: result };
+  } finally {
+    conn.release();
+  }
+}
+
+async function handleToggleDone(identity, body) {
+  if (identity.kind !== 'curator') {
+    return { statusCode: 403, body: { error: 'curator_only' } };
+  }
+  const messageId = body?.message_id;
+  if (!messageId || typeof messageId !== 'string') {
+    return { statusCode: 400, body: { error: 'message_id_required' } };
+  }
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    const r = await conn.query(
+      `SELECT public.toggle_message_done_by_curator($1, $2) AS result`,
+      [identity.id, messageId]
+    );
+    const result = r.rows[0]?.result || { success: false, error: 'rpc_no_result' };
+    return { statusCode: result.success ? 200 : 400, body: result };
+  } finally {
+    conn.release();
+  }
+}
+
 // ── Main handler ─────────────────────────────────────────────────────────
 module.exports.handler = async function (event) {
   await initSecrets();
@@ -593,6 +644,15 @@ module.exports.handler = async function (event) {
         break;
       case 'mark-read':
         res = await handleMarkRead(identity, body);
+        break;
+      case 'delete':
+        res = await handleDelete(identity, body);
+        break;
+      case 'toggle-done':
+        res = await handleToggleDone(identity, body);
+        break;
+      case 'toggle-done':
+        res = await handleToggleDone(identity, body);
         break;
       default:
         res = { statusCode: 404, body: { error: 'unknown_action', action } };

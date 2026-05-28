@@ -466,6 +466,30 @@ paths:
         type: cloud_functions
         function_id: d4ep21a89307vs93b0ns
 
+  /messages/toggle-done:
+    post:
+      summary: Curator toggles done_at on a client message
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/delete:
+    post:
+      summary: Delete own message (hard delete)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+
   # ═══════════════════════════════════════════════════════════════
   # Supabase-compatible routes (для совместимости)
   # ═══════════════════════════════════════════════════════════════
