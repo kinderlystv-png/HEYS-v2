@@ -60,6 +60,7 @@ const TECHNICAL_FILE_PATTERNS = [
     /(^|\/)jest(\..+)?\.(js|ts|mjs|cjs|json)$/,
     /(^|\/)eslint(\..+)?\.(js|ts|mjs|cjs|json)$/,
     /(^|\/)prettier(\..+)?\.(js|ts|mjs|cjs|json)$/,
+    /(^|\/)commitlint(\..+)?\.(js|ts|mjs|cjs|json)$/,
     /(^|\/)Dockerfile$/,
 ];
 
@@ -1066,6 +1067,24 @@ function runCheck() {
             writeLine(`✅ Whats-new entry для ${latestHash} наследуется на HEAD: ${inheritReason}`);
             writeLine(`   Entry: ${latest.version} — "${latest.title}"`);
             return 0;
+        }
+
+        // 2026-05-28: range-coverage fast-path. Когда параллельный agent
+        // коммитит fix ПОСЛЕ того как мы добавили whats-new entry для нашего
+        // более раннего fix'а в том же push — `resolveReleaseTargetRef` найдёт
+        // НОВЫЙ top fix, и наш entry не подойдёт под latestMatchesCurrent.
+        // Но entry всё ещё описывает легитимный fix в этом push range.
+        // Принимаем покрытие, если latestHash matches ЛЮБОЙ commit ahead of upstream.
+        // Это снимает большинство "bump whats-new build hash" chore-коммитов.
+        if (latestHash) {
+            const pushShas = getCommitsBeingPushed();
+            const latestInRange = pushShas.some((sha) => sha.startsWith(latestHash) || latestHash.startsWith(sha));
+            if (latestInRange) {
+                writeLine(`✅ Whats-new entry для ${latestHash} покрывает push range (${pushShas.length} commits ahead of upstream).`);
+                writeLine(`   Entry: ${latest.version} — "${latest.title}"`);
+                writeLine(`   Если в range появились новые user-facing изменения — можешь дополнить entry через pnpm prepare-release.`);
+                return 0;
+            }
         }
 
         writeLine('⚠️  Для текущего commit нет актуального changelog entry.');

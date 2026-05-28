@@ -88,11 +88,33 @@ echo "🧪 Запуск полного test suite..."
 # от transient-flake из-за shared global state (config `isolate: false`).
 # Если тест падает на ВТОРОЙ попытке — push всё равно блокируется, реальные
 # регрессии не маскируются.
-(cd apps/web && node_modules/.bin/vitest run --retry=1)
+#
+# 2026-05-28: source-SHA cache. Большая доля retry-пушей сегодня (allowlist
+# drift, whats-new bump, etc.) не трогает test-input файлы. Считаем SHA от
+# source-tree apps/web; если совпадает с last-pass — skip vitest.
+# Cache рушим при любой test-relevant правке, не маскирует регрессии.
+CACHE_FILE=".husky/.test-cache-last-pass"
+SRC_HASH=$(find apps/web \
+  \( -name "*.js" -o -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" -o -name "*.cjs" \) \
+  -not -path "*/dist/*" \
+  -not -path "*/public/*" \
+  -not -path "*/node_modules/*" \
+  -not -path "*/.cache/*" \
+  -not -path "*/coverage/*" \
+  2>/dev/null | LC_ALL=C sort | xargs shasum -a 256 2>/dev/null | shasum -a 256 | cut -c1-16)
 
-if [ $? -ne 0 ]; then
-  echo "❌ Тесты не прошли! Push отменён."
-  exit 1
+if [ -n "$SRC_HASH" ] && [ -f "$CACHE_FILE" ] && [ "$(cat "$CACHE_FILE")" = "$SRC_HASH" ]; then
+  echo "⚡ Source SHA не изменился с прошлого green run ($SRC_HASH) — skip vitest."
+else
+  (cd apps/web && node_modules/.bin/vitest run --retry=1)
+  if [ $? -ne 0 ]; then
+    echo "❌ Тесты не прошли! Push отменён."
+    rm -f "$CACHE_FILE"
+    exit 1
+  fi
+  if [ -n "$SRC_HASH" ]; then
+    echo "$SRC_HASH" > "$CACHE_FILE"
+  fi
 fi
 
 echo "✅ Все тесты прошли!"

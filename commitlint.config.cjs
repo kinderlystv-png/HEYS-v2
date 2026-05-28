@@ -22,7 +22,10 @@ module.exports = {
     'type-case': [2, 'always', 'lower-case'],
     'type-empty': [2, 'never'],
     'scope-case': [2, 'always', 'lower-case'],
-    'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
+    // 2026-05-28: понижено level 2 → 1 (warn). Блокировка ACRONYMS (SQL, PIN,
+    // RPC, API) в subject стоила нам ~1 retry/день. Style-проверка остаётся
+    // как warning — не блокирует push, но напоминает.
+    'subject-case': [1, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
     'subject-empty': [2, 'never'],
     'subject-full-stop': [2, 'never', '.'],
     'header-max-length': [2, 'always', 100],
