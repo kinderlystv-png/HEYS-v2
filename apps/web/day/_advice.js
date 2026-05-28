@@ -1143,10 +1143,26 @@
         achievement: 'достижение', streak: 'streak', weight: 'вес',
         recovery: 'восстановление', mood: 'настроение', insulin: 'инсулин',
         gi: 'ГИ', deficit: 'дефицит', surplus: 'профицит', general: 'общее',
+        weekly: 'неделя', daily: 'день', macro: 'макросы', micro: 'микро',
+        hydration: 'гидратация', evening: 'вечер', morning: 'утро',
+        first: 'первое', best: 'достижение',
     };
     function curatorHistoryCategoryRu(category) {
         if (!category || typeof category !== 'string') return '';
         return CURATOR_HISTORY_CATEGORY_RU[category] || category;
+    }
+    // Эвристика: достать категорию из advice-id когда live match отсутствует.
+    // ID советов следуют паттерну `{topic}_{detail}_{detail}` или `{prefix}_{topic}`
+    // (примеры из реальных outcomes: protein_low, water_reminder, streak_hint,
+    // training_type_strength, deficit_fiber_satiety, weight_forecast_on_track).
+    // Перебираем токены до первого матча в словаре — даёт чистую подпись без archive-шума.
+    function inferCategoryFromAdviceId(id) {
+        if (!id || typeof id !== 'string') return '';
+        const tokens = id.toLowerCase().split(/[_\-\s]+/).filter(Boolean);
+        for (const tok of tokens) {
+            if (CURATOR_HISTORY_CATEGORY_RU[tok]) return tok;
+        }
+        return '';
     }
 
     function renderCuratorAdviceHistory({
@@ -1212,14 +1228,19 @@
                             const humanTitle = (live && (live.text || live.title))
                                 ? (live.text || live.title)
                                 : humanizeAdviceId(r.id);
-                            const category = live ? (live.category || live?.expertMeta?.theme || '') : '';
+                            // Категория: предпочитаем live.category/theme, иначе heuristic
+                            // по id (топик из токенов). Так для большинства советов
+                            // покажется русская группа без шумного 'archive · ...'.
+                            const liveCategory = live ? (live.category || live?.expertMeta?.theme || '') : '';
+                            const inferredCategory = liveCategory || inferCategoryFromAdviceId(r.id);
+                            const categoryLabel = inferredCategory ? curatorHistoryCategoryRu(inferredCategory) : '';
                             const isStale = !live;
                             return React.createElement('div', {
                                 key: r.id,
                                 style: {
                                     display: 'flex', flexDirection: 'column', gap: '3px',
                                     padding: '10px 8px', borderBottom: '1px solid var(--heys-border, rgba(0,0,0,0.08))',
-                                    opacity: isStale ? 0.7 : 1,
+                                    opacity: isStale ? 0.78 : 1,  // легче приглушить, не помечать словом
                                 }
                             },
                                 React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'flex-start' } },
@@ -1228,9 +1249,9 @@
                                     React.createElement('div', { style: { fontSize: '0.72em', opacity: 0.55, whiteSpace: 'nowrap', paddingTop: '2px' } },
                                         formatHistoryTime(r.lastUpdated))
                                 ),
-                                (category || isStale) && React.createElement('div', {
+                                categoryLabel && React.createElement('div', {
                                     style: { fontSize: '0.72em', opacity: 0.55, fontStyle: 'italic' }
-                                }, isStale ? `archive · ${humanizeAdviceId(r.id)}` : curatorHistoryCategoryRu(category)),
+                                }, categoryLabel),
                                 React.createElement('div', { style: { fontSize: '0.76em', opacity: 0.75, display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '2px' } },
                                     r.shown > 0 && React.createElement('span', null, `👁 ${r.shown}`),
                                     r.read > 0 && React.createElement('span', null, `✓ ${r.read}`),
