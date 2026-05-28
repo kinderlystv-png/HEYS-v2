@@ -21,7 +21,6 @@ export const LEGACY_BUNDLES = {
         'heys_cloud_merge_v1.js',
         'heys_cloud_storage_utils_v1.js',
         'heys_cloud_shared_v1.js',
-        'heys_cloud_queue_v1.js',
         'heys_storage_photos_v1.js',
         'heys_pending_queue_pure_v1.js',
         'heys_sync_queue_runtime_pure_v1.js',
