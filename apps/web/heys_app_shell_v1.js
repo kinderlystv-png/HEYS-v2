@@ -2041,21 +2041,21 @@
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
 
-        // Native fallback на onClick для tab-advice: React synthetic events
-        // иногда не доходят до handler после повторных re-render'ов shell'а
-        // (наблюдалось 2026-05-28: native click event fires, React onClick не
-        // срабатывает, dropdown не открывается). Native listener через ref
-        // переживает любые React state-changes.
+        // Bulletproof fallback: document-level capture listener для tab-advice.
+        // React synthetic events иногда не доходят до onClick после re-render'ов
+        // shell'а (наблюдалось 2026-05-28). useRef + useEffect([]) тоже не помог
+        // (ref ловит только initial node). Document.addEventListener в capture
+        // phase ловит любой клик ПОВЕРХ React event system, фильтруем по closest.
         const adviceTabRef = React.useRef(null);
         React.useEffect(() => {
-            const el = adviceTabRef.current;
-            if (!el) return;
-            const handler = () => {
-                console.warn('[advice-diag] 0️⃣ native ref onClick fired on tab-advice');
-                setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
+            const handler = (e) => {
+                if (e.target && e.target.closest && e.target.closest('.tab.tab-advice')) {
+                    console.warn('[advice-diag] 0️⃣ document-level capture click on tab-advice');
+                    setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
+                }
             };
-            el.addEventListener('click', handler);
-            return () => el.removeEventListener('click', handler);
+            document.addEventListener('click', handler, true);
+            return () => document.removeEventListener('click', handler, true);
         }, []);
 
         // 🔔 Бейдж модерации на ⚙️-иконке: показываем JWT-куратору количество pending-заявок.
