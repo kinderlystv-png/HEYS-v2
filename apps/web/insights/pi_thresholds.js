@@ -991,31 +991,45 @@
             }
         }
 
-        // Валидация входных данных
+        // Валидация входных данных.
+        // Dedup: getAdaptiveThresholds вызывается ~100+ раз за boot (React
+        // re-renders с разными deps до того как days/profile полные). Без
+        // дедупа консоль завалена одинаковыми сообщениями. Один раз сообщить
+        // достаточно — состояние не меняется между близкими вызовами.
+        if (!getAdaptiveThresholds._warnedDedup) {
+            getAdaptiveThresholds._warnedDedup = new Set();
+        }
+        const _warnOnce = (key, level, msg) => {
+            if (getAdaptiveThresholds._warnedDedup.has(key)) return;
+            getAdaptiveThresholds._warnedDedup.add(key);
+            (level === 'info' ? console.info : console.warn)(msg);
+        };
+
         if (!U) {
-            console.warn('[HEYS.thresholds] ⚠️ Missing HEYS.dayUtils utility');
+            _warnOnce('missing-U', 'warn', '[HEYS.thresholds] ⚠️ Missing HEYS.dayUtils utility');
             return getDefaultThresholds(profile);
         }
 
         if (!days || !Array.isArray(days) || days.length === 0) {
-            console.warn('[HEYS.thresholds] ⚠️ Missing or empty days array');
+            _warnOnce('missing-days', 'warn', '[HEYS.thresholds] ⚠️ Missing or empty days array');
             return getDefaultThresholds(profile);
         }
 
         if (!profile) {
-            console.warn('[HEYS.thresholds] ⚠️ Missing profile — continue with partial profile (proteinPerMeal may be defaulted)');
+            _warnOnce('missing-profile', 'warn', '[HEYS.thresholds] ⚠️ Missing profile — continue with partial profile (proteinPerMeal may be defaulted)');
             profile = {};
         }
 
         // Weight/goal не обязательны: без них считаем остальные пороги,
-        // а proteinPerMealG будет рассчитан через fallback defaults
+        // а proteinPerMealG будет рассчитан через fallback defaults.
+        // Эмодзи ℹ️ — это info-уровень по смыслу, не warning.
         if (!profile.weight && !profile.goal) {
-            console.warn('[HEYS.thresholds] ℹ️ Profile has no weight/goal — computing thresholds without profile-based protein target');
+            _warnOnce('no-weight-goal', 'info', '[HEYS.thresholds] ℹ️ Profile has no weight/goal — computing thresholds without profile-based protein target');
         }
 
         // pIndex не критичен, но без него несколько порогов не посчитаются
         if (!pIndex) {
-            console.warn('[HEYS.thresholds] ℹ️ Missing pIndex (some thresholds will be skipped)');
+            _warnOnce('missing-pIndex', 'info', '[HEYS.thresholds] ℹ️ Missing pIndex (some thresholds will be skipped)');
         }
 
         return _computeAndCache(days, profile, pIndex, U);
