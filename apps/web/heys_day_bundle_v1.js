@@ -9711,6 +9711,16 @@
                         HEYS.Toast?.success('Приём создан');
                         window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
 
+                        // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
+                        try {
+                            window.HEYS?.eventLog?.write(
+                                'meal-add',
+                                `meal=${newMeal.name || 'unnamed'} для ${date}`,
+                                { dateKey: date, mealName: newMeal.name || '', count: 1 },
+                                'addMeal_mobile_flow'
+                            );
+                        } catch (_) { /* noop */ }
+
                         // 🆕 Стабильный флоу: lazy-вычисление индекса через HEYS.Day, retry через rAF
                         const savedMealName = (newMeal.name || '').toLowerCase();
 
@@ -10127,6 +10137,16 @@
                 }
                 HEYS.Toast?.success('Приём создан');
                 window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+
+                // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
+                try {
+                    window.HEYS?.eventLog?.write(
+                        'meal-add',
+                        `meal=${newMeal.name || 'unnamed'} для ${date}`,
+                        { dateKey: date, mealName: newMeal.name || '', count: 1 },
+                        'addMeal_desktop'
+                    );
+                } catch (_) { /* noop */ }
             }
         }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
 
@@ -10589,6 +10609,17 @@
 
                         HEYS.Toast?.success?.(`Создан приём, скопировано: ${cloned.length}`);
                         window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+
+                        // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
+                        try {
+                            window.HEYS?.eventLog?.write(
+                                'meal-add',
+                                `meal=${newMeal.name || 'unnamed'} для ${todayStr}`,
+                                { dateKey: todayStr, mealName: newMeal.name || '', count: 1 },
+                                'addMeal_copy_new_day'
+                            );
+                        } catch (_) { /* noop */ }
+
                         navigateAndScrollToMeal(todayStr, newMeal.id);
                     };
 
@@ -10734,6 +10765,17 @@
                 });
 
                 window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+
+                // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
+                try {
+                    window.HEYS?.eventLog?.write(
+                        'meal-add',
+                        `meal=${newMeal.name || 'unnamed'} для ${todayStr}`,
+                        { dateKey: todayStr, mealName: newMeal.name || '', count: 1 },
+                        'addMeal_move_copy_new'
+                    );
+                } catch (_) { /* noop */ }
+
                 navigateAndScrollToMeal(todayStr, newMeal.id);
             };
 
