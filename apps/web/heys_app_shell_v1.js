@@ -6,6 +6,37 @@
     if (!React) return;
     const U = HEYS.utils || {};
 
+    // ═══════════════════════════════════════════════════════════════════
+    // BULLETPROOF advice tab click — module-level capture listener.
+    // React onClick + useEffect ref не отрабатывали (наблюдалось 2026-05-28:
+    // native click events доходят до document, но React synthetic event
+    // не вызывает onClick handler и useEffect handler тоже не fires).
+    // Решение — listener регистрируется при загрузке скрипта, никаких
+    // компонентов, refs, hooks. Идемпотентен через флаг на window.
+    // ═══════════════════════════════════════════════════════════════════
+    if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabCaptureInstalled) {
+        window.__heysAdviceTabCaptureInstalled = true;
+        window.document.addEventListener('click', function _heysAdviceTabCapture(e) {
+            try {
+                if (!e || !e.target || typeof e.target.closest !== 'function') return;
+                const adviceTab = e.target.closest('.tab.tab-advice');
+                if (!adviceTab) return;
+                // Дисабленный (widgetsEditMode) — игнорим.
+                if (adviceTab.classList.contains('tab--disabled-home')) return;
+                console.warn('[advice-tab] module-level capture click fired, dispatching heysShowAdvice');
+                setTimeout(function _heysShowAdviceDispatch() {
+                    try {
+                        window.dispatchEvent(new CustomEvent('heysShowAdvice'));
+                    } catch (errDispatch) {
+                        console.warn('[advice-tab] dispatch failed:', errDispatch && errDispatch.message);
+                    }
+                }, 0);
+            } catch (err) {
+                console.warn('[advice-tab] module-level handler error:', err && err.message);
+            }
+        }, true);
+    }
+
     HEYS.debug = HEYS.debug || {};
     HEYS.perf = HEYS.perf || {};
     const HEYS_PROFILER_RING = [];
