@@ -161,6 +161,18 @@
     });
   }
 
+  /**
+   * Редактировать своё text-сообщение. Intent-сообщения редактировать нельзя
+   * (контракт payload бы поломал ссылку applied_meal_id у куратора).
+   * При успехе возвращает { success, edited_at }.
+   */
+  async function editMessage(messageId, newBody) {
+    return call('/messages/edit', {
+      method: 'POST',
+      body: { message_id: messageId, body: newBody },
+    });
+  }
+
   // ── Inbox cache (curator-only) ───────────────────────────────────────
   // Кэш для синхронного чтения из не-React компонентов (buildGate карточки).
   // Polling каждые 30 сек, старт лениво при первом getInboxCache.
@@ -214,6 +226,7 @@
     markRead,
     toggleDone,
     deleteMessage,
+    editMessage,
     getInboxCache,
     refreshInbox,
     _getBearerToken: getBearerToken, // exposed for testing/debug

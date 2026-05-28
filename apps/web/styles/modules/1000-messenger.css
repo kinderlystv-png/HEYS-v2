@@ -330,6 +330,116 @@ body.planning-tab-active .fab-group .message-fab {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+ * Inline edit (свои сообщения)
+ * ═══════════════════════════════════════════════════════════════════ */
+.msg-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.msg-edit-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 56px;
+  max-height: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  outline: none;
+  line-height: 1.4;
+}
+
+.msg-bubble-theirs .msg-edit-textarea {
+  border-color: rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--heys-text-primary, #111827);
+}
+
+.msg-edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.msg-edit-cancel,
+.msg-edit-save {
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.msg-edit-cancel {
+  background: rgba(255, 255, 255, 0.18);
+  color: inherit;
+}
+
+.msg-bubble-theirs .msg-edit-cancel {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.msg-edit-save {
+  background: #fff;
+  color: #2563eb;
+}
+
+.msg-bubble-theirs .msg-edit-save {
+  background: #2563eb;
+  color: #fff;
+}
+
+.msg-edit-cancel:disabled,
+.msg-edit-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Кнопка ✎ редактирования + маркер «изм.» */
+.msg-edit-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.msg-edit-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.msg-bubble-mine .msg-edit-btn:hover,
+.msg-bubble-done .msg-edit-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.msg-edited-marker {
+  font-size: 11px;
+  opacity: 0.65;
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
  * Reply preview над input (когда выбрано сообщение для ответа)
  * ═══════════════════════════════════════════════════════════════════ */
 .messenger-reply-preview {

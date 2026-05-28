@@ -62,13 +62,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // ── Thread message bubble ────────────────────────────────────────────
-  function MessageBubble({ message, viewerRole, onToggleDone, onDelete, onReply }) {
+  function MessageBubble({ message, viewerRole, onToggleDone, onDelete, onReply, onEdit }) {
     const isMine = message.sender_role === viewerRole;
     const isCurator = viewerRole === 'curator';
     const canMarkDone = isCurator && message.sender_role === 'client';
     const canDelete = isMine; // каждый удаляет только свои
     const canReply = !isMine; // отвечать можно только на чужие
+    const canEdit = isMine && !message.intent_type; // intent редактировать нельзя
     const isDone = !!message.done_at;
+    const [editing, setEditing] = useState(false);
+    const [editValue, setEditValue] = useState('');
+    const [savingEdit, setSavingEdit] = useState(false);
+    const editTextareaRef = useRef(null);
 
     // Парсим quote-prefix только для text-сообщений
     const parsed = message.body ? parseQuotedBody(message.body) : { quote: null, reply: '' };
@@ -95,6 +100,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       onDelete?.(message);
     };
 
+    const handleEditStart = () => {
+      if (!canEdit) return;
+      // При входе в edit-режим берём parsed.reply (без quote) — пользователь
+      // редактирует свой текст, а не цитату на которую отвечал.
+      setEditValue(parsed.reply || message.body || '');
+      setEditing(true);
+      setTimeout(() => {
+        const ta = editTextareaRef.current;
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      }, 30);
+    };
+
+    const handleEditCancel = () => {
+      setEditing(false);
+      setEditValue('');
+    };
+
+    const handleEditSave = async () => {
+      const trimmed = editValue.trim();
+      if (!trimmed || savingEdit) return;
+      // Восстанавливаем quote-prefix если был
+      const finalBody = parsed.quote
+        ? `${parsed.quote.split('\n').map((l) => `> ${l}`).join('\n')}\n\n${trimmed}`
+        : trimmed;
+      if (finalBody === message.body) {
+        // Без изменений — просто выходим
+        handleEditCancel();
+        return;
+      }
+      setSavingEdit(true);
+      const ok = await onEdit?.(message, finalBody);
+      setSavingEdit(false);
+      if (ok) handleEditCancel();
+    };
+
+    const handleEditKeyDown = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); handleEditCancel(); }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave(); }
+    };
+
     // Кнопка удаления — вне капсулы, в той же row.
     // Для mine (справа) ставим слева от bubble, для theirs (слева) — справа.
     const deleteButton = canDelete
@@ -110,15 +155,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const bubble = React.createElement(
       'div',
       { className: bubbleClasses },
-      parsed.quote &&
+      parsed.quote && !editing &&
         React.createElement('div', { className: 'msg-quote' }, parsed.quote),
-      replyText &&
-        React.createElement('div', { className: 'msg-body' }, replyText),
-      message.applied_at &&
+      editing
+        ? React.createElement(
+            'div',
+            { className: 'msg-edit' },
+            React.createElement('textarea', {
+              className: 'msg-edit-textarea',
+              ref: editTextareaRef,
+              value: editValue,
+              onChange: (e) => setEditValue(e.target.value),
+              onKeyDown: handleEditKeyDown,
+              disabled: savingEdit,
+              maxLength: 2000,
+              rows: 2,
+            }),
+            React.createElement(
+              'div',
+              { className: 'msg-edit-actions' },
+              React.createElement('button', {
+                type: 'button',
+                className: 'msg-edit-cancel',
+                onClick: handleEditCancel,
+                disabled: savingEdit,
+              }, 'Отмена'),
+              React.createElement('button', {
+                type: 'button',
+                className: 'msg-edit-save',
+                onClick: handleEditSave,
+                disabled: savingEdit || !editValue.trim(),
+              }, savingEdit ? '...' : 'Сохранить'),
+            ),
+          )
+        : replyText &&
+            React.createElement('div', { className: 'msg-body' }, replyText),
+      message.applied_at && !editing &&
         React.createElement('div', { className: 'msg-applied' }, '✅ Куратор применил в день'),
-      doneAtLabel &&
+      doneAtLabel && !editing &&
         React.createElement('div', { className: 'msg-done' }, doneAtLabel),
-      React.createElement(
+      !editing && React.createElement(
         'div',
         { className: 'msg-meta-row' },
         canReply &&
@@ -129,6 +205,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'aria-label': 'Ответить с цитатой',
             title: 'Ответить с цитатой',
           }, '↩'),
+        canEdit &&
+          React.createElement('button', {
+            type: 'button',
+            className: 'msg-edit-btn',
+            onClick: handleEditStart,
+            'aria-label': 'Редактировать сообщение',
+            title: 'Редактировать сообщение',
+          }, '✎'),
         canMarkDone &&
           React.createElement('button', {
             type: 'button',
@@ -137,6 +221,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'aria-label': isDone ? 'Снять отметку' : 'Отметить как обработанное',
             title: isDone ? 'Снять отметку «обработано»' : 'Отметить как обработанное',
           }, isDone ? '✓' : '○'),
+        message.edited_at &&
+          React.createElement('span', {
+            className: 'msg-edited-marker',
+            title: `Изменено ${formatTime(message.edited_at)}`,
+          }, 'изм.'),
         React.createElement('div', { className: 'msg-meta' }, formatTime(message.created_at)),
       ),
     );
@@ -343,6 +432,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     };
 
+    // Редактирование своего сообщения. Оптимистично обновляем body+edited_at,
+    // на ошибку откатываем. Возвращает true при успехе (для bubble — закрыть edit-mode).
+    const handleEditMessage = async (message, newBody) => {
+      const prevBody = message.body;
+      const optimisticEditedAt = new Date().toISOString();
+      setMessages((prev) =>
+        prev.map((m) => (m.id === message.id ? { ...m, body: newBody, edited_at: optimisticEditedAt } : m))
+      );
+      const res = await HEYS.MessengerAPI.editMessage(message.id, newBody);
+      if (!res?.success) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === message.id ? { ...m, body: prevBody, edited_at: message.edited_at || null } : m))
+        );
+        setError(res?.error || 'edit_failed');
+        return false;
+      }
+      // Используем server-truth для edited_at
+      setMessages((prev) =>
+        prev.map((m) => (m.id === message.id ? { ...m, edited_at: res.edited_at || optimisticEditedAt } : m))
+      );
+      return true;
+    };
+
     // Удаление своего сообщения (hard delete). Оптимистично убираем из
     // локального state, на ошибку — возвращаем обратно.
     const handleDeleteMessage = async (message) => {
@@ -442,6 +554,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         onToggleDone: handleToggleDone,
                         onDelete: handleDeleteMessage,
                         onReply: handleReply,
+                        onEdit: handleEditMessage,
                       }),
                     );
                   }

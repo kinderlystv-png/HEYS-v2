@@ -535,6 +535,42 @@ async function handleMarkRead(identity, body) {
   }
 }
 
+async function handleEdit(identity, body) {
+  const messageId = body?.message_id;
+  const newBody = body?.body;
+  if (!messageId || typeof messageId !== 'string') {
+    return { statusCode: 400, body: { error: 'message_id_required' } };
+  }
+  if (!newBody || typeof newBody !== 'string' || !newBody.trim()) {
+    return { statusCode: 400, body: { error: 'body_required' } };
+  }
+  if (newBody.length > 2000) {
+    return { statusCode: 400, body: { error: 'body_too_long' } };
+  }
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    let rpcResult;
+    if (identity.kind === 'client') {
+      const r = await conn.query(
+        `SELECT public.edit_message_as_client($1, $2, $3) AS result`,
+        [identity.sessionToken, messageId, newBody]
+      );
+      rpcResult = r.rows[0]?.result;
+    } else {
+      const r = await conn.query(
+        `SELECT public.edit_message_as_curator($1, $2, $3) AS result`,
+        [identity.id, messageId, newBody]
+      );
+      rpcResult = r.rows[0]?.result;
+    }
+    const result = rpcResult || { success: false, error: 'rpc_no_result' };
+    return { statusCode: result.success ? 200 : 400, body: result };
+  } finally {
+    conn.release();
+  }
+}
+
 async function handleDelete(identity, body) {
   const messageId = body?.message_id;
   if (!messageId || typeof messageId !== 'string') {
@@ -647,6 +683,9 @@ module.exports.handler = async function (event) {
         break;
       case 'delete':
         res = await handleDelete(identity, body);
+        break;
+      case 'edit':
+        res = await handleEdit(identity, body);
         break;
       case 'toggle-done':
         res = await handleToggleDone(identity, body);
