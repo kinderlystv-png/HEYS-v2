@@ -1574,7 +1574,10 @@
         // P0 Fix: Ensure timing never in past
         if (idealStart < currentTime) {
             const phaseAOverridden = phaseATimingShiftMin > 0;
-            console.warn(`[${LOG_FILTER}] ⚠️ Adjusted timing to current time (was in past):`, {
+            // Norma case — пользователь зашёл позже optimal start'а, и мы
+            // подвинули timing на "сейчас". Это не ошибка, это работа guard'а.
+            // Warning'ало раньше каждый рендер meal-rec.
+            console.info(`[${LOG_FILTER}] Adjusted timing to current time (was in past):`, {
                 originalStart: formatTime(idealStart),
                 adjustedStart: formatTime(currentTime),
                 hoursSinceLastMeal: hoursSinceLastMeal.toFixed(1),

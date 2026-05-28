@@ -1678,9 +1678,16 @@
         return;
       }
 
-      // XP расхождение обнаружено — нужен полный rebuild
-      console.warn('[🎮 GAME SYNC]', trigger, '— XP DRIFT detected! Cached XP=' + cachedXP +
-        ', audit xp_after=' + lastXPAfter + ', events: cached=' + cachedEventCount + ', actual=' + auditTotal);
+      // XP расхождение обнаружено — нужен полный rebuild.
+      // Distinguish: первый load (cachedEventCount=0) vs реальный drift
+      // (cache есть, не совпадает). Curator-load часто = first-load
+      // (курaтор открывает клиента впервые в сессии) — это не «drift»,
+      // это просто cache miss. Real drift = cachedEventCount > 0 и mismatch.
+      const _isFirstLoad = cachedEventCount === 0;
+      const _msg = '[🎮 GAME SYNC] ' + trigger + (_isFirstLoad ? ' — first-load (no cache yet)' : ' — XP DRIFT detected!') +
+        ' Cached XP=' + cachedXP + ', audit xp_after=' + lastXPAfter +
+        ', events: cached=' + cachedEventCount + ', actual=' + auditTotal;
+      (_isFirstLoad ? console.info : console.warn)(_msg);
 
       // ⚡ FAST-FORWARD: Если в audit есть actuality XP (вверх или вниз),
       // сразу обновляем UI/кэш, чтобы не ждать полный rebuild.
