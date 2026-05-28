@@ -2446,7 +2446,10 @@
             const handleShowAdvice = () => {
                 // PERF R13 FIX H: wrap setState in startTransition to defer React render
                 React.startTransition(() => {
-                    if (totalAdviceCount > 0) {
+                    // Курaтор всегда видит history dropdown (даже если live
+                    // totalAdviceCount=0 — у history свои данные).
+                    const _curator = isCuratorReadOnlyMode();
+                    if (totalAdviceCount > 0 || _curator) {
                         const engineVisibleAdviceCount = Array.isArray(safeBadgeAdvices)
                             ? safeBadgeAdvices.length
                             : 0;
@@ -2460,7 +2463,8 @@
                             displayedAdviceCount: totalAdviceCount,
                             engineVisibleAdviceCount,
                             badgeCount: Array.isArray(safeBadgeAdvices) ? safeBadgeAdvices.length : 0,
-                            filteredOutCount: Math.max(0, engineVisibleAdviceCount - totalAdviceCount)
+                            filteredOutCount: Math.max(0, engineVisibleAdviceCount - totalAdviceCount),
+                            ...(_curator ? { mode: 'curator_history' } : {})
                         });
                         haptic('light');
                     } else {
@@ -2644,7 +2648,9 @@
             if (!toastVisible) return;
 
             if (adviceTrigger === 'manual') {
-                if (safeAdviceRelevant.length === 0) {
+                // Курaторский режим: НЕ даунгрейдим в manual_empty даже если
+                // live советов 0 — history view не зависит от safeAdviceRelevant.
+                if (safeAdviceRelevant.length === 0 && !isCuratorReadOnlyMode()) {
                     setExpandedAdviceId(null);
                     setAdviceTrigger('manual_empty');
                 } else if (expandedAdviceId && !safeAdviceRelevant.some(item => item?.id === expandedAdviceId)) {
