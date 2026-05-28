@@ -982,9 +982,28 @@
 
         console.info('ews / weekly 🚀 load:', { key: WEEKLY_PROGRESS_STORAGE_KEY });
 
-        // 1. Try cloud first (if enabled)
+        // Quick token presence check ДО полного 5-attempt поиска и warning'ов.
+        // loadWeeklyProgress зовётся 3+ раз за boot (DayTab render, post-sync
+        // heavy work, meal-rec). Если token нигде нет — ходить в 5 attempts
+        // и warn'ать «no valid session token after 5 attempts» × 3 — спам.
+        // Cache «no token»-результата на TTL: при появлении токена fresh-check.
         if (CLOUD_SYNC_CONFIG.ENABLED && typeof HEYS?.YandexAPI?.rpc === 'function') {
-            try {
+            const _hasAnyTokenHint = () => {
+                try {
+                    if (HEYS.auth?.getSessionToken?.()) return true;
+                    if (localStorage.getItem('heys_session_token')) return true;
+                    if (localStorage.getItem('heys_curator_session')) return true;
+                } catch (_) { /* noop */ }
+                return false;
+            };
+            if (!_hasAnyTokenHint()) {
+                // Тихо переходим к localStorage fallback ниже — это норма во время
+                // PIN-handshake'а, до того как token записан.
+                if (!loadWeeklyProgress._silentNoTokenLogged) {
+                    loadWeeklyProgress._silentNoTokenLogged = true;
+                    console.info('ews / weekly ☁️ load.cloud.skip: no token yet, using localStorage');
+                }
+            } else try {
                 // Helper: validate token is not null/undefined/empty string
                 const isValidToken = (token) => {
                     if (!token) return false;
