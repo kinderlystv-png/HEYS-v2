@@ -128,6 +128,8 @@ get_function_config() {
             echo "nodejs18 index.handler 256m 30s" ;;
         "heys-api-messages")
             echo "nodejs18 index.handler 256m 30s" ;;
+        "heys-api-photos")
+            echo "nodejs18 index.handler 256m 30s" ;;
         "heys-cron-reminders")
             echo "nodejs18 index.handler 512m 120s" ;;
         "heys-client-daily-backup")
@@ -193,6 +195,15 @@ build_env_flags() {
         done
     fi
 
+    # Photos функция: S3 credentials для signed URL генерации
+    if [[ "$func_name" == "heys-api-photos" ]]; then
+        env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
+        local k
+        for k in S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY; do
+            _add "$k"
+        done
+    fi
+
     # heys-snapshot-demo: override S3_BUCKET (default bucket "heys-backups"
     # содержит client-daily; для demo нужен отдельный публичный bucket)
     if [[ "$func_name" == "heys-snapshot-demo" ]]; then
@@ -204,8 +215,8 @@ build_env_flags() {
         _add SMS_API_KEY
     fi
 
-    # JWT_SECRET — для rpc, auth, push, messages (curator-JWT identity resolution)
-    if [[ "$func_name" =~ (rpc|auth) ]] || [[ "$func_name" == "heys-api-push" ]] || [[ "$func_name" == "heys-api-messages" ]]; then
+    # JWT_SECRET — для rpc, auth, push, messages, photos (curator-JWT identity resolution)
+    if [[ "$func_name" =~ (rpc|auth) ]] || [[ "$func_name" == "heys-api-push" ]] || [[ "$func_name" == "heys-api-messages" ]] || [[ "$func_name" == "heys-api-photos" ]]; then
         _add_required JWT_SECRET
     fi
 
@@ -329,7 +340,7 @@ deploy_function() {
     # есть), DB pool max=3 (см. shared/db-pool.js:96) — 2 concurrent fit'ам.
     # Кроны остаются на default=1 (триггер запускает по одной задаче за раз).
     local concurrency_flag=""
-    if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push|messages)$ ]]; then
+    if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push|messages|photos)$ ]]; then
         concurrency_flag="--concurrency 2"
     fi
 

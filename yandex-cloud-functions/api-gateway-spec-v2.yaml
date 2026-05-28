@@ -503,6 +503,33 @@ paths:
         function_id: d4ep21a89307vs93b0ns
 
   # ═══════════════════════════════════════════════════════════════
+  # Photos — heys-api-photos (function_id: d4e93t0lrfu4ng62pqa1)
+  # ═══════════════════════════════════════════════════════════════
+  /photos/upload:
+    post:
+      summary: Generate presigned PUT URL for Yandex Object Storage
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e93t0lrfu4ng62pqa1
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e93t0lrfu4ng62pqa1
+
+  /photos/delete:
+    post:
+      summary: Delete photo from bucket
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e93t0lrfu4ng62pqa1
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e93t0lrfu4ng62pqa1
+
+  # ═══════════════════════════════════════════════════════════════
   # Supabase-compatible routes (для совместимости)
   # ═══════════════════════════════════════════════════════════════
 

@@ -1,0 +1,11 @@
+{
+  "name": "heys-api-photos",
+  "version": "1.0.0",
+  "description": "HEYS Photos API — presigned PUT URLs for Yandex Object Storage",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.478.0",
+    "@aws-sdk/s3-request-presigner": "^3.478.0",
+    "pg": "^8.11.3"
+  }
+}
