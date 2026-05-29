@@ -4104,9 +4104,11 @@
 
       // Сохраняем оригинальный метод в глобальную переменную
       originalSetItem = global.localStorage.setItem.bind(global.localStorage);
-      // Track last seen totalItems per dayv2 key to detect regressions (writer
-      // overwrites with stale snapshot). On regression we escalate to warn+stack.
-      const _dayv2LastSeenItems = new Map();
+      // Track last seen {items, updatedAt} per dayv2 key for stale-writer detection.
+      // 2026-05-29: previously this used Math.max(prevItems, currentItems) which "stuck"
+      // at the high-water mark and fired SHRINK on every legitimate delete forever
+      // (since deletes always produce items < max). Fixed: distinguish by updatedAt.
+      const _dayv2LastSeen = new Map(); // key → { items, updatedAt }
       global.localStorage.setItem = function (k, v) {
         // 🔬 [HEYS.day-trace] 5b/8 LS interceptor — every dayv2 setItem is captured here.
         try {
@@ -4123,19 +4125,31 @@
             } catch (_) { /* noop */ }
             const _meals = (parsed && Array.isArray(parsed.meals)) ? parsed.meals : null;
             const _totalItems = _meals ? _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0) : null;
-            // Regression detection: did we just shrink a previously-larger snapshot?
-            // This is the smoking gun for stale-writer races (e.g. gamification overwrite).
-            const _prevItems = _dayv2LastSeenItems.get(k);
-            const _shrunk = _prevItems != null && _totalItems != null && _totalItems < _prevItems;
-            if (_totalItems != null) _dayv2LastSeenItems.set(k, Math.max(_prevItems || 0, _totalItems));
-            if (_shrunk) {
-              // Escalate: regression detected. Warn + stack trace identifies the writer.
-              console.warn('[HEYS.day-trace] 5b/8 LS interceptor ⚠️ SHRINK', {
+            const _newUpdatedAt = (parsed && typeof parsed.updatedAt === 'number') ? parsed.updatedAt : null;
+            const _last = _dayv2LastSeen.get(k);
+            // True regression = newer-or-equal updatedAt but items shrank
+            // (writer using same/older timestamp overwrites with fewer items).
+            // Legitimate user delete = newer updatedAt → silently accept.
+            // Stale write = newer state in mem, but incoming has OLDER ts → stale.
+            const _isStaleWrite = _last && _newUpdatedAt != null && _last.updatedAt != null && _newUpdatedAt < _last.updatedAt;
+            const _isSameTsShrink = _last && _newUpdatedAt != null && _last.updatedAt === _newUpdatedAt && _totalItems != null && _last.items != null && _totalItems < _last.items;
+            const _shouldWarn = _isStaleWrite || _isSameTsShrink;
+            // Update tracker: prefer newer state (by updatedAt), else keep existing.
+            if (_totalItems != null && _newUpdatedAt != null) {
+              if (!_last || _last.updatedAt == null || _newUpdatedAt >= _last.updatedAt) {
+                _dayv2LastSeen.set(k, { items: _totalItems, updatedAt: _newUpdatedAt });
+              }
+            }
+            if (_shouldWarn) {
+              // Real regression: warn + stack to identify stale writer.
+              console.warn('[HEYS.day-trace] 5b/8 LS interceptor ⚠️ STALE-WRITER', {
                 key: k,
-                prevTotalItems: _prevItems,
-                newTotalItems: _totalItems,
+                prevItems: _last && _last.items,
+                newItems: _totalItems,
+                prevUpdatedAt: _last && _last.updatedAt,
+                newUpdatedAt: _newUpdatedAt,
+                reason: _isStaleWrite ? 'older_timestamp' : 'same_ts_shrink',
                 vSize: typeof v === 'string' ? v.length : '<obj>',
-                updatedAt: parsed && parsed.updatedAt,
                 sourceId: parsed && parsed._sourceId,
                 stack: new Error().stack.split('\n').slice(1, 10).join('\n'),
               });
@@ -4145,7 +4159,7 @@
                 key: k,
                 mealsCount: _meals ? _meals.length : '<not-array>',
                 totalItems: _totalItems,
-                updatedAt: parsed && parsed.updatedAt,
+                updatedAt: _newUpdatedAt,
               });
             }
           }
