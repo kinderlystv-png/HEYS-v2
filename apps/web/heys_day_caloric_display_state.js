@@ -30,8 +30,19 @@
         React.useEffect(() => {
             if (!displayOptimum || displayOptimum <= 0) return;
             const roundedEaten = r0(eatenKcal);
-            const needsUpdate = day.savedDisplayOptimum !== displayOptimum || day.savedEatenKcal !== roundedEaten;
-            if (!needsUpdate) return;
+            // 2026-05-29 anti-loop deadband: drift <5 ккал — это rounding между
+            // итерациями caloricDebt (depends on savedDisplayOptimum, который writes сюда).
+            // Без deadband: setDay → energyCtx invalidates → caloricDebt recomputes с
+            // другим dailyBoost → displayOptimum ±1 → setDay → infinite loop (виден
+            // как непрерывная upload-очередь dayv2). Раньше маскировалось React.startTransition'ом
+            // который батчил cascade-updates; после sweep'а startTransition обёрток
+            // (commits c3defb09, 9edbdc58) loop стал видимым. Структурный fix — см.
+            // docs/REFACTOR_REACT_MEMO_DAY_TAB.md (декаплинг savedEatenKcal от energyCtx deps).
+            const prevOptimum = +(day.savedDisplayOptimum || 0);
+            const prevEaten = +(day.savedEatenKcal || 0);
+            const diffOptimum = Math.abs(prevOptimum - displayOptimum);
+            const diffEaten = Math.abs(prevEaten - roundedEaten);
+            if (diffOptimum < 5 && diffEaten < 5) return;
 
             setDay(prev => ({
                 ...prev,
