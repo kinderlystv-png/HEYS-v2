@@ -5399,6 +5399,57 @@
     // для последующей идентификации виновника.
     U.lsSet = (k, v) => {
       const finalKey = nsKey(k);
+
+      // 2026-05-29 hot-write sentinel: runtime defense observability.
+      // Если для ANY ключа >HOT_WRITE_THRESHOLD writes за HOT_WRITE_WINDOW_MS —
+      // emit error log + first-occurrence stack capture + dispatch event.
+      // Catches будущие infinite loop regressions (как dayv2 200/30c из
+      // incident'a 21:16). Не intervents (не блокирует writes) — observability
+      // only. Threshold = 20 writes / 30s — генерит false-positive только для
+      // настоящих loops (legitimate user actions редко >20/30s).
+      try {
+        const sentinel = global.__heysHotWriteSentinel = global.__heysHotWriteSentinel || {
+          HOT_WRITE_WINDOW_MS: 30000,
+          HOT_WRITE_THRESHOLD: 20,
+          writesByKey: new Map(), // key → array of ts
+          alerts: [],             // { key, count, firstStack, firstAt }
+          alertedKeys: new Set(),
+        };
+        const now = Date.now();
+        let arr = sentinel.writesByKey.get(finalKey);
+        if (!arr) { arr = []; sentinel.writesByKey.set(finalKey, arr); }
+        arr.push(now);
+        // Drop entries вне window.
+        const cutoff = now - sentinel.HOT_WRITE_WINDOW_MS;
+        while (arr.length > 0 && arr[0] < cutoff) arr.shift();
+        // Alert only once per key (until window clears), чтобы не спамить.
+        if (arr.length >= sentinel.HOT_WRITE_THRESHOLD && !sentinel.alertedKeys.has(finalKey)) {
+          sentinel.alertedKeys.add(finalKey);
+          const stack = (new Error(`HOT_WRITE: ${finalKey}`)).stack || '';
+          const alert = { key: finalKey, count: arr.length, firstStack: stack, firstAt: now };
+          sentinel.alerts.push(alert);
+          if (sentinel.alerts.length > 50) sentinel.alerts.shift();
+          try {
+            console.error(
+              `[HEYS.lsSet] 🚨 HOT WRITE detected: ${finalKey} (${arr.length} writes in ${sentinel.HOT_WRITE_WINDOW_MS}ms). ` +
+              `Likely infinite loop — see stack and __heysHotWriteSentinel.alerts.`
+            );
+          } catch (_) { /* noop */ }
+          try {
+            global.dispatchEvent && global.dispatchEvent(new CustomEvent('heys:hot-write-detected', {
+              detail: { key: finalKey, count: arr.length, ts: now }
+            }));
+          } catch (_) { /* noop */ }
+        }
+        // Очищаем alertedKeys для ключей которые «остыли» (writes выпали из window).
+        if (arr.length < Math.floor(sentinel.HOT_WRITE_THRESHOLD / 2) && sentinel.alertedKeys.has(finalKey)) {
+          sentinel.alertedKeys.delete(finalKey);
+        }
+      } catch (_) { /* noop */ }
+
+      // 2026-05-29 anti-loop dedup для dayv2 keys (см. fc1ce544/9b6d8124):
+      // курaторская сессия имела источник в boot-calc bundle который писал
+      // dayv2 ~3/сек с identical content. Дедуплицируем по JSON + 1500ms window.
       if (/_dayv2_\d{4}-\d{2}-\d{2}$/.test(finalKey)) {
         try {
           const stats = global.__heysLsSetDayv2Dedup = global.__heysLsSetDayv2Dedup || {
