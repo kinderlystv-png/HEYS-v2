@@ -27,21 +27,31 @@
   
   // === ИМПОРТ УТИЛИТ ===
   const utils = HEYS.InsulinWave?.utils;
-  
+
+  // Anti-pollution 2026-05-30: per-client scoping для lipolysis records/history.
+  // Без scoping курaторский switch пере-создавал unscoped keys → cloud sync под
+  // новый clientId → cross-client pollution. Read fallback на legacy для one-shot
+  // migration; L1 cleanup в shell:2624 удалит legacy при switch'e.
+  const _scopedLipoKey = (legacy) => {
+    const cid = (HEYS && (HEYS.currentClientId || (HEYS.cloud && HEYS.cloud._cachedClientId))) || '';
+    return cid && legacy ? ('heys_' + cid + '_' + legacy.replace(/^heys_/, '')) : legacy;
+  };
+
   // === РЕКОРДЫ И STREAK ЛИПОЛИЗА ===
-  
+
   /**
    * Получить рекорд липолиза
    */
   const getLipolysisRecord = () => {
     try {
-      const record = localStorage.getItem(LIPOLYSIS_RECORD_KEY);
+      const scoped = _scopedLipoKey(LIPOLYSIS_RECORD_KEY);
+      const record = localStorage.getItem(scoped) || localStorage.getItem(LIPOLYSIS_RECORD_KEY);
       return record ? JSON.parse(record) : { minutes: 0, date: null };
     } catch (e) {
       return { minutes: 0, date: null };
     }
   };
-  
+
   /**
    * Обновить рекорд липолиза (если побит)
    * @returns {boolean} true если рекорд побит
@@ -49,51 +59,52 @@
   const updateLipolysisRecord = (minutes) => {
     const current = getLipolysisRecord();
     if (minutes > current.minutes) {
-      const newRecord = { 
-        minutes, 
+      const newRecord = {
+        minutes,
         date: utils.getDateKey(),
         previousRecord: current.minutes > 0 ? current.minutes : null
       };
       try {
-        localStorage.setItem(LIPOLYSIS_RECORD_KEY, JSON.stringify(newRecord));
+        localStorage.setItem(_scopedLipoKey(LIPOLYSIS_RECORD_KEY), JSON.stringify(newRecord));
       } catch (e) {}
       return true;
     }
     return false;
   };
-  
+
   /**
    * Получить историю липолиза по дням
    */
   const getLipolysisHistory = () => {
     try {
-      const history = localStorage.getItem(LIPOLYSIS_HISTORY_KEY);
+      const scoped = _scopedLipoKey(LIPOLYSIS_HISTORY_KEY);
+      const history = localStorage.getItem(scoped) || localStorage.getItem(LIPOLYSIS_HISTORY_KEY);
       return history ? JSON.parse(history) : [];
     } catch (e) {
       return [];
     }
   };
-  
+
   /**
    * Сохранить липолиз за день (вызывается при закрытии дня или в полночь)
    */
   const saveDayLipolysis = (date, minutes) => {
     const history = getLipolysisHistory();
     const existing = history.findIndex(h => h.date === date);
-    
+
     if (existing >= 0) {
       history[existing].minutes = Math.max(history[existing].minutes, minutes);
     } else {
       history.push({ date, minutes });
     }
-    
+
     // Храним последние 30 дней
     const sorted = history.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
-    
+
     try {
-      localStorage.setItem(LIPOLYSIS_HISTORY_KEY, JSON.stringify(sorted));
+      localStorage.setItem(_scopedLipoKey(LIPOLYSIS_HISTORY_KEY), JSON.stringify(sorted));
     } catch (e) {}
-    
+
     return sorted;
   };
   

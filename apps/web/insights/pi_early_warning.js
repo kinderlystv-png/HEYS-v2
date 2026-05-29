@@ -111,6 +111,16 @@
     const TRENDS_STORAGE_KEY = 'heys_ews_trends_v1';
     const WEEKLY_PROGRESS_STORAGE_KEY = 'heys_ews_weekly_v1';
 
+    // Anti-pollution 2026-05-30: эти keys содержат per-client aggregated данные.
+    // Без scoping курaторский switch воссоздаёт unscoped key под новым clientId
+    // → cross-client pollution в client_kv_store (cloud sync видит unscoped key
+    // и приписывает его текущему clientId). Read fallback на legacy для one-shot
+    // migration — новые writes уйдут scoped, legacy уберёт L1 cleanup при switch.
+    function _ewsScopedKey(legacyKey) {
+        const cid = (typeof window !== 'undefined' && window.HEYS && (window.HEYS.currentClientId || (window.HEYS.cloud && window.HEYS.cloud._cachedClientId))) || '';
+        return cid ? ('heys_' + cid + '_' + legacyKey.replace(/^heys_/, '')) : legacyKey;
+    }
+
     // Trends tracking configuration
     const TRENDS_CONFIG = {
         MAX_AGE_DAYS: 30,        // Keep occurrences for 30 days
@@ -682,7 +692,9 @@
         console.info('ews / trends 🚀 load:', { key: TRENDS_STORAGE_KEY });
 
         try {
-            const stored = localStorage.getItem(TRENDS_STORAGE_KEY);
+            const _scopedKey = _ewsScopedKey(TRENDS_STORAGE_KEY);
+            // Migration: prefer scoped, fall back to legacy unscoped one-shot.
+            const stored = localStorage.getItem(_scopedKey) || localStorage.getItem(TRENDS_STORAGE_KEY);
             if (!stored) {
                 console.info('ews / trends 📥 load.empty:', { reason: 'no_stored_data' });
                 return { version: 1, trends: {}, lastUpdated: null };
@@ -711,7 +723,7 @@
 
         try {
             trendsData.updatedAt = Date.now();
-            localStorage.setItem(TRENDS_STORAGE_KEY, JSON.stringify(trendsData));
+            localStorage.setItem(_ewsScopedKey(TRENDS_STORAGE_KEY), JSON.stringify(trendsData));
             console.info('ews / trends ✅ save.success:', {
                 size: JSON.stringify(trendsData).length,
                 lastUpdated: trendsData.lastUpdated
@@ -1117,7 +1129,7 @@
                     // Save to localStorage for fast access
                     const progressData = { version: 1, weeks, lastUpdated: weeks[0]?.lastUpdate || null };
                     try {
-                        localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));
+                        localStorage.setItem(_ewsScopedKey(WEEKLY_PROGRESS_STORAGE_KEY), JSON.stringify(progressData));
                         console.info('ews / weekly 💾 cached locally from cloud');
                     } catch (e) {
                         console.warn('ews / weekly ⚠️ localStorage cache failed:', e.message);
@@ -1150,7 +1162,9 @@
 
         // 2. Fallback to localStorage
         try {
-            const stored = localStorage.getItem(WEEKLY_PROGRESS_STORAGE_KEY);
+            const _scopedKey = _ewsScopedKey(WEEKLY_PROGRESS_STORAGE_KEY);
+            // Migration: prefer scoped, fall back to legacy unscoped one-shot.
+            const stored = localStorage.getItem(_scopedKey) || localStorage.getItem(WEEKLY_PROGRESS_STORAGE_KEY);
             if (!stored) {
                 console.info('ews / weekly 📥 load.empty:', { reason: 'no_stored_data', source: 'localStorage' });
                 return { version: 1, weeks: [], lastUpdated: null };
@@ -1182,7 +1196,7 @@
         // 1. Save to localStorage first (fast, always succeeds)
         try {
             progressData.updatedAt = Date.now();
-            localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));
+            localStorage.setItem(_ewsScopedKey(WEEKLY_PROGRESS_STORAGE_KEY), JSON.stringify(progressData));
             console.info('ews / weekly ✅ save.success:', {
                 size: JSON.stringify(progressData).length,
                 lastUpdated: progressData.lastUpdated,
@@ -1656,7 +1670,7 @@
             };
 
             try {
-                localStorage.setItem(WEEKLY_PROGRESS_STORAGE_KEY, JSON.stringify(progressData));
+                localStorage.setItem(_ewsScopedKey(WEEKLY_PROGRESS_STORAGE_KEY), JSON.stringify(progressData));
                 console.info('ews / weekly ✅ backfill.saved_to_localStorage:', {
                     snapshotsCount: snapshots.length
                 });

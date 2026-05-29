@@ -10,6 +10,7 @@ export default defineConfig({
     fullyParallel: false,
     retries: process.env.CI ? 2 : 0,
     workers: 1,
+    timeout: 180_000, // курaторский switch тест: T0+T1+T2+T3+T4 + 5s settle + DB cross-check
     reporter: [['list'], ['html', { open: 'never' }]],
     use: {
         baseURL: process.env.HEYS_E2E_BASE_URL || 'http://localhost:3001',

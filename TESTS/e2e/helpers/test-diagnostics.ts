@@ -300,8 +300,11 @@ export function dbClientIdByName(name: string): string | null {
     if (!result.success) return null;
     // Parse first non-header line из psql output
     const lines = result.output.split('\n');
+    // UUID strict format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (psql output rows
+    // могут содержать row separator из дефисов, поэтому не [0-9a-f-]{36}).
+    const UUID_RE = /^\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
     for (const line of lines) {
-        const m = line.match(/^\s*([0-9a-f-]{36})/);
+        const m = line.match(UUID_RE);
         if (m) return m[1];
     }
     return null;

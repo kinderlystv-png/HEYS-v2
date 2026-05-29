@@ -874,10 +874,17 @@
       ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length)
       : 0;
 
-    // История gaps
+    // История gaps — scoped per client (anti-pollution 2026-05-29 L1 leak):
+    // unscoped GAP_HISTORY_KEY ('heys_meal_gaps_history') писался в LS этим
+    // модулем при каждом ре-рендере insulin wave. После курaторского switch'a
+    // bootstrap бывшего клиента перетирал legacy под нового → cross-client pollution.
+    // Fix: scope key через текущий currentClientId; legacy unscoped key уходит
+    // через L1 cleanup в reload-on-switch handler'е и больше не воссоздаётся.
+    const _cid = HEYS?.currentClientId || HEYS?.cloud?._cachedClientId;
+    const SCOPED_KEY = _cid ? ('heys_' + _cid + '_meal_gaps_history') : GAP_HISTORY_KEY;
     let gapHistory = [];
     try {
-      gapHistory = JSON.parse(localStorage.getItem(GAP_HISTORY_KEY) || '[]');
+      gapHistory = JSON.parse(localStorage.getItem(SCOPED_KEY) || '[]');
     } catch (e) { }
 
     const today = now.toISOString().slice(0, 10);
@@ -898,7 +905,7 @@
       if (needsSave) {
         gapHistory = gapHistory.slice(-GAP_HISTORY_DAYS);
         try {
-          localStorage.setItem(GAP_HISTORY_KEY, JSON.stringify(gapHistory));
+          localStorage.setItem(SCOPED_KEY, JSON.stringify(gapHistory));
         } catch (e) { }
       }
     }
