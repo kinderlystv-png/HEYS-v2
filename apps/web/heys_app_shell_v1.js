@@ -1733,11 +1733,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             if (hot.length > 0) {
                                 extraLines.push('  🔥 HOT saveClientKey last 30s (≥3): ' + hot.map(([k, n]) => `${k}=${n}`).join(', '));
                             }
-                            extraLines.push('  --- last 50 (ago_ms | key | bytes | updatedAt | muteMirror | caller-chain top-3) ---');
+                            extraLines.push('  --- last 50 (ago_ms | key | bytes | updatedAt | muteMirror | caller-chain top-7) ---');
                             sckh.slice(-50).forEach(w => {
                                 const cs = Array.isArray(w.callers) ? w.callers : [];
                                 const callerChain = cs.length
-                                    ? cs.slice(0, 3).map(s => String(s || '').replace(/^at\s+/, '').slice(0, 60)).join(' ← ')
+                                    ? cs.slice(0, 7).map(s => String(s || '').replace(/^at\s+/, '').replace(/\s+\(http[^)]+\)/, '').slice(0, 55)).join(' ← ')
                                     : '—';
                                 extraLines.push(`  ${String(now - w.ts).padStart(5)}ms | ${String(w.k).padEnd(35)} | ${w.bytes}b | ${w.updatedAt || '—'} | mute=${w.muteMirror ? 'Y' : 'N'} | ${callerChain}`);
                             });

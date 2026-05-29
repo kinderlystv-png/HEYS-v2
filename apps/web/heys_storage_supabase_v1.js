@@ -10177,7 +10177,7 @@
     try {
       cloud._saveClientKeyHistory = cloud._saveClientKeyHistory || [];
       const _stack = (new Error()).stack || '';
-      const _callers = _stack.split('\n').slice(2, 5).map(s => s.trim()).filter(Boolean);
+      const _callers = _stack.split('\n').slice(2, 9).map(s => s.trim()).filter(Boolean);
       let _bytes = 0;
       try { _bytes = (JSON.stringify(value) || '').length; } catch (_) {}
       cloud._saveClientKeyHistory.push({
