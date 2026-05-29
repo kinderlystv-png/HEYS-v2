@@ -4211,6 +4211,16 @@
             lastEntry.repeatCount = (lastEntry.repeatCount || 1) + 1;
             lastEntry.lastSeenAt = Date.now();
             lastEntry.summary = sanitizeDailyAdviceSummary(buildAdviceTraceEntrySummary(trace), trace);
+            // 2026-05-29 anti-loop throttle: при том же fingerprint (контент идентичен)
+            // обновляем lastSeenAt/repeatCount in-memory, но НЕ персистим чаще чем раз в 10с.
+            // Иначе useEffect [adviceTrace, HEYSRef] в day/_advice.js:2479 (срабатывает на каждый
+            // render родителя из-за нестабильного adviceTrace ref) пишет advice_trace_day_v1
+            // каждые ~40мс → loop sync queue в курaторской сессии. См. snapshot 2026-05-29 14:20.
+            const _prevPersistedAt = lastEntry._persistedAt || 0;
+            if (Date.now() - _prevPersistedAt < 10000) {
+                return log; // skip persist — состояние in-memory обновится при следующем persist
+            }
+            lastEntry._persistedAt = Date.now();
             saveDailyAdviceTraceLog(log);
             return log;
         }
