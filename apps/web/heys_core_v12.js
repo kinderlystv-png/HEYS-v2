@@ -5388,7 +5388,44 @@
     }
 
     U.lsGet = (k, d) => get0(nsKey(k), d);
-    U.lsSet = (k, v) => set0(nsKey(k), v);
+    // 2026-05-29 anti-loop dedup для dayv2 keys: курaторская сессия имеет
+    // источник в boot-calc bundle (минифицирован, 2 anonymous frames) который
+    // зовёт lsSet('heys_<cid>_dayv2_<DATE>', day) ~3 раза/сек с identical content
+    // (одинаковый updatedAt). Это забивает sync queue. Source-of-truth fix —
+    // найти и убрать этот вызов, но пока — content-eq dedup в самой обёртке:
+    // если value JSON-identical предыдущему вызову для того же ключа в окне 1500мс,
+    // skip set0 (не доходит до LS / interceptor / cloud queue).
+    // Captures полный first-occurrence stack в window.__heysLsSetDayv2Dedup
+    // для последующей идентификации виновника.
+    U.lsSet = (k, v) => {
+      const finalKey = nsKey(k);
+      if (/_dayv2_\d{4}-\d{2}-\d{2}$/.test(finalKey)) {
+        try {
+          const stats = global.__heysLsSetDayv2Dedup = global.__heysLsSetDayv2Dedup || {
+            lastByKey: new Map(),
+            suppressed: [],
+            capturedStack: null,
+            capturedAt: 0,
+            totalSuppressed: 0,
+          };
+          const json = (typeof v === 'string') ? v : JSON.stringify(v);
+          const prev = stats.lastByKey.get(finalKey);
+          const now = Date.now();
+          if (prev && prev.json === json && (now - prev.ts) < 1500) {
+            stats.totalSuppressed++;
+            stats.suppressed.push({ key: finalKey, ts: now });
+            if (stats.suppressed.length > 200) stats.suppressed.shift();
+            if (!stats.capturedStack) {
+              stats.capturedStack = (new Error('LSSET DAYV2 DUP')).stack || '';
+              stats.capturedAt = now;
+            }
+            return;
+          }
+          stats.lastByKey.set(finalKey, { json, ts: now });
+        } catch (_) { /* noop */ }
+      }
+      return set0(finalKey, v);
+    };
     U.__clientScoped = true;
   }
 })(window);

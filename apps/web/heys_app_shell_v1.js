@@ -1746,6 +1746,31 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         }
                     } catch (_) { /* noop */ }
 
+                    // === LSSET dayv2 dedup (anti-loop) ===
+                    pushHeader('LSSET dayv2 dedup (anti-loop, suppress identical writes)');
+                    try {
+                        const ds = window.__heysLsSetDayv2Dedup;
+                        if (ds) {
+                            const now = Date.now();
+                            const last30s = ds.suppressed.filter(s => (now - s.ts) < 30000).length;
+                            const last5s = ds.suppressed.filter(s => (now - s.ts) < 5000).length;
+                            pushKV('totalSuppressed', ds.totalSuppressed || 0);
+                            pushKV('suppressed_last30s', last30s);
+                            pushKV('suppressed_last5s', last5s);
+                            pushKV('capturedAt', ds.capturedAt ? new Date(ds.capturedAt).toISOString() : '—');
+                            if (ds.capturedStack) {
+                                extraLines.push('  --- captured first-occurrence stack (un-truncated) ---');
+                                ds.capturedStack.split('\n').slice(0, 20).forEach(line => {
+                                    extraLines.push('  ' + line);
+                                });
+                            } else {
+                                extraLines.push('  (no duplicates captured — loop ушёл или ещё не воспроизводился)');
+                            }
+                        } else {
+                            extraLines.push('  (dedup instrumentation не загружен)');
+                        }
+                    } catch (_) { /* noop */ }
+
                     // === Cascade + EWS frequency ===
                     pushHeader('Cascade + EWS compute frequency (loop-trigger detection)');
                     try {
