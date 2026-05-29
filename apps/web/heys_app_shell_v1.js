@@ -1376,6 +1376,359 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         lastErrLines.push('(no upload errors recorded)');
                     }
                 } catch (_) { /* noop */ }
+                // 2026-05-29 deep diag: собираем дополнительные секции в текст для clipboard
+                const extraLines = [];
+                const pushKV = (label, val) => {
+                    if (val === null || val === undefined) extraLines.push(`  ${label}: —`);
+                    else if (typeof val === 'object') {
+                        try { extraLines.push(`  ${label}: ${JSON.stringify(val)}`); }
+                        catch (_) { extraLines.push(`  ${label}: <object>`); }
+                    } else extraLines.push(`  ${label}: ${val}`);
+                };
+                const pushHeader = (h) => { extraLines.push(''); extraLines.push(`=== ${h} ===`); };
+                try {
+                    pushHeader('Cloud flags');
+                    pushKV('_switchClientInProgress', HEYS?.cloud?._switchClientInProgress);
+                    pushKV('_rpcOnlyMode', HEYS?.cloud?._rpcOnlyMode);
+                    pushKV('_syncCompletedAt', HEYS?.cloud?._syncCompletedAt
+                        ? `${HEYS.cloud._syncCompletedAt} (${Math.round((Date.now() - HEYS.cloud._syncCompletedAt) / 1000)}s ago)` : null);
+                    pushKV('_curatorSession', !!HEYS?.auth?.isCuratorSession?.());
+                    pushKV('_pinAuthClientId(isPinAuthClient)', typeof HEYS?.cloud?.isPinAuthClient === 'function'
+                        ? HEYS.cloud.isPinAuthClient() : null);
+                    pushKV('currentClientId', HEYS?.currentClientId);
+
+                    pushHeader('Document state');
+                    pushKV('visibilityState', typeof document !== 'undefined' ? document.visibilityState : null);
+                    pushKV('hasFocus', typeof document !== 'undefined' && document.hasFocus ? document.hasFocus() : null);
+                    pushKV('navigator.onLine', typeof navigator !== 'undefined' ? navigator.onLine : null);
+                    pushKV('location', typeof location !== 'undefined' ? location.href : null);
+
+                    pushHeader('Current day (LS lookup)');
+                    const dayData = (() => {
+                        try {
+                            const lsRaw = (typeof localStorage !== 'undefined') ? localStorage.getItem('heys_client_current') : null;
+                            const cid = lsRaw ? String(lsRaw).replace(/^"|"$/g, '') : null;
+                            const today = new Date().toISOString().slice(0, 10);
+                            const key = cid ? ('heys_' + cid + '_dayv2_' + today) : ('heys_dayv2_' + today);
+                            const raw = localStorage.getItem(key);
+                            return raw ? JSON.parse(raw) : null;
+                        } catch (_) { return null; }
+                    })();
+                    if (dayData) {
+                        pushKV('date', dayData.date);
+                        pushKV('updatedAt', dayData.updatedAt ? `${dayData.updatedAt} (${Date.now() - dayData.updatedAt}ms ago)` : null);
+                        pushKV('savedDisplayOptimum', dayData.savedDisplayOptimum);
+                        pushKV('savedEatenKcal', dayData.savedEatenKcal);
+                        pushKV('mealsCount', Array.isArray(dayData.meals) ? dayData.meals.length : 0);
+                        pushKV('weightMorning', dayData.weightMorning);
+                        pushKV('sleepHours', dayData.sleepHours);
+                    } else {
+                        extraLines.push('  (no day data in LS)');
+                    }
+
+                    // === Write history ===
+                    const wh = Array.isArray(HEYS?.cloud?._writeHistory) ? HEYS.cloud._writeHistory : [];
+                    pushHeader(`Write history (last 50, total tracked: ${wh.length})`);
+                    if (wh.length > 0) {
+                        const now = Date.now();
+                        const recent = wh.filter(w => (now - w.ts) < 30000);
+                        const perKey = {};
+                        recent.forEach(w => { perKey[w.k] = (perKey[w.k] || 0) + 1; });
+                        const hot = Object.entries(perKey).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]);
+                        if (hot.length > 0) {
+                            extraLines.push('  🔥 HOT WRITES last 30s (≥3): ' + hot.map(([k, n]) => `${k}=${n}`).join(', '));
+                        } else {
+                            extraLines.push('  (no hot writes in last 30s)');
+                        }
+                        extraLines.push('  --- last 50 writes (ago_ms | key | caller) ---');
+                        wh.slice(-50).forEach(w => {
+                            const caller = (w.callers && w.callers[0]) ? w.callers[0].slice(0, 90) : '—';
+                            extraLines.push(`  ${String(now - w.ts).padStart(5)}ms | ${String(w.k).padEnd(35)} | ${caller}`);
+                        });
+                    } else {
+                        extraLines.push('  (empty — saveKey not called yet)');
+                    }
+
+                    // === Event history ===
+                    const eh = Array.isArray(HEYS?._eventHistory) ? HEYS._eventHistory : [];
+                    pushHeader(`Event history (last 50 heys:* / heysSyncCompleted, total: ${eh.length})`);
+                    if (eh.length > 0) {
+                        const now = Date.now();
+                        const recent = eh.filter(e => (now - e.ts) < 30000);
+                        const perType = {};
+                        recent.forEach(e => { perType[e.type] = (perType[e.type] || 0) + 1; });
+                        const hotEv = Object.entries(perType).filter(([, n]) => n >= 5).sort((a, b) => b[1] - a[1]);
+                        if (hotEv.length > 0) {
+                            extraLines.push('  🔥 HOT EVENTS last 30s (≥5): ' + hotEv.map(([t, n]) => `${t}=${n}`).join(', '));
+                        } else {
+                            extraLines.push('  (no hot events in last 30s)');
+                        }
+                        extraLines.push('  --- last 50 events (ago_ms | type | detail) ---');
+                        eh.slice(-50).forEach(e => {
+                            extraLines.push(`  ${String(Date.now() - e.ts).padStart(5)}ms | ${String(e.type).padEnd(28)} | ${e.detail || ''}`);
+                        });
+                    } else {
+                        extraLines.push('  (empty)');
+                    }
+
+                    // === Auth tokens ===
+                    pushHeader('Auth tokens (LS presence)');
+                    pushKV('heys_curator_session', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_curator_session')));
+                    pushKV('heys_session_token', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_session_token')));
+                    pushKV('heys_pin_auth_client', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_pin_auth_client')));
+                    pushKV('heys_supabase_auth_token', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_supabase_auth_token')));
+
+                    // === Sync config + retry ===
+                    pushHeader('Sync config (constants) + retry');
+                    pushKV('PENDING_SAVE_DEBOUNCE_MS', 120);
+                    pushKV('CASCADE_DCS_ENQUEUE_DEBOUNCE_MS', 380);
+                    pushKV('SWITCH_DEBOUNCE_MS', 30000);
+                    pushKV('MAX_RETRY_ATTEMPTS', 5);
+                    pushKV('GRACE_PERIOD_MS', 10000);
+                    pushKV('retryDebug', typeof HEYS?.cloud?.getRetryDebug === 'function' ? HEYS.cloud.getRetryDebug() : null);
+
+                    // === Network ===
+                    pushHeader('Network (Network Information API)');
+                    const conn = (typeof navigator !== 'undefined') && (navigator.connection || navigator.mozConnection || navigator.webkitConnection);
+                    pushKV('onLine', typeof navigator !== 'undefined' ? navigator.onLine : null);
+                    pushKV('effectiveType', conn ? conn.effectiveType : null);
+                    pushKV('downlink_Mbps', conn ? conn.downlink : null);
+                    pushKV('downlinkMax', conn ? conn.downlinkMax : null);
+                    pushKV('rtt_ms', conn ? conn.rtt : null);
+                    pushKV('saveData', conn ? conn.saveData : null);
+                    pushKV('userAgent', typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 120) : null);
+
+                    // === Storage (LS scan) ===
+                    pushHeader('Storage — localStorage scan');
+                    const lsInfo = (() => {
+                        try {
+                            if (typeof localStorage === 'undefined') return null;
+                            let count = 0, totalBytes = 0;
+                            const perPrefix = {};
+                            for (let i = 0; i < localStorage.length; i++) {
+                                const k = localStorage.key(i);
+                                const v = localStorage.getItem(k) || '';
+                                const sz = k.length + v.length;
+                                count++;
+                                totalBytes += sz;
+                                const m = k.match(/^([^_]+_[^_]+)/);
+                                const bucket = m ? m[1] : '(other)';
+                                perPrefix[bucket] = (perPrefix[bucket] || 0) + sz;
+                            }
+                            const top = Object.entries(perPrefix).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                            return { keyCount: count, totalKB: Math.round(totalBytes / 1024), top };
+                        } catch (_) { return null; }
+                    })();
+                    if (lsInfo) {
+                        pushKV('keyCount', lsInfo.keyCount);
+                        pushKV('totalKB', lsInfo.totalKB);
+                        extraLines.push('  top 10 buckets by prefix (kb):');
+                        lsInfo.top.forEach(([p, b]) => extraLines.push(`    ${p}: ${Math.round(b / 1024)}KB`));
+                    } else {
+                        extraLines.push('  (LS unavailable)');
+                    }
+
+                    // === Recent upload performance (60s) ===
+                    pushHeader('Recent upload perf (last 60s, from sync log)');
+                    try {
+                        const log = typeof HEYS?.cloud?.getSyncLog === 'function' ? HEYS.cloud.getSyncLog() : [];
+                        const now = Date.now();
+                        const recent = log.filter(e => e && e.ts && (now - e.ts) < 60000);
+                        const oks = recent.filter(e => e.type === 'upload_ok');
+                        const fails = recent.filter(e => e.type === 'upload_fail' || e.type === 'upload_error');
+                        const starts = recent.filter(e => e.type === 'upload_start');
+                        const latencies = oks.map(e => Number(e?.data?.ms) || 0).filter(x => x > 0);
+                        const avg = latencies.length ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0;
+                        const sorted = [...latencies].sort((a, b) => a - b);
+                        const p50 = sorted[Math.floor(sorted.length * 0.5)] || 0;
+                        const p95 = sorted[Math.floor(sorted.length * 0.95)] || 0;
+                        const maxL = sorted[sorted.length - 1] || 0;
+                        const successRate = (oks.length + fails.length) > 0
+                            ? Math.round((oks.length / (oks.length + fails.length)) * 100) : null;
+                        pushKV('starts', starts.length);
+                        pushKV('oks', oks.length);
+                        pushKV('fails', fails.length);
+                        pushKV('successPct', successRate);
+                        pushKV('avg_ms', avg);
+                        pushKV('p50_ms', p50);
+                        pushKV('p95_ms', p95);
+                        pushKV('max_ms', maxL);
+                        pushKV('uploadsPerMin', oks.length);
+                        // last 5 min hot upload keys
+                        const log5min = log.filter(e => e && e.ts && (now - e.ts) < 300000 && e.type === 'upload_start');
+                        const perKey5m = {};
+                        log5min.forEach(e => {
+                            const keys = String(e?.data?.keys || '').split(',').map(s => s.trim()).filter(Boolean);
+                            keys.forEach(k => { perKey5m[k] = (perKey5m[k] || 0) + 1; });
+                        });
+                        const hotUploadKeys = Object.entries(perKey5m).filter(([, n]) => n >= 5).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                        if (hotUploadKeys.length > 0) {
+                            extraLines.push('  🔥 HOT UPLOAD KEYS last 5min (≥5): ' + hotUploadKeys.map(([k, n]) => `${k}=${n}`).join(', '));
+                        }
+                        const lastOk = (typeof HEYS?.cloud?._lastUploadOkAt === 'number') ? HEYS.cloud._lastUploadOkAt : null;
+                        pushKV('idleSinceLastOk_sec', lastOk ? Math.round((Date.now() - lastOk) / 1000) : null);
+                        pushKV('backlogVsRate', (rt.pending > 0 && oks.length > 0)
+                            ? Math.round(rt.pending / Math.max(oks.length / 60, 0.01)) + 's to drain'
+                            : '—');
+                    } catch (_) { /* noop */ }
+
+                    // === Service Worker (sync part) ===
+                    pushHeader('Service Worker (sync state)');
+                    if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+                        const sw = navigator.serviceWorker;
+                        pushKV('controllerActive', !!sw.controller);
+                        pushKV('controllerScriptURL', sw.controller ? sw.controller.scriptURL : null);
+                        pushKV('controllerState', sw.controller ? sw.controller.state : null);
+                    } else {
+                        extraLines.push('  (navigator.serviceWorker unavailable)');
+                    }
+
+                    // === Network fetches (Resource Timing) ===
+                    pushHeader('Network fetches (Performance Resource Timing, last 60s, /rpc|/rest|/api|client_kv_store|push|messages)');
+                    try {
+                        if (typeof performance !== 'undefined' && performance.getEntriesByType) {
+                            const all = performance.getEntriesByType('resource');
+                            const cutoff = (typeof performance.now === 'function') ? performance.now() - 60000 : 0;
+                            const syncRe = /\/(rpc|rest|api|client_kv_store|push|messages)\b/i;
+                            const matches = all.filter(r => r.startTime >= cutoff && syncRe.test(r.name)).slice(-30);
+                            if (matches.length > 0) {
+                                extraLines.push('  total_ms | TTFB | DNS | TCP | tx | size_kb | url');
+                                matches.forEach(r => {
+                                    const url = r.name.replace(/^https?:\/\/[^/]+/, '').slice(0, 70);
+                                    const totalMs = Math.round(r.duration);
+                                    const ttfb = Math.round(r.responseStart - r.requestStart);
+                                    const dns = Math.round(r.domainLookupEnd - r.domainLookupStart);
+                                    const tcp = Math.round(r.connectEnd - r.connectStart);
+                                    const tx = Math.round(r.responseEnd - r.responseStart);
+                                    const sz = r.transferSize ? Math.round(r.transferSize / 1024) : '—';
+                                    extraLines.push(`  ${String(totalMs).padStart(7)} | ${String(ttfb).padStart(4)} | ${String(dns).padStart(3)} | ${String(tcp).padStart(3)} | ${String(tx).padStart(3)} | ${String(sz).padStart(6)} | ${url}`);
+                                });
+                                const totals = matches.map(r => r.duration);
+                                const sortedT = [...totals].sort((a, b) => a - b);
+                                extraLines.push(`  --- ${matches.length} fetches: avg=${Math.round(totals.reduce((a, b) => a + b, 0) / totals.length)}ms p50=${Math.round(sortedT[Math.floor(sortedT.length * 0.5)] || 0)}ms p95=${Math.round(sortedT[Math.floor(sortedT.length * 0.95)] || 0)}ms max=${Math.round(sortedT[sortedT.length - 1] || 0)}ms`);
+                            } else {
+                                extraLines.push('  (no matching fetches in last 60s)');
+                            }
+                        }
+                    } catch (_) { /* noop */ }
+
+                    // === Long tasks ===
+                    pushHeader('Long tasks last 60s (PerformanceObserver longtask >50ms)');
+                    try {
+                        const lt = Array.isArray(HEYS?._longtaskHistory) ? HEYS._longtaskHistory : [];
+                        const now = Date.now();
+                        const recent = lt.filter(t => (now - t.ts) < 60000);
+                        if (recent.length > 0) {
+                            const total = recent.reduce((s, t) => s + t.dur_ms, 0);
+                            extraLines.push(`  🐢 ${recent.length} long tasks in 60s, total ${total}ms blocked`);
+                            extraLines.push('  --- last 20 (ago_ms | dur_ms | name | attribution) ---');
+                            recent.slice(-20).forEach(t => {
+                                extraLines.push(`  ${String(now - t.ts).padStart(5)}ms | ${String(t.dur_ms).padStart(5)}ms | ${String(t.name).padEnd(20)} | ${t.attribution.join(',')}`);
+                            });
+                        } else {
+                            extraLines.push('  (no longtasks — main thread quiet or browser unsupported)');
+                        }
+                    } catch (_) { /* noop */ }
+
+                    // === Memory ===
+                    pushHeader('Memory (Chrome only)');
+                    try {
+                        if (typeof performance !== 'undefined' && performance.memory) {
+                            const m = performance.memory;
+                            pushKV('usedJSHeap_MB', Math.round(m.usedJSHeapSize / 1024 / 1024));
+                            pushKV('totalJSHeap_MB', Math.round(m.totalJSHeapSize / 1024 / 1024));
+                            pushKV('heapLimit_MB', Math.round(m.jsHeapSizeLimit / 1024 / 1024));
+                            pushKV('usagePct', Math.round((m.usedJSHeapSize / m.jsHeapSizeLimit) * 100));
+                        } else {
+                            extraLines.push('  (performance.memory unavailable — non-Chrome)');
+                        }
+                    } catch (_) { /* noop */ }
+
+                    // === Client upsert queue RAW ===
+                    pushHeader('Client upsert queue raw (top 10 by size)');
+                    try {
+                        const raw = typeof HEYS?.cloud?.getClientQueueRaw === 'function' ? HEYS.cloud.getClientQueueRaw() : [];
+                        if (raw.length > 0) {
+                            extraLines.push('  bytes | key | client_id | user_id | updatedAt');
+                            raw.forEach(it => {
+                                extraLines.push(`  ${String(it.bytes).padStart(6)} | ${String(it.k || '?').padEnd(35)} | ${it.client_id || '—'} | ${it.user_id || '—'} | ${it.updatedAt || '—'}`);
+                            });
+                        } else {
+                            extraLines.push('  (queue empty)');
+                        }
+                    } catch (_) { /* noop */ }
+
+                    // === All cloud._* private flags ===
+                    pushHeader('All cloud._* private flags (auto-enum)');
+                    try {
+                        if (HEYS?.cloud) {
+                            const keys = Object.keys(HEYS.cloud).filter(k => k.startsWith('_')).sort();
+                            keys.forEach(k => {
+                                const v = HEYS.cloud[k];
+                                const t = typeof v;
+                                if (t === 'function') return;
+                                if (t === 'object' && v !== null) {
+                                    if (Array.isArray(v)) {
+                                        extraLines.push(`  ${k}: Array(${v.length})`);
+                                    } else {
+                                        try {
+                                            const s = JSON.stringify(v);
+                                            extraLines.push(`  ${k}: ${s.length > 120 ? s.slice(0, 120) + '…' : s}`);
+                                        } catch (_) { extraLines.push(`  ${k}: <unstringifiable>`); }
+                                    }
+                                } else {
+                                    extraLines.push(`  ${k}: ${v}`);
+                                }
+                            });
+                        }
+                    } catch (_) { /* noop */ }
+
+                    // === Cascade + EWS frequency ===
+                    pushHeader('Cascade + EWS compute frequency (loop-trigger detection)');
+                    try {
+                        const cs = HEYS?._cascadeStats;
+                        if (cs) {
+                            const now = Date.now();
+                            const last30s = cs.recent.filter(r => (now - r.ts) < 30000).length;
+                            const last5s = cs.recent.filter(r => (now - r.ts) < 5000).length;
+                            pushKV('cascadeTotal', cs.count);
+                            pushKV('cascadeLast30s', last30s);
+                            pushKV('cascadeLast5s', last5s);
+                            pushKV('cascadeLastFireAgo_ms', cs.lastTs ? (now - cs.lastTs) : null);
+                            if (last5s >= 3) {
+                                extraLines.push(`  🔥 CASCADE COMPUTE HOT: ${last5s} раз за 5с (norm <1) — это loop trigger!`);
+                            }
+                        } else {
+                            extraLines.push('  (cascade stats unavailable)');
+                        }
+                        const es = HEYS?._ewsStats;
+                        if (es) {
+                            const now = Date.now();
+                            const last30s = es.recent.filter(r => (now - r.ts) < 30000).length;
+                            const last5s = es.recent.filter(r => (now - r.ts) < 5000).length;
+                            pushKV('ewsTotal', es.count);
+                            pushKV('ewsLast30s', last30s);
+                            pushKV('ewsLast5s', last5s);
+                            pushKV('ewsLastFireAgo_ms', es.lastTs ? (now - es.lastTs) : null);
+                            if (last5s >= 3) {
+                                extraLines.push(`  🔥 EWS DETECT HOT: ${last5s} раз за 5с (norm <1) — это loop trigger!`);
+                            }
+                        } else {
+                            extraLines.push('  (ews stats unavailable)');
+                        }
+                    } catch (_) { /* noop */ }
+
+                    // === Session runtime ===
+                    pushHeader('Session runtime');
+                    pushKV('sessionAgeSec', typeof performance !== 'undefined' && performance.timeOrigin
+                        ? Math.round((Date.now() - performance.timeOrigin) / 1000) : null);
+                    pushKV('perfNow_ms', typeof performance !== 'undefined' ? Math.round(performance.now()) : null);
+
+                } catch (deepErr) {
+                    extraLines.push('');
+                    extraLines.push('!! extra diag failed: ' + (deepErr?.message || deepErr));
+                }
+
                 const lines = [
                     `=== HEYS Sync Debug Snapshot @ ${ts} ===`,
                     `status:       ${rt.status}`,
@@ -1394,6 +1747,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     '',
                     `=== Last Upload Diag ===`,
                     ...lastErrLines,
+                    ...extraLines,
                     '',
                     `=== Sync Log (${logLines.length} entries) ===`,
                     ...(logLines.length ? logLines : ['[HEYS.sync] (пусто)']),
@@ -1405,10 +1759,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     }).catch(() => { });
                 }
             } catch (e) { /* noop */ }
-            // 2026-05-29 extended diag: dump everything sync-related to console
-            // (separate from clipboard snapshot — for live debugging write-loops etc.)
+            // 2026-05-29 extended diag mirror: дублируем некоторые async-only items в console
+            // (clipboard уже содержит всё sync-доступное; async-results типа
+            // navigator.storage.estimate() / sw.getRegistration() не могут попасть в clipboard).
             try {
-                console.groupCollapsed('🔍 [HEYS.sync.debug] @ ' + ts);
+                console.groupCollapsed('🔍 [HEYS.sync.debug] async-only @ ' + ts);
                 console.log('=== Cloud flags ===');
                 console.log({
                     isAuth: rt.isAuth,
