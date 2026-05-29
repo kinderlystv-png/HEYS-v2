@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.29.d7219041",
+      "buildHash": "d7219041",
+      "date": "2026-05-29",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "4-слойная защита от повторов багов которые мы ловили вручную месяцами",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Появились 4 автоматических guard'a против классов багов которые повторялись последний месяц",
+          "description": "После incident'a 2026-05-29 с pollution данных между клиентами в курaторской сессии (Александрин профиль улетел в облако Poplanton'a) провели рефлексивный аудит за месяц и нашли 6 рекуррентных классов багов: side-effects внутри setState reducer'a (вызывали loops dayv2 200/30c и advice_trace 47/30c — фиксили 14 раз в разных reducer'ах), unscoped writes к per-client ключам (профиль/dayv2/ews/ceb попадали в облако под currentClientId), render-перф регрессии (DayTab 188-375мс re-render, cascade postMessage chain после удаления продукта), stale dayRef.current в async handler'ах, hot-write loops, cross-client carryover через legacy LS migration. Добавили 4 проактивных guard'a: (1) custom ESLint правило @heys/no-setstate-side-effects ловит setX(prev => { lsSet|saveClientKey|fetch... return next }) на code-time; (2) pre-push lint scripts/lint-unscoped-client-writes.mjs блокирует direct localStorage.setItem('heys_profile'|'heys_dayv2_*'|...) без <clientId>_ префикса (allowlist для legitimate pre-auth fallback case'ов); (3) e2e perf budget suite измеряет click→state-update latency (median 5 samples), fails если превышает порог; (4) runtime hot-write sentinel в U.lsSet emit'ит console.error и dispatch event 'heys:hot-write-detected' если для любого ключа >20 writes/30с. Плюс e2e suite с 5 слоями диагностики (badge dump, console capture, DB cross-check через psql, LS snapshots в 5 точках, sync queue timeline) для post-mortem курaторских регрессий. Цель — следующие подобные баги ловить за минуты в CI/локалке, а не за дни в production."
+        }
+      ]
+    },
+    {
       "version": "2026.05.29.fc1ce544",
       "buildHash": "fc1ce544",
       "date": "2026-05-29",
