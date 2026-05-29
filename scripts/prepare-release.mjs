@@ -52,7 +52,7 @@ const TECHNICAL_FILE_PATTERNS = [
     /^apps\/web\/public\/build-meta\.json$/,
     /^apps\/web\/public\/version\.json$/,
     /^apps\/web\/public\/sw\.js$/,
-    /^.*\.(md|sql|yml|yaml|json)$/,
+    /^.*\.(md|sql|yml|yaml|json|toml)$/,
     /(^|\/)package\.json$/,
     /(^|\/)pnpm-lock\.yaml$/,
     /(^|\/)tsconfig(\..+)?\.json$/,
