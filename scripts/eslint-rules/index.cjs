@@ -22,16 +22,19 @@
  */
 
 const moduleArchitecture = require('./module-architecture.cjs');
+const noSetStateSideEffects = require('./no-setstate-side-effects.cjs');
 
 module.exports = {
   rules: {
     'module-architecture': moduleArchitecture,
+    'no-setstate-side-effects': noSetStateSideEffects,
   },
   configs: {
     recommended: {
       plugins: ['@heys'],
       rules: {
         '@heys/module-architecture': 'error',
+        '@heys/no-setstate-side-effects': 'error',
       },
     },
     // Мягкий режим - только warnings
@@ -39,6 +42,7 @@ module.exports = {
       plugins: ['@heys'],
       rules: {
         '@heys/module-architecture': 'warn',
+        '@heys/no-setstate-side-effects': 'warn',
       },
     },
   },
