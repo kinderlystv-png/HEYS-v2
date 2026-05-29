@@ -3862,21 +3862,35 @@
                 lastLoadedUpdatedAtRef.current = newUpdatedAt;
                 blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
-                setDay(prevDay => {
-                    const newMeals = [...(prevDay.meals || []), newMeal];
-                    const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
-                    // v69 FIX: Use scoped key to prevent cross-client contamination
-                    const _addCid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
-                    const key = _addCid
-                        ? 'heys_' + _addCid + '_dayv2_' + (prevDay.date || date)
-                        : 'heys_dayv2_' + (prevDay.date || date);
-                    try {
-                        lsSet(key, newDayData);
-                    } catch (e) {
-                        console.error('[HEYS.Day.addMealDirect] ❌ lsSet failed:', e);
-                    }
-                    return newDayData;
-                });
+                // 2026-05-29 anti-loop: lsSet НЕ внутри setDay reducer.
+                // React 18 updateReducer повторно прогоняет updater'ы из очереди
+                // при каждом рендере (особенно под StrictMode dev — ~2× amplification),
+                // что приводило к 200+ повторных lsSet в курaторской сессии (см. snapshot 11:51).
+                // Правильно: читаем live snapshot из LS, считаем newDayData, пишем СИНХРОННО
+                // ОДИН раз, после этого setDay делает только pure state update.
+                const _baseKeyAdd = 'heys_dayv2_' + date;
+                let liveSnapshot = {};
+                try {
+                    liveSnapshot = (HEYS.utils && typeof HEYS.utils.lsGet === 'function')
+                        ? (HEYS.utils.lsGet(_baseKeyAdd, {}) || {})
+                        : {};
+                } catch (_) { liveSnapshot = {}; }
+                const safePrev = liveSnapshot && typeof liveSnapshot === 'object' ? liveSnapshot : {};
+                const newMealsArr = [...(safePrev.meals || []), newMeal];
+                const newDayData = {
+                    ...safePrev,
+                    date: safePrev.date || date,
+                    meals: newMealsArr,
+                    updatedAt: newUpdatedAt
+                };
+
+                try {
+                    lsSet(_baseKeyAdd, newDayData);
+                } catch (e) {
+                    console.error('[HEYS.Day.addMealDirect] ❌ lsSet failed:', e);
+                }
+
+                setDay(prevDay => ({ ...prevDay, ...newDayData, meals: newMealsArr, updatedAt: newUpdatedAt }));
 
                 console.info('[HEYS.Day.addMealDirect] ✅ Meal added:', newMeal.name, 'id=' + newMeal.id);
                 return true;
