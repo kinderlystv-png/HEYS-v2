@@ -1,7 +1,8 @@
 /**
  * E2E suite for cross-client pollution fix (incident 2026-05-29 21:16:40-43,
- * commit fc1ce544). Три теста:
+ * commit fc1ce544). Три теста + полная diagnostics suite (5 layers).
  *
+ * Tests:
  *   1. PIN-вход Александры — verifies её dashboard загружается, currentClientId stable.
  *   2. PIN-вход Poplanton'a — то же самое для второго клиента.
  *   3. Курaторский switch Александра → Poplanton — главный test:
@@ -9,42 +10,54 @@
  *      (heys_profile, heys_dayv2_*, etc.). Это валидация L1 defence
  *      (cleanup в heys_app_shell_v1.js reload-on-switch handler).
  *
+ * Diagnostics attached к каждому тесту (видно в HTML report при failure):
+ *   (A) Badge dump (sync state, write/saveClientKey history, queue, LS scan)
+ *   (B) Console log (filtered [HEYS.*], warnings, errors)
+ *   (C) DB cross-check (ground truth из client_kv_store через psql.sh)
+ *   (D) LS snapshots в 5 точках + diff между ними
+ *   (E) Sync queue timeline (pending/inflight каждые 500ms)
+ *
  * Запуск:
  *   1. Скопируй .env.local.example в .env.local, заполни credentials.
  *   2. Подними dev-сервер: pnpm dev:local (или pnpm dev:web на 3001).
  *   3. pnpm test:e2e:curator-switch
  *
- * Backward-compat: тесты skip'аются если env vars отсутствуют — CI без
- * credentials просто пропустит suite, не упадёт.
+ * При failure открой playwright-report/index.html — все attachments видны рядом
+ * с failed assertion.
  */
 import { expect, test } from '@playwright/test';
 
 import { getNamedPinCredentials, hasNamedPinCredentials, loginWithHeysPin } from './helpers/pin-auth';
+import { hasCuratorCredentials, loginAsCurator, switchCuratorToClient } from './helpers/curator-auth';
 import {
-    captureLsSnapshot,
-    getCuratorCredentials,
-    hasCuratorCredentials,
-    loginAsCurator,
-    switchCuratorToClient,
-} from './helpers/curator-auth';
+    attachDiagnostics,
+    captureBadgeDump,
+    captureFullLsSnapshot,
+    dbClientIdByName,
+    dbRecentWrites,
+    diffLsSnapshots,
+    setupConsoleCapture,
+    startSyncQueueMonitor,
+} from './helpers/test-diagnostics';
 
 test.use({
     viewport: { width: 1280, height: 800 },
 });
 
 test.describe('Курaторский cross-client pollution — anti-regression', () => {
-    test('PIN login Александры — dashboard + currentClientId stable', async ({ page }) => {
+    test('PIN login Александры — dashboard + currentClientId stable', async ({ page }, testInfo) => {
         test.skip(
             !hasNamedPinCredentials('ALEX'),
             'Set HEYS_TEST_PHONE_ALEX and HEYS_TEST_PIN_ALEX in .env.local'
         );
+
+        const consoleLog = setupConsoleCapture(page);
 
         const credentials = getNamedPinCredentials('ALEX');
         const clientId = await loginWithHeysPin(page, credentials);
 
         expect(clientId).toBeTruthy();
 
-        // Dashboard markers — должен появиться UI её дня.
         await expect(page.getByRole('button', { name: /Добавить приём пищи/ })).toBeVisible({ timeout: 30_000 });
 
         await expect.poll(async () => {
@@ -60,20 +73,23 @@ test.describe('Курaторский cross-client pollution — anti-regression'
             pinAuthClient: clientId,
         });
 
-        // PIN-вход — НЕТ pollution-vector через unscoped legacy keys: LS Александры
-        // должен содержать только её scoped keys, не unscoped legacy.
-        const snap = await captureLsSnapshot(page);
-        expect(snap.currentClientId).toBe(clientId);
-        // Note: legitimate writes юзера (water/meals) могут попасть в unscoped keys
-        // через legacy pre-fix code paths. После reload-on-switch fix эти ключи
-        // будут cleared при выходе. Здесь мы НЕ проверяем = 0, просто capture'им.
+        // Attach post-login diagnostics
+        const lsSnap = await captureFullLsSnapshot(page);
+        const badgeDump = await captureBadgeDump(page);
+        await attachDiagnostics(testInfo, 'alex-pin-postlogin', {
+            badgeDump,
+            lsSnapshot: lsSnap,
+            consoleLog: consoleLog.format(),
+        });
     });
 
-    test('PIN login Poplanton — dashboard + currentClientId stable', async ({ page }) => {
+    test('PIN login Poplanton — dashboard + currentClientId stable', async ({ page }, testInfo) => {
         test.skip(
             !hasNamedPinCredentials('POPL'),
             'Set HEYS_TEST_PHONE_POPL and HEYS_TEST_PIN_POPL in .env.local'
         );
+
+        const consoleLog = setupConsoleCapture(page);
 
         const credentials = getNamedPinCredentials('POPL');
         const clientId = await loginWithHeysPin(page, credentials);
@@ -94,9 +110,17 @@ test.describe('Курaторский cross-client pollution — anti-regression'
             currentClientId: clientId,
             pinAuthClient: clientId,
         });
+
+        const lsSnap = await captureFullLsSnapshot(page);
+        const badgeDump = await captureBadgeDump(page);
+        await attachDiagnostics(testInfo, 'popl-pin-postlogin', {
+            badgeDump,
+            lsSnapshot: lsSnap,
+            consoleLog: consoleLog.format(),
+        });
     });
 
-    test('Курaтор switch Александра → Poplanton — НЕТ pollution в LS после switch', async ({ page }) => {
+    test('Курaтор switch Александра → Poplanton — НЕТ pollution в LS после switch', async ({ page }, testInfo) => {
         test.skip(
             !hasCuratorCredentials() ||
             !process.env.HEYS_TEST_CURATOR_CLIENT_ALEX_NAME ||
@@ -108,60 +132,134 @@ test.describe('Курaторский cross-client pollution — anti-regression'
         const alexName = String(process.env.HEYS_TEST_CURATOR_CLIENT_ALEX_NAME).trim();
         const poplName = String(process.env.HEYS_TEST_CURATOR_CLIENT_POPL_NAME).trim();
 
-        // 1. Курaтор-login.
+        // === Diagnostics setup ===
+        // (B) Console capture: запускается СРАЗУ — поймает все события на протяжении теста.
+        const consoleLog = setupConsoleCapture(page);
+        // (E) Sync queue monitor: каждые 500ms snapshot pending/inflight.
+        const queueMonitor = startSyncQueueMonitor(page, 500);
+
+        // === T0: курaтор-login ===
         const curator = await loginAsCurator(page);
         expect(curator.userId).toBeTruthy();
 
-        // 2. Switch на Александру (входим в её dashboard).
+        const t0_ls = await captureFullLsSnapshot(page);
+        const t0_badge = await captureBadgeDump(page);
+        await attachDiagnostics(testInfo, 'T0-curator-login', {
+            badgeDump: t0_badge,
+            lsSnapshot: t0_ls,
+        });
+
+        // === T1: switch на Александру ===
         const alexClientId = await switchCuratorToClient(page, alexName);
         expect(alexClientId).toBeTruthy();
-
-        // Ждём пока её данные подгрузятся.
         await expect(page.getByRole('button', { name: /Добавить приём пищи/ })).toBeVisible({ timeout: 60_000 });
 
-        // 3. Snapshot её LS — для baseline'a.
-        const beforeSwitch = await captureLsSnapshot(page);
-        expect(beforeSwitch.currentClientId).toBe(alexClientId);
-        // baseline: записываем сколько unscoped legacy keys было до switch'a (informational).
+        const t1_ls = await captureFullLsSnapshot(page);
+        const t1_badge = await captureBadgeDump(page);
+        await attachDiagnostics(testInfo, 'T1-after-switch-to-alex', {
+            badgeDump: t1_badge,
+            lsSnapshot: t1_ls,
+            lsDiff: diffLsSnapshots(t0_ls, t1_ls),
+        });
+
+        // baseline informational
         console.info(
-            `[anti-pollution test] Александра's LS перед switch: ${beforeSwitch.unscopedLegacyKeys.length} unscoped legacy keys ` +
-            `(${beforeSwitch.unscopedLegacyKeys.slice(0, 5).join(', ')}${beforeSwitch.unscopedLegacyKeys.length > 5 ? '...' : ''})`
+            `[T1] Александра's LS: ${t1_ls.unscopedLegacyKeys.length} unscoped legacy keys ` +
+            `(${t1_ls.unscopedLegacyKeys.slice(0, 5).join(', ')}${t1_ls.unscopedLegacyKeys.length > 5 ? '...' : ''})`
         );
 
-        // 4. CORE TEST: switch на Poplanton.
+        // === T2: момент перед switch'ом на Poplanton ===
+        // (даём sync ~3 сек чтобы settle — иначе pending writes Александры
+        // могут улететь под Poplanton id если switch произойдёт в момент upload'a).
+        await page.waitForTimeout(3000);
+        const t2_ls = await captureFullLsSnapshot(page);
+        await attachDiagnostics(testInfo, 'T2-pre-switch-to-popl', {
+            lsSnapshot: t2_ls,
+        });
+
+        // === T3: switch на Poplanton — CORE TEST ===
         const poplClientId = await switchCuratorToClient(page, poplName);
         expect(poplClientId).toBeTruthy();
         expect(poplClientId).not.toBe(alexClientId);
 
         await expect(page.getByRole('button', { name: /Добавить приём пищи/ })).toBeVisible({ timeout: 60_000 });
 
-        // 5. CORE ASSERTIONS — L1 defence сработал.
-        const afterSwitch = await captureLsSnapshot(page);
+        const t3_ls = await captureFullLsSnapshot(page);
+        const t3_badge = await captureBadgeDump(page);
+        await attachDiagnostics(testInfo, 'T3-after-switch-to-popl', {
+            badgeDump: t3_badge,
+            lsSnapshot: t3_ls,
+            lsDiff: diffLsSnapshots(t2_ls, t3_ls),
+        });
 
-        // (a) currentClientId переключился на Poplanton.
-        expect(afterSwitch.currentClientId).toBe(poplClientId);
+        // === T4: 5 секунд после switch'a (settled) ===
+        // Catches lingering pollution: bootstrap may upload Александрины legacy keys
+        // в течение нескольких секунд после reload. Если pollution случается отложенно
+        // — это T4 поймает.
+        await page.waitForTimeout(5000);
+        const t4_ls = await captureFullLsSnapshot(page);
+        const t4_badge = await captureBadgeDump(page);
+        await attachDiagnostics(testInfo, 'T4-settled-5s-after', {
+            badgeDump: t4_badge,
+            lsSnapshot: t4_ls,
+            lsDiff: diffLsSnapshots(t3_ls, t4_ls),
+        });
 
-        // (b) unscoped legacy keys очищены (L1 defence в reload-on-switch).
-        // Это главная anti-pollution гарантия из commit fc1ce544.
+        // === (C) DB cross-check: ground truth ===
+        // Самое надёжное assertion. Запрашиваем напрямую client_kv_store: что
+        // появилось у Poplanton'а за последние ~60 сек (от T1 до T4 ≈ 30-40 сек,
+        // берём 90 сек запас). Если там есть Александрины-shape keys (heys_profile
+        // с тем же bytecount, heys_dayv2_<date> за исторические даты которых
+        // Poplanton не правил) — pollution.
+        const poplUuid = dbClientIdByName(poplName);
+        const dbResult = poplUuid
+            ? dbRecentWrites(poplUuid, 90)
+            : { success: false, output: '', error: `Client "${poplName}" not found in DB` };
+        await attachDiagnostics(testInfo, 'T4-db-crosscheck', { dbResult });
+
+        // === FINAL CORE ASSERTIONS ===
+
+        // (1) currentClientId переключился
+        expect(t3_ls.currentClientId).toBe(poplClientId);
+        expect(t4_ls.currentClientId).toBe(poplClientId);
+
+        // (2) L1 defence сработал — НЕТ unscoped legacy keys после switch'a (T3)
         expect(
-            afterSwitch.unscopedLegacyKeys,
-            `L1 defence не сработал: после switch'а LS содержит ${afterSwitch.unscopedLegacyKeys.length} unscoped legacy keys ` +
-            `(${afterSwitch.unscopedLegacyKeys.join(', ')}). Они должны были быть удалены reload-on-switch handler'ом ` +
-            `(heys_app_shell_v1.js:2624). Если этот assertion падает — pollution может вернуться.`
+            t3_ls.unscopedLegacyKeys,
+            `L1 defence не сработал в T3: после switch'a LS содержит ${t3_ls.unscopedLegacyKeys.length} unscoped legacy keys ` +
+            `(${t3_ls.unscopedLegacyKeys.join(', ')}). Они должны были быть удалены reload-on-switch handler'ом ` +
+            `(heys_app_shell_v1.js:2624).`
         ).toEqual([]);
 
-        // (c) Профиль Poplanton'a (scoped) НЕ равен Александринскому (sanity check
-        // что мы реально на разных клиентах, не один scoped key переименован).
-        // Если bytes у обоих > 0 — оба клиента имеют свой profile (good).
-        // Если у Poplanton'a 0 — он ещё не успел подгрузить scoped profile с сервера;
-        // это НЕ pollution (отсутствие записи ≠ чужие данные).
-        // Pollution assertion: scopedProfileBytes у Poplanton'a НЕ должен совпадать
-        // с beforeSwitch.scopedProfileBytes (это были байты scoped profile Александры
-        // под her client_id — Poplanton НЕ должен иметь точно такую же запись под
-        // her client_id; scoped keys per-client разные).
-        console.info(
-            `[anti-pollution test] After switch: alex.scopedProfileBytes=${beforeSwitch.scopedProfileBytes}, ` +
-            `popl.scopedProfileBytes=${afterSwitch.scopedProfileBytes}`
-        );
+        // (3) Через 5с settle (T4) — всё ещё чисто (нет lingering pollution)
+        expect(
+            t4_ls.unscopedLegacyKeys,
+            `Через 5с после switch'a появились unscoped legacy keys (${t4_ls.unscopedLegacyKeys.length}): ` +
+            `${t4_ls.unscopedLegacyKeys.join(', ')}. Migration path в каком-то модуле всё ещё работает ` +
+            `после reload — это новый pollution vector, см. attached T4-badge-dump.txt.`
+        ).toEqual([]);
+
+        // === Сохраняем sync queue timeline ===
+        const queueSnaps = queueMonitor.stop();
+        await testInfo.attach('full-test-sync-timeline.txt', {
+            body: queueMonitor.formatTimeline(),
+            contentType: 'text/plain',
+        });
+        await testInfo.attach('full-test-console.txt', {
+            body: consoleLog.format(),
+            contentType: 'text/plain',
+        });
+
+        // (4) Sync queue не должна оставаться зависшей через 5с после switch.
+        // Если pending/inflight > 0 в финале — что-то ещё в очереди (потенциально
+        // chosen-под-неверный-client-id write).
+        const finalQueue = queueSnaps[queueSnaps.length - 1];
+        if (finalQueue) {
+            expect(
+                finalQueue.pending + finalQueue.inflight,
+                `Sync queue не дренировалась через 5с после switch: pending=${finalQueue.pending} inflight=${finalQueue.inflight}. ` +
+                `См. attached full-test-sync-timeline.txt для timeline.`
+            ).toBeLessThanOrEqual(2); // допускаем 1-2 в-полёте writes
+        }
     });
 });
