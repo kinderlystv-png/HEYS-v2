@@ -47,8 +47,21 @@ export function getHeysPinCredentials(): HeysPinCredentials {
     };
 }
 
-export async function loginWithHeysPin(page: Page): Promise<string> {
-    const credentials = getHeysPinCredentials();
+// 2026-05-29: explicit-credentials helpers для multi-client e2e (Александра + Poplanton).
+// Используется в curator-switch-pollution.spec.ts.
+export function hasNamedPinCredentials(prefix: string): boolean {
+    return Boolean(process.env[`HEYS_TEST_PHONE_${prefix}`] && process.env[`HEYS_TEST_PIN_${prefix}`]);
+}
+
+export function getNamedPinCredentials(prefix: string): HeysPinCredentials {
+    return {
+        phone: normalizePhone(process.env[`HEYS_TEST_PHONE_${prefix}`] || ''),
+        pin: normalizePin(process.env[`HEYS_TEST_PIN_${prefix}`] || ''),
+    };
+}
+
+export async function loginWithHeysPin(page: Page, overrideCredentials?: HeysPinCredentials): Promise<string> {
+    const credentials = overrideCredentials || getHeysPinCredentials();
 
     await page.goto('/');
 

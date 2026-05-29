@@ -75,6 +75,7 @@
     "test:all": "node -e \"require('fs').mkdirSync('coverage/.tmp',{ recursive: true })\" && cross-env NODE_OPTIONS=--max-old-space-size=6144 vitest run --coverage",
     "test:coverage": "pnpm -r run test:coverage",
     "test:e2e": "playwright test",
+    "test:e2e:curator-switch": "playwright test -c playwright.curator-switch.config.ts",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:pin": "playwright test -c playwright.heys-pin.config.ts",
     "test:e2e:planning-perf": "playwright test -c playwright.planning-perf.config.ts",
