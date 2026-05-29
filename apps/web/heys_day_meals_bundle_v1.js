@@ -6704,37 +6704,38 @@
                                             blockUntilTs: newUpdatedAt + 3000,
                                         });
 
-                                        setDay((prevDay = {}) => {
-                                            const updatedMeals = (prevDay.meals || []).map((m, i) =>
-                                                i === addMealIndex
-                                                    ? { ...m, items: [...(m.items || []), newItem] }
-                                                    : m,
-                                            );
-                                            const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
+                                        // 2026-05-29 anti-loop: pre-compute + persist outside setDay reducer,
+                                        // см. fix(day) f23aa6a2 + commit для остальных reducer'ов в этом файле.
+                                        const baseDay = dayRef.current || {};
+                                        const updatedMeals = (baseDay.meals || []).map((m, i) =>
+                                            i === addMealIndex
+                                                ? { ...m, items: [...(m.items || []), newItem] }
+                                                : m,
+                                        );
+                                        const newDayData = { ...baseDay, meals: updatedMeals, updatedAt: newUpdatedAt };
 
-                                            const key = _scopedDayKey(date);
-                                            const prevMealItems = ((prevDay?.meals || [])[addMealIndex]?.items || []).length;
-                                            try {
-                                                lsSet(key, newDayData);
-                                                console.info('[HEYS.meal] ✅ Product saved to localStorage', {
-                                                    product: finalProduct.name,
-                                                    key,
-                                                    mealIndex: addMealIndex,
-                                                    itemsInMeal: prevMealItems + 1,
-                                                    totalMeals: updatedMeals.length,
-                                                    updatedAt: newUpdatedAt,
-                                                });
-                                            } catch (e) {
-                                                console.error('[HEYS.meal] ❌ Product lsSet failed', {
-                                                    product: finalProduct.name,
-                                                    key,
-                                                    error: String(e),
-                                                });
-                                                trackError(e, { source: 'day/_meals.js', action: 'save_product' });
-                                            }
+                                        const key = _scopedDayKey(date);
+                                        const prevMealItems = ((baseDay?.meals || [])[addMealIndex]?.items || []).length;
+                                        try {
+                                            lsSet(key, newDayData);
+                                            console.info('[HEYS.meal] ✅ Product saved to localStorage', {
+                                                product: finalProduct.name,
+                                                key,
+                                                mealIndex: addMealIndex,
+                                                itemsInMeal: prevMealItems + 1,
+                                                totalMeals: updatedMeals.length,
+                                                updatedAt: newUpdatedAt,
+                                            });
+                                        } catch (e) {
+                                            console.error('[HEYS.meal] ❌ Product lsSet failed', {
+                                                product: finalProduct.name,
+                                                key,
+                                                error: String(e),
+                                            });
+                                            trackError(e, { source: 'day/_meals.js', action: 'save_product' });
+                                        }
 
-                                            return newDayData;
-                                        });
+                                        setDay(() => newDayData);
 
                                         try { navigator.vibrate?.(10); } catch (e) { }
                                         window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product: finalProduct, grams } }));

@@ -297,24 +297,28 @@
                         lastLoadedUpdatedAtRef.current = newUpdatedAt;
                         blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
-                        setDay((prevDay = {}) => {
-                          const updatedMeals = (prevDay.meals || []).map((m, i) =>
-                            i === addMealIndex
-                              ? { ...m, items: [...(m.items || []), newItem] }
-                              : m
-                          );
-                          const newDayData = { ...prevDay, meals: updatedMeals, updatedAt: newUpdatedAt };
-
-                          // ✅ СИНХРОННОЕ сохранение в localStorage внутри setDay
-                          const key = 'heys_dayv2_' + date;
-                          try {
-                            lsSet(key, newDayData);
-                          } catch (e) {
-                            console.error('[HEYS] 🍽 Failed to save product:', e);
-                          }
-
-                          return newDayData;
-                        });
+                        // 2026-05-29 anti-loop: pre-read + persist outside reducer,
+                        // setDay делает только pure update (см. fix f23aa6a2).
+                        const key = 'heys_dayv2_' + date;
+                        let liveSnap = {};
+                        try {
+                          liveSnap = (HEYS.utils && typeof HEYS.utils.lsGet === 'function')
+                            ? (HEYS.utils.lsGet(key, {}) || {})
+                            : {};
+                        } catch (_) { liveSnap = {}; }
+                        const baseDay = liveSnap && typeof liveSnap === 'object' ? liveSnap : {};
+                        const updatedMeals = (baseDay.meals || []).map((m, i) =>
+                          i === addMealIndex
+                            ? { ...m, items: [...(m.items || []), newItem] }
+                            : m
+                        );
+                        const newDayData = { ...baseDay, meals: updatedMeals, updatedAt: newUpdatedAt };
+                        try {
+                          lsSet(key, newDayData);
+                        } catch (e) {
+                          console.error('[HEYS] 🍽 Failed to save product:', e);
+                        }
+                        setDay(() => newDayData);
 
                         try { navigator.vibrate?.(10); } catch (e) { }
                         window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product, grams } }));
