@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.7fb8be2f",
+      "buildHash": "7fb8be2f",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Курaторская сессия: закрыты последние lazy-каналы, через которые ews/lipolysis-данные могли уплывать между клиентами",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Тренды Early Warning, история липолиза и интервалы между приёмами пищи теперь жёстко привязаны к clientId — больше не могут попасть в облако к другому клиенту при курaторском switch",
+          "description": "Контекст: 2026-05-29 уже закрыли утечку профиля/dayv2/ceb между клиентами (fc1ce544) двумя слоями — миграция теперь проверяет ownership, плюс reload-on-switch чистит legacy unscoped keys из LS перед reload. Но e2e тест, который написали для anti-regression, поймал ещё ОДИН класс writers, которые проскальзывали мимо двух слоёв защиты: три модуля писали свои legacy ключи (heys_meal_gaps_history, heys_lipolysis_record/history, heys_ews_trends_v1/weekly_v1) через прямой localStorage.setItem, минуя HEYS.store.set (которая автоматически добавляет clientId). Это значит: после reload-on-switch'а на нового клиента, при первом же расчёте insulin-wave / ews-trends / lipolysis-streak модуль воссоздавал unscoped ключ → перехватчик cloud sync видел unscoped key и приписывал его текущему clientId → данные предыдущего клиента уплывали в облако нового. Тест зафиксировал ровно этот сценарий: после fc1ce544 один из 3 legacy keys всё ещё пересоздавался после switch'а. Фикс: добавили scoping всем трём модулям с одинаковым паттерном — heys_<clientId>_<base_key>, плюс read-fallback на legacy unscoped key для one-shot миграции существующих данных. Дополнительно проверили DB cross-content: 0 строк с identical content между клиентами — прошлая pollution уже вычищена, новый risk закрыт. T1 baseline e2e теста показывает: 0 unscoped legacy keys у Александры (раньше было 3). DB пользователей чистая."
+        }
+      ]
+    },
+    {
       "version": "2026.05.29.d7219041",
       "buildHash": "d7219041",
       "date": "2026-05-29",
