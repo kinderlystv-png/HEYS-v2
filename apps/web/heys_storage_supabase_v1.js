@@ -834,6 +834,17 @@
   let status = CONNECTION_STATUS.OFFLINE;
   let user = null;
   let muteMirror = false;
+  // 2026-05-29 echo-loop diag: ring buffer for muteMirror toggles (last 50)
+  HEYS._muteMirrorHistory = [];
+  HEYS._muteMirrorCurrent = false;
+  HEYS._interceptDedupHits = 0; // counter for setItem-interceptor dedup hits
+  function _trackMuteMirror(next, source) {
+    try {
+      HEYS._muteMirrorHistory.push({ ts: Date.now(), next: !!next, source: source || '—' });
+      if (HEYS._muteMirrorHistory.length > 50) HEYS._muteMirrorHistory.shift();
+      HEYS._muteMirrorCurrent = !!next;
+    } catch (_) { /* noop */ }
+  }
   let _syncPauseUntil = 0;
   let _syncPauseToken = 0;
   let _syncPauseReason = '';
@@ -4368,6 +4379,8 @@
         if (muteMirror && isOurKey(k) && String(k).includes('dayv2_')) {
           // Trace event, не warning — это intentional skip mirror'а, поведение по дизайну.
           pushSyncTrace('MUTE_MIRROR_SKIP', { key: k }, 'debug');
+          // 2026-05-29 echo-loop diag: count интерсептор dedup-skip hits для dayv2
+          try { HEYS._interceptDedupHits = (HEYS._interceptDedupHits || 0) + 1; } catch (_) {}
         }
         if (!muteMirror && isOurKey(k)) {
           // 🔒 Дедупликация: пропускаем повторные сохранения с тем же updatedAt
@@ -11434,6 +11447,22 @@
   function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync') {
     if (!clientId || !baseKey || value == null) return false;
     if (isSensitiveSessionStorageKey(baseKey)) return false;
+
+    // 2026-05-29 echo-loop diag: trace each hot-sync apply
+    try {
+      HEYS._hotsyncApplies = HEYS._hotsyncApplies || [];
+      let _bytes = 0;
+      try { _bytes = (JSON.stringify(value) || '').length; } catch (_) {}
+      HEYS._hotsyncApplies.push({
+        ts: Date.now(),
+        baseKey: String(baseKey).slice(0, 60),
+        clientId: clientId ? String(clientId).slice(0, 8) : null,
+        source,
+        bytes: _bytes,
+        updatedAt: (value && typeof value === 'object') ? value.updatedAt : null,
+      });
+      if (HEYS._hotsyncApplies.length > 100) HEYS._hotsyncApplies.shift();
+    } catch (_) { /* noop */ }
 
     // Overlay key — канонический real-time канал sync продуктов между устройствами.
     // Без этой ветки удаление продукта на телефоне не попадёт на планшет до полного

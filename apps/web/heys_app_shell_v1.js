@@ -1683,6 +1683,42 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         }
                     } catch (_) { /* noop */ }
 
+                    // === ECHO LOOP HYPOTHESIS — autosave ↔ hot-sync correlation ===
+                    pushHeader('Echo-loop hypothesis (autosave ↔ hot-sync correlation)');
+                    try {
+                        const af = Array.isArray(HEYS?._autosaveFlushes) ? HEYS._autosaveFlushes : [];
+                        const ha = Array.isArray(HEYS?._hotsyncApplies) ? HEYS._hotsyncApplies : [];
+                        pushKV('autosaveFlushesTotal', af.length);
+                        pushKV('hotsyncAppliesTotal', ha.length);
+                        const now = Date.now();
+                        const af30s = af.filter(f => (now - f.ts) < 30000);
+                        const ha30s = ha.filter(f => (now - f.ts) < 30000);
+                        pushKV('autosave_last30s', af30s.length);
+                        pushKV('hotsync_last30s', ha30s.length);
+                        // suspectEchoLoop = autosave fired within 500ms after a hot-sync apply
+                        const echoCount = af30s.filter(f => f.suspectEchoLoop).length;
+                        pushKV('suspectEcho_last30s', echoCount);
+                        if (echoCount >= 5) {
+                            extraLines.push(`  🔥 ECHO LOOP SUSPECT: ${echoCount}/${af30s.length} autosaves fired <500ms after hot-sync — server-merge feedback cycle confirmed`);
+                        } else if (af30s.length > 5 && ha30s.length > 0) {
+                            extraLines.push(`  ⚠ ${af30s.length} autosaves vs ${ha30s.length} hot-syncs — possible but not strong echo correlation`);
+                        } else {
+                            extraLines.push('  (no strong echo correlation in last 30s)');
+                        }
+                        pushKV('interceptDedupHits', HEYS?._interceptDedupHits || 0);
+                        pushKV('muteMirrorCurrent', HEYS?._muteMirrorCurrent);
+
+                        // last 20 autosave entries with correlation
+                        extraLines.push('  --- last 20 autosave flushes (ago_ms | meals | content_kb | since_last_hotsync_ms | echo_suspect) ---');
+                        af.slice(-20).forEach(f => {
+                            extraLines.push(`  ${String(now - f.ts).padStart(5)}ms | meals=${f.mealsCount} | ${(f.contentBytes / 1024).toFixed(1)}KB | hotsync_delta=${f.sinceLastHotsync_ms !== null ? f.sinceLastHotsync_ms + 'ms' : '—'} | ${f.suspectEchoLoop ? 'YES_ECHO' : '—'}`);
+                        });
+                        extraLines.push('  --- last 20 hot-sync applies (ago_ms | baseKey | bytes | source | data.updatedAt) ---');
+                        ha.slice(-20).forEach(h => {
+                            extraLines.push(`  ${String(now - h.ts).padStart(5)}ms | ${String(h.baseKey).padEnd(35)} | ${h.bytes}b | ${h.source} | ${h.updatedAt || '—'}`);
+                        });
+                    } catch (_) { /* noop */ }
+
                     // === Cascade + EWS frequency ===
                     pushHeader('Cascade + EWS compute frequency (loop-trigger detection)');
                     try {

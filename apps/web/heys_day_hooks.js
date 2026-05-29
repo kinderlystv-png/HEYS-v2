@@ -448,6 +448,26 @@
           mealsCount: (payload.meals || []).length
         });
       }
+      // 2026-05-29 echo-loop diag: trace each autosave flush + correlate с hot-sync
+      try {
+        const _heys = global.HEYS || {};
+        _heys._autosaveFlushes = _heys._autosaveFlushes || [];
+        const _now = Date.now();
+        const _hs = Array.isArray(_heys._hotsyncApplies) ? _heys._hotsyncApplies : [];
+        const _lastHs = _hs.length ? _hs[_hs.length - 1] : null;
+        const _sinceLastHotsync = _lastHs ? (_now - _lastHs.ts) : null;
+        _heys._autosaveFlushes.push({
+          ts: _now,
+          date: String(date || ''),
+          mealsCount: Array.isArray(payload?.meals) ? payload.meals.length : 0,
+          updatedAt: payload?.updatedAt,
+          contentBytes: typeof daySnap === 'string' ? daySnap.length : 0,
+          sinceLastHotsync_ms: _sinceLastHotsync,
+          suspectEchoLoop: _sinceLastHotsync !== null && _sinceLastHotsync < 500,
+        });
+        if (_heys._autosaveFlushes.length > 100) _heys._autosaveFlushes.shift();
+      } catch (_) { /* noop */ }
+
       saveToDate(date, payload);
       prevStoredSnapRef.current = JSON.stringify(payload);
       prevDaySnapRef.current = daySnap;
