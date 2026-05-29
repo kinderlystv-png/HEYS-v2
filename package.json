@@ -77,6 +77,7 @@
     "test:e2e": "playwright test",
     "test:e2e:curator-switch": "playwright test -c playwright.curator-switch.config.ts",
     "test:e2e:debug": "playwright test --debug",
+    "test:e2e:perf-budget": "playwright test -c playwright.perf-budget.config.ts",
     "test:e2e:pin": "playwright test -c playwright.heys-pin.config.ts",
     "test:e2e:planning-perf": "playwright test -c playwright.planning-perf.config.ts",
     "test:e2e:ui": "playwright test --ui",
