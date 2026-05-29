@@ -9914,19 +9914,16 @@
                         lastLoadedUpdatedAtRef.current = newUpdatedAt;
                         blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
-                        setDay((prevDay) => {
-                            const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
-                            const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
-
-                            const key = _scopedDayKey(date);
-                            try {
-                                lsSet(key, newDayData);
-                            } catch (e) {
-                                trackError(e, { source: 'day/_meals.js', action: 'save_meal' });
-                            }
-
-                            return newDayData;
-                        });
+                        const baseDay = dayRef.current || {};
+                        const newMeals = sortMealsByTime([...(baseDay.meals || []), newMeal]);
+                        const newDayData = { ...baseDay, meals: newMeals, updatedAt: newUpdatedAt };
+                        const key = _scopedDayKey(date);
+                        try {
+                            lsSet(key, newDayData);
+                        } catch (e) {
+                            trackError(e, { source: 'day/_meals.js', action: 'save_meal' });
+                        }
+                        setDay(() => newDayData);
 
                         if (window.HEYS && window.HEYS.analytics) {
                             window.HEYS.analytics.trackDataOperation('meal-created');
@@ -10159,14 +10156,13 @@
                                             if (!pickedMeal || !(pickedMeal.items || []).length) return;
                                             const cloned = pickedMeal.items.map(it => ({ ...it, id: uid('it_') }));
                                             markUndoWindow(3000);
-                                            setDay(prevDay => {
-                                                const newMeals = (prevDay.meals || []).map((m, i) =>
-                                                    i === actualIdx ? { ...m, items: [...(m.items || []), ...cloned] } : m
-                                                );
-                                                const updated = { ...prevDay, meals: newMeals, updatedAt: Date.now() };
-                                                persistDayData(updated, 'flow_repeat_recent_meal');
-                                                return updated;
-                                            });
+                                            const baseDay = dayRef.current || {};
+                                            const newMeals = (baseDay.meals || []).map((m, i) =>
+                                                i === actualIdx ? { ...m, items: [...(m.items || []), ...cloned] } : m
+                                            );
+                                            const updated = { ...baseDay, meals: newMeals, updatedAt: Date.now() };
+                                            persistDayData(updated, 'flow_repeat_recent_meal');
+                                            setDay(() => updated);
                                             HEYS.Toast?.success?.(`Скопировано продуктов: ${cloned.length}`);
                                         },
                                     });
@@ -10341,19 +10337,18 @@
                 let newMealIndex = 0;
                 if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
                 if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
-                setDay((prevDay) => {
-                    const baseMeals = prevDay.meals || [];
-                    const newMeals = [...baseMeals, newMeal];
-                    newMealIndex = newMeals.length - 1;
-                    const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
-                    const key = _scopedDayKey(date);
-                    try {
-                        lsSet(key, newDayData);
-                    } catch (e) {
-                        trackError(e, { source: 'day/_meals.js', action: 'save_meal_desktop' });
-                    }
-                    return newDayData;
-                });
+                const baseDay = dayRef.current || {};
+                const baseMeals = baseDay.meals || [];
+                const newMeals = [...baseMeals, newMeal];
+                newMealIndex = newMeals.length - 1;
+                const newDayData = { ...baseDay, meals: newMeals, updatedAt: newUpdatedAt };
+                const key = _scopedDayKey(date);
+                try {
+                    lsSet(key, newDayData);
+                } catch (e) {
+                    trackError(e, { source: 'day/_meals.js', action: 'save_meal_desktop' });
+                }
+                setDay(() => newDayData);
                 expandOnlyMeal(newMealIndex);
                 if (window.HEYS && window.HEYS.analytics) {
                     window.HEYS.analytics.trackDataOperation('meal-created');
@@ -10439,29 +10434,27 @@
                 applyMutation: () => {
                     const removedUpdatedAt = markUndoWindow(5000);
 
-                    setDay((prevDay) => {
-                        const meals = (prevDay.meals || []).filter((meal) => meal.id !== mealId);
-                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
-                        persistDayData(nextDayData, 'remove_meal');
-                        return nextDayData;
-                    });
+                    const baseDay = dayRef.current || {};
+                    const meals = (baseDay.meals || []).filter((meal) => meal.id !== mealId);
+                    const nextDayData = { ...baseDay, meals, updatedAt: removedUpdatedAt };
+                    persistDayData(nextDayData, 'remove_meal');
+                    setDay(() => nextDayData);
 
                     return { mealId, mealToRemove, insertIndex: i };
                 },
                 undoMutation: ({ mealId: ctxMealId, mealToRemove: ctxMeal, insertIndex }) => {
                     const undoUpdatedAt = markUndoWindow(3000);
-                    setDay((prevDay) => {
-                        const meals = [...(prevDay.meals || [])];
-                        if (meals.some((meal) => meal.id === ctxMealId)) {
-                            return prevDay;
-                        }
-
-                        meals.splice(Math.max(0, Math.min(insertIndex, meals.length)), 0, ctxMeal);
-                        const restoredMeals = sortMealsByTime(meals);
-                        const nextDayData = { ...prevDay, meals: restoredMeals, updatedAt: undoUpdatedAt };
-                        persistDayData(nextDayData, 'undo_remove_meal');
-                        return nextDayData;
-                    });
+                    const baseDay = dayRef.current || {};
+                    const baseMeals = baseDay.meals || [];
+                    if (baseMeals.some((meal) => meal.id === ctxMealId)) {
+                        return;
+                    }
+                    const meals = [...baseMeals];
+                    meals.splice(Math.max(0, Math.min(insertIndex, meals.length)), 0, ctxMeal);
+                    const restoredMeals = sortMealsByTime(meals);
+                    const nextDayData = { ...baseDay, meals: restoredMeals, updatedAt: undoUpdatedAt };
+                    persistDayData(nextDayData, 'undo_remove_meal');
+                    setDay(() => nextDayData);
                 },
             });
         }, [haptic, setDay, markUndoWindow, persistDayData, runUndoableDayMutation]);
@@ -10536,47 +10529,44 @@
             const newUpdatedAt = Date.now();
             if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
             if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
-            setDay((prevDay) => {
-                const mealsList = prevDay.meals || [];
-                if (!mealsList[mi]) {
-                    console.warn('[HEYS.day] ❌ Meal index not found for addProductToMeal', {
-                        mealIndex: mi,
-                        mealsCount: mealsList.length,
-                        productName: finalProduct?.name || null
-                    });
-                }
-                const before = (mealsList[mi]?.items || []).length;
-                const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
-                const newDayData = { ...prevDay, meals, updatedAt: newUpdatedAt };
-                const key = _scopedDayKey(date);
-                // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
+            const baseDay = dayRef.current || {};
+            const mealsList = baseDay.meals || [];
+            if (!mealsList[mi]) {
+                console.warn('[HEYS.day] ❌ Meal index not found for addProductToMeal', {
+                    mealIndex: mi,
+                    mealsCount: mealsList.length,
+                    productName: finalProduct?.name || null
+                });
+            }
+            const before = (mealsList[mi]?.items || []).length;
+            const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
+            const newDayData = { ...baseDay, meals, updatedAt: newUpdatedAt };
+            const key = _scopedDayKey(date);
+            try {
+                console.info('[HEYS.day-trace] 4/8 setDay applied', {
+                    date: baseDay.date,
+                    key,
+                    mealIndex: mi,
+                    itemsBefore: before,
+                    itemsAfter: (newDayData.meals?.[mi]?.items || []).length,
+                    totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
+                    updatedAt: newUpdatedAt,
+                });
+            } catch (_) { /* noop */ }
+            try {
                 try {
-                    console.info('[HEYS.day-trace] 4/8 setDay applied', {
-                        date: prevDay.date,
+                    console.info('[HEYS.day-trace] 5/8 LS write', {
                         key,
-                        mealIndex: mi,
-                        itemsBefore: before,
-                        itemsAfter: (newDayData.meals?.[mi]?.items || []).length,
+                        mealsCount: meals.length,
                         totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
                         updatedAt: newUpdatedAt,
                     });
                 } catch (_) { /* noop */ }
-                try {
-                    // 🔬 [HEYS.day-trace] 5/8 LS write — about to persist day to localStorage.
-                    try {
-                        console.info('[HEYS.day-trace] 5/8 LS write', {
-                            key,
-                            mealsCount: meals.length,
-                            totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
-                            updatedAt: newUpdatedAt,
-                        });
-                    } catch (_) { /* noop */ }
-                    lsSet(key, newDayData);
-                } catch (e) {
-                    trackError(e, { source: 'day/_meals.js', action: 'save_product_quick' });
-                }
-                return newDayData;
-            });
+                lsSet(key, newDayData);
+            } catch (e) {
+                trackError(e, { source: 'day/_meals.js', action: 'save_product_quick' });
+            }
+            setDay(() => newDayData);
 
             if (setNewItemIds) {
                 setNewItemIds((prev) => new Set([...prev, item.id]));
@@ -10624,15 +10614,14 @@
                 applyMutation: () => {
                     const removedUpdatedAt = markUndoWindow(5000);
 
-                    setDay((prevDay) => {
-                        const meals = (prevDay.meals || []).map((meal) => {
-                            if (meal.id !== mealId) return meal;
-                            return { ...meal, items: (meal.items || []).filter((it) => it.id !== itId) };
-                        });
-                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
-                        persistDayData(nextDayData, 'remove_item');
-                        return nextDayData;
+                    const baseDay = dayRef.current || {};
+                    const meals = (baseDay.meals || []).map((meal) => {
+                        if (meal.id !== mealId) return meal;
+                        return { ...meal, items: (meal.items || []).filter((it) => it.id !== itId) };
                     });
+                    const nextDayData = { ...baseDay, meals, updatedAt: removedUpdatedAt };
+                    persistDayData(nextDayData, 'remove_item');
+                    setDay(() => nextDayData);
 
                     recalculateOrphanProducts();
                     emitPlannerReplanRequest('PRODUCT_REMOVED', { mealId, itemId: itId });
@@ -10640,23 +10629,22 @@
                 },
                 undoMutation: ({ mealId: ctxMealId, removedItem: ctxRemovedItem, itemIndex: ctxItemIndex }) => {
                     const undoUpdatedAt = markUndoWindow(3000);
-                    setDay((prevDay) => {
-                        const meals = (prevDay.meals || []).map((meal) => {
-                            if (meal.id !== ctxMealId) return meal;
+                    const baseDay = dayRef.current || {};
+                    const meals = (baseDay.meals || []).map((meal) => {
+                        if (meal.id !== ctxMealId) return meal;
 
-                            const items = [...(meal.items || [])];
-                            if (items.some((it) => it.id === ctxRemovedItem.id)) {
-                                return meal;
-                            }
+                        const items = [...(meal.items || [])];
+                        if (items.some((it) => it.id === ctxRemovedItem.id)) {
+                            return meal;
+                        }
 
-                            items.splice(Math.max(0, Math.min(ctxItemIndex, items.length)), 0, ctxRemovedItem);
-                            return { ...meal, items };
-                        });
-
-                        const nextDayData = { ...prevDay, meals, updatedAt: undoUpdatedAt };
-                        persistDayData(nextDayData, 'undo_remove_item');
-                        return nextDayData;
+                        items.splice(Math.max(0, Math.min(ctxItemIndex, items.length)), 0, ctxRemovedItem);
+                        return { ...meal, items };
                     });
+
+                    const nextDayData = { ...baseDay, meals, updatedAt: undoUpdatedAt };
+                    persistDayData(nextDayData, 'undo_remove_item');
+                    setDay(() => nextDayData);
                     recalculateOrphanProducts();
                 },
             });
@@ -10670,14 +10658,13 @@
             }
             const cloned = (yMeal.items || []).map(it => ({ ...it, id: uid('it_') }));
             markUndoWindow(3000);
-            setDay(prevDay => {
-                const newMeals = (prevDay.meals || []).map((m, i) =>
-                    i === mealIndex ? { ...m, items: [...(m.items || []), ...cloned] } : m
-                );
-                const updated = { ...prevDay, meals: newMeals, updatedAt: Date.now() };
-                persistDayData(updated, 'repeat_yesterday_meal');
-                return updated;
-            });
+            const baseDay = dayRef.current || {};
+            const newMeals = (baseDay.meals || []).map((m, i) =>
+                i === mealIndex ? { ...m, items: [...(m.items || []), ...cloned] } : m
+            );
+            const updated = { ...baseDay, meals: newMeals, updatedAt: Date.now() };
+            persistDayData(updated, 'repeat_yesterday_meal');
+            setDay(() => updated);
             HEYS.Toast?.success?.(`Повторено: ${cloned.length} продуктов из вчера`);
         }, [setDay, markUndoWindow, persistDayData]);
 
@@ -10742,13 +10729,13 @@
             if (tgtDate === date) {
                 // Same-day copy — обновляем React state + LS через стандартный путь
                 markUndoWindow(3000);
-                setDay((prevDay) => {
-                    const updated = writeIntoTarget(prevDay);
-                    if (!updated) return prevDay;
+                const baseDay = dayRef.current || {};
+                const updated = writeIntoTarget(baseDay);
+                if (updated) {
                     persistDayData(updated, 'copy_items_to_meal');
+                    setDay(() => updated);
                     dstMealId = updated.meals[dstMealIndex]?.id || null;
-                    return updated;
-                });
+                }
             } else {
                 // Cross-day copy — пишем в LS целевого дня; React state открытого дня НЕ трогаем
                 const tgtKey = _scopedDayKey(tgtDate);
@@ -10810,12 +10797,11 @@
                         if (todayStr === date) {
                             // Today открыт: используем стандартный setDay
                             markUndoWindow(3000);
-                            setDay((prevDay) => {
-                                const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
-                                const updated = { ...prevDay, meals: newMeals, updatedAt: Date.now() };
-                                persistDayData(updated, 'copy_items_to_new_meal');
-                                return updated;
-                            });
+                            const baseDay = dayRef.current || {};
+                            const newMeals = sortMealsByTime([...(baseDay.meals || []), newMeal]);
+                            const updated = { ...baseDay, meals: newMeals, updatedAt: Date.now() };
+                            persistDayData(updated, 'copy_items_to_new_meal');
+                            setDay(() => updated);
                         } else {
                             // Today не открыт: пишем в LS today's dayv2 напрямую
                             const tgtKey = _scopedDayKey(todayStr);
@@ -10909,12 +10895,11 @@
         const writeDay = React.useCallback((dStr, mutator, action) => {
             if (dStr === date) {
                 markUndoWindow(3000);
-                setDay((prevDay) => {
-                    const next = mutator(prevDay);
-                    if (!next) return prevDay;
-                    persistDayData(next, action);
-                    return next;
-                });
+                const baseDay = dayRef.current || {};
+                const next = mutator(baseDay);
+                if (!next) return false;
+                persistDayData(next, action);
+                setDay(() => next);
                 return true;
             }
             const key = _scopedDayKey(dStr);
@@ -11346,37 +11331,35 @@
                 applyMutation: () => {
                     const removedUpdatedAt = markUndoWindow(6000);
 
-                    setDay((prevDay) => {
-                        const meals = (prevDay.meals || []).map((meal) => {
-                            if (meal.id !== mealId) return meal;
-                            return { ...meal, photos: (meal.photos || []).filter((photo) => photo.id !== photoId) };
-                        });
-                        const nextDayData = { ...prevDay, meals, updatedAt: removedUpdatedAt };
-                        persistDayData(nextDayData, 'remove_photo');
-                        return nextDayData;
+                    const baseDay = dayRef.current || {};
+                    const meals = (baseDay.meals || []).map((meal) => {
+                        if (meal.id !== mealId) return meal;
+                        return { ...meal, photos: (meal.photos || []).filter((photo) => photo.id !== photoId) };
                     });
+                    const nextDayData = { ...baseDay, meals, updatedAt: removedUpdatedAt };
+                    persistDayData(nextDayData, 'remove_photo');
+                    setDay(() => nextDayData);
 
                     return { mealId, removedPhoto, photoIndex };
                 },
                 undoMutation: ({ mealId: ctxMealId, removedPhoto: ctxRemovedPhoto, photoIndex: ctxPhotoIndex }) => {
                     const undoUpdatedAt = markUndoWindow(3000);
-                    setDay((prevDay) => {
-                        const meals = (prevDay.meals || []).map((meal) => {
-                            if (meal.id !== ctxMealId) return meal;
+                    const baseDay = dayRef.current || {};
+                    const meals = (baseDay.meals || []).map((meal) => {
+                        if (meal.id !== ctxMealId) return meal;
 
-                            const photos = [...(meal.photos || [])];
-                            if (photos.some((photo) => photo.id === ctxRemovedPhoto.id)) {
-                                return meal;
-                            }
+                        const photos = [...(meal.photos || [])];
+                        if (photos.some((photo) => photo.id === ctxRemovedPhoto.id)) {
+                            return meal;
+                        }
 
-                            photos.splice(Math.max(0, Math.min(ctxPhotoIndex, photos.length)), 0, ctxRemovedPhoto);
-                            return { ...meal, photos };
-                        });
-
-                        const nextDayData = { ...prevDay, meals, updatedAt: undoUpdatedAt };
-                        persistDayData(nextDayData, 'undo_remove_photo');
-                        return nextDayData;
+                        photos.splice(Math.max(0, Math.min(ctxPhotoIndex, photos.length)), 0, ctxRemovedPhoto);
+                        return { ...meal, photos };
                     });
+
+                    const nextDayData = { ...baseDay, meals, updatedAt: undoUpdatedAt };
+                    persistDayData(nextDayData, 'undo_remove_photo');
+                    setDay(() => nextDayData);
                 },
                 onExpire: async (_reason, { removedPhoto: ctxRemovedPhoto }) => {
                     if (ctxRemovedPhoto?.path && ctxRemovedPhoto?.uploaded && window.HEYS?.cloud?.deletePhoto) {

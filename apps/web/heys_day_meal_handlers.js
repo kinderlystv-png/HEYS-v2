@@ -100,23 +100,28 @@
             lastLoadedUpdatedAtRef.current = newUpdatedAt; // Защита от перезаписи cloud sync
             blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000; // Блокируем cloud sync на 3 сек
 
-            // 🔒 КРИТИЧНО: Сохраняем СРАЗУ в localStorage СИНХРОННО!
-            // flush() не работает т.к. использует day из closure который ещё не обновился React
-            // Поэтому сохраняем напрямую с НОВЫМИ данными
-            setDay(prevDay => {
-              const newMeals = sortMealsByTime([...(prevDay.meals || []), newMeal]);
-              const newDayData = { ...prevDay, meals: newMeals, updatedAt: newUpdatedAt };
+            // 2026-05-29 anti-loop: lsSet НЕ внутри setDay reducer.
+            // React 18 updateReducer повторно прогоняет pending updater'ы при каждом render
+            // (под StrictMode dev — 2× amplification), → lsSet вызывался многократно.
+            // Pattern: pre-read live snapshot из LS → синхронный lsSet → pure setDay.
+            const key = 'heys_dayv2_' + date;
+            let liveSnapshot = {};
+            try {
+              liveSnapshot = (HEYS.utils && typeof HEYS.utils.lsGet === 'function')
+                ? (HEYS.utils.lsGet(key, {}) || {})
+                : {};
+            } catch (_) { liveSnapshot = {}; }
+            const baseDay = liveSnapshot && typeof liveSnapshot === 'object' ? liveSnapshot : {};
+            const newMeals = sortMealsByTime([...(baseDay.meals || []), newMeal]);
+            const newDayData = { ...baseDay, meals: newMeals, updatedAt: newUpdatedAt };
 
-              // ✅ СИНХРОННОЕ сохранение в localStorage внутри setDay (имеем доступ к актуальным данным)
-              const key = 'heys_dayv2_' + date;
-              try {
-                lsSet(key, newDayData);
-              } catch (e) {
-                console.error('[HEYS] 🍽 Failed to save meal:', e);
-              }
+            try {
+              lsSet(key, newDayData);
+            } catch (e) {
+              console.error('[HEYS] 🍽 Failed to save meal:', e);
+            }
 
-              return newDayData;
-            });
+            setDay(() => newDayData);
 
             if (window.HEYS && window.HEYS.analytics) {
               window.HEYS.analytics.trackDataOperation('meal-created');
