@@ -10173,6 +10173,26 @@
       return;
     }
 
+    // 2026-05-29 echo-loop diag: track saveClientKey calls (separate path from saveKey)
+    try {
+      cloud._saveClientKeyHistory = cloud._saveClientKeyHistory || [];
+      const _stack = (new Error()).stack || '';
+      const _callers = _stack.split('\n').slice(2, 5).map(s => s.trim()).filter(Boolean);
+      let _bytes = 0;
+      try { _bytes = (JSON.stringify(value) || '').length; } catch (_) {}
+      cloud._saveClientKeyHistory.push({
+        ts: Date.now(),
+        k: String(k || '').slice(0, 80),
+        client_id: client_id ? String(client_id).slice(0, 8) : null,
+        bytes: _bytes,
+        updatedAt: (value && typeof value === 'object') ? value.updatedAt : null,
+        callers: _callers,
+        muteMirror: HEYS._muteMirrorCurrent,
+        _waitingForSync: waitingForSync,
+      });
+      if (cloud._saveClientKeyHistory.length > 100) cloud._saveClientKeyHistory.shift();
+    } catch (_) { /* noop */ }
+
     // Ticket B: defence-in-depth — non-client-data ключи (heys_clients,
     // heys_client_current, heys_curator_session, heys_debug_events) никогда
     // не должны попадать в client_kv_store. Server гейтит то же самое

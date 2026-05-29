@@ -1719,6 +1719,30 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         });
                     } catch (_) { /* noop */ }
 
+                    // === saveClientKey history (second write path, parallel to saveKey) ===
+                    pushHeader('saveClientKey history (last 50, dayv2 + client-specific keys path)');
+                    try {
+                        const sckh = Array.isArray(HEYS?.cloud?._saveClientKeyHistory) ? HEYS.cloud._saveClientKeyHistory : [];
+                        pushKV('totalTracked', sckh.length);
+                        if (sckh.length > 0) {
+                            const now = Date.now();
+                            const recent = sckh.filter(w => (now - w.ts) < 30000);
+                            const perKey = {};
+                            recent.forEach(w => { perKey[w.k] = (perKey[w.k] || 0) + 1; });
+                            const hot = Object.entries(perKey).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]);
+                            if (hot.length > 0) {
+                                extraLines.push('  🔥 HOT saveClientKey last 30s (≥3): ' + hot.map(([k, n]) => `${k}=${n}`).join(', '));
+                            }
+                            extraLines.push('  --- last 50 (ago_ms | key | bytes | updatedAt | muteMirror | caller) ---');
+                            sckh.slice(-50).forEach(w => {
+                                const caller = (w.callers && w.callers[0]) ? w.callers[0].slice(0, 80) : '—';
+                                extraLines.push(`  ${String(now - w.ts).padStart(5)}ms | ${String(w.k).padEnd(35)} | ${w.bytes}b | ${w.updatedAt || '—'} | mute=${w.muteMirror ? 'Y' : 'N'} | ${caller}`);
+                            });
+                        } else {
+                            extraLines.push('  (empty — saveClientKey not called or instrumentation not loaded)');
+                        }
+                    } catch (_) { /* noop */ }
+
                     // === Cascade + EWS frequency ===
                     pushHeader('Cascade + EWS compute frequency (loop-trigger detection)');
                     try {
