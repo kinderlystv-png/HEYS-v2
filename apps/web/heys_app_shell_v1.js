@@ -1522,6 +1522,169 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     heys_pin_auth_client: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_pin_auth_client')),
                     heys_supabase_auth_token: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_supabase_auth_token')),
                 });
+
+                // === Sync pipeline configuration & retry policy ===
+                console.log('=== Sync config + retry debug ===');
+                console.log({
+                    // Hard-coded constants from heys_storage_supabase_v1.js
+                    PENDING_SAVE_DEBOUNCE_MS: 120,
+                    CASCADE_DCS_ENQUEUE_DEBOUNCE_MS: 380,
+                    SWITCH_DEBOUNCE_MS: 30000,
+                    MAX_RETRY_ATTEMPTS: 5,
+                    GRACE_PERIOD_MS: 10000,
+                    // Runtime retry/auth diag
+                    retryDebug: typeof HEYS?.cloud?.getRetryDebug === 'function'
+                        ? HEYS.cloud.getRetryDebug() : null,
+                });
+
+                // === Network context (Network Information API) ===
+                console.log('=== Network ===');
+                const conn = (typeof navigator !== 'undefined') && (navigator.connection || navigator.mozConnection || navigator.webkitConnection);
+                console.log({
+                    onLine: typeof navigator !== 'undefined' ? navigator.onLine : null,
+                    effectiveType: conn ? conn.effectiveType : '—',
+                    downlink_Mbps: conn ? conn.downlink : '—',
+                    downlinkMax: conn ? conn.downlinkMax : '—',
+                    rtt_ms: conn ? conn.rtt : '—',
+                    saveData: conn ? conn.saveData : '—',
+                    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 100) : null,
+                });
+
+                // === Storage budget (LS scan) ===
+                console.log('=== Storage (localStorage scan) ===');
+                const lsInfo = (() => {
+                    try {
+                        if (typeof localStorage === 'undefined') return null;
+                        let count = 0, totalBytes = 0;
+                        const perPrefix = {};
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const k = localStorage.key(i);
+                            const v = localStorage.getItem(k) || '';
+                            const sz = k.length + v.length;
+                            count++;
+                            totalBytes += sz;
+                            // bucket by first 2 underscore-separated chunks (e.g. heys_4545ee50, heys_supabase)
+                            const m = k.match(/^([^_]+_[^_]+)/);
+                            const bucket = m ? m[1] : '(other)';
+                            perPrefix[bucket] = (perPrefix[bucket] || 0) + sz;
+                        }
+                        const top = Object.entries(perPrefix)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 10)
+                            .map(([p, b]) => ({ prefix: p, kb: Math.round(b / 1024) }));
+                        return { keyCount: count, totalKB: Math.round(totalBytes / 1024), top10ByPrefix: top };
+                    } catch (_) { return null; }
+                })();
+                console.log(lsInfo);
+
+                // Async storage.estimate() — даёт квоту браузера + реальный usage
+                if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
+                    navigator.storage.estimate().then(est => {
+                        console.log('[HEYS.sync.debug] navigator.storage.estimate (async):', {
+                            quota_MB: est?.quota ? Math.round(est.quota / 1024 / 1024) : null,
+                            usage_MB: est?.usage ? Math.round(est.usage / 1024 / 1024) : null,
+                            usagePct: (est?.quota && est?.usage) ? Math.round((est.usage / est.quota) * 100) : null,
+                            usageDetails: est?.usageDetails || null,
+                        });
+                    }).catch(() => {});
+                }
+
+                // === Recent upload performance (derived from sync log) ===
+                console.log('=== Recent upload performance (last 60s, from sync log) ===');
+                try {
+                    const log = typeof HEYS?.cloud?.getSyncLog === 'function' ? HEYS.cloud.getSyncLog() : [];
+                    const now = Date.now();
+                    const recent = log.filter(e => e && e.ts && (now - e.ts) < 60000);
+                    const oks = recent.filter(e => e.type === 'upload_ok');
+                    const fails = recent.filter(e => e.type === 'upload_fail' || e.type === 'upload_error');
+                    const starts = recent.filter(e => e.type === 'upload_start');
+                    const latencies = oks.map(e => Number(e?.data?.ms) || 0).filter(x => x > 0);
+                    const avg = latencies.length ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0;
+                    const sorted = [...latencies].sort((a, b) => a - b);
+                    const p50 = sorted[Math.floor(sorted.length * 0.5)] || 0;
+                    const p95 = sorted[Math.floor(sorted.length * 0.95)] || 0;
+                    const max = sorted[sorted.length - 1] || 0;
+                    const successRate = (oks.length + fails.length) > 0
+                        ? Math.round((oks.length / (oks.length + fails.length)) * 100) : null;
+                    console.log({
+                        windowSec: 60,
+                        starts: starts.length,
+                        oks: oks.length,
+                        fails: fails.length,
+                        successPct: successRate,
+                        avgLatencyMs: avg,
+                        p50LatencyMs: p50,
+                        p95LatencyMs: p95,
+                        maxLatencyMs: max,
+                        uploadsPerMin: oks.length,
+                    });
+                    // Last 5 minutes upload frequency per key
+                    const log5min = log.filter(e => e && e.ts && (now - e.ts) < 300000 && e.type === 'upload_start');
+                    const perKey5m = {};
+                    log5min.forEach(e => {
+                        const keys = String(e?.data?.keys || '').split(',').map(s => s.trim()).filter(Boolean);
+                        keys.forEach(k => { perKey5m[k] = (perKey5m[k] || 0) + 1; });
+                    });
+                    const hotUploadKeys = Object.entries(perKey5m)
+                        .filter(([_, n]) => n >= 5)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10);
+                    if (hotUploadKeys.length > 0) {
+                        console.warn('🔥 HOT UPLOAD KEYS last 5min (≥5):', Object.fromEntries(hotUploadKeys));
+                    }
+                    // Idle / activity health
+                    const lastOk = (typeof HEYS?.cloud?._lastUploadOkAt === 'number') ? HEYS.cloud._lastUploadOkAt : null;
+                    console.log({
+                        idleSinceLastOk_sec: lastOk ? Math.round((now - lastOk) / 1000) : null,
+                        backlogVsRate: (rt.pending > 0 && oks.length > 0)
+                            ? Math.round(rt.pending / Math.max(oks.length / 60, 0.01)) + 's to drain at current rate'
+                            : '—',
+                    });
+                } catch (_) { /* noop */ }
+
+                // === Service Worker status ===
+                console.log('=== Service Worker ===');
+                if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+                    const sw = navigator.serviceWorker;
+                    console.log({
+                        controllerActive: !!sw.controller,
+                        controllerScriptURL: sw.controller ? sw.controller.scriptURL : null,
+                        controllerState: sw.controller ? sw.controller.state : null,
+                    });
+                    if (sw.getRegistration) {
+                        sw.getRegistration().then(reg => {
+                            console.log('[HEYS.sync.debug] SW registration (async):', {
+                                scope: reg?.scope,
+                                active: reg?.active?.state,
+                                waiting: reg?.waiting?.state,
+                                installing: reg?.installing?.state,
+                                updateViaCache: reg?.updateViaCache,
+                            });
+                        }).catch(() => {});
+                    }
+                } else {
+                    console.log('(navigator.serviceWorker unavailable)');
+                }
+
+                // === Session / runtime context ===
+                console.log('=== Session runtime ===');
+                console.log({
+                    sessionAgeSec: typeof performance !== 'undefined' && performance.timeOrigin
+                        ? Math.round((Date.now() - performance.timeOrigin) / 1000) : null,
+                    perfNow_ms: typeof performance !== 'undefined' ? Math.round(performance.now()) : null,
+                    bundleManifest: (() => {
+                        try {
+                            return window.__HEYS_BUNDLE_MANIFEST || '—';
+                        } catch (_) { return '—'; }
+                    })(),
+                    syncDebug_recent: (() => {
+                        try {
+                            const sd = HEYS?._syncDebug;
+                            if (!Array.isArray(sd)) return '—';
+                            return sd.slice(-10);
+                        } catch (_) { return '—'; }
+                    })(),
+                });
                 console.groupEnd();
             } catch (e) {
                 console.warn('[HEYS.sync.debug] extended dump failed:', e?.message || e);
