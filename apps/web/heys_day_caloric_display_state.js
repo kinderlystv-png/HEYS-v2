@@ -27,28 +27,38 @@
             return optimum;
         }, [optimum, caloricDebt, day?.isRefeedDay]);
 
+        const lastWroteRef = React.useRef({ at: 0, dispOpt: null, eaten: null });
         React.useEffect(() => {
             if (!displayOptimum || displayOptimum <= 0) return;
             const roundedEaten = r0(eatenKcal);
-            // 2026-05-29 anti-loop deadband: drift <5 ккал — это rounding между
-            // итерациями caloricDebt (depends on savedDisplayOptimum, который writes сюда).
-            // Без deadband: setDay → energyCtx invalidates → caloricDebt recomputes с
-            // другим dailyBoost → displayOptimum ±1 → setDay → infinite loop (виден
-            // как непрерывная upload-очередь dayv2). Раньше маскировалось React.startTransition'ом
-            // который батчил cascade-updates; после sweep'а startTransition обёрток
-            // (commits c3defb09, 9edbdc58) loop стал видимым. Структурный fix — см.
-            // docs/REFACTOR_REACT_MEMO_DAY_TAB.md (декаплинг savedEatenKcal от energyCtx deps).
+            // 2026-05-29 anti-loop deadband + throttle: drift <5 ккал ignored
+            // (rounding noise); plus throttle 2s на same (displayOptimum, eaten) pair.
+            // Без guard: setDay → energyCtx invalidates → caloricDebt recomputes →
+            // displayOptimum ±1 → setDay → infinite loop. Раньше маскировалось
+            // React.startTransition (батчил cascade). После sweep'а wrap'ов
+            // (c3defb09, 9edbdc58) loop стал visible — pollый dayv2 каждые 300мс.
+            // Структурный fix — docs/REFACTOR_REACT_MEMO_DAY_TAB.md.
             const prevOptimum = +(day.savedDisplayOptimum || 0);
             const prevEaten = +(day.savedEatenKcal || 0);
             const diffOptimum = Math.abs(prevOptimum - displayOptimum);
             const diffEaten = Math.abs(prevEaten - roundedEaten);
             if (diffOptimum < 5 && diffEaten < 5) return;
 
+            // Anti-loop throttle: если за последние 2с уже писали ровно те же значения — skip
+            const now = Date.now();
+            const lw = lastWroteRef.current;
+            if (lw.dispOpt === displayOptimum && lw.eaten === roundedEaten && (now - lw.at) < 2000) {
+                console.debug('[caloric-display] throttle skip', { displayOptimum, roundedEaten, sinceLast: now - lw.at });
+                return;
+            }
+            lastWroteRef.current = { at: now, dispOpt: displayOptimum, eaten: roundedEaten };
+            console.debug('[caloric-display] write', { prev: { prevOptimum, prevEaten }, next: { displayOptimum, roundedEaten } });
+
             setDay(prev => ({
                 ...prev,
                 savedDisplayOptimum: displayOptimum,
                 savedEatenKcal: roundedEaten,
-                updatedAt: Date.now(),
+                updatedAt: now,
             }));
         }, [displayOptimum, eatenKcal, day.savedDisplayOptimum, day.savedEatenKcal, setDay, r0]);
 

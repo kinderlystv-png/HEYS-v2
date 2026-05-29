@@ -1405,6 +1405,127 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     }).catch(() => { });
                 }
             } catch (e) { /* noop */ }
+            // 2026-05-29 extended diag: dump everything sync-related to console
+            // (separate from clipboard snapshot — for live debugging write-loops etc.)
+            try {
+                console.groupCollapsed('🔍 [HEYS.sync.debug] @ ' + ts);
+                console.log('=== Cloud flags ===');
+                console.log({
+                    isAuth: rt.isAuth,
+                    isPin: rt.isPin,
+                    client: rt.client,
+                    online: rt.online,
+                    syncing: rt.syncing,
+                    uploading: rt.uploading,
+                    _switchClientInProgress: HEYS?.cloud?._switchClientInProgress,
+                    _rpcOnlyMode: HEYS?.cloud?._rpcOnlyMode,
+                    _syncCompletedAt: HEYS?.cloud?._syncCompletedAt,
+                    _curatorSession: !!HEYS?.auth?.isCuratorSession?.(),
+                    _pinAuthClientId: typeof HEYS?.cloud?.isPinAuthClient === 'function'
+                        ? HEYS.cloud.isPinAuthClient() : null,
+                    currentClientId: HEYS?.currentClientId,
+                });
+                console.log('=== Queue state ===');
+                console.log({
+                    pending: rt.pending,
+                    pendingDet: rt.pendingDet,
+                    clientQueue: rt.clientQueue,
+                    inflight: rt.inflightQueue,
+                    queueDebug: typeof HEYS?.cloud?.getQueueDebug === 'function'
+                        ? HEYS.cloud.getQueueDebug() : null,
+                });
+                console.log('=== Document state ===');
+                console.log({
+                    visibilityState: typeof document !== 'undefined' ? document.visibilityState : null,
+                    hasFocus: typeof document !== 'undefined' && document.hasFocus ? document.hasFocus() : null,
+                    online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+                    location: typeof location !== 'undefined' ? location.href : null,
+                });
+                console.log('=== Current day (DayTab state if accessible) ===');
+                const dayDate = (() => {
+                    try {
+                        const lsRaw = (typeof localStorage !== 'undefined')
+                            ? localStorage.getItem('heys_client_current') : null;
+                        const cid = lsRaw ? String(lsRaw).replace(/^"|"$/g, '') : null;
+                        const today = new Date().toISOString().slice(0, 10);
+                        const key = cid ? ('heys_' + cid + '_dayv2_' + today) : ('heys_dayv2_' + today);
+                        const raw = localStorage.getItem(key);
+                        return raw ? JSON.parse(raw) : null;
+                    } catch (_) { return null; }
+                })();
+                if (dayDate) {
+                    console.log({
+                        date: dayDate.date,
+                        updatedAt: dayDate.updatedAt,
+                        updatedAtAgo: dayDate.updatedAt ? (Date.now() - dayDate.updatedAt) + 'ms' : '—',
+                        savedDisplayOptimum: dayDate.savedDisplayOptimum,
+                        savedEatenKcal: dayDate.savedEatenKcal,
+                        mealsCount: Array.isArray(dayDate.meals) ? dayDate.meals.length : 0,
+                        weightMorning: dayDate.weightMorning,
+                        sleepHours: dayDate.sleepHours,
+                    });
+                } else {
+                    console.log('(no day data found in LS)');
+                }
+                // 2026-05-29: last 50 writes (via cloud._writeHistory ring buffer)
+                console.log('=== Write history (last 50 saveKey calls) ===');
+                const wh = Array.isArray(HEYS?.cloud?._writeHistory) ? HEYS.cloud._writeHistory : [];
+                if (wh.length > 0) {
+                    const now = Date.now();
+                    const lastN = wh.slice(-50);
+                    console.log('Total tracked: ' + wh.length + '  showing last ' + lastN.length);
+                    // Count per key in last 30 sec — для loop detection
+                    const recent = wh.filter(w => (now - w.ts) < 30000);
+                    const perKey = {};
+                    recent.forEach(w => { perKey[w.k] = (perKey[w.k] || 0) + 1; });
+                    const hot = Object.entries(perKey)
+                        .filter(([k, n]) => n >= 3)
+                        .sort((a, b) => b[1] - a[1]);
+                    if (hot.length > 0) {
+                        console.warn('🔥 HOT WRITES last 30s (≥3 calls):', Object.fromEntries(hot));
+                    }
+                    console.table(lastN.map(w => ({
+                        ago_ms: now - w.ts,
+                        key: w.k,
+                        caller: (w.callers && w.callers[0]) || '—',
+                    })));
+                } else {
+                    console.log('(write history empty — saveKey not called yet)');
+                }
+                // 2026-05-29: last 50 heys:* events
+                console.log('=== Event history (last 50 heys:* / heysSyncCompleted) ===');
+                const eh = Array.isArray(HEYS?._eventHistory) ? HEYS._eventHistory : [];
+                if (eh.length > 0) {
+                    const now = Date.now();
+                    const lastN = eh.slice(-50);
+                    const recent = eh.filter(e => (now - e.ts) < 30000);
+                    const perType = {};
+                    recent.forEach(e => { perType[e.type] = (perType[e.type] || 0) + 1; });
+                    const hotEv = Object.entries(perType)
+                        .filter(([t, n]) => n >= 5)
+                        .sort((a, b) => b[1] - a[1]);
+                    if (hotEv.length > 0) {
+                        console.warn('🔥 HOT EVENTS last 30s (≥5 dispatches):', Object.fromEntries(hotEv));
+                    }
+                    console.table(lastN.map(e => ({
+                        ago_ms: now - e.ts,
+                        type: e.type,
+                        detail: e.detail,
+                    })));
+                } else {
+                    console.log('(event history empty)');
+                }
+                console.log('=== Auth tokens ===');
+                console.log({
+                    heys_curator_session: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_curator_session')),
+                    heys_session_token: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_session_token')),
+                    heys_pin_auth_client: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_pin_auth_client')),
+                    heys_supabase_auth_token: !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_supabase_auth_token')),
+                });
+                console.groupEnd();
+            } catch (e) {
+                console.warn('[HEYS.sync.debug] extended dump failed:', e?.message || e);
+            }
             if (HEYS?.cloud?.syncClient && clientIdValue) {
                 console.info('[HEYS.sync] 🔄 Manual force-sync triggered from badge');
                 HEYS.cloud.syncClient(clientIdValue, { force: true });

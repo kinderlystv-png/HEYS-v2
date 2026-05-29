@@ -27,6 +27,36 @@
 
   const cloud = HEYS.cloud = HEYS.cloud || {};
 
+  // 2026-05-29 diag: ring buffer for window.dispatchEvent — last 100 events.
+  // Только heys:* events (наши custom). Доступно через HEYS._eventHistory.
+  // Используется badge-click handler'ом для понимания event-cascade triggers.
+  if (typeof window !== 'undefined' && !window.__heysDispatchPatched) {
+    window.__heysDispatchPatched = true;
+    HEYS._eventHistory = [];
+    const _origDispatch = window.dispatchEvent.bind(window);
+    window.dispatchEvent = function (ev) {
+      try {
+        const t = ev && ev.type;
+        if (typeof t === 'string' && (t.startsWith('heys:') || t === 'heysSyncCompleted')) {
+          HEYS._eventHistory.push({
+            ts: Date.now(),
+            type: t,
+            detail: (() => {
+              try {
+                const d = ev && ev.detail;
+                if (!d) return null;
+                const s = JSON.stringify(d);
+                return s.length > 120 ? s.slice(0, 120) + '…' : s;
+              } catch (_) { return '<unstringifiable>'; }
+            })(),
+          });
+          if (HEYS._eventHistory.length > 100) HEYS._eventHistory.shift();
+        }
+      } catch (_) { /* noop */ }
+      return _origDispatch(ev);
+    };
+  }
+
   // DEMO_MODE: short-circuit the whole storage layer with stubs.
   // No cloud writes, no shared-index lookups, no bootstrap sync. Snapshot is
   // loaded directly into LS by HEYS.demoMode.loadSnapshot() during bootstrap.
@@ -10879,12 +10909,32 @@
     }, delay);
   }
 
+  // 2026-05-29 diag: ring buffer for write trace — last 100 saveKey calls.
+  // Доступно через HEYS.cloud._writeHistory. Используется badge-click handler'ом
+  // в shell для понимания кто/что инициирует repeated writes (write-loop detection).
+  cloud._writeHistory = [];
+  function _trackWrite(k) {
+    try {
+      const stack = (new Error()).stack || '';
+      // skip 2 frames (Error + _trackWrite + saveKey caller). Take next 3.
+      const callers = stack.split('\n').slice(3, 6).map(s => s.trim()).filter(Boolean);
+      cloud._writeHistory.push({
+        ts: Date.now(),
+        k: String(k).slice(0, 80),
+        callers,
+      });
+      if (cloud._writeHistory.length > 100) cloud._writeHistory.shift();
+    } catch (_) { /* noop */ }
+  }
+
   cloud.saveKey = function (k, v) {
     if (isLogoutSuppressionActive()) return;
     if (!user || !k) return;
 
     if (isLocalOnlyStorageKey(k)) return;
     if (isSensitiveSessionStorageKey(k)) return;
+
+    _trackWrite(k);
 
     // 🛡️ GRACE PERIOD v3: Skip re-upload of data just downloaded from cloud
     const _skGrace = cloud._syncCompletedAt ? (Date.now() - cloud._syncCompletedAt) : Infinity;
