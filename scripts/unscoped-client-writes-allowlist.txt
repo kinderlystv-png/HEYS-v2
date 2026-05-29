@@ -1,0 +1,37 @@
+# unscoped-client-writes-allowlist.txt
+#
+# Allowlist для lint-unscoped-client-writes.mjs. Каждая entry — это explicit
+# acknowledgement что direct unscoped write к per-client key в этом месте
+# архитектурно OK (обычно pre-auth fallback когда clientId ещё не установлен).
+#
+# Format: relative/path:lineNumber
+# КАЖДАЯ entry ДОЛЖНА сопровождаться комментарием почему это safe.
+#
+# === Baseline 2026-05-29 (после fc1ce544 architectural fix) ===
+
+# heys_profile_step_v1.js:auto-set fallback — НЕТ clientId в pre-auth flow,
+# профиль пишется в global LS для последующей migration на scoped после login.
+# Migration в profile_step:1640 теперь ownership-aware (помечает _sourceClientId).
+apps/web/heys_profile_step_v1.js:436
+apps/web/heys_profile_step_v1.js:1039
+apps/web/heys_profile_step_v1.js:1188
+apps/web/heys_profile_step_v1.js:1635
+apps/web/heys_profile_step_v1.js:1643
+apps/web/heys_profile_step_v1.js:1710
+
+# heys_morning_checkin_v1.js: fallback path внутри writeDayV2ScopedAndLegacy
+# (line 156) — выполняется ТОЛЬКО когда нет clientId (pre-auth case).
+# При clientId scoped path работает correctly (P0 guard).
+apps/web/heys_morning_checkin_v1.js:136
+apps/web/heys_morning_checkin_v1.js:156
+
+# heys_demo_mode_v1.js: legacy demo mode — пишет под фиксированный demo client.
+# Demo mode опасен для production (см. comment в коде); если решим dropшать
+# demo mode — удалить и entries.
+apps/web/heys_demo_mode_v1.js:185
+
+# heys_day_add_product.js:721: emergency fallback в add-product path когда
+# и HEYS.store.set, и U.lsSet недоступны (только interceptor live). Rare edge
+# case на ранней загрузке. grams_history — usage stat, не критичный per-client
+# canonical. TODO: убрать fallback path entirely after audit.
+apps/web/heys_day_add_product.js:721

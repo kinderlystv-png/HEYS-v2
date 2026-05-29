@@ -76,6 +76,15 @@ node scripts/lint-direct-localstorage-writes.mjs || {
   exit 1
 }
 
+echo "🔒 Проверка unscoped writes к per-client keys (anti-pollution guard)..."
+node scripts/lint-unscoped-client-writes.mjs || {
+  echo "❌ Найден unscoped write к client-specific ключу. Это primary pollution vector"
+  echo "   (см. incident fc1ce544: Александра → Poplanton)."
+  echo "💡 Исправь scoped key через HEYS.utils.lsSet или добавь в allowlist:"
+  echo "   scripts/unscoped-client-writes-allowlist.txt"
+  exit 1
+}
+
 echo "🔍 Проверка React.startTransition counter (anti-pattern guard, warn-only)..."
 node scripts/lint-react-start-transition.mjs || true
 
