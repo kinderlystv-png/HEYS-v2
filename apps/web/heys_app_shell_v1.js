@@ -1666,6 +1666,157 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     console.log('(navigator.serviceWorker unavailable)');
                 }
 
+                // === Deep layer: Performance Resource Timing (last 30 sync fetches) ===
+                console.log('=== Network fetches (Performance Resource Timing, last 60s, /rpc|/rest|/api) ===');
+                try {
+                    if (typeof performance !== 'undefined' && performance.getEntriesByType) {
+                        const all = performance.getEntriesByType('resource');
+                        const cutoff = (typeof performance.now === 'function') ? performance.now() - 60000 : 0;
+                        const syncRe = /\/(rpc|rest|api|client_kv_store|push|messages)\b/i;
+                        const matches = all
+                            .filter(r => r.startTime >= cutoff && syncRe.test(r.name))
+                            .slice(-30);
+                        if (matches.length > 0) {
+                            console.table(matches.map(r => ({
+                                url: r.name.replace(/^https?:\/\/[^/]+/, '').slice(0, 60),
+                                total_ms: Math.round(r.duration),
+                                ttfb_ms: Math.round(r.responseStart - r.requestStart),
+                                dns_ms: Math.round(r.domainLookupEnd - r.domainLookupStart),
+                                tcp_ms: Math.round(r.connectEnd - r.connectStart),
+                                tx_ms: Math.round(r.responseEnd - r.responseStart),
+                                size_kb: r.transferSize ? Math.round(r.transferSize / 1024) : '—',
+                                initiator: r.initiatorType,
+                            })));
+                            // Aggregate stats
+                            const totals = matches.map(r => r.duration);
+                            const sortedT = [...totals].sort((a, b) => a - b);
+                            console.log({
+                                fetches: matches.length,
+                                avg_ms: Math.round(totals.reduce((a, b) => a + b, 0) / totals.length),
+                                p50_ms: Math.round(sortedT[Math.floor(sortedT.length * 0.5)] || 0),
+                                p95_ms: Math.round(sortedT[Math.floor(sortedT.length * 0.95)] || 0),
+                                max_ms: Math.round(sortedT[sortedT.length - 1] || 0),
+                            });
+                        } else {
+                            console.log('(no matching fetches in last 60s)');
+                        }
+                    }
+                } catch (_) { /* noop */ }
+
+                // === Deep layer: Long tasks (main-thread blocks >50ms) ===
+                console.log('=== Long tasks last 60s (PerformanceObserver) ===');
+                try {
+                    const lt = Array.isArray(HEYS?._longtaskHistory) ? HEYS._longtaskHistory : [];
+                    const now = Date.now();
+                    const recent = lt.filter(t => (now - t.ts) < 60000);
+                    if (recent.length > 0) {
+                        const total = recent.reduce((s, t) => s + t.dur_ms, 0);
+                        console.warn(`🐢 ${recent.length} long tasks in 60s, total ${total}ms blocked`);
+                        console.table(recent.slice(-20).map(t => ({
+                            ago_ms: now - t.ts,
+                            dur_ms: t.dur_ms,
+                            name: t.name,
+                            attribution: t.attribution.join(','),
+                        })));
+                    } else {
+                        console.log('(no longtasks recorded — либо main thread спокоен либо browser не поддерживает PerformanceObserver longtask)');
+                    }
+                } catch (_) { /* noop */ }
+
+                // === Deep layer: Memory (Chrome only) ===
+                console.log('=== Memory ===');
+                try {
+                    if (typeof performance !== 'undefined' && performance.memory) {
+                        const m = performance.memory;
+                        console.log({
+                            usedJSHeap_MB: Math.round(m.usedJSHeapSize / 1024 / 1024),
+                            totalJSHeap_MB: Math.round(m.totalJSHeapSize / 1024 / 1024),
+                            heapLimit_MB: Math.round(m.jsHeapSizeLimit / 1024 / 1024),
+                            usagePct: Math.round((m.usedJSHeapSize / m.jsHeapSizeLimit) * 100),
+                        });
+                    } else {
+                        console.log('(performance.memory unavailable — non-Chrome browser)');
+                    }
+                } catch (_) { /* noop */ }
+
+                // === Deep layer: Raw queue contents (top by size) ===
+                console.log('=== Client upsert queue raw (top 10 by size) ===');
+                try {
+                    const raw = typeof HEYS?.cloud?.getClientQueueRaw === 'function' ? HEYS.cloud.getClientQueueRaw() : [];
+                    if (raw.length > 0) {
+                        console.table(raw);
+                    } else {
+                        console.log('(queue empty or getter unavailable)');
+                    }
+                } catch (_) { /* noop */ }
+
+                // === Deep layer: All cloud._* private state ===
+                console.log('=== All cloud._* private flags ===');
+                try {
+                    if (HEYS?.cloud) {
+                        const privs = {};
+                        Object.keys(HEYS.cloud).forEach(k => {
+                            if (k.startsWith('_')) {
+                                const v = HEYS.cloud[k];
+                                const t = typeof v;
+                                if (t === 'function') return; // skip methods
+                                if (t === 'object' && v !== null) {
+                                    if (Array.isArray(v)) {
+                                        privs[k] = `Array(${v.length})`;
+                                    } else {
+                                        try {
+                                            const s = JSON.stringify(v);
+                                            privs[k] = s.length > 80 ? s.slice(0, 80) + '…' : s;
+                                        } catch (_) { privs[k] = '<unstringifiable>'; }
+                                    }
+                                } else {
+                                    privs[k] = v;
+                                }
+                            }
+                        });
+                        console.log(privs);
+                    }
+                } catch (_) { /* noop */ }
+
+                // === Deep layer: Cascade / EWS compute counters ===
+                console.log('=== Cascade + EWS compute frequency ===');
+                try {
+                    const cs = HEYS?._cascadeStats;
+                    if (cs) {
+                        const now = Date.now();
+                        const last30s = cs.recent.filter(r => (now - r.ts) < 30000).length;
+                        const last5s = cs.recent.filter(r => (now - r.ts) < 5000).length;
+                        console.log({
+                            cascadeTotal: cs.count,
+                            cascadeLast30sCount: last30s,
+                            cascadeLast5sCount: last5s,
+                            cascadeLastFireAgo_ms: cs.lastTs ? (now - cs.lastTs) : null,
+                        });
+                        if (last5s >= 3) {
+                            console.warn(`🔥 CASCADE COMPUTE HOT: ${last5s} раз за 5с (norm <1) — это loop trigger!`);
+                        }
+                    } else {
+                        console.log('(cascade stats unavailable)');
+                    }
+                    const es = HEYS?._ewsStats;
+                    if (es) {
+                        const now = Date.now();
+                        const last30s = es.recent.filter(r => (now - r.ts) < 30000).length;
+                        const last5s = es.recent.filter(r => (now - r.ts) < 5000).length;
+                        console.log({
+                            ewsTotal: es.count,
+                            ewsLast30sCount: last30s,
+                            ewsLast5sCount: last5s,
+                            ewsLastFireAgo_ms: es.lastTs ? (now - es.lastTs) : null,
+                        });
+                        if (last5s >= 3) {
+                            console.warn(`🔥 EWS DETECT HOT: ${last5s} раз за 5с (norm <1) — это loop trigger!`);
+                        }
+                    } else {
+                        console.log('(ews stats unavailable)');
+                    }
+                } catch (_) { /* noop */ }
+
                 // === Session / runtime context ===
                 console.log('=== Session runtime ===');
                 console.log({

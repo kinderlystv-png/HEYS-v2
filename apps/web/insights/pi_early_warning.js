@@ -4173,6 +4173,17 @@
             mode = 'full';
         }
 
+        // 2026-05-29 diag: counter для частоты EWS detect (loop detection)
+        try {
+            window.HEYS = window.HEYS || {};
+            window.HEYS._ewsStats = window.HEYS._ewsStats || { count: 0, lastTs: 0, recent: [] };
+            const _est = window.HEYS._ewsStats;
+            _est.count += 1;
+            _est.lastTs = Date.now();
+            _est.recent.push({ ts: _est.lastTs, mode: mode, daysCount: (Array.isArray(days) ? days.length : 0) });
+            if (_est.recent.length > 50) _est.recent.shift();
+        } catch (_) { /* noop */ }
+
         const checksCount = mode === 'acute' ? 10 : 25;
 
         console.info('ews / detect 🚀 start:', {

@@ -2026,6 +2026,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var computeOpts = opts || {};
     var silent = !!computeOpts.silent;
 
+    // 2026-05-29 diag: counter для понимания частоты cascade-compute (loop detection)
+    try {
+      window.HEYS = window.HEYS || {};
+      window.HEYS._cascadeStats = window.HEYS._cascadeStats || { count: 0, lastTs: 0, recent: [] };
+      var st = window.HEYS._cascadeStats;
+      st.count += 1;
+      st.lastTs = Date.now();
+      st.recent.push({ ts: st.lastTs, silent: silent });
+      if (st.recent.length > 50) st.recent.shift();
+    } catch (_) { /* noop */ }
+
     console.info('[HEYS.cascade] ─── computeCascadeState v3.6.0 START ────────');
     console.info('[HEYS.cascade] 🧬 v3.6.0 features: CRS = base(EMA completed days) + DCS×0.03 | soft chain degradation | continuous scoring | personal baselines | circadian awareness | confidence layer | day-type detection | cross-factor synergies | goal-aware calorie penalty | chronotype-tolerant sleep scoring');
     console.info('[HEYS.cascade] 📥 Input data:', {

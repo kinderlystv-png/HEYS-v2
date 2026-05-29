@@ -27,6 +27,46 @@
 
   const cloud = HEYS.cloud = HEYS.cloud || {};
 
+  // 2026-05-29 diag: PerformanceObserver ring buffer для longtask'ов >50ms.
+  // Доступно через HEYS._longtaskHistory. Используется badge-click handler'ом
+  // чтобы видеть какие main-thread блокировки совпадают с upload-loop'ами.
+  if (typeof window !== 'undefined' && typeof PerformanceObserver === 'function' && !window.__heysLongtaskPatched) {
+    window.__heysLongtaskPatched = true;
+    HEYS._longtaskHistory = [];
+    try {
+      const obs = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry) => {
+          HEYS._longtaskHistory.push({
+            ts: Date.now(),
+            dur_ms: Math.round(entry.duration),
+            name: String(entry.name).slice(0, 40),
+            attribution: (entry.attribution || []).map(a => a?.containerName || a?.name || '?').slice(0, 2),
+          });
+          if (HEYS._longtaskHistory.length > 100) HEYS._longtaskHistory.shift();
+        });
+      });
+      obs.observe({ entryTypes: ['longtask'] });
+    } catch (_) { /* longtask unsupported (Safari/iOS) */ }
+  }
+
+  // 2026-05-29 diag: getter для raw clientUpsertQueue items (top by size).
+  cloud.getClientQueueRaw = function () {
+    try {
+      const q = (typeof clientUpsertQueue !== 'undefined' && Array.isArray(clientUpsertQueue)) ? clientUpsertQueue : [];
+      return q.map(item => {
+        let bytes = 0;
+        try { bytes = (JSON.stringify(item?.v) || '').length; } catch (_) { bytes = 0; }
+        return {
+          k: item?.k,
+          client_id: item?.client_id ? String(item.client_id).slice(0, 8) : null,
+          user_id: item?.user_id ? String(item.user_id).slice(0, 8) : null,
+          bytes,
+          updatedAt: item?.updated_at,
+        };
+      }).sort((a, b) => b.bytes - a.bytes).slice(0, 10);
+    } catch (_) { return []; }
+  };
+
   // 2026-05-29 diag: ring buffer for window.dispatchEvent — last 100 events.
   // Только heys:* events (наши custom). Доступно через HEYS._eventHistory.
   // Используется badge-click handler'ом для понимания event-cascade triggers.
