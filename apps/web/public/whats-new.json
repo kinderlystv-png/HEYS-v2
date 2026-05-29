@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.a2d31432",
+      "buildHash": "a2d31432",
+      "date": "2026-05-30",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Bundle hash bump после deploy 7fb8be2f (anti-pollution scoping)",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Vite пересобрал boot-core с новым hash, APP_VERSION/sw CACHE_VERSION/index.html синхронизированы",
+          "description": "Это post-deploy bundle artifact'ы (no functional change). См. предыдущий entry 7fb8be2f для сути fix'а."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.7fb8be2f",
       "buildHash": "7fb8be2f",
       "date": "2026-05-30",
