@@ -1733,10 +1733,13 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             if (hot.length > 0) {
                                 extraLines.push('  🔥 HOT saveClientKey last 30s (≥3): ' + hot.map(([k, n]) => `${k}=${n}`).join(', '));
                             }
-                            extraLines.push('  --- last 50 (ago_ms | key | bytes | updatedAt | muteMirror | caller) ---');
+                            extraLines.push('  --- last 50 (ago_ms | key | bytes | updatedAt | muteMirror | caller-chain top-3) ---');
                             sckh.slice(-50).forEach(w => {
-                                const caller = (w.callers && w.callers[0]) ? w.callers[0].slice(0, 80) : '—';
-                                extraLines.push(`  ${String(now - w.ts).padStart(5)}ms | ${String(w.k).padEnd(35)} | ${w.bytes}b | ${w.updatedAt || '—'} | mute=${w.muteMirror ? 'Y' : 'N'} | ${caller}`);
+                                const cs = Array.isArray(w.callers) ? w.callers : [];
+                                const callerChain = cs.length
+                                    ? cs.slice(0, 3).map(s => String(s || '').replace(/^at\s+/, '').slice(0, 60)).join(' ← ')
+                                    : '—';
+                                extraLines.push(`  ${String(now - w.ts).padStart(5)}ms | ${String(w.k).padEnd(35)} | ${w.bytes}b | ${w.updatedAt || '—'} | mute=${w.muteMirror ? 'Y' : 'N'} | ${callerChain}`);
                             });
                         } else {
                             extraLines.push('  (empty — saveClientKey not called or instrumentation not loaded)');

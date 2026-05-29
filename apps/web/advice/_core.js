@@ -4200,40 +4200,53 @@
         };
     }
 
+    // 2026-05-29 anti-loop throttle: per-date timestamps to drop excessive calls.
+    // Source of pain: useEffect [adviceTrace, HEYSRef] в day/_advice.js:2479 firing on every
+    // DayTab render with a fresh adviceTrace reference. Fingerprint меняется (trigger,
+    // ordering, derived numbers fluctuate) → старая throttle-ветка обходилась → loop.
+    // Now: drop entirely if <2s since last touch for that date; defer persist until 10s window.
+    const _adviceTraceLastTouch = new Map();
+    const _adviceTraceLastPersist = new Map();
+    const _ADVICE_TRACE_TOUCH_MIN_MS = 2000;
+    const _ADVICE_TRACE_PERSIST_MIN_MS = 10000;
+
     function appendDailyAdviceTraceSnapshot(trace) {
         if (!trace?.input?.date) return null;
+        const date = trace.input.date;
+        const now = Date.now();
+        const lastTouch = _adviceTraceLastTouch.get(date) || 0;
+        if (now - lastTouch < _ADVICE_TRACE_TOUCH_MIN_MS) {
+            return null; // hard drop: too frequent calls for this date
+        }
+        _adviceTraceLastTouch.set(date, now);
 
-        const log = getDailyAdviceTraceLog(trace.input.date);
+        const log = getDailyAdviceTraceLog(date);
         const fingerprint = buildAdviceTraceFingerprint(trace);
         const lastEntry = log.entries[log.entries.length - 1];
+        const lastPersist = _adviceTraceLastPersist.get(date) || 0;
+        const shouldPersist = (now - lastPersist) >= _ADVICE_TRACE_PERSIST_MIN_MS;
 
         if (lastEntry?.type === 'snapshot' && lastEntry?.fingerprint === fingerprint) {
             lastEntry.repeatCount = (lastEntry.repeatCount || 1) + 1;
-            lastEntry.lastSeenAt = Date.now();
+            lastEntry.lastSeenAt = now;
             lastEntry.summary = sanitizeDailyAdviceSummary(buildAdviceTraceEntrySummary(trace), trace);
-            // 2026-05-29 anti-loop throttle: при том же fingerprint (контент идентичен)
-            // обновляем lastSeenAt/repeatCount in-memory, но НЕ персистим чаще чем раз в 10с.
-            // Иначе useEffect [adviceTrace, HEYSRef] в day/_advice.js:2479 (срабатывает на каждый
-            // render родителя из-за нестабильного adviceTrace ref) пишет advice_trace_day_v1
-            // каждые ~40мс → loop sync queue в курaторской сессии. См. snapshot 2026-05-29 14:20.
-            const _prevPersistedAt = lastEntry._persistedAt || 0;
-            if (Date.now() - _prevPersistedAt < 10000) {
-                return log; // skip persist — состояние in-memory обновится при следующем persist
-            }
-            lastEntry._persistedAt = Date.now();
+            if (!shouldPersist) return log;
+            _adviceTraceLastPersist.set(date, now);
             saveDailyAdviceTraceLog(log);
             return log;
         }
 
         log.entries.push({
             type: 'snapshot',
-            recordedAt: Date.now(),
-            lastSeenAt: Date.now(),
+            recordedAt: now,
+            lastSeenAt: now,
             repeatCount: 1,
             fingerprint,
             summary: sanitizeDailyAdviceSummary(buildAdviceTraceEntrySummary(trace), trace),
             trace: sanitizeStoredAdviceTrace(trace)
         });
+        if (!shouldPersist) return log;
+        _adviceTraceLastPersist.set(date, now);
         saveDailyAdviceTraceLog(log);
         return log;
     }
