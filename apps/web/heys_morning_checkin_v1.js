@@ -58,8 +58,16 @@
       (p.age || p.weight || p.height || p.firstName || p.profileCompleted === true);
     const scopedParsed = tryDecompress(localStorage.getItem(`heys_${clientId}_profile`));
     if (isProfileShape(scopedParsed)) return scopedParsed;
+    // Legacy unscoped fallback с ownership check (incident 2026-05-29):
+    // unscoped heys_profile может принадлежать ДРУГОМУ клиенту того же браузера
+    // (курaторская сессия с несколькими клиентами). Возвращаем legacy ТОЛЬКО
+    // если маркера _sourceClientId нет (true legacy ДО введения scoping) или
+    // если он совпадает с текущим clientId.
     const legacyParsed = tryDecompress(localStorage.getItem('heys_profile'));
-    return isProfileShape(legacyParsed) ? legacyParsed : null;
+    if (!isProfileShape(legacyParsed)) return null;
+    const legacyOwner = legacyParsed && legacyParsed._sourceClientId;
+    if (legacyOwner && legacyOwner !== clientId) return null;
+    return legacyParsed;
   }
 
   function getCurrentClientId() {
@@ -115,7 +123,12 @@
     return readStoredValue(`heys_dayv2_${dateKey}`, fallback) || fallback;
   }
 
-  /** Согласовано с heys_steps_v1.js saveDayData: scoped + unscoped + dayCache. */
+  /** P0 guard pattern (см. heys_steps_v1.js:264 saveDayData):
+   *  если scoped key есть — НЕ пишем unscoped. Unscoped — это global LS
+   *  shared между всеми клиентами одного браузера. Раньше dual-write делал
+   *  cross-client contamination когда курaтор работает с несколькими клиентами
+   *  в одной сессии (incident 2026-05-29 21:16: Александра's dayv2 залились
+   *  в Poplanton'a через unscoped legacy path). */
   function writeDayV2ScopedAndLegacy(dateKey, dayData) {
     const cid = getCurrentClientId();
     if (cid) {
@@ -125,7 +138,14 @@
       } else if (HEYS.utils?.lsSet) {
         HEYS.utils.lsSet(scopedKey, dayData);
       }
+      try {
+        if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
+          HEYS.dayCache.notifyDateUpdated(dateKey);
+        }
+      } catch (_) { /* ignore */ }
+      return;
     }
+    // Fallback: нет clientId (редкий pre-auth case) — только тогда unscoped.
     const unscopedKey = `heys_dayv2_${dateKey}`;
     if (HEYS.store?.set) {
       HEYS.store.set(unscopedKey, dayData);

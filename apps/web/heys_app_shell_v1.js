@@ -2645,6 +2645,44 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
                                                                 console.info(`[HEYS.shell] 🔄 Hard reload для switch'а на: ${c.name} (${c.id.slice(0, 8)}...)`);
 
+                                                                // 2026-05-29 anti-pollution L1 defense (incident 21:16:40 Александра → Poplanton):
+                                                                // unscoped legacy LS keys (heys_profile, heys_dayv2_*, heys_ews_*,
+                                                                // heys_ceb_*, heys_meal_gaps_history) принадлежали СТАРОМУ клиенту,
+                                                                // но после reload bootstrap/migration пути читают их и пишут под
+                                                                // НОВЫЙ currentClientId → cloud pollution. Cleanup ПЕРЕД reload —
+                                                                // default-on defence, закрывает класс bugs независимо от того
+                                                                // fix'нуты ли individual migration paths. Scoped keys
+                                                                // (heys_<old_cid>_*) НЕ трогаем — они correctly attributed.
+                                                                try {
+                                                                    const _legacyPatterns = [
+                                                                        /^heys_profile$/,
+                                                                        /^heys_dayv2_\d{4}-\d{2}-\d{2}$/,
+                                                                        /^heys_ews_snapshot$/,
+                                                                        /^heys_ews_trends_v1$/,
+                                                                        /^heys_ews_weekly_v1$/,
+                                                                        /^heys_ceb_v1$/,
+                                                                        /^heys_ceb_d_\d{4}-\d{2}-\d{2}$/,
+                                                                        /^heys_meal_gaps_history$/,
+                                                                        /^heys_cascade_dcs_v\d+$/,
+                                                                        /^heys_grams_history$/,
+                                                                        /^heys_norms$/,
+                                                                    ];
+                                                                    const _toRemove = [];
+                                                                    for (let i = 0; i < localStorage.length; i++) {
+                                                                        const _k = localStorage.key(i);
+                                                                        if (!_k) continue;
+                                                                        if (_legacyPatterns.some(re => re.test(_k))) _toRemove.push(_k);
+                                                                    }
+                                                                    if (_toRemove.length > 0) {
+                                                                        console.info(`[HEYS.shell] 🧹 Cleanup ${_toRemove.length} unscoped legacy keys перед switch (anti-pollution):`, _toRemove);
+                                                                        _toRemove.forEach(_k => {
+                                                                            try { localStorage.removeItem(_k); } catch (_) { /* noop */ }
+                                                                        });
+                                                                    }
+                                                                } catch (e) {
+                                                                    console.warn('[HEYS.shell] legacy cleanup failed:', e?.message);
+                                                                }
+
                                                                 // Сохраняем target в LS чтобы бутстрап подхватил после reload
                                                                 writeGlobalValue('heys_last_client_id', c.id);
                                                                 writeGlobalValue('heys_client_current', c.id);

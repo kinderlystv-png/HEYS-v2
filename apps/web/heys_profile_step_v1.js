@@ -1620,14 +1620,32 @@
         if (!_profileCompletedAutoSetThisSession) {
           _profileCompletedAutoSetThisSession = true;
           try {
+            // 2026-05-29 anti-pollution: пишем СТРОГО scoped + stamp marker.
+            // Раньше 'heys_profile' (unscoped) попадал в interceptor и uploads
+            // под currentClientId — после switch contamination'ил нового клиента.
+            // P0 guard pattern (see heys_steps_v1.js:264 saveDayData).
             profile.profileCompleted = true;
-            if (window.HEYS?.store?.set) {
-              window.HEYS.store.set('heys_profile', profile);
+            const _autoCid = (window.HEYS?.currentClientId || '').toString();
+            const _autoScoped = _autoCid ? `heys_${_autoCid}_profile` : null;
+            const stamped = _autoCid ? { ...profile, _sourceClientId: _autoCid } : profile;
+            if (_autoScoped) {
+              if (window.HEYS?.store?.set) {
+                window.HEYS.store.set(_autoScoped, stamped);
+              } else {
+                localStorage.setItem(_autoScoped, JSON.stringify(stamped));
+              }
             } else {
-              localStorage.setItem('heys_profile', JSON.stringify(profile));
+              // Fallback: нет client_id (pre-auth flow) — единственный случай
+              // когда unscoped write безопасен (никакого user context ещё нет).
+              if (window.HEYS?.store?.set) {
+                window.HEYS.store.set('heys_profile', profile);
+              } else {
+                localStorage.setItem('heys_profile', JSON.stringify(profile));
+              }
             }
             console.warn('[ProfileSteps] auto-set profileCompleted=true for filled profile', {
-              firstName: fn, weight: profile.weight, height: profile.height
+              firstName: fn, weight: profile.weight, height: profile.height,
+              scoped: !!_autoScoped,
             });
           } catch (_) { }
         }
@@ -1636,7 +1654,28 @@
       }
     } catch (_) { }
 
-    // 🧭 Миграция legacy профиля (без clientId) → scoped ключ
+    // 🧭 Миграция legacy профиля (без clientId) → scoped ключ.
+    //
+    // 2026-05-29 (curator-pollution fix): ДВА бага исправлены.
+    //
+    // 1. Ownership check. Старая ветка мигрировала ЛЮБОЙ unscoped heys_profile
+    //    в текущий scope. После курaторского switch (Александра → Poplanton)
+    //    LS всё ещё содержал Александрин unscoped heys_profile → миграция
+    //    переносила её содержимое в heys_<poplanton_id>_profile → cloud
+    //    pollution. Теперь legacy migrates ТОЛЬКО если содержит маркер
+    //    _sourceClientId совпадающий с currentClientId, или вообще не имеет
+    //    маркера (legacy данные ДО введения scoping — единственный случай
+    //    когда unscoped принадлежит «всем»).
+    //
+    // 2. Запись через store.set('heys_profile', ...) — UNSCOPED!
+    //    Interceptor catches → saveClientKey('heys_profile', ...) → line 10171
+    //    в heys_storage_supabase_v1.js → client_id = currentClientId → write
+    //    в client_kv_store под current client_id. Это и был основной vector
+    //    pollution в incident 2026-05-29 21:16:40-43. Теперь пишем СТРОГО
+    //    через scopedKey (legacy heys_profile никогда не пишем).
+    //
+    // 3. После успешной migration — removeItem('heys_profile') чтобы legacy
+    //    не остался в LS как ловушка для следующего switch.
     try {
       const currentClientId = (window.HEYS?.currentClientId || '').toString();
       const scopedKey = currentClientId ? `heys_${currentClientId}_profile` : null;
@@ -1644,8 +1683,6 @@
       const rawLegacy = localStorage.getItem('heys_profile');
 
       if (currentClientId && scopedKey && !rawScoped && rawLegacy) {
-        // Store.decompress сам обрабатывает префикс ¤Z¤ и обычный JSON.
-        // Голый JSON.parse падает на сжатых данных — миграция тогда не срабатывает.
         const decompressFn = window.HEYS?.store?.decompress;
         const legacyProfile = decompressFn ? decompressFn(rawLegacy) : JSON.parse(rawLegacy);
         const hasLegacyData = legacyProfile && (
@@ -1657,14 +1694,35 @@
           legacyProfile.age
         );
 
-        if (hasLegacyData) {
+        // Ownership gate: legacy без маркера _sourceClientId — это true legacy
+        // (написано ДО введения scoping). Если маркер есть и НЕ совпадает с
+        // currentClientId — это carryover от другого клиента → skip + cleanup.
+        const legacyOwner = legacyProfile && legacyProfile._sourceClientId;
+        const ownershipOk = !legacyOwner || legacyOwner === currentClientId;
+
+        if (hasLegacyData && ownershipOk) {
+          // Stamp marker before writing to scoped — следующий read для другого
+          // клиента увидит ownership и не подхватит чужие данные.
+          const stamped = { ...legacyProfile, _sourceClientId: currentClientId };
           if (window.HEYS?.store?.set) {
-            window.HEYS.store.set('heys_profile', legacyProfile);
+            window.HEYS.store.set(scopedKey, stamped);
           } else {
-            localStorage.setItem(scopedKey, JSON.stringify(legacyProfile));
+            localStorage.setItem(scopedKey, JSON.stringify(stamped));
           }
+          // Cleanup legacy — removeItem unscoped после успешной migration.
+          try { localStorage.removeItem('heys_profile'); } catch (_) { /* noop */ }
           localStorage.removeItem('heys_registration_in_progress');
           return false;
+        }
+
+        if (hasLegacyData && !ownershipOk) {
+          // Cross-client carryover detected — clean legacy + продолжить как
+          // если бы профиля не было (Poplanton начнёт onboarding с нуля).
+          console.warn('[HEYS.profile] cross-client legacy heys_profile detected — removing', {
+            legacyOwner: String(legacyOwner).slice(0, 8),
+            currentClientId: String(currentClientId).slice(0, 8),
+          });
+          try { localStorage.removeItem('heys_profile'); } catch (_) { /* noop */ }
         }
       }
     } catch (_) { }
