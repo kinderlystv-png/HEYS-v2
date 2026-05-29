@@ -10530,19 +10530,34 @@
             const newUpdatedAt = Date.now();
             if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
             if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
-            const baseDay = dayRef.current || {};
-            const mealsList = baseDay.meals || [];
+            // 2026-05-29 bug fix: ранее использовался dayRef.current — может отставать
+            // от LS state после быстрой последовательности «create meal → add product»
+            // (React не commit'ил setDay → dayRef.current stale → mealsList без новой
+            // meal → mealIndex для свежей meal out-of-bounds → продукт молча терялся
+            // или mapping коlapse'ил на wrong index). Читаем live snapshot из LS
+            // (canonical source of truth между actions). Bounds-check предотвращает
+            // запись поломанного state.
+            const key = _scopedDayKey(date);
+            let baseDay = {};
+            try {
+                baseDay = (HEYS.utils && typeof HEYS.utils.lsGet === 'function')
+                    ? (HEYS.utils.lsGet(key, {}) || {})
+                    : (dayRef.current || {});
+            } catch (_) { baseDay = dayRef.current || {}; }
+            const mealsList = (baseDay && baseDay.meals) || [];
             if (!mealsList[mi]) {
-                console.warn('[HEYS.day] ❌ Meal index not found for addProductToMeal', {
+                console.warn('[HEYS.day] ❌ Meal index out-of-bounds for addProductToMeal — aborting (state race?)', {
                     mealIndex: mi,
                     mealsCount: mealsList.length,
-                    productName: finalProduct?.name || null
+                    productName: finalProduct?.name || null,
+                    baseDayUpdatedAt: baseDay?.updatedAt || null,
                 });
+                if (HEYS.Toast?.error) HEYS.Toast.error('Не удалось добавить — приём не найден, попробуй ещё раз');
+                return;
             }
             const before = (mealsList[mi]?.items || []).length;
             const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
             const newDayData = { ...baseDay, meals, updatedAt: newUpdatedAt };
-            const key = _scopedDayKey(date);
             try {
                 console.info('[HEYS.day-trace] 4/8 setDay applied', {
                     date: baseDay.date,
