@@ -1,0 +1,34 @@
+# Gitleaks config — allowlist для public-by-design ключей.
+#
+# Зачем: HEYS-v2 использует legacy Supabase anon key как идентификатор клиента
+# для Yandex Cloud Functions (через REST proxy). Anon key в Supabase
+# архитектурно публичный — он встроен во все client bundles. Cloud-side
+# защита делается через RLS policies (row-level security), не через секретность
+# anon key. Поэтому detect'ить его как "secret" — false positive.
+#
+# Также bundle файлы (apps/web/public/*.bundle.HASH.js) генерируются на каждом
+# rebuild с новым hash в имени. После того как regex auto-sync был исправлен
+# (commit ed879ea9), bundles correctly пересобираются на каждом commit'е,
+# triggering Gitleaks JWT detection на одном и том же anon key.
+
+# Inherit default rules.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public-by-design tokens and generated bundles"
+
+# Известный Supabase anon key проекта HEYS legacy (issuer=supabase, role=anon).
+# Это public token — он есть в браузере у каждого пользователя.
+regexes = [
+    '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcW9sY3ppcWN1cGxxZmdybXNoIiwicm9sZSI6ImFub24i'''
+]
+
+# Generated/minified bundles — содержимое regenerable из source.
+# Если secret leak'нул через bundle, он сначала появится в source (там его и поймаем).
+paths = [
+    '''apps/web/public/.*\.bundle\.[a-f0-9]+\.js''',
+    '''apps/web/public/.*\.bundle\.[a-f0-9]+\.js\.gz''',
+    '''apps/web/heys_(advice|day_meals|day)_bundle_v1\.js''',
+    '''apps/landing/out/_next/static/.*''',
+]

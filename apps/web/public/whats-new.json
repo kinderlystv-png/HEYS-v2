@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.29.fc1ce544",
+      "buildHash": "fc1ce544",
+      "date": "2026-05-29",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Курaторская сессия: закрыта утечка данных одного клиента в другого при switch'е",
+      "items": [
+        {
+          "type": "fix",
+          "title": "При переключении курaтора между клиентами в одном браузере данные ОДНОГО клиента больше не попадают в облако ДРУГОГО",
+          "description": "Симптом: курaтор работал с клиентом А (правил день, профиль, отметки), потом через дропдаун в шапке переключился на клиента Б — и через 2-3 секунды в облачной таблице client_kv_store у клиента Б появлялись чужие данные: профиль А (вес/рост/дата рождения), несколько dayv2 за прошлые даты, ceb-d statistics. Было подтверждено DB-запросом: у клиента Poplanton хранится профиль Александры (weight=51.6, height=162, birthDate=1991-10-29). Причина: миграция legacy профиля в profile_step (логика «нашли старый unscoped heys_profile → перенесём в heys_<clientId>_profile») делала это БЕЗ проверки кому принадлежал legacy, и плюс внутри миграции запись шла unscoped ключом → перехватчик localStorage уплывал её в облако под ТЕКУЩИЙ client_id (после reload это уже Poplanton). Тот же anti-pattern был в morning_checkin (dual-write scoped+unscoped даже когда scoped есть). Архитектурный fix двумя слоями: (1) корень — миграция теперь проверяет ownership через маркер _sourceClientId, пишет строго scoped ключом + штампует marker, после migration удаляет legacy чтобы не оставался ловушкой; morning_checkin переведён на P0 guard pattern (если scoped есть — не пишем unscoped). (2) defence-in-depth — reload-on-switch теперь чистит unscoped legacy keys (heys_profile, heys_dayv2_*, heys_ews_*, heys_ceb_*, heys_meal_gaps_history и др.) перед самим reload — даже если кто-то добавит ещё одну migration-path в будущем, после switch'а legacy в LS уже не будет. Polluted данные в облаке (11 строк за окно incident'a) отдельно вычищены."
+        }
+      ]
+    },
+    {
       "version": "2026.05.29.41524f5c",
       "buildHash": "41524f5c",
       "date": "2026-05-29",
