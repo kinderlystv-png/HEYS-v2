@@ -2291,7 +2291,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (mealQS && mealQS.score != null) {
         console.info('[HEYS.cascade] 🎯 Meal quality (' + getMealLabel(meal, i, mealBandShift) + '): score=' + mealQS.score + ' grade=' + qualityGrade + ' weight=' + (+mealWeight).toFixed(2) + ' color=' + mealQS.color + ' scoringModel=v2.1.0-continuous');
       } else {
-        console.warn('[HEYS.cascade] ⚠️ getMealQualityScore недоступен (' + getMealLabel(meal, i, mealBandShift) + ') → fallback weight=' + mealWeight + ' | HEYS.mealScoring=' + (typeof (HEYS.mealScoring && HEYS.mealScoring.getMealQualityScore)) + ' pIndex=' + (!!pIndex));
+        // 2026-05-29: downgrade warn → info. mealScoringFn=null или pIndex отсутствует
+        // — это **expected** path (например, до того как pIndex загружен из cloud).
+        // fallback weight=0.9 даёт корректное поведение. console.warn разворачивал
+        // полный React-render stack в DevTools на каждом рендере DayTab → шум.
+        console.info('[HEYS.cascade] ℹ️ getMealQualityScore fallback (' + getMealLabel(meal, i, mealBandShift) + ') weight=' + mealWeight + ' (mealScoring=' + (typeof (HEYS.mealScoring && HEYS.mealScoring.getMealQualityScore)) + ', pIndex=' + (!!pIndex) + ')');
       }
 
       console.info('[HEYS.cascade] 🍽️ [MEAL ' + (i + 1) + '/' + meals.length + '] ' + getMealLabel(meal, i, mealBandShift) + ' (model v2.1.0 continuous + circadian):', {

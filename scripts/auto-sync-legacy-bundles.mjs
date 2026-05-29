@@ -46,13 +46,21 @@ function stripWebPrefix(filePath) {
     return filePath.startsWith('apps/web/') ? filePath.slice('apps/web/'.length) : null;
 }
 
+// 2026-05-29: explicit set из LEGACY_GENERATORS.output — single source of truth.
+// Раньше использовался regex /^apps\/web\/heys_.*bundle.*\.js$/ который false-positive'ил
+// hand-written source файлы с "bundle" в имени (heys_day_core_bundle_v1.js — это IIFE
+// модуль входящий в boot-calc, НЕ generated). Из-за этого правки в source skipped
+// rebuild → требовался manual pnpm bundle:legacy (см. c5fbc14a, манук-rebuild).
+const LEGACY_GENERATED_OUTPUTS = new Set(
+    Object.values(LEGACY_GENERATORS).map(g => g.output)
+);
+
 function isLegacyGeneratedFile(filePath) {
     return (
         filePath.startsWith('apps/web/public/') ||
         filePath === 'apps/web/bundle-manifest.json' ||
         filePath === 'apps/web/index.html' ||
-        filePath === 'apps/web/public/sw.js' ||
-        /^apps\/web\/heys_.*bundle.*\.js$/.test(filePath)
+        LEGACY_GENERATED_OUTPUTS.has(filePath)
     );
 }
 
