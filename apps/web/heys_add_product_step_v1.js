@@ -5540,10 +5540,15 @@ NOVA: 1
                     Toast?.info?.('Заявка уже отправлена ранее — ждёт модерации');
                   } else if (status === 'error' || result?.error) {
                     const msg = result?.message || (typeof result?.error === 'string' ? result.error : (result?.error?.message || 'неизвестная ошибка'));
-                    const isSessionExpired = /invalid_session|No session token|Нет активной сессии/i.test(String(msg));
+                    // PIN-сессия живёт 30 дней. Если RPC говорит invalid_session ИЛИ клиент
+                    // вообще не нашёл активную сессию — это не нормальное «истёк», это сигнал
+                    // что cookie/LS повреждены или браузер их не сохраняет (incognito,
+                    // ITP cleanup, явное удаление). Просим обновить страницу — bootstrap
+                    // покажет PIN-форму если auth действительно потерян.
+                    const isSessionMissing = /invalid_session|No session token|Нет активной сессии/i.test(String(msg));
                     console.error('[HarmSelectStep] ❌ Ошибка отправки на модерацию:', result);
-                    if (isSessionExpired) {
-                      Toast?.error?.('PIN-сессия истекла. Пожалуйста, войдите снова, чтобы заявка дошла до куратора.');
+                    if (isSessionMissing) {
+                      Toast?.error?.('Не удалось подтвердить сессию. Обновите страницу — если попросит PIN, введите его заново.');
                       try { HEYS.Auth?.requestPinReentry?.(); } catch (_) { /* no API — toast уже показан */ }
                     } else {
                       Toast?.error?.(`Не удалось отправить на модерацию: ${msg}`);
