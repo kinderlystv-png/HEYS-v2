@@ -2286,9 +2286,19 @@
     function getSessionData() {
         try {
             const data = sessionStorage.getItem(SESSION_KEY);
-            return data ? JSON.parse(data) : { shown: [], count: 0, lastShown: 0 };
+            const parsed = data ? JSON.parse(data) : null;
+            return parsed
+                ? {
+                    shown: parsed.shown || [],
+                    count: parsed.count || 0,
+                    lastShown: parsed.lastShown || 0,
+                    // Phase 4 (2026-05-30): per-category cooldown tracking
+                    lastShownByCategory: parsed.lastShownByCategory || {},
+                    countByCategory: parsed.countByCategory || {}
+                }
+                : { shown: [], count: 0, lastShown: 0, lastShownByCategory: {}, countByCategory: {} };
         } catch (e) {
-            return { shown: [], count: 0, lastShown: 0 };
+            return { shown: [], count: 0, lastShown: 0, lastShownByCategory: {}, countByCategory: {} };
         }
     }
 
@@ -2304,17 +2314,48 @@
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // 🕐 Phase 4 (2026-05-30): per-category cooldown configuration
+    //
+    // Заменяет глобальный 45с window на context-aware cooldowns.
+    // Например, hydration советы реже (10мин) чтобы не раздражать;
+    // training советы редко (30мин) уместны; nutrition чаще (5мин).
+    //
+    // GLOBAL_FLOOR_MS — minimal интервал между ЛЮБЫМИ показами
+    // (защита от burst после канOLDOWN expiry).
+    //
+    // SESSION_CAP_PER_CATEGORY — max показов одной категории
+    // в пределах session (поверх per-category cooldown).
+    // ═══════════════════════════════════════════════════════════════
+
+    const CATEGORY_COOLDOWN_MS = {
+        nutrition: 5 * 60 * 1000,    // 5 мин
+        hydration: 10 * 60 * 1000,   // 10 мин — реже, иначе annoy'ing
+        training:  30 * 60 * 1000,   // 30 мин — редко уместно
+        emotional: 15 * 60 * 1000,   // 15 мин
+        timing:    5 * 60 * 1000,    // 5 мин
+        other:     8 * 60 * 1000     // 8 мин
+    };
+    const GLOBAL_FLOOR_MS = 30 * 1000;  // не чаще 30с между ЛЮБЫМИ
+    const SESSION_CAP_PER_CATEGORY = 5; // max 5 показов категории в сессию
+
     /**
      * Отмечает совет как показанный
      * @param {string} adviceId
+     * @param {string} [category] — Phase 4: для per-category cooldown
      */
-    function markAdviceShown(adviceId) {
+    function markAdviceShown(adviceId, category) {
         const data = getSessionData();
         if (!data.shown.includes(adviceId)) {
             data.shown.push(adviceId);
         }
         data.count++;
-        data.lastShown = Date.now();
+        const now = Date.now();
+        data.lastShown = now;
+        if (category) {
+            data.lastShownByCategory[category] = now;
+            data.countByCategory[category] = (data.countByCategory[category] || 0) + 1;
+        }
         saveSessionData(data);
     }
 
@@ -2332,6 +2373,12 @@
         const data = getSessionData();
         const now = Date.now();
         const timeSinceLastShown = now - (data.lastShown || 0);
+        // Phase 4 (2026-05-30): per-category cooldown
+        const category = options.category || null;
+        const categoryCooldownMs = category ? (CATEGORY_COOLDOWN_MS[category] || ADVICE_COOLDOWN_MS) : ADVICE_COOLDOWN_MS;
+        const lastShownInCategory = category ? (data.lastShownByCategory[category] || 0) : 0;
+        const timeSinceCategory = category ? (now - lastShownInCategory) : Infinity;
+        const sessionCountInCategory = category ? (data.countByCategory[category] || 0) : 0;
 
         if (data.count >= MAX_ADVICES_PER_SESSION) {
             return {
@@ -2345,7 +2392,50 @@
             };
         }
 
-        if (!options.canSkipCooldown && timeSinceLastShown < ADVICE_COOLDOWN_MS) {
+        // 🕐 Phase 4: global floor (30s) — защита от burst
+        if (!options.canSkipCooldown && timeSinceLastShown < GLOBAL_FLOOR_MS) {
+            return {
+                allowed: false,
+                reason: 'global_floor',
+                message: `Минимальный интервал ещё ${Math.ceil((GLOBAL_FLOOR_MS - timeSinceLastShown) / 1000)}с`,
+                sessionCount: data.count,
+                maxPerSession: MAX_ADVICES_PER_SESSION,
+                remainingMs: Math.max(0, GLOBAL_FLOOR_MS - timeSinceLastShown),
+                lastShownAt: data.lastShown || 0
+            };
+        }
+
+        // 🕐 Phase 4: session cap per category
+        if (category && sessionCountInCategory >= SESSION_CAP_PER_CATEGORY) {
+            return {
+                allowed: false,
+                reason: 'category_session_cap',
+                message: `Лимит категории "${category}" исчерпан в сессии (${SESSION_CAP_PER_CATEGORY})`,
+                sessionCount: data.count,
+                categorySessionCount: sessionCountInCategory,
+                maxPerSession: MAX_ADVICES_PER_SESSION,
+                remainingMs: 0,
+                lastShownAt: lastShownInCategory
+            };
+        }
+
+        // 🕐 Phase 4: per-category cooldown (заменяет global 45с window)
+        if (!options.canSkipCooldown && category && timeSinceCategory < categoryCooldownMs) {
+            return {
+                allowed: false,
+                reason: 'category_cooldown',
+                message: `Cooldown категории "${category}" активен ещё ${Math.ceil((categoryCooldownMs - timeSinceCategory) / 60000)}мин`,
+                sessionCount: data.count,
+                categoryCooldownMs,
+                categorySessionCount: sessionCountInCategory,
+                maxPerSession: MAX_ADVICES_PER_SESSION,
+                remainingMs: Math.max(0, categoryCooldownMs - timeSinceCategory),
+                lastShownAt: lastShownInCategory
+            };
+        }
+
+        // Fallback global cooldown (если category не передан — старое поведение)
+        if (!options.canSkipCooldown && !category && timeSinceLastShown < ADVICE_COOLDOWN_MS) {
             return {
                 allowed: false,
                 reason: 'global_cooldown',
@@ -6561,11 +6651,23 @@
         })();
 
         const traceDerived = buildDerivedContext(ctx);
+        // 🧪 Phase 4.2 (2026-05-30): A/B experiment routing.
+        // Inject variant + experimentId в trace для per-variant breakdown
+        // в daily-log quality metrics. Deterministic per user.id.
+        const experimentMeta = (() => {
+            try {
+                return window.HEYS?.adviceExperiments?.getCurrentExperimentMeta?.() || null;
+            } catch (e) { return null; }
+        })();
+
         const adviceTrace = {
             version: 'advice-trace-v2',
             generatedAt: new Date().toISOString(),
             trigger: trigger || null,
             input: buildAdviceTraceInput({ ...ctx, ...traceDerived, trigger }),
+            // Phase 4.2: A/B experiment context
+            experimentId: experimentMeta?.experimentId || null,
+            variant: experimentMeta?.variant || null,
             cache: {},
             modules: [],
             summary: {},
@@ -6825,7 +6927,7 @@
             if (trigger === 'manual' || trigger === 'manual_empty') {
                 return [];
             }
-            return allForTrigger.filter(a => canShowAdvice(a.id, { canSkipCooldown: a.canSkipCooldown }));
+            return allForTrigger.filter(a => canShowAdvice(a.id, { canSkipCooldown: a.canSkipCooldown, category: a.category }));
         })();
 
         appendAdviceTraceStage(adviceTrace, 'cooldown_filter', allForTrigger, relevantAdvices, {
@@ -6841,7 +6943,7 @@
                     };
                     return acc;
                 }
-                const visibility = explainAdviceVisibility(advice?.id, { canSkipCooldown: advice?.canSkipCooldown });
+                const visibility = explainAdviceVisibility(advice?.id, { canSkipCooldown: advice?.canSkipCooldown, category: advice?.category });
                 if (!visibility.allowed) {
                     acc[advice.id] = {
                         code: visibility.reason,
@@ -6951,7 +7053,8 @@
                 const advice = resolveAdviceRef(adviceRef);
                 const adviceId = advice?.id || String(adviceRef || '');
                 if (!adviceId) return;
-                markAdviceShown(adviceId);
+                // Phase 4: передаём category для per-category cooldown tracking
+                markAdviceShown(adviceId, advice?.category);
                 trackAdviceShown(adviceId); // 📊 Tracking
                 if (advice) {
                     recordAdviceOutcomeEvent(advice, ctx, 'shown');
