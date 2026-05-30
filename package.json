@@ -84,6 +84,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:packages": "pnpm -r --filter='./packages/*' run test",
     "test:regressions": "vitest run TESTS/regressions --exclude='**/*-db.test.ts' --exclude='**/468a*.test.ts' --no-coverage",
+    "test:rpc": "vitest run TESTS/rpc --no-coverage",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:unit": "vitest run",

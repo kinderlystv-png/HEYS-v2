@@ -26,13 +26,15 @@ export default defineConfig({
       '**/dist/**',
       '**/coverage/**',
       'TESTS/e2e/**',
-      // TESTS/db — против real Postgres, нужен dedicated `pnpm test:db`
-      // (60s timeout для psql RTT). Default vitest 10s timeout не подходит.
-      'TESTS/db/**',
-      // TESTS/regressions/468a*-tz-fix.test.ts — также требует DB
-      'TESTS/regressions/468a*.test.ts',
-      // TESTS/rpc — scaffold-only (skip), см. plan Phase 4
-      'TESTS/rpc/**',
+      // TESTS/db, TESTS/regressions/468a*-tz-fix.test.ts — против real
+      // Postgres, нужны dedicated `pnpm test:db` (60s timeout для psql RTT).
+      // Default vitest 10s timeout будет таймаут'ить. Каждый файл имеет
+      // // @vitest-environment node directive.
+      // ⚠ НЕ exclude'им потому что workspace ignore'ит direct file paths
+      // через --filter, и tests становятся не-запускаемыми. Полагаемся на
+      // commit hook чтобы pre-commit не запускал тяжёлые DB tests.
+      // TESTS/rpc — используют undici fetch напрямую (bypass setupFiles
+      // global.fetch mock), могут запускаться в default vitest run.
       '.github/skills/**',
       'TOOLS/templates/**',
       'TESTS/example.test.js',
