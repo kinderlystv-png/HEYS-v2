@@ -6146,3 +6146,537 @@ button.meal-quality-badge:active {
 [data-theme="dark"] .mpc-name-oneoff {
   color: var(--color-slate-400, #94a3b8);
 }
+
+/* ============================================================
+ * === Fingers focus mode (climbing fingerboard module) ======
+ * ============================================================
+ * Namespace `.fingers-fs-*` — изолирован от существующих
+ * `.compact-*`, `.ct-wb-*`, `.aps-*`, `.mpc-*` стилей дневника.
+ * Live в portal-контейнере (mount в document.body) — стили дневника
+ * сюда не каскадятся.
+ *
+ * 3 темы через `[data-fingers-theme="A|B|C"]`:
+ *   A — HEYS native (наследует токены дизайна)
+ *   B — Custom blue (минималистичный модерн)
+ *   C — Climbing granite/rust + grainy noise (фирменный)
+ *
+ * Layout: 24px mobile padding / 32px tablet+, sections gap 32-48px,
+ * cards: 1px border + 16px radius + 24px padding, NO heavy shadows.
+ * Min tap target: 44×44px (Apple HIG).
+ * ============================================================ */
+
+/* ---- root portal container ---- */
+.fingers-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: var(--fingers-bg, #fff);
+  color: var(--fingers-text, #1a1a1f);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fingers-fs * {
+  box-sizing: border-box;
+}
+
+.fingers-fs button,
+.fingers-fs [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+  font-family: inherit;
+}
+
+/* ---- close button (×) — top-right ---- */
+.fingers-fs__close {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top, 16px));
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.04);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fingers-text, #1a1a1f);
+  z-index: 10;
+  transition: background-color 120ms ease;
+}
+.fingers-fs__close:hover,
+.fingers-fs__close:focus-visible {
+  background: rgba(0, 0, 0, 0.08);
+  outline: none;
+}
+.fingers-fs__close svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+}
+
+/* ---- inner container ---- */
+.fingers-fs__container {
+  padding: 24px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+@media (min-width: 768px) {
+  .fingers-fs__container { padding: 32px; }
+}
+
+.fingers-fs__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  padding-right: 56px; /* room for × button */
+}
+.fingers-fs__header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* ---- tabs ---- */
+.fingers-fs-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  margin-bottom: 32px;
+  overflow-x: auto;
+}
+.fingers-fs-tab {
+  flex: 1;
+  min-width: 80px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--fingers-text, #1a1a1f);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.fingers-fs-tab:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.fingers-fs-tab--active {
+  background: var(--fingers-bg, #fff);
+  color: var(--fingers-accent, #0066ff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- program card ---- */
+.fingers-fs-program-card {
+  border: 1px solid var(--fingers-card-border, rgba(0, 0, 0, 0.06));
+  border-radius: var(--fingers-card-radius, 16px);
+  padding: 24px;
+  margin-bottom: 16px;
+  background: var(--fingers-bg, #fff);
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.fingers-fs-program-card:hover {
+  border-color: var(--fingers-accent, #0066ff);
+}
+.fingers-fs-program-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.fingers-fs-program-card__meta {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--fingers-muted-text, rgba(0, 0, 0, 0.55));
+  margin-bottom: 12px;
+}
+.fingers-fs-program-card__desc {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--fingers-text, #1a1a1f);
+  opacity: 0.85;
+}
+
+/* ---- primary CTA ---- */
+.fingers-fs-cta {
+  display: block;
+  width: 100%;
+  height: 56px;
+  border-radius: var(--fingers-card-radius, 16px);
+  background: var(--fingers-cta-bg, var(--fingers-accent, #0066ff));
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: filter 120ms ease, transform 80ms ease;
+}
+.fingers-fs-cta:hover {
+  filter: brightness(0.95);
+}
+.fingers-fs-cta:active {
+  transform: scale(0.98);
+}
+.fingers-fs-cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- secondary / ghost ---- */
+.fingers-fs-ghost {
+  display: inline-block;
+  padding: 0 18px;
+  height: 44px;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fingers-text, #1a1a1f);
+  border: 1px solid var(--fingers-card-border, rgba(0, 0, 0, 0.12));
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.fingers-fs-ghost:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* ---- bibliography modal ---- */
+.fingers-fs-bib-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.fingers-fs-bib-modal__panel {
+  width: 100%;
+  max-width: 600px;
+  max-height: 85vh;
+  background: var(--fingers-bg, #fff);
+  border-radius: 20px 20px 0 0;
+  padding: 24px;
+  overflow-y: auto;
+  color: var(--fingers-text, #1a1a1f);
+}
+@media (min-width: 600px) {
+  .fingers-fs-bib-modal { align-items: center; }
+  .fingers-fs-bib-modal__panel { border-radius: 20px; }
+}
+
+/* ---- inline source chip ---- */
+.fingers-fs-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--fingers-text, #1a1a1f);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color 120ms ease;
+}
+.fingers-fs-source-chip:hover {
+  border-color: var(--fingers-accent, #0066ff);
+}
+
+/* ---- tooltip ---- */
+.fingers-fs-tooltip {
+  position: absolute;
+  background: var(--fingers-text, #1a1a1f);
+  color: var(--fingers-bg, #fff);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 280px;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.fingers-fs-tooltip[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- 8-grip picker grid ---- */
+.fingers-fs-grip-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+.fingers-fs-grip-grid__item {
+  aspect-ratio: 1;
+  padding: 12px;
+  border: 1px solid var(--fingers-card-border, rgba(0, 0, 0, 0.06));
+  border-radius: 12px;
+  background: var(--fingers-bg, #fff);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fingers-text, #1a1a1f);
+  transition: border-color 120ms ease;
+}
+.fingers-fs-grip-grid__item:hover,
+.fingers-fs-grip-grid__item[aria-pressed="true"] {
+  border-color: var(--fingers-accent, #0066ff);
+  border-width: 2px;
+  padding: 11px;
+}
+@media (max-width: 480px) {
+  .fingers-fs-grip-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---- anatomy ---- */
+.fingers-fs-anatomy-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin: 24px auto;
+}
+.fingers-fs-anatomy-hotspot {
+  border-radius: 50%;
+  transition: background-color 120ms ease;
+}
+.fingers-fs-anatomy-hotspot:hover {
+  background: rgba(0, 102, 255, 0.08) !important;
+}
+.fingers-fs-anatomy-hotspot.is-active {
+  background: rgba(0, 102, 255, 0.18) !important;
+}
+.fingers-fs-anatomy-svg {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.04));
+}
+
+/* ---- grip icon (inline use) ---- */
+.fingers-fs-grip-icon {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ---- timer (big number + ring) ---- */
+.fingers-fs-timer-big {
+  font-family: ui-monospace, "SF Mono", "Menlo", monospace;
+  font-size: 96pt;
+  font-weight: 300;
+  line-height: 1;
+  text-align: center;
+  color: var(--fingers-text, #1a1a1f);
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+@media (max-width: 480px) {
+  .fingers-fs-timer-big { font-size: 72pt; }
+}
+.fingers-fs-timer-ring {
+  width: 280px;
+  height: 280px;
+  margin: 0 auto;
+  display: block;
+}
+.fingers-fs-timer-ring circle {
+  fill: none;
+  stroke-width: 6;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+.fingers-fs-timer-ring__bg {
+  stroke: var(--fingers-card-border, rgba(0, 0, 0, 0.08));
+}
+.fingers-fs-timer-ring__progress {
+  stroke: var(--fingers-accent, #0066ff);
+  transition: stroke-dashoffset 1000ms linear;
+  stroke-linecap: round;
+}
+
+/* ---- year heatmap ---- */
+.fingers-fs-heatmap {
+  display: grid;
+  grid-template-columns: repeat(53, 12px);
+  grid-template-rows: repeat(7, 12px);
+  gap: 2px;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+.fingers-fs-heatmap__day {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--fingers-card-border, rgba(0, 0, 0, 0.06));
+}
+.fingers-fs-heatmap__day[data-load="recovery"] { background: rgba(0, 102, 255, 0.25); }
+.fingers-fs-heatmap__day[data-load="moderate"] { background: rgba(0, 102, 255, 0.55); }
+.fingers-fs-heatmap__day[data-load="max"]      { background: var(--fingers-accent, #0066ff); }
+
+/* ---- pill (compact card в дневнике — НЕ внутри .fingers-fs, отдельно для day) ---- */
+.fingers-fs-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 12px 16px;
+  border: 1px solid var(--fingers-card-border, rgba(0, 0, 0, 0.06));
+  border-radius: 12px;
+  background: var(--fingers-bg, #fff);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 120ms ease;
+}
+.fingers-fs-pill:hover {
+  border-color: var(--fingers-accent, #0066ff);
+}
+.fingers-fs-pill__icon {
+  font-size: 24px;
+}
+.fingers-fs-pill__body {
+  flex: 1;
+  min-width: 0;
+}
+.fingers-fs-pill__title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fingers-fs-pill__meta {
+  font-size: 13px;
+  opacity: 0.65;
+}
+.fingers-fs-pill__chevron {
+  width: 20px;
+  height: 20px;
+  opacity: 0.4;
+}
+
+/* ============================================================
+ * === THEMES ===
+ * ============================================================ */
+
+/* THEME A — HEYS native (наследует tokens из дизайн-системы) */
+[data-fingers-theme='A'] .fingers-fs {
+  --fingers-bg: var(--bg-primary, #fff);
+  --fingers-text: var(--text-primary, #1a1a1f);
+  --fingers-muted-text: var(--text-secondary, rgba(0, 0, 0, 0.55));
+  --fingers-accent: var(--accent, #0066ff);
+  --fingers-card-border: rgba(0, 0, 0, 0.06);
+  --fingers-card-radius: 16px;
+  --fingers-cta-bg: var(--accent, #0066ff);
+  --fingers-muted: rgba(120, 120, 130, 0.18);
+}
+
+/* THEME B — Custom blue (cleanest modern) */
+[data-fingers-theme='B'] .fingers-fs {
+  --fingers-bg: #ffffff;
+  --fingers-text: #1a1a1f;
+  --fingers-muted-text: rgba(0, 0, 0, 0.55);
+  --fingers-accent: #0066ff;
+  --fingers-card-border: rgba(0, 0, 0, 0.06);
+  --fingers-card-radius: 16px;
+  --fingers-cta-bg: #0066ff;
+  --fingers-muted: rgba(120, 120, 130, 0.18);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+/* THEME C — Climbing granite/rust + grainy noise */
+[data-fingers-theme='C'] .fingers-fs {
+  --fingers-bg: #faf9f7;
+  --fingers-text: #1c1b19;
+  --fingers-muted-text: rgba(28, 27, 25, 0.6);
+  --fingers-accent: #b85742;
+  --fingers-card-border: rgba(28, 27, 25, 0.08);
+  --fingers-card-radius: 12px;
+  --fingers-cta-bg: #b85742;
+  --fingers-muted: rgba(120, 100, 90, 0.18);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 0.04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* ============================================================
+ * === DARK MODE per theme ===
+ * ============================================================ */
+
+[data-theme="dark"][data-fingers-theme='A'] .fingers-fs,
+[data-theme="dark"] [data-fingers-theme='A'] .fingers-fs {
+  --fingers-bg: var(--bg-primary, #0F0F11);
+  --fingers-text: var(--text-primary, #F2F2F5);
+  --fingers-muted-text: rgba(255, 255, 255, 0.55);
+  --fingers-card-border: rgba(255, 255, 255, 0.08);
+  --fingers-muted: rgba(200, 200, 210, 0.18);
+}
+
+[data-theme="dark"][data-fingers-theme='B'] .fingers-fs,
+[data-theme="dark"] [data-fingers-theme='B'] .fingers-fs {
+  --fingers-bg: #0F0F11;
+  --fingers-text: #F2F2F5;
+  --fingers-muted-text: rgba(255, 255, 255, 0.55);
+  --fingers-accent: #4d8bff;
+  --fingers-card-border: rgba(255, 255, 255, 0.08);
+  --fingers-cta-bg: #4d8bff;
+  --fingers-muted: rgba(200, 200, 210, 0.18);
+}
+
+[data-theme="dark"][data-fingers-theme='C'] .fingers-fs,
+[data-theme="dark"] [data-fingers-theme='C'] .fingers-fs {
+  --fingers-bg: #1c1a18;
+  --fingers-text: #f0ede8;
+  --fingers-muted-text: rgba(240, 237, 232, 0.55);
+  --fingers-accent: #d4684f;
+  --fingers-card-border: rgba(240, 237, 232, 0.08);
+  --fingers-cta-bg: #d4684f;
+  --fingers-muted: rgba(150, 140, 130, 0.25);
+}
+
+[data-theme="dark"] .fingers-fs__close {
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"] .fingers-fs__close:hover,
+[data-theme="dark"] .fingers-fs__close:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] .fingers-fs-tabs {
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"] .fingers-fs-tab:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+[data-theme="dark"] .fingers-fs-tab--active {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] .fingers-fs-source-chip {
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"] .fingers-fs-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"] .fingers-fs-bib-modal {
+  background: rgba(0, 0, 0, 0.6);
+}

@@ -13,8 +13,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'heys_day_trainings_v1.js',
         'heys_day_training_popups_v1.js',
         'heys_day_sleep_score_popups_v1.js',
-        // 🤚 Fingers — climbing fingerboard module (Wave 1: entry stub; Wave 2-3 expand)
-        'heys_fingers_entry_v1.js'
+        // 🤚 Fingers — climbing fingerboard module (Wave 2 — 17 modules)
+        // Order: features FIRST (capability detection), then data (catalogs/bibliography),
+        // then visuals (svg/voice), then logic (records → calibration → timer), then UI helpers.
+        'heys_platform_features_v1.js',
+        'heys_fingers_audio_extension_v1.js',
+        'heys_fingers_bibliography_v1.js',
+        'heys_fingers_grips_catalog_v1.js',
+        'heys_fingers_boards_catalog_v1.js',
+        'heys_fingers_programs_catalog_v1.js',
+        'heys_fingers_age_gating_v1.js',
+        'heys_fingers_readiness_v1.js',
+        'heys_fingers_svg_grips_v1.js',
+        'heys_fingers_svg_anatomy_v1.js',
+        'heys_fingers_voice_v1.js',
+        'heys_fingers_records_store_v1.js',
+        'heys_fingers_calibration_v1.js',
+        'heys_fingers_timer_v1.js',
+        'heys_fingers_session_persistence_v1.js',
+        'heys_fingers_calendar_v1.js',
+        'heys_fingers_safety_v1.js',
+        'heys_fingers_entry_v1.js' // entry stub LAST — opens fullscreen using everything above
     ];
 
     function reportError(error, src) {
