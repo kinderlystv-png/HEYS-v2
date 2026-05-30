@@ -1497,27 +1497,14 @@
         ADVICE_CATEGORY_NAMES,
         AdviceCard,
     }) {
-        // Курaторская сессия: показываем read-only history клиента вместо
-        // live-карточек советов. Курaтор не пишет outcomes (гейчено в
-        // advice/_core.js recordAdviceOutcomeEvent + track*). Manual click
-        // на 💡 в его UI открывает этот dropdown с историей.
+        // 2026-05-31: Кураторская сессия видит советы так же как клиент при
+        // нажатии на 💡 (manual mode), но auto-toast принудительно выключен
+        // (см. forceCuratorToastsOff ниже + disabled toggle). Раньше был
+        // отдельный renderCuratorAdviceHistory с read-only history client'a —
+        // убрано чтобы курaтор видел текущие live-карточки точно как клиент.
+        // Курaтор всё равно не пишет outcomes (гейчено в advice/_core.js
+        // recordAdviceOutcomeEvent + track*).
         const _isCurator = isCuratorReadOnlyMode();
-        if (_isCurator) {
-            if (!(adviceTrigger === 'manual' && toastVisible)) return null;
-            try {
-                return renderCuratorAdviceHistory({
-                    React,
-                    dismissToast,
-                    handleAdviceListTouchStart,
-                    handleAdviceListTouchMove,
-                    handleAdviceListTouchEnd,
-                    adviceRelevant,
-                });
-            } catch (renderErr) {
-                console.error('[advice-history] render failed:', renderErr && renderErr.message);
-                return null;
-            }
-        }
 
         if (!(adviceTrigger === 'manual' && adviceRelevant?.length > 0 && toastVisible)) return null;
 
@@ -1569,17 +1556,28 @@
                     ),
                     React.createElement('div', { className: 'advice-list-header-left' },
                         React.createElement('div', { className: 'advice-list-toggles' },
+                            // 2026-05-31: Для куратора toggle disabled и принудительно
+                            // off — чтобы куратор не получал toast'ы советов клиента
+                            // случайно (он смотрит чужие данные).
                             React.createElement('label', {
-                                className: 'ios-toggle-label',
-                                title: toastsEnabled ? 'Отключить всплывающие советы' : 'Включить всплывающие советы',
+                                className: 'ios-toggle-label' + (_isCurator ? ' ios-toggle-label--disabled' : ''),
+                                title: _isCurator
+                                    ? 'У куратора всплывающие советы отключены — чтобы не отвлекать от чужих данных'
+                                    : (toastsEnabled ? 'Отключить всплывающие советы' : 'Включить всплывающие советы'),
+                                style: _isCurator ? { opacity: 0.55, cursor: 'not-allowed' } : null
                             },
                                 React.createElement('div', {
-                                    className: `ios-toggle ${toastsEnabled ? 'ios-toggle-on' : ''}`,
-                                    onClick: toggleToastsEnabled,
+                                    className: `ios-toggle ${(toastsEnabled && !_isCurator) ? 'ios-toggle-on' : ''}`,
+                                    onClick: _isCurator ? (e) => { e.preventDefault(); e.stopPropagation(); } : toggleToastsEnabled,
+                                    style: _isCurator ? { pointerEvents: 'none' } : null
                                 }, React.createElement('div', { className: 'ios-toggle-thumb' })),
                                 React.createElement('div', { className: 'advice-toggle-text-group' },
                                     React.createElement('span', { className: 'ios-toggle-text' }, '🔔'),
-                                    React.createElement('span', { className: 'advice-toggle-hint' }, 'Автопоказ всплывающих советов')
+                                    React.createElement('span', { className: 'advice-toggle-hint' },
+                                        _isCurator
+                                            ? 'Автопоказ выключен (режим куратора)'
+                                            : 'Автопоказ всплывающих советов'
+                                    )
                                 )
                             ),
                             React.createElement('label', {
@@ -3047,8 +3045,12 @@
                 return;
             }
 
-            if (!isManualTrigger && !toastsEnabled) {
-                console.info('[HEYS.advice] 🚫 Toast BLOCKED: toastsEnabled=false, adviceTrigger=' + adviceTrigger);
+            // 2026-05-31: для куратора auto-toast принудительно выключен —
+            // он смотрит данные клиента, советы только manual (через 💡).
+            const _toastsBlockedForCurator = isCuratorReadOnlyMode();
+            if (!isManualTrigger && (!toastsEnabled || _toastsBlockedForCurator)) {
+                console.info('[HEYS.advice] 🚫 Toast BLOCKED: toastsEnabled=' + toastsEnabled +
+                    ', curator=' + _toastsBlockedForCurator + ', adviceTrigger=' + adviceTrigger);
                 setDisplayedAdvice(advicePrimary);
                 setDisplayedAdviceList(safeAdviceRelevant);
                 setToastVisible(false);

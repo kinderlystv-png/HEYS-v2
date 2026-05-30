@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.31.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-31",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Куратор: убран отдельный read-only UI советов + auto-toast выключен принудительно",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Курaтор видит советы так же как клиент при клике на 💡, но auto-toast выключен",
+          "description": "Раньше у куратора был свой отдельный UI раскрывашки советов (renderCuratorAdviceHistory — read-only история client'a). Это не соответствовало клиентскому опыту. Теперь курaтор видит точно те же live-карточки советов что и клиент при manual open (💡). Но: чтобы куратор случайно не читал советы клиента в auto-toast (он смотрит чужие данные) — toggle '🔔 Автопоказ всплывающих советов' принудительно выключен и disabled (opacity 0.55, pointer-events: none, не кликабельный). Подпись для куратора: 'Автопоказ выключен (режим куратора)'. Tooltip: 'У куратора всплывающие советы отключены — чтобы не отвлекать от чужих данных'. Auto-toast в любом случае blocked на rendering layer (isCuratorReadOnlyMode check в showToast effect)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.31.39cf62e8",
       "buildHash": "39cf62e8",
       "date": "2026-05-31",
