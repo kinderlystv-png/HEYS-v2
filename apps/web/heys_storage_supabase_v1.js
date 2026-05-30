@@ -13241,11 +13241,12 @@
             return { ...p, harm: computed, harmScore: computed };
           });
 
-          if (updates.length > 0 && YandexAPI?.from) {
-            const { error: upsertError } = await YandexAPI.from('shared_products')
-              .upsert(updates, { onConflict: 'id' });
-            if (upsertError) {
-              err('[SHARED PRODUCTS] Harm backfill upsert error:', upsertError);
+          if (updates.length > 0 && YandexAPI?.rpc) {
+            const { error: rpcError } = await YandexAPI.rpc('backfill_shared_harm', {
+              p_updates: updates
+            });
+            if (rpcError) {
+              err('[SHARED PRODUCTS] Harm backfill rpc error:', rpcError);
             } else if (lsSet) {
               lsSet(cacheKey, true);
             }
