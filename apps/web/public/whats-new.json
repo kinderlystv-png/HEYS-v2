@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Куратор: убрана ошибка 500 на каждой загрузке + architectural LS-cleanup",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Harm backfill больше не валится с 500 — выделенная безопасная RPC",
+          "description": "Раньше при загрузке панели куратора в консоли стрелась POST /rest/shared_products?upsert=true 500 (Internal Server Error) — это шумело в Sentry/аналитике и не давало backfill harm-score завершиться (флаг в localStorage не выставлялся, попытка повторялась на каждой загрузке). Корневая причина: client отправлял partial-payload {id, harm} через REST upsert, а REST emulator генерирует INSERT...ON CONFLICT DO UPDATE с full-row construction — NOT NULL колонка name без DEFAULT приводила к ошибке до проверки conflict. Архитектурно правильный фикс: dedicated SQL-функция backfill_shared_harm(jsonb) с прямым UPDATE и инвариантом WHERE harm IS NULL (не перезаписывает уже-curated harm-score даже при race'ах). Паттерн — как у approve_pending_products_bulk. Опровергнутые гипотезы при аудите: RLS на shared_products выключена, не использует auth.uid(); column-case также не разъезжается. Реальная root cause воспроизведена прямым SQL в БД до фикса."
+        },
+        {
+          "type": "improvement",
+          "title": "Архитектурная чистка direct-localStorage вызовов в insights/",
+          "description": "11 direct-localStorage точек в apps/web/insights/* и heys_yesterday_verify_v1.js разобраны и аннотированы: 2 полностью удалены (pi_ui_cards toggle 'Show All' + pi_meal_rec_feedback fallback — теперь только через HEYS.utils.lsSet, чтобы cloud-sync interceptor подхватывал), 3 точки в meal-card (add fallback'и + expand toggle) сохранены как three-tier safety chain lsSet → store.set → direct LS с inline-комментарием (direct LS остаётся как последний fallback на bootstrap window когда HEYS не загружен), 6 точек аналитики (EWS trends/weekly progress cache, debug-only diagnostics) аннотированы как 'derived analytics cache — direct LS by design, не user data'. Bootstrap-bypass-allowlist пересинхронизирован под актуальные line numbers. Pre-push hook lint-direct-localstorage-writes теперь pass'ит без drift'а."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.c861c627",
       "buildHash": "c861c627",
       "date": "2026-05-30",
