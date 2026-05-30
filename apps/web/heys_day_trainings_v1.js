@@ -110,6 +110,8 @@
     tone(0,    880, 120, 0.18);
     tone(0.18, 1320, 180, 0.22);
   }
+  // 🤚 Exposed for reuse by Fingers module (heys_fingers_timer_v1.js).
+  try { HEYS.__playRestDoneBeep = playRestDoneBeep; } catch (_) { /* noop */ }
 
   /** Последние сохранённые вес/подходы/повторы по нормализованному имени (прошлые дни + раньше в этот день). */
   function findLastExerciseSnapshot(dateKey, norm, curTi, curExi) {

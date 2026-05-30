@@ -12,7 +12,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'heys_day_activity_v1.js',
         'heys_day_trainings_v1.js',
         'heys_day_training_popups_v1.js',
-        'heys_day_sleep_score_popups_v1.js'
+        'heys_day_sleep_score_popups_v1.js',
+        // 🤚 Fingers — climbing fingerboard module (Wave 1: entry stub; Wave 2-3 expand)
+        'heys_fingers_entry_v1.js'
     ];
 
     function reportError(error, src) {

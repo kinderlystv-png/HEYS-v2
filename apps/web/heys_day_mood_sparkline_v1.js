@@ -79,12 +79,13 @@
                 const w = wellbeing || 5;
                 const s = stress || 5;
                 const score = (m + w + (10 - s)) / 3;
-                const typeIcons = { cardio: '🏃', strength: '🏋️', hobby: '⚽' };
+                const typeIcons = { cardio: '🏃', strength: '🏋️', hobby: '⚽', fingers: '🤚' };
+                const typeNames = { cardio: 'Кардио', strength: 'Силовая', hobby: 'Хобби', fingers: 'Пальцы' };
                 points.push({
                     time,
                     score: Math.round(score * 10) / 10,
                     type: 'training',
-                    name: tr.type === 'cardio' ? 'Кардио' : tr.type === 'strength' ? 'Силовая' : 'Хобби',
+                    name: typeNames[tr.type] || 'Хобби',
                     mood,
                     wellbeing,
                     stress,

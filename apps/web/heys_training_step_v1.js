@@ -40,13 +40,15 @@
   const TRAINING_TYPES = [
     { id: 'cardio', icon: '🏃', label: 'Кардио' },
     { id: 'strength', icon: '🏋️', label: 'Силовая' },
-    { id: 'hobby', icon: '⚽', label: 'Хобби' }
+    { id: 'hobby', icon: '⚽', label: 'Хобби' },
+    { id: 'fingers', icon: '🤚', label: 'Пальцы' }
   ];
 
   const TRAINING_TYPE_META = {
     cardio: { icon: '🏃', label: 'Кардио' },
     strength: { icon: '🏋️', label: 'Силовая' },
-    hobby: { icon: '⚽', label: 'Активное хобби' }
+    hobby: { icon: '⚽', label: 'Активное хобби' },
+    fingers: { icon: '🤚', label: 'Пальцы (скалолазание)' }
   };
 
   const TRAINING_ACTIVITY_STORAGE_KEY = 'heys_training_activity_options_v1';
@@ -63,7 +65,10 @@
     { type: 'hobby', icon: '🧘', label: 'Йога' },
     { type: 'hobby', icon: '🤸', label: 'Пилатес' },
     { type: 'hobby', icon: '🎾', label: 'Теннис' },
-    { type: 'hobby', icon: '💃', label: 'Танцы' }
+    { type: 'hobby', icon: '💃', label: 'Танцы' },
+    { type: 'fingers', icon: '🤚', label: 'Fingerboard' },
+    { type: 'fingers', icon: '🧗', label: 'Hangboard' },
+    { type: 'fingers', icon: '💪', label: 'Block pulling' }
   ];
 
   function normalizeActivityLabel(value) {
@@ -210,6 +215,9 @@
     if (source.workoutLog && typeof source.workoutLog === 'object') {
       out.workoutLog = source.workoutLog;
     }
+    if (source.fingersLog && typeof source.fingersLog === 'object') {
+      out.fingersLog = source.fingersLog;
+    }
     return out;
   }
 
@@ -243,6 +251,10 @@
       stress: merged.stress,
       comment: merged.comment
     };
+
+    if (merged.fingersLog && typeof merged.fingersLog === 'object') {
+      finalTraining.fingersLog = merged.fingersLog;
+    }
 
     if (merged.strengthEntryMode) {
       finalTraining.strengthEntryMode = merged.strengthEntryMode;
@@ -391,6 +403,23 @@
     };
 
     const handleTypeChange = (nextType) => {
+      // 🤚 Fingers handoff to dedicated full-screen overlay (skip remaining steps).
+      // Wave 1: handoff stub — opens fullscreen if module loaded; Wave 3 will mount UI.
+      if (nextType === 'fingers' && window.HEYS?.Fingers?.openFullscreen) {
+        haptic('light');
+        try { HEYS.StepModal.hide(); } catch (_) { /* noop */ }
+        try {
+          HEYS.Fingers.openFullscreen({
+            dateKey: context?.dateKey,
+            trainingIndex: context?.trainingIndex,
+            mode: 'new'
+          });
+        } catch (e) {
+          console.warn('[TrainingStep] Fingers.openFullscreen failed:', e);
+        }
+        return;
+      }
+
       const nextOptions = buildTrainingActivityOptions(nextType, savedActivities, '');
       const canKeepCurrentActivity = nextOptions.some(
         (option) => option.label.toLowerCase() === activityLabel.toLowerCase()
@@ -836,6 +865,7 @@
     component: TrainingZonesStep,
     shouldShow: (ctx, sd) => {
       const t = (sd['training-info'] || {}).type;
+      if (t === 'fingers') return false; // 🤚 fingers handoff to dedicated overlay, never reach zones
       if (t !== 'strength') return true;
       return (sd['training-strength-mode'] || {}).mode === 'hr_zones';
     },
@@ -900,9 +930,27 @@
     });
   }
 
+  // 🤚 Fingers persistence wrapper — thin layer over persistMergedTraining.
+  // Called by Fingers.openFullscreen save flow (Wave 3). Keeps storage logic in one place.
+  function saveFingers(ctx, fingersLog, meta) {
+    const baseMeta = meta && typeof meta === 'object' ? meta : {};
+    persistMergedTraining(ctx, {}, {
+      type: 'fingers',
+      activityLabel: baseMeta.activityLabel || 'Пальцы',
+      time: baseMeta.time || getRoundedCurrentTime(),
+      zones: [0, 0, 0, 0],
+      mood: baseMeta.mood || 0,
+      wellbeing: baseMeta.wellbeing || 0,
+      stress: baseMeta.stress || 0,
+      comment: typeof baseMeta.comment === 'string' ? baseMeta.comment : '',
+      fingersLog
+    });
+  }
+
   // === Экспорт ===
   HEYS.TrainingStep = {
     show: showTrainingModal,
+    saveFingers,
     InfoComponent: TrainingInfoStep,
     FeedbackComponent: TrainingFeedbackStep,
     ZonesComponent: TrainingZonesStep,

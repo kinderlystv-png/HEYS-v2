@@ -192,7 +192,8 @@
         const trainingTypes = [
             { id: 'cardio', icon: '🏃', label: 'Кардио' },
             { id: 'strength', icon: '🏋️', label: 'Силовая' },
-            { id: 'hobby', icon: '⚽', label: 'Активное хобби' }
+            { id: 'hobby', icon: '⚽', label: 'Активное хобби' },
+            { id: 'fingers', icon: '🤚', label: 'Пальцы' }
         ];
 
         // Импортируем константы из dayUtils (единый источник правды)
