@@ -277,6 +277,7 @@ const ALLOWED_FUNCTIONS = [
   'publish_shared_product_by_session', // 🔐 P3: прямая публикация для кураторов (REST→RPC, session)
   'publish_shared_product_by_curator', // 🔐 P3: прямая публикация для кураторов (REST→RPC, JWT)
   'approve_pending_products_bulk',     // 🚀 P3: массовое одобрение pending'ов куратором (1 RPC вместо N×2)
+  'backfill_shared_harm',              // 🔧 2026-05-30: безопасный backfill harm-score (заменил REST upsert с NOT NULL-violation)
   // 'sync_shared_products_by_session', // 🪦 REMOVED 2026-05-24 (plan F17): не вызывается из apps/,
   //                                     attack surface (replace heys_products через UPSERT без tombstone).
   //                                     DROP миграция: database/2026-05-24_drop_sync_shared_products_by_session.sql
