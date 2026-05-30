@@ -14,6 +14,22 @@
         };
     });
 
+    // 🛡️ 2026-05-30 audit F5: при курaторском switch очистить IndexedDB heys-share-db.
+    // PWA Share Target API мог сохранить shared-images под контекстом старого клиента;
+    // после switch UI откроет share-modal с чужими картинками. switchClient вызывает
+    // fire-and-forget — promise не блокирует reload.
+    HEYS.shareDb = HEYS.shareDb || {};
+    HEYS.shareDb.clear = async function () {
+        try {
+            const db = await openShareDB();
+            const tx = db.transaction('shared-images', 'readwrite');
+            tx.objectStore('shared-images').clear();
+            await new Promise((resolve) => { tx.oncomplete = resolve; tx.onerror = resolve; });
+        } catch (e) {
+            console.warn('[HEYS.shareDb.clear] failed:', e?.message || e);
+        }
+    };
+
     const getAllFromStore = (store) => new Promise((resolve, reject) => {
         const request = store.getAll();
         request.onsuccess = () => resolve(request.result || []);

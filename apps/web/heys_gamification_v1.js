@@ -5914,6 +5914,18 @@
 
   // ========== ЭКСПОРТ ==========
 
+  // 🛡️ 2026-05-30 audit F3: kill pending debounce/flush timers ПЕРЕД curator switch.
+  // _auditFlushTimer (3s debounce, line 941+), _cloudSyncTimer (line 1922+, 5-10s debounce),
+  // _debounceTimer (line 193) могут сработать ПОСЛЕ старта switch'а и записать XP/state
+  // под именем НОВОГО client'а с STALE данными старого. Вызывается из switchClient.
+  game.cancelAllPendingFlushes = function () {
+    try { if (_auditFlushTimer) { clearTimeout(_auditFlushTimer); _auditFlushTimer = null; } } catch (_) { /* noop */ }
+    try { if (_cloudSyncTimer) { clearTimeout(_cloudSyncTimer); _cloudSyncTimer = null; } } catch (_) { /* noop */ }
+    try { if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; } } catch (_) { /* noop */ }
+    try { _pendingCloudSync = false; } catch (_) { /* noop */ }
+    try { _syncInProgress = false; } catch (_) { /* noop */ }
+  };
+
   HEYS.game = game;
   HEYS.gamification = game;
 

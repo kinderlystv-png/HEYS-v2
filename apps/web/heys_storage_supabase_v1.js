@@ -12572,6 +12572,27 @@
     // 🔧 v63 FIX #1: Ставим флаг чтобы React useEffect не запускал параллельный syncClient
     cloud._switchClientInProgress = true;
 
+    // 🛡️ 2026-05-30 audit Wave 1+2: убиваем все pending writers + сбрасываем module-level кэши
+    // ДО cleanup'а LS. Иначе debounced timers сработают между cleanup и reload и запишут
+    // stale данные старого клиента под scope нового. Все вызовы optional — модули могут
+    // не быть загружены на момент первого switch'а после boot'а.
+    try { global.HEYS?.gamification?.cancelAllPendingFlushes?.(); } catch (_) { /* noop */ }
+    try { global.HEYS?.dayUtils?.resetSessionCaches?.(); } catch (_) { /* noop */ }
+    try { global.HEYS?.TrialQueue?.clearCache?.(); } catch (_) { /* noop */ }
+    try { global.HEYS?.shareDb?.clear?.(); } catch (_) { /* fire-and-forget IndexedDB clear */ }
+    try { if (global.HEYS) global.HEYS._lastCrs = null; } catch (_) { /* noop */ }
+    // 🔁 Инвалидация Service Worker KV cache — без неё SW мог бы вернуть кэш ответа
+    // /rest/client_kv_store от oldClient в первом запросе после reload.
+    try {
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'CLIENT_SWITCH',
+          reason: 'curator-switch',
+          newClientId,
+        });
+      }
+    } catch (_) { /* noop */ }
+
     // 🛡️ Race-window kill (2026-05-30 audit): активный debounce timer мог быть
     // запланирован за миллисекунды до switch'а. Если позволим ему сработать —
     // запишет данные ПОД ИМЕНЕМ нового клиента (currentClientId уже сменится
@@ -12700,6 +12721,19 @@
     if (global.HEYS) {
       global.HEYS.currentClientId = newClientId;
     }
+
+    // 🔧 2026-05-31 FIX: flush Store memory cache при actual switch (new !== old).
+    // Без этого Store.get('heys_profile') возвращает cached {} от OLD client'a даже
+    // после смены currentClientId — scoped key другой, но memory.get(sk) cached на
+    // прошлом sk и не re-reads LS. Симптом: курaторский switch на свежий client
+    // показывает registration wizard (e2e tests skip blocked from 2026-05-30).
+    // Phase 1 plan: ~/.claude/plans/cozy-hatching-minsky.md.
+    try {
+      if (global.HEYS?.store?.flushMemory) {
+        global.HEYS.store.flushMemory();
+        log('🧹 [SWITCH] Store memory cache flushed (was cached for ' + String(oldClientId || 'null').slice(0, 8) + ')');
+      }
+    } catch (_) { /* noop */ }
 
     // 🔧 v68 FIX: НЕ удаляем last_sync_ts — delta fast-path позволяет быстро
     // подгрузить только изменённые записи вместо полного sync 250+ ключей.
@@ -12838,6 +12872,25 @@
         const purged = beforeLen - clientUpsertQueue.length;
         if (purged > 0) {
           logCritical(`🧹 [SWITCH] Purged ${purged} stale items from pending queue (old client)`);
+        }
+      }
+
+      // 🛡️ 2026-05-30 audit F1: тот же purge для in-flight queue. Items
+      // отправленные на сервер ДО switch, ответ ещё не пришёл — могут
+      // вернуться с ошибкой и retry push в clientUpsertQueue, и потом
+      // отправиться под новым clientId. Чистим items со старым client_id.
+      if (clientUpsertInFlightQueue && clientUpsertInFlightQueue.length > 0) {
+        const beforeLen = clientUpsertInFlightQueue.length;
+        for (let qi = clientUpsertInFlightQueue.length - 1; qi >= 0; qi--) {
+          const item = clientUpsertInFlightQueue[qi];
+          if (item && item.client_id && item.client_id !== newClientId) {
+            clientUpsertInFlightQueue.splice(qi, 1);
+          }
+        }
+        const purged = beforeLen - clientUpsertInFlightQueue.length;
+        if (purged > 0) {
+          try { savePendingQueue(PENDING_CLIENT_INFLIGHT_QUEUE_KEY, clientUpsertInFlightQueue); } catch (_) { /* noop */ }
+          logCritical(`🧹 [SWITCH] Purged ${purged} stale items from in-flight queue (old client)`);
         }
       }
 

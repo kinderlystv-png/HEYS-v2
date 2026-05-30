@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1780159891783';
+const CACHE_VERSION = 'heys-1780161089218';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -919,6 +919,15 @@ self.addEventListener('message', (event) => {
   // === KV SWR контракт (Phase A VPN speedup) ===
   if (event.data && event.data.type === 'INVALIDATE_KV') {
     event.waitUntil(invalidateKvCache(event.data.reason));
+    return;
+  }
+
+  // 🛡️ 2026-05-30 audit F4: курaторский switch инвалидирует KV cache.
+  // Без этого SW мог бы вернуть cached ответ /rest/client_kv_store от oldClient
+  // в первом запросе после reload (cache key = CACHE_VERSION, без client_id partition).
+  if (event.data && event.data.type === 'CLIENT_SWITCH') {
+    const reason = 'curator-switch:' + (event.data.newClientId ? String(event.data.newClientId).slice(0, 8) : 'unknown');
+    event.waitUntil(invalidateKvCache(reason));
     return;
   }
 

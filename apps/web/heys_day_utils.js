@@ -3350,9 +3350,21 @@
   }
 
   // === Exports ===
+  // 🛡️ 2026-05-30 audit F8, F9: сброс module-level кэшей при curator switch.
+  // _autoClonedSharedIds Set держит ids уже клонированных за сессию shared-продуктов;
+  // после switch на нового client'а Set всё ещё думает что они склонированы → пропустит
+  // legitimate clone для нового. orphanProductsMap может содержать orphans старого
+  // клиента — UI отобразит их до recalculate.
+  HEYS.dayUtils = HEYS.dayUtils || {};
+  HEYS.dayUtils.resetSessionCaches = function () {
+    try { if (typeof HEYS?.orphanProducts?.clear === 'function') HEYS.orphanProducts.clear(); } catch (_) { /* noop */ }
+    try { _autoClonedSharedIds.clear(); } catch (_) { /* noop */ }
+  };
+
   // Всё экспортируется через HEYS.dayUtils
   // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
   HEYS.dayUtils = {
+    ...HEYS.dayUtils,
     // Haptic
     haptic: hapticFn,
     // Date/Time
