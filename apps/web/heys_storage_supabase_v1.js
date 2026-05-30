@@ -9962,6 +9962,16 @@
    */
   function scheduleClientPush(opts) {
     if (isLogoutSuppressionActive()) return;
+    // 🛡️ Switch-race guard (2026-05-30 audit): scheduleClientPush мог
+    // setTimeout'ить flush С 500ms debounce. Если в этой window'е стартует
+    // curator switch — после cleanup, но до reload — таймер мог сработать
+    // и записать stale data старого клиента в scope нового. Проверка флага
+    // здесь блокирует НОВЫЕ schedulings; активный timer убивается в
+    // switchClient (см. там же).
+    if (cloud._switchClientInProgress) {
+      log('[switch-guard] scheduleClientPush skipped: switch in progress');
+      return;
+    }
     if (clientUpsertTimer) return;
 
     // Сохраняем очередь в localStorage для персистентности
@@ -9996,6 +10006,16 @@
     clientUpsertTimer = setTimeout(async () => {
       if (_uploadInProgress) {
         clientUpsertTimer = null;
+        return;
+      }
+      // 🛡️ Race-window guard: timer мог быть запланирован ДО switch'а,
+      // а firingуется ПОСЛЕ. Если сейчас идёт switch — drop'аем batch,
+      // пусть _flushDeferredWritesAfterSwitch его подберёт по old clientId
+      // (или reload очистит). Иначе писать stale data будет в scope
+      // нового клиента — это и есть pollution.
+      if (cloud._switchClientInProgress) {
+        clientUpsertTimer = null;
+        log('[switch-guard] setTimeout flush dropped: switch in progress');
         return;
       }
 
@@ -12551,6 +12571,19 @@
 
     // 🔧 v63 FIX #1: Ставим флаг чтобы React useEffect не запускал параллельный syncClient
     cloud._switchClientInProgress = true;
+
+    // 🛡️ Race-window kill (2026-05-30 audit): активный debounce timer мог быть
+    // запланирован за миллисекунды до switch'а. Если позволим ему сработать —
+    // запишет данные ПОД ИМЕНЕМ нового клиента (currentClientId уже сменится
+    // на newClientId к моменту firing). Убиваем timer + flush'аем queue в
+    // deferred map с oldClientId scope, чтобы после switch писалось правильно.
+    try {
+      if (clientUpsertTimer) {
+        clearTimeout(clientUpsertTimer);
+        clientUpsertTimer = null;
+        log('[switch-guard] killed pending debounce timer');
+      }
+    } catch (_) { /* noop */ }
 
     // 🛡️ P0 hygiene (2026-05-17 incident): clear stale heys_session_token from
     // a previous PIN session — но ТОЛЬКО на curator-пути ПРИ переключении между
