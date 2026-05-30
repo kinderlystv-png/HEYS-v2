@@ -213,6 +213,18 @@
     // Сохранение данных дня под конкретную дату
     const saveToDate = React.useCallback((dateStr, payload) => {
       if (!dateStr || !payload) return;
+      // 🛡️ 2026-05-31: hard invariant — dateStr ДОЛЖНА совпадать с payload.date.
+      // Иначе мы пишем blob с meals/trainings одного дня под key другого дня
+      // (и переписываем payload.date → silent data corruption невидим на чтении).
+      // См. flush(): saveDate = day.date — но catch также если кто-то ещё вызовет.
+      if (payload.date && payload.date !== dateStr) {
+        console.warn('[HEYS.dayHooks] 🛡️ saveToDate aborted: payload.date mismatch', {
+          dateStr,
+          payloadDate: payload.date,
+          mealsCount: Array.isArray(payload.meals) ? payload.meals.length : 0,
+        });
+        return;
+      }
       const key = getKey(dateStr);
       const current = readExisting(key);
       const incomingUpdatedAt = payload.updatedAt != null ? payload.updatedAt : now();
@@ -385,13 +397,21 @@
       if (!force && (disabled || isUnmountedRef.current)) return;
       if (!day || !date) return;
 
+      // 🛡️ 2026-05-31: ключ ВСЕГДА вычисляем по day.date (родная дата dayRaw),
+      // не по date (= selectedDate из header). На смене даты React пересоздаёт
+      // useCallback с НОВОЙ date в closure ДО того, как dayRaw обновится через
+      // doLocal/setDay. Без этого fix'а requestFlush({force:true}) при смене
+      // даты писал бы today's meals под yesterday's LS key → silent data loss
+      // реальных yesterday данных клиента.
+      const saveDate = (day && day.date) || date;
+
       if (force) {
-        const key = getKey(date);
+        const key = getKey(saveDate);
         const existing = readExisting(key);
         if (isMeaningfulDayData(existing) && !isMeaningfulDayData(day)) return;
       }
 
-      const freshestPersistedDay = getFreshestPersistedDay(date);
+      const freshestPersistedDay = getFreshestPersistedDay(saveDate);
       const freshestUpdatedAt = freshestPersistedDay?.updatedAt || 0;
       let daySnap;
       let freshestDaySnap = null;
@@ -411,7 +431,7 @@
 
       const shouldPreserveFreshestPersistedDay = !!(
         freshestPersistedDay &&
-        freshestPersistedDay.date === date &&
+        freshestPersistedDay.date === saveDate &&
         (
           freshestUpdatedAt > updatedAt ||
           (
@@ -468,7 +488,7 @@
         if (_heys._autosaveFlushes.length > 100) _heys._autosaveFlushes.shift();
       } catch (_) { /* noop */ }
 
-      saveToDate(date, payload);
+      saveToDate(saveDate, payload);
       prevStoredSnapRef.current = JSON.stringify(payload);
       prevDaySnapRef.current = daySnap;
     }, [day, date, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay]);
