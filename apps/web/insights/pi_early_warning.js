@@ -723,6 +723,8 @@
 
         try {
             trendsData.updatedAt = Date.now();
+            // [audit] EWS derived analytics cache (trends) — direct LS by design,
+            // не user data, cloud-sync не нужен. В bootstrap-bypass-allowlist.
             localStorage.setItem(_ewsScopedKey(TRENDS_STORAGE_KEY), JSON.stringify(trendsData));
             console.info('ews / trends ✅ save.success:', {
                 size: JSON.stringify(trendsData).length,
@@ -1129,6 +1131,8 @@
                     // Save to localStorage for fast access
                     const progressData = { version: 1, weeks, lastUpdated: weeks[0]?.lastUpdate || null };
                     try {
+                        // [audit] EWS derived weekly progress cache — direct LS by design,
+                        // не user data, cloud-sync не нужен. В bootstrap-bypass-allowlist.
                         localStorage.setItem(_ewsScopedKey(WEEKLY_PROGRESS_STORAGE_KEY), JSON.stringify(progressData));
                         console.info('ews / weekly 💾 cached locally from cloud');
                     } catch (e) {
@@ -1196,6 +1200,8 @@
         // 1. Save to localStorage first (fast, always succeeds)
         try {
             progressData.updatedAt = Date.now();
+            // [audit] EWS derived weekly progress cache — direct LS by design,
+            // не user data, cloud-sync не нужен. В bootstrap-bypass-allowlist.
             localStorage.setItem(_ewsScopedKey(WEEKLY_PROGRESS_STORAGE_KEY), JSON.stringify(progressData));
             console.info('ews / weekly ✅ save.success:', {
                 size: JSON.stringify(progressData).length,
@@ -1670,6 +1676,8 @@
             };
 
             try {
+                // [audit] EWS derived weekly progress backfill cache — direct LS by design,
+                // не user data, cloud-sync не нужен. В bootstrap-bypass-allowlist.
                 localStorage.setItem(_ewsScopedKey(WEEKLY_PROGRESS_STORAGE_KEY), JSON.stringify(progressData));
                 console.info('ews / weekly ✅ backfill.saved_to_localStorage:', {
                     snapshotsCount: snapshots.length

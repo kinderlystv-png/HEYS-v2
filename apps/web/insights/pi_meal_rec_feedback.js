@@ -187,9 +187,10 @@
             if (U && typeof U.lsSet === 'function') {
                 U.lsSet(STORAGE_KEY, feedback); // U.lsSet handles clientId namespace
             } else {
-                // Fallback to direct localStorage (shouldn't happen in production)
-                const legacyKey = buildLegacyStorageKey(clientId);
-                localStorage.setItem(legacyKey, JSON.stringify(feedback));
+                // HEYS.utils.lsSet недоступен (bootstrap-window). Не пишем напрямую
+                // в LS — это bypass'ит cloud-sync interceptor. Лучше потерять кеш
+                // одного бутстрапа чем рассинхронить с облаком.
+                console.warn(`${LOG_PREFIX} ⚠️ U.lsSet недоступен, feedback не закешировался локально (будет загружен из облака)`);
             }
         } catch (err) {
             console.error(`${LOG_PREFIX} ❌ Cannot save feedback:`, err?.message);

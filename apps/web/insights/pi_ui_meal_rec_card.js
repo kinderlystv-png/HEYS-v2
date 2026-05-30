@@ -1031,6 +1031,9 @@
                                     const nowTs = Date.now();
                                     const updatedDay = { ...(day || {}), date: dateKey, meals: updatedMeals, updatedAt: nowTs };
                                     try {
+                                        // Three-tier safety chain: lsSet (cloud-sync) → store.set → direct LS.
+                                        // Direct LS как третий fallback покрывает bootstrap window когда
+                                        // HEYS не загружен; зарегистрирован в bootstrap-bypass-allowlist.
                                         if (HEYS?.utils?.lsSet) HEYS.utils.lsSet(key, updatedDay);
                                         else if (HEYS?.store?.set) HEYS.store.set(key, updatedDay);
                                         else localStorage.setItem(key, JSON.stringify(updatedDay));
@@ -1289,6 +1292,9 @@
                                     const nowTs = Date.now();
                                     const updatedDay = { ...(day || {}), date: dateKey, meals: updatedMeals, updatedAt: nowTs };
                                     try {
+                                        // Three-tier safety chain: lsSet (cloud-sync) → store.set → direct LS.
+                                        // Direct LS как третий fallback покрывает bootstrap window когда
+                                        // HEYS не загружен; зарегистрирован в bootstrap-bypass-allowlist.
                                         if (HEYS?.utils?.lsSet) HEYS.utils.lsSet(key, updatedDay);
                                         else if (HEYS?.store?.set) HEYS.store.set(key, updatedDay);
                                         else localStorage.setItem(key, JSON.stringify(updatedDay));
@@ -2014,8 +2020,13 @@
             // 2026-05-28: dropped startTransition wrapper (discarded в курaторе → card expand не работал)
             onClick: () => setExpanded(prev => {
                 const next = !prev;
-                // R1-6: persist в LS чтобы пережить пересчёт плана
-                try { localStorage.setItem('heys_meal_planner_expanded_v1', next ? '1' : '0'); } catch (e) {}
+                // R1-6: persist в LS чтобы пережить пересчёт плана.
+                // lsSet (cloud-sync) предпочтительно; direct LS — safety net в bootstrap window,
+                // зарегистрирован в bootstrap-bypass-allowlist.
+                try {
+                    if (HEYS?.utils?.lsSet) HEYS.utils.lsSet('heys_meal_planner_expanded_v1', next ? '1' : '0');
+                    else localStorage.setItem('heys_meal_planner_expanded_v1', next ? '1' : '0');
+                } catch (e) {}
                 // R5-C: при ОТКРЫТИИ карточки триггерим replan — план мог
                 // устареть пока юзер смотрел на другие места приложения.
                 if (next === true) {

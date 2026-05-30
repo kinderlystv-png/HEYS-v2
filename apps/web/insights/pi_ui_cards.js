@@ -1155,7 +1155,9 @@
         try {
           const utils = HEYS?.utils;
           if (utils?.lsSet) utils.lsSet(SHOW_ALL_LS_KEY, next ? '1' : '0');
-          else localStorage.setItem(SHOW_ALL_LS_KEY, next ? '1' : '0');
+          // Если utils.lsSet недоступен — UI state не персистится (toggle
+          // потеряется на reload). Не пишем напрямую в LS, чтобы не bypass'ить
+          // cloud-sync interceptor.
         } catch (e) { /* noop */ }
       };
 

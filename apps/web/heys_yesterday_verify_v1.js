@@ -1117,6 +1117,8 @@
       const info = getPendingPastDays();
       setPendingInfo(info);
       try {
+        // [audit] debug-only diagnostics — direct LS by design, не user data.
+        // В bootstrap-bypass-allowlist.
         if (info) {
           localStorage.setItem('heys_debug_yesterday_info', JSON.stringify(info));
         } else {
