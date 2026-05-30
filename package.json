@@ -74,7 +74,7 @@
     "test": "turbo run test",
     "test:all": "node -e \"require('fs').mkdirSync('coverage/.tmp',{ recursive: true })\" && cross-env NODE_OPTIONS=--max-old-space-size=6144 vitest run --coverage",
     "test:coverage": "pnpm -r run test:coverage",
-    "test:db": "vitest run TESTS/db TESTS/regressions/468a2947-audit-tz-fix.test.ts --no-coverage --test-timeout=60000 --hook-timeout=60000",
+    "test:db": "vitest run TESTS/db TESTS/regressions/468a2947-audit-tz-fix.test.ts --no-coverage --test-timeout=60000 --hook-timeout=60000 --pool=threads",
     "test:e2e": "playwright test",
     "test:e2e:curator-switch": "playwright test -c playwright.curator-switch.config.ts",
     "test:e2e:debug": "playwright test --debug",
