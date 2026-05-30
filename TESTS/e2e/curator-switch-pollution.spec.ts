@@ -153,13 +153,17 @@ test.describe('Курaторский cross-client pollution — anti-regression'
             'HEYS_TEST_E2E_CLIENT_ALEX_NAME, HEYS_TEST_E2E_CLIENT_POPL_NAME in .env.local'
         );
 
-        // TODO: тест требует bootstrap'нутого LS state для test clients
-        // (registration wizard блокирует курaторский dropdown при empty client).
-        // Тесты 1+2 + perf-budget + DB-level isolation покрывают anti-pollution
-        // через unit-like assertions без UI bootstrap dependency. Этот UI-flow
-        // тест включится когда добавим scripted bootstrap (insert минимальных
-        // heys_dayv2_*, heys_norms, heys_clients keys в migration).
-        test.skip(true, 'E2E test clients require bootstrap pre-population для UI dropdown flow — TODO');
+        // TODO 2026-05-31: тест требует app-level fix чтобы курaторский switch
+        // на свежий test client не показывал registration wizard.
+        // Пробовали: pre-populated profile в DB (scoped + unscoped) +
+        // addInitScript LS injection + waitForFunction profile sync + dismiss
+        // wizard button — wizard всё ещё блокирует курaторский dropdown,
+        // вероятно из-за Store memory cache от initial курaторский session
+        // (Store.get('heys_profile') возвращает кэшированный {} даже после
+        // курaторский switch на TestAlex).
+        // Real anti-pollution semantics покрыты тестами 1+2 (legacy=0 baseline)
+        // + DB-level isolation (afterAll cleanup deletes test writes).
+        test.skip(true, 'UI-flow требует app-level fix для Store memory cache при курaторском switch на fresh client — отдельный таск');
 
         const alexName = TEST_CLIENT_ALEX_NAME;
         const poplName = TEST_CLIENT_POPL_NAME;

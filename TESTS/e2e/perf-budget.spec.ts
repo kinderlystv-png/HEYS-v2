@@ -90,11 +90,12 @@ test.describe('Perf budget — render regressions guards', () => {
             'Set HEYS_TEST_PHONE_E2E_ALEX and HEYS_TEST_PIN_E2E_ALEX in .env.local'
         );
 
-        // TODO: тест клика на "Добавить приём пищи" требует bootstrap'нутого LS
-        // (registration wizard блокирует main dashboard у empty test client).
-        // Включится после добавления scripted day/norms pre-population
-        // в 2026-05-31 migration. Тот же блок что у curator-switch test 3.
-        test.skip(true, 'E2E test clients require bootstrap pre-population для UI dashboard — TODO');
+        // TODO 2026-05-31: тест требует bootstrap'нутого LS state (см. analog
+        // в curator-switch test 3). pin-auth waitForFunction profile sync
+        // не помог — wizard всё ещё блокирует "Добавить приём пищи" button
+        // для fresh test client. Решение требует app-level fix или scripted
+        // bootstrap dayv2/norms/clients keys в DB.
+        test.skip(true, 'UI-flow требует app-level fix или scripted bootstrap для empty test client — отдельный таск');
 
         const credentials = getNamedPinCredentials('E2E_ALEX');
         await loginWithHeysPin(page, credentials);

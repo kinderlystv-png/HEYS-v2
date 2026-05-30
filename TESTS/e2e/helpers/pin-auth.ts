@@ -199,5 +199,29 @@ export async function loginWithHeysPin(page: Page, overrideCredentials?: HeysPin
         })
         .toBeTruthy();
 
+    // 2026-05-31: anti-race для UI assertions сразу после login.
+    // Если cloud-sync ещё не подгрузил scoped profile (heys_<cid>_profile),
+    // profile_step.isProfileIncomplete() видит {} → ставит
+    // heys_registration_in_progress=true → app рендерит registration wizard
+    // вместо dashboard. Ждём пока profile реально появится с realname/completed
+    // флагом, потом гарантируем что флаг чист (на случай если уже был установлен
+    // до того как sync завершился).
+    try {
+        await page.waitForFunction(
+            () => {
+                const w = window as typeof window & { HEYS?: any };
+                const p = w.HEYS?.utils?.lsGet?.('heys_profile') || w.HEYS?.store?.get?.('heys_profile');
+                if (!p || typeof p !== 'object') return false;
+                return Boolean(p.profileCompleted === true || p.firstName || p.birthDate);
+            },
+            { timeout: 30_000, polling: 200 }
+        );
+        await page.evaluate(() => {
+            try { localStorage.removeItem('heys_registration_in_progress'); } catch (_) { /* noop */ }
+        });
+    } catch (_) {
+        // Не блокируем return — caller сам decides поведение для empty profile case.
+    }
+
     return loginResult.clientId as string;
 }

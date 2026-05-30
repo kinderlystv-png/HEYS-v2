@@ -128,6 +128,33 @@ export async function enterCuratorClientFromPanel(page: Page, clientName: string
         });
     }, { timeout: 60_000 }).toBeTruthy();
 
+    // 2026-05-31: anti-race для UI (см. pin-auth waitForFunction).
+    // Wait пока scoped profile загрузится из cloud в LS — иначе registration
+    // wizard блокирует курaторский dropdown trigger для следующего switch'a.
+    try {
+        await page.waitForFunction(
+            () => {
+                const w = window as typeof window & { HEYS?: any };
+                const p = w.HEYS?.utils?.lsGet?.('heys_profile') || w.HEYS?.store?.get?.('heys_profile');
+                if (!p || typeof p !== 'object') return false;
+                return Boolean(p.profileCompleted === true || p.firstName || p.birthDate);
+            },
+            { timeout: 30_000, polling: 200 }
+        );
+    } catch (_) { /* profile sync slow — продолжим dismiss wizard если есть */ }
+
+    // Clear flag + dismiss любой visible registration wizard (× close button).
+    await page.evaluate(() => {
+        try { localStorage.removeItem('heys_registration_in_progress'); } catch (_) { /* noop */ }
+    });
+    try {
+        const closeBtn = page.getByRole('button', { name: /^Закрыть$/ }).first();
+        if (await closeBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+            await closeBtn.click({ timeout: 5_000 });
+            await page.waitForTimeout(500);
+        }
+    } catch (_) { /* no wizard — OK */ }
+
     const clientId = await page.evaluate(() => {
         const w = window as typeof window & { HEYS?: any };
         return String(w.HEYS?.currentClientId || '');
