@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.85cf0b8e",
+      "buildHash": "85cf0b8e",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Закрыто 5 последних race-окон для cross-client pollution при switch'е куратора",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Defense-in-depth: 5 дополнительных слоёв изоляции при переключении клиентов куратором",
+          "description": "Глубокий аудит выявил 5 дополнительных pollution vectors поверх предыдущих защит (fc1ce544 + 7fb8be2f + 687a9e6a). Pollution в базе на сегодня нет — это закрытие теоретической поверхности атаки на будущее, чтобы при будущих рефакторингах риск повтора был минимальным. Закрыто: (1) in-flight upload queue теперь чистится от items старого клиента при switch — раньше items в полёте могли вернуться с ошибкой и retry под scope нового клиента; (2) фоновые таймеры gamification (audit flush, cloud sync, debounce — 3-10 секунд) убиваются при старте switch'а; (3) Service Worker KV cache инвалидируется при switch — раньше мог вернуть кэш ответа от старого клиента в первом запросе после reload; (4) module-level кэши (orphan products, auto-cloned shared ids, cascade state, trial queue) сбрасываются при switch; (5) IndexedDB share-db (PWA Share Target) очищается. F6 cookie cleanup — disproven by audit: куратор использует JWT-путь с server-side ownership check, stale PIN-cookie игнорируется."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.687a9e6a",
       "buildHash": "687a9e6a",
       "date": "2026-05-30",
