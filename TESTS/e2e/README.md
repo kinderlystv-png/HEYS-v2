@@ -1,5 +1,89 @@
 # HEYS E2E Testing Guide
 
+## ⚠️ Test Isolation Invariants (2026-05-31)
+
+**E2E тесты НИКОГДА не хитят real user data.** Используются **dedicated test clients**, созданные миграцией `scripts/db/migrations/2026-05-31_create_e2e_test_clients.sql`:
+
+| Test client | UUID | Phone | PIN |
+|---|---|---|---|
+| `E2E-TestAlex` | `11111111-1111-1111-1111-111111111111` | `+70000000001` | `0000` |
+| `E2E-TestPopl` | `22222222-2222-2222-2222-222222222222` | `+70000000002` | `1111` |
+
+Oба owned by curator `poplanton@mail.ru`. Видны в курaторском dropdown — игнорируй их в реальной курaторской работе.
+
+**Real Александра/Poplanton НЕ trouched тестами** — это main invariant.
+
+### Setup (one-time per environment)
+
+```bash
+# 1. Apply migration
+bash scripts/db/psql.sh -f scripts/db/migrations/2026-05-31_create_e2e_test_clients.sql
+
+# 2. Verify
+bash scripts/db/psql.sh -c "SELECT id, name FROM public.clients WHERE name LIKE 'E2E-Test%';"
+
+# 3. Copy creds (HEYS_TEST_E2E_* уже preset'нуты в example):
+cp .env.local.example .env.local
+# fill HEYS_TEST_CURATOR_EMAIL + HEYS_TEST_CURATOR_PASSWORD
+```
+
+### Cleanup
+
+Each test suite (`curator-switch-pollution.spec.ts`, `perf-budget.spec.ts`) имеет `afterAll` hook (`helpers/test-cleanup.ts`):
+
+```sql
+DELETE FROM public.client_kv_store
+WHERE client_id IN ('<test_uuids>')
+  AND updated_at > '<test_start_iso>';
+```
+
+**Safety**: filter by `client_id IN (test_uuids)` AND `updated_at > sinceISO` — real client_id никогда не matches фиксированные test UUIDs.
+
+### Verify isolation после run
+
+```bash
+# Real users untouched (MAX timestamp unchanged):
+bash scripts/db/psql.sh -c "SELECT MAX(updated_at) FROM public.client_kv_store WHERE client_id IN ('4545ee50-4f5f-4fc0-b862-7ca45fa1bafc'::uuid, 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a'::uuid);"
+
+# Test clients чистые после cleanup (count = 0):
+bash scripts/db/psql.sh -c "SELECT COUNT(*) FROM public.client_kv_store WHERE client_id IN ('11111111-1111-1111-1111-111111111111'::uuid, '22222222-2222-2222-2222-222222222222'::uuid);"
+```
+
+### Adding new e2e test
+
+```ts
+import { captureCleanupBaseline, cleanupTestClients, type CleanupBaseline } from './helpers/test-cleanup';
+import { getNamedPinCredentials } from './helpers/pin-auth';
+
+test.describe('My new suite', () => {
+  let cleanupBaseline: CleanupBaseline;
+  test.beforeAll(() => {
+    cleanupBaseline = captureCleanupBaseline([
+      process.env.HEYS_TEST_E2E_CLIENT_ALEX_ID!,
+    ]);
+  });
+  test.afterAll(() => cleanupTestClients(cleanupBaseline));
+
+  test('...', async ({ page }) => {
+    const creds = getNamedPinCredentials('E2E_ALEX'); // NOT 'ALEX' (deprecated real)
+    // ...
+  });
+});
+```
+
+### Rollback test clients (если нужно)
+
+```sql
+DELETE FROM public.clients WHERE id IN ('11111111-1111-1111-1111-111111111111'::uuid, '22222222-2222-2222-2222-222222222222'::uuid);
+-- ON DELETE CASCADE → client_kv_store rows авто-снесутся.
+```
+
+### Why dedicated test clients (incident 2026-05-30)
+
+До 2026-05-31 e2e тесты использовали real creds (Александра + Poplanton) → writes неотличимы от real user writes, нет cleanup hook. Это привело к **неотделимому test residue** в обоих real клиентах. Plan: `~/.claude/plans/cozy-hatching-minsky.md`.
+
+---
+
 ## Overview
 
 Comprehensive End-to-End testing suite for HEYS using Playwright. This testing infrastructure covers all major user journeys and ensures the application works correctly across different browsers and devices.
