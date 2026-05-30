@@ -89,6 +89,110 @@
         }
 
         // ─────────────────────────────────────────────────────────
+        // 🧘 Normal-state maintenance — для дней без crashed/stressed
+        // Раньше emotional молчал при stress 3-5 (нормальный диапазон).
+        // Этот блок гарантирует coverage в обычные дни — habit-формирующие
+        // microhabits с peer-reviewed evidence. Evidence см. _evidence.js.
+        // ─────────────────────────────────────────────────────────
+
+        const _avgStressNormal = day?.stressAvg || 0;
+        const isNormalStress = _avgStressNormal >= 3 && _avgStressNormal < 6
+            && emotionalState !== 'crashed' && emotionalState !== 'stressed';
+
+        if (isNormalStress) {
+            // Sleep hygiene — Walker-2017 «Why We Sleep»
+            if (hour >= 19 && !sessionStorage.getItem('heys_emo_sleep_hygiene')) {
+                advices.push({
+                    id: 'emotional_sleep_hygiene',
+                    icon: '🛏️',
+                    text: 'Фиксированное время сна ±30 мин = глубже sleep cycles',
+                    details: '😴 Циркадные ритмы любят regularity. Засыпание в одно и то же ' +
+                        'время ±30 мин синхронизирует мелатонин и aденозин → быстрее засыпание, ' +
+                        'глубже REM. Walker-2017: chronotype consistency > общая продолжительность.',
+                    type: 'tip',
+                    priority: 56,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 6000,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_sleep_hygiene', '1'); } catch (e) { } }
+                });
+            }
+
+            // Screen curfew — Cain & Gradisar 2010 systematic review + Chang-2015 RCT
+            if (hour >= 21 && !sessionStorage.getItem('heys_emo_screen_curfew')) {
+                advices.push({
+                    id: 'emotional_screen_curfew',
+                    icon: '📵',
+                    text: 'Выключи экраны за 60 мин до сна — мелатонин скажет спасибо',
+                    details: '💡 Blue light от экранов подавляет мелатонин на 23-50% (Chang-2015 RCT). ' +
+                        'Curfew 60 мин до сна → нормальная sleep latency. ' +
+                        'Альтернатива: night-shift / red-shift фильтры (-30% эффект, но лучше чем ничего).',
+                    type: 'tip',
+                    priority: 59,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 6000,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_screen_curfew', '1'); } catch (e) { } }
+                });
+            }
+
+            // Social anchor — Hari-2018 «Lost Connections» + Holt-Lunstad-2010 meta
+            if (!sessionStorage.getItem('heys_emo_social_anchor')) {
+                advices.push({
+                    id: 'emotional_social_anchor',
+                    icon: '💬',
+                    text: '5 мин звонка близкому = мощный стресс-буфер',
+                    details: '🤝 Social connection — protective factor сильнее многих биомаркеров. ' +
+                        'Holt-Lunstad-2010 meta (148 исследований, n=308k): сильные social ties ' +
+                        'снижают mortality risk на 50%. Даже 5-мин качественный контакт работает.',
+                    type: 'tip',
+                    priority: 64,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 5500,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_social_anchor', '1'); } catch (e) { } }
+                });
+            }
+
+            // Micro-breaks — Sianoja-2018 micro-break RCT
+            if (hour >= 10 && hour <= 17 && !sessionStorage.getItem('heys_emo_micro_break')) {
+                advices.push({
+                    id: 'emotional_micro_break',
+                    icon: '⏸️',
+                    text: '3 микропаузы по 1-2 мин в работе = меньше усталости вечером',
+                    details: '🧠 Sianoja-2018 RCT: 1-2 мин micro-breaks каждые 60-90 мин ' +
+                        'снижают cumulative fatigue к концу дня на 20-25%. ' +
+                        'Хорошо работает: встать, посмотреть в окно (на дальние объекты — отдых глаз), ' +
+                        '5 глубоких вдохов, налить воды.',
+                    type: 'tip',
+                    priority: 67,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 5500,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_micro_break', '1'); } catch (e) { } }
+                });
+            }
+
+            // Gratitude log — Emmons & McCullough 2003 RCT
+            if (hour >= 21 && !sessionStorage.getItem('heys_emo_gratitude')) {
+                advices.push({
+                    id: 'emotional_gratitude_log',
+                    icon: '🙏',
+                    text: '3 благодарности перед сном — простой shift настроения',
+                    details: '✨ Emmons-2003 RCT (n=192, 10 нед): regular gratitude journaling → ' +
+                        '+25% subjective wellbeing, лучше sleep quality. Достаточно 3 строк в день — ' +
+                        'без претензий на глубокую философию, просто заметить хорошее.',
+                    type: 'tip',
+                    priority: 72,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 5500,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_gratitude', '1'); } catch (e) { } }
+                });
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────
         // 😰 EMOTIONAL RISK — стресс + долг
         // ─────────────────────────────────────────────────────────
 

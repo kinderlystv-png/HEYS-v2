@@ -123,6 +123,116 @@
         }
 
         // ─────────────────────────────────────────────────────────
+        // 🧘 Rest-day rules — для дней БЕЗ тренировки
+        // Раньше модуль молчал на rest-days (hasTraining=false блокирует все
+        // правила). Этот блок гарантирует coverage в дни отдыха через
+        // recovery-focused советы. Evidence см. _evidence.js (Phase 1).
+        // ─────────────────────────────────────────────────────────
+
+        if (!hasTraining) {
+            // NEAT / низкоинтенсивная активность — основа recovery
+            // (ACSM-2018 PA guidelines: 150-300 min/wk moderate activity)
+            advices.push({
+                id: 'rest_day_neat_walking',
+                icon: '🚶',
+                text: helpers.personalizeText(helpers.pickRandomText([
+                    'День отдыха — добавь 30-45 мин прогулки',
+                    '${firstName}, прогулка 30 мин подстегнёт восстановление',
+                    'Лёгкая активность = лучшее восстановление'
+                ]), ctx),
+                details: '🚶 NEAT (бытовая активность) ускоряет циркуляцию, ' +
+                    'уменьшает DOMS (мышечную боль) и не нагружает ЦНС. ' +
+                    'ACSM-2018: 150-300 мин/нед умеренной активности — база здоровья.',
+                type: 'tip',
+                priority: 42,
+                category: 'training',
+                triggers: ['tab_open'],
+                ttl: 6000
+            });
+
+            // Mobility / стретч — снижение жёсткости (Behm-2016 systematic review)
+            advices.push({
+                id: 'rest_day_mobility',
+                icon: '🤸',
+                text: '10 мин mobility — снимет жёсткость и улучшит ROM',
+                details: '🧘 Mobility-сессия 10 мин (foam roller, динамический стретч) ' +
+                    'улучшает range of motion и снижает мышечную жёсткость без ущерба силе. ' +
+                    'Behm-2016 systematic review: short-duration stretching безопасен на rest-days.',
+                type: 'tip',
+                priority: 48,
+                category: 'training',
+                triggers: ['tab_open'],
+                ttl: 5500
+            });
+
+            // Сон — приоритет для восстановления (Sleep Foundation 2023 consensus)
+            advices.push({
+                id: 'rest_day_sleep_priority',
+                icon: '😴',
+                text: 'День без тренировки — лучший момент уйти спать на час раньше',
+                details: '💤 Восстановление мышц и ЦНС на 70% идёт во сне. ' +
+                    '7-9 часов — рекомендация для взрослых (Sleep Foundation 2023). ' +
+                    'Особенно важно на rest-days — компенсация недосыпа за неделю.',
+                type: 'tip',
+                priority: 38,
+                category: 'training',
+                triggers: ['tab_open'],
+                ttl: 6000
+            });
+
+            // Распределение белка — даже без тренировки (Schoenfeld-2018 meta)
+            if (proteinPct < THRESHOLDS.protein.adequate) {
+                advices.push({
+                    id: 'rest_day_protein_distribution',
+                    icon: '💪',
+                    text: 'И в день отдыха белок важен — 20-30г на приём',
+                    details: '🥚 На rest-day мышцы восстанавливаются — синтез белка идёт ' +
+                        'непрерывно. Распредели белок на 3-4 приёма по 20-30г. ' +
+                        'Schoenfeld-2018 meta-analysis: distributed protein > skewed для MPS.',
+                    type: 'tip',
+                    priority: 33,
+                    category: 'training',
+                    triggers: ['tab_open', 'product_added'],
+                    excludes: ['protein_low'],
+                    ttl: 5500
+                });
+            }
+
+            // Утренний свет — циркадная коррекция (Wright-2020)
+            if (hour >= 7 && hour <= 11) {
+                advices.push({
+                    id: 'rest_day_light_exposure',
+                    icon: '🌅',
+                    text: '10-15 мин на утреннем свету = крепче сон ночью',
+                    details: '☀️ Утренний bright light (особенно до 11 утра) синхронизирует ' +
+                        'циркадные ритмы → лучше засыпание, глубже сон. ' +
+                        'Wright-2020 показал shift на 50-60 мин при regular morning exposure. ' +
+                        'Rest-day — идеально совместить с прогулкой.',
+                    type: 'tip',
+                    priority: 46,
+                    category: 'training',
+                    triggers: ['tab_open'],
+                    ttl: 6000
+                });
+            }
+
+            // Active recovery (йога / лёгкое кардио)
+            advices.push({
+                id: 'rest_day_active_recovery',
+                icon: '🧘',
+                text: 'Йога / лёгкое кардио 20 мин — recovery без нагрузки',
+                details: '🌿 Active recovery (HR в зоне 1-2, ~50-65% от max) ' +
+                    'улучшает кровоток к мышцам, ускоряет вынос метаболитов. ' +
+                    'Йога, плавание, велосипед в лёгком темпе — отлично подходят.',
+                type: 'tip',
+                priority: 52,
+                category: 'training',
+                triggers: ['tab_open'],
+                ttl: 5000
+            });
+        }
+
+        // ─────────────────────────────────────────────────────────
         // ⏱️ Recovery window (30-60 мин после тренировки)
         // ─────────────────────────────────────────────────────────
 

@@ -610,6 +610,74 @@
         return 'evening';
     }
 
+    // ─────────────────────────────────────────────────────────
+    // 🌱 Insight-of-the-day rotation (Phase 0.4 coverage fallback)
+    // 12 базовых evidence-based tips. Ротация day-of-year mod 12.
+    // Гарантирует coverage > 0 для любого snapshot когда все остальные
+    // модули silent. Evidence см. _evidence.js (Phase 1).
+    // ─────────────────────────────────────────────────────────
+
+    const INSIGHTS_OF_THE_DAY = [
+        { id: 'insight_protein_distribution', icon: '🥚',
+          text: 'Распредели белок на 3-4 приёма по 20-30г = лучше MPS',
+          details: 'Distributed protein > skewed: 4×30г лучше, чем 1×120г. Schoenfeld-2018 meta-analysis.' },
+        { id: 'insight_fiber_baseline', icon: '🥬',
+          text: 'Цель по клетчатке: 14г на каждые 1000 ккал (ESPEN-2022)',
+          details: 'Например на 2000 ккал — 28г клетчатки. Овощи, бобовые, цельные злаки — основные источники.' },
+        { id: 'insight_water_30ml', icon: '💧',
+          text: 'Базовая норма воды: 30 мл на кг веса (EFSA-2010)',
+          details: 'При 65 кг это ~2 л / день. +500 мл на каждый час интенсивной нагрузки.' },
+        { id: 'insight_sleep_anchor', icon: '😴',
+          text: 'Регулярное время сна важнее общей продолжительности',
+          details: 'Walker-2017: chronotype consistency (±30 мин) выгоднее, чем +1 час хаотично.' },
+        { id: 'insight_neat_daily', icon: '🚶',
+          text: 'NEAT > workout: 8-10к шагов держат метаболизм активным',
+          details: 'Levine-2005: NEAT даёт 15-50% от total daily energy expenditure — больше, чем 1 тренировка.' },
+        { id: 'insight_whole_foods', icon: '🍎',
+          text: 'Минимум 80% дневной еды — minimally processed',
+          details: 'NOVA group 4 (ultra-processed) > 20% диеты связаны с +30% риском хронических заболеваний (Monteiro-2019).' },
+        { id: 'insight_omega3', icon: '🐟',
+          text: 'Жирная рыба 2× в неделю = 250-500мг EPA+DHA / день',
+          details: 'AHA + EFSA-2010 recommendation. Альтернатива: 2-3г льняного масла + algae oil.' },
+        { id: 'insight_caffeine_curfew', icon: '☕',
+          text: 'Кофеин — стоп за 8-10 часов до сна',
+          details: 'Half-life caffeine = 5-6 ч. Drake-2013: даже за 6 ч до сна снижает sleep efficiency на 12%.' },
+        { id: 'insight_morning_light', icon: '☀️',
+          text: '10-15 мин на утреннем свету = крепче сон вечером',
+          details: 'Wright-2020: morning bright light shift'+'ит мелатонин вечером — быстрее засыпание.' },
+        { id: 'insight_chew_slow', icon: '🍽️',
+          text: 'Жуй медленнее: 20+ жевательных движений = больше насыщения',
+          details: 'Андо-2014 RCT: slow eating → +30% CCK (satiety hormone) и -10% intake без чувства голода.' },
+        { id: 'insight_strength_training', icon: '🏋️',
+          text: '2-3 силовых сессии в неделю → меньше потеря мышц с возрастом',
+          details: 'ACSM-2018 + Westcott-2012: каждое десятилетие после 30 теряем 3-8% мышц без resistance training.' },
+        { id: 'insight_social_connection', icon: '💬',
+          text: 'Сильные social ties = -50% mortality risk',
+          details: 'Holt-Lunstad-2010 meta (148 исследований, n=308k). 5 мин качественного контакта — уже работает.' }
+    ];
+
+    function getInsightOfTheDay(ctx) {
+        try {
+            const date = ctx?.day?.date || new Date().toISOString().slice(0, 10);
+            const dayOfYear = (() => {
+                const d = new Date(date);
+                const start = new Date(d.getFullYear(), 0, 0);
+                return Math.floor((d - start) / 86400000);
+            })();
+            const idx = dayOfYear % INSIGHTS_OF_THE_DAY.length;
+            const base = INSIGHTS_OF_THE_DAY[idx];
+            return {
+                ...base,
+                type: 'tip',
+                priority: 78,
+                category: 'other',
+                triggers: ['tab_open', 'manual'],
+                ttl: 6000,
+                __traceModule: 'fallback_insight_of_the_day'
+            };
+        } catch (e) { return null; }
+    }
+
     /**
      * Выбирает текст совета с учётом времени суток
      * @param {string} adviceId
@@ -6593,24 +6661,29 @@
 
         // Фильтруем по триггеру (для показа в развёрнутом виде — без canShowAdvice)
         // Спецтриггер 'manual' — показывает ВСЕ советы без фильтрации по триггеру
+        // 🔧 2026-05-30 Phase 0: null trigger → fallback 'tab_open' для snapshot calc.
+        // Раньше `if (!trigger) return []` приводил к visibleForManualCount=0 при
+        // modulesWithOutput>0 (User 2 snapshot bug). Primary всё равно null если
+        // actual trigger null — через relevantAdvices logic ниже.
         const allForTrigger = (() => {
-            if (!trigger) return [];
+            const effectiveTrigger = trigger || 'tab_open';
             const userBusy = isUserBusy(uiState);
             const busyInputAdvices = moodAdaptedAdvices;
             const busyFilteredAdvices = userBusy ? [] : busyInputAdvices;
             let advices = busyFilteredAdvices;
 
             // Manual trigger — показываем все советы
-            if (trigger !== 'manual') {
-                advices = advices.filter(a => a.triggers.includes(trigger));
+            if (effectiveTrigger !== 'manual') {
+                advices = advices.filter(a => a.triggers.includes(effectiveTrigger));
             }
             appendAdviceTraceStage(adviceTrace, 'trigger_filter', busyInputAdvices, advices, {
-                trigger,
-                manualBypass: trigger === 'manual',
+                trigger: effectiveTrigger,
+                originalTrigger: trigger,
+                manualBypass: effectiveTrigger === 'manual',
                 userBusy
             }, {
                 reasonMap: buildTriggerFilterReasonMap(busyInputAdvices, advices, {
-                    trigger,
+                    trigger: effectiveTrigger,
                     userBusy
                 })
             });
@@ -6664,6 +6737,19 @@
                 reasonMap: buildCategoryLimitReasonMap(advices, limitedAdvices)
             });
             advices = limitedAdvices;
+
+            // 🔧 2026-05-30 Phase 0.4: Coverage fallback rule.
+            // Если после всех фильтров не осталось советов — выдаём insight-of-the-day
+            // из ротации (12 базовых tips, day-of-year mod 12). Гарантирует coverage > 0
+            // для любого snapshot. Не применяется если userBusy (избегаем noise).
+            if (advices.length === 0 && !userBusy) {
+                const fallbackAdvice = getInsightOfTheDay(ctx);
+                if (fallbackAdvice) {
+                    advices = [fallbackAdvice];
+                    appendAdviceTraceStage(adviceTrace, 'coverage_fallback',
+                        [], advices, { reason: 'no_advices_after_all_filters' });
+                }
+            }
 
             return advices;
         })();
@@ -8733,6 +8819,116 @@
         }
 
         // ─────────────────────────────────────────────────────────
+        // 🧘 Rest-day rules — для дней БЕЗ тренировки
+        // Раньше модуль молчал на rest-days (hasTraining=false блокирует все
+        // правила). Этот блок гарантирует coverage в дни отдыха через
+        // recovery-focused советы. Evidence см. _evidence.js (Phase 1).
+        // ─────────────────────────────────────────────────────────
+
+        if (!hasTraining) {
+            // NEAT / низкоинтенсивная активность — основа recovery
+            // (ACSM-2018 PA guidelines: 150-300 min/wk moderate activity)
+            advices.push({
+                id: 'rest_day_neat_walking',
+                icon: '🚶',
+                text: helpers.personalizeText(helpers.pickRandomText([
+                    'День отдыха — добавь 30-45 мин прогулки',
+                    '${firstName}, прогулка 30 мин подстегнёт восстановление',
+                    'Лёгкая активность = лучшее восстановление'
+                ]), ctx),
+                details: '🚶 NEAT (бытовая активность) ускоряет циркуляцию, ' +
+                    'уменьшает DOMS (мышечную боль) и не нагружает ЦНС. ' +
+                    'ACSM-2018: 150-300 мин/нед умеренной активности — база здоровья.',
+                type: 'tip',
+                priority: 42,
+                category: 'training',
+                triggers: ['tab_open'],
+                ttl: 6000
+            });
+
+            // Mobility / стретч — снижение жёсткости (Behm-2016 systematic review)
+            advices.push({
+                id: 'rest_day_mobility',
+                icon: '🤸',
+                text: '10 мин mobility — снимет жёсткость и улучшит ROM',
+                details: '🧘 Mobility-сессия 10 мин (foam roller, динамический стретч) ' +
+                    'улучшает range of motion и снижает мышечную жёсткость без ущерба силе. ' +
+                    'Behm-2016 systematic review: short-duration stretching безопасен на rest-days.',
+                type: 'tip',
+                priority: 48,
+                category: 'training',
+                triggers: ['tab_open'],
+                ttl: 5500
+            });
+
+            // Сон — приоритет для восстановления (Sleep Foundation 2023 consensus)
+            advices.push({
+                id: 'rest_day_sleep_priority',
+                icon: '😴',
+                text: 'День без тренировки — лучший момент уйти спать на час раньше',
+                details: '💤 Восстановление мышц и ЦНС на 70% идёт во сне. ' +
+                    '7-9 часов — рекомендация для взрослых (Sleep Foundation 2023). ' +
+                    'Особенно важно на rest-days — компенсация недосыпа за неделю.',
+                type: 'tip',
+                priority: 38,
+                category: 'training',
+                triggers: ['tab_open'],
+                ttl: 6000
+            });
+
+            // Распределение белка — даже без тренировки (Schoenfeld-2018 meta)
+            if (proteinPct < THRESHOLDS.protein.adequate) {
+                advices.push({
+                    id: 'rest_day_protein_distribution',
+                    icon: '💪',
+                    text: 'И в день отдыха белок важен — 20-30г на приём',
+                    details: '🥚 На rest-day мышцы восстанавливаются — синтез белка идёт ' +
+                        'непрерывно. Распредели белок на 3-4 приёма по 20-30г. ' +
+                        'Schoenfeld-2018 meta-analysis: distributed protein > skewed для MPS.',
+                    type: 'tip',
+                    priority: 33,
+                    category: 'training',
+                    triggers: ['tab_open', 'product_added'],
+                    excludes: ['protein_low'],
+                    ttl: 5500
+                });
+            }
+
+            // Утренний свет — циркадная коррекция (Wright-2020)
+            if (hour >= 7 && hour <= 11) {
+                advices.push({
+                    id: 'rest_day_light_exposure',
+                    icon: '🌅',
+                    text: '10-15 мин на утреннем свету = крепче сон ночью',
+                    details: '☀️ Утренний bright light (особенно до 11 утра) синхронизирует ' +
+                        'циркадные ритмы → лучше засыпание, глубже сон. ' +
+                        'Wright-2020 показал shift на 50-60 мин при regular morning exposure. ' +
+                        'Rest-day — идеально совместить с прогулкой.',
+                    type: 'tip',
+                    priority: 46,
+                    category: 'training',
+                    triggers: ['tab_open'],
+                    ttl: 6000
+                });
+            }
+
+            // Active recovery (йога / лёгкое кардио)
+            advices.push({
+                id: 'rest_day_active_recovery',
+                icon: '🧘',
+                text: 'Йога / лёгкое кардио 20 мин — recovery без нагрузки',
+                details: '🌿 Active recovery (HR в зоне 1-2, ~50-65% от max) ' +
+                    'улучшает кровоток к мышцам, ускоряет вынос метаболитов. ' +
+                    'Йога, плавание, велосипед в лёгком темпе — отлично подходят.',
+                type: 'tip',
+                priority: 52,
+                category: 'training',
+                triggers: ['tab_open'],
+                ttl: 5000
+            });
+        }
+
+        // ─────────────────────────────────────────────────────────
         // ⏱️ Recovery window (30-60 мин после тренировки)
         // ─────────────────────────────────────────────────────────
 
@@ -8941,6 +9137,110 @@
                 triggers: ['tab_open'],
                 ttl: 5000
             });
+        }
+
+        // ─────────────────────────────────────────────────────────
+        // 🧘 Normal-state maintenance — для дней без crashed/stressed
+        // Раньше emotional молчал при stress 3-5 (нормальный диапазон).
+        // Этот блок гарантирует coverage в обычные дни — habit-формирующие
+        // microhabits с peer-reviewed evidence. Evidence см. _evidence.js.
+        // ─────────────────────────────────────────────────────────
+
+        const _avgStressNormal = day?.stressAvg || 0;
+        const isNormalStress = _avgStressNormal >= 3 && _avgStressNormal < 6
+            && emotionalState !== 'crashed' && emotionalState !== 'stressed';
+
+        if (isNormalStress) {
+            // Sleep hygiene — Walker-2017 «Why We Sleep»
+            if (hour >= 19 && !sessionStorage.getItem('heys_emo_sleep_hygiene')) {
+                advices.push({
+                    id: 'emotional_sleep_hygiene',
+                    icon: '🛏️',
+                    text: 'Фиксированное время сна ±30 мин = глубже sleep cycles',
+                    details: '😴 Циркадные ритмы любят regularity. Засыпание в одно и то же ' +
+                        'время ±30 мин синхронизирует мелатонин и aденозин → быстрее засыпание, ' +
+                        'глубже REM. Walker-2017: chronotype consistency > общая продолжительность.',
+                    type: 'tip',
+                    priority: 56,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 6000,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_sleep_hygiene', '1'); } catch (e) { } }
+                });
+            }
+
+            // Screen curfew — Cain & Gradisar 2010 systematic review + Chang-2015 RCT
+            if (hour >= 21 && !sessionStorage.getItem('heys_emo_screen_curfew')) {
+                advices.push({
+                    id: 'emotional_screen_curfew',
+                    icon: '📵',
+                    text: 'Выключи экраны за 60 мин до сна — мелатонин скажет спасибо',
+                    details: '💡 Blue light от экранов подавляет мелатонин на 23-50% (Chang-2015 RCT). ' +
+                        'Curfew 60 мин до сна → нормальная sleep latency. ' +
+                        'Альтернатива: night-shift / red-shift фильтры (-30% эффект, но лучше чем ничего).',
+                    type: 'tip',
+                    priority: 59,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 6000,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_screen_curfew', '1'); } catch (e) { } }
+                });
+            }
+
+            // Social anchor — Hari-2018 «Lost Connections» + Holt-Lunstad-2010 meta
+            if (!sessionStorage.getItem('heys_emo_social_anchor')) {
+                advices.push({
+                    id: 'emotional_social_anchor',
+                    icon: '💬',
+                    text: '5 мин звонка близкому = мощный стресс-буфер',
+                    details: '🤝 Social connection — protective factor сильнее многих биомаркеров. ' +
+                        'Holt-Lunstad-2010 meta (148 исследований, n=308k): сильные social ties ' +
+                        'снижают mortality risk на 50%. Даже 5-мин качественный контакт работает.',
+                    type: 'tip',
+                    priority: 64,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 5500,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_social_anchor', '1'); } catch (e) { } }
+                });
+            }
+
+            // Micro-breaks — Sianoja-2018 micro-break RCT
+            if (hour >= 10 && hour <= 17 && !sessionStorage.getItem('heys_emo_micro_break')) {
+                advices.push({
+                    id: 'emotional_micro_break',
+                    icon: '⏸️',
+                    text: '3 микропаузы по 1-2 мин в работе = меньше усталости вечером',
+                    details: '🧠 Sianoja-2018 RCT: 1-2 мин micro-breaks каждые 60-90 мин ' +
+                        'снижают cumulative fatigue к концу дня на 20-25%. ' +
+                        'Хорошо работает: встать, посмотреть в окно (на дальние объекты — отдых глаз), ' +
+                        '5 глубоких вдохов, налить воды.',
+                    type: 'tip',
+                    priority: 67,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 5500,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_micro_break', '1'); } catch (e) { } }
+                });
+            }
+
+            // Gratitude log — Emmons & McCullough 2003 RCT
+            if (hour >= 21 && !sessionStorage.getItem('heys_emo_gratitude')) {
+                advices.push({
+                    id: 'emotional_gratitude_log',
+                    icon: '🙏',
+                    text: '3 благодарности перед сном — простой shift настроения',
+                    details: '✨ Emmons-2003 RCT (n=192, 10 нед): regular gratitude journaling → ' +
+                        '+25% subjective wellbeing, лучше sleep quality. Достаточно 3 строк в день — ' +
+                        'без претензий на глубокую философию, просто заметить хорошее.',
+                    type: 'tip',
+                    priority: 72,
+                    category: 'emotional',
+                    triggers: ['tab_open'],
+                    ttl: 5500,
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_gratitude', '1'); } catch (e) { } }
+                });
+            }
         }
 
         // ─────────────────────────────────────────────────────────

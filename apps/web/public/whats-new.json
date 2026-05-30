@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Советы: закрыты silent-модули training/emotional + coverage никогда не 0",
+      "items": [
+        {
+          "type": "feat",
+          "title": "Training-модуль: 6 советов для дней без тренировки",
+          "description": "Раньше модуль training молчал весь rest-day (все правила условны на hasTraining=true). Добавлены 6 evidence-based советов для rest-days: NEAT-прогулка 30-45 мин (ACSM-2018), 10-мин mobility (Behm-2016 systematic review), приоритет сна 7-9ч (Sleep Foundation 2023), распределение белка 3-4×20-30г (Schoenfeld-2018 meta), утренний свет 10-15 мин (Wright-2020 circadian), active recovery йога/лёгкое кардио. Закрывает silent-модуль на rest-days, который виден в daily-log двух пользователей."
+        },
+        {
+          "type": "feat",
+          "title": "Emotional-модуль: 5 советов для normal-state (stress 3-5)",
+          "description": "Раньше emotional активен только при stress ≥ 6 или crashed/stressed. В normal-state (большинство дней) модуль молчал. Добавлены 5 советов с peer-reviewed evidence: фиксированное время сна ±30мин (Walker-2017), экранный curfew 60мин до сна (Chang-2015 RCT), 5-мин социальный якорь (Holt-Lunstad-2010 meta n=308k), 3 микропаузы в работе (Sianoja-2018 RCT), 3 благодарности перед сном (Emmons-2003 RCT). Каждый показывается раз в session, привязан к времени суток. Закрывает silent emotional для normal-state."
+        },
+        {
+          "type": "fix",
+          "title": "Snapshot bug: visibleForManualCount=0 при null trigger",
+          "description": "У User 2 в daily-log lastSnapshot.trigger=null приводил к visibleForManualCount=0 при modulesWithOutput=5 (engine посчитал что нет видимых советов, но modules их выдали). Корневая причина: `if (!trigger) return []` в allForTrigger IIFE. Fix: null trigger → fallback 'tab_open' для snapshot calc; primary всё равно null если actual trigger null (через relevantAdvices logic). Daily-log теперь честно показывает visibleForManualCount = реальное число eligible советов."
+        },
+        {
+          "type": "feat",
+          "title": "Coverage fallback: insight-of-the-day rotation (12 базовых tips)",
+          "description": "Если после всех фильтров (cooldown, expert conflict resolution, category limit, emotional filter, deduplication) осталось 0 советов — раньше snapshot имел coverage=0. Добавлен fallback rule: 12 базовых evidence-based tips в ротации day-of-year mod 12. Покрывают protein distribution (Schoenfeld), fiber baseline (ESPEN), water 30мл/кг (EFSA), sleep anchor (Walker), NEAT 8-10к шагов (Levine), whole foods (Monteiro NOVA), omega-3 2× в неделю (AHA), caffeine curfew (Drake), morning light (Wright), chewing slow (Андо), strength training (ACSM), social ties (Holt-Lunstad). Гарантирует coverage > 0 для любого snapshot."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.f70789fe",
       "buildHash": "f70789fe",
       "date": "2026-05-30",

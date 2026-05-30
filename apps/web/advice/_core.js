@@ -346,6 +346,74 @@
         return 'evening';
     }
 
+    // ─────────────────────────────────────────────────────────
+    // 🌱 Insight-of-the-day rotation (Phase 0.4 coverage fallback)
+    // 12 базовых evidence-based tips. Ротация day-of-year mod 12.
+    // Гарантирует coverage > 0 для любого snapshot когда все остальные
+    // модули silent. Evidence см. _evidence.js (Phase 1).
+    // ─────────────────────────────────────────────────────────
+
+    const INSIGHTS_OF_THE_DAY = [
+        { id: 'insight_protein_distribution', icon: '🥚',
+          text: 'Распредели белок на 3-4 приёма по 20-30г = лучше MPS',
+          details: 'Distributed protein > skewed: 4×30г лучше, чем 1×120г. Schoenfeld-2018 meta-analysis.' },
+        { id: 'insight_fiber_baseline', icon: '🥬',
+          text: 'Цель по клетчатке: 14г на каждые 1000 ккал (ESPEN-2022)',
+          details: 'Например на 2000 ккал — 28г клетчатки. Овощи, бобовые, цельные злаки — основные источники.' },
+        { id: 'insight_water_30ml', icon: '💧',
+          text: 'Базовая норма воды: 30 мл на кг веса (EFSA-2010)',
+          details: 'При 65 кг это ~2 л / день. +500 мл на каждый час интенсивной нагрузки.' },
+        { id: 'insight_sleep_anchor', icon: '😴',
+          text: 'Регулярное время сна важнее общей продолжительности',
+          details: 'Walker-2017: chronotype consistency (±30 мин) выгоднее, чем +1 час хаотично.' },
+        { id: 'insight_neat_daily', icon: '🚶',
+          text: 'NEAT > workout: 8-10к шагов держат метаболизм активным',
+          details: 'Levine-2005: NEAT даёт 15-50% от total daily energy expenditure — больше, чем 1 тренировка.' },
+        { id: 'insight_whole_foods', icon: '🍎',
+          text: 'Минимум 80% дневной еды — minimally processed',
+          details: 'NOVA group 4 (ultra-processed) > 20% диеты связаны с +30% риском хронических заболеваний (Monteiro-2019).' },
+        { id: 'insight_omega3', icon: '🐟',
+          text: 'Жирная рыба 2× в неделю = 250-500мг EPA+DHA / день',
+          details: 'AHA + EFSA-2010 recommendation. Альтернатива: 2-3г льняного масла + algae oil.' },
+        { id: 'insight_caffeine_curfew', icon: '☕',
+          text: 'Кофеин — стоп за 8-10 часов до сна',
+          details: 'Half-life caffeine = 5-6 ч. Drake-2013: даже за 6 ч до сна снижает sleep efficiency на 12%.' },
+        { id: 'insight_morning_light', icon: '☀️',
+          text: '10-15 мин на утреннем свету = крепче сон вечером',
+          details: 'Wright-2020: morning bright light shift'+'ит мелатонин вечером — быстрее засыпание.' },
+        { id: 'insight_chew_slow', icon: '🍽️',
+          text: 'Жуй медленнее: 20+ жевательных движений = больше насыщения',
+          details: 'Андо-2014 RCT: slow eating → +30% CCK (satiety hormone) и -10% intake без чувства голода.' },
+        { id: 'insight_strength_training', icon: '🏋️',
+          text: '2-3 силовых сессии в неделю → меньше потеря мышц с возрастом',
+          details: 'ACSM-2018 + Westcott-2012: каждое десятилетие после 30 теряем 3-8% мышц без resistance training.' },
+        { id: 'insight_social_connection', icon: '💬',
+          text: 'Сильные social ties = -50% mortality risk',
+          details: 'Holt-Lunstad-2010 meta (148 исследований, n=308k). 5 мин качественного контакта — уже работает.' }
+    ];
+
+    function getInsightOfTheDay(ctx) {
+        try {
+            const date = ctx?.day?.date || new Date().toISOString().slice(0, 10);
+            const dayOfYear = (() => {
+                const d = new Date(date);
+                const start = new Date(d.getFullYear(), 0, 0);
+                return Math.floor((d - start) / 86400000);
+            })();
+            const idx = dayOfYear % INSIGHTS_OF_THE_DAY.length;
+            const base = INSIGHTS_OF_THE_DAY[idx];
+            return {
+                ...base,
+                type: 'tip',
+                priority: 78,
+                category: 'other',
+                triggers: ['tab_open', 'manual'],
+                ttl: 6000,
+                __traceModule: 'fallback_insight_of_the_day'
+            };
+        } catch (e) { return null; }
+    }
+
     /**
      * Выбирает текст совета с учётом времени суток
      * @param {string} adviceId
@@ -6329,24 +6397,29 @@
 
         // Фильтруем по триггеру (для показа в развёрнутом виде — без canShowAdvice)
         // Спецтриггер 'manual' — показывает ВСЕ советы без фильтрации по триггеру
+        // 🔧 2026-05-30 Phase 0: null trigger → fallback 'tab_open' для snapshot calc.
+        // Раньше `if (!trigger) return []` приводил к visibleForManualCount=0 при
+        // modulesWithOutput>0 (User 2 snapshot bug). Primary всё равно null если
+        // actual trigger null — через relevantAdvices logic ниже.
         const allForTrigger = (() => {
-            if (!trigger) return [];
+            const effectiveTrigger = trigger || 'tab_open';
             const userBusy = isUserBusy(uiState);
             const busyInputAdvices = moodAdaptedAdvices;
             const busyFilteredAdvices = userBusy ? [] : busyInputAdvices;
             let advices = busyFilteredAdvices;
 
             // Manual trigger — показываем все советы
-            if (trigger !== 'manual') {
-                advices = advices.filter(a => a.triggers.includes(trigger));
+            if (effectiveTrigger !== 'manual') {
+                advices = advices.filter(a => a.triggers.includes(effectiveTrigger));
             }
             appendAdviceTraceStage(adviceTrace, 'trigger_filter', busyInputAdvices, advices, {
-                trigger,
-                manualBypass: trigger === 'manual',
+                trigger: effectiveTrigger,
+                originalTrigger: trigger,
+                manualBypass: effectiveTrigger === 'manual',
                 userBusy
             }, {
                 reasonMap: buildTriggerFilterReasonMap(busyInputAdvices, advices, {
-                    trigger,
+                    trigger: effectiveTrigger,
                     userBusy
                 })
             });
@@ -6400,6 +6473,19 @@
                 reasonMap: buildCategoryLimitReasonMap(advices, limitedAdvices)
             });
             advices = limitedAdvices;
+
+            // 🔧 2026-05-30 Phase 0.4: Coverage fallback rule.
+            // Если после всех фильтров не осталось советов — выдаём insight-of-the-day
+            // из ротации (12 базовых tips, day-of-year mod 12). Гарантирует coverage > 0
+            // для любого snapshot. Не применяется если userBusy (избегаем noise).
+            if (advices.length === 0 && !userBusy) {
+                const fallbackAdvice = getInsightOfTheDay(ctx);
+                if (fallbackAdvice) {
+                    advices = [fallbackAdvice];
+                    appendAdviceTraceStage(adviceTrace, 'coverage_fallback',
+                        [], advices, { reason: 'no_advices_after_all_filters' });
+                }
+            }
 
             return advices;
         })();
