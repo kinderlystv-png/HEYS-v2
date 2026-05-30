@@ -3280,6 +3280,16 @@
                 }
             };
 
+            // 🚀 2026-05-31: H1 fix — мгновенный показ LS-snapshot за новую дату
+            // ДО bootstrapClientSync. Иначе doLocal() ждал sync (~1-5с на медленной
+            // сети, или фактически бесконечно при подвисшем RPC) — dayRaw оставался
+            // на предыдущей дате, UI показывал meals прошлого дня под header нового
+            // дня. Curator-сценарий: переключение дат клиента не реагировало.
+            // Optimistic UI: показываем LS сразу; sync дополнит свежими данными
+            // через второй doLocal() в .then() (idempotent через isSameDayHydratedContent
+            // фильтр в setDay).
+            doLocal();
+
             if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
                 if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true) {
                     // 🔒 Блокируем события heys:day-updated во время синхронизации
@@ -3293,16 +3303,11 @@
                             doLocal();
                         })
                         .catch((err) => {
-                            // Нет сети или ошибка — загружаем из локального кэша
+                            // Нет сети или ошибка — данные уже показаны из LS выше
                             isSyncingRef.current = false;
                             console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
-                            doLocal();
                         });
-                } else {
-                    doLocal();
                 }
-            } else {
-                doLocal();
             }
 
             return () => {
