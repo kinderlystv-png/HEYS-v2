@@ -4016,6 +4016,120 @@
         });
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // 📅 Phase 5 (2026-05-30): Longitudinal awareness
+    //
+    // Weekly aggregation + previous-day context injection.
+    // Engine читает вчерашний log и эффективно избегает повторов
+    // советов которые юзер игнорил, поощряет паттерны успешного
+    // engagement.
+    // ═══════════════════════════════════════════════════════════════
+
+    const WEEKLY_TRACE_LOG_KEY = 'heys_advice_trace_week_v1';
+    const PREVIOUS_DAYS_CONTEXT_WINDOW = 7; // дней для weekIgnored
+
+    function getYesterdayDateIso(today) {
+        const safeToday = today || new Date().toISOString().slice(0, 10);
+        const d = new Date(safeToday);
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().slice(0, 10);
+    }
+
+    /**
+     * Извлекает advice IDs показанные/проигнорированные в данном daily log.
+     * @param {Object} log — daily trace log object
+     * @returns {{shown: Set<string>, ignored: Set<string>}}
+     */
+    function collectAdviceIdsFromLog(log) {
+        const shown = new Set();
+        const ignored = new Set();
+        const reactedTo = new Set(); // получили click/read/positive/negative/hidden
+
+        (log?.entries || []).forEach(entry => {
+            if (entry?.type !== 'event') return;
+            const adviceId = entry?.payload?.adviceId;
+            if (!adviceId) return;
+            const evt = entry.eventType;
+
+            if (evt === 'shown') shown.add(adviceId);
+            if (evt === 'click' || evt === 'manual_click' || evt === 'read'
+                || evt === 'positive' || evt === 'negative' || evt === 'hidden'
+                || evt === 'scheduled') {
+                reactedTo.add(adviceId);
+            }
+        });
+
+        // ignored = shown - reactedTo
+        shown.forEach(id => { if (!reactedTo.has(id)) ignored.add(id); });
+
+        return { shown, ignored };
+    }
+
+    function getYesterdayAdviceContext(today) {
+        const yesterdayDate = getYesterdayDateIso(today);
+        const yesterdayLog = getDailyAdviceTraceLog(yesterdayDate);
+        return collectAdviceIdsFromLog(yesterdayLog);
+    }
+
+    /**
+     * Aggregated weekly trace — agregates last N daily logs.
+     * Counts per-rule shown/ignored, top blockers, silent modules.
+     * Idempotent — может вызываться много раз.
+     */
+    function rollupWeeklyAdviceTrace(referenceDate) {
+        const today = referenceDate || new Date().toISOString().slice(0, 10);
+        const weekIgnoredCounts = {};
+        const weekShownCounts = {};
+        const silentModulesCounts = {};
+        const blockerCounts = {};
+
+        for (let i = 0; i < PREVIOUS_DAYS_CONTEXT_WINDOW; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const dayIso = d.toISOString().slice(0, 10);
+            const log = getDailyAdviceTraceLog(dayIso);
+            const { shown, ignored } = collectAdviceIdsFromLog(log);
+            shown.forEach(id => { weekShownCounts[id] = (weekShownCounts[id] || 0) + 1; });
+            ignored.forEach(id => { weekIgnoredCounts[id] = (weekIgnoredCounts[id] || 0) + 1; });
+            (log?.entries || []).forEach(entry => {
+                if (entry?.type !== 'snapshot') return;
+                (entry?.payload?.silentModules || []).forEach(m => {
+                    silentModulesCounts[m] = (silentModulesCounts[m] || 0) + 1;
+                });
+                (entry?.payload?.topBlockers || []).forEach(b => {
+                    blockerCounts[b.code] = (blockerCounts[b.code] || 0) + (b.count || 1);
+                });
+            });
+        }
+
+        const rollup = {
+            weekStart: (() => {
+                const d = new Date(today);
+                d.setDate(d.getDate() - PREVIOUS_DAYS_CONTEXT_WINDOW + 1);
+                return d.toISOString().slice(0, 10);
+            })(),
+            weekEnd: today,
+            weekShownCounts,
+            weekIgnoredCounts,
+            silentModulesCounts,
+            blockerCounts,
+            updatedAt: Date.now()
+        };
+
+        try { setAdviceTraceStoreValue(WEEKLY_TRACE_LOG_KEY, rollup); } catch (e) { /* noop */ }
+        return rollup;
+    }
+
+    function getWeeklyAdviceTrace(referenceDate) {
+        const cached = getAdviceTraceStoreValue(WEEKLY_TRACE_LOG_KEY, null);
+        const today = referenceDate || new Date().toISOString().slice(0, 10);
+        // Если кеш устарел (>4ч) или другой день — пересчитать
+        if (!cached || cached.weekEnd !== today || (Date.now() - (cached.updatedAt || 0) > 4 * 3600 * 1000)) {
+            return rollupWeeklyAdviceTrace(today);
+        }
+        return cached;
+    }
+
     function buildAdviceTraceFingerprint(trace) {
         if (!trace) return 'trace:none';
         const payload = {
@@ -6659,6 +6773,26 @@
                 return window.HEYS?.adviceExperiments?.getCurrentExperimentMeta?.() || null;
             } catch (e) { return null; }
         })();
+
+        // 📅 Phase 5.2 (2026-05-30): Longitudinal context injection.
+        // Engine читает вчерашний log и weekly aggregation чтобы:
+        //   • не повторять советы которые юзер игнорировал вчера (-5pt smart score)
+        //   • temporary suppress правила игнорируемые > 5× за неделю (3 дня)
+        //   • boost'ить advice IDs которые получили positive reaction вчера
+        // Используется в sortBySmartScore через ctx.yesterdayIgnoredIds.
+        try {
+            const today = ctx?.day?.date || new Date().toISOString().slice(0, 10);
+            const yesterdayCtx = getYesterdayAdviceContext(today);
+            const weekly = getWeeklyAdviceTrace(today);
+            if (yesterdayCtx && ctx) {
+                ctx.yesterdayShownIds = yesterdayCtx.shown;
+                ctx.yesterdayIgnoredIds = yesterdayCtx.ignored;
+            }
+            if (weekly && ctx) {
+                ctx.weekIgnoredCounts = weekly.weekIgnoredCounts;
+                ctx.weekShownCounts = weekly.weekShownCounts;
+            }
+        } catch (e) { /* noop — Phase 5 context optional */ }
 
         const adviceTrace = {
             version: 'advice-trace-v2',
