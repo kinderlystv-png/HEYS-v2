@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.3d337f84",
+      "buildHash": "3d337f84",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Pollution hardening Wave 4: 2 финальных edge-case fix'а",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Закрыты последние мелкие race window'а при switch'е куратора",
+          "description": "Четвёртый аудит вглубь нашёл 2 точечных vectors: (1) recalculate миссий в gamification запускался через requestIdleCallback и мог сработать после старта switch'а, прочитав state старого клиента — добавлен guard внутри callback; (2) Messenger FAB при курaторской сессии использовал heys_last_client_id как fallback к currentClientId, что могло привести к запросу счётчика unread для stale клиента — fallback убран, при null currentClientId возвращаем 0. Refactor 15+ unscoped writers оказался не нужен (HEYS.store.set уже auto-scope'ит ключи). E2E assertions отложены до настройки test credentials в окружении."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.dd3378f4",
       "buildHash": "dd3378f4",
       "date": "2026-05-30",
