@@ -341,6 +341,7 @@ export const LEGACY_GENERATORS = {
             'apps/web/advice/_evidence.js',
             'apps/web/advice/_commitments.js',
             'apps/web/advice/_experiments.js',
+            'apps/web/advice/_actions.js',
             'apps/web/advice/_outcomes.js',
             'apps/web/advice/_core.js',
             'apps/web/advice/_nutrition.js',

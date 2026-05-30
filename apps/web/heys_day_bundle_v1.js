@@ -1340,6 +1340,11 @@
 
     function renderMedicalDisclaimer(React, onAccept) {
         if (isMedicalDisclaimerAccepted()) return null;
+        // 🎨 Phase A.7 (2026-05-30): explicit color: inherit для совместимости
+        // с dark theme. Background rgba transparent overlay работает на любом
+        // фоне, но без `color: inherit` browser default button text может быть
+        // black на dark → invisible. Inherit'им text color от родителя advice
+        // drawer (который уже theme-aware).
         return React.createElement('div', {
             className: 'advice-medical-disclaimer',
             style: {
@@ -1349,12 +1354,13 @@
                 padding: '10px 12px',
                 margin: '0 0 12px 0',
                 fontSize: '12px',
-                lineHeight: '1.45'
+                lineHeight: '1.45',
+                color: 'inherit'
             }
         },
-            React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px' } },
+            React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px', color: 'inherit' } },
                 '⚕️ Важно про советы'),
-            React.createElement('div', { style: { opacity: 0.9 } },
+            React.createElement('div', { style: { opacity: 0.9, color: 'inherit' } },
                 'Все советы здесь основаны на peer-reviewed research (ESPEN, ACSM, WHO, EFSA и meta-analyses), но не заменяют консультацию врача. При хронических заболеваниях, беременности, приёме лекарств — сверяйся с врачом или диетологом.'),
             React.createElement('button', {
                 onClick: (e) => { e.stopPropagation(); acceptMedicalDisclaimer(); if (onAccept) onAccept(); },
@@ -1363,7 +1369,8 @@
                     background: 'rgba(255,200,100,0.25)',
                     border: '1px solid rgba(255,200,100,0.5)',
                     borderRadius: '6px', cursor: 'pointer',
-                    fontSize: '12px', fontWeight: 500
+                    fontSize: '12px', fontWeight: 500,
+                    color: 'inherit'  // dark-theme safe
                 }
             }, 'Понятно, дальше не показывать')
         );

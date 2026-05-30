@@ -13,6 +13,7 @@ const modules = [
     { file: 'advice/_evidence.js', label: 'advice/_evidence.js' },
     { file: 'advice/_commitments.js', label: 'advice/_commitments.js' },
     { file: 'advice/_experiments.js', label: 'advice/_experiments.js' },
+    { file: 'advice/_actions.js', label: 'advice/_actions.js' },
     { file: 'advice/_outcomes.js', label: 'advice/_outcomes.js' },
     { file: 'advice/_core.js', label: 'advice/_core.js' },
     { file: 'advice/_nutrition.js', label: 'advice/_nutrition.js' },

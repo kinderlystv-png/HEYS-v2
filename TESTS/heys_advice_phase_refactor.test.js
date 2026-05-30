@@ -357,6 +357,43 @@ describe('Phase 5 — Longitudinal awareness', () => {
     });
 });
 
+describe('Phase B.1+B.2 — In-card action handlers', () => {
+    it('window.HEYS.adviceActions API существует', () => {
+        expect(window.HEYS.adviceActions).toBeDefined();
+        expect(typeof window.HEYS.adviceActions.execute).toBe('function');
+        expect(typeof window.HEYS.adviceActions.register).toBe('function');
+        expect(typeof window.HEYS.adviceActions.list).toBe('function');
+        expect(typeof window.HEYS.adviceActions.has).toBe('function');
+    });
+
+    it('Built-in handlers зарегистрированы', () => {
+        const list = window.HEYS.adviceActions.list();
+        expect(list).toContain('openSupplementsCourse');
+        expect(list).toContain('addMealProduct');
+        expect(list).toContain('logWaterGlass');
+        expect(list).toContain('openHabitTracker');
+        expect(list).toContain('openProfile');
+    });
+
+    it('execute() с unknown handler возвращает false', () => {
+        const advice = { id: 'test', action: { primary: { handler: 'nonexistent', label: 'X' } } };
+        expect(window.HEYS.adviceActions.execute(advice)).toBe(false);
+    });
+
+    it('execute() без action.primary возвращает false', () => {
+        const advice = { id: 'test' };
+        expect(window.HEYS.adviceActions.execute(advice)).toBe(false);
+    });
+
+    it('register() добавляет custom handler', () => {
+        let called = false;
+        window.HEYS.adviceActions.register('test_handler', () => { called = true; return true; });
+        const advice = { id: 'test', action: { primary: { handler: 'test_handler', label: 'X' } } };
+        expect(window.HEYS.adviceActions.execute(advice)).toBe(true);
+        expect(called).toBe(true);
+    });
+});
+
 describe('Phase 6 — Medical disclaimer', () => {
     it('LS key heys_advice_disclaimer_accepted_v1 persists state', () => {
         localStorage.setItem('heys_advice_disclaimer_accepted_v1', '1');
