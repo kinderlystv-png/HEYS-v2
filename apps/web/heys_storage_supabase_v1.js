@@ -13635,6 +13635,46 @@
   };
 
   /**
+   * 🚀 Bulk approve массива pending-заявок одной RPC.
+   * Сервер атомарно (per-row try/catch) одобряет все pending'и, переиспользуя
+   * publish_shared_product_by_curator. 30 заявок ≈ 500ms вместо 60-90 сек
+   * sequential approve.
+   * @param {Array<{id:string}>} pendings - массив pending-объектов (нужен только .id)
+   * @returns {Promise<{success:boolean, approved:int, existing:int, already_moderated:int, failed:int, errors:Array, total:int, error?:any}>}
+   */
+  cloud.approvePendingProductsBulk = async function (pendings) {
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+    const curatorId = user?.id;
+    if (!curatorId) {
+      return { success: false, error: 'Not authenticated as curator' };
+    }
+    const ids = (pendings || []).map(p => p?.id).filter(Boolean);
+    if (ids.length === 0) {
+      return { success: true, approved: 0, existing: 0, already_moderated: 0, failed: 0, errors: [], total: 0 };
+    }
+
+    try {
+      const { data, error } = await YandexAPI.rpc('approve_pending_products_bulk', {
+        p_curator_id: curatorId,
+        p_pending_ids: ids,
+      });
+      if (error) {
+        err('[SHARED PRODUCTS] Bulk approve error:', error);
+        return { success: false, error };
+      }
+      // Инвалидируем shared cache — могут быть новые published products.
+      _sharedProductsCacheTime = 0;
+      // Возвращаем серверный summary as-is.
+      return data || { success: false, error: 'Empty response' };
+    } catch (e) {
+      err('[SHARED PRODUCTS] Bulk approve unexpected error:', e);
+      return { success: false, error: e.message };
+    }
+  };
+
+  /**
    * Отклонить pending-заявку
    * @param {string} pendingId - ID заявки
    * @param {string} reason - Причина отклонения

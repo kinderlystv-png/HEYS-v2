@@ -942,6 +942,8 @@
     function ModerationTab({ clients }) {
         const [pending, setPending] = React.useState([]);
         const [loading, setLoading] = React.useState(true);
+        // Bulk approve: null когда idle, объект { total, done } во время обработки.
+        const [bulkProgress, setBulkProgress] = React.useState(null);
 
         const load = React.useCallback(async () => {
             setLoading(true);
@@ -995,6 +997,61 @@
             }
         };
 
+        // Bulk approve: батчами по 10, чтобы был визуальный прогресс
+        // (BATCH=10 чтобы 30 заявок → 3 шага ≈ 600-900мс, юзер видит counter).
+        const approveAllPending = async () => {
+            if (pending.length === 0 || bulkProgress) return;
+            const confirmed = window.confirm(`Одобрить все ${pending.length} заявок? Дубликаты по fingerprint будут помечены approved без повторного INSERT.`);
+            if (!confirmed) return;
+
+            const BATCH_SIZE = 10;
+            const all = pending.slice();
+            let totalApproved = 0, totalExisting = 0, totalRace = 0, totalFailed = 0;
+            const allErrors = [];
+            setBulkProgress({ total: all.length, done: 0 });
+            try {
+                for (let i = 0; i < all.length; i += BATCH_SIZE) {
+                    const chunk = all.slice(i, i + BATCH_SIZE);
+                    const res = await window.HEYS?.cloud?.approvePendingProductsBulk?.(chunk);
+                    if (!res || res.success === false) {
+                        const msg = res?.error?.message || res?.error || 'неизвестная ошибка';
+                        window.HEYS?.Toast?.error?.('Bulk-approve ошибка: ' + msg);
+                        break;
+                    }
+                    totalApproved += res.approved || 0;
+                    totalExisting += res.existing || 0;
+                    totalRace += res.already_moderated || 0;
+                    totalFailed += res.failed || 0;
+                    if (Array.isArray(res.errors)) allErrors.push(...res.errors);
+
+                    // Удаляем из UI обработанные ids (всё кроме failed)
+                    const failedIds = new Set((res.errors || []).map(e => e?.id).filter(Boolean));
+                    const processedIds = new Set(chunk.map(c => c.id).filter(id => !failedIds.has(id)));
+                    setPending(prev => prev.filter(p => !processedIds.has(p.id)));
+                    setBulkProgress({ total: all.length, done: Math.min(i + BATCH_SIZE, all.length) });
+                }
+            } catch (e) {
+                window.HEYS?.Toast?.error?.('Bulk-approve упал: ' + (e?.message || e));
+            } finally {
+                setBulkProgress(null);
+                notifyUpdated();
+            }
+
+            // Итоговый toast
+            const parts = [];
+            if (totalApproved > 0) parts.push(`✅ одобрено ${totalApproved}`);
+            if (totalExisting > 0) parts.push(`ℹ️ уже в базе ${totalExisting}`);
+            if (totalRace > 0) parts.push(`⚠️ обработано другим куратором ${totalRace}`);
+            if (totalFailed > 0) parts.push(`❌ ошибок ${totalFailed}`);
+            const summary = parts.length > 0 ? parts.join(', ') : 'нечего обрабатывать';
+            if (totalFailed === 0) {
+                window.HEYS?.Toast?.success?.(`Готово: ${summary}`);
+            } else {
+                window.HEYS?.Toast?.warning?.(`С ошибками: ${summary}`);
+                console.warn('[ModerationTab] bulk approve errors:', allErrors);
+            }
+        };
+
         const rejectPending = async (item) => {
             const reason = prompt('Причина отклонения (опционально):');
             if (reason === null) return;
@@ -1042,6 +1099,33 @@
         }
 
         return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+            // Bulk-approve панель: счётчик заявок + кнопка «Одобрить все».
+            React.createElement('div', {
+                style: {
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    background: '#f1f5f9', borderRadius: 10, padding: '10px 14px', gap: 12,
+                    border: '1px solid rgba(148,163,184,0.25)'
+                }
+            },
+                React.createElement('div', { style: { fontSize: 13, color: '#475569' } },
+                    bulkProgress
+                        ? `Обрабатываю ${bulkProgress.done}/${bulkProgress.total}...`
+                        : `Заявок на модерацию: ${pending.length}`
+                ),
+                React.createElement('button', {
+                    onClick: approveAllPending,
+                    disabled: !!bulkProgress || pending.length === 0,
+                    title: 'Одобрить все заявки сразу',
+                    style: {
+                        padding: '8px 14px', borderRadius: 8, border: 'none',
+                        background: bulkProgress ? '#cbd5e1' : '#16a34a',
+                        color: '#fff', fontWeight: 600, fontSize: 13,
+                        cursor: bulkProgress ? 'wait' : 'pointer',
+                        opacity: pending.length === 0 ? 0.5 : 1,
+                        display: 'flex', alignItems: 'center', gap: 6
+                    }
+                }, bulkProgress ? '⏳ Обрабатываю...' : `✅ Одобрить все (${pending.length})`)
+            ),
             pending.map(item => {
                 const p = item.product_data || {};
                 const clientName = clientMap[item.client_id] || item.client_id?.slice(0, 8) || '—';
@@ -1077,19 +1161,23 @@
                         React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0 } },
                             React.createElement('button', {
                                 onClick: () => approvePending(item),
-                                title: 'Одобрить',
+                                disabled: !!bulkProgress,
+                                title: bulkProgress ? 'Идёт массовое одобрение' : 'Одобрить',
                                 style: {
                                     width: 36, height: 36, borderRadius: 8, border: 'none',
-                                    background: '#dcfce7', cursor: 'pointer', fontSize: 16,
+                                    background: '#dcfce7', cursor: bulkProgress ? 'wait' : 'pointer', fontSize: 16,
+                                    opacity: bulkProgress ? 0.5 : 1,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }
                             }, '✅'),
                             React.createElement('button', {
                                 onClick: () => rejectPending(item),
-                                title: 'Отклонить',
+                                disabled: !!bulkProgress,
+                                title: bulkProgress ? 'Идёт массовое одобрение' : 'Отклонить',
                                 style: {
                                     width: 36, height: 36, borderRadius: 8, border: 'none',
-                                    background: '#fee2e2', cursor: 'pointer', fontSize: 16,
+                                    background: '#fee2e2', cursor: bulkProgress ? 'wait' : 'pointer', fontSize: 16,
+                                    opacity: bulkProgress ? 0.5 : 1,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }
                             }, '❌')
