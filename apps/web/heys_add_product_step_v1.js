@@ -5529,7 +5529,14 @@ NOVA: 1
                     } catch (_) { /* noop */ }
                     try {
                       const bc = new BroadcastChannel('heys_pending_products');
-                      bc.postMessage({ type: 'pending-created', at: Date.now() });
+                      // 🛡️ 2026-05-30 Wave 3 audit (G2): добавляем clientId в payload
+                      // чтобы receiver в другой tab мог фильтровать чужие события.
+                      // Без этого Tab A постит для clientA, Tab B (другой client) применит
+                      // как-будто для своего.
+                      const _ownerCid = (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function')
+                        ? HEYS.cloud.getCurrentClientId()
+                        : (window.HEYS && window.HEYS.currentClientId) || null;
+                      bc.postMessage({ type: 'pending-created', clientId: _ownerCid, at: Date.now() });
                       setTimeout(() => { try { bc.close(); } catch (_) { /* noop */ } }, 200);
                     } catch (_) { /* BroadcastChannel может отсутствовать в старых браузерах */ }
                   } else if (status === 'exists') {

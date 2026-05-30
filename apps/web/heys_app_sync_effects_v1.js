@@ -19,6 +19,22 @@
             ]);
             window.addEventListener('storage', (e) => {
                 if (!e || !TOMBSTONE_LS_KEYS.has(e.key)) return;
+                // 🛡️ 2026-05-30 Wave 3 audit (G1): cross-tab tombstone reload guard.
+                // Storage event fires в other tabs того же origin. Если Tab A active с
+                // clientA пишет heys_deleted_ids, и Tab B active с clientB слушает —
+                // tombstones клиента A не должны применяться к клиенту B. Без этого
+                // guard'а UI клиента B "забывает" продукты которые юзер другого клиента
+                // удалил.
+                // Простой эвристический guard: если в Tab B активен switch (флаг
+                // _switchClientInProgress) — skip reload. Полное решение через
+                // scoping heys_<clientId>_deleted_ids — отдельный PR (refactor unscoped
+                // writers).
+                try {
+                    if (window.HEYS?.cloud?._switchClientInProgress === true) {
+                        console.info('[HEYS.sync] 🪦 multi-tab tombstone reload skipped: switch in progress (' + e.key + ')');
+                        return;
+                    }
+                } catch (_) { /* noop */ }
                 try {
                     if (typeof window.HEYS?.deletedProducts?._reloadFromStorage === 'function') {
                         window.HEYS.deletedProducts._reloadFromStorage();

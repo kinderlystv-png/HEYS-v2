@@ -164,11 +164,11 @@ apps/web/heys_planning_tasks_v1.js:2295
 apps/web/heys_platform_apis_v1.js:177
 apps/web/heys_platform_apis_v1.js:581
 apps/web/heys_predictive_insights_v1.js:48
-apps/web/heys_products_overlay_v1.js:510
-apps/web/heys_products_overlay_v1.js:930
-apps/web/heys_products_overlay_v1.js:931
-apps/web/heys_products_overlay_v1.js:932
-apps/web/heys_products_overlay_v1.js:991
+apps/web/heys_products_overlay_v1.js:527
+apps/web/heys_products_overlay_v1.js:947
+apps/web/heys_products_overlay_v1.js:948
+apps/web/heys_products_overlay_v1.js:949
+apps/web/heys_products_overlay_v1.js:1008
 apps/web/heys_profile_step_v1.js:1635
 apps/web/heys_profile_step_v1.js:1039
 apps/web/heys_profile_step_v1.js:1188

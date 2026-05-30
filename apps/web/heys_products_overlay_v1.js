@@ -167,6 +167,23 @@
     if (!Array.isArray(incomingRows)) return { applied: false, reason: 'not-array' };
     const source = (opts && opts.source) || 'unknown';
 
+    // 🛡️ 2026-05-30 Wave 3 audit (G11): bootstrap race window guard.
+    // applyCloudSnapshot пишет overlay в LS через writeRaw, и если currentClientId
+    // ещё null/undefined в момент bootstrap (race между reload и auth_init →
+    // setCurrentClientId), снапшот может попасть в unscoped key и потом сcontaminated
+    // ru при следующем write. Защищаемся: skip apply пока clientId не finalized.
+    var _currentCid = null;
+    try {
+      _currentCid = (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function')
+        ? HEYS.cloud.getCurrentClientId()
+        : (HEYS.currentClientId || null);
+    } catch (_) { /* noop */ }
+    if (!_currentCid) {
+      // Caller (cloud-sync bootstrap) сам должен retry после установки currentClientId.
+      console.warn('[OverlayStore] applyCloudSnapshot deferred — currentClientId not set yet (source=' + source + ')');
+      return { applied: false, reason: 'no-current-client', deferred: true };
+    }
+
     // 1. Dedup incoming TypeA по shared_origin_id.
     const seenSO = new Set();
     let deduped = incomingRows.filter(function (r) {
