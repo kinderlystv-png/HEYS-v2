@@ -5881,6 +5881,26 @@
             const evidence = buildAdviceEvidence(advice, ctx, signals);
             if (!evidence) return advice;
 
+            // 🔬 Phase 1.2 (2026-05-30): merge evidence KB поверх runtime science meta.
+            // Если для advice.id есть peer-reviewed citation в _evidence.js KB —
+            // используем его как authoritative source. Иначе остаётся PI-registry-based
+            // science (через mapAdviceToScienceKeys). UI рендерит через
+            // expertMeta.science.{evidenceLevel, topic, rationale} (см. _advice.js:239-258).
+            let mergedScience = evidence.science;
+            const kbAdvice = window.HEYS?.adviceEvidence?.getAdvice?.(advice.id);
+            if (kbAdvice) {
+                mergedScience = {
+                    ...mergedScience,
+                    evidenceLevel: kbAdvice.evidenceLevel,
+                    topic: kbAdvice.topic,
+                    rationale: kbAdvice.rationale,
+                    sources: kbAdvice.sources,
+                    guideline_ref: kbAdvice.guideline_ref,
+                    not_apply_when: kbAdvice.not_apply_when
+                };
+            }
+            const kbSourceCount = (kbAdvice?.sources || []).length;
+
             return {
                 ...advice,
                 priority: Math.max(0, (advice.priority || 0) - evidence.priorityBoost),
@@ -5890,10 +5910,10 @@
                 expertMeta: {
                     whyNow: evidence.whyNow,
                     evidenceScore: evidence.evidenceScore,
-                    sourceCount: evidence.sourceCount,
+                    sourceCount: (evidence.sourceCount || 0) + kbSourceCount,
                     actionNow: evidence.actionNow,
                     theme: evidence.theme,
-                    science: evidence.science,
+                    science: mergedScience,
                     uncertainty: evidence.uncertainty,
                     causal: evidence.causal,
                     responseMemory: evidence.responseMemory,

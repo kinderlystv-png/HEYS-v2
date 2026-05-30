@@ -335,6 +335,10 @@ export const LEGACY_GENERATORS = {
         script: 'apps/web/scripts/bundle-advice.cjs',
         output: 'apps/web/heys_advice_bundle_v1.js',
         sources: [
+            // _evidence.js должен загружаться ПЕРЕД _core.js — он populate'ит
+            // window.HEYS.adviceEvidence, который _core.js использует
+            // в enrichAdvicesWithExpertContext (Phase 1.2).
+            'apps/web/advice/_evidence.js',
             'apps/web/advice/_outcomes.js',
             'apps/web/advice/_core.js',
             'apps/web/advice/_nutrition.js',

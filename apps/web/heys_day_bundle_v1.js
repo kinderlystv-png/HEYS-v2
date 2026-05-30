@@ -250,8 +250,47 @@
             ),
             expertMeta.science && React.createElement('div', { className: 'advice-expert-evidence__block' },
                 React.createElement('div', { className: 'advice-expert-evidence__label' }, 'На что опирается совет'),
-                React.createElement('div', { className: 'advice-expert-evidence__text' }, `${getScienceEvidenceLabel(expertMeta.science.evidenceLevel)} · ${expertMeta.science.topic}`)
+                React.createElement('div', { className: 'advice-expert-evidence__text' }, `${getScienceEvidenceLabel(expertMeta.science.evidenceLevel)} · ${expertMeta.science.topic}`),
+                // 🔬 Phase 1.3 (2026-05-30): peer-reviewed sources list из _evidence.js KB.
+                // Видимо только если populate'ено (Tier-A 30 советов). Compact rendering:
+                // "Sources: ESPEN-2022 guideline, Morton-2018 meta (n=1863, Br J Sports Med)"
+                Array.isArray(expertMeta.science.sources) && expertMeta.science.sources.length > 0 &&
+                    React.createElement('div', {
+                        className: 'advice-expert-evidence__sources',
+                        style: { marginTop: '6px', fontSize: '12px', opacity: 0.8 }
+                    },
+                        '📚 Sources: ',
+                        expertMeta.science.sources.slice(0, 3).map((src, i) => {
+                            const parts = [];
+                            if (src.org) parts.push(src.org);
+                            if (src.year) parts.push(src.year);
+                            const main = parts.join('-');
+                            const meta = [];
+                            if (src.type) meta.push(src.type);
+                            if (src.n) meta.push(`n=${src.n}`);
+                            if (src.journal) meta.push(src.journal);
+                            const metaStr = meta.length > 0 ? ` (${meta.join(', ')})` : '';
+                            return React.createElement('span', {
+                                key: `src_${i}`,
+                                className: 'advice-expert-evidence__source-item'
+                            }, (i > 0 ? '; ' : '') + main + metaStr);
+                        })
+                    )
             ),
+            // 🔬 Phase 1.3: "Не подходит когда" — edge cases / contraindications.
+            // Populate'ено только для Tier-A 30 советов (Phase 6 расширит).
+            Array.isArray(expertMeta.science?.not_apply_when) && expertMeta.science.not_apply_when.length > 0 &&
+                React.createElement('div', { className: 'advice-expert-evidence__block advice-expert-evidence__block--caution' },
+                    React.createElement('div', { className: 'advice-expert-evidence__label' }, '⚠️ Когда совет не подходит'),
+                    React.createElement('ul', { className: 'advice-expert-evidence__list' },
+                        expertMeta.science.not_apply_when.slice(0, 3).map((case_, i) =>
+                            React.createElement('li', {
+                                key: `caution_${i}`,
+                                className: 'advice-expert-evidence__list-item'
+                            }, case_)
+                        )
+                    )
+                ),
             (expertMeta.sourceCount || confidenceLabel) && React.createElement('div', { className: 'advice-expert-evidence__block' },
                 React.createElement('div', { className: 'advice-expert-evidence__label' }, 'Насколько это надёжно'),
                 React.createElement('div', { className: 'advice-expert-evidence__text' }, [
