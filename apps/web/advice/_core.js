@@ -1355,6 +1355,40 @@
     }
 
     /**
+     * 🧹 Phase B.6 (2026-05-31): cancel scheduled advice by ID.
+     * Используется когда юзер выполнил primary action до того как snooze
+     * re-trigger'нулся (например, click "→ Конструктор витаминов" cancel'ит
+     * предыдущий snooze на тот же совет).
+     * @param {string} adviceId
+     * @returns {number} количество удалённых entries
+     */
+    function cancelScheduledByAdviceId(adviceId) {
+        if (!adviceId) return 0;
+        try {
+            const HEYS = window.HEYS || {};
+            const U = HEYS.utils || {};
+            const scheduled = HEYS.store?.get
+                ? (HEYS.store.get(SCHEDULED_KEY, null) || [])
+                : (U.lsGet ? (U.lsGet(SCHEDULED_KEY, null) || []) : JSON.parse(localStorage.getItem(SCHEDULED_KEY) || 'null') || []);
+            // Совпадение либо по basis advice.id, либо по '<id>_scheduled' suffix
+            // (см. getScheduledAdvices line ~1386).
+            const remaining = scheduled.filter(s => {
+                const id = s?.advice?.id || '';
+                return id !== adviceId && id !== adviceId + '_scheduled';
+            });
+            const removed = scheduled.length - remaining.length;
+            if (removed > 0) {
+                if (HEYS.store?.set) {
+                    HEYS.store.set(SCHEDULED_KEY, remaining);
+                } else if (U.lsSet) {
+                    U.lsSet(SCHEDULED_KEY, remaining);
+                }
+            }
+            return removed;
+        } catch (e) { return 0; }
+    }
+
+    /**
      * Получает советы, которые пора показать
      * @returns {Array}
      */
@@ -7260,6 +7294,7 @@
         // Scheduling
         scheduleAdvice,
         getScheduledAdvices,
+        cancelScheduledByAdviceId,
         getScheduledCount,
         SNOOZE_OPTIONS,
         // Goal-specific

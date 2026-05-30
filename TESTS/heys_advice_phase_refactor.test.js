@@ -394,6 +394,47 @@ describe('Phase B.1+B.2 — In-card action handlers', () => {
     });
 });
 
+describe('Phase B.5+B.6 — Snooze cycle + cancellation', () => {
+    it('window.HEYS.advice.cancelScheduledByAdviceId существует', () => {
+        expect(typeof window.HEYS.advice.cancelScheduledByAdviceId).toBe('function');
+    });
+
+    it('cancelScheduledByAdviceId(null) возвращает 0 без throw', () => {
+        expect(window.HEYS.advice.cancelScheduledByAdviceId(null)).toBe(0);
+    });
+
+    it('window.HEYS.adviceActions.snooze tracker API существует', () => {
+        expect(typeof window.HEYS.adviceActions.snooze).toBe('function');
+        expect(typeof window.HEYS.adviceActions.getSnoozeCount).toBe('function');
+        expect(typeof window.HEYS.adviceActions.resetSnoozeCounter).toBe('function');
+    });
+
+    it('snooze() counter инкрементируется и escalates на 3', () => {
+        const advice = {
+            id: 'test_snooze_advice',
+            action: { snooze: { remindAfterMinutes: 30 } }
+        };
+        // Reset чтобы старый state не мешал
+        window.HEYS.adviceActions.resetSnoozeCounter('test_snooze_advice');
+        const r1 = window.HEYS.adviceActions.snooze(advice);
+        const r2 = window.HEYS.adviceActions.snooze(advice);
+        const r3 = window.HEYS.adviceActions.snooze(advice);
+        expect(r1.count).toBe(1);
+        expect(r2.count).toBe(2);
+        expect(r3.escalated).toBe(true); // 3rd snooze escalates
+        // After escalation counter reset
+        expect(window.HEYS.adviceActions.getSnoozeCount('test_snooze_advice')).toBe(0);
+    });
+
+    it('resetSnoozeCounter(id) обнуляет counter', () => {
+        const advice = { id: 'test_reset', action: { snooze: { remindAfterMinutes: 30 } } };
+        window.HEYS.adviceActions.snooze(advice);
+        expect(window.HEYS.adviceActions.getSnoozeCount('test_reset')).toBe(1);
+        window.HEYS.adviceActions.resetSnoozeCounter('test_reset');
+        expect(window.HEYS.adviceActions.getSnoozeCount('test_reset')).toBe(0);
+    });
+});
+
 describe('Phase 6 — Medical disclaimer', () => {
     it('LS key heys_advice_disclaimer_accepted_v1 persists state', () => {
         localStorage.setItem('heys_advice_disclaimer_accepted_v1', '1');

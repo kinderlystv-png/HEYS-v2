@@ -139,7 +139,92 @@
             console.warn('[advice.action] Unknown handler:', primary.handler);
             return false;
         }
-        return handler(primary.data || {}, advice);
+        const result = handler(primary.data || {}, advice);
+        // Phase B.6: автоматически cancel pending snooze для этого ID
+        // (юзер выполнил primary → no need to remind).
+        try {
+            if (result !== false && window.HEYS?.advice?.cancelScheduledByAdviceId) {
+                window.HEYS.advice.cancelScheduledByAdviceId(advice.id);
+            }
+        } catch (e) { /* noop */ }
+        // Reset snooze counter
+        try { snoozeCounters[advice.id] = 0; persistSnoozeCounters(); } catch (e) { /* noop */ }
+        return result;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🔁 Phase B.5+B.6 (2026-05-31): Smart snooze cycle с escalation
+    //
+    // Track snooze count per advice ID. После 3 snooze без compliance —
+    // эскалация: пометить как "не актуально" (через commitments.decline
+    // + cancel scheduled). Counter persisted в LS, reset при primary exec.
+    // ═══════════════════════════════════════════════════════════════
+
+    const SNOOZE_COUNTER_KEY = 'heys_advice_snooze_counters_v1';
+    const SNOOZE_ESCALATION_THRESHOLD = 3;
+    let snoozeCounters = (() => {
+        try { return JSON.parse(localStorage.getItem(SNOOZE_COUNTER_KEY) || '{}'); }
+        catch (e) { return {}; }
+    })();
+
+    function persistSnoozeCounters() {
+        try {
+            if (window.HEYS?.utils?.lsSet) {
+                window.HEYS.utils.lsSet(SNOOZE_COUNTER_KEY, snoozeCounters);
+            } else {
+                localStorage.setItem(SNOOZE_COUNTER_KEY, JSON.stringify(snoozeCounters));
+            }
+        } catch (e) { /* noop */ }
+    }
+
+    /**
+     * Smart snooze with escalation tracking.
+     * @param {Object} advice
+     * @returns {Object} { scheduled: boolean, count: number, escalated: boolean }
+     */
+    function snoozeWithEscalation(advice) {
+        if (!advice?.id) return { scheduled: false, count: 0, escalated: false };
+        const minutes = Number(advice?.action?.snooze?.remindAfterMinutes) || 120;
+        const prevCount = snoozeCounters[advice.id] || 0;
+        const newCount = prevCount + 1;
+        snoozeCounters[advice.id] = newCount;
+        persistSnoozeCounters();
+
+        // Escalation: после 3+ snooze без compliance — cancel и log obstacle
+        if (newCount >= SNOOZE_ESCALATION_THRESHOLD) {
+            try {
+                if (window.HEYS?.advice?.cancelScheduledByAdviceId) {
+                    window.HEYS.advice.cancelScheduledByAdviceId(advice.id);
+                }
+                if (window.HEYS?.adviceCommitments?.decline) {
+                    window.HEYS.adviceCommitments.decline(advice, 'repeated_snooze');
+                }
+                // Reset counter после escalation чтобы не блокировать навсегда
+                snoozeCounters[advice.id] = 0;
+                persistSnoozeCounters();
+            } catch (e) { /* noop */ }
+            return { scheduled: false, count: newCount, escalated: true };
+        }
+
+        // Normal snooze via existing scheduleAdvice infrastructure
+        try {
+            const scheduleFn = window.HEYS?.advice?.scheduleAdvice;
+            if (typeof scheduleFn === 'function') {
+                scheduleFn(advice, minutes);
+                return { scheduled: true, count: newCount, escalated: false };
+            }
+        } catch (e) { /* noop */ }
+        return { scheduled: false, count: newCount, escalated: false };
+    }
+
+    function getSnoozeCount(adviceId) {
+        return snoozeCounters[adviceId] || 0;
+    }
+
+    function resetSnoozeCounter(adviceId) {
+        if (adviceId) delete snoozeCounters[adviceId];
+        else snoozeCounters = {};
+        persistSnoozeCounters();
     }
 
     /**
@@ -169,8 +254,13 @@
         register: registerHandler,
         list: listHandlers,
         has: hasHandler,
+        // Phase B.5+B.6 snooze cycle
+        snooze: snoozeWithEscalation,
+        getSnoozeCount,
+        resetSnoozeCounter,
         // Direct exports для tests/debug
-        _HANDLERS: ADVICE_ACTION_HANDLERS
+        _HANDLERS: ADVICE_ACTION_HANDLERS,
+        _SNOOZE_ESCALATION_THRESHOLD: SNOOZE_ESCALATION_THRESHOLD
     };
 
 })();
