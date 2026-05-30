@@ -5,6 +5,14 @@ const ROOT = process.cwd();
 const OUT_FILE = path.join(ROOT, 'heys_advice_bundle_v1.js');
 
 const modules = [
+    // ⚠️ Этот список должен совпадать с scripts/legacy-bundle-config.mjs
+    // (LEGACY_GENERATORS.advice.sources). Разрыв двух конфигов уже приводил
+    // к bundle output без Phase 1 evidence (incident 2026-05-30).
+    // _evidence.js / _commitments.js / _experiments.js должны быть ПЕРЕД
+    // _core.js — они populate'ят window.HEYS.advice{Evidence,Commitments,Experiments}.
+    { file: 'advice/_evidence.js', label: 'advice/_evidence.js' },
+    { file: 'advice/_commitments.js', label: 'advice/_commitments.js' },
+    { file: 'advice/_experiments.js', label: 'advice/_experiments.js' },
     { file: 'advice/_outcomes.js', label: 'advice/_outcomes.js' },
     { file: 'advice/_core.js', label: 'advice/_core.js' },
     { file: 'advice/_nutrition.js', label: 'advice/_nutrition.js' },
