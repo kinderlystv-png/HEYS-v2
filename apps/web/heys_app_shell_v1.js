@@ -2355,14 +2355,21 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 haptic('light');
             };
 
-            if (HEYS?.cloud?.fetchDays && prefetchDates.length > 0) {
-                HEYS.cloud.fetchDays(prefetchDates)
-                    .then(() => applyDate())
-                    .catch(() => applyDate());
-                return;
-            }
-
+            // 🚀 2026-05-31: H1 layer-2 fix — мгновенный setSelectedDate.
+            // Раньше fetchDays(prefetchDates) блокировал applyDate до resolve
+            // (~1-5с на медленной сети / зависший RPC). Curator-сценарий:
+            // клик "Вчера" → header pill частично менялся (через side-effects),
+            // но selectedDate в App root оставался today → DayTab useEffect[date]
+            // не fired → meals залипали на сегодняшних. doLocal в useDaySyncEffects
+            // уже умеет показывать LS-snapshot мгновенно, fetchDays — оптимизация
+            // для prefetch соседних дней, не блокер UX.
             applyDate();
+
+            // Prefetch fire-and-forget — sync приносит свежие данные через
+            // heys:day-updated event'ы, doLocal внутри useDaySyncEffects их подберёт.
+            if (HEYS?.cloud?.fetchDays && prefetchDates.length > 0) {
+                HEYS.cloud.fetchDays(prefetchDates).catch(() => { /* noop — данные уже из LS */ });
+            }
         };
 
         const clientListMaxHeight = Math.max(120, clientDropdownMaxHeight - 128);
