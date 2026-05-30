@@ -339,6 +339,80 @@
                 { org: 'Buysse', year: 2014, type: 'review', journal: 'Sleep' }
             ],
             guideline_ref: 'Walker-2017'
+        },
+
+        // ─── SUPPLEMENTS / VITAMINS (Phase C.2 — 7) ────────────────
+        'supplements_personal_rec': {
+            evidenceLevel: 'B',
+            topic: 'targeted-supplementation',
+            rationale: 'Целенаправленная supplementation основанная на биомаркерах или risk factors (возраст, пол, сезон, активность) дает лучший effect-size чем generic multivitamin.',
+            sources: [
+                { org: 'Bird et al', year: 2017, type: 'review', journal: 'Nutrients' },
+                { org: 'Kantor et al', year: 2016, type: 'observational', journal: 'JAMA' }
+            ],
+            guideline_ref: 'Bird-2017',
+            not_apply_when: ['прием лекарств — проверь interactions с врачом', 'хронические заболевания почек/печени']
+        },
+        'iron_reminder': {
+            evidenceLevel: 'A',
+            topic: 'iron-needs',
+            rationale: 'Женщинам репродуктивного возраста требуется 18мг Fe/день vs 8мг для мужчин (FAO/WHO RDA). Дефицит — distalкая причина усталости и ухудшения когнитивных функций.',
+            sources: [
+                { org: 'WHO', year: 2011, type: 'guideline', topic: 'Iron requirements' },
+                { org: 'Pasricha et al', year: 2021, type: 'review', journal: 'Lancet' }
+            ],
+            guideline_ref: 'WHO-2011',
+            not_apply_when: ['гемохроматоз / повышенный ферритин', 'не принимать с кальцием одновременно']
+        },
+        'cycle_iron_important': {
+            evidenceLevel: 'A',
+            topic: 'menstrual-iron-loss',
+            rationale: 'В период менструации женщина теряет 30-80мг Fe через cycle. Без compensation → железо deficit anemia в 12-25% женщин репродуктивного возраста.',
+            sources: [
+                { org: 'Hallberg et al', year: 1991, type: 'observational', journal: 'Am J Clin Nutr' },
+                { org: 'Camaschella', year: 2015, type: 'review', journal: 'N Engl J Med' }
+            ],
+            guideline_ref: 'Hallberg-1991'
+        },
+        'supplements_iron_vitc_synergy': {
+            evidenceLevel: 'A',
+            topic: 'iron-vitamin-c-synergy',
+            rationale: 'Vitamin C 100мг с non-heme iron увеличивает absorption в 2-3 раза. Классический synergy биохимия (восстановление Fe3+ → Fe2+).',
+            sources: [
+                { org: 'Lynch & Cook', year: 1980, type: 'review', journal: 'Ann N Y Acad Sci' },
+                { org: 'Hallberg et al', year: 1989, type: 'RCT', journal: 'Am J Clin Nutr' }
+            ],
+            guideline_ref: 'Lynch-1980'
+        },
+        'supplements_dairy_iron_conflict': {
+            evidenceLevel: 'A',
+            topic: 'iron-calcium-conflict',
+            rationale: 'Кальций 300мг+ снижает Fe absorption на 50-60% при одновременном приёме. Разнести iron и dairy на 2+ часа.',
+            sources: [
+                { org: 'Hallberg et al', year: 1991, type: 'RCT', journal: 'Eur J Clin Nutr' },
+                { org: 'Hurrell & Egli', year: 2010, type: 'review', journal: 'Am J Clin Nutr' }
+            ],
+            guideline_ref: 'Hallberg-1991-Ca'
+        },
+        'supplements_coffee_minerals': {
+            evidenceLevel: 'B',
+            topic: 'caffeine-mineral-absorption',
+            rationale: 'Кофе/чай снижают non-heme iron absorption на 35-90% (полифенолы tannins связывают Fe). Также уменьшают Zn, Mg, Ca absorption.',
+            sources: [
+                { org: 'Morck et al', year: 1983, type: 'RCT', journal: 'Am J Clin Nutr' },
+                { org: 'Hurrell et al', year: 1999, type: 'review', journal: 'Am J Clin Nutr' }
+            ],
+            guideline_ref: 'Morck-1983'
+        },
+        'supplements_fat_meal_synergy': {
+            evidenceLevel: 'A',
+            topic: 'lipid-soluble-vitamins',
+            rationale: 'Lipid-soluble vitamins (A, D, E, K) требуют dietary fat для абсорпции — bioavailability +29-300% с meal containing 10+г fat.',
+            sources: [
+                { org: 'Borel et al', year: 2017, type: 'review', journal: 'Prog Lipid Res' },
+                { org: 'Mulligan & Bukrinsky', year: 2013, type: 'review', journal: 'Nutrients' }
+            ],
+            guideline_ref: 'Borel-2017'
         }
     };
 
