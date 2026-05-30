@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.f36df281",
+      "buildHash": "f36df281",
+      "date": "2026-05-30",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Bundle hash bump после deploy 1919f848 (no functional change)",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Vite пересобрал boot-core с новым hash, APP_VERSION/sw CACHE_VERSION/index.html синхронизированы",
+          "description": "Post-deploy bundle artifact'ы (no functional change). См. предыдущий entry 1919f848 для сути fix'а."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.1919f848",
       "buildHash": "1919f848",
       "date": "2026-05-30",
