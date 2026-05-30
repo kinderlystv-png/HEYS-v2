@@ -417,6 +417,111 @@
                 { org: 'Mulligan & Bukrinsky', year: 2013, type: 'review', journal: 'Nutrients' }
             ],
             guideline_ref: 'Borel-2017'
+        },
+
+        // ─── TIER-B baseline (Phase A.9 — 20) ──────────────────────
+        // Минимум level + summary + 1 source. Высокочастотные rules из
+        // typical logs для baseline UI evidence badge.
+
+        'post_training_undereating_critical': {
+            evidenceLevel: 'A', topic: 'anabolic-window',
+            rationale: 'Голодание после тренировки → catabolism, потеря MPS до 30-40%.',
+            sources: [{ org: 'Aragon & Schoenfeld', year: 2013, type: 'review', journal: 'J Int Soc Sports Nutr' }]
+        },
+        'training_strength_undereating': {
+            evidenceLevel: 'A', topic: 'strength-recovery',
+            rationale: 'После силовой недоедание ведёт к net muscle protein breakdown.',
+            sources: [{ org: 'Phillips & Van Loon', year: 2011, type: 'review', journal: 'J Sports Sci' }]
+        },
+        'training_cardio_undereating': {
+            evidenceLevel: 'B', topic: 'glycogen-replenishment',
+            rationale: 'Cardio + дефицит = неполная гликоген replete'+'ция → impaired next-session performance.',
+            sources: [{ org: 'Burke et al', year: 2017, type: 'review', journal: 'Int J Sport Nutr Exerc Metab' }]
+        },
+        'hard_workout_recovery': {
+            evidenceLevel: 'A', topic: 'recovery-protein',
+            rationale: 'Intense workout создаёт microdamage; protein 20-40г + carbs ускоряют recovery 24-72ч.',
+            sources: [{ org: 'Burke et al', year: 2017, type: 'review', journal: 'Int J Sport Nutr Exerc Metab' }]
+        },
+        'great_workout': {
+            evidenceLevel: 'B', topic: 'volume-intensity',
+            rationale: '45+ мин moderate-vigorous activity = effective training stimulus и cardiometabolic benefit.',
+            sources: [{ org: 'ACSM', year: 2018, type: 'guideline', topic: 'Physical Activity Guidelines' }]
+        },
+        'low_gi_great': {
+            evidenceLevel: 'A', topic: 'glycemic-index',
+            rationale: 'Low-GI diet снижает glucose excursion и improves cardiometabolic risk markers.',
+            sources: [{ org: 'Brand-Miller et al', year: 2009, type: 'meta-analysis', journal: 'Am J Clin Nutr' }]
+        },
+        'fiber_good': {
+            evidenceLevel: 'A', topic: 'fiber-benefits',
+            rationale: 'Достижение 25-35г fiber/день — independent predictor CVD mortality reduction.',
+            sources: [{ org: 'Reynolds et al', year: 2019, type: 'meta-analysis', journal: 'Lancet' }]
+        },
+        'fiber_per_meal_good': {
+            evidenceLevel: 'B', topic: 'fiber-distribution',
+            rationale: 'Fiber per meal 8+г = adequate satiety boost через CCK/GLP-1 release.',
+            sources: [{ org: 'Slavin', year: 2013, type: 'review', journal: 'Nutrients' }]
+        },
+        'meal_too_large': {
+            evidenceLevel: 'B', topic: 'large-meal-effects',
+            rationale: 'Meals > 800ккал → ↑postprandial inflammation, glycemic excursion, drowsiness.',
+            sources: [{ org: 'Margioris', year: 2009, type: 'review', journal: 'Curr Opin Clin Nutr Metab Care' }]
+        },
+        'meal_too_small': {
+            evidenceLevel: 'C', topic: 'minimum-meal-size',
+            rationale: 'Meals < 150ккал часто не triggerят satiety hormones — risk внеплановых перекусов.',
+            sources: [{ org: 'Leidy et al', year: 2015, type: 'review', journal: 'Am J Clin Nutr' }]
+        },
+        'empty_stomach_late': {
+            evidenceLevel: 'B', topic: 'fasting-window',
+            rationale: 'Длительное fasting вечером + nocturnal hypoglycemia risk → poor sleep + morning hunger.',
+            sources: [{ org: 'St-Onge et al', year: 2017, type: 'AHA-statement', journal: 'Circulation' }]
+        },
+        'harm_warning': {
+            evidenceLevel: 'B', topic: 'ultra-processed-food',
+            rationale: 'NOVA-4 ultra-processed > 20% kcal — associated с ↑CVD/T2D risk и weight gain.',
+            sources: [{ org: 'Monteiro et al', year: 2019, type: 'review', journal: 'Public Health Nutr' }]
+        },
+        'streak_3': {
+            evidenceLevel: 'B', topic: 'habit-formation',
+            rationale: 'Habit-forming start: 3 consecutive дней — significant в habit-strength curve.',
+            sources: [{ org: 'Lally et al', year: 2010, type: 'observational', journal: 'Eur J Soc Psychol' }]
+        },
+        'streak_7': {
+            evidenceLevel: 'B', topic: 'habit-stability',
+            rationale: 'Неделя consistent behavior = ≈25% completed к 66-day habit automaticity median.',
+            sources: [{ org: 'Lally et al', year: 2010, type: 'observational', journal: 'Eur J Soc Psychol' }]
+        },
+        'bedtime_undereating': {
+            evidenceLevel: 'B', topic: 'late-deficit',
+            rationale: 'Going to sleep с большим deficit → next-day morning hunger overcompensation.',
+            sources: [{ org: 'St-Onge et al', year: 2016, type: 'review', journal: 'Adv Nutr' }]
+        },
+        'emotional_screen_curfew': {
+            evidenceLevel: 'A', topic: 'blue-light-melatonin',
+            rationale: 'Blue light от экранов снижает melatonin на 23-50%; curfew 60мин до сна → normal latency.',
+            sources: [{ org: 'Chang et al', year: 2015, type: 'RCT', journal: 'Proc Natl Acad Sci' }]
+        },
+        'emotional_micro_break': {
+            evidenceLevel: 'B', topic: 'micro-breaks',
+            rationale: '1-2 мин micro-breaks каждые 60-90 мин снижают cumulative fatigue 20-25%.',
+            sources: [{ org: 'Sianoja et al', year: 2018, type: 'RCT', journal: 'J Occup Health Psychol' }]
+        },
+        'emotional_gratitude_log': {
+            evidenceLevel: 'A', topic: 'gratitude-intervention',
+            rationale: 'Daily gratitude journaling: +25% subjective wellbeing, better sleep quality (Emmons-2003 RCT).',
+            sources: [{ org: 'Emmons & McCullough', year: 2003, type: 'RCT', journal: 'J Pers Soc Psychol' }]
+        },
+        'emotional_social_anchor': {
+            evidenceLevel: 'A', topic: 'social-connection',
+            rationale: 'Strong social ties = -50% mortality risk (Holt-Lunstad meta n=308k).',
+            sources: [{ org: 'Holt-Lunstad et al', year: 2010, type: 'meta-analysis', journal: 'PLoS Medicine' }]
+        },
+        'rest_day_mobility': {
+            evidenceLevel: 'B', topic: 'mobility-recovery',
+            rationale: 'Short-duration stretching на rest-days улучшает ROM без strength impairment.',
+            sources: [{ org: 'Behm & Chaouachi', year: 2011, type: 'systematic-review', journal: 'Eur J Appl Physiol' }]
         }
     };
 
