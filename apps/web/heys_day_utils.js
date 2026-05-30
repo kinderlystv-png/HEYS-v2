@@ -1136,7 +1136,17 @@
           return { success: false, count: 0, products: [], error: 'BLOCKED_EMPTY_BASE' };
         }
 
-        const newProducts = Array.from(productsMap.values());
+        // Сохраняем existing products as-is + добавляем только новые restored.
+        // Раньше использовали productsMap.values() — Map keyed by name.toLowerCase()
+        // схлопывал legitimate дубликаты по lowercase-имени → newProducts.length
+        // становился меньше products.length. setAll-shrink-guard auto-tombstone'ил
+        // потерянные продукты и блокировал операцию.
+        // Incident 2026-05-30: у Александры 262 продукта в overlay, из которых 24
+        // дублировались по lowercase-name → восстановление падало BLOCKED.
+        const existingIds = new Set();
+        products.forEach((p) => { if (p?.id != null) existingIds.add(String(p.id)); });
+        const newAdditions = restored.filter((r) => r.id == null || !existingIds.has(String(r.id)));
+        const newProducts = [...products, ...newAdditions];
         if (newProducts.length < products.length * 0.5) {
           console.error(`[HEYS] ❌ RESTORE BLOCKED: новое кол-во (${newProducts.length}) < 50% от текущего (${products.length})`);
           return { success: false, count: 0, products: [], error: 'BLOCKED_DATA_LOSS' };
