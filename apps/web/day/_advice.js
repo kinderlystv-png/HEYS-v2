@@ -253,7 +253,7 @@
                 Array.isArray(expertMeta.science.sources) && expertMeta.science.sources.length > 0 &&
                     React.createElement('div', {
                         className: 'advice-expert-evidence__sources',
-                        style: { marginTop: '6px', fontSize: '12px', opacity: 0.8 }
+                        style: { marginTop: '6px', fontSize: '12px', opacity: 0.85 }
                     },
                         '📚 Sources: ',
                         expertMeta.science.sources.slice(0, 3).map((src, i) => {
@@ -266,10 +266,34 @@
                             if (src.n) meta.push(`n=${src.n}`);
                             if (src.journal) meta.push(src.journal);
                             const metaStr = meta.length > 0 ? ` (${meta.join(', ')})` : '';
-                            return React.createElement('span', {
-                                key: `src_${i}`,
-                                className: 'advice-expert-evidence__source-item'
-                            }, (i > 0 ? '; ' : '') + main + metaStr);
+                            // 🔬 Phase A.+ (2026-05-31): PubMed search link на каждый source.
+                            // Honest approach — search query вместо fabricated DOI.
+                            // Tooltip native browser title с full citation.
+                            // Pattern reuse из apps/web/insights/pi_ui_rings.js:112.
+                            const searchTerm = [src.org, src.year, src.journal, src.topic, src.title]
+                                .filter(Boolean).join(' ');
+                            const url = src.doi
+                                ? `https://doi.org/${src.doi}`
+                                : `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(searchTerm)}`;
+                            const tooltipFull = `${main}${metaStr}${src.title ? ' — ' + src.title : ''}\n🔗 Открыть в PubMed / DOI`;
+                            return React.createElement(React.Fragment, { key: `src_${i}` },
+                                (i > 0 ? '; ' : ''),
+                                React.createElement('a', {
+                                    href: url,
+                                    target: '_blank',
+                                    rel: 'noopener noreferrer',
+                                    title: tooltipFull,
+                                    onClick: (e) => e.stopPropagation(),
+                                    className: 'advice-expert-evidence__source-link',
+                                    style: {
+                                        color: 'inherit',
+                                        textDecoration: 'underline',
+                                        textDecorationStyle: 'dotted',
+                                        textUnderlineOffset: '2px',
+                                        cursor: 'pointer'
+                                    }
+                                }, main + metaStr + ' 🔗')
+                            );
                         })
                     )
             ),
