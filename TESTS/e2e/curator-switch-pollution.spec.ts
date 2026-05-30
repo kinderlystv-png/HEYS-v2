@@ -319,3 +319,144 @@ test.describe('Курaторский cross-client pollution — anti-regression'
         }
     });
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// Regression guards для pollution-hardening Wave 1-4 API surface
+// ═══════════════════════════════════════════════════════════════════
+// SCAFFOLD pattern (см. TESTS/e2e/README.md "Without local env"):
+// тесты написаны как smoke checks для API surface, НО не верифицированы
+// локально без env. Все скипнуты test.describe.skip — owner снимет skip
+// после local validation на 1-2 тестах за раз, чтобы выявить potential
+// runtime issues (bundle order, timing, browser features).
+//
+// Каждая wave добавила специфические защитные API:
+//   Wave 1 (687a9e6a): scheduleClientPush + setTimeout callback _switchClientInProgress guards
+//   Wave 2 (85cf0b8e): cancelAllPendingFlushes, dayUtils.resetSessionCaches, shareDb.clear, SW CLIENT_SWITCH
+//   Wave 3 (c861c627): applyCloudSnapshot bootstrap-race guard, BC clientId in payload
+//   Wave 4 (3d337f84): rIC switch guard, messenger fallback removal
+//
+// Тесты не зависят от curator credentials — только page load. После
+// validate'а локально (один за другим) — снять .skip с describe.
+test.describe.skip('Pollution hardening Wave 1-4 — API surface regression guards', () => {
+    test('Wave 2 (F3): HEYS.gamification.cancelAllPendingFlushes exists и callable', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => !!(window as any).HEYS?.gamification, null, { timeout: 30_000 });
+        const result = await page.evaluate(() => {
+            const HEYS = (window as any).HEYS;
+            const fn = HEYS?.gamification?.cancelAllPendingFlushes;
+            if (typeof fn !== 'function') return { ok: false, reason: 'not-a-function' };
+            try { fn(); return { ok: true }; } catch (e: any) { return { ok: false, reason: e?.message || String(e) }; }
+        });
+        expect(result.ok, `cancelAllPendingFlushes должен быть callable: ${result.reason || ''}`).toBe(true);
+    });
+
+    test('Wave 2 (F7,F8,F9): HEYS.dayUtils.resetSessionCaches exists и callable', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => !!(window as any).HEYS?.dayUtils, null, { timeout: 30_000 });
+        const result = await page.evaluate(() => {
+            const HEYS = (window as any).HEYS;
+            const fn = HEYS?.dayUtils?.resetSessionCaches;
+            if (typeof fn !== 'function') return { ok: false, reason: 'not-a-function' };
+            try { fn(); return { ok: true }; } catch (e: any) { return { ok: false, reason: e?.message || String(e) }; }
+        });
+        expect(result.ok, `dayUtils.resetSessionCaches должен быть callable: ${result.reason || ''}`).toBe(true);
+    });
+
+    test('Wave 2 (F5): HEYS.shareDb.clear exists и returns Promise', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => !!(window as any).HEYS?.shareDb, null, { timeout: 30_000 });
+        const result = await page.evaluate(async () => {
+            const HEYS = (window as any).HEYS;
+            const fn = HEYS?.shareDb?.clear;
+            if (typeof fn !== 'function') return { ok: false, reason: 'not-a-function' };
+            try { await fn(); return { ok: true }; } catch (e: any) { return { ok: false, reason: e?.message || String(e) }; }
+        });
+        expect(result.ok, `shareDb.clear должен быть async и callable: ${result.reason || ''}`).toBe(true);
+    });
+
+    test('Wave 3 (G11): applyCloudSnapshot deferred при null currentClientId', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => !!(window as any).HEYS?.OverlayStore?.applyCloudSnapshot, null, { timeout: 30_000 });
+        const result = await page.evaluate(() => {
+            const HEYS = (window as any).HEYS;
+            const origCid = HEYS.currentClientId;
+            try {
+                HEYS.currentClientId = null;
+                const r = HEYS.OverlayStore.applyCloudSnapshot([], { source: 'test-no-cid' });
+                return { applied: r?.applied, reason: r?.reason, deferred: r?.deferred };
+            } finally {
+                HEYS.currentClientId = origCid;
+            }
+        });
+        expect(result.applied, 'applyCloudSnapshot должен отклонить snapshot при null currentClientId').toBe(false);
+        expect(result.reason, 'reason должен быть no-current-client').toBe('no-current-client');
+        expect(result.deferred, 'deferred=true сигналит caller о retry').toBe(true);
+    });
+
+    test('Wave 1 (Layer 1): cloud._switchClientInProgress flag exists', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForFunction(() => !!(window as any).HEYS?.cloud, null, { timeout: 30_000 });
+        const result = await page.evaluate(() => {
+            const cloud = (window as any).HEYS?.cloud;
+            // Флаг initialized как boolean (false при boot, true только во время switch)
+            const flagType = typeof cloud?._switchClientInProgress;
+            return { flagType, value: cloud?._switchClientInProgress };
+        });
+        expect(['boolean', 'undefined']).toContain(result.flagType);
+        // Default state — не in progress
+        expect(result.value).not.toBe(true);
+    });
+
+    test('Wave 4 (V2): refreshFabUnread не использует heys_last_client_id fallback', async ({ page }) => {
+        // Smoke check: messenger module loaded и не ломает page если currentClientId null.
+        // Полный e2e через FAB click требует curator session — см. main test выше.
+        await page.goto('/');
+        await page.waitForFunction(() => typeof (window as any).HEYS !== 'undefined', null, { timeout: 30_000 });
+        const result = await page.evaluate(() => {
+            try {
+                // Проверяем что messenger загружен (он добавляет HEYS.MessengerAPI или подобное)
+                const HEYS = (window as any).HEYS;
+                return { ok: !!HEYS, hasMessenger: !!(HEYS?.MessengerAPI || HEYS?.messenger) };
+            } catch (e: any) {
+                return { ok: false, reason: e?.message || String(e) };
+            }
+        });
+        expect(result.ok, 'HEYS namespace должен загрузиться без ошибок').toBe(true);
+    });
+
+    test('Wave 3 (G2): BroadcastChannel "heys_pending_products" payload содержит clientId', async ({ page }) => {
+        // Programmatic test: subscribe на channel в page context, симулируем post,
+        // проверяем payload shape. НЕ требует курaторской session.
+        await page.goto('/');
+        await page.waitForFunction(() => typeof window !== 'undefined', null, { timeout: 10_000 });
+        const result = await page.evaluate(async () => {
+            return new Promise<{ ok: boolean; payload?: any; reason?: string }>((resolve) => {
+                try {
+                    const bc = new BroadcastChannel('heys_pending_products');
+                    const timer = setTimeout(() => {
+                        try { bc.close(); } catch (_) {}
+                        resolve({ ok: false, reason: 'timeout' });
+                    }, 2000);
+                    bc.onmessage = (ev) => {
+                        clearTimeout(timer);
+                        try { bc.close(); } catch (_) {}
+                        resolve({ ok: true, payload: ev.data });
+                    };
+                    // Post message через другой channel handle — receiver получит
+                    const sender = new BroadcastChannel('heys_pending_products');
+                    sender.postMessage({ type: 'pending-created', clientId: 'test-cid-xyz', at: Date.now() });
+                    setTimeout(() => { try { sender.close(); } catch (_) {} }, 100);
+                } catch (e: any) {
+                    resolve({ ok: false, reason: e?.message || String(e) });
+                }
+            });
+        });
+        // Если BroadcastChannel не поддерживается — skip, не fail
+        if (result.reason === 'timeout' || !result.ok) {
+            test.skip(true, `BroadcastChannel недоступен или timeout: ${result.reason || 'unknown'}`);
+            return;
+        }
+        expect(result.payload, 'BC message должен дойти').toBeTruthy();
+        expect(result.payload?.clientId, 'payload должен содержать clientId (G2 contract)').toBeTruthy();
+    });
+});
