@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.50dbc568",
+      "buildHash": "50dbc568",
+      "date": "2026-05-30",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Изоляция e2e Playwright тестов от prod (новый infra)",
+      "items": [
+        {
+          "type": "chore",
+          "title": "E2E тесты теперь работают с dedicated test clients (E2E-TestAlex/Popl), real Александра/Poplanton не trouchaются",
+          "description": "До этого тесты писали в real prod cloud, оставляя неотделимый residue. Теперь 2 dedicated test client'a + afterAll cleanup hook. См. TESTS/e2e/README.md."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.6c756f9d",
       "buildHash": "6c756f9d",
       "date": "2026-05-30",
