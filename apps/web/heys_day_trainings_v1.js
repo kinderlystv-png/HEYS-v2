@@ -2810,8 +2810,21 @@
           stress: rawT.stress ?? 0,
           comment: rawT.comment || '',
           strengthEntryMode: rawT.strengthEntryMode,
-          workoutLog: rawT.workoutLog
+          workoutLog: rawT.workoutLog,
+          fingersLog: rawT.fingersLog || null
         };
+
+        // 🤚 Fingers branch — рендерим компактный pill вместо обычной карточки.
+        // Click → открывает full-screen overlay через portal (heys_fingers_fullscreen_v1.js).
+        if (String(T.type) === 'fingers' && HEYS.Fingers?.renderPreviewPill) {
+          return React.createElement('div', { key: 'training-' + ti, className: 'compact-train-wrap' },
+            HEYS.Fingers.renderPreviewPill({
+              training: T,
+              dateKey: dateKey,
+              trainingIndex: ti
+            })
+          );
+        }
 
         const kcalZ = (i) => safeR0((+T.z[i] || 0) * (kcalMin?.[i] || 0));
         const total = safeR0(kcalZ(0) + kcalZ(1) + kcalZ(2) + kcalZ(3));

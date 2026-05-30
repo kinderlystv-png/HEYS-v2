@@ -30,6 +30,7 @@
   const PROGRAMS = [
     {
       id: 'beastmaker_1000_beginner',
+      intensity: 'moderate',
       name: 'Beastmaker 1000 — Beginner Loop',
       description: 'Стартовая программа: repeaters 7/3 × 6 на разных хватах. Подходит для V1-V4 и для возврата после паузы.',
       level: 'beginner',
@@ -47,6 +48,7 @@
     },
     {
       id: 'horst_max_hangs',
+      intensity: 'max',
       name: 'Eric Hörst — Max Hangs 10s × 5',
       description: 'Максимальная сила: 10 секунд виса с добавочным весом до failure ~12 сек, отдых 3 минуты, 4-5 подходов на хват.',
       level: 'intermediate',
@@ -64,6 +66,7 @@
     },
     {
       id: 'lopez_mr',
+      intensity: 'max',
       name: 'Eva López — Maximum Recruitment (MR)',
       description: '5-12 секунд виса с весом, отдых 3-5 минут, 4-6 подходов. Margin не более 3 секунд от failure.',
       level: 'advanced',
@@ -81,6 +84,7 @@
     },
     {
       id: 'repeaters_7_3',
+      intensity: 'moderate',
       name: 'Repeaters 7:3 классические',
       description: '7 секунд виса / 3 секунды отдыха × 6 = один подход. Отдых 3 минуты, всего 6 подходов. Лучший конструктор силовой выносливости.',
       level: 'intermediate',
@@ -98,6 +102,7 @@
     },
     {
       id: 'nelson_no_hangs',
+      intensity: 'recovery',
       name: 'Tyler Nelson — No-Hangs',
       description: 'Без оборудования: изометрия пальцев сидя с грузом 30-50% RPE. 30 секунд × 3-5 повторов, отдых 1-2 минуты. Безопасно для дней с низкой готовностью.',
       level: 'beginner',
@@ -115,6 +120,7 @@
     },
     {
       id: 'min_edge_progression',
+      intensity: 'max',
       name: 'Min Edge Progression (López MED)',
       description: 'Без веса: 10 секунд × 4-6 подходов. Edge уменьшается на 1-2 мм если margin > 3 сек от failure. Безопаснее MR по сухожилиям.',
       level: 'advanced',
@@ -183,9 +189,17 @@
     });
   }
 
+  // Convenient intensity lookup — used by ageGate.filterPrograms,
+  // calendar._classifyProgramId, readiness hard overrides.
+  function getIntensity(programId) {
+    const p = PROGRAMS_BY_ID[programId];
+    return (p && p.intensity) || 'moderate';
+  }
+
   // === Экспорт ===
   Fingers.PROGRAMS = PROGRAMS;
   Fingers.PROGRAMS_BY_ID = PROGRAMS_BY_ID;
   Fingers.getProgramById = getProgramById;
+  Fingers.getProgramIntensity = getIntensity;
   Fingers.buildLogFromProgram = buildLogFromProgram;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -33,7 +33,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'heys_fingers_session_persistence_v1.js',
         'heys_fingers_calendar_v1.js',
         'heys_fingers_safety_v1.js',
-        'heys_fingers_entry_v1.js' // entry stub LAST — opens fullscreen using everything above
+        // Wave 3 — Integration UI (зависят от Wave 2 catalogs/visuals/timer)
+        'heys_fingers_muscle_detail_v1.js',     // drill-down per muscle
+        'heys_fingers_constructor_v1.js',       // exercise editor (depends на grip_catalog, anatomy, records, ageGate)
+        'heys_fingers_onboarding_v1.js',        // wizard (depends на programs, ageGate, calibration)
+        'heys_fingers_session_ui_v1.js',        // 4-tab UI (depends на ВСЕ выше)
+        'heys_fingers_fullscreen_v1.js',        // portal orchestrator (depends на SessionUI + Onboarding)
+        'heys_fingers_entry_v1.js'              // entry LAST — exposes openFullscreen() public API
     ];
 
     function reportError(error, src) {

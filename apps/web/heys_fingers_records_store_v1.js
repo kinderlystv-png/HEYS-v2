@@ -140,11 +140,10 @@
     all.updatedAt = Date.now();
     _writeAll(all);
 
-    _eventLog('finger-pr-update', `PR for ${slug}`, {
-      slug, type: stamped.type,
-      mvcKg: stamped.mvcKg, holdTime: stamped.holdTime,
-      source: stamped.source,
-    });
+    // 152-ФЗ: health_data (mvcKg/holdTime/addedKg) категорически нельзя в
+    // eventLog payload — SAFE_PAYLOAD_KEYS (heys_event_log_v1.js:38-50) их
+    // фильтрует на '<filtered>'. Логируем только safe keys.
+    _eventLog('finger-pr-update', `PR for ${slug}`, { source: stamped.source });
 
     return true;
   }

@@ -945,6 +945,24 @@
       comment: typeof baseMeta.comment === 'string' ? baseMeta.comment : '',
       fingersLog
     });
+
+    // Recovery contract: readiness.getYesterdayFb() (heys_fingers_readiness_v1.js)
+    // expects day.fingers.{lastSessionAt, lastIntensity} for hard 48h cooldown override.
+    // Intensity derived from program id via getProgramIntensity, fallback 'moderate'.
+    try {
+      const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const intensity = (window.HEYS?.Fingers?.getProgramIntensity?.(fingersLog?.programId)) || 'moderate';
+      day.fingers = {
+        ...(day.fingers || {}),
+        lastSessionAt: Date.now(),
+        lastIntensity: intensity,
+        lastProgramId: fingersLog?.programId || null
+      };
+      lsSet(`heys_dayv2_${dateKey}`, day);
+    } catch (e) {
+      console.warn('[saveFingers] day.fingers update failed:', e);
+    }
   }
 
   // === Экспорт ===

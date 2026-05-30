@@ -22,24 +22,22 @@
 
   if (Fingers.YearHeatmap && Fingers.cooldownCheck) return; // idempotent
 
-  // Protocol-ID → intensity classification (см. план «State machine»).
-  const MAX_PROTOCOL_IDS = new Set([
-    'horst_max_hangs_v1',
-    'lattice_max_hangs_v1',
-    'beastmaker_2k_max_v1',
+  // Protocol-ID → intensity classification.
+  // Single source of truth: `program.intensity` поле в каталоге программ
+  // (heys_fingers_programs_catalog_v1.js). Fallback к hardcoded для test
+  // IDs (calibration tests не в каталоге программ).
+  const CALIBRATION_TEST_IDS = new Set([
     'critical_force_test',
     'max_hang_test',
-  ]);
-  const RECOVERY_PROTOCOL_IDS = new Set([
-    'recovery_pumpers_v1',
-    'easy_arc_v1',
-    'mobility_only',
+    'min_edge_test',
   ]);
 
   function _classifyProgramId(programId) {
     if (!programId) return 'moderate';
-    if (MAX_PROTOCOL_IDS.has(programId)) return 'max';
-    if (RECOVERY_PROTOCOL_IDS.has(programId)) return 'recovery';
+    if (CALIBRATION_TEST_IDS.has(programId)) return 'max'; // tests are max-load
+    if (typeof Fingers.getProgramIntensity === 'function') {
+      return Fingers.getProgramIntensity(programId);
+    }
     return 'moderate';
   }
 
@@ -289,5 +287,5 @@
 
   Fingers.YearHeatmap = YearHeatmap;
   Fingers.cooldownCheck = cooldownCheck;
-  Fingers.__calendarConstants = { MAX_PROTOCOL_IDS, RECOVERY_PROTOCOL_IDS };
+  Fingers.__calendarConstants = { CALIBRATION_TEST_IDS };
 })(typeof window !== 'undefined' ? window : globalThis);

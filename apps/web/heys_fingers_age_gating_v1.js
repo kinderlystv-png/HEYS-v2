@@ -52,9 +52,10 @@
     return programs.filter(function (p) {
       if (!p) return false;
       if (Number.isFinite(p.minAge) && a < p.minAge) return false;
-      // Подросткам 16-17 — без max-протоколов (id содержит max или level === 'advanced' MR/MED).
+      // Подросткам 16-17 — без max-протоколов. Используем явное поле
+      // `program.intensity` ('max'|'moderate'|'recovery') вместо хрупкого regex.
       if (level === 'no-max') {
-        if (/max|mr|med/i.test(p.id || '')) return false;
+        if (p.intensity === 'max') return false;
         if (p.level === 'advanced') return false;
       }
       // 14-15 — только beginner/repeaters BW без веса.
