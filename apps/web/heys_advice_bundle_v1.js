@@ -10170,7 +10170,11 @@
                 priority: 35,
                 category: 'timing',
                 triggers: ['tab_open'],
-                ttl: 5000
+                ttl: 5000,
+                action: {
+                    primary: { label: '🥛 Найти казеин/творог', handler: 'addMealProduct', data: { category: 'protein_slow' } },
+                    snooze: { label: 'Позже', remindAfterMinutes: 30 }
+                }
             });
         }
 
@@ -10189,7 +10193,11 @@
                 priority: 8,
                 category: 'timing',
                 triggers: ['tab_open'],
-                ttl: 6000
+                ttl: 6000,
+                action: {
+                    primary: { label: '🍽️ Добавить лёгкий приём', handler: 'addMealProduct', data: { category: 'protein_quick' } },
+                    snooze: { label: 'Пропущу сегодня', remindAfterMinutes: 720 }
+                }
             });
         }
 
@@ -11360,6 +11368,10 @@
                     ttl: 8000,
                     onShow: () => {
                         try { sessionStorage.setItem('heys_morning_supplements_advice_shown', Date.now().toString()); } catch (e) { }
+                    },
+                    action: {
+                        primary: { label: '→ Отметить приём в курсе', handler: 'openSupplementsCourse', data: { focusPending: pendingSupps } },
+                        snooze: { label: 'Через 30 мин', remindAfterMinutes: 30 }
                     }
                 });
             }
@@ -11412,6 +11424,10 @@
                     isReminder: true,
                     triggers: ['product_added'],
                     ttl: 8000,
+                    action: {
+                        primary: { label: '→ Отметить приём в курсе', handler: 'openSupplementsCourse', data: { focusPending: eveningSupps } },
+                        snooze: { label: 'Через час', remindAfterMinutes: 60 }
+                    },
                     onShow: () => {
                         try { sessionStorage.setItem('heys_evening_supplements_advice_shown', Date.now().toString()); } catch (e) { }
                     }

@@ -222,7 +222,11 @@
                 priority: 35,
                 category: 'timing',
                 triggers: ['tab_open'],
-                ttl: 5000
+                ttl: 5000,
+                action: {
+                    primary: { label: '🥛 Найти казеин/творог', handler: 'addMealProduct', data: { category: 'protein_slow' } },
+                    snooze: { label: 'Позже', remindAfterMinutes: 30 }
+                }
             });
         }
 
@@ -241,7 +245,11 @@
                 priority: 8,
                 category: 'timing',
                 triggers: ['tab_open'],
-                ttl: 6000
+                ttl: 6000,
+                action: {
+                    primary: { label: '🍽️ Добавить лёгкий приём', handler: 'addMealProduct', data: { category: 'protein_quick' } },
+                    snooze: { label: 'Пропущу сегодня', remindAfterMinutes: 720 }
+                }
             });
         }
 

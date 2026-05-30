@@ -82,6 +82,10 @@
                     ttl: 8000,
                     onShow: () => {
                         try { sessionStorage.setItem('heys_morning_supplements_advice_shown', Date.now().toString()); } catch (e) { }
+                    },
+                    action: {
+                        primary: { label: '→ Отметить приём в курсе', handler: 'openSupplementsCourse', data: { focusPending: pendingSupps } },
+                        snooze: { label: 'Через 30 мин', remindAfterMinutes: 30 }
                     }
                 });
             }
@@ -134,6 +138,10 @@
                     isReminder: true,
                     triggers: ['product_added'],
                     ttl: 8000,
+                    action: {
+                        primary: { label: '→ Отметить приём в курсе', handler: 'openSupplementsCourse', data: { focusPending: eveningSupps } },
+                        snooze: { label: 'Через час', remindAfterMinutes: 60 }
+                    },
                     onShow: () => {
                         try { sessionStorage.setItem('heys_evening_supplements_advice_shown', Date.now().toString()); } catch (e) { }
                     }
