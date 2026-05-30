@@ -1,6 +1,71 @@
 {
   "releases": [
     {
+      "version": "2026.05.31.39cf62e8",
+      "buildHash": "39cf62e8",
+      "date": "2026-05-31",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Советы: научно-обоснованный refactor — evidence badges, in-card actions, snooze cycle, peer-reviewed sources",
+      "items": [
+        {
+          "type": "feat",
+          "title": "Научно-обоснованные советы с peer-reviewed sources и кликабельными ссылками на исследования",
+          "description": "Каждый совет теперь может содержать научную атрибуцию: уровень доказательности (A/B/C), topic, rationale, список peer-reviewed sources (organisation + year + journal + n-size). 57 из 194 советов получили full evidence в Knowledge Base (apps/web/advice/_evidence.js): 30 Tier-A high-frequency (protein_low, bedtime_protein, fiber_low, water_reminder, sleep_low, и др.) + 7 supplements/vitamins (iron_reminder, cycle_iron_important, supplements_fat_meal_synergy и др.) + 20 Tier-B baseline (streak_3/7, rest_day_mobility, emotional_sleep_hygiene и др.). Sources atributed только peer-reviewed organisations: ESPEN, ACSM, WHO, EFSA, AHA, и опубликованные meta-analyses в Lancet, NEJM, Nutrients, Br J Sports Med и др. Без fabricated DOIs — где DOI отсутствует, source ссылается на PubMed search query для honest verifiability."
+        },
+        {
+          "type": "feat",
+          "title": "Clickable peer-reviewed sources с tooltip и переходом в PubMed/DOI",
+          "description": "В drawer каждый source совета теперь clickable link с native tooltip showing full citation. При наличии DOI — open https://doi.org/<doi>; иначе — PubMed search query с encoded author+year+journal. Target=_blank + rel=noopener для security. Dotted underline visual hint. Pattern reused из существующего PMID link в insights/pi_ui_rings.js."
+        },
+        {
+          "type": "feat",
+          "title": "In-card action buttons: '→ В конструктор витаминов' / 'Добавлю позже' вместо swipe-only dismiss",
+          "description": "В карточках советов теперь могут быть 2 actionable кнопки прямо в card (toast + drawer): primary action (handler exec — например, открыть конструктор витаминов через window.HEYS.Supplements.openMyCourseScreen) + snooze (отложить через scheduleAdvice). 11 высокочастотных rules получили action buttons: 3 supplements (supplements_personal_rec, iron_reminder, cycle_iron_important), 2 meal (protein_low, fiber_low → addMealProduct), 2 water (water_reminder, water_evening_low → logWaterGlass), 2 sleep/training (rest_day_neat_walking, emotional_sleep_hygiene → openHabitTracker), 2 timing (bedtime_protein, bedtime_undereating). Legacy 3-button rate row (👎/⏰/👍) остаётся для rules без action."
+        },
+        {
+          "type": "feat",
+          "title": "Smart snooze cycle: 3-snooze escalation + cancellation",
+          "description": "snoozeWithEscalation tracker: counter persisted в LS (heys_advice_snooze_counters_v1), cloud-sync. После 3-го snooze без compliance — автоматическая escalation: cancel pending + commitments.decline(advice, 'repeated_snooze') logged. При primary action exec — автоматический cancel pending snooze для этого совета (выполнил → no need to remind). cancelScheduledByAdviceId infrastructure добавлен в _core.js advice engine."
+        },
+        {
+          "type": "feat",
+          "title": "Calibrated thresholds per user profile (ESPEN/ACSM формулы)",
+          "description": "Threshold'ы для protein/water/kcal/fiber/sleep теперь могут вычисляться индивидуально по user profile (вес, пол, возраст, goal, phenotype, training days) через computeThresholds + getThresholds proxy в heys_advice_rules_v1.js. Формулы — peer-reviewed: protein 1.6-2.0 г/кг (ESPEN-2022 + Helms-2014 + Aragon-2017 для female RT в дефиците, с +0.2 boost для insulin_resistant phenotype или 3+ training/нед, hard cap 2.2 г/кг по Schoenfeld-2018), water 32мл/кг (EFSA-2010), kcal через Mifflin-St Jeor BMR × activity factor × goal adjustment, fiber 14г/1000ккал (ESPEN-2022), sleep target chronotype-adjusted. Backward compatible — legacy rules продолжают работать со static fractions, новые мигрируют постепенно на absolute G/Ml/H keys (protein_low + fiber_low уже мигрированы)."
+        },
+        {
+          "type": "feat",
+          "title": "Per-category cooldown заменяет глобальный 45с window",
+          "description": "Раньше cooldown 45с применялся ко всем советам глобально (suppressedByCooldownRate ≈50% по daily logs). Теперь context-aware: nutrition 5min, hydration 10min, training 30min, emotional 15min, timing 5min, other 8min. Global floor 30с защита от burst после cooldown expiry. SESSION_CAP_PER_CATEGORY = 5 показов одной категории за сессию. CATEGORY_COOLDOWN_MS, GLOBAL_FLOOR_MS, SESSION_CAP_PER_CATEGORY вынесены в rules config для consistency."
+        },
+        {
+          "type": "feat",
+          "title": "Longitudinal awareness: engine видит вчерашний день и weekly trends",
+          "description": "Engine при каждом snapshot собирает yesterday context (shown/ignored advice IDs) и weekly aggregation (heys_advice_trace_week_v1, rolling 7-day window). В sortBySmartScore применяет penalty -5pt для вчера-ignored совета и -10pt дополнительно если ignored ≥5× за неделю. Не hard suppress — даём шанс альтернативе пробить penalty. Weekly aggregation TTL 4ч cache, рекомпьютится при changing день."
+        },
+        {
+          "type": "feat",
+          "title": "Coverage fallback insight-of-the-day rotation (12 evidence-based tips)",
+          "description": "Если после всех фильтров engine не выдал совет — fallback на insight-of-the-day из ротации (12 базовых tips, day-of-year mod 12). Покрывают protein distribution (Schoenfeld), fiber baseline (ESPEN), water 30мл/кг (EFSA), sleep anchor (Walker), NEAT 8-10к шагов (Levine), whole foods (Monteiro NOVA), omega-3 2× в неделю (AHA), caffeine curfew (Drake), morning light (Wright), chewing slow (Андо), strength training (ACSM), social ties (Holt-Lunstad). Phase A.5 refinement: НЕ fallback если есть active EWS warnings (severity high/medium) — generic tip diluted bы meaningful signal."
+        },
+        {
+          "type": "feat",
+          "title": "Rest-day training и normal-state emotional советы (silent modules closed)",
+          "description": "Раньше training-модуль молчал на rest-days (все правила условны на hasTraining=true), emotional silent при normal stress (3-5). Добавлены 6 rest-day training rules (NEAT walking ACSM-2018, mobility Behm-2016, sleep priority Sleep Foundation 2023, protein distribution Schoenfeld-2018 meta, morning light Wright-2020, active recovery) + 5 emotional normal-state rules (sleep hygiene Walker-2017, screen curfew Chang-2015 RCT, social anchor Holt-Lunstad-2010 meta n=308k, micro-breaks Sianoja-2018 RCT, gratitude log Emmons-2003 RCT). Silent modules больше не silent."
+        },
+        {
+          "type": "fix",
+          "title": "Snapshot bug: visibleForManualCount=0 при null trigger + medical disclaimer dark-theme + A/B baseline bug",
+          "description": "Закрыто несколько накопленных bugs во время self-audit: (1) snapshot calc обнулял visibility когда trigger=null хотя modules выдавали советы — fallback на 'tab_open' для snapshot calc; (2) medical disclaimer inline styles ломались на dark theme — добавлен color: 'inherit' для button text; (3) getActiveExperiment в A/B framework имел bug — !exp.startDate (null falsy) считался match → false-positive active experiment. EXPERIMENTS[0] startDate/endDate установлены null для baseline (не активен)."
+        },
+        {
+          "type": "feat",
+          "title": "Medical disclaimer (один раз при первом открытии советов)",
+          "description": "Юзер один раз acknowledges что советы основаны на peer-reviewed research (ESPEN, ACSM, WHO, EFSA и meta-analyses), но не заменяют врача. При хронических заболеваниях, беременности, приёме лекарств — сверяйся с врачом. Persistence через LS heys_advice_disclaimer_accepted_v1 + cloud-sync HEYS.utils.lsSet. Dark-theme safe."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.7784df95",
       "buildHash": "7784df95",
       "date": "2026-05-30",
