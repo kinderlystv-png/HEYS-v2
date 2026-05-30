@@ -1144,6 +1144,56 @@
                                 }
                             }, 'Тех. детали')
                         )
+                    ),
+                    // 🎯 Phase B.3 (2026-05-31): in-card action buttons в drawer.
+                    // Если rule имеет advice.action.primary — render 2 кнопки
+                    // (primary + snooze) под текстом совета. Видимы всегда
+                    // (не только expanded), чтобы юзер мог быстро действовать.
+                    advice.action?.primary && React.createElement('div', {
+                        className: 'advice-card-actions-row',
+                        style: {
+                            display: 'flex', gap: '8px', marginTop: '8px',
+                            paddingTop: '6px', borderTop: '1px solid rgba(148,163,184,0.18)'
+                        }
+                    },
+                        React.createElement('button', {
+                            type: 'button',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                const ok = window.HEYS?.adviceActions?.execute?.(advice);
+                                if (onRate && ok !== false) onRate(advice, true, e);
+                            },
+                            style: {
+                                flex: '1 1 65%',
+                                padding: '8px 10px',
+                                border: 'none',
+                                borderRadius: '12px',
+                                background: 'rgba(22, 163, 74, 0.16)',
+                                color: '#15803d',
+                                fontSize: '13px', fontWeight: 600,
+                                cursor: 'pointer', lineHeight: 1.15,
+                                textAlign: 'center'
+                            }
+                        }, advice.action.primary.label || '✓ Сделать'),
+                        advice.action.snooze && React.createElement('button', {
+                            type: 'button',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                const minutes = Number(advice.action.snooze.remindAfterMinutes) || 120;
+                                if (onSchedule) onSchedule(advice, minutes);
+                            },
+                            style: {
+                                flex: '1 1 35%',
+                                padding: '8px 10px',
+                                border: 'none',
+                                borderRadius: '12px',
+                                background: 'rgba(59, 130, 246, 0.14)',
+                                color: '#2563eb',
+                                fontSize: '13px', fontWeight: 600,
+                                cursor: 'pointer', lineHeight: 1.15,
+                                textAlign: 'center'
+                            }
+                        }, advice.action.snooze.label || '⏰ Позже')
                     )
                 )
             )
@@ -1762,7 +1812,81 @@
                                 animation: 'fadeIn 0.2s ease',
                             }
                         }, toastRatedState === 'positive' ? '👍 Учту как полезный' : '👎 Учту как слабый / вредный')
-                        : React.createElement('div', {
+                        : (displayedAdvice?.action?.primary
+                            // 🎯 Phase B.3 (2026-05-31): in-card action buttons.
+                            // Когда rule имеет advice.action.primary → render 2 кнопки:
+                            // Primary (handler exec) + Snooze (scheduleAdvice).
+                            // Иначе fallback на existing 3-button rate layout.
+                            ? React.createElement('div', {
+                                style: {
+                                    display: 'flex',
+                                    alignItems: 'stretch',
+                                    justifyContent: 'stretch',
+                                    gap: '10px',
+                                    width: '100%',
+                                    height: '100%',
+                                    padding: '8px 10px',
+                                    boxSizing: 'border-box',
+                                }
+                            },
+                                React.createElement('button', {
+                                    onClick: (e) => {
+                                        e.stopPropagation();
+                                        const ok = window.HEYS?.adviceActions?.execute?.(displayedAdvice);
+                                        if (handleToastRate && ok !== false) handleToastRate(true, e);
+                                        else if (dismissToast) dismissToast();
+                                    },
+                                    style: {
+                                        border: 'none',
+                                        background: 'rgba(22, 163, 74, 0.18)',
+                                        color: '#15803d',
+                                        padding: '10px 14px',
+                                        borderRadius: '18px',
+                                        fontSize: '15px',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        flex: '1 1 65%',
+                                        minWidth: '0',
+                                        minHeight: '72px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        textAlign: 'center',
+                                        lineHeight: 1.15,
+                                        boxShadow: 'inset 0 0 0 1px rgba(22, 163, 74, 0.10)'
+                                    },
+                                }, displayedAdvice.action.primary.label || '✓ Сделать'),
+                                displayedAdvice.action.snooze && React.createElement('button', {
+                                    onClick: (e) => {
+                                        e.stopPropagation();
+                                        // Reuse existing schedule handler — он cleanly интегрирован
+                                        // в outcome tracking. Default 120 мин.
+                                        const minutes = Number(displayedAdvice.action.snooze.remindAfterMinutes) || 120;
+                                        if (handleToastSchedule) handleToastSchedule(e, minutes);
+                                        else if (dismissToast) dismissToast();
+                                    },
+                                    style: {
+                                        border: 'none',
+                                        background: 'rgba(59, 130, 246, 0.14)',
+                                        color: '#2563eb',
+                                        padding: '10px 8px',
+                                        borderRadius: '18px',
+                                        fontSize: '14px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        flex: '1 1 35%',
+                                        minWidth: '0',
+                                        minHeight: '72px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        textAlign: 'center',
+                                        lineHeight: 1.15,
+                                        boxShadow: 'inset 0 0 0 1px rgba(59, 130, 246, 0.06)'
+                                    },
+                                }, displayedAdvice.action.snooze.label || '⏰ Позже')
+                            )
+                            : React.createElement('div', {
                             style: {
                                 display: 'flex',
                                 alignItems: 'stretch',
@@ -1840,7 +1964,7 @@
                                     boxShadow: 'inset 0 0 0 1px rgba(22, 163, 74, 0.06)'
                                 },
                             }, '👍 Полезный')
-                        )
+                        ))
             ),
             React.createElement('div', {
                 className: 'macro-toast-main',
