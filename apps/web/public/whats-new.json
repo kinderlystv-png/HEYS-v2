@@ -1,6 +1,101 @@
 {
   "releases": [
     {
+      "version": "2026.05.31.3d52e622",
+      "buildHash": "3d52e622",
+      "date": "2026-05-31",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Тренировка пальцев (climbing fingerboard) — 4-й тип тренировки с голосовым coach",
+      "items": [
+        {
+          "type": "feature",
+          "title": "Новый тип тренировки «🤚 Пальцы» для скалолазов",
+          "description": "При создании тренировки добавлен 4-й тип — «Пальцы». Открывает полноэкранный focus-режим с 4 вкладками: Программы (6 научно-обоснованных пресетов от Hörst/López/Beastmaker/Nelson), Конструктор упражнений (8 типов хвата × кромки × вес × циклы), Прогресс (личные рекорды по каждому хвату), Календарь нагрузки. Тренировка сохраняется в дневнике как компактный pill с программой и длительностью."
+        },
+        {
+          "type": "feature",
+          "title": "Голосовой coach на русском — 56 фраз через Yandex SpeechKit",
+          "description": "Во время сессии — голосовой коуч ведёт по протоколу: countdown 5-1, «ВИС!», «отпускай», «отдых 3 минуты», «подход 3 из 5», safety warnings («боль в PIP — остановись»), мотивация. Полностью на русском, голос alena. Конкуренты (Crimpd/Lattice/Tindeq) — только английский. Музыка в фоне не глушится (WebAudio mixing)."
+        },
+        {
+          "type": "feature",
+          "title": "Безопасность по UIAA MedCom + 48ч cooldown",
+          "description": "Age-gating: под 14 — только No-Hangs, 14-15 без full crimp, 16-17 без max-протоколов. Pre-flight safety check (RAMP warmup + health screening). Soft warning при попытке max-сессии раньше 48ч после прошлой (tendon collagen synthesis по Magnusson 2010)."
+        },
+        {
+          "type": "feature",
+          "title": "Readiness-aware load: учитывает утренний чекин",
+          "description": "Уникально на рынке: до старта сессии система оценивает готовность по mood/sleep/wellbeing за последние 7-14 дней (baseline + z-score). Если показатели ниже личной нормы — рекомендует заменить max-protocol на No-Hangs (active recovery) с объяснением «почему». Никто из climbing apps не интегрирует daily readiness."
+        },
+        {
+          "type": "feature",
+          "title": "Видимая научная база — 15 источников inline",
+          "description": "Каждая программа, каждая подсказка в конструкторе, каждый warning несут inline-ссылку на исследование (Schweizer 2008, López 2019, Giles 2019, Hörst, UIAA и др.). Кнопка «📚 Методология» в любом экране открывает полную bibliography с фильтром по топику (биомеханика/протоколы/safety/recovery/calibration)."
+        },
+        {
+          "type": "feature",
+          "title": "Анатомические SVG-иллюстрации 8 хватов + drill-down мышц",
+          "description": "В конструкторе живые SVG руки в каждой позе хвата (open hand, half crimp, full crimp, front-3, back-3, mono, pinch, sloper) + анатомия предплечья с подсветкой задействованных мышц (FDP, FDS, lumbricals, brachioradialis, ECR, FCR). Tap на мышцу → drill-down экран с функцией, травмами (A2 pulley rupture etc.), профилактикой и источниками."
+        },
+        {
+          "type": "feature",
+          "title": "3 темы дизайна на выбор + минималистичный full-screen",
+          "description": "Fingers живёт в отдельном full-screen overlay через React portal — не загромождает дневник. Доступны 3 темы: A (HEYS native), B (Custom blue/ochra), C (Climbing granite/rust grainy texture). Переключение в onboarding или settings. Wake lock держит экран включённым во время сессии."
+        },
+        {
+          "type": "improvement",
+          "title": "Grip-specific PR tracking + calibration tests",
+          "description": "Личные рекорды трекаются отдельно по каждой комбинации (8 хватов × edge × hangSec). Hybrid mode: вес если есть весы, время иначе. Calibration tests раз в 8 недель: Max Hang, Critical Force (Giles 2019), Min Edge Progression (López MED). Auto-prompt напоминание."
+        }
+      ]
+    },
+    {
+      "version": "2026.05.31.cd06f716",
+      "buildHash": "cd06f716",
+      "date": "2026-05-31",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Fingers Wave 3 — Integration UI (часть фичи «Тренировка пальцев»)",
+      "items": [
+        {
+          "type": "feature",
+          "title": "UI-слой fingers модуля: fullscreen overlay + 4 таба",
+          "description": "5 новых UI-модулей (~2500 строк): fullscreen portal orchestrator, onboarding wizard (quick start + полный setup), exercise constructor с live SVG и %MVC hint, session UI с 4 табами (Программы/Конструктор/Прогресс/Календарь), muscle detail drill-down. Routing в дневнике: при type=='fingers' рендерится компактный pill вместо обычной карточки. Часть полной фичи — см. release 2026.05.31.3d52e622."
+        }
+      ]
+    },
+    {
+      "version": "2026.05.31.2ad67e97",
+      "buildHash": "2ad67e97",
+      "date": "2026-05-31",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Fingers Wave 2 — 17 модулей нижнего слоя (часть фичи «Тренировка пальцев»)",
+      "items": [
+        {
+          "type": "feature",
+          "title": "Нижний слой fingers: catalogs + visuals + timer state-machine",
+          "description": "17 модулей (~50 KB): bibliography (15 источников), grips_catalog (8 хватов), boards_catalog (6 fingerboard), programs_catalog (6 пресетов), age_gating UIAA, readiness assessment, safety pre-flight, 8 SVG руки + анатомия предплечья, voice phrase bank, countdown timer state-machine, session persistence + reload recovery, PR storage, calibration tests, year heatmap calendar, platform feature detection, audio extension. Часть полной фичи — см. release 2026.05.31.3d52e622."
+        }
+      ]
+    },
+    {
+      "version": "2026.05.31.8c257069",
+      "buildHash": "8c257069",
+      "date": "2026-05-31",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Fingers Wave 1 — 4-й тип тренировки в picker (часть фичи «Тренировка пальцев»)",
+      "items": [
+        {
+          "type": "feature",
+          "title": "Foundation для fingers модуля: тип «🤚 Пальцы» в выборе тренировки",
+          "description": "Регистрация 4-го типа тренировки fingers в picker, sparkline, training step modal. Bug fix зон пульса для fingers (не показываются). Handoff handler: выбор fingers закрывает StepModal и открывает fullscreen overlay. saveFingers wrapper с day.fingers contract для readiness cooldown. Часть полной фичи — см. release 2026.05.31.3d52e622."
+        }
+      ]
+    },
+    {
       "version": "2026.05.31.aa03c34d",
       "buildHash": "aa03c34d",
       "date": "2026-05-31",
