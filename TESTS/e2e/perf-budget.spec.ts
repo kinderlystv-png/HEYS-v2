@@ -90,12 +90,9 @@ test.describe('Perf budget — render regressions guards', () => {
             'Set HEYS_TEST_PHONE_E2E_ALEX and HEYS_TEST_PIN_E2E_ALEX in .env.local'
         );
 
-        // TODO 2026-05-31: тест требует bootstrap'нутого LS state (см. analog
-        // в curator-switch test 3). pin-auth waitForFunction profile sync
-        // не помог — wizard всё ещё блокирует "Добавить приём пищи" button
-        // для fresh test client. Решение требует app-level fix или scripted
-        // bootstrap dayv2/norms/clients keys в DB.
-        test.skip(true, 'UI-flow требует app-level fix или scripted bootstrap для empty test client — отдельный таск');
+        // TODO 2026-05-31: see curator-switch test 3 — empty test client UI
+        // блокирован registration wizard, нужен deeper sync orchestration fix.
+        test.skip(true, 'UI-flow: empty test client — wizard blocks button until profile sync завершен');
 
         const credentials = getNamedPinCredentials('E2E_ALEX');
         await loginWithHeysPin(page, credentials);

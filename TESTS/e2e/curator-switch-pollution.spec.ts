@@ -153,17 +153,13 @@ test.describe('Курaторский cross-client pollution — anti-regression'
             'HEYS_TEST_E2E_CLIENT_ALEX_NAME, HEYS_TEST_E2E_CLIENT_POPL_NAME in .env.local'
         );
 
-        // TODO 2026-05-31: тест требует app-level fix чтобы курaторский switch
-        // на свежий test client не показывал registration wizard.
-        // Пробовали: pre-populated profile в DB (scoped + unscoped) +
-        // addInitScript LS injection + waitForFunction profile sync + dismiss
-        // wizard button — wizard всё ещё блокирует курaторский dropdown,
-        // вероятно из-за Store memory cache от initial курaторский session
-        // (Store.get('heys_profile') возвращает кэшированный {} даже после
-        // курaторский switch на TestAlex).
-        // Real anti-pollution semantics покрыты тестами 1+2 (legacy=0 baseline)
-        // + DB-level isolation (afterAll cleanup deletes test writes).
-        test.skip(true, 'UI-flow требует app-level fix для Store memory cache при курaторском switch на fresh client — отдельный таск');
+        // TODO 2026-05-31: Phase 1 (Store.flushMemory on switchClient) helped
+        // но не полностью — курaторский path для empty test client всё ещё
+        // показывает registration wizard. Глубже: либо curator getKVBatch не
+        // вытаскивает scoped profile, либо app rendering pipeline не ждёт
+        // sync completion before рисует wizard.
+        // Anti-pollution semantics покрыты tests 1+2 + Phase 2 DB-level triggers.
+        test.skip(true, 'UI-flow: курaторский path к empty test client не догружает profile в LS до wizard render — нужен deeper sync orchestration fix');
 
         const alexName = TEST_CLIENT_ALEX_NAME;
         const poplName = TEST_CLIENT_POPL_NAME;
