@@ -1,0 +1,291 @@
+{
+  "generatedAt": "2026-05-30T23:28:44.953Z",
+  "voice": "alena",
+  "files": [
+    {
+      "id": "cue.start_session",
+      "path": "/voice/fingers-ru/cue.start_session.mp3",
+      "skipped": true
+    },
+    {
+      "id": "cue.warmup_ok",
+      "path": "/voice/fingers-ru/cue.warmup_ok.mp3",
+      "bytes": 22317
+    },
+    {
+      "id": "cue.warmup_skipped",
+      "path": "/voice/fingers-ru/cue.warmup_skipped.mp3",
+      "bytes": 34029
+    },
+    {
+      "id": "cue.session_done",
+      "path": "/voice/fingers-ru/cue.session_done.mp3",
+      "bytes": 24045
+    },
+    {
+      "id": "cue.session_done_pr",
+      "path": "/voice/fingers-ru/cue.session_done_pr.mp3",
+      "bytes": 23661
+    },
+    {
+      "id": "cue.session_aborted",
+      "path": "/voice/fingers-ru/cue.session_aborted.mp3",
+      "bytes": 24813
+    },
+    {
+      "id": "cue.countdown_5",
+      "path": "/voice/fingers-ru/cue.countdown_5.mp3",
+      "bytes": 15405
+    },
+    {
+      "id": "cue.countdown_3",
+      "path": "/voice/fingers-ru/cue.countdown_3.mp3",
+      "bytes": 4845
+    },
+    {
+      "id": "cue.countdown_2",
+      "path": "/voice/fingers-ru/cue.countdown_2.mp3",
+      "bytes": 6957
+    },
+    {
+      "id": "cue.countdown_1",
+      "path": "/voice/fingers-ru/cue.countdown_1.mp3",
+      "bytes": 6573
+    },
+    {
+      "id": "cue.go_hang",
+      "path": "/voice/fingers-ru/cue.go_hang.mp3",
+      "bytes": 6765
+    },
+    {
+      "id": "cue.hang_done",
+      "path": "/voice/fingers-ru/cue.hang_done.mp3",
+      "bytes": 8685
+    },
+    {
+      "id": "cue.last_3_sec",
+      "path": "/voice/fingers-ru/cue.last_3_sec.mp3",
+      "bytes": 10029
+    },
+    {
+      "id": "cue.rest_start",
+      "path": "/voice/fingers-ru/cue.rest_start.mp3",
+      "bytes": 8685
+    },
+    {
+      "id": "cue.rest_almost_done",
+      "path": "/voice/fingers-ru/cue.rest_almost_done.mp3",
+      "bytes": 19629
+    },
+    {
+      "id": "cue.rest_done",
+      "path": "/voice/fingers-ru/cue.rest_done.mp3",
+      "bytes": 10605
+    },
+    {
+      "id": "cue.set_done",
+      "path": "/voice/fingers-ru/cue.set_done.mp3",
+      "bytes": 13485
+    },
+    {
+      "id": "cue.big_rest_start",
+      "path": "/voice/fingers-ru/cue.big_rest_start.mp3",
+      "bytes": 24813
+    },
+    {
+      "id": "cue.last_set",
+      "path": "/voice/fingers-ru/cue.last_set.mp3",
+      "bytes": 20781
+    },
+    {
+      "id": "cue.halfway",
+      "path": "/voice/fingers-ru/cue.halfway.mp3",
+      "bytes": 14253
+    },
+    {
+      "id": "cue.safety_pip_warning",
+      "path": "/voice/fingers-ru/cue.safety_pip_warning.mp3",
+      "bytes": 36525
+    },
+    {
+      "id": "cue.safety_pulley_warn",
+      "path": "/voice/fingers-ru/cue.safety_pulley_warn.mp3",
+      "bytes": 26733
+    },
+    {
+      "id": "cue.cooldown_warning",
+      "path": "/voice/fingers-ru/cue.cooldown_warning.mp3",
+      "bytes": 48813
+    },
+    {
+      "id": "cue.readiness_low",
+      "path": "/voice/fingers-ru/cue.readiness_low.mp3",
+      "bytes": 29805
+    },
+    {
+      "id": "cue.push_hard",
+      "path": "/voice/fingers-ru/cue.push_hard.mp3",
+      "bytes": 19437
+    },
+    {
+      "id": "cue.good_form",
+      "path": "/voice/fingers-ru/cue.good_form.mp3",
+      "bytes": 20205
+    },
+    {
+      "id": "cue.almost_done",
+      "path": "/voice/fingers-ru/cue.almost_done.mp3",
+      "bytes": 20205
+    },
+    {
+      "id": "cue.paused",
+      "path": "/voice/fingers-ru/cue.paused.mp3",
+      "bytes": 7917
+    },
+    {
+      "id": "cue.resumed",
+      "path": "/voice/fingers-ru/cue.resumed.mp3",
+      "bytes": 9453
+    },
+    {
+      "id": "cue.no_equip_intro",
+      "path": "/voice/fingers-ru/cue.no_equip_intro.mp3",
+      "bytes": 27117
+    },
+    {
+      "id": "cue.no_equip_effort",
+      "path": "/voice/fingers-ru/cue.no_equip_effort.mp3",
+      "bytes": 27117
+    },
+    {
+      "id": "cue.no_equip_release",
+      "path": "/voice/fingers-ru/cue.no_equip_release.mp3",
+      "bytes": 18285
+    },
+    {
+      "id": "cue.next_grip",
+      "path": "/voice/fingers-ru/cue.next_grip.mp3",
+      "bytes": 12909
+    },
+    {
+      "id": "cue.grip_change_warning",
+      "path": "/voice/fingers-ru/cue.grip_change_warning.mp3",
+      "bytes": 32493
+    },
+    {
+      "id": "cue.add_weight",
+      "path": "/voice/fingers-ru/cue.add_weight.mp3",
+      "bytes": 21741
+    },
+    {
+      "id": "cue.rest_60sec",
+      "path": "/voice/fingers-ru/cue.rest_60sec.mp3",
+      "bytes": 14061
+    },
+    {
+      "id": "cue.rest_90sec",
+      "path": "/voice/fingers-ru/cue.rest_90sec.mp3",
+      "bytes": 14637
+    },
+    {
+      "id": "cue.rest_120sec",
+      "path": "/voice/fingers-ru/cue.rest_120sec.mp3",
+      "bytes": 13101
+    },
+    {
+      "id": "cue.rest_180sec",
+      "path": "/voice/fingers-ru/cue.rest_180sec.mp3",
+      "bytes": 15597
+    },
+    {
+      "id": "cue.set_1of3",
+      "path": "/voice/fingers-ru/cue.set_1of3.mp3",
+      "bytes": 16173
+    },
+    {
+      "id": "cue.set_2of3",
+      "path": "/voice/fingers-ru/cue.set_2of3.mp3",
+      "bytes": 14061
+    },
+    {
+      "id": "cue.set_3of3",
+      "path": "/voice/fingers-ru/cue.set_3of3.mp3",
+      "bytes": 14445
+    },
+    {
+      "id": "cue.set_1of4",
+      "path": "/voice/fingers-ru/cue.set_1of4.mp3",
+      "bytes": 16941
+    },
+    {
+      "id": "cue.set_2of4",
+      "path": "/voice/fingers-ru/cue.set_2of4.mp3",
+      "bytes": 15597
+    },
+    {
+      "id": "cue.set_3of4",
+      "path": "/voice/fingers-ru/cue.set_3of4.mp3",
+      "bytes": 15789
+    },
+    {
+      "id": "cue.set_4of4",
+      "path": "/voice/fingers-ru/cue.set_4of4.mp3",
+      "bytes": 16749
+    },
+    {
+      "id": "cue.set_1of5",
+      "path": "/voice/fingers-ru/cue.set_1of5.mp3",
+      "bytes": 15789
+    },
+    {
+      "id": "cue.set_2of5",
+      "path": "/voice/fingers-ru/cue.set_2of5.mp3",
+      "bytes": 14061
+    },
+    {
+      "id": "cue.set_3of5",
+      "path": "/voice/fingers-ru/cue.set_3of5.mp3",
+      "bytes": 14445
+    },
+    {
+      "id": "cue.set_4of5",
+      "path": "/voice/fingers-ru/cue.set_4of5.mp3",
+      "bytes": 15021
+    },
+    {
+      "id": "cue.set_5of5",
+      "path": "/voice/fingers-ru/cue.set_5of5.mp3",
+      "bytes": 15981
+    },
+    {
+      "id": "cue.set_1of6",
+      "path": "/voice/fingers-ru/cue.set_1of6.mp3",
+      "bytes": 15981
+    },
+    {
+      "id": "cue.set_2of6",
+      "path": "/voice/fingers-ru/cue.set_2of6.mp3",
+      "bytes": 14445
+    },
+    {
+      "id": "cue.set_3of6",
+      "path": "/voice/fingers-ru/cue.set_3of6.mp3",
+      "bytes": 14637
+    },
+    {
+      "id": "cue.set_4of6",
+      "path": "/voice/fingers-ru/cue.set_4of6.mp3",
+      "bytes": 15597
+    },
+    {
+      "id": "cue.set_5of6",
+      "path": "/voice/fingers-ru/cue.set_5of6.mp3",
+      "bytes": 16365
+    },
+    {
+      "id": "cue.set_6of6",
+      "path": "/voice/fingers-ru/cue.set_6of6.mp3",
+      "bytes": 16941
+    }
+  ]
+}
