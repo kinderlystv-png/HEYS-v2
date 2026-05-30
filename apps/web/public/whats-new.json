@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.b30796f6",
+      "buildHash": "b30796f6",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Фоновая синхронизация: устранена ошибка которая раз в минуту валила legacy fallback",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Устранён ReferenceError 'reason is not defined' в фоновой sync-задаче (срабатывал у каждого PIN-юзера примерно раз в минуту)",
+          "description": "Симптом: в консоли постоянно мелькало '[HEYS.sync] ⚠️ Foreground auto-sync failed: visible-interval reason is not defined'. Причина: функция _runForegroundHotKeySyncLegacy (запасной путь обновления данных когда batch RPC недоступен) в success-логе использовала переменную reason, которая не была её параметром — bare reference на undefined переменную бросал throw, верхний catch ловил это как 'failed sync'. Фикс: добавил reason параметром и пробросил из вызывающего runForegroundHotKeySync. Эффект для пользователя: cross-device sync теперь корректно работает на legacy fallback (раньше каждая такая попытка тихо проваливалась и помечала session как unhealthy после нескольких подряд)."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.a2d31432",
       "buildHash": "a2d31432",
       "date": "2026-05-30",
