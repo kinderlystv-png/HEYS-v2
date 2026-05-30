@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.6c756f9d",
+      "buildHash": "6c756f9d",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Кнопка «Одобрить все» теперь действительно работает (403 fix)",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Bulk-approve больше не падает с 403 Forbidden",
+          "description": "После выкатки 949361ae кнопка «Одобрить все (N)» возвращала 403 «Function approve_pending_products_bulk not allowed». Причина: cloud function (heys-api-rpc) имеет explicit whitelist разрешённых RPC, а новая функция там не была. SQL GRANT в БД сам по себе недостаточен — cloud function отбрасывает запрос до проксирования в Postgres. Добавил функцию в whitelist рядом с publish_shared_product_by_curator + redeploy heys-api-rpc."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.949361ae",
       "buildHash": "949361ae",
       "date": "2026-05-30",
