@@ -245,6 +245,20 @@ describe('Phase 2 — Calibrated personalization', () => {
         // Fallback — должен быть оригинальный THRESHOLDS object (0.8 для protein.adequate)
         expect(t.protein.adequate).toBe(0.8);
     });
+
+    it('Phase A.1: getThresholds(ctx) с profile → absolute G/Ml/H keys', () => {
+        const ctx = {
+            prof: { weight: 70, sex: 'female' },
+            goal: { mode: 'deficit' }
+        };
+        const t = window.HEYS.adviceRules.getThresholds(ctx);
+        // Calibrated absolute keys
+        expect(t.protein.targetG).toBeCloseTo(112, 0);  // 70 × 1.6
+        expect(t.water.targetMl).toBeCloseTo(2240, 0);   // 70 × 32
+        expect(t.sleep.targetH).toBeCloseTo(7.5, 1);
+        // Static fractions сохраняются (для legacy rules без миграции)
+        expect(t.protein.adequate).toBe(0.8);
+    });
 });
 
 describe('Phase 3 — Commitment engine', () => {

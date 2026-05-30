@@ -17,6 +17,13 @@
             PRIORITY,
             PRODUCT_CATEGORIES
         } = rules;
+        // 🔬 Phase A.1 (2026-05-30): per-user calibrated thresholds.
+        // T содержит legacy fractions (T.protein.adequate = 0.8) И calibrated
+        // absolute keys (T.protein.adequateG = absolute grams) если profile
+        // complete. Rules постепенно migrируют на absolute (см. protein_low,
+        // fiber_low ниже). Backward-compat: fallback на static fraction если
+        // *G/Ml/H ключей нет (incomplete profile).
+        const T = (typeof rules.getThresholds === 'function') ? rules.getThresholds(ctx) : THRESHOLDS;
 
         const {
             dayTot,
@@ -188,7 +195,15 @@
         // 💡 TIPS (priority: 31-50) — баланс
         // ─────────────────────────────────────────────────────────
 
-        if (proteinPct < THRESHOLDS.protein.low && hour >= 12) {
+        // 🔬 Phase A.1: protein_low — use calibrated threshold если есть profile
+        // (absolute grams от ESPEN-2022 + Schoenfeld-2018 + activity boost),
+        // иначе fallback на static 50% fraction.
+        const _proteinLowG = T?.protein?.lowG;
+        const _proteinG = Number(dayTot?.prot) || 0;
+        const _proteinUnderThreshold = _proteinLowG != null
+            ? _proteinG < _proteinLowG
+            : proteinPct < THRESHOLDS.protein.low;
+        if (_proteinUnderThreshold && hour >= 12) {
             const proteinText = getTimeBasedText('protein_low', hour,
                 personalizeText(pickRandomText([
                     'Добавь белка — мясо, рыба, творог',
@@ -211,7 +226,13 @@
             });
         }
 
-        if (fiberPct < THRESHOLDS.fiber.low && mealCount >= 2) {
+        // 🔬 Phase A.1: fiber_low — calibrated (ESPEN-2022: 14г/1000ккал) или fallback
+        const _fiberLowG = T?.fiber?.lowG;
+        const _fiberG = Number(dayTot?.fiber) || 0;
+        const _fiberUnderThreshold = _fiberLowG != null
+            ? _fiberG < _fiberLowG
+            : fiberPct < THRESHOLDS.fiber.low;
+        if (_fiberUnderThreshold && mealCount >= 2) {
             const fiberDefault = personalizeText(pickRandomText([
                 'Мало клетчатки — добавь овощей или злаков',
                 'Кишечнику нужна клетчатка — овощи, зелень',

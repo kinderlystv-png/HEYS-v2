@@ -738,13 +738,54 @@
     const computed = computeThresholds(ctx);
     if (!computed) return THRESHOLDS; // fallback при incomplete profile
 
+    // Phase A.1 architectural fix: computed absolute units (g/ml/h) идут в
+    // ОТДЕЛЬНЫЕ keys (suffix G/Ml/H), не shadowа't static fractions.
+    // Иначе T.protein.adequate было бы 89.6 (grams) для одного юзера и
+    // 0.8 (fraction) для другого — semantic mix. Теперь rule явно
+    // выбирает: T.protein.adequate (fraction, всегда) ИЛИ T.protein.adequateG
+    // (absolute grams, only если profile complete).
     return {
       ...THRESHOLDS,
-      protein: { ...THRESHOLDS.protein, ...computed.protein },
-      water: { ...THRESHOLDS.water, ...computed.water },
-      ...(computed.kcal ? { kcal: { ...THRESHOLDS.kcal, ...computed.kcal } } : {}),
-      ...(computed.fiber ? { fiber: { ...THRESHOLDS.fiber, ...computed.fiber } } : {}),
-      sleep: { ...THRESHOLDS.sleep, ...computed.sleep },
+      protein: {
+        ...THRESHOLDS.protein,
+        targetG:    computed.protein.target,
+        lowG:       computed.protein.low,
+        adequateG:  computed.protein.adequate,
+        goodG:      computed.protein.good,
+        highG:      computed.protein.high,
+        _source:    computed.protein._source
+      },
+      water: {
+        ...THRESHOLDS.water,
+        targetMl:     computed.water.target,
+        eveningLowMl: computed.water.eveningLow,
+        _source:      computed.water._source
+      },
+      ...(computed.kcal ? {
+        kcal: {
+          ...THRESHOLDS.kcal,
+          targetKcal:        computed.kcal.target,
+          undereatingKcal:   computed.kcal.undereating,
+          eveningKcal:       computed.kcal.evening,
+          _source:           computed.kcal._source
+        }
+      } : {}),
+      ...(computed.fiber ? {
+        fiber: {
+          ...THRESHOLDS.fiber,
+          targetG:   computed.fiber.target,
+          lowG:      computed.fiber.low,
+          adequateG: computed.fiber.adequate,
+          goodG:     computed.fiber.good,
+          _source:   computed.fiber._source
+        }
+      } : {}),
+      sleep: {
+        ...THRESHOLDS.sleep,
+        targetH:      computed.sleep.target,
+        lowH:         computed.sleep.low,
+        _source:      computed.sleep._source
+      },
       _computedMeta: computed._meta
     };
   }
