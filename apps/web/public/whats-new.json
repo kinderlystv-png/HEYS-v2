@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.c861c627",
+      "buildHash": "c861c627",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Pollution hardening Wave 3: cross-tab + bootstrap race guards",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Закрыты 3 race window'а: cross-tab tombstones, BroadcastChannel идентификация, bootstrap snapshot",
+          "description": "Третий аудит вглубь нашёл ещё 3 теоретических race window: (1) storage event для удалённых продуктов между tab'ами мог применить tombstones клиента одного tab'а к UI клиента другого tab'а — добавлен guard skip-if-switch-in-progress; (2) BroadcastChannel при создании заявки на модерацию не передавал client-author в payload — другой tab мог по ошибке обновить свой UI; добавлен clientId в сообщение; (3) applyCloudSnapshot при bootstrap мог писать overlay в LS до того как currentClientId окончательно установился — добавлен early-return guard, caller (bootstrap sync) повторит после auth_init."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.2a34e214",
       "buildHash": "2a34e214",
       "date": "2026-05-30",
