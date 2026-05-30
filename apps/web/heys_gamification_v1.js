@@ -6220,6 +6220,10 @@
     } else {
       window.addEventListener('heys:day-updated', () => {
         const run = () => {
+          // 🛡️ 2026-05-30 Wave 4 audit: skip recalculate если идёт курaторский
+          // switch — таска была запланирована через rIC до switch'а и может
+          // прочитать state старого клиента уже после смены currentClientId.
+          if (window.HEYS?.cloud?._switchClientInProgress === true) return;
           if (HEYS.game?.recalculateDailyMissionsProgress) {
             HEYS.game.recalculateDailyMissionsProgress();
           }

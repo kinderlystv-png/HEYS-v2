@@ -252,8 +252,12 @@
   async function refreshFabUnread() {
     try {
       const isCurator = looksLikeCuratorToken();
+      // 🛡️ 2026-05-30 Wave 4 audit: убран fallback на heys_last_client_id —
+      // он может содержать stale clientId от прошлой сессии и приведёт к
+      // запросу unread count для wrong client'а. Лучше показать 0 пока
+      // currentClientId не установлен.
       const opts = isCurator
-        ? { client_id: window.HEYS?.currentClientId || localStorage.getItem('heys_last_client_id') }
+        ? { client_id: window.HEYS?.currentClientId || null }
         : {};
       if (isCurator && !opts.client_id) {
         // Курaтор без выбранного клиента — счёт не показываем
