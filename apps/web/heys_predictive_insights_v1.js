@@ -835,18 +835,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     console.info(`[HEYS.insights] 📊 v6.0 | daysBack=${daysBack}, days=${days.length}, patterns=${patterns.length}/41 possible (v6.0: +C13+C22+C14+C15+C16+C18+C17+C19+C20+C21)`,
       patterns.map(p => `${p.pattern || 'unknown_pattern'}:${p.score ?? 'n/a'}`));
 
-    // Detailed unavailable patterns logging
+    // Detailed unavailable patterns logging — dedup по signature.
+    // analyzePatterns вызывается часто (re-render, sync, mealrec recompute),
+    // содержимое unavailable стабильно для одного daysBack — повторное логирование
+    // только спам в console. Логируем только если signature изменилась с прошлого раза.
     const unavailable = unavailablePatterns;
     if (unavailable.length > 0) {
-      console.group(`[HEYS.insights] ⏸️ Недоступные паттерны (${unavailable.length}/${patterns.length})`);
-      unavailable.forEach(p => {
-        console.log(
-          `├─ ${p.pattern}:`,
-          `reason="${p.reason || 'none'}"`,
-          p.message ? `msg="${p.message}"` : ''
-        );
-      });
-      console.groupEnd();
+      try {
+        const sig = unavailable.map(p => `${p.pattern}:${p.reason || ''}`).sort().join('|');
+        HEYS._lastUnavailSig = HEYS._lastUnavailSig || '';
+        if (HEYS._lastUnavailSig !== sig) {
+          HEYS._lastUnavailSig = sig;
+          console.group(`[HEYS.insights] ⏸️ Недоступные паттерны (${unavailable.length}/${patterns.length})`);
+          unavailable.forEach(p => {
+            console.log(
+              `├─ ${p.pattern}:`,
+              `reason="${p.reason || 'none'}"`,
+              p.message ? `msg="${p.message}"` : ''
+            );
+          });
+          console.groupEnd();
+        }
+      } catch (_) { /* noop */ }
     }
 
     // Category distribution log
