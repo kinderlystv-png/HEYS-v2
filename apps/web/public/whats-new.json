@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.687a9e6a",
+      "buildHash": "687a9e6a",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Куратор: закрыто последнее race-окно cross-client pollution при переключении клиентов",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Defense-in-depth: debounced upload больше не сработает после старта switch'а",
+          "description": "Аудит 2026-05-30 нашёл runtime race vector между fc1ce544 (reload-on-switch + cleanup) и 7fb8be2f (lazy-каналы scope): функция scheduleClientPush() планировала отправку накопленных данных с debounce 500ms, но не проверяла флаг _switchClientInProgress. Сценарий: пользователь редактирует профиль → enqueueClientSave → setTimeout(500ms) → куратор кликает на другого клиента → switchClient меняет currentClientId, делает cleanup LS, но reload ещё не наступил → setTimeout срабатывает в окне ~200ms между cleanup и reload → doClientUpload видит уже НОВЫЙ currentClientId → пишет stale данные старого клиента под scope нового → cross-client pollution в client_kv_store. Закрыто тремя слоями: (1) scheduleClientPush больше не планирует новые таймеры при активном switch'е, (2) callback таймера запланированного ДО switch'а проверяет флаг при срабатывании и дропает batch, (3) switchClient в самом начале clearTimeout активный debounce. БД проверена — текущей pollution не выявлено, фикс закрывает теоретическую возможность для будущих расширений."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.50dbc568",
       "buildHash": "50dbc568",
       "date": "2026-05-30",
