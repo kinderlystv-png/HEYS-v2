@@ -918,12 +918,15 @@
     // Если нет активного — getVariant() returns null.
 
     const EXPERIMENTS = [
+        // Phase A.8 (2026-05-30): null startDate = baseline (no active experiment).
+        // Когда будет real launch — set startDate/endDate to ISO date.
+        // Это пример template — не реальный активный эксперимент.
         {
             id: 'evidence-badge-v1',
             description: 'A: показывать evidence sources в auto-toast inline · B: + commitment buttons',
             variants: ['control', 'A', 'B'],
-            startDate: '2026-06-01',
-            endDate: '2026-06-08',
+            startDate: null, // baseline — set ISO date при launch
+            endDate: null,
             routing: 'hash'
         }
         // Add more experiments here. Старые экспы оставлять для исторического trace.
@@ -932,7 +935,12 @@
     function getActiveExperiment(dateIso) {
         const today = dateIso || new Date().toISOString().slice(0, 10);
         return EXPERIMENTS.find(exp => {
-            const startOk = !exp.startDate || exp.startDate <= today;
+            // Phase A.8 fix: null startDate = experiment не активен (baseline).
+            // Раньше `!exp.startDate` давал true (null falsy) → false positive
+            // active experiment. Корректно: для активного эксп требуется
+            // явный startDate ISO.
+            if (!exp.startDate) return false;
+            const startOk = exp.startDate <= today;
             const endOk = !exp.endDate || exp.endDate >= today;
             return startOk && endOk;
         }) || null;
@@ -3341,30 +3349,17 @@
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 🕐 Phase 4 (2026-05-30): per-category cooldown configuration
-    //
-    // Заменяет глобальный 45с window на context-aware cooldowns.
-    // Например, hydration советы реже (10мин) чтобы не раздражать;
-    // training советы редко (30мин) уместны; nutrition чаще (5мин).
-    //
-    // GLOBAL_FLOOR_MS — minimal интервал между ЛЮБЫМИ показами
-    // (защита от burst после канOLDOWN expiry).
-    //
-    // SESSION_CAP_PER_CATEGORY — max показов одной категории
-    // в пределах session (поверх per-category cooldown).
-    // ═══════════════════════════════════════════════════════════════
-
-    const CATEGORY_COOLDOWN_MS = {
-        nutrition: 5 * 60 * 1000,    // 5 мин
-        hydration: 10 * 60 * 1000,   // 10 мин — реже, иначе annoy'ing
-        training:  30 * 60 * 1000,   // 30 мин — редко уместно
-        emotional: 15 * 60 * 1000,   // 15 мин
-        timing:    5 * 60 * 1000,    // 5 мин
-        other:     8 * 60 * 1000     // 8 мин
+    // 🕐 Phase A.6 (2026-05-30): per-category cooldown config moved to
+    // heys_advice_rules_v1.js (consistency с остальным config).
+    // Reading from AdviceRules with fallback на defaults (для safety если
+    // rules version mismatch).
+    const CATEGORY_COOLDOWN_MS = AdviceRules.CATEGORY_COOLDOWN_MS || {
+        nutrition: 5 * 60 * 1000, hydration: 10 * 60 * 1000,
+        training: 30 * 60 * 1000, emotional: 15 * 60 * 1000,
+        timing: 5 * 60 * 1000, other: 8 * 60 * 1000
     };
-    const GLOBAL_FLOOR_MS = 30 * 1000;  // не чаще 30с между ЛЮБЫМИ
-    const SESSION_CAP_PER_CATEGORY = 5; // max 5 показов категории в сессию
+    const GLOBAL_FLOOR_MS = AdviceRules.GLOBAL_FLOOR_MS || 30 * 1000;
+    const SESSION_CAP_PER_CATEGORY = AdviceRules.SESSION_CAP_PER_CATEGORY || 5;
 
     /**
      * Отмечает совет как показанный

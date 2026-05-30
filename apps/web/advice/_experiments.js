@@ -41,12 +41,15 @@
     // Если нет активного — getVariant() returns null.
 
     const EXPERIMENTS = [
+        // Phase A.8 (2026-05-30): null startDate = baseline (no active experiment).
+        // Когда будет real launch — set startDate/endDate to ISO date.
+        // Это пример template — не реальный активный эксперимент.
         {
             id: 'evidence-badge-v1',
             description: 'A: показывать evidence sources в auto-toast inline · B: + commitment buttons',
             variants: ['control', 'A', 'B'],
-            startDate: '2026-06-01',
-            endDate: '2026-06-08',
+            startDate: null, // baseline — set ISO date при launch
+            endDate: null,
             routing: 'hash'
         }
         // Add more experiments here. Старые экспы оставлять для исторического trace.
@@ -55,7 +58,12 @@
     function getActiveExperiment(dateIso) {
         const today = dateIso || new Date().toISOString().slice(0, 10);
         return EXPERIMENTS.find(exp => {
-            const startOk = !exp.startDate || exp.startDate <= today;
+            // Phase A.8 fix: null startDate = experiment не активен (baseline).
+            // Раньше `!exp.startDate` давал true (null falsy) → false positive
+            // active experiment. Корректно: для активного эксп требуется
+            // явный startDate ISO.
+            if (!exp.startDate) return false;
+            const startOk = exp.startDate <= today;
             const endOk = !exp.endDate || exp.endDate >= today;
             return startOk && endOk;
         }) || null;

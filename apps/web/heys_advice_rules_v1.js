@@ -12,9 +12,30 @@
   window.HEYS = window.HEYS || {};
 
   const MAX_ADVICES_PER_SESSION = 10;
-  const ADVICE_COOLDOWN_MS = 45000; // 45 секунд между советами
+  const ADVICE_COOLDOWN_MS = 45000; // 45 секунд между советами (legacy fallback)
   const SESSION_KEY = 'heys_advice_session';
   const TRACKING_KEY = 'heys_advice_stats';
+
+  // Phase A.6 (2026-05-30): per-category cooldown — moved from _core.js
+  // Заменяет global 45с window context-aware values:
+  //   nutrition  5 min  (frequent, but not каждые 45с)
+  //   hydration 10 min  (less often — иначе annoy'ing)
+  //   training  30 min  (rarely уместно)
+  //   emotional 15 min
+  //   timing     5 min
+  //   other      8 min
+  const CATEGORY_COOLDOWN_MS = {
+    nutrition: 5 * 60 * 1000,
+    hydration: 10 * 60 * 1000,
+    training:  30 * 60 * 1000,
+    emotional: 15 * 60 * 1000,
+    timing:    5 * 60 * 1000,
+    other:     8 * 60 * 1000
+  };
+  // Global floor — minimum 30с между ЛЮБЫМИ показами (защита от burst)
+  const GLOBAL_FLOOR_MS = 30 * 1000;
+  // Max показов одной категории в сессии (поверх per-category cooldown)
+  const SESSION_CAP_PER_CATEGORY = 5;
 
   // ═══════════════════════════════════════════════════════════
   // 🎯 PRIORITY CONSTANTS — Стандартизованные приоритеты
@@ -611,15 +632,37 @@
     const height = Number(prof.height) || null;
     const age = Number(prof.age) || null;
     const sex = prof.sex || prof.gender || null;
-    const activityFactor = Number(prof.activityFactor) || 1.4;
+    // Phase A.2 (2026-05-30): default activity 1.55 (lightly active),
+    // не 1.4 (sedentary). Tracking-юзеры обычно более активны базового.
+    const activityFactor = Number(prof.activityFactor) || 1.55;
+    const trainingDaysPerWeek = Number(prof.trainingDaysPerWeek) || 0;
+    const isFemale = sex === 'female';
 
     if (!weight) return null; // нет данных — fallback на STATIC
 
-    // ─── Protein: ESPEN-2022 + Phillips-2014 + Schoenfeld-2018 ─────
-    const proteinPerKg = goalMode === 'deficit'
-      ? (phenotype.metabolic === 'insulin_resistant' ? 2.0 : 1.8)
-      : goalMode === 'bulk' ? 2.2
-      : 1.5;
+    // ─── Protein: ESPEN-2022 + Helms-2014 + Aragon-2017 ─────
+    // Phase A.2 recalibration: ранее давали 1.8 г/кг для женщин в дефиците
+    // — overestimate. Real evidence:
+    //   Female deficit (sedentary): 1.4-1.6 г/кг (Helms-2014)
+    //   Female deficit + resistance training: 1.6-1.8 г/кг (Aragon-2017)
+    //   Male deficit (sedentary): 1.6-1.8
+    //   Male deficit + RT: 1.8-2.0
+    //   Maintenance: ESPEN 0.8 baseline → 1.2-1.5 для active adults
+    //   Bulk: 1.8-2.0 (Schoenfeld-2018 meta — no extra benefit >2.0)
+    //   IR-phenotype boost +0.2 (muscle preservation в deficit)
+    //   Activity boost +0.2 при ≥3 train/нед
+    const proteinPerKg = (() => {
+      let base = goalMode === 'deficit'
+        ? (isFemale ? 1.6 : 1.8)
+        : goalMode === 'bulk' ? 1.8
+        : (isFemale ? 1.3 : 1.5);
+      if (goalMode === 'deficit' && phenotype.metabolic === 'insulin_resistant') {
+        base += 0.2;
+      }
+      if (trainingDaysPerWeek >= 3) base += 0.2;
+      // Hard cap 2.2 г/кг — выше нет evidence бенефита (Schoenfeld-2018)
+      return Math.min(base, 2.2);
+    })();
     const proteinTargetG = weight * proteinPerKg;
 
     // ─── Water: EFSA-2010 (~30-35 мл/кг для adults) ─────
@@ -714,6 +757,10 @@
     PRIORITY,
     ADVICE_CACHE_TTL,
     MAX_ADVICES_PER_CATEGORY,
+    // Phase A.6 (2026-05-30): per-category cooldown config
+    CATEGORY_COOLDOWN_MS,
+    GLOBAL_FLOOR_MS,
+    SESSION_CAP_PER_CATEGORY,
     THRESHOLDS,
     // Phase 2 (2026-05-30): calibrated per-user thresholds
     computeThresholds,

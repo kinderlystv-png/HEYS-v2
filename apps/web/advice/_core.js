@@ -2050,30 +2050,17 @@
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 🕐 Phase 4 (2026-05-30): per-category cooldown configuration
-    //
-    // Заменяет глобальный 45с window на context-aware cooldowns.
-    // Например, hydration советы реже (10мин) чтобы не раздражать;
-    // training советы редко (30мин) уместны; nutrition чаще (5мин).
-    //
-    // GLOBAL_FLOOR_MS — minimal интервал между ЛЮБЫМИ показами
-    // (защита от burst после канOLDOWN expiry).
-    //
-    // SESSION_CAP_PER_CATEGORY — max показов одной категории
-    // в пределах session (поверх per-category cooldown).
-    // ═══════════════════════════════════════════════════════════════
-
-    const CATEGORY_COOLDOWN_MS = {
-        nutrition: 5 * 60 * 1000,    // 5 мин
-        hydration: 10 * 60 * 1000,   // 10 мин — реже, иначе annoy'ing
-        training:  30 * 60 * 1000,   // 30 мин — редко уместно
-        emotional: 15 * 60 * 1000,   // 15 мин
-        timing:    5 * 60 * 1000,    // 5 мин
-        other:     8 * 60 * 1000     // 8 мин
+    // 🕐 Phase A.6 (2026-05-30): per-category cooldown config moved to
+    // heys_advice_rules_v1.js (consistency с остальным config).
+    // Reading from AdviceRules with fallback на defaults (для safety если
+    // rules version mismatch).
+    const CATEGORY_COOLDOWN_MS = AdviceRules.CATEGORY_COOLDOWN_MS || {
+        nutrition: 5 * 60 * 1000, hydration: 10 * 60 * 1000,
+        training: 30 * 60 * 1000, emotional: 15 * 60 * 1000,
+        timing: 5 * 60 * 1000, other: 8 * 60 * 1000
     };
-    const GLOBAL_FLOOR_MS = 30 * 1000;  // не чаще 30с между ЛЮБЫМИ
-    const SESSION_CAP_PER_CATEGORY = 5; // max 5 показов категории в сессию
+    const GLOBAL_FLOOR_MS = AdviceRules.GLOBAL_FLOOR_MS || 30 * 1000;
+    const SESSION_CAP_PER_CATEGORY = AdviceRules.SESSION_CAP_PER_CATEGORY || 5;
 
     /**
      * Отмечает совет как показанный

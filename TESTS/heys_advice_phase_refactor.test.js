@@ -184,16 +184,50 @@ describe('Phase 2 — Calibrated personalization', () => {
         };
         const t = window.HEYS.adviceRules.computeThresholds(ctx);
         expect(t).toBeDefined();
-        // Protein: 70кг × 1.8 г/кг (deficit без IR phenotype) = 126г
-        expect(t.protein.target).toBeCloseTo(126, 0);
-        // Water: 70кг × 32мл = 2240мл
+        // Phase A.2 recalibration: 70кг × 1.6 г/кг (female deficit, no IR, no
+        // training, ESPEN-2022 + Helms-2014) = 112г. Раньше было 1.8 = 126г —
+        // overestimate.
+        expect(t.protein.target).toBeCloseTo(112, 0);
+        // Water: 70кг × 32мл = 2240мл (EFSA-2010)
         expect(t.water.target).toBeCloseTo(2240, 0);
-        // BMR (female): 10×70 + 6.25×170 - 5×35 - 161 = 700 + 1062.5 - 175 - 161 = 1426.5
-        // TDEE: 1426.5 × 1.4 = 1997.1
+        // BMR (female): 10×70 + 6.25×170 - 5×35 - 161 = 1426.5
+        // TDEE: 1426.5 × 1.4 (explicit override) = 1997.1
         // kcal target deficit 15%: 1997.1 × 0.85 = 1697.5
         expect(t.kcal.target).toBeCloseTo(1697.5, 0);
         expect(t._meta.bmr).toBeDefined();
         expect(t._meta.tdee).toBeDefined();
+    });
+
+    it('Phase A.2: female deficit + RT 3+ дней → +0.2 boost', () => {
+        const ctx = {
+            prof: { weight: 70, sex: 'female', trainingDaysPerWeek: 4 },
+            goal: { mode: 'deficit' }
+        };
+        const t = window.HEYS.adviceRules.computeThresholds(ctx);
+        // 1.6 base + 0.2 training boost = 1.8 г/кг × 70 = 126г
+        expect(t.protein.target).toBeCloseTo(126, 0);
+    });
+
+    it('Phase A.2: hard cap 2.2 г/кг даже при всех boost', () => {
+        const ctx = {
+            prof: { weight: 80, sex: 'male', trainingDaysPerWeek: 5 },
+            goal: { mode: 'deficit' },
+            phenotype: { metabolic: 'insulin_resistant' }
+        };
+        const t = window.HEYS.adviceRules.computeThresholds(ctx);
+        // 1.8 base + 0.2 IR + 0.2 training = 2.2 cap × 80 = 176г
+        expect(t.protein.target).toBeCloseTo(176, 0);
+    });
+
+    it('Phase A.2: default activityFactor 1.55 (lightly active)', () => {
+        const ctx = {
+            prof: { weight: 70, height: 170, age: 35, sex: 'female' },
+            // no explicit activityFactor
+            goal: { mode: 'maintenance' }
+        };
+        const t = window.HEYS.adviceRules.computeThresholds(ctx);
+        // BMR 1426.5 × 1.55 default = ~2211 maintenance kcal
+        expect(t.kcal.target).toBeCloseTo(2211, 0);
     });
 
     it('computeThresholds с insulin_resistant даёт 2.0 г/кг белка в дефиците', () => {
