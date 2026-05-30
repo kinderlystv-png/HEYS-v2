@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Куратор: bulk-approve заявок на модерацию больше не возвращает их обратно",
+      "items": [
+        {
+          "type": "fix",
+          "title": "«Одобрить все» теперь действительно одобряет все, а не отображает фейковый успех",
+          "description": "Симптом: куратор жал «Одобрить все (14)», видел тост «Готово», заявки исчезали из UI, но после перезагрузки страницы возвращались все 14. Сейчас bulk-approve корректно одобряет каждую заявку и сохраняет статус. Причина: 14 заявок были подняты sweep-миграцией из orphan-продуктов PIN-клиентов (после 2-недельного простоя submit'а) и сохранились в shared_products_pending без поля fingerprint в product_data. SQL-функция approve_pending_products_bulk → publish_shared_product_by_curator требовала fingerprint в input и падала с ошибкой fingerprint_required, которую UI воспринимал как «failed» и оставлял заявки на месте. Single-approve работал потому что клиент сам пересчитывает fingerprint перед отправкой. Архитектурный фикс: fingerprint стал server-derived свойством — единая SQL-функция compute_product_fingerprint(jsonb), которая 1-в-1 повторяет client-алгоритм (SHA-256 от имени + округлённых нутриентов). Теперь publish_shared_product_by_curator auto-derives fingerprint если он не передан в input; trigger на shared_products_pending гарантирует invariant колонки fingerprint = compute_product_fingerprint(product_data). Backfill 12 sweep-pending исправил их колонку fingerprint (бывший fallback name_norm заменён на настоящий hash). Parity JS↔SQL зафиксирован на 5 samples в DO-блоке миграции."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.85cf0b8e",
       "buildHash": "85cf0b8e",
       "date": "2026-05-30",
