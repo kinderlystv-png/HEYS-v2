@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.PENDING",
+      "buildHash": "PENDING",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Harm backfill: pg-driver type hint + devx push-and-watch helper",
+      "items": [
+        {
+          "type": "fix",
+          "title": "backfill_shared_harm.p_updates: ::jsonb type hint в RPC cloud function",
+          "description": "Четвёртый слой каскада harm backfill: после восстановления client-switch (d6406637) и RPC allowlist (2798ee88) получали 500 'Database error' при клиент-switch'е. Корневая причина: TYPE_HINTS-карта в heys-api-rpc/index.js не имела entry для p_updates, поэтому pg-driver сериализовал массив объектов как PG array literal вместо jsonb — функция падала на типах. Добавил hint ::jsonb (тот же класс что log_client_event_by_session/p_events). Cloud function задеплоена, health-check прошёл."
+        },
+        {
+          "type": "improvement",
+          "title": "scripts/push-and-watch.sh: единый способ push'ить на main",
+          "description": "Добавил wrapper над git push: после push блокирует управление пока workflow 'Deploy to Yandex Cloud' не станет зелёным. Exit 1 если deploy упал. Зачем: 3 раза за сессию забывал проверить CI deploy после push, прод оставался на старой версии, юзер вручную проверял GitHub Actions. Скрипт делает чек обязательным."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.2798ee88",
       "buildHash": "2798ee88",
       "date": "2026-05-30",

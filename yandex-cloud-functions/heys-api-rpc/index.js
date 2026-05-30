@@ -2837,6 +2837,12 @@ module.exports.handler = async function (event, context) {
       'log_client_event_by_session': {
         'p_session_token': '::text',
         'p_events': '::jsonb'
+      },
+      // 🔧 Harm backfill: p_updates требует ::jsonb hint (тот же класс что
+      // p_events выше). Без hint pg-driver сериализует массив как PG array
+      // literal → 500 "Database error" (incident 2026-05-30).
+      'backfill_shared_harm': {
+        'p_updates': '::jsonb'
       }
     };
 
