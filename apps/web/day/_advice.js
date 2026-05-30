@@ -1309,6 +1309,62 @@
     // --- Manual advice list UI ---
     const dayAdviceListUI = {};
 
+    // ═════════════════════════════════════════════════════════════════
+    // ⚕️ Phase 6 (2026-05-30): Medical disclaimer (one-time, LS-tracked)
+    //
+    // Юзер должен один раз acknowledge что советы основаны на
+    // peer-reviewed research, но не заменяют врача. После accept'a —
+    // не показывается. Reset через DevTools localStorage если нужно.
+    // ═════════════════════════════════════════════════════════════════
+
+    const MEDICAL_DISCLAIMER_KEY = 'heys_advice_disclaimer_accepted_v1';
+
+    function isMedicalDisclaimerAccepted() {
+        try { return localStorage.getItem(MEDICAL_DISCLAIMER_KEY) === '1'; }
+        catch (e) { return true; /* on error — assume accepted, не блокируем UI */ }
+    }
+
+    function acceptMedicalDisclaimer() {
+        try {
+            if (window.HEYS?.utils?.lsSet) {
+                window.HEYS.utils.lsSet(MEDICAL_DISCLAIMER_KEY, '1');
+            } else {
+                localStorage.setItem(MEDICAL_DISCLAIMER_KEY, '1');
+            }
+        } catch (e) { /* noop */ }
+    }
+
+    function renderMedicalDisclaimer(React, onAccept) {
+        if (isMedicalDisclaimerAccepted()) return null;
+        return React.createElement('div', {
+            className: 'advice-medical-disclaimer',
+            style: {
+                background: 'rgba(255,200,100,0.12)',
+                border: '1px solid rgba(255,200,100,0.4)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                margin: '0 0 12px 0',
+                fontSize: '12px',
+                lineHeight: '1.45'
+            }
+        },
+            React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px' } },
+                '⚕️ Важно про советы'),
+            React.createElement('div', { style: { opacity: 0.9 } },
+                'Все советы здесь основаны на peer-reviewed research (ESPEN, ACSM, WHO, EFSA и meta-analyses), но не заменяют консультацию врача. При хронических заболеваниях, беременности, приёме лекарств — сверяйся с врачом или диетологом.'),
+            React.createElement('button', {
+                onClick: (e) => { e.stopPropagation(); acceptMedicalDisclaimer(); if (onAccept) onAccept(); },
+                style: {
+                    marginTop: '8px', padding: '6px 14px',
+                    background: 'rgba(255,200,100,0.25)',
+                    border: '1px solid rgba(255,200,100,0.5)',
+                    borderRadius: '6px', cursor: 'pointer',
+                    fontSize: '12px', fontWeight: 500
+                }
+            }, 'Понятно, дальше не показывать')
+        );
+    }
+
     dayAdviceListUI.renderManualAdviceList = function renderManualAdviceList({
         React,
         adviceTrigger,
@@ -1400,6 +1456,8 @@
                 onTouchMove: handleAdviceListTouchMove,
                 onTouchEnd: handleAdviceListTouchEnd,
             },
+                // Phase 6: Medical disclaimer (one-time, top of drawer)
+                renderMedicalDisclaimer(React, () => { /* re-render */ }),
                 React.createElement('div', { className: 'advice-list-header' },
                     React.createElement('div', { className: 'advice-list-header-top' },
                         React.createElement('span', null, `💡 Советы (${activeCount})`),
