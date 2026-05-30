@@ -228,3 +228,7 @@ apps/web/insights/pi_ui_meal_rec_card.js:2028
 apps/web/heys_curator_push_onboarding_banner_v1.js:62
 apps/web/heys_app_shell_v1.js:176
 apps/web/heys_app_shell_v1.js:292
+apps/web/advice/_actions.js:175
+apps/web/advice/_commitments.js:52
+apps/web/advice/_commitments.js:200
+apps/web/advice/_experiments.js:117
