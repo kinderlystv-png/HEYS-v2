@@ -84,6 +84,54 @@ DELETE FROM public.clients WHERE id IN ('11111111-1111-1111-1111-111111111111'::
 
 ---
 
+## Without local env — scaffold + skip pattern (для agents/contributors без credentials)
+
+**Проблема**: добавлять e2e assertions без возможности **локально запустить и убедиться что они зелёные** = риск ship'нуть broken tests. Это **legitimate concern**. Не нужно копировать чужой подход без verify.
+
+**Безопасный паттерн**: scaffold structure + `test.skip(true, '...')` + explicit TODO. Прямо так делали для Phases 3/4/6 (см. `cross-device-sync.spec.ts`, `sw-update.spec.ts`, `TESTS/rpc/heys-api-rpc.contract.test.ts`):
+
+```ts
+import { test } from '@playwright/test';
+
+test.describe('My new e2e suite [SCAFFOLD]', () => {
+    test('TODO: <конкретное assertion которое потом проверим>', async ({ page }) => {
+        test.skip(true, 'Scaffold only — нужны HEYS_TEST_E2E_* env vars + локальный pnpm dev:web run для verify. См. TESTS/e2e/README.md разделы Setup + Without local env');
+
+        // Pseudo-code как должен выглядеть test когда unlocked:
+        //   const creds = getNamedPinCredentials('E2E_ALEX');
+        //   await loginWithHeysPin(page, creds);
+        //   await page.click('...');
+        //   expect(...).toBe(...);
+    });
+});
+```
+
+**Что это даёт**:
+- Code review происходит **сейчас** (другой агент / human может read structure + comments)
+- Test discovery работает (Playwright видит файл, считает skipped)
+- Когда у кого-то с env будет время — он удаляет `test.skip(true, ...)`, заменяет pseudo-code на real, запускает, fix'ит assertion если падает, commit'ит unblock
+- **Никто не ship'ит code который could fail in CI без warning**
+
+**Чего НЕ делать без env**:
+- ❌ Писать **active** assertions (без skip) и надеяться что они правильные — даже если выглядят логично, race conditions / UI selectors / timing могут отличаться
+- ❌ Commit'ить тесты которые "должны работать" но не проверены — это эквивалент `git commit --no-verify` для тестовой логики
+- ❌ Удалять `.skip` у чужих TODO без локального verify
+
+**Что нужно для unlock'a** (если хочешь locally запускать e2e):
+1. `.env.local` копируется из `.env.local.example` + заполняется:
+   - `HEYS_TEST_CURATOR_EMAIL` + `HEYS_TEST_CURATOR_PASSWORD` (запросить у owner'a)
+   - Все `HEYS_TEST_E2E_*` уже preset'нуты в example
+2. Yandex Cloud CLI auth + Lockbox payload subscription (для `bash scripts/db/psql.sh`):
+   - `yc init` → выбрать `kinderly.stv@gmail.com` profile
+   - Verify: `bash scripts/db/get-pg-password.sh` должен напечатать password (без ошибки)
+3. Запустить `pnpm dev:web` в фоне на порту 3001
+4. Migration applied: `bash scripts/db/psql.sh -f scripts/db/migrations/2026-05-31_create_e2e_test_clients.sql` (idempotent, безопасно re-apply)
+5. Verify: `pnpm test:e2e:curator-switch` должен показать 2 passed + 1 skipped (test 3 имеет separate TODO для wizard race)
+
+Если хоть один пункт unavailable → scaffold + skip pattern выше — **корректный путь** добавить test infrastructure без риска регрессии.
+
+---
+
 ## Overview
 
 Comprehensive End-to-End testing suite for HEYS using Playwright. This testing infrastructure covers all major user journeys and ensures the application works correctly across different browsers and devices.
