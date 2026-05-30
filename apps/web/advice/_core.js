@@ -1019,12 +1019,33 @@
         const cachedRatings = getAllRatings();
         const cachedOutcomeProfiles = getAdviceOutcomeProfiles();
 
+        // 📅 Phase A.4 (2026-05-30): longitudinal penalties applied here.
+        // Phase 5.1/5.2 инжектят ctx.yesterdayIgnoredIds (Set) +
+        // ctx.weekIgnoredCounts (object). Раньше никто это не reads — A.4 hook.
+        // Penalty -5pt вчерашний ignored, -10pt дополнительно если ignored >=5
+        // раз за неделю. Не hard suppress — даём шанс альтернативе.
+        const yesterdayIgnored = ctx?.yesterdayIgnoredIds;
+        const weekIgnoredCounts = ctx?.weekIgnoredCounts || {};
+
         return advices
             .map(a => {
                 const scoreProfile = buildAdviceScoreProfile(a, ctx, cachedStats, cachedRatings, cachedOutcomeProfiles);
+                let finalScore = scoreProfile.finalScore;
+                const longitudinalPenalty = (() => {
+                    let p = 0;
+                    if (yesterdayIgnored && typeof yesterdayIgnored.has === 'function'
+                        && yesterdayIgnored.has(a.id)) p += 5;
+                    const weekCount = weekIgnoredCounts[a.id] || 0;
+                    if (weekCount >= 5) p += 10;
+                    return p;
+                })();
+                if (longitudinalPenalty > 0) {
+                    finalScore -= longitudinalPenalty;
+                    scoreProfile.longitudinalPenalty = longitudinalPenalty;
+                }
                 return {
                     ...a,
-                    smartScore: scoreProfile.finalScore,
+                    smartScore: finalScore,
                     scoreProfile
                 };
             })
@@ -6763,17 +6784,34 @@
             });
             advices = limitedAdvices;
 
-            // 🔧 2026-05-30 Phase 0.4: Coverage fallback rule.
-            // Если после всех фильтров не осталось советов — выдаём insight-of-the-day
-            // из ротации (12 базовых tips, day-of-year mod 12). Гарантирует coverage > 0
-            // для любого snapshot. Не применяется если userBusy (избегаем noise).
-            if (advices.length === 0 && !userBusy) {
+            // 🔧 Phase 0.4 + A.5 (2026-05-30): Coverage fallback rule.
+            // Если после всех фильтров не осталось советов — выдаём
+            // insight-of-the-day из ротации.
+            //
+            // Phase A.5 (self-audit) refinement: НЕ fallback если есть active
+            // EWS warnings (medium/high severity). Когда engine silent при
+            // active warnings — это сигнал что warning-based rules должны
+            // fire, не generic tip. Fallback здесь diluted бы meaningful
+            // signals.
+            //
+            // Также: НЕ fallback при userBusy (избегаем noise).
+            const hasActiveWarnings = (() => {
+                try {
+                    const warnings = (signals?.earlyWarnings?.warnings) || [];
+                    return warnings.some(w => w?.severity === 'high' || w?.severity === 'medium');
+                } catch (e) { return false; }
+            })();
+
+            if (advices.length === 0 && !userBusy && !hasActiveWarnings) {
                 const fallbackAdvice = getInsightOfTheDay(ctx);
                 if (fallbackAdvice) {
                     advices = [fallbackAdvice];
                     appendAdviceTraceStage(adviceTrace, 'coverage_fallback',
                         [], advices, { reason: 'no_advices_after_all_filters' });
                 }
+            } else if (advices.length === 0 && hasActiveWarnings) {
+                appendAdviceTraceStage(adviceTrace, 'coverage_fallback_suppressed',
+                    [], [], { reason: 'active_ews_warnings_suppress_generic_fallback' });
             }
 
             return advices;
