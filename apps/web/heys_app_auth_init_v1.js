@@ -90,11 +90,21 @@
             const code = String(error?.code || error?.status || error?.statusCode || '').toLowerCase();
             const message = String(error?.message || error || '').toLowerCase();
             if (code === '401' || code === '403') return true;
+            // 'no session token' / 'no auth token' НЕ считаем auth-error:
+            // эти строки приходят ТОЛЬКО от client-side guard (когда LS
+            // пустой). Сервер бы валидировал PIN-сессию через cookie
+            // (heys-api-rpc/index.js:1129-1136), если бы запрос дошёл.
+            // Если бутстрап здесь свалится с этой message — снос
+            // heys_pin_auth_client + heys_session_token порождает цикл:
+            // reload → cleanup → re-PIN → новая session → next reload снова падает.
+            // Инцидент 2026-05-30: у двух активных PIN-юзеров накопилось
+            // 179 и 194 client_sessions за 30 дней из-за этого цикла.
+            // Legitimate server-side auth-errors остались: 401/403, invalid_session,
+            // invalid token, token expired, jwt, forbidden, unauthorized, auth_required.
             return (
                 message.includes('unauthorized') ||
                 message.includes('auth_required') ||
-                message.includes('no session token') ||
-                message.includes('no auth token') ||
+                message.includes('invalid_session') ||
                 message.includes('invalid token') ||
                 message.includes('token expired') ||
                 message.includes('jwt') ||
