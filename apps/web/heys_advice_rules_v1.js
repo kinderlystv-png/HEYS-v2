@@ -587,6 +587,125 @@
 
   const MEAL_ADVICE_THROTTLE_MS = 3000;
 
+  // ═══════════════════════════════════════════════════════════
+  // 🔬 PHASE 2: CALIBRATED PERSONALIZATION (2026-05-30)
+  // computeThresholds(ctx) — peer-reviewed формулы от user profile
+  // (вес, пол, возраст, goal, фенотип). Заменяет hardcoded percentages
+  // на per-user calibrated values.
+  //
+  // getThresholds(ctx) — proxy: возвращает merge(STATIC, computed).
+  // Если profile incomplete → fallback на STATIC THRESHOLDS.
+  //
+  // Существующие rules используют const { THRESHOLDS } = rules (static).
+  // Чтобы перейти на dynamic: const T = rules.getThresholds(ctx).
+  // Backward-compat: gradual migration, не ломаем legacy modules.
+  // ═══════════════════════════════════════════════════════════
+
+  function computeThresholds(ctx) {
+    const prof = ctx?.prof || {};
+    const phenotype = ctx?.phenotype || {};
+    const goalMode = ctx?.goal?.mode || ctx?.goal || 'maintenance';
+    const deficitPctTarget = ctx?.goal?.deficitPctTarget || 0.15;
+
+    const weight = Number(prof.weight) || null;
+    const height = Number(prof.height) || null;
+    const age = Number(prof.age) || null;
+    const sex = prof.sex || prof.gender || null;
+    const activityFactor = Number(prof.activityFactor) || 1.4;
+
+    if (!weight) return null; // нет данных — fallback на STATIC
+
+    // ─── Protein: ESPEN-2022 + Phillips-2014 + Schoenfeld-2018 ─────
+    const proteinPerKg = goalMode === 'deficit'
+      ? (phenotype.metabolic === 'insulin_resistant' ? 2.0 : 1.8)
+      : goalMode === 'bulk' ? 2.2
+      : 1.5;
+    const proteinTargetG = weight * proteinPerKg;
+
+    // ─── Water: EFSA-2010 (~30-35 мл/кг для adults) ─────
+    const waterTargetMl = weight * 32;
+
+    // ─── Kcal: Mifflin-St Jeor BMR + activity + goal ─────
+    let bmr = null;
+    if (height && age && (sex === 'female' || sex === 'male')) {
+      bmr = sex === 'female'
+        ? 10 * weight + 6.25 * height - 5 * age - 161
+        : 10 * weight + 6.25 * height - 5 * age + 5;
+    }
+    const tdee = bmr ? bmr * activityFactor : null;
+    const kcalTarget = tdee
+      ? (goalMode === 'deficit' ? tdee * (1 - deficitPctTarget)
+         : goalMode === 'bulk' ? tdee * 1.1
+         : tdee)
+      : null;
+
+    // ─── Fiber: ESPEN-2022 (14г / 1000 ккал) ─────
+    const fiberTargetG = kcalTarget ? (kcalTarget / 1000) * 14 : null;
+
+    // ─── Sleep: Walker-2017 + chronotype-adjusted ─────
+    const sleepTargetH = phenotype.circadian === 'evening_type' ? 8.0 : 7.5;
+
+    return {
+      protein: {
+        target: proteinTargetG,
+        low: proteinTargetG * 0.5,
+        adequate: proteinTargetG * 0.8,
+        good: proteinTargetG * 0.9,
+        high: proteinTargetG * 1.2,
+        champion: proteinTargetG * 1.2,
+        _source: 'ESPEN-2022 + Schoenfeld-2018'
+      },
+      water: {
+        target: waterTargetMl,
+        eveningLow: waterTargetMl * 0.5,
+        _source: 'EFSA-2010'
+      },
+      kcal: kcalTarget ? {
+        target: kcalTarget,
+        undereating: kcalTarget * 0.6,
+        evening: kcalTarget * 0.7,
+        _source: 'Mifflin-St-Jeor + ACSM-2018'
+      } : null,
+      fiber: fiberTargetG ? {
+        target: fiberTargetG,
+        low: fiberTargetG * 0.3,
+        adequate: fiberTargetG * 0.5,
+        good: fiberTargetG,
+        _source: 'Reynolds-Lancet-2019 / ESPEN-2022'
+      } : null,
+      sleep: {
+        target: sleepTargetH,
+        low: sleepTargetH - 1,
+        deficit: 1.5,
+        deficitHigh: 2,
+        _source: 'Walker-2017 + chronotype-adjusted'
+      },
+      // Computed meta для debugging
+      _meta: {
+        bmr: bmr ? Math.round(bmr) : null,
+        tdee: tdee ? Math.round(tdee) : null,
+        proteinPerKg,
+        chronotype: phenotype.circadian || null,
+        metabolicPhenotype: phenotype.metabolic || null
+      }
+    };
+  }
+
+  function getThresholds(ctx) {
+    const computed = computeThresholds(ctx);
+    if (!computed) return THRESHOLDS; // fallback при incomplete profile
+
+    return {
+      ...THRESHOLDS,
+      protein: { ...THRESHOLDS.protein, ...computed.protein },
+      water: { ...THRESHOLDS.water, ...computed.water },
+      ...(computed.kcal ? { kcal: { ...THRESHOLDS.kcal, ...computed.kcal } } : {}),
+      ...(computed.fiber ? { fiber: { ...THRESHOLDS.fiber, ...computed.fiber } } : {}),
+      sleep: { ...THRESHOLDS.sleep, ...computed.sleep },
+      _computedMeta: computed._meta
+    };
+  }
+
   window.HEYS.adviceRules = {
     MAX_ADVICES_PER_SESSION,
     ADVICE_COOLDOWN_MS,
@@ -596,6 +715,9 @@
     ADVICE_CACHE_TTL,
     MAX_ADVICES_PER_CATEGORY,
     THRESHOLDS,
+    // Phase 2 (2026-05-30): calibrated per-user thresholds
+    computeThresholds,
+    getThresholds,
     PRODUCT_CATEGORIES,
     DEDUPLICATION_RULES,
     TIME_RESTRICTIONS,
