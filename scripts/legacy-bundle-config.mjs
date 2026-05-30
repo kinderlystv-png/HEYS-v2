@@ -339,6 +339,7 @@ export const LEGACY_GENERATORS = {
             // window.HEYS.adviceEvidence, который _core.js использует
             // в enrichAdvicesWithExpertContext (Phase 1.2).
             'apps/web/advice/_evidence.js',
+            'apps/web/advice/_commitments.js',
             'apps/web/advice/_outcomes.js',
             'apps/web/advice/_core.js',
             'apps/web/advice/_nutrition.js',

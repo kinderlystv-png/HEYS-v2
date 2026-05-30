@@ -4633,6 +4633,52 @@
             if (traceCollector?.moduleRuns) traceCollector.moduleRuns.push(moduleTrace);
         }
 
+        // 🤝 Phase 3.2 (2026-05-30): processing expired commitments.
+        // Если у юзера есть pending commitments (он нажал "Сделаю сегодня"
+        // на каком-то совете) и время прошло (dueAt < now) — engine
+        // evaluates check predicate на текущем ctx и выдаёт generic
+        // reinforcement / alt совет. Specific on_success/on_miss advice IDs
+        // обрабатываются через advice modules (Phase 3.4 populate).
+        try {
+            const commitmentsApi = window.HEYS?.adviceCommitments;
+            if (commitmentsApi?.processExpired) {
+                const results = commitmentsApi.processExpired(ctx);
+                for (const r of results) {
+                    const followUpAdvice = {
+                        id: r.adviceId,
+                        icon: r.outcome === 'success' ? '✅' : '🔄',
+                        text: r.outcome === 'success'
+                            ? 'Отлично — ты выполнил(а) то, что обещал(а)!'
+                            : 'В следующий раз попробуй мягче — обстоятельства бывают',
+                        details: r.outcome === 'success'
+                            ? `Follow-up: твой коммитмент "${r.commitment.adviceId}" выполнен. Habit-loop работает.`
+                            : `Follow-up: коммитмент "${r.commitment.adviceId}" не вышел. Это норма — обстоятельства не всегда позволяют. Без вины.`,
+                        type: r.outcome === 'success' ? 'achievement' : 'tip',
+                        priority: r.outcome === 'success' ? 25 : 55,
+                        category: 'other',
+                        triggers: ['tab_open', 'manual'],
+                        ttl: 6000,
+                        __commitmentResult: r
+                    };
+                    advices.push(attachAdviceTraceMeta(followUpAdvice, {
+                        module: 'commitment_followup',
+                        source: 'commitment'
+                    }));
+                }
+                if (traceCollector?.moduleRuns && results.length > 0) {
+                    traceCollector.moduleRuns.push({
+                        module: 'commitment_followup',
+                        status: 'ok',
+                        mode: 'commitment',
+                        outputCount: results.length,
+                        adviceIds: results.map(r => r.adviceId)
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('[HEYS.advice] ⚠️ Commitments processing failed:', e?.message);
+        }
+
         return advices;
     }
 
