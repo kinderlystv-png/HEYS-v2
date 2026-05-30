@@ -11961,10 +11961,10 @@
     if (isCuratorMode && typeof YandexAPI.getAllKVByCurator === 'function') {
       return _runForegroundHotKeySyncCurator(clientId, keysToFetch, reason, markerScopes);
     }
-    return _runForegroundHotKeySyncLegacy(clientId, keysToFetch, markerScopes);
+    return _runForegroundHotKeySyncLegacy(clientId, keysToFetch, reason, markerScopes);
   }
 
-  async function _runForegroundHotKeySyncLegacy(clientId, keys, markerScopes = []) {
+  async function _runForegroundHotKeySyncLegacy(clientId, keys, reason, markerScopes = []) {
     const YandexAPI = global.HEYS?.YandexAPI;
     if (!YandexAPI || typeof YandexAPI.getKV !== 'function') {
       return { success: false, updated: 0, failed: 0, reason: 'no_getkv', mode: 'no-getkv', fetchedKeys: keys, fetchedKeyCount: keys.length, markerScopes };
