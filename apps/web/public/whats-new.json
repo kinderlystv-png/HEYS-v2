@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.b1a7db22",
+      "buildHash": "b1a7db22",
+      "date": "2026-05-30",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Bundle hash bump после deploy 74f30fbe (no functional change)",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Vite пересобрал boot-core с новым hash, APP_VERSION/sw CACHE_VERSION/index.html синхронизированы",
+          "description": "Post-deploy bundle artifact'ы (no functional change). См. предыдущий entry 74f30fbe для сути fix'а orphan restore."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.74f30fbe",
       "buildHash": "74f30fbe",
       "date": "2026-05-30",
