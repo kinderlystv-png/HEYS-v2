@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.30.2798ee88",
+      "buildHash": "2798ee88",
+      "date": "2026-05-30",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Harm backfill 500: добавлено разрешение для RPC в cloud function gateway",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Cloud function heys-api-rpc теперь allowlist'ит backfill_shared_harm",
+          "description": "После восстановления client-switch на rpc('backfill_shared_harm') (commit d6406637) reload давал 403 'Function backfill_shared_harm not allowed'. Третий слой каскада: cloud function /rpc имеет JS-уровневый allowlist разрешённых функций (yandex-cloud-functions/heys-api-rpc/index.js) — backfill_shared_harm в нём отсутствовал. Добавлен entry рядом с approve_pending_products_bulk (тот же класс куратор-only). Cloud function задеплоена, health-check прошёл, RPC теперь возвращает 200."
+        }
+      ]
+    },
+    {
       "version": "2026.05.30.d6406637",
       "buildHash": "d6406637",
       "date": "2026-05-30",
