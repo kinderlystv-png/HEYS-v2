@@ -9097,8 +9097,12 @@
               onClick: async () => {
                 const result = await HEYS.orphanProducts?.restore?.();
                 if (result?.success) {
-                  HEYS.Toast?.success(`Восстановлено ${result.count} продуктов! Обновите страницу для применения.`) || alert(`✅ Восстановлено ${result.count} продуктов!\nОбновите страницу для применения.`);
-                  window.location.reload();
+                  // No reload: orphanProducts.restore() уже вызывает recalculate()
+                  // и диспатчит heysProductsUpdated/heys:orphan-updated — UI react
+                  // перерендеривается. Reload порождал race с cloud-sync
+                  // (особенно при auto-safe degraded mode), restored продукт
+                  // возвращался как orphan после bootstrap'а.
+                  HEYS.Toast?.success(`Восстановлено ${result.count} продуктов!`) || alert(`✅ Восстановлено ${result.count} продуктов!`);
                 } else {
                   HEYS.Toast?.warning('Не удалось восстановить — нет данных в штампах.') || alert('⚠️ Не удалось восстановить — нет данных в штампах.');
                 }

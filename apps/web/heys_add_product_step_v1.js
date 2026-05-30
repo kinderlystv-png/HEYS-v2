@@ -5540,8 +5540,14 @@ NOVA: 1
                     Toast?.info?.('Заявка уже отправлена ранее — ждёт модерации');
                   } else if (status === 'error' || result?.error) {
                     const msg = result?.message || (typeof result?.error === 'string' ? result.error : (result?.error?.message || 'неизвестная ошибка'));
+                    const isSessionExpired = /invalid_session|No session token|Нет активной сессии/i.test(String(msg));
                     console.error('[HarmSelectStep] ❌ Ошибка отправки на модерацию:', result);
-                    Toast?.error?.(`Не удалось отправить на модерацию: ${msg}`);
+                    if (isSessionExpired) {
+                      Toast?.error?.('PIN-сессия истекла. Пожалуйста, войдите снова, чтобы заявка дошла до куратора.');
+                      try { HEYS.Auth?.requestPinReentry?.(); } catch (_) { /* no API — toast уже показан */ }
+                    } else {
+                      Toast?.error?.(`Не удалось отправить на модерацию: ${msg}`);
+                    }
                   } else {
                     console.warn('[HarmSelectStep] ⚠️ Неожиданный ответ createPendingProduct:', result);
                   }

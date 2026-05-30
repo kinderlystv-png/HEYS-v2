@@ -13491,7 +13491,10 @@
       const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
         || HEYS.utils?.lsGet?.('heys_session_token', null)
         || (() => { try { return JSON.parse(localStorage.getItem('heys_session_token')); } catch { return null; } })();
-      if (!sessionToken) {
+      // Post-PR-C: в production token в HttpOnly cookie. Если LS пуст, но активна PIN-сессия,
+      // heys-api-rpc сам инжектит токен из cookie в *_by_session функции.
+      const hasCookieSession = !!cloud.isPinAuthClient?.();
+      if (!sessionToken && !hasCookieSession) {
         return { data: null, error: 'No session token', status: 'error', message: 'Нет активной сессии PIN-клиента' };
       }
 
@@ -13509,13 +13512,14 @@
         }
       } catch (_) { /* fallback to null */ }
 
-      const { data, error } = await YandexAPI.rpc('create_pending_product_by_session', {
-        p_session_token: sessionToken,
+      const rpcParams = {
         p_name: product.name,
         p_product_data: product,
         p_fingerprint: fingerprint,
         p_name_norm: nameNorm
-      });
+      };
+      if (sessionToken) rpcParams.p_session_token = sessionToken;
+      const { data, error } = await YandexAPI.rpc('create_pending_product_by_session', rpcParams);
 
       if (error) {
         err('[SHARED PRODUCTS] Pending create error:', error);

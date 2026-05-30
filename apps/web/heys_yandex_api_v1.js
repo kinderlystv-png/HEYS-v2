@@ -1938,15 +1938,16 @@
   async function checkSubscriptionStatus(sessionToken = null) {
     try {
       const token = sessionToken || HEYS.auth?.getSessionToken?.();
-      if (!token) {
+      const hasCookieSession = !!global?.HEYS?.cloud?.isPinAuthClient?.();
+      if (!token && !hasCookieSession) {
         return { data: null, error: { message: 'No session token' } };
       }
 
       log(`checkSubscriptionStatus: using session-based RPC`);
 
-      const result = await rpc('get_subscription_status_by_session', {
-        p_session_token: token
-      });
+      const rpcParams = {};
+      if (token) rpcParams.p_session_token = token;
+      const result = await rpc('get_subscription_status_by_session', rpcParams);
 
       return result;
     } catch (e) {
@@ -2135,13 +2136,12 @@
    */
   async function checkRequiredConsentsBySession(expectedVersions) {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
-
-      return await rpc('check_required_consents_by_session', {
-        p_session_token: sessionToken,
+      const sessionRpc = buildSessionRpcParams({
         p_expected_versions: JSON.stringify(expectedVersions || {})
       });
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+
+      return await rpc('check_required_consents_by_session', sessionRpc.params);
     } catch (e) {
       err('checkRequiredConsentsBySession failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -2153,9 +2153,9 @@
    */
   async function getMyConsentsBySession() {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
-      return await rpc('get_my_consents_by_session', { p_session_token: sessionToken });
+      const sessionRpc = buildSessionRpcParams();
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+      return await rpc('get_my_consents_by_session', sessionRpc.params);
     } catch (e) {
       err('getMyConsentsBySession failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -2168,12 +2168,9 @@
    */
   async function getConsentProofBySession(consentType) {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
-      return await rpc('get_consent_proof_by_session', {
-        p_session_token: sessionToken,
-        p_consent_type: consentType
-      });
+      const sessionRpc = buildSessionRpcParams({ p_consent_type: consentType });
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+      return await rpc('get_consent_proof_by_session', sessionRpc.params);
     } catch (e) {
       err('getConsentProofBySession failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -2185,9 +2182,9 @@
    */
   async function exportMyDataBySession() {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
-      return await rpc('export_my_data_by_session', { p_session_token: sessionToken });
+      const sessionRpc = buildSessionRpcParams();
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+      return await rpc('export_my_data_by_session', sessionRpc.params);
     } catch (e) {
       err('exportMyDataBySession failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -2199,12 +2196,9 @@
    */
   async function confirmAgeBySession(birthYear) {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
-      return await rpc('confirm_age_by_session', {
-        p_session_token: sessionToken,
-        p_birth_year: birthYear
-      });
+      const sessionRpc = buildSessionRpcParams({ p_birth_year: birthYear });
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+      return await rpc('confirm_age_by_session', sessionRpc.params);
     } catch (e) {
       err('confirmAgeBySession failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -2217,12 +2211,9 @@
    */
   async function requestRestrictionBySession(active) {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
-      return await rpc('request_restriction_by_session', {
-        p_session_token: sessionToken,
-        p_active: !!active
-      });
+      const sessionRpc = buildSessionRpcParams({ p_active: !!active });
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+      return await rpc('request_restriction_by_session', sessionRpc.params);
     } catch (e) {
       err('requestRestrictionBySession failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -2234,9 +2225,9 @@
    */
   async function revokeCuratorAccessBySession() {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
-      return await rpc('revoke_curator_access_by_session', { p_session_token: sessionToken });
+      const sessionRpc = buildSessionRpcParams();
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+      return await rpc('revoke_curator_access_by_session', sessionRpc.params);
     } catch (e) {
       err('revokeCuratorAccessBySession failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -2249,12 +2240,9 @@
    */
   async function revokeConsentBySession(consentType) {
     try {
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) return { data: null, error: { message: 'No session token' } };
-      return await rpc('revoke_consent_by_session', {
-        p_session_token: sessionToken,
-        p_consent_type: consentType
-      });
+      const sessionRpc = buildSessionRpcParams({ p_consent_type: consentType });
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+      return await rpc('revoke_consent_by_session', sessionRpc.params);
     } catch (e) {
       err('revokeConsentBySession failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -2275,16 +2263,15 @@
       log(`createPendingProduct:`, product.name);
 
       // 🔐 P1: Используем session-версию (IDOR fix)
-      const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
-        return { data: null, error: { message: 'No session token' } };
-      }
-
-      const result = await rpc('create_pending_product_by_session', {
-        p_session_token: sessionToken,
+      const sessionRpc = buildSessionRpcParams({
         p_name: product.name,
         p_product_data: product
       });
+      if (!sessionRpc.ok) {
+        return { data: null, error: { message: 'No session token' } };
+      }
+
+      const result = await rpc('create_pending_product_by_session', sessionRpc.params);
 
       return result;
     } catch (e) {
