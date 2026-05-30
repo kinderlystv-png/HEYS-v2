@@ -222,7 +222,12 @@
                 triggers: ['product_added', 'tab_open'],
                 excludes: ['post_training_protein', 'deficit_protein_save_muscle', 'bulk_protein_critical'],
                 ttl: 5000,
-                onShow: () => { markChainStart('protein_low'); }
+                onShow: () => { markChainStart('protein_low'); },
+                // 🥩 Phase B.4: actions для meal-addition
+                action: {
+                    primary: { label: '🥩 Найти источник белка', handler: 'addMealProduct', data: { category: 'protein' } },
+                    snooze: { label: 'Добавлю позже', remindAfterMinutes: 180 }
+                }
             });
         }
 
@@ -250,7 +255,11 @@
                 triggers: ['product_added', 'tab_open'],
                 excludes: ['deficit_fiber_satiety'],
                 ttl: 5000,
-                onShow: () => { markChainStart('fiber_low'); }
+                onShow: () => { markChainStart('fiber_low'); },
+                action: {
+                    primary: { label: '🥬 Найти источник клетчатки', handler: 'addMealProduct', data: { category: 'fiber' } },
+                    snooze: { label: 'Добавлю позже', remindAfterMinutes: 240 }
+                }
             });
         }
 

@@ -1083,7 +1083,12 @@
                     category: 'personalized',
                     triggers: ['tab_open'],
                     ttl: 5000,
-                    onShow: () => { try { sessionStorage.setItem('heys_iron_tip_today', '1'); } catch (e) { } }
+                    onShow: () => { try { sessionStorage.setItem('heys_iron_tip_today', '1'); } catch (e) { } },
+                    // Phase B.4: action для iron tracking
+                    action: {
+                        primary: { label: '→ Добавить железо в курс', handler: 'openSupplementsCourse', data: { focusCategory: 'iron' } },
+                        snooze: { label: 'Добавлю позже', remindAfterMinutes: 240 }
+                    }
                 });
             }
         }
@@ -1124,7 +1129,11 @@
                     priority: 57,
                     category: 'personalized',
                     triggers: ['tab_open'],
-                    ttl: 5000
+                    ttl: 5000,
+                    action: {
+                        primary: { label: '→ Добавить железо в курс', handler: 'openSupplementsCourse', data: { focusCategory: 'iron', urgency: 'cycle' } },
+                        snooze: { label: 'Через час', remindAfterMinutes: 60 }
+                    }
                 });
             }
         }
@@ -1702,7 +1711,16 @@
                         category: 'supplements',
                         triggers: ['tab_open'],
                         ttl: 6000,
-                        onShow: () => { try { sessionStorage.setItem('heys_supp_personal_rec', '1'); } catch (e) { } }
+                        onShow: () => { try { sessionStorage.setItem('heys_supp_personal_rec', '1'); } catch (e) { } },
+                        // 💊 Phase B.4: открыть конструктор витаминов с pre-selected ID
+                        action: {
+                            primary: {
+                                label: '→ В конструктор витаминов',
+                                handler: 'openSupplementsCourse',
+                                data: { focusSupplementId: rec.id }
+                            },
+                            snooze: { label: 'Добавлю позже', remindAfterMinutes: 120 }
+                        }
                     });
                 }
             }

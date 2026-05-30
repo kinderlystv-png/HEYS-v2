@@ -114,7 +114,11 @@
                     category: 'emotional',
                     triggers: ['tab_open'],
                     ttl: 6000,
-                    onShow: () => { try { sessionStorage.setItem('heys_emo_sleep_hygiene', '1'); } catch (e) { } }
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_sleep_hygiene', '1'); } catch (e) { } },
+                    action: {
+                        primary: { label: '✓ Поставить цель времени сна', handler: 'openHabitTracker', data: { habit: 'sleep_schedule' } },
+                        snooze: { label: 'Завтра напомни', remindAfterMinutes: 720 }
+                    }
                 });
             }
 

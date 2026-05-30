@@ -46,7 +46,11 @@
                 priority: 36,
                 category: 'hydration',
                 triggers: ['tab_open'],
-                ttl: 5000
+                ttl: 5000,
+                action: {
+                    primary: { label: '💧 +250 мл сейчас', handler: 'logWaterGlass', data: { ml: 250 } },
+                    snooze: { label: 'Через час', remindAfterMinutes: 60 }
+                }
             });
         }
 
@@ -60,7 +64,13 @@
                 priority: 34,
                 category: 'hydration',
                 triggers: ['tab_open', 'product_added'],
-                ttl: 4000
+                ttl: 4000,
+                // 🚰 Phase B.4: in-card actions — quick add 250мл или remind через 60 мин.
+                // UI рендеринг кнопок — Phase B.3 (defer).
+                action: {
+                    primary: { label: '💧 +250 мл сейчас', handler: 'logWaterGlass', data: { ml: 250 } },
+                    snooze: { label: 'Попозже', remindAfterMinutes: 60 }
+                }
             });
         }
 

@@ -147,6 +147,10 @@
                 priority: 42,
                 category: 'training',
                 triggers: ['tab_open'],
+                action: {
+                    primary: { label: '✓ Отметить прогулку', handler: 'openHabitTracker', data: { habit: 'walking' } },
+                    snooze: { label: 'Сделаю позже', remindAfterMinutes: 180 }
+                },
                 ttl: 6000
             });
 

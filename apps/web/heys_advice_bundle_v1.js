@@ -8980,7 +8980,12 @@
                 triggers: ['product_added', 'tab_open'],
                 excludes: ['post_training_protein', 'deficit_protein_save_muscle', 'bulk_protein_critical'],
                 ttl: 5000,
-                onShow: () => { markChainStart('protein_low'); }
+                onShow: () => { markChainStart('protein_low'); },
+                // 🥩 Phase B.4: actions для meal-addition
+                action: {
+                    primary: { label: '🥩 Найти источник белка', handler: 'addMealProduct', data: { category: 'protein' } },
+                    snooze: { label: 'Добавлю позже', remindAfterMinutes: 180 }
+                }
             });
         }
 
@@ -9008,7 +9013,11 @@
                 triggers: ['product_added', 'tab_open'],
                 excludes: ['deficit_fiber_satiety'],
                 ttl: 5000,
-                onShow: () => { markChainStart('fiber_low'); }
+                onShow: () => { markChainStart('fiber_low'); },
+                action: {
+                    primary: { label: '🥬 Найти источник клетчатки', handler: 'addMealProduct', data: { category: 'fiber' } },
+                    snooze: { label: 'Добавлю позже', remindAfterMinutes: 240 }
+                }
             });
         }
 
@@ -10406,6 +10415,10 @@
                 priority: 42,
                 category: 'training',
                 triggers: ['tab_open'],
+                action: {
+                    primary: { label: '✓ Отметить прогулку', handler: 'openHabitTracker', data: { habit: 'walking' } },
+                    snooze: { label: 'Сделаю позже', remindAfterMinutes: 180 }
+                },
                 ttl: 6000
             });
 
@@ -10728,7 +10741,11 @@
                     category: 'emotional',
                     triggers: ['tab_open'],
                     ttl: 6000,
-                    onShow: () => { try { sessionStorage.setItem('heys_emo_sleep_hygiene', '1'); } catch (e) { } }
+                    onShow: () => { try { sessionStorage.setItem('heys_emo_sleep_hygiene', '1'); } catch (e) { } },
+                    action: {
+                        primary: { label: '✓ Поставить цель времени сна', handler: 'openHabitTracker', data: { habit: 'sleep_schedule' } },
+                        snooze: { label: 'Завтра напомни', remindAfterMinutes: 720 }
+                    }
                 });
             }
 
@@ -11196,7 +11213,11 @@
                 priority: 36,
                 category: 'hydration',
                 triggers: ['tab_open'],
-                ttl: 5000
+                ttl: 5000,
+                action: {
+                    primary: { label: '💧 +250 мл сейчас', handler: 'logWaterGlass', data: { ml: 250 } },
+                    snooze: { label: 'Через час', remindAfterMinutes: 60 }
+                }
             });
         }
 
@@ -11210,7 +11231,13 @@
                 priority: 34,
                 category: 'hydration',
                 triggers: ['tab_open', 'product_added'],
-                ttl: 4000
+                ttl: 4000,
+                // 🚰 Phase B.4: in-card actions — quick add 250мл или remind через 60 мин.
+                // UI рендеринг кнопок — Phase B.3 (defer).
+                action: {
+                    primary: { label: '💧 +250 мл сейчас', handler: 'logWaterGlass', data: { ml: 250 } },
+                    snooze: { label: 'Попозже', remindAfterMinutes: 60 }
+                }
             });
         }
 
@@ -12334,7 +12361,12 @@
                     category: 'personalized',
                     triggers: ['tab_open'],
                     ttl: 5000,
-                    onShow: () => { try { sessionStorage.setItem('heys_iron_tip_today', '1'); } catch (e) { } }
+                    onShow: () => { try { sessionStorage.setItem('heys_iron_tip_today', '1'); } catch (e) { } },
+                    // Phase B.4: action для iron tracking
+                    action: {
+                        primary: { label: '→ Добавить железо в курс', handler: 'openSupplementsCourse', data: { focusCategory: 'iron' } },
+                        snooze: { label: 'Добавлю позже', remindAfterMinutes: 240 }
+                    }
                 });
             }
         }
@@ -12375,7 +12407,11 @@
                     priority: 57,
                     category: 'personalized',
                     triggers: ['tab_open'],
-                    ttl: 5000
+                    ttl: 5000,
+                    action: {
+                        primary: { label: '→ Добавить железо в курс', handler: 'openSupplementsCourse', data: { focusCategory: 'iron', urgency: 'cycle' } },
+                        snooze: { label: 'Через час', remindAfterMinutes: 60 }
+                    }
                 });
             }
         }
@@ -12953,7 +12989,16 @@
                         category: 'supplements',
                         triggers: ['tab_open'],
                         ttl: 6000,
-                        onShow: () => { try { sessionStorage.setItem('heys_supp_personal_rec', '1'); } catch (e) { } }
+                        onShow: () => { try { sessionStorage.setItem('heys_supp_personal_rec', '1'); } catch (e) { } },
+                        // 💊 Phase B.4: открыть конструктор витаминов с pre-selected ID
+                        action: {
+                            primary: {
+                                label: '→ В конструктор витаминов',
+                                handler: 'openSupplementsCourse',
+                                data: { focusSupplementId: rec.id }
+                            },
+                            snooze: { label: 'Добавлю позже', remindAfterMinutes: 120 }
+                        }
                     });
                 }
             }
