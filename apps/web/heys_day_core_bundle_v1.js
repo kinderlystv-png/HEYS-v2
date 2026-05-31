@@ -3167,21 +3167,11 @@
             lastLoadedUpdatedAtRef.current = 0;
 
             const doLocal = () => {
-                if (cancelled) {
-                    console.warn('[HEYS.day-diag] doLocal SKIPPED: cancelled', { date });
-                    return;
-                }
+                if (cancelled) return;
                 const profNow = getProfile();
                 const dayRead = readDayV2(date, lsGet);
                 const key = dayRead.key;
                 const v = dayRead.value;
-                console.warn('[HEYS.day-diag] doLocal read', {
-                    date,
-                    key,
-                    hasValue: !!v,
-                    valueDate: v && v.date,
-                    mealsCount: v && Array.isArray(v.meals) ? v.meals.length : null,
-                });
                 const hasStoredData = !!(v && typeof v === 'object' && (
                     v.date ||
                     (Array.isArray(v.meals) && v.meals.length > 0) ||
@@ -3246,14 +3236,6 @@
                             const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
                                 ? HEYS.dayUtils.isSameDayHydratedContent(prevDay, newDay)
                                 : false;
-                            console.warn('[HEYS.day-diag] setDay (stored)', {
-                                prevDate: prevDay && prevDay.date,
-                                newDate: newDay && newDay.date,
-                                eq,
-                                willApply: !eq,
-                                prevMeals: prevDay && prevDay.meals ? prevDay.meals.length : null,
-                                newMeals: newDay && newDay.meals ? newDay.meals.length : null,
-                            });
                             if (eq) return prevDay;
                             return newDay;
                         });
@@ -3287,10 +3269,6 @@
                         dayComment: ''
                     }, profNow);
                     const _commitDefault = function() {
-                        console.warn('[HEYS.day-diag] setDay (default — no stored)', {
-                            newDate: defaultDay && defaultDay.date,
-                            newMeals: defaultDay && defaultDay.meals ? defaultDay.meals.length : null,
-                        });
                         setDay(defaultDay);
                         setIsHydrated(true);
                     };
@@ -3302,18 +3280,10 @@
                 }
             };
 
-            // 🚀 2026-05-31: H1 fix + diagnostic — мгновенный показ LS-snapshot.
-            // console.warn НЕ стрипается Terser drop_console (только log/info/debug),
-            // поэтому используем warn для трассировки реального состояния useEffect.
-            console.warn('[HEYS.day-diag] useDaySyncEffects[date] FIRED', {
-                date,
-                prevDate: prevDateRef.current,
-                clientId: clientId ? String(clientId).slice(0, 8) : '(none)',
-                hasCloud: !!cloud,
-                hasBootstrap: !!(cloud && cloud.bootstrapClientSync),
-            });
+            // 🚀 2026-05-31: H1 fix — мгновенный показ LS-snapshot за новую дату
+            // ДО bootstrapClientSync. Curator переключение дат теперь обновляет
+            // dayRaw сразу из LS, не ждёт cloud sync (который мог хвиснуть).
             doLocal();
-            console.warn('[HEYS.day-diag] doLocal() returned (sync path)', { date });
 
             if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
                 if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true) {
