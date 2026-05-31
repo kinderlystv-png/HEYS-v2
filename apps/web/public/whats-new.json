@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.31.99b7aa94",
+      "buildHash": "99b7aa94",
+      "date": "2026-05-31",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Игнор тест-репортов и локальных бэкапов",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Repository hygiene",
+          "description": "Добавлены .backups/, playwright-report/data/, playwright-report/index.html в .gitignore — артефакты прогонов тестов и ручные снапшоты больше не засоряют git status."
+        }
+      ]
+    },
+    {
       "version": "2026.05.31.66381388",
       "buildHash": "66381388",
       "date": "2026-05-31",
