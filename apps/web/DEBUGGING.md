@@ -6,6 +6,18 @@ How to debug runtime issues in the legacy bundle. See
 
 ---
 
+## Quick reference
+
+```js
+HEYS.diagnostics.overlay(); // products overlay health
+HEYS.diagnostics.storageAudit(); // LS size + violations (read-only)
+HEYS.diagnostics.runStorageAuditNow(); // trigger audit on demand
+window.__heysLogControl.reset(); // logs back to default groups (см. ниже)
+window.__heysNativeConsole.error(x); // bypass log filtering (см. ниже)
+```
+
+---
+
 ## Products / orphan / tombstones (Wave 2-4, 2026-05-24)
 
 После Wave 2-4 продуктовых правок добавлены диагностические входы.

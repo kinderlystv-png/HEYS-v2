@@ -5,6 +5,9 @@ applyTo: '**/*'
 
 # HEYS v2 — AI Core
 
+> **Этот файл — для GitHub Copilot.** Если ты Claude, canonical правила в
+> `/CLAUDE.md` корня репо. При расхождении считай canonical CLAUDE.md.
+>
 > Ответы по-русски, код на английском.
 
 ## Production stack (что СЕЙЧАС работает в проде)

@@ -6,98 +6,27 @@ Compact agent reference. Detailed architecture in
 [apps/web/BUGS_HISTORY.md](apps/web/BUGS_HISTORY.md). Project status / TODO in
 [todo.md](todo.md).
 
+Tone, communication length, adjacent observations — см. user-level CLAUDE.md.
+
 ---
 
-## Communication
+## Project-specific communication
 
-- **Русский для объяснений**, английский для кода и идентификаторов.
-- **Простыми словами, всегда.** Через аналогии и конкретные примеры. Без
-  формального жаргона где можно его избежать. Это касается любых объяснений,
-  резюме, отчётов о сделанной работе, ответов на вопросы. Технический термин
-  можно использовать только если он короче и понятнее аналогии.
-- **Сначала суть в одном предложении, потом детали.** Если задача тривиальная —
-  вообще без деталей.
-- **Порог длины по умолчанию: ≤5 предложений или короткая таблица.** Длинные
-  ответы с заголовками, нумерованными секциями, абзацами объяснений — только
-  если пользователь явно попросил («подробно», «глубокий аудит», «расскажи
-  детально»). Если сомневаешься — пиши коротко, пользователь сам попросит
-  раскрыть.
-- **Плохой паттерн (не делай так):** в ответ на «что предлагаешь» вываливать 3
-  варианта с заголовками, таблицей сравнения и блоком «что рекомендую» — даже
-  если каждый кусок полезен, в сумме это портянка. Правильно: одно предложение
-  «предлагаю X, потому что Y» + вопрос «делать?». Детали — после того как
-  спросят.
-- **Проактивно делись классными идеями и рекомендациями — это обязательный шаг,
-  не рекомендация.** Финальное сообщение любой не-тривиальной задачи ОБЯЗАНО
-  заканчиваться либо 1–3 смежными наблюдениями (каждое одной строкой: суть +
-  почему), либо явной строкой `Смежного нет.` Без этого ответ считается неполным
-  — точно так же как код без прохода `tsc`. Приоритет: скрытые риски (новое поле
-  сломает старые сейвы; индикатор UI врёт) > балансные проблемы > nice-to-have.
-  Не повторять очевидное из диффа.
+- В ответ на «что предлагаешь» — одно предложение «предлагаю X, потому что Y» +
+  вопрос «делать?». Не вываливать варианты с заголовками и таблицей сравнения.
 
 ## Execution autonomy
 
-- **Пользователь не выполняет команды сам.** Не пиши «запусти sql миграцию»,
-  «задеплой cloud function» как инструкции на потом. Делай эти шаги сам в своей
-  сессии: SQL миграции через `bash scripts/db/psql.sh -f ...`, cloud functions
-  через `cd yandex-cloud-functions && ./deploy-all.sh <name>`, коммиты через
-  `git commit`. Если деплой-скрипт ругается на сетевой таймаут или checksum —
-  пробуй `--skip-checks` (после явной проверки что credentials валидны), retry с
-  экспоненциальным backoff, или альтернативный путь.
-- **`git push` — ТОЛЬКО по явной команде пользователя.** Approval задачи («ок»,
-  «делай», «убери X», «исправь Y») = разрешение коммитить, НЕ пушить. После
-  коммита остановись и сообщи «закоммитил, пушить?». Триггер push'а: явные слова
-  «пуш», «push», «запушь», «отправь на сервер», «выкатывай». Это HARD invariant
-  — push виден другим клиентам и параллельным сессиям, откатить дорого. Incident
-  2026-05-28: пушил после «ок» на задачу cleanup без явного запроса push'а.
-- **Просить пользователя что-то выполнить — только когда:** (1) операция требует
-  физического подтверждения у внешнего сервиса (2FA, hardware key), (2)
-  требуется доступ который у тебя точно отсутствует (другая машина, чужой
-  логин), (3) destructive операция вне согласованного плана, (4) push на remote
-  (см. выше). Сетевые глюки, IAM таймауты, checksum-warnings — это твои
-  проблемы, решай retry/skip/workaround.
-- **Если что-то не вышло с n-й попытки** — пиши что попробовал и какие
-  альтернативы доступны, и переходи к ним. Не оставляй пользователю «осталось
-  тебе сделать X».
-
-## Planning & audits — Facts Table required
-
-Для любого подробного аудита (план перед `ExitPlanMode`; ответ на «как работает
-X / где живёт Y / отличается ли A от B»; любой ответ с 5+ `file:line` ссылками)
-**обязательна Facts Table** перед финализацией. Активируй skill `audit-facts` —
-он описывает формат таблицы и правила.
-
-Краткое правило: **каждое конкретное утверждение** (имя функции, путь, диапазон
-строк, поле контракта, бандл-локация) — отдельной строкой в таблице с **runnable
-verify-командой** и пометкой результата (`✅` / `❌ — что исправлено`). Источник
-«agent» сам по себе недостаточен — нужен свой grep/read. Свои выдуманные
-предположения помечай явно (`— (invented)`) и верифицируй.
-
-**Каскадное правило:** если пользователь нашёл одну ошибку — это сигнал, что
-весь документ под подозрением. Перепроверь все факты, не только локальный пункт.
-Не патчи точечно после первого "fix one mistake".
-
-Hook на `PreToolUse(ExitPlanMode)` блокирует выход из plan mode без секции
-`Facts Table` / `Verification log` в plan-файле.
-
-## Working principles
-
-- **Diagnose root cause before fixing.** For non-trivial bugs, trace end-to-end:
-  route → page → container → orchestration → state, OR function → hook → service
-  → API → DB. For trivial fixes (typo, lint, rename) — be proportional, no
-  ritual.
-- **Fix at the source-of-truth layer.** Fallback chains, silent recovery
-  branches, duplicated logic are signals that you're patching the wrong layer.
-- **Watch for coupled layers.** Contracts, handlers, queries, cache,
-  serializers, loading states often need to move together.
-- **One-file fixes are suspect.** Justify why other layers are unaffected.
-- **Keep changes proportional.** Bug fix doesn't need surrounding cleanup.
-- **Never write cleanup/garbage-collection by shape inference.** Functions that
-  decide "valid vs invalid" by checking the presence of fields like `.name` or
-  `.id` will inevitably break when data shape evolves (overlay v2 → TypeA rows
-  have no `.name`; tombstone arrays hold IDs not objects). Use explicit
-  tombstones / versioning / migrations instead. See `BUGS_HISTORY.md` cloud
-  cleanup destruction (2026-05-11) for the cost.
+- Делай шаги сам в текущей сессии: SQL миграции через
+  `bash scripts/db/psql.sh -f ...`, cloud functions через
+  `cd yandex-cloud-functions && ./deploy-all.sh <name>`, коммиты через
+  `git commit`. Сетевые таймауты, IAM, checksum-warnings — твои проблемы, не
+  задачи пользователю.
+- **`git push` — только по явной команде** («пуш», «push», «запушь»,
+  «выкатывай»). Approval задачи ≠ approval push. После commit: «закоммитил,
+  пушить?». HARD invariant — push виден другим клиентам.
+- Просить пользователя — только: 2FA / hardware key, чужой доступ, destructive
+  вне согласованного плана, push на remote.
 
 ## Local dev
 
@@ -119,10 +48,8 @@ Hook на `PreToolUse(ExitPlanMode)` блокирует выход из plan mod
 
 - Чёрный список запрещённых слов и конструкций
 - Принципы (клиентоориентированный flow, конкретика вместо абстракции)
-- **История замечаний** — реальные кейсы провалов и принципов на будущее
-
-Документ растёт с каждым новым замечанием пользователя. Если получил обратную
-связь по копирайту — пополни «История замечаний» новой записью.
+- **История замечаний** — пополняй её новой записью когда получаешь feedback по
+  копирайту.
 
 ---
 
@@ -147,163 +74,34 @@ Hook на `PreToolUse(ExitPlanMode)` блокирует выход из plan mod
 6. **DB schema**: `client_kv_store` has FK
    `client_id → clients(id) ON DELETE CASCADE` (added 2026-05-11). Deleting a
    client cascades to all per-client storage.
+7. **Никогда не пиши cleanup/garbage-collection через shape inference.** Функции
+   которые решают «valid vs invalid» по наличию полей вроде `.name` / `.id`
+   ломаются при эволюции данных (overlay v2 → TypeA rows без `.name`; tombstone
+   arrays держат IDs, не объекты). Использовать explicit tombstones /
+   versioning. См. `BUGS_HISTORY.md` cloud cleanup destruction 2026-05-11.
 
 See [apps/web/ARCHITECTURE.md](apps/web/ARCHITECTURE.md) for full details on
 each.
 
 ---
 
-## Pre-commit / pre-push gates
+## Pre-commit / pre-push hooks
 
-- **commitlint**: type must be
-  `feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|release`.
-- **prepare-release:check** (pre-push): every code-bearing commit needs a
-  `whats-new.json` entry with matching `buildHash`. For docs/release-only
-  commits the hash auto-resolves to the previous meaningful commit.
-  - **Super-technical push'и пропускают check автоматически.** Если все коммиты
-    в push'е (`@{upstream}..HEAD`) имеют тип
-    `chore|ci|build|docs|style|refactor|test|revert` И все изменённые файлы
-    подпадают под `TECHNICAL_FILE_PATTERNS` (`/scripts/`, `/.github/`,
-    `/.husky/`, `/tools/`, `/docs/`, `__tests__/`, `*.md`, `*.yml`, `*.sql`,
-    etc.) — pre-push пропускает push без whats-new entry.
-  - **User-facing типы (`feat`, `fix`, `perf`) ВСЕГДА требуют entry** — даже
-    если файлы технические. Автор тэгом подтверждает: правка влияет на UX.
-    Например: `fix(deploy-frontend): missing postboot bundles` затрагивает
-    только `/scripts/`, но fix может повлиять на пользователя через сборку →
-    entry нужен. А `chore(deploy-frontend): tidy retry comment` — не нужен.
-- **lint-direct-localstorage-writes** (pre-push, warn-only): new
-  `localStorage.setItem` outside the allowlist blocks the push. Allowlist:
-  [scripts/bootstrap-bypass-allowlist.txt](scripts/bootstrap-bypass-allowlist.txt).
-- **lint-shared-cache-writes** (pre-commit): `_sharedProductsCache =` always
-  pairs with `_invalidateSharedIndex()`.
-- **legacy-sync hook** (pre-commit): when source files change, regenerates
-  legacy bundles + manifest + index.html hashes + sw.js cache version. The
-  rebundled output gets auto-staged.
+Активные хуки: commitlint, `prepare-release:check` (whats-new),
+`lint-direct-localstorage-writes`, `lint-shared-cache-writes`, `legacy-sync`
+(rebundle + auto-stage).
 
-To skip a hook the user must explicitly authorize. Default: do not
-`--no-verify`.
+**Когда хук срабатывает — следуй его stderr.** Сообщение содержит точные
+инструкции (что добавить, какой формат, какие файлы). Никогда `--no-verify` без
+явного разрешения пользователя.
 
-### How to react when a hook fires
-
-**`prepare-release:check` failed (no whats-new entry)** — add an entry to
-[apps/web/public/whats-new.json](apps/web/public/whats-new.json) at the top of
-`releases[]`:
-
-```json
-{
-  "version": "2026.05.11.<HASH>",
-  "buildHash": "<HASH>",
-  "date": "<YYYY-MM-DD>",
-  "kind": "technical", // or "user-facing"
-  "profile": "technical-infra", // or "user-facing-general", etc.
-  "title": "Short user-friendly title",
-  "items": [
-    {
-      "type": "fix|improvement|chore",
-      "title": "...",
-      "description": "..."
-    }
-  ]
-}
-```
-
-The `<HASH>` is the **short SHA of the source-bearing commit** (not the docs
-commit). Get it via `git log -1 --format=%h`. Then make a fresh
-`chore(release): bump whats-new build hash to <HASH>` commit. The check is
-re-run on push.
-
-**`lint-direct-localstorage-writes` failed (new direct setItem)** — preferred
-fix: refactor the new call site to `HEYS.utils.lsSet(key, value)` or
-`HEYS.store.set(key, value)`. If the call must stay direct (bootstrap-time
-before Store loads), add the new line as `relative/path:line` to
-[scripts/bootstrap-bypass-allowlist.txt](scripts/bootstrap-bypass-allowlist.txt).
-**Common surprise**: editing a file shifts other lines, breaking existing
-allowlist entries with stale line numbers. The hook output names exactly which
-lines to update — just re-sync.
-
-**`legacy-sync` regenerated bundles** — this is normal. The hook auto-stages the
-rebuilt `apps/web/public/boot-*.bundle.<hash>.js` + manifest + index.html
-
-- sw.js. Just commit them together with the source change. Never hand-edit those
-  generated files.
+Quick hint: `feat|fix|perf` коммиты всегда требуют entry в
+`apps/web/public/whats-new.json` (top of `releases[]`,
+`buildHash = git log -1 --format=%h` +
+`chore(release): bump whats-new build hash to <HASH>`).
 
 ---
 
-## Parallel agents: HEYS-specific post-merge
+## Diagnostics
 
-User-level CLAUDE.md описывает общее правило `Parallel-first execution`
-(pre-flight план + worktree isolation + post-merge pre-flight check). В HEYS
-post-merge check ловит **три специфических drift'а**, которые ломают push если
-их не закрыть:
-
-1. **localStorage allowlist drift** — параллельные агенты сдвигают строки в
-   `heys_core_v12.js`, `heys_day_utils.js`, `heys_products_overlay_v1.js`, и
-   старые entries в `scripts/bootstrap-bypass-allowlist.txt` указывают на
-   неправильные строки. Pre-push hook `lint-direct-localstorage-writes`
-   блокирует push. **Fix**: `node scripts/lint-direct-localstorage-writes.mjs` →
-   видишь точные line numbers → правишь entries в allowlist.
-2. **Bundle hash regenerated** — если legacy-sync hook сработал в одном из
-   агентов, бандл получает новый hash → `prepare-release:check` требует
-   `whats-new.json` entry с этим новым hash. Старый entry от агента уже не
-   совпадает. **Fix**: `git log -1 --format=%h` → bump `whats-new.json` с новым
-   hash → commit `chore(release): bump whats-new build hash to <HASH>`.
-3. **whats-new merge conflicts** — два агента могли добавить entries в начало
-   `releases[]`. Git merge оставит оба, но порядок может быть неверный (более
-   старый коммит сверху). Проверь руками.
-4. **whats-new missing для чужого fix/feat** — другая сессия (или ты сам в
-   предыдущем подходе) могла закоммитить `fix(...)`/`feat(...)`/`perf(...)`
-   **без** парного `chore(release): bump whats-new build hash to <HASH>`. На
-   push CI «Validate What's New before deploy» провалится. **Check**:
-   `git log @{upstream}..HEAD --oneline` — top-of-branch source-bearing коммит
-   должен иметь whats-new entry с его hash. Если нет — добавь entry в
-   `apps/web/public/whats-new.json` + chore(release) bump до push. Incident
-   2026-05-31: дважды споткнулся на этом из-за `fix(day) 3ea34538` от другой
-   сессии без bump.
-
-**Финальный gate** перед push: `pnpm push:ready` (если есть) или
-`pnpm test && pnpm lint && pnpm tsc`.
-
-Этот чек-лист отработан в реальном инциденте 2026-05-24 (parallel Wave 2
-
-- Wave 5.5 merge) — см. `apps/web/BUGS_HISTORY.md` → «Parallel worktree merge».
-
----
-
-## Working with code
-
-- **Prefer editing existing files** — НЕ создавай новые модули без явной
-  необходимости. Legacy bundle = IIFE modules in `apps/web/heys_*.js`,
-  registered into `window.HEYS = {...}` namespace.
-- **Bundles regenerate on commit** — `apps/web/public/boot-*.bundle.<hash>.js`
-  - `boot-init`, `boot-app`, `boot-core`, `boot-day`, `boot-calc`,
-    `postboot-*-lazy`. Don't hand-edit anything in `apps/web/public/` or
-    `apps/web/dist/`.
-- **Bundle hash in DOM ≠ executed code** if SW serves a stale cache. After
-  `pnpm bundle:legacy` use **Incognito** for verification.
-
----
-
-## Memory and external references
-
-- **DB access pattern** (Lockbox + psql + Yandex Postgres): memory
-  `reference_db_migration.md`.
-- **DB inspection scripts**: [scripts/db/](scripts/db/) — `psql.sh` обёртка
-  (auto-loads password from Lockbox) + готовые аудиты (`audit-clients.sql`,
-  `audit-products.sql`, `audit-orphans.sql`, `inspect-client.sh <cid8>`).
-  Используй их вместо ручного писания SQL и передачи пароля.
-- **User profile / preferences**: memory `user_*.md`, `feedback_*.md`.
-- **Project context** specific to this codebase: memory `project_*.md`.
-
----
-
-## Diagnostics quick reference
-
-```js
-HEYS.diagnostics.overlay(); // products overlay health
-HEYS.diagnostics.storageAudit(); // LS size + violations (read-only)
-HEYS.diagnostics.runStorageAuditNow(); // trigger audit on demand
-window.__heysLogControl.reset(); // logs back to default groups
-window.__heysNativeConsole.error(x); // bypass log filtering
-```
-
-Full diagnostics catalog: [DEBUGGING.md](apps/web/DEBUGGING.md).
+Каталог + quick reference: [DEBUGGING.md](apps/web/DEBUGGING.md).
