@@ -1,5 +1,10 @@
-// heys_fingers_programs_catalog_v1.js — Каталог 6 пресетных программ (Phase 1).
+// heys_fingers_programs_catalog_v1.js — Каталог 7 пресетных программ (Phase 1).
 // Wave 2-A: статичные конфиги + хелпер buildLogFromProgram() для конструктора.
+// 2026-05-31 redesign: уникальные методически-корректные наборы хватов по первоисточникам
+// (Beastmaker 1000, Hörst Max Hangs, López MaxHangs MAW, Hörst 7:3 Repeaters,
+// Nelson No-Hangs, Nelson Density Hangs, López MED). См. /tmp/fingers-catalog-redesign.md — Facts Table.
+// nelson_no_hangs — единственная истинно noEquipment программа, используется
+// рекомендателем как fallback для (а) пользователей без доски, (б) <14 лет.
 //
 // Public API:
 //   HEYS.Fingers.PROGRAMS                          — массив программ
@@ -32,14 +37,16 @@
       id: 'beastmaker_1000_beginner',
       intensity: 'moderate',
       name: 'Beastmaker 1000 — Beginner Loop',
-      description: 'Стартовая программа: repeaters 7/3 × 6 на разных хватах. Подходит для V1-V4 и для возврата после паузы.',
+      description: 'Базовая программа от Beastmaker для V1–V4 или возврата после паузы. Три упражнения на разных хватах: 4-палец открытый на ребре 20 мм, 3-палец открытый на кармане, 4-палец на покатости. Каждое — 7 секунд виса / 3 секунды отдыха × 6 повторов (это один подход), 3 подхода с паузой 3 минуты. Без добавочного веса. Лучше всего как стартовая база силы пальцев.',
       level: 'beginner',
-      durationMin: 25,
+      durationMin: 30,
       exercises: [
         { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
-          hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 150 },
-        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
-          hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 150 }
+          hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 },
+        { gripId: 'front3', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 },
+        { gripId: 'sloper', edgeSizeMm: 35, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 }
       ],
       sourceIds: ['beastmaker_1000', 'horst_753'],
       advisoryBadge: null,
@@ -50,16 +57,20 @@
       id: 'horst_max_hangs',
       intensity: 'max',
       name: 'Eric Hörst — Max Hangs 10s × 5',
-      description: 'Максимальная сила: 10 секунд виса с добавочным весом до failure ~12 сек, отдых 3 минуты, 4-5 подходов на хват.',
+      description: 'Максимальная сила пальцев: 10 секунд виса с добавочным весом, который удержишь не больше 13 секунд (запас 3 секунды до отказа). Отдых 3 минуты, 5 подходов на каждый хват. Программа из 4 хватов: полузамок, открытый 4-палец, передние 3 пальца, зажим. Edge 20 мм для широких хватов, 25 мм для зажима. Не для новичков — нужна база минимум 1 год регулярных тренировок.',
       level: 'intermediate',
-      durationMin: 40,
+      durationMin: 50,
       exercises: [
         { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 15,
           hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 },
         { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 12,
+          hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 },
+        { gripId: 'front3', edgeSizeMm: 20, addedWeightKg: 10,
+          hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 4, restBetweenSetsSec: 180 },
+        { gripId: 'pinch', edgeSizeMm: 25, addedWeightKg: 8,
           hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 4, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['horst_podcast10'],
+      sourceIds: ['horst_podcast10', 'physivantage_collagen'],
       advisoryBadge: 'Не для новичков — нужна база ≥1 года лазания',
       noEquipment: false,
       minAge: 18
@@ -67,15 +78,17 @@
     {
       id: 'lopez_mr',
       intensity: 'max',
-      name: 'Eva López — Maximum Recruitment (MR)',
-      description: '5-12 секунд виса с весом, отдых 3-5 минут, 4-6 подходов. Margin не более 3 секунд от failure.',
+      name: 'Eva López — MaxHangs MAW (Maximum Added Weight)',
+      description: 'Силовой протокол с добавочным весом по методике Эвы Лопес (исследование 2014, статья 2019). 10 секунд виса с весом, который удержал бы не больше 13 секунд — оставляешь 3 секунды запаса до отказа (margin RM-3). Отдых 4 минуты между подходами, 5 подходов на каждый хват. Программа из 3 хватов: полузамок, открытый 4-палец, передние 3 пальца. Edge 18 мм. Только для V5+ с минимум 2 годами опыта.',
       level: 'advanced',
-      durationMin: 45,
+      durationMin: 55,
       exercises: [
-        { gripId: 'halfcrimp', edgeSizeMm: 15, addedWeightKg: 20,
-          hangSec: 8, restSec: 240, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 240 },
-        { gripId: 'openhand4', edgeSizeMm: 15, addedWeightKg: 18,
-          hangSec: 8, restSec: 240, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 240 }
+        { gripId: 'halfcrimp', edgeSizeMm: 18, addedWeightKg: 20,
+          hangSec: 10, restSec: 240, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 240 },
+        { gripId: 'openhand4', edgeSizeMm: 18, addedWeightKg: 18,
+          hangSec: 10, restSec: 240, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 240 },
+        { gripId: 'front3', edgeSizeMm: 18, addedWeightKg: 15,
+          hangSec: 10, restSec: 240, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 240 }
       ],
       sourceIds: ['lopez2019'],
       advisoryBadge: 'Только V5+ с минимум 2 годами опыта',
@@ -86,16 +99,20 @@
       id: 'repeaters_7_3',
       intensity: 'moderate',
       name: 'Repeaters 7:3 классические',
-      description: '7 секунд виса / 3 секунды отдыха × 6 = один подход. Отдых 3 минуты, всего 6 подходов. Лучший конструктор силовой выносливости.',
+      description: 'Силовая выносливость: 7 секунд виса / 3 секунды отдыха × 6 повторов = один подход. Отдых 3 минуты между подходами, 3 подхода на каждый хват. Программа из 4 хватов: открытый 4-палец, полузамок, передние 3 пальца, покатость. Edge 20 мм для пальцевых хватов, 35 мм для покатости. Без добавочного веса — это база, не максимум. Главный конструктор «выкатывающейся» силы пальцев для длинных трасс.',
       level: 'intermediate',
-      durationMin: 35,
+      durationMin: 40,
       exercises: [
+        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 },
         { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
           hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 },
-        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+        { gripId: 'front3', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 },
+        { gripId: 'sloper', edgeSizeMm: 35, addedWeightKg: 0,
           hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['horst_753'],
+      sourceIds: ['horst_753', 'beastmaker_1000'],
       advisoryBadge: null,
       noEquipment: false,
       minAge: 16
@@ -103,15 +120,17 @@
     {
       id: 'nelson_no_hangs',
       intensity: 'recovery',
-      name: 'Tyler Nelson — No-Hangs',
-      description: 'Без оборудования: изометрия пальцев сидя с грузом 30-50% RPE. 30 секунд × 3-5 повторов, отдых 1-2 минуты. Безопасно для дней с низкой готовностью.',
+      name: 'Tyler Nelson — No-Hangs (без доски)',
+      description: 'Изометрическая нагрузка пальцев без виса и без доски — по методике Тайлера Нельсона. Берёшься за прочный край на уровне бедра (дверной косяк, край стола, нижняя полка) и тянешь вверх 7 секунд с усилием 30-50% от максимума. Отдых 30 секунд, 6 повторов в подходе, 3 подхода на каждый хват. Программа из 3 хватов: открытый 4-палец, полузамок, передние 3 пальца. Подходит когда нет доски, для дней с низкой готовностью, для восстановления после травмы и для подростков 12-14 лет, которым ещё нельзя на доску.',
       level: 'beginner',
       durationMin: 20,
       exercises: [
-        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
-          hangSec: 30, restSec: 90, repsPerSet: 4, setsCount: 1, restBetweenSetsSec: 0 },
-        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
-          hangSec: 30, restSec: 90, repsPerSet: 4, setsCount: 1, restBetweenSetsSec: 0 }
+        { gripId: 'openhand4', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 7, restSec: 30, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 120 },
+        { gripId: 'halfcrimp', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 7, restSec: 30, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 120 },
+        { gripId: 'front3', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 7, restSec: 30, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 120 }
       ],
       sourceIds: ['nelson_camp4'],
       advisoryBadge: null,
@@ -119,16 +138,38 @@
       minAge: 12
     },
     {
+      id: 'nelson_density_hangs',
+      intensity: 'recovery',
+      name: 'Tyler Nelson — Density Hangs (низкая нагрузка на доске)',
+      description: 'Объёмный протокол на доске: длинные висы под нагрузкой ~55-75% от максимума. 25 секунд виса / 12 секунд отдыха (2:1) × 2 повтора = один подход, 5 подходов на хват, отдых между подходами 3 минуты. Без добавочного веса — но висы длинные, общий объём нагрузки большой. Программа из 3 хватов: открытый 4-палец, полузамок, передние 3 пальца. Edge 25 мм. Хороша как объёмная база перед переходом на Max Hangs и как «лёгкий» день между максимальными тренировками.',
+      level: 'beginner',
+      durationMin: 35,
+      exercises: [
+        { gripId: 'openhand4', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 25, restSec: 12, repsPerSet: 2, setsCount: 5, restBetweenSetsSec: 180 },
+        { gripId: 'halfcrimp', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 25, restSec: 12, repsPerSet: 2, setsCount: 5, restBetweenSetsSec: 180 },
+        { gripId: 'front3', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 25, restSec: 12, repsPerSet: 2, setsCount: 5, restBetweenSetsSec: 180 }
+      ],
+      sourceIds: ['nelson_camp4'],
+      advisoryBadge: null,
+      noEquipment: false,
+      minAge: 14
+    },
+    {
       id: 'min_edge_progression',
       intensity: 'max',
-      name: 'Min Edge Progression (López MED)',
-      description: 'Без веса: 10 секунд × 4-6 подходов. Edge уменьшается на 1-2 мм если margin > 3 сек от failure. Безопаснее MR по сухожилиям.',
+      name: 'Eva López — Min Edge Depth (MED)',
+      description: 'Максимальная сила без добавочного веса по методике Эвы Лопес. 10 секунд виса на минимальном ребре, на котором удержался бы не больше 13 секунд (margin 3 секунды). Отдых 3 минуты, 5 подходов на хват. Программа из 3 хватов: открытый 4-палец на 12 мм, полузамок на 10 мм, передние 3 пальца на 12 мм. Если запас > 5 секунд — уменьши ребро на 1-2 мм; если близко к отказу — увеличь. Безопаснее MaxHangs MAW по сухожилиям, но не для новичков — нужен V7+.',
       level: 'advanced',
-      durationMin: 40,
+      durationMin: 45,
       exercises: [
-        { gripId: 'halfcrimp', edgeSizeMm: 12, addedWeightKg: 0,
+        { gripId: 'openhand4', edgeSizeMm: 12, addedWeightKg: 0,
           hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 },
-        { gripId: 'openhand4', edgeSizeMm: 14, addedWeightKg: 0,
+        { gripId: 'halfcrimp', edgeSizeMm: 10, addedWeightKg: 0,
+          hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 },
+        { gripId: 'front3', edgeSizeMm: 12, addedWeightKg: 0,
           hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 }
       ],
       sourceIds: ['lopez2019'],
