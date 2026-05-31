@@ -4030,47 +4030,6 @@
   }
   cloud.isNonClientDataKey = isNonClientDataKey;
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // 🆕 Wave A (plan curried-stirring-shell.md): curator namespace isolation
-  // ═══════════════════════════════════════════════════════════════════════
-  // isCuratorNamespace — детект префикса 'heys_curator__'. По дизайну
-  // namespace keys НЕ scoped к клиенту, поэтому strip-aware вариант не нужен.
-  function isCuratorNamespace(k) {
-    if (!k || typeof k !== 'string') return false;
-    return k.startsWith('heys_curator__');
-  }
-  cloud.isCuratorNamespace = isCuratorNamespace;
-
-  // Cached curator-session detect. Hot path (interceptSetItem) вызывается на
-  // КАЖДОМ writeStorage → нельзя JSON.parse на каждом setItem. Кэшируем
-  // (token string, isCurator) — invalidate'ится natural'но если token в LS
-  // меняется (string-identity compare на каждом вызове).
-  let _curatorSessionCache = null; // { token: string|null, isCurator: boolean }
-  function isCuratorSession() {
-    try {
-      const token = global.localStorage.getItem('heys_supabase_auth_token');
-      if (!token) {
-        if (!_curatorSessionCache || _curatorSessionCache.token !== null) {
-          _curatorSessionCache = { token: null, isCurator: false };
-        }
-        return false;
-      }
-      if (_curatorSessionCache && _curatorSessionCache.token === token) {
-        return _curatorSessionCache.isCurator;
-      }
-      let isCurator = false;
-      try {
-        const parsed = JSON.parse(token);
-        isCurator = !!(parsed && parsed.user && parsed.access_token);
-      } catch (_) { /* invalid JSON → not curator */ }
-      _curatorSessionCache = { token, isCurator };
-      return isCurator;
-    } catch (_) {
-      return false;
-    }
-  }
-  cloud.isCuratorSession = isCuratorSession;
-
   /**
    * Ticket D: распознаём auth failure от сервера (invalid_session /
    * invalid_or_expired_session — оба варианта поскольку разные SQL функции
@@ -4445,31 +4404,6 @@
         // 🚫 Не зеркалим backup-ключи (во избежание перезаписи базы при sync)
         if (String(k || '').includes('_backup')) {
           return;
-        }
-
-        // ════════════════════════════════════════════════════════════════
-        // 🆕 Wave A (plan curried-stirring-shell.md): curator namespace
-        // ════════════════════════════════════════════════════════════════
-        // heys_curator__* ключи в курaторской сессии → curator_kv_store,
-        // bypass-я client_kv_store. PIN-сессии не матчат (isCuratorSession=false)
-        // → проваливаются в существующий routing (saveKey path).
-        try {
-          if (global.HEYS?.flags?.isEnabled?.('curator_namespace_isolation')
-              && isCuratorNamespace(k)
-              && isCuratorSession()) {
-            let parsedVal;
-            if (typeof v === 'string') {
-              try { parsedVal = JSON.parse(v); }
-              catch (_) { parsedVal = v; } // raw string → server JSON.stringify обернёт
-            } else {
-              parsedVal = v;
-            }
-            cloud.queueCuratorKvUpsert(k, parsedVal);
-            return; // НЕ продолжаем в client_kv_store routing
-          }
-        } catch (e) {
-          console.warn('[HEYS] curator-namespace queue failed:', k, e && e.message);
-          // Fall through к existing routing на error (safe fallback).
         }
 
         if (muteMirror && isOurKey(k) && String(k).includes('dayv2_')) {
@@ -10242,105 +10176,6 @@
     }
   };
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // 🆕 Wave A: curator_kv_store sync queue (plan curried-stirring-shell.md)
-  // ═══════════════════════════════════════════════════════════════════════
-  // Очередь heys_curator__* записей для отправки в curator_kv_store через
-  // RPC merge_save_curator_kv. Отделена от clientUpsertQueue схематически:
-  // - curator_id derived from JWT на сервере (не передаём из клиента)
-  // - НЕТ client_id scoping
-  // - Debounced flush: 2с после последнего write (как client queue)
-  const curatorUpsertQueue = [];
-  const _curatorLastSeenAt = new Map(); // k → ISO string (для conflict detect)
-  let _curatorFlushTimer = null;
-  let _curatorFlushInFlight = false;
-
-  cloud.queueCuratorKvUpsert = function (k, v) {
-    if (!isCuratorNamespace(k)) {
-      console.warn('[HEYS.curator-kv] non-namespace key rejected:', k);
-      return;
-    }
-    // Dedup: если уже есть запись с тем же k в очереди — заменяем (LWW).
-    const existingIdx = curatorUpsertQueue.findIndex(item => item.k === k);
-    const entry = { k, v, queuedAt: Date.now() };
-    if (existingIdx >= 0) {
-      curatorUpsertQueue[existingIdx] = entry;
-    } else {
-      curatorUpsertQueue.push(entry);
-    }
-    if (_curatorFlushTimer) clearTimeout(_curatorFlushTimer);
-    _curatorFlushTimer = setTimeout(() => {
-      _curatorFlushTimer = null;
-      cloud.flushCuratorQueue().catch(e => {
-        console.warn('[HEYS.curator-kv] flush failed:', e && e.message);
-      });
-    }, 2000);
-  };
-
-  cloud.flushCuratorQueue = async function () {
-    if (_curatorFlushInFlight) return { ok: true, skipped: 'in_flight' };
-    if (curatorUpsertQueue.length === 0) return { ok: true, saved: 0 };
-    const YandexAPI = global.HEYS?.YandexAPI;
-    if (!YandexAPI || typeof YandexAPI.rpc !== 'function') {
-      console.warn('[HEYS.curator-kv] no YandexAPI.rpc, deferring flush');
-      return { ok: false, error: 'no_api' };
-    }
-    _curatorFlushInFlight = true;
-    const batch = curatorUpsertQueue.splice(0, curatorUpsertQueue.length);
-    let saved = 0;
-    let failed = 0;
-    try {
-      for (const item of batch) {
-        try {
-          // rpc() возвращает { data, error }. JWT добавляется автоматически
-          // т.к. merge_save_curator_kv в CURATOR_ONLY_FUNCTIONS.
-          const { data, error } = await YandexAPI.rpc('merge_save_curator_kv', {
-            p_k: item.k,
-            p_v: item.v,
-            p_last_seen_updated_at: _curatorLastSeenAt.get(item.k) || null,
-          });
-          if (error) {
-            failed++;
-            console.warn('[HEYS.curator-kv] RPC error:', item.k, error.message || error);
-            continue;
-          }
-          if (data && data.ok) {
-            saved++;
-            if (data.updated_at) _curatorLastSeenAt.set(item.k, data.updated_at);
-          } else if (data && data.error === 'conflict') {
-            // Server returned newer value — LWW: server wins, update cache + LS.
-            if (data.current_updated_at) _curatorLastSeenAt.set(item.k, data.current_updated_at);
-            if (data.current_v !== undefined) {
-              try {
-                cloud.writeLocalKvWithoutMirror(item.k, data.current_v);
-              } catch (_) { /* noop */ }
-            }
-            failed++;
-            console.info('[HEYS.curator-kv] conflict resolved (server wins):', item.k);
-          } else {
-            failed++;
-            console.warn('[HEYS.curator-kv] save failed:', item.k, data && data.error);
-          }
-        } catch (e) {
-          failed++;
-          console.warn('[HEYS.curator-kv] RPC exception:', item.k, e && e.message);
-        }
-      }
-    } finally {
-      _curatorFlushInFlight = false;
-    }
-    return { ok: true, saved, failed };
-  };
-
-  // Diagnostic getter
-  cloud.getCuratorQueueStats = function () {
-    return {
-      queued: curatorUpsertQueue.length,
-      inFlight: _curatorFlushInFlight,
-      cached: _curatorLastSeenAt.size,
-    };
-  };
-
   // Поддерживает старую сигнатуру saveClientKey(k, v) — в этом случае client_id берётся из HEYS.currentClientId.
   cloud.saveClientKey = function (...args) {
     let client_id, k, value;
@@ -11695,25 +11530,6 @@
   function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync') {
     if (!clientId || !baseKey || value == null) return false;
     if (isSensitiveSessionStorageKey(baseKey)) return false;
-
-    // ════════════════════════════════════════════════════════════════════
-    // 🆕 Wave A (plan curried-stirring-shell.md): curator namespace skip
-    // ════════════════════════════════════════════════════════════════════
-    // heys_curator__* keys принадлежат curator_kv_store (отдельная таблица),
-    // НЕ должны приходить через client_kv_store HOT-sync. Если видим такой
-    // key здесь — это stale legacy data в client_kv_store (до Wave C cleanup).
-    // Skip apply чтобы не зеркалить foreign-client-scoped value в локальный LS.
-    // Cross-device hydration для namespace keys пойдёт через get_curator_kv_all
-    // (отдельный path, добавится в Wave B).
-    if (typeof baseKey === 'string' && baseKey.startsWith('heys_curator__')) {
-      try {
-        console.info('[HEYS.hot-sync] skip curator namespace key from client_kv_store', {
-          baseKey: baseKey.slice(0, 50),
-          source,
-        });
-      } catch (_) { /* noop */ }
-      return true; // mark handled — no LS write
-    }
 
     // 2026-05-29 echo-loop diag: trace each hot-sync apply
     try {

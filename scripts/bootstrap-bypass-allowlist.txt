@@ -123,7 +123,7 @@ apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
 apps/web/heys_exercise_catalog_v1.js:170
-apps/web/heys_feature_flags_v1.js:101
+apps/web/heys_feature_flags_v1.js:95
 apps/web/heys_gamification_bar_v1.js:1419
 apps/web/heys_gamification_bar_v1.js:1420
 apps/web/heys_gamification_bar_v1.js:1421

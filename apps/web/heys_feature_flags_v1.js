@@ -66,12 +66,6 @@
     // Default OFF. Enable via HEYS.featureFlags.enable('gantt_v2') after smoke-test.
     // Disable mid-flight to revert to legacy GanttScreen instantly.
     'gantt_v2': false,
-
-    // === Curator namespace isolation (plan curried-stirring-shell.md Wave A) ===
-    // Default OFF. Когда ON: setItem('heys_curator__*') в курaторской сессии идёт в
-    // curator_kv_store (cross-device), bypass-я client_kv_store. Архитектурная
-    // замена NON_CLIENT_DATA_BLACKLIST denylist. Rollback: instant disable.
-    'curator_namespace_isolation': false,
   };
 
   /**

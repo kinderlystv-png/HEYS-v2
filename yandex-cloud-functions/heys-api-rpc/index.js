@@ -384,13 +384,6 @@ const CURATOR_ONLY_FUNCTIONS = [
   // Безопасность: SQL функция проверяет ownership (clients.user_id = curator).
   'batch_upsert_client_kv_by_curator',
   'merge_save_client_kv_by_curator',      // 🔀 Server-side merge — куратор пишет данные клиента
-
-  // === CURATOR KV STORE (namespace isolation, plan curried-stirring-shell.md Wave A) ===
-  // curator_kv_store — отдельная таблица для UI-state курaтора (theme/widget/
-  // whats_new_last_seen). Cross-device sync per-curator account, изолированно
-  // от client_kv_store на уровне схемы. curator_id derived from JWT.sub.
-  'merge_save_curator_kv',                // upsert одного heys_curator__* ключа
-  'get_curator_kv_all',                   // batch-read для HOT-sync hydration
 ];
 
 // === P1-B: Curator audit middleware (2026-05-22) =============================
@@ -2146,106 +2139,6 @@ module.exports.handler = async function (event, context) {
           outcome: mergeOutcome
         })
       };
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // 🆕 Wave A (plan curried-stirring-shell.md): curator_kv_store namespace
-    // ═══════════════════════════════════════════════════════════════════════
-    // merge_save_curator_kv — upsert одного heys_curator__* ключа в
-    // curator_kv_store. curator_id берётся из JWT (curatorId), НЕ из params.
-    // SQL функция сама enforce'ит префикс 'heys_curator__'; здесь — audit-only
-    // log в случае violation для симметрии defence-in-depth.
-    if (fnName === 'merge_save_curator_kv') {
-      const k = params.p_k || params.k;
-      const v = params.p_v !== undefined ? params.p_v : params.v;
-      const lastSeen = params.p_last_seen_updated_at || params.last_seen_updated_at || null;
-
-      if (!k || typeof k !== 'string') {
-        try { client.release(); } catch (_) { /* ignore */ }
-        return {
-          statusCode: 400,
-          headers: corsHeaders,
-          body: JSON.stringify({ ok: false, error: 'Missing p_k' })
-        };
-      }
-      if (v === undefined || v === null) {
-        try { client.release(); } catch (_) { /* ignore */ }
-        return {
-          statusCode: 400,
-          headers: corsHeaders,
-          body: JSON.stringify({ ok: false, error: 'Missing p_v' })
-        };
-      }
-      if (!curatorId) {
-        try { client.release(); } catch (_) { /* ignore */ }
-        return {
-          statusCode: 403,
-          headers: corsHeaders,
-          body: JSON.stringify({ ok: false, error: 'Curator JWT required' })
-        };
-      }
-      // Defence-in-depth: namespace prefix check (audit-only — SQL также enforce'ит).
-      if (!k.startsWith('heys_curator__')) {
-        console.warn('[RPC] merge_save_curator_kv: non-namespace key rejected', {
-          curatorId, k: k.slice(0, 40)
-        });
-        // SQL функция вернёт invalid_key_prefix — пропускаем, не дублируем ошибку.
-      }
-
-      try {
-        const rpcRes = await client.query(
-          'SELECT public.merge_save_curator_kv($1::uuid, $2::text, $3::jsonb, $4::timestamptz) AS result',
-          [curatorId, k, JSON.stringify(v), lastSeen]
-        );
-        const result = rpcRes.rows?.[0]?.result || { ok: false, error: 'empty_result' };
-        try { client.release(); } catch (_) { /* ignore */ }
-        return {
-          statusCode: result.ok ? 200 : (result.error === 'conflict' ? 409 : 400),
-          headers: corsHeaders,
-          body: JSON.stringify(result)
-        };
-      } catch (e) {
-        try { client.release(); } catch (_) { /* ignore */ }
-        console.error('[RPC] merge_save_curator_kv SQL error:', e.message);
-        return {
-          statusCode: 500,
-          headers: corsHeaders,
-          body: JSON.stringify({ ok: false, error: 'db_error', details: e.message })
-        };
-      }
-    }
-
-    // get_curator_kv_all — batch-read всех ключей курaтора (HOT-sync hydration).
-    if (fnName === 'get_curator_kv_all') {
-      if (!curatorId) {
-        try { client.release(); } catch (_) { /* ignore */ }
-        return {
-          statusCode: 403,
-          headers: corsHeaders,
-          body: JSON.stringify({ ok: false, error: 'Curator JWT required' })
-        };
-      }
-      try {
-        const rpcRes = await client.query(
-          'SELECT public.get_curator_kv_all($1::uuid) AS result',
-          [curatorId]
-        );
-        const result = rpcRes.rows?.[0]?.result || { ok: false, error: 'empty_result' };
-        try { client.release(); } catch (_) { /* ignore */ }
-        return {
-          statusCode: result.ok ? 200 : 500,
-          headers: corsHeaders,
-          body: JSON.stringify(result)
-        };
-      } catch (e) {
-        try { client.release(); } catch (_) { /* ignore */ }
-        console.error('[RPC] get_curator_kv_all SQL error:', e.message);
-        return {
-          statusCode: 500,
-          headers: corsHeaders,
-          body: JSON.stringify({ ok: false, error: 'db_error', details: e.message })
-        };
-      }
     }
 
     // 📝 SPECIAL: get_my_curator_changelog_since
