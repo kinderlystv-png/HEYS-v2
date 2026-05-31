@@ -43,19 +43,47 @@
     return cid ? `heys_${cid}_finger_onboarding` : 'heys_finger_onboarding';
   }
 
+  // Prefill из глобального профиля HEYS (birthDate → age, ранее введённый
+  // fingerboardProfile если onboarding запускается повторно).
+  function _calcAgeFromBirthDate(birthDate) {
+    if (!birthDate) return null;
+    const birth = new Date(birthDate);
+    if (isNaN(birth.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+    return age > 0 && age < 120 ? age : null;
+  }
+
+  function _readGlobalProfile() {
+    try {
+      const get = HEYS.utils && HEYS.utils.lsGet;
+      if (typeof get === 'function') return get('heys_profile', {}) || {};
+      const raw = localStorage.getItem('heys_profile');
+      return raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
   function _defaultState() {
+    const globalProfile = _readGlobalProfile();
+    const fp = (globalProfile && globalProfile.fingerboardProfile) || {};
+    const ageFromBirth = _calcAgeFromBirthDate(globalProfile.birthDate);
+    const ageFromProfile = Number(globalProfile.age) > 0 ? Number(globalProfile.age) : null;
     return {
       step: 0,
       completed: false,
       path: null,
-      themeId: 'A',
+      themeId: fp.themeId || 'A',
       profile: {
-        age: null,
-        climbingYears: 0,
-        maxVGrade: null,
-        hasFingerboard: true,
-        hasScale: false,
-        fingerboardId: 'beastmaker_1000',
+        age: ageFromBirth || ageFromProfile || null,
+        climbingYears: Number(fp.climbingYears) || 0,
+        maxVGrade: fp.maxVGrade || null,
+        hasFingerboard: fp.hasFingerboard !== false,
+        hasScale: !!fp.hasScale,
+        fingerboardId: fp.fingerboardId || 'beastmaker_1000',
         needsMaxHangTest: false
       },
       recommendedProgramId: null,
@@ -66,11 +94,26 @@
   function _readState() {
     try {
       const key = _getKey();
+      let state = null;
       if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
-        return HEYS.utils.lsGet(key, null) || _defaultState();
+        state = HEYS.utils.lsGet(key, null);
+      } else {
+        const raw = localStorage.getItem(key);
+        state = raw ? JSON.parse(raw) : null;
       }
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : _defaultState();
+      if (!state) return _defaultState();
+      // Re-prefill из глобального профиля для полей, которые могут быть
+      // пустыми в saved state (user закрыл wizard на Profile step без ввода).
+      // Не перезаписываем непустые значения — user мог ввести и сохранить.
+      const globalProfile = _readGlobalProfile();
+      state.profile = state.profile || {};
+      if (state.profile.age == null) {
+        const ageFromBirth = _calcAgeFromBirthDate(globalProfile.birthDate);
+        const ageFromProfile = Number(globalProfile.age) > 0 ? Number(globalProfile.age) : null;
+        const prefilled = ageFromBirth || ageFromProfile;
+        if (prefilled) state.profile.age = prefilled;
+      }
+      return state;
     } catch (e) {
       console.warn('[Fingers.Onboarding] read failed:', e);
       return _defaultState();
@@ -82,13 +125,40 @@
       const key = _getKey();
       if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
         HEYS.utils.lsSet(key, state);
-        return true;
+      } else {
+        localStorage.setItem(key, JSON.stringify(state));
       }
-      localStorage.setItem(key, JSON.stringify(state));
+      // При завершении onboarding — синхронизировать fingerboardProfile в
+      // глобальный профиль HEYS чтобы при reset/re-onboarding значения
+      // подгружались, а другие модули (constructor, etc.) могли их читать.
+      if (state && state.completed) _syncToGlobalProfile(state);
       return true;
     } catch (e) {
       console.warn('[Fingers.Onboarding] write failed:', e);
       return false;
+    }
+  }
+
+  function _syncToGlobalProfile(state) {
+    try {
+      const get = HEYS.utils && HEYS.utils.lsGet;
+      const set = HEYS.utils && HEYS.utils.lsSet;
+      if (typeof get !== 'function' || typeof set !== 'function') return;
+      const global = get('heys_profile', {}) || {};
+      global.fingerboardProfile = Object.assign({}, global.fingerboardProfile || {}, {
+        themeId: state.themeId,
+        climbingYears: state.profile?.climbingYears,
+        maxVGrade: state.profile?.maxVGrade,
+        hasFingerboard: state.profile?.hasFingerboard,
+        hasScale: state.profile?.hasScale,
+        fingerboardId: state.profile?.fingerboardId,
+        onboardingPath: state.path,
+        recommendedProgramId: state.recommendedProgramId,
+        completedAt: Date.now()
+      });
+      set('heys_profile', global);
+    } catch (e) {
+      console.warn('[Fingers.Onboarding] global profile sync failed:', e);
     }
   }
 
@@ -391,16 +461,35 @@
       setState(next);
     }
 
+    // Late-binding prefill: глобальный profile может подгружаться из cloud
+    // асинхронно (heys_profile через HEYS.store). Если state.profile.age
+    // пустой на момент render — вычисляем prefilled значение прямо здесь
+    // (без useEffect — нарушение Rules of Hooks в condionally-вызываемой
+    // функции renderer). При user-edit или Next — persisted в state.
+    const displayedAge = state.profile.age != null
+      ? state.profile.age
+      : (function () {
+          const gp = _readGlobalProfile();
+          return _calcAgeFromBirthDate(gp.birthDate)
+            || (Number(gp.age) > 0 ? Number(gp.age) : '');
+        })();
+
     function next() {
-      // Решаем, нужен ли age warning экран
-      const age = Number(state.profile.age);
+      // На «Далее» — persistим displayedAge в state если user не вводил вручную.
+      const persistedAge = state.profile.age != null
+        ? state.profile.age
+        : (displayedAge === '' ? null : Number(displayedAge));
+      const age = Number(persistedAge);
       const needsWarn = Number.isFinite(age) && age < 18;
-      const ns = Object.assign({}, state, { step: needsWarn ? 2 : 3 });
+      const ns = Object.assign({}, state, {
+        step: needsWarn ? 2 : 3,
+        profile: Object.assign({}, state.profile, { age: persistedAge })
+      });
       _writeState(ns);
       setState(ns);
     }
 
-    const ageNum = Number(state.profile.age);
+    const ageNum = Number(displayedAge);
     const canNext = Number.isFinite(ageNum) && ageNum >= 8 && ageNum <= 99;
 
     return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
@@ -412,7 +501,7 @@
           id: 'fingers-ob-age',
           type: 'number',
           min: 8, max: 99,
-          value: state.profile.age == null ? '' : state.profile.age,
+          value: displayedAge === '' ? '' : displayedAge,
           onChange: (e) => updateProfile({ age: e.target.value === '' ? null : Number(e.target.value) }),
           style: STYLES.input
         })
@@ -449,7 +538,11 @@
   }
 
   // Screen 2: Age warning
-  function _renderAgeWarning(state, setState) {
+  // React FC — hooks разрешены т.к. component всегда mounts/unmounts целиком
+  // (vs функция-renderer которая вызывается conditionally — нарушение Rules of Hooks).
+  function AgeWarningStep(props) {
+    const state = props.state;
+    const setState = props.setState;
     const age = Number(state.profile.age);
     const ageGate = Fingers.ageGate;
     const restriction = (ageGate && typeof ageGate.getRestrictionMessage === 'function')
@@ -646,7 +739,11 @@
   }
 
   // Screen 5: Recommendation + notifications + done
-  function _renderDone(state, setState, onComplete) {
+  // React FC — hooks разрешены (component mounts/unmounts целиком).
+  function DoneStep(props) {
+    const state = props.state;
+    const setState = props.setState;
+    const onComplete = props.onComplete;
     const [pushOn, setPushOn] = React.useState(state.pushOptIn !== false);
     const [busy, setBusy] = React.useState(false);
 
@@ -781,7 +878,8 @@
       screen = _renderProfile(state, setState);
       showBack = true;
     } else if (state.step === 2) {
-      screen = _renderAgeWarning(state, setState);
+      // FC (а не renderer-функция) — hooks внутри AgeWarningStep корректны.
+      screen = h(AgeWarningStep, { state: state, setState: setState });
       showBack = true;
     } else if (state.step === 3) {
       screen = _renderSafety(state, setState);
@@ -790,7 +888,8 @@
       screen = _renderEquipment(state, setState);
       showBack = true;
     } else if (state.step === 5) {
-      screen = _renderDone(state, setState, onComplete);
+      // FC (а не renderer-функция) — hooks внутри DoneStep корректны.
+      screen = h(DoneStep, { state: state, setState: setState, onComplete: onComplete });
       showBack = state.path === 'full';
     }
 
