@@ -6251,33 +6251,43 @@ button.meal-quality-badge:active {
 /* ---- tabs ---- */
 .fingers-fs-tabs {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: 12px;
-  margin-bottom: 32px;
-  overflow-x: auto;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(120, 120, 128, 0.12);
+  border-radius: 10px;
+  margin-bottom: 24px;
+  overflow-x: hidden;
 }
 .fingers-fs-tab {
-  flex: 1;
-  min-width: 80px;
-  padding: 10px 14px;
+  flex: 1 1 0;
+  min-width: 0; /* allow text truncation вместо overflow на соседей */
+  padding: 8px 6px;
   border: none;
   background: transparent;
   border-radius: 8px;
   color: var(--fingers-text, #1a1a1f);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
+  letter-spacing: -0.01em;
   cursor: pointer;
   transition: background-color 120ms ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
 .fingers-fs-tab:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(120, 120, 128, 0.08);
 }
 .fingers-fs-tab--active {
   background: var(--fingers-bg, #fff);
-  color: var(--fingers-accent, #0066ff);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  color: var(--fingers-text, #1a1a1f);
+  font-weight: 600;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04), 0 3px 8px rgba(0, 0, 0, 0.06);
+}
+/* На очень узких экранах (<360px) — иконка-only fallback скрывает label */
+@media (max-width: 360px) {
+  .fingers-fs-tab { font-size: 12px; padding: 8px 4px; }
 }
 
 /* ---- program card ---- */
@@ -6679,4 +6689,164 @@ button.meal-quality-badge:active {
 }
 [data-theme="dark"] .fingers-fs-bib-modal {
   background: rgba(0, 0, 0, 0.6);
+}
+
+/* ============================================================
+ * iOS-style polish (Wave 5 P1) — glass cards + tighter typography
+ * Применяется ко всем карточкам внутри fingers модуля.
+ * ============================================================ */
+
+/* SF Pro Display для заголовков — более крупная Display-вариация */
+.fingers-fs h1,
+.fingers-fs h2,
+.fingers-fs h3 {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+.fingers-fs h1 { font-size: 22px; }
+.fingers-fs h2 { font-size: 19px; }
+.fingers-fs h3 { font-size: 17px; }
+
+/* Базовый текст — SF Pro Text */
+.fingers-fs,
+.fingers-fs input,
+.fingers-fs button,
+.fingers-fs select,
+.fingers-fs textarea {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+}
+
+/* ==== iOS glass exercise card (конструктор) ==== */
+.fingers-fs-constructor-card {
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 0.5px solid rgba(0, 0, 0, 0.06);
+  border-radius: 18px !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.05);
+  padding: 20px !important;
+  margin-bottom: 16px;
+  overflow: hidden; /* clip backdrop blur edges */
+}
+[data-theme="dark"] .fingers-fs-constructor-card {
+  background: rgba(28, 28, 30, 0.72);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Header упражнения — sticky выглядит как iOS toolbar */
+.fingers-fs-constructor-card > div:first-child {
+  padding-bottom: 14px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+  margin-bottom: 4px;
+}
+[data-theme="dark"] .fingers-fs-constructor-card > div:first-child {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Section dividers в карточке — тоньше и менее контрастные */
+.fingers-fs-constructor-card hr {
+  height: 0.5px !important;
+  background: rgba(0, 0, 0, 0.06) !important;
+  margin: 8px 0 !important;
+}
+[data-theme="dark"] .fingers-fs-constructor-card hr {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Inputs внутри карточки — iOS rounded rect */
+.fingers-fs-constructor-card input[type="number"],
+.fingers-fs-constructor-card input[type="text"],
+.fingers-fs-constructor-card select {
+  background: rgba(120, 120, 128, 0.06) !important;
+  border: 0.5px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 10px !important;
+  font-size: 16px !important; /* iOS не зумит на focus при ≥16px */
+  font-weight: 500 !important;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.fingers-fs-constructor-card input:focus,
+.fingers-fs-constructor-card select:focus {
+  outline: none !important;
+  border-color: var(--fingers-accent, #0066ff) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+[data-theme="dark"] .fingers-fs-constructor-card input,
+[data-theme="dark"] .fingers-fs-constructor-card select {
+  background: rgba(120, 120, 128, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Stepper кнопки (−/+) — iOS pill-style */
+.fingers-fs-constructor-card button:not(.fingers-fs-cta):not(.fingers-fs-ghost) {
+  background: rgba(120, 120, 128, 0.12) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  transition: background-color 120ms ease, transform 80ms ease;
+}
+.fingers-fs-constructor-card button:not(.fingers-fs-cta):not(.fingers-fs-ghost):active {
+  background: rgba(120, 120, 128, 0.2) !important;
+  transform: scale(0.96);
+}
+[data-theme="dark"] .fingers-fs-constructor-card button:not(.fingers-fs-cta):not(.fingers-fs-ghost) {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Compact labels */
+.fingers-fs-constructor-card label,
+.fingers-fs-constructor-card > div > label {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase;
+  color: rgba(60, 60, 67, 0.6) !important;
+  margin-bottom: 6px !important;
+}
+[data-theme="dark"] .fingers-fs-constructor-card label {
+  color: rgba(235, 235, 245, 0.6) !important;
+}
+
+/* Muscle chips group — выровнять spacing */
+.fingers-fs-constructor-card .fingers-fs-muscle-chips,
+.fingers-fs-anatomy-wrap + div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* Program card iOS-tweaks */
+.fingers-fs-program-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(16px);
+  border: 0.5px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 4px 16px rgba(0, 0, 0, 0.04);
+}
+[data-theme="dark"] .fingers-fs-program-card {
+  background: rgba(28, 28, 30, 0.72) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* iOS-style CTA buttons */
+.fingers-fs-cta {
+  background: var(--fingers-accent, #007aff) !important;
+  border-radius: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  transition: opacity 120ms ease, transform 80ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.fingers-fs-cta:active {
+  opacity: 0.85;
+  transform: scale(0.99);
 }
