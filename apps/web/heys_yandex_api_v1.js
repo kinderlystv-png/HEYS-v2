@@ -290,6 +290,12 @@
     // heys-api-rest. rpc() автоматически положит JWT в Authorization.
     'batch_upsert_client_kv_by_curator',
     'merge_save_client_kv_by_curator', // 🔀 Server-side merge для dayv2/norms/profile (curator path)
+
+    // === CURATOR_KV_STORE (Wave A, plan curried-stirring-shell.md) ===
+    // Namespace isolation: heys_curator__* keys уходят в отдельную таблицу
+    // curator_kv_store (cross-device per curator, НЕ client-scoped).
+    'merge_save_curator_kv',           // upsert одного heys_curator__* ключа
+    'get_curator_kv_all',              // batch-read всех namespace ключей курaтора
   ];
 
   /**
