@@ -6765,10 +6765,11 @@ button.meal-quality-badge:active {
 }
 
 /* Каждая остальная секция (поля) — equal padding, тонкий divider снизу.
- * Исключаем .fingers-fs-row — у них собственный компактный padding ниже,
- * иначе общий 14px вертикали раздувает строки до ~60px. */
-.fingers-fs-constructor-card > div:not(:first-child):not(.fingers-fs-row),
-.fingers-fs-constructor-card > hr + div:not(.fingers-fs-row) {
+ * Исключаем .fingers-fs-row и .fingers-fs-weight-row — у них собственный
+ * компактный/крупный padding ниже, иначе общий 14px вертикали ломает их.
+ * .fingers-fs-hint-row — тоже свой padding (small caption под "Доп. вес"). */
+.fingers-fs-constructor-card > div:not(:first-child):not(.fingers-fs-row):not(.fingers-fs-weight-row):not(.fingers-fs-hint-row),
+.fingers-fs-constructor-card > hr + div:not(.fingers-fs-row):not(.fingers-fs-weight-row):not(.fingers-fs-hint-row) {
   padding: 14px 20px !important;
 }
 
@@ -6952,4 +6953,36 @@ button.meal-quality-badge:active {
 .fingers-fs-cta:active {
   opacity: 0.85;
   transform: scale(0.99);
+}
+
+/* === Accessibility: keyboard focus rings (a11y baseline) ===
+   `:focus-visible` рисует кольцо только при keyboard-навигации (Tab), не на
+   click — поэтому безопасно для touch-юзеров. */
+.fingers-fs-muscle-chip:focus-visible,
+.fingers-fs-grip-grid > *:focus-visible,
+.fingers-fs-grip-grid-item:focus-visible,
+.fingers-fs-tab:focus-visible,
+.fingers-fs-row select:focus-visible,
+.fingers-fs-row input:focus-visible,
+.fingers-fs-weight-input:focus-visible,
+.fingers-fs-weight-btn:focus-visible,
+.fingers-fs-timer-btn:focus-visible,
+.fingers-fs-cta:focus-visible,
+.fingers-fs-ghost:focus-visible {
+  outline: 2px solid var(--fingers-accent, #2563eb);
+  outline-offset: 2px;
+}
+
+/* === prefers-reduced-motion: гасим анимации для чувствительных юзеров === */
+@media (prefers-reduced-motion: reduce) {
+  .heys-fingers-countdown circle,
+  .heys-fingers-countdown * {
+    transition: none !important;
+    animation: none !important;
+  }
+  .fingers-fs-cta,
+  .fingers-fs-weight-btn,
+  .fingers-fs-timer-btn {
+    transition: none !important;
+  }
 }

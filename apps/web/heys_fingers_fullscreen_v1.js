@@ -162,6 +162,7 @@
             ? h(Fingers.SessionUI, {
                 dateKey: dateKey,
                 trainingIndex: trainingIndex,
+                mode: mode,
                 onClose: onRequestClose
               })
             : h('div', { style: { padding: 32, textAlign: 'center' } },

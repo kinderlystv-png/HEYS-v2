@@ -203,6 +203,7 @@
         _beep('triumph');
         _say('cue.session_done');
         clearTick();
+        Fingers.activeTimerLock = false;
         if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
         if (typeof onComplete === 'function') {
           try { onComplete(); } catch (e) { console.warn('[Fingers.timer] onComplete threw:', e); }
@@ -210,10 +211,12 @@
         return; // no tick to start
       } else if (nextState === STATES.ABORTED || nextState === STATES.EXPIRED) {
         clearTick();
+        Fingers.activeTimerLock = false;
         if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
         return;
       } else if (nextState === STATES.IDLE) {
         clearTick();
+        Fingers.activeTimerLock = false;
         if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
         return;
       }
@@ -267,6 +270,9 @@
       setSetIdx(0);
       setRepIdx(0);
       setTotalElapsed(0);
+      // Lock close/swipe-confirm while timer running (read by fullscreen swipe guard
+      // и close handler). Cleared on abort/DONE/unmount ниже.
+      Fingers.activeTimerLock = true;
       enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: 0, repIdx: 0 });
     }, [enterPhase]);
 
@@ -277,8 +283,8 @@
       pauseStartedAtRef.current = _now();
       clearTick();
       setState(STATES.PAUSED);
-      fireStateChange(STATES.PAUSED, { resumeTo: previousStateRef.current, secondsLeft });
-    }, [state, secondsLeft, clearTick, fireStateChange]);
+      fireStateChange(STATES.PAUSED, { resumeTo: previousStateRef.current, secondsLeft, setIdx, repIdx });
+    }, [state, secondsLeft, setIdx, repIdx, clearTick, fireStateChange]);
 
     const resume = React.useCallback(() => {
       if (state !== STATES.PAUSED) return;
@@ -287,9 +293,9 @@
       // Adjust phaseStartedAt чтобы оставшееся время сохранилось.
       phaseStartedAtRef.current += pauseDurMs;
       setState(previousStateRef.current);
-      fireStateChange(previousStateRef.current, { resumed: true });
+      fireStateChange(previousStateRef.current, { resumed: true, setIdx, repIdx, durationSec: Math.ceil(phaseDurationMsRef.current / 1000) });
       startTick();
-    }, [state, startTick, fireStateChange]);
+    }, [state, setIdx, repIdx, startTick, fireStateChange]);
 
     const abort = React.useCallback(() => {
       enterPhase(STATES.ABORTED, 0, {});
@@ -302,6 +308,49 @@
       advancePhase();
     }, [state, clearTick]);
 
+    // ─── Resume from persistence snapshot ──────────────────────────────────
+    // Round-в-пользу-безопасности: фаза которая «истекла пока юзера не было»
+    // не auto-completes (можно проскочить целый вис) — вместо этого даём
+    // короткий 0.5s tail, чтобы тик дошёл до 0 и advancePhase сам перевёл
+    // на следующую фазу через нормальный путь.
+    const startFromSnapshot = React.useCallback((snap) => {
+      if (!snap || !snap.state
+          || snap.state === STATES.IDLE || snap.state === STATES.DONE
+          || snap.state === STATES.ABORTED || snap.state === STATES.EXPIRED) {
+        start();
+        return;
+      }
+      sessionStartedAtRef.current = _now();
+      pauseTotalMsRef.current = 0;
+      const snapSetIdx = Number(snap.setIdx) || 0;
+      const snapRepIdx = Number(snap.repIdx) || 0;
+      setSetIdx(snapSetIdx);
+      setRepIdx(snapRepIdx);
+      Fingers.activeTimerLock = true;
+
+      const wasPaused = snap.state === STATES.PAUSED;
+      const targetState = wasPaused ? (snap.resumeTo || STATES.HANG) : snap.state;
+      let targetSec;
+      if (wasPaused) {
+        targetSec = Math.max(1, Number(snap.pausedAtRemainingSec) || 0);
+      } else {
+        const elapsedMs = Date.now() - (Number(snap.phaseStartedAt) || Date.now());
+        const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
+        if (remainingSec >= 0.5) {
+          targetSec = Math.ceil(remainingSec);
+        } else {
+          targetSec = 0.5; // istекло — короткий tail, advancePhase сам переведёт
+        }
+      }
+
+      enterPhase(targetState, targetSec, { setIdx: snapSetIdx, repIdx: snapRepIdx });
+
+      if (wasPaused) {
+        // Defer: даём enterPhase отработать React state update, потом ставим pause.
+        setTimeout(function () { try { pause(); } catch (_) {} }, 50);
+      }
+    }, [start, enterPhase, pause]);
+
     // Cleanup on unmount ONLY. ВАЖНО: deps=[] (пустой массив), иначе wakeLock
     // (новый объект каждый render из HEYS.AppHooks.useWakeLock()) триггерил
     // cleanup → clearTick на КАЖДОМ ререндере → setTimeout убит сразу после
@@ -311,6 +360,7 @@
     React.useEffect(() => {
       return () => {
         clearTick();
+        Fingers.activeTimerLock = false;
         const wl = wakeLockRef.current;
         if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
       };
@@ -318,7 +368,7 @@
     }, []);
 
     return { state, setIdx, repIdx, secondsLeft, totalElapsed,
-      start, pause, resume, abort, skipPhase };
+      start, startFromSnapshot, pause, resume, abort, skipPhase };
   }
 
   // ─── Component: CountdownDisplay ─────────────────────────────────────────
@@ -329,7 +379,7 @@
 
     const {
       state, secondsLeft, setIdx, totalSets, repIdx, totalReps,
-      gripLabel, edgeLabel, addedWeightKg, onPause, onAbort,
+      gripLabel, edgeLabel, addedWeightKg, onPause, onAbort, onSkip,
     } = props || {};
 
     // Visual style depending on phase
@@ -416,23 +466,36 @@
         }, String(Math.max(0, secondsLeft | 0)))
       ),
 
-      // Controls
+      // Controls — touch targets ≥44px (потные пальцы после виса; iOS HIG).
       (state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED)
-        ? h('div', { style: { display: 'flex', gap: '12px', marginTop: '8px' } },
+        ? h('div', { style: { display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' } },
             h('button', {
               type: 'button',
+              className: 'fingers-fs-timer-btn',
               onClick: onPause,
               style: {
-                padding: '10px 20px', borderRadius: '8px',
+                minHeight: 44, padding: '10px 20px', borderRadius: '8px',
                 border: '1px solid #d1d5db', background: '#f9fafb',
                 fontSize: '14px', cursor: 'pointer',
               },
             }, state === STATES.PAUSED ? 'Возобновить' : 'Пауза'),
+            (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+              type: 'button',
+              className: 'fingers-fs-timer-btn',
+              onClick: onSkip,
+              'aria-label': 'Пропустить фазу',
+              style: {
+                minHeight: 44, padding: '10px 20px', borderRadius: '8px',
+                border: '1px solid #d1d5db', background: '#f9fafb',
+                fontSize: '14px', cursor: 'pointer',
+              },
+            }, '→') : null,
             h('button', {
               type: 'button',
+              className: 'fingers-fs-timer-btn',
               onClick: onAbort,
               style: {
-                padding: '10px 20px', borderRadius: '8px',
+                minHeight: 44, padding: '10px 20px', borderRadius: '8px',
                 border: '1px solid #fecaca', background: '#fef2f2',
                 color: '#b91c1c', fontSize: '14px', cursor: 'pointer',
               },

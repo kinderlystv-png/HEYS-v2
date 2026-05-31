@@ -180,6 +180,7 @@
               if (Fingers.ExerciseConstructor) {
                 return h(Fingers.ExerciseConstructor, {
                   key: i,
+                  exIdx: i,
                   exercise: ex,
                   userBoard: userBoard,
                   userAge: userAge,
@@ -284,14 +285,51 @@
 
   // --- Live session — ведомое выполнение упражнения с countdown timer ---
   // Каждое exercise = собственный cycle (key={exIdx} → re-mount hook'a).
-  function ExerciseRunner({ exercise, exIdx, totalExercises, onDone, onAbort }) {
+  function ExerciseRunner({ exercise, exIdx, totalExercises, dateKey, trainingIndex, exercises, programId, initialSnapshot, onDone, onAbort }) {
+    // onStateChange wired to persistence.save: snapshot пишется на переходе фазы
+    // (fireStateChange зовётся только на transition, не на tick). Live remaining
+    // секунд реконструируется на load() как durationSec - (now - phaseStartedAt).
+    // DONE/ABORTED → clear (нет смысла хранить).
+    const handleStateChange = useCallback(function (nextState, meta) {
+      const STATES = Fingers.STATES || {};
+      if (!Fingers.persistence) return;
+      if (nextState === STATES.DONE || nextState === STATES.ABORTED || nextState === STATES.IDLE || nextState === STATES.EXPIRED) {
+        try { Fingers.persistence.clear(); } catch (_) {}
+        return;
+      }
+      const now = Date.now();
+      const snapshot = {
+        dateKey: dateKey,
+        trainingIndex: trainingIndex,
+        exIdx: exIdx,
+        exercises: exercises,
+        programId: programId,
+        state: nextState,
+        setIdx: meta && meta.setIdx != null ? meta.setIdx : 0,
+        repIdx: meta && meta.repIdx != null ? meta.repIdx : 0,
+        durationSec: meta && meta.durationSec != null ? meta.durationSec : 0,
+        phaseStartedAt: now,
+        stateEnteredAt: now
+      };
+      // PAUSED — meta.secondsLeft = сколько осталось до pause; кладём как
+      // pausedAtRemainingSec, на resume используем при реконструкции.
+      if (nextState === STATES.PAUSED && meta && meta.secondsLeft != null) {
+        snapshot.pausedAtRemainingSec = meta.secondsLeft;
+        snapshot.resumeTo = meta.resumeTo;
+      }
+      try { Fingers.persistence.save(snapshot); } catch (e) {
+        console.warn('[Fingers.ExerciseRunner] persistence.save failed:', e);
+      }
+    }, [dateKey, trainingIndex, exIdx, exercises, programId]);
+
     const cycle = Fingers.useCountdownCycle({
       hangSec: Number(exercise.hangSec) || 7,
       restSec: Number(exercise.restSec) || 3,
       repsPerSet: Number(exercise.repsPerSet) || 6,
       setsCount: Number(exercise.setsCount) || 3,
       restBetweenSetsSec: Number(exercise.restBetweenSetsSec) || 180,
-      onComplete: onDone
+      onComplete: onDone,
+      onStateChange: handleStateChange
     });
 
     // Auto-start session на mount. НЕ блокируем повторный запуск ref'ом —
@@ -308,18 +346,26 @@
       const waitPromise = (HEYS.Fingers?.voice?.waitForQueue)
         ? HEYS.Fingers.voice.waitForQueue()
         : Promise.resolve();
-      waitPromise.then(function () {
-        if (cancelled) return;
+      // Resume from snapshot if it matches this exercise; иначе обычный start.
+      const useResume = initialSnapshot
+        && initialSnapshot.exIdx === exIdx
+        && typeof cycle.startFromSnapshot === 'function';
+      const launch = function () {
         try {
-          if (typeof cycle.start === 'function') cycle.start();
+          if (useResume) {
+            cycle.startFromSnapshot(initialSnapshot);
+          } else if (typeof cycle.start === 'function') {
+            cycle.start();
+          }
         } catch (e) {
           console.warn('[Fingers.ExerciseRunner] start failed:', e);
         }
+      };
+      waitPromise.then(function () {
+        if (cancelled) return;
+        launch();
       }).catch(function () {
-        // Fallback: даже если queue падает — всё равно запускаем
-        if (!cancelled && typeof cycle.start === 'function') {
-          try { cycle.start(); } catch (_) {}
-        }
+        if (!cancelled) launch();
       });
       return function () { cancelled = true; };
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -342,6 +388,83 @@
           }
         } catch (e) { console.warn('[Fingers.ExerciseRunner] pause/resume failed:', e); }
       };
+
+      // 2-step abort flow: "Прервать?" → "Записать частично?".
+      // Fallback (нет ConfirmModal) — старое поведение (немедленный abort).
+      const requestAbort = function () {
+        const finalize = function () {
+          try { cycle.abort(); } catch (_) {}
+          if (onAbort) onAbort();
+        };
+        if (!HEYS.ConfirmModal?.show) { finalize(); return; }
+        // Snap progress в момент клика (closure ловит свежие значения).
+        const doneExercises = exIdx;
+        const doneSets = cycle.setIdx || 0;
+        const doneReps = cycle.repIdx || 0;
+        const hasProgress = doneExercises > 0 || doneSets > 0 || doneReps > 0;
+
+        HEYS.ConfirmModal.show({
+          icon: '⚠',
+          title: 'Прервать тренировку?',
+          text: 'Текущая фаза не будет засчитана.',
+          confirmText: 'Прервать',
+          cancelText: 'Продолжить',
+          confirmStyle: 'warning',
+          onConfirm: function () {
+            if (!hasProgress) { finalize(); return; }
+            HEYS.ConfirmModal.show({
+              icon: '💾',
+              title: 'Записать прогресс?',
+              text: 'Выполнено: ' + doneExercises + ' упр., '
+                    + doneSets + ' подходов, ' + doneReps + ' повторов в текущем подходе.',
+              confirmText: 'Записать как частично',
+              cancelText: 'Не записывать',
+              onConfirm: function () {
+                try {
+                  const totalMin = Array.isArray(exercises)
+                    ? exercises.reduce(function (s, e) {
+                        const oneSet = (Number(e.hangSec) + Number(e.restSec)) * Number(e.repsPerSet) + Number(e.restBetweenSetsSec);
+                        return s + (oneSet * Number(e.setsCount)) / 60;
+                      }, 0)
+                    : 0;
+                  const partialLog = {
+                    version: 2,
+                    programId: programId,
+                    totalDurationMinutes: Math.round(totalMin),
+                    exercises: exercises,
+                    completedAt: new Date().toISOString(),
+                    viaTimer: true,
+                    partial: true,
+                    partialProgress: {
+                      completedExercises: doneExercises,
+                      currentExerciseCompletedSets: doneSets,
+                      currentExerciseCompletedRepsInCurrentSet: doneReps
+                    }
+                  };
+                  HEYS.TrainingStep?.saveFingers?.(
+                    { dateKey: dateKey, trainingIndex: trainingIndex },
+                    partialLog,
+                    { activityLabel: (programId && programId !== 'custom' ? programId : 'Свой конструктор') + ' (частично)' }
+                  );
+                  if (HEYS.Toast?.success) {
+                    HEYS.Toast.success('Записано: ' + doneExercises + ' упр., ' + doneSets + ' подходов');
+                  }
+                } catch (e) {
+                  console.warn('[Fingers.ExerciseRunner] partial save failed:', e);
+                }
+                try { Fingers.persistence?.clear?.(); } catch (_) {}
+                finalize();
+              },
+              onCancel: function () {
+                try { Fingers.persistence?.clear?.(); } catch (_) {}
+                if (HEYS.Toast?.info) HEYS.Toast.info('Сессия прервана');
+                finalize();
+              }
+            });
+          }
+        });
+      };
+
       return h(Fingers.CountdownDisplay, {
         state: cycle.state,
         secondsLeft: cycle.secondsLeft,
@@ -357,7 +480,7 @@
         exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
         onPause: togglePauseResume,
         onResume: cycle.resume,
-        onAbort: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); },
+        onAbort: requestAbort,
         onSkip: cycle.skipPhase
       });
     }
@@ -377,8 +500,12 @@
     );
   }
 
-  function LiveSession({ exercises, onAllDone, onAbort }) {
-    const [exIdx, setExIdx] = useState(0);
+  function LiveSession({ exercises, dateKey, trainingIndex, programId, initialSnapshot, onAllDone, onAbort }) {
+    // Start at snapshot.exIdx if resuming; иначе с первого упражнения.
+    const startIdx = (initialSnapshot && Number.isInteger(initialSnapshot.exIdx))
+      ? Math.min(Math.max(0, initialSnapshot.exIdx), Math.max(0, (exercises?.length || 1) - 1))
+      : 0;
+    const [exIdx, setExIdx] = useState(startIdx);
     const handleExerciseDone = useCallback(function () {
       if (exIdx + 1 < exercises.length) {
         setExIdx(exIdx + 1);
@@ -399,22 +526,55 @@
       exercise: current,
       exIdx: exIdx,
       totalExercises: exercises.length,
+      dateKey: dateKey,
+      trainingIndex: trainingIndex,
+      exercises: exercises,
+      programId: programId,
+      initialSnapshot: initialSnapshot,
       onDone: handleExerciseDone,
       onAbort: onAbort
     });
   }
 
   // --- Main SessionUI ---
-  function SessionUI({ dateKey, trainingIndex, onClose }) {
+  function SessionUI({ dateKey, trainingIndex, mode, onClose }) {
     const [tab, setTab] = useState('programs');
     const [exercises, setExercises] = useState([]);
     const [showBib, setShowBib] = useState(false);
     const [pendingProgram, setPendingProgram] = useState(null);
     const [liveActive, setLiveActive] = useState(false);
+    // initialSnapshot — заполняется при mode='continue', пробрасывается в
+    // LiveSession → ExerciseRunner → cycle.startFromSnapshot. После resume
+    // обнуляется чтобы повторные переключения упражнений не пытались
+    // снова восстановиться из старого snapshot.
+    const [initialSnapshot, setInitialSnapshot] = useState(null);
+
+    // Resume on continue mode: load snapshot, restore exercises + program, прыгнуть в live.
+    useEffect(function () {
+      if (mode !== 'continue') return;
+      try {
+        const loaded = Fingers.persistence && Fingers.persistence.load && Fingers.persistence.load();
+        if (!loaded || !loaded.snapshot) return;
+        const snap = loaded.snapshot;
+        if (!Array.isArray(snap.exercises) || !snap.exercises.length) return;
+        setExercises(snap.exercises);
+        if (snap.programId && typeof Fingers.getProgramById === 'function') {
+          const prog = Fingers.getProgramById(snap.programId);
+          if (prog) setPendingProgram(prog);
+        }
+        setInitialSnapshot(snap);
+        setLiveActive(true);
+      } catch (e) {
+        console.warn('[Fingers.SessionUI] resume from snapshot failed:', e);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const profile = getProfile();
     const userBoard = profile.fingerboardId || null;
-    const userAge = Number(profile.age) || 18;
+    // Age fail-closed: null если не указан в профиле — конструктор покажет
+    // guard вместо опасных хватов (ранее дефолтилось 18 → fail-open).
+    const userAge = Number.isFinite(Number(profile.age)) ? Number(profile.age) : null;
     const recommendedId = getRecommendedProgramId();
 
     // Pick program → load exercises into constructor → switch to constructor tab
@@ -536,14 +696,17 @@
 
     const handleLiveAllDone = useCallback(function () {
       setLiveActive(false);
+      setInitialSnapshot(null);
       try { Fingers.voice?.say?.('cue.session_done'); } catch (_) {}
       handleComplete({ viaTimer: true });
     }, [handleComplete]);
 
     const handleLiveAbort = useCallback(function () {
+      // Toast/save flow handled inside ExerciseRunner.requestAbort (2-step modal).
+      // Здесь только воспроизводим audio cue и закрываем live overlay.
       setLiveActive(false);
+      setInitialSnapshot(null);
       try { Fingers.voice?.say?.('cue.session_aborted'); } catch (_) {}
-      if (HEYS.Toast?.info) HEYS.Toast.info('Сессия прервана — план сохранён');
     }, []);
 
     // Live session берёт весь экран — табы и header скрыты
@@ -551,6 +714,10 @@
       return h('div', { className: 'fingers-fs-live' },
         h(LiveSession, {
           exercises: exercises,
+          dateKey: dateKey,
+          trainingIndex: trainingIndex,
+          programId: pendingProgram?.id || 'custom',
+          initialSnapshot: initialSnapshot,
           onAllDone: handleLiveAllDone,
           onAbort: handleLiveAbort
         })

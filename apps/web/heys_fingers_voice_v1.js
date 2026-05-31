@@ -145,6 +145,11 @@
 
   function loadSettings() {
     try {
+      const HEYS = (typeof window !== 'undefined' && window.HEYS) || {};
+      if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+        const v = HEYS.utils.lsGet(SETTINGS_KEY, null);
+        if (v && typeof v === 'object') return Object.assign({}, DEFAULT_SETTINGS, v);
+      }
       const raw = (typeof localStorage !== 'undefined') ? localStorage.getItem(SETTINGS_KEY) : null;
       if (!raw) return Object.assign({}, DEFAULT_SETTINGS);
       const parsed = JSON.parse(raw);
@@ -154,6 +159,11 @@
 
   function saveSettings(s) {
     try {
+      const HEYS = (typeof window !== 'undefined' && window.HEYS) || {};
+      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+        HEYS.utils.lsSet(SETTINGS_KEY, s);
+        return;
+      }
       if (typeof localStorage !== 'undefined') localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
     } catch (_) { /* silent — quota / private mode */ }
   }
