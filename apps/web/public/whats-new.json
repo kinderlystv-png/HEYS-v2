@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.05.31.172035e4",
+      "buildHash": "172035e4",
+      "date": "2026-05-31",
+      "kind": "technical",
+      "profile": "technical-infra",
+      "title": "Курaторские настройки — отдельное хранилище (Wave A backend)",
+      "items": [
+        {
+          "type": "chore",
+          "title": "Фундамент изоляции курaторского namespace",
+          "description": "Добавлены backend-кирпичики (новая таблица curator_kv_store, RPC merge_save_curator_kv и get_curator_kv_all, фича-флаг curator_namespace_isolation по умолчанию OFF) для будущего переезда UI-настроек куратора (тема, раскладка виджетов, прочитанные «Что нового») из общего client_kv_store в отдельный, изолированный канал. На поведение приложения сейчас не влияет — UI-миграция call-sites придёт следующими Wave."
+        }
+      ]
+    },
+    {
       "version": "2026.05.31.1209104e",
       "buildHash": "1209104e",
       "date": "2026-05-31",
