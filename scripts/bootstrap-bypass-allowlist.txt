@@ -236,4 +236,4 @@ apps/web/heys_fingers_calibration_v1.js:57
 apps/web/heys_fingers_onboarding_v1.js:129
 apps/web/heys_fingers_records_store_v1.js:56
 apps/web/heys_fingers_session_persistence_v1.js:60
-apps/web/heys_fingers_voice_v1.js:167
+apps/web/heys_fingers_voice_v1.js:157
