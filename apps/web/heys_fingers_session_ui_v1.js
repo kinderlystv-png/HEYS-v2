@@ -282,12 +282,100 @@
     );
   }
 
+  // --- Live session — ведомое выполнение упражнения с countdown timer ---
+  // Каждое exercise = собственный cycle (key={exIdx} → re-mount hook'a).
+  function ExerciseRunner({ exercise, exIdx, totalExercises, onDone, onAbort }) {
+    const cycle = Fingers.useCountdownCycle({
+      hangSec: Number(exercise.hangSec) || 7,
+      restSec: Number(exercise.restSec) || 3,
+      repsPerSet: Number(exercise.repsPerSet) || 6,
+      setsCount: Number(exercise.setsCount) || 3,
+      restBetweenSetsSec: Number(exercise.restBetweenSetsSec) || 180,
+      onComplete: onDone
+    });
+
+    // Auto-start session на mount
+    useEffect(function () {
+      if (cycle && typeof cycle.start === 'function') {
+        // Defer на следующий tick чтобы wake lock и audio context успели init
+        const t = setTimeout(function () { try { cycle.start(); } catch (_) {} }, 100);
+        return function () { clearTimeout(t); };
+      }
+    }, []);
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : exercise.gripId;
+    const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : '—';
+    const addedWeight = Number(exercise.addedWeightKg) || 0;
+
+    if (Fingers.CountdownDisplay) {
+      return h(Fingers.CountdownDisplay, {
+        state: cycle.state,
+        secondsLeft: cycle.secondsLeft,
+        setIdx: cycle.setIdx,
+        totalSets: Number(exercise.setsCount) || 3,
+        repIdx: cycle.repIdx,
+        totalReps: Number(exercise.repsPerSet) || 6,
+        gripLabel: gripLabel + ' · ' + edgeLabel + (addedWeight ? ' · ' + (addedWeight > 0 ? '+' : '') + addedWeight + 'кг' : ''),
+        edgeLabel: edgeLabel,
+        addedWeightKg: addedWeight,
+        exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+        onPause: cycle.pause,
+        onResume: cycle.resume,
+        onAbort: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); },
+        onSkip: cycle.skipPhase
+      });
+    }
+
+    // Fallback если CountdownDisplay не загружен
+    return h('div', { style: { padding: 32, textAlign: 'center' } },
+      h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel),
+      h('div', { style: { fontSize: 96, fontWeight: 300, fontFamily: 'mono' } },
+        cycle.secondsLeft + 'с'),
+      h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
+        'Состояние: ' + cycle.state + ' · Сет ' + (cycle.setIdx + 1) + '/' + exercise.setsCount),
+      h('button', {
+        className: 'fingers-fs-ghost',
+        onClick: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); },
+        style: { marginTop: 16 }
+      }, '✕ Прервать')
+    );
+  }
+
+  function LiveSession({ exercises, onAllDone, onAbort }) {
+    const [exIdx, setExIdx] = useState(0);
+    const handleExerciseDone = useCallback(function () {
+      if (exIdx + 1 < exercises.length) {
+        setExIdx(exIdx + 1);
+      } else if (onAllDone) {
+        onAllDone();
+      }
+    }, [exIdx, exercises.length, onAllDone]);
+
+    if (!exercises || !exercises.length) {
+      return h('div', { style: { padding: 32, textAlign: 'center' } },
+        'Нет упражнений для запуска.'
+      );
+    }
+
+    const current = exercises[exIdx];
+    return h(ExerciseRunner, {
+      key: exIdx, // forces re-mount of useCountdownCycle hook on exercise switch
+      exercise: current,
+      exIdx: exIdx,
+      totalExercises: exercises.length,
+      onDone: handleExerciseDone,
+      onAbort: onAbort
+    });
+  }
+
   // --- Main SessionUI ---
   function SessionUI({ dateKey, trainingIndex, onClose }) {
     const [tab, setTab] = useState('programs');
     const [exercises, setExercises] = useState([]);
     const [showBib, setShowBib] = useState(false);
     const [pendingProgram, setPendingProgram] = useState(null);
+    const [liveActive, setLiveActive] = useState(false);
 
     const profile = getProfile();
     const userBoard = profile.fingerboardId || null;
@@ -306,8 +394,9 @@
       try { Fingers.voice?.say?.('cue.next_set'); } catch (_) { /* noop */ }
     }, [userBoard]);
 
-    // Save current session as training (called on «Завершить тренировку»)
-    const handleComplete = useCallback(function () {
+    // Save current session as training (called on «Завершить тренировку» или auto on LiveSession DONE)
+    const handleComplete = useCallback(function (opts) {
+      const o = opts || {};
       if (!exercises.length) return;
       const programId = pendingProgram?.id || 'custom';
       const totalMin = exercises.reduce(function (s, e) {
@@ -319,7 +408,8 @@
         programId: programId,
         totalDurationMinutes: Math.round(totalMin),
         exercises: exercises,
-        completedAt: new Date().toISOString()
+        completedAt: new Date().toISOString(),
+        viaTimer: !!o.viaTimer // true если завершено через ведомый таймер
       };
       try {
         HEYS.TrainingStep?.saveFingers?.(
@@ -327,12 +417,108 @@
           fingersLog,
           { activityLabel: pendingProgram?.name || 'Свой конструктор' }
         );
-        if (HEYS.Toast?.success) HEYS.Toast.success('Тренировка сохранена');
+        if (HEYS.Toast?.success) HEYS.Toast.success(o.viaTimer ? 'Сессия завершена и сохранена' : 'План тренировки сохранён');
       } catch (e) {
         console.warn('[SessionUI] saveFingers failed:', e);
       }
       if (onClose) onClose();
     }, [exercises, pendingProgram, dateKey, trainingIndex, onClose]);
+
+    // G1+G2+G5+G6: Start live timer session (с readiness + safety pre-flight)
+    const handleStartLive = useCallback(function () {
+      if (!exercises.length) return;
+
+      // G5: Readiness gate — читаем readiness из morning checkin
+      let readinessBucket = 'moderate-only';
+      let readinessReasons = [];
+      try {
+        const today = (typeof dateKey === 'string' ? dateKey : new Date().toISOString().slice(0, 10));
+        if (Fingers.readiness && typeof Fingers.readiness.assess === 'function') {
+          const r = Fingers.readiness.assess({ dateKey: today });
+          if (r && r.bucket) {
+            readinessBucket = r.bucket;
+            readinessReasons = Array.isArray(r.reasons) ? r.reasons : [];
+          }
+        }
+      } catch (e) {
+        console.warn('[SessionUI] readiness.assess failed:', e);
+      }
+
+      const programIntensity = pendingProgram?.intensity
+        || (Fingers.getProgramIntensity && Fingers.getProgramIntensity(pendingProgram?.id))
+        || 'moderate';
+
+      // Rest-day hard block только для max-protocol
+      if (readinessBucket === 'rest-day' && programIntensity === 'max') {
+        if (HEYS.ConfirmModal?.show) {
+          HEYS.ConfirmModal.show({
+            icon: '🛑',
+            title: 'Сегодня тело устало',
+            text: 'Готовность низкая (' + (readinessReasons[0] || 'низкие mood/sleep/wellbeing за последние дни') + '). Max-protocol запрещён. Попробуй No-Hangs (active recovery).',
+            confirmText: 'Понял',
+            cancelText: null
+          });
+        }
+        return;
+      }
+
+      // G2: Safety pre-flight — RAMP warmup checklist через ConfirmModal
+      if (!HEYS.ConfirmModal?.show) {
+        // Fallback: если ConfirmModal недоступен — сразу старт
+        setLiveActive(true);
+        return;
+      }
+
+      const cooldownInfo = (Fingers.cooldownCheck && Fingers.cooldownCheck()) || {};
+      const cooldownWarn = (cooldownInfo.hoursSinceLast != null && cooldownInfo.hoursSinceLast < 48 && cooldownInfo.lastWasMax && programIntensity === 'max')
+        ? '\n⚠ Прошло только ' + Math.round(cooldownInfo.hoursSinceLast) + 'ч с прошлой max-сессии (рекомендуется ≥48ч).'
+        : '';
+
+      const readinessNote = readinessBucket === 'recovery-only'
+        ? '\nℹ Готовность невысокая — лучше No-Hangs или recovery-протокол.'
+        : '';
+
+      HEYS.ConfirmModal.show({
+        icon: '🤲',
+        title: 'Pre-flight check',
+        text: 'Перед стартом подтверди:\n\n' +
+              '✓ Разогрев 15-20 мин (RAMP: Raise/Activate/Mobilize/Potentiate)\n' +
+              '✓ Нет острой боли в пальцах и PIP суставах\n' +
+              '✓ Не на холодные руки' +
+              cooldownWarn + readinessNote,
+        confirmText: 'Всё ОК, начинаем',
+        cancelText: 'Отмена',
+        confirmStyle: programIntensity === 'max' ? 'warning' : 'primary',
+        onConfirm: function () {
+          // G6: voice cue session start
+          try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
+          setLiveActive(true);
+        }
+      });
+    }, [exercises, pendingProgram, dateKey]);
+
+    const handleLiveAllDone = useCallback(function () {
+      setLiveActive(false);
+      try { Fingers.voice?.say?.('cue.session_done'); } catch (_) {}
+      handleComplete({ viaTimer: true });
+    }, [handleComplete]);
+
+    const handleLiveAbort = useCallback(function () {
+      setLiveActive(false);
+      try { Fingers.voice?.say?.('cue.session_aborted'); } catch (_) {}
+      if (HEYS.Toast?.info) HEYS.Toast.info('Сессия прервана — план сохранён');
+    }, []);
+
+    // Live session берёт весь экран — табы и header скрыты
+    if (liveActive) {
+      return h('div', { className: 'fingers-fs-live' },
+        h(LiveSession, {
+          exercises: exercises,
+          onAllDone: handleLiveAllDone,
+          onAbort: handleLiveAbort
+        })
+      );
+    }
 
     const tabs = [
       { id: 'programs', label: 'Программы', icon: '📚' },
@@ -394,13 +580,21 @@
           }),
           exercises.length > 0 && h('div', {
             style: { marginTop: 24, padding: 16, borderRadius: 12,
-              background: 'rgba(0,0,0,0.03)' }
+              background: 'rgba(0,0,0,0.03)',
+              display: 'flex', flexDirection: 'column', gap: 12 }
           },
+            // Primary CTA — ведомая сессия с countdown timer + voice
             h('button', {
               className: 'fingers-fs-cta',
-              onClick: handleComplete,
-              style: { width: '100%' }
-            }, '✓ Завершить и сохранить тренировку')
+              onClick: handleStartLive,
+              style: { width: '100%', fontSize: 16, padding: '14px 20px' }
+            }, '▶ Запустить ведомую сессию'),
+            // Secondary — просто сохранить план без timer (для тех кто тренируется по своему ритму)
+            h('button', {
+              className: 'fingers-fs-ghost',
+              onClick: function () { handleComplete({ viaTimer: false }); },
+              style: { width: '100%', fontSize: 13 }
+            }, 'Сохранить план без таймера')
           )
         ),
         tab === 'progress' && h(ProgressTab, {
