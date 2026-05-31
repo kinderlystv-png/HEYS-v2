@@ -190,6 +190,7 @@ docs/archive/reports-*/
 # Test results
 test-results/
 coverage/
+playwright-report/
 
 # Temp build artifacts
 tsup.config.bundled_*.mjs
@@ -216,6 +217,9 @@ docs/tmpclaude-*
 tmp_diff_*.txt
 alex-dashboard*.png
 apps/web/__tests__/heys-backup-*.json
+
+# Manual backup snapshots (user-curated, stay local)
+.backups/
 
 # Cloud function local build artifacts
 yandex-cloud-functions/*.zip
