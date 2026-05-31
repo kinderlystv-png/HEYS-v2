@@ -2250,6 +2250,23 @@
         // Сохранение данных дня под конкретную дату
         const saveToDate = React.useCallback((dateStr, payload) => {
             if (!dateStr || !payload) return;
+            // 🛡️ 2026-05-31: H2 fix — hard invariant: dateStr ДОЛЖНА совпадать с
+            // payload.date. Иначе сохраняем blob с meals/trainings одного дня
+            // под key другого дня + saveToDate переписывает payload.date на
+            // dateStr → silent data corruption невидим на чтении.
+            // Incident 2026-05-31 07:55: Александры 30 мая (888 ккал, 4 meals)
+            // был затёрт today data (174 ккал, 1 meal, payload.date=31 мая).
+            // Без этого guard'а кто-то (cloud event handler? live-refresh?) ещё
+            // продолжит переписывать чужие даты. Защищаем data integrity на
+            // нижнем слое — даже если bug в caller'е, корруптной записи не будет.
+            if (payload.date && payload.date !== dateStr) {
+                console.warn('[HEYS.dayHooks] 🛡️ saveToDate ABORT: payload.date mismatch', {
+                    dateStr,
+                    payloadDate: payload.date,
+                    mealsCount: Array.isArray(payload.meals) ? payload.meals.length : 0,
+                });
+                return;
+            }
             const key = getKey(dateStr);
             const current = readExisting(key);
             const incomingUpdatedAt = payload.updatedAt != null ? payload.updatedAt : now();
