@@ -75,10 +75,18 @@
   // Большинство секций используют border-bottom встроенный в row.
   const ST_DIVIDER = { display: 'none' };
 
-  // Header — компактный (icon + title + ×)
+  // Hero — фото хвата на всю ширину карточки, native aspect ratio.
+  const ST_HERO = {
+    width: '100%',
+    height: 'auto',
+    display: 'block',
+    background: 'rgba(120, 120, 128, 0.05)',
+    borderBottom: BORDER_LITE,
+  };
+  // Header — заголовок + remove (без иконки, фото живёт в hero).
   const ST_HEADER = {
     display: 'flex', alignItems: 'center', gap: 10,
-    padding: '8px 14px',
+    padding: '10px 14px',
     background: 'rgba(120, 120, 128, 0.05)',
     borderBottom: BORDER_LITE,
     lineHeight: 1.2,
@@ -206,12 +214,19 @@
   }
 
   // ===== SUB-RENDERERS =====
+  function renderHero(grip) {
+    return R.createElement('img', {
+      src: '/exercises/' + grip.id + '.webp',
+      alt: 'Хват: ' + grip.label,
+      loading: 'lazy',
+      decoding: 'async',
+      className: 'fingers-fs-grip-hero fingers-fs-grip-hero--' + grip.id,
+      style: ST_HERO,
+      onError: function (e) { try { e.target.style.display = 'none'; } catch (_) {} },
+    });
+  }
   function renderHeader(grip, onRemove) {
-    const icon = Fingers.GripIcon
-      ? R.createElement(Fingers.GripIcon, { gripId: grip.id, size: 36 })
-      : R.createElement('div', { style: { width: 36, height: 36 } }, grip.icon || '🖐');
     return R.createElement('div', { style: ST_HEADER },
-      R.createElement('div', { style: { flex: '0 0 auto' } }, icon),
       R.createElement('div', { style: ST_TITLE }, grip.label),
       R.createElement('button', {
         type: 'button', 'aria-label': 'Удалить упражнение',
@@ -448,6 +463,7 @@
       || { id: ex.gripId, label: ex.gripId, primaryMuscles: [], icon: '🖐' };
 
     const els = [];
+    els.push(R.createElement(R.Fragment, { key: 'hero' }, renderHero(grip)));
     els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove)));
 
     // iOS form-grouped: каждое поле — отдельная row с label слева, value справа.
