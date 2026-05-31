@@ -294,13 +294,21 @@
       onComplete: onDone
     });
 
-    // Auto-start session на mount
+    // Auto-start session на mount. НЕ блокируем повторный запуск ref'ом —
+    // React Strict Mode mount-unmount-remount убивает setInterval из cleanup
+    // первого mount; на втором mount нужно перезапустить start, чтобы setInterval
+    // ожил снова. start() сам идемпотентен: переустанавливает phaseStartedAtRef
+    // и setState(SET_PREP) → новый setInterval.
     useEffect(function () {
-      if (cycle && typeof cycle.start === 'function') {
-        // Defer на следующий tick чтобы wake lock и audio context успели init
-        const t = setTimeout(function () { try { cycle.start(); } catch (_) {} }, 100);
-        return function () { clearTimeout(t); };
-      }
+      const t = setTimeout(function () {
+        try {
+          if (typeof cycle.start === 'function') cycle.start();
+        } catch (e) {
+          console.warn('[Fingers.ExerciseRunner] start failed:', e);
+        }
+      }, 0);
+      return function () { clearTimeout(t); };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
@@ -309,6 +317,17 @@
     const addedWeight = Number(exercise.addedWeightKg) || 0;
 
     if (Fingers.CountdownDisplay) {
+      // Smart pause/resume: CountdownDisplay читает только onPause prop;
+      // если state===PAUSED — вызываем resume, иначе pause.
+      const togglePauseResume = function () {
+        try {
+          if (cycle.state === (Fingers.STATES && Fingers.STATES.PAUSED)) {
+            cycle.resume && cycle.resume();
+          } else {
+            cycle.pause && cycle.pause();
+          }
+        } catch (e) { console.warn('[Fingers.ExerciseRunner] pause/resume failed:', e); }
+      };
       return h(Fingers.CountdownDisplay, {
         state: cycle.state,
         secondsLeft: cycle.secondsLeft,
@@ -316,11 +335,13 @@
         totalSets: Number(exercise.setsCount) || 3,
         repIdx: cycle.repIdx,
         totalReps: Number(exercise.repsPerSet) || 6,
-        gripLabel: gripLabel + ' · ' + edgeLabel + (addedWeight ? ' · ' + (addedWeight > 0 ? '+' : '') + addedWeight + 'кг' : ''),
+        // Только название хвата — edge/вес передаются отдельными prop'ами
+        // чтобы CountdownDisplay сам форматировал без дубликатов.
+        gripLabel: gripLabel,
         edgeLabel: edgeLabel,
         addedWeightKg: addedWeight,
         exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
-        onPause: cycle.pause,
+        onPause: togglePauseResume,
         onResume: cycle.resume,
         onAbort: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); },
         onSkip: cycle.skipPhase
