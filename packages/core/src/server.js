@@ -7,8 +7,6 @@
 
 const cors = require('cors');
 const express = require('express');
-const { Readable } = require('stream');
-const { pipeline } = require('stream/promises');
 const { buildDefaultAllowedOrigins } = require('./corsOrigins');
 
 const app = express();
@@ -180,16 +178,19 @@ async function proxyToProd(req, res) {
       res.setHeader('Set-Cookie', rewritten);
     }
 
-    // Стриминг в браузер — не ждём полного тела от апстрима в памяти Node (быстрее bootstrap на больших JSON)
+    // 🛡️ 2026-05-31: buffered response вместо streaming pipeline.
+    // Раньше использовался `pipeline(Readable.fromWeb(proxyRes.body), res)` для
+    // streaming, но это падало с "Cannot pipe to a closed or destroyed stream"
+    // когда client cancellation / HMR reload опережали upstream response. Стрим
+    // обрывался mid-response, client получал partial/empty body, YandexAPI
+    // парсил как успешный пустой ответ → fetchDays возвращал [] → курaтор
+    // видел пустой dayv2 хотя в DB данные есть. Buffered подход читает всё
+    // upstream body в RAM, потом одной операцией send'ит клиенту — никаких
+    // stream races. Memory cost допустим для dev (типичные response < 1MB).
     if (proxyRes.body) {
-      const nodeReadable = Readable.fromWeb(proxyRes.body);
-      // Undici emits 'error' on the Readable in the next tick (via emitErrorNT) when the upstream
-      // connection is aborted (ETIMEDOUT). Without a listener Node throws "Unhandled error event"
-      // and crashes. pipeline() attaches its own listener synchronously, but loses the race on
-      // Node 24 because the error fires in process.processTicksAndRejections after our await
-      // suspension point. A noop listener prevents the crash; pipeline's rejection still propagates.
-      nodeReadable.on('error', () => {});
-      await pipeline(nodeReadable, res);
+      const buf = Buffer.from(await proxyRes.arrayBuffer());
+      if (res.writableEnded) return;
+      res.end(buf);
     } else {
       res.end();
     }
