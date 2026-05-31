@@ -89,23 +89,28 @@
     display: 'block',
   };
   // Под фото — список работающих мышц, каждая на своей строке.
+  // Block layout (НЕ flex) — flex с wrap'ом текста + chevron'ом давал
+  // нестабильные высоты. Chevron позиционируем absolute справа.
   const ST_HERO_MUSCLES = {
-    display: 'flex', flexDirection: 'column',
+    display: 'block',
     background: BG,
   };
   const ST_HERO_MUSCLE_ROW = {
     appearance: 'none', background: 'transparent', cursor: 'pointer',
     border: 'none', borderTop: BORDER_LITE,
-    padding: '10px 14px',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    gap: 10, textAlign: 'left',
+    padding: '12px 36px 12px 14px',
+    textAlign: 'left',
     fontFamily: 'inherit', fontSize: 13, fontWeight: 500, color: FG,
-    lineHeight: 1.35,
-    width: '100%',
+    lineHeight: 1.4,
+    width: '100%', display: 'block',
+    position: 'relative',
+    whiteSpace: 'normal',
   };
   const ST_HERO_MUSCLE_ARROW = {
-    flex: '0 0 auto', fontSize: 16, color: MUTED, fontWeight: 400,
-    lineHeight: 1,
+    position: 'absolute', right: 14, top: '50%',
+    transform: 'translateY(-50%)',
+    fontSize: 18, color: MUTED, fontWeight: 400,
+    lineHeight: 1, pointerEvents: 'none',
   };
   // Header — заголовок + remove (без иконки, фото живёт в hero).
   const ST_HEADER = {
