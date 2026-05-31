@@ -272,7 +272,12 @@
             return showSkeleton ? React.createElement(DayTabSkeleton) : null;
         }
         return React.createElement(window.HEYS.DayTab, {
-            key: `daytab-${clientId || 'none'}`,
+            // 🛡️ 2026-05-31: key включает selectedDate → React unmount+mount
+            // DayTab при смене даты. dayRaw initializer пересчитывается → читает
+            // scoped LS для новой date свежо. Без этого useState dayRaw запускался
+            // ТОЛЬКО при mount → dayRaw залипал, курaтор видел today's meals под
+            // всеми датами.
+            key: `daytab-${clientId || 'none'}-${selectedDate || 'today'}`,
             clientId,
             products,
             selectedDate,

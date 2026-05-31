@@ -803,27 +803,21 @@
 
       // Обёртка для onComplete: обновляем данные дня
       const wrappedOnComplete = () => {
-        // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
+        const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
+        const currentClientId = getCurrentClientId();
 
-        // 🎫 Автостарт триала УБРАН (v5.0)
-        // Триал стартует только через куратора:
-        //   1. Клиент оставляет заявку на лендинге
-        //   2. Куратор одобряет → даёт PIN
-        //   3. При первом логине → activate_trial_timer_by_session
-        // См. database/2026-02-08_trial_machine_fix.sql
-
-        // 🔔 Устанавливаем флаг для советов по витаминам
+        // 🔔 Устанавливаем флаг СИНХРОННО до любых async/dispatch — гарантия что повторный
+        // shouldShowMorningCheckin (от следующего heysSyncCompleted) увидит флаг и не покажет
+        // визард ещё раз. До 2026-05-31 здесь был TDZ ReferenceError из-за `const todayKey`
+        // ниже по коду → флаг не выставлялся → checkin выпадал повторно.
         try {
-          const currentClientId = getCurrentClientId();
           const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
           sessionStorage.setItem(sessionKey, 'true');
           sessionStorage.removeItem('heys_morning_checkin_done');
-          // Очищаем флаг показа совета — чтобы он показался после чек-ина
           sessionStorage.removeItem('heys_morning_supplements_advice_shown');
         } catch (e) { /* sessionStorage недоступен */ }
 
         // 🔄 Принудительно обновляем данные дня после завершения чек-ина
-        const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
         }));
@@ -832,6 +826,16 @@
         window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
           detail: { date: todayKey, type: 'morning' }
         }));
+
+        // ☁️ Принудительный flush pending queue в облако — гарантия что вес/sleep/etc.
+        // не потеряются если пользователь закроет вкладку до debounced 2s flush'a.
+        try {
+          if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
+            HEYS.cloud.flushPendingQueue(5000).catch((err) => {
+              console.warn('[MorningCheckin] flushPendingQueue failed (non-fatal):', err?.message);
+            });
+          }
+        } catch (e) { /* cloud module недоступен */ }
 
         if (onComplete) onComplete();
       };
@@ -892,35 +896,37 @@
 
         // Обёртка для onComplete: обновляем данные дня
         const wrappedOnComplete = () => {
-          // 🎉 Поздравительная модалка теперь показывается как шаг 'welcome' внутри flow
+          const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
+          const currentClientId = getCurrentClientId();
 
-          // 🎫 Автостарт триала уже произошёл в стартовом useEffect (через HEYS.Subscription)
-          // Этот блок оставлен для логирования
           if (isRegistrationCheckin) {
             console.log('[showCheckin.morning] ✅ Registration checkin completed');
           }
 
-          // 🔔 Устанавливаем флаг для советов по витаминам
+          // 🔔 Флаг СИНХРОННО до любого async — иначе повторный shouldShow от следующего sync покажет визард ещё раз
           try {
-            const currentClientId = getCurrentClientId();
-            const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
             const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
             sessionStorage.setItem(sessionKey, 'true');
             sessionStorage.removeItem('heys_morning_checkin_done');
-            // Очищаем флаг показа совета — чтобы он показался после чек-ина
             sessionStorage.removeItem('heys_morning_supplements_advice_shown');
           } catch (e) { /* sessionStorage недоступен */ }
 
-          // 🔄 Принудительно обновляем данные дня после завершения чек-ина
-          const todayKey = (HEYS.utils && HEYS.utils.getTodayKey) ? HEYS.utils.getTodayKey() : new Date().toISOString().slice(0, 10);
           window.dispatchEvent(new CustomEvent('heys:day-updated', {
             detail: { date: todayKey, source: 'morning-checkin-complete', forceReload: true }
           }));
 
-          // 💊 Вызываем событие для обновления советов
           window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
             detail: { date: todayKey, type: 'morning' }
           }));
+
+          // ☁️ Принудительный flush — данные чек-ина не должны теряться если пользователь закроет вкладку
+          try {
+            if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
+              HEYS.cloud.flushPendingQueue(5000).catch((err) => {
+                console.warn('[showCheckin.morning] flushPendingQueue failed (non-fatal):', err?.message);
+              });
+            }
+          } catch (e) { /* cloud module недоступен */ }
 
           if (onComplete) onComplete();
         };

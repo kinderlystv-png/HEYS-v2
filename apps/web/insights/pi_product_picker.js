@@ -416,6 +416,7 @@
      * @returns {string} категория
      */
     function detectCategory(productName) {
+        if (!productName || typeof productName !== 'string') return PRODUCT_CATEGORIES.OTHER;
         const normalized = productName.toLowerCase();
 
         for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
@@ -456,6 +457,7 @@
      * @returns {boolean} true если содержит кофеин
      */
     function containsCaffeine(productName) {
+        if (!productName || typeof productName !== 'string') return false;
         const normalized = productName.toLowerCase();
         return CAFFEINE_KEYWORDS.some((kw) => normalized.includes(kw));
     }
@@ -466,6 +468,7 @@
      * @returns {boolean}
      */
     function containsAddedSugar(productName) {
+        if (!productName || typeof productName !== 'string') return false;
         const normalized = productName.toLowerCase();
         return ADDED_SUGAR_KEYWORDS.some((kw) => normalized.includes(kw));
     }
@@ -503,7 +506,7 @@
         scores.fatAlignment = Math.max(0, 100 - fatDiff * 1.5); // ×1.5: softer — fat varies widely
 
         pushPickerLogRow('macro', {
-            product: product.name.substring(0, 32),
+            product: String(product.name || '???').substring(0, 32),
             scenario: scenarioType,
             ideal: `P${idealProfile.protPct}/C${idealProfile.carbPct}/F${idealProfile.fatPct}`,
             prod: `P${Math.round(proteinEnPct)}/C${Math.round(carbEnPct)}/F${Math.round(fatEnPct)}`,

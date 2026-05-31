@@ -7,8 +7,6 @@
 
 const cors = require('cors');
 const express = require('express');
-const { Readable } = require('stream');
-const { pipeline } = require('stream/promises');
 const { buildDefaultAllowedOrigins } = require('./corsOrigins');
 
 const app = express();
@@ -180,16 +178,20 @@ async function proxyToProd(req, res) {
       res.setHeader('Set-Cookie', rewritten);
     }
 
-    // Стриминг в браузер — не ждём полного тела от апстрима в памяти Node (быстрее bootstrap на больших JSON)
+    // 🛡️ 2026-05-31: buffered response вместо streaming pipeline.
+    // Pipeline streaming падал с "Cannot pipe to a closed or destroyed stream"
+    // на КАЖДОМ proxy request (batch_get_client_kv, weekly_snapshots, kv_store
+    // REST, messages/inbox, ...). Симптом для пользователя: курaтор видит UI,
+    // dayv2 keys уже накоплены в scoped LS, но при смене даты bootstrapClientSync
+    // (delta sync) fails → .then() не вызывается → doLocal не вызывается →
+    // setDay не вызывается → dayRaw залип на today. UI показывает 174 ккал
+    // на всех днях даже хотя LS содержит правильные данные за каждый день.
+    // Buffered: читаем upstream полностью через arrayBuffer(), потом одной
+    // операцией отдаём клиенту. Никаких stream race conditions.
     if (proxyRes.body) {
-      const nodeReadable = Readable.fromWeb(proxyRes.body);
-      // Undici emits 'error' on the Readable in the next tick (via emitErrorNT) when the upstream
-      // connection is aborted (ETIMEDOUT). Without a listener Node throws "Unhandled error event"
-      // and crashes. pipeline() attaches its own listener synchronously, but loses the race on
-      // Node 24 because the error fires in process.processTicksAndRejections after our await
-      // suspension point. A noop listener prevents the crash; pipeline's rejection still propagates.
-      nodeReadable.on('error', () => {});
-      await pipeline(nodeReadable, res);
+      const buf = Buffer.from(await proxyRes.arrayBuffer());
+      if (res.writableEnded) return;
+      res.end(buf);
     } else {
       res.end();
     }
