@@ -1,4 +1,11 @@
 // heys_day_hooks.js — React hooks for Day component
+//
+// ⚠ PHANTOM SOURCE — этот файл НЕ загружается в runtime.
+// Реальный код живёт в heys_day_core_bundle_v1.js (boot-calc, см.
+// scripts/legacy-bundle-config.mjs L50). Core bundle поддерживается
+// руками с inlined копиями (`// === heys_day_hooks.js ===` маркер L2065).
+// Правки здесь без дублирования в bundle = потеряются.
+// История: project_insights_fetch_storm.md → Bundle vs source divergence trap.
 
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
