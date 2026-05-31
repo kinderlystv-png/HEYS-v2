@@ -4729,6 +4729,7 @@
                 if (!next) return false;
                 persistDayData(next, action);
                 setDay(() => next);
+                dayRef.current = next;
                 return true;
             }
             const key = _scopedDayKey(dStr);
