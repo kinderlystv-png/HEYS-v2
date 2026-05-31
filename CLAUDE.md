@@ -250,6 +250,15 @@ post-merge check ловит **три специфических drift'а**, ко
 3. **whats-new merge conflicts** — два агента могли добавить entries в начало
    `releases[]`. Git merge оставит оба, но порядок может быть неверный (более
    старый коммит сверху). Проверь руками.
+4. **whats-new missing для чужого fix/feat** — другая сессия (или ты сам в
+   предыдущем подходе) могла закоммитить `fix(...)`/`feat(...)`/`perf(...)`
+   **без** парного `chore(release): bump whats-new build hash to <HASH>`. На
+   push CI «Validate What's New before deploy» провалится. **Check**:
+   `git log @{upstream}..HEAD --oneline` — top-of-branch source-bearing коммит
+   должен иметь whats-new entry с его hash. Если нет — добавь entry в
+   `apps/web/public/whats-new.json` + chore(release) bump до push. Incident
+   2026-05-31: дважды споткнулся на этом из-за `fix(day) 3ea34538` от другой
+   сессии без bump.
 
 **Финальный gate** перед push: `pnpm push:ready` (если есть) или
 `pnpm test && pnpm lint && pnpm tsc`.
