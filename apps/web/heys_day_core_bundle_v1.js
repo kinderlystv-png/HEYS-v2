@@ -3280,11 +3280,11 @@
                 }
             };
 
-            // 🚀 2026-05-31: H1 fix — мгновенный показ LS-snapshot за новую дату
-            // ДО bootstrapClientSync. Curator переключение дат теперь обновляет
-            // dayRaw сразу из LS, не ждёт cloud sync (который мог хвиснуть).
-            doLocal();
-
+            // 🔙 ROLLBACK 2026-05-31: H1 fix откатан (вызывал регрессию — курaтор
+            // видел 0 ккал на всех днях т.к. doLocal сразу читал пустой scoped LS
+            // до завершения bootstrapClientSync). Возвращена оригинальная логика:
+            // doLocal вызывается ТОЛЬКО ПОСЛЕ sync. Известный trade-off: UI lag
+            // на смене даты пока sync не завершится. Будет решаться другим путём.
             if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
                 if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true) {
                     // 🔒 Блокируем события heys:day-updated во время синхронизации
@@ -3298,11 +3298,16 @@
                             doLocal();
                         })
                         .catch((err) => {
-                            // Нет сети или ошибка — данные уже показаны из LS выше
+                            // Нет сети или ошибка — загружаем из локального кэша
                             isSyncingRef.current = false;
                             console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
+                            doLocal();
                         });
+                } else {
+                    doLocal();
                 }
+            } else {
+                doLocal();
             }
 
             return () => {
