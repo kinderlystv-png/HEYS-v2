@@ -77,7 +77,6 @@
 
   // Hero — фото хвата на всю ширину карточки, native aspect ratio.
   const ST_HERO_WRAP = {
-    position: 'relative',
     width: '100%',
     borderBottom: BORDER_LITE,
     background: 'rgba(120, 120, 128, 0.05)',
@@ -88,23 +87,22 @@
     height: 'auto',
     display: 'block',
   };
-  // Поверх нижней части фото — полоска с бейджами работающих мышц.
-  const ST_HERO_BADGES = {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    padding: '10px 12px',
-    display: 'flex', flexWrap: 'wrap', gap: 6,
-    background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%)',
-    lineHeight: 1.2,
+  // Под фото — список работающих мышц, каждая на своей строке.
+  const ST_HERO_MUSCLES = {
+    display: 'flex', flexDirection: 'column',
+    background: BG, lineHeight: 1.3,
   };
-  const ST_HERO_BADGE = {
-    appearance: 'none', border: 'none', padding: '6px 10px',
-    borderRadius: 14, background: 'rgba(0, 0, 0, 0.6)',
-    color: '#fff', fontSize: 12, fontWeight: 600,
-    cursor: 'pointer', fontFamily: 'inherit',
-    backdropFilter: 'blur(6px)',
-    WebkitBackdropFilter: 'blur(6px)',
-    lineHeight: 1.2, whiteSpace: 'nowrap',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+  const ST_HERO_MUSCLE_ROW = {
+    appearance: 'none', background: 'transparent', cursor: 'pointer',
+    border: 'none', borderTop: BORDER_LITE,
+    padding: '10px 14px',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    gap: 10, textAlign: 'left',
+    fontFamily: 'inherit', fontSize: 13, fontWeight: 500, color: FG,
+    width: '100%', minHeight: 38,
+  };
+  const ST_HERO_MUSCLE_ARROW = {
+    flex: '0 0 auto', fontSize: 14, color: MUTED, fontWeight: 400,
   };
   // Header — заголовок + remove (без иконки, фото живёт в hero).
   const ST_HEADER = {
@@ -247,32 +245,35 @@
       style: ST_HERO,
       onError: function (e) { try { e.target.style.display = 'none'; } catch (_) {} },
     });
-    // Бейджи мышц поверх низа фото — тап → drill-down напрямую.
+    // Под фото — мышцы колонкой, каждая строка кликабельна → drill-down.
     const muscleIds = (grip && Array.isArray(grip.primaryMuscles)) ? grip.primaryMuscles : [];
     const known = (Fingers.MUSCLE_INFO && typeof Fingers.MUSCLE_INFO === 'object')
       ? muscleIds.filter(function (m) {
           return Object.prototype.hasOwnProperty.call(Fingers.MUSCLE_INFO, m);
         })
       : [];
-    const badges = known.map(function (mid) {
+    const rows = known.map(function (mid) {
       const info = Fingers.MUSCLE_INFO[mid];
       const label = (info && info.name) ? info.name : mid;
       return R.createElement('button', {
         key: mid, type: 'button',
-        className: 'fingers-fs-hero-badge',
-        style: ST_HERO_BADGE,
+        className: 'fingers-fs-hero-muscle-row',
+        style: ST_HERO_MUSCLE_ROW,
         'aria-label': 'Подробнее: ' + label,
         onClick: function () {
           if (typeof Fingers.openMuscleDetail === 'function') {
             try { Fingers.openMuscleDetail(mid); } catch (_) {}
           }
         },
-      }, label);
+      },
+        R.createElement('span', null, label),
+        R.createElement('span', { style: ST_HERO_MUSCLE_ARROW, 'aria-hidden': 'true' }, '›'),
+      );
     });
-    const overlay = badges.length > 0
-      ? R.createElement('div', { style: ST_HERO_BADGES, className: 'fingers-fs-hero-badges' }, badges)
+    const muscles = rows.length > 0
+      ? R.createElement('div', { style: ST_HERO_MUSCLES, className: 'fingers-fs-hero-muscles' }, rows)
       : null;
-    return R.createElement('div', { style: ST_HERO_WRAP, className: 'fingers-fs-hero-wrap' }, img, overlay);
+    return R.createElement('div', { style: ST_HERO_WRAP, className: 'fingers-fs-hero-wrap' }, img, muscles);
   }
   function renderHeader(grip, onRemove) {
     return R.createElement('div', { style: ST_HEADER },
