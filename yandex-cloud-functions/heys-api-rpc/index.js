@@ -22,6 +22,22 @@ const NON_CLIENT_DATA_BLACKLIST = [
   'heys_client_current',
   'heys_curator_session',
   'heys_debug_events',
+  // 2026-05-31: расширение после incident'а cross-client leak (Poplanton ↔ Aleksandra).
+  // Mirror-copy в apps/web/heys_storage_supabase_v1.js. Browser-global UI state:
+  'heys_iw_config_cache_v1',
+  'heys_iw_config_cache_meta_v1',
+  'heys_docs_cache_version',
+  'heys_update_in_progress',
+  'heys_boot_perf_baseline_v1',
+  'heys_last_client_id',
+  'heys_theme',
+  'heys_theme_pref',
+  'heys_theme_explicit',
+  'heys_whats_new_last_seen',
+  'heys_whats_new_last_acknowledged',
+  'heys_push_onboarded',
+  'heys_widget_layout_v1',
+  'heys_shared_harm_backfill_v1',
 ];
 function stripClientScopeFromKey(key) {
   const m = String(key || '').match(/^heys_[0-9a-f-]{36}_(.+)$/i);

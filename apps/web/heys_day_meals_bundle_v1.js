@@ -2266,7 +2266,7 @@
           name: finalProduct.name,
           fingerprint: finalProduct.fingerprint,
           grams: grams || 100,
-          portions: Array.isArray(finalProduct.portions) ? finalProduct.portions : undefined,
+          portions: Array.isArray(finalProduct.portions) ? finalProduct.portions.map(p => ({ ...p })) : undefined,
           // ⚡ Разовый продукт — флаг едет с item'ом во все downstream-системы
           // (cloud sync, orphan-tracking, render). Стамп уже инлайнится ниже.
           ...(finalProduct._oneTime && { _oneTime: true }),
@@ -7589,6 +7589,7 @@
                 if (!next) return false;
                 persistDayData(next, action);
                 setDay(() => next);
+                dayRef.current = next;
                 return true;
             }
             const key = _scopedDayKey(dStr);

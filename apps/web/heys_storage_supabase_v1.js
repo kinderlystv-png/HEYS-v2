@@ -301,6 +301,22 @@
     'heys_client_current',    // Кого курaтор сейчас смотрит (UI-указатель)
     'heys_curator_session',   // JWT курaтора
     'heys_debug_events',      // Analytics курaторской сессии
+    // 2026-05-31: расширение после incident'а cross-client leak (Poplanton ↔ Aleksandra).
+    // Browser-global UI state и app-wide markers — не привязаны к клиенту:
+    'heys_iw_config_cache_v1',
+    'heys_iw_config_cache_meta_v1',
+    'heys_docs_cache_version',
+    'heys_update_in_progress',
+    'heys_boot_perf_baseline_v1',
+    'heys_last_client_id',
+    'heys_theme',
+    'heys_theme_pref',
+    'heys_theme_explicit',
+    'heys_whats_new_last_seen',
+    'heys_whats_new_last_acknowledged',
+    'heys_push_onboarded',
+    'heys_widget_layout_v1',
+    'heys_shared_harm_backfill_v1',
   ];
 
   /** Префиксы для client-specific данных */
@@ -10675,6 +10691,19 @@
     }
 
     try {
+      // 2026-05-31: defence-in-depth — direct REST путь в client_kv_store также должен
+      // блокировать NON_CLIENT_DATA_BLACKLIST keys. Без этого guard'а curator-session
+      // UI-state ключи попадают в scope клиента в обход isNonClientDataKey check'а на
+      // верхних уровнях (saveClientKey, RPC). См. incident 2026-05-31 (Poplanton ↔ Aleksandra).
+      if (tableName === 'client_kv_store' && isNonClientDataKey(obj && obj.k)) {
+        try {
+          (typeof logCritical === 'function' ? logCritical : console.warn)(
+            '🚫 [HEYS.cloud.upsert] blocked non-client-data key:', obj.k
+          );
+        } catch (_) {}
+        return { skipped: true, reason: 'non_client_data' };
+      }
+
       // Если это client_kv_store, проверяем что клиент существует; иначе пропускаем
       if (tableName === 'client_kv_store' && obj.client_id) {
         const _exists = await cloud.ensureClient(obj.client_id);
