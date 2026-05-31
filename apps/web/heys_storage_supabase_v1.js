@@ -316,6 +316,7 @@
     'heys_whats_new_last_acknowledged',
     'heys_push_onboarded',
     'heys_widget_layout_v1',
+    'heys_widget_layout_meta_v1',
     'heys_shared_harm_backfill_v1',
   ];
 

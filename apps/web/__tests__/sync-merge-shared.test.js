@@ -239,3 +239,72 @@ describe('mergeScalarKv', () => {
     expect(merged.kcal).toBe(2000);
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Cross-client merge guard (Strategy B, 2026-06-01 incident)
+// Pop'овский профиль получал Алексин cycleDay/MA через mergeDayData, потому что
+// remote приходил от чужого клиента. Guard блокирует merge если _writerCid
+// у local и remote различаются.
+// ───────────────────────────────────────────────────────────────────────────
+describe('mergeDayData — cross-client guard (_writerCid)', () => {
+  const CID_POP = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+  const CID_AL = '4545ee50-4f5f-4fc0-b862-7ca45fa1bafc';
+
+  test('mismatched _writerCid → returns local untouched (rejects remote)', () => {
+    const local = {
+      date: '2026-05-31',
+      updatedAt: 1000,
+      _writerCid: CID_POP,
+      weightMorning: 93.6,
+      meals: [],
+    };
+    const remote = {
+      date: '2026-05-31',
+      updatedAt: 2000,
+      _writerCid: CID_AL,
+      weightMorning: 51.3,
+      cycleDay: 3,
+      meals: [makeMeal('al_breakfast', [makeItem('it1')])],
+    };
+    const merged = mergeDayData(local, remote);
+    expect(merged).not.toBe(null);
+    expect(merged.weightMorning).toBe(93.6); // Pop's weight preserved
+    expect(merged.cycleDay).toBeUndefined(); // Al's cycleDay rejected
+    expect(merged.meals).toEqual([]); // Al's meals rejected
+    expect(merged._writerCid).toBe(CID_POP);
+  });
+
+  test('matching _writerCid → normal merge proceeds', () => {
+    const local = {
+      date: '2026-05-31',
+      updatedAt: 1000,
+      _writerCid: CID_POP,
+      meals: [makeMeal('breakfast', [makeItem('i1')])],
+    };
+    const remote = {
+      date: '2026-05-31',
+      updatedAt: 2000,
+      _writerCid: CID_POP,
+      meals: [makeMeal('breakfast', [makeItem('i1')]), makeMeal('lunch', [makeItem('i2')])],
+    };
+    const merged = mergeDayData(local, remote);
+    expect(merged).not.toBe(null);
+    expect(merged.meals.length).toBe(2); // merged
+  });
+
+  test('no _writerCid on either side → backward-compat, normal merge', () => {
+    const local = makeDay(1000, [makeMeal('breakfast')]);
+    const remote = makeDay(2000, [makeMeal('breakfast'), makeMeal('lunch')]);
+    const merged = mergeDayData(local, remote);
+    expect(merged).not.toBe(null);
+    expect(merged.meals.length).toBe(2);
+  });
+
+  test('only one side has _writerCid → backward-compat, normal merge', () => {
+    const local = { ...makeDay(1000, [makeMeal('breakfast')]), _writerCid: CID_POP };
+    const remote = makeDay(2000, [makeMeal('breakfast'), makeMeal('lunch')]); // legacy row, no tag
+    const merged = mergeDayData(local, remote);
+    expect(merged).not.toBe(null);
+    expect(merged.meals.length).toBe(2);
+  });
+});

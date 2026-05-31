@@ -212,6 +212,15 @@
   function scoped(k) {
     const cid = ns();
     if (!cid) return k;
+    // Non-client-data ключи (curator UI session: theme, widget_layout, whats_new и т.д.)
+    // никогда не скоупим под currentClientId — иначе каждый client switch плодит
+    // отдельную копию в LS и в client_kv_store (incident 2026-05-31: 25 строк с
+    // одинаковым md5). Single source of truth: глобальный unscoped LS-слот +
+    // существующие isNonClientDataKey gates в cloud.saveClientKey блокируют cloud upload.
+    try {
+      const c = global.HEYS && global.HEYS.cloud;
+      if (c && typeof c.isNonClientDataKey === 'function' && c.isNonClientDataKey(k)) return k;
+    } catch (_) { /* noop — fall through to legacy regex below */ }
     // 🎮 Global keys — НЕ добавляем clientId (для совместимости с cloud sync)
     // heys_game теперь client-scoped (иначе XP смешивается между клиентами)
     if (/^heys_(clients|client_current|sound_settings)$/i.test(k)) return k;
@@ -565,8 +574,25 @@
   }
   // ────────────────────────────────────────────────────────────────────────
 
+  // 🛡️ Cross-client merge invariant (Strategy B, 2026-06-01).
+  // Tag every dayv2 write with _writerCid извлечённым из scoped key. Это позволяет
+  // mergeDayData отвергать cross-client merges (incident: Алексин cycleDay/MA
+  // утекал в Poplanton через mergeDayData с `remote` от чужого клиента). Тег
+  // идёт от KEY scope, не от currentClientId — корректно для defer/re-scope
+  // путей, где deferSk указывает на oldCid пока currentClientId уже newCid.
+  const HEYS_DAYV2_KEY_RE = /^heys_([0-9a-f-]{36})_dayv2_\d{4}-\d{2}-\d{2}$/i;
+  function tagDayV2WriterCid(sk, v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return v;
+    const m = HEYS_DAYV2_KEY_RE.exec(sk);
+    if (!m) return v;
+    const cid = m[1];
+    if (v._writerCid === cid) return v;
+    return { ...v, _writerCid: cid };
+  }
+
   Store.set = function (k, v) {
     const sk = scoped(k);
+    v = tagDayV2WriterCid(sk, v);
     // 🔧 v69 FIX: Блокируем все записи во время switchClient.
     // Gate flow теперь НЕ меняет currentClientId до завершения switch,
     // но на случай если другой путь всё же вызовет Store.set — блокируем.
@@ -596,6 +622,8 @@
               deferSk = sk.replace(reHasNew, 'heys_' + oldCid + '_');
             }
           }
+          // Re-tag _writerCid под deferSk scope (если re-scope сменил ключ).
+          if (deferSk !== sk) v = tagDayV2WriterCid(deferSk, v);
           c._deferredStoreWriteMap.set(deferSk, { sk: deferSk, v });
           if (deferSk !== sk) {
             try {
@@ -1444,5 +1472,46 @@
     }
     try { return JSON.parse(value); } catch (_) { return value; }
   };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🧹 ONE-SHOT CLEANUP — устаревшие per-client копии UI-state ключей
+  // ═══════════════════════════════════════════════════════════════════
+  // Контекст: до фикса scoped() (heys_storage_layer_v1.js:212) Store.set
+  // слепо скоупил UI-state ключи (heys_theme, heys_widget_layout_v1 и т.д.)
+  // под currentClientId, плодя heys_<UUID>_<key> копии в LS на каждом
+  // курaторском свитче. После фикса записи идут в unscoped слот; старые
+  // scoped копии остаются мёртвым весом. Чистим один раз.
+  //
+  // Marker key heys_cleanup_scoped_uikeys_v1: '1' означает «уже почистили».
+  // ═══════════════════════════════════════════════════════════════════
+  const CLEANUP_MARKER = 'heys_cleanup_scoped_uikeys_v1';
+  const UI_KEY_TAILS = [
+    'heys_clients', 'heys_client_current', 'heys_curator_session',
+    'heys_debug_events', 'heys_iw_config_cache_v1', 'heys_iw_config_cache_meta_v1',
+    'heys_docs_cache_version', 'heys_update_in_progress', 'heys_boot_perf_baseline_v1',
+    'heys_last_client_id', 'heys_theme', 'heys_theme_pref', 'heys_theme_explicit',
+    'heys_whats_new_last_seen', 'heys_whats_new_last_acknowledged', 'heys_push_onboarded',
+    'heys_widget_layout_v1', 'heys_widget_layout_meta_v1', 'heys_shared_harm_backfill_v1',
+  ];
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem(CLEANUP_MARKER) !== '1') {
+      const SCOPED_RE = /^heys_[a-f0-9-]{36}_(heys_.+)$/i;
+      const tailSet = new Set(UI_KEY_TAILS);
+      const toRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        const m = SCOPED_RE.exec(key);
+        if (m && tailSet.has(m[1])) toRemove.push(key);
+      }
+      for (const k of toRemove) {
+        try { localStorage.removeItem(k); } catch (_) { /* noop */ }
+      }
+      try { localStorage.setItem(CLEANUP_MARKER, '1'); } catch (_) { /* noop */ }
+      if (toRemove.length > 0) {
+        console.info('[HEYS.storage] 🧹 cleaned ' + toRemove.length + ' stale scoped UI-key copies from LS');
+      }
+    }
+  } catch (_) { /* noop — never block module init */ }
 
 })(window);

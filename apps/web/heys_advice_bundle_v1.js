@@ -5033,6 +5033,9 @@
 
     function appendAdviceTraceStage(trace, stageName, beforeList, afterList, meta, options = {}) {
         if (!trace) return;
+        // Hot path: skip ~700ms of buildAdviceTraceRefs + cloneTracePayload × 12 stages
+        // when nobody is reading trace.stages. Enable with localStorage.setItem('heys_advice_debug_trace', '1').
+        if (trace.__stagesDisabled) return;
 
         const beforeRefs = buildAdviceTraceRefs(beforeList);
         const afterRefs = buildAdviceTraceRefs(afterList);
@@ -8319,7 +8322,14 @@
             }
         } catch (e) { /* noop — Phase 5 context optional */ }
 
+        const traceStagesEnabled = (() => {
+            try {
+                return typeof localStorage !== 'undefined'
+                    && localStorage.getItem('heys_advice_debug_trace') === '1';
+            } catch (e) { return false; }
+        })();
         const adviceTrace = {
+            __stagesDisabled: !traceStagesEnabled,
             version: 'advice-trace-v2',
             generatedAt: new Date().toISOString(),
             trigger: trigger || null,

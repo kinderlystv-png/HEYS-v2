@@ -113,6 +113,29 @@
 
     if (!local || !remote) return null;
 
+    // 🛡️ Cross-client merge guard (Strategy B, 2026-06-01 incident).
+    // Если у обеих сторон есть _writerCid и они РАЗНЫЕ — это cross-client merge
+    // (как Алексин cycleDay/MA утекал в Poplanton через mergeDayData с remote от
+    // чужого клиента). Возвращаем local untouched — отказываемся принять чужие
+    // данные. Backward compat: row'и без _writerCid (старые) skip — guard работает
+    // только когда оба тега есть, постепенный ramp-up по мере записей.
+    if (local._writerCid && remote._writerCid && local._writerCid !== remote._writerCid) {
+      try {
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[heys.sync.merge] 🛡️ CROSS_CLIENT_MERGE_BLOCKED', {
+            date: local.date || remote.date,
+            localCid: String(local._writerCid).slice(0, 8),
+            remoteCid: String(remote._writerCid).slice(0, 8),
+          });
+        }
+        const g = typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : null);
+        if (g && g.HEYS) {
+          g.HEYS._crossClientMergeBlockedCount = (g.HEYS._crossClientMergeBlockedCount || 0) + 1;
+        }
+      } catch (_) { /* noop */ }
+      return { ...local }; // safe fallback — keep local untouched, reject remote
+    }
+
     local = { ...local, trainings: normalizeTrainings(local && local.trainings) };
     remote = { ...remote, trainings: normalizeTrainings(remote && remote.trainings) };
 
