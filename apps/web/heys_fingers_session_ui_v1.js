@@ -300,14 +300,28 @@
     // ожил снова. start() сам идемпотентен: переустанавливает phaseStartedAtRef
     // и setState(SET_PREP) → новый setInterval.
     useEffect(function () {
-      const t = setTimeout(function () {
+      let cancelled = false;
+      // Ждём voice queue (если играется pre-flight cue.start_session «Начнём
+      // тренировку. Проверь разогрев.»), чтобы countdown 5→0 начался ПОСЛЕ
+      // фразы, а не параллельно. Без этого user слышит «Готовься. Пять.»
+      // когда display уже на 3 — voice/render desync.
+      const waitPromise = (HEYS.Fingers?.voice?.waitForQueue)
+        ? HEYS.Fingers.voice.waitForQueue()
+        : Promise.resolve();
+      waitPromise.then(function () {
+        if (cancelled) return;
         try {
           if (typeof cycle.start === 'function') cycle.start();
         } catch (e) {
           console.warn('[Fingers.ExerciseRunner] start failed:', e);
         }
-      }, 0);
-      return function () { clearTimeout(t); };
+      }).catch(function () {
+        // Fallback: даже если queue падает — всё равно запускаем
+        if (!cancelled && typeof cycle.start === 'function') {
+          try { cycle.start(); } catch (_) {}
+        }
+      });
+      return function () { cancelled = true; };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -511,7 +525,9 @@
         cancelText: 'Отмена',
         confirmStyle: programIntensity === 'max' ? 'warning' : 'primary',
         onConfirm: function () {
-          // G6: voice cue session start
+          // voice.say теперь serial queue (heys_fingers_voice_v1.js) — фраза
+          // «Начинаем тренировку. Проверь разогрев.» сыграется первой,
+          // потом timer добавит «Готовься. Пять.» в очередь, не накладывая.
           try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
           setLiveActive(true);
         }

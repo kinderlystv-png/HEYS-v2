@@ -131,25 +131,40 @@
 
     const clearTick = React.useCallback(() => {
       if (tickRef.current) {
-        clearInterval(tickRef.current);
+        // Используется setTimeout (рекурсивный) вместо setInterval — clearTimeout
+        // независимо работает для timeouts. setInterval throttled в этом
+        // окружении (HEYS perf optimizations либо browser policy).
+        clearTimeout(tickRef.current);
         tickRef.current = null;
       }
     }, []);
 
+    // Рекурсивный setTimeout вместо setInterval — более надёжный в HEYS
+    // окружении (setInterval не fires; возможно perf-main-thread наблюдатель
+    // или background throttling). Преимущества: каждый next tick планируется
+    // только после завершения предыдущего, нет накопления pending callbacks.
+    const tickFnRef = React.useRef(null);
     const startTick = React.useCallback(() => {
       clearTick();
-      tickRef.current = setInterval(() => {
+      const tickFn = function () {
         const elapsedMs = _now() - phaseStartedAtRef.current;
         const remainingMs = Math.max(0, phaseDurationMsRef.current - elapsedMs);
         const remainingSec = Math.ceil(remainingMs / 1000);
         setSecondsLeft(remainingSec);
         setTotalElapsed(Math.floor((_now() - sessionStartedAtRef.current - pauseTotalMsRef.current) / 1000));
         if (remainingMs <= 0) {
-          // Phase complete — выходим, advance() решит следующий state.
-          clearTick();
+          tickRef.current = null;
           advancePhase();
+          return;
         }
-      }, TICK_MS);
+        // Рекурсивный setTimeout вместо setInterval — setInterval blocked
+        // в HEYS окружении (возможно perf-monitor patches либо browser policy
+        // в DevTools mobile emulation). Каждый next tick планируется только
+        // после завершения предыдущего.
+        tickRef.current = setTimeout(tickFn, TICK_MS);
+      };
+      tickFnRef.current = tickFn;
+      tickRef.current = setTimeout(tickFn, TICK_MS);
     }, [clearTick]); // advancePhase прямой ref внизу — eslint disable-line
 
     // Forward-declared advancePhase (создаётся ниже через ref).
@@ -287,13 +302,20 @@
       advancePhase();
     }, [state, clearTick]);
 
-    // Cleanup on unmount.
+    // Cleanup on unmount ONLY. ВАЖНО: deps=[] (пустой массив), иначе wakeLock
+    // (новый объект каждый render из HEYS.AppHooks.useWakeLock()) триггерил
+    // cleanup → clearTick на КАЖДОМ ререндере → setTimeout убит сразу после
+    // запуска → таймер не tick. Сохраняем wakeLock через ref для cleanup.
+    const wakeLockRef = React.useRef(wakeLock);
+    wakeLockRef.current = wakeLock;
     React.useEffect(() => {
       return () => {
         clearTick();
-        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
+        const wl = wakeLockRef.current;
+        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
       };
-    }, [clearTick, wakeLock]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return { state, setIdx, repIdx, secondsLeft, totalElapsed,
       start, pause, resume, abort, skipPhase };

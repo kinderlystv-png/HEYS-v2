@@ -279,8 +279,26 @@
     return 'none';
   };
 
-  // Главный метод
-  voice.say = async function say(cueId, opts) {
+  // Serial queue: чтобы фразы НЕ накладывались друг на друга, каждый say
+  // ждёт завершения предыдущего. Используется fire-and-forget из timer
+  // (без await), и без очереди MP3 проигрывались параллельно.
+  let _voiceQueue = Promise.resolve();
+
+  voice.say = function say(cueId, opts) {
+    const job = _voiceQueue.then(function () { return _doSay(cueId, opts); }).catch(function () {});
+    _voiceQueue = job;
+    return job;
+  };
+
+  // Используется ExerciseRunner: «не запускай countdown пока pre-flight voice
+  // не доиграет», иначе display 5→4→3→2→1 идёт пока ещё играет «Начнём
+  // тренировку. Проверь разогрев.» — voice и render desync.
+  voice.waitForQueue = function () {
+    return _voiceQueue;
+  };
+
+  // Internal — actual say logic without queue (queue в voice.say обёртке выше).
+  async function _doSay(cueId, opts) {
     if (!settings.enabled) return false;
     const o = opts || {};
     const vol = typeof o.volume === 'number' ? o.volume : settings.volume;
