@@ -76,12 +76,44 @@
   const ST_DIVIDER = { display: 'none' };
 
   // Hero — фото хвата на всю ширину карточки, native aspect ratio.
+  const ST_HERO_BTN = {
+    appearance: 'none', border: 'none', padding: 0, margin: 0,
+    background: 'transparent', cursor: 'pointer', width: '100%',
+    display: 'block', position: 'relative', fontFamily: 'inherit',
+  };
   const ST_HERO = {
     width: '100%',
     height: 'auto',
     display: 'block',
     background: 'rgba(120, 120, 128, 0.05)',
     borderBottom: BORDER_LITE,
+  };
+  // Маленький "i"-бейдж в правом верхнем углу hero — намёк что фото кликабельно.
+  const ST_HERO_HINT = {
+    position: 'absolute', top: 8, right: 8,
+    width: 24, height: 24, borderRadius: '50%',
+    background: 'rgba(0, 0, 0, 0.55)', color: '#fff',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 13, fontWeight: 700, fontFamily: 'Georgia, serif',
+    fontStyle: 'italic', pointerEvents: 'none',
+    backdropFilter: 'blur(4px)',
+  };
+  // Раскрывающаяся "шторка" под фото со списком работающих мышц.
+  const ST_MSHEET = {
+    background: 'rgba(120, 120, 128, 0.05)',
+    borderBottom: BORDER_LITE,
+    padding: '10px 14px',
+    display: 'flex', flexDirection: 'column', gap: 8,
+  };
+  const ST_MSHEET_HEAD = {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    fontSize: 11, fontWeight: 500, color: MUTED,
+    textTransform: 'uppercase', letterSpacing: '0.04em',
+  };
+  const ST_MSHEET_CLOSE = {
+    appearance: 'none', border: 'none', background: 'transparent',
+    color: MUTED, fontSize: 18, cursor: 'pointer', padding: '0 4px',
+    lineHeight: 1, fontFamily: 'inherit',
   };
   // Header — заголовок + remove (без иконки, фото живёт в hero).
   const ST_HEADER = {
@@ -214,8 +246,8 @@
   }
 
   // ===== SUB-RENDERERS =====
-  function renderHero(grip) {
-    return R.createElement('img', {
+  function renderHero(grip, onOpenMuscles) {
+    const img = R.createElement('img', {
       src: '/exercises/' + grip.id + '.webp',
       alt: 'Хват: ' + grip.label,
       loading: 'lazy',
@@ -224,6 +256,56 @@
       style: ST_HERO,
       onError: function (e) { try { e.target.style.display = 'none'; } catch (_) {} },
     });
+    const hint = R.createElement('span', {
+      style: ST_HERO_HINT, 'aria-hidden': 'true',
+    }, 'i');
+    return R.createElement('button', {
+      type: 'button',
+      onClick: function () { if (typeof onOpenMuscles === 'function') onOpenMuscles(); },
+      'aria-label': 'Подробнее о работающих мышцах: ' + grip.label,
+      style: ST_HERO_BTN,
+      className: 'fingers-fs-grip-hero-btn',
+    }, img, hint);
+  }
+
+  // Шторка под фото — список работающих мышц этого хвата.
+  // Каждый чип открывает существующий drill-down (Fingers.openMuscleDetail).
+  function renderMusclesSheet(grip, onPick, onClose) {
+    const muscleIds = (grip && Array.isArray(grip.primaryMuscles)) ? grip.primaryMuscles : [];
+    const known = (Fingers.MUSCLE_INFO && typeof Fingers.MUSCLE_INFO === 'object')
+      ? muscleIds.filter(function (m) {
+          return Object.prototype.hasOwnProperty.call(Fingers.MUSCLE_INFO, m);
+        })
+      : [];
+    if (known.length === 0) {
+      return R.createElement('div', { style: ST_MSHEET },
+        R.createElement('div', { style: ST_MSHEET_HEAD },
+          R.createElement('span', null, 'Работающие мышцы'),
+          R.createElement('button', { type: 'button', onClick: onClose,
+            'aria-label': 'Закрыть', style: ST_MSHEET_CLOSE }, '×'),
+        ),
+        R.createElement('div', { style: { fontSize: 13, color: MUTED } },
+          'Для этого хвата данные о мышцах пока не добавлены.'),
+      );
+    }
+    const chips = known.map(function (mid) {
+      const info = Fingers.MUSCLE_INFO[mid];
+      const label = (info && info.name) ? info.name : mid;
+      return R.createElement('button', {
+        key: mid, type: 'button',
+        className: 'fingers-fs-muscle-chip',
+        onClick: function () { onPick(mid); },
+        'aria-label': 'Подробнее: ' + label, style: ST_MUSCLE_CHIP,
+      }, label);
+    });
+    return R.createElement('div', { style: ST_MSHEET },
+      R.createElement('div', { style: ST_MSHEET_HEAD },
+        R.createElement('span', null, 'Работающие мышцы — нажми для деталей'),
+        R.createElement('button', { type: 'button', onClick: onClose,
+          'aria-label': 'Закрыть', style: ST_MSHEET_CLOSE }, '×'),
+      ),
+      R.createElement('div', { style: ST_MUSCLES }, chips),
+    );
   }
   function renderHeader(grip, onRemove) {
     return R.createElement('div', { style: ST_HEADER },
@@ -437,6 +519,9 @@
     const onRemove = typeof p.onRemove === 'function' ? p.onRemove : function () {};
     const patch = function (diff) { onChange(Object.assign({}, ex, diff)); };
 
+    // Hooks must be called unconditionally (Rules of Hooks) — выше age-guard'а.
+    const [musclesOpen, setMusclesOpen] = R.useState(false);
+
     // Age fail-closed guard: возраст не указан в профиле — показываем CTA
     // вместо опасных хватов (вместо тихо отфильтрованного списка).
     if (userAge == null) {
@@ -462,8 +547,20 @@
       || ageFiltered[0]
       || { id: ex.gripId, label: ex.gripId, primaryMuscles: [], icon: '🖐' };
 
+    const handlePickMuscle = function (mid) {
+      setMusclesOpen(false);
+      if (typeof Fingers.openMuscleDetail === 'function') {
+        try { Fingers.openMuscleDetail(mid); } catch (_) {}
+      }
+    };
+
     const els = [];
-    els.push(R.createElement(R.Fragment, { key: 'hero' }, renderHero(grip)));
+    els.push(R.createElement(R.Fragment, { key: 'hero' },
+      renderHero(grip, function () { setMusclesOpen(function (v) { return !v; }); })));
+    if (musclesOpen) {
+      els.push(R.createElement(R.Fragment, { key: 'msheet' },
+        renderMusclesSheet(grip, handlePickMuscle, function () { setMusclesOpen(false); })));
+    }
     els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove)));
 
     // iOS form-grouped: каждое поле — отдельная row с label слева, value справа.
