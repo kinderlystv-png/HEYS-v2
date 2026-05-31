@@ -12794,6 +12794,21 @@
         // 🚀 PERF v7.0: Use syncClient for dedup — prevents double sync
         // when DayTabWithCloudSync also calls syncClient on client change
         _switchUsedCuratorPath = true;
+        // 🛡️ 2026-05-31: Force FULL sync для curator path, не delta.
+        // v68 FIX сохранял last_sync_ts для скорости (delta тянет только
+        // изменённые keys, ~5x быстрее). Но это сломано для курaтора:
+        // в курaторском browser scoped LS пустой (нет накопленных PIN-keys
+        // клиента, они в его собственном browser). Delta sync пропускает
+        // dayv2 keys которые не updated с last sync → курaтор видит 0 ккал
+        // на всех днях вместо реальных данных клиента. Сбрасываем
+        // last_sync_ts → bootstrapClientSync делает FULL paginated fetch
+        // (~250+ keys, +3-5с overhead, но данные корректные).
+        // PIN path этот код не трогает — у PIN-юзера scoped LS уже накоплен
+        // из его прошлых сессий, delta достаточно.
+        try {
+            global.localStorage.removeItem(`heys_${newClientId}_last_sync_ts`);
+            log('🔄 [SWITCH/CURATOR] Reset last_sync_ts → force full sync');
+        } catch (_) { /* noop */ }
         await cloud.syncClient(newClientId, { force: true, deferNonCriticalTail: true });
       } else {
         logCritical('🔐 [SWITCH] Нет Supabase сессии — используем RPC sync');
