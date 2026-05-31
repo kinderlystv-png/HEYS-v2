@@ -149,6 +149,7 @@
             glWarnings: [],
             highScoreRows: [],
             pickedRows: [],
+            sleepPenaltyRows: [],
         };
     }
 
@@ -168,6 +169,10 @@
         }
         if (type === 'picked') {
             _activePickerLogCycle.pickedRows.push(payload);
+            return;
+        }
+        if (type === 'sleepPenalty') {
+            _activePickerLogCycle.sleepPenaltyRows.push(payload);
         }
     }
 
@@ -226,6 +231,22 @@
                 cycle: cycle.meta,
             });
             console.table(top);
+        }
+
+        // 2b) Sleep penalty (GRAINS pre-sleep/late-evening): collapse to one digest row.
+        if (cycle.sleepPenaltyRows.length > 0) {
+            const byScenario = {};
+            cycle.sleepPenaltyRows.forEach((row) => {
+                const key = row.scenario || 'UNKNOWN';
+                byScenario[key] = byScenario[key] || { count: 0, products: [] };
+                byScenario[key].count += 1;
+                if (byScenario[key].products.length < 8) byScenario[key].products.push(row.product);
+            });
+            console.info(`${LOG_PREFIX} 🌙 [sleepPenalty] GRAINS penalized:`, {
+                total: cycle.sleepPenaltyRows.length,
+                byScenario,
+                cycle: cycle.meta,
+            });
         }
 
         // 3) Picked tables: collapse repeated per-category dumps into one compact summary.
@@ -631,7 +652,11 @@
             const productCat = product.category || 'other';
             if (productCat === PRODUCT_CATEGORIES.GRAINS) {
                 scores.sleepGIPenalty = 0; // Hard penalty: high-GI carbs disrupt sleep
-                console.warn(`${LOG_PREFIX} 🌙❌ GRAINS penalized (PRE_SLEEP scenario):`, { product: product.name });
+                pushPickerLogRow('sleepPenalty', {
+                    product: product.name,
+                    scenario: mealScenarioType || 'UNKNOWN',
+                    category: productCat,
+                });
             } else if (productCat === PRODUCT_CATEGORIES.DAIRY) {
                 scores.sleepGIPenalty = 100; // Boost: casein/kefir optimal pre-sleep
             } else if (productCat === PRODUCT_CATEGORIES.PROTEIN) {

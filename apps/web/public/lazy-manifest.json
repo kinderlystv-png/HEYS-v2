@@ -5,15 +5,15 @@
     "sourceFingerprint": "b3888bcce55c",
     "fileCount": 32,
     "size": 1488712,
-    "builtAt": "2026-05-31T05:46:53.097Z"
+    "builtAt": "2026-05-31T05:53:24.849Z"
   },
   "postboot-2-insights-lazy": {
-    "file": "postboot-2-insights-lazy.bundle.4d671eccb10d.js",
-    "hash": "4d671eccb10d",
-    "sourceFingerprint": "2bce26c66b24",
+    "file": "postboot-2-insights-lazy.bundle.518848d26853.js",
+    "hash": "518848d26853",
+    "sourceFingerprint": "c2e849593919",
     "fileCount": 39,
-    "size": 1641566,
-    "builtAt": "2026-05-31T05:48:34.689Z"
+    "size": 1641950,
+    "builtAt": "2026-05-31T09:50:43.232Z"
   },
   "postboot-3-ui-lazy": {
     "file": "postboot-3-ui-lazy.bundle.aae436b63b7d.js",
@@ -21,6 +21,6 @@
     "sourceFingerprint": "c7ec0bf503be",
     "fileCount": 50,
     "size": 1906304,
-    "builtAt": "2026-05-31T05:48:38.750Z"
+    "builtAt": "2026-05-31T05:53:31.296Z"
   }
 }

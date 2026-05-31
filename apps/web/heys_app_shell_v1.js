@@ -1049,6 +1049,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
             let retryTimeoutId = null;
             let ewsLoaded = false; // PERF v7.2: prevent duplicate detect calls
+            let lastDetectAt = 0; // PERF v7.3: throttle post-sync re-detect (защита от secondary loop через heysSyncCompleted после cloud upload heys_ews_* ключей)
+            const POST_SYNC_DETECT_MIN_GAP_MS = 30_000;
 
             const loadEWSData = async (retryCount = 0) => {
                 try {
@@ -1114,6 +1116,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         mode: 'acute',
                         includeDetails: true
                     });
+                    lastDetectAt = Date.now();
 
                     if (result.available) {
                         setEWSData(result);
@@ -1197,6 +1200,19 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         }
                         postSyncHeavyQuietTimer = null;
                         if (gen !== postSyncHeavyGen) return;
+                        // PERF v7.3: throttle — heys_ews_* writes сами генерируют heysSyncCompleted
+                        // через CLIENT_SPECIFIC_KEYS cloud upload, что без guard'а зацикливало бы
+                        // detect → write → sync-complete → detect. Если < 30s от прошлого detect —
+                        // skip, иначе сбрасываем ewsLoaded и перезапускаем.
+                        const sinceLastDetect = lastDetectAt > 0 ? (Date.now() - lastDetectAt) : Infinity;
+                        if (sinceLastDetect < POST_SYNC_DETECT_MIN_GAP_MS) {
+                            console.info('ews / badge ⏭️ post-sync detect throttled', {
+                                reason,
+                                sinceLastDetectMs: Math.round(sinceLastDetect),
+                                minGapMs: POST_SYNC_DETECT_MIN_GAP_MS
+                            });
+                            return;
+                        }
                         const run = () => {
                             ewsLoaded = false;
                             loadEWSData();

@@ -1268,6 +1268,16 @@
                     return;
                 }
 
+                // EWS snapshot/trends/weekly — fire-and-forget локальные снимки
+                // для server-side push (cron-reminders читают heys_ews_snapshot).
+                // Cloud upload по-прежнему идёт через interceptor; гасим только
+                // UI-индикатор syncing и связанный re-render всего app-shell.
+                const _dsKey = String(e?.detail?.key || '');
+                if (_dsKey.startsWith('heys_ews_')) {
+                    logDataSavedSkipOnce('ews-write', '', e);
+                    return;
+                }
+
                 if (syncedTimeoutRef.current) {
                     logDataSavedSkipOnce('syncedTimeout active', '', e);
                     return;
