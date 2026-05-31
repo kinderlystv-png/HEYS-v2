@@ -203,11 +203,13 @@
   }
 
   function renderWeightStepper(addedKg, onChange) {
-    return R.createElement('div', null,
+    return R.createElement('div', { className: 'fingers-fs-weight-row' },
       R.createElement('label', { style: ST_LABEL, htmlFor: 'fc-weight' }, 'Доп. вес, кг'),
       R.createElement('div', { style: ST_STEP_ROW },
         R.createElement('button', {
-          type: 'button', 'aria-label': 'Уменьшить на 2.5 кг', style: ST_STEP_BTN,
+          type: 'button', 'aria-label': 'Уменьшить на 2.5 кг',
+          className: 'fingers-fs-weight-btn',
+          style: ST_STEP_BTN,
           onClick: function () { onChange(snap(addedKg - 2.5, 0.5)); },
         }, '−2.5'),
         R.createElement('input', {
@@ -216,10 +218,13 @@
             const raw = parseFloat(e.target.value);
             onChange(Number.isFinite(raw) ? snap(raw, 0.5) : 0);
           },
+          className: 'fingers-fs-weight-input',
           style: ST_STEP_VAL,
         }),
         R.createElement('button', {
-          type: 'button', 'aria-label': 'Увеличить на 2.5 кг', style: ST_STEP_BTN,
+          type: 'button', 'aria-label': 'Увеличить на 2.5 кг',
+          className: 'fingers-fs-weight-btn',
+          style: ST_STEP_BTN,
           onClick: function () { onChange(snap(addedKg + 2.5, 0.5)); },
         }, '+2.5'),
       ),

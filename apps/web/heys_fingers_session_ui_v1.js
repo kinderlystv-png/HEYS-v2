@@ -589,16 +589,13 @@
             role: 'tab',
             'aria-selected': active,
             className: 'fingers-fs-tab' + (active ? ' fingers-fs-tab--active' : ''),
-            onClick: function () { setTab(t.id); },
-            style: {
-              flex: 1, padding: '10px 8px', borderRadius: 8,
-              border: 'none', cursor: 'pointer',
-              background: active ? 'var(--fingers-bg)' : 'transparent',
-              color: active ? 'var(--fingers-text)' : 'inherit',
-              fontWeight: active ? 600 : 400,
-              fontSize: 14
-            }
-          }, t.icon + ' ' + t.label);
+            onClick: function () { setTab(t.id); }
+            // styles в CSS (.fingers-fs-tab) — иконка/текст как flex column,
+            // умещаются без обрезания на 390px
+          },
+            h('span', { key: 'i' }, t.icon),
+            h('span', { key: 'l' }, t.label)
+          );
         })
       ),
 

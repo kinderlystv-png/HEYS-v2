@@ -6830,12 +6830,55 @@ button.meal-quality-badge:active {
 }
 
 /* Stepper buttons тоже compact */
-.fingers-fs-constructor-card button:not(.fingers-fs-cta):not(.fingers-fs-ghost):not(.fingers-fs-muscle-chip) {
+.fingers-fs-constructor-card button:not(.fingers-fs-cta):not(.fingers-fs-ghost):not(.fingers-fs-muscle-chip):not(.fingers-fs-weight-btn) {
   height: 24px !important;
   width: 24px !important;
   min-height: 24px !important;
   min-width: 24px !important;
   font-size: 15px !important;
+}
+
+/* ==== Доп. вес — отдельная "крупная" строка ====
+ * Tap-targets ≥40px, явная высота строки, label без truncation. */
+.fingers-fs-weight-row {
+  min-height: 56px !important;
+  padding: 10px 14px !important;
+  column-gap: 12px !important;
+}
+.fingers-fs-weight-row label {
+  white-space: normal !important;
+  overflow: visible !important;
+  font-size: 14px !important;
+}
+.fingers-fs-constructor-card .fingers-fs-weight-btn {
+  width: 44px !important;
+  height: 40px !important;
+  min-width: 44px !important;
+  min-height: 40px !important;
+  padding: 0 8px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  background: rgba(120, 120, 128, 0.16) !important;
+  color: var(--fingers-text, #1a1a1f) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  font-family: inherit;
+}
+[data-theme="dark"] .fingers-fs-constructor-card .fingers-fs-weight-btn {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+.fingers-fs-constructor-card .fingers-fs-weight-btn:active {
+  background: rgba(120, 120, 128, 0.28) !important;
+}
+.fingers-fs-constructor-card .fingers-fs-weight-input {
+  min-width: 56px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
 }
 /* Remove iOS spinner на number inputs */
 .fingers-fs-constructor-card input[type="number"]::-webkit-outer-spin-button,
