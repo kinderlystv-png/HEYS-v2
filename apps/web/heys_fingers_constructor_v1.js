@@ -76,11 +76,12 @@
   const ST_DIVIDER = { display: 'none' };
 
   // Hero — фото хвата на всю ширину карточки, native aspect ratio.
+  // (display:block у img уже устраняет inline-baseline-gap, lineHeight:0 на
+  // wrapper'е НЕ нужен — он каскадно ломает текст в дочерних кнопках.)
   const ST_HERO_WRAP = {
     width: '100%',
     borderBottom: BORDER_LITE,
     background: 'rgba(120, 120, 128, 0.05)',
-    lineHeight: 0,
   };
   const ST_HERO = {
     width: '100%',
@@ -90,7 +91,7 @@
   // Под фото — список работающих мышц, каждая на своей строке.
   const ST_HERO_MUSCLES = {
     display: 'flex', flexDirection: 'column',
-    background: BG, lineHeight: 1.3,
+    background: BG,
   };
   const ST_HERO_MUSCLE_ROW = {
     appearance: 'none', background: 'transparent', cursor: 'pointer',
@@ -99,10 +100,12 @@
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     gap: 10, textAlign: 'left',
     fontFamily: 'inherit', fontSize: 13, fontWeight: 500, color: FG,
-    width: '100%', minHeight: 38,
+    lineHeight: 1.35,
+    width: '100%',
   };
   const ST_HERO_MUSCLE_ARROW = {
-    flex: '0 0 auto', fontSize: 14, color: MUTED, fontWeight: 400,
+    flex: '0 0 auto', fontSize: 16, color: MUTED, fontWeight: 400,
+    lineHeight: 1,
   };
   // Header — заголовок + remove (без иконки, фото живёт в hero).
   const ST_HEADER = {
