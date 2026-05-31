@@ -1,17 +1,19 @@
 // heys_fingers_svg_grips_v1.js — Wave 2-B (visual).
-// HEYS.Fingers.GripIcon({ gripId, size, theme }) — inline SVG руки в позе хвата.
+// HEYS.Fingers.GripIcon({ gripId, size, variant, theme }) — иконка хвата руки.
 //
 // Public API:
 //   HEYS.Fingers.GripIcon(props)
-//     props.gripId : 'openhand4' | 'halfcrimp' | 'fullcrimp'
-//                   | 'front3' | 'back3' | 'mono' | 'pinch' | 'sloper'
-//     props.size   : px (default 80)
-//     props.theme  : 'A' | 'B' | 'C'  (visual customisation hint; main themingчерез CSS-vars)
-//     props.label  : bool — показать ли подпись угла сустава (по умолчанию false)
+//     props.gripId  : 'openhand4' | 'halfcrimp' | 'fullcrimp'
+//                    | 'front3' | 'back3' | 'mono' | 'pinch' | 'sloper'
+//     props.size    : px (default 80)
+//     props.variant : 'photo' (default) — фотореалистичный <img> из /exercises/<gripId>.webp
+//                    'svg'             — line-art inline SVG (legacy fallback)
+//     props.theme   : 'A' | 'B' | 'C' (svg-only hint)
+//     props.label   : bool — подпись угла сустава (svg-only)
 //
 // React.createElement (no JSX — legacy IIFE bundle).
-// Стили — CSS variables `--fingers-accent`, `--fingers-card-border`; через `currentColor`.
-// SVG viewBox 0 0 100 100. line-art (stroke=currentColor, stroke-width=1.5, fill=none).
+// SVG: viewBox 0 0 100 100, line-art (stroke=currentColor).
+// Photo: 384×440 webp, object-fit: cover, скруглённые углы.
 // Идемпотентность: Fingers.GripIcon__registered.
 
 ;(function (global) {
@@ -267,8 +269,32 @@
     const p = props || {};
     const gid = p.gripId || 'halfcrimp';
     const size = typeof p.size === 'number' ? p.size : 80;
+    const variant = p.variant || 'photo';
     const showLabel = !!p.label;
     const builder = BUILDERS[gid];
+
+    if (variant === 'photo' && builder) {
+      return R.createElement('img', {
+        src: '/exercises/' + gid + '.webp',
+        width: size,
+        height: size,
+        alt: 'Хват: ' + (LABELS[gid] || gid),
+        className: 'fingers-fs-grip-icon fingers-fs-grip-icon--' + gid + ' fingers-fs-grip-icon--photo',
+        loading: 'lazy',
+        decoding: 'async',
+        style: {
+          display: 'inline-block',
+          objectFit: 'cover',
+          borderRadius: Math.max(4, Math.round(size * 0.12)),
+          verticalAlign: 'middle',
+        },
+        onError: function (e) {
+          // Фото не загрузилось (старый SW-кэш / offline) — прячем broken-icon.
+          try { e.target.style.visibility = 'hidden'; } catch (_) {}
+        },
+      });
+    }
+
     if (!builder) {
       // unknown grip — рисуем "?" placeholder
       return R.createElement('svg', { width: size, height: size, viewBox: '0 0 100 100', role: 'img', 'aria-label': 'Unknown grip: ' + gid },
