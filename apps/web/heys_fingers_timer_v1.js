@@ -164,23 +164,25 @@
       previousStateRef.current = nextState;
       fireStateChange(nextState, Object.assign({ durationSec }, meta || {}));
 
-      // Phase cues
+      // Phase cues. ВАЖНО: cue ID должны совпадать с MP3 файлами в
+      // apps/web/public/voice/fingers-ru/. Mismatch → 404 → TTS fallback с
+      // дефолтным voice (часто en-US) → дублирование RU и EN голоса.
       if (nextState === STATES.HANG) {
         _fingerSound('fingerStart');
-        _say('cue.hang_start');
+        _say('cue.go_hang'); // MP3: «Вис.»
         _vibrate([80, 60, 80]);
         if (wakeLock && wakeLock.requestWakeLock && !wakeLock.isWakeLockActive) {
           wakeLock.requestWakeLock();
         }
       } else if (nextState === STATES.REST) {
         _fingerSound('fingerRelease');
-        _say('cue.rest_start');
+        _say('cue.rest_start'); // MP3: «Отдых.»
         _beep('caution');
       } else if (nextState === STATES.BIG_REST) {
-        _say('cue.big_rest_start');
+        _say('cue.big_rest_start'); // MP3: «Большой отдых...»
         _beep('caution');
       } else if (nextState === STATES.SET_PREP) {
-        _say('cue.prep_start');
+        _say('cue.countdown_5'); // MP3: «Готовься. Пять.»
         _beep('notify');
       } else if (nextState === STATES.DONE) {
         _beep('triumph');

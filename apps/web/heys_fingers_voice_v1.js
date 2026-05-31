@@ -204,10 +204,30 @@
     });
   }
 
-  // Web Speech API fallback
+  // Web Speech API fallback. ВАЖНО: TTS включаем ТОЛЬКО если в браузере
+  // реально есть голос на ru-RU. Иначе SpeechSynthesisUtterance падает на
+  // default voice (часто en-US) — это приводит к «двойному голосу» (Yandex MP3
+  // на одном cue + Web Speech en-US на другом cue которого нет в банке).
+  // Молчание лучше чем English поверх русской сессии.
+  function hasRuVoice() {
+    if (typeof speechSynthesis === 'undefined') return false;
+    try {
+      const voices = speechSynthesis.getVoices();
+      if (!voices || !voices.length) return false;
+      return voices.some((v) => v && v.lang && v.lang.toLowerCase().startsWith('ru'));
+    } catch (_) { return false; }
+  }
+
   function playTts(text, opts) {
     return new Promise((resolve) => {
       if (typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') {
+        resolve(false); return;
+      }
+      // Защита от en-US double-voice: нет RU голоса → не озвучиваем.
+      if (!hasRuVoice()) {
+        if (typeof console !== 'undefined') {
+          console.debug('[Fingers.voice] TTS skipped — no ru-RU voice available, silence > English');
+        }
         resolve(false); return;
       }
       try {
@@ -220,14 +240,9 @@
         if (opts.signal) {
           opts.signal.addEventListener('abort', () => { try { speechSynthesis.cancel(); } catch (_) {} resolve(false); }, { once: true });
         }
-        // Pick RU voice if available
-        try {
-          const voices = speechSynthesis.getVoices();
-          if (voices && voices.length) {
-            const ru = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('ru'));
-            if (ru) u.voice = ru;
-          }
-        } catch (_) {}
+        const voices = speechSynthesis.getVoices();
+        const ru = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('ru'));
+        if (ru) u.voice = ru;
         speechSynthesis.speak(u);
       } catch (_) {
         resolve(false);
