@@ -475,6 +475,12 @@
         })();
     </script>
 
+    <!-- 📋 Console log trace → облако (2026-06-01). Ставится ПЕРВЫМ скриптом
+         чтобы перехватить console.* всех остальных модулей с самого старта.
+         Flush через sendBeacon на visibilitychange/pagehide — критично для
+         мобильных где DevTools недоступен и вкладку закрывают не предупредив. -->
+    <script src="heys_client_log_trace_v1.js"></script>
+
     <!-- 📊 Loading Progress UI (P1-R, 2026-05-22) — pure DOM bar + chip, без зависимостей.
          Грузится sync (no defer) сразу после __heysPerfMark, чтобы юзер видел прогресс с T0. -->
     <script src="heys_loading_progress_v1.js"></script>

@@ -70,6 +70,7 @@ const ALLOWED_TABLES = [
   'shared_products_pending',   // Pending products для модерации куратором (PATCH/DELETE)
   'client_kv_store',           // KV store для данных клиентов (куратор sync)
   'client_change_markers',     // Change markers для hot-sync (куратор read-only)
+  'client_log_trace',          // Клиентский console buffer → батчевый insert (write-only с мобильных)
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
   // ❌ clients — removed (PII: phone_normalized, managed via /auth/clients)
   // ❌ kv_store — removed (writes via RPC only)
@@ -109,6 +110,8 @@ const ALLOWED_COLUMNS = {
   client_kv_store: ['user_id', 'client_id', 'k', 'v', 'updated_at'],
   // client_change_markers — hot-sync change detection (read-only)
   client_change_markers: ['client_id', 'scope', 'changed_at'],
+  // client_log_trace — клиентский console buffer (см. миграцию 2026-06-01)
+  client_log_trace: ['id', 'client_id', 'captured_at', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url'],
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC
   // ❌ clients, kv_store, shared_products_pending, consents — removed
 };
@@ -276,7 +279,8 @@ module.exports.handler = async function (event, context) {
   const WRITE_ALLOWED_TABLES = [
     'client_kv_store',           // Куратор sync
     'shared_products_pending',   // Модерация продуктов куратором
-    'shared_products'            // Админ-удаление/правки shared продуктов
+    'shared_products',           // Админ-удаление/правки shared продуктов
+    'client_log_trace'           // Клиентский console batch insert (write-only с мобильных)
   ];
   const isWriteAllowed = WRITE_ALLOWED_TABLES.includes(tableName);
 
@@ -490,6 +494,90 @@ module.exports.handler = async function (event, context) {
         // [DEBUG] Log request summary (не полный body чтобы не захламлять логи)
         const rowsPreview = Array.isArray(body) ? body.length : 1;
         console.log('[REST POST REQUEST]', { table: tableName, rows: rowsPreview, params: Object.keys(params) });
+
+        // 📝 client_log_trace — батчевый INSERT клиентского console buffer.
+        // Никакой авторизации/UPSERT: append-only, TTL 14 дней (heys-maintenance).
+        // Жёсткие лимиты чтобы public POST не превратился в DoS-вектор.
+        if (tableName === 'client_log_trace') {
+          const MAX_ROWS_PER_BATCH = 500;
+          const MAX_MSG_LEN = 4000;
+          const MAX_ARGS_BYTES = 8000;
+          const MAX_UA_LEN = 500;
+          const MAX_URL_LEN = 1000;
+          const MAX_SESSION_LEN = 100;
+          const LEVELS = new Set(['log', 'info', 'warn', 'error', 'debug']);
+
+          const rawRows = Array.isArray(body) ? body : [body];
+          if (rawRows.length === 0) {
+            return {
+              statusCode: 400,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: 'Empty body' })
+            };
+          }
+          if (rawRows.length > MAX_ROWS_PER_BATCH) {
+            return {
+              statusCode: 413,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: `Batch too large (max ${MAX_ROWS_PER_BATCH})` })
+            };
+          }
+
+          // UA / URL — общие для batch'a (берём из заголовков fallback)
+          const headerUA = (event.headers?.['User-Agent'] || event.headers?.['user-agent'] || '').slice(0, MAX_UA_LEN);
+
+          const cols = ['client_id', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url'];
+          const values = [];
+          const placeholders = [];
+          let p = 1;
+          let inserted = 0;
+          let skipped = 0;
+
+          for (const row of rawRows) {
+            const lvl = LEVELS.has(row.level) ? row.level : 'log';
+            const msg = typeof row.message === 'string' ? row.message.slice(0, MAX_MSG_LEN) : String(row.message ?? '').slice(0, MAX_MSG_LEN);
+            if (!msg) { skipped++; continue; }
+            // client_id: optional, ignore malformed (не блокируем batch)
+            const cid = (typeof row.client_id === 'string' && /^[0-9a-f-]{32,36}$/i.test(row.client_id)) ? row.client_id : null;
+            // client_ts: optional, default now()
+            let cts = row.client_ts ? new Date(row.client_ts) : new Date();
+            if (Number.isNaN(cts.getTime())) cts = new Date();
+            // args: cap by serialized size
+            let argsJson = null;
+            if (row.args != null) {
+              try {
+                const s = JSON.stringify(row.args);
+                argsJson = s.length > MAX_ARGS_BYTES ? JSON.stringify({ _truncated: true, _origLen: s.length, preview: s.slice(0, 2000) }) : s;
+              } catch (_) { argsJson = null; }
+            }
+            const sid = typeof row.session_id === 'string' ? row.session_id.slice(0, MAX_SESSION_LEN) : null;
+            const ua = (typeof row.user_agent === 'string' ? row.user_agent : headerUA).slice(0, MAX_UA_LEN);
+            const url = typeof row.page_url === 'string' ? row.page_url.slice(0, MAX_URL_LEN) : null;
+
+            placeholders.push(`($${p++}, $${p++}, $${p++}, $${p++}, $${p++}::jsonb, $${p++}, $${p++}, $${p++})`);
+            values.push(cid, cts.toISOString(), lvl, msg, argsJson, sid, ua, url);
+            inserted++;
+          }
+
+          if (inserted === 0) {
+            return {
+              statusCode: 400,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: 'No valid rows', skipped })
+            };
+          }
+
+          const query = `INSERT INTO "client_log_trace" (${cols.map(c => `"${c}"`).join(', ')}) VALUES ${placeholders.join(', ')}`;
+          await client.query(query, values);
+
+          console.log('[REST POST client_log_trace]', { inserted, skipped, total: rawRows.length });
+
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({ success: true, inserted, skipped })
+          };
+        }
 
         // 🛡️ DATA LOSS PROTECTION: Для client_kv_store используем защищённые функции!
         if (tableName === 'client_kv_store') {

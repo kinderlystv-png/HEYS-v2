@@ -171,6 +171,28 @@ async function cleanupSecurityLogs(client) {
 }
 
 /**
+ * Cleanup client_log_trace — клиентский console buffer (2026-06-01).
+ * Удерживаем 14 дней (диагностика recent инцидентов). Источник: миграция
+ * 2026-06-01_create_client_log_trace.sql.
+ */
+async function cleanupClientLogTrace(client) {
+  try {
+    const res = await client.query(
+      `WITH del AS (
+         DELETE FROM public.client_log_trace
+         WHERE captured_at < (NOW() - INTERVAL '14 days')
+         RETURNING length(message) + length(coalesce(args::text, '')) AS sz
+       )
+       SELECT count(*)::int AS rows, coalesce(sum(sz), 0)::bigint AS bytes FROM del`
+    );
+    return res.rows[0] || { rows: 0, bytes: 0 };
+  } catch (e) {
+    // Table может не существовать на стейдже — fail-safe
+    return { rows: 0, bytes: 0, error: e.message };
+  }
+}
+
+/**
  * KV Storage health check — ловит индикаторы регрессий после фиксов 2026-05-23
  * (precision-mismatch ack, zombie xp_cache, race profile-subscription, и т.д.).
  * Шлёт Telegram alert если что-то выглядит аномально.
@@ -605,6 +627,10 @@ module.exports.handler = async (event, context) => {
         deleted_count: await cleanupSecurityLogs(client)
       };
       console.log(`[Maintenance] Cleanup: deleted ${results.cleanup.deleted_count} old entries`);
+
+      // client_log_trace TTL — каждый день в той же daily-фазе
+      results.log_trace_cleanup = await cleanupClientLogTrace(client);
+      console.log(`[Maintenance] LogTrace TTL: deleted ${results.log_trace_cleanup.rows} rows (${(Number(results.log_trace_cleanup.bytes || 0) / 1024).toFixed(1)} KB)`);
     }
 
     // KV health check + Telegram alert при аномалиях
