@@ -142,12 +142,32 @@
             // 🔐 PIN auth: проверяем также heys_pin_auth_client (клиент вошедший по PIN)
             const pinAuthClient = readGlobalValue('heys_pin_auth_client', null);
 
+            // 🔇 Dedup helper: useEffect в client_init может перезапустить runAuthInit
+            // на каждом ре-рендере (нестабильные deps — setProducts/setClients/etc).
+            // initLocalData идемпотентна, но лог "[AuthInit] restored ..." раньше шумел
+            // 8+ раз за 90s (incident 2026-06-01). Логируем только когда меняется
+            // (auth_kind:client_id) пара ИЛИ прошло >60s.
+            const _logKey = (kind, cid) => `${kind}:${cid}`;
+            const _shouldLogRestore = (kind, cid) => {
+                try {
+                    window.__heysAuthInitLastLog = window.__heysAuthInitLastLog || {};
+                    const k = _logKey(kind, cid);
+                    const now = Date.now();
+                    const last = window.__heysAuthInitLastLog[k] || 0;
+                    if (now - last < 60000) return false;
+                    window.__heysAuthInitLastLog[k] = now;
+                    return true;
+                } catch (_) { return true; }
+            };
+
             if (!skipClientRestore && currentClient && storedClientsArray.some((c) => c.id === currentClient)) {
                 // Куратор выбрал клиента из списка
                 setClientId(currentClient);
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = currentClient;
-                console.warn('[AuthInit] restored curator currentClientId', currentClient?.slice(0, 8));
+                if (_shouldLogRestore('curator', currentClient)) {
+                    console.warn('[AuthInit] restored curator currentClientId', currentClient?.slice(0, 8));
+                }
             } else if (!skipPinAuthRestore && pinAuthClient) {
                 // 🔐 PIN auth: клиент вошёл по телефону+PIN — устанавливаем его clientId
                 setClientId(pinAuthClient);
@@ -155,7 +175,9 @@
                 window.HEYS.currentClientId = pinAuthClient;
                 // Sync heys_client_current so nsKey resolves correctly on next reload
                 try { localStorage.setItem('heys_client_current', JSON.stringify(pinAuthClient)); } catch (_) { }
-                console.warn('[AuthInit] restored PIN currentClientId', pinAuthClient?.slice(0, 8));
+                if (_shouldLogRestore('pin', pinAuthClient)) {
+                    console.warn('[AuthInit] restored PIN currentClientId', pinAuthClient?.slice(0, 8));
+                }
 
                 // 🛠️ Миграция legacy ключей без clientId → scoped (PIN flow)
                 try {

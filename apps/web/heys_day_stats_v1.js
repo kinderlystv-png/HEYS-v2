@@ -3319,17 +3319,32 @@
 
                 // Даем React применить state, затем сохраняем и открываем чек-ин без перезагрузки
                 setTimeout(() => {
+                  // Диагностика: эта кнопка — основной user path для re-открытия чекина после ×.
+                  // Раньше try/catch проглатывал любые ошибки молча → невозможно понять почему
+                  // визард не открылся. Теперь явно логируем что доступно (см. инцидент 2026-06-01
+                  // где LS=95% full + missing showCheckin приводили к silent no-op).
+                  const trace = {
+                    hasDay: !!Day,
+                    hasDayFlush: !!(Day && typeof Day.requestFlush === 'function'),
+                    hasShowCheckin: !!showCheckin,
+                    hasMorning: !!(showCheckin && typeof showCheckin.morning === 'function'),
+                    hasWeight: !!(showCheckin && typeof showCheckin.weight === 'function'),
+                  };
                   try {
                     if (Day && typeof Day.requestFlush === 'function') {
                       Day.requestFlush();
                     }
                     if (showCheckin && typeof showCheckin.morning === 'function') {
+                      console.info('[dev-clear-weight] open morning checkin wizard', trace);
                       showCheckin.morning();
                     } else if (showCheckin && typeof showCheckin.weight === 'function') {
+                      console.info('[dev-clear-weight] open weight checkin step', trace);
                       showCheckin.weight();
+                    } else {
+                      console.warn('[dev-clear-weight] no checkin opener available', trace);
                     }
                   } catch (err) {
-                    // Ничего: не мешаем UX, если чек-ин не доступен
+                    console.error('[dev-clear-weight] failed to open checkin', err, trace);
                   }
                 }, 50);
               },
