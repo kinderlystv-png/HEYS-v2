@@ -4834,6 +4834,10 @@
         backfillWeeklySnapshots: backfillWeeklySnapshots,
         thresholds: THRESHOLDS,
         healthImpact: HEALTH_IMPACT_SCORES,
+        // Test-only: clear the 10s detect() memoization cache between vitest
+        // cases. Tests share identical input signatures (same date range +
+        // anonymous profile) so cached results pollute across cases.
+        _clearDetectCache: () => _detectCache.clear(),
         version: '4.2.0'
     };
 

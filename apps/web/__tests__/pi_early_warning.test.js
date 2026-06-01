@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 beforeAll(async () => {
     global.window = global;
@@ -68,6 +68,13 @@ function makeDay(date, overrides = {}) {
 }
 
 describe('Early Warning System', () => {
+    // Tests share identical detect() input signatures (same 7-day range,
+    // anonymous profile). The 10s memoization cache (perf optim e548b4b9)
+    // pollutes results across cases. Clear before each.
+    beforeEach(() => {
+        global.HEYS.InsightsPI.earlyWarning._clearDetectCache();
+    });
+
     it('returns unavailable when insufficient data (< 7 days)', () => {
         const detect = global.HEYS.InsightsPI.earlyWarning.detect;
         const pIndex = makePIndex();
