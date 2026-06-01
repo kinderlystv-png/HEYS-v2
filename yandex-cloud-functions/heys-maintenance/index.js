@@ -214,6 +214,67 @@ async function cleanupProfileSnapshots(client) {
 }
 
 /**
+ * Writer-CID invariant check (2026-06-01 wave 3, #12 reframe) — для каждого
+ * per-client KV blob (heys_profile/norms/game/hr_zones) проверяет что
+ * v._writerCid совпадает с client_id (legitimate write). Mismatch → pollution
+ * (даже если RPC guard был bypassed напрямую через SQL/admin path). NULL →
+ * legacy untagged row, нужна перезапись через клиента для активации guard.
+ *
+ * Без S3 backup diff (требовал бы новых зависимостей). Этот инвариант
+ * самодостаточен: legitimate write всегда тегается currentClientId = client_id.
+ */
+async function writerCidIntegrityCheck(client) {
+  const findings = [];
+  const summary = { mismatched: 0, untagged: 0 };
+
+  const GUARDED_KEYS = ['heys_profile', 'heys_norms', 'heys_game', 'heys_hr_zones'];
+
+  try {
+    const res = await client.query(
+      `SELECT client_id, k,
+              v->>'_writerCid' AS writer_cid,
+              updated_at,
+              v->>'firstName' AS first_name,
+              v->>'lastName'  AS last_name
+         FROM client_kv_store
+        WHERE k = ANY($1::text[])
+          AND (
+            v->>'_writerCid' IS NULL
+            OR v->>'_writerCid' <> client_id::text
+          )
+        ORDER BY updated_at DESC
+        LIMIT 50`,
+      [GUARDED_KEYS]
+    );
+
+    for (const row of res.rows) {
+      const cidShort = String(row.client_id).slice(0, 8);
+      const writer = row.writer_cid;
+      const ageHours = Math.round((Date.now() - new Date(row.updated_at).getTime()) / 3600000);
+      if (writer == null || writer === '') {
+        summary.untagged++;
+        findings.push(
+          `⚠️ *untagged* \`${cidShort}\` key=\`${row.k}\` age=${ageHours}h ` +
+          (row.first_name ? `(${row.first_name})` : '')
+        );
+      } else if (writer !== row.client_id) {
+        summary.mismatched++;
+        findings.push(
+          `🚨 *writer_cid_mismatch* \`${cidShort}\` key=\`${row.k}\`\n` +
+          `expected: \`${cidShort}\`, got: \`${String(writer).slice(0, 8)}\`\n` +
+          `age=${ageHours}h ${row.first_name ? '('+row.first_name+')' : ''}\n` +
+          `_POSSIBLE POLLUTION — bypass через direct SQL?_`
+        );
+      }
+    }
+  } catch (e) {
+    console.warn('[writer-cid-integrity] query failed:', e.message);
+  }
+
+  return { findings, summary };
+}
+
+/**
  * Profile integrity check (2026-06-01) — обнаруживает cross-client pollution
  * profile-полей. Источник: incident 2026-05-31 13:00 где Poplanton'овские
  * identity-поля перетёрли профиль Александры через unscoped legacy LS path.
@@ -229,25 +290,36 @@ async function profileIntegrityCheck(client) {
   const findings = [];
   const summary = { mismatches: 0, blocked: 0, anomalies: 0 };
 
-  // 1. Name mismatch detection
+  // 1. Name mismatch detection. Normalize hyphens/spaces/dots/quotes на обеих сторонах
+  // ДО compare — иначе "E2E-TestAlex" vs "E2E TestAlex" даёт false-positive.
+  // regexp_replace убирает любой non-letter character перед lower().
   try {
     const mismatchRes = await client.query(`
-      SELECT c.id, c.name,
-             p.v->>'firstName' AS pf,
-             p.v->>'lastName'  AS pl,
-             p.v->>'gender'    AS pg,
-             p.v->>'_writerCid' AS pwriter,
-             p.updated_at
-        FROM clients c
-        JOIN client_kv_store p
-          ON p.client_id = c.id AND p.k = 'heys_profile'
-       WHERE c.name IS NOT NULL
-         AND length(trim(c.name)) > 0
-         AND p.v->>'firstName' IS NOT NULL
-         AND (
-           lower(coalesce(p.v->>'firstName','') || ' ' || coalesce(p.v->>'lastName','')) NOT LIKE '%' || lower(c.name) || '%'
-           AND lower(c.name) NOT LIKE '%' || lower(coalesce(p.v->>'firstName','')) || '%'
-         )
+      WITH normalized AS (
+        SELECT c.id, c.name AS c_name,
+               p.v->>'firstName' AS pf,
+               p.v->>'lastName'  AS pl,
+               p.v->>'gender'    AS pg,
+               p.v->>'_writerCid' AS pwriter,
+               p.updated_at,
+               lower(regexp_replace(c.name, '[^[:alpha:][:digit:]]', '', 'g')) AS c_norm,
+               lower(regexp_replace(
+                 coalesce(p.v->>'firstName','') || coalesce(p.v->>'lastName',''),
+                 '[^[:alpha:][:digit:]]', '', 'g'
+               )) AS p_norm
+          FROM clients c
+          JOIN client_kv_store p
+            ON p.client_id = c.id AND p.k = 'heys_profile'
+         WHERE c.name IS NOT NULL
+           AND length(trim(c.name)) > 0
+           AND p.v->>'firstName' IS NOT NULL
+      )
+      SELECT id, c_name AS name, pf, pl, pg, pwriter, updated_at
+        FROM normalized
+       WHERE c_norm <> ''
+         AND p_norm <> ''
+         AND p_norm NOT LIKE '%' || c_norm || '%'
+         AND c_norm NOT LIKE '%' || p_norm || '%'
        LIMIT 20
     `);
     summary.mismatches = mismatchRes.rows.length;
@@ -733,6 +805,27 @@ module.exports.handler = async (event, context) => {
       // profile_snapshots TTL (30 дней)
       results.profile_snapshots_cleanup = await cleanupProfileSnapshots(client);
       console.log(`[Maintenance] ProfileSnapshots TTL: deleted ${results.profile_snapshots_cleanup.rows} rows (${(Number(results.profile_snapshots_cleanup.bytes || 0) / 1024).toFixed(1)} KB)`);
+
+      // 🔬 Writer-CID invariant check (2026-06-01 wave 3, #12) — ловит pollution
+      // даже если RPC guards bypassed через direct SQL/admin. mismatched/untagged
+      // rows → Telegram alert. Untagged — это legacy rows до wave 1 deploy, не
+      // критично но желательно мигрировать (перезаписать через клиента).
+      try {
+        const { findings, summary } = await writerCidIntegrityCheck(client);
+        results.writer_cid_integrity = summary;
+        console.log('[Maintenance] Writer-CID integrity:', JSON.stringify(summary));
+        if (summary.mismatched > 0 || summary.untagged > 5) {
+          await sendTelegramNotification(
+            `🔬 *Writer-CID Integrity Alert*\n\n` +
+            `mismatched=${summary.mismatched} untagged=${summary.untagged}\n\n` +
+            findings.slice(0, 8).join('\n\n') +
+            (findings.length > 8 ? `\n\n…+${findings.length - 8} more` : '')
+          );
+        }
+      } catch (wErr) {
+        console.error('[Maintenance] writer_cid_integrity failed:', wErr.message);
+        results.writer_cid_integrity = { error: wErr.message };
+      }
 
       // 🛡️ Profile integrity check (2026-06-01) — обнаружение cross-client pollution.
       // Алертит в Telegram если есть mismatch'и clients.name vs profile.firstName+lastName

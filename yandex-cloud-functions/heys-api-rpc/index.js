@@ -2065,6 +2065,24 @@ module.exports.handler = async function (event, context) {
               } catch (auditErr) {
                 console.warn('[merge_save] cross_client_blob audit insert failed:', auditErr.message);
               }
+              // Pre-write snapshot для profile — даже если block, фиксируем
+              // ATTEMPT для forensics (кто пытался писать, что хотел записать).
+              // Cloud остался на owner's value — restore не нужен. Сначала
+              // snapshot, потом alert чтобы включить snapshot_id в TG-сообщение.
+              let blockSnapshotId = null;
+              if (k === 'heys_profile') {
+                try {
+                  const snapRes = await client.query(
+                    `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, writer_cid)
+                     VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'cross_client_blocked', $4)
+                     RETURNING id`,
+                    [resolvedClientId, JSON.stringify(currentValue), JSON.stringify(incomingValue), incomingValue._writerCid || null]
+                  );
+                  blockSnapshotId = snapRes.rows[0]?.id;
+                } catch (snapErr) {
+                  console.warn('[merge_save] snapshot insert failed:', snapErr.message);
+                }
+              }
               // 🔔 Real-time TG alert (dedup 5min per client+action)
               if (_shouldSendTgAlert(resolvedClientId, auditAction)) {
                 sendTgAlertFireAndForget(
@@ -2073,20 +2091,10 @@ module.exports.handler = async function (event, context) {
                   `client: \`${String(resolvedClientId).slice(0, 8)}\`\n` +
                   `incoming writer: \`${String(incomingValue._writerCid).slice(0, 8)}\`\n` +
                   `cloud writer: \`${String(currentValue._writerCid).slice(0, 8)}\`\n` +
-                  (k === 'heys_profile' ? `snapshot saved (см. profile_snapshots).` : '')
+                  (k === 'heys_profile' && blockSnapshotId
+                    ? `\n_Cloud OK (оставлен owner's value). Forensic snapshot #${blockSnapshotId}._`
+                    : '')
                 );
-              }
-              // Pre-write snapshot для profile — даже если block, фиксируем попытку
-              if (k === 'heys_profile') {
-                try {
-                  await client.query(
-                    `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, writer_cid)
-                     VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'cross_client_blocked', $4)`,
-                    [resolvedClientId, JSON.stringify(currentValue), JSON.stringify(incomingValue), incomingValue._writerCid || null]
-                  );
-                } catch (snapErr) {
-                  console.warn('[merge_save] snapshot insert failed:', snapErr.message);
-                }
               }
             } else {
               // 🛡️ Schema validation для heys_profile identity-fields (2026-06-01 wave 2).
@@ -2128,6 +2136,35 @@ module.exports.handler = async function (event, context) {
                   );
                 }
               } else {
+                // 📸 Routine pre-write snapshot (2026-06-01 wave 3, #9):
+                // даже для НОРМАЛЬНОЙ записи heys_profile сохраняем prev_v
+                // чтобы любой "time travel" restore был возможен — не только
+                // после wholesale_change/cross_client_block.
+                // Audit показал velocity ~3 writes/день → 30d * 4 clients ≈ 360
+                // snapshots ≈ 720KB. Negligible.
+                // Skip если currentValue null (первый write — нечего сохранять)
+                // ИЛИ если incoming == current (no-op merge, не имеет смысла).
+                if (k === 'heys_profile' && currentValue && typeof currentValue === 'object') {
+                  try {
+                    const incJson = JSON.stringify(incomingValue);
+                    const curJson = JSON.stringify(currentValue);
+                    if (incJson !== curJson) {
+                      await client.query(
+                        `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, writer_cid)
+                         VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'routine', $4)`,
+                        [
+                          resolvedClientId,
+                          curJson,
+                          incJson,
+                          (incomingValue && incomingValue._writerCid) || null,
+                        ]
+                      );
+                    }
+                  } catch (snapErr) {
+                    console.warn('[merge_save] routine snapshot failed:', snapErr.message);
+                  }
+                }
+
                 mergedValue = mergeScalarKv(incomingValue, currentValue);
                 mergeOutcome = 'scalar_merged';
 
@@ -2146,10 +2183,14 @@ module.exports.handler = async function (event, context) {
                       // 📸 Pre-write snapshot — даёт мгновенный rollback через
                       // restore_profile_snapshot(snapshot_id) RPC. См. миграцию
                       // 2026-06-01_create_profile_snapshots.sql.
+                      // RETURNING id чтобы включить snapshot_id в TG alert для
+                      // one-click restore (wave 3 #10 reframe).
+                      let snapshotId = null;
                       try {
-                        await client.query(
+                        const snapRes = await client.query(
                           `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, changed_fields, writer_cid)
-                           VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'wholesale_identity_change', $4::text[], $5)`,
+                           VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'wholesale_identity_change', $4::text[], $5)
+                           RETURNING id`,
                           [
                             resolvedClientId,
                             JSON.stringify(currentValue),
@@ -2158,6 +2199,7 @@ module.exports.handler = async function (event, context) {
                             (incomingValue && incomingValue._writerCid) || null,
                           ]
                         );
+                        snapshotId = snapRes.rows[0]?.id;
                       } catch (snapErr) {
                         console.warn('[merge_save] wholesale snapshot insert failed:', snapErr.message);
                       }
@@ -2167,7 +2209,7 @@ module.exports.handler = async function (event, context) {
                         [
                           resolvedClientId,
                           k,
-                          `fields=[${changedFields.join(',')}] cloud_age_h=${Math.round(cloudAgeMs / 3600000)}`,
+                          `fields=[${changedFields.join(',')}] cloud_age_h=${Math.round(cloudAgeMs / 3600000)} snapshot_id=${snapshotId || '?'}`,
                         ]
                       );
                       if (_shouldSendTgAlert(resolvedClientId, 'wholesale_identity_change')) {
@@ -2176,7 +2218,9 @@ module.exports.handler = async function (event, context) {
                           `client: \`${String(resolvedClientId).slice(0, 8)}\`\n` +
                           `changed fields: \`${changedFields.join(', ')}\`\n` +
                           `cloud age: ${Math.round(cloudAgeMs / 3600000)}h\n` +
-                          `_Snapshot saved — restore via_ \`SELECT restore_profile_snapshot(<id>);\``
+                          (snapshotId
+                            ? `\n*Откат одной командой:*\n\`SELECT restore_profile_snapshot(${snapshotId});\``
+                            : `\n_Snapshot insert failed — restore вручную из S3 backup._`)
                         );
                       }
                     }
