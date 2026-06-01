@@ -251,7 +251,9 @@ function sendTgAlertFireAndForget(text) {
 // Incident 3: dayv2_* rows тоже подверглись pollution через batch_upsert_by_curator —
 // добавлен в guarded set + ужесточена проверка cross-client (incoming._writerCid !== clientId
 // строже чем сравнение с prev_v: ловит pollution на пустых rows / fresh writes).
-const IDENTITY_GUARD_KEY_RE = /^(heys_profile|heys_norms|heys_game|heys_hr_zones|heys_dayv2_\d{4}-\d{2}-\d{2})$/;
+// Accept both unscoped (heys_profile) и scoped (heys_<UUID>_profile) — pollution
+// часто идёт через scoped формат при curator-switch (incident 2026-06-01 #5).
+const IDENTITY_GUARD_KEY_RE = /^heys_(?:[0-9a-f-]{36}_)?(profile|norms|game|hr_zones|dayv2_\d{4}-\d{2}-\d{2})$/i;
 function isIdentityGuardKey(k) {
   return typeof k === 'string' && IDENTITY_GUARD_KEY_RE.test(k);
 }
@@ -2288,7 +2290,41 @@ module.exports.handler = async function (event, context) {
           // Concurrency conflict if cloud version was modified after the client's last-known timestamp.
           const noConflict = lastSeenUpdatedAt > 0 && lastSeenUpdatedAt >= cloudInternalTs;
 
-          if (noConflict) {
+          // 🛡️ Generic cross-client guard (incident 2026-06-02 #6): incoming
+          // _writerCid должен совпадать с row.client_id для ВСЕХ guarded keys
+          // включая heys_dayv2_*. До этого dayv2 branch внизу шёл сразу в
+          // mergeDayData без cross-client check — Александрин dayv2 был
+          // overwritten пустым state'ом TestAlex'a при switch (incident #6).
+          // Проверка ДО noConflict — иначе pollution с подходящим lastSeen
+          // проскакивает через fast-path.
+          if (isIdentityGuardKey(k) && incomingValue && typeof incomingValue === 'object' &&
+              incomingValue._writerCid && String(incomingValue._writerCid) !== String(resolvedClientId)) {
+            const auditAction = (k === 'heys_profile') ? 'cross_client_profile_blocked' : 'cross_client_blob_blocked';
+            mergedValue = currentValue;
+            mergeOutcome = auditAction;
+            const cloudWriter = (currentValue && typeof currentValue === 'object' && currentValue._writerCid)
+              ? String(currentValue._writerCid).slice(0, 8) : 'null';
+            try {
+              await client.query(
+                `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                 VALUES ($1::uuid, $2::text, $3::text, FALSE, $4)`,
+                [resolvedClientId, k, auditAction,
+                  `merge_save incoming_writer=${String(incomingValue._writerCid).slice(0, 8)} expected=${String(resolvedClientId).slice(0, 8)} cloud_writer=${cloudWriter}`]
+              );
+            } catch (auditErr) {
+              console.warn('[merge_save] cross_client audit insert failed:', auditErr.message);
+            }
+            if (_shouldSendTgAlert(resolvedClientId, auditAction)) {
+              sendTgAlertFireAndForget(
+                `🛡️ *${auditAction}*\n` +
+                `key: \`${k}\`\n` +
+                `client: \`${String(resolvedClientId).slice(0, 8)}\`\n` +
+                `source: \`merge_save\`\n` +
+                `incoming writer: \`${String(incomingValue._writerCid).slice(0, 8)}\` (expected: \`${String(resolvedClientId).slice(0, 8)}\`)\n` +
+                `cloud writer: \`${cloudWriter}\``
+              );
+            }
+          } else if (noConflict) {
             mergedValue = incomingValue;
           } else if (/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(k)) {
             // forceKeepAll: client may not have seen the latest cloud-side meals yet,

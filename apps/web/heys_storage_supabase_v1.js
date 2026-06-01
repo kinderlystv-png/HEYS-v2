@@ -8735,7 +8735,24 @@
               const _bwMeals = Array.isArray(bwVal?.meals) ? bwVal.meals.length : 0;
               const _bwKcal = bwVal?.savedEatenKcal || 0;
               const _bwMealNames = Array.isArray(bwVal?.meals) ? bwVal.meals.map(m => m.name + '(' + (m.items?.length || 0) + ')').join(', ') : 'none';
+              // Detailed forensic items list (incident 2026-06-02): продукты + граммы
+              // на случай если cross-client guard НЕ сработает и row сотрётся
+              // pollution'ом — будем знать что было в row.
+              const _bwItems = Array.isArray(bwVal?.meals)
+                ? bwVal.meals.flatMap(m => {
+                    const mealName = m.name || '?';
+                    return (Array.isArray(m.items) ? m.items : []).map(it => {
+                      const name = (it.product_name || it.name || it.product || it.title || '?').toString().slice(0, 40);
+                      const grams = it.grams || it.g || it.weight_g || it.amount || it.weight || null;
+                      return `${mealName}:${name}(${grams != null ? grams + 'g' : '?'})`;
+                    });
+                  })
+                : [];
               window.console.info('[HEYS.sinhron] 📝 BATCH_WRITE dayv2 СЕГОДНЯ: meals=' + _bwMeals + ' kcal=' + _bwKcal + ' [' + _bwMealNames + ']');
+              if (_bwItems.length > 0) {
+                // Отдельная строка чтобы не порушить grep на BATCH_WRITE structure line
+                window.console.info('[HEYS.sinhron] 📋 BATCH_WRITE items dayv2 СЕГОДНЯ: ' + _bwItems.join(' | '));
+              }
             }
           });
           const updatedDates = [];

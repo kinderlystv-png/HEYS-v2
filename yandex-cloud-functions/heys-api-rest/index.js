@@ -23,6 +23,39 @@ function requireEnv(name) {
   return v;
 }
 
+// 🛡️ Identity-pollution guards (added 2026-06-01 incident 4).
+// REST POST /rest/client_kv_store шёл в обход guard'ов в heys-api-rpc:
+// ловил только blacklist через safe_upsert_client_kv, идентификационных
+// проверок не было. Теперь до записи проверяем cross-client _writerCid.
+// Принимаем и unscoped, и scoped (heys_<UUID>_...) варианты — pollution
+// чаще идёт через scoped формат при curator-switch (incident 2026-06-01 #5).
+const IDENTITY_GUARD_KEY_RE = /^heys_(?:[0-9a-f-]{36}_)?(profile|norms|game|hr_zones|dayv2_\d{4}-\d{2}-\d{2})$/i;
+function isIdentityGuardKey(k) {
+  return typeof k === 'string' && IDENTITY_GUARD_KEY_RE.test(k);
+}
+
+const _tgAlertLastSent = new Map();
+const TG_ALERT_DEDUP_MS = 5 * 60 * 1000;
+function shouldSendTgAlert(clientId, action) {
+  const key = `${clientId}:${action}`;
+  const now = Date.now();
+  const last = _tgAlertLastSent.get(key) || 0;
+  if (now - last < TG_ALERT_DEDUP_MS) return false;
+  _tgAlertLastSent.set(key, now);
+  return true;
+}
+function sendTgAlertFireAndForget(text) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+  const body = JSON.stringify({ chat_id: chatId, text: text.slice(0, 3800), parse_mode: 'Markdown' });
+  fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  }).catch((err) => console.warn('[tg-alert] send failed:', err.message));
+}
+
 // PG config loaded lazily inside handler (after OPTIONS check)
 // This allows CORS preflight to work even if DB env is misconfigured
 let PG_CONFIG = null;
@@ -597,6 +630,82 @@ module.exports.handler = async function (event, context) {
           for (const row of rows) {
             if (!row.client_id || !row.k) {
               console.warn('[REST POST] Missing client_id or k in row:', row);
+              continue;
+            }
+
+            // 🛡️ Identity-pollution guard (incident 2026-06-01 #4): incoming
+            // _writerCid должен совпадать с client_id (owner of row). Ловит
+            // cross-client write от curator switch'ей где stale React state
+            // одного клиента ре-tag'ается правильным writerCid и улетает
+            // под другой scope. RPC path уже гейтится (commit 5df98732),
+            // но REST шёл в обход — закрываем дыру здесь.
+            // [DEBUG #5]: для каждого guarded key логируем что пришло.
+            if (isIdentityGuardKey(row.k)) {
+              const vType = typeof row.v;
+              const vIsArr = Array.isArray(row.v);
+              const vKeys = (row.v && vType === 'object' && !vIsArr) ? Object.keys(row.v).slice(0, 12) : null;
+              const wc = (row.v && vType === 'object' && !vIsArr) ? row.v._writerCid : null;
+              console.log('[GUARD-DEBUG]', JSON.stringify({
+                k: row.k,
+                client: String(row.client_id).slice(0, 8),
+                vType,
+                vIsArr,
+                vKeysCount: vKeys ? Object.keys(row.v).length : null,
+                vKeysSample: vKeys,
+                writerCid: wc ? String(wc).slice(0, 8) : null,
+                hasMeals: row.v && Array.isArray(row.v.meals) ? row.v.meals.length : null,
+              }));
+            }
+            if (isIdentityGuardKey(row.k) && row.v && typeof row.v === 'object' &&
+                row.v._writerCid && String(row.v._writerCid) !== String(row.client_id)) {
+              const auditAction = (row.k === 'heys_profile')
+                ? 'cross_client_profile_blocked'
+                : 'cross_client_blob_blocked';
+              blocked++;
+              const incomingWriter = String(row.v._writerCid).slice(0, 8);
+              const expectedWriter = String(row.client_id).slice(0, 8);
+              console.warn(`[REST POST] 🛡️ ${auditAction}:`, row.k,
+                'incoming_writer=', incomingWriter, 'expected=', expectedWriter);
+              // Forensic snapshot для profile + audit + TG alert.
+              let snapshotId = null;
+              if (row.k === 'heys_profile') {
+                try {
+                  const prevR = await client.query(
+                    'SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text',
+                    [row.client_id, row.k]
+                  );
+                  const prev = prevR.rows[0]?.v || {};
+                  const snapR = await client.query(
+                    `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, writer_cid)
+                     VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'cross_client_blocked', $4)
+                     RETURNING id`,
+                    [row.client_id, JSON.stringify(prev), JSON.stringify(row.v), row.v._writerCid || null]
+                  );
+                  snapshotId = snapR.rows[0]?.id;
+                } catch (e) {
+                  console.warn('[REST POST] snapshot insert failed:', e.message);
+                }
+              }
+              try {
+                await client.query(
+                  `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                   VALUES ($1::uuid, $2::text, $3::text, FALSE, $4)`,
+                  [row.client_id, row.k, auditAction,
+                    `rest_post incoming_writer=${incomingWriter} expected=${expectedWriter}`]
+                );
+              } catch (e) {
+                console.warn('[REST POST] audit insert failed:', e.message);
+              }
+              if (shouldSendTgAlert(row.client_id, auditAction)) {
+                sendTgAlertFireAndForget(
+                  `🛡️ *${auditAction}*\n` +
+                  `key: \`${row.k}\`\n` +
+                  `client: \`${expectedWriter}\`\n` +
+                  `source: \`rest_post\`\n` +
+                  `incoming writer: \`${incomingWriter}\`` +
+                  (snapshotId ? `\n_Forensic snapshot #${snapshotId}._` : '')
+                );
+              }
               continue;
             }
 

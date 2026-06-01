@@ -2519,9 +2519,48 @@
         try { voice.setVolume(clamped); } catch (_) {}
       }
 
-      const icon = enabled
-        ? (vol < 0.25 ? '🔈' : vol < 0.7 ? '🔉' : '🔊')
-        : '🔇';
+      // SVG монолинейный спикер — единый стиль с табами и кнопками-иконками
+      // вместо emoji-силуэта (тот рендерится чёрным и выбивается из дизайна).
+      // Количество волн зависит от громкости; muted — крест поверх.
+      function speakerIcon() {
+        const waves = !enabled ? 0
+          : vol < 0.05 ? 0
+          : vol < 0.4 ? 1
+          : vol < 0.75 ? 2
+          : 3;
+        const stroke = 1.7;
+        const common = {
+          fill: 'none', stroke: 'currentColor', strokeWidth: stroke,
+          strokeLinecap: 'round', strokeLinejoin: 'round'
+        };
+        const children = [
+          // Корпус спикера
+          R.createElement('path', Object.assign({ key: 'body',
+            d: 'M3.5 9v6h3.2l5 3.6V5.4L6.7 9H3.5z' }, common))
+        ];
+        if (waves >= 1) {
+          children.push(R.createElement('path', Object.assign({ key: 'w1',
+            d: 'M14.5 9.5c.7.7 1.1 1.6 1.1 2.5s-.4 1.8-1.1 2.5' }, common)));
+        }
+        if (waves >= 2) {
+          children.push(R.createElement('path', Object.assign({ key: 'w2',
+            d: 'M16.7 7.3c1.3 1.3 2 3 2 4.7s-.7 3.4-2 4.7' }, common)));
+        }
+        if (waves >= 3) {
+          children.push(R.createElement('path', Object.assign({ key: 'w3',
+            d: 'M18.9 5.1c1.9 1.9 2.9 4.3 2.9 6.9s-1 5-2.9 6.9' }, common)));
+        }
+        if (!enabled) {
+          children.push(R.createElement('path', Object.assign({ key: 'mute',
+            d: 'M15.5 9.5l5 5M20.5 9.5l-5 5' }, common, {
+            stroke: '#dc2626', strokeWidth: stroke
+          })));
+        }
+        return R.createElement('svg', {
+          width: 22, height: 22, viewBox: '0 0 24 24',
+          'aria-hidden': 'true'
+        }, children);
+      }
 
       return R.createElement('div', {
         className: 'fingers-voice-mini' + (inline ? ' is-inline' : '') + (open ? ' is-open' : '')
@@ -2533,7 +2572,7 @@
           'aria-label': enabled ? 'Голос: включен. Изменить громкость' : 'Голос: выключен. Изменить',
           'aria-expanded': open ? 'true' : 'false',
           onClick: function () { setOpen(function (o) { return !o; }); }
-        }, icon),
+        }, speakerIcon()),
 
         // Popover
         open ? R.createElement('div', {
@@ -3769,8 +3808,9 @@
 
       // Controls — touch targets ≥44px (iOS HIG, потные пальцы после виса).
       showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        // VoiceMiniControls без inline — 44px чтобы матчиться с .__btn высотой
         Fingers.VoiceMiniControls
-          ? h(Fingers.VoiceMiniControls, { inline: true })
+          ? h(Fingers.VoiceMiniControls, null)
           : null,
         h('button', {
           type: 'button',
@@ -6192,7 +6232,7 @@
         rows.push(R.createElement('div', {
           key: 'warn',
           style: danger ? ST_HINT_DANGER : ST_HINT_WARN,
-          className: 'fingers-fs-hint-warn',
+          className: 'fingers-fs-hint-warn' + (danger ? ' is-danger' : ''),
           role: 'alert',
         }, warnText));
       }
@@ -6260,7 +6300,7 @@
         R.createElement(Fingers.SourceBadge, { sourceId: tip.sourceId })));
     }
     children.push(R.createElement('div', { key: 't', style: ST_METHOD_TXT }, tip.text));
-    return R.createElement('div', { style: ST_METHOD }, children);
+    return R.createElement('div', { style: ST_METHOD, className: 'fingers-fs-method-tip' }, children);
   }
 
   // ===== ПУБЛИЧНЫЙ КОМПОНЕНТ =====
@@ -7633,15 +7673,155 @@
     );
   }
 
+  // --- Grip Picker Sheet ─────────────────────────────────────────────────
+  // Bottom-sheet модалка выбора хвата для нового упражнения. Filter chips
+  // по типу нагрузки + grid 8 хватов с safety-меткой (a2-ratio). Возрастной
+  // age-gate автоматически прячет full crimp/mono подросткам.
+
+  const GRIP_CATEGORIES = [
+    { id: 'all',     label: 'Все',       match: function () { return true; } },
+    { id: 'open',    label: 'Открытые',  match: function (g) {
+      return ['openhand4', 'sloper', 'pinch'].indexOf(g.id) >= 0;
+    } },
+    { id: 'crimps',  label: 'Замки',     match: function (g) {
+      return ['halfcrimp', 'fullcrimp'].indexOf(g.id) >= 0;
+    } },
+    { id: 'narrow',  label: 'N-палец',   match: function (g) {
+      return ['front3', 'back3', 'mono'].indexOf(g.id) >= 0;
+    } }
+  ];
+
+  function _dangerLabel(d) {
+    return d === 'low' ? 'низкий риск'
+      : d === 'moderate' ? 'средний риск'
+      : d === 'high' ? 'высокий риск'
+      : d === 'very-high' ? 'максимум' : '';
+  }
+
+  function GripPickerSheet(props) {
+    const onPick = (props && props.onPick) || function () {};
+    const onClose = (props && props.onClose) || function () {};
+    const userAge = props && props.userAge;
+    const [filter, setFilter] = useState('all');
+
+    // Age-gate: даже если grip есть в каталоге, для возраста он может быть
+    // запрещён (full crimp/mono до 18, back-3 до 16 и т.п.). Используем
+    // существующий ageGate.filterGrips — fail-closed.
+    const allGrips = Array.isArray(Fingers.GRIPS) ? Fingers.GRIPS : [];
+    const ageFiltered = (Fingers.ageGate && Fingers.ageGate.filterGrips)
+      ? Fingers.ageGate.filterGrips(allGrips, userAge)
+      : allGrips;
+    const category = GRIP_CATEGORIES.find(function (c) { return c.id === filter; }) || GRIP_CATEGORIES[0];
+    const visible = ageFiltered.filter(category.match);
+
+    // Escape для закрытия
+    useEffect(function () {
+      const onKey = function (e) { if (e.key === 'Escape') onClose(); };
+      document.addEventListener('keydown', onKey);
+      return function () { document.removeEventListener('keydown', onKey); };
+    }, [onClose]);
+
+    return h('div', {
+      className: 'fingers-grip-picker__backdrop',
+      onClick: onClose,
+      role: 'presentation'
+    },
+      h('div', {
+        className: 'fingers-grip-picker',
+        role: 'dialog',
+        'aria-label': 'Выбор хвата',
+        onClick: function (e) { e.stopPropagation(); }
+      },
+        h('div', { className: 'fingers-grip-picker__handle', 'aria-hidden': 'true' }),
+        h('div', { className: 'fingers-grip-picker__header' },
+          h('h2', { className: 'fingers-grip-picker__title' }, 'Выбери хват'),
+          h('button', {
+            type: 'button',
+            className: 'fingers-grip-picker__close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          },
+            h('svg', { width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 1.6 },
+              h('path', { d: 'M5 5l10 10M15 5L5 15', strokeLinecap: 'round' })
+            )
+          )
+        ),
+
+        // Filter chips
+        h('div', { className: 'fingers-grip-picker__filters', role: 'tablist' },
+          GRIP_CATEGORIES.map(function (c) {
+            const active = filter === c.id;
+            const count = ageFiltered.filter(c.match).length;
+            return h('button', {
+              key: c.id,
+              type: 'button',
+              role: 'tab',
+              'aria-selected': active,
+              className: 'fingers-grip-picker__chip' + (active ? ' is-active' : ''),
+              onClick: function () { setFilter(c.id); }
+            }, c.label, count > 0 ? h('span', { className: 'fingers-grip-picker__chip-count' }, count) : null);
+          })
+        ),
+
+        // Grid of grips
+        visible.length === 0
+          ? h('div', { className: 'fingers-grip-picker__empty' },
+              h('p', null, 'Для твоего возраста в этой категории хваты недоступны.'))
+          : h('div', { className: 'fingers-grip-picker__grid' },
+              visible.map(function (g) {
+                return h('button', {
+                  key: g.id,
+                  type: 'button',
+                  className: 'fingers-grip-tile',
+                  'data-fingers-danger': g.dangerLevel,
+                  onClick: function () { onPick(g); }
+                },
+                  h('div', { className: 'fingers-grip-tile__icon', 'aria-hidden': 'true' },
+                    h('img', {
+                      src: '/exercises/' + g.id + '.webp',
+                      alt: '',
+                      loading: 'eager',
+                      decoding: 'async',
+                      onError: function (e) {
+                        // Fallback на emoji-иконку если SVG-арт нет
+                        try {
+                          const span = document.createElement('span');
+                          span.style.fontSize = '32px';
+                          span.textContent = g.icon || '🖐';
+                          e.target.replaceWith(span);
+                        } catch (_) {}
+                      }
+                    })
+                  ),
+                  h('div', { className: 'fingers-grip-tile__name' }, g.label),
+                  h('div', { className: 'fingers-grip-tile__meta' },
+                    h('span', { className: 'fingers-grip-tile__a2' },
+                      'A2 ×' + (g.a2ForceRatio || 1).toFixed(1)),
+                    h('span', { className: 'fingers-grip-tile__danger' }, _dangerLabel(g.dangerLevel))
+                  )
+                );
+              })
+            )
+      )
+    );
+  }
+
   // --- Constructor tab ---
   function ConstructorTab({ exercises, setExercises, userBoard, userAge, programName, onUnbindProgram }) {
-    const add = function () {
+    const [pickerOpen, setPickerOpen] = useState(false);
+
+    const addExerciseForGrip = function (grip) {
+      const opts = { boardId: userBoard, gripId: grip && grip.id ? grip.id : 'openhand4' };
       const blank = Fingers.createBlankExercise
-        ? Fingers.createBlankExercise({ boardId: userBoard })
-        : { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+        ? Fingers.createBlankExercise(opts)
+        : { gripId: opts.gripId, edgeSizeMm: 20, addedWeightKg: 0,
             hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 };
       setExercises(exercises.concat([blank]));
+      setPickerOpen(false);
     };
+
+    const add = function () { setPickerOpen(true); };
 
     const updateAt = function (i, updated) {
       const next = exercises.slice();
@@ -7737,7 +7917,13 @@
               onClick: add,
               style: { width: '100%', marginTop: 16 }
             }, '+ Добавить ещё упражнение')
-          )
+          ),
+      // Grip picker bottom-sheet (рендерится поверх контента)
+      pickerOpen ? h(GripPickerSheet, {
+        userAge: userAge,
+        onPick: addExerciseForGrip,
+        onClose: function () { setPickerOpen(false); }
+      }) : null
     );
   }
 
