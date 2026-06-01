@@ -221,6 +221,45 @@
         gut_health: 70
     };
 
+    // Short-TTL memoization for detect(). Boot fires up to 7 different callers
+    // (badge, crash_risk widget, EarlyWarningCard, InsightsTab, meal_recommender,
+    // EarlyWarningBadge, dashboard widgets) within a 1-2s window. Each does the
+    // same heavy work and prints the same 4 ui.* tables. TTL is tight (10s) so
+    // genuine state changes (new day data, profile edits) still bypass.
+    const _DETECT_CACHE_TTL_MS = 10000;
+    const _DETECT_CACHE_MAX = 8;
+    const _detectCache = new Map();
+
+    function _detectCacheSig(days, profile, pIndex, options) {
+        const dlen = Array.isArray(days) ? days.length : 0;
+        const first = dlen > 0 ? (days[0] && days[0].date) || '?' : '0';
+        const last = dlen > 0 ? (days[dlen - 1] && days[dlen - 1].date) || '?' : '0';
+        const mode = (options && options.mode) || 'full';
+        const incDet = (options && options.includeDetails) ? '1' : '0';
+        const hasCP = (options && options.currentPatterns) ? '1' : '0';
+        const profId = (profile && (profile.id || profile.userId || profile.email)) || '?';
+        const pidx = Array.isArray(pIndex) ? pIndex.length : (pIndex ? '?' : 0);
+        return `${mode}|${first}|${last}|${dlen}|${incDet}|${hasCP}|${profId}|${pidx}`;
+    }
+
+    function _detectCacheGet(sig) {
+        const e = _detectCache.get(sig);
+        if (!e) return null;
+        if (Date.now() - e.ts > _DETECT_CACHE_TTL_MS) {
+            _detectCache.delete(sig);
+            return null;
+        }
+        return e.result;
+    }
+
+    function _detectCachePut(sig, result) {
+        if (_detectCache.size >= _DETECT_CACHE_MAX) {
+            const firstKey = _detectCache.keys().next().value;
+            if (firstKey !== undefined) _detectCache.delete(firstKey);
+        }
+        _detectCache.set(sig, { ts: Date.now(), result });
+    }
+
     // Severity weights for priority calculation
     const SEVERITY_WEIGHTS = {
         high: 3,
@@ -4765,9 +4804,29 @@
 
 
 
+    // Memoizing wrapper — see _detectCache comments. Only `result.available`
+    // results are cached; insufficient_data short-circuits don't pin state.
+    function detectCached(days, profile, pIndex, options) {
+        const sig = _detectCacheSig(days, profile, pIndex, options);
+        const cached = _detectCacheGet(sig);
+        if (cached) {
+            console.info('ews / detect ⏭️ cache hit (memoized)', {
+                sig,
+                ttlMs: _DETECT_CACHE_TTL_MS
+            });
+            return cached;
+        }
+        const result = detectEarlyWarnings(days, profile, pIndex, options);
+        if (result && result.available) {
+            _detectCachePut(sig, result);
+        }
+        return result;
+    }
+
     // Export API
     HEYS.InsightsPI.earlyWarning = {
-        detect: detectEarlyWarnings,
+        detect: detectCached,
+        detectUncached: detectEarlyWarnings,
         trackTrends: trackWarningTrends,
         prioritize: prioritizeWarnings,
         calculateGlobalScore: calculateEwsGlobalScore,
