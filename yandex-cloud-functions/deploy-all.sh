@@ -426,7 +426,9 @@ if [ -n "$TARGET_FUNC" ]; then
 else
     # Deploy all functions
     echo -e "${YELLOW}🚀 Deploying all functions...${NC}"
-    for func_name in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-sms heys-api-health heys-api-payments; do
+    # heys-api-sms удалён 2026-05-22 (см. apps/web/heys_consents_v1.js:53) — исключён
+    # из auto-deploy чтобы CI не падал с "function not found"
+    for func_name in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-health heys-api-payments; do
         deploy_function "$func_name"
     done
     

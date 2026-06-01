@@ -40,7 +40,11 @@ broken, what was fixed, and the pattern to watch for.
   сессии и автоматический sync не пишут в changelog (changelog — только для
   явных курaтор-actions типа `water_set`, `meal_added`).
 
-### Root cause (гипотеза, не подтверждён)
+### Root cause (первоначальная гипотеза — SUPERSEDED, см. Update 2026-05-28 ниже)
+
+> ⚠ Эта секция оставлена как исторический record первого захода. Реальный root
+> cause — `cloud.saveKey` ignores whitelist (см. Update). Не цитировать как
+> факт.
 
 Курaтор-страница имеет свои global LS keys (`heys_products`, `heys_clients`,
 `heys_client_current`, `heys_advice_*`, `heys_ews_*`). При открытии клиента
@@ -93,12 +97,30 @@ restore.
 Любая попытка курaторского write (`user_id IS NOT NULL`) в её `client_kv_store`
 теперь RAISE EXCEPTION на уровне БД. PIN-сессии не блокируются.
 
-### Полный план фиксов
+### Полный план фиксов (deployment status 2026-06-01)
 
 См. `plans/toasty-sauteeing-porcupine.md` — Tickets I (whitelist), J (saveKey
 fix), A (cloud shrink-guard), B (server blacklist + client defence), D (status
 code + client invalid_session handler), F (audit trigger на revoke), G (fetch
-wrapper). Deployment order: I → J → A → B → F → D → снять curator_write_locked.
+wrapper).
+
+**Deployed:**
+
+- Ticket I — `CLIENT_SPECIFIC_KEYS` whitelist
+  (`heys_storage_supabase_v1.js:232`)
+- Ticket J — `isNonClientDataKey` gate в `saveClientKey`
+  (`heys_storage_supabase_v1.js:10252`) + defence-in-depth в `cloud.upsert` для
+  direct REST path (`:10699`)
+- Ticket D — invalid_session detection (`:4035`)
+- Ticket F — `database/2026-05-28_audit_session_revoke.sql`
+- Migrations: `curator_write_lock.sql` + `_default_on.sql` (default-on для всех
+  клиентов, не per-client opt-in) + `_unlock.sql` (per-client unlock когда нужен
+  legitimate курaтор-write) + `fix_pin_path_user_id.sql`
+
+**Follow-up incident 2026-05-31** (Poplanton ↔ Aleksandra) — после Tickets J
+обнаружилось что direct REST путь в `client_kv_store` обходил
+`isNonClientDataKey` check на верхних уровнях. Защитили на уровне `cloud.upsert`
+(`heys_storage_supabase_v1.js:10695-10712`).
 
 ---
 
@@ -168,7 +190,8 @@ catch»**. Не дочитали
 в SQL функции (`database/2026-05-25_client_event_log.sql:110-113`). Этот
 catch-all **физически блокирует** все exception'ы → клиент получил бы 200 OK с
 `{error: SQLERRM}`, не 500. Реально 500 = JS-уровень exception в Yandex функции.
-Defer'нуто, см. todo.md, commit 48244ecf.
+Изначально defer'нули (commit 48244ecf), но root cause найден через несколько
+часов — см. POSTSCRIPT ниже.
 
 #### POSTSCRIPT (через несколько часов): root cause найден — TYPE_HINTS
 
@@ -292,11 +315,6 @@ merge в main срабатывают cross-cutting эффекты:
 3. `pnpm test && pnpm lint && pnpm tsc` — финальный gate.
 4. `git push` — теперь pre-push hook пройдёт.
 
-Это документировано в `CLAUDE.md` → «Parallel agents: HEYS-specific post-merge».
-Правило `Parallel-first execution` в user-level `~/.claude/CLAUDE.md` обязывает
-делать post-merge pre-flight check как часть workflow, а не вспоминать когда
-упал push.
-
 ---
 
 ## Orphan-баннер + cleanup hardening (2026-05-24)
@@ -346,11 +364,12 @@ TypeA, transient import-pasted объекты), **не проставляя tomb
   для случайной реактивации.
 
 Дальнейшие волны (Wave 2-4): централизованный shrink-guard в
-`HEYS.products.setAll()` + `OverlayStore.writeRaw()`; shared-fallback в
-renderOrphanAlert; defensive re-check в getDayData; авто-clone из shared при
-тихом resolve; tombstone-aware shrink-tolerance в cloud-sync (закрывает live bug
-— раньше >5% shrink REJECT в infinite loop, теперь pass если все исчезновения
-tombstoned).
+`HEYS.products.setAll()` + `OverlayStore.writeRaw()` (✅ **deployed** в
+`heys_core_v12.js:4671-4791` с kill-switch `__heys_disable_shrink_guard__`);
+shared-fallback в renderOrphanAlert; defensive re-check в getDayData; авто-clone
+из shared при тихом resolve; tombstone-aware shrink-tolerance в cloud-sync
+(закрывает live bug — раньше >5% shrink REJECT в infinite loop, теперь pass если
+все исчезновения tombstoned).
 
 ### Урок
 

@@ -221,6 +221,9 @@ apps/web/__tests__/heys-backup-*.json
 # Manual backup snapshots (user-curated, stay local)
 .backups/
 
+# Local-only diagnostic baselines (output scripts/db/audit-baseline-snapshot.sh)
+data/
+
 # Cloud function local build artifacts
 yandex-cloud-functions/*.zip
 yandex-cloud-functions/backup-*.json
