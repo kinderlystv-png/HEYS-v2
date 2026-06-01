@@ -105,6 +105,9 @@
 
             saveDeletedProductsData(deletedProductsData);
             console.log(`[HEYS] 🚫 Продукт добавлен в игнор-лист: "${name}"${reason ? ` reason=${reason}` : ''}`);
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('heys:deleted-products-changed', { detail: { action: 'add', name, id, fingerprint, reason } }));
+            }
         },
         isDeleted(nameOrId) {
             if (!nameOrId) return false;
