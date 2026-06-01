@@ -506,11 +506,16 @@
     _checkInFlight = true;
     try {
       if (!HEYS.YandexAPI?.getMyCuratorChangelogSince) return;
-      // 🚪 Banner — курaтор-only feature (показывает «куратор внёс изменения»).
-      // PIN-сессия не имеет heys_curator_session токена → RPC всегда вернёт
-      // 'No session token'. Гейтим тут, чтобы не делать пустой RPC-call и
-      // не плодить warning'и для каждого heysSyncCompleted.
-      if (!HEYS.YandexAPI.getCuratorToken?.()) return;
+      // 🚪 Banner показывает PIN-клиенту «куратор внёс изменения в твои данные».
+      // 🛡️ FIX 2026-06-01: раньше gate был на getCuratorToken() — это неверно,
+      // RPC get_my_curator_changelog_since использует heys_session_token (PIN),
+      // а не heys_curator_session. С прежним gate'ом banner НИКОГДА не
+      // показывался у PIN-клиентов → ack никогда не вызывался → unacked count
+      // постоянно рос (см. nightly KV health alert "169 unacked"). Гейтим
+      // на наличие PIN session token напрямую — то что RPC требует.
+      let _hasPinSession = false;
+      try { _hasPinSession = !!localStorage.getItem('heys_session_token'); } catch (_) { /* noop */ }
+      if (!_hasPinSession) return;
       const res = await HEYS.YandexAPI.getMyCuratorChangelogSince();
       if (!res || res.ok === false) {
         // 'No session token' уже отфильтрован гейтом выше; 'invalid_session'
