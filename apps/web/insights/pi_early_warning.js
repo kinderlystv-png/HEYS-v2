@@ -4809,6 +4809,21 @@
     function detectCached(days, profile, pIndex, options) {
         const sig = _detectCacheSig(days, profile, pIndex, options);
         const cached = _detectCacheGet(sig);
+        // TEMP DIAG: console.warn survives terser drop_console. Use to identify
+        // which consumers call detect() and why memoization misses. Remove after
+        // diagnosis — tracking issue: ews 2-cycle source. Date: 2026-06-01.
+        try {
+            const _stack = (new Error('ews-trace')).stack;
+            const _frames = _stack ? _stack.split('\n').slice(2, 6).map(s => s.trim()) : [];
+            console.warn('ews / detect 🎯 caller', {
+                mode: (options && options.mode) || 'full',
+                daysLen: Array.isArray(days) ? days.length : 0,
+                hasOpts: !!options,
+                hit: !!cached,
+                sig,
+                frames: _frames
+            });
+        } catch (_) { /* noop */ }
         if (cached) {
             console.info('ews / detect ⏭️ cache hit (memoized)', {
                 sig,
