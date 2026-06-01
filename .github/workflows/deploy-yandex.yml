@@ -3,7 +3,12 @@ name: Deploy to Yandex Cloud
 on:
   push:
     branches: [main]
-  workflow_dispatch: # Ручной запуск
+  workflow_dispatch:
+    inputs:
+      force_full:
+        description: "Skip release-only classifier, run full build + upload"
+        type: boolean
+        default: false
 
 # Сериализуем deploy'и на main: два одновременных push'а (или push + ручной
 # workflow_dispatch) пойдут в очередь, не параллельно. cancel-in-progress: false
@@ -45,16 +50,44 @@ jobs:
           node-version: "18"
 
       - id: classify
-        name: Classify push (release-only vs code-bearing)
+        name: Classify push (S3-aware, release-only vs code-bearing)
+        # 2026-06-01: переход с $BEFORE..$AFTER на deployed-hash-as-baseline.
+        # Старая логика смотрела только diff одного push'а — после провалившегося
+        # full deploy следующий release-bump push'еr классифицировался как fast-path
+        # и оставлял прод с устаревшими бандлами (incident 2026-06-01: 5 commits
+        # застряли). Теперь baseline = hash из public build-meta.json на S3:
+        # если между deployed и HEAD есть хоть один code-bearing commit → full build.
         run: |
-          BEFORE="${{ github.event.before }}"
-          AFTER="${{ github.event.after }}"
-          if node scripts/prepare-release.mjs --is-release-only-push "$BEFORE" "$AFTER"; then
+          if [ "${{ github.event.inputs.force_full }}" = "true" ]; then
+            echo "🔧 Manual force_full=true — bypass classifier"
+            echo "release_only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          DEPLOYED_HASH=$(curl -fsS -m 15 "https://storage.yandexcloud.net/heys-app/build-meta.json?bust=$(date +%s)" 2>/dev/null \
+            | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{console.log(JSON.parse(d).hash||"")}catch{console.log("")}})' \
+            || echo "")
+
+          if [ -z "$DEPLOYED_HASH" ]; then
+            echo "⚠️ Cannot fetch deployed build-meta.json — safe default: full build"
+            echo "release_only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if ! git cat-file -e "$DEPLOYED_HASH" 2>/dev/null; then
+            echo "⚠️ Deployed hash $DEPLOYED_HASH not in git history (force-push? rebase?) — full build"
+            echo "release_only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "🔍 Deployed hash baseline: $DEPLOYED_HASH"
+
+          if node scripts/prepare-release.mjs --is-release-only-push "$DEPLOYED_HASH" "HEAD"; then
             echo "release_only=true" >> $GITHUB_OUTPUT
-            echo "✅ Fast-path: only release-meta files changed"
+            echo "✅ Fast-path: only release-meta files changed since $DEPLOYED_HASH"
           else
             echo "release_only=false" >> $GITHUB_OUTPUT
-            echo "📦 Full build: push contains code changes"
+            echo "📦 Full build: code changes since $DEPLOYED_HASH"
           fi
 
   build-and-deploy:
@@ -702,6 +735,62 @@ jobs:
           echo "Full bundles unchanged — skipped 11.84MB rebuild + upload." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Commit: \`${GITHUB_SHA::7}\`" >> $GITHUB_STEP_SUMMARY
+
+  # Post-deploy sanity check: server actually reflects HEAD.
+  # 2026-06-01: добавлено как страховка от "deploy success, но прод не обновился"
+  # (incident: fast-path после failed full деплоя оставлял прод на старом hash'е).
+  # Full-build path требует exact match, fast-path допускает ancestor (build-meta
+  # часто отстаёт на 1 commit при chore(release) bumps).
+  verify-deploy:
+    name: Verify deployed state vs HEAD
+    runs-on: ubuntu-latest
+    needs: [detect, build-and-deploy, fast-release-bump]
+    if: |
+      always() && needs.detect.result == 'success' &&
+      (needs.build-and-deploy.result == 'success' || needs.fast-release-bump.result == 'success')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compare deployed hash with HEAD
+        run: |
+          # Дать S3/CDN время на propagation.
+          sleep 5
+
+          DEPLOYED=$(curl -fsS -m 15 "https://storage.yandexcloud.net/heys-app/build-meta.json?bust=$(date +%s)" 2>/dev/null \
+            | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{console.log(JSON.parse(d).hash||"")}catch{console.log("")}})' \
+            || echo "")
+          HEAD=$(git rev-parse --short=8 HEAD)
+          RELEASE_ONLY="${{ needs.detect.outputs.release_only }}"
+
+          echo "🔍 Deployed: $DEPLOYED"
+          echo "🔍 HEAD:     $HEAD"
+          echo "🔍 Path:     $([ "$RELEASE_ONLY" = "true" ] && echo fast-deploy || echo full-build)"
+
+          if [ -z "$DEPLOYED" ]; then
+            echo "::error::Cannot fetch deployed build-meta.json after deploy — upload broken or CDN stale"
+            exit 1
+          fi
+
+          if [ "$DEPLOYED" = "$HEAD" ]; then
+            echo "✅ Exact match — deploy verified"
+            exit 0
+          fi
+
+          if [ "$RELEASE_ONLY" = "true" ]; then
+            # Fast-deploy не запускает update-version.cjs — build-meta может отставать
+            # на 1+ commit. Допускаем если deployed = ancestor HEAD.
+            if git merge-base --is-ancestor "$DEPLOYED" HEAD 2>/dev/null; then
+              echo "⚠️ Hash mismatch ($DEPLOYED != $HEAD) but deployed is ancestor of HEAD — OK for fast-path"
+              exit 0
+            fi
+            echo "::error::Fast-deploy left server with hash $DEPLOYED — NOT in HEAD history"
+            exit 1
+          fi
+
+          echo "::error::Full build success но server hash $DEPLOYED != HEAD $HEAD — update-version.cjs или upload broken"
+          exit 1
 
   # Cloud Functions деплоятся отдельным workflow: .github/workflows/cloud-functions-deploy.yml
   # Это предотвращает параллельный двойной деплой при push в main.
