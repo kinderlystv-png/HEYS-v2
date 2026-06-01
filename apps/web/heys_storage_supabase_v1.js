@@ -12700,6 +12700,14 @@
     };
 
     console.info(`[HEYS.sync] 🔄 Переключение клиента: ${oldClientId?.substring(0, 8) || 'нет'} → ${newClientId.substring(0, 8)}`);
+    try {
+      global.HEYS?.__pt?.('SWITCH_START', {
+        oldCid: oldClientId ? oldClientId.slice(0, 8) : null,
+        newCid: newClientId.slice(0, 8),
+        isCuratorSwitch: _isCuratorSwitch,
+        pendingBefore: _pendingBeforeSwitch,
+      });
+    } catch (_) { /* noop */ }
 
     // 1. Сначала синхронизируем текущие данные в облако (если есть pending)
     const _pendingBeforeSwitch = oldClientId ? cloud.getPendingCount() : 0;
@@ -13053,8 +13061,22 @@
         }
       } catch (_) { }
       try {
+        global.HEYS?.__pt?.('SWITCH_REPLAY', {
+          oldCid: oldClientId ? oldClientId.slice(0, 8) : null,
+          newCid: newClientId ? newClientId.slice(0, 8) : null,
+          deferredCount: _deferredKeysSnapshot.length,
+          deferredKeys: _deferredKeysSnapshot.slice(0, 10),
+        });
+      } catch (_) { /* noop */ }
+      try {
         cloud._flushDeferredWritesAfterSwitch(newClientId, oldClientId);
       } catch (_) { }
+      try {
+        global.HEYS?.__pt?.('SWITCH_END', {
+          oldCid: oldClientId ? oldClientId.slice(0, 8) : null,
+          newCid: newClientId ? newClientId.slice(0, 8) : null,
+        });
+      } catch (_) { /* noop */ }
       // 📝 Switch audit log — пишем после replay чтобы видеть финальное состояние.
       try {
         const startedAtMs = (cloud._switchSnapshot && cloud._switchSnapshot.startedAtMs) || 0;

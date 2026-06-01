@@ -209,6 +209,58 @@
   }
 
   function ns() { return (global.HEYS && global.HEYS.currentClientId) || ''; }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 🔍 POLLUTION-TRACE (added 2026-06-01 incident 3): instrument write paths
+  // и switchClient lifecycle, чтобы при следующем pollution-incident'е
+  // можно было точно установить КОГДА данные одного клиента ушли под
+  // scope другого. Логи с префиксом [POLLUTION-TRACE] для grep'а. Также
+  // буферизуем последние 500 записей в HEYS.__pollutionTrace для post-mortem.
+  // ────────────────────────────────────────────────────────────────────────
+  function __ptFingerprint(v) {
+    if (!v || typeof v !== 'object') return null;
+    try {
+      const fp = {};
+      if (Array.isArray(v.meals)) {
+        fp.meals = v.meals.length;
+        if (v.meals[0] && typeof v.meals[0] === 'object') {
+          fp.meal0 = String(v.meals[0].name || v.meals[0].title || '').slice(0, 30);
+        }
+      }
+      if (v.weightMorning != null) fp.wm = v.weightMorning;
+      if (v.firstName != null) fp.fn = String(v.firstName).slice(0, 20);
+      if (v.weight != null) fp.w = v.weight;
+      if (v.gender != null) fp.g = v.gender;
+      if (v._writerCid) fp.wc = String(v._writerCid).slice(0, 8);
+      if (v.updatedAt != null) fp.ts = v.updatedAt;
+      return fp;
+    } catch (_) { return null; }
+  }
+  function __pt(stage, payload) {
+    try {
+      const entry = {
+        ts: new Date().toISOString(),
+        stage,
+        cid: ns().slice(0, 8) || null,
+        switchInProgress: !!(global.HEYS?.cloud?._switchClientInProgress),
+        ...payload,
+      };
+      const arr = global.HEYS.__pollutionTrace = global.HEYS.__pollutionTrace || [];
+      arr.push(entry);
+      if (arr.length > 500) arr.shift();
+      // Compact line for console
+      const tail = Object.entries(payload || {})
+        .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`)
+        .join(' ');
+      console.info(`[POLLUTION-TRACE] ${stage} cid=${entry.cid} switching=${entry.switchInProgress} ${tail}`);
+    } catch (_) { /* never break */ }
+  }
+  // Expose helper for instrumentation in other modules
+  global.HEYS.__pt = __pt;
+  global.HEYS.__ptFingerprint = __ptFingerprint;
+  global.HEYS.__ptDump = function () {
+    return (global.HEYS.__pollutionTrace || []).slice(-100);
+  };
   function scoped(k) {
     const cid = ns();
     if (!cid) return k;
@@ -587,12 +639,34 @@
     if (!m) return v;
     const cid = m[1];
     if (v._writerCid === cid) return v;
+    // 🔍 trace: writerCid changes (включая first-tag undefined→cid, и cross-cid re-tag).
+    try {
+      __pt('TAG_CID', {
+        sk: sk.slice(0, 60),
+        keyCid: cid.slice(0, 8),
+        prevWriter: v._writerCid ? String(v._writerCid).slice(0, 8) : 'null',
+        mealsLen: Array.isArray(v.meals) ? v.meals.length : null,
+      });
+    } catch (_) { /* noop */ }
     return { ...v, _writerCid: cid };
   }
 
   Store.set = function (k, v) {
     const sk = scoped(k);
     v = tagDayV2WriterCid(sk, v);
+    // 🔍 trace: log every write для guarded keys (dayv2/profile/norms/game/hr_zones).
+    try {
+      if (/^heys_(?:[0-9a-f-]{36}_)?(?:profile|norms|game|hr_zones|dayv2_)/i.test(sk)) {
+        const stack = (new Error()).stack || '';
+        const caller = stack.split('\n').slice(2, 4).map(s => s.trim().replace(/^at\s+/, '').slice(0, 80)).join(' ← ');
+        __pt('STORE_SET', {
+          k: k.slice(0, 60),
+          sk: sk.slice(0, 80),
+          fp: __ptFingerprint(v),
+          caller,
+        });
+      }
+    } catch (_) { /* noop */ }
     // 🔧 v69 FIX: Блокируем все записи во время switchClient.
     // Gate flow теперь НЕ меняет currentClientId до завершения switch,
     // но на случай если другой путь всё же вызовет Store.set — блокируем.

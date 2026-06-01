@@ -114,10 +114,10 @@ apps/web/heys_day_hooks.js:39
 apps/web/heys_fingers_bundle_v1.js:2373
 apps/web/heys_fingers_bundle_v1.js:2726
 apps/web/heys_fingers_bundle_v1.js:2991
-apps/web/heys_fingers_bundle_v1.js:3904
-apps/web/heys_fingers_bundle_v1.js:3984
-apps/web/heys_fingers_bundle_v1.js:6537
-apps/web/heys_fingers_bundle_v1.js:9517
+apps/web/heys_fingers_bundle_v1.js:3861
+apps/web/heys_fingers_bundle_v1.js:3941
+apps/web/heys_fingers_bundle_v1.js:6494
+apps/web/heys_fingers_bundle_v1.js:9474
 apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
@@ -238,5 +238,5 @@ apps/web/fingers/heys_fingers_records_store_v1.js:56
 apps/web/fingers/heys_fingers_session_persistence_v1.js:60
 apps/web/fingers/heys_fingers_session_persistence_v1.js:140
 apps/web/fingers/heys_fingers_voice_v1.js:167
-apps/web/heys_storage_layer_v1.js:1510
+apps/web/heys_storage_layer_v1.js:1584
 apps/web/advice/_core.js:3290

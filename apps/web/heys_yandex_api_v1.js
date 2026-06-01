@@ -911,6 +911,18 @@
       // имеет ownership guard через clients.curator_id = caller.
       const curatorToken = getCuratorToken();
       if (curatorToken) {
+        try {
+          if (/^heys_(?:profile|norms|game|hr_zones|dayv2_)/i.test(String(key))) {
+            const stack = (new Error()).stack || '';
+            const caller = stack.split('\n').slice(2, 5).map(s => s.trim().replace(/^at\s+/, '').slice(0, 70)).join(' ← ');
+            global.HEYS?.__pt?.('RPC_SAVE_CURATOR', {
+              targetCid: String(clientId).slice(0, 8),
+              k: String(key).slice(0, 60),
+              fp: global.HEYS?.__ptFingerprint?.(value),
+              caller,
+            });
+          }
+        } catch (_) { /* noop */ }
         const result = await rpc('batch_upsert_client_kv_by_curator', {
           p_client_id: clientId,
           p_items: [{ k: key, v: value }],
@@ -1391,6 +1403,23 @@
       const curatorToken = getCuratorToken();
       if (curatorToken) {
         try {
+          try {
+            const guardedItems = items.filter(it => it && typeof it.k === 'string' &&
+              /^heys_(?:profile|norms|game|hr_zones|dayv2_)/i.test(it.k));
+            if (guardedItems.length > 0) {
+              const stack = (new Error()).stack || '';
+              const caller = stack.split('\n').slice(2, 5).map(s => s.trim().replace(/^at\s+/, '').slice(0, 70)).join(' ← ');
+              global.HEYS?.__pt?.('RPC_BATCH_CURATOR', {
+                targetCid: String(clientId).slice(0, 8),
+                totalItems: items.length,
+                guardedItems: guardedItems.map(it => ({
+                  k: it.k.slice(0, 50),
+                  fp: global.HEYS?.__ptFingerprint?.(it.v),
+                })),
+                caller,
+              });
+            }
+          } catch (_) { /* noop */ }
           const result = await rpc('batch_upsert_client_kv_by_curator', {
             p_client_id: clientId,
             p_items: items,
@@ -1559,6 +1588,18 @@
     if (_GUARDED_KEYS.indexOf(k) !== -1 && v && typeof v === 'object' && !Array.isArray(v) && clientId) {
       try { v = Object.assign({}, v, { _writerCid: clientId }); } catch (_) { /* readonly object — skip */ }
     }
+    try {
+      if (_GUARDED_KEYS.indexOf(k) !== -1 || /^heys_dayv2_/i.test(k)) {
+        const stack = (new Error()).stack || '';
+        const caller = stack.split('\n').slice(2, 5).map(s => s.trim().replace(/^at\s+/, '').slice(0, 70)).join(' ← ');
+        global.HEYS?.__pt?.('RPC_MERGE_SAVE', {
+          targetCid: String(clientId).slice(0, 8),
+          k: k.slice(0, 60),
+          fp: global.HEYS?.__ptFingerprint?.(v),
+          caller,
+        });
+      }
+    } catch (_) { /* noop */ }
     try {
       // 🛡️ CRITICAL FIX (2026-05-17): curator JWT path MUST be checked BEFORE
       // session token path. Otherwise stale `heys_session_token` left in LS by

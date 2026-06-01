@@ -2495,6 +2495,88 @@
     return 'none';
   };
 
+  // ===== VoiceMiniControls (React) =====
+  // Компактные controls для inline-рендера в шапке WarmupRunner и LiveSession:
+  // иконка 🔊/🔇 (toggle enabled) + раскрывающаяся панелька со слайдером громкости.
+  // Изменения сразу пишутся в LS через voice.setEnabled/setVolume.
+  // Используется как: Fingers.VoiceMiniControls({ inline?: true })
+  const R = (typeof window !== 'undefined') ? window.React : null;
+  if (R && R.createElement) {
+    Fingers.VoiceMiniControls = function VoiceMiniControls(props) {
+      const inline = !!(props && props.inline);
+      const initial = voice.getSettings();
+      const [open, setOpen] = R.useState(false);
+      const [enabled, setEnabledLocal] = R.useState(initial.enabled !== false);
+      const [vol, setVolLocal] = R.useState(typeof initial.volume === 'number' ? initial.volume : 0.8);
+
+      function applyEnabled(b) {
+        setEnabledLocal(b);
+        try { voice.setEnabled(b); } catch (_) {}
+      }
+      function applyVolume(v) {
+        const clamped = Math.max(0, Math.min(1, Number(v) || 0));
+        setVolLocal(clamped);
+        try { voice.setVolume(clamped); } catch (_) {}
+      }
+
+      const icon = enabled
+        ? (vol < 0.25 ? '🔈' : vol < 0.7 ? '🔉' : '🔊')
+        : '🔇';
+
+      return R.createElement('div', {
+        className: 'fingers-voice-mini' + (inline ? ' is-inline' : '') + (open ? ' is-open' : '')
+      },
+        // Trigger
+        R.createElement('button', {
+          type: 'button',
+          className: 'fingers-voice-mini__btn',
+          'aria-label': enabled ? 'Голос: включен. Изменить громкость' : 'Голос: выключен. Изменить',
+          'aria-expanded': open ? 'true' : 'false',
+          onClick: function () { setOpen(function (o) { return !o; }); }
+        }, icon),
+
+        // Popover
+        open ? R.createElement('div', {
+          className: 'fingers-voice-mini__pop',
+          role: 'dialog',
+          'aria-label': 'Настройки голоса'
+        },
+          // Row 1: enable toggle
+          R.createElement('label', { className: 'fingers-voice-mini__row' },
+            R.createElement('span', { className: 'fingers-voice-mini__label' }, 'Голосовое сопровождение'),
+            R.createElement('input', {
+              type: 'checkbox',
+              className: 'fingers-voice-mini__toggle',
+              checked: enabled,
+              onChange: function (e) { applyEnabled(!!e.target.checked); }
+            })
+          ),
+          // Row 2: volume slider (disabled if voice off)
+          R.createElement('label', { className: 'fingers-voice-mini__row fingers-voice-mini__row--volume' },
+            R.createElement('span', { className: 'fingers-voice-mini__label' },
+              'Громкость',
+              R.createElement('span', { className: 'fingers-voice-mini__value' }, Math.round(vol * 100) + '%')
+            ),
+            R.createElement('input', {
+              type: 'range',
+              className: 'fingers-voice-mini__slider',
+              min: 0, max: 1, step: 0.05,
+              value: vol,
+              disabled: !enabled,
+              onChange: function (e) { applyVolume(e.target.value); },
+              'aria-label': 'Громкость голоса'
+            })
+          ),
+          R.createElement('button', {
+            type: 'button',
+            className: 'fingers-voice-mini__close',
+            onClick: function () { setOpen(false); }
+          }, 'Готово')
+        ) : null
+      );
+    };
+  }
+
   // Serial queue: чтобы фразы НЕ накладывались друг на друга, каждый say
   // ждёт завершения предыдущего. Используется fire-and-forget из timer
   // (без await), и без очереди MP3 проигрывались параллельно.
@@ -3563,6 +3645,9 @@
   }
 
   // ─── Component: CountdownDisplay ─────────────────────────────────────────
+  // Wave 6 premium: phase-color theming через data-phase, круговое progress-кольцо
+  // с тенью и pulse'ом digit на финальных 3 секундах HANG/REST. Breathing-ring
+  // на отдыхе (медленный scale 1↔1.02) подсказывает ритм дыхания.
   function CountdownDisplay(props) {
     const React = global.React;
     if (!React) return null;
@@ -3573,14 +3658,15 @@
       gripLabel, gripId, edgeLabel, addedWeightKg, onPause, onAbort, onSkip,
     } = props || {};
 
-    // Visual style depending on phase
-    const phaseColor = state === STATES.HANG ? '#dc2626'        // red — work
-      : state === STATES.REST ? '#0891b2'                       // cyan — rest
-      : state === STATES.BIG_REST ? '#0e7490'                   // dark cyan — big rest
-      : state === STATES.SET_PREP ? '#ca8a04'                   // amber — prep
-      : state === STATES.PAUSED ? '#6b7280'                     // gray — paused
-      : state === STATES.DONE ? '#16a34a'                       // green — done
-      : '#374151';                                              // neutral
+    // Phase → CSS data-attr value (используется в .heys-fingers-countdown[data-phase=...])
+    const phaseKey = state === STATES.HANG ? 'hang'
+      : state === STATES.REST ? 'rest'
+      : state === STATES.BIG_REST ? 'big-rest'
+      : state === STATES.SET_PREP ? 'prep'
+      : state === STATES.PAUSED ? 'paused'
+      : state === STATES.DONE ? 'done'
+      : state === STATES.ABORTED ? 'aborted'
+      : 'idle';
 
     const phaseLabel = state === STATES.HANG ? 'ВИС'
       : state === STATES.REST ? 'Отдых'
@@ -3591,9 +3677,8 @@
       : state === STATES.ABORTED ? 'Прервано'
       : state === STATES.IDLE ? 'Готов к старту' : state;
 
-    // SVG ring progress — 0..1 based on phase progress (computed by caller via secondsLeft + maxPhase).
-    // Здесь упрощённо: показываем только заполнение по доле от 60s ceiling.
-    const ringRadius = 84;
+    // SVG ring progress — 0..1 based on phase progress.
+    const ringRadius = 86;
     const ringCircum = 2 * Math.PI * ringRadius;
     const phaseMaxSec = state === STATES.HANG ? Math.max(secondsLeft, 7)
       : state === STATES.REST ? Math.max(secondsLeft, 3)
@@ -3603,151 +3688,108 @@
     const ratio = Math.max(0, Math.min(1, secondsLeft / phaseMaxSec));
     const dashoffset = ringCircum * (1 - ratio);
 
+    // Финальные 3 сек активной фазы — pulse'нем digit. Активно только на работе/
+    // отдыхе (на паузе/done — нет смысла).
+    const isCountingActive = state === STATES.HANG || state === STATES.REST
+      || state === STATES.BIG_REST || state === STATES.SET_PREP;
+    const isFinalCount = isCountingActive && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
+
+    const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
+
     return h('div', {
       className: 'heys-fingers-countdown',
-      style: {
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: '14px', padding: '20px 24px', fontFamily: 'system-ui, -apple-system, sans-serif',
-      },
+      'data-phase': phaseKey
     },
-      // Top info — set/rep counter
-      h('div', { style: { fontSize: '14px', color: '#6b7280', textAlign: 'center', fontWeight: 500 } },
+      // Set/rep counter — наверху
+      h('div', { className: 'heys-fingers-countdown__counter' },
         (totalSets && totalReps)
-          ? `Подход ${(setIdx || 0) + 1}/${totalSets} · Повтор ${(repIdx || 0) + 1}/${totalReps}`
+          ? 'Подход ' + ((setIdx || 0) + 1) + '/' + totalSets +
+            ' · Повтор ' + ((repIdx || 0) + 1) + '/' + totalReps
           : ''
       ),
 
-      // Grip name — крупно (теперь это основной заголовок)
-      gripLabel ? h('div', {
-        style: { fontSize: '22px', fontWeight: 700, color: '#1f2937',
-          textAlign: 'center', letterSpacing: '-0.01em', lineHeight: 1.2 }
-      }, gripLabel) : null,
+      // Grip name — крупный заголовок
+      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
 
-      // Grip hero — крупнее. При 404 wrapper схлопывается через onError.
-      gripId ? h('div', {
-        style: {
-          width: 200, height: 200, borderRadius: 20,
-          overflow: 'hidden', background: 'rgba(120, 120, 128, 0.08)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }
-      },
+      // Hero image (при 404 wrapper схлопывается)
+      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
         h('img', {
           src: '/exercises/' + gripId + '.webp',
           alt: gripLabel || gripId,
           loading: 'eager',
           decoding: 'async',
-          style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
           onError: function (e) {
             try { e.target.parentNode.style.display = 'none'; } catch (_) {}
           }
         })
       ) : null,
 
-      // Параметры — заметные чипы (грань + доп. вес).
-      // На красном фоне HANG юзеру важно одним взглядом помнить вес — поэтому крупно.
-      (edgeLabel || addedWeightKg != null) ? h('div', {
-        style: { display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }
-      },
-        edgeLabel ? h('div', {
-          style: {
-            display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-            background: 'rgba(120, 120, 128, 0.10)', borderRadius: 12,
-            padding: '8px 16px', minWidth: 80
-          }
-        },
-          h('span', { style: { fontSize: 11, color: '#6b7280', fontWeight: 500,
-            textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Грань'),
-          h('span', { style: { fontSize: 20, fontWeight: 700, color: '#1f2937', marginTop: 2 } },
-            edgeLabel)
+      // Chips: грань + доп. вес
+      (edgeLabel || addedWeightKg != null) ? h('div', { className: 'heys-fingers-countdown__chips' },
+        edgeLabel ? h('div', { className: 'heys-fingers-countdown__chip' },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Грань'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' }, edgeLabel)
         ) : null,
         addedWeightKg != null ? h('div', {
-          style: {
-            display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-            background: 'rgba(120, 120, 128, 0.10)', borderRadius: 12,
-            padding: '8px 16px', minWidth: 80
-          }
+          className: 'heys-fingers-countdown__chip heys-fingers-countdown__chip--weight',
+          'data-weight-sign': addedWeightKg > 0 ? 'plus' : addedWeightKg < 0 ? 'minus' : 'zero'
         },
-          h('span', { style: { fontSize: 11, color: '#6b7280', fontWeight: 500,
-            textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Доп. вес'),
-          h('span', { style: { fontSize: 20, fontWeight: 700,
-            color: addedWeightKg > 0 ? '#dc2626' : (addedWeightKg < 0 ? '#0891b2' : '#1f2937'),
-            marginTop: 2 } },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Доп. вес'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' },
             (addedWeightKg > 0 ? '+' : '') + addedWeightKg + ' кг')
         ) : null
       ) : null,
 
       // Phase badge
-      h('div', {
-        style: {
-          background: phaseColor, color: '#fff',
-          padding: '6px 16px', borderRadius: '999px',
-          fontSize: '13px', fontWeight: 600, letterSpacing: '0.5px',
-          textTransform: 'uppercase',
-        },
-      }, phaseLabel),
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
 
-      // Ring + big number
-      h('div', { style: { position: 'relative', width: '200px', height: '200px' } },
-        h('svg', { width: 200, height: 200, viewBox: '0 0 200 200' },
+      // Ring + digit
+      h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+        h('svg', {
+          className: 'heys-fingers-countdown__ring',
+          width: 200, height: 200, viewBox: '0 0 200 200'
+        },
           h('circle', {
-            cx: 100, cy: 100, r: ringRadius,
-            stroke: '#e5e7eb', strokeWidth: 8, fill: 'none',
+            className: 'heys-fingers-countdown__ring-track',
+            cx: 100, cy: 100, r: ringRadius, fill: 'none'
           }),
           h('circle', {
-            cx: 100, cy: 100, r: ringRadius,
-            stroke: phaseColor, strokeWidth: 10, fill: 'none',
-            strokeLinecap: 'round',
+            className: 'heys-fingers-countdown__ring-fill',
+            cx: 100, cy: 100, r: ringRadius, fill: 'none',
             strokeDasharray: ringCircum,
             strokeDashoffset: dashoffset,
-            transform: 'rotate(-90 100 100)',
-            style: { transition: 'stroke-dashoffset 100ms linear' },
+            transform: 'rotate(-90 100 100)'
           })
         ),
         h('div', {
-          style: {
-            position: 'absolute', inset: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            fontSize: '72px', fontWeight: 700, color: phaseColor,
-          },
+          className: 'heys-fingers-countdown__digit'
+            + (isFinalCount ? ' is-final-count' : '')
         }, String(Math.max(0, secondsLeft | 0)))
       ),
 
-      // Controls — touch targets ≥44px (потные пальцы после виса; iOS HIG).
-      (state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED)
-        ? h('div', { style: { display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' } },
-            h('button', {
-              type: 'button',
-              className: 'fingers-fs-timer-btn',
-              onClick: onPause,
-              style: {
-                minHeight: 44, padding: '10px 20px', borderRadius: '8px',
-                border: '1px solid #d1d5db', background: '#f9fafb',
-                fontSize: '14px', cursor: 'pointer',
-              },
-            }, state === STATES.PAUSED ? 'Возобновить' : 'Пауза'),
-            (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
-              type: 'button',
-              className: 'fingers-fs-timer-btn',
-              onClick: onSkip,
-              'aria-label': 'Пропустить фазу',
-              style: {
-                minHeight: 44, padding: '10px 20px', borderRadius: '8px',
-                border: '1px solid #d1d5db', background: '#f9fafb',
-                fontSize: '14px', cursor: 'pointer',
-              },
-            }, '→') : null,
-            h('button', {
-              type: 'button',
-              className: 'fingers-fs-timer-btn',
-              onClick: onAbort,
-              style: {
-                minHeight: 44, padding: '10px 20px', borderRadius: '8px',
-                border: '1px solid #fecaca', background: '#fef2f2',
-                color: '#b91c1c', fontSize: '14px', cursor: 'pointer',
-              },
-            }, 'Прервать')
-          ) : null
+      // Controls — touch targets ≥44px (iOS HIG, потные пальцы после виса).
+      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        Fingers.VoiceMiniControls
+          ? h(Fingers.VoiceMiniControls, { inline: true })
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onPause
+        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
+        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onSkip,
+          'aria-label': 'Пропустить фазу',
+          title: 'Пропустить фазу'
+        }, '→') : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
+          onClick: onAbort
+        }, 'Прервать')
+      ) : null
     );
   }
 
@@ -4445,31 +4487,110 @@
 
   const React = global.React;
 
-  /** RAMP warmup протокол — 4 фазы, ~15-20 минут до max-сессии. */
+  /** RAMP warmup протокол — 4 фазы, ~15-20 минут до max-сессии.
+   *  Каждый step:
+   *    label       — заголовок фазы (для UI и голоса)
+   *    durationMin — длительность в минутах
+   *    action      — короткая команда «что делать» (одна строка, императив)
+   *    dosage      — «сколько/как» (одна строка, технические детали)
+   *    why         — «зачем» (одна строка, кратко обоснование)
+   *    tip?        — опциональный совет / альтернатива (одна строка)
+   *    description — fallback для голоса (склейка вышеперечисленного) */
   const rampWarmupSteps = [
     {
       id: 'raise',
-      label: 'R — Raise (поднять температуру)',
+      label: 'Раз — поднять температуру',
       durationMin: 5,
-      description: 'Лёгкое кардио (скакалка, jumping jacks, бег на месте) до лёгкого пота. Температура мышц поднимается на 1-2°C — снижает риск разрыва.'
+      action: 'Лёгкое кардио до первых капель пота.',
+      dosage: 'Скакалка, jumping jacks или бег на месте — 5 минут.',
+      why: 'Температура мышц растёт на 1–2 °C — снижает риск разрыва.',
+      description: 'Лёгкое кардио (скакалка, jumping jacks, бег на месте) 5 минут до лёгкого пота. Температура мышц поднимается на 1-2°C — снижает риск разрыва.'
     },
     {
       id: 'activate',
-      label: 'A — Activate (активировать)',
+      label: 'Два — активировать плечо и лопатку',
       durationMin: 4,
+      action: 'Включаем стабилизаторы плечевого пояса.',
+      dosage: 'Pull-aparts с резиной, scapular pulls, лёгкие отжимания — по 10–12 повторов.',
+      why: 'Без рабочей лопатки нагрузка валится в пальцы — травма блока выше.',
       description: 'Pull-aparts с резиной, scapular pulls, лёгкие отжимания. Включает стабилизаторы плеча и лопатки — критично для безопасных висов.'
     },
     {
       id: 'mobilize',
-      label: 'M — Mobilize (мобилизация)',
+      label: 'Три — мобилизация суставов',
       durationMin: 4,
+      action: 'Прогоняем все суставы рабочей цепи.',
+      dosage: 'Запястья, локти, плечи. По 8–10 кругов в каждую сторону.',
+      why: 'Синовиальная жидкость прогревается — суставы готовы к нагрузке.',
       description: 'Wrist circles, finger flexion/extension, локоть и плечо. Каждый сустав по 8-10 повторов в обе стороны.'
     },
     {
       id: 'potentiate',
-      label: 'P — Potentiate (потенциация)',
+      label: 'Четыре — прогрессивные висы',
       durationMin: 5,
+      action: 'Постепенно подводим пальцы к рабочей нагрузке.',
+      dosage: '5 с на 25 мм open hand → 7 с на 20 мм half crimp → 5 с с лёгким весом.',
+      why: 'Шкивы и сухожилия входят в рабочий диапазон без шока.',
+      tip: 'Не до отказа — это разминка, не тренировка.',
       description: 'Прогрессивные висы на больших краях: 5 с на 25 мм open hand → 7 с на 20 мм half crimp → 5 с с лёгким весом (если max-протокол). Не до отказа.'
+    }
+  ];
+
+  /** Быстрая targeted-разминка — 5 фаз, ~6 минут, без оборудования.
+   *  Для non-max протоколов (No-Hangs, Beastmaker Beginner Loop, repeaters BW
+   *  на больших краях). Для max-сессий — обязательно полный RAMP.
+   *
+   *  Источники: Hörst «Training for Climbing» 3rd ed., Schöffl «Climbing
+   *  Medicine» 2nd ed., Hsu 2013 «Tendon glides for pulley health». */
+  const quickFingerWarmupSteps = [
+    {
+      id: 'raise_quick',
+      label: 'Раз — поднять пульс',
+      durationMin: 1,
+      action: 'Лёгкое кардио всем телом.',
+      dosage: '20–30 jumping jacks или ходьба на месте с махами руками.',
+      why: 'Поднимает температуру мышц на 1 °C — кровоток вырастает.',
+      tip: 'Цель — лёгкое тепло, не пот.',
+      description: '20-30 jumping jacks или быстрая ходьба на месте с махами руками. Цель — лёгкое тепло в теле, не пот. Поднимает температуру мышц на 1°C.'
+    },
+    {
+      id: 'wrist_mobilize',
+      label: 'Два — мобилизация кисти и предплечья',
+      durationMin: 1,
+      action: 'Прогоняем кисть, запястье и предплечье.',
+      dosage: 'Круги кистями (8 в каждую сторону), пронация/супинация предплечья (8 раз), сгибание/разгибание запястья (8 раз).',
+      why: 'Активирует синовиальную жидкость в лучезапястном суставе.',
+      description: 'Круговые движения кистями (8 в каждую сторону), пронация/супинация предплечья (8 повторов), сгибание/разгибание запястья. Активирует синовиальную жидкость в лучезапястном суставе.'
+    },
+    {
+      id: 'tendon_glides',
+      label: 'Три — tendon glides',
+      durationMin: 1.5,
+      action: 'Прогон сухожилий через 5 позиций кулака.',
+      dosage: 'Прямые пальцы → крючок → полный кулак → стол → прямые пальцы. 10 циклов медленно.',
+      why: 'Сухожилия скользят свободнее в шкивах A2 и A4 — защита от микротравм.',
+      tip: 'Крючок: DIP/PIP согнуты, MCP прямой. Стол: MCP согнут, IP прямые. Источник: Hsu 2013.',
+      description: 'Пять позиций кулака подряд: прямые пальцы → крючок (DIP/PIP согнуты, MCP прямой) → полный кулак → стол (MCP согнут, IP прямые) → прямые пальцы. 10 циклов медленно. Увеличивает glide сухожилий в A2/A4 шкивах — критично для здоровья шкивов (Hsu 2013).'
+    },
+    {
+      id: 'finger_extensors',
+      label: 'Четыре — баланс сгибатели и разгибатели',
+      durationMin: 1,
+      action: 'Медленно сжимаем и разжимаем кулак.',
+      dosage: '15–20 повторов в спокойном темпе.',
+      why: 'Балансирует доминирование сгибателей — снижает риск эпикондилита.',
+      tip: 'С резинкой для пальцев лучше. Без — прижми ладонь к столу и поднимай пальцы.',
+      description: 'Медленно разжимать и сжимать кулак 15-20 раз. Если есть резинка для пальцев или просто прижать ладонь к столу и поднимать пальцы — ещё лучше. Балансирует доминирование сгибателей.'
+    },
+    {
+      id: 'easy_hang',
+      label: 'Пять — лёгкая активация на jugs',
+      durationMin: 1.5,
+      action: 'Несколько коротких висов на больших гранях без веса.',
+      dosage: '3–4 виса по 5–7 секунд, open hand, отдых 30 с между подходами.',
+      why: 'Шкивы входят в рабочий диапазон постепенно, без шока.',
+      tip: 'Нет фингерборда — повисни на косяке двери или на ребре крепкой полки.',
+      description: 'Если есть фингерборд — 3-4 виса по 5-7 сек на самой большой грани/jugs (open hand, без доп. веса). Если нет — повисеть на дверном косяке или ребре стола. Цель: вход в рабочий диапазон без шока.'
     }
   ];
 
@@ -4698,6 +4819,7 @@
   }
 
   SafetyGate.rampWarmupSteps = rampWarmupSteps;
+  SafetyGate.quickFingerWarmupSteps = quickFingerWarmupSteps;
   SafetyGate.checklistItems = CHECKLIST_ITEMS;
   SafetyGate.sourceIds = ['horst_podcast10', 'schoffl2021', 'uiaa_medcom'];
 
@@ -4846,16 +4968,21 @@
       style: ST_BACKDROP
     },
       React.createElement('div', { className: 'fingers-warmup-runner__card', style: ST_CARD },
-        // Header: phase counter + abort
+        // Header: phase counter + voice controls + abort
         React.createElement('div', { style: ST_HEADER },
           React.createElement('span', { style: ST_PHASE_COUNTER },
             'Фаза ' + (phaseIdx + 1) + ' из ' + totalPhases),
-          React.createElement('button', {
-            type: 'button',
-            onClick: handleAbort,
-            'aria-label': 'Прервать разминку',
-            style: ST_CLOSE_BTN
-          }, '✕')
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+            Fingers.VoiceMiniControls
+              ? React.createElement(Fingers.VoiceMiniControls, { inline: true })
+              : null,
+            React.createElement('button', {
+              type: 'button',
+              onClick: handleAbort,
+              'aria-label': 'Прервать разминку',
+              style: ST_CLOSE_BTN
+            }, '✕')
+          )
         ),
 
         // Progress bar
@@ -4883,8 +5010,26 @@
         // Big timer
         React.createElement('div', { style: ST_TIMER }, fmtMS(secLeft)),
 
-        // Description
-        React.createElement('div', { style: ST_DESC }, phase.description),
+        // Structured body: action / dosage / why / tip.
+        // Если у фазы есть structured-поля (новый формат) — рендерим их
+        // отдельными секциями. Иначе fallback — old-style цельный description.
+        (phase.action || phase.dosage || phase.why || phase.tip)
+          ? React.createElement('div', { className: 'fingers-warmup-body', style: ST_BODY },
+              phase.action ? React.createElement('div', { className: 'fingers-warmup-action', style: ST_ACTION }, phase.action) : null,
+              phase.dosage ? React.createElement('div', { className: 'fingers-warmup-row fingers-warmup-row--dosage', style: ST_ROW },
+                React.createElement('span', { className: 'fingers-warmup-row__label', style: ST_ROW_LABEL }, 'СКОЛЬКО'),
+                React.createElement('span', { className: 'fingers-warmup-row__text', style: ST_ROW_TEXT }, phase.dosage)
+              ) : null,
+              phase.why ? React.createElement('div', { className: 'fingers-warmup-row fingers-warmup-row--why', style: ST_ROW },
+                React.createElement('span', { className: 'fingers-warmup-row__label', style: ST_ROW_LABEL }, 'ЗАЧЕМ'),
+                React.createElement('span', { className: 'fingers-warmup-row__text', style: ST_ROW_TEXT }, phase.why)
+              ) : null,
+              phase.tip ? React.createElement('div', { className: 'fingers-warmup-tip', style: ST_TIP },
+                React.createElement('span', { 'aria-hidden': 'true', style: { marginRight: 6 } }, '💡'),
+                phase.tip
+              ) : null
+            )
+          : React.createElement('div', { style: ST_DESC }, phase.description),
 
         // Controls
         React.createElement('div', { style: ST_CONTROLS },
@@ -4978,6 +5123,48 @@
     fontSize: 14, lineHeight: 1.5,
     color: 'var(--text-muted, #475569)',
     textAlign: 'center'
+  };
+  // Structured body — для нового формата фаз с action/dosage/why/tip.
+  // Композиция: крупный «что делать» (action), две строки с маркерными
+  // лейблами СКОЛЬКО/ЗАЧЕМ, опциональный tip в выделенной плашке.
+  const ST_BODY = {
+    padding: '0 20px 18px',
+    display: 'flex', flexDirection: 'column', gap: 12,
+    textAlign: 'left'
+  };
+  const ST_ACTION = {
+    fontSize: 15.5, lineHeight: 1.45,
+    fontWeight: 600,
+    color: 'var(--text-primary, #0f172a)',
+    letterSpacing: '-0.005em'
+  };
+  const ST_ROW = {
+    display: 'grid',
+    gridTemplateColumns: '64px 1fr',
+    gap: 10, alignItems: 'baseline',
+    fontSize: 13.5, lineHeight: 1.45
+  };
+  const ST_ROW_LABEL = {
+    fontSize: 10.5, fontWeight: 700,
+    letterSpacing: '0.08em',
+    color: 'rgba(60, 60, 67, 0.55)',
+    textTransform: 'uppercase',
+    fontVariant: 'all-small-caps',
+    paddingTop: 1
+  };
+  const ST_ROW_TEXT = {
+    color: 'var(--text-primary, #1f2937)',
+    fontWeight: 500
+  };
+  const ST_TIP = {
+    marginTop: 2,
+    padding: '8px 11px',
+    borderRadius: 10,
+    background: 'rgba(245, 158, 11, 0.10)',
+    border: '0.5px solid rgba(245, 158, 11, 0.28)',
+    fontSize: 13, lineHeight: 1.4,
+    color: '#92400e',
+    display: 'flex', alignItems: 'flex-start'
   };
   const ST_CONTROLS = {
     padding: '12px 16px 16px',
@@ -7555,75 +7742,250 @@
   }
 
   // --- Progress tab ---
+  // Утилиты Progress-таба ─────────────────────────────────────────────────
+  // Все читают heys_dayv2_<dateKey> через HEYS.utils.lsGet — тот же путь,
+  // что используют YearHeatmap и cooldownCheck. Один проход 365 дней даёт
+  // streak + totals + recent — экономим IO.
+
+  function _formatDateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
+  function _readDayDiary(dateKey) {
+    try {
+      const u = HEYS.utils;
+      if (u && typeof u.lsGet === 'function') return u.lsGet('heys_dayv2_' + dateKey, null);
+    } catch (_) {}
+    return null;
+  }
+
+  /**
+   * Один проход по последним 365 дням → streak, totals, последние 5 сессий.
+   * @returns {{streak:number, totalSessions:number, totalHolds:number, totalMinutes:number, lastSessions:Array}}
+   */
+  function computeProgressStats() {
+    const today = new Date();
+    let streak = 0;
+    let totalSessions = 0;
+    let totalHolds = 0;
+    let totalMinutes = 0;
+    const lastSessions = [];
+    let streakBroken = false;
+
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = _formatDateKey(d);
+      const day = _readDayDiary(key);
+      const fingersTrainings = (day && Array.isArray(day.trainings))
+        ? day.trainings.filter(function (t) { return t && t.type === 'fingers'; })
+        : [];
+      const hasSession = fingersTrainings.length > 0;
+
+      // Streak: считаем подряд от сегодня. Если сегодня нет — допускаем без
+      // штрафа (юзер ещё не тренировался), но если на день назад тоже нет —
+      // streak обрывается.
+      if (!streakBroken) {
+        if (hasSession) streak += 1;
+        else if (i > 0) streakBroken = true; // первый день без сессии после today — обрыв
+      }
+
+      if (hasSession) {
+        totalSessions += fingersTrainings.length;
+        fingersTrainings.forEach(function (t) {
+          const log = t.fingersLog || {};
+          totalHolds += Array.isArray(log.holds) ? log.holds.length : 0;
+          const dur = Number(log.totalDurationMinutes) || 0;
+          totalMinutes += dur;
+          if (lastSessions.length < 5) {
+            const intensity = typeof Fingers.getProgramIntensity === 'function'
+              ? Fingers.getProgramIntensity(log.programId)
+              : 'moderate';
+            const program = log.programId && typeof Fingers.getProgramById === 'function'
+              ? Fingers.getProgramById(log.programId) : null;
+            lastSessions.push({
+              dateKey: key,
+              programName: (program && program.name) || (log.programId === 'custom' ? 'Свой конструктор' : log.programId) || 'Тренировка',
+              intensity: intensity,
+              durationMin: dur || null,
+              daysAgo: i
+            });
+          }
+        });
+      }
+    }
+
+    return {
+      streak: streak,
+      totalSessions: totalSessions,
+      totalHolds: totalHolds,
+      totalMinutes: totalMinutes,
+      lastSessions: lastSessions
+    };
+  }
+
+  function _relativeDay(daysAgo) {
+    if (daysAgo === 0) return 'сегодня';
+    if (daysAgo === 1) return 'вчера';
+    if (daysAgo < 7) return daysAgo + ' дн назад';
+    if (daysAgo < 30) return Math.floor(daysAgo / 7) + ' нед назад';
+    return Math.floor(daysAgo / 30) + ' мес назад';
+  }
+
+  function _intensityRu(intensity) {
+    return intensity === 'max' ? 'максимум'
+      : intensity === 'recovery' ? 'восстановление'
+      : 'умеренно';
+  }
+
   function ProgressTab({ recommendedProgramId, onPickProgram }) {
     const records = (Fingers.records && Fingers.records.get) ? Fingers.records.get() : { maxHangs: {} };
     const allHangs = records.maxHangs || {};
     const slugs = Object.keys(allHangs);
     const cooldown = Fingers.cooldownCheck ? Fingers.cooldownCheck() : null;
-    const profile = getProfile();
     const mvcDue = Fingers.calibration && Fingers.calibration.isDue
       ? Fingers.calibration.isDue('maxHang', 'openhand4_20mm')
       : false;
+    // Memo чтобы 365-day scan не пересчитывался на каждый render таба.
+    const stats = React.useMemo(computeProgressStats, []);
+    const currentYear = new Date().getFullYear();
+
+    const isEmpty = slugs.length === 0 && stats.totalSessions === 0;
+
+    if (isEmpty) {
+      return h('div', { className: 'fingers-fs-progress' },
+        h('div', { className: 'fingers-fs-progress-empty' },
+          h('div', { className: 'fingers-fs-progress-empty__icon', 'aria-hidden': 'true' }, '📊'),
+          h('h3', { className: 'fingers-fs-progress-empty__title' }, 'Прогресса пока нет'),
+          h('p', { className: 'fingers-fs-progress-empty__hint' },
+            'После первой тренировки здесь появятся серия, рекорды по хватам и календарь.'),
+          recommendedProgramId && Fingers.getProgramById && h('button', {
+            className: 'fingers-fs-cta',
+            style: { marginTop: 18 },
+            onClick: function () {
+              const p = Fingers.getProgramById(recommendedProgramId);
+              if (p && onPickProgram) onPickProgram(p);
+            }
+          }, '▶ Запустить первую тренировку')
+        )
+      );
+    }
 
     return h('div', { className: 'fingers-fs-progress' },
-      // Cooldown card
-      cooldown && !cooldown.allowedNow && h('div', {
-        style: {
-          padding: 16, marginBottom: 16, borderRadius: 12,
-          background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b'
-        }
-      },
-        h('strong', null, '🛡 Recovery: ' + cooldown.recommendation),
-        h('p', { style: { margin: '4px 0 0', fontSize: 14 } },
-          'Прошло ' + Math.round(cooldown.hoursSinceLast) + 'ч с последней сессии. Tendon collagen synthesis не завершён (Magnusson 2010).')
+
+      // ─── Hero stats: streak / сессии / время ────────────────────────────
+      h('div', { className: 'fingers-fs-progress-hero' },
+        h('div', { className: 'fingers-fs-progress-stat fingers-fs-progress-stat--streak' },
+          h('div', { className: 'fingers-fs-progress-stat__icon', 'aria-hidden': 'true' }, '🔥'),
+          h('div', { className: 'fingers-fs-progress-stat__value' }, String(stats.streak)),
+          h('div', { className: 'fingers-fs-progress-stat__label' },
+            stats.streak === 1 ? 'день серии' : 'дней серии')
+        ),
+        h('div', { className: 'fingers-fs-progress-stat' },
+          h('div', { className: 'fingers-fs-progress-stat__icon', 'aria-hidden': 'true' }, '💪'),
+          h('div', { className: 'fingers-fs-progress-stat__value' }, String(stats.totalSessions)),
+          h('div', { className: 'fingers-fs-progress-stat__label' },
+            stats.totalSessions === 1 ? 'тренировка' : 'тренировок')
+        ),
+        h('div', { className: 'fingers-fs-progress-stat' },
+          h('div', { className: 'fingers-fs-progress-stat__icon', 'aria-hidden': 'true' }, '⏱'),
+          h('div', { className: 'fingers-fs-progress-stat__value' },
+            stats.totalMinutes >= 60
+              ? Math.round(stats.totalMinutes / 60) + ' ч'
+              : Math.round(stats.totalMinutes) + ' м'),
+          h('div', { className: 'fingers-fs-progress-stat__label' }, 'всего')
+        )
       ),
 
-      slugs.length === 0
-        ? h('div', { className: 'fingers-fs-empty' },
-            h('h3', null, '📊 Прогресс'),
-            h('p', null, 'Тренировок ещё нет. После первой здесь появятся твои рекорды по 8 хватам.'),
-            recommendedProgramId && Fingers.getProgramById && h('div', { style: { marginTop: 24 } },
-              h('p', { style: { fontSize: 13, opacity: 0.7 } }, 'Рекомендованный стартовый протокол:'),
-              h('button', {
-                className: 'fingers-fs-cta',
-                onClick: function () {
-                  const p = Fingers.getProgramById(recommendedProgramId);
-                  if (p && onPickProgram) onPickProgram(p);
-                },
-                style: { marginTop: 8 }
-              }, '▶ Запустить первую тренировку')
-            )
-          )
-        : h('div', null,
-            h('h3', { style: { margin: '0 0 12px' } }, 'Личные рекорды'),
-            h('div', { className: 'fingers-fs-records' },
-              slugs.map(function (slug) {
-                const r = allHangs[slug];
-                const main = r.type === 'weight'
-                  ? (r.mvcKg ? r.mvcKg.toFixed(1) + ' кг' : '—')
-                  : (r.holdTime ? r.holdTime.toFixed(1) + ' с' : '—');
-                // Slug формат: '{gripId}_{edgeMm}mm' (см. records_store._slug).
-                // Транслируем в человеческое: 'Открытый 4-палец · 20 мм'.
-                const m = /^(.+?)_(\d+)mm$/.exec(slug);
-                const grip = m && Fingers.getGripById ? Fingers.getGripById(m[1]) : null;
-                const label = m
-                  ? ((grip && grip.label) || m[1]) + ' · ' + m[2] + ' мм'
-                  : slug;
-                return h('div', { key: slug, className: 'fingers-fs-record-row',
-                  style: { display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
-                    borderBottom: '1px solid var(--fingers-card-border)', gap: 12, alignItems: 'center' } },
-                  h('span', { style: { fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' } }, label),
-                  h('strong', { style: { flexShrink: 0 } }, main)
-                );
-              })
-            ),
-            mvcDue && h('div', {
-              style: {
-                marginTop: 16, padding: 12, borderRadius: 8,
-                background: '#fffbeb', border: '1px solid #fde68a', fontSize: 13
-              }
-            }, '📅 Пора re-test (>8 недель с последнего MVC теста)')
-          )
+      // ─── Cooldown card (если recovery) ────────────────────────────────
+      cooldown && !cooldown.allowedNow && h('div', { className: 'fingers-fs-progress-cooldown' },
+        h('div', { className: 'fingers-fs-progress-cooldown__icon', 'aria-hidden': 'true' }, '🛡'),
+        h('div', { className: 'fingers-fs-progress-cooldown__body' },
+          h('div', { className: 'fingers-fs-progress-cooldown__title' },
+            'Восстановление — ' + cooldown.recommendation),
+          h('div', { className: 'fingers-fs-progress-cooldown__text' },
+            'Прошло ' + Math.round(cooldown.hoursSinceLast) +
+            'ч с последней сессии. Синтез коллагена в сухожилиях ещё идёт (Magnusson 2010).')
+        )
+      ),
+
+      // ─── Year heatmap ──────────────────────────────────────────────────
+      Fingers.YearHeatmap && h('section', { className: 'fingers-fs-progress-section' },
+        h('div', { className: 'fingers-fs-progress-section__header' },
+          h('h3', { className: 'fingers-fs-progress-section__title' }, 'Год тренировок'),
+          h('span', { className: 'fingers-fs-progress-section__hint' }, String(currentYear))
+        ),
+        h(Fingers.YearHeatmap, { year: currentYear })
+      ),
+
+      // ─── Personal records ──────────────────────────────────────────────
+      slugs.length > 0 && h('section', { className: 'fingers-fs-progress-section' },
+        h('div', { className: 'fingers-fs-progress-section__header' },
+          h('h3', { className: 'fingers-fs-progress-section__title' }, 'Личные рекорды'),
+          h('span', { className: 'fingers-fs-progress-section__hint' },
+            slugs.length + (slugs.length === 1 ? ' хват' : slugs.length < 5 ? ' хвата' : ' хватов'))
+        ),
+        h('div', { className: 'fingers-fs-progress-records' },
+          slugs.map(function (slug) {
+            const r = allHangs[slug];
+            const main = r.type === 'weight'
+              ? (r.mvcKg ? r.mvcKg.toFixed(1) + ' кг' : '—')
+              : (r.holdTime ? r.holdTime.toFixed(1) + ' с' : '—');
+            const m = /^(.+?)_(\d+)mm$/.exec(slug);
+            const grip = m && Fingers.getGripById ? Fingers.getGripById(m[1]) : null;
+            const label = m
+              ? ((grip && grip.label) || m[1])
+              : slug;
+            const edge = m ? m[2] + ' мм' : '';
+            const testedAt = r.testedAt ? new Date(r.testedAt) : null;
+            const daysSince = testedAt
+              ? Math.max(0, Math.floor((Date.now() - testedAt.getTime()) / (1000 * 60 * 60 * 24)))
+              : null;
+            return h('div', { key: slug, className: 'fingers-fs-progress-record' },
+              h('div', { className: 'fingers-fs-progress-record__head' },
+                h('span', { className: 'fingers-fs-progress-record__grip' }, label),
+                edge && h('span', { className: 'fingers-fs-progress-record__edge' }, edge)
+              ),
+              h('div', { className: 'fingers-fs-progress-record__value' }, main),
+              daysSince != null && h('div', { className: 'fingers-fs-progress-record__when' },
+                daysSince === 0 ? 'установлен сегодня' :
+                daysSince === 1 ? 'установлен вчера' :
+                daysSince < 30 ? 'установлен ' + daysSince + ' дн назад' :
+                'установлен ' + Math.floor(daysSince / 30) + ' мес назад')
+            );
+          })
+        ),
+        mvcDue && h('div', { className: 'fingers-fs-progress-callout' },
+          h('span', { 'aria-hidden': 'true' }, '📅'),
+          ' Пора re-test (прошло больше 8 недель с последнего MVC теста).')
+      ),
+
+      // ─── Last sessions ─────────────────────────────────────────────────
+      stats.lastSessions.length > 0 && h('section', { className: 'fingers-fs-progress-section' },
+        h('div', { className: 'fingers-fs-progress-section__header' },
+          h('h3', { className: 'fingers-fs-progress-section__title' }, 'Последние тренировки')
+        ),
+        h('div', { className: 'fingers-fs-progress-sessions' },
+          stats.lastSessions.map(function (s) {
+            return h('div', { key: s.dateKey + '_' + s.programName, className: 'fingers-fs-progress-session' },
+              h('div', { className: 'fingers-fs-progress-session__main' },
+                h('div', { className: 'fingers-fs-progress-session__title' }, s.programName),
+                h('div', { className: 'fingers-fs-progress-session__meta' },
+                  h('span', null, _relativeDay(s.daysAgo)),
+                  s.durationMin ? h('span', null, '· ' + Math.round(s.durationMin) + ' мин') : null
+                )
+              ),
+              h('span', {
+                className: 'fingers-fs-progress-session__intensity',
+                'data-fingers-intensity': s.intensity
+              }, _intensityRu(s.intensity))
+            );
+          })
+        )
+      )
     );
   }
 
@@ -7921,6 +8283,8 @@
     const [pendingProgram, setPendingProgram] = useState(null);
     const [liveActive, setLiveActive] = useState(false);
     const [warmupActive, setWarmupActive] = useState(false);
+    // 'ramp' (полная 15-20 мин до max) | 'quick' (5-8 мин targeted на пальцы/кисть)
+    const [warmupProtocol, setWarmupProtocol] = useState('ramp');
     // pendingResume — снапшот незавершённой сессии для постоянного баннера наверху.
     // Заполняется при монтировании если persistence.load() вернул свежий snapshot.
     // null → нет прерванной сессии, баннер не рисуется.
@@ -8170,25 +8534,36 @@
 
       const preflightOpts = {
         icon: '🤲',
-        title: 'Pre-flight check',
+        title: 'Готов начинать?',
         // text может быть React-элементом — ConfirmModal:210 рендерит его как child.
         text: h(PreflightChecklist, { extraNotes: extraNotes }),
         confirmStyle: programIntensity === 'max' ? 'warning' : 'primary',
       };
 
       if (canShowWarmup) {
-        // 3-кнопочный вариант: Отмена / Разминка 18 мин / Всё ОК
+        // 4-кнопочный вариант: Отмена / Быстрая разминка / Полная разминка / Всё ОК.
+        // Быстрая доступна для всех протоколов — юзер сам решает (для max
+        // методически рекомендуется RAMP, но не блокируем выбор).
         // На «go» вешаем className 'fingers-fs-preflight-go' — CSS-анимация
         // приглушает кнопку первые 2.4с пока галочки заполняются.
         preflightOpts.actions = [
           { key: 'cancel', label: 'Отмена', style: 'neutral', variant: 'text',
             isCancel: true, row: 0 },
-          { key: 'warmup', label: 'Сначала разминка 18 мин', style: 'primary',
-            variant: 'text', value: 'warmup', row: 1,
-            onClick: function () { setWarmupActive(true); } },
+          { key: 'warmup_quick', label: '⚡ Быстрая разминка (5-8 мин)',
+            style: 'primary', variant: 'text', value: 'quick', row: 1,
+            onClick: function () {
+              setWarmupProtocol('quick');
+              setWarmupActive(true);
+            } },
+          { key: 'warmup_full', label: '🔥 Полная разминка (15-20 мин)',
+            style: 'primary', variant: 'text', value: 'full', row: 2,
+            onClick: function () {
+              setWarmupProtocol('ramp');
+              setWarmupActive(true);
+            } },
           { key: 'go', label: 'Всё ОК, начинаем',
             style: programIntensity === 'max' ? 'warning' : 'primary',
-            variant: 'fill', isDefault: true, value: 'go', row: 2,
+            variant: 'fill', isDefault: true, value: 'go', row: 3,
             className: 'fingers-fs-preflight-go',
             onClick: function () {
               try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
@@ -8291,9 +8666,15 @@
     ];
 
     return h('div', { className: 'fingers-fs-session' },
-      // Warmup runner overlay (floats над всем когда warmupActive=true)
+      // Warmup runner overlay (floats над всем когда warmupActive=true).
+      // Steps подаём в зависимости от выбранного протокола: 'quick' — targeted
+      // 5-8 мин на пальцы/кисть/предплечья (Hörst+Schöffl+Hsu), 'ramp' (default) —
+      // полный 15-20 мин RAMP. WarmupRunner если не передать steps берёт ramp.
       warmupActive && Fingers.WarmupRunner ? h(Fingers.WarmupRunner, {
-        key: 'warmup',
+        key: 'warmup-' + warmupProtocol,
+        steps: warmupProtocol === 'quick'
+          ? (Fingers.SafetyGate?.quickFingerWarmupSteps)
+          : undefined,
         onDone: handleWarmupDone,
         onCancel: handleWarmupCancel
       }) : null,
