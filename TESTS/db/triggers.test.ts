@@ -14,8 +14,15 @@
  * UPSERT'ы не транзакционные потому что нужен real trigger execution; вместо
  * этого explicit DELETE в конце.
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { runSql, runSqlBlock, TEST_CLIENT_ALEX_ID } from './_helpers';
+
+// Each runSql/runSqlBlock hits cloud Postgres via psql — round-trips routinely
+// take 14-17s per test. The default 10s testTimeout fails when running the
+// full vitest suite (pnpm test). The dedicated `pnpm test:db` already sets
+// --test-timeout=60000, but full-suite runs (e.g. CI, `vitest run`) need the
+// same per-file. Setting here so any runner picks it up.
+vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 });
 
 const TEST_KEY_PREFIX = 'heys_db_trigger_test_';
 const TEST_USER_ID = '00000000-0000-0000-0000-000000099999'; // fake actor (not real curator)
