@@ -114,6 +114,8 @@
     } else {
       merged.dayScore = local.dayScore || remote.dayScore || '';
     }
+    // dayScoreRaw — derived float, всегда из текущего расчёта (dayScoreManual только для integer)
+    merged.dayScoreRaw = local.dayScoreRaw || remote.dayScoreRaw || '';
     merged.dayComment = local.dayComment || remote.dayComment || '';
 
     if (local.cycleDay === null && (local.updatedAt || 0) >= (remote.updatedAt || 0)) {

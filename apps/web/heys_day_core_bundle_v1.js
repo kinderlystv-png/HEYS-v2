@@ -2911,17 +2911,22 @@
         const stressAvg = allStress.length ? r1(allStress.reduce((sum, val) => sum + val, 0) / allStress.length) : '';
 
         // Автоматический расчёт dayScore
-        // Формула: (mood + wellbeing + (10 - stress)) / 3, округлено до целого
+        // Формула: (mood + wellbeing + (10 - stress)) / 3
+        // dayScore — integer для UI/storage, dayScoreRaw — float .1 для analytics/predictive layers
+        // (relapse_risk_v1.js предпочитает raw при наличии, fallback integer)
         let dayScore = '';
+        let dayScoreRaw = '';
         if (moodAvg !== '' || wellbeingAvg !== '' || stressAvg !== '') {
             const m = moodAvg !== '' ? +moodAvg : 5;
             const w = wellbeingAvg !== '' ? +wellbeingAvg : 5;
             const s = stressAvg !== '' ? +stressAvg : 5;
             // stress инвертируем: низкий стресс = хорошо
-            dayScore = Math.round((m + w + (10 - s)) / 3);
+            const raw = (m + w + (10 - s)) / 3;
+            dayScoreRaw = r1(raw);
+            dayScore = Math.round(raw);
         }
 
-        return { moodAvg, wellbeingAvg, stressAvg, dayScore };
+        return { moodAvg, wellbeingAvg, stressAvg, dayScore, dayScoreRaw };
     }
 
     /**
