@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.06.01.PLACEHOLDER",
-      "buildHash": "PLACEHOLDER",
+      "version": "2026.06.01.2774b66b",
+      "buildHash": "2774b66b",
       "date": "2026-06-01",
       "kind": "user-facing",
       "profile": "user-facing-general",
