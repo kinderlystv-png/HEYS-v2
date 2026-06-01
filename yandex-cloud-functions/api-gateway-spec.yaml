@@ -134,20 +134,25 @@ paths:
 
   # ═══════════════════════════════════════════════════════════════
   # SMS — Отправка SMS через SMS.ru
+  # ⚠️ Функция удалена из прода (36e96a1e, 2026-05-22). Route отключён до
+  # восстановления (см. apps/web/heys_consents_v1.js:53 — клиент перешёл на
+  # web push / email-only verification). Раскомменчивать вместе с
+  # пересозданием функции, получением нового function_id и обновлением
+  # api-gateway-spec-v2.yaml аналогично.
   # ═══════════════════════════════════════════════════════════════
-  /sms:
-    post:
-      summary: SMS sending via SMS.ru
-      x-yc-apigateway-integration:
-        type: cloud_functions
-        service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4ejimndqnd8q72r9g00
-    options:
-      summary: CORS preflight for SMS
-      x-yc-apigateway-integration:
-        type: cloud_functions
-        service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4ejimndqnd8q72r9g00
+  # /sms:
+  #   post:
+  #     summary: SMS sending via SMS.ru
+  #     x-yc-apigateway-integration:
+  #       type: cloud_functions
+  #       service_account_id: aje85rjgpj4nk9m384ek
+  #       function_id: <RECREATE_AFTER_DEPLOY>
+  #   options:
+  #     summary: CORS preflight for SMS
+  #     x-yc-apigateway-integration:
+  #       type: cloud_functions
+  #       service_account_id: aje85rjgpj4nk9m384ek
+  #       function_id: <RECREATE_AFTER_DEPLOY>
 
   # ═══════════════════════════════════════════════════════════════
   # Leads — Лиды с лендинга

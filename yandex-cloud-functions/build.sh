@@ -37,7 +37,8 @@ build_function() {
 # Собираем все функции
 build_function "heys-api-rpc"
 build_function "heys-api-rest"
-build_function "heys-api-sms"
+# heys-api-sms убрано 2026-06-01 — функция удалена из прода 2026-05-22.
+# Восстанавливать вместе с пересозданием heys-api-sms/ директории.
 build_function "heys-api-leads"
 build_function "heys-api-health"
 

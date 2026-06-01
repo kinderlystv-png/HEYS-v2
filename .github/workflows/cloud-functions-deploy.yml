@@ -22,7 +22,6 @@ on:
           - "heys-api-rest"
           - "heys-api-auth"
           - "heys-api-leads"
-          - "heys-api-sms"
           - "heys-api-health"
           - "heys-api-payments"
 
