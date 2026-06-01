@@ -147,7 +147,9 @@
       if (root && root.parentNode) {
         try {
           root.parentNode.removeChild(root);
-        } catch (e) { }
+        } catch (e) {
+          console.warn('[pull-refresh] overlay removeChild failed:', e?.message || e);
+        }
       }
       pullHoldOverlayRootRef.current = null;
     };
@@ -223,7 +225,9 @@
       });
       try {
         showPullRefreshHoldOverlay();
-      } catch (e) { }
+      } catch (e) {
+        console.warn('[pull-refresh] showPullRefreshHoldOverlay failed:', e?.message || e);
+      }
     };
 
     const runSyncWithTimeout = async (cloud, clientId) => {

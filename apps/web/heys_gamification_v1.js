@@ -453,7 +453,11 @@
                 console.log(`[🎮 Gamification] Found better data in ${k}: XP=${bestXP}, level=${parsed.level}`);
               }
             }
-          } catch (e) { }
+          } catch (e) {
+            // Не fatal — продолжаем сканировать остальные ключи. Но логируем
+            // на debug чтобы corrupt data не оставалась невидимой.
+            console.debug('[🎮 Gamification] fallback parse error on key', k, ':', e?.message || e);
+          }
         }
       } catch (e) {
         console.warn('[🎮 Gamification] Fallback search error:', e);

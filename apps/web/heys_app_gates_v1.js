@@ -301,7 +301,11 @@
                             dayKey = key;
                             break;
                         }
-                    } catch (e) { }
+                    } catch (e) {
+                        // Скан-цикл: corrupt JSON в одном ключе не должен ломать сканирование.
+                        // debug потому что таких ключей может быть много (стартовый scan).
+                        console.debug('[gates] dayv2 scan parse failed for', key, ':', e?.message || e);
+                    }
                 }
 
                 // Считаем все ключи в localStorage
@@ -404,7 +408,9 @@
                         dayKey = k;
                         try {
                             dayData = localStorage.getItem(k);
-                        } catch (e) { }
+                        } catch (e) {
+                            console.warn('[gates] localStorage.getItem failed for', k, ':', e?.message || e);
+                        }
                         break;
                     }
                 }
