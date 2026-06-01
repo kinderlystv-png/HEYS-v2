@@ -387,6 +387,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     id: 'tour-fab-buttons'
                 },
                     React.createElement('button', {
+                        className: 'water-fab',
+                        onClick: (e) => addWater(200, {
+                            source: 'day-fab',
+                            sourceEl: e.currentTarget
+                        }),
+                        'aria-label': 'Добавить стакан воды'
+                    }, '🥛'),
+                    React.createElement('button', {
                         className: 'meal-fab',
                         onClick: () => {
                             if (mobileSubTab === 'stats' && window.HEYS?.App?.setTab) {
@@ -408,14 +416,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         },
                         'aria-label': 'Добавить приём пищи'
                     }, '🍽️'),
-                    React.createElement('button', {
-                        className: 'water-fab',
-                        onClick: (e) => addWater(200, {
-                            source: 'day-fab',
-                            sourceEl: e.currentTarget
-                        }),
-                        'aria-label': 'Добавить стакан воды'
-                    }, '🥛'),
                     window.HEYS?.Messenger?.FabButton
                         ? React.createElement(window.HEYS.Messenger.FabButton, { key: 'msg-fab' })
                         : React.createElement('button', {

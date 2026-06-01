@@ -385,6 +385,21 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         // null = ещё не загрузили, { subscribed, permission, capable, needsInstall, busy }
         const [pushStatus, setPushStatus] = React.useState(null);
         const [pushBusy, setPushBusy] = React.useState(false);
+
+        // Portal target: push-badge живёт в state app_shell, но рендерится слева от 🌙
+        // в GamificationBar. См. heys_gamification_bar_v1.js → #push-badge-slot.
+        const [pushBadgeSlot, setPushBadgeSlot] = React.useState(null);
+        React.useEffect(() => {
+            let cancelled = false;
+            const find = () => {
+                const el = document.getElementById('push-badge-slot');
+                if (!cancelled) setPushBadgeSlot(el);
+            };
+            find();
+            const t1 = setTimeout(find, 200);
+            const t2 = setTimeout(find, 800);
+            return () => { cancelled = true; clearTimeout(t1); clearTimeout(t2); };
+        }, []);
         React.useEffect(() => {
             if (!window.HEYS?.push) return;
             // Синхронная проверка capable — показываем бейдж сразу, не ждём SW.ready
@@ -3012,38 +3027,31 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     ewsData.count > 0 && React.createElement('span', { className: 'ews-badge__count' }, ewsData.count)
                 ]),
 
-                // 🔔 Push notifications indicator (рядом с EWS, в одной строке шапки)
-                // Не рендерим если браузер вообще не поддерживает push.
-                pushStatus && pushStatus.capable !== false && React.createElement('div', {
-                    key: 'pushbadge',
-                    className: 'push-badge' + (
-                        pushStatus.subscribed ? ' push-badge--on' :
-                        (pushStatus.permission === 'denied' || pushStatus.needsInstall) ? ' push-badge--blocked' :
-                        ' push-badge--off'
-                    ),
-                    title: pushStatus.subscribed
-                        ? '🔔 Уведомления включены — тап для настроек'
-                        : pushStatus.needsInstall
-                            ? '📲 Добавь HEYS на главный экран чтобы включить уведомления'
-                            : pushStatus.permission === 'denied'
-                                ? '🔕 Уведомления заблокированы в браузере'
-                                : '🔕 Уведомления выключены — тап чтобы включить',
-                    onClick: pushBusy ? undefined : handlePushBadgeClick,
-                    style: {
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        width: '28px', height: '28px', borderRadius: '8px',
-                        cursor: pushBusy ? 'wait' : 'pointer',
-                        background: pushStatus.subscribed ? '#dcfce7'
-                            : (pushStatus.permission === 'denied' || pushStatus.needsInstall) ? '#f4f4f5'
-                                : '#fef3c7',
-                        border: '1px solid ' + (pushStatus.subscribed ? '#86efac'
-                            : (pushStatus.permission === 'denied' || pushStatus.needsInstall) ? '#d4d4d8'
-                                : '#fcd34d'),
-                        fontSize: '14px',
-                        opacity: pushBusy ? 0.6 : 1,
-                        marginLeft: '4px'
-                    }
-                }, pushStatus.subscribed ? '🔔' : '🔕'),
+                // 🔔 Push notifications indicator — рендерится через Portal в GamificationBar,
+                // слева от 🌙 (heys_gamification_bar_v1.js → #push-badge-slot).
+                pushStatus && pushStatus.capable !== false && pushBadgeSlot && window.ReactDOM?.createPortal && window.ReactDOM.createPortal(
+                    React.createElement('div', {
+                        key: 'pushbadge',
+                        className: 'push-badge' + (
+                            pushStatus.subscribed ? ' push-badge--on' :
+                            (pushStatus.permission === 'denied' || pushStatus.needsInstall) ? ' push-badge--blocked' :
+                            ' push-badge--off'
+                        ),
+                        title: pushStatus.subscribed
+                            ? '🔔 Уведомления включены — тап для настроек'
+                            : pushStatus.needsInstall
+                                ? '📲 Добавь HEYS на главный экран чтобы включить уведомления'
+                                : pushStatus.permission === 'denied'
+                                    ? '🔕 Уведомления заблокированы в браузере'
+                                    : '🔕 Уведомления выключены — тап чтобы включить',
+                        onClick: pushBusy ? undefined : handlePushBadgeClick,
+                        style: {
+                            cursor: pushBusy ? 'wait' : 'pointer',
+                            opacity: pushBusy ? 0.6 : 1
+                        }
+                    }, pushStatus.subscribed ? '🔔' : '🔕'),
+                    pushBadgeSlot
+                ),
 
                                    // Кнопки "Вчера" + "Сегодня" + DatePicker
                 (tab === 'stats' || tab === 'diary' || tab === 'insights' || tab === 'month' || tab === 'widgets') && window.HEYS.DatePicker
@@ -3452,26 +3460,38 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 React.createElement('span', { className: 'tab-advice-badge', id: 'nav-advice-badge' }),
             ),
             // iOS Switch группа для stats/diary/widgets/insights/month/tasks — ПО ЦЕНТРУ + подписи
-            React.createElement(
-                'div',
-                { className: 'tab-switch-wrapper tab-switch-wrapper--' + primaryTabsVariant },
-                React.createElement(
+            (() => {
+                const activeIdx = primaryTabs.findIndex(item => item.key === tab);
+                const totalTabs = primaryTabs.length;
+                const gliderStyle = activeIdx < 0
+                    ? { opacity: 0, pointerEvents: 'none' }
+                    : {
+                        width: `calc((100% - 4px) / ${totalTabs})`,
+                        transform: `translateX(${activeIdx * 100}%)`,
+                    };
+                return React.createElement(
                     'div',
-                    { className: 'tab-switch-group tab-switch-group--' + primaryTabsVariant },
-                    primaryTabs.map((item) => React.createElement(
+                    { className: 'tab-switch-wrapper tab-switch-wrapper--' + primaryTabsVariant },
+                    React.createElement(
                         'div',
                         {
-                            key: item.key,
-                            className: 'tab tab-switch ' + (tab === item.key ? 'active' : '') + (widgetsEditMode && defaultTab === item.key ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
-                            id: item.id,
-                            title: item.label,
-                            onClick: () => handlePrimaryTabClick(item.key),
+                            className: 'tab-switch-group tab-switch-group--' + primaryTabsVariant + (activeIdx < 0 ? ' tab-switch-group--no-active' : ''),
                         },
-                        widgetsEditMode && defaultTab === item.key && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
-                        React.createElement('span', { className: item.iconClassName || 'tab-icon' }, item.icon),
-                        React.createElement('span', { className: 'tab-text' }, item.buttonLabel),
-                    )),
-                ),
+                        React.createElement('div', { className: 'tab-switch-glider', 'aria-hidden': 'true', style: gliderStyle }),
+                        primaryTabs.map((item) => React.createElement(
+                            'div',
+                            {
+                                key: item.key,
+                                className: 'tab tab-switch ' + (tab === item.key ? 'active' : '') + (widgetsEditMode && defaultTab === item.key ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                                id: item.id,
+                                title: item.label,
+                                onClick: () => handlePrimaryTabClick(item.key),
+                            },
+                            widgetsEditMode && defaultTab === item.key && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
+                            React.createElement('span', { className: item.iconClassName || 'tab-icon' }, item.icon),
+                            React.createElement('span', { className: 'tab-text' }, item.buttonLabel),
+                        )),
+                    ),
                 // Подписи под переключателем
                 React.createElement(
                     'div',
@@ -3483,7 +3503,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         onClick: () => switchTabWithUndoCommit(item.key, `tab-label-${item.key}-switch`)
                     }, item.label)),
                 ),
-            ),
+            );
+            })(),
             // Настройки — раскрывающееся меню вверх
             React.createElement(
                 'div',

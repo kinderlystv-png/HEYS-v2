@@ -3550,8 +3550,8 @@ td:first-child input {
   margin: 0 auto;
   padding: 12px 18px 80px;
   box-sizing: border-box;
-  /* Отступ сверху для fixed шапки */
-  padding-top: 110px;
+  /* Отступ сверху для fixed шапки (40px gamification + 40px calendar + .hdr padding) */
+  padding-top: 94px;
   /* 🚀 PERF: isolation creates a stacking context boundary that helps
      the compositor limit backdrop-filter sampling scope on .hdr / .tabs */
   isolation: isolate;
@@ -3765,8 +3765,9 @@ td:first-child input {
 }
 
 /* === 14. Gamification Bar (Phase 1 Live) === */
-.hdr-gamification {
-  padding: 10px 16px;
+.hdr-top.hdr-gamification {
+  padding: 4px 12px;
+  min-height: 40px;
   position: relative;
   /* 🚀 PERF: contain gamification layout — prevents child animations from triggering parent reflow */
   contain: layout style;
@@ -8113,12 +8114,12 @@ svg.date-picker-icon {
   justify-content: space-around;
   align-items: center;
   gap: 0;
-  padding: 8px 12px;
+  padding: 8px 6px;
   margin: 0;
-  background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border-top: 0.5px solid rgba(0, 0, 0, 0.1);
+  background: rgba(242, 242, 247, 0.96);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.08);
   border-radius: 0;
   position: fixed;
   bottom: 0;
@@ -8156,8 +8157,9 @@ svg.date-picker-icon {
   transform-origin: right center;
   will-change: transform, right, width;
   /* applyCascadeVisual() wipes inline styles via cssText — CSS must provide colors. */
-  background: linear-gradient(90deg, #10b981, #34d399);
-  box-shadow: 0 0 4px rgba(52, 211, 153, 0.8), 0 0 10px rgba(16, 185, 129, 0.6), 0 0 16px rgba(5, 150, 105, 0.4);
+  background: linear-gradient(90deg, #059669 0%, #10b981 50%, #34d399 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.08);
   transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1), right 1.8s cubic-bezier(0.22, 1, 0.36, 1), width 1.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -8167,8 +8169,9 @@ svg.date-picker-icon {
   height: 100%;
   transform-origin: left center;
   will-change: transform, left, width;
-  background: linear-gradient(90deg, #dc2626, #f97316, #fde047);
-  box-shadow: 0 0 4px rgba(253, 224, 71, 0.7), 0 0 10px rgba(249, 115, 22, 0.6), 0 0 16px rgba(220, 38, 38, 0.4);
+  background: linear-gradient(90deg, #c2410c 0%, #ea580c 50%, #fb923c 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.08);
   transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1), left 1.8s cubic-bezier(0.22, 1, 0.36, 1), width 1.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -8179,10 +8182,10 @@ svg.date-picker-icon {
   height: 8px;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow: 0 0 0 1.5px rgba(15, 23, 42, 0.15), 0 0 6px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.28), 0 1px 2px rgba(0, 0, 0, 0.18);
   transition: left 2s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
-  opacity: 0.95;
+  opacity: 1;
 }
 
 /*
@@ -8199,29 +8202,26 @@ svg.date-picker-icon {
 }
 
 [data-theme="dark"] .crs-bar-green {
-  background: linear-gradient(90deg, #0d9488 0%, #14b8a6 35%, #5eead4 70%, #a7f3d0 100%) !important;
+  background: linear-gradient(90deg, #0d9488 0%, #14b8a6 50%, #2dd4bf 100%) !important;
   box-shadow:
-    0 0 6px rgba(94, 234, 212, 0.95),
-    0 0 14px rgba(45, 212, 191, 0.75),
-    0 0 22px rgba(16, 185, 129, 0.45) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18) !important;
 }
 
 [data-theme="dark"] .crs-bar-orange {
-  background: linear-gradient(90deg, #fbbf24 0%, #fb923c 30%, #f43f5e 65%, #e879f9 100%) !important;
+  background: linear-gradient(90deg, #b45309 0%, #ea580c 50%, #f97316 100%) !important;
   box-shadow:
-    0 0 6px rgba(251, 191, 36, 0.9),
-    0 0 14px rgba(249, 115, 22, 0.65),
-    0 0 20px rgba(244, 63, 94, 0.45) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18) !important;
 }
 
 [data-theme="dark"] .crs-bar-divider {
-  width: 7px;
-  height: 7px;
-  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #ecfeff 40%, #5eead4 100%);
+  width: 8px;
+  height: 8px;
+  background: #ffffff;
   box-shadow:
-    0 0 0 2px rgba(34, 211, 238, 0.45),
-    0 0 10px rgba(255, 255, 255, 0.55),
-    0 0 18px rgba(94, 234, 212, 0.5);
+    0 0 0 1px rgba(15, 23, 42, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
   opacity: 1;
 }
 
@@ -8236,29 +8236,26 @@ svg.date-picker-icon {
   }
 
   html:not([data-theme]) .crs-bar-green {
-    background: linear-gradient(90deg, #0d9488 0%, #14b8a6 35%, #5eead4 70%, #a7f3d0 100%) !important;
+    background: linear-gradient(90deg, #0d9488 0%, #14b8a6 50%, #2dd4bf 100%) !important;
     box-shadow:
-      0 0 6px rgba(94, 234, 212, 0.95),
-      0 0 14px rgba(45, 212, 191, 0.75),
-      0 0 22px rgba(16, 185, 129, 0.45) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.18) !important;
   }
 
   html:not([data-theme]) .crs-bar-orange {
-    background: linear-gradient(90deg, #fbbf24 0%, #fb923c 30%, #f43f5e 65%, #e879f9 100%) !important;
+    background: linear-gradient(90deg, #b45309 0%, #ea580c 50%, #f97316 100%) !important;
     box-shadow:
-      0 0 6px rgba(251, 191, 36, 0.9),
-      0 0 14px rgba(249, 115, 22, 0.65),
-      0 0 20px rgba(244, 63, 94, 0.45) !important;
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.18) !important;
   }
 
   html:not([data-theme]) .crs-bar-divider {
-    width: 7px;
-    height: 7px;
-    background: radial-gradient(circle at 35% 30%, #ffffff 0%, #ecfeff 40%, #5eead4 100%);
+    width: 8px;
+    height: 8px;
+    background: #ffffff;
     box-shadow:
-      0 0 0 2px rgba(34, 211, 238, 0.45),
-      0 0 10px rgba(255, 255, 255, 0.55),
-      0 0 18px rgba(94, 234, 212, 0.5);
+      0 0 0 1px rgba(15, 23, 42, 0.4),
+      0 1px 2px rgba(0, 0, 0, 0.3);
     opacity: 1;
   }
 }
@@ -8336,13 +8333,13 @@ svg.date-picker-icon {
 }
 
 .tab.active {
-  color: #007aff;
-  background: rgba(0, 122, 255, 0.08);
+  color: #1a1a1f;
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04), 0 3px 8px rgba(0, 0, 0, 0.06);
 }
 
 .tab.active .tab-icon {
-  transform: scale(1.08);
-  filter: grayscale(0%) drop-shadow(0 1px 2px rgba(0, 122, 255, 0.2));
+  filter: grayscale(0%) drop-shadow(0 1px 2px rgba(0, 122, 255, 0.22));
 }
 
 .tab.active .tab-text {
@@ -8354,8 +8351,8 @@ svg.date-picker-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(120, 120, 128, 0.12);
-  border-radius: 8px;
+  background: rgba(120, 120, 128, 0.18);
+  border-radius: 10px;
   padding: 2px;
   gap: 0;
   height: 40px;
@@ -8363,6 +8360,25 @@ svg.date-picker-icon {
   -webkit-tap-highlight-color: transparent;
   flex: 0 1 auto;
   min-width: 160px;
+  position: relative;
+}
+
+/* Glider — единая белая «пилюля», скользит между табами при переключении.
+ * width и transform задаются inline через React style (см. heys_app_shell_v1.js) */
+.tab-switch-glider {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04), 0 3px 8px rgba(0, 0, 0, 0.06);
+  transition: transform 320ms cubic-bezier(0.34, 1.42, 0.64, 1),
+              opacity 200ms ease,
+              width 320ms cubic-bezier(0.34, 1.42, 0.64, 1);
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform;
 }
 
 .tab-switch-wrapper {
@@ -8382,21 +8398,19 @@ svg.date-picker-icon {
   min-width: 48px;
   min-height: 32px;
   padding: 4px 8px;
-  border-radius: 0;
+  border-radius: 8px;
   background: transparent;
-  color: #666;
-  transition: color, background-color, box-shadow 0.2s ease;
+  color: #1a1a1f;
+  transition: color 0.12s ease;
   gap: 1px;
   max-width: none;
+  position: relative;
+  z-index: 1;
 }
 
-/* Скругление только на внешних краях */
-.tab.tab-switch:first-child {
-  border-radius: 6px 0 0 6px;
-}
-
+.tab.tab-switch:first-child,
 .tab.tab-switch:last-child {
-  border-radius: 0 6px 6px 0;
+  border-radius: 8px;
 }
 
 .tab.tab-switch .tab-icon {
@@ -8410,21 +8424,30 @@ svg.date-picker-icon {
 }
 
 .tab.tab-switch.active {
-  background: linear-gradient(135deg, #007aff 0%, #0056d6 100%);
-  color: var(--color-white);
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.35);
+  background: transparent;
+  color: #1a1a1f;
+  font-weight: 600;
+  box-shadow: none;
 }
 
 .tab.tab-switch.active .tab-icon {
-  filter: brightness(1.1) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+  filter: drop-shadow(0 1px 2px rgba(0, 122, 255, 0.22));
 }
 
 /* === Кнопка советов в навигации === */
 .tab.tab-advice {
-  flex: 0 1 auto;
-  min-width: 48px;
-  max-width: 64px;
+  flex: 0 0 auto;
+  min-width: 44px;
+  max-width: 44px;
+  padding: 4px 4px;
   position: relative;
+}
+
+/* Settings (⚙️) — компактнее по умолчанию, чтобы освободить место центральной группе */
+.tab-settings-wrap > .tab {
+  min-width: 44px;
+  max-width: 44px;
+  padding: 4px 4px;
 }
 
 /* === Настройки: выпадающее меню вверх === */
@@ -8520,7 +8543,11 @@ svg.date-picker-icon {
 }
 
 .tab.tab-advice .tab-icon {
-  font-size: 26px;
+  font-size: 22px;
+}
+
+.tab-settings-wrap > .tab .tab-icon {
+  font-size: 22px;
 }
 
 .tab-advice-badge {
@@ -8687,7 +8714,7 @@ svg.date-picker-icon {
 
 /* Dark theme */
 [data-theme="dark"] .tab-switch-group {
-  background: #3a3a3c;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .tab-settings-menu {
@@ -8705,12 +8732,22 @@ svg.date-picker-icon {
 }
 
 [data-theme="dark"] .tab.tab-switch {
-  color: #8e8e93;
+  color: #d1d1d6;
 }
 
 [data-theme="dark"] .tab.tab-switch.active {
-  background: #0a84ff;
-  color: var(--color-white);
+  background: transparent;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .tab.tab-switch.active .tab-icon {
+  filter: drop-shadow(0 1px 2px rgba(130, 170, 255, 0.35));
+}
+
+[data-theme="dark"] .tab-switch-glider {
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.25), 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
 .tab-switch-labels {
@@ -10330,8 +10367,8 @@ svg.date-picker-icon {
 
   .wrap {
     padding: 12px 14px 80px;
-    /* Отступ сверху для fixed шапки на мобильных */
-    padding-top: 125px;
+    /* Отступ сверху для fixed шапки на мобильных (gamification 40px + bottom 40px + .hdr padding) */
+    padding-top: 109px;
   }
 }
 
@@ -13560,4 +13597,114 @@ svg.date-picker-icon {
   .achievement-story-icon {
     font-size: 48px;
   }
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+ * Header secondary action buttons — unified neutral-glass pill.
+ * Применяется к: 🌙 hdr-theme-btn, ☁️ cloud-sync-indicator, ⚠️ ews-badge,
+ * 🔕/🔔 push-badge, "31" yesterday-quick-btn. Все одного размера/радиуса/тени;
+ * статус передаётся цветом иконки и тонкой подсветкой бордера, а не цветным
+ * фоном — снимает визуальный шум в шапке.
+ * ═════════════════════════════════════════════════════════════════════ */
+.hdr-theme-btn,
+.cloud-sync-indicator,
+.ews-badge,
+.push-badge,
+.yesterday-quick-btn {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05),
+              inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  color: #475569 !important;
+  font-size: 14px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms ease,
+              border-color 150ms ease,
+              box-shadow 150ms ease,
+              transform 150ms ease !important;
+  flex-shrink: 0;
+}
+
+.hdr-theme-btn:hover,
+.cloud-sync-indicator:hover,
+.ews-badge:hover,
+.push-badge:hover,
+.yesterday-quick-btn:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(15, 23, 42, 0.16) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+  transform: translateY(-1px);
+}
+
+/* Cloud sync — icon color = state */
+.cloud-sync-indicator.syncing { color: #0284c7; border-color: rgba(2, 132, 199, 0.22) !important; }
+.cloud-sync-indicator.offline { color: #dc2626; border-color: rgba(220, 38, 38, 0.22) !important; }
+.cloud-sync-indicator.session { color: #7c3aed; border-color: rgba(124, 58, 237, 0.22) !important; }
+.cloud-sync-indicator.idle    { color: #64748b; }
+
+/* EWS warning — red accent через цвет иконки/бордера, фон остаётся нейтральным */
+.ews-badge--high   { color: #dc2626; border-color: rgba(220, 38, 38, 0.24) !important; }
+.ews-badge--medium { color: #ea580c; border-color: rgba(234, 88, 12, 0.22) !important; }
+.ews-badge--low    { color: #ca8a04; border-color: rgba(202, 138, 4, 0.22) !important; }
+
+/* Push notifications — состояние через цвет иконки */
+.push-badge.push-badge--on      { color: #16a34a; border-color: rgba(22, 163, 74, 0.22) !important; }
+.push-badge.push-badge--off     { color: #d97706; border-color: rgba(217, 119, 6, 0.22) !important; }
+.push-badge.push-badge--blocked { color: #6b7280; border-color: rgba(107, 114, 128, 0.2) !important; }
+
+/* Yesterday quick btn — amber accent через границу + цвет цифры,
+ * чуть крупнее остальных бейджей чтобы число читалось */
+.yesterday-quick-btn {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  border-radius: 10px !important;
+  color: #b45309 !important;
+  font-size: 13px !important;
+  font-weight: 600;
+  border-color: rgba(245, 158, 11, 0.28) !important;
+}
+.yesterday-quick-btn:hover {
+  border-color: rgba(245, 158, 11, 0.45) !important;
+}
+.yesterday-quick-btn.active {
+  background: rgba(254, 243, 199, 0.85) !important;
+}
+
+/* Dark mode — тёмный glass-пилюль вместо белого */
+[data-theme="dark"] .hdr-theme-btn,
+[data-theme="dark"] .cloud-sync-indicator,
+[data-theme="dark"] .ews-badge,
+[data-theme="dark"] .push-badge,
+[data-theme="dark"] .yesterday-quick-btn {
+  background: rgba(40, 40, 50, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25),
+              inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="dark"] .hdr-theme-btn:hover,
+[data-theme="dark"] .cloud-sync-indicator:hover,
+[data-theme="dark"] .ews-badge:hover,
+[data-theme="dark"] .push-badge:hover,
+[data-theme="dark"] .yesterday-quick-btn:hover {
+  background: rgba(55, 55, 65, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Push-badge slot в GamificationBar — display: contents чтобы пустой span
+ * не занимал flex-место и не дублировал gap между ▼ и 🌙.
+ * Когда push-badge зарендерится через Portal — он сам встанет в flex-row
+ * как direct child .game-bar и получит свой gap. */
+.gamification-push-slot {
+  display: contents;
 }

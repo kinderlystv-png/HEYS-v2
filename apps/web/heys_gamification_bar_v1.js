@@ -1402,6 +1402,9 @@
                     title: expanded ? 'Свернуть' : 'Подробнее'
                 }, expanded ? '▲' : '▼'),
 
+                // Slot для push-уведомлений (рендерится через Portal из heys_app_shell_v1.js)
+                React.createElement('span', { id: 'push-badge-slot', className: 'gamification-push-slot', key: 'push-slot' }),
+
                 // Theme toggle button — всегда виден
                 React.createElement('button', {
                     className: 'hdr-theme-btn',
