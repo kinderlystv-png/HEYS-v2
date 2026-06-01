@@ -116,7 +116,7 @@
         h('div', { style: { fontSize: 32, marginBottom: 12 } }, '🎂'),
         h('h3', { style: { margin: '0 0 8px', fontSize: 17 } }, 'Укажи возраст для рекомендаций'),
         h('p', { style: { margin: '0 0 16px', fontSize: 14, opacity: 0.75, lineHeight: 1.45 } },
-          'Без возраста мы не показываем программы — это safety-настройка ' +
+          'Без возраста мы не показываем протоколы — это safety-настройка ' +
           '(полный замок и mono нельзя до 16-18 лет, UIAA/BMC).'),
         onRequestOnboarding
           ? h('button', {
@@ -133,7 +133,7 @@
         ? Fingers.ageGate.getRestrictionMessage(ageRaw) : null;
       return h('div', { className: 'fingers-fs-empty', style: { padding: 24 } },
         h('h3', { style: { margin: '0 0 8px', fontSize: 16 } },
-          'Программы недоступны для возраста ' + ageRaw),
+          'Протоколы недоступны для возраста ' + ageRaw),
         restr ? h('p', { style: { fontSize: 13, opacity: 0.75, lineHeight: 1.4 } }, restr.message) : null
       );
     }
@@ -143,41 +143,26 @@
         const isRec = p.id === recommendedId;
         return h('div', {
           key: p.id,
-          className: 'fingers-fs-program-card' + (isRec ? ' fingers-fs-program-card--recommended' : ''),
-          style: { position: 'relative' }
+          className: 'fingers-fs-program-card' + (isRec ? ' fingers-fs-program-card--recommended' : '')
         },
           isRec && h('div', {
-            style: {
-              position: 'absolute', top: 12, right: 12,
-              padding: '2px 8px', borderRadius: 999,
-              fontSize: 11, fontWeight: 600,
-              background: 'var(--fingers-accent)', color: '#fff'
-            }
-          }, '★ для тебя'),
-          h('h3', { style: { margin: '0 0 8px', fontSize: 18 } }, p.name),
-          h('p', { style: { margin: '0 0 12px', fontSize: 14, opacity: 0.75 } }, p.description),
-          h('div', {
-            style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, fontSize: 12 }
+            className: 'fingers-fs-program-card__rec-badge',
+            'aria-label': 'Рекомендовано для тебя'
           },
+            h('span', { className: 'fingers-fs-program-card__rec-star', 'aria-hidden': 'true' }, '★'),
+            h('span', null, 'для тебя')
+          ),
+          h('h3', { className: 'fingers-fs-program-card__title' }, p.name),
+          h('p', { className: 'fingers-fs-program-card__desc' }, p.description),
+          h('div', { className: 'fingers-fs-program-card__chips' },
             h('span', {
-              style: {
-                padding: '2px 8px', borderRadius: 4,
-                background: intensityColor(p.intensity) + '22',
-                color: intensityColor(p.intensity)
-              }
+              className: 'fingers-fs-chip fingers-fs-chip--intensity',
+              'data-fingers-intensity': p.intensity || 'moderate'
             }, intensityLabel(p.intensity)),
-            h('span', {
-              style: {
-                padding: '2px 8px', borderRadius: 4,
-                background: 'rgba(0,0,0,0.06)'
-              }
-            }, '⏱ ' + (p.durationMin || '—') + ' мин'),
-            h('span', {
-              style: {
-                padding: '2px 8px', borderRadius: 4,
-                background: 'rgba(0,0,0,0.06)'
-              }
-            }, p.level)
+            h('span', { className: 'fingers-fs-chip' },
+              h('span', { 'aria-hidden': 'true' }, '⏱ '),
+              (p.durationMin || '—') + ' мин'),
+            h('span', { className: 'fingers-fs-chip fingers-fs-chip--level' }, p.level)
           ),
           p.advisoryBadge && h('div', {
             style: {
@@ -200,7 +185,7 @@
             className: 'fingers-fs-cta',
             onClick: function () { onPickProgram(p); },
             style: { width: '100%' }
-          }, 'Запустить программу')
+          }, 'Запустить протокол')
         );
       })
     );
@@ -335,8 +320,8 @@
       }
     },
       h('div', { style: { fontSize: 13, lineHeight: 1.4, color: '#1f2937' } },
-        h('span', { style: { fontWeight: 600 } }, '🔒 Программа: ', programName), '. ',
-        'Время виса, отдых и повторы зафиксированы протоколом — меняй грань и доп. вес.'
+        h('span', { style: { fontWeight: 600 } }, '🔒 Протокол: ', programName), '. ',
+        'Время виса, отдых и повторы зафиксированы — меняй грань и доп. вес.'
       ),
       h('button', {
         type: 'button',
@@ -347,14 +332,14 @@
           padding: '4px 0', cursor: 'pointer',
           color: '#4f46e5', fontSize: 12, fontWeight: 600
         }
-      }, 'Отвязаться от программы')
+      }, 'Отвязаться от протокола')
     ) : null;
 
     return h('div', { className: 'fingers-fs-constructor' },
       programBanner,
       exercises.length === 0
         ? h('div', { className: 'fingers-fs-empty', style: { padding: 32, textAlign: 'center' } },
-            h('p', null, 'Пусто. Добавь упражнение или примени программу из вкладки Программы.'),
+            h('p', null, 'Пусто. Добавь упражнение или примени протокол из вкладки Протоколы.'),
             h('button', { className: 'fingers-fs-cta', onClick: add, style: { marginTop: 16 } },
               '+ Добавить упражнение'))
         : h(React.Fragment, null,
@@ -437,7 +422,7 @@
             h('h3', null, '📊 Прогресс'),
             h('p', null, 'Тренировок ещё нет. После первой здесь появятся твои рекорды по 8 хватам.'),
             recommendedProgramId && Fingers.getProgramById && h('div', { style: { marginTop: 24 } },
-              h('p', { style: { fontSize: 13, opacity: 0.7 } }, 'Рекомендованная стартовая программа:'),
+              h('p', { style: { fontSize: 13, opacity: 0.7 } }, 'Рекомендованный стартовый протокол:'),
               h('button', {
                 className: 'fingers-fs-cta',
                 onClick: function () {
@@ -488,12 +473,13 @@
         h('p', null, 'Календарь недоступен (module not loaded).'));
     }
     const currentYear = new Date().getFullYear();
+    // onDayClick намеренно НЕ передаём пока bottom-sheet с деталями дня не сделан —
+    // YearHeatmap читает `hasSession && onDayClick` чтобы поставить cursor:pointer.
+    // Раньше передавали пустую функцию → курсор-указатель обманывал юзера, клик
+    // ничего не делал (audit-finding 2026-06-01).
     return h('div', null,
       h('h3', { style: { margin: '0 0 16px' } }, '📅 Год тренировок'),
-      h(Fingers.YearHeatmap, {
-        year: currentYear,
-        onDayClick: function (date) { /* TODO: bottom-sheet с деталями дня */ }
-      })
+      h(Fingers.YearHeatmap, { year: currentYear })
     );
   }
 
@@ -1094,11 +1080,45 @@
       );
     }
 
+    // Custom SF-style monoline SVG icons — единый визуальный язык вместо смешанных emoji.
+    // Все 22×22 viewBox, stroke=1.6, lineCap=round.
+    const svgIcon = function (d) {
+      return h('svg', {
+        className: 'fingers-fs-tab__svg',
+        width: 22, height: 22, viewBox: '0 0 22 22',
+        fill: 'none', stroke: 'currentColor',
+        strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round',
+        'aria-hidden': 'true'
+      }, typeof d === 'string'
+        ? h('path', { d: d })
+        : d.map(function (item, i) { return h(item.tag, Object.assign({ key: i }, item.attrs)); })
+      );
+    };
+    const ICONS = {
+      programs: svgIcon([
+        { tag: 'path', attrs: { d: 'M4 4.5h10a2.5 2.5 0 0 1 2.5 2.5v11' } },
+        { tag: 'path', attrs: { d: 'M4 4.5v13a2 2 0 0 0 2 2h10.5' } },
+        { tag: 'path', attrs: { d: 'M7.5 8.5h6M7.5 11.5h5' } }
+      ]),
+      constructor: svgIcon([
+        { tag: 'circle', attrs: { cx: 11, cy: 11, r: 2.5 } },
+        { tag: 'path', attrs: { d: 'M11 3v2.5M11 16.5V19M3 11h2.5M16.5 11H19M5.3 5.3l1.8 1.8M14.9 14.9l1.8 1.8M16.7 5.3l-1.8 1.8M7.1 14.9l-1.8 1.8' } }
+      ]),
+      progress: svgIcon([
+        { tag: 'path', attrs: { d: 'M3.5 17.5V12M8.5 17.5V8.5M13.5 17.5v-4M18.5 17.5V5' } },
+        { tag: 'path', attrs: { d: 'M3 19.5h16' } }
+      ]),
+      calendar: svgIcon([
+        { tag: 'rect', attrs: { x: 3.5, y: 5, width: 15, height: 13.5, rx: 2 } },
+        { tag: 'path', attrs: { d: 'M3.5 9h15M7.5 3v3.5M14.5 3v3.5' } },
+        { tag: 'circle', attrs: { cx: 11, cy: 13, r: 1.2, fill: 'currentColor', stroke: 'none' } }
+      ])
+    };
     const tabs = [
-      { id: 'programs', label: 'Программы', icon: '📚' },
-      { id: 'constructor', label: 'Конструктор', icon: '⚙' },
-      { id: 'progress', label: 'Прогресс', icon: '📊' },
-      { id: 'calendar', label: 'Календарь', icon: '📅' }
+      { id: 'programs',    label: 'Протоколы',   icon: ICONS.programs },
+      { id: 'constructor', label: 'Конструктор', icon: ICONS.constructor },
+      { id: 'progress',    label: 'Прогресс',    icon: ICONS.progress },
+      { id: 'calendar',    label: 'Календарь',   icon: ICONS.calendar }
     ];
 
     return h('div', { className: 'fingers-fs-session' },
@@ -1109,21 +1129,22 @@
         onCancel: handleWarmupCancel
       }) : null,
       // Header
-      h('div', { className: 'fingers-fs__header',
-        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          paddingTop: 12, paddingBottom: 24, gap: 8 } },
-        h('h1', { style: { margin: 0, fontSize: 22, minWidth: 0, overflow: 'hidden',
-          textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, '🤚 Тренировка'),
-        h('div', { style: { display: 'flex', gap: 6, flexShrink: 0 } },
+      h('div', { className: 'fingers-fs__header fingers-fs__header--premium' },
+        h('h1', { className: 'fingers-fs__title' },
+          h('span', { className: 'fingers-fs__title-icon', 'aria-hidden': 'true' }, '🤚'),
+          h('span', { className: 'fingers-fs__title-text' }, 'Тренировка')
+        ),
+        h('div', { className: 'fingers-fs__header-actions' },
           onRequestOnboarding ? h('button', {
-            className: 'fingers-fs-ghost',
+            type: 'button',
+            className: 'fingers-fs__icon-btn',
             onClick: function () {
               if (HEYS.ConfirmModal?.show) {
                 HEYS.ConfirmModal.show({
                   icon: '⚙',
                   title: 'Перенастроить',
                   text: 'Сбросить ответы онбординга и перепройти заново? ' +
-                    'Это пересчитает рекомендованную программу. Существующие записи в дневнике сохранятся.',
+                    'Это пересчитает рекомендованный протокол. Существующие записи в дневнике сохранятся.',
                   confirmText: 'Перепройти',
                   cancelText: 'Отмена',
                   onConfirm: function () { onRequestOnboarding(); }
@@ -1132,16 +1153,16 @@
                 onRequestOnboarding();
               }
             },
-            style: { padding: '8px 10px', fontSize: 13 },
             'aria-label': 'Перенастроить профиль (перепройти онбординг)',
             title: 'Перенастроить'
-          }, '⚙') : null,
+          }, h('span', { 'aria-hidden': 'true' }, '⚙')) : null,
           h('button', {
-            className: 'fingers-fs-ghost',
+            type: 'button',
+            className: 'fingers-fs__icon-btn',
             onClick: function () { setShowBib(true); },
-            style: { padding: '8px 12px', fontSize: 13 },
-            'aria-label': 'Источники и методология'
-          }, '📚')
+            'aria-label': 'Источники и методология',
+            title: 'Источники'
+          }, h('span', { 'aria-hidden': 'true' }, '📚'))
         )
       ),
 
@@ -1211,22 +1232,19 @@
       })() : null,
 
       // Tabs
-      h('div', { className: 'fingers-fs-tabs', role: 'tablist',
-        style: { display: 'flex', gap: 4, marginBottom: 24,
-          padding: 4, borderRadius: 12, background: 'rgba(0,0,0,0.04)' } },
-        tabs.map(function (t) {
+      h('div', { className: 'fingers-fs-tabs', role: 'tablist' },
+        tabs.map(function (t, idx) {
           const active = tab === t.id;
           return h('button', {
             key: t.id,
             role: 'tab',
             'aria-selected': active,
             className: 'fingers-fs-tab' + (active ? ' fingers-fs-tab--active' : ''),
+            style: { animationDelay: (idx * 40) + 'ms' },
             onClick: function () { setTab(t.id); }
-            // styles в CSS (.fingers-fs-tab) — иконка/текст как flex column,
-            // умещаются без обрезания на 390px
           },
-            h('span', { key: 'i' }, t.icon),
-            h('span', { key: 'l' }, t.label)
+            h('span', { key: 'i', className: 'fingers-fs-tab__icon' }, t.icon),
+            h('span', { key: 'l', className: 'fingers-fs-tab__label' }, t.label)
           );
         })
       ),

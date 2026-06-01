@@ -332,7 +332,7 @@ export const LEGACY_BUNDLES = {
 
 export const LEGACY_GENERATORS = {
     advice: {
-        script: 'apps/web/scripts/bundle-advice.cjs',
+        script: 'apps/web/scripts/bundle-advice.mjs',
         output: 'apps/web/heys_advice_bundle_v1.js',
         sources: [
             // _evidence.js должен загружаться ПЕРЕД _core.js — он populate'ит
@@ -374,9 +374,47 @@ export const LEGACY_GENERATORS = {
         ],
         dependsOn: ['meals'],
     },
+    fingers: {
+        // 24 IIFE-модуля Fingers собираются в один lazy-loaded бандл.
+        // Order — strict dependency layers (см. bundle-fingers.cjs MODULES).
+        script: 'apps/web/scripts/bundle-fingers.cjs',
+        output: 'apps/web/heys_fingers_bundle_v1.js',
+        sources: [
+            // Layer 1
+            'apps/web/fingers/heys_fingers_audio_extension_v1.js',
+            'apps/web/fingers/heys_fingers_body_metrics_v1.js',
+            'apps/web/fingers/heys_fingers_bibliography_v1.js',
+            'apps/web/fingers/heys_fingers_grips_catalog_v1.js',
+            'apps/web/fingers/heys_fingers_boards_catalog_v1.js',
+            'apps/web/fingers/heys_fingers_programs_catalog_v1.js',
+            'apps/web/fingers/heys_fingers_age_gating_v1.js',
+            'apps/web/fingers/heys_fingers_readiness_v1.js',
+            // Layer 2
+            'apps/web/fingers/heys_fingers_svg_grips_v1.js',
+            'apps/web/fingers/heys_fingers_svg_anatomy_v1.js',
+            'apps/web/fingers/heys_fingers_voice_v1.js',
+            // Layer 3
+            'apps/web/fingers/heys_fingers_records_store_v1.js',
+            'apps/web/fingers/heys_fingers_calibration_v1.js',
+            'apps/web/fingers/heys_fingers_timer_v1.js',
+            'apps/web/fingers/heys_fingers_session_persistence_v1.js',
+            'apps/web/fingers/heys_fingers_calendar_v1.js',
+            'apps/web/fingers/heys_fingers_safety_v1.js',
+            'apps/web/fingers/heys_fingers_warmup_runner_v1.js',
+            // Layer 4
+            'apps/web/fingers/heys_fingers_muscle_detail_v1.js',
+            'apps/web/fingers/heys_fingers_constructor_v1.js',
+            'apps/web/fingers/heys_fingers_onboarding_v1.js',
+            'apps/web/fingers/heys_fingers_session_ui_v1.js',
+            'apps/web/fingers/heys_fingers_fullscreen_v1.js',
+            // Layer 5 — entry LAST
+            'apps/web/fingers/heys_fingers_entry_v1.js',
+        ],
+        dependsOn: [],
+    },
 };
 
-export const LEGACY_GENERATOR_ORDER = ['advice', 'meals', 'day'];
+export const LEGACY_GENERATOR_ORDER = ['advice', 'meals', 'day', 'fingers'];
 
 export const LEGACY_FULL_REBUILD_TRIGGERS = new Set([
     'scripts/bundle-legacy.mjs',

@@ -197,7 +197,7 @@
     if (!src) return null;
     const onClick = props && props.onClick;
     return React.createElement('span', {
-      className: 'fingers-source-badge',
+      className: 'fingers-source-badge' + (onClick ? ' fingers-source-badge--clickable' : ''),
       role: onClick ? 'button' : undefined,
       tabIndex: onClick ? 0 : undefined,
       onClick: onClick ? function (e) {
@@ -208,21 +208,12 @@
           e.preventDefault();
           try { onClick(src, e); } catch (err) { console.warn('[Fingers.SourceBadge] onKeyDown failed', err); }
         }
-      } : undefined,
-      style: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '2px 8px',
-        borderRadius: 999,
-        background: 'var(--bg-soft, rgba(148,163,184,0.15))',
-        color: 'var(--text-muted, #64748b)',
-        fontSize: 12,
-        fontWeight: 500,
-        cursor: onClick ? 'pointer' : 'default',
-        userSelect: 'none'
-      }
-    }, '📚 ', src.author, ' ', src.year);
+      } : undefined
+    },
+      React.createElement('span', { className: 'fingers-source-badge__icon', 'aria-hidden': 'true' }, '📖'),
+      React.createElement('span', { className: 'fingers-source-badge__author' }, src.author),
+      React.createElement('span', { className: 'fingers-source-badge__year' }, src.year)
+    );
   }
 
   const TOPIC_LABELS = {

@@ -25,7 +25,7 @@ import https from 'node:https';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const VOICE_DIR = path.join(ROOT, 'public', 'voice', 'fingers-ru');
-const PHRASE_BANK_FILE = path.join(ROOT, 'heys_fingers_voice_v1.js');
+const PHRASE_BANK_FILE = path.join(ROOT, 'fingers', 'heys_fingers_voice_v1.js');
 
 // ===== CLI =====
 const argv = process.argv.slice(2);

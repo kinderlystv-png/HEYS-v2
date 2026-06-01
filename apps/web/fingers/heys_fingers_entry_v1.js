@@ -1,15 +1,65 @@
 // heys_fingers_entry_v1.js — Точка входа модуля «Тренировка пальцев» (climbing fingerboard).
 // Wave 3: реальная реализация поверх Fullscreen portal + рендер компактного pill для дневника.
 //
-// Public API:
-//   HEYS.Fingers.openFullscreen({ dateKey, trainingIndex, mode })
-//     dateKey:        ISO 'YYYY-MM-DD' дата дневника
-//     trainingIndex:  индекс тренировки в day.trainings[]
-//     mode:           'new' | 'view' | 'continue' | 'edit'
-//   HEYS.Fingers.close()
-//   HEYS.Fingers.isReady()
-//   HEYS.Fingers.renderPreviewPill({ training, dateKey, trainingIndex, onClick })
-//     React component — компактная 60px карточка fingers тренировки для дневника.
+// PUBLIC API (стабильный контракт — consumer-код в day_trainings и др. полагается на эти подписи):
+//   HEYS.Fingers.openFullscreen(opts)       — открыть fullscreen-overlay
+//   HEYS.Fingers.close()                    — закрыть текущий overlay (если открыт)
+//   HEYS.Fingers.isReady()                  — true если SessionUI + Fullscreen зарегистрированы
+//   HEYS.Fingers.renderPreviewPill(props)   — React-компонент карточки в дневнике
+//   HEYS.Fingers.getBodyWeight()            — { kg, source } из heys_profile (см. body_metrics)
+//
+// SECONDARY API (используется внутри fingers модуля, но safe для external read):
+//   HEYS.Fingers.ageGate.{filterPrograms,filterGrips,warnLevel,getRestrictionMessage}
+//   HEYS.Fingers.readiness.assess(today, history) → { score, bucket, reasons }
+//   HEYS.Fingers.PROGRAMS, HEYS.Fingers.GRIPS, HEYS.Fingers.BOARDS — статические каталоги
+//
+// NB: всё остальное (Fingers.Fullscreen, Fingers.SessionUI, Fingers.timer и т.п.) —
+// internal, может меняться без semver-bump. Не полагаться извне.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPE DEFINITIONS (JSDoc — даёт IDE autocomplete без TS-конверсии)
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * @typedef {'new'|'view'|'continue'|'edit'} FingersOpenMode
+ *   - 'new':       создать новую тренировку (показать программы/конструктор)
+ *   - 'view':      read-only просмотр завершённой записи
+ *   - 'continue':  возобновить interrupted session из persistence snapshot
+ *   - 'edit':      редактировать существующую запись (изменить добавленный вес и т.п.)
+ */
+
+/**
+ * @typedef {object} FingersOpenOpts
+ * @property {string} [dateKey]              ISO дата 'YYYY-MM-DD' дневника
+ * @property {number} [trainingIndex]        индекс в day.trainings[]
+ * @property {FingersOpenMode} [mode]        режим открытия (default: 'new')
+ */
+
+/**
+ * @typedef {object} FingersTraining
+ * @property {string} type                   обязательно === 'fingers' чтобы pill отрисовался
+ * @property {string} [time]                 'HH:MM' времени тренировки
+ * @property {object} [fingersLog]
+ * @property {string} [fingersLog.programId] id выбранного протокола ('beastmaker_1000_beginner' и т.п.)
+ * @property {number} [fingersLog.totalDurationMinutes]
+ * @property {number} [fingersLog.completedAt] timestamp millis (если завершено)
+ */
+
+/**
+ * @typedef {object} FingersPillProps
+ * @property {FingersTraining} training
+ * @property {string} dateKey
+ * @property {number} trainingIndex
+ * @property {Function} [onClick]            override — иначе ведёт в openFullscreen({mode:'edit'})
+ */
+
+/**
+ * @typedef {object} BodyWeightResult
+ * @property {number} kg
+ * @property {'profile'|'baseWeight'|'fallback'} source
+ *   - 'profile':    взят из heys_profile.weight (canonical)
+ *   - 'baseWeight': взят из heys_profile.baseWeight (legacy alias)
+ *   - 'fallback':   ничего не указано, возвращён FALLBACK_KG=70 (caller должен показать warning)
+ */
 
 ;(function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -21,6 +71,12 @@
   const React = global.React;
   const h = React && React.createElement;
 
+  /**
+   * Открывает fullscreen-overlay тренировки пальцев. Граефул-fallback на toast
+   * если модуль ещё не загружен (race с lazy-load).
+   * @param {FingersOpenOpts} opts
+   * @returns {void}
+   */
   Fingers.openFullscreen = function openFullscreen(opts) {
     const o = opts || {};
     if (Fingers.Fullscreen && typeof Fingers.Fullscreen.mount === 'function') {
@@ -37,12 +93,21 @@
     }
   };
 
+  /**
+   * Закрывает текущий fullscreen-overlay если открыт. No-op если не открыт.
+   * @returns {void}
+   */
   Fingers.close = function close() {
     if (Fingers.Fullscreen && typeof Fingers.Fullscreen.unmount === 'function') {
       Fingers.Fullscreen.unmount();
     }
   };
 
+  /**
+   * @returns {boolean} true если SessionUI и Fullscreen-portal зарегистрированы
+   *   и openFullscreen() гарантированно сработает. Используется consumer-кодом
+   *   для skip-render fallback'а когда модуль ещё не догружен (lazy scenario).
+   */
   Fingers.isReady = function isReady() {
     return !!(Fingers.Fullscreen && Fingers.SessionUI);
   };
@@ -51,6 +116,10 @@
   // Компактная 60px карточка: иконка 🤚 + program name + duration + chevron.
   // Click → открывает fullscreen. Используется из heys_day_trainings_v1.js
   // когда training.type === 'fingers'.
+  /**
+   * @param {FingersPillProps} props
+   * @returns {object|null} React element или null если React недоступен
+   */
   Fingers.renderPreviewPill = function renderPreviewPill(props) {
     if (!h) return null;
     const T = (props && props.training) || {};

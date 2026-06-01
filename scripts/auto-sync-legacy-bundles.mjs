@@ -164,7 +164,15 @@ function hasRelevantLegacyChanges(stagedFiles) {
 }
 
 function stageGeneratedOutputs() {
-    run('git add -A apps/web/public apps/web/bundle-manifest.json apps/web/index.html apps/web/heys_advice_bundle_v1.js apps/web/heys_day_meals_bundle_v1.js apps/web/heys_day_bundle_v1.js');
+    // Bundle outputs берём ДИНАМИЧЕСКИ из LEGACY_GENERATORS — раньше тут был
+    // hardcoded список который при добавлении нового generator (fingers, 2026-06-01)
+    // не покрывал новый output, и при коммите изменения в source бандл не
+    // стейджился → на push уходили исходники без обновлённого артефакта.
+    const generatorOutputs = Object.values(LEGACY_GENERATORS)
+        .map(g => g.output)
+        .join(' ');
+    const fixedPaths = 'apps/web/public apps/web/bundle-manifest.json apps/web/index.html';
+    run(`git add -A ${fixedPaths} ${generatorOutputs}`);
 }
 
 function main() {

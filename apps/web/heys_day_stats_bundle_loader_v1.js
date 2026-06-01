@@ -13,34 +13,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'heys_day_trainings_v1.js',
         'heys_day_training_popups_v1.js',
         'heys_day_sleep_score_popups_v1.js',
-        // 🤚 Fingers — climbing fingerboard module (Wave 2 — 17 modules)
-        // Order: features FIRST (capability detection), then data (catalogs/bibliography),
-        // then visuals (svg/voice), then logic (records → calibration → timer), then UI helpers.
+        // 🤚 Fingers — climbing fingerboard module.
+        // Lazy: грузим только тонкий 5 KB stub. Полный 404 KB bundle подтягивается
+        // в момент: (a) первого render renderPreviewPill, (b) openFullscreen,
+        // (c) detect-on-boot нашёл snapshot прерванной сессии. Юзеры которые
+        // не тренируют пальцы, не платят за parse 8800 строк.
+        // Stub source: heys_fingers_boot_stub_v1.js
+        // Bundle source: heys_fingers_bundle_v1.js (auto-gen, см. scripts/bundle-fingers.cjs)
         'heys_platform_features_v1.js',
-        'heys_fingers_audio_extension_v1.js',
-        'heys_fingers_bibliography_v1.js',
-        'heys_fingers_grips_catalog_v1.js',
-        'heys_fingers_boards_catalog_v1.js',
-        'heys_fingers_programs_catalog_v1.js',
-        'heys_fingers_age_gating_v1.js',
-        'heys_fingers_readiness_v1.js',
-        'heys_fingers_svg_grips_v1.js',
-        'heys_fingers_svg_anatomy_v1.js',
-        'heys_fingers_voice_v1.js',
-        'heys_fingers_records_store_v1.js',
-        'heys_fingers_calibration_v1.js',
-        'heys_fingers_timer_v1.js',
-        'heys_fingers_session_persistence_v1.js',
-        'heys_fingers_calendar_v1.js',
-        'heys_fingers_safety_v1.js',
-        'heys_fingers_warmup_runner_v1.js',     // RAMP-разминка runner (depends на safety.rampWarmupSteps + voice)
-        // Wave 3 — Integration UI (зависят от Wave 2 catalogs/visuals/timer)
-        'heys_fingers_muscle_detail_v1.js',     // drill-down per muscle
-        'heys_fingers_constructor_v1.js',       // exercise editor (depends на grip_catalog, anatomy, records, ageGate)
-        'heys_fingers_onboarding_v1.js',        // wizard (depends на programs, ageGate, calibration)
-        'heys_fingers_session_ui_v1.js',        // 4-tab UI (depends на ВСЕ выше)
-        'heys_fingers_fullscreen_v1.js',        // portal orchestrator (depends на SessionUI + Onboarding)
-        'heys_fingers_entry_v1.js'              // entry LAST — exposes openFullscreen() public API
+        'heys_fingers_boot_stub_v1.js'
     ];
 
     function reportError(error, src) {

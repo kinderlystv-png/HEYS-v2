@@ -421,17 +421,35 @@
     }
     if (mvc.type === 'weight') {
       const mvcKg = Number(mvc.mvcKg) || 0;
-      const bw = Number(HEYS && HEYS.user && HEYS.user.weightKg) || 70;
-      const total = bw + (Number(addedKg) || 0);
+      // Источник веса: heys_profile.weight (canonical) / .baseWeight (legacy alias).
+      // Раньше использовался HEYS.user.weightKg — поля которого нет в кодовой
+      // базе (audit-finding 2026-06-01). У 100% юзеров % MVC считался с дефолтом
+      // 70кг. Если профильный вес отсутствует — показываем приглушённую
+      // подсказку «укажи вес» вместо тихого fallback'а.
+      const bm = (Fingers.getBodyWeight && Fingers.getBodyWeight()) || { kg: 70, source: 'fallback' };
+      const isFallback = bm.source === 'fallback';
+      const total = bm.kg + (Number(addedKg) || 0);
       const pct = mvcKg > 0 ? Math.round(100 * total / mvcKg) : 0;
       // Hörst Max Hangs: 85-95% MVC. >110% — риск pulley-травмы повышен.
       const overLimit = pct > 110;
       const danger = pct > 125;
-      const baseEls = [R.createElement('span', { key: 'p' }, pct + '% от MVC (' + mvcKg.toFixed(1) + ' кг)')];
+      const pctLabel = pct + '% от MVC (' + mvcKg.toFixed(1) + ' кг)' + (isFallback ? ' ≈' : '');
+      const baseEls = [R.createElement('span', { key: 'p' }, pctLabel)];
       if (Fingers.SourceBadge) {
         baseEls.push(R.createElement(Fingers.SourceBadge, { key: 's', sourceId: 'horst_podcast10' }));
       }
       const rows = [R.createElement('div', { key: 'base', style: ST_HINT, className: 'fingers-fs-hint-row' }, baseEls)];
+      if (isFallback) {
+        // Fail-loud (но не fail-closed): показываем цифру но честно говорим
+        // что вес не указан. Skipping % полностью был бы хуже UX — юзер бы
+        // не понял почему индикатор пропал.
+        rows.push(R.createElement('div', {
+          key: 'weight-hint',
+          style: ST_HINT,
+          className: 'fingers-fs-hint-row',
+        }, R.createElement('span', { style: { opacity: 0.7 } },
+          'Вес тела не указан — расчёт по 70 кг. Уточни в Профиле для точного %.')));
+      }
       if (overLimit) {
         const warnText = danger
           ? '🚨 ' + pct + '% MVC — критично выше нормы. Hörst Max Hangs: 85-95%. Резкий рост риска разрыва A2-блока.'
