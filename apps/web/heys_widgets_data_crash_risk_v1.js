@@ -30,6 +30,14 @@
         MOVEMENT_MIN: 0.15, // ниже этого — считаем stable
     };
 
+    // Reliability thresholds — below these the regression is too noisy or thin
+    // to trust, and we override the zone classification to 'noisy' instead of
+    // surfacing a misleading 'danger'/'too_fast' from a low-quality fit.
+    const QUALITY_THRESHOLDS = {
+        MIN_R2: 0.3,              // < 0.3 = регрессия плохо описывает данные
+        MIN_COMPLETENESS: 0.5,    // < 50% дней с замером веса
+    };
+
     const ZONE_META = {
         stagnation: { label: 'Нет прогресса', color: '#f59e0b', light: '#fef3c7', emoji: '⏸' },
         optimal: { label: 'Оптимально', color: '#10b981', light: '#d1fae5', emoji: '✅' },
@@ -40,6 +48,7 @@
         stable: { label: 'Стабильный вес', color: '#64748b', light: '#f1f5f9', emoji: '→' },
         gaining: { label: 'Набор веса', color: '#8b5cf6', light: '#ede9fe', emoji: '↑' },
         gaining_fast: { label: 'Быстрый набор', color: '#f97316', light: '#ffedd5', emoji: '⚡↑' },
+        noisy: { label: 'Данные нестабильны', color: '#64748b', light: '#f1f5f9', emoji: '〰' },
     };
 
     const ZONE_HINT = {
@@ -52,6 +61,7 @@
         stable: 'Вес стабилен — ни потери, ни набора.',
         gaining: 'Постепенный набор веса.',
         gaining_fast: 'Быстрый набор веса. Стоит проверить калораж.',
+        noisy: 'Замеров мало или они слишком разбросаны — для надёжного вывода нужны регулярные взвешивания.',
     };
 
     const MIN_DAYS = 7;
@@ -69,12 +79,16 @@
 
     function loadWeightData(days) {
         const U = HEYS.utils || {};
+        // toISOString() returns UTC date; near midnight in local TZ this is the
+        // previous/next day relative to what the rest of the app stores. Use
+        // the project's local-date formatter to match heys_dayv2_* keys.
+        const fmtDate = HEYS.dayUtils?.fmtDate || U.fmtDate || ((d) => d.toISOString().split('T')[0]);
         const result = [];
         const today = new Date();
         for (let i = 0; i < days; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = fmtDate(date);
             const dayData = U.lsGet(`heys_dayv2_${dateStr}`, null);
             const weight = getWeightFromDay(dayData);
             if (weight !== null && weight > 0) result.push({ date: dateStr, weight });
@@ -132,10 +146,13 @@
     // ============================================================================
 
     function getCrashRiskData(options = {}) {
+        const _t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         const days = Math.max(MIN_DAYS, Math.min(options.days || 7, MAX_DAYS));
         const U = HEYS.utils || {};
         const profile = U.lsGet('heys_profile', {});
-        const pIndex = profile?.pIndex || 0;
+        // profile.pIndex doesn't exist — bug pre-2026-06-01 sent 0 here, so EWS
+        // couldn't resolve product calories. Match the badge's resolver (getAll).
+        const pIndex = HEYS.products?.getAll?.() || [];
 
         try {
             const weightData = loadWeightData(days);
@@ -168,7 +185,19 @@
             const pctPerWeek = (slopePerWeek / currentWeight) * 100; // signed %/week
             const absPct = Math.abs(pctPerWeek);
 
-            const zone = classifyZone(slopePerWeek, currentWeight);
+            // Реальная дельта (первый → последний замер)
+            const totalDeltaKg = currentWeight - firstWeight;
+            const dataCompleteness = weightData.length / days;
+
+            // Raw zone от классификатора (по slope), затем quality-override.
+            // Если r2 < 0.3 или completeness < 0.5 — регрессии нельзя верить,
+            // переключаем zone в 'noisy' чтобы UI не показывал 🚨 на шумных данных.
+            const rawZone = classifyZone(slopePerWeek, currentWeight);
+            const qualityReasons = [];
+            if (regression.r2 < QUALITY_THRESHOLDS.MIN_R2) qualityReasons.push('low_r2');
+            if (dataCompleteness < QUALITY_THRESHOLDS.MIN_COMPLETENESS) qualityReasons.push('low_completeness');
+            const isReliable = qualityReasons.length === 0;
+            const zone = isReliable ? rawZone : 'noisy';
             const zoneMeta = ZONE_META[zone] || ZONE_META['stable'];
             const zoneHint = ZONE_HINT[zone] || '';
             const direction = slopePerWeek < -0.1 ? 'losing' : slopePerWeek > 0.1 ? 'gaining' : 'stable';
@@ -176,10 +205,6 @@
             const severity = zone === 'danger' ? 'high'
                 : (zone === 'warning' || zone === 'too_fast') ? 'medium'
                     : 'none';
-
-            // Реальная дельта (первый → последний замер)
-            const totalDeltaKg = currentWeight - firstWeight;
-            const dataCompleteness = weightData.length / days;
 
             // Прогресс к цели
             const goalWeight = profile?.goalWeight || null;
@@ -219,6 +244,13 @@
                 slopePerWeek,         // signed kg/week
                 direction,            // 'losing'|'gaining'|'stable'
                 zone,
+                rawZone,              // классификация ДО quality-override (для диагностики)
+                quality: {
+                    reliable: isReliable,
+                    reasons: qualityReasons,
+                    r2: regression.r2,
+                    completeness: dataCompleteness,
+                },
                 zoneMeta,
                 zoneHint,
                 currentWeight,
@@ -240,8 +272,13 @@
                 periodDays: days,
             };
 
+            const _t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
             console.info('[HEYS.widgets.weightProgress] ✅ Data computed:', {
+                duration_ms: Math.round(_t1 - _t0),
                 zone,
+                rawZone: rawZone !== zone ? rawZone + ' (overridden→noisy)' : rawZone,
+                reliable: isReliable,
+                qualityReasons: qualityReasons.length ? qualityReasons : 'ok',
                 pctPerWeek: pctPerWeek.toFixed(2) + '%',
                 slopePerWeek: slopePerWeek.toFixed(3) + 'кг/нед',
                 direction,
@@ -268,6 +305,7 @@
     HEYS.Widgets.DataProviders.crashRisk = {
         getData: getCrashRiskData,
         ZONE_THRESHOLDS,
+        QUALITY_THRESHOLDS,
         ZONE_META,
         ZONE_HINT,
     };

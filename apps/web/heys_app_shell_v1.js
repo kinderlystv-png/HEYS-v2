@@ -1098,6 +1098,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     lastDetectAt = Date.now();
 
                     detectInFlight = (async () => {
+                        const _t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
                         // Load 7 days of data (ACUTE mode: current state alerts only)
                         const days = [];
                         for (let i = 0; i < 7; i++) {
@@ -1134,27 +1135,35 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         });
                         lastDetectAt = Date.now();
 
+                        const _t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                        const _durMs = Math.round(_t1 - _t0);
                         if (result.available) {
                             setEWSData(result);
                             if (result.count > 0) {
                                 console.info('ews / badge ✅ Badge data loaded:', {
+                                    duration_ms: _durMs,
                                     count: result.count,
                                     high: result.highSeverityCount,
                                     medium: result.count - result.highSeverityCount,
                                     daysAnalyzed: days.length,
+                                    daysRequested: 7,
                                     hasWarnings: Array.isArray(result.warnings) && result.warnings.length > 0,
                                 });
                             } else {
                                 console.info('ews / badge ✅ All OK (no warnings):', {
+                                    duration_ms: _durMs,
                                     daysAnalyzed: days.length,
+                                    daysRequested: 7,
                                     status: 'healthy'
                                 });
                             }
                         } else {
                             setEWSData({ count: 0, highSeverityCount: 0, available: false, warnings: [] });
                             console.info('ews / badge ℹ️ EWS unavailable — showing neutral badge:', {
+                                duration_ms: _durMs,
                                 reason: result.reason || 'insufficient_data',
                                 daysAnalyzed: days.length,
+                                daysRequested: 7,
                             });
                         }
                     })();
@@ -1269,12 +1278,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
             window.addEventListener('heysSyncCompleted', handleSyncComplete);
 
-            // Reload every 5 minutes (skip work while tab is in background)
+            // Safety-net poll. Real updates already come via day-data-changed
+            // and heysSyncCompleted events — 5min was wasteful (12 detects/hour
+            // on idle sessions). 30min keeps the fallback without spamming.
             const interval = setInterval(() => {
                 if (typeof document !== 'undefined' && document.hidden) return;
                 ewsLoaded = false;
                 loadEWSData();
-            }, 5 * 60 * 1000);
+            }, 30 * 60 * 1000);
 
             return () => {
                 postSyncHeavyGen++;
