@@ -1,11 +1,11 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# ⚠ WHATS-NEW-OFF-UNTIL-2026-06-11
-# Временно отключаем What's New gate и интерактив перед запуском продукта.
-# Чтобы вернуть: убрать `if false; then` и `fi` ниже (или revert этого коммита).
-# Поиск: grep -rn 'WHATS-NEW-OFF-UNTIL' .husky package.json
-if false; then
+# 2026-06-01: WHATS-NEW gate включён обратно. До этого был обёрнут в `if false`
+# (маркер WHATS-NEW-OFF-UNTIL-2026-06-11). За время отключения случился incident:
+# fix(insights/test) без entry прошёл локально, упал в CI Yandex Cloud деплое.
+# Non-tty ветка (Claude Code, scripts) — non-interactive `prepare-release:check`
+# с exit 1 при неуспехе. Tty ветка — интерактивный prompt с push:ready.
 echo "📝 Проверка What's New для текущего deploy/push..."
 
 check_status=0
@@ -67,8 +67,6 @@ else
     exit 1
   fi
 fi
-fi
-# /WHATS-NEW-OFF-UNTIL-2026-06-11
 
 echo "🔍 Проверка прямых localStorage.setItem (Phase 3 lint gate, warn-only)..."
 node scripts/lint-direct-localstorage-writes.mjs || {
