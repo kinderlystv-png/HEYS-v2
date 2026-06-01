@@ -670,36 +670,45 @@
       }
     }
 
-    const dayData = readDayV2ScopedFirst(todayKey, {});
+    const dayData = readDayV2ScopedFirst(todayKey, {}) || {};
     const calendarKey = new Date().toISOString().slice(0, 10);
-    const altDayData = calendarKey !== todayKey ? readDayV2ScopedFirst(calendarKey, {}) : {};
+    const altDayData = calendarKey !== todayKey ? (readDayV2ScopedFirst(calendarKey, {}) || {}) : {};
+    // Шаг считаем выполненным если данные есть в любом из двух dateKey
+    // (до 3:00 todayKey=вчера, dayData=вчерашний; altDayData=календарный для корректной кросс-полуночной проверки)
+    const mergedDay = { ...altDayData, ...dayData };
 
-    const hasWeightPrimary = dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0;
-    const hasWeightAlt = altDayData && altDayData.weightMorning != null && altDayData.weightMorning !== '' && altDayData.weightMorning !== 0;
-    const hasWeight = hasWeightPrimary || hasWeightAlt;
+    const pending = [];
+    if (!(mergedDay.weightMorning != null && mergedDay.weightMorning !== '' && mergedDay.weightMorning !== 0)) pending.push('weight');
+    if (!(mergedDay.sleepStart != null && mergedDay.sleepEnd != null)) pending.push('sleepTime');
+    if (!(mergedDay.sleepQuality != null)) pending.push('sleepQuality');
+    if (!(mergedDay.moodMorning != null)) pending.push('morning_mood');
+    if (!(profile && profile.stepsGoal != null && profile.stepsGoal > 0)) pending.push('stepsGoal');
 
-    console.info('[MorningCheckin] 🔍 shouldShowMorningCheckin check:', {
+    try {
+      if (HEYS.YesterdayVerify
+        && typeof HEYS.YesterdayVerify.shouldShow === 'function'
+        && HEYS.YesterdayVerify.shouldShow()) {
+        pending.push('yesterdayVerify');
+      }
+    } catch (_) { /* YesterdayVerify не загружен */ }
+
+    console.info('[MorningCheckin] 🔍 shouldShow check', {
       clientId: currentClientId?.slice(0, 8),
       todayKey,
       calendarKey,
-      weightMorningPrimary: dayData?.weightMorning,
-      weightMorningAlt: altDayData?.weightMorning,
-      hasWeightPrimary,
-      hasWeightAlt,
-      hasWeight,
-      sessionKey,
+      pending,
       sessionFlag: sessionStorage.getItem(sessionKey),
     });
 
-    // Показываем, если ни в эффективном дне (до 3:00 = вчера), ни в календарном ключе нет веса
-    return !hasWeight;
+    return pending.length > 0;
   }
 
   /**
    * Централизованная функция для получения списка шагов чек-ина
    * Используется и в MorningCheckin, и в showCheckin.morning()
    */
-  function getCheckinSteps(profile) {
+  function getCheckinSteps(profile, opts) {
+    const { filterCompleted = false } = opts || {};
     const steps = [];
     let hasProfileSteps = false;
 
@@ -764,7 +773,27 @@
     // 9. 🌟 Мотивирующий финальный шаг
     steps.push('morningRoutine');
 
-    return steps;
+    if (!filterCompleted) return steps;
+
+    // Фильтруем уже-выполненные required-шаги (data-derived completion).
+    // Регистрационные / opaque / opt-in шаги оставляем как есть — они либо нужны атомарно (registration),
+    // либо conditional-gated на уровне push, либо canSkip:true и не требуют detection.
+    const todayKey = getTodayKey();
+    const dayDataF = readDayV2ScopedFirst(todayKey, {}) || {};
+    const calendarKey = new Date().toISOString().slice(0, 10);
+    const altDayDataF = calendarKey !== todayKey ? (readDayV2ScopedFirst(calendarKey, {}) || {}) : {};
+    const day = { ...altDayDataF, ...dayDataF };
+
+    return steps.filter(id => {
+      switch (id) {
+        case 'weight': return !(day.weightMorning != null && day.weightMorning !== '' && day.weightMorning !== 0);
+        case 'sleepTime': return !(day.sleepStart != null && day.sleepEnd != null);
+        case 'sleepQuality': return !(day.sleepQuality != null);
+        case 'morning_mood': return !(day.moodMorning != null);
+        case 'stepsGoal': return !(profile && profile.stepsGoal != null && profile.stepsGoal > 0);
+        default: return true;
+      }
+    });
   }
 
   /**
@@ -806,7 +835,7 @@
     // Если StepModal доступен — используем его
     if (HEYS.StepModal && HEYS.StepModal.Component) {
       const profile = readStoredValue('heys_profile', {});
-      const steps = getCheckinSteps(profile);
+      const steps = getCheckinSteps(profile, { filterCompleted: true });
 
       // Определяем: это регистрационный чек-ин (есть profile-шаги)?
       const isRegistrationCheckin = steps.includes('profile-personal');
@@ -849,6 +878,20 @@
 
         if (onComplete) onComplete();
       };
+
+      // Edge case: после filterCompleted список пуст (race: shouldShow вернул true,
+      // но между sync-completed и mount'ом какой-то required step доехал из cloud).
+      // Avoid рендера пустого StepModal — auto-complete без UI.
+      if (window.React && typeof window.React.useEffect === 'function') {
+        window.React.useEffect(function () {
+          if (steps.length === 0) {
+            console.info('[MorningCheckin] all required steps already done → auto-complete without UI');
+            wrappedOnComplete();
+          }
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, []);
+      }
+      if (steps.length === 0) return null;
 
       return React.createElement(HEYS.StepModal.Component, {
         steps: steps,

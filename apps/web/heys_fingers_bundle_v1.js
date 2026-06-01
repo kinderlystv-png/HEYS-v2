@@ -7205,6 +7205,59 @@
       : intensity === 'recovery' ? '#10b981' : '#6b7280';
   }
 
+  // Pre-flight checklist — Wave 6 polish: пункты загораются зелёным
+  // поочерёдно с задержкой ~700ms, заставляя юзера прочитать вместо
+  // прокликивания. Кнопка «Всё ОК» приглушена ~2.4s через CSS-animated
+  // arm (см. .fingers-fs-preflight-go в стилях).
+  function PreflightChecklist(props) {
+    const extraNotes = (props && props.extraNotes) || [];
+    const items = [
+      { id: 'warmup', text: 'Разогрев 15-20 мин (RAMP: Raise/Activate/Mobilize/Potentiate)' },
+      { id: 'pain',   text: 'Нет острой боли в пальцах и PIP суставах' },
+      { id: 'temp',   text: 'Не на холодные руки' }
+    ];
+    const STEP_MS = 700;
+    const [doneCount, setDoneCount] = useState(0);
+    useEffect(function () {
+      if (doneCount >= items.length) return undefined;
+      const t = setTimeout(function () {
+        setDoneCount(function (n) { return Math.min(items.length, n + 1); });
+      }, STEP_MS);
+      return function () { clearTimeout(t); };
+    }, [doneCount]);
+
+    return h('div', { className: 'fingers-fs-preflight' },
+      h('ul', { className: 'fingers-fs-preflight-list', role: 'list' },
+        items.map(function (item, i) {
+          const done = i < doneCount;
+          return h('li', {
+            key: item.id,
+            className: 'fingers-fs-preflight-item' + (done ? ' is-done' : ''),
+            'aria-checked': done ? 'true' : 'false',
+            role: 'checkbox'
+          },
+            h('span', { className: 'fingers-fs-preflight-check', 'aria-hidden': 'true' },
+              done ? h('svg', { width: 14, height: 14, viewBox: '0 0 14 14', fill: 'none' },
+                h('path', { d: 'M3 7.5l2.5 2.5L11 4.5',
+                  stroke: 'currentColor', strokeWidth: 2,
+                  strokeLinecap: 'round', strokeLinejoin: 'round' })
+              ) : null
+            ),
+            h('span', { className: 'fingers-fs-preflight-text' }, item.text)
+          );
+        })
+      ),
+      extraNotes.length > 0 ? h('div', { className: 'fingers-fs-preflight-notes' },
+        extraNotes.map(function (n, i) {
+          return h('div', { key: 'n' + i, className: 'fingers-fs-preflight-note' },
+            h('span', { 'aria-hidden': 'true' }, n.icon || 'ℹ'),
+            h('span', null, n.text)
+          );
+        })
+      ) : null
+    );
+  }
+
   // --- Programs tab ---
   function ProgramsTab({ onPickProgram, recommendedId, onRequestOnboarding }) {
     const programs = Array.isArray(Fingers.PROGRAMS) ? Fingers.PROGRAMS : [];
@@ -8096,13 +8149,21 @@
       }
 
       const cooldownInfo = (Fingers.cooldownCheck && Fingers.cooldownCheck()) || {};
-      const cooldownWarn = (cooldownInfo.hoursSinceLast != null && cooldownInfo.hoursSinceLast < 48 && cooldownInfo.lastWasMax && programIntensity === 'max')
-        ? '\n⚠ Прошло только ' + Math.round(cooldownInfo.hoursSinceLast) + 'ч с прошлой max-сессии (рекомендуется ≥48ч).'
-        : '';
-
-      const readinessNote = readinessBucket === 'recovery-only'
-        ? '\nℹ Готовность невысокая — лучше No-Hangs или recovery-протокол.'
-        : '';
+      const extraNotes = [];
+      if (cooldownInfo.hoursSinceLast != null && cooldownInfo.hoursSinceLast < 48
+          && cooldownInfo.lastWasMax && programIntensity === 'max') {
+        extraNotes.push({
+          icon: '⚠',
+          text: 'Прошло только ' + Math.round(cooldownInfo.hoursSinceLast) +
+                'ч с прошлой max-сессии (рекомендуется ≥48ч).'
+        });
+      }
+      if (readinessBucket === 'recovery-only') {
+        extraNotes.push({
+          icon: 'ℹ',
+          text: 'Готовность невысокая — лучше No-Hangs или recovery-протокол.'
+        });
+      }
 
       // Если WarmupRunner недоступен — деградируем до 2-кнопочного варианта.
       const canShowWarmup = !!(Fingers.WarmupRunner);
@@ -8110,16 +8171,15 @@
       const preflightOpts = {
         icon: '🤲',
         title: 'Pre-flight check',
-        text: 'Перед стартом подтверди:\n\n' +
-              '✓ Разогрев 15-20 мин (RAMP: Raise/Activate/Mobilize/Potentiate)\n' +
-              '✓ Нет острой боли в пальцах и PIP суставах\n' +
-              '✓ Не на холодные руки' +
-              cooldownWarn + readinessNote,
+        // text может быть React-элементом — ConfirmModal:210 рендерит его как child.
+        text: h(PreflightChecklist, { extraNotes: extraNotes }),
         confirmStyle: programIntensity === 'max' ? 'warning' : 'primary',
       };
 
       if (canShowWarmup) {
         // 3-кнопочный вариант: Отмена / Разминка 18 мин / Всё ОК
+        // На «go» вешаем className 'fingers-fs-preflight-go' — CSS-анимация
+        // приглушает кнопку первые 2.4с пока галочки заполняются.
         preflightOpts.actions = [
           { key: 'cancel', label: 'Отмена', style: 'neutral', variant: 'text',
             isCancel: true, row: 0 },
@@ -8129,6 +8189,7 @@
           { key: 'go', label: 'Всё ОК, начинаем',
             style: programIntensity === 'max' ? 'warning' : 'primary',
             variant: 'fill', isDefault: true, value: 'go', row: 2,
+            className: 'fingers-fs-preflight-go',
             onClick: function () {
               try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
               setLiveActive(true);

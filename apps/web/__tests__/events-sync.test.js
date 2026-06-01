@@ -71,6 +71,7 @@ describe('initialSyncDoneRef pattern', () => {
 
 describe('shouldShowMorningCheckin logic', () => {
   let mockStorage;
+  let mockProfile;
   let mockClientId;
 
   const getTodayKey = (hoursOverride) => {
@@ -85,70 +86,116 @@ describe('shouldShowMorningCheckin logic', () => {
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   };
 
-  const shouldShowMorningCheckin = (clientId, storage, hoursOverride) => {
-    // Если клиент не выбран — НЕ показываем чек-ин
-    if (!clientId) {
-      return false;
-    }
-
+  // Required-set по новому контракту: weight, sleepTime, sleepQuality, morning_mood, stepsGoal.
+  // Возвращает массив pending step-id (визард надо показать если он непустой).
+  const computePending = (clientId, storage, profile, hoursOverride) => {
+    if (!clientId) return null;
     const todayKey = getTodayKey(hoursOverride);
     const dayData = storage[`heys_dayv2_${todayKey}`] || {};
-
-    // Альтернативный ключ (календарный, UTC-based)
     const calendarKey = new Date().toISOString().slice(0, 10);
     const altDayData = calendarKey !== todayKey ? (storage[`heys_dayv2_${calendarKey}`] || {}) : {};
+    const day = { ...altDayData, ...dayData };
 
-    const hasWeightPrimary = dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0;
-    const hasWeightAlt = altDayData.weightMorning != null && altDayData.weightMorning !== '' && altDayData.weightMorning !== 0;
-
-    return !hasWeightPrimary && !hasWeightAlt;
+    const pending = [];
+    if (!(day.weightMorning != null && day.weightMorning !== '' && day.weightMorning !== 0)) pending.push('weight');
+    if (!(day.sleepStart != null && day.sleepEnd != null)) pending.push('sleepTime');
+    if (!(day.sleepQuality != null)) pending.push('sleepQuality');
+    if (!(day.moodMorning != null)) pending.push('morning_mood');
+    if (!(profile && profile.stepsGoal != null && profile.stepsGoal > 0)) pending.push('stepsGoal');
+    return pending;
   };
+
+  const shouldShowMorningCheckin = (clientId, storage, profile, hoursOverride) => {
+    const pending = computePending(clientId, storage, profile, hoursOverride);
+    if (pending === null) return false;
+    return pending.length > 0;
+  };
+
+  const fullyCompletedDay = () => ({
+    weightMorning: 75.5,
+    sleepStart: '23:00',
+    sleepEnd: '07:00',
+    sleepQuality: 4,
+    moodMorning: 5,
+  });
 
   beforeEach(() => {
     mockStorage = {};
+    mockProfile = { stepsGoal: 10000 };
     mockClientId = 'client_123';
   });
 
   it('возвращает false если clientId отсутствует', () => {
-    const result = shouldShowMorningCheckin(null, mockStorage);
+    const result = shouldShowMorningCheckin(null, mockStorage, mockProfile);
     expect(result).toBe(false);
   });
 
   it('возвращает false если clientId пустая строка', () => {
-    const result = shouldShowMorningCheckin('', mockStorage);
+    const result = shouldShowMorningCheckin('', mockStorage, mockProfile);
     expect(result).toBe(false);
   });
 
-  it('возвращает true если вес не заполнен', () => {
-    const result = shouldShowMorningCheckin(mockClientId, mockStorage);
+  it('возвращает true если ни один required-шаг не заполнен', () => {
+    const result = shouldShowMorningCheckin(mockClientId, mockStorage, { /* no stepsGoal */ });
     expect(result).toBe(true);
   });
 
-  it('возвращает false если вес заполнен в основном ключе', () => {
+  it('возвращает true если вес заполнен, но sleep/mood пустые', () => {
     const todayKey = getTodayKey();
     mockStorage[`heys_dayv2_${todayKey}`] = { weightMorning: 75.5 };
 
-    const result = shouldShowMorningCheckin(mockClientId, mockStorage);
-
-    expect(result).toBe(false);
+    const pending = computePending(mockClientId, mockStorage, mockProfile);
+    expect(pending).toEqual(expect.arrayContaining(['sleepTime', 'sleepQuality', 'morning_mood']));
+    expect(pending).not.toContain('weight');
+    expect(shouldShowMorningCheckin(mockClientId, mockStorage, mockProfile)).toBe(true);
   });
 
-  it('возвращает false если вес = 0 (считается не заполненным)', () => {
+  it('возвращает true если вес+sleep заполнены, но mood пустой', () => {
     const todayKey = getTodayKey();
-    mockStorage[`heys_dayv2_${todayKey}`] = { weightMorning: 0 };
+    mockStorage[`heys_dayv2_${todayKey}`] = {
+      weightMorning: 75.5,
+      sleepStart: '23:00',
+      sleepEnd: '07:00',
+      sleepQuality: 4,
+    };
 
-    const result = shouldShowMorningCheckin(mockClientId, mockStorage);
-
-    expect(result).toBe(true);
+    const pending = computePending(mockClientId, mockStorage, mockProfile);
+    expect(pending).toEqual(['morning_mood']);
+    expect(shouldShowMorningCheckin(mockClientId, mockStorage, mockProfile)).toBe(true);
   });
 
-  it('возвращает false если вес заполнен в альтернативном ключе', () => {
+  it('возвращает true если stepsGoal в profile отсутствует', () => {
+    const todayKey = getTodayKey();
+    mockStorage[`heys_dayv2_${todayKey}`] = fullyCompletedDay();
+    const profileWithoutStepsGoal = {};
+
+    const pending = computePending(mockClientId, mockStorage, profileWithoutStepsGoal);
+    expect(pending).toEqual(['stepsGoal']);
+    expect(shouldShowMorningCheckin(mockClientId, mockStorage, profileWithoutStepsGoal)).toBe(true);
+  });
+
+  it('возвращает false если ВСЕ required-шаги заполнены (dayv2 + profile.stepsGoal)', () => {
+    const todayKey = getTodayKey();
+    mockStorage[`heys_dayv2_${todayKey}`] = fullyCompletedDay();
+
+    expect(computePending(mockClientId, mockStorage, mockProfile)).toEqual([]);
+    expect(shouldShowMorningCheckin(mockClientId, mockStorage, mockProfile)).toBe(false);
+  });
+
+  it('считает вес=0 как не заполненный', () => {
+    const todayKey = getTodayKey();
+    mockStorage[`heys_dayv2_${todayKey}`] = { ...fullyCompletedDay(), weightMorning: 0 };
+
+    const pending = computePending(mockClientId, mockStorage, mockProfile);
+    expect(pending).toContain('weight');
+    expect(shouldShowMorningCheckin(mockClientId, mockStorage, mockProfile)).toBe(true);
+  });
+
+  it('распознаёт required-поля из альтернативного календарного ключа (cross-midnight)', () => {
     const calendarKey = new Date().toISOString().slice(0, 10);
-    mockStorage[`heys_dayv2_${calendarKey}`] = { weightMorning: 80 };
+    mockStorage[`heys_dayv2_${calendarKey}`] = fullyCompletedDay();
 
-    const result = shouldShowMorningCheckin(mockClientId, mockStorage);
-
-    expect(result).toBe(false);
+    expect(shouldShowMorningCheckin(mockClientId, mockStorage, mockProfile)).toBe(false);
   });
 });
 
