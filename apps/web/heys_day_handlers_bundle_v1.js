@@ -54,6 +54,15 @@
         });
 
         React.useEffect(() => {
+            return () => {
+                if (heysRef.Undo?.pending) {
+                    console.info('[HEYS.day] 🧹 Commit pending undo on date change/unmount', { date: ctx.date });
+                    heysRef.Undo.commit('day-context-change');
+                }
+            };
+        }, [ctx.date, heysRef]);
+
+        React.useEffect(() => {
             if (ctx.updateMealTimeRef) {
                 ctx.updateMealTimeRef.current = mealHandlers.updateMealTime;
             }
