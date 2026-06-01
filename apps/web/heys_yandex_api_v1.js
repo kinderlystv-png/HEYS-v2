@@ -1550,6 +1550,14 @@
     if (!k || v == null) {
       return { success: false, error: 'invalid_params' };
     }
+    // 🛡️ Cross-client profile guard tag (2026-06-01): тегаем каждую запись
+    // heys_profile полем _writerCid = clientId, чтобы сервер (mergeScalarKv в
+    // merge_save_client_kv_*) мог отвергать writes от чужого клиента. Mirror
+    // Class 4 fa851aad fix для dayv2. Backward compat: server skip-ит guard
+    // если хотя бы одна сторона без _writerCid (ramp-up).
+    if (k === 'heys_profile' && v && typeof v === 'object' && !Array.isArray(v) && clientId) {
+      try { v = Object.assign({}, v, { _writerCid: clientId }); } catch (_) { /* readonly object — skip */ }
+    }
     try {
       // 🛡️ CRITICAL FIX (2026-05-17): curator JWT path MUST be checked BEFORE
       // session token path. Otherwise stale `heys_session_token` left in LS by

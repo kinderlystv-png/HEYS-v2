@@ -193,6 +193,83 @@ async function cleanupClientLogTrace(client) {
 }
 
 /**
+ * Profile integrity check (2026-06-01) — обнаруживает cross-client pollution
+ * profile-полей. Источник: incident 2026-05-31 13:00 где Poplanton'овские
+ * identity-поля перетёрли профиль Александры через unscoped legacy LS path.
+ *
+ * Эвристика: clients.name vs profile.firstName+lastName fuzzy comparison.
+ * Если ≥1 mismatch → alert в Telegram с client_id + diff для разбора.
+ * Бэкап для restore — в heys-backups/client-daily/.
+ *
+ * Также pull-аутит свежие cross_client_profile_blocked / wholesale_identity_change
+ * записи из data_loss_audit (последние 24ч) как дополнительный сигнал.
+ */
+async function profileIntegrityCheck(client) {
+  const findings = [];
+  const summary = { mismatches: 0, blocked: 0, anomalies: 0 };
+
+  // 1. Name mismatch detection
+  try {
+    const mismatchRes = await client.query(`
+      SELECT c.id, c.name,
+             p.v->>'firstName' AS pf,
+             p.v->>'lastName'  AS pl,
+             p.v->>'gender'    AS pg,
+             p.v->>'_writerCid' AS pwriter,
+             p.updated_at
+        FROM clients c
+        JOIN client_kv_store p
+          ON p.client_id = c.id AND p.k = 'heys_profile'
+       WHERE c.name IS NOT NULL
+         AND length(trim(c.name)) > 0
+         AND p.v->>'firstName' IS NOT NULL
+         AND (
+           lower(coalesce(p.v->>'firstName','') || ' ' || coalesce(p.v->>'lastName','')) NOT LIKE '%' || lower(c.name) || '%'
+           AND lower(c.name) NOT LIKE '%' || lower(coalesce(p.v->>'firstName','')) || '%'
+         )
+       LIMIT 20
+    `);
+    summary.mismatches = mismatchRes.rows.length;
+    for (const r of mismatchRes.rows) {
+      findings.push(
+        `🚨 *Profile name mismatch* \`${String(r.id).slice(0, 8)}\`\n` +
+        `clients.name: \`${r.name}\`\n` +
+        `profile: \`${r.pf || '?'} ${r.pl || '?'}\` (gender=${r.pg || '?'})\n` +
+        (r.pwriter ? `writerCid: \`${String(r.pwriter).slice(0, 8)}\`` : `_writerCid: ⚠️ missing (pre-fix row)`)
+      );
+    }
+  } catch (e) {
+    console.warn('[profile-integrity] mismatch query failed:', e.message);
+  }
+
+  // 2. Recent cross_client_profile_blocked + wholesale_identity_change events
+  try {
+    const auditRes = await client.query(`
+      SELECT client_id, action, reason, created_at
+        FROM data_loss_audit
+       WHERE key = 'heys_profile'
+         AND action IN ('cross_client_profile_blocked','wholesale_identity_change')
+         AND created_at > NOW() - INTERVAL '24 hours'
+       ORDER BY created_at DESC
+       LIMIT 10
+    `);
+    for (const r of auditRes.rows) {
+      if (r.action === 'cross_client_profile_blocked') summary.blocked++;
+      if (r.action === 'wholesale_identity_change') summary.anomalies++;
+      findings.push(
+        `${r.action === 'cross_client_profile_blocked' ? '🛡️' : '⚠️'} *${r.action}* \`${String(r.client_id).slice(0, 8)}\`\n` +
+        `${r.reason || ''}\n` +
+        `at ${new Date(r.created_at).toISOString().slice(11, 19)} UTC`
+      );
+    }
+  } catch (e) {
+    console.warn('[profile-integrity] audit query failed:', e.message);
+  }
+
+  return { findings, summary };
+}
+
+/**
  * KV Storage health check — ловит индикаторы регрессий после фиксов 2026-05-23
  * (precision-mismatch ack, zombie xp_cache, race profile-subscription, и т.д.).
  * Шлёт Telegram alert если что-то выглядит аномально.
@@ -631,6 +708,27 @@ module.exports.handler = async (event, context) => {
       // client_log_trace TTL — каждый день в той же daily-фазе
       results.log_trace_cleanup = await cleanupClientLogTrace(client);
       console.log(`[Maintenance] LogTrace TTL: deleted ${results.log_trace_cleanup.rows} rows (${(Number(results.log_trace_cleanup.bytes || 0) / 1024).toFixed(1)} KB)`);
+
+      // 🛡️ Profile integrity check (2026-06-01) — обнаружение cross-client pollution.
+      // Алертит в Telegram если есть mismatch'и clients.name vs profile.firstName+lastName
+      // или свежие cross_client_profile_blocked / wholesale_identity_change события.
+      try {
+        const { findings, summary } = await profileIntegrityCheck(client);
+        results.profile_integrity = summary;
+        console.log('[Maintenance] Profile integrity:', JSON.stringify(summary));
+        if (findings.length > 0) {
+          await sendTelegramNotification(
+            `🩺 *Profile Integrity Alert*\n\n` +
+            `mismatches=${summary.mismatches}, blocked=${summary.blocked}, anomalies=${summary.anomalies}\n\n` +
+            findings.slice(0, 8).join('\n\n') +
+            (findings.length > 8 ? `\n\n…+${findings.length - 8} more` : '') +
+            `\n\n_Restore procedure_: \`yc storage s3 cp s3://heys-backups/client-daily/YYYY-MM-DD/<cid>.json.gz /tmp/\` + safe_upsert_client_kv с merged профилем.`
+          );
+        }
+      } catch (piErr) {
+        console.error('[Maintenance] profile_integrity failed:', piErr.message);
+        results.profile_integrity = { error: piErr.message };
+      }
     }
 
     // KV health check + Telegram alert при аномалиях

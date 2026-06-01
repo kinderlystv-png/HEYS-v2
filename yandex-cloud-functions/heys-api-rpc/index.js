@@ -2000,8 +2000,68 @@ module.exports.handler = async function (event, context) {
               mergedValue = incomingValue; // identical content
             }
           } else if (k === 'heys_norms' || k === 'heys_profile') {
-            mergedValue = mergeScalarKv(incomingValue, currentValue);
-            mergeOutcome = 'scalar_merged';
+            // 🛡️ Cross-client profile guard (2026-06-01, mirrors Class 4 fa851aad
+            // для dayv2). Если ОБА side'а имеют _writerCid и они различаются —
+            // это write от чужого клиента (incident 2026-05-31: Poplanton'ские
+            // identity-поля перетёрли профиль Александры через unscoped legacy
+            // path). Отклоняем incoming, оставляем cloud как есть.
+            // Backward compat: rows без _writerCid skip-ят guard, ramp-up по мере
+            // того как клиент-side tag rollout-ится.
+            if (
+              k === 'heys_profile' &&
+              incomingValue && typeof incomingValue === 'object' && incomingValue._writerCid &&
+              currentValue && typeof currentValue === 'object' && currentValue._writerCid &&
+              incomingValue._writerCid !== currentValue._writerCid
+            ) {
+              mergedValue = currentValue;
+              mergeOutcome = 'cross_client_profile_blocked';
+              try {
+                await client.query(
+                  `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                   VALUES ($1::uuid, $2::text, 'cross_client_profile_blocked', FALSE, $3)`,
+                  [
+                    resolvedClientId,
+                    k,
+                    `incoming_writer=${String(incomingValue._writerCid).slice(0, 8)} cloud_writer=${String(currentValue._writerCid).slice(0, 8)}`,
+                  ]
+                );
+              } catch (auditErr) {
+                console.warn('[merge_save] cross_client_profile audit insert failed:', auditErr.message);
+              }
+            } else {
+              mergedValue = mergeScalarKv(incomingValue, currentValue);
+              mergeOutcome = 'scalar_merged';
+
+              // 📊 Anomaly detection: wholesale identity change на немолодой row.
+              // Не блокирует (legit полная правка профиля бывает), просто аудит-фиксация
+              // для nightly check / forensics. Триггер: 3+ identity-поля изменились
+              // И cloud row старше 24ч (свежесозданные/edit-burst не считаются).
+              if (k === 'heys_profile') {
+                try {
+                  const IDENTITY_FIELDS = ['firstName', 'lastName', 'gender', 'birthDate', 'height', 'birthYear'];
+                  let changedFields = [];
+                  for (const f of IDENTITY_FIELDS) {
+                    const a = currentValue && currentValue[f];
+                    const b = incomingValue && incomingValue[f];
+                    if (a != null && b != null && a !== b) changedFields.push(f);
+                  }
+                  const cloudAgeMs = Date.now() - (currentUpdatedAt || 0);
+                  if (changedFields.length >= 3 && cloudAgeMs >= 24 * 3600 * 1000) {
+                    await client.query(
+                      `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                       VALUES ($1::uuid, $2::text, 'wholesale_identity_change', TRUE, $3)`,
+                      [
+                        resolvedClientId,
+                        k,
+                        `fields=[${changedFields.join(',')}] cloud_age_h=${Math.round(cloudAgeMs / 3600000)}`,
+                      ]
+                    );
+                  }
+                } catch (anomErr) {
+                  console.warn('[merge_save] wholesale_identity audit failed:', anomErr.message);
+                }
+              }
+            }
           } else {
             // Ticket A v2: hybrid last-write-wins по semantic causality (v.updatedAt).
             // Primary — device clock (момент намеренной правки в UI).

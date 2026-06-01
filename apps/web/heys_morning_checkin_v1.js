@@ -58,15 +58,16 @@
       (p.age || p.weight || p.height || p.firstName || p.profileCompleted === true);
     const scopedParsed = tryDecompress(localStorage.getItem(`heys_${clientId}_profile`));
     if (isProfileShape(scopedParsed)) return scopedParsed;
-    // Legacy unscoped fallback с ownership check (incident 2026-05-29):
-    // unscoped heys_profile может принадлежать ДРУГОМУ клиенту того же браузера
-    // (курaторская сессия с несколькими клиентами). Возвращаем legacy ТОЛЬКО
-    // если маркера _sourceClientId нет (true legacy ДО введения scoping) или
-    // если он совпадает с текущим clientId.
+    // Legacy unscoped fallback с STRICT ownership check (2026-06-01, tightened
+    // after pollution incident 2026-05-31): возвращаем legacy heys_profile ТОЛЬКО
+    // если _sourceClientId явно совпадает с currentClientId. Раньше "true legacy"
+    // (без маркера) тоже проходил → courator-style сессии видели чужой профиль
+    // и перезаписывали им scoped. Теперь без маркера → null (cloud re-fetch
+    // подтянет правильный профиль в scoped LS на следующем sync).
     const legacyParsed = tryDecompress(localStorage.getItem('heys_profile'));
     if (!isProfileShape(legacyParsed)) return null;
     const legacyOwner = legacyParsed && legacyParsed._sourceClientId;
-    if (legacyOwner && legacyOwner !== clientId) return null;
+    if (legacyOwner !== clientId) return null; // require explicit match — no more "trusted legacy"
     return legacyParsed;
   }
 

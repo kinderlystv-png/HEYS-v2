@@ -20,8 +20,13 @@
             (p.age || p.weight || p.height || p.firstName || p.profileCompleted === true);
         const scopedParsed = tryDecompress(localStorage.getItem(`heys_${clientId}_profile`));
         if (isProfileShape(scopedParsed)) return scopedParsed;
+        // Strict ownership (2026-06-01, tightened): legacy heys_profile принимаем
+        // только при явном _sourceClientId === clientId. Без маркера → null
+        // (cloud re-fetch подтянет правильный профиль). Mirror lazy-helper в
+        // heys_morning_checkin_v1.js:60-70.
         const legacyParsed = tryDecompress(localStorage.getItem('heys_profile'));
-        return isProfileShape(legacyParsed) ? legacyParsed : null;
+        if (!isProfileShape(legacyParsed)) return null;
+        return legacyParsed._sourceClientId === clientId ? legacyParsed : null;
     }
 
     const useMorningCheckinSync = ({ React, isInitializing, clientId }) => {
