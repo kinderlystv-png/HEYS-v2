@@ -246,11 +246,15 @@ function sendTgAlertFireAndForget(text) {
   });
 }
 
-// 🛡️ Identity-pollution guards (extracted 2026-06-01 incident 2).
-// До этой даты только merge_save_*_by_curator/by_session гейтили identity-keys.
-// batch_upsert_* и upsert_client_kv_by_session шли в обход → wholesale pollution
-// от curator switch'ей не детектилась. Helper применяется per-item во всех write paths.
-const IDENTITY_GUARD_KEYS = new Set(['heys_profile', 'heys_norms', 'heys_game', 'heys_hr_zones']);
+// 🛡️ Identity-pollution guards (extracted 2026-06-01 incident 2, extended 2026-06-01 incident 3).
+// Incident 2: merge_save_* path гейтил identity-keys, batch_upsert_* шёл в обход.
+// Incident 3: dayv2_* rows тоже подверглись pollution через batch_upsert_by_curator —
+// добавлен в guarded set + ужесточена проверка cross-client (incoming._writerCid !== clientId
+// строже чем сравнение с prev_v: ловит pollution на пустых rows / fresh writes).
+const IDENTITY_GUARD_KEY_RE = /^(heys_profile|heys_norms|heys_game|heys_hr_zones|heys_dayv2_\d{4}-\d{2}-\d{2})$/;
+function isIdentityGuardKey(k) {
+  return typeof k === 'string' && IDENTITY_GUARD_KEY_RE.test(k);
+}
 const PROFILE_IDENTITY_FIELDS = ['firstName', 'lastName', 'gender', 'birthDate', 'height', 'birthYear'];
 
 /**
@@ -264,18 +268,20 @@ const PROFILE_IDENTITY_FIELDS = ['firstName', 'lastName', 'gender', 'birthDate',
  * но guard decision (allow/false) принимается строго.
  */
 async function runIdentityGuardsForItem(client, clientId, k, incomingValue, currentValue, currentUpdatedAtMs, source) {
-  if (!IDENTITY_GUARD_KEYS.has(k)) {
+  if (!isIdentityGuardKey(k)) {
     return { allow: true, finalValue: incomingValue, snapshotId: null, blockedReason: null };
   }
   if (!incomingValue || typeof incomingValue !== 'object') {
     return { allow: true, finalValue: incomingValue, snapshotId: null, blockedReason: null };
   }
 
-  // 🛡️ 1. Cross-client _writerCid guard (per-client blobs).
-  // Backward-compat: rows без currentValue._writerCid (legacy до wave 1) skip guard.
-  if (currentValue && typeof currentValue === 'object' &&
-      incomingValue._writerCid && currentValue._writerCid &&
-      incomingValue._writerCid !== currentValue._writerCid) {
+  // 🛡️ 1. Cross-client _writerCid guard.
+  // Правило: incoming._writerCid должен совпадать с clientId (owner of row).
+  // Это строже чем сравнение с currentValue._writerCid (старая реализация) —
+  // ловит pollution даже на fresh row (где currentValue=null) и на rows
+  // которые ранее писались legitimately другим клиентом (legacy без _writerCid).
+  // Backward-compat: incoming без _writerCid skip-аем (legacy миграции).
+  if (incomingValue._writerCid && String(incomingValue._writerCid) !== String(clientId)) {
     const auditAction = (k === 'heys_profile') ? 'cross_client_profile_blocked' : 'cross_client_blob_blocked';
     let snapshotId = null;
     if (k === 'heys_profile') {
@@ -284,7 +290,7 @@ async function runIdentityGuardsForItem(client, clientId, k, incomingValue, curr
           `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, writer_cid)
            VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'cross_client_blocked', $4)
            RETURNING id`,
-          [clientId, JSON.stringify(currentValue), JSON.stringify(incomingValue), incomingValue._writerCid || null]
+          [clientId, JSON.stringify(currentValue || {}), JSON.stringify(incomingValue), incomingValue._writerCid || null]
         );
         snapshotId = r.rows[0]?.id || null;
       } catch (e) {
@@ -292,23 +298,27 @@ async function runIdentityGuardsForItem(client, clientId, k, incomingValue, curr
       }
     }
     try {
+      const cloudWriter = (currentValue && typeof currentValue === 'object' && currentValue._writerCid)
+        ? String(currentValue._writerCid).slice(0, 8) : 'null';
       await client.query(
         `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
          VALUES ($1::uuid, $2::text, $3::text, FALSE, $4)`,
         [clientId, k, auditAction,
-          `${source} incoming_writer=${String(incomingValue._writerCid).slice(0, 8)} cloud_writer=${String(currentValue._writerCid).slice(0, 8)}`]
+          `${source} incoming_writer=${String(incomingValue._writerCid).slice(0, 8)} expected=${String(clientId).slice(0, 8)} cloud_writer=${cloudWriter}`]
       );
     } catch (e) {
       console.warn(`[${source}] cross_client audit failed:`, e.message);
     }
     if (_shouldSendTgAlert(clientId, auditAction)) {
+      const cloudWriter = (currentValue && typeof currentValue === 'object' && currentValue._writerCid)
+        ? String(currentValue._writerCid).slice(0, 8) : 'null';
       sendTgAlertFireAndForget(
         `🛡️ *${auditAction}*\n` +
         `key: \`${k}\`\n` +
         `client: \`${String(clientId).slice(0, 8)}\`\n` +
         `source: \`${source}\`\n` +
-        `incoming writer: \`${String(incomingValue._writerCid).slice(0, 8)}\`\n` +
-        `cloud writer: \`${String(currentValue._writerCid).slice(0, 8)}\`` +
+        `incoming writer: \`${String(incomingValue._writerCid).slice(0, 8)}\` (expected: \`${String(clientId).slice(0, 8)}\`)\n` +
+        `cloud writer: \`${cloudWriter}\`` +
         (k === 'heys_profile' && snapshotId ? `\n_Forensic snapshot #${snapshotId}._` : '')
       );
     }
@@ -425,13 +435,59 @@ async function runIdentityGuardsForItem(client, clientId, k, incomingValue, curr
 }
 
 /**
+ * 🛡️ Content-fingerprint cross-client guard для dayv2 (added 2026-06-01 incident 3).
+ * Сценарий: curator switch'нул клиента, LS не очистился, stale в-memory state получил
+ * новый _writerCid (правильный) перед push'ом. cross-client _writerCid guard слепнет
+ * потому что writer=clientId. Решение: detect когда identical content только что
+ * пришёл другому клиенту того же curator в последние 5 минут.
+ *
+ * curatorId опциональный (для session-path = null → guard skip).
+ * Возвращает { conflictClientId } или null.
+ */
+async function detectCrossClientDayv2ContentDup(client, curatorId, clientId, k, incomingValue) {
+  if (!curatorId) return null;
+  if (!k || !/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(k)) return null;
+  if (!incomingValue || typeof incomingValue !== 'object') return null;
+  // Fingerprint только из meals (главный bulk-payload). Если meals пустые — skip.
+  const meals = incomingValue.meals;
+  if (!Array.isArray(meals) || meals.length === 0) return null;
+  let mealsJson;
+  try {
+    mealsJson = JSON.stringify(meals);
+  } catch (_) {
+    return null;
+  }
+  if (mealsJson.length < 50) return null; // тривиальные/пустые meals — skip
+  try {
+    const r = await client.query(
+      `SELECT kv.client_id
+         FROM client_kv_store kv
+         JOIN clients c ON c.id = kv.client_id
+        WHERE c.curator_id = $1::uuid
+          AND kv.client_id != $2::uuid
+          AND kv.k = $3::text
+          AND kv.updated_at > now() - interval '5 minutes'
+          AND md5(coalesce(kv.v->'meals', '[]'::jsonb)::text) = md5($4::text)
+        LIMIT 1`,
+      [curatorId, clientId, k, mealsJson]
+    );
+    if (r.rows.length > 0) {
+      return { conflictClientId: r.rows[0].client_id };
+    }
+  } catch (e) {
+    console.warn('[content-dup] check failed:', e.message);
+  }
+  return null;
+}
+
+/**
  * Pre-fetch (v, updated_at) для batch items с guarded keys. Возвращает Map<k, {v, updated_at_ms}>.
  * Возвращает пустую Map если в batch нет guarded keys (skip DB roundtrip).
  */
 async function prefetchGuardedCurrentValues(client, clientId, items) {
   const guardedKeys = [];
   for (const it of items) {
-    if (it && typeof it.k === 'string' && IDENTITY_GUARD_KEYS.has(it.k)) {
+    if (it && typeof it.k === 'string' && isIdentityGuardKey(it.k)) {
       guardedKeys.push(it.k);
     }
   }
@@ -2824,6 +2880,11 @@ module.exports.handler = async function (event, context) {
       // До этого date только merge_save_* path защищал identity-keys; curator
       // batch path шёл в обход → wholesale identity overwrite от tab-switch'ей
       // не детектился (см. BUGS_HISTORY). Фильтруем items до SQL UPSERT'a.
+      //
+      // 1.5b) Дополнительно для dayv2 (incident 3): content-fingerprint check
+      // против identical writes другим клиентам того же curator за 5 мин.
+      // Ловит случай где client-side tagDayV2WriterCid ре-tag'нул stale data
+      // правильным writerCid — обычный _writerCid guard слепнет.
       const guardBlockedKeys = [];
       const guardKeptItems = [];
       for (const it of items) {
@@ -2831,7 +2892,7 @@ module.exports.handler = async function (event, context) {
           guardKeptItems.push(it);
           continue;
         }
-        if (!IDENTITY_GUARD_KEYS.has(it.k)) {
+        if (!isIdentityGuardKey(it.k)) {
           guardKeptItems.push(it);
           continue;
         }
@@ -2840,11 +2901,39 @@ module.exports.handler = async function (event, context) {
         const gr = await runIdentityGuardsForItem(
           client, targetClientId, it.k, it.v, prevValue, prevTsMs, 'batch_upsert_by_curator'
         );
-        if (gr.allow) {
-          guardKeptItems.push(it);
-        } else {
+        if (!gr.allow) {
           guardBlockedKeys.push({ k: it.k, reason: gr.blockedReason });
+          continue;
         }
+        // dayv2 content-fingerprint check (curator path only)
+        const dupCheck = await detectCrossClientDayv2ContentDup(
+          client, curatorId, targetClientId, it.k, it.v
+        );
+        if (dupCheck) {
+          const auditAction = 'cross_client_dayv2_content_dup';
+          try {
+            await client.query(
+              `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+               VALUES ($1::uuid, $2::text, $3::text, FALSE, $4)`,
+              [targetClientId, it.k, auditAction,
+                `batch_upsert_by_curator dup_from_client=${String(dupCheck.conflictClientId).slice(0, 8)}`]
+            );
+          } catch (e) {
+            console.warn('[batch_upsert] content-dup audit failed:', e.message);
+          }
+          if (_shouldSendTgAlert(targetClientId, auditAction)) {
+            sendTgAlertFireAndForget(
+              `🛡️ *${auditAction}*\n` +
+              `key: \`${it.k}\`\n` +
+              `client: \`${String(targetClientId).slice(0, 8)}\`\n` +
+              `dup with client: \`${String(dupCheck.conflictClientId).slice(0, 8)}\` (within 5 min)\n` +
+              `_Curator стейт не очистился между switch'ами — meals идентичны другому клиенту._`
+            );
+          }
+          guardBlockedKeys.push({ k: it.k, reason: auditAction });
+          continue;
+        }
+        guardKeptItems.push(it);
       }
       items.length = 0;
       items.push(...guardKeptItems);
@@ -3049,7 +3138,7 @@ module.exports.handler = async function (event, context) {
 
     // 🛡️ Identity-guard для session single-write path (added 2026-06-01 incident 2).
     if (fnName === 'upsert_client_kv_by_session' &&
-        typeof params.p_key === 'string' && IDENTITY_GUARD_KEYS.has(params.p_key) &&
+        typeof params.p_key === 'string' && isIdentityGuardKey(params.p_key) &&
         params.p_value && typeof params.p_value === 'object' && params.p_session_token) {
       // Resolve session → client_id.
       let resolvedSessionClientId = null;
@@ -3122,7 +3211,7 @@ module.exports.handler = async function (event, context) {
 
       // 🛡️ Identity-guard для session batch path.
       // Skip resolution entirely если нет guarded keys (избегаем лишнего DB roundtrip).
-      const hasGuardedKey = params.p_items.some(it => it && typeof it.k === 'string' && IDENTITY_GUARD_KEYS.has(it.k));
+      const hasGuardedKey = params.p_items.some(it => it && typeof it.k === 'string' && isIdentityGuardKey(it.k));
       if (hasGuardedKey && params.p_session_token) {
         let resolvedSessionClientId = null;
         try {
@@ -3142,7 +3231,7 @@ module.exports.handler = async function (event, context) {
           const blockedSessionKeys = [];
           const kept = [];
           for (const it of params.p_items) {
-            if (!it || typeof it.k !== 'string' || !IDENTITY_GUARD_KEYS.has(it.k)) {
+            if (!it || typeof it.k !== 'string' || !isIdentityGuardKey(it.k)) {
               kept.push(it);
               continue;
             }
