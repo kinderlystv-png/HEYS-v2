@@ -212,6 +212,16 @@ build_env_flags() {
         done
     fi
 
+    # heys-api-rpc: TG для real-time profile pollution alerts (2026-06-01 wave 2).
+    # initSecrets через shared/secrets.js уже читает TELEGRAM_* из Lockbox; здесь
+    # явный env-fallback на случай если Lockbox lag-нет на cold start.
+    if [[ "$func_name" == "heys-api-rpc" ]]; then
+        local k
+        for k in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
+            _add "$k"
+        done
+    fi
+
     # Photos функция: S3 credentials для signed URL генерации
     if [[ "$func_name" == "heys-api-photos" ]]; then
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"

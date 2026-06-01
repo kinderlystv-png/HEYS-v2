@@ -193,6 +193,27 @@ async function cleanupClientLogTrace(client) {
 }
 
 /**
+ * Cleanup profile_snapshots (2026-06-01 wave 2) — TTL 30 дней. Источник:
+ * миграция 2026-06-01_create_profile_snapshots.sql + merge_save pre-write
+ * snapshot logic в heys-api-rpc.
+ */
+async function cleanupProfileSnapshots(client) {
+  try {
+    const res = await client.query(
+      `WITH del AS (
+         DELETE FROM public.profile_snapshots
+         WHERE created_at < (NOW() - INTERVAL '30 days')
+         RETURNING length(prev_v::text) + length(coalesce(new_v::text, '')) AS sz
+       )
+       SELECT count(*)::int AS rows, coalesce(sum(sz), 0)::bigint AS bytes FROM del`
+    );
+    return res.rows[0] || { rows: 0, bytes: 0 };
+  } catch (e) {
+    return { rows: 0, bytes: 0, error: e.message };
+  }
+}
+
+/**
  * Profile integrity check (2026-06-01) — обнаруживает cross-client pollution
  * profile-полей. Источник: incident 2026-05-31 13:00 где Poplanton'овские
  * identity-поля перетёрли профиль Александры через unscoped legacy LS path.
@@ -708,6 +729,10 @@ module.exports.handler = async (event, context) => {
       // client_log_trace TTL — каждый день в той же daily-фазе
       results.log_trace_cleanup = await cleanupClientLogTrace(client);
       console.log(`[Maintenance] LogTrace TTL: deleted ${results.log_trace_cleanup.rows} rows (${(Number(results.log_trace_cleanup.bytes || 0) / 1024).toFixed(1)} KB)`);
+
+      // profile_snapshots TTL (30 дней)
+      results.profile_snapshots_cleanup = await cleanupProfileSnapshots(client);
+      console.log(`[Maintenance] ProfileSnapshots TTL: deleted ${results.profile_snapshots_cleanup.rows} rows (${(Number(results.profile_snapshots_cleanup.bytes || 0) / 1024).toFixed(1)} KB)`);
 
       // 🛡️ Profile integrity check (2026-06-01) — обнаружение cross-client pollution.
       // Алертит в Telegram если есть mismatch'и clients.name vs profile.firstName+lastName

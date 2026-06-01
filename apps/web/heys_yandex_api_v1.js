@@ -1550,12 +1550,13 @@
     if (!k || v == null) {
       return { success: false, error: 'invalid_params' };
     }
-    // 🛡️ Cross-client profile guard tag (2026-06-01): тегаем каждую запись
-    // heys_profile полем _writerCid = clientId, чтобы сервер (mergeScalarKv в
-    // merge_save_client_kv_*) мог отвергать writes от чужого клиента. Mirror
-    // Class 4 fa851aad fix для dayv2. Backward compat: server skip-ит guard
-    // если хотя бы одна сторона без _writerCid (ramp-up).
-    if (k === 'heys_profile' && v && typeof v === 'object' && !Array.isArray(v) && clientId) {
+    // 🛡️ Cross-client blob guard tag (2026-06-01, wave 2: + norms/game/hr_zones).
+    // Тегаем каждую запись per-client KV blob полем _writerCid = clientId, чтобы
+    // сервер мог отвергать writes от чужого клиента. Mirror Class 4 fa851aad для
+    // dayv2. Backward compat: server skip-ит guard если хотя бы одна сторона
+    // без _writerCid (ramp-up по мере перезаписи).
+    const _GUARDED_KEYS = ['heys_profile', 'heys_norms', 'heys_game', 'heys_hr_zones'];
+    if (_GUARDED_KEYS.indexOf(k) !== -1 && v && typeof v === 'object' && !Array.isArray(v) && clientId) {
       try { v = Object.assign({}, v, { _writerCid: clientId }); } catch (_) { /* readonly object — skip */ }
     }
     try {

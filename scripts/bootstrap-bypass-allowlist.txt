@@ -151,8 +151,9 @@ apps/web/heys_metabolic_intelligence_v1.js:2416
 apps/web/heys_models_v1.js:404
 apps/web/heys_module_perf_v1.js:43
 apps/web/heys_module_perf_v1.js:67
+apps/web/heys_fingers_entry_v1.js:166
 apps/web/heys_morning_checkin_v1.js:136
-apps/web/heys_morning_checkin_v1.js:156
+apps/web/heys_morning_checkin_v1.js:157
 apps/web/heys_morning_checkin_v1.js:159
 apps/web/heys_perf_main_thread_v1.js:2
 apps/web/heys_planning_schedule_v1.js:3239

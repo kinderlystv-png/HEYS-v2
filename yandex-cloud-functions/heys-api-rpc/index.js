@@ -209,6 +209,43 @@ function verifyJwt(token, jwtSecret) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// 🔔 Real-time Telegram alert for profile pollution events (2026-06-01 wave 2).
+// Fire-and-forget HTTPS POST к Telegram Bot API. Env (TELEGRAM_BOT_TOKEN,
+// TELEGRAM_CHAT_ID) populates from Lockbox через initSecrets. Dedup
+// 5min per (client_id, action) чтобы не спамить если повтор.
+// ─────────────────────────────────────────────────────────────────────────
+const _tgAlertLastSent = new Map(); // `${clientId}:${action}` → ts
+const TG_ALERT_DEDUP_MS = 5 * 60 * 1000;
+
+function _shouldSendTgAlert(clientId, action) {
+  const key = `${clientId}:${action}`;
+  const now = Date.now();
+  const last = _tgAlertLastSent.get(key) || 0;
+  if (now - last < TG_ALERT_DEDUP_MS) return false;
+  _tgAlertLastSent.set(key, now);
+  return true;
+}
+
+function sendTgAlertFireAndForget(text) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return; // не настроено — skip
+  // Не await — handler не должен ждать TG ответа
+  const body = JSON.stringify({
+    chat_id: chatId,
+    text: text.slice(0, 3800),
+    parse_mode: 'Markdown',
+  });
+  fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  }).catch((err) => {
+    console.warn('[tg-alert] send failed:', err.message);
+  });
+}
+
 const ALLOW_LOCALHOST_ORIGINS = process.env.ALLOW_LOCALHOST_ORIGINS === '1';
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
@@ -1999,66 +2036,153 @@ module.exports.handler = async function (event, context) {
             } else {
               mergedValue = incomingValue; // identical content
             }
-          } else if (k === 'heys_norms' || k === 'heys_profile') {
-            // 🛡️ Cross-client profile guard (2026-06-01, mirrors Class 4 fa851aad
-            // для dayv2). Если ОБА side'а имеют _writerCid и они различаются —
-            // это write от чужого клиента (incident 2026-05-31: Poplanton'ские
-            // identity-поля перетёрли профиль Александры через unscoped legacy
-            // path). Отклоняем incoming, оставляем cloud как есть.
-            // Backward compat: rows без _writerCid skip-ят guard, ramp-up по мере
-            // того как клиент-side tag rollout-ится.
-            if (
-              k === 'heys_profile' &&
+          } else if (k === 'heys_norms' || k === 'heys_profile' || k === 'heys_game' || k === 'heys_hr_zones') {
+            // 🛡️ Cross-client guard (extended 2026-06-01 wave 2: + heys_norms,
+            // heys_game, heys_hr_zones). Mirror Class 4 fa851aad pattern для всех
+            // per-client KV blobs где cross-client write может произойти.
+            // Backward compat: rows без _writerCid skip-ят guard.
+            const isPerClientBlob = (k === 'heys_profile' || k === 'heys_norms' || k === 'heys_game' || k === 'heys_hr_zones');
+            const crossWriter = isPerClientBlob &&
               incomingValue && typeof incomingValue === 'object' && incomingValue._writerCid &&
               currentValue && typeof currentValue === 'object' && currentValue._writerCid &&
-              incomingValue._writerCid !== currentValue._writerCid
-            ) {
+              incomingValue._writerCid !== currentValue._writerCid;
+
+            if (crossWriter) {
+              const auditAction = (k === 'heys_profile') ? 'cross_client_profile_blocked' : 'cross_client_blob_blocked';
               mergedValue = currentValue;
-              mergeOutcome = 'cross_client_profile_blocked';
+              mergeOutcome = auditAction;
               try {
                 await client.query(
                   `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
-                   VALUES ($1::uuid, $2::text, 'cross_client_profile_blocked', FALSE, $3)`,
+                   VALUES ($1::uuid, $2::text, $3::text, FALSE, $4)`,
                   [
                     resolvedClientId,
                     k,
+                    auditAction,
                     `incoming_writer=${String(incomingValue._writerCid).slice(0, 8)} cloud_writer=${String(currentValue._writerCid).slice(0, 8)}`,
                   ]
                 );
               } catch (auditErr) {
-                console.warn('[merge_save] cross_client_profile audit insert failed:', auditErr.message);
+                console.warn('[merge_save] cross_client_blob audit insert failed:', auditErr.message);
               }
-            } else {
-              mergedValue = mergeScalarKv(incomingValue, currentValue);
-              mergeOutcome = 'scalar_merged';
-
-              // 📊 Anomaly detection: wholesale identity change на немолодой row.
-              // Не блокирует (legit полная правка профиля бывает), просто аудит-фиксация
-              // для nightly check / forensics. Триггер: 3+ identity-поля изменились
-              // И cloud row старше 24ч (свежесозданные/edit-burst не считаются).
+              // 🔔 Real-time TG alert (dedup 5min per client+action)
+              if (_shouldSendTgAlert(resolvedClientId, auditAction)) {
+                sendTgAlertFireAndForget(
+                  `🛡️ *${auditAction}*\n` +
+                  `key: \`${k}\`\n` +
+                  `client: \`${String(resolvedClientId).slice(0, 8)}\`\n` +
+                  `incoming writer: \`${String(incomingValue._writerCid).slice(0, 8)}\`\n` +
+                  `cloud writer: \`${String(currentValue._writerCid).slice(0, 8)}\`\n` +
+                  (k === 'heys_profile' ? `snapshot saved (см. profile_snapshots).` : '')
+                );
+              }
+              // Pre-write snapshot для profile — даже если block, фиксируем попытку
               if (k === 'heys_profile') {
                 try {
-                  const IDENTITY_FIELDS = ['firstName', 'lastName', 'gender', 'birthDate', 'height', 'birthYear'];
-                  let changedFields = [];
-                  for (const f of IDENTITY_FIELDS) {
-                    const a = currentValue && currentValue[f];
-                    const b = incomingValue && incomingValue[f];
-                    if (a != null && b != null && a !== b) changedFields.push(f);
+                  await client.query(
+                    `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, writer_cid)
+                     VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'cross_client_blocked', $4)`,
+                    [resolvedClientId, JSON.stringify(currentValue), JSON.stringify(incomingValue), incomingValue._writerCid || null]
+                  );
+                } catch (snapErr) {
+                  console.warn('[merge_save] snapshot insert failed:', snapErr.message);
+                }
+              }
+            } else {
+              // 🛡️ Schema validation для heys_profile identity-fields (2026-06-01 wave 2).
+              // Отвергаем obviously invalid values на сервере — предотвращает garbage
+              // от багов UI/auto-fill/импорта. Reject выгоднее silent-drop: клиент
+              // видит ошибку и не успевает залить мусор в LS.
+              let schemaError = null;
+              if (k === 'heys_profile' && incomingValue && typeof incomingValue === 'object') {
+                const g = incomingValue.gender;
+                const a = incomingValue.age;
+                const h = incomingValue.height;
+                const w = incomingValue.weight;
+                if (g != null && g !== '' && !['Мужской', 'Женский', 'Другой'].includes(g)) {
+                  schemaError = `invalid_gender:${String(g).slice(0, 30)}`;
+                } else if (a != null && a !== '' && (Number(a) < 10 || Number(a) > 120 || !Number.isFinite(Number(a)))) {
+                  schemaError = `invalid_age:${a}`;
+                } else if (h != null && h !== '' && (Number(h) < 50 || Number(h) > 250 || !Number.isFinite(Number(h)))) {
+                  schemaError = `invalid_height:${h}`;
+                } else if (w != null && w !== '' && (Number(w) < 20 || Number(w) > 400 || !Number.isFinite(Number(w)))) {
+                  schemaError = `invalid_weight:${w}`;
+                }
+              }
+
+              if (schemaError) {
+                mergedValue = currentValue;
+                mergeOutcome = 'invalid_profile_field_rejected';
+                try {
+                  await client.query(
+                    `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                     VALUES ($1::uuid, $2::text, 'invalid_profile_field', FALSE, $3)`,
+                    [resolvedClientId, k, schemaError]
+                  );
+                } catch (_) { /* noop */ }
+                if (_shouldSendTgAlert(resolvedClientId, 'invalid_profile_field')) {
+                  sendTgAlertFireAndForget(
+                    `⚠️ *invalid_profile_field rejected*\n` +
+                    `client: \`${String(resolvedClientId).slice(0, 8)}\`\n` +
+                    `reason: \`${schemaError}\``
+                  );
+                }
+              } else {
+                mergedValue = mergeScalarKv(incomingValue, currentValue);
+                mergeOutcome = 'scalar_merged';
+
+                // 📊 Anomaly detection: wholesale identity change на немолодой row.
+                if (k === 'heys_profile') {
+                  try {
+                    const IDENTITY_FIELDS = ['firstName', 'lastName', 'gender', 'birthDate', 'height', 'birthYear'];
+                    let changedFields = [];
+                    for (const f of IDENTITY_FIELDS) {
+                      const a = currentValue && currentValue[f];
+                      const b = incomingValue && incomingValue[f];
+                      if (a != null && b != null && a !== b) changedFields.push(f);
+                    }
+                    const cloudAgeMs = Date.now() - (currentUpdatedAt || 0);
+                    if (changedFields.length >= 3 && cloudAgeMs >= 24 * 3600 * 1000) {
+                      // 📸 Pre-write snapshot — даёт мгновенный rollback через
+                      // restore_profile_snapshot(snapshot_id) RPC. См. миграцию
+                      // 2026-06-01_create_profile_snapshots.sql.
+                      try {
+                        await client.query(
+                          `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, changed_fields, writer_cid)
+                           VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'wholesale_identity_change', $4::text[], $5)`,
+                          [
+                            resolvedClientId,
+                            JSON.stringify(currentValue),
+                            JSON.stringify(incomingValue),
+                            changedFields,
+                            (incomingValue && incomingValue._writerCid) || null,
+                          ]
+                        );
+                      } catch (snapErr) {
+                        console.warn('[merge_save] wholesale snapshot insert failed:', snapErr.message);
+                      }
+                      await client.query(
+                        `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                         VALUES ($1::uuid, $2::text, 'wholesale_identity_change', TRUE, $3)`,
+                        [
+                          resolvedClientId,
+                          k,
+                          `fields=[${changedFields.join(',')}] cloud_age_h=${Math.round(cloudAgeMs / 3600000)}`,
+                        ]
+                      );
+                      if (_shouldSendTgAlert(resolvedClientId, 'wholesale_identity_change')) {
+                        sendTgAlertFireAndForget(
+                          `⚠️ *wholesale_identity_change*\n` +
+                          `client: \`${String(resolvedClientId).slice(0, 8)}\`\n` +
+                          `changed fields: \`${changedFields.join(', ')}\`\n` +
+                          `cloud age: ${Math.round(cloudAgeMs / 3600000)}h\n` +
+                          `_Snapshot saved — restore via_ \`SELECT restore_profile_snapshot(<id>);\``
+                        );
+                      }
+                    }
+                  } catch (anomErr) {
+                    console.warn('[merge_save] wholesale_identity audit failed:', anomErr.message);
                   }
-                  const cloudAgeMs = Date.now() - (currentUpdatedAt || 0);
-                  if (changedFields.length >= 3 && cloudAgeMs >= 24 * 3600 * 1000) {
-                    await client.query(
-                      `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
-                       VALUES ($1::uuid, $2::text, 'wholesale_identity_change', TRUE, $3)`,
-                      [
-                        resolvedClientId,
-                        k,
-                        `fields=[${changedFields.join(',')}] cloud_age_h=${Math.round(cloudAgeMs / 3600000)}`,
-                      ]
-                    );
-                  }
-                } catch (anomErr) {
-                  console.warn('[merge_save] wholesale_identity audit failed:', anomErr.message);
                 }
               }
             }

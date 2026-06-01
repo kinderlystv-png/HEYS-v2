@@ -5765,7 +5765,11 @@
       // Each mergeable item is sent through merge_save_client_kv_by_session/_by_curator
       // which atomically merges incoming with current cloud (FOR UPDATE), then returns
       // the merged blob. We write the merged blob back to LS so local matches truth.
-      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile)$/;
+      // 2026-06-01 wave 2: добавлены heys_game и heys_hr_zones чтобы попасть под
+      // cross-client _writerCid guard (см. yandex-cloud-functions/heys-api-rpc/index.js
+      // в merge_save handler). Раньше эти keys шли через batch upsert, что обходило
+      // server-side guard — теоретическая cross-client pollution не ловилась.
+      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones)$/;
       const mergeableItems = yandexItems.filter(it => MERGEABLE_KEY_RE.test(it.k));
       const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
 
