@@ -246,6 +246,214 @@ function sendTgAlertFireAndForget(text) {
   });
 }
 
+// 🛡️ Identity-pollution guards (extracted 2026-06-01 incident 2).
+// До этой даты только merge_save_*_by_curator/by_session гейтили identity-keys.
+// batch_upsert_* и upsert_client_kv_by_session шли в обход → wholesale pollution
+// от curator switch'ей не детектилась. Helper применяется per-item во всех write paths.
+const IDENTITY_GUARD_KEYS = new Set(['heys_profile', 'heys_norms', 'heys_game', 'heys_hr_zones']);
+const PROFILE_IDENTITY_FIELDS = ['firstName', 'lastName', 'gender', 'birthDate', 'height', 'birthYear'];
+
+/**
+ * runIdentityGuardsForItem — per-item проверки перед UPSERT в client_kv_store.
+ * Возвращает { allow, finalValue, snapshotId, blockedReason }.
+ *   - allow=false → caller обязан исключить item из write batch
+ *   - allow=true → продолжать write (finalValue == incomingValue)
+ *   - snapshotId → если ≠null, создан profile_snapshots row для rollback
+ *
+ * Гарантии: best-effort на all snapshot/audit/TG operations (не падаем при их ошибках),
+ * но guard decision (allow/false) принимается строго.
+ */
+async function runIdentityGuardsForItem(client, clientId, k, incomingValue, currentValue, currentUpdatedAtMs, source) {
+  if (!IDENTITY_GUARD_KEYS.has(k)) {
+    return { allow: true, finalValue: incomingValue, snapshotId: null, blockedReason: null };
+  }
+  if (!incomingValue || typeof incomingValue !== 'object') {
+    return { allow: true, finalValue: incomingValue, snapshotId: null, blockedReason: null };
+  }
+
+  // 🛡️ 1. Cross-client _writerCid guard (per-client blobs).
+  // Backward-compat: rows без currentValue._writerCid (legacy до wave 1) skip guard.
+  if (currentValue && typeof currentValue === 'object' &&
+      incomingValue._writerCid && currentValue._writerCid &&
+      incomingValue._writerCid !== currentValue._writerCid) {
+    const auditAction = (k === 'heys_profile') ? 'cross_client_profile_blocked' : 'cross_client_blob_blocked';
+    let snapshotId = null;
+    if (k === 'heys_profile') {
+      try {
+        const r = await client.query(
+          `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, writer_cid)
+           VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'cross_client_blocked', $4)
+           RETURNING id`,
+          [clientId, JSON.stringify(currentValue), JSON.stringify(incomingValue), incomingValue._writerCid || null]
+        );
+        snapshotId = r.rows[0]?.id || null;
+      } catch (e) {
+        console.warn(`[${source}] cross_client snapshot failed:`, e.message);
+      }
+    }
+    try {
+      await client.query(
+        `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+         VALUES ($1::uuid, $2::text, $3::text, FALSE, $4)`,
+        [clientId, k, auditAction,
+          `${source} incoming_writer=${String(incomingValue._writerCid).slice(0, 8)} cloud_writer=${String(currentValue._writerCid).slice(0, 8)}`]
+      );
+    } catch (e) {
+      console.warn(`[${source}] cross_client audit failed:`, e.message);
+    }
+    if (_shouldSendTgAlert(clientId, auditAction)) {
+      sendTgAlertFireAndForget(
+        `🛡️ *${auditAction}*\n` +
+        `key: \`${k}\`\n` +
+        `client: \`${String(clientId).slice(0, 8)}\`\n` +
+        `source: \`${source}\`\n` +
+        `incoming writer: \`${String(incomingValue._writerCid).slice(0, 8)}\`\n` +
+        `cloud writer: \`${String(currentValue._writerCid).slice(0, 8)}\`` +
+        (k === 'heys_profile' && snapshotId ? `\n_Forensic snapshot #${snapshotId}._` : '')
+      );
+    }
+    return { allow: false, finalValue: currentValue, snapshotId, blockedReason: auditAction };
+  }
+
+  // 🛡️ 2. Schema validation для heys_profile identity-fields.
+  if (k === 'heys_profile') {
+    const g = incomingValue.gender;
+    const a = incomingValue.age;
+    const h = incomingValue.height;
+    const w = incomingValue.weight;
+    let schemaError = null;
+    if (g != null && g !== '' && !['Мужской', 'Женский', 'Другой'].includes(g)) {
+      schemaError = `invalid_gender:${String(g).slice(0, 30)}`;
+    } else if (a != null && a !== '' && (Number(a) < 10 || Number(a) > 120 || !Number.isFinite(Number(a)))) {
+      schemaError = `invalid_age:${a}`;
+    } else if (h != null && h !== '' && (Number(h) < 50 || Number(h) > 250 || !Number.isFinite(Number(h)))) {
+      schemaError = `invalid_height:${h}`;
+    } else if (w != null && w !== '' && (Number(w) < 20 || Number(w) > 400 || !Number.isFinite(Number(w)))) {
+      schemaError = `invalid_weight:${w}`;
+    }
+    if (schemaError) {
+      try {
+        await client.query(
+          `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+           VALUES ($1::uuid, $2::text, 'invalid_profile_field', FALSE, $3)`,
+          [clientId, k, `${source} ${schemaError}`]
+        );
+      } catch (_) { /* noop */ }
+      if (_shouldSendTgAlert(clientId, 'invalid_profile_field')) {
+        sendTgAlertFireAndForget(
+          `⚠️ *invalid_profile_field rejected*\n` +
+          `client: \`${String(clientId).slice(0, 8)}\`\n` +
+          `source: \`${source}\`\n` +
+          `reason: \`${schemaError}\``
+        );
+      }
+      return { allow: false, finalValue: currentValue || incomingValue, snapshotId: null, blockedReason: 'invalid_profile_field' };
+    }
+  }
+
+  // 📸 3. Routine pre-write snapshot для heys_profile (только при реальном content change).
+  // Velocity ~3-5 writes/день/клиент → ~150 snapshots/клиент/мес, ~300KB. Negligible.
+  if (k === 'heys_profile' && currentValue && typeof currentValue === 'object') {
+    try {
+      const incJson = JSON.stringify(incomingValue);
+      const curJson = JSON.stringify(currentValue);
+      if (incJson !== curJson) {
+        await client.query(
+          `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, writer_cid)
+           VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'routine', $4)`,
+          [clientId, curJson, incJson, incomingValue._writerCid || null]
+        );
+      }
+    } catch (e) {
+      console.warn(`[${source}] routine snapshot failed:`, e.message);
+    }
+  }
+
+  // 🚨 4. Wholesale identity change detection.
+  // Threshold: ≥2 identity-fields изменились. 24h-age threshold убран после incident
+  // 2026-06-01 (pollution через batch_upsert на row возрастом ~19.5h → не сработало).
+  if (k === 'heys_profile') {
+    try {
+      const changedFields = [];
+      for (const f of PROFILE_IDENTITY_FIELDS) {
+        const a = currentValue && currentValue[f];
+        const b = incomingValue[f];
+        if (a != null && b != null && a !== b) changedFields.push(f);
+      }
+      if (changedFields.length >= 2) {
+        let snapshotId = null;
+        try {
+          const r = await client.query(
+            `INSERT INTO profile_snapshots (client_id, prev_v, new_v, reason, changed_fields, writer_cid)
+             VALUES ($1::uuid, $2::jsonb, $3::jsonb, 'wholesale_identity_change', $4::text[], $5)
+             RETURNING id`,
+            [clientId, JSON.stringify(currentValue), JSON.stringify(incomingValue), changedFields,
+              incomingValue._writerCid || null]
+          );
+          snapshotId = r.rows[0]?.id || null;
+        } catch (e) {
+          console.warn(`[${source}] wholesale snapshot failed:`, e.message);
+        }
+        const cloudAgeMs = currentUpdatedAtMs ? (Date.now() - currentUpdatedAtMs) : 0;
+        try {
+          await client.query(
+            `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+             VALUES ($1::uuid, $2::text, 'wholesale_identity_change', TRUE, $3)`,
+            [clientId, k,
+              `${source} fields=[${changedFields.join(',')}] cloud_age_h=${Math.round(cloudAgeMs / 3600000)} snapshot_id=${snapshotId || '?'}`]
+          );
+        } catch (_) { /* noop */ }
+        if (_shouldSendTgAlert(clientId, 'wholesale_identity_change')) {
+          sendTgAlertFireAndForget(
+            `⚠️ *wholesale_identity_change*\n` +
+            `client: \`${String(clientId).slice(0, 8)}\`\n` +
+            `source: \`${source}\`\n` +
+            `changed fields: \`${changedFields.join(', ')}\`\n` +
+            `cloud age: ${Math.round(cloudAgeMs / 3600000)}h\n` +
+            (snapshotId
+              ? `\n*Откат одной командой:*\n\`SELECT restore_profile_snapshot(${snapshotId});\``
+              : `\n_Snapshot insert failed — restore вручную из S3 backup._`)
+          );
+        }
+      }
+    } catch (e) {
+      console.warn(`[${source}] wholesale_identity audit failed:`, e.message);
+    }
+  }
+
+  return { allow: true, finalValue: incomingValue, snapshotId: null, blockedReason: null };
+}
+
+/**
+ * Pre-fetch (v, updated_at) для batch items с guarded keys. Возвращает Map<k, {v, updated_at_ms}>.
+ * Возвращает пустую Map если в batch нет guarded keys (skip DB roundtrip).
+ */
+async function prefetchGuardedCurrentValues(client, clientId, items) {
+  const guardedKeys = [];
+  for (const it of items) {
+    if (it && typeof it.k === 'string' && IDENTITY_GUARD_KEYS.has(it.k)) {
+      guardedKeys.push(it.k);
+    }
+  }
+  const map = new Map();
+  if (guardedKeys.length === 0) return map;
+  try {
+    const r = await client.query(
+      'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])',
+      [clientId, guardedKeys]
+    );
+    for (const row of r.rows) {
+      const tsMs = (row.updated_at instanceof Date)
+        ? row.updated_at.getTime()
+        : Date.parse(row.updated_at || '');
+      map.set(row.k, { v: row.v, updated_at_ms: tsMs || 0 });
+    }
+  } catch (e) {
+    console.warn('[identity-guard] prefetch failed:', e.message);
+  }
+  return map;
+}
+
 const ALLOW_LOCALHOST_ORIGINS = process.env.ALLOW_LOCALHOST_ORIGINS === '1';
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
@@ -2589,22 +2797,70 @@ module.exports.handler = async function (event, context) {
         };
       }
 
-      // 1) Pre-SELECT OLD values одним запросом для diff'a.
+      // 1) Pre-SELECT OLD values одним запросом для diff'a + updated_at для identity-guard.
       const keysList = items.map(it => it && it.k).filter(k => typeof k === 'string');
       let oldByKey = new Map();
+      let oldUpdatedAtByKey = new Map();
       if (keysList.length > 0) {
         try {
           const oldRows = await client.query(
-            'SELECT k, v FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])',
+            'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])',
             [targetClientId, keysList]
           );
           for (const row of oldRows.rows) {
             oldByKey.set(row.k, row.v);
+            const tsMs = (row.updated_at instanceof Date)
+              ? row.updated_at.getTime()
+              : Date.parse(row.updated_at || '');
+            oldUpdatedAtByKey.set(row.k, tsMs || 0);
           }
         } catch (selErr) {
           // Если SELECT упал — продолжаем без OLD (diff покажет всё как added).
           console.warn('[batch_upsert] OLD select failed:', selErr.message);
         }
+      }
+
+      // 1.5) 🛡️ Identity-pollution guards (added 2026-06-01 incident 2).
+      // До этого date только merge_save_* path защищал identity-keys; curator
+      // batch path шёл в обход → wholesale identity overwrite от tab-switch'ей
+      // не детектился (см. BUGS_HISTORY). Фильтруем items до SQL UPSERT'a.
+      const guardBlockedKeys = [];
+      const guardKeptItems = [];
+      for (const it of items) {
+        if (!it || typeof it.k !== 'string') {
+          guardKeptItems.push(it);
+          continue;
+        }
+        if (!IDENTITY_GUARD_KEYS.has(it.k)) {
+          guardKeptItems.push(it);
+          continue;
+        }
+        const prevValue = oldByKey.has(it.k) ? oldByKey.get(it.k) : null;
+        const prevTsMs = oldUpdatedAtByKey.get(it.k) || 0;
+        const gr = await runIdentityGuardsForItem(
+          client, targetClientId, it.k, it.v, prevValue, prevTsMs, 'batch_upsert_by_curator'
+        );
+        if (gr.allow) {
+          guardKeptItems.push(it);
+        } else {
+          guardBlockedKeys.push({ k: it.k, reason: gr.blockedReason });
+        }
+      }
+      items.length = 0;
+      items.push(...guardKeptItems);
+      if (items.length === 0) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            success: true,
+            saved: 0,
+            rejected: rejectedKeys.length,
+            identity_blocked: guardBlockedKeys,
+            error: guardBlockedKeys.length ? 'identity_guard_blocked' : (rejectedKeys.length ? 'not_client_data' : undefined),
+          })
+        };
       }
 
       // 2) Вызываем PL/pgSQL функцию (она делает ownership check + UPSERT).
@@ -2679,10 +2935,15 @@ module.exports.handler = async function (event, context) {
         event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null,
       );
 
+      // Include identity_blocked в response чтобы caller знал что часть items
+      // отвергнута guard'ом (даже при success=true остальных).
+      const responseBody = (guardBlockedKeys.length > 0 && upsertResult && typeof upsertResult === 'object')
+        ? { ...upsertResult, identity_blocked: guardBlockedKeys }
+        : upsertResult;
       return {
         statusCode: 200,
         headers: corsHeaders,
-        body: JSON.stringify(upsertResult)
+        body: JSON.stringify(responseBody)
       };
     }
 
@@ -2785,6 +3046,55 @@ module.exports.handler = async function (event, context) {
         body: JSON.stringify({ ok: false, success: false, error: 'not_client_data', key: params.p_key })
       };
     }
+
+    // 🛡️ Identity-guard для session single-write path (added 2026-06-01 incident 2).
+    if (fnName === 'upsert_client_kv_by_session' &&
+        typeof params.p_key === 'string' && IDENTITY_GUARD_KEYS.has(params.p_key) &&
+        params.p_value && typeof params.p_value === 'object' && params.p_session_token) {
+      // Resolve session → client_id.
+      let resolvedSessionClientId = null;
+      try {
+        const sr = await client.query(
+          `SELECT client_id FROM client_sessions
+           WHERE token_hash = digest($1, 'sha256')
+             AND expires_at > now()
+             AND revoked_at IS NULL`,
+          [params.p_session_token]
+        );
+        resolvedSessionClientId = sr.rows?.[0]?.client_id || null;
+      } catch (e) {
+        console.warn('[upsert_client_kv_by_session] session resolve failed:', e.message);
+      }
+      if (resolvedSessionClientId) {
+        let prevV = null, prevTsMs = 0;
+        try {
+          const cr = await client.query(
+            'SELECT v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text',
+            [resolvedSessionClientId, params.p_key]
+          );
+          if (cr.rows.length > 0) {
+            prevV = cr.rows[0].v;
+            prevTsMs = (cr.rows[0].updated_at instanceof Date)
+              ? cr.rows[0].updated_at.getTime()
+              : (Date.parse(cr.rows[0].updated_at || '') || 0);
+          }
+        } catch (e) {
+          console.warn('[upsert_client_kv_by_session] prev fetch failed:', e.message);
+        }
+        const gr = await runIdentityGuardsForItem(
+          client, resolvedSessionClientId, params.p_key, params.p_value, prevV, prevTsMs, 'upsert_by_session'
+        );
+        if (!gr.allow) {
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({ success: false, ok: false, error: 'identity_guard_blocked', reason: gr.blockedReason, key: params.p_key })
+          };
+        }
+      }
+    }
+
     if (fnName === 'batch_upsert_client_kv_by_session' && Array.isArray(params.p_items)) {
       const _rejected = [];
       const _filtered = [];
@@ -2807,6 +3117,56 @@ module.exports.handler = async function (event, context) {
             headers: corsHeaders,
             body: JSON.stringify({ success: true, saved: 0, rejected: _rejected.length, error: 'not_client_data' })
           };
+        }
+      }
+
+      // 🛡️ Identity-guard для session batch path.
+      // Skip resolution entirely если нет guarded keys (избегаем лишнего DB roundtrip).
+      const hasGuardedKey = params.p_items.some(it => it && typeof it.k === 'string' && IDENTITY_GUARD_KEYS.has(it.k));
+      if (hasGuardedKey && params.p_session_token) {
+        let resolvedSessionClientId = null;
+        try {
+          const sr = await client.query(
+            `SELECT client_id FROM client_sessions
+             WHERE token_hash = digest($1, 'sha256')
+               AND expires_at > now()
+               AND revoked_at IS NULL`,
+            [params.p_session_token]
+          );
+          resolvedSessionClientId = sr.rows?.[0]?.client_id || null;
+        } catch (e) {
+          console.warn('[batch_upsert_client_kv_by_session] session resolve failed:', e.message);
+        }
+        if (resolvedSessionClientId) {
+          const prevMap = await prefetchGuardedCurrentValues(client, resolvedSessionClientId, params.p_items);
+          const blockedSessionKeys = [];
+          const kept = [];
+          for (const it of params.p_items) {
+            if (!it || typeof it.k !== 'string' || !IDENTITY_GUARD_KEYS.has(it.k)) {
+              kept.push(it);
+              continue;
+            }
+            const prev = prevMap.get(it.k) || { v: null, updated_at_ms: 0 };
+            const gr = await runIdentityGuardsForItem(
+              client, resolvedSessionClientId, it.k, it.v, prev.v, prev.updated_at_ms, 'batch_upsert_by_session'
+            );
+            if (gr.allow) {
+              kept.push(it);
+            } else {
+              blockedSessionKeys.push({ k: it.k, reason: gr.blockedReason });
+            }
+          }
+          params.p_items = kept;
+          if (params.p_items.length === 0) {
+            try { client.release(); } catch (_) { /* ignore */ }
+            return {
+              statusCode: 200,
+              headers: corsHeaders,
+              body: JSON.stringify({ success: true, saved: 0, identity_blocked: blockedSessionKeys, error: 'identity_guard_blocked' })
+            };
+          }
+          // Store for response augmentation in dispatch path (see below).
+          params.__identityBlocked = blockedSessionKeys;
         }
       }
     }
@@ -3152,7 +3512,12 @@ module.exports.handler = async function (event, context) {
     // localStorage. The body still returns the plain UUID for legacy JS
     // until we drop localStorage on the client; both paths interoperate.
     // `revoke_session` success clears the same cookie with Max-Age=0.
-    const responseBody = result.rows.length === 1 ? result.rows[0] : result.rows;
+    let responseBody = result.rows.length === 1 ? result.rows[0] : result.rows;
+    // 🛡️ Surface identity_blocked если guard отверг часть items в session batch path.
+    if (params && Array.isArray(params.__identityBlocked) && params.__identityBlocked.length > 0
+        && responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)) {
+      responseBody = { ...responseBody, identity_blocked: params.__identityBlocked };
+    }
     const finalHeaders = { ...corsHeaders };
 
     // pg returns scalar-functions wrapped as `{ <fnName>: <value> }`, so we
