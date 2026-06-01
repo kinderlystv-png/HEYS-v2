@@ -245,6 +245,16 @@ When working on the diary / meal-add / meal-edit flow, these files own what:
 bundle files will be overwritten on next `pnpm bundle:legacy`. Edit [day/](day/)
 sources only.
 
+### Domain data shapes (агент часто ошибается без подсказки)
+
+- **Day totals**: `dayTot.prot` / `.fat` / `.carb`, **НЕ** `.protein`.
+  `product.harm`, **НЕ** `.harmScore`.
+- **Protein = 3 kcal/g** (TEF-adjusted), не 4.
+- **`MealItem` не содержит `category`** — брать через
+  `getProductFromItem(item, pIndex).category`.
+- **Storage-ключи дня / EWS**: `heys_dayv2_*`, `heys_ews_weekly_v1` (scoped —
+  см. «Storage management»).
+
 ---
 
 ## Meal Planner card (badge «Планнер» в Дневнике)
@@ -366,6 +376,12 @@ leaderboard*\*, client_change_markers, pending_products, client_kv_store).
 `leads` uses `ON DELETE SET NULL`.
 
 → DELETE FROM clients caskades everywhere; no orphan data accumulates.
+
+### Protected RPC access
+
+Фронт ходит в облако **только** через `HEYS.YandexAPI.rpc()` / `.rest()`.
+Защищённые RPC — это `*_by_session`-варианты + `session_token`; **никогда не
+передавать `client_id` напрямую** (client разрешается из сессии на бэкенде).
 
 ### Migrations
 

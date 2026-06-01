@@ -79,6 +79,11 @@ Tone, communication length, adjacent observations — см. user-level CLAUDE.md
    ломаются при эволюции данных (overlay v2 → TypeA rows без `.name`; tombstone
    arrays держат IDs, не объекты). Использовать explicit tombstones /
    versioning. См. `BUGS_HISTORY.md` cloud cleanup destruction 2026-05-11.
+8. **UPSERT на таблицах с auth-триггерами по `NEW.user_id`** (`client_kv_store`
+   и подобные) — всегда `SET user_id = EXCLUDED.user_id` в `ON CONFLICT`. Иначе
+   stale `user_id` прошлого writer'а проходит trigger-condition и блокирует
+   легитимные writes (incident 2026-05-28, PIN-flow 500; hotfix
+   `database/2026-05-28_fix_pin_path_user_id.sql`).
 
 See [apps/web/ARCHITECTURE.md](apps/web/ARCHITECTURE.md) for full details on
 each.
