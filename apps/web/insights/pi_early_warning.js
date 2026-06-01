@@ -939,7 +939,7 @@
         });
 
         if (!ewsTablesQuiet()) {
-            console.group('ews / trends 🖥️ ui.chronic_warnings - Top 3');
+            console.groupCollapsed('ews / trends 🖥️ ui.chronic_warnings - Top 3');
             console.table(chronicWarnings.map(w => ({
                 'Warning Type': w.type,
                 '14d': w.frequency14d,
@@ -1042,7 +1042,7 @@
         });
 
         if (!ewsTablesQuiet()) {
-            console.group('ews / priority 🖥️ ui.top3 - Critical Priority');
+            console.groupCollapsed('ews / priority 🖥️ ui.top3 - Critical Priority');
             console.table(top3.map(w => ({
                 'Type': w.type,
                 'Pattern': w.patternName || w.pattern || '',
@@ -1881,7 +1881,7 @@
         await saveWeeklyProgress(progressData, weekSnapshot);
 
         if (!ewsTablesQuiet()) {
-            console.group('ews / weekly 🖥️ ui.summary - Last 4 Weeks');
+            console.groupCollapsed('ews / weekly 🖥️ ui.summary - Last 4 Weeks');
             console.table(progressData.weeks.map((w, idx) => ({
                 '#': idx + 1,
                 'Week': `${w.weekStart} to ${w.weekEnd}`,
@@ -4650,7 +4650,7 @@
 
         // Visual summary table of all 15 checks (v3.0 verification +  pipeline logs v3.1)
         const showTables = !ewsTablesQuiet();
-        if (showTables) console.group('ews / detect 🖥️ ui.summary - All 25 Checks');
+        if (showTables) console.groupCollapsed('ews / detect 🖥️ ui.summary - All 25 Checks');
         const checkMapping = [
             { num: 1, name: 'Health Score Decline', tier: 'Baseline', types: ['HEALTH_SCORE_DECLINE'] },
             { num: 2, name: 'Pattern Issues', tier: 'Baseline', types: ['CRITICAL_PATTERN_DEGRADATION', 'LOW_PATTERN_SCORE'] },
@@ -4809,21 +4809,6 @@
     function detectCached(days, profile, pIndex, options) {
         const sig = _detectCacheSig(days, profile, pIndex, options);
         const cached = _detectCacheGet(sig);
-        // TEMP DIAG: console.warn survives terser drop_console. Use to identify
-        // which consumers call detect() and why memoization misses. Remove after
-        // diagnosis — tracking issue: ews 2-cycle source. Date: 2026-06-01.
-        try {
-            const _stack = (new Error('ews-trace')).stack;
-            const _frames = _stack ? _stack.split('\n').slice(2, 6).map(s => s.trim()) : [];
-            console.warn('ews / detect 🎯 caller', {
-                mode: (options && options.mode) || 'full',
-                daysLen: Array.isArray(days) ? days.length : 0,
-                hasOpts: !!options,
-                hit: !!cached,
-                sig,
-                frames: _frames
-            });
-        } catch (_) { /* noop */ }
         if (cached) {
             console.info('ews / detect ⏭️ cache hit (memoized)', {
                 sig,
