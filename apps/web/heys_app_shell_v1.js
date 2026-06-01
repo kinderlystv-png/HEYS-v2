@@ -1050,6 +1050,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             let retryTimeoutId = null;
             let ewsLoaded = false; // PERF v7.2: prevent duplicate detect calls
             let lastDetectAt = 0; // PERF v7.3: throttle post-sync re-detect (защита от secondary loop через heysSyncCompleted после cloud upload heys_ews_* ключей)
+            // PERF v7.4: single-flight promise — boot fires mount() + 'heys-ews-ready' event +
+            // 'heysSyncCompleted' near-concurrently; without dedup all three start a detect.
+            let detectInFlight = null;
             const POST_SYNC_DETECT_MIN_GAP_MS = 30_000;
 
             const loadEWSData = async (retryCount = 0) => {
@@ -1080,70 +1083,91 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     }
                     ewsLoaded = true;
 
+                    // PERF v7.4: single-flight dedup. If detect is already running, await
+                    // the same promise — prevents triple concurrent detect at boot.
+                    if (detectInFlight) {
+                        console.info('ews / badge ⏭️ detect already in-flight, awaiting existing');
+                        return detectInFlight;
+                    }
+
                     console.info('ews / badge ✅ EWS module detected');
 
-                    // Load 7 days of data (ACUTE mode: current state alerts only)
-                    const days = [];
-                    for (let i = 0; i < 7; i++) {
-                        const d = new Date();
-                        d.setDate(d.getDate() - i);
-                        const dateStr = formatLocalISO(d);
-                        const U = HEYS.utils || {};
-                        const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateStr}`) : null;
-                        if (dayData) days.push({ ...dayData, date: dateStr });
-                    }
-
-                    console.info('ews / badge 📦 Days loaded:', days.length);
-
-                    if (days.length < 3) {
-                        console.info('ews / badge ⏸️ Insufficient data:', days.length, 'days (need 3+) — showing neutral badge');
-                        setEWSData({ count: 0, highSeverityCount: 0, available: false, warnings: [] });
-                        return;
-                    }
-
-                    const profile = cachedProfile || HEYS.store?.get?.('heys_profile') || null;
-                    const pIndex = products || HEYS.products?.getAll?.() || [];
-
-                    console.info('ews / badge 📤 calling detect:', {
-                        mode: 'acute',
-                        daysCount: days.length,
-                        hasProfile: !!profile,
-                        pIndexCount: pIndex?.length || 0,
-                        checksExpected: 10
-                    });
-
-                    const result = await HEYS.InsightsPI.earlyWarning.detect(days, profile, pIndex, {
-                        mode: 'acute',
-                        includeDetails: true
-                    });
+                    // PERF v7.4: stamp lastDetectAt BEFORE await so post-sync throttle
+                    // (POST_SYNC_DETECT_MIN_GAP_MS) sees the in-flight call rather than
+                    // lastDetectAt=0 → Infinity gap → bypass throttle.
                     lastDetectAt = Date.now();
 
-                    if (result.available) {
-                        setEWSData(result);
-                        if (result.count > 0) {
-                            console.info('ews / badge ✅ Badge data loaded:', {
-                                count: result.count,
-                                high: result.highSeverityCount,
-                                medium: result.count - result.highSeverityCount,
-                                daysAnalyzed: days.length,
-                                hasWarnings: Array.isArray(result.warnings) && result.warnings.length > 0,
-                            });
+                    detectInFlight = (async () => {
+                        // Load 7 days of data (ACUTE mode: current state alerts only)
+                        const days = [];
+                        for (let i = 0; i < 7; i++) {
+                            const d = new Date();
+                            d.setDate(d.getDate() - i);
+                            const dateStr = formatLocalISO(d);
+                            const U = HEYS.utils || {};
+                            const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${dateStr}`) : null;
+                            if (dayData) days.push({ ...dayData, date: dateStr });
+                        }
+
+                        console.info('ews / badge 📦 Days loaded:', days.length);
+
+                        if (days.length < 3) {
+                            console.info('ews / badge ⏸️ Insufficient data:', days.length, 'days (need 3+) — showing neutral badge');
+                            setEWSData({ count: 0, highSeverityCount: 0, available: false, warnings: [] });
+                            return;
+                        }
+
+                        const profile = cachedProfile || HEYS.store?.get?.('heys_profile') || null;
+                        const pIndex = products || HEYS.products?.getAll?.() || [];
+
+                        console.info('ews / badge 📤 calling detect:', {
+                            mode: 'acute',
+                            daysCount: days.length,
+                            hasProfile: !!profile,
+                            pIndexCount: pIndex?.length || 0,
+                            checksExpected: 10
+                        });
+
+                        const result = await HEYS.InsightsPI.earlyWarning.detect(days, profile, pIndex, {
+                            mode: 'acute',
+                            includeDetails: true
+                        });
+                        lastDetectAt = Date.now();
+
+                        if (result.available) {
+                            setEWSData(result);
+                            if (result.count > 0) {
+                                console.info('ews / badge ✅ Badge data loaded:', {
+                                    count: result.count,
+                                    high: result.highSeverityCount,
+                                    medium: result.count - result.highSeverityCount,
+                                    daysAnalyzed: days.length,
+                                    hasWarnings: Array.isArray(result.warnings) && result.warnings.length > 0,
+                                });
+                            } else {
+                                console.info('ews / badge ✅ All OK (no warnings):', {
+                                    daysAnalyzed: days.length,
+                                    status: 'healthy'
+                                });
+                            }
                         } else {
-                            console.info('ews / badge ✅ All OK (no warnings):', {
+                            setEWSData({ count: 0, highSeverityCount: 0, available: false, warnings: [] });
+                            console.info('ews / badge ℹ️ EWS unavailable — showing neutral badge:', {
+                                reason: result.reason || 'insufficient_data',
                                 daysAnalyzed: days.length,
-                                status: 'healthy'
                             });
                         }
-                    } else {
-                        setEWSData({ count: 0, highSeverityCount: 0, available: false, warnings: [] });
-                        console.info('ews / badge ℹ️ EWS unavailable — showing neutral badge:', {
-                            reason: result.reason || 'insufficient_data',
-                            daysAnalyzed: days.length,
-                        });
+                    })();
+
+                    try {
+                        await detectInFlight;
+                    } finally {
+                        detectInFlight = null;
                     }
                 } catch (err) {
                     console.warn('ews / badge ⚠️ Failed to load EWS data:', err.message);
                     setEWSData({ count: 0, highSeverityCount: 0, available: false, warnings: [] });
+                    detectInFlight = null;
                 }
             };
 

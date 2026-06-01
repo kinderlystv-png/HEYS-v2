@@ -54,6 +54,17 @@
         ? HEYS.lruCache.create({ name: 'ews-day-score', max: 90 })
         : null;
 
+    // Opt-out for the 4 ui.* console.table blocks (summary/top3/chronic/weekly).
+    // Set localStorage.heys_ews_quiet='1' or HEYS.debug.ewsQuiet=true to silence
+    // ~4 tables per detect call. Text-based diagnostic logs are unaffected.
+    const ewsTablesQuiet = () => {
+        try {
+            if (global.localStorage && global.localStorage.getItem('heys_ews_quiet') === '1') return true;
+            if (global.HEYS && global.HEYS.debug && global.HEYS.debug.ewsQuiet === true) return true;
+        } catch (_) { /* noop */ }
+        return false;
+    };
+
     // Thresholds for warnings
     const THRESHOLDS = {
         HEALTH_SCORE_DECLINE_DAYS: 3,
@@ -186,6 +197,28 @@
         STEP_DECLINE: 45,            // NEAT reduction
         MEAL_TIMING_DRIFT: 50,       // Circadian alignment
         ELECTROLYTE_IMBALANCE: 60    // Performance, hydration
+    };
+
+    // Per-pattern health impact for LOW_PATTERN_SCORE warnings.
+    // Without this map, all pattern issues collapse to fallback 50 in priority
+    // ranking — a sleep_weight problem ends up scored identically to steps_weight.
+    const PATTERN_HEALTH_IMPACT = {
+        meal_timing: 60,
+        wave_overlap: 55,
+        late_eating: 65,
+        meal_quality_trend: 70,
+        sleep_weight: 80,
+        sleep_hunger: 70,
+        training_kcal: 50,
+        steps_weight: 45,
+        protein_satiety: 60,
+        fiber_regularity: 70,
+        nutrition_quality: 75,
+        omega_balancer: 60,
+        protein_distribution: 60,
+        training_type_match: 50,
+        hydration: 60,
+        gut_health: 70
     };
 
     // Severity weights for priority calculation
@@ -866,14 +899,16 @@
             frequencies: chronicWarnings.map(w => `${w.frequency14d}d14/${w.frequency30d}d30`)
         });
 
-        console.group('ews / trends 🖥️ ui.chronic_warnings - Top 3');
-        console.table(chronicWarnings.map(w => ({
-            'Warning Type': w.type,
-            '14d': w.frequency14d,
-            '30d': w.frequency30d,
-            'Last': w.lastOccurrence
-        })));
-        console.groupEnd();
+        if (!ewsTablesQuiet()) {
+            console.group('ews / trends 🖥️ ui.chronic_warnings - Top 3');
+            console.table(chronicWarnings.map(w => ({
+                'Warning Type': w.type,
+                '14d': w.frequency14d,
+                '30d': w.frequency30d,
+                'Last': w.lastOccurrence
+            })));
+            console.groupEnd();
+        }
 
         console.info('ews / trends 🖥️ ui.complete:', {
             chronicDisplayed: chronicWarnings.length
@@ -928,7 +963,9 @@
         const prioritizedWarnings = warnings.map(warning => {
             const warningType = warning.type;
             const severityWeight = SEVERITY_WEIGHTS[warning.severity] || 1;
-            const healthImpact = HEALTH_IMPACT_SCORES[warningType] || 50; // default 50 if not defined
+            const healthImpact = (warningType === 'LOW_PATTERN_SCORE' && warning.pattern && PATTERN_HEALTH_IMPACT[warning.pattern])
+                || HEALTH_IMPACT_SCORES[warningType]
+                || 50;
             const frequency14d = trendsData?.trends?.[warningType]?.frequency14d || 1; // at least 1 (today)
 
             // Priority formula: severity (1-3) × frequency (1-14) × health impact (0-100)
@@ -965,16 +1002,19 @@
             averageScore: Math.round(prioritizedWarnings.reduce((sum, w) => sum + w.priorityScore, 0) / prioritizedWarnings.length)
         });
 
-        console.group('ews / priority 🖥️ ui.top3 - Critical Priority');
-        console.table(top3.map(w => ({
-            'Type': w.type,
-            'Severity': w.severity,
-            'Freq 14d': w.frequency14d,
-            'Health Impact': w.healthImpact,
-            'Priority Score': w.priorityScore,
-            'Label': w.priorityLabel
-        })));
-        console.groupEnd();
+        if (!ewsTablesQuiet()) {
+            console.group('ews / priority 🖥️ ui.top3 - Critical Priority');
+            console.table(top3.map(w => ({
+                'Type': w.type,
+                'Pattern': w.patternName || w.pattern || '',
+                'Severity': w.severity,
+                'Freq 14d': w.frequency14d,
+                'Health Impact': w.healthImpact,
+                'Priority Score': w.priorityScore,
+                'Label': w.priorityLabel
+            })));
+            console.groupEnd();
+        }
 
         console.info('ews / priority 🖥️ ui.complete:', {
             criticalPriorityCount: top3.length,
@@ -1801,16 +1841,18 @@
         // Save updated data (localStorage + cloud sync)
         await saveWeeklyProgress(progressData, weekSnapshot);
 
-        console.group('ews / weekly 🖥️ ui.summary - Last 4 Weeks');
-        console.table(progressData.weeks.map((w, idx) => ({
-            '#': idx + 1,
-            'Week': `${w.weekStart} to ${w.weekEnd}`,
-            'Warnings': w.warningsCount,
-            'Global Score': w.globalScore,
-            'High/Med/Low': `${w.severityBreakdown.high}/${w.severityBreakdown.medium}/${w.severityBreakdown.low}`,
-            'Last Update': w.lastUpdate
-        })));
-        console.groupEnd();
+        if (!ewsTablesQuiet()) {
+            console.group('ews / weekly 🖥️ ui.summary - Last 4 Weeks');
+            console.table(progressData.weeks.map((w, idx) => ({
+                '#': idx + 1,
+                'Week': `${w.weekStart} to ${w.weekEnd}`,
+                'Warnings': w.warningsCount,
+                'Global Score': w.globalScore,
+                'High/Med/Low': `${w.severityBreakdown.high}/${w.severityBreakdown.medium}/${w.severityBreakdown.low}`,
+                'Last Update': w.lastUpdate
+            })));
+            console.groupEnd();
+        }
 
         console.info('ews / weekly 🖥️ ui.trend:', {
             status: trend.status,
@@ -4568,7 +4610,8 @@
         });
 
         // Visual summary table of all 15 checks (v3.0 verification +  pipeline logs v3.1)
-        console.group('ews / detect 🖥️ ui.summary - All 25 Checks');
+        const showTables = !ewsTablesQuiet();
+        if (showTables) console.group('ews / detect 🖥️ ui.summary - All 25 Checks');
         const checkMapping = [
             { num: 1, name: 'Health Score Decline', tier: 'Baseline', types: ['HEALTH_SCORE_DECLINE'] },
             { num: 2, name: 'Pattern Issues', tier: 'Baseline', types: ['CRITICAL_PATTERN_DEGRADATION', 'LOW_PATTERN_SCORE'] },
@@ -4606,9 +4649,11 @@
                 'Status': hasWarning ? '⚠️ WARNING' : '✓ Clean'
             };
         });
-        console.table(checkSummary);
-        console.info('ews / detect 🖥️ ui.legend:', 'Baseline(5) + Tier1(3) + Tier2(4) + Tier3(3) + Advanced(10) = 25 checks total');
-        console.groupEnd();
+        if (showTables) {
+            console.table(checkSummary);
+            console.info('ews / detect 🖥️ ui.legend:', 'Baseline(5) + Tier1(3) + Tier2(4) + Tier3(3) + Advanced(10) = 25 checks total');
+            console.groupEnd();
+        }
         console.info('ews / detect 🖥️ ui.complete:', { warningsDisplayed: warnings.length, checksTotal: 25 });
 
         // Track warning trends (v3.1)
