@@ -331,6 +331,25 @@ export const LEGACY_BUNDLES = {
 };
 
 export const LEGACY_GENERATORS = {
+    'day-core': {
+        script: 'apps/web/scripts/bundle-day-core.mjs',
+        output: 'apps/web/heys_day_core_bundle_v1.js',
+        sources: [
+            // Order matters — same as historical manual concat sequence.
+            // utils provides HEYS.dayUtils + HEYS.deletedProducts namespace,
+            // hooks/calculations/effects depend on it; handlers below depend
+            // on store/effect helpers; handlers_bundle is the public API
+            // entry — must be LAST.
+            'apps/web/heys_day_utils.js',
+            'apps/web/heys_day_hooks.js',
+            'apps/web/heys_day_calculations.js',
+            'apps/web/heys_day_effects.js',
+            'apps/web/heys_day_training_handlers.js',
+            'apps/web/heys_day_day_handlers.js',
+            'apps/web/heys_day_handlers_bundle_v1.js',
+        ],
+        dependsOn: [],
+    },
     advice: {
         script: 'apps/web/scripts/bundle-advice.mjs',
         output: 'apps/web/heys_advice_bundle_v1.js',
@@ -414,7 +433,7 @@ export const LEGACY_GENERATORS = {
     },
 };
 
-export const LEGACY_GENERATOR_ORDER = ['advice', 'meals', 'day', 'fingers'];
+export const LEGACY_GENERATOR_ORDER = ['day-core', 'advice', 'meals', 'day', 'fingers'];
 
 export const LEGACY_FULL_REBUILD_TRIGGERS = new Set([
     'scripts/bundle-legacy.mjs',

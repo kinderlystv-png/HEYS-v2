@@ -10,22 +10,15 @@
     // (DayTab + sidebar + sparklines часто читают тот же день за < 16мс окно).
     // TTL короткий чтобы быстро отражать external writes (autosave, sync, cascade).
     // Конфликта с HEYS.store.invalidate ниже НЕТ: invalidate чистит HEYS.store кэш,
-    // а наш _readDayV2Cache — независимая Map (consumed/seeded только этим модулем).
+    // а наш _readDayV2Cache — независимая Map.
     const _readDayV2Cache = (HEYS.lruCache && typeof HEYS.lruCache.create === 'function')
         ? HEYS.lruCache.create({ name: 'readDayV2', max: 30, ttlMs: 200 })
         : null;
 
-    // v69 FIX: Resolve scoped dayv2 key to prevent cross-client contamination
-    function getScopedDayV2Key(dateStr) {
-        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
-        return cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
-    }
-
-    // v69 FIX: Read from scoped key first, fallback to unscoped for legacy
+    // v69 FIX: Read from scoped dayv2 key first, fallback to unscoped for legacy
     function readDayV2(dateStr, lsGet) {
         const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
 
-        // PERF F2: cache key включает clientId+dateStr; ttl 200мс окно.
         const cacheKey = cid + '|' + dateStr;
         if (_readDayV2Cache) {
             const cached = _readDayV2Cache.get(cacheKey);
@@ -78,7 +71,6 @@
             blockCloudUpdatesUntilRef,
             isSyncingRef
         } = deps || {};
-        const clientScopeId = String(HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '');
 
         const isMeaningfulDayData = (data) => {
             if (!data || typeof data !== 'object') return false;
@@ -121,7 +113,10 @@
             prevDateRef.current = date;
 
             setIsHydrated(false); // Сброс: данные ещё не загружены для новой даты
-            const clientId = global.HEYS && global.HEYS.currentClientId;
+            const clientId = global.HEYS?.utils?.getCurrentClientId?.()
+                || global.HEYS?.currentClientId
+                || (global.HEYS?.store?.get ? global.HEYS.store.get('heys_client_current', '') : '')
+                || localStorage.getItem('heys_client_current') || '';
             const cloud = global.HEYS && global.HEYS.cloud;
 
             // Сбрасываем ref при смене даты
@@ -133,6 +128,13 @@
                 const dayRead = readDayV2(date, lsGet);
                 const key = dayRead.key;
                 const v = dayRead.value;
+                const hasStoredData = !!(v && typeof v === 'object' && (
+                    v.date ||
+                    (Array.isArray(v.meals) && v.meals.length > 0) ||
+                    (Array.isArray(v.trainings) && v.trainings.length > 0) ||
+                    v.updatedAt || v.waterMl || v.steps || v.weightMorning
+                ));
+
                 // 🔬 [HEYS.day-trace] 7/8 boot LS read — what came back from localStorage on refresh.
                 try {
                     const _meals = (v && Array.isArray(v.meals)) ? v.meals : [];
@@ -140,47 +142,42 @@
                     console.info('[HEYS.day-trace] 7/8 boot LS read', {
                         date,
                         key,
-                        hasValue: !!v,
+                        hasStoredData,
                         mealsCount: _meals.length,
                         totalItems: _totalItems,
                         updatedAt: v && v.updatedAt,
                         sourceId: v && v._sourceId,
                     });
                 } catch (_) { /* noop */ }
-                if (v && (v.isFastingDay || v.isIncomplete)) {
-                    console.info('[HEYS.dayRealData] 🔄 doLocal read day', {
-                        date,
-                        key,
-                        flags: {
-                            isFastingDay: !!v.isFastingDay,
-                            isIncomplete: !!v.isIncomplete
-                        },
-                        updatedAt: v.updatedAt || 0,
-                        mealsCount: (v.meals || []).length
-                    });
-                }
-                if (v && v.date === date) {
+
+                if (hasStoredData) {
+                    const normalizedDay = v?.date ? v : { ...v, date };
                     // ЗАЩИТА: не перезаписываем более свежие данные
                     // handleDayUpdated может уже загрузить sync данные
-                    if (v.updatedAt && lastLoadedUpdatedAtRef.current > 0 && v.updatedAt < lastLoadedUpdatedAtRef.current) {
+                    if (normalizedDay.updatedAt && lastLoadedUpdatedAtRef.current > 0 && normalizedDay.updatedAt < lastLoadedUpdatedAtRef.current) {
                         return;
                     }
-                    lastLoadedUpdatedAtRef.current = v.updatedAt || Date.now();
+                    lastLoadedUpdatedAtRef.current = normalizedDay.updatedAt || Date.now();
 
                     // Мигрируем оценки тренировок и очищаем пустые (только в памяти, НЕ сохраняем)
                     // Миграция сохранится автоматически при следующем реальном изменении данных
-                    const normalizedTrainings = normalizeTrainings(v.trainings);
+                    const normalizedTrainings = normalizeTrainings(normalizedDay.trainings);
                     const cleanedTrainings = cleanEmptyTrainings(normalizedTrainings);
                     const cleanedDay = {
-                        ...v,
+                        ...normalizedDay,
                         trainings: cleanedTrainings
                     };
+                    // 🔧 FIX: если meals пустые, пробуем подхватить legacy-ключи (heys_day_*, meals_*)
+                    if (!Array.isArray(cleanedDay.meals) || cleanedDay.meals.length === 0) {
+                        const legacyMeals = loadMealsForDate(date) || [];
+                        if (legacyMeals.length > 0) {
+                            cleanedDay.meals = legacyMeals;
+                        }
+                    }
                     // 🔒 НЕ сохраняем миграцию сразу — это вызывает DAY SAVE и мерцание UI
                     // Данные сохранятся при следующем изменении (добавление еды, воды и т.д.)
                     const newDay = ensureDay(cleanedDay, profNow);
                     // 🔒 Оптимизация: не вызываем setDay если данные идентичны (предотвращает мерцание)
-                    // 🚀 PERF: startTransition defers the heavy content re-render
-                    // so the date header updates instantly on click
                     try {
                         if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
                             HEYS.perf.markCommitHint('date-effect:doLocal', {
@@ -190,20 +187,28 @@
                             });
                         }
                     } catch (_) { /* noop */ }
-                    React.startTransition(() => {
+                    const _commitStored = function() {
                         setDay(prevDay => {
                             const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
                                 ? HEYS.dayUtils.isSameDayHydratedContent(prevDay, newDay)
                                 : false;
-                            if (eq) {
-                                return prevDay;
-                            }
+                            if (eq) return prevDay;
                             return newDay;
                         });
                         setIsHydrated(true);
-                    });
+                    };
+                    if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                        React.startTransition(_commitStored);
+                    } else {
+                        _commitStored();
+                    }
                 } else {
                     // create a clean default day for the selected date (don't inherit previous trainings)
+                    try {
+                        if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                            HEYS.perf.markCommitHint('date-effect:doLocal-default', { date });
+                        }
+                    } catch (_) { /* noop */ }
                     const defaultDay = ensureDay({
                         date: date,
                         meals: (loadMealsForDate(date) || []),
@@ -219,28 +224,23 @@
                         stressAvg: '',
                         dayComment: ''
                     }, profNow);
-                    try {
-                        if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
-                            HEYS.perf.markCommitHint('date-effect:doLocal-default', { date });
-                        }
-                    } catch (_) { /* noop */ }
-                    React.startTransition(() => {
+                    const _commitDefault = function() {
                         setDay(defaultDay);
                         setIsHydrated(true);
-                    });
+                    };
+                    if (React.startTransition && window.HEYS?.flags?.isEnabled?.('boot_optimized_v1')) {
+                        React.startTransition(_commitDefault);
+                    } else {
+                        _commitDefault();
+                    }
                 }
             };
 
-            // 🚀 2026-05-31: H1 fix — мгновенный показ LS-snapshot за новую дату
-            // ДО bootstrapClientSync. Раньше doLocal() ждал sync (~1-5с на медленной
-            // сети), и пользователь видел today's meals под header выбранной даты
-            // всё это время. Curator-сценарий: переключение дат клиента шло с
-            // ощутимым лагом, выглядело как «UI не реагирует».
-            // Optimistic UI: показываем что есть в LS сразу; sync дополнит свежими
-            // данными через второй doLocal() в .then() (idempotent — setDay через
-            // isSameDayHydratedContent фильтрует no-op).
-            doLocal();
-
+            // 🔙 ROLLBACK 2026-05-31: H1 fix откатан (вызывал регрессию — курaтор
+            // видел 0 ккал на всех днях т.к. doLocal сразу читал пустой scoped LS
+            // до завершения bootstrapClientSync). Возвращена оригинальная логика:
+            // doLocal вызывается ТОЛЬКО ПОСЛЕ sync. Известный trade-off: UI lag
+            // на смене даты пока sync не завершится. Будет решаться другим путём.
             if (clientId && cloud && typeof cloud.bootstrapClientSync === 'function') {
                 if (typeof cloud.shouldSyncClient === 'function' ? cloud.shouldSyncClient(clientId, 4000) : true) {
                     // 🔒 Блокируем события heys:day-updated во время синхронизации
@@ -254,23 +254,30 @@
                             doLocal();
                         })
                         .catch((err) => {
-                            // Нет сети или ошибка — данные уже показаны из LS выше
+                            // Нет сети или ошибка — загружаем из локального кэша
                             isSyncingRef.current = false;
                             console.warn('[HEYS] Sync failed, using local cache:', err?.message || err);
+                            doLocal();
                         });
+                } else {
+                    doLocal();
                 }
+            } else {
+                doLocal();
             }
 
             return () => {
                 cancelled = true;
                 isSyncingRef.current = false; // Сброс при смене даты или размонтировании
             };
-        }, [date, clientScopeId]);
+        }, [date]);
 
         // Слушаем событие обновления данных дня (от Morning Check-in или внешних изменений)
         // НЕ слушаем heysSyncCompleted — это вызывает бесконечный цикл при каждом сохранении
         // 🔧 v3.19.1: Защита от дублирующихся событий fetchDays
         const lastProcessedEventRef = React.useRef({ date: null, source: null, timestamp: 0, fetchKey: '' });
+        const dayUpdateLogBufferRef = React.useRef([]);
+        const dayUpdateLogTimerRef = React.useRef(null);
         const pendingDayApplyRafRef = React.useRef(null);
         const pendingDayForceReloadRef = React.useRef(false);
         const lastDayApplySourceRef = React.useRef('unknown');
@@ -278,28 +285,59 @@
         const lastAppliedAtRef = React.useRef(0);
 
         React.useEffect(() => {
+            const flushDayUpdateLog = () => {
+                if (!dayUpdateLogBufferRef.current.length) return;
+                const batch = dayUpdateLogBufferRef.current.splice(0);
+                const bySource = batch.reduce((acc, item) => {
+                    acc[item.source] = (acc[item.source] || 0) + 1;
+                    return acc;
+                }, {});
+                const sourcesSummary = Object.entries(bySource)
+                    .map(([source, count]) => `${source}:${count}`)
+                    .join(', ');
+                const dates = [...new Set(batch.map(item => item.updatedDate).filter(Boolean))].slice(0, 6).join(', ');
+                console.info('[HEYS.day] 🔄 heys:day-updated (batch)', {
+                    count: batch.length,
+                    sources: sourcesSummary,
+                    dates: dates ? dates + (batch.length > 6 ? '…' : '') : undefined
+                });
+            };
+
+            const scheduleDayUpdateLog = (payload) => {
+                dayUpdateLogBufferRef.current.push(payload);
+                if (dayUpdateLogTimerRef.current) return;
+                dayUpdateLogTimerRef.current = setTimeout(() => {
+                    dayUpdateLogTimerRef.current = null;
+                    flushDayUpdateLog();
+                }, 250);
+            };
+
             const handleDayUpdated = (e) => {
                 const updatedDate = e.detail?.date;
                 const source = e.detail?.source || 'unknown';
                 const forceReload = e.detail?.forceReload || false;
-                const eventData = e.detail?.data || null;
+                const syncTimestampOnly = e.detail?.syncTimestampOnly || false;
+                const updatedAt = e.detail?.updatedAt;
+                const payloadData = e.detail?.data;
 
                 // 🔬 [HEYS.day-trace] 8/8 day-updated event — fires only when the event
-                // actually carries fresh meals data (not just a syncTimestamp ping).
+                // actually carries fresh data for the current day (not just a syncTimestamp ping).
+                // Without this filter the trace floods on fetchDays bursts (10+ events for 1 day).
                 try {
                     const isForCurrent = !updatedDate || updatedDate === date || (e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date));
-                    const _meals = (eventData && Array.isArray(eventData.meals)) ? eventData.meals : null;
-                    if (isForCurrent && _meals != null) {
+                    const _meals = (payloadData && Array.isArray(payloadData.meals)) ? payloadData.meals : null;
+                    const hasMeaningfulPayload = !syncTimestampOnly && _meals != null;
+                    if (isForCurrent && hasMeaningfulPayload) {
                         const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
                         console.info('[HEYS.day-trace] 8/8 day-updated event', {
                             currentDate: date,
                             updatedDate,
                             source,
                             forceReload,
-                            blockedRemainingMs: Math.max(0, blockCloudUpdatesUntilRef.current - Date.now()),
+                            blockedRemainingMs: blockCloudUpdatesUntilRef ? Math.max(0, blockCloudUpdatesUntilRef.current - Date.now()) : null,
                             eventMealsCount: _meals.length,
                             eventTotalItems: _totalItems,
-                            eventUpdatedAt: eventData && eventData.updatedAt,
+                            eventUpdatedAt: payloadData && payloadData.updatedAt,
                             lastLoadedUpdatedAtRef: lastLoadedUpdatedAtRef.current,
                         });
                     }
@@ -316,10 +354,9 @@
                     }
                 } catch (_) { /* noop */ }
 
-                // PERF (2026-05-26): симметричный skip для :recv stage. Если event несёт
-                // тот же updatedAt что уже в state — игнорируем сразу, до dedup/external-block
-                // guards и до RAF schedule. Замер ?reactProfiler=1 показал :recv = 83.6ms
-                // отдельным источником после :raf-apply fix. Kill switch разделяет с :raf-apply.
+                // PERF (2026-05-26): симметричный skip для :recv stage (см. парный fix в
+                // heys_day_effects.js). Замер ?reactProfiler=1 показал :recv = 83.6ms
+                // как отдельный source после :raf-apply fix. Kill switch shared.
                 try {
                     const _eventUpdatedAt = (eventData && eventData.updatedAt) || e.detail?.updatedAt || 0;
                     if (!forceReload && _eventUpdatedAt > 0 && _eventUpdatedAt === lastLoadedUpdatedAtRef.current
@@ -332,36 +369,22 @@
                     }
                 } catch (_) { /* localStorage недоступен — продолжаем */ }
 
-                if (source === 'day-stats-real-data-cta' || eventData?.isFastingDay || eventData?.isIncomplete) {
-                    try {
-                        global.__HEYS_REALDATA_DEBUG = global.__HEYS_REALDATA_DEBUG || [];
-                        global.__HEYS_REALDATA_DEBUG.push({
-                            stage: 'handleDayUpdated-received',
-                            ts: Date.now(),
-                            currentDate: date,
-                            updatedDate,
-                            source,
-                            forceReload,
-                            eventFlags: {
-                                isFastingDay: !!eventData?.isFastingDay,
-                                isIncomplete: !!eventData?.isIncomplete
-                            },
-                            eventUpdatedAt: eventData?.updatedAt || 0
-                        });
-                    } catch (_) { }
-                    console.error('[HEYS.dayRealData] handleDayUpdated received', {
-                        currentDate: date,
-                        updatedDate,
-                        source,
-                        forceReload,
-                        eventFlags: {
-                            isFastingDay: !!eventData?.isFastingDay,
-                            isIncomplete: !!eventData?.isIncomplete
-                        },
-                        eventUpdatedAt: eventData?.updatedAt || 0
-                    });
+                // v25.8.6.1: Handle timestamp-only sync (prevent fetchDays overwrite)
+                if (syncTimestampOnly && updatedAt) {
+                    const newTimestamp = Math.max(lastLoadedUpdatedAtRef.current || 0, updatedAt);
+                    lastLoadedUpdatedAtRef.current = newTimestamp;
+                    console.info(`[HEYS.day] ⏱️ Timestamp ref synced: ${newTimestamp} (source: ${source})`);
+                    return; // Don't reload day, just updated timestamp ref
                 }
 
+                scheduleDayUpdateLog({
+                    source,
+                    updatedDate,
+                    forceReload,
+                    blockUntil: blockCloudUpdatesUntilRef.current
+                });
+
+                // 🔧 v3.19.1: Дедуп fetchDays — batch first date менялся между вызовами; ключ по полному списку дат.
                 const now = Date.now();
                 const last = lastProcessedEventRef.current;
                 const fetchDaysKey = (source === 'fetchDays' && e.detail?.batch && Array.isArray(e.detail?.dates))
@@ -371,7 +394,7 @@
                     last.source === source &&
                     last.fetchKey === fetchDaysKey &&
                     now - last.timestamp < 450) {
-                    return;
+                    return; // Пропускаем дубликат / coalesced повтор
                 }
                 lastProcessedEventRef.current = { date: updatedDate, source, timestamp: now, fetchKey: fetchDaysKey };
 
@@ -381,8 +404,81 @@
                     return;
                 }
 
+                // v25.8.6.5: Если событие пришло с полным payload дня — применяем его напрямую.
+                // Это обходит риск чтения устаревшего localStorage во время/после fetchDays.
+                if (payloadData && (!updatedDate || updatedDate === date)) {
+                    const profNow = getProfile();
+                    const normalizedPayload = ensureDay(payloadData?.date ? payloadData : { ...payloadData, date }, profNow);
+                    const payloadUpdatedAt = normalizedPayload.updatedAt || updatedAt || Date.now();
+                    const payloadMealsCount = (normalizedPayload.meals || []).length;
+
+                    try {
+                        if (HEYS.perf && typeof HEYS.perf.markCommitHint === 'function') {
+                            HEYS.perf.markCommitHint('day-updated:payload', {
+                                source,
+                                date: normalizedPayload?.date || date,
+                                mealsCount: payloadMealsCount
+                            });
+                        }
+                    } catch (_) { /* noop */ }
+
+                    React.startTransition(() => {
+                    setDay(prevDay => {
+                        const prevUpdatedAt = prevDay?.updatedAt || 0;
+                        const prevMealsCount = (prevDay?.meals || []).length;
+                        const prevItemsCount = (prevDay?.meals || []).reduce((s, m) => s + (Array.isArray(m?.items) ? m.items.length : 0), 0);
+                        const payloadItemsCount = (normalizedPayload.meals || []).reduce((s, m) => s + (Array.isArray(m?.items) ? m.items.length : 0), 0);
+
+                        // Защита от отката: принимаем payload, если он не старее
+                        // или если в нём больше приемов пищи (локальный прогресс).
+                        if (!forceReload && payloadUpdatedAt < prevUpdatedAt && payloadMealsCount <= prevMealsCount) {
+                            console.info('[HEYS.day] ⏭️ Payload skipped (older than current)', {
+                                source,
+                                payloadUpdatedAt,
+                                prevUpdatedAt,
+                                payloadMealsCount,
+                                prevMealsCount
+                            });
+                            return prevDay;
+                        }
+
+                        console.info('[HEYS.day] 📦 Applied day-updated payload', {
+                            source,
+                            payloadUpdatedAt,
+                            payloadMealsCount,
+                            forceReload
+                        });
+                        // MA persist/sync часто идёт сразу после добавления продукта: getFreshDayData может
+                        // отстать от React на один item. forceReload обходит старый guard — не откатываем meals.
+                        const maPayloadSources = (
+                            source === 'morning-activation-followup' ||
+                            source === 'morning-activation-sync' ||
+                            source === 'morning-activation'
+                        );
+                        let nextDay = normalizedPayload;
+                        // MA не редактирует приёмы: при **строго** большем числе строк в React — подменяем meals
+                        // (payload отстал от LS). При **равенстве** оставляем payload: prevDay в этом кадре часто ещё
+                        // без только что добавленной строки продукта — иначе теряем item.
+                        if (maPayloadSources && prevDay && Array.isArray(prevDay.meals) && prevItemsCount > payloadItemsCount) {
+                            console.info('[HEYS.day] 🛡️ MA payload: retain prev meals (React > payload lines)', {
+                                source,
+                                prevItemsCount,
+                                payloadItemsCount
+                            });
+                            nextDay = { ...normalizedPayload, meals: prevDay.meals };
+                        }
+                        return nextDay;
+                    });
+                    });
+
+                    lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, payloadUpdatedAt);
+                    return;
+                }
+
                 // 🔧 v4.9.0: Определяем внешние источники (cloud sync)
-                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays'];
+                // foreground-hot-sync тоже внешний — должен блокироваться blockCloudUpdatesUntilRef
+                // иначе hot-sync → setDay → autosave → upload → hot-sync loop
+                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays', 'foreground-hot-sync'];
                 const isExternalSource = externalSources.includes(source);
 
                 // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)
@@ -440,41 +536,32 @@
                             const dayRead = readDayV2(date, lsGet);
                     const key = dayRead.key;
                     const v = dayRead.value;
-                    if (v && (source === 'day-stats-real-data-cta' || v.isFastingDay || v.isIncomplete)) {
-                        try {
-                            global.__HEYS_REALDATA_DEBUG.push({
-                                stage: 'handleDayUpdated-storage-snapshot',
-                                ts: Date.now(),
-                                currentDate: date,
-                                source,
-                                flags: {
-                                    isFastingDay: !!v.isFastingDay,
-                                    isIncomplete: !!v.isIncomplete
-                                },
-                                updatedAt: v.updatedAt || 0,
-                                mealsCount: (v.meals || []).length
-                            });
-                        } catch (_) { }
-                        console.error('[HEYS.dayRealData] handleDayUpdated storage snapshot', {
-                            currentDate: date,
-                            source,
-                            flags: {
-                                isFastingDay: !!v.isFastingDay,
-                                isIncomplete: !!v.isIncomplete
-                            },
-                            updatedAt: v.updatedAt || 0,
-                            mealsCount: (v.meals || []).length
-                        });
-                    }
-                    if (v && v.date === date) {
-                        const storageMeaningful = isMeaningfulDayData(v);
+                    const hasStoredData = !!(v && typeof v === 'object' && (
+                        v.date ||
+                        (Array.isArray(v.meals) && v.meals.length > 0) ||
+                        (Array.isArray(v.trainings) && v.trainings.length > 0) ||
+                        v.updatedAt || v.waterMl || v.steps || v.weightMorning
+                    ));
+                    if (hasStoredData) {
+                        const normalizedDay = v?.date ? v : { ...v, date };
+                        const storageMeaningful = isMeaningfulDayData(normalizedDay);
                         // Проверяем: данные из storage новее текущих?
-                        const storageUpdatedAt = v.updatedAt || 0;
+                        const storageUpdatedAt = normalizedDay.updatedAt || 0;
                         const currentUpdatedAt = lastLoadedUpdatedAtRef.current || 0;
+
+                        const storageMealsCount = (normalizedDay.meals || []).length;
+                        const storageItemsCount = (normalizedDay.meals || []).reduce((s, m) => s + (m?.items?.length || 0), 0);
+                        console.info('[HEYS.day] 📥 storage snapshot', {
+                            source,
+                            storageUpdatedAt,
+                            currentUpdatedAt,
+                            storageMealsCount,
+                            storageItemsCount,
+                            forceReload
+                        });
 
                         // Двойная защита: по timestamp И по количеству meals
                         // Не откатываем если в storage меньше meals чем в текущем state
-                        const storageMealsCount = (v.meals || []).length;
                         const isStaleStorage = storageUpdatedAt < currentUpdatedAt;
 
                         // Пропускаем проверку timestamp если forceReload
@@ -489,12 +576,9 @@
                             return; // Не перезаписываем более новые данные старыми
                         }
                         // PERF (2026-05-26): skip heavy normalize/JSON work for no-op apply.
-                        // Existing fast-path в setDay (prev.updatedAt === new.updatedAt) уже есть, но он
-                        // ПОСЛЕ normalizeTrainings + cleanEmptyTrainings + ensureDay + 2× JSON.stringify.
-                        // Эти 100ms+ выполняются даже если данные не менялись — частый случай при
-                        // cloud sync echo events, hot-sync re-emits, multiple раз RAF batch.
-                        // Замер ?reactProfiler=1 показал: 6 hits avg 106ms / max 171ms за тестовую сессию.
-                        // Kill switch: localStorage.setItem('heys_skip_noop_apply', '0') для emergency revert.
+                        // См. парный fix в heys_day_effects.js (same line area).
+                        // Замер ?reactProfiler=1 показал day-updated:raf-apply: 6 hits / avg 106ms / max 171ms.
+                        // Kill switch: localStorage.setItem('heys_skip_noop_apply', '0').
                         try {
                             if (!forceReload && storageUpdatedAt > 0 && storageUpdatedAt === currentUpdatedAt
                                 && window.localStorage.getItem('heys_skip_noop_apply') !== '0') {
@@ -506,11 +590,18 @@
                                 return;
                             }
                         } catch (_) { /* localStorage недоступен — продолжаем без skip */ }
-                        const migratedTrainings = normalizeTrainings(v.trainings);
+                        const migratedTrainings = normalizeTrainings(normalizedDay.trainings);
                         const cleanedTrainings = cleanEmptyTrainings(migratedTrainings);
-                        const migratedDay = { ...v, trainings: cleanedTrainings };
+                        const migratedDay = { ...normalizedDay, trainings: cleanedTrainings };
+                        // 🔧 FIX: если meals пустые, пробуем подхватить legacy-ключи (heys_day_*, meals_*)
+                        if (!Array.isArray(migratedDay.meals) || migratedDay.meals.length === 0) {
+                            const legacyMeals = loadMealsForDate(date) || [];
+                            if (legacyMeals.length > 0) {
+                                migratedDay.meals = legacyMeals;
+                            }
+                        }
                         // Сохраняем миграцию ТОЛЬКО если данные изменились
-                        const trainingsChanged = JSON.stringify(v.trainings) !== JSON.stringify(cleanedTrainings);
+                        const trainingsChanged = JSON.stringify(normalizedDay.trainings) !== JSON.stringify(cleanedTrainings);
                         if (trainingsChanged) {
                             lsSet(key, migratedDay);
                         }
@@ -521,7 +612,11 @@
                             if (!storageMeaningful && isMeaningfulDayData(prevDay)) {
                                 return prevDay;
                             }
+                            // React может быть новее LS (debounced autosave): ref ещё не поднят, тогда
+                            // внешний heys:day-updated с «тем же» storageUpdatedAt откатывает UI (дневник силы).
                             const prevUpdatedAt = prevDay?.updatedAt || 0;
+                            // Не откатывать по LS даже при forceReload: hot-sync может шлют forceReload
+                            // со снимком до autosave и стирать дневник конструктора.
                             if (storageUpdatedAt < prevUpdatedAt) {
                                 console.info('[HEYS.day] ⏭️ Skip storage overlay (LS older than React; unpersisted edit)', {
                                     source,
@@ -530,35 +625,124 @@
                                 });
                                 return prevDay;
                             }
-                            const dayHasStrengthBuilder = (day) => {
+                            // Равный updatedAt: overlay из LS может потерять workoutLog при том же timestamp.
+                            // Нельзя считать «есть конструктор» только по strengthEntryMode — шаблон 1×пустая строка
+                            // тоже workout_builder; hot-sync тогда не блокируется и затирает заполненный дневник.
+                            var __dayHasStrengthBuilder = function (day) {
                                 try {
-                                    const dhwb = HEYS.dayCalculations && typeof HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
+                                    var dhwb = HEYS && HEYS.dayCalculations && typeof HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
                                         ? HEYS.dayCalculations.dayHasTrackableWorkoutBuilder
                                         : null;
                                     if (dhwb && dhwb(day)) return true;
-                                } catch (e) { /* noop */ }
-                                const tr = day?.trainings;
+                                } catch (eDhwb) { /* noop */ }
+                                var tr = day && day.trainings;
                                 if (!Array.isArray(tr)) return false;
-                                return tr.some((t) => {
-                                    if (!t || String(t.type) !== 'strength') return false;
-                                    if (t.strengthEntryMode === 'workout_builder') return false;
-                                    const wl = t.workoutLog;
-                                    return !!(wl && Array.isArray(wl.exercises) && wl.exercises.length > 0);
-                                });
+                                for (var i2 = 0; i2 < tr.length; i2++) {
+                                    var t2 = tr[i2];
+                                    if (!t2 || String(t2.type) !== 'strength') continue;
+                                    if (t2.strengthEntryMode === 'workout_builder') continue;
+                                    var wl2 = t2.workoutLog;
+                                    if (wl2 && Array.isArray(wl2.exercises) && wl2.exercises.length > 0) return true;
+                                }
+                                return false;
                             };
-                            if (dayHasStrengthBuilder(prevDay) && !dayHasStrengthBuilder(newDay)) {
+                            if (__dayHasStrengthBuilder(prevDay) && !__dayHasStrengthBuilder(newDay)) {
+                                return prevDay;
+                            }
+                            /** Сумма длин workoutLog.exercises по слотам workout_builder (для анти-отката hot-sync). */
+                            var __sumWbExerciseLengths = function (day) {
+                                var tr = day && day.trainings;
+                                if (!Array.isArray(tr)) return 0;
+                                var s = 0;
+                                for (var iw = 0; iw < tr.length; iw++) {
+                                    var tw = tr[iw];
+                                    if (!tw || String(tw.type) !== 'strength' || tw.strengthEntryMode !== 'workout_builder') continue;
+                                    var wlw = tw.workoutLog;
+                                    if (wlw && Array.isArray(wlw.exercises)) s += wlw.exercises.length;
+                                }
+                                return s;
+                            };
+                            var prevWbRows = __sumWbExerciseLengths(prevDay);
+                            var newWbRows = __sumWbExerciseLengths(newDay);
+                            /** Same tab date as patchTraining / LS; prevDay.date can lag right after reload. */
+                            var dkGuard = (prevDay && prevDay.date) || date;
+                            var lastCommitWb = HEYS && HEYS.Day && HEYS.Day._lastWbRowsByDate && dkGuard
+                                ? HEYS.Day._lastWbRowsByDate[dkGuard]
+                                : null;
+                            var persistedWb = 0;
+                            try {
+                                if (dkGuard && typeof global.sessionStorage !== 'undefined' && global.sessionStorage) {
+                                    var rawW = global.sessionStorage.getItem('heys_last_wbrows_' + dkGuard);
+                                    if (rawW != null && rawW !== '') persistedWb = parseInt(rawW, 10) || 0;
+                                }
+                            } catch (eSs2) { /* noop */ }
+                            var refWbRows = Math.max(
+                                prevWbRows,
+                                typeof lastCommitWb === 'number' ? lastCommitWb : 0,
+                                persistedWb
+                            );
+                            /** Include foreground-hot-sync (not in externalSources[]) so WB rows are not rolled back. */
+                            var wbOverlayFromRemoteish =
+                                isExternalSource || source === 'foreground-hot-sync';
+                            /** Only when snapshot is not strictly newer than React: allow cloud/other tab to win by updatedAt. */
+                            var incomingUp = (newDay && newDay.updatedAt) || 0;
+                            var prevUpWb = (prevDay && prevDay.updatedAt) || 0;
+                            if (
+                                wbOverlayFromRemoteish &&
+                                refWbRows > newWbRows &&
+                                incomingUp <= prevUpWb
+                            ) {
                                 return prevDay;
                             }
                             const prevMealsCount = (prevDay?.meals || []).length;
-                            const shouldSkipOverwrite = isStaleStorage && storageMealsCount < prevMealsCount;
+                            const prevItemsCount = (prevDay?.meals || []).reduce((s, m) => s + (m?.items?.length || 0), 0);
+                            const mealsDown = storageMealsCount < prevMealsCount;
+                            const itemsDown = storageItemsCount < prevItemsCount;
+                            if (mealsDown || itemsDown) {
+                                console.warn('[HEYS.day] ⚠️ Potential overwrite (meals/items count down)', {
+                                    source,
+                                    prevMealsCount,
+                                    storageMealsCount,
+                                    prevItemsCount,
+                                    storageItemsCount,
+                                    forceReload
+                                });
+                            }
+
+                            const shouldSkipOverwrite = isStaleStorage && (mealsDown || itemsDown);
                             if (shouldSkipOverwrite) {
-                                console.warn('[HEYS.day] 🛡️ Skip overwrite (stale + meals down)', {
+                                console.warn('[HEYS.day] 🛡️ Skip overwrite (stale + meals/items down)', {
                                     source,
                                     updatedDate,
                                     storageUpdatedAt,
                                     currentUpdatedAt,
                                     prevMealsCount,
                                     storageMealsCount,
+                                    prevItemsCount,
+                                    storageItemsCount,
+                                    forceReload
+                                });
+                                return prevDay;
+                            }
+
+                            // v25.8.6.6+: Защита от cloud/fetchDays/hot-sync отката количества приёмов И продуктов.
+                            // Внешние источники не должны уменьшать локально подтвержденные meals/items
+                            // (кейс: продукт добавлен в существующий приём, meal count не изменился,
+                            // но облако ещё не получило новый item — hot-sync перезаписывает и item пропадает).
+                            const shouldSkipExternalMealsRollback =
+                                isExternalSource &&
+                                (mealsDown || itemsDown);
+
+                            if (shouldSkipExternalMealsRollback) {
+                                console.warn('[HEYS.day] 🛡️ Skip overwrite (external meals/items rollback)', {
+                                    source,
+                                    updatedDate,
+                                    prevMealsCount,
+                                    storageMealsCount,
+                                    prevItemsCount,
+                                    storageItemsCount,
+                                    storageUpdatedAt,
+                                    currentUpdatedAt,
                                     forceReload
                                 });
                                 return prevDay;
@@ -567,114 +751,35 @@
                             // Обновляем ref только если приняли данные из storage
                             lastLoadedUpdatedAtRef.current = storageUpdatedAt;
 
-                            if (prevDay && prevDay.date === newDay.date) {
-                                // ⚡ Fast path: updatedAt fingerprint (avoids all 8x JSON.stringify)
-                                if (prevDay.updatedAt && newDay.updatedAt && prevDay.updatedAt === newDay.updatedAt) {
+                            // Равный updatedAt: снимок из LS/облака может отстать по waterMl на один тик
+                            // (persist через Store + hot-sync с тем же timestamp).
+                            var mergedForReturn = newDay;
+                            if (storageUpdatedAt === prevUpdatedAt && prevDay && mergedForReturn) {
+                                var prevWml = +(prevDay.waterMl || 0);
+                                var nextWml = +(mergedForReturn.waterMl || 0);
+                                if (prevWml > nextWml) {
+                                    var prevLw = +(prevDay.lastWaterTime || 0);
+                                    var nextLw = +(mergedForReturn.lastWaterTime || 0);
+                                    mergedForReturn = {
+                                        ...mergedForReturn,
+                                        waterMl: prevWml,
+                                        lastWaterTime: Math.max(prevLw, nextLw) || mergedForReturn.lastWaterTime
+                                    };
+                                }
+                            }
+
+                            if (prevDay && prevDay.date === mergedForReturn.date) {
+                                const eq = HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayStorageMergeContent === 'function'
+                                    ? HEYS.dayUtils.isSameDayStorageMergeContent(prevDay, mergedForReturn)
+                                    : false;
+                                if (eq) {
                                     return prevDay;
                                 }
-
-                                // Medium path: primitives + array lengths (cheap, no serialization)
-                                const samePrimitives =
-                                    prevDay.waterMl === newDay.waterMl &&
-                                    prevDay.steps === newDay.steps &&
-                                    prevDay.weightMorning === newDay.weightMorning &&
-                                    !!prevDay.isFastingDay === !!newDay.isFastingDay &&
-                                    !!prevDay.isIncomplete === !!newDay.isIncomplete &&
-                                    prevDay.moodMorning === newDay.moodMorning &&
-                                    prevDay.wellbeingMorning === newDay.wellbeingMorning &&
-                                    prevDay.stressMorning === newDay.stressMorning;
-
-                                if (samePrimitives) {
-                                    const pM = prevDay.meals || [], nM = newDay.meals || [];
-                                    const pT = prevDay.trainings || [], nT = newDay.trainings || [];
-                                    const pSP = prevDay.supplementsPlanned || [], nSP = newDay.supplementsPlanned || [];
-                                    const pST = prevDay.supplementsTaken || [], nST = newDay.supplementsTaken || [];
-
-                                    if (pM.length === nM.length && pT.length === nT.length &&
-                                        pSP.length === nSP.length && pST.length === nST.length) {
-                                        // Shallow meal items check (avoids full JSON.stringify on large arrays)
-                                        let mealsMatch = true;
-                                        for (let mi = 0; mi < pM.length && mealsMatch; mi++) {
-                                            const pItems = pM[mi]?.items || [], nItems = nM[mi]?.items || [];
-                                            if (pItems.length !== nItems.length || pM[mi]?.name !== nM[mi]?.name) {
-                                                mealsMatch = false;
-                                            } else {
-                                                for (let ii = 0; ii < pItems.length; ii++) {
-                                                    if (pItems[ii]?.grams !== nItems[ii]?.grams ||
-                                                        (pItems[ii]?.product_id ?? pItems[ii]?.id) !== (nItems[ii]?.product_id ?? nItems[ii]?.id)) {
-                                                        mealsMatch = false;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        // Only JSON.stringify small arrays (trainings + supplements, typically <10 items)
-                                        const isSameContent = mealsMatch &&
-                                            JSON.stringify(pT) === JSON.stringify(nT) &&
-                                            JSON.stringify(pSP) === JSON.stringify(nSP) &&
-                                            JSON.stringify(pST) === JSON.stringify(nST);
-
-                                        if (isSameContent) {
-                                            if (source === 'day-stats-real-data-cta' || newDay.isFastingDay || newDay.isIncomplete) {
-                                                console.error('[HEYS.dayRealData] handleDayUpdated kept existing state (same content)', {
-                                                    currentDate: date,
-                                                    source,
-                                                    flags: {
-                                                        isFastingDay: !!prevDay.isFastingDay,
-                                                        isIncomplete: !!prevDay.isIncomplete
-                                                    },
-                                                    updatedAt: prevDay.updatedAt || 0
-                                                });
-                                            }
-                                            return prevDay;
-                                        }
-                                    }
-                                }
                             }
-                            if (source === 'day-stats-real-data-cta' || newDay.isFastingDay || newDay.isIncomplete) {
-                                try {
-                                    global.__HEYS_REALDATA_DEBUG.push({
-                                        stage: 'handleDayUpdated-applying-newDay',
-                                        ts: Date.now(),
-                                        currentDate: date,
-                                        source,
-                                        flags: {
-                                            isFastingDay: !!newDay.isFastingDay,
-                                            isIncomplete: !!newDay.isIncomplete
-                                        },
-                                        updatedAt: newDay.updatedAt || 0
-                                    });
-                                } catch (_) { }
-                                console.error('[HEYS.dayRealData] handleDayUpdated applying newDay', {
-                                    currentDate: date,
-                                    source,
-                                    flags: {
-                                        isFastingDay: !!newDay.isFastingDay,
-                                        isIncomplete: !!newDay.isIncomplete
-                                    },
-                                    updatedAt: newDay.updatedAt || 0
-                                });
-                            }
-                            // 🔬 [HEYS.day-trace] 8b/8 day applied — final commit of cloud/external data into React state.
-                            try {
-                                const _meals = newDay.meals || [];
-                                const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
-                                console.info('[HEYS.day-trace] 8b/8 day applied (state replaced)', {
-                                    currentDate: date,
-                                    source,
-                                    fromUpdatedAt: prevDay?.updatedAt || 0,
-                                    toUpdatedAt: newDay.updatedAt || 0,
-                                    fromMeals: (prevDay?.meals || []).length,
-                                    toMeals: _meals.length,
-                                    fromTotalItems: (prevDay?.meals || []).reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0),
-                                    toTotalItems: _totalItems,
-                                });
-                            } catch (_) { /* noop */ }
-                            lastAppliedSignatureRef.current = applySignature;
-                            lastAppliedAtRef.current = Date.now();
-                            return newDay;
+                            return mergedForReturn;
                         });
+                        lastAppliedSignatureRef.current = applySignature;
+                        lastAppliedAtRef.current = Date.now();
                     }
                         });
                     });
@@ -690,34 +795,74 @@
                     pendingDayApplyRafRef.current = null;
                 }
                 global.removeEventListener('heys:day-updated', handleDayUpdated);
+                if (dayUpdateLogTimerRef.current) {
+                    clearTimeout(dayUpdateLogTimerRef.current);
+                    dayUpdateLogTimerRef.current = null;
+                }
             };
         }, [date]);
 
-        // 🆕 v4.8.0: Listen for product rename cascade updates
-        // When product is renamed, meal item names are updated in localStorage
-        // This effect reloads current day's data to show updated names
+        // v25.8.6.7: Export addMealDirect — direct React state update for external callers
+        // Used by meal rec card instead of unreliable event dispatch pipeline
         React.useEffect(() => {
-            const handleMealsUpdated = (e) => {
-                const { reason, productId, oldName, newName } = e.detail || {};
-                if (reason !== 'product-rename') return;
+            HEYS.Day = HEYS.Day || {};
 
-                // Reload current day data from localStorage
-                const profNow = getProfile();
-                const dayRead = readDayV2(date, lsGet);
-                const key = dayRead.key;
-                const v = dayRead.value;
-                if (v && v.date) {
-                    const newDay = ensureDay(v, profNow);
-                    React.startTransition(() => {
-                        setDay(newDay);
-                    });
-                    window.DEV?.log?.(`[DAY_EFFECTS] Reloaded day after product rename: "${oldName}" → "${newName}"`);
+            /**
+             * Add a meal directly to day state + localStorage (synchronous).
+             * Mirrors the pattern from heys_day_meal_handlers.js addMeal onComplete.
+             * @param {Object} newMeal - Meal object from MealStep.showAddMeal onComplete
+             * @returns {boolean} success
+             */
+            HEYS.Day.addMealDirect = (newMeal) => {
+                if (!newMeal || !newMeal.id) {
+                    console.warn('[HEYS.Day.addMealDirect] ❌ Invalid meal:', newMeal);
+                    return false;
                 }
+
+                const newUpdatedAt = Date.now();
+                lastLoadedUpdatedAtRef.current = newUpdatedAt;
+                blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+
+                // 2026-05-29 anti-loop: lsSet НЕ внутри setDay reducer.
+                // React 18 updateReducer повторно прогоняет updater'ы из очереди
+                // при каждом рендере (особенно под StrictMode dev — ~2× amplification),
+                // что приводило к 200+ повторных lsSet в курaторской сессии (см. snapshot 11:51).
+                // Правильно: читаем live snapshot из LS, считаем newDayData, пишем СИНХРОННО
+                // ОДИН раз, после этого setDay делает только pure state update.
+                const _baseKeyAdd = 'heys_dayv2_' + date;
+                let liveSnapshot = {};
+                try {
+                    liveSnapshot = (HEYS.utils && typeof HEYS.utils.lsGet === 'function')
+                        ? (HEYS.utils.lsGet(_baseKeyAdd, {}) || {})
+                        : {};
+                } catch (_) { liveSnapshot = {}; }
+                const safePrev = liveSnapshot && typeof liveSnapshot === 'object' ? liveSnapshot : {};
+                const newMealsArr = [...(safePrev.meals || []), newMeal];
+                const newDayData = {
+                    ...safePrev,
+                    date: safePrev.date || date,
+                    meals: newMealsArr,
+                    updatedAt: newUpdatedAt
+                };
+
+                try {
+                    lsSet(_baseKeyAdd, newDayData);
+                } catch (e) {
+                    console.error('[HEYS.Day.addMealDirect] ❌ lsSet failed:', e);
+                }
+
+                setDay(prevDay => ({ ...prevDay, ...newDayData, meals: newMealsArr, updatedAt: newUpdatedAt }));
+
+                console.info('[HEYS.Day.addMealDirect] ✅ Meal added:', newMeal.name, 'id=' + newMeal.id);
+                return true;
             };
 
-            global.addEventListener('heys:meals-updated', handleMealsUpdated);
-            return () => global.removeEventListener('heys:meals-updated', handleMealsUpdated);
-        }, [date, clientScopeId]);
+            return () => {
+                if (HEYS.Day && HEYS.Day.addMealDirect) {
+                    delete HEYS.Day.addMealDirect;
+                }
+            };
+        }, [date]);
     }
 
     function useDayBootEffects() {
@@ -760,9 +905,6 @@
         const React = getReact();
         const { theme, resolvedTheme } = deps || {};
         React.useEffect(() => {
-            const themePreference = theme === 'dark' || theme === 'light' || theme === 'auto'
-                ? theme
-                : 'auto';
             const nextTheme = theme === 'dark' || theme === 'light'
                 ? theme
                 : resolvedTheme === 'dark'
@@ -772,16 +914,11 @@
             document.documentElement.setAttribute('data-theme', nextTheme);
             try {
                 const U = global.HEYS?.utils || {};
-                localStorage.setItem('heys_theme_pref', themePreference);
-                localStorage.setItem('heys_theme_explicit', themePreference === 'auto' ? '0' : '1');
-                localStorage.setItem('heys_theme', nextTheme);
-                if (U.lsSet) {
-                    U.lsSet('heys_theme_pref', themePreference);
-                    U.lsSet('heys_theme_explicit', themePreference === 'auto' ? '0' : '1');
+                if (global.HEYS?.store?.set) {
+                    global.HEYS.store.set('heys_theme', nextTheme);
+                } else if (U.lsSet) {
                     U.lsSet('heys_theme', nextTheme);
                 } else {
-                    localStorage.setItem('heys_theme_pref', themePreference);
-                    localStorage.setItem('heys_theme_explicit', themePreference === 'auto' ? '0' : '1');
                     localStorage.setItem('heys_theme', nextTheme);
                 }
             } catch (e) {
@@ -936,3 +1073,4 @@
     };
 
 })(window);
+

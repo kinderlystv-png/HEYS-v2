@@ -1,709 +1,655 @@
 // heys_day_hooks.js — React hooks for Day component
-//
-// ⚠ PHANTOM SOURCE — этот файл НЕ загружается в runtime.
-// Реальный код живёт в heys_day_core_bundle_v1.js (boot-calc, см.
-// scripts/legacy-bundle-config.mjs L50). Core bundle поддерживается
-// руками с inlined копиями (`// === heys_day_hooks.js ===` маркер L2065).
-// Правки здесь без дублирования в bundle = потеряются.
-// История: project_insights_fetch_storm.md → Bundle vs source divergence trap.
 
 ; (function (global) {
-  const HEYS = global.HEYS = global.HEYS || {};
-  function getReact() {
+    const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
-    if (!React) {
-      throw new Error('[heys_day_hooks] React is required');
-    }
-    return React;
-  }
 
-  const storeGet = (key, def) => {
-    try {
-      if (HEYS.store?.get) return HEYS.store.get(key, def);
-      if (HEYS.utils?.lsGet) return HEYS.utils.lsGet(key, def);
-      const raw = global.localStorage?.getItem(key);
-      return raw ? JSON.parse(raw) : def;
-    } catch (e) {
-      return def;
-    }
-  };
+    // Импортируем утилиты из dayUtils
+    const getDayUtils = () => HEYS.dayUtils || {};
 
-  const storeSet = (key, value) => {
-    try {
-      if (HEYS.store?.set) {
-        HEYS.store.set(key, value);
-        return;
-      }
-      if (HEYS.utils?.lsSet) {
-        HEYS.utils.lsSet(key, value);
-        return;
-      }
-      global.localStorage?.setItem(key, JSON.stringify(value));
-    } catch (e) { }
-  };
+    // Глобальный дедуп логов: несколько экземпляров useDayAutosave (разные даты) иначе спамят одинаковым HIT.
+    const __heysDayv2FlushGuardLogState = { updatedAt: null, at: 0 };
 
-  // Импортируем утилиты из dayUtils
-  const getDayUtils = () => HEYS.dayUtils || {};
+    // Хук для централизованного автосохранения дня с учётом гонок и межвкладочной синхронизации
+    // Поддерживает ночную логику: приёмы 00:00-02:59 сохраняются под следующий календарный день
+    function useDayAutosave({
+        day,
+        date,
+        lsSet,
+        lsGetFn,
+        keyPrefix = 'heys_dayv2_',
+        debounceMs = 500,
+        now = () => Date.now(),
+        disabled = false, // ЗАЩИТА: не сохранять пока данные не загружены
+    }) {
+        const utils = getDayUtils();
+        // ВАЖНО: Используем динамический вызов чтобы всегда брать актуальный HEYS.utils.lsSet
+        // Это нужно для синхронизации с облаком (диспатч события heys:data-saved)
+        const lsSetFn = React.useCallback((key, val) => {
+            const storeSet = global.HEYS?.store?.set;
+            if (storeSet) {
+                storeSet(key, val);
+                return;
+            }
+            const actualLsSet = global.HEYS?.utils?.lsSet || lsSet || utils.lsSet;
+            if (actualLsSet) {
+                actualLsSet(key, val);
+            } else {
+                // Fallback
+                try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { }
+            }
+        }, [lsSet, utils.lsSet]);
+        const lsGetFunc = lsGetFn || utils.lsGet;
 
-  function isSyntheticEstimatedItem(item) {
-    if (!item || typeof item !== 'object') return false;
-    const productId = String(item.product_id ?? item.productId ?? '');
-    const itemId = String(item.id ?? '');
-    const estimatedSource = String(item.estimatedSource ?? '');
-    return !!(
-      item.isEstimated ||
-      item.virtualProduct ||
-      item.skipProductRestore ||
-      item.skipOrphanTracking ||
-      estimatedSource === 'morning-checkin' ||
-      productId.startsWith('estimated_') ||
-      productId.startsWith('estimated_quickfill_') ||
-      itemId.startsWith('estimated_')
-    );
-  }
+        const timerRef = React.useRef(null);
+        const prevStoredSnapRef = React.useRef(null);
+        const prevDaySnapRef = React.useRef(null);
+        const sourceIdRef = React.useRef((global.crypto && typeof global.crypto.randomUUID === 'function') ? global.crypto.randomUUID() : String(Math.random()));
+        const channelRef = React.useRef(null);
+        const isUnmountedRef = React.useRef(false);
 
-  // Хук для централизованного автосохранения дня с учётом гонок и межвкладочной синхронизации
-  // Поддерживает ночную логику: приёмы 00:00-02:59 сохраняются под следующий календарный день
-  function useDayAutosave({
-    day,
-    date,
-    lsSet,
-    lsGetFn,
-    keyPrefix = 'heys_dayv2_',
-    debounceMs = 500,
-    now = () => Date.now(),
-    disabled = false, // ЗАЩИТА: не сохранять пока данные не загружены
-  }) {
-    const React = getReact();
-    const utils = getDayUtils();
-    // ВАЖНО: Используем динамический вызов чтобы всегда брать актуальный HEYS.utils.lsSet
-    // Это нужно для синхронизации с облаком (диспатч события heys:data-saved)
-    const lsSetFn = React.useCallback((key, val) => {
-      const actualLsSet = global.HEYS?.utils?.lsSet || lsSet || utils.lsSet;
-      if (actualLsSet) {
-        actualLsSet(key, val);
-        return;
-      }
-      storeSet(key, val);
-    }, [lsSet, utils.lsSet]);
-    const lsGetFunc = lsGetFn || utils.lsGet;
+        React.useEffect(() => {
+            isUnmountedRef.current = false;
+            if ('BroadcastChannel' in global) {
+                const channel = new BroadcastChannel('heys_day_updates');
+                channelRef.current = channel;
+                return () => {
+                    isUnmountedRef.current = true;
+                    channel.close();
+                    channelRef.current = null;
+                };
+            }
+            channelRef.current = null;
+        }, []);
 
-    const timerRef = React.useRef(null);
-    const prevStoredSnapRef = React.useRef(null);
-    const prevDaySnapRef = React.useRef(null);
-    const sourceIdRef = React.useRef((global.crypto && typeof global.crypto.randomUUID === 'function') ? global.crypto.randomUUID() : String(Math.random()));
-    const channelRef = React.useRef(null);
-    const isUnmountedRef = React.useRef(false);
+        const getKey = React.useCallback((dateStr) => keyPrefix + dateStr, [keyPrefix]);
 
-    React.useEffect(() => {
-      isUnmountedRef.current = false;
-      if ('BroadcastChannel' in global) {
-        const channel = new BroadcastChannel('heys_day_updates');
-        channelRef.current = channel;
-        return () => {
-          isUnmountedRef.current = true;
-          channel.close();
-          channelRef.current = null;
-        };
-      }
-      channelRef.current = null;
-    }, []);
+        const stripMeta = React.useCallback((payload) => {
+            if (!payload) return payload;
+            const { updatedAt, _sourceId, ...rest } = payload;
+            return rest;
+        }, []);
 
-    const getKey = React.useCallback((dateStr) => keyPrefix + dateStr, [keyPrefix]);
+        // PERF Foundation 0: content-hash вместо JSON.stringify(stripMeta(day)).
+        // На дне с 200+ meal items — JSON.stringify ~100мс. Hash через cached _h полей — ~0.3мс.
+        // Fallback на stringify если contentHash не загружен (редкий load-order edge case).
+        const computeDaySnap = React.useCallback((payload) => {
+            if (!payload) return '';
+            const ch = global.HEYS?.contentHash;
+            if (ch && typeof ch.hashDay === 'function') {
+                return ch.hashDay(payload);
+            }
+            return JSON.stringify(stripMeta(payload));
+        }, [stripMeta]);
 
-    const stripMeta = React.useCallback((payload) => {
-      if (!payload) return payload;
-      const { updatedAt, _sourceId, ...rest } = payload;
-      return rest;
-    }, []);
+        const readExisting = React.useCallback((key) => {
+            if (!key) return null;
+            try {
+                if (global.HEYS?.store?.invalidate) {
+                    global.HEYS.store.invalidate(key);
+                }
+                const stored = lsGetFunc ? lsGetFunc(key, null) : null;
+                if (stored && typeof stored === 'object') return stored;
+                if (typeof stored === 'string') {
+                    return JSON.parse(stored);
+                }
+            } catch (e) { }
 
-    const readExisting = React.useCallback((key) => {
-      if (!key) return null;
-      try {
-        if (global.HEYS?.store?.invalidate) {
-          global.HEYS.store.invalidate(key);
-        }
-        const stored = lsGetFunc ? lsGetFunc(key, null) : storeGet(key, null);
-        if (stored && typeof stored === 'object') return stored;
-        if (typeof stored === 'string') {
-          return JSON.parse(stored);
-        }
-      } catch (e) { }
+            const readRawLocal = (rawKey) => {
+                if (!rawKey) return null;
+                try {
+                    const raw = global.localStorage?.getItem(rawKey);
+                    if (!raw) return null;
+                    if (raw.startsWith('¤Z¤') && global.HEYS?.store?.decompress) {
+                        return global.HEYS.store.decompress(raw);
+                    }
+                    return JSON.parse(raw);
+                } catch (e) {
+                    return null;
+                }
+            };
 
-      const readRawLocal = (rawKey) => {
-        if (!rawKey) return null;
-        try {
-          const raw = global.localStorage?.getItem(rawKey);
-          if (!raw) return null;
-          if (raw.startsWith('¤Z¤') && global.HEYS?.store?.decompress) {
-            return global.HEYS.store.decompress(raw);
-          }
-          return JSON.parse(raw);
-        } catch (e) {
-          return null;
-        }
-      };
+            try {
+                const cid = global.HEYS?.currentClientId;
+                const isScoped = cid && key.startsWith('heys_') && !key.includes(cid);
+                const scopedKey = isScoped ? ('heys_' + cid + '_' + key.substring('heys_'.length)) : key;
+                const scopedVal = readRawLocal(scopedKey);
+                if (scopedVal && typeof scopedVal === 'object') return scopedVal;
+                const rawVal = readRawLocal(key);
+                if (rawVal && typeof rawVal === 'object') return rawVal;
+            } catch (e) { }
+            return null;
+        }, [lsGetFunc]);
 
-      try {
-        const cid = global.HEYS?.currentClientId;
-        const isScoped = cid && key.startsWith('heys_') && !key.includes(cid);
-        const scopedKey = isScoped ? ('heys_' + cid + '_' + key.substring('heys_'.length)) : key;
-        const scopedVal = readRawLocal(scopedKey);
-        if (scopedVal && typeof scopedVal === 'object') return scopedVal;
-        const rawVal = readRawLocal(key);
-        if (rawVal && typeof rawVal === 'object') return rawVal;
-      } catch (e) { }
-      return null;
-    }, [lsGetFunc]);
+        const isMeaningfulDayData = React.useCallback((data) => {
+            if (!data || typeof data !== 'object') return false;
+            try {
+                const dc = HEYS.dayCalculations && typeof HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
+                    ? HEYS.dayCalculations.dayHasTrackableWorkoutBuilder(data)
+                    : false;
+                if (dc) return true;
+            } catch (e) { /* noop */ }
+            const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
+            const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
+            if (mealsCount > 0 || trainingsCount > 0) return true;
+            if (data.isFastingDay || data.isIncomplete) return true;
+            const hasMealLines = typeof HEYS.dayMealsIntegrity?.hasAnyMealLines === 'function'
+                && HEYS.dayMealsIntegrity.hasAnyMealLines(data);
+            if ((data.savedEatenKcal || 0) > 0 && hasMealLines) return true;
+            if ((data.savedDisplayOptimum || 0) > 0 && hasMealLines) return true;
+            if ((data.waterMl || 0) > 0) return true;
+            if ((data.steps || 0) > 0) return true;
+            if ((data.weightMorning || 0) > 0) return true;
+            if (data.sleepStart || data.sleepEnd || data.sleepQuality || data.sleepNote) return true;
+            if (data.dayScore || data.moodAvg || data.wellbeingAvg || data.stressAvg) return true;
+            if (data.moodMorning || data.wellbeingMorning || data.stressMorning) return true;
+            if (data.householdMin || (Array.isArray(data.householdActivities) && data.householdActivities.length > 0)) return true;
+            if (data.isRefeedDay || data.refeedReason) return true;
+            if (data.cycleDay !== null && data.cycleDay !== undefined) return true;
+            if (data.deficitPct !== null && data.deficitPct !== undefined && data.deficitPct !== '') return true;
+            if ((Array.isArray(data.supplementsPlanned) && data.supplementsPlanned.length > 0) ||
+                (Array.isArray(data.supplementsTaken) && data.supplementsTaken.length > 0)) return true;
+            return false;
+        }, []);
 
-    const isMeaningfulDayData = React.useCallback((data) => {
-      if (!data || typeof data !== 'object') return false;
-      try {
-        const dc = HEYS.dayCalculations && typeof HEYS.dayCalculations.dayHasTrackableWorkoutBuilder === 'function'
-          ? HEYS.dayCalculations.dayHasTrackableWorkoutBuilder(data)
-          : false;
-        if (dc) return true;
-      } catch (e) { /* noop */ }
-      const mealsCount = Array.isArray(data.meals) ? data.meals.length : 0;
-      const trainingsCount = Array.isArray(data.trainings) ? data.trainings.length : 0;
-      if (mealsCount > 0 || trainingsCount > 0) return true;
-      if (data.isFastingDay || data.isIncomplete) return true;
-      const hasMealLines = typeof HEYS.dayMealsIntegrity?.hasAnyMealLines === 'function'
-        && HEYS.dayMealsIntegrity.hasAnyMealLines(data);
-      if ((data.savedEatenKcal || 0) > 0 && hasMealLines) return true;
-      if ((data.savedDisplayOptimum || 0) > 0 && hasMealLines) return true;
-      if ((data.waterMl || 0) > 0) return true;
-      if ((data.steps || 0) > 0) return true;
-      if ((data.weightMorning || 0) > 0) return true;
-      if (data.sleepStart || data.sleepEnd || data.sleepQuality || data.sleepNote) return true;
-      if (data.dayScore || data.moodAvg || data.wellbeingAvg || data.stressAvg) return true;
-      if (data.moodMorning || data.wellbeingMorning || data.stressMorning) return true;
-      if (data.householdMin || (Array.isArray(data.householdActivities) && data.householdActivities.length > 0)) return true;
-      if (data.isRefeedDay || data.refeedReason) return true;
-      if (data.cycleDay !== null && data.cycleDay !== undefined) return true;
-      if (data.deficitPct !== null && data.deficitPct !== undefined && data.deficitPct !== '') return true;
-      if ((Array.isArray(data.supplementsPlanned) && data.supplementsPlanned.length > 0) ||
-        (Array.isArray(data.supplementsTaken) && data.supplementsTaken.length > 0)) return true;
-      return false;
-    }, []);
+        // Очистка фото от base64 данных перед сохранением (экономия localStorage)
+        const stripPhotoData = React.useCallback((payload) => {
+            if (!payload?.meals) return payload;
+            return {
+                ...payload,
+                meals: payload.meals.map(meal => {
+                    if (!meal?.photos?.length) return meal;
+                    return {
+                        ...meal,
+                        photos: meal.photos.map(photo => {
+                            // Если есть URL — удаляем data (base64)
+                            // Если нет URL (pending) — сохраняем data для offline
+                            if (photo.url) {
+                                const { data, ...rest } = photo;
+                                return rest;
+                            }
+                            // Pending фото: сохраняем, но ограничиваем размер
+                            // Если data > 100KB — не сохраняем в localStorage (только в pending queue)
+                            if (photo.data && photo.data.length > 100000) {
+                                console.warn('[AUTOSAVE] Photo too large for localStorage, skipping data');
+                                const { data, ...rest } = photo;
+                                return { ...rest, dataSkipped: true };
+                            }
+                            return photo;
+                        })
+                    };
+                })
+            };
+        }, []);
 
-    // Очистка фото от base64 данных перед сохранением (экономия localStorage)
-    const stripPhotoData = React.useCallback((payload) => {
-      if (!payload?.meals) return payload;
-      return {
-        ...payload,
-        meals: payload.meals.map(meal => {
-          if (!meal?.photos?.length) return meal;
-          return {
-            ...meal,
-            photos: meal.photos.map(photo => {
-              // Если есть URL — удаляем data (base64)
-              // Если нет URL (pending) — сохраняем data для offline
-              if (photo.url) {
-                const { data, ...rest } = photo;
-                return rest;
-              }
-              // Pending фото: сохраняем, но ограничиваем размер
-              // Если data > 100KB — не сохраняем в localStorage (только в pending queue)
-              if (photo.data && photo.data.length > 100000) {
-                console.warn('[AUTOSAVE] Photo too large for localStorage, skipping data');
-                const { data, ...rest } = photo;
-                return { ...rest, dataSkipped: true };
-              }
-              return photo;
-            })
-          };
-        })
-      };
-    }, []);
+        // Сохранение данных дня под конкретную дату
+        const saveToDate = React.useCallback((dateStr, payload) => {
+            if (!dateStr || !payload) return;
+            // 🛡️ 2026-05-31: H2 fix — hard invariant: dateStr ДОЛЖНА совпадать с
+            // payload.date. Иначе сохраняем blob с meals/trainings одного дня
+            // под key другого дня + saveToDate переписывает payload.date на
+            // dateStr → silent data corruption невидим на чтении.
+            // Incident 2026-05-31 07:55: Александры 30 мая (888 ккал, 4 meals)
+            // был затёрт today data (174 ккал, 1 meal, payload.date=31 мая).
+            // Без этого guard'а кто-то (cloud event handler? live-refresh?) ещё
+            // продолжит переписывать чужие даты. Защищаем data integrity на
+            // нижнем слое — даже если bug в caller'е, корруптной записи не будет.
+            if (payload.date && payload.date !== dateStr) {
+                console.warn('[HEYS.dayHooks] 🛡️ saveToDate ABORT: payload.date mismatch', {
+                    dateStr,
+                    payloadDate: payload.date,
+                    mealsCount: Array.isArray(payload.meals) ? payload.meals.length : 0,
+                });
+                return;
+            }
+            const key = getKey(dateStr);
+            const current = readExisting(key);
+            const incomingUpdatedAt = payload.updatedAt != null ? payload.updatedAt : now();
 
-    // Сохранение данных дня под конкретную дату
-    const saveToDate = React.useCallback((dateStr, payload) => {
-      if (!dateStr || !payload) return;
-      // 🛡️ 2026-05-31: hard invariant — dateStr ДОЛЖНА совпадать с payload.date.
-      // Иначе мы пишем blob с meals/trainings одного дня под key другого дня
-      // (и переписываем payload.date → silent data corruption невидим на чтении).
-      // См. flush(): saveDate = day.date — но catch также если кто-то ещё вызовет.
-      if (payload.date && payload.date !== dateStr) {
-        console.warn('[HEYS.dayHooks] 🛡️ saveToDate aborted: payload.date mismatch', {
-          dateStr,
-          payloadDate: payload.date,
-          mealsCount: Array.isArray(payload.meals) ? payload.meals.length : 0,
-        });
-        return;
-      }
-      const key = getKey(dateStr);
-      const current = readExisting(key);
-      const incomingUpdatedAt = payload.updatedAt != null ? payload.updatedAt : now();
+            if (current && current.updatedAt > incomingUpdatedAt) return;
+            if (current && current.updatedAt === incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) return;
 
-      if (payload.isFastingDay || payload.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
-        console.info('[HEYS.dayRealData] 💾 saveToDate attempt', {
-          key,
-          date: dateStr,
-          incomingUpdatedAt,
-          payloadFlags: {
-            isFastingDay: !!payload.isFastingDay,
-            isIncomplete: !!payload.isIncomplete
-          },
-          currentFlags: {
-            isFastingDay: !!current?.isFastingDay,
-            isIncomplete: !!current?.isIncomplete
-          },
-          currentUpdatedAt: current?.updatedAt || 0
-        });
-      }
+            if (current && isMeaningfulDayData(current) && !isMeaningfulDayData(payload)) return;
 
-      if (current && current.updatedAt > incomingUpdatedAt) {
-        if (payload.isFastingDay || payload.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
-          console.warn('[HEYS.dayRealData] ⏭️ saveToDate skipped: newer current data', {
-            key,
-            date: dateStr,
-            incomingUpdatedAt,
-            currentUpdatedAt: current.updatedAt
-          });
-        }
-        return;
-      }
-      if (current && current.updatedAt === incomingUpdatedAt && current._sourceId && current._sourceId > sourceIdRef.current) {
-        if (payload.isFastingDay || payload.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
-          console.warn('[HEYS.dayRealData] ⏭️ saveToDate skipped: source ordering', {
-            key,
-            date: dateStr,
-            incomingUpdatedAt,
-            currentSourceId: current._sourceId,
-            sourceId: sourceIdRef.current
-          });
-        }
-        return;
-      }
-
-      if (current && isMeaningfulDayData(current) && !isMeaningfulDayData(payload)) {
-        if (payload.isFastingDay || payload.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
-          console.warn('[HEYS.dayRealData] ⏭️ saveToDate skipped: non-meaningful payload would overwrite meaningful day', {
-            key,
-            date: dateStr
-          });
-        }
-        return;
-      }
-
-      // 🔍 DEBUG: Проверка на продукты без нутриентов в meals
-      const emptyItems = [];
-      (payload.meals || []).forEach((meal, mi) => {
-        (meal.items || []).forEach((item, ii) => {
-          if (isSyntheticEstimatedItem(item)) return;
-          if (!item.kcal100 && !item.protein100 && !item.carbs100) {
-            emptyItems.push({
-              mealIndex: mi,
-              itemIndex: ii,
-              name: item.name,
-              id: item.id,
-              product_id: item.product_id,
-              grams: item.grams
+            // 🔍 DEBUG: Проверка на продукты без нутриентов в meals
+            const emptyItems = [];
+            (payload.meals || []).forEach((meal, mi) => {
+                (meal.items || []).forEach((item, ii) => {
+                    if (!item.kcal100 && !item.protein100 && !item.carbs100) {
+                        emptyItems.push({
+                            mealIndex: mi,
+                            itemIndex: ii,
+                            name: item.name,
+                            id: item.id,
+                            product_id: item.product_id,
+                            grams: item.grams
+                        });
+                    }
+                });
             });
-          }
+            if (emptyItems.length > 0) {
+                console.warn('⚠️ [AUTOSAVE] Items WITHOUT nutrients being saved:', emptyItems);
+                // Попробуем найти продукт в базе для этого item
+                emptyItems.forEach(item => {
+                    const products = HEYS?.products?.getAll?.() || [];
+                    const found = products.find(p =>
+                        p.name?.toLowerCase() === item.name?.toLowerCase() ||
+                        String(p.id) === String(item.product_id)
+                    );
+                    if (found) {
+                        console.log('🔍 [AUTOSAVE] Found product in DB for empty item:', item.name, {
+                            dbHasNutrients: !!(found.kcal100 || found.protein100),
+                            dbKcal100: found.kcal100,
+                            dbProtein100: found.protein100
+                        });
+                    } else {
+                        console.error('🚨 [AUTOSAVE] Product NOT FOUND in DB for:', item.name);
+                    }
+                });
+            }
+
+            // Очищаем фото от base64 перед сохранением
+            const cleanedPayload = stripPhotoData(payload);
+
+            const toStore = {
+                ...cleanedPayload,
+                date: dateStr,
+                schemaVersion: payload.schemaVersion != null ? payload.schemaVersion : 3,
+                updatedAt: incomingUpdatedAt,
+                _sourceId: sourceIdRef.current,
+            };
+
+            try {
+                // 🔬 [HEYS.day-trace] 5/8 LS write — about to persist day via flush().
+                try {
+                    const _meals = toStore.meals || [];
+                    const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+                    console.info('[HEYS.day-trace] 5/8 LS write (saveToDate)', {
+                        key,
+                        date: dateStr,
+                        mealsCount: _meals.length,
+                        totalItems: _totalItems,
+                        updatedAt: toStore.updatedAt,
+                        sourceId: toStore._sourceId,
+                    });
+                } catch (_) { /* noop */ }
+                lsSetFn(key, toStore);
+                if (channelRef.current && !isUnmountedRef.current) {
+                    try {
+                        channelRef.current.postMessage({ type: 'day:update', date: dateStr, payload: toStore });
+                    } catch (e) { }
+                }
+            } catch (error) {
+                console.error('[AUTOSAVE] localStorage write failed:', error);
+            }
+        }, [getKey, lsSetFn, now, readExisting, stripPhotoData, isMeaningfulDayData]);
+
+        const getFreshestPersistedDay = React.useCallback((dateStr) => {
+            if (!dateStr) return null;
+
+            const key = getKey(dateStr);
+            const existing = readExisting(key);
+            const runtimeDay = typeof global.HEYS?.Day?.getDay === 'function'
+                ? global.HEYS.Day.getDay()
+                : null;
+
+            let freshest = null;
+
+            if (existing && typeof existing === 'object' && existing.date === dateStr) {
+                freshest = existing;
+            }
+
+            if (runtimeDay && typeof runtimeDay === 'object' && runtimeDay.date === dateStr) {
+                const runtimeUpdatedAt = runtimeDay.updatedAt || 0;
+                const freshestUpdatedAt = freshest?.updatedAt || 0;
+                if (runtimeUpdatedAt > freshestUpdatedAt) {
+                    freshest = { ...runtimeDay };
+                }
+            }
+
+            return freshest;
+        }, [getKey, readExisting]);
+
+        const flush = React.useCallback((options = {}) => {
+            let force = options && options.force === true;
+            if (!force && (disabled || isUnmountedRef.current)) return;
+            // 🔧 RACE FIX: prefer ref-based day if it's newer than the closure-day.
+            // flush() is invoked via RAF+setTimeout from addProductToMeal, which can
+            // fire before React has committed the setDay state update — meaning the
+            // closure-`day` is stale (still has 2 items while user just added the 3rd).
+            // HEYS.Day.getDay() reads from the ref kept in sync via setDayRaw, so it
+            // always has the freshest snapshot. This fix prevents the silent
+            // "product disappears after refresh" bug.
+            const _closureDay = day;
+            let _effDay = _closureDay;
+            try {
+                const _refDay = global.HEYS && global.HEYS.Day && typeof global.HEYS.Day.getDay === 'function'
+                    ? global.HEYS.Day.getDay()
+                    : null;
+                if (_refDay && _refDay.date === (_closureDay && _closureDay.date)
+                    && (_refDay.updatedAt || 0) > ((_closureDay && _closureDay.updatedAt) || 0)) {
+                    _effDay = _refDay;
+                    // Force the write — the closure-`day` is stale, so guards downstream
+                    // (which compare effDay snap vs freshestPersisted snap derived from
+                    // the same ref) would incorrectly say "nothing changed". Without
+                    // force, flush exits early and the user's add disappears on refresh.
+                    force = true;
+                    try {
+                        const _cm = (_closureDay && _closureDay.meals) || [];
+                        const _rm = _refDay.meals || [];
+                        const _cItems = _cm.reduce((a, m) => a + ((m.items || []).length), 0);
+                        const _rItems = _rm.reduce((a, m) => a + ((m.items || []).length), 0);
+                        if (_cItems !== _rItems) {
+                            console.info('[HEYS.day-trace] 4d/8 flush picked ref over closure (race-recovery, force=true)', {
+                                closureItems: _cItems,
+                                refItems: _rItems,
+                                closureUpdatedAt: _closureDay && _closureDay.updatedAt,
+                                refUpdatedAt: _refDay.updatedAt,
+                            });
+                        }
+                    } catch (_) { /* noop */ }
+                }
+            } catch (_) { /* noop */ }
+            if (!_effDay || !_effDay.date) return;
+
+            if (force) {
+                const key = getKey(_effDay.date);
+                const existing = readExisting(key);
+                if (isMeaningfulDayData(existing) && !isMeaningfulDayData(_effDay)) return;
+            }
+
+            const freshestPersistedDay = getFreshestPersistedDay(_effDay.date);
+            const freshestUpdatedAt = freshestPersistedDay?.updatedAt || 0;
+            let daySnap;
+            let freshestDaySnap = null;
+            const measureSnaps = () => {
+                daySnap = computeDaySnap(_effDay);
+                freshestDaySnap = freshestPersistedDay
+                    ? computeDaySnap(freshestPersistedDay)
+                    : null;
+            };
+            const pmFlush = global.HEYS?.perfMainThread;
+            if (pmFlush && typeof pmFlush.measureSync === 'function') {
+                pmFlush.measureSync('useDayAutosave:flushSnaps', measureSnaps, { threshold: 14 });
+            } else {
+                measureSnaps();
+            }
+            const updatedAt = _effDay.updatedAt != null ? _effDay.updatedAt : now();
+
+            const shouldPreserveFreshestPersistedDay = !!(
+                freshestPersistedDay &&
+                freshestPersistedDay.date === _effDay.date &&
+                (
+                    freshestUpdatedAt > updatedAt ||
+                    (
+                        freshestUpdatedAt === updatedAt &&
+                        freshestDaySnap &&
+                        freshestDaySnap !== daySnap &&
+                        isMeaningfulDayData(freshestPersistedDay)
+                    )
+                )
+            );
+
+            if (shouldPreserveFreshestPersistedDay) {
+                prevStoredSnapRef.current = JSON.stringify(freshestPersistedDay);
+                prevDaySnapRef.current = freshestDaySnap;
+                return;
+            }
+
+            // Hot-sync loop protection: если content localStorage идентичен current state
+            // (сравнение без updatedAt через stripMeta) — skip, чтобы не создавать upload loop.
+            // hot-sync может получить dayv2 из облака → setDay → autosave → upload → hot-sync → ...
+            if (!force && freshestDaySnap && freshestDaySnap === daySnap) {
+                const t = Date.now();
+                const r = __heysDayv2FlushGuardLogState;
+                // Один лог на окно времени: updatedAt дёргается часто, несколько инстансов хука — иначе простыня HIT.
+                if (t - r.at < 8000) return;
+                r.updatedAt = updatedAt;
+                r.at = t;
+                if (typeof console !== 'undefined' && (
+                    global?.localStorage?.getItem('heys_debug_sync') === 'true' ||
+                    global?.localStorage?.getItem('heys_debug_ind') === 'true'
+                )) {
+                    console.info('[HEYS.sync] [IND] flush: dayv2 content guard HIT (freshest===current, skip write) updatedAt=' + updatedAt);
+                }
+                return;
+            }
+            if (!force && freshestDaySnap) {
+                if (typeof console !== 'undefined' && (
+                    global?.localStorage?.getItem('heys_debug_sync') === 'true' ||
+                    global?.localStorage?.getItem('heys_debug_ind') === 'true'
+                )) console.info('[HEYS.sync] [IND] flush: dayv2 content guard MISS (content differs) updatedAt=' + updatedAt + ' freshestUpdatedAt=' + freshestUpdatedAt);
+            }
+
+            // force: всегда пишем в storage — иначе MA/модалки читают LS без последнего debounced-патча приёмов.
+            if (!force && prevDaySnapRef.current === daySnap) return;
+
+            // 🔬 [HEYS.day-trace] 4c/8 inside flush — confirm we're using freshest day snapshot.
+            try {
+                const _meals = _effDay.meals || [];
+                const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+                console.info('[HEYS.day-trace] 4c/8 inside flush about to write', {
+                    effMealsCount: _meals.length,
+                    effTotalItems: _totalItems,
+                    effUpdatedAt: _effDay.updatedAt,
+                    pickedFromRef: _effDay !== _closureDay,
+                });
+            } catch (_) { /* noop */ }
+
+            // Просто сохраняем все приёмы под текущую дату
+            // Ночная логика теперь в todayISO() — до 3:00 "сегодня" = вчера
+            const payload = {
+                ..._effDay,
+                updatedAt,
+            };
+            saveToDate(_effDay.date, payload);
+            prevStoredSnapRef.current = JSON.stringify(payload);
+            prevDaySnapRef.current = daySnap;
+        }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay, computeDaySnap]);
+
+        React.useEffect(() => {
+            // 🔒 ЗАЩИТА: Не инициализируем prevDaySnapRef до гидратации!
+            // Иначе после sync данные изменятся, а ref будет содержать старую версию
+            if (disabled) return;
+            if (!day || !day.date) return;
+            // ✅ FIX: getKey ожидает dateStr, а не объект day
+            // Иначе получаем ключ вида "heys_dayv2_[object Object]" и ломаем init снапов.
+            const key = getKey(day.date);
+            const current = readExisting(key);
+            if (current) {
+                prevStoredSnapRef.current = JSON.stringify(current);
+                prevDaySnapRef.current = computeDaySnap(current);
+            } else {
+                prevDaySnapRef.current = computeDaySnap(day);
+            }
+        }, [day && day.date, getKey, readExisting, stripMeta, disabled, computeDaySnap]);
+
+        React.useEffect(() => {
+            if (disabled) return; // ЗАЩИТА: не запускать таймер до гидратации
+            if (!day || !day.date) return;
+
+            // 🔒 ЗАЩИТА: Инициализируем prevDaySnapRef при первом включении
+            // Это предотвращает ложный save сразу после isHydrated=true
+            let daySnap;
+            const pmCmp = global.HEYS?.perfMainThread;
+            if (pmCmp && typeof pmCmp.measureSync === 'function') {
+                pmCmp.measureSync('useDayAutosave:daySnap', () => {
+                    daySnap = computeDaySnap(day);
+                }, { threshold: 14 });
+            } else {
+                daySnap = computeDaySnap(day);
+            }
+
+            if (prevDaySnapRef.current === null) {
+                // Первый запуск после гидратации — просто запоминаем состояние без save
+                prevDaySnapRef.current = daySnap;
+                return;
+            }
+
+            if (prevDaySnapRef.current === daySnap) return;
+
+            // ☁️ Сразу показать что данные изменились (до debounce)
+            // Это запустит анимацию синхронизации в облачном индикаторе
+            if (typeof global.dispatchEvent === 'function') {
+                global.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key: 'day', type: 'data' } }));
+            }
+
+            global.clearTimeout(timerRef.current);
+            timerRef.current = global.setTimeout(flush, debounceMs);
+            return () => { global.clearTimeout(timerRef.current); };
+        }, [day, debounceMs, flush, stripMeta, disabled, computeDaySnap]);
+
+        React.useEffect(() => {
+            return () => {
+                global.clearTimeout(timerRef.current);
+                if (!disabled) flush(); // ЗАЩИТА: не сохранять при unmount если не гидратировано
+            };
+        }, [flush, disabled]);
+
+        React.useEffect(() => {
+            const onVisChange = () => {
+                if (!disabled && global.document.visibilityState !== 'visible') flush();
+            };
+            global.document.addEventListener('visibilitychange', onVisChange);
+            global.addEventListener('pagehide', flush);
+            return () => {
+                global.document.removeEventListener('visibilitychange', onVisChange);
+                global.removeEventListener('pagehide', flush);
+            };
+        }, [flush]);
+
+        return { flush };
+    }
+
+    // Хук для централизованной детекции мобильных устройств с поддержкой ротации
+    function useMobileDetection(breakpoint = 768) {
+        const [isMobile, setIsMobile] = React.useState(() => {
+            if (typeof window === 'undefined') return false;
+            return window.innerWidth <= breakpoint;
         });
-      });
-      if (emptyItems.length > 0) {
-        console.warn('⚠️ [AUTOSAVE] Items WITHOUT nutrients being saved:', emptyItems);
-        // Попробуем найти продукт в базе для этого item
-        emptyItems.forEach(item => {
-          const products = HEYS?.products?.getAll?.() || [];
-          const found = products.find(p =>
-            p.name?.toLowerCase() === item.name?.toLowerCase() ||
-            String(p.id) === String(item.product_id)
-          );
-          if (found) {
-            console.info('[HEYS.dayHooks] 🔍 [AUTOSAVE] Found product in DB for empty item:', item.name, {
-              dbHasNutrients: !!(found.kcal100 || found.protein100),
-              dbKcal100: found.kcal100,
-              dbProtein100: found.protein100
-            });
-          } else {
-            console.error('🚨 [AUTOSAVE] Product NOT FOUND in DB for:', item.name);
-          }
-        });
-      }
 
-      // Очищаем фото от base64 перед сохранением
-      const cleanedPayload = stripPhotoData(payload);
+        React.useEffect(() => {
+            if (typeof window === 'undefined' || !window.matchMedia) return;
 
-      const toStore = {
-        ...cleanedPayload,
-        date: dateStr,
-        schemaVersion: payload.schemaVersion != null ? payload.schemaVersion : 3,
-        updatedAt: incomingUpdatedAt,
-        _sourceId: sourceIdRef.current,
-      };
+            const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`);
 
-      try {
-        // 🔬 [HEYS.day-trace] 5/8 LS write — about to persist day to localStorage.
-        try {
-          const _meals = toStore.meals || [];
-          const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
-          console.info('[HEYS.day-trace] 5/8 LS write', {
-            key,
-            date: dateStr,
-            mealsCount: _meals.length,
-            totalItems: _totalItems,
-            updatedAt: toStore.updatedAt,
-            sourceId: toStore._sourceId,
-          });
-        } catch (_) { /* noop */ }
-        lsSetFn(key, toStore);
-        if (toStore.isFastingDay || toStore.isIncomplete || current?.isFastingDay || current?.isIncomplete) {
-          const storedAfterWrite = readExisting(key);
-          console.info('[HEYS.dayRealData] 💾 saveToDate persisted', {
-            key,
-            date: dateStr,
-            storedFlags: {
-              isFastingDay: !!storedAfterWrite?.isFastingDay,
-              isIncomplete: !!storedAfterWrite?.isIncomplete
-            },
-            storedUpdatedAt: storedAfterWrite?.updatedAt || 0
-          });
-        }
-        if (channelRef.current && !isUnmountedRef.current) {
-          try {
-            channelRef.current.postMessage({ type: 'day:update', date: dateStr, payload: toStore });
-          } catch (e) { }
-        }
-      } catch (error) {
-        console.error('[AUTOSAVE] localStorage write failed:', error);
-      }
-    }, [getKey, lsSetFn, now, readExisting, stripPhotoData, isMeaningfulDayData]);
+            const handleChange = (e) => {
+                setIsMobile(e.matches);
+            };
 
-    const getFreshestPersistedDay = React.useCallback((dateStr) => {
-      if (!dateStr) return null;
+            // Начальное значение
+            setIsMobile(mediaQuery.matches);
 
-      const key = getKey(dateStr);
-      const existing = readExisting(key);
-      const runtimeDay = typeof global.HEYS?.Day?.getDay === 'function'
-        ? global.HEYS.Day.getDay()
-        : null;
+            // Подписка на изменения (поддержка ротации экрана)
+            if (mediaQuery.addEventListener) {
+                mediaQuery.addEventListener('change', handleChange);
+                return () => mediaQuery.removeEventListener('change', handleChange);
+            } else {
+                // Fallback для старых браузеров
+                mediaQuery.addListener(handleChange);
+                return () => mediaQuery.removeListener(handleChange);
+            }
+        }, [breakpoint]);
 
-      let freshest = null;
+        return isMobile;
+    }
 
-      if (existing && typeof existing === 'object' && existing.date === dateStr) {
-        freshest = existing;
-      }
+    // 🔧 v3.19.2: Глобальный кэш prefetch для предотвращения повторных запросов
+    // Сохраняется между размонтированиями компонента
+    const globalPrefetchCache = {
+        prefetched: new Set(),
+        lastPrefetchTime: 0,
+        PREFETCH_COOLDOWN: 5000 // 5 секунд между prefetch
+    };
 
-      if (runtimeDay && typeof runtimeDay === 'object' && runtimeDay.date === dateStr) {
-        const runtimeUpdatedAt = runtimeDay.updatedAt || 0;
-        const freshestUpdatedAt = freshest?.updatedAt || 0;
-        if (runtimeUpdatedAt > freshestUpdatedAt) {
-          freshest = { ...runtimeDay };
-        }
-      }
+    // Хук для Smart Prefetch — предзагрузка данных ±N дней при наличии интернета
+    function useSmartPrefetch({
+        currentDate,
+        daysRange = 7,  // ±7 дней
+        enabled = true
+    }) {
+        // 🔧 v3.19.2: Используем глобальный кэш вместо локального ref
+        const prefetchedRef = React.useRef(globalPrefetchCache.prefetched);
+        const utils = getDayUtils();
+        const lsGet = utils.lsGet || HEYS.utils?.lsGet;
 
-      return freshest;
-    }, [getKey, readExisting]);
+        // Генерация списка дат для prefetch
+        const getDatesToPrefetch = React.useCallback((centerDate) => {
+            const dates = [];
+            const center = new Date(centerDate);
 
-    const flush = React.useCallback((options = {}) => {
-      const force = options && options.force === true;
-      if (!force && (disabled || isUnmountedRef.current)) return;
-      if (!day || !date) return;
+            for (let i = -daysRange; i <= daysRange; i++) {
+                const d = new Date(center);
+                d.setDate(d.getDate() + i);
+                dates.push(d.toISOString().slice(0, 10));
+            }
 
-      // 🛡️ 2026-05-31: ключ ВСЕГДА вычисляем по day.date (родная дата dayRaw),
-      // не по date (= selectedDate из header). На смене даты React пересоздаёт
-      // useCallback с НОВОЙ date в closure ДО того, как dayRaw обновится через
-      // doLocal/setDay. Без этого fix'а requestFlush({force:true}) при смене
-      // даты писал бы today's meals под yesterday's LS key → silent data loss
-      // реальных yesterday данных клиента.
-      const saveDate = (day && day.date) || date;
+            return dates;
+        }, [daysRange]);
 
-      if (force) {
-        const key = getKey(saveDate);
-        const existing = readExisting(key);
-        if (isMeaningfulDayData(existing) && !isMeaningfulDayData(day)) return;
-      }
+        // Prefetch данных через Supabase (если доступно)
+        const prefetchFromCloud = React.useCallback(async (dates) => {
+            if (!navigator.onLine) return;
+            if (!HEYS.cloud?.isAuthenticated?.()) return;
 
-      const freshestPersistedDay = getFreshestPersistedDay(saveDate);
-      const freshestUpdatedAt = freshestPersistedDay?.updatedAt || 0;
-      let daySnap;
-      let freshestDaySnap = null;
-      const measureSnaps = () => {
-        daySnap = JSON.stringify(stripMeta(day));
-        freshestDaySnap = freshestPersistedDay
-          ? JSON.stringify(stripMeta(freshestPersistedDay))
-          : null;
-      };
-      const pmFlush = global.HEYS?.perfMainThread;
-      if (pmFlush && typeof pmFlush.measureSync === 'function') {
-        pmFlush.measureSync('useDayAutosave:flushSnaps', measureSnaps, { threshold: 14 });
-      } else {
-        measureSnaps();
-      }
-      const updatedAt = day.updatedAt != null ? day.updatedAt : now();
+            // 🔧 v3.19.2: Cooldown защита от частых вызовов
+            const now = Date.now();
+            if (now - globalPrefetchCache.lastPrefetchTime < globalPrefetchCache.PREFETCH_COOLDOWN) {
+                return; // Слишком частые вызовы — пропускаем
+            }
 
-      const shouldPreserveFreshestPersistedDay = !!(
-        freshestPersistedDay &&
-        freshestPersistedDay.date === saveDate &&
-        (
-          freshestUpdatedAt > updatedAt ||
-          (
-            freshestUpdatedAt === updatedAt &&
-            freshestDaySnap &&
-            freshestDaySnap !== daySnap &&
-            isMeaningfulDayData(freshestPersistedDay)
-          )
-        )
-      );
+            const toFetch = dates.filter(d => !prefetchedRef.current.has(d));
+            if (toFetch.length === 0) return;
 
-      if (shouldPreserveFreshestPersistedDay) {
-        prevStoredSnapRef.current = JSON.stringify(freshestPersistedDay);
-        prevDaySnapRef.current = freshestDaySnap;
-        return;
-      }
+            try {
+                // 🔧 v3.19.2: Обновляем время последнего prefetch
+                globalPrefetchCache.lastPrefetchTime = now;
 
-      if (prevDaySnapRef.current === daySnap) return;
+                // Пометим как "в процессе" чтобы избежать дублирования
+                toFetch.forEach(d => prefetchedRef.current.add(d));
 
-      // Просто сохраняем все приёмы под текущую дату
-      // Ночная логика теперь в todayISO() — до 3:00 "сегодня" = вчера
-      const payload = {
-        ...day,
-        updatedAt,
-      };
-      if (payload.isFastingDay || payload.isIncomplete) {
-        console.info('[HEYS.dayRealData] 💾 flush day payload', {
-          date,
-          updatedAt,
-          flags: {
-            isFastingDay: !!payload.isFastingDay,
-            isIncomplete: !!payload.isIncomplete
-          },
-          mealsCount: (payload.meals || []).length
-        });
-      }
-      // 2026-05-29 echo-loop diag: trace each autosave flush + correlate с hot-sync
-      try {
-        const _heys = global.HEYS || {};
-        _heys._autosaveFlushes = _heys._autosaveFlushes || [];
-        const _now = Date.now();
-        const _hs = Array.isArray(_heys._hotsyncApplies) ? _heys._hotsyncApplies : [];
-        const _lastHs = _hs.length ? _hs[_hs.length - 1] : null;
-        const _sinceLastHotsync = _lastHs ? (_now - _lastHs.ts) : null;
-        _heys._autosaveFlushes.push({
-          ts: _now,
-          date: String(date || ''),
-          mealsCount: Array.isArray(payload?.meals) ? payload.meals.length : 0,
-          updatedAt: payload?.updatedAt,
-          contentBytes: typeof daySnap === 'string' ? daySnap.length : 0,
-          sinceLastHotsync_ms: _sinceLastHotsync,
-          suspectEchoLoop: _sinceLastHotsync !== null && _sinceLastHotsync < 500,
-        });
-        if (_heys._autosaveFlushes.length > 100) _heys._autosaveFlushes.shift();
-      } catch (_) { /* noop */ }
+                // Загружаем данные через cloud sync
+                if (HEYS.cloud?.fetchDays) {
+                    await HEYS.cloud.fetchDays(toFetch);
+                }
+            } catch (error) {
+                // Откатываем пометки при ошибке
+                toFetch.forEach(d => prefetchedRef.current.delete(d));
+            }
+        }, []);
 
-      saveToDate(saveDate, payload);
-      prevStoredSnapRef.current = JSON.stringify(payload);
-      prevDaySnapRef.current = daySnap;
-    }, [day, date, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay]);
+        // Prefetch при смене даты или восстановлении соединения
+        React.useEffect(() => {
+            if (!enabled || !currentDate) return;
 
-    React.useEffect(() => {
-      // 🔒 ЗАЩИТА: Не инициализируем prevDaySnapRef до гидратации!
-      // Иначе после sync данные изменятся, а ref будет содержать старую версию
-      if (disabled) return;
-      if (!day || !day.date) return;
-      // ✅ FIX: getKey ожидает dateStr, а не объект day
-      // Иначе получаем ключ вида "heys_dayv2_[object Object]" и ломаем init снапов.
-      const key = getKey(day.date);
-      const current = readExisting(key);
-      if (current) {
-        prevStoredSnapRef.current = JSON.stringify(current);
-        prevDaySnapRef.current = JSON.stringify(stripMeta(current));
-      } else {
-        prevDaySnapRef.current = JSON.stringify(stripMeta(day));
-      }
-    }, [day && day.date, getKey, readExisting, stripMeta, disabled]);
+            const dates = getDatesToPrefetch(currentDate);
+            prefetchFromCloud(dates);
 
-    React.useEffect(() => {
-      if (disabled) return; // ЗАЩИТА: не запускать таймер до гидратации
-      if (!day || !day.date) return;
+            // Подписка на восстановление соединения
+            const handleOnline = () => {
+                prefetchFromCloud(getDatesToPrefetch(currentDate));
+            };
 
-      // 🔒 ЗАЩИТА: Инициализируем prevDaySnapRef при первом включении
-      // Это предотвращает ложный save сразу после isHydrated=true
-      let daySnap;
-      const pmCmp = global.HEYS?.perfMainThread;
-      if (pmCmp && typeof pmCmp.measureSync === 'function') {
-        pmCmp.measureSync('useDayAutosave:daySnap', () => {
-          daySnap = JSON.stringify(stripMeta(day));
-        }, { threshold: 14 });
-      } else {
-        daySnap = JSON.stringify(stripMeta(day));
-      }
+            window.addEventListener('online', handleOnline);
+            return () => window.removeEventListener('online', handleOnline);
+        }, [currentDate, enabled, getDatesToPrefetch, prefetchFromCloud]);
 
-      if (prevDaySnapRef.current === null) {
-        // Первый запуск после гидратации — просто запоминаем состояние без save
-        prevDaySnapRef.current = daySnap;
-        return;
-      }
+        // Ручной триггер prefetch
+        const triggerPrefetch = React.useCallback(() => {
+            if (!currentDate) return;
+            prefetchedRef.current.clear();
+            prefetchFromCloud(getDatesToPrefetch(currentDate));
+        }, [currentDate, getDatesToPrefetch, prefetchFromCloud]);
 
-      if (prevDaySnapRef.current === daySnap) return;
+        return { triggerPrefetch };
+    }
 
-      // ☁️ Сразу показать что данные изменились (до debounce)
-      // Это запустит анимацию синхронизации в облачном индикаторе
-      if (typeof global.dispatchEvent === 'function') {
-        global.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key: 'day', type: 'data' } }));
-      }
-
-      global.clearTimeout(timerRef.current);
-      timerRef.current = global.setTimeout(flush, debounceMs);
-      return () => { global.clearTimeout(timerRef.current); };
-    }, [day, debounceMs, flush, stripMeta, disabled]);
-
-    React.useEffect(() => {
-      return () => {
-        global.clearTimeout(timerRef.current);
-        if (!disabled) flush(); // ЗАЩИТА: не сохранять при unmount если не гидратировано
-      };
-    }, [flush, disabled]);
-
-    React.useEffect(() => {
-      const onVisChange = () => {
-        if (!disabled && global.document.visibilityState !== 'visible') flush();
-      };
-      global.document.addEventListener('visibilitychange', onVisChange);
-      global.addEventListener('pagehide', flush);
-      return () => {
-        global.document.removeEventListener('visibilitychange', onVisChange);
-        global.removeEventListener('pagehide', flush);
-      };
-    }, [flush]);
-
-    return { flush };
-  }
-
-  // Хук для централизованной детекции мобильных устройств с поддержкой ротации
-  function useMobileDetection(breakpoint = 768) {
-    const React = getReact();
-    const [isMobile, setIsMobile] = React.useState(() => {
-      if (typeof window === 'undefined') return false;
-      return window.innerWidth <= breakpoint;
-    });
-
-    React.useEffect(() => {
-      if (typeof window === 'undefined' || !window.matchMedia) return;
-
-      const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`);
-
-      const handleChange = (e) => {
-        setIsMobile(e.matches);
-      };
-
-      // Начальное значение
-      setIsMobile(mediaQuery.matches);
-
-      // Подписка на изменения (поддержка ротации экрана)
-      if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-      } else {
-        // Fallback для старых браузеров
-        mediaQuery.addListener(handleChange);
-        return () => mediaQuery.removeListener(handleChange);
-      }
-    }, [breakpoint]);
-
-    return isMobile;
-  }
-
-  // 🔧 v3.19.2: Глобальный кэш prefetch для предотвращения повторных запросов
-  // Сохраняется между размонтированиями компонента
-  const globalPrefetchCache = {
-    prefetched: new Set(),
-    lastPrefetchTime: 0,
-    PREFETCH_COOLDOWN: 5000 // 5 секунд между prefetch
-  };
-
-  // Хук для Smart Prefetch — предзагрузка данных ±N дней при наличии интернета
-  function useSmartPrefetch({
-    currentDate,
-    daysRange = 7,  // ±7 дней
-    enabled = true
-  }) {
-    const React = getReact();
-    // 🔧 v3.19.2: Используем глобальный кэш вместо локального ref
-    const prefetchedRef = React.useRef(globalPrefetchCache.prefetched);
-    const utils = getDayUtils();
-    const lsGet = utils.lsGet || HEYS.utils?.lsGet;
-
-    // Генерация списка дат для prefetch
-    const getDatesToPrefetch = React.useCallback((centerDate) => {
-      const dates = [];
-      const center = new Date(centerDate);
-
-      for (let i = -daysRange; i <= daysRange; i++) {
-        const d = new Date(center);
-        d.setDate(d.getDate() + i);
-        dates.push(d.toISOString().slice(0, 10));
-      }
-
-      return dates;
-    }, [daysRange]);
-
-    // Prefetch данных через Supabase (если доступно)
-    const prefetchFromCloud = React.useCallback(async (dates) => {
-      if (!navigator.onLine) return;
-      if (!HEYS.cloud?.isAuthenticated?.()) return;
-
-      // 🔧 v3.19.2: Cooldown защита от частых вызовов
-      const now = Date.now();
-      if (now - globalPrefetchCache.lastPrefetchTime < globalPrefetchCache.PREFETCH_COOLDOWN) {
-        return; // Слишком частые вызовы — пропускаем
-      }
-
-      const toFetch = dates.filter(d => !prefetchedRef.current.has(d));
-      if (toFetch.length === 0) return;
-
-      try {
-        // 🔧 v3.19.2: Обновляем время последнего prefetch
-        globalPrefetchCache.lastPrefetchTime = now;
-
-        // Пометим как "в процессе" чтобы избежать дублирования
-        toFetch.forEach(d => prefetchedRef.current.add(d));
-
-        // Загружаем данные через cloud sync
-        if (HEYS.cloud?.fetchDays) {
-          await HEYS.cloud.fetchDays(toFetch);
-        }
-      } catch (error) {
-        // Откатываем пометки при ошибке
-        toFetch.forEach(d => prefetchedRef.current.delete(d));
-      }
-    }, []);
-
-    // Prefetch при смене даты или восстановлении соединения
-    React.useEffect(() => {
-      if (!enabled || !currentDate) return;
-
-      const dates = getDatesToPrefetch(currentDate);
-      prefetchFromCloud(dates);
-
-      // Подписка на восстановление соединения
-      const handleOnline = () => {
-        prefetchFromCloud(getDatesToPrefetch(currentDate));
-      };
-
-      window.addEventListener('online', handleOnline);
-      return () => window.removeEventListener('online', handleOnline);
-    }, [currentDate, enabled, getDatesToPrefetch, prefetchFromCloud]);
-
-    // Ручной триггер prefetch
-    const triggerPrefetch = React.useCallback(() => {
-      if (!currentDate) return;
-      prefetchedRef.current.clear();
-      prefetchFromCloud(getDatesToPrefetch(currentDate));
-    }, [currentDate, getDatesToPrefetch, prefetchFromCloud]);
-
-    return { triggerPrefetch };
-  }
-
-  // === Exports ===
-  HEYS.dayHooks = {
-    useDayAutosave,
-    useMobileDetection,
-    useSmartPrefetch
-  };
+    // === Exports ===
+    HEYS.dayHooks = {
+        useDayAutosave,
+        useMobileDetection,
+        useSmartPrefetch
+    };
 
 })(window);
+

@@ -2,426 +2,338 @@
 // Phase 11 of HEYS Day v12 refactoring
 // Extracted calculation and utility functions
 (function (global) {
-  'use strict';
+    'use strict';
 
-  const HEYS = global.HEYS = global.HEYS || {};
-  const React = global.React;
+    const HEYS = global.HEYS = global.HEYS || {};
+    const React = global.React;
 
-  // Dependencies - use HEYS.dayUtils if available (optional for this module)
-  const U = HEYS.dayUtils || {};
-  const M = HEYS.models || {};
-  const r0 = (n) => Math.round(n) || 0;
-  const r1 = (n) => Math.round(n * 10) / 10;
+    // Dependencies - use HEYS.dayUtils if available (optional for this module)
+    const U = HEYS.dayUtils || {};
+    const M = HEYS.models || {};
+    const r0 = (n) => Math.round(n) || 0;
+    const r1 = (n) => Math.round(n * 10) / 10;
 
-  /**
-   * Calculate day totals from meals
-   * @param {Object} day - Day data
-   * @param {Object} pIndex - Product index
-   * @returns {Object} Day totals
-   */
-  function calculateDayTotals(day, pIndex) {
-    const t = { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0 };
-    (day.meals || []).forEach(m => {
-      const mt = M.mealTotals ? M.mealTotals(m, pIndex) : {};
-      Object.keys(t).forEach(k => {
-        t[k] += mt[k] || 0;
-      });
-    });
-    Object.keys(t).forEach(k => t[k] = r0(t[k]));
+    /**
+     * Calculate day totals from meals
+     * @param {Object} day - Day data
+     * @param {Object} pIndex - Product index
+     * @returns {Object} Day totals
+     */
+    function calculateDayTotals(day, pIndex) {
+        const t = { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0 };
+        (day.meals || []).forEach(m => {
+            const mt = M.mealTotals ? M.mealTotals(m, pIndex) : {};
+            Object.keys(t).forEach(k => {
+                t[k] += mt[k] || 0;
+            });
+        });
+        Object.keys(t).forEach(k => t[k] = r0(t[k]));
 
-    // Weighted averages для ГИ и вредности по граммам
-    let gSum = 0, giSum = 0, harmSum = 0;
-    (day.meals || []).forEach(m => {
-      (m.items || []).forEach(it => {
-        const p = getProductFromItem(it, pIndex);
-        if (!p) return;
-        const g = +it.grams || 0;
-        if (!g) return;
-        const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
-        // Harm: берём из базы или считаем на лету если нет
-        let harm = p.harm ?? p.harmScore ?? p.harm100;
-        if (harm == null && window.HEYS?.Harm?.calculateHarmScore) {
-          harm = window.HEYS.Harm.calculateHarmScore(p);
-        }
-        gSum += g;
-        if (gi != null) giSum += gi * g;
-        if (harm != null) harmSum += harm * g;
-      });
-    });
-    t.gi = gSum ? giSum / gSum : 0;
-    t.harm = gSum ? harmSum / gSum : 0;
+        // Weighted averages для ГИ и вредности по граммам
+        let gSum = 0, giSum = 0, harmSum = 0;
+        (day.meals || []).forEach(m => {
+            (m.items || []).forEach(it => {
+                const p = getProductFromItem(it, pIndex);
+                if (!p) return;
+                const g = +it.grams || 0;
+                if (!g) return;
+                const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
+                const harm = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
+                gSum += g;
+                if (gi != null) giSum += gi * g;
+                if (harm != null) harmSum += harm * g;
+            });
+        });
+        t.gi = gSum ? giSum / gSum : 0;
+        t.harm = gSum ? harmSum / gSum : 0;
 
-    return t;
-  }
-
-  /**
-   * Get product from item (helper function)
-   */
-  function getProductFromItem(item, pIndex) {
-    if (!item || !pIndex) return null;
-    const productId = item.product_id || item.id;
-    return pIndex[productId] || null;
-  }
-
-  /**
-   * Compute daily norms from percentages
-   * @param {number} optimum - Target calories
-   * @param {Object} normPerc - Norm percentages
-   * @returns {Object} Absolute norms
-   */
-  function computeDailyNorms(optimum, normPerc = {}) {
-    const K = +optimum || 0;
-    const carbPct = +normPerc.carbsPct || 0;
-    const protPct = +normPerc.proteinPct || 0;
-    const fatPct = Math.max(0, 100 - carbPct - protPct);
-    const carbs = K ? (K * carbPct / 100) / 4 : 0;
-    const prot = K ? (K * protPct / 100) / 4 : 0;
-    const fat = K ? (K * fatPct / 100) / 9 : 0; // 9 ккал/г
-    const simplePct = +normPerc.simpleCarbPct || 0;
-    const simple = carbs * simplePct / 100;
-    const complex = Math.max(0, carbs - simple);
-    const badPct = +normPerc.badFatPct || 0;
-    const transPct = +normPerc.superbadFatPct || 0;
-    const bad = fat * badPct / 100;
-    const trans = fat * transPct / 100;
-    const good = Math.max(0, fat - bad - trans);
-    const fiberPct = +normPerc.fiberPct || 0;
-    const fiber = K ? (K / 1000) * fiberPct : 0;
-    const gi = +normPerc.giPct || 0;
-    const harm = +normPerc.harmPct || 0;
-    return { kcal: K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm };
-  }
-
-  /** Defaults must match ensureWorkoutLogShape (heys_day_trainings_v1.js). */
-  const WB_DEF_SETS = 1;
-  const WB_DEF_REPS = 10;
-
-  /** Строка конструктора силовой: есть что синхронизировать (не только пустой шаблон). */
-  function exerciseRowHasTrackableContent(e) {
-    if (!e) return false;
-    if (String(e.name || '').trim()) return true;
-    const asInt = (v) => {
-      if (v == null || v === '') return NaN;
-      if (typeof v === 'number') return Number.isFinite(v) ? Math.trunc(v) : NaN;
-      const n = parseInt(v, 10);
-      return Number.isFinite(n) ? n : NaN;
-    };
-    const ap = e.approaches;
-    if (Array.isArray(ap)) {
-      if (ap.length > 1) return true;
-      for (let i = 0; i < ap.length; i++) {
-        const a = ap[i];
-        if (a && String(a.weightKg || '').trim()) return true;
-        const r = asInt(a && a.reps);
-        if (Number.isFinite(r) && r !== WB_DEF_REPS) return true;
-      }
-    }
-    if (typeof e.weightKg === 'number' && Number.isFinite(e.weightKg) && e.weightKg > 0) return true;
-    if (String(e.weightKg || '').trim()) return true;
-    if (String(e.note || '').trim()) return true;
-    if ((+e.rpe || 0) > 0) return true;
-    if ((+e.ssGroup || 0) > 0) return true;
-    const sets = asInt(e.sets);
-    const reps = asInt(e.reps);
-    if (Number.isFinite(sets) && sets !== WB_DEF_SETS) return true;
-    if (Number.isFinite(reps) && reps !== WB_DEF_REPS) return true;
-    return false;
-  }
-
-  /** Минуты по зонам или заполненные упражнения в дневнике. */
-  function workoutLogHasTrackableContent(wl) {
-    if (!wl || typeof wl !== 'object') return false;
-    if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.some((m) => +m > 0)) return true;
-    const ex = wl.exercises;
-    if (Array.isArray(ex) && ex.length > 1) return true;
-    if (Array.isArray(ex) && ex.some(exerciseRowHasTrackableContent)) return true;
-    return false;
-  }
-
-  function dayHasTrackableWorkoutBuilder(day) {
-    const tr = day && day.trainings;
-    if (!Array.isArray(tr)) return false;
-    return tr.some((t) => {
-      if (!t || String(t.type) !== 'strength' || t.strengthEntryMode !== 'workout_builder') return false;
-      return workoutLogHasTrackableContent(t.workoutLog);
-    });
-  }
-
-  /**
-   * Calculate day averages (mood, wellbeing, stress, dayScore)
-   * @param {Array} meals - Meals array
-   * @param {Array} trainings - Trainings array
-   * @param {Object} dayData - Day data with morning scores
-   * @returns {Object} Averages
-   */
-  function calculateDayAverages(meals, trainings, dayData) {
-    // Утренние оценки из чек-ина (если есть — это стартовая точка дня)
-    const morningMood = dayData?.moodMorning && !isNaN(+dayData.moodMorning) ? [+dayData.moodMorning] : [];
-    const morningWellbeing = dayData?.wellbeingMorning && !isNaN(+dayData.wellbeingMorning) ? [+dayData.wellbeingMorning] : [];
-    const morningStress = dayData?.stressMorning && !isNaN(+dayData.stressMorning) ? [+dayData.stressMorning] : [];
-
-    // Собираем все оценки из приёмов пищи
-    const mealMoods = (meals || []).filter(m => m.mood && !isNaN(+m.mood)).map(m => +m.mood);
-    const mealWellbeing = (meals || []).filter(m => m.wellbeing && !isNaN(+m.wellbeing)).map(m => +m.wellbeing);
-    const mealStress = (meals || []).filter(m => m.stress && !isNaN(+m.stress)).map(m => +m.stress);
-
-    // Собираем оценки из тренировок (фильтруем только РЕАЛЬНЫЕ тренировки)
-    const realTrainings = (trainings || []).filter(t => {
-      const hasTime = t.time && t.time.trim() !== '';
-      const hasMinutes = t.z && Array.isArray(t.z) && t.z.some(m => m > 0);
-      const hasBuilder =
-        t.type === 'strength' &&
-        t.strengthEntryMode === 'workout_builder' &&
-        t.workoutLog &&
-        workoutLogHasTrackableContent(t.workoutLog);
-      return hasTime || hasMinutes || hasBuilder;
-    });
-    const trainingMoods = realTrainings.filter(t => t.mood && !isNaN(+t.mood)).map(t => +t.mood);
-    const trainingWellbeing = realTrainings.filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
-    const trainingStress = realTrainings.filter(t => t.stress && !isNaN(+t.stress)).map(t => +t.stress);
-
-    // Объединяем все оценки: утро + приёмы пищи + тренировки
-    const allMoods = [...morningMood, ...mealMoods, ...trainingMoods];
-    const allWellbeing = [...morningWellbeing, ...mealWellbeing, ...trainingWellbeing];
-    const allStress = [...morningStress, ...mealStress, ...trainingStress];
-
-    const moodAvg = allMoods.length ? r1(allMoods.reduce((sum, val) => sum + val, 0) / allMoods.length) : '';
-    const wellbeingAvg = allWellbeing.length ? r1(allWellbeing.reduce((sum, val) => sum + val, 0) / allWellbeing.length) : '';
-    const stressAvg = allStress.length ? r1(allStress.reduce((sum, val) => sum + val, 0) / allStress.length) : '';
-
-    // Автоматический расчёт dayScore
-    // Формула: (mood + wellbeing + (10 - stress)) / 3, округлено до целого для UI/storage
-    let dayScore = '';
-    let dayScoreRaw = '';  // float с точностью 1 знак — для analytics/predictive layers
-    if (moodAvg !== '' || wellbeingAvg !== '' || stressAvg !== '') {
-      const m = moodAvg !== '' ? +moodAvg : 5;
-      const w = wellbeingAvg !== '' ? +wellbeingAvg : 5;
-      const s = stressAvg !== '' ? +stressAvg : 5;
-      // stress инвертируем: низкий стресс = хорошо
-      const raw = (m + w + (10 - s)) / 3;
-      dayScoreRaw = r1(raw);
-      dayScore = Math.round(raw);
+        return t;
     }
 
-    return { moodAvg, wellbeingAvg, stressAvg, dayScore, dayScoreRaw };
-  }
+    /**
+     * Get product from item (helper function)
+     */
+    function getProductFromItem(item, pIndex) {
+        if (!item || !pIndex) return null;
+        const productId = item.product_id || item.id;
+        return pIndex[productId] || null;
+    }
 
-  /**
-   * Normalize trainings data (migrate quality/feelAfter to mood/wellbeing)
-   * @param {Array} trainings - Trainings array
-   * @returns {Array} Normalized trainings
-   */
-  function normalizeTrainings(trainings = []) {
-    return trainings.map((t = {}) => {
-      let next = t;
-      if (t.quality !== undefined || t.feelAfter !== undefined) {
-        const { quality, feelAfter, ...rest } = t;
-        next = {
-          ...rest,
-          mood: rest.mood ?? quality ?? 5,
-          wellbeing: rest.wellbeing ?? feelAfter ?? 5,
-          stress: rest.stress ?? 5
+    /**
+     * Compute daily norms from percentages
+     * @param {number} optimum - Target calories
+     * @param {Object} normPerc - Norm percentages
+     * @returns {Object} Absolute norms
+     */
+    function computeDailyNorms(optimum, normPerc = {}) {
+        const K = +optimum || 0;
+        const carbPct = +normPerc.carbsPct || 0;
+        const protPct = +normPerc.proteinPct || 0;
+        const fatPct = Math.max(0, 100 - carbPct - protPct);
+        const carbs = K ? (K * carbPct / 100) / 4 : 0;
+        const prot = K ? (K * protPct / 100) / 4 : 0;
+        const fat = K ? (K * fatPct / 100) / 9 : 0; // 9 ккал/г
+        const simplePct = +normPerc.simpleCarbPct || 0;
+        const simple = carbs * simplePct / 100;
+        const complex = Math.max(0, carbs - simple);
+        const badPct = +normPerc.badFatPct || 0;
+        const transPct = +normPerc.superbadFatPct || 0;
+        const bad = fat * badPct / 100;
+        const trans = fat * transPct / 100;
+        const good = Math.max(0, fat - bad - trans);
+        const fiberPct = +normPerc.fiberPct || 0;
+        const fiber = K ? (K / 1000) * fiberPct : 0;
+        const gi = +normPerc.giPct || 0;
+        const harm = +normPerc.harmPct || 0;
+        return { kcal: K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm };
+    }
+
+    /** Defaults must match ensureWorkoutLogShape (heys_day_trainings_v1.js). */
+    const WB_DEF_SETS = 1;
+    const WB_DEF_REPS = 10;
+
+    /** Строка конструктора силовой: есть что синхронизировать (не только пустой шаблон). */
+    function exerciseRowHasTrackableContent(e) {
+        if (!e) return false;
+        if (String(e.name || '').trim()) return true;
+        const asInt = (v) => {
+            if (v == null || v === '') return NaN;
+            if (typeof v === 'number') return Number.isFinite(v) ? Math.trunc(v) : NaN;
+            const n = parseInt(v, 10);
+            return Number.isFinite(n) ? n : NaN;
         };
-      }
-      // Repair: stepData merge once wrote feedback over training-info — constructor payload with wrong type
-      if (
-        next.workoutLog &&
-        typeof next.workoutLog === 'object' &&
-        next.strengthEntryMode === 'workout_builder' &&
-        String(next.type) !== 'strength'
-      ) {
-        next = { ...next, type: 'strength' };
-      }
-      if (
-        next.workoutLog &&
-        typeof next.workoutLog === 'object' &&
-        Array.isArray(next.workoutLog.exercises) &&
-        next.workoutLog.exercises.length > 0 &&
-        !next.strengthEntryMode
-      ) {
-        next = { ...next, type: 'strength', strengthEntryMode: 'workout_builder' };
-      }
-      if (
-        next.type === 'strength' &&
-        next.strengthEntryMode === 'workout_builder' &&
-        next.workoutLog &&
-        typeof next.workoutLog === 'object' &&
-        (!next.z || !Array.isArray(next.z) || !next.z.some((x) => +x > 0))
-      ) {
-        const wl = next.workoutLog;
-        if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.length >= 4 && wl.zoneMinutes.some((x) => +x > 0)) {
-          const z = [0, 1, 2, 3].map((i) =>
-            Math.max(0, Math.min(180, Math.round(Number(wl.zoneMinutes[i]) || 0)))
-          );
-          next = { ...next, z };
-        } else if (typeof wl.totalDurationMinutes === 'number' && wl.totalDurationMinutes >= 1) {
-          const m = Math.max(1, Math.min(180, Math.round(wl.totalDurationMinutes)));
-          next = { ...next, z: [0, m, 0, 0] };
+        const ap = e.approaches;
+        if (Array.isArray(ap)) {
+            if (ap.length > 1) return true;
+            for (let i = 0; i < ap.length; i++) {
+                const a = ap[i];
+                if (a && String(a.weightKg || '').trim()) return true;
+                const r = asInt(a && a.reps);
+                if (Number.isFinite(r) && r !== WB_DEF_REPS) return true;
+            }
         }
-      }
-      return next;
-    });
-  }
-
-  /**
-   * Clean empty trainings (all zones = 0)
-   * @param {Array} trainings - Trainings array
-   * @returns {Array} Filtered trainings
-   */
-  function cleanEmptyTrainings(trainings) {
-    if (!Array.isArray(trainings)) return [];
-    return trainings.filter((t) => {
-      if (!t) return false;
-      if (t.z && Array.isArray(t.z) && t.z.some((z) => +z > 0)) return true;
-      if (t.type === 'strength' && t.strengthEntryMode === 'workout_builder' && t.workoutLog) {
-        const wl = t.workoutLog;
-        if (workoutLogHasTrackableContent(wl)) return true;
-        // Keep any non-empty exercises list: avoid dropping the slot while name/weight still "empty"
-        // by heuristics, or before debounced save — otherwise reload wipes data and cloud never gets it.
-        if (Array.isArray(wl.exercises) && wl.exercises.length >= 1) return true;
-      }
-      return false;
-    });
-  }
-
-  /**
-   * Sort meals by time (latest first)
-   * @param {Array} meals - Meals array
-   * @returns {Array} Sorted meals
-   */
-  function sortMealsByTime(meals) {
-    if (!meals || meals.length <= 1) return meals;
-
-    return [...meals].sort((a, b) => {
-      const timeA = U.timeToMinutes ? U.timeToMinutes(a.time) : null;
-      const timeB = U.timeToMinutes ? U.timeToMinutes(b.time) : null;
-
-      // Если оба без времени — сохраняем порядок
-      if (timeA === null && timeB === null) return 0;
-      // Без времени — в конец
-      if (timeA === null) return 1;
-      if (timeB === null) return -1;
-
-      // Обратный порядок: последние наверху
-      return timeB - timeA;
-    });
-  }
-
-  /**
-   * Parse time string to minutes
-   * @param {string} timeStr - Time string (HH:MM)
-   * @returns {number} Minutes since midnight
-   */
-  function parseTimeToMinutes(timeStr) {
-    if (!timeStr) return 0;
-    const [h, m] = timeStr.split(':').map(Number);
-    return (h || 0) * 60 + (m || 0);
-  }
-
-  /**
-   * Format time from minutes
-   * @param {number} minutes - Minutes since midnight
-   * @returns {string} Time string (HH:MM)
-   */
-  function formatMinutesToTime(minutes) {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  }
-
-  // Export module
-  /**
-   * Compute optional derived day score metrics (not persisted — analytics only)
-   * @param {Object} dayData - Current day data with moodMorning/wellbeingMorning/stressMorning and scored meals
-   * @param {Object|null} yesterdayData - Previous day data (optional)
-   * @returns {Object} derived metrics
-   */
-  function getDayScoreDerivedMetrics(dayData, yesterdayData) {
-    const dayScore = dayData?.dayScore;
-    const dayScoreRaw = dayData?.dayScoreRaw;
-    const hasDayScore = dayScore !== '' && dayScore != null && Number.isFinite(+dayScore);
-
-    // --- delta vs morning chek-in ---
-    let deltaVsMorning = null;
-    if (hasDayScore) {
-      const mm = dayData?.moodMorning;
-      const wm = dayData?.wellbeingMorning;
-      const sm = dayData?.stressMorning;
-      if (mm != null && wm != null && sm != null) {
-        const morningRaw = (+mm + +wm + (10 - +sm)) / 3;
-        deltaVsMorning = r1((dayScoreRaw != null ? +dayScoreRaw : +dayScore) - morningRaw);
-      }
+        if (typeof e.weightKg === 'number' && Number.isFinite(e.weightKg) && e.weightKg > 0) return true;
+        if (String(e.weightKg || '').trim()) return true;
+        if (String(e.note || '').trim()) return true;
+        if ((+e.rpe || 0) > 0) return true;
+        if ((+e.ssGroup || 0) > 0) return true;
+        const sets = asInt(e.sets);
+        const reps = asInt(e.reps);
+        if (Number.isFinite(sets) && sets !== WB_DEF_SETS) return true;
+        if (Number.isFinite(reps) && reps !== WB_DEF_REPS) return true;
+        return false;
     }
 
-    // --- delta vs yesterday ---
-    let deltaVsYesterday = null;
-    if (hasDayScore && yesterdayData) {
-      const yd = yesterdayData?.dayScore;
-      if (yd !== '' && yd != null && Number.isFinite(+yd)) {
-        deltaVsYesterday = r1((dayScoreRaw != null ? +dayScoreRaw : +dayScore) - +yd);
-      }
+    /** Минуты по зонам или заполненные упражнения в дневнике. */
+    function workoutLogHasTrackableContent(wl) {
+        if (!wl || typeof wl !== 'object') return false;
+        if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.some((m) => +m > 0)) return true;
+        const ex = wl.exercises;
+        if (Array.isArray(ex) && ex.length > 1) return true;
+        if (Array.isArray(ex) && ex.some(exerciseRowHasTrackableContent)) return true;
+        return false;
     }
 
-    // --- intraday volatility: std dev of individual scores collected during the day ---
-    let intradayVolatility = null;
-    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
-    const trainings = Array.isArray(dayData?.trainings) ? dayData.trainings : [];
-    const mm0 = dayData?.moodMorning != null ? +dayData.moodMorning : null;
-    const wm0 = dayData?.wellbeingMorning != null ? +dayData.wellbeingMorning : null;
-    const sm0 = dayData?.stressMorning != null ? +dayData.stressMorning : null;
-    const perCheckIn = [];
-    if (mm0 != null && wm0 != null && sm0 != null) perCheckIn.push(r1((mm0 + wm0 + (10 - sm0)) / 3));
-    for (const meal of meals) {
-      if (meal?.mood != null && meal?.wellbeing != null && meal?.stress != null) {
-        perCheckIn.push(r1((+meal.mood + +meal.wellbeing + (10 - +meal.stress)) / 3));
-      }
-    }
-    for (const t of trainings) {
-      if (t?.mood != null && t?.wellbeing != null && t?.stress != null) {
-        const hasTime = t.time && t.time.trim() !== '';
-        const hasMins = t.z && Array.isArray(t.z) && t.z.some(m => m > 0);
-        const hasBuilder =
-          t.type === 'strength' &&
-          t.strengthEntryMode === 'workout_builder' &&
-          t.workoutLog &&
-          workoutLogHasTrackableContent(t.workoutLog);
-        if (hasTime || hasMins || hasBuilder) perCheckIn.push(r1((+t.mood + +t.wellbeing + (10 - +t.stress)) / 3));
-      }
-    }
-    if (perCheckIn.length >= 2) {
-      const mean = perCheckIn.reduce((a, b) => a + b, 0) / perCheckIn.length;
-      const variance = perCheckIn.reduce((sum, v) => sum + (v - mean) ** 2, 0) / perCheckIn.length;
-      intradayVolatility = r1(Math.sqrt(variance));
+    function dayHasTrackableWorkoutBuilder(day) {
+        const tr = day && day.trainings;
+        if (!Array.isArray(tr)) return false;
+        return tr.some((t) => {
+            if (!t || String(t.type) !== 'strength' || t.strengthEntryMode !== 'workout_builder') return false;
+            return workoutLogHasTrackableContent(t.workoutLog);
+        });
     }
 
-    // --- trend over day: first-half checkIns avg vs second-half ---
-    let trendOverDay = null;
-    if (perCheckIn.length >= 3) {
-      const mid = Math.floor(perCheckIn.length / 2);
-      const firstHalf = perCheckIn.slice(0, mid);
-      const secondHalf = perCheckIn.slice(mid);
-      const avgFirst = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
-      const avgSecond = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
-      trendOverDay = r1(avgSecond - avgFirst); // positive = improving, negative = worsening
+    /**
+     * Calculate day averages (mood, wellbeing, stress, dayScore)
+     * @param {Array} meals - Meals array
+     * @param {Array} trainings - Trainings array
+     * @param {Object} dayData - Day data with morning scores
+     * @returns {Object} Averages
+     */
+    function calculateDayAverages(meals, trainings, dayData) {
+        // Утренние оценки из чек-ина (если есть — это стартовая точка дня)
+        const morningMood = dayData?.moodMorning && !isNaN(+dayData.moodMorning) ? [+dayData.moodMorning] : [];
+        const morningWellbeing = dayData?.wellbeingMorning && !isNaN(+dayData.wellbeingMorning) ? [+dayData.wellbeingMorning] : [];
+        const morningStress = dayData?.stressMorning && !isNaN(+dayData.stressMorning) ? [+dayData.stressMorning] : [];
+
+        // Собираем все оценки из приёмов пищи
+        const mealMoods = (meals || []).filter(m => m.mood && !isNaN(+m.mood)).map(m => +m.mood);
+        const mealWellbeing = (meals || []).filter(m => m.wellbeing && !isNaN(+m.wellbeing)).map(m => +m.wellbeing);
+        const mealStress = (meals || []).filter(m => m.stress && !isNaN(+m.stress)).map(m => +m.stress);
+
+        // Собираем оценки из тренировок (фильтруем только РЕАЛЬНЫЕ тренировки)
+        const realTrainings = (trainings || []).filter(t => {
+            const hasTime = t.time && t.time.trim() !== '';
+            const hasMinutes = t.z && Array.isArray(t.z) && t.z.some(m => m > 0);
+            const hasBuilder =
+                t.type === 'strength' &&
+                t.strengthEntryMode === 'workout_builder' &&
+                t.workoutLog &&
+                workoutLogHasTrackableContent(t.workoutLog);
+            return hasTime || hasMinutes || hasBuilder;
+        });
+        const trainingMoods = realTrainings.filter(t => t.mood && !isNaN(+t.mood)).map(t => +t.mood);
+        const trainingWellbeing = realTrainings.filter(t => t.wellbeing && !isNaN(+t.wellbeing)).map(t => +t.wellbeing);
+        const trainingStress = realTrainings.filter(t => t.stress && !isNaN(+t.stress)).map(t => +t.stress);
+
+        // Объединяем все оценки: утро + приёмы пищи + тренировки
+        const allMoods = [...morningMood, ...mealMoods, ...trainingMoods];
+        const allWellbeing = [...morningWellbeing, ...mealWellbeing, ...trainingWellbeing];
+        const allStress = [...morningStress, ...mealStress, ...trainingStress];
+
+        const moodAvg = allMoods.length ? r1(allMoods.reduce((sum, val) => sum + val, 0) / allMoods.length) : '';
+        const wellbeingAvg = allWellbeing.length ? r1(allWellbeing.reduce((sum, val) => sum + val, 0) / allWellbeing.length) : '';
+        const stressAvg = allStress.length ? r1(allStress.reduce((sum, val) => sum + val, 0) / allStress.length) : '';
+
+        // Автоматический расчёт dayScore
+        // Формула: (mood + wellbeing + (10 - stress)) / 3, округлено до целого
+        let dayScore = '';
+        if (moodAvg !== '' || wellbeingAvg !== '' || stressAvg !== '') {
+            const m = moodAvg !== '' ? +moodAvg : 5;
+            const w = wellbeingAvg !== '' ? +wellbeingAvg : 5;
+            const s = stressAvg !== '' ? +stressAvg : 5;
+            // stress инвертируем: низкий стресс = хорошо
+            dayScore = Math.round((m + w + (10 - s)) / 3);
+        }
+
+        return { moodAvg, wellbeingAvg, stressAvg, dayScore };
     }
 
-    return { deltaVsMorning, deltaVsYesterday, intradayVolatility, trendOverDay };
-  }
+    /**
+     * Normalize trainings data (migrate quality/feelAfter to mood/wellbeing)
+     * @param {Array} trainings - Trainings array
+     * @returns {Array} Normalized trainings
+     */
+    function normalizeTrainings(trainings = []) {
+        return trainings.map((t = {}) => {
+            let next = t;
+            if (t.quality !== undefined || t.feelAfter !== undefined) {
+                const { quality, feelAfter, ...rest } = t;
+                next = {
+                    ...rest,
+                    mood: rest.mood ?? quality ?? 5,
+                    wellbeing: rest.wellbeing ?? feelAfter ?? 5,
+                    stress: rest.stress ?? 5
+                };
+            }
+            if (
+                next.workoutLog &&
+                typeof next.workoutLog === 'object' &&
+                next.strengthEntryMode === 'workout_builder' &&
+                String(next.type) !== 'strength'
+            ) {
+                next = { ...next, type: 'strength' };
+            }
+            if (
+                next.workoutLog &&
+                typeof next.workoutLog === 'object' &&
+                Array.isArray(next.workoutLog.exercises) &&
+                next.workoutLog.exercises.length > 0 &&
+                !next.strengthEntryMode
+            ) {
+                next = { ...next, type: 'strength', strengthEntryMode: 'workout_builder' };
+            }
+            if (
+                next.type === 'strength' &&
+                next.strengthEntryMode === 'workout_builder' &&
+                next.workoutLog &&
+                typeof next.workoutLog === 'object' &&
+                (!next.z || !Array.isArray(next.z) || !next.z.some((x) => +x > 0))
+            ) {
+                const wl = next.workoutLog;
+                if (Array.isArray(wl.zoneMinutes) && wl.zoneMinutes.length >= 4 && wl.zoneMinutes.some((x) => +x > 0)) {
+                    const z = [0, 1, 2, 3].map((i) =>
+                        Math.max(0, Math.min(180, Math.round(Number(wl.zoneMinutes[i]) || 0)))
+                    );
+                    next = { ...next, z };
+                } else if (typeof wl.totalDurationMinutes === 'number' && wl.totalDurationMinutes >= 1) {
+                    const m = Math.max(1, Math.min(180, Math.round(wl.totalDurationMinutes)));
+                    next = { ...next, z: [0, m, 0, 0] };
+                }
+            }
+            return next;
+        });
+    }
 
-  HEYS.dayCalculations = {
-    calculateDayTotals,
-    computeDailyNorms,
-    calculateDayAverages,
-    getDayScoreDerivedMetrics,
-    normalizeTrainings,
-    cleanEmptyTrainings,
-    sortMealsByTime,
-    parseTimeToMinutes,
-    formatMinutesToTime,
-    getProductFromItem,
-    exerciseRowHasTrackableContent,
-    workoutLogHasTrackableContent,
-    dayHasTrackableWorkoutBuilder
-  };
+    /**
+     * Clean empty trainings (all zones = 0)
+     * @param {Array} trainings - Trainings array
+     * @returns {Array} Filtered trainings
+     */
+    function cleanEmptyTrainings(trainings) {
+        if (!Array.isArray(trainings)) return [];
+        return trainings.filter((t) => {
+            if (!t) return false;
+            if (t.z && Array.isArray(t.z) && t.z.some((z) => +z > 0)) return true;
+            if (t.type === 'strength' && t.strengthEntryMode === 'workout_builder' && t.workoutLog) {
+                const wl = t.workoutLog;
+                if (workoutLogHasTrackableContent(wl)) return true;
+                if (Array.isArray(wl.exercises) && wl.exercises.length >= 1) return true;
+            }
+            return false;
+        });
+    }
+
+    /**
+     * Sort meals by time (latest first)
+     * @param {Array} meals - Meals array
+     * @returns {Array} Sorted meals
+     */
+    function sortMealsByTime(meals) {
+        if (!meals || meals.length <= 1) return meals;
+
+        return [...meals].sort((a, b) => {
+            const timeA = U.timeToMinutes ? U.timeToMinutes(a.time) : null;
+            const timeB = U.timeToMinutes ? U.timeToMinutes(b.time) : null;
+
+            // Если оба без времени — сохраняем порядок
+            if (timeA === null && timeB === null) return 0;
+            // Без времени — в конец
+            if (timeA === null) return 1;
+            if (timeB === null) return -1;
+
+            // Обратный порядок: последние наверху
+            return timeB - timeA;
+        });
+    }
+
+    /**
+     * Parse time string to minutes
+     * @param {string} timeStr - Time string (HH:MM)
+     * @returns {number} Minutes since midnight
+     */
+    function parseTimeToMinutes(timeStr) {
+        if (!timeStr) return 0;
+        const [h, m] = timeStr.split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+    }
+
+    /**
+     * Format time from minutes
+     * @param {number} minutes - Minutes since midnight
+     * @returns {string} Time string (HH:MM)
+     */
+    function formatMinutesToTime(minutes) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    // Export module
+    HEYS.dayCalculations = {
+        calculateDayTotals,
+        computeDailyNorms,
+        calculateDayAverages,
+        normalizeTrainings,
+        cleanEmptyTrainings,
+        sortMealsByTime,
+        parseTimeToMinutes,
+        formatMinutesToTime,
+        getProductFromItem,
+        exerciseRowHasTrackableContent,
+        workoutLogHasTrackableContent,
+        dayHasTrackableWorkoutBuilder
+    };
 
 })(window);
+

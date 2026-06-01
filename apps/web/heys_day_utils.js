@@ -1,3447 +1,2060 @@
 // heys_day_utils.js — Day utilities: date/time, storage, calculations
 
 ; (function (global) {
-  const HEYS = global.HEYS = global.HEYS || {};
+    const HEYS = global.HEYS = global.HEYS || {};
 
-  // Создаём namespace для утилит дня
-  HEYS.dayUtils = {};
+    // Создаём namespace для утилит дня
+    HEYS.dayUtils = {};
 
-  // === Deleted Products Ignore List v2.0 ===
-  // Персистентный список удалённых продуктов — чтобы autoRecover и cloud sync не восстанавливали их
-  // Ключ localStorage: heys_deleted_products_ignore_list
-  // Формат v2: { entries: { [key]: { name, id?, deletedAt, fingerprint? } }, version: 2 }
-  const DELETED_PRODUCTS_KEY = 'heys_deleted_products_ignore_list';
-  const DELETED_PRODUCTS_VERSION = 2;
-  const DELETED_PRODUCTS_TTL_DAYS = 90; // Автоочистка через 90 дней
+    // === Deleted Products Ignore List v2.0 ===
+    // 🆕 v4.8.0: Персистентный список удалённых продуктов с TTL и метаданными
+    const DELETED_PRODUCTS_KEY = 'heys_deleted_products_ignore_list';
+    const DELETED_PRODUCTS_VERSION = 2;
+    const DELETED_PRODUCTS_TTL_DAYS = 90;
 
-  /**
-   * Загружаем игнор-лист из localStorage при инициализации
-   * Поддерживает миграцию с v1 (Set) на v2 (Object с метаданными)
-   */
-  function loadDeletedProductsList() {
-    try {
-      const stored = localStorage.getItem(DELETED_PRODUCTS_KEY);
-      if (!stored) return { entries: {}, version: DELETED_PRODUCTS_VERSION };
-
-      const parsed = JSON.parse(stored);
-
-      // Миграция с v1 (массив строк) на v2 (объект с метаданными)
-      if (Array.isArray(parsed)) {
-        const now = Date.now();
-        const migrated = { entries: {}, version: DELETED_PRODUCTS_VERSION };
-        parsed.forEach(key => {
-          if (key) {
-            migrated.entries[String(key).toLowerCase()] = {
-              name: key,
-              deletedAt: now,
-              _migratedFromV1: true
-            };
-          }
-        });
-        console.log(`[HEYS] 🔄 Мигрировано ${Object.keys(migrated.entries).length} записей игнор-листа v1 → v2`);
-        saveDeletedProductsData(migrated);
-        return migrated;
-      }
-
-      // v2 формат
-      if (parsed.version === DELETED_PRODUCTS_VERSION && parsed.entries) {
-        return parsed;
-      }
-
-      return { entries: {}, version: DELETED_PRODUCTS_VERSION };
-    } catch (e) {
-      console.warn('[HEYS] Ошибка загрузки deleted products list:', e);
-      return { entries: {}, version: DELETED_PRODUCTS_VERSION };
-    }
-  }
-
-  /**
-   * Сохраняем игнор-лист в localStorage
-   */
-  function saveDeletedProductsData(data) {
-    try {
-      localStorage.setItem(DELETED_PRODUCTS_KEY, JSON.stringify(data));
-    } catch (e) {
-      console.warn('[HEYS] Ошибка сохранения deleted products list:', e);
-    }
-  }
-
-  // In-memory кэш игнор-листа
-  let deletedProductsData = loadDeletedProductsList();
-
-  /**
-   * Нормализация ключа для игнор-листа (lowercase, trim, collapse spaces)
-   */
-  function normalizeDeletedKey(name) {
-    return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  }
-
-  /**
-   * Автоочистка устаревших записей (старше TTL)
-   */
-  function cleanupExpiredEntries() {
-    const now = Date.now();
-    const ttlMs = DELETED_PRODUCTS_TTL_DAYS * 24 * 60 * 60 * 1000;
-    let removed = 0;
-
-    for (const [key, entry] of Object.entries(deletedProductsData.entries)) {
-      if (entry.deletedAt && (now - entry.deletedAt) > ttlMs) {
-        delete deletedProductsData.entries[key];
-        removed++;
-      }
-    }
-
-    if (removed > 0) {
-      saveDeletedProductsData(deletedProductsData);
-      console.log(`[HEYS] 🧹 Очищено ${removed} устаревших записей из игнор-листа (TTL: ${DELETED_PRODUCTS_TTL_DAYS} дней)`);
-    }
-
-    return removed;
-  }
-
-  // Автоочистка при загрузке
-  cleanupExpiredEntries();
-
-  // === API для управления игнор-листом удалённых продуктов ===
-  HEYS.deletedProducts = {
-    /**
-     * Добавить продукт в игнор-лист (при удалении)
-     * @param {string} name - Название продукта
-     * @param {string} [id] - ID продукта (опционально)
-     * @param {string} [fingerprint] - Fingerprint продукта (опционально)
-     * @param {string} [reason] - Причина удаления (опционально, для audit/observability)
-     */
-    add(name, id, fingerprint, reason) {
-      if (!name) return;
-      const key = normalizeDeletedKey(name);
-      const now = Date.now();
-
-      deletedProductsData.entries[key] = {
-        name: name,
-        id: id || null,
-        fingerprint: fingerprint || null,
-        deletedAt: now,
-        ...(reason ? { reason } : {}),
-      };
-
-      // Также добавляем по ID и fingerprint для быстрого поиска
-      if (id) {
-        deletedProductsData.entries[String(id)] = {
-          name: name,
-          id: id,
-          fingerprint: fingerprint || null,
-          deletedAt: now,
-          _isIdKey: true,
-          ...(reason ? { reason } : {}),
-        };
-      }
-      if (fingerprint) {
-        deletedProductsData.entries[String(fingerprint)] = {
-          name: name,
-          id: id || null,
-          fingerprint: fingerprint,
-          deletedAt: now,
-          _isFingerprintKey: true,
-          ...(reason ? { reason } : {}),
-        };
-      }
-
-      saveDeletedProductsData(deletedProductsData);
-      console.log(`[HEYS] 🚫 Продукт добавлен в игнор-лист: "${name}"${id ? ` (id: ${id.slice(0, 8)}...)` : ''}${reason ? ` reason=${reason}` : ''}`);
-
-      // Диспатчим событие для синхронизации с облаком
-      if (typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('heys:deleted-products-changed', {
-          detail: { action: 'add', name, id, fingerprint }
-        }));
-      }
-    },
-
-    /**
-     * Проверить, удалён ли продукт (по имени, ID или fingerprint)
-     * @param {string} nameOrIdOrFingerprint - Название, ID или fingerprint продукта
-     * @returns {boolean}
-     */
-    isDeleted(nameOrIdOrFingerprint) {
-      if (!nameOrIdOrFingerprint) return false;
-      const key = normalizeDeletedKey(nameOrIdOrFingerprint);
-      return !!deletedProductsData.entries[key] || !!deletedProductsData.entries[String(nameOrIdOrFingerprint)];
-    },
-
-    /**
-     * Проверить продукт по всем полям (имя, ID, fingerprint)
-     * @param {Object} product - Объект продукта
-     * @returns {boolean}
-     */
-    isProductDeleted(product) {
-      if (!product) return false;
-      if (product.name && this.isDeleted(product.name)) return true;
-      if (product.id && this.isDeleted(product.id)) return true;
-      if (product.product_id && this.isDeleted(product.product_id)) return true;
-      if (product.fingerprint && this.isDeleted(product.fingerprint)) return true;
-      return false;
-    },
-
-    /**
-     * Удалить продукт из игнор-листа (если пользователь снова добавил продукт с таким же именем)
-     * @param {string} name - Название продукта
-     * @param {string} [id] - ID продукта (опционально)
-     * @param {string} [fingerprint] - Fingerprint продукта (опционально)
-     */
-    remove(name, id, fingerprint) {
-      if (!name) return;
-      const key = normalizeDeletedKey(name);
-      delete deletedProductsData.entries[key];
-      if (id) delete deletedProductsData.entries[String(id)];
-      if (fingerprint) delete deletedProductsData.entries[String(fingerprint)];
-      saveDeletedProductsData(deletedProductsData);
-      console.info(`[HEYS] ✅ Продукт восстановлен из игнор-листа: "${name}"`);
-
-      // 🪦 FIX v5.0.2: Также очищаем Store tombstone (heys_deleted_ids) при явном восстановлении.
-      // Без этого tombstone из Store блокирует orphan recovery и merge sync,
-      // и продукт не появляется в личной базе даже после восстановления из игнор-листа.
-      try {
-        const _storeTombstones = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
-        if (Array.isArray(_storeTombstones) && _storeTombstones.length > 0) {
-          const normName = (n) => String(n || '').toLowerCase().trim();
-          const nameNorm = normName(name);
-          const before = _storeTombstones.length;
-          const cleaned = _storeTombstones.filter(t => {
-            if (id && t.id === id) return false;
-            if (nameNorm && normName(t.name) === nameNorm) return false;
-            return true;
-          });
-          if (cleaned.length < before) {
-            window.HEYS.store.set('heys_deleted_ids', cleaned);
-            console.info(`[HEYS] 🪦 Store tombstone очищен при восстановлении: "${name}" (${before}→${cleaned.length})`);
-          }
-        }
-      } catch (e) {
-        console.warn('[HEYS] ⚠️ Ошибка очистки Store tombstone:', e?.message);
-      }
-
-      // Диспатчим событие для обновления UI
-      if (typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('heys:deleted-products-changed', {
-          detail: { action: 'remove', name, id, fingerprint }
-        }));
-      }
-    },
-
-    /**
-     * Получить весь игнор-лист (только уникальные записи по name)
-     * @returns {Array<{name: string, id?: string, fingerprint?: string, deletedAt: number}>}
-     */
-    getAll() {
-      const unique = new Map();
-      for (const [key, entry] of Object.entries(deletedProductsData.entries)) {
-        // Пропускаем вспомогательные ключи (_isIdKey, _isFingerprintKey)
-        if (entry._isIdKey || entry._isFingerprintKey) continue;
-        unique.set(normalizeDeletedKey(entry.name), entry);
-      }
-      return Array.from(unique.values());
-    },
-
-    /**
-     * Получить метаданные записи
-     * @param {string} nameOrId - Название или ID продукта
-     * @returns {Object|null}
-     */
-    getEntry(nameOrId) {
-      if (!nameOrId) return null;
-      const key = normalizeDeletedKey(nameOrId);
-      return deletedProductsData.entries[key] || deletedProductsData.entries[String(nameOrId)] || null;
-    },
-
-    /**
-     * Количество удалённых продуктов в игнор-листе (уникальных)
-     * @returns {number}
-     */
-    count() {
-      return this.getAll().length;
-    },
-
-    /**
-     * Очистить игнор-лист (осторожно!)
-     */
-    clear() {
-      const count = this.count();
-      deletedProductsData = { entries: {}, version: DELETED_PRODUCTS_VERSION };
-      saveDeletedProductsData(deletedProductsData);
-      console.info(`[HEYS] Игнор-лист удалённых продуктов очищен (было ${count})`);
-
-      // 🪦 FIX v5.0.2: При полной очистке тоже сбрасываем Store tombstones (heys_deleted_ids)
-      try {
-        if (window.HEYS?.store?.set) {
-          window.HEYS.store.set('heys_deleted_ids', []);
-          console.info('[HEYS] 🪦 Store tombstones (heys_deleted_ids) полностью очищены');
-        }
-      } catch (e) {
-        console.warn('[HEYS] ⚠️ Ошибка очистки heys_deleted_ids:', e?.message);
-      }
-
-      // Диспатчим событие для обновления UI
-      if (typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('heys:deleted-products-changed', {
-          detail: { action: 'clear', count }
-        }));
-      }
-    },
-
-    /**
-     * Принудительная очистка устаревших записей
-     * @returns {number} Количество удалённых записей
-     */
-    cleanup() {
-      return cleanupExpiredEntries();
-    },
-
-    /**
-     * Показать игнор-лист в консоли
-     */
-    log() {
-      const all = this.getAll();
-      if (all.length === 0) {
-        console.log('✅ Игнор-лист удалённых продуктов пуст');
-        return;
-      }
-      console.log(`🚫 Игнор-лист удалённых продуктов (${all.length}):`);
-      const now = Date.now();
-      all.forEach((entry, i) => {
-        const daysAgo = Math.floor((now - entry.deletedAt) / (24 * 60 * 60 * 1000));
-        const ttlRemaining = DELETED_PRODUCTS_TTL_DAYS - daysAgo;
-        console.log(`  ${i + 1}. "${entry.name}" — удалён ${daysAgo}д назад (TTL: ${ttlRemaining}д)`);
-      });
-    },
-
-    /**
-     * Экспорт данных для cloud sync
-     * @returns {Object}
-     */
-    exportForSync() {
-      return {
-        entries: deletedProductsData.entries,
-        version: DELETED_PRODUCTS_VERSION,
-        exportedAt: Date.now()
-      };
-    },
-
-    /**
-     * Импорт данных из cloud sync (merge с локальными)
-     * @param {Object} cloudData - Данные из облака
-     * @returns {number} Количество импортированных записей
-     */
-    importFromSync(cloudData) {
-      if (!cloudData || !cloudData.entries) return 0;
-
-      let imported = 0;
-      for (const [key, entry] of Object.entries(cloudData.entries)) {
-        // Мержим: если запись новее — заменяем
-        const local = deletedProductsData.entries[key];
-        if (!local || (entry.deletedAt > (local.deletedAt || 0))) {
-          deletedProductsData.entries[key] = entry;
-          imported++;
-        }
-      }
-
-      if (imported > 0) {
-        saveDeletedProductsData(deletedProductsData);
-        console.log(`[HEYS] ☁️ Импортировано ${imported} записей игнор-листа из облака`);
-      }
-
-      return imported;
-    },
-
-    /**
-     * Batch-очистка item'ов из дневника для удалённого продукта
-     * @param {string} name - Название продукта
-     * @param {Object} options - Опции
-     * @returns {Promise<{daysAffected: number, itemsRemoved: number}>}
-     */
-    async purgeFromDiary(name, options = {}) {
-      const { dryRun = false, maxDays = 365 } = options;
-
-      if (!name) return { daysAffected: 0, itemsRemoved: 0 };
-
-      const normalizedName = normalizeDeletedKey(name);
-      const entry = this.getEntry(name);
-      const productId = entry?.id;
-      const fingerprint = entry?.fingerprint;
-
-      const U = HEYS.utils || {};
-      const lsGet = U.lsGet || ((k, d) => {
-        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-      });
-      const lsSet = U.lsSet || HEYS.store?.set?.bind(HEYS.store) || ((k, v) => console.warn('[purgeFromDiary] Store unavailable; write dropped:', k));
-
-      // Собираем все ключи дней
-      const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
-
-      let daysAffected = 0;
-      let itemsRemoved = 0;
-
-      for (const key of keys.slice(0, maxDays)) {
+    function loadDeletedProductsList() {
         try {
-          const raw = localStorage.getItem(key);
-          if (!raw) continue;
+            const stored = localStorage.getItem(DELETED_PRODUCTS_KEY);
+            if (!stored) return { entries: {}, version: DELETED_PRODUCTS_VERSION };
 
-          let day;
-          if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-            day = HEYS.store.decompress(raw);
-          } else {
-            day = JSON.parse(raw);
-          }
+            const parsed = JSON.parse(stored);
 
-          if (!day || !Array.isArray(day.meals)) continue;
-
-          let dayModified = false;
-
-          for (const meal of day.meals) {
-            if (!Array.isArray(meal.items)) continue;
-
-            const beforeCount = meal.items.length;
-            meal.items = meal.items.filter(item => {
-              const itemName = normalizeDeletedKey(item.name);
-              const itemId = String(item.product_id || item.productId || '');
-              const itemFingerprint = item.fingerprint || '';
-
-              // Проверяем совпадение по имени, ID или fingerprint
-              if (itemName === normalizedName) return false;
-              if (productId && itemId === String(productId)) return false;
-              if (fingerprint && itemFingerprint === fingerprint) return false;
-
-              return true;
-            });
-
-            if (meal.items.length < beforeCount) {
-              dayModified = true;
-              itemsRemoved += (beforeCount - meal.items.length);
-            }
-          }
-
-          if (dayModified && !dryRun) {
-            // Сохраняем изменённый день
-            if (HEYS.store?.compress) {
-              localStorage.setItem(key, HEYS.store.compress(day));
-            } else {
-              localStorage.setItem(key, JSON.stringify(day));
-            }
-            daysAffected++;
-          } else if (dayModified) {
-            daysAffected++;
-          }
-        } catch (e) {
-          // Пропускаем битые записи
-        }
-      }
-
-      if (itemsRemoved > 0) {
-        console.log(`[HEYS] ${dryRun ? '🔍 [DRY RUN]' : '🗑️'} Удалено ${itemsRemoved} записей "${name}" из ${daysAffected} дней`);
-      }
-
-      return { daysAffected, itemsRemoved };
-    },
-
-    // Константы для внешнего использования
-    TTL_DAYS: DELETED_PRODUCTS_TTL_DAYS,
-    VERSION: DELETED_PRODUCTS_VERSION
-  };
-
-  // === Orphan Products Tracking ===
-  // Отслеживание продуктов, для которых данные берутся из штампа вместо базы
-  const orphanProductsMap = new Map(); // name => { name, usedInDays: Set, firstSeen }
-  const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
-  const shouldLogOrphanTrace = () => {
-    try {
-      return !!(
-        HEYS?.debug?.orphansTrace === true ||
-        global?.localStorage?.getItem('heys_debug_orphans_trace') === 'true'
-      );
-    } catch (_) {
-      return false;
-    }
-  };
-  const normalizeProductName = HEYS.models?.normalizeProductName
-    || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
-
-  // 🪦 F8 helper (plan 2026-05-24): rate-limited auto-clone shared → personal overlay.
-  // Module-scope Set держит id-метки уже-клонированных shared-продуктов за boot,
-  // чтобы re-render'ы не зацикливали клонирование. Сбрасывается только при reload.
-  const _autoClonedSharedIds = new Set();
-  function _scheduleAutoCloneFromShared(sharedProduct) {
-    if (!sharedProduct || !sharedProduct.id) return;
-    const sid = String(sharedProduct.id);
-    if (_autoClonedSharedIds.has(sid)) return;
-    _autoClonedSharedIds.add(sid);
-    // Гейт куратора: в курaторской сессии в LS лежат данные нескольких клиентов,
-    // авто-clone может полить чужой overlay чужим продуктом. Manual orphan-restore
-    // в UI остаётся доступным.
-    try {
-      const isCurator =
-        (typeof HEYS.auth?.isCuratorSession === 'function' && HEYS.auth.isCuratorSession()) ||
-        (typeof HEYS.Bootstrap?.isCuratorSession === 'function' && HEYS.Bootstrap.isCuratorSession()) ||
-        (typeof global.isCuratorSession === 'function' && global.isCuratorSession()) ||
-        false;
-      if (isCurator) {
-        console.info('[HEYS.orphan-autoclone] skip: curator session', { id: sid, name: sharedProduct.name });
-        return;
-      }
-    } catch (_) { /* noop */ }
-    if (typeof HEYS.products?.addFromShared !== 'function') return;
-    // Async, чтобы не блокировать getDayData calc; addFromShared сам делает
-    // tombstone-check по name (heys_core_v12.js:4751-4764) — если продукт явно
-    // удалён юзером, addFromShared вернёт null и клон не появится.
-    setTimeout(() => {
-      try {
-        const cloned = HEYS.products.addFromShared(sharedProduct);
-        if (cloned) {
-          console.info('[HEYS.orphan-autoclone] cloned shared → personal', {
-            id: sid,
-            name: sharedProduct.name,
-            cloneId: cloned.id,
-          });
-        }
-      } catch (e) {
-        console.warn('[HEYS.orphan-autoclone] failed:', e?.message || e);
-      }
-    }, 0);
-  }
-
-  function resolveProductByItem(item, productsList) {
-    if (!item) return null;
-    const list = Array.isArray(productsList) ? productsList : [];
-    if (!list.length) return null;
-
-    const productId = item.product_id ?? item.productId;
-    const itemFingerprint = item.fingerprint || null;
-    const itemName = String(item.name || '').trim();
-    const itemNameNorm = normalizeProductName(itemName);
-    const itemNameLower = itemName.toLowerCase();
-
-    // 🪦 F14 (plan 2026-05-24): best-match priority вместо list.find (первый попавшийся).
-    // Раньше при дубликатах в shared_products (модератор продублировал) find возвращал
-    // первый по индексу — недетерминированно. Это давало плохие auto-clone target'ы.
-    // Приоритет: id > fingerprint > name. Среди name-match'ей tiebreaker — created_at
-    // старше (более устоявшаяся запись), затем — первая по списку.
-    let idMatch = null;
-    let fpMatch = null;
-    const nameMatches = [];
-    for (let i = 0; i < list.length; i++) {
-      const product = list[i];
-      if (!product || typeof product !== 'object') continue;
-      if (!idMatch && productId != null
-          && String(product.id ?? product.product_id ?? '') === String(productId)) {
-        idMatch = product;
-        break; // id-match — наивысший приоритет, сразу выходим
-      }
-      if (!fpMatch && itemFingerprint && product.fingerprint && product.fingerprint === itemFingerprint) {
-        fpMatch = product;
-      }
-      const productName = String(product.name || '').trim();
-      if (productName) {
-        const productNameLower = productName.toLowerCase();
-        if (productNameLower === itemNameLower || normalizeProductName(productName) === itemNameNorm) {
-          nameMatches.push(product);
-        }
-      }
-    }
-    if (idMatch) return idMatch;
-    if (fpMatch) return fpMatch;
-    if (nameMatches.length === 0) return null;
-    if (nameMatches.length === 1) return nameMatches[0];
-    // 2+ name match → tiebreaker по created_at (старше предпочтительнее), потом первый.
-    let best = nameMatches[0];
-    let bestTs = _coerceTs(best.created_at ?? best.createdAt);
-    for (let k = 1; k < nameMatches.length; k++) {
-      const cand = nameMatches[k];
-      const ts = _coerceTs(cand.created_at ?? cand.createdAt);
-      if (ts != null && (bestTs == null || ts < bestTs)) {
-        best = cand;
-        bestTs = ts;
-      }
-    }
-    return best;
-  }
-
-  function _coerceTs(v) {
-    if (v == null) return null;
-    if (typeof v === 'number' && Number.isFinite(v)) return v;
-    const parsed = Date.parse(String(v));
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  function isSyntheticEstimatedItem(item) {
-    if (!item || typeof item !== 'object') return false;
-    const productId = String(item.product_id ?? item.productId ?? '');
-    const itemId = String(item.id ?? '');
-    const estimatedSource = String(item.estimatedSource ?? '');
-    return !!(
-      item.isEstimated ||
-      item.virtualProduct ||
-      item.skipProductRestore ||
-      item.skipOrphanTracking ||
-      estimatedSource === 'morning-checkin' ||
-      productId.startsWith('estimated_') ||
-      productId.startsWith('estimated_quickfill_') ||
-      itemId.startsWith('estimated_')
-    );
-  }
-
-  function copySnapshotFields(item, target) {
-    if (!item || !target) return target;
-    const numericFields = [
-      'kcal100', 'protein100', 'carbs100', 'fat100',
-      'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100',
-      'fiber100', 'sodium100',
-      'omega3_100', 'omega6_100', 'nutrient_density',
-      'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
-      'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
-      'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine'
-    ];
-    numericFields.forEach((field) => {
-      if (target[field] == null && item[field] != null) {
-        target[field] = item[field];
-      }
-    });
-    const itemNova = item.nova_group ?? item.novaGroup;
-    if (target.nova_group == null && itemNova != null) {
-      target.nova_group = itemNova;
-    }
-    if (target.novaGroup == null && target.nova_group != null) {
-      target.novaGroup = target.nova_group;
-    }
-    if (target.additives == null && Array.isArray(item.additives) && item.additives.length) {
-      target.additives = item.additives;
-    }
-    const boolFields = ['is_organic', 'is_whole_grain', 'is_fermented', 'is_raw'];
-    boolFields.forEach((field) => {
-      if (target[field] == null && item[field] != null) {
-        target[field] = item[field];
-      }
-    });
-    return target;
-  }
-
-  function enrichProductMaybe(product) {
-    if (!product) return product;
-    const normalized = global.HEYS?.models?.normalizeProductFields
-      ? global.HEYS.models.normalizeProductFields(product)
-      : product;
-    if (global.HEYS?.Harm?.enrichProduct) {
-      try {
-        return global.HEYS.Harm.enrichProduct(normalized) || normalized;
-      } catch {
-        return normalized;
-      }
-    }
-    return normalized;
-  }
-
-  function trackOrphanProduct(item, dateStr) {
-    if (!item || !item.name) return;
-    // ⚡ Разовые продукты (_oneTime: true) by design не должны быть в БД —
-    // они НЕ сироты, рендерятся через стамп-фоллбэк.
-    if (item._oneTime === true) return;
-    if (isSyntheticEstimatedItem(item)) return;
-    const name = String(item.name).trim();
-    if (!name) return;
-    const normalizedName = normalizeProductName(name);
-    const productId = item.product_id ?? item.productId ?? null;
-    const fingerprint = item.fingerprint || null;
-
-    if (!orphanProductsMap.has(name)) {
-      orphanProductsMap.set(name, {
-        name: name,
-        normalizedName,
-        product_id: productId,
-        fingerprint,
-        usedInDays: new Set([dateStr]),
-        firstSeen: Date.now(),
-        hasInlineData: item.kcal100 != null
-      });
-      if (shouldLogOrphanTrace()) {
-        console.info('[HEYS.orphan-trace] track new', { name, dateStr, productId, fingerprint });
-      }
-    } else {
-      const orphanData = orphanProductsMap.get(name);
-      orphanData.usedInDays.add(dateStr);
-      if (!orphanData.product_id && productId != null) orphanData.product_id = productId;
-      if (!orphanData.fingerprint && fingerprint) orphanData.fingerprint = fingerprint;
-      if (!orphanData.normalizedName && normalizedName) orphanData.normalizedName = normalizedName;
-    }
-  }
-
-  // Safety: auto-clear _recoveryInProgress after 8s if autoRecoverOnLoad never runs
-  // (e.g. no clientId, error in recovery flow). Prevents permanent suppression of warnings.
-  if (typeof window !== 'undefined') {
-    setTimeout(() => {
-      if (HEYS.orphanProducts && HEYS.orphanProducts._recoveryInProgress === true) {
-        HEYS.orphanProducts._recoveryInProgress = false;
-      }
-    }, 8000);
-  }
-
-  // API для просмотра orphan-продуктов
-  HEYS.orphanProducts = {
-    // Initialize as TRUE at boot — warning is suppressed until first autoRecoverOnLoad finishes.
-    // Otherwise UI shows "1 продукт не найден" briefly between initial render and recovery setAll.
-    // Safety: auto-clear after 8s if recovery never runs (e.g. no clientId yet).
-    _recoveryInProgress: true,
-
-    // Получить список всех orphan-продуктов
-    getAll() {
-      return Array.from(orphanProductsMap.values()).map(o => ({
-        ...o,
-        usedInDays: Array.from(o.usedInDays),
-        daysCount: o.usedInDays.size
-      }));
-    },
-
-    // Количество orphan-продуктов
-    count() {
-      return orphanProductsMap.size;
-    },
-
-    /** Сироты, встречающиеся в записи дня dateStr (YYYY-MM-DD) — для баннера на вкладке дня */
-    countForDate(dateStr) {
-      const ds = String(dateStr || '').trim();
-      if (!ds) return orphanProductsMap.size;
-      let n = 0;
-      for (const o of orphanProductsMap.values()) {
-        if (o && o.usedInDays && typeof o.usedInDays.has === 'function' && o.usedInDays.has(ds)) {
-          n++;
-        }
-      }
-      return n;
-    },
-
-    getAllForDate(dateStr) {
-      const ds = String(dateStr || '').trim();
-      if (!ds) return this.getAll();
-      return Array.from(orphanProductsMap.values())
-        .filter((o) => o && o.usedInDays && typeof o.usedInDays.has === 'function' && o.usedInDays.has(ds))
-        .map((o) => ({
-          ...o,
-          usedInDays: Array.from(o.usedInDays),
-          daysCount: o.usedInDays.size
-        }));
-    },
-
-    // Есть ли orphan-продукты?
-    hasAny() {
-      return orphanProductsMap.size > 0;
-    },
-
-    hasAnyForDate(dateStr) {
-      return this.countForDate(dateStr) > 0;
-    },
-
-    track(item, dateStr) {
-      trackOrphanProduct(item, dateStr);
-    },
-
-    // Очистить (после синхронизации или исправления)
-    clear() {
-      const before = orphanProductsMap.size;
-      orphanProductsMap.clear();
-      if (before > 0 && typeof global.dispatchEvent === 'function') {
-        global.dispatchEvent(new CustomEvent('heys:orphan-updated', {
-          detail: { count: 0, removed: before }
-        }));
-      }
-    },
-
-    // Удалить конкретный по имени (если продукт добавили обратно в базу)
-    remove(productName) {
-      const name = String(productName || '').trim();
-      if (name) {
-        orphanProductsMap.delete(name);
-        // Также пробуем lowercase
-        orphanProductsMap.delete(name.toLowerCase());
-      }
-    },
-
-    // 🪦 F6 (plan 2026-05-24): экспорт resolveProductByItem для renderOrphanAlert.
-    // orphan_alert импортируется отдельным IIFE (heys_day_orphan_alert.js), не
-    // имеет доступа к локальной resolveProductByItem из heys_day_utils.js scope.
-    // Без этой обёртки баннер не мог проверить shared cache на финальной фильтрации.
-    _resolveByItem(item, productsList) {
-      return resolveProductByItem(item, productsList);
-    },
-
-    // Пересчитать orphan-продукты на основе актуальной базы
-    // Вызывается после добавления продукта или удаления item из meal
-    recalculate() {
-      if (shouldLogOrphanTrace()) {
-        const n = global.HEYS?.products?.getAll?.()?.length;
-        console.info('[HEYS.orphan-trace] recalculate start', {
-          mapSize: orphanProductsMap.size,
-          getAllLength: n,
-          hasGetAll: !!global.HEYS?.products?.getAll
-        });
-      }
-      if (!global.HEYS?.products?.getAll) return;
-
-      const products = global.HEYS.products.getAll();
-      const productNamesLower = new Set();
-      const productNamesNormalized = new Set();
-      const productIds = new Set();
-      const productFingerprints = new Set();
-      products.forEach((product) => {
-        if (!product || typeof product !== 'object') return;
-        const productName = String(product.name || '').trim();
-        if (productName) {
-          productNamesLower.add(productName.toLowerCase());
-          productNamesNormalized.add(normalizeProductName(productName));
-        }
-        const pid = product.id ?? product.product_id;
-        if (pid != null) productIds.add(String(pid));
-        if (product.fingerprint) productFingerprints.add(product.fingerprint);
-      });
-
-      const beforeCount = orphanProductsMap.size;
-
-      // Удаляем из orphan те, что теперь есть в базе
-      for (const [name, orphanData] of orphanProductsMap) {
-        const hasName = productNamesLower.has(String(name || '').toLowerCase());
-        const hasNormalizedName = orphanData?.normalizedName && productNamesNormalized.has(orphanData.normalizedName);
-        const hasId = orphanData?.product_id != null && productIds.has(String(orphanData.product_id));
-        const hasFingerprint = orphanData?.fingerprint && productFingerprints.has(orphanData.fingerprint);
-        if (hasName || hasNormalizedName || hasId || hasFingerprint) {
-          orphanProductsMap.delete(name);
-        }
-      }
-
-      const sharedProducts = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
-      if (sharedProducts.length > 0) {
-        for (const [name, orphanData] of [...orphanProductsMap.entries()]) {
-          const synthetic = {
-            name: orphanData?.name || name,
-            product_id: orphanData?.product_id ?? orphanData?.productId,
-            productId: orphanData?.product_id ?? orphanData?.productId,
-            fingerprint: orphanData?.fingerprint,
-          };
-          if (resolveProductByItem(synthetic, sharedProducts)) {
-            orphanProductsMap.delete(name);
-          }
-        }
-      }
-
-      const afterCount = orphanProductsMap.size;
-
-      // Если количество изменилось — диспатчим событие для обновления UI
-      if (beforeCount !== afterCount && typeof global.dispatchEvent === 'function') {
-        global.dispatchEvent(new CustomEvent('heys:orphan-updated', {
-          detail: { count: afterCount, removed: beforeCount - afterCount }
-        }));
-      }
-      if (shouldLogOrphanTrace()) {
-        console.info('[HEYS.orphan-trace] recalculate end', { beforeCount, afterCount: orphanProductsMap.size });
-      }
-    },
-
-    // Показать в консоли красивую таблицу
-    log() {
-      const all = this.getAll();
-      if (all.length === 0) {
-        console.log('✅ Нет orphan-продуктов — все данные берутся из базы');
-        return;
-      }
-      console.warn(`⚠️ Найдено ${all.length} orphan-продуктов (данные из штампа):`);
-      console.table(all.map(o => ({
-        Название: o.name,
-        'Дней использования': o.daysCount,
-        'Есть данные': o.hasInlineData ? '✓' : '✗'
-      })));
-    },
-
-    // ⚡ Пометить orphan-продукты разовыми (вместо восстановления в базу).
-    // Юзер удалил продукт → его данные остаются только в meal-item (stamp), как у oneTime.
-    // Сканирует все dayv2_* ключи, ставит item._oneTime=true на matching items с inline-stamp,
-    // bumpит day.updatedAt, dispatchит heys:day-updated для каждого изменённого дня.
-    // Tombstone не трогаем — юзер явно удалил продукт, мы уважаем интент.
-    // Параметр orphansToConvert (опционально) — список из getAll()/getAllForDate(); если не передан —
-    // берём всех текущих orphans с hasInlineData=true.
-    markAllAsOneTime(orphansToConvert) {
-      const U = HEYS.utils || {};
-      // Используем Store/utils.lsSet — оба триггерят interceptSetItem (cloud-sync queue).
-      // Прямой localStorage.setItem обходил бы compress-aware Store layer.
-      const lsSet = HEYS.store?.set
-        ? (k, v) => HEYS.store.set(k, v)
-        : (U.lsSet || ((k, v) => console.warn('[orphanProducts.markAllAsOneTime] no LS writer:', k)));
-      const list = Array.isArray(orphansToConvert) && orphansToConvert.length > 0
-        ? orphansToConvert
-        : this.getAll().filter((o) => o && o.hasInlineData === true);
-      if (list.length === 0) {
-        return { success: false, convertedItems: 0, affectedDates: [], productsConverted: 0, failed: [] };
-      }
-
-      // Множества для матчинга: по id и по name (lower-cased)
-      const targetIds = new Set();
-      const targetNames = new Set();
-      for (const o of list) {
-        const oid = o?.product_id ?? o?.productId;
-        if (oid != null) targetIds.add(String(oid));
-        const oname = String(o?.name || '').trim().toLowerCase();
-        if (oname) targetNames.add(oname);
-      }
-
-      // Decompress-aware читалка LS
-      const parseStoredValue = (raw) => {
-        if (!raw) return null;
-        if (typeof raw === 'object') return raw;
-        if (typeof raw !== 'string') return null;
-        if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-          try { return HEYS.store.decompress(raw); } catch { return null; }
-        }
-        try { return JSON.parse(raw); } catch { return null; }
-      };
-
-      const dayKeys = [];
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && /_dayv2_\d{4}-\d{2}-\d{2}$/.test(key)) dayKeys.push(key);
-        }
-      } catch (_) { /* noop */ }
-
-      const affectedDates = new Set();
-      const failed = [];
-      let convertedItems = 0;
-
-      for (const key of dayKeys) {
-        try {
-          const raw = localStorage.getItem(key);
-          // Читаем СВЕЖАЙШУЮ версию с диска перед mutate (race-safety vs useDayAutosave flush).
-          const day = parseStoredValue(raw);
-          if (!day || !Array.isArray(day.meals)) continue;
-          let dayChanged = false;
-          for (const meal of day.meals) {
-            if (!meal || !Array.isArray(meal.items)) continue;
-            for (const it of meal.items) {
-              if (!it) continue;
-              if (it._oneTime === true) continue; // уже разовый — пропускаем
-              const itId = it.product_id != null ? String(it.product_id) : null;
-              const itName = String(it.name || '').trim().toLowerCase();
-              const matchById = itId && targetIds.has(itId);
-              const matchByName = itName && targetNames.has(itName);
-              if (!matchById && !matchByName) continue;
-              // Гард: нужны inline-данные, иначе нечего сохранять
-              if (it.kcal100 == null && it.protein100 == null) continue;
-              it._oneTime = true;
-              convertedItems++;
-              dayChanged = true;
-            }
-          }
-          if (dayChanged) {
-            day.updatedAt = Date.now();
-            const dateMatch = key.match(/_dayv2_(\d{4}-\d{2}-\d{2})$/);
-            const dateStr = dateMatch ? dateMatch[1] : null;
-            if (dateStr) affectedDates.add(dateStr);
-            // Через Store.set — он triggerит interceptSetItem для cloud-sync queue.
-            try {
-              lsSet(key, day);
-            } catch (writeErr) {
-              failed.push({ key, dateStr, message: writeErr?.message || String(writeErr) });
-              continue;
-            }
-            // Уведомляем UI о том что день изменился
-            if (dateStr && typeof global.dispatchEvent === 'function') {
-              try {
-                global.dispatchEvent(new CustomEvent('heys:day-updated', {
-                  detail: { date: dateStr, source: 'orphan-to-onetime' }
-                }));
-              } catch (_) { /* noop */ }
-            }
-          }
-        } catch (e) {
-          failed.push({ key, message: e?.message || String(e) });
-        }
-      }
-
-      // Чистим orphan-tracker от конвертированных (на след. boot scanner всё равно их пропустит,
-      // но в текущей сессии хотим чтобы баннер исчез сразу)
-      try {
-        for (const o of list) {
-          if (o?.name) {
-            orphanProductsMap.delete(o.name);
-            orphanProductsMap.delete(String(o.name).toLowerCase());
-          }
-        }
-      } catch (_) { /* noop */ }
-
-      // Триггерим UI re-render orphan-баннера
-      if (typeof global.dispatchEvent === 'function') {
-        try {
-          global.dispatchEvent(new CustomEvent('heys:orphan-updated', {
-            detail: { reason: 'mark-onetime', converted: convertedItems }
-          }));
-        } catch (_) { /* noop */ }
-      }
-
-      return {
-        success: convertedItems > 0,
-        convertedItems,
-        affectedDates: Array.from(affectedDates).sort(),
-        productsConverted: list.length,
-        failed
-      };
-    },
-
-    // Восстановить orphan-продукты в базу из штампов в днях
-    async restore() {
-      const U = HEYS.utils || {};
-      const lsGet = HEYS.store?.get
-        ? (k, d) => HEYS.store.get(k, d)
-        : (U.lsGet || ((k, d) => {
-          try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-        }));
-      const lsSet = HEYS.store?.set
-        ? (k, v) => HEYS.store.set(k, v)
-        : (U.lsSet || ((k, v) => console.warn('[OrphanProducts.restore] Store unavailable; write dropped:', k)));
-      const parseStoredValue = (raw) => {
-        if (!raw) return null;
-        if (typeof raw === 'object') return raw;
-        if (typeof raw !== 'string') return null;
-        if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-          return HEYS.store.decompress(raw);
-        }
-        try { return JSON.parse(raw); } catch { return null; }
-      };
-
-      const products = HEYS.products?.getAll?.() || [];
-      const productsMap = new Map();
-      const productsById = new Map();
-      products.forEach((p) => {
-        if (p && p.name) {
-          const name = String(p.name).trim().toLowerCase();
-          if (name) productsMap.set(name, p);
-          const pid = p.id ?? p.product_id;
-          if (pid != null) productsById.set(String(pid), p);
-        }
-      });
-
-      const restored = [];
-      const keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
-
-      if (shouldLogOrphanTrace()) {
-        console.info('[HEYS.orphan-trace] restore scan', {
-          orphanKeys: Array.from(orphanProductsMap.keys()),
-          dayKeys: keys.length,
-          baseCount: products.length
-        });
-      }
-
-      let checkedItems = 0;
-      let foundWithData = 0;
-      let alreadyInBase = 0;
-
-      for (const key of keys) {
-        try {
-          const storedDay = HEYS.store?.get ? HEYS.store.get(key, null) : null;
-          const day = parseStoredValue(storedDay ?? localStorage.getItem(key));
-          if (!day || !day.meals) continue;
-
-          for (const meal of day.meals) {
-            for (const item of (meal.items || [])) {
-              if (isSyntheticEstimatedItem(item)) continue;
-              // ⚡ Разовые продукты (_oneTime: true) by design не должны воскрешаться в базу —
-              // их данные живут в meal-item (stamp), личная база остаётся чистой по интенту юзера.
-              if (item && item._oneTime === true) continue;
-              checkedItems++;
-              const itemName = String(item.name || '').trim();
-              const itemNameLower = itemName.toLowerCase();
-              if (!itemName) continue;
-
-              const hasData = item.kcal100 != null;
-              const pid = item.product_id ?? item.productId;
-              const inBase = productsMap.has(itemNameLower) || (pid != null && productsById.has(String(pid)));
-
-              if (hasData) foundWithData++;
-              if (inBase) alreadyInBase++;
-
-              // 🛡️ Источник данных для восстановления:
-              //   1) сам item (stamp, kcal100 != null) — основной путь;
-              //   2) _stampResolutionCache (auto-recovery side cache) по pid — fallback
-              //      для item'ов без инлайна нутриентов (quick-add chain и т.п.);
-              //   3) shared catalog по name match — последний fallback.
-              let dataSource = null;
-              let recoverySource = 'orphan_stamp';
-              if (itemName && !inBase) {
-                if (hasData) {
-                  dataSource = item;
-                } else {
-                  try {
-                    const cache = HEYS.orphanProducts && HEYS.orphanProducts._stampResolutionCache;
-                    if (cache instanceof Map && pid != null) {
-                      const cached = cache.get(String(pid));
-                      if (cached && cached.kcal100 != null) {
-                        dataSource = cached;
-                        recoverySource = 'orphan_stamp_cache';
-                      }
+            // Миграция v1 → v2
+            if (Array.isArray(parsed)) {
+                const now = Date.now();
+                const migrated = { entries: {}, version: DELETED_PRODUCTS_VERSION };
+                parsed.forEach(key => {
+                    if (key) {
+                        migrated.entries[String(key).toLowerCase()] = { name: key, deletedAt: now, _migratedFromV1: true };
                     }
-                  } catch (_) { /* noop */ }
-                  if (!dataSource) {
-                    try {
-                      const sharedCache = (HEYS.cloud && typeof HEYS.cloud.getCachedSharedProducts === 'function')
-                        ? HEYS.cloud.getCachedSharedProducts() : [];
-                      if (Array.isArray(sharedCache) && sharedCache.length > 0) {
-                        const sharedMatch = sharedCache.find(p =>
-                          p && String(p.name || '').trim().toLowerCase() === itemNameLower
-                        );
-                        if (sharedMatch && sharedMatch.kcal100 != null) {
-                          dataSource = sharedMatch;
-                          recoverySource = 'orphan_shared';
-                        }
-                      }
-                    } catch (_) { /* noop */ }
-                  }
-                }
-              }
-              if (dataSource) {
-                const restoredProduct = {
-                  id: pid || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
-                  name: itemName,
-                  kcal100: dataSource.kcal100,
-                  protein100: dataSource.protein100 || 0,
-                  fat100: dataSource.fat100 || 0,
-                  carbs100: dataSource.carbs100 || 0,
-                  simple100: dataSource.simple100 || 0,
-                  complex100: dataSource.complex100 || 0,
-                  badFat100: dataSource.badFat100 || 0,
-                  goodFat100: dataSource.goodFat100 || 0,
-                  trans100: dataSource.trans100 || 0,
-                  fiber100: dataSource.fiber100 || 0,
-                  gi: dataSource.gi || 50,
-                  harm: dataSource.harm ?? dataSource.harmScore ?? 0,
-                  restoredAt: Date.now(),
-                  restoredFrom: recoverySource
-                };
-                copySnapshotFields(dataSource, restoredProduct);
-                const enriched = enrichProductMaybe(restoredProduct);
-                productsMap.set(itemNameLower, enriched);
-                if (enriched.id != null) productsById.set(String(enriched.id), enriched);
-                restored.push(enriched);
-              }
-            }
-          }
-        } catch (e) {
-          // Пропускаем битые записи
-        }
-      }
-
-      if (restored.length > 0) {
-        if (products.length === 0) {
-          console.error('[HEYS] ❌ RESTORE BLOCKED: база продуктов пуста (corruption guard).');
-          return { success: false, count: 0, products: [], error: 'BLOCKED_EMPTY_BASE' };
-        }
-
-        // Сохраняем existing products as-is + добавляем только новые restored.
-        // Раньше использовали productsMap.values() — Map keyed by name.toLowerCase()
-        // схлопывал legitimate дубликаты по lowercase-имени → newProducts.length
-        // становился меньше products.length. setAll-shrink-guard auto-tombstone'ил
-        // потерянные продукты и блокировал операцию.
-        // Incident 2026-05-30: у Александры 262 продукта в overlay, из которых 24
-        // дублировались по lowercase-name → восстановление падало BLOCKED.
-        const existingIds = new Set();
-        products.forEach((p) => { if (p?.id != null) existingIds.add(String(p.id)); });
-        const newAdditions = restored.filter((r) => r.id == null || !existingIds.has(String(r.id)));
-        const newProducts = [...products, ...newAdditions];
-        if (newProducts.length < products.length * 0.5) {
-          console.error(`[HEYS] ❌ RESTORE BLOCKED: новое кол-во (${newProducts.length}) < 50% от текущего (${products.length})`);
-          return { success: false, count: 0, products: [], error: 'BLOCKED_DATA_LOSS' };
-        }
-
-        HEYS.products.setAll(newProducts, { source: 'button-restore-orphans' });
-
-        if (HEYS.cloud?.flushPendingQueue) {
-          try {
-            await HEYS.cloud.flushPendingQueue(3000);
-          } catch (e) { /* noop */ }
-        }
-
-        if (HEYS.products?.buildSearchIndex) {
-          HEYS.products.buildSearchIndex();
-        }
-
-        if (typeof this.recalculate === 'function') {
-          try { this.recalculate(); } catch (_e) { /* noop */ }
-        }
-
-        if (typeof window !== 'undefined' && window.dispatchEvent) {
-          window.dispatchEvent(new CustomEvent('heysProductsUpdated', {
-            detail: { products: newProducts, restored: restored.length }
-          }));
-        }
-
-        console.log(`✅ Восстановлено ${restored.length} продуктов в базу`);
-        return { success: true, count: restored.length, products: restored };
-      }
-
-      console.log('ℹ️ Нечего восстанавливать — нет данных в штампах');
-      return { success: false, count: 0, products: [] };
-    },
-
-    /**
-     * 🔄 autoRecoverOnLoad — Автоматическая проверка и восстановление orphan-продуктов при загрузке
-     * Вызывается после загрузки продуктов (sync или localStorage)
-     * 
-     * Логика:
-     * 1. Сканирует все дни (heys_dayv2_*)
-     * 2. Для каждого продукта в приёмах пищи проверяет наличие в локальной базе
-     * 3. Если не найден — пытается восстановить:
-     *    a) Из штампа (kcal100, protein100, etc. в meal item) — приоритет
-     *    b) Из shared_products через HEYS.YandexAPI.rpc — fallback
-     * 4. Добавляет восстановленные продукты в локальную базу
-     * 
-     * @param {Object} options - Опции
-     * @param {boolean} options.verbose - Подробный лог (default: false)
-     * @param {boolean} options.tryShared - Пытаться восстановить из shared_products (default: true)
-     * @param {string} [options.clientId] - Если задан, dayv2-сканирование ограничено
-     *   ключами `heys_${clientId}_dayv2_*` (+ legacy `heys_dayv2_*`). По умолчанию
-     *   берётся из cloud.getCurrentClientId() / utils.getCurrentClientId().
-     *   В кураторской сессии в LS могут лежать dayv2 нескольких клиентов —
-     *   без фильтра recovery собирает stamps из ЧУЖИХ дней.
-     * @returns {Promise<{recovered: number, fromStamp: number, fromShared: number, missing: string[]}>}
-     */
-    async autoRecoverOnLoad(options = {}) {
-      // Mark recovery in progress so UI can skip orphan-warning flicker during the
-      // ~100-500ms window between initial render and recovery setAll.
-      try { HEYS.orphanProducts._recoveryInProgress = true; } catch (_) { /* noop */ }
-      const { verbose = false, tryShared = true } = options;
-      const scopeClientId = options.clientId
-        || (global.HEYS?.cloud?.getCurrentClientId?.())
-        || (global.HEYS?.utils?.getCurrentClientId?.())
-        || null;
-      const U = HEYS.utils || {};
-      const lsGet = U.lsGet || ((k, d) => {
-        try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
-      });
-      const parseStoredValue = (raw) => {
-        if (!raw || typeof raw !== 'string') return null;
-        if (raw.startsWith('¤Z¤') && HEYS.store?.decompress) {
-          return HEYS.store.decompress(raw);
-        }
-        try { return JSON.parse(raw); } catch { return null; }
-      };
-
-      const startTime = Date.now();
-      if (verbose) console.log('[HEYS] 🔍 autoRecoverOnLoad: начинаю проверку продуктов...');
-
-      // 1. Собираем текущие продукты в Map по id и по name (normalized)
-      // 🆕 v4.9.0: Используем HEYS.products.getAll() вместо localStorage напрямую
-      // чтобы не потерять продукты которые уже загружены в память
-      const products = HEYS.products?.getAll?.() || [];
-      const productsById = new Map();
-      const productsByName = new Map();
-      const productsByFingerprint = new Map(); // 🆕 v4.6.0: Индекс по fingerprint
-      const normalizeName = HEYS.models?.normalizeProductName || ((n) => String(n || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
-      products.forEach(p => {
-        if (p && p.id) productsById.set(String(p.id), p);
-        if (p && p.name) productsByName.set(normalizeName(p.name), p);
-        if (p && p.fingerprint) productsByFingerprint.set(p.fingerprint, p); // 🆕
-      });
-
-      if (verbose) console.log(`[HEYS] Локальная база: ${products.length} продуктов`);
-
-      // 2. Собираем все уникальные продукты из всех дней
-      // Yield before heavy dayv2 scan so the React Scheduler message handler returns
-      // immediately — without this, 90+ days × JSON.parse runs synchronously inside
-      // the scheduler's onmessage, causing an 8+ second 'message' handler violation.
-      await new Promise(function(r) { setTimeout(r, 0); });
-
-      // Scope dayv2-keys to current client. Without this, в кураторской сессии
-      // recovery видит `heys_${otherClient}_dayv2_*` и нагребает stamps из чужих
-      // дней → раздувает heys_products чужими продуктами. Legacy `heys_dayv2_*`
-      // (без префикса clientId) трактуем как принадлежащие активному клиенту —
-      // безопасно для PIN/одиночных сессий и совместимо с pre-scope storage.
-      const scopedDayv2Prefix = scopeClientId ? `heys_${scopeClientId}_dayv2_` : null;
-      const allDayv2Keys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
-      const keys = scopedDayv2Prefix
-        ? allDayv2Keys.filter(k => k.startsWith(scopedDayv2Prefix) || k.startsWith('heys_dayv2_'))
-        : allDayv2Keys;
-      const _scannedScopedCount = scopedDayv2Prefix
-        ? keys.filter(k => k.startsWith(scopedDayv2Prefix)).length
-        : 0;
-      const _scannedLegacyCount = keys.filter(k => k.startsWith('heys_dayv2_')).length;
-      const _skippedForeignCount = scopedDayv2Prefix
-        ? Math.max(0, allDayv2Keys.length - keys.length)
-        : 0;
-      const missingProducts = new Map(); // product_id or name => { item, dateStr, hasStamp }
-
-      for (let _ki = 0; _ki < keys.length; _ki++) {
-        // Yield every 15 keys to keep frames responsive during large histories.
-        if (_ki > 0 && _ki % 15 === 0) {
-          await new Promise(function(r) { setTimeout(r, 0); });
-        }
-        const key = keys[_ki];
-        try {
-          const day = parseStoredValue(localStorage.getItem(key));
-          if (!day || !day.meals) continue;
-          const dateStr = key.split('_dayv2_').pop();
-
-          for (const meal of day.meals) {
-            for (const item of (meal.items || [])) {
-              if (isSyntheticEstimatedItem(item)) continue;
-              // ⚡ Разовые продукты (_oneTime: true) пропускаем на boot-recovery —
-              // юзер уже выбрал «оставить в истории, не возвращать в базу».
-              if (item && item._oneTime === true) continue;
-              const productId = item.product_id ? String(item.product_id) : null;
-              const itemName = String(item.name || '').trim();
-              const itemNameNorm = normalizeName(itemName); // 🆕 v4.6.0: Используем normalizeProductName
-              const itemFingerprint = item.fingerprint || null; // 🆕 v4.6.0: Fingerprint из штампа
-
-              // Проверяем есть ли в базе (ID → fingerprint → name)
-              const foundById = productId && productsById.has(productId);
-              const foundByFingerprint = itemFingerprint && productsByFingerprint.has(itemFingerprint); // 🆕
-              const foundByName = itemNameNorm && productsByName.has(itemNameNorm);
-
-              if (!foundById && !foundByFingerprint && !foundByName && itemName) {
-                const lookupKey = itemFingerprint || productId || itemNameNorm; // 🆕 Приоритет: fingerprint → id → name
-                if (!missingProducts.has(lookupKey)) {
-                  missingProducts.set(lookupKey, {
-                    productId,
-                    name: itemName,
-                    fingerprint: itemFingerprint, // 🆕 v4.6.0
-                    hasStamp: item.kcal100 != null,
-                    stampData: item.kcal100 != null ? {
-                      kcal100: item.kcal100,
-                      protein100: item.protein100 || 0,
-                      fat100: item.fat100 || 0,
-                      carbs100: item.carbs100 || 0,
-                      simple100: item.simple100 || 0,
-                      complex100: item.complex100 || 0,
-                      badFat100: item.badFat100 || 0,
-                      goodFat100: item.goodFat100 || 0,
-                      trans100: item.trans100 || 0,
-                      fiber100: item.fiber100 || 0,
-                      gi: item.gi,
-                      harm: item.harm ?? item.harmScore
-                    } : null,
-                    firstSeenDate: dateStr
-                  });
-                }
-              }
-            }
-          }
-        } catch (e) {
-          // Пропускаем битые записи
-        }
-      }
-
-      if (missingProducts.size === 0) {
-        if (verbose) console.log(`[HEYS] ✅ Все продукты найдены в базе (${Date.now() - startTime}ms)`);
-        try { HEYS.orphanProducts._recoveryInProgress = false; } catch (_) { /* noop */ }
-        return { recovered: 0, fromStamp: 0, fromShared: 0, missing: [] };
-      }
-
-      // 🔇 v4.7.1: Лог отключён
-
-      // 3. Пытаемся восстановить
-      const recovered = [];
-      let fromStamp = 0;
-      let fromShared = 0;
-      let skippedDeleted = 0; // 🆕 v4.8.0: Счётчик пропущенных удалённых
-      const stillMissing = [];
-
-      // 🪦 FIX v4.9.1: Строим Set удалённых имён из heys_deleted_ids (Store-based, надёжный)
-      // HEYS.deletedProducts — localStorage-based, может потеряться при overflow/cleanup.
-      // heys_deleted_ids — Store-based, синхронизирован с облаком, НАДЁЖНЫЙ.
-      const _tombstonesRecovery = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
-      const _deletedNamesSet = new Set();
-      const _deletedIdsSet = new Set();
-      if (Array.isArray(_tombstonesRecovery)) {
-        const _normTS = (n) => String(n || '').toLowerCase().trim();
-        _tombstonesRecovery.forEach(t => {
-          if (t.name) _deletedNamesSet.add(_normTS(t.name));
-          if (t.id) _deletedIdsSet.add(String(t.id));
-        });
-      }
-
-      // Хелпер: проверка tombstones (оба источника)
-      const _isProductTombstoned = (name, productId) => {
-        // 1️⃣ heys_deleted_ids (Store — надёжный)
-        const _normCheck = (n) => String(n || '').toLowerCase().trim();
-        if (name && _deletedNamesSet.has(_normCheck(name))) return true;
-        if (productId && _deletedIdsSet.has(String(productId))) return true;
-        // 2️⃣ HEYS.deletedProducts (localStorage — fallback)
-        if (HEYS.deletedProducts?.isDeleted?.(name)) return true;
-        if (HEYS.deletedProducts?.isDeleted?.(productId)) return true;
-        return false;
-      };
-
-      // 3a. Восстановление из штампов
-      for (const [key, data] of missingProducts) {
-        // 🆕 v4.9.1: Проверяем ОБА tombstone-источника (heys_deleted_ids + deletedProducts)
-        if (_isProductTombstoned(data.name, data.productId)) {
-          skippedDeleted++;
-          if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт: "${data.name}" (tombstone)`);
-          continue;
-        }
-
-        if (data.hasStamp && data.stampData) {
-          // 🛟 Gap-filler: не создаём дубликат, если уже есть такой же по имени с заполненными нутриентами.
-          // Это блокирует цикл «orphan-recovery → дублирующая stamp-only запись → dedupe теряет полную версию».
-          const existingByName = productsByName.get(normalizeName(data.name));
-          const hasNutrients = !!existingByName && (
-            Number(existingByName.kcal100) > 0 ||
-            Number(existingByName.iron) > 0 ||
-            Number(existingByName.simple100) > 0
-          );
-          if (hasNutrients) continue;
-
-          const restoredProduct = {
-            id: data.productId || ('restored_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
-            name: data.name,
-            fingerprint: data.fingerprint, // 🆕 v4.6.0: Сохраняем fingerprint
-            ...data.stampData,
-            gi: data.stampData.gi ?? 50,
-            harm: data.stampData.harm ?? 0,
-            _recoveredFrom: 'stamp',
-            _recoveredAt: Date.now()
-          };
-          recovered.push(restoredProduct);
-          productsById.set(String(restoredProduct.id), restoredProduct);
-          productsByName.set(normalizeName(data.name), restoredProduct); // 🆕 v4.6.0: normalizeProductName
-          if (data.fingerprint) productsByFingerprint.set(data.fingerprint, restoredProduct); // 🆕
-          fromStamp++;
-          // 🔇 v4.7.1: Лог отключён
-        } else {
-          stillMissing.push(data);
-        }
-      }
-
-      // 3b. Пытаемся найти в shared_products (если есть YandexAPI)
-      if (tryShared && stillMissing.length > 0 && HEYS.YandexAPI?.rpc) {
-        try {
-          if (verbose) console.log(`[HEYS] 🌐 Пытаюсь найти ${stillMissing.length} продуктов в shared_products...`);
-
-          const { data: sharedProducts, error } = await HEYS.YandexAPI.rpc('get_shared_products', {});
-
-          if (!error && Array.isArray(sharedProducts)) {
-            // 🆕 v4.6.0: Индексация shared по fingerprint, id и name
-            const sharedByFingerprint = new Map();
-            const sharedById = new Map();
-            const sharedByName = new Map();
-            sharedProducts.forEach(p => {
-              if (p && p.fingerprint) sharedByFingerprint.set(p.fingerprint, p);
-              if (p && p.id) sharedById.set(String(p.id), p);
-              if (p && p.name) sharedByName.set(normalizeName(p.name), p);
-            });
-
-            for (const data of stillMissing) {
-              // 🆕 v4.9.1: Проверяем ОБА tombstone-источника (heys_deleted_ids + deletedProducts)
-              if (_isProductTombstoned(data.name, data.productId)) {
-                skippedDeleted++;
-                if (verbose) console.log(`[HEYS] ⏭️ Пропускаю удалённый продукт (shared): "${data.name}" (tombstone)`);
-                continue;
-              }
-
-              // 🆕 v4.6.0: Поиск: fingerprint → id → name (приоритет)
-              let found = null;
-              if (data.fingerprint) found = sharedByFingerprint.get(data.fingerprint);
-              if (!found && data.productId) found = sharedById.get(data.productId);
-              if (!found && data.name) found = sharedByName.get(normalizeName(data.name));
-
-              if (found) {
-                // Клонируем из shared
-                const cloned = HEYS.products?.addFromShared?.(found);
-                if (cloned) {
-                  cloned._recoveredFrom = 'shared';
-                  cloned._recoveredAt = Date.now();
-                  recovered.push(cloned);
-                  fromShared++;
-                  // 🔇 v4.7.1: Лог отключён
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('[HEYS] Не удалось загрузить shared_products:', e?.message || e);
-        }
-      }
-
-      // Compact orphan-recovery summary + detailed breakdown when only 1-3 recovered.
-      try {
-        const stampRec = recovered.filter(p => p._recoveredFrom === 'stamp');
-        const sharedRec = recovered.filter(p => p._recoveredFrom === 'shared');
-        if (stampRec.length > 0 || sharedRec.length > 0 || stillMissing.length > 0) {
-          console.info('[HEYS.products] orphan-recovery', {
-            localCount: products.length,
-            missingTotal: missingProducts.size,
-            stampRecovered: stampRec.length,
-            sharedRecovered: sharedRec.length,
-            stillMissing: stillMissing.length,
-            skippedDeleted,
-            scannedKeys: {
-              total: keys.length,
-              scoped: _scannedScopedCount,
-              legacy: _scannedLegacyCount,
-              skippedForeign: _skippedForeignCount,
-              clientId: scopeClientId ? String(scopeClientId).slice(0, 8) : '(none)',
-            },
-            // Always include first-3 names of each bucket — quickly diagnose "что именно".
-            stampNames: stampRec.slice(0, 8).map(p => p.name),
-            sharedNames: sharedRec.slice(0, 8).map(p => p.name),
-            stillMissingNames: stillMissing.slice(0, 8).map(d => d.name),
-          });
-        }
-      } catch (_) { /* noop */ }
-      // 🔬 Per-product details: log first 5 always, all if ≤10. Useful when we want to see
-      // exactly which products are being recovered from stamp (iron-less) vs shared (iron-rich).
-      try {
-        if (recovered.length > 0) {
-          const sample = recovered.length <= 10 ? recovered : recovered.slice(0, 5);
-          for (const p of sample) {
-            const data = missingProducts.get(p.fingerprint || p.id || normalizeName(p.name)) || null;
-            console.info('[HEYS.products] orphan-recovery detail', {
-              source: p._recoveredFrom,
-              id: p.id,
-              name: p.name,
-              fingerprint: (p.fingerprint || '').slice(0, 12),
-              firstSeenDate: data ? data.firstSeenDate : '(unknown)',
-              kcal100: p.kcal100,
-              hasIron: Number(p.iron) > 0,
-            });
-          }
-          if (recovered.length > 10) {
-            console.info('[HEYS.products] orphan-recovery (showing first 5 of', recovered.length, ')');
-          }
-        }
-      } catch (_) { /* noop */ }
-
-      // 4. Stamp-recovered → overlay (single source of truth).
-      // Если имя совпадает с продуктом из shared catalog → создаём TypeA-ссылку
-      // (через addFromShared), а не TypeB. Это критично — иначе при попадании
-      // продукта в общую базу позже у юзера остаётся «осиротевший» TypeB-дубликат.
-      // Если совпадения нет → создаём TypeB (truly custom).
-      const stampOnly = recovered.filter(p => p._recoveredFrom === 'stamp');
-      if (stampOnly.length > 0 && global.HEYS?.OverlayStore?.upsertRow) {
-        const Overlay = global.HEYS.OverlayStore;
-        const sharedById = global.HEYS.cloud?.getSharedIndex?.();
-        const merged = Overlay.toMergedView ? (Overlay.toMergedView(sharedById) || []) : [];
-        const existingNamesLower = new Set();
-        merged.forEach(r => {
-          if (r && r.name) existingNamesLower.add(normalizeName(r.name));
-        });
-        // Build name → shared product index from full catalog (not just merged view)
-        // — иначе пропускаем продукты из shared, которых ещё нет в overlay этого юзера.
-        const sharedByName = new Map();
-        if (sharedById && typeof sharedById.forEach === 'function') {
-          sharedById.forEach((sharedProd) => {
-            if (sharedProd && sharedProd.name) {
-              sharedByName.set(normalizeName(sharedProd.name), sharedProd);
-            }
-          });
-        }
-        let upsertedTypeA = 0;
-        let upsertedTypeB = 0;
-        for (const p of stampOnly) {
-          if (!p || p.id == null || !p.name) continue;
-          const nameLower = normalizeName(p.name);
-          if (existingNamesLower.has(nameLower)) continue; // skip — уже есть в overlay
-
-          // Проверяем shared catalog: если имя совпадает → TypeA link
-          const sharedMatch = sharedByName.get(nameLower);
-          if (sharedMatch && global.HEYS?.products?.addFromShared) {
-            try {
-              global.HEYS.products.addFromShared(sharedMatch);
-              existingNamesLower.add(nameLower);
-              upsertedTypeA++;
-              continue;
-            } catch (_) { /* fall through to TypeB */ }
-          }
-
-          // Иначе — TypeB (truly custom)
-          const typeBRow = Object.assign({}, p, {
-            _custom: true,
-            in_my_list: true,
-            gi: p.gi != null ? p.gi : 50,
-            harm: p.harm != null ? p.harm : 0,
-          });
-          try {
-            Overlay.upsertRow(typeBRow);
-            existingNamesLower.add(nameLower);
-            upsertedTypeB++;
-          } catch (_) { /* noop */ }
-        }
-        if (upsertedTypeA + upsertedTypeB > 0) {
-          console.info('[HEYS.products] orphan-recovery → overlay:',
-            { typeA: upsertedTypeA, typeB: upsertedTypeB });
-        }
-      }
-      // Shared-recovered (full nutrients) already went through addFromShared → setAll above.
-
-      // 5. Очищаем orphan-трекинг для восстановленных
-      recovered.forEach(p => this.remove(p.name));
-
-      // Собираем имена тех, кого так и не нашли
-      const finalMissing = [];
-      for (const data of stillMissing) {
-        const wasRecovered = recovered.some(p =>
-          p.name.toLowerCase() === data.name.toLowerCase() ||
-          (data.productId && String(p.id) === data.productId)
-        );
-        if (!wasRecovered) {
-          finalMissing.push(data.name);
-          // 🔇 v4.7.1: Лог отключён
-        }
-      }
-
-      const elapsed = Date.now() - startTime;
-
-      // 🆕 v4.8.0: Лог пропущенных удалённых
-      if (skippedDeleted > 0 && verbose) {
-        console.log(`[HEYS] 🚫 Пропущено ${skippedDeleted} удалённых продуктов (в игнор-листе)`);
-      }
-
-      // Диспатчим событие для UI
-      if (recovered.length > 0 && typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('heys:orphans-recovered', {
-          detail: { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing }
-        }));
-      }
-
-      // Clear recovery flag — alert may now show legitimate orphans (those not recovered).
-      try { HEYS.orphanProducts._recoveryInProgress = false; } catch (_) { /* noop */ }
-
-      return { recovered: recovered.length, fromStamp, fromShared, missing: finalMissing };
-    }
-  };
-
-  // === Haptic Feedback ===
-  // Track if user has interacted (required for vibrate API)
-  let userHasInteracted = false;
-  if (typeof window !== 'undefined') {
-    const markInteracted = () => { userHasInteracted = true; };
-    window.addEventListener('click', markInteracted, { once: true, passive: true });
-    window.addEventListener('touchstart', markInteracted, { once: true, passive: true });
-    window.addEventListener('keydown', markInteracted, { once: true, passive: true });
-  }
-
-  function hapticFn(type = 'light') {
-    if (!navigator.vibrate || !userHasInteracted) return;
-    try {
-      switch (type) {
-        case 'light': navigator.vibrate(10); break;
-        case 'medium': navigator.vibrate(20); break;
-        case 'heavy': navigator.vibrate(30); break;
-        case 'success': navigator.vibrate([10, 50, 20]); break;
-        case 'warning': navigator.vibrate([30, 30, 30]); break;
-        case 'error': navigator.vibrate([50, 30, 50, 30, 50]); break;
-        case 'tick': navigator.vibrate(5); break;
-        default: navigator.vibrate(10);
-      }
-    } catch (e) { /* ignore vibrate errors */ }
-  }
-
-  // Двойной API: функция + объект с методами для удобства
-  // HEYS.haptic('medium') ИЛИ HEYS.haptic.medium()
-  const hapticObj = Object.assign(
-    (type) => hapticFn(type),
-    {
-      light: () => hapticFn('light'),
-      medium: () => hapticFn('medium'),
-      heavy: () => hapticFn('heavy'),
-      success: () => hapticFn('success'),
-      warning: () => hapticFn('warning'),
-      error: () => hapticFn('error'),
-      tick: () => hapticFn('tick')
-    }
-  );
-
-  HEYS.haptic = hapticObj;
-
-  // === Date/Time Utilities ===
-  function pad2(n) { return String(n).padStart(2, '0'); }
-
-  // Ночной порог: до 03:00 считается "вчера" (день ещё не закончился)
-  const NIGHT_HOUR_THRESHOLD = 3; // 00:00 - 02:59 → ещё предыдущий день
-
-  // "Эффективная" сегодняшняя дата — до 3:00 возвращает вчера
-  function todayISO() {
-    const d = new Date();
-    const hour = d.getHours();
-    // До 3:00 — это ещё "вчера" (день не закончился)
-    if (hour < NIGHT_HOUR_THRESHOLD) {
-      d.setDate(d.getDate() - 1);
-    }
-    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
-  }
-
-  function fmtDate(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
-  function parseISO(s) { const [y, m, d] = String(s || '').split('-').map(x => parseInt(x, 10)); if (!y || !m || !d) return new Date(); const dt = new Date(y, m - 1, d); dt.setHours(12); return dt; }
-  function uid(p) { return (p || 'id') + Math.random().toString(36).slice(2, 8); }
-
-  // Проверка: время относится к "ночным" часам (00:00-02:59)
-  function isNightTime(timeStr) {
-    if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return false;
-    const [hh] = timeStr.split(':').map(x => parseInt(x, 10));
-    if (isNaN(hh)) return false;
-    return hh >= 0 && hh < NIGHT_HOUR_THRESHOLD;
-  }
-
-  // Возвращает "эффективную" дату для приёма пищи
-  // Если время 00:00-02:59, возвращает предыдущий день
-  function getEffectiveDate(timeStr, calendarDateISO) {
-    if (!calendarDateISO) return calendarDateISO;
-    if (!isNightTime(timeStr)) return calendarDateISO;
-    // Вычитаем 1 день
-    const d = parseISO(calendarDateISO);
-    d.setDate(d.getDate() - 1);
-    return fmtDate(d);
-  }
-
-  // Возвращает "следующий" календарный день
-  function getNextDay(dateISO) {
-    const d = parseISO(dateISO);
-    d.setDate(d.getDate() + 1);
-    return fmtDate(d);
-  }
-
-  // === Storage Utilities ===
-  // ВАЖНО: Используем HEYS.utils.lsGet/lsSet которые работают с clientId namespace
-  function lsGet(k, d) {
-    try {
-      // Приоритет: HEYS.utils (с namespace) → HEYS.store → localStorage fallback
-      if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
-        return HEYS.utils.lsGet(k, d);
-      }
-      if (HEYS.store && typeof HEYS.store.get === 'function') {
-        return HEYS.store.get(k, d);
-      }
-      const v = JSON.parse(localStorage.getItem(k));
-      return v == null ? d : v;
-    } catch (e) { return d; }
-  }
-
-  function lsSet(k, v) {
-    try {
-      // Приоритет: HEYS.utils (с namespace + compress) → HEYS.store (compress) → drop
-      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') return HEYS.utils.lsSet(k, v);
-      if (HEYS.store && typeof HEYS.store.set === 'function') return HEYS.store.set(k, v);
-      // Neither available — should not happen post-boot; drop with warning
-      console.warn('[HEYS.day.lsSet] Store unavailable; write dropped:', k);
-    } catch (e) { }
-  }
-
-  // === Math Utilities ===
-  function clamp(n, a, b) { n = +n || 0; if (n < a) return a; if (n > b) return b; return n; }
-  const r1 = v => Math.round((+v || 0) * 10) / 10; // округление до 1 десятой (для веса)
-  const r0 = v => Math.round(+v || 0); // округление до целого (для калорий)
-  const scale = (v, g) => Math.round(((+v || 0) * (+g || 0) / 100) * 10) / 10;
-
-  // === Model Helpers (delegates to HEYS.models) ===
-  function ensureDay(d, prof) {
-    const M = HEYS.models || {};
-    return (M.ensureDay ? M.ensureDay(d, prof) : (d || {}));
-  }
-
-  function buildProductIndex(ps) {
-    const M = HEYS.models || {};
-    return M.buildProductIndex ? M.buildProductIndex(ps) : { byId: new Map(), byName: new Map(), byFingerprint: new Map() }; // 🆕 v4.6.0
-  }
-
-  function getProductFromItem(it, idx) {
-    const M = HEYS.models || {};
-    return M.getProductFromItem ? M.getProductFromItem(it, idx) : null;
-  }
-
-  function per100(p) {
-    const M = HEYS.models || {};
-    if (!p) return { kcal100: 0, carbs100: 0, prot100: 0, fat100: 0, simple100: 0, complex100: 0, bad100: 0, good100: 0, trans100: 0, fiber100: 0, sodium100: 0 };
-    if (M.computeDerivedProduct) {
-      const d = M.computeDerivedProduct(p);
-      return { kcal100: d.kcal100, carbs100: d.carbs100, prot100: +p.protein100 || 0, fat100: d.fat100, simple100: +p.simple100 || 0, complex100: +p.complex100 || 0, bad100: +p.badFat100 || 0, good100: +p.goodFat100 || 0, trans100: +p.trans100 || 0, fiber100: +p.fiber100 || 0, sodium100: +p.sodium100 || 0 };
-    }
-    const s = +p.simple100 || 0, c = +p.complex100 || 0, pr = +p.protein100 || 0, b = +p.badFat100 || 0, g = +p.goodFat100 || 0, t = +p.trans100 || 0, fib = +p.fiber100 || 0, na = +p.sodium100 || 0;
-    const carbs = +p.carbs100 || (s + c);
-    const fat = +p.fat100 || (b + g + t);
-    const kcal = +p.kcal100 || (4 * (pr + carbs) + 8 * fat);
-    return { kcal100: kcal, carbs100: carbs, prot100: pr, fat100: fat, simple100: s, complex100: c, bad100: b, good100: g, trans100: t, fiber100: fib, sodium100: na };
-  }
-
-  // === Data Loading ===
-
-  // Базовая загрузка приёмов из localStorage (без ночной логики)
-  function loadMealsRaw(ds) {
-    const keys = ['heys_dayv2_' + ds, 'heys_day_' + ds, 'day_' + ds + '_meals', 'meals_' + ds, 'food_' + ds];
-    for (const k of keys) {
-      try {
-        const raw = localStorage.getItem(k);
-        if (!raw) continue;
-        const v = JSON.parse(raw);
-        if (v && Array.isArray(v.meals)) return v.meals;
-        if (Array.isArray(v)) return v;
-      } catch (e) { }
-    }
-    return [];
-  }
-
-  // Загрузка приёмов для даты с учётом ночной логики:
-  // - Берём приёмы текущего дня (кроме ночных 00:00-02:59)
-  // - Добавляем ночные приёмы из следующего календарного дня (они принадлежат этому дню)
-  function loadMealsForDate(ds) {
-    // 1. Загружаем приёмы текущего календарного дня (фильтруем ночные — они ушли в предыдущий день)
-    const currentDayMeals = (loadMealsRaw(ds) || []).filter(m => !isNightTime(m.time));
-
-    // 2. Загружаем ночные приёмы из следующего календарного дня
-    const nextDayISO = getNextDay(ds);
-    const nextDayMeals = (loadMealsRaw(nextDayISO) || []).filter(m => isNightTime(m.time));
-
-    // 3. Объединяем и сортируем по времени
-    const allMeals = [...currentDayMeals, ...nextDayMeals];
-
-    // Сортировка: ночные (00:00-02:59) в конец, остальные по времени
-    allMeals.sort((a, b) => {
-      const aIsNight = isNightTime(a.time);
-      const bIsNight = isNightTime(b.time);
-      if (aIsNight && !bIsNight) return 1; // ночные в конец
-      if (!aIsNight && bIsNight) return -1;
-      // Одинаковый тип — сортируем по времени
-      return (a.time || '').localeCompare(b.time || '');
-    });
-
-    return allMeals;
-  }
-
-  // Lightweight signature for products (ids/names + kcal для инвалидации при синхронизации)
-  // FIX: добавлен kcal100 чтобы пересобрать индекс когда продукт обновился с нулей на реальные данные
-  function productsSignature(ps) {
-    // Ensure ps is an array
-    if (!ps) return '';
-    if (!Array.isArray(ps)) {
-      console.warn('[HEYS] productsSignature: expected array, got', typeof ps);
-      return '';
-    }
-    // Включаем id/name + kcal100 для детектирования обновлений содержимого
-    return ps.map(p => {
-      if (!p) return '';
-      const id = p.id || p.product_id || p.name || '';
-      const kcal = p.kcal100 ?? p.kcal ?? 0;
-      return `${id}:${kcal}`;
-    }).join('|');
-  }
-
-  // Cached popular products (per month + signature + TTL)
-  const POPULAR_CACHE = {}; // key => {ts, list}
-
-  function computePopularProducts(ps, iso) {
-    const sig = productsSignature(ps);
-    const monthKey = (iso || todayISO()).slice(0, 7); // YYYY-MM
-    // Добавляем favorites в ключ кэша чтобы обновлять при изменении избранных
-    const favorites = (window.HEYS && window.HEYS.store && window.HEYS.store.getFavorites)
-      ? window.HEYS.store.getFavorites()
-      : new Set();
-    const favSig = Array.from(favorites).sort().join(',');
-    const key = monthKey + '::' + sig + '::' + favSig;
-    const now = Date.now();
-    const ttl = 1000 * 60 * 10; // 10 минут
-    const cached = POPULAR_CACHE[key];
-    if (cached && (now - cached.ts) < ttl) return cached.list;
-    const idx = buildProductIndex(ps), base = iso ? new Date(iso) : new Date(), cnt = new Map();
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(base); d.setDate(d.getDate() - i);
-      (loadMealsForDate(fmtDate(d)) || []).forEach(m => {
-        ((m && m.items) || []).forEach(it => {
-          const p = getProductFromItem(it, idx);
-          if (!p) return;
-          const k = String(p.id ?? p.product_id ?? p.name);
-          cnt.set(k, (cnt.get(k) || 0) + 1);
-        });
-      });
-    }
-    const arr = [];
-    cnt.forEach((c, k) => {
-      let p = idx.byId.get(String(k)) || idx.byName.get(String(k).trim().toLowerCase());
-      if (p) arr.push({ p, c });
-    });
-    // Сортировка: избранные первые, затем по частоте
-    arr.sort((a, b) => {
-      const aFav = favorites.has(String(a.p.id ?? a.p.product_id ?? a.p.name));
-      const bFav = favorites.has(String(b.p.id ?? b.p.product_id ?? b.p.name));
-      if (aFav && !bFav) return -1;
-      if (!aFav && bFav) return 1;
-      return b.c - a.c;
-    });
-    const list = arr.slice(0, 20).map(x => x.p);
-    POPULAR_CACHE[key] = { ts: now, list };
-    return list;
-  }
-
-  // === Profile & Calculations ===
-  function getProfile() {
-    const p = lsGet('heys_profile', {}) || {};
-    const g = (p.gender || p.sex || 'Мужской');
-    const sex = (String(g).toLowerCase().startsWith('ж') ? 'female' : 'male');
-    return {
-      sex,
-      height: +p.height || 175,
-      age: +p.age || 30,
-      sleepHours: +p.sleepHours || 8,
-      weight: +p.weight || 70,
-      deficitPctTarget: +p.deficitPctTarget || 0,
-      stepsGoal: +p.stepsGoal || 7000,
-      weightGoal: +p.weightGoal || 0,  // Целевой вес для прогноза
-      cycleTrackingEnabled: !!p.cycleTrackingEnabled
-    };
-  }
-
-  // 🔬 TDEE v1.1.0: Делегируем в единый модуль HEYS.TDEE с fallback для legacy
-  function calcBMR(w, prof) {
-    // Fallback: Mifflin-St Jeor (всегда должен быть доступен)
-    const fallback = () => {
-      const h = +prof.height || 175, a = +prof.age || 30, sex = (prof.sex || 'male');
-      return Math.round(10 * (+w || 0) + 6.25 * h - 5 * a + (sex === 'female' ? -161 : 5));
-    };
-
-    // Делегируем в единый модуль, но НИКОГДА не даём ошибке “убить” UI.
-    // В противном случае getActiveDaysForMonth вернёт пустой Map из-за try/catch.
-    try {
-      if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.calcBMR) {
-        const v = HEYS.TDEE.calcBMR({ ...prof, weight: w });
-        const num = +v;
-        if (Number.isFinite(num) && num > 0) return Math.round(num);
-      }
-    } catch (e) {
-      try {
-        if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
-          HEYS.analytics.trackError(e, { where: 'day_utils.calcBMR', hasTDEE: !!HEYS.TDEE });
-        }
-      } catch (_) { }
-    }
-
-    return fallback();
-  }
-
-  // 🔬 TDEE v1.1.0: Делегируем в единый модуль с fallback
-  function kcalPerMin(met, w) {
-    try {
-      if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.kcalPerMin) {
-        const v = HEYS.TDEE.kcalPerMin(met, w);
-        const num = +v;
-        if (Number.isFinite(num)) return num;
-      }
-    } catch (e) {
-      try {
-        if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
-          HEYS.analytics.trackError(e, { where: 'day_utils.kcalPerMin', hasTDEE: !!HEYS.TDEE });
-        }
-      } catch (_) { }
-    }
-    return Math.round((((+met || 0) * (+w || 0) * 0.0175) - 1) * 10) / 10;
-  }
-
-  function stepsKcal(steps, w, sex, len) {
-    try {
-      if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.stepsKcal) {
-        const v = HEYS.TDEE.stepsKcal(steps, w, sex, len);
-        const num = +v;
-        if (Number.isFinite(num)) return num;
-      }
-    } catch (e) {
-      try {
-        if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
-          HEYS.analytics.trackError(e, { where: 'day_utils.stepsKcal', hasTDEE: !!HEYS.TDEE });
-        }
-      } catch (_) { }
-    }
-    const coef = (sex === 'female' ? 0.5 : 0.57);
-    const km = (+steps || 0) * (len || 0.7) / 1000;
-    return Math.round(coef * (+w || 0) * km * 10) / 10;
-  }
-
-  // === Time/Sleep Utilities ===
-  function parseTime(t) {
-    if (!t || typeof t !== 'string' || !t.includes(':')) return null;
-    const [hh, mm] = t.split(':').map(x => parseInt(x, 10));
-    if (isNaN(hh) || isNaN(mm)) return null;
-    // НЕ обрезаем часы до 23 — ночные часы могут быть 24-26
-    return { hh: Math.max(0, hh), mm: clamp(mm, 0, 59) };
-  }
-
-  function sleepHours(a, b) {
-    const s = parseTime(a), e = parseTime(b);
-    if (!s || !e) return 0;
-    let sh = s.hh + s.mm / 60, eh = e.hh + e.mm / 60;
-    let d = eh - sh;
-    if (d < 0) d += 24;
-    return r1(d);
-  }
-
-  function normalizeDaySleepMinutes(value) {
-    const n = Math.round(+value || 0);
-    if (!Number.isFinite(n) || n <= 0) return 0;
-    return clamp(n, 0, 360);
-  }
-
-  function getNightSleepHours(day) {
-    if (!day) return 0;
-    const fromWindow = sleepHours(day.sleepStart, day.sleepEnd);
-    if (fromWindow > 0) return fromWindow;
-
-    const total = +day.sleepHours || 0;
-    const napHours = normalizeDaySleepMinutes(day.daySleepMinutes) / 60;
-    return r1(Math.max(0, total - napHours));
-  }
-
-  function getTotalSleepHours(day) {
-    if (!day) return 0;
-
-    const totalStored = +day.sleepHours || 0;
-    const napHours = normalizeDaySleepMinutes(day.daySleepMinutes) / 60;
-    const nightHours = getNightSleepHours(day);
-
-    if (nightHours > 0 || napHours > 0) {
-      return r1(nightHours + napHours);
-    }
-
-    return r1(Math.max(0, totalStored));
-  }
-
-  // === Meal Type Classification ===
-  // Типы приёмов пищи с иконками и названиями
-  const MEAL_TYPES = {
-    breakfast: { name: 'Завтрак', icon: '🍳', order: 1 },
-    snack1: { name: 'Перекус', icon: '🍎', order: 2 },
-    lunch: { name: 'Обед', icon: '🍲', order: 3 },
-    snack2: { name: 'Перекус', icon: '🥜', order: 4 },
-    dinner: { name: 'Ужин', icon: '🍽️', order: 5 },
-    snack3: { name: 'Перекус', icon: '🧀', order: 6 },
-    night: { name: 'Ночной приём', icon: '🌙', order: 7 }
-  };
-
-  // Пороги для определения "основного приёма" vs "перекуса"
-  const MAIN_MEAL_THRESHOLDS = {
-    minProducts: 3,      // минимум продуктов для основного приёма
-    minGrams: 200,       // минимум граммов для основного приёма
-    minKcal: 300         // минимум калорий для основного приёма
-  };
-
-  /**
-   * Вычисляет тотал по приёму (граммы, продукты, калории)
-   */
-  function getMealStats(meal, pIndex) {
-    if (!meal || !meal.items || !meal.items.length) {
-      return { totalGrams: 0, productCount: 0, totalKcal: 0 };
-    }
-
-    let totalGrams = 0;
-    let totalKcal = 0;
-    const productCount = meal.items.length;
-
-    meal.items.forEach(item => {
-      const g = +item.grams || 0;
-      totalGrams += g;
-
-      // Пытаемся получить калории
-      const p = pIndex ? getProductFromItem(item, pIndex) : null;
-      if (p) {
-        const per = per100(p);
-        totalKcal += (per.kcal100 || 0) * g / 100;
-      }
-    });
-
-    return { totalGrams, productCount, totalKcal: Math.round(totalKcal) };
-  }
-
-  /**
-   * Проверяет, является ли приём "основным" (завтрак/обед/ужин) по размеру
-   */
-  function isMainMeal(mealStats) {
-    const { totalGrams, productCount, totalKcal } = mealStats;
-
-    // Основной приём если: много продуктов ИЛИ (много граммов И больше 1 продукта)
-    if (productCount >= MAIN_MEAL_THRESHOLDS.minProducts) return true;
-    if (totalGrams >= MAIN_MEAL_THRESHOLDS.minGrams && productCount >= 2) return true;
-    if (totalKcal >= MAIN_MEAL_THRESHOLDS.minKcal) return true;
-
-    return false;
-  }
-
-  /**
-   * Преобразует время в минуты от полуночи (с учётом ночных часов)
-   * Ночные часы (00:00-02:59) считаются как 24:00-26:59
-   */
-  function timeToMinutes(timeStr) {
-    const parsed = parseTime(timeStr);
-    if (!parsed) return null;
-
-    let { hh, mm } = parsed;
-    // Ночные часы (00-02) — это "после полуночи" предыдущего дня
-    if (hh < NIGHT_HOUR_THRESHOLD) {
-      hh += 24;
-    }
-    return hh * 60 + mm;
-  }
-
-  /**
-   * Форматирует время приёма для отображения
-   * 24:20 → 00:20 (ночные часы хранятся как 24-26)
-   */
-  function formatMealTime(timeStr) {
-    if (!timeStr) return '';
-    const parsed = parseTime(timeStr);
-    if (!parsed) return timeStr;
-
-    let { hh, mm } = parsed;
-    // Нормализуем ночные часы: 24 → 00, 25 → 01, 26 → 02
-    if (hh >= 24) {
-      hh = hh - 24;
-    }
-    return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
-  }
-
-  // === Hours Order для Wheel Picker ===
-  // Порядок часов: 03, 04, ..., 23, 00, 01, 02
-  // Это позволяет скроллить от вечера к ночи естественно
-  const HOURS_ORDER = (() => {
-    const order = [];
-    for (let h = NIGHT_HOUR_THRESHOLD; h < 24; h++) order.push(h);
-    for (let h = 0; h < NIGHT_HOUR_THRESHOLD; h++) order.push(h);
-    return order;
-  })();
-
-  /**
-   * Конвертация: индекс колеса → реальный час
-   * @param {number} idx - индекс в HOURS_ORDER
-   * @returns {number} реальный час (0-23)
-   */
-  function wheelIndexToHour(idx) {
-    return HOURS_ORDER[idx] ?? idx;
-  }
-
-  /**
-   * Конвертация: реальный час → индекс колеса
-   * Учитывает ночные часы: 24→0, 25→1, 26→2
-   * @param {number} hour - реальный час (0-26)
-   * @returns {number} индекс в HOURS_ORDER
-   */
-  function hourToWheelIndex(hour) {
-    // Нормализуем ночные часы для поиска в колесе
-    const normalizedHour = hour >= 24 ? hour - 24 : hour;
-    const idx = HOURS_ORDER.indexOf(normalizedHour);
-    return idx >= 0 ? idx : 0;
-  }
-
-  /**
-   * Определяет тип приёма пищи на основе:
-   * - Порядкового номера (первый = завтрак)
-   * - Времени (деление дня на слоты)
-   * - Размера приёма (основной vs перекус)
-   * 
-   * @param {number} mealIndex - Индекс приёма в отсортированном списке
-   * @param {Object} meal - Объект приёма {id, time, items, ...}
-   * @param {Array} allMeals - Все приёмы дня (отсортированы по времени)
-   * @param {Object} pIndex - Индекс продуктов для расчёта калорий
-   * @returns {Object} { type: string, name: string, icon: string }
-   */
-  function getMealType(mealIndex, meal, allMeals, pIndex) {
-    // Защита от undefined
-    if (!allMeals || !Array.isArray(allMeals) || allMeals.length === 0) {
-      return { type: 'snack', ...MEAL_TYPES.snack };
-    }
-
-    // Первый приём дня всегда Завтрак
-    if (mealIndex === 0) {
-      return { type: 'breakfast', ...MEAL_TYPES.breakfast };
-    }
-
-    // Получаем время первого приёма (завтрака)
-    const firstMeal = allMeals[0];
-    const breakfastMinutes = timeToMinutes(firstMeal?.time);
-    const currentMinutes = timeToMinutes(meal?.time);
-
-    // Если время не указано, определяем по порядку и размеру
-    if (breakfastMinutes === null || currentMinutes === null) {
-      return fallbackMealType(mealIndex, meal, pIndex);
-    }
-
-    // Конец дня = 03:00 следующего дня = 27:00 в нашей системе
-    const endOfDayMinutes = 27 * 60; // 03:00 + 24 = 27:00
-
-    // Оставшееся время от завтрака до конца дня
-    const remainingMinutes = endOfDayMinutes - breakfastMinutes;
-
-    // Делим на 6 слотов (7 типов минус завтрак = 6)
-    const slotDuration = remainingMinutes / 6;
-
-    // Определяем в какой слот попадает текущий приём
-    const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
-    const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
-
-    // Типы слотов: 0=перекус1, 1=обед, 2=перекус2, 3=ужин, 4=перекус3, 5=ночной
-    const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
-
-    // Получаем статистику приёма
-    const mealStats = getMealStats(meal, pIndex);
-    const isMain = isMainMeal(mealStats);
-
-    // Определяем базовый тип по слоту
-    let baseType = slotTypes[clamp(slotIndex, 0, 5)];
-
-    // Корректируем: если попали в "перекус" слот, но это большой приём — 
-    // проверяем соседние "основные" слоты
-    if (baseType.startsWith('snack') && isMain) {
-      // Ищем ближайший основной слот
-      if (slotIndex <= 1) {
-        baseType = 'lunch';
-      } else if (slotIndex >= 2 && slotIndex <= 3) {
-        baseType = 'dinner';
-      }
-      // Если после ужина большой приём — оставляем как есть (поздний ужин → snack3)
-    }
-
-    // Обратная корректировка: если попали в "основной" слот, но это маленький приём — 
-    // оставляем как основной (обед может быть лёгким)
-
-    // Проверяем не дублируется ли уже этот тип (избегаем 2 обеда)
-    const usedTypes = new Set();
-    for (let i = 0; i < mealIndex; i++) {
-      const prevType = getMealTypeSimple(i, allMeals[i], allMeals, pIndex);
-      usedTypes.add(prevType);
-    }
-
-    // Если обед уже был, а мы пытаемся назвать это обедом — делаем перекусом
-    if (baseType === 'lunch' && usedTypes.has('lunch')) {
-      baseType = 'snack2';
-    }
-    if (baseType === 'dinner' && usedTypes.has('dinner')) {
-      baseType = 'snack3';
-    }
-
-    return { type: baseType, ...MEAL_TYPES[baseType] };
-  }
-
-  /**
-   * Упрощённая версия для проверки дубликатов (без рекурсии)
-   */
-  function getMealTypeSimple(mealIndex, meal, allMeals, pIndex) {
-    if (mealIndex === 0) return 'breakfast';
-
-    const firstMeal = allMeals[0];
-    const breakfastMinutes = timeToMinutes(firstMeal?.time);
-    const currentMinutes = timeToMinutes(meal?.time);
-
-    if (breakfastMinutes === null || currentMinutes === null) {
-      return 'snack1';
-    }
-
-    const endOfDayMinutes = 27 * 60;
-    const remainingMinutes = endOfDayMinutes - breakfastMinutes;
-    const slotDuration = remainingMinutes / 6;
-    const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
-    const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
-
-    const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
-    let baseType = slotTypes[clamp(slotIndex, 0, 5)];
-
-    const mealStats = getMealStats(meal, pIndex);
-    const isMain = isMainMeal(mealStats);
-
-    if (baseType.startsWith('snack') && isMain) {
-      if (slotIndex <= 1) baseType = 'lunch';
-      else if (slotIndex >= 2 && slotIndex <= 3) baseType = 'dinner';
-    }
-
-    return baseType;
-  }
-
-  /**
-   * Fallback определение типа (когда нет времени)
-   */
-  function fallbackMealType(mealIndex, meal, pIndex) {
-    const mealStats = getMealStats(meal, pIndex);
-    const isMain = isMainMeal(mealStats);
-
-    // По порядку: 0=завтрак, 1=перекус/обед, 2=перекус/ужин, ...
-    const fallbackTypes = [
-      'breakfast',
-      isMain ? 'lunch' : 'snack1',
-      isMain ? 'dinner' : 'snack2',
-      'snack3',
-      'night'
-    ];
-
-    const type = fallbackTypes[clamp(mealIndex, 0, fallbackTypes.length - 1)];
-    return { type, ...MEAL_TYPES[type] };
-  }
-
-  // Форматирование даты для отображения
-  // Использует "эффективную" дату (до 3:00 — ещё вчера)
-  function formatDateDisplay(isoDate) {
-    const d = parseISO(isoDate);
-    const effectiveToday = parseISO(todayISO()); // todayISO учитывает ночной порог
-    const effectiveYesterday = new Date(effectiveToday);
-    effectiveYesterday.setDate(effectiveYesterday.getDate() - 1);
-
-    const isToday = d.toDateString() === effectiveToday.toDateString();
-    const isYesterday = d.toDateString() === effectiveYesterday.toDateString();
-
-    const dayName = d.toLocaleDateString('ru-RU', { weekday: 'short' });
-    const dayNum = d.getDate();
-    const month = d.toLocaleDateString('ru-RU', { month: 'short' });
-
-    if (isToday) return { label: 'Сегодня', sub: `${dayNum} ${month}` };
-    if (isYesterday) return { label: 'Вчера', sub: `${dayNum} ${month}` };
-    return { label: `${dayNum} ${month}`, sub: dayName };
-  }
-
-  /**
-   * Предпросмотр типа приёма для модалки создания.
-   * Определяет тип по времени и существующим приёмам (без данных о продуктах).
-   * @param {string} timeStr - время в формате "HH:MM"
-   * @param {Array} existingMeals - массив существующих приёмов дня
-   * @returns {string} - ключ типа (breakfast, lunch, dinner, snack1, snack2, snack3, night)
-   */
-  function getMealTypeForPreview(timeStr, existingMeals) {
-    const meals = existingMeals || [];
-
-    // Если нет приёмов — это будет первый, значит завтрак
-    if (meals.length === 0) {
-      return 'breakfast';
-    }
-
-    // Находим первый приём (завтрак)
-    const sortedMeals = [...meals].sort((a, b) => {
-      const aMin = timeToMinutes(a.time) || 0;
-      const bMin = timeToMinutes(b.time) || 0;
-      return aMin - bMin;
-    });
-
-    const breakfastMinutes = timeToMinutes(sortedMeals[0]?.time);
-    const currentMinutes = timeToMinutes(timeStr);
-
-    if (breakfastMinutes === null || currentMinutes === null) {
-      return 'snack1'; // fallback
-    }
-
-    // Если новый приём раньше первого — он станет завтраком
-    if (currentMinutes < breakfastMinutes) {
-      return 'breakfast';
-    }
-
-    // Конец дня = 03:00 следующего дня = 27:00
-    const endOfDayMinutes = 27 * 60;
-    const remainingMinutes = endOfDayMinutes - breakfastMinutes;
-    const slotDuration = remainingMinutes / 6;
-
-    const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
-    const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
-
-    const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
-    return slotTypes[clamp(slotIndex, 0, 5)];
-  }
-
-  // === Calendar Day Indicators ===
-
-  // perf: reuse parsed day blob when localStorage raw unchanged (getActiveDaysForMonth → many days)
-  const _dayV2RawParseCache = new Map();
-  const _DAY_V2_PARSE_CACHE_MAX = 128;
-  function _trimDayV2ParseCache() {
-    while (_dayV2RawParseCache.size > _DAY_V2_PARSE_CACHE_MAX) {
-      const k = _dayV2RawParseCache.keys().next().value;
-      _dayV2RawParseCache.delete(k);
-    }
-  }
-
-  /**
-   * Получает данные дня: калории и активность для расчёта реального target
-   * @param {string} dateStr - Дата в формате YYYY-MM-DD
-   * @param {Map} productsMap - Map продуктов (id => product)
-   * @param {Object} profile - Профиль пользователя
-   * @returns {{kcal: number, steps: number, householdMin: number, trainings: Array}} Данные дня
-   */
-  function getDayData(dateStr, productsMap, profile) {
-    try {
-      // Пробуем несколько источников clientId (через утилиту для корректного JSON.parse)
-      const U = window.HEYS && window.HEYS.utils;
-      const clientId = U && U.getCurrentClientId ? U.getCurrentClientId() : '';
-
-      const scopedKey = clientId
-        ? 'heys_' + clientId + '_dayv2_' + dateStr
-        : 'heys_dayv2_' + dateStr;
-
-      const logicalDayKey = 'heys_dayv2_' + dateStr;
-      // Читаем через lsGet: тот же путь, что и остальное приложение (scoped + decompress + legacy migrate).
-      let dayData = (U && typeof U.lsGet === 'function') ? U.lsGet(logicalDayKey, null) : null;
-
-      if (!dayData || typeof dayData !== 'object') {
-        const raw = localStorage.getItem(scopedKey);
-        if (!raw) return null;
-
-        dayData = null;
-        const parseHit = _dayV2RawParseCache.get(scopedKey);
-        if (parseHit && parseHit.raw === raw) {
-          dayData = parseHit.dayData;
-        } else {
-          if (raw.startsWith('¤Z¤')) {
-            if (HEYS.store?.decompress) {
-              dayData = HEYS.store.decompress(raw);
-            } else {
-              let str = raw.substring(3);
-              const patterns = {
-                '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-                '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
-              };
-              for (const [code, pattern] of Object.entries(patterns)) {
-                str = str.split(code).join(pattern);
-              }
-              dayData = JSON.parse(str);
-            }
-          } else {
-            dayData = JSON.parse(raw);
-          }
-          if (dayData && typeof dayData === 'object') {
-            _dayV2RawParseCache.set(scopedKey, { raw, dayData });
-            _trimDayV2ParseCache();
-          }
-        }
-
-        if (!dayData || typeof dayData !== 'object') return null;
-      }
-
-      // Считаем калории и макросы из meals
-      let totalKcal = 0, totalProt = 0, totalFat = 0, totalCarbs = 0;
-      (dayData.meals || []).forEach(meal => {
-        (meal.items || []).forEach(item => {
-          const grams = +item.grams || 0;
-          if (grams <= 0) return;
-
-          // Ищем в productsMap по id/fingerprint/названию, затем fallback на inline данные item
-          const itemName = String(item.name || '').trim();
-          const itemNameLower = itemName.toLowerCase();
-          const itemNameNorm = normalizeProductName(itemName);
-          let product = null;
-          if (item.product_id != null && global.HEYS?.products?.getById) {
-            product = global.HEYS.products.getById(item.product_id);
-            // 🪦 Stamp-cache fallback (heys_core_v12.js:5050+) возвращает product с
-            // _recoveredFrom='stamp' — это означает что в реальной базе продукта НЕТ,
-            // он живёт только в meal-stamp. Для orphan-tracking считаем не-resolved
-            // (track() ниже на строке ~2270 регистрирует его в orphanProductsMap →
-            // banner покажет выбор «восстановить» / «сделать разовым»).
-            // Калькуляция нутриентов не страдает: src = product || item ниже всё равно
-            // возьмёт inline-stamp из item (kcal100, protein100, ...).
-            if (product && product._recoveredFrom === 'stamp') {
-              product = null;
-            }
-          }
-          if (!product && itemName) {
-            product = productsMap.get(itemNameLower) || productsMap.get(itemNameNorm) || null;
-          }
-
-          // 🔄 Fallback: если не найден в переданном productsMap, проверяем актуальную базу
-          // Это решает проблему когда продукт только что добавлен но props ещё не обновились
-          if (!product && itemName && global.HEYS?.products?.getAll) {
-            const freshProducts = global.HEYS.products.getAll();
-            const freshProduct = resolveProductByItem(item, freshProducts);
-            if (freshProduct) {
-              product = freshProduct;
-              // Добавляем в productsMap для следующих итераций
-              productsMap.set(itemNameLower, freshProduct);
-              if (itemNameNorm) productsMap.set(itemNameNorm, freshProduct);
-              // Убираем из orphan если был там
-              if (orphanProductsMap.has(itemName)) {
-                orphanProductsMap.delete(itemName);
-              }
-              if (orphanProductsMap.has(itemNameNorm)) {
-                orphanProductsMap.delete(itemNameNorm);
-              }
-              if (orphanProductsMap.has(itemNameLower)) {
-                orphanProductsMap.delete(itemNameLower);
-              }
-            } else if (freshProducts.length > 0) {
-              // DEBUG: Продукт не найден, но база загружена
-              // Проверяем возможные причины
-              const similar = freshProducts.filter(p => {
-                const pName = String(p.name || '').trim().toLowerCase();
-                return pName.includes(itemNameLower.slice(0, 10)) ||
-                  itemNameLower.includes(pName.slice(0, 10));
-              });
-              if (similar.length > 0) {
-                // Throttle: не логируем чаще раза в минуту для каждого продукта
-                const lastLogged = orphanLoggedRecently.get(itemName) || 0;
-                if (Date.now() - lastLogged > 60000) {
-                  // Fuzzy-match info с suggestion — hint для дебага data-quality
-                  // (опечатка в имени продукта), не warning.
-                  console.info(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similar[0].name}"`);
-                  orphanLoggedRecently.set(itemName, Date.now());
-                }
-              }
-            }
-          }
-
-          // 🌐 Общая база: в приёме может быть shared id / fingerprint без локального клона в heys_products
-          if (!product && itemName) {
-            const sharedEarly = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
-            const fromSharedEarly = resolveProductByItem(item, sharedEarly);
-            if (fromSharedEarly) {
-              product = fromSharedEarly;
-              productsMap.set(itemNameLower, fromSharedEarly);
-              if (itemNameNorm) productsMap.set(itemNameNorm, fromSharedEarly);
-              if (orphanProductsMap.has(itemName)) orphanProductsMap.delete(itemName);
-              if (itemNameNorm && orphanProductsMap.has(itemNameNorm)) orphanProductsMap.delete(itemNameNorm);
-              if (orphanProductsMap.has(itemNameLower)) orphanProductsMap.delete(itemNameLower);
-              // 🪦 F8 (plan 2026-05-24): авто-clone shared → personal overlay.
-              // Если резолв через shared прошёл, кладём personal clone в overlay — на
-              // следующий boot getById сработает напрямую, баннер не появится, orphan
-              // tracker не сработает. Закрывает корневую причину дрейфа (день держит
-              // dangling product_id, потому что cloud-merge не клонирует).
-              // Rate-limit: не чаще 1 клона на product_id за boot (Set в module scope).
-              // НЕ клонируем в curator session — там legacy/overlay принадлежит другому
-              // клиенту, addFromShared зальёт чужой клон в нашу базу.
-              try {
-                _scheduleAutoCloneFromShared(fromSharedEarly);
-              } catch (_) { /* noop — auto-clone не должен ронять calc */ }
-            }
-          }
-
-          const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
-
-          // Трекаем orphan-продукты (когда используется штамп вместо базы)
-          // НЕ трекаем если база продуктов пуста или синхронизация не завершена
-          if (!product && itemName && !isSyntheticEstimatedItem(item)) {
-            // Получаем продукты из всех возможных источников
-            let freshProducts = global.HEYS?.products?.getAll?.() || [];
-
-            // Fallback: читаем напрямую из localStorage если HEYS.products пуст
-            if (freshProducts.length === 0) {
-              try {
-                // Пробуем разные варианты ключей
-                const U = global.HEYS?.utils;
-                if (U && U.lsGet) {
-                  freshProducts = U.lsGet('heys_products', []) || [];
-                } else {
-                  // Fallback без clientId-aware функции
-                  const clientId = localStorage.getItem('heys_client_current') || '';
-                  const keys = [
-                    clientId ? `heys_${clientId}_products` : null,
-                    'heys_products'
-                  ].filter(Boolean);
-
-                  for (const key of keys) {
-                    const stored = localStorage.getItem(key);
-                    if (stored) {
-                      const parsed = JSON.parse(stored);
-                      if (Array.isArray(parsed) && parsed.length > 0) {
-                        freshProducts = parsed;
-                        break;
-                      }
-                    }
-                  }
-                }
-              } catch (e) { /* ignore */ }
-            }
-
-            // 🔧 v3.19.0: Получаем также shared products из кэша
-            const sharedProducts = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
-
-            const hasProductsLoaded = productsMap.size > 0 || freshProducts.length > 0 || sharedProducts.length > 0;
-
-            // Дополнительная проверка: ищем продукт напрямую в свежей базе
-            const foundInFresh = resolveProductByItem(item, freshProducts);
-
-            // 🔧 v3.19.0: Также ищем в shared products
-            const foundInShared = resolveProductByItem(item, sharedProducts);
-
-            // 🪦 F7 (plan 2026-05-24): defensive re-check shared cache прямо перед track.
-            // sharedProducts читается выше в скоупе функции, но между этим моментом и
-            // моментом track-decision shared cache мог обновиться (async populate). Если
-            // shared теперь не пустой и резолвит item — НЕ трекаем (защита от race, когда
-            // shared загрузился между двумя render'ами и first track всё равно сработал).
-            let foundInSharedRecheck = foundInShared;
-            if (!foundInSharedRecheck) {
-              const sharedNow = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
-              if (sharedNow.length > 0 && sharedNow !== sharedProducts) {
-                foundInSharedRecheck = resolveProductByItem(item, sharedNow);
-              }
-            }
-
-            // Трекаем только если база загружена И продукт реально не найден в обеих базах
-            if (hasProductsLoaded && !foundInFresh && !foundInSharedRecheck) {
-              if (shouldLogOrphanTrace()) {
-                console.info('[HEYS.orphan-trace] getDayData orphan miss', {
-                  dateStr,
-                  itemName: String(item.name || '').trim(),
-                  productId: item.product_id ?? item.productId ?? null,
-                  fingerprint: item.fingerprint || null,
-                  freshCount: freshProducts.length,
-                  sharedCount: sharedProducts.length,
-                  hasInlineData: item.kcal100 != null
                 });
-              }
-              trackOrphanProduct(item, dateStr);
-            } else if (foundInFresh || foundInSharedRecheck) {
-              const n = String(item.name || '').trim();
-              if (n && orphanProductsMap.has(n)) orphanProductsMap.delete(n);
-              if (itemNameNorm && orphanProductsMap.has(itemNameNorm)) orphanProductsMap.delete(itemNameNorm);
-              if (orphanProductsMap.has(itemNameLower)) orphanProductsMap.delete(itemNameLower);
+                saveDeletedProductsData(migrated);
+                return migrated;
             }
-          }
 
-          if (src.kcal100 != null || src.protein100 != null) {
-            const mult = grams / 100;
-            const prot = (+src.protein100 || 0) * mult;
-            const fat = (+src.fat100 || 0) * mult;
-            const carbs = (+src.carbs100 || (+src.simple100 || 0) + (+src.complex100 || 0)) * mult;
+            if (parsed.version === DELETED_PRODUCTS_VERSION && parsed.entries) {
+                return parsed;
+            }
 
-            // 🔄 v3.9.2: Используем TEF-формулу как в mealTotals (белок 3 ккал/г вместо 4)
-            // TEF-aware: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g
-            const kcalTEF = 3 * prot + 4 * carbs + 9 * fat;
-            totalKcal += kcalTEF;
-            totalProt += prot;
-            totalFat += fat;
-            totalCarbs += carbs;
-          }
-        });
-      });
-
-      const sleepHours = getTotalSleepHours(dayData);
-
-      // Считаем общие минуты тренировок
-      let trainingMinutes = 0;
-      (dayData.trainings || []).forEach(t => {
-        if (t && t.z && Array.isArray(t.z)) {
-          trainingMinutes += t.z.reduce((sum, m) => sum + (+m || 0), 0);
+            return { entries: {}, version: DELETED_PRODUCTS_VERSION };
+        } catch (e) {
+            console.warn('[HEYS] Ошибка загрузки deleted products list:', e);
+            return { entries: {}, version: DELETED_PRODUCTS_VERSION };
         }
-      });
+    }
 
-      // Stale-flag guard: пользователь мог пометить день «дозаполню позже» через
-      // утренний чекин (isIncomplete=true), а потом дозаполнить через обычный
-      // дневник дня — обычный flow сохранения meal'а не сбрасывает флаг. Если
-      // данные фактически есть (kcal>0 + приёмы непустые), флаг считаем
-      // устаревшим, чтобы день вернулся в статистику.
-      const hasRealContent = totalKcal > 0 && Array.isArray(dayData.meals) && dayData.meals.length > 0;
-      const isIncompleteResolved = hasRealContent ? false : !!dayData.isIncomplete;
+    function saveDeletedProductsData(data) {
+        try {
+            localStorage.setItem(DELETED_PRODUCTS_KEY, JSON.stringify(data));
+        } catch (e) {
+            console.warn('[HEYS] Ошибка сохранения deleted products list:', e);
+        }
+    }
 
-      return {
-        kcal: Math.round(totalKcal),
-        savedEatenKcal: +dayData.savedEatenKcal || 0, // 🆕 Сохранённые калории (приоритет над пересчитанными)
-        prot: Math.round(totalProt),
-        fat: Math.round(totalFat),
-        carbs: Math.round(totalCarbs),
-        steps: +dayData.steps || 0,
-        waterMl: +dayData.waterMl || 0, // 🆕 Вода для персонализированных инсайтов
-        householdMin: +dayData.householdMin || 0,
-        trainings: dayData.trainings || [],
-        trainingMinutes,
-        weightMorning: +dayData.weightMorning || 0,
-        deficitPct: dayData.deficitPct, // может быть undefined — тогда из профиля
-        sleepHours,
-        moodAvg: +dayData.moodAvg || 0,
-        dayScore: +dayData.dayScore || 0,
-        cycleDay: dayData.cycleDay || null, // День менструального цикла (1-N или null)
-        isRefeedDay: dayData.isRefeedDay || false, // Загрузочный день
-        refeedReason: dayData.refeedReason || null, // Причина refeed
-        // 🔧 FIX: Сохранённая норма с учётом долга — используется для корректного отображения в sparkline
-        savedDisplayOptimum: +dayData.savedDisplayOptimum || 0,
-        // 🆕 v1.1: Флаги верификации низкокалорийных дней
-        isFastingDay: dayData.isFastingDay || false, // Осознанное голодание — данные корректны
-        isIncomplete: isIncompleteResolved, // Не заполнен — исключить из статистик (с stale-flag guard)
-        meals: dayData.meals || [] // 🆕 v1.1: Для определения пустого дня
-      };
-    } catch (e) {
+    let deletedProductsData = loadDeletedProductsList();
+
+    function normalizeDeletedKey(name) {
+        return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function cleanupExpiredEntries() {
+        const now = Date.now();
+        const ttlMs = DELETED_PRODUCTS_TTL_DAYS * 24 * 60 * 60 * 1000;
+        let removed = 0;
+
+        for (const [key, entry] of Object.entries(deletedProductsData.entries)) {
+            if (entry.deletedAt && (now - entry.deletedAt) > ttlMs) {
+                delete deletedProductsData.entries[key];
+                removed++;
+            }
+        }
+
+        if (removed > 0) {
+            saveDeletedProductsData(deletedProductsData);
+            console.log(`[HEYS] 🧹 Очищено ${removed} устаревших записей из игнор-листа`);
+        }
+        return removed;
+    }
+
+    cleanupExpiredEntries();
+
+    // 🆕 v4.8.0: API для управления игнор-листом удалённых продуктов (v2)
+    HEYS.deletedProducts = {
+        // 🪦 F10 (plan 2026-05-24): перечитать blocklist из LS — используется multi-tab
+        // storage event handler, чтобы синхронизировать удаление сделанное в другом табе.
+        _reloadFromStorage() {
+            try {
+                deletedProductsData = loadDeletedProductsList();
+            } catch (e) {
+                console.warn('[HEYS] deletedProducts._reloadFromStorage failed:', e?.message || e);
+            }
+        },
+        add(name, id, fingerprint, reason) {
+            if (!name) return;
+            const key = normalizeDeletedKey(name);
+            const now = Date.now();
+
+            deletedProductsData.entries[key] = { name, id: id || null, fingerprint: fingerprint || null, deletedAt: now, ...(reason ? { reason } : {}) };
+            if (id) deletedProductsData.entries[String(id)] = { name, id, fingerprint: fingerprint || null, deletedAt: now, _isIdKey: true, ...(reason ? { reason } : {}) };
+            if (fingerprint) deletedProductsData.entries[String(fingerprint)] = { name, id: id || null, fingerprint, deletedAt: now, _isFingerprintKey: true, ...(reason ? { reason } : {}) };
+
+            saveDeletedProductsData(deletedProductsData);
+            console.log(`[HEYS] 🚫 Продукт добавлен в игнор-лист: "${name}"${reason ? ` reason=${reason}` : ''}`);
+        },
+        isDeleted(nameOrId) {
+            if (!nameOrId) return false;
+            const key = normalizeDeletedKey(nameOrId);
+            return !!deletedProductsData.entries[key] || !!deletedProductsData.entries[String(nameOrId)];
+        },
+        isProductDeleted(product) {
+            if (!product) return false;
+            if (product.name && this.isDeleted(product.name)) return true;
+            if (product.id && this.isDeleted(product.id)) return true;
+            if (product.product_id && this.isDeleted(product.product_id)) return true;
+            if (product.fingerprint && this.isDeleted(product.fingerprint)) return true;
+            return false;
+        },
+        remove(name, id, fingerprint) {
+            if (!name) return;
+            const key = normalizeDeletedKey(name);
+            delete deletedProductsData.entries[key];
+            if (id) delete deletedProductsData.entries[String(id)];
+            if (fingerprint) delete deletedProductsData.entries[String(fingerprint)];
+            saveDeletedProductsData(deletedProductsData);
+            console.info(`[HEYS] ✅ Продукт восстановлен из игнор-листа: "${name}"`);
+            // 🪦 FIX v5.0.2: Также очищаем Store tombstone (heys_deleted_ids) при явном восстановлении.
+            try {
+                const _storeTombstones = window.HEYS?.store?.get?.('heys_deleted_ids') || [];
+                if (Array.isArray(_storeTombstones) && _storeTombstones.length > 0) {
+                    const normName = (n) => String(n || '').toLowerCase().trim();
+                    const nameNorm = normName(name);
+                    const before = _storeTombstones.length;
+                    const cleaned = _storeTombstones.filter(t => {
+                        if (id && t.id === id) return false;
+                        if (nameNorm && normName(t.name) === nameNorm) return false;
+                        return true;
+                    });
+                    if (cleaned.length < before) {
+                        window.HEYS.store.set('heys_deleted_ids', cleaned);
+                        console.info(`[HEYS] 🪦 Store tombstone очищен при восстановлении: "${name}" (${before}→${cleaned.length})`);
+                    }
+                }
+            } catch (e) {
+                console.warn('[HEYS] ⚠️ Ошибка очистки Store tombstone:', e?.message);
+            }
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('heys:deleted-products-changed', { detail: { action: 'remove', name, id, fingerprint } }));
+            }
+        },
+        getAll() {
+            const unique = new Map();
+            for (const [key, entry] of Object.entries(deletedProductsData.entries)) {
+                if (entry._isIdKey || entry._isFingerprintKey) continue;
+                unique.set(normalizeDeletedKey(entry.name), entry);
+            }
+            return Array.from(unique.values());
+        },
+        getEntry(nameOrId) {
+            if (!nameOrId) return null;
+            const key = normalizeDeletedKey(nameOrId);
+            return deletedProductsData.entries[key] || deletedProductsData.entries[String(nameOrId)] || null;
+        },
+        count() { return this.getAll().length; },
+        clear() {
+            const count = this.count();
+            deletedProductsData = { entries: {}, version: DELETED_PRODUCTS_VERSION };
+            saveDeletedProductsData(deletedProductsData);
+            console.info(`[HEYS] Игнор-лист удалённых продуктов очищен (было ${count})`);
+            // 🪦 FIX v5.0.2: При полной очистке тоже сбрасываем Store tombstones
+            try {
+                if (window.HEYS?.store?.set) {
+                    window.HEYS.store.set('heys_deleted_ids', []);
+                    console.info('[HEYS] 🪦 Store tombstones (heys_deleted_ids) полностью очищены');
+                }
+            } catch (e) {
+                console.warn('[HEYS] ⚠️ Ошибка очистки heys_deleted_ids:', e?.message);
+            }
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('heys:deleted-products-changed', { detail: { action: 'clear', count } }));
+            }
+        },
+        cleanup() { return cleanupExpiredEntries(); },
+        log() {
+            const all = this.getAll();
+            if (all.length === 0) {
+                console.log('✅ Игнор-лист удалённых продуктов пуст');
+                return;
+            }
+            console.log(`🚫 Игнор-лист удалённых продуктов (${all.length}):`);
+            const now = Date.now();
+            all.forEach((entry, i) => {
+                const daysAgo = Math.floor((now - entry.deletedAt) / (24 * 60 * 60 * 1000));
+                console.log(`  ${i + 1}. "${entry.name}" — удалён ${daysAgo}д назад`);
+            });
+        },
+        exportForSync() {
+            return { entries: deletedProductsData.entries, version: DELETED_PRODUCTS_VERSION, exportedAt: Date.now() };
+        },
+        importFromSync(cloudData) {
+            if (!cloudData || !cloudData.entries) return 0;
+            let imported = 0;
+            for (const [key, entry] of Object.entries(cloudData.entries)) {
+                const local = deletedProductsData.entries[key];
+                if (!local || (entry.deletedAt > (local.deletedAt || 0))) {
+                    deletedProductsData.entries[key] = entry;
+                    imported++;
+                }
+            }
+            if (imported > 0) {
+                saveDeletedProductsData(deletedProductsData);
+                console.log(`[HEYS] ☁️ Импортировано ${imported} записей игнор-листа из облака`);
+            }
+            return imported;
+        },
+        TTL_DAYS: DELETED_PRODUCTS_TTL_DAYS,
+        VERSION: DELETED_PRODUCTS_VERSION
+    };
+
+    // === Orphan Products Tracking ===
+    // Карта сирот и HEYS.orphanProducts задаются в heys_day_utils.js (загружается следом в boot-calc).
+    // Здесь только хелперы для getDayData в этом файле — пишем в тот же singleton через .track / .remove.
+    const orphanLoggedRecently = new Map(); // name => timestamp (throttle логов)
+    const normalizeProductName = HEYS.models?.normalizeProductName
+      || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+    const shouldLogOrphanDebug = () => {
+      try {
+        return !!(
+          HEYS?.debug?.orphans === true ||
+          global?.localStorage?.getItem('heys_debug_orphans') === 'true'
+        );
+      } catch (_) {
+        return false;
+      }
+    };
+
+    // PERF (2026-05-27 v2): O(N×M) → O(1) lookup через Map index с WeakMap multi-list cache.
+    // ИСТОРИЯ: v1 кэшировал только один последний productsList (identity ===). Chrome Perf
+    // trace после v1 deploy показал что resolveProductByItem self time ВЫРОС 603→1048ms —
+    // оказалось call sites чередуют 3 разных list (freshProducts, sharedEarly, sharedProducts)
+    // и cache тhrash'ился на каждом switch, rebuild Map'ов был хуже оригинала.
+    // v2: WeakMap<list, index> хранит indexes для ВСЕХ lists одновременно, GC автоматически
+    // чистит когда list релизится. Length stored в cache entry для detection in-place mutations.
+    const _productsIndexCache = new WeakMap();
+    function _getProductsIndex(productsList) {
+      const cached = _productsIndexCache.get(productsList);
+      if (cached && cached.length === productsList.length) {
+        return cached;
+      }
+      const byId = new Map();
+      const byFingerprint = new Map();
+      const byNormName = new Map();
+      const byLowerName = new Map();
+      for (let i = 0; i < productsList.length; i++) {
+        const p = productsList[i];
+        if (!p || typeof p !== 'object') continue;
+        const id = p.id ?? p.product_id;
+        if (id != null) byId.set(String(id), p);
+        if (p.fingerprint) byFingerprint.set(p.fingerprint, p);
+        const name = String(p.name || '').trim();
+        if (name) {
+          const lower = name.toLowerCase();
+          if (!byLowerName.has(lower)) byLowerName.set(lower, p); // first wins при дубликатах
+          const norm = normalizeProductName(name);
+          if (!byNormName.has(norm)) byNormName.set(norm, p);
+        }
+      }
+      const index = { byId, byFingerprint, byNormName, byLowerName, length: productsList.length, builtAt: Date.now() };
+      _productsIndexCache.set(productsList, index);
+      return index;
+    }
+
+    function resolveProductByItem(item, productsList) {
+      if (!item) return null;
+      const list = Array.isArray(productsList) ? productsList : [];
+      if (!list.length) return null;
+
+      const idx = _getProductsIndex(list);
+
+      // Priority order совпадает с оригинальной функцией: id → fingerprint → name (lower → norm)
+      const productId = item.product_id ?? item.productId;
+      if (productId != null) {
+        const p = idx.byId.get(String(productId));
+        if (p) return p;
+      }
+
+      const itemFingerprint = item.fingerprint || null;
+      if (itemFingerprint) {
+        const p = idx.byFingerprint.get(itemFingerprint);
+        if (p) return p;
+      }
+
+      const itemName = String(item.name || '').trim();
+      if (itemName) {
+        const lower = itemName.toLowerCase();
+        let p = idx.byLowerName.get(lower);
+        if (p) return p;
+        const norm = normalizeProductName(itemName);
+        p = idx.byNormName.get(norm);
+        if (p) return p;
+      }
+
       return null;
     }
-  }
 
-  /**
-   * Рассчитать оптимум для конкретного дня
-   * @param {Object} dayData - данные дня
-   * @param {Object} profile - профиль пользователя
-   * @param {Object} options - { includeNDTE?: boolean }
-   * @returns {{ optimum: number, baseOptimum: number|null, deficitPct: number, tdee: number }}
-   */
-  function getOptimumForDay(dayData, profile, options = {}) {
-    const day = dayData || {};
-    const prof = profile || getProfile() || {};
-    const savedDisplayOptimum = +day.savedDisplayOptimum || 0;
-    const dayDeficit = (day.deficitPct !== '' && day.deficitPct != null) ? +day.deficitPct : (prof.deficitPctTarget || 0);
-
-    if (savedDisplayOptimum > 0) {
-      return {
-        optimum: savedDisplayOptimum,
-        baseOptimum: null,
-        deficitPct: dayDeficit,
-        tdee: 0
+    // Diagnostics для проверки эффекта в HEYS.perf.productsIndexStats()
+    if (typeof window !== 'undefined') {
+      window.HEYS = window.HEYS || {};
+      window.HEYS.perf = window.HEYS.perf || {};
+      window.HEYS.perf.productsIndexStats = function () {
+        // WeakMap не имеет .size / iterate API — stats нельзя enumerate.
+        // Diagnostic шлёт "isWeakMap: true" чтобы пользователь знал что v2 deployed.
+        const stats = { type: 'WeakMap (v2)', note: 'размер не enumerable; вместо этого проверь Chrome Perf trace resolveProductByItem self time' };
+        console.info('[HEYS.perf] productsIndex', stats);
+        return stats;
       };
     }
 
-    if (global.HEYS?.TDEE?.calculate) {
-      const tdeeResult = global.HEYS.TDEE.calculate(day, prof, { lsGet, includeNDTE: options.includeNDTE }) || {};
-      const optimum = tdeeResult.optimum || 0;
-      const baseExpenditure = tdeeResult.baseExpenditure || 0;
-      const deficitPct = (tdeeResult.deficitPct != null) ? tdeeResult.deficitPct : dayDeficit;
-      const baseOptimum = baseExpenditure
-        ? Math.round(baseExpenditure * (1 + deficitPct / 100))
-        : (optimum || 0);
-      return {
-        optimum,
-        baseOptimum,
-        deficitPct,
-        tdee: tdeeResult.tdee || 0
-      };
+    function isSyntheticEstimatedItem(item) {
+      if (!item || typeof item !== 'object') return false;
+      const productId = String(item.product_id ?? item.productId ?? '');
+      const itemId = String(item.id ?? '');
+      const estimatedSource = String(item.estimatedSource ?? '');
+      return !!(
+        item.isEstimated ||
+        item.virtualProduct ||
+        item.skipProductRestore ||
+        item.skipOrphanTracking ||
+        estimatedSource === 'morning-checkin' ||
+        productId.startsWith('estimated_') ||
+        productId.startsWith('estimated_quickfill_') ||
+        itemId.startsWith('estimated_')
+      );
     }
 
-    if (!prof.weight || !prof.height || !prof.age) {
-      return {
-        optimum: 2000,
-        baseOptimum: 2000,
-        deficitPct: dayDeficit,
-        tdee: 0
-      };
-    }
-
-    const bmr = calcBMR(prof);
-    const activityMultipliers = {
-      sedentary: 1.2,
-      light: 1.375,
-      moderate: 1.55,
-      active: 1.725,
-      very_active: 1.9
-    };
-    const multiplier = activityMultipliers[prof.activityLevel] || 1.55;
-    const baseExpenditure = Math.round(bmr * multiplier);
-    const optimum = Math.round(baseExpenditure * (1 + dayDeficit / 100));
-
-    return {
-      optimum,
-      baseOptimum: baseExpenditure,
-      deficitPct: dayDeficit,
-      tdee: baseExpenditure
-    };
-  }
-
-  /**
-   * Рассчитать оптимумы для набора дат
-   * @param {string[]} dateStrs
-   * @param {Object} options - { profile?: Object, includeNDTE?: boolean, daysByDate?: Map }
-   * @returns {Map<string, { optimum: number, baseOptimum: number|null, deficitPct: number, tdee: number }>}
-   */
-  function getOptimumForDays(dateStrs, options = {}) {
-    const result = new Map();
-    const prof = options.profile || getProfile() || {};
-    const daysByDate = options.daysByDate || new Map();
-
-    (dateStrs || []).forEach((dateStr) => {
-      const dayData = daysByDate.get(dateStr) || loadDay(dateStr);
-      result.set(dateStr, getOptimumForDay(dayData, prof, options));
-    });
-
-    return result;
-  }
-
-  /**
-   * Вычисляет калории за день напрямую из localStorage (legacy wrapper)
-   */
-  function getDayCalories(dateStr, productsMap) {
-    const data = getDayData(dateStr, productsMap, {});
-    return data ? data.kcal : 0;
-  }
-
-  /**
-   * Получает Map продуктов для вычисления калорий
-   * @returns {Map} productsMap (name => product)
-   */
-  function getProductsMap() {
-    const productsMap = new Map();
-    try {
-      // Используем HEYS.store.get который знает правильный ключ с clientId
-      let products = [];
-      if (window.HEYS && window.HEYS.store && typeof window.HEYS.store.get === 'function') {
-        products = window.HEYS.store.get('heys_products', []);
-      } else {
-        // Fallback: пробуем напрямую из localStorage
-        const clientId = (window.HEYS && window.HEYS.currentClientId) || '';
-        const productsKey = clientId
-          ? 'heys_' + clientId + '_products'
-          : 'heys_products';
-        const productsRaw = localStorage.getItem(productsKey);
-
-        if (productsRaw) {
-          if (productsRaw.startsWith('¤Z¤')) {
-            let str = productsRaw.substring(3);
-            const patterns = {
-              '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
-              '¤c¤': '"carbs100"', '¤f¤': '"fat100"', '¤s¤': '"simple100"',
-              '¤x¤': '"complex100"', '¤b¤': '"badFat100"', '¤g¤': '"goodFat100"',
-              '¤t¤': '"trans100"', '¤i¤': '"fiber100"', '¤G¤': '"gi"', '¤h¤': '"harmScore"'
-            };
-            for (const [code, pattern] of Object.entries(patterns)) {
-              str = str.split(code).join(pattern);
-            }
-            products = JSON.parse(str);
-          } else {
-            products = JSON.parse(productsRaw);
-          }
-        }
-      }
-      // Если products — объект с полем products, извлекаем массив
-      if (products && !Array.isArray(products) && Array.isArray(products.products)) {
-        products = products.products;
-      }
-      // Финальная проверка что это массив
-      if (!Array.isArray(products)) {
-        products = [];
-      }
-      products.forEach(p => {
-        if (p && p.name) {
-          const name = String(p.name).trim();
-          if (name) productsMap.set(name, p);
-        }
-      });
-    } catch (e) {
-      // Тихий fallback — productsMap не критичен
-    }
-    return productsMap;
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // 🚀 LAZY-LOADING DAYS — Оптимизированная загрузка дней
-  // ═══════════════════════════════════════════════════════════════════
-
-  // Кэш загруженных дней (для предотвращения повторных чтений)
-  const DAYS_CACHE = new Map(); // dateStr => { data, timestamp }
-  const DAYS_CACHE_TTL = 5 * 60 * 1000; // 5 минут TTL
-  const TDEE_CACHE = new Map(); // key => { data, timestamp }
-  const TDEE_CACHE_TTL = 5 * 60 * 1000; // 5 минут TTL
-  let TDEE_CACHE_HITS = 0;
-  let TDEE_CACHE_MISSES = 0;
-
-  /**
-   * Lazy-загрузка дней — загружает только последние N дней
-   * Оптимизирует холодный старт приложения
-   * 
-   * @param {number} daysBack - Сколько дней назад загружать (default: 30)
-   * @param {Object} options - Опции
-   * @param {boolean} options.forceRefresh - Игнорировать кэш
-   * @param {Function} options.onProgress - Callback прогресса (loaded, total)
-   * @returns {Map<string, Object>} Map дат с данными дней
-   */
-  function loadRecentDays(daysBack = 30, options = {}) {
-    const { forceRefresh = false, onProgress } = options;
-    const result = new Map();
-    const now = Date.now();
-    const today = new Date();
-
-    for (let i = 0; i < daysBack; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateStr = fmtDate(d);
-
-      // Проверяем кэш
-      if (!forceRefresh && DAYS_CACHE.has(dateStr)) {
-        const cached = DAYS_CACHE.get(dateStr);
-        if (now - cached.timestamp < DAYS_CACHE_TTL) {
-          result.set(dateStr, cached.data);
-          if (onProgress) onProgress(i + 1, daysBack);
-          continue;
-        }
-      }
-
-      // Загружаем день
-      const dayData = lsGet('heys_dayv2_' + dateStr, null);
-      if (dayData && typeof dayData === 'object') {
-        result.set(dateStr, dayData);
-        DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
-      }
-
-      if (onProgress) onProgress(i + 1, daysBack);
-    }
-
-    return result;
-  }
-
-  /**
-   * Lazy-загрузка одного дня с кэшированием
-   * @param {string} dateStr - Дата в формате YYYY-MM-DD
-   * @param {boolean} forceRefresh - Игнорировать кэш
-   * @returns {Object|null} Данные дня или null
-   */
-  function loadDay(dateStr, forceRefresh = false) {
-    const now = Date.now();
-
-    // Проверяем кэш
-    if (!forceRefresh && DAYS_CACHE.has(dateStr)) {
-      const cached = DAYS_CACHE.get(dateStr);
-      if (now - cached.timestamp < DAYS_CACHE_TTL) {
-        return cached.data;
-      }
-    }
-
-    // Загружаем день
-    const dayData = lsGet('heys_dayv2_' + dateStr, null);
-    if (dayData && typeof dayData === 'object') {
-      DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
-      return dayData;
-    }
-
-    return null;
-  }
-
-  /**
-   * Инвалидирует кэш дня (вызывать после сохранения)
-   * @param {string} dateStr - Дата в формате YYYY-MM-DD
-   */
-  function invalidateDayCache(dateStr) {
-    DAYS_CACHE.delete(dateStr);
-    if (!dateStr) return;
-    const prefix = dateStr + '|';
-    Array.from(TDEE_CACHE.keys()).forEach((key) => {
-      if (key.startsWith(prefix)) TDEE_CACHE.delete(key);
-    });
-  }
-
-  /**
-   * Очищает весь кэш дней
-   */
-  function clearDaysCache() {
-    DAYS_CACHE.clear();
-    TDEE_CACHE.clear();
-    TDEE_CACHE_HITS = 0;
-    TDEE_CACHE_MISSES = 0;
-  }
-
-  /**
-   * Получить статистику кэша
-   * @returns {{size: number, hitRate: number}}
-   */
-  function getDaysCacheStats() {
-    let validCount = 0;
-    const now = Date.now();
-
-    DAYS_CACHE.forEach((cached) => {
-      if (now - cached.timestamp < DAYS_CACHE_TTL) {
-        validCount++;
-      }
-    });
-
-    return {
-      size: DAYS_CACHE.size,
-      validEntries: validCount,
-      expiredEntries: DAYS_CACHE.size - validCount
-    };
-  }
-
-  /**
-   * Получить статистику TDEE-кэша
-   * @returns {{size: number, validEntries: number, expiredEntries: number, hits: number, misses: number, hitRate: number}}
-   */
-  function getTdeeCacheStats() {
-    let validCount = 0;
-    const now = Date.now();
-
-    TDEE_CACHE.forEach((cached) => {
-      if (now - cached.timestamp < TDEE_CACHE_TTL) {
-        validCount++;
-      }
-    });
-
-    const total = TDEE_CACHE_HITS + TDEE_CACHE_MISSES;
-    const hitRate = total > 0 ? Math.round((TDEE_CACHE_HITS / total) * 1000) / 10 : 0;
-
-    return {
-      size: TDEE_CACHE.size,
-      validEntries: validCount,
-      expiredEntries: TDEE_CACHE.size - validCount,
-      hits: TDEE_CACHE_HITS,
-      misses: TDEE_CACHE_MISSES,
-      hitRate
-    };
-  }
-
-  /**
-   * Получить TDEE/optimum для дня с кэшированием
-   * @param {string} dateStr
-   * @param {Object} profile
-   * @param {Object} options - { includeNDTE?: boolean, dayData?: Object }
-   * @returns {{ tdee: number, optimum: number, baseExpenditure: number|null, deficitPct: number }}
-   */
-  function getDayTdee(dateStr, profile, options = {}) {
-    if (!dateStr) {
-      return { tdee: 0, optimum: 0, baseExpenditure: null, deficitPct: (profile?.deficitPctTarget || 0) };
-    }
-
-    const includeNDTE = !!options.includeNDTE;
-    const productsSig = options.products ? productsSignature(options.products) : (options.pIndex ? 'pindex' : 'nopindex');
-    const cacheKey = dateStr + '|' + (includeNDTE ? '1' : '0') + '|' + productsSig;
-    const now = Date.now();
-
-    if (TDEE_CACHE.has(cacheKey)) {
-      const cached = TDEE_CACHE.get(cacheKey);
-      if (now - cached.timestamp < TDEE_CACHE_TTL) {
-        TDEE_CACHE_HITS += 1;
-        return cached.data;
-      }
-    }
-
-    TDEE_CACHE_MISSES += 1;
-
-    const prof = profile || getProfile() || {};
-    const dayDataRaw = options.dayData || loadDay(dateStr);
-    const dayData = dayDataRaw ? { ...dayDataRaw, date: dayDataRaw.date || dateStr } : dayDataRaw;
-    const resolvedPIndex = options.pIndex || (options.products ? buildProductIndex(options.products) : null);
-
-    let result = null;
-    if (dayData && global.HEYS?.TDEE?.calculate) {
-      const tdeeResult = global.HEYS.TDEE.calculate(dayData, prof, { lsGet, includeNDTE, pIndex: resolvedPIndex }) || {};
-      result = {
-        tdee: tdeeResult.tdee || 0,
-        optimum: tdeeResult.optimum || 0,
-        baseExpenditure: tdeeResult.baseExpenditure || null,
-        deficitPct: (tdeeResult.deficitPct != null) ? tdeeResult.deficitPct : (prof.deficitPctTarget || 0)
-      };
-    } else {
-      const optInfo = getOptimumForDay(dayData, prof, { includeNDTE });
-      result = {
-        tdee: optInfo.tdee || optInfo.baseOptimum || optInfo.optimum || 0,
-        optimum: optInfo.optimum || 0,
-        baseExpenditure: optInfo.baseOptimum || null,
-        deficitPct: optInfo.deficitPct || (prof.deficitPctTarget || 0)
-      };
-    }
-
-    TDEE_CACHE.set(cacheKey, { data: result, timestamp: now });
-    return result;
-  }
-
-  /**
-   * Предзагрузка дней для месяца (для календаря)
-   * Загружает данные асинхронно чтобы не блокировать UI
-   * 
-   * @param {number} year
-   * @param {number} month - 0-11
-   * @returns {Promise<Map<string, Object>>}
-   */
-  async function preloadMonthDays(year, month) {
-    return new Promise((resolve) => {
-      const result = new Map();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-      // Используем requestIdleCallback для фоновой загрузки
-      const loadBatch = (startDay, batchSize = 5) => {
-        const endDay = Math.min(startDay + batchSize, daysInMonth + 1);
-
-        for (let d = startDay; d < endDay; d++) {
-          const dateStr = fmtDate(new Date(year, month, d));
-          const dayData = loadDay(dateStr);
-          if (dayData) {
-            result.set(dateStr, dayData);
-          }
-        }
-
-        if (endDay <= daysInMonth) {
-          // Продолжаем загрузку в следующем idle callback
-          if (typeof requestIdleCallback !== 'undefined') {
-            requestIdleCallback(() => loadBatch(endDay, batchSize));
-          } else {
-            setTimeout(() => loadBatch(endDay, batchSize), 0);
-          }
-        } else {
-          // Загрузка завершена
-          resolve(result);
-        }
-      };
-
-      // Начинаем загрузку
-      loadBatch(1);
-    });
-  }
-
-  // R53: in-memory cache for getActiveDaysForMonth (60s TTL)
-  const _activeDaysCacheU = new Map();
-  const _ACTIVE_DAYS_CACHE_TTL_U = 60000;
-
-  function _invalidateActiveDaysCacheU(dateStr) {
-    if (!dateStr) { _activeDaysCacheU.clear(); return; }
-    const key = dateStr.slice(0, 7); // "YYYY-MM"
-    for (const k of _activeDaysCacheU.keys()) {
-      if (k.startsWith(key)) _activeDaysCacheU.delete(k);
-    }
-  }
-  function _clearActiveDaysCacheU() { _activeDaysCacheU.clear(); }
-
-  if (typeof globalThis !== 'undefined' && globalThis.addEventListener) {
-    globalThis.addEventListener('heys:day-updated', function (e) {
-      var d = e && e.detail; var ds = d && d.dateStr;
-      if (!ds) {
-        _dayV2RawParseCache.clear();
-      } else {
-        const U2 = window.HEYS && window.HEYS.utils;
-        const cid2 = U2 && U2.getCurrentClientId ? U2.getCurrentClientId() : '';
-        const sk2 = cid2 ? 'heys_' + cid2 + '_dayv2_' + ds : 'heys_dayv2_' + ds;
-        _dayV2RawParseCache.delete(sk2);
-      }
-      _invalidateActiveDaysCacheU(ds || null);
-    });
-  }
-
-  /**
-   * Вычисляет Set активных дней для месяца
-   * Активный день = съедено ≥ 1/3 BMR (реальное ведение дневника)
-   * 
-   * @param {number} year - Год
-   * @param {number} month - Месяц (0-11)
-   * @param {Object} profile - Профиль пользователя {weight, height, age, sex, deficitPctTarget}
-   * @param {Array} products - Массив продуктов (передаётся из App state)
-   * @returns {Map<string, {kcal: number, target: number, ratio: number}>} Map дат с данными
-   */
-  function getActiveDaysForMonth(year, month, profile, products) {
-    // R53: check cache
-    const _ck = year + '-' + String(month + 1).padStart(2, '0');
-    const _cached = _activeDaysCacheU.get(_ck);
-    if (_cached && (Date.now() - _cached.ts < _ACTIVE_DAYS_CACHE_TTL_U)) return _cached.data;
-
-    const daysData = new Map();
-
-    try {
-      // Получаем базовые данные из профиля
-      const profileWeight = +(profile && profile.weight) || 70;
-      const deficitPct = +(profile && profile.deficitPctTarget) || 0;
-      const sex = (profile && profile.sex) || 'male';
-      const baseBmr = calcBMR(profileWeight, profile || {});
-      const threshold = Math.round(baseBmr / 3); // 1/3 BMR — минимум для "активного" дня
-
-      // Строим Map продуктов из переданного массива (ключ = lowercase name)
-      const productsMap = new Map();
-      const productsArr = Array.isArray(products) ? products : [];
-      productsArr.forEach(p => {
-        if (p && p.name) {
-          const name = String(p.name).trim().toLowerCase();
-          if (name) productsMap.set(name, p);
-        }
-      });
-      const pIndex = buildProductIndex(productsArr);
-
-      // Проходим по всем дням месяца
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = fmtDate(new Date(year, month, d));
-        const dayInfo = getDayData(dateStr, productsMap, profile);
-
-        // Пропускаем дни без данных. Если есть цикл или хотя бы один приём пищи — показываем даже при низких ккал
-        const hasCycleDay = dayInfo && dayInfo.cycleDay != null;
-        const hasMeals = !!(dayInfo && Array.isArray(dayInfo.meals) && dayInfo.meals.length > 0);
-        if (!dayInfo || (dayInfo.kcal < threshold && !hasCycleDay && !hasMeals)) continue;
-
-        // Если день только с cycleDay (без еды) — добавляем минимальную запись
-        if (dayInfo.kcal < threshold && hasCycleDay) {
-          daysData.set(dateStr, {
-            kcal: 0, target: 0, ratio: 0,
-            hasTraining: false, trainingTypes: [], morningActivationCount: 0, trainingMinutes: 0,
-            moodAvg: null, sleepHours: 0, dayScore: 0,
-            prot: 0, fat: 0, carbs: 0,
-            cycleDay: dayInfo.cycleDay
-          });
-          continue;
-        }
-
-        // Используем вес дня если есть, иначе из профиля
-        const weight = dayInfo.weightMorning || profileWeight;
-        const bmr = calcBMR(weight, profile || {});
-
-        // Шаги: формула stepsKcal(steps, weight, sex, 0.7)
-        const steps = dayInfo.steps || 0;
-
-        // Быт: householdMin × kcalPerMin(2.5, weight)
-        const householdMin = dayInfo.householdMin || 0;
-
-        // Тренировки: суммируем ккал из зон z (как на экране дня — только первые 3)
-        const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки
-
-        // Собираем типы тренировок с реальными минутами
-        const activeTrainings = trainings
-          .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0));
-        const trainingTypes = activeTrainings.map(t => t.type || 'cardio');
-        const morningActivationCount = activeTrainings.filter(t => t?.source === 'morning_activation').length;
-        const hasTraining = trainingTypes.length > 0;
-
-        const dayForTdee = { ...dayInfo, date: dayInfo.date || dateStr };
-        const tdeeResult = global.HEYS?.TDEE?.calculate
-          ? global.HEYS.TDEE.calculate(dayForTdee, profile || {}, { lsGet, includeNDTE: true, pIndex })
-          : null;
-        const tdee = tdeeResult?.tdee || (bmr + stepsKcal(steps, weight, sex, 0.7) + Math.round(householdMin * kcalPerMin(2.5, weight)));
-        // Используем дефицит дня если есть (не пустая строка и не null), иначе из профиля
-        const dayDeficit = (tdeeResult?.deficitPct != null)
-          ? tdeeResult.deficitPct
-          : ((dayInfo.deficitPct !== '' && dayInfo.deficitPct != null) ? +dayInfo.deficitPct : deficitPct);
-        const calculatedTarget = tdeeResult?.optimum || Math.round(tdee * (1 + dayDeficit / 100));
-        const calculatedBaseTarget = tdeeResult?.baseExpenditure
-          ? Math.round(tdeeResult.baseExpenditure * (1 + dayDeficit / 100))
-          : calculatedTarget;
-
-        // 🔧 FIX: Используем сохранённую норму с долгом если есть, иначе расчётную
-        // Это позволяет показывать корректную линию нормы в sparkline для прошлых дней
-        const target = dayInfo.savedDisplayOptimum > 0 ? dayInfo.savedDisplayOptimum : calculatedTarget;
-
-        // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
-        // savedEatenKcal гарантирует точное значение, которое показывалось пользователю в тот день
-        const hasAnyMealItems = (dayInfo.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
-        const kcal = hasAnyMealItems && dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
-
-        // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
-        const ratio = target > 0 ? kcal / target : 0;
-
-        // moodAvg для mood-полосы на графике
-        const moodAvg = dayInfo.moodAvg ? +dayInfo.moodAvg : null;
-
-        // Дополнительные данные для sparkline и персонализированных инсайтов
-        const sleepHours = dayInfo.sleepHours || 0;
-        const trainingMinutes = dayInfo.trainingMinutes || 0;
-        const prot = dayInfo.prot || 0;
-        const fat = dayInfo.fat || 0;
-        const carbs = dayInfo.carbs || 0;
-        const dayScore = dayInfo.dayScore || 0;
-        const cycleDay = dayInfo.cycleDay || null; // День менструального цикла
-        // steps уже объявлен выше для расчёта stepsKcal
-        const waterMl = dayInfo.waterMl || 0; // 🆕 Вода для персонализированных инсайтов
-        const weightMorning = dayInfo.weightMorning || 0; // 🆕 Вес для персонализированных инсайтов
-
-        daysData.set(dateStr, {
-          kcal, target, ratio, // 🔧 FIX: kcal теперь использует savedEatenKcal если есть
-          baseTarget: calculatedBaseTarget, // 🔧 Базовая норма БЕЗ долга — для расчёта caloricDebt
-          spent: tdee, // 🆕 v5.0: Затраты дня (TDEE) для расчета дефицита/профицита
-          hasTraining, trainingTypes, morningActivationCount, trainingMinutes,
-          moodAvg, sleepHours, dayScore,
-          prot, fat, carbs,
-          steps, waterMl, weightMorning, // 🆕 Добавлены для персонализированных инсайтов
-          cycleDay,
-          isRefeedDay: dayInfo.isRefeedDay || false,
-          refeedReason: dayInfo.refeedReason || null,
-          // 🆕 v1.1: Флаги верификации низкокалорийных дней
-          isFastingDay: dayInfo.isFastingDay || false,
-          isIncomplete: dayInfo.isIncomplete || false
-        });
-      }
-    } catch (e) {
-      // Тихий fallback — activeDays для календаря не критичны,
-      // но ошибку стоит залогировать, иначе отладка невозможна.
+    function trackOrphanProduct(item, dateStr) {
       try {
-        if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
-          HEYS.analytics.trackError(e, {
-            where: 'day_utils.getActiveDaysForMonth',
-            year,
-            month,
-            hasProfile: !!profile,
-            productsLen: Array.isArray(products) ? products.length : null,
-          });
+        if (typeof global.HEYS?.orphanProducts?.track === 'function') {
+          global.HEYS.orphanProducts.track(item, dateStr);
         }
-      } catch (_) { }
+      } catch (_e) { /* noop */ }
     }
 
-    // R53: cache result
-    _activeDaysCacheU.set(_ck, { data: daysData, ts: Date.now() });
-    return daysData;
-  }
+    function orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower) {
+      const op = global.HEYS?.orphanProducts;
+      if (!op || typeof op.remove !== 'function') return;
+      const n = String(itemName || '').trim();
+      if (n) op.remove(n);
+      if (itemNameNorm) op.remove(String(itemNameNorm));
+      if (itemNameLower) op.remove(String(itemNameLower));
+    }
 
-  // --- Day content equality (fingerprints) — avoids hot-path JSON.stringify on full meals/trainings ---
-  function compactMealsContentSignature(meals) {
-    const arr = Array.isArray(meals) ? meals : [];
-    if (arr.length === 0) return '0';
-    return arr.map((m, idx) => {
-      const items = Array.isArray(m && m.items) ? m.items : [];
-      const itemSig = items.map((it, j) => [
-        (it && (it.productId || it.id)) || j,
-        Math.round(Number(it && it.grams) || 0),
-        Math.round(Number(it && it.kcal) || 0),
-        it && it.deleted ? 'd' : ''
-      ].join('.')).join(',');
-      return [
-        (m && m.id) || ('i' + idx),
-        String((m && m.updatedAt) || 0),
-        Math.round(Number(m && m.grams) || 0),
-        Math.round(Number(m && m.kcal) || 0),
-        String((m && m.time) || ''),
-        String((m && m.name) || '').slice(0, 120),
-        items.length,
-        itemSig
-      ].join('|');
-    }).join('\n');
-  }
 
-  function compactTrainingsContentSignature(trainings) {
-    const arr = Array.isArray(trainings) ? trainings : [];
-    if (arr.length === 0) return '0';
-    return arr.map((t, idx) => [
-      (t && t.id) || ('i' + idx),
-      String((t && t.updatedAt) || 0),
-      String((t && t.type) || ''),
-      Math.round(Number(t && t.minutes) || 0),
-      Math.round(Number(t && t.kcal) || 0)
-    ].join('|')).join('\n');
-  }
+    // === Haptic Feedback ===
+    // Track if user has interacted (required for vibrate API)
+    let userHasInteracted = false;
+    if (typeof window !== 'undefined') {
+        const markInteracted = () => { userHasInteracted = true; };
+        window.addEventListener('click', markInteracted, { once: true, passive: true });
+        window.addEventListener('touchstart', markInteracted, { once: true, passive: true });
+        window.addEventListener('keydown', markInteracted, { once: true, passive: true });
+    }
 
-  function mealsTrainingsDeepEqual(a, b) {
-    return JSON.stringify(a || []) === JSON.stringify(b || []);
-  }
+    function hapticFn(type = 'light') {
+        if (!navigator.vibrate || !userHasInteracted) return;
+        try {
+            switch (type) {
+                case 'light': navigator.vibrate(10); break;
+                case 'medium': navigator.vibrate(20); break;
+                case 'heavy': navigator.vibrate(30); break;
+                case 'success': navigator.vibrate([10, 50, 20]); break;
+                case 'warning': navigator.vibrate([30, 30, 30]); break;
+                case 'error': navigator.vibrate([50, 30, 50, 30, 50]); break;
+                case 'tick': navigator.vibrate(5); break;
+                default: navigator.vibrate(10);
+            }
+        } catch (e) { /* ignore vibrate errors */ }
+    }
 
-  /**
-   * DayTab hydrated path: same user-visible content as heys_day_effects / doLocal (no supplements/household).
-   */
-  function isSameDayHydratedContent(prevDay, newDay) {
-    if (!prevDay || !newDay || prevDay.date !== newDay.date) return false;
-    const pm = prevDay.meals || [];
-    const nm = newDay.meals || [];
-    const pt = prevDay.trainings || [];
-    const nt = newDay.trainings || [];
-    if (pm.length !== nm.length || pt.length !== nt.length) return false;
-    const mealsOk = compactMealsContentSignature(pm) === compactMealsContentSignature(nm)
-      || mealsTrainingsDeepEqual(pm, nm);
-    const trainOk = compactTrainingsContentSignature(pt) === compactTrainingsContentSignature(nt)
-      || mealsTrainingsDeepEqual(pt, nt);
-    if (!mealsOk || !trainOk) return false;
-    return prevDay.waterMl === newDay.waterMl &&
-      prevDay.steps === newDay.steps &&
-      prevDay.weightMorning === newDay.weightMorning &&
-      !!prevDay.isFastingDay === !!newDay.isFastingDay &&
-      !!prevDay.isIncomplete === !!newDay.isIncomplete &&
-      prevDay.moodMorning === newDay.moodMorning &&
-      prevDay.wellbeingMorning === newDay.wellbeingMorning &&
-      prevDay.stressMorning === newDay.stressMorning &&
-      prevDay.moodAvg === newDay.moodAvg &&
-      prevDay.wellbeingAvg === newDay.wellbeingAvg &&
-      prevDay.stressAvg === newDay.stressAvg &&
-      prevDay.dayScore === newDay.dayScore &&
-      prevDay.dayScoreRaw === newDay.dayScoreRaw &&
-      prevDay.dayScoreManual === newDay.dayScoreManual &&
-      prevDay.sleepStart === newDay.sleepStart &&
-      prevDay.sleepEnd === newDay.sleepEnd &&
-      prevDay.sleepHours === newDay.sleepHours &&
-      prevDay.sleepQuality === newDay.sleepQuality;
-  }
+    // Двойной API: функция + объект с методами для удобства
+    // HEYS.haptic('medium') ИЛИ HEYS.haptic.medium()
+    const hapticObj = Object.assign(
+        (type) => hapticFn(type),
+        {
+            light: () => hapticFn('light'),
+            medium: () => hapticFn('medium'),
+            heavy: () => hapticFn('heavy'),
+            success: () => hapticFn('success'),
+            warning: () => hapticFn('warning'),
+            error: () => hapticFn('error'),
+            tick: () => hapticFn('tick')
+        }
+    );
 
-  /**
-   * heys:day-updated merge path: supplements + household + morningActivation etc.
-   */
-  function isSameDayStorageMergeContent(prevDay, newDay) {
-    if (!prevDay || !newDay || prevDay.date !== newDay.date) return false;
-    const pm = prevDay.meals || [];
-    const nm = newDay.meals || [];
-    const pt = prevDay.trainings || [];
-    const nt = newDay.trainings || [];
-    if (pm.length !== nm.length || pt.length !== nt.length) return false;
-    const mealsOk = compactMealsContentSignature(pm) === compactMealsContentSignature(nm)
-      || mealsTrainingsDeepEqual(pm, nm);
-    const trainOk = compactTrainingsContentSignature(pt) === compactTrainingsContentSignature(nt)
-      || mealsTrainingsDeepEqual(pt, nt);
-    if (!mealsOk || !trainOk) return false;
-    const prevSupplementsPlanned = JSON.stringify(prevDay.supplementsPlanned || []);
-    const newSupplementsPlanned = JSON.stringify(newDay.supplementsPlanned || []);
-    const prevSupplementsTaken = JSON.stringify(prevDay.supplementsTaken || []);
-    const newSupplementsTaken = JSON.stringify(newDay.supplementsTaken || []);
-    const prevHouseholdJson = JSON.stringify(prevDay.householdActivities || []);
-    const newHouseholdJson = JSON.stringify(newDay.householdActivities || []);
-    return prevHouseholdJson === newHouseholdJson &&
-      prevDay.waterMl === newDay.waterMl &&
-      prevDay.steps === newDay.steps &&
-      prevDay.weightMorning === newDay.weightMorning &&
-      prevDay.moodMorning === newDay.moodMorning &&
-      prevDay.wellbeingMorning === newDay.wellbeingMorning &&
-      prevDay.stressMorning === newDay.stressMorning &&
-      prevSupplementsPlanned === newSupplementsPlanned &&
-      prevSupplementsTaken === newSupplementsTaken &&
-      prevDay.sleepStart === newDay.sleepStart &&
-      prevDay.sleepEnd === newDay.sleepEnd &&
-      prevDay.sleepHours === newDay.sleepHours &&
-      prevDay.sleepQuality === newDay.sleepQuality &&
-      prevDay.morningActivation?.status === newDay.morningActivation?.status &&
-      prevDay.householdMin === newDay.householdMin;
-  }
+    HEYS.haptic = hapticObj;
 
-  // === Exports ===
-  // 🛡️ 2026-05-30 audit F8, F9: сброс module-level кэшей при curator switch.
-  // _autoClonedSharedIds Set держит ids уже клонированных за сессию shared-продуктов;
-  // после switch на нового client'а Set всё ещё думает что они склонированы → пропустит
-  // legitimate clone для нового. orphanProductsMap может содержать orphans старого
-  // клиента — UI отобразит их до recalculate.
-  HEYS.dayUtils = HEYS.dayUtils || {};
-  HEYS.dayUtils.resetSessionCaches = function () {
-    try { if (typeof HEYS?.orphanProducts?.clear === 'function') HEYS.orphanProducts.clear(); } catch (_) { /* noop */ }
-    try { _autoClonedSharedIds.clear(); } catch (_) { /* noop */ }
-  };
+    // === Date/Time Utilities ===
+    function pad2(n) { return String(n).padStart(2, '0'); }
 
-  // Всё экспортируется через HEYS.dayUtils
-  // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
-  HEYS.dayUtils = {
-    ...HEYS.dayUtils,
-    // Haptic
-    haptic: hapticFn,
-    // Date/Time
-    pad2,
-    todayISO,
-    fmtDate,
-    parseISO,
-    uid,
-    formatDateDisplay,
-    // Night time logic (приёмы 00:00-02:59 относятся к предыдущему дню)
-    NIGHT_HOUR_THRESHOLD,
-    isNightTime,
-    getEffectiveDate,
-    getNextDay,
-    // Storage
-    lsGet,
-    lsSet,
-    // Math
-    clamp,
-    r0,
-    r1,
-    scale,
-    sleepHours,
-    normalizeDaySleepMinutes,
-    getNightSleepHours,
-    getTotalSleepHours,
-    // Models
-    ensureDay,
-    buildProductIndex,
-    getProductFromItem,
-    per100,
-    // Data
-    loadMealsForDate,
-    loadMealsRaw,
-    productsSignature,
-    computePopularProducts,
-    // Profile/Calculations
-    getProfile,
-    calcBMR,
-    kcalPerMin,
-    stepsKcal,
-    // Time/Sleep
-    parseTime,
-    sleepHours,
-    formatMealTime,
-    // Hours Order (для wheel picker с ночными часами)
-    HOURS_ORDER,
-    wheelIndexToHour,
-    hourToWheelIndex,
-    // Meal Type Classification
-    MEAL_TYPES,
-    MAIN_MEAL_THRESHOLDS,
-    getMealStats,
-    isMainMeal,
-    timeToMinutes,
-    getMealType,
-    getMealTypeSimple,
-    getMealTypeForPreview,
-    fallbackMealType,
-    // Calendar indicators
-    getDayCalories,
-    getProductsMap,
-    getActiveDaysForMonth,
-    getDayData,
-    getOptimumForDay,
-    getOptimumForDays,
-    getDayTdee,
-    getTdeeCacheStats,
-    // 🚀 Lazy-loading API
-    loadRecentDays,
-    loadDay,
-    invalidateDayCache,
-    clearDaysCache,
-    getDaysCacheStats,
-    preloadMonthDays,
-    isSameDayHydratedContent,
-    isSameDayStorageMergeContent
-  };
+    // Ночной порог: до 03:00 считается "вчера" (день ещё не закончился)
+    const NIGHT_HOUR_THRESHOLD = 3; // 00:00 - 02:59 → ещё предыдущий день
+
+    // "Эффективная" сегодняшняя дата — до 3:00 возвращает вчера
+    function todayISO() {
+        const d = new Date();
+        const hour = d.getHours();
+        // До 3:00 — это ещё "вчера" (день не закончился)
+        if (hour < NIGHT_HOUR_THRESHOLD) {
+            d.setDate(d.getDate() - 1);
+        }
+        return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+    }
+
+    function fmtDate(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+    function parseISO(s) { const [y, m, d] = String(s || '').split('-').map(x => parseInt(x, 10)); if (!y || !m || !d) return new Date(); const dt = new Date(y, m - 1, d); dt.setHours(12); return dt; }
+    function uid(p) { return (p || 'id') + Math.random().toString(36).slice(2, 8); }
+
+    // Проверка: время относится к "ночным" часам (00:00-02:59)
+    function isNightTime(timeStr) {
+        if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return false;
+        const [hh] = timeStr.split(':').map(x => parseInt(x, 10));
+        if (isNaN(hh)) return false;
+        return hh >= 0 && hh < NIGHT_HOUR_THRESHOLD;
+    }
+
+    // Возвращает "эффективную" дату для приёма пищи
+    // Если время 00:00-02:59, возвращает предыдущий день
+    function getEffectiveDate(timeStr, calendarDateISO) {
+        if (!calendarDateISO) return calendarDateISO;
+        if (!isNightTime(timeStr)) return calendarDateISO;
+        // Вычитаем 1 день
+        const d = parseISO(calendarDateISO);
+        d.setDate(d.getDate() - 1);
+        return fmtDate(d);
+    }
+
+    // Возвращает "следующий" календарный день
+    function getNextDay(dateISO) {
+        const d = parseISO(dateISO);
+        d.setDate(d.getDate() + 1);
+        return fmtDate(d);
+    }
+
+    // === Storage Utilities ===
+    // ВАЖНО: Store-first (HEYS.store), затем HEYS.utils, затем localStorage
+    function lsGet(k, d) {
+        try {
+            // Приоритет: HEYS.store → HEYS.utils → localStorage fallback
+            if (HEYS.store && typeof HEYS.store.get === 'function') {
+                return HEYS.store.get(k, d);
+            }
+            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                return HEYS.utils.lsGet(k, d);
+            }
+            const v = JSON.parse(localStorage.getItem(k));
+            return v == null ? d : v;
+        } catch (e) { return d; }
+    }
+
+    function lsSet(k, v) {
+        try {
+            // Приоритет: HEYS.store → HEYS.utils → localStorage fallback
+            if (HEYS.store && typeof HEYS.store.set === 'function') {
+                return HEYS.store.set(k, v);
+            }
+            if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                return HEYS.utils.lsSet(k, v);
+            }
+            localStorage.setItem(k, JSON.stringify(v));
+        } catch (e) { }
+    }
+
+    // === Math Utilities ===
+    function clamp(n, a, b) { n = +n || 0; if (n < a) return a; if (n > b) return b; return n; }
+    const r1 = v => Math.round((+v || 0) * 10) / 10; // округление до 1 десятой (для веса)
+    const r0 = v => Math.round(+v || 0); // округление до целого (для калорий)
+    const scale = (v, g) => Math.round(((+v || 0) * (+g || 0) / 100) * 10) / 10;
+
+    // === Model Helpers (delegates to HEYS.models) ===
+    function ensureDay(d, prof) {
+        const M = HEYS.models || {};
+        return (M.ensureDay ? M.ensureDay(d, prof) : (d || {}));
+    }
+
+    function buildProductIndex(ps) {
+        const M = HEYS.models || {};
+        return M.buildProductIndex ? M.buildProductIndex(ps) : { byId: new Map(), byName: new Map(), byFingerprint: new Map() }; // 🆕 v4.6.0
+    }
+
+    function getProductFromItem(it, idx) {
+        const M = HEYS.models || {};
+        return M.getProductFromItem ? M.getProductFromItem(it, idx) : null;
+    }
+
+    function per100(p) {
+        const M = HEYS.models || {};
+        if (!p) return { kcal100: 0, carbs100: 0, prot100: 0, fat100: 0, simple100: 0, complex100: 0, bad100: 0, good100: 0, trans100: 0, fiber100: 0 };
+        if (M.computeDerivedProduct) {
+            const d = M.computeDerivedProduct(p);
+            return { kcal100: d.kcal100, carbs100: d.carbs100, prot100: +p.protein100 || 0, fat100: d.fat100, simple100: +p.simple100 || 0, complex100: +p.complex100 || 0, bad100: +p.badFat100 || 0, good100: +p.goodFat100 || 0, trans100: +p.trans100 || 0, fiber100: +p.fiber100 || 0 };
+        }
+        const s = +p.simple100 || 0, c = +p.complex100 || 0, pr = +p.protein100 || 0, b = +p.badFat100 || 0, g = +p.goodFat100 || 0, t = +p.trans100 || 0, fib = +p.fiber100 || 0;
+        const carbs = +p.carbs100 || (s + c);
+        const fat = +p.fat100 || (b + g + t);
+        const kcal = +p.kcal100 || (4 * (pr + carbs) + 8 * fat);
+        return { kcal100: kcal, carbs100: carbs, prot100: pr, fat100: fat, simple100: s, complex100: c, bad100: b, good100: g, trans100: t, fiber100: fib };
+    }
+
+    // === Data Loading ===
+
+    // Базовая загрузка приёмов из storage (store-first) (без ночной логики)
+    function loadMealsRaw(ds) {
+        // v69 FIX: Try scoped key first to prevent cross-client contamination
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        const scopedDayKey = cid ? 'heys_' + cid + '_dayv2_' + ds : null;
+        const keys = scopedDayKey
+            ? [scopedDayKey, 'heys_dayv2_' + ds, 'heys_day_' + ds, 'day_' + ds + '_meals', 'meals_' + ds, 'food_' + ds]
+            : ['heys_dayv2_' + ds, 'heys_day_' + ds, 'day_' + ds + '_meals', 'meals_' + ds, 'food_' + ds];
+        const debugEnabled = !!(global.HEYS?.DEBUG_MODE || global.HEYS?.debug?.dayLoad);
+        const debugLog = debugEnabled ? (...args) => console.log(...args) : null;
+        const summarizeObjectArrays = (obj) => {
+            if (!obj || typeof obj !== 'object') return null;
+            const keys = Object.keys(obj);
+            const arrays = keys
+                .filter((key) => Array.isArray(obj[key]))
+                .map((key) => ({ key, count: obj[key].length }))
+                .filter((entry) => entry.count > 0);
+            return { keys, arrays };
+        };
+        for (const k of keys) {
+            try {
+                const fromStore = (global.HEYS?.store?.get ? global.HEYS.store.get(k, null) : null);
+                const raw = fromStore ?? (global.localStorage ? global.localStorage.getItem(k) : null);
+                if (!raw) continue;
+                if (debugLog) {
+                    debugLog('[MEALS LOAD] candidate', {
+                        date: ds,
+                        key: k,
+                        source: fromStore != null ? 'store' : 'localStorage',
+                        rawType: typeof raw
+                    });
+                }
+                if (typeof raw === 'object') {
+                    if (raw && Array.isArray(raw.meals) && raw.meals.length > 0) {
+                        if (debugLog) debugLog('[MEALS LOAD] hit object.meals', { key: k, count: raw.meals.length });
+                        return raw.meals;
+                    }
+                    if (Array.isArray(raw) && raw.length > 0) {
+                        if (debugLog) debugLog('[MEALS LOAD] hit array', { key: k, count: raw.length });
+                        return raw;
+                    }
+                    if (debugLog) {
+                        const summary = summarizeObjectArrays(raw);
+                        const compact = summary
+                            ? {
+                                keys: summary.keys.slice(0, 30),
+                                arrays: summary.arrays.slice(0, 30)
+                            }
+                            : null;
+                        debugLog('[MEALS LOAD] object without meals', {
+                            key: k,
+                            summary: compact,
+                            summaryStr: compact ? JSON.stringify(compact) : null
+                        });
+                    }
+                }
+                if (typeof raw === 'string') {
+                    let parsed = null;
+                    if (raw.startsWith('¤Z¤') && global.HEYS?.store?.decompress) {
+                        parsed = global.HEYS.store.decompress(raw);
+                    } else {
+                        parsed = JSON.parse(raw);
+                    }
+                    if (parsed && Array.isArray(parsed.meals) && parsed.meals.length > 0) {
+                        if (debugLog) debugLog('[MEALS LOAD] hit parsed.meals', { key: k, count: parsed.meals.length });
+                        return parsed.meals;
+                    }
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        if (debugLog) debugLog('[MEALS LOAD] hit parsed array', { key: k, count: parsed.length });
+                        return parsed;
+                    }
+                    if (debugLog) {
+                        const summary = summarizeObjectArrays(parsed);
+                        const compact = summary
+                            ? {
+                                keys: summary.keys.slice(0, 30),
+                                arrays: summary.arrays.slice(0, 30)
+                            }
+                            : null;
+                        debugLog('[MEALS LOAD] parsed without meals', {
+                            key: k,
+                            summary: compact,
+                            summaryStr: compact ? JSON.stringify(compact) : null
+                        });
+                    }
+                }
+            } catch (e) { }
+        }
+        // 🔁 Fallback: искать данные по всем ключам localStorage для этой даты
+        // (на случай, если данные лежат под другим clientId)
+        try {
+            const patterns = [
+                `_dayv2_${ds}`,
+                `_day_${ds}`,
+                `day_${ds}_meals`,
+                `meals_${ds}`,
+                `food_${ds}`
+            ];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key || !patterns.some((p) => key.includes(p))) continue;
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                let parsed = null;
+                if (typeof raw === 'string') {
+                    if (raw.startsWith('¤Z¤') && global.HEYS?.store?.decompress) {
+                        parsed = global.HEYS.store.decompress(raw);
+                    } else {
+                        parsed = JSON.parse(raw);
+                    }
+                } else if (typeof raw === 'object') {
+                    parsed = raw;
+                }
+                if (parsed && Array.isArray(parsed.meals) && parsed.meals.length > 0) {
+                    if (debugLog) debugLog('[MEALS LOAD] cross-key hit meals', { key, count: parsed.meals.length });
+                    return parsed.meals;
+                }
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    if (debugLog) debugLog('[MEALS LOAD] cross-key hit array', { key, count: parsed.length });
+                    return parsed;
+                }
+            }
+        } catch (e) { }
+        if (debugLog) debugLog('[MEALS LOAD] miss', { date: ds, triedKeys: keys });
+        return [];
+    }
+
+    // Загрузка приёмов для даты с учётом ночной логики:
+    // - Берём приёмы текущего дня (кроме ночных 00:00-02:59)
+    // - Добавляем ночные приёмы из следующего календарного дня (они принадлежат этому дню)
+    function loadMealsForDate(ds) {
+        // 1. Загружаем приёмы текущего календарного дня (фильтруем ночные — они ушли в предыдущий день)
+        const currentDayMeals = (loadMealsRaw(ds) || []).filter(m => !isNightTime(m.time));
+
+        // 2. Загружаем ночные приёмы из следующего календарного дня
+        const nextDayISO = getNextDay(ds);
+        const nextDayMeals = (loadMealsRaw(nextDayISO) || []).filter(m => isNightTime(m.time));
+
+        // 3. Объединяем и сортируем по времени
+        const allMeals = [...currentDayMeals, ...nextDayMeals];
+
+        // Сортировка: ночные (00:00-02:59) в конец, остальные по времени
+        allMeals.sort((a, b) => {
+            const aIsNight = isNightTime(a.time);
+            const bIsNight = isNightTime(b.time);
+            if (aIsNight && !bIsNight) return 1; // ночные в конец
+            if (!aIsNight && bIsNight) return -1;
+            // Одинаковый тип — сортируем по времени
+            return (a.time || '').localeCompare(b.time || '');
+        });
+
+        return allMeals;
+    }
+
+    // Lightweight signature for products (ids/names + kcal для инвалидации при синхронизации)
+    // FIX: добавлен kcal100 чтобы пересобрать индекс когда продукт обновился с нулей на реальные данные
+    function productsSignature(ps) {
+        // Ensure ps is an array
+        if (!ps) return '';
+        if (!Array.isArray(ps)) {
+            console.warn('[HEYS] productsSignature: expected array, got', typeof ps);
+            return '';
+        }
+        // Включаем id/name + kcal100 для детектирования обновлений содержимого
+        return ps.map(p => {
+            if (!p) return '';
+            const id = p.id || p.product_id || p.name || '';
+            const kcal = p.kcal100 ?? p.kcal ?? 0;
+            return `${id}:${kcal}`;
+        }).join('|');
+    }
+
+    // Cached popular products (per month + signature + TTL)
+    const POPULAR_CACHE = {}; // key => {ts, list}
+
+    function computePopularProducts(ps, iso) {
+        const sig = productsSignature(ps);
+        const monthKey = (iso || todayISO()).slice(0, 7); // YYYY-MM
+        // Добавляем favorites в ключ кэша чтобы обновлять при изменении избранных
+        const favorites = (window.HEYS && window.HEYS.store && window.HEYS.store.getFavorites)
+            ? window.HEYS.store.getFavorites()
+            : new Set();
+        const favSig = Array.from(favorites).sort().join(',');
+        const key = monthKey + '::' + sig + '::' + favSig;
+        const now = Date.now();
+        const ttl = 1000 * 60 * 10; // 10 минут
+        const cached = POPULAR_CACHE[key];
+        if (cached && (now - cached.ts) < ttl) return cached.list;
+        const idx = buildProductIndex(ps), base = iso ? new Date(iso) : new Date(), cnt = new Map();
+        for (let i = 0; i < 30; i++) {
+            const d = new Date(base); d.setDate(d.getDate() - i);
+            (loadMealsForDate(fmtDate(d)) || []).forEach(m => {
+                ((m && m.items) || []).forEach(it => {
+                    const p = getProductFromItem(it, idx);
+                    if (!p) return;
+                    const k = String(p.id ?? p.product_id ?? p.name);
+                    cnt.set(k, (cnt.get(k) || 0) + 1);
+                });
+            });
+        }
+        const arr = [];
+        cnt.forEach((c, k) => {
+            let p = idx.byId.get(String(k)) || idx.byName.get(String(k).trim().toLowerCase());
+            if (p) arr.push({ p, c });
+        });
+        // Сортировка: избранные первые, затем по частоте
+        arr.sort((a, b) => {
+            const aFav = favorites.has(String(a.p.id ?? a.p.product_id ?? a.p.name));
+            const bFav = favorites.has(String(b.p.id ?? b.p.product_id ?? b.p.name));
+            if (aFav && !bFav) return -1;
+            if (!aFav && bFav) return 1;
+            return b.c - a.c;
+        });
+        const list = arr.slice(0, 20).map(x => x.p);
+        POPULAR_CACHE[key] = { ts: now, list };
+        return list;
+    }
+
+    // === Profile & Calculations ===
+    function getProfile() {
+        const p = lsGet('heys_profile', {}) || {};
+        const g = (p.gender || p.sex || 'Мужской');
+        const sex = (String(g).toLowerCase().startsWith('ж') ? 'female' : 'male');
+        return {
+            sex,
+            height: +p.height || 175,
+            age: +p.age || 30,
+            sleepHours: +p.sleepHours || 8,
+            weight: +p.weight || 70,
+            deficitPctTarget: +p.deficitPctTarget || 0,
+            stepsGoal: +p.stepsGoal || 7000,
+            weightGoal: +p.weightGoal || 0,  // Целевой вес для прогноза
+            cycleTrackingEnabled: !!p.cycleTrackingEnabled
+        };
+    }
+
+    // 🔬 TDEE v1.1.0: Делегируем в единый модуль HEYS.TDEE с fallback для legacy
+    function calcBMR(w, prof) {
+        // Fallback: Mifflin-St Jeor (всегда должен быть доступен)
+        const fallback = () => {
+            const h = +prof.height || 175, a = +prof.age || 30, sex = (prof.sex || 'male');
+            return Math.round(10 * (+w || 0) + 6.25 * h - 5 * a + (sex === 'female' ? -161 : 5));
+        };
+
+        // Делегируем в единый модуль, но НИКОГДА не даём ошибке “убить” UI.
+        // В противном случае getActiveDaysForMonth вернёт пустой Map из-за try/catch.
+        try {
+            if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.calcBMR) {
+                const v = HEYS.TDEE.calcBMR({ ...prof, weight: w });
+                const num = +v;
+                if (Number.isFinite(num) && num > 0) return Math.round(num);
+            }
+        } catch (e) {
+            try {
+                if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
+                    HEYS.analytics.trackError(e, { where: 'day_utils.calcBMR', hasTDEE: !!HEYS.TDEE });
+                }
+            } catch (_) { }
+        }
+
+        return fallback();
+    }
+
+    // 🔬 TDEE v1.1.0: Делегируем в единый модуль с fallback
+    function kcalPerMin(met, w) {
+        try {
+            if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.kcalPerMin) {
+                const v = HEYS.TDEE.kcalPerMin(met, w);
+                const num = +v;
+                if (Number.isFinite(num)) return num;
+            }
+        } catch (e) {
+            try {
+                if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
+                    HEYS.analytics.trackError(e, { where: 'day_utils.kcalPerMin', hasTDEE: !!HEYS.TDEE });
+                }
+            } catch (_) { }
+        }
+        return Math.round((((+met || 0) * (+w || 0) * 0.0175) - 1) * 10) / 10;
+    }
+
+    function stepsKcal(steps, w, sex, len) {
+        try {
+            if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.stepsKcal) {
+                const v = HEYS.TDEE.stepsKcal(steps, w, sex, len);
+                const num = +v;
+                if (Number.isFinite(num)) return num;
+            }
+        } catch (e) {
+            try {
+                if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
+                    HEYS.analytics.trackError(e, { where: 'day_utils.stepsKcal', hasTDEE: !!HEYS.TDEE });
+                }
+            } catch (_) { }
+        }
+        const coef = (sex === 'female' ? 0.5 : 0.57);
+        const km = (+steps || 0) * (len || 0.7) / 1000;
+        return Math.round(coef * (+w || 0) * km * 10) / 10;
+    }
+
+    // === Time/Sleep Utilities ===
+    function parseTime(t) {
+        if (!t || typeof t !== 'string' || !t.includes(':')) return null;
+        const [hh, mm] = t.split(':').map(x => parseInt(x, 10));
+        if (isNaN(hh) || isNaN(mm)) return null;
+        // НЕ обрезаем часы до 23 — ночные часы могут быть 24-26
+        return { hh: Math.max(0, hh), mm: clamp(mm, 0, 59) };
+    }
+
+    function sleepHours(a, b) {
+        const s = parseTime(a), e = parseTime(b);
+        if (!s || !e) return 0;
+        let sh = s.hh + s.mm / 60, eh = e.hh + e.mm / 60;
+        let d = eh - sh;
+        if (d < 0) d += 24;
+        return r1(d);
+    }
+
+    // === Meal Type Classification ===
+    // Типы приёмов пищи с иконками и названиями
+    const MEAL_TYPES = {
+        breakfast: { name: 'Завтрак', icon: '🍳', order: 1 },
+        snack1: { name: 'Перекус', icon: '🍎', order: 2 },
+        lunch: { name: 'Обед', icon: '🍲', order: 3 },
+        snack2: { name: 'Перекус', icon: '🥜', order: 4 },
+        dinner: { name: 'Ужин', icon: '🍽️', order: 5 },
+        snack3: { name: 'Перекус', icon: '🧀', order: 6 },
+        night: { name: 'Ночной приём', icon: '🌙', order: 7 }
+    };
+
+    // Пороги для определения "основного приёма" vs "перекуса"
+    const MAIN_MEAL_THRESHOLDS = {
+        minProducts: 3,      // минимум продуктов для основного приёма
+        minGrams: 200,       // минимум граммов для основного приёма
+        minKcal: 300         // минимум калорий для основного приёма
+    };
+
+    /**
+     * Вычисляет тотал по приёму (граммы, продукты, калории)
+     */
+    function getMealStats(meal, pIndex) {
+        if (!meal || !meal.items || !meal.items.length) {
+            return { totalGrams: 0, productCount: 0, totalKcal: 0 };
+        }
+
+        let totalGrams = 0;
+        let totalKcal = 0;
+        const productCount = meal.items.length;
+
+        meal.items.forEach(item => {
+            const g = +item.grams || 0;
+            totalGrams += g;
+
+            // Пытаемся получить калории
+            const p = pIndex ? getProductFromItem(item, pIndex) : null;
+            if (p) {
+                const per = per100(p);
+                totalKcal += (per.kcal100 || 0) * g / 100;
+            }
+        });
+
+        return { totalGrams, productCount, totalKcal: Math.round(totalKcal) };
+    }
+
+    /**
+     * Проверяет, является ли приём "основным" (завтрак/обед/ужин) по размеру
+     */
+    function isMainMeal(mealStats) {
+        const { totalGrams, productCount, totalKcal } = mealStats;
+
+        // Основной приём если: много продуктов ИЛИ (много граммов И больше 1 продукта)
+        if (productCount >= MAIN_MEAL_THRESHOLDS.minProducts) return true;
+        if (totalGrams >= MAIN_MEAL_THRESHOLDS.minGrams && productCount >= 2) return true;
+        if (totalKcal >= MAIN_MEAL_THRESHOLDS.minKcal) return true;
+
+        return false;
+    }
+
+    /**
+     * Преобразует время в минуты от полуночи (с учётом ночных часов)
+     * Ночные часы (00:00-02:59) считаются как 24:00-26:59
+     */
+    function timeToMinutes(timeStr) {
+        const parsed = parseTime(timeStr);
+        if (!parsed) return null;
+
+        let { hh, mm } = parsed;
+        // Ночные часы (00-02) — это "после полуночи" предыдущего дня
+        if (hh < NIGHT_HOUR_THRESHOLD) {
+            hh += 24;
+        }
+        return hh * 60 + mm;
+    }
+
+    /**
+     * Форматирует время приёма для отображения
+     * 24:20 → 00:20 (ночные часы хранятся как 24-26)
+     */
+    function formatMealTime(timeStr) {
+        if (!timeStr) return '';
+        const parsed = parseTime(timeStr);
+        if (!parsed) return timeStr;
+
+        let { hh, mm } = parsed;
+        // Нормализуем ночные часы: 24 → 00, 25 → 01, 26 → 02
+        if (hh >= 24) {
+            hh = hh - 24;
+        }
+        return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    }
+
+    // === Hours Order для Wheel Picker ===
+    // Порядок часов: 03, 04, ..., 23, 00, 01, 02
+    // Это позволяет скроллить от вечера к ночи естественно
+    const HOURS_ORDER = (() => {
+        const order = [];
+        for (let h = NIGHT_HOUR_THRESHOLD; h < 24; h++) order.push(h);
+        for (let h = 0; h < NIGHT_HOUR_THRESHOLD; h++) order.push(h);
+        return order;
+    })();
+
+    /**
+     * Конвертация: индекс колеса → реальный час
+     * @param {number} idx - индекс в HOURS_ORDER
+     * @returns {number} реальный час (0-23)
+     */
+    function wheelIndexToHour(idx) {
+        return HOURS_ORDER[idx] ?? idx;
+    }
+
+    /**
+     * Конвертация: реальный час → индекс колеса
+     * Учитывает ночные часы: 24→0, 25→1, 26→2
+     * @param {number} hour - реальный час (0-26)
+     * @returns {number} индекс в HOURS_ORDER
+     */
+    function hourToWheelIndex(hour) {
+        // Нормализуем ночные часы для поиска в колесе
+        const normalizedHour = hour >= 24 ? hour - 24 : hour;
+        const idx = HOURS_ORDER.indexOf(normalizedHour);
+        return idx >= 0 ? idx : 0;
+    }
+
+    /**
+     * Определяет тип приёма пищи на основе:
+     * - Порядкового номера (первый = завтрак)
+     * - Времени (деление дня на слоты)
+     * - Размера приёма (основной vs перекус)
+     * 
+     * @param {number} mealIndex - Индекс приёма в отсортированном списке
+     * @param {Object} meal - Объект приёма {id, time, items, ...}
+     * @param {Array} allMeals - Все приёмы дня (отсортированы по времени)
+     * @param {Object} pIndex - Индекс продуктов для расчёта калорий
+     * @returns {Object} { type: string, name: string, icon: string }
+     */
+    function getMealType(mealIndex, meal, allMeals, pIndex) {
+        // Защита от undefined
+        if (!allMeals || !Array.isArray(allMeals) || allMeals.length === 0) {
+            return { type: 'snack', ...MEAL_TYPES.snack };
+        }
+
+        // Первый приём дня всегда Завтрак
+        if (mealIndex === 0) {
+            return { type: 'breakfast', ...MEAL_TYPES.breakfast };
+        }
+
+        // Получаем время первого приёма (завтрака)
+        const firstMeal = allMeals[0];
+        const breakfastMinutes = timeToMinutes(firstMeal?.time);
+        const currentMinutes = timeToMinutes(meal?.time);
+
+        // Если время не указано, определяем по порядку и размеру
+        if (breakfastMinutes === null || currentMinutes === null) {
+            return fallbackMealType(mealIndex, meal, pIndex);
+        }
+
+        // Конец дня = 03:00 следующего дня = 27:00 в нашей системе
+        const endOfDayMinutes = 27 * 60; // 03:00 + 24 = 27:00
+
+        // Оставшееся время от завтрака до конца дня
+        const remainingMinutes = endOfDayMinutes - breakfastMinutes;
+
+        // Делим на 6 слотов (7 типов минус завтрак = 6)
+        const slotDuration = remainingMinutes / 6;
+
+        // Определяем в какой слот попадает текущий приём
+        const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
+        const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
+
+        // Типы слотов: 0=перекус1, 1=обед, 2=перекус2, 3=ужин, 4=перекус3, 5=ночной
+        const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
+
+        // Получаем статистику приёма
+        const mealStats = getMealStats(meal, pIndex);
+        const isMain = isMainMeal(mealStats);
+
+        // Определяем базовый тип по слоту
+        let baseType = slotTypes[clamp(slotIndex, 0, 5)];
+
+        // Корректируем: если попали в "перекус" слот, но это большой приём — 
+        // проверяем соседние "основные" слоты
+        if (baseType.startsWith('snack') && isMain) {
+            // Ищем ближайший основной слот
+            if (slotIndex <= 1) {
+                baseType = 'lunch';
+            } else if (slotIndex >= 2 && slotIndex <= 3) {
+                baseType = 'dinner';
+            }
+            // Если после ужина большой приём — оставляем как есть (поздний ужин → snack3)
+        }
+
+        // Обратная корректировка: если попали в "основной" слот, но это маленький приём — 
+        // оставляем как основной (обед может быть лёгким)
+
+        // Проверяем не дублируется ли уже этот тип (избегаем 2 обеда)
+        const usedTypes = new Set();
+        for (let i = 0; i < mealIndex; i++) {
+            const prevType = getMealTypeSimple(i, allMeals[i], allMeals, pIndex);
+            usedTypes.add(prevType);
+        }
+
+        // Если обед уже был, а мы пытаемся назвать это обедом — делаем перекусом
+        if (baseType === 'lunch' && usedTypes.has('lunch')) {
+            baseType = 'snack2';
+        }
+        if (baseType === 'dinner' && usedTypes.has('dinner')) {
+            baseType = 'snack3';
+        }
+
+        return { type: baseType, ...MEAL_TYPES[baseType] };
+    }
+
+    /**
+     * Упрощённая версия для проверки дубликатов (без рекурсии)
+     */
+    function getMealTypeSimple(mealIndex, meal, allMeals, pIndex) {
+        if (mealIndex === 0) return 'breakfast';
+
+        const firstMeal = allMeals[0];
+        const breakfastMinutes = timeToMinutes(firstMeal?.time);
+        const currentMinutes = timeToMinutes(meal?.time);
+
+        if (breakfastMinutes === null || currentMinutes === null) {
+            return 'snack1';
+        }
+
+        const endOfDayMinutes = 27 * 60;
+        const remainingMinutes = endOfDayMinutes - breakfastMinutes;
+        const slotDuration = remainingMinutes / 6;
+        const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
+        const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
+
+        const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
+        let baseType = slotTypes[clamp(slotIndex, 0, 5)];
+
+        const mealStats = getMealStats(meal, pIndex);
+        const isMain = isMainMeal(mealStats);
+
+        if (baseType.startsWith('snack') && isMain) {
+            if (slotIndex <= 1) baseType = 'lunch';
+            else if (slotIndex >= 2 && slotIndex <= 3) baseType = 'dinner';
+        }
+
+        return baseType;
+    }
+
+    /**
+     * Fallback определение типа (когда нет времени)
+     */
+    function fallbackMealType(mealIndex, meal, pIndex) {
+        const mealStats = getMealStats(meal, pIndex);
+        const isMain = isMainMeal(mealStats);
+
+        // По порядку: 0=завтрак, 1=перекус/обед, 2=перекус/ужин, ...
+        const fallbackTypes = [
+            'breakfast',
+            isMain ? 'lunch' : 'snack1',
+            isMain ? 'dinner' : 'snack2',
+            'snack3',
+            'night'
+        ];
+
+        const type = fallbackTypes[clamp(mealIndex, 0, fallbackTypes.length - 1)];
+        return { type, ...MEAL_TYPES[type] };
+    }
+
+    // Форматирование даты для отображения
+    // Использует "эффективную" дату (до 3:00 — ещё вчера)
+    function formatDateDisplay(isoDate) {
+        const d = parseISO(isoDate);
+        const effectiveToday = parseISO(todayISO()); // todayISO учитывает ночной порог
+        const effectiveYesterday = new Date(effectiveToday);
+        effectiveYesterday.setDate(effectiveYesterday.getDate() - 1);
+
+        const isToday = d.toDateString() === effectiveToday.toDateString();
+        const isYesterday = d.toDateString() === effectiveYesterday.toDateString();
+
+        const dayName = d.toLocaleDateString('ru-RU', { weekday: 'short' });
+        const dayNum = d.getDate();
+        const month = d.toLocaleDateString('ru-RU', { month: 'short' });
+
+        if (isToday) return { label: 'Сегодня', sub: `${dayNum} ${month}` };
+        if (isYesterday) return { label: 'Вчера', sub: `${dayNum} ${month}` };
+        return { label: `${dayNum} ${month}`, sub: dayName };
+    }
+
+    /**
+     * Предпросмотр типа приёма для модалки создания.
+     * Определяет тип по времени и существующим приёмам (без данных о продуктах).
+     * @param {string} timeStr - время в формате "HH:MM"
+     * @param {Array} existingMeals - массив существующих приёмов дня
+     * @returns {string} - ключ типа (breakfast, lunch, dinner, snack1, snack2, snack3, night)
+     */
+    function getMealTypeForPreview(timeStr, existingMeals) {
+        const meals = existingMeals || [];
+
+        // Если нет приёмов — это будет первый, значит завтрак
+        if (meals.length === 0) {
+            return 'breakfast';
+        }
+
+        // Находим первый приём (завтрак)
+        const sortedMeals = [...meals].sort((a, b) => {
+            const aMin = timeToMinutes(a.time) || 0;
+            const bMin = timeToMinutes(b.time) || 0;
+            return aMin - bMin;
+        });
+
+        const breakfastMinutes = timeToMinutes(sortedMeals[0]?.time);
+        const currentMinutes = timeToMinutes(timeStr);
+
+        if (breakfastMinutes === null || currentMinutes === null) {
+            return 'snack1'; // fallback
+        }
+
+        // Если новый приём раньше первого — он станет завтраком
+        if (currentMinutes < breakfastMinutes) {
+            return 'breakfast';
+        }
+
+        // Конец дня = 03:00 следующего дня = 27:00
+        const endOfDayMinutes = 27 * 60;
+        const remainingMinutes = endOfDayMinutes - breakfastMinutes;
+        const slotDuration = remainingMinutes / 6;
+
+        const minutesSinceBreakfast = currentMinutes - breakfastMinutes;
+        const slotIndex = Math.floor(minutesSinceBreakfast / slotDuration);
+
+        const slotTypes = ['snack1', 'lunch', 'snack2', 'dinner', 'snack3', 'night'];
+        return slotTypes[clamp(slotIndex, 0, 5)];
+    }
+
+    // === Calendar Day Indicators ===
+
+    /**
+     * Получает данные дня: калории и активность для расчёта реального target
+     * @param {string} dateStr - Дата в формате YYYY-MM-DD
+     * @param {Map} productsMap - Map продуктов (id => product)
+     * @param {Object} profile - Профиль пользователя
+     * @returns {{kcal: number, steps: number, householdMin: number, trainings: Array}} Данные дня
+     */
+    function getDayData(dateStr, productsMap, profile) {
+        try {
+            // Пробуем несколько источников clientId (через утилиту для корректного JSON.parse)
+            const U = window.HEYS && window.HEYS.utils;
+            const storeGet = window.HEYS?.store?.get;
+            const clientId = (U && U.getCurrentClientId ? U.getCurrentClientId() : '')
+                || (window.HEYS && window.HEYS.currentClientId) || (storeGet ? storeGet('heys_client_current', '') : '')
+                || localStorage.getItem('heys_client_current') || '';
+
+            const scopedKey = clientId
+                ? 'heys_' + clientId + '_dayv2_' + dateStr
+                : 'heys_dayv2_' + dateStr;
+
+            const raw = (global.HEYS?.store?.get ? global.HEYS.store.get(scopedKey, null) : null)
+                ?? (global.localStorage ? global.localStorage.getItem(scopedKey) : null);
+            if (!raw) return null;
+
+            let dayData = null;
+            if (typeof raw === 'object') {
+                dayData = raw;
+            } else if (typeof raw === 'string') {
+                if (raw.startsWith('¤Z¤')) {
+                    if (global.HEYS?.store?.decompress) {
+                        dayData = global.HEYS.store.decompress(raw);
+                    } else {
+                        let str = raw.substring(3);
+                        const patterns = {
+                            '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+                            '¤c¤': '"carbs100"', '¤f¤': '"fat100"'
+                        };
+                        for (const [code, pattern] of Object.entries(patterns)) {
+                            str = str.split(code).join(pattern);
+                        }
+                        dayData = JSON.parse(str);
+                    }
+                } else {
+                    dayData = JSON.parse(raw);
+                }
+            }
+
+            if (!dayData) return null;
+
+            // Считаем калории и макросы из meals
+            let totalKcal = 0, totalProt = 0, totalFat = 0, totalCarbs = 0;
+            (dayData.meals || []).forEach(meal => {
+                (meal.items || []).forEach(item => {
+                    const grams = +item.grams || 0;
+                    if (grams <= 0) return;
+
+                    // Ищем в productsMap по id/нормализованному имени, затем fallback на inline данные item
+                    const itemName = String(item.name || '').trim();
+                    const itemNameLower = itemName.toLowerCase();
+                    const itemNameNorm = normalizeProductName(itemName);
+                    let product = null;
+                    if (item.product_id != null && global.HEYS?.products?.getById) {
+                        product = global.HEYS.products.getById(item.product_id);
+                        // 🪦 Stamp-cache fallback (heys_core_v12.js:5050+) возвращает product с
+                        // _recoveredFrom='stamp' — это значит что в реальной базе продукта НЕТ,
+                        // он живёт только в meal-stamp. Считаем не-resolved → код пойдёт по
+                        // orphan-tracking ветке и banner покажет выбор «восстановить» / «разовым».
+                        if (product && product._recoveredFrom === 'stamp') {
+                            product = null;
+                        }
+                    }
+                    if (!product && itemName) {
+                        product = productsMap.get(itemNameLower) || productsMap.get(itemNameNorm) || null;
+                    }
+
+                    // 🔄 Fallback: актуальная личная база (resolve по id / fingerprint / имени)
+                    if (!product && itemName && global.HEYS?.products?.getAll) {
+                        const freshProducts = global.HEYS.products.getAll();
+                        const freshProduct = resolveProductByItem(item, freshProducts);
+                        if (freshProduct) {
+                            product = freshProduct;
+                            productsMap.set(itemNameLower, freshProduct);
+                            if (itemNameNorm) productsMap.set(itemNameNorm, freshProduct);
+                            orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower);
+                        } else if (freshProducts.length > 0) {
+                            const similar = freshProducts.filter(p => {
+                                const pName = String(p.name || '').trim().toLowerCase();
+                                return pName.includes(itemNameLower.slice(0, 10)) ||
+                                  itemNameLower.includes(pName.slice(0, 10));
+                            });
+                            if (similar.length > 0) {
+                                const lastLogged = orphanLoggedRecently.get(itemName) || 0;
+                                if (Date.now() - lastLogged > 60000) {
+                                    console.warn(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similar[0].name}"`);
+                                    orphanLoggedRecently.set(itemName, Date.now());
+                                }
+                            }
+                        }
+                    }
+
+                    // 🌐 Общая база: ссылка на shared id / fingerprint без локального клона
+                    if (!product && itemName) {
+                        const sharedEarly = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
+                        const fromSharedEarly = resolveProductByItem(item, sharedEarly);
+                        if (fromSharedEarly) {
+                            product = fromSharedEarly;
+                            productsMap.set(itemNameLower, fromSharedEarly);
+                            if (itemNameNorm) productsMap.set(itemNameNorm, fromSharedEarly);
+                            orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower);
+                        }
+                    }
+
+                    const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
+
+                    // Трекаем orphan-продукты (когда используется штамп вместо базы)
+                    if (!product && itemName && !isSyntheticEstimatedItem(item)) {
+                        let freshProducts = global.HEYS?.products?.getAll?.() || [];
+
+                        if (freshProducts.length === 0) {
+                            try {
+                                const U = global.HEYS?.utils;
+                                const storeGet = global.HEYS?.store?.get;
+                                if (storeGet) {
+                                    freshProducts = storeGet('heys_products', []) || [];
+                                } else if (U && U.lsGet) {
+                                    freshProducts = U.lsGet('heys_products', []) || [];
+                                } else {
+                                    const cid = U?.getCurrentClientId?.()
+                                        || (storeGet ? storeGet('heys_client_current', '') : '')
+                                        || localStorage.getItem('heys_client_current') || '';
+                                    const keys = [
+                                        cid ? `heys_${cid}_products` : null,
+                                        'heys_products'
+                                    ].filter(Boolean);
+
+                                    for (const key of keys) {
+                                        const stored = storeGet ? storeGet(key, null) : localStorage.getItem(key);
+                                        if (stored) {
+                                            const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
+                                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                                freshProducts = parsed;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (e) { /* ignore */ }
+                        }
+
+                        const sharedProducts = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
+
+                        const hasProductsLoaded = productsMap.size > 0 || freshProducts.length > 0 || sharedProducts.length > 0;
+
+                        const foundInFresh = resolveProductByItem(item, freshProducts);
+                        const foundInShared = resolveProductByItem(item, sharedProducts);
+
+                        if (hasProductsLoaded && !foundInFresh && !foundInShared) {
+                            if (shouldLogOrphanDebug()) {
+                                const itemNameNorm = normalizeProductName(itemName);
+                                const freshSample = freshProducts
+                                    .filter((p) => p && p.name)
+                                    .map((p) => String(p.name).trim())
+                                    .filter((name) => {
+                                        const n = normalizeProductName(name);
+                                        return n.includes(itemNameNorm.slice(0, 8)) || itemNameNorm.includes(n.slice(0, 8));
+                                    })
+                                    .slice(0, 3);
+                                const sharedSample = sharedProducts
+                                    .filter((p) => p && p.name)
+                                    .map((p) => String(p.name).trim())
+                                    .filter((name) => {
+                                        const n = normalizeProductName(name);
+                                        return n.includes(itemNameNorm.slice(0, 8)) || itemNameNorm.includes(n.slice(0, 8));
+                                    })
+                                    .slice(0, 3);
+                                console.info('[HEYS.orphan-debug] miss', {
+                                    date: dateStr,
+                                    itemName,
+                                    itemNameNorm,
+                                    productId: item.product_id ?? item.productId ?? null,
+                                    fingerprint: item.fingerprint || null,
+                                    freshProductsCount: freshProducts.length,
+                                    sharedProductsCount: sharedProducts.length,
+                                    freshSimilar: freshSample,
+                                    sharedSimilar: sharedSample,
+                                    hasInlineData: item.kcal100 != null,
+                                });
+                            }
+                            trackOrphanProduct(item, dateStr);
+                        } else if (foundInFresh || foundInShared) {
+                            const n = String(item.name || '').trim();
+                            orphanProductsRemoveKeys(n || itemName, itemNameNorm, itemNameLower);
+                        }
+                    }
+
+                    if (src.kcal100 != null || src.protein100 != null) {
+                        const mult = grams / 100;
+                        const prot = (+src.protein100 || 0) * mult;
+                        const fat = (+src.fat100 || 0) * mult;
+                        const carbs = (+src.carbs100 || (+src.simple100 || 0) + (+src.complex100 || 0)) * mult;
+
+                        // 🔄 v3.9.2: Используем TEF-формулу как в mealTotals (белок 3 ккал/г вместо 4)
+                        // TEF-aware: protein 3 kcal/g (25% TEF), carbs 4 kcal/g, fat 9 kcal/g
+                        const kcalTEF = 3 * prot + 4 * carbs + 9 * fat;
+                        totalKcal += kcalTEF;
+                        totalProt += prot;
+                        totalFat += fat;
+                        totalCarbs += carbs;
+                    }
+                });
+            });
+
+            // Вычисляем sleepHours из sleepStart/sleepEnd
+            let sleepHours = 0;
+            if (dayData.sleepStart && dayData.sleepEnd) {
+                const [sh, sm] = dayData.sleepStart.split(':').map(Number);
+                const [eh, em] = dayData.sleepEnd.split(':').map(Number);
+                let startMin = sh * 60 + sm;
+                let endMin = eh * 60 + em;
+                if (endMin < startMin) endMin += 24 * 60; // через полночь
+                sleepHours = (endMin - startMin) / 60;
+            }
+
+            // Считаем общие минуты тренировок
+            let trainingMinutes = 0;
+            (dayData.trainings || []).forEach(t => {
+                if (t && t.z && Array.isArray(t.z)) {
+                    trainingMinutes += t.z.reduce((sum, m) => sum + (+m || 0), 0);
+                }
+            });
+
+            return {
+                kcal: Math.round(totalKcal),
+                savedEatenKcal: +dayData.savedEatenKcal || 0, // 🆕 Сохранённые калории (приоритет над пересчитанными)
+                prot: Math.round(totalProt),
+                fat: Math.round(totalFat),
+                carbs: Math.round(totalCarbs),
+                steps: +dayData.steps || 0,
+                waterMl: +dayData.waterMl || 0, // 🆕 Вода для персонализированных инсайтов
+                householdMin: +dayData.householdMin || 0,
+                trainings: dayData.trainings || [],
+                trainingMinutes,
+                weightMorning: +dayData.weightMorning || 0,
+                deficitPct: dayData.deficitPct, // может быть undefined — тогда из профиля
+                sleepHours,
+                moodAvg: +dayData.moodAvg || 0,
+                dayScore: +dayData.dayScore || 0,
+                cycleDay: dayData.cycleDay || null, // День менструального цикла (1-N или null)
+                isRefeedDay: dayData.isRefeedDay || false, // Загрузочный день
+                refeedReason: dayData.refeedReason || null, // Причина refeed
+                // 🔧 FIX: Сохранённая норма с учётом долга — используется для корректного отображения в sparkline
+                savedDisplayOptimum: +dayData.savedDisplayOptimum || 0,
+                // 🆕 v1.1: Флаги верификации низкокалорийных дней
+                isFastingDay: dayData.isFastingDay || false, // Осознанное голодание — данные корректны
+                isIncomplete: dayData.isIncomplete || false, // Не заполнен — исключить из статистик
+                meals: dayData.meals || [] // 🆕 v1.1: Для определения пустого дня
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * Вычисляет калории за день напрямую из localStorage (legacy wrapper)
+     */
+    function getDayCalories(dateStr, productsMap) {
+        const data = getDayData(dateStr, productsMap, {});
+        return data ? data.kcal : 0;
+    }
+
+    /**
+     * Получает Map продуктов для вычисления калорий
+     * @returns {Map} productsMap (name => product)
+     */
+    function getProductsMap() {
+        const productsMap = new Map();
+        try {
+            // Используем HEYS.store.get который знает правильный ключ с clientId
+            let products = [];
+            if (window.HEYS && window.HEYS.store && typeof window.HEYS.store.get === 'function') {
+                products = window.HEYS.store.get('heys_products', []);
+            } else {
+                // Fallback: пробуем напрямую из localStorage
+                const U = window.HEYS?.utils;
+                const storeGet = window.HEYS?.store?.get;
+                const clientId = U?.getCurrentClientId?.()
+                    || (window.HEYS && window.HEYS.currentClientId)
+                    || (storeGet ? storeGet('heys_client_current', '') : '')
+                    || localStorage.getItem('heys_client_current') || '';
+                const productsKey = clientId
+                    ? 'heys_' + clientId + '_products'
+                    : 'heys_products';
+                const productsRaw = storeGet ? storeGet(productsKey, null) : localStorage.getItem(productsKey);
+
+                if (productsRaw) {
+                    if (typeof productsRaw === 'string') {
+                        if (productsRaw.startsWith('¤Z¤')) {
+                            let str = productsRaw.substring(3);
+                            const patterns = {
+                                '¤n¤': '"name":"', '¤k¤': '"kcal100"', '¤p¤': '"protein100"',
+                                '¤c¤': '"carbs100"', '¤f¤': '"fat100"', '¤s¤': '"simple100"',
+                                '¤x¤': '"complex100"', '¤b¤': '"badFat100"', '¤g¤': '"goodFat100"',
+                                '¤t¤': '"trans100"', '¤i¤': '"fiber100"', '¤G¤': '"gi"', '¤h¤': '"harmScore"'
+                            };
+                            for (const [code, pattern] of Object.entries(patterns)) {
+                                str = str.split(code).join(pattern);
+                            }
+                            products = JSON.parse(str);
+                        } else {
+                            products = JSON.parse(productsRaw);
+                        }
+                    } else {
+                        products = productsRaw;
+                    }
+                }
+            }
+            // Если products — объект с полем products, извлекаем массив
+            if (products && !Array.isArray(products) && Array.isArray(products.products)) {
+                products = products.products;
+            }
+            // Финальная проверка что это массив
+            if (!Array.isArray(products)) {
+                products = [];
+            }
+            products.forEach(p => {
+                if (p && p.name) {
+                    const name = String(p.name).trim();
+                    if (name) productsMap.set(name, p);
+                }
+            });
+        } catch (e) {
+            // Тихий fallback — productsMap не критичен
+        }
+        return productsMap;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 🚀 LAZY-LOADING DAYS — Оптимизированная загрузка дней
+    // ═══════════════════════════════════════════════════════════════════
+
+    // Кэш загруженных дней (для предотвращения повторных чтений)
+    const DAYS_CACHE = new Map(); // dateStr => { data, timestamp }
+    const DAYS_CACHE_TTL = 5 * 60 * 1000; // 5 минут TTL
+
+    /**
+     * Lazy-загрузка дней — загружает только последние N дней
+     * Оптимизирует холодный старт приложения
+     * 
+     * @param {number} daysBack - Сколько дней назад загружать (default: 30)
+     * @param {Object} options - Опции
+     * @param {boolean} options.forceRefresh - Игнорировать кэш
+     * @param {Function} options.onProgress - Callback прогресса (loaded, total)
+     * @returns {Map<string, Object>} Map дат с данными дней
+     */
+    function loadRecentDays(daysBack = 30, options = {}) {
+        const { forceRefresh = false, onProgress } = options;
+        const result = new Map();
+        const now = Date.now();
+        const today = new Date();
+
+        for (let i = 0; i < daysBack; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const dateStr = fmtDate(d);
+
+            // Проверяем кэш
+            if (!forceRefresh && DAYS_CACHE.has(dateStr)) {
+                const cached = DAYS_CACHE.get(dateStr);
+                if (now - cached.timestamp < DAYS_CACHE_TTL) {
+                    result.set(dateStr, cached.data);
+                    if (onProgress) onProgress(i + 1, daysBack);
+                    continue;
+                }
+            }
+
+            // Загружаем день (v69: scoped key first)
+            const _cid1 = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+            const dayData = (_cid1 ? lsGet('heys_' + _cid1 + '_dayv2_' + dateStr, null) : null) || lsGet('heys_dayv2_' + dateStr, null);
+            if (dayData && typeof dayData === 'object') {
+                result.set(dateStr, dayData);
+                DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
+            }
+
+            if (onProgress) onProgress(i + 1, daysBack);
+        }
+
+        return result;
+    }
+
+    /**
+     * Lazy-загрузка одного дня с кэшированием
+     * @param {string} dateStr - Дата в формате YYYY-MM-DD
+     * @param {boolean} forceRefresh - Игнорировать кэш
+     * @returns {Object|null} Данные дня или null
+     */
+    function loadDay(dateStr, forceRefresh = false) {
+        const now = Date.now();
+
+        // Проверяем кэш
+        if (!forceRefresh && DAYS_CACHE.has(dateStr)) {
+            const cached = DAYS_CACHE.get(dateStr);
+            if (now - cached.timestamp < DAYS_CACHE_TTL) {
+                return cached.data;
+            }
+        }
+
+        // Загружаем день (v69: scoped key first)
+        const _cid2 = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        const dayData = (_cid2 ? lsGet('heys_' + _cid2 + '_dayv2_' + dateStr, null) : null) || lsGet('heys_dayv2_' + dateStr, null);
+        if (dayData && typeof dayData === 'object') {
+            DAYS_CACHE.set(dateStr, { data: dayData, timestamp: now });
+            return dayData;
+        }
+
+        return null;
+    }
+
+    /**
+     * Инвалидирует кэш дня (вызывать после сохранения)
+     * @param {string} dateStr - Дата в формате YYYY-MM-DD
+     */
+    function invalidateDayCache(dateStr) {
+        DAYS_CACHE.delete(dateStr);
+        _invalidateActiveDaysCache(dateStr);
+    }
+
+    /**
+     * Очищает весь кэш дней
+     */
+    function clearDaysCache() {
+        DAYS_CACHE.clear();
+        _clearActiveDaysCache();
+    }
+
+    /**
+     * Получить статистику кэша
+     * @returns {{size: number, hitRate: number}}
+     */
+    function getDaysCacheStats() {
+        let validCount = 0;
+        const now = Date.now();
+
+        DAYS_CACHE.forEach((cached) => {
+            if (now - cached.timestamp < DAYS_CACHE_TTL) {
+                validCount++;
+            }
+        });
+
+        return {
+            size: DAYS_CACHE.size,
+            validEntries: validCount,
+            expiredEntries: DAYS_CACHE.size - validCount
+        };
+    }
+
+    /**
+     * Предзагрузка дней для месяца (для календаря)
+     * Загружает данные асинхронно чтобы не блокировать UI
+     * 
+     * @param {number} year
+     * @param {number} month - 0-11
+     * @returns {Promise<Map<string, Object>>}
+     */
+    async function preloadMonthDays(year, month) {
+        return new Promise((resolve) => {
+            const result = new Map();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // Используем requestIdleCallback для фоновой загрузки
+            const loadBatch = (startDay, batchSize = 5) => {
+                const endDay = Math.min(startDay + batchSize, daysInMonth + 1);
+
+                for (let d = startDay; d < endDay; d++) {
+                    const dateStr = fmtDate(new Date(year, month, d));
+                    const dayData = loadDay(dateStr);
+                    if (dayData) {
+                        result.set(dateStr, dayData);
+                    }
+                }
+
+                if (endDay <= daysInMonth) {
+                    // Продолжаем загрузку в следующем idle callback
+                    if (typeof requestIdleCallback !== 'undefined') {
+                        requestIdleCallback(() => loadBatch(endDay, batchSize));
+                    } else {
+                        setTimeout(() => loadBatch(endDay, batchSize), 0);
+                    }
+                } else {
+                    // Загрузка завершена
+                    resolve(result);
+                }
+            };
+
+            // Начинаем загрузку
+            loadBatch(1);
+        });
+    }
+
+    // R53: In-memory cache for getActiveDaysForMonth to avoid repeated localStorage reads
+    const _activeDaysCache = new Map();
+    const _ACTIVE_DAYS_CACHE_TTL = 60000; // 60s TTL
+
+    function _invalidateActiveDaysCache(dateStr) {
+        // Invalidate the month containing dateStr
+        if (dateStr && dateStr.length >= 7) {
+            const key = dateStr.substring(0, 7); // 'YYYY-MM'
+            _activeDaysCache.forEach((_, k) => {
+                if (k.startsWith(key)) _activeDaysCache.delete(k);
+            });
+        }
+    }
+
+    function _clearActiveDaysCache() {
+        _activeDaysCache.clear();
+    }
+
+    // Listen for day updates to invalidate cache
+    if (global.addEventListener) {
+        global.addEventListener('heys:day-updated', (e) => {
+            const dateStr = e?.detail?.date || e?.detail?.dateStr;
+            if (dateStr) {
+                _invalidateActiveDaysCache(dateStr);
+            } else {
+                _clearActiveDaysCache();
+            }
+        });
+    }
+
+    /**
+     * Вычисляет Set активных дней для месяца
+     * Активный день = съедено ≥ 1/3 BMR (реальное ведение дневника)
+     * 
+     * @param {number} year - Год
+     * @param {number} month - Месяц (0-11)
+     * @param {Object} profile - Профиль пользователя {weight, height, age, sex, deficitPctTarget}
+     * @param {Array} products - Массив продуктов (передаётся из App state)
+     * @returns {Map<string, {kcal: number, target: number, ratio: number}>} Map дат с данными
+     */
+    function getActiveDaysForMonth(year, month, profile, products) {
+        // R53: Check in-memory cache first
+        const clientId = (HEYS.currentClientId || '').slice(0, 16);
+        const cacheKey = year + '-' + String(month + 1).padStart(2, '0') + '_' + clientId;
+        const cached = _activeDaysCache.get(cacheKey);
+        if (cached && (Date.now() - cached.ts < _ACTIVE_DAYS_CACHE_TTL)) {
+            return cached.data;
+        }
+
+        const daysData = new Map();
+
+        try {
+            // Получаем базовые данные из профиля
+            const profileWeight = +(profile && profile.weight) || 70;
+            const deficitPct = +(profile && profile.deficitPctTarget) || 0;
+            const sex = (profile && profile.sex) || 'male';
+            const baseBmr = calcBMR(profileWeight, profile || {});
+            const threshold = Math.round(baseBmr / 3); // 1/3 BMR — минимум для "активного" дня
+
+            // Строим Map продуктов из переданного массива (ключ = lowercase name)
+            const productsMap = new Map();
+            const productsArr = Array.isArray(products) ? products : [];
+            productsArr.forEach(p => {
+                if (p && p.name) {
+                    const name = String(p.name).trim().toLowerCase();
+                    if (name) productsMap.set(name, p);
+                }
+            });
+
+            // Проходим по всем дням месяца
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // [HEYS.calendar] Диагностика: подсчёт статуса дней
+            let _diagNull = 0, _diagFiltered = 0, _diagActive = 0;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = fmtDate(new Date(year, month, d));
+                const dayInfo = getDayData(dateStr, productsMap, profile);
+
+                // Пропускаем дни без данных. Если есть цикл или хотя бы один приём пищи — показываем даже при низких ккал
+                const hasCycleDay = dayInfo && dayInfo.cycleDay != null;
+                const hasMeals = !!(dayInfo && Array.isArray(dayInfo.meals) && dayInfo.meals.length > 0);
+                if (!dayInfo) { _diagNull++; continue; }
+                if (dayInfo.kcal < threshold && !hasCycleDay && !hasMeals) { _diagFiltered++; continue; }
+
+                // Если день только с cycleDay (без еды) — добавляем минимальную запись
+                if (dayInfo.kcal < threshold && hasCycleDay) {
+                    daysData.set(dateStr, {
+                        kcal: 0, target: 0, ratio: 0,
+                        hasTraining: false, trainingTypes: [], morningActivationCount: 0, trainingMinutes: 0,
+                        moodAvg: null, sleepHours: 0, dayScore: 0,
+                        prot: 0, fat: 0, carbs: 0,
+                        cycleDay: dayInfo.cycleDay
+                    });
+                    continue;
+                }
+
+                // Используем вес дня если есть, иначе из профиля
+                const weight = dayInfo.weightMorning || profileWeight;
+                const bmr = calcBMR(weight, profile || {});
+
+                // Шаги: формула stepsKcal(steps, weight, sex, 0.7)
+                const steps = dayInfo.steps || 0;
+                const stepsK = stepsKcal(steps, weight, sex, 0.7);
+
+                // Быт: householdMin × kcalPerMin(2.5, weight)
+                const householdMin = dayInfo.householdMin || 0;
+                const householdK = Math.round(householdMin * kcalPerMin(2.5, weight));
+
+                // Тренировки: суммируем ккал из зон z (как на экране дня — только первые 3)
+                // Читаем кастомные MET из heys_hr_zones (как на экране дня)
+                const hrZones = lsGet('heys_hr_zones', []);
+                const customMets = hrZones.map(x => +x.MET || 0);
+                const mets = [2.5, 6, 8, 10].map((def, i) => customMets[i] || def);
+                const kcalMin = mets.map(m => kcalPerMin(m, weight));
+
+                let trainingsK = 0;
+                const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки
+
+                // Собираем типы тренировок с реальными минутами
+                const activeTrainings = trainings
+                    .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0));
+                const trainingTypes = activeTrainings.map(t => t.type || 'cardio');
+                const morningActivationCount = activeTrainings.filter(t => t?.source === 'morning_activation').length;
+                const hasTraining = trainingTypes.length > 0;
+
+                trainings.forEach((t, tIdx) => {
+                    if (t.z && Array.isArray(t.z)) {
+                        let tKcal = 0;
+                        t.z.forEach((min, i) => {
+                            tKcal += Math.round((+min || 0) * (kcalMin[i] || 0));
+                        });
+                        trainingsK += tKcal;
+                    }
+                });
+
+                const tdee = bmr + stepsK + householdK + trainingsK;
+                // Используем дефицит дня если есть (не пустая строка и не null), иначе из профиля
+                const dayDeficit = (dayInfo.deficitPct !== '' && dayInfo.deficitPct != null) ? +dayInfo.deficitPct : deficitPct;
+                const calculatedTarget = Math.round(tdee * (1 + dayDeficit / 100));
+
+                // 🔧 FIX: Используем сохранённую норму с долгом если есть, иначе расчётную
+                // Это позволяет показывать корректную линию нормы в sparkline для прошлых дней
+                const target = dayInfo.savedDisplayOptimum > 0 ? dayInfo.savedDisplayOptimum : calculatedTarget;
+
+                // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
+                // savedEatenKcal гарантирует точное значение, которое показывалось пользователю в тот день
+                const hasAnyMealItems = (dayInfo.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
+                const kcal = hasAnyMealItems && dayInfo.savedEatenKcal > 0 ? dayInfo.savedEatenKcal : dayInfo.kcal;
+
+                // ratio: 1.0 = идеально в цель, <1 недоел, >1 переел
+                const ratio = target > 0 ? kcal / target : 0;
+
+                // moodAvg для mood-полосы на графике
+                const moodAvg = dayInfo.moodAvg ? +dayInfo.moodAvg : null;
+
+                // Дополнительные данные для sparkline и персонализированных инсайтов
+                const sleepHours = dayInfo.sleepHours || 0;
+                const trainingMinutes = dayInfo.trainingMinutes || 0;
+                const prot = dayInfo.prot || 0;
+                const fat = dayInfo.fat || 0;
+                const carbs = dayInfo.carbs || 0;
+                const dayScore = dayInfo.dayScore || 0;
+                const cycleDay = dayInfo.cycleDay || null; // День менструального цикла
+                // steps уже объявлен выше для расчёта stepsKcal
+                const waterMl = dayInfo.waterMl || 0; // 🆕 Вода для персонализированных инсайтов
+                const weightMorning = dayInfo.weightMorning || 0; // 🆕 Вес для персонализированных инсайтов
+
+                daysData.set(dateStr, {
+                    kcal, target, ratio, // 🔧 FIX: kcal теперь использует savedEatenKcal если есть
+                    baseTarget: calculatedTarget, // 🔧 Базовая норма БЕЗ долга — для расчёта caloricDebt
+                    hasTraining, trainingTypes, morningActivationCount, trainingMinutes,
+                    moodAvg, sleepHours, dayScore,
+                    prot, fat, carbs,
+                    steps, waterMl, weightMorning, // 🆕 Добавлены для персонализированных инсайтов
+                    cycleDay,
+                    isRefeedDay: dayInfo.isRefeedDay || false,
+                    refeedReason: dayInfo.refeedReason || null,
+                    // 🆕 v1.1: Флаги верификации низкокалорийных дней
+                    isFastingDay: dayInfo.isFastingDay || false,
+                    isIncomplete: dayInfo.isIncomplete || false
+                });
+
+                _diagActive++;
+            }
+
+            // [HEYS.calendar] Диагностика результатов
+            window.console.info('[HEYS.calendar] 📊 getActiveDaysForMonth: month=' + (month + 1)
+                + ' daysInMonth=' + daysInMonth
+                + ' null=' + _diagNull + ' filtered=' + _diagFiltered + ' active=' + _diagActive
+                + ' productsMap=' + productsMap.size
+                + ' threshold=' + threshold
+                + ' clientId=' + (window.HEYS?.currentClientId?.slice(0, 8) || 'none'));
+
+        } catch (e) {
+            // Тихий fallback — activeDays для календаря не критичны,
+            // но ошибку стоит залогировать, иначе отладка невозможна.
+            window.console.error('[HEYS.calendar] ❌ getActiveDaysForMonth ошибка:', e?.message || e);
+            try {
+                if (typeof HEYS !== 'undefined' && HEYS.analytics && HEYS.analytics.trackError) {
+                    HEYS.analytics.trackError(e, {
+                        where: 'day_utils.getActiveDaysForMonth',
+                        year,
+                        month,
+                        hasProfile: !!profile,
+                        productsLen: Array.isArray(products) ? products.length : null,
+                    });
+                }
+            } catch (_) { }
+        }
+
+        // R53: Store in cache before returning
+        _activeDaysCache.set(cacheKey, { data: daysData, ts: Date.now() });
+        return daysData;
+    }
+
+    function compactMealsContentSignature(meals) {
+        const arr = Array.isArray(meals) ? meals : [];
+        if (arr.length === 0) return '0';
+        return arr.map((m, idx) => {
+            const items = Array.isArray(m && m.items) ? m.items : [];
+            const itemSig = items.map((it, j) => [
+                (it && (it.productId || it.id)) || j,
+                Math.round(Number(it && it.grams) || 0),
+                Math.round(Number(it && it.kcal) || 0),
+                it && it.deleted ? 'd' : ''
+            ].join('.')).join(',');
+            return [
+                (m && m.id) || ('i' + idx),
+                String((m && m.updatedAt) || 0),
+                Math.round(Number(m && m.grams) || 0),
+                Math.round(Number(m && m.kcal) || 0),
+                String((m && m.time) || ''),
+                String((m && m.name) || '').slice(0, 120),
+                items.length,
+                itemSig
+            ].join('|');
+        }).join('\n');
+    }
+
+    function compactTrainingsContentSignature(trainings) {
+        const arr = Array.isArray(trainings) ? trainings : [];
+        if (arr.length === 0) return '0';
+        return arr.map((t, idx) => [
+            (t && t.id) || ('i' + idx),
+            String((t && t.updatedAt) || 0),
+            String((t && t.type) || ''),
+            Math.round(Number(t && t.minutes) || 0),
+            Math.round(Number(t && t.kcal) || 0)
+        ].join('|')).join('\n');
+    }
+
+    function mealsTrainingsDeepEqual(a, b) {
+        return JSON.stringify(a || []) === JSON.stringify(b || []);
+    }
+
+    function isSameDayHydratedContent(prevDay, newDay) {
+        if (!prevDay || !newDay || prevDay.date !== newDay.date) return false;
+        const pm = prevDay.meals || [];
+        const nm = newDay.meals || [];
+        const pt = prevDay.trainings || [];
+        const nt = newDay.trainings || [];
+        if (pm.length !== nm.length || pt.length !== nt.length) return false;
+        const mealsOk = compactMealsContentSignature(pm) === compactMealsContentSignature(nm)
+            || mealsTrainingsDeepEqual(pm, nm);
+        const trainOk = compactTrainingsContentSignature(pt) === compactTrainingsContentSignature(nt)
+            || mealsTrainingsDeepEqual(pt, nt);
+        if (!mealsOk || !trainOk) return false;
+        return prevDay.waterMl === newDay.waterMl &&
+            prevDay.steps === newDay.steps &&
+            prevDay.weightMorning === newDay.weightMorning &&
+            !!prevDay.isFastingDay === !!newDay.isFastingDay &&
+            !!prevDay.isIncomplete === !!newDay.isIncomplete &&
+            prevDay.moodMorning === newDay.moodMorning &&
+            prevDay.wellbeingMorning === newDay.wellbeingMorning &&
+            prevDay.stressMorning === newDay.stressMorning &&
+            prevDay.moodAvg === newDay.moodAvg &&
+            prevDay.wellbeingAvg === newDay.wellbeingAvg &&
+            prevDay.stressAvg === newDay.stressAvg &&
+            prevDay.dayScore === newDay.dayScore &&
+            prevDay.dayScoreRaw === newDay.dayScoreRaw &&
+            prevDay.dayScoreManual === newDay.dayScoreManual &&
+            prevDay.sleepStart === newDay.sleepStart &&
+            prevDay.sleepEnd === newDay.sleepEnd &&
+            prevDay.sleepHours === newDay.sleepHours &&
+            prevDay.sleepQuality === newDay.sleepQuality;
+    }
+
+    function isSameDayStorageMergeContent(prevDay, newDay) {
+        if (!prevDay || !newDay || prevDay.date !== newDay.date) return false;
+        const pm = prevDay.meals || [];
+        const nm = newDay.meals || [];
+        const pt = prevDay.trainings || [];
+        const nt = newDay.trainings || [];
+        if (pm.length !== nm.length || pt.length !== nt.length) return false;
+        const mealsOk = compactMealsContentSignature(pm) === compactMealsContentSignature(nm)
+            || mealsTrainingsDeepEqual(pm, nm);
+        const trainOk = compactTrainingsContentSignature(pt) === compactTrainingsContentSignature(nt)
+            || mealsTrainingsDeepEqual(pt, nt);
+        if (!mealsOk || !trainOk) return false;
+        const prevSupplementsPlanned = JSON.stringify(prevDay.supplementsPlanned || []);
+        const newSupplementsPlanned = JSON.stringify(newDay.supplementsPlanned || []);
+        const prevSupplementsTaken = JSON.stringify(prevDay.supplementsTaken || []);
+        const newSupplementsTaken = JSON.stringify(newDay.supplementsTaken || []);
+        const prevHouseholdJson = JSON.stringify(prevDay.householdActivities || []);
+        const newHouseholdJson = JSON.stringify(newDay.householdActivities || []);
+        return prevHouseholdJson === newHouseholdJson &&
+            prevDay.waterMl === newDay.waterMl &&
+            prevDay.steps === newDay.steps &&
+            prevDay.weightMorning === newDay.weightMorning &&
+            prevDay.moodMorning === newDay.moodMorning &&
+            prevDay.wellbeingMorning === newDay.wellbeingMorning &&
+            prevDay.stressMorning === newDay.stressMorning &&
+            prevSupplementsPlanned === newSupplementsPlanned &&
+            prevSupplementsTaken === newSupplementsTaken &&
+            prevDay.sleepStart === newDay.sleepStart &&
+            prevDay.sleepEnd === newDay.sleepEnd &&
+            prevDay.sleepHours === newDay.sleepHours &&
+            prevDay.sleepQuality === newDay.sleepQuality &&
+            prevDay.morningActivation?.status === newDay.morningActivation?.status &&
+            prevDay.householdMin === newDay.householdMin;
+    }
+
+    // === Exports ===
+    // Всё экспортируется через HEYS.dayUtils
+    // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
+    HEYS.dayUtils = {
+        // Haptic
+        haptic: hapticFn,
+        // Date/Time
+        pad2,
+        todayISO,
+        fmtDate,
+        parseISO,
+        uid,
+        formatDateDisplay,
+        // Night time logic (приёмы 00:00-02:59 относятся к предыдущему дню)
+        NIGHT_HOUR_THRESHOLD,
+        isNightTime,
+        getEffectiveDate,
+        getNextDay,
+        // Storage
+        lsGet,
+        lsSet,
+        // Math
+        clamp,
+        r0,
+        r1,
+        scale,
+        // Models
+        ensureDay,
+        buildProductIndex,
+        getProductFromItem,
+        per100,
+        // Data
+        loadMealsForDate,
+        loadMealsRaw,
+        productsSignature,
+        computePopularProducts,
+        // Profile/Calculations
+        getProfile,
+        calcBMR,
+        kcalPerMin,
+        stepsKcal,
+        // Time/Sleep
+        parseTime,
+        sleepHours,
+        formatMealTime,
+        // Hours Order (для wheel picker с ночными часами)
+        HOURS_ORDER,
+        wheelIndexToHour,
+        hourToWheelIndex,
+        // Meal Type Classification
+        MEAL_TYPES,
+        MAIN_MEAL_THRESHOLDS,
+        getMealStats,
+        isMainMeal,
+        timeToMinutes,
+        getMealType,
+        getMealTypeSimple,
+        getMealTypeForPreview,
+        fallbackMealType,
+        // Calendar indicators
+        getDayCalories,
+        getProductsMap,
+        getActiveDaysForMonth,
+        getDayData,
+        // 🚀 Lazy-loading API
+        loadRecentDays,
+        loadDay,
+        invalidateDayCache,
+        clearDaysCache,
+        getDaysCacheStats,
+        preloadMonthDays,
+        isSameDayHydratedContent,
+        isSameDayStorageMergeContent
+    };
 
 })(window);
+
