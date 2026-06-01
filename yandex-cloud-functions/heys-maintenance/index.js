@@ -679,6 +679,70 @@ async function dailyReport(client) {
     healthBlock = `🩺 *KV Health*: ⚠️ ${e.message.slice(0, 80)}`;
   }
 
+  // 7. Profile pollution defense status (wave 1-4) — позитивное подтверждение
+  // что все 14 layer'ов работают. Каждое утро видим зелёный baseline или
+  // конкретное место где регрессия.
+  let defenseBlock = '';
+  try {
+    // a) Synthetic self-test (DB CHECK trigger + RPC function + tables)
+    const syn = await syntheticDefenseCheck(client);
+    // b) Writer-CID invariant
+    const wci = await writerCidIntegrityCheck(client);
+    // c) Profile name integrity
+    const pi = await profileIntegrityCheck(client);
+    // d) Snapshots за 24ч (показывает что pipeline активный)
+    const snapRes = await client.query(`
+      SELECT count(*)::int AS total,
+             count(*) FILTER (WHERE reason = 'routine')::int   AS routine,
+             count(*) FILTER (WHERE reason = 'wholesale_identity_change')::int AS wholesale,
+             count(*) FILTER (WHERE reason = 'cross_client_blocked')::int      AS blocked
+        FROM profile_snapshots
+       WHERE created_at > now() - interval '24 hours'
+    `);
+    const s = snapRes.rows[0];
+    // e) Pollution-related audit events за 24ч
+    const auRes = await client.query(`
+      SELECT
+        count(*) FILTER (WHERE action = 'cross_client_profile_blocked')::int AS xclient_p,
+        count(*) FILTER (WHERE action = 'cross_client_blob_blocked')::int    AS xclient_b,
+        count(*) FILTER (WHERE action = 'wholesale_identity_change')::int    AS wholesale_a,
+        count(*) FILTER (WHERE action = 'invalid_profile_field')::int        AS invalid_f
+      FROM data_loss_audit
+       WHERE created_at > now() - interval '24 hours'
+    `);
+    const au = auRes.rows[0];
+
+    const synOk = syn.failures.length === 0;
+    const wciOk = wci.summary.mismatched === 0 && wci.summary.dayv2_mismatched === 0;
+    const piOk = pi.summary.mismatches === 0;
+    const auditNoBad = au.xclient_p === 0 && au.xclient_b === 0 && au.invalid_f === 0;
+    const allGreen = synOk && wciOk && piOk && auditNoBad;
+
+    const lines = [];
+    lines.push(`🛡️ *Защита данных* — ${allGreen ? '✅ всё работает' : '⚠️ требует внимания'}`);
+    lines.push(`${synOk ? '✅' : '🚨'} Synthetic check: ${syn.summary.passed}/${syn.summary.total}${synOk ? '' : ' — *защита сломана*'}`);
+    lines.push(
+      `${wciOk ? '✅' : '🚨'} Writer-CID invariant: ` +
+      `profile/norms ${wci.summary.mismatched}, dayv2 ${wci.summary.dayv2_mismatched} mismatched` +
+      (wci.summary.untagged + wci.summary.dayv2_untagged > 0
+        ? ` _(${wci.summary.untagged + wci.summary.dayv2_untagged} legacy untagged — норма)_`
+        : '')
+    );
+    lines.push(`${piOk ? '✅' : '🚨'} Profile name integrity: ${pi.summary.mismatches} mismatches`);
+    lines.push(
+      `${auditNoBad ? '✅' : '🚨'} Pollution events 24ч: ` +
+      `cross-client=${au.xclient_p + au.xclient_b}, invalid=${au.invalid_f}` +
+      (au.wholesale_a > 0 ? `, wholesale=${au.wholesale_a} (legit или подозрительно?)` : '')
+    );
+    lines.push(
+      `📸 Snapshots 24ч: ${s.total} ` +
+      `_(routine=${s.routine}, wholesale=${s.wholesale}, blocked=${s.blocked})_`
+    );
+    defenseBlock = lines.join('\n');
+  } catch (e) {
+    defenseBlock = `🛡️ *Защита данных*: ⚠️ ${e.message.slice(0, 100)}`;
+  }
+
   const parts = [
     `📊 *Утренний отчёт HEYS* — ${dateStr}`,
     activityBlock,
@@ -687,6 +751,7 @@ async function dailyReport(client) {
     expiringBlock,
     trialBlock,
     healthBlock,
+    defenseBlock,
   ].filter(Boolean);
 
   await sendTelegramNotification(parts.join('\n\n'));
