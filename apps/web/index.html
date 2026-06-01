@@ -856,10 +856,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.41f5eafc8db7.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.a83a6e60f6de.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.57e342daaae0.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.e3361edb8a40.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.32eed14b7028.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.44190912d140.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.ed701047dc0a.js" as="script" />
     <link rel="preload" href="boot-init.bundle.a261f6f72353.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -2308,6 +2308,15 @@
 
                 inp.addEventListener('input', function (e) {
                     var raw = inp.value.replace(/\D/g, '').slice(0, 10);
+                    // Mobile-фикс: на Android keydown не отдаёт key==='Backspace',
+                    // backspace приходит только через input. Если стёрся только
+                    // разделитель маски ('-' или ') '), количество цифр не
+                    // изменилось — снимаем последнюю цифру руками, иначе
+                    // ввод «упирается в стенку» на стыках 3/6/8 цифр.
+                    var inputType = (e && e.inputType) || '';
+                    if (inputType === 'deleteContentBackward' && raw.length === phoneDigits.length && phoneDigits.length > 0) {
+                        raw = raw.slice(0, -1);
+                    }
                     phoneDigits = raw;
                     inp.value = formatPhoneBody(raw);
                     wrap.classList.toggle('is-complete', raw.length === 10);
@@ -3002,10 +3011,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.41f5eafc8db7.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.a83a6e60f6de.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.57e342daaae0.js"></script>
-    <script defer src="boot-day.bundle.e3361edb8a40.js"></script>
-    <script defer src="boot-app.bundle.32eed14b7028.js"></script>
+    <script defer src="boot-day.bundle.44190912d140.js"></script>
+    <script defer src="boot-app.bundle.ed701047dc0a.js"></script>
     <script defer src="boot-init.bundle.a261f6f72353.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

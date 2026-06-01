@@ -291,6 +291,17 @@
         }
     };
 
+    // 🚮 Give-up policy для фоток которые не загружаются вечно (incident 2026-06-01:
+    // 4 фотки × ~125KB застряли с 28 мая → 505KB в pending queue 5+ дней,
+    // забивали LS budget до 95% emergency audit loop). Раньше любой fail просто
+    // returning photo в queue без счётчика → бесконечный retry. Теперь:
+    // - retryCount счётчик попыток uplo'a
+    // - даём до MAX_RETRIES упорных попыток
+    // - после стольки же ИЛИ возраст > MAX_AGE_MS → give up, удаляем из queue
+    //   с console.warn (видно в client_log_trace для разбора)
+    const MAX_RETRIES = 5;
+    const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 дней — после этого даже свежие фотки losу
+
     Photos.uploadPendingPhotos = async function () {
         if (!navigator.onLine) return;
 
@@ -301,8 +312,19 @@
             log('📷 Uploading', pending.length, 'pending photos...');
 
             const stillPending = [];
+            const givenUp = [];
+            const now = Date.now();
 
             for (const photo of pending) {
+                const ageMs = now - (Number(photo.createdAt) || now);
+                const retryCount = Number(photo.retryCount) || 0;
+
+                // Give-up прямо тут до retry — старые/upstream-failed уже не спасти
+                if (ageMs > MAX_AGE_MS || retryCount >= MAX_RETRIES) {
+                    givenUp.push({ id: photo.id, ageH: Math.round(ageMs / 3600000), retries: retryCount });
+                    continue; // не пушим в stillPending — выкидываем из queue
+                }
+
                 try {
                     const result = await Photos.uploadPhoto(
                         photo.data,
@@ -315,17 +337,24 @@
                         await updatePhotoUrlInDay(photo.clientId, photo.date, photo.id, result.url);
                         log('📷 Pending photo uploaded:', photo.id);
                     } else {
-                        stillPending.push(photo);
+                        stillPending.push({ ...photo, retryCount: retryCount + 1, lastTriedAt: now });
                     }
-                } catch (_) {
-                    stillPending.push(photo);
+                } catch (err) {
+                    // Раньше catch (_) silenced ошибку. Теперь log + bump retryCount,
+                    // чтобы было видно почему фотки не уезжают.
+                    console.warn('[HEYS.photos] upload failed for', photo.id, ':', err?.message || err);
+                    stillPending.push({ ...photo, retryCount: retryCount + 1, lastTriedAt: now });
                 }
             }
 
             global.localStorage.setItem(PENDING_PHOTOS_KEY, JSON.stringify(stillPending));
 
+            if (givenUp.length > 0) {
+                console.warn('[HEYS.photos] 🚮 Gave up on', givenUp.length, 'stuck photos:', givenUp);
+            }
             if (stillPending.length < pending.length) {
-                log('📷 Uploaded', pending.length - stillPending.length, 'photos,', stillPending.length, 'still pending');
+                log('📷 Uploaded', pending.length - stillPending.length - givenUp.length, 'photos,',
+                    stillPending.length, 'still pending,', givenUp.length, 'given up');
             }
         } catch (e) {
             logCritical('📷 uploadPendingPhotos error:', e?.message || e);

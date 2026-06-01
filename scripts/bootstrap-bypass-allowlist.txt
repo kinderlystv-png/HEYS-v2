@@ -151,7 +151,7 @@ apps/web/heys_metabolic_intelligence_v1.js:2416
 apps/web/heys_models_v1.js:404
 apps/web/heys_module_perf_v1.js:43
 apps/web/heys_module_perf_v1.js:67
-apps/web/heys_fingers_entry_v1.js:166
+apps/web/fingers/heys_fingers_entry_v1.js:166
 apps/web/heys_morning_checkin_v1.js:136
 apps/web/heys_morning_checkin_v1.js:157
 apps/web/heys_morning_checkin_v1.js:159
@@ -190,7 +190,7 @@ apps/web/heys_steps_v1.js:58
 apps/web/heys_storage_layer_v1.js:169
 apps/web/heys_storage_layer_v1.js:200
 apps/web/heys_storage_photos_v1.js:210
-apps/web/heys_storage_photos_v1.js:325
+apps/web/heys_storage_photos_v1.js:350
 apps/web/heys_subscription_v1.js:62
 apps/web/heys_subscriptions_v1.js:605
 apps/web/heys_subscriptions_v1.js:1342
@@ -233,11 +233,11 @@ apps/web/advice/_actions.js:175
 apps/web/advice/_commitments.js:52
 apps/web/advice/_commitments.js:200
 apps/web/advice/_experiments.js:117
-apps/web/heys_fingers_calibration_v1.js:57
-apps/web/heys_fingers_onboarding_v1.js:129
-apps/web/heys_fingers_records_store_v1.js:56
-apps/web/heys_fingers_session_persistence_v1.js:60
-apps/web/heys_fingers_session_persistence_v1.js:140
-apps/web/heys_fingers_voice_v1.js:167
+apps/web/fingers/heys_fingers_calibration_v1.js:57
+apps/web/fingers/heys_fingers_onboarding_v1.js:129
+apps/web/fingers/heys_fingers_records_store_v1.js:56
+apps/web/fingers/heys_fingers_session_persistence_v1.js:60
+apps/web/fingers/heys_fingers_session_persistence_v1.js:140
+apps/web/fingers/heys_fingers_voice_v1.js:167
 apps/web/heys_storage_layer_v1.js:1510
 apps/web/advice/_core.js:3290
