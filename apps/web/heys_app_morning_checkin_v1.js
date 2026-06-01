@@ -103,12 +103,20 @@
 
                     // Проверяем что clientId из события совпадает с текущим в localStorage
                     const lsClientId = HEYS.utils?.getCurrentClientId?.() || '';
-                    if (eventClientId !== lsClientId) {
-                        console.warn('[MorningCheckin] ⚠️ eventClientId !== lsClientId — пропускаем', {
+                    if (lsClientId && eventClientId !== lsClientId) {
+                        // Реальное расхождение: ls указывает на другого клиента (cross-session leak risk).
+                        console.warn('[MorningCheckin] ⚠️ eventClientId !== lsClientId — пропускаем (другой клиент в LS)', {
                             event: eventClientId?.slice(0, 8),
                             ls: lsClientId?.slice(0, 8),
                         });
                         return;
+                    }
+                    if (!lsClientId) {
+                        // PIN-сессия: heysSyncCompleted приходит ДО записи heys_client_current в LS
+                        // (race ~200-400ms на медленных устройствах). Принимаем eventClientId — он
+                        // авторитетный источник для свежепереключённого клиента, как и в clientIdRef
+                        // fallback выше. Backward compat: то же поведение что для clientIdRef пустого.
+                        console.info('[MorningCheckin] ℹ️ lsClientId пуст (PIN race) — принимаем eventClientId:', eventClientId?.slice(0, 8));
                     }
 
                     if (HEYS.shouldShowMorningCheckin) {

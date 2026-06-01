@@ -21,9 +21,9 @@
   var API_URL = isLocalDev ? 'http://localhost:4001' : 'https://api.heyslab.ru';
   var ENDPOINT = API_URL + '/rest/client_log_trace';
 
-  var RING_MAX = 500;            // max entries в буфере
-  var FLUSH_INTERVAL_MS = 30000; // periodic flush каждые 30s
-  var FLUSH_BATCH = 200;         // max строк за один POST (сервер capped 500)
+  var RING_MAX = 1500;           // max entries в буфере (поднято 2026-06-01: 500 не хватало активным сессиям)
+  var FLUSH_INTERVAL_MS = 20000; // periodic flush каждые 20s (раньше 30s — снижаем риск overflow до flush)
+  var FLUSH_BATCH = 300;         // max строк за один POST (сервер capped 500)
   var MAX_MSG_LEN = 4000;        // обрезка длинных строк
   var SESSION_ID = (function () {
     try {

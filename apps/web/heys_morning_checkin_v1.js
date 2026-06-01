@@ -204,7 +204,16 @@
       ...(dayData.morningActivation || {}),
       ...patch
     };
-    dayData.updatedAt = Date.now();
+    // 🛡️ Monotonic updatedAt (2026-06-01 STALE-WRITER incident): между нашим
+    // readDayV2ScopedFirst выше и writeDayV2ScopedAndLegacy ниже параллельный
+    // writer (step save / Day.requestFlush async tail) может записать в LS
+    // более свежий updatedAt. Если мы поставим Date.now() и он окажется
+    // <= того что уже в LS, stale-writer guard в LS interceptor отвергнет
+    // запись и MA patch потеряется. Re-read LS прямо здесь + гарантия
+    // updatedAt > свежайшего в LS закрывает race окно.
+    let _latestInLs = readDayV2ScopedFirst(dateKey, null);
+    const _latestUpdatedAt = (_latestInLs && typeof _latestInLs.updatedAt === 'number') ? _latestInLs.updatedAt : 0;
+    dayData.updatedAt = Math.max(Date.now(), _latestUpdatedAt + 1);
     writeDayV2ScopedAndLegacy(dateKey, dayData);
     window.dispatchEvent(new CustomEvent('heys:day-updated', {
       detail: {
