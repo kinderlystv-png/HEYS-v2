@@ -2061,7 +2061,9 @@
         getDaysCacheStats,
         preloadMonthDays,
         isSameDayHydratedContent,
-        isSameDayStorageMergeContent
+        isSameDayStorageMergeContent,
+        // Predicates
+        isSyntheticEstimatedItem
     };
 
 })(window);
@@ -2281,10 +2283,13 @@
             if (current && isMeaningfulDayData(current) && !isMeaningfulDayData(payload)) return;
 
             // 🔍 DEBUG: Проверка на продукты без нутриентов в meals
+            // Synthetic estimated items (morning-checkin quickfill, virtual products) легитимно
+            // не имеют нутриентов — пропускаем, чтобы не засорять signal от настоящих empty items.
+            const isSynthetic = HEYS.dayUtils?.isSyntheticEstimatedItem;
             const emptyItems = [];
             (payload.meals || []).forEach((meal, mi) => {
                 (meal.items || []).forEach((item, ii) => {
-                    if (!item.kcal100 && !item.protein100 && !item.carbs100) {
+                    if (!item.kcal100 && !item.protein100 && !item.carbs100 && !isSynthetic?.(item)) {
                         emptyItems.push({
                             mealIndex: mi,
                             itemIndex: ii,

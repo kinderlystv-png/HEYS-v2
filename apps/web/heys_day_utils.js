@@ -2056,7 +2056,9 @@
         getDaysCacheStats,
         preloadMonthDays,
         isSameDayHydratedContent,
-        isSameDayStorageMergeContent
+        isSameDayStorageMergeContent,
+        // Predicates
+        isSyntheticEstimatedItem
     };
 
 })(window);
