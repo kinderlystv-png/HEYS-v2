@@ -415,7 +415,7 @@
 
     const {
       state, secondsLeft, setIdx, totalSets, repIdx, totalReps,
-      gripLabel, edgeLabel, addedWeightKg, onPause, onAbort, onSkip,
+      gripLabel, gripId, edgeLabel, addedWeightKg, onPause, onAbort, onSkip,
     } = props || {};
 
     // Visual style depending on phase
@@ -452,17 +452,73 @@
       className: 'heys-fingers-countdown',
       style: {
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: '16px', padding: '24px', fontFamily: 'system-ui, -apple-system, sans-serif',
+        gap: '14px', padding: '20px 24px', fontFamily: 'system-ui, -apple-system, sans-serif',
       },
     },
-      // Top info — set/rep counter + grip
-      h('div', { style: { fontSize: '14px', color: '#6b7280', textAlign: 'center' } },
+      // Top info — set/rep counter
+      h('div', { style: { fontSize: '14px', color: '#6b7280', textAlign: 'center', fontWeight: 500 } },
         (totalSets && totalReps)
           ? `Подход ${(setIdx || 0) + 1}/${totalSets} · Повтор ${(repIdx || 0) + 1}/${totalReps}`
           : ''
       ),
-      gripLabel ? h('div', { style: { fontSize: '13px', color: '#9ca3af', textAlign: 'center' } },
-        `${gripLabel}${edgeLabel ? ' · ' + edgeLabel : ''}${addedWeightKg != null ? ` · ${addedWeightKg > 0 ? '+' : ''}${addedWeightKg} кг` : ''}`
+
+      // Grip name — крупно (теперь это основной заголовок)
+      gripLabel ? h('div', {
+        style: { fontSize: '22px', fontWeight: 700, color: '#1f2937',
+          textAlign: 'center', letterSpacing: '-0.01em', lineHeight: 1.2 }
+      }, gripLabel) : null,
+
+      // Grip hero — крупнее. При 404 wrapper схлопывается через onError.
+      gripId ? h('div', {
+        style: {
+          width: 200, height: 200, borderRadius: 20,
+          overflow: 'hidden', background: 'rgba(120, 120, 128, 0.08)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }
+      },
+        h('img', {
+          src: '/exercises/' + gripId + '.webp',
+          alt: gripLabel || gripId,
+          loading: 'eager',
+          decoding: 'async',
+          style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+          onError: function (e) {
+            try { e.target.parentNode.style.display = 'none'; } catch (_) {}
+          }
+        })
+      ) : null,
+
+      // Параметры — заметные чипы (грань + доп. вес).
+      // На красном фоне HANG юзеру важно одним взглядом помнить вес — поэтому крупно.
+      (edgeLabel || addedWeightKg != null) ? h('div', {
+        style: { display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }
+      },
+        edgeLabel ? h('div', {
+          style: {
+            display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+            background: 'rgba(120, 120, 128, 0.10)', borderRadius: 12,
+            padding: '8px 16px', minWidth: 80
+          }
+        },
+          h('span', { style: { fontSize: 11, color: '#6b7280', fontWeight: 500,
+            textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Грань'),
+          h('span', { style: { fontSize: 20, fontWeight: 700, color: '#1f2937', marginTop: 2 } },
+            edgeLabel)
+        ) : null,
+        addedWeightKg != null ? h('div', {
+          style: {
+            display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+            background: 'rgba(120, 120, 128, 0.10)', borderRadius: 12,
+            padding: '8px 16px', minWidth: 80
+          }
+        },
+          h('span', { style: { fontSize: 11, color: '#6b7280', fontWeight: 500,
+            textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Доп. вес'),
+          h('span', { style: { fontSize: 20, fontWeight: 700,
+            color: addedWeightKg > 0 ? '#dc2626' : (addedWeightKg < 0 ? '#0891b2' : '#1f2937'),
+            marginTop: 2 } },
+            (addedWeightKg > 0 ? '+' : '') + addedWeightKg + ' кг')
+        ) : null
       ) : null,
 
       // Phase badge

@@ -222,25 +222,6 @@
     background: 'rgba(220, 38, 38, 0.10)', color: '#991b1b',
   };
 
-  // Anatomy section
-  const ST_ANAT_SECTION = { padding: '10px 14px', borderBottom: BORDER_LITE };
-  const ST_ANAT_TITLE = {
-    fontSize: 11, fontWeight: 500, color: MUTED,
-    marginBottom: 6, display: 'block',
-    textTransform: 'uppercase', letterSpacing: '0.04em',
-  };
-  const ST_ANAT_WRAP = { display: 'flex', justifyContent: 'center', padding: '4px 0 8px' };
-  const ST_MUSCLES = { display: 'flex', flexWrap: 'wrap', gap: 4 };
-  const ST_MUSCLE_CHIP = {
-    padding: '4px 10px', borderRadius: 10,
-    border: '0.5px solid rgba(60, 60, 67, 0.18)',
-    background: 'rgba(120, 120, 128, 0.06)', color: FG,
-    fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-    lineHeight: 1.3, whiteSpace: 'nowrap',
-    minHeight: 'auto', minWidth: 'auto',
-    height: 26,
-  };
-
   // Method tip — info-style block в конце
   const ST_METHOD = {
     padding: '10px 14px', background: 'rgba(0, 102, 255, 0.05)',
@@ -332,15 +313,12 @@
       : null;
     return R.createElement('div', { style: ST_HERO_WRAP, className: 'fingers-fs-hero-wrap' }, img, muscles);
   }
-  function renderHeader(grip, onRemove, exIdx, exTotal) {
-    // «Упражнение 2 из 3 · Полузамок» — нумерация важна когда в плане несколько
-    // упражнений, чтобы юзер понимал где он в стеке. Шапка теперь над фото.
-    const idxLabel = (Number.isFinite(exIdx) && Number.isFinite(exTotal) && exTotal > 1)
-      ? 'Упражнение ' + (exIdx + 1) + ' из ' + exTotal
-      : 'Упражнение';
+  function renderHeader(grip, onRemove) {
+    // Нумерация «Упражнение N из M» вынесена наружу карточки (в ConstructorTab
+    // — центральный разделитель между карточками), здесь только название хвата
+    // + кнопка удаления.
     return R.createElement('div', { style: ST_HEADER, className: 'fingers-fs-exercise-header' },
       R.createElement('div', { style: ST_TITLE_GROUP },
-        R.createElement('div', { style: ST_TITLE_KICKER }, idxLabel),
         R.createElement('div', { style: ST_TITLE }, grip.label),
       ),
       R.createElement('button', {
@@ -474,64 +452,49 @@
     return null;
   }
 
-  function renderTimeInput(label, value, onChange, min, max, mmSs) {
-    return R.createElement('div', { style: ST_ROW, className: 'fingers-fs-row' },
-      R.createElement('label', { style: ST_LABEL }, label),
+  // locked=true → input read-only, выглядит приглушённо, в label префикс 🔒
+  // (см. protocolLocked в ExerciseConstructor — поля времени/повторов/подходов
+  // залочены пока активна программа, чтобы юзер не ломал калибровку протокола).
+  function renderTimeInput(label, value, onChange, min, max, mmSs, locked) {
+    const labelStyle = locked ? Object.assign({}, ST_LABEL, { opacity: 0.55 }) : ST_LABEL;
+    const inputStyle = locked
+      ? Object.assign({}, ST_INLINE_INPUT, { opacity: 0.55, cursor: 'not-allowed', color: MUTED })
+      : ST_INLINE_INPUT;
+    return R.createElement('div', { style: ST_ROW, className: 'fingers-fs-row' + (locked ? ' is-locked' : '') },
+      R.createElement('label', { style: labelStyle }, (locked ? '🔒 ' : '') + label),
       R.createElement('div', { style: ST_TIME_WRAP },
         R.createElement('input', {
           type: 'number', min: min, max: max, step: 1, value: value,
-          onChange: function (e) { onChange(clamp(parseInt(e.target.value, 10), min, max)); },
-          style: ST_INLINE_INPUT,
+          readOnly: !!locked,
+          disabled: !!locked,
+          onChange: function (e) {
+            if (locked) return;
+            onChange(clamp(parseInt(e.target.value, 10), min, max));
+          },
+          style: inputStyle,
         }),
         R.createElement('span', { style: ST_TIME_UNIT }, mmSs ? fmtMmSs(value) : 'с'),
       ),
     );
   }
 
-  function renderIntInput(label, value, onChange, min, max) {
-    return R.createElement('div', { style: ST_ROW, className: 'fingers-fs-row' },
-      R.createElement('label', { style: ST_LABEL }, label),
+  function renderIntInput(label, value, onChange, min, max, locked) {
+    const labelStyle = locked ? Object.assign({}, ST_LABEL, { opacity: 0.55 }) : ST_LABEL;
+    const inputStyle = locked
+      ? Object.assign({}, ST_INLINE_INPUT, { opacity: 0.55, cursor: 'not-allowed', color: MUTED })
+      : ST_INLINE_INPUT;
+    return R.createElement('div', { style: ST_ROW, className: 'fingers-fs-row' + (locked ? ' is-locked' : '') },
+      R.createElement('label', { style: labelStyle }, (locked ? '🔒 ' : '') + label),
       R.createElement('input', {
         type: 'number', min: min, max: max, step: 1, value: value,
-        onChange: function (e) { onChange(clamp(parseInt(e.target.value, 10), min, max)); },
-        style: ST_INLINE_INPUT,
+        readOnly: !!locked,
+        disabled: !!locked,
+        onChange: function (e) {
+          if (locked) return;
+          onChange(clamp(parseInt(e.target.value, 10), min, max));
+        },
+        style: inputStyle,
       }),
-    );
-  }
-
-  function renderMusclesPanel(grip) {
-    const muscleIds = (grip && Array.isArray(grip.primaryMuscles)) ? grip.primaryMuscles : [];
-    const known = (Fingers.MUSCLE_INFO && typeof Fingers.MUSCLE_INFO === 'object')
-      ? muscleIds.filter(function (m) {
-          return Object.prototype.hasOwnProperty.call(Fingers.MUSCLE_INFO, m);
-        })
-      : [];
-
-    const handleChip = function (mid) {
-      if (typeof Fingers.openMuscleDetail === 'function') {
-        try { Fingers.openMuscleDetail(mid); return; } catch (_) {}
-      }
-      const msg = 'Деталь мышцы появится после загрузки модуля.';
-      try {
-        if (HEYS.Toast && typeof HEYS.Toast.info === 'function') HEYS.Toast.info(msg);
-        else if (HEYS.Toast && typeof HEYS.Toast.show === 'function') HEYS.Toast.show(msg);
-      } catch (_) {}
-    };
-
-    const chips = known.map(function (mid) {
-      const info = Fingers.MUSCLE_INFO[mid];
-      const label = (info && info.name) ? info.name : mid;
-      return R.createElement('button', {
-        key: mid, type: 'button',
-        className: 'fingers-fs-muscle-chip',
-        onClick: function () { handleChip(mid); },
-        'aria-label': 'Подробнее: ' + label, style: ST_MUSCLE_CHIP,
-      }, label);
-    });
-
-    return R.createElement('div', { style: ST_ANAT_SECTION },
-      R.createElement('span', { style: ST_ANAT_TITLE }, 'Задействованные мышцы'),
-      chips.length > 0 ? R.createElement('div', { style: ST_MUSCLES }, chips) : null,
     );
   }
 
@@ -562,6 +525,11 @@
     const onChange = typeof p.onChange === 'function' ? p.onChange : function () {};
     const onRemove = typeof p.onRemove === 'function' ? p.onRemove : function () {};
     const patch = function (diff) { onChange(Object.assign({}, ex, diff)); };
+    // Когда активна программа — параметры протокола (время виса/отдых/повторы/
+    // подходы) залочены: это калиброванные значения под конкретный энергообмен,
+    // менять их = ломать смысл программы. Доступны для изменения только grip,
+    // edge и доп. вес — стандартные progression knobs.
+    const protocolLocked = !!p.protocolLocked;
 
     // Age fail-closed guard: возраст не указан в профиле — показываем CTA
     // вместо опасных хватов (вместо тихо отфильтрованного списка).
@@ -591,7 +559,7 @@
     const els = [];
     // Заголовок (название упражнения + крестик) — теперь СВЕРХУ, до фото.
     // Тогда юзер сразу видит контекст и может удалить упражнение без скролла.
-    els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove, exIdx, exTotal)));
+    els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove)));
     els.push(R.createElement(R.Fragment, { key: 'hero' }, renderHero(grip)));
 
     // iOS form-grouped: каждое поле — отдельная row с label слева, value справа.
@@ -608,21 +576,19 @@
 
     els.push(R.createElement(R.Fragment, { key: 'hang' },
       renderTimeInput('Длительность виса', ex.hangSec,
-        function (v) { patch({ hangSec: v }); }, 1, 30, false)));
+        function (v) { patch({ hangSec: v }); }, 1, 30, false, protocolLocked)));
     els.push(R.createElement(R.Fragment, { key: 'rest' },
       renderTimeInput('Отдых между висами', ex.restSec,
-        function (v) { patch({ restSec: v }); }, 0, 600, false)));
+        function (v) { patch({ restSec: v }); }, 0, 600, false, protocolLocked)));
     els.push(R.createElement(R.Fragment, { key: 'reps' },
       renderIntInput('Висов в подходе', ex.repsPerSet,
-        function (v) { patch({ repsPerSet: v }); }, 1, 30)));
+        function (v) { patch({ repsPerSet: v }); }, 1, 30, protocolLocked)));
     els.push(R.createElement(R.Fragment, { key: 'sets' },
       renderIntInput('Подходов', ex.setsCount,
-        function (v) { patch({ setsCount: v }); }, 1, 12)));
+        function (v) { patch({ setsCount: v }); }, 1, 12, protocolLocked)));
     els.push(R.createElement(R.Fragment, { key: 'restset' },
       renderTimeInput('Отдых между подходами', ex.restBetweenSetsSec,
-        function (v) { patch({ restBetweenSetsSec: v }); }, 0, 900, true)));
-
-    els.push(R.createElement(R.Fragment, { key: 'm' }, renderMusclesPanel(grip)));
+        function (v) { patch({ restBetweenSetsSec: v }); }, 0, 900, true, protocolLocked)));
 
     const method = renderMethodSection(ex.gripId, ex.edgeSizeMm, ex.hangSec);
     if (method) {

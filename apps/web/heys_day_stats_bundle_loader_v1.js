@@ -33,6 +33,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'heys_fingers_session_persistence_v1.js',
         'heys_fingers_calendar_v1.js',
         'heys_fingers_safety_v1.js',
+        'heys_fingers_warmup_runner_v1.js',     // RAMP-разминка runner (depends на safety.rampWarmupSteps + voice)
         // Wave 3 — Integration UI (зависят от Wave 2 catalogs/visuals/timer)
         'heys_fingers_muscle_detail_v1.js',     // drill-down per muscle
         'heys_fingers_constructor_v1.js',       // exercise editor (depends на grip_catalog, anatomy, records, ageGate)

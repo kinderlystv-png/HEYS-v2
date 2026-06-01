@@ -301,7 +301,7 @@
   }
 
   // --- Constructor tab ---
-  function ConstructorTab({ exercises, setExercises, userBoard, userAge }) {
+  function ConstructorTab({ exercises, setExercises, userBoard, userAge, programName, onUnbindProgram }) {
     const add = function () {
       const blank = Fingers.createBlankExercise
         ? Fingers.createBlankExercise({ boardId: userBoard })
@@ -320,7 +320,38 @@
       setExercises(exercises.filter(function (_, idx) { return idx !== i; }));
     };
 
+    const protocolLocked = !!programName;
+
+    // Баннер «программа активна» — показывается над карточками когда выбрана
+    // программа. Объясняет почему поля времени залочены + даёт unbind.
+    const programBanner = protocolLocked ? h('div', {
+      className: 'fingers-fs-program-banner',
+      style: {
+        background: 'rgba(99, 102, 241, 0.08)',
+        border: '1px solid rgba(99, 102, 241, 0.22)',
+        borderRadius: 12, padding: '12px 14px',
+        marginBottom: 12,
+        display: 'flex', flexDirection: 'column', gap: 8
+      }
+    },
+      h('div', { style: { fontSize: 13, lineHeight: 1.4, color: '#1f2937' } },
+        h('span', { style: { fontWeight: 600 } }, '🔒 Программа: ', programName), '. ',
+        'Время виса, отдых и повторы зафиксированы протоколом — меняй грань и доп. вес.'
+      ),
+      h('button', {
+        type: 'button',
+        onClick: function () { if (typeof onUnbindProgram === 'function') onUnbindProgram(); },
+        style: {
+          alignSelf: 'flex-start',
+          background: 'transparent', border: 'none',
+          padding: '4px 0', cursor: 'pointer',
+          color: '#4f46e5', fontSize: 12, fontWeight: 600
+        }
+      }, 'Отвязаться от программы')
+    ) : null;
+
     return h('div', { className: 'fingers-fs-constructor' },
+      programBanner,
       exercises.length === 0
         ? h('div', { className: 'fingers-fs-empty', style: { padding: 32, textAlign: 'center' } },
             h('p', null, 'Пусто. Добавь упражнение или примени программу из вкладки Программы.'),
@@ -329,21 +360,44 @@
         : h(React.Fragment, null,
             h(ExerciseStickyBar, { count: exercises.length }),
             exercises.map(function (ex, i) {
+              // Центральный разделитель «УПРАЖНЕНИЕ N ИЗ M» — отделяет карточки
+              // визуально, заодно говорит юзеру где он в стеке. Линии слева/справа
+              // (через flex: 1 hr) создают эффект «главы» в книге.
+              const separator = h('div', {
+                key: 'sep-' + i,
+                className: 'fingers-fs-exercise-separator',
+                style: {
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  marginTop: i === 0 ? 0 : 28, marginBottom: 12,
+                  color: '#9ca3af', fontSize: 11, fontWeight: 600,
+                  letterSpacing: '0.08em', textTransform: 'uppercase'
+                }
+              },
+                h('span', { style: { flex: 1, height: 1, background: 'rgba(0,0,0,0.08)' } }),
+                h('span', null,
+                  'Упражнение ' + (i + 1) + (exercises.length > 1 ? ' из ' + exercises.length : '')),
+                h('span', { style: { flex: 1, height: 1, background: 'rgba(0,0,0,0.08)' } })
+              );
               if (Fingers.ExerciseConstructor) {
-                return h(Fingers.ExerciseConstructor, {
-                  key: i,
-                  exIdx: i,
-                  exTotal: exercises.length,
-                  exercise: ex,
-                  userBoard: userBoard,
-                  userAge: userAge,
-                  onChange: function (u) { updateAt(i, u); },
-                  onRemove: function () { removeAt(i); }
-                });
+                return h(React.Fragment, { key: i },
+                  separator,
+                  h(Fingers.ExerciseConstructor, {
+                    exIdx: i,
+                    exTotal: exercises.length,
+                    exercise: ex,
+                    userBoard: userBoard,
+                    userAge: userAge,
+                    protocolLocked: protocolLocked,
+                    onChange: function (u) { updateAt(i, u); },
+                    onRemove: function () { removeAt(i); }
+                  })
+                );
               }
-              return h('div', { key: i, className: 'fingers-fs-program-card' },
-                h('p', null, 'Constructor module not loaded yet.'),
-                h('pre', { style: { fontSize: 11 } }, JSON.stringify(ex, null, 2)));
+              return h(React.Fragment, { key: i },
+                separator,
+                h('div', { className: 'fingers-fs-program-card' },
+                  h('p', null, 'Constructor module not loaded yet.'),
+                  h('pre', { style: { fontSize: 11 } }, JSON.stringify(ex, null, 2))));
             }),
             h('button', {
               className: 'fingers-fs-ghost',
@@ -446,15 +500,26 @@
   // --- Live session — ведомое выполнение упражнения с countdown timer ---
   // Каждое exercise = собственный cycle (key={exIdx} → re-mount hook'a).
   function ExerciseRunner({ exercise, exIdx, totalExercises, dateKey, trainingIndex, exercises, programId, initialSnapshot, onDone, onAbort }) {
+    // keepSnapshotOnAbortRef — флаг для «Прервать → Не записывать» сценария.
+    // Когда true: при переходе в ABORTED НЕ очищаем persistence, чтобы остался
+    // snapshot и в SessionUI появился resume-баннер. При DONE/EXPIRED очищаем
+    // всегда (нет смысла хранить завершённое).
+    const keepSnapshotOnAbortRef = React.useRef(false);
+
     // onStateChange wired to persistence.save: snapshot пишется на переходе фазы
     // (fireStateChange зовётся только на transition, не на tick). Live remaining
     // секунд реконструируется на load() как durationSec - (now - phaseStartedAt).
-    // DONE/ABORTED → clear (нет смысла хранить).
     const handleStateChange = useCallback(function (nextState, meta) {
       const STATES = Fingers.STATES || {};
       if (!Fingers.persistence) return;
-      if (nextState === STATES.DONE || nextState === STATES.ABORTED || nextState === STATES.IDLE || nextState === STATES.EXPIRED) {
+      if (nextState === STATES.DONE || nextState === STATES.IDLE || nextState === STATES.EXPIRED) {
         try { Fingers.persistence.clear(); } catch (_) {}
+        return;
+      }
+      if (nextState === STATES.ABORTED) {
+        if (!keepSnapshotOnAbortRef.current) {
+          try { Fingers.persistence.clear(); } catch (_) {}
+        }
         return;
       }
       const now = Date.now();
@@ -616,8 +681,12 @@
                 finalize();
               },
               onCancel: function () {
-                try { Fingers.persistence?.clear?.(); } catch (_) {}
-                if (HEYS.Toast?.info) HEYS.Toast.info('Сессия прервана');
+                // «Не записывать» = юзер захочет вернуться → оставляем snapshot
+                // нетронутым, флаг блокирует clear в handleStateChange(ABORTED).
+                // После finalize → onAbort → liveActive=false → useEffect
+                // подхватит snapshot и покажет банер «Незавершённая тренировка».
+                keepSnapshotOnAbortRef.current = true;
+                if (HEYS.Toast?.info) HEYS.Toast.info('Сессия прервана — можно продолжить позже');
                 finalize();
               }
             });
@@ -635,6 +704,7 @@
         // Только название хвата — edge/вес передаются отдельными prop'ами
         // чтобы CountdownDisplay сам форматировал без дубликатов.
         gripLabel: gripLabel,
+        gripId: exercise.gripId,
         edgeLabel: edgeLabel,
         addedWeightKg: addedWeight,
         exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
@@ -703,6 +773,11 @@
     const [showBib, setShowBib] = useState(false);
     const [pendingProgram, setPendingProgram] = useState(null);
     const [liveActive, setLiveActive] = useState(false);
+    const [warmupActive, setWarmupActive] = useState(false);
+    // pendingResume — снапшот незавершённой сессии для постоянного баннера наверху.
+    // Заполняется при монтировании если persistence.load() вернул свежий snapshot.
+    // null → нет прерванной сессии, баннер не рисуется.
+    const [pendingResume, setPendingResume] = useState(null);
     // initialSnapshot — заполняется при mode='continue', пробрасывается в
     // LiveSession → ExerciseRunner → cycle.startFromSnapshot. После resume
     // обнуляется чтобы повторные переключения упражнений не пытались
@@ -731,6 +806,75 @@
         console.warn('[Fingers.SessionUI] resume from snapshot failed:', e);
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Persistent banner: при открытии режима 'new' / 'edit' / 'view' проверяем
+    // snapshot и если он есть — рисуем баннер «есть незавершённая сессия».
+    // В 'continue'-режиме snapshot уже подхвачен эффектом выше → баннер не нужен.
+    //
+    // ВАЖНО: snapshot может прилететь из облака с задержкой (cloud sync). Если
+    // читать LS сразу при mount — там может быть пусто, а потом sync дольёт.
+    // Поэтому проверяем 1) сразу, 2) ещё раз после heysSyncCompleted.
+    useEffect(function () {
+      if (mode === 'continue') return;
+      if (liveActive) return;
+      const checkSnapshot = function () {
+        try {
+          const loaded = Fingers.persistence && Fingers.persistence.load && Fingers.persistence.load();
+          if (loaded && loaded.snapshot && !loaded.stale
+              && Array.isArray(loaded.snapshot.exercises) && loaded.snapshot.exercises.length) {
+            setPendingResume(loaded.snapshot);
+          } else {
+            setPendingResume(null);
+          }
+        } catch (e) {
+          console.warn('[Fingers.SessionUI] resume check failed:', e);
+        }
+      };
+      checkSnapshot();
+      if (typeof window === 'undefined') return undefined;
+      if (window.__heysSyncCompletedFired) return undefined;
+      const onSync = function () { checkSnapshot(); };
+      window.addEventListener('heysSyncCompleted', onSync, { once: true });
+      return function () { window.removeEventListener('heysSyncCompleted', onSync); };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mode, liveActive]);
+
+    const handleResumeContinue = useCallback(function () {
+      if (!pendingResume) return;
+      try {
+        const snap = pendingResume;
+        setExercises(snap.exercises);
+        if (snap.programId && typeof Fingers.getProgramById === 'function') {
+          const prog = Fingers.getProgramById(snap.programId);
+          if (prog) setPendingProgram(prog);
+        }
+        setInitialSnapshot(snap);
+        setPendingResume(null);
+        setLiveActive(true);
+      } catch (e) {
+        console.warn('[Fingers.SessionUI] resume failed:', e);
+      }
+    }, [pendingResume]);
+
+    const handleResumeDiscard = useCallback(function () {
+      const confirmDiscard = function () {
+        try { Fingers.persistence && Fingers.persistence.clear && Fingers.persistence.clear(); } catch (_) {}
+        setPendingResume(null);
+      };
+      if (HEYS.ConfirmModal?.show) {
+        HEYS.ConfirmModal.show({
+          icon: '🗑',
+          title: 'Удалить прерванную сессию?',
+          text: 'Прогресс не сохранится — отменить нельзя.',
+          confirmText: 'Удалить',
+          cancelText: 'Назад',
+          confirmStyle: 'danger',
+          onConfirm: confirmDiscard
+        });
+      } else {
+        confirmDiscard();
+      }
     }, []);
 
     const profile = getProfile();
@@ -866,7 +1010,10 @@
         ? '\nℹ Готовность невысокая — лучше No-Hangs или recovery-протокол.'
         : '';
 
-      HEYS.ConfirmModal.show({
+      // Если WarmupRunner недоступен — деградируем до 2-кнопочного варианта.
+      const canShowWarmup = !!(Fingers.WarmupRunner);
+
+      const preflightOpts = {
         icon: '🤲',
         title: 'Pre-flight check',
         text: 'Перед стартом подтверди:\n\n' +
@@ -874,18 +1021,48 @@
               '✓ Нет острой боли в пальцах и PIP суставах\n' +
               '✓ Не на холодные руки' +
               cooldownWarn + readinessNote,
-        confirmText: 'Всё ОК, начинаем',
-        cancelText: 'Отмена',
         confirmStyle: programIntensity === 'max' ? 'warning' : 'primary',
-        onConfirm: function () {
-          // voice.say теперь serial queue (heys_fingers_voice_v1.js) — фраза
-          // «Начинаем тренировку. Проверь разогрев.» сыграется первой,
-          // потом timer добавит «Готовься. Пять.» в очередь, не накладывая.
+      };
+
+      if (canShowWarmup) {
+        // 3-кнопочный вариант: Отмена / Разминка 18 мин / Всё ОК
+        preflightOpts.actions = [
+          { key: 'cancel', label: 'Отмена', style: 'neutral', variant: 'text',
+            isCancel: true, row: 0 },
+          { key: 'warmup', label: 'Сначала разминка 18 мин', style: 'primary',
+            variant: 'text', value: 'warmup', row: 1,
+            onClick: function () { setWarmupActive(true); } },
+          { key: 'go', label: 'Всё ОК, начинаем',
+            style: programIntensity === 'max' ? 'warning' : 'primary',
+            variant: 'fill', isDefault: true, value: 'go', row: 2,
+            onClick: function () {
+              try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
+              setLiveActive(true);
+            } },
+        ];
+      } else {
+        preflightOpts.confirmText = 'Всё ОК, начинаем';
+        preflightOpts.cancelText = 'Отмена';
+        preflightOpts.onConfirm = function () {
           try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
           setLiveActive(true);
-        }
-      });
+        };
+      }
+
+      HEYS.ConfirmModal.show(preflightOpts);
     }, [exercises, pendingProgram, dateKey]);
+
+    // После завершения/прерывания разминки — снова открыть pre-flight.
+    // Юзер дотыкает оставшиеся чек-пункты (нет боли, не на холодные руки) и стартует.
+    const handleWarmupDone = useCallback(function () {
+      setWarmupActive(false);
+      // Defer re-open чтобы предыдущий ConfirmModal успел размонтироваться.
+      setTimeout(function () { handleStartLive(); }, 50);
+    }, [handleStartLive]);
+
+    const handleWarmupCancel = useCallback(function () {
+      setWarmupActive(false);
+    }, []);
 
     const handleLiveAllDone = useCallback(function () {
       setLiveActive(false);
@@ -925,10 +1102,16 @@
     ];
 
     return h('div', { className: 'fingers-fs-session' },
+      // Warmup runner overlay (floats над всем когда warmupActive=true)
+      warmupActive && Fingers.WarmupRunner ? h(Fingers.WarmupRunner, {
+        key: 'warmup',
+        onDone: handleWarmupDone,
+        onCancel: handleWarmupCancel
+      }) : null,
       // Header
       h('div', { className: 'fingers-fs__header',
         style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '12px 0 24px', gap: 8 } },
+          paddingTop: 12, paddingBottom: 24, gap: 8 } },
         h('h1', { style: { margin: 0, fontSize: 22, minWidth: 0, overflow: 'hidden',
           textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, '🤚 Тренировка'),
         h('div', { style: { display: 'flex', gap: 6, flexShrink: 0 } },
@@ -961,6 +1144,71 @@
           }, '📚')
         )
       ),
+
+      // Resume banner — постоянный, над табами, пока есть snapshot.
+      pendingResume ? (function () {
+        const lastTick = Number(pendingResume.lastTickAt) || 0;
+        const ageText = lastTick ? (function () {
+          const mins = Math.max(1, Math.round((Date.now() - lastTick) / 60000));
+          if (mins < 60) return mins + ' мин назад';
+          const hrs = Math.floor(mins / 60);
+          const rem = mins % 60;
+          return hrs + 'ч ' + rem + 'мин назад';
+        })() : '';
+        const progText = (function () {
+          const exDone = Number(pendingResume.exIdx) || 0;
+          const exTotal = Array.isArray(pendingResume.exercises) ? pendingResume.exercises.length : 0;
+          const setIdx = Number(pendingResume.setIdx) || 0;
+          const repIdx = Number(pendingResume.repIdx) || 0;
+          return 'упр ' + (exDone + 1) + '/' + exTotal
+            + ' · подход ' + (setIdx + 1)
+            + ' · повтор ' + (repIdx + 1);
+        })();
+        return h('div', {
+          key: 'resume-banner',
+          className: 'fingers-fs-resume-banner',
+          style: {
+            background: 'rgba(245, 158, 11, 0.10)',
+            border: '1px solid rgba(245, 158, 11, 0.30)',
+            borderRadius: 12, padding: '12px 14px',
+            marginBottom: 16,
+            display: 'flex', flexDirection: 'column', gap: 10
+          }
+        },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+            h('span', { style: { fontSize: 18 } }, '⏸'),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: { fontWeight: 600, fontSize: 14, color: '#1f2937' } },
+                'Незавершённая тренировка'),
+              h('div', { style: { fontSize: 12, color: '#6b7280', marginTop: 2 } },
+                ageText ? progText + ' · ' + ageText : progText)
+            )
+          ),
+          h('div', { style: { display: 'flex', gap: 8 } },
+            h('button', {
+              type: 'button',
+              onClick: handleResumeContinue,
+              style: {
+                flex: 1,
+                background: '#f59e0b', color: '#fff',
+                border: 'none', borderRadius: 10,
+                padding: '10px 14px', fontSize: 14, fontWeight: 600,
+                cursor: 'pointer'
+              }
+            }, 'Продолжить'),
+            h('button', {
+              type: 'button',
+              onClick: handleResumeDiscard,
+              style: {
+                background: 'transparent', color: '#991b1b',
+                border: '1px solid rgba(220, 38, 38, 0.30)', borderRadius: 10,
+                padding: '10px 14px', fontSize: 14, fontWeight: 500,
+                cursor: 'pointer'
+              }
+            }, 'Удалить')
+          )
+        );
+      })() : null,
 
       // Tabs
       h('div', { className: 'fingers-fs-tabs', role: 'tablist',
@@ -995,7 +1243,9 @@
             exercises: exercises,
             setExercises: setExercises,
             userBoard: userBoard,
-            userAge: userAge
+            userAge: userAge,
+            programName: pendingProgram?.name,
+            onUnbindProgram: function () { setPendingProgram(null); }
           }),
           exercises.length > 0 && h('div', {
             style: { marginTop: 24, padding: 16, borderRadius: 12,

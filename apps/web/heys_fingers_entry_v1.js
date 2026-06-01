@@ -112,6 +112,10 @@
 
   // Auto-detect interrupted session at boot — show resume prompt.
   // Listens for heysSyncCompleted then probes persistence module.
+  // Snooze: «Позже» сохраняет timestamp в LS, модалка не появится до его
+  // истечения. In-component баннер (SessionUI) — постоянный, snooze игнорирует.
+  const SNOOZE_LS_KEY = 'fingers.resume.snoozedUntil';
+  const SNOOZE_HOURS = 6;
   if (typeof window !== 'undefined') {
     const tryDetect = function () {
       try {
@@ -123,6 +127,15 @@
             // Auto-save as aborted (handled by persistence module itself)
             return;
           }
+          // Snooze check: если юзер недавно нажал «Позже» — не показываем модалку.
+          try {
+            const raw = window.localStorage && window.localStorage.getItem(SNOOZE_LS_KEY);
+            const until = raw ? parseInt(raw, 10) : 0;
+            if (until && until > Date.now()) return;
+            if (until && until <= Date.now()) {
+              window.localStorage.removeItem(SNOOZE_LS_KEY);
+            }
+          } catch (_) { /* LS недоступен — продолжаем */ }
           // Форматируем относительное время с момента последнего тика.
           // Это даёт юзеру понять — это «5 мин назад» (стоит продолжить) или
           // «50 мин назад» (близко к stale, возможно лучше удалить).
@@ -139,19 +152,31 @@
             HEYS.ConfirmModal.show({
               icon: '⏸',
               title: 'Прерванная тренировка',
-              text: 'Найдена незавершённая fingerboard сессия.' + ageText + ' Продолжить?',
-              confirmText: 'Продолжить',
-              cancelText: 'Удалить',
-              onConfirm: function () {
-                Fingers.openFullscreen({
-                  dateKey: snap.dateKey,
-                  trainingIndex: snap.trainingIndex,
-                  mode: 'continue'
-                });
-              },
-              onCancel: function () {
-                try { Fingers.persistence.clear(); } catch (_) { /* noop */ }
-              }
+              text: 'Найдена незавершённая fingerboard сессия.' + ageText,
+              actions: [
+                { key: 'discard', label: 'Удалить', style: 'danger',
+                  variant: 'text', row: 0, isCancel: true,
+                  onClick: function () {
+                    try { Fingers.persistence.clear(); } catch (_) {}
+                  } },
+                { key: 'snooze', label: 'Позже', style: 'neutral',
+                  variant: 'text', row: 1,
+                  onClick: function () {
+                    try {
+                      window.localStorage.setItem(SNOOZE_LS_KEY,
+                        String(Date.now() + SNOOZE_HOURS * 60 * 60 * 1000));
+                    } catch (_) {}
+                  } },
+                { key: 'continue', label: 'Продолжить', style: 'primary',
+                  variant: 'fill', row: 2, isDefault: true,
+                  onClick: function () {
+                    Fingers.openFullscreen({
+                      dateKey: snap.dateKey,
+                      trainingIndex: snap.trainingIndex,
+                      mode: 'continue'
+                    });
+                  } }
+              ]
             });
           }
         });
