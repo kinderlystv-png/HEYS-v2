@@ -5,7 +5,7 @@
     "sourceFingerprint": "cd47fbf1caec",
     "fileCount": 39,
     "size": 1036891,
-    "builtAt": "2026-06-01T16:10:14.970Z"
+    "builtAt": "2026-06-01T16:11:45.331Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.5b65220d6df4.js",
@@ -29,7 +29,7 @@
     "sourceFingerprint": "49e3ef27c281",
     "fileCount": 51,
     "size": 960613,
-    "builtAt": "2026-06-01T16:10:21.743Z"
+    "builtAt": "2026-06-01T16:11:48.709Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.a261f6f72353.js",

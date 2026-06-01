@@ -394,7 +394,15 @@
         setErr('');
         const input = e.target.value;
         // Извлекаем только цифры из того что ввели
-        const newDigits = input.replace(/\D/g, '').slice(0, 10);
+        let newDigits = input.replace(/\D/g, '').slice(0, 10);
+        // Mobile-фикс: на Android backspace приходит как input
+        // (key==='Unidentified' в keydown). Если стёрся только разделитель
+        // маски, число цифр не уменьшилось — снимаем последнюю цифру руками,
+        // иначе ввод «упирается в стенку» на стыках 3/6/8 цифр.
+        const inputType = (e.nativeEvent && e.nativeEvent.inputType) || '';
+        if (inputType === 'deleteContentBackward' && newDigits.length === phoneDigits.length && phoneDigits.length > 0) {
+          newDigits = newDigits.slice(0, -1);
+        }
         // Обновляем состояние — храним форматированную строку для display
         setPhoneMasked(newDigits);
         // Автофокус на PIN после ввода 10 цифр
