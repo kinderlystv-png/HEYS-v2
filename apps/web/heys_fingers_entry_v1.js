@@ -123,11 +123,23 @@
             // Auto-save as aborted (handled by persistence module itself)
             return;
           }
+          // Форматируем относительное время с момента последнего тика.
+          // Это даёт юзеру понять — это «5 мин назад» (стоит продолжить) или
+          // «50 мин назад» (близко к stale, возможно лучше удалить).
+          const ageText = (function () {
+            const lastTick = Number(snap.lastTickAt) || 0;
+            if (!lastTick) return '';
+            const mins = Math.max(1, Math.round((Date.now() - lastTick) / 60000));
+            if (mins < 60) return ' Прервана ' + mins + ' мин назад.';
+            const hrs = Math.floor(mins / 60);
+            const rem = mins % 60;
+            return ' Прервана ' + hrs + 'ч ' + rem + 'мин назад.';
+          })();
           if (HEYS.ConfirmModal?.show) {
             HEYS.ConfirmModal.show({
               icon: '⏸',
               title: 'Прерванная тренировка',
-              text: 'Найдена незавершённая fingerboard сессия. Продолжить?',
+              text: 'Найдена незавершённая fingerboard сессия.' + ageText + ' Продолжить?',
               confirmText: 'Продолжить',
               cancelText: 'Удалить',
               onConfirm: function () {

@@ -34,18 +34,50 @@
   const { useState, useMemo, useEffect, useCallback } = React;
 
   // --- helpers ---
+  // Возраст клиента считается из birthDate (приоритет) или поля `age`
+  // на верхнем уровне профиля. Помещаем результат в fingerboardProfile.age
+  // на лету, если в subprofile он не задан — чтобы все safety-проверки
+  // (filterPrograms, filterGrips) автоматически работали с глобальным
+  // возрастом клиента.
+  function _ageFromGlobalProfile(p) {
+    const bd = p && p.birthDate;
+    if (bd) {
+      const birth = new Date(bd);
+      if (!isNaN(birth.getTime())) {
+        const t = new Date();
+        let a = t.getFullYear() - birth.getFullYear();
+        const m = t.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && t.getDate() < birth.getDate())) a--;
+        return Math.max(0, a);
+      }
+    }
+    const ageRaw = p && Number(p.age);
+    return Number.isFinite(ageRaw) ? ageRaw : null;
+  }
+
   function getProfile() {
     const u = HEYS.utils;
     if (!u || !u.lsGet) return {};
     const p = u.lsGet('heys_profile', {}) || {};
-    return p.fingerboardProfile || {};
+    const fp = Object.assign({}, p.fingerboardProfile || {});
+    // Источник истины — глобальный профиль клиента (заполняется при
+    // регистрации, поля birthDate / age). fingerboardProfile.age — это
+    // legacy-поле из Fingers Onboarding wizard; глобальный возраст всегда
+    // его перекрывает. Если глобального нет — оставляем fp.age как есть.
+    const globalAge = _ageFromGlobalProfile(p);
+    if (globalAge != null) fp.age = globalAge;
+    return fp;
   }
 
   function getRecommendedProgramId() {
     const fp = getProfile();
     if (fp.recommendedProgramId) return fp.recommendedProgramId;
     if (fp.noEquipment) return 'nelson_no_hangs';
-    if ((fp.age || 18) < 14) return 'nelson_no_hangs';
+    // Возраст не указан → не рекомендуем ничего (UI покажет prompt "укажи возраст").
+    // Дефолт 18 раньше → подростки без профиля автоматом получали adult-программы.
+    const ageNum = Number(fp.age);
+    if (!Number.isFinite(ageNum)) return null;
+    if (ageNum < 14) return 'nelson_no_hangs';
     const g = fp.maxVGrade || 'V3-V4';
     if (g === 'V0-V2' || g === 'V3-V4') return 'beastmaker_1000_beginner';
     if (g === 'V5-V6') return 'repeaters_7_3';
@@ -66,18 +98,43 @@
   }
 
   // --- Programs tab ---
-  function ProgramsTab({ onPickProgram, recommendedId }) {
+  function ProgramsTab({ onPickProgram, recommendedId, onRequestOnboarding }) {
     const programs = Array.isArray(Fingers.PROGRAMS) ? Fingers.PROGRAMS : [];
     const profile = getProfile();
-    const age = Number(profile.age) || 18;
+    // Fail-closed: возраст не указан → age=NaN → ageGate.filterPrograms вернёт [].
+    // Это правильное поведение: подростку без профиля не должен открыться
+    // full crimp / mono / Max Hangs.
+    const ageRaw = Number(profile.age);
+    const ageKnown = Number.isFinite(ageRaw);
     const filtered = Fingers.ageGate && Fingers.ageGate.filterPrograms
-      ? Fingers.ageGate.filterPrograms(programs, age)
+      ? Fingers.ageGate.filterPrograms(programs, ageRaw)
       : programs;
 
+    if (!ageKnown) {
+      // CTA: заполнить возраст через re-onboarding.
+      return h('div', { className: 'fingers-fs-empty', style: { padding: 24, textAlign: 'center' } },
+        h('div', { style: { fontSize: 32, marginBottom: 12 } }, '🎂'),
+        h('h3', { style: { margin: '0 0 8px', fontSize: 17 } }, 'Укажи возраст для рекомендаций'),
+        h('p', { style: { margin: '0 0 16px', fontSize: 14, opacity: 0.75, lineHeight: 1.45 } },
+          'Без возраста мы не показываем программы — это safety-настройка ' +
+          '(полный замок и mono нельзя до 16-18 лет, UIAA/BMC).'),
+        onRequestOnboarding
+          ? h('button', {
+              className: 'fingers-fs-cta',
+              onClick: onRequestOnboarding,
+              style: { padding: '10px 20px' }
+            }, 'Заполнить профиль')
+          : null
+      );
+    }
+
     if (!filtered.length) {
-      return h('div', { className: 'fingers-fs-empty' },
-        'Программы недоступны для возраста ' + age + '. ',
-        Fingers.ageGate && h('p', null, Fingers.ageGate.getRestrictionMessage(age))
+      const restr = Fingers.ageGate && Fingers.ageGate.getRestrictionMessage
+        ? Fingers.ageGate.getRestrictionMessage(ageRaw) : null;
+      return h('div', { className: 'fingers-fs-empty', style: { padding: 24 } },
+        h('h3', { style: { margin: '0 0 8px', fontSize: 16 } },
+          'Программы недоступны для возраста ' + ageRaw),
+        restr ? h('p', { style: { fontSize: 13, opacity: 0.75, lineHeight: 1.4 } }, restr.message) : null
       );
     }
 
@@ -149,6 +206,100 @@
     );
   }
 
+  // --- Exercise sticky bar (паттерн как MealStickyBar в дневнике) ---
+  // Fixed-bar поверх списка карточек. Scroll listener считает какая карточка
+  // (.fingers-fs-constructor-card[data-exercise-index]) пересекает y=130.
+  // Показывает «Упр. N из M · Хват». Тап на бар скроллит к началу карточки.
+  const EXERCISE_STICKY_LINE = 130;
+  function ExerciseStickyBar({ count }) {
+    const [currentIdx, setCurrentIdx] = useState(null);
+    const [currentGrip, setCurrentGrip] = useState('');
+    const rafRef = React.useRef(null);
+
+    useEffect(function () {
+      if (!count || count < 2) return undefined; // одного упражнения — бар не нужен
+
+      const update = function () {
+        rafRef.current = null;
+        const cards = document.querySelectorAll('.fingers-fs-constructor-card[data-exercise-index]');
+        let active = null;
+        let activeGrip = '';
+        for (let i = 0; i < cards.length; i++) {
+          const card = cards[i];
+          const rect = card.getBoundingClientRect();
+          if (rect.top <= EXERCISE_STICKY_LINE && rect.bottom > EXERCISE_STICKY_LINE) {
+            active = parseInt(card.dataset.exerciseIndex, 10);
+            activeGrip = card.dataset.exerciseGrip || '';
+          }
+        }
+        setCurrentIdx(function (p) { return p === active ? p : active; });
+        setCurrentGrip(function (p) { return p === activeGrip ? p : activeGrip; });
+      };
+
+      const onScroll = function () {
+        if (rafRef.current != null) return;
+        rafRef.current = requestAnimationFrame(update);
+      };
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      // Также слушаем scroll на ближайшем scrollable parent — fullscreen overlay
+      // может скроллиться сам, не window.
+      const overlay = document.querySelector('.fingers-fs__container, .fingers-fs');
+      if (overlay) overlay.addEventListener('scroll', onScroll, { passive: true });
+      update();
+
+      return function () {
+        window.removeEventListener('scroll', onScroll);
+        if (overlay) overlay.removeEventListener('scroll', onScroll);
+        if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      };
+    }, [count]);
+
+    if (!count || count < 2) return null;
+    const visible = currentIdx != null;
+
+    const onClick = function () {
+      if (currentIdx == null) return;
+      const card = document.querySelector(
+        '.fingers-fs-constructor-card[data-exercise-index="' + currentIdx + '"]');
+      if (!card) return;
+      const top = card.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: Math.max(0, top - EXERCISE_STICKY_LINE + 8), behavior: 'smooth' });
+    };
+
+    return h('div', {
+      onClick: visible ? onClick : undefined,
+      role: visible ? 'button' : 'presentation',
+      'aria-hidden': !visible,
+      'aria-label': visible ? 'К началу: упражнение ' + (currentIdx + 1) : undefined,
+      style: {
+        position: 'sticky', top: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '10px 14px',
+        margin: '0 -4px 8px',
+        borderRadius: 10,
+        background: 'rgba(255, 255, 255, 0.92)',
+        backdropFilter: 'saturate(180%) blur(10px)',
+        WebkitBackdropFilter: 'saturate(180%) blur(10px)',
+        border: '0.5px solid rgba(0, 0, 0, 0.08)',
+        boxShadow: visible ? '0 4px 14px rgba(0,0,0,0.05)' : 'none',
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 0.18s ease',
+        cursor: visible ? 'pointer' : 'default',
+        fontSize: 13,
+      },
+    },
+      h('span', {
+        style: { fontSize: 11, fontWeight: 600, color: '#6b7280',
+          letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0 }
+      }, 'Упр. ' + (visible ? (currentIdx + 1) : '—') + ' из ' + count),
+      h('span', {
+        style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap', fontWeight: 600, color: '#1f2937' }
+      }, currentGrip)
+    );
+  }
+
   // --- Constructor tab ---
   function ConstructorTab({ exercises, setExercises, userBoard, userAge }) {
     const add = function () {
@@ -176,11 +327,13 @@
             h('button', { className: 'fingers-fs-cta', onClick: add, style: { marginTop: 16 } },
               '+ Добавить упражнение'))
         : h(React.Fragment, null,
+            h(ExerciseStickyBar, { count: exercises.length }),
             exercises.map(function (ex, i) {
               if (Fingers.ExerciseConstructor) {
                 return h(Fingers.ExerciseConstructor, {
                   key: i,
                   exIdx: i,
+                  exTotal: exercises.length,
                   exercise: ex,
                   userBoard: userBoard,
                   userAge: userAge,
@@ -249,11 +402,18 @@
                 const main = r.type === 'weight'
                   ? (r.mvcKg ? r.mvcKg.toFixed(1) + ' кг' : '—')
                   : (r.holdTime ? r.holdTime.toFixed(1) + ' с' : '—');
+                // Slug формат: '{gripId}_{edgeMm}mm' (см. records_store._slug).
+                // Транслируем в человеческое: 'Открытый 4-палец · 20 мм'.
+                const m = /^(.+?)_(\d+)mm$/.exec(slug);
+                const grip = m && Fingers.getGripById ? Fingers.getGripById(m[1]) : null;
+                const label = m
+                  ? ((grip && grip.label) || m[1]) + ' · ' + m[2] + ' мм'
+                  : slug;
                 return h('div', { key: slug, className: 'fingers-fs-record-row',
                   style: { display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
-                    borderBottom: '1px solid var(--fingers-card-border)' } },
-                  h('span', { style: { fontFamily: 'monospace', fontSize: 13 } }, slug),
-                  h('strong', null, main)
+                    borderBottom: '1px solid var(--fingers-card-border)', gap: 12, alignItems: 'center' } },
+                  h('span', { style: { fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' } }, label),
+                  h('strong', { style: { flexShrink: 0 } }, main)
                 );
               })
             ),
@@ -537,7 +697,7 @@
   }
 
   // --- Main SessionUI ---
-  function SessionUI({ dateKey, trainingIndex, mode, onClose }) {
+  function SessionUI({ dateKey, trainingIndex, mode, onClose, onRequestOnboarding }) {
     const [tab, setTab] = useState('programs');
     const [exercises, setExercises] = useState([]);
     const [showBib, setShowBib] = useState(false);
@@ -548,6 +708,9 @@
     // обнуляется чтобы повторные переключения упражнений не пытались
     // снова восстановиться из старого snapshot.
     const [initialSnapshot, setInitialSnapshot] = useState(null);
+    // Summary screen после завершения live-сессии. null → не показан,
+    // объект → показываем оверлей с метриками сессии перед close().
+    const [sessionSummary, setSessionSummary] = useState(null);
 
     // Resume on continue mode: load snapshot, restore exercises + program, прыгнуть в live.
     useEffect(function () {
@@ -606,18 +769,48 @@
         completedAt: new Date().toISOString(),
         viaTimer: !!o.viaTimer // true если завершено через ведомый таймер
       };
+      let saveOk = true;
       try {
         HEYS.TrainingStep?.saveFingers?.(
           { dateKey, trainingIndex },
           fingersLog,
           { activityLabel: pendingProgram?.name || 'Свой конструктор' }
         );
-        if (HEYS.Toast?.success) HEYS.Toast.success(o.viaTimer ? 'Сессия завершена и сохранена' : 'План тренировки сохранён');
+        // Toast только для manual-save (план). При завершении через таймер
+        // показываем summary-карточку (см. ниже) — она сама подтверждает save.
+        if (!o.viaTimer && HEYS.Toast?.success) {
+          HEYS.Toast.success('План тренировки сохранён');
+        }
       } catch (e) {
+        saveOk = false;
         console.warn('[SessionUI] saveFingers failed:', e);
+        if (HEYS.Toast?.warn) HEYS.Toast.warn('Не удалось сохранить — попробуй ещё раз');
+      }
+      // Live-сессия (через таймер) → показываем summary-карточку перед close,
+      // чтобы юзер видел результат и понял что данные сохранены.
+      // Manual-save (с конструктора) → сразу close, summary не нужен.
+      if (o.viaTimer && saveOk) {
+        const totalReps = exercises.reduce(function (s, e) {
+          return s + (Number(e.repsPerSet) || 0) * (Number(e.setsCount) || 0);
+        }, 0);
+        setSessionSummary({
+          programName: pendingProgram?.name || 'Свой конструктор',
+          totalMin: Math.round(totalMin),
+          totalReps: totalReps,
+          exercisesCount: exercises.length,
+          dateKey: dateKey || (new Date().toISOString().slice(0, 10)),
+        });
+        // Persistence уже очищается в LiveSession.onComplete → можно close
+        // только по явному дисмиссу из summary.
+        return;
       }
       if (onClose) onClose();
     }, [exercises, pendingProgram, dateKey, trainingIndex, onClose]);
+
+    const handleDismissSummary = useCallback(function () {
+      setSessionSummary(null);
+      if (onClose) onClose();
+    }, [onClose]);
 
     // G1+G2+G5+G6: Start live timer session (с readiness + safety pre-flight)
     const handleStartLive = useCallback(function () {
@@ -735,14 +928,38 @@
       // Header
       h('div', { className: 'fingers-fs__header',
         style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '12px 0 24px', gap: 12 } },
-        h('h1', { style: { margin: 0, fontSize: 24 } }, '🤚 Тренировка пальцев'),
-        h('button', {
-          className: 'fingers-fs-ghost',
-          onClick: function () { setShowBib(true); },
-          style: { padding: '8px 14px', fontSize: 13 },
-          'aria-label': 'Источники и методология'
-        }, '📚 Методология')
+          padding: '12px 0 24px', gap: 8 } },
+        h('h1', { style: { margin: 0, fontSize: 22, minWidth: 0, overflow: 'hidden',
+          textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, '🤚 Тренировка'),
+        h('div', { style: { display: 'flex', gap: 6, flexShrink: 0 } },
+          onRequestOnboarding ? h('button', {
+            className: 'fingers-fs-ghost',
+            onClick: function () {
+              if (HEYS.ConfirmModal?.show) {
+                HEYS.ConfirmModal.show({
+                  icon: '⚙',
+                  title: 'Перенастроить',
+                  text: 'Сбросить ответы онбординга и перепройти заново? ' +
+                    'Это пересчитает рекомендованную программу. Существующие записи в дневнике сохранятся.',
+                  confirmText: 'Перепройти',
+                  cancelText: 'Отмена',
+                  onConfirm: function () { onRequestOnboarding(); }
+                });
+              } else {
+                onRequestOnboarding();
+              }
+            },
+            style: { padding: '8px 10px', fontSize: 13 },
+            'aria-label': 'Перенастроить профиль (перепройти онбординг)',
+            title: 'Перенастроить'
+          }, '⚙') : null,
+          h('button', {
+            className: 'fingers-fs-ghost',
+            onClick: function () { setShowBib(true); },
+            style: { padding: '8px 12px', fontSize: 13 },
+            'aria-label': 'Источники и методология'
+          }, '📚')
+        )
       ),
 
       // Tabs
@@ -770,6 +987,7 @@
       h('div', { className: 'fingers-fs-tab-content' },
         tab === 'programs' && h(ProgramsTab, {
           onPickProgram: handlePickProgram,
+          onRequestOnboarding: onRequestOnboarding,
           recommendedId: recommendedId
         }),
         tab === 'constructor' && h(React.Fragment, null,
@@ -808,7 +1026,85 @@
       // Bibliography modal
       showBib && Fingers.BibliographyModal && h(Fingers.BibliographyModal, {
         onClose: function () { setShowBib(false); }
-      })
+      }),
+
+      // Summary screen — показывается после автозавершения через таймер.
+      // Backdrop + центральная карточка с метриками + CTA «Закрыть».
+      sessionSummary && h('div', {
+        className: 'fingers-fs-summary-backdrop',
+        onClick: function (e) { if (e.target === e.currentTarget) handleDismissSummary(); },
+        style: {
+          position: 'fixed', inset: 0, zIndex: 2200,
+          background: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16,
+        }
+      },
+        h('div', {
+          role: 'dialog',
+          'aria-modal': 'true',
+          'aria-label': 'Сессия завершена',
+          style: {
+            background: 'var(--fingers-bg, #fff)', borderRadius: 16,
+            width: '100%', maxWidth: 440,
+            padding: '28px 24px 20px',
+            display: 'flex', flexDirection: 'column', gap: 16,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
+          }
+        },
+          h('div', { style: { fontSize: 44, lineHeight: 1, textAlign: 'center' } }, '🎉'),
+          h('h2', {
+            style: { margin: 0, fontSize: 22, fontWeight: 700, textAlign: 'center',
+              color: 'var(--fingers-text, #1a1a1f)' }
+          }, 'Сессия завершена'),
+          h('div', { style: { fontSize: 14, opacity: 0.7, textAlign: 'center', marginTop: -8 } },
+            sessionSummary.programName),
+          h('div', {
+            style: { display: 'flex', gap: 12, marginTop: 4 }
+          },
+            h('div', {
+              style: { flex: 1, padding: '14px 10px', borderRadius: 10,
+                background: 'rgba(120,120,128,0.08)', textAlign: 'center' }
+            },
+              h('div', { style: { fontSize: 24, fontWeight: 700, color: 'var(--fingers-accent, #0066ff)' } },
+                sessionSummary.totalMin),
+              h('div', { style: { fontSize: 11, opacity: 0.65, marginTop: 2 } }, 'минут')
+            ),
+            h('div', {
+              style: { flex: 1, padding: '14px 10px', borderRadius: 10,
+                background: 'rgba(120,120,128,0.08)', textAlign: 'center' }
+            },
+              h('div', { style: { fontSize: 24, fontWeight: 700, color: 'var(--fingers-accent, #0066ff)' } },
+                sessionSummary.exercisesCount),
+              h('div', { style: { fontSize: 11, opacity: 0.65, marginTop: 2 } }, 'упражнений')
+            ),
+            h('div', {
+              style: { flex: 1, padding: '14px 10px', borderRadius: 10,
+                background: 'rgba(120,120,128,0.08)', textAlign: 'center' }
+            },
+              h('div', { style: { fontSize: 24, fontWeight: 700, color: 'var(--fingers-accent, #0066ff)' } },
+                sessionSummary.totalReps),
+              h('div', { style: { fontSize: 11, opacity: 0.65, marginTop: 2 } }, 'висов')
+            )
+          ),
+          h('div', {
+            style: {
+              padding: '10px 12px', borderRadius: 8,
+              background: 'rgba(22, 163, 74, 0.10)',
+              color: '#15803d', fontSize: 13, lineHeight: 1.4,
+              display: 'flex', gap: 8, alignItems: 'center',
+            }
+          },
+            h('span', null, '✓'),
+            h('span', null, 'Сохранено в дневник на ' + sessionSummary.dateKey)
+          ),
+          h('button', {
+            className: 'fingers-fs-cta',
+            onClick: handleDismissSummary,
+            style: { width: '100%', padding: '12px 20px', fontSize: 15, marginTop: 4 }
+          }, 'Закрыть')
+        )
+      )
     );
   }
 

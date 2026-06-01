@@ -99,13 +99,41 @@
     const checked = checkedState[0];
     const setChecked = checkedState[1];
 
+    // Hard-block: реальная проверка cooldown через calendar_v1.cooldownCheck().
+    // Раньше rest_48h был honor-checkbox — юзер просто кликал галочку, никто
+    // не сверял с фактом. Теперь если max-сессия была < 48ч назад — checkbox
+    // дизейблится, отображается reset-time, кнопка «Начать» disabled.
+    const cooldown = React.useMemo(function () {
+      try {
+        return (typeof Fingers.cooldownCheck === 'function') ? Fingers.cooldownCheck() : null;
+      } catch (e) {
+        console.warn('[Fingers.SafetyGate] cooldownCheck failed', e);
+        return null;
+      }
+    }, []);
+    const cooldownBlocked = !!(cooldown && cooldown.lastWasMax && cooldown.allowedNow === false);
+    const cooldownResetText = (function () {
+      if (!cooldownBlocked || !cooldown || cooldown.hoursSinceLast == null) return null;
+      const hoursLeft = Math.max(0, 48 - cooldown.hoursSinceLast);
+      const resetMs = Date.now() + hoursLeft * 60 * 60 * 1000;
+      const d = new Date(resetMs);
+      const sameDay = d.toDateString() === new Date().toDateString();
+      const time = d.getHours().toString().padStart(2, '0') + ':' +
+        d.getMinutes().toString().padStart(2, '0');
+      const dayLabel = sameDay ? 'сегодня в '
+        : (d.getDate() === new Date().getDate() + 1 ? 'завтра в ' : '');
+      return 'Можно ' + dayLabel + time + ' (осталось ' + hoursLeft.toFixed(1) + 'ч от 48ч окна синтеза коллагена).';
+    })();
+
     const toggle = React.useCallback(function (id) {
+      // Защита: rest_48h нельзя поставить вручную, если cooldown ещё активен.
+      if (id === 'rest_48h' && cooldownBlocked) return;
       setChecked(function (prev) {
         const next = Object.assign({}, prev);
         next[id] = !prev[id];
         return next;
       });
-    }, []);
+    }, [cooldownBlocked]);
 
     const allCriticalChecked = React.useMemo(function () {
       return CHECKLIST_ITEMS.every(function (item) {
@@ -114,10 +142,13 @@
       });
     }, [checked]);
 
+    // Финальный gate: все critical галки + cooldown НЕ blocked.
+    const canProceed = allCriticalChecked && !cooldownBlocked;
+
     const handleProceed = React.useCallback(function () {
-      if (!allCriticalChecked) return;
+      if (!canProceed) return;
       try { onProceed(checked); } catch (e) { console.warn('[Fingers.SafetyGate] onProceed failed', e); }
-    }, [allCriticalChecked, checked, onProceed]);
+    }, [canProceed, checked, onProceed]);
 
     return React.createElement('div', {
       className: 'fingers-safety-gate-backdrop',
@@ -160,19 +191,25 @@
         },
           CHECKLIST_ITEMS.map(function (item) {
             const isChecked = checked[item.id] === true;
+            const itemBlocked = (item.id === 'rest_48h' && cooldownBlocked);
             return React.createElement('label', {
               key: item.id,
               style: {
                 display: 'flex', alignItems: 'flex-start', gap: 10,
-                padding: '10px 0', cursor: 'pointer',
+                padding: '10px 0', cursor: itemBlocked ? 'not-allowed' : 'pointer',
+                opacity: itemBlocked ? 0.7 : 1,
                 borderBottom: '1px solid var(--border-soft,rgba(148,163,184,0.15))'
               }
             },
               React.createElement('input', {
                 type: 'checkbox',
                 checked: isChecked,
+                disabled: itemBlocked,
                 onChange: function () { toggle(item.id); },
-                style: { marginTop: 3, flexShrink: 0, width: 18, height: 18, cursor: 'pointer' }
+                style: {
+                  marginTop: 3, flexShrink: 0, width: 18, height: 18,
+                  cursor: itemBlocked ? 'not-allowed' : 'pointer'
+                }
               }),
               React.createElement('div', { style: { flex: 1 } },
                 React.createElement('div', {
@@ -185,11 +222,20 @@
                       }, '*')
                     : null
                 ),
-                item.hint
+                itemBlocked && cooldownResetText
                   ? React.createElement('div', {
-                      style: { fontSize: 12, color: 'var(--text-muted,#64748b)', marginTop: 2, lineHeight: 1.4 }
-                    }, item.hint)
-                  : null
+                      style: {
+                        fontSize: 12, color: '#991b1b', marginTop: 4, lineHeight: 1.4,
+                        padding: '6px 10px', borderRadius: 6,
+                        background: 'rgba(220, 38, 38, 0.08)',
+                        border: '1px solid rgba(220, 38, 38, 0.20)',
+                      }
+                    }, '⛔ ' + cooldownResetText)
+                  : item.hint
+                    ? React.createElement('div', {
+                        style: { fontSize: 12, color: 'var(--text-muted,#64748b)', marginTop: 2, lineHeight: 1.4 }
+                      }, item.hint)
+                    : null
               )
             );
           })
@@ -211,13 +257,13 @@
           }, 'Отмена'),
           React.createElement('button', {
             type: 'button',
-            disabled: !allCriticalChecked,
+            disabled: !canProceed,
             onClick: handleProceed,
             style: {
               padding: '8px 16px', borderRadius: 8, border: 'none',
-              cursor: allCriticalChecked ? 'pointer' : 'not-allowed',
-              background: allCriticalChecked ? '#16a34a' : 'var(--bg-soft,rgba(148,163,184,0.3))',
-              color: allCriticalChecked ? '#fff' : 'var(--text-muted,#94a3b8)',
+              cursor: canProceed ? 'pointer' : 'not-allowed',
+              background: canProceed ? '#16a34a' : 'var(--bg-soft,rgba(148,163,184,0.3))',
+              color: canProceed ? '#fff' : 'var(--text-muted,#94a3b8)',
               fontWeight: 700
             }
           }, 'Начать')

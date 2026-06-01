@@ -98,13 +98,31 @@
   const ST_HERO_MUSCLE_ROW = {
     appearance: 'none', background: 'transparent', cursor: 'pointer',
     border: 'none', borderTop: BORDER_LITE,
-    padding: '12px 36px 12px 14px',
+    // left pad освобождает место под thumb (absolute, повёрнутый 90°).
+    padding: '8px 36px 8px 84px',
+    minHeight: 44,
     textAlign: 'left',
     fontFamily: 'inherit', fontSize: 13, fontWeight: 500, color: FG,
     lineHeight: 1.4,
     width: '100%', display: 'block',
     position: 'relative',
     whiteSpace: 'normal',
+  };
+  // Wrapper: горизонтальный слот (рука лёжа). Внутри img-portrait + rotate 90°.
+  const ST_HERO_MUSCLE_THUMB_WRAP = {
+    position: 'absolute', left: 12, top: '50%',
+    transform: 'translateY(-50%)',
+    width: 64, height: 28, borderRadius: 6,
+    overflow: 'hidden',
+    background: 'rgba(120, 120, 128, 0.08)',
+    pointerEvents: 'none',
+  };
+  const ST_HERO_MUSCLE_THUMB_IMG = {
+    position: 'absolute', top: '50%', left: '50%',
+    // Содержимое — портрет 28×64; поворот вокруг центра даёт визуально 64×28.
+    width: 28, height: 64,
+    objectFit: 'cover',
+    transform: 'translate(-50%, -50%) rotate(90deg)',
   };
   const ST_HERO_MUSCLE_ARROW = {
     position: 'absolute', right: 14, top: '50%',
@@ -120,7 +138,13 @@
     borderBottom: BORDER_LITE,
     lineHeight: 1.2,
   };
-  const ST_TITLE = { flex: 1, fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', minWidth: 0 };
+  const ST_TITLE_GROUP = { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 };
+  const ST_TITLE_KICKER = {
+    fontSize: 11, fontWeight: 600, color: MUTED,
+    letterSpacing: '0.04em', textTransform: 'uppercase',
+  };
+  const ST_TITLE = { fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', minWidth: 0,
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
   const ST_REMOVE = {
     width: 28, height: 28, borderRadius: '50%', border: 'none',
     background: 'rgba(120, 120, 128, 0.12)',
@@ -182,6 +206,20 @@
     padding: '4px 14px 8px', fontSize: 12, color: MUTED,
     display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
     borderBottom: BORDER_LITE,
+  };
+  // MVC% превышает безопасный диапазон — оранжевый/красный chip с warning.
+  // Hörst Max Hangs протокол: 85-95% MVC. >110% = de facto failure rep.
+  const ST_HINT_WARN = {
+    padding: '8px 14px', fontSize: 12, fontWeight: 500,
+    display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+    borderBottom: BORDER_LITE,
+    background: 'rgba(245, 158, 11, 0.10)', color: '#92400e',
+  };
+  const ST_HINT_DANGER = {
+    padding: '8px 14px', fontSize: 12, fontWeight: 600,
+    display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+    borderBottom: BORDER_LITE,
+    background: 'rgba(220, 38, 38, 0.10)', color: '#991b1b',
   };
 
   // Anatomy section
@@ -263,6 +301,7 @@
     const rows = known.map(function (mid) {
       const info = Fingers.MUSCLE_INFO[mid];
       const label = (info && info.name) ? info.name : mid;
+      const thumbSrc = '/anatomy/' + String(mid).toLowerCase() + '.webp';
       return R.createElement('button', {
         key: mid, type: 'button',
         className: 'fingers-fs-hero-muscle-row',
@@ -274,6 +313,16 @@
           }
         },
       },
+        R.createElement('span', { style: ST_HERO_MUSCLE_THUMB_WRAP, 'aria-hidden': 'true' },
+          R.createElement('img', {
+            src: thumbSrc, alt: '',
+            loading: 'lazy', decoding: 'async',
+            style: ST_HERO_MUSCLE_THUMB_IMG,
+            onError: function (e) {
+              try { e.target.parentNode.style.visibility = 'hidden'; } catch (_) {}
+            },
+          })
+        ),
         R.createElement('span', null, label),
         R.createElement('span', { style: ST_HERO_MUSCLE_ARROW, 'aria-hidden': 'true' }, '›'),
       );
@@ -283,9 +332,17 @@
       : null;
     return R.createElement('div', { style: ST_HERO_WRAP, className: 'fingers-fs-hero-wrap' }, img, muscles);
   }
-  function renderHeader(grip, onRemove) {
-    return R.createElement('div', { style: ST_HEADER },
-      R.createElement('div', { style: ST_TITLE }, grip.label),
+  function renderHeader(grip, onRemove, exIdx, exTotal) {
+    // «Упражнение 2 из 3 · Полузамок» — нумерация важна когда в плане несколько
+    // упражнений, чтобы юзер понимал где он в стеке. Шапка теперь над фото.
+    const idxLabel = (Number.isFinite(exIdx) && Number.isFinite(exTotal) && exTotal > 1)
+      ? 'Упражнение ' + (exIdx + 1) + ' из ' + exTotal
+      : 'Упражнение';
+    return R.createElement('div', { style: ST_HEADER, className: 'fingers-fs-exercise-header' },
+      R.createElement('div', { style: ST_TITLE_GROUP },
+        R.createElement('div', { style: ST_TITLE_KICKER }, idxLabel),
+        R.createElement('div', { style: ST_TITLE }, grip.label),
+      ),
       R.createElement('button', {
         type: 'button', 'aria-label': 'Удалить упражнение',
         onClick: function () { onRemove(); }, style: ST_REMOVE,
@@ -389,11 +446,26 @@
       const bw = Number(HEYS && HEYS.user && HEYS.user.weightKg) || 70;
       const total = bw + (Number(addedKg) || 0);
       const pct = mvcKg > 0 ? Math.round(100 * total / mvcKg) : 0;
-      const els = [R.createElement('span', { key: 'p' }, pct + '% от MVC (' + mvcKg.toFixed(1) + ' кг)')];
+      // Hörst Max Hangs: 85-95% MVC. >110% — риск pulley-травмы повышен.
+      const overLimit = pct > 110;
+      const danger = pct > 125;
+      const baseEls = [R.createElement('span', { key: 'p' }, pct + '% от MVC (' + mvcKg.toFixed(1) + ' кг)')];
       if (Fingers.SourceBadge) {
-        els.push(R.createElement(Fingers.SourceBadge, { key: 's', sourceId: 'horst_podcast10' }));
+        baseEls.push(R.createElement(Fingers.SourceBadge, { key: 's', sourceId: 'horst_podcast10' }));
       }
-      return R.createElement('div', { style: ST_HINT, className: 'fingers-fs-hint-row' }, els);
+      const rows = [R.createElement('div', { key: 'base', style: ST_HINT, className: 'fingers-fs-hint-row' }, baseEls)];
+      if (overLimit) {
+        const warnText = danger
+          ? '🚨 ' + pct + '% MVC — критично выше нормы. Hörst Max Hangs: 85-95%. Резкий рост риска разрыва A2-блока.'
+          : '⚠ ' + pct + '% MVC — выше безопасного диапазона. Hörst рекомендует 85-95% для max-hangs.';
+        rows.push(R.createElement('div', {
+          key: 'warn',
+          style: danger ? ST_HINT_DANGER : ST_HINT_WARN,
+          className: 'fingers-fs-hint-warn',
+          role: 'alert',
+        }, warnText));
+      }
+      return R.createElement(R.Fragment, null, rows);
     }
     if (mvc.type === 'time') {
       return R.createElement('div', { style: ST_HINT, className: 'fingers-fs-hint-row' },
@@ -446,10 +518,6 @@
       } catch (_) {}
     };
 
-    const anatomyEl = Fingers.AnatomyDiagram
-      ? R.createElement(Fingers.AnatomyDiagram, { highlightMuscles: known, size: 200 })
-      : null;
-
     const chips = known.map(function (mid) {
       const info = Fingers.MUSCLE_INFO[mid];
       const label = (info && info.name) ? info.name : mid;
@@ -463,7 +531,6 @@
 
     return R.createElement('div', { style: ST_ANAT_SECTION },
       R.createElement('span', { style: ST_ANAT_TITLE }, 'Задействованные мышцы'),
-      anatomyEl ? R.createElement('div', { style: ST_ANAT_WRAP }, anatomyEl) : null,
       chips.length > 0 ? R.createElement('div', { style: ST_MUSCLES }, chips) : null,
     );
   }
@@ -491,6 +558,7 @@
     // 99 → fail-open, любые grips доступны).
     const userAge = Number.isFinite(Number(p.userAge)) ? Number(p.userAge) : null;
     const exIdx = Number.isFinite(Number(p.exIdx)) ? Number(p.exIdx) : 0;
+    const exTotal = Number.isFinite(Number(p.exTotal)) ? Number(p.exTotal) : 1;
     const onChange = typeof p.onChange === 'function' ? p.onChange : function () {};
     const onRemove = typeof p.onRemove === 'function' ? p.onRemove : function () {};
     const patch = function (diff) { onChange(Object.assign({}, ex, diff)); };
@@ -521,8 +589,10 @@
       || { id: ex.gripId, label: ex.gripId, primaryMuscles: [], icon: '🖐' };
 
     const els = [];
+    // Заголовок (название упражнения + крестик) — теперь СВЕРХУ, до фото.
+    // Тогда юзер сразу видит контекст и может удалить упражнение без скролла.
+    els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove, exIdx, exTotal)));
     els.push(R.createElement(R.Fragment, { key: 'hero' }, renderHero(grip)));
-    els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove)));
 
     // iOS form-grouped: каждое поле — отдельная row с label слева, value справа.
     els.push(R.createElement(R.Fragment, { key: 'grip' },
@@ -560,7 +630,13 @@
     }
 
     return R.createElement('div', {
-      className: 'fingers-fs-constructor-card', style: ST_CARD,
+      className: 'fingers-fs-constructor-card',
+      style: ST_CARD,
+      // data-attr используется ExerciseStickyBar для определения активного
+      // упражнения через scroll listener (см. session_ui).
+      'data-exercise-index': exIdx,
+      'data-exercise-grip': grip.label,
+      'data-exercise-total': exTotal,
     }, els);
   };
 

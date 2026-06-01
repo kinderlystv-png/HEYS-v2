@@ -6831,7 +6831,7 @@ button.meal-quality-badge:active {
 }
 
 /* Stepper buttons тоже compact */
-.fingers-fs-constructor-card button:not(.fingers-fs-cta):not(.fingers-fs-ghost):not(.fingers-fs-muscle-chip):not(.fingers-fs-weight-btn) {
+.fingers-fs-constructor-card button:not(.fingers-fs-cta):not(.fingers-fs-ghost):not(.fingers-fs-muscle-chip):not(.fingers-fs-weight-btn):not(.fingers-fs-hero-muscle-row) {
   height: 24px !important;
   width: 24px !important;
   min-height: 24px !important;

@@ -87,91 +87,153 @@
   Fingers.MUSCLE_IDS = MUSCLE_IDS;
 
   // ===== SVG SHAPES =====
-  // Кисть + предплечье, palmar view; viewBox 0 0 240 320.
-  // Forearm — две parallel-полосы (radial/ulnar muscle groups) сверху; palm — overlap снизу.
-  // Каждая «мышца» — это path c прозрачным fill по умолчанию; подсветка → accent fill.
+  // Premium-стиль: palmar view, кисть СВЕРХУ (пальцы вверх) → запястье →
+  // предплечье ВНИЗ. viewBox 0 0 280 400. Силуэт — один заполненный path
+  // (skin tone), мышцы — органичные формы с мягким fill, активная — с glow
+  // через radialGradient + drop-shadow filter + лейбл-плашка снизу.
 
+  // Hand silhouette: контур кисти + предплечья. Один closed path.
+  // Пропорции: палец длинн. ≈ palm width, форearm ≈ 1.4 × palm length.
+  const HAND_SILHOUETTE_D =
+    // Старт у основания большого пальца (left palm)
+    'M 88 168 ' +
+    // Левая сторона ладони → к пальцам
+    'L 86 130 Q 86 124 92 122 ' +
+    // Указательный палец (left side)
+    'L 100 122 L 100 56 Q 100 48 108 48 L 116 48 Q 124 48 124 56 L 124 124 ' +
+    // Средний палец
+    'L 134 124 L 134 40 Q 134 32 142 32 L 150 32 Q 158 32 158 40 L 158 124 ' +
+    // Безымянный
+    'L 168 124 L 168 50 Q 168 42 176 42 L 184 42 Q 192 42 192 50 L 192 124 ' +
+    // Мизинец
+    'L 200 124 L 200 72 Q 200 64 208 64 L 216 64 Q 224 64 224 72 L 224 130 ' +
+    // Правая сторона ладони → запястье
+    'Q 224 158 220 178 L 218 218 ' +
+    // Запястье справа
+    'L 222 230 ' +
+    // Предплечье справа (расширяется к локтю)
+    'Q 234 290 244 380 L 244 388 ' +
+    'L 80 388 L 80 380 ' +
+    // Предплечье слева
+    'Q 90 290 102 230 ' +
+    // Запястье слева
+    'L 106 218 L 100 178 ' +
+    // Большой палец (отведён в сторону)
+    'Q 92 174 88 170 ' +
+    // Назад к старту через thumb root
+    'Q 70 178 56 198 Q 44 220 56 238 Q 70 252 88 240 L 96 218 ' +
+    'Z';
+
+  // Inner muscle shapes — мягкие organic формы.
+  // Forearm: y=240..380, 5 продольных «полос» (анатомически по группам).
+  // Palm: lumbricals — центр ладони; adductor_pollicis — thenar (основание большого).
+  const MUSCLE_PATHS = Object.freeze({
+    // Forearm (palmar view, слева→справа по компасу скрин):
+    // brachioradialis — radial side (left, тонкая)
+    brachioradialis: 'M 96 248 Q 92 290 96 360 Q 102 372 112 368 Q 116 320 118 252 Q 110 244 96 248 Z',
+    // FCR — следом
+    FCR:             'M 122 250 Q 120 295 124 360 Q 132 372 144 366 Q 144 320 146 254 Q 134 246 122 250 Z',
+    // FDS — центр
+    FDS:             'M 150 252 Q 150 300 154 364 Q 162 376 174 370 Q 174 322 176 256 Q 162 248 150 252 Z',
+    // FDP — глубже, чуть правее
+    FDP:             'M 180 254 Q 178 300 184 366 Q 192 378 204 372 Q 204 324 206 258 Q 192 250 180 254 Z',
+    // ECR — ulnar side (right, толще)
+    ECR:             'M 210 250 Q 210 296 214 362 Q 222 372 230 366 Q 232 318 232 252 Q 222 244 210 250 Z',
+    // Palm muscles
+    lumbricals:        'M 118 158 Q 114 178 120 196 Q 130 206 156 206 Q 188 206 200 196 Q 206 178 200 158 Q 188 152 156 152 Q 130 152 118 158 Z',
+    adductor_pollicis: 'M 70 200 Q 56 210 56 226 Q 58 240 76 238 Q 92 236 100 222 L 102 200 Q 88 192 70 200 Z',
+  });
+
+  // Hand silhouette — заполненная фигура (skin tone) + тонкий контур.
+  function staticHandOutline() {
+    return [
+      R.createElement('path', {
+        key: 'hand-fill',
+        d: HAND_SILHOUETTE_D,
+        fill: 'url(#skinGradient)',
+        stroke: 'var(--fingers-text, #1a1a1f)',
+        strokeWidth: 1.2,
+        strokeOpacity: 0.45,
+        strokeLinejoin: 'round',
+        filter: 'url(#handShadow)',
+      }),
+      // Запястье (тонкая горизонтальная линия-сгиб)
+      R.createElement('line', {
+        key: 'wrist-crease',
+        x1: 108, y1: 222, x2: 218, y2: 222,
+        stroke: 'var(--fingers-text, #1a1a1f)',
+        strokeWidth: 0.6, strokeOpacity: 0.25, strokeLinecap: 'round',
+      }),
+      // Складки на ладони (palm creases) — едва видимые
+      R.createElement('path', {
+        key: 'crease-1', d: 'M 112 152 Q 160 142 218 156',
+        fill: 'none', stroke: 'var(--fingers-text, #1a1a1f)',
+        strokeWidth: 0.6, strokeOpacity: 0.18, strokeLinecap: 'round',
+      }),
+      R.createElement('path', {
+        key: 'crease-2', d: 'M 108 180 Q 150 168 200 178',
+        fill: 'none', stroke: 'var(--fingers-text, #1a1a1f)',
+        strokeWidth: 0.6, strokeOpacity: 0.18, strokeLinecap: 'round',
+      }),
+      // Knuckle dots (PIP/DIP суставы) — субтильные референсы
+      ...[
+        [112, 80], [112, 105],  // index
+        [146, 65], [146, 95],   // middle
+        [180, 72], [180, 100],  // ring
+        [212, 96], [212, 114],  // pinky
+      ].map(([cx, cy], i) => R.createElement('circle', {
+        key: 'joint-' + i, cx, cy, r: 1.2,
+        fill: 'var(--fingers-text, #1a1a1f)', fillOpacity: 0.18,
+      })),
+    ];
+  }
+
+  // Render muscle shape — два режима: inactive (тонкий контур-намёк) и
+  // active (заливка accent gradient + glow filter + лейбл).
   function muscleShape(d, id, isHighlighted, onClick) {
-    const accent = 'var(--fingers-accent, #0066ff)';
-    const muted = 'var(--fingers-muted, rgba(120, 120, 130, 0.18))';
-    const fill = isHighlighted ? accent : muted;
-    const opacity = isHighlighted ? 0.42 : 0.75;
-    const stroke = isHighlighted ? accent : 'var(--fingers-text, #444)';
-    // <path> с muscle id (для click delegation)
+    if (isHighlighted) {
+      return R.createElement('path', {
+        key: 'muscle-' + id,
+        d,
+        fill: 'url(#muscleActiveGradient)',
+        fillOpacity: 0.85,
+        stroke: 'var(--fingers-accent, #0066ff)',
+        strokeWidth: 1.4,
+        strokeOpacity: 0.9,
+        filter: 'url(#muscleGlow)',
+        'data-muscle-id': id,
+        style: onClick ? { pointerEvents: 'none' } : undefined,
+      });
+    }
     return R.createElement('path', {
       key: 'muscle-' + id,
       d,
-      fill,
-      fillOpacity: opacity,
-      stroke,
-      strokeWidth: 1.2,
-      strokeOpacity: isHighlighted ? 0.8 : 0.35,
+      fill: 'transparent',
+      stroke: 'var(--fingers-text, #1a1a1f)',
+      strokeWidth: 0.6,
+      strokeOpacity: 0.18,
+      strokeDasharray: '2 3',
       'data-muscle-id': id,
       style: onClick ? { pointerEvents: 'none' } : undefined,
     });
   }
 
-  // Координаты мышц (упрощённые анатомические pathи).
-  const MUSCLE_PATHS = Object.freeze({
-    // Forearm (top part of SVG)
-    brachioradialis: 'M70 30 Q60 80 70 140 L88 140 Q82 80 90 30 Z',
-    FCR:             'M95 35 Q92 85 100 140 L115 140 Q110 85 113 35 Z',
-    FDS:             'M118 30 Q116 90 124 145 L140 145 Q138 90 138 30 Z',
-    FDP:             'M143 35 Q142 90 148 145 L162 145 Q160 90 162 35 Z',
-    ECR:             'M165 30 Q170 80 168 140 L185 140 Q180 80 188 30 Z',
-    // Palm/hand area (lower part)
-    lumbricals:        'M95 175 Q98 195 100 215 L150 215 Q152 195 150 175 Q145 170 122 170 Q98 170 95 175 Z',
-    adductor_pollicis: 'M80 200 Q72 210 75 230 Q80 240 95 235 L100 218 Q92 205 80 200 Z',
-  });
-
-  // Кисть (статичный outline): palm + 5 пальцев + wrist
-  function staticHandOutline() {
-    const stroke = 'var(--fingers-text, #1a1a1f)';
-    const stroke05 = { stroke, strokeWidth: 1.4, fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' };
-    return [
-      // wrist (separator под предплечьем)
-      R.createElement('line', { key: 'wrist', x1: 65, y1: 150, x2: 195, y2: 150, ...stroke05, strokeWidth: 1.8 }),
-      // palm outline
-      R.createElement('path', { key: 'palm', d: 'M82 155 L82 230 Q82 250 100 252 L160 252 Q178 250 178 230 L178 155', ...stroke05 }),
-      // 5 fingers — выпрямлены вверх (от palm-top вниз)
-      // thumb (короткий, сбоку)
-      R.createElement('path', { key: 'thumb', d: 'M82 200 Q60 200 56 218 Q54 238 70 245', ...stroke05 }),
-      // index
-      R.createElement('path', { key: 'finger-i', d: 'M96 155 L96 105 Q96 100 99 100 L101 100 Q104 100 104 105 L104 155', ...stroke05 }),
-      // middle
-      R.createElement('path', { key: 'finger-m', d: 'M118 155 L118 90 Q118 85 121 85 L123 85 Q126 85 126 90 L126 155', ...stroke05 }),
-      // ring
-      R.createElement('path', { key: 'finger-r', d: 'M140 155 L140 95 Q140 90 143 90 L145 90 Q148 90 148 95 L148 155', ...stroke05 }),
-      // pinky
-      R.createElement('path', { key: 'finger-p', d: 'M162 155 L162 115 Q162 110 165 110 L167 110 Q170 110 170 115 L170 155', ...stroke05 }),
-      // forearm outline (sides)
-      R.createElement('path', { key: 'fa-l', d: 'M62 30 Q58 90 65 150', ...stroke05 }),
-      R.createElement('path', { key: 'fa-r', d: 'M198 30 Q198 90 195 150', ...stroke05 }),
-    ];
-  }
-
-  // Pulleys (A2/A4) — показывать опционально
+  // Pulleys (A2/A4) — показывать опционально (новые координаты пальцев)
   function pulleyMarkers() {
     const stroke = 'var(--fingers-accent, #0066ff)';
     const markers = [];
-    // 4 пальца × 2 pulley
-    // index x=100, middle x=122, ring x=144, pinky x=166
-    [[100, 105], [122, 90], [144, 95], [166, 115]].forEach(([x, topY], i) => {
-      // A2 — около PIP (середина пальца)
-      const pipY = topY + (155 - topY) * 0.5;
-      // A4 — около DIP (нижняя треть)
-      const dipY = topY + (155 - topY) * 0.78;
+    // 4 пальца: index x≈112, middle x≈146, ring x≈180, pinky x≈212
+    [[112, 56], [146, 40], [180, 50], [212, 72]].forEach(([x, topY], i) => {
+      const pipY = topY + (124 - topY) * 0.5;
+      const dipY = topY + (124 - topY) * 0.8;
       markers.push(R.createElement('rect', {
-        key: 'a2-' + i, x: x - 3, y: pipY - 2, width: 10, height: 3,
-        fill: stroke, fillOpacity: 0.85, stroke: stroke, strokeWidth: 0.8,
+        key: 'a2-' + i, x: x - 6, y: pipY - 2, width: 12, height: 3, rx: 1.5,
+        fill: stroke, fillOpacity: 0.85,
       }));
       markers.push(R.createElement('rect', {
-        key: 'a4-' + i, x: x - 3, y: dipY - 1.5, width: 10, height: 2,
-        fill: stroke, fillOpacity: 0.7, stroke: stroke, strokeWidth: 0.5,
+        key: 'a4-' + i, x: x - 5, y: dipY - 1.5, width: 10, height: 2, rx: 1,
+        fill: stroke, fillOpacity: 0.6,
       }));
-      markers.push(R.createElement('text', {
-        key: 'lbl-a2-' + i, x: x + 9, y: pipY + 1, fill: stroke, fontSize: 5, fontFamily: 'system-ui',
-      }, 'A2'));
     });
     return markers;
   }
@@ -194,18 +256,50 @@
       return muscleShape(d, mid, highlightSet.has(mid), onMuscleClick);
     }).filter(Boolean);
 
-    const svgChildren = [];
-    // 1) Мышцы (под рукой — backdrop)
-    svgChildren.push(...muscleEls);
-    // 2) Контур кисти + предплечья (поверх)
+    // <defs>: gradients + filters для premium-эффекта.
+    // skinGradient — мягкая «кожа» (нейтральный беж/серый); подстраивается под
+    // тёмную тему через CSS var с дефолтом.
+    const defs = R.createElement('defs', { key: 'defs' },
+      R.createElement('linearGradient', { id: 'skinGradient', x1: '0%', y1: '0%', x2: '0%', y2: '100%' },
+        R.createElement('stop', { offset: '0%', stopColor: 'var(--fingers-skin-1, #f5efe7)' }),
+        R.createElement('stop', { offset: '100%', stopColor: 'var(--fingers-skin-2, #e6dccf)' }),
+      ),
+      R.createElement('radialGradient', { id: 'muscleActiveGradient', cx: '50%', cy: '50%', r: '60%' },
+        R.createElement('stop', { offset: '0%', stopColor: 'var(--fingers-accent, #0066ff)', stopOpacity: '0.55' }),
+        R.createElement('stop', { offset: '100%', stopColor: 'var(--fingers-accent, #0066ff)', stopOpacity: '0.18' }),
+      ),
+      R.createElement('filter', { id: 'muscleGlow', x: '-30%', y: '-30%', width: '160%', height: '160%' },
+        R.createElement('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: '3', result: 'blur' }),
+        R.createElement('feMerge', null,
+          R.createElement('feMergeNode', { in: 'blur' }),
+          R.createElement('feMergeNode', { in: 'SourceGraphic' }),
+        ),
+      ),
+      R.createElement('filter', { id: 'handShadow', x: '-10%', y: '-10%', width: '120%', height: '120%' },
+        R.createElement('feGaussianBlur', { in: 'SourceAlpha', stdDeviation: '4' }),
+        R.createElement('feOffset', { dx: '0', dy: '2', result: 'offsetblur' }),
+        R.createElement('feComponentTransfer', null,
+          R.createElement('feFuncA', { type: 'linear', slope: '0.18' }),
+        ),
+        R.createElement('feMerge', null,
+          R.createElement('feMergeNode', null),
+          R.createElement('feMergeNode', { in: 'SourceGraphic' }),
+        ),
+      ),
+    );
+
+    const svgChildren = [defs];
+    // 1) Контур + заливка кисти (skin tone)
     svgChildren.push(...staticHandOutline());
+    // 2) Мышцы — поверх кожи (активная видна, остальные dashed-намёк)
+    svgChildren.push(...muscleEls);
     // 3) Pulleys (опционально, сверху всего)
     if (showPulleys) svgChildren.push(...pulleyMarkers());
 
     const svgEl = R.createElement('svg', {
       width: size,
-      height: Math.round(size * 320 / 240),
-      viewBox: '0 0 240 320',
+      height: Math.round(size * 400 / 280),
+      viewBox: '0 0 280 400',
       role: 'img',
       'aria-label': 'Анатомия предплечья и кисти. Подсвечены: ' + (highlights.length ? highlights.join(', ') : 'нет'),
       className: 'fingers-fs-anatomy-svg',
@@ -218,23 +312,23 @@
     }
 
     // Overlay-buttons: positioned absolute поверх SVG-областей.
-    // Координаты (cx,cy в SVG-системе 240×320) → перевод в % контейнера.
+    // Координаты (cx,cy в SVG-системе 280×400) → перевод в % контейнера.
     const HOTSPOTS = {
-      brachioradialis:  { cx: 79,  cy: 90  },
-      FCR:              { cx: 104, cy: 90  },
-      FDS:              { cx: 128, cy: 88  },
-      FDP:              { cx: 152, cy: 90  },
-      ECR:              { cx: 176, cy: 85  },
-      lumbricals:       { cx: 122, cy: 195 },
-      adductor_pollicis:{ cx: 86,  cy: 220 },
+      brachioradialis:  { cx: 106, cy: 310 },
+      FCR:              { cx: 134, cy: 310 },
+      FDS:              { cx: 164, cy: 314 },
+      FDP:              { cx: 194, cy: 314 },
+      ECR:              { cx: 222, cy: 308 },
+      lumbricals:       { cx: 160, cy: 180 },
+      adductor_pollicis:{ cx: 78,  cy: 220 },
     };
 
     const buttons = MUSCLE_IDS.map((mid) => {
       const info = MUSCLE_INFO[mid];
       const hs = HOTSPOTS[mid];
       if (!hs || !info) return null;
-      const leftPct = (hs.cx / 240) * 100;
-      const topPct  = (hs.cy / 320) * 100;
+      const leftPct = (hs.cx / 280) * 100;
+      const topPct  = (hs.cy / 400) * 100;
       return R.createElement('button', {
         key: 'btn-' + mid,
         type: 'button',

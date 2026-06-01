@@ -367,6 +367,42 @@
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Visibility hook: если юзер ушёл на фоновую вкладку дольше 5с во время
+    // активной фазы (HANG/REST/BIG_REST/SET_PREP) — браузер throttle'ит
+    // setTimeout до 1Hz и приостанавливает Web Audio. Voice cues могут не
+    // сработать → юзер не слышит «3...2...1» отказа. На возвращении показываем
+    // тост-предупреждение, чтобы он перепроверил данные.
+    const stateRef = React.useRef(state);
+    stateRef.current = state;
+    React.useEffect(() => {
+      if (typeof document === 'undefined') return;
+      let hiddenAt = 0;
+      const onVis = function () {
+        const isActivePhase = stateRef.current === STATES.HANG
+          || stateRef.current === STATES.REST
+          || stateRef.current === STATES.BIG_REST
+          || stateRef.current === STATES.SET_PREP;
+        if (document.visibilityState === 'hidden') {
+          if (isActivePhase) hiddenAt = _now();
+        } else if (document.visibilityState === 'visible' && hiddenAt > 0) {
+          const hiddenMs = _now() - hiddenAt;
+          hiddenAt = 0;
+          if (hiddenMs > 5000 && isActivePhase) {
+            try {
+              const sec = Math.round(hiddenMs / 1000);
+              const msg = '⚠ Вкладка была в фоне ' + sec +
+                ' сек — звуковые команды могли не сработать, перепроверь данные.';
+              if (HEYS.Toast && typeof HEYS.Toast.warn === 'function') HEYS.Toast.warn(msg);
+              else if (HEYS.Toast && typeof HEYS.Toast.info === 'function') HEYS.Toast.info(msg);
+              else if (HEYS.Toast && typeof HEYS.Toast.show === 'function') HEYS.Toast.show(msg);
+            } catch (_) {}
+          }
+        }
+      };
+      document.addEventListener('visibilitychange', onVis);
+      return function () { document.removeEventListener('visibilitychange', onVis); };
+    }, []);
+
     return { state, setIdx, repIdx, secondsLeft, totalElapsed,
       start, startFromSnapshot, pause, resume, abort, skipPhase };
   }

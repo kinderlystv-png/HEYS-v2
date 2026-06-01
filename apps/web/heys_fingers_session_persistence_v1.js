@@ -127,6 +127,35 @@
     _safeRemoveLS(_getKey());
   }
 
+  // Synchronous flush — для beforeunload/pagehide. Не уходит через
+  // HEYS.utils (async cloud sync), а пишет напрямую в LS чтобы успеть
+  // до закрытия вкладки.
+  function _flushSync() {
+    if (!_pendingSnapshot) return;
+    if (_saveTimer) {
+      clearTimeout(_saveTimer);
+      _saveTimer = null;
+    }
+    try {
+      localStorage.setItem(_getKey(), JSON.stringify(_pendingSnapshot));
+    } catch (e) {
+      // LS quota / private mode — ignore, лучше потерять snapshot чем краш.
+    }
+    _pendingSnapshot = null;
+  }
+
+  if (typeof window !== 'undefined') {
+    // beforeunload — большинство десктоп браузеров. На iOS Safari часто не
+    // срабатывает → pagehide как fallback (срабатывает при back-forward cache
+    // и закрытии таба на iOS).
+    window.addEventListener('beforeunload', _flushSync);
+    window.addEventListener('pagehide', _flushSync);
+    // visibility hidden — тоже хороший сигнал, особенно для PWA.
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') _flushSync();
+    });
+  }
+
   // ─── Boot detection ─────────────────────────────────────────────────────
   // Slушаем heysSyncCompleted (initial cloud sync done) и вызываем callback
   // с актуальным snapshot. Если callback вернёт truthy «handled» — не

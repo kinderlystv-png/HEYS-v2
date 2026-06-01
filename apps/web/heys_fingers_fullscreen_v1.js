@@ -133,6 +133,19 @@
       setShowOnboarding(false);
     }, []);
 
+    // Re-onboarding: сбросить LS-state онбординга и показать его снова
+    // поверх текущего fullscreen. Использовано из header SessionUI.
+    const handleRequestOnboarding = useCallback(function () {
+      try {
+        if (typeof Fingers.resetOnboarding === 'function') {
+          Fingers.resetOnboarding();
+        }
+      } catch (e) {
+        console.warn('[Fingers.Fullscreen] resetOnboarding failed:', e);
+      }
+      setShowOnboarding(true);
+    }, []);
+
     return h('div', {
       className: 'fingers-fs',
       role: 'dialog',
@@ -163,7 +176,8 @@
                 dateKey: dateKey,
                 trainingIndex: trainingIndex,
                 mode: mode,
-                onClose: onRequestClose
+                onClose: onRequestClose,
+                onRequestOnboarding: handleRequestOnboarding
               })
             : h('div', { style: { padding: 32, textAlign: 'center' } },
                 h('p', null, 'Модуль ещё не загружен (SessionUI или Onboarding).'),

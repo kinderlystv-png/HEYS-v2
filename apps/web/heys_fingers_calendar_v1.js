@@ -175,6 +175,126 @@
     };
   }
 
+  // ─── Mobile MonthGrid ──────────────────────────────────────────────────
+  // На узком экране year-heatmap превращается в нечитаемые 12px квадратики
+  // (см. audit #5). Показываем месяц с ячейками 36×36 и навигацией prev/next.
+  function _MonthGrid(props) {
+    const React = global.React;
+    if (!React) return null;
+    const h = React.createElement;
+    const monthDate = props.monthDate; // первое число месяца
+    const data = props.data;
+    const onDayClick = props.onDayClick;
+    const onPrev = props.onPrev;
+    const onNext = props.onNext;
+
+    const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+      'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    const weekdayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7; // 0=Mon
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const cells = [];
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      cells.push({ empty: true, key: 'e-' + i });
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(year, month, day);
+      const k = _formatDateKey(d);
+      cells.push({ day: day, dateKey: k, info: data[k], key: k });
+    }
+
+    const cellColor = (info) => {
+      if (!info) return 'transparent';
+      const i = info.maxIntensity;
+      const opacity = Math.min(1, 0.3 + (info.count - 1) * 0.2);
+      return i === 'max' ? `rgba(220, 38, 38, ${Math.max(opacity, 0.8)})`
+        : i === 'moderate' ? `rgba(14, 116, 144, ${Math.max(opacity, 0.5)})`
+        : `rgba(132, 204, 22, ${Math.max(opacity, 0.4)})`;
+    };
+
+    return h('div', {
+      className: 'heys-fingers-month-grid',
+      style: { padding: '12px', fontFamily: 'system-ui, -apple-system, sans-serif' },
+    },
+      h('div', {
+        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 12, gap: 8 },
+      },
+        h('button', {
+          type: 'button', onClick: onPrev,
+          'aria-label': 'Предыдущий месяц',
+          style: { width: 44, height: 44, border: 'none', background: 'rgba(0,0,0,0.05)',
+            borderRadius: 10, cursor: 'pointer', fontSize: 18, color: '#374151' },
+        }, '‹'),
+        h('div', {
+          style: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: 600, color: '#374151' },
+        }, monthNames[month] + ' ' + year),
+        h('button', {
+          type: 'button', onClick: onNext,
+          'aria-label': 'Следующий месяц',
+          style: { width: 44, height: 44, border: 'none', background: 'rgba(0,0,0,0.05)',
+            borderRadius: 10, cursor: 'pointer', fontSize: 18, color: '#374151' },
+        }, '›')
+      ),
+      h('div', {
+        style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4,
+          marginBottom: 4 },
+      },
+        weekdayNames.map(function (n) {
+          return h('div', { key: n, style: { fontSize: 10, textAlign: 'center',
+            color: '#9ca3af', fontWeight: 500 } }, n);
+        })
+      ),
+      h('div', {
+        style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 },
+      },
+        cells.map(function (c) {
+          if (c.empty) return h('div', { key: c.key, style: { aspectRatio: '1 / 1' } });
+          const bg = cellColor(c.info);
+          const hasSession = !!c.info;
+          return h('button', {
+            key: c.key, type: 'button',
+            disabled: !hasSession || !onDayClick,
+            onClick: hasSession && onDayClick
+              ? function () { onDayClick(c.dateKey, c.info.sessions); }
+              : undefined,
+            'aria-label': c.dateKey + (hasSession
+              ? ' — ' + c.info.count + ' сессий (' + c.info.maxIntensity + ')' : ''),
+            style: {
+              aspectRatio: '1 / 1', minHeight: 36,
+              border: hasSession ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(0,0,0,0.04)',
+              borderRadius: 8,
+              background: hasSession ? bg : 'rgba(0,0,0,0.02)',
+              color: hasSession ? '#fff' : '#9ca3af',
+              fontSize: 13, fontWeight: hasSession ? 600 : 400,
+              cursor: hasSession && onDayClick ? 'pointer' : 'default',
+              padding: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            },
+          }, String(c.day));
+        })
+      ),
+      h('div', {
+        style: { display: 'flex', gap: 12, marginTop: 12, fontSize: 11,
+          color: '#6b7280', alignItems: 'center', flexWrap: 'wrap' },
+      },
+        h('span', null, 'Цвет:'),
+        h('div', { style: { display: 'flex', gap: 4, alignItems: 'center' } },
+          h('div', { style: { width: 12, height: 12, background: 'rgba(132, 204, 22, 0.5)', borderRadius: 3 } }),
+          h('span', null, 'recovery')),
+        h('div', { style: { display: 'flex', gap: 4, alignItems: 'center' } },
+          h('div', { style: { width: 12, height: 12, background: 'rgba(14, 116, 144, 0.7)', borderRadius: 3 } }),
+          h('span', null, 'moderate')),
+        h('div', { style: { display: 'flex', gap: 4, alignItems: 'center' } },
+          h('div', { style: { width: 12, height: 12, background: 'rgba(220, 38, 38, 0.9)', borderRadius: 3 } }),
+          h('span', null, 'max'))
+      )
+    );
+  }
+
   // ─── YearHeatmap component ─────────────────────────────────────────────
   function YearHeatmap(props) {
     const React = global.React;
@@ -183,6 +303,27 @@
 
     const year = (props && Number(props.year)) || new Date().getFullYear();
     const onDayClick = props && typeof props.onDayClick === 'function' ? props.onDayClick : null;
+
+    // Mobile detection через matchMedia. Реактивно — обновляется при resize
+    // (например, поворот устройства).
+    const [isMobile, setIsMobile] = React.useState(function () {
+      if (typeof window === 'undefined') return false;
+      return window.matchMedia ? window.matchMedia('(max-width: 600px)').matches : false;
+    });
+    React.useEffect(function () {
+      if (typeof window === 'undefined' || !window.matchMedia) return;
+      const mq = window.matchMedia('(max-width: 600px)');
+      const onChange = function (e) { setIsMobile(e.matches); };
+      if (mq.addEventListener) mq.addEventListener('change', onChange);
+      else mq.addListener(onChange);
+      return function () {
+        if (mq.removeEventListener) mq.removeEventListener('change', onChange);
+        else mq.removeListener(onChange);
+      };
+    }, []);
+
+    // Month navigation для мобильной версии. monthOffset=0 → текущий месяц.
+    const [monthOffset, setMonthOffset] = React.useState(0);
 
     // Aggregate: для каждой даты года считаем sessions + max intensity
     const data = React.useMemo(() => {
@@ -235,6 +376,20 @@
         : `rgba(132, 204, 22, ${Math.max(opacity, 0.25)})`;                          // lime — recovery
       return base;
     };
+
+    // Mobile-first: на узких экранах year-grid становится 12px квадратиками
+    // невозможными для тапа. Переключаемся на месячный grid с навигацией.
+    if (isMobile) {
+      const now = new Date();
+      const targetMonth = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+      return h(_MonthGrid, {
+        monthDate: targetMonth,
+        data: data,
+        onDayClick: onDayClick,
+        onPrev: function () { setMonthOffset(function (o) { return o - 1; }); },
+        onNext: function () { setMonthOffset(function (o) { return o + 1; }); },
+      });
+    }
 
     const CELL_SIZE = 12;
     const CELL_GAP = 2;

@@ -134,16 +134,68 @@
       'aria-label': 'Закрыть детали мышцы',
       onClick: onClose,
       style: {
-        position: 'absolute', top: 8, right: 8,
-        width: 44, height: 44, minWidth: 44, minHeight: 44,
-        border: 'none', background: 'transparent',
-        fontSize: 22, cursor: 'pointer',
+        width: 40, height: 40, minWidth: 40, minHeight: 40,
+        border: 'none',
+        background: 'rgba(120, 120, 128, 0.12)',
+        fontSize: 20, cursor: 'pointer',
         color: 'var(--fingers-text, #1a1a1f)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderRadius: 8,
+        borderRadius: '50%',
+        flexShrink: 0,
       },
     }, '✕');
   }
+
+  // Backdrop + centered panel. Клик по backdrop'у — закрывает.
+  // Панель — flex-column: sticky header (title+X) + scrollable body.
+  const ST_BACKDROP = {
+    position: 'fixed', inset: 0, zIndex: 2100,
+    background: 'rgba(0, 0, 0, 0.45)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: 12,
+    paddingTop: 'max(12px, env(safe-area-inset-top, 12px))',
+    paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))',
+  };
+  const ST_PANEL = {
+    position: 'relative',
+    width: '100%',
+    maxWidth: 560,
+    height: '80vh',
+    maxHeight: 760,
+    background: 'var(--fingers-bg, #fff)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    display: 'flex', flexDirection: 'column',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.08)',
+  };
+  // Sticky header — название + крестик. Не скроллится.
+  const ST_HEADER = {
+    flexShrink: 0,
+    display: 'flex', alignItems: 'flex-start', gap: 12,
+    padding: '14px 14px 14px 20px',
+    borderBottom: '0.5px solid rgba(120, 120, 128, 0.18)',
+    background: 'var(--fingers-bg, #fff)',
+  };
+  const ST_HEADER_TITLES = {
+    flex: 1, minWidth: 0,
+    display: 'flex', flexDirection: 'column', gap: 4,
+    paddingTop: 4,
+  };
+  const ST_HEADER_H1 = {
+    margin: 0, fontSize: 20, fontWeight: 700, lineHeight: 1.2,
+    color: 'var(--fingers-text, #1a1a1f)',
+    letterSpacing: '-0.01em',
+  };
+  const ST_HEADER_LATIN = {
+    fontSize: 13, fontStyle: 'italic',
+    color: 'var(--fingers-text-muted, #777)',
+  };
+  // Scrollable body.
+  const ST_BODY = {
+    flex: 1, minHeight: 0,
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+  };
 
   function renderInjuryCard(inj, idx) {
     const sev = SEVERITY_META[inj.severity] || SEVERITY_META.mid;
@@ -220,36 +272,74 @@
       };
     }, [onClose]);
 
+    // Preload оставшихся 6 мышц — на случай если пользователь сразу откроет
+    // соседнюю из списка под фото. Один раз за life-cycle модалки.
+    // ~370KB суммарно, грузится фоном без блокировки UI.
+    R.useEffect(function () {
+      const ids = Fingers.MUSCLE_IDS || [];
+      ids.forEach(function (mid) {
+        if (mid === muscleId) return;
+        try {
+          const img = new Image();
+          img.src = '/anatomy/' + String(mid).toLowerCase() + '.webp';
+        } catch (_) {}
+      });
+    }, [muscleId]);
+
     const MUSCLE_INFO = Fingers.MUSCLE_INFO || {};
     const info = MUSCLE_INFO[muscleId];
     const SourceBadge = Fingers.SourceBadge;
     const AnatomyDiagram = Fingers.AnatomyDiagram;
 
+    // Premium-фото мышцы в /public/anatomy/ (см. apps/web/public/anatomy/).
+    // Если файл не загрузился — fallback на схематичный SVG AnatomyDiagram.
+    const [anatomyImgFailed, setAnatomyImgFailed] = R.useState(false);
+    const anatomyImgSrc = '/anatomy/' + String(muscleId).toLowerCase() + '.webp';
+
+    // Клик по backdrop'у (вне панели) — закрывает.
+    const handleBackdropClick = function (e) {
+      if (e.target === e.currentTarget) {
+        try { onClose(); } catch (_) {}
+      }
+    };
+
     // Fallback: muscleId не найден
     if (!info) {
       return R.createElement('div', {
-        className: 'fingers-fs-muscle-detail',
-        style: {
-          position: 'fixed', inset: 0, zIndex: 2100,
-          background: 'var(--fingers-bg, #fff)',
-          padding: 24,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 16,
-        },
+        className: 'fingers-fs-muscle-detail-backdrop',
+        onClick: handleBackdropClick,
+        style: ST_BACKDROP,
       },
-        renderCloseButton(onClose),
         R.createElement('div', {
-          style: { fontSize: 16, color: 'var(--fingers-text-muted, #555)', textAlign: 'center' },
-        }, 'Информация о мышце недоступна.'),
-        R.createElement('button', {
-          type: 'button',
-          onClick: onClose,
-          style: {
-            padding: '10px 20px', borderRadius: 8, border: 'none',
-            background: 'var(--fingers-accent, #0066ff)', color: '#fff',
-            fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          className: 'fingers-fs-muscle-detail',
+          style: Object.assign({}, ST_PANEL, { height: 'auto' }),
+        },
+          R.createElement('div', { style: ST_HEADER },
+            R.createElement('div', { style: ST_HEADER_TITLES },
+              R.createElement('h1', { style: ST_HEADER_H1 }, 'Деталь мышцы'),
+            ),
+            renderCloseButton(onClose),
+          ),
+          R.createElement('div', {
+            style: {
+              padding: 24, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: 16,
+            },
           },
-        }, 'Закрыть')
+            R.createElement('div', {
+              style: { fontSize: 16, color: 'var(--fingers-text-muted, #555)', textAlign: 'center' },
+            }, 'Информация о мышце недоступна.'),
+            R.createElement('button', {
+              type: 'button',
+              onClick: onClose,
+              style: {
+                padding: '10px 20px', borderRadius: 8, border: 'none',
+                background: 'var(--fingers-accent, #0066ff)', color: '#fff',
+                fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              },
+            }, 'Закрыть')
+          )
+        )
       );
     }
 
@@ -258,55 +348,68 @@
     const sourceIds = Array.isArray(info.sourceIds) ? info.sourceIds : [];
 
     return R.createElement('div', {
+      className: 'fingers-fs-muscle-detail-backdrop',
+      onClick: handleBackdropClick,
+      style: ST_BACKDROP,
+    },
+     R.createElement('div', {
       className: 'fingers-fs-muscle-detail',
       role: 'dialog',
       'aria-modal': 'true',
       'aria-label': 'Подробно о мышце: ' + (info.name || muscleId),
-      style: {
-        position: 'fixed', inset: 0, zIndex: 2100,
-        background: 'var(--fingers-bg, #fff)',
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-      },
+      style: ST_PANEL,
     },
-      renderCloseButton(onClose),
-      R.createElement('div', {
+      // Sticky header: название + крестик. Не скроллится с контентом.
+      R.createElement('div', { style: ST_HEADER },
+        R.createElement('div', { style: ST_HEADER_TITLES },
+          R.createElement('h1', { style: ST_HEADER_H1 }, info.name || muscleId),
+          info.latin ? R.createElement('div', { style: ST_HEADER_LATIN }, info.latin) : null,
+        ),
+        renderCloseButton(onClose),
+      ),
+      // Scrollable body — всё остальное.
+      R.createElement('div', { style: ST_BODY },
+       R.createElement('div', {
         className: 'fingers-fs-muscle-detail__inner',
         style: {
-          maxWidth: 720, margin: '0 auto',
-          padding: '56px 20px 40px',
-          display: 'flex', flexDirection: 'column', gap: 28,
+          padding: '16px 20px 28px',
+          display: 'flex', flexDirection: 'column', gap: 20,
         },
       },
-        // 1) Headline
-        R.createElement('header', {
-          style: { display: 'flex', flexDirection: 'column', gap: 6 },
+        // 2) Anatomy — медицинская иллюстрация в карточке-«панели».
+        //    Фото из /public/anatomy/{muscleId}.webp. Если 404 → fallback на SVG.
+        R.createElement('div', {
+          style: {
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            padding: 16,
+            background: 'linear-gradient(180deg, rgba(120, 120, 128, 0.04) 0%, rgba(120, 120, 128, 0.08) 100%)',
+            borderRadius: 14,
+            border: '0.5px solid rgba(120, 120, 128, 0.18)',
+            minHeight: 280,
+          },
         },
-          R.createElement('h1', {
-            style: {
-              margin: 0, fontSize: 32, fontWeight: 700, lineHeight: 1.15,
-              color: 'var(--fingers-text, #1a1a1f)',
-            },
-          }, info.name || muscleId),
-          R.createElement('div', {
-            style: {
-              fontSize: 14, fontStyle: 'italic',
-              color: 'var(--fingers-text-muted, #777)',
-            },
-          }, info.latin || '')
-        ),
-
-        // 2) Enlarged Anatomy
-        AnatomyDiagram
-          ? R.createElement('div', {
-              style: { display: 'flex', justifyContent: 'center', padding: '8px 0' },
-            },
-              R.createElement(AnatomyDiagram, {
-                highlightMuscles: [muscleId],
-                size: 280,
+          !anatomyImgFailed
+            ? R.createElement('img', {
+                src: anatomyImgSrc,
+                alt: 'Анатомия: ' + (info.name || muscleId),
+                loading: 'eager',
+                decoding: 'async',
+                onError: function () { setAnatomyImgFailed(true); },
+                style: {
+                  display: 'block',
+                  width: '100%',
+                  maxWidth: 360,
+                  height: 'auto',
+                  borderRadius: 10,
+                },
               })
-            )
-          : null,
+            : (AnatomyDiagram
+                ? R.createElement(AnatomyDiagram, {
+                    highlightMuscles: [muscleId],
+                    size: 240,
+                  })
+                : null)
+        ),
 
         // 3) Function
         info.function
@@ -352,6 +455,8 @@
             )
           : null
       )
+     )
+     )
     );
   };
 
