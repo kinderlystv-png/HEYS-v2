@@ -214,6 +214,82 @@ async function cleanupProfileSnapshots(client) {
 }
 
 /**
+ * Synthetic defense check (2026-06-01 wave 4, layer A) — каждый день
+ * проверяем что наши защитные механизмы ЖИВЫ (DB CHECK trigger, validate
+ * functions, snapshot table). Если кто-то случайно дропнул триггер или
+ * мигрировал схему сломав защиту — здесь поймаем за 24 часа, а не когда
+ * случится реальный pollution incident.
+ *
+ * Strategy: smoke-tests прямо в DB через transaction + ROLLBACK (никакого
+ * mutation реальных данных). Test client 11111111-...-1111 — E2E fixture.
+ */
+async function syntheticDefenseCheck(client) {
+  const failures = [];
+  const TEST_CLIENT = '11111111-1111-1111-1111-111111111111';
+
+  // Test 1: DB CHECK trigger trg_validate_profile должен REJECT-ить invalid gender
+  try {
+    await client.query('BEGIN');
+    let trgFired = false;
+    try {
+      await client.query(
+        `UPDATE client_kv_store
+            SET v = jsonb_set(v, '{gender}', '"InvalidGenderSynthetic"'::jsonb)
+          WHERE client_id = $1::uuid AND k = 'heys_profile'`,
+        [TEST_CLIENT]
+      );
+    } catch (e) {
+      if (String(e.message).includes('invalid_profile_gender')) {
+        trgFired = true;
+      } else {
+        failures.push(`unexpected error in trigger test: ${e.message.slice(0, 100)}`);
+      }
+    }
+    await client.query('ROLLBACK');
+    if (!trgFired) {
+      failures.push('🚨 trg_validate_profile trigger DID NOT fire on invalid_gender — DB CHECK защита сломана!');
+    }
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+    failures.push(`trigger test exception: ${e.message.slice(0, 120)}`);
+  }
+
+  // Test 2: profile_snapshots table accessible + RPC restore_profile_snapshot exists
+  try {
+    const fnRes = await client.query(
+      `SELECT 1 FROM pg_proc WHERE proname = 'restore_profile_snapshot' LIMIT 1`
+    );
+    if (fnRes.rows.length === 0) {
+      failures.push('🚨 restore_profile_snapshot function MISSING — instant rollback сломан!');
+    }
+    const tblRes = await client.query(
+      `SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'profile_snapshots' LIMIT 1`
+    );
+    if (tblRes.rows.length === 0) {
+      failures.push('🚨 profile_snapshots table MISSING — snapshots не пишутся!');
+    }
+  } catch (e) {
+    failures.push(`snapshot infra test exception: ${e.message.slice(0, 120)}`);
+  }
+
+  // Test 3: client_log_trace table accessible (для диагностики)
+  try {
+    const r = await client.query(
+      `SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'client_log_trace' LIMIT 1`
+    );
+    if (r.rows.length === 0) {
+      failures.push('⚠️ client_log_trace table MISSING — mobile debug pipeline сломан');
+    }
+  } catch (e) {
+    failures.push(`log_trace test exception: ${e.message.slice(0, 120)}`);
+  }
+
+  return { failures, summary: { passed: 3 - failures.length, total: 3 } };
+}
+
+/**
  * Writer-CID invariant check (2026-06-01 wave 3, #12 reframe) — для каждого
  * per-client KV blob (heys_profile/norms/game/hr_zones) проверяет что
  * v._writerCid совпадает с client_id (legitimate write). Mismatch → pollution
@@ -225,46 +301,68 @@ async function cleanupProfileSnapshots(client) {
  */
 async function writerCidIntegrityCheck(client) {
   const findings = [];
-  const summary = { mismatched: 0, untagged: 0 };
+  const summary = { mismatched: 0, untagged: 0, dayv2_mismatched: 0, dayv2_untagged: 0 };
 
-  const GUARDED_KEYS = ['heys_profile', 'heys_norms', 'heys_game', 'heys_hr_zones'];
-
+  // 2026-06-01 wave 4 (B): добавлены heys_dayv2_* (meals data) — те же writer-CID
+  // инварианты применимы. dayv2 более активна (per-day rows), threshold выше.
   try {
     const res = await client.query(
       `SELECT client_id, k,
               v->>'_writerCid' AS writer_cid,
               updated_at,
               v->>'firstName' AS first_name,
-              v->>'lastName'  AS last_name
+              v->>'lastName'  AS last_name,
+              (k LIKE 'heys_dayv2_%') AS is_dayv2
          FROM client_kv_store
-        WHERE k = ANY($1::text[])
+        WHERE (
+            k IN ('heys_profile', 'heys_norms', 'heys_game', 'heys_hr_zones')
+            OR k ~ '^heys_dayv2_\\d{4}-\\d{2}-\\d{2}$'
+          )
           AND (
             v->>'_writerCid' IS NULL
             OR v->>'_writerCid' <> client_id::text
           )
-        ORDER BY updated_at DESC
-        LIMIT 50`,
-      [GUARDED_KEYS]
+        ORDER BY (k LIKE 'heys_dayv2_%'), updated_at DESC
+        LIMIT 100`
     );
 
     for (const row of res.rows) {
       const cidShort = String(row.client_id).slice(0, 8);
       const writer = row.writer_cid;
       const ageHours = Math.round((Date.now() - new Date(row.updated_at).getTime()) / 3600000);
+      const isDayv2 = row.is_dayv2;
+
       if (writer == null || writer === '') {
-        summary.untagged++;
-        findings.push(
-          `⚠️ *untagged* \`${cidShort}\` key=\`${row.k}\` age=${ageHours}h ` +
-          (row.first_name ? `(${row.first_name})` : '')
-        );
+        if (isDayv2) {
+          summary.dayv2_untagged++;
+          // dayv2 untagged — менее критично (legacy много), включаем в findings только первые 5
+          if (summary.dayv2_untagged <= 5) {
+            findings.push(`⚠️ *dayv2_untagged* \`${cidShort}\` ${row.k.slice(11)} age=${ageHours}h`);
+          }
+        } else {
+          summary.untagged++;
+          findings.push(
+            `⚠️ *untagged* \`${cidShort}\` key=\`${row.k}\` age=${ageHours}h ` +
+            (row.first_name ? `(${row.first_name})` : '')
+          );
+        }
       } else if (writer !== row.client_id) {
-        summary.mismatched++;
-        findings.push(
-          `🚨 *writer_cid_mismatch* \`${cidShort}\` key=\`${row.k}\`\n` +
-          `expected: \`${cidShort}\`, got: \`${String(writer).slice(0, 8)}\`\n` +
-          `age=${ageHours}h ${row.first_name ? '('+row.first_name+')' : ''}\n` +
-          `_POSSIBLE POLLUTION — bypass через direct SQL?_`
-        );
+        if (isDayv2) {
+          summary.dayv2_mismatched++;
+          findings.push(
+            `🚨 *dayv2_writer_cid_mismatch* \`${cidShort}\` ${row.k.slice(11)}\n` +
+            `expected: \`${cidShort}\`, got: \`${String(writer).slice(0, 8)}\`\n` +
+            `age=${ageHours}h — _POSSIBLE POLLUTION_`
+          );
+        } else {
+          summary.mismatched++;
+          findings.push(
+            `🚨 *writer_cid_mismatch* \`${cidShort}\` key=\`${row.k}\`\n` +
+            `expected: \`${cidShort}\`, got: \`${String(writer).slice(0, 8)}\`\n` +
+            `age=${ageHours}h ${row.first_name ? '('+row.first_name+')' : ''}\n` +
+            `_POSSIBLE POLLUTION — bypass через direct SQL?_`
+          );
+        }
       }
     }
   } catch (e) {
@@ -806,6 +904,24 @@ module.exports.handler = async (event, context) => {
       results.profile_snapshots_cleanup = await cleanupProfileSnapshots(client);
       console.log(`[Maintenance] ProfileSnapshots TTL: deleted ${results.profile_snapshots_cleanup.rows} rows (${(Number(results.profile_snapshots_cleanup.bytes || 0) / 1024).toFixed(1)} KB)`);
 
+      // 🧪 Synthetic defense check (2026-06-01 wave 4, A) — гарантия что
+      // защитные триггеры/функции не дропнуты случайной миграцией.
+      try {
+        const { failures, summary } = await syntheticDefenseCheck(client);
+        results.synthetic_defense = summary;
+        console.log('[Maintenance] Synthetic defense:', JSON.stringify(summary));
+        if (failures.length > 0) {
+          await sendTelegramNotification(
+            `🧪 *Synthetic Defense FAILED*\n\n` +
+            `passed=${summary.passed}/${summary.total}\n\n` +
+            failures.map(f => `• ${f}`).join('\n')
+          );
+        }
+      } catch (sErr) {
+        console.error('[Maintenance] synthetic_defense failed:', sErr.message);
+        results.synthetic_defense = { error: sErr.message };
+      }
+
       // 🔬 Writer-CID invariant check (2026-06-01 wave 3, #12) — ловит pollution
       // даже если RPC guards bypassed через direct SQL/admin. mismatched/untagged
       // rows → Telegram alert. Untagged — это legacy rows до wave 1 deploy, не
@@ -814,10 +930,19 @@ module.exports.handler = async (event, context) => {
         const { findings, summary } = await writerCidIntegrityCheck(client);
         results.writer_cid_integrity = summary;
         console.log('[Maintenance] Writer-CID integrity:', JSON.stringify(summary));
-        if (summary.mismatched > 0 || summary.untagged > 5) {
+        // Alert threshold: ANY mismatched (real pollution) — always alert.
+        // untagged (legacy pre-guard rows) — noisy, не alert'им. dayv2 untagged
+        // особенно много исторически (snapshot baseline 93 при deploy) — будут
+        // мигрировать постепенно при edit. Sum untagged видно в audit log
+        // results, не в alert.
+        if (
+          summary.mismatched > 0 ||
+          summary.dayv2_mismatched > 0
+        ) {
           await sendTelegramNotification(
             `🔬 *Writer-CID Integrity Alert*\n\n` +
-            `mismatched=${summary.mismatched} untagged=${summary.untagged}\n\n` +
+            `profile/norms: mismatched=${summary.mismatched} untagged=${summary.untagged}\n` +
+            `dayv2: mismatched=${summary.dayv2_mismatched} untagged=${summary.dayv2_untagged}\n\n` +
             findings.slice(0, 8).join('\n\n') +
             (findings.length > 8 ? `\n\n…+${findings.length - 8} more` : '')
           );

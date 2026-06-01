@@ -256,7 +256,7 @@
           migratedAt: Date.now(),
           presetMigratedAt: Date.now()
         });
-        try { this.saveLayout(presetLayoutData); } catch (e) { }
+        try { this.saveLayout(presetLayoutData); } catch (e) { console.error('[widgets] saveLayout preset failed:', e?.message || e); }
       } else if (needsMigration && hasSavedLayout) {
         // Важно: saveLayout() раньше сохранял this._widgets (ещё пустой) → мог перезатирать storage.
         // Поэтому: нормализуем мигрированный layout и сохраняем ИМЕННО его.
@@ -281,7 +281,7 @@
           migratedAt: Date.now()
         });
         // Сохраняем сразу (без debounce)
-        try { this.saveLayout(normalizedLayoutData); } catch (e) { }
+        try { this.saveLayout(normalizedLayoutData); } catch (e) { console.error('[widgets] saveLayout normalized failed:', e?.message || e); }
       }
 
       if (saved && Array.isArray(saved) && saved.length > 0) {
