@@ -2324,6 +2324,33 @@ module.exports.handler = async function (event, context) {
                 `cloud writer: \`${cloudWriter}\``
               );
             }
+          } else if (isCurator && /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(k) &&
+                     (await detectCrossClientDayv2ContentDup(client, curatorId, resolvedClientId, k, incomingValue))) {
+            // 🛡️ Content-fingerprint dup check для dayv2 (incident #7, 2026-06-02):
+            // writer=clientId проходит cross-client guard, но содержимое идентично
+            // свежей записи ДРУГОГО клиента того же curator — это stale React state,
+            // ре-tag'нутый правильным writerCid после switch. Устраняет MA-модальный
+            // loop (stale state стирал morningActivation.status='missed' каждый
+            // switch). Только curator path (нужен curatorId).
+            const auditAction = 'cross_client_dayv2_content_dup';
+            mergedValue = currentValue;
+            mergeOutcome = auditAction;
+            try {
+              await client.query(
+                `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                 VALUES ($1::uuid, $2::text, $3::text, FALSE, $4)`,
+                [resolvedClientId, k, auditAction, `merge_save_by_curator`]
+              );
+            } catch (e) { console.warn('[merge_save] content-dup audit failed:', e.message); }
+            if (_shouldSendTgAlert(resolvedClientId, auditAction)) {
+              sendTgAlertFireAndForget(
+                `🛡️ *${auditAction}*\n` +
+                `key: \`${k}\`\n` +
+                `client: \`${String(resolvedClientId).slice(0, 8)}\`\n` +
+                `source: \`merge_save\`\n` +
+                `_Curator state не очистился между switch'ами — meals идентичны другому клиенту того же curator._`
+              );
+            }
           } else if (noConflict) {
             mergedValue = incomingValue;
           } else if (/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(k)) {

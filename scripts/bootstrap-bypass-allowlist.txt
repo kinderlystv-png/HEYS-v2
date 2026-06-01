@@ -116,8 +116,8 @@ apps/web/heys_fingers_bundle_v1.js:2765
 apps/web/heys_fingers_bundle_v1.js:3030
 apps/web/heys_fingers_bundle_v1.js:3901
 apps/web/heys_fingers_bundle_v1.js:3981
-apps/web/heys_fingers_bundle_v1.js:6534
-apps/web/heys_fingers_bundle_v1.js:9660
+apps/web/heys_fingers_bundle_v1.js:6557
+apps/web/heys_fingers_bundle_v1.js:9683
 apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
@@ -159,7 +159,7 @@ apps/web/heys_planning_schedule_v1.js:3239
 apps/web/heys_planning_schedule_v1.js:4415
 apps/web/heys_planning_schedule_v1.js:4416
 apps/web/heys_planning_schedule_v1.js:4417
-apps/web/heys_planning_store_v1.js:258
+apps/web/heys_planning_store_v1.js:314
 apps/web/heys_planning_tasks_v1.js:2295
 apps/web/heys_platform_apis_v1.js:177
 apps/web/heys_platform_apis_v1.js:581
