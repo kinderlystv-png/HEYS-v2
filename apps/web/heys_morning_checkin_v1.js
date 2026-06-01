@@ -893,10 +893,32 @@
       }
       if (steps.length === 0) return null;
 
+      // Защита от случайного закрытия чек-ина mid-flow.
+      // Backdrop-click / крестик дёргают onClose — оборачиваем confirm-диалогом
+      // (HEYS.ConfirmModal — нативный, fallback на window.confirm если модуль не загружен).
+      // Render-time guard (787-803) и wrappedOnComplete вызывают исходный onClose/onComplete
+      // напрямую (без обёртки) — это легитимные пути и не нуждаются в confirm.
+      const onCloseWithConfirm = () => {
+        const proceed = () => { if (typeof onClose === 'function') onClose(); };
+        const cm = HEYS && HEYS.ConfirmModal;
+        if (cm && typeof cm.confirmAction === 'function') {
+          cm.confirmAction({
+            icon: '⚠️',
+            title: 'Прервать утренний чек-ин?',
+            text: 'Уже сохранённые шаги останутся. Текущий незаконченный шаг не запишется — продолжите с него при следующем открытии.',
+            confirmText: 'Прервать',
+            cancelText: 'Продолжить',
+            onConfirm: proceed,
+          });
+        } else if (window.confirm('Прервать утренний чек-ин? Уже сохранённые шаги останутся, текущий — нет.')) {
+          proceed();
+        }
+      };
+
       return React.createElement(HEYS.StepModal.Component, {
         steps: steps,
         onComplete: wrappedOnComplete,
-        onClose: onClose, // Крестик в хедере для закрытия без сохранения
+        onClose: onCloseWithConfirm,
         showProgress: true,
         showStreak: true,
         showGreeting: true,
