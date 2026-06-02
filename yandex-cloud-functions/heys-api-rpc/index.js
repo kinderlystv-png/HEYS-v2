@@ -538,6 +538,86 @@ async function prefetchGuardedCurrentValues(client, clientId, items) {
   return map;
 }
 
+/**
+ * 🛡️ validateContextForWrite (Phase A2, 2026-06-02) — server-authoritative
+ * client_id routing. Если caller передал p_context_id, валидируем его и при
+ * mismatch переписываем resolvedClientId ← context.client_id. Это core fix
+ * cross-client pollution: stale React state c context_A → write попадает в
+ * client A, даже если browser в момент save думал что currentClientId = B.
+ *
+ * Phase B (default): warn-only — invalid/mismatched контексты логируются в
+ * data_loss_audit, write всё равно идёт (rerouted если context.client_id
+ * отличается). Strict mode (Phase C): HEYS_WRITE_CONTEXT_STRICT=1 — write
+ * блокируется при context_required / invalid context.
+ *
+ * Returns { ok, status, effectiveClientId }.
+ * Caller обязан использовать effectiveClientId вместо исходного для
+ * SELECT/UPDATE/INSERT путей.
+ */
+async function validateContextForWrite(client, params, isCurator, curatorId, sessionId, resolvedClientId, k) {
+  const ctxId = params?.p_context_id || null;
+  const STRICT_MODE = process.env.HEYS_WRITE_CONTEXT_STRICT === '1';
+  const auditKey = (typeof k === 'string' && k.length > 0) ? k.slice(0, 200) : '<batch>';
+
+  if (!ctxId) {
+    if (STRICT_MODE) {
+      try {
+        await client.query(
+          `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+           VALUES ($1::uuid, $2::text, 'context_required', FALSE, $3)`,
+          [resolvedClientId, auditKey, isCurator ? 'curator_strict' : 'session_strict']
+        );
+      } catch (_) { /* noop */ }
+      return { ok: false, status: 'context_required', effectiveClientId: resolvedClientId };
+    }
+    return { ok: true, status: 'no_context_phase_b', effectiveClientId: resolvedClientId };
+  }
+
+  let row;
+  try {
+    const r = await client.query(
+      'SELECT * FROM validate_write_context($1::uuid, $2::uuid, $3::uuid)',
+      [ctxId, isCurator ? curatorId : null, isCurator ? null : (sessionId || null)]
+    );
+    row = r.rows[0];
+  } catch (e) {
+    console.warn('[write-context] validate query failed:', e.message);
+    // Treat as no_context — fall through to Phase B no-op (don't block writes
+    // due to DB hiccup on context validation).
+    return { ok: true, status: 'validation_db_error', effectiveClientId: resolvedClientId };
+  }
+
+  if (!row || !row.ok) {
+    try {
+      await client.query(
+        `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+         VALUES ($1::uuid, $2::text, 'context_mismatch', $3::boolean, $4)`,
+        [resolvedClientId, auditKey, !STRICT_MODE, row?.status || 'unknown']
+      );
+    } catch (_) { /* noop */ }
+    if (STRICT_MODE) {
+      return { ok: false, status: row?.status || 'context_invalid', effectiveClientId: resolvedClientId };
+    }
+    return { ok: true, status: row?.status || 'context_invalid_warn', effectiveClientId: resolvedClientId };
+  }
+
+  // OK — but check for reroute: server-resolved client_id may differ from
+  // browser-supplied. THE CORE FIX — write target switches to context.client_id.
+  const ctxClientId = row.client_id;
+  if (resolvedClientId && String(resolvedClientId) !== String(ctxClientId)) {
+    try {
+      await client.query(
+        `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+         VALUES ($1::uuid, $2::text, 'context_rerouted', TRUE, $3)`,
+        [ctxClientId, auditKey,
+         `browser=${String(resolvedClientId).slice(0, 8)} context=${String(ctxClientId).slice(0, 8)}`]
+      );
+    } catch (_) { /* noop */ }
+    return { ok: true, status: 'rerouted', effectiveClientId: ctxClientId };
+  }
+  return { ok: true, status: 'ok', effectiveClientId: resolvedClientId };
+}
+
 const ALLOW_LOCALHOST_ORIGINS = process.env.ALLOW_LOCALHOST_ORIGINS === '1';
 const ALLOWED_ORIGINS = [
   'https://heyslab.ru',
@@ -2279,6 +2359,28 @@ module.exports.handler = async function (event, context) {
         }
       }
 
+      // 🛡️ Write context validation + reroute (Phase A2/B, 2026-06-02).
+      // Если client передал p_context_id, server валидирует его. При mismatch
+      // resolvedClientId перепишется на context.client_id (THE CORE FIX —
+      // pollution невозможна). Phase B: warn-only; Phase C: strict reject.
+      {
+        const ctxResult = await validateContextForWrite(
+          client, params, isCurator,
+          isCurator ? curatorId : null,
+          null, // sessionId binding — Phase C enhancement
+          resolvedClientId, k
+        );
+        if (!ctxResult.ok) {
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 403,
+            headers: corsHeaders,
+            body: JSON.stringify({ ok: false, error: ctxResult.status })
+          };
+        }
+        resolvedClientId = ctxResult.effectiveClientId;
+      }
+
       // Ticket B: server-side blacklist — UI-state ключи курaторской сессии
       // (см. NON_CLIENT_DATA_BLACKLIST в начале файла) никогда не должны
       // попадать в client_kv_store, независимо от пути (by_session ИЛИ
@@ -2939,7 +3041,7 @@ module.exports.handler = async function (event, context) {
     // SQL функция делает UPSERT, но НЕ пишет changelog — это делается здесь
     // с семантическим diff'ом (computeCuratorActionPayload) по каждому ключу.
     if (fnName === 'batch_upsert_client_kv_by_curator') {
-      const targetClientId = params.p_client_id || params.client_id;
+      let targetClientId = params.p_client_id || params.client_id;
       const items = Array.isArray(params.p_items) ? params.p_items : [];
       if (!targetClientId || !curatorId) {
         try { client.release(); } catch (_) { /* ignore */ }
@@ -2956,6 +3058,24 @@ module.exports.handler = async function (event, context) {
           headers: corsHeaders,
           body: JSON.stringify({ success: true, saved: 0 })
         };
+      }
+
+      // 🛡️ Write context validation + reroute (Phase A2/B, 2026-06-02).
+      // Batch path: один context_id на batch (items.share React state).
+      {
+        const ctxResult = await validateContextForWrite(
+          client, params, true /* isCurator */,
+          curatorId, null /* sessionId */, targetClientId, '<batch>'
+        );
+        if (!ctxResult.ok) {
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 403,
+            headers: corsHeaders,
+            body: JSON.stringify({ ok: false, error: ctxResult.status })
+          };
+        }
+        targetClientId = ctxResult.effectiveClientId;
       }
 
       // Ticket B: server-side blacklist для batch path. Отфильтровываем

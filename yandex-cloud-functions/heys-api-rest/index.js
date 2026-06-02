@@ -94,6 +94,81 @@ async function detectCrossClientDayv2ContentDup(client, clientId, k, v) {
   return null;
 }
 
+/**
+ * 🛡️ validateContextForWriteRest (Phase A2, 2026-06-02) — REST POST
+ * /rest/client_kv_store закрывает критическую дыру (anyone-can-POST without
+ * auth). Когда client передаёт row.context_id, server валидирует его через
+ * validate_write_context() и при mismatch переписывает row.client_id ←
+ * context.client_id. Это THE CORE FIX для REST path — stale state c context_A
+ * → write попадает в client A независимо от browser-supplied client_id.
+ *
+ * Phase B (default): warn-only — invalid/mismatched контексты логируются в
+ * data_loss_audit, но write всё равно идёт (rerouted если client_id отличается).
+ * Phase C (HEYS_WRITE_CONTEXT_STRICT=1): write блокируется при отсутствии
+ * или невалидности context — REST POST требует context_id как первый
+ * capability-based auth для этого endpoint'а.
+ *
+ * Returns { ok, status, effectiveClientId }.
+ */
+async function validateContextForWriteRest(client, ctxId, suppliedClientId, k) {
+  const STRICT_MODE = process.env.HEYS_WRITE_CONTEXT_STRICT === '1';
+  const auditKey = (typeof k === 'string' && k.length > 0) ? k.slice(0, 200) : '<rest>';
+
+  if (!ctxId) {
+    if (STRICT_MODE) {
+      try {
+        await client.query(
+          `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+           VALUES ($1::uuid, $2::text, 'context_required', FALSE, 'rest_strict')`,
+          [suppliedClientId, auditKey]
+        );
+      } catch (_) { /* noop */ }
+      return { ok: false, status: 'context_required', effectiveClientId: suppliedClientId };
+    }
+    return { ok: true, status: 'no_context_phase_b', effectiveClientId: suppliedClientId };
+  }
+
+  let row;
+  try {
+    const r = await client.query(
+      'SELECT * FROM validate_write_context($1::uuid, NULL, NULL)', [ctxId]
+    );
+    row = r.rows[0];
+  } catch (e) {
+    console.warn('[REST write-context] validate query failed:', e.message);
+    return { ok: true, status: 'validation_db_error', effectiveClientId: suppliedClientId };
+  }
+
+  if (!row || !row.ok) {
+    try {
+      await client.query(
+        `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+         VALUES ($1::uuid, $2::text, 'context_mismatch', $3::boolean, $4)`,
+        [suppliedClientId, auditKey, !STRICT_MODE,
+          (row?.status || 'unknown') + '_rest']
+      );
+    } catch (_) { /* noop */ }
+    if (STRICT_MODE) {
+      return { ok: false, status: row?.status || 'context_invalid', effectiveClientId: suppliedClientId };
+    }
+    return { ok: true, status: row?.status || 'context_invalid_warn', effectiveClientId: suppliedClientId };
+  }
+
+  const ctxClientId = row.client_id;
+  if (suppliedClientId && String(suppliedClientId) !== String(ctxClientId)) {
+    try {
+      await client.query(
+        `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+         VALUES ($1::uuid, $2::text, 'context_rerouted', TRUE, $3)`,
+        [ctxClientId, auditKey,
+          `rest_post browser=${String(suppliedClientId).slice(0, 8)} context=${String(ctxClientId).slice(0, 8)}`]
+      );
+    } catch (_) { /* noop */ }
+    return { ok: true, status: 'rerouted', effectiveClientId: ctxClientId };
+  }
+  return { ok: true, status: 'ok', effectiveClientId: suppliedClientId };
+}
+
 const _tgAlertLastSent = new Map();
 const TG_ALERT_DEDUP_MS = 5 * 60 * 1000;
 function shouldSendTgAlert(clientId, action) {
@@ -691,6 +766,24 @@ module.exports.handler = async function (event, context) {
             if (!row.client_id || !row.k) {
               console.warn('[REST POST] Missing client_id or k in row:', row);
               continue;
+            }
+
+            // 🛡️ Write context validation + reroute (Phase A2/B, 2026-06-02).
+            // Если row.context_id присутствует, server валидирует и при mismatch
+            // переписывает row.client_id ← context.client_id. THE CORE FIX для
+            // REST POST: первая capability-based auth для endpoint'a где раньше
+            // вообще не было auth (anyone-can-POST gap).
+            {
+              const ctxResult = await validateContextForWriteRest(
+                client, row.context_id || null, row.client_id, row.k
+              );
+              if (!ctxResult.ok) {
+                blocked++;
+                continue; // strict mode reject
+              }
+              row.client_id = ctxResult.effectiveClientId;
+              // Strip context_id из row — это transport metadata, не данные.
+              delete row.context_id;
             }
 
             // 🛡️ Identity-pollution guard (incident 2026-06-01 #4): incoming
