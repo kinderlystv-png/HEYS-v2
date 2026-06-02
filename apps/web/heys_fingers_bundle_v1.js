@@ -1146,6 +1146,62 @@
       minAge: 12
     },
     {
+      id: 'horst_towel_pulls',
+      intensity: 'moderate',
+      name: 'Eric Hörst — Towel Isometric Pulls',
+      description: 'Изометрические тяги через полотенце — рабочий способ нагрузить пальцы в поездке или дома без доски. Перебрасываешь плотное полотенце через закрытую дверь сверху (зажимаешь полотенце дверью) или через прочную перекладину/штангу. Берёшь оба конца на уровне груди, тянешь вниз-к-себе 6 секунд с усилием ~70-80% от максимума. Отдых 90 секунд, 5 подходов на каждом из 3 хватов. Нагрузка регулируется углом и силой тяги — учишься чувствовать «70%» без приборов. Хват меняешь захватом полотенца разной толщины (свёрнутое плотно = тонкий edge, разложенное = широкий). Подходит когда нет доски, в командировке, на даче.',
+      level: 'beginner',
+      durationMin: 25,
+      exercises: [
+        { gripId: 'openhand4', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 6, restSec: 90, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 },
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 6, restSec: 90, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 },
+        { gripId: 'front3', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 6, restSec: 90, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 }
+      ],
+      sourceIds: ['horst_753', 'horst_podcast10'],
+      advisoryBadge: null,
+      noEquipment: true,
+      minAge: 14
+    },
+    {
+      id: 'pinch_books',
+      intensity: 'moderate',
+      name: 'Pinch on Books — щипок без снаряда',
+      description: 'Щипковый зажим стопки книг разной толщины — единственный способ прокачать pinch grip без специального снаряда. Берёшь толстую книгу в твёрдой обложке (или связанную доску), зажимаешь между большим пальцем и четырьмя пальцами на боковых гранях, поднимаешь на уровень пояса и держишь 10 секунд. Делаешь 5 подходов на каждой из 3 толщин: тонкая (~20-25 мм — словарь карманного формата), средняя (~35-40 мм — стандартный роман), толстая (~50+ мм — энциклопедия или 2-3 связанных книги). Между подходами отдых 2 минуты. Прогрессия — увеличивай вес книги или сужай толщину при той же длительности. Pinch — слабое звено у большинства лазунов; этот хват редко нагружается на обычной доске.',
+      level: 'beginner',
+      durationMin: 25,
+      exercises: [
+        { gripId: 'pinch', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 10, restSec: 120, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 },
+        { gripId: 'pinch', edgeSizeMm: 35, addedWeightKg: 0,
+          hangSec: 10, restSec: 120, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 },
+        { gripId: 'pinch', edgeSizeMm: 50, addedWeightKg: 0,
+          hangSec: 10, restSec: 120, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 }
+      ],
+      sourceIds: ['horst_753'],
+      advisoryBadge: null,
+      noEquipment: true,
+      minAge: 14
+    },
+    {
+      id: 'antagonist_bands',
+      intensity: 'recovery',
+      name: 'Schöffl — Antagonist Band Extensions',
+      description: 'Профилактика травм по Schöffl: разгибатели пальцев почти не работают при лазании, что создаёт мышечный дисбаланс и предрасполагает к тендинопатиям и pulley-травмам. Надеваешь резинку (обычная канцелярская или специальная для пальцев) на все пять пальцев у основания ногтей и медленно раскрываешь кисть до полного разгибания, удерживаешь 1 секунду, медленно возвращаешь. 20 повторений × 3 подхода на каждую руку, отдых между подходами 60 секунд. Делай 2-3 раза в неделю как recovery-блок или после тренировки на пальцы. Через 3-4 недели бери резинку плотнее. Особенно важно для тех кто уже ловил «щёлкнувший» палец — снижает риск рецидива A2/A4.',
+      level: 'beginner',
+      durationMin: 10,
+      exercises: [
+        { gripId: 'openhand4', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 1, restSec: 1, repsPerSet: 20, setsCount: 3, restBetweenSetsSec: 60 }
+      ],
+      sourceIds: ['schoffl2021'],
+      advisoryBadge: null,
+      noEquipment: true,
+      minAge: 12
+    },
+    {
       id: 'nelson_density_hangs',
       intensity: 'recovery',
       name: 'Tyler Nelson — Density Hangs (низкая нагрузка на доске)',
@@ -1336,6 +1392,9 @@
 
   function _programMatchesType(p, type) {
     if (type === 'none') return p.noEquipment === true;
+    // noEquipment программы — отдельная категория, не подмножество door/block/full.
+    // Показывать их только когда у юзера активен таб 'none'.
+    if (p.noEquipment) return false;
     if (type === 'block') {
       return p.equipmentReq === 'block' || !p.equipmentReq;
     }
@@ -7852,6 +7911,101 @@
   const { useState, useMemo, useEffect, useCallback } = React;
 
   // --- helpers ---
+  // Сканирует последние lookbackDays дней heys_dayv2_<date> и собирает
+  // Map<programId, dateKey> последней сессии для каждого протокола. Используется
+  // в ProgramsTab для chip «Сделал N дней назад». Возвращает {} если utils нет.
+  function _scanLastDoneByProgram(lookbackDays) {
+    const lookback = Math.max(7, Math.min(365, lookbackDays || 90));
+    const u = HEYS.utils;
+    if (!u || !u.lsGet) return {};
+    const result = Object.create(null);
+    const today = new Date();
+    for (let i = 0; i < lookback; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateKey = y + '-' + m + '-' + dd;
+      const day = u.lsGet('heys_dayv2_' + dateKey, null);
+      if (!day || !Array.isArray(day.trainings)) continue;
+      for (let k = 0; k < day.trainings.length; k++) {
+        const tr = day.trainings[k];
+        if (!tr || tr.type !== 'fingers') continue;
+        const pid = tr.fingersLog && tr.fingersLog.programId;
+        if (!pid) continue;
+        if (!result[pid]) result[pid] = dateKey; // самый свежий — мы идём от сегодня
+      }
+    }
+    return result;
+  }
+
+  // Human-friendly расстояние от dateKey до сегодня. «Сегодня / вчера / N дней
+  // назад / N недель назад / N месяцев назад». Используется только для отображения.
+  function _humanizeDaysAgo(dateKey) {
+    if (!dateKey || typeof dateKey !== 'string') return '';
+    const m = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return '';
+    const target = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((today - target) / 86400000);
+    if (diffDays <= 0) return 'сегодня';
+    if (diffDays === 1) return 'вчера';
+    if (diffDays < 7) return diffDays + ' дн. назад';
+    if (diffDays < 30) {
+      const w = Math.round(diffDays / 7);
+      return w + (w === 1 ? ' нед. назад' : ' нед. назад');
+    }
+    const months = Math.round(diffDays / 30);
+    if (months < 12) return months + ' мес. назад';
+    return 'давно';
+  }
+
+  // Разбивает описание на первое предложение + остаток для accordion-разворота.
+  // Первое предложение — до первого `.`, `!`, `?` + пробел. Если описание
+  // короткое или граница не найдена — `rest` пустой и accordion не показывается.
+  function _splitDescription(text) {
+    if (typeof text !== 'string') return { first: '', rest: '' };
+    const trimmed = text.trim();
+    if (trimmed.length <= 140) return { first: trimmed, rest: '' };
+    const m = trimmed.match(/^([^.!?]+[.!?])\s+(.+)$/s);
+    if (!m) return { first: trimmed, rest: '' };
+    return { first: m[1], rest: m[2] };
+  }
+
+  // Сворачиваемое описание: первое предложение всегда видно, остаток —
+  // под «Подробнее». State локальный per-card.
+  function ProgramDesc({ text }) {
+    const [expanded, setExpanded] = useState(false);
+    const { first, rest } = _splitDescription(text || '');
+    if (!rest) {
+      return h('p', { className: 'fingers-fs-program-card__desc' }, first);
+    }
+    return h('div', { className: 'fingers-fs-program-card__desc-wrap' },
+      h('p', { className: 'fingers-fs-program-card__desc' },
+        first,
+        ' ',
+        !expanded && h('button', {
+          type: 'button',
+          className: 'fingers-fs-program-card__desc-toggle',
+          onClick: function () { setExpanded(true); },
+          'aria-expanded': false
+        }, 'Подробнее')
+      ),
+      expanded && h('div', { className: 'fingers-fs-program-card__desc-rest' },
+        h('p', { className: 'fingers-fs-program-card__desc' }, rest),
+        h('button', {
+          type: 'button',
+          className: 'fingers-fs-program-card__desc-toggle',
+          onClick: function () { setExpanded(false); },
+          'aria-expanded': true
+        }, 'Свернуть')
+      )
+    );
+  }
+
   // Возраст клиента считается из birthDate (приоритет) или поля `age`
   // на верхнем уровне профиля. Помещаем результат в fingerboardProfile.age
   // на лету, если в subprofile он не задан — чтобы все safety-проверки
@@ -7887,20 +8041,60 @@
     return fp;
   }
 
+  // Возвращает приоритет-список program ID по grade — рекомендатор пройдётся
+  // по нему и выберет первый который проходит equipment + age фильтр.
+  function _gradePreferenceList(grade) {
+    if (grade === 'V0-V2' || grade === 'V3-V4') {
+      return ['beastmaker_1000_beginner', 'repeaters_7_3', 'block_hangs_horst',
+        'nelson_density_hangs', 'horst_towel_pulls', 'nelson_no_hangs'];
+    }
+    if (grade === 'V5-V6') {
+      return ['repeaters_7_3', 'block_min_edge', 'block_hangs_horst',
+        'horst_max_hangs', 'nelson_density_hangs', 'horst_towel_pulls', 'nelson_no_hangs'];
+    }
+    if (grade === 'V7-V8' || grade === 'V9+') {
+      return ['horst_max_hangs', 'block_hangs_horst', 'min_edge_progression',
+        'block_min_edge', 'repeaters_7_3', 'nelson_density_hangs', 'horst_towel_pulls', 'nelson_no_hangs'];
+    }
+    return ['beastmaker_1000_beginner', 'nelson_density_hangs', 'nelson_no_hangs'];
+  }
+
   function getRecommendedProgramId() {
     const fp = getProfile();
     if (fp.recommendedProgramId) return fp.recommendedProgramId;
-    if (fp.noEquipment) return 'nelson_no_hangs';
     // Возраст не указан → не рекомендуем ничего (UI покажет prompt "укажи возраст").
     // Дефолт 18 раньше → подростки без профиля автоматом получали adult-программы.
     const ageNum = Number(fp.age);
     if (!Number.isFinite(ageNum)) return null;
+    // Sub-14 → жёстко no-hangs независимо от снаряжения (UIAA/BMC: до 14 fingerboard запрещён).
     if (ageNum < 14) return 'nelson_no_hangs';
+
+    // Сужаем PROGRAMS по age + equipment, потом берём первый из grade-prefs
+    // который выжил. Это гарантирует что рекомендация всегда совпадает с тем
+    // что юзер реально видит в списке (block user → block protocol; door user
+    // → door-compatible; none user → noEquipment).
+    const programs = Array.isArray(Fingers.PROGRAMS) ? Fingers.PROGRAMS : [];
+    const ageFiltered = (Fingers.ageGate && Fingers.ageGate.filterPrograms)
+      ? Fingers.ageGate.filterPrograms(programs, ageNum) : programs;
+    const eqOpts = {
+      equipmentTypes: Array.isArray(fp.equipmentTypes) ? fp.equipmentTypes : null,
+      noEquipment: !!fp.noEquipment,
+      blockMode: !!fp.blockMode,
+      edgeLimit: fp.edgeLimit
+    };
+    const eligible = Fingers.filterProgramsByEquipment
+      ? Fingers.filterProgramsByEquipment(ageFiltered, eqOpts) : ageFiltered;
+    if (!eligible.length) return null;
+    const eligibleIds = new Set(eligible.map(function (p) { return p.id; }));
+
     const g = fp.maxVGrade || 'V3-V4';
-    if (g === 'V0-V2' || g === 'V3-V4') return 'beastmaker_1000_beginner';
-    if (g === 'V5-V6') return 'repeaters_7_3';
-    if (g === 'V7-V8' || g === 'V9+') return 'horst_max_hangs';
-    return 'beastmaker_1000_beginner';
+    const prefs = _gradePreferenceList(g);
+    for (let i = 0; i < prefs.length; i++) {
+      if (eligibleIds.has(prefs[i])) return prefs[i];
+    }
+    // Если grade-prefs не пересеклись с eligible — fallback на первый eligible
+    // (любой видимый протокол лучше чем «нет рекомендации»).
+    return eligible[0].id;
   }
 
   function intensityLabel(intensity) {
@@ -7992,6 +8186,33 @@
     const filtered = (Fingers.filterProgramsByEquipment)
       ? Fingers.filterProgramsByEquipment(ageFilteredAll, eqOpts)
       : ageFilteredAll;
+    // Map<programId, dateKey> последней сессии — для chip «Сделал N дней назад».
+    // Скан 90 дней (~3 мес), useMemo чтоб не перерасчитывать на каждый render.
+    const lastDoneByProgram = useMemo(function () {
+      return _scanLastDoneByProgram(90);
+    }, []);
+
+    // Intensity filter: 'all' | 'recovery' | 'moderate' | 'max'.
+    // Localstorage-persisted чтобы фильтр не сбрасывался при перезагрузке.
+    const [intensityFilter, setIntensityFilter] = useState(function () {
+      const u = HEYS.utils;
+      const v = u && u.lsGet ? u.lsGet('fingers_intensity_filter', 'all') : 'all';
+      return ['all', 'recovery', 'moderate', 'max'].indexOf(v) >= 0 ? v : 'all';
+    });
+    const onPickFilter = useCallback(function (val) {
+      setIntensityFilter(val);
+      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_intensity_filter', val);
+    }, []);
+    // Применяем intensity-фильтр поверх age+equipment.
+    const visibleFiltered = intensityFilter === 'all'
+      ? filtered
+      : filtered.filter(function (p) { return (p.intensity || 'moderate') === intensityFilter; });
+    // Подсчёт штук на каждый filter — показываем в чипе «Все (12)», «Восстановление (3)»
+    const counts = { all: filtered.length, recovery: 0, moderate: 0, max: 0 };
+    filtered.forEach(function (p) {
+      const i = p.intensity || 'moderate';
+      if (counts[i] != null) counts[i]++;
+    });
 
     if (!ageKnown) {
       // CTA: заполнить возраст через re-onboarding.
@@ -8021,8 +8242,82 @@
       );
     }
 
-    return h('div', { className: 'fingers-fs-program-grid' },
-      filtered.map(function (p) {
+    const filterChips = [
+      { id: 'all',      label: 'Все',           emoji: null },
+      { id: 'recovery', label: 'Восстановление', emoji: '🌿' },
+      { id: 'moderate', label: 'Умеренно',      emoji: '⚡' },
+      { id: 'max',      label: 'Максимум',      emoji: '🔥' }
+    ];
+
+    // Readiness banner — широкая карточка наверху, читает cooldownCheck.
+    // Намеренно отличается от pill-фильтра ниже: горизонтальный layout с
+    // крупной иконкой и подзаголовком — пользователь видит «что советует
+    // организм», а ниже сам выбирает чем фильтровать.
+    const cool = (Fingers.cooldownCheck && typeof Fingers.cooldownCheck === 'function')
+      ? (function () { try { return Fingers.cooldownCheck(); } catch (_) { return null; } })()
+      : null;
+    let readinessBanner = null;
+    if (cool) {
+      const READINESS_MAP = {
+        max:      { icon: '🔥', title: 'Готов к максимуму',         sub: 'После прошлой сессии прошло достаточно времени — можно жёстко.' },
+        moderate: { icon: '⚡', title: 'Готов к умеренной нагрузке', sub: 'Сегодня — repeaters или density, но без max-hangs.' },
+        recovery: { icon: '🌿', title: 'Только восстановление',     sub: 'Связки ещё восстанавливаются — лёгкие no-hangs или антагонисты.' },
+        rest:     { icon: '💤', title: 'Сегодня — день отдыха',      sub: 'Меньше 24ч после max — любая нагрузка повышает риск травмы пальцев.' }
+      };
+      const conf = Object.assign({}, READINESS_MAP[cool.recommendation] || READINESS_MAP.max);
+      if (cool.hoursSinceLast == null) {
+        conf.sub = 'История пуста — стартуй с того, что под рукой.';
+      } else {
+        const h_ago = Math.max(0, cool.hoursSinceLast);
+        const human = h_ago < 24 ? Math.round(h_ago) + 'ч назад'
+          : Math.round(h_ago / 24) + ' дн. назад';
+        conf.sub += ' Последняя сессия: ' + human + '.';
+      }
+      readinessBanner = h('div', {
+        className: 'fingers-fs-readiness-banner',
+        'data-readiness': cool.recommendation,
+        role: 'status',
+        'aria-live': 'polite'
+      },
+        h('div', { className: 'fingers-fs-readiness-banner__icon', 'aria-hidden': 'true' }, conf.icon),
+        h('div', { className: 'fingers-fs-readiness-banner__body' },
+          h('div', { className: 'fingers-fs-readiness-banner__title' }, conf.title),
+          h('div', { className: 'fingers-fs-readiness-banner__sub' }, conf.sub)
+        )
+      );
+    }
+
+    return h('div', { className: 'fingers-fs-programs-wrap' },
+      readinessBanner,
+      h('div', { className: 'fingers-fs-intensity-filter', role: 'tablist', 'aria-label': 'Фильтр по интенсивности' },
+        filterChips.map(function (fc) {
+          const active = intensityFilter === fc.id;
+          const count = counts[fc.id];
+          const disabled = count === 0 && fc.id !== 'all';
+          return h('button', {
+            key: fc.id,
+            type: 'button',
+            className: 'fingers-fs-intensity-filter__chip'
+              + (active ? ' is-active' : '')
+              + (disabled ? ' is-disabled' : ''),
+            'data-intensity': fc.id,
+            'aria-pressed': active,
+            disabled: disabled,
+            onClick: function () { if (!disabled) onPickFilter(fc.id); }
+          },
+            fc.emoji ? h('span', { 'aria-hidden': 'true' }, fc.emoji + ' ') : null,
+            fc.label,
+            h('span', { className: 'fingers-fs-intensity-filter__count' }, ' ' + count)
+          );
+        })
+      ),
+      visibleFiltered.length === 0
+        ? h('div', { className: 'fingers-fs-empty', style: { padding: '24px 16px', textAlign: 'center' } },
+            h('p', { style: { margin: 0, fontSize: 14, opacity: 0.7 } },
+              'Нет протоколов с интенсивностью «' + (filterChips.find(function (c) { return c.id === intensityFilter; }) || {}).label + '» под текущее оборудование.')
+          )
+        : h('div', { className: 'fingers-fs-program-grid' },
+      visibleFiltered.map(function (p) {
         const isRec = p.id === recommendedId;
         return h('div', {
           key: p.id,
@@ -8036,7 +8331,7 @@
             h('span', null, 'для тебя')
           ),
           h('h3', { className: 'fingers-fs-program-card__title' }, p.name),
-          h('p', { className: 'fingers-fs-program-card__desc' }, p.description),
+          h(ProgramDesc, { text: p.description }),
           h('div', { className: 'fingers-fs-program-card__chips' },
             h('span', {
               className: 'fingers-fs-chip fingers-fs-chip--intensity',
@@ -8045,7 +8340,24 @@
             h('span', { className: 'fingers-fs-chip' },
               h('span', { 'aria-hidden': 'true' }, '⏱ '),
               (p.durationMin || '—') + ' мин'),
-            h('span', { className: 'fingers-fs-chip fingers-fs-chip--level' }, p.level)
+            h('span', { className: 'fingers-fs-chip fingers-fs-chip--level' }, p.level),
+            // Last-done chip: показывает «✓ Сделал N дней назад» если протокол
+            // был выполнен в последние 90 дней. Иначе — нейтральное «ещё не пробовал».
+            (function () {
+              const lastKey = lastDoneByProgram[p.id];
+              if (lastKey) {
+                return h('span', {
+                  className: 'fingers-fs-chip fingers-fs-chip--lastdone',
+                  title: 'Последняя сессия: ' + lastKey
+                },
+                  h('span', { 'aria-hidden': 'true' }, '✓ '),
+                  'Сделал ' + _humanizeDaysAgo(lastKey)
+                );
+              }
+              return h('span', {
+                className: 'fingers-fs-chip fingers-fs-chip--lastdone fingers-fs-chip--lastdone-new'
+              }, 'ещё не пробовал');
+            })()
           ),
           // Equipment-чипы — какое оборудование подходит для протокола.
           // Активные (из EquipmentBar юзера) — ярко, неактивные — приглушённо.
@@ -8072,22 +8384,30 @@
                 eqChips.push({ id: 'door', icon: '🚪', label: 'Door' });
               }
             }
-            // Derive user's active equipment types из profile (тот же fallback что в EquipmentBar)
+            // Derive user's active equipment types из profile (тот же fallback что в EquipmentBar).
+            // Показываем ТОЛЬКО чипы того оборудования что у юзера выбрано —
+            // иначе он подумает что приглушённый чип = «нужно но нет», хотя
+            // на универсальных протоколах это всего лишь альтернатива.
             const userTypes = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
               ? profile.equipmentTypes
               : (profile.noEquipment ? ['none']
                 : profile.blockMode ? ['block']
                 : profile.edgeLimit === 25 ? ['door']
                 : ['full']);
+            const matchingChips = eqChips.filter(function (c) {
+              return userTypes.indexOf(c.id) >= 0;
+            });
+            // Безопасность: если по какой-то причине пересечения нет (баг
+            // фильтра), показываем все совместимые с program (старая логика)
+            // чтобы юзер не остался без чипов.
+            const finalChips = matchingChips.length > 0 ? matchingChips : eqChips;
             return h('div', { className: 'fingers-fs-program-card__equipment' },
-              eqChips.map(function (c) {
-                const isActive = userTypes.indexOf(c.id) >= 0;
+              finalChips.map(function (c) {
                 return h('span', {
                   key: c.id,
-                  className: 'fingers-fs-equipment-chip'
-                    + (isActive ? ' is-available' : ' is-muted'),
+                  className: 'fingers-fs-equipment-chip is-available',
                   'data-equipment': c.id,
-                  title: isActive ? 'У тебя выбрано' : 'Не выбрано в табах оборудования'
+                  title: 'Этот протокол можно делать на твоём оборудовании: ' + c.label
                 },
                   h('span', { 'aria-hidden': 'true' }, c.icon),
                   ' ',
@@ -8120,6 +8440,7 @@
           }, 'Запустить протокол')
         );
       })
+        )
     );
   }
 
@@ -10148,6 +10469,7 @@
 
   // --- Exports ---
   Fingers.SessionUI = SessionUI;
+  Fingers.getRecommendedProgramId = getRecommendedProgramId;
 
   Fingers.startSession = function startSession(opts) {
     // Stub for future direct session launch from outside fullscreen.

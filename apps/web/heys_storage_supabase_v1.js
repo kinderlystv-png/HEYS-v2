@@ -2313,6 +2313,25 @@
         }));
       }
     } catch (_) { /* noop */ }
+    // 5. 🛡️ Force location.reload() с debounce. dispatchEvent выше пытается
+    // обновить DayTab, но React state в других компонентах (виджеты, сводка,
+    // calendar) держит stale данные и ре-пишет их в LS через writeRaw →
+    // pollution возвращается через секунду. Reload — единственный надёжный
+    // способ полностью обнулить in-memory state. Reuses Layer 3 debounce
+    // timer (cloud._reloadDebounceTimer) — серия drop'ов даёт один reload.
+    // Disable: localStorage['heys_disable_switch_reload']='1'.
+    try {
+      const reloadDisabled = (() => {
+        try { return global.localStorage?.getItem('heys_disable_switch_reload') === '1'; } catch (_) { return false; }
+      })();
+      if (!reloadDisabled && typeof global.location !== 'undefined') {
+        try { if (cloud._reloadDebounceTimer) clearTimeout(cloud._reloadDebounceTimer); } catch (_) { /* noop */ }
+        cloud._reloadDebounceTimer = setTimeout(() => {
+          try { logCritical('[drop-rejected] location.reload() triggered — preventing stale state re-pollution'); } catch (_) {}
+          try { global.location.reload(); } catch (_) { /* noop */ }
+        }, 500);
+      }
+    } catch (_) { /* noop */ }
   };
 
   cloud._writeSwitchAuditLog = function (oldCid, newCid, meta) {
