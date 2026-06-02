@@ -176,7 +176,31 @@
                     }));
                 } catch (_) { /* best-effort */ }
                 const root = ReactDOM.createRoot(rootElement);
-                root.render(React.createElement(ErrorBoundary, null, React.createElement(AppComponent)));
+                // 🛡️ Layer 1 (incident 2026-06-02 fix): RootWithKey подписан на
+                // event 'heys:client-changed' и применяет key={clientId} на AppComponent.
+                // При смене clientId React unmount'ит ВСЁ поддерево и mount'ит fresh —
+                // все useState/useRef/useReducer обнуляются. Fallback на случай если
+                // location.reload() отключён через `heys_disable_switch_reload='1'`.
+                function RootWithKey() {
+                    const [clientId, setClientId] = React.useState(() => (
+                        (window.HEYS && window.HEYS.currentClientId) || null
+                    ));
+                    React.useEffect(() => {
+                        const handler = (e) => {
+                            const next = (e && e.detail && e.detail.clientId)
+                                || (window.HEYS && window.HEYS.currentClientId)
+                                || null;
+                            setClientId(next);
+                        };
+                        window.addEventListener('heys:client-changed', handler);
+                        return () => window.removeEventListener('heys:client-changed', handler);
+                    }, []);
+                    // Sentinel key '__no_client__' для до-логина (Gate/Login flow рендерится через App).
+                    // При переходе на UUID после login → remount произойдёт автоматически (правильное поведение).
+                    const reactKey = clientId || '__no_client__';
+                    return React.createElement(AppComponent, { key: reactKey });
+                }
+                root.render(React.createElement(ErrorBoundary, null, React.createElement(RootWithKey)));
                 window.__heysPerfMark && window.__heysPerfMark('root.render: called → __heysAppReady');
 
                 // 🆕 Уведомляем SW об успешной загрузке (сбрасывает счётчик boot failures)

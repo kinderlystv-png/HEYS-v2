@@ -1013,6 +1013,18 @@
   // ─────────────────────────────────────────────────────────────────────
   // Export
   // ─────────────────────────────────────────────────────────────────────
+  // 🧹 Hard reset module-level caches — вызывается в cloud.switchClient перед
+  // загрузкой данных нового клиента. Не трогает persistent LS (он scoped через
+  // Store layer и сам перечитается по новому clientId). Только in-memory.
+  function clear() {
+    invalidateMergedView();
+    _healthWrittenThisSession = false;
+    _sharedByFingerprintRef = null;
+    _sharedByFingerprint = null;
+    _sharedByNameRef = null;
+    _sharedByName = null;
+  }
+
   HEYS.OverlayStore = {
     STORE_KEY,
     readRaw,
@@ -1024,6 +1036,7 @@
     toMergedView,
     getMergedView,
     invalidate: invalidateMergedView,
+    clear,
     migrate,
     verifyMigration,
     NUTRIENT_FIELDS,

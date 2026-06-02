@@ -12632,6 +12632,10 @@
     try { global.HEYS?.TrialQueue?.clearCache?.(); } catch (_) { /* noop */ }
     try { global.HEYS?.shareDb?.clear?.(); } catch (_) { /* fire-and-forget IndexedDB clear */ }
     try { if (global.HEYS) global.HEYS._lastCrs = null; } catch (_) { /* noop */ }
+    // 🧹 OverlayStore in-memory cache reset (incident 2026-06-02 fix Layer 2):
+    // _mergedViewCache, _sharedByFingerprint и пр. могут держать данные предыдущего
+    // клиента. Persistent LS scoped через Store layer — перечитается по новому cid.
+    try { global.HEYS?.OverlayStore?.clear?.(); } catch (_) { /* noop */ }
     // 🔁 Инвалидация Service Worker KV cache — без неё SW мог бы вернуть кэш ответа
     // /rest/client_kv_store от oldClient в первом запросе после reload.
     try {
@@ -12655,6 +12659,10 @@
         clientUpsertTimer = null;
         log('[switch-guard] killed pending debounce timer');
       }
+      // 🧹 Reset timer-set timestamp (incident 2026-06-02 fix Layer 2):
+      // иначе scheduleClientPush мог бы считать что timer "недавно поставлен"
+      // и пропустить новое расписание после switch.
+      _clientUpsertTimerSetAt = 0;
     } catch (_) { /* noop */ }
 
     // 🛡️ P0 hygiene (2026-05-17 incident): clear stale heys_session_token from
@@ -12726,24 +12734,65 @@
       });
     } catch (_) { /* noop */ }
 
-    // 1. Сначала синхронизируем текущие данные в облако (если есть pending)
+    // 1. БЛОКИРУЮЩИЙ pre-flush gate (incident 2026-06-02 fix Layer 2):
+    // НЕ запускаем дальше switch пока pending queue не дрейн. Без жёсткого
+    // timeout — с soft 30s warning и user-promptом retry/cancel/force-lossy.
+    // Раньше был flushPendingQueue(8000) с silent fallthrough на timeout —
+    // pending writes Александры оставались в LS-очереди → после reload они
+    // восстанавливались и приписывались новому клиенту (cross-client leak).
     const _pendingBeforeSwitch = oldClientId ? cloud.getPendingCount() : 0;
     if (_pendingBeforeSwitch > 0) {
       emitSwitchStage('saving', { pendingCount: _pendingBeforeSwitch });
-      log('⏳ Ожидаем синхронизацию старого клиента...');
-
-      // 🔧 v63 FIX #3: Используем flushPendingQueue вместо ручного polling.
-      // flushPendingQueue делает немедленный upload и ждёт queue-drained event.
-      try {
-        const flushed = await cloud.flushPendingQueue(8000); // 8 сек таймаут
-        if (flushed) {
-          log('✅ Синхронизация старого клиента завершена');
-        } else {
-          logCritical('⚠️ [SWITCH] Flush timeout — ' + cloud.getPendingCount() + ' items still pending');
+      log('⏳ Ожидаем синхронизацию старого клиента (' + _pendingBeforeSwitch + ' изменений)...');
+      const DRAIN_SOFT_TIMEOUT_MS = 30000;
+      let drainStartedAt = Date.now();
+      let drainAborted = false;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const pendingCount = cloud.getPendingCount();
+        if (pendingCount === 0) break;
+        try { await cloud.flushPendingQueue(5000); } catch (_) { /* fall through */ }
+        if (cloud.getPendingCount() === 0) break;
+        const elapsed = Date.now() - drainStartedAt;
+        if (elapsed > DRAIN_SOFT_TIMEOUT_MS) {
+          const remain = cloud.getPendingCount();
+          let decision = 'retry';
+          try {
+            // MVP UI: window.confirm. Cancel → отменить switch (user остаётся на oldClient).
+            // OK → force-lossy: dropping остатки от oldClientId.
+            decision = global.confirm
+              ? (global.confirm(
+                  `Не удалось синхронизировать ${remain} изменений за 30 сек.\n\n` +
+                  `OK — продолжить переключение (несохранённые правки будут потеряны).\n` +
+                  `Отмена — остаться на текущем клиенте и подождать соединение.`
+                ) ? 'force-lossy' : 'cancel')
+              : 'force-lossy';
+          } catch (_) { decision = 'force-lossy'; }
+          if (decision === 'cancel') {
+            logCritical('[switch-flush] CANCELLED by user: ' + remain + ' items still pending for client ' + (oldClientId?.slice(0,8) || 'unknown'));
+            emitSwitchStage('cancelled', { pendingCount: remain });
+            cloud._switchClientInProgress = false;
+            drainAborted = true;
+            return false;
+          }
+          // force-lossy: drop oldClientId items
+          if (Array.isArray(clientUpsertQueue)) {
+            let dropped = 0;
+            for (let i = clientUpsertQueue.length - 1; i >= 0; i--) {
+              if (clientUpsertQueue[i]?.client_id === oldClientId) {
+                clientUpsertQueue.splice(i, 1);
+                dropped++;
+              }
+            }
+            logCritical('[switch-flush] FORCE-LOSSY drain: dropped ' + dropped + ' pending items for client ' + (oldClientId?.slice(0,8) || 'unknown'));
+            try { savePendingQueueImmediate(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue); } catch (_) { /* noop */ }
+          }
+          break;
         }
-      } catch (e) {
-        logCritical('⚠️ Не удалось дождаться синхронизации, но продолжаем переключение');
+        await new Promise((r) => setTimeout(r, 500));
       }
+      if (drainAborted) return false;
+      log('✅ Pending queue drained перед switch');
     }
 
     // 🔧 v67 FIX: Lightweight profile basics capture for post-sync contamination check.
@@ -13123,6 +13172,57 @@
       try {
         cloud._hotSyncQuietUntilMs = Date.now() + (_switchUsedCuratorPath ? 18000 : 2200);
       } catch (_) { /* noop */ }
+
+      // 🛡️ Layer 3 (incident 2026-06-02 fix): hard-reset через location.reload()
+      // для 100% гарантии что in-memory state (React, module caches, debounce
+      // timers) не перенесёт данные старого клиента в новый scope. Применяется
+      // ВСЕГДА (и curator, и PIN) — единообразная логика. Disable: установить
+      // localStorage['heys_disable_switch_reload']='1'.
+      try {
+        const reloadDisabled = (() => {
+          try { return localStorage.getItem('heys_disable_switch_reload') === '1'; } catch (_) { return false; }
+        })();
+        if (!reloadDisabled) {
+          // (1) Final queue validation — защитная мера, pre-flush gate должен
+          // был уже всё забрать. Если что-то осталось — drop + log.
+          if (Array.isArray(clientUpsertQueue)) {
+            const leftover = clientUpsertQueue.filter(it => it?.client_id === oldClientId).length;
+            if (leftover > 0) {
+              logCritical('[switch-reload] CRITICAL: ' + leftover + ' residual items from ' + (oldClientId?.slice(0,8) || 'unknown') + ' — dropping');
+              for (let i = clientUpsertQueue.length - 1; i >= 0; i--) {
+                if (clientUpsertQueue[i]?.client_id === oldClientId) clientUpsertQueue.splice(i, 1);
+              }
+              try { savePendingQueueImmediate(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue); } catch (_) { /* noop */ }
+            }
+          }
+          // (2) Await SW cache invalidation (max 1500ms — не блокируем дольше)
+          try {
+            if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller && typeof MessageChannel !== 'undefined') {
+              await new Promise((resolve) => {
+                const channel = new MessageChannel();
+                const timer = setTimeout(resolve, 1500);
+                channel.port1.onmessage = () => { clearTimeout(timer); resolve(); };
+                try {
+                  navigator.serviceWorker.controller.postMessage(
+                    { type: 'CLEAR_API_KV', reason: 'switch-reload' },
+                    [channel.port2]
+                  );
+                } catch (_) { clearTimeout(timer); resolve(); }
+              });
+            }
+          } catch (_) { /* noop */ }
+          // (3) Reload с debounce 100ms (коалесцирует серию быстрых switch'ей).
+          try {
+            if (cloud._reloadDebounceTimer) clearTimeout(cloud._reloadDebounceTimer);
+          } catch (_) { /* noop */ }
+          cloud._reloadDebounceTimer = setTimeout(() => {
+            try { logCritical('[switch-reload] location.reload() triggered'); } catch (_) {}
+            try { global.location.reload(); } catch (_) { /* noop */ }
+          }, 100);
+        }
+      } catch (e) {
+        try { logCritical('[switch-reload] failed to schedule reload:', e?.message || String(e)); } catch (_) {}
+      }
     }
   };
 

@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1780349380981';
+const CACHE_VERSION = 'heys-1780383645975';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -928,6 +928,26 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'CLIENT_SWITCH') {
     const reason = 'curator-switch:' + (event.data.newClientId ? String(event.data.newClientId).slice(0, 8) : 'unknown');
     event.waitUntil(invalidateKvCache(reason));
+    return;
+  }
+
+  // 🛡️ 2026-06-02 fix Layer 3: blocking variant of CLIENT_SWITCH — отвечает
+  // через MessageChannel когда cache invalidated. Page-side в switchClient
+  // ждёт reply (max 1500ms) перед location.reload() чтобы первый запрос
+  // нового клиента не получил cached ответ от oldClient.
+  if (event.data && event.data.type === 'CLEAR_API_KV') {
+    const reason = 'clear-api-kv:' + (event.data.reason || 'unknown');
+    const replyPort = event.ports && event.ports[0];
+    const work = invalidateKvCache(reason).then(() => {
+      if (replyPort) {
+        try { replyPort.postMessage({ ok: true, reason }); } catch (_) { /* noop */ }
+      }
+    }).catch((err) => {
+      if (replyPort) {
+        try { replyPort.postMessage({ ok: false, error: err?.message || String(err) }); } catch (_) { /* noop */ }
+      }
+    });
+    event.waitUntil(work);
     return;
   }
 
