@@ -219,8 +219,8 @@ function cleanOldBundles(selectedNames) {
 // ─── Sync index.html ───────────────────────────────────────────────────────
 
 /**
- * Обновляет ссылки на постбут-бандлы в index.html.
- * Заменяет старые хэши в POST_BOOT_BUNDLES на новые из manifest.
+ * Обновляет ссылки на бандлы в index.html.
+ * Заменяет старые хэши и синхронизирует полный POST_BOOT_BUNDLES из manifest.
  * Также обновляет ссылки на boot-*.bundle.*.js в <script defer src="...">
  * @param {Record<string, {file: string}>} manifest
  */
@@ -247,6 +247,27 @@ function syncIndexHtml(manifest) {
             return entry.file;
         });
         html = updated;
+    }
+
+    const postBootFiles = Object.entries(manifest)
+        .filter(([name]) => name.startsWith('postboot-'))
+        .map(([, entry]) => entry.file);
+    if (postBootFiles.length > 0) {
+        const postBootArray = 'var POST_BOOT_BUNDLES = [\n'
+            + postBootFiles.map((file, index) => {
+                const comma = index < postBootFiles.length - 1 ? ',' : '';
+                return `                '${file}'${comma}`;
+            }).join('\n')
+            + '\n            ];';
+        const updated = html.replace(
+            /var\s+POST_BOOT_BUNDLES\s*=\s*\[[\s\S]*?\];/,
+            postBootArray,
+        );
+        if (updated !== html) {
+            changed++;
+            console.info(`  index.html: POST_BOOT_BUNDLES → ${postBootFiles.length} bundle(s)`);
+            html = updated;
+        }
     }
 
     if (changed > 0) {
