@@ -48,13 +48,17 @@
     };
   }
 
-  // Remove a meal by ID. Bumps day.updatedAt so other clients see the deletion.
+  // Remove a meal by ID. Writes a tombstone in deletedMealIds so a stale
+  // device pushing the meal back gets filtered by mergeDayData on next sync.
   function removeMeal(day, mealId) {
     if (!day || !mealId) return day;
     const ts = now();
+    const prevTombstones = (day.deletedMealIds && typeof day.deletedMealIds === 'object' && !Array.isArray(day.deletedMealIds))
+      ? day.deletedMealIds : {};
     return {
       ...day,
       meals: (day.meals || []).filter((m) => m && m.id !== mealId),
+      deletedMealIds: { ...prevTombstones, [mealId]: ts },
       updatedAt: ts,
     };
   }

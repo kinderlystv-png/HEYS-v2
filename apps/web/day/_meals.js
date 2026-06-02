@@ -4250,7 +4250,10 @@
 
                     const baseDay = dayRef.current || {};
                     const meals = (baseDay.meals || []).filter((meal) => meal.id !== mealId);
-                    const nextDayData = { ...baseDay, meals, updatedAt: removedUpdatedAt };
+                    const prevTombstones = (baseDay.deletedMealIds && typeof baseDay.deletedMealIds === 'object' && !Array.isArray(baseDay.deletedMealIds))
+                        ? baseDay.deletedMealIds : {};
+                    const deletedMealIds = { ...prevTombstones, [mealId]: removedUpdatedAt };
+                    const nextDayData = { ...baseDay, meals, deletedMealIds, updatedAt: removedUpdatedAt };
                     persistDayData(nextDayData, 'remove_meal');
                     setDay(() => nextDayData);
 
@@ -4264,7 +4267,10 @@
                         return;
                     }
                     const meals = [...baseMeals];
-                    meals.splice(Math.max(0, Math.min(insertIndex, meals.length)), 0, ctxMeal);
+                    // Bump meal.updatedAt past the prior tombstone so future merges
+                    // see mealTs > tombstoneTs and keep the restored meal.
+                    const restoredMeal = { ...ctxMeal, updatedAt: undoUpdatedAt };
+                    meals.splice(Math.max(0, Math.min(insertIndex, meals.length)), 0, restoredMeal);
                     const restoredMeals = sortMealsByTime(meals);
                     const nextDayData = { ...baseDay, meals: restoredMeals, updatedAt: undoUpdatedAt };
                     persistDayData(nextDayData, 'undo_remove_meal');
