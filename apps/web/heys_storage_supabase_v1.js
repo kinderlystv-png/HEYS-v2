@@ -5864,13 +5864,32 @@
     }
 
     try {
+      // 🛡️ Phase B2.5: gate boot race — await context issuance до отправки batch'а.
+      // Если context ещё в полёте (issue_write_context RPC not yet returned),
+      // ждём до 3 сек. Иначе saves на boot уходят с p_context_id: null и
+      // обходят routing-protection. После Phase C strict mode такие writes
+      // получат 403 — критично закрыть здесь.
+      if (cloud._writeContextReady && !cloud._writeContextReady._settled) {
+        try {
+          await Promise.race([
+            cloud._writeContextReady,
+            new Promise(r => setTimeout(r, 3000))
+          ]);
+        } catch (_) { /* noop */ }
+      }
       // Преобразуем items в формат для YandexAPI.
-      // 🛡️ Phase B2 — preserve _ctx из queue item для прокидывания в API layer.
+      // 🛡️ Phase B2 — preserve _ctx из queue item; для items без _ctx (например
+      // direct push'ы из interceptSetItem) fallback на live cloud._writeContext
+      // если он для того же clientId. Без этого fallback'a saves через
+      // interceptSetItem не получали бы context (большинство писей идёт через
+      // этот путь, не через saveClientKey).
+      const liveCtx = (cloud._writeContext && cloud._writeContext.clientId === clientId)
+        ? cloud._writeContext.contextId : null;
       const yandexItems = items.map(item => ({
         originalKey: item.k, // preserve scoped key for LS write-back
         k: normalizeKeyForSupabase(item.k, clientId),
         v: item.v,
-        _ctx: item._ctx || null,
+        _ctx: item._ctx || liveCtx || null,
         updated_at: item.updated_at || new Date().toISOString()
       }));
 
@@ -10326,29 +10345,43 @@
   // Phase B: warn-only сервер. Phase C: strict mode + retry-on-context-invalid.
   // ───────────────────────────────────────────────────────────────────
   cloud._writeContext = null; // { contextId, clientId, curatorId, expiresAt }
+  // Awaitable promise — resolves когда context для текущего clientId выпущен
+  // (или после первой неудачной попытки). doClientUpload await'ит это перед
+  // отправкой batch'а — закрывает boot race window где saves успевают уйти
+  // ДО завершения issue_write_context (~80-200ms RPC roundtrip).
+  cloud._writeContextReady = null; // Promise<context|null>
 
   cloud._issueWriteContext = async function (targetClientId) {
+    // Возвращаем in-flight promise при concurrent issue (типа boot + первый save fire).
+    if (cloud._writeContextReady && !cloud._writeContextReady._settled) {
+      return cloud._writeContextReady;
+    }
+    let resolvePromise;
+    const p = new Promise(resolve => { resolvePromise = resolve; });
+    p._settled = false;
+    cloud._writeContextReady = p;
+    const finish = (ctx) => { p._settled = true; resolvePromise(ctx); return ctx; };
     try {
       const api = global.HEYS?.YandexAPI;
-      if (!api?.rpc) return null;
+      if (!api?.rpc) return finish(null);
       // Curator path: targetClientId требуется, server резолвит curator_id из JWT.
       // Session path: targetClientId игнорируется — server берёт client_id из session_token.
       const isCurator = !!(global.HEYS?.lastIsCuratorAuth || !global.HEYS?.lastIsPinAuth);
       let res;
       if (isCurator) {
-        if (!targetClientId) return null;
+        if (!targetClientId) return finish(null);
         res = await api.rpc('issue_write_context_by_curator', { p_client_id: targetClientId });
       } else {
         const sessionToken = global.localStorage?.getItem?.('heys_session_token') || null;
-        if (!sessionToken) return null;
+        if (!sessionToken) return finish(null);
         res = await api.rpc('issue_write_context_by_session', { p_session_token: sessionToken });
       }
       if (res?.error) {
         console.warn('[write-context] issue failed:', res.error.message || res.error.code || res.error);
-        return null;
+        return finish(null);
       }
       const data = res?.data || {};
-      if (!data.context_id) return null;
+      if (!data.context_id) return finish(null);
       cloud._writeContext = {
         contextId: data.context_id,
         clientId: data.client_id || targetClientId,
@@ -10356,10 +10389,10 @@
         expiresAt: data.expires_at || null,
         issuedAt: Date.now(),
       };
-      return cloud._writeContext;
+      return finish(cloud._writeContext);
     } catch (e) {
       console.warn('[write-context] issue exception:', e?.message || e);
-      return null;
+      return finish(null);
     }
   };
 
