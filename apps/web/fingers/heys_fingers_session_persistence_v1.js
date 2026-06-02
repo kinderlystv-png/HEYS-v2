@@ -53,15 +53,35 @@
     }
   }
 
+  function _isActiveSessionKey(key) {
+    if (!key) return false;
+    if (key === 'heys_finger_active_session') return true;
+    return /^heys_[a-f0-9-]{36}_finger_active_session$/i.test(String(key));
+  }
+
+  function _listActiveSessionKeys() {
+    const keys = [];
+    const seen = new Set();
+    const add = (key) => {
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      keys.push(key);
+    };
+    add(_getKey());
+    add('heys_finger_active_session');
+    try {
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (_isActiveSessionKey(key)) add(key);
+      }
+    } catch (_) { /* noop */ }
+    return keys;
+  }
+
   function _safeWriteLS(key, value) {
     try {
-      // Prefer HEYS.utils.lsSet (route through store + compression + cloud sync).
-      // Marker — НЕ должен зеркалиться в облако между устройствами (per-tab artefact);
-      // но интерсептор всё равно safer чем raw setItem. Падает обратно на native при отсутствии.
-      if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
-        HEYS.utils.lsSet(key, value);
-        return true;
-      }
+      // Active-session marker is a per-tab recovery artefact. It must stay local:
+      // cloud replay would resurrect discarded/cancelled sessions on reload.
       localStorage.setItem(key, JSON.stringify(value));
       return true;
     } catch (e) {
@@ -130,6 +150,36 @@
       _pendingSnapshot = null;
     }
     _safeRemoveLS(_getKey());
+  }
+
+  function _matchesTraining(snapshot, ctx) {
+    if (!snapshot || typeof snapshot !== 'object') return false;
+    if (!ctx || typeof ctx !== 'object') return true;
+    const ctxDate = ctx.dateKey == null ? null : String(ctx.dateKey);
+    const snapDate = snapshot.dateKey == null ? null : String(snapshot.dateKey);
+    if (ctxDate && snapDate && ctxDate !== snapDate) return false;
+    if (ctx.trainingIndex != null && snapshot.trainingIndex != null) {
+      const ctxIdx = Number(ctx.trainingIndex);
+      const snapIdx = Number(snapshot.trainingIndex);
+      if (Number.isFinite(ctxIdx) && Number.isFinite(snapIdx) && ctxIdx !== snapIdx) return false;
+    }
+    return true;
+  }
+
+  function clearForTraining(ctx) {
+    if (_saveTimer) {
+      clearTimeout(_saveTimer);
+      _saveTimer = null;
+      _pendingSnapshot = null;
+    }
+    let cleared = 0;
+    _listActiveSessionKeys().forEach((key) => {
+      const snapshot = _safeReadLS(key);
+      if (!snapshot) return;
+      if (!_matchesTraining(snapshot, ctx)) return;
+      if (_safeRemoveLS(key)) cleared++;
+    });
+    return cleared;
   }
 
   // Synchronous flush — для beforeunload/pagehide. Не уходит через
@@ -210,10 +260,12 @@
     save,
     load,
     clear,
+    clearForTraining,
     detectOnBoot,
     __registered: true,
     // Test/internal helpers (не публичный API, но удобно для дебага)
     __getKey: _getKey,
+    __isActiveSessionKey: _isActiveSessionKey,
     __STALE_THRESHOLD_MS: STALE_THRESHOLD_MS,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

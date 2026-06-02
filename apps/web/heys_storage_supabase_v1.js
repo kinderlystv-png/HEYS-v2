@@ -576,7 +576,8 @@
       foreign: new Set(),
       doubleScoped: new Set(),
       quoted: new Set(),
-      sensitive: new Set()
+      sensitive: new Set(),
+      localOnly: new Set()
     };
   }
 
@@ -591,7 +592,8 @@
       ...Array.from(collector.foreign || []),
       ...Array.from(collector.doubleScoped || []),
       ...Array.from(collector.quoted || []),
-      ...Array.from(collector.sensitive || [])
+      ...Array.from(collector.sensitive || []),
+      ...Array.from(collector.localOnly || [])
     ].filter(Boolean)));
   }
 
@@ -601,13 +603,14 @@
     const doubleScopedCount = collector.doubleScoped?.size || 0;
     const quotedCount = collector.quoted?.size || 0;
     const sensitiveCount = collector.sensitive?.size || 0;
-    const total = foreignCount + doubleScopedCount + quotedCount + sensitiveCount;
+    const localOnlyCount = collector.localOnly?.size || 0;
+    const total = foreignCount + doubleScopedCount + quotedCount + sensitiveCount + localOnlyCount;
     if (!total) return 0;
 
     const sample = getCloudGarbageKeys(collector).slice(0, 4).join(', ');
     logCritical(
       `🧹 [CLOUD GARBAGE] ${source}: client=${clientId.slice(0, 8)} ` +
-      `foreign=${foreignCount} double=${doubleScopedCount} quoted=${quotedCount} sensitive=${sensitiveCount}` +
+      `foreign=${foreignCount} double=${doubleScopedCount} quoted=${quotedCount} sensitive=${sensitiveCount} localOnly=${localOnlyCount}` +
       (sample ? ` | sample=${sample}` : '')
     );
     return total;
@@ -1928,10 +1931,13 @@
     'heys_boot_log',  // boot diagnostics — local only
     'heys_sync_log',              // sync metadata — local only, syncing it causes infinite loop
     'heys_pending_sync_ui_queue', // sync badge UI state — local only, must not be synced to cloud
+    'heys_finger_active_session', // active fingers timer snapshot — per-tab recovery only
+    'fingers.resume.snoozedUntil',
   ]);
 
   const LOCAL_ONLY_STORAGE_SUFFIXES = [
-    '_advice_trace_day_v1'
+    '_advice_trace_day_v1',
+    '_finger_active_session',
   ];
 
   const LOCAL_ONLY_STORAGE_PREFIXES = [
@@ -5490,6 +5496,10 @@
         try {
           const key = row.k;
 
+          if (isLocalOnlyStorageKey(key)) {
+            return;
+          }
+
           // 🔐 КРИТИЧНО: НЕ перезаписываем auth токен из облака!
           // Auth токен уже сохранён локально со свежим expires_at после signIn.
           // Токен в облаке имеет старый expires_at → перезапишет свежий → ошибка при reload.
@@ -7260,7 +7270,15 @@
                 recordCloudGarbageCandidate(lightCloudGarbage, 'sensitive', row.k);
                 return;
               }
+              if (isLocalOnlyStorageKey(row?.k)) {
+                recordCloudGarbageCandidate(lightCloudGarbage, 'localOnly', row.k);
+                return;
+              }
               const key = scopeKeyForClientStorage(row.k, client_id);
+              if (isLocalOnlyStorageKey(key)) {
+                recordCloudGarbageCandidate(lightCloudGarbage, 'localOnly', row.k);
+                return;
+              }
               const normalizedSyncKey = normalizeKeyForSupabase(row.k, client_id);
               if (isForeignClientScopedKey(key, client_id)) {
                 recordCloudGarbageCandidate(lightCloudGarbage, 'foreign', row.k);
@@ -7437,7 +7455,15 @@
             recordCloudGarbageCandidate(fullSyncCloudGarbage, 'sensitive', row.k);
             return;
           }
+          if (isLocalOnlyStorageKey(row?.k)) {
+            recordCloudGarbageCandidate(fullSyncCloudGarbage, 'localOnly', row.k);
+            return;
+          }
           let key = scopeKeyForClientStorage(row.k, client_id);
+          if (isLocalOnlyStorageKey(key)) {
+            recordCloudGarbageCandidate(fullSyncCloudGarbage, 'localOnly', row.k);
+            return;
+          }
 
           if (isForeignClientScopedKey(key, client_id)) {
             dedupIngress.foreign++;
@@ -11801,6 +11827,7 @@
   function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync') {
     if (!clientId || !baseKey || value == null) return false;
     if (isSensitiveSessionStorageKey(baseKey)) return false;
+    if (isLocalOnlyStorageKey(baseKey)) return false;
 
     // 2026-05-29 echo-loop diag: trace each hot-sync apply
     try {

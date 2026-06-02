@@ -152,4 +152,27 @@ describe('mergeScalarKv — Phase A critical keys are listed in storage layer', 
     const fnArea = source.slice(fnStart, fnStart + 2000);
     expect(fnArea).toMatch(/_products_overlay_v2_BACKUP_/);
   });
+
+  it('fingers active-session markers are local-only', () => {
+    const exactStart = source.indexOf('const LOCAL_ONLY_STORAGE_EXACT_KEYS');
+    const suffixStart = source.indexOf('const LOCAL_ONLY_STORAGE_SUFFIXES');
+    if (exactStart < 0 || suffixStart < 0) {
+      throw new Error('Test setup: local-only storage constants not found');
+    }
+    const exactArea = source.slice(exactStart, exactStart + 1000);
+    const suffixArea = source.slice(suffixStart, suffixStart + 500);
+    expect(exactArea).toContain("'heys_finger_active_session'");
+    expect(exactArea).toContain("'fingers.resume.snoozedUntil'");
+    expect(suffixArea).toContain("'_finger_active_session'");
+  });
+
+  it('cloud garbage collector tracks local-only rows for cleanup', () => {
+    const collectorStart = source.indexOf('function createCloudGarbageCollector');
+    if (collectorStart < 0) {
+      throw new Error('Test setup: `function createCloudGarbageCollector` not found');
+    }
+    const collectorArea = source.slice(collectorStart, collectorStart + 1200);
+    expect(collectorArea).toContain('localOnly: new Set()');
+    expect(collectorArea).toContain('collector.localOnly');
+  });
 });

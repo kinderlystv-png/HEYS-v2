@@ -2443,6 +2443,14 @@
           if (typeof setVisibleTrainings === 'function') {
             setVisibleTrainings((prev) => Math.max(0, prev - 1));
           }
+          if (removedTraining && (String(removedTraining.type) === 'fingers' || removedTraining.fingersLog)) {
+            try {
+              HEYS.Fingers?.persistence?.clearForTraining?.({
+                dateKey: day && day.date,
+                trainingIndex: ti
+              });
+            } catch (_) { /* noop */ }
+          }
           // Форсируем запись в store/облако — без этого sync не триггерится
           global.setTimeout(function () {
             if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {

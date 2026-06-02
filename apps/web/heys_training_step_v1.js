@@ -946,6 +946,10 @@
       fingersLog
     });
 
+    try {
+      window.HEYS?.Fingers?.persistence?.clearForTraining?.(ctx);
+    } catch (_) { /* noop */ }
+
     // Recovery contract: readiness.getYesterdayFb() (heys_fingers_readiness_v1.js)
     // expects day.fingers.{lastSessionAt, lastIntensity} for hard 48h cooldown override.
     // Intensity derived from program id via getProgramIntensity, fallback 'moderate'.

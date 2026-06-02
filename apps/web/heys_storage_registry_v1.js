@@ -273,6 +273,12 @@
     cloudSync: 'never', pruneStrategy: 'manual',
     description: 'Gantt v2 UI prefs (zoom, toggles, collapsed groups, view position, schema flag).',
   });
+  register('fingers_active_session', {
+    pattern: /^(heys_finger_active_session|heys_[a-f0-9-]{36}_finger_active_session|fingers\.resume\.snoozedUntil)$/,
+    scope: 'global', maxSize: 16 * KB, maxAge: 1 * DAY_MS,
+    cloudSync: 'never', pruneStrategy: 'manual',
+    description: 'Fingers active timer recovery snapshot/snooze. Local-only; never cloud-synced.',
+  });
   register('products_overlay', {
     pattern: /^heys_[a-f0-9-]{36}_heys_products_overlay_v2$/,
     scope: 'per-client', /* maxSize unbounded */ maxAge: 0,
