@@ -2330,8 +2330,11 @@
         setStoredValue(dayKey, dayData);
       }
 
-      // Update local gameData mirror for compatibility (if any legacy code reads it)
-      gameData.dailyMissions = dayData.dailyMissions;
+      // Update local gameData mirror for compatibility (if any legacy code reads it).
+      // Shallow-copy to avoid shared object reference: both gameData and dayData end up
+      // in the pending queue simultaneously; compress() uses WeakSet and detects the
+      // shared ref as a "circular reference", dropping dailyMissions from one queue item.
+      gameData.dailyMissions = { ...dayData.dailyMissions, missions: (dayData.dailyMissions.missions || []).map(m => ({ ...m })) };
       saveData();
     }
 
@@ -2620,8 +2623,8 @@
       setStoredValue(dayKey, dayData);
     }
 
-    // Mirror to gameData for safety
-    gameData.dailyMissions = dayData.dailyMissions;
+    // Mirror to gameData for safety (copy — see getDailyMissions comment on WeakSet/compress)
+    gameData.dailyMissions = { ...dayData.dailyMissions, missions: (dayData.dailyMissions.missions || []).map(m => ({ ...m })) };
     saveData();
 
     // Проверяем бонус за все 3 миссии — автоклейм
@@ -2636,7 +2639,7 @@
         setStoredValue(dayKey, dayData); // Save bonus state to day
       }
 
-      gameData.dailyMissions = dayData.dailyMissions; // Mirror
+      gameData.dailyMissions = { ...dayData.dailyMissions, missions: (dayData.dailyMissions.missions || []).map(m => ({ ...m })) }; // Mirror (copy)
       saveData();
 
       triggerImmediateSync('daily_missions_bonus');
