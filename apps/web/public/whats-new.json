@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.06.02.stale-writer-fix",
-      "buildHash": "stale-writer-fix",
+      "version": "2026.06.02.48014930",
+      "buildHash": "48014930",
       "date": "2026-06-02",
       "kind": "user-facing",
       "profile": "user-facing-general",
