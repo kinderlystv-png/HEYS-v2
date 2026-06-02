@@ -84,6 +84,30 @@ Tone, communication length, adjacent observations — см. user-level CLAUDE.md
    stale `user_id` прошлого writer'а проходит trigger-condition и блокирует
    легитимные writes (incident 2026-05-28, PIN-flow 500; hotfix
    `database/2026-05-28_fix_pin_path_user_id.sql`).
+9. **Любой scan по localStorage обязан фильтровать foreign-scoped keys.**
+   Pattern-based LS поиск (`key.includes('_dayv2_')`,
+   `Object.keys(localStorage)`) возвращает данные **всех клиентов** что
+   когда-либо логинились в этой сессии (особенно incognito multi-tab, где все
+   tabs делят LS). Если код потом отдаёт эти данные React state как
+   «meals/profile/etc for current client» или пишет их под `currentClientId` —
+   это cross-client pollution. Pattern для фильтра:
+   `/^heys_([0-9a-f-]{36})_/i.exec(key)?.[1] === currentScope` (current =
+   `HEYS.currentClientId.toLowerCase()`). Unscoped legacy keys принимаются.
+   Incident 2026-06-02 #13: `loadMealsRaw` cross-key fallback в
+   [apps/web/heys_day_utils.js:600](apps/web/heys_day_utils.js#L600) — годами
+   тёк меж клиентами кураторов.
+10. **Server резолвит canonical client_id из `context_id`, игнорирует
+    browser-supplied.** Phase A+B (2026-06-02): сервер выдаёт capability token
+    `context_id` через `issue_write_context_by_curator/_by_session` RPC,
+    привязанный к (curator_id, client_id) или (session_id, client_id) в момент
+    issue. Каждый KV write несёт `p_context_id` — сервер валидирует через
+    `validate_write_context()` и при mismatch переписывает
+    `resolvedClientId ← context.client_id` (rerouting вместо pollution). REST
+    POST `/rest/client_kv_store` тоже принимает `row.context_id` (первая
+    capability-based auth для этого endpoint'a). `cloud._writeContextReady`
+    awaitable promise закрывает boot race (saveClientViaRPC ждёт до 3 сек). См.
+    `write_contexts` table + plan
+    `/Users/poplavskijanton/.claude/plans/cosmic-tickling-lynx.md`.
 
 See [apps/web/ARCHITECTURE.md](apps/web/ARCHITECTURE.md) for full details on
 each.
