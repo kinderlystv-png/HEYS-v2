@@ -2237,6 +2237,84 @@
     } catch (_) { return 0; }
   }
 
+  // 🛡️ Layer 4 (incident 2026-06-02): handle server rejection.
+  // Когда сервер отвергает запись с `cross_client_*` / `content_dup` / etc —
+  // локальные LS/queue могут держать polluted data (попавшую туда через
+  // pre-fix bundle или race). Этот хелпер removes LS scoped key + queue entries
+  // + триggers UI re-read с cloud's clean state.
+  // Вызывается из yandex_api_v1.js mergeSaveKV / batchSaveKV когда RPC response
+  // содержит `outcome` или `identity_blocked` с cross_client signals.
+  cloud._dropRejectedKey = function (clientId, k, reason) {
+    if (!clientId || !k) return;
+    let scopedKey;
+    const m = /^heys_([0-9a-f-]{36})_/i.exec(k);
+    if (m) {
+      // Already scoped form. Используем только если совпадает с clientId.
+      if (String(m[1]).toLowerCase() !== String(clientId).toLowerCase()) return;
+      scopedKey = k;
+    } else if (k.indexOf('heys_') === 0) {
+      // Unscoped — добавляем prefix per-client.
+      scopedKey = 'heys_' + clientId + '_' + k.slice(5);
+    } else {
+      return;
+    }
+    try {
+      logCritical(`[drop-rejected] ${reason || 'server_rejected'}: removing LS+queue for ${scopedKey.slice(0, 80)} (client ${String(clientId).slice(0,8)})`);
+    } catch (_) { /* noop */ }
+    // 1. Drop LS под scoped key.
+    try {
+      if (typeof global.localStorage !== 'undefined') {
+        global.localStorage.removeItem(scopedKey);
+      }
+    } catch (_) { /* noop */ }
+    // 2. Drop из in-memory Store cache.
+    try {
+      if (global.HEYS?.store?.memory?.delete) {
+        global.HEYS.store.memory.delete(scopedKey);
+      }
+    } catch (_) { /* noop */ }
+    // 3. Drop из clientUpsertQueue / clientUpsertInFlightQueue.
+    try {
+      let purged = 0;
+      if (Array.isArray(clientUpsertQueue)) {
+        for (let i = clientUpsertQueue.length - 1; i >= 0; i--) {
+          const it = clientUpsertQueue[i];
+          if (it && it.client_id === clientId && (it.k === scopedKey || it.k === k)) {
+            clientUpsertQueue.splice(i, 1);
+            purged++;
+          }
+        }
+      }
+      if (Array.isArray(clientUpsertInFlightQueue)) {
+        for (let i = clientUpsertInFlightQueue.length - 1; i >= 0; i--) {
+          const it = clientUpsertInFlightQueue[i];
+          if (it && it.client_id === clientId && (it.k === scopedKey || it.k === k)) {
+            clientUpsertInFlightQueue.splice(i, 1);
+            purged++;
+          }
+        }
+      }
+      if (purged > 0) {
+        try { savePendingQueueImmediate(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue); } catch (_) { /* noop */ }
+      }
+    } catch (_) { /* noop */ }
+    // 4. Если это dayv2 — dispatch heys:day-updated с forceReload, чтобы DayTab
+    // перечитал значение (теперь чистое после drop'a — sync-down прижмёт cloud's empty).
+    try {
+      const dayMatch = /dayv2_(\d{4}-\d{2}-\d{2})$/i.exec(scopedKey);
+      if (dayMatch && typeof global.dispatchEvent === 'function') {
+        global.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: {
+            date: dayMatch[1],
+            source: 'drop-rejected',
+            forceReload: true,
+            reason: reason || 'server_rejected'
+          }
+        }));
+      }
+    } catch (_) { /* noop */ }
+  };
+
   cloud._writeSwitchAuditLog = function (oldCid, newCid, meta) {
     if (!newCid) return;
     try {

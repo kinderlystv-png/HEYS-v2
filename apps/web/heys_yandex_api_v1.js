@@ -930,6 +930,16 @@
         if (!result.error) {
           const data = result.data;
           const success = data?.success !== false;
+          // 🛡️ Layer 4: handle identity_blocked для saveKV path (single item batch).
+          try {
+            if (Array.isArray(data?.identity_blocked) && data.identity_blocked.length > 0) {
+              for (const ib of data.identity_blocked) {
+                if (ib && typeof ib.k === 'string') {
+                  try { global.HEYS?.cloud?._dropRejectedKey?.(clientId, ib.k, ib.reason || 'identity_blocked'); } catch (_) { /* noop */ }
+                }
+              }
+            }
+          } catch (_) { /* noop */ }
           if (success && !data?.error) {
             invalidateSwKvCache('saveKV_curator');
             return { success: true };
@@ -1429,6 +1439,18 @@
           if (!result.error) {
             const data = result.data;
             const success = data?.success !== false;
+            // 🛡️ Layer 4 (incident 2026-06-02): сервер мог частично заблокировать
+            // items через identity guards. data.identity_blocked содержит { k, reason }.
+            // Для каждого — drop LS/queue, чтобы pollution не retry'илась бесконечно.
+            try {
+              if (Array.isArray(data?.identity_blocked) && data.identity_blocked.length > 0) {
+                for (const ib of data.identity_blocked) {
+                  if (ib && typeof ib.k === 'string') {
+                    try { global.HEYS?.cloud?._dropRejectedKey?.(clientId, ib.k, ib.reason || 'identity_blocked'); } catch (_) { /* noop */ }
+                  }
+                }
+              }
+            } catch (_) { /* noop */ }
             // Если SQL вернул success:true — отдаём как есть
             if (success && !data?.error) {
               invalidateSwKvCache('batchSaveKV_curator_rpc');
@@ -1479,6 +1501,16 @@
         }
         const data = result.data;
         const success = data?.success !== false;
+        // 🛡️ Layer 4 — то же что в curator path: drop rejected items.
+        try {
+          if (Array.isArray(data?.identity_blocked) && data.identity_blocked.length > 0) {
+            for (const ib of data.identity_blocked) {
+              if (ib && typeof ib.k === 'string') {
+                try { global.HEYS?.cloud?._dropRejectedKey?.(clientId, ib.k, ib.reason || 'identity_blocked'); } catch (_) { /* noop */ }
+              }
+            }
+          }
+        } catch (_) { /* noop */ }
         if (success && !data?.error) invalidateSwKvCache('batchSaveKV_session_rpc');
         return {
           success,
@@ -1626,6 +1658,12 @@
           return { success: false, error: data.error || 'merge_failed' };
         }
         invalidateSwKvCache('mergeSaveKV_curator');
+        // 🛡️ Layer 4 (incident 2026-06-02): сервер отверг через cross-client guard.
+        // outcome содержит код rejection — удаляем local LS/queue, чтобы pollution
+        // больше не пыталась push'нуться.
+        if (data?.outcome && /^(cross_client_|invalid_profile_field)/i.test(data.outcome)) {
+          try { global.HEYS?.cloud?._dropRejectedKey?.(clientId, k, data.outcome); } catch (_) { /* noop */ }
+        }
         return { success: true, v: data?.v, outcome: data?.outcome };
       }
 
@@ -1649,6 +1687,10 @@
           return { success: false, error: data.error || 'merge_failed' };
         }
         invalidateSwKvCache('mergeSaveKV_session');
+        // 🛡️ Layer 4 — то же что в curator path выше.
+        if (data?.outcome && /^(cross_client_|invalid_profile_field)/i.test(data.outcome)) {
+          try { global.HEYS?.cloud?._dropRejectedKey?.(clientId, k, data.outcome); } catch (_) { /* noop */ }
+        }
         return { success: true, v: data?.v, outcome: data?.outcome };
       }
 

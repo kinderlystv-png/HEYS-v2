@@ -1234,7 +1234,7 @@
       id: 'block_min_edge',
       intensity: 'max',
       name: 'Block Min Edge — без веса',
-      description: 'Минимальная грань без добавочного веса на hang block. Заменяет MED Эвы Лопес когда нет fingerboard'а. 10 секунд виса на самой тонкой грани блока, на которой держишь 13 секунд (margin 3с). Отдых 3 минуты, 5 подходов на хват. Программа из 2 хватов: открытый 4-палец и полузамок. Подходит для V5+, безопаснее по сухожилиям чем block lifts с большим весом.',
+      description: 'Минимальная грань без добавочного веса на hang block. Заменяет MED Эвы Лопес когда нет fingerboard\'а. 10 секунд виса на самой тонкой грани блока, на которой держишь 13 секунд (margin 3с). Отдых 3 минуты, 5 подходов на хват. Программа из 2 хватов: открытый 4-палец и полузамок. Подходит для V5+, безопаснее по сухожилиям чем block lifts с большим весом.',
       level: 'advanced',
       durationMin: 35,
       exercises: [
@@ -1310,47 +1310,62 @@
   }
 
   /**
-   * Фильтр программ по доступному оборудованию.
+   * Фильтр программ по доступному оборудованию (multi-select).
    * @param {Array} programs — список (обычно после ageGate.filterPrograms)
-   * @param {{noEquipment?:boolean, blockMode?:boolean, edgeLimit?:number}} eq
+   * @param {object} eq — equipmentTypes: ['full','block','door','none'][]
+   *                      Legacy form (noEquipment/blockMode/edgeLimit) ещё
+   *                      поддерживается через автоматическую конверсию.
    * @returns {Array}
    *
-   * Логика:
-   *   noEquipment=true → только программы с noEquipment=true (No-Hangs)
-   *   blockMode=true  → equipmentReq='block' ∪ программы без equipmentReq
-   *                     (универсальные max-hangs работают на блоке)
-   *   edgeLimit=25    → исключаем программы где минимальный edge <25мм
-   *                     (door-frame portable не даёт thin edges)
-   *   default (full fingerboard) → всё кроме equipmentReq='block'
-   *                     (block-протоколы предполагают конкретный workflow с грузом)
+   * Программа включается если её equipmentReq совместим хотя бы с одним из
+   * активных типов:
+   *   'full'  → equipmentReq ∈ ['fingerboard', undefined]
+   *   'block' → equipmentReq ∈ ['block', undefined]
+   *   'door'  → equipmentReq === undefined, И min edge ≥ 25мм
+   *   'none'  → noEquipment === true
    */
+  function _legacyToTypes(opts) {
+    if (Array.isArray(opts.equipmentTypes) && opts.equipmentTypes.length > 0) {
+      return opts.equipmentTypes;
+    }
+    if (opts.noEquipment) return ['none'];
+    if (opts.blockMode) return ['block'];
+    if (opts.edgeLimit === 25) return ['door'];
+    return ['full'];
+  }
+
+  function _programMatchesType(p, type) {
+    if (type === 'none') return p.noEquipment === true;
+    if (type === 'block') {
+      return p.equipmentReq === 'block' || !p.equipmentReq;
+    }
+    if (type === 'door') {
+      if (p.equipmentReq === 'block' || p.equipmentReq === 'fingerboard') return false;
+      const minEdge = Array.isArray(p.exercises)
+        ? p.exercises.reduce(function (m, ex) {
+            const v = Number(ex.edgeSizeMm) || Infinity;
+            return Math.min(m, v);
+          }, Infinity)
+        : Infinity;
+      return minEdge >= 25;
+    }
+    if (type === 'full') {
+      // Полный fingerboard: всё кроме block-only
+      return p.equipmentReq !== 'block';
+    }
+    return false;
+  }
+
   function filterProgramsByEquipment(programs, eq) {
     if (!Array.isArray(programs)) return [];
-    const opts = eq || {};
-    const noEq = !!opts.noEquipment;
-    const block = !!opts.blockMode;
-    const edgeLimit = Number(opts.edgeLimit);
+    const types = _legacyToTypes(eq || {});
     return programs.filter(function (p) {
       if (!p) return false;
-      // No-Hangs path: только программы без оборудования
-      if (noEq) return p.noEquipment === true;
-      // Block path: либо block-специфичные, либо универсальные (no equipmentReq).
-      // Программы с equipmentReq='fingerboard' исключаем — им нужен sloper/большой выбор edges.
-      if (block) {
-        return p.equipmentReq === 'block' || !p.equipmentReq;
+      // Программа подходит если совместима хотя бы с одним активным типом.
+      for (let i = 0; i < types.length; i++) {
+        if (_programMatchesType(p, types[i])) return true;
       }
-      // Door-frame path: filter по min edge (≥edgeLimit)
-      if (Number.isFinite(edgeLimit)) {
-        const minEdge = Array.isArray(p.exercises)
-          ? p.exercises.reduce(function (m, ex) {
-              const v = Number(ex.edgeSizeMm) || Infinity;
-              return Math.min(m, v);
-            }, Infinity)
-          : Infinity;
-        if (minEdge < edgeLimit) return false;
-      }
-      // Full fingerboard: всё кроме block-специфичных
-      return p.equipmentReq !== 'block';
+      return false;
     });
   }
 
@@ -7966,9 +7981,10 @@
       ? Fingers.ageGate.filterPrograms(programs, ageRaw)
       : programs;
     // Equipment-фильтр: показываем только релевантные для выбранного оборудования.
-    // blockMode → block-протоколы + универсальные; noEquipment → No-Hangs;
-    // door-frame → только программы с edge ≥ 25мм; full → всё кроме block-only.
+    // Multi-select: equipmentTypes — массив активных, union программ.
+    // Legacy single-state поля поддерживаются через _legacyToTypes (catalog).
     const eqOpts = {
+      equipmentTypes: Array.isArray(profile.equipmentTypes) ? profile.equipmentTypes : null,
       noEquipment: !!profile.noEquipment,
       blockMode: !!profile.blockMode,
       edgeLimit: profile.edgeLimit
@@ -8031,6 +8047,55 @@
               (p.durationMin || '—') + ' мин'),
             h('span', { className: 'fingers-fs-chip fingers-fs-chip--level' }, p.level)
           ),
+          // Equipment-чипы — какое оборудование подходит для протокола.
+          // Активные (из EquipmentBar юзера) — ярко, неактивные — приглушённо.
+          // Это даёт сразу понять «работает на X, но у тебя X нет — выбери в табах»
+          // или «работает на Y и у тебя Y активен — отлично».
+          (function () {
+            const eqChips = [];
+            if (p.noEquipment) {
+              eqChips.push({ id: 'none', icon: '🤚', label: 'No-Hangs' });
+            } else if (p.equipmentReq === 'block') {
+              eqChips.push({ id: 'block', icon: '💪', label: 'Hang block' });
+            } else if (p.equipmentReq === 'fingerboard') {
+              eqChips.push({ id: 'full', icon: '🪜', label: 'Board' });
+            } else {
+              eqChips.push({ id: 'full', icon: '🪜', label: 'Board' });
+              eqChips.push({ id: 'block', icon: '💪', label: 'Block' });
+              const minEdge = Array.isArray(p.exercises)
+                ? p.exercises.reduce(function (m, ex) {
+                    const v = Number(ex.edgeSizeMm) || Infinity;
+                    return Math.min(m, v);
+                  }, Infinity)
+                : Infinity;
+              if (minEdge >= 25) {
+                eqChips.push({ id: 'door', icon: '🚪', label: 'Door' });
+              }
+            }
+            // Derive user's active equipment types из profile (тот же fallback что в EquipmentBar)
+            const userTypes = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
+              ? profile.equipmentTypes
+              : (profile.noEquipment ? ['none']
+                : profile.blockMode ? ['block']
+                : profile.edgeLimit === 25 ? ['door']
+                : ['full']);
+            return h('div', { className: 'fingers-fs-program-card__equipment' },
+              eqChips.map(function (c) {
+                const isActive = userTypes.indexOf(c.id) >= 0;
+                return h('span', {
+                  key: c.id,
+                  className: 'fingers-fs-equipment-chip'
+                    + (isActive ? ' is-available' : ' is-muted'),
+                  'data-equipment': c.id,
+                  title: isActive ? 'У тебя выбрано' : 'Не выбрано в табах оборудования'
+                },
+                  h('span', { 'aria-hidden': 'true' }, c.icon),
+                  ' ',
+                  c.label
+                );
+              })
+            );
+          })(),
           p.advisoryBadge && h('div', {
             style: {
               padding: '8px 12px', marginBottom: 12,
@@ -8948,22 +9013,53 @@
   function FingersEquipmentBar(props) {
     const onChange = (props && props.onChange) || function () {};
     const profile = getProfile();
-    // eqType inference: explicit blockMode > noEquipment > edgeLimit fallback
-    const eqType = profile.blockMode ? 'block'
-      : profile.noEquipment ? 'none'
-      : profile.edgeLimit === 25 ? 'door'
-      : 'full';
+
+    // Multi-select: тренировка может комбинировать оборудование (warmup на door,
+    // max-hangs на block, repeaters на board). equipmentTypes — массив активных
+    // ['full','block','door','none']. Legacy single-state поля (noEquipment,
+    // blockMode, edgeLimit) синхронизируются derived'ом для обратной совместимости.
+    function deriveTypesFromLegacy(p) {
+      // Если в профиле уже есть массив — используем его.
+      if (Array.isArray(p.equipmentTypes) && p.equipmentTypes.length > 0) {
+        return p.equipmentTypes.slice();
+      }
+      // Иначе reconstruct из legacy single-state.
+      if (p.noEquipment) return ['none'];
+      if (p.blockMode) return ['block'];
+      if (p.edgeLimit === 25) return ['door'];
+      return ['full'];
+    }
+    const activeTypes = deriveTypesFromLegacy(profile);
     const allBoards = Array.isArray(Fingers.BOARDS) ? Fingers.BOARDS : [];
-    // Для full и block — разные подсписки досок (kind: 'fingerboard' vs 'block')
-    const boards = eqType === 'block'
-      ? (Fingers.getBoardsByKind ? Fingers.getBoardsByKind('block')
-          : allBoards.filter(function (b) { return b.kind === 'block'; }))
-      : (Fingers.getBoardsByKind ? Fingers.getBoardsByKind('fingerboard')
-          : allBoards.filter(function (b) { return (b.kind || 'fingerboard') === 'fingerboard'; }));
+    // Board picker отображается если активен full или block. Список зависит от
+    // того что активно: если оба — показываем оба kind'а в одном списке.
+    const wantFull  = activeTypes.indexOf('full') >= 0;
+    const wantBlock = activeTypes.indexOf('block') >= 0;
+    const boards = (wantFull || wantBlock)
+      ? allBoards.filter(function (b) {
+          const k = b.kind || 'fingerboard';
+          return (wantFull && k === 'fingerboard') || (wantBlock && k === 'block');
+        })
+      : [];
     const currentBoard = profile.fingerboardId && Fingers.getBoardById
       ? Fingers.getBoardById(profile.fingerboardId)
       : null;
     const [boardPickerOpen, setBoardPickerOpen] = useState(false);
+
+    function syncLegacyFromTypes(types) {
+      // Derive legacy single-state поля из массива. Преимущество для совместимости:
+      // если в массиве 'block' — blockMode=true (даже если есть и full). Это
+      // позволяет recommendations подсветить block-протоколы.
+      // hasFingerboard: true если что-то кроме 'none' (даже door считается).
+      return {
+        equipmentTypes: types,
+        noEquipment: types.length === 1 && types[0] === 'none',
+        blockMode: types.indexOf('block') >= 0 && types.length === 1,
+        // edgeLimit актуален когда door — единственный реальный equip-тип
+        edgeLimit: (types.indexOf('door') >= 0 && !wantFull && !wantBlock) ? 25 : null,
+        hasFingerboard: types.some(function (t) { return t !== 'none'; })
+      };
+    }
 
     function writeProfile(patch) {
       try {
@@ -8978,29 +9074,30 @@
       }
     }
 
-    function pickEquipment(type) {
-      if (type === 'full') {
-        writeProfile({
-          hasFingerboard: true, noEquipment: false, blockMode: false, edgeLimit: null,
-          // При возврате с block → default доска beastmaker_1000
-          fingerboardId: currentBoard && currentBoard.kind === 'block'
-            ? 'beastmaker_1000' : (profile.fingerboardId || 'beastmaker_1000')
-        });
-      } else if (type === 'door') {
-        writeProfile({ hasFingerboard: true, noEquipment: false, blockMode: false, edgeLimit: 25 });
-      } else if (type === 'block') {
-        writeProfile({
-          hasFingerboard: true,   // block тоже фингер-устройство
-          noEquipment: false,
-          blockMode: true,
-          edgeLimit: null,
-          // Default block — xclimb terminator (или текущий если он block)
-          fingerboardId: currentBoard && currentBoard.kind === 'block'
-            ? profile.fingerboardId : 'xclimb_terminator'
-        });
-      } else if (type === 'none') {
-        writeProfile({ hasFingerboard: false, noEquipment: true, blockMode: false, edgeLimit: null });
+    function toggleType(type) {
+      const has = activeTypes.indexOf(type) >= 0;
+      let next;
+      if (has) {
+        // Enforce: минимум 1 активный тип.
+        if (activeTypes.length === 1) return;
+        next = activeTypes.filter(function (t) { return t !== type; });
+      } else {
+        // 'none' эксклюзивен: либо «нет оборудования», либо что-то ещё.
+        if (type === 'none') next = ['none'];
+        else next = activeTypes.filter(function (t) { return t !== 'none'; }).concat([type]);
       }
+      const patch = syncLegacyFromTypes(next);
+      // Если включили block и пока нет block-доски выбранной — назначить default
+      if (type === 'block' && !has) {
+        if (!currentBoard || currentBoard.kind !== 'block') {
+          patch.fingerboardId = 'xclimb_terminator';
+        }
+      }
+      // Если выключили block и текущая доска — block, переключить на fingerboard default
+      if (type === 'block' && has && currentBoard && currentBoard.kind === 'block') {
+        patch.fingerboardId = next.indexOf('full') >= 0 ? 'beastmaker_1000' : null;
+      }
+      writeProfile(patch);
     }
     function pickBoard(id) {
       writeProfile({ fingerboardId: id });
@@ -9015,25 +9112,34 @@
     ];
 
     return h('div', { className: 'fingers-fs-equipment-bar' },
-      h('div', { className: 'fingers-fs-equipment-bar__tabs', role: 'tablist',
-        'aria-label': 'Оборудование' },
+      h('div', { className: 'fingers-fs-equipment-bar__tabs',
+        role: 'group',
+        'aria-label': 'Оборудование (можно выбрать несколько)' },
         tabs.map(function (t) {
-          const active = eqType === t.id;
+          const active = activeTypes.indexOf(t.id) >= 0;
+          const isOnlyActive = active && activeTypes.length === 1;
           return h('button', {
             key: t.id,
             type: 'button',
-            role: 'tab',
-            'aria-selected': active,
+            role: 'checkbox',
+            'aria-checked': active,
+            'aria-disabled': isOnlyActive,
+            title: isOnlyActive ? 'Минимум один тип должен быть активен' : null,
             className: 'fingers-fs-equipment-tab' + (active ? ' is-active' : ''),
-            onClick: function () { pickEquipment(t.id); }
+            onClick: function () { toggleType(t.id); }
           },
+            // Чекбокс-индикатор в углу для multi-select clarity
+            h('span', {
+              className: 'fingers-fs-equipment-tab__check' + (active ? ' is-checked' : ''),
+              'aria-hidden': 'true'
+            }, active ? '✓' : null),
             h('span', { className: 'fingers-fs-equipment-tab__icon', 'aria-hidden': 'true' }, t.icon),
             h('span', { className: 'fingers-fs-equipment-tab__label' }, t.label)
           );
         })
       ),
-      // Board picker (для full и block — список зависит от kind, см. выше)
-      (eqType === 'full' || eqType === 'block') && boards.length > 0 ? h('div', { className: 'fingers-fs-equipment-board' },
+      // Board picker (для full и/или block — список объединённый по активным kind'ам)
+      (wantFull || wantBlock) && boards.length > 0 ? h('div', { className: 'fingers-fs-equipment-board' },
         h('button', {
           type: 'button',
           className: 'fingers-fs-equipment-board__btn',
