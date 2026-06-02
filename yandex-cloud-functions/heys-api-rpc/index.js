@@ -218,11 +218,21 @@ function verifyJwt(token, jwtSecret) {
 const _tgAlertLastSent = new Map(); // `${clientId}:${action}` → ts
 const TG_ALERT_DEDUP_MS = 5 * 60 * 1000;
 
+// Per-action dedupe overrides (мс). Кросс-client pollution attempts ловим
+// аггресивно — 30 сек, чтобы видеть каждый burst в real-time во время тестов.
+// При прод-эксплуатации события редкие, дедупа достаточно.
+const TG_ALERT_DEDUP_BY_ACTION = {
+  cross_client_dayv2_content_dup: 30 * 1000,
+  cross_client_profile_blocked:   30 * 1000,
+  cross_client_blob_blocked:      30 * 1000,
+};
+
 function _shouldSendTgAlert(clientId, action) {
   const key = `${clientId}:${action}`;
   const now = Date.now();
   const last = _tgAlertLastSent.get(key) || 0;
-  if (now - last < TG_ALERT_DEDUP_MS) return false;
+  const ttl = TG_ALERT_DEDUP_BY_ACTION[action] || TG_ALERT_DEDUP_MS;
+  if (now - last < ttl) return false;
   _tgAlertLastSent.set(key, now);
   return true;
 }
@@ -2450,6 +2460,35 @@ module.exports.handler = async function (event, context) {
               );
             }
             // Skip downstream UPSERT путём установки sentinel.
+            mergedValue = '__BLOCKED_FRESH_ROW__';
+          } else if (isCurator && /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(k) &&
+                     (await detectCrossClientDayv2ContentDup(client, curatorId, resolvedClientId, k, incomingValue))) {
+            // 🛡️ Content-fingerprint dup check для FRESH dayv2 row (incident
+            // 2026-06-02 #12): pollution scenario где React state из другого
+            // клиента того же curator пришёл со свежим writerCid (re-tag'нут
+            // на switch). cur.rows.length === 0 path раньше пропускал такой
+            // write полностью — содержимое перетекало в свежую row до того
+            // как content-dup check мог среагировать. Теперь проверяем meal_id/
+            // item_id overlap в окне 30 мин ПЕРЕД UPSERT'ом.
+            const auditAction = 'cross_client_dayv2_content_dup';
+            mergeOutcome = auditAction;
+            try {
+              await client.query(
+                `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                 VALUES ($1::uuid, $2::text, $3::text, FALSE, $4)`,
+                [resolvedClientId, k, auditAction, 'merge_save_fresh_row_dup']
+              );
+            } catch (e) { console.warn('[merge_save] fresh-row content-dup audit failed:', e.message); }
+            if (_shouldSendTgAlert(resolvedClientId, auditAction)) {
+              sendTgAlertFireAndForget(
+                `🛡️ *${auditAction}*\n` +
+                `key: \`${k}\`\n` +
+                `client: \`${String(resolvedClientId).slice(0, 8)}\`\n` +
+                `source: \`merge_save_fresh_row\`\n` +
+                `_Свежая row, но meals совпадают с другим клиентом curator — stale React state._`
+              );
+            }
+            // Skip UPSERT — fresh row остаётся не созданной (нет полюции в облаке).
             mergedValue = '__BLOCKED_FRESH_ROW__';
           } else {
             // Row doesn't exist → incoming wins outright (legitimate first write).

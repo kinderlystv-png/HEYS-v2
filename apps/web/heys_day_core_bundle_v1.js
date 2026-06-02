@@ -602,9 +602,21 @@
                 }
             } catch (e) { }
         }
-        // 🔁 Fallback: искать данные по всем ключам localStorage для этой даты
-        // (на случай, если данные лежат под другим clientId)
+        // 🔁 Fallback: искать данные по ключам localStorage для этой даты.
+        // 🛡️ POLLUTION FIX (2026-06-02): раньше fallback возвращал meals из
+        // ЛЮБОГО scoped ключа `heys_<UUID>_dayv2_<ds>` независимо от currentClientId.
+        // Multi-tab incognito с Александры → LS shared между tabs → TestAlex's
+        // loadMeals находил Александрин day и возвращал её meals → React state
+        // получала Александрину еду на TestAlex'a page → autosave → upload с
+        // полюцией под TestAlex's client_id → server блокирует, но UI уже
+        // показал полюцию. Теперь скипаем foreign-scoped keys: pattern matches
+        // только current scope OR unscoped legacy keys.
         try {
+            const currentScope = (global.HEYS && global.HEYS.currentClientId)
+                ? String(global.HEYS.currentClientId).toLowerCase()
+                : null;
+            // foreign-scoped pattern: heys_<UUID>_dayv2_... where UUID != current
+            const FOREIGN_SCOPE_RE = /^heys_([0-9a-f-]{36})_/i;
             const patterns = [
                 `_dayv2_${ds}`,
                 `_day_${ds}`,
@@ -615,6 +627,15 @@
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (!key || !patterns.some((p) => key.includes(p))) continue;
+                // 🛡️ Skip foreign-scoped keys (другого клиента).
+                const scopeMatch = FOREIGN_SCOPE_RE.exec(key);
+                if (scopeMatch) {
+                    const keyScope = String(scopeMatch[1]).toLowerCase();
+                    if (currentScope && keyScope !== currentScope) {
+                        if (debugLog) debugLog('[MEALS LOAD] skip foreign-scoped', { key, keyScope: keyScope.slice(0,8), curScope: currentScope.slice(0,8) });
+                        continue;
+                    }
+                }
                 const raw = localStorage.getItem(key);
                 if (!raw) continue;
                 let parsed = null;

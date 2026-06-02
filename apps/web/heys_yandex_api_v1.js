@@ -1390,6 +1390,21 @@
       // v60: REST теперь возвращает { success, rowCount, inserted } для upsert
       const responseData = result.data;
       const actualSaved = responseData?.rowCount || responseData?.inserted || items.length;
+      // 🛡️ Phase B (2026-06-02): REST POST identity_blocked array — server
+      // вернул items которые он отверг (cross-client guard / content-dup /
+      // data_loss_protection). Drop LS keys + trigger reload, иначе stale
+      // данные остаются в LS и UI показывает их пока не reload вручную.
+      try {
+        if (Array.isArray(responseData?.identity_blocked) && responseData.identity_blocked.length > 0) {
+          for (const ib of responseData.identity_blocked) {
+            if (ib && typeof ib.k === 'string') {
+              try {
+                global.HEYS?.cloud?._dropRejectedKey?.(clientId, ib.k, ib.reason || 'rest_blocked');
+              } catch (_) { /* noop */ }
+            }
+          }
+        }
+      } catch (_) { /* noop */ }
       log(`[v56] REST upsert success: ${actualSaved} items saved (requested: ${items.length})`);
       return { success: true, saved: actualSaved };
     } catch (e) {

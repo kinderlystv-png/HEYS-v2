@@ -7300,40 +7300,44 @@
     const ageNum = Number(displayedAge);
     const canNext = Number.isFinite(ageNum) && ageNum >= 8 && ageNum <= 99;
 
-    return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
-      h('h2', { className: 'fingers-ob-h2' }, 'Профиль'),
-      h('p', { className: 'fingers-ob-sub' }, 'Несколько коротких вопросов для подбора программы.'),
-      h('div', null,
-        h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-age' }, 'Возраст *'),
-        h('input', {
-          id: 'fingers-ob-age',
-          type: 'number',
-          min: 8, max: 99,
-          value: displayedAge === '' ? '' : displayedAge,
-          onChange: (e) => updateProfile({ age: e.target.value === '' ? null : Number(e.target.value) }),
-          className: 'fingers-ob-input'
-        })
+    return h('div', { className: 'fingers-ob-step' },
+      h('div', { className: 'fingers-ob-step__header' },
+        h('h2', { className: 'fingers-ob-h2' }, 'Профиль'),
+        h('p', { className: 'fingers-ob-sub' }, 'Несколько коротких вопросов для подбора программы.')
       ),
-      h('div', null,
-        h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-years' }, 'Сколько лет лазаешь'),
-        h('input', {
-          id: 'fingers-ob-years',
-          type: 'number',
-          min: 0, max: 50,
-          value: state.profile.climbingYears || 0,
-          onChange: (e) => updateProfile({ climbingYears: Math.max(0, Math.min(50, Number(e.target.value) || 0)) }),
-          className: 'fingers-ob-input'
-        })
-      ),
-      h('div', null,
-        h('div', { className: 'fingers-ob-label' }, 'Максимальная сложность боулдеринга'),
-        h('div', { className: 'fingers-ob-chip-row' },
-          GRADES.map((g) => h('button', {
-            key: g,
-            type: 'button',
-            onClick: () => updateProfile({ maxVGrade: g }),
-            className: 'fingers-ob-chip' + (state.profile.maxVGrade === g ? ' is-active' : '')
-          }, GRADE_LABELS[g]))
+      h('div', { className: 'fingers-ob-stepcard' },
+        h('div', null,
+          h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-age' }, 'Возраст *'),
+          h('input', {
+            id: 'fingers-ob-age',
+            type: 'number',
+            min: 8, max: 99,
+            value: displayedAge === '' ? '' : displayedAge,
+            onChange: (e) => updateProfile({ age: e.target.value === '' ? null : Number(e.target.value) }),
+            className: 'fingers-ob-input'
+          })
+        ),
+        h('div', null,
+          h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-years' }, 'Сколько лет лазаешь'),
+          h('input', {
+            id: 'fingers-ob-years',
+            type: 'number',
+            min: 0, max: 50,
+            value: state.profile.climbingYears || 0,
+            onChange: (e) => updateProfile({ climbingYears: Math.max(0, Math.min(50, Number(e.target.value) || 0)) }),
+            className: 'fingers-ob-input'
+          })
+        ),
+        h('div', null,
+          h('div', { className: 'fingers-ob-label' }, 'Максимальная сложность боулдеринга'),
+          h('div', { className: 'fingers-ob-chip-row' },
+            GRADES.map((g) => h('button', {
+              key: g,
+              type: 'button',
+              onClick: () => updateProfile({ maxVGrade: g }),
+              className: 'fingers-ob-chip' + (state.profile.maxVGrade === g ? ' is-active' : '')
+            }, GRADE_LABELS[g]))
+          )
         )
       ),
       h('button', {
@@ -7392,8 +7396,10 @@
     const message = restriction.message || '';
     const sourceIds = restriction.sourceIds || [];
 
-    return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
-      h('h2', { className: 'fingers-ob-h2' }, 'Возрастные ограничения'),
+    return h('div', { className: 'fingers-ob-step' },
+      h('div', { className: 'fingers-ob-step__header' },
+        h('h2', { className: 'fingers-ob-h2' }, 'Возрастные ограничения')
+      ),
       h('div', { className: 'fingers-ob-warn' },
         h('div', { style: { fontWeight: 600, marginBottom: 6 } }, title),
         h('div', null, message),
@@ -7438,16 +7444,18 @@
       '3. ≥48ч между max-сессиями.'
     ];
 
-    return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
-      h('h2', { className: 'fingers-ob-h2' }, 'Безопасность'),
-      h('p', { className: 'fingers-ob-sub' }, 'Три правила, которые сохранят твои пальцы.'),
-      h('div', { className: 'fingers-ob-card' },
-        RULES.map((r, i) => h('div', { key: i, style: { padding: '6px 0', fontSize: 15, lineHeight: 1.5 } }, r))
+    return h('div', { className: 'fingers-ob-step' },
+      h('div', { className: 'fingers-ob-step__header' },
+        h('h2', { className: 'fingers-ob-h2' }, 'Безопасность'),
+        h('p', { className: 'fingers-ob-sub' }, 'Три правила, которые сохранят твои пальцы.')
       ),
-      h('div', { className: 'fingers-ob-badges' },
-        _renderSourceBadge('uiaa_medcom'),
-        _renderSourceBadge('schoffl2021'),
-        _renderSourceBadge('physivantage_collagen')
+      h('div', { className: 'fingers-ob-stepcard' },
+        RULES.map((r, i) => h('div', { key: i, className: 'fingers-ob-rule' }, r)),
+        h('div', { className: 'fingers-ob-badges' },
+          _renderSourceBadge('uiaa_medcom'),
+          _renderSourceBadge('schoffl2021'),
+          _renderSourceBadge('physivantage_collagen')
+        )
       ),
       h('button', { type: 'button', onClick: next, className: 'fingers-ob-btn fingers-ob-btn--primary' }, 'Прочитал и принимаю')
     );
@@ -7607,8 +7615,10 @@
 
     const needsMaxHangNote = state.profile && state.profile.needsMaxHangTest;
 
-    return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
-      h('h2', { className: 'fingers-ob-h2' }, 'Почти готово'),
+    return h('div', { className: 'fingers-ob-step' },
+      h('div', { className: 'fingers-ob-step__header' },
+        h('h2', { className: 'fingers-ob-h2' }, 'Почти готово')
+      ),
       h('div', { className: 'fingers-ob-card' }, cardChildren),
       needsMaxHangNote ? h('div', { style: { fontSize: 13, color: 'var(--text-muted, #64748b)', padding: '4px 4px 0' } },
         '💡 Не забудь сделать Max Hang Test в Прогресс табе.'

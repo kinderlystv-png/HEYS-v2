@@ -171,11 +171,19 @@ async function validateContextForWriteRest(client, ctxId, suppliedClientId, k) {
 
 const _tgAlertLastSent = new Map();
 const TG_ALERT_DEDUP_MS = 5 * 60 * 1000;
+// Per-action dedupe overrides — для cross-client pollution events ставим
+// 30 сек чтобы видеть каждый burst в real-time. Symmetric к heys-api-rpc.
+const TG_ALERT_DEDUP_BY_ACTION = {
+  cross_client_dayv2_content_dup: 30 * 1000,
+  cross_client_profile_blocked:   30 * 1000,
+  cross_client_blob_blocked:      30 * 1000,
+};
 function shouldSendTgAlert(clientId, action) {
   const key = `${clientId}:${action}`;
   const now = Date.now();
   const last = _tgAlertLastSent.get(key) || 0;
-  if (now - last < TG_ALERT_DEDUP_MS) return false;
+  const ttl = TG_ALERT_DEDUP_BY_ACTION[action] || TG_ALERT_DEDUP_MS;
+  if (now - last < ttl) return false;
   _tgAlertLastSent.set(key, now);
   return true;
 }
@@ -761,6 +769,11 @@ module.exports.handler = async function (event, context) {
 
           let processed = 0;
           let blocked = 0;
+          // 🛡️ Track blocked keys with their reason so client can call
+          // _dropRejectedKey → clear stale LS + trigger reload. Без этого
+          // REST POST полюция остаётся в LS даже после server reject (UI
+          // показывает stale данные до hard-reload).
+          const blockedItems = [];
 
           for (const row of rows) {
             if (!row.client_id || !row.k) {
@@ -779,6 +792,7 @@ module.exports.handler = async function (event, context) {
               );
               if (!ctxResult.ok) {
                 blocked++;
+                blockedItems.push({ k: row.k, reason: ctxResult.status });
                 continue; // strict mode reject
               }
               row.client_id = ctxResult.effectiveClientId;
@@ -815,6 +829,7 @@ module.exports.handler = async function (event, context) {
                 ? 'cross_client_profile_blocked'
                 : 'cross_client_blob_blocked';
               blocked++;
+              blockedItems.push({ k: row.k, reason: auditAction });
               const incomingWriter = String(row.v._writerCid).slice(0, 8);
               const expectedWriter = String(row.client_id).slice(0, 8);
               console.warn(`[REST POST] 🛡️ ${auditAction}:`, row.k,
@@ -869,6 +884,7 @@ module.exports.handler = async function (event, context) {
               const dup = await detectCrossClientDayv2ContentDup(client, row.client_id, row.k, row.v);
               if (dup) {
                 blocked++;
+                blockedItems.push({ k: row.k, reason: 'cross_client_dayv2_content_dup' });
                 const expected = String(row.client_id).slice(0, 8);
                 const conflictCid = String(dup.conflictClientId).slice(0, 8);
                 console.warn(`[REST POST] 🛡️ cross_client_dayv2_content_dup:`, row.k,
@@ -905,6 +921,7 @@ module.exports.handler = async function (event, context) {
               processed++;
             } else if (res?.error === 'data_loss_protection') {
               blocked++;
+              blockedItems.push({ k: row.k, reason: 'data_loss_protection' });
               console.warn('[REST POST] 🛡️ Data loss protection blocked:', row.k);
             } else {
               console.error('[REST POST] Write failed:', res);
@@ -920,6 +937,12 @@ module.exports.handler = async function (event, context) {
               success: true,
               processed,
               blocked,
+              // 🛡️ identity_blocked — symmetric с RPC batch_upsert response.
+              // Client (batchSaveKVviaREST) видит этот массив и вызывает
+              // _dropRejectedKey для каждого entry → удаляет stale LS +
+              // ставит drop fence + триггерит reload. Без этого UI остаётся
+              // загрязнённым stale данными даже после server reject.
+              identity_blocked: blockedItems.length > 0 ? blockedItems : undefined,
               message: blocked > 0 ? `${blocked} writes blocked by data loss protection` : undefined
             })
           };
