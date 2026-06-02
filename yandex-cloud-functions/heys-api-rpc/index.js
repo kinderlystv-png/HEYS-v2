@@ -448,33 +448,59 @@ async function runIdentityGuardsForItem(client, clientId, k, incomingValue, curr
  */
 async function detectCrossClientDayv2ContentDup(client, curatorId, clientId, k, incomingValue) {
   if (!curatorId) return null;
-  if (!k || !/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(k)) return null;
+  // Принимаем unscoped (heys_dayv2_<date>) и scoped (heys_<UUID>_dayv2_<date>).
+  // Из key извлекаем дату — у других клиентов того же curator key другой
+  // (свой UUID посередине), поэтому ищем по дате, а не по полному k.
+  const dateMatch = /^heys_(?:[0-9a-f-]{36}_)?dayv2_(\d{4}-\d{2}-\d{2})$/i.exec(k || '');
+  if (!dateMatch) return null;
+  const dateStr = dateMatch[1];
   if (!incomingValue || typeof incomingValue !== 'object') return null;
-  // Fingerprint только из meals (главный bulk-payload). Если meals пустые — skip.
   const meals = incomingValue.meals;
   if (!Array.isArray(meals) || meals.length === 0) return null;
-  let mealsJson;
-  try {
-    mealsJson = JSON.stringify(meals);
-  } catch (_) {
-    return null;
+  // Собираем meal IDs И item IDs из incoming — pollution = совпадение
+  // ХОТЯ БЫ ОДНОГО id у двух разных клиентов того же curator за окно.
+  // (full-hash check ловит только идентичные rows; partial pollution
+  // где Александра добавила свой meal после switch — hash другой, но
+  // ранние meals у обоих с одинаковыми meal_id/item_id. Incident #8.)
+  const mealIds = [];
+  const itemIds = [];
+  for (const m of meals) {
+    if (m && typeof m === 'object') {
+      if (typeof m.id === 'string' && m.id) mealIds.push(m.id);
+      if (Array.isArray(m.items)) {
+        for (const it of m.items) {
+          if (it && typeof it.id === 'string' && it.id) itemIds.push(it.id);
+        }
+      }
+    }
   }
-  if (mealsJson.length < 50) return null; // тривиальные/пустые meals — skip
+  if (mealIds.length === 0 && itemIds.length === 0) return null;
   try {
     const r = await client.query(
-      `SELECT kv.client_id
+      `SELECT kv.client_id, kv.k
          FROM client_kv_store kv
          JOIN clients c ON c.id = kv.client_id
         WHERE c.curator_id = $1::uuid
           AND kv.client_id != $2::uuid
-          AND kv.k = $3::text
-          AND kv.updated_at > now() - interval '5 minutes'
-          AND md5(coalesce(kv.v->'meals', '[]'::jsonb)::text) = md5($4::text)
+          AND (kv.k = ('heys_dayv2_' || $3::text)
+               OR kv.k LIKE ('heys_%_dayv2_' || $3::text))
+          AND kv.updated_at > now() - interval '30 minutes'
+          AND (
+            EXISTS (
+              SELECT 1 FROM jsonb_array_elements(coalesce(kv.v->'meals','[]'::jsonb)) AS m
+              WHERE m->>'id' = ANY($4::text[])
+            )
+            OR EXISTS (
+              SELECT 1 FROM jsonb_array_elements(coalesce(kv.v->'meals','[]'::jsonb)) AS m,
+                jsonb_array_elements(coalesce(m->'items','[]'::jsonb)) AS it
+              WHERE it->>'id' = ANY($5::text[])
+            )
+          )
         LIMIT 1`,
-      [curatorId, clientId, k, mealsJson]
+      [curatorId, clientId, dateStr, mealIds, itemIds]
     );
     if (r.rows.length > 0) {
-      return { conflictClientId: r.rows[0].client_id };
+      return { conflictClientId: r.rows[0].client_id, conflictKey: r.rows[0].k };
     }
   } catch (e) {
     console.warn('[content-dup] check failed:', e.message);
@@ -2279,8 +2305,42 @@ module.exports.handler = async function (event, context) {
         );
 
         if (cur.rows.length === 0) {
-          // Row doesn't exist → incoming wins outright
-          mergedValue = incomingValue;
+          // 🛡️ Fresh-row guard (incident 2026-06-02 #9): даже когда cloud row
+          // ещё не существует — проверяем что incoming._writerCid соответствует
+          // resolvedClientId. Иначе cross-client pollution от switch'а проходит
+          // в обход (Алексин dayv2 пишется в TestAlex'a row которой раньше не
+          // было). До этого fresh-write path вообще не имел guard'а.
+          if (isIdentityGuardKey(k) && incomingValue && typeof incomingValue === 'object' &&
+              incomingValue._writerCid && String(incomingValue._writerCid) !== String(resolvedClientId)) {
+            const auditAction = (k === 'heys_profile') ? 'cross_client_profile_blocked' : 'cross_client_blob_blocked';
+            mergeOutcome = auditAction;
+            // mergedValue остаётся undefined → ниже UPSERT skip'нется.
+            try {
+              await client.query(
+                `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                 VALUES ($1::uuid, $2::text, $3::text, FALSE, $4)`,
+                [resolvedClientId, k, auditAction,
+                  `merge_save_fresh_row incoming_writer=${String(incomingValue._writerCid).slice(0, 8)} expected=${String(resolvedClientId).slice(0, 8)}`]
+              );
+            } catch (auditErr) {
+              console.warn('[merge_save] fresh-row cross_client audit failed:', auditErr.message);
+            }
+            if (_shouldSendTgAlert(resolvedClientId, auditAction)) {
+              sendTgAlertFireAndForget(
+                `🛡️ *${auditAction}*\n` +
+                `key: \`${k}\`\n` +
+                `client: \`${String(resolvedClientId).slice(0, 8)}\`\n` +
+                `source: \`merge_save_fresh_row\`\n` +
+                `incoming writer: \`${String(incomingValue._writerCid).slice(0, 8)}\` (expected: \`${String(resolvedClientId).slice(0, 8)}\`)\n` +
+                `_Cloud row не существовал — заблокирована новая cross-client запись._`
+              );
+            }
+            // Skip downstream UPSERT путём установки sentinel.
+            mergedValue = '__BLOCKED_FRESH_ROW__';
+          } else {
+            // Row doesn't exist → incoming wins outright (legitimate first write).
+            mergedValue = incomingValue;
+          }
         } else {
           const currentValue = cur.rows[0].v;
           const currentUpdatedAt = (cur.rows[0].updated_at instanceof Date)
@@ -2324,7 +2384,7 @@ module.exports.handler = async function (event, context) {
                 `cloud writer: \`${cloudWriter}\``
               );
             }
-          } else if (isCurator && /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(k) &&
+          } else if (isCurator && /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(k) &&
                      (await detectCrossClientDayv2ContentDup(client, curatorId, resolvedClientId, k, incomingValue))) {
             // 🛡️ Content-fingerprint dup check для dayv2 (incident #7, 2026-06-02):
             // writer=clientId проходит cross-client guard, но содержимое идентично
@@ -2353,7 +2413,7 @@ module.exports.handler = async function (event, context) {
             }
           } else if (noConflict) {
             mergedValue = incomingValue;
-          } else if (/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(k)) {
+          } else if (/^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(k)) {
             // forceKeepAll: client may not have seen the latest cloud-side meals yet,
             // so treating absence as "deleted" would lose other side's edits. Conservative: keep both.
             const merged = mergeDayData(incomingValue, currentValue, { forceKeepAll: true });
@@ -2596,14 +2656,20 @@ module.exports.handler = async function (event, context) {
         // PIN-writes сбрасывают user_id в NULL; курaторские writes
         // выставляют curatorId — trigger корректно фильтрует.
         const userIdForRow = isCurator ? curatorId : null;
-        await client.query(
-          `INSERT INTO client_kv_store(client_id, k, v, updated_at, user_id)
-           VALUES ($1::uuid, $2::text, $3::jsonb, NOW(), $4)
-           ON CONFLICT (client_id, k) DO UPDATE SET v = EXCLUDED.v, updated_at = NOW(), user_id = EXCLUDED.user_id`,
-          [resolvedClientId, k, JSON.stringify(mergedValue), userIdForRow]
-        );
+        // 🛡️ Sentinel: fresh-row guard blocked → skip UPSERT entirely.
+        if (mergedValue === '__BLOCKED_FRESH_ROW__') {
+          await client.query('ROLLBACK');
+          mergedValue = null; // clean response to client (outcome conveys block reason)
+        } else {
+          await client.query(
+            `INSERT INTO client_kv_store(client_id, k, v, updated_at, user_id)
+             VALUES ($1::uuid, $2::text, $3::jsonb, NOW(), $4)
+             ON CONFLICT (client_id, k) DO UPDATE SET v = EXCLUDED.v, updated_at = NOW(), user_id = EXCLUDED.user_id`,
+            [resolvedClientId, k, JSON.stringify(mergedValue), userIdForRow]
+          );
 
-        await client.query('COMMIT');
+          await client.query('COMMIT');
+        }
 
         // Best-effort audit: only when actual merge happened (don't spam on every save).
         if (mergeOutcome === 'day_merged' || mergeOutcome === 'scalar_merged') {
