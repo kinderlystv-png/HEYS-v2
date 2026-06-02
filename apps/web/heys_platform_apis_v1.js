@@ -78,6 +78,34 @@
   const UPDATE_BANNER_ID = 'heys-sw-update-banner';
   const OFFLINE_BANNER_ID = 'heys-offline-banner';
   const UPDATE_LOCK_KEY = 'heys_update_in_progress';
+  const DROP_FENCE_SESSION_PREFIX = 'heys_drop_fence_';
+
+  function clearSessionStoragePreservingDropFences() {
+    const preserved = [];
+
+    try {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith(DROP_FENCE_SESSION_PREFIX)) {
+          preserved.push([key, sessionStorage.getItem(key)]);
+        }
+      }
+    } catch (e) {
+      preserved.length = 0;
+    }
+
+    try {
+      sessionStorage.clear();
+    } catch (e) {
+      return;
+    }
+
+    preserved.forEach(([key, value]) => {
+      try {
+        if (value !== null) sessionStorage.setItem(key, value);
+      } catch (e) { /* noop */ }
+    });
+  }
   const UPDATE_LOCK_TIMEOUT = 30000;
   const UPDATE_ATTEMPT_KEY = 'heys_update_attempt';
   const MAX_UPDATE_ATTEMPTS = 2;
@@ -816,7 +844,7 @@
                 keysToRemove.forEach(key => localStorage.removeItem(key));
                 console.log(`[SW] 🗑️ Removed ${keysToRemove.length} session keys, kept critical data`);
 
-                sessionStorage.clear();
+                clearSessionStoragePreservingDropFences();
 
                 console.log('[SW] ✅ Session cleared safely, reloading...');
               } catch (e) {
