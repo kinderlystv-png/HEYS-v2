@@ -223,9 +223,9 @@ apps/web/insights/pi_early_warning.js:1218
 apps/web/insights/pi_early_warning.js:1763
 apps/web/insights/pi_early_warning.js:803
 apps/web/insights/pi_early_warning.js:1287
-apps/web/insights/pi_ui_meal_rec_card.js:1040
-apps/web/insights/pi_ui_meal_rec_card.js:1301
-apps/web/insights/pi_ui_meal_rec_card.js:2032
+apps/web/insights/pi_ui_meal_rec_card.js:1047
+apps/web/insights/pi_ui_meal_rec_card.js:1308
+apps/web/insights/pi_ui_meal_rec_card.js:2039
 apps/web/heys_curator_push_onboarding_banner_v1.js:62
 apps/web/heys_app_shell_v1.js:176
 apps/web/heys_app_shell_v1.js:292

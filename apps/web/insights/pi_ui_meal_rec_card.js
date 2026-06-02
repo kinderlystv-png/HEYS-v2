@@ -157,7 +157,14 @@
     const LOG_FILTER = 'MEALREC';
     const LOG_PREFIX = `[${LOG_FILTER}][HEYS.mealRec.card]`;
     const DEFAULT_REPLAN_REASON = 'INITIAL_LOAD';
-    const REPLAN_DEBOUNCE_MS = 220;
+    // 🛡️ 2026-06-02: bumped 220 → 800ms чтобы поймать в одно окно initial
+    // LS hydration + pageshow hot-sync (обычно 200-500ms gap). Раньше hot-sync
+    // updates приходили после первого compute → второй полный прогон patterns
+    // analyzer (видно как двойной MealRec в console). Trade-off: первый план
+    // появляется на ~600ms позже, но MealRec card and так показывает loading
+    // skeleton — UX-разница незаметна, а лишняя heavy работа (full pattern
+    // analysis) исчезает. См. `project_insights_fetch_storm`.
+    const REPLAN_DEBOUNCE_MS = 800;
     let mealRecCardNullLogged = false;
 
     // === Diagnostics ring buffer ===
