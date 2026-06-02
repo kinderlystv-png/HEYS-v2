@@ -278,6 +278,12 @@
     'heys_planning_tasks',
     'heys_planning_slots',
     'heys_planning_links_v1',
+    // Chrono подвкладка планирования. Timer (heys_planning_chrono_timer) намеренно
+    // остаётся локальным: активный stopwatch не синкается, чтобы избежать гонок
+    // между устройствами клиента (last-writer wins прерывал бы запись).
+    'heys_planning_chrono_activities',
+    'heys_planning_chrono_entries',
+    'heys_planning_chrono_snapshots',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */
@@ -5858,11 +5864,13 @@
     }
 
     try {
-      // Преобразуем items в формат для YandexAPI
+      // Преобразуем items в формат для YandexAPI.
+      // 🛡️ Phase B2 — preserve _ctx из queue item для прокидывания в API layer.
       const yandexItems = items.map(item => ({
         originalKey: item.k, // preserve scoped key for LS write-back
         k: normalizeKeyForSupabase(item.k, clientId),
         v: item.v,
+        _ctx: item._ctx || null,
         updated_at: item.updated_at || new Date().toISOString()
       }));
 
@@ -5894,7 +5902,8 @@
       for (const it of mergeableItems) {
         try {
           const lastSeen = Number((it.v && it.v.updatedAt) || 0);
-          const result = await YandexAPI.mergeSaveKV(clientId, it.k, it.v, lastSeen);
+          // 🛡️ Phase B2: pass per-item contextId (captured at save-time).
+          const result = await YandexAPI.mergeSaveKV(clientId, it.k, it.v, lastSeen, it._ctx || null);
           if (result.success && result.v) {
             // 🛡️ Idempotency check — обрывает curator-side merge/autosave loop.
             // Сценарий: merge_save_client_kv_by_curator возвращает merged_v с DB.updated_at,
@@ -5949,7 +5958,7 @@
             } else {
               console.warn('[merge-save] error for', it.k, '→', result.error, '— falling back to batch');
             }
-            fallbackToBatch.push({ k: it.k, v: it.v, updated_at: it.updated_at });
+            fallbackToBatch.push({ k: it.k, v: it.v, _ctx: it._ctx || null, updated_at: it.updated_at });
           }
         } catch (e) {
           if (isAuthFailure(e)) {
@@ -5958,14 +5967,15 @@
             break;
           }
           console.warn('[merge-save] exception for', it.k, '→', e.message, '— falling back to batch');
-          fallbackToBatch.push({ k: it.k, v: it.v, updated_at: it.updated_at });
+          fallbackToBatch.push({ k: it.k, v: it.v, _ctx: it._ctx || null, updated_at: it.updated_at });
         }
       }
 
       // Restore yandexItems with non-mergeable items + any mergeable items that fell back.
+      // 🛡️ Phase B2: сохраняем _ctx через preserveCtx — batchSaveKV извлечёт top-level из first non-null.
       yandexItems.length = 0;
       for (const it of nonMergeableItems) {
-        yandexItems.push({ k: it.k, v: it.v, updated_at: it.updated_at });
+        yandexItems.push({ k: it.k, v: it.v, _ctx: it._ctx || null, updated_at: it.updated_at });
       }
       for (const it of fallbackToBatch) {
         yandexItems.push(it);
@@ -6219,7 +6229,8 @@
           const tryWireUpload = async (value) => {
             const attempt = await YandexAPI.batchSaveKV(clientId, [{ ...it, v: value }]);
             if (attempt.success) return { ok: true, saved: attempt.saved || 1 };
-            const one = await YandexAPI.saveKV(clientId, it.k, value);
+            // 🛡️ Phase B2: pass context_id для одно-item fallback path.
+            const one = await YandexAPI.saveKV(clientId, it.k, value, it._ctx || null);
             if (one.success) return { ok: true, saved: 1 };
             return { ok: false, err: one.error || attempt.error };
           };
@@ -10305,9 +10316,98 @@
     }
   };
 
+  // ───────────────────────────────────────────────────────────────────
+  // 🛡️ Write context (Phase B1, 2026-06-02). Server-issued capability token,
+  // привязанный к (curator_id, client_id) или (session_id, client_id) в момент
+  // issue. React load sites захватывают snapshot в state, debounced saves
+  // отправляют captured contextId с writes. Server резолвит canonical
+  // client_id из context'a → routing pollution невозможна.
+  //
+  // Phase B: warn-only сервер. Phase C: strict mode + retry-on-context-invalid.
+  // ───────────────────────────────────────────────────────────────────
+  cloud._writeContext = null; // { contextId, clientId, curatorId, expiresAt }
+
+  cloud._issueWriteContext = async function (targetClientId) {
+    try {
+      const api = global.HEYS?.YandexAPI;
+      if (!api?.rpc) return null;
+      // Curator path: targetClientId требуется, server резолвит curator_id из JWT.
+      // Session path: targetClientId игнорируется — server берёт client_id из session_token.
+      const isCurator = !!(global.HEYS?.lastIsCuratorAuth || !global.HEYS?.lastIsPinAuth);
+      let res;
+      if (isCurator) {
+        if (!targetClientId) return null;
+        res = await api.rpc('issue_write_context_by_curator', { p_client_id: targetClientId });
+      } else {
+        const sessionToken = global.localStorage?.getItem?.('heys_session_token') || null;
+        if (!sessionToken) return null;
+        res = await api.rpc('issue_write_context_by_session', { p_session_token: sessionToken });
+      }
+      if (res?.error) {
+        console.warn('[write-context] issue failed:', res.error.message || res.error.code || res.error);
+        return null;
+      }
+      const data = res?.data || {};
+      if (!data.context_id) return null;
+      cloud._writeContext = {
+        contextId: data.context_id,
+        clientId: data.client_id || targetClientId,
+        curatorId: data.curator_id || null,
+        expiresAt: data.expires_at || null,
+        issuedAt: Date.now(),
+      };
+      return cloud._writeContext;
+    } catch (e) {
+      console.warn('[write-context] issue exception:', e?.message || e);
+      return null;
+    }
+  };
+
+  // Snapshot accessor — React load sites вызывают AT LOAD TIME и хранят
+  // результат в state. На save передают этот snapshot через
+  // saveClientKey(..., { writeContext, __heys_save_opts: true }).
+  cloud.snapshotWriteContext = function () {
+    return cloud._writeContext ? { ...cloud._writeContext } : null;
+  };
+
+  // Auto-issue on heysSyncCompleted — единая точка для cold boot, post-reload
+  // boot, и manual switchClient (без reload). Issue только когда clientId
+  // меняется (или контекст ещё не выпускался для этого клиента), чтобы не
+  // создавать row на каждый hot-sync.
+  cloud._lastIssuedForClientId = null;
+  if (typeof global.addEventListener === 'function') {
+    global.addEventListener('heysSyncCompleted', (e) => {
+      try {
+        const detail = e?.detail || {};
+        if (detail.error) return;
+        const cid = detail.clientId || global.HEYS?.currentClientId;
+        if (!cid) return;
+        // Re-issue только если current context для другого клиента (или нет
+        // вообще). Hot-syncs того же клиента → no-op (context живёт 24h).
+        if (cloud._writeContext && cloud._writeContext.clientId === cid &&
+            cloud._lastIssuedForClientId === cid) return;
+        cloud._lastIssuedForClientId = cid;
+        // Fire-and-forget — boot/switch progress не должен ждать context issue.
+        cloud._issueWriteContext(cid).catch(() => { /* logged внутри */ });
+      } catch (_) { /* noop */ }
+    });
+  }
+
   // Поддерживает старую сигнатуру saveClientKey(k, v) — в этом случае client_id берётся из HEYS.currentClientId.
   cloud.saveClientKey = function (...args) {
     let client_id, k, value;
+
+    // 🛡️ Phase B2: Опциональный last-arg opts с writeContext snapshot.
+    // React load sites: passing { writeContext, __heys_save_opts: true } →
+    // server резолвит client_id из context (не из browser-supplied client_id).
+    // Защита: stale React state с context_A не уйдёт в client B.
+    let opts = null;
+    if (args.length >= 3) {
+      const last = args[args.length - 1];
+      if (last && typeof last === 'object' && last.__heys_save_opts === true) {
+        opts = args.pop();
+      }
+    }
 
     // 🔄 ИЗМЕНЕНО: Вместо полной блокировки — добавляем в очередь
     // Данные будут отправлены когда sync завершится или по таймауту
@@ -10521,12 +10621,21 @@
       }
     }
 
+    // 🛡️ Phase B2: capture writeContext for this save. Prefer per-read snapshot
+    // (opts.writeContext) over live cloud._writeContext. Per-read snapshot —
+    // ключевая защита: если React state был загружен под client A, его save
+    // несёт context_A, а server резолвит target = A, даже если browser к моменту
+    // save уже переключился на B (currentClientId = B).
+    const writeContext = (opts && opts.writeContext) || cloud._writeContext || null;
+    const _ctx = writeContext?.contextId || null;
+
     const upsertObj = {
       user_id: user?.id || null, // 🔐 PIN auth: user может быть null
       client_id: client_id,
       k: normalizedKey,
       v: value,
       updated_at: (new Date()).toISOString(),
+      _ctx, // transport-only field; doClientUpload extracts before sending
     };
 
     // 🛡️ v4.8.3 / v4.9.x: НЕ сохраняем products в облако ДО завершения initial sync

@@ -902,7 +902,7 @@
    * @param {any} value - Значение
    * @returns {Promise<{success: boolean, error?: string}>}
    */
-  async function saveKV(clientId, key, value) {
+  async function saveKV(clientId, key, value, contextId = null) {
     try {
       // 🛡️ CRITICAL FIX (2026-05-17): curator path FIRST.
       // Без этого stale session token от прошлой PIN-сессии резолвил бы
@@ -926,6 +926,7 @@
         const result = await rpc('batch_upsert_client_kv_by_curator', {
           p_client_id: clientId,
           p_items: [{ k: key, v: value }],
+          p_context_id: contextId || null, // 🛡️ Phase B2 write context
         });
         if (!result.error) {
           const data = result.data;
@@ -1338,7 +1339,7 @@
    * @param {Array<{k: string, v: any, updated_at?: string}>} items - Массив данных
    * @returns {Promise<{success: boolean, saved: number, error?: string}>}
    */
-  async function batchSaveKVviaREST(curatorUserId, clientId, items) {
+  async function batchSaveKVviaREST(curatorUserId, clientId, items, contextId = null) {
     log(`[v56] batchSaveKVviaREST: curator=${curatorUserId?.slice(0, 8)}, client=${clientId?.slice(0, 8)}, items=${items.length}`);
 
     if (!curatorUserId || !clientId || !items?.length) {
@@ -1348,11 +1349,15 @@
     try {
       // Формируем данные для REST upsert
       // Primary Key: (user_id, client_id, k)
+      // 🛡️ Phase B2: каждая row несёт context_id (per-item _ctx или fallback на
+      // top-level contextId). Server резолвит canonical client_id из context'а,
+      // в Phase C — отвергает writes без context.
       const restData = items.map(item => ({
         user_id: curatorUserId,
         client_id: clientId,
         k: item.k,
         v: item.v,
+        context_id: item._ctx || contextId || null,
         updated_at: item.updated_at || new Date().toISOString()
       }));
 
@@ -1399,9 +1404,17 @@
    * @param {Array<{k: string, v: any}>} items - Массив данных
    * @returns {Promise<{success: boolean, saved: number, error?: string}>}
    */
-  async function batchSaveKV(clientId, items) {
+  async function batchSaveKV(clientId, items, contextId = null) {
     if (!items || items.length === 0) {
       return { success: true, saved: 0 };
+    }
+
+    // 🛡️ Phase B2: если top-level contextId не передан — пробуем извлечь из
+    // первого items с _ctx (все items в batch обычно из одного React state,
+    // share один context).
+    if (!contextId) {
+      const itemWithCtx = items.find(it => it && it._ctx);
+      if (itemWithCtx) contextId = itemWithCtx._ctx;
     }
 
     try {
@@ -1430,9 +1443,12 @@
               });
             }
           } catch (_) { /* noop */ }
+          // 🛡️ Phase B2: strip _ctx from items (transport-only), pass top-level p_context_id.
+          const cleanItems = items.map(({ _ctx: _stripped, ...rest }) => rest);
           const result = await rpc('batch_upsert_client_kv_by_curator', {
             p_client_id: clientId,
-            p_items: items,
+            p_items: cleanItems,
+            p_context_id: contextId || null,
             // p_curator_id проставит RPC handler автоматически из JWT
           });
 
@@ -1482,7 +1498,7 @@
       const curatorUserId = getCuratorUserId();
       if (curatorUserId) {
         log(`[v56] Falling back to REST path (curator=${curatorUserId?.slice(0, 8)})`);
-        const restResult = await batchSaveKVviaREST(curatorUserId, clientId, items);
+        const restResult = await batchSaveKVviaREST(curatorUserId, clientId, items, contextId);
         if (restResult?.success) invalidateSwKvCache('batchSaveKV_curator_rest');
         return restResult;
       }
@@ -1492,7 +1508,11 @@
       // are bound to one client. Post PR-C: токен может быть только в HttpOnly
       // cookie — buildSessionRpcParams отдаст RPC-параметры без
       // p_session_token, и heys-api-rpc заполнит из cookie.
-      const sessionRpc = buildSessionRpcParams({ p_items: items });
+      // 🛡️ Phase B2: session path не получает p_context_id потому что server
+      // ignore'ит browser-supplied client_id (резолвит из session_token).
+      // Pollution vector здесь структурно отсутствует — context-validation skip.
+      const cleanItemsSession = items.map(({ _ctx: _stripped, ...rest }) => rest);
+      const sessionRpc = buildSessionRpcParams({ p_items: cleanItemsSession });
       if (sessionRpc.ok) {
         const result = await rpc('batch_upsert_client_kv_by_session', sessionRpc.params);
         if (result.error) {
@@ -1607,7 +1627,7 @@
     }
   }
 
-  async function mergeSaveKV(clientId, k, v, lastSeenUpdatedAt = 0) {
+  async function mergeSaveKV(clientId, k, v, lastSeenUpdatedAt = 0, contextId = null) {
     if (!k || v == null) {
       return { success: false, error: 'invalid_params' };
     }
@@ -1648,6 +1668,7 @@
           p_key: k,
           p_value: v,
           p_last_seen_updated_at: lastSeenUpdatedAt,
+          p_context_id: contextId || null, // 🛡️ Phase B2 write context
         });
         if (result.error) {
           err('[mergeSaveKV] curator RPC error:', result.error?.message || result.error);
@@ -1675,6 +1696,7 @@
         p_key: k,
         p_value: v,
         p_last_seen_updated_at: lastSeenUpdatedAt,
+        p_context_id: contextId || null, // 🛡️ Phase B2 write context
       });
       if (sessionRpc.ok) {
         const result = await rpc('merge_save_client_kv_by_session', sessionRpc.params);

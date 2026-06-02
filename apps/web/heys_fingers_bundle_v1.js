@@ -7025,7 +7025,7 @@
       step: 0,
       completed: false,
       path: null,
-      themeId: fp.themeId || 'A',
+      themeId: _normalizeTheme(fp.themeId),
       profile: {
         age: ageFromBirth || ageFromProfile || null,
         climbingYears: Number(fp.climbingYears) || 0,
@@ -7111,10 +7111,16 @@
     }
   }
 
+  // Темы: оставлены 2 — 'A' (HEYS native) и 'C' (Climbing, default).
+  // Тема 'B' (Custom blue) удалена; legacy profile со старым value мигрируется в 'C'.
+  function _normalizeTheme(themeId) {
+    return (themeId === 'A' || themeId === 'C') ? themeId : 'C';
+  }
+
   function _applyTheme(themeId) {
     try {
       if (typeof document !== 'undefined' && document.documentElement) {
-        document.documentElement.setAttribute('data-fingers-theme', themeId || 'A');
+        document.documentElement.setAttribute('data-fingers-theme', _normalizeTheme(themeId));
       }
     } catch (_) { /* swallow */ }
   }
@@ -7129,7 +7135,7 @@
   Fingers.resetOnboarding = function resetOnboarding() {
     try {
       _writeState(_defaultState());
-      _applyTheme('A');
+      _applyTheme('C');
       return true;
     } catch (e) {
       console.warn('[Fingers.Onboarding] reset failed:', e);
@@ -7157,156 +7163,8 @@
 
   // ─── Reusable UI atoms ───────────────────────────────────────────────
 
-  const STYLES = {
-    root: {
-      padding: '32px 24px',
-      maxWidth: 560,
-      margin: '0 auto',
-      fontFamily: 'inherit',
-      color: 'var(--text, #0f172a)',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 20,
-      boxSizing: 'border-box'
-    },
-    backBtn: {
-      position: 'absolute',
-      top: 12,
-      left: 12,
-      padding: '8px 12px',
-      minHeight: 44,
-      background: 'transparent',
-      border: '1px solid var(--fingers-card-border, rgba(148,163,184,0.3))',
-      borderRadius: 8,
-      cursor: 'pointer',
-      fontSize: 14,
-      color: 'inherit'
-    },
-    dots: {
-      display: 'flex',
-      justifyContent: 'center',
-      gap: 8,
-      marginTop: 8,
-      marginBottom: 4
-    },
-    dot: (active) => ({
-      width: active ? 10 : 6,
-      height: active ? 10 : 6,
-      borderRadius: '50%',
-      background: active ? 'var(--fingers-accent, #2563eb)' : 'var(--fingers-card-border, rgba(148,163,184,0.4))',
-      transition: 'all 0.2s'
-    }),
-    h1: { fontSize: 26, fontWeight: 700, margin: 0, lineHeight: 1.2 },
-    h2: { fontSize: 20, fontWeight: 600, margin: 0, lineHeight: 1.3 },
-    sub: { fontSize: 15, color: 'var(--text-muted, #64748b)', margin: 0 },
-    btnPrimary: {
-      width: '100%',
-      minHeight: 56,
-      padding: '14px 20px',
-      background: 'var(--fingers-accent, #2563eb)',
-      color: '#fff',
-      border: 'none',
-      borderRadius: 12,
-      fontSize: 17,
-      fontWeight: 600,
-      cursor: 'pointer'
-    },
-    btnSecondary: {
-      width: '100%',
-      minHeight: 56,
-      padding: '14px 20px',
-      background: 'transparent',
-      color: 'var(--fingers-accent, #2563eb)',
-      border: '1.5px solid var(--fingers-accent, #2563eb)',
-      borderRadius: 12,
-      fontSize: 16,
-      fontWeight: 500,
-      cursor: 'pointer'
-    },
-    btnGhost: {
-      minHeight: 44,
-      padding: '10px 16px',
-      background: 'transparent',
-      color: 'var(--text-muted, #64748b)',
-      border: 'none',
-      cursor: 'pointer',
-      fontSize: 14,
-      textDecoration: 'underline'
-    },
-    card: {
-      padding: 16,
-      border: '1px solid var(--fingers-card-border, rgba(148,163,184,0.3))',
-      borderRadius: 12,
-      background: 'var(--card-bg, rgba(255,255,255,0.02))'
-    },
-    chipRow: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginTop: 8
-    },
-    chip: (active) => ({
-      minHeight: 44,
-      padding: '10px 16px',
-      borderRadius: 999,
-      border: '1.5px solid',
-      borderColor: active ? 'var(--fingers-accent, #2563eb)' : 'var(--fingers-card-border, rgba(148,163,184,0.3))',
-      background: active ? 'var(--fingers-accent, #2563eb)' : 'transparent',
-      color: active ? '#fff' : 'inherit',
-      cursor: 'pointer',
-      fontSize: 14,
-      fontWeight: 500
-    }),
-    radio: (active) => ({
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      minHeight: 56,
-      padding: '12px 16px',
-      border: '1.5px solid',
-      borderColor: active ? 'var(--fingers-accent, #2563eb)' : 'var(--fingers-card-border, rgba(148,163,184,0.3))',
-      borderRadius: 12,
-      background: active ? 'rgba(37,99,235,0.06)' : 'transparent',
-      cursor: 'pointer',
-      fontSize: 15,
-      marginBottom: 8
-    }),
-    input: {
-      width: '100%',
-      minHeight: 44,
-      padding: '10px 12px',
-      border: '1px solid var(--fingers-card-border, rgba(148,163,184,0.4))',
-      borderRadius: 8,
-      fontSize: 16,
-      background: 'transparent',
-      color: 'inherit',
-      boxSizing: 'border-box'
-    },
-    label: {
-      display: 'block',
-      fontSize: 13,
-      fontWeight: 500,
-      color: 'var(--text-muted, #64748b)',
-      marginBottom: 6,
-      marginTop: 12
-    },
-    badgeRow: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 8
-    },
-    warnBox: {
-      padding: 16,
-      borderRadius: 12,
-      background: 'rgba(217,119,6,0.08)',
-      border: '1px solid rgba(217,119,6,0.3)',
-      color: 'var(--text, #0f172a)',
-      fontSize: 14,
-      lineHeight: 1.5
-    }
-  };
+  // Стили онбординга — см. apps/web/styles/modules/fingers.css (fingers-ob-*).
+  // Здесь объект STYLES удалён в премиум-редизайне.
 
   function _renderSourceBadge(sourceId) {
     if (Fingers.SourceBadge && h) {
@@ -7318,9 +7176,9 @@
   function _renderDots(currentStep, totalSteps) {
     const dots = [];
     for (let i = 0; i < totalSteps; i++) {
-      dots.push(h('span', { key: i, style: STYLES.dot(i === currentStep) }));
+      dots.push(h('span', { key: i, className: 'fingers-ob-dot' + (i === currentStep ? ' is-active' : '') }));
     }
-    return h('div', { style: STYLES.dots }, dots);
+    return h('div', { className: 'fingers-ob-dots' }, dots);
   }
 
   // ─── Screen renderers ────────────────────────────────────────────────
@@ -7333,9 +7191,8 @@
       { icon: '🛡', text: 'Recovery-aware' }
     ];
     const THEMES = [
-      { id: 'A', label: 'HEYS native' },
-      { id: 'B', label: 'Custom blue' },
-      { id: 'C', label: 'Climbing granite' }
+      { id: 'C', label: 'Climbing' },
+      { id: 'A', label: 'HEYS native' }
     ];
 
     function chooseTheme(themeId) {
@@ -7369,31 +7226,33 @@
       setState(next);
     }
 
-    return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 18 } },
-      h('div', null,
-        h('h1', { style: STYLES.h1 }, '🤚 Тренировка пальцев'),
-        h('p', { style: Object.assign({ marginTop: 8 }, STYLES.sub) }, 'Серьёзный подход к силе хвата')
+    return h('div', { className: 'fingers-ob-welcome' },
+      h('div', { className: 'fingers-ob-hero', 'aria-hidden': 'true' },
+        h('div', { className: 'fingers-ob-hero__title' },
+          h('h1', { className: 'fingers-ob-hero__h1' }, 'Тренировка пальцев'),
+          h('p', { className: 'fingers-ob-hero__sub' }, 'Серьёзный подход к силе хвата')
+        )
       ),
-      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
-        VALUES.map((v, i) => h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 12, fontSize: 15 } },
-          h('span', { style: { fontSize: 20 } }, v.icon),
+      h('div', { className: 'fingers-ob-values' },
+        VALUES.map((v, i) => h('div', { key: i },
+          h('span', { 'aria-hidden': 'true' }, v.icon),
           h('span', null, v.text)
         ))
       ),
-      h('div', null,
-        h('div', { style: STYLES.label }, 'Тема'),
-        h('div', { style: { display: 'flex', gap: 8 } },
+      h('div', { className: 'fingers-ob-theme-block' },
+        h('div', { className: 'fingers-ob-label' }, 'Тема'),
+        h('div', { className: 'fingers-ob-theme-row' },
           THEMES.map((t) => h('button', {
             key: t.id,
             type: 'button',
             onClick: () => chooseTheme(t.id),
-            style: Object.assign({}, STYLES.chip(state.themeId === t.id), { flex: 1, minHeight: 48 })
+            className: 'fingers-ob-chip fingers-ob-chip--theme' + (state.themeId === t.id ? ' is-active' : '')
           }, t.label))
         )
       ),
-      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 } },
-        h('button', { type: 'button', onClick: chooseQuick, style: STYLES.btnPrimary }, 'Начать быстро'),
-        h('button', { type: 'button', onClick: chooseFull, style: STYLES.btnSecondary }, 'Полный setup')
+      h('div', { className: 'fingers-ob-welcome__actions' },
+        h('button', { type: 'button', onClick: chooseQuick, className: 'fingers-ob-btn fingers-ob-btn--primary' }, 'Начать быстро'),
+        h('button', { type: 'button', onClick: chooseFull, className: 'fingers-ob-btn fingers-ob-btn--secondary' }, 'Полный setup')
       )
     );
   }
@@ -7442,38 +7301,38 @@
     const canNext = Number.isFinite(ageNum) && ageNum >= 8 && ageNum <= 99;
 
     return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
-      h('h2', { style: STYLES.h2 }, 'Профиль'),
-      h('p', { style: STYLES.sub }, 'Несколько коротких вопросов для подбора программы.'),
+      h('h2', { className: 'fingers-ob-h2' }, 'Профиль'),
+      h('p', { className: 'fingers-ob-sub' }, 'Несколько коротких вопросов для подбора программы.'),
       h('div', null,
-        h('label', { style: STYLES.label, htmlFor: 'fingers-ob-age' }, 'Возраст *'),
+        h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-age' }, 'Возраст *'),
         h('input', {
           id: 'fingers-ob-age',
           type: 'number',
           min: 8, max: 99,
           value: displayedAge === '' ? '' : displayedAge,
           onChange: (e) => updateProfile({ age: e.target.value === '' ? null : Number(e.target.value) }),
-          style: STYLES.input
+          className: 'fingers-ob-input'
         })
       ),
       h('div', null,
-        h('label', { style: STYLES.label, htmlFor: 'fingers-ob-years' }, 'Сколько лет лазаешь'),
+        h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-years' }, 'Сколько лет лазаешь'),
         h('input', {
           id: 'fingers-ob-years',
           type: 'number',
           min: 0, max: 50,
           value: state.profile.climbingYears || 0,
           onChange: (e) => updateProfile({ climbingYears: Math.max(0, Math.min(50, Number(e.target.value) || 0)) }),
-          style: STYLES.input
+          className: 'fingers-ob-input'
         })
       ),
       h('div', null,
-        h('div', { style: STYLES.label }, 'Максимальная сложность боулдеринга'),
-        h('div', { style: STYLES.chipRow },
+        h('div', { className: 'fingers-ob-label' }, 'Максимальная сложность боулдеринга'),
+        h('div', { className: 'fingers-ob-chip-row' },
           GRADES.map((g) => h('button', {
             key: g,
             type: 'button',
             onClick: () => updateProfile({ maxVGrade: g }),
-            style: STYLES.chip(state.profile.maxVGrade === g)
+            className: 'fingers-ob-chip' + (state.profile.maxVGrade === g ? ' is-active' : '')
           }, GRADE_LABELS[g]))
         )
       ),
@@ -7481,7 +7340,7 @@
         type: 'button',
         onClick: next,
         disabled: !canNext,
-        style: Object.assign({}, STYLES.btnPrimary, !canNext ? { opacity: 0.4, cursor: 'not-allowed' } : {})
+        className: 'fingers-ob-btn fingers-ob-btn--primary' + (!canNext ? ' is-disabled' : '')
       }, 'Далее')
     );
   }
@@ -7534,14 +7393,14 @@
     const sourceIds = restriction.sourceIds || [];
 
     return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
-      h('h2', { style: STYLES.h2 }, 'Возрастные ограничения'),
-      h('div', { style: STYLES.warnBox },
+      h('h2', { className: 'fingers-ob-h2' }, 'Возрастные ограничения'),
+      h('div', { className: 'fingers-ob-warn' },
         h('div', { style: { fontWeight: 600, marginBottom: 6 } }, title),
         h('div', null, message),
-        h('div', { style: STYLES.badgeRow }, sourceIds.map(_renderSourceBadge))
+        h('div', { className: 'fingers-ob-badges' }, sourceIds.map(_renderSourceBadge))
       ),
       age < 14
-        ? h('button', { type: 'button', onClick: next, style: STYLES.btnPrimary }, 'Я понял, ограничения применены')
+        ? h('button', { type: 'button', onClick: next, className: 'fingers-ob-btn fingers-ob-btn--primary' }, 'Я понял, ограничения применены')
         : h('div', null,
             h('label', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0', fontSize: 14 } },
               h('input', {
@@ -7556,7 +7415,7 @@
               type: 'button',
               onClick: next,
               disabled: !acknowledged,
-              style: Object.assign({}, STYLES.btnPrimary, !acknowledged ? { opacity: 0.4, cursor: 'not-allowed' } : {})
+              className: 'fingers-ob-btn fingers-ob-btn--primary' + (!acknowledged ? ' is-disabled' : '')
             }, 'Далее')
           )
     );
@@ -7580,17 +7439,17 @@
     ];
 
     return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
-      h('h2', { style: STYLES.h2 }, 'Безопасность'),
-      h('p', { style: STYLES.sub }, 'Три правила, которые сохранят твои пальцы.'),
-      h('div', { style: STYLES.card },
+      h('h2', { className: 'fingers-ob-h2' }, 'Безопасность'),
+      h('p', { className: 'fingers-ob-sub' }, 'Три правила, которые сохранят твои пальцы.'),
+      h('div', { className: 'fingers-ob-card' },
         RULES.map((r, i) => h('div', { key: i, style: { padding: '6px 0', fontSize: 15, lineHeight: 1.5 } }, r))
       ),
-      h('div', { style: STYLES.badgeRow },
+      h('div', { className: 'fingers-ob-badges' },
         _renderSourceBadge('uiaa_medcom'),
         _renderSourceBadge('schoffl2021'),
         _renderSourceBadge('physivantage_collagen')
       ),
-      h('button', { type: 'button', onClick: next, style: STYLES.btnPrimary }, 'Прочитал и принимаю')
+      h('button', { type: 'button', onClick: next, className: 'fingers-ob-btn fingers-ob-btn--primary' }, 'Прочитал и принимаю')
     );
   }
 
@@ -7641,26 +7500,26 @@
     const eqType = p.noEquipment ? 'none' : (p.edgeLimit === 25 ? 'door' : 'full');
 
     return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
-      h('h2', { style: STYLES.h2 }, 'Оборудование'),
-      h('p', { style: STYLES.sub }, 'Что у тебя есть?'),
+      h('h2', { className: 'fingers-ob-h2' }, 'Оборудование'),
+      h('p', { className: 'fingers-ob-sub' }, 'Что у тебя есть?'),
       h('div', null,
         h('div', {
           onClick: () => pickEquipment('full'),
-          style: STYLES.radio(eqType === 'full')
+          className: 'fingers-ob-radio' + (eqType === 'full' ? ' is-active' : '')
         },
           h('span', { style: { fontSize: 22 } }, '🪜'),
           h('span', null, 'Полный fingerboard')
         ),
         h('div', {
           onClick: () => pickEquipment('door'),
-          style: STYLES.radio(eqType === 'door')
+          className: 'fingers-ob-radio' + (eqType === 'door' ? ' is-active' : '')
         },
           h('span', { style: { fontSize: 22 } }, '🚪'),
           h('span', null, 'Door frame / portable')
         ),
         h('div', {
           onClick: () => pickEquipment('none'),
-          style: STYLES.radio(eqType === 'none')
+          className: 'fingers-ob-radio' + (eqType === 'none' ? ' is-active' : '')
         },
           h('span', { style: { fontSize: 22 } }, '🤚'),
           h('span', null, 'Нет оборудования — буду делать No-Hangs')
@@ -7678,15 +7537,15 @@
         )
       ) : null,
       (eqType === 'full' && BOARDS.length) ? h('div', null,
-        h('label', { style: STYLES.label, htmlFor: 'fingers-ob-board' }, 'Модель доски'),
+        h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-board' }, 'Модель доски'),
         h('select', {
           id: 'fingers-ob-board',
           value: p.fingerboardId || 'beastmaker_1000',
           onChange: (e) => pickBoard(e.target.value),
-          style: STYLES.input
+          className: 'fingers-ob-input'
         }, BOARDS.map((b) => h('option', { key: b.id, value: b.id }, b.label || b.id)))
       ) : null,
-      h('button', { type: 'button', onClick: next, style: STYLES.btnPrimary }, 'Далее')
+      h('button', { type: 'button', onClick: next, className: 'fingers-ob-btn fingers-ob-btn--primary' }, 'Далее')
     );
   }
 
@@ -7739,22 +7598,22 @@
         'Уровень: ', String(program.level || '—'),
         ' · Длительность: ', String(program.durationMin || '—'), ' мин'
       ),
-      h('div', { key: 's', style: STYLES.badgeRow },
+      h('div', { key: 's', className: 'fingers-ob-badges' },
         (program.sourceIds || []).slice(0, 2).map(_renderSourceBadge)
       )
     ] : [
-      h('div', { key: 'm', style: STYLES.sub }, 'Программа подобрана.')
+      h('div', { key: 'm', className: 'fingers-ob-sub' }, 'Программа подобрана.')
     ];
 
     const needsMaxHangNote = state.profile && state.profile.needsMaxHangTest;
 
     return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
-      h('h2', { style: STYLES.h2 }, 'Почти готово'),
-      h('div', { style: STYLES.card }, cardChildren),
+      h('h2', { className: 'fingers-ob-h2' }, 'Почти готово'),
+      h('div', { className: 'fingers-ob-card' }, cardChildren),
       needsMaxHangNote ? h('div', { style: { fontSize: 13, color: 'var(--text-muted, #64748b)', padding: '4px 4px 0' } },
         '💡 Не забудь сделать Max Hang Test в Прогресс табе.'
       ) : null,
-      h('div', { style: STYLES.card },
+      h('div', { className: 'fingers-ob-card' },
         h('label', { style: { display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, cursor: 'pointer' } },
           h('input', {
             type: 'checkbox',
@@ -7769,7 +7628,7 @@
         type: 'button',
         onClick: finish,
         disabled: busy,
-        style: Object.assign({}, STYLES.btnPrimary, busy ? { opacity: 0.6, cursor: 'wait' } : {})
+        className: 'fingers-ob-btn fingers-ob-btn--primary' + (busy ? ' is-busy' : '')
       }, busy ? 'Сохраняю…' : 'Готово, открыть программы')
     );
   }
@@ -7787,7 +7646,7 @@
     const [state, setState] = React.useState(_readState);
 
     // Apply theme on mount
-    React.useEffect(() => { _applyTheme(state.themeId || 'A'); }, []);
+    React.useEffect(() => { _applyTheme(state.themeId); }, []);
 
     // Auto-redirect away from age warning if age >= 18 (Screen 2 case)
     React.useEffect(() => {
@@ -7851,7 +7710,7 @@
         key: 'back',
         type: 'button',
         onClick: goBack,
-        style: STYLES.backBtn,
+        className: 'fingers-ob-back',
         'aria-label': 'Назад'
       }, '← Назад'));
     }
@@ -7865,13 +7724,12 @@
     // Skip-link на welcome (если caller передал onSkip)
     if (state.step === 0 && typeof onSkip === 'function') {
       children.push(h('div', { key: 'skip', style: { textAlign: 'center', marginTop: 4 } },
-        h('button', { type: 'button', onClick: onSkip, style: STYLES.btnGhost }, 'Пропустить')
+        h('button', { type: 'button', onClick: onSkip, className: 'fingers-ob-btn-ghost' }, 'Пропустить')
       ));
     }
 
     return h('div', {
-      className: 'fingers-fs-onboarding',
-      style: Object.assign({ position: 'relative' }, STYLES.root)
+      className: 'fingers-fs-onboarding fingers-ob-root'
     }, children);
   }
 
@@ -9805,14 +9663,16 @@
     const [voiceVol, setVoiceVol] = useState(
       typeof voiceInitial.volume === 'number' ? voiceInitial.volume : 0.8);
 
-    // Theme: A — HEYS native, B — Custom blue, C — Climbing granite
+    // Theme: A — HEYS native, C — Climbing (по умолчанию). Тема B удалена,
+    // legacy value мигрируется в C при чтении.
     const initialTheme = (function () {
       try {
         const fp = profile || {};
-        return fp.themeId || (typeof document !== 'undefined'
+        const raw = fp.themeId || (typeof document !== 'undefined'
           ? document.documentElement.getAttribute('data-fingers-theme')
-          : 'A') || 'A';
-      } catch (_) { return 'A'; }
+          : 'C');
+        return (raw === 'A' || raw === 'C') ? raw : 'C';
+      } catch (_) { return 'C'; }
     })();
     const [theme, setTheme] = useState(initialTheme);
 
@@ -9827,7 +9687,7 @@
     }
 
     function applyTheme(id) {
-      if (['A', 'B', 'C'].indexOf(id) < 0) return;
+      if (['A', 'C'].indexOf(id) < 0) return;
       setTheme(id);
       try {
         if (typeof document !== 'undefined') {
@@ -9878,9 +9738,8 @@
       : 'не указан';
 
     const themeMeta = {
-      A: { label: 'HEYS native',  color: 'linear-gradient(135deg, #2563eb, #1d4ed8)' },
-      B: { label: 'Custom blue',  color: 'linear-gradient(135deg, #06b6d4, #0e7490)' },
       C: { label: 'Climbing',     color: 'linear-gradient(135deg, #c2410c, #7c2d12)' },
+      A: { label: 'HEYS native',  color: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }
     };
 
     return h('div', {
@@ -9960,7 +9819,7 @@
           h('section', { className: 'fingers-settings__section' },
             h('div', { className: 'fingers-settings__section-title' }, 'Тема оформления'),
             h('div', { className: 'fingers-settings__theme-grid' },
-              ['A', 'B', 'C'].map(function (id) {
+              ['C', 'A'].map(function (id) {
                 const meta = themeMeta[id];
                 const active = theme === id;
                 return h('button', {
@@ -10043,6 +9902,24 @@
       };
       window.addEventListener('fingers-open-bibliography', handler);
       return function () { window.removeEventListener('fingers-open-bibliography', handler); };
+    }, []);
+    // Boot theme apply + legacy migration: тема 'B' (Custom blue) удалена,
+    // нормализуем в 'C' (Climbing) если в profile старое значение. Default = C.
+    useEffect(function () {
+      try {
+        const u = HEYS.utils;
+        const raw = u && u.lsGet ? u.lsGet('heys_profile', {}) : {};
+        const fp = (raw && raw.fingerboardProfile) || {};
+        const cur = (fp.themeId === 'A' || fp.themeId === 'C') ? fp.themeId : 'C';
+        if (typeof document !== 'undefined') {
+          document.documentElement.setAttribute('data-fingers-theme', cur);
+        }
+        // Persist обратно если был legacy 'B' или undefined
+        if (cur !== fp.themeId && u && u.lsSet) {
+          const next = Object.assign({}, fp, { themeId: cur });
+          u.lsSet('heys_profile', Object.assign({}, raw, { fingerboardProfile: next }));
+        }
+      } catch (_) {}
     }, []);
     const [pendingProgram, setPendingProgram] = useState(null);
     const [liveActive, setLiveActive] = useState(false);
