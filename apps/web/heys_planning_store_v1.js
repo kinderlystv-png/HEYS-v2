@@ -15,6 +15,10 @@
         TASKS: 'heys_planning_tasks',
         SLOTS: 'heys_planning_slots',
         LINKS: 'heys_planning_links_v1',
+        CHRONO_ACTIVITIES: 'heys_planning_chrono_activities',
+        CHRONO_ENTRIES: 'heys_planning_chrono_entries',
+        CHRONO_SNAPSHOTS: 'heys_planning_chrono_snapshots',
+        CHRONO_TIMER: 'heys_planning_chrono_timer',
     };
 
     const PROJECT_COLORS = [
@@ -93,6 +97,59 @@
 
         const fallbackPool = PROJECT_COLORS.filter((color) => normalizeHexColor(color) !== excludeColor);
         return randomItem(fallbackPool, PROJECT_COLORS[0]);
+    }
+
+    // Chrono palette — отдельный hue-пул для подвкладки «Хронометраж».
+    // Кружки кодируют время двойной осью: размер (радиус) + насыщенность цвета.
+    // Здесь храним только hue; saturation/lightness считаются на рендере по minutes/maxMin.
+    const CHRONO_HUES = [
+        18,   // тёплый коралл
+        38,   // оранжевый
+        70,   // оливковый
+        100,  // зелёный
+        145,  // морская зелень
+        175,  // бирюзовый
+        205,  // небесно-голубой
+        225,  // синий
+        260,  // сине-фиолетовый (мягкий)
+        290,  // приглушённый пурпур
+    ];
+
+    function normalizeHue(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return null;
+        return ((Math.round(n) % 360) + 360) % 360;
+    }
+
+    function pickDistinctChronoHue(activities, options) {
+        const list = Array.isArray(activities) ? activities : [];
+        const excludeId = options?.excludeId || null;
+        const used = new Set(
+            list
+                .filter((a) => a && a.id !== excludeId)
+                .map((a) => normalizeHue(a.hue))
+                .filter((h) => h !== null),
+        );
+
+        const available = CHRONO_HUES.filter((h) => !used.has(h));
+        if (available.length > 0) return randomItem(available, CHRONO_HUES[0]);
+
+        // Пул исчерпан — выбираем максимально удалённый от ближайшего used.
+        let bestHue = CHRONO_HUES[0];
+        let bestDist = -1;
+        for (let candidate = 0; candidate < 360; candidate += 12) {
+            let minDist = 360;
+            used.forEach((h) => {
+                const diff = Math.abs(candidate - h);
+                const dist = Math.min(diff, 360 - diff);
+                if (dist < minDist) minDist = dist;
+            });
+            if (minDist > bestDist) {
+                bestDist = minDist;
+                bestHue = candidate;
+            }
+        }
+        return bestHue;
     }
 
     function pad2(value) {
@@ -552,6 +609,334 @@
         });
     }
 
+    // ── Chrono activities / entries / snapshots ─────────────────────
+    // Отдельная сущность хранения: dayv2 рискован из-за hashDay по meals/items
+    // и `...remote` spread в mergeDayData — chrono-поля терялись бы при cross-client merge,
+    // плюс ломался бы режим Неделя. Здесь — три плоских ключа, синкаются через
+    // localStorage interceptor + refreshPlanningFromCloud, как projects/tasks/slots.
+
+    function getChronoActivities() {
+        return sortByOrder(lsGet(KEYS.CHRONO_ACTIVITIES, []));
+    }
+
+    function saveChronoActivities(activities) {
+        lsSet(KEYS.CHRONO_ACTIVITIES, sortByOrder(activities || []));
+    }
+
+    function addChronoActivity(input) {
+        const activities = getChronoActivities();
+        const name = String(input?.name || '').trim();
+        if (!name) return null;
+        const hue = input?.hue !== undefined && normalizeHue(input.hue) !== null
+            ? normalizeHue(input.hue)
+            : pickDistinctChronoHue(activities);
+        const dayVal = Number(input?.targetMinutesPerDay);
+        const weekVal = Number(input?.targetMinutesPerWeek);
+        const dayBudget = Number(input?.budgetMinutesPerDay);
+        const weekBudget = Number(input?.budgetMinutesPerWeek);
+        const activity = {
+            id: uid(),
+            name,
+            emoji: input?.emoji ? String(input.emoji) : undefined,
+            hue,
+            taskId: input?.taskId ? String(input.taskId) : undefined,
+            projectId: input?.projectId ? String(input.projectId) : undefined,
+            targetMinutesPerDay: dayVal > 0 ? Math.round(dayVal) : undefined,
+            targetMinutesPerWeek: weekVal > 0 ? Math.round(weekVal) : undefined,
+            budgetMinutesPerDay: dayBudget > 0 ? Math.round(dayBudget) : undefined,
+            budgetMinutesPerWeek: weekBudget > 0 ? Math.round(weekBudget) : undefined,
+            archived: false,
+            createdAt: nowISO(),
+            updatedAt: nowISO(),
+        };
+        saveChronoActivities(activities.concat(activity));
+        return activity;
+    }
+
+    function updateChronoActivity(id, patch) {
+        const activities = getChronoActivities();
+        const index = activities.findIndex((a) => a.id === id);
+        if (index === -1) return null;
+        const current = activities[index];
+        const updated = { ...current, ...patch, updatedAt: nowISO() };
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'hue')) {
+            const nh = normalizeHue(patch.hue);
+            if (nh !== null) updated.hue = nh;
+        }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'taskId')) {
+            updated.taskId = patch.taskId ? String(patch.taskId) : undefined;
+        }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'projectId')) {
+            updated.projectId = patch.projectId ? String(patch.projectId) : undefined;
+        }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'archived')) {
+            updated.archived = patch.archived === true;
+            updated.archivedAt = updated.archived ? nowISO() : undefined;
+        }
+        // Цели и лимиты независимы между периодами (день/неделя), но
+        // внутри одного периода mutually exclusive: target и budget не могут
+        // одновременно быть установлены (бизнес-логика: цель — это «расти к»,
+        // лимит — «не превышать», для одного периода только что-то одно).
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'targetMinutesPerDay')) {
+            const tv = Number(patch.targetMinutesPerDay);
+            if (tv > 0) {
+                updated.targetMinutesPerDay = Math.round(tv);
+                updated.budgetMinutesPerDay = undefined;
+            } else {
+                updated.targetMinutesPerDay = undefined;
+            }
+        }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'targetMinutesPerWeek')) {
+            const tv = Number(patch.targetMinutesPerWeek);
+            if (tv > 0) {
+                updated.targetMinutesPerWeek = Math.round(tv);
+                updated.budgetMinutesPerWeek = undefined;
+            } else {
+                updated.targetMinutesPerWeek = undefined;
+            }
+        }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'budgetMinutesPerDay')) {
+            const bv = Number(patch.budgetMinutesPerDay);
+            if (bv > 0) {
+                updated.budgetMinutesPerDay = Math.round(bv);
+                updated.targetMinutesPerDay = undefined;
+            } else {
+                updated.budgetMinutesPerDay = undefined;
+            }
+        }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'budgetMinutesPerWeek')) {
+            const bv = Number(patch.budgetMinutesPerWeek);
+            if (bv > 0) {
+                updated.budgetMinutesPerWeek = Math.round(bv);
+                updated.targetMinutesPerWeek = undefined;
+            } else {
+                updated.budgetMinutesPerWeek = undefined;
+            }
+        }
+        activities[index] = updated;
+        saveChronoActivities(activities);
+        return updated;
+    }
+
+    function archiveChronoActivity(id) {
+        return updateChronoActivity(id, { archived: true });
+    }
+
+    function restoreChronoActivity(id) {
+        return updateChronoActivity(id, { archived: false });
+    }
+
+    function deleteChronoActivity(id) {
+        const activities = getChronoActivities().filter((a) => a.id !== id);
+        saveChronoActivities(activities);
+        const entries = getChronoEntries().filter((e) => e.activityId !== id);
+        saveChronoEntries(entries);
+        const snapshots = getChronoSnapshots().filter((s) => s.activityId !== id);
+        saveChronoSnapshots(snapshots);
+    }
+
+    function getChronoEntries() {
+        return lsGet(KEYS.CHRONO_ENTRIES, []);
+    }
+
+    function saveChronoEntries(entries) {
+        lsSet(KEYS.CHRONO_ENTRIES, Array.isArray(entries) ? entries : []);
+    }
+
+    function addChronoEntry(input) {
+        const activityId = input?.activityId;
+        const minutes = Math.round(Number(input?.minutes) || 0);
+        if (!activityId || minutes <= 0) return null;
+        const activity = getChronoActivities().find((a) => a.id === activityId);
+        if (!activity) return null;
+        const entry = {
+            id: uid(),
+            activityId,
+            date: dateStr(input?.date),
+            minutes,
+            createdAt: nowISO(),
+        };
+        saveChronoEntries(getChronoEntries().concat(entry));
+        return entry;
+    }
+
+    function updateChronoEntry(id, patch) {
+        if (!id) return null;
+        const entries = getChronoEntries();
+        const index = entries.findIndex((e) => e.id === id);
+        if (index === -1) return null;
+        const current = entries[index];
+        const next = { ...current, updatedAt: nowISO() };
+
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'minutes')) {
+            const minutes = Math.round(Number(patch.minutes) || 0);
+            if (minutes <= 0) return null;
+            next.minutes = minutes;
+        }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'date')) {
+            next.date = dateStr(patch.date);
+        }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'activityId')) {
+            const activityId = patch.activityId ? String(patch.activityId) : '';
+            const activity = getChronoActivities().find((a) => a.id === activityId);
+            if (!activity) return null;
+            next.activityId = activityId;
+        }
+
+        entries[index] = next;
+        saveChronoEntries(entries);
+        return next;
+    }
+
+    function adjustChronoEntryMinutes(id, deltaMinutes) {
+        const entries = getChronoEntries();
+        const current = entries.find((e) => e.id === id);
+        if (!current) return null;
+        const nextMinutes = Math.round((Number(current.minutes) || 0) + (Number(deltaMinutes) || 0));
+        if (nextMinutes <= 0) {
+            deleteChronoEntry(id);
+            return { ...current, minutes: 0, deleted: true };
+        }
+        return updateChronoEntry(id, { minutes: nextMinutes });
+    }
+
+    function deleteChronoEntry(id) {
+        if (!id) return;
+        saveChronoEntries(getChronoEntries().filter((e) => e.id !== id));
+    }
+
+    function getChronoSnapshots() {
+        return lsGet(KEYS.CHRONO_SNAPSHOTS, []);
+    }
+
+    function saveChronoSnapshots(snapshots) {
+        lsSet(KEYS.CHRONO_SNAPSHOTS, Array.isArray(snapshots) ? snapshots : []);
+    }
+
+    function upsertSnapshotInPlace(snapshots, date, activityId, addMinutes) {
+        const idx = snapshots.findIndex((s) => s.date === date && s.activityId === activityId);
+        if (idx === -1) {
+            snapshots.push({ date, activityId, totalMinutes: addMinutes });
+        } else {
+            snapshots[idx] = {
+                ...snapshots[idx],
+                totalMinutes: (Number(snapshots[idx].totalMinutes) || 0) + addMinutes,
+            };
+        }
+    }
+
+    function mergeChronoActivities(fromId, toId) {
+        if (!fromId || !toId || fromId === toId) return false;
+        const activities = getChronoActivities();
+        const from = activities.find((a) => a.id === fromId);
+        const to = activities.find((a) => a.id === toId);
+        if (!from || !to) return false;
+
+        const entries = getChronoEntries().map((e) => e.activityId === fromId
+            ? { ...e, activityId: toId }
+            : e);
+        saveChronoEntries(entries);
+
+        const snapshots = getChronoSnapshots().slice();
+        const movedFrom = snapshots.filter((s) => s.activityId === fromId);
+        const remaining = snapshots.filter((s) => s.activityId !== fromId);
+        movedFrom.forEach((snap) => {
+            upsertSnapshotInPlace(remaining, snap.date, toId, Number(snap.totalMinutes) || 0);
+        });
+        saveChronoSnapshots(remaining);
+
+        saveChronoActivities(activities.filter((a) => a.id !== fromId));
+        return true;
+    }
+
+    function compactChronoOlderThan90Once() {
+        const entries = getChronoEntries();
+        if (!entries.length) return 0;
+        const cutoff = addDays(dateStr(new Date()), -90);
+        const old = entries.filter((e) => e.date && e.date < cutoff);
+        if (!old.length) return 0;
+        const fresh = entries.filter((e) => !(e.date && e.date < cutoff));
+
+        const snapshots = getChronoSnapshots().slice();
+        old.forEach((e) => {
+            upsertSnapshotInPlace(snapshots, e.date, e.activityId, Number(e.minutes) || 0);
+        });
+
+        saveChronoSnapshots(snapshots);
+        saveChronoEntries(fresh);
+        return old.length;
+    }
+
+    // ── Chrono timer (один глобальный активный таймер на клиент) ───────
+    // Shape:
+    // { activityId, startMs, plannedMinutes, accumulatedPausedMs, pausedAt, createdAt } | null
+
+    function getChronoTimer() {
+        return lsGet(KEYS.CHRONO_TIMER, null);
+    }
+
+    function saveChronoTimer(timer) {
+        lsSet(KEYS.CHRONO_TIMER, timer || null);
+    }
+
+    function startChronoTimer(input) {
+        const activityId = input?.activityId;
+        const plannedMinutes = Math.round(Number(input?.plannedMinutes) || 0);
+        if (!activityId || plannedMinutes <= 0) return null;
+        const activity = getChronoActivities().find((a) => a.id === activityId);
+        if (!activity) return null;
+        const timer = {
+            activityId,
+            startMs: Date.now(),
+            plannedMinutes,
+            accumulatedPausedMs: 0,
+            pausedAt: null,
+            createdAt: nowISO(),
+        };
+        saveChronoTimer(timer);
+        return timer;
+    }
+
+    function pauseChronoTimer() {
+        const timer = getChronoTimer();
+        if (!timer || timer.pausedAt) return timer || null;
+        const next = { ...timer, pausedAt: Date.now(), updatedAt: nowISO() };
+        saveChronoTimer(next);
+        return next;
+    }
+
+    function resumeChronoTimer() {
+        const timer = getChronoTimer();
+        if (!timer || !timer.pausedAt) return timer || null;
+        const pausedFor = Math.max(0, Date.now() - Number(timer.pausedAt));
+        const next = {
+            ...timer,
+            accumulatedPausedMs: Math.max(0, Number(timer.accumulatedPausedMs) || 0) + pausedFor,
+            pausedAt: null,
+            updatedAt: nowISO(),
+        };
+        saveChronoTimer(next);
+        return next;
+    }
+
+    function clearChronoTimer() {
+        saveChronoTimer(null);
+    }
+
+    function getChronoMinutesByActivity(entries, snapshots, dates) {
+        const dateSet = new Set(Array.isArray(dates) ? dates : []);
+        const out = {};
+        (Array.isArray(entries) ? entries : []).forEach((e) => {
+            if (!e || !dateSet.has(e.date)) return;
+            out[e.activityId] = (out[e.activityId] || 0) + (Number(e.minutes) || 0);
+        });
+        (Array.isArray(snapshots) ? snapshots : []).forEach((s) => {
+            if (!s || !dateSet.has(s.date)) return;
+            out[s.activityId] = (out[s.activityId] || 0) + (Number(s.totalMinutes) || 0);
+        });
+        return out;
+    }
+
     function getPlanningCloudClientId() {
         try {
             if (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function') {
@@ -581,6 +966,10 @@
             'heys_planning_tasks',
             'heys_planning_slots',
             'heys_planning_links_v1',
+            'heys_planning_chrono_activities',
+            'heys_planning_chrono_entries',
+            'heys_planning_chrono_snapshots',
+            'heys_planning_chrono_timer',
         ];
         return YandexAPI.getKVBatch(clientId, keys).then(function (res) {
             if (res.error || !Array.isArray(res.data)) {
@@ -596,6 +985,14 @@
                     Store.saveSlots(item.v);
                 } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
                     Store.saveLinks(item.v);
+                } else if (item.k === 'heys_planning_chrono_activities' && typeof Store.saveChronoActivities === 'function') {
+                    Store.saveChronoActivities(item.v);
+                } else if (item.k === 'heys_planning_chrono_entries' && typeof Store.saveChronoEntries === 'function') {
+                    Store.saveChronoEntries(item.v);
+                } else if (item.k === 'heys_planning_chrono_snapshots' && typeof Store.saveChronoSnapshots === 'function') {
+                    Store.saveChronoSnapshots(item.v);
+                } else if (item.k === 'heys_planning_chrono_timer' && typeof Store.saveChronoTimer === 'function') {
+                    Store.saveChronoTimer(item.v);
                 }
             });
             try {
@@ -612,12 +1009,20 @@
         const [tasks, setTasks] = useState(getTasks);
         const [slots, setSlots] = useState(getSlots);
         const [links, setLinks] = useState(getLinks);
+        const [chronoActivities, setChronoActivities] = useState(getChronoActivities);
+        const [chronoEntries, setChronoEntries] = useState(getChronoEntries);
+        const [chronoSnapshots, setChronoSnapshots] = useState(getChronoSnapshots);
+        const [chronoTimer, setChronoTimer] = useState(getChronoTimer);
 
         const refresh = useCallback(() => {
             setProjects(getProjects());
             setTasks(getTasks());
             setSlots(getSlots());
             setLinks(getLinks());
+            setChronoActivities(getChronoActivities());
+            setChronoEntries(getChronoEntries());
+            setChronoSnapshots(getChronoSnapshots());
+            setChronoTimer(getChronoTimer());
         }, []);
 
         useEffect(() => {
@@ -648,10 +1053,24 @@
             addLink: (fromId, toId, opts) => { const link = addLink(fromId, toId, opts); refresh(); return link; },
             deleteLink: (id) => { deleteLink(id); refresh(); },
             getLinksFor,
+            addChronoActivity: (input) => { const a = addChronoActivity(input); refresh(); return a; },
+            updateChronoActivity: (id, patch) => { const a = updateChronoActivity(id, patch); refresh(); return a; },
+            deleteChronoActivity: (id) => { deleteChronoActivity(id); refresh(); },
+            archiveChronoActivity: (id) => { const a = archiveChronoActivity(id); refresh(); return a; },
+            restoreChronoActivity: (id) => { const a = restoreChronoActivity(id); refresh(); return a; },
+            mergeChronoActivities: (fromId, toId) => { const ok = mergeChronoActivities(fromId, toId); if (ok) refresh(); return ok; },
+            addChronoEntry: (input) => { const e = addChronoEntry(input); if (e) refresh(); return e; },
+            updateChronoEntry: (id, patch) => { const e = updateChronoEntry(id, patch); if (e) refresh(); return e; },
+            adjustChronoEntryMinutes: (id, deltaMinutes) => { const e = adjustChronoEntryMinutes(id, deltaMinutes); refresh(); return e; },
+            deleteChronoEntry: (id) => { deleteChronoEntry(id); refresh(); },
+            startChronoTimer: (input) => { const t = startChronoTimer(input); if (t) refresh(); return t; },
+            pauseChronoTimer: () => { const t = pauseChronoTimer(); refresh(); return t; },
+            resumeChronoTimer: () => { const t = resumeChronoTimer(); refresh(); return t; },
+            clearChronoTimer: () => { clearChronoTimer(); refresh(); },
             refresh,
         }), [refresh]);
 
-        return { projects, tasks, slots, links, ...api };
+        return { projects, tasks, slots, links, chronoActivities, chronoEntries, chronoSnapshots, chronoTimer, ...api };
     }
 
     function usePlanningViewport() {
@@ -696,6 +1115,9 @@
         getDueBucket,
         getTaskProjectColor,
         pickDistinctProjectColor,
+        pickDistinctChronoHue,
+        normalizeHue,
+        getChronoMinutesByActivity,
         sortByOrder,
     };
 
@@ -723,6 +1145,29 @@
         addLink,
         deleteLink,
         getLinksFor,
+        getChronoActivities,
+        saveChronoActivities,
+        addChronoActivity,
+        updateChronoActivity,
+        deleteChronoActivity,
+        archiveChronoActivity,
+        restoreChronoActivity,
+        mergeChronoActivities,
+        getChronoEntries,
+        saveChronoEntries,
+        addChronoEntry,
+        updateChronoEntry,
+        adjustChronoEntryMinutes,
+        deleteChronoEntry,
+        getChronoSnapshots,
+        saveChronoSnapshots,
+        compactChronoOlderThan90Once,
+        getChronoTimer,
+        saveChronoTimer,
+        startChronoTimer,
+        pauseChronoTimer,
+        resumeChronoTimer,
+        clearChronoTimer,
     };
 
     Planning.Hooks = {

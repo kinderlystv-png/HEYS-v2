@@ -34,6 +34,66 @@ function isIdentityGuardKey(k) {
   return typeof k === 'string' && IDENTITY_GUARD_KEY_RE.test(k);
 }
 
+// 🛡️ Content-fingerprint dup check для dayv2 (incident 2026-06-02 #8):
+// ловит partial pollution где writer_cid правильный (свой) но meals
+// идентичны свежей записи другого клиента того же curator. REST POST
+// не имеет JWT curator context, поэтому curator_id резолвим из
+// clients.curator_id по client_id.
+async function detectCrossClientDayv2ContentDup(client, clientId, k, v) {
+  const dateMatch = /^heys_(?:[0-9a-f-]{36}_)?dayv2_(\d{4}-\d{2}-\d{2})$/i.exec(k || '');
+  if (!dateMatch) return null;
+  const dateStr = dateMatch[1];
+  if (!v || typeof v !== 'object') return null;
+  const meals = v.meals;
+  if (!Array.isArray(meals) || meals.length === 0) return null;
+  // Overlap by meal_id / item_id (partial pollution check — incident #8).
+  const mealIds = [];
+  const itemIds = [];
+  for (const m of meals) {
+    if (m && typeof m === 'object') {
+      if (typeof m.id === 'string' && m.id) mealIds.push(m.id);
+      if (Array.isArray(m.items)) {
+        for (const it of m.items) {
+          if (it && typeof it.id === 'string' && it.id) itemIds.push(it.id);
+        }
+      }
+    }
+  }
+  if (mealIds.length === 0 && itemIds.length === 0) return null;
+  try {
+    const r = await client.query(
+      `WITH this_curator AS (
+         SELECT curator_id FROM clients WHERE id = $1::uuid LIMIT 1
+       )
+       SELECT kv.client_id, kv.k
+         FROM client_kv_store kv
+         JOIN clients c ON c.id = kv.client_id
+         JOIN this_curator tc ON c.curator_id = tc.curator_id
+        WHERE kv.client_id != $1::uuid
+          AND (kv.k = ('heys_dayv2_' || $2::text)
+               OR kv.k LIKE ('heys_%_dayv2_' || $2::text))
+          AND kv.updated_at > now() - interval '30 minutes'
+          AND (
+            EXISTS (
+              SELECT 1 FROM jsonb_array_elements(coalesce(kv.v->'meals','[]'::jsonb)) AS m
+              WHERE m->>'id' = ANY($3::text[])
+            )
+            OR EXISTS (
+              SELECT 1 FROM jsonb_array_elements(coalesce(kv.v->'meals','[]'::jsonb)) AS m,
+                jsonb_array_elements(coalesce(m->'items','[]'::jsonb)) AS it
+              WHERE it->>'id' = ANY($4::text[])
+            )
+          )
+        LIMIT 1`,
+      [clientId, dateStr, mealIds, itemIds]
+    );
+    if (r.rows.length > 0) return { conflictClientId: r.rows[0].client_id, conflictKey: r.rows[0].k };
+  } catch (e) {
+    console.warn('[REST content-dup] check failed:', e.message);
+  }
+  return null;
+}
+
 const _tgAlertLastSent = new Map();
 const TG_ALERT_DEDUP_MS = 5 * 60 * 1000;
 function shouldSendTgAlert(clientId, action) {
@@ -707,6 +767,38 @@ module.exports.handler = async function (event, context) {
                 );
               }
               continue;
+            }
+
+            // 🛡️ Content-fingerprint dup check для dayv2 — ловит partial pollution
+            // где writer_cid правильный но meals идентичны другому клиенту того же
+            // curator (incident #8).
+            if (/^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(row.k)) {
+              const dup = await detectCrossClientDayv2ContentDup(client, row.client_id, row.k, row.v);
+              if (dup) {
+                blocked++;
+                const expected = String(row.client_id).slice(0, 8);
+                const conflictCid = String(dup.conflictClientId).slice(0, 8);
+                console.warn(`[REST POST] 🛡️ cross_client_dayv2_content_dup:`, row.k,
+                  'client=', expected, 'dup_from=', conflictCid);
+                try {
+                  await client.query(
+                    `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+                     VALUES ($1::uuid, $2::text, 'cross_client_dayv2_content_dup', FALSE, $3)`,
+                    [row.client_id, row.k, `rest_post dup_from=${conflictCid} dup_key=${dup.conflictKey}`]
+                  );
+                } catch (e) { console.warn('[REST POST] dup audit insert failed:', e.message); }
+                if (shouldSendTgAlert(row.client_id, 'cross_client_dayv2_content_dup')) {
+                  sendTgAlertFireAndForget(
+                    `🛡️ *cross_client_dayv2_content_dup*\n` +
+                    `key: \`${row.k}\`\n` +
+                    `client: \`${expected}\`\n` +
+                    `source: \`rest_post\`\n` +
+                    `dup with client: \`${conflictCid}\` (within 5 min)\n` +
+                    `_Curator state не очистился между switch'ами — meals идентичны._`
+                  );
+                }
+                continue;
+              }
             }
 
             // Вызываем защищённую функцию вместо прямого INSERT

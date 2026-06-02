@@ -54,15 +54,18 @@
         ? HEYS.lruCache.create({ name: 'ews-day-score', max: 90 })
         : null;
 
-    // Opt-out for the 4 ui.* console.table blocks (summary/top3/chronic/weekly).
-    // Set localStorage.heys_ews_quiet='1' or HEYS.debug.ewsQuiet=true to silence
-    // ~4 tables per detect call. Text-based diagnostic logs are unaffected.
+    // Opt-in for bulky ui.* console.table blocks (summary/top3/chronic/weekly).
+    // Text-based diagnostic logs stay in the normal full stream; tables are for
+    // manual inspection and otherwise drown the useful timeline.
+    // Enable with localStorage.heys_ews_tables='1' or HEYS.debug.ewsTables=true.
     const ewsTablesQuiet = () => {
         try {
+            if (global.localStorage && global.localStorage.getItem('heys_ews_tables') === '1') return false;
+            if (global.HEYS && global.HEYS.debug && global.HEYS.debug.ewsTables === true) return false;
             if (global.localStorage && global.localStorage.getItem('heys_ews_quiet') === '1') return true;
             if (global.HEYS && global.HEYS.debug && global.HEYS.debug.ewsQuiet === true) return true;
         } catch (_) { /* noop */ }
-        return false;
+        return true;
     };
 
     // Thresholds for warnings

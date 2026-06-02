@@ -22,9 +22,14 @@
     mutator(day);
     day.updatedAt = Date.now();
     U.lsSet(key, day);
+    // Сбрасываем кэш активных дней — иначе sparkline/график продолжит показывать
+    // прочерк/старое значение для этой даты до естественной инвалидации (TTL).
+    try {
+      HEYS.dayUtils?._activeDaysCache?.clear?.();
+    } catch (_) { }
     try {
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: { date, source: 'low-cal-banner', data: day }
+        detail: { date, source: 'low-cal-banner', data: day, forceReload: true }
       }));
     } catch (_) { }
   }
@@ -57,6 +62,7 @@
       delete d.yesterdayVerifyAt;
       delete d.yesterdayVerifyVersion;
     });
+    HEYS.Toast?.success?.('Решение сброшено — день снова учитывается');
   }
 
   function scrollToDiary() {
@@ -119,18 +125,7 @@
     const { date, day, eatenKcal, displayOptimum, isToday } = params || {};
     if (!day || isToday) return null;
 
-    const hasMeals = Array.isArray(day.meals)
-      && day.meals.some((m) => Array.isArray(m && m.items) && m.items.length > 0);
-    if (!hasMeals) return null;
-
-    const target = displayOptimum || day.savedDisplayOptimum || 0;
-    const kcal = eatenKcal || day.savedEatenKcal || 0;
-    if (target <= 0 || kcal <= 0) return null;
-
-    const ratio = kcal / target;
-    if (ratio >= THRESHOLD) return null;
-
-    // State B — отмечен как голодание
+    // State B — отмечен как голодание (флаг показываем всегда, независимо от ratio)
     if (day.isFastingDay === true) {
       return React.createElement('div', { className: 'low-cal-banner low-cal-banner-compact', style: COMPACT_BANNER_STYLE },
         React.createElement('span', null, '🍽 День отмечен как осознанное голодание'),
@@ -143,7 +138,7 @@
       );
     }
 
-    // State C — помечен как пропуск
+    // State C — помечен как пропуск (флаг показываем всегда, независимо от ratio)
     if (day.isIncomplete === true) {
       return React.createElement('div', { className: 'low-cal-banner low-cal-banner-compact', style: COMPACT_BANNER_STYLE },
         React.createElement('span', null, '🚫 День помечен как пропуск (не учитывается)'),
@@ -155,6 +150,17 @@
         }, 'Изменить')
       );
     }
+
+    const hasMeals = Array.isArray(day.meals)
+      && day.meals.some((m) => Array.isArray(m && m.items) && m.items.length > 0);
+    if (!hasMeals) return null;
+
+    const target = displayOptimum || day.savedDisplayOptimum || 0;
+    const kcal = eatenKcal || day.savedEatenKcal || 0;
+    if (target <= 0 || kcal <= 0) return null;
+
+    const ratio = kcal / target;
+    if (ratio >= THRESHOLD) return null;
 
     // State A — решение не принято
     const pct = Math.round(ratio * 100);

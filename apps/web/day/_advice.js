@@ -2200,7 +2200,7 @@
                     }
                 } catch (_) { }
             } catch (e) { }
-            console.warn('[HEYS.advice] ⚠️ readAdviceSettings: no settings found, returning {}');
+            console.info('[HEYS.advice] readAdviceSettings: no settings found, returning {}');
             return {};
         }, [HEYSRef.store, utils.lsGet]);
 

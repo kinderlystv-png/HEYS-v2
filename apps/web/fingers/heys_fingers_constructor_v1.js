@@ -398,6 +398,9 @@
             const raw = parseFloat(e.target.value);
             onChange(Number.isFinite(raw) ? snap(raw, 0.5) : 0);
           },
+          // data-weight-sign — для цветового акцента: positive → красный (нагрузка),
+          // negative → циан (разгрузка), zero → нейтрал (gradient slate).
+          'data-weight-sign': addedKg > 0 ? 'plus' : addedKg < 0 ? 'minus' : 'zero',
           className: 'fingers-fs-weight-input',
           style: ST_STEP_VAL,
         }),
@@ -411,13 +414,34 @@
     );
   }
 
-  function renderMvcHint(gripId, edgeSizeMm, addedKg) {
+  function renderMvcHint(gripId, edgeSizeMm, addedKg, onOpenTest) {
     if (!Fingers.records || typeof Fingers.records.getMVC !== 'function') return null;
     let mvc = null;
     try { mvc = Fingers.records.getMVC(gripId, edgeSizeMm); } catch (_) { mvc = null; }
     if (!mvc) {
-      return R.createElement('div', { style: ST_HINT, className: 'fingers-fs-hint-row' },
-        R.createElement('span', null, 'Сделай Max Hang Test для расчёта % от MVC'));
+      // Premium CTA — открывает inline-test модалку через onOpenTest callback.
+      // Также dispatch'ит событие 'fingers-open-calibration' для внешних подписчиков.
+      return R.createElement('div', { className: 'fingers-fs-hint-row fingers-fs-hint-row--cta' },
+        R.createElement('button', {
+          type: 'button',
+          className: 'fingers-fs-mvc-cta',
+          onClick: function () {
+            if (typeof onOpenTest === 'function') {
+              onOpenTest({ gripId: gripId, edgeMm: edgeSizeMm, startWeight: addedKg });
+            }
+            try {
+              window.dispatchEvent(new CustomEvent('fingers-open-calibration', {
+                detail: { type: 'maxHang', gripId: gripId, edgeMm: edgeSizeMm }
+              }));
+            } catch (_) {}
+          }
+        },
+          R.createElement('span', { className: 'fingers-fs-mvc-cta__icon', 'aria-hidden': 'true' }, '⚡'),
+          R.createElement('span', { className: 'fingers-fs-mvc-cta__text' },
+            R.createElement('strong', null, 'Max Hang Test'),
+            ' — посчитать % от MVC'),
+          R.createElement('span', { className: 'fingers-fs-mvc-cta__arrow', 'aria-hidden': 'true' }, '›')
+        ));
     }
     if (mvc.type === 'weight') {
       const mvcKg = Number(mvc.mvcKg) || 0;
@@ -438,6 +462,19 @@
       if (Fingers.SourceBadge) {
         baseEls.push(R.createElement(Fingers.SourceBadge, { key: 's', sourceId: 'horst_podcast10' }));
       }
+      // Edit-кнопка справа — открывает Max Hang Test заново чтобы переписать MVC
+      // (после прогресса или re-test через 8 нед).
+      if (typeof onOpenTest === 'function') {
+        baseEls.push(R.createElement('button', {
+          key: 'edit',
+          type: 'button',
+          className: 'fingers-fs-mvc-edit',
+          onClick: function () {
+            onOpenTest({ gripId: gripId, edgeMm: edgeSizeMm, startWeight: addedKg });
+          },
+          'aria-label': 'Переделать Max Hang Test'
+        }, '↻ Изменить'));
+      }
       const rows = [R.createElement('div', { key: 'base', style: ST_HINT, className: 'fingers-fs-hint-row' }, baseEls)];
       if (isFallback) {
         // Fail-loud (но не fail-closed): показываем цифру но честно говорим
@@ -457,7 +494,7 @@
         rows.push(R.createElement('div', {
           key: 'warn',
           style: danger ? ST_HINT_DANGER : ST_HINT_WARN,
-          className: 'fingers-fs-hint-warn',
+          className: 'fingers-fs-hint-warn' + (danger ? ' is-danger' : ''),
           role: 'alert',
         }, warnText));
       }
@@ -525,10 +562,181 @@
         R.createElement(Fingers.SourceBadge, { sourceId: tip.sourceId })));
     }
     children.push(R.createElement('div', { key: 't', style: ST_METHOD_TXT }, tip.text));
-    return R.createElement('div', { style: ST_METHOD }, children);
+    return R.createElement('div', { style: ST_METHOD, className: 'fingers-fs-method-tip' }, children);
   }
 
   // ===== ПУБЛИЧНЫЙ КОМПОНЕНТ =====
+  // ─── Max Hang Test inline modal ─────────────────────────────────────────
+  // Минимальный workflow: юзер делает вис до отказа в реале (off-app),
+  // вводит holdTime + вес → recordResult сохраняет MVC + показывает gate
+  // suggestion («идеально/слишком тяжело/легко»). Модалка inline в карточке,
+  // не отдельный portal — проще + меньше слоёв z-index.
+  function MaxHangTestSheet(props) {
+    const params = props && props.params;
+    const onClose = (props && props.onClose) || function () {};
+    const onSaved = (props && props.onSaved) || function () {};
+    if (!params || !R) return null;
+    const gripId = params.gripId;
+    const edgeMm = Number(params.edgeMm) || 20;
+    const startWeight = Number(params.startWeight) || 0;
+    const grip = Fingers.getGripById ? Fingers.getGripById(gripId) : null;
+    const gripLabel = (grip && grip.label) || gripId;
+
+    const [addedKg, setAddedKg] = R.useState(startWeight);
+    const [holdTime, setHoldTime] = R.useState(7);
+    const [result, setResult] = R.useState(null);
+
+    function handleSave() {
+      const bm = (Fingers.getBodyWeight && Fingers.getBodyWeight()) || { kg: 70, source: 'fallback' };
+      try {
+        const out = (Fingers.calibration && Fingers.calibration.maxHang &&
+          Fingers.calibration.maxHang.recordResult)
+          ? Fingers.calibration.maxHang.recordResult(gripId, edgeMm,
+              Number(holdTime), Number(addedKg), bm.kg)
+          : null;
+        if (out) {
+          setResult({
+            isPR: out.isPR,
+            suggestion: out.suggestion,
+            mvc: Number(addedKg) + bm.kg,
+            bwSource: bm.source
+          });
+          onSaved();
+        }
+      } catch (e) {
+        console.warn('[Fingers.MaxHangTest] recordResult failed:', e);
+      }
+    }
+
+    function resetForm() {
+      setResult(null);
+      setHoldTime(7);
+      setAddedKg(startWeight);
+    }
+
+    // Stage 1 — input form. Stage 2 — result with suggestion.
+    const body = result
+      ? R.createElement('div', { className: 'fingers-mh-test__result' },
+          R.createElement('div', {
+            className: 'fingers-mh-test__result-icon',
+            'data-action': result.suggestion.action
+          }, result.suggestion.action === 'store' ? '✓' : '↻'),
+          R.createElement('h3', { className: 'fingers-mh-test__result-title' },
+            result.isPR ? '🏆 Новый MVC!' : 'Записано'),
+          R.createElement('div', { className: 'fingers-mh-test__result-mvc' },
+            'MVC ≈ ', R.createElement('strong', null, result.mvc.toFixed(1) + ' кг')),
+          R.createElement('p', { className: 'fingers-mh-test__result-explain' },
+            'Это максимальная нагрузка, которую ты можешь держать 7-10 секунд на ',
+            R.createElement('strong', null, gripLabel + ' / ' + edgeMm + ' мм'),
+            '. В карточке упражнения теперь будет считаться ',
+            R.createElement('strong', null, '% от MVC'),
+            ' и подсветится warning если доп. вес опасно высокий.'),
+          R.createElement('div', { className: 'fingers-mh-test__result-msg-block' },
+            R.createElement('span', { className: 'fingers-mh-test__result-msg-icon' },
+              result.suggestion.action === 'store' ? '✓' : 'ℹ'),
+            R.createElement('span', { className: 'fingers-mh-test__result-msg' },
+              result.suggestion.message)),
+          result.bwSource === 'fallback'
+            ? R.createElement('p', { className: 'fingers-mh-test__result-warn' },
+                '⚠ Вес тела не указан в Профиле — взяли 70 кг. Уточни для точного MVC.')
+            : null,
+          R.createElement('div', { className: 'fingers-mh-test__result-actions' },
+            R.createElement('button', {
+              type: 'button',
+              className: 'fingers-mh-test__btn fingers-mh-test__btn--cancel',
+              onClick: resetForm
+            }, '↻ Переделать'),
+            R.createElement('button', {
+              type: 'button',
+              className: 'fingers-mh-test__btn fingers-mh-test__btn--save',
+              onClick: onClose
+            }, 'Готово')
+          )
+        )
+      : R.createElement('div', { className: 'fingers-mh-test__form' },
+
+          // Explainer block — что это / зачем / как
+          R.createElement('div', { className: 'fingers-mh-test__explainer' },
+            R.createElement('div', { className: 'fingers-mh-test__explainer-row' },
+              R.createElement('span', { className: 'fingers-mh-test__explainer-icon' }, '🎯'),
+              R.createElement('div', null,
+                R.createElement('strong', null, 'Зачем нужен этот тест: '),
+                'найти максимальную нагрузку которую ты можешь держать на этом хвате/грани. ',
+                'Потом из него рассчитывается % MVC — критично для безопасной тренировки.')
+            ),
+            R.createElement('div', { className: 'fingers-mh-test__explainer-row' },
+              R.createElement('span', { className: 'fingers-mh-test__explainer-icon' }, '🤲'),
+              R.createElement('div', null,
+                R.createElement('strong', null, 'Как делать: '),
+                'хорошо прогрейся, потом подвесься с выбранным весом на ',
+                gripLabel.toLowerCase(),
+                ' / ',
+                edgeMm,
+                ' мм до отказа. Замерь время виса.')
+            ),
+            R.createElement('div', { className: 'fingers-mh-test__explainer-row' },
+              R.createElement('span', { className: 'fingers-mh-test__explainer-icon' }, '⏱'),
+              R.createElement('div', null,
+                R.createElement('strong', null, 'Цель — 7-10 секунд. '),
+                'Меньше → вес слишком большой, подбери легче. Больше → слишком лёгкий, добавь.')
+            )
+          ),
+
+          R.createElement('label', { className: 'fingers-mh-test__field' },
+            R.createElement('span', null, 'Доп. вес, кг'),
+            R.createElement('input', {
+              type: 'number', step: 0.5, value: addedKg,
+              onChange: function (e) { setAddedKg(parseFloat(e.target.value) || 0); }
+            })
+          ),
+          R.createElement('label', { className: 'fingers-mh-test__field' },
+            R.createElement('span', null,
+              'Время виса, с',
+              R.createElement('em', { className: 'fingers-mh-test__sweet-zone' },
+                'цель 7–10 с')),
+            R.createElement('input', {
+              type: 'number', step: 0.5, min: 1, max: 60, value: holdTime,
+              onChange: function (e) { setHoldTime(parseFloat(e.target.value) || 0); }
+            })
+          ),
+          R.createElement('div', { className: 'fingers-mh-test__actions' },
+            R.createElement('button', {
+              type: 'button',
+              className: 'fingers-mh-test__btn fingers-mh-test__btn--cancel',
+              onClick: onClose
+            }, 'Отмена'),
+            R.createElement('button', {
+              type: 'button',
+              className: 'fingers-mh-test__btn fingers-mh-test__btn--save',
+              onClick: handleSave
+            }, 'Записать результат')
+          )
+        );
+
+    return R.createElement('div', {
+      className: 'fingers-mh-test__backdrop',
+      onClick: onClose,
+      role: 'presentation'
+    },
+      R.createElement('div', {
+        className: 'fingers-mh-test',
+        role: 'dialog',
+        'aria-label': 'Max Hang Test',
+        onClick: function (e) { e.stopPropagation(); }
+      },
+        R.createElement('div', { className: 'fingers-mh-test__header' },
+          R.createElement('h2', { className: 'fingers-mh-test__title' },
+            R.createElement('span', { 'aria-hidden': 'true' }, '⚡'),
+            ' Max Hang Test'),
+          R.createElement('div', { className: 'fingers-mh-test__sub' },
+            gripLabel + ' · ' + edgeMm + ' мм')
+        ),
+        body
+      )
+    );
+  }
+  Fingers.MaxHangTestSheet = MaxHangTestSheet;
+
   Fingers.ExerciseConstructor = function ExerciseConstructor(props) {
     if (!R) return null;
     const p = props || {};
@@ -548,6 +756,10 @@
     // менять их = ломать смысл программы. Доступны для изменения только grip,
     // edge и доп. вес — стандартные progression knobs.
     const protocolLocked = !!p.protocolLocked;
+    // Max Hang Test inline-модалка: {gripId, edgeMm, startWeight} или null.
+    // Открывается при клике на CTA «Max Hang Test», закрывается ручкой или
+    // после записи результата.
+    const [mhTestParams, setMhTestParams] = R.useState(null);
 
     // Age fail-closed guard: возраст не указан в профиле — показываем CTA
     // вместо опасных хватов (вместо тихо отфильтрованного списка).
@@ -589,7 +801,7 @@
     // Доп. вес — единственная "крупная" строка с большими кнопками
     els.push(R.createElement(R.Fragment, { key: 'w' },
       renderWeightStepper(ex.addedWeightKg, function (kg) { patch({ addedWeightKg: kg }); }, exIdx)));
-    const hint = renderMvcHint(ex.gripId, ex.edgeSizeMm, ex.addedWeightKg);
+    const hint = renderMvcHint(ex.gripId, ex.edgeSizeMm, ex.addedWeightKg, setMhTestParams);
     if (hint) els.push(R.createElement(R.Fragment, { key: 'wh' }, hint));
 
     els.push(R.createElement(R.Fragment, { key: 'hang' },
@@ -621,7 +833,14 @@
       'data-exercise-index': exIdx,
       'data-exercise-grip': grip.label,
       'data-exercise-total': exTotal,
-    }, els);
+    }, els.concat(mhTestParams
+      ? [R.createElement(MaxHangTestSheet, {
+          key: 'mh-modal',
+          params: mhTestParams,
+          onClose: function () { setMhTestParams(null); },
+          onSaved: function () { /* keep open для показа результата */ }
+        })]
+      : []));
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);

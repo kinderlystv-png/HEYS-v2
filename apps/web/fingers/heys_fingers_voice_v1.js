@@ -289,6 +289,127 @@
     return 'none';
   };
 
+  // ===== VoiceMiniControls (React) =====
+  // Компактные controls для inline-рендера в шапке WarmupRunner и LiveSession:
+  // иконка 🔊/🔇 (toggle enabled) + раскрывающаяся панелька со слайдером громкости.
+  // Изменения сразу пишутся в LS через voice.setEnabled/setVolume.
+  // Используется как: Fingers.VoiceMiniControls({ inline?: true })
+  const R = (typeof window !== 'undefined') ? window.React : null;
+  if (R && R.createElement) {
+    Fingers.VoiceMiniControls = function VoiceMiniControls(props) {
+      const inline = !!(props && props.inline);
+      const initial = voice.getSettings();
+      const [open, setOpen] = R.useState(false);
+      const [enabled, setEnabledLocal] = R.useState(initial.enabled !== false);
+      const [vol, setVolLocal] = R.useState(typeof initial.volume === 'number' ? initial.volume : 0.8);
+
+      function applyEnabled(b) {
+        setEnabledLocal(b);
+        try { voice.setEnabled(b); } catch (_) {}
+      }
+      function applyVolume(v) {
+        const clamped = Math.max(0, Math.min(1, Number(v) || 0));
+        setVolLocal(clamped);
+        try { voice.setVolume(clamped); } catch (_) {}
+      }
+
+      // SVG монолинейный спикер — единый стиль с табами и кнопками-иконками
+      // вместо emoji-силуэта (тот рендерится чёрным и выбивается из дизайна).
+      // Количество волн зависит от громкости; muted — крест поверх.
+      function speakerIcon() {
+        const waves = !enabled ? 0
+          : vol < 0.05 ? 0
+          : vol < 0.4 ? 1
+          : vol < 0.75 ? 2
+          : 3;
+        const stroke = 1.7;
+        const common = {
+          fill: 'none', stroke: 'currentColor', strokeWidth: stroke,
+          strokeLinecap: 'round', strokeLinejoin: 'round'
+        };
+        const children = [
+          // Корпус спикера
+          R.createElement('path', Object.assign({ key: 'body',
+            d: 'M3.5 9v6h3.2l5 3.6V5.4L6.7 9H3.5z' }, common))
+        ];
+        if (waves >= 1) {
+          children.push(R.createElement('path', Object.assign({ key: 'w1',
+            d: 'M14.5 9.5c.7.7 1.1 1.6 1.1 2.5s-.4 1.8-1.1 2.5' }, common)));
+        }
+        if (waves >= 2) {
+          children.push(R.createElement('path', Object.assign({ key: 'w2',
+            d: 'M16.7 7.3c1.3 1.3 2 3 2 4.7s-.7 3.4-2 4.7' }, common)));
+        }
+        if (waves >= 3) {
+          children.push(R.createElement('path', Object.assign({ key: 'w3',
+            d: 'M18.9 5.1c1.9 1.9 2.9 4.3 2.9 6.9s-1 5-2.9 6.9' }, common)));
+        }
+        if (!enabled) {
+          children.push(R.createElement('path', Object.assign({ key: 'mute',
+            d: 'M15.5 9.5l5 5M20.5 9.5l-5 5' }, common, {
+            stroke: '#dc2626', strokeWidth: stroke
+          })));
+        }
+        return R.createElement('svg', {
+          width: 22, height: 22, viewBox: '0 0 24 24',
+          'aria-hidden': 'true'
+        }, children);
+      }
+
+      return R.createElement('div', {
+        className: 'fingers-voice-mini' + (inline ? ' is-inline' : '') + (open ? ' is-open' : '')
+      },
+        // Trigger
+        R.createElement('button', {
+          type: 'button',
+          className: 'fingers-voice-mini__btn',
+          'aria-label': enabled ? 'Голос: включен. Изменить громкость' : 'Голос: выключен. Изменить',
+          'aria-expanded': open ? 'true' : 'false',
+          onClick: function () { setOpen(function (o) { return !o; }); }
+        }, speakerIcon()),
+
+        // Popover
+        open ? R.createElement('div', {
+          className: 'fingers-voice-mini__pop',
+          role: 'dialog',
+          'aria-label': 'Настройки голоса'
+        },
+          // Row 1: enable toggle
+          R.createElement('label', { className: 'fingers-voice-mini__row' },
+            R.createElement('span', { className: 'fingers-voice-mini__label' }, 'Голосовое сопровождение'),
+            R.createElement('input', {
+              type: 'checkbox',
+              className: 'fingers-voice-mini__toggle',
+              checked: enabled,
+              onChange: function (e) { applyEnabled(!!e.target.checked); }
+            })
+          ),
+          // Row 2: volume slider (disabled if voice off)
+          R.createElement('label', { className: 'fingers-voice-mini__row fingers-voice-mini__row--volume' },
+            R.createElement('span', { className: 'fingers-voice-mini__label' },
+              'Громкость',
+              R.createElement('span', { className: 'fingers-voice-mini__value' }, Math.round(vol * 100) + '%')
+            ),
+            R.createElement('input', {
+              type: 'range',
+              className: 'fingers-voice-mini__slider',
+              min: 0, max: 1, step: 0.05,
+              value: vol,
+              disabled: !enabled,
+              onChange: function (e) { applyVolume(e.target.value); },
+              'aria-label': 'Громкость голоса'
+            })
+          ),
+          R.createElement('button', {
+            type: 'button',
+            className: 'fingers-voice-mini__close',
+            onClick: function () { setOpen(false); }
+          }, 'Готово')
+        ) : null
+      );
+    };
+  }
+
   // Serial queue: чтобы фразы НЕ накладывались друг на друга, каждый say
   // ждёт завершения предыдущего. Используется fire-and-forget из timer
   // (без await), и без очереди MP3 проигрывались параллельно.

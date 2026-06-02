@@ -616,7 +616,10 @@
   // Screen 3: Safety
   function _renderSafety(state, setState) {
     function next() {
-      const ns = Object.assign({}, state, { step: 4 });
+      // Раньше шёл на step 4 (Equipment); теперь сразу на Done.
+      // Equipment выбирается tab-bar'ом над шапкой fingers.
+      // Дефолт hasFingerboard=true гарантирован в _readState (line 84).
+      const ns = Object.assign({}, state, { step: 5 });
       _writeState(ns);
       setState(ns);
     }
@@ -869,8 +872,10 @@
 
     let screen = null;
     let showBack = false;
+    // 5 step'ов после удаления Equipment-шага (его место — tab-bar над шапкой
+    // fingers, чтобы можно было менять оборудование между сессиями).
     let showDots = state.path === 'full';
-    let totalSteps = 6;
+    let totalSteps = 5;
 
     if (state.step === 0) {
       screen = _renderWelcome(state, setState, onComplete);
@@ -884,11 +889,9 @@
     } else if (state.step === 3) {
       screen = _renderSafety(state, setState);
       showBack = true;
-    } else if (state.step === 4) {
-      screen = _renderEquipment(state, setState);
-      showBack = true;
-    } else if (state.step === 5) {
-      // FC (а не renderer-функция) — hooks внутри DoneStep корректны.
+    } else if (state.step === 4 || state.step === 5) {
+      // Step 4 (Equipment) удалён — но старые LS-снапшоты могут иметь step=4.
+      // Перенаправляем в Done. Step=5 рендерит Done нативно.
       screen = h(DoneStep, { state: state, setState: setState, onComplete: onComplete });
       showBack = state.path === 'full';
     }

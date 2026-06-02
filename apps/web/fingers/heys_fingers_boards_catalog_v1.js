@@ -112,6 +112,60 @@
         { id: 'pocket_3finger',    label: '3-finger pocket', sizeMm: 20, gripCompat: ['front3', 'back3'] },
         { id: 'mono',              label: 'Mono pocket',     sizeMm: 18, gripCompat: ['mono'] }
       ]
+    },
+    // ─── Hang blocks (portable lift/hang tools) ──────────────────────────
+    // kind: 'block' маркер — UI отображает их в отдельном tab'е EquipmentBar
+    // («💪 Hang block»). Используются для max-hangs и block-lifts (eccentric
+    // подъём гантели/гири/диска снизу за карабин). Repeaters не подходят —
+    // нет разнообразия для длительной последовательности подходов.
+    {
+      id: 'xclimb_terminator',
+      kind: 'block',
+      label: 'xclimb Terminator',
+      manufacturer: 'xclimb (RU)',
+      imageUrl: null,
+      edges: [
+        { id: 'edge_20', label: 'Edge 20 мм', sizeMm: 20, gripCompat: ['openhand4', 'halfcrimp', 'fullcrimp', 'front3'] },
+        { id: 'edge_15', label: 'Edge 15 мм', sizeMm: 15, gripCompat: ['halfcrimp', 'fullcrimp', 'front3'] },
+        { id: 'edge_10', label: 'Edge 10 мм', sizeMm: 10, gripCompat: ['halfcrimp', 'fullcrimp'] },
+        { id: 'pocket_2finger_18', label: '2-finger pocket', sizeMm: 18, gripCompat: ['halfcrimp', 'front3'] }
+      ]
+    },
+    {
+      id: 'tension_block_1',
+      kind: 'block',
+      label: 'Tension Block 1.0',
+      manufacturer: 'Tension Climbing (US)',
+      imageUrl: null,
+      edges: [
+        { id: 'edge_20', label: 'Edge 20 мм', sizeMm: 20, gripCompat: ['openhand4', 'halfcrimp', 'fullcrimp', 'front3'] },
+        { id: 'edge_15', label: 'Edge 15 мм', sizeMm: 15, gripCompat: ['halfcrimp', 'fullcrimp', 'front3'] },
+        { id: 'edge_10', label: 'Edge 10 мм', sizeMm: 10, gripCompat: ['halfcrimp', 'fullcrimp'] },
+        { id: 'pocket_3finger_18', label: '3-finger pocket', sizeMm: 18, gripCompat: ['front3'] }
+      ]
+    },
+    {
+      id: 'lattice_block',
+      kind: 'block',
+      label: 'Lattice Hang Block',
+      manufacturer: 'Lattice Training (UK)',
+      imageUrl: null,
+      edges: [
+        { id: 'edge_20', label: 'Edge 20 мм', sizeMm: 20, gripCompat: ['openhand4', 'halfcrimp', 'fullcrimp', 'front3'] },
+        { id: 'edge_14', label: 'Edge 14 мм', sizeMm: 14, gripCompat: ['halfcrimp', 'fullcrimp', 'front3'] }
+      ]
+    },
+    {
+      id: 'custom_wood_block',
+      kind: 'block',
+      label: 'Самодельный block',
+      manufacturer: 'Custom wood',
+      imageUrl: null,
+      edges: [
+        { id: 'edge_20', label: 'Edge 20 мм', sizeMm: 20, gripCompat: ['openhand4', 'halfcrimp', 'fullcrimp', 'front3'] },
+        { id: 'edge_15', label: 'Edge 15 мм', sizeMm: 15, gripCompat: ['halfcrimp', 'fullcrimp', 'front3'] },
+        { id: 'edge_10', label: 'Edge 10 мм', sizeMm: 10, gripCompat: ['halfcrimp', 'fullcrimp'] }
+      ]
     }
   ];
 
@@ -145,10 +199,23 @@
     });
   }
 
+  /**
+   * Доски по типу: 'fingerboard' (полные настенные) или 'block' (portable
+   * hang block для max-hangs и lift'ов). Default kind для legacy записей — 'fingerboard'.
+   * @param {string} kind
+   * @returns {Array}
+   */
+  function getBoardsByKind(kind) {
+    return BOARDS.filter(function (b) {
+      return (b.kind || 'fingerboard') === kind;
+    });
+  }
+
   // === Экспорт ===
   Fingers.BOARDS = BOARDS;
   Fingers.BOARDS_BY_ID = BOARDS_BY_ID;
   Fingers.getBoardById = getBoardById;
   Fingers.getEdgeById = getEdgeById;
   Fingers.findCompatibleEdges = findCompatibleEdges;
+  Fingers.getBoardsByKind = getBoardsByKind;
 })(typeof window !== 'undefined' ? window : globalThis);

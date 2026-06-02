@@ -7911,6 +7911,82 @@
   const { useState, useMemo, useEffect, useCallback } = React;
 
   // --- helpers ---
+  // Сканирует историю fingers-сессий за lookbackDays и считает session-level
+  // achievements для текущей завершённой сессии. Возвращает {
+  //   isFirstEver, isFirstOfProgram, isVolumePR, prevBestHangSec, comebackDays
+  // }. Используется в session summary для achievement chips.
+  function _computeSessionAchievements(currentLog, dateKey, lookbackDays) {
+    const lookback = Math.max(30, Math.min(365, lookbackDays || 365));
+    const u = HEYS.utils;
+    if (!u || !u.lsGet || !currentLog) {
+      return { isFirstEver: true, isFirstOfProgram: true, isVolumePR: false, prevBestHangSec: 0, comebackDays: 0 };
+    }
+    const todayKey = dateKey || new Date().toISOString().slice(0, 10);
+    let prevSessions = 0;
+    let prevOfProgram = 0;
+    let prevBestHangSec = 0;
+    let lastSessionKey = null;
+    const today = new Date();
+    for (let i = 0; i < lookback; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const key = y + '-' + m + '-' + dd;
+      const day = u.lsGet('heys_dayv2_' + key, null);
+      if (!day || !Array.isArray(day.trainings)) continue;
+      for (let k = 0; k < day.trainings.length; k++) {
+        const tr = day.trainings[k];
+        if (!tr || tr.type !== 'fingers') continue;
+        // Сегодняшнюю текущую сессию мы пропускаем (она уже сохранена сверху)
+        if (key === todayKey && tr.fingersLog && currentLog.completedAt
+          && tr.fingersLog.completedAt === currentLog.completedAt) continue;
+        prevSessions++;
+        if (!lastSessionKey) lastSessionKey = key;
+        const log = tr.fingersLog || {};
+        if (log.programId === currentLog.programId) prevOfProgram++;
+        // Volume PR: общее время виса предыдущих сессий
+        let hangSec = 0;
+        if (Array.isArray(log.exercises)) {
+          for (let e = 0; e < log.exercises.length; e++) {
+            const ex = log.exercises[e];
+            hangSec += (Number(ex.hangSec) || 0)
+              * (Number(ex.repsPerSet) || 0)
+              * (Number(ex.setsCount) || 0);
+          }
+        }
+        if (hangSec > prevBestHangSec) prevBestHangSec = hangSec;
+      }
+    }
+    // Compute current session totalHangSec
+    let curHangSec = 0;
+    if (Array.isArray(currentLog.exercises)) {
+      for (let e = 0; e < currentLog.exercises.length; e++) {
+        const ex = currentLog.exercises[e];
+        curHangSec += (Number(ex.hangSec) || 0)
+          * (Number(ex.repsPerSet) || 0)
+          * (Number(ex.setsCount) || 0);
+      }
+    }
+    let comebackDays = 0;
+    if (lastSessionKey) {
+      const lp = lastSessionKey.split('-');
+      const lastDate = new Date(Number(lp[0]), Number(lp[1]) - 1, Number(lp[2]));
+      const tp = todayKey.split('-');
+      const curDate = new Date(Number(tp[0]), Number(tp[1]) - 1, Number(tp[2]));
+      comebackDays = Math.round((curDate - lastDate) / 86400000);
+    }
+    return {
+      isFirstEver: prevSessions === 0,
+      isFirstOfProgram: prevOfProgram === 0,
+      isVolumePR: curHangSec > prevBestHangSec && prevBestHangSec > 0,
+      prevBestHangSec: prevBestHangSec,
+      curHangSec: curHangSec,
+      comebackDays: comebackDays
+    };
+  }
+
   // Сканирует последние lookbackDays дней heys_dayv2_<date> и собирает
   // Map<programId, dateKey> последней сессии для каждого протокола. Используется
   // в ProgramsTab для chip «Сделал N дней назад». Возвращает {} если utils нет.
@@ -8249,6 +8325,24 @@
       { id: 'max',      label: 'Максимум',      emoji: '🔥' }
     ];
 
+    // Readiness-aware launch guard. Сравниваем intensity протокола с тем,
+    // что разрешает cooldown (rest/recovery → не выше recovery; moderate →
+    // не выше moderate). Если выше — перехватываем onPickProgram и просим
+    // подтверждение.
+    const INTENSITY_RANK = { recovery: 0, moderate: 1, max: 2 };
+    const READINESS_CEILING = { rest: 0, recovery: 0, moderate: 1, max: 2 };
+    const [pendingRisky, setPendingRisky] = useState(null);
+    const safeLaunch = useCallback(function (program) {
+      const r = cool && cool.recommendation;
+      const ceiling = (r && READINESS_CEILING[r] != null) ? READINESS_CEILING[r] : 2;
+      const need = INTENSITY_RANK[program.intensity || 'moderate'];
+      if (need > ceiling) {
+        setPendingRisky({ program: program, readiness: r, hours: cool && cool.hoursSinceLast });
+        return;
+      }
+      onPickProgram(program);
+    }, [cool, onPickProgram]);
+
     // Readiness banner — широкая карточка наверху, читает cooldownCheck.
     // Намеренно отличается от pill-фильтра ниже: горизонтальный layout с
     // крупной иконкой и подзаголовком — пользователь видит «что советует
@@ -8435,12 +8529,54 @@
           ),
           h('button', {
             className: 'fingers-fs-cta',
-            onClick: function () { onPickProgram(p); },
+            onClick: function () { safeLaunch(p); },
             style: { width: '100%' }
           }, 'Запустить протокол')
         );
       })
-        )
+        ),
+      pendingRisky && (function () {
+        const r = pendingRisky.readiness;
+        const restMode = r === 'rest';
+        const title = restMode ? 'Сегодня — день отдыха' : 'Связки ещё восстанавливаются';
+        const reason = restMode
+          ? 'С прошлой максимальной сессии прошло меньше 24 часов. Сухожилия пальцев восстанавливаются медленнее мышц — нагрузка сейчас сильно повышает риск разрыва кольцевидного блока (A2/A4).'
+          : 'Прошло меньше 48 часов после максимальной сессии. Сегодня лучше no-hangs или антагонисты — мышцы готовы, а связки нет.';
+        const hoursTxt = pendingRisky.hours != null
+          ? (pendingRisky.hours < 24 ? Math.round(pendingRisky.hours) + 'ч' : Math.round(pendingRisky.hours / 24) + ' дн.')
+          : '—';
+        return h('div', {
+          className: 'fingers-fs-risk-overlay',
+          onClick: function (e) { if (e.target === e.currentTarget) setPendingRisky(null); }
+        },
+          h('div', { className: 'fingers-fs-risk-modal', role: 'dialog', 'aria-modal': 'true' },
+            h('div', { className: 'fingers-fs-risk-modal__icon', 'aria-hidden': 'true' }, '⚠'),
+            h('h3', { className: 'fingers-fs-risk-modal__title' }, title),
+            h('p', { className: 'fingers-fs-risk-modal__reason' }, reason),
+            h('div', { className: 'fingers-fs-risk-modal__meta' },
+              h('span', null, 'Прошло с прошлой сессии: '),
+              h('strong', null, hoursTxt)
+            ),
+            h('div', { className: 'fingers-fs-risk-modal__actions' },
+              h('button', {
+                className: 'fingers-fs-risk-modal__btn fingers-fs-risk-modal__btn--secondary',
+                onClick: function () { setPendingRisky(null); }
+              }, 'Отмена'),
+              h('button', {
+                className: 'fingers-fs-risk-modal__btn fingers-fs-risk-modal__btn--danger',
+                onClick: function () {
+                  const prog = pendingRisky.program;
+                  setPendingRisky(null);
+                  onPickProgram(prog);
+                }
+              }, 'Всё равно начать')
+            ),
+            h('p', { className: 'fingers-fs-risk-modal__source' },
+              'Schöffl et al. (2021): A2 — самый травмируемый блок (~70% всех pulley injuries).'
+            )
+          )
+        );
+      })()
     );
   }
 
@@ -9929,6 +10065,15 @@
         // Stats для achievements — переиспользуем уже определённую функцию.
         let stats = null;
         try { stats = computeProgressStats(); } catch (_) { stats = null; }
+        // Session-level achievements: volume PR, first-of-program, comeback.
+        // Сканируем 365 дней — этого хватит чтобы отличить «первый раз» от
+        // «возвращение после паузы».
+        let achievements = null;
+        try {
+          achievements = _computeSessionAchievements(fingersLog, dateKey, 365);
+        } catch (e) {
+          console.warn('[SessionUI] achievements compute failed:', e);
+        }
         setSessionSummary({
           programName: pendingProgram?.name || 'Свой конструктор',
           totalMin: Math.round(totalMin),
@@ -9938,7 +10083,8 @@
           dateKey: dateKey || (new Date().toISOString().slice(0, 10)),
           intensity: programIntensity,
           streak: stats ? stats.streak : 0,
-          totalSessions: stats ? stats.totalSessions : 1
+          totalSessions: stats ? stats.totalSessions : 1,
+          achievements: achievements
         });
         // Persistence уже очищается в LiveSession.onComplete → можно close
         // только по явному дисмиссу из summary.
@@ -10366,6 +10512,36 @@
             label: 'Max-сессия',
             kind: 'intensity-max'
           });
+        }
+        // Session-level achievements (Volume PR / Comeback / First-of-program)
+        const ach = ss.achievements;
+        if (ach) {
+          if (ach.isVolumePR) {
+            const delta = ach.curHangSec - ach.prevBestHangSec;
+            const fmt = function (s) { return s >= 60 ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : s + ' с'; };
+            milestones.unshift({
+              id: 'pr',
+              icon: '🏆',
+              label: 'Volume PR: ' + fmt(ach.curHangSec) + ' (+' + delta + ' с)',
+              kind: 'pr'
+            });
+          }
+          if (ach.comebackDays >= 14 && !ach.isFirstEver) {
+            milestones.push({
+              id: 'comeback',
+              icon: '👋',
+              label: 'Возвращение после ' + ach.comebackDays + ' дн.',
+              kind: 'comeback'
+            });
+          }
+          if (ach.isFirstOfProgram && !ach.isFirstEver) {
+            milestones.push({
+              id: 'first-prog',
+              icon: '🆕',
+              label: 'Первый раз этот протокол',
+              kind: 'first-prog'
+            });
+          }
         }
         // Next-step рекомендация по intensity
         const nextStepText = ss.intensity === 'max'

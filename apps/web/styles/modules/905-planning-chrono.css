@@ -1,0 +1,1770 @@
+/* =============================================================================
+   905 — PLANNING CHRONO (Хронометраж)
+   Подвкладка раздела "Задачи": облако кружков-дел, размер ∝ √минут,
+   цвет ∝ минут (pastel → vivid).
+   ============================================================================= */
+
+/* planning-content по умолчанию (для list/calendar/gantt) — обычный
+   overflow-y:auto без flex. Для нашего экрана хроно нужен flex-column,
+   чтобы chrono-cloud по-настоящему растягивался по вертикали и баблы
+   центрировались между strip и низом, а не прижимались к верху. */
+.planning-tab:has(.chrono-screen) .planning-content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chrono-screen {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    /* Двойной механизм роста по высоте — на случай если `.planning-content`
+       НЕ flex-родитель (например, если :has-селектор сверху не применился):
+       flex:1 работает когда parent — flex; height:100% когда parent — block. */
+    flex: 1 1 0;
+    height: 100%;
+    min-height: 0;
+    padding: 12px 12px 16px;
+    box-sizing: border-box;
+    gap: 12px;
+    /* Скролл на самом экране, а не на cloud — иначе breakdown-бар в режиме
+       «неделя» как sibling cloud уезжает за низ экрана без возможности
+       проскроллить. Теперь облако растёт под свой контент + minHeight, а
+       весь экран листается, если содержимого больше высоты. */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* --- Timer banner (активный таймер вверху экрана) --- */
+.chrono-timer-banner {
+    --hue: 200deg;
+    flex: 0 0 auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: hsl(var(--hue) 35% 96%);
+    border: 1px solid hsl(var(--hue) 35% 80%);
+    color: hsl(var(--hue) 30% 22%);
+    font-size: 13px;
+    overflow: hidden;
+}
+
+.chrono-timer-banner__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: hsl(var(--hue) 55% 70% / 0.35);
+    transition: width 0.5s linear;
+    z-index: 0;
+}
+
+.chrono-timer-banner__emoji,
+.chrono-timer-banner__name,
+.chrono-timer-banner__time,
+.chrono-timer-banner__paused,
+.chrono-timer-banner__control,
+.chrono-timer-banner__stop {
+    position: relative;
+    z-index: 1;
+}
+
+.chrono-timer-banner.is-paused .chrono-timer-banner__fill {
+    opacity: 0.45;
+}
+
+.chrono-timer-banner__emoji {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.chrono-timer-banner__name {
+    flex: 1 1 auto;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chrono-timer-banner__time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.chrono-timer-banner__paused {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.chrono-timer-banner__control,
+.chrono-timer-banner__stop {
+    border: none;
+    background: transparent;
+    color: #ec4899;
+    font-size: 16px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chrono-timer-banner__control {
+    color: var(--planning-accent, #2563eb);
+}
+
+.chrono-timer-banner__control:hover,
+.chrono-timer-banner__stop:hover {
+    background: rgba(236, 72, 153, 0.12);
+}
+
+.chrono-timer-banner__control:hover {
+    background: rgba(37, 99, 235, 0.12);
+}
+
+/* --- Timer complete / stop modals --- */
+.chrono-timer-complete,
+.chrono-timer-stop {
+    max-width: 380px;
+    width: calc(100% - 24px);
+}
+
+.chrono-timer-complete__body,
+.chrono-timer-stop__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chrono-timer-complete__activity {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.chrono-timer-complete__emoji {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.chrono-timer-complete__msg {
+    color: var(--planning-muted, #64748b);
+    font-size: 13px;
+}
+
+.chrono-timer-complete__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chrono-timer-complete__actions .planning-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* --- Timer chips в duration-модалке --- */
+.chrono-duration__timer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--planning-surface-elevated, #f1f5f9);
+    border: 1px dashed var(--planning-border, rgba(15, 23, 42, 0.12));
+}
+
+.chrono-duration__timer-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.chrono-duration__timer-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--planning-text, #0f172a);
+}
+
+.chrono-duration__timer-running {
+    font-size: 11px;
+    color: #ec4899;
+}
+
+.chrono-duration__timer-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chrono-duration__timer-chip {
+    flex: 1 0 calc(50% - 3px);
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.12));
+    background: var(--planning-surface, #fff);
+    color: var(--planning-text, #0f172a);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.chrono-duration__timer-chip:hover:not(:disabled) {
+    background: rgba(37, 99, 235, 0.08);
+    border-color: var(--planning-accent, #2563eb);
+}
+
+.chrono-duration__timer-chip:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- Kind toggle [Цель|Лимит] в строке цели --- */
+.chrono-duration__target-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.chrono-duration__target-kind-toggle {
+    margin-left: auto;
+    display: inline-flex;
+    background: var(--planning-surface, #fff);
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.12));
+    border-radius: 999px;
+    padding: 2px;
+}
+
+.chrono-duration__target-kind-btn {
+    border: none;
+    background: transparent;
+    color: var(--planning-muted, #64748b);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chrono-duration__target-kind-btn.active {
+    background: var(--planning-accent, #2563eb);
+    color: #fff;
+}
+
+.chrono-duration__target.is-budget .chrono-duration__target-kind-btn.active {
+    background: hsl(28, 85%, 52%);
+}
+
+.chrono-duration__target.is-budget .chrono-duration__target-save:not(.is-saved):not(:disabled) {
+    background: hsl(28, 85%, 52%);
+}
+
+/* --- Scope bar (День/Неделя + дата + Сегодня — одна строка) --- */
+.chrono-scope-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+}
+
+.chrono-scope-bar__toggle {
+    display: inline-flex;
+    background: var(--planning-surface-elevated, #f1f5f9);
+    border-radius: 999px;
+    padding: 2px;
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.08));
+}
+
+.chrono-scope-bar__toggle-item {
+    border: none;
+    background: transparent;
+    color: var(--planning-muted, #64748b);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chrono-scope-bar__toggle-item.active {
+    background: var(--planning-accent, #2563eb);
+    color: #fff;
+}
+
+.chrono-scope-bar__nav-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--planning-surface-elevated, #f1f5f9);
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.08));
+    color: var(--planning-text, #0f172a);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.chrono-scope-bar__date {
+    min-width: 56px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--planning-text, #0f172a);
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Сумма за период — закреплена внизу справа, на одном уровне с FABs
+   подвкладок планнинга (.planning-subnav anchor = bottom-left, мы зеркалим
+   bottom-right). Использует те же переменные bottom-offset что и subnav,
+   чтобы при изменении высоты основных табов оба двигались синхронно. */
+.chrono-bottom-total {
+    position: fixed;
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px))) + 4px);
+    z-index: 940;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: var(--planning-text, #0f172a);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-bottom-total__label {
+    font-size: 12px;
+    color: var(--planning-muted, #64748b);
+    font-weight: 500;
+}
+
+.chrono-bottom-total__value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--planning-accent, #2563eb);
+}
+
+.theme-dark .chrono-bottom-total,
+[data-theme="dark"] .chrono-bottom-total {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.chrono-scope-bar__today {
+    margin-left: auto;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.08));
+    color: var(--planning-text, #0f172a);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.chrono-scope-bar__nav-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.chrono-scope-bar__today:hover {
+    background: var(--planning-surface-elevated, #f1f5f9);
+}
+
+/* --- Strip (занятия без часов в выбранном охвате — «пресеты»). ---
+   Тап → duration modal → запись → активность переезжает в облако. */
+.chrono-strip {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+    align-items: center;
+}
+
+.chrono-strip__item {
+    --hue: 210deg;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--planning-surface-elevated, #f1f5f9);
+    border: 1px solid hsl(var(--hue) 35% 78% / 0.6);
+    color: var(--planning-text, #0f172a);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.chrono-strip__item:hover {
+    background: hsl(var(--hue) 60% 92%);
+    border-color: hsl(var(--hue) 50% 65%);
+}
+
+.chrono-strip__item:active {
+    transform: scale(0.97);
+}
+
+.chrono-strip__emoji {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.chrono-strip__name {
+    line-height: 1;
+}
+
+.chrono-strip__item--add {
+    background: var(--planning-accent, #2563eb);
+    border-color: var(--planning-accent, #2563eb);
+    color: #fff;
+    font-weight: 600;
+}
+
+.chrono-strip__item--add:hover {
+    background: var(--planning-accent, #2563eb);
+    border-color: var(--planning-accent, #2563eb);
+    color: #fff;
+    filter: brightness(1.08);
+}
+
+/* --- Insights + plan/fact --- */
+.chrono-insights,
+.chrono-planfact {
+    flex: 0 0 auto;
+    border: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.07));
+    background: var(--planning-surface-elevated, #f8fafc);
+    border-radius: 10px;
+}
+
+.chrono-insights {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+}
+
+.chrono-insights__item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    min-width: 0;
+    background: var(--planning-surface, #fff);
+}
+
+.chrono-insights__title,
+.chrono-planfact__meta {
+    font-size: 11px;
+    color: var(--planning-muted, #64748b);
+}
+
+.chrono-insights__value,
+.chrono-planfact__name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--planning-text, #0f172a);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chrono-insights__detail,
+.chrono-planfact__numbers {
+    font-size: 12px;
+    color: var(--planning-muted, #64748b);
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-planfact {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+}
+
+.chrono-planfact__title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--planning-text, #0f172a);
+}
+
+.chrono-planfact__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.chrono-planfact__main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.chrono-planfact__meter {
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.08);
+}
+
+.chrono-planfact__fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--planning-accent, #2563eb);
+}
+
+.chrono-planfact__fill.is-over {
+    background: hsl(28, 85%, 52%);
+}
+
+/* --- Cloud (bubbles) ---
+   Outer = flex-центрирование (горизонталь + вертикаль) внутри доступной высоты.
+   Inner (__items) = flex-wrap с gap, чтобы кружки оставались рядом друг с другом. */
+.chrono-cloud {
+    /* Растёт под содержимое, но не меньше minHeight — чтобы оставалось
+       пространство для вертикального центрирования баблов между strip и
+       breakdown/низом. Скролл — на chrono-screen, не на cloud, чтобы
+       breakdown-бар в недельном режиме не уезжал за край без возможности
+       прокрутить. */
+    flex: 1 0 auto;
+    min-height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 4px;
+}
+
+.chrono-cloud__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    align-content: center;
+    max-width: 100%;
+}
+
+@keyframes chrono-float {
+    0%   { transform: translate3d(0, 0, 0); }
+    25%  { transform: translate3d(var(--float-x, 5px), calc(var(--float-y, 4px) * -1), 0); }
+    50%  { transform: translate3d(calc(var(--float-x, 5px) * -0.6), var(--float-y, 4px), 0); }
+    75%  { transform: translate3d(calc(var(--float-x, 5px) * 0.4), calc(var(--float-y, 4px) * -0.5), 0); }
+    100% { transform: translate3d(0, 0, 0); }
+}
+
+.chrono-empty {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--planning-muted, #64748b);
+    font-size: 14px;
+    text-align: center;
+    padding: 24px;
+}
+
+/* Wrapper — несёт размер, плавающую анимацию и (при наличии цели) кольцо
+   прогресса через conic-gradient. Внутри — сам кружок-button. */
+.chrono-bubble-wrap {
+    --size: 56px;
+    --ring-thickness: 4px;
+    position: relative;
+    width: var(--size);
+    height: var(--size);
+    box-sizing: border-box;
+    border-radius: 50%;
+    display: inline-block;
+    flex: 0 0 auto;
+    transition: width 0.25s ease, height 0.25s ease;
+    animation: chrono-float var(--float-dur, 9s) ease-in-out infinite;
+    animation-delay: var(--float-delay, 0s);
+    will-change: transform;
+}
+
+.chrono-bubble-wrap.has-target {
+    width: calc(var(--size) + var(--ring-thickness) * 2);
+    height: calc(var(--size) + var(--ring-thickness) * 2);
+    padding: var(--ring-thickness);
+    background: conic-gradient(
+        var(--ring-color, var(--planning-accent, #2563eb)) var(--progress-deg, 0deg),
+        rgba(15, 23, 42, 0.08) var(--progress-deg, 0deg)
+    );
+}
+
+.chrono-bubble-wrap.has-target.is-complete {
+    box-shadow: 0 0 0 1px var(--ring-color, var(--planning-accent, #2563eb)),
+                0 4px 14px rgba(15, 23, 42, 0.18);
+}
+
+/* Перебор лимита (budget) — кольцо полностью красное + красноватая тень. */
+.chrono-bubble-wrap.is-over {
+    box-shadow: 0 0 0 1px hsl(0, 80%, 52%),
+                0 4px 14px rgba(239, 68, 68, 0.3);
+}
+
+.chrono-bubble-wrap.is-over .chrono-bubble__time {
+    color: hsl(0, 70%, 35%);
+}
+
+.chrono-bubble {
+    --bg: hsl(210, 35%, 82%);
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--bg);
+    border: none;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    color: rgba(15, 23, 42, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px;
+    cursor: pointer;
+    transition: background 0.25s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    overflow: hidden;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    /* Появление-«хлопок» при первом монтировании — играет один раз браузером.
+       Повторно при re-render не запускается, так что бабл не дёргается на
+       каждый тап (это нам делает badge выше). */
+    animation: chrono-spawn 0.42s cubic-bezier(0.4, 0, 0.2, 1.25);
+    transform-origin: center;
+}
+
+.chrono-bubble:hover {
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.22);
+    filter: brightness(1.06);
+}
+
+.chrono-bubble:active {
+    filter: brightness(0.94);
+}
+
+@keyframes chrono-spawn {
+    0%   { transform: scale(0.55); opacity: 0.4; }
+    100% { transform: scale(1);    opacity: 1; }
+}
+
+.chrono-bubble__badge {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, -6px);
+    background: var(--badge-bg, var(--planning-accent, #2563eb));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 2;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.24);
+    animation: chrono-badge-float 1.35s ease-out forwards;
+}
+
+@keyframes chrono-badge-float {
+    0%   { transform: translate(-50%, -4px); opacity: 0; }
+    15%  { opacity: 1; }
+    100% { transform: translate(-50%, -52px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chrono-bubble-wrap { animation: none; }
+    .chrono-bubble { animation: none; }
+    .chrono-bubble__badge { animation: chrono-badge-float-reduced 1.2s linear forwards; }
+}
+@keyframes chrono-badge-float-reduced {
+    0%, 90% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.chrono-bubble__emoji {
+    font-size: clamp(18px, calc(var(--size) * 0.28), 32px);
+    line-height: 1;
+}
+
+.chrono-bubble__name {
+    font-size: clamp(9px, calc(var(--size) * 0.11), 13px);
+    font-weight: 600;
+    line-height: 1.05;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 92%;
+}
+
+.chrono-bubble__time {
+    font-size: clamp(10px, calc(var(--size) * 0.12), 13px);
+    font-weight: 700;
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-bubble-quick {
+    position: absolute;
+    left: 50%;
+    bottom: -18px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    gap: 3px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, bottom 0.15s ease;
+    z-index: 3;
+}
+
+.chrono-bubble-wrap:hover .chrono-bubble-quick,
+.chrono-bubble-wrap:focus-within .chrono-bubble-quick {
+    opacity: 1;
+    pointer-events: auto;
+    bottom: -24px;
+}
+
+.chrono-bubble-quick__btn,
+.chrono-history__tiny-btn {
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--planning-text, #0f172a);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    min-width: 28px;
+    height: 24px;
+    padding: 0 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+}
+
+/* --- Activity picker --- */
+.chrono-picker-overlay {
+    z-index: 1100;
+}
+
+.chrono-picker {
+    max-width: 480px;
+    width: calc(100% - 24px);
+}
+
+.chrono-picker__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.chrono-picker__search {
+    width: 100%;
+}
+
+.chrono-picker__list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chrono-picker__empty {
+    padding: 12px;
+    color: var(--planning-muted, #64748b);
+    font-size: 13px;
+    text-align: center;
+}
+
+.chrono-picker__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--planning-surface-elevated, #f1f5f9);
+    border: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.05));
+}
+
+.chrono-picker__row.is-archived {
+    opacity: 0.62;
+}
+
+.chrono-picker__toolbar {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.chrono-picker__archive-toggle {
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.12));
+    background: var(--planning-surface, #fff);
+    color: var(--planning-muted, #64748b);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.chrono-picker__archive-toggle.active {
+    background: var(--planning-accent, #2563eb);
+    border-color: var(--planning-accent, #2563eb);
+    color: #fff;
+}
+
+.chrono-picker__row--editing {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.chrono-picker__edit-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chrono-picker__emoji {
+    font-size: 22px;
+    line-height: 1;
+    width: 28px;
+    text-align: center;
+    flex: 0 0 auto;
+}
+
+.chrono-picker__emoji--btn {
+    background: transparent;
+    border: 1px dashed var(--planning-border, rgba(15, 23, 42, 0.12));
+    border-radius: 8px;
+    padding: 4px;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+}
+
+.chrono-picker__name {
+    flex: 1 1 auto;
+    font-size: 14px;
+    color: var(--planning-text, #0f172a);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chrono-picker__name-block {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.chrono-picker__name-block .chrono-picker__name {
+    flex: 0 0 auto;
+}
+
+.chrono-picker__target {
+    font-size: 11px;
+    color: var(--planning-muted, #64748b);
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-picker__target-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px;
+}
+
+.chrono-picker__target-label {
+    font-size: 12px;
+    color: var(--planning-muted, #64748b);
+    flex: 1 1 auto;
+}
+
+.chrono-picker__target-input {
+    width: 80px;
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.chrono-picker__input {
+    flex: 1 1 auto;
+    font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.12));
+    background: var(--planning-surface, #fff);
+    color: var(--planning-text, #0f172a);
+    min-width: 0;
+}
+
+.chrono-picker__row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+.chrono-picker__icon-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--planning-muted, #64748b);
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chrono-picker__icon-btn:hover {
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--planning-text, #0f172a);
+}
+
+.chrono-picker__icon-btn--danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.chrono-picker__create {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px dashed rgba(37, 99, 235, 0.3);
+}
+
+.chrono-picker__create-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chrono-picker__create-preview {
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    min-width: 0;
+}
+
+.chrono-picker__create-btn {
+    flex: 0 0 auto;
+    padding: 6px 14px;
+    background: var(--planning-accent, #2563eb);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* --- Emoji palette --- */
+.chrono-emoji-palette {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+}
+
+.chrono-emoji-palette__item {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: var(--planning-surface, #fff);
+    font-size: 18px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.chrono-emoji-palette__item:hover {
+    background: var(--planning-surface-elevated, #f1f5f9);
+}
+
+.chrono-emoji-palette__item.active {
+    border-color: var(--planning-accent, #2563eb);
+    background: rgba(37, 99, 235, 0.08);
+}
+
+/* --- Delete modal --- */
+.chrono-delete-overlay {
+    z-index: 1110;
+}
+
+.chrono-delete {
+    max-width: 420px;
+    width: calc(100% - 24px);
+}
+
+.chrono-delete__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chrono-delete__activity {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.chrono-delete__emoji {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.chrono-delete__name {
+    color: var(--planning-text, #0f172a);
+}
+
+.chrono-delete__history {
+    color: var(--planning-muted, #64748b);
+    font-size: 13px;
+}
+
+.chrono-delete__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chrono-delete__actions .planning-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+.chrono-delete__merge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    margin: 4px 0 8px;
+}
+
+.chrono-delete__merge-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.05));
+    background: var(--planning-surface-elevated, #f1f5f9);
+    color: var(--planning-text, #0f172a);
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.chrono-delete__merge-option.active {
+    border-color: var(--planning-accent, #2563eb);
+    background: rgba(37, 99, 235, 0.08);
+}
+
+/* --- History modal (long-press на кружок) --- */
+.chrono-history-overlay {
+    z-index: 1105;
+}
+
+.chrono-history {
+    max-width: 420px;
+    width: calc(100% - 24px);
+}
+
+.chrono-history__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.chrono-history__emoji {
+    margin-right: 4px;
+}
+
+.chrono-history__summary {
+    font-size: 13px;
+    color: var(--planning-muted, #64748b);
+}
+
+.chrono-history__empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--planning-muted, #64748b);
+    font-size: 13px;
+}
+
+.chrono-history__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chrono-history__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--planning-surface-elevated, #f1f5f9);
+    border: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.05));
+}
+
+.chrono-history__row--editing {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.chrono-history__edit-input {
+    min-width: 0;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.12));
+    background: var(--planning-surface, #fff);
+    color: var(--planning-text, #0f172a);
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-history__tiny-btn {
+    min-width: 32px;
+    height: 26px;
+    box-shadow: none;
+}
+
+.chrono-history__row-time {
+    font-weight: 700;
+    color: var(--planning-text, #0f172a);
+    font-variant-numeric: tabular-nums;
+    flex: 0 0 auto;
+}
+
+.chrono-history__row-when {
+    flex: 1 1 auto;
+    font-size: 13px;
+    color: var(--planning-muted, #64748b);
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-history__section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--planning-muted, #64748b);
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+/* ---- Heatmap (13 недель × 7 дней) ---- */
+.chrono-heatmap {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px;
+    align-items: stretch;
+}
+
+.chrono-heatmap__row-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--planning-muted, #64748b);
+    padding: 2px 0;
+}
+
+.chrono-heatmap__grid {
+    display: grid;
+    gap: 3px;
+}
+
+.chrono-heatmap__col {
+    display: grid;
+    grid-template-rows: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.chrono-heatmap__cell {
+    aspect-ratio: 1 / 1;
+    border-radius: 3px;
+    min-height: 10px;
+    transition: transform 0.1s ease;
+}
+
+.chrono-heatmap__cell--empty {
+    background: transparent !important;
+}
+
+.chrono-heatmap__cell:hover {
+    transform: scale(1.4);
+    z-index: 2;
+    position: relative;
+}
+
+.chrono-heatmap__legend {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--planning-muted, #64748b);
+    margin-top: 6px;
+}
+
+.chrono-heatmap__legend > span:not(:first-child):not(:last-child) {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+/* ---- Week breakdown (стек-бар по 7 дням) ---- */
+.chrono-week-breakdown {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 100px;
+    padding: 0 4px;
+}
+
+.chrono-week-breakdown__col {
+    flex: 1 1 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.chrono-week-breakdown__col-fill {
+    width: 100%;
+    min-height: 2px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 4px 4px 2px 2px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.04);
+    transition: filter 0.15s ease, transform 0.12s ease;
+}
+
+.chrono-week-breakdown__col:hover .chrono-week-breakdown__col-fill {
+    filter: brightness(1.08);
+}
+
+.chrono-week-breakdown__col:active .chrono-week-breakdown__col-fill {
+    transform: scale(0.97);
+}
+
+.chrono-week-breakdown__col.is-active .chrono-week-breakdown__col-fill {
+    box-shadow: 0 0 0 2px var(--planning-accent, #2563eb);
+}
+
+.chrono-week-breakdown__col.is-today .chrono-week-breakdown__label {
+    color: var(--planning-accent, #2563eb);
+    font-weight: 700;
+}
+
+.chrono-week-breakdown__seg {
+    width: 100%;
+    flex: 0 0 auto;
+}
+
+.chrono-week-breakdown__label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--planning-muted, #64748b);
+    font-weight: 600;
+}
+
+/* ---- Period toggle (день/неделя) в модалках цели ---- */
+.chrono-duration__target-period {
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chrono-duration__target-period-toggle,
+.chrono-picker__target-period-toggle {
+    display: inline-flex;
+    background: var(--planning-surface, #fff);
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.12));
+    border-radius: 999px;
+    padding: 2px;
+    flex: 0 0 auto;
+}
+
+.chrono-duration__target-period-btn,
+.chrono-picker__target-period-btn {
+    border: none;
+    background: transparent;
+    color: var(--planning-muted, #64748b);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    min-width: 44px;
+}
+
+.chrono-duration__target-period-btn.active,
+.chrono-picker__target-period-btn.active {
+    background: var(--planning-accent, #2563eb);
+    color: #fff;
+}
+
+
+/* --- Duration modal --- */
+.chrono-duration-overlay {
+    z-index: 1100;
+}
+
+.chrono-duration {
+    max-width: 380px;
+    width: calc(100% - 24px);
+}
+
+.chrono-duration__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Компактные колёса часы:минуты в chrono-модалке — viewport 132px (3 строки)
+   вместо стандартных 220px (5 строк), узкие колонки 64px, шрифт мельче.
+   Override scoped к .chrono-duration чтобы не задевать другие модалки. */
+.chrono-duration .wheel-viewport {
+    height: 132px;
+}
+
+.chrono-duration .wheel-column {
+    width: 64px;
+}
+
+.chrono-duration .wheel-label {
+    margin-bottom: 4px;
+    font-size: 11px;
+}
+
+.chrono-duration .wheel-item {
+    font-size: 18px;
+}
+
+.chrono-duration .wheel-item.selected {
+    font-size: 20px;
+}
+
+/* Крупный розовый крестик закрытия для chrono-модалок. */
+.chrono-duration .planning-modal__close,
+.chrono-history .planning-modal__close,
+.chrono-delete .planning-modal__close,
+.chrono-picker .planning-modal__close {
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+    line-height: 1;
+    color: #ec4899;
+    border-radius: 50%;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.chrono-duration .planning-modal__close:hover,
+.chrono-history .planning-modal__close:hover,
+.chrono-delete .planning-modal__close:hover,
+.chrono-picker .planning-modal__close:hover {
+    background: rgba(236, 72, 153, 0.12);
+    color: #db2777;
+}
+
+.chrono-duration .planning-modal__close:active,
+.chrono-history .planning-modal__close:active,
+.chrono-delete .planning-modal__close:active,
+.chrono-picker .planning-modal__close:active {
+    transform: scale(0.92);
+}
+
+.chrono-duration__emoji {
+    margin-right: 4px;
+}
+
+.chrono-duration__current {
+    font-size: 13px;
+    color: var(--planning-muted, #64748b);
+    line-height: 1.35;
+}
+
+.chrono-duration__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.chrono-duration__preset {
+    padding: 14px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.08));
+    background: var(--planning-surface-elevated, #f1f5f9);
+    color: var(--planning-text, #0f172a);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.chrono-duration__preset:hover {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: var(--planning-accent, #2563eb);
+}
+
+.chrono-duration__preset:active {
+    transform: scale(0.97);
+}
+
+.chrono-duration__custom-label {
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--planning-muted, #64748b);
+}
+
+.chrono-duration__custom {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.chrono-duration__wheels {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.chrono-duration__wheel-sep {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--planning-muted, #64748b);
+    padding: 0 4px;
+}
+
+.chrono-duration__custom-add {
+    align-self: stretch;
+    justify-content: center;
+}
+
+/* Цель в день — встроена в модалку, чтобы можно было задать/править/убрать
+   в тот же момент, когда уже думаешь про время. Менять можно сколько угодно,
+   change сохраняется на blur, Enter, или одновременно с добавлением минут. */
+.chrono-duration__target {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--planning-surface-elevated, #f1f5f9);
+    border: 1px dashed var(--planning-border, rgba(15, 23, 42, 0.12));
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.chrono-duration__target-label {
+    flex: 0 0 auto;
+    font-size: 13px;
+    color: var(--planning-muted, #64748b);
+    font-weight: 600;
+}
+
+.chrono-duration__target-input {
+    width: 80px;
+    flex: 0 0 auto;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-duration__target-unit-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    background: var(--planning-surface, #fff);
+    border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.12));
+    border-radius: 999px;
+    padding: 2px;
+}
+
+.chrono-duration__target-unit-btn {
+    border: none;
+    background: transparent;
+    color: var(--planning-muted, #64748b);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    min-width: 32px;
+}
+
+.chrono-duration__target-unit-btn.active {
+    background: var(--planning-accent, #2563eb);
+    color: #fff;
+}
+
+.chrono-duration__target-value {
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.chrono-duration__target-value .chrono-duration__target-input {
+    flex: 0 1 70px;
+    min-width: 56px;
+}
+
+.chrono-duration__target-clear {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    color: var(--planning-muted, #64748b);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+
+.chrono-duration__target-clear:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* Кнопка Сохранить/Обновить — синяя, при flash зеленеет на 900мс
+   (тот же savedFlash-стейт, что и инпут). */
+.chrono-duration__target-save {
+    margin-left: auto;
+    flex: 0 0 auto;
+    border: none;
+    background: var(--planning-accent, #2563eb);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease, opacity 0.15s ease;
+    white-space: nowrap;
+}
+
+.chrono-duration__target-save:hover:not(:disabled) {
+    filter: brightness(1.06);
+}
+
+.chrono-duration__target-save:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.chrono-duration__target-save:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.chrono-duration__target-save.is-saved {
+    background: #22c55e;
+}
+
+/* Зелёный flash на инпуте + плашка «✓ сохранено» — фидбек что значение
+   ушло в стор. Длится 900мс синхронно с savedFlash-стейтом в JS. */
+.chrono-duration__target-input {
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.chrono-duration__target-input.is-saved {
+    background-color: #dcfce7;
+    border-color: #22c55e;
+}
+
+.chrono-duration__target-saved {
+    flex: 0 0 100%;
+    font-size: 12px;
+    font-weight: 600;
+    color: #16a34a;
+    animation: chrono-target-saved 0.9s ease-out forwards;
+}
+
+.chrono-duration__link {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--planning-surface-elevated, #f1f5f9);
+    border: 1px dashed var(--planning-border, rgba(15, 23, 42, 0.12));
+}
+
+.chrono-duration__link-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--planning-text, #0f172a);
+}
+
+.chrono-duration__link-select {
+    width: 100%;
+}
+
+@keyframes chrono-target-saved {
+    0%   { opacity: 0; transform: translateY(-4px); }
+    20%  { opacity: 1; transform: translateY(0); }
+    80%  { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(0); }
+}
+
+/* --- Undo toast --- */
+.chrono-undo-toast {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(var(--planning-main-tabs-height, 96px) + var(--planning-subnav-height, 44px) + 24px);
+    z-index: 950;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.24);
+    font-size: 13px;
+    max-width: calc(100vw - 24px);
+}
+
+.chrono-undo-toast__text {
+    white-space: nowrap;
+}
+
+.chrono-undo-toast__action {
+    background: transparent;
+    border: none;
+    color: #93c5fd;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+}
+
+.chrono-undo-toast__close {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+}
+
+/* --- Narrow viewport --- */
+@media (max-width: 480px) {
+    .chrono-cloud { gap: 12px; }
+    .chrono-bubble { --size: 52px; }
+    .chrono-emoji-palette { grid-template-columns: repeat(7, 1fr); }
+    .chrono-duration__grid { grid-template-columns: repeat(2, 1fr); }
+    .chrono-scope-bar { row-gap: 6px; }
+    .chrono-insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .chrono-planfact__row { grid-template-columns: minmax(0, 1fr); }
+    .chrono-planfact__meter { width: 100%; }
+    .chrono-bubble-quick {
+        opacity: 1;
+        pointer-events: auto;
+        bottom: -24px;
+    }
+}
+
+/* --- Dark theme --- */
+.theme-dark .chrono-bubble,
+[data-theme="dark"] .chrono-bubble {
+    color: rgba(15, 23, 42, 0.92);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.theme-dark .chrono-scope-bar__toggle,
+.theme-dark .chrono-scope-bar__nav-btn,
+.theme-dark .chrono-picker__row,
+.theme-dark .chrono-insights,
+.theme-dark .chrono-insights__item,
+.theme-dark .chrono-planfact,
+.theme-dark .chrono-duration__preset,
+.theme-dark .chrono-delete__merge-option,
+[data-theme="dark"] .chrono-scope-bar__toggle,
+[data-theme="dark"] .chrono-scope-bar__nav-btn,
+[data-theme="dark"] .chrono-picker__row,
+[data-theme="dark"] .chrono-insights,
+[data-theme="dark"] .chrono-insights__item,
+[data-theme="dark"] .chrono-planfact,
+[data-theme="dark"] .chrono-duration__preset,
+[data-theme="dark"] .chrono-delete__merge-option {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.theme-dark .chrono-emoji-palette__item,
+[data-theme="dark"] .chrono-emoji-palette__item {
+    background: rgba(255, 255, 255, 0.04);
+    color: inherit;
+}

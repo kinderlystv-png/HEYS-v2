@@ -158,6 +158,7 @@
     const LOG_PREFIX = `[${LOG_FILTER}][HEYS.mealRec.card]`;
     const DEFAULT_REPLAN_REASON = 'INITIAL_LOAD';
     const REPLAN_DEBOUNCE_MS = 220;
+    let mealRecCardNullLogged = false;
 
     // === Diagnostics ring buffer ===
     // Кольцевой буфер логов планнера для копирования юзером.
@@ -1840,7 +1841,10 @@
 
         // Если рекомендация недоступна — не рендерим карточку
         if (!recommendation) {
-            console.warn(`${LOG_PREFIX} 🚫 Card NOT rendered (recommendation is null)`);
+            if (!mealRecCardNullLogged && global.__heysLogControl?.isEnabled?.('insights')) {
+                mealRecCardNullLogged = true;
+                console.info(`${LOG_PREFIX} Card skipped: recommendation is null`);
+            }
             return null;
         }
 

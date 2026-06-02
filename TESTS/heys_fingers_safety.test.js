@@ -462,3 +462,121 @@ describe('Fingers.bootStub — lazy-load gate', () => {
     expect(url).toBe('heys_fingers_bundle_v1.js');
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// EQUIPMENT FILTER — фильтр программ по доступному оборудованию
+// (blockMode / noEquipment / edgeLimit). Чтобы юзер с hang block не видел
+// repeaters_7_3 (нужен sloper), а с no-equipment — только No-Hangs программы.
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('Fingers.filterProgramsByEquipment', () => {
+  beforeEach(() => {
+    setupHEYS();
+    evalSource('heys_fingers_programs_catalog_v1.js');
+  });
+
+  const samplePrograms = [
+    { id: 'nelson',     noEquipment: true,                                exercises: [{ edgeSizeMm: null }] },
+    { id: 'universal',  noEquipment: false,                               exercises: [{ edgeSizeMm: 20 }, { edgeSizeMm: 18 }] },
+    { id: 'beastmaker', noEquipment: false, equipmentReq: 'fingerboard',  exercises: [{ edgeSizeMm: 20 }, { edgeSizeMm: 35 }] },
+    { id: 'block_max',  noEquipment: false, equipmentReq: 'block',        exercises: [{ edgeSizeMm: 20 }] },
+    { id: 'thin_edge',  noEquipment: false,                               exercises: [{ edgeSizeMm: 12 }, { edgeSizeMm: 10 }] }
+  ];
+
+  it('noEquipment=true → только программы с noEquipment:true (No-Hangs)', () => {
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(samplePrograms, { noEquipment: true });
+    expect(r.map((p) => p.id)).toEqual(['nelson']);
+  });
+
+  it('blockMode=true → block-специфичные + универсальные, БЕЗ No-Hangs и fingerboard-only', () => {
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(samplePrograms, { blockMode: true });
+    const ids = r.map((p) => p.id).sort();
+    // No-Hangs (nelson) — отдельная категория, видна только когда выбран таб 'none'.
+    // beastmaker (equipmentReq:'fingerboard') — не подходит для блока.
+    expect(ids).toEqual(['block_max', 'thin_edge', 'universal']);
+  });
+
+  it('edgeLimit=25 (door-frame) → исключаем edge <25мм И No-Hangs', () => {
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(samplePrograms, { edgeLimit: 25 });
+    const ids = r.map((p) => p.id);
+    // universal (min 18мм), thin_edge (min 10мм), beastmaker (min 20мм) — все исключены.
+    // nelson (noEquipment) — тоже исключён, это отдельная категория.
+    expect(ids).not.toContain('thin_edge');
+    expect(ids).not.toContain('universal');
+    expect(ids).not.toContain('beastmaker');
+    expect(ids).not.toContain('nelson');
+  });
+
+  it('full fingerboard (default) → всё кроме block-only', () => {
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(samplePrograms, {});
+    const ids = r.map((p) => p.id).sort();
+    expect(ids).not.toContain('block_max');
+    expect(ids).toContain('beastmaker');
+    expect(ids).toContain('universal');
+  });
+
+  it('REGRESSION: реальные PROGRAMS — Beastmaker beginner НЕ показывается на block', () => {
+    const all = window.HEYS.Fingers.PROGRAMS;
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(all, { blockMode: true });
+    expect(r.find((p) => p.id === 'beastmaker_1000_beginner')).toBeUndefined();
+    // А block_hangs_horst — наоборот должен быть
+    expect(r.find((p) => p.id === 'block_hangs_horst')).toBeDefined();
+  });
+
+  it('REGRESSION: на full fingerboard block-протоколы НЕ показываются', () => {
+    const all = window.HEYS.Fingers.PROGRAMS;
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(all, {});
+    expect(r.find((p) => p.id === 'block_hangs_horst')).toBeUndefined();
+    expect(r.find((p) => p.id === 'block_lifts_5x5')).toBeUndefined();
+    // Beastmaker — наоборот должен
+    expect(r.find((p) => p.id === 'beastmaker_1000_beginner')).toBeDefined();
+  });
+
+  it('пустой/невалидный input → []', () => {
+    expect(window.HEYS.Fingers.filterProgramsByEquipment(null, {})).toEqual([]);
+    expect(window.HEYS.Fingers.filterProgramsByEquipment(undefined, {})).toEqual([]);
+    expect(window.HEYS.Fingers.filterProgramsByEquipment([], {})).toEqual([]);
+  });
+
+  // ──── Multi-select (equipmentTypes array) ────
+  it('MULTI: equipmentTypes=[full, block] → union без No-Hangs (нужен явный таб none)', () => {
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(samplePrograms, {
+      equipmentTypes: ['full', 'block']
+    });
+    const ids = r.map((p) => p.id).sort();
+    // На full: universal, thin_edge, beastmaker. На block: block_max, universal, thin_edge.
+    // nelson (noEquipment) НЕ включён — нет таба 'none'.
+    expect(ids).toEqual(['beastmaker', 'block_max', 'thin_edge', 'universal']);
+  });
+
+  it('MULTI: equipmentTypes=[block, none] → block + No-Hangs, без fingerboard-only', () => {
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(samplePrograms, {
+      equipmentTypes: ['block', 'none']
+    });
+    const ids = r.map((p) => p.id).sort();
+    expect(ids).toContain('block_max');
+    expect(ids).toContain('nelson'); // через 'none'
+    expect(ids).toContain('universal'); // через block (no equipmentReq)
+    expect(ids).not.toContain('beastmaker'); // fingerboard-only
+  });
+
+  it('MULTI: equipmentTypes имеет приоритет над legacy fields', () => {
+    // Даже если в legacy fields указан noEquipment=true — массив главенствует.
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(samplePrograms, {
+      equipmentTypes: ['full'],
+      noEquipment: true,  // должно игнорироваться
+      blockMode: true     // должно игнорироваться
+    });
+    const ids = r.map((p) => p.id);
+    expect(ids).toContain('beastmaker');
+    expect(ids).not.toContain('block_max');
+  });
+
+  it('MULTI: equipmentTypes=[] (пустой массив) → fallback на legacy', () => {
+    const r = window.HEYS.Fingers.filterProgramsByEquipment(samplePrograms, {
+      equipmentTypes: [],
+      noEquipment: true
+    });
+    expect(r.map((p) => p.id)).toEqual(['nelson']);
+  });
+});

@@ -17,6 +17,7 @@
         { id: 'tasks', label: 'Список', shortLabel: 'Список', icon: '☑️' },
         { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
         { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
+        { id: 'chrono', label: 'Хронометраж', shortLabel: 'Хроно', icon: '⏱️' },
     ];
     const DEFAULT_HOME_SCREEN = 'calendar';
 
@@ -69,12 +70,14 @@
         const GanttScreen = useGanttV2 && HEYS.PlanningGantt && HEYS.PlanningGantt.GanttScreen
             ? HEYS.PlanningGantt.GanttScreen
             : (HEYS.PlanningSchedule && HEYS.PlanningSchedule.GanttScreen);
+        const ChronoScreen = HEYS.PlanningChrono && HEYS.PlanningChrono.ChronoScreen;
         const usePlanningState = Planning.Hooks && Planning.Hooks.usePlanningState;
 
         return {
             TasksScreen,
             CalendarScreen,
             GanttScreen,
+            ChronoScreen,
             usePlanningState,
             store: Planning.Store || {},
         };
@@ -175,10 +178,11 @@
         const CurrentScreen = useMemo(() => {
             if (activeScreen === 'calendar') return runtime.CalendarScreen;
             if (activeScreen === 'gantt') return runtime.GanttScreen;
+            if (activeScreen === 'chrono') return runtime.ChronoScreen;
             return runtime.TasksScreen;
-        }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.TasksScreen]);
+        }, [activeScreen, runtime.CalendarScreen, runtime.GanttScreen, runtime.ChronoScreen, runtime.TasksScreen]);
 
-        if (!planState || !runtime.TasksScreen || !runtime.CalendarScreen || !runtime.GanttScreen) {
+        if (!planState || !runtime.TasksScreen || !runtime.CalendarScreen || !runtime.GanttScreen || !runtime.ChronoScreen) {
             console.warn('[HEYS.planning] Planning split modules are not ready yet');
             return h(PlanningFallback);
         }

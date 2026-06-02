@@ -137,16 +137,21 @@
       style: ST_BACKDROP
     },
       React.createElement('div', { className: 'fingers-warmup-runner__card', style: ST_CARD },
-        // Header: phase counter + abort
+        // Header: phase counter + voice controls + abort
         React.createElement('div', { style: ST_HEADER },
           React.createElement('span', { style: ST_PHASE_COUNTER },
             'Фаза ' + (phaseIdx + 1) + ' из ' + totalPhases),
-          React.createElement('button', {
-            type: 'button',
-            onClick: handleAbort,
-            'aria-label': 'Прервать разминку',
-            style: ST_CLOSE_BTN
-          }, '✕')
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+            Fingers.VoiceMiniControls
+              ? React.createElement(Fingers.VoiceMiniControls, { inline: true })
+              : null,
+            React.createElement('button', {
+              type: 'button',
+              onClick: handleAbort,
+              'aria-label': 'Прервать разминку',
+              style: ST_CLOSE_BTN
+            }, '✕')
+          )
         ),
 
         // Progress bar
@@ -174,8 +179,26 @@
         // Big timer
         React.createElement('div', { style: ST_TIMER }, fmtMS(secLeft)),
 
-        // Description
-        React.createElement('div', { style: ST_DESC }, phase.description),
+        // Structured body: action / dosage / why / tip.
+        // Если у фазы есть structured-поля (новый формат) — рендерим их
+        // отдельными секциями. Иначе fallback — old-style цельный description.
+        (phase.action || phase.dosage || phase.why || phase.tip)
+          ? React.createElement('div', { className: 'fingers-warmup-body', style: ST_BODY },
+              phase.action ? React.createElement('div', { className: 'fingers-warmup-action', style: ST_ACTION }, phase.action) : null,
+              phase.dosage ? React.createElement('div', { className: 'fingers-warmup-row fingers-warmup-row--dosage', style: ST_ROW },
+                React.createElement('span', { className: 'fingers-warmup-row__label', style: ST_ROW_LABEL }, 'СКОЛЬКО'),
+                React.createElement('span', { className: 'fingers-warmup-row__text', style: ST_ROW_TEXT }, phase.dosage)
+              ) : null,
+              phase.why ? React.createElement('div', { className: 'fingers-warmup-row fingers-warmup-row--why', style: ST_ROW },
+                React.createElement('span', { className: 'fingers-warmup-row__label', style: ST_ROW_LABEL }, 'ЗАЧЕМ'),
+                React.createElement('span', { className: 'fingers-warmup-row__text', style: ST_ROW_TEXT }, phase.why)
+              ) : null,
+              phase.tip ? React.createElement('div', { className: 'fingers-warmup-tip', style: ST_TIP },
+                React.createElement('span', { 'aria-hidden': 'true', style: { marginRight: 6 } }, '💡'),
+                phase.tip
+              ) : null
+            )
+          : React.createElement('div', { style: ST_DESC }, phase.description),
 
         // Controls
         React.createElement('div', { style: ST_CONTROLS },
@@ -269,6 +292,48 @@
     fontSize: 14, lineHeight: 1.5,
     color: 'var(--text-muted, #475569)',
     textAlign: 'center'
+  };
+  // Structured body — для нового формата фаз с action/dosage/why/tip.
+  // Композиция: крупный «что делать» (action), две строки с маркерными
+  // лейблами СКОЛЬКО/ЗАЧЕМ, опциональный tip в выделенной плашке.
+  const ST_BODY = {
+    padding: '0 20px 18px',
+    display: 'flex', flexDirection: 'column', gap: 12,
+    textAlign: 'left'
+  };
+  const ST_ACTION = {
+    fontSize: 15.5, lineHeight: 1.45,
+    fontWeight: 600,
+    color: 'var(--text-primary, #0f172a)',
+    letterSpacing: '-0.005em'
+  };
+  const ST_ROW = {
+    display: 'grid',
+    gridTemplateColumns: '64px 1fr',
+    gap: 10, alignItems: 'baseline',
+    fontSize: 13.5, lineHeight: 1.45
+  };
+  const ST_ROW_LABEL = {
+    fontSize: 10.5, fontWeight: 700,
+    letterSpacing: '0.08em',
+    color: 'rgba(60, 60, 67, 0.55)',
+    textTransform: 'uppercase',
+    fontVariant: 'all-small-caps',
+    paddingTop: 1
+  };
+  const ST_ROW_TEXT = {
+    color: 'var(--text-primary, #1f2937)',
+    fontWeight: 500
+  };
+  const ST_TIP = {
+    marginTop: 2,
+    padding: '8px 11px',
+    borderRadius: 10,
+    background: 'rgba(245, 158, 11, 0.10)',
+    border: '0.5px solid rgba(245, 158, 11, 0.28)',
+    fontSize: 13, lineHeight: 1.4,
+    color: '#92400e',
+    display: 'flex', alignItems: 'flex-start'
   };
   const ST_CONTROLS = {
     padding: '12px 16px 16px',

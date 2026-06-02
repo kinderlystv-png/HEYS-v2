@@ -176,10 +176,19 @@
         }
     }
 
+    function pickerTablesEnabled() {
+        try {
+            if (global.localStorage && global.localStorage.getItem('heys_picker_tables') === '1') return true;
+            if (global.HEYS && global.HEYS.debug && global.HEYS.debug.pickerTables === true) return true;
+        } catch (_) { /* noop */ }
+        return false;
+    }
+
     function flushPickerLogCycle() {
         if (!_activePickerLogCycle) return;
         const cycle = _activePickerLogCycle;
         _activePickerLogCycle = null;
+        const showTables = pickerTablesEnabled();
 
         // 1) Macro rows: very noisy. Group by scenario and print compact top set.
         if (cycle.macroRows.length > 0) {
@@ -201,11 +210,13 @@
                 cycle: cycle.meta,
             });
 
-            Object.entries(byScenario).forEach(([scenario, info]) => {
-                console.group(`${LOG_PREFIX} 🧪 [macro] ${scenario}: showing ${info.rows.length}/${info.count}`);
-                console.table(info.rows);
-                console.groupEnd();
-            });
+            if (showTables) {
+                Object.entries(byScenario).forEach(([scenario, info]) => {
+                    console.group(`${LOG_PREFIX} 🧪 [macro] ${scenario}: showing ${info.rows.length}/${info.count}`);
+                    console.table(info.rows);
+                    console.groupEnd();
+                });
+            }
         }
 
         // 2) GL warnings: keep signal, collapse duplicates.
@@ -230,7 +241,7 @@
                 shown: top.length,
                 cycle: cycle.meta,
             });
-            console.table(top);
+            if (showTables) console.table(top);
         }
 
         // 2b) Sleep penalty (GRAINS pre-sleep/late-evening): collapse to one digest row.
@@ -264,7 +275,7 @@
                 totalGroups: grouped.length,
                 cycle: cycle.meta,
             });
-            console.table(grouped);
+            if (showTables) console.table(grouped);
         }
     }
 

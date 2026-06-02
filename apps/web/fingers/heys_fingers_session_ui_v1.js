@@ -34,6 +34,177 @@
   const { useState, useMemo, useEffect, useCallback } = React;
 
   // --- helpers ---
+  // Сканирует историю fingers-сессий за lookbackDays и считает session-level
+  // achievements для текущей завершённой сессии. Возвращает {
+  //   isFirstEver, isFirstOfProgram, isVolumePR, prevBestHangSec, comebackDays
+  // }. Используется в session summary для achievement chips.
+  function _computeSessionAchievements(currentLog, dateKey, lookbackDays) {
+    const lookback = Math.max(30, Math.min(365, lookbackDays || 365));
+    const u = HEYS.utils;
+    if (!u || !u.lsGet || !currentLog) {
+      return { isFirstEver: true, isFirstOfProgram: true, isVolumePR: false, prevBestHangSec: 0, comebackDays: 0 };
+    }
+    const todayKey = dateKey || new Date().toISOString().slice(0, 10);
+    let prevSessions = 0;
+    let prevOfProgram = 0;
+    let prevBestHangSec = 0;
+    let lastSessionKey = null;
+    const today = new Date();
+    for (let i = 0; i < lookback; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const key = y + '-' + m + '-' + dd;
+      const day = u.lsGet('heys_dayv2_' + key, null);
+      if (!day || !Array.isArray(day.trainings)) continue;
+      for (let k = 0; k < day.trainings.length; k++) {
+        const tr = day.trainings[k];
+        if (!tr || tr.type !== 'fingers') continue;
+        // Сегодняшнюю текущую сессию мы пропускаем (она уже сохранена сверху)
+        if (key === todayKey && tr.fingersLog && currentLog.completedAt
+          && tr.fingersLog.completedAt === currentLog.completedAt) continue;
+        prevSessions++;
+        if (!lastSessionKey) lastSessionKey = key;
+        const log = tr.fingersLog || {};
+        if (log.programId === currentLog.programId) prevOfProgram++;
+        // Volume PR: общее время виса предыдущих сессий
+        let hangSec = 0;
+        if (Array.isArray(log.exercises)) {
+          for (let e = 0; e < log.exercises.length; e++) {
+            const ex = log.exercises[e];
+            hangSec += (Number(ex.hangSec) || 0)
+              * (Number(ex.repsPerSet) || 0)
+              * (Number(ex.setsCount) || 0);
+          }
+        }
+        if (hangSec > prevBestHangSec) prevBestHangSec = hangSec;
+      }
+    }
+    // Compute current session totalHangSec
+    let curHangSec = 0;
+    if (Array.isArray(currentLog.exercises)) {
+      for (let e = 0; e < currentLog.exercises.length; e++) {
+        const ex = currentLog.exercises[e];
+        curHangSec += (Number(ex.hangSec) || 0)
+          * (Number(ex.repsPerSet) || 0)
+          * (Number(ex.setsCount) || 0);
+      }
+    }
+    let comebackDays = 0;
+    if (lastSessionKey) {
+      const lp = lastSessionKey.split('-');
+      const lastDate = new Date(Number(lp[0]), Number(lp[1]) - 1, Number(lp[2]));
+      const tp = todayKey.split('-');
+      const curDate = new Date(Number(tp[0]), Number(tp[1]) - 1, Number(tp[2]));
+      comebackDays = Math.round((curDate - lastDate) / 86400000);
+    }
+    return {
+      isFirstEver: prevSessions === 0,
+      isFirstOfProgram: prevOfProgram === 0,
+      isVolumePR: curHangSec > prevBestHangSec && prevBestHangSec > 0,
+      prevBestHangSec: prevBestHangSec,
+      curHangSec: curHangSec,
+      comebackDays: comebackDays
+    };
+  }
+
+  // Сканирует последние lookbackDays дней heys_dayv2_<date> и собирает
+  // Map<programId, dateKey> последней сессии для каждого протокола. Используется
+  // в ProgramsTab для chip «Сделал N дней назад». Возвращает {} если utils нет.
+  function _scanLastDoneByProgram(lookbackDays) {
+    const lookback = Math.max(7, Math.min(365, lookbackDays || 90));
+    const u = HEYS.utils;
+    if (!u || !u.lsGet) return {};
+    const result = Object.create(null);
+    const today = new Date();
+    for (let i = 0; i < lookback; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateKey = y + '-' + m + '-' + dd;
+      const day = u.lsGet('heys_dayv2_' + dateKey, null);
+      if (!day || !Array.isArray(day.trainings)) continue;
+      for (let k = 0; k < day.trainings.length; k++) {
+        const tr = day.trainings[k];
+        if (!tr || tr.type !== 'fingers') continue;
+        const pid = tr.fingersLog && tr.fingersLog.programId;
+        if (!pid) continue;
+        if (!result[pid]) result[pid] = dateKey; // самый свежий — мы идём от сегодня
+      }
+    }
+    return result;
+  }
+
+  // Human-friendly расстояние от dateKey до сегодня. «Сегодня / вчера / N дней
+  // назад / N недель назад / N месяцев назад». Используется только для отображения.
+  function _humanizeDaysAgo(dateKey) {
+    if (!dateKey || typeof dateKey !== 'string') return '';
+    const m = dateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return '';
+    const target = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((today - target) / 86400000);
+    if (diffDays <= 0) return 'сегодня';
+    if (diffDays === 1) return 'вчера';
+    if (diffDays < 7) return diffDays + ' дн. назад';
+    if (diffDays < 30) {
+      const w = Math.round(diffDays / 7);
+      return w + (w === 1 ? ' нед. назад' : ' нед. назад');
+    }
+    const months = Math.round(diffDays / 30);
+    if (months < 12) return months + ' мес. назад';
+    return 'давно';
+  }
+
+  // Разбивает описание на первое предложение + остаток для accordion-разворота.
+  // Первое предложение — до первого `.`, `!`, `?` + пробел. Если описание
+  // короткое или граница не найдена — `rest` пустой и accordion не показывается.
+  function _splitDescription(text) {
+    if (typeof text !== 'string') return { first: '', rest: '' };
+    const trimmed = text.trim();
+    if (trimmed.length <= 140) return { first: trimmed, rest: '' };
+    const m = trimmed.match(/^([^.!?]+[.!?])\s+(.+)$/s);
+    if (!m) return { first: trimmed, rest: '' };
+    return { first: m[1], rest: m[2] };
+  }
+
+  // Сворачиваемое описание: первое предложение всегда видно, остаток —
+  // под «Подробнее». State локальный per-card.
+  function ProgramDesc({ text }) {
+    const [expanded, setExpanded] = useState(false);
+    const { first, rest } = _splitDescription(text || '');
+    if (!rest) {
+      return h('p', { className: 'fingers-fs-program-card__desc' }, first);
+    }
+    return h('div', { className: 'fingers-fs-program-card__desc-wrap' },
+      h('p', { className: 'fingers-fs-program-card__desc' },
+        first,
+        ' ',
+        !expanded && h('button', {
+          type: 'button',
+          className: 'fingers-fs-program-card__desc-toggle',
+          onClick: function () { setExpanded(true); },
+          'aria-expanded': false
+        }, 'Подробнее')
+      ),
+      expanded && h('div', { className: 'fingers-fs-program-card__desc-rest' },
+        h('p', { className: 'fingers-fs-program-card__desc' }, rest),
+        h('button', {
+          type: 'button',
+          className: 'fingers-fs-program-card__desc-toggle',
+          onClick: function () { setExpanded(false); },
+          'aria-expanded': true
+        }, 'Свернуть')
+      )
+    );
+  }
+
   // Возраст клиента считается из birthDate (приоритет) или поля `age`
   // на верхнем уровне профиля. Помещаем результат в fingerboardProfile.age
   // на лету, если в subprofile он не задан — чтобы все safety-проверки
@@ -69,20 +240,60 @@
     return fp;
   }
 
+  // Возвращает приоритет-список program ID по grade — рекомендатор пройдётся
+  // по нему и выберет первый который проходит equipment + age фильтр.
+  function _gradePreferenceList(grade) {
+    if (grade === 'V0-V2' || grade === 'V3-V4') {
+      return ['beastmaker_1000_beginner', 'repeaters_7_3', 'block_hangs_horst',
+        'nelson_density_hangs', 'horst_towel_pulls', 'nelson_no_hangs'];
+    }
+    if (grade === 'V5-V6') {
+      return ['repeaters_7_3', 'block_min_edge', 'block_hangs_horst',
+        'horst_max_hangs', 'nelson_density_hangs', 'horst_towel_pulls', 'nelson_no_hangs'];
+    }
+    if (grade === 'V7-V8' || grade === 'V9+') {
+      return ['horst_max_hangs', 'block_hangs_horst', 'min_edge_progression',
+        'block_min_edge', 'repeaters_7_3', 'nelson_density_hangs', 'horst_towel_pulls', 'nelson_no_hangs'];
+    }
+    return ['beastmaker_1000_beginner', 'nelson_density_hangs', 'nelson_no_hangs'];
+  }
+
   function getRecommendedProgramId() {
     const fp = getProfile();
     if (fp.recommendedProgramId) return fp.recommendedProgramId;
-    if (fp.noEquipment) return 'nelson_no_hangs';
     // Возраст не указан → не рекомендуем ничего (UI покажет prompt "укажи возраст").
     // Дефолт 18 раньше → подростки без профиля автоматом получали adult-программы.
     const ageNum = Number(fp.age);
     if (!Number.isFinite(ageNum)) return null;
+    // Sub-14 → жёстко no-hangs независимо от снаряжения (UIAA/BMC: до 14 fingerboard запрещён).
     if (ageNum < 14) return 'nelson_no_hangs';
+
+    // Сужаем PROGRAMS по age + equipment, потом берём первый из grade-prefs
+    // который выжил. Это гарантирует что рекомендация всегда совпадает с тем
+    // что юзер реально видит в списке (block user → block protocol; door user
+    // → door-compatible; none user → noEquipment).
+    const programs = Array.isArray(Fingers.PROGRAMS) ? Fingers.PROGRAMS : [];
+    const ageFiltered = (Fingers.ageGate && Fingers.ageGate.filterPrograms)
+      ? Fingers.ageGate.filterPrograms(programs, ageNum) : programs;
+    const eqOpts = {
+      equipmentTypes: Array.isArray(fp.equipmentTypes) ? fp.equipmentTypes : null,
+      noEquipment: !!fp.noEquipment,
+      blockMode: !!fp.blockMode,
+      edgeLimit: fp.edgeLimit
+    };
+    const eligible = Fingers.filterProgramsByEquipment
+      ? Fingers.filterProgramsByEquipment(ageFiltered, eqOpts) : ageFiltered;
+    if (!eligible.length) return null;
+    const eligibleIds = new Set(eligible.map(function (p) { return p.id; }));
+
     const g = fp.maxVGrade || 'V3-V4';
-    if (g === 'V0-V2' || g === 'V3-V4') return 'beastmaker_1000_beginner';
-    if (g === 'V5-V6') return 'repeaters_7_3';
-    if (g === 'V7-V8' || g === 'V9+') return 'horst_max_hangs';
-    return 'beastmaker_1000_beginner';
+    const prefs = _gradePreferenceList(g);
+    for (let i = 0; i < prefs.length; i++) {
+      if (eligibleIds.has(prefs[i])) return prefs[i];
+    }
+    // Если grade-prefs не пересеклись с eligible — fallback на первый eligible
+    // (любой видимый протокол лучше чем «нет рекомендации»).
+    return eligible[0].id;
   }
 
   function intensityLabel(intensity) {
@@ -97,6 +308,59 @@
       : intensity === 'recovery' ? '#10b981' : '#6b7280';
   }
 
+  // Pre-flight checklist — Wave 6 polish: пункты загораются зелёным
+  // поочерёдно с задержкой ~700ms, заставляя юзера прочитать вместо
+  // прокликивания. Кнопка «Всё ОК» приглушена ~2.4s через CSS-animated
+  // arm (см. .fingers-fs-preflight-go в стилях).
+  function PreflightChecklist(props) {
+    const extraNotes = (props && props.extraNotes) || [];
+    const items = [
+      { id: 'warmup', text: 'Разогрев 15-20 мин (RAMP: Raise/Activate/Mobilize/Potentiate)' },
+      { id: 'pain',   text: 'Нет острой боли в пальцах и PIP суставах' },
+      { id: 'temp',   text: 'Не на холодные руки' }
+    ];
+    const STEP_MS = 700;
+    const [doneCount, setDoneCount] = useState(0);
+    useEffect(function () {
+      if (doneCount >= items.length) return undefined;
+      const t = setTimeout(function () {
+        setDoneCount(function (n) { return Math.min(items.length, n + 1); });
+      }, STEP_MS);
+      return function () { clearTimeout(t); };
+    }, [doneCount]);
+
+    return h('div', { className: 'fingers-fs-preflight' },
+      h('ul', { className: 'fingers-fs-preflight-list', role: 'list' },
+        items.map(function (item, i) {
+          const done = i < doneCount;
+          return h('li', {
+            key: item.id,
+            className: 'fingers-fs-preflight-item' + (done ? ' is-done' : ''),
+            'aria-checked': done ? 'true' : 'false',
+            role: 'checkbox'
+          },
+            h('span', { className: 'fingers-fs-preflight-check', 'aria-hidden': 'true' },
+              done ? h('svg', { width: 14, height: 14, viewBox: '0 0 14 14', fill: 'none' },
+                h('path', { d: 'M3 7.5l2.5 2.5L11 4.5',
+                  stroke: 'currentColor', strokeWidth: 2,
+                  strokeLinecap: 'round', strokeLinejoin: 'round' })
+              ) : null
+            ),
+            h('span', { className: 'fingers-fs-preflight-text' }, item.text)
+          );
+        })
+      ),
+      extraNotes.length > 0 ? h('div', { className: 'fingers-fs-preflight-notes' },
+        extraNotes.map(function (n, i) {
+          return h('div', { key: 'n' + i, className: 'fingers-fs-preflight-note' },
+            h('span', { 'aria-hidden': 'true' }, n.icon || 'ℹ'),
+            h('span', null, n.text)
+          );
+        })
+      ) : null
+    );
+  }
+
   // --- Programs tab ---
   function ProgramsTab({ onPickProgram, recommendedId, onRequestOnboarding }) {
     const programs = Array.isArray(Fingers.PROGRAMS) ? Fingers.PROGRAMS : [];
@@ -106,9 +370,48 @@
     // full crimp / mono / Max Hangs.
     const ageRaw = Number(profile.age);
     const ageKnown = Number.isFinite(ageRaw);
-    const filtered = Fingers.ageGate && Fingers.ageGate.filterPrograms
+    const ageFilteredAll = Fingers.ageGate && Fingers.ageGate.filterPrograms
       ? Fingers.ageGate.filterPrograms(programs, ageRaw)
       : programs;
+    // Equipment-фильтр: показываем только релевантные для выбранного оборудования.
+    // Multi-select: equipmentTypes — массив активных, union программ.
+    // Legacy single-state поля поддерживаются через _legacyToTypes (catalog).
+    const eqOpts = {
+      equipmentTypes: Array.isArray(profile.equipmentTypes) ? profile.equipmentTypes : null,
+      noEquipment: !!profile.noEquipment,
+      blockMode: !!profile.blockMode,
+      edgeLimit: profile.edgeLimit
+    };
+    const filtered = (Fingers.filterProgramsByEquipment)
+      ? Fingers.filterProgramsByEquipment(ageFilteredAll, eqOpts)
+      : ageFilteredAll;
+    // Map<programId, dateKey> последней сессии — для chip «Сделал N дней назад».
+    // Скан 90 дней (~3 мес), useMemo чтоб не перерасчитывать на каждый render.
+    const lastDoneByProgram = useMemo(function () {
+      return _scanLastDoneByProgram(90);
+    }, []);
+
+    // Intensity filter: 'all' | 'recovery' | 'moderate' | 'max'.
+    // Localstorage-persisted чтобы фильтр не сбрасывался при перезагрузке.
+    const [intensityFilter, setIntensityFilter] = useState(function () {
+      const u = HEYS.utils;
+      const v = u && u.lsGet ? u.lsGet('fingers_intensity_filter', 'all') : 'all';
+      return ['all', 'recovery', 'moderate', 'max'].indexOf(v) >= 0 ? v : 'all';
+    });
+    const onPickFilter = useCallback(function (val) {
+      setIntensityFilter(val);
+      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_intensity_filter', val);
+    }, []);
+    // Применяем intensity-фильтр поверх age+equipment.
+    const visibleFiltered = intensityFilter === 'all'
+      ? filtered
+      : filtered.filter(function (p) { return (p.intensity || 'moderate') === intensityFilter; });
+    // Подсчёт штук на каждый filter — показываем в чипе «Все (12)», «Восстановление (3)»
+    const counts = { all: filtered.length, recovery: 0, moderate: 0, max: 0 };
+    filtered.forEach(function (p) {
+      const i = p.intensity || 'moderate';
+      if (counts[i] != null) counts[i]++;
+    });
 
     if (!ageKnown) {
       // CTA: заполнить возраст через re-onboarding.
@@ -138,8 +441,100 @@
       );
     }
 
-    return h('div', { className: 'fingers-fs-program-grid' },
-      filtered.map(function (p) {
+    const filterChips = [
+      { id: 'all',      label: 'Все',           emoji: null },
+      { id: 'recovery', label: 'Восстановление', emoji: '🌿' },
+      { id: 'moderate', label: 'Умеренно',      emoji: '⚡' },
+      { id: 'max',      label: 'Максимум',      emoji: '🔥' }
+    ];
+
+    // Readiness-aware launch guard. Сравниваем intensity протокола с тем,
+    // что разрешает cooldown (rest/recovery → не выше recovery; moderate →
+    // не выше moderate). Если выше — перехватываем onPickProgram и просим
+    // подтверждение.
+    const INTENSITY_RANK = { recovery: 0, moderate: 1, max: 2 };
+    const READINESS_CEILING = { rest: 0, recovery: 0, moderate: 1, max: 2 };
+    const [pendingRisky, setPendingRisky] = useState(null);
+    const safeLaunch = useCallback(function (program) {
+      const r = cool && cool.recommendation;
+      const ceiling = (r && READINESS_CEILING[r] != null) ? READINESS_CEILING[r] : 2;
+      const need = INTENSITY_RANK[program.intensity || 'moderate'];
+      if (need > ceiling) {
+        setPendingRisky({ program: program, readiness: r, hours: cool && cool.hoursSinceLast });
+        return;
+      }
+      onPickProgram(program);
+    }, [cool, onPickProgram]);
+
+    // Readiness banner — широкая карточка наверху, читает cooldownCheck.
+    // Намеренно отличается от pill-фильтра ниже: горизонтальный layout с
+    // крупной иконкой и подзаголовком — пользователь видит «что советует
+    // организм», а ниже сам выбирает чем фильтровать.
+    const cool = (Fingers.cooldownCheck && typeof Fingers.cooldownCheck === 'function')
+      ? (function () { try { return Fingers.cooldownCheck(); } catch (_) { return null; } })()
+      : null;
+    let readinessBanner = null;
+    if (cool) {
+      const READINESS_MAP = {
+        max:      { icon: '🔥', title: 'Готов к максимуму',         sub: 'После прошлой сессии прошло достаточно времени — можно жёстко.' },
+        moderate: { icon: '⚡', title: 'Готов к умеренной нагрузке', sub: 'Сегодня — repeaters или density, но без max-hangs.' },
+        recovery: { icon: '🌿', title: 'Только восстановление',     sub: 'Связки ещё восстанавливаются — лёгкие no-hangs или антагонисты.' },
+        rest:     { icon: '💤', title: 'Сегодня — день отдыха',      sub: 'Меньше 24ч после max — любая нагрузка повышает риск травмы пальцев.' }
+      };
+      const conf = Object.assign({}, READINESS_MAP[cool.recommendation] || READINESS_MAP.max);
+      if (cool.hoursSinceLast == null) {
+        conf.sub = 'История пуста — стартуй с того, что под рукой.';
+      } else {
+        const h_ago = Math.max(0, cool.hoursSinceLast);
+        const human = h_ago < 24 ? Math.round(h_ago) + 'ч назад'
+          : Math.round(h_ago / 24) + ' дн. назад';
+        conf.sub += ' Последняя сессия: ' + human + '.';
+      }
+      readinessBanner = h('div', {
+        className: 'fingers-fs-readiness-banner',
+        'data-readiness': cool.recommendation,
+        role: 'status',
+        'aria-live': 'polite'
+      },
+        h('div', { className: 'fingers-fs-readiness-banner__icon', 'aria-hidden': 'true' }, conf.icon),
+        h('div', { className: 'fingers-fs-readiness-banner__body' },
+          h('div', { className: 'fingers-fs-readiness-banner__title' }, conf.title),
+          h('div', { className: 'fingers-fs-readiness-banner__sub' }, conf.sub)
+        )
+      );
+    }
+
+    return h('div', { className: 'fingers-fs-programs-wrap' },
+      readinessBanner,
+      h('div', { className: 'fingers-fs-intensity-filter', role: 'tablist', 'aria-label': 'Фильтр по интенсивности' },
+        filterChips.map(function (fc) {
+          const active = intensityFilter === fc.id;
+          const count = counts[fc.id];
+          const disabled = count === 0 && fc.id !== 'all';
+          return h('button', {
+            key: fc.id,
+            type: 'button',
+            className: 'fingers-fs-intensity-filter__chip'
+              + (active ? ' is-active' : '')
+              + (disabled ? ' is-disabled' : ''),
+            'data-intensity': fc.id,
+            'aria-pressed': active,
+            disabled: disabled,
+            onClick: function () { if (!disabled) onPickFilter(fc.id); }
+          },
+            fc.emoji ? h('span', { 'aria-hidden': 'true' }, fc.emoji + ' ') : null,
+            fc.label,
+            h('span', { className: 'fingers-fs-intensity-filter__count' }, ' ' + count)
+          );
+        })
+      ),
+      visibleFiltered.length === 0
+        ? h('div', { className: 'fingers-fs-empty', style: { padding: '24px 16px', textAlign: 'center' } },
+            h('p', { style: { margin: 0, fontSize: 14, opacity: 0.7 } },
+              'Нет протоколов с интенсивностью «' + (filterChips.find(function (c) { return c.id === intensityFilter; }) || {}).label + '» под текущее оборудование.')
+          )
+        : h('div', { className: 'fingers-fs-program-grid' },
+      visibleFiltered.map(function (p) {
         const isRec = p.id === recommendedId;
         return h('div', {
           key: p.id,
@@ -153,7 +548,7 @@
             h('span', null, 'для тебя')
           ),
           h('h3', { className: 'fingers-fs-program-card__title' }, p.name),
-          h('p', { className: 'fingers-fs-program-card__desc' }, p.description),
+          h(ProgramDesc, { text: p.description }),
           h('div', { className: 'fingers-fs-program-card__chips' },
             h('span', {
               className: 'fingers-fs-chip fingers-fs-chip--intensity',
@@ -162,8 +557,82 @@
             h('span', { className: 'fingers-fs-chip' },
               h('span', { 'aria-hidden': 'true' }, '⏱ '),
               (p.durationMin || '—') + ' мин'),
-            h('span', { className: 'fingers-fs-chip fingers-fs-chip--level' }, p.level)
+            h('span', { className: 'fingers-fs-chip fingers-fs-chip--level' }, p.level),
+            // Last-done chip: показывает «✓ Сделал N дней назад» если протокол
+            // был выполнен в последние 90 дней. Иначе — нейтральное «ещё не пробовал».
+            (function () {
+              const lastKey = lastDoneByProgram[p.id];
+              if (lastKey) {
+                return h('span', {
+                  className: 'fingers-fs-chip fingers-fs-chip--lastdone',
+                  title: 'Последняя сессия: ' + lastKey
+                },
+                  h('span', { 'aria-hidden': 'true' }, '✓ '),
+                  'Сделал ' + _humanizeDaysAgo(lastKey)
+                );
+              }
+              return h('span', {
+                className: 'fingers-fs-chip fingers-fs-chip--lastdone fingers-fs-chip--lastdone-new'
+              }, 'ещё не пробовал');
+            })()
           ),
+          // Equipment-чипы — какое оборудование подходит для протокола.
+          // Активные (из EquipmentBar юзера) — ярко, неактивные — приглушённо.
+          // Это даёт сразу понять «работает на X, но у тебя X нет — выбери в табах»
+          // или «работает на Y и у тебя Y активен — отлично».
+          (function () {
+            const eqChips = [];
+            if (p.noEquipment) {
+              eqChips.push({ id: 'none', icon: '🤚', label: 'No-Hangs' });
+            } else if (p.equipmentReq === 'block') {
+              eqChips.push({ id: 'block', icon: '💪', label: 'Hang block' });
+            } else if (p.equipmentReq === 'fingerboard') {
+              eqChips.push({ id: 'full', icon: '🪜', label: 'Board' });
+            } else {
+              eqChips.push({ id: 'full', icon: '🪜', label: 'Board' });
+              eqChips.push({ id: 'block', icon: '💪', label: 'Block' });
+              const minEdge = Array.isArray(p.exercises)
+                ? p.exercises.reduce(function (m, ex) {
+                    const v = Number(ex.edgeSizeMm) || Infinity;
+                    return Math.min(m, v);
+                  }, Infinity)
+                : Infinity;
+              if (minEdge >= 25) {
+                eqChips.push({ id: 'door', icon: '🚪', label: 'Door' });
+              }
+            }
+            // Derive user's active equipment types из profile (тот же fallback что в EquipmentBar).
+            // Показываем ТОЛЬКО чипы того оборудования что у юзера выбрано —
+            // иначе он подумает что приглушённый чип = «нужно но нет», хотя
+            // на универсальных протоколах это всего лишь альтернатива.
+            const userTypes = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
+              ? profile.equipmentTypes
+              : (profile.noEquipment ? ['none']
+                : profile.blockMode ? ['block']
+                : profile.edgeLimit === 25 ? ['door']
+                : ['full']);
+            const matchingChips = eqChips.filter(function (c) {
+              return userTypes.indexOf(c.id) >= 0;
+            });
+            // Безопасность: если по какой-то причине пересечения нет (баг
+            // фильтра), показываем все совместимые с program (старая логика)
+            // чтобы юзер не остался без чипов.
+            const finalChips = matchingChips.length > 0 ? matchingChips : eqChips;
+            return h('div', { className: 'fingers-fs-program-card__equipment' },
+              finalChips.map(function (c) {
+                return h('span', {
+                  key: c.id,
+                  className: 'fingers-fs-equipment-chip is-available',
+                  'data-equipment': c.id,
+                  title: 'Этот протокол можно делать на твоём оборудовании: ' + c.label
+                },
+                  h('span', { 'aria-hidden': 'true' }, c.icon),
+                  ' ',
+                  c.label
+                );
+              })
+            );
+          })(),
           p.advisoryBadge && h('div', {
             style: {
               padding: '8px 12px', marginBottom: 12,
@@ -183,11 +652,54 @@
           ),
           h('button', {
             className: 'fingers-fs-cta',
-            onClick: function () { onPickProgram(p); },
+            onClick: function () { safeLaunch(p); },
             style: { width: '100%' }
           }, 'Запустить протокол')
         );
       })
+        ),
+      pendingRisky && (function () {
+        const r = pendingRisky.readiness;
+        const restMode = r === 'rest';
+        const title = restMode ? 'Сегодня — день отдыха' : 'Связки ещё восстанавливаются';
+        const reason = restMode
+          ? 'С прошлой максимальной сессии прошло меньше 24 часов. Сухожилия пальцев восстанавливаются медленнее мышц — нагрузка сейчас сильно повышает риск разрыва кольцевидного блока (A2/A4).'
+          : 'Прошло меньше 48 часов после максимальной сессии. Сегодня лучше no-hangs или антагонисты — мышцы готовы, а связки нет.';
+        const hoursTxt = pendingRisky.hours != null
+          ? (pendingRisky.hours < 24 ? Math.round(pendingRisky.hours) + 'ч' : Math.round(pendingRisky.hours / 24) + ' дн.')
+          : '—';
+        return h('div', {
+          className: 'fingers-fs-risk-overlay',
+          onClick: function (e) { if (e.target === e.currentTarget) setPendingRisky(null); }
+        },
+          h('div', { className: 'fingers-fs-risk-modal', role: 'dialog', 'aria-modal': 'true' },
+            h('div', { className: 'fingers-fs-risk-modal__icon', 'aria-hidden': 'true' }, '⚠'),
+            h('h3', { className: 'fingers-fs-risk-modal__title' }, title),
+            h('p', { className: 'fingers-fs-risk-modal__reason' }, reason),
+            h('div', { className: 'fingers-fs-risk-modal__meta' },
+              h('span', null, 'Прошло с прошлой сессии: '),
+              h('strong', null, hoursTxt)
+            ),
+            h('div', { className: 'fingers-fs-risk-modal__actions' },
+              h('button', {
+                className: 'fingers-fs-risk-modal__btn fingers-fs-risk-modal__btn--secondary',
+                onClick: function () { setPendingRisky(null); }
+              }, 'Отмена'),
+              h('button', {
+                className: 'fingers-fs-risk-modal__btn fingers-fs-risk-modal__btn--danger',
+                onClick: function () {
+                  const prog = pendingRisky.program;
+                  setPendingRisky(null);
+                  onPickProgram(prog);
+                }
+              }, 'Всё равно начать')
+            ),
+            h('p', { className: 'fingers-fs-risk-modal__source' },
+              'Schöffl et al. (2021): A2 — самый травмируемый блок (~70% всех pulley injuries).'
+            )
+          )
+        );
+      })()
     );
   }
 
@@ -285,15 +797,155 @@
     );
   }
 
+  // --- Grip Picker Sheet ─────────────────────────────────────────────────
+  // Bottom-sheet модалка выбора хвата для нового упражнения. Filter chips
+  // по типу нагрузки + grid 8 хватов с safety-меткой (a2-ratio). Возрастной
+  // age-gate автоматически прячет full crimp/mono подросткам.
+
+  const GRIP_CATEGORIES = [
+    { id: 'all',     label: 'Все',       match: function () { return true; } },
+    { id: 'open',    label: 'Открытые',  match: function (g) {
+      return ['openhand4', 'sloper', 'pinch'].indexOf(g.id) >= 0;
+    } },
+    { id: 'crimps',  label: 'Замки',     match: function (g) {
+      return ['halfcrimp', 'fullcrimp'].indexOf(g.id) >= 0;
+    } },
+    { id: 'narrow',  label: 'N-палец',   match: function (g) {
+      return ['front3', 'back3', 'mono'].indexOf(g.id) >= 0;
+    } }
+  ];
+
+  function _dangerLabel(d) {
+    return d === 'low' ? 'низкий риск'
+      : d === 'moderate' ? 'средний риск'
+      : d === 'high' ? 'высокий риск'
+      : d === 'very-high' ? 'максимум' : '';
+  }
+
+  function GripPickerSheet(props) {
+    const onPick = (props && props.onPick) || function () {};
+    const onClose = (props && props.onClose) || function () {};
+    const userAge = props && props.userAge;
+    const [filter, setFilter] = useState('all');
+
+    // Age-gate: даже если grip есть в каталоге, для возраста он может быть
+    // запрещён (full crimp/mono до 18, back-3 до 16 и т.п.). Используем
+    // существующий ageGate.filterGrips — fail-closed.
+    const allGrips = Array.isArray(Fingers.GRIPS) ? Fingers.GRIPS : [];
+    const ageFiltered = (Fingers.ageGate && Fingers.ageGate.filterGrips)
+      ? Fingers.ageGate.filterGrips(allGrips, userAge)
+      : allGrips;
+    const category = GRIP_CATEGORIES.find(function (c) { return c.id === filter; }) || GRIP_CATEGORIES[0];
+    const visible = ageFiltered.filter(category.match);
+
+    // Escape для закрытия
+    useEffect(function () {
+      const onKey = function (e) { if (e.key === 'Escape') onClose(); };
+      document.addEventListener('keydown', onKey);
+      return function () { document.removeEventListener('keydown', onKey); };
+    }, [onClose]);
+
+    return h('div', {
+      className: 'fingers-grip-picker__backdrop',
+      onClick: onClose,
+      role: 'presentation'
+    },
+      h('div', {
+        className: 'fingers-grip-picker',
+        role: 'dialog',
+        'aria-label': 'Выбор хвата',
+        onClick: function (e) { e.stopPropagation(); }
+      },
+        h('div', { className: 'fingers-grip-picker__handle', 'aria-hidden': 'true' }),
+        h('div', { className: 'fingers-grip-picker__header' },
+          h('h2', { className: 'fingers-grip-picker__title' }, 'Выбери хват'),
+          h('button', {
+            type: 'button',
+            className: 'fingers-grip-picker__close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          },
+            h('svg', { width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 1.6 },
+              h('path', { d: 'M5 5l10 10M15 5L5 15', strokeLinecap: 'round' })
+            )
+          )
+        ),
+
+        // Filter chips
+        h('div', { className: 'fingers-grip-picker__filters', role: 'tablist' },
+          GRIP_CATEGORIES.map(function (c) {
+            const active = filter === c.id;
+            const count = ageFiltered.filter(c.match).length;
+            return h('button', {
+              key: c.id,
+              type: 'button',
+              role: 'tab',
+              'aria-selected': active,
+              className: 'fingers-grip-picker__chip' + (active ? ' is-active' : ''),
+              onClick: function () { setFilter(c.id); }
+            }, c.label, count > 0 ? h('span', { className: 'fingers-grip-picker__chip-count' }, count) : null);
+          })
+        ),
+
+        // Grid of grips
+        visible.length === 0
+          ? h('div', { className: 'fingers-grip-picker__empty' },
+              h('p', null, 'Для твоего возраста в этой категории хваты недоступны.'))
+          : h('div', { className: 'fingers-grip-picker__grid' },
+              visible.map(function (g) {
+                return h('button', {
+                  key: g.id,
+                  type: 'button',
+                  className: 'fingers-grip-tile',
+                  'data-fingers-danger': g.dangerLevel,
+                  onClick: function () { onPick(g); }
+                },
+                  h('div', { className: 'fingers-grip-tile__icon', 'aria-hidden': 'true' },
+                    h('img', {
+                      src: '/exercises/' + g.id + '.webp',
+                      alt: '',
+                      loading: 'eager',
+                      decoding: 'async',
+                      onError: function (e) {
+                        // Fallback на emoji-иконку если SVG-арт нет
+                        try {
+                          const span = document.createElement('span');
+                          span.style.fontSize = '32px';
+                          span.textContent = g.icon || '🖐';
+                          e.target.replaceWith(span);
+                        } catch (_) {}
+                      }
+                    })
+                  ),
+                  h('div', { className: 'fingers-grip-tile__name' }, g.label),
+                  h('div', { className: 'fingers-grip-tile__meta' },
+                    h('span', { className: 'fingers-grip-tile__a2' },
+                      'A2 ×' + (g.a2ForceRatio || 1).toFixed(1)),
+                    h('span', { className: 'fingers-grip-tile__danger' }, _dangerLabel(g.dangerLevel))
+                  )
+                );
+              })
+            )
+      )
+    );
+  }
+
   // --- Constructor tab ---
   function ConstructorTab({ exercises, setExercises, userBoard, userAge, programName, onUnbindProgram }) {
-    const add = function () {
+    const [pickerOpen, setPickerOpen] = useState(false);
+
+    const addExerciseForGrip = function (grip) {
+      const opts = { boardId: userBoard, gripId: grip && grip.id ? grip.id : 'openhand4' };
       const blank = Fingers.createBlankExercise
-        ? Fingers.createBlankExercise({ boardId: userBoard })
-        : { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+        ? Fingers.createBlankExercise(opts)
+        : { gripId: opts.gripId, edgeSizeMm: 20, addedWeightKg: 0,
             hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 };
       setExercises(exercises.concat([blank]));
+      setPickerOpen(false);
     };
+
+    const add = function () { setPickerOpen(true); };
 
     const updateAt = function (i, updated) {
       const next = exercises.slice();
@@ -389,80 +1041,261 @@
               onClick: add,
               style: { width: '100%', marginTop: 16 }
             }, '+ Добавить ещё упражнение')
-          )
+          ),
+      // Grip picker bottom-sheet (рендерится поверх контента)
+      pickerOpen ? h(GripPickerSheet, {
+        userAge: userAge,
+        onPick: addExerciseForGrip,
+        onClose: function () { setPickerOpen(false); }
+      }) : null
     );
   }
 
   // --- Progress tab ---
+  // Утилиты Progress-таба ─────────────────────────────────────────────────
+  // Все читают heys_dayv2_<dateKey> через HEYS.utils.lsGet — тот же путь,
+  // что используют YearHeatmap и cooldownCheck. Один проход 365 дней даёт
+  // streak + totals + recent — экономим IO.
+
+  function _formatDateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
+  function _readDayDiary(dateKey) {
+    try {
+      const u = HEYS.utils;
+      if (u && typeof u.lsGet === 'function') return u.lsGet('heys_dayv2_' + dateKey, null);
+    } catch (_) {}
+    return null;
+  }
+
+  /**
+   * Один проход по последним 365 дням → streak, totals, последние 5 сессий.
+   * @returns {{streak:number, totalSessions:number, totalHolds:number, totalMinutes:number, lastSessions:Array}}
+   */
+  function computeProgressStats() {
+    const today = new Date();
+    let streak = 0;
+    let totalSessions = 0;
+    let totalHolds = 0;
+    let totalMinutes = 0;
+    const lastSessions = [];
+    let streakBroken = false;
+
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = _formatDateKey(d);
+      const day = _readDayDiary(key);
+      const fingersTrainings = (day && Array.isArray(day.trainings))
+        ? day.trainings.filter(function (t) { return t && t.type === 'fingers'; })
+        : [];
+      const hasSession = fingersTrainings.length > 0;
+
+      // Streak: считаем подряд от сегодня. Если сегодня нет — допускаем без
+      // штрафа (юзер ещё не тренировался), но если на день назад тоже нет —
+      // streak обрывается.
+      if (!streakBroken) {
+        if (hasSession) streak += 1;
+        else if (i > 0) streakBroken = true; // первый день без сессии после today — обрыв
+      }
+
+      if (hasSession) {
+        totalSessions += fingersTrainings.length;
+        fingersTrainings.forEach(function (t) {
+          const log = t.fingersLog || {};
+          totalHolds += Array.isArray(log.holds) ? log.holds.length : 0;
+          const dur = Number(log.totalDurationMinutes) || 0;
+          totalMinutes += dur;
+          if (lastSessions.length < 5) {
+            const intensity = typeof Fingers.getProgramIntensity === 'function'
+              ? Fingers.getProgramIntensity(log.programId)
+              : 'moderate';
+            const program = log.programId && typeof Fingers.getProgramById === 'function'
+              ? Fingers.getProgramById(log.programId) : null;
+            lastSessions.push({
+              dateKey: key,
+              programName: (program && program.name) || (log.programId === 'custom' ? 'Свой конструктор' : log.programId) || 'Тренировка',
+              intensity: intensity,
+              durationMin: dur || null,
+              daysAgo: i
+            });
+          }
+        });
+      }
+    }
+
+    return {
+      streak: streak,
+      totalSessions: totalSessions,
+      totalHolds: totalHolds,
+      totalMinutes: totalMinutes,
+      lastSessions: lastSessions
+    };
+  }
+
+  function _relativeDay(daysAgo) {
+    if (daysAgo === 0) return 'сегодня';
+    if (daysAgo === 1) return 'вчера';
+    if (daysAgo < 7) return daysAgo + ' дн назад';
+    if (daysAgo < 30) return Math.floor(daysAgo / 7) + ' нед назад';
+    return Math.floor(daysAgo / 30) + ' мес назад';
+  }
+
+  function _intensityRu(intensity) {
+    return intensity === 'max' ? 'максимум'
+      : intensity === 'recovery' ? 'восстановление'
+      : 'умеренно';
+  }
+
   function ProgressTab({ recommendedProgramId, onPickProgram }) {
     const records = (Fingers.records && Fingers.records.get) ? Fingers.records.get() : { maxHangs: {} };
     const allHangs = records.maxHangs || {};
     const slugs = Object.keys(allHangs);
     const cooldown = Fingers.cooldownCheck ? Fingers.cooldownCheck() : null;
-    const profile = getProfile();
     const mvcDue = Fingers.calibration && Fingers.calibration.isDue
       ? Fingers.calibration.isDue('maxHang', 'openhand4_20mm')
       : false;
+    // Memo чтобы 365-day scan не пересчитывался на каждый render таба.
+    const stats = React.useMemo(computeProgressStats, []);
+    const currentYear = new Date().getFullYear();
+
+    const isEmpty = slugs.length === 0 && stats.totalSessions === 0;
+
+    if (isEmpty) {
+      return h('div', { className: 'fingers-fs-progress' },
+        h('div', { className: 'fingers-fs-progress-empty' },
+          h('div', { className: 'fingers-fs-progress-empty__icon', 'aria-hidden': 'true' }, '📊'),
+          h('h3', { className: 'fingers-fs-progress-empty__title' }, 'Прогресса пока нет'),
+          h('p', { className: 'fingers-fs-progress-empty__hint' },
+            'После первой тренировки здесь появятся серия, рекорды по хватам и календарь.'),
+          recommendedProgramId && Fingers.getProgramById && h('button', {
+            className: 'fingers-fs-cta',
+            style: { marginTop: 18 },
+            onClick: function () {
+              const p = Fingers.getProgramById(recommendedProgramId);
+              if (p && onPickProgram) onPickProgram(p);
+            }
+          }, '▶ Запустить первую тренировку')
+        )
+      );
+    }
 
     return h('div', { className: 'fingers-fs-progress' },
-      // Cooldown card
-      cooldown && !cooldown.allowedNow && h('div', {
-        style: {
-          padding: 16, marginBottom: 16, borderRadius: 12,
-          background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b'
-        }
-      },
-        h('strong', null, '🛡 Recovery: ' + cooldown.recommendation),
-        h('p', { style: { margin: '4px 0 0', fontSize: 14 } },
-          'Прошло ' + Math.round(cooldown.hoursSinceLast) + 'ч с последней сессии. Tendon collagen synthesis не завершён (Magnusson 2010).')
+
+      // ─── Hero stats: streak / сессии / время ────────────────────────────
+      h('div', { className: 'fingers-fs-progress-hero' },
+        h('div', { className: 'fingers-fs-progress-stat fingers-fs-progress-stat--streak' },
+          h('div', { className: 'fingers-fs-progress-stat__icon', 'aria-hidden': 'true' }, '🔥'),
+          h('div', { className: 'fingers-fs-progress-stat__value' }, String(stats.streak)),
+          h('div', { className: 'fingers-fs-progress-stat__label' },
+            stats.streak === 1 ? 'день серии' : 'дней серии')
+        ),
+        h('div', { className: 'fingers-fs-progress-stat' },
+          h('div', { className: 'fingers-fs-progress-stat__icon', 'aria-hidden': 'true' }, '💪'),
+          h('div', { className: 'fingers-fs-progress-stat__value' }, String(stats.totalSessions)),
+          h('div', { className: 'fingers-fs-progress-stat__label' },
+            stats.totalSessions === 1 ? 'тренировка' : 'тренировок')
+        ),
+        h('div', { className: 'fingers-fs-progress-stat' },
+          h('div', { className: 'fingers-fs-progress-stat__icon', 'aria-hidden': 'true' }, '⏱'),
+          h('div', { className: 'fingers-fs-progress-stat__value' },
+            stats.totalMinutes >= 60
+              ? Math.round(stats.totalMinutes / 60) + ' ч'
+              : Math.round(stats.totalMinutes) + ' м'),
+          h('div', { className: 'fingers-fs-progress-stat__label' }, 'всего')
+        )
       ),
 
-      slugs.length === 0
-        ? h('div', { className: 'fingers-fs-empty' },
-            h('h3', null, '📊 Прогресс'),
-            h('p', null, 'Тренировок ещё нет. После первой здесь появятся твои рекорды по 8 хватам.'),
-            recommendedProgramId && Fingers.getProgramById && h('div', { style: { marginTop: 24 } },
-              h('p', { style: { fontSize: 13, opacity: 0.7 } }, 'Рекомендованный стартовый протокол:'),
-              h('button', {
-                className: 'fingers-fs-cta',
-                onClick: function () {
-                  const p = Fingers.getProgramById(recommendedProgramId);
-                  if (p && onPickProgram) onPickProgram(p);
-                },
-                style: { marginTop: 8 }
-              }, '▶ Запустить первую тренировку')
-            )
-          )
-        : h('div', null,
-            h('h3', { style: { margin: '0 0 12px' } }, 'Личные рекорды'),
-            h('div', { className: 'fingers-fs-records' },
-              slugs.map(function (slug) {
-                const r = allHangs[slug];
-                const main = r.type === 'weight'
-                  ? (r.mvcKg ? r.mvcKg.toFixed(1) + ' кг' : '—')
-                  : (r.holdTime ? r.holdTime.toFixed(1) + ' с' : '—');
-                // Slug формат: '{gripId}_{edgeMm}mm' (см. records_store._slug).
-                // Транслируем в человеческое: 'Открытый 4-палец · 20 мм'.
-                const m = /^(.+?)_(\d+)mm$/.exec(slug);
-                const grip = m && Fingers.getGripById ? Fingers.getGripById(m[1]) : null;
-                const label = m
-                  ? ((grip && grip.label) || m[1]) + ' · ' + m[2] + ' мм'
-                  : slug;
-                return h('div', { key: slug, className: 'fingers-fs-record-row',
-                  style: { display: 'flex', justifyContent: 'space-between', padding: '12px 16px',
-                    borderBottom: '1px solid var(--fingers-card-border)', gap: 12, alignItems: 'center' } },
-                  h('span', { style: { fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' } }, label),
-                  h('strong', { style: { flexShrink: 0 } }, main)
-                );
-              })
-            ),
-            mvcDue && h('div', {
-              style: {
-                marginTop: 16, padding: 12, borderRadius: 8,
-                background: '#fffbeb', border: '1px solid #fde68a', fontSize: 13
-              }
-            }, '📅 Пора re-test (>8 недель с последнего MVC теста)')
-          )
+      // ─── Cooldown card (если recovery) ────────────────────────────────
+      cooldown && !cooldown.allowedNow && h('div', { className: 'fingers-fs-progress-cooldown' },
+        h('div', { className: 'fingers-fs-progress-cooldown__icon', 'aria-hidden': 'true' }, '🛡'),
+        h('div', { className: 'fingers-fs-progress-cooldown__body' },
+          h('div', { className: 'fingers-fs-progress-cooldown__title' },
+            'Восстановление — ' + cooldown.recommendation),
+          h('div', { className: 'fingers-fs-progress-cooldown__text' },
+            'Прошло ' + Math.round(cooldown.hoursSinceLast) +
+            'ч с последней сессии. Синтез коллагена в сухожилиях ещё идёт (Magnusson 2010).')
+        )
+      ),
+
+      // ─── Year heatmap ──────────────────────────────────────────────────
+      Fingers.YearHeatmap && h('section', { className: 'fingers-fs-progress-section' },
+        h('div', { className: 'fingers-fs-progress-section__header' },
+          h('h3', { className: 'fingers-fs-progress-section__title' }, 'Год тренировок'),
+          h('span', { className: 'fingers-fs-progress-section__hint' }, String(currentYear))
+        ),
+        h(Fingers.YearHeatmap, { year: currentYear })
+      ),
+
+      // ─── Personal records ──────────────────────────────────────────────
+      slugs.length > 0 && h('section', { className: 'fingers-fs-progress-section' },
+        h('div', { className: 'fingers-fs-progress-section__header' },
+          h('h3', { className: 'fingers-fs-progress-section__title' }, 'Личные рекорды'),
+          h('span', { className: 'fingers-fs-progress-section__hint' },
+            slugs.length + (slugs.length === 1 ? ' хват' : slugs.length < 5 ? ' хвата' : ' хватов'))
+        ),
+        h('div', { className: 'fingers-fs-progress-records' },
+          slugs.map(function (slug) {
+            const r = allHangs[slug];
+            const main = r.type === 'weight'
+              ? (r.mvcKg ? r.mvcKg.toFixed(1) + ' кг' : '—')
+              : (r.holdTime ? r.holdTime.toFixed(1) + ' с' : '—');
+            const m = /^(.+?)_(\d+)mm$/.exec(slug);
+            const grip = m && Fingers.getGripById ? Fingers.getGripById(m[1]) : null;
+            const label = m
+              ? ((grip && grip.label) || m[1])
+              : slug;
+            const edge = m ? m[2] + ' мм' : '';
+            const testedAt = r.testedAt ? new Date(r.testedAt) : null;
+            const daysSince = testedAt
+              ? Math.max(0, Math.floor((Date.now() - testedAt.getTime()) / (1000 * 60 * 60 * 24)))
+              : null;
+            return h('div', { key: slug, className: 'fingers-fs-progress-record' },
+              h('div', { className: 'fingers-fs-progress-record__head' },
+                h('span', { className: 'fingers-fs-progress-record__grip' }, label),
+                edge && h('span', { className: 'fingers-fs-progress-record__edge' }, edge)
+              ),
+              h('div', { className: 'fingers-fs-progress-record__value' }, main),
+              daysSince != null && h('div', { className: 'fingers-fs-progress-record__when' },
+                daysSince === 0 ? 'установлен сегодня' :
+                daysSince === 1 ? 'установлен вчера' :
+                daysSince < 30 ? 'установлен ' + daysSince + ' дн назад' :
+                'установлен ' + Math.floor(daysSince / 30) + ' мес назад')
+            );
+          })
+        ),
+        mvcDue && h('div', { className: 'fingers-fs-progress-callout' },
+          h('span', { 'aria-hidden': 'true' }, '📅'),
+          ' Пора re-test (прошло больше 8 недель с последнего MVC теста).')
+      ),
+
+      // ─── Last sessions ─────────────────────────────────────────────────
+      stats.lastSessions.length > 0 && h('section', { className: 'fingers-fs-progress-section' },
+        h('div', { className: 'fingers-fs-progress-section__header' },
+          h('h3', { className: 'fingers-fs-progress-section__title' }, 'Последние тренировки')
+        ),
+        h('div', { className: 'fingers-fs-progress-sessions' },
+          stats.lastSessions.map(function (s) {
+            return h('div', { key: s.dateKey + '_' + s.programName, className: 'fingers-fs-progress-session' },
+              h('div', { className: 'fingers-fs-progress-session__main' },
+                h('div', { className: 'fingers-fs-progress-session__title' }, s.programName),
+                h('div', { className: 'fingers-fs-progress-session__meta' },
+                  h('span', null, _relativeDay(s.daysAgo)),
+                  s.durationMin ? h('span', null, '· ' + Math.round(s.durationMin) + ' мин') : null
+                )
+              ),
+              h('span', {
+                className: 'fingers-fs-progress-session__intensity',
+                'data-fingers-intensity': s.intensity
+              }, _intensityRu(s.intensity))
+            );
+          })
+        )
+      )
     );
   }
 
@@ -753,13 +1586,432 @@
   }
 
   // --- Main SessionUI ---
+  // EquipmentBar — tab-strip над шапкой fingers для смены оборудования
+  // между сессиями. 3 варианта: 🪜 полный board / 🚪 door frame / 🤚 No-Hangs.
+  // При full — рядом chip с моделью доски (опционально, клик → выбор из BOARDS).
+  // Persist в heys_profile.fingerboardProfile, перерендер по тику.
+  function FingersEquipmentBar(props) {
+    const onChange = (props && props.onChange) || function () {};
+    const profile = getProfile();
+
+    // Multi-select: тренировка может комбинировать оборудование (warmup на door,
+    // max-hangs на block, repeaters на board). equipmentTypes — массив активных
+    // ['full','block','door','none']. Legacy single-state поля (noEquipment,
+    // blockMode, edgeLimit) синхронизируются derived'ом для обратной совместимости.
+    function deriveTypesFromLegacy(p) {
+      // Если в профиле уже есть массив — используем его.
+      if (Array.isArray(p.equipmentTypes) && p.equipmentTypes.length > 0) {
+        return p.equipmentTypes.slice();
+      }
+      // Иначе reconstruct из legacy single-state.
+      if (p.noEquipment) return ['none'];
+      if (p.blockMode) return ['block'];
+      if (p.edgeLimit === 25) return ['door'];
+      return ['full'];
+    }
+    const activeTypes = deriveTypesFromLegacy(profile);
+    const allBoards = Array.isArray(Fingers.BOARDS) ? Fingers.BOARDS : [];
+    // Board picker отображается если активен full или block. Список зависит от
+    // того что активно: если оба — показываем оба kind'а в одном списке.
+    const wantFull  = activeTypes.indexOf('full') >= 0;
+    const wantBlock = activeTypes.indexOf('block') >= 0;
+    const boards = (wantFull || wantBlock)
+      ? allBoards.filter(function (b) {
+          const k = b.kind || 'fingerboard';
+          return (wantFull && k === 'fingerboard') || (wantBlock && k === 'block');
+        })
+      : [];
+    const currentBoard = profile.fingerboardId && Fingers.getBoardById
+      ? Fingers.getBoardById(profile.fingerboardId)
+      : null;
+    const [boardPickerOpen, setBoardPickerOpen] = useState(false);
+
+    function syncLegacyFromTypes(types) {
+      // Derive legacy single-state поля из массива. Преимущество для совместимости:
+      // если в массиве 'block' — blockMode=true (даже если есть и full). Это
+      // позволяет recommendations подсветить block-протоколы.
+      // hasFingerboard: true если что-то кроме 'none' (даже door считается).
+      return {
+        equipmentTypes: types,
+        noEquipment: types.length === 1 && types[0] === 'none',
+        blockMode: types.indexOf('block') >= 0 && types.length === 1,
+        // edgeLimit актуален когда door — единственный реальный equip-тип
+        edgeLimit: (types.indexOf('door') >= 0 && !wantFull && !wantBlock) ? 25 : null,
+        hasFingerboard: types.some(function (t) { return t !== 'none'; })
+      };
+    }
+
+    function writeProfile(patch) {
+      try {
+        const u = HEYS.utils;
+        if (!u || !u.lsGet || !u.lsSet) return;
+        const p = u.lsGet('heys_profile', {}) || {};
+        const fp = Object.assign({}, p.fingerboardProfile || {}, patch);
+        u.lsSet('heys_profile', Object.assign({}, p, { fingerboardProfile: fp }));
+        onChange();
+      } catch (e) {
+        console.warn('[FingersEquipmentBar] writeProfile failed:', e);
+      }
+    }
+
+    function toggleType(type) {
+      const has = activeTypes.indexOf(type) >= 0;
+      let next;
+      if (has) {
+        // Enforce: минимум 1 активный тип.
+        if (activeTypes.length === 1) return;
+        next = activeTypes.filter(function (t) { return t !== type; });
+      } else {
+        // 'none' эксклюзивен: либо «нет оборудования», либо что-то ещё.
+        if (type === 'none') next = ['none'];
+        else next = activeTypes.filter(function (t) { return t !== 'none'; }).concat([type]);
+      }
+      const patch = syncLegacyFromTypes(next);
+      // Если включили block и пока нет block-доски выбранной — назначить default
+      if (type === 'block' && !has) {
+        if (!currentBoard || currentBoard.kind !== 'block') {
+          patch.fingerboardId = 'xclimb_terminator';
+        }
+      }
+      // Если выключили block и текущая доска — block, переключить на fingerboard default
+      if (type === 'block' && has && currentBoard && currentBoard.kind === 'block') {
+        patch.fingerboardId = next.indexOf('full') >= 0 ? 'beastmaker_1000' : null;
+      }
+      writeProfile(patch);
+    }
+    function pickBoard(id) {
+      writeProfile({ fingerboardId: id });
+      setBoardPickerOpen(false);
+    }
+
+    const tabs = [
+      { id: 'full',  icon: '🪜', label: 'Полный board' },
+      { id: 'block', icon: '💪', label: 'Hang block' },
+      { id: 'door',  icon: '🚪', label: 'Door frame' },
+      { id: 'none',  icon: '🤚', label: 'No-Hangs' }
+    ];
+
+    return h('div', { className: 'fingers-fs-equipment-bar' },
+      h('div', { className: 'fingers-fs-equipment-bar__tabs',
+        role: 'group',
+        'aria-label': 'Оборудование (можно выбрать несколько)' },
+        tabs.map(function (t) {
+          const active = activeTypes.indexOf(t.id) >= 0;
+          const isOnlyActive = active && activeTypes.length === 1;
+          return h('button', {
+            key: t.id,
+            type: 'button',
+            role: 'checkbox',
+            'aria-checked': active,
+            'aria-disabled': isOnlyActive,
+            title: isOnlyActive ? 'Минимум один тип должен быть активен' : null,
+            className: 'fingers-fs-equipment-tab' + (active ? ' is-active' : ''),
+            onClick: function () { toggleType(t.id); }
+          },
+            // Чекбокс-индикатор в углу для multi-select clarity
+            h('span', {
+              className: 'fingers-fs-equipment-tab__check' + (active ? ' is-checked' : ''),
+              'aria-hidden': 'true'
+            }, active ? '✓' : null),
+            h('span', { className: 'fingers-fs-equipment-tab__icon', 'aria-hidden': 'true' }, t.icon),
+            h('span', { className: 'fingers-fs-equipment-tab__label' }, t.label)
+          );
+        })
+      ),
+      // Board picker (для full и/или block — список объединённый по активным kind'ам)
+      (wantFull || wantBlock) && boards.length > 0 ? h('div', { className: 'fingers-fs-equipment-board' },
+        h('button', {
+          type: 'button',
+          className: 'fingers-fs-equipment-board__btn',
+          onClick: function () { setBoardPickerOpen(!boardPickerOpen); },
+          'aria-expanded': boardPickerOpen ? 'true' : 'false'
+        },
+          h('span', { className: 'fingers-fs-equipment-board__label' },
+            (currentBoard && currentBoard.label) || 'Выбрать модель'),
+          h('span', { className: 'fingers-fs-equipment-board__chevron', 'aria-hidden': 'true' },
+            boardPickerOpen ? '▲' : '▼')
+        ),
+        boardPickerOpen ? h('div', { className: 'fingers-fs-equipment-board__menu' },
+          boards.map(function (b) {
+            const active = (currentBoard && currentBoard.id === b.id);
+            return h('button', {
+              key: b.id,
+              type: 'button',
+              className: 'fingers-fs-equipment-board__option' + (active ? ' is-active' : ''),
+              onClick: function () { pickBoard(b.id); }
+            },
+              h('span', { className: 'fingers-fs-equipment-board__option-label' }, b.label),
+              b.manufacturer ? h('span', { className: 'fingers-fs-equipment-board__option-sub' },
+                b.manufacturer) : null,
+              active ? h('span', { className: 'fingers-fs-equipment-board__option-check' }, '✓') : null
+            );
+          })
+        ) : null
+      ) : null
+    );
+  }
+  Fingers.EquipmentBar = FingersEquipmentBar;
+
+  // Settings popover — единое место для voice/тема/профиль/reset.
+  // Открывается из ⚙ кнопки в шапке fingers.
+  function FingersSettingsSheet(props) {
+    const onClose = (props && props.onClose) || function () {};
+    const onRequestReset = props && props.onRequestReset;
+    const profile = getProfile();
+    const HEYS_utils = HEYS.utils || {};
+
+    // Voice settings — берём актуальные через voice.getSettings()
+    const voiceInitial = (Fingers.voice && Fingers.voice.getSettings)
+      ? Fingers.voice.getSettings()
+      : { enabled: true, volume: 0.8 };
+    const [voiceEnabled, setVoiceEnabled] = useState(voiceInitial.enabled !== false);
+    const [voiceVol, setVoiceVol] = useState(
+      typeof voiceInitial.volume === 'number' ? voiceInitial.volume : 0.8);
+
+    // Theme: A — HEYS native, B — Custom blue, C — Climbing granite
+    const initialTheme = (function () {
+      try {
+        const fp = profile || {};
+        return fp.themeId || (typeof document !== 'undefined'
+          ? document.documentElement.getAttribute('data-fingers-theme')
+          : 'A') || 'A';
+      } catch (_) { return 'A'; }
+    })();
+    const [theme, setTheme] = useState(initialTheme);
+
+    function applyVoiceEnabled(b) {
+      setVoiceEnabled(b);
+      try { Fingers.voice && Fingers.voice.setEnabled && Fingers.voice.setEnabled(b); } catch (_) {}
+    }
+    function applyVoiceVolume(v) {
+      const clamped = Math.max(0, Math.min(1, Number(v) || 0));
+      setVoiceVol(clamped);
+      try { Fingers.voice && Fingers.voice.setVolume && Fingers.voice.setVolume(clamped); } catch (_) {}
+    }
+
+    function applyTheme(id) {
+      if (['A', 'B', 'C'].indexOf(id) < 0) return;
+      setTheme(id);
+      try {
+        if (typeof document !== 'undefined') {
+          document.documentElement.setAttribute('data-fingers-theme', id);
+        }
+      } catch (_) {}
+      // Persist в heys_profile.fingerboardProfile.themeId
+      try {
+        if (HEYS_utils.lsGet && HEYS_utils.lsSet) {
+          const p = HEYS_utils.lsGet('heys_profile', {}) || {};
+          const fp = Object.assign({}, p.fingerboardProfile || {}, { themeId: id });
+          HEYS_utils.lsSet('heys_profile', Object.assign({}, p, { fingerboardProfile: fp }));
+        }
+      } catch (_) {}
+    }
+
+    function handleResetOnboarding() {
+      if (HEYS.ConfirmModal?.show) {
+        HEYS.ConfirmModal.show({
+          icon: '↻',
+          title: 'Перепройти онбординг',
+          text: 'Сбросить ответы и пройти заново? Это пересчитает рекомендованный ' +
+            'протокол. Существующие записи в дневнике сохранятся.',
+          confirmText: 'Перепройти',
+          cancelText: 'Отмена',
+          onConfirm: function () {
+            onClose();
+            if (typeof onRequestReset === 'function') onRequestReset();
+          }
+        });
+      } else if (typeof onRequestReset === 'function') {
+        onClose();
+        onRequestReset();
+      }
+    }
+
+    // Escape close
+    useEffect(function () {
+      function onKey(e) { if (e.key === 'Escape') onClose(); }
+      document.addEventListener('keydown', onKey);
+      return function () { document.removeEventListener('keydown', onKey); };
+    }, [onClose]);
+
+    const ageStr = Number.isFinite(Number(profile.age)) ? String(profile.age) + ' лет' : 'не указан';
+    const bm = (Fingers.getBodyWeight && Fingers.getBodyWeight()) || { kg: null, source: 'fallback' };
+    const weightStr = bm.source !== 'fallback'
+      ? bm.kg.toFixed(1) + ' кг'
+      : 'не указан';
+
+    const themeMeta = {
+      A: { label: 'HEYS native',  color: 'linear-gradient(135deg, #2563eb, #1d4ed8)' },
+      B: { label: 'Custom blue',  color: 'linear-gradient(135deg, #06b6d4, #0e7490)' },
+      C: { label: 'Climbing',     color: 'linear-gradient(135deg, #c2410c, #7c2d12)' },
+    };
+
+    return h('div', {
+      className: 'fingers-settings__backdrop',
+      onClick: onClose,
+      role: 'presentation'
+    },
+      h('div', {
+        className: 'fingers-settings',
+        role: 'dialog',
+        'aria-label': 'Настройки тренировки',
+        onClick: function (e) { e.stopPropagation(); }
+      },
+        // Header
+        h('div', { className: 'fingers-settings__header' },
+          h('div', { className: 'fingers-settings__header-text' },
+            h('h2', { className: 'fingers-settings__title' },
+              h('span', { 'aria-hidden': 'true' }, '⚙'), ' Настройки тренировки'),
+            h('p', { className: 'fingers-settings__sub' },
+              'Голос, тема, профиль')
+          ),
+          h('button', {
+            type: 'button',
+            className: 'fingers-settings__close',
+            'aria-label': 'Закрыть',
+            onClick: onClose
+          },
+            h('svg', { width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 1.6 },
+              h('path', { d: 'M5 5l10 10M15 5L5 15', strokeLinecap: 'round' })
+            )
+          )
+        ),
+
+        // Body
+        h('div', { className: 'fingers-settings__body' },
+
+          // ─── Voice section ───
+          h('section', { className: 'fingers-settings__section' },
+            h('div', { className: 'fingers-settings__section-title' }, 'Голос'),
+            h('div', { className: 'fingers-settings__row' },
+              h('div', { className: 'fingers-settings__row-text' },
+                h('div', { className: 'fingers-settings__row-label' }, 'Голосовое сопровождение'),
+                h('div', { className: 'fingers-settings__row-hint' },
+                  voiceEnabled ? 'Цитирует фазы виса/отдыха и подсказки' : 'Отключено — silent mode')
+              ),
+              h('label', { className: 'fingers-settings__toggle' },
+                h('input', {
+                  type: 'checkbox',
+                  checked: voiceEnabled,
+                  onChange: function (e) { applyVoiceEnabled(!!e.target.checked); }
+                }),
+                h('span', { className: 'fingers-settings__toggle-slider', 'aria-hidden': 'true' })
+              )
+            ),
+            h('div', { className: 'fingers-settings__row fingers-settings__row--volume' },
+              h('div', { className: 'fingers-settings__row-text' },
+                h('div', { className: 'fingers-settings__row-label' },
+                  'Громкость',
+                  h('span', { className: 'fingers-settings__volume-value' },
+                    Math.round(voiceVol * 100) + '%')
+                )
+              ),
+              h('input', {
+                type: 'range',
+                className: 'fingers-settings__slider',
+                min: 0, max: 1, step: 0.05,
+                value: voiceVol,
+                disabled: !voiceEnabled,
+                onChange: function (e) { applyVoiceVolume(e.target.value); },
+                'aria-label': 'Громкость голоса'
+              })
+            )
+          ),
+
+          // ─── Theme section ───
+          h('section', { className: 'fingers-settings__section' },
+            h('div', { className: 'fingers-settings__section-title' }, 'Тема оформления'),
+            h('div', { className: 'fingers-settings__theme-grid' },
+              ['A', 'B', 'C'].map(function (id) {
+                const meta = themeMeta[id];
+                const active = theme === id;
+                return h('button', {
+                  key: id,
+                  type: 'button',
+                  className: 'fingers-settings__theme' + (active ? ' is-active' : ''),
+                  onClick: function () { applyTheme(id); },
+                  'aria-pressed': active
+                },
+                  h('span', {
+                    className: 'fingers-settings__theme-swatch',
+                    style: { background: meta.color }
+                  }),
+                  h('span', { className: 'fingers-settings__theme-id' }, id),
+                  h('span', { className: 'fingers-settings__theme-label' }, meta.label),
+                  active ? h('span', { className: 'fingers-settings__theme-check', 'aria-hidden': 'true' }, '✓') : null
+                );
+              })
+            )
+          ),
+
+          // ─── Profile section ───
+          h('section', { className: 'fingers-settings__section' },
+            h('div', { className: 'fingers-settings__section-title' }, 'Профиль'),
+            h('div', { className: 'fingers-settings__profile-grid' },
+              h('div', { className: 'fingers-settings__profile-tile' },
+                h('div', { className: 'fingers-settings__profile-label' }, 'Возраст'),
+                h('div', {
+                  className: 'fingers-settings__profile-value' +
+                    (profile.age == null ? ' is-missing' : '')
+                }, ageStr)
+              ),
+              h('div', { className: 'fingers-settings__profile-tile' },
+                h('div', { className: 'fingers-settings__profile-label' }, 'Вес тела'),
+                h('div', {
+                  className: 'fingers-settings__profile-value' +
+                    (bm.source === 'fallback' ? ' is-missing' : '')
+                }, weightStr)
+              )
+            ),
+            h('p', { className: 'fingers-settings__profile-hint' },
+              'Возраст определяет какие хваты безопасны (UIAA/BMC), вес — точный % MVC. ',
+              'Изменить можно в общем Профиле HEYS.')
+          ),
+
+          // ─── Re-onboarding link ───
+          onRequestReset
+            ? h('button', {
+                type: 'button',
+                className: 'fingers-settings__reset-btn',
+                onClick: handleResetOnboarding
+              },
+                h('span', { 'aria-hidden': 'true' }, '↻'),
+                ' Перепройти онбординг'
+              )
+            : null
+        )
+      )
+    );
+  }
+  Fingers.SettingsSheet = FingersSettingsSheet;
+
   function SessionUI({ dateKey, trainingIndex, mode, onClose, onRequestOnboarding }) {
     const [tab, setTab] = useState('programs');
     const [exercises, setExercises] = useState([]);
+    // showBib: false | true | {focusSourceId: string} — last form открывает
+    // модалку с автоскроллом и expanded card конкретного источника.
     const [showBib, setShowBib] = useState(false);
+    // Settings popover — единая точка для voice/тема/профиль/reset.
+    const [showSettings, setShowSettings] = useState(false);
+    // EquipmentBar bumps this on change → SessionUI re-renders, getProfile()
+    // перечитывается → userBoard / noEquipment подхватываются по всему дереву.
+    const [equipmentTick, setEquipmentTick] = useState(0);
+    // Глобальный listener: любой SourceBadge-click шлёт событие, открываем
+    // bibliography с focus на этом source id.
+    useEffect(function () {
+      const handler = function (e) {
+        const sid = e && e.detail && e.detail.sourceId;
+        setShowBib(sid ? { focusSourceId: sid } : true);
+      };
+      window.addEventListener('fingers-open-bibliography', handler);
+      return function () { window.removeEventListener('fingers-open-bibliography', handler); };
+    }, []);
     const [pendingProgram, setPendingProgram] = useState(null);
     const [liveActive, setLiveActive] = useState(false);
     const [warmupActive, setWarmupActive] = useState(false);
+    // 'ramp' (полная 15-20 мин до max) | 'quick' (5-8 мин targeted на пальцы/кисть)
+    const [warmupProtocol, setWarmupProtocol] = useState('ramp');
     // pendingResume — снапшот незавершённой сессии для постоянного баннера наверху.
     // Заполняется при монтировании если persistence.load() вернул свежий snapshot.
     // null → нет прерванной сессии, баннер не рисуется.
@@ -923,12 +2175,39 @@
         const totalReps = exercises.reduce(function (s, e) {
           return s + (Number(e.repsPerSet) || 0) * (Number(e.setsCount) || 0);
         }, 0);
+        // Считаем общее время удержания (висы только, без отдыха) — premium-метрика.
+        const totalHangSec = exercises.reduce(function (s, e) {
+          return s + (Number(e.hangSec) || 0)
+            * (Number(e.repsPerSet) || 0)
+            * (Number(e.setsCount) || 0);
+        }, 0);
+        // Intensity протокола для phase-цвета и next-step рекомендации.
+        const programIntensity = (pendingProgram?.id && typeof Fingers.getProgramIntensity === 'function')
+          ? Fingers.getProgramIntensity(pendingProgram.id)
+          : 'moderate';
+        // Stats для achievements — переиспользуем уже определённую функцию.
+        let stats = null;
+        try { stats = computeProgressStats(); } catch (_) { stats = null; }
+        // Session-level achievements: volume PR, first-of-program, comeback.
+        // Сканируем 365 дней — этого хватит чтобы отличить «первый раз» от
+        // «возвращение после паузы».
+        let achievements = null;
+        try {
+          achievements = _computeSessionAchievements(fingersLog, dateKey, 365);
+        } catch (e) {
+          console.warn('[SessionUI] achievements compute failed:', e);
+        }
         setSessionSummary({
           programName: pendingProgram?.name || 'Свой конструктор',
           totalMin: Math.round(totalMin),
+          totalHangSec: Math.round(totalHangSec),
           totalReps: totalReps,
           exercisesCount: exercises.length,
           dateKey: dateKey || (new Date().toISOString().slice(0, 10)),
+          intensity: programIntensity,
+          streak: stats ? stats.streak : 0,
+          totalSessions: stats ? stats.totalSessions : 1,
+          achievements: achievements
         });
         // Persistence уже очищается в LiveSession.onComplete → можно close
         // только по явному дисмиссу из summary.
@@ -988,39 +2267,58 @@
       }
 
       const cooldownInfo = (Fingers.cooldownCheck && Fingers.cooldownCheck()) || {};
-      const cooldownWarn = (cooldownInfo.hoursSinceLast != null && cooldownInfo.hoursSinceLast < 48 && cooldownInfo.lastWasMax && programIntensity === 'max')
-        ? '\n⚠ Прошло только ' + Math.round(cooldownInfo.hoursSinceLast) + 'ч с прошлой max-сессии (рекомендуется ≥48ч).'
-        : '';
-
-      const readinessNote = readinessBucket === 'recovery-only'
-        ? '\nℹ Готовность невысокая — лучше No-Hangs или recovery-протокол.'
-        : '';
+      const extraNotes = [];
+      if (cooldownInfo.hoursSinceLast != null && cooldownInfo.hoursSinceLast < 48
+          && cooldownInfo.lastWasMax && programIntensity === 'max') {
+        extraNotes.push({
+          icon: '⚠',
+          text: 'Прошло только ' + Math.round(cooldownInfo.hoursSinceLast) +
+                'ч с прошлой max-сессии (рекомендуется ≥48ч).'
+        });
+      }
+      if (readinessBucket === 'recovery-only') {
+        extraNotes.push({
+          icon: 'ℹ',
+          text: 'Готовность невысокая — лучше No-Hangs или recovery-протокол.'
+        });
+      }
 
       // Если WarmupRunner недоступен — деградируем до 2-кнопочного варианта.
       const canShowWarmup = !!(Fingers.WarmupRunner);
 
       const preflightOpts = {
         icon: '🤲',
-        title: 'Pre-flight check',
-        text: 'Перед стартом подтверди:\n\n' +
-              '✓ Разогрев 15-20 мин (RAMP: Raise/Activate/Mobilize/Potentiate)\n' +
-              '✓ Нет острой боли в пальцах и PIP суставах\n' +
-              '✓ Не на холодные руки' +
-              cooldownWarn + readinessNote,
+        title: 'Готов начинать?',
+        // text может быть React-элементом — ConfirmModal:210 рендерит его как child.
+        text: h(PreflightChecklist, { extraNotes: extraNotes }),
         confirmStyle: programIntensity === 'max' ? 'warning' : 'primary',
       };
 
       if (canShowWarmup) {
-        // 3-кнопочный вариант: Отмена / Разминка 18 мин / Всё ОК
+        // 4-кнопочный вариант: Отмена / Быстрая разминка / Полная разминка / Всё ОК.
+        // Быстрая доступна для всех протоколов — юзер сам решает (для max
+        // методически рекомендуется RAMP, но не блокируем выбор).
+        // На «go» вешаем className 'fingers-fs-preflight-go' — CSS-анимация
+        // приглушает кнопку первые 2.4с пока галочки заполняются.
         preflightOpts.actions = [
           { key: 'cancel', label: 'Отмена', style: 'neutral', variant: 'text',
             isCancel: true, row: 0 },
-          { key: 'warmup', label: 'Сначала разминка 18 мин', style: 'primary',
-            variant: 'text', value: 'warmup', row: 1,
-            onClick: function () { setWarmupActive(true); } },
+          { key: 'warmup_quick', label: '⚡ Быстрая разминка (5-8 мин)',
+            style: 'primary', variant: 'text', value: 'quick', row: 1,
+            onClick: function () {
+              setWarmupProtocol('quick');
+              setWarmupActive(true);
+            } },
+          { key: 'warmup_full', label: '🔥 Полная разминка (15-20 мин)',
+            style: 'primary', variant: 'text', value: 'full', row: 2,
+            onClick: function () {
+              setWarmupProtocol('ramp');
+              setWarmupActive(true);
+            } },
           { key: 'go', label: 'Всё ОК, начинаем',
             style: programIntensity === 'max' ? 'warning' : 'primary',
-            variant: 'fill', isDefault: true, value: 'go', row: 2,
+            variant: 'fill', isDefault: true, value: 'go', row: 3,
+            className: 'fingers-fs-preflight-go',
             onClick: function () {
               try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
               setLiveActive(true);
@@ -1122,11 +2420,23 @@
     ];
 
     return h('div', { className: 'fingers-fs-session' },
-      // Warmup runner overlay (floats над всем когда warmupActive=true)
+      // Warmup runner overlay (floats над всем когда warmupActive=true).
+      // Steps подаём в зависимости от выбранного протокола: 'quick' — targeted
+      // 5-8 мин на пальцы/кисть/предплечья (Hörst+Schöffl+Hsu), 'ramp' (default) —
+      // полный 15-20 мин RAMP. WarmupRunner если не передать steps берёт ramp.
       warmupActive && Fingers.WarmupRunner ? h(Fingers.WarmupRunner, {
-        key: 'warmup',
+        key: 'warmup-' + warmupProtocol,
+        steps: warmupProtocol === 'quick'
+          ? (Fingers.SafetyGate?.quickFingerWarmupSteps)
+          : undefined,
         onDone: handleWarmupDone,
         onCancel: handleWarmupCancel
+      }) : null,
+      // Equipment bar — над шапкой, всегда видим для смены оборудования
+      // (тренировка может проходить в разных местах, набор меняется каждый раз).
+      Fingers.EquipmentBar ? h(Fingers.EquipmentBar, {
+        key: 'eqbar-' + equipmentTick,
+        onChange: function () { setEquipmentTick(function (n) { return n + 1; }); }
       }) : null,
       // Header
       h('div', { className: 'fingers-fs__header fingers-fs__header--premium' },
@@ -1135,27 +2445,13 @@
           h('span', { className: 'fingers-fs__title-text' }, 'Тренировка')
         ),
         h('div', { className: 'fingers-fs__header-actions' },
-          onRequestOnboarding ? h('button', {
+          h('button', {
             type: 'button',
             className: 'fingers-fs__icon-btn',
-            onClick: function () {
-              if (HEYS.ConfirmModal?.show) {
-                HEYS.ConfirmModal.show({
-                  icon: '⚙',
-                  title: 'Перенастроить',
-                  text: 'Сбросить ответы онбординга и перепройти заново? ' +
-                    'Это пересчитает рекомендованный протокол. Существующие записи в дневнике сохранятся.',
-                  confirmText: 'Перепройти',
-                  cancelText: 'Отмена',
-                  onConfirm: function () { onRequestOnboarding(); }
-                });
-              } else {
-                onRequestOnboarding();
-              }
-            },
-            'aria-label': 'Перенастроить профиль (перепройти онбординг)',
-            title: 'Перенастроить'
-          }, h('span', { 'aria-hidden': 'true' }, '⚙')) : null,
+            onClick: function () { setShowSettings(true); },
+            'aria-label': 'Настройки тренировки',
+            title: 'Настройки'
+          }, h('span', { 'aria-hidden': 'true' }, '⚙')),
           h('button', {
             type: 'button',
             className: 'fingers-fs__icon-btn',
@@ -1293,91 +2589,186 @@
 
       // Bibliography modal
       showBib && Fingers.BibliographyModal && h(Fingers.BibliographyModal, {
-        onClose: function () { setShowBib(false); }
+        onClose: function () { setShowBib(false); },
+        focusSourceId: (showBib && typeof showBib === 'object') ? showBib.focusSourceId : undefined
       }),
 
-      // Summary screen — показывается после автозавершения через таймер.
-      // Backdrop + центральная карточка с метриками + CTA «Закрыть».
-      sessionSummary && h('div', {
-        className: 'fingers-fs-summary-backdrop',
-        onClick: function (e) { if (e.target === e.currentTarget) handleDismissSummary(); },
-        style: {
-          position: 'fixed', inset: 0, zIndex: 2200,
-          background: 'rgba(0,0,0,0.55)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: 16,
+      // Settings sheet (⚙) — voice/theme/profile/reset
+      showSettings && Fingers.SettingsSheet && h(Fingers.SettingsSheet, {
+        onClose: function () { setShowSettings(false); },
+        onRequestReset: onRequestOnboarding || undefined
+      }),
+
+      // Summary screen — премиум-итог после автозавершения live-таймера.
+      // Backdrop + glass-card с hero, метриками, achievements, next-step.
+      sessionSummary && (function () {
+        const ss = sessionSummary;
+        // Compute achievement-карточки: streak milestone / total milestone / intensity badge
+        const milestones = [];
+        if (ss.streak >= 3) {
+          milestones.push({
+            id: 'streak',
+            icon: '🔥',
+            label: ss.streak + (ss.streak === 1 ? ' день' : ss.streak < 5 ? ' дня' : ' дней') + ' подряд',
+            kind: 'streak'
+          });
         }
-      },
-        h('div', {
-          role: 'dialog',
-          'aria-modal': 'true',
-          'aria-label': 'Сессия завершена',
-          style: {
-            background: 'var(--fingers-bg, #fff)', borderRadius: 16,
-            width: '100%', maxWidth: 440,
-            padding: '28px 24px 20px',
-            display: 'flex', flexDirection: 'column', gap: 16,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
+        if ([10, 25, 50, 100, 200, 500].indexOf(ss.totalSessions) >= 0) {
+          milestones.push({
+            id: 'total',
+            icon: '🏆',
+            label: ss.totalSessions + '-я тренировка',
+            kind: 'milestone'
+          });
+        } else if (ss.totalSessions === 1) {
+          milestones.push({
+            id: 'first',
+            icon: '🎉',
+            label: 'Первая тренировка!',
+            kind: 'first'
+          });
+        }
+        if (ss.intensity === 'max') {
+          milestones.push({
+            id: 'intensity',
+            icon: '⚡',
+            label: 'Max-сессия',
+            kind: 'intensity-max'
+          });
+        }
+        // Session-level achievements (Volume PR / Comeback / First-of-program)
+        const ach = ss.achievements;
+        if (ach) {
+          if (ach.isVolumePR) {
+            const delta = ach.curHangSec - ach.prevBestHangSec;
+            const fmt = function (s) { return s >= 60 ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : s + ' с'; };
+            milestones.unshift({
+              id: 'pr',
+              icon: '🏆',
+              label: 'Volume PR: ' + fmt(ach.curHangSec) + ' (+' + delta + ' с)',
+              kind: 'pr'
+            });
           }
+          if (ach.comebackDays >= 14 && !ach.isFirstEver) {
+            milestones.push({
+              id: 'comeback',
+              icon: '👋',
+              label: 'Возвращение после ' + ach.comebackDays + ' дн.',
+              kind: 'comeback'
+            });
+          }
+          if (ach.isFirstOfProgram && !ach.isFirstEver) {
+            milestones.push({
+              id: 'first-prog',
+              icon: '🆕',
+              label: 'Первый раз этот протокол',
+              kind: 'first-prog'
+            });
+          }
+        }
+        // Next-step рекомендация по intensity
+        const nextStepText = ss.intensity === 'max'
+          ? 'Следующая max-сессия — через 48ч. Сухожилия синтезируют коллаген до 72ч (Magnusson 2010).'
+          : ss.intensity === 'recovery'
+            ? 'Recovery — можно тренировать на следующий день. Базовая активация без стресса для шкивов.'
+            : 'Через 24–48ч можно повторить или сделать max-сессию если готовность позволит.';
+        const totalHangMin = Math.floor((ss.totalHangSec || 0) / 60);
+        const totalHangSec = (ss.totalHangSec || 0) % 60;
+        const totalHangLabel = totalHangMin > 0
+          ? totalHangMin + ':' + String(totalHangSec).padStart(2, '0')
+          : (ss.totalHangSec || 0) + ' с';
+
+        return h('div', {
+          className: 'fingers-fs-summary__backdrop',
+          onClick: function (e) { if (e.target === e.currentTarget) handleDismissSummary(); },
+          role: 'presentation'
         },
-          h('div', { style: { fontSize: 44, lineHeight: 1, textAlign: 'center' } }, '🎉'),
-          h('h2', {
-            style: { margin: 0, fontSize: 22, fontWeight: 700, textAlign: 'center',
-              color: 'var(--fingers-text, #1a1a1f)' }
-          }, 'Сессия завершена'),
-          h('div', { style: { fontSize: 14, opacity: 0.7, textAlign: 'center', marginTop: -8 } },
-            sessionSummary.programName),
           h('div', {
-            style: { display: 'flex', gap: 12, marginTop: 4 }
+            className: 'fingers-fs-summary',
+            'data-intensity': ss.intensity,
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': 'Сессия завершена',
+            onClick: function (e) { e.stopPropagation(); }
           },
-            h('div', {
-              style: { flex: 1, padding: '14px 10px', borderRadius: 10,
-                background: 'rgba(120,120,128,0.08)', textAlign: 'center' }
-            },
-              h('div', { style: { fontSize: 24, fontWeight: 700, color: 'var(--fingers-accent, #0066ff)' } },
-                sessionSummary.totalMin),
-              h('div', { style: { fontSize: 11, opacity: 0.65, marginTop: 2 } }, 'минут')
+            // Hero — большая иконка + заголовок + название программы + intensity-бейдж
+            h('div', { className: 'fingers-fs-summary__hero' },
+              h('div', { className: 'fingers-fs-summary__hero-icon', 'aria-hidden': 'true' },
+                ss.intensity === 'max' ? '🔥'
+                  : ss.intensity === 'recovery' ? '🌿' : '💪'),
+              h('h2', { className: 'fingers-fs-summary__title' }, 'Сессия завершена'),
+              h('div', { className: 'fingers-fs-summary__program' }, ss.programName),
+              h('span', {
+                className: 'fingers-fs-summary__intensity',
+                'data-intensity': ss.intensity
+              }, ss.intensity === 'max' ? 'максимум'
+                : ss.intensity === 'recovery' ? 'восстановление'
+                : 'умеренно')
             ),
-            h('div', {
-              style: { flex: 1, padding: '14px 10px', borderRadius: 10,
-                background: 'rgba(120,120,128,0.08)', textAlign: 'center' }
-            },
-              h('div', { style: { fontSize: 24, fontWeight: 700, color: 'var(--fingers-accent, #0066ff)' } },
-                sessionSummary.exercisesCount),
-              h('div', { style: { fontSize: 11, opacity: 0.65, marginTop: 2 } }, 'упражнений')
+
+            // Hero metric — суммарное время удержания, крупно gradient
+            h('div', { className: 'fingers-fs-summary__hero-metric' },
+              h('div', { className: 'fingers-fs-summary__hero-metric-label' }, 'Время в висе'),
+              h('div', { className: 'fingers-fs-summary__hero-metric-value' }, totalHangLabel)
             ),
-            h('div', {
-              style: { flex: 1, padding: '14px 10px', borderRadius: 10,
-                background: 'rgba(120,120,128,0.08)', textAlign: 'center' }
-            },
-              h('div', { style: { fontSize: 24, fontWeight: 700, color: 'var(--fingers-accent, #0066ff)' } },
-                sessionSummary.totalReps),
-              h('div', { style: { fontSize: 11, opacity: 0.65, marginTop: 2 } }, 'висов')
-            )
-          ),
-          h('div', {
-            style: {
-              padding: '10px 12px', borderRadius: 8,
-              background: 'rgba(22, 163, 74, 0.10)',
-              color: '#15803d', fontSize: 13, lineHeight: 1.4,
-              display: 'flex', gap: 8, alignItems: 'center',
-            }
-          },
-            h('span', null, '✓'),
-            h('span', null, 'Сохранено в дневник на ' + sessionSummary.dateKey)
-          ),
-          h('button', {
-            className: 'fingers-fs-cta',
-            onClick: handleDismissSummary,
-            style: { width: '100%', padding: '12px 20px', fontSize: 15, marginTop: 4 }
-          }, 'Закрыть')
-        )
-      )
+
+            // Secondary metrics row — 3 tiles
+            h('div', { className: 'fingers-fs-summary__metrics' },
+              h('div', { className: 'fingers-fs-summary__metric' },
+                h('div', { className: 'fingers-fs-summary__metric-value' }, String(ss.totalMin)),
+                h('div', { className: 'fingers-fs-summary__metric-label' }, 'минут всего')
+              ),
+              h('div', { className: 'fingers-fs-summary__metric' },
+                h('div', { className: 'fingers-fs-summary__metric-value' }, String(ss.exercisesCount)),
+                h('div', { className: 'fingers-fs-summary__metric-label' },
+                  ss.exercisesCount === 1 ? 'упражнение' : ss.exercisesCount < 5 ? 'упражнения' : 'упражнений')
+              ),
+              h('div', { className: 'fingers-fs-summary__metric' },
+                h('div', { className: 'fingers-fs-summary__metric-value' }, String(ss.totalReps)),
+                h('div', { className: 'fingers-fs-summary__metric-label' },
+                  ss.totalReps === 1 ? 'вис' : ss.totalReps < 5 ? 'виса' : 'висов')
+              )
+            ),
+
+            // Achievements row (если есть)
+            milestones.length > 0 ? h('div', { className: 'fingers-fs-summary__achievements' },
+              milestones.map(function (m) {
+                return h('div', {
+                  key: m.id,
+                  className: 'fingers-fs-summary__achievement',
+                  'data-kind': m.kind
+                },
+                  h('span', { className: 'fingers-fs-summary__achievement-icon', 'aria-hidden': 'true' }, m.icon),
+                  h('span', { className: 'fingers-fs-summary__achievement-label' }, m.label)
+                );
+              })
+            ) : null,
+
+            // Save confirmation + next-step
+            h('div', { className: 'fingers-fs-summary__saved' },
+              h('span', { className: 'fingers-fs-summary__saved-check', 'aria-hidden': 'true' }, '✓'),
+              h('span', null, 'Сохранено в дневник на ' + ss.dateKey)
+            ),
+
+            h('div', { className: 'fingers-fs-summary__next-step' },
+              h('div', { className: 'fingers-fs-summary__next-step-label' }, 'Что дальше'),
+              h('p', { className: 'fingers-fs-summary__next-step-text' }, nextStepText)
+            ),
+
+            h('button', {
+              type: 'button',
+              className: 'fingers-fs-summary__cta',
+              onClick: handleDismissSummary
+            }, 'Готово')
+          )
+        );
+      })()
     );
   }
 
   // --- Exports ---
   Fingers.SessionUI = SessionUI;
+  Fingers.getRecommendedProgramId = getRecommendedProgramId;
 
   Fingers.startSession = function startSession(opts) {
     // Stub for future direct session launch from outside fullscreen.

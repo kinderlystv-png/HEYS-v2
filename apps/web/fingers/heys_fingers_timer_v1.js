@@ -408,6 +408,9 @@
   }
 
   // ─── Component: CountdownDisplay ─────────────────────────────────────────
+  // Wave 6 premium: phase-color theming через data-phase, круговое progress-кольцо
+  // с тенью и pulse'ом digit на финальных 3 секундах HANG/REST. Breathing-ring
+  // на отдыхе (медленный scale 1↔1.02) подсказывает ритм дыхания.
   function CountdownDisplay(props) {
     const React = global.React;
     if (!React) return null;
@@ -418,14 +421,15 @@
       gripLabel, gripId, edgeLabel, addedWeightKg, onPause, onAbort, onSkip,
     } = props || {};
 
-    // Visual style depending on phase
-    const phaseColor = state === STATES.HANG ? '#dc2626'        // red — work
-      : state === STATES.REST ? '#0891b2'                       // cyan — rest
-      : state === STATES.BIG_REST ? '#0e7490'                   // dark cyan — big rest
-      : state === STATES.SET_PREP ? '#ca8a04'                   // amber — prep
-      : state === STATES.PAUSED ? '#6b7280'                     // gray — paused
-      : state === STATES.DONE ? '#16a34a'                       // green — done
-      : '#374151';                                              // neutral
+    // Phase → CSS data-attr value (используется в .heys-fingers-countdown[data-phase=...])
+    const phaseKey = state === STATES.HANG ? 'hang'
+      : state === STATES.REST ? 'rest'
+      : state === STATES.BIG_REST ? 'big-rest'
+      : state === STATES.SET_PREP ? 'prep'
+      : state === STATES.PAUSED ? 'paused'
+      : state === STATES.DONE ? 'done'
+      : state === STATES.ABORTED ? 'aborted'
+      : 'idle';
 
     const phaseLabel = state === STATES.HANG ? 'ВИС'
       : state === STATES.REST ? 'Отдых'
@@ -436,9 +440,8 @@
       : state === STATES.ABORTED ? 'Прервано'
       : state === STATES.IDLE ? 'Готов к старту' : state;
 
-    // SVG ring progress — 0..1 based on phase progress (computed by caller via secondsLeft + maxPhase).
-    // Здесь упрощённо: показываем только заполнение по доле от 60s ceiling.
-    const ringRadius = 84;
+    // SVG ring progress — 0..1 based on phase progress.
+    const ringRadius = 86;
     const ringCircum = 2 * Math.PI * ringRadius;
     const phaseMaxSec = state === STATES.HANG ? Math.max(secondsLeft, 7)
       : state === STATES.REST ? Math.max(secondsLeft, 3)
@@ -448,151 +451,109 @@
     const ratio = Math.max(0, Math.min(1, secondsLeft / phaseMaxSec));
     const dashoffset = ringCircum * (1 - ratio);
 
+    // Финальные 3 сек активной фазы — pulse'нем digit. Активно только на работе/
+    // отдыхе (на паузе/done — нет смысла).
+    const isCountingActive = state === STATES.HANG || state === STATES.REST
+      || state === STATES.BIG_REST || state === STATES.SET_PREP;
+    const isFinalCount = isCountingActive && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
+
+    const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
+
     return h('div', {
       className: 'heys-fingers-countdown',
-      style: {
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: '14px', padding: '20px 24px', fontFamily: 'system-ui, -apple-system, sans-serif',
-      },
+      'data-phase': phaseKey
     },
-      // Top info — set/rep counter
-      h('div', { style: { fontSize: '14px', color: '#6b7280', textAlign: 'center', fontWeight: 500 } },
+      // Set/rep counter — наверху
+      h('div', { className: 'heys-fingers-countdown__counter' },
         (totalSets && totalReps)
-          ? `Подход ${(setIdx || 0) + 1}/${totalSets} · Повтор ${(repIdx || 0) + 1}/${totalReps}`
+          ? 'Подход ' + ((setIdx || 0) + 1) + '/' + totalSets +
+            ' · Повтор ' + ((repIdx || 0) + 1) + '/' + totalReps
           : ''
       ),
 
-      // Grip name — крупно (теперь это основной заголовок)
-      gripLabel ? h('div', {
-        style: { fontSize: '22px', fontWeight: 700, color: '#1f2937',
-          textAlign: 'center', letterSpacing: '-0.01em', lineHeight: 1.2 }
-      }, gripLabel) : null,
+      // Grip name — крупный заголовок
+      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
 
-      // Grip hero — крупнее. При 404 wrapper схлопывается через onError.
-      gripId ? h('div', {
-        style: {
-          width: 200, height: 200, borderRadius: 20,
-          overflow: 'hidden', background: 'rgba(120, 120, 128, 0.08)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }
-      },
+      // Hero image (при 404 wrapper схлопывается)
+      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
         h('img', {
           src: '/exercises/' + gripId + '.webp',
           alt: gripLabel || gripId,
           loading: 'eager',
           decoding: 'async',
-          style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
           onError: function (e) {
             try { e.target.parentNode.style.display = 'none'; } catch (_) {}
           }
         })
       ) : null,
 
-      // Параметры — заметные чипы (грань + доп. вес).
-      // На красном фоне HANG юзеру важно одним взглядом помнить вес — поэтому крупно.
-      (edgeLabel || addedWeightKg != null) ? h('div', {
-        style: { display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }
-      },
-        edgeLabel ? h('div', {
-          style: {
-            display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-            background: 'rgba(120, 120, 128, 0.10)', borderRadius: 12,
-            padding: '8px 16px', minWidth: 80
-          }
-        },
-          h('span', { style: { fontSize: 11, color: '#6b7280', fontWeight: 500,
-            textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Грань'),
-          h('span', { style: { fontSize: 20, fontWeight: 700, color: '#1f2937', marginTop: 2 } },
-            edgeLabel)
+      // Chips: грань + доп. вес
+      (edgeLabel || addedWeightKg != null) ? h('div', { className: 'heys-fingers-countdown__chips' },
+        edgeLabel ? h('div', { className: 'heys-fingers-countdown__chip' },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Грань'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' }, edgeLabel)
         ) : null,
         addedWeightKg != null ? h('div', {
-          style: {
-            display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-            background: 'rgba(120, 120, 128, 0.10)', borderRadius: 12,
-            padding: '8px 16px', minWidth: 80
-          }
+          className: 'heys-fingers-countdown__chip heys-fingers-countdown__chip--weight',
+          'data-weight-sign': addedWeightKg > 0 ? 'plus' : addedWeightKg < 0 ? 'minus' : 'zero'
         },
-          h('span', { style: { fontSize: 11, color: '#6b7280', fontWeight: 500,
-            textTransform: 'uppercase', letterSpacing: '0.05em' } }, 'Доп. вес'),
-          h('span', { style: { fontSize: 20, fontWeight: 700,
-            color: addedWeightKg > 0 ? '#dc2626' : (addedWeightKg < 0 ? '#0891b2' : '#1f2937'),
-            marginTop: 2 } },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Доп. вес'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' },
             (addedWeightKg > 0 ? '+' : '') + addedWeightKg + ' кг')
         ) : null
       ) : null,
 
       // Phase badge
-      h('div', {
-        style: {
-          background: phaseColor, color: '#fff',
-          padding: '6px 16px', borderRadius: '999px',
-          fontSize: '13px', fontWeight: 600, letterSpacing: '0.5px',
-          textTransform: 'uppercase',
-        },
-      }, phaseLabel),
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
 
-      // Ring + big number
-      h('div', { style: { position: 'relative', width: '200px', height: '200px' } },
-        h('svg', { width: 200, height: 200, viewBox: '0 0 200 200' },
+      // Ring + digit
+      h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+        h('svg', {
+          className: 'heys-fingers-countdown__ring',
+          width: 200, height: 200, viewBox: '0 0 200 200'
+        },
           h('circle', {
-            cx: 100, cy: 100, r: ringRadius,
-            stroke: '#e5e7eb', strokeWidth: 8, fill: 'none',
+            className: 'heys-fingers-countdown__ring-track',
+            cx: 100, cy: 100, r: ringRadius, fill: 'none'
           }),
           h('circle', {
-            cx: 100, cy: 100, r: ringRadius,
-            stroke: phaseColor, strokeWidth: 10, fill: 'none',
-            strokeLinecap: 'round',
+            className: 'heys-fingers-countdown__ring-fill',
+            cx: 100, cy: 100, r: ringRadius, fill: 'none',
             strokeDasharray: ringCircum,
             strokeDashoffset: dashoffset,
-            transform: 'rotate(-90 100 100)',
-            style: { transition: 'stroke-dashoffset 100ms linear' },
+            transform: 'rotate(-90 100 100)'
           })
         ),
         h('div', {
-          style: {
-            position: 'absolute', inset: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            fontSize: '72px', fontWeight: 700, color: phaseColor,
-          },
+          className: 'heys-fingers-countdown__digit'
+            + (isFinalCount ? ' is-final-count' : '')
         }, String(Math.max(0, secondsLeft | 0)))
       ),
 
-      // Controls — touch targets ≥44px (потные пальцы после виса; iOS HIG).
-      (state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED)
-        ? h('div', { style: { display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' } },
-            h('button', {
-              type: 'button',
-              className: 'fingers-fs-timer-btn',
-              onClick: onPause,
-              style: {
-                minHeight: 44, padding: '10px 20px', borderRadius: '8px',
-                border: '1px solid #d1d5db', background: '#f9fafb',
-                fontSize: '14px', cursor: 'pointer',
-              },
-            }, state === STATES.PAUSED ? 'Возобновить' : 'Пауза'),
-            (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
-              type: 'button',
-              className: 'fingers-fs-timer-btn',
-              onClick: onSkip,
-              'aria-label': 'Пропустить фазу',
-              style: {
-                minHeight: 44, padding: '10px 20px', borderRadius: '8px',
-                border: '1px solid #d1d5db', background: '#f9fafb',
-                fontSize: '14px', cursor: 'pointer',
-              },
-            }, '→') : null,
-            h('button', {
-              type: 'button',
-              className: 'fingers-fs-timer-btn',
-              onClick: onAbort,
-              style: {
-                minHeight: 44, padding: '10px 20px', borderRadius: '8px',
-                border: '1px solid #fecaca', background: '#fef2f2',
-                color: '#b91c1c', fontSize: '14px', cursor: 'pointer',
-              },
-            }, 'Прервать')
-          ) : null
+      // Controls — touch targets ≥44px (iOS HIG, потные пальцы после виса).
+      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        // VoiceMiniControls без inline — 44px чтобы матчиться с .__btn высотой
+        Fingers.VoiceMiniControls
+          ? h(Fingers.VoiceMiniControls, null)
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onPause
+        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
+        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onSkip,
+          'aria-label': 'Пропустить фазу',
+          title: 'Пропустить фазу'
+        }, '→') : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
+          onClick: onAbort
+        }, 'Прервать')
+      ) : null
     );
   }
 

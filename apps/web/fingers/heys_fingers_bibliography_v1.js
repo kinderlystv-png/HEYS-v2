@@ -195,20 +195,32 @@
     if (!React) return null;
     const src = getSourceById(props && props.sourceId);
     if (!src) return null;
-    const onClick = props && props.onClick;
+    const customClick = props && props.onClick;
+    // Default behavior: dispatch event 'fingers-open-bibliography' с source id
+    // → SessionUI слушает и открывает BibliographyModal с focus на этой записи.
+    const handleClick = customClick
+      ? function (e) {
+          try { customClick(src, e); } catch (err) { console.warn('[Fingers.SourceBadge] onClick failed', err); }
+        }
+      : function () {
+          try {
+            window.dispatchEvent(new CustomEvent('fingers-open-bibliography', {
+              detail: { sourceId: src.id }
+            }));
+          } catch (_) {}
+        };
     return React.createElement('span', {
-      className: 'fingers-source-badge' + (onClick ? ' fingers-source-badge--clickable' : ''),
-      role: onClick ? 'button' : undefined,
-      tabIndex: onClick ? 0 : undefined,
-      onClick: onClick ? function (e) {
-        try { onClick(src, e); } catch (err) { console.warn('[Fingers.SourceBadge] onClick failed', err); }
-      } : undefined,
-      onKeyDown: onClick ? function (e) {
+      className: 'fingers-source-badge fingers-source-badge--clickable',
+      role: 'button',
+      tabIndex: 0,
+      title: src.author + ' ' + src.year + ' — ' + src.title,
+      onClick: handleClick,
+      onKeyDown: function (e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          try { onClick(src, e); } catch (err) { console.warn('[Fingers.SourceBadge] onKeyDown failed', err); }
+          handleClick(e);
         }
-      } : undefined
+      }
     },
       React.createElement('span', { className: 'fingers-source-badge__icon', 'aria-hidden': 'true' }, '📖'),
       React.createElement('span', { className: 'fingers-source-badge__author' }, src.author),
@@ -230,21 +242,49 @@
     guideline: { label: 'Гайдлайн', color: '#d97706' }
   };
 
+  // Маппинг type → emoji-иконка для visual quick-recognition.
+  function _typeIcon(t) {
+    return t === 'peer-reviewed' ? '🔬'
+      : t === 'practitioner' ? '🧗'
+      : t === 'guideline' ? '📋' : '📚';
+  }
+
   /**
-   * Модалка «Источники и методология».
-   * @param {{onClose:Function}} props
+   * Премиум-модалка «Источники и методология».
+   * @param {{onClose:Function, focusSourceId?:string}} props
+   *   focusSourceId — если передан, открывается с этим источником в expanded
+   *   состоянии и со скроллом к нему. Используется когда SourceBadge клацнули.
    */
   function BibliographyModal(props) {
     if (!React) return null;
     const onClose = (props && props.onClose) || function () {};
+    const focusSourceId = props && props.focusSourceId;
 
-    const queryState = React.useState('');
-    const query = queryState[0];
-    const setQuery = queryState[1];
+    const [query, setQuery] = React.useState('');
+    const [activeTopic, setActiveTopic] = React.useState(null);
+    // Раскрытая карточка (для key finding deep-read). По default — focusSourceId.
+    const [expandedId, setExpandedId] = React.useState(focusSourceId || null);
 
-    const topicState = React.useState(null);
-    const activeTopic = topicState[0];
-    const setActiveTopic = topicState[1];
+    // Escape close + scroll to focused.
+    React.useEffect(function () {
+      function onKey(e) { if (e.key === 'Escape') onClose(); }
+      document.addEventListener('keydown', onKey);
+      return function () { document.removeEventListener('keydown', onKey); };
+    }, [onClose]);
+
+    React.useEffect(function () {
+      if (focusSourceId) {
+        // Defer чтобы render успел положить узлы.
+        const t = setTimeout(function () {
+          const el = document.querySelector('[data-bib-source="' + focusSourceId + '"]');
+          if (el && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 60);
+        return function () { clearTimeout(t); };
+      }
+      return undefined;
+    }, [focusSourceId]);
 
     const filtered = React.useMemo(function () {
       const q = String(query || '').trim().toLowerCase();
@@ -256,123 +296,150 @@
       });
     }, [query, activeTopic]);
 
+    // Counts per topic для бейджей в filter chips.
+    const counts = React.useMemo(function () {
+      const c = { all: BIBLIOGRAPHY.length };
+      Object.keys(TOPIC_LABELS).forEach(function (t) {
+        c[t] = BIBLIOGRAPHY.filter(function (s) { return s.topics.indexOf(t) >= 0; }).length;
+      });
+      return c;
+    }, []);
+
     return React.createElement('div', {
-      className: 'fingers-fs-bib-modal-backdrop',
+      className: 'fingers-bib-modal__backdrop',
       onClick: function (e) { if (e.target === e.currentTarget) onClose(); },
-      style: {
-        position: 'fixed', inset: 0, zIndex: 9000,
-        background: 'rgba(15,23,42,0.55)', display: 'flex',
-        alignItems: 'center', justifyContent: 'center', padding: 16
-      }
+      role: 'presentation'
     },
       React.createElement('div', {
-        className: 'fingers-fs-bib-modal',
-        style: {
-          background: 'var(--card,#fff)', borderRadius: 16,
-          maxWidth: 720, width: '100%', maxHeight: '90vh',
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-        }
+        className: 'fingers-bib-modal',
+        role: 'dialog',
+        'aria-label': 'Источники и методология',
+        onClick: function (e) { e.stopPropagation(); }
       },
-        // Header
-        React.createElement('div', {
-          style: {
-            padding: '16px 20px', borderBottom: '1px solid var(--border,#e5e7eb)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12
-          }
-        },
-          React.createElement('div', { style: { fontSize: 18, fontWeight: 700 } }, 'Источники и методология'),
+        // Header — sticky
+        React.createElement('div', { className: 'fingers-bib-modal__header' },
+          React.createElement('div', { className: 'fingers-bib-modal__header-text' },
+            React.createElement('h2', { className: 'fingers-bib-modal__title' },
+              React.createElement('span', { 'aria-hidden': 'true' }, '📚'),
+              ' Источники и методология'),
+            React.createElement('p', { className: 'fingers-bib-modal__sub' },
+              BIBLIOGRAPHY.length + ' источников — научные статьи, практики, гайдлайны')
+          ),
           React.createElement('button', {
             type: 'button',
+            className: 'fingers-bib-modal__close',
             'aria-label': 'Закрыть',
-            onClick: onClose,
-            style: {
-              background: 'transparent', border: 'none', fontSize: 22,
-              cursor: 'pointer', color: 'var(--text-muted,#64748b)', padding: 4
-            }
-          }, '✕')
+            onClick: onClose
+          },
+            React.createElement('svg', { width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 1.6 },
+              React.createElement('path', { d: 'M5 5l10 10M15 5L5 15', strokeLinecap: 'round' })
+            )
+          )
         ),
+
         // Search + topic chips
-        React.createElement('div', { style: { padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 10 } },
-          React.createElement('input', {
-            type: 'search',
-            placeholder: 'Поиск по названию или находке…',
-            value: query,
-            onChange: function (e) { setQuery(e.target.value); },
-            style: {
-              padding: '8px 12px', borderRadius: 8,
-              border: '1px solid var(--border,#e5e7eb)',
-              fontSize: 14, outline: 'none', width: '100%'
-            }
-          }),
-          React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
+        React.createElement('div', { className: 'fingers-bib-modal__filters' },
+          React.createElement('div', { className: 'fingers-bib-modal__search' },
+            React.createElement('span', { className: 'fingers-bib-modal__search-icon', 'aria-hidden': 'true' }, '🔍'),
+            React.createElement('input', {
+              type: 'search',
+              className: 'fingers-bib-modal__search-input',
+              placeholder: 'Поиск по находке, названию или автору…',
+              value: query,
+              onChange: function (e) { setQuery(e.target.value); },
+              'aria-label': 'Поиск по источникам'
+            })
+          ),
+          React.createElement('div', { className: 'fingers-bib-modal__chips', role: 'tablist' },
             React.createElement('button', {
               type: 'button',
-              onClick: function () { setActiveTopic(null); },
-              style: chipStyle(activeTopic == null)
-            }, 'Все'),
+              role: 'tab',
+              'aria-selected': activeTopic == null,
+              className: 'fingers-bib-modal__chip' + (activeTopic == null ? ' is-active' : ''),
+              onClick: function () { setActiveTopic(null); }
+            }, 'Все ', React.createElement('span', { className: 'fingers-bib-modal__chip-count' }, counts.all)),
             Object.keys(TOPIC_LABELS).map(function (topic) {
+              const active = activeTopic === topic;
               return React.createElement('button', {
                 key: topic,
                 type: 'button',
-                onClick: function () { setActiveTopic(activeTopic === topic ? null : topic); },
-                style: chipStyle(activeTopic === topic)
-              }, TOPIC_LABELS[topic]);
+                role: 'tab',
+                'aria-selected': active,
+                className: 'fingers-bib-modal__chip' + (active ? ' is-active' : ''),
+                onClick: function () { setActiveTopic(active ? null : topic); }
+              }, TOPIC_LABELS[topic], ' ',
+                 React.createElement('span', { className: 'fingers-bib-modal__chip-count' }, counts[topic]));
             })
           )
         ),
+
         // List
-        React.createElement('div', {
-          style: {
-            padding: '8px 20px 20px', overflowY: 'auto', flex: 1,
-            display: 'flex', flexDirection: 'column', gap: 12
-          }
-        },
+        React.createElement('div', { className: 'fingers-bib-modal__list' },
           filtered.length === 0
-            ? React.createElement('div', {
-                style: { textAlign: 'center', color: 'var(--text-muted,#64748b)', padding: '32px 0' }
-              }, 'Ничего не найдено')
-            : filtered.map(function (src) { return renderCard(src); })
+            ? React.createElement('div', { className: 'fingers-bib-modal__empty' },
+                React.createElement('div', { className: 'fingers-bib-modal__empty-icon' }, '🔎'),
+                React.createElement('div', { className: 'fingers-bib-modal__empty-title' }, 'Ничего не найдено'),
+                React.createElement('div', { className: 'fingers-bib-modal__empty-hint' },
+                  'Попробуй очистить поиск или сменить категорию.'))
+            : filtered.map(function (src) {
+                return _renderSourceCard(src, expandedId === src.id, function () {
+                  setExpandedId(expandedId === src.id ? null : src.id);
+                });
+              })
         )
       )
     );
   }
 
-  function chipStyle(active) {
-    return {
-      padding: '4px 10px', borderRadius: 999, border: 'none', cursor: 'pointer',
-      fontSize: 12, fontWeight: 600,
-      background: active ? 'var(--accent,#3b82f6)' : 'var(--bg-soft,rgba(148,163,184,0.15))',
-      color: active ? '#fff' : 'var(--text,#1e293b)'
-    };
-  }
-
-  function renderCard(src) {
+  function _renderSourceCard(src, expanded, onToggle) {
     const typeMeta = TYPE_LABELS[src.type] || { label: src.type, color: '#64748b' };
-    return React.createElement('div', {
+    return React.createElement('article', {
       key: src.id,
-      style: {
-        padding: 12, borderRadius: 10, background: 'var(--bg-soft,rgba(148,163,184,0.08))',
-        display: 'flex', flexDirection: 'column', gap: 6
-      }
+      'data-bib-source': src.id,
+      'data-bib-type': src.type,
+      className: 'fingers-bib-source' + (expanded ? ' is-expanded' : '')
     },
-      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
-        React.createElement('span', { style: { fontWeight: 700 } }, src.author, ' ', src.year),
-        React.createElement('span', {
-          style: {
-            fontSize: 11, fontWeight: 600, padding: '2px 6px',
-            borderRadius: 4, background: typeMeta.color, color: '#fff'
-          }
-        }, typeMeta.label)
+      React.createElement('button', {
+        type: 'button',
+        className: 'fingers-bib-source__head',
+        onClick: onToggle,
+        'aria-expanded': expanded ? 'true' : 'false'
+      },
+        React.createElement('div', { className: 'fingers-bib-source__type', 'aria-hidden': 'true' },
+          React.createElement('span', { className: 'fingers-bib-source__type-icon' }, _typeIcon(src.type)),
+          React.createElement('span', { className: 'fingers-bib-source__type-label' }, typeMeta.label)
+        ),
+        React.createElement('div', { className: 'fingers-bib-source__main' },
+          React.createElement('div', { className: 'fingers-bib-source__author' },
+            React.createElement('strong', null, src.author),
+            ' · ',
+            React.createElement('span', { className: 'fingers-bib-source__year' }, String(src.year))),
+          React.createElement('h3', { className: 'fingers-bib-source__title' }, src.title)
+        ),
+        React.createElement('span', { className: 'fingers-bib-source__chevron', 'aria-hidden': 'true' }, expanded ? '▲' : '▼')
       ),
-      React.createElement('div', { style: { fontSize: 14, fontWeight: 500 } }, src.title),
-      React.createElement('div', { style: { fontSize: 13, color: 'var(--text-muted,#64748b)', lineHeight: 1.4 } }, src.keyFinding),
-      src.url
-        ? React.createElement('a', {
-            href: src.url, target: '_blank', rel: 'noopener noreferrer',
-            style: { fontSize: 12, color: 'var(--accent,#3b82f6)', textDecoration: 'none', wordBreak: 'break-all' }
-          }, src.url)
-        : null
+      expanded ? React.createElement('div', { className: 'fingers-bib-source__body' },
+        React.createElement('div', { className: 'fingers-bib-source__finding-label' }, 'Главное открытие'),
+        React.createElement('p', { className: 'fingers-bib-source__finding' }, src.keyFinding),
+        Array.isArray(src.topics) && src.topics.length > 0 ? React.createElement('div', {
+          className: 'fingers-bib-source__topics'
+        },
+          src.topics.map(function (t) {
+            return React.createElement('span', { key: t, className: 'fingers-bib-source__topic' },
+              TOPIC_LABELS[t] || t);
+          })
+        ) : null,
+        src.url ? React.createElement('a', {
+          href: src.url, target: '_blank', rel: 'noopener noreferrer',
+          className: 'fingers-bib-source__link'
+        },
+          React.createElement('span', { 'aria-hidden': 'true' }, '🔗'),
+          ' ',
+          'Открыть оригинал',
+          React.createElement('span', { className: 'fingers-bib-source__link-arrow', 'aria-hidden': 'true' }, '→')
+        ) : null
+      ) : null
     );
   }
 
