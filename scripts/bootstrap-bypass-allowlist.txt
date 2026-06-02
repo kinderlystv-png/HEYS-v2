@@ -243,4 +243,4 @@ apps/web/advice/_core.js:3290
 # chrono planning UI state (collapsed toggle) — added by parallel agent
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не
 # bootstrap-critical и не data-bearing (UI collapse флаг).
-apps/web/heys_planning_chrono_v1.js:1914
+apps/web/heys_planning_chrono_v1.js:1921

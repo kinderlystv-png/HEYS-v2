@@ -63,12 +63,15 @@
 
     // === Чистые функции ===
 
-    function radiusForMinutes(minutes, maxMin) {
+    function radiusForMinutes(minutes, maxMin, sizeScale) {
         const m = Math.max(0, Number(minutes) || 0);
         const M = Math.max(0, Number(maxMin) || 0);
-        if (M <= 0) return r_min;
+        const scale = Math.max(0.62, Math.min(1, Number(sizeScale) || 1));
+        const minR = r_min * (0.9 + scale * 0.1);
+        const maxR = r_max * scale;
+        if (M <= 0) return minR;
         const t = Math.min(1, m / M);
-        return r_min + (r_max - r_min) * Math.sqrt(t);
+        return minR + (maxR - minR) * Math.sqrt(t);
     }
 
     function colorForActivity(hue, minutes, maxMin) {
@@ -1656,22 +1659,24 @@
 
     const DRAG_ACTIVATE_PX = 10;  // палец должен пройти ≥ этого расстояния прежде чем включится drag mode
 
-    function ChronoBubble({ activity, minutes, maxMin, scope, badge, onClick, onLongPress,
+    function ChronoBubble({ activity, minutes, maxMin, sizeScale, scope, badge, onClick, onLongPress,
                             baseX, baseY, bubbleRadius, onDragStart, onDragMove, onDragEnd }) {
-        const diameter = Math.round(radiusForMinutes(minutes, maxMin) * 2);
+        const diameter = Math.round(radiusForMinutes(minutes, maxMin, sizeScale) * 2);
         const bg = colorForActivity(activity.hue, minutes, maxMin);
         const seed = hashSeed(activity.id);
         // Float уменьшен: 2-3px амплитуда (было 4-7), 12-17s период (было 8-12).
         // Цель — лёгкое «дыхание», а не плавание; кружки удерживают radial positions.
         const delay = ((seed % 100) / 100) * -12;
         const dur = 12 + (seed % 6);
-        const fx = 2 + (seed % 2);
-        const fy = 2 + ((seed >> 3) % 2);
+        const fx = 1 + (seed % 2) * 0.5;
+        const fy = 1 + ((seed >> 3) % 2) * 0.5;
         const progress = getProgress(activity, minutes, scope);
         const hasGoal = progress !== null;
         const progressDeg = hasGoal ? Math.round(progress.value * 360) : 0;
         const ringColor = ringColorForProgress(progress, activity.hue);
         const goalKind = progress ? progress.kind : null;
+        const nameFontSize = Math.max(10, Math.min(20, diameter * 0.125));
+        const timeFontSize = Math.max(12, Math.min(23, diameter * 0.145));
 
         const pressTimer = useRef(null);
         const longFiredRef = useRef(false);
@@ -1778,6 +1783,8 @@
                 '--float-delay': delay + 's',
                 '--float-x': fx + 'px',
                 '--float-y': fy + 'px',
+                '--bubble-name-font': nameFontSize.toFixed(1) + 'px',
+                '--bubble-time-font': timeFontSize.toFixed(1) + 'px',
             },
         },
             h('button', {
@@ -2098,38 +2105,42 @@
     // перекрывать ранее уложенные. Сортировка по minutes desc → крупный
     // садится в (0,0), последующие закручиваются спиралью по убыванию.
     const PHYLLOTAXIS_GOLDEN_ANGLE = 137.5 * Math.PI / 180;
-    const BUBBLE_GAP = 10;          // запас между краями bubble'ов
-    const RING_PADDING = 4;         // .chrono-bubble-wrap.has-target шире на 2×ring_thickness=8
+    const BUBBLE_GAP = 10;          // compact visible air между bubble'ами
+    const RING_PADDING = 8;         // .chrono-bubble-wrap.has-target + визуальный stroke/shadow
     const PHYLLOTAXIS_STEP = 4;     // шаг наружу при коллизии (px)
     const PHYLLOTAXIS_MAX_ATTEMPTS = 400;
 
-    function computeRadialLayout(activities, minutesByActivity, maxMin, halfW) {
+    function sizeScaleForCount(count, halfW) {
+        const n = Math.max(1, Number(count) || 1);
+        const byCount = n <= 4 ? 1 : Math.max(0.68, 1 - (n - 4) * 0.055);
+        const byWidth = halfW > 0 ? Math.max(0.7, Math.min(1, halfW / 190)) : 1;
+        return Math.max(0.62, Math.min(1, byCount, byWidth));
+    }
+
+    function computeRadialLayout(activities, minutesByActivity, maxMin, halfW, sizeScale) {
         const sorted = activities.slice().sort((a, b) =>
             (minutesByActivity[b.id] || 0) - (minutesByActivity[a.id] || 0)
         );
         if (sorted.length === 0) return { positioned: [], cloudHeight: 240 };
 
         const allRadii = sorted.map((a) =>
-            radiusForMinutes(minutesByActivity[a.id] || 0, maxMin) + RING_PADDING
+            radiusForMinutes(minutesByActivity[a.id] || 0, maxMin, sizeScale) + RING_PADDING
         );
         const avgR = allRadii.reduce((s, r) => s + r, 0) / allRadii.length;
         const maxBubbleR = Math.max.apply(null, allRadii);
-        let orbitScale = avgR * 2 + BUBBLE_GAP;
-
-        // Adaptive cap: если safe zone (halfW) известна, ограничиваем maxOrbit чтобы
-        // самый внешний кружок не выезжал за safe zone (halfW - maxBubbleR - padding).
-        // Сжимаем orbitScale так, чтобы r_last = orbitScale·√(N-1) ≤ maxOrbit.
-        if (halfW > 0 && sorted.length > 1) {
-            const maxOrbit = Math.max(0, halfW - maxBubbleR - CLOUD_SAFE_PADDING);
-            const naiveMaxR = orbitScale * Math.sqrt(sorted.length - 1);
-            if (naiveMaxR > maxOrbit && maxOrbit > 0) {
-                orbitScale = maxOrbit / Math.sqrt(sorted.length - 1);
-            }
-        }
+        let orbitScale = avgR * 1.45 + BUBBLE_GAP;
         const useBounds = halfW > 0;
+        const outerCount = Math.max(1, sorted.length - 1);
+        const verticalRows = Math.max(1, Math.ceil(outerCount / 2));
+        const layoutHalfH = Math.max(
+            190,
+            maxBubbleR + (allRadii[1] || maxBubbleR) + BUBBLE_GAP + CLOUD_SAFE_PADDING + 24,
+            maxBubbleR + verticalRows * (avgR * 0.85 + BUBBLE_GAP)
+        );
 
         const placed = [];
         let maxExtent = 0;
+        let maxYExtent = 0;
 
         sorted.forEach((activity, i) => {
             const bubbleR = allRadii[i];
@@ -2140,7 +2151,7 @@
                 let cx = Math.cos(theta) * r;
                 let cy = Math.sin(theta) * r;
                 if (useBounds) {
-                    const c = clampToBounds(cx, cy, bubbleR, halfW, halfW);
+                    const c = clampToBounds(cx, cy, bubbleR, halfW, layoutHalfH);
                     cx = c.x;
                     cy = c.y;
                 }
@@ -2161,6 +2172,8 @@
                     placed.push({ activity, x, y, radius: bubbleR });
                     const ext = Math.max(Math.abs(x), Math.abs(y)) + bubbleR;
                     if (ext > maxExtent) maxExtent = ext;
+                    const yExt = Math.abs(y) + bubbleR;
+                    if (yExt > maxYExtent) maxYExtent = yExt;
                     return;
                 }
                 r += PHYLLOTAXIS_STEP;
@@ -2169,26 +2182,48 @@
             let cx = Math.cos(theta) * r;
             let cy = Math.sin(theta) * r;
             if (useBounds) {
-                const c = clampToBounds(cx, cy, bubbleR, halfW, halfW);
+                const c = clampToBounds(cx, cy, bubbleR, halfW, layoutHalfH);
                 cx = c.x;
                 cy = c.y;
             }
             placed.push({ activity, x: Math.round(cx), y: Math.round(cy), radius: bubbleR });
+            const ext = Math.max(Math.abs(cx), Math.abs(cy)) + bubbleR;
+            if (ext > maxExtent) maxExtent = ext;
+            const yExt = Math.abs(cy) + bubbleR;
+            if (yExt > maxYExtent) maxYExtent = yExt;
         });
 
-        const cloudHeight = Math.max(240, maxExtent * 2 + 40);
-        return { positioned: placed, cloudHeight };
+        let cloudHeight = Math.max(280, maxYExtent * 2 + 48);
+        let settled = placed;
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+            settled = reflowAroundOverrides(placed, {}, halfW, cloudHeight / 2);
+            if (!hasBubbleOverlap(settled)) break;
+            cloudHeight += Math.max(48, maxBubbleR * 0.6);
+        }
+        return { positioned: settled, cloudHeight };
+    }
+
+    function hasBubbleOverlap(positioned) {
+        for (let i = 0; i < positioned.length; i += 1) {
+            for (let j = i + 1; j < positioned.length; j += 1) {
+                const a = positioned[i];
+                const b = positioned[j];
+                const dist = Math.hypot(a.x - b.x, a.y - b.y);
+                if (dist < a.radius + b.radius + BUBBLE_GAP - 0.5) return true;
+            }
+        }
+        return false;
     }
 
     // Force-directed reflow: симметричное отталкивание двух bubbles на каждом
-    // обнаруженном overlap'е. Anchor↔anchor → push 50/50 (anchors слегка
-    // расходятся если перекрыты). Anchor↔non-anchor → non-anchor берёт 100%.
-    // Non-anchor↔non-anchor → 50/50. После каждой итерации — clamp всех в
-    // safe zone, до 40 проходов до полной сходимости.
-    function reflowAroundOverrides(positioned, overrides, halfW, halfH) {
-        if (!overrides || Object.keys(overrides).length === 0) return positioned;
+    // обнаруженном overlap'е. Даже dragged/override bubble — мягкий якорь:
+    // если точка пальца ведёт к наслоению у safe-zone, сам bubble чуть сдвинется
+    // в ближайшее свободное место, как пузырёк в воде.
+    function reflowAroundOverrides(positioned, overrides, halfW, halfH, lockedIds) {
+        const safeOverrides = overrides || {};
+        const locks = lockedIds || {};
         const pos = positioned.map((p) => {
-            const ov = overrides[p.activity.id];
+            const ov = safeOverrides[p.activity.id];
             if (!ov) return { ...p };
             const clamped = (halfW > 0 && halfH > 0)
                 ? clampToBounds(ov.x, ov.y, p.radius, halfW, halfH)
@@ -2196,26 +2231,17 @@
             return { ...p, x: clamped.x, y: clamped.y };
         });
         const useBounds = halfW > 0 && halfH > 0;
-        const RELAX_FACTOR = 1.0;  // 1.0 = снять overlap за одну итерацию (без overshoot)
+        const RELAX_FACTOR = 0.85;
 
-        for (let iter = 0; iter < 40; iter += 1) {
+        for (let iter = 0; iter < 120; iter += 1) {
             let moved = false;
             for (let i = 0; i < pos.length; i += 1) {
-                const iAnchor = !!overrides[pos[i].activity.id];
                 for (let j = i + 1; j < pos.length; j += 1) {
-                    const jAnchor = !!overrides[pos[j].activity.id];
                     const dx = pos[i].x - pos[j].x;
                     const dy = pos[i].y - pos[j].y;
                     const dist = Math.hypot(dx, dy);
                     const minDist = pos[i].radius + pos[j].radius + BUBBLE_GAP;
                     if (dist >= minDist) continue;
-
-                    // Распределение силы: non-anchor получает всю push если другой anchor.
-                    let shareI;
-                    let shareJ;
-                    if (iAnchor && !jAnchor) { shareI = 0; shareJ = 1; }
-                    else if (!iAnchor && jAnchor) { shareI = 1; shareJ = 0; }
-                    else { shareI = 0.5; shareJ = 0.5; }
 
                     const overlap = (minDist - dist) * RELAX_FACTOR;
                     let ux;
@@ -2226,6 +2252,12 @@
                     } else {
                         ux = 0; uy = -1;  // совпали → толкаем по вертикали
                     }
+                    const iLocked = !!locks[pos[i].activity.id];
+                    const jLocked = !!locks[pos[j].activity.id];
+                    let shareI = 0.5;
+                    let shareJ = 0.5;
+                    if (iLocked && !jLocked) { shareI = 0; shareJ = 1; }
+                    else if (!iLocked && jLocked) { shareI = 1; shareJ = 0; }
                     pos[i].x += ux * overlap * shareI;
                     pos[i].y += uy * overlap * shareI;
                     pos[j].x -= ux * overlap * shareJ;
@@ -2249,7 +2281,7 @@
         return pos;
     }
 
-    const CLOUD_SAFE_PADDING = 16;  // отступ от края контейнера, в котором bubble не должен оказаться
+    const CLOUD_SAFE_PADDING = 28;  // safe zone от края контейнера, в котором bubble не должен оказаться
 
     function clampToBounds(x, y, radius, halfW, halfH) {
         if (halfW <= 0 || halfH <= 0) return { x, y };
@@ -2262,10 +2294,9 @@
     }
 
 
-    const DRAG_REPULSION_BUFFER = 8;
-    const DRAG_RELEASE_DURATION_MS = 1600;  // супер-плавный, "тягучий" возврат — как медленное скольжение домой
+    const DRAG_RELEASE_DURATION_MS = 3800;  // медленный liquid-return на новую орбиту
 
-    function ChronoCloud({ activities, minutesByActivity, maxMin, scope, recentBadge, onPick, onLongPress, hasInactive }) {
+    function ChronoCloud({ activities, minutesByActivity, maxMin, scope, recentBadge, onPick, onLongPress, hasInactive, onDragDelete }) {
         if (!activities.length) {
             const text = hasInactive
                 ? 'Нажмите на занятие выше, чтобы записать время — кружок появится здесь и будет расти.'
@@ -2294,22 +2325,39 @@
         const [slotOverrides, setSlotOverrides] = useState({});
 
         const halfW = containerWidth / 2;
+        const sizeScale = sizeScaleForCount(activities.length, halfW);
         // Базовый layout — чистый phyllotaxis с adaptive scale к safe zone.
         // Передаём halfW, чтобы orbits вписывались по ширине контейнера.
         const { positioned, cloudHeight } = useMemo(() =>
-            computeRadialLayout(activities, minutesByActivity, maxMin, halfW),
-            [activities, minutesByActivity, maxMin, halfW]
+            computeRadialLayout(activities, minutesByActivity, maxMin, halfW, sizeScale),
+            [activities, minutesByActivity, maxMin, halfW, sizeScale]
         );
 
         const halfH = cloudHeight / 2;
 
-        // Permanent overrides из drag-release — applied через reflow (anchors fixed,
-        // соседи отталкиваются + clamp в safe zone).
+        // Permanent overrides из drag-release + временный override активного drag.
+        // Во время drag/release сам dragged bubble locked: он идёт за пальцем
+        // или по release-анимации, а остальные bubble'ы ищут места вокруг него.
         const displayed = useMemo(
-            () => reflowAroundOverrides(positioned, slotOverrides, halfW, halfH),
-            [positioned, slotOverrides, halfW, halfH]
+            () => {
+                const overrides = { ...slotOverrides };
+                const lockedIds = {};
+                if (drag) {
+                    overrides[drag.id] = clampToBounds(
+                        drag.baseX + drag.dx,
+                        drag.baseY + drag.dy,
+                        drag.radius,
+                        halfW,
+                        halfH
+                    );
+                    lockedIds[drag.id] = true;
+                }
+                return reflowAroundOverrides(positioned, overrides, halfW, halfH, lockedIds);
+            },
+            [positioned, slotOverrides, halfW, halfH, drag]
         );
         const releaseRafRef = useRef(0);
+        const trashRef = useRef(null);
 
         useEffect(() => () => {
             if (releaseRafRef.current) cancelAnimationFrame(releaseRafRef.current);
@@ -2322,7 +2370,7 @@
         // не триггерил сброс (drop меняет slotOverrides, но id+minutes — нет).
         const layoutSignatureRef = useRef('');
         const inputSignature = activities.map((a) =>
-            a.id + ':' + Math.round(radiusForMinutes(minutesByActivity[a.id] || 0, maxMin))
+            a.id + ':' + Math.round(radiusForMinutes(minutesByActivity[a.id] || 0, maxMin, sizeScale))
         ).join('|');
         useEffect(() => {
             if (layoutSignatureRef.current && layoutSignatureRef.current !== inputSignature) {
@@ -2340,12 +2388,28 @@
         }, []);
 
         const handleDragMove = useCallback((dx, dy) => {
-            setDrag((prev) => (prev && !prev.releasing ? { ...prev, dx, dy } : prev));
+            setDrag((prev) => {
+                if (!prev || prev.releasing) return prev;
+                let overTrash = false;
+                if (trashRef.current && containerRef.current) {
+                    const cRect = containerRef.current.getBoundingClientRect();
+                    const cx = cRect.left + cRect.width / 2 + prev.baseX + dx;
+                    const cy = cRect.top + cRect.height / 2 + prev.baseY + dy;
+                    const tRect = trashRef.current.getBoundingClientRect();
+                    overTrash = cx >= tRect.left && cx <= tRect.right
+                        && cy >= tRect.top && cy <= tRect.bottom;
+                }
+                return { ...prev, dx, dy, overTrash };
+            });
         }, []);
 
         const handleDragEnd = useCallback(() => {
             setDrag((prev) => {
                 if (!prev) return prev;
+                if (prev.overTrash) {
+                    if (typeof onDragDelete === 'function') onDragDelete(prev.id);
+                    return null;
+                }
                 // Target radius = phyllotaxis-orbit размера этого кружка (его «слой»).
                 // Большой (phyloIdx=0) → centr, маленькие → внешние orbit'ы.
                 const idealEntry = positioned.find((p) => p.activity.id === prev.id);
@@ -2372,9 +2436,8 @@
                 const releaseId = prev.id;
                 const step = (now) => {
                     const t = Math.min(1, (now - startTs) / DRAG_RELEASE_DURATION_MS);
-                    // ease-out-expo: основная часть пути за первую треть времени, потом
-                    // долгое плавное затухание к цели — даёт liquid/heavy feel.
-                    const eased = t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+                    // Медленный smoothstep: меньше рывка в начале и длинный мягкий ход.
+                    const eased = t * t * (3 - 2 * t);
                     const ndx = startDx + (targetDx - startDx) * eased;
                     const ndy = startDy + (targetDy - startDy) * eased;
                     if (t >= 1) {
@@ -2392,7 +2455,7 @@
                 releaseRafRef.current = requestAnimationFrame(step);
                 return { ...prev, releasing: true };
             });
-        }, [halfW, halfH, positioned]);
+        }, [halfW, halfH, positioned, onDragDelete]);
 
         const releasing = !!(drag && drag.releasing);
 
@@ -2409,47 +2472,21 @@
             },
                 displayed.map(({ activity, x: slotX, y: slotY, radius }) => {
                     const isDragged = drag && drag.id === activity.id;
-                    let drx = 0;
-                    let dry = 0;
-                    if (isDragged) {
-                        drx = drag.dx;
-                        dry = drag.dy;
-                    } else if (drag) {
-                        // Расталкивание от сырой позиции пальца — соседи реагируют
-                        // когда палец рядом, и затухает к нулю когда палец далеко.
-                        const dragX = drag.baseX + drag.dx;
-                        const dragY = drag.baseY + drag.dy;
-                        const ddx = slotX - dragX;
-                        const ddy = slotY - dragY;
-                        const dist = Math.hypot(ddx, ddy);
-                        const minDist = radius + drag.radius + DRAG_REPULSION_BUFFER;
-                        if (dist > 0.001 && dist < minDist) {
-                            const push = minDist - dist;
-                            drx = (ddx / dist) * push;
-                            dry = (ddy / dist) * push;
-                            // Для соседей оставляем clamp — они не должны вылетать за края.
-                            const after = clampToBounds(slotX + drx, slotY + dry, radius, halfW, halfH);
-                            drx = after.x - slotX;
-                            dry = after.y - slotY;
-                        } else if (dist <= 0.001) {
-                            drx = 0;
-                            dry = -minDist;
-                        }
-                    }
                     return h('div', {
                         key: activity.id,
                         className: 'chrono-cloud__slot' + (isDragged ? ' is-dragged' : ''),
                         style: {
                             '--slot-x': slotX + 'px',
                             '--slot-y': slotY + 'px',
-                            '--drag-dx': drx + 'px',
-                            '--drag-dy': dry + 'px',
+                            '--drag-dx': '0px',
+                            '--drag-dy': '0px',
                         },
                     },
                         h(ChronoBubble, {
                             activity,
                             minutes: minutesByActivity[activity.id] || 0,
                             maxMin,
+                            sizeScale,
                             scope,
                             badge: recentBadge && recentBadge.activityId === activity.id ? recentBadge : null,
                             onClick: onPick,
@@ -2463,6 +2500,25 @@
                         }),
                     );
                 }),
+                h('div', {
+                    ref: trashRef,
+                    className: 'chrono-cloud__trash'
+                        + (drag && !drag.releasing ? ' is-dragging' : '')
+                        + (drag && drag.overTrash ? ' is-active' : ''),
+                    'aria-hidden': 'true',
+                },
+                    h('svg', {
+                        width: 22, height: 22, viewBox: '0 0 22 22', fill: 'none',
+                    },
+                        h('path', {
+                            d: 'M4 6h14M9 6V4h4v2M9 10v6M13 10v6M5 6l1 12h10L17 6',
+                            stroke: 'currentColor',
+                            'stroke-width': '1.8',
+                            'stroke-linecap': 'round',
+                            'stroke-linejoin': 'round',
+                        }),
+                    ),
+                ),
             ),
         );
     }
@@ -2836,6 +2892,10 @@
                 onPick: handleBubbleClick,
                 onLongPress: handleLongPress,
                 hasInactive: partition.inactive.length > 0,
+                onDragDelete: (id) => {
+                    const a = activities.find((x) => x.id === id);
+                    if (a) setDeleteTarget(a);
+                },
             }),
             scope === 'week' && h(ChronoWeeklyReport, { report: weeklyReport }),
             scope === 'week' && weekBreakdown && h(ChronoWeekBreakdown, {

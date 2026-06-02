@@ -874,28 +874,25 @@
         calc(-50% + var(--slot-x, 0px) + var(--drag-dx, 0px)),
         calc(-50% + var(--slot-y, 0px) + var(--drag-dy, 0px))
     );
-    /* Spring-back с лёгким overshoot для соседей при активном drag.
-       is-dragged → transition отключён (палец двигает slot напрямую).
-       is-releasing → transition 2× длиннее (640ms) и мягче — все кружки
-       плавно возвращаются на phyllotaxis-позиции с физикой расталкивания. */
-    transition: transform 0.32s cubic-bezier(0.34, 1.35, 0.64, 1);
+    /* Slow liquid motion: соседние пузырьки не прыгают, а медленно перетекают
+       в новое место вокруг dragged bubble. */
+    transition: transform 1.25s cubic-bezier(0.22, 1, 0.36, 1);
     line-height: 0;
     touch-action: none;
 }
 
 .chrono-cloud__slot.is-dragged {
-    transition: none;
+    transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
     z-index: 10;
 }
 
 .chrono-cloud__items--radial.is-releasing .chrono-cloud__slot {
-    /* ease-out-expo-ish: длинный плавный finish без overshoot, gel-like feel. */
-    transition: transform 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 3.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* dragged-кружок во время release-фазы анимируется JS-rAF spring'ом
-   (см. ChronoCloud handleDragEnd) — CSS transition должен быть выключен,
-   чтобы не конкурировать с JS, иначе движение получится дёрганым. */
+/* dragged-кружок во время release-фазы анимируется JS-rAF smoothstep'ом
+   (см. ChronoCloud handleDragEnd); CSS transition выключаем, чтобы не
+   складывать две анимации поверх друг друга. */
 .chrono-cloud__items--radial.is-releasing .chrono-cloud__slot.is-dragged {
     transition: none;
 }
@@ -905,6 +902,54 @@
         0 8px 24px rgba(15, 23, 42, 0.18),
         0 2px 6px rgba(15, 23, 42, 0.10);
     filter: brightness(1.04);
+}
+
+/* Корзина — появляется при drag'е любого кружка, hit-detection через
+   getBoundingClientRect (см. ChronoCloud handleDragMove). pointer-events:none,
+   чтобы palец продолжал captured на bubble'е. */
+/* Привязка к viewport как у chrono-bottom-total — корзина оказывается
+   в нижней зоне между FAB-ами слева и блоком "всего" справа. */
+.chrono-cloud__trash {
+    position: fixed;
+    right: calc(135px + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px))) + 4px);
+    width: 72px;
+    height: 36px;
+    border-radius: 12px;
+    border: 1.5px dashed rgba(100, 116, 139, 0.7);
+    background: rgba(255, 255, 255, 0.92);
+    color: rgba(71, 85, 105, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 1;
+    transition: transform 0.18s ease,
+                border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+    z-index: 940;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+}
+
+.chrono-cloud__trash.is-dragging {
+    border-color: rgba(100, 116, 139, 0.85);
+    color: rgba(51, 65, 85, 1);
+}
+
+.chrono-cloud__trash.is-active {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    transform: scale(1.12);
+    transform-origin: center center;
+}
+
+.theme-dark .chrono-cloud__trash,
+[data-theme="dark"] .chrono-cloud__trash {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.78);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1056,14 +1101,12 @@
 }
 
 .chrono-bubble__name {
-    /* Адаптивный рост: 9-22px. При size=56px ≈ 9px, size=100px ≈ 15px,
-       size=160px ≈ 22px. Включён wrap (до 3 строк) для длинных названий
-       вроде «Залип в телефоне» — крупный шрифт + перенос вместо мелкого
-       однострочного с ellipsis. */
-    font-size: clamp(9px, calc(var(--size) * 0.14), 22px);
+    /* JS считает от фактического диаметра bubble, чтобы текст рос синхронно
+       с минутами, а не только с viewport/CSS-контейнером. */
+    font-size: var(--bubble-name-font, clamp(10px, calc(var(--size) * 0.125), 20px));
     font-weight: 600;
     line-height: 1.15;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -1077,10 +1120,10 @@
 }
 
 .chrono-bubble__time {
-    font-size: clamp(11px, calc(var(--size) * 0.165), 26px);
-    font-weight: 800;
+    font-size: var(--bubble-time-font, clamp(12px, calc(var(--size) * 0.145), 23px));
+    font-weight: 700;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
     opacity: 0.92;
     font-variant-numeric: tabular-nums;
 }
