@@ -654,6 +654,29 @@
   Store.set = function (k, v) {
     const sk = scoped(k);
     v = tagDayV2WriterCid(sk, v);
+    // 🛡️ Drop fence (incident #10, 2026-06-02): если ключ был только что
+    // отвергнут сервером через Layer 4 `_dropRejectedKey`, sessionStorage
+    // содержит fence-flag со старше 10 сек. Любая попытка Store.set для этого
+    // ключа silently no-op'ится — защищает от race где React state / SW cache
+    // re-populate'ит LS сразу после drop'a (вкл. после location.reload()).
+    // После 10 сек fence истекает — нормальные writes возобновляются.
+    try {
+      const fenceKey = 'heys_drop_fence_' + sk;
+      const fenceRaw = global.sessionStorage && global.sessionStorage.getItem(fenceKey);
+      const fenceTs = fenceRaw ? parseInt(fenceRaw, 10) : 0;
+      if (fenceTs > 0) {
+        const ageMs = Date.now() - fenceTs;
+        if (ageMs >= 0 && ageMs < 10000) {
+          // Active fence — block this write.
+          try {
+            __pt('STORE_SET_FENCED', { sk: sk.slice(0, 80), ageMs });
+          } catch (_) { /* noop */ }
+          return;
+        }
+        // Expired — clean up sentinel.
+        try { global.sessionStorage.removeItem(fenceKey); } catch (_) { /* noop */ }
+      }
+    } catch (_) { /* sessionStorage не доступен — пропустим guard */ }
     // 🔍 trace: log every write для guarded keys (dayv2/profile/norms/game/hr_zones).
     try {
       if (/^heys_(?:[0-9a-f-]{36}_)?(?:profile|norms|game|hr_zones|dayv2_)/i.test(sk)) {

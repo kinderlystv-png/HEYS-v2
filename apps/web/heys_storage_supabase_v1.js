@@ -2261,6 +2261,16 @@
     try {
       logCritical(`[drop-rejected] ${reason || 'server_rejected'}: removing LS+queue for ${scopedKey.slice(0, 80)} (client ${String(clientId).slice(0,8)})`);
     } catch (_) { /* noop */ }
+    // 0. 🛡️ Drop fence (incident #10, 2026-06-02): sessionStorage flag блокирует
+    // Store.set для этого scopedKey на 10 сек. Переживает location.reload() —
+    // защищает от race где React state / SW cache repopulate'ит LS сразу после
+    // drop'a (и после reload), приводя к infinite loop. Store.set проверяет
+    // флаг и silently no-op'ит. После 10 сек fence истекает естественно.
+    try {
+      if (typeof global.sessionStorage !== 'undefined') {
+        global.sessionStorage.setItem('heys_drop_fence_' + scopedKey, String(Date.now()));
+      }
+    } catch (_) { /* noop */ }
     // 1. Drop LS под scoped key.
     try {
       if (typeof global.localStorage !== 'undefined') {
