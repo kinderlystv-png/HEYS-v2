@@ -303,6 +303,14 @@
       _bannerEl.parentNode.removeChild(_bannerEl);
     }
     _bannerEl = null;
+    // 🛡️ Defensive sweep: если HMR / повторная загрузка модуля / параллельный
+    // checkAndShow рассинхронизировал _bannerEl с DOM, осиротевшие .ca-banner
+    // остаются висеть после клика «Понял». Гарантируем удаление по селектору.
+    try {
+      document.querySelectorAll('.ca-banner').forEach((el) => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      });
+    } catch (_) { /* noop */ }
   }
 
   function removeExistingModal() {
@@ -310,6 +318,11 @@
       _modalEl.parentNode.removeChild(_modalEl);
     }
     _modalEl = null;
+    try {
+      document.querySelectorAll('.ca-modal-backdrop').forEach((el) => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      });
+    } catch (_) { /* noop */ }
   }
 
   function getLatestEntryTs() {

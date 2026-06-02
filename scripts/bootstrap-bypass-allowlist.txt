@@ -206,8 +206,8 @@ apps/web/heys_user_tab_impl_v1.js:627
 apps/web/heys_user_v12.js:147
 apps/web/heys_user_v12.js:158
 apps/web/heys_weekly_reports_v2.js:36
-apps/web/heys_curator_actions_banner_v1.js:329
-apps/web/heys_curator_actions_banner_v1.js:349
+apps/web/heys_curator_actions_banner_v1.js:342
+apps/web/heys_curator_actions_banner_v1.js:362
 apps/web/heys_curator_push_onboarding_banner_v1.js:62
 apps/web/heys_whats_new_modal_v1.js:70
 apps/web/heys_widgets_core_v1.js:1049
