@@ -355,7 +355,15 @@ async function main() {
             }
         }
 
-        syncIndexHtml(builtEntries);
+        // 🛡️ FIX 2026-06-02: передаём FULL manifest (все 12 bundles), не
+        // builtEntries (только что rebuild'нутые). Иначе при --files= partial
+        // rebuild POST_BOOT_BUNDLES в index.html переписывается только теми
+        // bundles что rebuild'нулись (например только postboot-3-ui-lazy),
+        // и оставшиеся 5 (postboot-1-game-*, postboot-2-insights-*,
+        // postboot-3-ui-eager) выпадают из загрузки → CascadeCard /
+        // MealRecCard не доступны → каскад/планер stuck в loading state.
+        // Incident a08ca222 (Phase B1+B2 commit, accidentally dropped 5 of 6).
+        syncIndexHtml(manifest);
 
         // Write lazy-manifest.json: maps lazy-chunk bundle names → their hashed filenames.
         // Façade stubs fetch this at runtime so they always load the current-deploy URL (S1).
