@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.06.02.00000000",
-      "buildHash": "00000000",
+      "version": "2026.06.02.54788de6",
+      "buildHash": "54788de6",
       "date": "2026-06-02",
       "kind": "technical",
       "profile": "technical-infra",
