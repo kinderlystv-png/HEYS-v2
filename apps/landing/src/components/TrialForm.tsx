@@ -340,6 +340,63 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         </p>
       </div>
 
+      {/* Год рождения — 18+ gate (152-ФЗ ст.9.5) */}
+      <div className="mb-4">
+        <label htmlFor="birth_year" className="block text-sm font-medium text-gray-700 mb-2">
+          Год рождения
+        </label>
+        <input
+          id="birth_year"
+          type="number"
+          min={1900}
+          max={new Date().getFullYear()}
+          value={birthYear}
+          onChange={e => setBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          disabled={formState === 'loading'}
+          placeholder="Например, 1990"
+          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          required
+        />
+        <p className="text-gray-500 text-xs mt-1">
+          Сервис доступен только лицам старше 18 лет.
+        </p>
+      </div>
+
+      {/* Согласие */}
+      <label className="mb-3 flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={consentAccepted}
+          onChange={e => setConsentAccepted(e.target.checked)}
+          disabled={formState === 'loading'}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span className="text-gray-500 text-xs leading-5">
+          Даю согласие на обработку персональных данных в соответствии с{' '}
+          <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+            политикой конфиденциальности
+          </a>{' '}
+          и принимаю{' '}
+          <a href="/legal/user-agreement" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+            условия использования
+          </a>
+        </span>
+      </label>
+
+      {/* Маркетинговое согласие — опционально (152-ФЗ ст.15) */}
+      <label className="mb-5 flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={marketingAccepted}
+          onChange={e => setMarketingAccepted(e.target.checked)}
+          disabled={formState === 'loading'}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span className="text-gray-500 text-xs leading-5">
+          Хочу получать полезные материалы и информацию об акциях. Можно отписаться в любой момент.
+        </span>
+      </label>
+
       {/* Ошибка */}
       {errorMessage && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
@@ -365,63 +422,6 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           ctaLabel || 'Записаться на неделю старта →'
         )}
       </button>
-
-      {/* Год рождения — 18+ gate (152-ФЗ ст.9.5) */}
-      <div className="mt-4">
-        <label htmlFor="birth_year" className="block text-sm font-medium text-gray-700 mb-2">
-          Год рождения
-        </label>
-        <input
-          id="birth_year"
-          type="number"
-          min={1900}
-          max={new Date().getFullYear()}
-          value={birthYear}
-          onChange={e => setBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
-          disabled={formState === 'loading'}
-          placeholder="Например, 1990"
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-          required
-        />
-        <p className="text-gray-500 text-xs mt-1">
-          Сервис доступен только лицам старше 18 лет.
-        </p>
-      </div>
-
-      {/* Согласие */}
-      <label className="mt-4 flex items-start gap-3 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={consentAccepted}
-          onChange={e => setConsentAccepted(e.target.checked)}
-          disabled={formState === 'loading'}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-gray-500 text-xs leading-5">
-          Даю согласие на обработку персональных данных в соответствии с{' '}
-          <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
-            политикой конфиденциальности
-          </a>{' '}
-          и принимаю{' '}
-          <a href="/legal/user-agreement" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
-            условия использования
-          </a>
-        </span>
-      </label>
-
-      {/* Маркетинговое согласие — опционально (152-ФЗ ст.15) */}
-      <label className="mt-3 flex items-start gap-3 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={marketingAccepted}
-          onChange={e => setMarketingAccepted(e.target.checked)}
-          disabled={formState === 'loading'}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-gray-500 text-xs leading-5">
-          Хочу получать полезные материалы и информацию об акциях. Можно отписаться в любой момент.
-        </span>
-      </label>
     </form>
   )
 }

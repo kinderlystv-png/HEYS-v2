@@ -49,6 +49,11 @@ const TECHNICAL_FILE_PATTERNS = [
     /^apps\/[^/]+\/tests\//,                            // any app tests/ (was apps/web only)
     /^apps\/web\/scripts\//,
     /^apps\/web\/api\//,
+    // Landing — отдельный продукт (heyslab.ru), его правки не видны
+    // HEYS web-app пользователям, для которых whats-new.json и нужен.
+    // Гейт ригорозно проверяет именно web-app релизы; landing-only пуши
+    // безопасно скипать (свой деплой через apps/landing/, без модалки).
+    /^apps\/landing\//,
     /^apps\/web\/public\/whats-new\.json$/,
     /^apps\/web\/public\/build-meta\.json$/,
     /^apps\/web\/public\/version\.json$/,
