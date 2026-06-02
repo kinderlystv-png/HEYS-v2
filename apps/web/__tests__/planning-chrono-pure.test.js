@@ -419,6 +419,15 @@ describe('Planning.Store chrono helpers — addChronoEntry + compaction', () => 
         expect(cur.archived).toBe(false);
     });
 
+    it('persists and updates activity category', () => {
+        const a = Store.addChronoActivity({ name: 'Coding', category: 'focus' });
+        expect(a.category).toBe('focus');
+
+        Store.updateChronoActivity(a.id, { category: 'growth' });
+        const cur = Store.getChronoActivities().find((x) => x.id === a.id);
+        expect(cur.category).toBe('growth');
+    });
+
     it('mergeChronoActivities reassigns entries + sums snapshots', () => {
         const from = Store.addChronoActivity({ name: 'From' });
         const to = Store.addChronoActivity({ name: 'To' });
@@ -498,5 +507,60 @@ describe('chrono analytics helpers', () => {
         expect(insights.map((item) => item.kind)).toContain('top');
         expect(insights.map((item) => item.kind)).toContain('over');
         expect(insights.map((item) => item.kind)).toContain('under');
+        expect(insights.map((item) => item.kind)).not.toContain('total');
+    });
+
+    it('buildCategoryBalance groups tracked time by inferred and explicit category', () => {
+        const balance = Chrono.buildCategoryBalance(
+            [
+                { id: 'a', name: 'Programming', category: 'focus' },
+                { id: 'b', name: 'Залип в телефоне' },
+            ],
+            { a: 90, b: 30 },
+        );
+        expect(balance[0]).toMatchObject({ id: 'focus', minutes: 90, pct: 75 });
+        expect(balance[1]).toMatchObject({ id: 'drain', minutes: 30, pct: 25 });
+    });
+
+    it('buildDayTimeline sorts entries chronologically and attaches activity category', () => {
+        const timeline = Chrono.buildDayTimeline(
+            [
+                { id: 'e2', activityId: 'a', date: '2026-06-02', minutes: 20, createdAt: '2026-06-02T12:00:00Z' },
+                { id: 'e1', activityId: 'a', date: '2026-06-02', minutes: 10, createdAt: '2026-06-02T09:00:00Z' },
+            ],
+            [{ id: 'a', name: 'Read', category: 'growth' }],
+            '2026-06-02',
+        );
+        expect(timeline.map((entry) => entry.id)).toEqual(['e1', 'e2']);
+        expect(timeline[0].category).toBe('growth');
+    });
+
+    it('buildSmartSuggestions returns last and yesterday presets', () => {
+        const suggestions = Chrono.buildSmartSuggestions(
+            { id: 'a', name: 'Focus' },
+            [
+                { activityId: 'a', date: '2026-06-01', minutes: 40, createdAt: '2026-06-01T10:00:00Z' },
+                { activityId: 'a', date: '2026-05-31', minutes: 25, createdAt: '2026-06-02T10:00:00Z' },
+            ],
+            '2026-06-02',
+        );
+        expect(suggestions[0]).toMatchObject({ id: 'last', minutes: 25 });
+        expect(suggestions[1]).toMatchObject({ id: 'yesterday', minutes: 40 });
+    });
+
+    it('buildWeeklyReport returns premium summary when week has tracked time', () => {
+        const report = Chrono.buildWeeklyReport(
+            [{ id: 'a', name: 'Code', category: 'focus' }],
+            [{ activityId: 'a', date: '2026-06-01', minutes: 60 }],
+            [],
+            ['2026-06-01', '2026-06-02'],
+            { a: 60 },
+        );
+        expect(report).toMatchObject({
+            total: 60,
+            headline: expect.any(String),
+            recommendation: expect.any(String),
+        });
+        expect(report.score).toBeGreaterThan(0);
     });
 });
