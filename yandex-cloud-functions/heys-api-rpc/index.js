@@ -591,6 +591,7 @@ const ALLOWED_FUNCTIONS = [
   'batch_get_client_kv_by_session',       // 🔐 Phase 1a: пакетное чтение (hot-sync optimization)
   'get_change_markers_by_session',        // 🔐 Phase 1b: scoped change markers (conditional sync)
   'delete_client_kv_by_session',          // 🔐 P1: удаление KV (session-safe)
+  'issue_write_context_by_session',       // 🛡️ Write context — выдача capability token для PIN session (Phase A1)
 
   // === CURATOR ACTIONS FEED (📝 in-app banner + push body) ===
   'get_my_curator_changelog_since',       // 📝 client reads curator-changes since last-seen
@@ -713,6 +714,7 @@ const CURATOR_ONLY_FUNCTIONS = [
   // Безопасность: SQL функция проверяет ownership (clients.user_id = curator).
   'batch_upsert_client_kv_by_curator',
   'merge_save_client_kv_by_curator',      // 🔀 Server-side merge — куратор пишет данные клиента
+  'issue_write_context_by_curator',       // 🛡️ Write context — выдача capability token (Phase A1)
 ];
 
 // === P1-B: Curator audit middleware (2026-05-22) =============================
@@ -2130,6 +2132,16 @@ module.exports.handler = async function (event, context) {
       params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
     }
     debugLog('[RPC Handler] Added server-side p_ip to log_consents');
+  }
+
+  // 🛡️ Write context issue: IP/UA с сервера для аудита (Phase A1).
+  // Клиенту нет смысла передавать их сам — server header'ы доверенный источник.
+  if (fnName === 'issue_write_context_by_curator' || fnName === 'issue_write_context_by_session') {
+    params.p_ip = clientIp || null;
+    params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
+    if (typeof params.p_ttl_seconds !== 'number') {
+      params.p_ttl_seconds = 86400; // 24h default
+    }
   }
 
   // Подключаемся к PostgreSQL через connection pool
@@ -3665,6 +3677,21 @@ module.exports.handler = async function (event, context) {
       // literal → 500 "Database error" (incident 2026-05-30).
       'backfill_shared_harm': {
         'p_updates': '::jsonb'
+      },
+      // 🛡️ Write context issue — uuid/int/text/inet hints для generic dispatch.
+      // p_curator_id auto-injected from JWT (L2108); p_client_id from caller body.
+      'issue_write_context_by_curator': {
+        'p_curator_id':  '::uuid',
+        'p_client_id':   '::uuid',
+        'p_ttl_seconds': '::int',
+        'p_user_agent':  '::text',
+        'p_ip':          '::inet'
+      },
+      'issue_write_context_by_session': {
+        'p_session_token': '::text',
+        'p_ttl_seconds':   '::int',
+        'p_user_agent':    '::text',
+        'p_ip':            '::inet'
       }
     };
 
