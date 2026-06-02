@@ -579,4 +579,25 @@ describe('Fingers.filterProgramsByEquipment', () => {
     });
     expect(r.map((p) => p.id)).toEqual(['nelson']);
   });
+
+  // ──── Multi-tier hybrid model (per-exercise equipmentTier) ────
+  it('HYBRID: horst_mixed_day (block+door+none) показывается в любой комбинации', () => {
+    const all = window.HEYS.Fingers.PROGRAMS;
+    // Любой отдельный таб с пересечением подходит.
+    expect(window.HEYS.Fingers.filterProgramsByEquipment(all, { blockMode: true })
+      .find((p) => p.id === 'horst_mixed_day')).toBeDefined();
+    expect(window.HEYS.Fingers.filterProgramsByEquipment(all, { edgeLimit: 25 })
+      .find((p) => p.id === 'horst_mixed_day')).toBeDefined();
+    expect(window.HEYS.Fingers.filterProgramsByEquipment(all, { noEquipment: true })
+      .find((p) => p.id === 'horst_mixed_day')).toBeDefined();
+    // Только fingerboard — НЕ показывается (нет 'full' в типах).
+    expect(window.HEYS.Fingers.filterProgramsByEquipment(all, { equipmentTypes: ['full'] })
+      .find((p) => p.id === 'horst_mixed_day')).toBeUndefined();
+  });
+
+  it('HYBRID: getProgramEquipmentTypes возвращает unique tier set из exercises', () => {
+    const hybrid = window.HEYS.Fingers.PROGRAMS.find((p) => p.id === 'horst_mixed_day');
+    const tiers = window.HEYS.Fingers.getProgramEquipmentTypes(hybrid);
+    expect(tiers.sort()).toEqual(['block', 'door', 'none']);
+  });
 });

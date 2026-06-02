@@ -1521,6 +1521,11 @@
     // Для каждого выбранного tier'а ищем exercise. Source приоритет:
     //   1. Hybrid программа с exercise.equipmentTier === tier
     //   2. Программа у которой program-tiers включает tier — берём первое exercise
+    // Сколько упражнений берём с каждого tier'а — зависит от mix intensity:
+    //   recovery: 1 (минимально, бережно)
+    //   moderate: 1 (стандарт)
+    //   max:      2 если есть из чего выбрать (больше объёма)
+    const perTier = desiredIntensity === 'max' ? 2 : 1;
     const pickedExercises = [];
     const includedTiers = [];
     for (let i = 0; i < types.length; i++) {
@@ -1531,21 +1536,35 @@
       });
       if (!tierCands.length) continue;
 
-      // Random pick из пула. Чтобы было «свежо» каждый раз, используем Math.random.
-      const pickProg = tierCands[Math.floor(Math.random() * tierCands.length)];
-      let exercise = null;
-      if (Array.isArray(pickProg.exercises)) {
-        // Если у exercises есть explicit equipmentTier — берём matching.
+      // Собираем pool всех exercises, подходящих под tier, по всем кандидатам.
+      const pool = [];
+      tierCands.forEach(function (pickProg) {
+        if (!Array.isArray(pickProg.exercises)) return;
         const tierExercises = pickProg.exercises.filter(function (ex) {
           return ex && ex.equipmentTier === tier;
         });
-        const pool = tierExercises.length ? tierExercises : pickProg.exercises;
-        exercise = pool[Math.floor(Math.random() * pool.length)];
+        const list = tierExercises.length ? tierExercises : pickProg.exercises;
+        list.forEach(function (ex) { pool.push(ex); });
+      });
+      if (!pool.length) continue;
+
+      // Берём перемешанные top-N уникальных exercises (по gripId+edge).
+      const shuffled = pool.slice();
+      for (let j = shuffled.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1));
+        const t = shuffled[j]; shuffled[j] = shuffled[k]; shuffled[k] = t;
       }
-      if (exercise) {
-        pickedExercises.push(Object.assign({}, exercise, { equipmentTier: tier }));
-        includedTiers.push(tier);
+      const seen = Object.create(null);
+      let taken = 0;
+      for (let j = 0; j < shuffled.length && taken < perTier; j++) {
+        const ex = shuffled[j];
+        const key = ex.gripId + '_' + ex.edgeSizeMm;
+        if (seen[key]) continue;
+        seen[key] = true;
+        pickedExercises.push(Object.assign({}, ex, { equipmentTier: tier }));
+        taken++;
       }
+      if (taken > 0) includedTiers.push(tier);
     }
 
     if (!pickedExercises.length) return null;
@@ -8394,17 +8413,28 @@
         : ['full']);
     const [mixedWorkout, setMixedWorkout] = useState(null);
     const [mixSeed, setMixSeed] = useState(0);
+    // Локальная intensity микса — отдельный toggle внутри карточки.
+    // Default = moderate, persisted в LS чтоб не сбрасывалась.
+    const [mixIntensity, setMixIntensity] = useState(function () {
+      const u = HEYS.utils;
+      const v = u && u.lsGet ? u.lsGet('fingers_mix_intensity', 'moderate') : 'moderate';
+      return ['recovery', 'moderate', 'max'].indexOf(v) >= 0 ? v : 'moderate';
+    });
+    const onPickMixIntensity = useCallback(function (v) {
+      setMixIntensity(v);
+      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_mix_intensity', v);
+    }, []);
     useEffect(function () {
       if (!Fingers.generateMixedWorkout) return;
       const w = Fingers.generateMixedWorkout({
         equipmentTypes: userTypes,
-        intensity: intensityFilter,
+        intensity: mixIntensity,
         age: ageRaw,
         readiness: cool && cool.recommendation
       });
       setMixedWorkout(w);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userTypes.join(','), intensityFilter, ageRaw, cool && cool.recommendation, mixSeed]);
+    }, [userTypes.join(','), mixIntensity, ageRaw, cool && cool.recommendation, mixSeed]);
     const onGenerateMix = useCallback(function () { setMixSeed(function (n) { return n + 1; }); }, []);
     let readinessBanner = null;
     if (cool) {
@@ -8469,9 +8499,33 @@
           'Не нашёл подходящий протокол? Попробуй случайную сборку по умному алгоритму:'
         ),
         h('div', { className: 'fingers-fs-mixcard__inner' },
-          h('div', { className: 'fingers-fs-mixcard__badge' },
-            h('span', { 'aria-hidden': 'true' }, '🎲'),
-            ' Микс'
+          h('div', { className: 'fingers-fs-mixcard__head-row' },
+            h('div', { className: 'fingers-fs-mixcard__badge' },
+              h('span', { 'aria-hidden': 'true' }, '🎲'),
+              ' Микс'
+            ),
+            h('div', { className: 'fingers-fs-mixcard__intensity-toggle', role: 'tablist', 'aria-label': 'Мощность тренировки' },
+              [
+                { id: 'recovery', label: 'лёгкая',   emoji: '🌿' },
+                { id: 'moderate', label: 'умеренная', emoji: '⚡' },
+                { id: 'max',      label: 'жёсткая',  emoji: '🔥' }
+              ].map(function (opt) {
+                const active = mixIntensity === opt.id;
+                return h('button', {
+                  key: opt.id,
+                  type: 'button',
+                  role: 'tab',
+                  'aria-selected': active,
+                  className: 'fingers-fs-mixcard__int-btn'
+                    + (active ? ' is-active' : ''),
+                  'data-intensity': opt.id,
+                  onClick: function () { onPickMixIntensity(opt.id); }
+                },
+                  h('span', { 'aria-hidden': 'true' }, opt.emoji + ' '),
+                  opt.label
+                );
+              })
+            )
           ),
           h('h3', { className: 'fingers-fs-mixcard__title' }, mixedWorkout.name),
           h('p', { className: 'fingers-fs-mixcard__desc' }, mixedWorkout.description),

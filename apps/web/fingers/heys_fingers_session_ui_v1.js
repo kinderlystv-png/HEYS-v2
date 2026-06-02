@@ -448,6 +448,14 @@
       { id: 'max',      label: 'Максимум',      emoji: '🔥' }
     ];
 
+    // Readiness banner — широкая карточка наверху, читает cooldownCheck.
+    // Намеренно отличается от pill-фильтра ниже: горизонтальный layout с
+    // крупной иконкой и подзаголовком — пользователь видит «что советует
+    // организм», а ниже сам выбирает чем фильтровать.
+    const cool = (Fingers.cooldownCheck && typeof Fingers.cooldownCheck === 'function')
+      ? (function () { try { return Fingers.cooldownCheck(); } catch (_) { return null; } })()
+      : null;
+
     // Readiness-aware launch guard. Сравниваем intensity протокола с тем,
     // что разрешает cooldown (rest/recovery → не выше recovery; moderate →
     // не выше moderate). Если выше — перехватываем onPickProgram и просим
@@ -466,13 +474,40 @@
       onPickProgram(program);
     }, [cool, onPickProgram]);
 
-    // Readiness banner — широкая карточка наверху, читает cooldownCheck.
-    // Намеренно отличается от pill-фильтра ниже: горизонтальный layout с
-    // крупной иконкой и подзаголовком — пользователь видит «что советует
-    // организм», а ниже сам выбирает чем фильтровать.
-    const cool = (Fingers.cooldownCheck && typeof Fingers.cooldownCheck === 'function')
-      ? (function () { try { return Fingers.cooldownCheck(); } catch (_) { return null; } })()
-      : null;
+    // Микс-генератор — собирает ad-hoc программу по выбранным tier'ам.
+    // Генерится автоматически при изменении userTypes/intensityFilter, юзер
+    // может перегенерировать через reroll.
+    const userTypes = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
+      ? profile.equipmentTypes
+      : (profile.noEquipment ? ['none']
+        : profile.blockMode ? ['block']
+        : profile.edgeLimit === 25 ? ['door']
+        : ['full']);
+    const [mixedWorkout, setMixedWorkout] = useState(null);
+    const [mixSeed, setMixSeed] = useState(0);
+    // Локальная intensity микса — отдельный toggle внутри карточки.
+    // Default = moderate, persisted в LS чтоб не сбрасывалась.
+    const [mixIntensity, setMixIntensity] = useState(function () {
+      const u = HEYS.utils;
+      const v = u && u.lsGet ? u.lsGet('fingers_mix_intensity', 'moderate') : 'moderate';
+      return ['recovery', 'moderate', 'max'].indexOf(v) >= 0 ? v : 'moderate';
+    });
+    const onPickMixIntensity = useCallback(function (v) {
+      setMixIntensity(v);
+      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_mix_intensity', v);
+    }, []);
+    useEffect(function () {
+      if (!Fingers.generateMixedWorkout) return;
+      const w = Fingers.generateMixedWorkout({
+        equipmentTypes: userTypes,
+        intensity: mixIntensity,
+        age: ageRaw,
+        readiness: cool && cool.recommendation
+      });
+      setMixedWorkout(w);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userTypes.join(','), mixIntensity, ageRaw, cool && cool.recommendation, mixSeed]);
+    const onGenerateMix = useCallback(function () { setMixSeed(function (n) { return n + 1; }); }, []);
     let readinessBanner = null;
     if (cool) {
       const READINESS_MAP = {
@@ -528,6 +563,89 @@
           );
         })
       ),
+      // Генерированная микс-карточка — оранжевая, отличается от обычных
+      // протоколов. Подсказка «не нашли подходящего — попробуй случайный».
+      mixedWorkout ? h('div', { className: 'fingers-fs-mixcard' },
+        h('div', { className: 'fingers-fs-mixcard__hint' },
+          h('span', { 'aria-hidden': 'true' }, '✨ '),
+          'Не нашёл подходящий протокол? Попробуй случайную сборку по умному алгоритму:'
+        ),
+        h('div', { className: 'fingers-fs-mixcard__inner' },
+          h('div', { className: 'fingers-fs-mixcard__head-row' },
+            h('div', { className: 'fingers-fs-mixcard__badge' },
+              h('span', { 'aria-hidden': 'true' }, '🎲'),
+              ' Микс'
+            ),
+            h('div', { className: 'fingers-fs-mixcard__intensity-toggle', role: 'tablist', 'aria-label': 'Мощность тренировки' },
+              [
+                { id: 'recovery', label: 'лёгкая',   emoji: '🌿' },
+                { id: 'moderate', label: 'умеренная', emoji: '⚡' },
+                { id: 'max',      label: 'жёсткая',  emoji: '🔥' }
+              ].map(function (opt) {
+                const active = mixIntensity === opt.id;
+                return h('button', {
+                  key: opt.id,
+                  type: 'button',
+                  role: 'tab',
+                  'aria-selected': active,
+                  className: 'fingers-fs-mixcard__int-btn'
+                    + (active ? ' is-active' : ''),
+                  'data-intensity': opt.id,
+                  onClick: function () { onPickMixIntensity(opt.id); }
+                },
+                  h('span', { 'aria-hidden': 'true' }, opt.emoji + ' '),
+                  opt.label
+                );
+              })
+            )
+          ),
+          h('h3', { className: 'fingers-fs-mixcard__title' }, mixedWorkout.name),
+          h('p', { className: 'fingers-fs-mixcard__desc' }, mixedWorkout.description),
+          h('div', { className: 'fingers-fs-mixcard__chips' },
+            h('span', { className: 'fingers-fs-chip fingers-fs-chip--intensity',
+              'data-fingers-intensity': mixedWorkout.intensity || 'moderate'
+            }, intensityLabel(mixedWorkout.intensity)),
+            h('span', { className: 'fingers-fs-chip' },
+              h('span', { 'aria-hidden': 'true' }, '⏱ '),
+              mixedWorkout.durationMin + ' мин'),
+            h('span', { className: 'fingers-fs-chip' },
+              mixedWorkout.exercises.length + ' упр')
+          ),
+          h('div', { className: 'fingers-fs-mixcard__equipment' },
+            (mixedWorkout.equipmentTypes || []).map(function (t) {
+              const meta = ({
+                full: { icon: '🪜', label: 'Board' },
+                block: { icon: '💪', label: 'Block' },
+                door: { icon: '🚪', label: 'Door' },
+                none: { icon: '🤚', label: 'No-Hangs' }
+              })[t] || { icon: '·', label: t };
+              return h('span', {
+                key: t,
+                className: 'fingers-fs-equipment-chip is-available',
+                'data-equipment': t
+              },
+                h('span', { 'aria-hidden': 'true' }, meta.icon), ' ', meta.label
+              );
+            })
+          ),
+          h('div', { className: 'fingers-fs-mixcard__actions' },
+            h('button', {
+              type: 'button',
+              className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--reroll',
+              onClick: onGenerateMix,
+              title: 'Другой набор упражнений'
+            },
+              h('span', { 'aria-hidden': 'true' }, '🔄')
+            ),
+            h('button', {
+              type: 'button',
+              className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--launch',
+              onClick: function () { safeLaunch(mixedWorkout); }
+            }, 'Запустить микс')
+          )
+        )
+      ) : null,
+
       visibleFiltered.length === 0
         ? h('div', { className: 'fingers-fs-empty', style: { padding: '24px 16px', textAlign: 'center' } },
             h('p', { style: { margin: 0, fontSize: 14, opacity: 0.7 } },
@@ -581,50 +699,44 @@
           // Это даёт сразу понять «работает на X, но у тебя X нет — выбери в табах»
           // или «работает на Y и у тебя Y активен — отлично».
           (function () {
-            const eqChips = [];
-            if (p.noEquipment) {
-              eqChips.push({ id: 'none', icon: '🤚', label: 'No-Hangs' });
-            } else if (p.equipmentReq === 'block') {
-              eqChips.push({ id: 'block', icon: '💪', label: 'Hang block' });
-            } else if (p.equipmentReq === 'fingerboard') {
-              eqChips.push({ id: 'full', icon: '🪜', label: 'Board' });
-            } else {
-              eqChips.push({ id: 'full', icon: '🪜', label: 'Board' });
-              eqChips.push({ id: 'block', icon: '💪', label: 'Block' });
-              const minEdge = Array.isArray(p.exercises)
-                ? p.exercises.reduce(function (m, ex) {
-                    const v = Number(ex.edgeSizeMm) || Infinity;
-                    return Math.min(m, v);
-                  }, Infinity)
-                : Infinity;
-              if (minEdge >= 25) {
-                eqChips.push({ id: 'door', icon: '🚪', label: 'Door' });
-              }
-            }
-            // Derive user's active equipment types из profile (тот же fallback что в EquipmentBar).
-            // Показываем ТОЛЬКО чипы того оборудования что у юзера выбрано —
-            // иначе он подумает что приглушённый чип = «нужно но нет», хотя
-            // на универсальных протоколах это всего лишь альтернатива.
+            // Multi-tier модель: тащим список equipmentTypes из catalog helper.
+            // Для hybrid протоколов это будет ['block','door','none'] — все
+            // tier'ы упражнений. Для simple — один tier.
+            const tiers = Fingers.getProgramEquipmentTypes
+              ? Fingers.getProgramEquipmentTypes(p)
+              : [];
+            const TIER_META = {
+              none:  { icon: '🤚', label: 'No-Hangs' },
+              block: { icon: '💪', label: 'Block' },
+              door:  { icon: '🚪', label: 'Door' },
+              full:  { icon: '🪜', label: 'Board' }
+            };
+            // Фильтруем chips по тому, что у юзера в табах активно — иначе
+            // юзер видит chip Door хотя Door таб не выбран, и думает «у меня
+            // же не выбрана дверь, откуда».
             const userTypes = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
               ? profile.equipmentTypes
               : (profile.noEquipment ? ['none']
                 : profile.blockMode ? ['block']
                 : profile.edgeLimit === 25 ? ['door']
                 : ['full']);
-            const matchingChips = eqChips.filter(function (c) {
-              return userTypes.indexOf(c.id) >= 0;
+            const userSet = Object.create(null);
+            userTypes.forEach(function (t) { userSet[t] = true; });
+            const visibleTiers = tiers.filter(function (t) { return userSet[t]; });
+            // Если по какой-то причине пересечения нет (защита от баг'а
+            // фильтра) — показываем все program-tier'ы как было.
+            const finalTiers = visibleTiers.length > 0 ? visibleTiers : tiers;
+            const eqChips = finalTiers.map(function (t) {
+              const m = TIER_META[t] || { icon: '·', label: t };
+              return { id: t, icon: m.icon, label: m.label };
             });
-            // Безопасность: если по какой-то причине пересечения нет (баг
-            // фильтра), показываем все совместимые с program (старая логика)
-            // чтобы юзер не остался без чипов.
-            const finalChips = matchingChips.length > 0 ? matchingChips : eqChips;
             return h('div', { className: 'fingers-fs-program-card__equipment' },
-              finalChips.map(function (c) {
+              eqChips.map(function (c) {
                 return h('span', {
                   key: c.id,
                   className: 'fingers-fs-equipment-chip is-available',
                   'data-equipment': c.id,
-                  title: 'Этот протокол можно делать на твоём оборудовании: ' + c.label
+                  title: c.label
                 },
                   h('span', { 'aria-hidden': 'true' }, c.icon),
                   ' ',
@@ -1084,6 +1196,13 @@
     let totalMinutes = 0;
     const lastSessions = [];
     let streakBroken = false;
+    // Weekly volume: 12 недель, считаем минуты на каждую (индекс 0 = текущая,
+    // 11 = 11 недель назад). Для bar-chart на UI.
+    const weeklyVolume = new Array(12).fill(0);
+    // Grip usage: считаем сколько раз каждый gripId встречался в exercises.
+    const gripUsage = Object.create(null);
+    // Recent PRs: PR с testedAt в последние 30 дней — отдельная highlight-секция.
+    // (PR-список читается напрямую из Fingers.records.get() в ProgressTab.)
 
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
@@ -1110,6 +1229,20 @@
           totalHolds += Array.isArray(log.holds) ? log.holds.length : 0;
           const dur = Number(log.totalDurationMinutes) || 0;
           totalMinutes += dur;
+          // Weekly volume — кладём в bucket по неделям (i / 7).
+          const weekIdx = Math.floor(i / 7);
+          if (weekIdx < 12) weeklyVolume[weekIdx] += dur;
+          // Grip usage — считаем уникальные хваты по exercises (без повторных
+          // подсчётов одного gripId в одной сессии).
+          const usedInSession = Object.create(null);
+          if (Array.isArray(log.exercises)) {
+            log.exercises.forEach(function (ex) {
+              if (ex && ex.gripId && !usedInSession[ex.gripId]) {
+                usedInSession[ex.gripId] = true;
+                gripUsage[ex.gripId] = (gripUsage[ex.gripId] || 0) + 1;
+              }
+            });
+          }
           if (lastSessions.length < 5) {
             const intensity = typeof Fingers.getProgramIntensity === 'function'
               ? Fingers.getProgramIntensity(log.programId)
@@ -1133,7 +1266,9 @@
       totalSessions: totalSessions,
       totalHolds: totalHolds,
       totalMinutes: totalMinutes,
-      lastSessions: lastSessions
+      lastSessions: lastSessions,
+      weeklyVolume: weeklyVolume,
+      gripUsage: gripUsage
     };
   }
 
@@ -1210,6 +1345,41 @@
         )
       ),
 
+      // ─── Weekly volume chart (12 недель) ────────────────────────────────
+      (function () {
+        const wv = stats.weeklyVolume || [];
+        const maxV = Math.max.apply(null, wv);
+        if (maxV <= 0) return null; // нет данных
+        // Реверс — слева 11 недель назад, справа сегодняшняя.
+        const bars = wv.slice().reverse();
+        return h('section', { className: 'fingers-fs-progress-section' },
+          h('div', { className: 'fingers-fs-progress-section__header' },
+            h('h3', { className: 'fingers-fs-progress-section__title' }, 'Недельный объём'),
+            h('span', { className: 'fingers-fs-progress-section__hint' }, '12 недель · минут')
+          ),
+          h('div', { className: 'fingers-fs-volume-chart' },
+            bars.map(function (val, idx) {
+              const heightPct = Math.max(2, Math.round((val / maxV) * 100));
+              const isCurrent = idx === bars.length - 1;
+              const weeksAgo = bars.length - 1 - idx;
+              const label = weeksAgo === 0 ? 'эта неделя' : weeksAgo + ' нед назад';
+              return h('div', {
+                key: idx,
+                className: 'fingers-fs-volume-chart__bar-wrap',
+                title: label + ': ' + Math.round(val) + ' мин'
+              },
+                h('div', {
+                  className: 'fingers-fs-volume-chart__bar' + (isCurrent ? ' is-current' : ''),
+                  style: { height: heightPct + '%' }
+                },
+                  val > 0 ? h('span', { className: 'fingers-fs-volume-chart__bar-value' }, Math.round(val)) : null
+                )
+              );
+            })
+          )
+        );
+      })(),
+
       // ─── Cooldown card (если recovery) ────────────────────────────────
       cooldown && !cooldown.allowedNow && h('div', { className: 'fingers-fs-progress-cooldown' },
         h('div', { className: 'fingers-fs-progress-cooldown__icon', 'aria-hidden': 'true' }, '🛡'),
@@ -1272,6 +1442,99 @@
           h('span', { 'aria-hidden': 'true' }, '📅'),
           ' Пора re-test (прошло больше 8 недель с последнего MVC теста).')
       ),
+
+      // ─── Recent PRs (последние 30 дней) ──────────────────────────────
+      (function () {
+        const allRecords = (Fingers.records && Fingers.records.get) ? Fingers.records.get() : null;
+        if (!allRecords || !allRecords.maxHangs) return null;
+        const cutoff = Date.now() - 30 * 86400000;
+        const recent = [];
+        Object.keys(allRecords.maxHangs).forEach(function (slug) {
+          const r = allRecords.maxHangs[slug];
+          if (!r || !r.testedAt) return;
+          const t = Date.parse(r.testedAt);
+          if (!isFinite(t) || t < cutoff) return;
+          const m = /^(.+?)_(\d+)mm$/.exec(slug);
+          const grip = m && Fingers.getGripById ? Fingers.getGripById(m[1]) : null;
+          recent.push({
+            slug: slug,
+            label: (grip && grip.label) || (m ? m[1] : slug),
+            edge: m ? m[2] : '—',
+            value: r.type === 'weight'
+              ? (r.mvcKg ? r.mvcKg.toFixed(1) + ' кг' : '—')
+              : (r.holdTime ? r.holdTime.toFixed(1) + ' с' : '—'),
+            daysAgo: Math.max(0, Math.floor((Date.now() - t) / 86400000)),
+            ts: t
+          });
+        });
+        if (recent.length === 0) return null;
+        recent.sort(function (a, b) { return b.ts - a.ts; });
+        return h('section', { className: 'fingers-fs-progress-section' },
+          h('div', { className: 'fingers-fs-progress-section__header' },
+            h('h3', { className: 'fingers-fs-progress-section__title' }, 'Свежие PR'),
+            h('span', { className: 'fingers-fs-progress-section__hint' }, 'за 30 дней')
+          ),
+          h('div', { className: 'fingers-fs-recent-prs' },
+            recent.slice(0, 5).map(function (r) {
+              return h('div', { key: r.slug, className: 'fingers-fs-recent-pr' },
+                h('span', { className: 'fingers-fs-recent-pr__icon', 'aria-hidden': 'true' }, '🏆'),
+                h('div', { className: 'fingers-fs-recent-pr__body' },
+                  h('div', { className: 'fingers-fs-recent-pr__main' },
+                    h('span', { className: 'fingers-fs-recent-pr__grip' }, r.label),
+                    h('span', { className: 'fingers-fs-recent-pr__edge' }, r.edge + ' мм')
+                  ),
+                  h('div', { className: 'fingers-fs-recent-pr__meta' },
+                    r.daysAgo === 0 ? 'сегодня'
+                      : r.daysAgo === 1 ? 'вчера'
+                      : r.daysAgo + ' дн. назад')
+                ),
+                h('div', { className: 'fingers-fs-recent-pr__value' }, r.value)
+              );
+            })
+          )
+        );
+      })(),
+
+      // ─── Grip distribution: какие хваты юзер тренирует чаще ─────────
+      (function () {
+        const usage = stats.gripUsage || {};
+        const entries = Object.keys(usage).map(function (g) { return [g, usage[g]]; });
+        if (entries.length === 0) return null;
+        entries.sort(function (a, b) { return b[1] - a[1]; });
+        const total = entries.reduce(function (s, e) { return s + e[1]; }, 0);
+        const maxV = entries[0][1];
+        return h('section', { className: 'fingers-fs-progress-section' },
+          h('div', { className: 'fingers-fs-progress-section__header' },
+            h('h3', { className: 'fingers-fs-progress-section__title' }, 'Хваты в работе'),
+            h('span', { className: 'fingers-fs-progress-section__hint' },
+              entries.length + (entries.length === 1 ? ' хват' : entries.length < 5 ? ' хвата' : ' хватов'))
+          ),
+          h('div', { className: 'fingers-fs-grip-dist' },
+            entries.map(function (e) {
+              const gid = e[0];
+              const cnt = e[1];
+              const pct = Math.round((cnt / total) * 100);
+              const widthPct = Math.max(4, Math.round((cnt / maxV) * 100));
+              const grip = Fingers.getGripById ? Fingers.getGripById(gid) : null;
+              const label = (grip && grip.label) || gid;
+              const icon = (grip && grip.icon) || '';
+              return h('div', { key: gid, className: 'fingers-fs-grip-dist__row' },
+                h('div', { className: 'fingers-fs-grip-dist__label' },
+                  icon ? h('span', { 'aria-hidden': 'true' }, icon + ' ') : null,
+                  label
+                ),
+                h('div', { className: 'fingers-fs-grip-dist__bar-track' },
+                  h('div', {
+                    className: 'fingers-fs-grip-dist__bar-fill',
+                    style: { width: widthPct + '%' }
+                  })
+                ),
+                h('div', { className: 'fingers-fs-grip-dist__count' }, cnt + ' · ' + pct + '%')
+              );
+            })
+          )
+        );
+      })(),
 
       // ─── Last sessions ─────────────────────────────────────────────────
       stats.lastSessions.length > 0 && h('section', { className: 'fingers-fs-progress-section' },
@@ -1440,6 +1703,10 @@
           try { cycle.abort(); } catch (_) {}
           if (onAbort) onAbort();
         };
+        // По умолчанию snapshot переживает abort — юзер сам решает «продолжить»
+        // или «удалить» через resume-banner после возврата. Очистка происходит
+        // только в одном явном случае: «Записать как частично» (см. ниже).
+        keepSnapshotOnAbortRef.current = true;
         if (!HEYS.ConfirmModal?.show) { finalize(); return; }
         // Snap progress в момент клика (closure ловит свежие значения).
         const doneExercises = exIdx;
@@ -1450,7 +1717,7 @@
         HEYS.ConfirmModal.show({
           icon: '⚠',
           title: 'Прервать тренировку?',
-          text: 'Текущая фаза не будет засчитана.',
+          text: 'Сессия останется как «незавершённая» — сможешь продолжить позже.',
           confirmText: 'Прервать',
           cancelText: 'Продолжить',
           confirmStyle: 'warning',
@@ -1662,9 +1929,9 @@
         if (activeTypes.length === 1) return;
         next = activeTypes.filter(function (t) { return t !== type; });
       } else {
-        // 'none' эксклюзивен: либо «нет оборудования», либо что-то ещё.
-        if (type === 'none') next = ['none'];
-        else next = activeTypes.filter(function (t) { return t !== 'none'; }).concat([type]);
+        // Multi-tier: все табы независимы, 'none' добавляется в общий набор
+        // (раньше был эксклюзивен — теперь модель «фильтры по интересам»).
+        next = activeTypes.concat([type]);
       }
       const patch = syncLegacyFromTypes(next);
       // Если включили block и пока нет block-доски выбранной — назначить default
@@ -1768,14 +2035,16 @@
     const [voiceVol, setVoiceVol] = useState(
       typeof voiceInitial.volume === 'number' ? voiceInitial.volume : 0.8);
 
-    // Theme: A — HEYS native, B — Custom blue, C — Climbing granite
+    // Theme: A — HEYS native, C — Climbing (по умолчанию). Тема B удалена,
+    // legacy value мигрируется в C при чтении.
     const initialTheme = (function () {
       try {
         const fp = profile || {};
-        return fp.themeId || (typeof document !== 'undefined'
+        const raw = fp.themeId || (typeof document !== 'undefined'
           ? document.documentElement.getAttribute('data-fingers-theme')
-          : 'A') || 'A';
-      } catch (_) { return 'A'; }
+          : 'C');
+        return (raw === 'A' || raw === 'C') ? raw : 'C';
+      } catch (_) { return 'C'; }
     })();
     const [theme, setTheme] = useState(initialTheme);
 
@@ -1790,7 +2059,7 @@
     }
 
     function applyTheme(id) {
-      if (['A', 'B', 'C'].indexOf(id) < 0) return;
+      if (['A', 'C'].indexOf(id) < 0) return;
       setTheme(id);
       try {
         if (typeof document !== 'undefined') {
@@ -1841,9 +2110,8 @@
       : 'не указан';
 
     const themeMeta = {
-      A: { label: 'HEYS native',  color: 'linear-gradient(135deg, #2563eb, #1d4ed8)' },
-      B: { label: 'Custom blue',  color: 'linear-gradient(135deg, #06b6d4, #0e7490)' },
       C: { label: 'Climbing',     color: 'linear-gradient(135deg, #c2410c, #7c2d12)' },
+      A: { label: 'HEYS native',  color: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }
     };
 
     return h('div', {
@@ -1923,7 +2191,7 @@
           h('section', { className: 'fingers-settings__section' },
             h('div', { className: 'fingers-settings__section-title' }, 'Тема оформления'),
             h('div', { className: 'fingers-settings__theme-grid' },
-              ['A', 'B', 'C'].map(function (id) {
+              ['C', 'A'].map(function (id) {
                 const meta = themeMeta[id];
                 const active = theme === id;
                 return h('button', {
@@ -2006,6 +2274,24 @@
       };
       window.addEventListener('fingers-open-bibliography', handler);
       return function () { window.removeEventListener('fingers-open-bibliography', handler); };
+    }, []);
+    // Boot theme apply + legacy migration: тема 'B' (Custom blue) удалена,
+    // нормализуем в 'C' (Climbing) если в profile старое значение. Default = C.
+    useEffect(function () {
+      try {
+        const u = HEYS.utils;
+        const raw = u && u.lsGet ? u.lsGet('heys_profile', {}) : {};
+        const fp = (raw && raw.fingerboardProfile) || {};
+        const cur = (fp.themeId === 'A' || fp.themeId === 'C') ? fp.themeId : 'C';
+        if (typeof document !== 'undefined') {
+          document.documentElement.setAttribute('data-fingers-theme', cur);
+        }
+        // Persist обратно если был legacy 'B' или undefined
+        if (cur !== fp.themeId && u && u.lsSet) {
+          const next = Object.assign({}, fp, { themeId: cur });
+          u.lsSet('heys_profile', Object.assign({}, raw, { fingerboardProfile: next }));
+        }
+      } catch (_) {}
     }, []);
     const [pendingProgram, setPendingProgram] = useState(null);
     const [liveActive, setLiveActive] = useState(false);
@@ -2124,10 +2410,22 @@
 
     // Pick program → load exercises into constructor → switch to constructor tab
     const handlePickProgram = useCallback(function (program) {
-      const built = Fingers.buildLogFromProgram
-        ? Fingers.buildLogFromProgram(program.id, userBoard ? Fingers.getBoardById?.(userBoard) : null)
-        : (program.exercises || []);
-      setExercises(built || []);
+      // Generated mix не в catalog — buildLogFromProgram не найдёт его id.
+      // Используем exercises напрямую без mapping'а по board edges.
+      let built;
+      if (program && program.__generated) {
+        built = Array.isArray(program.exercises) ? program.exercises.slice() : [];
+      } else {
+        built = Fingers.buildLogFromProgram
+          ? Fingers.buildLogFromProgram(program.id, userBoard ? Fingers.getBoardById?.(userBoard) : null)
+          : (program.exercises || []);
+        if (!Array.isArray(built) || built.length === 0) {
+          // Fallback: если buildLogFromProgram вернула null (unknown id) —
+          // берём program.exercises как есть.
+          built = Array.isArray(program.exercises) ? program.exercises.slice() : [];
+        }
+      }
+      setExercises(built);
       setPendingProgram(program);
       setTab('constructor');
       // Voice cue
@@ -2465,12 +2763,17 @@
       // Resume banner — постоянный, над табами, пока есть snapshot.
       pendingResume ? (function () {
         const lastTick = Number(pendingResume.lastTickAt) || 0;
+        const ageMs = lastTick ? (Date.now() - lastTick) : 0;
+        const aging = ageMs > 60 * 60 * 1000; // >1h — "давно открыта"
         const ageText = lastTick ? (function () {
-          const mins = Math.max(1, Math.round((Date.now() - lastTick) / 60000));
+          const mins = Math.max(1, Math.round(ageMs / 60000));
           if (mins < 60) return mins + ' мин назад';
           const hrs = Math.floor(mins / 60);
-          const rem = mins % 60;
-          return hrs + 'ч ' + rem + 'мин назад';
+          if (hrs < 24) {
+            const rem = mins % 60;
+            return hrs + 'ч ' + rem + 'мин назад';
+          }
+          return Math.floor(hrs / 24) + ' дн. назад';
         })() : '';
         const progText = (function () {
           const exDone = Number(pendingResume.exIdx) || 0;
@@ -2483,45 +2786,28 @@
         })();
         return h('div', {
           key: 'resume-banner',
-          className: 'fingers-fs-resume-banner',
-          style: {
-            background: 'rgba(245, 158, 11, 0.10)',
-            border: '1px solid rgba(245, 158, 11, 0.30)',
-            borderRadius: 12, padding: '12px 14px',
-            marginBottom: 16,
-            display: 'flex', flexDirection: 'column', gap: 10
-          }
+          className: 'fingers-fs-resume-banner' + (aging ? ' is-aging' : ''),
+          role: 'status',
+          'aria-live': 'polite'
         },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
-            h('span', { style: { fontSize: 18 } }, '⏸'),
-            h('div', { style: { flex: 1, minWidth: 0 } },
-              h('div', { style: { fontWeight: 600, fontSize: 14, color: '#1f2937' } },
-                'Незавершённая тренировка'),
-              h('div', { style: { fontSize: 12, color: '#6b7280', marginTop: 2 } },
-                ageText ? progText + ' · ' + ageText : progText)
-            )
+          h('div', { className: 'fingers-fs-resume-banner__icon', 'aria-hidden': 'true' },
+            aging ? '⏰' : '⏸'),
+          h('div', { className: 'fingers-fs-resume-banner__body' },
+            h('div', { className: 'fingers-fs-resume-banner__title' },
+              aging ? 'Незавершённая сессия' : 'Тренировка на паузе'),
+            h('div', { className: 'fingers-fs-resume-banner__sub' },
+              ageText ? progText + ' · ' + ageText : progText)
           ),
-          h('div', { style: { display: 'flex', gap: 8 } },
+          h('div', { className: 'fingers-fs-resume-banner__actions' },
             h('button', {
               type: 'button',
-              onClick: handleResumeContinue,
-              style: {
-                flex: 1,
-                background: '#f59e0b', color: '#fff',
-                border: 'none', borderRadius: 10,
-                padding: '10px 14px', fontSize: 14, fontWeight: 600,
-                cursor: 'pointer'
-              }
+              className: 'fingers-fs-resume-banner__btn fingers-fs-resume-banner__btn--primary',
+              onClick: handleResumeContinue
             }, 'Продолжить'),
             h('button', {
               type: 'button',
-              onClick: handleResumeDiscard,
-              style: {
-                background: 'transparent', color: '#991b1b',
-                border: '1px solid rgba(220, 38, 38, 0.30)', borderRadius: 10,
-                padding: '10px 14px', fontSize: 14, fontWeight: 500,
-                cursor: 'pointer'
-              }
+              className: 'fingers-fs-resume-banner__btn fingers-fs-resume-banner__btn--secondary',
+              onClick: handleResumeDiscard
             }, 'Удалить')
           )
         );

@@ -298,6 +298,30 @@
       noEquipment: false,
       equipmentReq: 'block',
       minAge: 18
+    },
+    // ─── Hybrid mixed-equipment program (демонстрирует multi-tier модель) ───
+    {
+      id: 'horst_mixed_day',
+      intensity: 'moderate',
+      name: 'Eric Hörst — Mixed Day',
+      description: 'Сбалансированная сессия из трёх блоков на разном оборудовании. 1) Max Hangs 7s на блоке (полузамок, добавочный вес ~50% от твоего max) — 4 подхода по 1 повтору, отдых 3 минуты. 2) Towel pulls на дверном косяке (открытый 4-палец, изометрия 6 секунд × 5) — нагрузка пальцев без виса, восстанавливает связки между max-подходами. 3) Антагонист-резинка на разгибатели (20 повторений × 3) — закрывает сессию профилактикой травм. По методу Hörst-style mixed training: сочетание силового стимула + recovery в одной сессии повышает adaptation efficiency.',
+      level: 'intermediate',
+      durationMin: 45,
+      // Каждое упражнение явно помечено своим tier — это делает программу
+      // мульти-tier (block + door + none), показывается в любом сочетании этих табов.
+      exercises: [
+        { equipmentTier: 'block', gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 180, repsPerSet: 1, setsCount: 4, restBetweenSetsSec: 180 },
+        { equipmentTier: 'door',  gripId: 'openhand4', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 6, restSec: 90, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 },
+        { equipmentTier: 'none',  gripId: 'openhand4', edgeSizeMm: 25, addedWeightKg: 0,
+          hangSec: 1, restSec: 1, repsPerSet: 20, setsCount: 3, restBetweenSetsSec: 60 }
+      ],
+      sourceIds: ['horst_753', 'horst_podcast10', 'schoffl2021'],
+      advisoryBadge: null,
+      // Explicit equipmentTypes — overrides exercise-derived, для canonical UI ordering.
+      equipmentTypes: ['block', 'door', 'none'],
+      minAge: 16
     }
   ];
 
@@ -360,19 +384,59 @@
   }
 
   /**
-   * Фильтр программ по доступному оборудованию (multi-select).
+   * Возвращает массив equipment tier'ов которые программа использует во всех
+   * своих упражнениях. Источники tier'а в порядке приоритета:
+   *   1. exercise.equipmentTier (явное per-exercise указание, для hybrid протоколов)
+   *   2. program.equipmentTypes (явное per-program указание)
+   *   3. derive из program.noEquipment / equipmentReq / edge size
+   *
+   * Возможные tier'ы: 'full' (полный fingerboard), 'block' (hang block),
+   * 'door' (door frame, edge ≥ 25мм), 'none' (без снаряжения).
+   */
+  function getProgramEquipmentTypes(p) {
+    if (!p) return [];
+    // 1. Если у программы явно указан equipmentTypes — используем его (даже если
+    //    у exercises есть свои tier'ы — program-level это canonical set).
+    if (Array.isArray(p.equipmentTypes) && p.equipmentTypes.length > 0) {
+      return p.equipmentTypes.slice();
+    }
+    // 2. Собираем уникальные tier'ы из exercises (если у каждого есть свой).
+    if (Array.isArray(p.exercises) && p.exercises.length > 0) {
+      const exerciseTiers = new Set();
+      let anyExplicit = false;
+      p.exercises.forEach(function (ex) {
+        if (ex && typeof ex.equipmentTier === 'string') {
+          exerciseTiers.add(ex.equipmentTier);
+          anyExplicit = true;
+        }
+      });
+      if (anyExplicit) return Array.from(exerciseTiers);
+    }
+    // 3. Backwards-compat: derive из legacy полей.
+    if (p.noEquipment) return ['none'];
+    if (p.equipmentReq === 'block') return ['block'];
+    if (p.equipmentReq === 'fingerboard') return ['full'];
+    // Без equipmentReq → программа generic (вписывается в full + block).
+    // Если min edge ≥ 25мм — door тоже подходит.
+    const minEdge = Array.isArray(p.exercises)
+      ? p.exercises.reduce(function (m, ex) {
+          const v = Number(ex.edgeSizeMm) || Infinity;
+          return Math.min(m, v);
+        }, Infinity)
+      : Infinity;
+    return minEdge >= 25 ? ['full', 'block', 'door'] : ['full', 'block'];
+  }
+
+  /**
+   * Фильтр программ по выбранному оборудованию (intersection model).
    * @param {Array} programs — список (обычно после ageGate.filterPrograms)
    * @param {object} eq — equipmentTypes: ['full','block','door','none'][]
    *                      Legacy form (noEquipment/blockMode/edgeLimit) ещё
    *                      поддерживается через автоматическую конверсию.
    * @returns {Array}
    *
-   * Программа включается если её equipmentReq совместим хотя бы с одним из
-   * активных типов:
-   *   'full'  → equipmentReq ∈ ['fingerboard', undefined]
-   *   'block' → equipmentReq ∈ ['block', undefined]
-   *   'door'  → equipmentReq === undefined, И min edge ≥ 25мм
-   *   'none'  → noEquipment === true
+   * Программа показывается если её equipmentTypes пересекается хотя бы одним
+   * элементом с user-выбранными tier'ами (intersection ≥ 1).
    */
   function _legacyToTypes(opts) {
     if (Array.isArray(opts.equipmentTypes) && opts.equipmentTypes.length > 0) {
@@ -384,39 +448,17 @@
     return ['full'];
   }
 
-  function _programMatchesType(p, type) {
-    if (type === 'none') return p.noEquipment === true;
-    // noEquipment программы — отдельная категория, не подмножество door/block/full.
-    // Показывать их только когда у юзера активен таб 'none'.
-    if (p.noEquipment) return false;
-    if (type === 'block') {
-      return p.equipmentReq === 'block' || !p.equipmentReq;
-    }
-    if (type === 'door') {
-      if (p.equipmentReq === 'block' || p.equipmentReq === 'fingerboard') return false;
-      const minEdge = Array.isArray(p.exercises)
-        ? p.exercises.reduce(function (m, ex) {
-            const v = Number(ex.edgeSizeMm) || Infinity;
-            return Math.min(m, v);
-          }, Infinity)
-        : Infinity;
-      return minEdge >= 25;
-    }
-    if (type === 'full') {
-      // Полный fingerboard: всё кроме block-only
-      return p.equipmentReq !== 'block';
-    }
-    return false;
-  }
-
   function filterProgramsByEquipment(programs, eq) {
     if (!Array.isArray(programs)) return [];
     const types = _legacyToTypes(eq || {});
+    const typeSet = Object.create(null);
+    types.forEach(function (t) { typeSet[t] = true; });
     return programs.filter(function (p) {
       if (!p) return false;
-      // Программа подходит если совместима хотя бы с одним активным типом.
-      for (let i = 0; i < types.length; i++) {
-        if (_programMatchesType(p, types[i])) return true;
+      const progTypes = getProgramEquipmentTypes(p);
+      // Intersection ≥ 1 → программа подходит.
+      for (let i = 0; i < progTypes.length; i++) {
+        if (typeSet[progTypes[i]]) return true;
       }
       return false;
     });
@@ -429,4 +471,140 @@
   Fingers.getProgramIntensity = getIntensity;
   Fingers.buildLogFromProgram = buildLogFromProgram;
   Fingers.filterProgramsByEquipment = filterProgramsByEquipment;
+  Fingers.getProgramEquipmentTypes = getProgramEquipmentTypes;
+
+  /**
+   * Умный генератор «случайной» тренировки — берёт по одному упражнению
+   * из программ под каждый выбранный пользователем equipment tier, миксует
+   * в одну сессию. Не «чисто random»: respect intensity filter, age gate,
+   * baseline correctness (никаких mono/fullcrimp <18, никаких добавочных
+   * весов на recovery).
+   *
+   * @param {object} opts
+   *   - equipmentTypes: string[] — какие tier'ы включать ('full'|'block'|'door'|'none')
+   *   - intensity: 'all'|'recovery'|'moderate'|'max' — желаемая интенсивность
+   *   - age: number — возраст (для age-gate exercises)
+   *   - readiness: string — 'rest'|'recovery'|'moderate'|'max' (опционально, ceiling)
+   * @returns {object|null} ad-hoc program object или null если генерация невозможна
+   */
+  function generateMixedWorkout(opts) {
+    const o = opts || {};
+    const types = Array.isArray(o.equipmentTypes) && o.equipmentTypes.length
+      ? o.equipmentTypes : ['full'];
+    const desiredIntensity = o.intensity || 'all';
+    const ageNum = Number(o.age);
+    const READINESS_CEILING = { rest: 'recovery', recovery: 'recovery', moderate: 'moderate', max: 'max' };
+    const INTENSITY_RANK = { recovery: 0, moderate: 1, max: 2 };
+    const ceiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
+
+    // Готовим pool кандидатов — все программы из каталога, фильтр по
+    // age + intensity-ceiling.
+    let candidates = PROGRAMS.slice();
+    if (Number.isFinite(ageNum) && Fingers.ageGate && Fingers.ageGate.filterPrograms) {
+      candidates = Fingers.ageGate.filterPrograms(candidates, ageNum);
+    }
+    candidates = candidates.filter(function (p) {
+      const intensity = p.intensity || 'moderate';
+      if (INTENSITY_RANK[intensity] > INTENSITY_RANK[ceiling]) return false;
+      if (desiredIntensity !== 'all' && intensity !== desiredIntensity) return false;
+      return true;
+    });
+
+    if (!candidates.length) return null;
+
+    // Для каждого выбранного tier'а ищем exercise. Source приоритет:
+    //   1. Hybrid программа с exercise.equipmentTier === tier
+    //   2. Программа у которой program-tiers включает tier — берём первое exercise
+    // Сколько упражнений берём с каждого tier'а — зависит от mix intensity:
+    //   recovery: 1 (минимально, бережно)
+    //   moderate: 1 (стандарт)
+    //   max:      2 если есть из чего выбрать (больше объёма)
+    const perTier = desiredIntensity === 'max' ? 2 : 1;
+    const pickedExercises = [];
+    const includedTiers = [];
+    for (let i = 0; i < types.length; i++) {
+      const tier = types[i];
+      const tierCands = candidates.filter(function (p) {
+        const progTiers = getProgramEquipmentTypes(p);
+        return progTiers.indexOf(tier) >= 0;
+      });
+      if (!tierCands.length) continue;
+
+      // Собираем pool всех exercises, подходящих под tier, по всем кандидатам.
+      const pool = [];
+      tierCands.forEach(function (pickProg) {
+        if (!Array.isArray(pickProg.exercises)) return;
+        const tierExercises = pickProg.exercises.filter(function (ex) {
+          return ex && ex.equipmentTier === tier;
+        });
+        const list = tierExercises.length ? tierExercises : pickProg.exercises;
+        list.forEach(function (ex) { pool.push(ex); });
+      });
+      if (!pool.length) continue;
+
+      // Берём перемешанные top-N уникальных exercises (по gripId+edge).
+      const shuffled = pool.slice();
+      for (let j = shuffled.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1));
+        const t = shuffled[j]; shuffled[j] = shuffled[k]; shuffled[k] = t;
+      }
+      const seen = Object.create(null);
+      let taken = 0;
+      for (let j = 0; j < shuffled.length && taken < perTier; j++) {
+        const ex = shuffled[j];
+        const key = ex.gripId + '_' + ex.edgeSizeMm;
+        if (seen[key]) continue;
+        seen[key] = true;
+        pickedExercises.push(Object.assign({}, ex, { equipmentTier: tier }));
+        taken++;
+      }
+      if (taken > 0) includedTiers.push(tier);
+    }
+
+    if (!pickedExercises.length) return null;
+
+    // Сортируем: max → moderate → recovery. Внутри tier'а — без перестановок.
+    // (intensity берётся из исходной программы; используем грубую эвристику
+    // по addedWeightKg — > 0 = max, иначе moderate; recovery — если nature
+    // явно low (hangSec <= 7 без веса).)
+    pickedExercises.sort(function (a, b) {
+      const aIntensity = a.addedWeightKg > 0 ? 'max'
+        : (a.repsPerSet >= 6 ? 'moderate' : 'recovery');
+      const bIntensity = b.addedWeightKg > 0 ? 'max'
+        : (b.repsPerSet >= 6 ? 'moderate' : 'recovery');
+      return INTENSITY_RANK[bIntensity] - INTENSITY_RANK[aIntensity];
+    });
+
+    // Считаем общую длительность.
+    const totalSec = pickedExercises.reduce(function (s, ex) {
+      const setSec = (Number(ex.hangSec) + Number(ex.restSec)) * Number(ex.repsPerSet)
+        + Number(ex.restBetweenSetsSec);
+      return s + setSec * Number(ex.setsCount);
+    }, 0);
+    const totalMin = Math.max(10, Math.round(totalSec / 60));
+
+    // Tier-friendly название.
+    const TIER_LABEL = { full: 'доска', block: 'блок', door: 'дверь', none: 'No-Hangs' };
+    const tierNames = includedTiers.map(function (t) { return TIER_LABEL[t] || t; }).join(' + ');
+
+    return {
+      id: 'generated_mix_' + Date.now(),
+      __generated: true,
+      name: 'Микс-тренировка',
+      description: 'Случайный микс упражнений на ' + tierNames
+        + '. По одному упражнению на каждый выбранный снаряд, в порядке убывания интенсивности. '
+        + 'Сгенерировано автоматически — обнови ниже чтобы получить другой набор.',
+      level: 'mixed',
+      durationMin: totalMin,
+      intensity: desiredIntensity === 'all' ? 'moderate' : desiredIntensity,
+      exercises: pickedExercises,
+      equipmentTypes: includedTiers,
+      sourceIds: [],
+      advisoryBadge: null,
+      noEquipment: false,
+      minAge: 14
+    };
+  }
+
+  Fingers.generateMixedWorkout = generateMixedWorkout;
 })(typeof window !== 'undefined' ? window : globalThis);

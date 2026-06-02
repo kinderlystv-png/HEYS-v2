@@ -29,7 +29,12 @@
 
   if (Fingers.persistence && Fingers.persistence.__registered) return;
 
-  const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+  // Stale = «забытая» сессия. Раньше 1h — слишком жёстко: если закрыл вкладку
+  // вечером и открыл утром, snapshot уже отмечался как stale → resume banner
+  // не появлялся. Расширил до 24h — UI отдельно показывает «давно открыта»
+  // для snapshots старше 1h, чтоб юзер мог решить продолжить или удалить.
+  const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
+  const AGING_THRESHOLD_MS = 60 * 60 * 1000;       // 1 hour — soft "aging" warning
   const DEBOUNCE_MS = 250;
 
   function _getKey() {
