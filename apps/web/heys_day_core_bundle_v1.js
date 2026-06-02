@@ -3632,6 +3632,12 @@
                             const source = lastDayApplySourceRef.current;
 
                             const profNow = getProfile();
+                            // Invalidate LRU cache before reading: hot-sync may have written fresh
+                            // data to LS within the 200ms TTL window, so the cached entry could be
+                            // stale (root cause of STALE-WRITER echo-loop 2026-06-02).
+                            if (_readDayV2Cache) {
+                                _readDayV2Cache.invalidate((HEYS.currentClientId || '') + '|' + date);
+                            }
                             const dayRead = readDayV2(date, lsGet);
                     const key = dayRead.key;
                     const v = dayRead.value;
