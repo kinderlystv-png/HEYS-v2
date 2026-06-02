@@ -10375,12 +10375,18 @@
   // (или после первой неудачной попытки). doClientUpload await'ит это перед
   // отправкой batch'а — закрывает boot race window где saves успевают уйти
   // ДО завершения issue_write_context (~80-200ms RPC roundtrip).
-  cloud._writeContextReady = null; // Promise<context|null>
+	  cloud._writeContextReady = null; // Promise<context|null>
 
-  cloud._issueWriteContext = async function (targetClientId) {
-    // Возвращаем in-flight promise при concurrent issue (типа boot + первый save fire).
-    if (cloud._writeContextReady && !cloud._writeContextReady._settled) {
-      return cloud._writeContextReady;
+	  cloud._issueWriteContext = async function (targetClientId) {
+	    const isPinAuthTarget = !!(_pinAuthClientId && _pinAuthClientId === targetClientId && !user);
+	    if (isPinAuthTarget || cloud.isPinAuthClient?.() === true) {
+	      cloud._writeContext = null;
+	      cloud._writeContextReady = null;
+	      return null;
+	    }
+	    // Возвращаем in-flight promise при concurrent issue (типа boot + первый save fire).
+	    if (cloud._writeContextReady && !cloud._writeContextReady._settled) {
+	      return cloud._writeContextReady;
     }
     let resolvePromise;
     const p = new Promise(resolve => { resolvePromise = resolve; });
@@ -10439,10 +10445,12 @@
       try {
         const detail = e?.detail || {};
         if (detail.error) return;
-        const cid = detail.clientId || global.HEYS?.currentClientId;
-        if (!cid) return;
-        // Re-issue только если current context для другого клиента (или нет
-        // вообще). Hot-syncs того же клиента → no-op (context живёт 24h).
+	        const cid = detail.clientId || global.HEYS?.currentClientId;
+	        if (!cid) return;
+	        const isPinAuthTarget = !!(_pinAuthClientId && _pinAuthClientId === cid && !user);
+	        if (isPinAuthTarget || cloud.isPinAuthClient?.() === true) return;
+	        // Re-issue только если current context для другого клиента (или нет
+	        // вообще). Hot-syncs того же клиента → no-op (context живёт 24h).
         if (cloud._writeContext && cloud._writeContext.clientId === cid &&
             cloud._lastIssuedForClientId === cid) return;
         cloud._lastIssuedForClientId = cid;
