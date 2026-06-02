@@ -35,8 +35,25 @@
                     await Promise.all(registrations.map(reg => reg.unregister()));
                 }
 
-                // Очищаем sessionStorage
-                sessionStorage.clear();
+                // Очищаем sessionStorage, сохраняя drop fences (incident #11, 2026-06-02):
+                // recovery flow не должен сносить `heys_drop_fence_*` — иначе после reload
+                // re-pollution race снова откроется. См. clearSessionStoragePreservingDropFences
+                // в heys_platform_apis_v1.js L83 (single source of truth для preserve логики).
+                try {
+                    const preserved = [];
+                    for (let i = 0; i < sessionStorage.length; i++) {
+                        const key = sessionStorage.key(i);
+                        if (key && key.startsWith('heys_drop_fence_')) {
+                            preserved.push([key, sessionStorage.getItem(key)]);
+                        }
+                    }
+                    sessionStorage.clear();
+                    preserved.forEach(([k, v]) => {
+                        if (v !== null) sessionStorage.setItem(k, v);
+                    });
+                } catch (_) {
+                    try { sessionStorage.clear(); } catch (__) { /* noop */ }
+                }
 
                 // Перезагружаем
                 window.location.reload();

@@ -83,6 +83,14 @@ node scripts/lint-unscoped-client-writes.mjs || {
   exit 1
 }
 
+echo "🔒 Проверка raw sessionStorage.clear() (drop fence preservation guard)..."
+node scripts/lint-raw-session-clear.mjs || {
+  echo "❌ Найден raw sessionStorage.clear() — сносит heys_drop_fence_*."
+  echo "💡 Используй clearSessionStoragePreservingDropFences() или inline preserve,"
+  echo "   либо добавь сайт в scripts/raw-session-clear-allowlist.txt с обоснованием."
+  exit 1
+}
+
 echo "🔍 Проверка React.startTransition counter (anti-pattern guard, warn-only)..."
 node scripts/lint-react-start-transition.mjs || true
 

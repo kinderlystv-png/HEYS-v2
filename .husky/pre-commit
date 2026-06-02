@@ -16,3 +16,9 @@ if ! git diff --quiet scripts/bootstrap-bypass-allowlist.txt 2>/dev/null; then
   echo "[pre-commit] 🔧 Allowlist line drift auto-fixed — staging update."
   git add scripts/bootstrap-bypass-allowlist.txt
 fi
+
+node scripts/lint-raw-session-clear.mjs --auto-fix > /dev/null 2>&1 || true
+if ! git diff --quiet scripts/raw-session-clear-allowlist.txt 2>/dev/null; then
+  echo "[pre-commit] 🔧 raw-session-clear allowlist line drift auto-fixed — staging update."
+  git add scripts/raw-session-clear-allowlist.txt
+fi

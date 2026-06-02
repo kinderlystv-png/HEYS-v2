@@ -4190,7 +4190,12 @@
 
   if (Fingers.persistence && Fingers.persistence.__registered) return;
 
-  const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+  // Stale = «забытая» сессия. Раньше 1h — слишком жёстко: если закрыл вкладку
+  // вечером и открыл утром, snapshot уже отмечался как stale → resume banner
+  // не появлялся. Расширил до 24h — UI отдельно показывает «давно открыта»
+  // для snapshots старше 1h, чтоб юзер мог решить продолжить или удалить.
+  const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
+  const AGING_THRESHOLD_MS = 60 * 60 * 1000;       // 1 hour — soft "aging" warning
   const DEBOUNCE_MS = 250;
 
   function _getKey() {
@@ -8325,6 +8330,14 @@
       { id: 'max',      label: 'Максимум',      emoji: '🔥' }
     ];
 
+    // Readiness banner — широкая карточка наверху, читает cooldownCheck.
+    // Намеренно отличается от pill-фильтра ниже: горизонтальный layout с
+    // крупной иконкой и подзаголовком — пользователь видит «что советует
+    // организм», а ниже сам выбирает чем фильтровать.
+    const cool = (Fingers.cooldownCheck && typeof Fingers.cooldownCheck === 'function')
+      ? (function () { try { return Fingers.cooldownCheck(); } catch (_) { return null; } })()
+      : null;
+
     // Readiness-aware launch guard. Сравниваем intensity протокола с тем,
     // что разрешает cooldown (rest/recovery → не выше recovery; moderate →
     // не выше moderate). Если выше — перехватываем onPickProgram и просим
@@ -8342,14 +8355,6 @@
       }
       onPickProgram(program);
     }, [cool, onPickProgram]);
-
-    // Readiness banner — широкая карточка наверху, читает cooldownCheck.
-    // Намеренно отличается от pill-фильтра ниже: горизонтальный layout с
-    // крупной иконкой и подзаголовком — пользователь видит «что советует
-    // организм», а ниже сам выбирает чем фильтровать.
-    const cool = (Fingers.cooldownCheck && typeof Fingers.cooldownCheck === 'function')
-      ? (function () { try { return Fingers.cooldownCheck(); } catch (_) { return null; } })()
-      : null;
     let readinessBanner = null;
     if (cool) {
       const READINESS_MAP = {
@@ -8961,6 +8966,13 @@
     let totalMinutes = 0;
     const lastSessions = [];
     let streakBroken = false;
+    // Weekly volume: 12 недель, считаем минуты на каждую (индекс 0 = текущая,
+    // 11 = 11 недель назад). Для bar-chart на UI.
+    const weeklyVolume = new Array(12).fill(0);
+    // Grip usage: считаем сколько раз каждый gripId встречался в exercises.
+    const gripUsage = Object.create(null);
+    // Recent PRs: PR с testedAt в последние 30 дней — отдельная highlight-секция.
+    // (PR-список читается напрямую из Fingers.records.get() в ProgressTab.)
 
     for (let i = 0; i < 365; i++) {
       const d = new Date(today);
@@ -8987,6 +8999,20 @@
           totalHolds += Array.isArray(log.holds) ? log.holds.length : 0;
           const dur = Number(log.totalDurationMinutes) || 0;
           totalMinutes += dur;
+          // Weekly volume — кладём в bucket по неделям (i / 7).
+          const weekIdx = Math.floor(i / 7);
+          if (weekIdx < 12) weeklyVolume[weekIdx] += dur;
+          // Grip usage — считаем уникальные хваты по exercises (без повторных
+          // подсчётов одного gripId в одной сессии).
+          const usedInSession = Object.create(null);
+          if (Array.isArray(log.exercises)) {
+            log.exercises.forEach(function (ex) {
+              if (ex && ex.gripId && !usedInSession[ex.gripId]) {
+                usedInSession[ex.gripId] = true;
+                gripUsage[ex.gripId] = (gripUsage[ex.gripId] || 0) + 1;
+              }
+            });
+          }
           if (lastSessions.length < 5) {
             const intensity = typeof Fingers.getProgramIntensity === 'function'
               ? Fingers.getProgramIntensity(log.programId)
@@ -9010,7 +9036,9 @@
       totalSessions: totalSessions,
       totalHolds: totalHolds,
       totalMinutes: totalMinutes,
-      lastSessions: lastSessions
+      lastSessions: lastSessions,
+      weeklyVolume: weeklyVolume,
+      gripUsage: gripUsage
     };
   }
 
@@ -9087,6 +9115,41 @@
         )
       ),
 
+      // ─── Weekly volume chart (12 недель) ────────────────────────────────
+      (function () {
+        const wv = stats.weeklyVolume || [];
+        const maxV = Math.max.apply(null, wv);
+        if (maxV <= 0) return null; // нет данных
+        // Реверс — слева 11 недель назад, справа сегодняшняя.
+        const bars = wv.slice().reverse();
+        return h('section', { className: 'fingers-fs-progress-section' },
+          h('div', { className: 'fingers-fs-progress-section__header' },
+            h('h3', { className: 'fingers-fs-progress-section__title' }, 'Недельный объём'),
+            h('span', { className: 'fingers-fs-progress-section__hint' }, '12 недель · минут')
+          ),
+          h('div', { className: 'fingers-fs-volume-chart' },
+            bars.map(function (val, idx) {
+              const heightPct = Math.max(2, Math.round((val / maxV) * 100));
+              const isCurrent = idx === bars.length - 1;
+              const weeksAgo = bars.length - 1 - idx;
+              const label = weeksAgo === 0 ? 'эта неделя' : weeksAgo + ' нед назад';
+              return h('div', {
+                key: idx,
+                className: 'fingers-fs-volume-chart__bar-wrap',
+                title: label + ': ' + Math.round(val) + ' мин'
+              },
+                h('div', {
+                  className: 'fingers-fs-volume-chart__bar' + (isCurrent ? ' is-current' : ''),
+                  style: { height: heightPct + '%' }
+                },
+                  val > 0 ? h('span', { className: 'fingers-fs-volume-chart__bar-value' }, Math.round(val)) : null
+                )
+              );
+            })
+          )
+        );
+      })(),
+
       // ─── Cooldown card (если recovery) ────────────────────────────────
       cooldown && !cooldown.allowedNow && h('div', { className: 'fingers-fs-progress-cooldown' },
         h('div', { className: 'fingers-fs-progress-cooldown__icon', 'aria-hidden': 'true' }, '🛡'),
@@ -9149,6 +9212,99 @@
           h('span', { 'aria-hidden': 'true' }, '📅'),
           ' Пора re-test (прошло больше 8 недель с последнего MVC теста).')
       ),
+
+      // ─── Recent PRs (последние 30 дней) ──────────────────────────────
+      (function () {
+        const allRecords = (Fingers.records && Fingers.records.get) ? Fingers.records.get() : null;
+        if (!allRecords || !allRecords.maxHangs) return null;
+        const cutoff = Date.now() - 30 * 86400000;
+        const recent = [];
+        Object.keys(allRecords.maxHangs).forEach(function (slug) {
+          const r = allRecords.maxHangs[slug];
+          if (!r || !r.testedAt) return;
+          const t = Date.parse(r.testedAt);
+          if (!isFinite(t) || t < cutoff) return;
+          const m = /^(.+?)_(\d+)mm$/.exec(slug);
+          const grip = m && Fingers.getGripById ? Fingers.getGripById(m[1]) : null;
+          recent.push({
+            slug: slug,
+            label: (grip && grip.label) || (m ? m[1] : slug),
+            edge: m ? m[2] : '—',
+            value: r.type === 'weight'
+              ? (r.mvcKg ? r.mvcKg.toFixed(1) + ' кг' : '—')
+              : (r.holdTime ? r.holdTime.toFixed(1) + ' с' : '—'),
+            daysAgo: Math.max(0, Math.floor((Date.now() - t) / 86400000)),
+            ts: t
+          });
+        });
+        if (recent.length === 0) return null;
+        recent.sort(function (a, b) { return b.ts - a.ts; });
+        return h('section', { className: 'fingers-fs-progress-section' },
+          h('div', { className: 'fingers-fs-progress-section__header' },
+            h('h3', { className: 'fingers-fs-progress-section__title' }, 'Свежие PR'),
+            h('span', { className: 'fingers-fs-progress-section__hint' }, 'за 30 дней')
+          ),
+          h('div', { className: 'fingers-fs-recent-prs' },
+            recent.slice(0, 5).map(function (r) {
+              return h('div', { key: r.slug, className: 'fingers-fs-recent-pr' },
+                h('span', { className: 'fingers-fs-recent-pr__icon', 'aria-hidden': 'true' }, '🏆'),
+                h('div', { className: 'fingers-fs-recent-pr__body' },
+                  h('div', { className: 'fingers-fs-recent-pr__main' },
+                    h('span', { className: 'fingers-fs-recent-pr__grip' }, r.label),
+                    h('span', { className: 'fingers-fs-recent-pr__edge' }, r.edge + ' мм')
+                  ),
+                  h('div', { className: 'fingers-fs-recent-pr__meta' },
+                    r.daysAgo === 0 ? 'сегодня'
+                      : r.daysAgo === 1 ? 'вчера'
+                      : r.daysAgo + ' дн. назад')
+                ),
+                h('div', { className: 'fingers-fs-recent-pr__value' }, r.value)
+              );
+            })
+          )
+        );
+      })(),
+
+      // ─── Grip distribution: какие хваты юзер тренирует чаще ─────────
+      (function () {
+        const usage = stats.gripUsage || {};
+        const entries = Object.keys(usage).map(function (g) { return [g, usage[g]]; });
+        if (entries.length === 0) return null;
+        entries.sort(function (a, b) { return b[1] - a[1]; });
+        const total = entries.reduce(function (s, e) { return s + e[1]; }, 0);
+        const maxV = entries[0][1];
+        return h('section', { className: 'fingers-fs-progress-section' },
+          h('div', { className: 'fingers-fs-progress-section__header' },
+            h('h3', { className: 'fingers-fs-progress-section__title' }, 'Хваты в работе'),
+            h('span', { className: 'fingers-fs-progress-section__hint' },
+              entries.length + (entries.length === 1 ? ' хват' : entries.length < 5 ? ' хвата' : ' хватов'))
+          ),
+          h('div', { className: 'fingers-fs-grip-dist' },
+            entries.map(function (e) {
+              const gid = e[0];
+              const cnt = e[1];
+              const pct = Math.round((cnt / total) * 100);
+              const widthPct = Math.max(4, Math.round((cnt / maxV) * 100));
+              const grip = Fingers.getGripById ? Fingers.getGripById(gid) : null;
+              const label = (grip && grip.label) || gid;
+              const icon = (grip && grip.icon) || '';
+              return h('div', { key: gid, className: 'fingers-fs-grip-dist__row' },
+                h('div', { className: 'fingers-fs-grip-dist__label' },
+                  icon ? h('span', { 'aria-hidden': 'true' }, icon + ' ') : null,
+                  label
+                ),
+                h('div', { className: 'fingers-fs-grip-dist__bar-track' },
+                  h('div', {
+                    className: 'fingers-fs-grip-dist__bar-fill',
+                    style: { width: widthPct + '%' }
+                  })
+                ),
+                h('div', { className: 'fingers-fs-grip-dist__count' }, cnt + ' · ' + pct + '%')
+              );
+            })
+          )
+        );
+      })(),
 
       // ─── Last sessions ─────────────────────────────────────────────────
       stats.lastSessions.length > 0 && h('section', { className: 'fingers-fs-progress-section' },
@@ -9317,6 +9473,10 @@
           try { cycle.abort(); } catch (_) {}
           if (onAbort) onAbort();
         };
+        // По умолчанию snapshot переживает abort — юзер сам решает «продолжить»
+        // или «удалить» через resume-banner после возврата. Очистка происходит
+        // только в одном явном случае: «Записать как частично» (см. ниже).
+        keepSnapshotOnAbortRef.current = true;
         if (!HEYS.ConfirmModal?.show) { finalize(); return; }
         // Snap progress в момент клика (closure ловит свежие значения).
         const doneExercises = exIdx;
@@ -9327,7 +9487,7 @@
         HEYS.ConfirmModal.show({
           icon: '⚠',
           title: 'Прервать тренировку?',
-          text: 'Текущая фаза не будет засчитана.',
+          text: 'Сессия останется как «незавершённая» — сможешь продолжить позже.',
           confirmText: 'Прервать',
           cancelText: 'Продолжить',
           confirmStyle: 'warning',
@@ -10342,12 +10502,17 @@
       // Resume banner — постоянный, над табами, пока есть snapshot.
       pendingResume ? (function () {
         const lastTick = Number(pendingResume.lastTickAt) || 0;
+        const ageMs = lastTick ? (Date.now() - lastTick) : 0;
+        const aging = ageMs > 60 * 60 * 1000; // >1h — "давно открыта"
         const ageText = lastTick ? (function () {
-          const mins = Math.max(1, Math.round((Date.now() - lastTick) / 60000));
+          const mins = Math.max(1, Math.round(ageMs / 60000));
           if (mins < 60) return mins + ' мин назад';
           const hrs = Math.floor(mins / 60);
-          const rem = mins % 60;
-          return hrs + 'ч ' + rem + 'мин назад';
+          if (hrs < 24) {
+            const rem = mins % 60;
+            return hrs + 'ч ' + rem + 'мин назад';
+          }
+          return Math.floor(hrs / 24) + ' дн. назад';
         })() : '';
         const progText = (function () {
           const exDone = Number(pendingResume.exIdx) || 0;
@@ -10360,45 +10525,28 @@
         })();
         return h('div', {
           key: 'resume-banner',
-          className: 'fingers-fs-resume-banner',
-          style: {
-            background: 'rgba(245, 158, 11, 0.10)',
-            border: '1px solid rgba(245, 158, 11, 0.30)',
-            borderRadius: 12, padding: '12px 14px',
-            marginBottom: 16,
-            display: 'flex', flexDirection: 'column', gap: 10
-          }
+          className: 'fingers-fs-resume-banner' + (aging ? ' is-aging' : ''),
+          role: 'status',
+          'aria-live': 'polite'
         },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
-            h('span', { style: { fontSize: 18 } }, '⏸'),
-            h('div', { style: { flex: 1, minWidth: 0 } },
-              h('div', { style: { fontWeight: 600, fontSize: 14, color: '#1f2937' } },
-                'Незавершённая тренировка'),
-              h('div', { style: { fontSize: 12, color: '#6b7280', marginTop: 2 } },
-                ageText ? progText + ' · ' + ageText : progText)
-            )
+          h('div', { className: 'fingers-fs-resume-banner__icon', 'aria-hidden': 'true' },
+            aging ? '⏰' : '⏸'),
+          h('div', { className: 'fingers-fs-resume-banner__body' },
+            h('div', { className: 'fingers-fs-resume-banner__title' },
+              aging ? 'Незавершённая сессия' : 'Тренировка на паузе'),
+            h('div', { className: 'fingers-fs-resume-banner__sub' },
+              ageText ? progText + ' · ' + ageText : progText)
           ),
-          h('div', { style: { display: 'flex', gap: 8 } },
+          h('div', { className: 'fingers-fs-resume-banner__actions' },
             h('button', {
               type: 'button',
-              onClick: handleResumeContinue,
-              style: {
-                flex: 1,
-                background: '#f59e0b', color: '#fff',
-                border: 'none', borderRadius: 10,
-                padding: '10px 14px', fontSize: 14, fontWeight: 600,
-                cursor: 'pointer'
-              }
+              className: 'fingers-fs-resume-banner__btn fingers-fs-resume-banner__btn--primary',
+              onClick: handleResumeContinue
             }, 'Продолжить'),
             h('button', {
               type: 'button',
-              onClick: handleResumeDiscard,
-              style: {
-                background: 'transparent', color: '#991b1b',
-                border: '1px solid rgba(220, 38, 38, 0.30)', borderRadius: 10,
-                padding: '10px 14px', fontSize: 14, fontWeight: 500,
-                cursor: 'pointer'
-              }
+              className: 'fingers-fs-resume-banner__btn fingers-fs-resume-banner__btn--secondary',
+              onClick: handleResumeDiscard
             }, 'Удалить')
           )
         );

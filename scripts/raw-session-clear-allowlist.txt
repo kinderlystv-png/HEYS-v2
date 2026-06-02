@@ -1,0 +1,21 @@
+# Allowlist for raw `sessionStorage.clear()` calls
+# Format: relative/path:lineNumber (lines starting with `#` are comments)
+#
+# Drop fences (`heys_drop_fence_*`) MUST survive sessionStorage clears, иначе
+# re-pollution race снова открывается. Все НЕ-allowlist сайты обязаны
+# использовать `clearSessionStoragePreservingDropFences()` или inline-preserve.
+#
+# Каждая запись — намеренный raw clear с обоснованием:
+
+# Helper sam — preserve логика реализована вокруг этого clear (L83-L114 файла).
+apps/web/heys_platform_apis_v1.js:98
+
+# Account deletion flow — пользователь удалён, фенс уже не нужен.
+apps/web/heys_consents_v1.js:303
+
+# Recovery preserve pattern в RecoveryScreen.handleClearCache — clear после
+# сбора `heys_drop_fence_*` в `preserved`, затем restore. L50 — clear фазы
+# preserve-then-restore, L55 — last-resort fallback внутри catch (preserve loop
+# сам упал, sessionStorage broken — acceptable fence loss).
+apps/web/heys_app_root_component_v1.js:50
+apps/web/heys_app_root_component_v1.js:55
