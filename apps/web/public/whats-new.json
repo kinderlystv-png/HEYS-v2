@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.06.02.PLACEHOL",
-      "buildHash": "PLACEHOL",
+      "version": "2026.06.02.e2b4ec8d",
+      "buildHash": "e2b4ec8d",
       "date": "2026-06-02",
       "kind": "user-facing",
       "profile": "user-facing-general",
