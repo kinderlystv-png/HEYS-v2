@@ -111,15 +111,14 @@ apps/web/heys_day_storage_v1.js:28
 apps/web/heys_day_utils.js:48
 apps/web/heys_day_utils.js:470
 apps/web/heys_day_hooks.js:39
-apps/web/heys_fingers_bundle_v1.js:2852
-apps/web/heys_fingers_bundle_v1.js:3244
-apps/web/heys_fingers_bundle_v1.js:3509
-apps/web/heys_fingers_bundle_v1.js:4385
-apps/web/heys_fingers_bundle_v1.js:4465
-apps/web/heys_fingers_bundle_v1.js:7237
-apps/web/heys_fingers_bundle_v1.js:11400
-# new setItem from parallel agent fingers work — bundle regen on commit
-apps/web/heys_fingers_bundle_v1.js:11448
+# fingers bundle — regen after d4e9761d feat(fingers) shifted line numbers
+apps/web/heys_fingers_bundle_v1.js:2871
+apps/web/heys_fingers_bundle_v1.js:3263
+apps/web/heys_fingers_bundle_v1.js:3528
+apps/web/heys_fingers_bundle_v1.js:4404
+apps/web/heys_fingers_bundle_v1.js:4484
+apps/web/heys_fingers_bundle_v1.js:7256
+apps/web/heys_fingers_bundle_v1.js:11529
 apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
