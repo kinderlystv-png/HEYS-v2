@@ -3642,16 +3642,66 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
     }
 
     var _lazyTabCache = Object.create(null);
+    function _waitForLazyTabReady(loaderKey, getComp, options) {
+        var timeoutMs = (options && options.timeoutMs) || 8000;
+        var intervalMs = (options && options.intervalMs) || 50;
+        var startedAt = Date.now();
+
+        return new Promise(function (resolve, reject) {
+            function tick() {
+                try {
+                    var comp = getComp();
+                    if (comp) {
+                        resolve(comp);
+                        return;
+                    }
+
+                    var loadFn = window.HEYS && window.HEYS[loaderKey];
+                    if (typeof loadFn === 'function') {
+                        Promise.resolve(loadFn()).then(function () {
+                            var loadedComp = getComp();
+                            if (loadedComp) {
+                                resolve(loadedComp);
+                                return;
+                            }
+                            if (Date.now() - startedAt >= timeoutMs) {
+                                reject(new Error('lazy component not registered: ' + loaderKey));
+                                return;
+                            }
+                            setTimeout(tick, intervalMs);
+                        }).catch(function (error) {
+                            reject(error);
+                        });
+                        return;
+                    }
+
+                    if (Date.now() - startedAt >= timeoutMs) {
+                        reject(new Error('lazy loader not registered: ' + loaderKey));
+                        return;
+                    }
+                } catch (error) {
+                    reject(error);
+                    return;
+                }
+
+                setTimeout(tick, intervalMs);
+            }
+
+            tick();
+        });
+    }
+
     function _lazyTab(key, loaderKey, getComp) {
         if (!_lazyTabCache[key]) {
             _lazyTabCache[key] = React.lazy(function () {
-                var loadFn = window.HEYS && window.HEYS[loaderKey];
-                var p = loadFn ? loadFn() : Promise.resolve();
-                return p.then(function () {
-                    var comp = getComp();
-                    return { default: comp || function _LazyTabPlaceholder() { return null; } };
+                return _waitForLazyTabReady(loaderKey, getComp).then(function (comp) {
+                    return { default: comp };
                 }).catch(function () {
-                    return { default: function _LazyTabError() { return null; } };
+                    return {
+                        default: function _LazyTabError() {
+                            return tabFallbackSkeleton('⚠️', 'Модуль не загрузился. Обнови экран.', 0);
+                        }
+                    };
                 });
             });
         }
