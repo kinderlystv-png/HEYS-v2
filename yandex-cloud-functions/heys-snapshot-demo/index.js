@@ -195,7 +195,8 @@ async function fetchPlainKvKeys(dbClient, clientId, daysToInclude) {
         AND v_encrypted IS NULL
         AND (
           k IN ('heys_norms', 'heys_deleted_ids', 'heys_hr_zones', 'heys_ratio_zones',
-                'heys_planning_projects', 'heys_planning_tasks', 'heys_planning_slots', 'heys_planning_links_v1')
+                'heys_planning_projects', 'heys_planning_tasks', 'heys_planning_slots', 'heys_planning_links_v1',
+                'heys_planning_chrono_activities', 'heys_planning_chrono_entries', 'heys_planning_chrono_snapshots')
           OR (k LIKE 'heys_dayv2_____-__-__' AND k > 'heys_dayv2_' || (CURRENT_DATE - $2::int)::text)
         )
       ORDER BY k`,

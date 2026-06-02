@@ -34,17 +34,32 @@
     ];
 
     const DEFAULT_ACTIVITIES = [
-        { name: 'Поиграл с ребёнком', emoji: '👶' },
-        { name: 'Работа на студии', emoji: '🎨' },
-        { name: 'Залип в телефоне', emoji: '📱' },
-        { name: 'Программирование', emoji: '💻' },
-        { name: 'Спорт', emoji: '🏃' },
-        { name: 'Чтение', emoji: '📚' },
-        { name: 'Домашние дела', emoji: '🧹' },
-        { name: 'Отдых', emoji: '😴' },
+        { name: 'Поиграл с ребёнком', emoji: '👶', category: 'care' },
+        { name: 'Работа на студии', emoji: '🎨', category: 'focus' },
+        { name: 'Залип в телефоне', emoji: '📱', category: 'drain' },
+        { name: 'Программирование', emoji: '💻', category: 'focus' },
+        { name: 'Спорт', emoji: '🏃', category: 'health' },
+        { name: 'Чтение', emoji: '📚', category: 'growth' },
+        { name: 'Домашние дела', emoji: '🧹', category: 'errands' },
+        { name: 'Отдых', emoji: '😴', category: 'recovery' },
     ];
 
     const TOAST_TIMEOUT_MS = 5000;
+
+    const CHRONO_CATEGORIES = [
+        { id: 'focus', label: 'Фокус', short: 'Фокус', tone: 'blue' },
+        { id: 'growth', label: 'Рост', short: 'Рост', tone: 'green' },
+        { id: 'health', label: 'Здоровье', short: 'Здоровье', tone: 'teal' },
+        { id: 'care', label: 'Семья', short: 'Семья', tone: 'rose' },
+        { id: 'errands', label: 'Быт', short: 'Быт', tone: 'slate' },
+        { id: 'recovery', label: 'Восстановление', short: 'Восст.', tone: 'amber' },
+        { id: 'drain', label: 'Потери', short: 'Потери', tone: 'red' },
+    ];
+
+    const CHRONO_CATEGORY_BY_ID = CHRONO_CATEGORIES.reduce((acc, item) => {
+        acc[item.id] = item;
+        return acc;
+    }, {});
 
     // === Чистые функции ===
 
@@ -95,6 +110,135 @@
         if (!timer) return 0;
         const plannedMs = Math.max(0, Number(timer.plannedMinutes) || 0) * 60 * 1000;
         return Math.max(0, plannedMs - getTimerElapsedMs(timer, nowMs));
+    }
+
+    function inferActivityCategory(activity) {
+        if (!activity) return 'focus';
+        const explicit = String(activity.category || '').trim();
+        if (CHRONO_CATEGORY_BY_ID[explicit]) return explicit;
+        const text = String(activity.name || '').toLowerCase();
+        if (/телефон|соц|scroll|ютуб|youtube|игр/.test(text)) return 'drain';
+        if (/спорт|трен|бег|зал|йога|здоров/.test(text)) return 'health';
+        if (/реб|сем|сын|доч|жена|муж/.test(text)) return 'care';
+        if (/дом|убор|дела|магаз|быт/.test(text)) return 'errands';
+        if (/сон|отдых|релакс|медитац/.test(text)) return 'recovery';
+        if (/чтен|учеб|книг|курс/.test(text)) return 'growth';
+        return 'focus';
+    }
+
+    function getCategoryMeta(categoryId) {
+        return CHRONO_CATEGORY_BY_ID[categoryId] || CHRONO_CATEGORY_BY_ID.focus;
+    }
+
+    function buildCategoryBalance(activities, minutesByActivity) {
+        const totals = {};
+        let total = 0;
+        (Array.isArray(activities) ? activities : []).forEach((activity) => {
+            if (!activity || activity.archived) return;
+            const minutes = Math.round(Number(minutesByActivity && minutesByActivity[activity.id]) || 0);
+            if (minutes <= 0) return;
+            const category = inferActivityCategory(activity);
+            totals[category] = (totals[category] || 0) + minutes;
+            total += minutes;
+        });
+        return CHRONO_CATEGORIES
+            .map((category) => ({
+                ...category,
+                minutes: totals[category.id] || 0,
+                pct: total > 0 ? Math.round(((totals[category.id] || 0) / total) * 100) : 0,
+            }))
+            .filter((item) => item.minutes > 0)
+            .sort((a, b) => b.minutes - a.minutes);
+    }
+
+    function buildDayTimeline(entries, activities, date) {
+        const activityById = new Map((Array.isArray(activities) ? activities : []).map((a) => [a.id, a]));
+        return (Array.isArray(entries) ? entries : [])
+            .filter((entry) => entry && entry.date === date)
+            .map((entry) => {
+                const activity = activityById.get(entry.activityId) || {};
+                return {
+                    ...entry,
+                    activity,
+                    category: inferActivityCategory(activity),
+                };
+            })
+            .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+    }
+
+    function buildSmartSuggestions(activity, entries, activeDate) {
+        if (!activity) return [];
+        const list = (Array.isArray(entries) ? entries : []).filter((entry) => entry && entry.activityId === activity.id);
+        const sorted = list.slice().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+        const suggestions = [];
+        const last = sorted[0];
+        if (last && Number(last.minutes) > 0) {
+            suggestions.push({ id: 'last', label: `Повторить ${formatMinutes(last.minutes)}`, minutes: Number(last.minutes) });
+        }
+        const yesterday = Utils.addDays(activeDate || Utils.dateStr(), -1);
+        const yesterdayTotal = list
+            .filter((entry) => entry.date === yesterday)
+            .reduce((sum, entry) => sum + (Number(entry.minutes) || 0), 0);
+        if (yesterdayTotal > 0) {
+            suggestions.push({ id: 'yesterday', label: `Как вчера: ${formatMinutes(yesterdayTotal)}`, minutes: yesterdayTotal });
+        }
+        const sameDayTotals = {};
+        list.forEach((entry) => {
+            if (!entry.date || entry.date === activeDate) return;
+            sameDayTotals[entry.date] = (sameDayTotals[entry.date] || 0) + (Number(entry.minutes) || 0);
+        });
+        const totals = Object.values(sameDayTotals).filter((m) => m > 0).sort((a, b) => a - b);
+        if (totals.length >= 3) {
+            const median = Math.round(totals[Math.floor(totals.length / 2)] / 5) * 5;
+            if (median > 0 && !suggestions.some((s) => s.minutes === median)) {
+                suggestions.push({ id: 'typical', label: `Типично: ${formatMinutes(median)}`, minutes: median });
+            }
+        }
+        return suggestions.slice(0, 3);
+    }
+
+    function buildWeeklyReport(activities, entries, snapshots, weekDates, minutesByActivity) {
+        const total = Object.values(minutesByActivity || {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
+        if (total <= 0) return null;
+        const balance = buildCategoryBalance(activities, minutesByActivity);
+        const activeItems = (Array.isArray(activities) ? activities : [])
+            .filter((activity) => activity && !activity.archived)
+            .map((activity) => ({
+                activity,
+                minutes: Math.round(Number(minutesByActivity && minutesByActivity[activity.id]) || 0),
+            }))
+            .filter((item) => item.minutes > 0)
+            .sort((a, b) => b.minutes - a.minutes);
+        const breakdown = buildWeekBreakdown(entries, snapshots, weekDates);
+        let bestDay = null;
+        (Array.isArray(weekDates) ? weekDates : []).forEach((date) => {
+            const value = breakdown[date]?.__total || 0;
+            if (!bestDay || value > bestDay.minutes) bestDay = { date, minutes: value };
+        });
+        const focusMinutes = balance
+            .filter((item) => item.id === 'focus' || item.id === 'growth' || item.id === 'health')
+            .reduce((sum, item) => sum + item.minutes, 0);
+        const drainMinutes = balance.find((item) => item.id === 'drain')?.minutes || 0;
+        const score = Math.max(0, Math.min(100, Math.round((focusMinutes / total) * 100 - (drainMinutes / total) * 30 + 20)));
+        const headline = score >= 75
+            ? 'Неделя собрана'
+            : score >= 50
+                ? 'Неделя в балансе'
+                : 'Неделя требует чистки';
+        const recommendation = drainMinutes > focusMinutes * 0.35
+            ? 'Срежь потери на 30 минут и отдай их фокусу.'
+            : focusMinutes < total * 0.4
+                ? 'Добавь один блок фокуса на 45 минут.'
+                : 'Сохраняй ритм: фокус уже держит структуру недели.';
+        return {
+            total,
+            score,
+            headline,
+            recommendation,
+            top: activeItems[0] || null,
+            bestDay,
+            balance: balance.slice(0, 4),
+        };
     }
 
     function getTaskLabel(task, projects) {
@@ -191,15 +335,7 @@
             });
         }
 
-        if (total > 0) {
-            insights.push({
-                kind: 'total',
-                title: 'Всего',
-                value: formatMinutes(total),
-                detail: `${active.length} активн. дел`,
-            });
-        }
-        return insights.slice(0, 4);
+        return insights.slice(0, 3);
     }
 
     // У каждого занятия для каждого периода (день/неделя) может быть либо
@@ -353,7 +489,7 @@
         if (existing.length > 0) { writeSeedFlag(); return false; }
         if (typeof Store.addChronoActivity !== 'function') return false;
         DEFAULT_ACTIVITIES.forEach((preset) => {
-            Store.addChronoActivity({ name: preset.name, emoji: preset.emoji });
+            Store.addChronoActivity({ name: preset.name, emoji: preset.emoji, category: preset.category });
         });
         writeSeedFlag();
         return true;
@@ -767,6 +903,9 @@
         );
     }
 
+    // UI-prefs: свёрнут ли блок «Сводка». Локальный per-device ключ, не client-data.
+    const OVERVIEW_COLLAPSED_KEY = 'heys_planning_chrono_overview_collapsed_v1';
+
     // === Timer (Pomodoro-style встроенный таймер) ===
 
     const TIMER_PRESETS = [
@@ -1113,13 +1252,13 @@
                                     className: 'chrono-history__tiny-btn',
                                     onClick: () => onAdjustEntry(entry.id, -5),
                                     'aria-label': 'Уменьшить на 5 минут',
-                                }, '-5'),
+                                }, '−'),
                                 h('button', {
                                     type: 'button',
                                     className: 'chrono-history__tiny-btn',
                                     onClick: () => onAdjustEntry(entry.id, 5),
                                     'aria-label': 'Добавить 5 минут',
-                                }, '+5'),
+                                }, '+'),
                                 h('button', {
                                     type: 'button',
                                     className: 'chrono-picker__icon-btn',
@@ -1334,10 +1473,44 @@
         );
     }
 
-    function ChronoDurationModal({ activity, currentMinutes, scopeLabel, timerRunning, tasks, projects, onAdd, onSetTarget, onLink, onStartTimer, onClose }) {
+    function ChronoCategoryRow({ activity, onSave }) {
+        const current = inferActivityCategory(activity);
+        return h('div', { className: 'chrono-duration__category' },
+            h('div', { className: 'chrono-duration__category-title' }, 'Категория'),
+            h('div', { className: 'chrono-duration__category-list' },
+                CHRONO_CATEGORIES.map((category) => h('button', {
+                    key: category.id,
+                    type: 'button',
+                    className: 'chrono-duration__category-chip'
+                        + (current === category.id ? ' active' : '')
+                        + ' tone-' + category.tone,
+                    onClick: () => onSave && onSave(category.id),
+                }, category.short)),
+            ),
+        );
+    }
+
+    function ChronoSmartSuggestions({ suggestions, onPick }) {
+        if (!Array.isArray(suggestions) || suggestions.length === 0) return null;
+        return h('div', { className: 'chrono-duration__smart' },
+            h('div', { className: 'chrono-duration__smart-title' }, 'Умно'),
+            h('div', { className: 'chrono-duration__smart-list' },
+                suggestions.map((item) => h('button', {
+                    key: item.id,
+                    type: 'button',
+                    className: 'chrono-duration__smart-chip',
+                    onClick: () => onPick && onPick(item.minutes),
+                }, item.label)),
+            ),
+        );
+    }
+
+    function ChronoDurationModal({ activity, currentMinutes, scopeLabel, timerRunning, tasks, projects, entries, activeDate, onAdd, onSetTarget, onCategory, onLink, onStartTimer, onClose }) {
         const [hourIdx, setHourIdx] = useState(0);
         const [minuteIdx, setMinuteIdx] = useState(30);
         const overlayRef = useRef(null);
+        const smartSuggestions = useMemo(() => buildSmartSuggestions(activity, entries, activeDate),
+            [activity && activity.id, entries, activeDate]);
 
 
         useEffect(() => {
@@ -1394,6 +1567,10 @@
                             onClick: () => applyPreset(preset.minutes),
                         }, '+' + preset.label)),
                     ),
+                    h(ChronoSmartSuggestions, {
+                        suggestions: smartSuggestions,
+                        onPick: applyPreset,
+                    }),
                     h('div', { className: 'chrono-duration__custom-label' }, 'Своё время'),
                     WheelColumn && h('div', { className: 'chrono-duration__custom' },
                         h('div', { className: 'chrono-duration__wheels' },
@@ -1450,6 +1627,10 @@
                         initialKind: (activity && activity.budgetMinutesPerWeek) ? 'budget' : 'target',
                         onSave: ({ kind, minutes }) => onSetTarget && onSetTarget({ period: 'week', kind, minutes }),
                     }),
+                    h(ChronoCategoryRow, {
+                        activity,
+                        onSave: onCategory,
+                    }),
                     h(ChronoLinkRow, {
                         activity,
                         tasks,
@@ -1473,14 +1654,19 @@
     const LONG_PRESS_MS = 500;
     const LONG_PRESS_TOLERANCE_PX = 8;
 
-    function ChronoBubble({ activity, minutes, maxMin, scope, badge, onClick, onLongPress, onQuickAdjust }) {
+    const DRAG_ACTIVATE_PX = 10;  // палец должен пройти ≥ этого расстояния прежде чем включится drag mode
+
+    function ChronoBubble({ activity, minutes, maxMin, scope, badge, onClick, onLongPress,
+                            baseX, baseY, bubbleRadius, onDragStart, onDragMove, onDragEnd }) {
         const diameter = Math.round(radiusForMinutes(minutes, maxMin) * 2);
         const bg = colorForActivity(activity.hue, minutes, maxMin);
         const seed = hashSeed(activity.id);
-        const delay = ((seed % 100) / 100) * -8;
-        const dur = 8 + (seed % 5);
-        const fx = 4 + (seed % 4);
-        const fy = 4 + ((seed >> 3) % 4);
+        // Float уменьшен: 2-3px амплитуда (было 4-7), 12-17s период (было 8-12).
+        // Цель — лёгкое «дыхание», а не плавание; кружки удерживают radial positions.
+        const delay = ((seed % 100) / 100) * -12;
+        const dur = 12 + (seed % 6);
+        const fx = 2 + (seed % 2);
+        const fy = 2 + ((seed >> 3) % 2);
         const progress = getProgress(activity, minutes, scope);
         const hasGoal = progress !== null;
         const progressDeg = hasGoal ? Math.round(progress.value * 360) : 0;
@@ -1490,6 +1676,9 @@
         const pressTimer = useRef(null);
         const longFiredRef = useRef(false);
         const startPosRef = useRef({ x: 0, y: 0 });
+        // Drag state на ref — pointermove обрабатывается часто и не должен
+        // re-render'ить bubble; updates идут наверх в ChronoCloud через onDragMove.
+        const dragRef = useRef({ active: false, suppressClick: false, rafId: 0, lastDx: 0, lastDy: 0 });
 
         const clearPress = useCallback(() => {
             if (pressTimer.current) {
@@ -1501,24 +1690,72 @@
         const handlePointerDown = useCallback((e) => {
             longFiredRef.current = false;
             startPosRef.current = { x: e.clientX || 0, y: e.clientY || 0 };
+            dragRef.current.active = false;
+            dragRef.current.suppressClick = false;
+            dragRef.current.lastDx = 0;
+            dragRef.current.lastDy = 0;
             clearPress();
             pressTimer.current = setTimeout(() => {
                 longFiredRef.current = true;
                 pressTimer.current = null;
                 if (typeof onLongPress === 'function') onLongPress(activity);
             }, LONG_PRESS_MS);
+            try {
+                if (e.pointerId !== undefined && e.currentTarget && e.currentTarget.setPointerCapture) {
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                }
+            } catch (_) { /* noop */ }
         }, [activity, onLongPress, clearPress]);
 
         const handlePointerMove = useCallback((e) => {
-            if (!pressTimer.current) return;
-            const dx = Math.abs((e.clientX || 0) - startPosRef.current.x);
-            const dy = Math.abs((e.clientY || 0) - startPosRef.current.y);
-            if (dx > LONG_PRESS_TOLERANCE_PX || dy > LONG_PRESS_TOLERANCE_PX) clearPress();
-        }, [clearPress]);
+            const dx = (e.clientX || 0) - startPosRef.current.x;
+            const dy = (e.clientY || 0) - startPosRef.current.y;
+            const absDist = Math.hypot(dx, dy);
 
-        const handlePointerEnd = useCallback(() => { clearPress(); }, [clearPress]);
+            // Активация drag mode при превышении порога — отменяет long-press timer и click.
+            if (!dragRef.current.active) {
+                if (absDist < DRAG_ACTIVATE_PX) return;
+                clearPress();
+                dragRef.current.active = true;
+                if (typeof onDragStart === 'function') {
+                    onDragStart(activity.id, baseX || 0, baseY || 0, bubbleRadius || (diameter / 2));
+                }
+            }
+            // Throttle через rAF — pointermove может ~120fps на trackpad, нам хватит 60.
+            dragRef.current.lastDx = dx;
+            dragRef.current.lastDy = dy;
+            if (!dragRef.current.rafId && typeof onDragMove === 'function') {
+                dragRef.current.rafId = requestAnimationFrame(() => {
+                    dragRef.current.rafId = 0;
+                    onDragMove(dragRef.current.lastDx, dragRef.current.lastDy);
+                });
+            }
+        }, [activity, baseX, baseY, bubbleRadius, diameter, onDragStart, onDragMove, clearPress]);
+
+        const handlePointerEnd = useCallback((e) => {
+            clearPress();
+            if (dragRef.current.rafId) {
+                cancelAnimationFrame(dragRef.current.rafId);
+                dragRef.current.rafId = 0;
+            }
+            try {
+                if (e && e.pointerId !== undefined && e.currentTarget && e.currentTarget.releasePointerCapture) {
+                    e.currentTarget.releasePointerCapture(e.pointerId);
+                }
+            } catch (_) { /* noop */ }
+            if (dragRef.current.active) {
+                dragRef.current.active = false;
+                dragRef.current.suppressClick = true;
+                if (typeof onDragEnd === 'function') onDragEnd();
+            }
+        }, [clearPress, onDragEnd]);
 
         const handleClick = useCallback((e) => {
+            if (dragRef.current.suppressClick) {
+                dragRef.current.suppressClick = false;
+                e.preventDefault();
+                return;
+            }
             if (longFiredRef.current) {
                 e.preventDefault();
                 longFiredRef.current = false;
@@ -1560,20 +1797,6 @@
                 h('span', { className: 'chrono-bubble__emoji', 'aria-hidden': 'true' }, activity.emoji || '·'),
                 h('span', { className: 'chrono-bubble__name' }, activity.name),
                 h('span', { className: 'chrono-bubble__time' }, formatMinutes(minutes)),
-            ),
-            h('div', { className: 'chrono-bubble-quick', 'aria-label': 'Быстрые правки' },
-                [-5, 5, 10].map((delta) => h('button', {
-                    key: delta,
-                    type: 'button',
-                    className: 'chrono-bubble-quick__btn',
-                    onClick: (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (typeof onQuickAdjust === 'function') onQuickAdjust(activity, delta);
-                    },
-                    title: `${delta > 0 ? '+' : ''}${delta} минут`,
-                    'aria-label': `${delta > 0 ? 'Добавить' : 'Уменьшить'} ${Math.abs(delta)} минут`,
-                }, `${delta > 0 ? '+' : ''}${delta}`)),
             ),
             badge && h('span', {
                 key: badge.key,
@@ -1671,17 +1894,79 @@
         );
     }
 
-    function ChronoInsightsBar({ insights }) {
-        if (!Array.isArray(insights) || insights.length === 0) return null;
-        return h('div', { className: 'chrono-insights', 'aria-label': 'Краткая аналитика хронометража' },
-            insights.map((item, index) => h('div', {
-                key: item.kind + index,
-                className: 'chrono-insights__item chrono-insights__item--' + item.kind,
+    function ChronoOverviewPanel({ insights, balance }) {
+        const list = Array.isArray(insights) ? insights : [];
+        const top = list.find((item) => item && item.kind === 'top');
+        const alerts = list.filter((item) => item && item.kind !== 'top').slice(0, 2);
+        const categories = Array.isArray(balance) ? balance.filter((item) => item && item.minutes > 0).slice(0, 4) : [];
+        if (!top && categories.length === 0 && alerts.length === 0) return null;
+
+        // По дефолту свёрнуто; локальный UI-prefs ключ, не client-data (не синкается).
+        const [collapsed, setCollapsed] = useState(() => {
+            try {
+                const stored = localStorage.getItem(OVERVIEW_COLLAPSED_KEY);
+                return stored === null ? true : stored === '1';
+            } catch (e) { return true; }
+        });
+        const toggle = useCallback(() => {
+            setCollapsed((prev) => {
+                const next = !prev;
+                try { localStorage.setItem(OVERVIEW_COLLAPSED_KEY, next ? '1' : '0'); }
+                catch (e) { /* noop */ }
+                return next;
+            });
+        }, []);
+
+        return h('div', {
+            className: 'chrono-overview' + (collapsed ? ' is-collapsed' : ''),
+            'aria-label': 'Сводка хронометража',
+        },
+            h('button', {
+                type: 'button',
+                className: 'chrono-overview__toggle',
+                onClick: toggle,
+                'aria-expanded': !collapsed,
+                'aria-controls': 'chrono-overview-body',
             },
-                h('span', { className: 'chrono-insights__title' }, item.title),
-                h('span', { className: 'chrono-insights__value' }, item.value),
-                h('span', { className: 'chrono-insights__detail' }, item.detail),
-            )),
+                h('span', { className: 'chrono-overview__toggle-label' }, 'Сводка'),
+                top && collapsed && h('span', { className: 'chrono-overview__toggle-hint' }, top.value),
+                h('span', { className: 'chrono-overview__toggle-chevron', 'aria-hidden': 'true' }, '▾'),
+            ),
+            !collapsed && h('div', { id: 'chrono-overview-body', className: 'chrono-overview__body' },
+                h('div', { className: 'chrono-overview__top' },
+                    h('span', { className: 'chrono-overview__eyebrow' }, 'Топ'),
+                    h('strong', { className: 'chrono-overview__top-value' }, top ? top.value : 'Нет записей'),
+                    top && h('span', { className: 'chrono-overview__top-detail' }, top.detail),
+                    alerts.length > 0 && h('div', { className: 'chrono-overview__alerts' },
+                        alerts.map((item) => h('span', {
+                            key: item.kind,
+                            className: 'chrono-overview__alert is-' + item.kind,
+                            title: item.detail,
+                        }, `${item.title}: ${item.value}`)),
+                    ),
+                ),
+                categories.length > 0 && h('div', { className: 'chrono-overview__balance' },
+                    h('div', { className: 'chrono-overview__stack', 'aria-hidden': 'true' },
+                        categories.map((item) => h('span', {
+                            key: item.id,
+                            className: 'chrono-overview__segment tone-' + item.tone,
+                            style: { width: Math.max(5, item.pct) + '%' },
+                            title: `${item.label}: ${formatMinutes(item.minutes)}`,
+                        })),
+                    ),
+                    h('div', { className: 'chrono-overview__legend' },
+                        categories.map((item) => h('span', {
+                            key: item.id,
+                            className: 'chrono-overview__chip tone-' + item.tone,
+                            title: `${item.label}: ${formatMinutes(item.minutes)}`,
+                        },
+                            h('i', { className: 'chrono-overview__dot', 'aria-hidden': 'true' }),
+                            h('span', { className: 'chrono-overview__chip-label' }, item.short),
+                            h('strong', null, `${item.pct}%`),
+                        )),
+                    ),
+                ),
+            ),
         );
     }
 
@@ -1712,7 +1997,275 @@
         );
     }
 
-    function ChronoCloud({ activities, minutesByActivity, maxMin, scope, recentBadge, onPick, onLongPress, onQuickAdjust, hasInactive }) {
+    function ChronoCategoryBalance({ balance }) {
+        if (!Array.isArray(balance) || balance.length === 0) return null;
+        return h('div', { className: 'chrono-category-balance', 'aria-label': 'Баланс категорий' },
+            balance.slice(0, 5).map((item) => h('div', {
+                key: item.id,
+                className: 'chrono-category-balance__item tone-' + item.tone,
+                title: `${item.label}: ${formatMinutes(item.minutes)}`,
+            },
+                h('span', { className: 'chrono-category-balance__label' }, item.short),
+                h('span', { className: 'chrono-category-balance__bar' },
+                    h('span', { className: 'chrono-category-balance__fill', style: { width: Math.max(4, item.pct) + '%' } }),
+                ),
+                h('span', { className: 'chrono-category-balance__value' }, `${item.pct}%`),
+            )),
+        );
+    }
+
+    function ChronoWeeklyReport({ report }) {
+        if (!report) return null;
+        return h('div', { className: 'chrono-weekly-report', 'aria-label': 'Отчёт недели' },
+            h('div', { className: 'chrono-weekly-report__head' },
+                h('div', null,
+                    h('div', { className: 'chrono-weekly-report__eyebrow' }, 'Отчёт недели'),
+                    h('div', { className: 'chrono-weekly-report__title' }, report.headline),
+                ),
+                h('div', { className: 'chrono-weekly-report__score' }, report.score),
+            ),
+            h('div', { className: 'chrono-weekly-report__grid' },
+                h('div', null,
+                    h('span', { className: 'chrono-weekly-report__label' }, 'Всего'),
+                    h('strong', null, formatMinutes(report.total)),
+                ),
+                report.top && h('div', null,
+                    h('span', { className: 'chrono-weekly-report__label' }, 'Главное'),
+                    h('strong', null, `${report.top.activity.emoji || ''} ${report.top.activity.name}`),
+                ),
+                report.bestDay && h('div', null,
+                    h('span', { className: 'chrono-weekly-report__label' }, 'Лучший день'),
+                    h('strong', null, `${formatDateLabel(report.bestDay.date)} · ${formatMinutes(report.bestDay.minutes)}`),
+                ),
+            ),
+            h('div', { className: 'chrono-weekly-report__recommendation' }, report.recommendation),
+        );
+    }
+
+    function ChronoTimelineModal({ date, entries, activities, onClose, onPickActivity }) {
+        const overlayRef = useRef(null);
+        const timeline = useMemo(() => buildDayTimeline(entries, activities, date), [entries, activities, date]);
+
+        useEffect(() => {
+            const ModalManager = HEYS.ModalManager;
+            if (!ModalManager || typeof ModalManager.register !== 'function') return undefined;
+            return ModalManager.register('chrono-timeline', () => onClose());
+        }, [onClose]);
+
+        useEffect(() => {
+            function onKey(e) { if (e.key === 'Escape') onClose(); }
+            window.addEventListener('keydown', onKey);
+            return () => window.removeEventListener('keydown', onKey);
+        }, [onClose]);
+
+        return h('div', {
+            className: 'planning-modal-overlay planning-modal-overlay--nested chrono-timeline-overlay',
+            ref: overlayRef,
+            onClick: (e) => { if (e.target === overlayRef.current) onClose(); },
+        },
+            h('div', { className: 'planning-modal planning-modal--picker chrono-timeline', onClick: (e) => e.stopPropagation() },
+                h('div', { className: 'planning-modal__header' },
+                    h('span', null, 'Лента дня · ', formatDateLabel(date)),
+                    h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose, 'aria-label': 'Закрыть' }, '×'),
+                ),
+                h('div', { className: 'planning-modal__body chrono-timeline__body' },
+                    timeline.length === 0 && h('div', { className: 'chrono-timeline__empty' }, 'Записей за день пока нет.'),
+                    timeline.map((entry) => {
+                        const activity = entry.activity || {};
+                        const category = getCategoryMeta(entry.category);
+                        return h('button', {
+                            key: entry.id,
+                            type: 'button',
+                            className: 'chrono-timeline__row tone-' + category.tone,
+                            onClick: () => activity.id && onPickActivity && onPickActivity(activity),
+                        },
+                            h('span', { className: 'chrono-timeline__time' }, formatEntryTime(entry.createdAt).replace('сегодня ', '') || formatDateLabel(entry.date)),
+                            h('span', { className: 'chrono-timeline__dot' }),
+                            h('span', { className: 'chrono-timeline__main' },
+                                h('span', { className: 'chrono-timeline__name' }, `${activity.emoji || ''} ${activity.name || 'Занятие'}`),
+                                h('span', { className: 'chrono-timeline__cat' }, category.label),
+                            ),
+                            h('strong', { className: 'chrono-timeline__minutes' }, formatMinutes(entry.minutes)),
+                        );
+                    }),
+                ),
+            ),
+        );
+    }
+
+    // Phyllotaxis spiral с collision-avoidance: углы — золотое сечение (137.5°),
+    // а radius каждого кружка раздвигается наружу пока он не перестанет
+    // перекрывать ранее уложенные. Сортировка по minutes desc → крупный
+    // садится в (0,0), последующие закручиваются спиралью по убыванию.
+    const PHYLLOTAXIS_GOLDEN_ANGLE = 137.5 * Math.PI / 180;
+    const BUBBLE_GAP = 10;          // запас между краями bubble'ов
+    const RING_PADDING = 4;         // .chrono-bubble-wrap.has-target шире на 2×ring_thickness=8
+    const PHYLLOTAXIS_STEP = 4;     // шаг наружу при коллизии (px)
+    const PHYLLOTAXIS_MAX_ATTEMPTS = 400;
+
+    function computeRadialLayout(activities, minutesByActivity, maxMin, halfW) {
+        const sorted = activities.slice().sort((a, b) =>
+            (minutesByActivity[b.id] || 0) - (minutesByActivity[a.id] || 0)
+        );
+        if (sorted.length === 0) return { positioned: [], cloudHeight: 240 };
+
+        const allRadii = sorted.map((a) =>
+            radiusForMinutes(minutesByActivity[a.id] || 0, maxMin) + RING_PADDING
+        );
+        const avgR = allRadii.reduce((s, r) => s + r, 0) / allRadii.length;
+        const maxBubbleR = Math.max.apply(null, allRadii);
+        let orbitScale = avgR * 2 + BUBBLE_GAP;
+
+        // Adaptive cap: если safe zone (halfW) известна, ограничиваем maxOrbit чтобы
+        // самый внешний кружок не выезжал за safe zone (halfW - maxBubbleR - padding).
+        // Сжимаем orbitScale так, чтобы r_last = orbitScale·√(N-1) ≤ maxOrbit.
+        if (halfW > 0 && sorted.length > 1) {
+            const maxOrbit = Math.max(0, halfW - maxBubbleR - CLOUD_SAFE_PADDING);
+            const naiveMaxR = orbitScale * Math.sqrt(sorted.length - 1);
+            if (naiveMaxR > maxOrbit && maxOrbit > 0) {
+                orbitScale = maxOrbit / Math.sqrt(sorted.length - 1);
+            }
+        }
+        const useBounds = halfW > 0;
+
+        const placed = [];
+        let maxExtent = 0;
+
+        sorted.forEach((activity, i) => {
+            const bubbleR = allRadii[i];
+            const theta = i * PHYLLOTAXIS_GOLDEN_ANGLE;
+            let r = i === 0 ? 0 : orbitScale * Math.sqrt(i);
+
+            for (let attempt = 0; attempt < PHYLLOTAXIS_MAX_ATTEMPTS; attempt += 1) {
+                let cx = Math.cos(theta) * r;
+                let cy = Math.sin(theta) * r;
+                if (useBounds) {
+                    const c = clampToBounds(cx, cy, bubbleR, halfW, halfW);
+                    cx = c.x;
+                    cy = c.y;
+                }
+                let collide = false;
+                for (let j = 0; j < placed.length; j += 1) {
+                    const p = placed[j];
+                    const dx = cx - p.x;
+                    const dy = cy - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < bubbleR + p.radius + BUBBLE_GAP) {
+                        collide = true;
+                        break;
+                    }
+                }
+                if (!collide) {
+                    const x = Math.round(cx);
+                    const y = Math.round(cy);
+                    placed.push({ activity, x, y, radius: bubbleR });
+                    const ext = Math.max(Math.abs(x), Math.abs(y)) + bubbleR;
+                    if (ext > maxExtent) maxExtent = ext;
+                    return;
+                }
+                r += PHYLLOTAXIS_STEP;
+            }
+            // Fallback — кладём на clamped boundary даже если overlap (better than выезд за экран).
+            let cx = Math.cos(theta) * r;
+            let cy = Math.sin(theta) * r;
+            if (useBounds) {
+                const c = clampToBounds(cx, cy, bubbleR, halfW, halfW);
+                cx = c.x;
+                cy = c.y;
+            }
+            placed.push({ activity, x: Math.round(cx), y: Math.round(cy), radius: bubbleR });
+        });
+
+        const cloudHeight = Math.max(240, maxExtent * 2 + 40);
+        return { positioned: placed, cloudHeight };
+    }
+
+    // Force-directed reflow: симметричное отталкивание двух bubbles на каждом
+    // обнаруженном overlap'е. Anchor↔anchor → push 50/50 (anchors слегка
+    // расходятся если перекрыты). Anchor↔non-anchor → non-anchor берёт 100%.
+    // Non-anchor↔non-anchor → 50/50. После каждой итерации — clamp всех в
+    // safe zone, до 40 проходов до полной сходимости.
+    function reflowAroundOverrides(positioned, overrides, halfW, halfH) {
+        if (!overrides || Object.keys(overrides).length === 0) return positioned;
+        const pos = positioned.map((p) => {
+            const ov = overrides[p.activity.id];
+            if (!ov) return { ...p };
+            const clamped = (halfW > 0 && halfH > 0)
+                ? clampToBounds(ov.x, ov.y, p.radius, halfW, halfH)
+                : ov;
+            return { ...p, x: clamped.x, y: clamped.y };
+        });
+        const useBounds = halfW > 0 && halfH > 0;
+        const RELAX_FACTOR = 1.0;  // 1.0 = снять overlap за одну итерацию (без overshoot)
+
+        for (let iter = 0; iter < 40; iter += 1) {
+            let moved = false;
+            for (let i = 0; i < pos.length; i += 1) {
+                const iAnchor = !!overrides[pos[i].activity.id];
+                for (let j = i + 1; j < pos.length; j += 1) {
+                    const jAnchor = !!overrides[pos[j].activity.id];
+                    const dx = pos[i].x - pos[j].x;
+                    const dy = pos[i].y - pos[j].y;
+                    const dist = Math.hypot(dx, dy);
+                    const minDist = pos[i].radius + pos[j].radius + BUBBLE_GAP;
+                    if (dist >= minDist) continue;
+
+                    // Распределение силы: non-anchor получает всю push если другой anchor.
+                    let shareI;
+                    let shareJ;
+                    if (iAnchor && !jAnchor) { shareI = 0; shareJ = 1; }
+                    else if (!iAnchor && jAnchor) { shareI = 1; shareJ = 0; }
+                    else { shareI = 0.5; shareJ = 0.5; }
+
+                    const overlap = (minDist - dist) * RELAX_FACTOR;
+                    let ux;
+                    let uy;
+                    if (dist > 0.001) {
+                        ux = dx / dist;
+                        uy = dy / dist;
+                    } else {
+                        ux = 0; uy = -1;  // совпали → толкаем по вертикали
+                    }
+                    pos[i].x += ux * overlap * shareI;
+                    pos[i].y += uy * overlap * shareI;
+                    pos[j].x -= ux * overlap * shareJ;
+                    pos[j].y -= uy * overlap * shareJ;
+                    moved = true;
+                }
+            }
+            // Clamp всех в safe zone после итерации push'ей.
+            if (useBounds) {
+                for (let i = 0; i < pos.length; i += 1) {
+                    const c = clampToBounds(pos[i].x, pos[i].y, pos[i].radius, halfW, halfH);
+                    if (c.x !== pos[i].x || c.y !== pos[i].y) {
+                        pos[i].x = c.x;
+                        pos[i].y = c.y;
+                        moved = true;
+                    }
+                }
+            }
+            if (!moved) break;
+        }
+        return pos;
+    }
+
+    const CLOUD_SAFE_PADDING = 16;  // отступ от края контейнера, в котором bubble не должен оказаться
+
+    function clampToBounds(x, y, radius, halfW, halfH) {
+        if (halfW <= 0 || halfH <= 0) return { x, y };
+        const maxX = Math.max(0, halfW - radius - CLOUD_SAFE_PADDING);
+        const maxY = Math.max(0, halfH - radius - CLOUD_SAFE_PADDING);
+        return {
+            x: Math.max(-maxX, Math.min(maxX, x)),
+            y: Math.max(-maxY, Math.min(maxY, y)),
+        };
+    }
+
+
+    const DRAG_REPULSION_BUFFER = 8;
+    const DRAG_RELEASE_DURATION_MS = 1600;  // супер-плавный, "тягучий" возврат — как медленное скольжение домой
+
+    function ChronoCloud({ activities, minutesByActivity, maxMin, scope, recentBadge, onPick, onLongPress, hasInactive }) {
         if (!activities.length) {
             const text = hasInactive
                 ? 'Нажмите на занятие выше, чтобы записать время — кружок появится здесь и будет расти.'
@@ -1720,19 +2273,196 @@
             return h('div', { className: 'chrono-empty' }, text);
         }
 
+        // Измерение ширины контейнера для clamp'а позиций в safe zone.
+        const containerRef = useRef(null);
+        const [containerWidth, setContainerWidth] = useState(0);
+        useEffect(() => {
+            const el = containerRef.current;
+            if (!el) return undefined;
+            const update = () => setContainerWidth(el.clientWidth || 0);
+            update();
+            if (typeof ResizeObserver !== 'undefined') {
+                const ro = new ResizeObserver(update);
+                ro.observe(el);
+                return () => ro.disconnect();
+            }
+            window.addEventListener('resize', update);
+            return () => window.removeEventListener('resize', update);
+        }, []);
+
+        const [drag, setDrag] = useState(null);
+        const [slotOverrides, setSlotOverrides] = useState({});
+
+        const halfW = containerWidth / 2;
+        // Базовый layout — чистый phyllotaxis с adaptive scale к safe zone.
+        // Передаём halfW, чтобы orbits вписывались по ширине контейнера.
+        const { positioned, cloudHeight } = useMemo(() =>
+            computeRadialLayout(activities, minutesByActivity, maxMin, halfW),
+            [activities, minutesByActivity, maxMin, halfW]
+        );
+
+        const halfH = cloudHeight / 2;
+
+        // Permanent overrides из drag-release — applied через reflow (anchors fixed,
+        // соседи отталкиваются + clamp в safe zone).
+        const displayed = useMemo(
+            () => reflowAroundOverrides(positioned, slotOverrides, halfW, halfH),
+            [positioned, slotOverrides, halfW, halfH]
+        );
+        const releaseRafRef = useRef(0);
+
+        useEffect(() => () => {
+            if (releaseRafRef.current) cancelAnimationFrame(releaseRafRef.current);
+        }, []);
+
+        // При изменении минут (например, после "+30м" — кружок вырос в радиусе)
+        // или набора активностей — старые overrides становятся невалидными:
+        // кружок с новым размером может перекрывать соседей. Сбрасываем.
+        // Signature по чистому input layout'а (без overrides), чтобы сам drop
+        // не триггерил сброс (drop меняет slotOverrides, но id+minutes — нет).
+        const layoutSignatureRef = useRef('');
+        const inputSignature = activities.map((a) =>
+            a.id + ':' + Math.round(radiusForMinutes(minutesByActivity[a.id] || 0, maxMin))
+        ).join('|');
+        useEffect(() => {
+            if (layoutSignatureRef.current && layoutSignatureRef.current !== inputSignature) {
+                setSlotOverrides({});
+            }
+            layoutSignatureRef.current = inputSignature;
+        }, [inputSignature]);
+
+        const handleDragStart = useCallback((id, baseX, baseY, radius) => {
+            if (releaseRafRef.current) {
+                cancelAnimationFrame(releaseRafRef.current);
+                releaseRafRef.current = 0;
+            }
+            setDrag({ id, baseX, baseY, dx: 0, dy: 0, radius, releasing: false });
+        }, []);
+
+        const handleDragMove = useCallback((dx, dy) => {
+            setDrag((prev) => (prev && !prev.releasing ? { ...prev, dx, dy } : prev));
+        }, []);
+
+        const handleDragEnd = useCallback(() => {
+            setDrag((prev) => {
+                if (!prev) return prev;
+                // Target radius = phyllotaxis-orbit размера этого кружка (его «слой»).
+                // Большой (phyloIdx=0) → centr, маленькие → внешние orbit'ы.
+                const idealEntry = positioned.find((p) => p.activity.id === prev.id);
+                const targetR = idealEntry ? Math.hypot(idealEntry.x, idealEntry.y) : Math.hypot(prev.baseX, prev.baseY);
+                // Angle берём из сырой позиции пальца (без safe-zone clamp) — куда
+                // оттянул, туда и возвращается, даже если оттянул далеко за край.
+                const releaseX = prev.baseX + prev.dx;
+                const releaseY = prev.baseY + prev.dy;
+                const releaseDist = Math.hypot(releaseX, releaseY);
+                const angle = releaseDist < 0.001
+                    ? Math.atan2(prev.baseY, prev.baseX)
+                    : Math.atan2(releaseY, releaseX);
+                let newX = targetR === 0 ? 0 : Math.round(Math.cos(angle) * targetR);
+                let newY = targetR === 0 ? 0 : Math.round(Math.sin(angle) * targetR);
+                // Если на этой орбите целевая точка выходит за safe zone — clamp.
+                const finalClamp = clampToBounds(newX, newY, prev.radius, halfW, halfH);
+                newX = finalClamp.x;
+                newY = finalClamp.y;
+                const targetDx = newX - prev.baseX;
+                const targetDy = newY - prev.baseY;
+                const startDx = prev.dx;
+                const startDy = prev.dy;
+                const startTs = performance.now();
+                const releaseId = prev.id;
+                const step = (now) => {
+                    const t = Math.min(1, (now - startTs) / DRAG_RELEASE_DURATION_MS);
+                    // ease-out-expo: основная часть пути за первую треть времени, потом
+                    // долгое плавное затухание к цели — даёт liquid/heavy feel.
+                    const eased = t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+                    const ndx = startDx + (targetDx - startDx) * eased;
+                    const ndy = startDy + (targetDy - startDy) * eased;
+                    if (t >= 1) {
+                        releaseRafRef.current = 0;
+                        // Коммитим новую позицию в overrides + чистим drag атомарно
+                        // (React batch'ит оба update в одном render — slot
+                        // переедет на newX/Y без визуального jump'а).
+                        setSlotOverrides((cur) => ({ ...cur, [releaseId]: { x: newX, y: newY } }));
+                        setDrag(null);
+                        return;
+                    }
+                    setDrag((cur) => (cur ? { ...cur, dx: ndx, dy: ndy } : cur));
+                    releaseRafRef.current = requestAnimationFrame(step);
+                };
+                releaseRafRef.current = requestAnimationFrame(step);
+                return { ...prev, releasing: true };
+            });
+        }, [halfW, halfH, positioned]);
+
+        const releasing = !!(drag && drag.releasing);
+
+        // Drag-движение НЕ clamp'ится — пользователь может оттянуть кружок куда угодно
+        // (за safe zone, в любую сторону). Clamp применяется только к release-target
+        // и к layout/reflow для resting positions. Это даёт ощущение "оттянуть подальше
+        // и отпустить — пузырь сам найдёт дорогу домой".
+
         return h('div', { className: 'chrono-cloud' },
-            h('div', { className: 'chrono-cloud__items' },
-                activities.map((a) => h(ChronoBubble, {
-                    key: a.id,
-                    activity: a,
-                    minutes: minutesByActivity[a.id] || 0,
-                    maxMin,
-                    scope,
-                    badge: recentBadge && recentBadge.activityId === a.id ? recentBadge : null,
-                    onClick: onPick,
-                    onLongPress,
-                    onQuickAdjust,
-                })),
+            h('div', {
+                ref: containerRef,
+                className: 'chrono-cloud__items chrono-cloud__items--radial' + (releasing ? ' is-releasing' : ''),
+                style: { '--cloud-height': cloudHeight + 'px' },
+            },
+                displayed.map(({ activity, x: slotX, y: slotY, radius }) => {
+                    const isDragged = drag && drag.id === activity.id;
+                    let drx = 0;
+                    let dry = 0;
+                    if (isDragged) {
+                        drx = drag.dx;
+                        dry = drag.dy;
+                    } else if (drag) {
+                        // Расталкивание от сырой позиции пальца — соседи реагируют
+                        // когда палец рядом, и затухает к нулю когда палец далеко.
+                        const dragX = drag.baseX + drag.dx;
+                        const dragY = drag.baseY + drag.dy;
+                        const ddx = slotX - dragX;
+                        const ddy = slotY - dragY;
+                        const dist = Math.hypot(ddx, ddy);
+                        const minDist = radius + drag.radius + DRAG_REPULSION_BUFFER;
+                        if (dist > 0.001 && dist < minDist) {
+                            const push = minDist - dist;
+                            drx = (ddx / dist) * push;
+                            dry = (ddy / dist) * push;
+                            // Для соседей оставляем clamp — они не должны вылетать за края.
+                            const after = clampToBounds(slotX + drx, slotY + dry, radius, halfW, halfH);
+                            drx = after.x - slotX;
+                            dry = after.y - slotY;
+                        } else if (dist <= 0.001) {
+                            drx = 0;
+                            dry = -minDist;
+                        }
+                    }
+                    return h('div', {
+                        key: activity.id,
+                        className: 'chrono-cloud__slot' + (isDragged ? ' is-dragged' : ''),
+                        style: {
+                            '--slot-x': slotX + 'px',
+                            '--slot-y': slotY + 'px',
+                            '--drag-dx': drx + 'px',
+                            '--drag-dy': dry + 'px',
+                        },
+                    },
+                        h(ChronoBubble, {
+                            activity,
+                            minutes: minutesByActivity[activity.id] || 0,
+                            maxMin,
+                            scope,
+                            badge: recentBadge && recentBadge.activityId === activity.id ? recentBadge : null,
+                            onClick: onPick,
+                            onLongPress,
+                            baseX: slotX,
+                            baseY: slotY,
+                            bubbleRadius: radius,
+                            onDragStart: handleDragStart,
+                            onDragMove: handleDragMove,
+                            onDragEnd: handleDragEnd,
+                        }),
+                    );
+                }),
             ),
         );
     }
@@ -1750,6 +2480,7 @@
         const [recentBadge, setRecentBadge] = useState(null);
         const [timerCompleteShown, setTimerCompleteShown] = useState(false);
         const [timerStopOpen, setTimerStopOpen] = useState(false);
+        const [timelineOpen, setTimelineOpen] = useState(false);
         const [timerNow, setTimerNow] = useState(() => Date.now());
 
         useEffect(() => {
@@ -1902,26 +2633,6 @@
             state.startChronoTimer({ activityId: durationTarget.id, plannedMinutes: minutes });
         }, [durationTarget, state]);
 
-        const handleQuickAdjust = useCallback((activity, deltaMinutes) => {
-            if (!activity || !deltaMinutes) return;
-            if (deltaMinutes > 0) {
-                const entry = state.addChronoEntry({ activityId: activity.id, date: activeDate, minutes: deltaMinutes });
-                if (entry && entry.id) {
-                    setToast({ id: entry.id, minutes: deltaMinutes });
-                    setRecentBadge({ activityId: activity.id, minutes: deltaMinutes, key: entry.id });
-                }
-                return;
-            }
-            const ds = new Set(dates);
-            const last = (entries || [])
-                .filter((e) => e && e.activityId === activity.id && ds.has(e.date))
-                .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))[0];
-            if (last && typeof state.adjustChronoEntryMinutes === 'function') {
-                state.adjustChronoEntryMinutes(last.id, deltaMinutes);
-                setToast({ id: last.id, minutes: deltaMinutes, adjusted: true });
-            }
-        }, [activeDate, dates, entries, state]);
-
         const handleUpdateEntry = useCallback((id, patch) => {
             if (typeof state.updateChronoEntry === 'function') state.updateChronoEntry(id, patch);
         }, [state]);
@@ -2002,6 +2713,14 @@
 
         const planFacts = useMemo(() => buildChronoPlanFacts(visibleActivities, tasks, minutesByActivity),
             [visibleActivities, tasks, minutesByActivity]);
+
+        const categoryBalance = useMemo(() => buildCategoryBalance(visibleActivities, minutesByActivity),
+            [visibleActivities, minutesByActivity]);
+
+        const weeklyReport = useMemo(() => {
+            if (scope !== 'week') return null;
+            return buildWeeklyReport(visibleActivities, entries, snapshots, dates, minutesByActivity);
+        }, [scope, visibleActivities, entries, snapshots, dates, minutesByActivity]);
 
         // Запрещаем листать в будущее: следующий шаг (день или неделя) не должен
         // выходить за «сегодня». Для недельного режима ориентируемся на старт
@@ -2084,6 +2803,13 @@
                     className: 'chrono-scope-bar__today',
                     onClick: () => setActiveDate(todayStr),
                 }, 'Сегодня'),
+                h('button', {
+                    type: 'button',
+                    className: 'chrono-scope-bar__icon-btn',
+                    onClick: () => setTimelineOpen(true),
+                    'aria-label': 'Лента дня',
+                    title: 'Лента дня',
+                }, '◷'),
             ),
             timer && timerActivity && h(ChronoTimerBanner, {
                 activity: timerActivity,
@@ -2094,7 +2820,7 @@
                 onResume: handleTimerResume,
                 onStop: () => setTimerStopOpen(true),
             }),
-            h(ChronoInsightsBar, { insights }),
+            h(ChronoOverviewPanel, { insights, balance: categoryBalance }),
             h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
             h(ChronoStrip, {
                 activities: partition.inactive,
@@ -2109,9 +2835,9 @@
                 recentBadge,
                 onPick: handleBubbleClick,
                 onLongPress: handleLongPress,
-                onQuickAdjust: handleQuickAdjust,
                 hasInactive: partition.inactive.length > 0,
             }),
+            scope === 'week' && h(ChronoWeeklyReport, { report: weeklyReport }),
             scope === 'week' && weekBreakdown && h(ChronoWeekBreakdown, {
                 dates,
                 breakdown: weekBreakdown,
@@ -2127,8 +2853,11 @@
                 timerRunning: !!timer,
                 tasks,
                 projects,
+                entries,
+                activeDate,
                 onStartTimer: handleStartTimer,
                 onAdd: handleAddMinutes,
+                onCategory: (category) => state.updateChronoActivity(durationTarget.id, { category }),
                 onLink: (patch) => state.updateChronoActivity(durationTarget.id, patch),
                 onSetTarget: (payload) => {
                     // payload: { period: 'day'|'week', kind: 'target'|'budget', minutes: N|null }
@@ -2191,6 +2920,16 @@
                 onDiscard: handleTimerStopDiscard,
                 onClose: () => setTimerStopOpen(false),
             }),
+            timelineOpen && h(ChronoTimelineModal, {
+                date: activeDate,
+                entries,
+                activities,
+                onPickActivity: (activity) => {
+                    setTimelineOpen(false);
+                    setDurationTarget(activity);
+                },
+                onClose: () => setTimelineOpen(false),
+            }),
             totalMinutes > 0 && h('div', {
                 className: 'chrono-bottom-total',
                 title: `Суммарное время ${scope === 'week' ? 'за неделю' : 'за день'}`,
@@ -2228,8 +2967,15 @@
         buildWeekBreakdown,
         buildChronoPlanFacts,
         buildChronoWeekInsights,
+        buildCategoryBalance,
+        buildDayTimeline,
+        buildSmartSuggestions,
+        buildWeeklyReport,
+        inferActivityCategory,
+        getCategoryMeta,
         CHRONO_PRESETS,
         CHRONO_EMOJI_PALETTE,
+        CHRONO_CATEGORIES,
         TIMER_PRESETS,
         r_min,
         r_max,

@@ -639,6 +639,7 @@
             name,
             emoji: input?.emoji ? String(input.emoji) : undefined,
             hue,
+            category: input?.category ? String(input.category) : undefined,
             taskId: input?.taskId ? String(input.taskId) : undefined,
             projectId: input?.projectId ? String(input.projectId) : undefined,
             targetMinutesPerDay: dayVal > 0 ? Math.round(dayVal) : undefined,
@@ -662,6 +663,9 @@
         if (patch && Object.prototype.hasOwnProperty.call(patch, 'hue')) {
             const nh = normalizeHue(patch.hue);
             if (nh !== null) updated.hue = nh;
+        }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'category')) {
+            updated.category = patch.category ? String(patch.category) : undefined;
         }
         if (patch && Object.prototype.hasOwnProperty.call(patch, 'taskId')) {
             updated.taskId = patch.taskId ? String(patch.taskId) : undefined;
@@ -969,7 +973,8 @@
             'heys_planning_chrono_activities',
             'heys_planning_chrono_entries',
             'heys_planning_chrono_snapshots',
-            'heys_planning_chrono_timer',
+            // heys_planning_chrono_timer не тянем: активный stopwatch локальный,
+            // не синкается на push-стороне (см. CLIENT_SPECIFIC_KEYS в storage).
         ];
         return YandexAPI.getKVBatch(clientId, keys).then(function (res) {
             if (res.error || !Array.isArray(res.data)) {
@@ -991,8 +996,6 @@
                     Store.saveChronoEntries(item.v);
                 } else if (item.k === 'heys_planning_chrono_snapshots' && typeof Store.saveChronoSnapshots === 'function') {
                     Store.saveChronoSnapshots(item.v);
-                } else if (item.k === 'heys_planning_chrono_timer' && typeof Store.saveChronoTimer === 'function') {
-                    Store.saveChronoTimer(item.v);
                 }
             });
             try {

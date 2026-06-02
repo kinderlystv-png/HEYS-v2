@@ -8384,15 +8384,17 @@
     }, [cool, onPickProgram]);
 
     // Микс-генератор — собирает ad-hoc программу по выбранным tier'ам.
-    // Хранится в state чтоб не пересчитываться на каждый render.
-    const [mixedWorkout, setMixedWorkout] = useState(null);
+    // Генерится автоматически при изменении userTypes/intensityFilter, юзер
+    // может перегенерировать через reroll.
     const userTypes = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
       ? profile.equipmentTypes
       : (profile.noEquipment ? ['none']
         : profile.blockMode ? ['block']
         : profile.edgeLimit === 25 ? ['door']
         : ['full']);
-    const onGenerateMix = useCallback(function () {
+    const [mixedWorkout, setMixedWorkout] = useState(null);
+    const [mixSeed, setMixSeed] = useState(0);
+    useEffect(function () {
       if (!Fingers.generateMixedWorkout) return;
       const w = Fingers.generateMixedWorkout({
         equipmentTypes: userTypes,
@@ -8401,7 +8403,9 @@
         readiness: cool && cool.recommendation
       });
       setMixedWorkout(w);
-    }, [userTypes, intensityFilter, ageRaw, cool]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userTypes.join(','), intensityFilter, ageRaw, cool && cool.recommendation, mixSeed]);
+    const onGenerateMix = useCallback(function () { setMixSeed(function (n) { return n + 1; }); }, []);
     let readinessBanner = null;
     if (cool) {
       const READINESS_MAP = {
@@ -8457,6 +8461,65 @@
           );
         })
       ),
+      // Генерированная микс-карточка — оранжевая, отличается от обычных
+      // протоколов. Подсказка «не нашли подходящего — попробуй случайный».
+      mixedWorkout ? h('div', { className: 'fingers-fs-mixcard' },
+        h('div', { className: 'fingers-fs-mixcard__hint' },
+          h('span', { 'aria-hidden': 'true' }, '✨ '),
+          'Не нашёл подходящий протокол? Попробуй случайную сборку по умному алгоритму:'
+        ),
+        h('div', { className: 'fingers-fs-mixcard__inner' },
+          h('div', { className: 'fingers-fs-mixcard__badge' },
+            h('span', { 'aria-hidden': 'true' }, '🎲'),
+            ' Микс'
+          ),
+          h('h3', { className: 'fingers-fs-mixcard__title' }, mixedWorkout.name),
+          h('p', { className: 'fingers-fs-mixcard__desc' }, mixedWorkout.description),
+          h('div', { className: 'fingers-fs-mixcard__chips' },
+            h('span', { className: 'fingers-fs-chip fingers-fs-chip--intensity',
+              'data-fingers-intensity': mixedWorkout.intensity || 'moderate'
+            }, intensityLabel(mixedWorkout.intensity)),
+            h('span', { className: 'fingers-fs-chip' },
+              h('span', { 'aria-hidden': 'true' }, '⏱ '),
+              mixedWorkout.durationMin + ' мин'),
+            h('span', { className: 'fingers-fs-chip' },
+              mixedWorkout.exercises.length + ' упр')
+          ),
+          h('div', { className: 'fingers-fs-mixcard__equipment' },
+            (mixedWorkout.equipmentTypes || []).map(function (t) {
+              const meta = ({
+                full: { icon: '🪜', label: 'Board' },
+                block: { icon: '💪', label: 'Block' },
+                door: { icon: '🚪', label: 'Door' },
+                none: { icon: '🤚', label: 'No-Hangs' }
+              })[t] || { icon: '·', label: t };
+              return h('span', {
+                key: t,
+                className: 'fingers-fs-equipment-chip is-available',
+                'data-equipment': t
+              },
+                h('span', { 'aria-hidden': 'true' }, meta.icon), ' ', meta.label
+              );
+            })
+          ),
+          h('div', { className: 'fingers-fs-mixcard__actions' },
+            h('button', {
+              type: 'button',
+              className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--reroll',
+              onClick: onGenerateMix,
+              title: 'Другой набор упражнений'
+            },
+              h('span', { 'aria-hidden': 'true' }, '🔄')
+            ),
+            h('button', {
+              type: 'button',
+              className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--launch',
+              onClick: function () { safeLaunch(mixedWorkout); }
+            }, 'Запустить микс')
+          )
+        )
+      ) : null,
+
       visibleFiltered.length === 0
         ? h('div', { className: 'fingers-fs-empty', style: { padding: '24px 16px', textAlign: 'center' } },
             h('p', { style: { margin: 0, fontSize: 14, opacity: 0.7 } },
@@ -10221,10 +10284,22 @@
 
     // Pick program → load exercises into constructor → switch to constructor tab
     const handlePickProgram = useCallback(function (program) {
-      const built = Fingers.buildLogFromProgram
-        ? Fingers.buildLogFromProgram(program.id, userBoard ? Fingers.getBoardById?.(userBoard) : null)
-        : (program.exercises || []);
-      setExercises(built || []);
+      // Generated mix не в catalog — buildLogFromProgram не найдёт его id.
+      // Используем exercises напрямую без mapping'а по board edges.
+      let built;
+      if (program && program.__generated) {
+        built = Array.isArray(program.exercises) ? program.exercises.slice() : [];
+      } else {
+        built = Fingers.buildLogFromProgram
+          ? Fingers.buildLogFromProgram(program.id, userBoard ? Fingers.getBoardById?.(userBoard) : null)
+          : (program.exercises || []);
+        if (!Array.isArray(built) || built.length === 0) {
+          // Fallback: если buildLogFromProgram вернула null (unknown id) —
+          // берём program.exercises как есть.
+          built = Array.isArray(program.exercises) ? program.exercises.slice() : [];
+        }
+      }
+      setExercises(built);
       setPendingProgram(program);
       setTab('constructor');
       // Voice cue
