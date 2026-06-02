@@ -1260,7 +1260,9 @@
                     }
 
                     // 🔄 Fallback: актуальная личная база (resolve по id / fingerprint / имени)
-                    if (!product && itemName && global.HEYS?.products?.getAll) {
+                    const isEstimatedSynthetic = isSyntheticEstimatedItem(item);
+
+                    if (!product && itemName && !isEstimatedSynthetic && global.HEYS?.products?.getAll) {
                         const freshProducts = global.HEYS.products.getAll();
                         const freshProduct = resolveProductByItem(item, freshProducts);
                         if (freshProduct) {
@@ -1277,7 +1279,8 @@
                             if (similar.length > 0) {
                                 const lastLogged = orphanLoggedRecently.get(itemName) || 0;
                                 if (Date.now() - lastLogged > 60000) {
-                                    console.warn(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similar[0].name}"`);
+                                    const similarName = similar[0]?.name || 'unknown';
+                                    console.warn(`[HEYS] Orphan mismatch: "${itemName}" not found, similar: "${similarName}"`);
                                     orphanLoggedRecently.set(itemName, Date.now());
                                 }
                             }
@@ -1299,7 +1302,7 @@
                     const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
 
                     // Трекаем orphan-продукты (когда используется штамп вместо базы)
-                    if (!product && itemName && !isSyntheticEstimatedItem(item)) {
+                    if (!product && itemName && !isEstimatedSynthetic) {
                         let freshProducts = global.HEYS?.products?.getAll?.() || [];
 
                         if (freshProducts.length === 0) {
@@ -2083,4 +2086,3 @@
     };
 
 })(window);
-
