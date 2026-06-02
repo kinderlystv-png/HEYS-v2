@@ -1719,6 +1719,7 @@
                                                                         window.HEYS.currentClientId = c.id;
                                                                         setClientId(c.id);
                                                                         console.info('[HEYS.gate] ✅ Клиент переключён (после sync)', { clientId: c.id });
+                                                                        window.__heysLastDispatchedClientId = c.id;
                                                                         window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: c.id } }));
                                                                     }, 0);
                                                                 }

@@ -2856,6 +2856,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                             }
                                             removeGlobalValue('heys_client_current');
                                             setClientId('');
+                                            window.__heysLastDispatchedClientId = null;
                                             window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: null } }));
                                             setShowClientDropdown(false);
                                         }

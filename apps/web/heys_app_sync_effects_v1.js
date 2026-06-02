@@ -89,9 +89,9 @@
             }
         }, [products.length, setProducts]);
 
-        // 🚀 PERF v7.0: Track last dispatched clientId to avoid duplicate heys:client-changed events
-        // Gate flow (heys_app_gate_flow_v1.js) already dispatches this event on click
-        const _lastDispatchedClientRef = React.useRef(null);
+        // Track globally, not only in a hook ref: RootWithKey intentionally remounts
+        // App on client switch, so a local ref is reset right after the event.
+        const _lastDispatchedClientRef = React.useRef(window.__heysLastDispatchedClientId || null);
 
         React.useEffect(() => {
             if (clientId) {
@@ -99,8 +99,9 @@
                 window.HEYS = window.HEYS || {};
                 window.HEYS.currentClientId = clientId;
                 // 🚀 PERF v7.0: Only dispatch if this is a NEW clientId (not already dispatched by gate flow)
-                if (_lastDispatchedClientRef.current !== clientId) {
+                if (_lastDispatchedClientRef.current !== clientId && window.__heysLastDispatchedClientId !== clientId) {
                     _lastDispatchedClientRef.current = clientId;
+                    window.__heysLastDispatchedClientId = clientId;
                     window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId } }));
                 }
                 // 🔇 v4.7.1: Лог клиента отключён
