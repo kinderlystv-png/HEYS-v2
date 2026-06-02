@@ -1579,6 +1579,24 @@
     });
   }
 
+  function getDayPayloadUpdatedAt(value) {
+    const raw = value && typeof value === 'object' ? value.updatedAt : 0;
+    if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+    if (typeof raw === 'string' && raw.trim()) {
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric) && numeric > 0) return numeric;
+      const parsed = Date.parse(raw);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return 0;
+  }
+
+  function isRemoteDayNewer(localValue, remoteValue) {
+    const localUpdatedAt = getDayPayloadUpdatedAt(localValue);
+    const remoteUpdatedAt = getDayPayloadUpdatedAt(remoteValue);
+    return remoteUpdatedAt > 0 && remoteUpdatedAt > localUpdatedAt;
+  }
+
   /**
    * Merge products when local and remote conflict.
    *
@@ -5546,20 +5564,20 @@
                 const localMeaningful = isMeaningfulDayData(existing);
                 const remoteMeaningful = isMeaningfulDayData(valueToStore);
 
-                if (localMeaningful && !remoteMeaningful) {
+                if (localMeaningful && !remoteMeaningful && !isRemoteDayNewer(existing, valueToStore)) {
                   logCritical(`🛡️ [BOOTSTRAP] KEEP LOCAL: meaningful local, empty remote for ${key}`);
                   return;
                 }
 
                 const localMealsCount = Array.isArray(existing?.meals) ? existing.meals.length : 0;
                 const remoteMealsCount = Array.isArray(valueToStore?.meals) ? valueToStore.meals.length : 0;
-                if (localMealsCount > remoteMealsCount) {
+                if (localMealsCount > remoteMealsCount && !isRemoteDayNewer(existing, valueToStore)) {
                   logCritical(`🛡️ [BOOTSTRAP] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${key}`);
                   return;
                 }
 
-                const existingUpdatedAt = existing?.updatedAt || 0;
-                const incomingUpdatedAt = valueToStore?.updatedAt || 0;
+                const existingUpdatedAt = getDayPayloadUpdatedAt(existing);
+                const incomingUpdatedAt = getDayPayloadUpdatedAt(valueToStore);
                 if (existingUpdatedAt > incomingUpdatedAt) {
                   logCritical(`🛡️ [BOOTSTRAP] KEEP LOCAL: local is newer (${existingUpdatedAt} > ${incomingUpdatedAt}) for ${key}`);
                   return;
@@ -5730,7 +5748,7 @@
                 const remoteMeaningful = isMeaningfulDayData(valueToStore);
 
                 // Не затираем meaningful локальные данные пустым remote
-                if (localMeaningful && !remoteMeaningful) {
+                if (localMeaningful && !remoteMeaningful && !isRemoteDayNewer(existing, valueToStore)) {
                   logCritical(`🛡️ [YANDEX SYNC] KEEP LOCAL: meaningful local, empty remote for ${localKey}`);
                   return; // skip this row
                 }
@@ -5738,14 +5756,14 @@
                 // Не затираем если local имеет БОЛЬШЕ meals
                 const localMealsCount = Array.isArray(existing?.meals) ? existing.meals.length : 0;
                 const remoteMealsCount = Array.isArray(valueToStore?.meals) ? valueToStore.meals.length : 0;
-                if (localMealsCount > remoteMealsCount) {
+                if (localMealsCount > remoteMealsCount && !isRemoteDayNewer(existing, valueToStore)) {
                   logCritical(`🛡️ [YANDEX SYNC] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${localKey}`);
                   return; // skip this row
                 }
 
                 // Не затираем если local новее по timestamp
-                const existingUpdatedAt = existing?.updatedAt || 0;
-                const incomingUpdatedAt = valueToStore?.updatedAt || 0;
+                const existingUpdatedAt = getDayPayloadUpdatedAt(existing);
+                const incomingUpdatedAt = getDayPayloadUpdatedAt(valueToStore);
                 if (existingUpdatedAt > incomingUpdatedAt) {
                   logCritical(`🛡️ [YANDEX SYNC] KEEP LOCAL: local is newer (${existingUpdatedAt} > ${incomingUpdatedAt}) for ${localKey}`);
                   return; // skip this row
@@ -6572,8 +6590,16 @@
     const backupStats = getDayDataSyncScore(backupEntry.data);
     if (!backupStats.meaningful) return { value: incomingValue, restored: false };
 
-    const incomingUpdatedAt = incomingValue?.updatedAt || 0;
-    const backupUpdatedAt = backupEntry.data?.updatedAt || backupEntry.payload?.localUpdatedAt || 0;
+    const incomingUpdatedAt = getDayPayloadUpdatedAt(incomingValue);
+    const backupUpdatedAt = getDayPayloadUpdatedAt(backupEntry.data) || getDayPayloadUpdatedAt({ updatedAt: backupEntry.payload?.localUpdatedAt });
+
+    if (incomingUpdatedAt > 0 && incomingUpdatedAt > backupUpdatedAt) {
+      logCritical(
+        `🛡️ [DAYV2 BACKUP SKIP] ${key}: incoming is newer (${incomingUpdatedAt} > ${backupUpdatedAt}), keeping incoming ` +
+        `(${incomingStats.totalItems} items, kcal=${incomingStats.savedEatenKcal}) | source=${source}`
+      );
+      return { value: incomingValue, restored: false };
+    }
 
     const shouldRestore = backupStats.score > incomingStats.score && (
       backupUpdatedAt >= incomingUpdatedAt ||
@@ -7775,8 +7801,8 @@
                   return; // Пропускаем этот ключ, НЕ затираем localStorage
                 }
 
-                const remoteUpdatedAt = row.v?.updatedAt || 0;
-                const localUpdatedAt = local?.updatedAt || 0;
+                const remoteUpdatedAt = getDayPayloadUpdatedAt(row.v);
+                const localUpdatedAt = getDayPayloadUpdatedAt(local);
 
                 // � Диагностика: логируем решения по dayv2 для сегодня
                 const _syncDayDate = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -7792,7 +7818,7 @@
                 // �🛡️ ЗАЩИТА: Не перезаписываем meaningful локальные данные пустым remote
                 const localMeaningful = isMeaningfulDayData(local);
                 const remoteMeaningful = isMeaningfulDayData(row.v);
-                if (localMeaningful && !remoteMeaningful) {
+                if (localMeaningful && !remoteMeaningful && !isRemoteDayNewer(local, row.v)) {
                   logCritical(`🛡️ [DAYV2] KEEP LOCAL: meaningful local, empty remote for ${key}`);
                   window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (empty remote) ' + key);
                   if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ → KEEP_LOCAL (remote пустой)');
@@ -7811,7 +7837,7 @@
                 if (!forceSync) {
                   const localMealsCount = Array.isArray(local?.meals) ? local.meals.length : 0;
                   const remoteMealsCount = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
-                  if (localMealsCount > remoteMealsCount) {
+                  if (localMealsCount > remoteMealsCount && !isRemoteDayNewer(local, row.v)) {
                     logCritical(`🛡️ [DAYV2] KEEP LOCAL: local has MORE meals (${localMealsCount} > ${remoteMealsCount}) for ${key}`);
                     window.console.info('[HEYS.sinhron] 🛡️ KEEP_LOCAL (more meals ' + localMealsCount + '>' + remoteMealsCount + ') ' + key);
                     if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ → KEEP_LOCAL (local больше meals ' + localMealsCount + '>' + remoteMealsCount + ')');
@@ -7841,7 +7867,7 @@
 
                   let valueToSave;
                   // ✅ Даже в force-режиме не перезаписываем meaningful локальные данные пустым remote
-                  if (localMeaningful && !remoteMeaningful) {
+                  if (localMeaningful && !remoteMeaningful && !isRemoteDayNewer(local, row.v)) {
                     valueToSave = local;
                     if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ FORCE → KEEP_LOCAL (remote пустой, local meaningful)');
                     const dateMatch = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -7862,12 +7888,13 @@
                     // Remote ещё не получил последние изменения. Сохраняем local как есть.
                     // ⚠️ Условие: local больше данных ИЛИ local новее (не И!) — защищаем от потери любых данных
                     const localHasMore = local.meals.length > (row.v.meals?.length || 0);
-                    const localIsNewer = (local.updatedAt || 0) > (row.v.updatedAt || 0);
+                    const localIsNewer = getDayPayloadUpdatedAt(local) > getDayPayloadUpdatedAt(row.v);
+                    const remoteIsNewer = isRemoteDayNewer(local, row.v);
 
                     // 🔇 PERF: Отключено
                     // logCritical(`   🔍 CHECK: localHasMore=${localHasMore} (${local.meals.length} > ${row.v.meals?.length || 0}), localIsNewer=${localIsNewer} (${local.updatedAt} > ${row.v.updatedAt})`);
 
-                    if (localHasMore || localIsNewer) {
+                    if (!remoteIsNewer && (localHasMore || localIsNewer)) {
                       // 🔇 PERF: Отключено
                       // logCritical(`🛡️ [FORCE SYNC] PROTECTED! Local wins: hasMore=${localHasMore}, isNewer=${localIsNewer}. Keeping local.`);
                       valueToSave = local;
@@ -7889,6 +7916,11 @@
                         // 🔇 PERF: Отключено
                         // logCritical(`☁️ [FORCE SYNC] Queued local data upload to cloud for ${dayKey}`);
                       }
+                    } else if (remoteIsNewer && !remoteMeaningful) {
+                      // Облако с более свежим штампом и без приёмов — это явное удаление с другого устройства.
+                      // Никакого merge: принимаем удаление как есть.
+                      valueToSave = row.v;
+                      if (_isTodaySync) window.console.info('[HEYS.sinhron] 📊 dayv2 СЕГОДНЯ FORCE → ACCEPT_REMOTE (удаление по штампу, meals=0)');
                     } else {
                       // Есть локальные данные — merge с preferRemote чтобы удаления из облака применились
                       const merged = mergeDayData(local, row.v, { forceKeepAll: true, preferRemote: true });
@@ -7944,7 +7976,11 @@
                 }
 
                 // Если есть локальные изменения И облачные изменения — нужен merge
-                if (local && localUpdatedAt > 0 && remoteUpdatedAt > 0) {
+                const localMealsCountForMerge = Array.isArray(local?.meals) ? local.meals.length : 0;
+                const remoteMealsCountForMerge = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
+                const remoteLooksLikeDeletion = remoteUpdatedAt > localUpdatedAt && remoteMealsCountForMerge < localMealsCountForMerge;
+
+                if (local && localUpdatedAt > 0 && remoteUpdatedAt > 0 && !remoteLooksLikeDeletion) {
                   // MERGE: объединяем данные вместо перезаписи
                   const merged = mergeDayData(local, row.v);
                   if (merged) {
@@ -9419,7 +9455,7 @@
             const remoteMeaningful = isMeaningfulDayData(row.v);
 
             // 🛡️ ЗАЩИТА 0: meaningful локальные данные не затираем пустым remote
-            if (localMeaningful && !remoteMeaningful) {
+            if (localMeaningful && !remoteMeaningful && !isRemoteDayNewer(freshLocalVal, row.v)) {
               logCritical(`🛡️ [fetchDays] KEEP LOCAL: meaningful local, empty remote for ${targetKey}`);
               return;
             }
@@ -9432,20 +9468,20 @@
             // � v4.7.1: Debug логи отключены
 
             // 🛡️ ЗАЩИТА 1: Не затираем непустые данные пустыми
-            if (!remoteHasMeals && localHasMeals) {
+            if (!remoteHasMeals && localHasMeals && !isRemoteDayNewer(freshLocalVal, row.v)) {
               logCritical(`🛡️ [fetchDays] PROTECTED: Not overwriting local (${localMealsCount} meals) with empty remote`);
               return;
             }
 
             // 🛡️ ЗАЩИТА 2: Не затираем если local имеет БОЛЬШЕ meals (race condition)
-            if (localMealsCount > remoteMealsCount) {
+            if (localMealsCount > remoteMealsCount && !isRemoteDayNewer(freshLocalVal, row.v)) {
               logCritical(`🛡️ [fetchDays] PROTECTED: Local has MORE meals (${localMealsCount} > ${remoteMealsCount}), keeping local`);
               return;
             }
 
             // 🛡️ ЗАЩИТА 3: Если одинаковое количество meals — сравниваем по timestamp
-            const remoteUpdated = new Date(row.updated_at || 0).getTime();
-            const localUpdated = freshLocalVal?.updatedAt || 0;
+            const remoteUpdated = getDayPayloadUpdatedAt(row.v) || new Date(row.updated_at || 0).getTime();
+            const localUpdated = getDayPayloadUpdatedAt(freshLocalVal);
             if (localUpdated > remoteUpdated) {
               logCritical(`🛡️ [fetchDays] PROTECTED: Local is newer (${localUpdated} > ${remoteUpdated}), keeping local`);
               return;
