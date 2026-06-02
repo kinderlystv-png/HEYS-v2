@@ -111,10 +111,14 @@ describe('isTechnicalFile', () => {
     expect(isTechnicalFile('apps/web/README.md')).toBe(true);
   });
 
+  test('matches landing files (separate deploy, no whats-new needed)', () => {
+    expect(isTechnicalFile('apps/landing/src/components/HeroSSR.tsx')).toBe(true);
+    expect(isTechnicalFile('apps/landing/src/app/page.tsx')).toBe(true);
+  });
+
   test('rejects runtime app code', () => {
     expect(isTechnicalFile('apps/web/heys_storage_supabase_v1.js')).toBe(false);
     expect(isTechnicalFile('apps/web/heys_day_diary_section.js')).toBe(false);
-    expect(isTechnicalFile('apps/landing/src/components/HeroSSR.tsx')).toBe(false);
   });
 });
 
