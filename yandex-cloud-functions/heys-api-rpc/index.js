@@ -3586,7 +3586,8 @@ module.exports.handler = async function (event, context) {
       },
       'get_change_markers_by_session': {
         'p_session_token': '::text',
-        'p_since': '::timestamptz'
+        'p_since': '::timestamptz',
+        'p_since_revision': '::bigint'  // L3c: revision-based marker checkpoint (clock-skew immune)
       },
       'upsert_client_kv_by_session': {
         'p_session_token': '::text',

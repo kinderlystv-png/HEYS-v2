@@ -1106,7 +1106,7 @@
    * @param {string|null} [since] - ISO timestamp, если null вернёт все маркеры
    * @returns {Promise<{data: Object|null, error?: string}>}
    */
-  async function getChangeMarkers(since) {
+  async function getChangeMarkers(since, sinceRevision) {
     try {
       // 🛡️ Guard: если есть curator token — это значит куратор. Curator должен
       // вызвать getChangeMarkersByCurator явно. Возвращаем early-error чтобы
@@ -1123,6 +1123,10 @@
 
       const params = sessionRpc.params;
       if (since) params.p_since = since;
+      // L3c (2026-06-03): revision checkpoint. When provided, the server filters by
+      // changed_revision > p_since_revision (clock-skew immune) and ignores p_since.
+      // Omitted → server falls back to the timestamp path (deploy-lag / un-migrated).
+      if (sinceRevision != null) params.p_since_revision = sinceRevision;
 
       const result = await rpc('get_change_markers_by_session', params);
 
@@ -1165,11 +1169,17 @@
    * @param {string|null} [since] - ISO timestamp
    * @returns {Promise<{data: Object|null, error?: string}>}
    */
-  async function getChangeMarkersByCurator(clientId, since) {
+  async function getChangeMarkersByCurator(clientId, since, sinceRevision) {
     if (!clientId) return { data: null, error: 'No clientId' };
     try {
       const filters = { 'eq.client_id': clientId };
-      if (since) filters['gt.changed_at'] = since;
+      // L3c (2026-06-03): prefer the revision checkpoint (clock-skew immune) when we
+      // have one; fall back to the timestamp delta otherwise.
+      if (sinceRevision != null) {
+        filters['gt.changed_revision'] = sinceRevision;
+      } else if (since) {
+        filters['gt.changed_at'] = since;
+      }
       // L2 (2026-06-03): widen to read changed_revision (server-revision watermark).
       const result = await rest('client_change_markers', {
         select: 'scope,changed_at,changed_revision',

@@ -12269,6 +12269,10 @@
 
   // Phase 1b: change markers state
   let _lastMarkerCheckTs = null; // ISO string of last successful marker check
+  // L3c (2026-06-03): server-revision checkpoint for hot-sync markers. Once set, the
+  // server filters scopes by changed_revision > this (clock-skew immune); the
+  // browser-clock _lastMarkerCheckTs above becomes a deploy-lag fallback only.
+  let _lastMarkerCheckRevision = null;
 
   /**
    * Phase 1b: derive which keys need pulling based on changed scopes.
@@ -12373,9 +12377,9 @@
         // markers не того клиента. Теперь при curator-mode явно идём через
         // by_curator endpoint с explicit clientId.
         if (isCuratorMode && typeof YandexAPI.getChangeMarkersByCurator === 'function') {
-          markerResult = await YandexAPI.getChangeMarkersByCurator(clientId, _lastMarkerCheckTs);
+          markerResult = await YandexAPI.getChangeMarkersByCurator(clientId, _lastMarkerCheckTs, _lastMarkerCheckRevision);
         } else if (hasSessionToken && typeof YandexAPI.getChangeMarkers === 'function') {
-          markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs);
+          markerResult = await YandexAPI.getChangeMarkers(_lastMarkerCheckTs, _lastMarkerCheckRevision);
         }
 
         if (markerResult && !markerResult.error && markerResult.data) {
@@ -12387,6 +12391,13 @@
           const changedKeys = _getKeysForChangedScopes(markerResult.data, markerAwareKeys);
           if (changedKeys !== null) {
             _lastMarkerCheckTs = new Date().toISOString();
+            // L3c: advance the revision checkpoint to the server's high-watermark at
+            // read time. A write that landed after this read gets a higher revision and
+            // is caught next tick — no missed-write race. Falls back to the timestamp
+            // checkpoint above when the server doesn't report server_revision.
+            if (typeof markerResult.server_revision === 'number') {
+              _lastMarkerCheckRevision = markerResult.server_revision;
+            }
             if (changedKeys.length === 0) {
               // Nothing changed — skip pull entirely
               return { success: true, updated: 0, failed: 0, authMissing: false, mode: 'markers-skip', fetchedKeys: [], fetchedKeyCount: 0, markerScopes };
@@ -12425,7 +12436,13 @@
 
         if (batchResult && !batchResult.error && Array.isArray(batchResult.data)) {
           let updated = 0;
-          for (const item of batchResult.data) {
+          // Fold overlay tail shards into the main overlay row before applying.
+          // HOT-sync otherwise drops tails (applyForegroundHotSyncValue, see
+          // isOverlayTailRpcKey branch), so a product that landed in a tail shard
+          // never reaches this device until a full bootstrap (incident 2026-06-03:
+          // product synced without name — meal item fell back to nameless snapshot).
+          const hotRows = mergeOverlayRpcTailRawClientRows(batchResult.data, clientId);
+          for (const item of hotRows) {
             if (item.v != null && applyForegroundHotSyncValue(clientId, item.k, item.v, 'foreground-hot-sync', item.revision)) {
               updated += 1;
             }
@@ -12487,6 +12504,25 @@
     let returnedEarly = false;
     let lateArrivals = 0;
 
+    // HOT-sync drops overlay tail shards when applied individually (see batch-RPC
+    // path). Here keys stream in one-by-one, so buffer the overlay family and
+    // reassemble once via mergeOverlayRpcTailRawClientRows before applying — keeps
+    // tail-sharded products from being lost until the next full bootstrap.
+    const _overlayHotBuf = [];
+    const _isOverlayFamilyKey = (k) => {
+      const nk = normalizeKeyForSupabase(k, clientId);
+      return nk === 'heys_products_overlay_v2' || isOverlayTailRpcKey(nk);
+    };
+    const flushOverlayHotBuf = () => {
+      if (_overlayHotBuf.length === 0) return 0;
+      const merged = mergeOverlayRpcTailRawClientRows(_overlayHotBuf.splice(0), clientId);
+      let n = 0;
+      for (const r of merged) {
+        if (r.v != null && applyForegroundHotSyncValue(clientId, r.k, r.v, 'foreground-hot-sync', r.revision)) n += 1;
+      }
+      return n;
+    };
+
     const handleResult = (key, result) => {
       if (result.status !== 'fulfilled') {
         if (!returnedEarly) failed += 1; else lateArrivals += 1;
@@ -12499,6 +12535,11 @@
         return;
       }
       if (payload.data == null) return;
+      if (_isOverlayFamilyKey(key)) {
+        // Defer overlay apply until reassembly (flushOverlayHotBuf below).
+        _overlayHotBuf.push({ k: key, v: payload.data });
+        return;
+      }
       const applied = applyForegroundHotSyncValue(clientId, key, payload.data);
       if (applied) {
         if (!returnedEarly) updated += 1;
@@ -12517,10 +12558,13 @@
       new Promise((resolve) => setTimeout(resolve, SOFT_BUDGET_MS)),
     ]);
     returnedEarly = true;
+    // Reassemble + apply overlay shards collected within budget.
+    updated += flushOverlayHotBuf();
 
     // Поздние ответы продолжают применяться в фоне (через handleResult выше).
     // Логируем количество для наблюдения и при необходимости флашим память.
     Promise.allSettled(tasks).then(() => {
+      lateArrivals += flushOverlayHotBuf();
       if (lateArrivals > 0) {
         console.info(`[HEYS.sync] 🐢 hot-sync late arrivals: ${lateArrivals} key(s) applied after ${SOFT_BUDGET_MS}ms budget`);
         if (global.HEYS?.store?.flushMemory) {
@@ -12570,7 +12614,11 @@
 
       let updated = 0;
       const rows = Array.isArray(result.data) ? result.data : [];
-      for (const row of rows) {
+      // Fold overlay tail shards into the main overlay row before applying (see
+      // batch-RPC path for rationale: HOT-sync drops tails, losing tail-sharded
+      // products until the next full bootstrap).
+      const hotRows = mergeOverlayRpcTailRawClientRows(rows, clientId);
+      for (const row of hotRows) {
         if (row.v != null && row.k && applyForegroundHotSyncValue(clientId, row.k, row.v, 'foreground-hot-sync', row.revision)) {
           updated += 1;
         }
