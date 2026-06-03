@@ -17,6 +17,7 @@
             normalizedKey === 'heys_products_overlay_v2' ||
             normalizedKey === 'heys_client_current' ||
             normalizedKey === 'heys_subscription_status' ||
+            normalizedKey.startsWith('heys_planning_') ||
             normalizedKey.includes('widget_layout')
         );
     }

@@ -128,6 +128,31 @@ describe('HEYS.syncQueueRuntimePure', () => {
     expect(doImmediateClientUpload).toHaveBeenCalledTimes(1);
   });
 
+  it('enqueueClientSave treats planning chrono keys as immediate critical writes', () => {
+    global.HEYS = {};
+    loadModule();
+    const { enqueueClientSave } = global.HEYS.syncQueueRuntimePure;
+
+    const queue = [];
+    const doImmediateClientUpload = vi.fn(() => Promise.resolve());
+
+    const result = enqueueClientSave({
+      queue,
+      item: { k: 'heys_planning_chrono_activities', v: [] },
+      normalizedKey: 'heys_planning_chrono_activities',
+      waitingForSync: false,
+      isOnline: true,
+      persistQueue: vi.fn(),
+      notifyPendingChange: vi.fn(),
+      scheduleClientPush: vi.fn(),
+      doImmediateClientUpload,
+      onImmediateUploadError: vi.fn(),
+    });
+
+    expect(result.shouldImmediate).toBe(true);
+    expect(doImmediateClientUpload).toHaveBeenCalledTimes(1);
+  });
+
   it('restorePersistentQueueState rehydrates in-flight batch after reload', () => {
     global.HEYS = {};
     loadModule();

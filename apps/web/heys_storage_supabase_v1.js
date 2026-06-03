@@ -11996,6 +11996,29 @@
       const previousValue = currentRaw ? tryParse(currentRaw) : null;
       if (currentRaw === serialized) return false;
 
+      // Planning/chrono arrays are last-writer snapshots. A local delete shrinks
+      // the array and enters the upload queue; until that upload lands, hot-sync
+      // can still fetch the old cloud array and visually resurrect the deleted
+      // circle/task. Keep the local pending value authoritative for the same key.
+      if (baseKey.startsWith('heys_planning_')) {
+        try {
+          if (cloud.getSyncStatus && cloud.getSyncStatus(baseKey) === 'pending') {
+            global.HEYS = global.HEYS || {};
+            global.HEYS._hotsyncPlanningBlocks = global.HEYS._hotsyncPlanningBlocks || [];
+            global.HEYS._hotsyncPlanningBlocks.push({
+              ts: Date.now(),
+              clientId: clientId ? String(clientId).slice(0, 8) : null,
+              key: baseKey,
+              source,
+              reason: 'local-pending-write',
+            });
+            if (global.HEYS._hotsyncPlanningBlocks.length > 25) global.HEYS._hotsyncPlanningBlocks.shift();
+            console.info('[HEYS.planning] hot-sync skipped stale cloud while local write is pending', { key: baseKey, source });
+            return false;
+          }
+        } catch (_) { /* noop */ }
+      }
+
       // HOT sync products anti-shrink + nutrient-completeness guard.
       // Block legitimate cloud → local overwrite when local has MORE data
       // (length OR more iron-bearing rows). Mirrors the dayv2/widget_layout pattern.
@@ -12058,6 +12081,26 @@
           const localUp = localObj?.updatedAt;
           const remoteUp = value?.updatedAt;
           if (typeof localUp === 'number' && typeof remoteUp === 'number' && localUp > remoteUp) {
+            try {
+              const localMeals = Array.isArray(localObj?.meals) ? localObj.meals : [];
+              const remoteMeals = Array.isArray(value?.meals) ? value.meals : [];
+              const countItems = (meals) => meals.reduce((sum, meal) => sum + (Array.isArray(meal?.items) ? meal.items.length : 0), 0);
+              global.HEYS = global.HEYS || {};
+              global.HEYS._hotsyncDayv2Blocks = global.HEYS._hotsyncDayv2Blocks || [];
+              global.HEYS._hotsyncDayv2Blocks.push({
+                ts: Date.now(),
+                clientId: clientId ? String(clientId).slice(0, 8) : null,
+                key: scopedKey,
+                source,
+                localUpdatedAt: localUp,
+                remoteUpdatedAt: remoteUp,
+                localMeals: localMeals.length,
+                remoteMeals: remoteMeals.length,
+                localItems: countItems(localMeals),
+                remoteItems: countItems(remoteMeals),
+              });
+              if (global.HEYS._hotsyncDayv2Blocks.length > 25) global.HEYS._hotsyncDayv2Blocks.shift();
+            } catch (_) { /* noop */ }
             logCritical(`🛡️ [DAYV2 HOT] BLOCKED overwrite (local ${localUp} > remote ${remoteUp}): ${scopedKey}`);
             return false; // local is newer — don't overwrite
           }
@@ -12236,6 +12279,8 @@
     );
     const hasCuratorSession = (() => {
       try {
+        const curatorSession = global.localStorage.getItem('heys_curator_session');
+        if (curatorSession && curatorSession.length > 10) return true;
         const storedToken = global.localStorage.getItem('heys_supabase_auth_token');
         if (!storedToken) return false;
         const parsed = JSON.parse(storedToken);
@@ -12245,7 +12290,7 @@
       }
     })();
     const isCuratorLike = !!(user || hasCuratorSession);
-    const isCuratorMode = !hasSessionToken && isCuratorLike;
+    const isCuratorMode = hasCuratorSession || (!hasSessionToken && isCuratorLike);
 
     // Phase 1b: check change markers before pulling data
     // Can be disabled: localStorage.setItem('heys_disable_markers', '1')
@@ -12298,10 +12343,10 @@
       try {
         let batchResult = null;
 
-        if (hasSessionToken && typeof YandexAPI.getKVBatch === 'function') {
-          batchResult = await YandexAPI.getKVBatch(clientId, keysToFetch);
-        } else if (isCuratorMode && typeof YandexAPI.getKVBatchByCurator === 'function') {
+        if (isCuratorMode && typeof YandexAPI.getKVBatchByCurator === 'function') {
           batchResult = await YandexAPI.getKVBatchByCurator(clientId, keysToFetch);
+        } else if (hasSessionToken && typeof YandexAPI.getKVBatch === 'function') {
+          batchResult = await YandexAPI.getKVBatch(clientId, keysToFetch);
         }
 
         if (batchResult?.error === 'No session token') {

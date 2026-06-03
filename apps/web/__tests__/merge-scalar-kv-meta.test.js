@@ -175,4 +175,15 @@ describe('mergeScalarKv — Phase A critical keys are listed in storage layer', 
     expect(collectorArea).toContain('localOnly: new Set()');
     expect(collectorArea).toContain('collector.localOnly');
   });
+
+  it('planning hot-sync skips stale cloud while a local write is pending', () => {
+    const applyStart = source.indexOf('function applyForegroundHotSyncValue');
+    if (applyStart < 0) {
+      throw new Error('Test setup: `function applyForegroundHotSyncValue` not found');
+    }
+    const applyArea = source.slice(applyStart, applyStart + 10000);
+    expect(applyArea).toContain("baseKey.startsWith('heys_planning_')");
+    expect(applyArea).toContain("cloud.getSyncStatus(baseKey) === 'pending'");
+    expect(applyArea).toContain('local-pending-write');
+  });
 });
