@@ -104,6 +104,21 @@ node scripts/lint-bundle-size.mjs || {
   exit 1
 }
 
+# 2026-06-04: fail-loud гейт против stale-деплоя. В source-only модели
+# (агенты не пересобирают бандлы — это делает `pnpm agents:integrate`) деплой
+# катит закоммиченные хеш-бандлы из public/, а не полностью пересобирает их из
+# исходников. ci.yml с verify-legacy-bundles выключен на push в main → если
+# source ушёл на main без интеграции, прод тихо уехал бы на старых бандлах.
+# Здесь ловим рассинхрон source↔bundle (source_fingerprint mismatch) ДО push.
+echo "🔗 Проверка соответствия legacy-бандлов исходникам (anti-stale-deploy)..."
+node scripts/verify-legacy-bundles.mjs || {
+  echo "❌ Бандлы не соответствуют исходникам (source изменён без пересборки)."
+  echo "💡 Запусти integration-проход, который пересоберёт бандлы:"
+  echo "   pnpm agents:integrate --branches=... --title=\"...\" --items='[...]'"
+  echo "   (или, для одиночной правки, pnpm bundle:legacy && git add apps/web/public ...)."
+  exit 1
+}
+
 echo "🧪 Запуск полного test suite..."
 
 # До 2026-05-21 здесь был whitelist из 14 «критических» файлов. За время его
