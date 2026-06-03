@@ -9,6 +9,7 @@ const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
 
 const {
   assertAgentStaging,
+  assertNotSharedRootDuringParallel,
   detectStagingMode,
   getForbiddenAgentStagedFiles,
   isGeneratedOrReleaseFile,
@@ -58,6 +59,41 @@ describe('agent staging guard', () => {
 
     expect(getForbiddenAgentStagedFiles(files)).toEqual(files.slice(0, 3));
     expect(isGeneratedOrReleaseFile('apps/web/public/whats-new/screen.png')).toBe(true);
+  });
+
+  const ROOT = '/repo';
+  const OTHER_WT = '/repo/.claude/worktrees/agent-x';
+
+  it('blocks agent work from the shared root checkout while agent worktrees are active', () => {
+    const r = assertNotSharedRootDuringParallel({
+      mode: 'agent', repoRoot: ROOT, env: {}, agentWorktrees: [OTHER_WT],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.others).toEqual([OTHER_WT]);
+  });
+
+  it('allows agent work that is already isolated inside its own worktree', () => {
+    expect(assertNotSharedRootDuringParallel({
+      mode: 'agent', repoRoot: OTHER_WT, env: {}, agentWorktrees: [OTHER_WT],
+    }).ok).toBe(true);
+  });
+
+  it('exempts integrators (non-agent mode) on the root checkout', () => {
+    expect(assertNotSharedRootDuringParallel({
+      mode: 'integration', repoRoot: ROOT, env: {}, agentWorktrees: [OTHER_WT],
+    }).ok).toBe(true);
+  });
+
+  it('allows solo agent work in root when no other agent worktrees exist', () => {
+    expect(assertNotSharedRootDuringParallel({
+      mode: 'agent', repoRoot: ROOT, env: {}, agentWorktrees: [],
+    }).ok).toBe(true);
+  });
+
+  it('honors HEYS_ALLOW_SHARED_TREE override', () => {
+    expect(assertNotSharedRootDuringParallel({
+      mode: 'agent', repoRoot: ROOT, env: { HEYS_ALLOW_SHARED_TREE: '1' }, agentWorktrees: [OTHER_WT],
+    }).ok).toBe(true);
   });
 
   it('rejects the raw react-bundle.js (not just the gzipped copy)', () => {

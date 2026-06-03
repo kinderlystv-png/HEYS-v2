@@ -141,6 +141,12 @@ generated-путей —
 [scripts/legacy-bundle-config.mjs](scripts/legacy-bundle-config.mjs) (single
 source of truth, не дублируй).
 
+**Изоляция рабочего дерева:** если коммитишь agent-mode правки из общего
+root-checkout, пока живы другие `.claude/worktrees/`, pre-commit падает — два
+агента в одном дереве перемешали бы незакоммиченные правки. Работай в своём
+worktree (`git worktree add`). Интеграторы на `main`/`integration` исключены;
+override — `HEYS_ALLOW_SHARED_TREE=1` (если этот checkout точно только твой).
+
 Workflow:
 
 1. Агент в своём worktree/ветке коммитит source/test/docs своей задачи. Бандлы,
