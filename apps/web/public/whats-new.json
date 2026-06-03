@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.06.03.fca1075f",
-      "buildHash": "fca1075f",
+      "version": "2026.06.03.cd11a9ed",
+      "buildHash": "cd11a9ed",
       "date": "2026-06-03",
       "kind": "user-facing",
       "profile": "user-facing-general",
