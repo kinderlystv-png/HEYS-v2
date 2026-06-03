@@ -268,6 +268,90 @@ describe('Store — chrono tombstones', () => {
     });
 });
 
+describe('Store — cloud pull merge by record (mergeCloudPlanningArray)', () => {
+    let Store;
+    beforeEach(() => { ({ Store } = loadModules()); });
+
+    const K_ENTRIES = 'heys_planning_chrono_entries';
+
+    it('returns null for non-merge-safe keys (caller keeps wholesale replace)', () => {
+        expect(Store.mergeCloudPlanningArray('heys_planning_tasks', [], [])).toBeNull();
+        expect(Store.mergeCloudPlanningArray('heys_planning_projects', [], [])).toBeNull();
+        expect(Store.mergeCloudPlanningArray('heys_planning_slots', [], [])).toBeNull();
+        expect(Store.mergeCloudPlanningArray('heys_planning_links_v1', [], [])).toBeNull();
+        expect(Store.mergeCloudPlanningArray('heys_planning_chrono_snapshots', [], [])).toBeNull();
+    });
+
+    it('unions local-only and remote-only records — neither side is lost', () => {
+        const local = [{ id: 'L', activityId: 'a', date: '2026-06-04', minutes: 30, createdAt: '2026-06-04T10:00:00Z' }];
+        const remote = [{ id: 'R', activityId: 'a', date: '2026-06-04', minutes: 45, createdAt: '2026-06-04T11:00:00Z' }];
+        const merged = Store.mergeCloudPlanningArray(K_ENTRIES, local, remote);
+        expect(merged.map((e) => e.id).sort()).toEqual(['L', 'R']);
+    });
+
+    it('on id-collision keeps the newer updatedAt — a local edit is not lost', () => {
+        const local = [{ id: 'X', minutes: 99, createdAt: '2026-06-04T10:00:00Z', updatedAt: '2026-06-04T12:00:00Z' }];
+        const remote = [{ id: 'X', minutes: 10, createdAt: '2026-06-04T10:00:00Z', updatedAt: '2026-06-04T11:00:00Z' }];
+        const merged = Store.mergeCloudPlanningArray(K_ENTRIES, local, remote);
+        expect(merged).toHaveLength(1);
+        expect(merged[0].minutes).toBe(99);
+    });
+
+    it('a newer remote edit wins over a stale local copy', () => {
+        const local = [{ id: 'X', minutes: 10, updatedAt: '2026-06-04T10:00:00Z' }];
+        const remote = [{ id: 'X', minutes: 77, updatedAt: '2026-06-04T13:00:00Z' }];
+        const merged = Store.mergeCloudPlanningArray(K_ENTRIES, local, remote);
+        expect(merged[0].minutes).toBe(77);
+    });
+
+    it('equal-recency tie keeps the LOCAL record (possibly-unsynced edit)', () => {
+        const ts = '2026-06-04T10:00:00Z';
+        const local = [{ id: 'X', minutes: 1, updatedAt: ts }];
+        const remote = [{ id: 'X', minutes: 2, updatedAt: ts }];
+        const merged = Store.mergeCloudPlanningArray(K_ENTRIES, local, remote);
+        expect(merged[0].minutes).toBe(1);
+    });
+
+    it('does NOT resurrect a locally-deleted entry carried by a stale cloud array', () => {
+        const a = Store.addChronoActivity({ name: 'Sport' });
+        const e = Store.addChronoEntry({ activityId: a.id, date: '2026-06-04', minutes: 30 });
+        Store.deleteChronoEntry(e.id); // writes an entry tombstone
+        const merged = Store.mergeCloudPlanningArray(K_ENTRIES, [], [e]);
+        expect(merged.find((x) => x.id === e.id)).toBeUndefined();
+    });
+
+    it('activities: unions local-only and remote-only without losing either', () => {
+        const local = [{ id: 'L', name: 'Local', order: 0, createdAt: '2026-06-04T10:00:00Z' }];
+        const remote = [{ id: 'R', name: 'Remote', order: 1, createdAt: '2026-06-04T11:00:00Z' }];
+        const merged = Store.mergeCloudPlanningArray('heys_planning_chrono_activities', local, remote);
+        expect(merged.map((x) => x.id).sort()).toEqual(['L', 'R']);
+    });
+
+    it('activities: strips a locally-deleted activity carried by a stale cloud array', () => {
+        const keep = Store.addChronoActivity({ name: 'Keep' });
+        const gone = Store.addChronoActivity({ name: 'Gone' });
+        Store.deleteChronoActivity(gone.id); // activity tombstone + removed from list
+        const merged = Store.mergeCloudPlanningArray(
+            'heys_planning_chrono_activities',
+            Store.getChronoActivities(),
+            [keep, gone], // cloud still has the deleted one
+        );
+        expect(merged.map((x) => x.id)).toContain(keep.id);
+        expect(merged.find((x) => x.id === gone.id)).toBeUndefined();
+    });
+
+    it('is idempotent — re-merging the merged result yields identical bytes (no echo loop)', () => {
+        const local = [
+            { id: 'B', minutes: 2, createdAt: '2026-06-04T11:00:00Z' },
+            { id: 'A', minutes: 1, createdAt: '2026-06-04T10:00:00Z' },
+        ];
+        const remote = [{ id: 'C', minutes: 3, createdAt: '2026-06-04T12:00:00Z' }];
+        const once = Store.mergeCloudPlanningArray(K_ENTRIES, local, remote);
+        const twice = Store.mergeCloudPlanningArray(K_ENTRIES, once, remote);
+        expect(JSON.stringify(twice)).toBe(JSON.stringify(once));
+    });
+});
+
 describe('Store — target/budget mutex within period', () => {
     let Store;
     beforeEach(() => { ({ Store } = loadModules()); });

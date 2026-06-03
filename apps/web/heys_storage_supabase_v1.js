@@ -8924,6 +8924,38 @@
                   }
                 }
 
+                // 🛡️ Chrono activities/entries: merge-by-record instead of wholesale
+                // replace (parallel-edit loss fix). Read THIS scoped key directly — NOT
+                // Planning.Store getters, which are currentClientId-scoped and could read
+                // a different client during a full-sync of another client_id.
+                if (row.k === 'heys_planning_chrono_activities' || row.k === 'heys_planning_chrono_entries') {
+                  try {
+                    const PStore = global.HEYS?.Planning?.Store;
+                    if (PStore && typeof PStore.mergeCloudPlanningArray === 'function' && Array.isArray(valueToSave)) {
+                      let localArr = null;
+                      try {
+                        const _raw = ls.getItem(key);
+                        if (_raw) {
+                          const _st = global.HEYS?.store;
+                          let _p = null;
+                          if (_st && typeof _st.decompress === 'function') { try { _p = _st.decompress(_raw); } catch (_) { _p = null; } }
+                          if (!Array.isArray(_p)) { try { _p = JSON.parse(_raw); } catch (_) { _p = null; } }
+                          localArr = _p;
+                        }
+                      } catch (_) { localArr = null; }
+                      const mergedArr = PStore.mergeCloudPlanningArray(row.k, Array.isArray(localArr) ? localArr : [], valueToSave);
+                      if (mergedArr) {
+                        const reserialized = JSON.stringify(mergedArr);
+                        if (ls.getItem(key) !== reserialized) {
+                          ls.setItem(key, reserialized);
+                          log(`  ✅ Merged chrono to localStorage: ${key}`);
+                        }
+                        return; // handled — skip wholesale write
+                      }
+                    }
+                  } catch (_) { /* fallback to wholesale write below */ }
+                }
+
                 // 🧷 Backup перед возможной перезаписью dayv2
                 if (key.includes('dayv2_')) {
                   backupDayV2BeforeOverwrite(key, valueToSave, 'cloud-sync');
@@ -12207,6 +12239,29 @@
           }
         } catch (_) { /* parse error — fallback to wholesale */ }
         if (!appliedMergedGame) {
+          global.localStorage.setItem(scopedKey, serialized);
+        }
+      } else if (baseKey === 'heys_planning_chrono_activities' || baseKey === 'heys_planning_chrono_entries') {
+        // 🛡️ Chrono merge-by-record (parallel-edit loss fix). Union local with cloud
+        // instead of wholesale replace, so a stale cloud array can't drop local-only
+        // adds or resurrect local deletes. Only activities/entries are merge-safe
+        // (id + tombstone coverage); the pure helper returns null otherwise.
+        let appliedMergedChrono = false;
+        try {
+          const PStore = global.HEYS?.Planning?.Store;
+          if (PStore && typeof PStore.mergeCloudPlanningArray === 'function' && Array.isArray(value)) {
+            const localArr = Array.isArray(previousValue) ? previousValue : [];
+            const mergedArr = PStore.mergeCloudPlanningArray(baseKey, localArr, value);
+            if (mergedArr) {
+              const reserialized = JSON.stringify(mergedArr);
+              if (currentRaw === reserialized) return false; // idempotent no-op → no echo upload
+              global.localStorage.setItem(scopedKey, reserialized);
+              value = mergedArr; // downstream event dispatch uses value
+              appliedMergedChrono = true;
+            }
+          }
+        } catch (_) { /* parse/store error — fallback to wholesale */ }
+        if (!appliedMergedChrono) {
           global.localStorage.setItem(scopedKey, serialized);
         }
       } else {

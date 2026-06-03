@@ -397,6 +397,73 @@
         );
     }
 
+    // ── Cloud pull merge by record (id + recency + tombstones) ────────────────
+    // Hot-sync / full-sync / refresh previously REPLACED a planning array wholesale
+    // with the cloud copy. Parallel edits on another device → loss: a stale cloud
+    // array resurrected deletes or dropped local-only additions. (Chrono twin of the
+    // cycleDay cross-client leak — same architectural root: trust the whole container,
+    // never reconcile per record.) These helpers merge per id instead:
+    //   • union by id (my new + their new both survive)
+    //   • on id-collision keep the later updatedAt/createdAt (edits don't get lost)
+    //   • ties keep LOCAL (our possibly-unsynced edit wins)
+    //   • deletes flow through the existing tombstone union (filterChrono* strips them)
+    // Output is deterministically ordered so re-merging identical input yields identical
+    // bytes — callers compare against current LS and skip the write (no echo-upload loop,
+    // see project_dayv2_echo_loop_fix history).
+    function chronoRecencyMs(item) {
+        const t = item && (item.updatedAt || item.createdAt || item.at);
+        if (t == null) return 0;
+        const n = typeof t === 'number' ? t : Date.parse(t);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    function mergeArrayById(localArr, remoteArr) {
+        const byId = new Map();
+        const absorb = (arr) => {
+            (Array.isArray(arr) ? arr : []).forEach((item) => {
+                if (!item || item.id == null) return;
+                const id = String(item.id);
+                const prev = byId.get(id);
+                // remote absorbed first, then local → equal-recency ties keep LOCAL.
+                if (!prev || chronoRecencyMs(item) >= chronoRecencyMs(prev)) byId.set(id, item);
+            });
+        };
+        absorb(remoteArr);
+        absorb(localArr);
+        return Array.from(byId.values());
+    }
+
+    // Stable, deterministic order for idempotency (so merge(merge(x)) === merge(x) byte-wise).
+    function sortChronoEntriesStable(entries) {
+        return (Array.isArray(entries) ? entries.slice() : []).sort((a, b) => {
+            const ra = chronoRecencyMs(a), rb = chronoRecencyMs(b);
+            if (ra !== rb) return ra - rb;
+            return String(a && a.id).localeCompare(String(b && b.id));
+        });
+    }
+
+    // Pure: returns the array to persist for a cloud pull of `key`, or NULL when the
+    // key is NOT safe to merge (caller then keeps the legacy wholesale replace).
+    // Does NOT write — callers (hot-sync interceptor, full-sync, refreshPlanningFromCloud)
+    // decide how to store.
+    //
+    // ⚠️ Only chrono ACTIVITIES and ENTRIES are merge-safe, because merge-by-union
+    // resurrects deletes unless a tombstone marks them. Those two have id + tombstone
+    // coverage (filterChrono* strips deleted ids here). The rest stay on replace:
+    //   • snapshots — no stable id (keyed by date+activityId, additive aggregate)
+    //   • projects/tasks/slots/links — no tombstone system yet, so union would
+    //     resurrect a delete done on another device. Adding per-record merge for
+    //     tasks/projects needs a tombstone layer first (separate change).
+    function mergeCloudPlanningArray(key, localArr, remoteArr) {
+        if (key === KEYS.CHRONO_ACTIVITIES) {
+            return sortByOrder(filterChronoActivities(mergeArrayById(localArr, remoteArr)));
+        }
+        if (key === KEYS.CHRONO_ENTRIES) {
+            return sortChronoEntriesStable(filterChronoEntries(mergeArrayById(localArr, remoteArr)));
+        }
+        return null; // not merge-safe — caller keeps wholesale replace
+    }
+
     function getProjects() {
         return sortByOrder(lsGet(KEYS.PROJECTS, []));
     }
@@ -1085,6 +1152,9 @@
                         return; // local write pending — keep local authoritative
                     }
                 } catch (e) { /* noop */ }
+                // 🛡️ Chrono activities/entries: merge-by-record (union local+cloud) so a
+                // stale cloud array can't drop local-only adds or resurrect local deletes.
+                // Other keys: legacy replace (no tombstone layer → union would resurrect).
                 if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
                     Store.saveProjects(item.v);
                 } else if (item.k === 'heys_planning_tasks' && typeof Store.saveTasks === 'function') {
@@ -1094,13 +1164,13 @@
                 } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
                     Store.saveLinks(item.v);
                 } else if (item.k === 'heys_planning_chrono_activities' && typeof Store.saveChronoActivities === 'function') {
-                    Store.saveChronoActivities(item.v);
+                    Store.saveChronoActivities(mergeCloudPlanningArray(item.k, getChronoActivities(), item.v) || item.v);
                 } else if (item.k === 'heys_planning_chrono_entries' && typeof Store.saveChronoEntries === 'function') {
-                    Store.saveChronoEntries(item.v);
+                    Store.saveChronoEntries(mergeCloudPlanningArray(item.k, getChronoEntries(), item.v) || item.v);
                 } else if (item.k === 'heys_planning_chrono_snapshots' && typeof Store.saveChronoSnapshots === 'function') {
                     Store.saveChronoSnapshots(item.v);
                 } else if (item.k === 'heys_planning_chrono_tombstones_v1' && typeof Store.saveChronoTombstones === 'function') {
-                    Store.saveChronoTombstones(item.v);
+                    Store.saveChronoTombstones(item.v); // tombstones already union-merge in saveChronoTombstones
                 }
             });
             try {
@@ -1263,6 +1333,8 @@
         mergeChronoActivities,
         getChronoTombstones,
         saveChronoTombstones,
+        mergeArrayById,
+        mergeCloudPlanningArray,
         getChronoEntries,
         saveChronoEntries,
         addChronoEntry,
