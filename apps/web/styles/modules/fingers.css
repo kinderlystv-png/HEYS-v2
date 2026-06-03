@@ -763,12 +763,45 @@
 /* Stepper buttons тоже compact. Исключаем CTA-кнопки которые должны быть
  * полноразмерные (например fingers-fs-mvc-cta — премиум CTA «Max Hang Test»,
  * fingers-fs-mvc-edit — «Изменить» рядом с уже сохранённым MVC). */
-.fingers-fs-constructor-card button:not(.fingers-fs-cta):not(.fingers-fs-ghost):not(.fingers-fs-muscle-chip):not(.fingers-fs-weight-btn):not(.fingers-fs-hero-muscle-row):not(.fingers-fs-mvc-cta):not(.fingers-fs-mvc-edit) {
+.fingers-fs-constructor-card button:not(.fingers-fs-cta):not(.fingers-fs-ghost):not(.fingers-fs-muscle-chip):not(.fingers-fs-weight-btn):not(.fingers-fs-hero-muscle-row):not(.fingers-fs-mvc-cta):not(.fingers-fs-mvc-edit):not(.fingers-fs-mvc-autofill) {
   height: 24px !important;
   width: 24px !important;
   min-height: 24px !important;
   min-width: 24px !important;
   font-size: 15px !important;
+}
+
+/* «⚖ Под X% MVC» — авто-подбор рабочего веса. Изумрудный акцент = позитивное
+ * действие (подставить), визуально отделён от нейтрального «↻ Изменить». */
+.fingers-fs-constructor-card .fingers-fs-mvc-autofill {
+  margin-left: 6px;
+  padding: 4px 10px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  min-width: auto !important;
+  width: auto !important;
+  border-radius: 999px !important;
+  border: 0.5px solid rgba(16, 185, 129, 0.32) !important;
+  background: rgba(16, 185, 129, 0.10) !important;
+  color: #047857 !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 160ms ease, transform 100ms ease;
+}
+.fingers-fs-constructor-card .fingers-fs-mvc-autofill:hover {
+  background: rgba(16, 185, 129, 0.18) !important;
+}
+.fingers-fs-constructor-card .fingers-fs-mvc-autofill:active { transform: scale(0.96); }
+[data-theme="dark"] .fingers-fs-constructor-card .fingers-fs-mvc-autofill {
+  border-color: rgba(52, 211, 153, 0.38) !important;
+  background: rgba(52, 211, 153, 0.16) !important;
+  color: #6ee7b7 !important;
+}
+[data-theme="dark"] .fingers-fs-constructor-card .fingers-fs-mvc-autofill:hover {
+  background: rgba(52, 211, 153, 0.26) !important;
 }
 
 /* «↻ Изменить» — компактная inline-кнопка рядом с «70% от MVC (52 кг)» */
@@ -2670,6 +2703,44 @@
   background: rgba(40, 40, 46, 0.85);
   border-color: rgba(255, 255, 255, 0.10);
   color: #f9fafb;
+}
+
+/* Сегмент выбора руки (both/left/right) для анализа L/R-асимметрии. */
+.fingers-mh-test__hand {
+  display: flex;
+  gap: 6px;
+}
+.fingers-mh-test__hand-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  border: 0.5px solid rgba(0, 0, 0, 0.10);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fingers-text, #0f172a);
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 100ms ease;
+}
+.fingers-mh-test__hand-btn[data-active="true"] {
+  border-color: rgba(99, 102, 241, 0.50);
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+}
+.fingers-mh-test__hand-btn:active { transform: scale(0.97); }
+[data-theme="dark"] .fingers-mh-test__hand-btn {
+  background: rgba(40, 40, 46, 0.85);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: #f9fafb;
+}
+[data-theme="dark"] .fingers-mh-test__hand-btn[data-active="true"] {
+  border-color: rgba(129, 140, 248, 0.55);
+  background: rgba(129, 140, 248, 0.20);
+  color: #c7d2fe;
 }
 
 .fingers-mh-test__actions {
@@ -5731,6 +5802,28 @@
   height: 120px;
   padding: 8px 4px 4px;
 }
+
+/* ─── Strength trend (рабочий вес по неделям, per grip) ─── */
+.fingers-fs-strength-note {
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.6;
+  margin: -2px 0 6px;
+}
+.fingers-fs-strength-grip {
+  margin-top: 8px;
+}
+.fingers-fs-strength-grip__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: rgba(60, 60, 67, 0.75);
+  margin-bottom: 2px;
+}
+.fingers-fs-strength-grip .fingers-fs-volume-chart {
+  height: 84px;
+}
+[data-theme="dark"] .fingers-fs-strength-grip__label { color: rgba(235, 235, 245, 0.62); }
 .fingers-fs-volume-chart__bar-wrap {
   flex: 1;
   height: 100%;
@@ -6022,6 +6115,48 @@
   color: #fcd34d;
   background: linear-gradient(180deg, rgba(120, 53, 15, 0.30), rgba(120, 53, 15, 0.18));
 }
+
+/* ─── Баланс силы (asymmetries) ─── */
+.fingers-fs-asym-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fingers-fs-asym {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.07);
+  border-left: 3px solid rgba(99, 102, 241, 0.45);
+}
+.fingers-fs-asym.is-warning {
+  background: linear-gradient(180deg, rgba(254, 243, 199, 0.85), rgba(253, 230, 138, 0.45));
+  border-left-color: rgba(245, 158, 11, 0.55);
+}
+.fingers-fs-asym__icon { font-size: 15px; line-height: 1.3; flex: none; }
+.fingers-fs-asym__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fingers-fs-asym__hint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--fingers-text, #0f172a);
+}
+.fingers-fs-asym__meta {
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+[data-theme="dark"] .fingers-fs-asym {
+  background: rgba(129, 140, 248, 0.14);
+  border-left-color: rgba(129, 140, 248, 0.5);
+}
+[data-theme="dark"] .fingers-fs-asym.is-warning {
+  background: linear-gradient(180deg, rgba(120, 53, 15, 0.30), rgba(120, 53, 15, 0.18));
+  border-left-color: rgba(245, 158, 11, 0.5);
+}
+[data-theme="dark"] .fingers-fs-asym__hint { color: #f1f5f9; }
 
 /* ─── Last sessions list ─── */
 .fingers-fs-progress-sessions {

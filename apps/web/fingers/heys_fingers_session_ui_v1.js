@@ -1044,7 +1044,7 @@
   }
 
   // --- Constructor tab ---
-  function ConstructorTab({ exercises, setExercises, userBoard, userAge, programName, onUnbindProgram }) {
+  function ConstructorTab({ exercises, setExercises, userBoard, userAge, programName, programIntensity, onUnbindProgram }) {
     const [pickerOpen, setPickerOpen] = useState(false);
 
     const addExerciseForGrip = function (grip) {
@@ -1137,6 +1137,7 @@
                     userBoard: userBoard,
                     userAge: userAge,
                     protocolLocked: protocolLocked,
+                    programIntensity: programIntensity,
                     onChange: function (u) { updateAt(i, u); },
                     onRemove: function () { removeAt(i); }
                   })
@@ -1185,6 +1186,42 @@
   }
 
   /**
+   * Собирает входы для Fingers.readiness.assess(today, history) из реальных
+   * dayv2-записей. morning-поля (moodMorning/wellbeingMorning/stressMorning/
+   * sleepStart/sleepEnd) лежат на верхнем уровне dayv2 — assess читает их as-is.
+   *
+   * История — 14 ПРЕДЫДУЩИХ дней (i=1..14), сегодня НЕ включаем: assess
+   * исключает today из baseline по ссылке (d !== safeToday), а мы отдаём клон,
+   * так что включение today сюда испортило бы baseline. Прошлые дни и так не
+   * несут .fingers.lastIntensity (это синтетическое поле), поэтому yesterday-FB
+   * берём из cooldownCheck() — единственного источника часов-с-последней-сессии.
+   */
+  function _buildReadinessInputs(todayKey) {
+    const today = Object.assign({}, _readDayDiary(todayKey) || { date: todayKey });
+    const history = [];
+    const base = new Date(todayKey + 'T00:00:00');
+    for (let i = 1; i <= 14; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() - i);
+      const day = _readDayDiary(_formatDateKey(d));
+      if (day) history.push(day);
+    }
+    try {
+      const cool = (Fingers.cooldownCheck && Fingers.cooldownCheck()) || null;
+      if (cool && cool.hoursSinceLast != null) {
+        // lastIntensity: точно знаем только lastWasMax; для не-max ставим
+        // 'moderate' — assess использует intensity==='max' лишь для hard-пути,
+        // так что этого достаточно и не врёт на критичной ветке.
+        today.fingers = {
+          lastSessionAt: Date.now() - cool.hoursSinceLast * 3600e3,
+          lastIntensity: cool.lastWasMax ? 'max' : 'moderate',
+        };
+      }
+    } catch (_) {}
+    return { today: today, history: history };
+  }
+
+  /**
    * Один проход по последним 365 дням → streak, totals, последние 5 сессий.
    * @returns {{streak:number, totalSessions:number, totalHolds:number, totalMinutes:number, lastSessions:Array}}
    */
@@ -1201,6 +1238,10 @@
     const weeklyVolume = new Array(12).fill(0);
     // Grip usage: считаем сколько раз каждый gripId встречался в exercises.
     const gripUsage = Object.create(null);
+    // Strength trend: per-grip максимум планируемого addedWeightKg по неделям
+    // (gripId → Array(12), индекс 0 = текущая неделя). Это РАБОЧИЙ вес из плана
+    // сессии, не измеренный MVC — честный лейбл «Рабочий вес» на UI.
+    const strengthByGrip = Object.create(null);
     // Recent PRs: PR с testedAt в последние 30 дней — отдельная highlight-секция.
     // (PR-список читается напрямую из Fingers.records.get() в ProgressTab.)
 
@@ -1237,9 +1278,17 @@
           const usedInSession = Object.create(null);
           if (Array.isArray(log.exercises)) {
             log.exercises.forEach(function (ex) {
-              if (ex && ex.gripId && !usedInSession[ex.gripId]) {
+              if (!ex || !ex.gripId) return;
+              if (!usedInSession[ex.gripId]) {
                 usedInSession[ex.gripId] = true;
                 gripUsage[ex.gripId] = (gripUsage[ex.gripId] || 0) + 1;
+              }
+              // Strength trend — max рабочего веса этого хвата в этой неделе.
+              const w = Number(ex.addedWeightKg) || 0;
+              if (w > 0 && weekIdx < 12) {
+                const arr = strengthByGrip[ex.gripId]
+                  || (strengthByGrip[ex.gripId] = new Array(12).fill(0));
+                if (w > arr[weekIdx]) arr[weekIdx] = w;
               }
             });
           }
@@ -1268,7 +1317,8 @@
       totalMinutes: totalMinutes,
       lastSessions: lastSessions,
       weeklyVolume: weeklyVolume,
-      gripUsage: gripUsage
+      gripUsage: gripUsage,
+      strengthByGrip: strengthByGrip
     };
   }
 
@@ -1380,6 +1430,58 @@
         );
       })(),
 
+      // ─── Strength trend: рабочий вес по неделям, per grip ───────────────
+      // ВАЖНО: это планируемый addedWeightKg из сессий, НЕ измеренный MVC.
+      // Кривая нагрузки, а не теста силы — лейбл «Рабочий вес» честно отражает.
+      (function () {
+        const sbg = stats.strengthByGrip || {};
+        const gripIds = Object.keys(sbg).filter(function (g) {
+          return sbg[g].filter(function (v) { return v > 0; }).length >= 2;
+        });
+        if (gripIds.length === 0) return null;
+        gripIds.sort(function (a, b) {
+          return sbg[b].filter(Boolean).length - sbg[a].filter(Boolean).length;
+        });
+        return h('section', { className: 'fingers-fs-progress-section' },
+          h('div', { className: 'fingers-fs-progress-section__header' },
+            h('h3', { className: 'fingers-fs-progress-section__title' }, 'Рабочий вес'),
+            h('span', { className: 'fingers-fs-progress-section__hint' }, '12 недель · кг')
+          ),
+          h('div', { className: 'fingers-fs-strength-note' },
+            'Планируемый доп. вес в сессиях (не результат теста MVC).'),
+          gripIds.map(function (gid) {
+            const series = sbg[gid];
+            const maxV = Math.max.apply(null, series);
+            const grip = Fingers.getGripById ? Fingers.getGripById(gid) : null;
+            const label = (grip && grip.label) || gid;
+            const bars = series.slice().reverse();
+            return h('div', { key: gid, className: 'fingers-fs-strength-grip' },
+              h('div', { className: 'fingers-fs-strength-grip__label' }, label),
+              h('div', { className: 'fingers-fs-volume-chart' },
+                bars.map(function (val, idx) {
+                  const heightPct = val > 0 ? Math.max(6, Math.round((val / maxV) * 100)) : 2;
+                  const isCurrent = idx === bars.length - 1;
+                  const weeksAgo = bars.length - 1 - idx;
+                  const wkLabel = weeksAgo === 0 ? 'эта неделя' : weeksAgo + ' нед назад';
+                  return h('div', {
+                    key: idx,
+                    className: 'fingers-fs-volume-chart__bar-wrap',
+                    title: wkLabel + ': ' + val + ' кг'
+                  },
+                    h('div', {
+                      className: 'fingers-fs-volume-chart__bar' + (isCurrent ? ' is-current' : ''),
+                      style: { height: heightPct + '%' }
+                    },
+                      val > 0 ? h('span', { className: 'fingers-fs-volume-chart__bar-value' }, val) : null
+                    )
+                  );
+                })
+              )
+            );
+          })
+        );
+      })(),
+
       // ─── Cooldown card (если recovery) ────────────────────────────────
       cooldown && !cooldown.allowedNow && h('div', { className: 'fingers-fs-progress-cooldown' },
         h('div', { className: 'fingers-fs-progress-cooldown__icon', 'aria-hidden': 'true' }, '🛡'),
@@ -1442,6 +1544,39 @@
           h('span', { 'aria-hidden': 'true' }, '📅'),
           ' Пора re-test (прошло больше 8 недель с последнего MVC теста).')
       ),
+
+      // ─── Асимметрии: open-vs-crimp + L/R (если есть данные _L/_R) ─────
+      (function () {
+        if (!Fingers.records || typeof Fingers.records.asymmetries !== 'function') return null;
+        let flags = [];
+        try { flags = Fingers.records.asymmetries() || []; } catch (_) { flags = []; }
+        if (!flags.length) return null;
+        return h('section', { className: 'fingers-fs-progress-section' },
+          h('div', { className: 'fingers-fs-progress-section__header' },
+            h('h3', { className: 'fingers-fs-progress-section__title' }, 'Баланс силы'),
+            h('span', { className: 'fingers-fs-progress-section__hint' },
+              flags.length + (flags.length === 1 ? ' сигнал' : flags.length < 5 ? ' сигнала' : ' сигналов'))
+          ),
+          h('div', { className: 'fingers-fs-asym-list' },
+            flags.map(function (f, i) {
+              const warn = f.flag === 'warning';
+              return h('div', {
+                key: (f.kind || 'a') + '_' + i,
+                className: 'fingers-fs-asym' + (warn ? ' is-warning' : ''),
+              },
+                h('span', { className: 'fingers-fs-asym__icon', 'aria-hidden': 'true' }, warn ? '⚠' : 'ℹ'),
+                h('div', { className: 'fingers-fs-asym__body' },
+                  h('div', { className: 'fingers-fs-asym__hint' }, f.hint || ''),
+                  (f.ratio || f.edgeMm) && h('div', { className: 'fingers-fs-asym__meta' },
+                    (f.ratio ? '×' + f.ratio + ' разница' : '')
+                    + (f.ratio && f.edgeMm ? ' · ' : '')
+                    + (f.edgeMm ? f.edgeMm + ' мм' : ''))
+                )
+              );
+            })
+          )
+        );
+      })(),
 
       // ─── Recent PRs (последние 30 дней) ──────────────────────────────
       (function () {
@@ -2527,9 +2662,10 @@
       let readinessBucket = 'moderate-only';
       let readinessReasons = [];
       try {
-        const today = (typeof dateKey === 'string' ? dateKey : new Date().toISOString().slice(0, 10));
+        const todayKey = (typeof dateKey === 'string' ? dateKey : new Date().toISOString().slice(0, 10));
         if (Fingers.readiness && typeof Fingers.readiness.assess === 'function') {
-          const r = Fingers.readiness.assess({ dateKey: today });
+          const rIn = _buildReadinessInputs(todayKey);
+          const r = Fingers.readiness.assess(rIn.today, rIn.history);
           if (r && r.bucket) {
             readinessBucket = r.bucket;
             readinessReasons = Array.isArray(r.reasons) ? r.reasons : [];
@@ -2574,7 +2710,11 @@
                 'ч с прошлой max-сессии (рекомендуется ≥48ч).'
         });
       }
-      if (readinessBucket === 'recovery-only') {
+      // recovery-only нота — но не дублируем cooldown: если он уже предупредил
+      // про «вчера max <48ч», readiness-штраф за ту же причину молчит.
+      const cooldownAlreadyWarns = cooldownInfo.lastWasMax
+        && cooldownInfo.hoursSinceLast != null && cooldownInfo.hoursSinceLast < 48;
+      if (readinessBucket === 'recovery-only' && !cooldownAlreadyWarns) {
         extraNotes.push({
           icon: 'ℹ',
           text: 'Готовность невысокая — лучше No-Hangs или recovery-протокол.'
@@ -2845,6 +2985,7 @@
             userBoard: userBoard,
             userAge: userAge,
             programName: pendingProgram?.name,
+            programIntensity: pendingProgram?.intensity,
             onUnbindProgram: function () { setPendingProgram(null); }
           }),
           exercises.length > 0 && h('div', {

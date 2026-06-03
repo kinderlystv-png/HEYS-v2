@@ -39,6 +39,12 @@
     return Math.round((Number(n) || 0) / step) * step;
   }
 
+  // Целевой % от MVC для авто-подбора рабочего веса, по интенсивности протокола.
+  // Hörst Max Hangs = 85-95% MVC → берём консервативные 90 для max. Без активной
+  // программы дефолтим 80% (умеренный progression-вес).
+  const MVC_TARGET_PCT = { recovery: 60, moderate: 75, max: 90 };
+  const MVC_TARGET_DEFAULT = 80;
+
   function createBlankExercise(opts) {
     const o = opts || {};
     return {
@@ -414,7 +420,7 @@
     );
   }
 
-  function renderMvcHint(gripId, edgeSizeMm, addedKg, onOpenTest) {
+  function renderMvcHint(gripId, edgeSizeMm, addedKg, onOpenTest, onPickWeight, targetPct) {
     if (!Fingers.records || typeof Fingers.records.getMVC !== 'function') return null;
     let mvc = null;
     try { mvc = Fingers.records.getMVC(gripId, edgeSizeMm); } catch (_) { mvc = null; }
@@ -474,6 +480,20 @@
           },
           'aria-label': 'Переделать Max Hang Test'
         }, '↻ Изменить'));
+      }
+      // Авто-подбор веса: считаем доп. вес под целевой % MVC и подставляем в
+      // stepper. addedKg = mvcKg*targetPct/100 − bodyWeight, клампим >= 0 и
+      // снапим к 0.5. При fallback-весе (70кг) показываем «≈» — расчёт грубый.
+      const tPct = Number.isFinite(Number(targetPct)) ? Number(targetPct) : MVC_TARGET_DEFAULT;
+      if (typeof onPickWeight === 'function' && mvcKg > 0) {
+        const suggested = clamp(snap(mvcKg * tPct / 100 - bm.kg, 0.5), 0, 999);
+        baseEls.push(R.createElement('button', {
+          key: 'autofill',
+          type: 'button',
+          className: 'fingers-fs-mvc-autofill',
+          onClick: function () { onPickWeight(suggested); },
+          'aria-label': 'Подставить вес под ' + tPct + '% MVC',
+        }, '⚖ Под ' + tPct + '% MVC' + (isFallback ? ' ≈' : '')));
       }
       const rows = [R.createElement('div', { key: 'base', style: ST_HINT, className: 'fingers-fs-hint-row' }, baseEls)];
       if (isFallback) {
@@ -585,13 +605,23 @@
     const [addedKg, setAddedKg] = R.useState(startWeight);
     const [holdTime, setHoldTime] = R.useState(7);
     const [result, setResult] = R.useState(null);
+    // Рука: 'both' (двуручный — стандарт, пишет bare gripId), 'left'/'right'
+    // (одноручный диагностический тест — пишет gripId_L / gripId_R для
+    // asymmetries()). Двуручные данные остаются валидны для grade-таблицы.
+    const [hand, setHand] = R.useState('both');
 
     function handleSave() {
       const bm = (Fingers.getBodyWeight && Fingers.getBodyWeight()) || { kg: 70, source: 'fallback' };
+      // Одноручный тест → суффикс _L/_R в gripId. recordResult/updateIfPR
+      // slug'ят чисто по переданному id, так что запись ложится в отдельный
+      // slug и asymmetries() её подхватывает. 'both' пишет bare id (стандарт).
+      const recGripId = hand === 'left' ? gripId + '_L'
+        : hand === 'right' ? gripId + '_R'
+        : gripId;
       try {
         const out = (Fingers.calibration && Fingers.calibration.maxHang &&
           Fingers.calibration.maxHang.recordResult)
-          ? Fingers.calibration.maxHang.recordResult(gripId, edgeMm,
+          ? Fingers.calibration.maxHang.recordResult(recGripId, edgeMm,
               Number(holdTime), Number(addedKg), bm.kg)
           : null;
         if (out) {
@@ -612,6 +642,7 @@
       setResult(null);
       setHoldTime(7);
       setAddedKg(startWeight);
+      setHand('both');
     }
 
     // Stage 1 — input form. Stage 2 — result with suggestion.
@@ -679,6 +710,25 @@
               R.createElement('div', null,
                 R.createElement('strong', null, 'Цель — 7-10 секунд. '),
                 'Меньше → вес слишком большой, подбери легче. Больше → слишком лёгкий, добавь.')
+            )
+          ),
+
+          R.createElement('div', { className: 'fingers-mh-test__field' },
+            R.createElement('span', null, 'Рука',
+              R.createElement('em', { className: 'fingers-mh-test__sweet-zone' },
+                'для анализа асимметрии')),
+            R.createElement('div', { className: 'fingers-mh-test__hand', role: 'radiogroup', 'aria-label': 'Рука' },
+              [['both', 'Обе'], ['left', 'Левая'], ['right', 'Правая']].map(function (opt) {
+                return R.createElement('button', {
+                  key: opt[0],
+                  type: 'button',
+                  role: 'radio',
+                  'aria-checked': hand === opt[0] ? 'true' : 'false',
+                  'data-active': hand === opt[0] ? 'true' : 'false',
+                  className: 'fingers-mh-test__hand-btn',
+                  onClick: function () { setHand(opt[0]); }
+                }, opt[1]);
+              })
             )
           ),
 
@@ -756,6 +806,9 @@
     // менять их = ломать смысл программы. Доступны для изменения только grip,
     // edge и доп. вес — стандартные progression knobs.
     const protocolLocked = !!p.protocolLocked;
+    // Интенсивность активной программы (recovery|moderate|max) → целевой % MVC
+    // для авто-подбора веса. Нет программы / неизвестна → дефолт 80%.
+    const targetPct = MVC_TARGET_PCT[p.programIntensity] || MVC_TARGET_DEFAULT;
     // Max Hang Test inline-модалка: {gripId, edgeMm, startWeight} или null.
     // Открывается при клике на CTA «Max Hang Test», закрывается ручкой или
     // после записи результата.
@@ -801,7 +854,8 @@
     // Доп. вес — единственная "крупная" строка с большими кнопками
     els.push(R.createElement(R.Fragment, { key: 'w' },
       renderWeightStepper(ex.addedWeightKg, function (kg) { patch({ addedWeightKg: kg }); }, exIdx)));
-    const hint = renderMvcHint(ex.gripId, ex.edgeSizeMm, ex.addedWeightKg, setMhTestParams);
+    const hint = renderMvcHint(ex.gripId, ex.edgeSizeMm, ex.addedWeightKg, setMhTestParams,
+      function (kg) { patch({ addedWeightKg: kg }); }, targetPct);
     if (hint) els.push(R.createElement(R.Fragment, { key: 'wh' }, hint));
 
     els.push(R.createElement(R.Fragment, { key: 'hang' },
