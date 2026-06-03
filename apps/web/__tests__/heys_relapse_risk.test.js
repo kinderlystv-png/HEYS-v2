@@ -369,7 +369,11 @@ describe('HEYS.RelapseRisk', () => {
 
   it('applies targeted relief to relevant domains instead of only subtracting a flat global buffer', () => {
     const result = global.HEYS.RelapseRisk.calculate(makeBaseOptions({
-      now: '2026-03-19T20:30:00.000Z',
+      // Local time (no Z): the source reads getHours() in local time, so a UTC string
+      // here made domain-relief depend on the runner's timezone (authored at UTC+3,
+      // failed under a UTC CI runner). A tz-naive ISO string parses as local → 23:30
+      // everywhere, the late-evening scenario this case intends.
+      now: '2026-03-19T23:30:00',
       dayData: {
         date: '2026-03-19',
         stressAvg: 2,

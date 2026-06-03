@@ -99,13 +99,9 @@ jobs:
     needs: detect
     if: needs.detect.outputs.release_only != 'true'
     runs-on: ubuntu-latest
-    # SOFT gate for now: runs the full suite on every code deploy and shows red/green,
-    # but does not block — the suite still has pre-existing CI-flaky tests (e.g.
-    # heys_relapse_risk "expected 0 to be greater than 0", unrelated to deploys), and
-    # the pre-push hook skips vitest on unchanged source so they slipped through. To
-    # promote to a HARD gate (deploy blocked on red), fix the flaky tests then remove
-    # this continue-on-error.
-    continue-on-error: true
+    # HARD gate: a red suite blocks the deploy. The full apps/web suite is green under
+    # the CI timezone (UTC) — the one tz-fragile test (heys_relapse_risk) was fixed to
+    # use a tz-naive `now`. If this job goes red, build-and-deploy is skipped by design.
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
