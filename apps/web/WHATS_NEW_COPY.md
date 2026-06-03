@@ -43,6 +43,14 @@ pnpm push:agent -- --title="Синхронизация активностей с
 
 Команда сначала проверит `What's New`, при необходимости добавит entry и
 follow-up commit, затем выполнит обычный `git push` с активными pre-push guards.
+Если в staging уже лежат не-release файлы, команда остановится, чтобы случайно
+не включить их в follow-up commit для `What's New`.
+
+Получить готовый шаблон команды:
+
+```bash
+pnpm push:agent -- --print-command
+```
 
 Проверить без commit и push:
 

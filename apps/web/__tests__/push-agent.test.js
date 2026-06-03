@@ -7,9 +7,12 @@ const __dirname = path.dirname(__filename);
 const SCRIPT_PATH = path.resolve(__dirname, '../../../scripts/push-agent.mjs');
 const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
 
-const { buildItemsJsonFromOptions, buildPrepareReleaseAutoArgs, parseCliArgs } = await import(
-  scriptUrl
-);
+const {
+  buildItemsJsonFromOptions,
+  buildPrepareReleaseAutoArgs,
+  getNonReleaseMetaStagedFiles,
+  parseCliArgs,
+} = await import(scriptUrl);
 
 describe('push-agent CLI helpers', () => {
   it('normalizes pnpm -- separator and parses options', () => {
@@ -72,6 +75,20 @@ describe('push-agent CLI helpers', () => {
       '--allow-user-facing-auto',
       '--title=Синхронизация стала устойчивее',
       '--items=[{"type":"fix","title":"A","description":"B"}]',
+    ]);
+  });
+
+  it('keeps only whats-new paths eligible for release follow-up commits', () => {
+    const files = [
+      'apps/web/public/whats-new.json',
+      'apps/web/public/whats-new/screen.png',
+      'apps/web/heys_storage_supabase_v1.js',
+      'package.json',
+    ];
+
+    expect(getNonReleaseMetaStagedFiles(files)).toEqual([
+      'apps/web/heys_storage_supabase_v1.js',
+      'package.json',
     ]);
   });
 });

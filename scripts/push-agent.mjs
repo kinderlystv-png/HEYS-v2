@@ -10,6 +10,7 @@
  *   pnpm push:agent -- --title="..." --items='[{"type":"fix","title":"...","description":"..."}]'
  *   pnpm push:agent -- --dry-run --title="..." --item-title="..." --item-description="..."
  *   pnpm push:agent -- --remote=origin --branch=main ...
+ *   pnpm push:agent -- --print-command
  *   pnpm push:agent -- --no-push ...
  */
 
@@ -20,6 +21,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.join(__dirname, '..');
 const PREPARE_RELEASE = path.join(__dirname, 'prepare-release.mjs');
+const RELEASE_META_PATH_RE = /^apps\/web\/public\/whats-new(?:\.json|\/)/;
 
 function normalizeArgs(argv) {
   return (Array.isArray(argv) ? argv : []).filter((arg) => arg !== '--');
@@ -88,6 +90,19 @@ function getGitOutput(gitArgs) {
   return String(result.stdout || '').trim();
 }
 
+function getStagedFiles() {
+  const out = getGitOutput(['diff', '--cached', '--name-only']);
+  if (!out) return [];
+  return out
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function getNonReleaseMetaStagedFiles(files = getStagedFiles()) {
+  return files.filter((file) => !RELEASE_META_PATH_RE.test(file));
+}
+
 function buildItemsJson() {
   return buildItemsJsonFromOptions({
     items: getOption('--items'),
@@ -130,7 +145,7 @@ function printUsageAndExit() {
   writeError('Whats New entry is required, but no explicit text was provided.');
   writeError('');
   writeError('Use one of:');
-  writeError('  pnpm push:agent -- --title="..." --item-title="..." --item-description="..."');
+  writeError(`  ${buildSuggestedCommand()}`);
   writeError(
     '  pnpm push:agent -- --title="..." --items=\'[{"type":"fix","title":"...","description":"..."}]\'',
   );
@@ -146,6 +161,35 @@ function buildPrepareReleaseAutoArgs(title, itemsJson) {
   return ['--auto', '--allow-user-facing-auto', `--title=${title}`, `--items=${itemsJson}`];
 }
 
+function buildSuggestedCommand() {
+  const hash = getGitOutput(['rev-parse', '--short=8', 'HEAD']) || '<hash>';
+  return (
+    `pnpm push:agent -- --title="Короткий пользовательский заголовок" ` +
+    `--item-title="Что стало работать корректнее" ` +
+    `--item-description="Что изменилось для пользователя. Target commit: ${hash}."`
+  );
+}
+
+function printSuggestedCommandAndExit() {
+  writeLine('Suggested non-interactive command:');
+  writeLine(buildSuggestedCommand());
+  writeLine('');
+  writeLine('Copy guidance: apps/web/WHATS_NEW_COPY.md');
+  process.exit(0);
+}
+
+function assertReleaseCommitStagingIsClean() {
+  const nonReleaseMeta = getNonReleaseMetaStagedFiles();
+  if (nonReleaseMeta.length === 0) return;
+
+  writeError('Refusing to create a Whats New follow-up commit while non-release files are staged.');
+  writeError('Unstage or commit these files first:');
+  nonReleaseMeta.forEach((file) => writeError(`  - ${file}`));
+  writeError('');
+  writeError('Release follow-up commits may contain only apps/web/public/whats-new* files.');
+  process.exit(2);
+}
+
 function ensureReleaseEntry() {
   writeLine('Checking Whats New...');
   const check = checkWhatsNew();
@@ -153,6 +197,8 @@ function ensureReleaseEntry() {
     writeLine('Whats New is already current.');
     return;
   }
+
+  assertReleaseCommitStagingIsClean();
 
   const title = getOption('--title');
   const itemsJson = buildItemsJson();
@@ -180,6 +226,7 @@ function ensureReleaseEntry() {
     mutates: true,
   });
   if (add.status !== 0) process.exit(add.status || 1);
+  assertReleaseCommitStagingIsClean();
 
   const hasStaged = runGit(
     [
@@ -223,6 +270,9 @@ function push() {
 }
 
 function main() {
+  if (hasFlag('--print-command')) {
+    printSuggestedCommandAndExit();
+  }
   ensureReleaseEntry();
   push();
 }
@@ -232,4 +282,10 @@ if (import.meta.url === invokedPath) {
   main();
 }
 
-export { buildItemsJsonFromOptions, buildPrepareReleaseAutoArgs, parseCliArgs };
+export {
+  buildItemsJsonFromOptions,
+  buildPrepareReleaseAutoArgs,
+  buildSuggestedCommand,
+  getNonReleaseMetaStagedFiles,
+  parseCliArgs,
+};

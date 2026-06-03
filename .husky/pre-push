@@ -63,7 +63,10 @@ if [ -t 1 ]; then
   fi
 else
   if [ "$check_status" -ne 0 ]; then
-    echo "❌ Push отменён. Запусти: pnpm push:ready"
+    echo "❌ Push отменён. Для non-interactive agent flow:"
+    echo "   1) pnpm push:agent -- --print-command"
+    echo "   2) pnpm push:agent -- --title=\"...\" --item-title=\"...\" --item-description=\"...\""
+    echo "   Для ручного интерактивного flow: pnpm push:ready"
     exit 1
   fi
 fi
