@@ -67,6 +67,7 @@
     "prepare": "husky install",
     "prepare-release": "node scripts/prepare-release.mjs",
     "prepare-release:check": "node scripts/prepare-release.mjs --check",
+    "push:agent": "node scripts/push-agent.mjs",
     "push:ready": "node scripts/release-prepare-and-commit.mjs",
     "push:safe": "node scripts/push-safe.mjs",
     "release": "pnpm run build:packages && changeset publish",
