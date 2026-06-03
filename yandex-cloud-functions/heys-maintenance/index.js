@@ -32,6 +32,32 @@ function _truncateList(items, maxVisible, formatFn) {
   return rest > 0 ? `${visible} и ещё ${rest}` : visible;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Synthetic / E2E fixtures (registry added 2026-06-03). These rows live in the
+// SAME DB as real clients (E2E-TestAlex / E2E-TestPopl). They never log in,
+// never ack the curator changelog, and their profiles get mutated by test
+// runs — so they must NOT count as real-client signal in unacked / churn /
+// integrity metrics, or the monitor cries wolf about its own fixtures.
+// Incident 2026-06-03: 50 of 52 "unacked changelog" were these two fixtures,
+// and the synthetic self-test 🚨'd because fixture 1111 had no heys_profile row.
+// The synthetic-defense self-test uses SANDBOX as a write target, always inside
+// BEGIN/ROLLBACK (zero real mutation).
+const SYNTHETIC_CLIENT_IDS = Object.freeze([
+  '11111111-1111-1111-1111-111111111111', // E2E-TestAlex
+  '22222222-2222-2222-2222-222222222222', // E2E-TestPopl
+]);
+const SYNTHETIC_DEFENSE_SANDBOX = SYNTHETIC_CLIENT_IDS[0];
+const _SYN_UUID_LIST = SYNTHETIC_CLIENT_IDS.map((id) => `'${id}'::uuid`).join(', ');
+
+// SQL predicate — TRUE only for real (non-synthetic) clients. Belt-and-braces:
+// excludes by hardcoded UUID AND by live `E2E-%` name prefix, so a freshly
+// added fixture can't silently re-pollute metrics before someone updates the
+// list above. `col` = the client_id column expression in the calling query.
+function realClientOnly(col) {
+  return `(${col} NOT IN (${_SYN_UUID_LIST}) ` +
+    `AND ${col} NOT IN (SELECT id FROM clients WHERE name LIKE 'E2E-%'))`;
+}
+
 async function sendTelegramNotification(message) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -89,6 +115,60 @@ async function sendTelegramNotification(message) {
     console.error('[Telegram] Error:', err.message);
     return { ok: false, error: 'exception', message: err.message };
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Dead-man's switch (2026-06-03). The whole monitor — synthetic defense, KV
+// health, daily/weekly reports — is worthless if heys-maintenance silently
+// stops running (dead cron trigger, broken initSecrets / Lockbox rotation,
+// exhausted DB pool). recordHeartbeat() stamps each task's last SUCCESS;
+// checkHeartbeats() is the watcher, run by the high-frequency trial_queue
+// trigger, and alerts when any task has gone silent past its threshold.
+
+async function recordHeartbeat(client, task) {
+  try {
+    // ON CONFLICT preserves the seeded max_silence; clears the stale latch so a
+    // recovered task can alert again if it dies later.
+    await client.query(
+      `INSERT INTO maintenance_heartbeat (task, last_ok_at, stale_alerted_at, max_silence)
+         VALUES ($1, now(), NULL, interval '25 hours')
+       ON CONFLICT (task) DO UPDATE
+         SET last_ok_at = now(), stale_alerted_at = NULL`,
+      [task]
+    );
+  } catch (e) {
+    console.warn('[heartbeat] record failed for', task, e.message);
+  }
+}
+
+async function checkHeartbeats(client) {
+  // Stale = last_ok_at older than its max_silence. Atomically latch
+  // stale_alerted_at (re-alert at most once / 6h) so a 5-min watcher cadence
+  // doesn't spam, and concurrent runs don't double-send.
+  let stale;
+  try {
+    const res = await client.query(`
+      UPDATE maintenance_heartbeat
+         SET stale_alerted_at = now()
+       WHERE last_ok_at < now() - max_silence
+         AND (stale_alerted_at IS NULL OR stale_alerted_at < now() - interval '6 hours')
+       RETURNING task,
+                 round(extract(epoch FROM now() - last_ok_at) / 3600)::int AS silent_h,
+                 max_silence::text AS max_silence
+    `);
+    stale = res.rows;
+  } catch (e) {
+    console.warn('[heartbeat] check failed:', e.message);
+    return;
+  }
+  if (stale.length === 0) return;
+  await sendTelegramNotification(
+    `🚑 *Monitor dead-man's switch*\n\n` +
+    `Таск(и) heys-maintenance молчат дольше порога — возможно умер cron-триггер, ` +
+    `секреты (Lockbox) или DB-pool:\n\n` +
+    stale.map((r) => `• \`${r.task}\` молчит ${r.silent_h}h _(порог ${r.max_silence})_`).join('\n') +
+    `\n\n_Проверь Yandex Cloud → Functions → triggers и логи heys-maintenance._`
+  );
 }
 
 /**
@@ -225,32 +305,61 @@ async function cleanupProfileSnapshots(client) {
  */
 async function syntheticDefenseCheck(client) {
   const failures = [];
-  const TEST_CLIENT = '11111111-1111-1111-1111-111111111111';
+  const groups = { validate: true, snapshot: true, logtrace: true, structure: true };
+  const SANDBOX = SYNTHETIC_DEFENSE_SANDBOX;
 
-  // Test 1: DB CHECK trigger trg_validate_profile должен REJECT-ить invalid gender
+  // Test 1: validate_profile_jsonb trigger must REJECT invalid field values.
+  //
+  // Self-seeding (2026-06-03 rewrite): we INSERT…ON CONFLICT a heys_profile row
+  // with a bad value, so the BEFORE INSERT/UPDATE trigger fires REGARDLESS of
+  // whether a fixture row exists. The old test did a bare UPDATE that no-op'd on
+  // the missing row (0 rows matched → trigger never ran) and reported "защита
+  // сломана" — a false 🚨 (incident 2026-06-03). user_id stays NULL so the
+  // curator-lock guard passes through and we exercise validate specifically.
+  // Each case runs in its own SAVEPOINT; the whole thing is rolled back — zero
+  // real mutation. We assert ALL value dimensions (gender + numeric ranges), so
+  // a partial trigger regression (e.g. gender check kept, age check dropped) is
+  // also caught.
+  const VALIDATION_CASES = [
+    { field: 'gender', payload: '{"gender":"InvalidGenderSynthetic"}', errcode: 'invalid_profile_gender' },
+    { field: 'age',    payload: '{"gender":"Мужской","age":999}',      errcode: 'invalid_profile_age' },
+    { field: 'weight', payload: '{"gender":"Мужской","weight":9999}',  errcode: 'invalid_profile_weight' },
+  ];
   try {
     await client.query('BEGIN');
-    let trgFired = false;
-    try {
-      await client.query(
-        `UPDATE client_kv_store
-            SET v = jsonb_set(v, '{gender}', '"InvalidGenderSynthetic"'::jsonb)
-          WHERE client_id = $1::uuid AND k = 'heys_profile'`,
-        [TEST_CLIENT]
-      );
-    } catch (e) {
-      if (String(e.message).includes('invalid_profile_gender')) {
-        trgFired = true;
-      } else {
-        failures.push(`unexpected error in trigger test: ${e.message.slice(0, 100)}`);
+    for (const tc of VALIDATION_CASES) {
+      let rejected = false;
+      let otherErr = null;
+      // eslint-disable-next-line no-await-in-loop
+      await client.query('SAVEPOINT sp_validate');
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await client.query(
+          `INSERT INTO client_kv_store (client_id, k, v)
+             VALUES ($1::uuid, 'heys_profile', $2::jsonb)
+           ON CONFLICT (client_id, k) DO UPDATE SET v = EXCLUDED.v`,
+          [SANDBOX, tc.payload]
+        );
+      } catch (e) {
+        if (String(e.message).includes(tc.errcode)) rejected = true;
+        else otherErr = e.message;
+      }
+      // After the expected RAISE the tx is aborted → roll back to the savepoint.
+      // eslint-disable-next-line no-await-in-loop
+      await client.query('ROLLBACK TO SAVEPOINT sp_validate');
+      if (!rejected) {
+        groups.validate = false;
+        failures.push(
+          otherErr
+            ? `🚨 validate trigger ${tc.field}-case: неожиданная ошибка (защита под вопросом): ${otherErr.slice(0, 90)}`
+            : `🚨 validate trigger НЕ отклоняет invalid ${tc.field} — DB CHECK защита сломана!`
+        );
       }
     }
     await client.query('ROLLBACK');
-    if (!trgFired) {
-      failures.push('🚨 trg_validate_profile trigger DID NOT fire on invalid_gender — DB CHECK защита сломана!');
-    }
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+    groups.validate = false;
     failures.push(`trigger test exception: ${e.message.slice(0, 120)}`);
   }
 
@@ -260,6 +369,7 @@ async function syntheticDefenseCheck(client) {
       `SELECT 1 FROM pg_proc WHERE proname = 'restore_profile_snapshot' LIMIT 1`
     );
     if (fnRes.rows.length === 0) {
+      groups.snapshot = false;
       failures.push('🚨 restore_profile_snapshot function MISSING — instant rollback сломан!');
     }
     const tblRes = await client.query(
@@ -267,9 +377,11 @@ async function syntheticDefenseCheck(client) {
         WHERE table_schema = 'public' AND table_name = 'profile_snapshots' LIMIT 1`
     );
     if (tblRes.rows.length === 0) {
+      groups.snapshot = false;
       failures.push('🚨 profile_snapshots table MISSING — snapshots не пишутся!');
     }
   } catch (e) {
+    groups.snapshot = false;
     failures.push(`snapshot infra test exception: ${e.message.slice(0, 120)}`);
   }
 
@@ -280,13 +392,56 @@ async function syntheticDefenseCheck(client) {
         WHERE table_schema = 'public' AND table_name = 'client_log_trace' LIMIT 1`
     );
     if (r.rows.length === 0) {
+      groups.logtrace = false;
       failures.push('⚠️ client_log_trace table MISSING — mobile debug pipeline сломан');
     }
   } catch (e) {
+    groups.logtrace = false;
     failures.push(`log_trace test exception: ${e.message.slice(0, 120)}`);
   }
 
-  return { failures, summary: { passed: 3 - failures.length, total: 3 } };
+  // Test 4: structural invariants (2026-06-03) — раньше "3/3 ✅" читалось как
+  // "вся защита жива", хотя проверялись только validate-триггер + snapshot +
+  // log_trace. Эти DB-уровневые инварианты — несущая конструкция защиты от
+  // pollution (CLAUDE.md). Если миграция случайно их снесёт, "3/3" бы не
+  // дрогнул. Проверяем дёшево само СУЩЕСТВОВАНИЕ (не поведение).
+  try {
+    const checks = [
+      // инвариант #8 path — curator-lock / restriction guards на client_kv_store
+      { sql: `SELECT 1 FROM pg_trigger WHERE tgname = 'trg_block_curator_write_on_locked'`,
+        miss: 'trg_block_curator_write_on_locked (curator-lock guard) MISSING' },
+      { sql: `SELECT 1 FROM pg_trigger WHERE tgname = 'trg_block_kv_under_restriction'`,
+        miss: 'trg_block_kv_under_restriction (152-ФЗ restriction guard) MISSING' },
+      // инвариант #6 — FK client_kv_store → clients ON DELETE CASCADE
+      { sql: `SELECT 1 FROM pg_constraint
+                WHERE conrelid = 'public.client_kv_store'::regclass
+                  AND contype = 'f' AND confdeltype = 'c'`,
+        miss: 'client_kv_store→clients FK ON DELETE CASCADE MISSING (инвариант #6)' },
+      // инвариант #10 — server-authoritative client_id routing
+      { sql: `SELECT 1 FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = 'write_contexts'`,
+        miss: 'write_contexts table MISSING (инвариант #10 capability routing)' },
+      { sql: `SELECT 1 FROM pg_proc WHERE proname = 'validate_write_context'`,
+        miss: 'validate_write_context() MISSING (инвариант #10)' },
+    ];
+    for (const c of checks) {
+      // eslint-disable-next-line no-await-in-loop
+      const res = await client.query(`${c.sql} LIMIT 1`);
+      if (res.rows.length === 0) {
+        groups.structure = false;
+        failures.push(`🚨 ${c.miss}`);
+      }
+    }
+  } catch (e) {
+    groups.structure = false;
+    failures.push(`structure test exception: ${e.message.slice(0, 120)}`);
+  }
+
+  // passed = number of healthy CHECK GROUPS (validate / snapshot / logtrace /
+  // structure), not raw failure-message count — so multiple sub-cases failing
+  // still reads as "1 group down", keeping the X/4 in the report meaningful.
+  const passed = Object.values(groups).filter(Boolean).length;
+  return { failures, summary: { passed, total: 4, groups } };
 }
 
 /**
@@ -322,6 +477,7 @@ async function writerCidIntegrityCheck(client) {
             v->>'_writerCid' IS NULL
             OR v->>'_writerCid' <> client_id::text
           )
+          AND ${realClientOnly('client_id')}
         ORDER BY (k LIKE 'heys_dayv2_%'), updated_at DESC
         LIMIT 100`
     );
@@ -366,7 +522,10 @@ async function writerCidIntegrityCheck(client) {
       }
     }
   } catch (e) {
+    // Fail-loud: a query error must NOT masquerade as "0 mismatched ✅". Surface
+    // it so the caller can render 🚨 "проверка не отработала" instead of green.
     console.warn('[writer-cid-integrity] query failed:', e.message);
+    summary.error = e.message;
   }
 
   return { findings, summary };
@@ -411,6 +570,7 @@ async function profileIntegrityCheck(client) {
          WHERE c.name IS NOT NULL
            AND length(trim(c.name)) > 0
            AND p.v->>'firstName' IS NOT NULL
+           AND ${realClientOnly('c.id')}
       )
       SELECT id, c_name AS name, pf, pl, pg, pwriter, updated_at
         FROM normalized
@@ -431,6 +591,7 @@ async function profileIntegrityCheck(client) {
     }
   } catch (e) {
     console.warn('[profile-integrity] mismatch query failed:', e.message);
+    summary.error = e.message;
   }
 
   // 2. Recent cross_client_profile_blocked + wholesale_identity_change events
@@ -441,6 +602,7 @@ async function profileIntegrityCheck(client) {
        WHERE key = 'heys_profile'
          AND action IN ('cross_client_profile_blocked','wholesale_identity_change')
          AND created_at > NOW() - INTERVAL '24 hours'
+         AND ${realClientOnly('client_id')}
        ORDER BY created_at DESC
        LIMIT 10
     `);
@@ -455,6 +617,7 @@ async function profileIntegrityCheck(client) {
     }
   } catch (e) {
     console.warn('[profile-integrity] audit query failed:', e.message);
+    summary.error = summary.error || e.message;
   }
 
   return { findings, summary };
@@ -471,18 +634,52 @@ async function kvHealthCheck(client) {
   const findings = [];
   const summary = {};
 
-  // 1. Unacked curator changelog. >5 unacked со старостью >24h = индикатор
-  //    что ack RPC снова сломался или precision-mismatch вернулся.
+  // 1. Curator changelog ack health — REAL regression detector (2026-06-03
+  //    rewrite). The precision/range bug signature (BUGS_HISTORY 2026-05-23) is:
+  //    an entry created BEFORE the client's own most-recent successful ack is
+  //    STILL unacked — i.e. acking failed to clear older rows. A raw "unacked
+  //    count" is NOT a bug: E2E fixtures and never-logged-in clients accumulate
+  //    unacked forever by design (incident 2026-06-03: 50/52 unacked were E2E
+  //    fixtures that never ack). So we alert ONLY on the stuck-despite-ack
+  //    signature, and only for real clients.
+  const stuckAckRes = await client.query(`
+    SELECT cl.client_id::text AS client_id, count(*)::int AS stuck,
+           round(extract(epoch FROM max(now() - cl.created_at)) / 3600)::int AS oldest_h
+    FROM client_data_changelog cl
+    JOIN (
+      SELECT client_id, max(acked_at) AS last_ack
+      FROM client_data_changelog
+      WHERE acked_at IS NOT NULL
+      GROUP BY client_id
+    ) a ON a.client_id = cl.client_id
+    WHERE cl.acked_at IS NULL
+      AND cl.created_at < a.last_ack
+      AND ${realClientOnly('cl.client_id')}
+    GROUP BY cl.client_id
+    ORDER BY stuck DESC
+  `);
+  summary.stuck_ack = stuckAckRes.rows.reduce((n, r) => n + r.stuck, 0);
+  if (stuckAckRes.rows.length > 0) {
+    const detail = stuckAckRes.rows.slice(0, 5)
+      .map((r) => `\`${r.client_id.slice(0, 8)}\` ${r.stuck} (старейш ${r.oldest_h}h)`)
+      .join(', ');
+    findings.push(
+      `📌 *Ack regression*: ${summary.stuck_ack} записей не сброшены после ack'а ` +
+      `у ${stuckAckRes.rows.length} клиент(ов) — precision-mismatch ack снова сломан ` +
+      `(см. BUGS_HISTORY 2026-05-23). ${detail}`
+    );
+  }
+
+  // 1b. Informational only (not an alert) — real-client unacked backlog for the
+  //     summary line. Excludes synthetic fixtures.
   const unackedRes = await client.query(`
     SELECT count(*)::int AS unacked,
            extract(epoch FROM coalesce(max(now() - created_at), interval '0'))::int AS oldest_age_sec
     FROM client_data_changelog
     WHERE acked_at IS NULL
+      AND ${realClientOnly('client_id')}
   `);
   summary.unacked = unackedRes.rows[0];
-  if (unackedRes.rows[0].unacked > 5 && unackedRes.rows[0].oldest_age_sec > 86400) {
-    findings.push(`📌 *Unacked changelog*: ${unackedRes.rows[0].unacked} записей, старейшей ${Math.round(unackedRes.rows[0].oldest_age_sec / 3600)}h — возможно precision-mismatch ack снова сломан (см. BUGS_HISTORY 2026-05-23)`);
-  }
 
   // 2. Zombie heys_xp_cache_* должно быть 0 после LOCAL_ONLY_STORAGE_PREFIXES fix.
   const xpZombieRes = await client.query(`
@@ -531,15 +728,11 @@ async function kvHealthCheck(client) {
     findings.push(`⚠️ *Profile subscription-only race*: ${profileRaceRes.rows[0].suspicious} активных клиентов имеют subscription-only профиль без personal — race вернулся`);
   }
 
-  // 5. Микросекундные unacked timestamps. После tolerance fix должно быть 0
-  //    (server +1ms интервал покрывает любые µs). Если >0 — tolerance не работает.
-  const usRes = await client.query(`
-    SELECT count(*)::int AS rows
-    FROM client_data_changelog
-    WHERE acked_at IS NULL
-      AND extract(microseconds FROM created_at)::int % 1000 != 0
-  `);
-  summary.unacked_with_us = usRes.rows[0].rows;
+  // 5. (removed 2026-06-03) The old "unacked rows with microsecond suffix"
+  //    discriminator was conceptually broken: EVERY Postgres timestamp carries
+  //    microseconds, so it counted essentially all unacked rows regardless of
+  //    whether the +1ms tolerance fix works. The real precision-regression
+  //    signal now lives in check #1 (stuck-despite-ack detector).
 
   // 6. Топ-1 жирный ключ — для информирования о росте мусора.
   const topRes = await client.query(`
@@ -555,7 +748,11 @@ async function kvHealthCheck(client) {
  * Ежедневный отчёт в Telegram — активность клиентов + trial queue + KV health summary.
  * Trigger: daily_report (07:00 МСК = 04:00 UTC).
  */
-async function dailyReport(client) {
+async function dailyReport(client, once) {
+  // `once(key, fn)` memoizes heavy scans within a single invoke so the daily
+  // report reuses results already computed in the cleanup/kv_health phases of an
+  // 'all' run instead of re-scanning. No-op (single call) for separate triggers.
+  const memo = once || ((_k, fn) => fn());
   const now = new Date();
   const dateStr = now.toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow', day: 'numeric', month: 'long' });
 
@@ -628,6 +825,7 @@ async function dailyReport(client) {
       FROM clients c
       JOIN client_event_log e ON e.client_id = c.id
       WHERE c.subscription_status IN ('trial', 'active')
+        AND ${realClientOnly('c.id')}
       GROUP BY c.id, c.name
       HAVING MAX(e.ts) < now() - interval '3 days'
       ORDER BY MAX(e.ts) ASC
@@ -666,7 +864,7 @@ async function dailyReport(client) {
   // 6. KV health — краткий итог (всегда, не только при аномалиях)
   let healthBlock = '';
   try {
-    const { findings, summary } = await kvHealthCheck(client);
+    const { findings, summary } = await memo('kv_health', () => kvHealthCheck(client));
     if (findings.length === 0) {
       const heaviest = summary.heaviest_key
         ? `; самый жирный ключ ${_mdEscape(summary.heaviest_key.k)} (${Math.round(summary.heaviest_key.bytes / 1024)} KB)`
@@ -685,11 +883,11 @@ async function dailyReport(client) {
   let defenseBlock = '';
   try {
     // a) Synthetic self-test (DB CHECK trigger + RPC function + tables)
-    const syn = await syntheticDefenseCheck(client);
+    const syn = await memo('synthetic', () => syntheticDefenseCheck(client));
     // b) Writer-CID invariant
-    const wci = await writerCidIntegrityCheck(client);
+    const wci = await memo('writer_cid', () => writerCidIntegrityCheck(client));
     // c) Profile name integrity
-    const pi = await profileIntegrityCheck(client);
+    const pi = await memo('profile_integrity', () => profileIntegrityCheck(client));
     // d) Snapshots за 24ч (показывает что pipeline активный)
     const snapRes = await client.query(`
       SELECT count(*)::int AS total,
@@ -700,40 +898,84 @@ async function dailyReport(client) {
        WHERE created_at > now() - interval '24 hours'
     `);
     const s = snapRes.rows[0];
-    // e) Pollution-related audit events за 24ч
+    // e) Pollution-related audit events за 24ч. КЛЮЧЕВОЕ различие (2026-06-03):
+    //    *_blocked события — это защита, которая СРАБОТАЛА (чужая запись отбита,
+    //    cloud не тронут), а не поломка. content_dup — fingerprint-fallback тоже
+    //    поймал. Реальная пробоина = только invalid-field, прорвавшийся в стор.
     const auRes = await client.query(`
       SELECT
-        count(*) FILTER (WHERE action = 'cross_client_profile_blocked')::int AS xclient_p,
-        count(*) FILTER (WHERE action = 'cross_client_blob_blocked')::int    AS xclient_b,
-        count(*) FILTER (WHERE action = 'wholesale_identity_change')::int    AS wholesale_a,
-        count(*) FILTER (WHERE action = 'invalid_profile_field')::int        AS invalid_f
+        count(*) FILTER (WHERE action = 'cross_client_profile_blocked')::int  AS blocked_p,
+        count(*) FILTER (WHERE action = 'cross_client_blob_blocked')::int      AS blocked_b,
+        count(*) FILTER (WHERE action = 'cross_client_dayv2_content_dup')::int AS content_dup,
+        count(*) FILTER (WHERE action = 'wholesale_identity_change')::int      AS wholesale_a,
+        count(*) FILTER (WHERE action = 'invalid_profile_field')::int          AS invalid_f,
+        count(*) FILTER (WHERE action = 'non_client_data_rejected')::int       AS ui_rejected
       FROM data_loss_audit
        WHERE created_at > now() - interval '24 hours'
     `);
     const au = auRes.rows[0];
 
+    // Fail-loud: a check whose query errored reports summary.error — it must read
+    // as 🚨 "проверка не отработала", NOT as a green "0 mismatched" (false-green
+    // was the deeper risk behind the 2026-06-03 audit).
     const synOk = syn.failures.length === 0;
-    const wciOk = wci.summary.mismatched === 0 && wci.summary.dayv2_mismatched === 0;
-    const piOk = pi.summary.mismatches === 0;
-    const auditNoBad = au.xclient_p === 0 && au.xclient_b === 0 && au.invalid_f === 0;
-    const allGreen = synOk && wciOk && piOk && auditNoBad;
+    const wciOk = !wci.summary.error && wci.summary.mismatched === 0 && wci.summary.dayv2_mismatched === 0;
+    const piOk = !pi.summary.error && pi.summary.mismatches === 0;
+    // LANDED pollution = the only true failure. Blocks are the defense WORKING
+    // (incident 2026-06-03: 60 blocks were painted "защита сломана" when the
+    // guard had in fact done its job). writerCid/profile mismatches that landed
+    // are already covered by wciOk/piOk; here we only add invalid-field leaks.
+    const landedClean = au.invalid_f === 0;
+    const allGreen = synOk && wciOk && piOk && landedClean;
+    const totalBlocks = au.blocked_p + au.blocked_b;
 
     const lines = [];
-    lines.push(`🛡️ *Защита данных* — ${allGreen ? '✅ всё работает' : '⚠️ требует внимания'}`);
-    lines.push(`${synOk ? '✅' : '🚨'} Synthetic check: ${syn.summary.passed}/${syn.summary.total}${synOk ? '' : ' — *защита сломана*'}`);
+    lines.push(`🛡️ *Защита данных* — ${allGreen ? '✅ всё работает' : '🚨 требует внимания'}`);
+    lines.push(`${synOk ? '✅' : '🚨'} Synthetic self-test: ${syn.summary.passed}/${syn.summary.total}${synOk ? '' : ' — *защита сломана*'}`);
     lines.push(
-      `${wciOk ? '✅' : '🚨'} Writer-CID invariant: ` +
-      `profile/norms ${wci.summary.mismatched}, dayv2 ${wci.summary.dayv2_mismatched} mismatched` +
-      (wci.summary.untagged + wci.summary.dayv2_untagged > 0
-        ? ` _(${wci.summary.untagged + wci.summary.dayv2_untagged} legacy untagged — норма)_`
-        : '')
+      wci.summary.error
+        ? `🚨 Writer-CID invariant: *проверка не отработала* — ${_mdEscape(String(wci.summary.error).slice(0, 80))}`
+        : `${wciOk ? '✅' : '🚨'} Writer-CID invariant: ` +
+          `profile/norms ${wci.summary.mismatched}, dayv2 ${wci.summary.dayv2_mismatched} mismatched` +
+          (wci.summary.untagged + wci.summary.dayv2_untagged > 0
+            ? ` _(${wci.summary.untagged + wci.summary.dayv2_untagged} legacy untagged — норма)_`
+            : '')
     );
-    lines.push(`${piOk ? '✅' : '🚨'} Profile name integrity: ${pi.summary.mismatches} mismatches`);
     lines.push(
-      `${auditNoBad ? '✅' : '🚨'} Pollution events 24ч: ` +
-      `cross-client=${au.xclient_p + au.xclient_b}, invalid=${au.invalid_f}` +
-      (au.wholesale_a > 0 ? `, wholesale=${au.wholesale_a} (legit или подозрительно?)` : '')
+      pi.summary.error
+        ? `🚨 Profile name integrity: *проверка не отработала* — ${_mdEscape(String(pi.summary.error).slice(0, 80))}`
+        : `${piOk ? '✅' : '🚨'} Profile name integrity: ${pi.summary.mismatches} mismatches`
     );
+    // Blocks: SUCCESS signal — green always; soft-flag only on a spike, which
+    // points at the client side (curator switching between LS-sharing clients,
+    // инвариант #9), not at a leak.
+    lines.push(
+      `🛡️ Отбито чужих записей 24ч: *${totalBlocks}* _(profile=${au.blocked_p}, blob=${au.blocked_b}` +
+      (au.content_dup > 0 ? `, content-dup=${au.content_dup}` : '') +
+      `)_` + (totalBlocks > 0 ? ` — защита сработала` : '')
+    );
+    if (totalBlocks > 100) {
+      lines.push(
+        `⚠️ Всплеск блокировок (>100/24ч) — вероятно курaтор активно переключается ` +
+        `между клиентами с общим localStorage (инвариант #9). Это не утечка, но стоит ` +
+        `глянуть клиентскую сторону.`
+      );
+    }
+    if (au.invalid_f > 0) {
+      lines.push(`🚨 Invalid-field записи ПРОРВАЛИСЬ в стор: ${au.invalid_f} — реальная пробоина, не блок`);
+    }
+    if (au.wholesale_a > 0) {
+      lines.push(`ℹ️ Wholesale identity changes: ${au.wholesale_a} _(legit смена имени или подозрительно — глянуть)_`);
+    }
+    // UI-state ключи, отбитые серверным blacklist'ом. Защита работает (в стор не
+    // попало), но высокий объём = клиент раз за разом шлёт то, что не должен —
+    // клиентская неэффективность (лишние round-trip'ы). >500/24ч стоит чинить.
+    if (au.ui_rejected > 0) {
+      lines.push(
+        `${au.ui_rejected > 500 ? '⚠️' : 'ℹ️'} Отбито UI-state ключей: ${au.ui_rejected}` +
+        (au.ui_rejected > 500 ? ` — клиент шлёт лишнее, стоит чинить клиентскую сторону` : ` _(норма, защита blacklist'а)_`)
+      );
+    }
     lines.push(
       `📸 Snapshots 24ч: ${s.total} ` +
       `_(routine=${s.routine}, wholesale=${s.wholesale}, blocked=${s.blocked})_`
@@ -937,6 +1179,13 @@ module.exports.handler = async (event, context) => {
     
     const results = {};
 
+    // Per-invoke memo — heavy scans (synthetic / writerCid / profile / kvHealth)
+    // are computed at most once even when an 'all' trigger runs both the cleanup
+    // phase and the daily report. Fresh per invocation (NOT module-level — the
+    // serverless container is reused and would serve stale results).
+    const _memo = {};
+    const once = (key, fn) => (_memo[key] ??= fn());
+
     // Determine which tasks to run
     const runTrialQueue = triggerId === 'trial_queue' || triggerId === 'all' || triggerId === 'default';
     const runCleanup = triggerId === 'daily_cleanup' || triggerId === 'all';
@@ -952,6 +1201,10 @@ module.exports.handler = async (event, context) => {
     // Process trial queue
     if (runTrialQueue) {
       results.trial_queue = await processTrialQueue(client);
+      await recordHeartbeat(client, 'trial_queue');
+      // trial_queue is the highest-frequency trigger → it's the watcher for the
+      // dead-man's switch over the daily/weekly tasks.
+      await checkHeartbeats(client);
     }
 
     // Cleanup security logs
@@ -972,7 +1225,7 @@ module.exports.handler = async (event, context) => {
       // 🧪 Synthetic defense check (2026-06-01 wave 4, A) — гарантия что
       // защитные триггеры/функции не дропнуты случайной миграцией.
       try {
-        const { failures, summary } = await syntheticDefenseCheck(client);
+        const { failures, summary } = await once('synthetic', () => syntheticDefenseCheck(client));
         results.synthetic_defense = summary;
         console.log('[Maintenance] Synthetic defense:', JSON.stringify(summary));
         if (failures.length > 0) {
@@ -983,8 +1236,12 @@ module.exports.handler = async (event, context) => {
           );
         }
       } catch (sErr) {
+        // Fail-loud: the check that guards the guards must not die quietly.
         console.error('[Maintenance] synthetic_defense failed:', sErr.message);
         results.synthetic_defense = { error: sErr.message };
+        await sendTelegramNotification(
+          `🚨 *Synthetic check ERRORED*\n\nСам self-test защиты не отработал — слепое пятно:\n${sErr.message.slice(0, 200)}`
+        );
       }
 
       // 🔬 Writer-CID invariant check (2026-06-01 wave 3, #12) — ловит pollution
@@ -992,9 +1249,16 @@ module.exports.handler = async (event, context) => {
       // rows → Telegram alert. Untagged — это legacy rows до wave 1 deploy, не
       // критично но желательно мигрировать (перезаписать через клиента).
       try {
-        const { findings, summary } = await writerCidIntegrityCheck(client);
+        const { findings, summary } = await once('writer_cid', () => writerCidIntegrityCheck(client));
         results.writer_cid_integrity = summary;
         console.log('[Maintenance] Writer-CID integrity:', JSON.stringify(summary));
+        // Fail-loud: a query error inside the check surfaces as summary.error —
+        // alert it rather than letting "0 mismatched" read as healthy.
+        if (summary.error) {
+          await sendTelegramNotification(
+            `🚨 *Writer-CID check ERRORED*\n\nПроверка целостности не отработала (false-green risk):\n${String(summary.error).slice(0, 200)}`
+          );
+        }
         // Alert threshold: ANY mismatched (real pollution) — always alert.
         // untagged (legacy pre-guard rows) — noisy, не alert'им. dayv2 untagged
         // особенно много исторически (snapshot baseline 93 при deploy) — будут
@@ -1021,9 +1285,14 @@ module.exports.handler = async (event, context) => {
       // Алертит в Telegram если есть mismatch'и clients.name vs profile.firstName+lastName
       // или свежие cross_client_profile_blocked / wholesale_identity_change события.
       try {
-        const { findings, summary } = await profileIntegrityCheck(client);
+        const { findings, summary } = await once('profile_integrity', () => profileIntegrityCheck(client));
         results.profile_integrity = summary;
         console.log('[Maintenance] Profile integrity:', JSON.stringify(summary));
+        if (summary.error) {
+          await sendTelegramNotification(
+            `🚨 *Profile integrity check ERRORED*\n\nПроверка не отработала (false-green risk):\n${String(summary.error).slice(0, 200)}`
+          );
+        }
         if (findings.length > 0) {
           await sendTelegramNotification(
             `🩺 *Profile Integrity Alert*\n\n` +
@@ -1036,13 +1305,18 @@ module.exports.handler = async (event, context) => {
       } catch (piErr) {
         console.error('[Maintenance] profile_integrity failed:', piErr.message);
         results.profile_integrity = { error: piErr.message };
+        await sendTelegramNotification(
+          `🚨 *Profile integrity check ERRORED*\n\n${piErr.message.slice(0, 200)}`
+        );
       }
+
+      await recordHeartbeat(client, 'daily_cleanup');
     }
 
     // KV health check + Telegram alert при аномалиях
     if (runKVHealth) {
       try {
-        const { findings, summary } = await kvHealthCheck(client);
+        const { findings, summary } = await once('kv_health', () => kvHealthCheck(client));
         results.kv_health = { findings_count: findings.length, summary };
         console.log('[Maintenance] KV health:', JSON.stringify(summary));
         if (findings.length > 0) {
@@ -1051,19 +1325,29 @@ module.exports.handler = async (event, context) => {
             `_Daily monitor from heys-maintenance. См. apps/web/BUGS_HISTORY.md 2026-05-23 для контекста._`
           );
         }
+        await recordHeartbeat(client, 'kv_health');
       } catch (kvErr) {
+        // Fail-loud: kvHealthCheck has no internal catch, so a query error throws
+        // here — alert instead of silently logging (false-green otherwise).
         console.error('[Maintenance] kv_health failed:', kvErr.message);
         results.kv_health = { error: kvErr.message };
+        await sendTelegramNotification(
+          `🚨 *KV Health check ERRORED*\n\nМонитор KV не отработал:\n${kvErr.message.slice(0, 200)}`
+        );
       }
     }
 
     // Daily morning report
     if (runDailyReport) {
       try {
-        results.daily_report = await dailyReport(client);
+        results.daily_report = await dailyReport(client, once);
+        await recordHeartbeat(client, 'daily_report');
       } catch (drErr) {
         console.error('[Maintenance] daily_report failed:', drErr.message);
         results.daily_report = { error: drErr.message };
+        await sendTelegramNotification(
+          `🚨 *Daily report FAILED*\n\nУтренний отчёт не сформирован:\n${drErr.message.slice(0, 200)}`
+        );
       }
     }
 
@@ -1071,9 +1355,13 @@ module.exports.handler = async (event, context) => {
     if (runWeeklyReport) {
       try {
         results.weekly_report = await weeklyReport(client);
+        await recordHeartbeat(client, 'weekly_report');
       } catch (wrErr) {
         console.error('[Maintenance] weekly_report failed:', wrErr.message);
         results.weekly_report = { error: wrErr.message };
+        await sendTelegramNotification(
+          `🚨 *Weekly report FAILED*\n\n${wrErr.message.slice(0, 200)}`
+        );
       }
     }
 
@@ -1117,15 +1405,16 @@ module.exports.handler = async (event, context) => {
     
   } catch (error) {
     console.error('[Maintenance] Error:', error.message);
-    
-    // Notify on critical errors
-    if (error.message.includes('trial_queue') || error.message.includes('advisory')) {
-      await sendTelegramNotification(
-        `⚠️ *Maintenance Error*\n\n` +
-        `Task: ${triggerId}\n` +
-        `Error: ${error.message.slice(0, 100)}`
-      );
-    }
+
+    // ANY handler-level failure must alert (was: only if message contained
+    // 'trial_queue'/'advisory' — a DB-pool / secrets / connect failure on a
+    // daily_report run would have been silent). Best-effort: if Telegram itself
+    // is the casualty, sendTelegramNotification fails gracefully.
+    await sendTelegramNotification(
+      `🚨 *Maintenance handler FAILED*\n\n` +
+      `Task: ${triggerId}\n` +
+      `Error: ${error.message.slice(0, 300)}`
+    );
     
     return {
       statusCode: 500,
