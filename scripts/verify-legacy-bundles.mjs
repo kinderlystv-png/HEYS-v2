@@ -11,6 +11,7 @@
  * Optional: --fix-hint (default true) append rebuild commands on failure
  */
 
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -21,10 +22,61 @@ import { LEGACY_BUNDLES } from './legacy-bundle-config.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const WEB_DIR = resolve(ROOT, 'apps/web');
-const PUB_DIR = resolve(WEB_DIR, 'public');
-const MANIFEST_WEB = resolve(WEB_DIR, 'bundle-manifest.json');
-const MANIFEST_PUBLIC = resolve(PUB_DIR, 'bundle-manifest.json');
 const INDEX_HTML = resolve(WEB_DIR, 'index.html');
+
+// --ref=HEAD (used by pre-push): verify the COMMITTED state being pushed, not
+// the working tree. In a shared/parallel checkout the working tree may carry
+// another agent's uncommitted bundle-source WIP — reading it would falsely flag
+// our self-consistent HEAD as "stale" and block the push. So for files that are
+// dirty in the working tree we read their content from <ref> instead of disk.
+// Clean files are byte-identical on disk and at <ref>, so we read those from
+// disk (fast — no per-file git fork). Default (no --ref) reads the working tree
+// as before (integration pass / CI run on a clean checkout).
+const VERIFY_REF = (process.argv.find(a => a.startsWith('--ref=')) ?? '').slice('--ref='.length)
+    || process.env.HEYS_VERIFY_REF
+    || '';
+
+let _dirtySetCache = null;
+function getDirtySet() {
+    if (_dirtySetCache) return _dirtySetCache;
+    _dirtySetCache = new Set();
+    if (!VERIFY_REF) return _dirtySetCache;
+    try {
+        const out = execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], {
+            cwd: ROOT, encoding: 'utf8',
+        });
+        for (const line of out.split('\n')) {
+            const p = line.slice(3).trim().replace(/^"|"$/g, '');
+            if (p) _dirtySetCache.add(p);
+        }
+    } catch {
+        /* if git status fails, fall back to disk reads (empty dirty set) */
+    }
+    return _dirtySetCache;
+}
+
+// Read a repo-relative file. In ref mode, dirty files come from <ref> (committed
+// state), clean files from disk. Throws on missing (caller may catch).
+function readRepoFile(repoRel) {
+    const clean = repoRel.split('?')[0];
+    if (VERIFY_REF && getDirtySet().has(clean)) {
+        return execFileSync('git', ['show', `${VERIFY_REF}:${clean}`], { cwd: ROOT, encoding: 'utf8' });
+    }
+    return readFileSync(resolve(ROOT, clean), 'utf8');
+}
+
+function repoFileExists(repoRel) {
+    const clean = repoRel.split('?')[0];
+    if (VERIFY_REF && getDirtySet().has(clean)) {
+        try {
+            execFileSync('git', ['cat-file', '-e', `${VERIFY_REF}:${clean}`], { cwd: ROOT, stdio: 'ignore' });
+            return true;
+        } catch {
+            return false;
+        }
+    }
+    return existsSync(resolve(ROOT, clean));
+}
 
 const BUNDLE_NAMES = Object.keys(LEGACY_BUNDLES);
 const BOOT_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('boot-'));
@@ -32,14 +84,14 @@ const POSTBOOT_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('postboot-'));
 
 const SHOW_FIX_HINT = !process.argv.includes('--no-fix-hint');
 
-function readJson(path) {
-    if (!existsSync(path)) {
-        return { error: `missing file: ${path}` };
+function readJsonRepo(repoRel) {
+    if (!repoFileExists(repoRel)) {
+        return { error: `missing file: ${repoRel}` };
     }
     try {
-        return { ok: true, data: JSON.parse(readFileSync(path, 'utf8')) };
+        return { ok: true, data: JSON.parse(readRepoFile(repoRel)) };
     } catch (e) {
-        return { error: `invalid JSON: ${path} (${e.message})` };
+        return { error: `invalid JSON: ${repoRel} (${e.message})` };
     }
 }
 
@@ -74,7 +126,7 @@ function arraysEqual(a, b) {
 
 function readWebFile(relPath) {
     const clean = relPath.split('?')[0];
-    return readFileSync(resolve(WEB_DIR, clean), 'utf8');
+    return readRepoFile(`apps/web/${clean}`);
 }
 
 function buildSourceFingerprint(files) {
@@ -157,10 +209,10 @@ function main() {
     const errors = [];
     const warnings = [];
 
-    const webM = readJson(MANIFEST_WEB);
+    const webM = readJsonRepo('apps/web/bundle-manifest.json');
     if (webM.error) errors.push(webM.error);
 
-    const pubM = readJson(MANIFEST_PUBLIC);
+    const pubM = readJsonRepo('apps/web/public/bundle-manifest.json');
     if (pubM.error) errors.push(pubM.error);
 
     let manifest = webM.ok ? webM.data : null;
@@ -197,8 +249,7 @@ function main() {
             if (file !== expectedFile) {
                 errors.push(`bundle "${name}": file "${file}" expected to be "${expectedFile}"`);
             }
-            const pubPath = resolve(PUB_DIR, file);
-            if (!existsSync(pubPath)) {
+            if (!repoFileExists(`apps/web/public/${file}`)) {
                 errors.push(`missing public asset: apps/web/public/${file} (manifest lists it)`);
                 continue;
             }
@@ -207,7 +258,7 @@ function main() {
                 try {
                     const currentFingerprint = buildSourceFingerprint(LEGACY_BUNDLES[name]);
                     if (entry.sourceFingerprint !== currentFingerprint) {
-                        const bundleContent = readFileSync(pubPath, 'utf8');
+                        const bundleContent = readRepoFile(`apps/web/public/${file}`);
                         const parsed = parseBundleSources(bundleContent);
                         const changedInputs = collectChangedInputs(name, LEGACY_BUNDLES[name], parsed.byFile, parsed.order);
                         const selectiveCmd = makeSelectiveRebuildCmd(changedInputs);
@@ -233,10 +284,10 @@ function main() {
         }
     }
 
-    if (!existsSync(INDEX_HTML)) {
+    if (!repoFileExists('apps/web/index.html')) {
         errors.push(`missing ${INDEX_HTML}`);
     } else if (manifest) {
-        const html = readFileSync(INDEX_HTML, 'utf8');
+        const html = readRepoFile('apps/web/index.html');
 
         const expectedBoot = BOOT_NAMES.map(n => manifest[n]?.file).filter(Boolean);
         const deferBoot = extractBootDeferScripts(html);

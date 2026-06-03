@@ -110,8 +110,11 @@ node scripts/lint-bundle-size.mjs || {
 # исходников. ci.yml с verify-legacy-bundles выключен на push в main → если
 # source ушёл на main без интеграции, прод тихо уехал бы на старых бандлах.
 # Здесь ловим рассинхрон source↔bundle (source_fingerprint mismatch) ДО push.
+# --ref=HEAD: сверяем КОММИТНУТОЕ состояние (то, что пушится), а не рабочее
+# дерево. Иначе незакоммиченный bundle-source WIP параллельного агента в общем
+# checkout ложно валит наш самосогласованный HEAD и блокирует пуш.
 echo "🔗 Проверка соответствия legacy-бандлов исходникам (anti-stale-deploy)..."
-node scripts/verify-legacy-bundles.mjs || {
+node scripts/verify-legacy-bundles.mjs --ref=HEAD || {
   echo "❌ Бандлы не соответствуют исходникам (source изменён без пересборки)."
   echo "💡 Запусти integration-проход, который пересоберёт бандлы:"
   echo "   pnpm agents:integrate --branches=... --title=\"...\" --items='[...]'"
