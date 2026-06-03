@@ -72,6 +72,17 @@
       setNewItemIds
     } = deps;
 
+    // 🛡️ Arm the cloud-update block window so an in-flight meal edit (still inside
+    // the ~500ms autosave debounce, not yet written to LS / uploaded) can't be
+    // reverted by an external forceReload overlay (fetchDays / foreground-hot-sync).
+    // Mirrors changeMealType; consumed by the heys_day_effects external-source guard
+    // (~:417). Without it a sync pull during the debounce re-rendered the day from
+    // stale storage and visually reverted the edit (e.g. grams 333 → 100).
+    const armEditBlock = React.useCallback((newUpdatedAt) => {
+      if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
+      if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+    }, [lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
+
     /**
      * Add new meal
      */
@@ -400,15 +411,17 @@
       if (!confirmed) return;
 
       haptic('medium');
+      const newUpdatedAt = Date.now();
+      armEditBlock(newUpdatedAt);
       setDay(prevDay => {
         const meals = (prevDay.meals || []).filter((_, idx) => idx !== i);
-        return { ...prevDay, meals, updatedAt: Date.now() };
+        return { ...prevDay, meals, updatedAt: newUpdatedAt };
       });
       // 🔄 Notify missions about deletion
       window.dispatchEvent(new CustomEvent('heysMealDeleted', {
         detail: { mealIndex: i }
       }));
-    }, [haptic, setDay]);
+    }, [haptic, setDay, armEditBlock]);
 
     /**
      * Add product to meal
@@ -486,10 +499,12 @@
         });
       } catch (_) { /* noop */ }
 
+      const newUpdatedAt = Date.now();
+      armEditBlock(newUpdatedAt);
       setDay(prevDay => {
         const before = (prevDay.meals?.[mi]?.items || []).length;
         const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
-        const next = { ...prevDay, meals, updatedAt: Date.now() };
+        const next = { ...prevDay, meals, updatedAt: newUpdatedAt };
         // 🔬 [HEYS.day-trace] 4/8 setDay applied — meal item count went from X to X+1.
         try {
           console.info('[HEYS.day-trace] 4/8 setDay applied', {
@@ -525,20 +540,24 @@
      */
     const setGrams = React.useCallback((mi, itId, g) => {
       const grams = +g || 0;
+      const newUpdatedAt = Date.now();
+      armEditBlock(newUpdatedAt);
       setDay(prevDay => {
         const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).map(it => it.id === itId ? { ...it, grams: grams } : it) } : m);
-        return { ...prevDay, meals, updatedAt: Date.now() };
+        return { ...prevDay, meals, updatedAt: newUpdatedAt };
       });
-    }, [setDay]);
+    }, [setDay, armEditBlock]);
 
     /**
      * Remove item from meal
      */
     const removeItem = React.useCallback((mi, itId) => {
       haptic('medium');
+      const newUpdatedAt = Date.now();
+      armEditBlock(newUpdatedAt);
       setDay(prevDay => {
         const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).filter(it => it.id !== itId) } : m);
-        return { ...prevDay, meals, updatedAt: Date.now() };
+        return { ...prevDay, meals, updatedAt: newUpdatedAt };
       });
       // 🔄 Notify missions about deletion
       window.dispatchEvent(new CustomEvent('heysItemRemoved', {
@@ -551,17 +570,19 @@
           window.HEYS.orphanProducts.recalculate();
         }
       }, 100);
-    }, [haptic, setDay]);
+    }, [haptic, setDay, armEditBlock]);
 
     /**
      * Update meal field
      */
     const updateMealField = React.useCallback((mealIndex, field, value) => {
+      const newUpdatedAt = Date.now();
+      armEditBlock(newUpdatedAt);
       setDay(prevDay => {
         const meals = (prevDay.meals || []).map((m, i) => i === mealIndex ? { ...m, [field]: value } : m);
-        return { ...prevDay, meals, updatedAt: Date.now() };
+        return { ...prevDay, meals, updatedAt: newUpdatedAt };
       });
-    }, [setDay]);
+    }, [setDay, armEditBlock]);
 
     /**
      * Change meal mood
