@@ -3577,7 +3577,9 @@
                 // 🔧 v4.9.0: Определяем внешние источники (cloud sync)
                 // foreground-hot-sync тоже внешний — должен блокироваться blockCloudUpdatesUntilRef
                 // иначе hot-sync → setDay → autosave → upload → hot-sync loop
-                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays', 'foreground-hot-sync'];
+                // 2026-06-03: server-merge добавлен — это ответ сервера на upload (round-trip),
+                // тоже внешний; без него server-merge re-apply минул 3-сек окно и замыкал echo-петлю.
+                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays', 'foreground-hot-sync', 'server-merge'];
                 const isExternalSource = externalSources.includes(source);
 
                 // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)

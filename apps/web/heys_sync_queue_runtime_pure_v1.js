@@ -63,6 +63,25 @@
         return Array.isArray(mergedQueue) ? mergedQueue : [...batch, ...queue];
     }
 
+    // L3 (2026-06-03): pull-side revision gate decision (pure).
+    // Decides whether an incoming cloud value should be applied based on the server
+    // revision it carries vs the highest revision this client has already applied for
+    // the key. This is ADDITIVE and conservative:
+    //   * remoteRevision absent / non-positive (old DB row, deploy-lag) → return true
+    //     ("no revision info" → defer to the caller's legacy updatedAt / pending guards).
+    //   * localRevision unknown (never applied this key) → return true (apply).
+    //   * otherwise apply ONLY when remoteRevision > localRevision.
+    // It NEVER forces an apply past a legacy guard — callers still run their
+    // pending-local-edit protections after this returns true. Its only new effect is
+    // to SKIP re-applying a revision we have already seen (remote <= local).
+    function shouldApplyByRevision(params) {
+        const remote = Number(params && params.remoteRevision);
+        if (!Number.isFinite(remote) || remote <= 0) return true;
+        const local = Number(params && params.localRevision);
+        if (!Number.isFinite(local) || local <= 0) return true;
+        return remote > local;
+    }
+
     function getSyncStatusForKey(params) {
         const key = String(params?.key || '');
         if (!key) return 'synced';
@@ -227,6 +246,7 @@
         restorePersistentQueueState,
         requeueInFlightBatch,
         getSyncStatusForKey,
+        shouldApplyByRevision,
         enqueueClientSave,
         flushPendingQueueCore,
     };

@@ -288,4 +288,41 @@ describe('HEYS.syncQueueRuntimePure', () => {
     expect(result).toBe(false);
     expect(listeners.length).toBe(1);
   });
+
+  describe('shouldApplyByRevision (L3 pull-side gate)', () => {
+    function gate() {
+      global.HEYS = {};
+      loadModule();
+      return global.HEYS.syncQueueRuntimePure.shouldApplyByRevision;
+    }
+
+    it('applies when remote revision is strictly newer', () => {
+      expect(gate()({ remoteRevision: 5, localRevision: 3 })).toBe(true);
+    });
+
+    it('skips when remote revision was already seen (equal)', () => {
+      expect(gate()({ remoteRevision: 5, localRevision: 5 })).toBe(false);
+    });
+
+    it('skips when remote revision is older than what we applied', () => {
+      expect(gate()({ remoteRevision: 2, localRevision: 5 })).toBe(false);
+    });
+
+    it('applies when the key has never been seen locally (undefined local)', () => {
+      expect(gate()({ remoteRevision: 7, localRevision: undefined })).toBe(true);
+    });
+
+    it('falls back to apply when remote revision is absent (deploy-lag / old row)', () => {
+      const shouldApply = gate();
+      expect(shouldApply({ remoteRevision: undefined, localRevision: 9 })).toBe(true);
+      expect(shouldApply({ remoteRevision: null, localRevision: 9 })).toBe(true);
+      expect(shouldApply({ remoteRevision: 0, localRevision: 9 })).toBe(true);
+    });
+
+    it('is robust to missing params', () => {
+      const shouldApply = gate();
+      expect(shouldApply({})).toBe(true);
+      expect(shouldApply()).toBe(true);
+    });
+  });
 });

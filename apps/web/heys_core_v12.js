@@ -5459,10 +5459,25 @@
             capturedAt: 0,
             totalSuppressed: 0,
           };
-          const json = (typeof v === 'string') ? v : JSON.stringify(v);
+          // 2026-06-03: дедуп по КОНТЕНТ-хэшу (hashDay исключает updatedAt/_mergedAt/
+          // _sourceId/_writerCid), а НЕ по полному JSON. Прошлая версия сравнивала
+          // JSON.stringify(v) целиком — но он содержит updatedAt, который бампается
+          // каждую запись, поэтому identical-content/fresh-timestamp шторм (4502b,
+          // ~1/сек) проходил насквозь (totalSuppressed застревал на ~2). Теперь дроп
+          // ловит шторм независимо от штампа. Fallback на полный JSON если hashDay
+          // недоступен (ранний boot / не-day value).
+          let contentKey;
+          try {
+            const parsedDay = (typeof v === 'string') ? JSON.parse(v) : v;
+            const ch = (global.HEYS && HEYS.contentHash && typeof HEYS.contentHash.hashDay === 'function')
+              ? HEYS.contentHash.hashDay(parsedDay) : null;
+            contentKey = ch || ((typeof v === 'string') ? v : JSON.stringify(v));
+          } catch (_) {
+            contentKey = (typeof v === 'string') ? v : JSON.stringify(v);
+          }
           const prev = stats.lastByKey.get(finalKey);
           const now = Date.now();
-          if (prev && prev.json === json && (now - prev.ts) < 1500) {
+          if (prev && prev.json === contentKey && (now - prev.ts) < 1500) {
             stats.totalSuppressed++;
             stats.suppressed.push({ key: finalKey, ts: now });
             if (stats.suppressed.length > 200) stats.suppressed.shift();
@@ -5472,7 +5487,7 @@
             }
             return;
           }
-          stats.lastByKey.set(finalKey, { json, ts: now });
+          stats.lastByKey.set(finalKey, { json: contentKey, ts: now });
         } catch (_) { /* noop */ }
       }
       return set0(finalKey, v);

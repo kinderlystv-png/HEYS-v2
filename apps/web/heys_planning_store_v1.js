@@ -1069,6 +1069,17 @@
             });
             res.data.forEach(function (item) {
                 if (!item || item.k == null || item.v == null) return;
+                // 🛡️ L3d (2026-06-03): respect the same pending-write guard as
+                // applyForegroundHotSyncValue. This path used to call Store.save*
+                // directly, bypassing the guard — so a local edit still queued for
+                // upload could be clobbered by a stale cloud array. Tombstone union
+                // (first pass above) stays unconditional; it is additive and safe.
+                try {
+                    if (HEYS.cloud && typeof HEYS.cloud.getSyncStatus === 'function'
+                        && HEYS.cloud.getSyncStatus(item.k) === 'pending') {
+                        return; // local write pending — keep local authoritative
+                    }
+                } catch (e) { /* noop */ }
                 if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
                     Store.saveProjects(item.v);
                 } else if (item.k === 'heys_planning_tasks' && typeof Store.saveTasks === 'function') {

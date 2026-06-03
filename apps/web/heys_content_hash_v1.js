@@ -95,11 +95,14 @@
   //
   // Поля исключаются из хеша:
   //   • updatedAt, _sourceId, _mergedAt — meta, не часть контента
+  //   • _writerCid — атрибуция писателя (cross-client merge guard), НЕ контент.
+  //     Без исключения его toggling (server добавляет → autosave write-back
+  //     strip'ает) спуфил «изменение контента» и кормил echo-петлю (2026-06-03).
   //   • _h — наш собственный кэш
   //   • meals, trainings, supplementsPlanned, supplementsTaken — обработаны отдельно
   //
   const EXCLUDED_DAY_KEYS = new Set([
-    'updatedAt', '_sourceId', '_mergedAt', '_h',
+    'updatedAt', '_sourceId', '_mergedAt', '_h', '_writerCid',
     'meals', 'trainings', 'supplementsPlanned', 'supplementsTaken',
   ]);
 

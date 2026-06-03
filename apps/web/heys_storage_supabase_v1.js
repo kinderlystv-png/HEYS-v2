@@ -1930,6 +1930,18 @@
   const restorePersistentQueueState = _syncQueueRuntimePure.restorePersistentQueueState.bind(_syncQueueRuntimePure);
   const requeueInFlightBatch = _syncQueueRuntimePure.requeueInFlightBatch.bind(_syncQueueRuntimePure);
   const getSyncStatusForKey = _syncQueueRuntimePure.getSyncStatusForKey.bind(_syncQueueRuntimePure);
+  // L3 (2026-06-03): pull-side revision gate helper (undefined-tolerant). Optional —
+  // fall back to "always apply" if an older pure module is loaded (deploy-lag).
+  const shouldApplyByRevision = typeof _syncQueueRuntimePure.shouldApplyByRevision === 'function'
+    ? _syncQueueRuntimePure.shouldApplyByRevision.bind(_syncQueueRuntimePure)
+    : function () { return true; };
+  // Per-key highest applied server revision. IN-MEMORY ONLY in L3 — fed exclusively by
+  // successful hot-sync applies (accurate per-(client,key) revision). Write-ack
+  // propagation + persistence arrive with L4/L5 (where per-key revision is returned),
+  // which is why we do NOT seed it from the global server_revision max (over-estimate
+  // would wrongly skip a concurrent other-client write). Keyed by `${clientId}|${cloudKey}`.
+  const localRevisionByKey = new Map();
+  function _revMapKey(clientId, k) { return String(clientId || '') + '|' + String(k || ''); }
 
   function getPendingQueueLocalStorageKey(item) {
     if (!item || typeof item !== 'object') return '';
@@ -4558,6 +4570,23 @@
           const now = Date.now();
           const lastSaved = _lastSavedKeys.get(k);
 
+          // 2026-06-03: для dayv2 дедуп по КОНТЕНТ-хэшу (hashDay исключает updatedAt
+          // и прочие метаполя) — ловит identical-content/fresh-timestamp шторм, который
+          // updatedAt-дедуп (ниже) пропускал, т.к. штамп меняется каждую запись.
+          // Вторая линия после LSSET-guard: покрывает прямые saveClientKey мимо U.lsSet.
+          let dayHash = null;
+          if (String(k).includes('dayv2_') && parsed) {
+            try {
+              if (global.HEYS && HEYS.contentHash && typeof HEYS.contentHash.hashDay === 'function') {
+                dayHash = HEYS.contentHash.hashDay(parsed);
+              }
+            } catch (_) { /* noop */ }
+            if (dayHash && lastSaved && lastSaved.contentHash === dayHash && (now - lastSaved.timestamp) < DEDUP_WINDOW_MS) {
+              pushSyncTrace('INTERCEPT_DEDUP_SKIP', { key: k, byContent: true, age: now - lastSaved.timestamp }, 'debug');
+              return;
+            }
+          }
+
           if (lastSaved && updatedAt > 0 && lastSaved.updatedAt === updatedAt && (now - lastSaved.timestamp) < DEDUP_WINDOW_MS) {
             if (String(k).includes('dayv2_')) {
               // Dedup skip — норма (тот же payload недавно записали), не предупреждение.
@@ -4568,7 +4597,7 @@
 
           // Запоминаем это сохранение
           if (updatedAt > 0) {
-            _lastSavedKeys.set(k, { updatedAt, timestamp: now });
+            _lastSavedKeys.set(k, { updatedAt, timestamp: now, contentHash: dayHash });
             // Очищаем старые записи (>10 сек)
             for (const [key, val] of _lastSavedKeys) {
               if (now - val.timestamp > 10000) _lastSavedKeys.delete(key);
@@ -11890,7 +11919,7 @@
     return normalized;
   }
 
-  function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync') {
+  function applyForegroundHotSyncValue(clientId, baseKey, value, source = 'foreground-hot-sync', remoteRevision = undefined) {
     if (!clientId || !baseKey || value == null) return false;
     if (isSensitiveSessionStorageKey(baseKey)) return false;
     if (isLocalOnlyStorageKey(baseKey)) return false;
@@ -12017,6 +12046,16 @@
       const currentRaw = global.localStorage.getItem(scopedKey);
       const previousValue = currentRaw ? tryParse(currentRaw) : null;
       if (currentRaw === serialized) return false;
+
+      // 🔢 L3 revision gate (pull-side, additive). Skip applying a revision we have
+      // already seen (remote <= local). When remoteRevision is absent/unknown (old DB
+      // row or deploy-lag) this is a no-op and we fall through to the legacy updatedAt /
+      // pending guards below. A genuinely newer remote (remote > local) still passes
+      // through every guard below — this NEVER weakens the pending-local-edit protection.
+      const _revMapK = _revMapKey(clientId, baseKey);
+      if (!shouldApplyByRevision({ remoteRevision, localRevision: localRevisionByKey.get(_revMapK) })) {
+        return false;
+      }
 
       // Planning/chrono arrays are last-writer snapshots. A local delete shrinks
       // the array and enters the upload queue; until that upload lands, hot-sync
@@ -12165,6 +12204,13 @@
 
       if (global.HEYS?.store?.invalidate) {
         global.HEYS.store.invalidate(scopedKey);
+      }
+
+      // 🔢 L3: record the revision we just applied so a later pull of the same (or
+      // older) revision is skipped by the gate above. Only on a real write-through.
+      {
+        const _rev = Number(remoteRevision);
+        if (Number.isFinite(_rev) && _rev > 0) localRevisionByKey.set(_revMapK, _rev);
       }
 
       dispatchForegroundHotSyncProfileEvents(clientId, baseKey, previousValue, value, source);
@@ -12380,7 +12426,7 @@
         if (batchResult && !batchResult.error && Array.isArray(batchResult.data)) {
           let updated = 0;
           for (const item of batchResult.data) {
-            if (item.v != null && applyForegroundHotSyncValue(clientId, item.k, item.v)) {
+            if (item.v != null && applyForegroundHotSyncValue(clientId, item.k, item.v, 'foreground-hot-sync', item.revision)) {
               updated += 1;
             }
           }
@@ -12525,7 +12571,7 @@
       let updated = 0;
       const rows = Array.isArray(result.data) ? result.data : [];
       for (const row of rows) {
-        if (row.v != null && row.k && applyForegroundHotSyncValue(clientId, row.k, row.v)) {
+        if (row.v != null && row.k && applyForegroundHotSyncValue(clientId, row.k, row.v, 'foreground-hot-sync', row.revision)) {
           updated += 1;
         }
       }
