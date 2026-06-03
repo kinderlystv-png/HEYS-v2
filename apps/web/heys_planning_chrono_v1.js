@@ -2384,16 +2384,22 @@
         if (pos.length <= 1) return pos;
         const useBounds = halfW > 0 && halfH > 0;
         const minGap = Number.isFinite(gap) ? gap : BUBBLE_GAP;
-        for (let iter = 0; iter < 400; iter += 1) {
-            // 1) гравитация к центру (центральный pos[0] не трогаем)
-            for (let i = 1; i < pos.length; i += 1) {
-                const d = Math.hypot(pos[i].x, pos[i].y);
-                if (d < 0.5) continue;
-                const step = Math.min(d, 2);
-                pos[i].x -= (pos[i].x / d) * step;
-                pos[i].y -= (pos[i].y / d) * step;
+        const ITERS = 460;
+        for (let iter = 0; iter < ITERS; iter += 1) {
+            // 1) гравитация к центру с затуханием (annealing): сначала стягиваем
+            // плотно, к концу тяга → 0, чтобы расталкивание чисто развело кружки
+            // без остаточных перекрытий и без распухания кластера.
+            const gravity = 2.4 * (1 - iter / ITERS);
+            if (gravity > 0.02) {
+                for (let i = 1; i < pos.length; i += 1) {
+                    const d = Math.hypot(pos[i].x, pos[i].y);
+                    if (d < 0.5) continue;
+                    const step = Math.min(d, gravity);
+                    pos[i].x -= (pos[i].x / d) * step;
+                    pos[i].y -= (pos[i].y / d) * step;
+                }
             }
-            // 2) расталкивание перекрытий (центральный заблокирован)
+            // 2) полное расталкивание перекрытий (центральный pos[0] заблокирован)
             for (let i = 0; i < pos.length; i += 1) {
                 for (let j = i + 1; j < pos.length; j += 1) {
                     const dx = pos[i].x - pos[j].x;
@@ -2401,7 +2407,7 @@
                     const dist = Math.hypot(dx, dy);
                     const minDist = pos[i].radius + pos[j].radius + minGap;
                     if (dist >= minDist) continue;
-                    const overlap = (minDist - dist) * 0.9;
+                    const overlap = minDist - dist;
                     let ux;
                     let uy;
                     if (dist > 0.001) { ux = dx / dist; uy = dy / dist; }
@@ -2414,12 +2420,9 @@
                 }
             }
             pos[0].x = 0; pos[0].y = 0;
-            if (useBounds) {
-                for (let i = 1; i < pos.length; i += 1) {
-                    const c = clampToBounds(pos[i].x, pos[i].y, pos[i].radius, halfW, halfH);
-                    pos[i].x = c.x; pos[i].y = c.y;
-                }
-            }
+            // Без clamp: центр пришпилен, гравитация держит кластер у центра, а
+            // расталкивание — зазор. Clamp здесь только мешал бы (вдавливал кружки
+            // внутрь → наезды). Контейнер потом масштабируется под фактический пак.
         }
         return pos;
     }
@@ -2510,7 +2513,7 @@
             const yExt = Math.abs(p.y) + p.radius;
             if (yExt > packedYExtent) packedYExtent = yExt;
         });
-        const cloudHeight = Math.max(240, packedYExtent * 2 + 32);
+        const cloudHeight = Math.max(280, packedYExtent * 2 + 56);
         return { positioned: packed, cloudHeight };
     }
 

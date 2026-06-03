@@ -140,9 +140,13 @@ describe('chrono radial bubble layout', () => {
         const minutes = makeMinutes(activities);
         const layout = Chrono.computeRadialLayout(activities, minutes, 360, 195, 0.86);
         const dragged = layout.positioned[3];
+        // Тащим в реалистичную off-center точку. (0,0) больше не валиден: с
+        // concentric-пакингом самый большой кружок всегда пришпилен в центре, и
+        // посадить второй крупный кружок ровно поверх него геометрически нельзя —
+        // двум большим в одной точке места нет (это был артефакт старой раскладки).
         const reflowed = Chrono.reflowAroundOverrides(
             layout.positioned,
-            { [dragged.activity.id]: { x: 0, y: 0 } },
+            { [dragged.activity.id]: { x: 90, y: 120 } },
             195,
             (layout.cloudHeight + 112) / 2,
             { [dragged.activity.id]: true },
