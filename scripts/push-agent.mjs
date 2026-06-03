@@ -10,6 +10,7 @@
  *   pnpm push:agent -- --title="..." --items='[{"type":"fix","title":"...","description":"..."}]'
  *   pnpm push:agent -- --dry-run --title="..." --item-title="..." --item-description="..."
  *   pnpm push:agent -- --remote=origin --branch=main ...
+ *   pnpm push:agent -- --status
  *   pnpm push:agent -- --print-command
  *   pnpm push:agent -- --no-push ...
  */
@@ -103,6 +104,17 @@ function getNonReleaseMetaStagedFiles(files = getStagedFiles()) {
   return files.filter((file) => !RELEASE_META_PATH_RE.test(file));
 }
 
+function getStatusShortLines(statusText) {
+  return String(statusText || '')
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter(Boolean);
+}
+
+function getWorkingTreeStatusLines() {
+  return getStatusShortLines(getGitOutput(['status', '--short']));
+}
+
 function buildItemsJson() {
   return buildItemsJsonFromOptions({
     items: getOption('--items'),
@@ -175,6 +187,52 @@ function printSuggestedCommandAndExit() {
   writeLine(buildSuggestedCommand());
   writeLine('');
   writeLine('Copy guidance: apps/web/WHATS_NEW_COPY.md');
+  process.exit(0);
+}
+
+function getPushTarget() {
+  return {
+    remote: getOption('--remote') || 'origin',
+    branch: getOption('--branch') || getGitOutput(['branch', '--show-current']) || 'main',
+  };
+}
+
+function printStatusAndExit() {
+  const targetHash = getGitOutput(['rev-parse', '--short=8', 'HEAD']) || '<unknown>';
+  const { remote, branch } = getPushTarget();
+  const stagedFiles = getStagedFiles();
+  const nonReleaseMeta = getNonReleaseMetaStagedFiles(stagedFiles);
+  const dirtyLines = getWorkingTreeStatusLines();
+
+  writeLine('Agent push status');
+  writeLine(`  target hash: ${targetHash}`);
+  writeLine(`  push target: ${remote} ${branch}`);
+  writeLine(`  staged files: ${stagedFiles.length}`);
+  writeLine(`  staged non-release files: ${nonReleaseMeta.length}`);
+  writeLine(`  uncommitted files: ${dirtyLines.length}`);
+
+  if (nonReleaseMeta.length > 0) {
+    writeLine('');
+    writeLine('Staged non-release files:');
+    nonReleaseMeta.forEach((file) => writeLine(`  - ${file}`));
+  }
+
+  if (dirtyLines.length > 0) {
+    writeLine('');
+    writeLine('Uncommitted files present; only committed changes will be pushed:');
+    dirtyLines.slice(0, 20).forEach((line) => writeLine(`  ${line}`));
+    if (dirtyLines.length > 20) writeLine(`  ...and ${dirtyLines.length - 20} more`);
+  }
+
+  writeLine('');
+  writeLine('Whats New check:');
+  const check = checkWhatsNew();
+  if (check.status === 0) {
+    writeLine('  ok');
+  } else {
+    writeLine('  not ready');
+    writeLine(`  suggested command: ${buildSuggestedCommand()}`);
+  }
   process.exit(0);
 }
 
@@ -263,13 +321,24 @@ function push() {
     writeLine('Prepared release entry. Push skipped because --no-push was provided.');
     return;
   }
-  const remote = getOption('--remote') || 'origin';
-  const branch = getOption('--branch') || getGitOutput(['branch', '--show-current']) || 'main';
+  const dirtyLines = getWorkingTreeStatusLines();
+  if (dirtyLines.length > 0) {
+    writeLine('');
+    writeLine('Warning: uncommitted files remain in the working tree and will not be pushed:');
+    dirtyLines.slice(0, 20).forEach((line) => writeLine(`  ${line}`));
+    if (dirtyLines.length > 20) writeLine(`  ...and ${dirtyLines.length - 20} more`);
+    writeLine('');
+  }
+
+  const { remote, branch } = getPushTarget();
   const result = runGit(['push', remote, branch], { mutates: true });
   if (result.status !== 0) process.exit(result.status || 1);
 }
 
 function main() {
+  if (hasFlag('--status')) {
+    printStatusAndExit();
+  }
   if (hasFlag('--print-command')) {
     printSuggestedCommandAndExit();
   }
@@ -287,5 +356,6 @@ export {
   buildPrepareReleaseAutoArgs,
   buildSuggestedCommand,
   getNonReleaseMetaStagedFiles,
+  getStatusShortLines,
   parseCliArgs,
 };

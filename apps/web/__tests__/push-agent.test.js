@@ -11,6 +11,7 @@ const {
   buildItemsJsonFromOptions,
   buildPrepareReleaseAutoArgs,
   getNonReleaseMetaStagedFiles,
+  getStatusShortLines,
   parseCliArgs,
 } = await import(scriptUrl);
 
@@ -19,6 +20,7 @@ describe('push-agent CLI helpers', () => {
     const parsed = parseCliArgs([
       '--',
       '--dry-run',
+      '--status',
       '--remote=upstream',
       '--branch=release/test',
       '--title=Sync fixes',
@@ -26,11 +28,13 @@ describe('push-agent CLI helpers', () => {
 
     expect(parsed.raw).toEqual([
       '--dry-run',
+      '--status',
       '--remote=upstream',
       '--branch=release/test',
       '--title=Sync fixes',
     ]);
     expect(parsed.flags.has('--dry-run')).toBe(true);
+    expect(parsed.flags.has('--status')).toBe(true);
     expect(parsed.options.get('--remote')).toBe('upstream');
     expect(parsed.options.get('--branch')).toBe('release/test');
     expect(parsed.options.get('--title')).toBe('Sync fixes');
@@ -90,5 +94,15 @@ describe('push-agent CLI helpers', () => {
       'apps/web/heys_storage_supabase_v1.js',
       'package.json',
     ]);
+  });
+
+  it('parses git status --short output into non-empty lines', () => {
+    const lines = getStatusShortLines(`
+ M scripts/push-agent.mjs
+?? apps/web/public/new-bundle.js
+
+`);
+
+    expect(lines).toEqual([' M scripts/push-agent.mjs', '?? apps/web/public/new-bundle.js']);
   });
 });
