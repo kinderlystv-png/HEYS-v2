@@ -2268,12 +2268,27 @@
     const today = getToday();
     const dayKey = `heys_dayv2_${today}`;
 
-    // Load dayData directly to store missions
-    let dayData = readStoredValue(dayKey, {});
-    if (!dayData || typeof dayData !== 'object') dayData = {};
+    // Daily missions live in gameData (keyed by date), NOT inside the day object.
+    // Writing them into heys_dayv2_<date> let the gamification XP storm clobber
+    // freshly-added meals with a stale day snapshot — products silently vanished
+    // (incident 2026-06-03). gameData is the single source; the day is never
+    // written from gamification anymore.
+    let dm = gameData.dailyMissions;
+    let _needPersist = false;
 
-    // Инициализация или новый день (если в dayData пусто)
-    if (!dayData.dailyMissions || dayData.dailyMissions.date !== today) {
+    // One-time read-only migration: seed today's missions from a legacy in-day
+    // copy if gameData doesn't have them yet. READ ONLY — never write the day key.
+    if (!dm || dm.date !== today) {
+      const _legacyDay = readStoredValue(dayKey, {});
+      if (_legacyDay && _legacyDay.dailyMissions && _legacyDay.dailyMissions.date === today) {
+        dm = _legacyDay.dailyMissions;
+        _needPersist = true;
+      }
+    }
+
+    // Инициализация или новый день
+    if (!dm || dm.date !== today) {
+      _needPersist = true;
       const selectFn = HEYS.missions?.selectDailyMissions;
 
       // Build excludeIds from last 7 days history
@@ -2286,7 +2301,7 @@
           .forEach(h => excludeIds.push(...(h.ids || [])));
       }
 
-      dayData.dailyMissions = {
+      dm = {
         date: today,
         missions: selectFn ? selectFn(gameData.level, excludeIds) : [],
         completedCount: 0,
@@ -2302,8 +2317,8 @@
         favoriteCategories: [],
         lastUpdated: null
       };
-      gameData.missionStats.totalAttempts += dayData.dailyMissions.missions.length;
-      dayData.dailyMissions.missions.forEach(m => {
+      gameData.missionStats.totalAttempts += dm.missions.length;
+      dm.missions.forEach(m => {
         if (!gameData.missionStats.byType[m.type]) {
           gameData.missionStats.byType[m.type] = { attempts: 0, completed: 0 };
         }
@@ -2314,31 +2329,18 @@
       gameData.missionHistory = gameData.missionHistory || [];
       gameData.missionHistory.push({
         date: today,
-        ids: dayData.dailyMissions.missions.map(m => m.id)
+        ids: dm.missions.map(m => m.id)
       });
       // Keep only last 7 days
       gameData.missionHistory = gameData.missionHistory.slice(-7);
-
-      // 🔧 RACE FIX (same as updateDailyMission): re-read LS and merge only
-      // dailyMissions field to avoid clobbering concurrent flush() writes.
-      const _freshDayInit = readStoredValue(dayKey, {});
-      if (_freshDayInit && _freshDayInit.date === today && Array.isArray(_freshDayInit.meals)) {
-        _freshDayInit.dailyMissions = dayData.dailyMissions;
-        setStoredValue(dayKey, _freshDayInit);
-        dayData = _freshDayInit;
-      } else {
-        setStoredValue(dayKey, dayData);
-      }
-
-      // Update local gameData mirror for compatibility (if any legacy code reads it).
-      // Shallow-copy to avoid shared object reference: both gameData and dayData end up
-      // in the pending queue simultaneously; compress() uses WeakSet and detects the
-      // shared ref as a "circular reference", dropping dailyMissions from one queue item.
-      gameData.dailyMissions = { ...dayData.dailyMissions, missions: (dayData.dailyMissions.missions || []).map(m => ({ ...m })) };
-      saveData();
     }
 
-    const dm = dayData.dailyMissions || {};
+    // Persist into gameData only when we created or migrated missions — avoid a
+    // redundant heys_game write on every call (getDailyMissions runs often).
+    if (_needPersist) {
+      gameData.dailyMissions = { ...dm, missions: (dm.missions || []).map(m => ({ ...m })) };
+      saveData();
+    }
     return {
       date: dm.date,
       missions: dm.missions || [],
@@ -2352,20 +2354,18 @@
   function updateDailyMission(type, value) {
     const gameData = loadData();
     const today = getToday();
-    const dayKey = `heys_dayv2_${today}`;
 
-    let dayData = readStoredValue(dayKey, {});
-    // Fallback
-    if (!dayData || typeof dayData !== 'object') dayData = {};
-
-    if (!dayData.dailyMissions || dayData.dailyMissions.date !== today) {
-      getDailyMissions(); // Will create in dayData
-      dayData = readStoredValue(dayKey, {});
-      if (!dayData.dailyMissions) return;
+    // Missions live in gameData (decoupled from the day object — see
+    // getDailyMissions). loadData() returns the same singleton, so
+    // getDailyMissions() populates gameData.dailyMissions in place.
+    if (!gameData.dailyMissions || gameData.dailyMissions.date !== today) {
+      getDailyMissions();
+      if (!gameData.dailyMissions || gameData.dailyMissions.date !== today) return;
     }
+    const dayMissions = gameData.dailyMissions;
 
     let missionCompleted = false;
-    const missions = dayData.dailyMissions.missions || [];
+    const missions = dayMissions.missions || [];
 
     for (const mission of missions) {
       if (mission.completed) continue;
@@ -2570,7 +2570,7 @@
         // Проверяем выполнение
         if (newProgress >= mission.target && !mission.completed) {
           mission.completed = true;
-          dayData.dailyMissions.completedCount++;
+          dayMissions.completedCount++;
           missionCompleted = true;
 
           // 📊 Update mission stats (completed)
@@ -2609,37 +2609,15 @@
       }
     }
 
-    // 🔧 RACE FIX: re-read LS immediately before write to avoid clobbering
-    // concurrent writes from React's flush() (e.g. addProductToMeal in progress).
-    // Without this, gamification's stale dayData snapshot overwrites the user's
-    // freshly added meal item and the product silently disappears on next refresh.
-    const _freshDay = readStoredValue(dayKey, {});
-    if (_freshDay && _freshDay.date === today && Array.isArray(_freshDay.meals)) {
-      // Patch only the dailyMissions field on the freshest snapshot.
-      _freshDay.dailyMissions = dayData.dailyMissions;
-      setStoredValue(dayKey, _freshDay);
-      dayData = _freshDay;
-    } else {
-      setStoredValue(dayKey, dayData);
-    }
-
-    // Mirror to gameData for safety (copy — see getDailyMissions comment on WeakSet/compress)
-    gameData.dailyMissions = { ...dayData.dailyMissions, missions: (dayData.dailyMissions.missions || []).map(m => ({ ...m })) };
+    // Missions are part of gameData (dayMissions is the same ref), so the
+    // mutations above are already reflected. Persist gameData only — never write
+    // the day object from gamification: that clobbered freshly-added meals with a
+    // stale day snapshot under the XP storm (incident 2026-06-03).
     saveData();
 
     // Проверяем бонус за все 3 миссии — автоклейм
-    if (dayData.dailyMissions.completedCount >= 3 && !dayData.dailyMissions.bonusClaimed) {
-      dayData.dailyMissions.bonusClaimed = true;
-      // Re-read again before second write — guard against concurrent updates.
-      const _freshDay2 = readStoredValue(dayKey, {});
-      if (_freshDay2 && _freshDay2.date === today && Array.isArray(_freshDay2.meals)) {
-        _freshDay2.dailyMissions = dayData.dailyMissions;
-        setStoredValue(dayKey, _freshDay2);
-      } else {
-        setStoredValue(dayKey, dayData); // Save bonus state to day
-      }
-
-      gameData.dailyMissions = { ...dayData.dailyMissions, missions: (dayData.dailyMissions.missions || []).map(m => ({ ...m })) }; // Mirror (copy)
+    if (dayMissions.completedCount >= 3 && !dayMissions.bonusClaimed) {
+      dayMissions.bonusClaimed = true;
       saveData();
 
       triggerImmediateSync('daily_missions_bonus');

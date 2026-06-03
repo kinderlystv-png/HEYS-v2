@@ -3457,7 +3457,7 @@
                 // heys_day_effects.js). Замер ?reactProfiler=1 показал :recv = 83.6ms
                 // как отдельный source после :raf-apply fix. Kill switch shared.
                 try {
-                    const _eventUpdatedAt = (eventData && eventData.updatedAt) || e.detail?.updatedAt || 0;
+                    const _eventUpdatedAt = (payloadData && payloadData.updatedAt) || e.detail?.updatedAt || 0;
                     if (!forceReload && _eventUpdatedAt > 0 && _eventUpdatedAt === lastLoadedUpdatedAtRef.current
                         && window.localStorage.getItem('heys_skip_noop_apply') !== '0') {
                         console.info('[HEYS.day] ⚡ Skip recv (no-op event, same updatedAt)', {
@@ -3503,6 +3503,26 @@
                     return;
                 }
 
+                // 🔧 v4.9.0: Определяем внешние источники (cloud sync)
+                // foreground-hot-sync тоже внешний — должен блокироваться blockCloudUpdatesUntilRef
+                // иначе hot-sync → setDay → autosave → upload → hot-sync loop
+                // 2026-06-03: server-merge добавлен — это ответ сервера на upload (round-trip),
+                // тоже внешний; без него server-merge re-apply минул 3-сек окно и замыкал echo-петлю.
+                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays', 'foreground-hot-sync', 'server-merge'];
+                const isExternalSource = externalSources.includes(source);
+
+                // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)
+                // на 3 секунды после локального изменения.
+                if (isExternalSource && Date.now() < blockCloudUpdatesUntilRef.current) {
+                    console.info('[HEYS.day] 🔒 External update blocked', {
+                        source,
+                        forceReload,
+                        hasPayload: !!payloadData,
+                        remainingMs: blockCloudUpdatesUntilRef.current - Date.now()
+                    });
+                    return;
+                }
+
                 // v25.8.6.5: Если событие пришло с полным payload дня — применяем его напрямую.
                 // Это обходит риск чтения устаревшего localStorage во время/после fetchDays.
                 if (payloadData && (!updatedDate || updatedDate === date)) {
@@ -3540,11 +3560,25 @@
                             });
                             return prevDay;
                         }
+                        if (isExternalSource && payloadUpdatedAt <= prevUpdatedAt && payloadItemsCount < prevItemsCount) {
+                            console.warn('[HEYS.day] 🛡️ Payload skipped (external items rollback)', {
+                                source,
+                                payloadUpdatedAt,
+                                prevUpdatedAt,
+                                payloadMealsCount,
+                                prevMealsCount,
+                                payloadItemsCount,
+                                prevItemsCount,
+                                forceReload
+                            });
+                            return prevDay;
+                        }
 
                         console.info('[HEYS.day] 📦 Applied day-updated payload', {
                             source,
                             payloadUpdatedAt,
                             payloadMealsCount,
+                            payloadItemsCount,
                             forceReload
                         });
                         // MA persist/sync часто идёт сразу после добавления продукта: getFreshDayData может
@@ -3571,25 +3605,6 @@
                     });
 
                     lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, payloadUpdatedAt);
-                    return;
-                }
-
-                // 🔧 v4.9.0: Определяем внешние источники (cloud sync)
-                // foreground-hot-sync тоже внешний — должен блокироваться blockCloudUpdatesUntilRef
-                // иначе hot-sync → setDay → autosave → upload → hot-sync loop
-                // 2026-06-03: server-merge добавлен — это ответ сервера на upload (round-trip),
-                // тоже внешний; без него server-merge re-apply минул 3-сек окно и замыкал echo-петлю.
-                const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays', 'foreground-hot-sync', 'server-merge'];
-                const isExternalSource = externalSources.includes(source);
-
-                // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)
-                // на 3 секунды после локального изменения
-                if (isExternalSource && Date.now() < blockCloudUpdatesUntilRef.current) {
-                    console.info('[HEYS.day] 🔒 External update blocked', {
-                        source,
-                        forceReload,
-                        remainingMs: blockCloudUpdatesUntilRef.current - Date.now()
-                    });
                     return;
                 }
 

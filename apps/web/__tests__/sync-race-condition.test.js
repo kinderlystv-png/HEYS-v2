@@ -637,6 +637,44 @@ describe('Batch day-updated event strategy', () => {
     const shouldSkip = lastAppliedSignatureRef.current === sig && (nowApply - lastAppliedAtRef.current) < sigCooldownMs;
     expect(shouldSkip).toBe(true);
   });
+
+  test('external payload should not roll back newer local items even with forceReload', () => {
+    const externalSources = ['cloud', 'cloud-sync', 'merge', 'fetchDays', 'foreground-hot-sync', 'server-merge'];
+    const source = 'fetchDays';
+    const isExternalSource = externalSources.includes(source);
+
+    const prevDay = {
+      updatedAt: 2000,
+      meals: [{
+        id: 'meal-1',
+        name: 'Breakfast',
+        items: [
+          { id: 'item-1', name: 'Syrniki' },
+          { id: 'item-2', name: 'Jam' }
+        ]
+      }]
+    };
+
+    const payloadDay = {
+      updatedAt: 2000,
+      meals: [{
+        id: 'meal-1',
+        name: 'Breakfast',
+        items: [
+          { id: 'item-1', name: 'Syrniki' }
+        ]
+      }]
+    };
+
+    const payloadUpdatedAt = payloadDay.updatedAt || 0;
+    const prevUpdatedAt = prevDay.updatedAt || 0;
+    const payloadItemsCount = payloadDay.meals.reduce((s, m) => s + (Array.isArray(m?.items) ? m.items.length : 0), 0);
+    const prevItemsCount = prevDay.meals.reduce((s, m) => s + (Array.isArray(m?.items) ? m.items.length : 0), 0);
+
+    const shouldSkipPayloadRollback = isExternalSource && payloadUpdatedAt <= prevUpdatedAt && payloadItemsCount < prevItemsCount;
+
+    expect(shouldSkipPayloadRollback).toBe(true);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
