@@ -750,6 +750,9 @@
     maybeReportQuota();
     if (watchers.has(sk)) watchers.get(sk).forEach(fn => { try { fn(v); } catch (e) { } });
     try {
+      if (global.HEYS && global.HEYS._suppressStoreCloudSync === true) {
+        return;
+      }
       if (global.HEYS && typeof global.HEYS.saveClientKey === 'function') {
         const cid = ns();
         if (cid) {

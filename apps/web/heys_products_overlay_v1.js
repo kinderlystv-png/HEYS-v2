@@ -132,13 +132,20 @@
       }
 
       if (HEYS.store && HEYS.store.set) {
-        HEYS.store.set(STORE_KEY, rows);
+        const skipCloudSync = !!(opts && opts.skipCloudSync);
+        const prevSuppressStoreCloudSync = HEYS._suppressStoreCloudSync === true;
+        if (skipCloudSync) HEYS._suppressStoreCloudSync = true;
+        try {
+          HEYS.store.set(STORE_KEY, rows);
+        } finally {
+          if (skipCloudSync) HEYS._suppressStoreCloudSync = prevSuppressStoreCloudSync;
+        }
         invalidateMergedView();
         // γ.3: notify other tabs that overlay changed.
         _broadcastOverlayWrite(rows.length);
         // skipCloudSync=true пропускает upload — используется applyCloudSnapshot
         // (данные пришли ИЗ cloud, нет смысла отправлять обратно).
-        if (!(opts && opts.skipCloudSync)) {
+        if (!skipCloudSync) {
           _scheduleCloudSync(rows);
         }
         return true;
