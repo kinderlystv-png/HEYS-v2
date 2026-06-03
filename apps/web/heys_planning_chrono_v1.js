@@ -2106,6 +2106,8 @@
     // садится в (0,0), последующие закручиваются спиралью по убыванию.
     const PHYLLOTAXIS_GOLDEN_ANGLE = 137.5 * Math.PI / 180;
     const BUBBLE_GAP = 10;          // compact visible air между bubble'ами
+    const DRAG_BUBBLE_GAP = 22;     // extra air пока палец ведёт bubble
+    const RELEASE_BUBBLE_GAP = 18;  // extra air на медленном возврате
     const RING_PADDING = 8;         // .chrono-bubble-wrap.has-target + визуальный stroke/shadow
     const PHYLLOTAXIS_STEP = 4;     // шаг наружу при коллизии (px)
     const PHYLLOTAXIS_MAX_ATTEMPTS = 400;
@@ -2194,22 +2196,27 @@
         });
 
         let cloudHeight = Math.max(280, maxYExtent * 2 + 48);
+        if (!hasBubbleOverlap(placed, BUBBLE_GAP)) {
+            return { positioned: placed, cloudHeight };
+        }
         let settled = placed;
+        const centerLocks = placed[0] ? { [placed[0].activity.id]: true } : null;
         for (let attempt = 0; attempt < 5; attempt += 1) {
-            settled = reflowAroundOverrides(placed, {}, halfW, cloudHeight / 2);
-            if (!hasBubbleOverlap(settled)) break;
+            settled = reflowAroundOverrides(placed, {}, halfW, cloudHeight / 2, centerLocks, BUBBLE_GAP);
+            if (!hasBubbleOverlap(settled, BUBBLE_GAP)) break;
             cloudHeight += Math.max(48, maxBubbleR * 0.6);
         }
         return { positioned: settled, cloudHeight };
     }
 
-    function hasBubbleOverlap(positioned) {
+    function hasBubbleOverlap(positioned, gap) {
+        const minGap = Number.isFinite(gap) ? gap : BUBBLE_GAP;
         for (let i = 0; i < positioned.length; i += 1) {
             for (let j = i + 1; j < positioned.length; j += 1) {
                 const a = positioned[i];
                 const b = positioned[j];
                 const dist = Math.hypot(a.x - b.x, a.y - b.y);
-                if (dist < a.radius + b.radius + BUBBLE_GAP - 0.5) return true;
+                if (dist < a.radius + b.radius + minGap - 0.5) return true;
             }
         }
         return false;
@@ -2219,9 +2226,10 @@
     // обнаруженном overlap'е. Даже dragged/override bubble — мягкий якорь:
     // если точка пальца ведёт к наслоению у safe-zone, сам bubble чуть сдвинется
     // в ближайшее свободное место, как пузырёк в воде.
-    function reflowAroundOverrides(positioned, overrides, halfW, halfH, lockedIds) {
+    function reflowAroundOverrides(positioned, overrides, halfW, halfH, lockedIds, gap) {
         const safeOverrides = overrides || {};
         const locks = lockedIds || {};
+        const minGap = Number.isFinite(gap) ? gap : BUBBLE_GAP;
         const pos = positioned.map((p) => {
             const ov = safeOverrides[p.activity.id];
             if (!ov) return { ...p };
@@ -2233,14 +2241,14 @@
         const useBounds = halfW > 0 && halfH > 0;
         const RELAX_FACTOR = 0.85;
 
-        for (let iter = 0; iter < 120; iter += 1) {
+        for (let iter = 0; iter < 260; iter += 1) {
             let moved = false;
             for (let i = 0; i < pos.length; i += 1) {
                 for (let j = i + 1; j < pos.length; j += 1) {
                     const dx = pos[i].x - pos[j].x;
                     const dy = pos[i].y - pos[j].y;
                     const dist = Math.hypot(dx, dy);
-                    const minDist = pos[i].radius + pos[j].radius + BUBBLE_GAP;
+                    const minDist = pos[i].radius + pos[j].radius + minGap;
                     if (dist >= minDist) continue;
 
                     const overlap = (minDist - dist) * RELAX_FACTOR;
@@ -2333,7 +2341,9 @@
             [activities, minutesByActivity, maxMin, halfW, sizeScale]
         );
 
-        const halfH = cloudHeight / 2;
+        const dragHeightReserve = drag ? (drag.releasing ? 72 : 112) : 0;
+        const displayCloudHeight = cloudHeight + dragHeightReserve;
+        const halfH = displayCloudHeight / 2;
 
         // Permanent overrides из drag-release + временный override активного drag.
         // Во время drag/release сам dragged bubble locked: он идёт за пальцем
@@ -2352,7 +2362,10 @@
                     );
                     lockedIds[drag.id] = true;
                 }
-                return reflowAroundOverrides(positioned, overrides, halfW, halfH, lockedIds);
+                const activeGap = drag
+                    ? (drag.releasing ? RELEASE_BUBBLE_GAP : DRAG_BUBBLE_GAP)
+                    : BUBBLE_GAP;
+                return reflowAroundOverrides(positioned, overrides, halfW, halfH, lockedIds, activeGap);
             },
             [positioned, slotOverrides, halfW, halfH, drag]
         );
@@ -2468,7 +2481,7 @@
             h('div', {
                 ref: containerRef,
                 className: 'chrono-cloud__items chrono-cloud__items--radial' + (releasing ? ' is-releasing' : ''),
-                style: { '--cloud-height': cloudHeight + 'px' },
+                style: { '--cloud-height': displayCloudHeight + 'px' },
             },
                 displayed.map(({ activity, x: slotX, y: slotY, radius }) => {
                     const isDragged = drag && drag.id === activity.id;
@@ -3023,6 +3036,10 @@
         getActivityTarget,
         getActivityGoalForScope,
         ringColorForProgress,
+        sizeScaleForCount,
+        computeRadialLayout,
+        reflowAroundOverrides,
+        hasBubbleOverlap,
         buildDailySeries,
         buildWeekBreakdown,
         buildChronoPlanFacts,

@@ -102,6 +102,57 @@ describe('chrono.colorForActivity', () => {
     });
 });
 
+describe('chrono radial bubble layout', () => {
+    let Chrono;
+    beforeEach(() => { ({ Chrono } = loadModules()); });
+
+    function makeActivities(count) {
+        return Array.from({ length: count }, (_, i) => ({
+            id: `activity-${i}`,
+            name: `Activity ${i}`,
+            emoji: '●',
+            hue: (i * 47) % 360,
+        }));
+    }
+
+    function makeMinutes(activities) {
+        return activities.reduce((acc, activity, i) => {
+            acc[activity.id] = Math.max(15, 360 - i * 24);
+            return acc;
+        }, {});
+    }
+
+    it('keeps resting bubbles separated across compact activity counts', () => {
+        [4, 6, 8, 10, 12].forEach((count) => {
+            const activities = makeActivities(count);
+            const minutes = makeMinutes(activities);
+            const sizeScale = Chrono.sizeScaleForCount(count, 195);
+            const layout = Chrono.computeRadialLayout(activities, minutes, 360, 195, sizeScale);
+
+            expect(Chrono.hasBubbleOverlap(layout.positioned, 10)).toBe(false);
+            expect(layout.positioned[0].x).toBeCloseTo(0, 5);
+            expect(layout.positioned[0].y).toBeCloseTo(0, 5);
+        });
+    });
+
+    it('keeps extra air around dragged bubbles during reflow', () => {
+        const activities = makeActivities(8);
+        const minutes = makeMinutes(activities);
+        const layout = Chrono.computeRadialLayout(activities, minutes, 360, 195, 0.86);
+        const dragged = layout.positioned[3];
+        const reflowed = Chrono.reflowAroundOverrides(
+            layout.positioned,
+            { [dragged.activity.id]: { x: 0, y: 0 } },
+            195,
+            (layout.cloudHeight + 112) / 2,
+            { [dragged.activity.id]: true },
+            22
+        );
+
+        expect(Chrono.hasBubbleOverlap(reflowed, 22)).toBe(false);
+    });
+});
+
 describe('chrono.getProgress', () => {
     let Chrono;
     beforeEach(() => { ({ Chrono } = loadModules()); });
