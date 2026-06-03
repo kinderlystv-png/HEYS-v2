@@ -440,3 +440,58 @@ export const LEGACY_FULL_REBUILD_TRIGGERS = new Set([
     'scripts/bundle-legacy.mjs',
     'scripts/legacy-bundle-config.mjs',
 ]);
+
+// ── Generated-artifact source of truth ───────────────────────────────────────
+// Единственное место, где задаётся, какие файлы являются BUILD-выходами
+// (пересобираются legacy-пайплайном), а не ручным source. Консьюмеры:
+//   - scripts/check-agent-staging.mjs       (запрет в agent-коммитах)
+//   - scripts/auto-sync-legacy-bundles.mjs  (детекция dirty generated baseline)
+//   - scripts/integrate-agents.mjs          (что стейджить в integration-проходе)
+// Держим всё знание о generated-путях ЗДЕСЬ — добавление нового бандла не сможет
+// рассинхронизировать списки в трёх скриптах.
+
+// Промежуточные generator-выходы (apps/web/heys_*_bundle_v1.js) — из конфига.
+const GENERATOR_OUTPUTS = Object.values(LEGACY_GENERATORS).map(g => g.output);
+
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Regex для каждого generated-артефакта (пути относительно корня репо).
+export const GENERATED_FILE_PATTERNS = [
+    /^apps\/web\/bundle-manifest\.json$/,
+    /^apps\/web\/index\.html$/,
+    /^apps\/web\/react-bundle\.js$/,                 // raw vendor-бандл (гзипится в public/)
+    ...GENERATOR_OUTPUTS.map(output => new RegExp(`^${escapeRegExp(output)}$`)),
+    /^apps\/web\/public\/(?:bundle-manifest|lazy-manifest)\.json$/,
+    /^apps\/web\/public\/sw\.js$/,
+    /^apps\/web\/public\/react-bundle\.js\.gz$/,
+    /^apps\/web\/public\/(?:boot|postboot)-[\w-]+\.bundle\.[a-f0-9]{12}\.js(?:\.gz)?$/,
+];
+
+// Release-артефакты (whats-new). Запрещены агентам; ими владеет integration.
+export const RELEASE_FILE_PATTERNS = [
+    /^apps\/web\/public\/whats-new\.json$/,
+    /^apps\/web\/public\/whats-new\//,
+];
+
+// Аргументы для `git add` в integration-проходе (директории + явные файлы).
+// apps/web/public покрывает все хешированные бандлы, manifests, sw.js,
+// react-bundle.js.gz и whats-new. Standalone-файлы лежат вне public/.
+export const GENERATED_ADD_PATHS = [
+    'apps/web/public',
+    'apps/web/bundle-manifest.json',
+    'apps/web/index.html',
+    'apps/web/react-bundle.js',
+    ...GENERATOR_OUTPUTS,
+    'scripts/bootstrap-bypass-allowlist.txt',
+    'scripts/raw-session-clear-allowlist.txt',
+];
+
+export function isGeneratedFile(filePath) {
+    return GENERATED_FILE_PATTERNS.some(re => re.test(filePath));
+}
+
+export function isReleaseFile(filePath) {
+    return RELEASE_FILE_PATTERNS.some(re => re.test(filePath));
+}

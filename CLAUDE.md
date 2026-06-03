@@ -116,32 +116,67 @@ each.
 
 ## Pre-commit / pre-push hooks
 
-Активные хуки: commitlint, `prepare-release:check` (whats-new),
-`lint-direct-localstorage-writes`, `lint-shared-cache-writes`, `legacy-sync`
-(rebundle + auto-stage).
+Активные хуки: commitlint, `check-agent-staging` (source-only guard в
+agent-mode), `legacy-sync` (rebundle+auto-stage в integration-mode, report-only
+в agent-mode), `prepare-release:check` (whats-new, pre-push),
+`lint-direct-localstorage-writes`, `lint-shared-cache-writes`.
+
+## Параллельная работа агентов (bundle isolation)
+
+**Главное правило: агенты коммитят ТОЛЬКО source. Бандлы и whats-new не
+трогают.** Приложение деплоится из закоммиченных бандлов с content-hash в именах
+(`public/*.bundle.<hash>.js`, `bundle-manifest.json`, `index.html`, `sw.js`,
+`react-bundle.js`). Если каждый из 2–5 агентов пересобирает их в своём коммите —
+hash-коллизии и порча чужих несобранных артефактов. Поэтому generated-файлы
+собирает **один integration-проход**, а не каждый агент.
+
+**Режим определяется автоматически**
+([check-agent-staging.mjs](scripts/check-agent-staging.mjs)): worktree под
+`.claude/worktrees/`, ветки `codex/`·`claude/`·`copilot/`· `worktree-agent/`, и
+**по умолчанию любая ветка кроме `main`/`develop`/`integration/*`/`release/*`**
+→ **agent mode** (source-only). В этом режиме pre-commit hook `legacy-sync`
+только репортит, какие бандлы нужно будет пересобрать, и **блокирует staging
+generated/release-файлов** (если случайно сделал `git add -A`). Источник списка
+generated-путей —
+[scripts/legacy-bundle-config.mjs](scripts/legacy-bundle-config.mjs) (single
+source of truth, не дублируй).
+
+Workflow:
+
+1. Агент в своём worktree/ветке коммитит source/test/docs своей задачи. Бандлы,
+   `whats-new.json`, `buildHash` — **не его забота**. Push не делает.
+2. Когда задачи закрыты — **integration-проход** (на `main`/`integration/*`)
+   собирает всё за один раз:
+   ```bash
+   pnpm agents:integrate --branches=codex/a,codex/b --title="..." \
+     --items='[{"type":"fix","title":"...","description":"..."}]'
+   ```
+   (или `--branches=auto --yes` — авто-сбор agent-веток из worktrees;
+   `--dry-run` — показать план без мутаций). Он мержит ветки (откат при
+   конфликте), делает full rebuild, стейджит generated, гоняет
+   `verify:legacy-bundles`, создаёт один `chore(build)` + один `chore(release)`
+   whats-new коммит. Push не делает.
 
 **Когда хук срабатывает — следуй его stderr.** Сообщение содержит точные
-инструкции (что добавить, какой формат, какие файлы). Никогда `--no-verify` без
-явного разрешения пользователя.
+инструкции. Никогда `--no-verify` без явного разрешения пользователя.
 
-Quick hint: `feat|fix|perf` коммиты всегда требуют entry в
-`apps/web/public/whats-new.json` (top of `releases[]`,
-`buildHash = git log -1 --format=%h` +
-`chore(release): bump whats-new build hash to <HASH>`).
+### Релиз / push (integration-only)
 
-Для агентского non-interactive push используй `pnpm push:agent` вместо обычного
-`git push`, когда в push-range есть `feat|fix|perf` или пользовательские runtime
-изменения. Сначала сформулируй короткий текст по
-[apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md), затем:
+Эти инструменты — для **integration-прохода и ручных technical-пушей**, не для
+рядовых agent-коммитов. whats-new (`feat|fix|perf` → entry в
+`apps/web/public/whats-new.json`, `coveredCommits` покрывают user-facing коммиты
+push-range) генерится автоматически через `agents:integrate` или, для одиночного
+technical/ручного пуша:
 
 ```bash
 pnpm push:agent -- --title="..." --item-title="..." --item-description="..."
 ```
 
-Для проверки без commit/push добавь `--dry-run --no-push`. Если нужна готовая
-команда-шаблон, запусти `pnpm push:agent -- --print-command`. `push:safe`
-оставлен для технических изменений; не используй его для user-facing правок,
-если текст релиза должен быть точным.
+Текст релиза — по [apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md).
+`--dry-run --no-push` для проверки, `--print-command` для шаблона. `push:safe` —
+для чисто технических изменений (не для user-facing, где текст должен быть
+точным). `prepare-release:check` гоняется на pre-push и в CI; bundle rebuild
+(`legacy-sync`) — на pre-commit только в integration-режиме.
 
 ---
 

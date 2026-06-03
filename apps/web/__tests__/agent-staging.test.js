@@ -25,6 +25,20 @@ describe('agent staging guard', () => {
     expect(detectStagingMode({ branchName: 'integration/agent-batch', repoRoot: '/repo', env: {} })).toBe('integration');
   });
 
+  it('is safe-by-default: unrecognized branches fall back to agent mode', () => {
+    // copilot/* and arbitrary names previously defaulted to integration (no
+    // bundle protection). Integration is now an allowlist; everything else is
+    // source-only.
+    expect(detectStagingMode({ branchName: 'copilot/whatsnew-trigger', repoRoot: '/repo', env: {} })).toBe('agent');
+    expect(detectStagingMode({ branchName: 'feature/x', repoRoot: '/repo', env: {} })).toBe('agent');
+    expect(detectStagingMode({ branchName: 'fix-sync', repoRoot: '/repo', env: {} })).toBe('agent');
+    expect(detectStagingMode({ branchName: '', repoRoot: '/repo', env: {} })).toBe('agent');
+  });
+
+  it('honors explicit HEYS_STAGING_MODE override on any branch', () => {
+    expect(detectStagingMode({ branchName: 'feature/x', repoRoot: '/repo', env: { HEYS_STAGING_MODE: 'integration' } })).toBe('integration');
+  });
+
   it('allows source-only staged files in agent mode', () => {
     const result = assertAgentStaging({
       mode: 'agent',
@@ -44,5 +58,16 @@ describe('agent staging guard', () => {
 
     expect(getForbiddenAgentStagedFiles(files)).toEqual(files.slice(0, 3));
     expect(isGeneratedOrReleaseFile('apps/web/public/whats-new/screen.png')).toBe(true);
+  });
+
+  it('rejects the raw react-bundle.js (not just the gzipped copy)', () => {
+    // Regression: only public/react-bundle.js.gz was forbidden; the tracked
+    // 142KB raw apps/web/react-bundle.js could slip into an agent commit.
+    expect(isGeneratedOrReleaseFile('apps/web/react-bundle.js')).toBe(true);
+    expect(isGeneratedOrReleaseFile('apps/web/public/react-bundle.js.gz')).toBe(true);
+    expect(getForbiddenAgentStagedFiles([
+      'apps/web/react-bundle.js',
+      'apps/web/heys_fingers_constructor_v1.js',
+    ])).toEqual(['apps/web/react-bundle.js']);
   });
 });

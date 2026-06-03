@@ -1,7 +1,9 @@
-import { execSync } from 'child_process';
+import { execFileSync, execSync, spawnSync } from 'child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,5 +27,47 @@ describe('auto-sync legacy bundles agent mode', () => {
     expect(output).toContain('Would rebuild final legacy bundles at integration');
     expect(output).toContain('boot-core');
     expect(after).toBe(before);
+  });
+});
+
+describe('auto-sync legacy bundles integration mode', () => {
+  let repo;
+
+  function git(args) {
+    return execFileSync('git', args, { cwd: repo, encoding: 'utf8' }).trim();
+  }
+
+  beforeEach(() => {
+    repo = mkdtempSync(path.join(tmpdir(), 'heys-autosync-'));
+    git(['init', '-q', '-b', 'main']);
+    git(['config', 'user.email', 'test@heys.local']);
+    git(['config', 'user.name', 'Test']);
+    mkdirSync(path.join(repo, 'apps/web/public'), { recursive: true });
+    writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// src\n');
+    git(['add', '.']);
+    git(['commit', '-q', '-m', 'base']);
+  });
+
+  afterEach(() => {
+    rmSync(repo, { recursive: true, force: true });
+  });
+
+  it('aborts when generated files are already dirty before the integration rebuild', () => {
+    // Stage a real source change so the sync proceeds past "no relevant files",
+    // then leave a generated artifact dirty — integration must refuse to rebuild
+    // on top of a polluted baseline instead of silently capturing it.
+    writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// edited\n');
+    git(['add', 'apps/web/heys_storage_supabase_v1.js']);
+    writeFileSync(path.join(repo, 'apps/web/public/sw.js'), '// dirty generated\n');
+
+    const result = spawnSync('node', [SCRIPT_PATH, '--mode=integration'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: process.env,
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Generated files are already dirty');
+    expect(result.stderr).toContain('apps/web/public/sw.js');
   });
 });

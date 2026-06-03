@@ -1,24 +1,13 @@
 #!/usr/bin/env node
 
 import { execSync, spawnSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = path.resolve(__dirname, '..');
+import { GENERATED_ADD_PATHS } from './legacy-bundle-config.mjs';
 
-const GENERATED_ADD_PATHS = [
-    'apps/web/public',
-    'apps/web/bundle-manifest.json',
-    'apps/web/index.html',
-    'apps/web/heys_advice_bundle_v1.js',
-    'apps/web/heys_day_bundle_v1.js',
-    'apps/web/heys_day_core_bundle_v1.js',
-    'apps/web/heys_day_meals_bundle_v1.js',
-    'apps/web/heys_fingers_bundle_v1.js',
-    'scripts/bootstrap-bypass-allowlist.txt',
-    'scripts/raw-session-clear-allowlist.txt',
-];
+// Operate on the current working directory (the repo root when invoked via
+// `pnpm agents:integrate`). Using cwd instead of a path hardcoded to this
+// script's location keeps the helper testable against fixture repos.
+const ROOT_DIR = process.cwd();
 
 function parseCliArgs(argv) {
     const flags = new Set();
@@ -91,11 +80,47 @@ function assertCleanWorktree() {
     process.exit(2);
 }
 
+// Agent-branch prefixes used to auto-discover work-in-progress branches.
+const AGENT_BRANCH_RE = /^(codex|claude|copilot|worktree-agent)[/-]/;
+
+// Branches checked out in agent worktrees (under .claude/worktrees/), parsed from
+// `git worktree list --porcelain`. These are the live parallel-agent branches.
+function discoverAgentBranches() {
+    const porcelain = gitOutput('worktree list --porcelain');
+    const found = [];
+    let currentWorktree = '';
+    for (const line of porcelain.split('\n')) {
+        if (line.startsWith('worktree ')) {
+            currentWorktree = line.slice('worktree '.length).trim();
+        } else if (line.startsWith('branch ')) {
+            const ref = line.slice('branch '.length).trim();
+            const branch = ref.replace(/^refs\/heads\//, '');
+            const inAgentWorktree = currentWorktree.includes('/.claude/worktrees/');
+            if (inAgentWorktree || AGENT_BRANCH_RE.test(branch)) found.push(branch);
+        }
+    }
+    return [...new Set(found)];
+}
+
 function parseBranches() {
     const raw = getOption('--branches');
     if (!raw) {
-        writeError('Missing --branches=branch-a,branch-b');
+        writeError('Missing --branches=branch-a,branch-b (or --branches=auto).');
         process.exit(2);
+    }
+    if (raw.trim() === 'auto') {
+        const discovered = discoverAgentBranches();
+        if (discovered.length === 0) {
+            writeError('--branches=auto found no agent worktree branches to integrate.');
+            process.exit(2);
+        }
+        writeLine('Auto-discovered agent branches:');
+        discovered.forEach((branch) => writeLine(`  - ${branch}`));
+        if (!hasFlag('--yes') && !hasFlag('--dry-run')) {
+            writeError('Re-run with --yes to confirm integrating the branches above (or pass explicit --branches=...).');
+            process.exit(2);
+        }
+        return discovered;
     }
     const branches = raw.split(',').map((branch) => branch.trim()).filter(Boolean);
     if (branches.length === 0) {
@@ -164,8 +189,23 @@ function main() {
 
     assertCleanWorktree();
 
+    const startRef = gitOutput('rev-parse HEAD');
     for (const branch of branches) {
-        runRequired('git', ['merge', '--no-ff', branch], { mutates: true });
+        const result = run('git', ['merge', '--no-ff', '--no-edit', branch], { mutates: true });
+        if (result.status !== 0) {
+            writeError(`\nMerge conflict while integrating "${branch}".`);
+            const conflicts = gitOutput('diff --name-only --diff-filter=U');
+            if (conflicts) {
+                writeError('Conflicting files:');
+                conflicts.split('\n').filter(Boolean).forEach((file) => writeError(`  - ${file}`));
+            }
+            if (!hasFlag('--dry-run')) {
+                run('git', ['merge', '--abort'], { mutates: true });
+                if (startRef) run('git', ['reset', '--hard', startRef], { mutates: true });
+                writeError(`Rolled back to ${startRef || 'pre-integration HEAD'}. Resolve the conflict on "${branch}" and re-run.`);
+            }
+            process.exit(1);
+        }
     }
 
     runRequired('pnpm', ['--filter', '@heys/web', 'run', 'predev'], { mutates: true });

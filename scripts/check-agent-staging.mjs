@@ -4,23 +4,15 @@ import { execSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
+import {
+    GENERATED_FILE_PATTERNS,
+    RELEASE_FILE_PATTERNS,
+    isGeneratedFile,
+    isReleaseFile,
+} from './legacy-bundle-config.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, '..');
-
-const GENERATED_FILE_PATTERNS = [
-    /^apps\/web\/bundle-manifest\.json$/,
-    /^apps\/web\/index\.html$/,
-    /^apps\/web\/heys_(advice|day|day_core|day_meals|fingers)_bundle_v1\.js$/,
-    /^apps\/web\/public\/(?:bundle-manifest|lazy-manifest)\.json$/,
-    /^apps\/web\/public\/sw\.js$/,
-    /^apps\/web\/public\/react-bundle\.js\.gz$/,
-    /^apps\/web\/public\/(?:boot|postboot)-[\w-]+\.bundle\.[a-f0-9]{12}\.js(?:\.gz)?$/,
-];
-
-const RELEASE_FILE_PATTERNS = [
-    /^apps\/web\/public\/whats-new\.json$/,
-    /^apps\/web\/public\/whats-new\//,
-];
 
 function runGit(args, options = {}) {
     try {
@@ -71,14 +63,19 @@ function detectStagingMode({
 
     if (env.HEYS_AGENT_MODE === '1' || env.CODEX_AGENT_MODE === '1') return 'agent';
     if (repoRoot.includes('/.claude/worktrees/')) return 'agent';
-    if (/^(codex|claude|worktree-agent)[/-]/.test(branchName)) return 'agent';
+    // Known agent-branch prefixes — hint only; the safe-by-default fallback below
+    // already treats anything that isn't an explicit integration branch as agent.
+    if (/^(codex|claude|copilot|worktree-agent)[/-]/.test(branchName)) return 'agent';
     if (isIntegrationBranch(branchName)) return 'integration';
-    return 'integration';
+    // Safe-by-default: integration is an ALLOWLIST. Any other branch
+    // (copilot/*, feature/*, fix-*, detached HEAD) is source-only so generated
+    // bundles can't slip into a parallel-agent commit. Override with
+    // --mode=integration / HEYS_STAGING_MODE=integration when intentional.
+    return 'agent';
 }
 
 function isGeneratedOrReleaseFile(filePath) {
-    return GENERATED_FILE_PATTERNS.some((pattern) => pattern.test(filePath))
-        || RELEASE_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
+    return isGeneratedFile(filePath) || isReleaseFile(filePath);
 }
 
 function getForbiddenAgentStagedFiles(files = getStagedFiles()) {

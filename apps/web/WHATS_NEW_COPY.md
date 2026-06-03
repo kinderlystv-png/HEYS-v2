@@ -31,9 +31,22 @@
 }
 ```
 
-## Агентский push
+## Релизный текст (integration-only)
 
-Для non-interactive push с явным релизным текстом:
+> **Рядовые агенты whats-new не трогают** — они коммитят source-only (см.
+> «Параллельная работа агентов» в корневом CLAUDE.md). Релизный текст
+> формулирует **интегратор** для одного integration-прохода:
+>
+> ```bash
+> pnpm agents:integrate --branches=auto --yes \
+>   --title="Синхронизация активностей стала устойчивее" \
+>   --items='[{"type":"fix","title":"...","description":"..."}]'
+> ```
+>
+> `coveredCommits` (какие user-facing коммиты покрыты) проставляется
+> автоматически из push-range.
+
+Для одиночного technical/ручного пуша с явным релизным текстом:
 
 ```bash
 pnpm push:agent -- --title="Синхронизация активностей стала устойчивее" \

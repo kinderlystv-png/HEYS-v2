@@ -15,6 +15,7 @@ import {
     LEGACY_FULL_REBUILD_TRIGGERS,
     LEGACY_GENERATORS,
     LEGACY_GENERATOR_ORDER,
+    isGeneratedFile,
 } from './legacy-bundle-config.mjs';
 
 const ROOT_DIR = process.cwd();
@@ -71,16 +72,6 @@ const LEGACY_GENERATED_OUTPUTS = new Set(
     Object.values(LEGACY_GENERATORS).map(g => g.output)
 );
 
-const GENERATED_STATUS_PATTERNS = [
-    /^apps\/web\/bundle-manifest\.json$/,
-    /^apps\/web\/index\.html$/,
-    /^apps\/web\/heys_(advice|day|day_core|day_meals|fingers)_bundle_v1\.js$/,
-    /^apps\/web\/public\/(?:bundle-manifest|lazy-manifest)\.json$/,
-    /^apps\/web\/public\/sw\.js$/,
-    /^apps\/web\/public\/react-bundle\.js\.gz$/,
-    /^apps\/web\/public\/(?:boot|postboot)-[\w-]+\.bundle\.[a-f0-9]{12}\.js(?:\.gz)?$/,
-];
-
 function isLegacyGeneratedFile(filePath) {
     return (
         filePath.startsWith('apps/web/public/') ||
@@ -91,7 +82,7 @@ function isLegacyGeneratedFile(filePath) {
 }
 
 function isGeneratedStatusFile(filePath) {
-    return GENERATED_STATUS_PATTERNS.some(pattern => pattern.test(filePath));
+    return isGeneratedFile(filePath);
 }
 
 function getDirtyGeneratedFiles() {
