@@ -789,7 +789,18 @@ jobs:
             exit 1
           fi
 
-          echo "::error::Full build success но server hash $DEPLOYED != HEAD $HEAD — update-version.cjs или upload broken"
+          # Full build stamps build-meta via update-version.cjs with the MEANINGFUL
+          # commit (resolveReleaseTargetRef), which legitimately lags HEAD when a
+          # release/meta commit (e.g. `chore(release): bump whats-new build hash`) sits
+          # on top. Accept when the deployed hash is an ancestor of HEAD — the deployed
+          # code IS in HEAD's history; only a bookkeeping commit follows it. (Mirrors the
+          # fast-path fallback above; empty/non-ancestor hashes still fail below.)
+          if git merge-base --is-ancestor "$DEPLOYED" HEAD 2>/dev/null; then
+            echo "✅ Deployed $DEPLOYED is an ancestor of HEAD $HEAD (release/meta commit on top) — verified"
+            exit 0
+          fi
+
+          echo "::error::Full build success но server hash $DEPLOYED не в истории HEAD $HEAD — update-version.cjs или upload broken"
           exit 1
 
   # Cloud Functions деплоятся отдельным workflow: .github/workflows/cloud-functions-deploy.yml
