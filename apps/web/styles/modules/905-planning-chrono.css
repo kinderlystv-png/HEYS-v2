@@ -33,6 +33,23 @@
        весь экран листается, если содержимого больше высоты. */
     overflow-y: auto;
     overflow-x: hidden;
+    /* Без bounce/pull-to-refresh: иначе при перетаскивании кружка к нижнему
+       краю (к корзине) жест перехватывается overscroll'ом и drag срывается. */
+    overscroll-behavior: contain;
+}
+
+/* На время перетаскивания кружка жёстко глушим прокрутку/жесты страницы,
+   чтобы палец дотянул кружок до корзины в углу и жест не «оттягивал» экран.
+   Класс вешает ChronoCloud на <html> в handleDragStart, снимает в handleDragEnd. */
+html.chrono-bubble-dragging,
+html.chrono-bubble-dragging body {
+    overscroll-behavior: none;
+    touch-action: none;
+}
+html.chrono-bubble-dragging .chrono-screen {
+    /* НЕ overflow:hidden — иначе тащимый кружок обрезается по пути к корзине.
+       touch-action:none гасит прокрутку контейнера, не обрезая контент. */
+    touch-action: none;
 }
 
 /* --- Timer banner (активный таймер вверху экрана) --- */
@@ -347,8 +364,11 @@
    чтобы при изменении высоты основных табов оба двигались синхронно. */
 .chrono-bottom-total {
     position: fixed;
-    right: calc(16px + env(safe-area-inset-right, 0px));
+    /* Слева от корзины (72px + угол 16px + зазор 8px = 96px), растёт влево —
+       не пересекается с корзиной ни при какой длине времени. */
+    right: calc(96px + env(safe-area-inset-right, 0px));
     bottom: calc(var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px))) + 4px);
+    white-space: nowrap;
     z-index: 940;
     height: 36px;
     display: inline-flex;
@@ -893,7 +913,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px 4px;
+    /* Нижняя сейф-зона: облако flex-центрируется, но низ перекрыт фикс-FABʼами
+       (корзина/тотал/переключатель подвкладок). Резервируем место снизу, чтобы
+       кружки собирались по центру ВИДИМОЙ области, а не уезжали под кнопки. */
+    padding: 12px 4px 72px;
 }
 
 .chrono-cloud__items {
@@ -961,7 +984,10 @@
    в нижней зоне между FAB-ами слева и блоком "всего" справа. */
 .chrono-cloud__trash {
     position: fixed;
-    right: calc(135px + env(safe-area-inset-right, 0px));
+    /* Корзина — в правом углу (стабильная цель для drag-to-trash). Тотал
+       («всего: …») живёт слева от неё (right:96), поэтому при длинном
+       «10ч 30м» время больше не наезжает на корзину — растёт в пустоту. */
+    right: calc(16px + env(safe-area-inset-right, 0px));
     bottom: calc(var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px))) + 4px);
     width: 72px;
     height: 36px;
@@ -1176,6 +1202,9 @@
     letter-spacing: 0;
     opacity: 0.92;
     font-variant-numeric: tabular-nums;
+    /* «1ч 30м» одной строкой — не переносим на 2 строки внутрь кружка. */
+    white-space: nowrap;
+    max-width: 96%;
 }
 
 .chrono-history__tiny-btn {

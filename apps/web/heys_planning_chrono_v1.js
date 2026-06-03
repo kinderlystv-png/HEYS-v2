@@ -1931,10 +1931,13 @@
             // Throttle через rAF — pointermove может ~120fps на trackpad, нам хватит 60.
             dragRef.current.lastDx = dx;
             dragRef.current.lastDy = dy;
+            dragRef.current.lastClientX = e.clientX || 0;
+            dragRef.current.lastClientY = e.clientY || 0;
             if (!dragRef.current.rafId && typeof onDragMove === 'function') {
                 dragRef.current.rafId = requestAnimationFrame(() => {
                     dragRef.current.rafId = 0;
-                    onDragMove(dragRef.current.lastDx, dragRef.current.lastDy);
+                    onDragMove(dragRef.current.lastDx, dragRef.current.lastDy,
+                        dragRef.current.lastClientX, dragRef.current.lastClientY);
                 });
             }
         }, [activity, baseX, baseY, bubbleRadius, diameter, onDragStart, onDragMove, clearPress]);
@@ -2373,6 +2376,54 @@
         return Math.max(0.62, Math.min(1, byCount, byWidth));
     }
 
+    // Концентрический пакинг: центральный кружок (самый большой, pos[0]) пришпилен
+    // в (0,0), остальные тянутся к центру лёгкой «гравитацией» и расталкиваются при
+    // перекрытии → собираются плотно вокруг него, а не висят на широкой спирали.
+    function packAroundCenter(items, halfW, halfH, gap) {
+        const pos = items.map((p) => ({ ...p }));
+        if (pos.length <= 1) return pos;
+        const useBounds = halfW > 0 && halfH > 0;
+        const minGap = Number.isFinite(gap) ? gap : BUBBLE_GAP;
+        for (let iter = 0; iter < 400; iter += 1) {
+            // 1) гравитация к центру (центральный pos[0] не трогаем)
+            for (let i = 1; i < pos.length; i += 1) {
+                const d = Math.hypot(pos[i].x, pos[i].y);
+                if (d < 0.5) continue;
+                const step = Math.min(d, 2);
+                pos[i].x -= (pos[i].x / d) * step;
+                pos[i].y -= (pos[i].y / d) * step;
+            }
+            // 2) расталкивание перекрытий (центральный заблокирован)
+            for (let i = 0; i < pos.length; i += 1) {
+                for (let j = i + 1; j < pos.length; j += 1) {
+                    const dx = pos[i].x - pos[j].x;
+                    const dy = pos[i].y - pos[j].y;
+                    const dist = Math.hypot(dx, dy);
+                    const minDist = pos[i].radius + pos[j].radius + minGap;
+                    if (dist >= minDist) continue;
+                    const overlap = (minDist - dist) * 0.9;
+                    let ux;
+                    let uy;
+                    if (dist > 0.001) { ux = dx / dist; uy = dy / dist; }
+                    else { ux = Math.cos(i * 2.4); uy = Math.sin(i * 2.4); }
+                    let si = 0.5;
+                    let sj = 0.5;
+                    if (i === 0) { si = 0; sj = 1; } else if (j === 0) { si = 1; sj = 0; }
+                    pos[i].x += ux * overlap * si; pos[i].y += uy * overlap * si;
+                    pos[j].x -= ux * overlap * sj; pos[j].y -= uy * overlap * sj;
+                }
+            }
+            pos[0].x = 0; pos[0].y = 0;
+            if (useBounds) {
+                for (let i = 1; i < pos.length; i += 1) {
+                    const c = clampToBounds(pos[i].x, pos[i].y, pos[i].radius, halfW, halfH);
+                    pos[i].x = c.x; pos[i].y = c.y;
+                }
+            }
+        }
+        return pos;
+    }
+
     function computeRadialLayout(activities, minutesByActivity, maxMin, halfW, sizeScale) {
         const sorted = activities.slice().sort((a, b) =>
             (minutesByActivity[b.id] || 0) - (minutesByActivity[a.id] || 0)
@@ -2384,7 +2435,10 @@
         );
         const avgR = allRadii.reduce((s, r) => s + r, 0) / allRadii.length;
         const maxBubbleR = Math.max.apply(null, allRadii);
-        let orbitScale = avgR * 1.45 + BUBBLE_GAP;
+        // Меньший множитель = плотнее вокруг центрального кружка. Collision-петля
+        // ниже всё равно гарантирует зазор BUBBLE_GAP, так что наезда не будет —
+        // просто старт ближе к центру → компактнее.
+        let orbitScale = avgR * 1.22 + BUBBLE_GAP;
         const useBounds = halfW > 0;
         const outerCount = Math.max(1, sorted.length - 1);
         const verticalRows = Math.max(1, Math.ceil(outerCount / 2));
@@ -2449,18 +2503,15 @@
             if (yExt > maxYExtent) maxYExtent = yExt;
         });
 
-        let cloudHeight = Math.max(280, maxYExtent * 2 + 48);
-        if (!hasBubbleOverlap(placed, BUBBLE_GAP)) {
-            return { positioned: placed, cloudHeight };
-        }
-        let settled = placed;
-        const centerLocks = placed[0] ? { [placed[0].activity.id]: true } : null;
-        for (let attempt = 0; attempt < 5; attempt += 1) {
-            settled = reflowAroundOverrides(placed, {}, halfW, cloudHeight / 2, centerLocks, BUBBLE_GAP);
-            if (!hasBubbleOverlap(settled, BUBBLE_GAP)) break;
-            cloudHeight += Math.max(48, maxBubbleR * 0.6);
-        }
-        return { positioned: settled, cloudHeight };
+        // Стягиваем рыхлую phyllotaxis-раскладку в плотный кластер вокруг центра.
+        const packed = packAroundCenter(placed, halfW, layoutHalfH, BUBBLE_GAP);
+        let packedYExtent = 0;
+        packed.forEach((p) => {
+            const yExt = Math.abs(p.y) + p.radius;
+            if (yExt > packedYExtent) packedYExtent = yExt;
+        });
+        const cloudHeight = Math.max(240, packedYExtent * 2 + 32);
+        return { positioned: packed, cloudHeight };
     }
 
     function hasBubbleOverlap(positioned, gap) {
@@ -2607,19 +2658,29 @@
                 const overrides = { ...slotOverrides };
                 const lockedIds = {};
                 if (drag) {
-                    overrides[drag.id] = clampToBounds(
-                        drag.baseX + drag.dx,
-                        drag.baseY + drag.dy,
-                        drag.radius,
-                        halfW,
-                        halfH
-                    );
+                    // Активный drag — кружок идёт ЗА ПАЛЬЦЕМ без clamp, иначе он
+                    // упирается в границы облака (середина экрана) и не доезжает
+                    // до корзины внизу. Clamp нужен только на release (возврат на
+                    // валидную орбиту — он уже есть в handleDragEnd).
+                    overrides[drag.id] = drag.releasing
+                        ? clampToBounds(drag.baseX + drag.dx, drag.baseY + drag.dy, drag.radius, halfW, halfH)
+                        : { x: drag.baseX + drag.dx, y: drag.baseY + drag.dy };
                     lockedIds[drag.id] = true;
                 }
                 const activeGap = drag
                     ? (drag.releasing ? RELEASE_BUBBLE_GAP : DRAG_BUBBLE_GAP)
                     : BUBBLE_GAP;
-                return reflowAroundOverrides(positioned, overrides, halfW, halfH, lockedIds, activeGap);
+                const reflowed = reflowAroundOverrides(positioned, overrides, halfW, halfH, lockedIds, activeGap);
+                // reflowAroundOverrides клампит ВСЕ кружки к границам облака (и на
+                // старте, и в каждой итерации) — включая тащимый. Поэтому на активном
+                // drag перерисовываем тащимый кружок по СЫРОЙ позиции пальца, чтобы он
+                // дотягивался до корзины внизу (вне облака). Остальные уже расступились.
+                if (drag && !drag.releasing) {
+                    const rawX = drag.baseX + drag.dx;
+                    const rawY = drag.baseY + drag.dy;
+                    return reflowed.map((p) => p.activity.id === drag.id ? { ...p, x: rawX, y: rawY } : p);
+                }
+                return reflowed;
             },
             [positioned, slotOverrides, halfW, halfH, drag]
         );
@@ -2628,6 +2689,8 @@
 
         useEffect(() => () => {
             if (releaseRafRef.current) cancelAnimationFrame(releaseRafRef.current);
+            // Safety: ушли с экрана посреди drag — не оставляем scroll-lock на <html>.
+            try { document.documentElement.classList.remove('chrono-bubble-dragging'); } catch (_) { /* noop */ }
         }, []);
 
         // При изменении минут (например, после "+30м" — кружок вырос в радиусе)
@@ -2651,50 +2714,44 @@
                 cancelAnimationFrame(releaseRafRef.current);
                 releaseRafRef.current = 0;
             }
+            // Глушим прокрутку/overscroll страницы на время drag — иначе жест к
+            // нижнему краю (к корзине) перехватывается scroll'ом и drag срывается.
+            try { document.documentElement.classList.add('chrono-bubble-dragging'); } catch (_) { /* noop */ }
             setDrag({ id, baseX, baseY, dx: 0, dy: 0, radius, releasing: false });
         }, []);
 
-        const handleDragMove = useCallback((dx, dy) => {
+        const handleDragMove = useCallback((dx, dy, pointerX, pointerY) => {
             setDrag((prev) => {
                 if (!prev || prev.releasing) return prev;
                 let overTrash = false;
-                if (trashRef.current && containerRef.current) {
-                    const cRect = containerRef.current.getBoundingClientRect();
-                    const cx = cRect.left + cRect.width / 2 + prev.baseX + dx;
-                    const cy = cRect.top + cRect.height / 2 + prev.baseY + dy;
+                // Попадание считаем по позиции ПАЛЬЦА (pointerX/Y), а не по центру
+                // кружка: центр смещён от пальца на точку захвата (у большого кружка
+                // это ~радиус), из-за чего корзина срабатывала, когда палец выше неё.
+                if (trashRef.current && Number.isFinite(pointerX) && Number.isFinite(pointerY)) {
                     const tRect = trashRef.current.getBoundingClientRect();
-                    overTrash = cx >= tRect.left && cx <= tRect.right
-                        && cy >= tRect.top && cy <= tRect.bottom;
+                    overTrash = pointerX >= tRect.left && pointerX <= tRect.right
+                        && pointerY >= tRect.top && pointerY <= tRect.bottom;
                 }
                 return { ...prev, dx, dy, overTrash };
             });
         }, []);
 
         const handleDragEnd = useCallback(() => {
+            // Палец отпущен — снимаем scroll-lock сразу (release-анимация чисто визуальная).
+            try { document.documentElement.classList.remove('chrono-bubble-dragging'); } catch (_) { /* noop */ }
             setDrag((prev) => {
                 if (!prev) return prev;
                 if (prev.overTrash) {
                     if (typeof onDragDelete === 'function') onDragDelete(prev.id);
                     return null;
                 }
-                // Target radius = phyllotaxis-orbit размера этого кружка (его «слой»).
-                // Большой (phyloIdx=0) → centr, маленькие → внешние orbit'ы.
+                // Возврат строго в «домашнюю» позицию из packed-раскладки: большой
+                // кружок всегда тяготеет в центр, меньшие — на свои места вокруг него.
+                // Drag — только визуальный («погонять» + удаление), компоновку он НЕ
+                // меняет, поэтому на отпускании кружок всегда возвращается в пак.
                 const idealEntry = positioned.find((p) => p.activity.id === prev.id);
-                const targetR = idealEntry ? Math.hypot(idealEntry.x, idealEntry.y) : Math.hypot(prev.baseX, prev.baseY);
-                // Angle берём из сырой позиции пальца (без safe-zone clamp) — куда
-                // оттянул, туда и возвращается, даже если оттянул далеко за край.
-                const releaseX = prev.baseX + prev.dx;
-                const releaseY = prev.baseY + prev.dy;
-                const releaseDist = Math.hypot(releaseX, releaseY);
-                const angle = releaseDist < 0.001
-                    ? Math.atan2(prev.baseY, prev.baseX)
-                    : Math.atan2(releaseY, releaseX);
-                let newX = targetR === 0 ? 0 : Math.round(Math.cos(angle) * targetR);
-                let newY = targetR === 0 ? 0 : Math.round(Math.sin(angle) * targetR);
-                // Если на этой орбите целевая точка выходит за safe zone — clamp.
-                const finalClamp = clampToBounds(newX, newY, prev.radius, halfW, halfH);
-                newX = finalClamp.x;
-                newY = finalClamp.y;
+                const newX = idealEntry ? idealEntry.x : 0;
+                const newY = idealEntry ? idealEntry.y : 0;
                 const targetDx = newX - prev.baseX;
                 const targetDy = newY - prev.baseY;
                 const startDx = prev.dx;
@@ -2709,10 +2766,15 @@
                     const ndy = startDy + (targetDy - startDy) * eased;
                     if (t >= 1) {
                         releaseRafRef.current = 0;
-                        // Коммитим новую позицию в overrides + чистим drag атомарно
-                        // (React batch'ит оба update в одном render — slot
-                        // переедет на newX/Y без визуального jump'а).
-                        setSlotOverrides((cur) => ({ ...cur, [releaseId]: { x: newX, y: newY } }));
+                        // НЕ пинним позицию: раскладка всегда возвращается к packed
+                        // (gravity-пакинг, большой по центру). Чистим возможный
+                        // прежний override этого кружка, если был.
+                        setSlotOverrides((cur) => {
+                            if (!(releaseId in cur)) return cur;
+                            const next = { ...cur };
+                            delete next[releaseId];
+                            return next;
+                        });
                         setDrag(null);
                         return;
                     }
