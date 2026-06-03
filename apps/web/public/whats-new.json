@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.06.03.aa3db279",
-      "buildHash": "aa3db279",
+      "version": "2026.06.03.84c94eb6",
+      "buildHash": "84c94eb6",
       "date": "2026-06-03",
       "kind": "user-facing",
       "profile": "user-facing-general",
