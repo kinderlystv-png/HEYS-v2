@@ -4557,6 +4557,17 @@
           return;
         }
 
+        // Cloud -> local apply must not echo back through the universal LS interceptor.
+        // OverlayStore.applyCloudSnapshot sets this flag around Store.set(); Store.set's
+        // own saveClientKey path already respects it, and this covers the lower
+        // localStorage.setItem mirror path.
+        if (global.HEYS && global.HEYS._suppressStoreCloudSync === true) {
+          try {
+            pushSyncTrace('INTERCEPT_SUPPRESS_STORE_CLOUD_SYNC', { key: String(k || '').slice(-80) }, 'debug');
+          } catch (_) { /* noop */ }
+          return;
+        }
+
         if (muteMirror && isOurKey(k) && String(k).includes('dayv2_')) {
           // Trace event, не warning — это intentional skip mirror'а, поведение по дизайну.
           pushSyncTrace('MUTE_MIRROR_SKIP', { key: k }, 'debug');

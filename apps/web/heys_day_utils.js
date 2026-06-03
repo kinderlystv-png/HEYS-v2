@@ -235,6 +235,20 @@
       }
     };
 
+    function isProductCatalogSettlingAfterSync() {
+      try {
+        const cloud = global.HEYS?.cloud;
+        if (!cloud) return false;
+        if (cloud._switchClientInProgress === true) return true;
+        const now = Date.now();
+        const syncCompletedAt = Number(cloud._syncCompletedAt || 0);
+        if (syncCompletedAt > 0 && now - syncCompletedAt < 3000) return true;
+        const hotSyncAt = Number(cloud._lastForegroundHotSync?.ts || 0);
+        if (hotSyncAt > 0 && now - hotSyncAt < 1500) return true;
+      } catch (_) { /* noop */ }
+      return false;
+    }
+
     // PERF (2026-05-27 v2): O(N×M) → O(1) lookup через Map index с WeakMap multi-list cache.
     // ИСТОРИЯ: v1 кэшировал только один последний productsList (identity ===). Chrome Perf
     // trace после v1 deploy показал что resolveProductByItem self time ВЫРОС 603→1048ms —
@@ -1261,6 +1275,7 @@
 
                     // 🔄 Fallback: актуальная личная база (resolve по id / fingerprint / имени)
                     const isEstimatedSynthetic = isSyntheticEstimatedItem(item);
+                    const productCatalogSettling = isProductCatalogSettlingAfterSync();
 
                     if (!product && itemName && !isEstimatedSynthetic && global.HEYS?.products?.getAll) {
                         const freshProducts = global.HEYS.products.getAll();
@@ -1270,7 +1285,7 @@
                             productsMap.set(itemNameLower, freshProduct);
                             if (itemNameNorm) productsMap.set(itemNameNorm, freshProduct);
                             orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower);
-                        } else if (freshProducts.length > 0) {
+                        } else if (!productCatalogSettling && freshProducts.length > 0) {
                             const similar = freshProducts.filter(p => {
                                 const pName = String(p.name || '').trim().toLowerCase();
                                 return pName.includes(itemNameLower.slice(0, 10)) ||
@@ -1302,7 +1317,7 @@
                     const src = product || item; // item может иметь inline kcal100, protein100 и т.д.
 
                     // Трекаем orphan-продукты (когда используется штамп вместо базы)
-                    if (!product && itemName && !isEstimatedSynthetic) {
+                    if (!product && itemName && !isEstimatedSynthetic && !productCatalogSettling) {
                         let freshProducts = global.HEYS?.products?.getAll?.() || [];
 
                         if (freshProducts.length === 0) {

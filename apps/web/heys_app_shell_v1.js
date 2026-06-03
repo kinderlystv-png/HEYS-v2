@@ -1823,9 +1823,62 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         const safeParse = (raw, fallback) => {
                             try { return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
                         };
+                        const readStored = (base, fallback) => {
+                            try {
+                                if (typeof HEYS?.store?.get === 'function') {
+                                    const v = HEYS.store.get(base, null);
+                                    if (v != null) return v;
+                                }
+                            } catch (_) { /* noop */ }
+                            try {
+                                const rawScoped = localStorage.getItem(scoped(base));
+                                if (rawScoped != null) return safeParse(rawScoped, fallback);
+                            } catch (_) { /* noop */ }
+                            try {
+                                const rawBase = localStorage.getItem(base);
+                                if (rawBase != null) return safeParse(rawBase, fallback);
+                            } catch (_) { /* noop */ }
+                            return fallback;
+                        };
+                        const normName = (value) => String(value || '')
+                            .trim()
+                            .toLowerCase()
+                            .replace(/[ё]/g, 'е')
+                            .replace(/[«»"']/g, '')
+                            .replace(/\s+/g, ' ');
                         const countItems = (day) => {
                             const meals = Array.isArray(day?.meals) ? day.meals : [];
                             return meals.reduce((sum, meal) => sum + (Array.isArray(meal?.items) ? meal.items.length : 0), 0);
+                        };
+                        const buildProductIndex = (list) => {
+                            const byId = new Map();
+                            const byName = new Map();
+                            (Array.isArray(list) ? list : []).forEach((p) => {
+                                if (!p) return;
+                                [p.id, p.product_id, p.shared_origin_id].filter(v => v != null && v !== '').forEach((id) => byId.set(String(id), p));
+                                const n = normName(p.name || p.title);
+                                if (n) byName.set(n, p);
+                            });
+                            return { byId, byName };
+                        };
+                        const resolveItem = (item, personalIndex, sharedIndex) => {
+                            if (!item) return { source: 'missing', name: '' };
+                            const ids = [item.product_id, item.productId, item.productID, item.id].filter(v => v != null && v !== '').map(String);
+                            for (const id of ids) {
+                                const personal = personalIndex.byId.get(id);
+                                if (personal) return { source: 'visible:id', name: personal.name || '' };
+                                const shared = sharedIndex.byId.get(id);
+                                if (shared) return { source: 'shared:id', name: shared.name || '' };
+                            }
+                            const name = normName(item.name || item.productName);
+                            if (name) {
+                                const personal = personalIndex.byName.get(name);
+                                if (personal) return { source: 'visible:name', name: personal.name || '' };
+                                const shared = sharedIndex.byName.get(name);
+                                if (shared) return { source: 'shared:name', name: shared.name || '' };
+                            }
+                            const hasInline = item.kcal100 != null || item.protein100 != null || item.prot100 != null || item.fat100 != null || item.carbs100 != null;
+                            return { source: hasInline ? 'inline-stamp' : 'missing', name: '' };
                         };
                         const listFingerprint = (list) => {
                             if (!Array.isArray(list) || list.length === 0) return '0:0';
@@ -1840,13 +1893,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             }
                             return `${list.length}:${hash.toString(16)}`;
                         };
-                        const overlayKey = scoped('products_overlay_v2');
-                        const legacyKey = scoped('products');
                         const dayKey = scoped(`dayv2_${date}`);
-                        const overlayRows = safeParse(localStorage.getItem(overlayKey), []);
-                        const legacyProducts = safeParse(localStorage.getItem(legacyKey), []);
+                        const overlayRows = readStored('heys_products_overlay_v2', []);
+                        const legacyProducts = readStored('heys_products', []);
                         const visibleProducts = typeof HEYS?.products?.getAll === 'function' ? HEYS.products.getAll() : [];
-                        const day = safeParse(localStorage.getItem(dayKey), null);
+                        const sharedProducts = typeof HEYS?.cloud?.getCachedSharedProducts === 'function' ? HEYS.cloud.getCachedSharedProducts() : [];
+                        const personalIndex = buildProductIndex(visibleProducts);
+                        const sharedIndex = buildProductIndex(sharedProducts);
+                        const day = readStored(`heys_dayv2_${date}`, null) || readStored(`dayv2_${date}`, null);
                         const overlayTails = [];
                         for (let i = 0; i < localStorage.length; i++) {
                             const k = localStorage.key(i);
@@ -1864,17 +1918,21 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         pushKV('overlayRows', Array.isArray(overlayRows) ? `${overlayRows.length} (TypeA=${overlayTypeA}, TypeB=${overlayTypeB}, fp=${listFingerprint(overlayRows)})` : 'not-array');
                         pushKV('legacyProducts', Array.isArray(legacyProducts) ? `${legacyProducts.length} (fp=${listFingerprint(legacyProducts)})` : 'not-array');
                         pushKV('visibleProducts', Array.isArray(visibleProducts) ? `${visibleProducts.length} (fp=${listFingerprint(visibleProducts)})` : 'not-array');
+                        pushKV('sharedProducts', Array.isArray(sharedProducts) ? `${sharedProducts.length} (fp=${listFingerprint(sharedProducts)})` : 'not-array');
                         pushKV('overlayTailKeys', overlayTails);
                         if (day) {
                             const meals = Array.isArray(day.meals) ? day.meals : [];
                             pushKV('dayKey', dayKey.replace(cid, cid ? cid.slice(0, 8) + '***' : ''));
                             pushKV('dayUpdatedAt', day.updatedAt ? `${day.updatedAt} (${now - day.updatedAt}ms ago)` : null);
                             pushKV('dayMealsItems', `${meals.length} meals / ${countItems(day)} items`);
-                            extraLines.push('  --- day meal items (meal | productId | productName | grams) ---');
+                            extraLines.push('  --- day meal items (meal | product_id | itemId | productName | grams | resolve) ---');
                             meals.forEach((meal, mealIdx) => {
                                 const items = Array.isArray(meal?.items) ? meal.items : [];
                                 items.forEach((item) => {
-                                    extraLines.push(`  ${meal?.name || meal?.title || mealIdx} | ${item?.productId || item?.id || '—'} | ${String(item?.name || item?.productName || '—').slice(0, 80)} | ${item?.grams ?? item?.weight ?? '—'}`);
+                                    const resolved = resolveItem(item, personalIndex, sharedIndex);
+                                    const productId = item?.product_id || item?.productId || item?.productID || '—';
+                                    const itemId = item?.id || '—';
+                                    extraLines.push(`  ${meal?.name || meal?.title || mealIdx} | ${productId} | ${itemId} | ${String(item?.name || item?.productName || '—').slice(0, 80)} | ${item?.grams ?? item?.weight ?? '—'} | ${resolved.source}${resolved.name ? ':' + String(resolved.name).slice(0, 40) : ''}`);
                                 });
                             });
                         } else {
