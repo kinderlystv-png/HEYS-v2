@@ -423,6 +423,17 @@ function getCommitsBeingPushed() {
     range = runGitCommand('git rev-list origin/main..HEAD 2>/dev/null');
     if (range) return range.split(/\r?\n/).filter(Boolean);
 
+    // CI deploy: after the push, origin/main == HEAD, so the ranges above are empty
+    // and the range-coverage fast-path would wrongly demand a manual `chore(release):
+    // bump` commit. The deploy workflow knows the currently-DEPLOYED commit (build-meta
+    // hash on S3) and passes it as HEYS_DEPLOYED_HASH — use deployed..HEAD so the check
+    // covers everything actually being shipped, matching push-side behaviour.
+    const deployedBase = String(process.env.HEYS_DEPLOYED_HASH || '').trim();
+    if (deployedBase) {
+        const deployedRange = runGitCommand(`git rev-list ${deployedBase}..HEAD 2>/dev/null`);
+        if (deployedRange) return deployedRange.split(/\r?\n/).filter(Boolean);
+    }
+
     const head = getShortHash('HEAD');
     return head ? [head] : [];
 }

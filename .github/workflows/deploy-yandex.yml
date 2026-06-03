@@ -37,7 +37,7 @@ jobs:
     outputs:
       release_only: ${{ steps.classify.outputs.release_only }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # fetch-depth: 0 needed because pushes >2 commits would otherwise fail
           # `git log $BEFORE..$AFTER` with shallow clone. Dynamic depth via
@@ -45,7 +45,7 @@ jobs:
           # Trade-off: +5-15s per push, but fast-path saves 3-4min on release-bumps.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "18"
 
@@ -90,15 +90,42 @@ jobs:
             echo "📦 Full build: code changes since $DEPLOYED_HASH"
           fi
 
+  # 🧪 Gate: run the same unit suite the pre-push hook runs (known green) BEFORE any
+  # prod upload. Closes the hole where a --no-verify push or a GitHub-UI merge could
+  # deploy untested code (ci.yml is PR-only and historically red, so it is no gate).
+  # Skipped for release-only (whats-new) pushes — no code changes there.
+  test:
+    name: Unit tests (deploy gate)
+    needs: detect
+    if: needs.detect.outputs.release_only != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run unit tests (same command as the pre-push gate)
+        run: cd apps/web && pnpm exec vitest run --retry=1
+
   build-and-deploy:
     name: Build & Deploy to Yandex Cloud
-    needs: detect
+    needs: [detect, test]
     if: needs.detect.outputs.release_only != 'true'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Full history for git commands
           submodules: false
@@ -107,7 +134,7 @@ jobs:
         run: git config --global --add safe.directory $GITHUB_WORKSPACE
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -142,7 +169,16 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Validate What's New before deploy
-        run: node scripts/prepare-release.mjs --check
+        run: |
+          # Pass the currently-deployed commit so the whats-new check covers the real
+          # ship range (deployed..HEAD) in CI, where origin/main==HEAD makes the usual
+          # range empty. This removes the need for a manual `chore(release): bump` commit
+          # when a push carries more than one substantive commit.
+          DEPLOYED=$(curl -fsS -m 15 "https://storage.yandexcloud.net/heys-app/build-meta.json?bust=$(date +%s)" 2>/dev/null \
+            | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{console.log(JSON.parse(d).hash||"")}catch{console.log("")}})' \
+            || echo "")
+          echo "Whats-new range baseline (deployed hash): ${DEPLOYED:-<none>}"
+          HEYS_DEPLOYED_HASH="$DEPLOYED" node scripts/prepare-release.mjs --check
 
       # TODO: Fix CI test environment (tests pass locally but fail in CI)
       # - name: Run critical tests
@@ -641,7 +677,7 @@ jobs:
     if: needs.detect.outputs.release_only == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -749,7 +785,7 @@ jobs:
       always() && needs.detect.result == 'success' &&
       (needs.build-and-deploy.result == 'success' || needs.fast-release-bump.result == 'success')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
