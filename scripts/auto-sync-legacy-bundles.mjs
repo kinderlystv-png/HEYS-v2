@@ -19,6 +19,15 @@ import {
 
 const ROOT_DIR = process.cwd();
 const WEB_DIR = path.join(ROOT_DIR, 'apps/web');
+const VALID_MODES = new Set(['default', 'agent-check', 'integration']);
+
+function getMode() {
+    const raw = (process.argv.find(arg => arg.startsWith('--mode=')) ?? '').slice('--mode='.length) || 'default';
+    if (!VALID_MODES.has(raw)) {
+        throw new Error(`[legacy-sync] Unknown --mode="${raw}". Use: default, agent-check, integration.`);
+    }
+    return raw;
+}
 
 function getCliFilesOverride() {
     const raw = (process.argv.find(arg => arg.startsWith('--files=')) ?? '').slice('--files='.length);
@@ -62,6 +71,16 @@ const LEGACY_GENERATED_OUTPUTS = new Set(
     Object.values(LEGACY_GENERATORS).map(g => g.output)
 );
 
+const GENERATED_STATUS_PATTERNS = [
+    /^apps\/web\/bundle-manifest\.json$/,
+    /^apps\/web\/index\.html$/,
+    /^apps\/web\/heys_(advice|day|day_core|day_meals|fingers)_bundle_v1\.js$/,
+    /^apps\/web\/public\/(?:bundle-manifest|lazy-manifest)\.json$/,
+    /^apps\/web\/public\/sw\.js$/,
+    /^apps\/web\/public\/react-bundle\.js\.gz$/,
+    /^apps\/web\/public\/(?:boot|postboot)-[\w-]+\.bundle\.[a-f0-9]{12}\.js(?:\.gz)?$/,
+];
+
 function isLegacyGeneratedFile(filePath) {
     return (
         filePath.startsWith('apps/web/public/') ||
@@ -69,6 +88,32 @@ function isLegacyGeneratedFile(filePath) {
         filePath === 'apps/web/index.html' ||
         LEGACY_GENERATED_OUTPUTS.has(filePath)
     );
+}
+
+function isGeneratedStatusFile(filePath) {
+    return GENERATED_STATUS_PATTERNS.some(pattern => pattern.test(filePath));
+}
+
+function getDirtyGeneratedFiles() {
+    const output = execSync('git status --porcelain --untracked-files=all', {
+        encoding: 'utf8',
+        cwd: ROOT_DIR,
+    });
+    return output
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => line.slice(3).replace(/^"|"$/g, ''))
+        .filter(isGeneratedStatusFile);
+}
+
+function assertGeneratedBaselineClean() {
+    const dirty = getDirtyGeneratedFiles();
+    if (dirty.length === 0) return;
+    console.error('[legacy-sync] ❌ Generated files are already dirty before bundle sync.');
+    console.error('[legacy-sync] Commit/stash/revert them first, then run integration rebuild from a clean baseline:');
+    dirty.forEach(filePath => console.error(`  - ${filePath}`));
+    process.exit(1);
 }
 
 function buildBundleSourceIndex() {
@@ -183,6 +228,7 @@ function stageGeneratedOutputs() {
 }
 
 function main() {
+    const mode = getMode();
     const stagedFiles = getStagedFiles();
     const isTestMode = !!getCliFilesOverride();
 
@@ -194,6 +240,9 @@ function main() {
     if (isTestMode) {
         console.info('[legacy-sync] 🧪 Test mode via --files (без чтения git diff --cached).');
     }
+    if (mode !== 'default') {
+        console.info(`[legacy-sync] mode=${mode}`);
+    }
 
     const relevant = stagedFiles.filter(filePath => !isLegacyGeneratedFile(filePath));
 
@@ -204,6 +253,10 @@ function main() {
 
     console.info('[legacy-sync] Обнаружены изменения в legacy-исходниках:');
     relevant.forEach(filePath => console.info(`  - ${filePath}`));
+
+    if (!isTestMode && mode === 'integration') {
+        assertGeneratedBaselineClean();
+    }
 
     if (relevant.some(filePath => LEGACY_FULL_REBUILD_TRIGGERS.has(filePath))) {
         console.info('[legacy-sync] ⚙️ Изменён core bundling config — запускаю полный rebuild.');
@@ -217,6 +270,18 @@ function main() {
     const initialGenerators = detectInitialGenerators(relevant);
     const generatorsToRun = expandAffectedGenerators(initialGenerators);
     const orderedGenerators = LEGACY_GENERATOR_ORDER.filter(name => generatorsToRun.has(name));
+    const finalBundles = detectAffectedFinalBundles(relevant, generatorsToRun);
+
+    if (mode === 'agent-check') {
+        if (orderedGenerators.length > 0) {
+            console.info(`[legacy-sync] 🔧 Would run intermediate generators at integration: ${orderedGenerators.join(', ')}`);
+        }
+        if (finalBundles.length > 0) {
+            console.info(`[legacy-sync] 📦 Would rebuild final legacy bundles at integration: ${finalBundles.join(', ')}`);
+        }
+        console.info('[legacy-sync] ✅ Agent check only: generated artifacts are left for integration-pass.');
+        return;
+    }
 
     if (orderedGenerators.length > 0) {
         console.info(`[legacy-sync] 🔧 Intermediate generators: ${orderedGenerators.join(', ')}`);
@@ -225,8 +290,6 @@ function main() {
             run(`node ${relativeScript}`, { cwd: WEB_DIR });
         });
     }
-
-    const finalBundles = detectAffectedFinalBundles(relevant, generatorsToRun);
 
     if (finalBundles.length > 0) {
         console.info(`[legacy-sync] 📦 Final legacy bundles: ${finalBundles.join(', ')}`);

@@ -417,6 +417,12 @@ function parseConventionalCommitType(message) {
 //      fall through to HEAD only and silently skip feat without entry).
 //   3. HEAD only — detached HEAD or no `origin/main` ref.
 function getCommitsBeingPushed() {
+    const explicitRange = getCliOptionValue('range');
+    if (explicitRange) {
+        const rangeOutput = runGitCommand(`git rev-list ${explicitRange} 2>/dev/null`);
+        if (rangeOutput) return rangeOutput.split(/\r?\n/).filter(Boolean);
+    }
+
     let range = runGitCommand('git rev-list @{upstream}..HEAD 2>/dev/null');
     if (range) return range.split(/\r?\n/).filter(Boolean);
 
@@ -457,6 +463,70 @@ function classifyPushKind(shas) {
         }
     }
     return { hasUserFacing, hasNonReleaseMeta, hasNonTechnical, commitCount: shas.length };
+}
+
+function shortHash(ref) {
+    return getShortHash(ref);
+}
+
+function hashMatches(candidate, target) {
+    if (!candidate || !target) return false;
+    return candidate.startsWith(target) || target.startsWith(candidate);
+}
+
+function listUserFacingCommits(shas = getCommitsBeingPushed()) {
+    return (shas || []).filter((sha) => {
+        const type = parseConventionalCommitType(getCommitMessage(sha));
+        return !!type && USER_FACING_COMMIT_TYPES.has(type);
+    });
+}
+
+function normalizeCoveredCommits(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+    return String(value).split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function resolveCoveredCommitsArg() {
+    const raw = getCliOptionValue('covered-commits');
+    if (!raw) return [];
+    if (raw === 'auto') {
+        return listUserFacingCommits().map((sha) => shortHash(sha));
+    }
+    return normalizeCoveredCommits(raw);
+}
+
+function getMissingCoverageForUserFacingShas(release, userFacingShas = []) {
+    if (userFacingShas.length === 0) return [];
+
+    const covered = normalizeCoveredCommits(release?.coveredCommits);
+    const latestHash = release?.buildHash || '';
+    const requiresExplicitCoverage = covered.length > 0
+        || process.env.HEYS_REQUIRE_COVERED_COMMITS === '1'
+        || userFacingShas.some((sha) => !hashMatches(sha, latestHash));
+
+    if (!requiresExplicitCoverage) return [];
+
+    return userFacingShas.filter((sha) => {
+        const short = shortHash(sha);
+        return !covered.some((coveredHash) => hashMatches(short, coveredHash) || hashMatches(sha, coveredHash));
+    });
+}
+
+function getMissingUserFacingCoverage(release, shas = getCommitsBeingPushed()) {
+    return getMissingCoverageForUserFacingShas(release, listUserFacingCommits(shas));
+}
+
+function validateUserFacingCoverage(release, shas = getCommitsBeingPushed()) {
+    const missing = getMissingUserFacingCoverage(release, shas);
+    if (missing.length === 0) return true;
+
+    writeLine('⚠️  What\'s New не покрывает все user-facing commits в push range.');
+    writeLine('   Добавь coveredCommits через integration flow или пересоздай entry:');
+    missing.forEach((sha) => {
+        writeLine(`   - ${shortHash(sha)} ${getCommitMessage(sha)}`);
+    });
+    return false;
 }
 
 // Phase A: returns reason-string if the push is safe to skip whats-new check,
@@ -1082,6 +1152,7 @@ function runCheck() {
     const latest = data.releases[0];
     const latestHash = latest.buildHash || '';
     const latestMatchesCurrent = latestHash === gitHash || latest.version === releaseVersion;
+    const pushShas = getCommitsBeingPushed();
 
     if (!latestMatchesCurrent) {
         // Inheritance fast-path: если между HEAD и latestHash только technical
@@ -1102,12 +1173,11 @@ function runCheck() {
         // Принимаем покрытие, если latestHash matches ЛЮБОЙ commit ahead of upstream.
         // Это снимает большинство "bump whats-new build hash" chore-коммитов.
         if (latestHash) {
-            const pushShas = getCommitsBeingPushed();
             const latestInRange = pushShas.some((sha) => sha.startsWith(latestHash) || latestHash.startsWith(sha));
             if (latestInRange) {
+                if (!validateUserFacingCoverage(latest, pushShas)) return 1;
                 writeLine(`✅ Whats-new entry для ${latestHash} покрывает push range (${pushShas.length} commits ahead of upstream).`);
                 writeLine(`   Entry: ${latest.version} — "${latest.title}"`);
-                writeLine(`   Если в range появились новые user-facing изменения — можешь дополнить entry через pnpm prepare-release.`);
                 return 0;
             }
         }
@@ -1120,6 +1190,8 @@ function runCheck() {
         writeLine('   Запусти: pnpm prepare-release');
         return 1;
     }
+
+    if (!validateUserFacingCoverage(latest, pushShas)) return 1;
 
     writeLine(`✅ whats-new.json актуален: v${latest.version} — "${latest.title}"`);
     writeLine(`   Build hash: ${gitHash}`);
@@ -1409,6 +1481,7 @@ function runAuto() {
     // Parse optional CLI overrides
     const titleArg = getCliOptionValue('title');
     const itemsArg = getCliOptionValue('items');
+    const coveredCommits = resolveCoveredCommitsArg();
 
     let title = templateVariant.title || suggestedProfile.title || 'Исправления и улучшения';
     let items = suggestedItems.length > 0
@@ -1437,6 +1510,9 @@ function runAuto() {
         title,
         items,
     };
+    if (coveredCommits.length > 0) {
+        release.coveredCommits = coveredCommits;
+    }
 
     data.releases.unshift(release);
     saveWhatsNew(data);
@@ -1458,7 +1534,16 @@ function runAuto() {
 
 // Named exports for unit-testing (pure functions). Production code still calls
 // these via the CLI dispatch below; tests can `import` them without triggering it.
-export { parseConventionalCommitType, classifyPushKind, isReleaseMetaOnlyFile, isTechnicalFile };
+export {
+    classifyPushKind,
+    getMissingCoverageForUserFacingShas,
+    getMissingUserFacingCoverage,
+    isReleaseMetaOnlyFile,
+    isTechnicalFile,
+    listUserFacingCommits,
+    normalizeCoveredCommits,
+    parseConventionalCommitType,
+};
 
 // Only run CLI dispatch when this file is invoked directly via `node`,
 // not when imported by a test runner.

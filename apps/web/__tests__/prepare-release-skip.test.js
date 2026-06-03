@@ -27,8 +27,10 @@ const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
 const {
   parseConventionalCommitType,
   classifyPushKind,
+  getMissingCoverageForUserFacingShas,
   isReleaseMetaOnlyFile,
   isTechnicalFile,
+  normalizeCoveredCommits,
 } = await import(scriptUrl);
 
 describe('parseConventionalCommitType', () => {
@@ -178,5 +180,43 @@ describe('classifyPushKind', () => {
     const fakeShas = ['HEAD', 'HEAD~1'];
     const result = classifyPushKind(fakeShas);
     expect(result.commitCount).toBe(2);
+  });
+});
+
+describe('coveredCommits release coverage', () => {
+  test('accepts one release covering multiple user-facing commits', () => {
+    const release = {
+      buildHash: 'aaaaaaaa',
+      coveredCommits: ['aaaaaaaa', 'bbbbbbbb'],
+    };
+
+    expect(getMissingCoverageForUserFacingShas(release, [
+      'aaaaaaaa11111111111111111111111111111111',
+      'bbbbbbbb22222222222222222222222222222222',
+    ])).toEqual([]);
+  });
+
+  test('reports missing user-facing commits from the range', () => {
+    const release = {
+      buildHash: 'aaaaaaaa',
+      coveredCommits: ['aaaaaaaa'],
+    };
+
+    expect(getMissingCoverageForUserFacingShas(release, [
+      'aaaaaaaa11111111111111111111111111111111',
+      'bbbbbbbb22222222222222222222222222222222',
+    ])).toEqual(['bbbbbbbb22222222222222222222222222222222']);
+  });
+
+  test('keeps single-commit legacy entries compatible when buildHash is the only user-facing commit', () => {
+    const release = { buildHash: 'aaaaaaaa' };
+
+    expect(getMissingCoverageForUserFacingShas(release, [
+      'aaaaaaaa11111111111111111111111111111111',
+    ])).toEqual([]);
+  });
+
+  test('normalizes comma-separated coverage lists', () => {
+    expect(normalizeCoveredCommits('aaaaaaaa, bbbbbbbb')).toEqual(['aaaaaaaa', 'bbbbbbbb']);
   });
 });

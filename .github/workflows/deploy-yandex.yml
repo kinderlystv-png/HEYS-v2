@@ -186,7 +186,7 @@ jobs:
             | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{console.log(JSON.parse(d).hash||"")}catch{console.log("")}})' \
             || echo "")
           echo "Whats-new range baseline (deployed hash): ${DEPLOYED:-<none>}"
-          HEYS_DEPLOYED_HASH="$DEPLOYED" node scripts/prepare-release.mjs --check
+          HEYS_DEPLOYED_HASH="$DEPLOYED" HEYS_REQUIRE_COVERED_COMMITS=1 node scripts/prepare-release.mjs --check
 
       # TODO: Fix CI test environment (tests pass locally but fail in CI)
       # - name: Run critical tests

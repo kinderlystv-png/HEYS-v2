@@ -169,8 +169,12 @@ function printUsageAndExit() {
   process.exit(2);
 }
 
-function buildPrepareReleaseAutoArgs(title, itemsJson) {
-  return ['--auto', '--allow-user-facing-auto', `--title=${title}`, `--items=${itemsJson}`];
+function buildPrepareReleaseAutoArgs(title, itemsJson, options = {}) {
+  const args = ['--auto', '--allow-user-facing-auto'];
+  if (options.range) args.push(`--range=${options.range}`);
+  if (options.coveredCommits) args.push(`--covered-commits=${options.coveredCommits}`);
+  args.push(`--title=${title}`, `--items=${itemsJson}`);
+  return args;
 }
 
 function buildSuggestedCommand() {
@@ -265,7 +269,10 @@ function ensureReleaseEntry() {
   }
 
   writeLine('Creating explicit Whats New entry...');
-  const autoArgs = buildPrepareReleaseAutoArgs(title, itemsJson);
+  const autoArgs = buildPrepareReleaseAutoArgs(title, itemsJson, {
+    range: getOption('--range'),
+    coveredCommits: getOption('--covered-commits'),
+  });
   if (hasFlag('--dry-run')) {
     writeLine('[dry-run] Would create Whats New entry:');
     writeLine(`  title: ${title}`);

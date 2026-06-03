@@ -72,11 +72,14 @@ describe('push-agent CLI helpers', () => {
     const args = buildPrepareReleaseAutoArgs(
       'Синхронизация стала устойчивее',
       '[{"type":"fix","title":"A","description":"B"}]',
+      { range: 'origin/main..HEAD', coveredCommits: 'auto' },
     );
 
     expect(args).toEqual([
       '--auto',
       '--allow-user-facing-auto',
+      '--range=origin/main..HEAD',
+      '--covered-commits=auto',
       '--title=Синхронизация стала устойчивее',
       '--items=[{"type":"fix","title":"A","description":"B"}]',
     ]);
