@@ -283,9 +283,11 @@ const ALLOWED_COLUMNS = {
     'status', 'reject_reason', 'created_at', 'moderated_at', 'moderated_by'
   ],
   // client_kv_store (table) — KV storage для данных клиентов (куратор sync)
-  client_kv_store: ['user_id', 'client_id', 'k', 'v', 'updated_at'],
+  // `revision` added 2026-06-03 (L2): curator hot-sync reads per-row server revision.
+  client_kv_store: ['user_id', 'client_id', 'k', 'v', 'updated_at', 'revision'],
   // client_change_markers — hot-sync change detection (read-only)
-  client_change_markers: ['client_id', 'scope', 'changed_at'],
+  // `changed_revision` added 2026-06-03 (L2): per-scope server-revision high-watermark.
+  client_change_markers: ['client_id', 'scope', 'changed_at', 'changed_revision'],
   // client_log_trace — клиентский console buffer (см. миграцию 2026-06-01)
   client_log_trace: ['id', 'client_id', 'captured_at', 'client_ts', 'level', 'message', 'args', 'session_id', 'user_agent', 'page_url'],
   // ❌ shared_products_public — REMOVED: VIEW uses auth.uid() which doesn't exist in YC

@@ -5922,6 +5922,20 @@
         updated_at: item.updated_at || new Date().toISOString()
       }));
 
+      // 📊 L0 telemetry (server-revision rollout): count writes that go out WITHOUT a
+      // write-context. This is the gate for the eventual HEYS_WRITE_CONTEXT_STRICT flip
+      // (L8) — strict mode 403s null-ctx writes, so we must first confirm this trends to
+      // zero across the fleet. Observe via HEYS._nullCtxWrites / HEYS._ctxWriteTotal.
+      // Dormant: never changes a save outcome.
+      try {
+        const _nullCtx = yandexItems.reduce((n, it) => n + (it._ctx ? 0 : 1), 0);
+        HEYS._ctxWriteTotal = (HEYS._ctxWriteTotal || 0) + yandexItems.length;
+        HEYS._nullCtxWrites = (HEYS._nullCtxWrites || 0) + _nullCtx;
+        if (_nullCtx > 0) {
+          HEYS._nullCtxLastKeys = yandexItems.filter(it => !it._ctx).map(it => it.k).slice(-10);
+        }
+      } catch (_) { /* telemetry must never break a save */ }
+
       // 🔀 Server-side merge routing for keys where two clients may collide:
       //   - heys_dayv2_YYYY-MM-DD (curator + client editing different meals)
       //   - heys_norms, heys_profile (settings edited from multiple devices)

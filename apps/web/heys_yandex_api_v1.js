@@ -1079,7 +1079,15 @@
         return { data: null, error: data.error };
       }
 
-      return { data: Array.isArray(data?.items) ? data.items : [], error: null };
+      // L2 (2026-06-03): items now carry per-row `revision` + `updated_at`; the
+      // response carries top-level `server_revision`. Surfaced as extra fields here
+      // (data shape unchanged → callers that read `data` are unaffected). Dormant
+      // until L3 consumes them.
+      return {
+        data: Array.isArray(data?.items) ? data.items : [],
+        server_revision: typeof data?.server_revision === 'number' ? data.server_revision : undefined,
+        error: null
+      };
     } catch (e) {
       err('getKVBatch failed:', e.message);
       return { data: null, error: e.message };
@@ -1134,7 +1142,16 @@
         return { data: null, error: data.error };
       }
 
-      return { data: data?.markers || {}, error: null };
+      // L2 (2026-06-03): `markers` keeps its {scope: changed_at} shape (un-upgraded
+      // bundles compare changed_at as a timestamp). Per-scope `marker_revisions`
+      // {scope: changed_revision} and top-level `server_revision` are surfaced as
+      // extra fields — dormant until L3 switches the checkpoint to revision.
+      return {
+        data: data?.markers || {},
+        marker_revisions: (data && typeof data.marker_revisions === 'object') ? data.marker_revisions : undefined,
+        server_revision: typeof data?.server_revision === 'number' ? data.server_revision : undefined,
+        error: null
+      };
     } catch (e) {
       err('getChangeMarkers failed:', e.message);
       return { data: null, error: e.message };
@@ -1153,8 +1170,9 @@
     try {
       const filters = { 'eq.client_id': clientId };
       if (since) filters['gt.changed_at'] = since;
+      // L2 (2026-06-03): widen to read changed_revision (server-revision watermark).
       const result = await rest('client_change_markers', {
-        select: 'scope,changed_at',
+        select: 'scope,changed_at,changed_revision',
         filters
       });
       if (result.error) {
@@ -1162,10 +1180,18 @@
       }
       const rows = Array.isArray(result.data) ? result.data : [];
       const markers = {};
+      const markerRevisions = {};
+      let serverRevision = 0;
       for (const row of rows) {
-        if (row.scope) markers[row.scope] = row.changed_at;
+        if (!row.scope) continue;
+        markers[row.scope] = row.changed_at; // unchanged shape (backward-compat)
+        const rev = Number(row.changed_revision) || 0;
+        markerRevisions[row.scope] = rev;
+        if (rev > serverRevision) serverRevision = rev;
       }
-      return { data: markers, error: null };
+      // No curator RPC variant exists, so server_revision is derived as the max
+      // changed_revision across this client's scopes (== latest write's revision).
+      return { data: markers, marker_revisions: markerRevisions, server_revision: serverRevision, error: null };
     } catch (e) {
       err('getChangeMarkersByCurator failed:', e.message);
       return { data: null, error: e.message };
@@ -1183,8 +1209,11 @@
     if (!clientId) return { data: null, error: 'No clientId' };
     if (!Array.isArray(keys) || keys.length === 0) return { data: [], error: null };
     try {
+      // L2 (2026-06-03): widen to read per-row revision + updated_at so the curator
+      // hot-sync path has parity with the session RPC. Previously mapped to {k,v}
+      // only, which silently stripped revision.
       const result = await rest('client_kv_store', {
-        select: 'k,v',
+        select: 'k,v,revision,updated_at',
         filters: {
           'eq.client_id': clientId,
           'in.k': `(${keys.join(',')})`
@@ -1194,7 +1223,7 @@
         return { data: null, error: result.error.message || result.error };
       }
       const rows = Array.isArray(result.data) ? result.data : [];
-      return { data: rows.map(r => ({ k: r.k, v: r.v })), error: null };
+      return { data: rows.map(r => ({ k: r.k, v: r.v, revision: r.revision, updated_at: r.updated_at })), error: null };
     } catch (e) {
       err('getKVBatchByCurator failed:', e.message);
       return { data: null, error: e.message };
