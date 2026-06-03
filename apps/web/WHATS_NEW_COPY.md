@@ -43,3 +43,19 @@ pnpm push:agent -- --title="Синхронизация активностей с
 
 Команда сначала проверит `What's New`, при необходимости добавит entry и
 follow-up commit, затем выполнит обычный `git push` с активными pre-push guards.
+
+Проверить без commit и push:
+
+```bash
+pnpm push:agent -- --dry-run --no-push --title="..." \
+  --item-title="..." \
+  --item-description="..."
+```
+
+Для нестандартного remote или ветки:
+
+```bash
+pnpm push:agent -- --remote=origin --branch=main --title="..." \
+  --item-title="..." \
+  --item-description="..."
+```

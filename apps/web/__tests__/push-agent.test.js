@@ -1,0 +1,77 @@
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { describe, expect, it } from 'vitest';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SCRIPT_PATH = path.resolve(__dirname, '../../../scripts/push-agent.mjs');
+const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
+
+const { buildItemsJsonFromOptions, buildPrepareReleaseAutoArgs, parseCliArgs } = await import(
+  scriptUrl
+);
+
+describe('push-agent CLI helpers', () => {
+  it('normalizes pnpm -- separator and parses options', () => {
+    const parsed = parseCliArgs([
+      '--',
+      '--dry-run',
+      '--remote=upstream',
+      '--branch=release/test',
+      '--title=Sync fixes',
+    ]);
+
+    expect(parsed.raw).toEqual([
+      '--dry-run',
+      '--remote=upstream',
+      '--branch=release/test',
+      '--title=Sync fixes',
+    ]);
+    expect(parsed.flags.has('--dry-run')).toBe(true);
+    expect(parsed.options.get('--remote')).toBe('upstream');
+    expect(parsed.options.get('--branch')).toBe('release/test');
+    expect(parsed.options.get('--title')).toBe('Sync fixes');
+  });
+
+  it('builds a single explicit release item from scalar options', () => {
+    const json = buildItemsJsonFromOptions({
+      itemType: 'fix',
+      itemTitle: 'Удалённые активности больше не возвращаются',
+      itemDescription: 'Правка на одном устройстве устойчивее применяется на другом.',
+    });
+
+    expect(JSON.parse(json)).toEqual([
+      {
+        type: 'fix',
+        title: 'Удалённые активности больше не возвращаются',
+        description: 'Правка на одном устройстве устойчивее применяется на другом.',
+      },
+    ]);
+  });
+
+  it('accepts explicit JSON items and preserves them', () => {
+    const items = [
+      {
+        type: 'improvement',
+        title: 'Экран обновляется спокойнее',
+        description: 'Состояние быстрее приходит к одной версии между устройствами.',
+      },
+    ];
+
+    expect(buildItemsJsonFromOptions({ items: JSON.stringify(items) })).toBe(JSON.stringify(items));
+  });
+
+  it('builds prepare-release auto args without interactive prompts', () => {
+    const args = buildPrepareReleaseAutoArgs(
+      'Синхронизация стала устойчивее',
+      '[{"type":"fix","title":"A","description":"B"}]',
+    );
+
+    expect(args).toEqual([
+      '--auto',
+      '--allow-user-facing-auto',
+      '--title=Синхронизация стала устойчивее',
+      '--items=[{"type":"fix","title":"A","description":"B"}]',
+    ]);
+  });
+});

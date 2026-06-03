@@ -129,6 +129,19 @@ Quick hint: `feat|fix|perf` коммиты всегда требуют entry в
 `buildHash = git log -1 --format=%h` +
 `chore(release): bump whats-new build hash to <HASH>`).
 
+Для агентского non-interactive push используй `pnpm push:agent` вместо обычного
+`git push`, когда в push-range есть `feat|fix|perf` или пользовательские runtime
+изменения. Сначала сформулируй короткий текст по
+[apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md), затем:
+
+```bash
+pnpm push:agent -- --title="..." --item-title="..." --item-description="..."
+```
+
+Для проверки без commit/push добавь `--dry-run --no-push`. `push:safe` оставлен
+для технических изменений; не используй его для user-facing правок, если текст
+релиза должен быть точным.
+
 ---
 
 ## Diagnostics
