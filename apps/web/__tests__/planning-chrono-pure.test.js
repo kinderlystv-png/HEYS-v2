@@ -670,3 +670,172 @@ describe('chrono analytics helpers', () => {
         expect(report.score).toBeGreaterThan(0);
     });
 });
+
+describe('chrono.buildGoalStreaks', () => {
+    let Chrono;
+    beforeEach(() => { ({ Chrono } = loadModules()); });
+
+    const OLD = '2026-01-01T00:00:00Z';
+
+    it('counts consecutive target-met days from today backward', () => {
+        const acts = [{ id: 'a', name: 'Sport', targetMinutesPerDay: 60, createdAt: OLD }];
+        const entries = [
+            { activityId: 'a', date: '2026-06-04', minutes: 60 },
+            { activityId: 'a', date: '2026-06-03', minutes: 90 },
+            { activityId: 'a', date: '2026-06-02', minutes: 30 }, // < 60 → breaks
+        ];
+        const res = Chrono.buildGoalStreaks(acts, entries, [], '2026-06-04');
+        expect(res).toHaveLength(1);
+        expect(res[0]).toMatchObject({ kind: 'target', streak: 2, metToday: true });
+    });
+
+    it('does not break a target streak mid-day when today is still pending', () => {
+        const acts = [{ id: 'b', name: 'Read', targetMinutesPerDay: 120, createdAt: OLD }];
+        const entries = [
+            { activityId: 'b', date: '2026-06-04', minutes: 30 },  // not met yet today
+            { activityId: 'b', date: '2026-06-03', minutes: 120 },
+            { activityId: 'b', date: '2026-06-02', minutes: 130 },
+        ];
+        const res = Chrono.buildGoalStreaks(acts, entries, [], '2026-06-04');
+        expect(res[0]).toMatchObject({ streak: 2, metToday: false });
+    });
+
+    it('counts budget clean-streak only since activity creation', () => {
+        const acts = [{ id: 'c', name: 'Phone', budgetMinutesPerDay: 30, createdAt: '2026-06-01T00:00:00Z' }];
+        const entries = [{ activityId: 'c', date: '2026-06-04', minutes: 10 }]; // under limit
+        // 06-01..06-04, all <= 30 (empty days = 0) → streak 4, clamped to creation
+        const res = Chrono.buildGoalStreaks(acts, entries, [], '2026-06-04');
+        expect(res[0]).toMatchObject({ kind: 'budget', streak: 4 });
+    });
+
+    it('breaks budget streak on an over-limit day', () => {
+        const acts = [{ id: 'c', name: 'Phone', budgetMinutesPerDay: 30, createdAt: '2026-06-02T00:00:00Z' }];
+        const entries = [{ activityId: 'c', date: '2026-06-03', minutes: 99 }]; // over on 06-03
+        const res = Chrono.buildGoalStreaks(acts, entries, [], '2026-06-04');
+        // 06-04 (0, met), 06-03 (99, over → break) → streak 1, filtered out (<2)
+        expect(res).toHaveLength(0);
+    });
+
+    it('ignores activities without a daily goal and archived ones', () => {
+        const acts = [
+            { id: 'd', name: 'No goal', createdAt: OLD },
+            { id: 'e', name: 'Archived', targetMinutesPerDay: 10, archived: true, createdAt: OLD },
+        ];
+        const entries = [
+            { activityId: 'd', date: '2026-06-04', minutes: 60 },
+            { activityId: 'e', date: '2026-06-04', minutes: 60 },
+        ];
+        expect(Chrono.buildGoalStreaks(acts, entries, [], '2026-06-04')).toHaveLength(0);
+    });
+});
+
+describe('chrono.buildWeekTrend', () => {
+    let Chrono;
+    beforeEach(() => { ({ Chrono } = loadModules()); });
+
+    const week = ['2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04', '2026-06-05', '2026-06-06', '2026-06-07'];
+
+    it('computes deltas and percent vs previous week', () => {
+        const acts = [{ id: 'a', name: 'Code', category: 'focus' }];
+        // prev week (shifted -7): 2026-05-25 has 60 min
+        const entries = [{ activityId: 'a', date: '2026-05-25', minutes: 60 }];
+        const trend = Chrono.buildWeekTrend(acts, entries, [], week, { a: 120 });
+        expect(trend).toMatchObject({ prevTotal: 60, totalDelta: 60, totalPct: 100 });
+        expect(trend.focus).toMatchObject({ now: 120, prev: 60, delta: 60 });
+        expect(trend.drain.delta).toBe(0);
+    });
+
+    it('returns null percent when previous week had no data', () => {
+        const acts = [{ id: 'a', name: 'Code', category: 'focus' }];
+        const trend = Chrono.buildWeekTrend(acts, [], [], week, { a: 100 });
+        expect(trend).toMatchObject({ prevTotal: 0, totalDelta: 100, totalPct: null });
+    });
+});
+
+describe('chrono.computeWeekScore', () => {
+    let Chrono;
+    beforeEach(() => { ({ Chrono } = loadModules()); });
+
+    it('grows monotonically with focus share', () => {
+        const low = Chrono.computeWeekScore({ focusShare: 0.1, drainShare: 0, daysTracked: 7, hasGoals: false });
+        const high = Chrono.computeWeekScore({ focusShare: 0.5, drainShare: 0, daysTracked: 7, hasGoals: false });
+        expect(high.score).toBeGreaterThan(low.score);
+    });
+
+    it('penalizes drain share', () => {
+        const clean = Chrono.computeWeekScore({ focusShare: 0.4, drainShare: 0, daysTracked: 7, hasGoals: false });
+        const dirty = Chrono.computeWeekScore({ focusShare: 0.4, drainShare: 0.3, daysTracked: 7, hasGoals: false });
+        expect(dirty.score).toBeLessThan(clean.score);
+    });
+
+    it('clamps to 0..100 and parts(clamped) equal score', () => {
+        const r = Chrono.computeWeekScore({ focusShare: 1, drainShare: 0, daysTracked: 7, goalHitRate: 1, hasGoals: true });
+        expect(r.score).toBeGreaterThanOrEqual(0);
+        expect(r.score).toBeLessThanOrEqual(100);
+        const sum = r.parts.reduce((s, p) => s + p.points, 0);
+        expect(Math.max(0, Math.min(100, sum))).toBe(r.score);
+    });
+
+    it('does not lower score when no goals are set (goal weight folds into base)', () => {
+        const noGoals = Chrono.computeWeekScore({ focusShare: 0.5, drainShare: 0, daysTracked: 7, hasGoals: false });
+        const withGoalsMissed = Chrono.computeWeekScore({ focusShare: 0.5, drainShare: 0, daysTracked: 7, goalHitRate: 0, hasGoals: true });
+        expect(noGoals.score).toBeGreaterThan(withGoalsMissed.score);
+        expect(noGoals.parts.some((p) => p.label === 'Цели')).toBe(false);
+    });
+});
+
+describe('chrono.buildTimeOfDayPattern', () => {
+    let Chrono;
+    beforeEach(() => { ({ Chrono } = loadModules()); });
+
+    const focusAct = { id: 'f', name: 'Code', category: 'focus' };
+
+    it('buckets focus minutes by hour from `at` and surfaces dominant part', () => {
+        const entries = [
+            { activityId: 'f', date: '2026-06-04', minutes: 60, at: '2026-06-04T08:00:00' },
+            { activityId: 'f', date: '2026-06-03', minutes: 50, at: '2026-06-03T09:30:00' },
+            { activityId: 'f', date: '2026-06-02', minutes: 40, at: '2026-06-02T07:15:00' },
+        ];
+        const res = Chrono.buildTimeOfDayPattern([focusAct], entries, '2026-06-04');
+        expect(res.focus).toMatchObject({ part: 'morning' });
+        expect(res.headline).toMatch(/Фокус чаще утром/);
+    });
+
+    it('falls back to createdAt when `at` missing', () => {
+        const entries = [
+            { activityId: 'f', date: '2026-06-04', minutes: 60, createdAt: '2026-06-04T20:00:00' },
+            { activityId: 'f', date: '2026-06-03', minutes: 50, createdAt: '2026-06-03T21:00:00' },
+            { activityId: 'f', date: '2026-06-02', minutes: 40, createdAt: '2026-06-02T19:00:00' },
+        ];
+        const res = Chrono.buildTimeOfDayPattern([focusAct], entries, '2026-06-04');
+        expect(res.focus).toMatchObject({ part: 'evening' });
+    });
+
+    it('returns null focus when too few focus entries', () => {
+        const entries = [
+            { activityId: 'f', date: '2026-06-04', minutes: 60, at: '2026-06-04T08:00:00' },
+            { activityId: 'f', date: '2026-06-03', minutes: 50, at: '2026-06-03T09:00:00' },
+        ];
+        const res = Chrono.buildTimeOfDayPattern([focusAct], entries, '2026-06-04');
+        expect(res.focus).toBeNull();
+        expect(res.headline).toBeNull();
+    });
+});
+
+describe('store.addChronoEntry — `at` field', () => {
+    let Chrono, Store;
+    beforeEach(() => { ({ Chrono, Store } = loadModules()); });
+
+    it('persists provided `at` and defaults to a timestamp when omitted', () => {
+        const activity = Store.addChronoActivity({ name: 'Code', emoji: '💻' });
+        Store.addChronoEntry({ activityId: activity.id, minutes: 25, at: '2026-06-04T08:00:00.000Z' });
+        Store.addChronoEntry({ activityId: activity.id, minutes: 10 });
+        const entries = Store.getChronoEntries();
+        expect(entries).toHaveLength(2);
+        const withAt = entries.find((e) => e.minutes === 25);
+        const withoutAt = entries.find((e) => e.minutes === 10);
+        expect(withAt.at).toBe('2026-06-04T08:00:00.000Z');
+        expect(typeof withoutAt.at).toBe('string');
+        expect(withoutAt.at.length).toBeGreaterThan(0);
+    });
+});

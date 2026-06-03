@@ -694,6 +694,56 @@
     flex: 0 0 auto;
 }
 
+/* --- Стрики попадания в цель --- */
+.chrono-overview__streaks {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chrono-overview__streak {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 999px;
+    padding: 5px 9px;
+    background: rgba(234, 88, 12, 0.10);
+    color: #9a3412;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.chrono-overview__streak.is-best {
+    background: rgba(234, 88, 12, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(234, 88, 12, 0.35);
+}
+
+.chrono-overview__streak.is-budget {
+    background: rgba(22, 163, 74, 0.10);
+    color: #166534;
+}
+
+.chrono-overview__streak.is-budget.is-best {
+    background: rgba(22, 163, 74, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.35);
+}
+
+.chrono-overview__streak strong {
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Паттерн времени суток --- */
+.chrono-overview__pattern {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--planning-muted, #64748b);
+}
+
 .chrono-insights {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2359,6 +2409,75 @@
     color: var(--planning-text, #0f172a);
 }
 
+/* --- Объяснимый score: разбивка «из чего сложилось» --- */
+.chrono-weekly-report__score-parts {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chrono-weekly-report__score-part {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 999px;
+    padding: 4px 8px;
+    background: rgba(15, 23, 42, 0.04);
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1;
+    color: var(--planning-text, #0f172a);
+}
+
+.chrono-weekly-report__score-part.is-negative {
+    background: rgba(220, 38, 38, 0.10);
+    color: #b91c1c;
+}
+
+.chrono-weekly-report__score-part-label {
+    color: var(--planning-muted, #64748b);
+}
+
+.chrono-weekly-report__score-part strong {
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Тренд неделя-к-неделе --- */
+.chrono-weekly-report__trend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chrono-weekly-report__trend-caption {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--planning-muted, #64748b);
+}
+
+.chrono-weekly-report__trend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 750;
+    color: var(--planning-muted, #64748b);
+}
+
+.chrono-weekly-report__trend-item.is-good { color: #16a34a; }
+.chrono-weekly-report__trend-item.is-bad { color: #dc2626; }
+
+.chrono-weekly-report__trend-label {
+    color: var(--planning-muted, #64748b);
+    font-weight: 700;
+}
+
+.chrono-weekly-report__trend-item strong {
+    font-variant-numeric: tabular-nums;
+}
+
 @keyframes chrono-target-saved {
     0%   { opacity: 0; transform: translateY(-4px); }
     20%  { opacity: 1; transform: translateY(0); }
@@ -2469,6 +2588,30 @@
 [data-theme="dark"] .chrono-overview__chip {
     background: rgba(255, 255, 255, 0.07);
     color: rgba(255, 255, 255, 0.9);
+}
+
+.theme-dark .chrono-overview__streak,
+[data-theme="dark"] .chrono-overview__streak {
+    background: rgba(234, 88, 12, 0.22);
+    color: #fdba74;
+}
+
+.theme-dark .chrono-overview__streak.is-budget,
+[data-theme="dark"] .chrono-overview__streak.is-budget {
+    background: rgba(22, 163, 74, 0.22);
+    color: #86efac;
+}
+
+.theme-dark .chrono-weekly-report__score-part,
+[data-theme="dark"] .chrono-weekly-report__score-part {
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.theme-dark .chrono-weekly-report__score-part.is-negative,
+[data-theme="dark"] .chrono-weekly-report__score-part.is-negative {
+    background: rgba(220, 38, 38, 0.22);
+    color: #fca5a5;
 }
 
 .theme-dark .chrono-emoji-palette__item,

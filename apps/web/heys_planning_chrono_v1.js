@@ -222,7 +222,18 @@
             .filter((item) => item.id === 'focus' || item.id === 'growth' || item.id === 'health')
             .reduce((sum, item) => sum + item.minutes, 0);
         const drainMinutes = balance.find((item) => item.id === 'drain')?.minutes || 0;
-        const score = Math.max(0, Math.min(100, Math.round((focusMinutes / total) * 100 - (drainMinutes / total) * 30 + 20)));
+        // Объяснимый score: дни-с-записями из breakdown, доля целей из недельного
+        // hit-rate. Разбивка (scoreParts) уходит в UI — «из чего сложилось».
+        const daysTracked = (Array.isArray(weekDates) ? weekDates : [])
+            .filter((date) => (breakdown[date]?.__total || 0) > 0).length;
+        const goalHit = buildWeekGoalHitRate(activities, entries, snapshots, weekDates);
+        const { score, parts: scoreParts } = computeWeekScore({
+            focusShare: total > 0 ? focusMinutes / total : 0,
+            drainShare: total > 0 ? drainMinutes / total : 0,
+            daysTracked,
+            goalHitRate: goalHit.rate,
+            hasGoals: goalHit.hasGoals,
+        });
         const headline = score >= 75
             ? 'Неделя собрана'
             : score >= 50
@@ -236,8 +247,10 @@
         return {
             total,
             score,
+            scoreParts,
             headline,
             recommendation,
+            trend: buildWeekTrend(activities, entries, snapshots, weekDates, minutesByActivity),
             top: activeItems[0] || null,
             bestDay,
             balance: balance.slice(0, 4),
@@ -452,6 +465,195 @@
             out[s.date].__total += m;
         });
         return out;
+    }
+
+    // ── Аналитика: стрики / тренд / score / время суток ──────────────
+    // Все функции ниже чистые (без обращения к Store/LS напрямую), тестируются
+    // через HEYS.PlanningChrono.*.
+
+    // Минуты одной активности за конкретную дату (entries + snapshots).
+    function sumActivityMinutesForDate(entries, snapshots, activityId, date) {
+        let total = 0;
+        (Array.isArray(entries) ? entries : []).forEach((e) => {
+            if (e && e.activityId === activityId && e.date === date) total += Number(e.minutes) || 0;
+        });
+        (Array.isArray(snapshots) ? snapshots : []).forEach((s) => {
+            if (s && s.activityId === activityId && s.date === date) total += Number(s.totalMinutes) || 0;
+        });
+        return total;
+    }
+
+    function dayGoalMet(kind, minutes, goalMinutes) {
+        return kind === 'budget' ? minutes <= goalMinutes : minutes >= goalMinutes;
+    }
+
+    // Стрики попадания в дневную цель/лимит. Для каждой активности с дневной
+    // целью считаем сколько дней ПОДРЯД (от хвоста) цель выполнена. Окно
+    // ограничено возрастом активности (createdAt), чтобы budget-«чистый» стрик
+    // не насчитывал успехи до её появления. target в середине дня не рвём:
+    // если сегодня ещё недобор — считаем со вчера (metToday=false).
+    function buildGoalStreaks(activities, entries, snapshots, todayStr) {
+        const today = todayStr || Utils.dateStr();
+        const floor = Utils.addDays(today, -90);
+        const out = [];
+        (Array.isArray(activities) ? activities : []).forEach((activity) => {
+            if (!activity || activity.archived) return;
+            const goal = getActivityGoalForScope(activity, 'day');
+            if (!goal || goal.minutes <= 0) return;
+            const createdDay = activity.createdAt ? Utils.dateStr(activity.createdAt) : floor;
+            const start = createdDay > floor ? createdDay : floor;
+            if (start > today) return;
+            const series = buildDailySeries(entries, snapshots, activity.id, start, today);
+            if (!series.length) return;
+            const last = series[series.length - 1];
+            const metToday = dayGoalMet(goal.kind, last.minutes, goal.minutes);
+            let idx = series.length - 1;
+            if (goal.kind === 'target' && !metToday) idx -= 1;
+            let streak = 0;
+            for (let i = idx; i >= 0; i -= 1) {
+                if (dayGoalMet(goal.kind, series[i].minutes, goal.minutes)) streak += 1;
+                else break;
+            }
+            if (streak >= 2) {
+                out.push({ activity, kind: goal.kind, goalMinutes: goal.minutes, streak, metToday });
+            }
+        });
+        return out.sort((a, b) => b.streak - a.streak);
+    }
+
+    // Доля выполненных (активность × день) пар недели среди активностей с
+    // дневной целью. Питает компонент «Цели» в score.
+    function buildWeekGoalHitRate(activities, entries, snapshots, weekDates) {
+        const dates = Array.isArray(weekDates) ? weekDates : [];
+        const goalActs = (Array.isArray(activities) ? activities : []).filter((a) => {
+            if (!a || a.archived) return false;
+            const g = getActivityGoalForScope(a, 'day');
+            return !!(g && g.minutes > 0);
+        });
+        if (!goalActs.length || !dates.length) return { rate: 0, hasGoals: false };
+        let hits = 0;
+        let count = 0;
+        goalActs.forEach((a) => {
+            const g = getActivityGoalForScope(a, 'day');
+            dates.forEach((d) => {
+                const minutes = sumActivityMinutesForDate(entries, snapshots, a.id, d);
+                count += 1;
+                if (dayGoalMet(g.kind, minutes, g.minutes)) hits += 1;
+            });
+        });
+        return { rate: count > 0 ? hits / count : 0, hasGoals: true };
+    }
+
+    // Фокус (focus+growth+health) и потери (drain) из category-balance.
+    function sumFocusDrainMinutes(balance) {
+        const list = Array.isArray(balance) ? balance : [];
+        const focus = list
+            .filter((item) => item.id === 'focus' || item.id === 'growth' || item.id === 'health')
+            .reduce((sum, item) => sum + (Number(item.minutes) || 0), 0);
+        const drain = list.find((item) => item.id === 'drain')?.minutes || 0;
+        return { focus, drain: Number(drain) || 0 };
+    }
+
+    // Тренд неделя-к-неделе: текущая неделя против сдвинутой на -7 дней.
+    function buildWeekTrend(activities, entries, snapshots, weekDates, minutesByActivity) {
+        const dates = Array.isArray(weekDates) ? weekDates : [];
+        if (!dates.length) return null;
+        const prevDates = dates.map((d) => Utils.addDays(d, -7));
+        const prevMBA = Utils.getChronoMinutesByActivity(entries, snapshots, prevDates);
+        const nowBalance = buildCategoryBalance(activities, minutesByActivity);
+        const prevBalance = buildCategoryBalance(activities, prevMBA);
+        const nowTotal = Object.values(minutesByActivity || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+        const prevTotal = Object.values(prevMBA || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+        const nowFD = sumFocusDrainMinutes(nowBalance);
+        const prevFD = sumFocusDrainMinutes(prevBalance);
+        return {
+            prevTotal: Math.round(prevTotal),
+            totalDelta: Math.round(nowTotal - prevTotal),
+            totalPct: prevTotal > 0 ? Math.round(((nowTotal - prevTotal) / prevTotal) * 100) : null,
+            focus: { now: Math.round(nowFD.focus), prev: Math.round(prevFD.focus), delta: Math.round(nowFD.focus - prevFD.focus) },
+            drain: { now: Math.round(nowFD.drain), prev: Math.round(prevFD.drain), delta: Math.round(nowFD.drain - prevFD.drain) },
+        };
+    }
+
+    // Прозрачный недельный score. Веса вынесены в WEEK_SCORE_WEIGHTS. Возвращает
+    // {score, parts:[{label, points}]} — parts(clamped) и есть «из чего сложилось».
+    const WEEK_SCORE_WEIGHTS = { base: 35, focus: 35, drain: 30, consistency: 15, goals: 15 };
+
+    function computeWeekScore(input) {
+        const focusShare = Math.max(0, Math.min(1, Number(input && input.focusShare) || 0));
+        const drainShare = Math.max(0, Math.min(1, Number(input && input.drainShare) || 0));
+        const daysTracked = Math.max(0, Math.min(7, Number(input && input.daysTracked) || 0));
+        const goalHitRate = Math.max(0, Math.min(1, Number(input && input.goalHitRate) || 0));
+        const hasGoals = !!(input && input.hasGoals);
+        const W = WEEK_SCORE_WEIGHTS;
+        // Нет целей — вес «Цели» переливаем в базу, чтобы неделя без целей не
+        // упиралась в потолок ниже 100.
+        const base = W.base + (hasGoals ? 0 : W.goals);
+        const parts = [
+            { label: 'База', points: base },
+            { label: 'Фокус', points: Math.round(W.focus * Math.min(1, focusShare / 0.5)) },
+            { label: 'Потери', points: -Math.round(W.drain * Math.min(1, drainShare / 0.3)) },
+            { label: 'Дней', points: Math.round(W.consistency * (daysTracked / 7)) },
+        ];
+        if (hasGoals) parts.push({ label: 'Цели', points: Math.round(W.goals * goalHitRate) });
+        const raw = parts.reduce((sum, p) => sum + p.points, 0);
+        return { score: Math.max(0, Math.min(100, raw)), parts };
+    }
+
+    const TIME_OF_DAY_PARTS = [
+        { id: 'morning', label: 'утром' },
+        { id: 'day', label: 'днём' },
+        { id: 'evening', label: 'вечером' },
+        { id: 'night', label: 'ночью' },
+    ];
+
+    function partForHour(hour) {
+        if (hour >= 5 && hour < 11) return 'morning';
+        if (hour >= 11 && hour < 17) return 'day';
+        if (hour >= 17 && hour < 23) return 'evening';
+        return 'night';
+    }
+
+    // Паттерн времени суток за окно windowDays (по умолчанию 30). Час берём из
+    // entry.at || entry.createdAt. Если фокус-записей мало (<3) — focus=null.
+    function buildTimeOfDayPattern(activities, entries, todayStr, windowDays) {
+        const today = todayStr || Utils.dateStr();
+        const win = Math.max(1, Number(windowDays) || 30);
+        const cutoff = Utils.addDays(today, -win);
+        const catByActivity = new Map(
+            (Array.isArray(activities) ? activities : []).map((a) => [a.id, inferActivityCategory(a)])
+        );
+        const byPart = { morning: 0, day: 0, evening: 0, night: 0 };
+        const focusByPart = { morning: 0, day: 0, evening: 0, night: 0 };
+        let focusCount = 0;
+        (Array.isArray(entries) ? entries : []).forEach((e) => {
+            if (!e || !e.date || e.date < cutoff || e.date > today) return;
+            const minutes = Number(e.minutes) || 0;
+            if (minutes <= 0) return;
+            const stamp = e.at || e.createdAt;
+            if (!stamp) return;
+            const d = new Date(stamp);
+            if (Number.isNaN(d.getTime())) return;
+            const part = partForHour(d.getHours());
+            byPart[part] += minutes;
+            if (catByActivity.get(e.activityId) === 'focus') {
+                focusByPart[part] += minutes;
+                focusCount += 1;
+            }
+        });
+        let focus = null;
+        if (focusCount >= 3) {
+            const total = focusByPart.morning + focusByPart.day + focusByPart.evening + focusByPart.night;
+            if (total > 0) {
+                let best = 'morning';
+                ['day', 'evening', 'night'].forEach((p) => { if (focusByPart[p] > focusByPart[best]) best = p; });
+                focus = { part: best, pct: Math.round((focusByPart[best] / total) * 100), minutes: Math.round(focusByPart[best]) };
+            }
+        }
+        const headline = focus
+            ? `Фокус чаще ${(TIME_OF_DAY_PARTS.find((p) => p.id === focus.part) || {}).label} (${focus.pct}%)`
+            : null;
+        return { byPart, focus, headline };
     }
 
     function formatEntryTime(iso) {
@@ -1901,12 +2103,14 @@
         );
     }
 
-    function ChronoOverviewPanel({ insights, balance }) {
+    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay }) {
         const list = Array.isArray(insights) ? insights : [];
         const top = list.find((item) => item && item.kind === 'top');
         const alerts = list.filter((item) => item && item.kind !== 'top').slice(0, 2);
         const categories = Array.isArray(balance) ? balance.filter((item) => item && item.minutes > 0).slice(0, 4) : [];
-        if (!top && categories.length === 0 && alerts.length === 0) return null;
+        const streakList = Array.isArray(streaks) ? streaks.slice(0, 3) : [];
+        const pattern = timeOfDay && timeOfDay.headline ? timeOfDay.headline : '';
+        if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern) return null;
 
         // По дефолту свёрнуто; локальный UI-prefs ключ, не client-data (не синкается).
         const [collapsed, setCollapsed] = useState(() => {
@@ -1973,6 +2177,21 @@
                         )),
                     ),
                 ),
+                streakList.length > 0 && h('div', { className: 'chrono-overview__streaks', 'aria-label': 'Серии по целям' },
+                    streakList.map((s, i) => h('span', {
+                        key: s.activity.id,
+                        className: 'chrono-overview__streak' + (i === 0 ? ' is-best' : '') + (s.kind === 'budget' ? ' is-budget' : ''),
+                        title: `${s.activity.name}: ${s.streak} дн. подряд ${s.kind === 'budget' ? 'в лимите' : 'в цели'}`,
+                    },
+                        h('span', { className: 'chrono-overview__streak-flame', 'aria-hidden': 'true' }, s.kind === 'budget' ? '🛡️' : '🔥'),
+                        h('span', { className: 'chrono-overview__streak-emoji', 'aria-hidden': 'true' }, s.activity.emoji || ''),
+                        h('strong', null, `${s.streak} дн.`),
+                    )),
+                ),
+                pattern && h('div', { className: 'chrono-overview__pattern' },
+                    h('span', { className: 'chrono-overview__pattern-icon', 'aria-hidden': 'true' }, '🕑'),
+                    h('span', null, pattern),
+                ),
             ),
         );
     }
@@ -2021,8 +2240,28 @@
         );
     }
 
+    // Подписанная дельта со стрелкой; goodWhenUp=false инвертирует тон (потери).
+    function renderTrendDelta(label, delta, opts) {
+        const o = opts || {};
+        const d = Number(delta) || 0;
+        const arrow = d > 0 ? '↑' : d < 0 ? '↓' : '·';
+        const goodWhenUp = o.goodWhenUp !== false;
+        const tone = d === 0 ? '' : ((d > 0) === goodWhenUp ? ' is-good' : ' is-bad');
+        const value = o.pct != null
+            ? `${d > 0 ? '+' : ''}${o.pct}%`
+            : `${d > 0 ? '+' : d < 0 ? '−' : ''}${formatMinutes(Math.abs(d))}`;
+        return h('span', { key: label, className: 'chrono-weekly-report__trend-item' + tone },
+            h('span', { className: 'chrono-weekly-report__trend-label' }, label),
+            h('span', { className: 'chrono-weekly-report__trend-arrow', 'aria-hidden': 'true' }, arrow),
+            h('strong', null, value),
+        );
+    }
+
     function ChronoWeeklyReport({ report }) {
         if (!report) return null;
+        const parts = Array.isArray(report.scoreParts) ? report.scoreParts : [];
+        const trend = report.trend;
+        const hasTrend = trend && (trend.totalDelta !== 0 || trend.focus.delta !== 0 || trend.drain.delta !== 0);
         return h('div', { className: 'chrono-weekly-report', 'aria-label': 'Отчёт недели' },
             h('div', { className: 'chrono-weekly-report__head' },
                 h('div', null,
@@ -2030,6 +2269,15 @@
                     h('div', { className: 'chrono-weekly-report__title' }, report.headline),
                 ),
                 h('div', { className: 'chrono-weekly-report__score' }, report.score),
+            ),
+            parts.length > 0 && h('div', { className: 'chrono-weekly-report__score-parts', 'aria-label': 'Из чего сложился счёт' },
+                parts.map((part) => h('span', {
+                    key: part.label,
+                    className: 'chrono-weekly-report__score-part' + (part.points < 0 ? ' is-negative' : ''),
+                },
+                    h('span', { className: 'chrono-weekly-report__score-part-label' }, part.label),
+                    h('strong', null, `${part.points > 0 ? '+' : ''}${part.points}`),
+                )),
             ),
             h('div', { className: 'chrono-weekly-report__grid' },
                 h('div', null,
@@ -2044,6 +2292,12 @@
                     h('span', { className: 'chrono-weekly-report__label' }, 'Лучший день'),
                     h('strong', null, `${formatDateLabel(report.bestDay.date)} · ${formatMinutes(report.bestDay.minutes)}`),
                 ),
+            ),
+            hasTrend && h('div', { className: 'chrono-weekly-report__trend', 'aria-label': 'Тренд к прошлой неделе' },
+                h('span', { className: 'chrono-weekly-report__trend-caption' }, 'vs прошлая неделя'),
+                renderTrendDelta('Всего', trend.totalDelta, { pct: trend.totalPct }),
+                renderTrendDelta('Фокус', trend.focus.delta, {}),
+                renderTrendDelta('Потери', trend.drain.delta, { goodWhenUp: false }),
             ),
             h('div', { className: 'chrono-weekly-report__recommendation' }, report.recommendation),
         );
@@ -2716,6 +2970,7 @@
                 activityId: timer.activityId,
                 date: Utils.dateStr(),
                 minutes,
+                at: timer.startMs ? new Date(timer.startMs).toISOString() : undefined,
             });
             if (entry && entry.id) {
                 setToast({ id: entry.id, minutes });
@@ -2753,6 +3008,7 @@
                 activityId: timer.activityId,
                 date: Utils.dateStr(),
                 minutes,
+                at: timer.startMs ? new Date(timer.startMs).toISOString() : undefined,
             });
             if (entry && entry.id) {
                 setToast({ id: entry.id, minutes });
@@ -2790,6 +3046,14 @@
             if (scope !== 'week') return null;
             return buildWeeklyReport(visibleActivities, entries, snapshots, dates, minutesByActivity);
         }, [scope, visibleActivities, entries, snapshots, dates, minutesByActivity]);
+
+        // Стрики по дневным целям и паттерн времени суток — не зависят от scope,
+        // считаются по всей истории (entries+snapshots).
+        const streaks = useMemo(() => buildGoalStreaks(visibleActivities, entries, snapshots, todayStr),
+            [visibleActivities, entries, snapshots, todayStr]);
+
+        const timeOfDay = useMemo(() => buildTimeOfDayPattern(visibleActivities, entries, todayStr),
+            [visibleActivities, entries, todayStr]);
 
         // Запрещаем листать в будущее: следующий шаг (день или неделя) не должен
         // выходить за «сегодня». Для недельного режима ориентируемся на старт
@@ -2889,7 +3153,7 @@
                 onResume: handleTimerResume,
                 onStop: () => setTimerStopOpen(true),
             }),
-            h(ChronoOverviewPanel, { insights, balance: categoryBalance }),
+            h(ChronoOverviewPanel, { insights, balance: categoryBalance, streaks, timeOfDay }),
             h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
             h(ChronoStrip, {
                 activities: partition.inactive,
@@ -3048,6 +3312,11 @@
         buildDayTimeline,
         buildSmartSuggestions,
         buildWeeklyReport,
+        buildGoalStreaks,
+        buildWeekGoalHitRate,
+        buildWeekTrend,
+        computeWeekScore,
+        buildTimeOfDayPattern,
         inferActivityCategory,
         getCategoryMeta,
         CHRONO_PRESETS,
