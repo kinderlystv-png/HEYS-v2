@@ -16,6 +16,9 @@ on:
 
 env:
   API_BASE_URL: https://api.heyslab.ru
+  # Force the Node20-runtime JS action (github-script@v7) onto Node 24 — GitHub
+  # force-removes Node20 on 2026-06-16. See deploy-yandex.yml for the original rollout.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   health-check:

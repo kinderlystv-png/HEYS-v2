@@ -4,6 +4,12 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  # Force the remaining Node20-runtime JS action (setup-node@v4) onto Node 24 — GitHub
+  # force-removes Node20 on 2026-06-16. Safer than setup-node@v5 (breaks pnpm lookup).
+  # See deploy-yandex.yml for the original rollout.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   validate-whats-new:
     name: Validate What's New entry

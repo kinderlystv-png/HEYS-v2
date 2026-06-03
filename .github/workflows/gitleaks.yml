@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  # Force the Node20-runtime JS action (gitleaks-action@v2) onto Node 24 — GitHub
+  # force-removes Node20 on 2026-06-16. See deploy-yandex.yml for the original rollout.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   gitleaks:
     name: Scan for secrets

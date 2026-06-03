@@ -11,6 +11,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Force the remaining Node20-runtime JS actions (setup-node@v4,
+  # pnpm/action-setup@v3) onto Node 24 — GitHub force-removes Node20 on 2026-06-16.
+  # Safer than major version bumps (setup-node@v5 breaks pnpm lookup in jobs without a
+  # preceding pnpm/action-setup). See deploy-yandex.yml for the original rollout.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   detect-legacy-bundle-changes:
     name: Detect legacy bundle changes
