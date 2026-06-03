@@ -22,6 +22,11 @@ concurrency:
 env:
   NODE_VERSION: "18"
   PNPM_VERSION: "8"
+  # Opt the remaining Node20-runtime actions (setup-node@v4, cache@v3,
+  # pnpm/action-setup@v2) onto Node 24 — the official migration path GitHub forces on
+  # 2026-06-16. Avoids the risky major bumps (setup-node@v5 breaks pnpm lookup in jobs
+  # without a preceding pnpm/action-setup). checkout is already @v5 (native Node 24).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   # Yandex Cloud Object Storage
   YC_BUCKET_PWA: heys-app # PWA приложение → app.heyslab.ru
   YC_BUCKET_LANDING: heys-static # Лендинг → heyslab.ru (CDN origin: heys-static.website.yandexcloud.net)
