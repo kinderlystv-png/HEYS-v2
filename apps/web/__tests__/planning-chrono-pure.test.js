@@ -162,6 +162,61 @@ describe('chrono.ringColorForProgress', () => {
     });
 });
 
+describe('Store — chrono tombstones', () => {
+    let Store;
+    beforeEach(() => { ({ Store } = loadModules()); });
+
+    it('keeps deleted activities from resurrecting when an old cloud array is saved', () => {
+        const activity = Store.addChronoActivity({ name: 'Programming', emoji: '💻' });
+        Store.deleteChronoActivity(activity.id);
+
+        Store.saveChronoActivities([activity]);
+
+        expect(Store.getChronoActivities()).toEqual([]);
+        expect(Store.getChronoTombstones()).toEqual([
+            expect.objectContaining({ type: 'activity', id: activity.id }),
+        ]);
+    });
+
+    it('filters entries and snapshots belonging to a deleted activity', () => {
+        const activity = Store.addChronoActivity({ name: 'Reading', emoji: '📚' });
+        const entry = Store.addChronoEntry({ activityId: activity.id, date: '2026-06-03', minutes: 30 });
+
+        Store.deleteChronoActivity(activity.id);
+        Store.saveChronoEntries([entry]);
+        Store.saveChronoSnapshots([{ date: '2026-06-03', activityId: activity.id, totalMinutes: 30 }]);
+
+        expect(Store.getChronoEntries()).toEqual([]);
+        expect(Store.getChronoSnapshots()).toEqual([]);
+    });
+
+    it('keeps deleted entries from resurrecting independently of activity deletion', () => {
+        const activity = Store.addChronoActivity({ name: 'Sport', emoji: '🏃' });
+        const entry = Store.addChronoEntry({ activityId: activity.id, date: '2026-06-03', minutes: 45 });
+
+        Store.deleteChronoEntry(entry.id);
+        Store.saveChronoEntries([entry]);
+
+        expect(Store.getChronoActivities()).toHaveLength(1);
+        expect(Store.getChronoEntries()).toEqual([]);
+        expect(Store.getChronoTombstones()).toEqual([
+            expect.objectContaining({ type: 'entry', id: entry.id }),
+        ]);
+    });
+
+    it('merges incoming tombstones instead of replacing local delete history', () => {
+        const localActivity = Store.addChronoActivity({ name: 'Local delete' });
+        Store.deleteChronoActivity(localActivity.id);
+
+        Store.saveChronoTombstones([{ type: 'activity', id: 'remote-delete', deletedAt: Date.now() }]);
+
+        expect(Store.getChronoTombstones()).toEqual(expect.arrayContaining([
+            expect.objectContaining({ type: 'activity', id: localActivity.id }),
+            expect.objectContaining({ type: 'activity', id: 'remote-delete' }),
+        ]));
+    });
+});
+
 describe('Store — target/budget mutex within period', () => {
     let Store;
     beforeEach(() => { ({ Store } = loadModules()); });

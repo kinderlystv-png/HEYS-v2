@@ -18,8 +18,11 @@
         CHRONO_ACTIVITIES: 'heys_planning_chrono_activities',
         CHRONO_ENTRIES: 'heys_planning_chrono_entries',
         CHRONO_SNAPSHOTS: 'heys_planning_chrono_snapshots',
+        CHRONO_TOMBSTONES: 'heys_planning_chrono_tombstones_v1',
         CHRONO_TIMER: 'heys_planning_chrono_timer',
     };
+
+    const CHRONO_TOMBSTONE_TTL_MS = 180 * 86400000;
 
     const PROJECT_COLORS = [
         '#3b82f6', '#2563eb', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981',
@@ -319,6 +322,81 @@
         }
     }
 
+    function normalizeChronoTombstone(entry) {
+        if (!entry) return null;
+        const type = String(entry.type || 'activity');
+        const id = String(entry.id || '').trim();
+        if (!id) return null;
+        return {
+            type,
+            id,
+            deletedAt: Number(entry.deletedAt) || Date.now(),
+            source: entry.source ? String(entry.source) : undefined,
+        };
+    }
+
+    function pruneChronoTombstones(items) {
+        const now = Date.now();
+        const byKey = new Map();
+        (Array.isArray(items) ? items : []).forEach((raw) => {
+            const tomb = normalizeChronoTombstone(raw);
+            if (!tomb) return;
+            if ((now - tomb.deletedAt) > CHRONO_TOMBSTONE_TTL_MS) return;
+            const key = tomb.type + ':' + tomb.id;
+            const prev = byKey.get(key);
+            if (!prev || tomb.deletedAt >= prev.deletedAt) byKey.set(key, tomb);
+        });
+        return Array.from(byKey.values()).sort((left, right) => right.deletedAt - left.deletedAt).slice(0, 500);
+    }
+
+    function getChronoTombstones() {
+        return pruneChronoTombstones(lsGet(KEYS.CHRONO_TOMBSTONES, []));
+    }
+
+    function saveChronoTombstones(tombstones) {
+        const current = lsGet(KEYS.CHRONO_TOMBSTONES, []);
+        const incoming = Array.isArray(tombstones) ? tombstones : [];
+        lsSet(KEYS.CHRONO_TOMBSTONES, pruneChronoTombstones(current.concat(incoming)));
+    }
+
+    function addChronoTombstone(type, id, source) {
+        const tomb = normalizeChronoTombstone({ type, id, source, deletedAt: Date.now() });
+        if (!tomb) return;
+        saveChronoTombstones(getChronoTombstones().concat(tomb));
+    }
+
+    function getChronoTombstoneSet(type) {
+        return new Set(
+            getChronoTombstones()
+                .filter((item) => item.type === type)
+                .map((item) => item.id),
+        );
+    }
+
+    function filterChronoActivities(activities) {
+        const deletedActivities = getChronoTombstoneSet('activity');
+        return (Array.isArray(activities) ? activities : []).filter((activity) =>
+            activity && !deletedActivities.has(String(activity.id || '')),
+        );
+    }
+
+    function filterChronoEntries(entries) {
+        const deletedActivities = getChronoTombstoneSet('activity');
+        const deletedEntries = getChronoTombstoneSet('entry');
+        return (Array.isArray(entries) ? entries : []).filter((entry) => {
+            if (!entry) return false;
+            if (deletedEntries.has(String(entry.id || ''))) return false;
+            return !deletedActivities.has(String(entry.activityId || ''));
+        });
+    }
+
+    function filterChronoSnapshots(snapshots) {
+        const deletedActivities = getChronoTombstoneSet('activity');
+        return (Array.isArray(snapshots) ? snapshots : []).filter((snapshot) =>
+            snapshot && !deletedActivities.has(String(snapshot.activityId || '')),
+        );
+    }
+
     function getProjects() {
         return sortByOrder(lsGet(KEYS.PROJECTS, []));
     }
@@ -616,11 +694,11 @@
     // localStorage interceptor + refreshPlanningFromCloud, как projects/tasks/slots.
 
     function getChronoActivities() {
-        return sortByOrder(lsGet(KEYS.CHRONO_ACTIVITIES, []));
+        return sortByOrder(filterChronoActivities(lsGet(KEYS.CHRONO_ACTIVITIES, [])));
     }
 
     function saveChronoActivities(activities) {
-        lsSet(KEYS.CHRONO_ACTIVITIES, sortByOrder(activities || []));
+        lsSet(KEYS.CHRONO_ACTIVITIES, sortByOrder(filterChronoActivities(activities || [])));
     }
 
     function addChronoActivity(input) {
@@ -731,6 +809,7 @@
     }
 
     function deleteChronoActivity(id) {
+        addChronoTombstone('activity', id, 'delete-activity');
         const activities = getChronoActivities().filter((a) => a.id !== id);
         saveChronoActivities(activities);
         const entries = getChronoEntries().filter((e) => e.activityId !== id);
@@ -740,11 +819,11 @@
     }
 
     function getChronoEntries() {
-        return lsGet(KEYS.CHRONO_ENTRIES, []);
+        return filterChronoEntries(lsGet(KEYS.CHRONO_ENTRIES, []));
     }
 
     function saveChronoEntries(entries) {
-        lsSet(KEYS.CHRONO_ENTRIES, Array.isArray(entries) ? entries : []);
+        lsSet(KEYS.CHRONO_ENTRIES, filterChronoEntries(entries));
     }
 
     function addChronoEntry(input) {
@@ -806,15 +885,16 @@
 
     function deleteChronoEntry(id) {
         if (!id) return;
+        addChronoTombstone('entry', id, 'delete-entry');
         saveChronoEntries(getChronoEntries().filter((e) => e.id !== id));
     }
 
     function getChronoSnapshots() {
-        return lsGet(KEYS.CHRONO_SNAPSHOTS, []);
+        return filterChronoSnapshots(lsGet(KEYS.CHRONO_SNAPSHOTS, []));
     }
 
     function saveChronoSnapshots(snapshots) {
-        lsSet(KEYS.CHRONO_SNAPSHOTS, Array.isArray(snapshots) ? snapshots : []);
+        lsSet(KEYS.CHRONO_SNAPSHOTS, filterChronoSnapshots(snapshots));
     }
 
     function upsertSnapshotInPlace(snapshots, date, activityId, addMinutes) {
@@ -849,6 +929,7 @@
         });
         saveChronoSnapshots(remaining);
 
+        addChronoTombstone('activity', fromId, 'merge-activity');
         saveChronoActivities(activities.filter((a) => a.id !== fromId));
         return true;
     }
@@ -973,6 +1054,7 @@
             'heys_planning_chrono_activities',
             'heys_planning_chrono_entries',
             'heys_planning_chrono_snapshots',
+            'heys_planning_chrono_tombstones_v1',
             // heys_planning_chrono_timer не тянем: активный stopwatch локальный,
             // не синкается на push-стороне (см. CLIENT_SPECIFIC_KEYS в storage).
         ];
@@ -980,6 +1062,11 @@
             if (res.error || !Array.isArray(res.data)) {
                 return { ok: false, reason: res.error || 'batch_failed' };
             }
+            res.data.forEach(function (item) {
+                if (item && item.k === 'heys_planning_chrono_tombstones_v1' && item.v != null) {
+                    saveChronoTombstones(item.v);
+                }
+            });
             res.data.forEach(function (item) {
                 if (!item || item.k == null || item.v == null) return;
                 if (item.k === 'heys_planning_projects' && typeof Store.saveProjects === 'function') {
@@ -996,6 +1083,8 @@
                     Store.saveChronoEntries(item.v);
                 } else if (item.k === 'heys_planning_chrono_snapshots' && typeof Store.saveChronoSnapshots === 'function') {
                     Store.saveChronoSnapshots(item.v);
+                } else if (item.k === 'heys_planning_chrono_tombstones_v1' && typeof Store.saveChronoTombstones === 'function') {
+                    Store.saveChronoTombstones(item.v);
                 }
             });
             try {
@@ -1156,6 +1245,8 @@
         archiveChronoActivity,
         restoreChronoActivity,
         mergeChronoActivities,
+        getChronoTombstones,
+        saveChronoTombstones,
         getChronoEntries,
         saveChronoEntries,
         addChronoEntry,

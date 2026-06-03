@@ -56,6 +56,32 @@
     return out;
   }
 
+  function mergeChronoTombstones(incoming, current) {
+    const byKey = new Map();
+    const add = (raw) => {
+      if (!raw || typeof raw !== 'object') return;
+      const type = String(raw.type || 'activity');
+      const id = String(raw.id || '').trim();
+      if (!id) return;
+      const deletedAt = Number(raw.deletedAt) || 0;
+      const key = type + ':' + id;
+      const prev = byKey.get(key);
+      if (!prev || deletedAt >= (Number(prev.deletedAt) || 0)) {
+        byKey.set(key, {
+          type,
+          id,
+          deletedAt: deletedAt || Date.now(),
+          source: raw.source ? String(raw.source) : undefined,
+        });
+      }
+    };
+    (Array.isArray(current) ? current : []).forEach(add);
+    (Array.isArray(incoming) ? incoming : []).forEach(add);
+    return Array.from(byKey.values())
+      .sort((left, right) => (Number(right.deletedAt) || 0) - (Number(left.deletedAt) || 0))
+      .slice(0, 500);
+  }
+
   // ─── stripStaleSavedDisplayNutrientsIfEmptyDiary ─────────────────────────
   // Removes cached display nutrients when meals/items are empty (same invariant
   // as dayMealsIntegrity).
@@ -469,6 +495,7 @@
 
   return {
     mergeDayData,
+    mergeChronoTombstones,
     mergeItemsById,
     mergeScalarKv,
     stripStaleSavedDisplayNutrientsIfEmptyDiary,

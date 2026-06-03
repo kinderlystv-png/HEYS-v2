@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
-const { mergeDayData, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
+const { mergeDayData, mergeChronoTombstones, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2564,6 +2564,9 @@ module.exports.handler = async function (event, context) {
                 `_Curator state не очистился между switch'ами — meals идентичны другому клиенту того же curator._`
               );
             }
+          } else if (k === 'heys_planning_chrono_tombstones_v1') {
+            mergedValue = mergeChronoTombstones(incomingValue, currentValue);
+            mergeOutcome = 'chrono_tombstones_merged';
           } else if (noConflict) {
             mergedValue = incomingValue;
           } else if (/^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(k)) {

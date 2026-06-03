@@ -284,6 +284,7 @@
     'heys_planning_chrono_activities',
     'heys_planning_chrono_entries',
     'heys_planning_chrono_snapshots',
+    'heys_planning_chrono_tombstones_v1',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */
@@ -5931,7 +5932,7 @@
       // cross-client _writerCid guard (см. yandex-cloud-functions/heys-api-rpc/index.js
       // в merge_save handler). Раньше эти keys шли через batch upsert, что обходило
       // server-side guard — теоретическая cross-client pollution не ловилась.
-      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones)$/;
+      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1)$/;
       const mergeableItems = yandexItems.filter(it => MERGEABLE_KEY_RE.test(it.k));
       const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
 
@@ -5985,6 +5986,13 @@
                 try {
                   global.dispatchEvent(new CustomEvent('heys:day-updated', {
                     detail: { date: dateMatch[1], source: 'server-merge', outcome: result.outcome }
+                  }));
+                } catch (_) { /* noop */ }
+              }
+              if (it.k && it.k.startsWith('heys_planning_') && typeof global.dispatchEvent === 'function') {
+                try {
+                  global.dispatchEvent(new CustomEvent('heys:planning-updated', {
+                    detail: { key: it.k, source: 'server-merge', outcome: result.outcome }
                   }));
                 } catch (_) { /* noop */ }
               }

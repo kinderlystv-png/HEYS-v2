@@ -19,7 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // We load the .cjs copy that Cloud Function uses — guarantees same code path.
 const require = createRequire(import.meta.url);
 const mergeModulePath = path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs');
-const { mergeDayData, mergeItemsById, mergeScalarKv } = require(mergeModulePath);
+const { mergeDayData, mergeChronoTombstones, mergeItemsById, mergeScalarKv } = require(mergeModulePath);
 
 // ───────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -306,5 +306,26 @@ describe('mergeDayData — cross-client guard (_writerCid)', () => {
     const merged = mergeDayData(local, remote);
     expect(merged).not.toBe(null);
     expect(merged.meals.length).toBe(2);
+  });
+});
+
+describe('mergeChronoTombstones', () => {
+  test('unions independent deletes and keeps the freshest duplicate', () => {
+    const merged = mergeChronoTombstones(
+      [
+        { type: 'activity', id: 'a1', deletedAt: 1000, source: 'phone' },
+        { type: 'entry', id: 'e1', deletedAt: 1200 },
+      ],
+      [
+        { type: 'activity', id: 'a1', deletedAt: 900, source: 'curator-old' },
+        { type: 'activity', id: 'a2', deletedAt: 1100, source: 'curator' },
+      ],
+    );
+
+    expect(merged).toEqual([
+      expect.objectContaining({ type: 'entry', id: 'e1', deletedAt: 1200 }),
+      expect.objectContaining({ type: 'activity', id: 'a2', deletedAt: 1100 }),
+      expect.objectContaining({ type: 'activity', id: 'a1', deletedAt: 1000, source: 'phone' }),
+    ]);
   });
 });
