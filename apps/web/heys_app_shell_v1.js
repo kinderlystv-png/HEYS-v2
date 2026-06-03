@@ -1545,7 +1545,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     pushKV('heys_supabase_auth_token', !!(typeof localStorage !== 'undefined' && localStorage.getItem('heys_supabase_auth_token')));
 
                     // === Sync config + retry ===
-                    pushHeader('Sync config (constants) + retry');
+                    // NOTE (2026-06-03): значения ниже — СТАТИЧЕСКОЕ зеркало литералов из
+                    // heys_storage_supabase_v1.js (PENDING_SAVE_DEBOUNCE_MS:3050,
+                    // CASCADE_DCS_ENQUEUE_DEBOUNCE_MS:9661). Они НЕ читаются из источника —
+                    // при изменении констант там это зеркало молча устареет.
+                    // Фаза 2: заменить на live HEYS.cloud.getSyncConstants().
+                    pushHeader('Sync config (static mirror — verify vs storage) + retry');
                     pushKV('PENDING_SAVE_DEBOUNCE_MS', 120);
                     pushKV('CASCADE_DCS_ENQUEUE_DEBOUNCE_MS', 380);
                     pushKV('SWITCH_DEBOUNCE_MS', 30000);
@@ -1603,7 +1608,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         const oks = recent.filter(e => e.type === 'upload_ok');
                         const fails = recent.filter(e => e.type === 'upload_fail' || e.type === 'upload_error');
                         const starts = recent.filter(e => e.type === 'upload_start');
-                        const latencies = oks.map(e => Number(e?.data?.ms) || 0).filter(x => x > 0);
+                        const latencies = oks.map(e => Number(e?.details?.ms) || 0).filter(x => x > 0);
                         const avg = latencies.length ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0;
                         const sorted = [...latencies].sort((a, b) => a - b);
                         const p50 = sorted[Math.floor(sorted.length * 0.5)] || 0;
@@ -1624,7 +1629,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         const log5min = log.filter(e => e && e.ts && (now - e.ts) < 300000 && e.type === 'upload_start');
                         const perKey5m = {};
                         log5min.forEach(e => {
-                            const keys = String(e?.data?.keys || '').split(',').map(s => s.trim()).filter(Boolean);
+                            const keys = String(e?.details?.keys || '').split(',').map(s => s.trim()).filter(Boolean);
                             keys.forEach(k => { perKey5m[k] = (perKey5m[k] || 0) + 1; });
                         });
                         const hotUploadKeys = Object.entries(perKey5m).filter(([, n]) => n >= 5).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -1728,22 +1733,29 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     pushHeader('All cloud._* private flags (auto-enum)');
                     try {
                         if (HEYS?.cloud) {
+                            // 2026-06-03: снапшот уходит в буфер обмена — редактируем секреты/PII.
+                            // _anonKey (JWT) и подобные ключи режем целиком; UUID (clientId,
+                            // curatorId, contextId) маскируем до 8 символов.
+                            const SENSITIVE_KEY_RE = /key|token|secret|anon|jwt|password|auth/i;
+                            const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+                            const maskUuids = (s) => String(s).replace(UUID_RE, m => m.slice(0, 8) + '***');
                             const keys = Object.keys(HEYS.cloud).filter(k => k.startsWith('_')).sort();
                             keys.forEach(k => {
                                 const v = HEYS.cloud[k];
                                 const t = typeof v;
                                 if (t === 'function') return;
+                                if (SENSITIVE_KEY_RE.test(k)) { extraLines.push(`  ${k}: <redacted ${t}>`); return; }
                                 if (t === 'object' && v !== null) {
                                     if (Array.isArray(v)) {
                                         extraLines.push(`  ${k}: Array(${v.length})`);
                                     } else {
                                         try {
-                                            const s = JSON.stringify(v);
+                                            const s = maskUuids(JSON.stringify(v));
                                             extraLines.push(`  ${k}: ${s.length > 120 ? s.slice(0, 120) + '…' : s}`);
                                         } catch (_) { extraLines.push(`  ${k}: <unstringifiable>`); }
                                     }
                                 } else {
-                                    extraLines.push(`  ${k}: ${v}`);
+                                    extraLines.push(`  ${k}: ${maskUuids(v)}`);
                                 }
                             });
                         }
@@ -1752,36 +1764,52 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     // === ECHO LOOP HYPOTHESIS — autosave ↔ hot-sync correlation ===
                     pushHeader('Echo-loop hypothesis (autosave ↔ hot-sync correlation)');
                     try {
-                        const af = Array.isArray(HEYS?._autosaveFlushes) ? HEYS._autosaveFlushes : [];
-                        const ha = Array.isArray(HEYS?._hotsyncApplies) ? HEYS._hotsyncApplies : [];
-                        pushKV('autosaveFlushesTotal', af.length);
-                        pushKV('hotsyncAppliesTotal', ha.length);
+                        // 2026-06-03: переписано на ЖИВЫЕ счётчики. Прошлая версия читала
+                        // HEYS._autosaveFlushes — массив, который НИКТО не заполняет, поэтому
+                        // секция всегда рапортовала "no echo" (в т.ч. во время реального
+                        // dayv2-шторма 59/мин). Теперь сигнатура выводится из _saveClientKeyHistory
+                        // (dayv2-writes) и _hotsyncApplies — оба заполняются боевым кодом.
                         const now = Date.now();
-                        const af30s = af.filter(f => (now - f.ts) < 30000);
-                        const ha30s = ha.filter(f => (now - f.ts) < 30000);
-                        pushKV('autosave_last30s', af30s.length);
-                        pushKV('hotsync_last30s', ha30s.length);
-                        // suspectEchoLoop = autosave fired within 500ms after a hot-sync apply
-                        const echoCount = af30s.filter(f => f.suspectEchoLoop).length;
-                        pushKV('suspectEcho_last30s', echoCount);
-                        if (echoCount >= 5) {
-                            extraLines.push(`  🔥 ECHO LOOP SUSPECT: ${echoCount}/${af30s.length} autosaves fired <500ms after hot-sync — server-merge feedback cycle confirmed`);
-                        } else if (af30s.length > 5 && ha30s.length > 0) {
-                            extraLines.push(`  ⚠ ${af30s.length} autosaves vs ${ha30s.length} hot-syncs — possible but not strong echo correlation`);
+                        const sckh = Array.isArray(HEYS?.cloud?._saveClientKeyHistory) ? HEYS.cloud._saveClientKeyHistory : [];
+                        const ha = Array.isArray(HEYS?._hotsyncApplies) ? HEYS._hotsyncApplies : [];
+                        const dayWrites = sckh.filter(w => String(w.k || '').includes('dayv2_'));
+                        const dayWrites30 = dayWrites.filter(w => (now - w.ts) < 30000);
+                        const ha30 = ha.filter(h => (now - h.ts) < 30000);
+                        pushKV('dayv2Writes_last30s', dayWrites30.length);
+                        pushKV('hotsyncApplies_last30s', ha30.length);
+                        pushKV('hotsyncAppliesTotal', ha.length);
+                        // Storm-сигнатура: подряд идущие dayv2-writes с ОДИНАКОВЫМ размером,
+                        // но РАЗНЫМ updatedAt = переписывание идентичного контента (то, что
+                        // глушит content-hash dedup). Прямой индикатор петли.
+                        let identicalChurn = 0;
+                        for (let i = 1; i < dayWrites30.length; i++) {
+                            const a = dayWrites30[i - 1], b = dayWrites30[i];
+                            if (a.bytes === b.bytes && a.updatedAt !== b.updatedAt) identicalChurn++;
+                        }
+                        pushKV('identicalContentChurn_last30s', identicalChurn);
+                        // Echo: dayv2-write, прилетевший <1500ms ПОСЛЕ hot-sync apply.
+                        let echoWrites = 0;
+                        dayWrites30.forEach(w => {
+                            if (ha.some(h => h.ts <= w.ts && (w.ts - h.ts) < 1500)) echoWrites++;
+                        });
+                        pushKV('writesAfterHotsync_lt1500ms', echoWrites);
+                        if (dayWrites30.length >= 20 && identicalChurn >= 5) {
+                            extraLines.push(`  🔥 STORM/ECHO SUSPECT: ${dayWrites30.length} dayv2-writes/30s, ${identicalChurn} переписей идентичного контента (same bytes, new updatedAt). Сигнатура петли.`);
+                        } else if (echoWrites >= 5) {
+                            extraLines.push(`  ⚠ ${echoWrites} dayv2-writes прилетели <1500ms после hot-sync — возможный server-merge feedback cycle`);
                         } else {
-                            extraLines.push('  (no strong echo correlation in last 30s)');
+                            extraLines.push('  (no storm/echo signature in last 30s)');
                         }
                         pushKV('interceptDedupHits', HEYS?._interceptDedupHits || 0);
                         pushKV('muteMirrorCurrent', HEYS?._muteMirrorCurrent);
 
-                        // last 20 autosave entries with correlation
-                        extraLines.push('  --- last 20 autosave flushes (ago_ms | meals | content_kb | since_last_hotsync_ms | echo_suspect) ---');
-                        af.slice(-20).forEach(f => {
-                            extraLines.push(`  ${String(now - f.ts).padStart(5)}ms | meals=${f.mealsCount} | ${(f.contentBytes / 1024).toFixed(1)}KB | hotsync_delta=${f.sinceLastHotsync_ms !== null ? f.sinceLastHotsync_ms + 'ms' : '—'} | ${f.suspectEchoLoop ? 'YES_ECHO' : '—'}`);
+                        extraLines.push('  --- last 12 dayv2 writes (ago_ms | bytes | updatedAt | mute) ---');
+                        dayWrites.slice(-12).forEach(w => {
+                            extraLines.push(`  ${String(now - w.ts).padStart(6)}ms | ${w.bytes}b | ${w.updatedAt || '—'} | mute=${w.muteMirror ? 'Y' : 'N'}`);
                         });
-                        extraLines.push('  --- last 20 hot-sync applies (ago_ms | baseKey | bytes | source | data.updatedAt) ---');
-                        ha.slice(-20).forEach(h => {
-                            extraLines.push(`  ${String(now - h.ts).padStart(5)}ms | ${String(h.baseKey).padEnd(35)} | ${h.bytes}b | ${h.source} | ${h.updatedAt || '—'}`);
+                        extraLines.push('  --- last 12 hot-sync applies (ago_ms | baseKey | bytes | source | updatedAt) ---');
+                        ha.slice(-12).forEach(h => {
+                            extraLines.push(`  ${String(now - h.ts).padStart(6)}ms | ${String(h.baseKey).padEnd(35)} | ${h.bytes}b | ${h.source} | ${h.updatedAt || '—'}`);
                         });
                     } catch (_) { /* noop */ }
 
@@ -2263,23 +2291,27 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 console.log('=== All cloud._* private flags ===');
                 try {
                     if (HEYS?.cloud) {
+                        const SENSITIVE_KEY_RE = /key|token|secret|anon|jwt|password|auth/i;
+                        const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+                        const maskUuids = (s) => String(s).replace(UUID_RE, m => m.slice(0, 8) + '***');
                         const privs = {};
                         Object.keys(HEYS.cloud).forEach(k => {
                             if (k.startsWith('_')) {
                                 const v = HEYS.cloud[k];
                                 const t = typeof v;
                                 if (t === 'function') return; // skip methods
+                                if (SENSITIVE_KEY_RE.test(k)) { privs[k] = `<redacted ${t}>`; return; }
                                 if (t === 'object' && v !== null) {
                                     if (Array.isArray(v)) {
                                         privs[k] = `Array(${v.length})`;
                                     } else {
                                         try {
-                                            const s = JSON.stringify(v);
+                                            const s = maskUuids(JSON.stringify(v));
                                             privs[k] = s.length > 80 ? s.slice(0, 80) + '…' : s;
                                         } catch (_) { privs[k] = '<unstringifiable>'; }
                                     }
                                 } else {
-                                    privs[k] = v;
+                                    privs[k] = maskUuids(v);
                                 }
                             }
                         });
