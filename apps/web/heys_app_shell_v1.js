@@ -1813,6 +1813,83 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         });
                     } catch (_) { /* noop */ }
 
+                    // === Products/day hot-sync forensic snapshot ===
+                    pushHeader('Products/day hot-sync forensic snapshot');
+                    try {
+                        const now = Date.now();
+                        const cid = String(clientIdValue || HEYS?.currentClientId || HEYS?.cloud?.getCurrentClientId?.() || '').replace(/^"|"$/g, '');
+                        const date = selectedDate || resolvedTodayISO || new Date().toISOString().slice(0, 10);
+                        const scoped = (base) => cid ? `heys_${cid}_${base}` : base;
+                        const safeParse = (raw, fallback) => {
+                            try { return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
+                        };
+                        const countItems = (day) => {
+                            const meals = Array.isArray(day?.meals) ? day.meals : [];
+                            return meals.reduce((sum, meal) => sum + (Array.isArray(meal?.items) ? meal.items.length : 0), 0);
+                        };
+                        const listFingerprint = (list) => {
+                            if (!Array.isArray(list) || list.length === 0) return '0:0';
+                            let hash = 2166136261 >>> 0;
+                            for (let i = 0; i < list.length; i++) {
+                                const p = list[i] || {};
+                                const token = `${p.id || ''}|${p.shared_origin_id || ''}|${p.name || ''}|${p.updatedAt || ''}|${p._custom ? 1 : 0}`;
+                                for (let j = 0; j < token.length; j++) {
+                                    hash ^= token.charCodeAt(j);
+                                    hash = Math.imul(hash, 16777619) >>> 0;
+                                }
+                            }
+                            return `${list.length}:${hash.toString(16)}`;
+                        };
+                        const overlayKey = scoped('products_overlay_v2');
+                        const legacyKey = scoped('products');
+                        const dayKey = scoped(`dayv2_${date}`);
+                        const overlayRows = safeParse(localStorage.getItem(overlayKey), []);
+                        const legacyProducts = safeParse(localStorage.getItem(legacyKey), []);
+                        const visibleProducts = typeof HEYS?.products?.getAll === 'function' ? HEYS.products.getAll() : [];
+                        const day = safeParse(localStorage.getItem(dayKey), null);
+                        const overlayTails = [];
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const k = localStorage.key(i);
+                            if (!k || !k.includes('products_overlay_v2_rpc_tail')) continue;
+                            if (cid && !k.startsWith(`heys_${cid}_`)) continue;
+                            const raw = localStorage.getItem(k) || '';
+                            const arr = safeParse(raw, []);
+                            overlayTails.push({ key: k.replace(cid, cid ? cid.slice(0, 8) + '***' : ''), bytes: raw.length, rows: Array.isArray(arr) ? arr.length : null });
+                        }
+                        const overlayTypeA = Array.isArray(overlayRows) ? overlayRows.filter(r => r && !r._custom).length : 0;
+                        const overlayTypeB = Array.isArray(overlayRows) ? overlayRows.filter(r => r && r._custom === true).length : 0;
+                        pushKV('client', cid ? cid.slice(0, 8) + '***' : '—');
+                        pushKV('selectedDate', date);
+                        pushKV('overlayDiag', typeof HEYS?.diagnostics?.overlay === 'function' ? HEYS.diagnostics.overlay() : null);
+                        pushKV('overlayRows', Array.isArray(overlayRows) ? `${overlayRows.length} (TypeA=${overlayTypeA}, TypeB=${overlayTypeB}, fp=${listFingerprint(overlayRows)})` : 'not-array');
+                        pushKV('legacyProducts', Array.isArray(legacyProducts) ? `${legacyProducts.length} (fp=${listFingerprint(legacyProducts)})` : 'not-array');
+                        pushKV('visibleProducts', Array.isArray(visibleProducts) ? `${visibleProducts.length} (fp=${listFingerprint(visibleProducts)})` : 'not-array');
+                        pushKV('overlayTailKeys', overlayTails);
+                        if (day) {
+                            const meals = Array.isArray(day.meals) ? day.meals : [];
+                            pushKV('dayKey', dayKey.replace(cid, cid ? cid.slice(0, 8) + '***' : ''));
+                            pushKV('dayUpdatedAt', day.updatedAt ? `${day.updatedAt} (${now - day.updatedAt}ms ago)` : null);
+                            pushKV('dayMealsItems', `${meals.length} meals / ${countItems(day)} items`);
+                            extraLines.push('  --- day meal items (meal | productId | productName | grams) ---');
+                            meals.forEach((meal, mealIdx) => {
+                                const items = Array.isArray(meal?.items) ? meal.items : [];
+                                items.forEach((item) => {
+                                    extraLines.push(`  ${meal?.name || meal?.title || mealIdx} | ${item?.productId || item?.id || '—'} | ${String(item?.name || item?.productName || '—').slice(0, 80)} | ${item?.grams ?? item?.weight ?? '—'}`);
+                                });
+                            });
+                        } else {
+                            pushKV('dayKey', dayKey.replace(cid, cid ? cid.slice(0, 8) + '***' : ''));
+                            pushKV('day', 'missing');
+                        }
+                        pushKV('hotSyncStatus', typeof HEYS?.cloud?.hotSync?.status === 'function' ? HEYS.cloud.hotSync.status() : null);
+                        pushKV('lastForegroundHotSync', HEYS?.cloud?._lastForegroundHotSync || null);
+                        pushKV('recentHotSyncApplies', Array.isArray(HEYS?._hotsyncApplies) ? HEYS._hotsyncApplies.slice(-20) : []);
+                        pushKV('recentDayv2Blocks', Array.isArray(HEYS?._hotsyncDayv2Blocks) ? HEYS._hotsyncDayv2Blocks.slice(-10) : []);
+                        pushKV('recentPlanningBlocks', Array.isArray(HEYS?._hotsyncPlanningBlocks) ? HEYS._hotsyncPlanningBlocks.slice(-10) : []);
+                    } catch (prodDiagErr) {
+                        extraLines.push('  products/day forensic snapshot failed: ' + (prodDiagErr?.message || prodDiagErr));
+                    }
+
                     // === saveClientKey history (second write path, parallel to saveKey) ===
                     pushHeader('saveClientKey history (last 50, dayv2 + client-specific keys path)');
                     try {
