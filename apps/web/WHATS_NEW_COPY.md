@@ -55,9 +55,10 @@ pnpm push:agent -- --title="Синхронизация активностей с
 ```
 
 Команда сначала проверит `What's New`, при необходимости добавит entry и
-follow-up commit, затем выполнит обычный `git push` с активными pre-push guards.
-Если в staging уже лежат не-release файлы, команда остановится, чтобы случайно
-не включить их в follow-up commit для `What's New`.
+follow-up commit с автоматическим `coveredCommits`, затем выполнит `git push` с
+активными pre-push guards и дождётся зелёного `Deploy to Yandex Cloud` для
+свежего `HEAD`. Если в staging уже лежат не-release файлы, команда остановится,
+чтобы случайно не включить их в follow-up commit для `What's New`.
 
 Получить готовый шаблон команды:
 
@@ -83,6 +84,15 @@ pnpm push:agent -- --dry-run --no-push --title="..." \
 
 ```bash
 pnpm push:agent -- --remote=origin --branch=main --title="..." \
+  --item-title="..." \
+  --item-description="..."
+```
+
+Не ждать GitHub Actions после push можно только для технического отладочного
+сценария:
+
+```bash
+pnpm push:agent -- --no-watch --title="..." \
   --item-title="..." \
   --item-description="..."
 ```

@@ -10,9 +10,11 @@ const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
 const {
   buildItemsJsonFromOptions,
   buildPrepareReleaseAutoArgs,
+  getDeployWatchConfig,
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
   parseCliArgs,
+  shouldWatchDeploy,
 } = await import(scriptUrl);
 
 describe('push-agent CLI helpers', () => {
@@ -85,6 +87,15 @@ describe('push-agent CLI helpers', () => {
     ]);
   });
 
+  it('defaults release coverage to auto for agent pushes', () => {
+    const args = buildPrepareReleaseAutoArgs(
+      'Синхронизация стала устойчивее',
+      '[{"type":"fix","title":"A","description":"B"}]',
+    );
+
+    expect(args).toContain('--covered-commits=auto');
+  });
+
   it('keeps only whats-new paths eligible for release follow-up commits', () => {
     const files = [
       'apps/web/public/whats-new.json',
@@ -107,5 +118,19 @@ describe('push-agent CLI helpers', () => {
 `);
 
     expect(lines).toEqual([' M scripts/push-agent.mjs', '?? apps/web/public/new-bundle.js']);
+  });
+
+  it('watches deploys by default only for main pushes', () => {
+    expect(shouldWatchDeploy('main')).toBe(true);
+    expect(shouldWatchDeploy('feature/test')).toBe(false);
+  });
+
+  it('uses the Yandex deploy workflow as the default watch target', () => {
+    expect(getDeployWatchConfig()).toMatchObject({
+      workflow: 'Deploy to Yandex Cloud',
+      waitSeconds: 5,
+      lookupAttempts: 6,
+      intervalSeconds: 20,
+    });
   });
 });

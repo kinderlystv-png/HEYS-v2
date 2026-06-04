@@ -13,6 +13,7 @@
  *   pnpm push:agent -- --status
  *   pnpm push:agent -- --print-command
  *   pnpm push:agent -- --no-push ...
+ *   pnpm push:agent -- --no-watch ...
  */
 
 import { spawnSync } from 'node:child_process';
@@ -23,6 +24,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.join(__dirname, '..');
 const PREPARE_RELEASE = path.join(__dirname, 'prepare-release.mjs');
 const RELEASE_META_PATH_RE = /^apps\/web\/public\/whats-new(?:\.json|\/)/;
+const DEFAULT_DEPLOY_WORKFLOW = 'Deploy to Yandex Cloud';
 
 function normalizeArgs(argv) {
   return (Array.isArray(argv) ? argv : []).filter((arg) => arg !== '--');
@@ -79,6 +81,10 @@ function runNode(script, scriptArgs, options = {}) {
 
 function runGit(gitArgs, options = {}) {
   return run('git', gitArgs, options);
+}
+
+function runGh(ghArgs, options = {}) {
+  return run('gh', ghArgs, options);
 }
 
 function checkWhatsNew() {
@@ -172,7 +178,7 @@ function printUsageAndExit() {
 function buildPrepareReleaseAutoArgs(title, itemsJson, options = {}) {
   const args = ['--auto', '--allow-user-facing-auto'];
   if (options.range) args.push(`--range=${options.range}`);
-  if (options.coveredCommits) args.push(`--covered-commits=${options.coveredCommits}`);
+  args.push(`--covered-commits=${options.coveredCommits || 'auto'}`);
   args.push(`--title=${title}`, `--items=${itemsJson}`);
   return args;
 }
@@ -199,6 +205,98 @@ function getPushTarget() {
     remote: getOption('--remote') || 'origin',
     branch: getOption('--branch') || getGitOutput(['branch', '--show-current']) || 'main',
   };
+}
+
+function getDeployWatchConfig() {
+  return {
+    workflow: getOption('--workflow') || DEFAULT_DEPLOY_WORKFLOW,
+    waitSeconds: Number(getOption('--watch-wait-seconds') || 5),
+    lookupAttempts: Number(getOption('--watch-lookup-attempts') || 6),
+    intervalSeconds: Number(getOption('--watch-interval') || 20),
+  };
+}
+
+function shouldWatchDeploy(branch) {
+  if (hasFlag('--no-watch') || hasFlag('--no-push') || hasFlag('--dry-run')) return false;
+  if (hasFlag('--watch')) return true;
+  return branch === 'main';
+}
+
+function sleepSeconds(seconds) {
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  if (safeSeconds <= 0) return;
+  run('sleep', [String(safeSeconds)], { stdio: 'ignore' });
+}
+
+function parseJsonArray(text) {
+  try {
+    const parsed = JSON.parse(String(text || ''));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function findDeployRunForHead({ workflow, branch, headSha }) {
+  const result = runGh(
+    [
+      'run',
+      'list',
+      `--workflow=${workflow}`,
+      `--branch=${branch}`,
+      '--limit',
+      '10',
+      '--json',
+      'databaseId,headSha,status,conclusion,url',
+    ],
+    { stdio: 'pipe' },
+  );
+  if (result.status !== 0) return null;
+
+  const runs = parseJsonArray(result.stdout);
+  return runs.find((runItem) => {
+    const runHead = String(runItem?.headSha || '');
+    return runHead && (runHead === headSha || runHead.startsWith(headSha));
+  }) || null;
+}
+
+function waitForDeploy({ branch, headSha }) {
+  if (!shouldWatchDeploy(branch)) return;
+
+  const { workflow, waitSeconds, lookupAttempts, intervalSeconds } = getDeployWatchConfig();
+  writeLine('');
+  writeLine(`Watching "${workflow}" deploy for ${branch}@${headSha.slice(0, 8)}...`);
+
+  sleepSeconds(waitSeconds);
+
+  let runItem = null;
+  for (let attempt = 1; attempt <= lookupAttempts; attempt += 1) {
+    runItem = findDeployRunForHead({ workflow, branch, headSha });
+    if (runItem) break;
+    if (attempt < lookupAttempts) sleepSeconds(waitSeconds);
+  }
+
+  if (!runItem) {
+    writeError(`Could not find "${workflow}" run for ${branch}@${headSha.slice(0, 8)}.`);
+    writeError(`Check manually: gh run list --workflow="${workflow}" --branch=${branch} --limit 5`);
+    process.exit(1);
+  }
+
+  writeLine(`Deploy run: ${runItem.url || `#${runItem.databaseId}`}`);
+  const watch = runGh(
+    [
+      'run',
+      'watch',
+      String(runItem.databaseId),
+      '--exit-status',
+      '--interval',
+      String(intervalSeconds),
+      '--compact',
+    ],
+    { mutates: true },
+  );
+  if (watch.status !== 0) process.exit(watch.status || 1);
+  writeLine('Deploy is green.');
 }
 
 function printStatusAndExit() {
@@ -338,8 +436,10 @@ function push() {
   }
 
   const { remote, branch } = getPushTarget();
+  const headSha = getGitOutput(['rev-parse', 'HEAD']);
   const result = runGit(['push', remote, branch], { mutates: true });
   if (result.status !== 0) process.exit(result.status || 1);
+  waitForDeploy({ branch, headSha });
 }
 
 function main() {
@@ -362,7 +462,9 @@ export {
   buildItemsJsonFromOptions,
   buildPrepareReleaseAutoArgs,
   buildSuggestedCommand,
+  getDeployWatchConfig,
   getNonReleaseMetaStagedFiles,
   getStatusShortLines,
+  shouldWatchDeploy,
   parseCliArgs,
 };
