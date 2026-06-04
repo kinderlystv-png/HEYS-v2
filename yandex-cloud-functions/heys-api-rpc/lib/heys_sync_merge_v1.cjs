@@ -341,8 +341,6 @@
     const localTrainings = local.trainings || [];
     const remoteTrainings = remote.trainings || [];
     merged.trainings = [];
-    const localIsNewerForTrainings = (local.updatedAt || 0) >= (remote.updatedAt || 0);
-
     const isMorningActivationTrainingRow = (t) => {
       if (!t || typeof t !== 'object') return false;
       if (t.source === 'morning_activation') return true;
@@ -374,9 +372,12 @@
       const rt = remoteTrainings[i] || { z: [0, 0, 0, 0] };
       const ltSum = (lt.z || []).reduce((a, b) => a + (b || 0), 0);
       const rtSum = (rt.z || []).reduce((a, b) => a + (b || 0), 0);
+      const localTrainingTs = lt.updatedAt || local.updatedAt || 0;
+      const remoteTrainingTs = rt.updatedAt || remote.updatedAt || 0;
+      const localTrainingIsNewer = localTrainingTs >= remoteTrainingTs;
 
       let winner;
-      if (localIsNewerForTrainings) {
+      if (localTrainingIsNewer) {
         winner = lt;
       } else if (ltSum === 0 && rtSum > 0) {
         winner = rt;
@@ -425,6 +426,7 @@
         stress: getMergedRating('stress'),
         quality: undefined,
         feelAfter: undefined,
+        updatedAt: Math.max(localTrainingTs, remoteTrainingTs) || undefined,
       };
 
       merged.trainings.push(winner);

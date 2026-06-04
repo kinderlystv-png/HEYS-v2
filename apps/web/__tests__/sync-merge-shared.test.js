@@ -131,6 +131,18 @@ describe('mergeDayData — lost-update prevention', () => {
     expect(merged.waterMl).toBe(1200);
   });
 
+  test('training.updatedAt granularity — fresher training wins even when day timestamp is older', () => {
+    const local = makeDay(3000, [], {
+      trainings: [{ z: [0, 10, 0, 0], activityLabel: 'old day edit', updatedAt: 2500 }],
+    });
+    const remote = makeDay(2000, [], {
+      trainings: [{ z: [0, 30, 0, 0], activityLabel: 'fresh training edit', updatedAt: 3500 }],
+    });
+    const merged = mergeDayData(local, remote, { forceKeepAll: true });
+    expect(merged.trainings[0].activityLabel).toBe('fresh training edit');
+    expect(merged.trainings[0].updatedAt).toBe(3500);
+  });
+
   test('deletion detection — local newer & meal absent → treated as deleted (default mode)', () => {
     const local = makeDay(2000, []); // no meals, fresher
     const remote = makeDay(1500, [makeMeal('breakfast')]);
