@@ -37,7 +37,22 @@
       if (item && item.id) itemsMap.set(item.id, item);
     });
     localItems.forEach((item) => {
-      if (item && item.id) itemsMap.set(item.id, item);
+      if (!item || !item.id) return;
+      const existing = itemsMap.get(item.id);
+      if (!existing) {
+        itemsMap.set(item.id, item);
+        return;
+      }
+      const localTs = Number(item.updatedAt) || 0;
+      const remoteTs = Number(existing.updatedAt) || 0;
+      // Item-level timestamp is the only reliable signal for same-product edits
+      // such as grams. Legacy rows without item.updatedAt keep the old
+      // preferLocal behavior for backward compatibility.
+      if (localTs > 0 || remoteTs > 0) {
+        itemsMap.set(item.id, localTs >= remoteTs ? item : existing);
+      } else {
+        itemsMap.set(item.id, item);
+      }
     });
     return Array.from(itemsMap.values());
   }

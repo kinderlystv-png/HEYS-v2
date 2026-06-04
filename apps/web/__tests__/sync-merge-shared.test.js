@@ -174,6 +174,13 @@ describe('mergeItemsById', () => {
     const merged = mergeItemsById(remote, local, true);
     expect(merged.map(i => i.id).sort()).toEqual(['a', 'b']);
   });
+
+  test('same item uses item.updatedAt so stale grams do not overwrite fresh grams', () => {
+    const remote = [{ id: 'coffee', grams: 300, updatedAt: 3000 }];
+    const local = [{ id: 'coffee', grams: 50, updatedAt: 1000 }];
+    const merged = mergeItemsById(remote, local, true);
+    expect(merged).toEqual([{ id: 'coffee', grams: 300, updatedAt: 3000 }]);
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────────────

@@ -4444,8 +4444,9 @@
                 if (index !== mi) return meal;
                 return {
                     ...meal,
+                    updatedAt,
                     items: (meal.items || []).map((item) => (
-                        item.id === itId ? { ...item, grams } : item
+                        item.id === itId ? { ...item, grams, updatedAt } : item
                     )),
                 };
             });

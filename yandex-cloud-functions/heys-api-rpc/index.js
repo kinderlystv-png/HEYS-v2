@@ -2502,6 +2502,39 @@ module.exports.handler = async function (event, context) {
           const cloudInternalTs = Number(currentValue && currentValue.updatedAt) || 0;
           // Concurrency conflict if cloud version was modified after the client's last-known timestamp.
           const noConflict = lastSeenUpdatedAt > 0 && lastSeenUpdatedAt >= cloudInternalTs;
+          const isDayv2Key = /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(k);
+          const hasNewerCurrentItemEdit = (() => {
+            if (!isDayv2Key || !incomingValue || !currentValue) return false;
+            const currentItems = new Map();
+            const collect = (day, cb) => {
+              const meals = Array.isArray(day && day.meals) ? day.meals : [];
+              meals.forEach((meal) => {
+                const items = Array.isArray(meal && meal.items) ? meal.items : [];
+                items.forEach((item) => {
+                  if (item && item.id) cb(item, meal);
+                });
+              });
+            };
+            collect(currentValue, (item, meal) => {
+              const ts = Number(item.updatedAt || meal.updatedAt || currentValue.updatedAt) || 0;
+              currentItems.set(String(item.id), { item, ts });
+            });
+            let foundNewer = false;
+            collect(incomingValue, (item, meal) => {
+              if (foundNewer) return;
+              const currentItem = currentItems.get(String(item.id));
+              if (!currentItem) return;
+              const incomingTs = Number(item.updatedAt || meal.updatedAt || incomingValue.updatedAt) || 0;
+              if (currentItem.ts > incomingTs) {
+                try {
+                  foundNewer = JSON.stringify(currentItem.item) !== JSON.stringify(item);
+                } catch (_) {
+                  foundNewer = true;
+                }
+              }
+            });
+            return foundNewer;
+          })();
 
           // 🛡️ Generic cross-client guard (incident 2026-06-02 #6): incoming
           // _writerCid должен совпадать с row.client_id для ВСЕХ guarded keys
@@ -2567,18 +2600,18 @@ module.exports.handler = async function (event, context) {
           } else if (k === 'heys_planning_chrono_tombstones_v1') {
             mergedValue = mergeChronoTombstones(incomingValue, currentValue);
             mergeOutcome = 'chrono_tombstones_merged';
-          } else if (noConflict) {
-            mergedValue = incomingValue;
-          } else if (/^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(k)) {
+          } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit)) {
             // forceKeepAll: client may not have seen the latest cloud-side meals yet,
             // so treating absence as "deleted" would lose other side's edits. Conservative: keep both.
             const merged = mergeDayData(incomingValue, currentValue, { forceKeepAll: true });
             if (merged) {
               mergedValue = merged;
-              mergeOutcome = 'day_merged';
+              mergeOutcome = hasNewerCurrentItemEdit ? 'day_item_guard_merged' : 'day_merged';
             } else {
               mergedValue = incomingValue; // identical content
             }
+          } else if (noConflict) {
+            mergedValue = incomingValue;
           } else if (k === 'heys_norms' || k === 'heys_profile' || k === 'heys_game' || k === 'heys_hr_zones') {
             // 🛡️ Cross-client guard (extended 2026-06-01 wave 2: + heys_norms,
             // heys_game, heys_hr_zones). Mirror Class 4 fa851aad pattern для всех
