@@ -7280,12 +7280,55 @@
 
         const setGrams = React.useCallback((mi, itId, g) => {
             const grams = +g || 0;
-            setDay((prevDay) => {
-                const meals = (prevDay.meals || []).map((m, i) => i === mi ? { ...m, items: (m.items || []).map((it) => it.id === itId ? { ...it, grams } : it) } : m);
-                return { ...prevDay, meals, updatedAt: Date.now() };
+            const updatedAt = markUndoWindow(3000);
+            const baseDay = dayRef.current || {};
+            const sourceMeal = baseDay.meals?.[mi];
+            const sourceItems = sourceMeal?.items || [];
+            const sourceItem = sourceItems.find((it) => it.id === itId);
+
+            if (!sourceMeal || !sourceItem) {
+                try {
+                    console.warn('[HEYS.day-trace] setGrams target missing', {
+                        date,
+                        mealIndex: mi,
+                        itemId: itId,
+                        grams,
+                        mealsCount: Array.isArray(baseDay.meals) ? baseDay.meals.length : 0,
+                        mealFound: !!sourceMeal,
+                    });
+                } catch (_) { /* noop */ }
+                return;
+            }
+
+            const meals = (baseDay.meals || []).map((meal, index) => {
+                if (index !== mi) return meal;
+                return {
+                    ...meal,
+                    items: (meal.items || []).map((item) => (
+                        item.id === itId ? { ...item, grams } : item
+                    )),
+                };
             });
+            const nextDayData = { ...baseDay, meals, updatedAt };
+
+            try {
+                console.info('[HEYS.day-trace] setGrams applied', {
+                    date,
+                    mealIndex: mi,
+                    mealId: sourceMeal.id || null,
+                    itemId: itId,
+                    productId: sourceItem.product_id || sourceItem.productId || null,
+                    productName: sourceItem.name || null,
+                    beforeGrams: sourceItem.grams,
+                    afterGrams: grams,
+                    updatedAt,
+                });
+            } catch (_) { /* noop */ }
+
+            persistDayData(nextDayData, 'set_grams');
+            setDay(() => nextDayData);
             emitPlannerReplanRequestDebounced('GRAMS_UPDATED', { mealIndex: mi, itemId: itId, grams }, 300);
-        }, [setDay, emitPlannerReplanRequestDebounced]);
+        }, [date, setDay, markUndoWindow, persistDayData, emitPlannerReplanRequestDebounced]);
 
         const removeItem = React.useCallback((mi, itId) => {
             const sourceMeal = dayRef.current.meals?.[mi];
