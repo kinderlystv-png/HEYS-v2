@@ -3,6 +3,7 @@
     {
       "version": "2026.06.04.690aba55",
       "buildHash": "690aba55",
+      "coveredCommits": ["690aba55"],
       "date": "2026-06-04",
       "kind": "user-facing",
       "profile": "user-facing-general",
