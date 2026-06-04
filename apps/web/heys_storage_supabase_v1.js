@@ -11719,9 +11719,11 @@
   // ═══════════════════════════════════════════════════════════════════
   // and we also sync immediately when the tab/window becomes active again.
   const FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS = 12000;
+  const FOREGROUND_AUTO_SYNC_INTERVAL_CURATOR_ACTIVE_MS = 3000;
   const FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS = 18000;
   const FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS = 25000;
   const FOREGROUND_AUTO_SYNC_MIN_GAP_MS = 8000;
+  const FOREGROUND_AUTO_SYNC_CURATOR_MIN_GAP_MS = 2500;
   const FOREGROUND_AUTO_SYNC_FALLBACK_COOLDOWN_MS = 15000;
   const FOREGROUND_AUTO_SYNC_EXTENDED_EVERY = 3;
   const HOT_SYNC_AUTO_SAFE_THRESHOLD = 5; // consecutive errors to trigger auto-safe mode
@@ -11759,6 +11761,20 @@
     return typeof cloud.getCurrentClientId === 'function' ? cloud.getCurrentClientId() : null;
   }
 
+  function hasCuratorHotSyncAuth() {
+    try {
+      if (user) return true;
+      const curatorSession = global.localStorage.getItem('heys_curator_session');
+      if (curatorSession && curatorSession.length > 10) return true;
+      const storedToken = global.localStorage.getItem('heys_supabase_auth_token');
+      if (!storedToken) return false;
+      const parsed = JSON.parse(storedToken);
+      return !!(parsed && parsed.user && parsed.access_token);
+    } catch (_) {
+      return false;
+    }
+  }
+
   const HOT_SYNC_HISTORY_LIMIT = 25;
   const HOT_SYNC_HEARTBEAT_EVERY = 10;
   const HOT_SYNC_SUPPLEMENT_PROFILE_FIELDS = new Set([
@@ -11773,9 +11789,10 @@
   const foregroundHotSyncHistory = [];
 
   function getForegroundAutoSyncIntervalMs() {
+    const curatorFastPoll = hasCuratorHotSyncAuth() && !isMarkersDisabled();
     let interval = foregroundAutoSyncIdleStreak >= 5
       ? FOREGROUND_AUTO_SYNC_INTERVAL_IDLE_MS
-      : FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS;
+      : (curatorFastPoll ? FOREGROUND_AUTO_SYNC_INTERVAL_CURATOR_ACTIVE_MS : FOREGROUND_AUTO_SYNC_INTERVAL_ACTIVE_MS);
     try {
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       if (connection?.saveData) interval = Math.max(interval, FOREGROUND_AUTO_SYNC_INTERVAL_LOW_END_MS);
@@ -11789,6 +11806,14 @@
       }
     } catch (_) { }
     return interval;
+  }
+
+  function getForegroundAutoSyncMinGapMs(intervalMs) {
+    if (hasCuratorHotSyncAuth() && !isMarkersDisabled()
+        && intervalMs <= FOREGROUND_AUTO_SYNC_INTERVAL_CURATOR_ACTIVE_MS) {
+      return FOREGROUND_AUTO_SYNC_CURATOR_MIN_GAP_MS;
+    }
+    return FOREGROUND_AUTO_SYNC_MIN_GAP_MS;
   }
 
   function getChangedTopLevelKeys(previousValue, nextValue) {
@@ -12884,7 +12909,7 @@
       const intervalMs = getForegroundAutoSyncIntervalMs();
       foregroundAutoSyncTimer = setTimeout(() => {
         requestForegroundAutoSync('visible-interval', {
-          minGapMs: Math.max(FOREGROUND_AUTO_SYNC_MIN_GAP_MS, intervalMs - 250)
+          minGapMs: Math.max(getForegroundAutoSyncMinGapMs(intervalMs), intervalMs - 250)
         }).catch(() => { }).finally(() => {
           if (foregroundAutoSyncTimer) scheduleNext();
         });
