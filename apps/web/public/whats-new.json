@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.06.04.690aba55",
+      "buildHash": "690aba55",
+      "date": "2026-06-04",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Надёжнее сохраняются граммы",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Граммы не откатываются при синхронизации",
+          "description": "Правки граммов теперь сразу сохраняются локально и не затираются устаревшим hot-sync."
+        }
+      ]
+    },
+    {
       "version": "2026.06.04.f754592c",
       "buildHash": "f754592c",
       "coveredCommits": ["f754592c", "49f16fc1"],
