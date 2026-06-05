@@ -26,6 +26,8 @@ const {
   mergeScalarKv,
   stampDayv2ChangedEntities,
   resolveDayMutationTs,
+  ownerClientIdFromDayKey,
+  gateCycleDayForOwner,
 } = require(mergeModulePath);
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -799,5 +801,60 @@ describe('mergeDayData — clock-skew per-item rescue', () => {
     expect(merged).not.toBe(null);
     const syrup = merged.meals[0].items.find((i) => i.id === 'it_syrup');
     expect(syrup.grams).toBe(222); // local per-item edit is newer → preserved
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// cycleDay feature-gate (incident 2026-06-05 #3 — cross-gender pollution)
+// ───────────────────────────────────────────────────────────────────────────
+describe('cycleDay feature-gate helpers', () => {
+  describe('ownerClientIdFromDayKey', () => {
+    test('scoped day key → owner clientId', () => {
+      expect(ownerClientIdFromDayKey('heys_ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a_dayv2_2026-06-04'))
+        .toBe('ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a');
+    });
+    test('unscoped legacy day key → null', () => {
+      expect(ownerClientIdFromDayKey('heys_dayv2_2026-06-04')).toBe(null);
+    });
+    test('non-day / garbage key → null', () => {
+      expect(ownerClientIdFromDayKey('heys_profile')).toBe(null);
+      expect(ownerClientIdFromDayKey(null)).toBe(null);
+      expect(ownerClientIdFromDayKey(undefined)).toBe(null);
+    });
+  });
+
+  describe('gateCycleDayForOwner', () => {
+    test('tracking OFF (false) → cycleDay nulled, other fields intact', () => {
+      const day = { date: '2026-06-04', cycleDay: 7, weightMorning: 91.5, meals: [{ id: 'm1' }] };
+      const gated = gateCycleDayForOwner(day, false);
+      expect(gated.cycleDay).toBe(null);
+      expect(gated.weightMorning).toBe(91.5);
+      expect(gated.meals).toEqual([{ id: 'm1' }]);
+      expect(gated).not.toBe(day); // новый объект, оригинал нетронут
+      expect(day.cycleDay).toBe(7);
+    });
+    test('tracking ON (true) → cycleDay preserved, same ref', () => {
+      const day = { date: '2026-06-04', cycleDay: 7 };
+      const gated = gateCycleDayForOwner(day, true);
+      expect(gated.cycleDay).toBe(7);
+      expect(gated).toBe(day);
+    });
+    test('tracking UNKNOWN (null/undefined) → cycleDay preserved (boot-race safety)', () => {
+      const day = { date: '2026-06-04', cycleDay: 7 };
+      expect(gateCycleDayForOwner(day, null).cycleDay).toBe(7);
+      expect(gateCycleDayForOwner(day, undefined).cycleDay).toBe(7);
+    });
+    test('no cycleDay → untouched same ref even when tracking off', () => {
+      const day = { date: '2026-06-04', meals: [] };
+      expect(gateCycleDayForOwner(day, false)).toBe(day);
+    });
+    test('cycleDay already null → untouched same ref', () => {
+      const day = { date: '2026-06-04', cycleDay: null };
+      expect(gateCycleDayForOwner(day, false)).toBe(day);
+    });
+    test('non-object input → returned as-is', () => {
+      expect(gateCycleDayForOwner(null, false)).toBe(null);
+      expect(gateCycleDayForOwner(undefined, false)).toBe(undefined);
+    });
   });
 });

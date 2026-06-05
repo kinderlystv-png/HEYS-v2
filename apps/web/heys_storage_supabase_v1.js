@@ -4106,18 +4106,132 @@
     return null;
   }
 
+  // 🌸 cycleDay feature-gate (incident 2026-06-05 #3, cross-gender pollution).
+  // cycleDay валиден ТОЛЬКО когда у владельца дня включён трекинг цикла
+  // (`cycleTrackingEnabled === true`) — это та же калитка, которой UI гейтит
+  // cycle-шаг (shouldShowCycleStep, heys_steps_v1.js). Дыра была в том, что
+  // write-path её игнорил: stale/cross-injected cycleDay переживал запись через
+  // carry-forward (yesterday-verify/checkin читают старый день как базу и не
+  // трогают cycleDay → Object.assign сохраняет чужое значение) и переотравлял
+  // облако на каждой мутации. Облачная чистка устройства не достаёт, а у
+  // не-cycle юзера cycle-шаг исключён из checkin → cycleDay некому занулить.
+  // Здесь — единый чокпоинт всех локальных мутаций дня: зануляем невалидный
+  // cycleDay до записи в LS. null (а не delete) — чтобы значение выиграло merge
+  // (heys_cloud_merge_v1.js ветка `local.cycleDay === null`) и протолкнуло
+  // очистку в облако и на другие устройства.
+  function ownerClientIdFromDayKey(key, clientId) {
+    const sync = global.HEYS && global.HEYS.sync;
+    const fromKey = sync && typeof sync.ownerClientIdFromDayKey === 'function'
+      ? sync.ownerClientIdFromDayKey(key)
+      : ((/^heys_([0-9a-f-]{36})_dayv2_/i.exec(String(key || '')) || [])[1] || null);
+    return fromKey || clientId || null;
+  }
+
+  // true — трекинг включён; false — профиль прочитан и трекинг выключен;
+  // null — профиль недоступен/пустой (boot race) → НЕ трогаем cycleDay.
+  // Безопасность от ложного зануления легит-данных:
+  //  • scoped профиль владельца дня (`heys_<ownerCid>_profile`) — основной;
+  //  • unscoped `heys_profile` — только когда владелец = текущий клиент
+  //    (иначе это профиль ДРУГОГО клиента, нельзя по нему судить);
+  //  • пустой `{}` (стаб до загрузки) трактуем как «неизвестно» (null),
+  //    чтобы не занулить cycleDay у женщины, чей профиль ещё не подтянулся.
+  function readCycleTrackingEnabled(ownerCid) {
+    const candidates = [];
+    if (ownerCid) candidates.push('heys_' + ownerCid + '_profile');
+    const current = (global.HEYS && global.HEYS.currentClientId) || '';
+    if (!ownerCid || (current && ownerCid === current)) {
+      candidates.push('heys_profile');
+    }
+    for (const key of candidates) {
+      try {
+        const raw = global.localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = tryParse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            && Object.keys(parsed).length > 0) {
+          return parsed.cycleTrackingEnabled === true;
+        }
+      } catch (_) { /* noop */ }
+    }
+    return null;
+  }
+
+  function stripInvalidCycleDay(key, value, clientId) {
+    if (!value || typeof value !== 'object' || value.cycleDay == null) return value;
+    const enabled = readCycleTrackingEnabled(ownerClientIdFromDayKey(key, clientId));
+    const sync = global.HEYS && global.HEYS.sync;
+    if (sync && typeof sync.gateCycleDayForOwner === 'function') {
+      return sync.gateCycleDayForOwner(value, enabled); // протестированная shared-логика
+    }
+    // boot-race fallback — идентично HEYS.sync.gateCycleDayForOwner
+    return enabled === false ? Object.assign({}, value, { cycleDay: null }) : value;
+  }
+
   function stampDayv2ValueForLocalMutation(key, value, clientId) {
     if (!isDayv2StorageKey(key) || !value || typeof value !== 'object') return value;
     const stampFn = getStampDayv2ChangedEntities();
-    if (!stampFn) return value; // sync-модуль ещё не подгружен — gracefully skip
-    const prevDay = readLocalDayForStamp(key, clientId);
-    return stampFn(prevDay, value);
+    // Стамп может быть недоступен (boot race), но cycleDay-гард должен работать
+    // всегда — иначе невалидный cycleDay проскочит в окне до загрузки sync-модуля.
+    const prevDay = stampFn ? readLocalDayForStamp(key, clientId) : null;
+    const stamped = stampFn ? stampFn(prevDay, value) : value;
+    return stripInvalidCycleDay(key, stamped, clientId);
   }
 
   Object.defineProperty(cloud, '_stampDayv2ChangedEntities', {
     get: () => getStampDayv2ChangedEntities(),
     configurable: true,
   });
+
+  // 🌸 One-shot device scrub (incident 2026-06-05 #3). Чокпоинт-гард
+  // (stampDayv2ValueForLocalMutation) лечит cycleDay при ЗАПИСИ дня, но дормантные
+  // дни в LS остаются «розовыми» до первого касания и могут переотравить облако при
+  // ближайшей мутации. Скраб гасит резидуал сразу: если у текущего клиента трекинг
+  // цикла выключен — зануляет cycleDay во всех его локальных днях (scoped-скан,
+  // инвариант #9). Идемпотентен; флаг ставится только когда профиль реально прочитан
+  // (enabled !== null), поэтому при boot-race повтор на следующем sync безопасен.
+  cloud.scrubInvalidCycleDays = function (clientIdArg) {
+    try {
+      const FLAG = 'heys_cycleday_scrub_v1';
+      if (global.localStorage.getItem(FLAG) === '1') return { skipped: 'done' };
+      const clientId = clientIdArg
+        || (global.HEYS && global.HEYS.utils && global.HEYS.utils.getCurrentClientId
+          ? global.HEYS.utils.getCurrentClientId() : '')
+        || (global.HEYS && global.HEYS.currentClientId) || '';
+      if (!clientId) return { skipped: 'no-client' };
+      const enabled = readCycleTrackingEnabled(clientId);
+      if (enabled === null) return { skipped: 'no-profile' }; // профиль не готов — повторим на следующем sync
+      if (enabled === true) {
+        global.localStorage.setItem(FLAG, '1'); // трекинг включён — чистить нечего
+        return { skipped: 'tracking-on' };
+      }
+      const prefix = `heys_${clientId}_dayv2_`;
+      const ls = global.localStorage;
+      const toFix = [];
+      let scanned = 0;
+      for (let i = 0; i < ls.length; i++) {
+        const k = ls.key(i);
+        if (!k || k.indexOf(prefix) !== 0) continue;
+        scanned++;
+        const parsed = tryParse(ls.getItem(k));
+        if (parsed && typeof parsed === 'object' && parsed.cycleDay != null) {
+          toFix.push({ key: k, day: parsed });
+        }
+      }
+      for (const { key, day } of toFix) {
+        day.cycleDay = null;
+        day.updatedAt = Date.now(); // bump — чтобы null выиграл merge и протолкнулся в облако
+        ls.setItem(key, JSON.stringify(day)); // через интерсептор → нормализация + auto-sync
+      }
+      global.localStorage.setItem(FLAG, '1');
+      if (toFix.length > 0) {
+        logCritical(`🌸 [CYCLE SCRUB] Removed cycleDay from ${toFix.length}/${scanned} local days (tracking off) for client ${clientId}`);
+      }
+      return { scanned, scrubbed: toFix.length };
+    } catch (e) {
+      try { console.warn('[CYCLE SCRUB] failed:', e && e.message ? e.message : e); } catch (_) { /* noop */ }
+      return { error: true };
+    }
+  };
 
   /**
    * Проверка, является ли ключ нашим (для зеркалирования/очистки)
@@ -4918,6 +5032,8 @@
                 ? raw
                 : (typeof raw === 'string' && /^\d+$/.test(raw) ? parseInt(raw, 10) : 0);
               logCritical('✅ [YANDEX RESTORE] Sync завершён:', keyCount, 'ключей');
+              // 🌸 One-shot scrub stale cycleDay (профиль+дни уже в LS после restore)
+              try { cloud.scrubInvalidCycleDays(pinAuthClient); } catch (_) { /* noop */ }
             } else {
               logCritical('⚠️ [YANDEX RESTORE] Sync failed:', result?.error || 'no result');
             }
