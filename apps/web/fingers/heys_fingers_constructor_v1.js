@@ -631,6 +631,14 @@
             mvc: Number(addedKg) + bm.kg,
             bwSource: bm.source
           });
+          // B2: яркий PR-feedback. isPR уже посчитан records.updateIfPR (max-wins).
+          if (out.isPR && HEYS.Toast && HEYS.Toast.success) {
+            const wTxt = Number(addedKg) > 0 ? (' +' + Number(addedKg) + 'кг') : '';
+            try {
+              HEYS.Toast.success('🏆 Новый рекорд: ' + Number(holdTime) + 'с @ '
+                + edgeMm + 'мм ' + gripLabel + wTxt);
+            } catch (_) { /* noop */ }
+          }
           onSaved();
         }
       } catch (e) {
