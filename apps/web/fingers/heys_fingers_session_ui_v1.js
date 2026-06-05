@@ -1543,6 +1543,33 @@
   }
   Fingers.recentFingerPain = _recentFingerPain;
 
+  // B4: RPE последней сессии для конкретного хвата (для авто-прогрессии).
+  // Идёт от сегодня назад, берёт первую finger-сессию с этим gripId и
+  // setFeedback. Возвращает { rpe:[...], daysAgo }.
+  function _lastGripFeedback(gripId, lookbackDays) {
+    const n = Math.max(1, Math.min(60, lookbackDays || 30));
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const day = _readDayDiary(_formatDateKey(d));
+      if (!day || !Array.isArray(day.trainings)) continue;
+      for (let t = day.trainings.length - 1; t >= 0; t--) {
+        const tr = day.trainings[t];
+        if (!tr || tr.type !== 'fingers' || !tr.fingersLog || !Array.isArray(tr.fingersLog.exercises)) continue;
+        const ex = tr.fingersLog.exercises.find(function (e) {
+          return e && e.gripId === gripId && Array.isArray(e.setFeedback);
+        });
+        if (ex) {
+          const rpe = ex.setFeedback.map(function (f) { return f && f.rpe; }).filter(Boolean);
+          if (rpe.length) return { rpe: rpe, daysAgo: i };
+        }
+      }
+    }
+    return { rpe: [], daysAgo: null };
+  }
+  Fingers.lastGripFeedback = _lastGripFeedback;
+
   /**
    * Один проход по последним 365 дням → streak, totals, последние 5 сессий.
    * @returns {{streak:number, totalSessions:number, totalHolds:number, totalMinutes:number, lastSessions:Array}}
