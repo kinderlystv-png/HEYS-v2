@@ -496,8 +496,12 @@ describe('item-deletion sync via deletedItemIds', () => {
     });
   });
 
-  describe('stampDayv2ChangedEntities auto-emit', () => {
-    test('prev has A, next without A → deletedItemIds[A] = mutationTs', () => {
+  describe('stampDayv2ChangedEntities — no auto-emit (explicit-delete only)', () => {
+    test('sync-writeback: prev=[A,B], next=[B] (merge dropped A) → NO phantom tombstone', () => {
+      // The stamper also runs on sync-writeback writes (pollOnce / live-refresh /
+      // merge result via patched setItem). A merge that legitimately drops an item
+      // must NOT become a permanent deletion. Regression guard for the phantom
+      // tombstone incident 2026-06-05 (it_pnqmnh "Молоко" tombstoned by pollOnce).
       const prev = {
         date: '2026-06-04',
         updatedAt: 2000,
@@ -516,8 +520,47 @@ describe('item-deletion sync via deletedItemIds', () => {
         ] }],
       };
       const result = stampDayv2ChangedEntities(prev, next);
-      expect(result.deletedItemIds).toBeTruthy();
-      expect(result.deletedItemIds.A).toBe(3000);
+      expect(result.deletedItemIds).toBeUndefined(); // A dropped by merge, NOT tombstoned
+      expect(result.meals[0].items.map((it) => it.id)).toEqual(['B']);
+    });
+
+    test('explicit delete: caller put deletedItemIds on next → passed through', () => {
+      // The removeItem handler sets day.deletedItemIds explicitly. The stamper
+      // must preserve it (this is a deliberate user delete, not an inference).
+      const prev = {
+        date: '2026-06-04', updatedAt: 2000, trainings: [],
+        meals: [{ id: 'm1', items: [{ id: 'A', grams: 100, updatedAt: 2000 }, { id: 'B', grams: 50, updatedAt: 2000 }] }],
+      };
+      const next = {
+        date: '2026-06-04', updatedAt: 3000, trainings: [],
+        meals: [{ id: 'm1', items: [{ id: 'B', grams: 50, updatedAt: 2000 }] }],
+        deletedItemIds: { A: 3000 }, // explicit, set by removeItem handler
+      };
+      const result = stampDayv2ChangedEntities(prev, next);
+      expect(result.deletedItemIds).toEqual({ A: 3000 });
+    });
+
+    test('pollOnce end-to-end: merge drops a local-only item, stamper does NOT tombstone it', () => {
+      // local LS has Молоко (local-only, older); cloud has only Кофе+Сироп (fresher).
+      const localLS = {
+        date: '2026-06-05', updatedAt: 2000, trainings: [],
+        meals: [{ id: 'm1', updatedAt: 2000, items: [
+          { id: 'kofe', grams: 100, updatedAt: 2000 },
+          { id: 'moloko', grams: 100, updatedAt: 1000 },
+        ] }],
+      };
+      const cloud = {
+        date: '2026-06-05', updatedAt: 3000, trainings: [],
+        meals: [{ id: 'm1', updatedAt: 3000, items: [
+          { id: 'kofe', grams: 77, updatedAt: 3000 },
+          { id: 'sirop', grams: 100, updatedAt: 3000 },
+        ] }],
+      };
+      // pollOnce: merge then write the merged blob through the stamper.
+      const merged = mergeDayData(localLS, cloud, { forceKeepAll: false, preferRemote: true });
+      const stamped = stampDayv2ChangedEntities(localLS, merged);
+      // No phantom tombstone, regardless of whether the merge kept or dropped Молоко.
+      expect(stamped.deletedItemIds).toBeUndefined();
     });
 
     test('idempotency: prev already has deletedItemIds[A], next without A → not duplicated', () => {

@@ -550,7 +550,9 @@
 
   // ─── Pure dayv2 stamping helpers ─────────────────────────────────────────
   // Используются HEYS.storage interceptor'ом для централизованного штампа
-  // изменённых meals/items/trainings + auto-emit deletedItemIds tombstones.
+  // изменённых meals/items/trainings. deletedItemIds tombstones НЕ выводятся из
+  // diff (это делало бы phantom-удаления на sync-writeback) — они только
+  // passthrough из prev + explicit из caller'a (removeItem handler).
   // Чистые функции — без global state, тестируются через CJS-копию.
 
   function stripDayMutationStamps(value) {
@@ -596,17 +598,6 @@
     return 0;
   }
 
-  function collectItemIdsByMeal(day) {
-    const ids = new Set();
-    if (!day || !Array.isArray(day.meals)) return ids;
-    day.meals.forEach((meal) => {
-      if (!meal || !Array.isArray(meal.items)) return;
-      meal.items.forEach((item) => {
-        if (item && item.id != null) ids.add(String(item.id));
-      });
-    });
-    return ids;
-  }
 
   function stampDayv2ChangedEntities(prevDay, nextDay) {
     if (!nextDay || typeof nextDay !== 'object') return nextDay;
@@ -722,35 +713,23 @@
       })
       : nextDay.trainings;
 
-    // Auto-emit deletedItemIds: items, которые были в prev и исчезли в next.
-    // Защита от false-positives:
-    //  - mutationTs === 0 (HMR-reset): не эмитим tombstones.
-    //  - next.meals полностью отсутствует (vs prev был непустой) — likely реинициализация,
-    //    не настоящее удаление; не эмитим.
-    let mergedDeletedItemIds = (prevDay && prevDay.deletedItemIds && typeof prevDay.deletedItemIds === 'object')
+    // deletedItemIds: pass through existing tombstones (from prev) + any EXPLICIT
+    // tombstone the caller already put on `next` (e.g. the removeItem handler).
+    // We deliberately do NOT auto-emit tombstones from a prev→next item diff:
+    // this stamper also runs on sync-writeback writes (pollOnce / live-refresh /
+    // merge result, via the patched setItem). A merge that legitimately drops an
+    // item would otherwise be turned into a PERMANENT deletion — a phantom
+    // tombstone (incident 2026-06-05: it_pnqmnh "Молоко" tombstoned by pollOnce).
+    // Deletion must be an explicit user action, not inferred from any diff.
+    let mergedDeletedItemIds = (prevDay && prevDay.deletedItemIds && typeof prevDay.deletedItemIds === 'object' && !Array.isArray(prevDay.deletedItemIds))
       ? { ...prevDay.deletedItemIds }
       : undefined;
-    if (nextDay.deletedItemIds && typeof nextDay.deletedItemIds === 'object') {
+    if (nextDay.deletedItemIds && typeof nextDay.deletedItemIds === 'object' && !Array.isArray(nextDay.deletedItemIds)) {
       mergedDeletedItemIds = mergedDeletedItemIds || {};
       Object.keys(nextDay.deletedItemIds).forEach((id) => {
         const incomingTs = Number(nextDay.deletedItemIds[id]) || 0;
         const existingTs = Number(mergedDeletedItemIds[id]) || 0;
         if (incomingTs > existingTs) mergedDeletedItemIds[id] = incomingTs;
-      });
-    }
-
-    const prevHasMeals = Array.isArray(prevDay.meals) && prevDay.meals.length > 0;
-    const nextHasMeals = Array.isArray(nextDay.meals);
-    if (mutationTs > 0 && prevHasMeals && nextHasMeals) {
-      const prevIds = collectItemIdsByMeal(prevDay);
-      const nextIds = collectItemIdsByMeal(nextDay);
-      prevIds.forEach((id) => {
-        if (nextIds.has(id)) return;
-        const existingTs = mergedDeletedItemIds && Number(mergedDeletedItemIds[id]) || 0;
-        if (existingTs >= mutationTs) return; // tombstone уже свежее или равно — idempotency
-        mergedDeletedItemIds = mergedDeletedItemIds || {};
-        mergedDeletedItemIds[id] = mutationTs;
-        dayChanged = true;
       });
     }
 

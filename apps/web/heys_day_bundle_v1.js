@@ -10939,7 +10939,13 @@
                         if (meal.id !== mealId) return meal;
                         return { ...meal, items: (meal.items || []).filter((it) => it.id !== itId) };
                     });
-                    const nextDayData = { ...baseDay, meals, updatedAt: removedUpdatedAt };
+                    // Explicit item tombstone: this is a deliberate user delete, so
+                    // record it in deletedItemIds. mergeItemsById uses it to keep the
+                    // deletion from being resurrected by a stale copy on another device.
+                    // (The stamper no longer auto-emits tombstones from diffs — only
+                    // explicit deletes like this one are honoured. See heys_sync_merge_v1.)
+                    const nextDeletedItemIds = { ...(baseDay.deletedItemIds || {}), [itId]: removedUpdatedAt };
+                    const nextDayData = { ...baseDay, meals, deletedItemIds: nextDeletedItemIds, updatedAt: removedUpdatedAt };
                     persistDayData(nextDayData, 'remove_item');
                     setDay(() => nextDayData);
 
@@ -10958,11 +10964,18 @@
                             return meal;
                         }
 
-                        items.splice(Math.max(0, Math.min(ctxItemIndex, items.length)), 0, ctxRemovedItem);
+                        // Fresh updatedAt so the restored item out-timestamps the
+                        // delete tombstone even if it unions back from cloud on merge.
+                        items.splice(Math.max(0, Math.min(ctxItemIndex, items.length)), 0, { ...ctxRemovedItem, updatedAt: undoUpdatedAt });
                         return { ...meal, items };
                     });
 
-                    const nextDayData = { ...baseDay, meals, updatedAt: undoUpdatedAt };
+                    // Clear the tombstone we set on delete — otherwise the restored
+                    // item (older updatedAt) would be filtered out as "deleted" by
+                    // mergeItemsById on the next sync.
+                    const nextDeletedItemIds = { ...(baseDay.deletedItemIds || {}) };
+                    delete nextDeletedItemIds[ctxRemovedItem.id];
+                    const nextDayData = { ...baseDay, meals, deletedItemIds: nextDeletedItemIds, updatedAt: undoUpdatedAt };
                     persistDayData(nextDayData, 'undo_remove_item');
                     setDay(() => nextDayData);
                     recalculateOrphanProducts();
