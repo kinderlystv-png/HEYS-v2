@@ -140,9 +140,16 @@
     all.updatedAt = Date.now();
     _writeAll(all);
 
-    // 152-ФЗ: health_data (mvcKg/holdTime/addedKg) категорически нельзя в
-    // eventLog payload — SAFE_PAYLOAD_KEYS (heys_event_log_v1.js:38-50) их
-    // фильтрует на '<filtered>'. Логируем только safe keys.
+    // 152-ФЗ: mvcKg/holdTime/addedKg — health_data, категория «физическая
+    // активность» (privacy policy раздел 5.1). В eventLog payload нельзя —
+    // SAFE_PAYLOAD_KEYS (heys_event_log_v1.js:38-50) фильтрует их на '<filtered>'.
+    // В основной storage (этот файл, _writeAll выше) — пишутся by design:
+    // синкаются в client_kv_store на серверах Yandex.Cloud РФ (см. privacy 6.2/7.2)
+    // через generic sync interceptor (isOurKey пропускает префикс heys_, denylist
+    // их не исключает). dayv2-канал с тем же addedWeightKg в fingersLog.exercises[]
+    // покрыт server-side encryption через is_health_key() regex; records_v1 пока
+    // нет — это осознанное состояние, см. план spicy-wibbling-tulip.md B17′ (A).
+    // Здесь логируем только safe keys.
     _eventLog('finger-pr-update', `PR for ${slug}`, { source: stamped.source });
 
     return true;
