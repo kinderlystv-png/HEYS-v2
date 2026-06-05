@@ -1525,6 +1525,24 @@
     } catch (_) { return false; }
   }
 
+  // B6: reader недавней finger-боли (dayv2 за lookbackDays). Reuse приватных
+  // _readDayDiary/_formatDateKey; pure-детект — Fingers.painGate.dayHasFingerPain.
+  // Возвращает { hasPain, daysAgo? } для grip-gating в конструкторе.
+  function _recentFingerPain(lookbackDays) {
+    const n = Math.max(1, Math.min(30, lookbackDays || 7));
+    const pg = Fingers.painGate;
+    if (!pg || typeof pg.dayHasFingerPain !== 'function') return { hasPain: false };
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const day = _readDayDiary(_formatDateKey(d));
+      if (day && pg.dayHasFingerPain(day)) return { hasPain: true, daysAgo: i };
+    }
+    return { hasPain: false };
+  }
+  Fingers.recentFingerPain = _recentFingerPain;
+
   /**
    * Один проход по последним 365 дням → streak, totals, последние 5 сессий.
    * @returns {{streak:number, totalSessions:number, totalHolds:number, totalMinutes:number, lastSessions:Array}}

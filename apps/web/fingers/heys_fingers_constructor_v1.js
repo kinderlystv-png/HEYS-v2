@@ -843,8 +843,14 @@
     const ageFiltered = (Fingers.ageGate && typeof Fingers.ageGate.filterGrips === 'function')
       ? Fingers.ageGate.filterGrips(allGrips, userAge)
       : allGrips;
+    // B6: при недавней finger-боли убираем full crimp / mono из выбора (fail-safe,
+    // A2/A4 шкивы). painGate читает боль из dayv2 (B1: hadPain/setFeedback.pain).
+    const painInfo = (Fingers.recentFingerPain && Fingers.recentFingerPain()) || { hasPain: false };
+    const gripChoices = (painInfo.hasPain && Fingers.painGate && Fingers.painGate.filterGripsForPain)
+      ? Fingers.painGate.filterGripsForPain(ageFiltered, true)
+      : ageFiltered;
     const grip = (Fingers.getGripById && Fingers.getGripById(ex.gripId))
-      || ageFiltered[0]
+      || gripChoices[0]
       || { id: ex.gripId, label: ex.gripId, primaryMuscles: [], icon: '🖐' };
 
     const els = [];
@@ -853,9 +859,18 @@
     els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove)));
     els.push(R.createElement(R.Fragment, { key: 'hero' }, renderHero(grip)));
 
+    // B6: примечание почему скрыты risky-хваты (если недавняя боль).
+    if (painInfo.hasPain) {
+      els.push(R.createElement('div', {
+        key: 'pain-note',
+        className: 'fingers-c-pain-note',
+        style: { fontSize: 13, lineHeight: 1.4, padding: '8px 12px', marginBottom: 8,
+          borderRadius: 8, background: 'rgba(220,38,38,0.10)', color: '#fca5a5' }
+      }, '🩹 Недавно была боль в пальцах — full crimp и mono временно скрыты. Дай связкам восстановиться.'));
+    }
     // iOS form-grouped: каждое поле — отдельная row с label слева, value справа.
     els.push(R.createElement(R.Fragment, { key: 'grip' },
-      renderGripSelect(ex.gripId, ageFiltered, function (nid) { patch({ gripId: nid }); }, exIdx)));
+      renderGripSelect(ex.gripId, gripChoices, function (nid) { patch({ gripId: nid }); }, exIdx)));
     els.push(R.createElement(R.Fragment, { key: 'edge' },
       renderEdgeSelect(userBoard, ex.gripId, ex.edgeSizeMm, function (mm) { patch({ edgeSizeMm: mm }); }, exIdx)));
 
