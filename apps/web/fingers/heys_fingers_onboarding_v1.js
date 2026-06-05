@@ -81,6 +81,9 @@
         age: ageFromBirth || ageFromProfile || null,
         climbingYears: Number(fp.climbingYears) || 0,
         maxVGrade: fp.maxVGrade || null,
+        // B16: цель тренировки. null → трактуется как 'strength' (старое
+        // grade-поведение), чтобы апгрейд не менял рекомендации существующим.
+        goal: fp.goal || null,
         hasFingerboard: fp.hasFingerboard !== false,
         hasScale: !!fp.hasScale,
         fingerboardId: fp.fingerboardId || 'beastmaker_1000',
@@ -149,6 +152,7 @@
         themeId: state.themeId,
         climbingYears: state.profile?.climbingYears,
         maxVGrade: state.profile?.maxVGrade,
+        goal: state.profile?.goal,
         hasFingerboard: state.profile?.hasFingerboard,
         hasScale: state.profile?.hasScale,
         fingerboardId: state.profile?.fingerboardId,
@@ -205,6 +209,9 @@
     if (profile.noEquipment || profile.hasFingerboard === false) return 'nelson_no_hangs';
     const age = Number(profile.age);
     if (Number.isFinite(age) && age < 14) return 'nelson_no_hangs';
+    // B16: цель перебивает grade-логику для non-strength целей.
+    if (profile.goal === 'rehab') return 'nelson_no_hangs';
+    if (profile.goal === 'endurance' || profile.goal === 'maintenance') return 'repeaters_7_3';
     const g = profile.maxVGrade;
     if (g === 'V0-V2' || g === 'V3-V4' || g === 'none') return 'beastmaker_1000_beginner';
     if (g === 'V5-V6') return 'repeaters_7_3';
@@ -312,6 +319,9 @@
   function _renderProfile(state, setState) {
     const GRADES = ['V0-V2', 'V3-V4', 'V5-V6', 'V7-V8', 'V9+', 'none'];
     const GRADE_LABELS = { 'V0-V2': 'V0-V2', 'V3-V4': 'V3-V4', 'V5-V6': 'V5-V6', 'V7-V8': 'V7-V8', 'V9+': 'V9+', 'none': 'Не лажу' };
+    // B16: цель тренировки. Влияет на рекомендацию программы.
+    const GOALS = ['strength', 'endurance', 'rehab', 'maintenance'];
+    const GOAL_LABELS = { strength: '💪 Сила', endurance: '🔄 Выносливость', rehab: '🩹 Реабилитация', maintenance: '⚖️ Поддержание' };
 
     function updateProfile(patch) {
       const profile = Object.assign({}, state.profile, patch);
@@ -388,6 +398,17 @@
               onClick: () => updateProfile({ maxVGrade: g }),
               className: 'fingers-ob-chip' + (state.profile.maxVGrade === g ? ' is-active' : '')
             }, GRADE_LABELS[g]))
+          )
+        ),
+        h('div', null,
+          h('div', { className: 'fingers-ob-label' }, 'Цель тренировок'),
+          h('div', { className: 'fingers-ob-chip-row' },
+            GOALS.map((gl) => h('button', {
+              key: gl,
+              type: 'button',
+              onClick: () => updateProfile({ goal: gl }),
+              className: 'fingers-ob-chip' + (state.profile.goal === gl ? ' is-active' : '')
+            }, GOAL_LABELS[gl]))
           )
         )
       ),

@@ -286,6 +286,13 @@
     if (!eligible.length) return null;
     const eligibleIds = new Set(eligible.map(function (p) { return p.id; }));
 
+    // B16: цель перебивает grade-prefs для non-strength целей, если
+    // целевая программа eligible. 'strength'/undefined → grade-логика ниже.
+    const goalForced = fp.goal === 'rehab' ? 'nelson_no_hangs'
+      : (fp.goal === 'endurance' || fp.goal === 'maintenance') ? 'repeaters_7_3'
+      : null;
+    if (goalForced && eligibleIds.has(goalForced)) return goalForced;
+
     const g = fp.maxVGrade || 'V3-V4';
     const prefs = _gradePreferenceList(g);
     for (let i = 0; i < prefs.length; i++) {
@@ -358,6 +365,229 @@
           );
         })
       ) : null
+    );
+  }
+
+  // --- Today tab (B0): proactive home screen ---
+  // Собирает readiness.assess + cooldownCheck + getRecommendedProgramId
+  // в один view с одной кнопкой Start. Заменяет дефолт open-Programs.
+  function _buildTodayData(todayKey) {
+    const data = {
+      bucket: 'max',        // final (min из readiness + cooldown)
+      readinessBucket: null, // raw из assess
+      score: null,
+      reasons: [],
+      cooldown: null,
+      recommendedProgram: null,
+      profileIncomplete: false,
+    };
+    const profile = getProfile();
+    const ageNum = Number(profile.age);
+    if (!Number.isFinite(ageNum)) {
+      data.profileIncomplete = true;
+      data.bucket = 'unknown';
+      return data;
+    }
+    try {
+      const rIn = _buildReadinessInputs(todayKey);
+      const r = Fingers.readiness && Fingers.readiness.assess
+        ? Fingers.readiness.assess(rIn.today, rIn.history)
+        : null;
+      if (r) {
+        data.readinessBucket = r.bucket;
+        data.score = r.score;
+        if (Array.isArray(r.reasons)) data.reasons = r.reasons.slice();
+      }
+    } catch (e) { console.warn('[Today] readiness assess failed:', e); }
+    try {
+      data.cooldown = (Fingers.cooldownCheck && Fingers.cooldownCheck()) || null;
+    } catch (e) { console.warn('[Today] cooldownCheck failed:', e); }
+    // Final bucket — пересечение: берём минимум (более осторожный).
+    const readinessRank = { 'rest-day': 0, 'recovery-only': 1, 'moderate-only': 2, 'max-protocol-ok': 3 };
+    const cooldownRank = { rest: 0, recovery: 1, moderate: 2, max: 3 };
+    const rRank = data.readinessBucket != null ? readinessRank[data.readinessBucket] : 3;
+    const cRank = data.cooldown ? cooldownRank[data.cooldown.recommendation] : 3;
+    const finalRank = Math.min(rRank, cRank);
+    data.bucket = ['rest', 'recovery', 'moderate', 'max'][finalRank];
+    // Recommended program — клампим к потолку бакета (safety). См.
+    // _recommendForBucket: getRecommendedProgramId() слепа к интенсивности и
+    // в recovery/moderate-день вернула бы max-протокол, противоречащий бейджу.
+    try {
+      data.recommendedProgram = _recommendForBucket(data.bucket);
+    } catch (e) { console.warn('[Today] recommend failed:', e); }
+    return data;
+  }
+
+  // Рекомендует программу, интенсивность которой не выше дневного safety-потолка
+  // (data.bucket из readiness ∩ cooldown). Сначала пытается оставить штатную
+  // рекомендацию getRecommendedProgramId(), если она в пределах потолка; иначе
+  // понижает до самой тяжёлой допустимой среди age+equipment-eligible. rest/
+  // unknown → null (Start всё равно скрыт через allowStart=false).
+  function _recommendForBucket(bucket) {
+    const ceil = ({ recovery: 1, moderate: 2, max: 3 })[bucket] || 0;
+    if (!ceil) return null;
+    const iRank = function (p) {
+      return ({ recovery: 1, moderate: 2, max: 3 })[(p && p.intensity) || 'moderate'] || 2;
+    };
+    const programs = Array.isArray(Fingers.PROGRAMS) ? Fingers.PROGRAMS : [];
+    const fp = getProfile();
+    // 1) Штатная рекомендация — оставляем, если в пределах потолка.
+    try {
+      const recId = getRecommendedProgramId();
+      const prog = recId ? programs.find(function (p) { return p.id === recId; }) : null;
+      if (prog && iRank(prog) <= ceil) return prog;
+    } catch (_) {}
+    // 2) Иначе — самая тяжёлая допустимая среди age+equipment-eligible
+    //    (те же гейты, что в getRecommendedProgramId / ProgramsTab).
+    const ageNum = Number(fp.age);
+    const ageFiltered = (Fingers.ageGate && Fingers.ageGate.filterPrograms)
+      ? Fingers.ageGate.filterPrograms(programs, ageNum) : programs;
+    const eqOpts = {
+      equipmentTypes: Array.isArray(fp.equipmentTypes) ? fp.equipmentTypes : null,
+      noEquipment: !!fp.noEquipment,
+      blockMode: !!fp.blockMode,
+      edgeLimit: fp.edgeLimit
+    };
+    const eligible = (Fingers.filterProgramsByEquipment
+      ? Fingers.filterProgramsByEquipment(ageFiltered, eqOpts) : ageFiltered)
+      .filter(function (p) { return iRank(p) <= ceil; });
+    if (!eligible.length) return null;
+    eligible.sort(function (a, b) { return iRank(b) - iRank(a); });
+    return eligible[0];
+  }
+
+  function _bucketMeta(bucket) {
+    // Returns { emoji, title, color, allowStart }
+    if (bucket === 'unknown') return { emoji: '🎂', title: 'Сегодня — заполни возраст', color: '#6b7280', allowStart: false };
+    if (bucket === 'rest')     return { emoji: '🛌', title: 'Сегодня — отдых', color: '#6b7280', allowStart: false };
+    if (bucket === 'recovery') return { emoji: '🟢', title: 'Сегодня — восстановление', color: '#10b981', allowStart: true };
+    if (bucket === 'moderate') return { emoji: '🟡', title: 'Сегодня — умеренная', color: '#f59e0b', allowStart: true };
+    if (bucket === 'max')      return { emoji: '🔴', title: 'Сегодня — максимум', color: '#dc2626', allowStart: true };
+    return { emoji: '❓', title: 'Сегодня', color: '#6b7280', allowStart: false };
+  }
+
+  function _formatHoursAgo(hours) {
+    if (hours == null) return null;
+    if (hours < 1) return 'меньше часа назад';
+    if (hours < 24) return Math.round(hours) + ' ч назад';
+    const days = Math.round(hours / 24);
+    return days === 1 ? 'вчера' : days + ' дн. назад';
+  }
+
+  function TodayTab({ onPickProgram, onSwitchToPrograms, onSwitchToConstructor, onRequestOnboarding }) {
+    const todayKey = useMemo(function () {
+      const d = new Date();
+      return _formatDateKey(d);
+    }, []);
+    // Re-compute on mount + при возвращении на таб; не пересчитываем на каждый
+    // render. Cooldown/readiness меняются медленно — раз в открытие достаточно.
+    const data = useMemo(function () { return _buildTodayData(todayKey); }, [todayKey]);
+    const meta = _bucketMeta(data.bucket);
+
+    // Profile incomplete — CTA на onboarding, никаких рекомендаций.
+    if (data.profileIncomplete) {
+      return h('div', { className: 'fingers-fs-empty', style: { padding: 24, textAlign: 'center' } },
+        h('div', { style: { fontSize: 40, marginBottom: 12 } }, meta.emoji),
+        h('h3', { style: { margin: '0 0 8px', fontSize: 17 } }, meta.title),
+        h('p', { style: { fontSize: 14, opacity: 0.75, marginBottom: 16 } },
+          'Без возраста не можем подобрать безопасные программы'),
+        h('button', {
+          type: 'button',
+          className: 'fingers-fs-btn fingers-fs-btn--primary',
+          onClick: onRequestOnboarding
+        }, 'Заполнить профиль')
+      );
+    }
+
+    const cdHint = data.cooldown && data.cooldown.hoursSinceLast != null
+      ? _formatHoursAgo(data.cooldown.hoursSinceLast) +
+        (data.cooldown.lastWasMax ? ' — была max-нагрузка' : '')
+      : 'Первая тренировка';
+
+    // Build reasons-list: top-3 из readiness + cooldown hint отдельной строкой.
+    const reasonItems = (data.reasons || []).slice(0, 3);
+
+    return h('div', { className: 'fingers-fs-today', style: { padding: '8px 0 16px' } },
+      // Hero card
+      h('div', {
+        className: 'fingers-fs-today__hero',
+        style: {
+          padding: 20,
+          borderRadius: 14,
+          background: 'linear-gradient(135deg, ' + meta.color + '22 0%, ' + meta.color + '0a 100%)',
+          border: '1px solid ' + meta.color + '40',
+          marginBottom: 16
+        }
+      },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 } },
+          h('span', { style: { fontSize: 32, lineHeight: 1 }, 'aria-hidden': 'true' }, meta.emoji),
+          h('div', null,
+            h('h2', { style: { margin: 0, fontSize: 20, fontWeight: 700, color: meta.color } }, meta.title),
+            data.score != null
+              ? h('div', { style: { fontSize: 13, opacity: 0.7, marginTop: 2 } },
+                  'Индекс готовности: ' + data.score + '/100')
+              : null
+          )
+        ),
+        // Cooldown hint + reasons
+        h('div', { style: { marginTop: 12, fontSize: 14, lineHeight: 1.5 } },
+          h('div', { style: { opacity: 0.8, marginBottom: 6 } }, '· ' + cdHint),
+          reasonItems.map(function (r, i) {
+            return h('div', { key: i, style: { opacity: 0.8 } }, '· ' + r);
+          })
+        )
+      ),
+
+      // Recommendation
+      data.recommendedProgram && meta.allowStart
+        ? h('div', { className: 'fingers-fs-today__rec', style: { marginBottom: 16 } },
+            h('div', { style: { fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6, marginBottom: 8 } },
+              'Рекомендуем'),
+            h('div', {
+              style: {
+                padding: 16,
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.03)'
+              }
+            },
+              h('div', { style: { fontSize: 16, fontWeight: 600, marginBottom: 4 } },
+                data.recommendedProgram.name || data.recommendedProgram.id),
+              h('div', { style: { fontSize: 13, opacity: 0.7, marginBottom: 12 } },
+                intensityLabel(data.recommendedProgram.intensity || 'moderate')),
+              h('button', {
+                type: 'button',
+                className: 'fingers-fs-btn fingers-fs-btn--primary',
+                style: { width: '100%' },
+                onClick: function () { onPickProgram && onPickProgram(data.recommendedProgram); }
+              }, 'Начать тренировку →')
+            )
+          )
+        : null,
+
+      // Rest-day messaging (no Start CTA)
+      !meta.allowStart && !data.profileIncomplete
+        ? h('div', { style: { padding: 16, fontSize: 14, opacity: 0.75, textAlign: 'center', marginBottom: 16 } },
+            data.bucket === 'rest'
+              ? 'Сегодня лучше отдохнуть. Прогресс не делается через переутомление.'
+              : 'Подходящих программ нет — посмотри каталог или собери свою.')
+        : null,
+
+      // Escape hatches
+      h('div', { style: { display: 'flex', gap: 8, fontSize: 13 } },
+        h('button', {
+          type: 'button',
+          className: 'fingers-fs-btn',
+          style: { flex: 1 },
+          onClick: onSwitchToPrograms
+        }, 'Все протоколы'),
+        h('button', {
+          type: 'button',
+          className: 'fingers-fs-btn',
+          style: { flex: 1 },
+          onClick: onSwitchToConstructor
+        }, 'Свой конструктор')
+      )
     );
   }
 
@@ -2390,7 +2620,7 @@
   Fingers.SettingsSheet = FingersSettingsSheet;
 
   function SessionUI({ dateKey, trainingIndex, mode, onClose, onRequestOnboarding }) {
-    const [tab, setTab] = useState('programs');
+    const [tab, setTab] = useState('today');
     const [exercises, setExercises] = useState([]);
     // showBib: false | true | {focusSourceId: string} — last form открывает
     // модалку с автоскроллом и expanded card конкретного источника.
@@ -2831,6 +3061,11 @@
       );
     };
     const ICONS = {
+      today: svgIcon([
+        { tag: 'path', attrs: { d: 'M3.5 10.5L11 4l7.5 6.5' } },
+        { tag: 'path', attrs: { d: 'M5.5 9.5v8.5h11V9.5' } },
+        { tag: 'path', attrs: { d: 'M9 18.5v-4h4v4' } }
+      ]),
       programs: svgIcon([
         { tag: 'path', attrs: { d: 'M4 4.5h10a2.5 2.5 0 0 1 2.5 2.5v11' } },
         { tag: 'path', attrs: { d: 'M4 4.5v13a2 2 0 0 0 2 2h10.5' } },
@@ -2851,6 +3086,7 @@
       ])
     };
     const tabs = [
+      { id: 'today',       label: 'Сегодня',     icon: ICONS.today },
       { id: 'programs',    label: 'Протоколы',   icon: ICONS.programs },
       { id: 'constructor', label: 'Конструктор', icon: ICONS.constructor },
       { id: 'progress',    label: 'Прогресс',    icon: ICONS.progress },
@@ -2973,6 +3209,12 @@
 
       // Tab content
       h('div', { className: 'fingers-fs-tab-content' },
+        tab === 'today' && h(TodayTab, {
+          onPickProgram: handlePickProgram,
+          onSwitchToPrograms: function () { setTab('programs'); },
+          onSwitchToConstructor: function () { setTab('constructor'); },
+          onRequestOnboarding: onRequestOnboarding
+        }),
         tab === 'programs' && h(ProgramsTab, {
           onPickProgram: handlePickProgram,
           onRequestOnboarding: onRequestOnboarding,
@@ -3196,6 +3438,9 @@
   // --- Exports ---
   Fingers.SessionUI = SessionUI;
   Fingers.getRecommendedProgramId = getRecommendedProgramId;
+  // Exposed for tests (B0 Today Coach): safety-clamp рекомендации к бакету.
+  Fingers._recommendForBucket = _recommendForBucket;
+  Fingers._buildTodayData = _buildTodayData;
 
   Fingers.startSession = function startSession(opts) {
     // Stub for future direct session launch from outside fullscreen.
