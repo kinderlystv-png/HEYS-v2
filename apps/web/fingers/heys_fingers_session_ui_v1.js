@@ -1500,7 +1500,29 @@
         };
       }
     } catch (_) {}
+    // B9: недавний пропуск разогрева → флаг для readiness-штрафа.
+    if (_warmupSkippedRecently()) {
+      today.fingers = Object.assign({}, today.fingers, { warmupSkippedRecently: true });
+    }
     return { today: today, history: history };
+  }
+
+  // B9: персист/чтение отметки «пропустил разогрев». Scoped по клиенту
+  // (паттерн heys_<cid>_fingers_*). Влияет на readiness следующей сессии в
+  // пределах 48ч (штраф в readiness.assess).
+  function _warmupSkipKey() {
+    const cid = (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
+    return cid ? ('heys_' + cid + '_fingers_warmup_skip_v1') : 'heys_fingers_warmup_skip_v1';
+  }
+  function _recordWarmupSkip() {
+    try { if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet(_warmupSkipKey(), Date.now()); } catch (_) { /* noop */ }
+  }
+  function _warmupSkippedRecently() {
+    try {
+      const u = HEYS.utils;
+      const at = u && u.lsGet ? Number(u.lsGet(_warmupSkipKey(), 0)) : 0;
+      return at > 0 && (Date.now() - at) < 48 * 3600e3;
+    } catch (_) { return false; }
   }
 
   /**
@@ -2828,6 +2850,9 @@
     const [warmupActive, setWarmupActive] = useState(false);
     // 'ramp' (полная 15-20 мин до max) | 'quick' (5-8 мин targeted на пальцы/кисть)
     const [warmupProtocol, setWarmupProtocol] = useState('ramp');
+    // B9: разминка пройдена в этом открытии сессии? Старт по «Всё ОК» без неё →
+    // _recordWarmupSkip (штраф readiness в следующий раз).
+    const warmedUpRef = React.useRef(false);
     // pendingResume — снапшот незавершённой сессии для постоянного баннера наверху.
     // Заполняется при монтировании если persistence.load() вернул свежий snapshot.
     // null → нет прерванной сессии, баннер не рисуется.
@@ -3149,6 +3174,7 @@
             className: 'fingers-fs-preflight-go',
             onClick: function () {
               try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
+              if (!warmedUpRef.current) _recordWarmupSkip(); // B9
               setLiveActive(true);
             } },
         ];
@@ -3157,6 +3183,7 @@
         preflightOpts.cancelText = 'Отмена';
         preflightOpts.onConfirm = function () {
           try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
+          if (!warmedUpRef.current) _recordWarmupSkip(); // B9
           setLiveActive(true);
         };
       }
@@ -3168,6 +3195,7 @@
     // Юзер дотыкает оставшиеся чек-пункты (нет боли, не на холодные руки) и стартует.
     const handleWarmupDone = useCallback(function () {
       setWarmupActive(false);
+      warmedUpRef.current = true; // B9: разминка пройдена → старт не штрафуется.
       // Defer re-open чтобы предыдущий ConfirmModal успел размонтироваться.
       setTimeout(function () { handleStartLive(); }, 50);
     }, [handleStartLive]);
