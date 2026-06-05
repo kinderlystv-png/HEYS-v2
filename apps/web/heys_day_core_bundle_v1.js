@@ -3691,13 +3691,32 @@
 
                 // Если date не указан, совпадает с текущим, или текущий есть в batch.dates — перезагружаем
                 const isBatchForCurrentDate = e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date);
-                if (!(!updatedDate || updatedDate === date || isBatchForCurrentDate)) {
-                    // Diagnostics-only: the event is not for the tab's current date. Records why
-                    // the handler does nothing (was a silent return — masked PIN→curator stalls).
-                    recordDayDecision('NOT_FOR_CURRENT', source, 'evt ' + (updatedDate || '∅') + ' vs tab ' + date
-                        + (e.detail?.batch ? ' batch[' + ((e.detail?.dates || []).join(',')) + ']' : ''));
+                const matchesCurrent = !updatedDate || updatedDate === date || isBatchForCurrentDate;
+                // ROOT of "PIN edits don't show on the curator while the tab is active"
+                // (2026-06-05): the recurring fetchDays batch sometimes omits the viewed
+                // date (batch[06-01..06-04] while the user is on 06-05), and a hot-sync
+                // dayv2 write only dispatches a matching day-updated when it actually
+                // wrote (skips on currentRaw===serialized / stale-guard). So the viewed
+                // day's LS can advance with NO event that targets it → the screen froze
+                // on stale grams. On ANY day-updated signal, also check whether the
+                // CURRENT day's LS is newer than what React loaded, and refresh if so.
+                // The apply guards below dedup true no-ops, so this can't cause churn.
+                let currentDayLsNewer = false;
+                if (!matchesCurrent) {
+                    try {
+                        if (_readDayV2Cache) _readDayV2Cache.invalidate((HEYS.currentClientId || '') + '|' + date);
+                        const __lsDayVal = readDayV2(date, lsGet).value;
+                        const __lsTs = (__lsDayVal && __lsDayVal.updatedAt) || 0;
+                        currentDayLsNewer = __lsTs > (lastLoadedUpdatedAtRef.current || 0);
+                    } catch (_) { /* noop */ }
+                    if (!currentDayLsNewer) {
+                        recordDayDecision('NOT_FOR_CURRENT', source, 'evt ' + (updatedDate || '∅') + ' vs tab ' + date
+                            + (e.detail?.batch ? ' batch[' + ((e.detail?.dates || []).join(',')) + ']' : '') + ', LS not newer');
+                    } else {
+                        recordDayDecision('CURRENT_DAY_LS_NEWER', source, 'evt for other date, but ' + date + ' LS advanced — refreshing');
+                    }
                 }
-                if (!updatedDate || updatedDate === date || isBatchForCurrentDate) {
+                if (matchesCurrent || currentDayLsNewer) {
                     lastDayApplySourceRef.current = source;
                     pendingDayForceReloadRef.current = pendingDayForceReloadRef.current || !!forceReload;
                     if (pendingDayApplyRafRef.current != null) {
