@@ -13,7 +13,7 @@
             const b = (global.HEYS._dayDiagBuffers = global.HEYS._dayDiagBuffers || { applyDecisions: [] });
             if (!Array.isArray(b.applyDecisions)) b.applyDecisions = [];
             b.applyDecisions.push({ ts: Date.now(), decision, source: source || '—', reason: reason || '' });
-            if (b.applyDecisions.length > 20) b.applyDecisions.shift();
+            if (b.applyDecisions.length > 100) b.applyDecisions.shift();
         } catch (_) { /* noop — diagnostics must never break the handler */ }
     }
 
@@ -577,6 +577,12 @@
 
                 // Если date не указан, совпадает с текущим, или текущий есть в batch.dates — перезагружаем
                 const isBatchForCurrentDate = e.detail?.batch && Array.isArray(e.detail?.dates) && e.detail.dates.includes(date);
+                if (!(!updatedDate || updatedDate === date || isBatchForCurrentDate)) {
+                    // Diagnostics-only: the event is not for the tab's current date. Records why
+                    // the handler does nothing (was a silent return — masked PIN→curator stalls).
+                    recordDayDecision('NOT_FOR_CURRENT', source, 'evt ' + (updatedDate || '∅') + ' vs tab ' + date
+                        + (e.detail?.batch ? ' batch[' + ((e.detail?.dates || []).join(',')) + ']' : ''));
+                }
                 if (!updatedDate || updatedDate === date || isBatchForCurrentDate) {
                     lastDayApplySourceRef.current = source;
                     pendingDayForceReloadRef.current = pendingDayForceReloadRef.current || !!forceReload;
@@ -940,6 +946,12 @@
                                     ? HEYS.dayUtils.isSameDayStorageMergeContent(prevDay, mergedForReturn)
                                     : false;
                                 if (eq) {
+                                    // Diagnostics: APPLIED was recorded above, but the reducer keeps
+                                    // prevDay because isSameDayStorageMergeContent says content is equal.
+                                    // If the screen is stale yet this fires, that equality check is the
+                                    // false-positive masking PIN's change (records the prev/next stamps).
+                                    recordDayDecision('SAME_STORAGE_MERGE_SKIP', source,
+                                        'kept React updatedAt ' + (prevDay && prevDay.updatedAt) + ' over storage ' + storageUpdatedAt);
                                     return prevDay;
                                 }
                             }

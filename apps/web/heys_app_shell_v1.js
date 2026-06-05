@@ -1536,8 +1536,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         const dec = (window.HEYS && window.HEYS._dayDiagBuffers && Array.isArray(window.HEYS._dayDiagBuffers.applyDecisions))
                             ? window.HEYS._dayDiagBuffers.applyDecisions : [];
                         if (dec.length) {
-                            extraLines.push('  --- recent apply decisions (last 12: ago_ms | source | decision) ---');
-                            dec.slice(-12).reverse().forEach(d => extraLines.push(
+                            extraLines.push('  --- recent apply decisions (last 30: ago_ms | source | decision) ---');
+                            dec.slice(-30).reverse().forEach(d => extraLines.push(
                                 `  ${Date.now() - d.ts}ms | ${d.source} | ${d.decision}${d.reason ? ' (' + d.reason + ')' : ''}`));
                         } else {
                             extraLines.push('  (no apply decisions recorded — day-update handler did not reach any branch)');
