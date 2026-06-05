@@ -480,6 +480,34 @@
     return touched ? out : exercises;
   }
 
+  // B1/B19: чистая сборка контракта fingersLog («finish → дневник»). Вынесена
+  // из handleComplete ради unit-тестов happy-path. opts:
+  //   { programId, feedback, viaTimer, nowIso? }.
+  // hadPain ставится только при наличии боли в каком-либо сете. Additive:
+  // без feedback exercises остаётся прежним (см. _mergeSetFeedback).
+  function _buildFingersLog(exercises, opts) {
+    const o = opts || {};
+    const list = Array.isArray(exercises) ? exercises : [];
+    const totalMin = list.reduce(function (s, e) {
+      const oneSet = (e.hangSec + e.restSec) * e.repsPerSet + e.restBetweenSetsSec;
+      return s + (oneSet * e.setsCount) / 60;
+    }, 0);
+    const loggedExercises = _mergeSetFeedback(list, o.feedback);
+    const hadPain = loggedExercises.some(function (e) {
+      return Array.isArray(e.setFeedback) && e.setFeedback.some(function (f) { return f && f.pain; });
+    });
+    const fingersLog = {
+      version: 1,
+      programId: o.programId || 'custom',
+      totalDurationMinutes: Math.round(totalMin),
+      exercises: loggedExercises,
+      completedAt: o.nowIso || new Date().toISOString(),
+      viaTimer: !!o.viaTimer
+    };
+    if (hadPain) fingersLog.hadPain = true;
+    return fingersLog;
+  }
+
   function _bucketMeta(bucket) {
     // Returns { emoji, title, color, allowStart }
     if (bucket === 'unknown') return { emoji: '🎂', title: 'Сегодня — заполни возраст', color: '#6b7280', allowStart: false };
@@ -2939,25 +2967,13 @@
       const o = opts || {};
       if (!exercises.length) return;
       const programId = pendingProgram?.id || 'custom';
-      const totalMin = exercises.reduce(function (s, e) {
-        const oneSet = (e.hangSec + e.restSec) * e.repsPerSet + e.restBetweenSetsSec;
-        return s + (oneSet * e.setsCount) / 60;
-      }, 0);
-      // B1: вмерживаем per-set RPE/боль (если были собраны через таймер).
-      // Additive — без feedback loggedExercises === exercises (контракт прежний).
-      const loggedExercises = _mergeSetFeedback(exercises, o.feedback);
-      const hadPain = loggedExercises.some(function (e) {
-        return Array.isArray(e.setFeedback) && e.setFeedback.some(function (f) { return f && f.pain; });
-      });
-      const fingersLog = {
-        version: 1,
+      // B1/B19: сборка контракта вынесена в чистый _buildFingersLog (unit-tested).
+      // Additive — без o.feedback exercises остаётся прежним.
+      const fingersLog = _buildFingersLog(exercises, {
         programId: programId,
-        totalDurationMinutes: Math.round(totalMin),
-        exercises: loggedExercises,
-        completedAt: new Date().toISOString(),
-        viaTimer: !!o.viaTimer // true если завершено через ведомый таймер
-      };
-      if (hadPain) fingersLog.hadPain = true;
+        feedback: o.feedback,
+        viaTimer: o.viaTimer
+      });
       let saveOk = true;
       try {
         HEYS.TrainingStep?.saveFingers?.(
@@ -3602,6 +3618,8 @@
   Fingers._buildTodayData = _buildTodayData;
   // Exposed for tests (B1): additive merge per-set feedback в fingersLog.
   Fingers._mergeSetFeedback = _mergeSetFeedback;
+  // Exposed for tests (B19): чистая сборка контракта fingersLog.
+  Fingers._buildFingersLog = _buildFingersLog;
 
   Fingers.startSession = function startSession(opts) {
     // Stub for future direct session launch from outside fullscreen.
