@@ -44,10 +44,17 @@
             const diffEaten = Math.abs(prevEaten - roundedEaten);
             if (diffOptimum < 5 && diffEaten < 5) return;
 
-            // Anti-loop throttle: если за последние 2с уже писали ровно те же значения — skip
+            // Anti-loop throttle: skip ANY write within 2s of the previous one, not just
+            // identical values. The feedback loop (setDay → energyCtx invalidate →
+            // caloricDebt → displayOptimum) ALTERNATES between two values ≥5 kcal apart
+            // (e.g. after a large meal), so the old same-value throttle never matched and
+            // the deadband (<5) didn't catch it → ~90 setDay/sec re-render + data-saved
+            // storm (curator 2026-06-05). A time gate breaks the cycle: after the first
+            // write, 2s of silence lets caloricDebt settle, then the deadband stops it.
+            // saved* is a display cache (recomputed on load), so a ≤2s lag is harmless.
             const now = Date.now();
             const lw = lastWroteRef.current;
-            if (lw.dispOpt === displayOptimum && lw.eaten === roundedEaten && (now - lw.at) < 2000) {
+            if ((now - lw.at) < 2000) {
                 console.debug('[caloric-display] throttle skip', { displayOptimum, roundedEaten, sinceLast: now - lw.at });
                 return;
             }
