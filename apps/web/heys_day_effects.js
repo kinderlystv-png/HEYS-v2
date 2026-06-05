@@ -584,8 +584,20 @@
                         recordDayDecision('SKIP_RAF_PENDING', source, 'apply already queued (RAF not yet fired — bg-tab throttle?)');
                         return;
                     }
-                    pendingDayApplyRafRef.current = requestAnimationFrame(() => {
+                    // iOS Safari fully pauses requestAnimationFrame while the tab/PWA is
+                    // backgrounded or on another in-app view; a rAF queued then never
+                    // fires, so pendingDayApplyRafRef stays non-null forever and every
+                    // later day update is dropped at the guard above until a manual refresh
+                    // (curator PIN→screen freeze, 2026-06-05: SKIP_RAF_PENDING for 354s).
+                    // Schedule via rAF AND a setTimeout fallback — setTimeout still fires
+                    // (throttled) in the background, so the apply always makes progress;
+                    // whichever fires first runs once and cancels the other.
+                    const runDayApply = () => {
+                        if (pendingDayApplyRafRef.current == null) return; // already ran via the other scheduler
+                        const __sched = pendingDayApplyRafRef.current;
                         pendingDayApplyRafRef.current = null;
+                        try { if (__sched && __sched.raf != null) cancelAnimationFrame(__sched.raf); } catch (_) { /* noop */ }
+                        try { if (__sched && __sched.timer != null) clearTimeout(__sched.timer); } catch (_) { /* noop */ }
                         const pendingSource = lastDayApplySourceRef.current;
                         const pendingForceReload = pendingDayForceReloadRef.current;
                         const applySignature = [String(date || ''), String(pendingSource || ''), pendingForceReload ? '1' : '0'].join('|');
@@ -937,7 +949,10 @@
                         lastAppliedAtRef.current = Date.now();
                     }
                         });
-                    });
+                    };
+                    const __dayApplyRaf = requestAnimationFrame(runDayApply);
+                    const __dayApplyTimer = setTimeout(runDayApply, 350);
+                    pendingDayApplyRafRef.current = { raf: __dayApplyRaf, timer: __dayApplyTimer };
                 }
             };
 
@@ -946,7 +961,9 @@
 
             return () => {
                 if (pendingDayApplyRafRef.current != null) {
-                    cancelAnimationFrame(pendingDayApplyRafRef.current);
+                    const __sched = pendingDayApplyRafRef.current;
+                    try { if (__sched && __sched.raf != null) cancelAnimationFrame(__sched.raf); } catch (_) { /* noop */ }
+                    try { if (__sched && __sched.timer != null) clearTimeout(__sched.timer); } catch (_) { /* noop */ }
                     pendingDayApplyRafRef.current = null;
                 }
                 global.removeEventListener('heys:day-updated', handleDayUpdated);
