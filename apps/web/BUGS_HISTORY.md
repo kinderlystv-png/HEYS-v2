@@ -7,6 +7,120 @@ broken, what was fixed, and the pattern to watch for.
 
 ---
 
+## Cross-device item-grams conflict + item-delete sync gap (2026-06-04)
+
+Курaтор меняет граммы продукта на ноуте → телефон с PIN не подтягивает свежую
+правку. Симптом смотрелся как pull-сторонний, корень был в upload-side
+конфликте: server fast-path заменял свежий cloud value на stale phone-upload
+если `lastSeen >= cloudInternal.updatedAt` на day-уровне, даже когда внутри была
+более свежая item-правка.
+
+### Что сделано
+
+**1. Item-level merge (commit
+`8dd73f79 fix(sync): protect item grams from stale day uploads`):**
+
+- `mergeItemsById` теперь сравнивает `item.updatedAt` (раньше — `preferLocal`
+  flag). Legacy items без TS — backward-compat preferLocal.
+- Серверный `hasNewerCurrentItemEdit` в `merge_save` форсит merge даже на
+  noConflict fast-path, если в облаке item с TS > incoming. Backstop когда
+  клиент шлёт устаревший blob.
+- UI handler `setGrams` (apps/web/day/\_meals.js:4421) выставляет
+  `item.updatedAt` и `meal.updatedAt` явно.
+
+**2. Централизованный stamping (commit
+`ad3b4493 fix(sync): stamp day mutations centrally`):**
+
+- `stampDayv2ChangedEntities` в storage interceptor штампует изменённые
+  meals/items/trainings по diff prev/next dayv2 в LS — handlers больше не
+  обязаны помнить про timestamps. setItem из любого handler'a автоматически
+  получает корректные стампы.
+- Затем pure helpers вынесены в `heys_sync_merge_v1.js` (UMD-wrapped), доступны
+  тестам через CJS-копию.
+
+**3. HMR-safe резолв + порядок чеков (2026-06-04, follow-up):**
+
+- `resolveDayMutationTs` больше не инжектит `Date.now()` при `nextTs=0` и **не
+  использует `prevTs+1`** — возвращает `0` всегда, когда caller не передал
+  day-level `updatedAt`. При `mutationTs=0` весь stamper возвращает payload как
+  есть (без модификаций и без emit'a tombstone'ов). Причина: interceptor патча
+  `localStorage.setItem` стампит **до** того, как payload дойдёт до HMR-guard'a
+  в `saveClientKey` (`if (!value.updatedAt && !value.schemaVersion)`). Любой
+  авто-инжект TS вкладывал бы HMR/bad-state writer в LS, а следующий upload
+  через saveClientKey уже видел бы валидный updatedAt и пропускал guard.
+  Реальные user-mutation handlers (например `setGrams` в `day/_meals.js` через
+  `markUndoWindow(3000)`) всегда выставляют `day.updatedAt` явно — stamper
+  делает item/meal/training-level stamps ТОЛЬКО производными от него.
+- Stamper в `saveClientKey` теперь вызывается **после** HMR-чека —
+  defense-in-depth, чтобы auto-инжект (если когда-нибудь вернётся) не мог обойти
+  guard.
+- Stale-cloud guard на pull-стороне
+  ([heys_storage_supabase_v1.js:12275](apps/web/heys_storage_supabase_v1.js#L12275),
+  `if (localUp > remoteUp) return false`) остался без изменений, но теперь
+  безопасен: stamper не инфлирует local TS в будущее.
+
+**4. Auto-emit `deletedItemIds` tombstones из stamper:**
+
+- Items, которые были в prev LS и исчезли в next, помечаются tombstone'ом с
+  `mutationTs`. Mirrors `deletedMealIds` pattern.
+- `mergeItemsById` принимает `deletedItemIdsMap` и фильтрует items с
+  `tombstoneTs >= item.updatedAt`.
+- Решение **централизовано в stamper**, не в `removeItem` handler — иначе правка
+  handler'a могла бы попасть в мёртвую копию (см. ниже dead shim).
+
+**5. Pre-commit hook `lint-sync-merge-cjs-mirror`:**
+
+- `heys_sync_merge_v1.js` (browser) и `heys_sync_merge_v1.cjs` (Yandex Cloud
+  function) должны быть идентичны. Раньше синк только на deploy через `cp`;
+  между ESM-коммитом и deploy'ем сервер мог гонять старую merge-логику. Теперь
+  pre-commit ловит drift с инструкцией.
+
+**6. `git rm apps/web/heys_day_meal_handlers.js` (dead shim cleanup):**
+
+- Файл — legacy shim, помеченный комментарием на L1 («moved to day/\_meals.js»),
+  не в bundle-config sources, не в index.html. Дублировал
+  `createMealHandlers`/`HEYS.dayMealHandlers` write. Параллельный агент в
+  d044a774 положил block-window фикс именно туда → фикс был мёртв в проде до тех
+  пор пока другой агент не нашёл живую копию в `day/_meals.js` (block-window там
+  реализован через `markUndoWindow(3000)` :4423).
+- Удалён чтобы будущие агенты не попадали в эту мину.
+
+### Что НЕ закрыто этими фиксами (ceiling)
+
+- **Clock-skew**: вся LWW-логика опирается на `Date.now()` устройства. Спешащий
+  телефон со stale данными может выиграть конфликт. Окончательный фикс —
+  server-revision write-merge (L4+, см. project_sync_revision_rollout),
+  deferred.
+- **L3 server-revision pull-gate** активен в коде
+  ([heys_storage_supabase_v1.js:12187](apps/web/heys_storage_supabase_v1.js#L12187)),
+  но возвращает `true` (apply) если сервер не шлёт `server_revision` в
+  kv-строках. Эффективный гейтинг требует end-to-end подтверждения от
+  server-RPC; на дату фикса не подтверждено в проде.
+
+### Pattern to watch
+
+1. **Никогда не правь handler-by-handler.** Параллельные агенты легко попадают в
+   дубль-копии (см. `heys_day_meal_handlers.js` → `day/_meals.js`). Логику,
+   которую можно вывести из diff prev/next в storage layer, выводи там, а не
+   размазывай по handlers. Stamper делает это для timestamps и теперь для
+   item-deletion.
+2. **CJS/ESM mirror checks** обязательны для любого кода, который дублируется
+   между client и serverless function.
+3. **Не инжектить timestamps если caller их не передал.** Stamper при
+   `nextDay.updatedAt = 0` возвращает payload как есть (ни `Date.now()`, ни
+   `prev+1`). Clock-skew инфляция блокирует legitimate pulls в stale-cloud guard
+   ([heys_storage_supabase_v1.js:12275]); `prev+1` тоже опасен — interceptor
+   стампит до HMR-guard'a. Реальные user-mutation handlers всегда выставляют
+   `day.updatedAt` явно.
+4. **Tombstone-aware promotion в stamper.** Если `item.id` уже в
+   `prev.deletedItemIds`, stamper НЕ повышает `item.updatedAt` до `mutationTs`.
+   Stale React-стейт, пишущий удалённый item обратно с свежим `day.updatedAt`,
+   без guard'a получил бы свежий item-стамп и обошёл tombstone-фильтр на merge.
+   Истинное re-добавление безопасно: caller выставляет
+   `item.updatedAt = Date.now() > tombstoneTs` — фильтр пропускает.
+
+---
+
 ## Curator-session pollution: курaтор затёр 11 KV-ключей клиента (2026-05-27)
 
 Клиентка Александра (`4545ee50-4f5f-4fc0-b862-7ca45fa1bafc`). Курaтор

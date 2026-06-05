@@ -27,17 +27,33 @@
   'use strict';
 
   // ─── mergeItemsById ──────────────────────────────────────────────────────
-  function mergeItemsById(remoteItems = [], localItems = [], preferLocal = true) {
+  function mergeItemsById(remoteItems = [], localItems = [], preferLocal = true, deletedItemIdsMap = null) {
+    // Tombstone filter: item.updatedAt <= tombstone.ts → item is considered deleted.
+    // Edit fresher than tombstone overrides deletion (item resurrected as new edit).
+    const isTombstoned = (item) => {
+      if (!deletedItemIdsMap || !item || item.id == null) return false;
+      const tombstoneTs = Number(deletedItemIdsMap[item.id]) || 0;
+      if (tombstoneTs <= 0) return false;
+      const itemTs = Number(item.updatedAt) || 0;
+      return tombstoneTs >= itemTs;
+    };
+
     if (!preferLocal) {
       // preferRemote: only remote items survive — required for cross-device deletions on pull-refresh
-      return remoteItems.filter((item) => item && item.id);
+      return remoteItems.filter((item) => item && item.id && !isTombstoned(item));
     }
     const itemsMap = new Map();
     remoteItems.forEach((item) => {
-      if (item && item.id) itemsMap.set(item.id, item);
+      if (!item || !item.id) return;
+      if (isTombstoned(item)) return;
+      itemsMap.set(item.id, item);
     });
     localItems.forEach((item) => {
       if (!item || !item.id) return;
+      if (isTombstoned(item)) {
+        itemsMap.delete(item.id);
+        return;
+      }
       const existing = itemsMap.get(item.id);
       if (!existing) {
         itemsMap.set(item.id, item);
@@ -259,6 +275,12 @@
     const localDeletedMealIds = (local.deletedMealIds && typeof local.deletedMealIds === 'object' && !Array.isArray(local.deletedMealIds)) ? local.deletedMealIds : {};
     const remoteDeletedMealIds = (remote.deletedMealIds && typeof remote.deletedMealIds === 'object' && !Array.isArray(remote.deletedMealIds)) ? remote.deletedMealIds : {};
     const mergedDeletedMealIds = unionMaxTimestamp(localDeletedMealIds, remoteDeletedMealIds);
+
+    // Item-level tombstones (Phase B1, 2026-06-04): like deletedMealIds but per item.
+    // Auto-emitted by central stamper when items disappear between prev/next dayv2 LS state.
+    const localDeletedItemIds = (local.deletedItemIds && typeof local.deletedItemIds === 'object' && !Array.isArray(local.deletedItemIds)) ? local.deletedItemIds : {};
+    const remoteDeletedItemIds = (remote.deletedItemIds && typeof remote.deletedItemIds === 'object' && !Array.isArray(remote.deletedItemIds)) ? remote.deletedItemIds : {};
+    const mergedDeletedItemIds = unionMaxTimestamp(localDeletedItemIds, remoteDeletedItemIds);
     const dayLocalTs = local.updatedAt || 0;
     const dayRemoteTs = remote.updatedAt || 0;
 
@@ -279,6 +301,19 @@
       }
     }
 
+    // Apply item-tombstones to a single meal's items (used when meal exists only on one side).
+    const filterItemTombstones = (meal) => {
+      if (!meal || !Array.isArray(meal.items)) return meal;
+      const filtered = meal.items.filter((item) => {
+        if (!item || item.id == null) return true;
+        const tombTs = Number(mergedDeletedItemIds[item.id]) || 0;
+        if (tombTs <= 0) return true;
+        const itemTs = Number(item.updatedAt) || 0;
+        return tombTs < itemTs; // tombstone older than item edit → item resurrected
+      });
+      return filtered === meal.items ? meal : { ...meal, items: filtered };
+    };
+
     // Remote meals first (will be overwritten by local if collision)
     remoteMeals.forEach((meal) => {
       if (!meal || !meal.id) return;
@@ -294,7 +329,7 @@
         logFn(`🗑️ [MERGE] Meal ${meal.id} deleted locally, skipping from remote`);
         return;
       }
-      mealsMap.set(meal.id, meal);
+      mealsMap.set(meal.id, filterItemTombstones(meal));
     });
 
     // Local meals: merge items if both sides have the meal
@@ -309,7 +344,7 @@
       }
       const existing = mealsMap.get(meal.id);
       if (!existing) {
-        mealsMap.set(meal.id, meal);
+        mealsMap.set(meal.id, filterItemTombstones(meal));
       } else {
         // ─── meal-level merge ────────────────────────────────────────────
         // Use meal.updatedAt for finer-grained "who edited THIS meal more recently"
@@ -319,7 +354,7 @@
         const mealLocalIsNewer = localMealTs >= remoteMealTs;
         const preferLocal = preferRemote ? false : mealLocalIsNewer;
 
-        const mergedItems = mergeItemsById(existing.items || [], meal.items || [], preferLocal);
+        const mergedItems = mergeItemsById(existing.items || [], meal.items || [], preferLocal, mergedDeletedItemIds);
 
         const mergedMeal = preferRemote
           ? { ...meal, ...existing, items: mergedItems }
@@ -336,6 +371,9 @@
       (a.time || '').localeCompare(b.time || '')
     );
     merged.deletedMealIds = mergedDeletedMealIds;
+    if (Object.keys(mergedDeletedItemIds).length > 0) {
+      merged.deletedItemIds = mergedDeletedItemIds;
+    }
 
     // ─── Trainings: position-indexed merge ────────────────────────────────
     const localTrainings = local.trainings || [];
@@ -510,11 +548,240 @@
     return merged;
   }
 
+  // ─── Pure dayv2 stamping helpers ─────────────────────────────────────────
+  // Используются HEYS.storage interceptor'ом для централизованного штампа
+  // изменённых meals/items/trainings + auto-emit deletedItemIds tombstones.
+  // Чистые функции — без global state, тестируются через CJS-копию.
+
+  function stripDayMutationStamps(value) {
+    if (Array.isArray(value)) return value.map(stripDayMutationStamps);
+    if (!value || typeof value !== 'object') return value;
+    const out = {};
+    Object.keys(value).forEach((key) => {
+      if (key === 'updatedAt' || key === '_mergedAt' || key === '_sourceId') return;
+      out[key] = stripDayMutationStamps(value[key]);
+    });
+    return out;
+  }
+
+  function isDayMutationContentEqual(left, right) {
+    try {
+      return JSON.stringify(stripDayMutationStamps(left)) === JSON.stringify(stripDayMutationStamps(right));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function mapByIdOrIndex(list) {
+    const map = new Map();
+    (Array.isArray(list) ? list : []).forEach((item, index) => {
+      if (!item || typeof item !== 'object') return;
+      const id = item.id != null ? String(item.id) : `#${index}`;
+      map.set(id, item);
+    });
+    return map;
+  }
+
+  function resolveDayMutationTs(nextDay, prevDay) {
+    const nextTs = Number(nextDay && nextDay.updatedAt) || 0;
+    if (nextTs > 0) return nextTs;
+    // HMR-safe: caller passed value без updatedAt. НЕ инжектим ни Date.now()
+    // (clock-skew инфляция блокирует pull-сторонний guard), ни prev+1
+    // (interceptor-path стампит ДО HMR-guard в saveClientKey; авто-стамп
+    // выпустил бы HMR-write в LS + upload). Возвращаем 0 → stamper вообще
+    // не модифицирует day/items/trainings и не эмитит tombstones. Реальная
+    // user-mutation всегда приходит с day.updatedAt из handler'a (например
+    // `markUndoWindow(3000)` в day/_meals.js setGrams).
+    void prevDay; // resolved param kept for API compat
+    return 0;
+  }
+
+  function collectItemIdsByMeal(day) {
+    const ids = new Set();
+    if (!day || !Array.isArray(day.meals)) return ids;
+    day.meals.forEach((meal) => {
+      if (!meal || !Array.isArray(meal.items)) return;
+      meal.items.forEach((item) => {
+        if (item && item.id != null) ids.add(String(item.id));
+      });
+    });
+    return ids;
+  }
+
+  function stampDayv2ChangedEntities(prevDay, nextDay) {
+    if (!nextDay || typeof nextDay !== 'object') return nextDay;
+    const mutationTs = resolveDayMutationTs(nextDay, prevDay);
+    // HMR / suspect write: nextDay не имеет updatedAt. Stamper НЕ модифицирует
+    // ничего — это вернёт payload как есть. HMR-guard на saveClientKey срежет
+    // upload, а interceptor-path (без guard'a) запишет в LS только то, что
+    // прислал caller, без авто-инжекта TS и tombstones.
+    if (mutationTs === 0) return nextDay;
+    if (!prevDay || typeof prevDay !== 'object') {
+      const meals = Array.isArray(nextDay.meals)
+        ? nextDay.meals.map((meal) => {
+          if (!meal || typeof meal !== 'object') return meal;
+          return {
+            ...meal,
+            updatedAt: Number(meal.updatedAt) || mutationTs,
+            items: Array.isArray(meal.items)
+              ? meal.items.map((item) => item && typeof item === 'object'
+                ? { ...item, updatedAt: Number(item.updatedAt) || mutationTs }
+                : item)
+              : meal.items,
+          };
+        })
+        : nextDay.meals;
+      const trainings = Array.isArray(nextDay.trainings)
+        ? nextDay.trainings.map((training) => training && typeof training === 'object'
+          ? { ...training, updatedAt: Number(training.updatedAt) || mutationTs }
+          : training)
+        : nextDay.trainings;
+      return { ...nextDay, meals, trainings, updatedAt: Number(nextDay.updatedAt) || mutationTs };
+    }
+
+    let dayChanged = !isDayMutationContentEqual(nextDay, prevDay);
+    const prevDeletedItemIds = (prevDay.deletedItemIds && typeof prevDay.deletedItemIds === 'object' && !Array.isArray(prevDay.deletedItemIds))
+      ? prevDay.deletedItemIds
+      : null;
+    const prevMealsById = mapByIdOrIndex(prevDay.meals);
+    const meals = Array.isArray(nextDay.meals)
+      ? nextDay.meals.map((meal, mealIndex) => {
+        if (!meal || typeof meal !== 'object') return meal;
+        const mealKey = meal.id != null ? String(meal.id) : `#${mealIndex}`;
+        const prevMeal = prevMealsById.get(mealKey);
+        const prevItemsById = mapByIdOrIndex(prevMeal && prevMeal.items);
+        let mealChanged = !prevMeal || !isDayMutationContentEqual(
+          { ...meal, items: [] },
+          { ...(prevMeal || {}), items: [] },
+        );
+        let mealStamp = Number(meal.updatedAt) || Number(prevMeal && prevMeal.updatedAt) || 0;
+
+        const items = Array.isArray(meal.items)
+          ? meal.items.map((item, itemIndex) => {
+            if (!item || typeof item !== 'object') return item;
+            const itemKey = item.id != null ? String(item.id) : `#${itemIndex}`;
+            const prevItem = prevItemsById.get(itemKey);
+            const itemChanged = !prevItem || !isDayMutationContentEqual(item, prevItem);
+            if (!itemChanged) {
+              return {
+                ...item,
+                updatedAt: Number(item.updatedAt) || Number(prevItem && prevItem.updatedAt) || undefined,
+              };
+            }
+            // Tombstone-aware promotion guard: если id уже в prev.deletedItemIds,
+            // НЕ повышаем item.updatedAt до mutationTs. Stale React-стейт пишет
+            // удалённый item обратно с свежим day.updatedAt → без guard'a stamper
+            // выставил бы item.updatedAt = mutationTs > tombstoneTs → mergeDayData
+            // воскресил бы удалённый продукт. Оставляем incoming-stamp как есть;
+            // mergeItemsById tombstone-фильтр срежет stale item на upload.
+            // Истинное re-добавление с тем же id безопасно: caller выставит
+            // item.updatedAt = Date.now() > tombstoneTs → фильтр пропустит.
+            const tombstoneTs = (prevDeletedItemIds && item.id != null)
+              ? Number(prevDeletedItemIds[item.id]) || 0
+              : 0;
+            const prevItemTs = Number(prevItem && prevItem.updatedAt) || 0;
+            let itemTs;
+            if (tombstoneTs > 0) {
+              // Preserve incoming stamp; do NOT auto-promote.
+              itemTs = Number(item.updatedAt) || 0;
+            } else {
+              itemTs = mutationTs >= prevItemTs
+                ? mutationTs
+                : (Number(item.updatedAt) || mutationTs);
+            }
+            mealChanged = true;
+            mealStamp = Math.max(mealStamp, itemTs);
+            return { ...item, updatedAt: itemTs || undefined };
+          })
+          : meal.items;
+
+        if (mealChanged && mutationTs > 0) mealStamp = Math.max(mealStamp, mutationTs);
+        return { ...meal, items, updatedAt: mealStamp || undefined };
+      })
+      : nextDay.meals;
+
+    const prevTrainingsById = mapByIdOrIndex(prevDay.trainings);
+    const trainings = Array.isArray(nextDay.trainings)
+      ? nextDay.trainings.map((training, index) => {
+        if (!training || typeof training !== 'object') return training;
+        const trainingKey = training.id != null ? String(training.id) : `#${index}`;
+        const prevTraining = prevTrainingsById.get(trainingKey);
+        const trainingChanged = !prevTraining || !isDayMutationContentEqual(training, prevTraining);
+        if (!trainingChanged) {
+          return {
+            ...training,
+            updatedAt: Number(training.updatedAt) || Number(prevTraining && prevTraining.updatedAt) || undefined,
+          };
+        }
+        dayChanged = true;
+        const prevTrainingTs = Number(prevTraining && prevTraining.updatedAt) || 0;
+        const trainingTs = mutationTs >= prevTrainingTs
+          ? mutationTs
+          : (Number(training.updatedAt) || mutationTs);
+        return { ...training, updatedAt: trainingTs || undefined };
+      })
+      : nextDay.trainings;
+
+    // Auto-emit deletedItemIds: items, которые были в prev и исчезли в next.
+    // Защита от false-positives:
+    //  - mutationTs === 0 (HMR-reset): не эмитим tombstones.
+    //  - next.meals полностью отсутствует (vs prev был непустой) — likely реинициализация,
+    //    не настоящее удаление; не эмитим.
+    let mergedDeletedItemIds = (prevDay && prevDay.deletedItemIds && typeof prevDay.deletedItemIds === 'object')
+      ? { ...prevDay.deletedItemIds }
+      : undefined;
+    if (nextDay.deletedItemIds && typeof nextDay.deletedItemIds === 'object') {
+      mergedDeletedItemIds = mergedDeletedItemIds || {};
+      Object.keys(nextDay.deletedItemIds).forEach((id) => {
+        const incomingTs = Number(nextDay.deletedItemIds[id]) || 0;
+        const existingTs = Number(mergedDeletedItemIds[id]) || 0;
+        if (incomingTs > existingTs) mergedDeletedItemIds[id] = incomingTs;
+      });
+    }
+
+    const prevHasMeals = Array.isArray(prevDay.meals) && prevDay.meals.length > 0;
+    const nextHasMeals = Array.isArray(nextDay.meals);
+    if (mutationTs > 0 && prevHasMeals && nextHasMeals) {
+      const prevIds = collectItemIdsByMeal(prevDay);
+      const nextIds = collectItemIdsByMeal(nextDay);
+      prevIds.forEach((id) => {
+        if (nextIds.has(id)) return;
+        const existingTs = mergedDeletedItemIds && Number(mergedDeletedItemIds[id]) || 0;
+        if (existingTs >= mutationTs) return; // tombstone уже свежее или равно — idempotency
+        mergedDeletedItemIds = mergedDeletedItemIds || {};
+        mergedDeletedItemIds[id] = mutationTs;
+        dayChanged = true;
+      });
+    }
+
+    // HMR-safe: при mutationTs=0 (нет источника TS) не выставляем явный day.updatedAt,
+    // оставляем nextDay-значение как есть. Иначе на dayChanged-path мы бы получали 0,
+    // что хоть и блокируется HMR-guard, но создаёт false signal для downstream debug.
+    const resolvedDayTs = dayChanged && mutationTs > 0
+      ? Math.max(Number(nextDay.updatedAt) || 0, mutationTs)
+      : nextDay.updatedAt;
+    const result = {
+      ...nextDay,
+      meals,
+      trainings,
+      updatedAt: resolvedDayTs,
+    };
+    if (mergedDeletedItemIds && Object.keys(mergedDeletedItemIds).length > 0) {
+      result.deletedItemIds = mergedDeletedItemIds;
+    }
+    return result;
+  }
+
   return {
     mergeDayData,
     mergeChronoTombstones,
     mergeItemsById,
     mergeScalarKv,
     stripStaleSavedDisplayNutrientsIfEmptyDiary,
+    // Pure dayv2 stamping helpers (used by HEYS.storage interceptor + tests):
+    stampDayv2ChangedEntities,
+    stripDayMutationStamps,
+    isDayMutationContentEqual,
+    resolveDayMutationTs,
   };
 });

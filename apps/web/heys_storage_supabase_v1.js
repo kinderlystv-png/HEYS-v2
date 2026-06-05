@@ -4075,137 +4075,12 @@
     return typeof k === 'string' && /heys_(?:[0-9a-f-]+_)?dayv2_\d{4}-\d{2}-\d{2}/.test(k);
   }
 
-  function stripDayMutationStamps(value) {
-    if (Array.isArray(value)) return value.map(stripDayMutationStamps);
-    if (!value || typeof value !== 'object') return value;
-    const out = {};
-    Object.keys(value).forEach((key) => {
-      if (key === 'updatedAt' || key === '_mergedAt' || key === '_sourceId') return;
-      out[key] = stripDayMutationStamps(value[key]);
-    });
-    return out;
-  }
-
-  function isDayMutationContentEqual(left, right) {
-    try {
-      return JSON.stringify(stripDayMutationStamps(left)) === JSON.stringify(stripDayMutationStamps(right));
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function mapByIdOrIndex(list) {
-    const map = new Map();
-    (Array.isArray(list) ? list : []).forEach((item, index) => {
-      if (!item || typeof item !== 'object') return;
-      const id = item.id != null ? String(item.id) : `#${index}`;
-      map.set(id, item);
-    });
-    return map;
-  }
-
-  function resolveDayMutationTs(nextDay, prevDay) {
-    const nextTs = Number(nextDay && nextDay.updatedAt) || 0;
-    const prevTs = Number(prevDay && prevDay.updatedAt) || 0;
-    if (nextTs > 0) return nextTs;
-    return Math.max(prevTs + 1, Date.now());
-  }
-
-  function stampDayv2ChangedEntities(prevDay, nextDay) {
-    if (!nextDay || typeof nextDay !== 'object') return nextDay;
-    const mutationTs = resolveDayMutationTs(nextDay, prevDay);
-    if (!prevDay || typeof prevDay !== 'object') {
-      const meals = Array.isArray(nextDay.meals)
-        ? nextDay.meals.map((meal) => {
-          if (!meal || typeof meal !== 'object') return meal;
-          return {
-            ...meal,
-            updatedAt: Number(meal.updatedAt) || mutationTs,
-            items: Array.isArray(meal.items)
-              ? meal.items.map((item) => item && typeof item === 'object'
-                ? { ...item, updatedAt: Number(item.updatedAt) || mutationTs }
-                : item)
-              : meal.items,
-          };
-        })
-        : nextDay.meals;
-      const trainings = Array.isArray(nextDay.trainings)
-        ? nextDay.trainings.map((training) => training && typeof training === 'object'
-          ? { ...training, updatedAt: Number(training.updatedAt) || mutationTs }
-          : training)
-        : nextDay.trainings;
-      return { ...nextDay, meals, trainings, updatedAt: Number(nextDay.updatedAt) || mutationTs };
-    }
-
-    let dayChanged = !isDayMutationContentEqual(nextDay, prevDay);
-    const prevMealsById = mapByIdOrIndex(prevDay.meals);
-    const meals = Array.isArray(nextDay.meals)
-      ? nextDay.meals.map((meal, mealIndex) => {
-        if (!meal || typeof meal !== 'object') return meal;
-        const mealKey = meal.id != null ? String(meal.id) : `#${mealIndex}`;
-        const prevMeal = prevMealsById.get(mealKey);
-        const prevItemsById = mapByIdOrIndex(prevMeal && prevMeal.items);
-        let mealChanged = !prevMeal || !isDayMutationContentEqual(
-          { ...meal, items: [] },
-          { ...(prevMeal || {}), items: [] },
-        );
-        let mealStamp = Number(meal.updatedAt) || Number(prevMeal && prevMeal.updatedAt) || 0;
-
-        const items = Array.isArray(meal.items)
-          ? meal.items.map((item, itemIndex) => {
-            if (!item || typeof item !== 'object') return item;
-            const itemKey = item.id != null ? String(item.id) : `#${itemIndex}`;
-            const prevItem = prevItemsById.get(itemKey);
-            const itemChanged = !prevItem || !isDayMutationContentEqual(item, prevItem);
-            if (!itemChanged) {
-              return {
-                ...item,
-                updatedAt: Number(item.updatedAt) || Number(prevItem && prevItem.updatedAt) || undefined,
-              };
-            }
-            const prevItemTs = Number(prevItem && prevItem.updatedAt) || 0;
-            const itemTs = mutationTs >= prevItemTs
-              ? mutationTs
-              : (Number(item.updatedAt) || mutationTs);
-            mealChanged = true;
-            mealStamp = Math.max(mealStamp, itemTs);
-            return { ...item, updatedAt: itemTs };
-          })
-          : meal.items;
-
-        if (mealChanged) mealStamp = Math.max(mealStamp, mutationTs);
-        return { ...meal, items, updatedAt: mealStamp || undefined };
-      })
-      : nextDay.meals;
-
-    const prevTrainingsById = mapByIdOrIndex(prevDay.trainings);
-    const trainings = Array.isArray(nextDay.trainings)
-      ? nextDay.trainings.map((training, index) => {
-        if (!training || typeof training !== 'object') return training;
-        const trainingKey = training.id != null ? String(training.id) : `#${index}`;
-        const prevTraining = prevTrainingsById.get(trainingKey);
-        const trainingChanged = !prevTraining || !isDayMutationContentEqual(training, prevTraining);
-        if (!trainingChanged) {
-          return {
-            ...training,
-            updatedAt: Number(training.updatedAt) || Number(prevTraining && prevTraining.updatedAt) || undefined,
-          };
-        }
-        dayChanged = true;
-        const prevTrainingTs = Number(prevTraining && prevTraining.updatedAt) || 0;
-        const trainingTs = mutationTs >= prevTrainingTs
-          ? mutationTs
-          : (Number(training.updatedAt) || mutationTs);
-        return { ...training, updatedAt: trainingTs };
-      })
-      : nextDay.trainings;
-
-    return {
-      ...nextDay,
-      meals,
-      trainings,
-      updatedAt: dayChanged ? Math.max(Number(nextDay.updatedAt) || 0, mutationTs) : nextDay.updatedAt,
-    };
+  // Pure stamping helpers живут в HEYS.sync (heys_sync_merge_v1.js) — UMD-обёртка
+  // обеспечивает доступ через window.HEYS.sync в браузере и через require() для тестов.
+  // Локальный fallback на случай если sync-модуль ещё не загружен (boot race).
+  function getStampDayv2ChangedEntities() {
+    const fromSync = global.HEYS && global.HEYS.sync && global.HEYS.sync.stampDayv2ChangedEntities;
+    return typeof fromSync === 'function' ? fromSync : null;
   }
 
   function readLocalDayForStamp(key, clientId) {
@@ -4233,11 +4108,16 @@
 
   function stampDayv2ValueForLocalMutation(key, value, clientId) {
     if (!isDayv2StorageKey(key) || !value || typeof value !== 'object') return value;
+    const stampFn = getStampDayv2ChangedEntities();
+    if (!stampFn) return value; // sync-модуль ещё не подгружен — gracefully skip
     const prevDay = readLocalDayForStamp(key, clientId);
-    return stampDayv2ChangedEntities(prevDay, value);
+    return stampFn(prevDay, value);
   }
 
-  cloud._stampDayv2ChangedEntities = stampDayv2ChangedEntities;
+  Object.defineProperty(cloud, '_stampDayv2ChangedEntities', {
+    get: () => getStampDayv2ChangedEntities(),
+    configurable: true,
+  });
 
   /**
    * Проверка, является ли ключ нашим (для зеркалирования/очистки)
@@ -10932,13 +10812,14 @@
       if (typeof value !== 'object' || value === null) {
         return;
       }
-      value = stampDayv2ValueForLocalMutation(k, value, client_id);
       // 🚨 ЗАЩИТА ОТ HMR: НЕ сохраняем день без updatedAt (признак что это HMR-сброс, а не реальное изменение)
       // Если есть updatedAt — это реальное изменение пользователем, разрешаем сохранение (даже пустого дня)
+      // HMR-чек выполняется ДО stamping чтобы инжект timestamp не мог обойти guard.
       if (!value.updatedAt && !value.schemaVersion) {
         log(`🚫 [SAVE BLOCKED] Refused to save day without updatedAt (HMR protection) - key: ${k}`);
         return;
       }
+      value = stampDayv2ValueForLocalMutation(k, value, client_id);
 
       // 🚨 КРИТИЧЕСКАЯ ЗАЩИТА: НЕ сохраняем ПУСТОЙ день в облако НИКОГДА
       // Это предотвращает перезапись реальных данных пустым днём при выборе даты в календаре
