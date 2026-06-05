@@ -13944,13 +13944,30 @@
       // 🛡️ Layer 3 (incident 2026-06-02 fix): hard-reset через location.reload()
       // для 100% гарантии что in-memory state (React, module caches, debounce
       // timers) не перенесёт данные старого клиента в новый scope. Применяется
-      // ВСЕГДА (и curator, и PIN) — единообразная логика. Disable: установить
-      // localStorage['heys_disable_switch_reload']='1'.
+      // при свитче МЕЖДУ клиентами (curator client↔client, ре-логин под другим в
+      // той же странице). Disable: localStorage['heys_disable_switch_reload']='1'.
+      //
+      // 🔧 first-activation optimization (cold PIN-login): на САМОЙ ПЕРВОЙ
+      // активации клиента в рамках этой загрузки страницы (anonymous boot →
+      // client) предыдущего клиента в памяти нет — reload защищал бы от
+      // несуществующей утечки ценой лишнего полного бута (+ до ~1.6с SW-await).
+      // Gate-flow Stage 2 уже монтирует AppShell in-place по Phase A; reload его
+      // выбрасывал. Пропускаем reload ТОЛЬКО в этом случае. Сигнал —
+      // module-level `_clientActivatedThisPage` (сбрасывается при reload, т.е. на
+      // свежей странице снова false) И пустой oldClientId (defense-in-depth:
+      // logout трёт heys_client_current, но флаг остаётся true → ре-логин под
+      // другим клиентом в той же странице reload'ит как раньше).
+      const _hadPriorClientThisPage = cloud._clientActivatedThisPage === true;
+      cloud._clientActivatedThisPage = true;
+      const _firstActivationNoReload = !_hadPriorClientThisPage && !oldClientId;
       try {
         const reloadDisabled = (() => {
           try { return localStorage.getItem('heys_disable_switch_reload') === '1'; } catch (_) { return false; }
         })();
-        if (!reloadDisabled) {
+        if (_firstActivationNoReload && !reloadDisabled) {
+          try { logCritical('[switch-reload] skipped — first client activation this page (no prior client in memory to purge)'); } catch (_) {}
+        }
+        if (!reloadDisabled && !_firstActivationNoReload) {
           // (1) Final queue validation — защитная мера, pre-flush gate должен
           // был уже всё забрать. Если что-то осталось — drop + log.
           if (Array.isArray(clientUpsertQueue)) {
