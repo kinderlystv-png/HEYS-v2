@@ -427,6 +427,7 @@
                 // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)
                 // на 3 секунды после локального изменения.
                 if (isExternalSource && Date.now() < blockCloudUpdatesUntilRef.current) {
+                    recordDayDecision('BLOCKED_BLOCK_WINDOW', source, 'remaining ' + (blockCloudUpdatesUntilRef.current - Date.now()) + 'ms, forceReload=' + !!forceReload);
                     console.info('[HEYS.day] 🔒 External update blocked', {
                         source,
                         forceReload,
@@ -534,6 +535,7 @@
                     lastDayApplySourceRef.current = source;
                     pendingDayForceReloadRef.current = pendingDayForceReloadRef.current || !!forceReload;
                     if (pendingDayApplyRafRef.current != null) {
+                        recordDayDecision('SKIP_RAF_PENDING', source, 'apply already queued (RAF not yet fired — bg-tab throttle?)');
                         return;
                     }
                     pendingDayApplyRafRef.current = requestAnimationFrame(() => {
@@ -544,6 +546,7 @@
                         const nowApply = Date.now();
                         const sigCooldownMs = (pendingSource === 'fetchDays' && pendingForceReload) ? 720 : 220;
                         if (lastAppliedSignatureRef.current === applySignature && (nowApply - lastAppliedAtRef.current) < sigCooldownMs) {
+                            recordDayDecision('SKIP_SIG_COOLDOWN', pendingSource, applySignature + ' within ' + sigCooldownMs + 'ms');
                             pendingDayForceReloadRef.current = false;
                             return;
                         }
@@ -602,6 +605,7 @@
                         // Пропускаем проверку timestamp если forceReload
                         // ВАЖНО: используем < вместо <= чтобы обрабатывать первую загрузку (когда оба = 0)
                         if (!forceReload && isStaleStorage) {
+                            recordDayDecision('SKIP_STALE_STORAGE', source, 'LS ' + storageUpdatedAt + ' < lastLoaded ' + currentUpdatedAt);
                             console.info('[HEYS.day] ⏭️ Day update skipped (stale storage)', {
                                 source,
                                 updatedDate,
@@ -676,6 +680,7 @@
                             // Не откатывать по LS даже при forceReload: hot-sync может шлют forceReload
                             // со снимком до autosave и стирать дневник конструктора.
                             if (storageUpdatedAt < prevUpdatedAt) {
+                                recordDayDecision('SKIP_LS_OLDER_THAN_REACT', source, 'LS ' + storageUpdatedAt + ' < React ' + prevUpdatedAt);
                                 console.info('[HEYS.day] ⏭️ Skip storage overlay (LS older than React; unpersisted edit)', {
                                     source,
                                     storageUpdatedAt,
@@ -829,6 +834,7 @@
                             }
 
                             // Обновляем ref только если приняли данные из storage
+                            recordDayDecision('APPLIED', source, 'updatedAt ' + storageUpdatedAt + ', items ' + storageItemsCount + ', forceReload=' + !!forceReload);
                             lastLoadedUpdatedAtRef.current = storageUpdatedAt;
 
                             // Равный updatedAt: снимок из LS/облака может отстать по waterMl на один тик

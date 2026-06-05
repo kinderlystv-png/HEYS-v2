@@ -12610,6 +12610,22 @@
             console.info(`[HEYS.sync] ✅ Foreground hot-sync applied ${updated} key(s) via ${isCuratorMode ? 'curator REST' : 'batch RPC'} (${reason})`);
           }
 
+          // DIAG (curator↔PIN asymmetry 2026-06-05): trace dayv2 delivery through
+          // the batch hot-sync so the Sync Debug Snapshot can show whether the
+          // active day was fetched / returned by the server / applied (vs silently
+          // dropped). PIN uses legacy-getkv and applies dayv2; curator-batch was
+          // suspected of not delivering the day in real time.
+          let _dayv2Diag = null;
+          try {
+            const dayKeyRe = /heys_dayv2_/;
+            const fetchedDayKeys = keysToFetch.filter(k => dayKeyRe.test(k));
+            const returnedDayKeys = Array.isArray(batchResult && batchResult.data)
+              ? batchResult.data.filter(r => r && dayKeyRe.test(r.k)).map(r => ({ k: r.k, hasV: r.v != null }))
+              : [];
+            _dayv2Diag = { fetched: fetchedDayKeys, returned: returnedDayKeys, at: Date.now() };
+            cloud._lastCuratorDayv2Diag = _dayv2Diag;
+          } catch (_) { _dayv2Diag = null; }
+
           return {
             success: true,
             updated,
@@ -12619,6 +12635,7 @@
             fetchedKeys: keysToFetch,
             fetchedKeyCount: keysToFetch.length,
             markerScopes,
+            dayv2Diag: _dayv2Diag,
           };
         }
 

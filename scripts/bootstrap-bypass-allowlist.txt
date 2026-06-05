@@ -100,8 +100,8 @@ apps/web/heys_day_core_bundle_v1.js:489
 apps/web/heys_day_core_bundle_v1.js:53
 apps/web/heys_day_orphan_alert.js:142
 apps/web/heys_event_log_v1.js:179
-apps/web/heys_day_effects.js:616
-apps/web/heys_day_effects.js:1002
+apps/web/heys_day_effects.js:620
+apps/web/heys_day_effects.js:1008
 apps/web/heys_day_engagement_effects.js:114
 apps/web/heys_day_insights_data_v1.js:830
 apps/web/heys_day_meals_chart_ui_v1.js:296

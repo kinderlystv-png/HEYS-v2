@@ -1536,10 +1536,22 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         const dec = (window.HEYS && window.HEYS._dayDiagBuffers && Array.isArray(window.HEYS._dayDiagBuffers.applyDecisions))
                             ? window.HEYS._dayDiagBuffers.applyDecisions : [];
                         if (dec.length) {
-                            extraLines.push('  --- recent apply decisions (last 6: ago_ms | source | decision) ---');
-                            dec.slice(-6).reverse().forEach(d => extraLines.push(
+                            extraLines.push('  --- recent apply decisions (last 12: ago_ms | source | decision) ---');
+                            dec.slice(-12).reverse().forEach(d => extraLines.push(
                                 `  ${Date.now() - d.ts}ms | ${d.source} | ${d.decision}${d.reason ? ' (' + d.reason + ')' : ''}`));
+                        } else {
+                            extraLines.push('  (no apply decisions recorded — day-update handler did not reach any branch)');
                         }
+                        // curator-batch dayv2 delivery trace (PIN↔curator asymmetry diag)
+                        try {
+                            const d2 = HEYS && HEYS.cloud && HEYS.cloud._lastCuratorDayv2Diag;
+                            if (d2) {
+                                extraLines.push('  --- curator hot-sync dayv2 trace (' + (Date.now() - d2.at) + 'ms ago) ---');
+                                extraLines.push('    fetched: ' + (d2.fetched && d2.fetched.length ? d2.fetched.join(', ') : '∅ (NOT in keysToFetch)'));
+                                extraLines.push('    server returned: ' + (d2.returned && d2.returned.length
+                                    ? d2.returned.map(r => r.k + (r.hasV ? '✓' : '∅')).join(', ') : '∅ (server returned no dayv2)'));
+                            }
+                        } catch (_) { /* noop */ }
                     } catch (e) {
                         extraLines.push('  (diagnostics error: ' + (e && e.message ? e.message : e) + ')');
                     }
