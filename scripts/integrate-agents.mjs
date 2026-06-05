@@ -9,6 +9,11 @@ import { GENERATED_ADD_PATHS } from './legacy-bundle-config.mjs';
 // script's location keeps the helper testable against fixture repos.
 const ROOT_DIR = process.cwd();
 
+// This IS the integration pass — its merge/build/release commits legitimately
+// land on main/develop, so exempt them from the "trunk is integration-only"
+// pre-commit guard (check-agent-staging.mjs).
+process.env.HEYS_INTEGRATION = '1';
+
 function parseCliArgs(argv) {
     const flags = new Set();
     const options = new Map();

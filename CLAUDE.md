@@ -123,6 +123,21 @@ agent-mode), `legacy-sync` (rebundle+auto-stage в integration-mode, report-only
 
 ## Параллельная работа агентов (bundle isolation)
 
+**Шаг 0 любой задачи: уйди с trunk на свою ветку СРАЗУ, до правок.** Если ты на
+`main`/`develop` — `git switch -c <task>` (соло: незакоммиченные правки переедут
+на ветку в том же каталоге) либо работай в своём worktree
+(`git worktree add ../heys-<task> -b <task>` — для реальной параллельной
+работы). Не по схеме «правлю в main → на коммите убегаю»: pre-commit
+([check-agent-staging.mjs](scripts/check-agent-staging.mjs)) **блокирует
+task-work (source/test/docs) в staged на `main`/`develop`**. Причина — несколько
+агентов на одном trunk сцепляются в одну ветку: `git push` (толкает всю ветку)
+не отправит твой фикс без чужих коммитов, а чужой красный коммит заблокирует
+твой деплой. Release-коммиты (whats-new от `push:agent`) и rebuild бандлов
+проходят (в staged нет task-work). `agents:integrate` ставит
+`HEYS_INTEGRATION=1`; осознанный ручной trunk-коммит —
+`HEYS_ALLOW_MAIN_COMMIT=1`. Поймало на коммите — не страшно:
+`git switch -c <task>` уносит правки на ветку, коммить там.
+
 **Главное правило: агенты коммитят ТОЛЬКО source. Бандлы и whats-new не
 трогают.** Приложение деплоится из закоммиченных бандлов с content-hash в именах
 (`public/*.bundle.<hash>.js`, `bundle-manifest.json`, `index.html`, `sw.js`,

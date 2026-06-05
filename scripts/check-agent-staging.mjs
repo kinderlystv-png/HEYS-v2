@@ -68,6 +68,47 @@ function isIntegrationBranch(branchName) {
         || branchName.startsWith('release/');
 }
 
+// Shared trunks that ship to prod. Multiple agents committing task-work here get
+// chained into one branch — A's commit becomes a child of B's, so `git push`
+// (whole-branch) can't send A without B, and B's red tests block A's deploy.
+// main/develop accept ONLY integration/release commits; task-work lives on
+// per-agent branches. (integration/* and release/* are integration WORKSPACES,
+// not blocked — agents:integrate runs there.)
+function isProtectedTrunk(branchName) {
+    return branchName === 'main' || branchName === 'develop';
+}
+
+// Linter-regenerated allowlists ride along with commits; not task-work.
+const INTEGRATION_MANAGED_ALLOWLISTS = new Set([
+    'scripts/bootstrap-bypass-allowlist.txt',
+    'scripts/raw-session-clear-allowlist.txt',
+]);
+
+function isTaskWorkFile(filePath) {
+    return !isGeneratedFile(filePath)
+        && !isReleaseFile(filePath)
+        && !INTEGRATION_MANAGED_ALLOWLISTS.has(filePath);
+}
+
+// main/develop are integration-only. A commit that stages task-work (source /
+// tests / docs) here is blocked — branch off so parallel agents don't entangle
+// on one trunk. Release-only commits (whats-new via push:agent) and generated
+// rebuilds pass (no task-work staged). agents:integrate sets HEYS_INTEGRATION=1;
+// a human integrator can use HEYS_ALLOW_MAIN_COMMIT=1 for a deliberate commit.
+function assertMainIsIntegrationOnly({
+    branchName = getBranchName(),
+    files = getStagedFiles(),
+    env = process.env,
+} = {}) {
+    if (env.HEYS_INTEGRATION === '1' || env.HEYS_ALLOW_MAIN_COMMIT === '1') {
+        return { ok: true, taskWork: [] };
+    }
+    if (!isProtectedTrunk(branchName)) return { ok: true, taskWork: [] };
+    const taskWork = files.filter(isTaskWorkFile);
+    if (taskWork.length === 0) return { ok: true, taskWork: [] };
+    return { ok: false, branch: branchName, taskWork };
+}
+
 function detectStagingMode({
     argv = process.argv.slice(2),
     branchName = getBranchName(),
@@ -147,6 +188,19 @@ function printSharedRootFailure(others) {
     process.stderr.write('[agent-staging] Override (you know this checkout is yours alone): HEYS_ALLOW_SHARED_TREE=1\n');
 }
 
+function printMainOnlyFailure(branch, taskWork) {
+    process.stderr.write(`[agent-staging] '${branch}' is integration-only — task-work must not be committed here.\n`);
+    process.stderr.write('[agent-staging] Parallel agents on one trunk chain together: your fix becomes a child of\n');
+    process.stderr.write('[agent-staging] someone else\'s commit, so a whole-branch push can\'t send yours alone.\n');
+    process.stderr.write('[agent-staging] Move this work to your own branch and let integration land it:\n');
+    process.stderr.write(`  git switch -c <task>            # then: git add -A && git commit\n`);
+    process.stderr.write('  (parallel? git worktree add ../heys-<task> -b <task>)\n');
+    process.stderr.write('[agent-staging] Staged task-work files:\n');
+    taskWork.slice(0, 10).forEach((file) => process.stderr.write(`  - ${file}\n`));
+    if (taskWork.length > 10) process.stderr.write(`  … and ${taskWork.length - 10} more\n`);
+    process.stderr.write('[agent-staging] Integration/release commits pass automatically. Deliberate trunk commit: HEYS_ALLOW_MAIN_COMMIT=1\n');
+}
+
 function main() {
     const argv = process.argv.slice(2);
     const mode = detectStagingMode({ argv });
@@ -154,6 +208,12 @@ function main() {
     if (argv.includes('--print-mode')) {
         process.stdout.write(`${mode}\n`);
         return 0;
+    }
+
+    const trunk = assertMainIsIntegrationOnly();
+    if (!trunk.ok) {
+        printMainOnlyFailure(trunk.branch, trunk.taskWork);
+        return 1;
     }
 
     const result = assertAgentStaging({ mode });
@@ -181,10 +241,13 @@ export {
     GENERATED_FILE_PATTERNS,
     RELEASE_FILE_PATTERNS,
     assertAgentStaging,
+    assertMainIsIntegrationOnly,
     assertNotSharedRootDuringParallel,
     detectStagingMode,
     getForbiddenAgentStagedFiles,
     isGeneratedOrReleaseFile,
     isIntegrationBranch,
+    isProtectedTrunk,
+    isTaskWorkFile,
     listAgentWorktrees,
 };
