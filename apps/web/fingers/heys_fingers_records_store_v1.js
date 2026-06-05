@@ -268,6 +268,9 @@
                 edgeMm: e,
                 ratio: Number((max / min).toFixed(2)),
                 flag: 'warning',
+                // B5: какая рука слабее — чтобы совет был конкретным.
+                weakerSide: lVal < rVal ? 'left' : 'right',
+                base: base,
                 hint: `Разница между руками >15% (${base}). Один-рук подходы на слабую руку.`,
               });
             }
@@ -277,6 +280,28 @@
     });
 
     return flags;
+  }
+
+  // B5: конкретный actionable-совет по lr_asymmetry — какая рука слабее и
+  // bias-прескрипшн 2:1 в её пользу. Pure. Для не-lr флагов → null. (One-arm
+  // training session не строим: модель упражнения двуручная, поля hand нет —
+  // совет текстовый + указывает grip/edge/сторону для ручной настройки.)
+  function asymmetryAdvice(flag) {
+    if (!flag || flag.kind !== 'lr_asymmetry' || !flag.weakerSide) return null;
+    const sideRu = flag.weakerSide === 'left' ? 'левую' : 'правую';
+    const weakSets = 2;
+    const strongSets = 1;
+    return {
+      weakerSide: flag.weakerSide,
+      base: flag.base || null,
+      edgeMm: flag.edgeMm,
+      weakSets: weakSets,
+      strongSets: strongSets,
+      text: 'Слабее ' + sideRu + ' рука (разница ' + flag.ratio + '×). На ближайших '
+        + 'сессиях делай ' + weakSets + ' одноручных подхода на ' + sideRu + ' к '
+        + strongSets + ' на сильную (' + (flag.base || 'хват') + ', ' + flag.edgeMm
+        + ' мм), пока разница не сократится.',
+    };
   }
 
   // Lattice male golden standards (% BW additional weight at 7s on 20mm two-hand)
@@ -299,6 +324,7 @@
     getMvcHistory,
     updateIfPR,
     asymmetries,
+    asymmetryAdvice,
     byGrade,
     GRADE_TABLE: Object.freeze(Object.assign({}, GRADE_TABLE)),
     __registered: true,

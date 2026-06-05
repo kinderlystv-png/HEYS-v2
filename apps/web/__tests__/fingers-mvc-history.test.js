@@ -80,3 +80,38 @@ describe('B3 MVC timeseries', () => {
     expect(r.getMvcHistory('mono', 10).length).toBe(100);
   });
 });
+
+// B5: asymmetry-aware — flag знает слабую руку + конкретный bias-совет 2:1.
+describe('B5 asymmetry advice', () => {
+  beforeEach(setup);
+  const R = () => globalThis.HEYS.Fingers.records;
+
+  it('lr_asymmetry flag указывает weakerSide + base', () => {
+    const r = R();
+    r.updateIfPR('halfcrimp_L', 20, wRec(70, 0, 7, '2026-06-01T10:00:00Z')); // слабее
+    r.updateIfPR('halfcrimp_R', 20, wRec(85, 15, 7, '2026-06-01T10:00:00Z')); // сильнее
+    const flags = r.asymmetries();
+    const lr = flags.find((f) => f.kind === 'lr_asymmetry');
+    expect(lr).toBeTruthy();
+    expect(lr.weakerSide).toBe('left');
+    expect(lr.base).toBe('halfcrimp');
+    expect(lr.ratio).toBeCloseTo(1.21, 1);
+  });
+
+  it('asymmetryAdvice даёт конкретный 2:1 совет на слабую руку', () => {
+    const r = R();
+    r.updateIfPR('openhand4_L', 18, wRec(90, 20, 7, '2026-06-01T10:00:00Z')); // сильнее
+    r.updateIfPR('openhand4_R', 18, wRec(72, 2, 7, '2026-06-01T10:00:00Z'));  // слабее
+    const lr = r.asymmetries().find((f) => f.kind === 'lr_asymmetry');
+    const adv = r.asymmetryAdvice(lr);
+    expect(adv.weakerSide).toBe('right');
+    expect(adv.weakSets).toBe(2);
+    expect(adv.strongSets).toBe(1);
+    expect(adv.text).toContain('правую');
+  });
+
+  it('asymmetryAdvice(не-lr флаг) → null', () => {
+    expect(R().asymmetryAdvice({ kind: 'crimp_weak' })).toBeNull();
+    expect(R().asymmetryAdvice(null)).toBeNull();
+  });
+});

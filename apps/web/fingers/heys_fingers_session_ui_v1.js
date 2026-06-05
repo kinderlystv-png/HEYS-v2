@@ -1919,7 +1919,16 @@
                   (f.ratio || f.edgeMm) && h('div', { className: 'fingers-fs-asym__meta' },
                     (f.ratio ? '×' + f.ratio + ' разница' : '')
                     + (f.ratio && f.edgeMm ? ' · ' : '')
-                    + (f.edgeMm ? f.edgeMm + ' мм' : ''))
+                    + (f.edgeMm ? f.edgeMm + ' мм' : '')),
+                  // B5: конкретный bias-совет (какая рука + 2:1) для lr_asymmetry.
+                  (function () {
+                    const adv = (Fingers.records && Fingers.records.asymmetryAdvice)
+                      ? Fingers.records.asymmetryAdvice(f) : null;
+                    return adv ? h('div', {
+                      className: 'fingers-fs-asym__advice',
+                      style: { marginTop: 6, fontSize: 13, lineHeight: 1.4, color: '#fbbf24' }
+                    }, '→ ' + adv.text) : null;
+                  })()
                 )
               );
             })
