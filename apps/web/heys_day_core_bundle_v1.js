@@ -4130,6 +4130,10 @@
         // unreliable) and, if they differ, apply via a DIRECT setDay (urgent update,
         // commits even under the storm). Converges the screen to LS within one tick.
         React.useEffect(() => {
+            // Closure guard (resets per date): the exact LS items-state we last applied.
+            // Belt-and-suspenders against any residual flap — apply each distinct storage
+            // state at most once so the reconciler can never become a write loop.
+            let lastReconciledKey = '';
             const reconcile = () => {
                 try {
                     if (typeof document !== 'undefined' && document.visibilityState && document.visibilityState !== 'visible') return;
@@ -4143,15 +4147,25 @@
                         ? HEYS.dayUtils.isSameDayHydratedContent(reactDay, lsDay)
                         : false;
                     if (same) return; // screen already matches storage
-                    // Content differs — reconcile by item.updatedAt (handles clock skew both ways),
-                    // then commit urgently (not via startTransition, which is being starved).
-                    const mergeApi = (HEYS.sync && typeof HEYS.sync.mergeDayData === 'function') ? HEYS.sync : null;
-                    const merged = mergeApi ? mergeApi.mergeDayData(reactDay, lsDay) : null;
-                    const finalDay = (merged && Array.isArray(merged.meals)) ? merged : lsDay;
+                    // Already reconciled this exact LS items-state? Don't re-apply (loop guard).
+                    const lsKey = (lsDay.meals || []).map(m =>
+                        (m && m.items || []).map(i => (i && i.id) + ':' + (i && i.grams)).join(',')
+                    ).join('|') + '#w' + (lsDay.waterMl || 0) + '#s' + (lsDay.steps || 0) + '#wt' + (lsDay.weightMorning || 0);
+                    if (lsKey === lastReconciledKey) return;
+                    lastReconciledKey = lsKey;
+                    // Content differs → apply localStorage AS-IS (it is the synced truth;
+                    // the local autosave always writes an edit to LS within its debounce,
+                    // well before the block window above clears, so this can't revert a live
+                    // local edit). Do NOT mergeDayData here: that adds _mergedAt, re-normalizes
+                    // trainings and bumps updatedAt=now, producing a THIRD representation the
+                    // reconciler then sees as a fresh diff → re-applies → re-uploads every tick
+                    // (cloud spinner / dayv2 upload storm, 2026-06-05). Applying ensureDay(lsDay)
+                    // — the same shape the normal day-updated handler writes — converges and
+                    // then isSameDayHydratedContent is true → reconciler goes quiet, no writes.
                     const profNow = getProfile();
-                    recordDayDecision('PERIODIC_RECONCILE', 'interval', 'React/LS content diff — direct apply');
-                    lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, finalDay.updatedAt || 0);
-                    setDay(() => ensureDay(finalDay, profNow));
+                    recordDayDecision('PERIODIC_RECONCILE', 'interval', 'React/LS content diff — apply LS');
+                    lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, lsDay.updatedAt || 0);
+                    setDay(() => ensureDay(lsDay, profNow));
                 } catch (_) { /* noop — reconciler must never break render */ }
             };
             const reconcileId = setInterval(reconcile, 3000);
