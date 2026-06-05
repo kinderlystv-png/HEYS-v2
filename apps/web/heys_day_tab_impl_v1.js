@@ -1431,6 +1431,16 @@
             HEYS.Day = HEYS.Day || {};
             HEYS.Day.getMealsCount = () => (day.meals || []).length;
             HEYS.Day.getMeals = () => day.meals || [];
+            // Diagnostics / render-desync detection (Phase B): expose current React day
+            // (via dayRef so it is always the latest, not a stale effect closure),
+            // its updatedAt, the date, and the block-window state. Used by the day-effects
+            // same-updatedAt content-aware apply-guard and the Sync Debug Snapshot.
+            HEYS.Day.getDay = () => dayRef.current || null;
+            HEYS.Day.getDayUpdatedAt = () => (dayRef.current && dayRef.current.updatedAt) || 0;
+            HEYS.Day.getDate = () => date;
+            HEYS.Day.getBlockUntil = () => blockCloudUpdatesUntilRef.current || 0;
+            HEYS.Day.isBlockingCloudUpdates = () => Date.now() < (blockCloudUpdatesUntilRef.current || 0);
+            HEYS.Day.getLastLoadedUpdatedAt = () => lastLoadedUpdatedAtRef.current || 0;
             HEYS.Day.getSteps = () => day.steps || 0;
             HEYS.Day.getTrainingsCount = () => (day.trainings || []).length;
             HEYS.Day.getWaterPercent = () => {

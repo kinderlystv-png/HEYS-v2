@@ -3119,6 +3119,18 @@
 
     const HEYS = global.HEYS = global.HEYS || {};
 
+    // Phase B diagnostics: ring buffer of day-update apply/skip decisions, read by
+    // the Sync Debug Snapshot (React-vs-LS divergence section). Helps explain why
+    // the UI did/didn't accept an LS snapshot (render-desync hunting).
+    function recordDayDecision(decision, source, reason) {
+        try {
+            const b = (global.HEYS._dayDiagBuffers = global.HEYS._dayDiagBuffers || { applyDecisions: [] });
+            if (!Array.isArray(b.applyDecisions)) b.applyDecisions = [];
+            b.applyDecisions.push({ ts: Date.now(), decision, source: source || '—', reason: reason || '' });
+            if (b.applyDecisions.length > 20) b.applyDecisions.shift();
+        } catch (_) { /* noop — diagnostics must never break the handler */ }
+    }
+
     // PERF Foundation 2: in-memory cache для readDayV2 (TTL=200мс, no write-aware).
     // Покрывает повторные reads одного и того же date-key в одном render burst
     // (DayTab + sidebar + sparklines часто читают тот же день за < 16мс окно).
@@ -3719,12 +3731,35 @@
                         try {
                             if (!forceReload && storageUpdatedAt > 0 && storageUpdatedAt === currentUpdatedAt
                                 && window.localStorage.getItem('heys_skip_noop_apply') !== '0') {
-                                console.info('[HEYS.day] ⚡ Skip apply (no-op, identical updatedAt)', {
+                                // Same updatedAt does NOT guarantee same content: a server-merge /
+                                // pollOnce / live-refresh can rewrite the day's items while keeping
+                                // the max updatedAt. Skipping blindly left the React UI stale vs LS
+                                // (render-desync, incident 2026-06-05 curator↔PIN). Only skip a TRUE
+                                // no-op — compare content against the current React day. Pending-edit /
+                                // block-window protection already ran above (external-source guard ~:417),
+                                // so applying changed content here can't clobber a live local edit.
+                                let sameContent = false;
+                                try {
+                                    const reactDay = (HEYS.Day && typeof HEYS.Day.getDay === 'function') ? HEYS.Day.getDay() : null;
+                                    sameContent = !!reactDay
+                                        && HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function'
+                                        && HEYS.dayUtils.isSameDayHydratedContent(reactDay, normalizedDay);
+                                } catch (_) { sameContent = false; }
+                                if (sameContent) {
+                                    recordDayDecision('SKIP_SAME_CONTENT', source, 'identical updatedAt+content');
+                                    console.info('[HEYS.day] ⚡ Skip apply (true no-op: same updatedAt + same content)', {
+                                        source,
+                                        storageUpdatedAt,
+                                        mealsCount: storageMealsCount
+                                    });
+                                    return;
+                                }
+                                recordDayDecision('APPLY_SAME_TS_DIFF_CONTENT', source, 'render-desync fix');
+                                console.info('[HEYS.day] 🔄 Same updatedAt, content differs — applying LS (render-desync fix)', {
                                     source,
-                                    storageUpdatedAt,
-                                    mealsCount: storageMealsCount
+                                    storageUpdatedAt
                                 });
-                                return;
+                                // fall through → normalize + setDay applies the changed content
                             }
                         } catch (_) { /* localStorage недоступен — продолжаем без skip */ }
                         const migratedTrainings = normalizeTrainings(normalizedDay.trainings);
@@ -3866,11 +3901,33 @@
                             // Внешние источники не должны уменьшать локально подтвержденные meals/items
                             // (кейс: продукт добавлен в существующий приём, meal count не изменился,
                             // но облако ещё не получило новый item — hot-sync перезаписывает и item пропадает).
+                            // A genuine cross-device DELETE drops the item count AND carries an
+                            // explicit deletedItemIds tombstone for the dropped item(s). That is not
+                            // a "rollback to block" — it must show. Exempt it from the guard so the
+                            // explicit-delete flow (removeItem → tombstone) propagates to the other
+                            // device's UI. Plain count-drops with no tombstone stay blocked (stale-cloud
+                            // anti-rollback protection unchanged).
+                            const droppedItemsAllTombstoned = (() => {
+                                try {
+                                    const tomb = (normalizedDay.deletedItemIds && typeof normalizedDay.deletedItemIds === 'object')
+                                        ? normalizedDay.deletedItemIds : null;
+                                    if (!tomb) return false;
+                                    const nextIds = new Set((normalizedDay.meals || [])
+                                        .flatMap(m => (m?.items || []).map(it => String(it?.id))));
+                                    const dropped = (prevDay?.meals || [])
+                                        .flatMap(m => (m?.items || []).map(it => String(it?.id)))
+                                        .filter(id => id && id !== 'undefined' && !nextIds.has(id));
+                                    return dropped.length > 0 && dropped.every(id => Number(tomb[id]) > 0);
+                                } catch (_) { return false; }
+                            })();
+
                             const shouldSkipExternalMealsRollback =
                                 isExternalSource &&
-                                (mealsDown || itemsDown);
+                                (mealsDown || itemsDown) &&
+                                !droppedItemsAllTombstoned;
 
                             if (shouldSkipExternalMealsRollback) {
+                                recordDayDecision('SKIP_EXTERNAL_ROLLBACK', source, `items ${storageItemsCount}<${prevItemsCount}, no tombstone`);
                                 console.warn('[HEYS.day] 🛡️ Skip overwrite (external meals/items rollback)', {
                                     source,
                                     updatedDate,

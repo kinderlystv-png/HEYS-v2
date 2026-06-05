@@ -1492,6 +1492,58 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         extraLines.push('  (no day data in LS)');
                     }
 
+                    // === Day React state vs LS divergence (render-desync diagnostics, Phase B) ===
+                    pushHeader('Day React state vs LS divergence');
+                    try {
+                        const reactDay = (HEYS.Day && typeof HEYS.Day.getDay === 'function') ? HEYS.Day.getDay() : null;
+                        const flatItems = (d) => {
+                            const out = [];
+                            (d && Array.isArray(d.meals) ? d.meals : []).forEach((m, mi) => {
+                                (m && Array.isArray(m.items) ? m.items : []).forEach((it) => {
+                                    if (it && it.id != null) out.push({ id: String(it.id), meal: mi, grams: it.grams, ts: it.updatedAt });
+                                });
+                            });
+                            return out;
+                        };
+                        const rItems = flatItems(reactDay);
+                        const lItems = flatItems(dayData);
+                        const lById = new Map(lItems.map(i => [i.id, i]));
+                        const rById = new Map(rItems.map(i => [i.id, i]));
+                        const rTs = (reactDay && reactDay.updatedAt) || 0;
+                        const lTs = (dayData && dayData.updatedAt) || 0;
+                        pushKV('react_day_updatedAt', rTs);
+                        pushKV('ls_day_updatedAt', lTs);
+                        pushKV('ts_match', rTs === lTs);
+                        pushKV('react_total_items', rItems.length);
+                        pushKV('ls_total_items', lItems.length);
+                        const onlyReact = rItems.filter(i => !lById.has(i.id)).map(i => i.id);
+                        const onlyLs = lItems.filter(i => !rById.has(i.id)).map(i => i.id);
+                        const diffGrams = rItems.filter(i => lById.has(i.id) && lById.get(i.id).grams !== i.grams)
+                            .map(i => `${i.id}:R${i.grams}/L${lById.get(i.id).grams}`);
+                        const diffTs = rItems.filter(i => lById.has(i.id) && (lById.get(i.id).ts || 0) !== (i.ts || 0))
+                            .map(i => `${i.id}:R${i.ts}/L${lById.get(i.id).ts}`);
+                        pushKV('items_only_in_react', onlyReact.length ? onlyReact.join(',') : '—');
+                        pushKV('items_only_in_ls', onlyLs.length ? onlyLs.join(',') : '—');
+                        pushKV('items_diff_grams', diffGrams.length ? diffGrams.join(', ') : '—');
+                        pushKV('items_diff_ts', diffTs.length ? diffTs.join(', ') : '—');
+                        const blockUntil = (HEYS.Day && typeof HEYS.Day.getBlockUntil === 'function') ? HEYS.Day.getBlockUntil() : 0;
+                        pushKV('is_blocking_cloud_updates', (HEYS.Day && typeof HEYS.Day.isBlockingCloudUpdates === 'function') ? HEYS.Day.isBlockingCloudUpdates() : null);
+                        pushKV('block_until_in_ms', blockUntil ? (blockUntil - Date.now()) : 0);
+                        pushKV('last_loaded_updatedAt', (HEYS.Day && typeof HEYS.Day.getLastLoadedUpdatedAt === 'function') ? HEYS.Day.getLastLoadedUpdatedAt() : null);
+                        const divergent = (rTs === lTs) && (onlyReact.length || onlyLs.length || diffGrams.length);
+                        pushKV('VERDICT', divergent ? '⚠️ RENDER-DESYNC (same updatedAt, different content)'
+                            : (rTs !== lTs ? 'updatedAt differs (sync in flight)' : 'in sync'));
+                        const dec = (window.HEYS && window.HEYS._dayDiagBuffers && Array.isArray(window.HEYS._dayDiagBuffers.applyDecisions))
+                            ? window.HEYS._dayDiagBuffers.applyDecisions : [];
+                        if (dec.length) {
+                            extraLines.push('  --- recent apply decisions (last 6: ago_ms | source | decision) ---');
+                            dec.slice(-6).reverse().forEach(d => extraLines.push(
+                                `  ${Date.now() - d.ts}ms | ${d.source} | ${d.decision}${d.reason ? ' (' + d.reason + ')' : ''}`));
+                        }
+                    } catch (e) {
+                        extraLines.push('  (diagnostics error: ' + (e && e.message ? e.message : e) + ')');
+                    }
+
                     // === Write history ===
                     const wh = Array.isArray(HEYS?.cloud?._writeHistory) ? HEYS.cloud._writeHistory : [];
                     pushHeader(`Write history (last 50, total tracked: ${wh.length})`);
