@@ -15,6 +15,7 @@
     "DISABLED_dev:tg-mini": "pnpm --filter='@heys/tg-mini' run dev",
     "DISABLED_mobile": "pnpm --filter mobile run start",
     "DISABLED_mobile:clear": "pnpm --filter mobile run start:clear",
+    "agent:worktree": "node scripts/agent-worktree.mjs",
     "agents:integrate": "node scripts/integrate-agents.mjs",
     "arch:check": "bash scripts/check-module-architecture.sh",
     "arch:limits:generate": "node scripts/generate-module-limits.js",

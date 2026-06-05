@@ -123,11 +123,13 @@ agent-mode), `legacy-sync` (rebundle+auto-stage в integration-mode, report-only
 
 ## Параллельная работа агентов (bundle isolation)
 
-**Шаг 0 любой задачи: уйди с trunk на свою ветку СРАЗУ, до правок.** Если ты на
-`main`/`develop` — `git switch -c <task>` (соло: незакоммиченные правки переедут
-на ветку в том же каталоге) либо работай в своём worktree
-(`git worktree add ../heys-<task> -b <task>` — для реальной параллельной
-работы). Не по схеме «правлю в main → на коммите убегаю»: pre-commit
+**Шаг 0 любой задачи: уйди с trunk на свою ветку СРАЗУ, до правок.** Для
+реальной параллельной работы — свой worktree одной командой:
+**`pnpm agent:worktree <task>`** (ветка `claude/<task>` от свежего origin/main,
+настоящий `pnpm install`, рабочие хуки; **никогда не симлинкай node_modules** —
+это рушит `core.bare`). Соло на `main`/`develop` без параллели — достаточно
+`git switch -c <task>` (незакоммиченные правки переедут на ветку в том же
+каталоге). Не по схеме «правлю в main → на коммите убегаю»: pre-commit
 ([check-agent-staging.mjs](scripts/check-agent-staging.mjs)) **блокирует
 task-work (source/test/docs) в staged на `main`/`develop`**. Причина — несколько
 агентов на одном trunk сцепляются в одну ветку: `git push` (толкает всю ветку)
