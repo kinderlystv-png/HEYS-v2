@@ -456,13 +456,29 @@
 
                 // 🔒 Блокируем ЛЮБЫЕ внешние обновления (включая forceReload)
                 // на 3 секунды после локального изменения.
-                if (isExternalSource && Date.now() < blockCloudUpdatesUntilRef.current) {
-                    recordDayDecision('BLOCKED_BLOCK_WINDOW', source, 'remaining ' + (blockCloudUpdatesUntilRef.current - Date.now()) + 'ms, forceReload=' + !!forceReload);
+                // Clock-skew defense (curator↔PIN incident 2026-06-05): the block is
+                // armed as `<editUpdatedAt> + 3000` / restored via setBlockCloudUpdates,
+                // so a future-skewed timestamp (clock-ahead device, or a stale saved
+                // value restored on modal open) can push blockUntil minutes ahead and
+                // FREEZE all incoming sync. The longest legitimate arm is
+                // markUndoWindow(~5000); anything beyond MAX_LEGIT_BLOCK_MS is skew/stale,
+                // not a real in-flight edit — clear it instead of freezing the curator.
+                const blockRemainingMs = blockCloudUpdatesUntilRef.current - Date.now();
+                const MAX_LEGIT_BLOCK_MS = 15000;
+                if (isExternalSource && blockRemainingMs > MAX_LEGIT_BLOCK_MS) {
+                    recordDayDecision('BLOCK_WINDOW_SKEW_CLEARED', source, 'remaining ' + blockRemainingMs + 'ms > ' + MAX_LEGIT_BLOCK_MS + 'ms cap — skew/stale, clearing');
+                    console.warn('[HEYS.day] 🧹 Block-window too far in future (skew/stale) — clearing, not freezing sync', {
+                        source,
+                        remainingMs: blockRemainingMs
+                    });
+                    blockCloudUpdatesUntilRef.current = Date.now();
+                } else if (isExternalSource && blockRemainingMs > 0) {
+                    recordDayDecision('BLOCKED_BLOCK_WINDOW', source, 'remaining ' + blockRemainingMs + 'ms, forceReload=' + !!forceReload);
                     console.info('[HEYS.day] 🔒 External update blocked', {
                         source,
                         forceReload,
                         hasPayload: !!payloadData,
-                        remainingMs: blockCloudUpdatesUntilRef.current - Date.now()
+                        remainingMs: blockRemainingMs
                     });
                     return;
                 }
