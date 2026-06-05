@@ -1570,6 +1570,39 @@
   }
   Fingers.lastGripFeedback = _lastGripFeedback;
 
+  // B18: извлекает детали дня (для модалки по клику в календаре) из dayv2-объекта.
+  // Pure. Возвращает { sessions:[{ programId, durationMinutes, hadPain, notes,
+  // exercises:[{ gripId, edgeSizeMm, addedWeightKg, setsCount, rpe:[...], pain }] }] }.
+  function _buildDayDetail(day) {
+    const out = { sessions: [] };
+    if (!day || !Array.isArray(day.trainings)) return out;
+    day.trainings.forEach(function (tr, idx) {
+      if (!tr || tr.type !== 'fingers' || !tr.fingersLog) return;
+      const log = tr.fingersLog;
+      const exercises = (Array.isArray(log.exercises) ? log.exercises : []).map(function (ex) {
+        const fb = Array.isArray(ex.setFeedback) ? ex.setFeedback : [];
+        return {
+          gripId: ex.gripId || null,
+          edgeSizeMm: ex.edgeSizeMm != null ? ex.edgeSizeMm : null,
+          addedWeightKg: Number(ex.addedWeightKg) || 0,
+          setsCount: Number(ex.setsCount) || 0,
+          rpe: fb.map(function (f) { return f && f.rpe; }).filter(Boolean),
+          pain: fb.some(function (f) { return f && f.pain; }),
+        };
+      });
+      out.sessions.push({
+        trainingIndex: idx,
+        programId: log.programId || 'custom',
+        durationMinutes: Number(log.totalDurationMinutes) || 0,
+        hadPain: !!log.hadPain || exercises.some(function (e) { return e.pain; }),
+        notes: tr.notes || '',
+        exercises: exercises,
+      });
+    });
+    return out;
+  }
+  Fingers._buildDayDetail = _buildDayDetail;
+
   /**
    * Один проход по последним 365 дням → streak, totals, последние 5 сессий.
    * @returns {{streak:number, totalSessions:number, totalHolds:number, totalMinutes:number, lastSessions:Array}}
@@ -1671,6 +1704,25 @@
     };
   }
 
+  // B11: цель недельного объёма (closing-the-loop). Цель = среднее по предыдущим
+  // неделям с данными (индексы 1..4, weeklyVolume[0]=текущая) — «держи свой
+  // недавний объём». Pure. Возвращает { thisWeek, target, pct } минут;
+  // target=null если нет истории (рано ставить план).
+  function _weeklyVolumeTarget(weeklyVolume) {
+    const wv = Array.isArray(weeklyVolume) ? weeklyVolume : [];
+    const thisWeek = Math.round(Number(wv[0]) || 0);
+    const prior = [];
+    for (let i = 1; i <= 4; i++) {
+      const v = Number(wv[i]) || 0;
+      if (v > 0) prior.push(v);
+    }
+    if (!prior.length) return { thisWeek: thisWeek, target: null, pct: null };
+    const target = Math.round(prior.reduce(function (s, v) { return s + v; }, 0) / prior.length);
+    const pct = target > 0 ? Math.round(100 * thisWeek / target) : null;
+    return { thisWeek: thisWeek, target: target, pct: pct };
+  }
+  Fingers._weeklyVolumeTarget = _weeklyVolumeTarget;
+
   function _relativeDay(daysAgo) {
     if (daysAgo === 0) return 'сегодня';
     if (daysAgo === 1) return 'вчера';
@@ -1756,6 +1808,23 @@
             h('h3', { className: 'fingers-fs-progress-section__title' }, 'Недельный объём'),
             h('span', { className: 'fingers-fs-progress-section__hint' }, '12 недель · минут')
           ),
+          // B11: цель недели = среднее по прошлым неделям + progress-bar.
+          (function () {
+            const tgt = _weeklyVolumeTarget(wv);
+            if (tgt.target == null) return null;
+            const pct = Math.max(0, Math.min(100, tgt.pct || 0));
+            const reached = (tgt.pct || 0) >= 100;
+            return h('div', { className: 'fingers-fs-volume-target', style: { marginBottom: 12 } },
+              h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 } },
+                h('span', { style: { opacity: 0.8 } }, 'Эта неделя: ' + tgt.thisWeek + ' / ~' + tgt.target + ' мин'),
+                h('span', { style: { fontWeight: 600, color: reached ? '#10b981' : '#f59e0b' } },
+                  (tgt.pct != null ? tgt.pct + '%' : ''))
+              ),
+              h('div', { style: { height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' } },
+                h('div', { style: { height: '100%', width: pct + '%', borderRadius: 4,
+                  background: reached ? '#10b981' : '#f59e0b', transition: 'width .3s' } }))
+            );
+          })(),
           h('div', { className: 'fingers-fs-volume-chart' },
             bars.map(function (val, idx) {
               const heightPct = Math.max(2, Math.round((val / maxV) * 100));
@@ -2057,18 +2126,59 @@
 
   // --- Calendar tab ---
   function CalendarTab() {
+    // B18: клик по дню → модалка с деталями (упражнения, хваты, RPE, боль, заметка).
+    const [detailKey, setDetailKey] = useState(null);
     if (!Fingers.YearHeatmap) {
       return h('div', { className: 'fingers-fs-empty' },
         h('p', null, 'Календарь недоступен (module not loaded).'));
     }
     const currentYear = new Date().getFullYear();
-    // onDayClick намеренно НЕ передаём пока bottom-sheet с деталями дня не сделан —
-    // YearHeatmap читает `hasSession && onDayClick` чтобы поставить cursor:pointer.
-    // Раньше передавали пустую функцию → курсор-указатель обманывал юзера, клик
-    // ничего не делал (audit-finding 2026-06-01).
+    const detail = detailKey ? _buildDayDetail(_readDayDiary(detailKey)) : null;
+    const rpeEmoji = { easy: '😎', ok: '😐', hard: '🥵' };
     return h('div', null,
       h('h3', { style: { margin: '0 0 16px' } }, '📅 Год тренировок'),
-      h(Fingers.YearHeatmap, { year: currentYear })
+      h(Fingers.YearHeatmap, { year: currentYear, onDayClick: function (dateKey) { setDetailKey(dateKey); } }),
+      // B18: bottom-sheet деталей дня.
+      detailKey && detail ? h('div', {
+        className: 'fingers-fs-day-detail-overlay',
+        style: { position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end',
+          justifyContent: 'center', background: 'rgba(0,0,0,0.5)' },
+        onClick: function () { setDetailKey(null); }
+      },
+        h('div', {
+          style: { width: '100%', maxWidth: 480, maxHeight: '80vh', overflowY: 'auto',
+            background: 'var(--fingers-fs-card-bg, #1b1b1f)', borderRadius: '16px 16px 0 0',
+            padding: 20, border: '1px solid rgba(255,255,255,0.12)' },
+          onClick: function (e) { e.stopPropagation(); }
+        },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 } },
+            h('h3', { style: { margin: 0, fontSize: 17 } }, detailKey),
+            h('button', { type: 'button', className: 'fingers-fs-ghost', onClick: function () { setDetailKey(null); } }, '✕')
+          ),
+          detail.sessions.length === 0
+            ? h('p', { style: { opacity: 0.7 } }, 'Нет тренировок пальцев в этот день.')
+            : detail.sessions.map(function (s, si) {
+                return h('div', { key: si, style: { marginBottom: 16 } },
+                  h('div', { style: { fontWeight: 600, marginBottom: 6 } },
+                    (s.programId || 'custom') + ' · '
+                    + intensityLabel((Fingers.getProgramIntensity && Fingers.getProgramIntensity(s.programId)) || 'moderate')
+                    + ' · ' + s.durationMinutes + ' мин' + (s.hadPain ? ' · 🩹 боль' : '')),
+                  s.notes ? h('div', { style: { fontSize: 13, opacity: 0.75, marginBottom: 6 } }, '«' + s.notes + '»') : null,
+                  h('div', null, s.exercises.map(function (ex, ei) {
+                    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[ex.gripId];
+                    const gl = grip ? grip.label : (ex.gripId || '—');
+                    const rpeStr = ex.rpe.map(function (r) { return rpeEmoji[r] || r; }).join(' ');
+                    return h('div', { key: ei, style: { fontSize: 13, padding: '4px 0', borderTop: ei ? '1px solid rgba(255,255,255,0.06)' : 'none' } },
+                      gl + ' · ' + (ex.edgeSizeMm != null ? ex.edgeSizeMm + 'мм' : '—')
+                      + (ex.addedWeightKg ? ' · +' + ex.addedWeightKg + 'кг' : '')
+                      + ' · ' + ex.setsCount + ' подх.'
+                      + (rpeStr ? ' · ' + rpeStr : '')
+                      + (ex.pain ? ' · 🩹' : ''));
+                  }))
+                );
+              })
+        )
+      ) : null
     );
   }
 
