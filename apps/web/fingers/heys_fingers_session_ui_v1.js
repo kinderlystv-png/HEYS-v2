@@ -407,7 +407,16 @@
     const cooldownRank = { rest: 0, recovery: 1, moderate: 2, max: 3 };
     const rRank = data.readinessBucket != null ? readinessRank[data.readinessBucket] : 3;
     const cRank = data.cooldown ? cooldownRank[data.cooldown.recommendation] : 3;
-    const finalRank = Math.min(rRank, cRank);
+    let finalRank = Math.min(rRank, cRank);
+    // B7: фаза мезоцикла дополнительно клампит интенсивность дня — цикл «ведёт»
+    // (deload-неделя → recovery даже при отличной готовности). Аддитивно: нет
+    // активного цикла → meso=null → без изменений.
+    const meso = _mesoCurrent(null, todayKey);
+    if (meso) {
+      data.mesocycle = meso;
+      const ceilRank = cooldownRank[meso.ceiling] != null ? cooldownRank[meso.ceiling] : 3;
+      finalRank = Math.min(finalRank, ceilRank);
+    }
     data.bucket = ['rest', 'recovery', 'moderate', 'max'][finalRank];
     // Recommended program — клампим к потолку бакета (safety). См.
     // _recommendForBucket: getRecommendedProgramId() слепа к интенсивности и
@@ -417,6 +426,76 @@
     } catch (e) { console.warn('[Today] recommend failed:', e); }
     return data;
   }
+
+  // ─── B7: мезоцикл ───────────────────────────────────────────────────────
+  // 4-нед блок: накопление → (интенсификация) → делоад → re-test. cycleState
+  // { startedAt:'YYYY-MM-DD', weeks } в fingerboardProfile. Нет цикла → фича
+  // выключена (Today не меняется). Phase клампит интенсивность дня в _buildTodayData.
+  const _MESO_DEFAULT_WEEKS = 4;
+  function _mesoPhaseForWeek(weekIdx, weeksTotal) {
+    const w = Number(weekIdx);
+    const total = Number(weeksTotal) || _MESO_DEFAULT_WEEKS;
+    if (!Number.isFinite(w) || w < 0) return 'accumulation';
+    if (w >= total) return 'retest';            // цикл завершён — пора пере-тест + новый блок
+    if (w === total - 1) return 'deload';       // последняя неделя — разгрузка
+    if (w === total - 2) return 'intensification';
+    return 'accumulation';
+  }
+  function _mesoIntensityCeiling(phase) {
+    return phase === 'deload' ? 'recovery'
+      : phase === 'accumulation' ? 'moderate'
+      : 'max'; // intensification / retest
+  }
+  function _mesoLabel(phase) {
+    return phase === 'accumulation' ? 'накопление'
+      : phase === 'intensification' ? 'интенсификация'
+      : phase === 'deload' ? 'разгрузка'
+      : phase === 'retest' ? 'пере-тест' : phase;
+  }
+  function _getCycleState() {
+    const fp = getProfile();
+    const cs = fp && fp.mesocycle;
+    if (!cs || !cs.startedAt) return null;
+    return { startedAt: cs.startedAt, weeks: Number(cs.weeks) || _MESO_DEFAULT_WEEKS };
+  }
+  function _mesoCurrent(cycleState, todayKey) {
+    const cs = cycleState || _getCycleState();
+    if (!cs || !cs.startedAt) return null;
+    const start = new Date(cs.startedAt + 'T00:00:00');
+    const today = new Date((todayKey || _formatDateKey(new Date())) + 'T00:00:00');
+    if (isNaN(start.getTime()) || isNaN(today.getTime())) return null;
+    const days = Math.floor((today.getTime() - start.getTime()) / 86400000);
+    if (days < 0) return null;
+    const weekIdx = Math.floor(days / 7);
+    const weeks = cs.weeks;
+    const phase = _mesoPhaseForWeek(weekIdx, weeks);
+    return {
+      weekIdx: weekIdx,
+      week: Math.min(weekIdx + 1, weeks),
+      weeksTotal: weeks,
+      phase: phase,
+      label: _mesoLabel(phase),
+      ceiling: _mesoIntensityCeiling(phase),
+      complete: weekIdx >= weeks,
+    };
+  }
+  function _startMesocycle(weeks) {
+    const u = HEYS.utils;
+    if (!u || !u.lsGet || !u.lsSet) return false;
+    const raw = u.lsGet('heys_profile', {}) || {};
+    const fp = Object.assign({}, raw.fingerboardProfile || {}, {
+      mesocycle: { startedAt: _formatDateKey(new Date()), weeks: Number(weeks) || _MESO_DEFAULT_WEEKS }
+    });
+    u.lsSet('heys_profile', Object.assign({}, raw, { fingerboardProfile: fp }));
+    return true;
+  }
+  Fingers.mesocycle = {
+    phaseForWeek: _mesoPhaseForWeek,
+    intensityCeiling: _mesoIntensityCeiling,
+    label: _mesoLabel,
+    current: _mesoCurrent,
+    start: _startMesocycle,
+  };
 
   // Рекомендует программу, интенсивность которой не выше дневного safety-потолка
   // (data.bucket из readiness ∩ cooldown). Сначала пытается оставить штатную
@@ -578,6 +657,14 @@
             data.score != null
               ? h('div', { style: { fontSize: 13, opacity: 0.7, marginTop: 2 } },
                   'Индекс готовности: ' + data.score + '/100')
+              : null,
+            // B7: индикатор фазы мезоцикла (если цикл активен).
+            data.mesocycle
+              ? h('div', { style: { fontSize: 12, opacity: 0.7, marginTop: 2 } },
+                  data.mesocycle.complete
+                    ? '🔄 Цикл завершён — пора пере-тест MVC и новый блок'
+                    : 'Цикл: неделя ' + data.mesocycle.week + '/' + data.mesocycle.weeksTotal
+                      + ' · ' + data.mesocycle.label)
               : null
           )
         ),
@@ -3020,6 +3107,36 @@
             h('p', { className: 'fingers-settings__profile-hint' },
               'Возраст определяет какие хваты безопасны (UIAA/BMC), вес — точный % MVC. ',
               'Изменить можно в общем Профиле HEYS.')
+          ),
+
+          // ─── Training cycle (B7) ───
+          h('section', { className: 'fingers-settings__section' },
+            h('div', { className: 'fingers-settings__section-title' }, 'Тренировочный цикл'),
+            (function () {
+              const cur = Fingers.mesocycle && Fingers.mesocycle.current
+                ? Fingers.mesocycle.current(null, null) : null;
+              return h('p', { className: 'fingers-settings__profile-hint', style: { marginTop: 0 } },
+                cur
+                  ? (cur.complete
+                      ? 'Цикл завершён — пора пере-тест MVC и начать новый блок.'
+                      : 'Идёт неделя ' + cur.week + '/' + cur.weeksTotal + ' · ' + cur.label
+                        + '. Фаза подстраивает рекомендуемую интенсивность в «Сегодня».')
+                  : '4-нед блок: накопление → интенсификация → разгрузка → пере-тест. '
+                    + 'Фаза автоматически клампит интенсивность дня.');
+            })(),
+            h('button', {
+              type: 'button',
+              className: 'fingers-settings__reset-btn',
+              onClick: function () {
+                if (Fingers.mesocycle && Fingers.mesocycle.start && Fingers.mesocycle.start(4)) {
+                  if (HEYS.Toast && HEYS.Toast.success) HEYS.Toast.success('Новый 4-недельный цикл начат');
+                  if (typeof onClose === 'function') onClose();
+                }
+              }
+            },
+              h('span', { 'aria-hidden': 'true' }, '🔄'),
+              ' Начать новый цикл (4 нед)'
+            )
           ),
 
           // ─── Data export (B12) ───
