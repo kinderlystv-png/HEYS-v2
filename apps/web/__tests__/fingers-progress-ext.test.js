@@ -94,3 +94,35 @@ describe('B18 _buildDayDetail', () => {
     expect(D(null).sessions).toEqual([]);
   });
 });
+
+// B12: pure CSV-сериализация экспорта тренировок.
+describe('B12 buildFingersCsv', () => {
+  beforeAll(setupOnce);
+  const C = (rows) => globalThis.HEYS.Fingers.buildFingersCsv(rows);
+  const HEADER = 'date,program,intensity,durationMin,grip,edgeMm,addedKg,sets,rpe,pain';
+
+  it('пустой вход → только заголовок', () => {
+    expect(C([])).toBe(HEADER);
+    expect(C(null)).toBe(HEADER);
+  });
+
+  it('строка: rpe-массив через пробел, pain → yes/пусто', () => {
+    const csv = C([
+      { date: '2026-06-05', program: 'horst_max_hangs', intensity: 'max', durationMin: 24,
+        grip: 'halfcrimp', edgeMm: 20, addedKg: 12, sets: 3, rpe: ['ok', 'hard'], pain: true },
+      { date: '2026-06-03', program: 'repeaters_7_3', intensity: 'moderate', durationMin: 18,
+        grip: 'openhand4', edgeMm: 18, addedKg: 0, sets: 4, rpe: [], pain: false },
+    ]);
+    const lines = csv.split('\n');
+    expect(lines[0]).toBe(HEADER);
+    expect(lines[1]).toBe('2026-06-05,horst_max_hangs,max,24,halfcrimp,20,12,3,ok hard,yes');
+    expect(lines[2]).toBe('2026-06-03,repeaters_7_3,moderate,18,openhand4,18,0,4,,');
+  });
+
+  it('RFC4180-эскейпинг полей с запятой/кавычкой', () => {
+    const csv = C([{ date: '2026-06-05', program: 'a,b', grip: 'x"y', rpe: [], pain: false }]);
+    const line = csv.split('\n')[1];
+    expect(line).toContain('"a,b"');     // запятая → кавычки
+    expect(line).toContain('"x""y"');    // кавычка удвоена
+  });
+});

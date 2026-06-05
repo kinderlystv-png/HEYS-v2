@@ -1603,6 +1603,75 @@
   }
   Fingers._buildDayDetail = _buildDayDetail;
 
+  // B12: экспорт тренировочных данных пальцев. Pure CSV-сериализация — одна
+  // строка на упражнение сессии (date/program/intensity/grip/edge/weight/sets/
+  // rpe/pain). RFC4180-эскейпинг полей с запятой/кавычкой/переводом строки.
+  function buildFingersCsv(rows) {
+    const cols = ['date', 'program', 'intensity', 'durationMin', 'grip', 'edgeMm', 'addedKg', 'sets', 'rpe', 'pain'];
+    const esc = function (v) {
+      const s = v == null ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const lines = [cols.join(',')];
+    (Array.isArray(rows) ? rows : []).forEach(function (r) {
+      lines.push([
+        r.date, r.program, r.intensity, r.durationMin, r.grip, r.edgeMm, r.addedKg,
+        r.sets, (Array.isArray(r.rpe) ? r.rpe.join(' ') : (r.rpe || '')), r.pain ? 'yes' : ''
+      ].map(esc).join(','));
+    });
+    return lines.join('\n');
+  }
+  Fingers.buildFingersCsv = buildFingersCsv;
+
+  // B12 reader: собирает плоские строки экспорта из dayv2 за lookbackDays
+  // (reuse _buildDayDetail). Newest-first по скану.
+  function _collectFingersExportRows(lookbackDays) {
+    const n = Math.max(1, Math.min(730, lookbackDays || 365));
+    const rows = [];
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = _formatDateKey(d);
+      const detail = _buildDayDetail(_readDayDiary(key));
+      detail.sessions.forEach(function (s) {
+        const intensity = (Fingers.getProgramIntensity && Fingers.getProgramIntensity(s.programId)) || '';
+        s.exercises.forEach(function (ex) {
+          rows.push({
+            date: key, program: s.programId, intensity: intensity,
+            durationMin: s.durationMinutes, grip: ex.gripId, edgeMm: ex.edgeSizeMm,
+            addedKg: ex.addedWeightKg, sets: ex.setsCount, rpe: ex.rpe, pain: ex.pain,
+          });
+        });
+      });
+    }
+    return rows;
+  }
+  Fingers._collectFingersExportRows = _collectFingersExportRows;
+
+  // B12: триггер скачивания CSV (browser-only). Собирает строки + Blob + anchor.
+  function exportFingersCsv() {
+    try {
+      const rows = _collectFingersExportRows(365);
+      const csv = buildFingersCsv(rows);
+      if (typeof document === 'undefined' || typeof Blob === 'undefined') return false;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fingers-export.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 1000);
+      return true;
+    } catch (e) {
+      console.warn('[Fingers] exportFingersCsv failed:', e);
+      return false;
+    }
+  }
+  Fingers.exportFingersCsv = exportFingersCsv;
+
   /**
    * Один проход по последним 365 дням → streak, totals, последние 5 сессий.
    * @returns {{streak:number, totalSessions:number, totalHolds:number, totalMinutes:number, lastSessions:Array}}
@@ -2951,6 +3020,28 @@
             h('p', { className: 'fingers-settings__profile-hint' },
               'Возраст определяет какие хваты безопасны (UIAA/BMC), вес — точный % MVC. ',
               'Изменить можно в общем Профиле HEYS.')
+          ),
+
+          // ─── Data export (B12) ───
+          h('section', { className: 'fingers-settings__section' },
+            h('div', { className: 'fingers-settings__section-title' }, 'Данные'),
+            h('button', {
+              type: 'button',
+              className: 'fingers-settings__reset-btn',
+              onClick: function () {
+                const ok = Fingers.exportFingersCsv && Fingers.exportFingersCsv();
+                if (HEYS.Toast) {
+                  if (ok && HEYS.Toast.success) HEYS.Toast.success('Экспорт CSV скачан');
+                  else if (!ok && HEYS.Toast.info) HEYS.Toast.info('Нет данных для экспорта');
+                }
+              }
+            },
+              h('span', { 'aria-hidden': 'true' }, '⬇'),
+              ' Экспорт тренировок (CSV)'
+            ),
+            h('p', { className: 'fingers-settings__profile-hint' },
+              'Скачать историю за год: дата, программа, хват, зацеп, вес, подходы, RPE, боль. '
+              + 'Для своей аналитики в Google Sheets / Excel.')
           ),
 
           // ─── Re-onboarding link ───
