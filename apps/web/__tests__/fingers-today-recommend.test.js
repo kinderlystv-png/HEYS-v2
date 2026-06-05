@@ -167,3 +167,44 @@ describe('B16 goal → getRecommendedProgramId', () => {
     expect(globalThis.HEYS.Fingers.getRecommendedProgramId()).toBe('repeaters_7_3');
   });
 });
+
+// B1: _mergeSetFeedback — additive merge per-set RPE/боли в fingersLog.exercises.
+describe('B1 _mergeSetFeedback', () => {
+  beforeAll(setupOnce);
+
+  const EX = [
+    { gripId: 'halfcrimp', setsCount: 3, addedWeightKg: 10 },
+    { gripId: 'openhand', setsCount: 2, addedWeightKg: 5 },
+  ];
+
+  it('экспортирована', () => {
+    expect(typeof globalThis.HEYS.Fingers._mergeSetFeedback).toBe('function');
+  });
+
+  it('пустой feedback → тот же массив (additive-инвариант, контракт прежний)', () => {
+    const M = globalThis.HEYS.Fingers._mergeSetFeedback;
+    expect(M(EX, {})).toBe(EX);
+    expect(M(EX, null)).toBe(EX);
+    expect(M(EX, undefined)).toBe(EX);
+  });
+
+  it('feedback вмерживается в setFeedback нужного упражнения, без мутации входа', () => {
+    const M = globalThis.HEYS.Fingers._mergeSetFeedback;
+    const out = M(EX, { 0: [{ rpe: 'hard', pain: true }, { rpe: 'ok', pain: false }] });
+    expect(out).not.toBe(EX);                 // новый массив
+    expect(EX[0].setFeedback).toBeUndefined(); // вход не мутирован
+    expect(out[0].setFeedback).toEqual([
+      { rpe: 'hard', pain: true },
+      { rpe: 'ok', pain: false },
+    ]);
+    expect(out[1].setFeedback).toBeUndefined(); // упр без feedback не тронуто
+    expect(out[1]).toBe(EX[1]);
+  });
+
+  it('нормализует пропуски/мусор в {rpe:null, pain:false}', () => {
+    const M = globalThis.HEYS.Fingers._mergeSetFeedback;
+    const out = M(EX, { 0: [{ pain: 1 }, null, { rpe: 'easy' }] });
+    expect(out[0].setFeedback[0]).toEqual({ rpe: null, pain: true });
+    expect(out[0].setFeedback[2]).toEqual({ rpe: 'easy', pain: false });
+  });
+});

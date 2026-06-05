@@ -456,6 +456,30 @@
     return eligible[0];
   }
 
+  // B1: мержит per-set feedback (RPE/боль) в КОПИЮ exercises для fingersLog.
+  // feedbackByExIdx: { [exIdx]: [{ rpe:'easy'|'ok'|'hard'|null, pain:bool }, ...] }.
+  // Additive-инвариант: пусто/нет → возвращаем исходный массив без изменений
+  // (старый контракт fingersLog байт-в-байт). Не мутирует вход.
+  function _mergeSetFeedback(exercises, feedbackByExIdx) {
+    if (!Array.isArray(exercises)) return exercises;
+    if (!feedbackByExIdx || typeof feedbackByExIdx !== 'object') return exercises;
+    let touched = false;
+    const out = exercises.map(function (ex, i) {
+      const fb = feedbackByExIdx[i];
+      if (!Array.isArray(fb) || !fb.length) return ex;
+      const setFeedback = [];
+      for (let s = 0; s < fb.length; s++) {
+        const f = fb[s];
+        if (!f) continue;
+        setFeedback[s] = { rpe: f.rpe || null, pain: !!f.pain };
+      }
+      if (!setFeedback.length) return ex;
+      touched = true;
+      return Object.assign({}, ex, { setFeedback: setFeedback });
+    });
+    return touched ? out : exercises;
+  }
+
   function _bucketMeta(bucket) {
     // Returns { emoji, title, color, allowStart }
     if (bucket === 'unknown') return { emoji: '🎂', title: 'Сегодня — заполни возраст', color: '#6b7280', allowStart: false };
@@ -1946,12 +1970,15 @@
 
   // --- Live session — ведомое выполнение упражнения с countdown timer ---
   // Каждое exercise = собственный cycle (key={exIdx} → re-mount hook'a).
-  function ExerciseRunner({ exercise, exIdx, totalExercises, dateKey, trainingIndex, exercises, programId, initialSnapshot, onDone, onAbort }) {
+  function ExerciseRunner({ exercise, exIdx, totalExercises, dateKey, trainingIndex, exercises, programId, initialSnapshot, onDone, onAbort, onSetFeedback }) {
     // keepSnapshotOnAbortRef — флаг для «Прервать → Не записывать» сценария.
     // Когда true: при переходе в ABORTED НЕ очищаем persistence, чтобы остался
     // snapshot и в SessionUI появился resume-баннер. При DONE/EXPIRED очищаем
     // всегда (нет смысла хранить завершённое).
     const keepSnapshotOnAbortRef = React.useRef(false);
+    // B1: промпт RPE/боли по завершении сета. null | { setIdx, isFinal }.
+    const [rpePrompt, setRpePrompt] = useState(null);
+    const [rpePain, setRpePain] = useState(false);
 
     // onStateChange wired to persistence.save: snapshot пишется на переходе фазы
     // (fireStateChange зовётся только на transition, не на tick). Live remaining
@@ -1994,15 +2021,60 @@
       }
     }, [dateKey, trainingIndex, exIdx, exercises, programId]);
 
+    // B1: обёртка onStateChange — на входе в BIG_REST показываем RPE-промпт за
+    // только что завершённый сет (meta.setIdx); на старте нового сета (HANG/
+    // SET_PREP) авто-дисмиссим незакрытый non-final промпт (= skip). Без
+    // onSetFeedback фича выключена (поведение прежнее). persistence не трогаем.
+    const handleStateChangeRpe = useCallback(function (nextState, meta) {
+      handleStateChange(nextState, meta);
+      if (!onSetFeedback) return;
+      const STATES = Fingers.STATES || {};
+      if (nextState === STATES.BIG_REST) {
+        const sIdx = meta && meta.setIdx != null ? meta.setIdx : 0;
+        setRpePrompt({ setIdx: sIdx, isFinal: false });
+      } else if (nextState === STATES.HANG || nextState === STATES.SET_PREP) {
+        setRpePrompt(function (p) { return (p && !p.isFinal) ? null : p; });
+      }
+    }, [handleStateChange, onSetFeedback]);
+
+    // B1: на DONE (последний сет) — вместо немедленного onDone показываем
+    // финальный промпт; onDone вызывается из submit/skip. Без onSetFeedback —
+    // прежнее поведение (сразу onDone).
+    const handleCycleComplete = useCallback(function () {
+      if (!onSetFeedback) { if (onDone) onDone(); return; }
+      const lastSet = Math.max(0, (Number(exercise.setsCount) || 1) - 1);
+      setRpePrompt({ setIdx: lastSet, isFinal: true });
+    }, [onSetFeedback, onDone, exercise.setsCount]);
+
     const cycle = Fingers.useCountdownCycle({
       hangSec: Number(exercise.hangSec) || 7,
       restSec: Number(exercise.restSec) || 3,
       repsPerSet: Number(exercise.repsPerSet) || 6,
       setsCount: Number(exercise.setsCount) || 3,
       restBetweenSetsSec: Number(exercise.restBetweenSetsSec) || 180,
-      onComplete: onDone,
-      onStateChange: handleStateChange
+      onComplete: handleCycleComplete,
+      onStateChange: handleStateChangeRpe
     });
+
+    // B1: submit/skip RPE-промпта. submit пишет feedback наверх (recordSetFeedback);
+    // на финальном сете оба пути завершают упражнение через onDone.
+    const submitRpe = useCallback(function (rpe, pain) {
+      setRpePrompt(function (p) {
+        if (p && onSetFeedback) {
+          try { onSetFeedback(exIdx, p.setIdx, { rpe: rpe, pain: !!pain }); } catch (_) {}
+        }
+        if (p && p.isFinal && onDone) onDone();
+        return null;
+      });
+      setRpePain(false);
+    }, [exIdx, onSetFeedback, onDone]);
+    const skipRpe = useCallback(function () {
+      setRpePrompt(function (p) {
+        if (p && p.isFinal && onDone) onDone();
+        return null;
+      });
+      setRpePain(false);
+    }, [onDone]);
 
     // Auto-start session на mount. НЕ блокируем повторный запуск ref'ом —
     // React Strict Mode mount-unmount-remount убивает setInterval из cleanup
@@ -2047,6 +2119,64 @@
     const gripLabel = grip ? grip.label : exercise.gripId;
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : '—';
     const addedWeight = Number(exercise.addedWeightKg) || 0;
+
+    // B1: RPE/боль оверлей. Рендерится поверх любой ветки (CountdownDisplay или
+    // fallback), чтобы финальный сет (isFinal) гарантированно мог завершить
+    // сессию через submit/skip. Non-final — поверх отдыха, не блокирует таймер.
+    const rpeOverlay = rpePrompt ? (function () {
+      const setNo = (Number(rpePrompt.setIdx) || 0) + 1;
+      const title = rpePrompt.isFinal
+        ? 'Последний подход — как прошёл?'
+        : ('Подход ' + setNo + ' — как прошёл?');
+      const btn = function (key, label, rpeVal) {
+        return h('button', {
+          key: key,
+          type: 'button',
+          className: 'fingers-fs-btn',
+          style: { flex: 1, fontSize: 15, padding: '12px 8px' },
+          onClick: function () { submitRpe(rpeVal, rpePain); }
+        }, label);
+      };
+      return h('div', {
+        className: 'fingers-fs-rpe-overlay',
+        style: {
+          position: 'fixed', inset: 0, zIndex: 40,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)', padding: 20
+        }
+      },
+        h('div', {
+          style: {
+            width: '100%', maxWidth: 360, borderRadius: 16, padding: 20,
+            background: 'var(--fingers-fs-card-bg, #1b1b1f)',
+            border: '1px solid rgba(255,255,255,0.12)'
+          }
+        },
+          h('h3', { style: { margin: '0 0 14px', fontSize: 17, textAlign: 'center' } }, title),
+          h('div', { style: { display: 'flex', gap: 8, marginBottom: 14 } },
+            btn('easy', '😎 Легко', 'easy'),
+            btn('ok', '😐 Норм', 'ok'),
+            btn('hard', '🥵 Тяжело', 'hard')
+          ),
+          h('label', {
+            style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, opacity: 0.85, cursor: 'pointer', marginBottom: 14 }
+          },
+            h('input', {
+              type: 'checkbox',
+              checked: rpePain,
+              onChange: function (e) { setRpePain(!!e.target.checked); }
+            }),
+            'Была боль в пальцах / суставах'
+          ),
+          h('button', {
+            type: 'button',
+            className: 'fingers-fs-ghost',
+            style: { width: '100%', fontSize: 13, opacity: 0.7 },
+            onClick: skipRpe
+          }, 'Пропустить')
+        )
+      );
+    })() : null;
 
     if (Fingers.CountdownDisplay) {
       // Smart pause/resume: CountdownDisplay читает только onPause prop;
@@ -2145,43 +2275,49 @@
         });
       };
 
-      return h(Fingers.CountdownDisplay, {
-        state: cycle.state,
-        secondsLeft: cycle.secondsLeft,
-        setIdx: cycle.setIdx,
-        totalSets: Number(exercise.setsCount) || 3,
-        repIdx: cycle.repIdx,
-        totalReps: Number(exercise.repsPerSet) || 6,
-        // Только название хвата — edge/вес передаются отдельными prop'ами
-        // чтобы CountdownDisplay сам форматировал без дубликатов.
-        gripLabel: gripLabel,
-        gripId: exercise.gripId,
-        edgeLabel: edgeLabel,
-        addedWeightKg: addedWeight,
-        exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
-        onPause: togglePauseResume,
-        onResume: cycle.resume,
-        onAbort: requestAbort,
-        onSkip: cycle.skipPhase
-      });
+      return h(React.Fragment, null,
+        h(Fingers.CountdownDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          setIdx: cycle.setIdx,
+          totalSets: Number(exercise.setsCount) || 3,
+          repIdx: cycle.repIdx,
+          totalReps: Number(exercise.repsPerSet) || 6,
+          // Только название хвата — edge/вес передаются отдельными prop'ами
+          // чтобы CountdownDisplay сам форматировал без дубликатов.
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          edgeLabel: edgeLabel,
+          addedWeightKg: addedWeight,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onPause: togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        rpeOverlay
+      );
     }
 
     // Fallback если CountdownDisplay не загружен
-    return h('div', { style: { padding: 32, textAlign: 'center' } },
-      h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel),
-      h('div', { style: { fontSize: 96, fontWeight: 300, fontFamily: 'mono' } },
-        cycle.secondsLeft + 'с'),
-      h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
-        'Состояние: ' + cycle.state + ' · Сет ' + (cycle.setIdx + 1) + '/' + exercise.setsCount),
-      h('button', {
-        className: 'fingers-fs-ghost',
-        onClick: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); },
-        style: { marginTop: 16 }
-      }, '✕ Прервать')
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel),
+        h('div', { style: { fontSize: 96, fontWeight: 300, fontFamily: 'mono' } },
+          cycle.secondsLeft + 'с'),
+        h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
+          'Состояние: ' + cycle.state + ' · Сет ' + (cycle.setIdx + 1) + '/' + exercise.setsCount),
+        h('button', {
+          className: 'fingers-fs-ghost',
+          onClick: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); },
+          style: { marginTop: 16 }
+        }, '✕ Прервать')
+      ),
+      rpeOverlay
     );
   }
 
-  function LiveSession({ exercises, dateKey, trainingIndex, programId, initialSnapshot, onAllDone, onAbort }) {
+  function LiveSession({ exercises, dateKey, trainingIndex, programId, initialSnapshot, onAllDone, onAbort, onSetFeedback }) {
     // Start at snapshot.exIdx if resuming; иначе с первого упражнения.
     const startIdx = (initialSnapshot && Number.isInteger(initialSnapshot.exIdx))
       ? Math.min(Math.max(0, initialSnapshot.exIdx), Math.max(0, (exercises?.length || 1) - 1))
@@ -2213,7 +2349,8 @@
       programId: programId,
       initialSnapshot: initialSnapshot,
       onDone: handleExerciseDone,
-      onAbort: onAbort
+      onAbort: onAbort,
+      onSetFeedback: onSetFeedback
     });
   }
 
@@ -2806,14 +2943,21 @@
         const oneSet = (e.hangSec + e.restSec) * e.repsPerSet + e.restBetweenSetsSec;
         return s + (oneSet * e.setsCount) / 60;
       }, 0);
+      // B1: вмерживаем per-set RPE/боль (если были собраны через таймер).
+      // Additive — без feedback loggedExercises === exercises (контракт прежний).
+      const loggedExercises = _mergeSetFeedback(exercises, o.feedback);
+      const hadPain = loggedExercises.some(function (e) {
+        return Array.isArray(e.setFeedback) && e.setFeedback.some(function (f) { return f && f.pain; });
+      });
       const fingersLog = {
         version: 1,
         programId: programId,
         totalDurationMinutes: Math.round(totalMin),
-        exercises: exercises,
+        exercises: loggedExercises,
         completedAt: new Date().toISOString(),
         viaTimer: !!o.viaTimer // true если завершено через ведомый таймер
       };
+      if (hadPain) fingersLog.hadPain = true;
       let saveOk = true;
       try {
         HEYS.TrainingStep?.saveFingers?.(
@@ -3016,11 +3160,25 @@
       setWarmupActive(false);
     }, []);
 
+    // B1: накопитель per-set feedback за live-сессию. { [exIdx]: [{rpe,pain}] }.
+    // ExerciseRunner шлёт сюда через onSetFeedback; handleLiveAllDone отдаёт в
+    // handleComplete и сбрасывает. Ref (не state) — записи во время сессии не
+    // должны триггерить ререндер живого таймера.
+    const liveFeedbackRef = React.useRef({});
+    const recordSetFeedback = useCallback(function (exIdx, setIdx, fb) {
+      if (exIdx == null || setIdx == null) return;
+      const arr = liveFeedbackRef.current[exIdx] || [];
+      arr[setIdx] = { rpe: (fb && fb.rpe) || null, pain: !!(fb && fb.pain) };
+      liveFeedbackRef.current[exIdx] = arr;
+    }, []);
+
     const handleLiveAllDone = useCallback(function () {
       setLiveActive(false);
       setInitialSnapshot(null);
       try { Fingers.voice?.say?.('cue.session_done'); } catch (_) {}
-      handleComplete({ viaTimer: true });
+      const feedback = liveFeedbackRef.current;
+      liveFeedbackRef.current = {};
+      handleComplete({ viaTimer: true, feedback: feedback });
     }, [handleComplete]);
 
     const handleLiveAbort = useCallback(function () {
@@ -3041,7 +3199,8 @@
           programId: pendingProgram?.id || 'custom',
           initialSnapshot: initialSnapshot,
           onAllDone: handleLiveAllDone,
-          onAbort: handleLiveAbort
+          onAbort: handleLiveAbort,
+          onSetFeedback: recordSetFeedback
         })
       );
     }
@@ -3441,6 +3600,8 @@
   // Exposed for tests (B0 Today Coach): safety-clamp рекомендации к бакету.
   Fingers._recommendForBucket = _recommendForBucket;
   Fingers._buildTodayData = _buildTodayData;
+  // Exposed for tests (B1): additive merge per-set feedback в fingersLog.
+  Fingers._mergeSetFeedback = _mergeSetFeedback;
 
   Fingers.startSession = function startSession(opts) {
     // Stub for future direct session launch from outside fullscreen.
