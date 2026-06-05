@@ -751,6 +751,33 @@
     return result;
   }
 
+  // ─── cycleDay feature-gate (incident 2026-06-05 #3) ───────────────────────
+  // Pure helpers used by the HEYS.storage interceptor chokepoint
+  // (stampDayv2ValueForLocalMutation) to drop stale / cross-injected cycleDay for
+  // users without cycle tracking. cycleDay валиден ТОЛЬКО когда у владельца дня
+  // `cycleTrackingEnabled === true` — та же калитка, что гейтит UI cycle-шаг
+  // (shouldShowCycleStep, heys_steps_v1.js). Без гейта stale cycleDay переживал
+  // запись через carry-forward (yesterday-verify/checkin) и переотравлял облако.
+
+  // Извлечь clientId владельца из scoped day-ключа; null для unscoped/legacy.
+  function ownerClientIdFromDayKey(key) {
+    const m = /^heys_([0-9a-f-]{36})_dayv2_\d{4}-\d{2}-\d{2}/i.exec(String(key || ''));
+    return (m && m[1]) || null;
+  }
+
+  // Занулить cycleDay, если трекинг владельца ПОЛОЖИТЕЛЬНО выключен.
+  // trackingEnabled: true (оставить), false (занулить), null/undefined
+  // (неизвестно → оставить, чтобы не снести легит-данные при boot-race).
+  // null (а не delete) — чтобы выиграть merge (`local.cycleDay === null`) и
+  // протолкнуть очистку в облако. Возвращает тот же ref когда менять нечего.
+  function gateCycleDayForOwner(day, trackingEnabled) {
+    if (!day || typeof day !== 'object' || day.cycleDay == null) return day;
+    if (trackingEnabled === false) {
+      return Object.assign({}, day, { cycleDay: null });
+    }
+    return day;
+  }
+
   return {
     mergeDayData,
     mergeChronoTombstones,
@@ -762,5 +789,8 @@
     stripDayMutationStamps,
     isDayMutationContentEqual,
     resolveDayMutationTs,
+    // Pure cycleDay feature-gate helpers (used by interceptor chokepoint + tests):
+    ownerClientIdFromDayKey,
+    gateCycleDayForOwner,
   };
 });
