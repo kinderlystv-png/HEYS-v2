@@ -134,9 +134,23 @@
       }
     }
 
-    if (!isPR) return false;
+    // B3: MVC timeseries — фиксируем КАЖДЫЙ тест (не только PR), чтобы строить
+    // тренд измеренной силы и ловить регрессии (падение MVC = ранний сигнал
+    // перетрена). maxHangs остаётся max-wins PR (backward compat). Кап 100 точек.
+    if (!all.history) all.history = {};
+    const hist = Array.isArray(all.history[slug]) ? all.history[slug] : [];
+    hist.push({
+      testedAt: stamped.testedAt,
+      type: stamped.type,
+      mvcKg: Number(stamped.mvcKg) || null,
+      holdTime: Number(stamped.holdTime) || null,
+      addedKg: Number(stamped.addedKg) || null,
+      bw: Number(stamped.bw) || null,
+    });
+    if (hist.length > 100) hist.splice(0, hist.length - 100);
+    all.history[slug] = hist;
 
-    all.maxHangs[slug] = stamped;
+    if (isPR) all.maxHangs[slug] = stamped;
     all.updatedAt = Date.now();
     _writeAll(all);
 
@@ -150,9 +164,33 @@
     // покрыт server-side encryption через is_health_key() regex; records_v1 пока
     // нет — это осознанное состояние, см. план spicy-wibbling-tulip.md B17′ (A).
     // Здесь логируем только safe keys.
-    _eventLog('finger-pr-update', `PR for ${slug}`, { source: stamped.source });
+    if (isPR) _eventLog('finger-pr-update', `PR for ${slug}`, { source: stamped.source });
 
-    return true;
+    return isPR;
+  }
+
+  /**
+   * B3: тренд ИЗМЕРЕННОЙ силы по grip+edge (в отличие от planned-веса в Progress).
+   * Точки {testedAt, mvcKg, holdTime, strengthRatio} по возрастанию времени.
+   * strengthRatio = mvcKg/bw — единая шкала силы-к-весу (как GRADE_TABLE.mvcRatio),
+   * корректная для изометрии. Сознательно НЕ e1RM: 1-rep-max — экстраполяция
+   * динамического лифта, для изометрического виса не валидна; strength-to-BW —
+   * established climbing-метрика (Lattice/Hörst).
+   */
+  function getMvcHistory(gripId, edgeMm) {
+    const all = _readAll();
+    const slug = _slug(gripId, edgeMm);
+    const hist = (all.history && Array.isArray(all.history[slug])) ? all.history[slug] : [];
+    return hist.map(function (p) {
+      const mvc = Number(p.mvcKg) || null;
+      const bw = Number(p.bw) || null;
+      return {
+        testedAt: p.testedAt,
+        mvcKg: mvc,
+        holdTime: Number(p.holdTime) || null,
+        strengthRatio: (mvc && bw) ? Number((mvc / bw).toFixed(3)) : null,
+      };
+    }).sort(function (a, b) { return (Date.parse(a.testedAt) || 0) - (Date.parse(b.testedAt) || 0); });
   }
 
   /**
@@ -258,6 +296,7 @@
   Fingers.records = {
     get,
     getMVC,
+    getMvcHistory,
     updateIfPR,
     asymmetries,
     byGrade,
