@@ -1964,6 +1964,11 @@
     'heys_pending_sync_ui_queue', // sync badge UI state — local only, must not be synced to cloud
     'heys_finger_active_session', // active fingers timer snapshot — per-tab recovery only
     'fingers.resume.snoozedUntil',
+    // B22: fingers UI-prefs — все local-only (per-device). intensity_filter /
+    // mix_intensity уже без heys_ префикса (не синкаются); voice_settings имел
+    // heys_ префикс и зеркалился — выравниваем сюда. Локальное значение
+    // сохраняется, просто перестаёт уходить в облако.
+    'heys_fingers_voice_settings_v1',
   ]);
 
   const LOCAL_ONLY_STORAGE_SUFFIXES = [
