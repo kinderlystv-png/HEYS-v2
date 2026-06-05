@@ -1005,6 +1005,45 @@
             };
         }, [date]);
 
+        // 🛟 Periodic content reconciler (curator PIN→screen stall, 2026-06-05).
+        // The event-driven apply path can stall on this device: the curator gets a
+        // heys:data-saved {key:"day"} storm (~100/30s) that starves the
+        // React.startTransition-wrapped apply, so the setDay reducer never commits
+        // and the screen keeps showing stale grams while localStorage already holds
+        // the new value. This is an independent safety net: every few seconds, while
+        // the diary is visible and no local edit is in flight, compare the React day
+        // to localStorage BY CONTENT (no timestamp games — clock skew made those
+        // unreliable) and, if they differ, apply via a DIRECT setDay (urgent update,
+        // commits even under the storm). Converges the screen to LS within one tick.
+        React.useEffect(() => {
+            const reconcile = () => {
+                try {
+                    if (typeof document !== 'undefined' && document.visibilityState && document.visibilityState !== 'visible') return;
+                    if (Date.now() < (blockCloudUpdatesUntilRef.current || 0)) return; // protect in-flight local edit
+                    if (_readDayV2Cache) _readDayV2Cache.invalidate((HEYS.currentClientId || '') + '|' + date);
+                    const lsDay = readDayV2(date, lsGet).value;
+                    if (!lsDay || typeof lsDay !== 'object' || !isMeaningfulDayData(lsDay)) return;
+                    const reactDay = (HEYS.Day && typeof HEYS.Day.getDay === 'function') ? HEYS.Day.getDay() : null;
+                    if (!reactDay) return;
+                    const same = (HEYS.dayUtils && typeof HEYS.dayUtils.isSameDayHydratedContent === 'function')
+                        ? HEYS.dayUtils.isSameDayHydratedContent(reactDay, lsDay)
+                        : false;
+                    if (same) return; // screen already matches storage
+                    // Content differs — reconcile by item.updatedAt (handles clock skew both ways),
+                    // then commit urgently (not via startTransition, which is being starved).
+                    const mergeApi = (HEYS.sync && typeof HEYS.sync.mergeDayData === 'function') ? HEYS.sync : null;
+                    const merged = mergeApi ? mergeApi.mergeDayData(reactDay, lsDay) : null;
+                    const finalDay = (merged && Array.isArray(merged.meals)) ? merged : lsDay;
+                    const profNow = getProfile();
+                    recordDayDecision('PERIODIC_RECONCILE', 'interval', 'React/LS content diff — direct apply');
+                    lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, finalDay.updatedAt || 0);
+                    setDay(() => ensureDay(finalDay, profNow));
+                } catch (_) { /* noop — reconciler must never break render */ }
+            };
+            const reconcileId = setInterval(reconcile, 3000);
+            return () => clearInterval(reconcileId);
+        }, [date]);
+
         // v25.8.6.7: Export addMealDirect — direct React state update for external callers
         // Used by meal rec card instead of unreliable event dispatch pipeline
         React.useEffect(() => {

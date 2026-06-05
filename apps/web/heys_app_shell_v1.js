@@ -2144,7 +2144,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             // (clipboard уже содержит всё sync-доступное; async-results типа
             // navigator.storage.estimate() / sw.getRegistration() не могут попасть в clipboard).
             try {
-                console.groupCollapsed('🔍 [HEYS.sync.debug] async-only @ ' + ts);
+                console.groupCollapsed('🔍 [HEYS.sync.debug] async-only');
                 console.log('=== Cloud flags ===');
                 console.log({
                     isAuth: rt.isAuth,
