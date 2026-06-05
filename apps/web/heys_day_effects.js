@@ -17,6 +17,36 @@
         } catch (_) { /* noop — diagnostics must never break the handler */ }
     }
 
+    // Clock-skew reconcile probe (curator↔PIN incident 2026-06-05): returns true
+    // when the remote (LS/cloud) day carries a strictly NEWER per-item edit than
+    // the local (React) day for the SAME item id. The day-level updatedAt guard
+    // (storageUpdatedAt < prevUpdatedAt) blindly keeps React when this device's
+    // wall-clock ran ahead, freezing a genuine cross-device grams/content edit
+    // that is newer by item.updatedAt. Edit-only (id present on both sides) to
+    // stay conservative — does not trigger on adds/deletes, so it can't resurrect
+    // a locally-deleted item or fight the existing count-down rollback guards.
+    function hasNewerRemoteItem(localDay, remoteDay) {
+        try {
+            const localItemTs = new Map();
+            ((localDay && localDay.meals) || []).forEach((m) =>
+                ((m && m.items) || []).forEach((it) => {
+                    if (it && it.id != null) localItemTs.set(String(it.id), Number(it.updatedAt) || 0);
+                }));
+            const remoteMeals = (remoteDay && remoteDay.meals) || [];
+            for (const m of remoteMeals) {
+                for (const it of ((m && m.items) || [])) {
+                    if (!it || it.id == null) continue;
+                    const rTs = Number(it.updatedAt) || 0;
+                    if (rTs <= 0) continue;
+                    const lTs = localItemTs.get(String(it.id));
+                    if (lTs == null) continue; // not in local → add, handled elsewhere
+                    if (rTs > lTs) return true; // genuine newer cross-device item edit
+                }
+            }
+            return false;
+        } catch (_) { return false; }
+    }
+
     // PERF Foundation 2: in-memory cache для readDayV2 (TTL=200мс, no write-aware).
     // Покрывает повторные reads одного и того же date-key в одном render burst
     // (DayTab + sidebar + sparklines часто читают тот же день за < 16мс окно).
@@ -680,6 +710,29 @@
                             // Не откатывать по LS даже при forceReload: hot-sync может шлют forceReload
                             // со снимком до autosave и стирать дневник конструктора.
                             if (storageUpdatedAt < prevUpdatedAt) {
+                                // Clock-skew rescue: the day-level stamp on THIS device ran ahead of
+                                // the other device's edit, so by day.updatedAt the LS day looks
+                                // "older" — but it may carry a strictly NEWER per-item edit (curator↔
+                                // PIN incident 2026-06-05: React froze on Сироп 111@old while LS had
+                                // 777@newer item ts). Reconcile by item.updatedAt instead of blindly
+                                // keeping React. Block-window (~:417) already dropped any in-flight
+                                // local edit, so this cannot revert a live grams change; the existing
+                                // SKIP path stays for the no-newer-item case (workout builder / true
+                                // stale snapshot).
+                                const mergeApi = (HEYS.sync && typeof HEYS.sync.mergeDayData === 'function') ? HEYS.sync : null;
+                                if (mergeApi && hasNewerRemoteItem(prevDay, normalizedDay)) {
+                                    const reconciled = mergeApi.mergeDayData(prevDay, normalizedDay);
+                                    if (reconciled && Array.isArray(reconciled.meals)) {
+                                        recordDayDecision('APPLY_ITEM_MERGE_SKEW', source, 'LS ' + storageUpdatedAt + ' < React ' + prevUpdatedAt + ', newer item reconciled');
+                                        console.info('[HEYS.day] 🔀 Clock-skew reconcile (LS day older but newer item) — merging by item.updatedAt', {
+                                            source,
+                                            storageUpdatedAt,
+                                            prevUpdatedAt
+                                        });
+                                        lastLoadedUpdatedAtRef.current = Math.max(lastLoadedUpdatedAtRef.current || 0, reconciled.updatedAt || 0);
+                                        return ensureDay(reconciled, profNow);
+                                    }
+                                }
                                 recordDayDecision('SKIP_LS_OLDER_THAN_REACT', source, 'LS ' + storageUpdatedAt + ' < React ' + prevUpdatedAt);
                                 console.info('[HEYS.day] ⏭️ Skip storage overlay (LS older than React; unpersisted edit)', {
                                     source,

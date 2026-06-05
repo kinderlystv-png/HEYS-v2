@@ -757,3 +757,47 @@ describe('item-deletion sync via deletedItemIds', () => {
     });
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Clock-skew reconcile — curator↔PIN incident 2026-06-05
+// Local (React) day.updatedAt ran AHEAD of the remote (LS/cloud) edit, but the
+// remote carries a strictly newer PER-ITEM edit. The day-effects handler now
+// reconciles via mergeDayData instead of keeping the stale-but-higher-ts local
+// (hasNewerRemoteItem gate). Locks the merge behavior the fix relies on: newer
+// item.updatedAt wins regardless of day-level updatedAt direction.
+// ───────────────────────────────────────────────────────────────────────────
+describe('mergeDayData — clock-skew per-item rescue', () => {
+  test('remote item with newer item.updatedAt wins even when local day.updatedAt is higher', () => {
+    const local = makeDay(916285, [
+      makeMeal('breakfast', [
+        { id: 'it_syrup', grams: 111, productId: 'p_syrup', updatedAt: 205124 },
+        { id: 'it_milk', grams: 333, productId: 'p_milk', updatedAt: 880000 },
+      ]),
+    ]);
+    const remote = makeDay(890093, [
+      makeMeal('breakfast', [
+        { id: 'it_syrup', grams: 777, productId: 'p_syrup', updatedAt: 889889 },
+        { id: 'it_milk', grams: 333, productId: 'p_milk', updatedAt: 880000 },
+      ]),
+    ]);
+    const merged = mergeDayData(local, remote);
+    expect(merged).not.toBe(null);
+    const syrup = merged.meals[0].items.find((i) => i.id === 'it_syrup');
+    expect(syrup.grams).toBe(777); // newer item edit wins despite local day being "newer"
+    expect(syrup.updatedAt).toBe(889889); // winner item ts preserved, not inflated
+    expect(merged.updatedAt).toBeGreaterThanOrEqual(916285); // local-newer day stamp not rolled back
+  });
+
+  test('local item edit still wins when it is the newer per-item edit', () => {
+    const local = makeDay(916285, [
+      makeMeal('breakfast', [{ id: 'it_syrup', grams: 222, productId: 'p_syrup', updatedAt: 900000 }]),
+    ]);
+    const remote = makeDay(890093, [
+      makeMeal('breakfast', [{ id: 'it_syrup', grams: 777, productId: 'p_syrup', updatedAt: 800000 }]),
+    ]);
+    const merged = mergeDayData(local, remote);
+    expect(merged).not.toBe(null);
+    const syrup = merged.meals[0].items.find((i) => i.id === 'it_syrup');
+    expect(syrup.grams).toBe(222); // local per-item edit is newer → preserved
+  });
+});
