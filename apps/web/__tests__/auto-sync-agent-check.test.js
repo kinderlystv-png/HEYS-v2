@@ -10,6 +10,16 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '../../../');
 const SCRIPT_PATH = path.resolve(REPO_ROOT, 'scripts/auto-sync-legacy-bundles.mjs');
 
+// Under a git hook (pre-push) git exports GIT_DIR/GIT_WORK_TREE/etc pointing at
+// the real repo; they leak into child git processes and break git operations in
+// the temp fixture repo ("must be run in a work tree"). Strip them.
+const GIT_ENV_VARS = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_PREFIX'];
+function cleanGitEnv() {
+  const env = { ...process.env };
+  for (const k of GIT_ENV_VARS) delete env[k];
+  return env;
+}
+
 function gitStatus() {
   return execSync('git status --porcelain', { cwd: REPO_ROOT, encoding: 'utf8' });
 }
@@ -34,7 +44,7 @@ describe('auto-sync legacy bundles integration mode', () => {
   let repo;
 
   function git(args) {
-    return execFileSync('git', args, { cwd: repo, encoding: 'utf8' }).trim();
+    return execFileSync('git', args, { cwd: repo, encoding: 'utf8', env: cleanGitEnv() }).trim();
   }
 
   beforeEach(() => {
@@ -63,7 +73,7 @@ describe('auto-sync legacy bundles integration mode', () => {
     const result = spawnSync('node', [SCRIPT_PATH, '--mode=integration'], {
       cwd: repo,
       encoding: 'utf8',
-      env: process.env,
+      env: cleanGitEnv(),
     });
 
     expect(result.status).toBe(1);

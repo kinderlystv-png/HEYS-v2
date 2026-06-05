@@ -12,8 +12,20 @@ const SCRIPT_PATH = path.resolve(REPO_ROOT, 'scripts/integrate-agents.mjs');
 
 let repo;
 
+// When this suite runs under a git hook (pre-push), git exports GIT_DIR /
+// GIT_WORK_TREE / GIT_INDEX_FILE pointing at the real repo. Those leak into the
+// child `git` processes below and make `git init`/add/commit in the temp repo
+// fail with "this operation must be run in a work tree". Strip them so the
+// fixture repo is the only git context the children see.
+const GIT_ENV_VARS = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_PREFIX'];
+function cleanGitEnv() {
+  const env = { ...process.env };
+  for (const k of GIT_ENV_VARS) delete env[k];
+  return env;
+}
+
 function git(args, opts = {}) {
-  return execFileSync('git', args, { cwd: repo, encoding: 'utf8', ...opts }).trim();
+  return execFileSync('git', args, { cwd: repo, encoding: 'utf8', env: cleanGitEnv(), ...opts }).trim();
 }
 
 function commitFile(name, content, message) {
@@ -38,7 +50,7 @@ function runIntegrate(extraArgs) {
   return spawnSync('node', [SCRIPT_PATH, ...extraArgs], {
     cwd: repo,
     encoding: 'utf8',
-    env: process.env,
+    env: cleanGitEnv(),
   });
 }
 
