@@ -80,7 +80,7 @@
       id: 'lopez_mr',
       intensity: 'max',
       name: 'Eva López — MaxHangs MAW (Maximum Added Weight)',
-      description: 'Силовой протокол с добавочным весом по методике Эвы Лопес (исследование 2014, статья 2019). 10 секунд виса с весом, который удержал бы не больше 13 секунд — оставляешь 3 секунды запаса до отказа (margin RM-3). Отдых 4 минуты между подходами, 5 подходов на каждый хват. Программа из 3 хватов: полузамок, открытый 4-палец, передние 3 пальца. Edge 18 мм. Только для V5+ с минимум 2 годами опыта.',
+      description: 'Силовой протокол с добавочным весом по методике Эвы Лопес (исследования 2012 и 2016). 10 секунд виса с весом, который удержал бы не больше 13 секунд — оставляешь 3 секунды запаса до отказа (margin RM-3). Отдых 4 минуты между подходами, 5 подходов на каждый хват. Программа из 3 хватов: полузамок, открытый 4-палец, передние 3 пальца. Edge 18 мм. Только для V5+ с минимум 2 годами опыта.',
       level: 'advanced',
       durationMin: 55,
       exercises: [
@@ -91,7 +91,7 @@
         { gripId: 'front3', edgeSizeMm: 18, addedWeightKg: 15,
           hangSec: 10, restSec: 240, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 240 }
       ],
-      sourceIds: ['lopez2019'],
+      sourceIds: ['lopez2012'],
       advisoryBadge: 'Только V5+ с минимум 2 годами опыта',
       noEquipment: false,
       minAge: 18
@@ -113,7 +113,7 @@
         { gripId: 'sloper', edgeSizeMm: 35, addedWeightKg: 0,
           hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['horst_753', 'beastmaker_1000'],
+      sourceIds: ['horst_753', 'beastmaker_1000', 'lopez2019'],
       advisoryBadge: null,
       noEquipment: false,
       equipmentReq: 'fingerboard', // 4 хвата включая sloper — нужен полный board
@@ -230,7 +230,7 @@
         { gripId: 'front3', edgeSizeMm: 12, addedWeightKg: 0,
           hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['lopez2019'],
+      sourceIds: ['lopez2012'],
       advisoryBadge: 'Только V7+',
       noEquipment: false,
       minAge: 18
@@ -274,7 +274,7 @@
         { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 18,
           hangSec: 5, restSec: 10, repsPerSet: 5, setsCount: 5, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['lattice_critical_force', 'lopez2019'],
+      sourceIds: ['lattice_critical_force', 'lopez2012'],
       advisoryBadge: null,
       noEquipment: false,
       equipmentReq: 'block',
@@ -293,7 +293,7 @@
         { gripId: 'halfcrimp', edgeSizeMm: 10, addedWeightKg: 0,
           hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['lopez2019', 'lattice_critical_force'],
+      sourceIds: ['lopez2012', 'lattice_critical_force'],
       advisoryBadge: 'V5+',
       noEquipment: false,
       equipmentReq: 'block',
@@ -322,6 +322,91 @@
       // Explicit equipmentTypes — overrides exercise-derived, для canonical UI ordering.
       equipmentTypes: ['block', 'door', 'none'],
       minAge: 16
+    },
+    // ─── Critical Force / capacity / connective-tissue protocols ────────────
+    // Засеяны для mixEngine: заполняют роли test / capacity / connective,
+    // которых не было в исходных 14 протоколах. Поле role — слот-мэппинг для
+    // движка (старые протоколы движок мэппит по intensity).
+    {
+      id: 'cf_test',
+      intensity: 'max',
+      role: 'test',
+      excludeFromMix: true, // диагностика, не тренировочный блок для микса
+      name: 'Critical Force — тест 4 мин (диагностика)',
+      description: 'Диагностический тест аэробно-анаэробной границы пальцев (Critical Force). На полузамке 20 мм без добавочного веса: цикл 7 секунд максимальной тяги / 3 секунды отдыха, без пауз, 24 повтора подряд = ровно 4 минуты. Нужен силовой датчик (Tindeq Progressor / Lattice) — CF считается как средняя сила последних повторов, по ней потом прописывается нагрузка на выносливость. Это не тренировка, а замер: делай на свежих пальцах, повторяй раз в 4-6 недель и смотри ТРЕНД, а не разовое абсолютное число.',
+      level: 'intermediate',
+      durationMin: 12,
+      exercises: [
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 24, setsCount: 1, restBetweenSetsSec: 0 }
+      ],
+      sourceIds: ['giles2019', 'balas2024_cf', 'kellawan2014', 'lattice_critical_force'],
+      advisoryBadge: 'Нужен силовой датчик (Tindeq/Lattice) · 18+',
+      noEquipment: false,
+      equipmentReq: 'fingerboard',
+      // 18+: all-out тест = max-интенсивность, а ageGate (16-17 = no-max) всё
+      // равно скрыл бы его при minAge 16 — ставим явный честный порог.
+      minAge: 18
+    },
+    {
+      id: 'sub_cf_capacity',
+      intensity: 'moderate',
+      role: 'capacity',
+      name: 'Sub-CF Capacity — аэробная ёмкость (ниже Critical Force)',
+      description: 'Объёмная выносливость в устойчивой зоне ниже Critical Force — поднимает «потолок» долгой работы пальцев на длинных трассах. Длинные repeaters 7 секунд виса / 3 секунды отдыха × 10 повторов = подход ~2 минуты, 4 подхода на хват, отдых 3 минуты. Без добавочного веса, нагрузка лёгкая-умеренная (если тяжело — ассистируй ногами): цель — закончить все подходы без отказа, а не дойти до предела. Программа из 2 хватов: открытый 4-палец и полузамок, edge 20 мм. Прогрессия: добавляй повторы, потом сокращай отдых — НЕ добавляй вес. 2 раза в неделю.',
+      level: 'intermediate',
+      durationMin: 40,
+      exercises: [
+        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 10, setsCount: 4, restBetweenSetsSec: 180 },
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 10, setsCount: 4, restBetweenSetsSec: 180 }
+      ],
+      sourceIds: ['giles2019', 'balas2024_cf', 'devise2022', 'lattice_critical_force'],
+      advisoryBadge: null,
+      noEquipment: false,
+      equipmentReq: 'fingerboard',
+      minAge: 16
+    },
+    {
+      id: 'abrahangs_daily',
+      intensity: 'recovery',
+      role: 'connective',
+      name: 'Abrahangs — ежедневные низконагрузочные висы',
+      description: 'Низкоинтенсивная высокочастотная нагрузка для соединительной ткани и силы пальцев по методу Эмиля Абрахамссона. Длинные холды на edge 18-22 мм с усилием всего ~40% от максимума (ноги на полу, разгружаешь вис до лёгкого) — 10 секунд виса / 20 секунд отдыха × 6 повторов на хват, всего ~10 минут. Программа из 2 хватов: открытый 4-палец и полузамок. Главное — частота: 3-7 раз в неделю, можно ежедневно (нагрузка щадит сухожилия). Прирост силы хвата сопоставим с Max Hangs, а в комбинации с ними — аддитивный. Прогрессируй временем холда, не весом.',
+      level: 'beginner',
+      durationMin: 10,
+      exercises: [
+        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 10, restSec: 20, repsPerSet: 6, setsCount: 1, restBetweenSetsSec: 0 },
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 10, restSec: 20, repsPerSet: 6, setsCount: 1, restBetweenSetsSec: 0 }
+      ],
+      sourceIds: ['abrahangs2024', 'physivantage_collagen', 'magnusson2010'],
+      advisoryBadge: null,
+      noEquipment: false,
+      equipmentTypes: ['full', 'door'],
+      minAge: 14
+    },
+    {
+      id: 'recruitment_pulls',
+      intensity: 'max',
+      role: 'power', // взрывное намерение — слот power перед max-силой
+      name: 'Recruitment Pulls — взрывные изометрические тяги (RFD)',
+      description: 'Развитие скорости усилия (RFD) и нейро-рекрутмента через ВЗРЫВНОЕ намерение. На блоке/датчике тянешь с пола максимально резко — разгон к пику как можно быстрее, ~90%+ усилия, короткий импульс 4 секунды × 5 повторов в подходе, отдых между повторами короткий (как восстановление нерва), 3 подхода на хват: полузамок и открытый 4-палец, edge 20 мм. Отдых между подходами 3 минуты. Только на свежих пальцах (высокая готовность) и в начале сессии. Дополняет, а не заменяет медленные max-hangs: даёт более крутой RFD-стимул и жёсткость сухожилий. Для V5+ с базой ≥2 лет.',
+      level: 'advanced',
+      durationMin: 30,
+      exercises: [
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 4, restSec: 60, repsPerSet: 5, setsCount: 3, restBetweenSetsSec: 180 },
+        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 4, restSec: 60, repsPerSet: 5, setsCount: 3, restBetweenSetsSec: 180 }
+      ],
+      sourceIds: ['stien2021', 'oranchuk2019', 'nelson_camp4', 'lattice_critical_force'],
+      advisoryBadge: 'Взрывное намерение · V5+ / 18+ · только на свежих пальцах',
+      noEquipment: false,
+      equipmentReq: 'block',
+      minAge: 18
     }
   ];
 
@@ -504,6 +589,7 @@
       candidates = Fingers.ageGate.filterPrograms(candidates, ageNum);
     }
     candidates = candidates.filter(function (p) {
+      if (p.excludeFromMix) return false; // диагностика (cf_test) — не в микс
       const intensity = p.intensity || 'moderate';
       if (INTENSITY_RANK[intensity] > INTENSITY_RANK[ceiling]) return false;
       if (desiredIntensity !== 'all' && intensity !== desiredIntensity) return false;

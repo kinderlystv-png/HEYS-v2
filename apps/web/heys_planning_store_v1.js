@@ -373,28 +373,94 @@
         );
     }
 
+    function chronoSnapshotTombstoneId(snapshotOrActivityId, maybeDate) {
+        const activityId = typeof snapshotOrActivityId === 'object'
+            ? snapshotOrActivityId && snapshotOrActivityId.activityId
+            : snapshotOrActivityId;
+        const date = typeof snapshotOrActivityId === 'object'
+            ? snapshotOrActivityId && snapshotOrActivityId.date
+            : maybeDate;
+        if (!activityId || !date) return '';
+        return String(date) + ':' + String(activityId);
+    }
+
+    // id → последний deletedAt (ms) для активити-tombstone'ов.
+    function getChronoActivityTombstoneTimes() {
+        const map = new Map();
+        getChronoTombstones().forEach((item) => {
+            if (!item || item.type !== 'activity') return;
+            const id = String(item.id || '');
+            const prev = map.get(id);
+            if (prev == null || item.deletedAt > prev) map.set(id, item.deletedAt);
+        });
+        return map;
+    }
+
+    // Время «жизни» занятия в ms: updatedAt > createdAt, иначе 0.
+    function chronoStampMs(rec) {
+        const raw = rec && (rec.updatedAt || rec.createdAt);
+        const t = raw ? Date.parse(raw) : NaN;
+        return Number.isFinite(t) ? t : 0;
+    }
+
+    // Воскрешённые занятия: присутствуют в каноничном массиве И их stamp новее их
+    // же tombstone'а (повторное добавление/правка перекрыли старое удаление).
+    // Читаем сырой LS (не getChronoActivities) — иначе рекурсия через фильтр.
+    function resurrectedChronoActivityIds() {
+        const tombTimes = getChronoActivityTombstoneTimes();
+        if (tombTimes.size === 0) return new Set();
+        const acts = lsGet(KEYS.CHRONO_ACTIVITIES, []);
+        const res = new Set();
+        (Array.isArray(acts) ? acts : []).forEach((a) => {
+            if (!a) return;
+            const id = String(a.id || '');
+            const tombAt = tombTimes.get(id);
+            if (tombAt != null && chronoStampMs(a) > tombAt) res.add(id);
+        });
+        return res;
+    }
+
     function filterChronoActivities(activities) {
-        const deletedActivities = getChronoTombstoneSet('activity');
-        return (Array.isArray(activities) ? activities : []).filter((activity) =>
-            activity && !deletedActivities.has(String(activity.id || '')),
-        );
+        const tombTimes = getChronoActivityTombstoneTimes();
+        return (Array.isArray(activities) ? activities : []).filter((activity) => {
+            if (!activity) return false;
+            const tombAt = tombTimes.get(String(activity.id || ''));
+            // Нет tombstone → живо. Есть → переживает, только если занятие создано/
+            // обновлено ПОЗЖЕ удаления. Так stale-массив со старым удалённым занятием
+            // (старый stamp < deletedAt) остаётся удалённым (invariant #7), а реальное
+            // повторное добавление (новый stamp) — выживает.
+            return tombAt == null || chronoStampMs(activity) > tombAt;
+        });
     }
 
     function filterChronoEntries(entries) {
         const deletedActivities = getChronoTombstoneSet('activity');
+        const resurrected = resurrectedChronoActivityIds();
         const deletedEntries = getChronoTombstoneSet('entry');
         return (Array.isArray(entries) ? entries : []).filter((entry) => {
             if (!entry) return false;
             if (deletedEntries.has(String(entry.id || ''))) return false;
-            return !deletedActivities.has(String(entry.activityId || ''));
+            const aid = String(entry.activityId || '');
+            return !(deletedActivities.has(aid) && !resurrected.has(aid));
         });
     }
 
     function filterChronoSnapshots(snapshots) {
         const deletedActivities = getChronoTombstoneSet('activity');
-        return (Array.isArray(snapshots) ? snapshots : []).filter((snapshot) =>
-            snapshot && !deletedActivities.has(String(snapshot.activityId || '')),
-        );
+        const resurrected = resurrectedChronoActivityIds();
+        const deletedSnapshots = new Map();
+        getChronoTombstones().forEach((item) => {
+            if (!item || item.type !== 'snapshot') return;
+            const prev = deletedSnapshots.get(item.id);
+            if (prev == null || item.deletedAt > prev) deletedSnapshots.set(item.id, item.deletedAt);
+        });
+        return (Array.isArray(snapshots) ? snapshots : []).filter((snapshot) => {
+            if (!snapshot) return false;
+            const aid = String(snapshot.activityId || '');
+            if (deletedActivities.has(aid) && !resurrected.has(aid)) return false;
+            const tombAt = deletedSnapshots.get(chronoSnapshotTombstoneId(snapshot));
+            return tombAt == null || chronoStampMs(snapshot) > tombAt;
+        });
     }
 
     // ── Cloud pull merge by record (id + recency + tombstones) ────────────────
@@ -760,8 +826,23 @@
     // плюс ломался бы режим Неделя. Здесь — три плоских ключа, синкаются через
     // localStorage interceptor + refreshPlanningFromCloud, как projects/tasks/slots.
 
+    // Самовосстановление: cloud-sync иногда кладёт значение как array-like объект
+    // ({0:…,1:…}) или wrapper ({v:[…]}) вместо массива — тогда фильтры роняли список
+    // в [] и занятия пропадали. Приводим к массиву; следующий save перезапишет облако
+    // чистым массивом. См. incident 2026-06-06 (chrono activities → object).
+    function coerceChronoArray(value) {
+        if (Array.isArray(value)) return value;
+        if (value && typeof value === 'object') {
+            if (Array.isArray(value.v)) return value.v;
+            if (value.id != null && (value.name != null || value.activityId != null)) return [value];
+            const vals = Object.values(value);
+            if (vals.length && vals.every((x) => x && typeof x === 'object')) return vals;
+        }
+        return [];
+    }
+
     function getChronoActivities() {
-        return sortByOrder(filterChronoActivities(lsGet(KEYS.CHRONO_ACTIVITIES, [])));
+        return sortByOrder(filterChronoActivities(coerceChronoArray(lsGet(KEYS.CHRONO_ACTIVITIES, []))));
     }
 
     function saveChronoActivities(activities) {
@@ -886,7 +967,7 @@
     }
 
     function getChronoEntries() {
-        return filterChronoEntries(lsGet(KEYS.CHRONO_ENTRIES, []));
+        return filterChronoEntries(coerceChronoArray(lsGet(KEYS.CHRONO_ENTRIES, [])));
     }
 
     function saveChronoEntries(entries) {
@@ -961,8 +1042,33 @@
         saveChronoEntries(getChronoEntries().filter((e) => e.id !== id));
     }
 
+    // Убирает время занятия за конкретный набор дат (текущий день/неделю), НЕ удаляя
+    // само занятие — оно остаётся в списке и возвращается в полосу выбора. Возвращает
+    // удалённые записи, чтобы вызывающий мог предложить undo.
+    function clearChronoScope(activityId, dates) {
+        if (!activityId || !Array.isArray(dates) || !dates.length) return { entries: [] };
+        const dateSet = new Set(dates);
+        const inScope = (rec) => rec && rec.activityId === activityId && dateSet.has(rec.date);
+
+        const allEntries = getChronoEntries();
+        const removedEntries = allEntries.filter(inScope);
+        if (removedEntries.length) {
+            removedEntries.forEach((e) => addChronoTombstone('entry', e.id, 'clear-scope'));
+            saveChronoEntries(allEntries.filter((e) => !inScope(e)));
+        }
+
+        const allSnaps = getChronoSnapshots();
+        const removedSnaps = allSnaps.filter(inScope);
+        if (removedSnaps.length) {
+            removedSnaps.forEach((s) => addChronoTombstone('snapshot', chronoSnapshotTombstoneId(s), 'clear-scope'));
+            saveChronoSnapshots(allSnaps.filter((s) => !inScope(s)));
+        }
+
+        return { entries: removedEntries };
+    }
+
     function getChronoSnapshots() {
-        return filterChronoSnapshots(lsGet(KEYS.CHRONO_SNAPSHOTS, []));
+        return filterChronoSnapshots(coerceChronoArray(lsGet(KEYS.CHRONO_SNAPSHOTS, [])));
     }
 
     function saveChronoSnapshots(snapshots) {
@@ -970,13 +1076,15 @@
     }
 
     function upsertSnapshotInPlace(snapshots, date, activityId, addMinutes) {
+        const updatedAt = nowISO();
         const idx = snapshots.findIndex((s) => s.date === date && s.activityId === activityId);
         if (idx === -1) {
-            snapshots.push({ date, activityId, totalMinutes: addMinutes });
+            snapshots.push({ date, activityId, totalMinutes: addMinutes, updatedAt });
         } else {
             snapshots[idx] = {
                 ...snapshots[idx],
                 totalMinutes: (Number(snapshots[idx].totalMinutes) || 0) + addMinutes,
+                updatedAt,
             };
         }
     }
@@ -1241,6 +1349,7 @@
             updateChronoEntry: (id, patch) => { const e = updateChronoEntry(id, patch); if (e) refresh(); return e; },
             adjustChronoEntryMinutes: (id, deltaMinutes) => { const e = adjustChronoEntryMinutes(id, deltaMinutes); refresh(); return e; },
             deleteChronoEntry: (id) => { deleteChronoEntry(id); refresh(); },
+            clearChronoScope: (activityId, dates) => { const r = clearChronoScope(activityId, dates); refresh(); return r; },
             startChronoTimer: (input) => { const t = startChronoTimer(input); if (t) refresh(); return t; },
             pauseChronoTimer: () => { const t = pauseChronoTimer(); refresh(); return t; },
             resumeChronoTimer: () => { const t = resumeChronoTimer(); refresh(); return t; },
@@ -1341,6 +1450,7 @@
         updateChronoEntry,
         adjustChronoEntryMinutes,
         deleteChronoEntry,
+        clearChronoScope,
         getChronoSnapshots,
         saveChronoSnapshots,
         compactChronoOlderThan90Once,

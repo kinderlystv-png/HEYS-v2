@@ -1007,28 +1007,41 @@
         : ['full']);
     const [mixedWorkout, setMixedWorkout] = useState(null);
     const [mixSeed, setMixSeed] = useState(0);
-    // Локальная intensity микса — отдельный toggle внутри карточки.
-    // Default = moderate, persisted в LS чтоб не сбрасывалась.
-    const [mixIntensity, setMixIntensity] = useState(function () {
+    // Цель микса (goal): ЧТО тренируем. Потолок (bucket) приходит из готовности,
+    // движок сам режет цель под него. Persisted в LS.
+    const MIX_GOALS = (Fingers.mixEngine && Array.isArray(Fingers.mixEngine.GOALS) && Fingers.mixEngine.GOALS.length)
+      ? Fingers.mixEngine.GOALS
+      : [{ id: 'strength', label: 'Сила' }, { id: 'endurance', label: 'Выносливость' },
+         { id: 'recovery', label: 'Восстановление' }, { id: 'maintenance', label: 'Поддержка' }];
+    const GOAL_EMOJI = { strength: '🔥', endurance: '🔁', recovery: '🌿', maintenance: '🧱' };
+    const [mixGoal, setMixGoal] = useState(function () {
       const u = HEYS.utils;
-      const v = u && u.lsGet ? u.lsGet('fingers_mix_intensity', 'moderate') : 'moderate';
-      return ['recovery', 'moderate', 'max'].indexOf(v) >= 0 ? v : 'moderate';
+      const v = u && u.lsGet ? u.lsGet('fingers_mix_goal', 'strength') : 'strength';
+      return MIX_GOALS.some(function (g) { return g.id === v; }) ? v : 'strength';
     });
-    const onPickMixIntensity = useCallback(function (v) {
-      setMixIntensity(v);
-      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_mix_intensity', v);
+    const onPickMixGoal = useCallback(function (v) {
+      setMixGoal(v);
+      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_mix_goal', v);
     }, []);
+    // goal → legacy intensity, только для fallback generateMixedWorkout.
+    const GOAL_TO_INTENSITY = { strength: 'max', endurance: 'moderate', recovery: 'recovery', maintenance: 'moderate' };
     useEffect(function () {
-      if (!Fingers.generateMixedWorkout) return;
-      const w = Fingers.generateMixedWorkout({
+      if (!Fingers.mixEngine && !Fingers.generateMixedWorkout) return;
+      const mixOpts = {
         equipmentTypes: userTypes,
-        intensity: mixIntensity,
+        goal: mixGoal,
+        intensity: GOAL_TO_INTENSITY[mixGoal] || 'moderate', // fallback-движок
         age: ageRaw,
         readiness: cool && cool.recommendation
-      });
+      };
+      // mixEngine (goal-axis) — основной путь; generateMixedWorkout — fallback.
+      let w = (Fingers.mixEngine && Fingers.mixEngine.recommendDay)
+        ? Fingers.mixEngine.recommendDay(mixOpts)
+        : null;
+      if (!w && Fingers.generateMixedWorkout) w = Fingers.generateMixedWorkout(mixOpts);
       setMixedWorkout(w);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userTypes.join(','), mixIntensity, ageRaw, cool && cool.recommendation, mixSeed]);
+    }, [userTypes.join(','), mixGoal, ageRaw, cool && cool.recommendation, mixSeed]);
     const onGenerateMix = useCallback(function () { setMixSeed(function (n) { return n + 1; }); }, []);
     let readinessBanner = null;
     if (cool) {
@@ -1098,13 +1111,9 @@
               h('span', { 'aria-hidden': 'true' }, '🎲'),
               ' Микс'
             ),
-            h('div', { className: 'fingers-fs-mixcard__intensity-toggle', role: 'tablist', 'aria-label': 'Мощность тренировки' },
-              [
-                { id: 'recovery', label: 'лёгкая',   emoji: '🌿' },
-                { id: 'moderate', label: 'умеренная', emoji: '⚡' },
-                { id: 'max',      label: 'жёсткая',  emoji: '🔥' }
-              ].map(function (opt) {
-                const active = mixIntensity === opt.id;
+            h('div', { className: 'fingers-fs-mixcard__intensity-toggle', role: 'tablist', 'aria-label': 'Цель тренировки' },
+              MIX_GOALS.map(function (opt) {
+                const active = mixGoal === opt.id;
                 return h('button', {
                   key: opt.id,
                   type: 'button',
@@ -1112,10 +1121,10 @@
                   'aria-selected': active,
                   className: 'fingers-fs-mixcard__int-btn'
                     + (active ? ' is-active' : ''),
-                  'data-intensity': opt.id,
-                  onClick: function () { onPickMixIntensity(opt.id); }
+                  'data-goal': opt.id,
+                  onClick: function () { onPickMixGoal(opt.id); }
                 },
-                  h('span', { 'aria-hidden': 'true' }, opt.emoji + ' '),
+                  h('span', { 'aria-hidden': 'true' }, (GOAL_EMOJI[opt.id] || '🎯') + ' '),
                   opt.label
                 );
               })

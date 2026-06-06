@@ -449,7 +449,7 @@
     function buildWeekBreakdown(entries, snapshots, weekDates) {
         const out = {};
         const dateSet = new Set(Array.isArray(weekDates) ? weekDates : []);
-        weekDates.forEach((d) => { out[d] = { __total: 0 }; });
+        (Array.isArray(weekDates) ? weekDates : []).forEach((d) => { out[d] = { __total: 0 }; });
         (Array.isArray(entries) ? entries : []).forEach((e) => {
             if (!e || !dateSet.has(e.date)) return;
             const m = Number(e.minutes) || 0;
@@ -465,6 +465,25 @@
             out[s.date].__total += m;
         });
         return out;
+    }
+
+    function buildDisplayChronoActivities(activities, minutesByActivity) {
+        const byId = new Map();
+        (Array.isArray(activities) ? activities : []).forEach((activity) => {
+            if (activity && activity.id) byId.set(String(activity.id), activity);
+        });
+        Object.keys(minutesByActivity || {}).forEach((activityId, index) => {
+            if (!activityId || byId.has(activityId) || (Number(minutesByActivity[activityId]) || 0) <= 0) return;
+            byId.set(activityId, {
+                id: activityId,
+                name: 'Занятие',
+                emoji: '◷',
+                hue: (index * 47 + 205) % 360,
+                archived: false,
+                isPlaceholder: true,
+            });
+        });
+        return Array.from(byId.values());
     }
 
     // ── Аналитика: стрики / тренд / score / время суток ──────────────
@@ -731,9 +750,11 @@
 
         return h('div', { className: 'chrono-undo-toast', role: 'status' },
             h('span', { className: 'chrono-undo-toast__text' },
-                toast.adjusted
-                    ? `Изменено ${toast.minutes > 0 ? '+' : '-'}${formatMinutes(Math.abs(toast.minutes))}`
-                    : `Добавлено ${formatMinutes(toast.minutes)}`),
+                toast.kind === 'cleared'
+                    ? `Убрано ${toast.scope === 'week' ? 'из недели' : 'из дня'}${toast.minutes > 0 ? ': ' + formatMinutes(toast.minutes) : ''}`
+                    : toast.adjusted
+                        ? `Изменено ${toast.minutes > 0 ? '+' : '-'}${formatMinutes(Math.abs(toast.minutes))}`
+                        : `Добавлено ${formatMinutes(toast.minutes)}`),
             h('button', {
                 type: 'button',
                 className: 'chrono-undo-toast__action',
@@ -2925,15 +2946,18 @@
             return m;
         }, [minutesByActivity]);
 
+        const displayActivities = useMemo(() => buildDisplayChronoActivities(visibleActivities, minutesByActivity),
+            [visibleActivities, minutesByActivity]);
+
         const partition = useMemo(() => {
             const active = [];
             const inactive = [];
-            visibleActivities.forEach((a) => {
+            displayActivities.forEach((a) => {
                 if ((minutesByActivity[a.id] || 0) > 0) active.push(a);
                 else inactive.push(a);
             });
             return { active, inactive };
-        }, [visibleActivities, minutesByActivity]);
+        }, [displayActivities, minutesByActivity]);
 
         // Распределение времени по дням недели для режима week.
         const weekBreakdown = useMemo(() => {
@@ -2979,7 +3003,16 @@
         }, [durationTarget, activeDate, state]);
 
         const handleUndo = useCallback(() => {
-            if (!toast || !toast.id) return;
+            if (!toast) return;
+            if (toast.kind === 'cleared') {
+                // Возвращаем убранные записи (новые id — старые в tombstone'ах).
+                (toast.removed || []).forEach((e) => {
+                    state.addChronoEntry({ activityId: e.activityId, date: e.date, minutes: e.minutes });
+                });
+                setToast(null);
+                return;
+            }
+            if (!toast.id) return;
             state.deleteChronoEntry(toast.id);
             setToast(null);
         }, [toast, state]);
@@ -3098,27 +3131,27 @@
             return sum;
         }, [minutesByActivity]);
 
-        const insights = useMemo(() => buildChronoWeekInsights(visibleActivities, minutesByActivity, totalMinutes, scope),
-            [visibleActivities, minutesByActivity, totalMinutes, scope]);
+        const insights = useMemo(() => buildChronoWeekInsights(displayActivities, minutesByActivity, totalMinutes, scope),
+            [displayActivities, minutesByActivity, totalMinutes, scope]);
 
-        const planFacts = useMemo(() => buildChronoPlanFacts(visibleActivities, tasks, minutesByActivity),
-            [visibleActivities, tasks, minutesByActivity]);
+        const planFacts = useMemo(() => buildChronoPlanFacts(displayActivities, tasks, minutesByActivity),
+            [displayActivities, tasks, minutesByActivity]);
 
-        const categoryBalance = useMemo(() => buildCategoryBalance(visibleActivities, minutesByActivity),
-            [visibleActivities, minutesByActivity]);
+        const categoryBalance = useMemo(() => buildCategoryBalance(displayActivities, minutesByActivity),
+            [displayActivities, minutesByActivity]);
 
         const weeklyReport = useMemo(() => {
             if (scope !== 'week') return null;
-            return buildWeeklyReport(visibleActivities, entries, snapshots, dates, minutesByActivity);
-        }, [scope, visibleActivities, entries, snapshots, dates, minutesByActivity]);
+            return buildWeeklyReport(displayActivities, entries, snapshots, dates, minutesByActivity);
+        }, [scope, displayActivities, entries, snapshots, dates, minutesByActivity]);
 
         // Стрики по дневным целям и паттерн времени суток — не зависят от scope,
         // считаются по всей истории (entries+snapshots).
-        const streaks = useMemo(() => buildGoalStreaks(visibleActivities, entries, snapshots, todayStr),
-            [visibleActivities, entries, snapshots, todayStr]);
+        const streaks = useMemo(() => buildGoalStreaks(displayActivities, entries, snapshots, todayStr),
+            [displayActivities, entries, snapshots, todayStr]);
 
-        const timeOfDay = useMemo(() => buildTimeOfDayPattern(visibleActivities, entries, todayStr),
-            [visibleActivities, entries, todayStr]);
+        const timeOfDay = useMemo(() => buildTimeOfDayPattern(displayActivities, entries, todayStr),
+            [displayActivities, entries, todayStr]);
 
         // Запрещаем листать в будущее: следующий шаг (день или неделя) не должен
         // выходить за «сегодня». Для недельного режима ориентируемся на старт
@@ -3236,7 +3269,15 @@
                 hasInactive: partition.inactive.length > 0,
                 onDragDelete: (id) => {
                     const a = activities.find((x) => x.id === id);
-                    if (a) setDeleteTarget(a);
+                    if (!a) return;
+                    // Корзина в облаке = убрать занятие из текущего дня/недели (вернуть в
+                    // полосу выбора), НЕ удалять его совсем. Полное удаление — только из
+                    // модалки «Занятия» (корзина у строки → DeleteActivityModal).
+                    const removed = state.clearChronoScope(id, dates);
+                    const entries = (removed && removed.entries) || [];
+                    const minutes = entries.reduce((sum, e) => sum + (Number(e.minutes) || 0), 0);
+                    setRecentBadge(null);
+                    setToast({ kind: 'cleared', removed: entries, minutes, scope });
                 },
             }),
             scope === 'week' && h(ChronoWeeklyReport, { report: weeklyReport }),
@@ -3371,6 +3412,7 @@
         hasBubbleOverlap,
         buildDailySeries,
         buildWeekBreakdown,
+        buildDisplayChronoActivities,
         buildChronoPlanFacts,
         buildChronoWeekInsights,
         buildCategoryBalance,

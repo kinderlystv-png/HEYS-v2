@@ -48,14 +48,31 @@
       topics: ['safety', 'recovery']
     },
     {
+      // Силовая методология Лопес (MAW vs MED). Sports Technology НЕ индексируется
+      // в PubMed — ссылка на издательский DOI (Taylor & Francis), не на pubmed.
+      // Раньше эта запись жила под id 'lopez2019' с year:2019 и битым PubMed-URL
+      // (PMID 30975050 = статья про гипсы при переломах ладьевидной кости, не по теме).
+      id: 'lopez2012',
+      author: 'López-Rivera & González-Badillo',
+      year: 2012,
+      title: 'The effects of two maximum grip strength training methods using the same effort duration and different edge depth on grip endurance in elite climbers',
+      type: 'peer-reviewed',
+      url: 'https://doi.org/10.1080/19346182.2012.716061',
+      keyFinding: 'Сравнила два метода максимальной силы пальцев при равной длительности усилия у элитных лазунов (8a+): MAW (ребро 18 мм + максимальный добавочный вес) и MED (минимальное ребро под весом тела). Вывод: MED — рабочая альтернатива добавочному весу и щадит сухожилия/шкивы. Методику позже подтвердило исследование López 2016 (≈28% прироста максимальной силы).',
+      topics: ['protocols', 'calibration', 'safety']
+    },
+    {
+      // Истинная статья 2019 года (peer-reviewed, PubMed). Про силовую ВЫНОСЛИВОСТЬ
+      // хвата, не про максимальную силу — поэтому из max-протоколов на неё больше
+      // не ссылаемся (они теперь на lopez2012); подключена к repeaters_7_3.
       id: 'lopez2019',
       author: 'López-Rivera & González-Badillo',
       year: 2019,
-      title: 'The effects of two maximum grip strength training methods using the same effort duration and different edge depth on grip endurance in elite climbers',
+      title: 'Comparison of the Effects of Three Hangboard Strength and Endurance Training Programs on Grip Endurance in Sport Climbers',
       type: 'peer-reviewed',
-      url: 'https://pubmed.ncbi.nlm.nih.gov/30975050/',
-      keyFinding: 'За 8 недель Max Hangs (MR) и Min Edge (MED) дают сопоставимый прирост силы пальцев у элитных лазунов, но MED безопаснее по сухожилиям.',
-      topics: ['protocols', 'calibration']
+      url: 'https://pubmed.ncbi.nlm.nih.gov/30988852/',
+      keyFinding: '8 недель, 26 опытных лазунов (7c+/8a). Прерывистые висы (intermittent dead-hangs, как repeaters) на минимальном ребре дали наибольший прирост силовой выносливости хвата (+45%), максимальные висы — +34%, комбинация — лишь +7%. Для выносливости хвата прерывистый метод эффективнее.',
+      topics: ['protocols']
     },
     {
       id: 'giles2019',
@@ -176,6 +193,66 @@
       url: 'https://latticetraining.com/critical-force/',
       keyFinding: 'BW-стандарты на 20 мм: V5 ≈ +25% BW (10 с), V7 ≈ +50%, V9 ≈ +80%, V11 ≈ +100%+. Хорошая reference-точка для калибровки стартового веса.',
       topics: ['calibration']
+    },
+    {
+      id: 'balas2024_cf',
+      author: 'Baláš et al.',
+      year: 2024,
+      title: 'Measuring critical force in sport climbers: a validation study of the 4 min all-out test on finger flexors',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/38668851/',
+      keyFinding: '4-минутный all-out тест на полузамке валиден для оценки Critical Force пальцев (CF ≈ 20.1 кг; время до отказа на CF ≈ 440 с). Важно: CF как «среднее последних 3 повторов» — это тренд/ориентир, а не точный абсолютный потолок (end-force точнее). Ретест раз в 4-6 недель.',
+      topics: ['calibration', 'protocols']
+    },
+    {
+      id: 'kellawan2014',
+      author: 'Kellawan & Tschakovsky',
+      year: 2014,
+      title: 'The single-bout forearm critical force test: a new method to establish forearm aerobic metabolic exercise intensity and capacity',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/24699366/',
+      keyFinding: 'Тест Critical Force предплечья за один подход воспроизводим (ICC 0.94) и предсказывает время до отказа (r=0.97). Ключ: разовый MVC НЕ предсказывает CF/W′ — нагрузку на выносливость надо привязывать к CF, а не к проценту от MVC.',
+      topics: ['calibration']
+    },
+    {
+      id: 'devise2022',
+      author: 'Devise et al.',
+      year: 2022,
+      title: 'Effects of Different Hangboard Training Intensities on Finger Grip Strength, Stamina, and Endurance',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/35498522/',
+      keyFinding: '4 недели, 54 лазуна, доска с датчиками силы. 100% MFS поднимает максимальную силу, но не выносливость; 60-80% MFS поднимает stamina/endurance. Адаптация intensity-специфична — сбалансированная тренировка должна задевать ≥2 зоны интенсивности.',
+      topics: ['protocols', 'calibration']
+    },
+    {
+      id: 'abrahangs2024',
+      author: 'Gilmore et al.',
+      year: 2024,
+      title: 'Effects of Different Loading Programs on Finger Strength in Rock Climbers',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/39560837/',
+      keyFinding: '10-минутные низкоинтенсивные висы («Abrahangs», ~40% усилия, длинные холды) дали такой же прирост силы хвата, как Max Hangs, а в комбинации — аддитивный эффект. Низкая нагрузка щадит сухожилия и вписывается в любую программу. Соавторы — Abrahamsson и Baar.',
+      topics: ['protocols', 'recovery']
+    },
+    {
+      id: 'stien2021',
+      author: 'Stien et al.',
+      year: 2021,
+      title: 'Effects of Two vs. Four Weekly Campus Board Training Sessions on Bouldering Performance and Climbing-Specific Tests in Advanced and Elite Climbers',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/34267583/',
+      keyFinding: '5-недельный блок взрывной кампус-тренировки у продвинутых/элитных лазунов: 4 раза в неделю заметно подняли скорость развития усилия (RFD, ES 2.92), 2 раза в неделю — болдеринг-перформанс. Взрывной стимул тренируется отдельно от медленной max-силы.',
+      topics: ['protocols']
+    },
+    {
+      id: 'oranchuk2019',
+      author: 'Oranchuk et al.',
+      year: 2019,
+      title: 'Isometric training and long-term adaptations: Effects of muscle length, intensity, and intent — a systematic review',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/30580468/',
+      keyFinding: 'Систематический обзор изометрической тренировки: при равной нагрузке ВЗРЫВНОЕ намерение (разгон к пику как можно быстрее) даёт более крутой прирост RFD, чем удержание; жёсткость сухожилий растёт при усилии ≥70% MVC. Обоснование отдельного explosive-intent блока.',
+      topics: ['protocols']
     }
   ];
 

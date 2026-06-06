@@ -38,6 +38,20 @@ describe('auto-sync legacy bundles agent mode', () => {
     expect(output).toContain('boot-core');
     expect(after).toBe(before);
   });
+
+  it('does not run full rebuild for config changes in agent-check mode', () => {
+    const before = gitStatus();
+    const output = execSync(
+      `node "${SCRIPT_PATH}" --mode=agent-check --files=scripts/legacy-bundle-config.mjs`,
+      { cwd: REPO_ROOT, encoding: 'utf8' },
+    );
+    const after = gitStatus();
+
+    expect(output).toContain('mode=agent-check');
+    expect(output).toContain('Would run full legacy rebuild');
+    expect(output).toContain('Agent check only');
+    expect(after).toBe(before);
+  });
 });
 
 describe('auto-sync legacy bundles integration mode', () => {
