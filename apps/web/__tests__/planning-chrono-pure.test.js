@@ -620,6 +620,32 @@ describe('chrono.buildWeekBreakdown (stacked-bar source)', () => {
     });
 });
 
+describe('chrono.buildDisplayChronoActivities', () => {
+    let Chrono;
+    beforeEach(() => { ({ Chrono } = loadModules()); });
+
+    it('keeps time-bearing bubbles visible when activity metadata is not loaded yet', () => {
+        const activities = Chrono.buildDisplayChronoActivities([], { missing: 30 });
+
+        expect(activities).toEqual([
+            expect.objectContaining({
+                id: 'missing',
+                name: 'Занятие',
+                isPlaceholder: true,
+            }),
+        ]);
+    });
+
+    it('does not create placeholders for zero-minute activities', () => {
+        const activities = Chrono.buildDisplayChronoActivities([{ id: 'known', name: 'Known' }], {
+            known: 0,
+            missing: 0,
+        });
+
+        expect(activities).toEqual([{ id: 'known', name: 'Known' }]);
+    });
+});
+
 describe('Planning.Utils.getChronoMinutesByActivity', () => {
     let Utils;
     beforeEach(() => { ({ Utils } = loadModules()); });

@@ -449,7 +449,7 @@
     function buildWeekBreakdown(entries, snapshots, weekDates) {
         const out = {};
         const dateSet = new Set(Array.isArray(weekDates) ? weekDates : []);
-        weekDates.forEach((d) => { out[d] = { __total: 0 }; });
+        (Array.isArray(weekDates) ? weekDates : []).forEach((d) => { out[d] = { __total: 0 }; });
         (Array.isArray(entries) ? entries : []).forEach((e) => {
             if (!e || !dateSet.has(e.date)) return;
             const m = Number(e.minutes) || 0;
@@ -465,6 +465,25 @@
             out[s.date].__total += m;
         });
         return out;
+    }
+
+    function buildDisplayChronoActivities(activities, minutesByActivity) {
+        const byId = new Map();
+        (Array.isArray(activities) ? activities : []).forEach((activity) => {
+            if (activity && activity.id) byId.set(String(activity.id), activity);
+        });
+        Object.keys(minutesByActivity || {}).forEach((activityId, index) => {
+            if (!activityId || byId.has(activityId) || (Number(minutesByActivity[activityId]) || 0) <= 0) return;
+            byId.set(activityId, {
+                id: activityId,
+                name: 'Занятие',
+                emoji: '◷',
+                hue: (index * 47 + 205) % 360,
+                archived: false,
+                isPlaceholder: true,
+            });
+        });
+        return Array.from(byId.values());
     }
 
     // ── Аналитика: стрики / тренд / score / время суток ──────────────
@@ -2927,24 +2946,18 @@
             return m;
         }, [minutesByActivity]);
 
+        const displayActivities = useMemo(() => buildDisplayChronoActivities(visibleActivities, minutesByActivity),
+            [visibleActivities, minutesByActivity]);
+
         const partition = useMemo(() => {
             const active = [];
             const inactive = [];
-            visibleActivities.forEach((a) => {
+            displayActivities.forEach((a) => {
                 if ((minutesByActivity[a.id] || 0) > 0) active.push(a);
                 else inactive.push(a);
             });
             return { active, inactive };
-        }, [visibleActivities, minutesByActivity]);
-
-        // Транзиентный sync-провал: boot-core иногда на ~10с пишет в LS пустой
-        // chrono_activities (минуя merge планнинга) → список схлопывается в 0, потом
-        // восстанавливается. Раз увидев занятия, при пустом списке показываем
-        // «обновление…» вместо пустого экрана (моргание). Реально пустой список у
-        // нового юзера (никогда не было занятий) — не маскируем. См. incident 2026-06-06.
-        const everHadChronoRef = useRef(false);
-        if (visibleActivities.length > 0) everHadChronoRef.current = true;
-        const chronoSyncing = everHadChronoRef.current && visibleActivities.length === 0;
+        }, [displayActivities, minutesByActivity]);
 
         // Распределение времени по дням недели для режима week.
         const weekBreakdown = useMemo(() => {
@@ -3118,27 +3131,27 @@
             return sum;
         }, [minutesByActivity]);
 
-        const insights = useMemo(() => buildChronoWeekInsights(visibleActivities, minutesByActivity, totalMinutes, scope),
-            [visibleActivities, minutesByActivity, totalMinutes, scope]);
+        const insights = useMemo(() => buildChronoWeekInsights(displayActivities, minutesByActivity, totalMinutes, scope),
+            [displayActivities, minutesByActivity, totalMinutes, scope]);
 
-        const planFacts = useMemo(() => buildChronoPlanFacts(visibleActivities, tasks, minutesByActivity),
-            [visibleActivities, tasks, minutesByActivity]);
+        const planFacts = useMemo(() => buildChronoPlanFacts(displayActivities, tasks, minutesByActivity),
+            [displayActivities, tasks, minutesByActivity]);
 
-        const categoryBalance = useMemo(() => buildCategoryBalance(visibleActivities, minutesByActivity),
-            [visibleActivities, minutesByActivity]);
+        const categoryBalance = useMemo(() => buildCategoryBalance(displayActivities, minutesByActivity),
+            [displayActivities, minutesByActivity]);
 
         const weeklyReport = useMemo(() => {
             if (scope !== 'week') return null;
-            return buildWeeklyReport(visibleActivities, entries, snapshots, dates, minutesByActivity);
-        }, [scope, visibleActivities, entries, snapshots, dates, minutesByActivity]);
+            return buildWeeklyReport(displayActivities, entries, snapshots, dates, minutesByActivity);
+        }, [scope, displayActivities, entries, snapshots, dates, minutesByActivity]);
 
         // Стрики по дневным целям и паттерн времени суток — не зависят от scope,
         // считаются по всей истории (entries+snapshots).
-        const streaks = useMemo(() => buildGoalStreaks(visibleActivities, entries, snapshots, todayStr),
-            [visibleActivities, entries, snapshots, todayStr]);
+        const streaks = useMemo(() => buildGoalStreaks(displayActivities, entries, snapshots, todayStr),
+            [displayActivities, entries, snapshots, todayStr]);
 
-        const timeOfDay = useMemo(() => buildTimeOfDayPattern(visibleActivities, entries, todayStr),
-            [visibleActivities, entries, todayStr]);
+        const timeOfDay = useMemo(() => buildTimeOfDayPattern(displayActivities, entries, todayStr),
+            [displayActivities, entries, todayStr]);
 
         // Запрещаем листать в будущее: следующий шаг (день или неделя) не должен
         // выходить за «сегодня». Для недельного режима ориентируемся на старт
@@ -3240,13 +3253,12 @@
             }),
             h(ChronoOverviewPanel, { insights, balance: categoryBalance, streaks, timeOfDay }),
             h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
-            chronoSyncing && h('div', { className: 'chrono-empty', role: 'status' }, 'Обновление занятий…'),
-            !chronoSyncing && h(ChronoStrip, {
+            h(ChronoStrip, {
                 activities: partition.inactive,
                 onPick: handleBubbleClick,
                 onAddNew: () => setPickerOpen(true),
             }),
-            !chronoSyncing && h(ChronoCloud, {
+            h(ChronoCloud, {
                 activities: partition.active,
                 minutesByActivity,
                 maxMin,
@@ -3400,6 +3412,7 @@
         hasBubbleOverlap,
         buildDailySeries,
         buildWeekBreakdown,
+        buildDisplayChronoActivities,
         buildChronoPlanFacts,
         buildChronoWeekInsights,
         buildCategoryBalance,
