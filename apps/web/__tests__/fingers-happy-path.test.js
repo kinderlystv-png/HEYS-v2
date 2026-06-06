@@ -101,8 +101,8 @@ describe('B19 happy-path: профиль → рекомендация → Today 
     expect(data.recommendedProgram.id).toBe('horst_max_hangs'); // max в пределах потолка
   });
 
-  it('rehab-цель протягивается до Today-рекомендации', () => {
-    setProfile('rehab');
+  it('recovery-цель протягивается до Today-рекомендации', () => {
+    setProfile('recovery');
     const F = globalThis.HEYS.Fingers;
     expect(F.getRecommendedProgramId()).toBe('nelson_no_hangs');
     const data = F._buildTodayData('2026-06-05');
