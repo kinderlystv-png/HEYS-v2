@@ -352,7 +352,18 @@
         const localMealTs = meal.updatedAt || local.updatedAt || 0;
         const remoteMealTs = existing.updatedAt || remote.updatedAt || 0;
         const mealLocalIsNewer = localMealTs >= remoteMealTs;
-        const preferLocal = preferRemote ? false : mealLocalIsNewer;
+        // 🛡️ Lost-add fix (incident 2026-06-06): NEVER infer item deletion from a
+        // newer remote meal timestamp. In normal background merge (pollOnce /
+        // live-refresh / server-merge / upload) we ALWAYS union items — a local-only
+        // item (just added, not yet in a stale remote copy) must survive even when the
+        // remote meal carries a fresher updatedAt (any of the ~22 day re-saves/30s can
+        // re-stamp a stale snapshot, then mergeItemsById's "only remote survives" branch
+        // silently dropped the just-added item). Same-id conflicts (grams) are still
+        // resolved by item-level updatedAt inside mergeItemsById; deletion propagates
+        // ONLY via an explicit deletedItemIds tombstone (day/_meals.js removeItem),
+        // never from absence. "Only remote survives" stays reserved for explicit
+        // pull-to-refresh (preferRemote).
+        const preferLocal = !preferRemote;
 
         const mergedItems = mergeItemsById(existing.items || [], meal.items || [], preferLocal, mergedDeletedItemIds);
 
