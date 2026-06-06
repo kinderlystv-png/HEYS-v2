@@ -48,14 +48,31 @@
       topics: ['safety', 'recovery']
     },
     {
+      // Силовая методология Лопес (MAW vs MED). Sports Technology НЕ индексируется
+      // в PubMed — ссылка на издательский DOI (Taylor & Francis), не на pubmed.
+      // Раньше эта запись жила под id 'lopez2019' с year:2019 и битым PubMed-URL
+      // (PMID 30975050 = статья про гипсы при переломах ладьевидной кости, не по теме).
+      id: 'lopez2012',
+      author: 'López-Rivera & González-Badillo',
+      year: 2012,
+      title: 'The effects of two maximum grip strength training methods using the same effort duration and different edge depth on grip endurance in elite climbers',
+      type: 'peer-reviewed',
+      url: 'https://doi.org/10.1080/19346182.2012.716061',
+      keyFinding: 'Сравнила два метода максимальной силы пальцев при равной длительности усилия у элитных лазунов (8a+): MAW (ребро 18 мм + максимальный добавочный вес) и MED (минимальное ребро под весом тела). Вывод: MED — рабочая альтернатива добавочному весу и щадит сухожилия/шкивы. Методику позже подтвердило исследование López 2016 (≈28% прироста максимальной силы).',
+      topics: ['protocols', 'calibration', 'safety']
+    },
+    {
+      // Истинная статья 2019 года (peer-reviewed, PubMed). Про силовую ВЫНОСЛИВОСТЬ
+      // хвата, не про максимальную силу — поэтому из max-протоколов на неё больше
+      // не ссылаемся (они теперь на lopez2012); подключена к repeaters_7_3.
       id: 'lopez2019',
       author: 'López-Rivera & González-Badillo',
       year: 2019,
-      title: 'The effects of two maximum grip strength training methods using the same effort duration and different edge depth on grip endurance in elite climbers',
+      title: 'Comparison of the Effects of Three Hangboard Strength and Endurance Training Programs on Grip Endurance in Sport Climbers',
       type: 'peer-reviewed',
-      url: 'https://pubmed.ncbi.nlm.nih.gov/30975050/',
-      keyFinding: 'За 8 недель Max Hangs (MR) и Min Edge (MED) дают сопоставимый прирост силы пальцев у элитных лазунов, но MED безопаснее по сухожилиям.',
-      topics: ['protocols', 'calibration']
+      url: 'https://pubmed.ncbi.nlm.nih.gov/30988852/',
+      keyFinding: '8 недель, 26 опытных лазунов (7c+/8a). Прерывистые висы (intermittent dead-hangs, как repeaters) на минимальном ребре дали наибольший прирост силовой выносливости хвата (+45%), максимальные висы — +34%, комбинация — лишь +7%. Для выносливости хвата прерывистый метод эффективнее.',
+      topics: ['protocols']
     },
     {
       id: 'giles2019',

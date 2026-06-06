@@ -98,7 +98,7 @@
       a2ForceRatio: 0.8,
       dangerLevel: 'low',
       minAge: 14,
-      sourceIds: ['lopez2019', 'lattice_critical_force'],
+      sourceIds: ['lopez2012', 'lattice_critical_force'],
       methodTips: 'Сжатие большим пальцем напротив остальных. Развивает оппозицию и силу большого. Низкий риск для A2, но нагружает кисть и предплечье.'
     },
     {
@@ -109,7 +109,7 @@
       a2ForceRatio: 0.5,
       dangerLevel: 'low',
       minAge: 14,
-      sourceIds: ['beastmaker_1000', 'lopez2019'],
+      sourceIds: ['beastmaker_1000', 'lopez2012'],
       methodTips: 'Открытая ладонь на покатой поверхности. Главная нагрузка — на сцепление кожи и стабилизаторы плеча. A2 почти не нагружается.'
     }
   ];

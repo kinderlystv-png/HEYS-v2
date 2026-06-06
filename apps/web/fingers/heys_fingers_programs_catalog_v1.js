@@ -80,7 +80,7 @@
       id: 'lopez_mr',
       intensity: 'max',
       name: 'Eva López — MaxHangs MAW (Maximum Added Weight)',
-      description: 'Силовой протокол с добавочным весом по методике Эвы Лопес (исследование 2014, статья 2019). 10 секунд виса с весом, который удержал бы не больше 13 секунд — оставляешь 3 секунды запаса до отказа (margin RM-3). Отдых 4 минуты между подходами, 5 подходов на каждый хват. Программа из 3 хватов: полузамок, открытый 4-палец, передние 3 пальца. Edge 18 мм. Только для V5+ с минимум 2 годами опыта.',
+      description: 'Силовой протокол с добавочным весом по методике Эвы Лопес (исследования 2012 и 2016). 10 секунд виса с весом, который удержал бы не больше 13 секунд — оставляешь 3 секунды запаса до отказа (margin RM-3). Отдых 4 минуты между подходами, 5 подходов на каждый хват. Программа из 3 хватов: полузамок, открытый 4-палец, передние 3 пальца. Edge 18 мм. Только для V5+ с минимум 2 годами опыта.',
       level: 'advanced',
       durationMin: 55,
       exercises: [
@@ -91,7 +91,7 @@
         { gripId: 'front3', edgeSizeMm: 18, addedWeightKg: 15,
           hangSec: 10, restSec: 240, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 240 }
       ],
-      sourceIds: ['lopez2019'],
+      sourceIds: ['lopez2012'],
       advisoryBadge: 'Только V5+ с минимум 2 годами опыта',
       noEquipment: false,
       minAge: 18
@@ -113,7 +113,7 @@
         { gripId: 'sloper', edgeSizeMm: 35, addedWeightKg: 0,
           hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['horst_753', 'beastmaker_1000'],
+      sourceIds: ['horst_753', 'beastmaker_1000', 'lopez2019'],
       advisoryBadge: null,
       noEquipment: false,
       equipmentReq: 'fingerboard', // 4 хвата включая sloper — нужен полный board
@@ -230,7 +230,7 @@
         { gripId: 'front3', edgeSizeMm: 12, addedWeightKg: 0,
           hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['lopez2019'],
+      sourceIds: ['lopez2012'],
       advisoryBadge: 'Только V7+',
       noEquipment: false,
       minAge: 18
@@ -274,7 +274,7 @@
         { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 18,
           hangSec: 5, restSec: 10, repsPerSet: 5, setsCount: 5, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['lattice_critical_force', 'lopez2019'],
+      sourceIds: ['lattice_critical_force', 'lopez2012'],
       advisoryBadge: null,
       noEquipment: false,
       equipmentReq: 'block',
@@ -293,7 +293,7 @@
         { gripId: 'halfcrimp', edgeSizeMm: 10, addedWeightKg: 0,
           hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 }
       ],
-      sourceIds: ['lopez2019', 'lattice_critical_force'],
+      sourceIds: ['lopez2012', 'lattice_critical_force'],
       advisoryBadge: 'V5+',
       noEquipment: false,
       equipmentReq: 'block',
