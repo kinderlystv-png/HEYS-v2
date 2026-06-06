@@ -4106,17 +4106,21 @@
   transition: all 0.15s ease;
 }
 [data-fingers-theme] .fingers-fs-mixcard__int-btn:hover { color: var(--fingers-text, #1a1a1f); }
-[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-intensity='recovery'] {
+[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-intensity='recovery'],
+[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-goal='recovery'] {
   background: linear-gradient(135deg, #10b981, #059669);
   color: #fff;
   box-shadow: 0 3px 8px rgba(16, 185, 129, 0.30);
 }
-[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-intensity='moderate'] {
+[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-intensity='moderate'],
+[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-goal='endurance'],
+[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-goal='maintenance'] {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #fff;
   box-shadow: 0 3px 8px rgba(245, 158, 11, 0.30);
 }
-[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-intensity='max'] {
+[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-intensity='max'],
+[data-fingers-theme] .fingers-fs-mixcard__int-btn.is-active[data-goal='strength'] {
   background: linear-gradient(135deg, #dc2626, #b91c1c);
   color: #fff;
   box-shadow: 0 3px 8px rgba(220, 38, 38, 0.30);

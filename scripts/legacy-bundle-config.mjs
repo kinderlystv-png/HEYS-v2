@@ -395,7 +395,7 @@ export const LEGACY_GENERATORS = {
         dependsOn: ['meals'],
     },
     fingers: {
-        // 24 IIFE-модуля Fingers собираются в один lazy-loaded бандл.
+        // 25 IIFE-модулей Fingers собираются в один lazy-loaded бандл.
         // Order — strict dependency layers (см. bundle-fingers.cjs MODULES).
         script: 'apps/web/scripts/bundle-fingers.cjs',
         output: 'apps/web/heys_fingers_bundle_v1.js',
@@ -421,6 +421,7 @@ export const LEGACY_GENERATORS = {
             'apps/web/fingers/heys_fingers_calendar_v1.js',
             'apps/web/fingers/heys_fingers_safety_v1.js',
             'apps/web/fingers/heys_fingers_warmup_runner_v1.js',
+            'apps/web/fingers/heys_fingers_mix_engine_v1.js',
             // Layer 4
             'apps/web/fingers/heys_fingers_muscle_detail_v1.js',
             'apps/web/fingers/heys_fingers_constructor_v1.js',

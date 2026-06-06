@@ -251,6 +251,13 @@ function main() {
 
     if (relevant.some(filePath => LEGACY_FULL_REBUILD_TRIGGERS.has(filePath))) {
         console.info('[legacy-sync] ⚙️ Изменён core bundling config — запускаю полный rebuild.');
+        if (mode === 'agent-check' || isTestMode) {
+            console.info('[legacy-sync] 🔧 Would run full legacy rebuild: pnpm --filter @heys/web run predev && pnpm bundle:legacy');
+            console.info(mode === 'agent-check'
+                ? '[legacy-sync] ✅ Agent check only: generated artifacts are left for integration-pass.'
+                : '[legacy-sync] ✅ Test mode: generated artifacts are left untouched.');
+            return;
+        }
         run('pnpm --filter @heys/web run predev');
         run('pnpm bundle:legacy');
         stageGeneratedOutputs();
