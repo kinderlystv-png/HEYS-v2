@@ -1,8 +1,8 @@
 {
   "releases": [
     {
-      "version": "2026.06.06.d0f007aa",
-      "buildHash": "d0f007aa",
+      "version": "2026.06.06.5c381ff6",
+      "buildHash": "5c381ff6",
       "date": "2026-06-06",
       "kind": "user-facing",
       "profile": "user-facing-general",
@@ -15,6 +15,7 @@
         }
       ],
       "coveredCommits": [
+        "5c381ff6",
         "d0f007aa",
         "83e9e2f1",
         "f29b6733",
