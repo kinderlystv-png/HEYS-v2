@@ -8263,7 +8263,7 @@
     const age = Number(profile.age);
     if (Number.isFinite(age) && age < 14) return 'nelson_no_hangs';
     // B16: цель перебивает grade-логику для non-strength целей.
-    if (profile.goal === 'rehab') return 'nelson_no_hangs';
+    if (profile.goal === 'recovery') return 'nelson_no_hangs';
     if (profile.goal === 'endurance' || profile.goal === 'maintenance') return 'repeaters_7_3';
     const g = profile.maxVGrade;
     if (g === 'V0-V2' || g === 'V3-V4' || g === 'none') return 'beastmaker_1000_beginner';
@@ -8373,8 +8373,8 @@
     const GRADES = ['V0-V2', 'V3-V4', 'V5-V6', 'V7-V8', 'V9+', 'none'];
     const GRADE_LABELS = { 'V0-V2': 'V0-V2', 'V3-V4': 'V3-V4', 'V5-V6': 'V5-V6', 'V7-V8': 'V7-V8', 'V9+': 'V9+', 'none': 'Не лажу' };
     // B16: цель тренировки. Влияет на рекомендацию программы.
-    const GOALS = ['strength', 'endurance', 'rehab', 'maintenance'];
-    const GOAL_LABELS = { strength: '💪 Сила', endurance: '🔄 Выносливость', rehab: '🩹 Реабилитация', maintenance: '⚖️ Поддержание' };
+    const GOALS = ['strength', 'endurance', 'recovery', 'maintenance'];
+    const GOAL_LABELS = { strength: '💪 Сила', endurance: '🔄 Выносливость', recovery: '🌿 Восстановление', maintenance: '⚖️ Поддержка' };
 
     function updateProfile(patch) {
       const profile = Object.assign({}, state.profile, patch);
@@ -8420,27 +8420,29 @@
         h('p', { className: 'fingers-ob-sub' }, 'Несколько коротких вопросов для подбора программы.')
       ),
       h('div', { className: 'fingers-ob-stepcard' },
-        h('div', null,
-          h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-age' }, 'Возраст *'),
-          h('input', {
-            id: 'fingers-ob-age',
-            type: 'number',
-            min: 8, max: 99,
-            value: displayedAge === '' ? '' : displayedAge,
-            onChange: (e) => updateProfile({ age: e.target.value === '' ? null : Number(e.target.value) }),
-            className: 'fingers-ob-input'
-          })
-        ),
-        h('div', null,
-          h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-years' }, 'Сколько лет лазаешь'),
-          h('input', {
-            id: 'fingers-ob-years',
-            type: 'number',
-            min: 0, max: 50,
-            value: state.profile.climbingYears || 0,
-            onChange: (e) => updateProfile({ climbingYears: Math.max(0, Math.min(50, Number(e.target.value) || 0)) }),
-            className: 'fingers-ob-input'
-          })
+        h('div', { className: 'fingers-ob-row2' },
+          h('div', null,
+            h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-age' }, 'Возраст *'),
+            h('input', {
+              id: 'fingers-ob-age',
+              type: 'number',
+              min: 8, max: 99,
+              value: displayedAge === '' ? '' : displayedAge,
+              onChange: (e) => updateProfile({ age: e.target.value === '' ? null : Number(e.target.value) }),
+              className: 'fingers-ob-input'
+            })
+          ),
+          h('div', null,
+            h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-years' }, 'Стаж, лет'),
+            h('input', {
+              id: 'fingers-ob-years',
+              type: 'number',
+              min: 0, max: 50,
+              value: state.profile.climbingYears || 0,
+              onChange: (e) => updateProfile({ climbingYears: Math.max(0, Math.min(50, Number(e.target.value) || 0)) }),
+              className: 'fingers-ob-input'
+            })
+          )
         ),
         h('div', null,
           h('div', { className: 'fingers-ob-label' }, 'Максимальная сложность боулдеринга'),
@@ -9178,7 +9180,7 @@
 
     // B16: цель перебивает grade-prefs для non-strength целей, если
     // целевая программа eligible. 'strength'/undefined → grade-логика ниже.
-    const goalForced = fp.goal === 'rehab' ? 'nelson_no_hangs'
+    const goalForced = fp.goal === 'recovery' ? 'nelson_no_hangs'
       : (fp.goal === 'endurance' || fp.goal === 'maintenance') ? 'repeaters_7_3'
       : null;
     if (goalForced && eligibleIds.has(goalForced)) return goalForced;
@@ -9882,24 +9884,13 @@
         : ['full']);
     const [mixedWorkout, setMixedWorkout] = useState(null);
     const [mixSeed, setMixSeed] = useState(0);
-    // Цель микса (goal): ЧТО тренируем. Потолок (bucket) приходит из готовности,
-    // движок сам режет цель под него. Persisted в LS.
-    const MIX_GOALS = (Fingers.mixEngine && Array.isArray(Fingers.mixEngine.GOALS) && Fingers.mixEngine.GOALS.length)
-      ? Fingers.mixEngine.GOALS
-      : [{ id: 'strength', label: 'Сила' }, { id: 'endurance', label: 'Выносливость' },
-         { id: 'recovery', label: 'Восстановление' }, { id: 'maintenance', label: 'Поддержка' }];
-    const GOAL_EMOJI = { strength: '🔥', endurance: '🔁', recovery: '🌿', maintenance: '🧱' };
-    const [mixGoal, setMixGoal] = useState(function () {
-      const u = HEYS.utils;
-      const v = u && u.lsGet ? u.lsGet('fingers_mix_goal', 'strength') : 'strength';
-      return MIX_GOALS.some(function (g) { return g.id === v; }) ? v : 'strength';
-    });
-    const onPickMixGoal = useCallback(function (v) {
-      setMixGoal(v);
-      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_mix_goal', v);
-    }, []);
+    // Цель — единая, из profile.goal (переключатель в баре оборудования).
+    // Меняешь там → equipmentTick перерисует SessionUI → микс пересоберётся.
     // goal → legacy intensity, только для fallback generateMixedWorkout.
     const GOAL_TO_INTENSITY = { strength: 'max', endurance: 'moderate', recovery: 'recovery', maintenance: 'moderate' };
+    const GOAL_LABELS_MAP = { strength: 'Сила', endurance: 'Выносливость', recovery: 'Восстановление', maintenance: 'Поддержка' };
+    const mixGoal = profile.goal || 'strength';
+    const mixGoalLabel = GOAL_LABELS_MAP[mixGoal] || mixGoal;
     useEffect(function () {
       if (!Fingers.mixEngine && !Fingers.generateMixedWorkout) return;
       const mixOpts = {
@@ -9986,24 +9977,9 @@
               h('span', { 'aria-hidden': 'true' }, '🎲'),
               ' Микс'
             ),
-            h('div', { className: 'fingers-fs-mixcard__intensity-toggle', role: 'tablist', 'aria-label': 'Цель тренировки' },
-              MIX_GOALS.map(function (opt) {
-                const active = mixGoal === opt.id;
-                return h('button', {
-                  key: opt.id,
-                  type: 'button',
-                  role: 'tab',
-                  'aria-selected': active,
-                  className: 'fingers-fs-mixcard__int-btn'
-                    + (active ? ' is-active' : ''),
-                  'data-goal': opt.id,
-                  onClick: function () { onPickMixGoal(opt.id); }
-                },
-                  h('span', { 'aria-hidden': 'true' }, (GOAL_EMOJI[opt.id] || '🎯') + ' '),
-                  opt.label
-                );
-              })
-            )
+            // Цель собирается из единого переключателя в баре оборудования.
+            h('div', { className: 'fingers-fs-mixcard__goalhint' },
+              'под цель «' + (mixGoalLabel) + '»')
           ),
           h('h3', { className: 'fingers-fs-mixcard__title' }, mixedWorkout.name),
           h('p', { className: 'fingers-fs-mixcard__desc' }, mixedWorkout.description),
@@ -11892,7 +11868,38 @@
       );
     };
 
+    // Единая ЦЕЛЬ тренировок — живёт здесь (рядом с оборудованием), пишется в
+    // profile.goal. Рулит И рекомендованным протоколом (getRecommendedProgramId),
+    // И микс-сборкой (mixEngine читает profile.goal). Онбординг задаёт стартовое
+    // значение; здесь меняешь в любой момент.
+    const GOAL_LIST = (Fingers.mixEngine && Array.isArray(Fingers.mixEngine.GOALS) && Fingers.mixEngine.GOALS.length)
+      ? Fingers.mixEngine.GOALS
+      : [{ id: 'strength', label: 'Сила' }, { id: 'endurance', label: 'Выносливость' },
+         { id: 'recovery', label: 'Восстановление' }, { id: 'maintenance', label: 'Поддержка' }];
+    const GOAL_EMOJI = { strength: '🔥', endurance: '🔁', recovery: '🌿', maintenance: '🧱' };
+    const currentGoal = profile.goal || 'strength';
+
     return h('div', { className: 'fingers-fs-equipment-bar' },
+      h('div', { className: 'fingers-fs-goalsel' },
+        h('div', { className: 'fingers-fs-goalsel__label' }, 'Цель тренировки'),
+        h('div', { className: 'fingers-fs-goalsel__grid', role: 'tablist', 'aria-label': 'Цель тренировки' },
+          GOAL_LIST.map(function (g) {
+            const active = currentGoal === g.id;
+            return h('button', {
+              key: g.id,
+              type: 'button',
+              role: 'tab',
+              'aria-selected': active,
+              className: 'fingers-fs-goalsel__btn' + (active ? ' is-active' : ''),
+              'data-goal': g.id,
+              onClick: function () { if (currentGoal !== g.id) writeProfile({ goal: g.id }); }
+            },
+              h('span', { className: 'fingers-fs-goalsel__emoji', 'aria-hidden': 'true' }, GOAL_EMOJI[g.id] || '🎯'),
+              h('span', { className: 'fingers-fs-goalsel__text' }, g.label)
+            );
+          })
+        )
+      ),
       h('div', { className: 'fingers-fs-equipment-bar__tabs',
         role: 'group',
         'aria-label': 'Оборудование (можно выбрать несколько)' },
