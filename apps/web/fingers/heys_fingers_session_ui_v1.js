@@ -1019,13 +1019,18 @@
       if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_mix_intensity', v);
     }, []);
     useEffect(function () {
-      if (!Fingers.generateMixedWorkout) return;
-      const w = Fingers.generateMixedWorkout({
+      if (!Fingers.mixEngine && !Fingers.generateMixedWorkout) return;
+      const mixOpts = {
         equipmentTypes: userTypes,
         intensity: mixIntensity,
         age: ageRaw,
         readiness: cool && cool.recommendation
-      });
+      };
+      // mixEngine (role-based) — основной путь; generateMixedWorkout — fallback.
+      let w = (Fingers.mixEngine && Fingers.mixEngine.recommendDay)
+        ? Fingers.mixEngine.recommendDay(mixOpts)
+        : null;
+      if (!w && Fingers.generateMixedWorkout) w = Fingers.generateMixedWorkout(mixOpts);
       setMixedWorkout(w);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userTypes.join(','), mixIntensity, ageRaw, cool && cool.recommendation, mixSeed]);

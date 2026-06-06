@@ -45,6 +45,7 @@ const MODULES = [
     { file: 'heys_fingers_calendar_v1.js',        label: 'year heatmap' },
     { file: 'heys_fingers_safety_v1.js',          label: 'RAMP-warmup defs' },
     { file: 'heys_fingers_warmup_runner_v1.js',   label: 'warmup runner' },
+    { file: 'heys_fingers_mix_engine_v1.js',      label: 'role-based mix engine' },
 
     // ── Layer 4: UI (depends on all above) ──
     { file: 'heys_fingers_muscle_detail_v1.js',   label: 'muscle drill-down' },
