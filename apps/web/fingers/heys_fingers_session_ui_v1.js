@@ -1110,8 +1110,12 @@
             h('div', { className: 'fingers-fs-mixcard__badge' },
               h('span', { 'aria-hidden': 'true' }, '🎲'),
               ' Микс'
-            ),
-            h('div', { className: 'fingers-fs-mixcard__intensity-toggle', role: 'tablist', 'aria-label': 'Цель тренировки' },
+            )
+          ),
+          // Цель — только для этой микс-сборки (не профильная «Цель тренировок»).
+          h('div', { className: 'fingers-fs-mixcard__goal' },
+            h('div', { className: 'fingers-fs-mixcard__goal-label' }, 'Цель этой тренировки'),
+            h('div', { className: 'fingers-fs-mixcard__goal-grid', role: 'tablist', 'aria-label': 'Цель этой тренировки' },
               MIX_GOALS.map(function (opt) {
                 const active = mixGoal === opt.id;
                 return h('button', {
@@ -1119,13 +1123,13 @@
                   type: 'button',
                   role: 'tab',
                   'aria-selected': active,
-                  className: 'fingers-fs-mixcard__int-btn'
+                  className: 'fingers-fs-mixcard__goal-btn'
                     + (active ? ' is-active' : ''),
                   'data-goal': opt.id,
                   onClick: function () { onPickMixGoal(opt.id); }
                 },
-                  h('span', { 'aria-hidden': 'true' }, (GOAL_EMOJI[opt.id] || '🎯') + ' '),
-                  opt.label
+                  h('span', { className: 'fingers-fs-mixcard__goal-emoji', 'aria-hidden': 'true' }, GOAL_EMOJI[opt.id] || '🎯'),
+                  h('span', { className: 'fingers-fs-mixcard__goal-text' }, opt.label)
                 );
               })
             )

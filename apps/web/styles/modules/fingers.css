@@ -4080,6 +4080,68 @@
   box-shadow: 0 2px 6px rgba(217, 119, 6, 0.30);
   flex-shrink: 0;
 }
+/* Goal-селектор микса — ровная сетка 2×2, цель ТОЛЬКО для этой микс-сборки. */
+[data-fingers-theme] .fingers-fs-mixcard__goal {
+  margin-bottom: 14px;
+}
+[data-fingers-theme] .fingers-fs-mixcard__goal-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(146, 64, 14, 0.78);
+  margin-bottom: 8px;
+}
+[data-fingers-theme] .fingers-fs-mixcard__goal-grid {
+  display: grid;
+  /* minmax(0,1fr) — РАВНЫЕ колонки даже при длинном слове «Восстановление»
+     (иначе 1fr раздувается под min-content и сетка кривая). */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+[data-fingers-theme] .fingers-fs-mixcard__goal-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 62px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(245, 158, 11, 0.30);
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--fingers-text, #1c1b19);
+  font-family: inherit;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, transform 120ms ease;
+}
+[data-fingers-theme] .fingers-fs-mixcard__goal-text {
+  font-size: 12.5px;
+  line-height: 1.2;
+}
+[data-fingers-theme] .fingers-fs-mixcard__goal-btn:hover {
+  border-color: rgba(245, 158, 11, 0.55);
+}
+[data-fingers-theme] .fingers-fs-mixcard__goal-btn:active { transform: scale(0.97); }
+[data-fingers-theme] .fingers-fs-mixcard__goal-btn.is-active {
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.34);
+}
+[data-fingers-theme] .fingers-fs-mixcard__goal-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-mixcard__goal-label {
+  color: rgba(252, 211, 77, 0.78);
+}
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-mixcard__goal-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(235, 235, 245, 0.85);
+}
 [data-fingers-theme] .fingers-fs-mixcard__intensity-toggle {
   display: inline-flex;
   flex-wrap: wrap;
