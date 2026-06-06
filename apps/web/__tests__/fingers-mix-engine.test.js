@@ -36,7 +36,7 @@ describe('mixEngine: roleOf + slot templates', () => {
   beforeAll(setupOnce);
 
   it('slot-шаблоны по bucket', () => {
-    expect(E()._slotTemplateFor('max')).toEqual(['max-strength', 'strength-endurance', 'antagonist']);
+    expect(E()._slotTemplateFor('max')).toEqual(['power', 'max-strength', 'strength-endurance', 'antagonist']);
     expect(E()._slotTemplateFor('moderate')).toEqual(['strength-endurance', 'capacity', 'antagonist']);
     expect(E()._slotTemplateFor('recovery')).toEqual(['capacity', 'antagonist']);
   });
@@ -254,5 +254,44 @@ describe('mixEngine Phase 2a: MAV volume (step 8)', () => {
       byGrip[e.gripId] = (byGrip[e.gripId] || 0) + e.setsCount;
     });
     Object.values(byGrip).forEach((n) => expect(n).toBeLessThanOrEqual(5));
+  });
+});
+
+describe('mixEngine Phase 2b: power slot (RFD recruitment_pulls)', () => {
+  beforeAll(setupOnce);
+
+  it('block tier + max → power-блок (recruitment_pulls) первым', () => {
+    const p = E().recommendDay({ equipmentTypes: ['block'], intensity: 'all', age: 25, readiness: 'max' });
+    expect(p).toBeTruthy();
+    const rs = p.exercises.map((e) => e.__role);
+    expect(rs[0]).toBe('power');
+    const power = p.exercises.find((e) => e.__role === 'power');
+    expect(power.__fromProgram).toBe('recruitment_pulls');
+  });
+
+  it('full tier → power-слот пуст (recruitment_pulls только block)', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' });
+    expect(p.exercises.every((e) => e.__role !== 'power')).toBe(true);
+  });
+
+  it('17 лет → нет power-блока (recruitment_pulls 18+)', () => {
+    const p = E().recommendDay({ equipmentTypes: ['block'], intensity: 'all', age: 17, readiness: 'max' });
+    expect(p.exercises.every((e) => e.__role !== 'power')).toBe(true);
+  });
+});
+
+describe('mixEngine Phase 2b: warmup-bookend', () => {
+  beforeAll(setupOnce);
+
+  it('max-день требует ramp-разогрев', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' });
+    expect(p.requiresWarmup).toBe(true);
+    expect(p.warmupType).toBe('ramp');
+  });
+
+  it('recovery-день — короткий разогрев, не ramp', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'recovery' });
+    expect(p.requiresWarmup).toBe(false);
+    expect(p.warmupType).toBe('quick');
   });
 });

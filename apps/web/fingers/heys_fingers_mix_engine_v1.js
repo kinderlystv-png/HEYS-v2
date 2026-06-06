@@ -36,12 +36,15 @@
 
   // bucket → упорядоченный список ролей-слотов.
   const SLOT_TEMPLATES = {
-    max: ['max-strength', 'strength-endurance', 'antagonist'],
+    // power первым — взрывной/нейро-стимул на самые свежие пальцы (если есть
+    // power-протокол под выбранный снаряд; иначе слот тихо пропускается).
+    max: ['power', 'max-strength', 'strength-endurance', 'antagonist'],
     moderate: ['strength-endurance', 'capacity', 'antagonist'],
     recovery: ['capacity', 'antagonist'],
   };
   // slotRole → какие protocol-роли его заполняют (с fallback'ами).
   const SLOT_ACCEPT = {
+    'power': { 'power': true },
     'max-strength': { 'max-strength': true },
     'strength-endurance': { 'strength-endurance': true },
     'capacity': { 'capacity': true, 'connective': true, 'strength-endurance': true },
@@ -56,7 +59,8 @@
     max: 'максимум', moderate: 'умеренный', recovery: 'восстановление',
   };
   const ROLE_LABEL = {
-    'max-strength': 'макс. сила', 'strength-endurance': 'силовая выносливость',
+    'power': 'взрывная сила (RFD)', 'max-strength': 'макс. сила',
+    'strength-endurance': 'силовая выносливость',
     'capacity': 'аэробная ёмкость', 'antagonist': 'антагонист',
   };
 
@@ -318,6 +322,12 @@
     const reason = buildReason(bucket, goal, ceiling, finalEx, hasAntagonist);
     const tierList = Object.keys(includedTiers);
 
+    // Step 7: warmup-bookend. Перед взрывным/max-блоком — полный RAMP-разогрев,
+    // иначе короткий. Флаги читает UI (session_ui) и запускает WarmupRunner.
+    // Копия — «готовность», не «профилактика травм».
+    const requiresWarmup = bucket === 'max'
+      || finalEx.some(function (e) { return e.__role === 'power' || e.__role === 'max-strength'; });
+
     return {
       id: 'mix_engine_' + Date.now(),
       __generated: true,
@@ -334,6 +344,8 @@
       advisoryBadge: null,
       noEquipment: tierList.length === 1 && tierList[0] === 'none',
       minAge: 14,
+      requiresWarmup: requiresWarmup,
+      warmupType: requiresWarmup ? 'ramp' : 'quick',
     };
   }
 

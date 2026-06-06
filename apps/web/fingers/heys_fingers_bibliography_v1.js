@@ -233,6 +233,26 @@
       url: 'https://pubmed.ncbi.nlm.nih.gov/39560837/',
       keyFinding: '10-минутные низкоинтенсивные висы («Abrahangs», ~40% усилия, длинные холды) дали такой же прирост силы хвата, как Max Hangs, а в комбинации — аддитивный эффект. Низкая нагрузка щадит сухожилия и вписывается в любую программу. Соавторы — Abrahamsson и Baar.',
       topics: ['protocols', 'recovery']
+    },
+    {
+      id: 'stien2021',
+      author: 'Stien et al.',
+      year: 2021,
+      title: 'Effects of Two vs. Four Weekly Campus Board Training Sessions on Bouldering Performance and Climbing-Specific Tests in Advanced and Elite Climbers',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/34267583/',
+      keyFinding: '5-недельный блок взрывной кампус-тренировки у продвинутых/элитных лазунов: 4 раза в неделю заметно подняли скорость развития усилия (RFD, ES 2.92), 2 раза в неделю — болдеринг-перформанс. Взрывной стимул тренируется отдельно от медленной max-силы.',
+      topics: ['protocols']
+    },
+    {
+      id: 'oranchuk2019',
+      author: 'Oranchuk et al.',
+      year: 2019,
+      title: 'Isometric training and long-term adaptations: Effects of muscle length, intensity, and intent — a systematic review',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/30580468/',
+      keyFinding: 'Систематический обзор изометрической тренировки: при равной нагрузке ВЗРЫВНОЕ намерение (разгон к пику как можно быстрее) даёт более крутой прирост RFD, чем удержание; жёсткость сухожилий растёт при усилии ≥70% MVC. Обоснование отдельного explosive-intent блока.',
+      topics: ['protocols']
     }
   ];
 

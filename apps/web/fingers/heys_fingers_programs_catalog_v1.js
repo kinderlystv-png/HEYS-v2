@@ -387,6 +387,26 @@
       noEquipment: false,
       equipmentTypes: ['full', 'door'],
       minAge: 14
+    },
+    {
+      id: 'recruitment_pulls',
+      intensity: 'max',
+      role: 'power', // взрывное намерение — слот power перед max-силой
+      name: 'Recruitment Pulls — взрывные изометрические тяги (RFD)',
+      description: 'Развитие скорости усилия (RFD) и нейро-рекрутмента через ВЗРЫВНОЕ намерение. На блоке/датчике тянешь с пола максимально резко — разгон к пику как можно быстрее, ~90%+ усилия, короткий импульс 4 секунды × 5 повторов в подходе, отдых между повторами короткий (как восстановление нерва), 3 подхода на хват: полузамок и открытый 4-палец, edge 20 мм. Отдых между подходами 3 минуты. Только на свежих пальцах (высокая готовность) и в начале сессии. Дополняет, а не заменяет медленные max-hangs: даёт более крутой RFD-стимул и жёсткость сухожилий. Для V5+ с базой ≥2 лет.',
+      level: 'advanced',
+      durationMin: 30,
+      exercises: [
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 4, restSec: 60, repsPerSet: 5, setsCount: 3, restBetweenSetsSec: 180 },
+        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 4, restSec: 60, repsPerSet: 5, setsCount: 3, restBetweenSetsSec: 180 }
+      ],
+      sourceIds: ['stien2021', 'oranchuk2019', 'nelson_camp4', 'lattice_critical_force'],
+      advisoryBadge: 'Взрывное намерение · V5+ / 18+ · только на свежих пальцах',
+      noEquipment: false,
+      equipmentReq: 'block',
+      minAge: 18
     }
   ];
 
