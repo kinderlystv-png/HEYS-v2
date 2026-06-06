@@ -184,6 +184,12 @@
       else if (yesterdayFb.intensity === 'recovery') { score -= 5; }
     }
 
+    // B9: пропуск разогрева в недавней сессии → выше риск травмы, нудж вниз.
+    if (safeToday.fingers && safeToday.fingers.warmupSkippedRecently) {
+      score -= 10;
+      reasons.push('В прошлый раз пропущен разогрев — выше риск травмы');
+    }
+
     const finalScore = Math.round(clamp(score, 0, 100));
     return { score: finalScore, bucket: bucketFromScore(finalScore), reasons: reasons };
   }
@@ -204,6 +210,12 @@
     if (Number.isFinite(wb) && wb < 5) { score = 45; downgraded = true; reasons.push('Самочувствие ниже среднего'); }
     if (Number.isFinite(sleep) && sleep < 6) { score = 40; downgraded = true; reasons.push('Сон менее 6 часов'); }
     if (yesterdayFb && yesterdayFb.intensity === 'max') { score = 35; downgraded = true; reasons.push('Вчера была max-нагрузка'); }
+
+    // B9: пропуск разогрева — нудж вниз и в упрощённом пути.
+    if (today.fingers && today.fingers.warmupSkippedRecently) {
+      score -= 10;
+      reasons.push('В прошлый раз пропущен разогрев — выше риск травмы');
+    }
 
     if (!downgraded) reasons.push('Истории мало — оценка по упрощённым правилам');
     return { score: score, bucket: bucketFromScore(score), reasons: reasons };

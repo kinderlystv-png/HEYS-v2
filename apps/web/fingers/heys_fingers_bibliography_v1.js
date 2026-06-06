@@ -241,6 +241,13 @@
     practitioner: { label: 'Практик-методист', color: '#2563eb' },
     guideline: { label: 'Гайдлайн', color: '#d97706' }
   };
+  // Группировка списка по типу: заголовок группы вместо бейджа в каждой карточке.
+  const TYPE_ORDER = ['peer-reviewed', 'practitioner', 'guideline'];
+  const TYPE_GROUP_LABELS = {
+    'peer-reviewed': 'Научные статьи',
+    practitioner: 'Практики и методисты',
+    guideline: 'Гайдлайны и стандарты'
+  };
 
   // Маппинг type → emoji-иконка для visual quick-recognition.
   function _typeIcon(t) {
@@ -382,11 +389,7 @@
                 React.createElement('div', { className: 'fingers-bib-modal__empty-title' }, 'Ничего не найдено'),
                 React.createElement('div', { className: 'fingers-bib-modal__empty-hint' },
                   'Попробуй очистить поиск или сменить категорию.'))
-            : filtered.map(function (src) {
-                return _renderSourceCard(src, expandedId === src.id, function () {
-                  setExpandedId(expandedId === src.id ? null : src.id);
-                });
-              })
+            : _renderGroupedSources(filtered, expandedId, setExpandedId)
         )
       )
     );
@@ -398,26 +401,29 @@
       key: src.id,
       'data-bib-source': src.id,
       'data-bib-type': src.type,
-      className: 'fingers-bib-source' + (expanded ? ' is-expanded' : '')
+      className: 'fingers-bib-source' + (expanded ? ' is-expanded' : ''),
+      // flex-shrink:0 — иначе в scrollable flex-колонке списка карточки сжимаются
+      // по высоте (default shrink:1) и overflow:hidden обрезает текст.
+      style: { flexShrink: 0 }
     },
       React.createElement('button', {
         type: 'button',
         className: 'fingers-bib-source__head',
         onClick: onToggle,
-        'aria-expanded': expanded ? 'true' : 'false'
+        'aria-expanded': expanded ? 'true' : 'false',
+        // Тип вынесен в заголовок группы — здесь только контент. grid 1fr auto.
+        style: { display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center',
+          gap: 12, padding: '15px 16px', width: '100%', textAlign: 'left',
+          background: 'transparent', border: 'none', cursor: 'pointer' }
       },
-        React.createElement('div', { className: 'fingers-bib-source__type', 'aria-hidden': 'true' },
-          React.createElement('span', { className: 'fingers-bib-source__type-icon' }, _typeIcon(src.type)),
-          React.createElement('span', { className: 'fingers-bib-source__type-label' }, typeMeta.label)
-        ),
-        React.createElement('div', { className: 'fingers-bib-source__main' },
-          React.createElement('div', { className: 'fingers-bib-source__author' },
-            React.createElement('strong', null, src.author),
+        React.createElement('div', { className: 'fingers-bib-source__main', style: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 } },
+          React.createElement('h3', { className: 'fingers-bib-source__title', style: { margin: 0, fontSize: 15, fontWeight: 650, lineHeight: 1.32, letterSpacing: '-0.01em', color: '#1c1b19' } }, src.title),
+          React.createElement('div', { className: 'fingers-bib-source__author', style: { fontSize: 12.5, fontWeight: 500, color: 'rgba(60,60,67,0.6)' } },
+            React.createElement('strong', { style: { color: 'rgba(60,60,67,0.85)', fontWeight: 600 } }, src.author),
             ' · ',
-            React.createElement('span', { className: 'fingers-bib-source__year' }, String(src.year))),
-          React.createElement('h3', { className: 'fingers-bib-source__title' }, src.title)
+            React.createElement('span', { className: 'fingers-bib-source__year' }, String(src.year)))
         ),
-        React.createElement('span', { className: 'fingers-bib-source__chevron', 'aria-hidden': 'true' }, expanded ? '▲' : '▼')
+        React.createElement('span', { className: 'fingers-bib-source__chevron', 'aria-hidden': 'true', style: { flexShrink: 0, opacity: 0.4, fontSize: 11 } }, expanded ? '▲' : '▼')
       ),
       expanded ? React.createElement('div', { className: 'fingers-bib-source__body' },
         React.createElement('div', { className: 'fingers-bib-source__finding-label' }, 'Главное открытие'),
@@ -441,6 +447,35 @@
         ) : null
       ) : null
     );
+  }
+
+  // Группирует (уже отфильтрованные) источники по типу и рендерит секции с
+  // заголовком группы — тип не дублируется в каждой карточке.
+  function _renderGroupedSources(sources, expandedId, onToggleId) {
+    const byType = {};
+    sources.forEach(function (s) { (byType[s.type] = byType[s.type] || []).push(s); });
+    const order = TYPE_ORDER.slice();
+    Object.keys(byType).forEach(function (t) { if (order.indexOf(t) < 0) order.push(t); });
+    return order.map(function (type) {
+      const list = byType[type];
+      if (!list || !list.length) return null;
+      const meta = TYPE_LABELS[type] || { label: type, color: '#64748b' };
+      return React.createElement('section', { key: type, className: 'fingers-bib-group', 'data-bib-type': type },
+        React.createElement('div', { className: 'fingers-bib-group__header' },
+          React.createElement('span', { className: 'fingers-bib-group__icon', 'aria-hidden': 'true' }, _typeIcon(type)),
+          React.createElement('span', { className: 'fingers-bib-group__label', style: { color: meta.color } },
+            TYPE_GROUP_LABELS[type] || meta.label),
+          React.createElement('span', { className: 'fingers-bib-group__count' }, list.length)
+        ),
+        React.createElement('div', { className: 'fingers-bib-group__items' },
+          list.map(function (src) {
+            return _renderSourceCard(src, expandedId === src.id, function () {
+              onToggleId(expandedId === src.id ? null : src.id);
+            });
+          })
+        )
+      );
+    });
   }
 
   // === Экспорт ===

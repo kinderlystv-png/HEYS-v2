@@ -23,16 +23,23 @@ function loadPersistence() {
 }
 
 describe('Fingers session persistence', () => {
+  // Defensive: в полном прогоне vitest (single-thread, shared globalThis)
+  // соседний файл может обнулить window.localStorage между хуками. Teardown/
+  // setup не должен кидать из-за чужого загрязнения — гардим существование.
+  const safeClearLS = () => {
+    try { if (typeof window !== 'undefined' && window.localStorage) window.localStorage.clear(); } catch (_) { /* noop */ }
+  };
+
   beforeEach(() => {
     vi.useFakeTimers();
-    window.localStorage.clear();
-    delete window.HEYS;
+    safeClearLS();
+    if (typeof window !== 'undefined') delete window.HEYS;
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    window.localStorage.clear();
-    delete window.HEYS;
+    safeClearLS();
+    if (typeof window !== 'undefined') delete window.HEYS;
   });
 
   it('saves active snapshot as raw localStorage, not through cloud-synced lsSet', () => {

@@ -45,6 +45,38 @@
   const MVC_TARGET_PCT = { recovery: 60, moderate: 75, max: 90 };
   const MVC_TARGET_DEFAULT = 80;
 
+  // B4: авто-прогрессия рабочего веса. Чистый движок: по RPE прошлой сессии
+  // (B1) + готовности (cooldown/readiness) + недавней боли (B6) советует шаг.
+  // Консервативно и safety-first: расти ТОЛЬКО при readyForMax и без боли;
+  // «тяжело» → держать/снизить. input:
+  //   { rpe:[ 'easy'|'ok'|'hard' ], readyForMax:bool, hasPain:bool,
+  //     currentKg:number, stepKg?:number }
+  // → { action:'increase'|'hold'|'decrease', deltaKg, suggestedKg, reason }.
+  function suggestProgression(input) {
+    const o = input || {};
+    const rpe = Array.isArray(o.rpe) ? o.rpe.filter(Boolean) : [];
+    const cur = Number(o.currentKg) || 0;
+    const step = Number(o.stepKg) > 0 ? Number(o.stepKg) : 1;
+    const mk = function (action, deltaKg, reason) {
+      return {
+        action: action,
+        deltaKg: deltaKg,
+        suggestedKg: Math.max(0, snap(cur + deltaKg, 0.5)),
+        reason: reason
+      };
+    };
+    if (o.hasPain) return mk('hold', 0, 'Недавняя боль — не прогрессируем, дай связкам восстановиться.');
+    if (!o.readyForMax) return mk('hold', 0, 'Готовность не максимальная — закрепи текущий вес.');
+    if (!rpe.length) return mk('hold', 0, 'Нет RPE с прошлой сессии — оцени подходы, чтобы получить рекомендацию.');
+    const hard = rpe.filter(function (r) { return r === 'hard'; }).length;
+    const easy = rpe.filter(function (r) { return r === 'easy'; }).length;
+    if (hard >= 2) return mk('decrease', -step, 'Прошлая сессия была тяжёлой (' + hard + ' подхода) — снизь вес.');
+    if (hard === 1) return mk('hold', 0, 'Был тяжёлый подход — закрепи текущий вес ещё раз.');
+    if (easy === rpe.length) return mk('increase', step, 'Все подходы дались легко при полной готовности — можно добавить.');
+    return mk('increase', step / 2, 'Подходы по плану, готовность максимальная — небольшой шаг вверх.');
+  }
+  Fingers.suggestProgression = suggestProgression;
+
   function createBlankExercise(opts) {
     const o = opts || {};
     return {
@@ -518,6 +550,36 @@
           role: 'alert',
         }, warnText));
       }
+      // B4: авто-прогрессия — движок советует шаг по RPE прошлой сессии +
+      // готовности + боли. Кнопка только на increase (actionable); decrease —
+      // приглушённое предупреждение. Не показываем при overLimit (сначала
+      // привести вес в безопасный диапазон).
+      if (!overLimit && typeof onPickWeight === 'function'
+          && Fingers.suggestProgression && Fingers.lastGripFeedback) {
+        try {
+          const fb = Fingers.lastGripFeedback(gripId);
+          const cd = (Fingers.cooldownCheck && Fingers.cooldownCheck()) || null;
+          const pain = (Fingers.recentFingerPain && Fingers.recentFingerPain()) || { hasPain: false };
+          const sug = Fingers.suggestProgression({
+            rpe: fb.rpe,
+            readyForMax: !!(cd && cd.recommendation === 'max'),
+            hasPain: pain.hasPain,
+            currentKg: Number(addedKg) || 0,
+          });
+          if (sug.action === 'increase' && sug.deltaKg > 0) {
+            rows.push(R.createElement('div', { key: 'prog', style: ST_HINT, className: 'fingers-fs-hint-row' },
+              R.createElement('button', {
+                type: 'button',
+                className: 'fingers-fs-mvc-autofill',
+                onClick: function () { onPickWeight(sug.suggestedKg); },
+                'aria-label': sug.reason,
+              }, '↑ Готов добавить +' + sug.deltaKg + ' кг → ' + sug.suggestedKg + ' кг')));
+          } else if (sug.action === 'decrease') {
+            rows.push(R.createElement('div', { key: 'prog', style: ST_HINT_WARN, className: 'fingers-fs-hint-warn' },
+              R.createElement('span', null, '↓ ' + sug.reason)));
+          }
+        } catch (_) { /* noop */ }
+      }
       return R.createElement(R.Fragment, null, rows);
     }
     if (mvc.type === 'time') {
@@ -631,6 +693,14 @@
             mvc: Number(addedKg) + bm.kg,
             bwSource: bm.source
           });
+          // B2: яркий PR-feedback. isPR уже посчитан records.updateIfPR (max-wins).
+          if (out.isPR && HEYS.Toast && HEYS.Toast.success) {
+            const wTxt = Number(addedKg) > 0 ? (' +' + Number(addedKg) + 'кг') : '';
+            try {
+              HEYS.Toast.success('🏆 Новый рекорд: ' + Number(holdTime) + 'с @ '
+                + edgeMm + 'мм ' + gripLabel + wTxt);
+            } catch (_) { /* noop */ }
+          }
           onSaved();
         }
       } catch (e) {
@@ -835,8 +905,14 @@
     const ageFiltered = (Fingers.ageGate && typeof Fingers.ageGate.filterGrips === 'function')
       ? Fingers.ageGate.filterGrips(allGrips, userAge)
       : allGrips;
+    // B6: при недавней finger-боли убираем full crimp / mono из выбора (fail-safe,
+    // A2/A4 шкивы). painGate читает боль из dayv2 (B1: hadPain/setFeedback.pain).
+    const painInfo = (Fingers.recentFingerPain && Fingers.recentFingerPain()) || { hasPain: false };
+    const gripChoices = (painInfo.hasPain && Fingers.painGate && Fingers.painGate.filterGripsForPain)
+      ? Fingers.painGate.filterGripsForPain(ageFiltered, true)
+      : ageFiltered;
     const grip = (Fingers.getGripById && Fingers.getGripById(ex.gripId))
-      || ageFiltered[0]
+      || gripChoices[0]
       || { id: ex.gripId, label: ex.gripId, primaryMuscles: [], icon: '🖐' };
 
     const els = [];
@@ -845,9 +921,18 @@
     els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove)));
     els.push(R.createElement(R.Fragment, { key: 'hero' }, renderHero(grip)));
 
+    // B6: примечание почему скрыты risky-хваты (если недавняя боль).
+    if (painInfo.hasPain) {
+      els.push(R.createElement('div', {
+        key: 'pain-note',
+        className: 'fingers-c-pain-note',
+        style: { fontSize: 13, lineHeight: 1.4, padding: '8px 12px', marginBottom: 8,
+          borderRadius: 8, background: 'rgba(220,38,38,0.10)', color: '#fca5a5' }
+      }, '🩹 Недавно была боль в пальцах — full crimp и mono временно скрыты. Дай связкам восстановиться.'));
+    }
     // iOS form-grouped: каждое поле — отдельная row с label слева, value справа.
     els.push(R.createElement(R.Fragment, { key: 'grip' },
-      renderGripSelect(ex.gripId, ageFiltered, function (nid) { patch({ gripId: nid }); }, exIdx)));
+      renderGripSelect(ex.gripId, gripChoices, function (nid) { patch({ gripId: nid }); }, exIdx)));
     els.push(R.createElement(R.Fragment, { key: 'edge' },
       renderEdgeSelect(userBoard, ex.gripId, ex.edgeSizeMm, function (mm) { patch({ edgeSizeMm: mm }); }, exIdx)));
 

@@ -136,4 +136,41 @@
     getRestrictionMessage: getRestrictionMessage,
     sourceIds: SOURCE_IDS
   };
+
+  // ─── B6: pain-gating ────────────────────────────────────────────────────
+  // При недавней боли в пальцах/суставах блокируем самые травмоопасные хваты
+  // (full crimp нагружает A2/A4 шкивы ~33× сильнее, mono — точечная нагрузка).
+  // Тот же fail-safe паттерн, что age-gate: лучше убрать опцию, чем дать
+  // нагрузить повреждённую связку. Источник боли — fingersLog (B1: hadPain /
+  // setFeedback[].pain), читается reader'ом Fingers.recentFingerPain.
+  const RISKY_PAIN_GRIPS = ['fullcrimp', 'mono'];
+
+  // Pure: есть ли в дне (dayv2-объект) finger-сессия с зафиксированной болью.
+  function dayHasFingerPain(day) {
+    if (!day || !Array.isArray(day.trainings)) return false;
+    return day.trainings.some(function (t) {
+      if (!t || t.type !== 'fingers' || !t.fingersLog) return false;
+      const log = t.fingersLog;
+      if (log.hadPain) return true;
+      return Array.isArray(log.exercises) && log.exercises.some(function (ex) {
+        return Array.isArray(ex.setFeedback) && ex.setFeedback.some(function (f) { return f && f.pain; });
+      });
+    });
+  }
+
+  // Pure: убрать risky-хваты если была недавняя боль. hasPain=false → без изменений.
+  function filterGripsForPain(grips, hasPain) {
+    if (!Array.isArray(grips)) return [];
+    if (!hasPain) return grips;
+    return grips.filter(function (g) {
+      const id = g && (g.id || g.gripId || g);
+      return RISKY_PAIN_GRIPS.indexOf(id) === -1;
+    });
+  }
+
+  Fingers.painGate = {
+    RISKY_GRIPS: RISKY_PAIN_GRIPS,
+    dayHasFingerPain: dayHasFingerPain,
+    filterGripsForPain: filterGripsForPain
+  };
 })(typeof window !== 'undefined' ? window : globalThis);
