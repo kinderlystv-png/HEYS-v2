@@ -322,6 +322,71 @@
       // Explicit equipmentTypes — overrides exercise-derived, для canonical UI ordering.
       equipmentTypes: ['block', 'door', 'none'],
       minAge: 16
+    },
+    // ─── Critical Force / capacity / connective-tissue protocols ────────────
+    // Засеяны для mixEngine: заполняют роли test / capacity / connective,
+    // которых не было в исходных 14 протоколах. Поле role — слот-мэппинг для
+    // движка (старые протоколы движок мэппит по intensity).
+    {
+      id: 'cf_test',
+      intensity: 'max',
+      role: 'test',
+      excludeFromMix: true, // диагностика, не тренировочный блок для микса
+      name: 'Critical Force — тест 4 мин (диагностика)',
+      description: 'Диагностический тест аэробно-анаэробной границы пальцев (Critical Force). На полузамке 20 мм без добавочного веса: цикл 7 секунд максимальной тяги / 3 секунды отдыха, без пауз, 24 повтора подряд = ровно 4 минуты. Нужен силовой датчик (Tindeq Progressor / Lattice) — CF считается как средняя сила последних повторов, по ней потом прописывается нагрузка на выносливость. Это не тренировка, а замер: делай на свежих пальцах, повторяй раз в 4-6 недель и смотри ТРЕНД, а не разовое абсолютное число.',
+      level: 'intermediate',
+      durationMin: 12,
+      exercises: [
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 24, setsCount: 1, restBetweenSetsSec: 0 }
+      ],
+      sourceIds: ['giles2019', 'balas2024_cf', 'kellawan2014', 'lattice_critical_force'],
+      advisoryBadge: 'Нужен силовой датчик (Tindeq/Lattice) · 18+',
+      noEquipment: false,
+      equipmentReq: 'fingerboard',
+      // 18+: all-out тест = max-интенсивность, а ageGate (16-17 = no-max) всё
+      // равно скрыл бы его при minAge 16 — ставим явный честный порог.
+      minAge: 18
+    },
+    {
+      id: 'sub_cf_capacity',
+      intensity: 'moderate',
+      role: 'capacity',
+      name: 'Sub-CF Capacity — аэробная ёмкость (ниже Critical Force)',
+      description: 'Объёмная выносливость в устойчивой зоне ниже Critical Force — поднимает «потолок» долгой работы пальцев на длинных трассах. Длинные repeaters 7 секунд виса / 3 секунды отдыха × 10 повторов = подход ~2 минуты, 4 подхода на хват, отдых 3 минуты. Без добавочного веса, нагрузка лёгкая-умеренная (если тяжело — ассистируй ногами): цель — закончить все подходы без отказа, а не дойти до предела. Программа из 2 хватов: открытый 4-палец и полузамок, edge 20 мм. Прогрессия: добавляй повторы, потом сокращай отдых — НЕ добавляй вес. 2 раза в неделю.',
+      level: 'intermediate',
+      durationMin: 40,
+      exercises: [
+        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 10, setsCount: 4, restBetweenSetsSec: 180 },
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 7, restSec: 3, repsPerSet: 10, setsCount: 4, restBetweenSetsSec: 180 }
+      ],
+      sourceIds: ['giles2019', 'balas2024_cf', 'devise2022', 'lattice_critical_force'],
+      advisoryBadge: null,
+      noEquipment: false,
+      equipmentReq: 'fingerboard',
+      minAge: 16
+    },
+    {
+      id: 'abrahangs_daily',
+      intensity: 'recovery',
+      role: 'connective',
+      name: 'Abrahangs — ежедневные низконагрузочные висы',
+      description: 'Низкоинтенсивная высокочастотная нагрузка для соединительной ткани и силы пальцев по методу Эмиля Абрахамссона. Длинные холды на edge 18-22 мм с усилием всего ~40% от максимума (ноги на полу, разгружаешь вис до лёгкого) — 10 секунд виса / 20 секунд отдыха × 6 повторов на хват, всего ~10 минут. Программа из 2 хватов: открытый 4-палец и полузамок. Главное — частота: 3-7 раз в неделю, можно ежедневно (нагрузка щадит сухожилия). Прирост силы хвата сопоставим с Max Hangs, а в комбинации с ними — аддитивный. Прогрессируй временем холда, не весом.',
+      level: 'beginner',
+      durationMin: 10,
+      exercises: [
+        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 10, restSec: 20, repsPerSet: 6, setsCount: 1, restBetweenSetsSec: 0 },
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 0,
+          hangSec: 10, restSec: 20, repsPerSet: 6, setsCount: 1, restBetweenSetsSec: 0 }
+      ],
+      sourceIds: ['abrahangs2024', 'physivantage_collagen', 'magnusson2010'],
+      advisoryBadge: null,
+      noEquipment: false,
+      equipmentTypes: ['full', 'door'],
+      minAge: 14
     }
   ];
 
@@ -504,6 +569,7 @@
       candidates = Fingers.ageGate.filterPrograms(candidates, ageNum);
     }
     candidates = candidates.filter(function (p) {
+      if (p.excludeFromMix) return false; // диагностика (cf_test) — не в микс
       const intensity = p.intensity || 'moderate';
       if (INTENSITY_RANK[intensity] > INTENSITY_RANK[ceiling]) return false;
       if (desiredIntensity !== 'all' && intensity !== desiredIntensity) return false;

@@ -193,6 +193,46 @@
       url: 'https://latticetraining.com/critical-force/',
       keyFinding: 'BW-стандарты на 20 мм: V5 ≈ +25% BW (10 с), V7 ≈ +50%, V9 ≈ +80%, V11 ≈ +100%+. Хорошая reference-точка для калибровки стартового веса.',
       topics: ['calibration']
+    },
+    {
+      id: 'balas2024_cf',
+      author: 'Baláš et al.',
+      year: 2024,
+      title: 'Measuring critical force in sport climbers: a validation study of the 4 min all-out test on finger flexors',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/38668851/',
+      keyFinding: '4-минутный all-out тест на полузамке валиден для оценки Critical Force пальцев (CF ≈ 20.1 кг; время до отказа на CF ≈ 440 с). Важно: CF как «среднее последних 3 повторов» — это тренд/ориентир, а не точный абсолютный потолок (end-force точнее). Ретест раз в 4-6 недель.',
+      topics: ['calibration', 'protocols']
+    },
+    {
+      id: 'kellawan2014',
+      author: 'Kellawan & Tschakovsky',
+      year: 2014,
+      title: 'The single-bout forearm critical force test: a new method to establish forearm aerobic metabolic exercise intensity and capacity',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/24699366/',
+      keyFinding: 'Тест Critical Force предплечья за один подход воспроизводим (ICC 0.94) и предсказывает время до отказа (r=0.97). Ключ: разовый MVC НЕ предсказывает CF/W′ — нагрузку на выносливость надо привязывать к CF, а не к проценту от MVC.',
+      topics: ['calibration']
+    },
+    {
+      id: 'devise2022',
+      author: 'Devise et al.',
+      year: 2022,
+      title: 'Effects of Different Hangboard Training Intensities on Finger Grip Strength, Stamina, and Endurance',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/35498522/',
+      keyFinding: '4 недели, 54 лазуна, доска с датчиками силы. 100% MFS поднимает максимальную силу, но не выносливость; 60-80% MFS поднимает stamina/endurance. Адаптация intensity-специфична — сбалансированная тренировка должна задевать ≥2 зоны интенсивности.',
+      topics: ['protocols', 'calibration']
+    },
+    {
+      id: 'abrahangs2024',
+      author: 'Gilmore et al.',
+      year: 2024,
+      title: 'Effects of Different Loading Programs on Finger Strength in Rock Climbers',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/39560837/',
+      keyFinding: '10-минутные низкоинтенсивные висы («Abrahangs», ~40% усилия, длинные холды) дали такой же прирост силы хвата, как Max Hangs, а в комбинации — аддитивный эффект. Низкая нагрузка щадит сухожилия и вписывается в любую программу. Соавторы — Abrahamsson и Baar.',
+      topics: ['protocols', 'recovery']
     }
   ];
 
