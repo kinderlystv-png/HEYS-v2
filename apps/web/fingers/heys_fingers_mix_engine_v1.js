@@ -189,7 +189,9 @@
   }
 
   // Выбор одного упражнения из пула с учётом anchor/дедупа/danger.
-  function pickFromPool(pool, slotRole, bucket, ctx) {
+  // Если передан `slotTrace` (массив) — складываем в него причины отклонения
+  // каждого кандидата, чтобы потом показать в логике сборки.
+  function pickFromPool(pool, slotRole, bucket, ctx, slotTrace) {
     // Step 5: сортируем по RPE-штрафу (недавние 'hard' — вниз), затем anchor.
     // Нет lastGripFeedback → штраф 0 у всех → остаётся только anchor (Phase 1).
     let ordered = pool.slice();
@@ -204,6 +206,7 @@
     });
     const budget = DANGER_BUDGET[bucket] != null ? DANGER_BUDGET[bucket] : 48;
     const banHighDanger = bucket === 'recovery';
+    const trace = Array.isArray(slotTrace) ? slotTrace : null;
     // Проход 1 — со всеми правилами (включая дедуп grip+edge).
     // Проход 2 — ослабляем дедуп, но НЕ ослабляем danger/pain (safety).
     for (let pass = 0; pass < 2; pass++) {
@@ -212,10 +215,26 @@
         const gm = gripMeta(c.ex.gripId);
         const danger = (gm && Number(gm.a2ForceRatio)) || 0;
         const dl = gm && gm.dangerLevel;
-        if (banHighDanger && (dl === 'high' || dl === 'very-high')) continue;
-        if (ctx.dangerSpent + danger > budget) continue;
+        if (banHighDanger && (dl === 'high' || dl === 'very-high')) {
+          if (trace) trace.push({ pass: pass + 1, programId: c.p.id, gripId: c.ex.gripId, edgeMm: c.ex.edgeSizeMm, skip: 'danger-level=' + dl + ' запрещён на recovery' });
+          continue;
+        }
+        if (ctx.dangerSpent + danger > budget) {
+          if (trace) trace.push({ pass: pass + 1, programId: c.p.id, gripId: c.ex.gripId, edgeMm: c.ex.edgeSizeMm, skip: 'danger-budget превышен (' + (ctx.dangerSpent + danger).toFixed(2) + ' > ' + budget + ')' });
+          continue;
+        }
         const key = c.ex.gripId + '_' + c.ex.edgeSizeMm;
-        if (pass === 0 && ctx.usedGripEdge[key]) continue;
+        if (pass === 0 && ctx.usedGripEdge[key]) {
+          if (trace) trace.push({ pass: pass + 1, programId: c.p.id, gripId: c.ex.gripId, edgeMm: c.ex.edgeSizeMm, skip: 'дубликат grip+edge — отложен на проход 2' });
+          continue;
+        }
+        if (trace) {
+          const reasonBits = [];
+          if (slotRole === 'max-strength' && c.ex.gripId === 'halfcrimp') reasonBits.push('anchor halfcrimp');
+          reasonBits.push('danger ' + danger.toFixed(2) + '/' + budget);
+          if (pass === 1) reasonBits.push('второй проход (дубликат разрешён)');
+          trace.push({ pass: pass + 1, programId: c.p.id, gripId: c.ex.gripId, edgeMm: c.ex.edgeSizeMm, chosen: true, reason: reasonBits.join(' · ') });
+        }
         return c;
       }
     }
@@ -246,15 +265,25 @@
 
   // Step 4: рабочий вес под %MVC роли. Только max-strength. Нет MVC / нет
   // records → каталожный вес + флаг __needsMvc (UI подскажет калибровку).
-  function doseExercise(ex, bucket, ageNum) {
-    if (ex.__role !== 'max-strength') return ex;
-    // Возрастной fail-safe: <18 (no-max / no-full-crimp / ...) — без веса.
-    // warnLevel(18+) === 'ok' (не клампим); все ограничительные уровни клампят.
+  // Если передан traceObj — складывает в него детальное обоснование (используется
+  // в MixTraceModal для прозрачности дозировки).
+  function doseExercise(ex, bucket, ageNum, traceObj) {
+    const writeTrace = function (data) { if (traceObj) Object.assign(traceObj, data); };
+    if (ex.__role !== 'max-strength') {
+      writeTrace({ skipped: 'не max-strength роль' });
+      return ex;
+    }
     if (Fingers.ageGate && typeof Fingers.ageGate.warnLevel === 'function') {
       const lvl = Fingers.ageGate.warnLevel(ageNum);
-      if (lvl && lvl !== 'ok') return Object.assign({}, ex, { addedWeightKg: 0 });
+      if (lvl && lvl !== 'ok') {
+        writeTrace({ ageClamp: lvl, addedKgFinal: 0, note: 'возраст ' + ageNum + ' (' + lvl + ') — доп.вес обнулён' });
+        return Object.assign({}, ex, { addedWeightKg: 0 });
+      }
     }
-    if (!Fingers.records || typeof Fingers.records.getMVC !== 'function') return ex;
+    if (!Fingers.records || typeof Fingers.records.getMVC !== 'function') {
+      writeTrace({ note: 'records-модуль не загружен — каталожный вес' });
+      return ex;
+    }
     let mvc = null;
     try { mvc = Fingers.records.getMVC(ex.gripId, ex.edgeSizeMm); } catch (_) { mvc = null; }
     if (!mvc || mvc.type !== 'weight' || !(Number(mvc.mvcKg) > 0)) {
@@ -263,6 +292,7 @@
         due = !!(Fingers.calibration && typeof Fingers.calibration.isDue === 'function'
           && Fingers.calibration.isDue('maxHang', ex.gripId));
       } catch (_) { due = false; }
+      writeTrace({ note: 'MVC не откалиброван — оставлен каталожный вес ' + (ex.addedWeightKg || 0) + ' кг', needsMvc: true, mvcDue: due });
       return Object.assign({}, ex, { __needsMvc: true, __mvcDue: due });
     }
     const mvcKg = Number(mvc.mvcKg);
@@ -270,22 +300,42 @@
     const targetPct = MVC_TARGET_PCT[bucket] || MVC_DEFAULT_PCT;
     const maxAdded = Math.max(0, snap(mvcKg * MVC_CEILING_PCT / 100 - bw, 0.5));
     const added = Math.max(0, Math.min(snap(mvcKg * targetPct / 100 - bw, 0.5), maxAdded));
+    writeTrace({
+      mvcKg: mvcKg, bodyWeightKg: bw, targetPct: targetPct, ceilingPct: MVC_CEILING_PCT,
+      formula: '(' + mvcKg + ' × ' + targetPct + '% − ' + bw + ' кг) → ' + added + ' кг',
+      addedKgCatalog: ex.addedWeightKg || 0, addedKgFinal: added, maxAddedAllowed: maxAdded
+    });
     return Object.assign({}, ex, { addedWeightKg: added, __mvcDosed: true });
   }
 
   // Step 8: объём — trim на recovery + MAV-кап рабочих сетов на хват.
   // Антагонист не трогаем (минимальный объём, держит баланс).
-  function applyVolume(picked, bucket) {
+  // Если передан volumeTrace — пишет в него причины изменения объёма по каждому ex.
+  function applyVolume(picked, bucket, volumeTrace) {
     const trim = (bucket === 'recovery') ? RECOVERY_TRIM : 1;
     const gripSets = Object.create(null);
     return picked.map(function (ex) {
-      if (ex.__role === 'antagonist') return ex;
-      let sets = Number(ex.setsCount) || 1;
-      if (trim < 1) sets = Math.max(1, Math.round(sets * trim));
+      const origSets = Number(ex.setsCount) || 1;
+      if (ex.__role === 'antagonist') {
+        if (volumeTrace) volumeTrace.push({ gripId: ex.gripId, edgeMm: ex.edgeSizeMm, role: ex.__role, origSets: origSets, finalSets: origSets, reason: 'антагонист — объём не трогаем' });
+        return ex;
+      }
+      let sets = origSets;
+      const reasons = [];
+      if (trim < 1) {
+        const trimmed = Math.max(1, Math.round(sets * trim));
+        if (trimmed !== sets) reasons.push('recovery-trim ×' + RECOVERY_TRIM + ' (' + sets + ' → ' + trimmed + ')');
+        sets = trimmed;
+      }
       const prior = gripSets[ex.gripId] || 0;
-      if (prior + sets > MAV_SETS_PER_GRIP) sets = Math.max(1, MAV_SETS_PER_GRIP - prior);
+      if (prior + sets > MAV_SETS_PER_GRIP) {
+        const capped = Math.max(1, MAV_SETS_PER_GRIP - prior);
+        reasons.push('MAV-кап ' + MAV_SETS_PER_GRIP + ' сетов/хват (был ' + sets + ', осталось ' + capped + ')');
+        sets = capped;
+      }
       gripSets[ex.gripId] = prior + sets;
-      return sets === Number(ex.setsCount) ? ex : Object.assign({}, ex, { setsCount: sets });
+      if (volumeTrace) volumeTrace.push({ gripId: ex.gripId, edgeMm: ex.edgeSizeMm, role: ex.__role, origSets: origSets, finalSets: sets, reason: reasons.length ? reasons.join('; ') : 'без изменений' });
+      return sets === origSets ? ex : Object.assign({}, ex, { setsCount: sets });
     });
   }
 
@@ -313,32 +363,73 @@
 
     const types = (Array.isArray(o.equipmentTypes) && o.equipmentTypes.length)
       ? o.equipmentTypes.slice() : ['full'];
-    let ceiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
+    const initialCeiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
+    let ceiling = initialCeiling;
     const goal = (o.goal && GOAL_TEMPLATES[o.goal]) ? o.goal : null; // новая ось
     const intensityOverride = (o.intensity && o.intensity !== 'all' && RANK[o.intensity] != null)
       ? o.intensity : null; // legacy ручная интенсивность
 
     const allowed = allowedGripIdSet(ageNum);
-    // Боль в пальцах — жёсткий safety-кап: никакого max-слота (плюс painGate уже
-    // убрал fullcrimp/mono из allowed). Опускаем потолок до moderate.
-    if (allowed.hasPain && RANK[ceiling] > RANK.moderate) ceiling = 'moderate';
+    const painLoweredCeiling = allowed.hasPain && RANK[ceiling] > RANK.moderate;
+    if (painLoweredCeiling) ceiling = 'moderate';
 
     let bucket = ceiling;
     let slots;
     let downgraded = false;
+    let slotsSource;
     if (goal) {
-      // Goal-axis: bucket = потолок готовности; шаблон из цели, обрезанный bucket'ом.
       slots = cappedGoalTemplate(goal, bucket);
       downgraded = RANK[GOAL_NATURAL[goal]] > RANK[bucket];
+      slotsSource = 'goal';
     } else {
-      // Legacy: ручная интенсивность опускает bucket; шаблон из bucket.
       if (intensityOverride && RANK[intensityOverride] < RANK[ceiling]) bucket = intensityOverride;
       slots = slotTemplateFor(bucket);
       downgraded = !!(intensityOverride && RANK[intensityOverride] > RANK[bucket]);
+      slotsSource = intensityOverride ? 'legacy-intensity' : 'bucket';
     }
 
     const progs = candidatePrograms(ageNum, ceiling);
     if (!progs.length) return null;
+
+    // ── Build trace skeleton — будет наполняться по мере исполнения ──
+    const traceObj = {
+      version: 1,
+      inputs: {
+        goal: o.goal || null,
+        readiness: o.readiness || null,
+        age: ageNum,
+        equipmentTypes: types,
+        intensityOverride: intensityOverride
+      },
+      safety: {
+        hasPain: !!allowed.hasPain,
+        painLoweredCeiling: painLoweredCeiling,
+        allowedGripCount: Object.keys(allowed.set).length,
+      },
+      resolution: {
+        initialCeiling: initialCeiling,
+        finalCeiling: ceiling,
+        bucket: bucket,
+        downgraded: downgraded,
+        goalNatural: goal ? GOAL_NATURAL[goal] : null,
+        slotsSource: slotsSource,
+        slotsTemplate: slots.slice(),
+        candidatePoolSize: progs.length
+      },
+      slots: [],
+      dosing: [],
+      volume: [],
+      warmup: null,
+      outputs: null,
+      constants: {
+        MVC_TARGET_PCT: Object.assign({}, MVC_TARGET_PCT),
+        MVC_CEILING_PCT: MVC_CEILING_PCT,
+        MAV_SETS_PER_GRIP: MAV_SETS_PER_GRIP,
+        RECOVERY_TRIM: RECOVERY_TRIM,
+        DANGER_BUDGET: Object.assign({}, DANGER_BUDGET)
+      }
+    };
+
     const ctx = { dangerSpent: 0, usedGripEdge: Object.create(null) };
     const picked = [];
     const includedTiers = Object.create(null);
@@ -346,15 +437,48 @@
 
     slots.forEach(function (slotRole) {
       const pool = poolForSlot(slotRole, progs, types, allowed.set);
-      if (!pool.length) return;
-      const choice = pickFromPool(pool, slotRole, bucket, ctx);
-      if (!choice) return;
+      const slotEntry = {
+        role: slotRole,
+        roleLabel: ROLE_LABEL[slotRole] || slotRole,
+        poolSize: pool.length,
+        candidates: [],
+        chosen: null,
+        skipped: null
+      };
+      if (!pool.length) {
+        slotEntry.skipped = 'нет программ под этот слот при выбранном оборудовании';
+        traceObj.slots.push(slotEntry);
+        return;
+      }
+      const choice = pickFromPool(pool, slotRole, bucket, ctx, slotEntry.candidates);
+      if (!choice) {
+        slotEntry.skipped = 'ни один кандидат не прошёл safety-фильтр (danger/pain)';
+        traceObj.slots.push(slotEntry);
+        return;
+      }
       const key = choice.ex.gripId + '_' + choice.ex.edgeSizeMm;
       ctx.usedGripEdge[key] = true;
       const gm = gripMeta(choice.ex.gripId);
-      ctx.dangerSpent += (gm && Number(gm.a2ForceRatio)) || 0;
+      const dangerCost = (gm && Number(gm.a2ForceRatio)) || 0;
+      ctx.dangerSpent += dangerCost;
       includedTiers[choice.tier] = true;
       (choice.p.sourceIds || []).forEach(function (s) { sourceIds[s] = true; });
+      slotEntry.chosen = {
+        programId: choice.p.id,
+        programName: choice.p.name,
+        gripId: choice.ex.gripId,
+        edgeMm: choice.ex.edgeSizeMm,
+        tier: choice.tier,
+        dangerCost: dangerCost,
+        dangerSpentTotal: ctx.dangerSpent,
+        catalogAddedKg: choice.ex.addedWeightKg,
+        hangSec: choice.ex.hangSec,
+        restSec: choice.ex.restSec,
+        repsPerSet: choice.ex.repsPerSet,
+        setsCount: choice.ex.setsCount,
+        restBetweenSetsSec: choice.ex.restBetweenSetsSec
+      };
+      traceObj.slots.push(slotEntry);
       picked.push(Object.assign({}, choice.ex, {
         equipmentTier: choice.tier, __role: slotRole, __fromProgram: choice.p.id,
       }));
@@ -362,21 +486,42 @@
 
     if (!picked.length) return null;
 
-    // Phase 2a post-passes: сначала MVC-доза (вес, на длительность не влияет),
-    // потом объём (trim/MAV — меняет setsCount) → длительность считаем после.
-    let finalEx = picked.map(function (ex) { return doseExercise(ex, bucket, ageNum); });
-    finalEx = applyVolume(finalEx, bucket);
+    // Phase 2a post-passes: сначала MVC-доза, потом объём.
+    const finalEx = picked.map(function (ex) {
+      const doseEntry = {
+        gripId: ex.gripId, edgeMm: ex.edgeSizeMm, role: ex.__role,
+        fromProgram: ex.__fromProgram
+      };
+      const dosed = doseExercise(ex, bucket, ageNum, doseEntry);
+      traceObj.dosing.push(doseEntry);
+      return dosed;
+    });
+    const volumedEx = applyVolume(finalEx, bucket, traceObj.volume);
 
-    const hasAntagonist = finalEx.some(function (e) { return e.__role === 'antagonist'; });
-    const reason = buildReason(bucket, downgraded, finalEx, hasAntagonist);
+    const hasAntagonist = volumedEx.some(function (e) { return e.__role === 'antagonist'; });
+    const reason = buildReason(bucket, downgraded, volumedEx, hasAntagonist);
     const tierList = Object.keys(includedTiers);
 
-    // Step 7: warmup-bookend — полный RAMP только если в сессии реально есть
-    // взрывной/max-блок (а не просто высокий потолок при endurance-цели).
-    // Флаги читает UI (session_ui) и запускает WarmupRunner. Копия — «готовность».
-    const requiresWarmup = finalEx.some(function (e) {
+    const requiresWarmup = volumedEx.some(function (e) {
       return e.__role === 'power' || e.__role === 'max-strength';
     });
+    traceObj.warmup = {
+      required: requiresWarmup,
+      type: requiresWarmup ? 'ramp' : 'quick',
+      reason: requiresWarmup
+        ? 'в сессии есть power/max-strength слот — полный RAMP (15-20 мин)'
+        : 'нет взрывных/максимальных слотов — короткая 5-8-минутная разминка'
+    };
+    const duration = totalDurationMin(volumedEx);
+    const sessionInt = sessionIntensity(volumedEx);
+    traceObj.outputs = {
+      durationMin: duration,
+      intensity: sessionInt,
+      tierList: tierList,
+      sourceIds: Object.keys(sourceIds),
+      exerciseCount: volumedEx.length,
+      hasAntagonist: hasAntagonist
+    };
 
     return {
       id: 'mix_engine_' + Date.now(),
@@ -386,9 +531,9 @@
       description: reason,
       coachReason: reason,
       level: 'mixed',
-      durationMin: totalDurationMin(finalEx),
-      intensity: sessionIntensity(finalEx),
-      exercises: finalEx,
+      durationMin: duration,
+      intensity: sessionInt,
+      exercises: volumedEx,
       equipmentTypes: tierList,
       sourceIds: Object.keys(sourceIds),
       advisoryBadge: null,
@@ -396,6 +541,7 @@
       minAge: 14,
       requiresWarmup: requiresWarmup,
       warmupType: requiresWarmup ? 'ramp' : 'quick',
+      __trace: traceObj
     };
   }
 

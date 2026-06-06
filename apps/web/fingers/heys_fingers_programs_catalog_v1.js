@@ -389,6 +389,50 @@
       minAge: 14
     },
     {
+      id: 'lattice_foundation',
+      intensity: 'max',
+      name: 'Lattice — Foundation Hangs (8-нед блок)',
+      description: 'Структурированный блок макс-силы по протоколу Lattice Training (Tom Randall): 4 хвата × 5 подходов по 10 секунд виса с RM-3-нагрузкой (груз, который удержал бы не больше 13 секунд). Edge 20 мм, отдых 3 минуты между подходами и между хватами. Программа из 4 хватов: полузамок, открытый 4-палец, передние 3 пальца, задние 3 пальца. Ключевое отличие от Hörst Max Hangs — рассчитан на 8-недельный микроцикл: первые 3 недели прибавляешь по 2-5% веса, четвёртая — deload (50% веса с теми же подходами), затем повторение. Встроенная разгрузка снижает риск перетренированности при многомесячных силовых блоках. Работает и на board, и на блоке.',
+      level: 'intermediate',
+      durationMin: 50,
+      exercises: [
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 15,
+          hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 },
+        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 12,
+          hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 },
+        { gripId: 'front3', edgeSizeMm: 20, addedWeightKg: 10,
+          hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 },
+        { gripId: 'back3', edgeSizeMm: 20, addedWeightKg: 8,
+          hangSec: 10, restSec: 180, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 180 }
+      ],
+      sourceIds: ['lattice_foundation', 'lattice_critical_force', 'horst_753'],
+      advisoryBadge: 'Нужна база ≥1 года · 4-я неделя — deload 50%',
+      noEquipment: false,
+      equipmentTypes: ['full', 'block'],
+      minAge: 18
+    },
+    {
+      id: 'beyer_heavy_iso',
+      intensity: 'recovery',
+      name: 'Beyer Heavy Slow Iso — связки/сухожилия',
+      description: 'Медленные тяжёлые изометрические удержания для адаптации сухожилий и шкивов по протоколу Beyer 2015 (адаптация Heavy Slow Resistance под пальцы). 30 секунд виса на 20 мм edge с усилием около 70% MVC — это весомая нагрузка, но без рывка и без подхода к отказу. На блоке: подвешиваешь груз так, чтобы удержание было «трудно, но без дрожи»; на доске — добавляешь вес или открытое ребро 18-20 мм. Отдых 2 минуты, 5 повторов на каждый из 3 хватов: полузамок, открытый 4-палец, передние 3 пальца. Назначение — не максимальная сила, а ремоделинг коллагена шкивов A2/A4 и MCP-связок. Особенно полезен после щёлкнувшего пальца (на стадии возвращения) и в periodisation как «соединительнотканный» день между max-блоками.',
+      level: 'intermediate',
+      durationMin: 45,
+      exercises: [
+        { gripId: 'halfcrimp', edgeSizeMm: 20, addedWeightKg: 8,
+          hangSec: 30, restSec: 120, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 },
+        { gripId: 'openhand4', edgeSizeMm: 20, addedWeightKg: 6,
+          hangSec: 30, restSec: 120, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 },
+        { gripId: 'front3', edgeSizeMm: 20, addedWeightKg: 4,
+          hangSec: 30, restSec: 120, repsPerSet: 1, setsCount: 5, restBetweenSetsSec: 120 }
+      ],
+      sourceIds: ['beyer2015', 'magnusson2010', 'schoffl2021'],
+      advisoryBadge: 'Соединительнотканная адаптация · 70% MVC, без отказа',
+      noEquipment: false,
+      equipmentTypes: ['full', 'block'],
+      minAge: 16
+    },
+    {
       id: 'recruitment_pulls',
       intensity: 'max',
       role: 'power', // взрывное намерение — слот power перед max-силой

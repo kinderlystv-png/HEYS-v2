@@ -749,6 +749,337 @@
     return days === 1 ? 'вчера' : days + ' дн. назад';
   }
 
+  // ─── Mix trace modal ───────────────────────────────────────────────────────
+  // Показывает все принципы и расчёты, по которым был собран микс.
+  // Открывается по 🧮 в MixCard.
+  function MixTraceModal({ trace, workout, onClose }) {
+    useEffect(function () {
+      const onKey = function (e) { if (e.key === 'Escape') onClose && onClose(); };
+      window.addEventListener('keydown', onKey);
+      return function () { window.removeEventListener('keydown', onKey); };
+    }, [onClose]);
+
+    const GOAL_LABELS = { strength: 'Сила', endurance: 'Выносливость', recovery: 'Восстановление', maintenance: 'Поддержка' };
+    const READINESS_LABELS = { max: 'Готов к максимуму', moderate: 'Умеренная нагрузка', recovery: 'Только восстановление', rest: 'День отдыха' };
+    const ROLE_LABELS = {
+      'power': 'взрывная сила (RFD)',
+      'max-strength': 'макс. сила',
+      'strength-endurance': 'силовая выносливость',
+      'capacity': 'аэробная ёмкость',
+      'antagonist': 'антагонист'
+    };
+    const BUCKET_LABELS = { max: 'максимум', moderate: 'умеренный', recovery: 'восстановление' };
+
+    const section = function (title, children) {
+      return h('section', { className: 'fingers-fs-trace__section' },
+        h('h3', { className: 'fingers-fs-trace__h3' }, title),
+        children
+      );
+    };
+    const kv = function (label, value) {
+      return h('div', { className: 'fingers-fs-trace__kv' },
+        h('span', { className: 'fingers-fs-trace__k' }, label),
+        h('span', { className: 'fingers-fs-trace__v' }, value)
+      );
+    };
+
+    // ── 1. Входные данные
+    const inSec = section('1. Входные данные',
+      h('div', null,
+        kv('Цель тренировки', GOAL_LABELS[trace.inputs.goal] || trace.inputs.goal || '—'),
+        kv('Готовность (cooldown)', READINESS_LABELS[trace.inputs.readiness] || trace.inputs.readiness || '—'),
+        kv('Возраст', String(trace.inputs.age)),
+        kv('Оборудование', trace.inputs.equipmentTypes.join(', ')),
+        trace.inputs.intensityOverride ? kv('Legacy intensity-override', trace.inputs.intensityOverride) : null,
+        kv('Есть боль в пальцах?', trace.safety.hasPain ? '⚠ да — потолок снижен до moderate' : 'нет'),
+        kv('Доступных хватов (после age+pain)', String(trace.safety.allowedGripCount))
+      )
+    );
+
+    // ── 2. Решение
+    const r = trace.resolution;
+    const downgradeNote = r.downgraded
+      ? 'Цель естественно требует «' + (BUCKET_LABELS[r.goalNatural] || r.goalNatural) + '», но bucket = «'
+        + (BUCKET_LABELS[r.bucket] || r.bucket) + '» — цель снижена ради восстановления связок.'
+      : 'Цель совпала с потолком готовности или ниже него — без понижения.';
+    const resSec = section('2. Резолюция: ceiling → bucket → шаблон слотов',
+      h('div', null,
+        kv('Начальный ceiling (по cooldown)', BUCKET_LABELS[r.initialCeiling] || r.initialCeiling),
+        r.initialCeiling !== r.finalCeiling
+          ? kv('Финальный ceiling (после pain-cap)', BUCKET_LABELS[r.finalCeiling] || r.finalCeiling) : null,
+        kv('Bucket (рабочий потолок)', BUCKET_LABELS[r.bucket] || r.bucket),
+        kv('Источник шаблона', r.slotsSource === 'goal' ? 'GOAL_TEMPLATES[' + trace.inputs.goal + '] обрезан bucket\'ом'
+          : r.slotsSource === 'legacy-intensity' ? 'legacy: intensity-override (' + trace.inputs.intensityOverride + ')'
+          : 'SLOT_TEMPLATES[' + r.bucket + ']'),
+        kv('Шаблон слотов', r.slotsTemplate.join(' → ')),
+        kv('Понижена ли цель готовностью?', downgradeNote),
+        kv('Кандидатных программ (после age+pain+intensity≤ceiling)', String(r.candidatePoolSize))
+      )
+    );
+
+    // ── 3. Заполнение слотов
+    const slotsSec = section('3. Заполнение слотов',
+      h('div', null,
+        trace.slots.map(function (s, i) {
+          const head = h('div', { className: 'fingers-fs-trace__slot-head' },
+            h('span', { className: 'fingers-fs-trace__slot-idx' }, '#' + (i + 1)),
+            h('span', { className: 'fingers-fs-trace__slot-role' }, s.role + ' · ' + s.roleLabel),
+            h('span', { className: 'fingers-fs-trace__slot-pool' }, 'пул: ' + s.poolSize)
+          );
+          if (s.skipped) {
+            return h('div', { key: i, className: 'fingers-fs-trace__slot fingers-fs-trace__slot--skipped' },
+              head,
+              h('div', { className: 'fingers-fs-trace__slot-skip' }, '⊘ слот пропущен: ' + s.skipped)
+            );
+          }
+          const c = s.chosen;
+          return h('div', { key: i, className: 'fingers-fs-trace__slot' },
+            head,
+            h('div', { className: 'fingers-fs-trace__slot-chosen' },
+              h('strong', null, c.programName || c.programId), ' — ',
+              c.gripId + ' @ ' + c.edgeMm + ' мм · ' + c.tier
+            ),
+            h('div', { className: 'fingers-fs-trace__slot-params' },
+              c.hangSec + 'с виса / ' + c.restSec + 'с отдыха × ' + c.repsPerSet
+                + ' повт × ' + c.setsCount + ' сетов, пауза ' + c.restBetweenSetsSec + 'с · каталог: '
+                + (c.catalogAddedKg || 0) + ' кг'
+            ),
+            h('div', { className: 'fingers-fs-trace__slot-danger' },
+              'danger A2: +' + c.dangerCost.toFixed(2) + ' → итого ' + c.dangerSpentTotal.toFixed(2)
+                + ' / бюджет ' + trace.constants.DANGER_BUDGET[r.bucket]
+            ),
+            s.candidates && s.candidates.length > 1 ? h('details', { className: 'fingers-fs-trace__details' },
+              h('summary', null, 'Все кандидаты (' + s.candidates.length + ')'),
+              s.candidates.map(function (ct, j) {
+                return h('div', { key: j, className: ct.chosen ? 'fingers-fs-trace__cand fingers-fs-trace__cand--chosen' : 'fingers-fs-trace__cand' },
+                  h('span', null, '[' + ct.pass + '] ' + ct.programId + ' · ' + ct.gripId + '@' + ct.edgeMm),
+                  ' — ',
+                  h('span', null, ct.chosen ? ('✓ ' + ct.reason) : ('⊘ ' + ct.skip))
+                );
+              })
+            ) : null
+          );
+        })
+      )
+    );
+
+    // ── 4. Дозировка веса (MVC)
+    const dosingItems = trace.dosing.filter(function (d) { return d.role === 'max-strength'; });
+    const dosingSec = dosingItems.length ? section('4. Дозировка веса (Phase 2a · MVC × bucket%)',
+      h('div', null,
+        h('p', { className: 'fingers-fs-trace__hint' },
+          'Цель ' + trace.constants.MVC_TARGET_PCT[r.bucket] + '% MVC, потолок '
+            + trace.constants.MVC_CEILING_PCT + '% (выше — риск pulley-травмы). '
+            + 'Снижается при отсутствии калибровки или возрастных ограничениях.'),
+        dosingItems.map(function (d, i) {
+          if (d.ageClamp) {
+            return h('div', { key: i, className: 'fingers-fs-trace__dose' },
+              h('strong', null, d.gripId + ' @ ' + d.edgeMm), ' — ',
+              h('span', null, '⚠ age-clamp (' + d.ageClamp + ') · доп.вес обнулён')
+            );
+          }
+          if (d.needsMvc) {
+            return h('div', { key: i, className: 'fingers-fs-trace__dose' },
+              h('strong', null, d.gripId + ' @ ' + d.edgeMm), ' — ',
+              h('span', null, '🎯 MVC не откалиброван — оставлен каталожный вес'
+                + (d.mvcDue ? ' (калибровка просрочена)' : ''))
+            );
+          }
+          if (!d.formula) {
+            return h('div', { key: i, className: 'fingers-fs-trace__dose' },
+              h('strong', null, d.gripId + ' @ ' + d.edgeMm), ' — ',
+              h('span', null, d.note || 'каталожный вес')
+            );
+          }
+          return h('div', { key: i, className: 'fingers-fs-trace__dose' },
+            h('strong', null, d.gripId + ' @ ' + d.edgeMm), ' — ',
+            h('span', null, d.formula),
+            h('div', { className: 'fingers-fs-trace__dose-sub' },
+              'MVC ' + d.mvcKg + ' кг · BW ' + d.bodyWeightKg + ' кг · target '
+                + d.targetPct + '% · max разрешено ' + d.maxAddedAllowed + ' кг · в каталоге было '
+                + d.addedKgCatalog + ' кг → стало ' + d.addedKgFinal + ' кг')
+          );
+        })
+      )
+    ) : null;
+
+    // ── 5. Объём (recovery-trim / MAV-cap)
+    const volSec = section('5. Объём — recovery-trim × ' + trace.constants.RECOVERY_TRIM + ' + MAV-кап ' + trace.constants.MAV_SETS_PER_GRIP + ' сетов/хват',
+      h('div', null,
+        trace.volume.map(function (v, i) {
+          return h('div', { key: i, className: 'fingers-fs-trace__vol' },
+            h('strong', null, v.gripId + ' @ ' + v.edgeMm + ' (' + v.role + ')'),
+            ' — ' + v.origSets + ' → ' + v.finalSets + ' сетов',
+            h('div', { className: 'fingers-fs-trace__vol-sub' }, v.reason)
+          );
+        })
+      )
+    );
+
+    // ── 6. Разминка
+    const wuSec = section('6. Разминка',
+      h('div', null,
+        kv('Тип', trace.warmup.type === 'ramp' ? 'полный RAMP (15-20 мин)' : 'короткая targeted (5-8 мин)'),
+        kv('Обоснование', trace.warmup.reason)
+      )
+    );
+
+    // ── 7. Итог
+    const outSec = section('7. Итог сессии',
+      h('div', null,
+        kv('Длительность', trace.outputs.durationMin + ' мин'),
+        kv('Финальная интенсивность (по выбранным ролям)', trace.outputs.intensity),
+        kv('Tiers оборудования', trace.outputs.tierList.join(', ') || '—'),
+        kv('Источников цитирования', String(trace.outputs.sourceIds.length)),
+        kv('Антагонист в сессии?', trace.outputs.hasAntagonist ? '✓ есть' : '⚠ нет — UI подскажет добавить резинку')
+      )
+    );
+
+    return h('div', {
+      className: 'fingers-fs-trace__backdrop',
+      onClick: function (e) { if (e.target === e.currentTarget) onClose && onClose(); },
+      role: 'presentation'
+    },
+      h('div', {
+        className: 'fingers-fs-trace__modal',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': 'Логика микс-сборки'
+      },
+        h('div', { className: 'fingers-fs-trace__topbar' },
+          h('h2', { className: 'fingers-fs-trace__h2' }, '🧮 Логика микс-сборки'),
+          h('button', {
+            type: 'button',
+            className: 'fingers-fs-trace__close',
+            onClick: onClose,
+            'aria-label': 'Закрыть'
+          }, '×')
+        ),
+        h('div', { className: 'fingers-fs-trace__body' },
+          inSec, resSec, slotsSec, dosingSec, volSec, wuSec, outSec
+        )
+      )
+    );
+  }
+
+  // ─── Mix card ──────────────────────────────────────────────────────────────
+  // Генерируемая «случайная сборка» — отдельный компонент, который раньше жил
+  // только в Протоколах. Перенесён в Today (рядом с рекомендованным официальным
+  // протоколом), чтобы Протоколы остались чистым каталогом, а Today давал две
+  // альтернативы на сегодня: курированный протокол vs goal-driven mix.
+  function MixCard({ onPick }) {
+    const profile = getProfile();
+    const ageRaw = Number(profile.age);
+    const userTypes = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
+      ? profile.equipmentTypes
+      : (profile.noEquipment ? ['none']
+        : profile.blockMode ? ['block']
+        : profile.edgeLimit === 25 ? ['door']
+        : ['full']);
+    const cool = (Fingers.cooldownCheck && typeof Fingers.cooldownCheck === 'function')
+      ? (function () { try { return Fingers.cooldownCheck(); } catch (_) { return null; } })()
+      : null;
+    const GOAL_TO_INTENSITY_MIX = { strength: 'max', endurance: 'moderate', recovery: 'recovery', maintenance: 'moderate' };
+    const GOAL_LABELS_MIX = { strength: 'Сила', endurance: 'Выносливость', recovery: 'Восстановление', maintenance: 'Поддержка' };
+    const mixGoal = profile.goal || 'strength';
+    const mixGoalLabel = GOAL_LABELS_MIX[mixGoal] || mixGoal;
+    const [mixedWorkout, setMixedWorkout] = useState(null);
+    const [mixSeed, setMixSeed] = useState(0);
+    useEffect(function () {
+      if (!Fingers.mixEngine && !Fingers.generateMixedWorkout) return;
+      const mixOpts = {
+        equipmentTypes: userTypes,
+        goal: mixGoal,
+        intensity: GOAL_TO_INTENSITY_MIX[mixGoal] || 'moderate',
+        age: ageRaw,
+        readiness: cool && cool.recommendation
+      };
+      let w = (Fingers.mixEngine && Fingers.mixEngine.recommendDay)
+        ? Fingers.mixEngine.recommendDay(mixOpts)
+        : null;
+      if (!w && Fingers.generateMixedWorkout) w = Fingers.generateMixedWorkout(mixOpts);
+      setMixedWorkout(w);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userTypes.join(','), mixGoal, ageRaw, cool && cool.recommendation, mixSeed]);
+    const onGenerateMix = useCallback(function () { setMixSeed(function (n) { return n + 1; }); }, []);
+    const [traceOpen, setTraceOpen] = useState(false);
+    if (!mixedWorkout) return null;
+    return h(React.Fragment, null,
+      traceOpen && mixedWorkout.__trace ? h(MixTraceModal, {
+        trace: mixedWorkout.__trace,
+        workout: mixedWorkout,
+        onClose: function () { setTraceOpen(false); }
+      }) : null,
+      h('div', { className: 'fingers-fs-mixcard' },
+      h('div', { className: 'fingers-fs-mixcard__hint' },
+        h('span', { 'aria-hidden': 'true' }, '🎲 '),
+        'Случайная сборка под цель и готовность — альтернатива официальному протоколу.'
+      ),
+      h('div', { className: 'fingers-fs-mixcard__inner' },
+        h('div', { className: 'fingers-fs-mixcard__head-row' },
+          h('div', { className: 'fingers-fs-mixcard__badge' },
+            h('span', { 'aria-hidden': 'true' }, '🎲'),
+            ' Микс'
+          ),
+          h('div', { className: 'fingers-fs-mixcard__goalhint' },
+            'под цель «' + mixGoalLabel + '»')
+        ),
+        h('h3', { className: 'fingers-fs-mixcard__title' }, mixedWorkout.name),
+        h('p', { className: 'fingers-fs-mixcard__desc' }, mixedWorkout.description),
+        h('div', { className: 'fingers-fs-mixcard__chips' },
+          h('span', { className: 'fingers-fs-chip fingers-fs-chip--intensity',
+            'data-fingers-intensity': mixedWorkout.intensity || 'moderate'
+          }, intensityLabel(mixedWorkout.intensity)),
+          h('span', { className: 'fingers-fs-chip' },
+            h('span', { 'aria-hidden': 'true' }, '⏱ '),
+            mixedWorkout.durationMin + ' мин'),
+          h('span', { className: 'fingers-fs-chip' },
+            mixedWorkout.exercises.length + ' упр')
+        ),
+        h('div', { className: 'fingers-fs-mixcard__equipment' },
+          (mixedWorkout.equipmentTypes || []).map(function (t) {
+            const meta = ({
+              full: { icon: '🪜', label: 'Board' },
+              block: { icon: '💪', label: 'Block' },
+              door: { icon: '🚪', label: 'Door' },
+              none: { icon: '🤚', label: 'No-Hangs' }
+            })[t] || { icon: '·', label: t };
+            return h('span', {
+              key: t,
+              className: 'fingers-fs-equipment-chip is-available',
+              'data-equipment': t
+            },
+              h('span', { 'aria-hidden': 'true' }, meta.icon), ' ', meta.label
+            );
+          })
+        ),
+        h('div', { className: 'fingers-fs-mixcard__actions' },
+          h('button', {
+            type: 'button',
+            className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--reroll',
+            onClick: onGenerateMix,
+            title: 'Другой набор упражнений'
+          },
+            h('span', { 'aria-hidden': 'true' }, '🔄')
+          ),
+          mixedWorkout.__trace ? h('button', {
+            type: 'button',
+            className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--trace',
+            onClick: function () { setTraceOpen(true); },
+            title: 'Показать как собран микс (все принципы и расчёты)'
+          },
+            h('span', { 'aria-hidden': 'true' }, '🧮')
+          ) : null,
+          h('button', {
+            type: 'button',
+            className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--launch',
+            onClick: function () { if (typeof onPick === 'function') onPick(mixedWorkout); }
+          }, 'Запустить микс')
+        )
+      )
+    ));
+  }
+
   function TodayTab({ onPickProgram, onSwitchToPrograms, onSwitchToConstructor, onRequestOnboarding }) {
     const todayKey = useMemo(function () {
       const d = new Date();
@@ -784,6 +1115,9 @@
 
     return h('div', { className: 'fingers-fs-today', style: { padding: '6px 0 12px' } },
       // ─── Hero: readiness-гадж (число в цветном кольце) + статус + причины ───
+      // Title уже несёт текстовый бакет ("Сегодня — восстановление"); отдельный
+      // premium-бейдж убран как избыточный — score-кольцо + meta.title + reasons
+      // уже покрывают readiness-сигнал.
       h('div', {
         className: 'fingers-fs-today__hero',
         style: {
@@ -832,6 +1166,10 @@
             )
           : null
       ),
+
+      // ─── Mix — goal-driven случайная сборка, перед официальной рекомендацией.
+      // Юзер видит две альтернативы на сегодня: микс или курированный протокол.
+      meta.allowStart ? h(MixCard, { onPick: onPickProgram }) : null,
 
       // ─── Рекомендация — той же полированной program-card, что в Протоколах ───
       data.recommendedProgram && meta.allowStart
@@ -913,27 +1251,26 @@
       return _scanLastDoneByProgram(90);
     }, []);
 
-    // Intensity filter: 'all' | 'recovery' | 'moderate' | 'max'.
-    // Localstorage-persisted чтобы фильтр не сбрасывался при перезагрузке.
-    const [intensityFilter, setIntensityFilter] = useState(function () {
+    // Бинарный фильтр «Под цель / Все». Под цель: оставляем только протоколы
+    // с intensity, соответствующей маппингу profile.goal → intensity (см.
+    // GOAL_TO_INTENSITY ниже). Дефолт — true, т.е. пользователь сразу видит
+    // релевантный список; toggle переключает в «Все» для просмотра каталога.
+    const _GOAL_TO_INTENSITY_LOCAL = { strength: 'max', endurance: 'moderate', recovery: 'recovery', maintenance: 'moderate' };
+    const _currentGoal = (getProfile().goal) || 'strength';
+    const _goalIntensity = _GOAL_TO_INTENSITY_LOCAL[_currentGoal] || 'moderate';
+    const [onlyForGoal, setOnlyForGoal] = useState(function () {
       const u = HEYS.utils;
-      const v = u && u.lsGet ? u.lsGet('fingers_intensity_filter', 'all') : 'all';
-      return ['all', 'recovery', 'moderate', 'max'].indexOf(v) >= 0 ? v : 'all';
+      const v = u && u.lsGet ? u.lsGet('fingers_only_for_goal', '1') : '1';
+      return v !== '0';
     });
-    const onPickFilter = useCallback(function (val) {
-      setIntensityFilter(val);
-      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_intensity_filter', val);
+    const onToggleOnlyForGoal = useCallback(function (next) {
+      setOnlyForGoal(next);
+      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_only_for_goal', next ? '1' : '0');
     }, []);
-    // Применяем intensity-фильтр поверх age+equipment.
-    const visibleFiltered = intensityFilter === 'all'
-      ? filtered
-      : filtered.filter(function (p) { return (p.intensity || 'moderate') === intensityFilter; });
-    // Подсчёт штук на каждый filter — показываем в чипе «Все (12)», «Восстановление (3)»
-    const counts = { all: filtered.length, recovery: 0, moderate: 0, max: 0 };
-    filtered.forEach(function (p) {
-      const i = p.intensity || 'moderate';
-      if (counts[i] != null) counts[i]++;
-    });
+    const visibleFiltered = onlyForGoal
+      ? filtered.filter(function (p) { return (p.intensity || 'moderate') === _goalIntensity; })
+      : filtered;
+    const goalMatchCount = filtered.filter(function (p) { return (p.intensity || 'moderate') === _goalIntensity; }).length;
 
     if (!ageKnown) {
       // CTA: заполнить возраст через re-onboarding.
@@ -963,17 +1300,8 @@
       );
     }
 
-    const filterChips = [
-      { id: 'all',      label: 'Все',           emoji: null },
-      { id: 'recovery', label: 'Восстановление', emoji: '🌿' },
-      { id: 'moderate', label: 'Умеренно',      emoji: '⚡' },
-      { id: 'max',      label: 'Максимум',      emoji: '🔥' }
-    ];
-
-    // Readiness banner — широкая карточка наверху, читает cooldownCheck.
-    // Намеренно отличается от pill-фильтра ниже: горизонтальный layout с
-    // крупной иконкой и подзаголовком — пользователь видит «что советует
-    // организм», а ниже сам выбирает чем фильтровать.
+    // Cooldown — нужен для readiness-aware launch guard (safeLaunch) и для
+    // подсветки mix-карты под бакет дня.
     const cool = (Fingers.cooldownCheck && typeof Fingers.cooldownCheck === 'function')
       ? (function () { try { return Fingers.cooldownCheck(); } catch (_) { return null; } })()
       : null;
@@ -996,165 +1324,37 @@
       onPickProgram(program);
     }, [cool, onPickProgram]);
 
-    // Микс-генератор — собирает ad-hoc программу по выбранным tier'ам.
-    // Генерится автоматически при изменении userTypes/intensityFilter, юзер
-    // может перегенерировать через reroll.
-    const userTypes = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
-      ? profile.equipmentTypes
-      : (profile.noEquipment ? ['none']
-        : profile.blockMode ? ['block']
-        : profile.edgeLimit === 25 ? ['door']
-        : ['full']);
-    const [mixedWorkout, setMixedWorkout] = useState(null);
-    const [mixSeed, setMixSeed] = useState(0);
-    // Цель — единая, из profile.goal (переключатель в баре оборудования).
-    // Меняешь там → equipmentTick перерисует SessionUI → микс пересоберётся.
-    // goal → legacy intensity, только для fallback generateMixedWorkout.
-    const GOAL_TO_INTENSITY = { strength: 'max', endurance: 'moderate', recovery: 'recovery', maintenance: 'moderate' };
-    const GOAL_LABELS_MAP = { strength: 'Сила', endurance: 'Выносливость', recovery: 'Восстановление', maintenance: 'Поддержка' };
-    const mixGoal = profile.goal || 'strength';
-    const mixGoalLabel = GOAL_LABELS_MAP[mixGoal] || mixGoal;
-    useEffect(function () {
-      if (!Fingers.mixEngine && !Fingers.generateMixedWorkout) return;
-      const mixOpts = {
-        equipmentTypes: userTypes,
-        goal: mixGoal,
-        intensity: GOAL_TO_INTENSITY[mixGoal] || 'moderate', // fallback-движок
-        age: ageRaw,
-        readiness: cool && cool.recommendation
-      };
-      // mixEngine (goal-axis) — основной путь; generateMixedWorkout — fallback.
-      let w = (Fingers.mixEngine && Fingers.mixEngine.recommendDay)
-        ? Fingers.mixEngine.recommendDay(mixOpts)
-        : null;
-      if (!w && Fingers.generateMixedWorkout) w = Fingers.generateMixedWorkout(mixOpts);
-      setMixedWorkout(w);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userTypes.join(','), mixGoal, ageRaw, cool && cool.recommendation, mixSeed]);
-    const onGenerateMix = useCallback(function () { setMixSeed(function (n) { return n + 1; }); }, []);
-    let readinessBanner = null;
-    if (cool) {
-      const READINESS_MAP = {
-        max:      { icon: '🔥', title: 'Готов к максимуму',         sub: 'После прошлой сессии прошло достаточно времени — можно жёстко.' },
-        moderate: { icon: '⚡', title: 'Готов к умеренной нагрузке', sub: 'Сегодня — repeaters или density, но без max-hangs.' },
-        recovery: { icon: '🌿', title: 'Только восстановление',     sub: 'Связки ещё восстанавливаются — лёгкие no-hangs или антагонисты.' },
-        rest:     { icon: '💤', title: 'Сегодня — день отдыха',      sub: 'Меньше 24ч после max — любая нагрузка повышает риск травмы пальцев.' }
-      };
-      const conf = Object.assign({}, READINESS_MAP[cool.recommendation] || READINESS_MAP.max);
-      if (cool.hoursSinceLast == null) {
-        conf.sub = 'История пуста — стартуй с того, что под рукой.';
-      } else {
-        const h_ago = Math.max(0, cool.hoursSinceLast);
-        const human = h_ago < 24 ? Math.round(h_ago) + 'ч назад'
-          : Math.round(h_ago / 24) + ' дн. назад';
-        conf.sub += ' Последняя сессия: ' + human + '.';
-      }
-      readinessBanner = h('div', {
-        className: 'fingers-fs-readiness-banner',
-        'data-readiness': cool.recommendation,
-        role: 'status',
-        'aria-live': 'polite'
-      },
-        h('div', { className: 'fingers-fs-readiness-banner__icon', 'aria-hidden': 'true' }, conf.icon),
-        h('div', { className: 'fingers-fs-readiness-banner__body' },
-          h('div', { className: 'fingers-fs-readiness-banner__title' }, conf.title),
-          h('div', { className: 'fingers-fs-readiness-banner__sub' }, conf.sub)
-        )
-      );
-    }
-
     return h('div', { className: 'fingers-fs-programs-wrap' },
-      readinessBanner,
-      h('div', { className: 'fingers-fs-intensity-filter', role: 'tablist', 'aria-label': 'Фильтр по интенсивности' },
-        filterChips.map(function (fc) {
-          const active = intensityFilter === fc.id;
-          const count = counts[fc.id];
-          const disabled = count === 0 && fc.id !== 'all';
-          return h('button', {
-            key: fc.id,
-            type: 'button',
-            className: 'fingers-fs-intensity-filter__chip'
-              + (active ? ' is-active' : '')
-              + (disabled ? ' is-disabled' : ''),
-            'data-intensity': fc.id,
-            'aria-pressed': active,
-            disabled: disabled,
-            onClick: function () { if (!disabled) onPickFilter(fc.id); }
-          },
-            fc.emoji ? h('span', { 'aria-hidden': 'true' }, fc.emoji + ' ') : null,
-            fc.label,
-            h('span', { className: 'fingers-fs-intensity-filter__count' }, ' ' + count)
-          );
-        })
-      ),
-      // Генерированная микс-карточка — оранжевая, отличается от обычных
-      // протоколов. Подсказка «не нашли подходящего — попробуй случайный».
-      mixedWorkout ? h('div', { className: 'fingers-fs-mixcard' },
-        h('div', { className: 'fingers-fs-mixcard__hint' },
-          h('span', { 'aria-hidden': 'true' }, '✨ '),
-          'Не нашёл подходящий протокол? Попробуй случайную сборку по умному алгоритму:'
-        ),
-        h('div', { className: 'fingers-fs-mixcard__inner' },
-          h('div', { className: 'fingers-fs-mixcard__head-row' },
-            h('div', { className: 'fingers-fs-mixcard__badge' },
-              h('span', { 'aria-hidden': 'true' }, '🎲'),
-              ' Микс'
-            ),
-            // Цель собирается из единого переключателя в баре оборудования.
-            h('div', { className: 'fingers-fs-mixcard__goalhint' },
-              'под цель «' + (mixGoalLabel) + '»')
-          ),
-          h('h3', { className: 'fingers-fs-mixcard__title' }, mixedWorkout.name),
-          h('p', { className: 'fingers-fs-mixcard__desc' }, mixedWorkout.description),
-          h('div', { className: 'fingers-fs-mixcard__chips' },
-            h('span', { className: 'fingers-fs-chip fingers-fs-chip--intensity',
-              'data-fingers-intensity': mixedWorkout.intensity || 'moderate'
-            }, intensityLabel(mixedWorkout.intensity)),
-            h('span', { className: 'fingers-fs-chip' },
-              h('span', { 'aria-hidden': 'true' }, '⏱ '),
-              mixedWorkout.durationMin + ' мин'),
-            h('span', { className: 'fingers-fs-chip' },
-              mixedWorkout.exercises.length + ' упр')
-          ),
-          h('div', { className: 'fingers-fs-mixcard__equipment' },
-            (mixedWorkout.equipmentTypes || []).map(function (t) {
-              const meta = ({
-                full: { icon: '🪜', label: 'Board' },
-                block: { icon: '💪', label: 'Block' },
-                door: { icon: '🚪', label: 'Door' },
-                none: { icon: '🤚', label: 'No-Hangs' }
-              })[t] || { icon: '·', label: t };
-              return h('span', {
-                key: t,
-                className: 'fingers-fs-equipment-chip is-available',
-                'data-equipment': t
-              },
-                h('span', { 'aria-hidden': 'true' }, meta.icon), ' ', meta.label
-              );
-            })
-          ),
-          h('div', { className: 'fingers-fs-mixcard__actions' },
-            h('button', {
-              type: 'button',
-              className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--reroll',
-              onClick: onGenerateMix,
-              title: 'Другой набор упражнений'
-            },
-              h('span', { 'aria-hidden': 'true' }, '🔄')
-            ),
-            h('button', {
-              type: 'button',
-              className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--launch',
-              onClick: function () { safeLaunch(mixedWorkout); }
-            }, 'Запустить микс')
-          )
-        )
+
+      // Мини-переключатель «Под цель / Все» — сидит над сеткой протоколов.
+      // Заменяет 4-чиповый intensity-фильтр, не путая с goal-селектором сверху.
+      filtered.length > 0 ? h('div', {
+        className: 'fingers-fs-scope-toggle',
+        role: 'tablist',
+        'aria-label': 'Какие протоколы показывать'
+      },
+        h('button', {
+          type: 'button',
+          role: 'tab',
+          'aria-selected': onlyForGoal,
+          className: 'fingers-fs-scope-toggle__btn' + (onlyForGoal ? ' is-active' : ''),
+          onClick: function () { onToggleOnlyForGoal(true); }
+        }, 'Под цель ', h('span', { className: 'fingers-fs-scope-toggle__count' }, goalMatchCount)),
+        h('button', {
+          type: 'button',
+          role: 'tab',
+          'aria-selected': !onlyForGoal,
+          className: 'fingers-fs-scope-toggle__btn' + (!onlyForGoal ? ' is-active' : ''),
+          onClick: function () { onToggleOnlyForGoal(false); }
+        }, 'Все ', h('span', { className: 'fingers-fs-scope-toggle__count' }, filtered.length))
       ) : null,
 
       visibleFiltered.length === 0
         ? h('div', { className: 'fingers-fs-empty', style: { padding: '24px 16px', textAlign: 'center' } },
             h('p', { style: { margin: 0, fontSize: 14, opacity: 0.7 } },
-              'Нет протоколов с интенсивностью «' + (filterChips.find(function (c) { return c.id === intensityFilter; }) || {}).label + '» под текущее оборудование.')
+              onlyForGoal
+                ? 'Под текущую цель протоколов нет. Переключи на «Все» или поменяй цель.'
+                : 'Нет протоколов под текущее оборудование. Включи другой тип в баре сверху.')
           )
         : h('div', { className: 'fingers-fs-program-grid' },
       visibleFiltered.map(function (p) {
@@ -2991,38 +3191,7 @@
       );
     };
 
-    // Единая ЦЕЛЬ тренировок — живёт здесь (рядом с оборудованием), пишется в
-    // profile.goal. Рулит И рекомендованным протоколом (getRecommendedProgramId),
-    // И микс-сборкой (mixEngine читает profile.goal). Онбординг задаёт стартовое
-    // значение; здесь меняешь в любой момент.
-    const GOAL_LIST = (Fingers.mixEngine && Array.isArray(Fingers.mixEngine.GOALS) && Fingers.mixEngine.GOALS.length)
-      ? Fingers.mixEngine.GOALS
-      : [{ id: 'strength', label: 'Сила' }, { id: 'endurance', label: 'Выносливость' },
-         { id: 'recovery', label: 'Восстановление' }, { id: 'maintenance', label: 'Поддержка' }];
-    const GOAL_EMOJI = { strength: '🔥', endurance: '🔁', recovery: '🌿', maintenance: '🧱' };
-    const currentGoal = profile.goal || 'strength';
-
     return h('div', { className: 'fingers-fs-equipment-bar' },
-      h('div', { className: 'fingers-fs-goalsel' },
-        h('div', { className: 'fingers-fs-goalsel__label' }, 'Цель тренировки'),
-        h('div', { className: 'fingers-fs-goalsel__grid', role: 'tablist', 'aria-label': 'Цель тренировки' },
-          GOAL_LIST.map(function (g) {
-            const active = currentGoal === g.id;
-            return h('button', {
-              key: g.id,
-              type: 'button',
-              role: 'tab',
-              'aria-selected': active,
-              className: 'fingers-fs-goalsel__btn' + (active ? ' is-active' : ''),
-              'data-goal': g.id,
-              onClick: function () { if (currentGoal !== g.id) writeProfile({ goal: g.id }); }
-            },
-              h('span', { className: 'fingers-fs-goalsel__emoji', 'aria-hidden': 'true' }, GOAL_EMOJI[g.id] || '🎯'),
-              h('span', { className: 'fingers-fs-goalsel__text' }, g.label)
-            );
-          })
-        )
-      ),
       h('div', { className: 'fingers-fs-equipment-bar__tabs',
         role: 'group',
         'aria-label': 'Оборудование (можно выбрать несколько)' },
@@ -3063,6 +3232,89 @@
     );
   }
   Fingers.EquipmentBar = FingersEquipmentBar;
+
+  // Единая ЦЕЛЬ тренировок — отдельный компонент, чтобы можно было разместить её
+  // ниже табов (а оборудование — между табами и целью). Пишется в profile.goal,
+  // рулит и рекомендованным протоколом, и микс-сборкой.
+  function FingersGoalSelector(props) {
+    const onChange = (props && props.onChange) || function () {};
+    const profile = getProfile();
+    const GOAL_LIST = (Fingers.mixEngine && Array.isArray(Fingers.mixEngine.GOALS) && Fingers.mixEngine.GOALS.length)
+      ? Fingers.mixEngine.GOALS
+      : [{ id: 'strength', label: 'Сила' }, { id: 'endurance', label: 'Выносливость' },
+         { id: 'recovery', label: 'Восстановление' }, { id: 'maintenance', label: 'Поддержка' }];
+    const GOAL_EMOJI = { strength: '🔥', endurance: '🔁', recovery: '🌿', maintenance: '🧱' };
+    const currentGoal = profile.goal || 'strength';
+    function writeGoal(goalId) {
+      try {
+        const u = HEYS.utils;
+        if (!u || !u.lsGet || !u.lsSet) return;
+        const p = u.lsGet('heys_profile', {}) || {};
+        const fp = Object.assign({}, p.fingerboardProfile || {}, { goal: goalId });
+        u.lsSet('heys_profile', Object.assign({}, p, { fingerboardProfile: fp }));
+        onChange();
+      } catch (e) {
+        console.warn('[FingersGoalSelector] write failed:', e);
+      }
+    }
+    return h('div', { className: 'fingers-fs-goalsel' },
+      h('div', { className: 'fingers-fs-goalsel__label' }, 'Цель тренировки'),
+      h('div', { className: 'fingers-fs-goalsel__grid', role: 'tablist', 'aria-label': 'Цель тренировки' },
+        GOAL_LIST.map(function (g) {
+          const active = currentGoal === g.id;
+          return h('button', {
+            key: g.id,
+            type: 'button',
+            role: 'tab',
+            'aria-selected': active,
+            className: 'fingers-fs-goalsel__btn' + (active ? ' is-active' : ''),
+            'data-goal': g.id,
+            onClick: function () { if (currentGoal !== g.id) writeGoal(g.id); }
+          },
+            h('span', { className: 'fingers-fs-goalsel__emoji', 'aria-hidden': 'true' }, GOAL_EMOJI[g.id] || '🎯'),
+            h('span', { className: 'fingers-fs-goalsel__text' }, g.label)
+          );
+        })
+      )
+    );
+  }
+  Fingers.GoalSelector = FingersGoalSelector;
+
+  // Компактный readiness-бейдж — однострочный вариант баннера готовности.
+  // Используется в шапке Fingers под целью тренировки, чтобы юзер видел статус
+  // готовности независимо от выбранной вкладки.
+  function FingersReadinessChip() {
+    const cool = (Fingers.cooldownCheck && typeof Fingers.cooldownCheck === 'function')
+      ? (function () { try { return Fingers.cooldownCheck(); } catch (_) { return null; } })()
+      : null;
+    if (!cool) return null;
+    const READINESS_MAP = {
+      max:      { icon: '🔥', title: 'Готов к максимуму' },
+      moderate: { icon: '⚡', title: 'Умеренная нагрузка' },
+      recovery: { icon: '🌿', title: 'Только восстановление' },
+      rest:     { icon: '💤', title: 'День отдыха' }
+    };
+    const conf = READINESS_MAP[cool.recommendation] || READINESS_MAP.max;
+    let sub;
+    if (cool.hoursSinceLast == null) {
+      sub = 'История пуста';
+    } else {
+      const h_ago = Math.max(0, cool.hoursSinceLast);
+      sub = h_ago < 24 ? Math.round(h_ago) + 'ч назад'
+        : Math.round(h_ago / 24) + ' дн. назад';
+    }
+    return h('div', {
+      className: 'fingers-fs-readiness-banner fingers-fs-readiness-banner--compact',
+      'data-readiness': cool.recommendation,
+      role: 'status',
+      'aria-live': 'polite'
+    },
+      h('span', { className: 'fingers-fs-readiness-banner__icon', 'aria-hidden': 'true' }, conf.icon),
+      h('span', { className: 'fingers-fs-readiness-banner__title' }, conf.title),
+      h('span', { className: 'fingers-fs-readiness-banner__sub' }, sub)
+    );
+  }
+  Fingers.ReadinessChip = FingersReadinessChip;
 
   // Settings popover — единое место для voice/тема/профиль/reset.
   // Открывается из ⚙ кнопки в шапке fingers.
@@ -3858,12 +4110,6 @@
         onDone: handleWarmupDone,
         onCancel: handleWarmupCancel
       }) : null,
-      // Equipment bar — над шапкой, всегда видим для смены оборудования
-      // (тренировка может проходить в разных местах, набор меняется каждый раз).
-      Fingers.EquipmentBar ? h(Fingers.EquipmentBar, {
-        key: 'eqbar-' + equipmentTick,
-        onChange: function () { setEquipmentTick(function (n) { return n + 1; }); }
-      }) : null,
       // Header
       h('div', { className: 'fingers-fs__header fingers-fs__header--premium' },
         h('h1', { className: 'fingers-fs__title' },
@@ -3908,7 +4154,21 @@
             },
             'aria-label': 'Скопировать диагностику расчётов',
             title: 'Диагностика расчётов'
-          }, h('span', { 'aria-hidden': 'true' }, '🧮'))
+          }, h('span', { 'aria-hidden': 'true' }, '🧮')),
+          // Розовый × — выход из Fingers (закрыть fullscreen-режим).
+          // В одну строку с остальными иконками шапки.
+          onClose ? h('button', {
+            type: 'button',
+            className: 'fingers-fs__icon-btn fingers-fs__icon-btn--close',
+            onClick: function () { try { onClose(); } catch (_) {} },
+            'aria-label': 'Закрыть режим тренировки',
+            title: 'Закрыть'
+          },
+            h('svg', { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', 'aria-hidden': 'true' },
+              h('path', { d: 'M5 5l10 10M15 5L5 15' })
+            )
+          ) : null
         )
       ),
 
@@ -3982,6 +4242,19 @@
           );
         })
       ),
+
+      // Equipment bar — под табами, всегда видим для смены оборудования.
+      Fingers.EquipmentBar ? h(Fingers.EquipmentBar, {
+        key: 'eqbar-' + equipmentTick,
+        onChange: function () { setEquipmentTick(function (n) { return n + 1; }); }
+      }) : null,
+
+      // Goal selector — общий контекст тренировки, не привязан к конкретной вкладке.
+      // Готовность встроена премиально в Today-карточку, поэтому здесь только цель.
+      Fingers.GoalSelector ? h(Fingers.GoalSelector, {
+        key: 'goalsel-' + equipmentTick,
+        onChange: function () { setEquipmentTick(function (n) { return n + 1; }); }
+      }) : null,
 
       // Tab content
       h('div', { className: 'fingers-fs-tab-content' },

@@ -152,8 +152,9 @@
       'aria-modal': 'true',
       'aria-label': 'Тренировка пальцев'
     },
-      // Close button (always top-right)
-      h('button', {
+      // Floating close button — нужен только в Onboarding-сценарии (когда нет
+      // inline-крестика в шапке SessionUI). В обычном режиме закрывает inline-×.
+      showOnboarding ? h('button', {
         className: 'fingers-fs__close',
         onClick: onRequestClose,
         'aria-label': 'Закрыть режим тренировки'
@@ -162,7 +163,7 @@
           stroke: 'currentColor', strokeWidth: 1.5 },
           h('path', { d: 'M5 5l10 10M15 5L5 15' })
         )
-      ),
+      ) : null,
 
       // Container
       h('div', { className: 'fingers-fs__container' },
