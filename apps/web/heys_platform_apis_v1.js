@@ -833,10 +833,15 @@
 
                 const keysToRemove = [];
                 const keysToKeep = ['heys_products', 'heys_profile', 'heys_norms', 'heys_hr_zones'];
+                // Browser-global UI keys are not tied to a client/session and
+                // must survive the update-triggered session reset.
+                const cloudRef = window.HEYS && window.HEYS.cloud;
+                const isBrowserGlobalUiKey = (k) =>
+                  !!(cloudRef && typeof cloudRef.isNonClientDataKey === 'function' && cloudRef.isNonClientDataKey(k));
 
                 for (let i = 0; i < localStorage.length; i++) {
                   const key = localStorage.key(i);
-                  if (!keysToKeep.some(k => key.includes(k)) && !key.startsWith('heys_dayv2_')) {
+                  if (!keysToKeep.some(k => key.includes(k)) && !key.startsWith('heys_dayv2_') && !isBrowserGlobalUiKey(key)) {
                     keysToRemove.push(key);
                   }
                 }
