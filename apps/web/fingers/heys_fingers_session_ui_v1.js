@@ -303,7 +303,7 @@
 
     // B16: цель перебивает grade-prefs для non-strength целей, если
     // целевая программа eligible. 'strength'/undefined → grade-логика ниже.
-    const goalForced = fp.goal === 'rehab' ? 'nelson_no_hangs'
+    const goalForced = fp.goal === 'recovery' ? 'nelson_no_hangs'
       : (fp.goal === 'endurance' || fp.goal === 'maintenance') ? 'repeaters_7_3'
       : null;
     if (goalForced && eligibleIds.has(goalForced)) return goalForced;
@@ -1007,24 +1007,13 @@
         : ['full']);
     const [mixedWorkout, setMixedWorkout] = useState(null);
     const [mixSeed, setMixSeed] = useState(0);
-    // Цель микса (goal): ЧТО тренируем. Потолок (bucket) приходит из готовности,
-    // движок сам режет цель под него. Persisted в LS.
-    const MIX_GOALS = (Fingers.mixEngine && Array.isArray(Fingers.mixEngine.GOALS) && Fingers.mixEngine.GOALS.length)
-      ? Fingers.mixEngine.GOALS
-      : [{ id: 'strength', label: 'Сила' }, { id: 'endurance', label: 'Выносливость' },
-         { id: 'recovery', label: 'Восстановление' }, { id: 'maintenance', label: 'Поддержка' }];
-    const GOAL_EMOJI = { strength: '🔥', endurance: '🔁', recovery: '🌿', maintenance: '🧱' };
-    const [mixGoal, setMixGoal] = useState(function () {
-      const u = HEYS.utils;
-      const v = u && u.lsGet ? u.lsGet('fingers_mix_goal', 'strength') : 'strength';
-      return MIX_GOALS.some(function (g) { return g.id === v; }) ? v : 'strength';
-    });
-    const onPickMixGoal = useCallback(function (v) {
-      setMixGoal(v);
-      if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet('fingers_mix_goal', v);
-    }, []);
+    // Цель — единая, из profile.goal (переключатель в баре оборудования).
+    // Меняешь там → equipmentTick перерисует SessionUI → микс пересоберётся.
     // goal → legacy intensity, только для fallback generateMixedWorkout.
     const GOAL_TO_INTENSITY = { strength: 'max', endurance: 'moderate', recovery: 'recovery', maintenance: 'moderate' };
+    const GOAL_LABELS_MAP = { strength: 'Сила', endurance: 'Выносливость', recovery: 'Восстановление', maintenance: 'Поддержка' };
+    const mixGoal = profile.goal || 'strength';
+    const mixGoalLabel = GOAL_LABELS_MAP[mixGoal] || mixGoal;
     useEffect(function () {
       if (!Fingers.mixEngine && !Fingers.generateMixedWorkout) return;
       const mixOpts = {
@@ -1110,29 +1099,10 @@
             h('div', { className: 'fingers-fs-mixcard__badge' },
               h('span', { 'aria-hidden': 'true' }, '🎲'),
               ' Микс'
-            )
-          ),
-          // Цель — только для этой микс-сборки (не профильная «Цель тренировок»).
-          h('div', { className: 'fingers-fs-mixcard__goal' },
-            h('div', { className: 'fingers-fs-mixcard__goal-label' }, 'Цель этой тренировки'),
-            h('div', { className: 'fingers-fs-mixcard__goal-grid', role: 'tablist', 'aria-label': 'Цель этой тренировки' },
-              MIX_GOALS.map(function (opt) {
-                const active = mixGoal === opt.id;
-                return h('button', {
-                  key: opt.id,
-                  type: 'button',
-                  role: 'tab',
-                  'aria-selected': active,
-                  className: 'fingers-fs-mixcard__goal-btn'
-                    + (active ? ' is-active' : ''),
-                  'data-goal': opt.id,
-                  onClick: function () { onPickMixGoal(opt.id); }
-                },
-                  h('span', { className: 'fingers-fs-mixcard__goal-emoji', 'aria-hidden': 'true' }, GOAL_EMOJI[opt.id] || '🎯'),
-                  h('span', { className: 'fingers-fs-mixcard__goal-text' }, opt.label)
-                );
-              })
-            )
+            ),
+            // Цель собирается из единого переключателя в баре оборудования.
+            h('div', { className: 'fingers-fs-mixcard__goalhint' },
+              'под цель «' + (mixGoalLabel) + '»')
           ),
           h('h3', { className: 'fingers-fs-mixcard__title' }, mixedWorkout.name),
           h('p', { className: 'fingers-fs-mixcard__desc' }, mixedWorkout.description),
@@ -3021,7 +2991,38 @@
       );
     };
 
+    // Единая ЦЕЛЬ тренировок — живёт здесь (рядом с оборудованием), пишется в
+    // profile.goal. Рулит И рекомендованным протоколом (getRecommendedProgramId),
+    // И микс-сборкой (mixEngine читает profile.goal). Онбординг задаёт стартовое
+    // значение; здесь меняешь в любой момент.
+    const GOAL_LIST = (Fingers.mixEngine && Array.isArray(Fingers.mixEngine.GOALS) && Fingers.mixEngine.GOALS.length)
+      ? Fingers.mixEngine.GOALS
+      : [{ id: 'strength', label: 'Сила' }, { id: 'endurance', label: 'Выносливость' },
+         { id: 'recovery', label: 'Восстановление' }, { id: 'maintenance', label: 'Поддержка' }];
+    const GOAL_EMOJI = { strength: '🔥', endurance: '🔁', recovery: '🌿', maintenance: '🧱' };
+    const currentGoal = profile.goal || 'strength';
+
     return h('div', { className: 'fingers-fs-equipment-bar' },
+      h('div', { className: 'fingers-fs-goalsel' },
+        h('div', { className: 'fingers-fs-goalsel__label' }, 'Цель тренировки'),
+        h('div', { className: 'fingers-fs-goalsel__grid', role: 'tablist', 'aria-label': 'Цель тренировки' },
+          GOAL_LIST.map(function (g) {
+            const active = currentGoal === g.id;
+            return h('button', {
+              key: g.id,
+              type: 'button',
+              role: 'tab',
+              'aria-selected': active,
+              className: 'fingers-fs-goalsel__btn' + (active ? ' is-active' : ''),
+              'data-goal': g.id,
+              onClick: function () { if (currentGoal !== g.id) writeProfile({ goal: g.id }); }
+            },
+              h('span', { className: 'fingers-fs-goalsel__emoji', 'aria-hidden': 'true' }, GOAL_EMOJI[g.id] || '🎯'),
+              h('span', { className: 'fingers-fs-goalsel__text' }, g.label)
+            );
+          })
+        )
+      ),
       h('div', { className: 'fingers-fs-equipment-bar__tabs',
         role: 'group',
         'aria-label': 'Оборудование (можно выбрать несколько)' },

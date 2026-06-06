@@ -210,7 +210,7 @@
     const age = Number(profile.age);
     if (Number.isFinite(age) && age < 14) return 'nelson_no_hangs';
     // B16: цель перебивает grade-логику для non-strength целей.
-    if (profile.goal === 'rehab') return 'nelson_no_hangs';
+    if (profile.goal === 'recovery') return 'nelson_no_hangs';
     if (profile.goal === 'endurance' || profile.goal === 'maintenance') return 'repeaters_7_3';
     const g = profile.maxVGrade;
     if (g === 'V0-V2' || g === 'V3-V4' || g === 'none') return 'beastmaker_1000_beginner';
@@ -320,8 +320,8 @@
     const GRADES = ['V0-V2', 'V3-V4', 'V5-V6', 'V7-V8', 'V9+', 'none'];
     const GRADE_LABELS = { 'V0-V2': 'V0-V2', 'V3-V4': 'V3-V4', 'V5-V6': 'V5-V6', 'V7-V8': 'V7-V8', 'V9+': 'V9+', 'none': 'Не лажу' };
     // B16: цель тренировки. Влияет на рекомендацию программы.
-    const GOALS = ['strength', 'endurance', 'rehab', 'maintenance'];
-    const GOAL_LABELS = { strength: '💪 Сила', endurance: '🔄 Выносливость', rehab: '🩹 Реабилитация', maintenance: '⚖️ Поддержание' };
+    const GOALS = ['strength', 'endurance', 'recovery', 'maintenance'];
+    const GOAL_LABELS = { strength: '💪 Сила', endurance: '🔄 Выносливость', recovery: '🌿 Восстановление', maintenance: '⚖️ Поддержка' };
 
     function updateProfile(patch) {
       const profile = Object.assign({}, state.profile, patch);

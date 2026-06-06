@@ -152,8 +152,8 @@ describe('B16 goal → getRecommendedProgramId', () => {
     expect(globalThis.HEYS.Fingers.getRecommendedProgramId()).toBe('horst_max_hangs');
   });
 
-  it('rehab → nelson_no_hangs (перебивает grade)', () => {
-    setGoal('rehab');
+  it('recovery → nelson_no_hangs (перебивает grade)', () => {
+    setGoal('recovery');
     expect(globalThis.HEYS.Fingers.getRecommendedProgramId()).toBe('nelson_no_hangs');
   });
 
