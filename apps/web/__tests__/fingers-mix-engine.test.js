@@ -154,3 +154,105 @@ describe('mixEngine: age + pain gates', () => {
     }
   });
 });
+
+describe('mixEngine Phase 2a: MVC auto-dosing (step 4)', () => {
+  beforeAll(setupOnce);
+
+  it('max-strength вес подставляется под 90% MVC, помечен __mvcDosed', () => {
+    const Fg = F();
+    const origRecords = Fg.records;
+    const origBW = Fg.getBodyWeight;
+    Fg.records = { getMVC: () => ({ type: 'weight', mvcKg: 80 }) };
+    Fg.getBodyWeight = () => ({ kg: 70, source: 'profile' });
+    try {
+      const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' });
+      const ms = p.exercises.find((e) => e.__role === 'max-strength');
+      expect(ms).toBeTruthy();
+      // 80*0.9 - 70 = 2.0 кг; ≤ 110% MVC (88-70=18) — без клампа
+      expect(ms.addedWeightKg).toBe(2);
+      expect(ms.__mvcDosed).toBe(true);
+    } finally {
+      Fg.records = origRecords;
+      Fg.getBodyWeight = origBW;
+    }
+  });
+
+  it('нет MVC → каталожный вес сохранён + флаг __needsMvc', () => {
+    const Fg = F();
+    const origRecords = Fg.records;
+    Fg.records = { getMVC: () => null };
+    try {
+      const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' });
+      const ms = p.exercises.find((e) => e.__role === 'max-strength');
+      expect(ms.__needsMvc).toBe(true);
+      expect(ms.__mvcDosed).toBeUndefined();
+      // вес не дозируется (min-edge max-протоколы вообще bodyweight) — главное,
+      // что движок не перетёр его и не пометил как dosed.
+      expect(typeof ms.addedWeightKg).toBe('number');
+    } finally {
+      Fg.records = origRecords;
+    }
+  });
+
+  it('нет records вообще → Phase 1 поведение (без флагов дозирования)', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' });
+    const ms = p.exercises.find((e) => e.__role === 'max-strength');
+    expect(ms.__mvcDosed).toBeUndefined();
+    expect(ms.__needsMvc).toBeUndefined();
+  });
+});
+
+describe('mixEngine Phase 2a: RPE history-bias (step 5)', () => {
+  beforeAll(setupOnce);
+
+  it('хват с 2+ недавними hard деприоритизируется (анкор уступает)', () => {
+    const Fg = F();
+    const origFb = Fg.lastGripFeedback;
+    Fg.lastGripFeedback = (gripId) => (gripId === 'halfcrimp' ? { rpe: ['hard', 'hard'], daysAgo: 1 } : { rpe: ['ok'], daysAgo: 5 });
+    try {
+      const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' });
+      const ms = p.exercises.find((e) => e.__role === 'max-strength');
+      // обычно анкор = halfcrimp; при недавних hard движок берёт другой хват
+      expect(ms.gripId).not.toBe('halfcrimp');
+    } finally {
+      Fg.lastGripFeedback = origFb;
+    }
+  });
+
+  it('старый hard (>2 дней) не штрафует — анкор half-crimp остаётся', () => {
+    const Fg = F();
+    const origFb = Fg.lastGripFeedback;
+    Fg.lastGripFeedback = () => ({ rpe: ['hard', 'hard'], daysAgo: 7 });
+    try {
+      const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' });
+      const ms = p.exercises.find((e) => e.__role === 'max-strength');
+      expect(ms.gripId).toBe('halfcrimp');
+    } finally {
+      Fg.lastGripFeedback = origFb;
+    }
+  });
+});
+
+describe('mixEngine Phase 2a: MAV volume (step 8)', () => {
+  beforeAll(setupOnce);
+
+  it('recovery → объём не-антагонист блоков урезан, антагонист не тронут', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'recovery' });
+    const cap = p.exercises.find((e) => e.__role === 'capacity');
+    const ant = p.exercises.find((e) => e.__role === 'antagonist');
+    // nelson_density_hangs: setsCount 5 → round(5*0.7)=4
+    expect(cap.setsCount).toBeLessThan(5);
+    expect(cap.setsCount).toBeGreaterThanOrEqual(1);
+    // antagonist_bands: setsCount 3 — не трогаем
+    if (ant) expect(ant.setsCount).toBe(3);
+  });
+
+  it('ни один хват не превышает MAV (5 рабочих сетов)', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' });
+    const byGrip = {};
+    p.exercises.filter((e) => e.__role !== 'antagonist').forEach((e) => {
+      byGrip[e.gripId] = (byGrip[e.gripId] || 0) + e.setsCount;
+    });
+    Object.values(byGrip).forEach((n) => expect(n).toBeLessThanOrEqual(5));
+  });
+});

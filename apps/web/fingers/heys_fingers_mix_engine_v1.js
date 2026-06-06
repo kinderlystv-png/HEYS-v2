@@ -60,6 +60,17 @@
     'capacity': 'аэробная ёмкость', 'antagonist': 'антагонист',
   };
 
+  // ── Phase 2a: автоregуляция (MVC-доза / RPE-bias / MAV-объём) ────────────
+  // Целевой % MVC по bucket (зеркалит constructor MVC_TARGET_PCT).
+  const MVC_TARGET_PCT = { recovery: 60, moderate: 75, max: 90 };
+  const MVC_DEFAULT_PCT = 80;
+  const MVC_CEILING_PCT = 110; // >110% MVC — риск pulley-травмы (constructor warn)
+  const MAV_SETS_PER_GRIP = 5; // верхний предел рабочих сетов на хват за сессию
+  const RECOVERY_TRIM = 0.7;   // множитель объёма на recovery/rest
+  const RPE_RECENT_DAYS = 2;   // «недавно» для RPE-bias
+
+  function snap(n, step) { return Math.round((Number(n) || 0) / step) * step; }
+
   // Роль протокола: явное p.role → спец-случай antagonist_bands → по intensity.
   function roleOf(p) {
     if (!p) return 'strength-endurance';
@@ -136,13 +147,18 @@
 
   // Выбор одного упражнения из пула с учётом anchor/дедупа/danger.
   function pickFromPool(pool, slotRole, bucket, ctx) {
+    // Step 5: сортируем по RPE-штрафу (недавние 'hard' — вниз), затем anchor.
+    // Нет lastGripFeedback → штраф 0 у всех → остаётся только anchor (Phase 1).
     let ordered = pool.slice();
-    if (slotRole === 'max-strength') {
-      // anchor: half-crimp первым.
-      ordered.sort(function (a, b) {
+    ordered.sort(function (a, b) {
+      const pa = gripRpePenalty(a.ex.gripId);
+      const pb = gripRpePenalty(b.ex.gripId);
+      if (pa !== pb) return pa - pb;
+      if (slotRole === 'max-strength') {
         return (a.ex.gripId === 'halfcrimp' ? 0 : 1) - (b.ex.gripId === 'halfcrimp' ? 0 : 1);
-      });
-    }
+      }
+      return 0;
+    });
     const budget = DANGER_BUDGET[bucket] != null ? DANGER_BUDGET[bucket] : 48;
     const banHighDanger = bucket === 'recovery';
     // Проход 1 — со всеми правилами (включая дедуп grip+edge).
@@ -170,6 +186,64 @@
       return s + setSec * Number(ex.setsCount);
     }, 0);
     return Math.max(10, Math.round(totalSec / 60));
+  }
+
+  // Step 5: штраф хвата по недавнему RPE. Нет сигнала → 0 (поведение Phase 1).
+  function gripRpePenalty(gripId) {
+    if (typeof Fingers.lastGripFeedback !== 'function') return 0;
+    let fb = null;
+    try { fb = Fingers.lastGripFeedback(gripId); } catch (_) { fb = null; }
+    if (!fb || !Array.isArray(fb.rpe) || fb.daysAgo == null) return 0;
+    if (Number(fb.daysAgo) > RPE_RECENT_DAYS) return 0;
+    const hard = fb.rpe.filter(function (r) { return r === 'hard'; }).length;
+    if (hard >= 2) return 100; // деприоритет: 2+ тяжёлых подхода ≤2 дней назад
+    if (hard === 1) return 10;
+    return 0;
+  }
+
+  // Step 4: рабочий вес под %MVC роли. Только max-strength. Нет MVC / нет
+  // records → каталожный вес + флаг __needsMvc (UI подскажет калибровку).
+  function doseExercise(ex, bucket, ageNum) {
+    if (ex.__role !== 'max-strength') return ex;
+    // Возрастной fail-safe: <18 (no-max / no-full-crimp / ...) — без веса.
+    // warnLevel(18+) === 'ok' (не клампим); все ограничительные уровни клампят.
+    if (Fingers.ageGate && typeof Fingers.ageGate.warnLevel === 'function') {
+      const lvl = Fingers.ageGate.warnLevel(ageNum);
+      if (lvl && lvl !== 'ok') return Object.assign({}, ex, { addedWeightKg: 0 });
+    }
+    if (!Fingers.records || typeof Fingers.records.getMVC !== 'function') return ex;
+    let mvc = null;
+    try { mvc = Fingers.records.getMVC(ex.gripId, ex.edgeSizeMm); } catch (_) { mvc = null; }
+    if (!mvc || mvc.type !== 'weight' || !(Number(mvc.mvcKg) > 0)) {
+      let due = false;
+      try {
+        due = !!(Fingers.calibration && typeof Fingers.calibration.isDue === 'function'
+          && Fingers.calibration.isDue('maxHang', ex.gripId));
+      } catch (_) { due = false; }
+      return Object.assign({}, ex, { __needsMvc: true, __mvcDue: due });
+    }
+    const mvcKg = Number(mvc.mvcKg);
+    const bw = (Fingers.getBodyWeight && Number(Fingers.getBodyWeight().kg)) || 70;
+    const targetPct = MVC_TARGET_PCT[bucket] || MVC_DEFAULT_PCT;
+    const maxAdded = Math.max(0, snap(mvcKg * MVC_CEILING_PCT / 100 - bw, 0.5));
+    const added = Math.max(0, Math.min(snap(mvcKg * targetPct / 100 - bw, 0.5), maxAdded));
+    return Object.assign({}, ex, { addedWeightKg: added, __mvcDosed: true });
+  }
+
+  // Step 8: объём — trim на recovery + MAV-кап рабочих сетов на хват.
+  // Антагонист не трогаем (минимальный объём, держит баланс).
+  function applyVolume(picked, bucket) {
+    const trim = (bucket === 'recovery') ? RECOVERY_TRIM : 1;
+    const gripSets = Object.create(null);
+    return picked.map(function (ex) {
+      if (ex.__role === 'antagonist') return ex;
+      let sets = Number(ex.setsCount) || 1;
+      if (trim < 1) sets = Math.max(1, Math.round(sets * trim));
+      const prior = gripSets[ex.gripId] || 0;
+      if (prior + sets > MAV_SETS_PER_GRIP) sets = Math.max(1, MAV_SETS_PER_GRIP - prior);
+      gripSets[ex.gripId] = prior + sets;
+      return sets === Number(ex.setsCount) ? ex : Object.assign({}, ex, { setsCount: sets });
+    });
   }
 
   function buildReason(bucket, goal, ceiling, picked, hasAntagonist) {
@@ -235,8 +309,13 @@
 
     if (!picked.length) return null;
 
-    const hasAntagonist = picked.some(function (e) { return e.__role === 'antagonist'; });
-    const reason = buildReason(bucket, goal, ceiling, picked, hasAntagonist);
+    // Phase 2a post-passes: сначала MVC-доза (вес, на длительность не влияет),
+    // потом объём (trim/MAV — меняет setsCount) → длительность считаем после.
+    let finalEx = picked.map(function (ex) { return doseExercise(ex, bucket, ageNum); });
+    finalEx = applyVolume(finalEx, bucket);
+
+    const hasAntagonist = finalEx.some(function (e) { return e.__role === 'antagonist'; });
+    const reason = buildReason(bucket, goal, ceiling, finalEx, hasAntagonist);
     const tierList = Object.keys(includedTiers);
 
     return {
@@ -247,9 +326,9 @@
       description: reason,
       coachReason: reason,
       level: 'mixed',
-      durationMin: totalDurationMin(picked),
+      durationMin: totalDurationMin(finalEx),
       intensity: bucket,
-      exercises: picked,
+      exercises: finalEx,
       equipmentTypes: tierList,
       sourceIds: Object.keys(sourceIds),
       advisoryBadge: null,
