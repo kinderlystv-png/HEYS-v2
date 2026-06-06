@@ -205,6 +205,58 @@ describe('mergeItemsById', () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────
+// mergeDayData — stale-remote must NOT drop a freshly-added local item.
+// Regression for incident 2026-06-06: a stale day re-save (one of ~22 dayv2
+// re-saves/30s) carried a NEWER meal/day updatedAt but FEWER items. The old
+// code inferred deletion from the newer-remote timestamp and silently dropped
+// the user's just-added item (lost-add). Deletion must come from an explicit
+// tombstone, never from absence.
+// ───────────────────────────────────────────────────────────────────────────
+describe('mergeDayData — stale-remote does not drop freshly-added local item (incident 2026-06-06)', () => {
+  // Local: user just added 'syrup' → 3 items, older day ts.
+  const dayWithSyrup = () => makeDay(208361, [
+    makeMeal('snack', [
+      { id: 'milk', grams: 185, updatedAt: 208000 },
+      { id: 'coffee', grams: 100, updatedAt: 208100 },
+      { id: 'syrup', grams: 20, updatedAt: 208361 }, // just added, local-only
+    ], { updatedAt: 208361 }),
+  ]);
+  // Remote: stale snapshot of the SAME meal — 'syrup' missing, but re-stamped fresher.
+  const staleNoSyrup = (extra) => makeDay(223971, [
+    makeMeal('snack', [
+      { id: 'milk', grams: 185, updatedAt: 208000 },
+      { id: 'coffee', grams: 100, updatedAt: 208100 },
+    ], { updatedAt: 223971 }),
+  ], extra);
+
+  test('background merge: local-only item survives a newer-ts stale remote meal', () => {
+    const merged = mergeDayData(dayWithSyrup(), staleNoSyrup());
+    expect(merged).not.toBe(null);
+    const snack = merged.meals.find((m) => m.id === 'snack');
+    expect(snack.items.map((i) => i.id).sort()).toEqual(['coffee', 'milk', 'syrup']);
+  });
+
+  test('server upload merge (forceKeepAll) also keeps the local-only item', () => {
+    const merged = mergeDayData(dayWithSyrup(), staleNoSyrup(), { forceKeepAll: true });
+    const snack = merged.meals.find((m) => m.id === 'snack');
+    expect(snack.items.map((i) => i.id).sort()).toEqual(['coffee', 'milk', 'syrup']);
+  });
+
+  test('explicit pull-to-refresh (preferRemote) still honors remote membership', () => {
+    const merged = mergeDayData(dayWithSyrup(), staleNoSyrup(), { preferRemote: true });
+    const snack = merged.meals.find((m) => m.id === 'snack');
+    expect(snack.items.map((i) => i.id).sort()).toEqual(['coffee', 'milk']);
+  });
+
+  test('union does NOT resurrect a tombstoned deletion (deletion via tombstone still wins)', () => {
+    // 'syrup' deleted on the other device WITH a tombstone fresher than the local edit.
+    const merged = mergeDayData(dayWithSyrup(), staleNoSyrup({ deletedItemIds: { syrup: 224000 } }));
+    const snack = merged.meals.find((m) => m.id === 'snack');
+    expect(snack.items.map((i) => i.id).sort()).toEqual(['coffee', 'milk']);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
 // mergeScalarKv — heys_norms / heys_profile merge
 // ───────────────────────────────────────────────────────────────────────────
 describe('mergeScalarKv', () => {
