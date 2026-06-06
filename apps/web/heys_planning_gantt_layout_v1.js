@@ -50,14 +50,26 @@
         return clamp(safeInitial * safeRatio, ZOOM_MIN, ZOOM_MAX);
     }
 
-    function isRelevantTask(task) {
+    function isRelevantTask(task, opts) {
         if (!task) return false;
-        if (task.status === 'cancelled') return false;
+        if (task.status === 'cancelled' && !(opts && opts.includeCancelled)) return false;
         return !!(task.startDate || task.dueDate || task.baselineStartDate || task.baselineDueDate);
     }
 
-    function computeRelevantTasks(tasks) {
-        return (Array.isArray(tasks) ? tasks : []).filter(isRelevantTask);
+    function computeRelevantTasks(tasks, opts) {
+        const list = Array.isArray(tasks) ? tasks : [];
+        return list.filter((t) => isRelevantTask(t, opts));
+    }
+
+    // Tasks WITHOUT any date span — used by the "Backlog" zone in Gantt v2.
+    // Excludes cancelled and milestones (milestones with dueDate are scheduled).
+    function computeBacklogTasks(tasks) {
+        const list = Array.isArray(tasks) ? tasks : [];
+        return list.filter((t) => {
+            if (!t) return false;
+            if (t.status === 'cancelled') return false;
+            return !(t.startDate || t.dueDate || t.baselineStartDate || t.baselineDueDate);
+        });
     }
 
     // Compute timeline bounds with ±2-year clamp from today (perf safety against far-future dates).
@@ -226,6 +238,7 @@
         snapDayWidth,
         pinchRatioToWidth,
         computeRelevantTasks,
+        computeBacklogTasks,
         computeTimelineBounds,
         computeTimelineDays,
         computeGroupedTasks,

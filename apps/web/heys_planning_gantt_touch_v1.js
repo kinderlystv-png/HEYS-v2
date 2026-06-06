@@ -384,10 +384,17 @@
                 const dx = pts[1].x - pts[0].x;
                 const dy = pts[1].y - pts[0].y;
                 const initialDistance = Math.max(1, Math.hypot(dx, dy));
+                const initialCenterX = (pts[0].x + pts[1].x) / 2;
                 pinchStateRef.current = {
                     initialDistance,
                     initialDayWidth: dayWidthRef.current,
                     lastWidth: dayWidthRef.current,
+                    // Period-swipe disambiguation: track distance change vs center movement
+                    // for first 100ms. If distance stays within ±10% but center moves >40px,
+                    // user is doing a two-finger horizontal pan, not a pinch.
+                    startTime: Date.now(),
+                    initialCenterX,
+                    isPanMode: false,
                 };
                 const screen = screenRef && screenRef.current;
                 if (screen) screen.classList.add('gantt-pinching-active');
@@ -404,6 +411,8 @@
                     screen.style.removeProperty('--gantt-day-w');
                 }
                 if (!state) return;
+                // Pan mode never altered dayWidth — nothing to commit.
+                if (state.isPanMode) return;
                 if (Layout && typeof Layout.snapDayWidth === 'function' && typeof onZoomEnd === 'function') {
                     const snapped = Layout.snapDayWidth(state.lastWidth);
                     if (snapped !== dayWidthRef.current) {
@@ -431,6 +440,32 @@
                 const dy = pts[1].y - pts[0].y;
                 const dist = Math.max(1, Math.hypot(dx, dy));
                 const ratio = dist / pinchStateRef.current.initialDistance;
+                const centerX = (pts[0].x + pts[1].x) / 2;
+
+                // Period-swipe vs pinch disambiguation in the first 100ms:
+                // distance change <10% AND center moved >40px → pan mode.
+                if (!pinchStateRef.current.isPanMode &&
+                    Date.now() - pinchStateRef.current.startTime < 100) {
+                    const distChange = Math.abs(ratio - 1);
+                    const centerShift = Math.abs(centerX - pinchStateRef.current.initialCenterX);
+                    if (distChange < 0.1 && centerShift > 40) {
+                        pinchStateRef.current.isPanMode = true;
+                        pinchStateRef.current.lastCenterX = centerX;
+                    }
+                }
+
+                if (pinchStateRef.current.isPanMode) {
+                    // Two-finger pan — translate horizontal scrollLeft by center delta.
+                    const scroll = scrollRef && scrollRef.current;
+                    if (scroll) {
+                        const delta = (pinchStateRef.current.lastCenterX || centerX) - centerX;
+                        scroll.scrollLeft += delta;
+                    }
+                    pinchStateRef.current.lastCenterX = centerX;
+                    if (e.cancelable) e.preventDefault();
+                    return;
+                }
+
                 const next = Layout && typeof Layout.clampDayWidth === 'function'
                     ? Layout.clampDayWidth(pinchStateRef.current.initialDayWidth * ratio)
                     : pinchStateRef.current.initialDayWidth * ratio;

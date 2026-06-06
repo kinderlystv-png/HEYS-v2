@@ -5969,6 +5969,216 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     pointer-events: none;
 }
 
+.planning-gantt2-today-line__label {
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    padding: 2px 6px;
+    background: var(--planning-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 0 0 6px 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+}
+
+/* Subtle row striping — alternating background for easier vertical scan. */
+.planning-gantt2-row:nth-child(even) {
+    background: rgba(148, 163, 184, 0.025);
+}
+
+/* Weekend column highlight in body (sticky timeline header already has it). */
+.planning-gantt2-weekend-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(148, 163, 184, 0.05);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Hover state on bars (desktop only — touch :hover sticks awkwardly). */
+@media (hover: hover) and (pointer: fine) {
+    .planning-gantt2-bar:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(15, 23, 42, 0.25);
+    }
+}
+
+/* Outside-bar text — fallback for bars too narrow to fit their label inside. */
+.planning-gantt2-bar__label--outside {
+    position: absolute;
+    left: 100%;
+    margin-left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--planning-text);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Backlog zone — compact card under all groups for unscheduled tasks. */
+.planning-gantt2-backlog {
+    position: absolute;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    background: var(--planning-surface-elevated);
+    border-top: 1px solid var(--planning-border);
+    border-bottom: 1px solid var(--planning-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.planning-gantt2-backlog__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.planning-gantt2-backlog__title {
+    flex: 1 1 auto;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--planning-text);
+}
+
+.planning-gantt2-backlog__count {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--planning-surface);
+    border: 1px solid var(--planning-border);
+    border-radius: 999px;
+    color: var(--planning-muted);
+}
+
+.planning-gantt2-backlog__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.planning-gantt2-backlog__item {
+    min-height: 36px;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 6px;
+    background: var(--planning-surface);
+    border: 1px solid var(--planning-border-soft);
+    font-size: 12px;
+    color: var(--planning-text);
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.planning-gantt2-backlog__item:active {
+    background: var(--planning-accent-soft);
+}
+
+/* Project counters in collapsed group label — small chip "5 / 3" right of name. */
+.planning-gantt2-group-progress {
+    flex: 0 0 auto;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--planning-muted);
+    background: var(--planning-surface);
+    padding: 2px 6px;
+    border-radius: 8px;
+    border: 1px solid var(--planning-border);
+    white-space: nowrap;
+}
+
+/* Cancelled task — diagonal strikethrough overlay. */
+.planning-gantt2-bar.is-cancelled {
+    opacity: 0.45;
+    filter: grayscale(0.7);
+}
+
+.planning-gantt2-bar.is-cancelled .planning-gantt2-bar__label {
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+/* Undo toast — bottom-center floating after destructive/move actions. */
+.planning-gantt2-undo-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--planning-main-tabs-height, 76px) + 12px);
+    transform: translateX(-50%);
+    z-index: 150;
+    padding: 8px 12px 8px 16px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #fff;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.32);
+    animation: planning-gantt2-undo-in 180ms ease;
+    will-change: transform, opacity;
+}
+
+@keyframes planning-gantt2-undo-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.planning-gantt2-undo-toast__label {
+    white-space: nowrap;
+}
+
+.planning-gantt2-undo-toast__btn {
+    min-height: 32px;
+    padding: 6px 12px;
+    background: var(--planning-accent);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.planning-gantt2-undo-toast__btn:active {
+    filter: brightness(0.9);
+}
+
+/* Reduced-motion preference — kill transitions for users with vestibular sensitivity. */
+@media (prefers-reduced-motion: reduce) {
+    .planning-gantt2-screen,
+    .planning-gantt2-corner,
+    .planning-gantt2-row-labels,
+    .planning-gantt2-label,
+    .planning-gantt2-mini-indicator {
+        transition: none !important;
+    }
+    .planning-gantt2-bar:hover {
+        transform: none !important;
+    }
+}
+
 .planning-gantt2-row {
     position: absolute;
     left: 0;

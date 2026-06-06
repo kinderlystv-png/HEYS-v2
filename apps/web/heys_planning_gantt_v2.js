@@ -13,6 +13,7 @@
     const LS_ZOOM = 'heys_planning_gantt_zoom_v1';
     const LS_TOGGLES = 'heys_planning_gantt_toggles_v1';
     const LS_GROUPS = 'heys_planning_gantt_groups_collapsed_v1';
+    const LS_VIEW_POS = 'heys_planning_gantt_view_pos_v1';
 
     const DEFAULT_TOGGLES = {
         deps: false,
@@ -21,7 +22,12 @@
         conflicts: true,
         slack: false,
         miniOverview: true,
+        cancelled: false,
+        backlog: true,
     };
+
+    // Bar narrower than this px places the label outside (right of the bar).
+    const OUTSIDE_LABEL_THRESHOLD_PX = 80;
 
     function lsGet(key, fallback) {
         try {
@@ -65,8 +71,22 @@
             try { Migration && Migration.run && Migration.run(); } catch (e) { /* noop */ }
         }, [Migration]);
 
+        // ── URL state seed (overrides LS on mount only) ─────────────────────
+        const urlSeed = useMemo(() => {
+            try {
+                const sp = new URLSearchParams(window.location.search);
+                const z = Number(sp.get('zoom'));
+                const d = sp.get('date');
+                return {
+                    zoom: (z >= Layout.ZOOM_MIN && z <= Layout.ZOOM_MAX) ? Layout.snapDayWidth(z) : null,
+                    date: (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) ? d : null,
+                };
+            } catch (e) { return { zoom: null, date: null }; }
+        }, []);
+
         // ── Persisted state ─────────────────────────────────────────────────
         const [dayWidth, setDayWidth] = useState(() => {
+            if (urlSeed.zoom) return urlSeed.zoom;
             const stored = Number(lsGet(LS_ZOOM, Layout.DEFAULT_DAY_WIDTH));
             return stored >= Layout.ZOOM_MIN && stored <= Layout.ZOOM_MAX ? Layout.snapDayWidth(stored) : Layout.DEFAULT_DAY_WIDTH;
         });
@@ -76,6 +96,25 @@
         useEffect(() => { lsSet(LS_ZOOM, dayWidth); }, [dayWidth]);
         useEffect(() => { lsSet(LS_TOGGLES, toggles); }, [toggles]);
         useEffect(() => { lsSet(LS_GROUPS, collapsed); }, [collapsed]);
+
+        // ── URL state sync (zoom + center date), debounced via rAF ──────────
+        const urlSyncRafRef = useRef(0);
+        const syncUrl = useCallback((centerDateIso) => {
+            if (urlSyncRafRef.current) return;
+            urlSyncRafRef.current = window.requestAnimationFrame(() => {
+                urlSyncRafRef.current = 0;
+                try {
+                    const sp = new URLSearchParams(window.location.search);
+                    sp.set('zoom', String(dayWidth));
+                    if (centerDateIso) sp.set('date', centerDateIso);
+                    const next = window.location.pathname + '?' + sp.toString();
+                    window.history.replaceState(window.history.state, '', next);
+                } catch (e) { /* noop */ }
+            });
+        }, [dayWidth]);
+        useEffect(() => () => {
+            if (urlSyncRafRef.current) window.cancelAnimationFrame(urlSyncRafRef.current);
+        }, []);
 
         // ── Transient state ─────────────────────────────────────────────────
         const scrollRef = useRef(null);
@@ -88,8 +127,25 @@
         const [viewportH, setViewportH] = useState(0);
 
         // ── Pure data (memoized) ────────────────────────────────────────────
-        const relevantTasks = useMemo(() => Layout.computeRelevantTasks(state.tasks), [state.tasks]);
-        const timelineBounds = useMemo(() => Layout.computeTimelineBounds(relevantTasks, todayIso), [relevantTasks, todayIso]);
+        const relevantTasks = useMemo(
+            () => Layout.computeRelevantTasks(state.tasks, { includeCancelled: !!toggles.cancelled }),
+            [state.tasks, toggles.cancelled]
+        );
+        const backlogTasks = useMemo(
+            () => (toggles.backlog ? Layout.computeBacklogTasks(state.tasks) : []),
+            [state.tasks, toggles.backlog]
+        );
+
+        // Force-include today in bounds when user taps "Сегодня далеко" pill.
+        const [forceTodayInBounds, setForceTodayInBounds] = useState(false);
+        const timelineBounds = useMemo(() => {
+            const bounds = Layout.computeTimelineBounds(relevantTasks, todayIso);
+            if (forceTodayInBounds) {
+                if (todayIso < bounds.start) return { start: Utils.addDays(todayIso, -3), end: bounds.end };
+                if (todayIso > bounds.end) return { start: bounds.start, end: Utils.addDays(todayIso, 4) };
+            }
+            return bounds;
+        }, [relevantTasks, todayIso, forceTodayInBounds, Utils]);
         const timelineDays = useMemo(() => Layout.computeTimelineDays(timelineBounds), [timelineBounds]);
         const grouped = useMemo(() => Layout.computeGroupedTasks(relevantTasks, state.projects), [relevantTasks, state.projects]);
         const layout = useMemo(() => Layout.computeRowsAndMetrics(grouped, timelineBounds.start, dayWidth, collapsed), [grouped, timelineBounds.start, dayWidth, collapsed]);
@@ -118,6 +174,17 @@
                 screen.classList.toggle('is-scrolled-right', isScrolledRight);
                 // Phase 6: track scrollTop for row virtualization.
                 setScrollTop(scroll.scrollTop);
+                // Persist scroll position (debounced naturally via rAF coalesce).
+                try {
+                    lsSet(LS_VIEW_POS, { scrollLeft: scroll.scrollLeft, scrollTop: scroll.scrollTop });
+                } catch (e) { /* noop */ }
+                // URL state: derive center date from current scrollLeft.
+                if (Layout && Utils && timelineBounds && timelineBounds.start) {
+                    const dayW = Math.max(1, dayWidth);
+                    const centerOffsetDays = Math.floor((scroll.scrollLeft + scroll.clientWidth / 2) / dayW);
+                    const centerIso = Utils.addDays(timelineBounds.start, centerOffsetDays);
+                    syncUrl(centerIso);
+                }
                 // Mini-overview: reposition the window indicator by ratio of scroll/total.
                 const indicator = miniIndicatorRef.current;
                 const strip = miniStripRef.current;
@@ -184,10 +251,26 @@
         // ── Today scroll-to button ──────────────────────────────────────────
         const scrollToToday = useCallback(() => {
             const scroll = scrollRef.current;
-            if (!scroll || todayDayIndex < 0) return;
-            const targetX = (todayDayIndex * dayWidth) - 80; // small offset so today isn't at very edge
+            if (!scroll) return;
+            // If today is out of bounds, expand bounds first; the next render
+            // will recompute timelineDays, then we scroll on the following frame.
+            if (todayDayIndex < 0) {
+                setForceTodayInBounds(true);
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        const sc = scrollRef.current;
+                        const days = Layout.computeTimelineDays(timelineBounds);
+                        const idx = days.indexOf(todayIso);
+                        if (sc && idx >= 0) {
+                            sc.scrollTo({ left: Math.max(0, idx * dayWidth - 80), behavior: 'smooth' });
+                        }
+                    });
+                });
+                return;
+            }
+            const targetX = (todayDayIndex * dayWidth) - 80;
             scroll.scrollTo({ left: Math.max(0, targetX), behavior: 'smooth' });
-        }, [todayDayIndex, dayWidth]);
+        }, [todayDayIndex, dayWidth, timelineBounds, todayIso]);
 
         // ── Touch interactions: drag-to-move (Phase 2a) ─────────────────────
         const tasksByIdRef = useRef(new Map());
@@ -198,30 +281,62 @@
         }, [state.tasks]);
         const getTaskById = useCallback((id) => tasksByIdRef.current.get(id), []);
 
+        // Undo toast — pushes a single-action snapshot with 5s expiry.
+        const [undoEntry, setUndoEntry] = useState(null);  // { label, fn, expiresAt }
+        const undoTimerRef = useRef(0);
+        const offerUndo = useCallback((label, undoFn) => {
+            if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
+            setUndoEntry({ label, fn: undoFn });
+            undoTimerRef.current = window.setTimeout(() => {
+                setUndoEntry(null);
+                undoTimerRef.current = 0;
+            }, 5000);
+        }, []);
+        useEffect(() => () => {
+            if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
+        }, []);
+        const triggerUndo = useCallback(() => {
+            if (undoEntry && typeof undoEntry.fn === 'function') {
+                try { undoEntry.fn(); } catch (e) { /* noop */ }
+            }
+            if (undoTimerRef.current) {
+                window.clearTimeout(undoTimerRef.current);
+                undoTimerRef.current = 0;
+            }
+            setUndoEntry(null);
+        }, [undoEntry]);
+
         const handleMoveTask = useCallback((taskId, deltaDays) => {
             const task = tasksByIdRef.current.get(taskId);
             if (!task || !state.updateTask) return;
             const patch = {};
+            const original = { startDate: task.startDate, dueDate: task.dueDate };
             if (task.startDate) patch.startDate = Utils.addDays(task.startDate, deltaDays);
             if (task.dueDate) patch.dueDate = Utils.addDays(task.dueDate, deltaDays);
-            if (Object.keys(patch).length > 0) state.updateTask(taskId, patch);
-        }, [state, Utils]);
+            if (Object.keys(patch).length > 0) {
+                state.updateTask(taskId, patch);
+                offerUndo('Перемещено на ' + (deltaDays > 0 ? '+' : '') + deltaDays + ' дн.',
+                    () => state.updateTask(taskId, original));
+            }
+        }, [state, Utils, offerUndo]);
 
         const handleResizeTask = useCallback((taskId, side, deltaDays) => {
             const task = tasksByIdRef.current.get(taskId);
             if (!task || !state.updateTask) return;
             if (side === 'start' && task.startDate) {
                 const candidate = Utils.addDays(task.startDate, deltaDays);
-                // Guard: new startDate must not exceed dueDate.
                 if (task.dueDate && candidate > task.dueDate) return;
+                const original = { startDate: task.startDate };
                 state.updateTask(taskId, { startDate: candidate });
+                offerUndo('Изменено начало', () => state.updateTask(taskId, original));
             } else if (side === 'end' && task.dueDate) {
                 const candidate = Utils.addDays(task.dueDate, deltaDays);
-                // Guard: new dueDate must not precede startDate.
                 if (task.startDate && candidate < task.startDate) return;
+                const original = { dueDate: task.dueDate };
                 state.updateTask(taskId, { dueDate: candidate });
+                offerUndo('Изменён срок', () => state.updateTask(taskId, original));
             }
-        }, [state, Utils]);
+        }, [state, Utils, offerUndo]);
 
         // Tap → quick-edit bottom sheet (Phase 3). "Открыть детали" inside sheet
         // escalates to TaskDetailModal for advanced fields (subtasks, blockedByTaskIds).
@@ -235,8 +350,27 @@
             setSelectedTaskId(taskId);
         }, []);
         const handleDeleteTaskFromSheet = useCallback((taskId) => {
-            if (state.deleteTask) state.deleteTask(taskId);
-        }, [state]);
+            const snapshot = tasksByIdRef.current.get(taskId);
+            if (!snapshot || !state.deleteTask) return;
+            state.deleteTask(taskId);
+            offerUndo('Задача удалена', () => {
+                if (state.addTask) {
+                    // Re-create with same fields. New id generated inside addTask.
+                    state.addTask(snapshot.title || '', {
+                        projectId: snapshot.projectId,
+                        parentTaskId: snapshot.parentTaskId,
+                        blockedByTaskIds: snapshot.blockedByTaskIds,
+                        priority: snapshot.priority,
+                        status: snapshot.status,
+                        startDate: snapshot.startDate,
+                        dueDate: snapshot.dueDate,
+                        plannedMinutes: snapshot.plannedMinutes,
+                        progress: snapshot.progress,
+                        isMilestone: snapshot.isMilestone,
+                    });
+                }
+            });
+        }, [state, offerUndo]);
         const handleUpdateTaskFromSheet = useCallback((taskId, patch) => {
             if (state.updateTask) state.updateTask(taskId, patch);
         }, [state]);
@@ -317,12 +451,28 @@
             })
             : { onPointerDown: null, dragPreview: null };
 
-        // Initial scroll-to-today on mount (if today within bounds).
+        // Initial mount: priority is URL `?date=` > saved scroll pos > today.
         useEffect(() => {
             const t = window.setTimeout(() => {
-                if (todayDayIndex >= 0) scrollToToday();
-                // Run handleScroll once on mount to size and position the mini-overview
-                // indicator (it has no initial layout otherwise).
+                const sc = scrollRef.current;
+                let handled = false;
+                if (sc && urlSeed.date && timelineBounds && timelineBounds.start) {
+                    const offset = Utils.diffDays(timelineBounds.start, urlSeed.date);
+                    if (offset >= 0 && offset < timelineDays.length) {
+                        sc.scrollTo({ left: Math.max(0, offset * dayWidth - 80), behavior: 'auto' });
+                        handled = true;
+                    }
+                }
+                if (!handled && sc) {
+                    const saved = lsGet(LS_VIEW_POS, null);
+                    if (saved && typeof saved.scrollLeft === 'number' && saved.scrollLeft > 0) {
+                        sc.scrollTo({ left: saved.scrollLeft, top: saved.scrollTop || 0, behavior: 'auto' });
+                        handled = true;
+                    }
+                }
+                if (!handled && todayDayIndex >= 0) scrollToToday();
+                // Run handleScroll once on mount to size and position the
+                // mini-overview indicator (no initial layout otherwise).
                 handleScroll();
             }, 60);
             return () => window.clearTimeout(t);
@@ -374,6 +524,8 @@
                 criticalIds: criticalResult.criticalIds,
                 conflictIds,
                 slackByTaskId,
+                backlogTasks,
+                onTapTask: handleTapTask,
             }),
             dragApi.dragPreview && renderDragGhost(dragApi.dragPreview, dayWidth, timelineBounds.start, getTaskById),
             quickEditTask && QuickEditSheet && h(QuickEditSheet, {
@@ -390,6 +542,18 @@
                 resolvedTaskProjectIds,
                 onClose: () => setSelectedTaskId(null),
             }),
+            undoEntry && h('div', {
+                className: 'planning-gantt2-undo-toast',
+                role: 'status',
+                'aria-live': 'polite',
+            },
+                h('span', { className: 'planning-gantt2-undo-toast__label' }, undoEntry.label),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-gantt2-undo-toast__btn',
+                    onClick: triggerUndo,
+                }, 'Отменить'),
+            ),
         );
     }
 
@@ -439,16 +603,21 @@
 
         return h('div', { className: 'planning-gantt2-toolbar' },
             h('div', { className: 'planning-gantt2-toolbar__group' }, ZOOM_PRESETS.map(zoomBtn)),
-            todayAvailable && h('button', {
+            // Today pill is ALWAYS visible. When `todayAvailable=false`, scrollToToday
+            // expands timelineBounds to include today before scrolling.
+            h('button', {
                 type: 'button',
-                className: 'planning-gantt2-today-pill',
+                className: 'planning-gantt2-today-pill' + (todayAvailable ? '' : ' is-out-of-bounds'),
                 onClick: scrollToToday,
-                'aria-label': 'Прокрутить к сегодня',
-            }, 'Сегодня'),
+                'aria-label': todayAvailable ? 'Прокрутить к сегодня' : 'Сегодня вне диапазона — расширить и прокрутить',
+                title: todayAvailable ? 'Сегодня' : 'Сегодня вне диапазона — нажми, чтобы перейти',
+            }, todayAvailable ? 'Сегодня' : '→ Сегодня'),
             h('div', { className: 'planning-gantt2-toolbar__group planning-gantt2-toolbar__group--right planning-gantt2-toolbar__group--scroll' },
                 renderToggleBtn(toggles, setToggles, 'criticalPath', '★', 'Критический путь'),
                 renderToggleBtn(toggles, setToggles, 'conflicts', '⚠', 'Конфликты'),
                 renderToggleBtn(toggles, setToggles, 'slack', '⏱', 'Отставание'),
+                renderToggleBtn(toggles, setToggles, 'cancelled', '⊘', 'Отменённые'),
+                renderToggleBtn(toggles, setToggles, 'backlog', '☰', 'Backlog'),
                 renderToggleBtn(toggles, setToggles, 'baseline', '▭', 'Baseline'),
                 renderToggleBtn(toggles, setToggles, 'deps', '↗', 'Связи'),
             ),
@@ -478,22 +647,39 @@
             items.push({ id: t.id, leftPct, widthPct, color });
         }
 
-        const onStripTap = (e) => {
+        const jumpToRatio = (ratio) => {
             const scroll = scrollRef.current;
-            const strip = miniStripRef.current;
-            if (!scroll || !strip) return;
-            const rect = strip.getBoundingClientRect();
-            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
+            if (!scroll) return;
+            const r = Math.max(0, Math.min(1, ratio));
             const totalScrollable = Math.max(0, scroll.scrollWidth - scroll.clientWidth);
-            const targetLeft = ratio * totalScrollable;
-            scroll.scrollTo({ left: targetLeft, behavior: 'smooth' });
+            scroll.scrollLeft = r * totalScrollable; // sync, used during drag
+        };
+
+        const onStripPointerDown = (e) => {
+            const strip = miniStripRef.current;
+            if (!strip) return;
+            const rect = strip.getBoundingClientRect();
+            const compute = (clientX) => Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
+            jumpToRatio(compute(e.clientX));
+            const onMove = (ev) => jumpToRatio(compute(ev.clientX));
+            const onUp = () => {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                window.removeEventListener('pointercancel', onUp);
+            };
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+            window.addEventListener('pointercancel', onUp);
+            if (e.cancelable) e.preventDefault();
         };
 
         return h('div', {
             className: 'planning-gantt2-mini-overview',
             ref: miniStripRef,
-            onClick: onStripTap,
-            'aria-label': 'Обзор таймлайна — нажмите для перехода',
+            onPointerDown: onStripPointerDown,
+            'aria-label': 'Обзор таймлайна — нажми или потяни для перехода',
+            role: 'slider',
+            tabIndex: 0,
         },
             items.map((item) => h('div', {
                 key: 'mini-' + item.id,
@@ -525,7 +711,7 @@
         );
     }
 
-    function renderScrollArea({ scrollRef, handleScroll, relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex, timelineStart, layout, visibleRows, collapsed, setCollapsed, projects, toggles, onBarPointerDown, criticalIds, conflictIds, slackByTaskId }) {
+    function renderScrollArea({ scrollRef, handleScroll, relevantTasks, timelineDays, dayWidth, todayIso, todayDayIndex, timelineStart, layout, visibleRows, collapsed, setCollapsed, projects, toggles, onBarPointerDown, criticalIds, conflictIds, slackByTaskId, backlogTasks, onTapTask }) {
         // Phase 6: render only the visible slice (virtualization). Fall back to full rows on the
         // first frame before viewportH is measured.
         const rowsToRender = (Array.isArray(visibleRows) && visibleRows.length > 0) ? visibleRows : layout.rows;
@@ -593,15 +779,17 @@
                                     type: 'button',
                                     className: 'planning-gantt2-group-toggle',
                                     onClick: () => setCollapsed((cur) => ({ ...cur, [row.group.project.id]: !cur[row.group.project.id] })),
-                                    'aria-label': 'Свернуть/развернуть группу',
+                                    'aria-label': 'Свернуть/развернуть группу ' + row.group.project.name,
+                                    'aria-expanded': !collapsed[row.group.project.id],
                                 }, collapsed[row.group.project.id] ? '▸' : '▾'),
                                 h('span', {
                                     className: 'planning-gantt2-group-chip',
                                     style: { background: row.group.project.color },
                                     title: row.group.project.name,
+                                    'aria-hidden': 'true',
                                 }, projectInitials(row.group.project.name)),
                                 h('span', { className: 'planning-gantt2-group-name' }, row.group.project.name),
-                                h('span', { className: 'planning-gantt2-group-count' }, row.group.tasks.length),
+                                renderGroupCounters(row.group.tasks),
                             )
                             : h('div', {
                                 key: 'label-task-' + row.id,
@@ -612,6 +800,7 @@
                                     className: 'planning-gantt2-task-chip',
                                     style: { background: row.group.project.color },
                                     title: row.task.title,
+                                    'aria-hidden': 'true',
                                 }, projectInitials(row.task.title || row.group.project.name)),
                                 h('div', { className: 'planning-gantt2-task-text' },
                                     h('div', { className: 'planning-gantt2-task-title' }, row.task.title || 'Без названия'),
@@ -626,11 +815,16 @@
                         className: 'planning-gantt2-timeline-body',
                         style: { width: totalWidth + 'px', height: totalHeight + 'px' },
                     },
-                        // Today line
+                        // Today line + floating "Сегодня · DD.MM" label.
                         todayDayIndex >= 0 && h('div', {
                             className: 'planning-gantt2-today-line',
                             style: { left: (todayDayIndex * dayWidth + (dayWidth / 2)) + 'px' },
-                        }),
+                            'aria-hidden': 'true',
+                        },
+                            h('div', { className: 'planning-gantt2-today-line__label' },
+                                'Сегодня · ' + formatTodayShort(todayIso),
+                            ),
+                        ),
                         // Bars / milestones / group rows
                         rowsToRender.map((row) => row.type === 'group'
                             ? h('div', {
@@ -646,6 +840,44 @@
                     ),
                 ),
             ),
+            // Backlog zone — unscheduled tasks below the timeline grid.
+            // Rendered outside scroll-area's grid so it spans full screen width.
+            backlogTasks && backlogTasks.length > 0 && renderBacklog({ backlogTasks, projects, onTapTask }),
+        );
+    }
+
+    function renderBacklog({ backlogTasks, projects, onTapTask }) {
+        const Utils = HEYS.Planning && HEYS.Planning.Utils;
+        return h('div', {
+            className: 'planning-gantt2-backlog',
+            'aria-label': 'Backlog: задачи без дат',
+        },
+            h('div', { className: 'planning-gantt2-backlog__head' },
+                h('span', { className: 'planning-gantt2-backlog__title' }, '☰  Backlog (без дат)'),
+                h('span', { className: 'planning-gantt2-backlog__count' }, String(backlogTasks.length)),
+            ),
+            h('div', { className: 'planning-gantt2-backlog__list' },
+                backlogTasks.map((t) => {
+                    const color = (Utils && Utils.getTaskProjectColor)
+                        ? Utils.getTaskProjectColor(t, projects)
+                        : '#64748b';
+                    return h('div', {
+                        key: 'backlog-' + t.id,
+                        className: 'planning-gantt2-backlog__item',
+                        role: 'button',
+                        tabIndex: 0,
+                        'aria-label': 'Запланировать задачу: ' + (t.title || 'Без названия'),
+                        onClick: () => onTapTask && onTapTask(t.id),
+                    },
+                        h('span', {
+                            className: 'planning-gantt2-task-chip',
+                            style: { background: color },
+                            'aria-hidden': 'true',
+                        }, projectInitials(t.title || '··')),
+                        h('span', { style: { flex: '1 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, t.title || 'Без названия'),
+                    );
+                }),
+            ),
         );
     }
 
@@ -655,6 +887,22 @@
         const parts = safe.split(/\s+/);
         if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
         return safe.slice(0, 2).toUpperCase();
+    }
+
+    function formatTodayShort(iso) {
+        // ISO 'YYYY-MM-DD' → 'DD.MM'
+        if (!iso || typeof iso !== 'string' || iso.length < 10) return '';
+        return iso.slice(8) + '.' + iso.slice(5, 7);
+    }
+
+    // Compact "5 / 3 ✓" for collapsed group label — total tasks vs. done count.
+    function renderGroupCounters(tasks) {
+        const total = tasks.length;
+        const done = tasks.filter((t) => t && t.status === 'done').length;
+        return h('span', {
+            className: 'planning-gantt2-group-progress',
+            'aria-label': total + ' задач, ' + done + ' выполнено',
+        }, total + ' / ' + done + ' ✓');
     }
 
     function renderTaskRow(row, metrics, dayWidth, projects, onBarPointerDown, extras) {
@@ -680,6 +928,7 @@
         const isMilestone = task.isMilestone === true;
         const progress = typeof task.progress === 'number' ? Math.max(0, Math.min(100, task.progress)) : 0;
         const isDone = task.status === 'done';
+        const isCancelled = task.status === 'cancelled';
 
         if (isMilestone) {
             // Diamond on dueDate axis
@@ -710,6 +959,14 @@
         const barWidth = metrics.right - metrics.left;
         const barHeight = Math.min(28, row.height - 8);
 
+        const finalBarWidth = Math.max(dayWidth, barWidth);
+        const useOutsideLabel = finalBarWidth < OUTSIDE_LABEL_THRESHOLD_PX;
+        const ariaLabel = task.title + (task.startDate ? ' · ' + task.startDate : '')
+            + (task.dueDate && task.dueDate !== task.startDate ? ' → ' + task.dueDate : '')
+            + (typeof task.progress === 'number' && task.progress > 0 ? ' · ' + task.progress + '%' : '')
+            + (isCancelled ? ' · отменено' : '')
+            + (isCritical ? ' · критический путь' : '');
+
         return h('div', {
             key: 'body-row-' + row.id,
             className: 'planning-gantt2-row',
@@ -719,26 +976,32 @@
             h('div', {
                 className: 'planning-gantt2-bar'
                     + (isDone ? ' is-done' : '')
+                    + (isCancelled ? ' is-cancelled' : '')
                     + (isCritical ? ' is-critical' : '')
                     + (isConflict ? ' is-conflict' : '')
                     + (hasSlack ? ' is-behind' : ''),
                 style: {
                     left: barLeft + 'px',
-                    width: Math.max(dayWidth, barWidth) + 'px',
+                    width: finalBarWidth + 'px',
                     top: ((row.height - barHeight) / 2) + 'px',
                     height: barHeight + 'px',
                     background: color,
                     '--bar-progress-color': color,
                 },
                 'data-task-id': task.id,
+                role: 'button',
+                tabIndex: 0,
+                'aria-label': ariaLabel,
                 title: hasSlack ? (task.title + ' · отстаёт на ' + Math.round(slack) + '%') : task.title,
                 onPointerDown: onBarPointerDown ? (e) => onBarPointerDown(e, task.id, { isResizable: true }) : undefined,
             },
                 progress > 0 && h('div', {
                     className: 'planning-gantt2-bar__progress',
                     style: { width: progress + '%' },
+                    'aria-hidden': 'true',
                 }),
-                h('div', { className: 'planning-gantt2-bar__label' }, task.title),
+                !useOutsideLabel && h('div', { className: 'planning-gantt2-bar__label' }, task.title),
+                useOutsideLabel && h('div', { className: 'planning-gantt2-bar__label--outside' }, task.title),
             ),
         );
     }
