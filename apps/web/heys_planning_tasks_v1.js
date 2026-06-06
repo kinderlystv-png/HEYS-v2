@@ -1871,6 +1871,9 @@
             baselineDueDate: sourceTask?.baselineDueDate || '',
             baselinePlannedMinutes: sourceTask?.baselinePlannedMinutes || '',
             blockedByTaskIds: Array.isArray(sourceTask?.blockedByTaskIds) ? sourceTask.blockedByTaskIds.slice() : [],
+            // Gantt v2 fields (Phase 0 schema migration)
+            progress: typeof sourceTask?.progress === 'number' ? Math.max(0, Math.min(100, sourceTask.progress)) : 0,
+            isMilestone: sourceTask?.isMilestone === true,
         });
 
         const [form, setForm] = useState(() => buildFormFromTask(task, effectiveProjectId));
@@ -1996,6 +1999,10 @@
                 baselineDueDate: form.baselineDueDate || undefined,
                 baselinePlannedMinutes: form.baselinePlannedMinutes ? Number(form.baselinePlannedMinutes) : undefined,
                 blockedByTaskIds: form.blockedByTaskIds,
+                // Gantt v2 fields — propagated through updateTask which clamps progress
+                // and auto-syncs status='done' ↔ progress=100 (heys_planning_store_v1.js).
+                progress: Math.max(0, Math.min(100, Number(form.progress) || 0)),
+                isMilestone: form.isMilestone === true,
             });
             setSavedMarker((value) => value + 1);
             onClose();
@@ -2108,6 +2115,37 @@
                                 value: form.status,
                                 onChange: (value) => handleField('status', value),
                             }),
+                            // Gantt v2 fields — visible regardless of feature flag (data is shared).
+                            h('div', { className: 'planning-task-editor__field-stack' },
+                                h('div', { className: 'planning-task-editor__field' },
+                                    h('label', { className: 'planning-task-editor__label' },
+                                        'Прогресс: ' + (form.progress || 0) + '%',
+                                    ),
+                                    h('input', {
+                                        className: 'planning-task-editor__input',
+                                        type: 'range',
+                                        min: 0,
+                                        max: 100,
+                                        step: 5,
+                                        value: form.progress || 0,
+                                        disabled: form.isMilestone,
+                                        onChange: (event) => handleField('progress', Number(event.target.value)),
+                                        style: { width: '100%', minHeight: '36px' },
+                                    }),
+                                ),
+                                h('label', {
+                                    className: 'planning-task-editor__field',
+                                    style: { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer' },
+                                },
+                                    h('input', {
+                                        type: 'checkbox',
+                                        checked: form.isMilestone === true,
+                                        onChange: (event) => handleField('isMilestone', !!event.target.checked),
+                                        style: { width: '20px', height: '20px' },
+                                    }),
+                                    h('span', null, 'Milestone (точка без длительности)'),
+                                ),
+                            ),
                         ),
                         h('section', { className: 'planning-modal__card planning-modal__card--compact' },
                             h('div', { className: 'planning-modal__card-header' },
