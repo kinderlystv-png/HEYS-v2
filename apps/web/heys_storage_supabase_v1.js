@@ -4293,8 +4293,10 @@
             continue;
           }
         } else {
-          // Полная очистка всех наших ключей
-          if (isOurKey(k)) ls.removeItem(k);
+          // Full wipe removes our client/session keys, but browser-global UI keys
+          // (whats-new seen/acknowledged, theme, push-onboarded, widget layout)
+          // are not tied to a client and must survive logout/update resets.
+          if (isOurKey(k) && !isNonClientDataKey(k)) ls.removeItem(k);
         }
       }
     } catch (e) {
