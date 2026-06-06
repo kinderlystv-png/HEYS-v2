@@ -268,14 +268,23 @@
     if (!R) return null;
     const p = props || {};
     const gid = p.gripId || 'halfcrimp';
+    const tier = p.equipmentTier || null;
     const size = typeof p.size === 'number' ? p.size : 80;
     const variant = p.variant || 'photo';
     const showLabel = !!p.label;
     const builder = BUILDERS[gid];
 
+    // Tier-aware src: для block/door есть отдельные фото с реальным оборудованием.
+    // Если файла нет — onError ниже откатывается на базовый.
+    const baseSrc = '/exercises/' + gid + '.webp';
+    const tieredSrc = (tier && tier !== 'full' && tier !== 'none')
+      ? '/exercises/' + gid + '_' + tier + '.webp'
+      : baseSrc;
+
     if (variant === 'photo' && builder) {
       return R.createElement('img', {
-        src: '/exercises/' + gid + '.webp',
+        src: tieredSrc,
+        'data-fallback-tried': tieredSrc === baseSrc ? 'true' : 'false',
         width: size,
         height: size,
         alt: 'Хват: ' + (LABELS[gid] || gid),
@@ -289,8 +298,15 @@
           verticalAlign: 'middle',
         },
         onError: function (e) {
-          // Фото не загрузилось (старый SW-кэш / offline) — прячем broken-icon.
-          try { e.target.style.visibility = 'hidden'; } catch (_) {}
+          try {
+            const el = e.target;
+            if (el.getAttribute('data-fallback-tried') !== 'true' && baseSrc !== tieredSrc) {
+              el.setAttribute('data-fallback-tried', 'true');
+              el.src = baseSrc;
+              return;
+            }
+            el.style.visibility = 'hidden';
+          } catch (_) {}
         },
       });
     }

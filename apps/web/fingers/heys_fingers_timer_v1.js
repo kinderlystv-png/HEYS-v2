@@ -418,8 +418,18 @@
 
     const {
       state, secondsLeft, setIdx, totalSets, repIdx, totalReps,
-      gripLabel, gripId, edgeLabel, addedWeightKg, onPause, onAbort, onSkip,
+      gripLabel, gripId, equipmentTier, edgeLabel, addedWeightKg, onPause, onAbort, onSkip,
     } = props || {};
+
+    // Tier-aware grip image: для block/door есть отдельные фото с реальным
+    // оборудованием. Если для (grip+tier) нет файла — onError откатывается на
+    // базовый /exercises/<gripId>.webp, если и его нет — wrapper схлопывается.
+    const tieredGripSrc = gripId
+      ? (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none'
+          ? '/exercises/' + gripId + '_' + equipmentTier + '.webp'
+          : '/exercises/' + gripId + '.webp')
+      : null;
+    const baseGripSrc = gripId ? '/exercises/' + gripId + '.webp' : null;
 
     // Phase → CSS data-attr value (используется в .heys-fingers-countdown[data-phase=...])
     const phaseKey = state === STATES.HANG ? 'hang'
@@ -474,15 +484,24 @@
       // Grip name — крупный заголовок
       gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
 
-      // Hero image (при 404 wrapper схлопывается)
+      // Hero image (при 404 откатываемся на базовый файл, потом схлопываемся)
       gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
         h('img', {
-          src: '/exercises/' + gripId + '.webp',
+          src: tieredGripSrc,
           alt: gripLabel || gripId,
           loading: 'eager',
           decoding: 'async',
+          'data-fallback-tried': tieredGripSrc === baseGripSrc ? 'true' : 'false',
           onError: function (e) {
-            try { e.target.parentNode.style.display = 'none'; } catch (_) {}
+            try {
+              const el = e.target;
+              if (el.getAttribute('data-fallback-tried') !== 'true' && baseGripSrc && baseGripSrc !== tieredGripSrc) {
+                el.setAttribute('data-fallback-tried', 'true');
+                el.src = baseGripSrc;
+                return;
+              }
+              el.parentNode.style.display = 'none';
+            } catch (_) {}
           }
         })
       ) : null,

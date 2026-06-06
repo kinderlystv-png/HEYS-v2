@@ -2993,6 +2993,7 @@
           // чтобы CountdownDisplay сам форматировал без дубликатов.
           gripLabel: gripLabel,
           gripId: exercise.gripId,
+          equipmentTier: exercise.equipmentTier,
           edgeLabel: edgeLabel,
           addedWeightKg: addedWeight,
           exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
@@ -3244,7 +3245,40 @@
       : [{ id: 'strength', label: 'Сила' }, { id: 'endurance', label: 'Выносливость' },
          { id: 'recovery', label: 'Восстановление' }, { id: 'maintenance', label: 'Поддержка' }];
     const GOAL_EMOJI = { strength: '🔥', endurance: '🔁', recovery: '🌿', maintenance: '🧱' };
+    const GOAL_TO_INTENSITY_GS = { strength: 'max', endurance: 'moderate', recovery: 'recovery', maintenance: 'moderate' };
     const currentGoal = profile.goal || 'strength';
+
+    // Считаем сколько программ подойдёт под каждую цель — с теми же фильтрами,
+    // что ProgramsTab («Под цель»): age + текущее оборудование, потом intensity.
+    // Это даёт честный preview перед сменой цели — пользователь видит «Сила 2,
+    // Восстановление 4» ещё до клика.
+    const goalCounts = (function () {
+      const counts = { strength: 0, endurance: 0, recovery: 0, maintenance: 0 };
+      try {
+        const programs = Array.isArray(Fingers.PROGRAMS) ? Fingers.PROGRAMS : [];
+        const ageNum = Number(profile.age);
+        const ageFiltered = (Fingers.ageGate && Fingers.ageGate.filterPrograms)
+          ? Fingers.ageGate.filterPrograms(programs, ageNum)
+          : programs;
+        const userTiers = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
+          ? profile.equipmentTypes
+          : (profile.noEquipment ? ['none']
+            : profile.blockMode ? ['block']
+            : profile.edgeLimit === 25 ? ['door']
+            : ['full']);
+        const eqFiltered = Fingers.filterProgramsByEquipment
+          ? Fingers.filterProgramsByEquipment(ageFiltered, { equipmentTypes: userTiers })
+          : ageFiltered;
+        eqFiltered.forEach(function (p) {
+          const pi = (p && p.intensity) || 'moderate';
+          GOAL_LIST.forEach(function (g) {
+            if ((GOAL_TO_INTENSITY_GS[g.id] || 'moderate') === pi) counts[g.id] = (counts[g.id] || 0) + 1;
+          });
+        });
+      } catch (_) { /* tolerant */ }
+      return counts;
+    })();
+
     function writeGoal(goalId) {
       try {
         const u = HEYS.utils;
@@ -3262,17 +3296,20 @@
       h('div', { className: 'fingers-fs-goalsel__grid', role: 'tablist', 'aria-label': 'Цель тренировки' },
         GOAL_LIST.map(function (g) {
           const active = currentGoal === g.id;
+          const cnt = goalCounts[g.id] || 0;
           return h('button', {
             key: g.id,
             type: 'button',
             role: 'tab',
             'aria-selected': active,
-            className: 'fingers-fs-goalsel__btn' + (active ? ' is-active' : ''),
+            className: 'fingers-fs-goalsel__btn' + (active ? ' is-active' : '') + (cnt === 0 ? ' is-empty' : ''),
             'data-goal': g.id,
+            title: cnt + ' протоколов под текущее оборудование и возраст',
             onClick: function () { if (currentGoal !== g.id) writeGoal(g.id); }
           },
             h('span', { className: 'fingers-fs-goalsel__emoji', 'aria-hidden': 'true' }, GOAL_EMOJI[g.id] || '🎯'),
-            h('span', { className: 'fingers-fs-goalsel__text' }, g.label)
+            h('span', { className: 'fingers-fs-goalsel__text' }, g.label),
+            h('span', { className: 'fingers-fs-goalsel__count', 'aria-label': cnt + ' протоколов' }, cnt)
           );
         })
       )
@@ -3769,11 +3806,21 @@
       // Generated mix не в catalog — buildLogFromProgram не найдёт его id.
       // Используем exercises напрямую без mapping'а по board edges.
       let built;
+      // Активные tier'ы пользователя — для резолва equipmentTier на упражнениях
+      // (нужно для tier-aware фото в CountdownDisplay/GripIcon: на блоке —
+      // фото с блоком, на двери — с дверью).
+      const profile = getProfile();
+      const userTiersForExpand = Array.isArray(profile.equipmentTypes) && profile.equipmentTypes.length
+        ? profile.equipmentTypes
+        : (profile.noEquipment ? ['none']
+          : profile.blockMode ? ['block']
+          : profile.edgeLimit === 25 ? ['door']
+          : ['full']);
       if (program && program.__generated) {
         built = Array.isArray(program.exercises) ? program.exercises.slice() : [];
       } else {
         built = Fingers.buildLogFromProgram
-          ? Fingers.buildLogFromProgram(program.id, _resolveBoardForProgram(program))
+          ? Fingers.buildLogFromProgram(program.id, _resolveBoardForProgram(program), userTiersForExpand)
           : (program.exercises || []);
         if (!Array.isArray(built) || built.length === 0) {
           // Fallback: если buildLogFromProgram вернула null (unknown id) —

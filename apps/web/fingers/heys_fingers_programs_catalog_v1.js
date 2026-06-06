@@ -468,12 +468,35 @@
    * @param {object} userBoard — { id, edges: [...] } или null
    * @returns {Array|null}
    */
-  function buildLogFromProgram(programId, userBoard) {
+  function buildLogFromProgram(programId, userBoard, userTiers) {
     const program = getProgramById(programId);
     if (!program) {
       console.warn('[Fingers.buildLogFromProgram] unknown programId:', programId);
       return null;
     }
+    // Резолв equipmentTier для каждого упражнения. Приоритет:
+    //   1. ex.equipmentTier (явный, например в hybrid horst_mixed_day)
+    //   2. пересечение программы с активными tier'ами пользователя
+    //      (TIER_PRIORITY: block > full > door > none — фото оборудования
+    //       специфично только для block/door, для full и none идёт base-фото).
+    //   3. фолбэк на первый tier программы.
+    const TIER_PRIORITY = { block: 0, door: 1, full: 2, none: 3 };
+    const progTiers = (typeof getProgramEquipmentTypes === 'function')
+      ? getProgramEquipmentTypes(program)
+      : (Array.isArray(program.equipmentTypes) ? program.equipmentTypes : []);
+    const activeUserTiers = Array.isArray(userTiers) && userTiers.length ? userTiers : null;
+    const resolvedDefault = (function () {
+      if (activeUserTiers) {
+        const overlap = progTiers.filter(function (t) { return activeUserTiers.indexOf(t) >= 0; });
+        if (overlap.length) {
+          overlap.sort(function (a, b) {
+            return (TIER_PRIORITY[a] != null ? TIER_PRIORITY[a] : 99) - (TIER_PRIORITY[b] != null ? TIER_PRIORITY[b] : 99);
+          });
+          return overlap[0];
+        }
+      }
+      return progTiers[0] || null;
+    })();
     return program.exercises.map(function (ex) {
       const out = {
         gripId: ex.gripId,
@@ -483,7 +506,8 @@
         restSec: ex.restSec,
         repsPerSet: ex.repsPerSet || 1,
         setsCount: ex.setsCount || 1,
-        restBetweenSetsSec: ex.restBetweenSetsSec || 0
+        restBetweenSetsSec: ex.restBetweenSetsSec || 0,
+        equipmentTier: ex.equipmentTier || resolvedDefault || undefined
       };
       // Если board задана — ищем edge с минимальной разницей в мм среди compatible.
       if (userBoard && Array.isArray(userBoard.edges)) {
@@ -584,8 +608,27 @@
     types.forEach(function (t) { typeSet[t] = true; });
     return programs.filter(function (p) {
       if (!p) return false;
+      // Гибридный протокол: каждое упражнение явно привязано к своему tier
+      // (например horst_mixed_day: block+door+none, каждое упражнение в своём).
+      // Чтобы выполнить такой протокол целиком, нужны ВСЕ его tier'ы.
+      // Generic протокол: program-level equipmentTypes/derived list — это набор
+      // взаимозаменяемых tier'ов («можно делать на board ИЛИ на block»), достаточно
+      // одного совпадения.
+      const exerciseTiers = (Array.isArray(p.exercises) && p.exercises.length)
+        ? p.exercises
+            .map(function (ex) { return ex && typeof ex.equipmentTier === 'string' ? ex.equipmentTier : null; })
+            .filter(function (t) { return t != null; })
+        : [];
+      if (exerciseTiers.length > 0) {
+        const uniqueTiers = Array.from(new Set(exerciseTiers));
+        for (let i = 0; i < uniqueTiers.length; i++) {
+          if (!typeSet[uniqueTiers[i]]) return false;
+        }
+        return true;
+      }
+      // Generic: пересечение ≥ 1.
       const progTypes = getProgramEquipmentTypes(p);
-      // Intersection ≥ 1 → программа подходит.
+      if (!progTypes.length) return false;
       for (let i = 0; i < progTypes.length; i++) {
         if (typeSet[progTypes[i]]) return true;
       }
