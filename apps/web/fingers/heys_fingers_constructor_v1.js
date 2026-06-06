@@ -300,15 +300,32 @@
   }
 
   // ===== SUB-RENDERERS =====
-  function renderHero(grip) {
+  function renderHero(grip, equipmentTier) {
+    // Tier-aware фото: для block/door есть отдельные изображения с реальным
+    // оборудованием. Если нет специфичного — onError откатывается на базовый.
+    const baseSrc = '/exercises/' + grip.id + '.webp';
+    const tieredSrc = (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none')
+      ? '/exercises/' + grip.id + '_' + equipmentTier + '.webp'
+      : baseSrc;
     const img = R.createElement('img', {
-      src: '/exercises/' + grip.id + '.webp',
+      src: tieredSrc,
       alt: 'Хват: ' + grip.label,
       loading: 'lazy',
       decoding: 'async',
       className: 'fingers-fs-grip-hero fingers-fs-grip-hero--' + grip.id,
       style: ST_HERO,
-      onError: function (e) { try { e.target.style.display = 'none'; } catch (_) {} },
+      'data-fallback-tried': tieredSrc === baseSrc ? 'true' : 'false',
+      onError: function (e) {
+        try {
+          const el = e.target;
+          if (el.getAttribute('data-fallback-tried') !== 'true' && baseSrc !== tieredSrc) {
+            el.setAttribute('data-fallback-tried', 'true');
+            el.src = baseSrc;
+            return;
+          }
+          el.style.display = 'none';
+        } catch (_) {}
+      },
     });
     // Под фото — мышцы колонкой, каждая строка кликабельна → drill-down.
     const muscleIds = (grip && Array.isArray(grip.primaryMuscles)) ? grip.primaryMuscles : [];
@@ -919,7 +936,7 @@
     // Заголовок (название упражнения + крестик) — теперь СВЕРХУ, до фото.
     // Тогда юзер сразу видит контекст и может удалить упражнение без скролла.
     els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove)));
-    els.push(R.createElement(R.Fragment, { key: 'hero' }, renderHero(grip)));
+    els.push(R.createElement(R.Fragment, { key: 'hero' }, renderHero(grip, ex && ex.equipmentTier)));
 
     // B6: примечание почему скрыты risky-хваты (если недавняя боль).
     if (painInfo.hasPain) {
