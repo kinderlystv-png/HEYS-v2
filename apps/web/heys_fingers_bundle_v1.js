@@ -438,6 +438,13 @@
     practitioner: { label: 'Практик-методист', color: '#2563eb' },
     guideline: { label: 'Гайдлайн', color: '#d97706' }
   };
+  // Группировка списка по типу: заголовок группы вместо бейджа в каждой карточке.
+  const TYPE_ORDER = ['peer-reviewed', 'practitioner', 'guideline'];
+  const TYPE_GROUP_LABELS = {
+    'peer-reviewed': 'Научные статьи',
+    practitioner: 'Практики и методисты',
+    guideline: 'Гайдлайны и стандарты'
+  };
 
   // Маппинг type → emoji-иконка для visual quick-recognition.
   function _typeIcon(t) {
@@ -579,11 +586,7 @@
                 React.createElement('div', { className: 'fingers-bib-modal__empty-title' }, 'Ничего не найдено'),
                 React.createElement('div', { className: 'fingers-bib-modal__empty-hint' },
                   'Попробуй очистить поиск или сменить категорию.'))
-            : filtered.map(function (src) {
-                return _renderSourceCard(src, expandedId === src.id, function () {
-                  setExpandedId(expandedId === src.id ? null : src.id);
-                });
-              })
+            : _renderGroupedSources(filtered, expandedId, setExpandedId)
         )
       )
     );
@@ -595,26 +598,29 @@
       key: src.id,
       'data-bib-source': src.id,
       'data-bib-type': src.type,
-      className: 'fingers-bib-source' + (expanded ? ' is-expanded' : '')
+      className: 'fingers-bib-source' + (expanded ? ' is-expanded' : ''),
+      // flex-shrink:0 — иначе в scrollable flex-колонке списка карточки сжимаются
+      // по высоте (default shrink:1) и overflow:hidden обрезает текст.
+      style: { flexShrink: 0 }
     },
       React.createElement('button', {
         type: 'button',
         className: 'fingers-bib-source__head',
         onClick: onToggle,
-        'aria-expanded': expanded ? 'true' : 'false'
+        'aria-expanded': expanded ? 'true' : 'false',
+        // Тип вынесен в заголовок группы — здесь только контент. grid 1fr auto.
+        style: { display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center',
+          gap: 12, padding: '15px 16px', width: '100%', textAlign: 'left',
+          background: 'transparent', border: 'none', cursor: 'pointer' }
       },
-        React.createElement('div', { className: 'fingers-bib-source__type', 'aria-hidden': 'true' },
-          React.createElement('span', { className: 'fingers-bib-source__type-icon' }, _typeIcon(src.type)),
-          React.createElement('span', { className: 'fingers-bib-source__type-label' }, typeMeta.label)
-        ),
-        React.createElement('div', { className: 'fingers-bib-source__main' },
-          React.createElement('div', { className: 'fingers-bib-source__author' },
-            React.createElement('strong', null, src.author),
+        React.createElement('div', { className: 'fingers-bib-source__main', style: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 } },
+          React.createElement('h3', { className: 'fingers-bib-source__title', style: { margin: 0, fontSize: 15, fontWeight: 650, lineHeight: 1.32, letterSpacing: '-0.01em', color: '#1c1b19' } }, src.title),
+          React.createElement('div', { className: 'fingers-bib-source__author', style: { fontSize: 12.5, fontWeight: 500, color: 'rgba(60,60,67,0.6)' } },
+            React.createElement('strong', { style: { color: 'rgba(60,60,67,0.85)', fontWeight: 600 } }, src.author),
             ' · ',
-            React.createElement('span', { className: 'fingers-bib-source__year' }, String(src.year))),
-          React.createElement('h3', { className: 'fingers-bib-source__title' }, src.title)
+            React.createElement('span', { className: 'fingers-bib-source__year' }, String(src.year)))
         ),
-        React.createElement('span', { className: 'fingers-bib-source__chevron', 'aria-hidden': 'true' }, expanded ? '▲' : '▼')
+        React.createElement('span', { className: 'fingers-bib-source__chevron', 'aria-hidden': 'true', style: { flexShrink: 0, opacity: 0.4, fontSize: 11 } }, expanded ? '▲' : '▼')
       ),
       expanded ? React.createElement('div', { className: 'fingers-bib-source__body' },
         React.createElement('div', { className: 'fingers-bib-source__finding-label' }, 'Главное открытие'),
@@ -638,6 +644,35 @@
         ) : null
       ) : null
     );
+  }
+
+  // Группирует (уже отфильтрованные) источники по типу и рендерит секции с
+  // заголовком группы — тип не дублируется в каждой карточке.
+  function _renderGroupedSources(sources, expandedId, onToggleId) {
+    const byType = {};
+    sources.forEach(function (s) { (byType[s.type] = byType[s.type] || []).push(s); });
+    const order = TYPE_ORDER.slice();
+    Object.keys(byType).forEach(function (t) { if (order.indexOf(t) < 0) order.push(t); });
+    return order.map(function (type) {
+      const list = byType[type];
+      if (!list || !list.length) return null;
+      const meta = TYPE_LABELS[type] || { label: type, color: '#64748b' };
+      return React.createElement('section', { key: type, className: 'fingers-bib-group', 'data-bib-type': type },
+        React.createElement('div', { className: 'fingers-bib-group__header' },
+          React.createElement('span', { className: 'fingers-bib-group__icon', 'aria-hidden': 'true' }, _typeIcon(type)),
+          React.createElement('span', { className: 'fingers-bib-group__label', style: { color: meta.color } },
+            TYPE_GROUP_LABELS[type] || meta.label),
+          React.createElement('span', { className: 'fingers-bib-group__count' }, list.length)
+        ),
+        React.createElement('div', { className: 'fingers-bib-group__items' },
+          list.map(function (src) {
+            return _renderSourceCard(src, expandedId === src.id, function () {
+              onToggleId(expandedId === src.id ? null : src.id);
+            });
+          })
+        )
+      );
+    });
   }
 
   // === Экспорт ===
@@ -1755,6 +1790,43 @@
     getRestrictionMessage: getRestrictionMessage,
     sourceIds: SOURCE_IDS
   };
+
+  // ─── B6: pain-gating ────────────────────────────────────────────────────
+  // При недавней боли в пальцах/суставах блокируем самые травмоопасные хваты
+  // (full crimp нагружает A2/A4 шкивы ~33× сильнее, mono — точечная нагрузка).
+  // Тот же fail-safe паттерн, что age-gate: лучше убрать опцию, чем дать
+  // нагрузить повреждённую связку. Источник боли — fingersLog (B1: hadPain /
+  // setFeedback[].pain), читается reader'ом Fingers.recentFingerPain.
+  const RISKY_PAIN_GRIPS = ['fullcrimp', 'mono'];
+
+  // Pure: есть ли в дне (dayv2-объект) finger-сессия с зафиксированной болью.
+  function dayHasFingerPain(day) {
+    if (!day || !Array.isArray(day.trainings)) return false;
+    return day.trainings.some(function (t) {
+      if (!t || t.type !== 'fingers' || !t.fingersLog) return false;
+      const log = t.fingersLog;
+      if (log.hadPain) return true;
+      return Array.isArray(log.exercises) && log.exercises.some(function (ex) {
+        return Array.isArray(ex.setFeedback) && ex.setFeedback.some(function (f) { return f && f.pain; });
+      });
+    });
+  }
+
+  // Pure: убрать risky-хваты если была недавняя боль. hasPain=false → без изменений.
+  function filterGripsForPain(grips, hasPain) {
+    if (!Array.isArray(grips)) return [];
+    if (!hasPain) return grips;
+    return grips.filter(function (g) {
+      const id = g && (g.id || g.gripId || g);
+      return RISKY_PAIN_GRIPS.indexOf(id) === -1;
+    });
+  }
+
+  Fingers.painGate = {
+    RISKY_GRIPS: RISKY_PAIN_GRIPS,
+    dayHasFingerPain: dayHasFingerPain,
+    filterGripsForPain: filterGripsForPain
+  };
 })(typeof window !== 'undefined' ? window : globalThis);
 // ===== End heys_fingers_age_gating_v1.js =====
 
@@ -1945,6 +2017,12 @@
       else if (yesterdayFb.intensity === 'recovery') { score -= 5; }
     }
 
+    // B9: пропуск разогрева в недавней сессии → выше риск травмы, нудж вниз.
+    if (safeToday.fingers && safeToday.fingers.warmupSkippedRecently) {
+      score -= 10;
+      reasons.push('В прошлый раз пропущен разогрев — выше риск травмы');
+    }
+
     const finalScore = Math.round(clamp(score, 0, 100));
     return { score: finalScore, bucket: bucketFromScore(finalScore), reasons: reasons };
   }
@@ -1965,6 +2043,12 @@
     if (Number.isFinite(wb) && wb < 5) { score = 45; downgraded = true; reasons.push('Самочувствие ниже среднего'); }
     if (Number.isFinite(sleep) && sleep < 6) { score = 40; downgraded = true; reasons.push('Сон менее 6 часов'); }
     if (yesterdayFb && yesterdayFb.intensity === 'max') { score = 35; downgraded = true; reasons.push('Вчера была max-нагрузка'); }
+
+    // B9: пропуск разогрева — нудж вниз и в упрощённом пути.
+    if (today.fingers && today.fingers.warmupSkippedRecently) {
+      score -= 10;
+      reasons.push('В прошлый раз пропущен разогрев — выше риск травмы');
+    }
 
     if (!downgraded) reasons.push('Истории мало — оценка по упрощённым правилам');
     return { score: score, bucket: bucketFromScore(score), reasons: reasons };
@@ -3341,18 +3425,63 @@
       }
     }
 
-    if (!isPR) return false;
+    // B3: MVC timeseries — фиксируем КАЖДЫЙ тест (не только PR), чтобы строить
+    // тренд измеренной силы и ловить регрессии (падение MVC = ранний сигнал
+    // перетрена). maxHangs остаётся max-wins PR (backward compat). Кап 100 точек.
+    if (!all.history) all.history = {};
+    const hist = Array.isArray(all.history[slug]) ? all.history[slug] : [];
+    hist.push({
+      testedAt: stamped.testedAt,
+      type: stamped.type,
+      mvcKg: Number(stamped.mvcKg) || null,
+      holdTime: Number(stamped.holdTime) || null,
+      addedKg: Number(stamped.addedKg) || null,
+      bw: Number(stamped.bw) || null,
+    });
+    if (hist.length > 100) hist.splice(0, hist.length - 100);
+    all.history[slug] = hist;
 
-    all.maxHangs[slug] = stamped;
+    if (isPR) all.maxHangs[slug] = stamped;
     all.updatedAt = Date.now();
     _writeAll(all);
 
-    // 152-ФЗ: health_data (mvcKg/holdTime/addedKg) категорически нельзя в
-    // eventLog payload — SAFE_PAYLOAD_KEYS (heys_event_log_v1.js:38-50) их
-    // фильтрует на '<filtered>'. Логируем только safe keys.
-    _eventLog('finger-pr-update', `PR for ${slug}`, { source: stamped.source });
+    // 152-ФЗ: mvcKg/holdTime/addedKg — health_data, категория «физическая
+    // активность» (privacy policy раздел 5.1). В eventLog payload нельзя —
+    // SAFE_PAYLOAD_KEYS (heys_event_log_v1.js:38-50) фильтрует их на '<filtered>'.
+    // В основной storage (этот файл, _writeAll выше) — пишутся by design:
+    // синкаются в client_kv_store на серверах Yandex.Cloud РФ (см. privacy 6.2/7.2)
+    // через generic sync interceptor (isOurKey пропускает префикс heys_, denylist
+    // их не исключает). dayv2-канал с тем же addedWeightKg в fingersLog.exercises[]
+    // покрыт server-side encryption через is_health_key() regex; records_v1 пока
+    // нет — это осознанное состояние, см. план spicy-wibbling-tulip.md B17′ (A).
+    // Здесь логируем только safe keys.
+    if (isPR) _eventLog('finger-pr-update', `PR for ${slug}`, { source: stamped.source });
 
-    return true;
+    return isPR;
+  }
+
+  /**
+   * B3: тренд ИЗМЕРЕННОЙ силы по grip+edge (в отличие от planned-веса в Progress).
+   * Точки {testedAt, mvcKg, holdTime, strengthRatio} по возрастанию времени.
+   * strengthRatio = mvcKg/bw — единая шкала силы-к-весу (как GRADE_TABLE.mvcRatio),
+   * корректная для изометрии. Сознательно НЕ e1RM: 1-rep-max — экстраполяция
+   * динамического лифта, для изометрического виса не валидна; strength-to-BW —
+   * established climbing-метрика (Lattice/Hörst).
+   */
+  function getMvcHistory(gripId, edgeMm) {
+    const all = _readAll();
+    const slug = _slug(gripId, edgeMm);
+    const hist = (all.history && Array.isArray(all.history[slug])) ? all.history[slug] : [];
+    return hist.map(function (p) {
+      const mvc = Number(p.mvcKg) || null;
+      const bw = Number(p.bw) || null;
+      return {
+        testedAt: p.testedAt,
+        mvcKg: mvc,
+        holdTime: Number(p.holdTime) || null,
+        strengthRatio: (mvc && bw) ? Number((mvc / bw).toFixed(3)) : null,
+      };
+    }).sort(function (a, b) { return (Date.parse(a.testedAt) || 0) - (Date.parse(b.testedAt) || 0); });
   }
 
   /**
@@ -3430,6 +3559,9 @@
                 edgeMm: e,
                 ratio: Number((max / min).toFixed(2)),
                 flag: 'warning',
+                // B5: какая рука слабее — чтобы совет был конкретным.
+                weakerSide: lVal < rVal ? 'left' : 'right',
+                base: base,
                 hint: `Разница между руками >15% (${base}). Один-рук подходы на слабую руку.`,
               });
             }
@@ -3439,6 +3571,28 @@
     });
 
     return flags;
+  }
+
+  // B5: конкретный actionable-совет по lr_asymmetry — какая рука слабее и
+  // bias-прескрипшн 2:1 в её пользу. Pure. Для не-lr флагов → null. (One-arm
+  // training session не строим: модель упражнения двуручная, поля hand нет —
+  // совет текстовый + указывает grip/edge/сторону для ручной настройки.)
+  function asymmetryAdvice(flag) {
+    if (!flag || flag.kind !== 'lr_asymmetry' || !flag.weakerSide) return null;
+    const sideRu = flag.weakerSide === 'left' ? 'левую' : 'правую';
+    const weakSets = 2;
+    const strongSets = 1;
+    return {
+      weakerSide: flag.weakerSide,
+      base: flag.base || null,
+      edgeMm: flag.edgeMm,
+      weakSets: weakSets,
+      strongSets: strongSets,
+      text: 'Слабее ' + sideRu + ' рука (разница ' + flag.ratio + '×). На ближайших '
+        + 'сессиях делай ' + weakSets + ' одноручных подхода на ' + sideRu + ' к '
+        + strongSets + ' на сильную (' + (flag.base || 'хват') + ', ' + flag.edgeMm
+        + ' мм), пока разница не сократится.',
+    };
   }
 
   // Lattice male golden standards (% BW additional weight at 7s on 20mm two-hand)
@@ -3458,8 +3612,10 @@
   Fingers.records = {
     get,
     getMVC,
+    getMvcHistory,
     updateIfPR,
     asymmetries,
+    asymmetryAdvice,
     byGrade,
     GRADE_TABLE: Object.freeze(Object.assign({}, GRADE_TABLE)),
     __registered: true,
@@ -6375,6 +6531,38 @@
   const MVC_TARGET_PCT = { recovery: 60, moderate: 75, max: 90 };
   const MVC_TARGET_DEFAULT = 80;
 
+  // B4: авто-прогрессия рабочего веса. Чистый движок: по RPE прошлой сессии
+  // (B1) + готовности (cooldown/readiness) + недавней боли (B6) советует шаг.
+  // Консервативно и safety-first: расти ТОЛЬКО при readyForMax и без боли;
+  // «тяжело» → держать/снизить. input:
+  //   { rpe:[ 'easy'|'ok'|'hard' ], readyForMax:bool, hasPain:bool,
+  //     currentKg:number, stepKg?:number }
+  // → { action:'increase'|'hold'|'decrease', deltaKg, suggestedKg, reason }.
+  function suggestProgression(input) {
+    const o = input || {};
+    const rpe = Array.isArray(o.rpe) ? o.rpe.filter(Boolean) : [];
+    const cur = Number(o.currentKg) || 0;
+    const step = Number(o.stepKg) > 0 ? Number(o.stepKg) : 1;
+    const mk = function (action, deltaKg, reason) {
+      return {
+        action: action,
+        deltaKg: deltaKg,
+        suggestedKg: Math.max(0, snap(cur + deltaKg, 0.5)),
+        reason: reason
+      };
+    };
+    if (o.hasPain) return mk('hold', 0, 'Недавняя боль — не прогрессируем, дай связкам восстановиться.');
+    if (!o.readyForMax) return mk('hold', 0, 'Готовность не максимальная — закрепи текущий вес.');
+    if (!rpe.length) return mk('hold', 0, 'Нет RPE с прошлой сессии — оцени подходы, чтобы получить рекомендацию.');
+    const hard = rpe.filter(function (r) { return r === 'hard'; }).length;
+    const easy = rpe.filter(function (r) { return r === 'easy'; }).length;
+    if (hard >= 2) return mk('decrease', -step, 'Прошлая сессия была тяжёлой (' + hard + ' подхода) — снизь вес.');
+    if (hard === 1) return mk('hold', 0, 'Был тяжёлый подход — закрепи текущий вес ещё раз.');
+    if (easy === rpe.length) return mk('increase', step, 'Все подходы дались легко при полной готовности — можно добавить.');
+    return mk('increase', step / 2, 'Подходы по плану, готовность максимальная — небольшой шаг вверх.');
+  }
+  Fingers.suggestProgression = suggestProgression;
+
   function createBlankExercise(opts) {
     const o = opts || {};
     return {
@@ -6848,6 +7036,36 @@
           role: 'alert',
         }, warnText));
       }
+      // B4: авто-прогрессия — движок советует шаг по RPE прошлой сессии +
+      // готовности + боли. Кнопка только на increase (actionable); decrease —
+      // приглушённое предупреждение. Не показываем при overLimit (сначала
+      // привести вес в безопасный диапазон).
+      if (!overLimit && typeof onPickWeight === 'function'
+          && Fingers.suggestProgression && Fingers.lastGripFeedback) {
+        try {
+          const fb = Fingers.lastGripFeedback(gripId);
+          const cd = (Fingers.cooldownCheck && Fingers.cooldownCheck()) || null;
+          const pain = (Fingers.recentFingerPain && Fingers.recentFingerPain()) || { hasPain: false };
+          const sug = Fingers.suggestProgression({
+            rpe: fb.rpe,
+            readyForMax: !!(cd && cd.recommendation === 'max'),
+            hasPain: pain.hasPain,
+            currentKg: Number(addedKg) || 0,
+          });
+          if (sug.action === 'increase' && sug.deltaKg > 0) {
+            rows.push(R.createElement('div', { key: 'prog', style: ST_HINT, className: 'fingers-fs-hint-row' },
+              R.createElement('button', {
+                type: 'button',
+                className: 'fingers-fs-mvc-autofill',
+                onClick: function () { onPickWeight(sug.suggestedKg); },
+                'aria-label': sug.reason,
+              }, '↑ Готов добавить +' + sug.deltaKg + ' кг → ' + sug.suggestedKg + ' кг')));
+          } else if (sug.action === 'decrease') {
+            rows.push(R.createElement('div', { key: 'prog', style: ST_HINT_WARN, className: 'fingers-fs-hint-warn' },
+              R.createElement('span', null, '↓ ' + sug.reason)));
+          }
+        } catch (_) { /* noop */ }
+      }
       return R.createElement(R.Fragment, null, rows);
     }
     if (mvc.type === 'time') {
@@ -6961,6 +7179,14 @@
             mvc: Number(addedKg) + bm.kg,
             bwSource: bm.source
           });
+          // B2: яркий PR-feedback. isPR уже посчитан records.updateIfPR (max-wins).
+          if (out.isPR && HEYS.Toast && HEYS.Toast.success) {
+            const wTxt = Number(addedKg) > 0 ? (' +' + Number(addedKg) + 'кг') : '';
+            try {
+              HEYS.Toast.success('🏆 Новый рекорд: ' + Number(holdTime) + 'с @ '
+                + edgeMm + 'мм ' + gripLabel + wTxt);
+            } catch (_) { /* noop */ }
+          }
           onSaved();
         }
       } catch (e) {
@@ -7165,8 +7391,14 @@
     const ageFiltered = (Fingers.ageGate && typeof Fingers.ageGate.filterGrips === 'function')
       ? Fingers.ageGate.filterGrips(allGrips, userAge)
       : allGrips;
+    // B6: при недавней finger-боли убираем full crimp / mono из выбора (fail-safe,
+    // A2/A4 шкивы). painGate читает боль из dayv2 (B1: hadPain/setFeedback.pain).
+    const painInfo = (Fingers.recentFingerPain && Fingers.recentFingerPain()) || { hasPain: false };
+    const gripChoices = (painInfo.hasPain && Fingers.painGate && Fingers.painGate.filterGripsForPain)
+      ? Fingers.painGate.filterGripsForPain(ageFiltered, true)
+      : ageFiltered;
     const grip = (Fingers.getGripById && Fingers.getGripById(ex.gripId))
-      || ageFiltered[0]
+      || gripChoices[0]
       || { id: ex.gripId, label: ex.gripId, primaryMuscles: [], icon: '🖐' };
 
     const els = [];
@@ -7175,9 +7407,18 @@
     els.push(R.createElement(R.Fragment, { key: 'h' }, renderHeader(grip, onRemove)));
     els.push(R.createElement(R.Fragment, { key: 'hero' }, renderHero(grip)));
 
+    // B6: примечание почему скрыты risky-хваты (если недавняя боль).
+    if (painInfo.hasPain) {
+      els.push(R.createElement('div', {
+        key: 'pain-note',
+        className: 'fingers-c-pain-note',
+        style: { fontSize: 13, lineHeight: 1.4, padding: '8px 12px', marginBottom: 8,
+          borderRadius: 8, background: 'rgba(220,38,38,0.10)', color: '#fca5a5' }
+      }, '🩹 Недавно была боль в пальцах — full crimp и mono временно скрыты. Дай связкам восстановиться.'));
+    }
     // iOS form-grouped: каждое поле — отдельная row с label слева, value справа.
     els.push(R.createElement(R.Fragment, { key: 'grip' },
-      renderGripSelect(ex.gripId, ageFiltered, function (nid) { patch({ gripId: nid }); }, exIdx)));
+      renderGripSelect(ex.gripId, gripChoices, function (nid) { patch({ gripId: nid }); }, exIdx)));
     els.push(R.createElement(R.Fragment, { key: 'edge' },
       renderEdgeSelect(userBoard, ex.gripId, ex.edgeSizeMm, function (mm) { patch({ edgeSizeMm: mm }); }, exIdx)));
 
@@ -7314,6 +7555,9 @@
         age: ageFromBirth || ageFromProfile || null,
         climbingYears: Number(fp.climbingYears) || 0,
         maxVGrade: fp.maxVGrade || null,
+        // B16: цель тренировки. null → трактуется как 'strength' (старое
+        // grade-поведение), чтобы апгрейд не менял рекомендации существующим.
+        goal: fp.goal || null,
         hasFingerboard: fp.hasFingerboard !== false,
         hasScale: !!fp.hasScale,
         fingerboardId: fp.fingerboardId || 'beastmaker_1000',
@@ -7382,6 +7626,7 @@
         themeId: state.themeId,
         climbingYears: state.profile?.climbingYears,
         maxVGrade: state.profile?.maxVGrade,
+        goal: state.profile?.goal,
         hasFingerboard: state.profile?.hasFingerboard,
         hasScale: state.profile?.hasScale,
         fingerboardId: state.profile?.fingerboardId,
@@ -7438,6 +7683,9 @@
     if (profile.noEquipment || profile.hasFingerboard === false) return 'nelson_no_hangs';
     const age = Number(profile.age);
     if (Number.isFinite(age) && age < 14) return 'nelson_no_hangs';
+    // B16: цель перебивает grade-логику для non-strength целей.
+    if (profile.goal === 'rehab') return 'nelson_no_hangs';
+    if (profile.goal === 'endurance' || profile.goal === 'maintenance') return 'repeaters_7_3';
     const g = profile.maxVGrade;
     if (g === 'V0-V2' || g === 'V3-V4' || g === 'none') return 'beastmaker_1000_beginner';
     if (g === 'V5-V6') return 'repeaters_7_3';
@@ -7545,6 +7793,9 @@
   function _renderProfile(state, setState) {
     const GRADES = ['V0-V2', 'V3-V4', 'V5-V6', 'V7-V8', 'V9+', 'none'];
     const GRADE_LABELS = { 'V0-V2': 'V0-V2', 'V3-V4': 'V3-V4', 'V5-V6': 'V5-V6', 'V7-V8': 'V7-V8', 'V9+': 'V9+', 'none': 'Не лажу' };
+    // B16: цель тренировки. Влияет на рекомендацию программы.
+    const GOALS = ['strength', 'endurance', 'rehab', 'maintenance'];
+    const GOAL_LABELS = { strength: '💪 Сила', endurance: '🔄 Выносливость', rehab: '🩹 Реабилитация', maintenance: '⚖️ Поддержание' };
 
     function updateProfile(patch) {
       const profile = Object.assign({}, state.profile, patch);
@@ -7621,6 +7872,17 @@
               onClick: () => updateProfile({ maxVGrade: g }),
               className: 'fingers-ob-chip' + (state.profile.maxVGrade === g ? ' is-active' : '')
             }, GRADE_LABELS[g]))
+          )
+        ),
+        h('div', null,
+          h('div', { className: 'fingers-ob-label' }, 'Цель тренировок'),
+          h('div', { className: 'fingers-ob-chip-row' },
+            GOALS.map((gl) => h('button', {
+              key: gl,
+              type: 'button',
+              onClick: () => updateProfile({ goal: gl }),
+              className: 'fingers-ob-chip' + (state.profile.goal === gl ? ' is-active' : '')
+            }, GOAL_LABELS[gl]))
           )
         )
       ),
@@ -8274,6 +8536,21 @@
     return fp;
   }
 
+  // Программа block-типа (нужен блок, не доска)? Используется для выбора модели:
+  // block-протоколы берут blockBoardId, остальные — fingerboardId.
+  function _isBlockProgram(program) {
+    if (!program) return false;
+    const types = (Fingers.getProgramEquipmentTypes && Fingers.getProgramEquipmentTypes(program)) || [];
+    return types.indexOf('block') >= 0 && types.indexOf('full') < 0 && types.indexOf('door') < 0;
+  }
+  // Резолвит board-объект под конкретную программу: блок для block-протоколов,
+  // доску — для остальных. null если соответствующая модель не выбрана.
+  function _resolveBoardForProgram(program) {
+    const fp = getProfile();
+    const id = _isBlockProgram(program) ? (fp.blockBoardId || null) : (fp.fingerboardId || null);
+    return (id && Fingers.getBoardById) ? Fingers.getBoardById(id) : null;
+  }
+
   // Возвращает приоритет-список program ID по grade — рекомендатор пройдётся
   // по нему и выберет первый который проходит equipment + age фильтр.
   function _gradePreferenceList(grade) {
@@ -8319,6 +8596,13 @@
       ? Fingers.filterProgramsByEquipment(ageFiltered, eqOpts) : ageFiltered;
     if (!eligible.length) return null;
     const eligibleIds = new Set(eligible.map(function (p) { return p.id; }));
+
+    // B16: цель перебивает grade-prefs для non-strength целей, если
+    // целевая программа eligible. 'strength'/undefined → grade-логика ниже.
+    const goalForced = fp.goal === 'rehab' ? 'nelson_no_hangs'
+      : (fp.goal === 'endurance' || fp.goal === 'maintenance') ? 'repeaters_7_3'
+      : null;
+    if (goalForced && eligibleIds.has(goalForced)) return goalForced;
 
     const g = fp.maxVGrade || 'V3-V4';
     const prefs = _gradePreferenceList(g);
@@ -8392,6 +8676,506 @@
           );
         })
       ) : null
+    );
+  }
+
+  // --- Today tab (B0): proactive home screen ---
+  // Собирает readiness.assess + cooldownCheck + getRecommendedProgramId
+  // в один view с одной кнопкой Start. Заменяет дефолт open-Programs.
+  function _buildTodayData(todayKey) {
+    const data = {
+      bucket: 'max',        // final (min из readiness + cooldown)
+      readinessBucket: null, // raw из assess
+      score: null,
+      reasons: [],
+      cooldown: null,
+      recommendedProgram: null,
+      profileIncomplete: false,
+    };
+    const profile = getProfile();
+    const ageNum = Number(profile.age);
+    if (!Number.isFinite(ageNum)) {
+      data.profileIncomplete = true;
+      data.bucket = 'unknown';
+      return data;
+    }
+    try {
+      const rIn = _buildReadinessInputs(todayKey);
+      const r = Fingers.readiness && Fingers.readiness.assess
+        ? Fingers.readiness.assess(rIn.today, rIn.history)
+        : null;
+      if (r) {
+        data.readinessBucket = r.bucket;
+        data.score = r.score;
+        if (Array.isArray(r.reasons)) data.reasons = r.reasons.slice();
+      }
+    } catch (e) { console.warn('[Today] readiness assess failed:', e); }
+    try {
+      data.cooldown = (Fingers.cooldownCheck && Fingers.cooldownCheck()) || null;
+    } catch (e) { console.warn('[Today] cooldownCheck failed:', e); }
+    // Final bucket — пересечение: берём минимум (более осторожный).
+    const readinessRank = { 'rest-day': 0, 'recovery-only': 1, 'moderate-only': 2, 'max-protocol-ok': 3 };
+    const cooldownRank = { rest: 0, recovery: 1, moderate: 2, max: 3 };
+    const rRank = data.readinessBucket != null ? readinessRank[data.readinessBucket] : 3;
+    const cRank = data.cooldown ? cooldownRank[data.cooldown.recommendation] : 3;
+    let finalRank = Math.min(rRank, cRank);
+    // B7: фаза мезоцикла дополнительно клампит интенсивность дня — цикл «ведёт»
+    // (deload-неделя → recovery даже при отличной готовности). Аддитивно: нет
+    // активного цикла → meso=null → без изменений.
+    const meso = _mesoCurrent(null, todayKey);
+    if (meso) {
+      data.mesocycle = meso;
+      const ceilRank = cooldownRank[meso.ceiling] != null ? cooldownRank[meso.ceiling] : 3;
+      finalRank = Math.min(finalRank, ceilRank);
+    }
+    data.bucket = ['rest', 'recovery', 'moderate', 'max'][finalRank];
+    // Recommended program — клампим к потолку бакета (safety). См.
+    // _recommendForBucket: getRecommendedProgramId() слепа к интенсивности и
+    // в recovery/moderate-день вернула бы max-протокол, противоречащий бейджу.
+    try {
+      data.recommendedProgram = _recommendForBucket(data.bucket);
+    } catch (e) { console.warn('[Today] recommend failed:', e); }
+    return data;
+  }
+
+  // ─── B7: мезоцикл ───────────────────────────────────────────────────────
+  // 4-нед блок: накопление → (интенсификация) → делоад → re-test. cycleState
+  // { startedAt:'YYYY-MM-DD', weeks } в fingerboardProfile. Нет цикла → фича
+  // выключена (Today не меняется). Phase клампит интенсивность дня в _buildTodayData.
+  const _MESO_DEFAULT_WEEKS = 4;
+  function _mesoPhaseForWeek(weekIdx, weeksTotal) {
+    const w = Number(weekIdx);
+    const total = Number(weeksTotal) || _MESO_DEFAULT_WEEKS;
+    if (!Number.isFinite(w) || w < 0) return 'accumulation';
+    if (w >= total) return 'retest';            // цикл завершён — пора пере-тест + новый блок
+    if (w === total - 1) return 'deload';       // последняя неделя — разгрузка
+    if (w === total - 2) return 'intensification';
+    return 'accumulation';
+  }
+  function _mesoIntensityCeiling(phase) {
+    return phase === 'deload' ? 'recovery'
+      : phase === 'accumulation' ? 'moderate'
+      : 'max'; // intensification / retest
+  }
+  function _mesoLabel(phase) {
+    return phase === 'accumulation' ? 'накопление'
+      : phase === 'intensification' ? 'интенсификация'
+      : phase === 'deload' ? 'разгрузка'
+      : phase === 'retest' ? 'пере-тест' : phase;
+  }
+  function _getCycleState() {
+    const fp = getProfile();
+    const cs = fp && fp.mesocycle;
+    if (!cs || !cs.startedAt) return null;
+    return { startedAt: cs.startedAt, weeks: Number(cs.weeks) || _MESO_DEFAULT_WEEKS };
+  }
+  function _mesoCurrent(cycleState, todayKey) {
+    const cs = cycleState || _getCycleState();
+    if (!cs || !cs.startedAt) return null;
+    const start = new Date(cs.startedAt + 'T00:00:00');
+    const today = new Date((todayKey || _formatDateKey(new Date())) + 'T00:00:00');
+    if (isNaN(start.getTime()) || isNaN(today.getTime())) return null;
+    const days = Math.floor((today.getTime() - start.getTime()) / 86400000);
+    if (days < 0) return null;
+    const weekIdx = Math.floor(days / 7);
+    const weeks = cs.weeks;
+    const phase = _mesoPhaseForWeek(weekIdx, weeks);
+    return {
+      weekIdx: weekIdx,
+      week: Math.min(weekIdx + 1, weeks),
+      weeksTotal: weeks,
+      phase: phase,
+      label: _mesoLabel(phase),
+      ceiling: _mesoIntensityCeiling(phase),
+      complete: weekIdx >= weeks,
+    };
+  }
+  function _startMesocycle(weeks) {
+    const u = HEYS.utils;
+    if (!u || !u.lsGet || !u.lsSet) return false;
+    const raw = u.lsGet('heys_profile', {}) || {};
+    const fp = Object.assign({}, raw.fingerboardProfile || {}, {
+      mesocycle: { startedAt: _formatDateKey(new Date()), weeks: Number(weeks) || _MESO_DEFAULT_WEEKS }
+    });
+    u.lsSet('heys_profile', Object.assign({}, raw, { fingerboardProfile: fp }));
+    return true;
+  }
+  Fingers.mesocycle = {
+    phaseForWeek: _mesoPhaseForWeek,
+    intensityCeiling: _mesoIntensityCeiling,
+    label: _mesoLabel,
+    current: _mesoCurrent,
+    start: _startMesocycle,
+  };
+
+  // ─── Прозрачная диагностика расчётов (copy-to-clipboard) ──────────────────
+  // Собирает читаемый текст: входы readiness + score/bucket/reasons, cooldown,
+  // пересечение бакета, рекомендацию (+логику), мезоцикл, асимметрию. Чтобы
+  // юзер видел КАК система пришла к рекомендации и индексу готовности.
+  function _buildFingersDiagnostic(todayKey) {
+    const L = [];
+    const P = function (s) { L.push(s == null ? '' : String(s)); };
+    const key = todayKey || _formatDateKey(new Date());
+    const profile = getProfile();
+    P('=== FINGERS · ДИАГНОСТИКА РАСЧЁТОВ ===');
+    P('Дата: ' + key);
+    P('Профиль: возраст=' + (profile.age != null ? profile.age : '—')
+      + ', grade=' + (profile.maxVGrade || '—')
+      + ', цель=' + (profile.goal || 'strength (дефолт)')
+      + ', оборудование=' + (Array.isArray(profile.equipmentTypes) ? profile.equipmentTypes.join(',') : '—'));
+    P('');
+
+    // 1) Готовность
+    try {
+      const rIn = _buildReadinessInputs(key);
+      const t = rIn.today || {};
+      const hist = rIn.history || [];
+      const validHist = hist.filter(function (d) {
+        return d && Number.isFinite(Number(d.moodMorning)) && Number.isFinite(Number(d.wellbeingMorning));
+      });
+      P('— 1. ГОТОВНОСТЬ (readiness.assess) —');
+      P('Входы (сегодня): настроение=' + (t.moodMorning != null ? t.moodMorning : '—')
+        + ', самочувствие=' + (t.wellbeingMorning != null ? t.wellbeingMorning : '—')
+        + ', стресс=' + (t.stressMorning != null ? t.stressMorning : '—')
+        + ', сон=' + (t.sleepStart || '?') + '→' + (t.sleepEnd || '?'));
+      P('История: ' + validHist.length + '/14 валидных дней (база для Z-score; <4 → упрощённые пороги)');
+      if (t.fingers) {
+        P('Последняя сессия: интенсивность=' + (t.fingers.lastIntensity || '?')
+          + ', ' + Math.round((Date.now() - (Number(t.fingers.lastSessionAt) || Date.now())) / 3600e3) + 'ч назад');
+      }
+      // Сравнение входов с личной нормой (медиана) — объясняет вклад каждого
+      // фактора, даже если он не перешагнул порог «причины».
+      const _med = function (arr) {
+        const v = arr.filter(function (x) { return Number.isFinite(Number(x)); }).map(Number).sort(function (a, b) { return a - b; });
+        if (!v.length) return null;
+        const m = Math.floor(v.length / 2);
+        return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+      };
+      const _cmp = function (label, today, base, goodHigh) {
+        if (today == null || base == null) return '  ' + label + ': ' + (today != null ? today : '—') + ' (нет нормы)';
+        const d = Number(today) - Number(base);
+        const dir = Math.abs(d) <= 0.5 ? '≈ норма'
+          : (d > 0 ? (goodHigh ? '↑ выше нормы (плюс к score)' : '↑ выше нормы (минус к score)')
+                   : (goodHigh ? '↓ ниже нормы (минус к score)' : '↓ ниже нормы (плюс к score)'));
+        return '  ' + label + ': ' + today + ' vs норма ' + base + ' → ' + dir;
+      };
+      P('Сравнение с личной нормой (медиана истории):');
+      P(_cmp('настроение', t.moodMorning, _med(validHist.map(function (d) { return d.moodMorning; })), true));
+      P(_cmp('самочувствие', t.wellbeingMorning, _med(validHist.map(function (d) { return d.wellbeingMorning; })), true));
+      P(_cmp('стресс', t.stressMorning, _med(validHist.map(function (d) { return d.stressMorning; })), false));
+      const r = (Fingers.readiness && Fingers.readiness.assess) ? Fingers.readiness.assess(t, hist) : null;
+      if (r) {
+        P('ИТОГ: score=' + r.score + '/100 → bucket=' + r.bucket);
+        if (r.reasons && r.reasons.length) {
+          P('Сработавшие пороги (крупные отклонения):');
+          r.reasons.forEach(function (x) { P('  • ' + x); });
+        } else {
+          P('Крупных порогов не сработало — score сложился из мелких Z-дельт (см. сравнение выше).');
+        }
+      }
+      P('Формула: 50 + Z(настроение)·10 + Z(самочувствие)·12.5 + Z(стресс,инверт)·7.5 (×shrink по объёму истории)');
+      P('         − штраф за сон (<5ч:−25, <6ч:−10) − штраф за вчерашнюю нагрузку (max:−30/мод:−15/восст:−5)');
+      P('         − штраф за пропуск разминки (−10). Hard-override: травма / вчера max <48ч → rest-day.');
+    } catch (e) { P('readiness: ошибка ' + (e && e.message)); }
+    P('');
+
+    // 2) Cooldown
+    try {
+      const cd = Fingers.cooldownCheck && Fingers.cooldownCheck();
+      if (cd) {
+        P('— 2. COOLDOWN (восстановление связок) —');
+        P('  ' + (cd.hoursSinceLast != null ? cd.hoursSinceLast + 'ч с последней сессии' : 'нет сессий')
+          + (cd.lastWasMax ? ' (была max)' : '') + ' → ' + cd.recommendation
+          + (cd.allowedNow === false ? ' [soft-block]' : ''));
+        P('  пороги после max: <24ч=rest, 24–48=recovery, 48–72=moderate, ≥72=max');
+      }
+    } catch (_) {}
+    P('');
+
+    // 3) Бакет дня + рекомендация + мезоцикл
+    try {
+      const data = _buildTodayData(key);
+      P('— 3. БАКЕТ ДНЯ (минимум из всех ограничителей) —');
+      P('  readiness=' + (data.readinessBucket || '—')
+        + ' ∩ cooldown=' + (data.cooldown ? data.cooldown.recommendation : '—')
+        + (data.mesocycle ? ' ∩ мезоцикл=' + data.mesocycle.ceiling + ' (фаза ' + data.mesocycle.label + ')' : '')
+        + ' → ИТОГ=' + data.bucket);
+      P('');
+      P('— 4. РЕКОМЕНДАЦИЯ —');
+      if (data.recommendedProgram) {
+        P('  ' + data.recommendedProgram.id + ' · интенсивность=' + (data.recommendedProgram.intensity || '?'));
+        P('  логика: getRecommendedProgramId (age+equipment+grade+goal) → кламп к потолку бакета');
+        P('          (_recommendForBucket): если штатная рекомендация выше дневного потолка — понижаем.');
+      } else {
+        P('  нет (день отдыха или нет программ под состояние/оборудование)');
+      }
+      if (data.mesocycle) {
+        P('');
+        P('— 5. МЕЗОЦИКЛ —');
+        P('  неделя ' + data.mesocycle.week + '/' + data.mesocycle.weeksTotal
+          + ' · фаза=' + data.mesocycle.label + ' · потолок=' + data.mesocycle.ceiling
+          + (data.mesocycle.complete ? ' · ЦИКЛ ЗАВЕРШЁН' : ''));
+      }
+    } catch (e) { P('today: ошибка ' + (e && e.message)); }
+
+    // 6) Асимметрия (если есть записи)
+    try {
+      const asym = (Fingers.records && Fingers.records.asymmetries) ? Fingers.records.asymmetries() : [];
+      if (asym && asym.length) {
+        P('');
+        P('— 6. БАЛАНС/АСИММЕТРИЯ —');
+        asym.forEach(function (f) {
+          P('  • ' + f.kind + (f.ratio ? ' ×' + f.ratio : '')
+            + (f.weakerSide ? ' (слабее ' + (f.weakerSide === 'left' ? 'левая' : 'правая') + ')' : ''));
+        });
+      }
+    } catch (_) {}
+
+    P('');
+    P('=== конец диагностики ===');
+    return L.join('\n');
+  }
+  Fingers.buildDiagnostic = _buildFingersDiagnostic;
+
+  // Рекомендует программу, интенсивность которой не выше дневного safety-потолка
+  // (data.bucket из readiness ∩ cooldown). Сначала пытается оставить штатную
+  // рекомендацию getRecommendedProgramId(), если она в пределах потолка; иначе
+  // понижает до самой тяжёлой допустимой среди age+equipment-eligible. rest/
+  // unknown → null (Start всё равно скрыт через allowStart=false).
+  function _recommendForBucket(bucket) {
+    const ceil = ({ recovery: 1, moderate: 2, max: 3 })[bucket] || 0;
+    if (!ceil) return null;
+    const iRank = function (p) {
+      return ({ recovery: 1, moderate: 2, max: 3 })[(p && p.intensity) || 'moderate'] || 2;
+    };
+    const programs = Array.isArray(Fingers.PROGRAMS) ? Fingers.PROGRAMS : [];
+    const fp = getProfile();
+    // 1) Штатная рекомендация — оставляем, если в пределах потолка.
+    try {
+      const recId = getRecommendedProgramId();
+      const prog = recId ? programs.find(function (p) { return p.id === recId; }) : null;
+      if (prog && iRank(prog) <= ceil) return prog;
+    } catch (_) {}
+    // 2) Иначе — самая тяжёлая допустимая среди age+equipment-eligible
+    //    (те же гейты, что в getRecommendedProgramId / ProgramsTab).
+    const ageNum = Number(fp.age);
+    const ageFiltered = (Fingers.ageGate && Fingers.ageGate.filterPrograms)
+      ? Fingers.ageGate.filterPrograms(programs, ageNum) : programs;
+    const eqOpts = {
+      equipmentTypes: Array.isArray(fp.equipmentTypes) ? fp.equipmentTypes : null,
+      noEquipment: !!fp.noEquipment,
+      blockMode: !!fp.blockMode,
+      edgeLimit: fp.edgeLimit
+    };
+    const eligible = (Fingers.filterProgramsByEquipment
+      ? Fingers.filterProgramsByEquipment(ageFiltered, eqOpts) : ageFiltered)
+      .filter(function (p) { return iRank(p) <= ceil; });
+    if (!eligible.length) return null;
+    eligible.sort(function (a, b) { return iRank(b) - iRank(a); });
+    return eligible[0];
+  }
+
+  // B1: мержит per-set feedback (RPE/боль) в КОПИЮ exercises для fingersLog.
+  // feedbackByExIdx: { [exIdx]: [{ rpe:'easy'|'ok'|'hard'|null, pain:bool }, ...] }.
+  // Additive-инвариант: пусто/нет → возвращаем исходный массив без изменений
+  // (старый контракт fingersLog байт-в-байт). Не мутирует вход.
+  function _mergeSetFeedback(exercises, feedbackByExIdx) {
+    if (!Array.isArray(exercises)) return exercises;
+    if (!feedbackByExIdx || typeof feedbackByExIdx !== 'object') return exercises;
+    let touched = false;
+    const out = exercises.map(function (ex, i) {
+      const fb = feedbackByExIdx[i];
+      if (!Array.isArray(fb) || !fb.length) return ex;
+      const setFeedback = [];
+      for (let s = 0; s < fb.length; s++) {
+        const f = fb[s];
+        if (!f) continue;
+        setFeedback[s] = { rpe: f.rpe || null, pain: !!f.pain };
+      }
+      if (!setFeedback.length) return ex;
+      touched = true;
+      return Object.assign({}, ex, { setFeedback: setFeedback });
+    });
+    return touched ? out : exercises;
+  }
+
+  // B1/B19: чистая сборка контракта fingersLog («finish → дневник»). Вынесена
+  // из handleComplete ради unit-тестов happy-path. opts:
+  //   { programId, feedback, viaTimer, nowIso? }.
+  // hadPain ставится только при наличии боли в каком-либо сете. Additive:
+  // без feedback exercises остаётся прежним (см. _mergeSetFeedback).
+  function _buildFingersLog(exercises, opts) {
+    const o = opts || {};
+    const list = Array.isArray(exercises) ? exercises : [];
+    const totalMin = list.reduce(function (s, e) {
+      const oneSet = (e.hangSec + e.restSec) * e.repsPerSet + e.restBetweenSetsSec;
+      return s + (oneSet * e.setsCount) / 60;
+    }, 0);
+    const loggedExercises = _mergeSetFeedback(list, o.feedback);
+    const hadPain = loggedExercises.some(function (e) {
+      return Array.isArray(e.setFeedback) && e.setFeedback.some(function (f) { return f && f.pain; });
+    });
+    const fingersLog = {
+      version: 1,
+      programId: o.programId || 'custom',
+      totalDurationMinutes: Math.round(totalMin),
+      exercises: loggedExercises,
+      completedAt: o.nowIso || new Date().toISOString(),
+      viaTimer: !!o.viaTimer
+    };
+    if (hadPain) fingersLog.hadPain = true;
+    return fingersLog;
+  }
+
+  function _bucketMeta(bucket) {
+    // Returns { emoji, title, color, allowStart }
+    if (bucket === 'unknown') return { emoji: '🎂', title: 'Сегодня — заполни возраст', color: '#6b7280', allowStart: false };
+    if (bucket === 'rest')     return { emoji: '🛌', title: 'Сегодня — отдых', color: '#6b7280', allowStart: false };
+    if (bucket === 'recovery') return { emoji: '🟢', title: 'Сегодня — восстановление', color: '#10b981', allowStart: true };
+    if (bucket === 'moderate') return { emoji: '🟡', title: 'Сегодня — умеренная', color: '#f59e0b', allowStart: true };
+    if (bucket === 'max')      return { emoji: '🔴', title: 'Сегодня — максимум', color: '#dc2626', allowStart: true };
+    return { emoji: '❓', title: 'Сегодня', color: '#6b7280', allowStart: false };
+  }
+
+  function _formatHoursAgo(hours) {
+    if (hours == null) return null;
+    if (hours < 1) return 'меньше часа назад';
+    if (hours < 24) return Math.round(hours) + ' ч назад';
+    const days = Math.round(hours / 24);
+    return days === 1 ? 'вчера' : days + ' дн. назад';
+  }
+
+  function TodayTab({ onPickProgram, onSwitchToPrograms, onSwitchToConstructor, onRequestOnboarding }) {
+    const todayKey = useMemo(function () {
+      const d = new Date();
+      return _formatDateKey(d);
+    }, []);
+    // Re-compute on mount + при возвращении на таб; не пересчитываем на каждый
+    // render. Cooldown/readiness меняются медленно — раз в открытие достаточно.
+    const data = useMemo(function () { return _buildTodayData(todayKey); }, [todayKey]);
+    const meta = _bucketMeta(data.bucket);
+
+    // Profile incomplete — CTA на onboarding, никаких рекомендаций.
+    if (data.profileIncomplete) {
+      return h('div', { className: 'fingers-fs-empty', style: { padding: 24, textAlign: 'center' } },
+        h('div', { style: { fontSize: 40, marginBottom: 12 } }, meta.emoji),
+        h('h3', { style: { margin: '0 0 8px', fontSize: 17 } }, meta.title),
+        h('p', { style: { fontSize: 14, opacity: 0.75, marginBottom: 16 } },
+          'Без возраста не можем подобрать безопасные программы'),
+        h('button', {
+          type: 'button',
+          className: 'fingers-fs-btn fingers-fs-btn--primary',
+          onClick: onRequestOnboarding
+        }, 'Заполнить профиль')
+      );
+    }
+
+    const cdHint = data.cooldown && data.cooldown.hoursSinceLast != null
+      ? _formatHoursAgo(data.cooldown.hoursSinceLast) +
+        (data.cooldown.lastWasMax ? ' — была max-нагрузка' : '')
+      : 'Первая тренировка';
+
+    // Build reasons-list: top-3 из readiness + cooldown hint отдельной строкой.
+    const reasonItems = (data.reasons || []).slice(0, 3);
+
+    return h('div', { className: 'fingers-fs-today', style: { padding: '6px 0 12px' } },
+      // ─── Hero: readiness-гадж (число в цветном кольце) + статус + причины ───
+      h('div', {
+        className: 'fingers-fs-today__hero',
+        style: {
+          padding: '18px 18px 16px', borderRadius: 16, marginBottom: 16,
+          background: 'linear-gradient(135deg, ' + meta.color + '1f 0%, ' + meta.color + '08 100%)',
+          border: '1px solid ' + meta.color + '33'
+        }
+      },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 14 } },
+          data.score != null
+            ? h('div', {
+                style: {
+                  flex: '0 0 auto', width: 60, height: 60, borderRadius: '50%',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  background: meta.color + '1f', border: '2.5px solid ' + meta.color, color: meta.color
+                }
+              },
+                h('span', { style: { fontSize: 19, fontWeight: 800, lineHeight: 1 } }, data.score),
+                h('span', { style: { fontSize: 10, opacity: 0.7, marginTop: 1, fontWeight: 600 } }, '/ 100')
+              )
+            : h('span', { style: { flex: '0 0 auto', fontSize: 36 }, 'aria-hidden': 'true' }, meta.emoji),
+          h('div', { style: { minWidth: 0 } },
+            h('h2', { style: { margin: 0, fontSize: 19, fontWeight: 700, color: meta.color, lineHeight: 1.2 } }, meta.title),
+            h('div', { style: { fontSize: 13, opacity: 0.7, marginTop: 3 } }, cdHint),
+            data.mesocycle
+              ? h('div', {
+                  style: { display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
+                    padding: '3px 9px', borderRadius: 20, fontSize: 12, fontWeight: 500,
+                    background: meta.color + '1a', color: meta.color }
+                }, data.mesocycle.complete
+                    ? '🔄 Цикл завершён — пора пере-тест'
+                    : '🗓 Цикл: нед. ' + data.mesocycle.week + '/' + data.mesocycle.weeksTotal + ' · ' + data.mesocycle.label)
+              : null
+          )
+        ),
+        reasonItems.length
+          ? h('div', {
+              style: { marginTop: 14, paddingTop: 12, borderTop: '1px solid ' + meta.color + '22',
+                display: 'flex', flexDirection: 'column', gap: 6 }
+            },
+              reasonItems.map(function (r, i) {
+                return h('div', { key: i, style: { fontSize: 13, opacity: 0.85, display: 'flex', gap: 8 } },
+                  h('span', { style: { color: meta.color, flex: '0 0 auto', fontWeight: 700 } }, '•'),
+                  h('span', null, r));
+              })
+            )
+          : null
+      ),
+
+      // ─── Рекомендация — той же полированной program-card, что в Протоколах ───
+      data.recommendedProgram && meta.allowStart
+        ? (function () {
+            const p = data.recommendedProgram;
+            return h('div', {
+              className: 'fingers-fs-program-card fingers-fs-program-card--recommended',
+              style: { marginBottom: 14 }
+            },
+              h('div', { className: 'fingers-fs-program-card__rec-badge', 'aria-label': 'Рекомендовано на сегодня' },
+                h('span', { className: 'fingers-fs-program-card__rec-star', 'aria-hidden': 'true' }, '★'),
+                h('span', null, 'на сегодня')
+              ),
+              h('h3', { className: 'fingers-fs-program-card__title' }, p.name || p.id),
+              p.description ? h(ProgramDesc, { text: p.description }) : null,
+              h('div', { className: 'fingers-fs-program-card__chips' },
+                h('span', {
+                  className: 'fingers-fs-chip fingers-fs-chip--intensity',
+                  'data-fingers-intensity': p.intensity || 'moderate'
+                }, intensityLabel(p.intensity)),
+                p.durationMin
+                  ? h('span', { className: 'fingers-fs-chip' }, h('span', { 'aria-hidden': 'true' }, '⏱ '), p.durationMin + ' мин')
+                  : null,
+                p.level ? h('span', { className: 'fingers-fs-chip fingers-fs-chip--level' }, p.level) : null
+              ),
+              h('button', {
+                type: 'button',
+                className: 'fingers-fs-cta',
+                style: { width: '100%' },
+                onClick: function () { onPickProgram && onPickProgram(p); }
+              }, 'Начать тренировку →')
+            );
+          })()
+        : null,
+
+      // ─── Rest-day / нет программ — callout ───
+      !meta.allowStart && !data.profileIncomplete
+        ? h('div', {
+            className: 'fingers-fs-progress-callout',
+            style: { display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14 }
+          },
+            h('span', { style: { fontSize: 22, flex: '0 0 auto' }, 'aria-hidden': 'true' }, meta.emoji),
+            h('span', { style: { fontSize: 14, lineHeight: 1.45 } },
+              data.bucket === 'rest'
+                ? 'Сегодня лучше отдохнуть — связки восстанавливаются медленнее мышц. Прогресс не делается через переутомление.'
+                : 'Подходящих протоколов под текущее состояние нет — загляни в каталог или собери свою сессию.')
+          )
+        : null
     );
   }
 
@@ -9252,8 +10036,177 @@
         };
       }
     } catch (_) {}
+    // B9: недавний пропуск разогрева → флаг для readiness-штрафа.
+    if (_warmupSkippedRecently()) {
+      today.fingers = Object.assign({}, today.fingers, { warmupSkippedRecently: true });
+    }
     return { today: today, history: history };
   }
+
+  // B9: персист/чтение отметки «пропустил разогрев». Scoped по клиенту
+  // (паттерн heys_<cid>_fingers_*). Влияет на readiness следующей сессии в
+  // пределах 48ч (штраф в readiness.assess).
+  function _warmupSkipKey() {
+    const cid = (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
+    return cid ? ('heys_' + cid + '_fingers_warmup_skip_v1') : 'heys_fingers_warmup_skip_v1';
+  }
+  function _recordWarmupSkip() {
+    try { if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet(_warmupSkipKey(), Date.now()); } catch (_) { /* noop */ }
+  }
+  function _warmupSkippedRecently() {
+    try {
+      const u = HEYS.utils;
+      const at = u && u.lsGet ? Number(u.lsGet(_warmupSkipKey(), 0)) : 0;
+      return at > 0 && (Date.now() - at) < 48 * 3600e3;
+    } catch (_) { return false; }
+  }
+
+  // B6: reader недавней finger-боли (dayv2 за lookbackDays). Reuse приватных
+  // _readDayDiary/_formatDateKey; pure-детект — Fingers.painGate.dayHasFingerPain.
+  // Возвращает { hasPain, daysAgo? } для grip-gating в конструкторе.
+  function _recentFingerPain(lookbackDays) {
+    const n = Math.max(1, Math.min(30, lookbackDays || 7));
+    const pg = Fingers.painGate;
+    if (!pg || typeof pg.dayHasFingerPain !== 'function') return { hasPain: false };
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const day = _readDayDiary(_formatDateKey(d));
+      if (day && pg.dayHasFingerPain(day)) return { hasPain: true, daysAgo: i };
+    }
+    return { hasPain: false };
+  }
+  Fingers.recentFingerPain = _recentFingerPain;
+
+  // B4: RPE последней сессии для конкретного хвата (для авто-прогрессии).
+  // Идёт от сегодня назад, берёт первую finger-сессию с этим gripId и
+  // setFeedback. Возвращает { rpe:[...], daysAgo }.
+  function _lastGripFeedback(gripId, lookbackDays) {
+    const n = Math.max(1, Math.min(60, lookbackDays || 30));
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const day = _readDayDiary(_formatDateKey(d));
+      if (!day || !Array.isArray(day.trainings)) continue;
+      for (let t = day.trainings.length - 1; t >= 0; t--) {
+        const tr = day.trainings[t];
+        if (!tr || tr.type !== 'fingers' || !tr.fingersLog || !Array.isArray(tr.fingersLog.exercises)) continue;
+        const ex = tr.fingersLog.exercises.find(function (e) {
+          return e && e.gripId === gripId && Array.isArray(e.setFeedback);
+        });
+        if (ex) {
+          const rpe = ex.setFeedback.map(function (f) { return f && f.rpe; }).filter(Boolean);
+          if (rpe.length) return { rpe: rpe, daysAgo: i };
+        }
+      }
+    }
+    return { rpe: [], daysAgo: null };
+  }
+  Fingers.lastGripFeedback = _lastGripFeedback;
+
+  // B18: извлекает детали дня (для модалки по клику в календаре) из dayv2-объекта.
+  // Pure. Возвращает { sessions:[{ programId, durationMinutes, hadPain, notes,
+  // exercises:[{ gripId, edgeSizeMm, addedWeightKg, setsCount, rpe:[...], pain }] }] }.
+  function _buildDayDetail(day) {
+    const out = { sessions: [] };
+    if (!day || !Array.isArray(day.trainings)) return out;
+    day.trainings.forEach(function (tr, idx) {
+      if (!tr || tr.type !== 'fingers' || !tr.fingersLog) return;
+      const log = tr.fingersLog;
+      const exercises = (Array.isArray(log.exercises) ? log.exercises : []).map(function (ex) {
+        const fb = Array.isArray(ex.setFeedback) ? ex.setFeedback : [];
+        return {
+          gripId: ex.gripId || null,
+          edgeSizeMm: ex.edgeSizeMm != null ? ex.edgeSizeMm : null,
+          addedWeightKg: Number(ex.addedWeightKg) || 0,
+          setsCount: Number(ex.setsCount) || 0,
+          rpe: fb.map(function (f) { return f && f.rpe; }).filter(Boolean),
+          pain: fb.some(function (f) { return f && f.pain; }),
+        };
+      });
+      out.sessions.push({
+        trainingIndex: idx,
+        programId: log.programId || 'custom',
+        durationMinutes: Number(log.totalDurationMinutes) || 0,
+        hadPain: !!log.hadPain || exercises.some(function (e) { return e.pain; }),
+        notes: tr.notes || '',
+        exercises: exercises,
+      });
+    });
+    return out;
+  }
+  Fingers._buildDayDetail = _buildDayDetail;
+
+  // B12: экспорт тренировочных данных пальцев. Pure CSV-сериализация — одна
+  // строка на упражнение сессии (date/program/intensity/grip/edge/weight/sets/
+  // rpe/pain). RFC4180-эскейпинг полей с запятой/кавычкой/переводом строки.
+  function buildFingersCsv(rows) {
+    const cols = ['date', 'program', 'intensity', 'durationMin', 'grip', 'edgeMm', 'addedKg', 'sets', 'rpe', 'pain'];
+    const esc = function (v) {
+      const s = v == null ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const lines = [cols.join(',')];
+    (Array.isArray(rows) ? rows : []).forEach(function (r) {
+      lines.push([
+        r.date, r.program, r.intensity, r.durationMin, r.grip, r.edgeMm, r.addedKg,
+        r.sets, (Array.isArray(r.rpe) ? r.rpe.join(' ') : (r.rpe || '')), r.pain ? 'yes' : ''
+      ].map(esc).join(','));
+    });
+    return lines.join('\n');
+  }
+  Fingers.buildFingersCsv = buildFingersCsv;
+
+  // B12 reader: собирает плоские строки экспорта из dayv2 за lookbackDays
+  // (reuse _buildDayDetail). Newest-first по скану.
+  function _collectFingersExportRows(lookbackDays) {
+    const n = Math.max(1, Math.min(730, lookbackDays || 365));
+    const rows = [];
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = _formatDateKey(d);
+      const detail = _buildDayDetail(_readDayDiary(key));
+      detail.sessions.forEach(function (s) {
+        const intensity = (Fingers.getProgramIntensity && Fingers.getProgramIntensity(s.programId)) || '';
+        s.exercises.forEach(function (ex) {
+          rows.push({
+            date: key, program: s.programId, intensity: intensity,
+            durationMin: s.durationMinutes, grip: ex.gripId, edgeMm: ex.edgeSizeMm,
+            addedKg: ex.addedWeightKg, sets: ex.setsCount, rpe: ex.rpe, pain: ex.pain,
+          });
+        });
+      });
+    }
+    return rows;
+  }
+  Fingers._collectFingersExportRows = _collectFingersExportRows;
+
+  // B12: триггер скачивания CSV (browser-only). Собирает строки + Blob + anchor.
+  function exportFingersCsv() {
+    try {
+      const rows = _collectFingersExportRows(365);
+      const csv = buildFingersCsv(rows);
+      if (typeof document === 'undefined' || typeof Blob === 'undefined') return false;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fingers-export.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 1000);
+      return true;
+    } catch (e) {
+      console.warn('[Fingers] exportFingersCsv failed:', e);
+      return false;
+    }
+  }
+  Fingers.exportFingersCsv = exportFingersCsv;
 
   /**
    * Один проход по последним 365 дням → streak, totals, последние 5 сессий.
@@ -9356,6 +10309,25 @@
     };
   }
 
+  // B11: цель недельного объёма (closing-the-loop). Цель = среднее по предыдущим
+  // неделям с данными (индексы 1..4, weeklyVolume[0]=текущая) — «держи свой
+  // недавний объём». Pure. Возвращает { thisWeek, target, pct } минут;
+  // target=null если нет истории (рано ставить план).
+  function _weeklyVolumeTarget(weeklyVolume) {
+    const wv = Array.isArray(weeklyVolume) ? weeklyVolume : [];
+    const thisWeek = Math.round(Number(wv[0]) || 0);
+    const prior = [];
+    for (let i = 1; i <= 4; i++) {
+      const v = Number(wv[i]) || 0;
+      if (v > 0) prior.push(v);
+    }
+    if (!prior.length) return { thisWeek: thisWeek, target: null, pct: null };
+    const target = Math.round(prior.reduce(function (s, v) { return s + v; }, 0) / prior.length);
+    const pct = target > 0 ? Math.round(100 * thisWeek / target) : null;
+    return { thisWeek: thisWeek, target: target, pct: pct };
+  }
+  Fingers._weeklyVolumeTarget = _weeklyVolumeTarget;
+
   function _relativeDay(daysAgo) {
     if (daysAgo === 0) return 'сегодня';
     if (daysAgo === 1) return 'вчера';
@@ -9441,6 +10413,23 @@
             h('h3', { className: 'fingers-fs-progress-section__title' }, 'Недельный объём'),
             h('span', { className: 'fingers-fs-progress-section__hint' }, '12 недель · минут')
           ),
+          // B11: цель недели = среднее по прошлым неделям + progress-bar.
+          (function () {
+            const tgt = _weeklyVolumeTarget(wv);
+            if (tgt.target == null) return null;
+            const pct = Math.max(0, Math.min(100, tgt.pct || 0));
+            const reached = (tgt.pct || 0) >= 100;
+            return h('div', { className: 'fingers-fs-volume-target', style: { marginBottom: 12 } },
+              h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 } },
+                h('span', { style: { opacity: 0.8 } }, 'Эта неделя: ' + tgt.thisWeek + ' / ~' + tgt.target + ' мин'),
+                h('span', { style: { fontWeight: 600, color: reached ? '#10b981' : '#f59e0b' } },
+                  (tgt.pct != null ? tgt.pct + '%' : ''))
+              ),
+              h('div', { style: { height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' } },
+                h('div', { style: { height: '100%', width: pct + '%', borderRadius: 4,
+                  background: reached ? '#10b981' : '#f59e0b', transition: 'width .3s' } }))
+            );
+          })(),
           h('div', { className: 'fingers-fs-volume-chart' },
             bars.map(function (val, idx) {
               const heightPct = Math.max(2, Math.round((val / maxV) * 100));
@@ -9604,7 +10593,16 @@
                   (f.ratio || f.edgeMm) && h('div', { className: 'fingers-fs-asym__meta' },
                     (f.ratio ? '×' + f.ratio + ' разница' : '')
                     + (f.ratio && f.edgeMm ? ' · ' : '')
-                    + (f.edgeMm ? f.edgeMm + ' мм' : ''))
+                    + (f.edgeMm ? f.edgeMm + ' мм' : '')),
+                  // B5: конкретный bias-совет (какая рука + 2:1) для lr_asymmetry.
+                  (function () {
+                    const adv = (Fingers.records && Fingers.records.asymmetryAdvice)
+                      ? Fingers.records.asymmetryAdvice(f) : null;
+                    return adv ? h('div', {
+                      className: 'fingers-fs-asym__advice',
+                      style: { marginTop: 6, fontSize: 13, lineHeight: 1.4, color: '#fbbf24' }
+                    }, '→ ' + adv.text) : null;
+                  })()
                 )
               );
             })
@@ -9733,29 +10731,73 @@
 
   // --- Calendar tab ---
   function CalendarTab() {
+    // B18: клик по дню → модалка с деталями (упражнения, хваты, RPE, боль, заметка).
+    const [detailKey, setDetailKey] = useState(null);
     if (!Fingers.YearHeatmap) {
       return h('div', { className: 'fingers-fs-empty' },
         h('p', null, 'Календарь недоступен (module not loaded).'));
     }
     const currentYear = new Date().getFullYear();
-    // onDayClick намеренно НЕ передаём пока bottom-sheet с деталями дня не сделан —
-    // YearHeatmap читает `hasSession && onDayClick` чтобы поставить cursor:pointer.
-    // Раньше передавали пустую функцию → курсор-указатель обманывал юзера, клик
-    // ничего не делал (audit-finding 2026-06-01).
+    const detail = detailKey ? _buildDayDetail(_readDayDiary(detailKey)) : null;
+    const rpeEmoji = { easy: '😎', ok: '😐', hard: '🥵' };
     return h('div', null,
       h('h3', { style: { margin: '0 0 16px' } }, '📅 Год тренировок'),
-      h(Fingers.YearHeatmap, { year: currentYear })
+      h(Fingers.YearHeatmap, { year: currentYear, onDayClick: function (dateKey) { setDetailKey(dateKey); } }),
+      // B18: bottom-sheet деталей дня.
+      detailKey && detail ? h('div', {
+        className: 'fingers-fs-day-detail-overlay',
+        style: { position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end',
+          justifyContent: 'center', background: 'rgba(0,0,0,0.5)' },
+        onClick: function () { setDetailKey(null); }
+      },
+        h('div', {
+          style: { width: '100%', maxWidth: 480, maxHeight: '80vh', overflowY: 'auto',
+            background: 'var(--fingers-fs-card-bg, #1b1b1f)', borderRadius: '16px 16px 0 0',
+            padding: 20, border: '1px solid rgba(255,255,255,0.12)' },
+          onClick: function (e) { e.stopPropagation(); }
+        },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 } },
+            h('h3', { style: { margin: 0, fontSize: 17 } }, detailKey),
+            h('button', { type: 'button', className: 'fingers-fs-ghost', onClick: function () { setDetailKey(null); } }, '✕')
+          ),
+          detail.sessions.length === 0
+            ? h('p', { style: { opacity: 0.7 } }, 'Нет тренировок пальцев в этот день.')
+            : detail.sessions.map(function (s, si) {
+                return h('div', { key: si, style: { marginBottom: 16 } },
+                  h('div', { style: { fontWeight: 600, marginBottom: 6 } },
+                    (s.programId || 'custom') + ' · '
+                    + intensityLabel((Fingers.getProgramIntensity && Fingers.getProgramIntensity(s.programId)) || 'moderate')
+                    + ' · ' + s.durationMinutes + ' мин' + (s.hadPain ? ' · 🩹 боль' : '')),
+                  s.notes ? h('div', { style: { fontSize: 13, opacity: 0.75, marginBottom: 6 } }, '«' + s.notes + '»') : null,
+                  h('div', null, s.exercises.map(function (ex, ei) {
+                    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[ex.gripId];
+                    const gl = grip ? grip.label : (ex.gripId || '—');
+                    const rpeStr = ex.rpe.map(function (r) { return rpeEmoji[r] || r; }).join(' ');
+                    return h('div', { key: ei, style: { fontSize: 13, padding: '4px 0', borderTop: ei ? '1px solid rgba(255,255,255,0.06)' : 'none' } },
+                      gl + ' · ' + (ex.edgeSizeMm != null ? ex.edgeSizeMm + 'мм' : '—')
+                      + (ex.addedWeightKg ? ' · +' + ex.addedWeightKg + 'кг' : '')
+                      + ' · ' + ex.setsCount + ' подх.'
+                      + (rpeStr ? ' · ' + rpeStr : '')
+                      + (ex.pain ? ' · 🩹' : ''));
+                  }))
+                );
+              })
+        )
+      ) : null
     );
   }
 
   // --- Live session — ведомое выполнение упражнения с countdown timer ---
   // Каждое exercise = собственный cycle (key={exIdx} → re-mount hook'a).
-  function ExerciseRunner({ exercise, exIdx, totalExercises, dateKey, trainingIndex, exercises, programId, initialSnapshot, onDone, onAbort }) {
+  function ExerciseRunner({ exercise, exIdx, totalExercises, dateKey, trainingIndex, exercises, programId, initialSnapshot, onDone, onAbort, onSetFeedback }) {
     // keepSnapshotOnAbortRef — флаг для «Прервать → Не записывать» сценария.
     // Когда true: при переходе в ABORTED НЕ очищаем persistence, чтобы остался
     // snapshot и в SessionUI появился resume-баннер. При DONE/EXPIRED очищаем
     // всегда (нет смысла хранить завершённое).
     const keepSnapshotOnAbortRef = React.useRef(false);
+    // B1: промпт RPE/боли по завершении сета. null | { setIdx, isFinal }.
+    const [rpePrompt, setRpePrompt] = useState(null);
+    const [rpePain, setRpePain] = useState(false);
 
     // onStateChange wired to persistence.save: snapshot пишется на переходе фазы
     // (fireStateChange зовётся только на transition, не на tick). Live remaining
@@ -9798,15 +10840,60 @@
       }
     }, [dateKey, trainingIndex, exIdx, exercises, programId]);
 
+    // B1: обёртка onStateChange — на входе в BIG_REST показываем RPE-промпт за
+    // только что завершённый сет (meta.setIdx); на старте нового сета (HANG/
+    // SET_PREP) авто-дисмиссим незакрытый non-final промпт (= skip). Без
+    // onSetFeedback фича выключена (поведение прежнее). persistence не трогаем.
+    const handleStateChangeRpe = useCallback(function (nextState, meta) {
+      handleStateChange(nextState, meta);
+      if (!onSetFeedback) return;
+      const STATES = Fingers.STATES || {};
+      if (nextState === STATES.BIG_REST) {
+        const sIdx = meta && meta.setIdx != null ? meta.setIdx : 0;
+        setRpePrompt({ setIdx: sIdx, isFinal: false });
+      } else if (nextState === STATES.HANG || nextState === STATES.SET_PREP) {
+        setRpePrompt(function (p) { return (p && !p.isFinal) ? null : p; });
+      }
+    }, [handleStateChange, onSetFeedback]);
+
+    // B1: на DONE (последний сет) — вместо немедленного onDone показываем
+    // финальный промпт; onDone вызывается из submit/skip. Без onSetFeedback —
+    // прежнее поведение (сразу onDone).
+    const handleCycleComplete = useCallback(function () {
+      if (!onSetFeedback) { if (onDone) onDone(); return; }
+      const lastSet = Math.max(0, (Number(exercise.setsCount) || 1) - 1);
+      setRpePrompt({ setIdx: lastSet, isFinal: true });
+    }, [onSetFeedback, onDone, exercise.setsCount]);
+
     const cycle = Fingers.useCountdownCycle({
       hangSec: Number(exercise.hangSec) || 7,
       restSec: Number(exercise.restSec) || 3,
       repsPerSet: Number(exercise.repsPerSet) || 6,
       setsCount: Number(exercise.setsCount) || 3,
       restBetweenSetsSec: Number(exercise.restBetweenSetsSec) || 180,
-      onComplete: onDone,
-      onStateChange: handleStateChange
+      onComplete: handleCycleComplete,
+      onStateChange: handleStateChangeRpe
     });
+
+    // B1: submit/skip RPE-промпта. submit пишет feedback наверх (recordSetFeedback);
+    // на финальном сете оба пути завершают упражнение через onDone.
+    const submitRpe = useCallback(function (rpe, pain) {
+      setRpePrompt(function (p) {
+        if (p && onSetFeedback) {
+          try { onSetFeedback(exIdx, p.setIdx, { rpe: rpe, pain: !!pain }); } catch (_) {}
+        }
+        if (p && p.isFinal && onDone) onDone();
+        return null;
+      });
+      setRpePain(false);
+    }, [exIdx, onSetFeedback, onDone]);
+    const skipRpe = useCallback(function () {
+      setRpePrompt(function (p) {
+        if (p && p.isFinal && onDone) onDone();
+        return null;
+      });
+      setRpePain(false);
+    }, [onDone]);
 
     // Auto-start session на mount. НЕ блокируем повторный запуск ref'ом —
     // React Strict Mode mount-unmount-remount убивает setInterval из cleanup
@@ -9851,6 +10938,64 @@
     const gripLabel = grip ? grip.label : exercise.gripId;
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : '—';
     const addedWeight = Number(exercise.addedWeightKg) || 0;
+
+    // B1: RPE/боль оверлей. Рендерится поверх любой ветки (CountdownDisplay или
+    // fallback), чтобы финальный сет (isFinal) гарантированно мог завершить
+    // сессию через submit/skip. Non-final — поверх отдыха, не блокирует таймер.
+    const rpeOverlay = rpePrompt ? (function () {
+      const setNo = (Number(rpePrompt.setIdx) || 0) + 1;
+      const title = rpePrompt.isFinal
+        ? 'Последний подход — как прошёл?'
+        : ('Подход ' + setNo + ' — как прошёл?');
+      const btn = function (key, label, rpeVal) {
+        return h('button', {
+          key: key,
+          type: 'button',
+          className: 'fingers-fs-btn',
+          style: { flex: 1, fontSize: 15, padding: '12px 8px' },
+          onClick: function () { submitRpe(rpeVal, rpePain); }
+        }, label);
+      };
+      return h('div', {
+        className: 'fingers-fs-rpe-overlay',
+        style: {
+          position: 'fixed', inset: 0, zIndex: 40,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)', padding: 20
+        }
+      },
+        h('div', {
+          style: {
+            width: '100%', maxWidth: 360, borderRadius: 16, padding: 20,
+            background: 'var(--fingers-fs-card-bg, #1b1b1f)',
+            border: '1px solid rgba(255,255,255,0.12)'
+          }
+        },
+          h('h3', { style: { margin: '0 0 14px', fontSize: 17, textAlign: 'center' } }, title),
+          h('div', { style: { display: 'flex', gap: 8, marginBottom: 14 } },
+            btn('easy', '😎 Легко', 'easy'),
+            btn('ok', '😐 Норм', 'ok'),
+            btn('hard', '🥵 Тяжело', 'hard')
+          ),
+          h('label', {
+            style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, opacity: 0.85, cursor: 'pointer', marginBottom: 14 }
+          },
+            h('input', {
+              type: 'checkbox',
+              checked: rpePain,
+              onChange: function (e) { setRpePain(!!e.target.checked); }
+            }),
+            'Была боль в пальцах / суставах'
+          ),
+          h('button', {
+            type: 'button',
+            className: 'fingers-fs-ghost',
+            style: { width: '100%', fontSize: 13, opacity: 0.7 },
+            onClick: skipRpe
+          }, 'Пропустить')
+        )
+      );
+    })() : null;
 
     if (Fingers.CountdownDisplay) {
       // Smart pause/resume: CountdownDisplay читает только onPause prop;
@@ -9949,43 +11094,49 @@
         });
       };
 
-      return h(Fingers.CountdownDisplay, {
-        state: cycle.state,
-        secondsLeft: cycle.secondsLeft,
-        setIdx: cycle.setIdx,
-        totalSets: Number(exercise.setsCount) || 3,
-        repIdx: cycle.repIdx,
-        totalReps: Number(exercise.repsPerSet) || 6,
-        // Только название хвата — edge/вес передаются отдельными prop'ами
-        // чтобы CountdownDisplay сам форматировал без дубликатов.
-        gripLabel: gripLabel,
-        gripId: exercise.gripId,
-        edgeLabel: edgeLabel,
-        addedWeightKg: addedWeight,
-        exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
-        onPause: togglePauseResume,
-        onResume: cycle.resume,
-        onAbort: requestAbort,
-        onSkip: cycle.skipPhase
-      });
+      return h(React.Fragment, null,
+        h(Fingers.CountdownDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          setIdx: cycle.setIdx,
+          totalSets: Number(exercise.setsCount) || 3,
+          repIdx: cycle.repIdx,
+          totalReps: Number(exercise.repsPerSet) || 6,
+          // Только название хвата — edge/вес передаются отдельными prop'ами
+          // чтобы CountdownDisplay сам форматировал без дубликатов.
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          edgeLabel: edgeLabel,
+          addedWeightKg: addedWeight,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onPause: togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        rpeOverlay
+      );
     }
 
     // Fallback если CountdownDisplay не загружен
-    return h('div', { style: { padding: 32, textAlign: 'center' } },
-      h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel),
-      h('div', { style: { fontSize: 96, fontWeight: 300, fontFamily: 'mono' } },
-        cycle.secondsLeft + 'с'),
-      h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
-        'Состояние: ' + cycle.state + ' · Сет ' + (cycle.setIdx + 1) + '/' + exercise.setsCount),
-      h('button', {
-        className: 'fingers-fs-ghost',
-        onClick: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); },
-        style: { marginTop: 16 }
-      }, '✕ Прервать')
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel),
+        h('div', { style: { fontSize: 96, fontWeight: 300, fontFamily: 'mono' } },
+          cycle.secondsLeft + 'с'),
+        h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
+          'Состояние: ' + cycle.state + ' · Сет ' + (cycle.setIdx + 1) + '/' + exercise.setsCount),
+        h('button', {
+          className: 'fingers-fs-ghost',
+          onClick: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); },
+          style: { marginTop: 16 }
+        }, '✕ Прервать')
+      ),
+      rpeOverlay
     );
   }
 
-  function LiveSession({ exercises, dateKey, trainingIndex, programId, initialSnapshot, onAllDone, onAbort }) {
+  function LiveSession({ exercises, dateKey, trainingIndex, programId, initialSnapshot, onAllDone, onAbort, onSetFeedback }) {
     // Start at snapshot.exIdx if resuming; иначе с первого упражнения.
     const startIdx = (initialSnapshot && Number.isInteger(initialSnapshot.exIdx))
       ? Math.min(Math.max(0, initialSnapshot.exIdx), Math.max(0, (exercises?.length || 1) - 1))
@@ -10017,7 +11168,8 @@
       programId: programId,
       initialSnapshot: initialSnapshot,
       onDone: handleExerciseDone,
-      onAbort: onAbort
+      onAbort: onAbort,
+      onSetFeedback: onSetFeedback
     });
   }
 
@@ -10047,20 +11199,17 @@
     }
     const activeTypes = deriveTypesFromLegacy(profile);
     const allBoards = Array.isArray(Fingers.BOARDS) ? Fingers.BOARDS : [];
-    // Board picker отображается если активен full или block. Список зависит от
-    // того что активно: если оба — показываем оба kind'а в одном списке.
     const wantFull  = activeTypes.indexOf('full') >= 0;
     const wantBlock = activeTypes.indexOf('block') >= 0;
-    const boards = (wantFull || wantBlock)
-      ? allBoards.filter(function (b) {
-          const k = b.kind || 'fingerboard';
-          return (wantFull && k === 'fingerboard') || (wantBlock && k === 'block');
-        })
-      : [];
-    const currentBoard = profile.fingerboardId && Fingers.getBoardById
-      ? Fingers.getBoardById(profile.fingerboardId)
-      : null;
-    const [boardPickerOpen, setBoardPickerOpen] = useState(false);
+    // Отдельные модели на тип: fingerboardId — доска (kind=fingerboard),
+    // blockBoardId — блок (kind=block). Раньше один fingerboardId перетирал оба.
+    const fullBoards  = allBoards.filter(function (b) { return (b.kind || 'fingerboard') === 'fingerboard'; });
+    const blockBoards = allBoards.filter(function (b) { return b.kind === 'block'; });
+    const _getB = function (id) { return id && Fingers.getBoardById ? Fingers.getBoardById(id) : null; };
+    const currentFullBoard  = _getB(profile.fingerboardId);
+    const currentBlockBoard = _getB(profile.blockBoardId);
+    // openPicker: null | 'full' | 'block' — какой дропдаун раскрыт (взаимоисключающе).
+    const [openPicker, setOpenPicker] = useState(null);
 
     function syncLegacyFromTypes(types) {
       // Derive legacy single-state поля из массива. Преимущество для совместимости:
@@ -10103,21 +11252,17 @@
         next = activeTypes.concat([type]);
       }
       const patch = syncLegacyFromTypes(next);
-      // Если включили block и пока нет block-доски выбранной — назначить default
-      if (type === 'block' && !has) {
-        if (!currentBoard || currentBoard.kind !== 'block') {
-          patch.fingerboardId = 'xclimb_terminator';
-        }
-      }
-      // Если выключили block и текущая доска — block, переключить на fingerboard default
-      if (type === 'block' && has && currentBoard && currentBoard.kind === 'block') {
-        patch.fingerboardId = next.indexOf('full') >= 0 ? 'beastmaker_1000' : null;
-      }
+      // Дефолтная модель при первом включении типа (если ещё не выбрана) —
+      // независимо для доски и блока, без перетирания друг друга.
+      if (type === 'block' && !has && !profile.blockBoardId) patch.blockBoardId = 'xclimb_terminator';
+      if (type === 'full' && !has && !profile.fingerboardId) patch.fingerboardId = 'beastmaker_1000';
       writeProfile(patch);
     }
-    function pickBoard(id) {
-      writeProfile({ fingerboardId: id });
-      setBoardPickerOpen(false);
+    function pickBoard(id, field) {
+      const p = {};
+      p[field || 'fingerboardId'] = id;
+      writeProfile(p);
+      setOpenPicker(null);
     }
 
     const tabs = [
@@ -10126,6 +11271,38 @@
       { id: 'door',  icon: '🚪', label: 'Door frame' },
       { id: 'none',  icon: '🤚', label: 'No-Hangs' }
     ];
+
+    // Пикер модели для одного типа оборудования. field — куда писать
+    // (fingerboardId | blockBoardId). pickerKey — для взаимоисключающего раскрытия.
+    const mkPicker = function (field, list, current, pickerKey, placeholder) {
+      const isOpen = openPicker === pickerKey;
+      return h('div', { className: 'fingers-fs-equipment-board', style: { flex: '1 1 0', minWidth: 0 } },
+        h('button', {
+          type: 'button',
+          className: 'fingers-fs-equipment-board__btn',
+          onClick: function () { setOpenPicker(isOpen ? null : pickerKey); },
+          'aria-expanded': isOpen ? 'true' : 'false'
+        },
+          h('span', { className: 'fingers-fs-equipment-board__label' }, (current && current.label) || placeholder),
+          h('span', { className: 'fingers-fs-equipment-board__chevron', 'aria-hidden': 'true' }, isOpen ? '▲' : '▼')
+        ),
+        isOpen ? h('div', { className: 'fingers-fs-equipment-board__menu' },
+          list.map(function (b) {
+            const active = current && current.id === b.id;
+            return h('button', {
+              key: b.id,
+              type: 'button',
+              className: 'fingers-fs-equipment-board__option' + (active ? ' is-active' : ''),
+              onClick: function () { pickBoard(b.id, field); }
+            },
+              h('span', { className: 'fingers-fs-equipment-board__option-label' }, b.label),
+              b.manufacturer ? h('span', { className: 'fingers-fs-equipment-board__option-sub' }, b.manufacturer) : null,
+              active ? h('span', { className: 'fingers-fs-equipment-board__option-check' }, '✓') : null
+            );
+          })
+        ) : null
+      );
+    };
 
     return h('div', { className: 'fingers-fs-equipment-bar' },
       h('div', { className: 'fingers-fs-equipment-bar__tabs',
@@ -10154,35 +11331,16 @@
           );
         })
       ),
-      // Board picker (для full и/или block — список объединённый по активным kind'ам)
-      (wantFull || wantBlock) && boards.length > 0 ? h('div', { className: 'fingers-fs-equipment-board' },
-        h('button', {
-          type: 'button',
-          className: 'fingers-fs-equipment-board__btn',
-          onClick: function () { setBoardPickerOpen(!boardPickerOpen); },
-          'aria-expanded': boardPickerOpen ? 'true' : 'false'
-        },
-          h('span', { className: 'fingers-fs-equipment-board__label' },
-            (currentBoard && currentBoard.label) || 'Выбрать модель'),
-          h('span', { className: 'fingers-fs-equipment-board__chevron', 'aria-hidden': 'true' },
-            boardPickerOpen ? '▲' : '▼')
-        ),
-        boardPickerOpen ? h('div', { className: 'fingers-fs-equipment-board__menu' },
-          boards.map(function (b) {
-            const active = (currentBoard && currentBoard.id === b.id);
-            return h('button', {
-              key: b.id,
-              type: 'button',
-              className: 'fingers-fs-equipment-board__option' + (active ? ' is-active' : ''),
-              onClick: function () { pickBoard(b.id); }
-            },
-              h('span', { className: 'fingers-fs-equipment-board__option-label' }, b.label),
-              b.manufacturer ? h('span', { className: 'fingers-fs-equipment-board__option-sub' },
-                b.manufacturer) : null,
-              active ? h('span', { className: 'fingers-fs-equipment-board__option-check' }, '✓') : null
-            );
-          })
-        ) : null
+      // Пикеры модели — на каждый активный тип (доска | блок) в строку, без
+      // перекрытия. Если выбраны оба — два пикера рядом, каждый со своим выбором.
+      (wantFull || wantBlock) ? h('div', {
+        className: 'fingers-fs-equipment-boards-row',
+        style: { display: 'flex', gap: 8, alignItems: 'flex-start' }
+      },
+        (wantFull && fullBoards.length)
+          ? mkPicker('fingerboardId', fullBoards, currentFullBoard, 'full', 'Выбрать доску') : null,
+        (wantBlock && blockBoards.length)
+          ? mkPicker('blockBoardId', blockBoards, currentBlockBoard, 'block', 'Выбрать блок') : null
       ) : null
     );
   }
@@ -10406,6 +11564,58 @@
               'Изменить можно в общем Профиле HEYS.')
           ),
 
+          // ─── Training cycle (B7) ───
+          h('section', { className: 'fingers-settings__section' },
+            h('div', { className: 'fingers-settings__section-title' }, 'Тренировочный цикл'),
+            (function () {
+              const cur = Fingers.mesocycle && Fingers.mesocycle.current
+                ? Fingers.mesocycle.current(null, null) : null;
+              return h('p', { className: 'fingers-settings__profile-hint', style: { marginTop: 0 } },
+                cur
+                  ? (cur.complete
+                      ? 'Цикл завершён — пора пере-тест MVC и начать новый блок.'
+                      : 'Идёт неделя ' + cur.week + '/' + cur.weeksTotal + ' · ' + cur.label
+                        + '. Фаза подстраивает рекомендуемую интенсивность в «Сегодня».')
+                  : '4-нед блок: накопление → интенсификация → разгрузка → пере-тест. '
+                    + 'Фаза автоматически клампит интенсивность дня.');
+            })(),
+            h('button', {
+              type: 'button',
+              className: 'fingers-settings__reset-btn',
+              onClick: function () {
+                if (Fingers.mesocycle && Fingers.mesocycle.start && Fingers.mesocycle.start(4)) {
+                  if (HEYS.Toast && HEYS.Toast.success) HEYS.Toast.success('Новый 4-недельный цикл начат');
+                  if (typeof onClose === 'function') onClose();
+                }
+              }
+            },
+              h('span', { 'aria-hidden': 'true' }, '🔄'),
+              ' Начать новый цикл (4 нед)'
+            )
+          ),
+
+          // ─── Data export (B12) ───
+          h('section', { className: 'fingers-settings__section' },
+            h('div', { className: 'fingers-settings__section-title' }, 'Данные'),
+            h('button', {
+              type: 'button',
+              className: 'fingers-settings__reset-btn',
+              onClick: function () {
+                const ok = Fingers.exportFingersCsv && Fingers.exportFingersCsv();
+                if (HEYS.Toast) {
+                  if (ok && HEYS.Toast.success) HEYS.Toast.success('Экспорт CSV скачан');
+                  else if (!ok && HEYS.Toast.info) HEYS.Toast.info('Нет данных для экспорта');
+                }
+              }
+            },
+              h('span', { 'aria-hidden': 'true' }, '⬇'),
+              ' Экспорт тренировок (CSV)'
+            ),
+            h('p', { className: 'fingers-settings__profile-hint' },
+              'Скачать историю за год: дата, программа, хват, зацеп, вес, подходы, RPE, боль. '
+              + 'Для своей аналитики в Google Sheets / Excel.')
+          ),
+
           // ─── Re-onboarding link ───
           onRequestReset
             ? h('button', {
@@ -10424,7 +11634,7 @@
   Fingers.SettingsSheet = FingersSettingsSheet;
 
   function SessionUI({ dateKey, trainingIndex, mode, onClose, onRequestOnboarding }) {
-    const [tab, setTab] = useState('programs');
+    const [tab, setTab] = useState('today');
     const [exercises, setExercises] = useState([]);
     // showBib: false | true | {focusSourceId: string} — last form открывает
     // модалку с автоскроллом и expanded card конкретного источника.
@@ -10467,6 +11677,9 @@
     const [warmupActive, setWarmupActive] = useState(false);
     // 'ramp' (полная 15-20 мин до max) | 'quick' (5-8 мин targeted на пальцы/кисть)
     const [warmupProtocol, setWarmupProtocol] = useState('ramp');
+    // B9: разминка пройдена в этом открытии сессии? Старт по «Всё ОК» без неё →
+    // _recordWarmupSkip (штраф readiness в следующий раз).
+    const warmedUpRef = React.useRef(false);
     // pendingResume — снапшот незавершённой сессии для постоянного баннера наверху.
     // Заполняется при монтировании если persistence.load() вернул свежий snapshot.
     // null → нет прерванной сессии, баннер не рисуется.
@@ -10571,7 +11784,11 @@
     }, []);
 
     const profile = getProfile();
-    const userBoard = profile.fingerboardId || null;
+    // userBoard для конструктора — модель под текущую загруженную программу:
+    // block-протокол → blockBoardId, иначе fingerboardId (грани берутся из неё).
+    const userBoard = _isBlockProgram(pendingProgram)
+      ? (profile.blockBoardId || null)
+      : (profile.fingerboardId || null);
     // Age fail-closed: null если не указан в профиле — конструктор покажет
     // guard вместо опасных хватов (ранее дефолтилось 18 → fail-open).
     const userAge = Number.isFinite(Number(profile.age)) ? Number(profile.age) : null;
@@ -10586,7 +11803,7 @@
         built = Array.isArray(program.exercises) ? program.exercises.slice() : [];
       } else {
         built = Fingers.buildLogFromProgram
-          ? Fingers.buildLogFromProgram(program.id, userBoard ? Fingers.getBoardById?.(userBoard) : null)
+          ? Fingers.buildLogFromProgram(program.id, _resolveBoardForProgram(program))
           : (program.exercises || []);
         if (!Array.isArray(built) || built.length === 0) {
           // Fallback: если buildLogFromProgram вернула null (unknown id) —
@@ -10606,18 +11823,13 @@
       const o = opts || {};
       if (!exercises.length) return;
       const programId = pendingProgram?.id || 'custom';
-      const totalMin = exercises.reduce(function (s, e) {
-        const oneSet = (e.hangSec + e.restSec) * e.repsPerSet + e.restBetweenSetsSec;
-        return s + (oneSet * e.setsCount) / 60;
-      }, 0);
-      const fingersLog = {
-        version: 1,
+      // B1/B19: сборка контракта вынесена в чистый _buildFingersLog (unit-tested).
+      // Additive — без o.feedback exercises остаётся прежним.
+      const fingersLog = _buildFingersLog(exercises, {
         programId: programId,
-        totalDurationMinutes: Math.round(totalMin),
-        exercises: exercises,
-        completedAt: new Date().toISOString(),
-        viaTimer: !!o.viaTimer // true если завершено через ведомый таймер
-      };
+        feedback: o.feedback,
+        viaTimer: o.viaTimer
+      });
       let saveOk = true;
       try {
         HEYS.TrainingStep?.saveFingers?.(
@@ -10793,6 +12005,7 @@
             className: 'fingers-fs-preflight-go',
             onClick: function () {
               try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
+              if (!warmedUpRef.current) _recordWarmupSkip(); // B9
               setLiveActive(true);
             } },
         ];
@@ -10801,6 +12014,7 @@
         preflightOpts.cancelText = 'Отмена';
         preflightOpts.onConfirm = function () {
           try { Fingers.voice?.say?.('cue.start_session'); } catch (_) {}
+          if (!warmedUpRef.current) _recordWarmupSkip(); // B9
           setLiveActive(true);
         };
       }
@@ -10812,6 +12026,7 @@
     // Юзер дотыкает оставшиеся чек-пункты (нет боли, не на холодные руки) и стартует.
     const handleWarmupDone = useCallback(function () {
       setWarmupActive(false);
+      warmedUpRef.current = true; // B9: разминка пройдена → старт не штрафуется.
       // Defer re-open чтобы предыдущий ConfirmModal успел размонтироваться.
       setTimeout(function () { handleStartLive(); }, 50);
     }, [handleStartLive]);
@@ -10820,11 +12035,25 @@
       setWarmupActive(false);
     }, []);
 
+    // B1: накопитель per-set feedback за live-сессию. { [exIdx]: [{rpe,pain}] }.
+    // ExerciseRunner шлёт сюда через onSetFeedback; handleLiveAllDone отдаёт в
+    // handleComplete и сбрасывает. Ref (не state) — записи во время сессии не
+    // должны триггерить ререндер живого таймера.
+    const liveFeedbackRef = React.useRef({});
+    const recordSetFeedback = useCallback(function (exIdx, setIdx, fb) {
+      if (exIdx == null || setIdx == null) return;
+      const arr = liveFeedbackRef.current[exIdx] || [];
+      arr[setIdx] = { rpe: (fb && fb.rpe) || null, pain: !!(fb && fb.pain) };
+      liveFeedbackRef.current[exIdx] = arr;
+    }, []);
+
     const handleLiveAllDone = useCallback(function () {
       setLiveActive(false);
       setInitialSnapshot(null);
       try { Fingers.voice?.say?.('cue.session_done'); } catch (_) {}
-      handleComplete({ viaTimer: true });
+      const feedback = liveFeedbackRef.current;
+      liveFeedbackRef.current = {};
+      handleComplete({ viaTimer: true, feedback: feedback });
     }, [handleComplete]);
 
     const handleLiveAbort = useCallback(function () {
@@ -10845,7 +12074,8 @@
           programId: pendingProgram?.id || 'custom',
           initialSnapshot: initialSnapshot,
           onAllDone: handleLiveAllDone,
-          onAbort: handleLiveAbort
+          onAbort: handleLiveAbort,
+          onSetFeedback: recordSetFeedback
         })
       );
     }
@@ -10865,6 +12095,11 @@
       );
     };
     const ICONS = {
+      today: svgIcon([
+        { tag: 'path', attrs: { d: 'M3.5 10.5L11 4l7.5 6.5' } },
+        { tag: 'path', attrs: { d: 'M5.5 9.5v8.5h11V9.5' } },
+        { tag: 'path', attrs: { d: 'M9 18.5v-4h4v4' } }
+      ]),
       programs: svgIcon([
         { tag: 'path', attrs: { d: 'M4 4.5h10a2.5 2.5 0 0 1 2.5 2.5v11' } },
         { tag: 'path', attrs: { d: 'M4 4.5v13a2 2 0 0 0 2 2h10.5' } },
@@ -10885,8 +12120,9 @@
       ])
     };
     const tabs = [
+      { id: 'today',       label: 'Сегодня',     icon: ICONS.today },
       { id: 'programs',    label: 'Протоколы',   icon: ICONS.programs },
-      { id: 'constructor', label: 'Конструктор', icon: ICONS.constructor },
+      { id: 'constructor', label: 'Своя',        icon: ICONS.constructor },
       { id: 'progress',    label: 'Прогресс',    icon: ICONS.progress },
       { id: 'calendar',    label: 'Календарь',   icon: ICONS.calendar }
     ];
@@ -10913,8 +12149,7 @@
       // Header
       h('div', { className: 'fingers-fs__header fingers-fs__header--premium' },
         h('h1', { className: 'fingers-fs__title' },
-          h('span', { className: 'fingers-fs__title-icon', 'aria-hidden': 'true' }, '🤚'),
-          h('span', { className: 'fingers-fs__title-text' }, 'Тренировка')
+          h('span', { className: 'fingers-fs__title-text' }, 'Сила хвата')
         ),
         h('div', { className: 'fingers-fs__header-actions' },
           h('button', {
@@ -10930,7 +12165,32 @@
             onClick: function () { setShowBib(true); },
             'aria-label': 'Источники и методология',
             title: 'Источники'
-          }, h('span', { 'aria-hidden': 'true' }, '📚'))
+          }, h('span', { 'aria-hidden': 'true' }, '📚')),
+          // Прозрачность: копирует диагностику всех расчётов (готовность,
+          // рекомендация, бакет, мезоцикл) в буфер обмена.
+          h('button', {
+            type: 'button',
+            className: 'fingers-fs__icon-btn',
+            onClick: function () {
+              try {
+                const txt = _buildFingersDiagnostic();
+                const done = function () {
+                  if (HEYS.Toast && HEYS.Toast.success) HEYS.Toast.success('Диагностика расчётов скопирована');
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(txt).then(done).catch(function () {
+                    console.log('[Fingers diagnostic]\n' + txt);
+                    if (HEYS.Toast && HEYS.Toast.info) HEYS.Toast.info('Скопировано в консоль (clipboard недоступен)');
+                  });
+                } else {
+                  console.log('[Fingers diagnostic]\n' + txt);
+                  if (HEYS.Toast && HEYS.Toast.info) HEYS.Toast.info('Выведено в консоль (clipboard недоступен)');
+                }
+              } catch (e) { console.warn('[Fingers] diagnostic copy failed:', e); }
+            },
+            'aria-label': 'Скопировать диагностику расчётов',
+            title: 'Диагностика расчётов'
+          }, h('span', { 'aria-hidden': 'true' }, '🧮'))
         )
       ),
 
@@ -11007,6 +12267,12 @@
 
       // Tab content
       h('div', { className: 'fingers-fs-tab-content' },
+        tab === 'today' && h(TodayTab, {
+          onPickProgram: handlePickProgram,
+          onSwitchToPrograms: function () { setTab('programs'); },
+          onSwitchToConstructor: function () { setTab('constructor'); },
+          onRequestOnboarding: onRequestOnboarding
+        }),
         tab === 'programs' && h(ProgramsTab, {
           onPickProgram: handlePickProgram,
           onRequestOnboarding: onRequestOnboarding,
@@ -11230,6 +12496,13 @@
   // --- Exports ---
   Fingers.SessionUI = SessionUI;
   Fingers.getRecommendedProgramId = getRecommendedProgramId;
+  // Exposed for tests (B0 Today Coach): safety-clamp рекомендации к бакету.
+  Fingers._recommendForBucket = _recommendForBucket;
+  Fingers._buildTodayData = _buildTodayData;
+  // Exposed for tests (B1): additive merge per-set feedback в fingersLog.
+  Fingers._mergeSetFeedback = _mergeSetFeedback;
+  // Exposed for tests (B19): чистая сборка контракта fingersLog.
+  Fingers._buildFingersLog = _buildFingersLog;
 
   Fingers.startSession = function startSession(opts) {
     // Stub for future direct session launch from outside fullscreen.
