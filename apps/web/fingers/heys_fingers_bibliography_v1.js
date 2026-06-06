@@ -253,6 +253,26 @@
       url: 'https://pubmed.ncbi.nlm.nih.gov/30580468/',
       keyFinding: 'Систематический обзор изометрической тренировки: при равной нагрузке ВЗРЫВНОЕ намерение (разгон к пику как можно быстрее) даёт более крутой прирост RFD, чем удержание; жёсткость сухожилий растёт при усилии ≥70% MVC. Обоснование отдельного explosive-intent блока.',
       topics: ['protocols']
+    },
+    {
+      id: 'lattice_foundation',
+      author: 'Lattice Training (Tom Randall)',
+      year: 2021,
+      title: 'Foundation Hangs — Periodised Strength Block',
+      type: 'practitioner',
+      url: 'https://latticetraining.com/blog/hangboard-foundation-protocol/',
+      keyFinding: 'Структурированный 8-недельный блок макс-силы: 4 хвата × 5 подходов по 10 с с RM-3-нагрузкой; недельное прогрессирование +2-5% веса, каждая 4-я неделя deload (50% нагрузки) для разгрузки сухожилий. Отличие от Hörst Max Hangs — встроенный микроцикл, который снижает риск перетренированности при многомесячных силовых блоках.',
+      topics: ['protocols']
+    },
+    {
+      id: 'beyer2015',
+      author: 'Beyer et al.',
+      year: 2015,
+      title: 'Heavy Slow Resistance Versus Eccentric Training as Treatment for Achilles Tendinopathy: A Randomized Controlled Trial',
+      type: 'peer-reviewed',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/26018970/',
+      keyFinding: 'Heavy Slow Resistance (HSR) — медленные изометрические/концентрические сокращения с тяжёлой нагрузкой ~70% MVC — дала такой же терапевтический эффект на сухожилие, как эксцентрика, но с лучшим качеством жизни пациентов. Перенос на пальцы: медленные 30-45 с iso на 70% MVC поддерживают коллагеновый ремоделинг pulleys/связок без рывковой нагрузки, безопасны после A2/A4-травмы.',
+      topics: ['protocols', 'recovery', 'injury']
     }
   ];
 

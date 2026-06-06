@@ -47,31 +47,37 @@
   position: absolute;
   top: max(16px, env(safe-area-inset-top, 16px));
   right: 16px;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.04);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  border: none;
+  background: rgba(20, 22, 28, 0.34);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--fingers-text, #1a1a1f);
+  color: #ffffff;
   z-index: 10;
-  transition: background-color 120ms ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  transition: background-color 160ms ease, transform 140ms ease, border-color 160ms ease;
 }
 .fingers-fs__close:hover,
 .fingers-fs__close:focus-visible {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(20, 22, 28, 0.5);
+  border-color: rgba(255, 255, 255, 0.32);
   outline: none;
 }
+.fingers-fs__close:active {
+  transform: scale(0.94);
+}
 .fingers-fs__close svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   stroke: currentColor;
-  stroke-width: 1.5;
+  stroke-width: 2;
+  stroke-linecap: round;
   fill: none;
 }
 
@@ -92,8 +98,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 32px;
-  padding-right: 56px; /* room for × button */
+  margin-bottom: 18px;
 }
 .fingers-fs__header-actions {
   display: flex;
@@ -591,11 +596,13 @@
 }
 
 [data-theme="dark"] .fingers-fs__close {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(20, 22, 28, 0.42);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 [data-theme="dark"] .fingers-fs__close:hover,
 [data-theme="dark"] .fingers-fs__close:focus-visible {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(20, 22, 28, 0.58);
+  border-color: rgba(255, 255, 255, 0.36);
 }
 [data-theme="dark"] .fingers-fs-tabs {
   background: rgba(255, 255, 255, 0.06);
@@ -1126,8 +1133,14 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 0 6px;
+  padding: 14px 0 12px;
   position: relative;
+}
+
+/* Goal selector — отдельный блок ниже бара оборудования. Свои поля сверху и
+   снизу, чтобы не слипался с барами выше и с табовым контентом ниже. */
+.fingers-fs-goalsel {
+  margin: 6px 0 16px;
 }
 
 /* Единый goal-селектор (живёт в баре оборудования) — ровная сетка 2×2. */
@@ -1165,10 +1178,25 @@
 .fingers-fs-goalsel__btn:hover { border-color: var(--fingers-accent, #0066ff); }
 .fingers-fs-goalsel__btn:active { transform: scale(0.97); }
 .fingers-fs-goalsel__btn.is-active {
-  background: linear-gradient(135deg, var(--fingers-accent, #0066ff), var(--fingers-accent-2, #4338ca));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--fingers-accent, #0066ff) 72%, var(--fingers-accent-2, #4338ca)),
+    color-mix(in srgb, var(--fingers-accent-2, #4338ca) 78%, var(--fingers-accent, #0066ff))
+  );
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 4px 14px rgba(0, 102, 255, 0.28);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.06),
+    0 3px 10px color-mix(in srgb, var(--fingers-accent, #0066ff) 30%, transparent),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.25);
+  filter: saturate(0.88);
+}
+.fingers-fs-goalsel__btn.is-active .fingers-fs-goalsel__text {
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 700;
+}
+[data-theme="dark"] .fingers-fs-goalsel__btn.is-active {
+  filter: saturate(0.82) brightness(0.92);
 }
 .fingers-fs-goalsel__emoji { font-size: 18px; line-height: 1; }
 .fingers-fs-goalsel__text { font-size: 12.5px; line-height: 1.2; }
@@ -4092,6 +4120,322 @@
 [data-theme="dark"][data-fingers-theme] .fingers-fs-readiness-banner[data-readiness='rest'],
 [data-theme="dark"] [data-fingers-theme] .fingers-fs-readiness-banner[data-readiness='rest'] {
   color: #fca5a5;
+}
+
+/* Узкий segmented-control «Под цель / Все» — сидит над сеткой протоколов
+   и заменяет 4-чиповый intensity-фильтр. Минимальный по высоте, чтобы не
+   соперничать с goal-селектором сверху. */
+[data-fingers-theme] .fingers-fs-scope-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 3px;
+  margin: 4px 0 14px;
+  background: rgba(120, 120, 128, 0.10);
+  border: 0.5px solid rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+[data-fingers-theme] .fingers-fs-scope-toggle__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(60, 60, 67, 0.78);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, box-shadow 200ms ease;
+}
+[data-fingers-theme] .fingers-fs-scope-toggle__btn.is-active {
+  background: linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
+  color: #0f172a;
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.04),
+    0 3px 8px rgba(15, 23, 42, 0.08),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.9);
+}
+[data-fingers-theme] .fingers-fs-scope-toggle__count {
+  margin-left: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.55;
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-scope-toggle,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-scope-toggle {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-scope-toggle__btn,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-scope-toggle__btn {
+  color: rgba(235, 235, 245, 0.62);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-scope-toggle__btn.is-active,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-scope-toggle__btn.is-active {
+  background: linear-gradient(180deg, #2a2a31 0%, #1f1f25 100%);
+  color: #f9fafb;
+}
+
+/* Mix trace modal — окно с разбором логики сборки микс-тренировки. */
+[data-fingers-theme] .fingers-fs-trace__backdrop {
+  position: fixed; inset: 0;
+  z-index: 2000;
+  background: rgba(10, 12, 18, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 32px 16px;
+  overflow-y: auto;
+  animation: fingers-fs-trace__fade 180ms ease-out;
+}
+@keyframes fingers-fs-trace__fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+[data-fingers-theme] .fingers-fs-trace__modal {
+  width: 100%;
+  max-width: 720px;
+  background: var(--fingers-bg, #fff);
+  color: var(--fingers-text, #1c1b19);
+  border-radius: 18px;
+  border: 1px solid var(--fingers-card-border, rgba(0, 0, 0, 0.10));
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 64px);
+  overflow: hidden;
+}
+[data-fingers-theme] .fingers-fs-trace__topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--fingers-card-border, rgba(0, 0, 0, 0.08));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent);
+}
+[data-fingers-theme] .fingers-fs-trace__h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+[data-fingers-theme] .fingers-fs-trace__close {
+  appearance: none; border: 0; cursor: pointer;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 20px; line-height: 1;
+  color: var(--fingers-text, #1c1b19);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 140ms ease;
+}
+[data-fingers-theme] .fingers-fs-trace__close:hover { background: rgba(0, 0, 0, 0.12); }
+[data-fingers-theme] .fingers-fs-trace__body {
+  padding: 14px 18px 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+[data-fingers-theme] .fingers-fs-trace__section {
+  padding: 14px 0;
+  border-top: 1px solid var(--fingers-card-border, rgba(0, 0, 0, 0.06));
+}
+[data-fingers-theme] .fingers-fs-trace__section:first-child {
+  border-top: 0;
+  padding-top: 4px;
+}
+[data-fingers-theme] .fingers-fs-trace__h3 {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--fingers-text, #1c1b19);
+}
+[data-fingers-theme] .fingers-fs-trace__kv {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 4px 0;
+  font-size: 13px; line-height: 1.45;
+}
+[data-fingers-theme] .fingers-fs-trace__k {
+  flex: 0 0 42%;
+  color: var(--fingers-muted-text, rgba(0, 0, 0, 0.55));
+  font-weight: 500;
+}
+[data-fingers-theme] .fingers-fs-trace__v {
+  flex: 1;
+  color: var(--fingers-text, #1c1b19);
+  font-weight: 600;
+  word-break: break-word;
+}
+[data-fingers-theme] .fingers-fs-trace__hint {
+  margin: 0 0 10px;
+  font-size: 12.5px; line-height: 1.5;
+  color: var(--fingers-muted-text, rgba(0, 0, 0, 0.6));
+  font-style: italic;
+}
+[data-fingers-theme] .fingers-fs-trace__slot {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.045);
+  border: 1px solid rgba(99, 102, 241, 0.14);
+  font-size: 12.5px; line-height: 1.45;
+}
+[data-fingers-theme] .fingers-fs-trace__slot--skipped {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+  opacity: 0.85;
+}
+[data-fingers-theme] .fingers-fs-trace__slot-head {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 600;
+}
+[data-fingers-theme] .fingers-fs-trace__slot-idx {
+  background: rgba(99, 102, 241, 0.16); color: #4338ca;
+  padding: 2px 6px; border-radius: 5px;
+  font-weight: 700;
+}
+[data-fingers-theme] .fingers-fs-trace__slot-role { flex: 1; }
+[data-fingers-theme] .fingers-fs-trace__slot-pool { opacity: 0.7; }
+[data-fingers-theme] .fingers-fs-trace__slot-chosen {
+  margin: 2px 0 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+[data-fingers-theme] .fingers-fs-trace__slot-params { opacity: 0.78; }
+[data-fingers-theme] .fingers-fs-trace__slot-danger {
+  font-size: 11.5px; opacity: 0.65; margin-top: 2px; font-variant-numeric: tabular-nums;
+}
+[data-fingers-theme] .fingers-fs-trace__slot-skip { opacity: 0.75; }
+[data-fingers-theme] .fingers-fs-trace__details {
+  margin-top: 6px;
+  font-size: 12px;
+}
+[data-fingers-theme] .fingers-fs-trace__details summary {
+  cursor: pointer;
+  opacity: 0.7;
+  font-weight: 500;
+  padding: 4px 0;
+}
+[data-fingers-theme] .fingers-fs-trace__cand {
+  padding: 3px 0;
+  opacity: 0.72;
+  font-variant-numeric: tabular-nums;
+}
+[data-fingers-theme] .fingers-fs-trace__cand--chosen {
+  opacity: 1;
+  font-weight: 600;
+  color: #15803d;
+}
+[data-fingers-theme] .fingers-fs-trace__dose,
+[data-fingers-theme] .fingers-fs-trace__vol {
+  padding: 6px 0;
+  font-size: 12.5px; line-height: 1.45;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.05);
+}
+[data-fingers-theme] .fingers-fs-trace__dose:last-child,
+[data-fingers-theme] .fingers-fs-trace__vol:last-child { border-bottom: 0; }
+[data-fingers-theme] .fingers-fs-trace__dose-sub,
+[data-fingers-theme] .fingers-fs-trace__vol-sub {
+  font-size: 11.5px;
+  opacity: 0.65;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+/* Dark theme */
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__modal,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__modal {
+  background: #1c1d22;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__topbar,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__topbar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__close,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__close {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__close:hover,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__close:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__section,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__section {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__k,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__k { color: rgba(235, 235, 245, 0.55); }
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__v,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__v { color: rgba(245, 245, 250, 0.92); }
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__hint,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__hint { color: rgba(235, 235, 245, 0.55); }
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__slot,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__slot {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.28);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__slot--skipped,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__slot--skipped {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__slot-head,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__slot-head { color: rgba(235, 235, 245, 0.6); }
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__slot-idx,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__slot-idx {
+  background: rgba(129, 140, 248, 0.22);
+  color: #c7d2fe;
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__cand--chosen,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__cand--chosen { color: #86efac; }
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__dose,
+[data-theme="dark"][data-fingers-theme] .fingers-fs-trace__vol,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__dose,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__vol {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Mix-card secondary action button — 🧮 для открытия trace-модалки.
+   Размер и стиль как у reroll-кнопки (квадратная), но цвет нейтральный. */
+[data-fingers-theme] .fingers-fs-mixcard__btn--trace {
+  background: transparent;
+  border: 1px solid var(--fingers-card-border, rgba(0, 0, 0, 0.10));
+  color: var(--fingers-text, #1c1b19);
+}
+[data-fingers-theme] .fingers-fs-mixcard__btn--trace:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs-mixcard__btn--trace,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs-mixcard__btn--trace {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: rgba(245, 245, 250, 0.85);
+}
+
+/* Розовый × — закрытие fingers-режима, 4-я иконка в шапке SessionUI. */
+[data-fingers-theme] .fingers-fs__icon-btn--close {
+  color: #ec4899;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.10), rgba(236, 72, 153, 0.04));
+  border-color: rgba(236, 72, 153, 0.25);
+}
+[data-fingers-theme] .fingers-fs__icon-btn--close:hover,
+[data-fingers-theme] .fingers-fs__icon-btn--close:focus-visible {
+  color: #db2777;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(236, 72, 153, 0.08));
+  border-color: rgba(236, 72, 153, 0.4);
+}
+[data-theme="dark"][data-fingers-theme] .fingers-fs__icon-btn--close,
+[data-theme="dark"] [data-fingers-theme] .fingers-fs__icon-btn--close {
+  color: #f9a8d4;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(236, 72, 153, 0.06));
+  border-color: rgba(236, 72, 153, 0.35);
 }
 
 /* ---- mix-workout fallback card (orange/amber) ---- */
