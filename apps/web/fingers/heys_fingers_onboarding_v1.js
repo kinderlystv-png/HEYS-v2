@@ -367,27 +367,29 @@
         h('p', { className: 'fingers-ob-sub' }, 'Несколько коротких вопросов для подбора программы.')
       ),
       h('div', { className: 'fingers-ob-stepcard' },
-        h('div', null,
-          h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-age' }, 'Возраст *'),
-          h('input', {
-            id: 'fingers-ob-age',
-            type: 'number',
-            min: 8, max: 99,
-            value: displayedAge === '' ? '' : displayedAge,
-            onChange: (e) => updateProfile({ age: e.target.value === '' ? null : Number(e.target.value) }),
-            className: 'fingers-ob-input'
-          })
-        ),
-        h('div', null,
-          h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-years' }, 'Сколько лет лазаешь'),
-          h('input', {
-            id: 'fingers-ob-years',
-            type: 'number',
-            min: 0, max: 50,
-            value: state.profile.climbingYears || 0,
-            onChange: (e) => updateProfile({ climbingYears: Math.max(0, Math.min(50, Number(e.target.value) || 0)) }),
-            className: 'fingers-ob-input'
-          })
+        h('div', { className: 'fingers-ob-row2' },
+          h('div', null,
+            h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-age' }, 'Возраст *'),
+            h('input', {
+              id: 'fingers-ob-age',
+              type: 'number',
+              min: 8, max: 99,
+              value: displayedAge === '' ? '' : displayedAge,
+              onChange: (e) => updateProfile({ age: e.target.value === '' ? null : Number(e.target.value) }),
+              className: 'fingers-ob-input'
+            })
+          ),
+          h('div', null,
+            h('label', { className: 'fingers-ob-label', htmlFor: 'fingers-ob-years' }, 'Стаж, лет'),
+            h('input', {
+              id: 'fingers-ob-years',
+              type: 'number',
+              min: 0, max: 50,
+              value: state.profile.climbingYears || 0,
+              onChange: (e) => updateProfile({ climbingYears: Math.max(0, Math.min(50, Number(e.target.value) || 0)) }),
+              className: 'fingers-ob-input'
+            })
+          )
         ),
         h('div', null,
           h('div', { className: 'fingers-ob-label' }, 'Максимальная сложность боулдеринга'),

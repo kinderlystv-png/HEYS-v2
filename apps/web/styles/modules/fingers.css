@@ -5422,7 +5422,7 @@
 
 
 .fingers-ob-root {
-  padding: 28px 22px 32px;
+  padding: 16px 18px 24px;
   max-width: 560px;
   margin: 0 auto;
   font-family: inherit;
@@ -5431,11 +5431,12 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 14px;
   box-sizing: border-box;
   position: relative;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  /* Скроллит внешний .fingers-fs (position:fixed; overflow-y:auto). Свой
+     overflow-y:auto + overscroll-behavior:contain на root ловил жест и не
+     отдавал его портлу, из-за чего скролл «не работал» при переполнении. */
   background: transparent;
 }
 /* Внешний контейнер fingers-fs__container имеет padding:24px и max-width:720px.
@@ -5619,7 +5620,16 @@
 .fingers-ob-root .fingers-ob-step {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
+}
+/* Возраст + стаж в одну строку, чтобы профиль помещался на один экран. */
+.fingers-ob-root .fingers-ob-row2 {
+  display: flex;
+  gap: 12px;
+}
+.fingers-ob-root .fingers-ob-row2 > div {
+  flex: 1 1 0;
+  min-width: 0;
 }
 .fingers-ob-root .fingers-ob-step__header {
   display: flex;
@@ -5642,7 +5652,7 @@
 /* Главный stepcard — большая glass-карточка содержащая всю форму шага.
    На фоне яркой скалы — плотный молочный glass с сильной тенью. */
 .fingers-ob-root .fingers-ob-stepcard {
-  padding: 22px 20px;
+  padding: 16px 16px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.40);
   background: linear-gradient(180deg, rgba(255, 253, 248, 0.94), rgba(250, 245, 238, 0.88));
@@ -5654,7 +5664,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.75);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 /* Rule rows внутри stepcard на Safety шаге */
 .fingers-ob-root .fingers-ob-rule {
@@ -5764,8 +5774,8 @@
 /* Inputs & labels */
 .fingers-ob-root .fingers-ob-input {
   width: 100%;
-  min-height: 50px;
-  padding: 12px 14px;
+  min-height: 44px;
+  padding: 10px 12px;
   border: 1.5px solid rgba(60, 50, 42, 0.22);
   border-radius: 10px;
   font-size: 16px;
@@ -5789,8 +5799,8 @@
   color: var(--fingers-muted-text, rgba(15, 23, 42, 0.55));
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 8px;
-  margin-top: 14px;
+  margin-bottom: 5px;
+  margin-top: 0;
 }
 
 /* Source badges row */
