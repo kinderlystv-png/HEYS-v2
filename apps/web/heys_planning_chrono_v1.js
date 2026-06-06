@@ -731,9 +731,11 @@
 
         return h('div', { className: 'chrono-undo-toast', role: 'status' },
             h('span', { className: 'chrono-undo-toast__text' },
-                toast.adjusted
-                    ? `Изменено ${toast.minutes > 0 ? '+' : '-'}${formatMinutes(Math.abs(toast.minutes))}`
-                    : `Добавлено ${formatMinutes(toast.minutes)}`),
+                toast.kind === 'cleared'
+                    ? `Убрано ${toast.scope === 'week' ? 'из недели' : 'из дня'}${toast.minutes > 0 ? ': ' + formatMinutes(toast.minutes) : ''}`
+                    : toast.adjusted
+                        ? `Изменено ${toast.minutes > 0 ? '+' : '-'}${formatMinutes(Math.abs(toast.minutes))}`
+                        : `Добавлено ${formatMinutes(toast.minutes)}`),
             h('button', {
                 type: 'button',
                 className: 'chrono-undo-toast__action',
@@ -2935,6 +2937,15 @@
             return { active, inactive };
         }, [visibleActivities, minutesByActivity]);
 
+        // Транзиентный sync-провал: boot-core иногда на ~10с пишет в LS пустой
+        // chrono_activities (минуя merge планнинга) → список схлопывается в 0, потом
+        // восстанавливается. Раз увидев занятия, при пустом списке показываем
+        // «обновление…» вместо пустого экрана (моргание). Реально пустой список у
+        // нового юзера (никогда не было занятий) — не маскируем. См. incident 2026-06-06.
+        const everHadChronoRef = useRef(false);
+        if (visibleActivities.length > 0) everHadChronoRef.current = true;
+        const chronoSyncing = everHadChronoRef.current && visibleActivities.length === 0;
+
         // Распределение времени по дням недели для режима week.
         const weekBreakdown = useMemo(() => {
             if (scope !== 'week') return null;
@@ -2979,7 +2990,16 @@
         }, [durationTarget, activeDate, state]);
 
         const handleUndo = useCallback(() => {
-            if (!toast || !toast.id) return;
+            if (!toast) return;
+            if (toast.kind === 'cleared') {
+                // Возвращаем убранные записи (новые id — старые в tombstone'ах).
+                (toast.removed || []).forEach((e) => {
+                    state.addChronoEntry({ activityId: e.activityId, date: e.date, minutes: e.minutes });
+                });
+                setToast(null);
+                return;
+            }
+            if (!toast.id) return;
             state.deleteChronoEntry(toast.id);
             setToast(null);
         }, [toast, state]);
@@ -3220,12 +3240,13 @@
             }),
             h(ChronoOverviewPanel, { insights, balance: categoryBalance, streaks, timeOfDay }),
             h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
-            h(ChronoStrip, {
+            chronoSyncing && h('div', { className: 'chrono-empty', role: 'status' }, 'Обновление занятий…'),
+            !chronoSyncing && h(ChronoStrip, {
                 activities: partition.inactive,
                 onPick: handleBubbleClick,
                 onAddNew: () => setPickerOpen(true),
             }),
-            h(ChronoCloud, {
+            !chronoSyncing && h(ChronoCloud, {
                 activities: partition.active,
                 minutesByActivity,
                 maxMin,
@@ -3236,7 +3257,15 @@
                 hasInactive: partition.inactive.length > 0,
                 onDragDelete: (id) => {
                     const a = activities.find((x) => x.id === id);
-                    if (a) setDeleteTarget(a);
+                    if (!a) return;
+                    // Корзина в облаке = убрать занятие из текущего дня/недели (вернуть в
+                    // полосу выбора), НЕ удалять его совсем. Полное удаление — только из
+                    // модалки «Занятия» (корзина у строки → DeleteActivityModal).
+                    const removed = state.clearChronoScope(id, dates);
+                    const entries = (removed && removed.entries) || [];
+                    const minutes = entries.reduce((sum, e) => sum + (Number(e.minutes) || 0), 0);
+                    setRecentBadge(null);
+                    setToast({ kind: 'cleared', removed: entries, minutes, scope });
                 },
             }),
             scope === 'week' && h(ChronoWeeklyReport, { report: weeklyReport }),

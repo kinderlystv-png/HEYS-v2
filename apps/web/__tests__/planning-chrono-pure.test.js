@@ -259,6 +259,31 @@ describe('Store — chrono tombstones', () => {
         ]);
     });
 
+    it('activity newer than its tombstone survives (re-add overrides old delete)', () => {
+        const a = Store.addChronoActivity({ name: 'Reading', emoji: '📚' });
+        // старое удаление (час назад) — занятие создано только что → переживает
+        Store.saveChronoTombstones([{ type: 'activity', id: a.id, deletedAt: Date.now() - 3600_000 }]);
+        expect(Store.getChronoActivities().map((x) => x.id)).toContain(a.id);
+    });
+
+    it('activity older than its tombstone stays deleted (stale array cannot resurrect)', () => {
+        const a = { id: 'stale-1', name: 'Old', createdAt: new Date(Date.now() - 3600_000).toISOString() };
+        Store.saveChronoTombstones([{ type: 'activity', id: 'stale-1', deletedAt: Date.now() }]);
+        Store.saveChronoActivities([a]);
+        expect(Store.getChronoActivities()).toEqual([]);
+    });
+
+    it('entries/snapshots of a resurrected activity are kept', () => {
+        const a = Store.addChronoActivity({ name: 'Sport' });
+        const e = Store.addChronoEntry({ activityId: a.id, date: '2026-06-06', minutes: 30 });
+        Store.saveChronoSnapshots([{ date: '2026-06-05', activityId: a.id, totalMinutes: 10 }]);
+        // старое удаление этого же занятия — занятие новее → воскрешено, записи остаются
+        Store.saveChronoTombstones([{ type: 'activity', id: a.id, deletedAt: Date.now() - 3600_000 }]);
+        expect(Store.getChronoActivities().map((x) => x.id)).toContain(a.id);
+        expect(Store.getChronoEntries().map((x) => x.id)).toContain(e.id);
+        expect(Store.getChronoSnapshots()).toHaveLength(1);
+    });
+
     it('merges incoming tombstones instead of replacing local delete history', () => {
         const localActivity = Store.addChronoActivity({ name: 'Local delete' });
         Store.deleteChronoActivity(localActivity.id);
@@ -269,6 +294,85 @@ describe('Store — chrono tombstones', () => {
             expect.objectContaining({ type: 'activity', id: localActivity.id }),
             expect.objectContaining({ type: 'activity', id: 'remote-delete' }),
         ]));
+    });
+});
+
+describe('Store — clearChronoScope (убрать круг из дня, не удаляя занятие)', () => {
+    let Store;
+    beforeEach(() => { ({ Store } = loadModules()); });
+
+    it('removes scoped entries/snapshots but keeps the activity and other dates', () => {
+        const a = Store.addChronoActivity({ name: 'Reading', emoji: '📚' });
+        const today = Store.addChronoEntry({ activityId: a.id, date: '2026-06-06', minutes: 30 });
+        const other = Store.addChronoEntry({ activityId: a.id, date: '2026-06-05', minutes: 20 });
+        Store.saveChronoSnapshots([
+            { date: '2026-06-06', activityId: a.id, totalMinutes: 15 },
+            { date: '2026-06-05', activityId: a.id, totalMinutes: 10 },
+        ]);
+
+        const removed = Store.clearChronoScope(a.id, ['2026-06-06']);
+
+        // занятие живо
+        expect(Store.getChronoActivities().map((x) => x.id)).toContain(a.id);
+        // время за 2026-06-06 убрано, за 2026-06-05 — на месте
+        expect(Store.getChronoEntries().map((e) => e.id)).toEqual([other.id]);
+        expect(Store.getChronoSnapshots()).toEqual([
+            { date: '2026-06-05', activityId: a.id, totalMinutes: 10 },
+        ]);
+        // удалённые записи возвращены для undo
+        expect(removed.entries.map((e) => e.id)).toEqual([today.id]);
+        // tombstone'ы на убранную запись и snapshot (не воскреснут из облака)
+        expect(Store.getChronoTombstones()).toEqual(expect.arrayContaining([
+            expect.objectContaining({ type: 'entry', id: today.id }),
+            expect.objectContaining({ type: 'snapshot', id: `2026-06-06:${a.id}` }),
+        ]));
+    });
+
+    it('does not resurrect scoped snapshots when stale cloud data is saved later', () => {
+        const a = Store.addChronoActivity({ name: 'Reading' });
+        Store.saveChronoSnapshots([
+            { date: '2026-06-06', activityId: a.id, totalMinutes: 40 },
+        ]);
+
+        Store.clearChronoScope(a.id, ['2026-06-06']);
+        Store.saveChronoSnapshots([
+            { date: '2026-06-06', activityId: a.id, totalMinutes: 40 },
+        ]);
+
+        expect(Store.getChronoSnapshots()).toEqual([]);
+        expect(Store.getChronoTombstones()).toEqual(expect.arrayContaining([
+            expect.objectContaining({ type: 'snapshot', id: `2026-06-06:${a.id}` }),
+        ]));
+    });
+
+    it('does not touch entries of other activities on the same date', () => {
+        const a = Store.addChronoActivity({ name: 'Reading' });
+        const b = Store.addChronoActivity({ name: 'Sport' });
+        Store.addChronoEntry({ activityId: a.id, date: '2026-06-06', minutes: 30 });
+        const keep = Store.addChronoEntry({ activityId: b.id, date: '2026-06-06', minutes: 25 });
+
+        Store.clearChronoScope(a.id, ['2026-06-06']);
+
+        expect(Store.getChronoEntries().map((e) => e.id)).toEqual([keep.id]);
+    });
+
+    it('recovers activities when LS value is an array-like object (sync corruption)', () => {
+        const a = Store.addChronoActivity({ name: 'Reading' });
+        const b = Store.addChronoActivity({ name: 'Sport' });
+        const arr = Store.getChronoActivities();
+        // эмулируем порчу: cloud-sync положил массив как объект {0:..,1:..}
+        Store.lsSetRaw ? Store.lsSetRaw('heys_planning_chrono_activities', { 0: arr[0], 1: arr[1] })
+            : window.HEYS.utils.lsSet('heys_planning_chrono_activities', { 0: arr[0], 1: arr[1] });
+        const recovered = Store.getChronoActivities();
+        expect(recovered.map((x) => x.id).sort()).toEqual([a.id, b.id].sort());
+    });
+
+    it('is a no-op with empty dates', () => {
+        const a = Store.addChronoActivity({ name: 'Reading' });
+        const e = Store.addChronoEntry({ activityId: a.id, date: '2026-06-06', minutes: 30 });
+        const removed = Store.clearChronoScope(a.id, []);
+        expect(removed.entries).toEqual([]);
+        expect(Store.getChronoEntries().map((x) => x.id)).toEqual([e.id]);
     });
 });
 
