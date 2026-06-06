@@ -55,6 +55,28 @@
   // exercises), но удерживает инвариант при будущих протоколах.
   const DANGER_BUDGET = { recovery: 8, moderate: 24, max: 48 };
 
+  // ── Goal-axis: «цель» (что тренируем) отдельно от bucket (потолок готовности).
+  // goal предлагает шаблон, bucket его режет: цель никогда не превышает готовность.
+  const GOAL_TEMPLATES = {
+    strength:    ['power', 'max-strength', 'strength-endurance', 'antagonist'],
+    endurance:   ['strength-endurance', 'capacity', 'antagonist'],
+    recovery:    ['capacity', 'antagonist'],
+    maintenance: ['strength-endurance', 'antagonist'],
+  };
+  // Минимальный bucket-ранг, при котором слот допустим (power/max — только max).
+  const SLOT_MIN_RANK = {
+    'power': 2, 'max-strength': 2, 'strength-endurance': 1, 'capacity': 0, 'antagonist': 0,
+  };
+  // Естественная интенсивность цели — для пометки «снижено готовностью».
+  const GOAL_NATURAL = { strength: 'max', endurance: 'moderate', recovery: 'recovery', maintenance: 'moderate' };
+  // Для UI-селектора (порядок = слева направо).
+  const GOALS = [
+    { id: 'strength', label: 'Сила' },
+    { id: 'endurance', label: 'Выносливость' },
+    { id: 'recovery', label: 'Восстановление' },
+    { id: 'maintenance', label: 'Поддержка' },
+  ];
+
   const BUCKET_LABEL = {
     max: 'максимум', moderate: 'умеренный', recovery: 'восстановление',
   };
@@ -88,6 +110,23 @@
 
   function slotTemplateFor(bucket) {
     return (SLOT_TEMPLATES[bucket] || SLOT_TEMPLATES.moderate).slice();
+  }
+
+  // Шаблон цели, обрезанный потолком готовности. Если после обрезки не осталось
+  // ни одного тренировочного слота (только антагонист) — падаем в дефолт bucket'а.
+  function cappedGoalTemplate(goal, bucket) {
+    const base = GOAL_TEMPLATES[goal] || GOAL_TEMPLATES.maintenance;
+    const r = RANK[bucket] != null ? RANK[bucket] : 2;
+    const capped = base.filter(function (role) { return r >= (SLOT_MIN_RANK[role] || 0); });
+    const hasTraining = capped.some(function (role) { return role !== 'antagonist'; });
+    return hasTraining ? capped : slotTemplateFor(bucket);
+  }
+
+  // Фактическая интенсивность собранной сессии (для cooldown/логов), по ролям.
+  function sessionIntensity(picked) {
+    if (picked.some(function (e) { return e.__role === 'power' || e.__role === 'max-strength'; })) return 'max';
+    if (picked.some(function (e) { return e.__role === 'strength-endurance'; })) return 'moderate';
+    return 'recovery';
   }
 
   function gripMeta(id) {
@@ -250,10 +289,10 @@
     });
   }
 
-  function buildReason(bucket, goal, ceiling, picked, hasAntagonist) {
+  function buildReason(bucket, downgraded, picked, hasAntagonist) {
     const roles = picked.map(function (e) { return ROLE_LABEL[e.__role] || e.__role; });
     let head = 'Потолок дня — ' + (BUCKET_LABEL[bucket] || bucket) + '. ';
-    if (goal && RANK[goal] != null && RANK[goal] > RANK[bucket]) {
+    if (downgraded) {
       head += 'Цель снижена ради восстановления связок. ';
     }
     let body = 'Собрал по ролям: ' + roles.join(' → ') + '.';
@@ -275,21 +314,31 @@
     const types = (Array.isArray(o.equipmentTypes) && o.equipmentTypes.length)
       ? o.equipmentTypes.slice() : ['full'];
     let ceiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
-    const goal = (o.intensity && o.intensity !== 'all') ? o.intensity : null;
+    const goal = (o.goal && GOAL_TEMPLATES[o.goal]) ? o.goal : null; // новая ось
+    const intensityOverride = (o.intensity && o.intensity !== 'all' && RANK[o.intensity] != null)
+      ? o.intensity : null; // legacy ручная интенсивность
 
     const allowed = allowedGripIdSet(ageNum);
     // Боль в пальцах — жёсткий safety-кап: никакого max-слота (плюс painGate уже
     // убрал fullcrimp/mono из allowed). Опускаем потолок до moderate.
     if (allowed.hasPain && RANK[ceiling] > RANK.moderate) ceiling = 'moderate';
 
-    // bucket = min(goal, ceiling). goal не задан → bucket = ceiling.
     let bucket = ceiling;
-    if (goal && RANK[goal] != null && RANK[goal] < RANK[ceiling]) bucket = goal;
+    let slots;
+    let downgraded = false;
+    if (goal) {
+      // Goal-axis: bucket = потолок готовности; шаблон из цели, обрезанный bucket'ом.
+      slots = cappedGoalTemplate(goal, bucket);
+      downgraded = RANK[GOAL_NATURAL[goal]] > RANK[bucket];
+    } else {
+      // Legacy: ручная интенсивность опускает bucket; шаблон из bucket.
+      if (intensityOverride && RANK[intensityOverride] < RANK[ceiling]) bucket = intensityOverride;
+      slots = slotTemplateFor(bucket);
+      downgraded = !!(intensityOverride && RANK[intensityOverride] > RANK[bucket]);
+    }
 
     const progs = candidatePrograms(ageNum, ceiling);
     if (!progs.length) return null;
-
-    const slots = slotTemplateFor(bucket);
     const ctx = { dangerSpent: 0, usedGripEdge: Object.create(null) };
     const picked = [];
     const includedTiers = Object.create(null);
@@ -319,14 +368,15 @@
     finalEx = applyVolume(finalEx, bucket);
 
     const hasAntagonist = finalEx.some(function (e) { return e.__role === 'antagonist'; });
-    const reason = buildReason(bucket, goal, ceiling, finalEx, hasAntagonist);
+    const reason = buildReason(bucket, downgraded, finalEx, hasAntagonist);
     const tierList = Object.keys(includedTiers);
 
-    // Step 7: warmup-bookend. Перед взрывным/max-блоком — полный RAMP-разогрев,
-    // иначе короткий. Флаги читает UI (session_ui) и запускает WarmupRunner.
-    // Копия — «готовность», не «профилактика травм».
-    const requiresWarmup = bucket === 'max'
-      || finalEx.some(function (e) { return e.__role === 'power' || e.__role === 'max-strength'; });
+    // Step 7: warmup-bookend — полный RAMP только если в сессии реально есть
+    // взрывной/max-блок (а не просто высокий потолок при endurance-цели).
+    // Флаги читает UI (session_ui) и запускает WarmupRunner. Копия — «готовность».
+    const requiresWarmup = finalEx.some(function (e) {
+      return e.__role === 'power' || e.__role === 'max-strength';
+    });
 
     return {
       id: 'mix_engine_' + Date.now(),
@@ -337,7 +387,7 @@
       coachReason: reason,
       level: 'mixed',
       durationMin: totalDurationMin(finalEx),
-      intensity: bucket,
+      intensity: sessionIntensity(finalEx),
       exercises: finalEx,
       equipmentTypes: tierList,
       sourceIds: Object.keys(sourceIds),
@@ -352,9 +402,12 @@
   Fingers.mixEngine = {
     __registered: true,
     recommendDay: recommendDay,
+    GOALS: GOALS, // для UI goal-селектора
     // exposed для тестов:
     _roleOf: roleOf,
     _slotTemplateFor: slotTemplateFor,
+    _cappedGoalTemplate: cappedGoalTemplate,
     _SLOT_TEMPLATES: SLOT_TEMPLATES,
+    _GOAL_TEMPLATES: GOAL_TEMPLATES,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

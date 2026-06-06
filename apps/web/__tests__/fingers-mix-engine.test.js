@@ -295,3 +295,43 @@ describe('mixEngine Phase 2b: warmup-bookend', () => {
     expect(p.warmupType).toBe('quick');
   });
 });
+
+describe('mixEngine Phase 2b: goal axis (goal предлагает, bucket режет)', () => {
+  beforeAll(setupOnce);
+
+  it('GOALS экспортированы для UI', () => {
+    expect(E().GOALS.map((g) => g.id)).toEqual(['strength', 'endurance', 'recovery', 'maintenance']);
+  });
+
+  it('cappedGoalTemplate: strength×max — полный шаблон', () => {
+    expect(E()._cappedGoalTemplate('strength', 'max'))
+      .toEqual(['power', 'max-strength', 'strength-endurance', 'antagonist']);
+  });
+
+  it('cappedGoalTemplate: strength×recovery — падает в recovery-дефолт (safety)', () => {
+    expect(E()._cappedGoalTemplate('strength', 'recovery')).toEqual(['capacity', 'antagonist']);
+  });
+
+  it('cappedGoalTemplate: endurance×max — endurance, без max-силы', () => {
+    expect(E()._cappedGoalTemplate('endurance', 'max'))
+      .toEqual(['strength-endurance', 'capacity', 'antagonist']);
+  });
+
+  it('goal=endurance при readiness max → нет max/power, intensity moderate, без ramp', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], goal: 'endurance', age: 25, readiness: 'max' });
+    expect(p.exercises.every((e) => e.__role !== 'max-strength' && e.__role !== 'power')).toBe(true);
+    expect(p.intensity).toBe('moderate');
+    expect(p.requiresWarmup).toBe(false);
+  });
+
+  it('goal=strength при readiness max → есть max-strength', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], goal: 'strength', age: 25, readiness: 'max' });
+    expect(p.exercises.some((e) => e.__role === 'max-strength')).toBe(true);
+  });
+
+  it('goal=strength при readiness recovery → safety режет: нет max, intensity recovery', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], goal: 'strength', age: 25, readiness: 'recovery' });
+    expect(p.exercises.every((e) => e.__role !== 'max-strength' && e.__role !== 'power')).toBe(true);
+    expect(p.intensity).toBe('recovery');
+  });
+});

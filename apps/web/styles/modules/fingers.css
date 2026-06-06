@@ -4082,6 +4082,8 @@
 }
 [data-fingers-theme] .fingers-fs-mixcard__intensity-toggle {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.55);
   border-radius: 10px;
   padding: 3px;
