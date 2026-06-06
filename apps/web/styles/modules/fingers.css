@@ -77,26 +77,37 @@
 
 /* ---- inner container ---- */
 .fingers-fs__container {
-  padding: 24px;
+  /* top: контент стартует ниже absolute × (44px на top:max(16,safe-inset)) —
+     завязываемся на тот же env, чтобы No-Hangs не лез под × и на чёлке. */
+  padding: calc(env(safe-area-inset-top, 16px) + 48px) 24px 24px;
   max-width: 720px;
   margin: 0 auto;
 }
 @media (min-width: 768px) {
-  .fingers-fs__container { padding: 32px; }
+  .fingers-fs__container { padding: calc(env(safe-area-inset-top, 16px) + 48px) 32px 32px; }
 }
 
 .fingers-fs__header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 32px;
   padding-right: 56px; /* room for × button */
 }
+.fingers-fs__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
 .fingers-fs__header h1 {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 23px;
+  font-weight: 700;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 /* ---- tabs ---- */
@@ -104,6 +115,7 @@
  * чтобы 4 длинных слова умещались без ellipsis. */
 .fingers-fs-tabs {
   display: flex;
+  justify-content: space-between;
   gap: 2px;
   padding: 3px;
   background: rgba(120, 120, 128, 0.12);
@@ -111,9 +123,9 @@
   margin-bottom: 24px;
 }
 .fingers-fs-tab {
-  flex: 1 1 0;
+  flex: 0 1 auto;
   min-width: 0;
-  padding: 8px 4px;
+  padding: 8px 10px;
   border: none;
   background: transparent;
   border-radius: 8px;
@@ -1204,9 +1216,12 @@
   background: linear-gradient(180deg, #ffffff, #f7f8fb);
   color: #0f172a;
   font-weight: 700;
+  /* Аккуратная фиолетовая рамка под цвет чекбокса (ring через box-shadow —
+     без сдвига layout). */
   box-shadow:
+    0 0 0 1.5px #6366f1,
     0 1px 1px rgba(0, 0, 0, 0.04),
-    0 4px 10px rgba(15, 23, 42, 0.10),
+    0 4px 10px rgba(99, 102, 241, 0.18),
     inset 0 0.5px 0 rgba(255, 255, 255, 0.9);
 }
 .fingers-fs-equipment-tab.is-active .fingers-fs-equipment-tab__icon {
@@ -2306,9 +2321,51 @@
 }
 [data-theme="dark"] .fingers-bib-modal__empty-hint { color: rgba(235, 235, 245, 0.55); }
 
+/* Группа источников по типу — заголовок секции вместо бейджа в каждой карточке */
+.fingers-bib-group {
+  flex-shrink: 0;
+}
+.fingers-bib-group + .fingers-bib-group {
+  margin-top: 18px;
+}
+.fingers-bib-group__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 9px;
+}
+.fingers-bib-group__icon { font-size: 14px; line-height: 1; }
+.fingers-bib-group__label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.fingers-bib-group__count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(60, 60, 67, 0.55);
+  background: rgba(120, 120, 128, 0.12);
+  min-width: 20px;
+  text-align: center;
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+[data-theme="dark"] .fingers-bib-group__count {
+  color: rgba(235, 235, 245, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+.fingers-bib-group__items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Source card — collapsible с type color-coding */
 .fingers-bib-source {
   position: relative;
+  flex-shrink: 0; /* не сжимать в scrollable flex-колонке — иначе текст обрезается */
   border-radius: 14px;
   border: 0.5px solid rgba(0, 0, 0, 0.06);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
@@ -3205,7 +3262,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 16px 56px 28px 0; /* right=56px — резерв под absolute ✕ кнопку */
+  padding: 16px 4px 28px 0; /* × — на уровне overlay (top), не шапки → резерв не нужен */
   margin-bottom: 0;
   position: relative;
 }
@@ -3291,7 +3348,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 20px;
   line-height: 1;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.65);
