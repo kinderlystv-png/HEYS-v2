@@ -116,8 +116,8 @@ apps/web/heys_fingers_bundle_v1.js:5097
 apps/web/heys_fingers_bundle_v1.js:5434
 apps/web/heys_fingers_bundle_v1.js:6349
 apps/web/heys_fingers_bundle_v1.js:6459
-apps/web/heys_fingers_bundle_v1.js:9954
-apps/web/heys_fingers_bundle_v1.js:15734
+apps/web/heys_fingers_bundle_v1.js:10045
+apps/web/heys_fingers_bundle_v1.js:15825
 apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
