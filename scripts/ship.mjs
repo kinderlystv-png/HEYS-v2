@@ -217,13 +217,11 @@ function main() {
     process.env.HEYS_INTEGRATION = '1';
     process.env.HEYS_STAGING_MODE = 'integration';
 
-    ensureSomethingToCommit();
+    ensureStagedAndReady(message);
 
-    // Stage everything currently dirty. Pre-commit hook (mode=integration) will
-    // rebuild affected bundles from staged source and stage the generated outputs
-    // into the same commit. If user already had bundle drift, that gets overwritten
-    // by the fresh rebuild — exactly what we want.
-    run('git', ['add', '-A'], { label: '📝 staging changes' });
+    // Staging is explicit (see ensureStagedAndReady) — agent already did `git add`.
+    // Pre-commit hook (mode=integration) will rebuild affected bundles from the
+    // staged source and stage the generated outputs into the same commit.
 
     // First commit: source + freshly rebuilt bundles (via pre-commit auto-sync).
     run('git', ['commit', '-m', message], { label: `💾 commit: ${message}` });
