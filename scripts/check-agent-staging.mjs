@@ -100,7 +100,7 @@ function assertMainIsIntegrationOnly({
     files = getStagedFiles(),
     env = process.env,
 } = {}) {
-    if (env.HEYS_INTEGRATION === '1' || env.HEYS_ALLOW_MAIN_COMMIT === '1') {
+    if (env.HEYS_INTEGRATION === '1' || env.HEYS_ALLOW_MAIN_COMMIT === '1' || env.HEYS_SHIP === '1') {
         return { ok: true, taskWork: [] };
     }
     if (!isProtectedTrunk(branchName)) return { ok: true, taskWork: [] };
@@ -139,8 +139,12 @@ function getForbiddenAgentStagedFiles(files = getStagedFiles()) {
     return files.filter(isGeneratedOrReleaseFile);
 }
 
-function assertAgentStaging({ mode = detectStagingMode(), files = getStagedFiles() } = {}) {
+function assertAgentStaging({ mode = detectStagingMode(), files = getStagedFiles(), env = process.env } = {}) {
     if (mode !== 'agent') return { ok: true, mode, forbidden: [] };
+    // `pnpm ship` собирает source+bundles+whats-new в одном проходе и явно
+    // подтверждает, что это намеренный single-author push. В этом режиме
+    // agent-mode generated/release блок не нужен.
+    if (env.HEYS_SHIP === '1') return { ok: true, mode, forbidden: [] };
 
     const forbidden = getForbiddenAgentStagedFiles(files);
     if (forbidden.length === 0) return { ok: true, mode, forbidden };
@@ -167,7 +171,7 @@ function assertNotSharedRootDuringParallel({
     env = process.env,
     agentWorktrees = listAgentWorktrees(),
 } = {}) {
-    if (env.HEYS_ALLOW_SHARED_TREE === '1') return { ok: true, others: [] };
+    if (env.HEYS_ALLOW_SHARED_TREE === '1' || env.HEYS_SHIP === '1') return { ok: true, others: [] };
     if (mode !== 'agent') return { ok: true, others: [] };
     if (repoRoot.includes(WORKTREE_DIR_MARKER)) return { ok: true, others: [] };
 

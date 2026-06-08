@@ -74,6 +74,7 @@
     "push:safe": "node scripts/push-safe.mjs",
     "release": "pnpm run build:packages && changeset publish",
     "release:prepare-and-commit": "node scripts/release-prepare-and-commit.mjs",
+    "ship": "node scripts/ship.mjs",
     "test": "turbo run test",
     "test:all": "node -e \"require('fs').mkdirSync('coverage/.tmp',{ recursive: true })\" && cross-env NODE_OPTIONS=--max-old-space-size=6144 vitest run --coverage",
     "test:coverage": "pnpm -r run test:coverage",
