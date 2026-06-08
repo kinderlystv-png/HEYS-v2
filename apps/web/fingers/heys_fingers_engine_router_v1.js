@@ -37,6 +37,12 @@
   if (typeof Fingers.flags.newEngine !== 'boolean') {
     Fingers.flags.newEngine = false; // безопасный default
   }
+  if (typeof Fingers.flags.shadowCompare !== 'boolean') {
+    Fingers.flags.shadowCompare = false; // shadow-compare выключен по умолчанию
+  }
+
+  // Хранилище последнего shadow-diff для тестов/телеметрии.
+  let _lastShadowDiff = null;
 
   // Диагностика последнего вызова (для тестов/телеметрии).
   let _lastSource = null;
@@ -76,6 +82,32 @@
     return true;
   }
 
+  // ─── Shadow-compare (ревью 4.3 #4.3e) ─────────────────────────────────────────
+  // При flag=on + shadowCompare=on: зовём оба движка, отдаём builder, логируем
+  // расхождения. Это **наблюдаемость**, не safety-guard: фактический выход не
+  // меняется (его уже гарантирует isValidSession + fallback-цепочка).
+  // Цель: дать методологу/тебе видимость «насколько разные сессии генерятся».
+  function _diffSessions(newS, oldS) {
+    if (!newS || !oldS) return { onlyOne: !newS ? 'old' : 'new' };
+    return {
+      intensity: { new: newS.intensity, old: oldS.intensity, same: newS.intensity === oldS.intensity },
+      durationMin: { new: newS.durationMin, old: oldS.durationMin, deltaMin: (newS.durationMin || 0) - (oldS.durationMin || 0) },
+      exerciseCount: { new: newS.exercises.length, old: oldS.exercises.length },
+      roles: {
+        new: newS.exercises.map(function (e) { return e.__role; }),
+        old: oldS.exercises.map(function (e) { return e.__role; })
+      },
+      requiresWarmup: { new: newS.requiresWarmup, old: oldS.requiresWarmup, same: newS.requiresWarmup === oldS.requiresWarmup }
+    };
+  }
+
+  function _logShadow(diff) {
+    _lastShadowDiff = diff;
+    if (typeof console !== 'undefined' && console.debug) {
+      console.debug('[fingers.engineRouter] shadow-compare diff', diff);
+    }
+  }
+
   function recommendDay(opts) {
     const useNew = Fingers.flags && Fingers.flags.newEngine === true;
     if (!useNew) {
@@ -105,6 +137,17 @@
         return _callOld(opts);
       }
       _lastSource = 'new';
+      // Shadow-compare: возвращаем builder-результат, но логируем дифф.
+      if (Fingers.flags.shadowCompare === true) {
+        try {
+          const oldResult = _callOld(opts);
+          _logShadow(_diffSessions(result, oldResult));
+        } catch (shadowErr) {
+          if (typeof console !== 'undefined' && console.warn) {
+            console.warn('[fingers.engineRouter] shadow-compare error (ignored)', shadowErr);
+          }
+        }
+      }
       return result;
     } catch (e) {
       // fail-safe: новый движок никогда не должен валить пользователю генерацию.
@@ -119,7 +162,8 @@
   Fingers.engineRouter = {
     recommendDay: recommendDay,
     isValidSession: isValidSession,
-    get lastSource() { return _lastSource; }
+    get lastSource() { return _lastSource; },
+    get lastShadowDiff() { return _lastShadowDiff; }
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);

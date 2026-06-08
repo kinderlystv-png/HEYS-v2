@@ -238,3 +238,54 @@ describe('engineRouter: contract-guard (Риск 2 ревью)', () => {
     expect(R().lastSource).toBe('fallback-contract');
   });
 });
+
+describe('engineRouter: shadow-compare (ревью 4.3 #4.3e — наблюдаемость)', () => {
+  beforeAll(setupOnce);
+  beforeEach(() => {
+    F().flags.newEngine = true;
+    F().flags.shadowCompare = false;
+  });
+
+  it('default shadowCompare=false (флаг существует, не активен)', () => {
+    expect(F().flags.shadowCompare).toBe(false);
+  });
+
+  it('shadowCompare=on + builder вернул new → lastShadowDiff заполнен полями diff', () => {
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'recovery', exercises: [{ __role: 'antagonist' }],
+        name: 'Builder', durationMin: 15, requiresWarmup: false
+      })
+    };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+    const diff = R().lastShadowDiff;
+    expect(diff).not.toBeNull();
+    expect(diff.intensity.new).toBe('recovery');
+    expect(typeof diff.intensity.old).toBe('string');
+    expect(diff.intensity.same).toBe(diff.intensity.new === diff.intensity.old);
+    expect(diff.exerciseCount.new).toBe(1);
+    expect(typeof diff.exerciseCount.old).toBe('number');
+    expect(Array.isArray(diff.roles.new)).toBe(true);
+    expect(Array.isArray(diff.roles.old)).toBe(true);
+  });
+
+  it('shadowCompare ошибка mixEngine не валит builder-выход', () => {
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'max', exercises: [{ __role: 'power' }],
+        name: 'X', durationMin: 30, requiresWarmup: true
+      })
+    };
+    const orig = F().mixEngine.recommendDay;
+    F().mixEngine.recommendDay = () => { throw new Error('shadow boom'); };
+    try {
+      const r = R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+      expect(r).not.toBeNull();
+      expect(r.name).toBe('X');
+    } finally {
+      F().mixEngine.recommendDay = orig;
+    }
+  });
+});
