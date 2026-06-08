@@ -129,20 +129,29 @@ agent-mode), `legacy-sync` (rebundle+auto-stage в integration-mode, report-only
 (ship сам предупредит, если запустить не с main, и подскажет команду).
 
 ```bash
+# Сначала явно стейджишь свои файлы (защита от чужой dirty в shared checkout):
+git add apps/web/fingers/heys_fingers_grid_v1.js TESTS/heys_fingers_grid.test.js
 pnpm ship "feat(fingers): добавить grid hint"   # UI-правка
-pnpm ship "chore(scripts): refactor logging"    # внутренняя
-pnpm ship "fix(sync): drop stale dayv2" --dry-run   # план без push
-pnpm ship "..." --no-push                       # commit без push
+
+# Или (если уверен что вся dirty — твоя):
+git add -A && pnpm ship "chore(scripts): refactor logging"
+
+# План без push / без push после коммита:
+git add <files> && pnpm ship "fix(sync): drop stale dayv2" --dry-run
+git add <files> && pnpm ship "..." --no-push
 ```
 
 Что делает [scripts/ship.mjs](scripts/ship.mjs):
 
-1. Стейджит и коммитит твои правки. Pre-commit в `integration`-режиме сам
-   пересобирает **только бандлы, затронутые твоей правкой** (через
-   `bundle:legacy:auto --files=<staged source>`).
-2. Генерит whats-new entry и коммитит её отдельным `chore(release):` коммитом —
-   kind зависит от типа основного коммита (см. таблицу ниже).
-3. Push и (если ты на `main`) — `gh run watch` для деплоя.
+1. **Проверяет staged** — если ничего не застейджено, но в worktree есть dirty
+   файлы, отказывается работать и показывает что было бы захвачено. Stage —
+   git-native сигнал «эти файлы мои», явный отказ от auto-`git add -A` защищает
+   от тихого захвата чужой WIP в shared root checkout.
+2. Коммитит staged. Pre-commit в `integration`-режиме пересобирает **только
+   бандлы, затронутые твоей правкой** (через `bundle:legacy:auto`).
+3. Генерит whats-new entry и коммитит её отдельным `chore(release):` — kind
+   зависит от типа основного коммита (см. таблицу ниже).
+4. Push и (если ты на `main`) — `gh run watch` для деплоя.
 
 ### Тип коммита определяет whats-new
 
@@ -169,6 +178,21 @@ entry per build hash), но в user-facing модалке whats-new её не в
 - **`git push`** — только по явной команде («пуш», «push», «выкатывай»).
 - **`--no-verify`** — только по явному разрешению.
 - **`pnpm agent:worktree`** «на всякий случай». См. ниже.
+
+### Cross-agent collisions в shared root checkout
+
+В корневом checkout'е могут параллельно работать другие сессии. Перед `git add`:
+
+- **`git status`** — посмотри что в дереве. Если видишь файлы которые ты не
+  трогал — это чужая WIP. Не стейджь их в свой scope.
+- **Если нужно закоммитить только своё, а чужое уже staged** — pathspec:
+  `git commit -- <path1> <path2> ...`. Git создаёт временный индекс только из
+  твоих путей; чужое staged-content в коммит не попадёт. Чужой staged остаётся в
+  их индексе нетронутым.
+- **Hook `legacy-sync` теперь сам падает** с понятным сообщением, если в
+  worktree dirty hybrid-файл (`apps/web/index.html`, бандл, manifest), но он НЕ
+  в твоём коммите — чтобы не затащить чужую правку через `git add -A`. Следуй
+  stderr: stash, commit отдельно, или revert.
 
 ### Worktree — только настоящая параллель
 
