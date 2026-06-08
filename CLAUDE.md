@@ -197,6 +197,16 @@ entry per build hash), но в user-facing модалке whats-new её не в
   worktree dirty hybrid-файл (`apps/web/index.html`, бандл, manifest), но он НЕ
   в твоём коммите — чтобы не затащить чужую правку через `git add -A`. Следуй
   stderr: stash, commit отдельно, или revert.
+- **Перед `git reset --hard|--mixed origin/main`** (или любой `reset` с
+  расхождением между HEAD и upstream) — **обязательно** проверь
+  `git log --oneline @{u}..HEAD`. Если что-то выведено — это **локальные не
+  запушенные коммиты другой сессии**, которые ресет сотрёт. Не ресетить молча:
+  это reflog-recoverable, но параллельный агент об этом не узнает и потеряет
+  работу. Альтернатива: `git fetch` + `git rebase origin/main` (сохраняет
+  локальные коммиты поверх свежего main), либо разобраться по reflog чьи это
+  коммиты и согласовать. Инцидент 2026-06-08: чужой
+  `git reset --mixed origin/main` снёс 2 моих unpushed коммита (восстановилось
+  через worktree- dirty + reflog, но могло легко потеряться).
 
 ### Worktree — только настоящая параллель
 
