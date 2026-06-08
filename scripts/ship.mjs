@@ -191,11 +191,16 @@ function main() {
         ], { label: '   prepare-release --auto' });
     } else {
         out('[ship] 📋 generating technical whats-new entry (not user-visible)');
+        // `--force-technical`: even if changed files match user-facing
+        // path heuristics (e.g. docs under apps/web/), the commit type signals
+        // an internal change. We override to technical kind so it stays out of
+        // the user-facing whats-new modal.
         run(process.execPath, [
             PREPARE_RELEASE,
             '--auto',
+            '--force-technical',
             '--covered-commits=auto',
-        ], { label: '   prepare-release --auto' });
+        ], { label: '   prepare-release --auto --force-technical' });
     }
 
     run('git', ['add', '--', 'apps/web/public/whats-new.json', 'apps/web/public/whats-new'], {});

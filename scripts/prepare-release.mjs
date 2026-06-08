@@ -1455,10 +1455,25 @@ function runAuto() {
     const todayDate = generateDateISO();
     const changedFiles = getChangedFiles();
     const releaseAnalysis = classifyReleaseKind(changedFiles);
-    const suggestedProfile = releaseAnalysis.suggestedTemplate || getSuggestedTemplate(releaseAnalysis.kind);
-    const templateVariant = chooseTemplateVariant(suggestedProfile, releaseAnalysis);
-    const suggestedItems = buildSuggestedItems(releaseAnalysis, templateVariant);
     const allowUserFacingAuto = hasCliFlag('--allow-user-facing-auto');
+    // `--force-technical` — used by `pnpm ship` when commit type is
+    // chore/docs/refactor/test: caller knows the change is internal even if the
+    // file-path heuristic classifies it as user-facing (e.g. docs under apps/web/).
+    const forceTechnical = hasCliFlag('--force-technical');
+
+    let effectiveAnalysis = releaseAnalysis;
+    if (forceTechnical && releaseAnalysis.kind !== 'technical') {
+        // Re-classify as technical-general so the entry doesn't surface in the
+        // user-facing whats-new modal.
+        effectiveAnalysis = {
+            ...releaseAnalysis,
+            kind: 'technical',
+            suggestedTemplate: getSuggestedTemplate('technicalGeneral'),
+        };
+    }
+    const suggestedProfile = effectiveAnalysis.suggestedTemplate || getSuggestedTemplate(effectiveAnalysis.kind);
+    const templateVariant = chooseTemplateVariant(suggestedProfile, effectiveAnalysis);
+    const suggestedItems = buildSuggestedItems(effectiveAnalysis, templateVariant);
 
     // Check if entry already exists for this hash
     const existingIdx = data.releases.findIndex(
@@ -1470,11 +1485,12 @@ function runAuto() {
         return 0;
     }
 
-    if (releaseAnalysis.kind !== 'technical' && !allowUserFacingAuto) {
+    if (effectiveAnalysis.kind !== 'technical' && !allowUserFacingAuto) {
         writeError('❌ [auto] Обнаружен user-facing релиз. Авто-режим по умолчанию остановлен.');
         writeError('   Для пользовательских изменений нужно вручную проверить смысл релиза, тексты и скриншоты.');
         writeError('   Запусти: pnpm push:ready');
         writeError('   Если автогенерация всё же осознанно нужна, используй флаг: --allow-user-facing-auto');
+        writeError('   Если файлы лежат в apps/web/, но правка внутренняя (docs/chore) — флаг: --force-technical');
         return 2;
     }
 
