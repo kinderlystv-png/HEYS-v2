@@ -42,9 +42,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # SEC-014 (2026-06-08): убрали continue-on-error после внедрения baseline-ratchet
+      # (`security-reports/sast-baseline.json`). SAST падает только на находках вне
+      # baseline. Если появилась НОВАЯ дыра — CI зелёный не сделать без триажа.
+      # Регенерация baseline после ручного review: `node scripts/security/sast-scan.js --update-baseline`.
       - name: Run SAST Scanner
         run: node scripts/security/sast-scan.js
-        continue-on-error: true
 
       - name: Upload SAST Results
         uses: actions/upload-artifact@v4

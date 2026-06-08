@@ -1,6 +1,46 @@
 # HEYS — Активные задачи
 
-> Обновлено: 2026-05-28
+> Обновлено: 2026-06-08
+
+---
+
+## ✅ FIXED 2026-06-08 — curator add-item silently dropped (live-refresh races flush)
+
+**Симптом (из Sync Debug Snapshot курaтора 12:14, клиент
+`ccfe6ea3\***`):** в курaторской сессии React содержал свежедобавленный item, а LS / Sync Log / saveClientKey history — нет ни единой записи `heys*dayv2*\*`
+за всю сессию. В PIN-режиме того же клиента работало.
+
+**Root cause**
+([apps/web/heys_day_live_refresh_v1.js:98](apps/web/heys_day_live_refresh_v1.js#L98)
+
+- [apps/web/heys_sync_merge_v1.js:558](apps/web/heys_sync_merge_v1.js#L558)):
+  курaтор смотрит клиента, чей PIN-телефон активно пишет дневник. Каждые 30с
+  live-refresh polling сливает облако с LS через `mergeDayData`, которая стампит
+  `merged.updatedAt = Math.max(cloud, local, Date.now())`. Когда курaтор кликает
+  «добавить», React получает `updatedAt = Date.now()`, а LS уже стампнут
+  Date.now()+мс. flush() через 500мс видит
+  `freshestUpdatedAt(LS) > updatedAt(React)`, срабатывает
+  `shouldPreserveFreshestPersistedDay`
+  ([apps/web/heys_day_hooks.js:382](apps/web/heys_day_hooks.js#L382)) и молча
+  выходит. saveClientKey никогда не вызывается. В PIN не повторяется, потому что
+  PIN-устройство — единственный пишущий, его LS всегда содержит свежайшее.
+
+**Fix** ([apps/web/heys_day_hooks.js](apps/web/heys_day_hooks.js#L316)): в
+`flush()` добавлен block-window override — если
+`HEYS.Day.isBlockingCloudUpdates() === true` (handleAdd / removeItem / другие
+mutation handlers армят это окно на 3с после правки),
+shouldPreserveFreshestPersistedDay игнорируется и flush принудительно пишет.
+Server-side mergeDayData затем корректно объединяет правку курaтора с любыми
+конкурентными PIN-обновлениями.
+
+Покрыто регрессом в
+[apps/web/**tests**/sync-race-condition.test.js](apps/web/__tests__/sync-race-condition.test.js)
+(`flush block-window override` + counter-case `block NOT active`).
+
+**Live-проверка после deploy:** в курaторе на тестовом клиенте → добавить item →
+в Sync Debug Snapshot: `items_only_in_react: —`, `saveClientKey history`
+содержит `heys_dayv2_<today>`, Sync Log имеет `upload_ok` для dayv2 в
+курaторской сессии.
 
 ---
 

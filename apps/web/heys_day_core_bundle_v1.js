@@ -2426,6 +2426,24 @@
         const flush = React.useCallback((options = {}) => {
             let force = options && options.force === true;
             if (!force && (disabled || isUnmountedRef.current)) return;
+            // 🛡️ Block-window override (incident 2026-06-08 curator add-item silently dropped):
+            // when user just edited (handleAdd / removeItem / etc. armed setBlockCloudUpdates),
+            // external writers can have stamped LS with newer Date.now() ts inside the same
+            // tick — live-refresh's mergeDayData uses `Math.max(cloud, local, Date.now())`
+            // (heys_sync_merge_v1.js:558), so its merged write into LS lands ~ms after the
+            // user's add and ends up > React's just-set updatedAt. Without force, the
+            // shouldPreserveFreshestPersistedDay branch below would silently bail and the
+            // user's edit would never persist. We respect the explicit "user is editing"
+            // signal from blockCloudUpdates and write through.
+            if (!force) {
+                try {
+                    const isBlocking = global.HEYS && global.HEYS.Day
+                        && typeof global.HEYS.Day.isBlockingCloudUpdates === 'function'
+                        ? global.HEYS.Day.isBlockingCloudUpdates()
+                        : false;
+                    if (isBlocking) force = true;
+                } catch (_) { /* noop */ }
+            }
             // 🔧 RACE FIX: prefer ref-based day if it's newer than the closure-day.
             // flush() is invoked via RAF+setTimeout from addProductToMeal, which can
             // fire before React has committed the setDay state update — meaning the

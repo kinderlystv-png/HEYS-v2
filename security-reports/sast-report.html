@@ -26,21 +26,21 @@
     <div class="container">
         <div class="header">
             <h1>🛡️ SAST Security Report</h1>
-            <p class="meta">Generated: 2026-06-08T12:37:21.152Z | Files Scanned: 903</p>
+            <p class="meta">Generated: 2026-06-08T12:44:23.889Z | Files Scanned: 903</p>
         </div>
         
         <div class="summary">
             <div class="summary-card">
                 <h3 style="color: #dc2626; margin: 0;">Critical</h3>
-                <p style="font-size: 24px; margin: 10px 0;">9</p>
+                <p style="font-size: 24px; margin: 10px 0;">0</p>
             </div>
             <div class="summary-card">
                 <h3 style="color: #ea580c; margin: 0;">High</h3>
-                <p style="font-size: 24px; margin: 10px 0;">6</p>
+                <p style="font-size: 24px; margin: 10px 0;">0</p>
             </div>
             <div class="summary-card">
                 <h3 style="color: #d97706; margin: 0;">Medium</h3>
-                <p style="font-size: 24px; margin: 10px 0;">1552</p>
+                <p style="font-size: 24px; margin: 10px 0;">1554</p>
             </div>
             <div class="summary-card">
                 <h3 style="color: #65a30d; margin: 0;">Low</h3>
@@ -674,17 +674,6 @@
                 <div class="vuln-body">
                     <div class="code">Math.random()</div>
                     <p><strong>Recommendation:</strong> Use cryptographically secure random number generators</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-high">
-                    <h3 style="margin: 0;">Potential XSS vulnerability</h3>
-                    <p class="meta">apps/landing/src/components/FAQAccordion.tsx:53 | Rule: xss-vulnerability | Severity: HIGH</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">dangerouslySetInnerHTML</div>
-                    <p><strong>Recommendation:</strong> Sanitize user input and use safe DOM manipulation methods</p>
                 </div>
             </div>
         
@@ -1587,17 +1576,6 @@
                 <div class="vuln-body">
                     <div class="code">Date.now()</div>
                     <p><strong>Recommendation:</strong> Use cryptographically secure random number generators</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-high">
-                    <h3 style="margin: 0;">Potential XSS vulnerability</h3>
-                    <p class="meta">apps/web/day/_meals.js:647 | Rule: xss-vulnerability | Severity: HIGH</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">dangerouslySetInnerHTML</div>
-                    <p><strong>Recommendation:</strong> Sanitize user input and use safe DOM manipulation methods</p>
                 </div>
             </div>
         
@@ -4011,17 +3989,6 @@
             </div>
         
             <div class="vulnerability">
-                <div class="vuln-header severity-critical">
-                    <h3 style="margin: 0;">Potential SQL Injection vulnerability</h3>
-                    <p class="meta">apps/web/heys_cloud_shared_v1.js:337 | Rule: sql-injection | Severity: CRITICAL</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">${filtered.length} products for "${query</div>
-                    <p><strong>Recommendation:</strong> Use parameterized queries or ORM methods instead of string concatenation</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
                 <div class="vuln-header severity-medium">
                     <h3 style="margin: 0;">Use of cryptographically insecure random number generation</h3>
                     <p class="meta">apps/web/heys_cloud_shared_v1.js:244 | Rule: insecure-operations | Severity: MEDIUM</p>
@@ -4044,17 +4011,6 @@
             </div>
         
             <div class="vulnerability">
-                <div class="vuln-header severity-high">
-                    <h3 style="margin: 0;">Potential XSS vulnerability</h3>
-                    <p class="meta">apps/web/heys_consents_v1.js:1235 | Rule: xss-vulnerability | Severity: HIGH</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">dangerouslySetInnerHTML</div>
-                    <p><strong>Recommendation:</strong> Sanitize user input and use safe DOM manipulation methods</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
                 <div class="vuln-header severity-medium">
                     <h3 style="margin: 0;">Use of cryptographically insecure random number generation</h3>
                     <p class="meta">apps/web/heys_consents_v1.js:343 | Rule: insecure-operations | Severity: MEDIUM</p>
@@ -4073,17 +4029,6 @@
                 <div class="vuln-body">
                     <div class="code">console.log('[Consents] ✅ Health-data revoked + purged:', deletedKeys, 'key</div>
                     <p><strong>Recommendation:</strong> Remove debug statements that expose sensitive information</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-critical">
-                    <h3 style="margin: 0;">Potential SQL Injection vulnerability</h3>
-                    <p class="meta">apps/web/heys_core_v12.js:2988 | Rule: sql-injection | Severity: CRITICAL</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">Updated > 5) previewMessage += `\n   ... и ещё ${</div>
-                    <p><strong>Recommendation:</strong> Use parameterized queries or ORM methods instead of string concatenation</p>
                 </div>
             </div>
         
@@ -4992,7 +4937,7 @@
             <div class="vulnerability">
                 <div class="vuln-header severity-medium">
                     <h3 style="margin: 0;">Use of cryptographically insecure random number generation</h3>
-                    <p class="meta">apps/web/heys_day_hooks.js:406 | Rule: insecure-operations | Severity: MEDIUM</p>
+                    <p class="meta">apps/web/heys_day_hooks.js:321 | Rule: insecure-operations | Severity: MEDIUM</p>
                 </div>
                 <div class="vuln-body">
                     <div class="code">Date.now()</div>
@@ -5003,7 +4948,29 @@
             <div class="vulnerability">
                 <div class="vuln-header severity-medium">
                     <h3 style="margin: 0;">Use of cryptographically insecure random number generation</h3>
-                    <p class="meta">apps/web/heys_day_hooks.js:599 | Rule: insecure-operations | Severity: MEDIUM</p>
+                    <p class="meta">apps/web/heys_day_hooks.js:322 | Rule: insecure-operations | Severity: MEDIUM</p>
+                </div>
+                <div class="vuln-body">
+                    <div class="code">Date.now()</div>
+                    <p><strong>Recommendation:</strong> Use cryptographically secure random number generators</p>
+                </div>
+            </div>
+        
+            <div class="vulnerability">
+                <div class="vuln-header severity-medium">
+                    <h3 style="margin: 0;">Use of cryptographically insecure random number generation</h3>
+                    <p class="meta">apps/web/heys_day_hooks.js:424 | Rule: insecure-operations | Severity: MEDIUM</p>
+                </div>
+                <div class="vuln-body">
+                    <div class="code">Date.now()</div>
+                    <p><strong>Recommendation:</strong> Use cryptographically secure random number generators</p>
+                </div>
+            </div>
+        
+            <div class="vulnerability">
+                <div class="vuln-header severity-medium">
+                    <h3 style="margin: 0;">Use of cryptographically insecure random number generation</h3>
+                    <p class="meta">apps/web/heys_day_hooks.js:617 | Rule: insecure-operations | Severity: MEDIUM</p>
                 </div>
                 <div class="vuln-body">
                     <div class="code">Date.now()</div>
@@ -5118,17 +5085,6 @@
                 <div class="vuln-body">
                     <div class="code">Date.now()</div>
                     <p><strong>Recommendation:</strong> Use cryptographically secure random number generators</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-high">
-                    <h3 style="margin: 0;">Potential XSS vulnerability</h3>
-                    <p class="meta">apps/web/heys_day_meal_card.js:414 | Rule: xss-vulnerability | Severity: HIGH</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">dangerouslySetInnerHTML</div>
-                    <p><strong>Recommendation:</strong> Sanitize user input and use safe DOM manipulation methods</p>
                 </div>
             </div>
         
@@ -7388,19 +7344,6 @@
             </div>
         
             <div class="vulnerability">
-                <div class="vuln-header severity-high">
-                    <h3 style="margin: 0;">Potential XSS vulnerability</h3>
-                    <p class="meta">apps/web/heys_paywall_v1.js:864 | Rule: xss-vulnerability | Severity: HIGH</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">innerHTML = `
-      <span>🔒</span>
-      <span>${</div>
-                    <p><strong>Recommendation:</strong> Sanitize user input and use safe DOM manipulation methods</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
                 <div class="vuln-header severity-medium">
                     <h3 style="margin: 0;">Use of cryptographically insecure random number generation</h3>
                     <p class="meta">apps/web/heys_perf_main_thread_v1.js:32 | Rule: insecure-operations | Severity: MEDIUM</p>
@@ -8970,17 +8913,6 @@
                 <div class="vuln-body">
                     <div class="code">Date.now()</div>
                     <p><strong>Recommendation:</strong> Use cryptographically secure random number generators</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-critical">
-                    <h3 style="margin: 0;">Potential SQL Injection vulnerability</h3>
-                    <p class="meta">apps/web/heys_storage_supabase_v1.js:14374 | Rule: sql-injection | Severity: CRITICAL</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">${filtered.length} products for "${query</div>
-                    <p><strong>Recommendation:</strong> Use parameterized queries or ORM methods instead of string concatenation</p>
                 </div>
             </div>
         
@@ -15541,17 +15473,6 @@
             </div>
         
             <div class="vulnerability">
-                <div class="vuln-header severity-high">
-                    <h3 style="margin: 0;">Potential XSS vulnerability</h3>
-                    <p class="meta">packages/ui/src/security/index.tsx:141 | Rule: xss-vulnerability | Severity: HIGH</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">dangerouslySetInnerHTML</div>
-                    <p><strong>Recommendation:</strong> Sanitize user input and use safe DOM manipulation methods</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
                 <div class="vuln-header severity-medium">
                     <h3 style="margin: 0;">Use of cryptographically insecure random number generation</h3>
                     <p class="meta">parse_worker.js:121 | Rule: insecure-operations | Severity: MEDIUM</p>
@@ -17242,72 +17163,6 @@
                 <div class="vuln-body">
                     <div class="code">console.log('[secret</div>
                     <p><strong>Recommendation:</strong> Remove debug statements that expose sensitive information</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-critical">
-                    <h3 style="margin: 0;">Potential SQL Injection vulnerability</h3>
-                    <p class="meta">yandex-cloud-functions/heys-api-rest/index.js:628 | Rule: sql-injection | Severity: CRITICAL</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">query += ` WHERE ${</div>
-                    <p><strong>Recommendation:</strong> Use parameterized queries or ORM methods instead of string concatenation</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-critical">
-                    <h3 style="margin: 0;">Potential SQL Injection vulnerability</h3>
-                    <p class="meta">yandex-cloud-functions/heys-api-rest/index.js:638 | Rule: sql-injection | Severity: CRITICAL</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">query += ` ORDER BY "${orderCol}" ${</div>
-                    <p><strong>Recommendation:</strong> Use parameterized queries or ORM methods instead of string concatenation</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-critical">
-                    <h3 style="margin: 0;">Potential SQL Injection vulnerability</h3>
-                    <p class="meta">yandex-cloud-functions/heys-api-rest/index.js:643 | Rule: sql-injection | Severity: CRITICAL</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">query += ` LIMIT ${</div>
-                    <p><strong>Recommendation:</strong> Use parameterized queries or ORM methods instead of string concatenation</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-critical">
-                    <h3 style="margin: 0;">Potential SQL Injection vulnerability</h3>
-                    <p class="meta">yandex-cloud-functions/heys-api-rest/index.js:647 | Rule: sql-injection | Severity: CRITICAL</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">query += ` OFFSET ${</div>
-                    <p><strong>Recommendation:</strong> Use parameterized queries or ORM methods instead of string concatenation</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-critical">
-                    <h3 style="margin: 0;">Potential SQL Injection vulnerability</h3>
-                    <p class="meta">yandex-cloud-functions/heys-api-rest/index.js:1037 | Rule: sql-injection | Severity: CRITICAL</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">query += ` RETURNING ${</div>
-                    <p><strong>Recommendation:</strong> Use parameterized queries or ORM methods instead of string concatenation</p>
-                </div>
-            </div>
-        
-            <div class="vulnerability">
-                <div class="vuln-header severity-critical">
-                    <h3 style="margin: 0;">Potential SQL Injection vulnerability</h3>
-                    <p class="meta">yandex-cloud-functions/heys-api-rest/index.js:1143 | Rule: sql-injection | Severity: CRITICAL</p>
-                </div>
-                <div class="vuln-body">
-                    <div class="code">query += ` RETURNING ${</div>
-                    <p><strong>Recommendation:</strong> Use parameterized queries or ORM methods instead of string concatenation</p>
                 </div>
             </div>
         

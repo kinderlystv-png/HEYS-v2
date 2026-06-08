@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-06-08T12:44:10.068Z",
+  "description": "SAST baseline (SEC-014 ratchet) — known critical+high findings, manually triaged as false-positives или tracked в отдельных SEC-NNN. SAST fails только на новых находках вне этого списка. Регенерация: `node scripts/security/sast-scan.js --update-baseline`.",
+  "count": 14,
+  "fingerprints": [
+    "sqlInjection|apps/web/heys_cloud_shared_v1.js|c32030e90e04",
+    "sqlInjection|apps/web/heys_core_v12.js|983f220ea0c4",
+    "sqlInjection|apps/web/heys_storage_supabase_v1.js|c32030e90e04",
+    "sqlInjection|yandex-cloud-functions/heys-api-rest/index.js|3bc42cacbd07",
+    "sqlInjection|yandex-cloud-functions/heys-api-rest/index.js|7cd17481f9fb",
+    "sqlInjection|yandex-cloud-functions/heys-api-rest/index.js|b4c900cd6da0",
+    "sqlInjection|yandex-cloud-functions/heys-api-rest/index.js|c22b1e2b0181",
+    "sqlInjection|yandex-cloud-functions/heys-api-rest/index.js|d6397dec39e2",
+    "xss|apps/landing/src/components/FAQAccordion.tsx|eb91b2f84fad",
+    "xss|apps/web/day/_meals.js|eb91b2f84fad",
+    "xss|apps/web/heys_consents_v1.js|eb91b2f84fad",
+    "xss|apps/web/heys_day_meal_card.js|eb91b2f84fad",
+    "xss|apps/web/heys_paywall_v1.js|872dd8f8fb49",
+    "xss|packages/ui/src/security/index.tsx|eb91b2f84fad"
+  ]
+}

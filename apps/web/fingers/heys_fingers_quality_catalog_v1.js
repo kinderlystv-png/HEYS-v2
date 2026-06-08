@@ -111,7 +111,7 @@
     },
     nelson_no_hangs: {
       block: { quality: 'finger_strength', targetStimulus: 'maintain', fatigueCost: 'low', tissueLoad: 'low' },
-      atom: { quality: 'finger_strength', doseShape: 'hang', loadModel: 'pctMax', loadValue: 40, emphasis: 'capacity', doseConfidence: 'B', energySystem: 'phosphagen' } // 7s×6 rest30 — низкая нагрузка, полное восстановление между повторами
+      atom: { quality: 'finger_strength', doseShape: 'hang', loadModel: 'pctMax', loadValue: 40, emphasis: 'capacity', doseConfidence: 'B', energySystem: null } // низконагруз. тканевый/recovery — энергосистема нерелевантна (явный null §1.2)
     },
     horst_towel_pulls: {
       block: { quality: 'finger_strength', targetStimulus: 'develop', fatigueCost: 'moderate', tissueLoad: 'moderate' },
@@ -163,7 +163,7 @@
     },
     abrahangs_daily: {
       block: { quality: 'finger_strength', targetStimulus: 'maintain', fatigueCost: 'low', tissueLoad: 'low' },
-      atom: { quality: 'finger_strength', doseShape: 'hang', loadModel: 'pctMax', loadValue: 40, emphasis: 'capacity', doseConfidence: 'B', energySystem: 'phosphagen' } // тканевый, низкая нагрузка, частота
+      atom: { quality: 'finger_strength', doseShape: 'hang', loadModel: 'pctMax', loadValue: 40, emphasis: 'capacity', doseConfidence: 'B', energySystem: null } // тканевый: энергосистема нерелевантна (явный null §1.2)
     },
     lattice_foundation: {
       block: { quality: 'finger_strength', targetStimulus: 'develop', fatigueCost: 'high', tissueLoad: 'high' },
@@ -171,7 +171,7 @@
     },
     beyer_heavy_iso: {
       block: { quality: 'finger_strength', targetStimulus: 'recover', fatigueCost: 'moderate', tissueLoad: 'high' },
-      atom: { quality: 'finger_strength', doseShape: 'hang', loadModel: 'pctMax', loadValue: 70, emphasis: 'max', doseConfidence: 'B', energySystem: 'phosphagen' } // heavy slow iso 30s — интент ткань/сила (override glycolytic-derive)
+      atom: { quality: 'finger_strength', doseShape: 'hang', loadModel: 'pctMax', loadValue: 70, emphasis: 'max', doseConfidence: 'B', energySystem: null } // HSR на коллаген — не метаболический протокол (явный null §1.2)
     },
     recruitment_pulls: {
       block: { quality: 'power', targetStimulus: 'develop', fatigueCost: 'high', tissueLoad: 'high' },
@@ -226,6 +226,15 @@
         if (k === 'quality') { if (QUALITIES.indexOf(m.block.quality) < 0) errors.push(p.id + ': block.quality невалиден'); }
         else if (!inEnum(m.block[k], enumKey)) errors.push(p.id + ': block.' + k + ' невалиден (' + m.block[k] + ')');
       });
+      // V_tissueIntent: низконагруз. finger_strength обязан быть maintain/recover —
+      // иначе scoring §3.2 выдернет тканевый протокол как РАЗВИВАЮЩИЙ стимул.
+      const _a = m.atom;
+      const _lowLoad = _a.loadModel === 'bodyweight' || _a.loadModel === 'none'
+        || (_a.loadModel === 'pctMax' && Number(_a.loadValue) < 60);
+      if (m.block.quality === 'finger_strength' && m.block.tissueLoad === 'low' && _lowLoad
+          && ['maintain', 'recover'].indexOf(m.block.targetStimulus) < 0) {
+        errors.push(p.id + ': V_tissueIntent — низконагруз. finger_strength требует targetStimulus maintain/recover');
+      }
       (p.exercises || []).forEach(function (ex, idx) {
         const am = atomMetaFor(p.id, idx);
         if (QUALITIES.indexOf(am.quality) < 0) errors.push(p.id + '[' + idx + ']: quality невалиден');

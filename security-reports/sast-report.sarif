@@ -1266,28 +1266,6 @@
           ]
         },
         {
-          "ruleId": "xss-vulnerability",
-          "level": "error",
-          "message": {
-            "text": "Potential XSS vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "apps/landing/src/components/FAQAccordion.tsx"
-                },
-                "region": {
-                  "startLine": 53,
-                  "snippet": {
-                    "text": "dangerouslySetInnerHTML"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "insecure-http",
           "level": "warning",
           "message": {
@@ -3085,28 +3063,6 @@
                   "startLine": 3066,
                   "snippet": {
                     "text": "Date.now()"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "xss-vulnerability",
-          "level": "error",
-          "message": {
-            "text": "Potential XSS vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "apps/web/day/_meals.js"
-                },
-                "region": {
-                  "startLine": 647,
-                  "snippet": {
-                    "text": "dangerouslySetInnerHTML"
                   }
                 }
               }
@@ -7932,28 +7888,6 @@
           ]
         },
         {
-          "ruleId": "sql-injection",
-          "level": "error",
-          "message": {
-            "text": "Potential SQL Injection vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "apps/web/heys_cloud_shared_v1.js"
-                },
-                "region": {
-                  "startLine": 337,
-                  "snippet": {
-                    "text": "${filtered.length} products for \"${query"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "insecure-operations",
           "level": "warning",
           "message": {
@@ -7998,28 +7932,6 @@
           ]
         },
         {
-          "ruleId": "xss-vulnerability",
-          "level": "error",
-          "message": {
-            "text": "Potential XSS vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "apps/web/heys_consents_v1.js"
-                },
-                "region": {
-                  "startLine": 1235,
-                  "snippet": {
-                    "text": "dangerouslySetInnerHTML"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "insecure-operations",
           "level": "warning",
           "message": {
@@ -8057,28 +7969,6 @@
                   "startLine": 266,
                   "snippet": {
                     "text": "console.log('[Consents] ✅ Health-data revoked + purged:', deletedKeys, 'key"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "sql-injection",
-          "level": "error",
-          "message": {
-            "text": "Potential SQL Injection vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "apps/web/heys_core_v12.js"
-                },
-                "region": {
-                  "startLine": 2988,
-                  "snippet": {
-                    "text": "Updated > 5) previewMessage += `\\n   ... и ещё ${"
                   }
                 }
               }
@@ -9902,7 +9792,7 @@
                   "uri": "apps/web/heys_day_hooks.js"
                 },
                 "region": {
-                  "startLine": 406,
+                  "startLine": 321,
                   "snippet": {
                     "text": "Date.now()"
                   }
@@ -9924,7 +9814,51 @@
                   "uri": "apps/web/heys_day_hooks.js"
                 },
                 "region": {
-                  "startLine": 599,
+                  "startLine": 322,
+                  "snippet": {
+                    "text": "Date.now()"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "insecure-operations",
+          "level": "warning",
+          "message": {
+            "text": "Use of cryptographically insecure random number generation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "apps/web/heys_day_hooks.js"
+                },
+                "region": {
+                  "startLine": 424,
+                  "snippet": {
+                    "text": "Date.now()"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "insecure-operations",
+          "level": "warning",
+          "message": {
+            "text": "Use of cryptographically insecure random number generation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "apps/web/heys_day_hooks.js"
+                },
+                "region": {
+                  "startLine": 617,
                   "snippet": {
                     "text": "Date.now()"
                   }
@@ -10147,28 +10081,6 @@
                   "startLine": 172,
                   "snippet": {
                     "text": "Date.now()"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "xss-vulnerability",
-          "level": "error",
-          "message": {
-            "text": "Potential XSS vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "apps/web/heys_day_meal_card.js"
-                },
-                "region": {
-                  "startLine": 414,
-                  "snippet": {
-                    "text": "dangerouslySetInnerHTML"
                   }
                 }
               }
@@ -14686,28 +14598,6 @@
           ]
         },
         {
-          "ruleId": "xss-vulnerability",
-          "level": "error",
-          "message": {
-            "text": "Potential XSS vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "apps/web/heys_paywall_v1.js"
-                },
-                "region": {
-                  "startLine": 864,
-                  "snippet": {
-                    "text": "innerHTML = `\n      <span>🔒</span>\n      <span>${"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "insecure-operations",
           "level": "warning",
           "message": {
@@ -17847,28 +17737,6 @@
                   "startLine": 1116,
                   "snippet": {
                     "text": "Date.now()"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "sql-injection",
-          "level": "error",
-          "message": {
-            "text": "Potential SQL Injection vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "apps/web/heys_storage_supabase_v1.js"
-                },
-                "region": {
-                  "startLine": 14374,
-                  "snippet": {
-                    "text": "${filtered.length} products for \"${query"
                   }
                 }
               }
@@ -30988,28 +30856,6 @@
           ]
         },
         {
-          "ruleId": "xss-vulnerability",
-          "level": "error",
-          "message": {
-            "text": "Potential XSS vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "packages/ui/src/security/index.tsx"
-                },
-                "region": {
-                  "startLine": 141,
-                  "snippet": {
-                    "text": "dangerouslySetInnerHTML"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "insecure-operations",
           "level": "warning",
           "message": {
@@ -34391,138 +34237,6 @@
                   "startLine": 104,
                   "snippet": {
                     "text": "console.log('[secret"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "sql-injection",
-          "level": "error",
-          "message": {
-            "text": "Potential SQL Injection vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "yandex-cloud-functions/heys-api-rest/index.js"
-                },
-                "region": {
-                  "startLine": 628,
-                  "snippet": {
-                    "text": "query += ` WHERE ${"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "sql-injection",
-          "level": "error",
-          "message": {
-            "text": "Potential SQL Injection vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "yandex-cloud-functions/heys-api-rest/index.js"
-                },
-                "region": {
-                  "startLine": 638,
-                  "snippet": {
-                    "text": "query += ` ORDER BY \"${orderCol}\" ${"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "sql-injection",
-          "level": "error",
-          "message": {
-            "text": "Potential SQL Injection vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "yandex-cloud-functions/heys-api-rest/index.js"
-                },
-                "region": {
-                  "startLine": 643,
-                  "snippet": {
-                    "text": "query += ` LIMIT ${"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "sql-injection",
-          "level": "error",
-          "message": {
-            "text": "Potential SQL Injection vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "yandex-cloud-functions/heys-api-rest/index.js"
-                },
-                "region": {
-                  "startLine": 647,
-                  "snippet": {
-                    "text": "query += ` OFFSET ${"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "sql-injection",
-          "level": "error",
-          "message": {
-            "text": "Potential SQL Injection vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "yandex-cloud-functions/heys-api-rest/index.js"
-                },
-                "region": {
-                  "startLine": 1037,
-                  "snippet": {
-                    "text": "query += ` RETURNING ${"
-                  }
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "sql-injection",
-          "level": "error",
-          "message": {
-            "text": "Potential SQL Injection vulnerability"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "yandex-cloud-functions/heys-api-rest/index.js"
-                },
-                "region": {
-                  "startLine": 1143,
-                  "snippet": {
-                    "text": "query += ` RETURNING ${"
                   }
                 }
               }

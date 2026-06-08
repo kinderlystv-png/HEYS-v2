@@ -7,6 +7,7 @@
  * @author HEYS Security Team
  */
 
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -152,11 +153,12 @@ const SCAN_CONFIG = {
 };
 
 class SASTScanner {
-  constructor() {
+  constructor(options = {}) {
     this.config = {
       ...SCAN_CONFIG,
       securityRules: { ...SCAN_CONFIG.securityRules },
       targetPaths: [SCAN_CONFIG.projectRoot],
+      updateBaseline: !!options.updateBaseline,
     };
 
     this.results = {
@@ -203,6 +205,14 @@ class SASTScanner {
       // Сканируем каждый файл
       for (const filePath of filesToScan) {
         await this.scanFile(filePath);
+      }
+
+      // SEC-014 ratchet: либо записать новый baseline (--update-baseline),
+      // либо отфильтровать known-FP/принятые находки из текущего отчёта.
+      if (this.config.updateBaseline) {
+        this.writeBaseline();
+      } else {
+        this.applyBaseline();
       }
 
       // Генерируем отчет
@@ -635,22 +645,120 @@ class SASTScanner {
   }
 
   /**
-   * Определение кода выхода на основе найденных уязвимостей
+   * Определение кода выхода на основе найденных уязвимостей.
+   * После applyBaseline() summary содержит только NEW (не записанные в baseline) находки.
    */
   getExitCode() {
     if (this.results.summary.critical > 0) return 2; // Критические уязвимости
     if (this.results.summary.high > 0) return 1; // Высокие уязвимости
     return 0; // Нет критических или высоких уязвимостей
   }
+
+  /**
+   * SEC-014 baseline-ratchet: fingerprint находки для сравнения с принятыми FP.
+   * Игнорируем номер строки (рефакторинг сдвигает) — fingerprint = rule + file + hash(evidence).
+   * Если код реально меняется, evidence меняется, fingerprint меняется → НЕ матчится со
+   * старым baseline → SAST fail на «новой» находке (что и нужно).
+   */
+  fingerprintVuln(v) {
+    const file = v.file || v.location?.file || '?';
+    const evidence = (v.evidence || '').trim().slice(0, 200);
+    const hash = crypto.createHash('md5').update(evidence).digest('hex').slice(0, 12);
+    const rule = v.ruleKey || v.rule || '?';
+    return `${rule}|${file}|${hash}`;
+  }
+
+  /**
+   * Применить baseline: убрать из results.vulnerabilities все находки, чьи fingerprint
+   * есть в `security-reports/sast-baseline.json`. Декрементировать summary-счётчики.
+   * Если baseline-файла нет — no-op (бэйзлайн ещё не зафиксирован).
+   */
+  applyBaseline() {
+    const baselinePath = path.join(this.config.outputDir, 'sast-baseline.json');
+    if (!fs.existsSync(baselinePath)) {
+      console.log('📋 Baseline: файл sast-baseline.json отсутствует — все находки → as-is');
+      return;
+    }
+    let baseline;
+    try {
+      baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+    } catch (e) {
+      console.warn(`⚠️  sast-baseline.json corrupt: ${e.message} — игнорирую`);
+      return;
+    }
+    const accepted = new Set(baseline.fingerprints || []);
+    if (accepted.size === 0) {
+      console.log('📋 Baseline: пустой fingerprints[] — все находки → as-is');
+      return;
+    }
+    const before = { ...this.results.summary };
+    let suppressed = 0;
+    const remaining = [];
+    for (const v of this.results.vulnerabilities) {
+      if (accepted.has(this.fingerprintVuln(v))) {
+        suppressed++;
+        if (this.results.summary[v.severity] !== undefined) {
+          this.results.summary[v.severity]--;
+        }
+        this.results.summary.total--;
+      } else {
+        remaining.push(v);
+      }
+    }
+    this.results.vulnerabilities = remaining;
+    this.results.baselineSuppressed = suppressed;
+    if (suppressed > 0) {
+      console.log(
+        `📋 Baseline: ${suppressed} known findings suppressed ` +
+          `(was critical=${before.critical}, high=${before.high} → ` +
+          `now critical=${this.results.summary.critical}, high=${this.results.summary.high})`,
+      );
+    }
+  }
+
+  /**
+   * Записать текущие critical+high находки как baseline. Старый файл перезаписывается.
+   * Запускается через `node scripts/security/sast-scan.js --update-baseline` после
+   * ручного триажа: разработчик подтвердил, что все текущие critical+high — FP или
+   * tracked elsewhere (другая SEC-NNN запись).
+   */
+  writeBaseline() {
+    const baselinePath = path.join(this.config.outputDir, 'sast-baseline.json');
+    const fingerprints = this.results.vulnerabilities
+      .filter((v) => v.severity === 'critical' || v.severity === 'high')
+      .map((v) => this.fingerprintVuln(v));
+    const dedup = [...new Set(fingerprints)].sort();
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      description:
+        'SAST baseline (SEC-014 ratchet) — known critical+high findings, ' +
+        'manually triaged as false-positives или tracked в отдельных SEC-NNN. ' +
+        'SAST fails только на новых находках вне этого списка. ' +
+        'Регенерация: `node scripts/security/sast-scan.js --update-baseline`.',
+      count: dedup.length,
+      fingerprints: dedup,
+    };
+    fs.writeFileSync(baselinePath, JSON.stringify(payload, null, 2));
+    console.log(
+      `📋 Baseline written: ${dedup.length} fingerprints → ${path.relative(
+        this.config.projectRoot,
+        baselinePath,
+      )}`,
+    );
+  }
 }
 
 // Запуск сканирования, если скрипт выполняется напрямую
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const scanner = new SASTScanner();
+  const args = process.argv.slice(2);
+  const updateBaseline = args.includes('--update-baseline');
+  const scanner = new SASTScanner({ updateBaseline });
   scanner
     .runScan()
     .then(() => {
-      process.exit(scanner.getExitCode());
+      // При --update-baseline всегда exit 0 (мы только сгенерировали snapshot,
+      // не валидируем). Иначе — по бизнес-логике (есть NEW findings → exit 1/2).
+      process.exit(updateBaseline ? 0 : scanner.getExitCode());
     })
     .catch((error) => {
       console.error('Fatal error:', error);

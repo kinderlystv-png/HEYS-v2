@@ -456,4 +456,37 @@ describe('quality_catalog: methodology data layer (Phase 1 / step 2)', () => {
     expect(mh.exercises[0].quality).toBeUndefined();
     expect(mh.exercises[0].emphasis).toBeUndefined();
   });
+
+  it('energySystem override: тканевые → null, аэробные → aerobic, density → phosphagen', () => {
+    const es = (id) => {
+      const p = globalThis.HEYS.Fingers.getProgramById(id);
+      return QC().energySystemOf(p.exercises[0], QC().atomMetaFor(id, 0));
+    };
+    // тканевые/recovery — энергосистема нерелевантна
+    expect(es('abrahangs_daily')).toBeNull();
+    expect(es('beyer_heavy_iso')).toBeNull();
+    expect(es('nelson_no_hangs')).toBeNull();
+    expect(es('antagonist_bands')).toBeNull();
+    // аэробно-целевые (sub/at CF) — override на aerobic, НЕ glycolytic-derive
+    expect(es('sub_cf_capacity')).toBe('aerobic');
+    expect(es('cf_test')).toBe('aerobic');
+    // density — phosphagen по заметке целостности §3.1
+    expect(es('nelson_density_hangs')).toBe('phosphagen');
+    // контроль derive-веток
+    expect(es('repeaters_7_3')).toBe('glycolytic');
+    expect(es('horst_max_hangs')).toBe('phosphagen');
+  });
+
+  it('V_tissueIntent: низконагруз. finger_strength без maintain/recover → ошибка', () => {
+    const meta = QC().PROGRAM_META.abrahangs_daily;
+    const save = meta.block.targetStimulus;
+    try {
+      meta.block.targetStimulus = 'develop';
+      const errs = QC().validateProgramMeta();
+      expect(errs.some((e) => /V_tissueIntent/.test(e))).toBe(true);
+    } finally {
+      meta.block.targetStimulus = save;
+    }
+    expect(QC().validateProgramMeta()).toEqual([]); // восстановлено
+  });
 });

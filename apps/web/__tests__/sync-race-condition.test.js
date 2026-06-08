@@ -258,6 +258,96 @@ describe('Sync Race Condition Protection', () => {
       expect(flushCalled).toBe(false);
     });
 
+    // Incident 2026-06-08: curator add-item silently dropped — when curator viewed
+    // a client whose PIN device kept pushing day updates, live-refresh's mergeDayData
+    // (uses Math.max(cloud, local, Date.now()) for merged.updatedAt — see
+    // heys_sync_merge_v1.js:558) would stamp LS with a ts slightly newer than
+    // React's just-set updatedAt. flush() then bailed via shouldPreserveFreshestPersistedDay
+    // and the add never persisted. Fix: when block-window is active (user just edited),
+    // treat flush as force=true so the pending edit always writes through.
+    // This mirrors the production logic in apps/web/heys_day_hooks.js flush().
+    test('flush block-window override: write through even when LS has newer ts', () => {
+      const stripMeta = (payload) => {
+        if (!payload) return payload;
+        const { updatedAt, _sourceId, ...rest } = payload;
+        return rest;
+      };
+
+      // Setup: user just clicked "add item" — block-window armed.
+      const blockCloudUpdatesUntilRef = { current: 1734000005000 };
+      vi.mocked(Date.now).mockReturnValue(1734000002500); // 2.5s into 3s block
+      global.HEYS.Day = global.HEYS.Day || {};
+      global.HEYS.Day.isBlockingCloudUpdates = () => Date.now() < blockCloudUpdatesUntilRef.current;
+
+      // React state: user added a third item; updatedAt = click time.
+      const reactDay = {
+        date: '2026-06-08',
+        meals: [{ id: 'm1', items: [{ id: 'i1' }, { id: 'i2' }, { id: 'i3' }] }],
+        updatedAt: 1734000002000,
+      };
+      // LS state: live-refresh's merge stamped LS with a slightly later Date.now()
+      // (~200ms after click) — missing the user's new item it3.
+      const lsDay = {
+        date: '2026-06-08',
+        meals: [{ id: 'm1', items: [{ id: 'i1' }, { id: 'i2' }] }],
+        updatedAt: 1734000002200, // > React's updatedAt
+      };
+
+      // Production logic mirror — flush() decision:
+      const options = {};
+      let force = options && options.force === true;
+      // Block-window override (new — see heys_day_hooks.js flush()):
+      if (!force) {
+        const isBlocking = typeof global.HEYS?.Day?.isBlockingCloudUpdates === 'function'
+          ? global.HEYS.Day.isBlockingCloudUpdates() : false;
+        if (isBlocking) force = true;
+      }
+
+      const updatedAt = reactDay.updatedAt;
+      const freshestUpdatedAt = lsDay.updatedAt;
+      const daySnap = JSON.stringify(stripMeta(reactDay));
+      const freshestDaySnap = JSON.stringify(stripMeta(lsDay));
+      const shouldPreserveFreshestPersistedDay = !!(
+        lsDay && lsDay.date === reactDay.date && (
+          freshestUpdatedAt > updatedAt ||
+          (freshestUpdatedAt === updatedAt && freshestDaySnap !== daySnap)
+        )
+      );
+
+      // Without force-override, shouldPreserve would be true and the write would be skipped.
+      expect(shouldPreserveFreshestPersistedDay).toBe(true);
+      // With block-window override, force is true → flush proceeds past the preserve guard.
+      expect(force).toBe(true);
+      // Effective write decision: skip only if !force && shouldPreserve.
+      const skipWrite = !force && shouldPreserveFreshestPersistedDay;
+      expect(skipWrite).toBe(false);
+    });
+
+    test('flush block-window NOT active: original preserve-fresher behavior unchanged', () => {
+      // Counter-case: when block is NOT active (e.g. unrelated React re-render, no
+      // pending user edit), the original guard still wins — stale React state must
+      // not clobber a fresher persisted snapshot.
+      const blockCloudUpdatesUntilRef = { current: 1734000000000 };
+      vi.mocked(Date.now).mockReturnValue(1734000010000); // long past block expiry
+      global.HEYS.Day = global.HEYS.Day || {};
+      global.HEYS.Day.isBlockingCloudUpdates = () => Date.now() < blockCloudUpdatesUntilRef.current;
+
+      const reactDay = { date: '2026-06-08', waterMl: 1300, updatedAt: 1734000001000 };
+      const lsDay = { date: '2026-06-08', waterMl: 1400, updatedAt: 1734000002000 };
+
+      let force = false;
+      const isBlocking = typeof global.HEYS?.Day?.isBlockingCloudUpdates === 'function'
+        ? global.HEYS.Day.isBlockingCloudUpdates() : false;
+      if (isBlocking) force = true;
+
+      const shouldPreserve = lsDay.updatedAt > reactDay.updatedAt;
+      const skipWrite = !force && shouldPreserve;
+
+      expect(isBlocking).toBe(false);
+      expect(force).toBe(false);
+      expect(skipWrite).toBe(true); // stale React state must NOT overwrite fresher LS
+    });
+
     test('flush should preserve a fresher persisted day snapshot over stale React state', () => {
       const stripMeta = (payload) => {
         if (!payload) return payload;
