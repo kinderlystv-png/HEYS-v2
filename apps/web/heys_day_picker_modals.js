@@ -439,7 +439,9 @@
                         // Обновляем приём
                         const newUpdatedAt = Date.now();
                         if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
-                        if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+                        // Phase 3 (2026-06-08): через setter — auto-mark pending для date.
+                        if (HEYS.Day?.setBlockCloudUpdates) HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
+                        else if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
                         setDay(prevDay => {
                             const updatedMeals = (prevDay.meals || []).map((m, i) =>
@@ -487,7 +489,9 @@
                         // Обновляем приём
                         const newUpdatedAt = Date.now();
                         if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
-                        if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+                        // Phase 3 (2026-06-08): через setter — auto-mark pending для date.
+                        if (HEYS.Day?.setBlockCloudUpdates) HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
+                        else if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
                         setDay(prevDay => {
                             const updatedMeals = (prevDay.meals || []).map((m, i) =>

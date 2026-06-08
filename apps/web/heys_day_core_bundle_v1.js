@@ -4241,7 +4241,12 @@
 
                 const newUpdatedAt = Date.now();
                 lastLoadedUpdatedAtRef.current = newUpdatedAt;
-                blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+                // Phase 3 (2026-06-08): через setter — auto-mark pending mutation для date.
+                if (HEYS.Day && typeof HEYS.Day.setBlockCloudUpdates === 'function') {
+                    HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
+                } else {
+                    blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+                }
 
                 // 2026-05-29 anti-loop: lsSet НЕ внутри setDay reducer.
                 // React 18 updateReducer повторно прогоняет updater'ы из очереди

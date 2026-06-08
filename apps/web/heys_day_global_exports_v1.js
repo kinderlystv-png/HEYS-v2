@@ -68,7 +68,20 @@
             HEYS.Day.requestFlush = flush;
             HEYS.Day.isBlockingCloudUpdates = () => Date.now() < blockCloudUpdatesUntilRef.current;
             HEYS.Day.getBlockUntil = () => blockCloudUpdatesUntilRef.current;
-            HEYS.Day.setBlockCloudUpdates = (until) => setBlockCloudUpdatesCapped(blockCloudUpdatesUntilRef, until);
+            // 🛡️ Phase 3 (2026-06-08): setter одновременно cap'ает blockUntil И marks
+            // pending для текущей открытой даты ЕСЛИ это arm (until > now+threshold).
+            // Покрывает все user-edit handlers (handleAdd, removeItem, copyMeal,
+            // edit-grams, time/mood pickers, trainings, addMealDirect, meal_rec_card)
+            // без необходимости вручную помечать pending в каждом call-site.
+            // Threshold +100ms отсеивает explicit clears (setBlockCloudUpdates(Date.now())
+            // в modal-cancel paths) — они не должны mark pending.
+            HEYS.Day.setBlockCloudUpdates = (until) => {
+                setBlockCloudUpdatesCapped(blockCloudUpdatesUntilRef, until);
+                if (typeof until === 'number' && until > Date.now() + 100) {
+                    const _date = dayRef && dayRef.current && dayRef.current.date;
+                    if (_date) markPendingDayMutation(_date);
+                }
+            };
             HEYS.Day.setLastLoadedUpdatedAt = (ts) => { lastLoadedUpdatedAtRef.current = ts; };
             HEYS.Day.getDay = () => dayRef?.current;
 
