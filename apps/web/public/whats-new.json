@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.08.950e0c67",
+      "buildHash": "950e0c67",
+      "date": "2026-06-08",
+      "kind": "technical",
+      "profile": "technical-general",
+      "title": "Исправления ошибок и улучшение стабильности",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Исправили внутренние ошибки и улучшили стабильность",
+          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
+        }
+      ],
+      "coveredCommits": ["7bbb3d62"]
+    },
+    {
       "version": "2026.06.08.8c22e1f7",
       "buildHash": "8c22e1f7",
       "date": "2026-06-08",
@@ -140,22 +156,6 @@
         }
       ],
       "coveredCommits": ["6ec7912f"]
-    },
-    {
-      "version": "2026.06.08.6305a4d0",
-      "buildHash": "6305a4d0",
-      "date": "2026-06-08",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "curator dayv2 pending-mutation registry (Phase 2)",
-      "items": [
-        {
-          "type": "fix",
-          "title": "curator dayv2 pending-mutation registry (Phase 2)",
-          "description": "curator dayv2 pending-mutation registry (Phase 2)"
-        }
-      ],
-      "coveredCommits": ["6305a4d0"]
     }
   ]
 }
