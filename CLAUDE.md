@@ -124,7 +124,9 @@ agent-mode), `legacy-sync` (rebundle+auto-stage в integration-mode, report-only
 ## Default flow: `pnpm ship` на `main`
 
 **Один поток работы — `pnpm ship` на `main`.** Без worktree'ев, без feature-
-веток. Соло-агент серийно правит main одной командой:
+веток. Соло-агент серийно правит main одной командой. Если сессия открылась на
+старой `claude/*`-ветке от прошлой задачи — `git checkout main` первым делом
+(ship сам предупредит, если запустить не с main, и подскажет команду).
 
 ```bash
 pnpm ship "feat(fingers): добавить grid hint"   # UI-правка

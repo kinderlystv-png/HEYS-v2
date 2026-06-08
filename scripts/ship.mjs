@@ -42,6 +42,7 @@ const flags = {
     dryRun: args.includes('--dry-run'),
     noPush: args.includes('--no-push'),
     noWatch: args.includes('--no-watch'),
+    allowNonMain: args.includes('--allow-non-main'),
     noVerify: false, // intentionally unsupported
 };
 const message = args.find((a) => !a.startsWith('--'));
@@ -154,6 +155,21 @@ function main() {
 
     const { type, subject, isUserFacing } = parseSubject(message);
     const branch = getCurrentBranch();
+
+    // Guard: ship's purpose is solo serial work on `main` → push → deploy.
+    // Running on an agent-style branch (claude/*, codex/*, integration/*) means
+    // the push won't reach prod and the deploy-watch is skipped — usually not
+    // what you wanted. Common cause: session opened on a leftover branch from
+    // a previous task. Override with --allow-non-main when intentional.
+    if (branch !== 'main' && !flags.allowNonMain) {
+        err(`[ship] ⚠️  Current branch is "${branch}", not "main".`);
+        err(`[ship]    ship pushes to current branch and only watches deploy on main.`);
+        err(`[ship]    If you meant to ship to prod:`);
+        err(`[ship]        git checkout main && pnpm ship "${message}"`);
+        err(`[ship]    If you really need to ship "${branch}":`);
+        err(`[ship]        pnpm ship "${message}" --allow-non-main`);
+        process.exit(1);
+    }
 
     out(`[ship] branch=${branch}  type=${type}  user-facing=${isUserFacing}${flags.dryRun ? '  (dry-run)' : ''}`);
 
