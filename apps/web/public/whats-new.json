@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.06.08.8dd6e926",
+      "buildHash": "8dd6e926",
+      "date": "2026-06-08",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Внутренние улучшения инфраструктуры",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Усиление security и pipeline сборки",
+          "description": "Заложили фундамент security-аудита баз данных (read-only снапшоты прав), починили внутренние SAST/dependency-инструменты, добавили single-command pipeline для соло-работы. Видимых изменений в интерфейсе нет."
+        }
+      ]
+    },
+    {
       "version": "2026.06.06.3b71d25e",
       "buildHash": "3b71d25e",
       "date": "2026-06-06",
@@ -166,22 +181,6 @@
         }
       ],
       "coveredCommits": ["53faea02"]
-    },
-    {
-      "version": "2026.06.05.e1a37f50",
-      "buildHash": "e1a37f50",
-      "date": "2026-06-05",
-      "kind": "technical",
-      "profile": "technical-infra-tests",
-      "title": "Корректное отображение отметок цикла",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Отметки цикла больше не появляются ошибочно",
-          "description": "Раньше у пользователей без отслеживания цикла на графике веса могли по ошибке появиться отметки цикла. Теперь они показываются только при включённом отслеживании цикла."
-        }
-      ],
-      "coveredCommits": ["a0e77ae7"]
     }
   ]
 }
