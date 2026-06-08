@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.06.08.4518522f",
+      "buildHash": "4518522f",
+      "date": "2026-06-08",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Внутренние улучшения инфраструктуры",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Усиление security и pipeline сборки",
+          "description": "Заложили фундамент security-аудита баз данных (read-only снапшоты прав), починили внутренние SAST/dependency-инструменты, добавили single-command pipeline для соло-работы. Видимых изменений в интерфейсе нет."
+        }
+      ]
+    },
+    {
       "version": "2026.06.06.83f030cb",
       "buildHash": "83f030cb",
       "date": "2026-06-06",
@@ -166,22 +181,6 @@
         }
       ],
       "coveredCommits": ["a0e77ae7"]
-    },
-    {
-      "version": "2026.06.05.df066d0d",
-      "buildHash": "df066d0d",
-      "date": "2026-06-05",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Дневник обновляется без лишней нагрузки на синхронизацию",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Открытый дневник перестал постоянно пересохраняться",
-          "description": "Дневник по-прежнему сам показывает правки с другого устройства, но больше не держит синхронизацию включённой без причины."
-        }
-      ],
-      "coveredCommits": ["df066d0d"]
     }
   ]
 }
