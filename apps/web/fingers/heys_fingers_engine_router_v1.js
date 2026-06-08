@@ -51,12 +51,28 @@
   }
 
   // Контракт-guard: новый движок должен возвращать форму, совместимую с
-  // mixEngine.recommendDay → `{intensity:string, exercises:Array}` с непустым
-  // exercises. Иначе кривой выход уйдёт пользователю молча (Риск 2 ревью).
+  // mixEngine.recommendDay. Проверяем поля, которые РЕАЛЬНО потребляет UI
+  // (ревью 4.2 находка #2 + ревью 4.3 уточнение):
+  //   - intensity (string) — для intensityLabel / data-fingers-intensity
+  //   - exercises (Array, непустой) — для рендера упражнений
+  //   - exercises[].__role (string) — UI ничего сам не делает с этим, но
+  //     контракт требует; safety-валидаторы и slot-логика опираются.
+  //   - name (string) — заголовок карточки (session_ui L1027)
+  //   - durationMin (number) — чип «X мин» (session_ui L1035)
+  //   - requiresWarmup (boolean) — S3 на UX-слое (не показывать сразу intensive
+  //     без RAMP-промпта). Допускаем undefined для backward-compat mixEngine.
   function isValidSession(s) {
     if (!s || typeof s !== 'object') return false;
     if (typeof s.intensity !== 'string' || !s.intensity) return false;
     if (!Array.isArray(s.exercises) || s.exercises.length === 0) return false;
+    if (!s.exercises.every(function (e) {
+      return e && typeof e.__role === 'string';
+    })) return false;
+    if (typeof s.name !== 'string' || !s.name) return false;
+    if (typeof s.durationMin !== 'number' || !isFinite(s.durationMin)) return false;
+    // requiresWarmup: безопасный default — если undefined, не блочим
+    // (mixEngine выставляет всегда; будущие билдеры могут опустить).
+    if (s.requiresWarmup !== undefined && typeof s.requiresWarmup !== 'boolean') return false;
     return true;
   }
 

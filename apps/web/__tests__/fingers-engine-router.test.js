@@ -145,7 +145,12 @@ describe('engineRouter: flag=on, sessionBuilder вернул валидную с
   beforeEach(() => {
     F().flags.newEngine = true;
     F().sessionBuilder = {
-      recommendDay: (opts) => ({ intensity: 'max', exercises: [{ __role: 'stub', name: 'stub' }], __from: 'new' })
+      recommendDay: (opts) => ({
+        intensity: 'max', exercises: [{ __role: 'stub', name: 'stub' }],
+        // Усиленный контракт (4.3 #2): полный набор UI-полей.
+        name: 'Stub session', durationMin: 30, requiresWarmup: true,
+        __from: 'new'
+      })
     };
   });
 
@@ -162,20 +167,52 @@ describe('engineRouter: contract-guard (Риск 2 ревью)', () => {
   beforeAll(setupOnce);
   beforeEach(() => { F().flags.newEngine = true; });
 
-  it('isValidSession: валидная форма', () => {
-    expect(R().isValidSession({ intensity: 'max', exercises: [{}] })).toBe(true);
+  // Усилен контракт-guard (ревью 4.3 #2): UI-релевантные поля.
+  const validSession = () => ({
+    intensity: 'max', exercises: [{ __role: 'power' }],
+    name: 'X', durationMin: 30, requiresWarmup: true
+  });
+
+  it('isValidSession: валидная форма (полный контракт)', () => {
+    expect(R().isValidSession(validSession())).toBe(true);
   });
 
   it('isValidSession: пустой exercises → false', () => {
-    expect(R().isValidSession({ intensity: 'max', exercises: [] })).toBe(false);
+    expect(R().isValidSession(Object.assign(validSession(), { exercises: [] }))).toBe(false);
   });
 
   it('isValidSession: нет intensity → false', () => {
-    expect(R().isValidSession({ exercises: [{}] })).toBe(false);
+    const s = validSession(); delete s.intensity;
+    expect(R().isValidSession(s)).toBe(false);
   });
 
   it('isValidSession: intensity не строка → false', () => {
-    expect(R().isValidSession({ intensity: 42, exercises: [{}] })).toBe(false);
+    expect(R().isValidSession(Object.assign(validSession(), { intensity: 42 }))).toBe(false);
+  });
+
+  it('ревью 4.3 #2: exercises без __role → false', () => {
+    expect(R().isValidSession(Object.assign(validSession(), {
+      exercises: [{ name: 'nope' }]
+    }))).toBe(false);
+  });
+
+  it('ревью 4.3 #2: нет name → false (UI L1027 читает)', () => {
+    const s = validSession(); delete s.name;
+    expect(R().isValidSession(s)).toBe(false);
+  });
+
+  it('ревью 4.3 #2: нет durationMin → false (UI L1035 читает)', () => {
+    const s = validSession(); delete s.durationMin;
+    expect(R().isValidSession(s)).toBe(false);
+  });
+
+  it('ревью 4.3 #2: requiresWarmup undefined → true (backward-compat)', () => {
+    const s = validSession(); delete s.requiresWarmup;
+    expect(R().isValidSession(s)).toBe(true);
+  });
+
+  it('ревью 4.3 #2: requiresWarmup не boolean → false', () => {
+    expect(R().isValidSession(Object.assign(validSession(), { requiresWarmup: 'yes' }))).toBe(false);
   });
 
   it('builder вернул объект без exercises → fallback-contract, прод не видит кривое', () => {

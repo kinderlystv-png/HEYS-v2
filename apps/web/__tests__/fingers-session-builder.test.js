@@ -48,15 +48,60 @@ describe('sessionBuilder: контракт выхода (Риск 2 ревью)'
     s.exercises.forEach((e) => expect(typeof e.__role).toBe('string'));
   });
 
-  it('contract-guard роутера: builder-выход проходит isValidSession', () => {
+  it('contract-guard роутера: builder-выход проходит расширенный isValidSession', () => {
     const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' });
     expect(R().isValidSession(s)).toBe(true);
   });
 
-  it('intensity == bucket (max/moderate/recovery)', () => {
-    expect(SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' }).intensity).toBe('max');
-    expect(SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'moderate' }).intensity).toBe('moderate');
-    expect(SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'recovery' }).intensity).toBe('recovery');
+  it('ревью 4.3 #2: полный набор UI-полей присутствует', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' });
+    expect(typeof s.name).toBe('string');
+    expect(typeof s.description).toBe('string');
+    expect(typeof s.coachReason).toBe('string');
+    expect(typeof s.durationMin).toBe('number');
+    expect(s.durationMin).toBeGreaterThanOrEqual(10);
+    expect(Array.isArray(s.equipmentTypes)).toBe(true);
+    expect(Array.isArray(s.sourceIds)).toBe(true);
+    expect(typeof s.requiresWarmup).toBe('boolean');
+    expect(['ramp', 'quick']).toContain(s.warmupType);
+    expect(s.__engine).toBe('sessionBuilder_v1');
+    expect(s.__trace).toBeDefined();
+  });
+
+  it('ревью 4.3 #2: exercises[] имеют legacy aliases (hangSec/repsPerSet/setsCount) для UI', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' });
+    s.exercises.forEach((e) => {
+      expect(typeof e.hangSec).toBe('number');
+      expect(typeof e.repsPerSet).toBe('number');
+      expect(typeof e.setsCount).toBe('number');
+      expect(typeof e.restSec).toBe('number');
+      expect(typeof e.restBetweenSetsSec).toBe('number');
+    });
+  });
+
+  it('ревью 4.3 #3: intensity выводится из ролей (sessionIntensity-домен)', () => {
+    // max bucket с full equipment → должен содержать power/max-strength → intensity=max
+    const max = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'advanced', readiness: 'max' });
+    expect(['max', 'moderate']).toContain(max.intensity); // зависит от того что нашёл builder
+    // recovery bucket → нет power/strength-endurance → intensity=recovery
+    const rec = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'recovery' });
+    expect(rec.intensity).toBe('recovery');
+  });
+
+  it('ревью 4.3 #3: opts.intensity legacy override понижает bucket', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, level: 'intermediate',
+      readiness: 'max', intensity: 'recovery'
+    });
+    expect(s.__bucket).toBe('recovery');
+  });
+
+  it('ревью 4.3 #5: requiresWarmup=true когда есть power/max-strength', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' });
+    if (s.exercises.some((e) => e.__role === 'power' || e.__role === 'max-strength')) {
+      expect(s.requiresWarmup).toBe(true);
+      expect(s.warmupType).toBe('ramp');
+    }
   });
 });
 

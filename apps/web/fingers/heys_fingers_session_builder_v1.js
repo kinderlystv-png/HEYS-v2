@@ -71,6 +71,69 @@
 
   function num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
 
+  // ─── Session intensity — выводится из НАПОЛНЕНИЯ (зеркало mixEngine L126-130) ─
+  // Ревью 4.2 находка #3: intensity-домен расходился (bucket vs sessionIntensity).
+  // Используем sessionIntensity → домен совпадает с mixEngine.
+  // Бонус: equipment-starved max (нет стимула) автоматически даунгрейдится до
+  // recovery, не ложь «max без power-блока».
+  function sessionIntensity(exercises) {
+    if (exercises.some(function (e) {
+      return e.__role === 'power' || e.__role === 'max-strength';
+    })) return 'max';
+    if (exercises.some(function (e) {
+      return e.__role === 'strength-endurance';
+    })) return 'moderate';
+    return 'recovery';
+  }
+
+  // ─── Длительность сессии — TUT_sec по doseShape (CONSTRUCTOR_SPEC §3.1) ──────
+  function _estimateAtomSec(atom) {
+    const d = atom && atom.dose;
+    if (!d) return 0;
+    function avg(rng) { return Array.isArray(rng) ? (rng[0] + rng[1]) / 2 : (rng || 0); }
+    const sets = num(d.sets) || 1;
+    const reps = num(d.reps) || (Array.isArray(d.reps) ? avg(d.reps) : 1);
+    const workSec = num(d.workSec) || 0;
+    const restSec = num(d.restSec) || 0;
+    const restSetsSec = num(d.restSetsSec) || 0;
+    switch (atom.doseShape) {
+      case 'hang':
+        // workSec×reps×sets + intra-set rest + inter-set rest
+        return workSec * reps * sets +
+               restSec * Math.max(0, reps - 1) * sets +
+               restSetsSec * Math.max(0, sets - 1);
+      case 'attempts': {
+        const moves = avg(d.movesPerAttempt) * 2.5;
+        const attempts = avg(d.attempts);
+        return moves * attempts + (num(d.restSetsSec) || 0) * Math.max(0, attempts - 1);
+      }
+      case 'circuit': {
+        const ppr = num(d.problemsPerRound) || 0;
+        const rounds = num(d.rounds) || 1;
+        const restRounds = num(d.restRoundsSec) || 0;
+        return ppr * rounds * 25 + restRounds * Math.max(0, rounds - 1);
+      }
+      case 'continuous':
+        return workSec * sets;
+      case 'reps':
+        return avg(d.reps) * 3 * sets + restSetsSec * Math.max(0, sets - 1);
+      case 'process':
+        return 0;
+      default:
+        return 0;
+    }
+  }
+
+  function totalDurationMin(exercises) {
+    let totalSec = 0;
+    for (let i = 0; i < exercises.length; i++) {
+      const ex = exercises[i];
+      const atom = Fingers.blockCatalog && Fingers.blockCatalog.getAtom(ex.atomId);
+      if (atom) totalSec += _estimateAtomSec(atom);
+    }
+    return Math.max(10, Math.round(totalSec / 60));
+  }
+
   // ─── Helpers ──────────────────────────────────────────────────────────────────
   function _allowedModalities(equipmentTypes) {
     const set = Object.create(null);
@@ -129,7 +192,12 @@
   }
 
   // Атом → exercise object совместимый с mixEngine output.
+  // Legacy aliases (hangSec/restSec/repsPerSet/setsCount/restBetweenSetsSec) —
+  // UI читает их напрямую (session_ui_v1.js L77-92, L715-716). Заполняем для
+  // hang-shape; для остальных shape'ов оставляем null (UI игнорирует 0/null).
   function _materializeExercise(atom, role) {
+    const d = atom.dose || {};
+    const isHang = atom.doseShape === 'hang';
     return {
       __role: role,
       atomId: atom.id,
@@ -138,10 +206,18 @@
       gripId: atom.gripId || null,
       edgeSizeMm: atom.edgeSizeMm || null,
       doseShape: atom.doseShape,
-      dose: atom.dose,
+      dose: d,
       loadModel: atom.loadModel,
       loadValue: atom.loadValue,
-      sourceIds: atom.sourceIds
+      sourceIds: atom.sourceIds,
+      // Legacy aliases для UI потребления:
+      hangSec: isHang ? (num(d.workSec) || 0) : 0,
+      restSec: isHang ? (num(d.restSec) || 0) : 0,
+      repsPerSet: isHang ? (num(d.reps) || 1) : 1,
+      setsCount: num(d.sets) || 1,
+      restBetweenSetsSec: num(d.restSetsSec) || 0,
+      // Сохраняем addedWeightKg для legacy (UI читает у max-strength блоков):
+      addedWeightKg: atom.loadModel === 'addedWeightKg' ? (num(atom.loadValue) || 0) : 0
     };
   }
 
@@ -156,8 +232,15 @@
     // обходил S1 `S1.profile_level_missing`. Без явного profile/level → null.
     if (!o.profile && !o.level) return null;
 
-    const ceiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
-    const bucket = ceiling;
+    let ceiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
+    // Legacy intensity-override (зеркало mixEngine L385): ручная даунгрейд-кнопка.
+    // Только понижает потолок; повысить ceiling выше readiness нельзя.
+    const intensityOverride = (o.intensity && o.intensity !== 'all' && RANK[o.intensity] != null)
+      ? o.intensity : null;
+    let bucket = ceiling;
+    if (intensityOverride && RANK[intensityOverride] < RANK[ceiling]) {
+      bucket = intensityOverride;
+    }
     const slots = (SLOT_TEMPLATES[bucket] || SLOT_TEMPLATES.moderate).slice();
 
     const profile = o.profile || {
@@ -249,12 +332,60 @@
     // но честнее вернуть null здесь).
     if (exercises.length === 0) return null;
 
+    // intensity — sessionIntensity(exercises) (ревью 4.2 находка #3): домен
+    // совпадает с mixEngine; equipment-starved max автоматически даунгрейдится.
+    const sessionInt = sessionIntensity(exercises);
+    const duration = totalDurationMin(exercises);
+    const requiresWarmup = exercises.some(function (e) {
+      return e.__role === 'power' || e.__role === 'max-strength';
+    });
+    const tierList = (o.equipmentTypes && o.equipmentTypes.length) ?
+      o.equipmentTypes.slice() : ['full'];
+    const allSourceIds = Object.create(null);
+    exercises.forEach(function (e) {
+      (e.sourceIds || []).forEach(function (sid) { allSourceIds[sid] = true; });
+    });
+
+    // Полный контракт mixEngine (ревью 4.2 находка #2). 16 полей, UI-совместимо.
     return {
-      intensity: bucket,
+      id: 'session_builder_' + bucket + '_' + exercises.length,
+      __generated: true,
+      __engine: 'sessionBuilder_v1',
+      __from: 'sessionBuilder_v1', // legacy alias (для существующих router-тестов)
+      name: 'Сессия по методологии',
+      description: 'Собрано из block_catalog по bucket=' + bucket,
+      coachReason: 'Bucket=' + bucket + '; safety-floor antagonist/mobility активен',
+      level: 'mixed',
+      durationMin: duration,
+      intensity: sessionInt,
       exercises: exercises,
-      __from: 'sessionBuilder_v1',
+      equipmentTypes: tierList,
+      sourceIds: Object.keys(allSourceIds),
+      advisoryBadge: null,
+      noEquipment: tierList.length === 1 && tierList[0] === 'none',
+      minAge: 14,
+      requiresWarmup: requiresWarmup,
+      warmupType: requiresWarmup ? 'ramp' : 'quick',
       __bucket: bucket,
-      __safetyTrace: safetyTrace
+      __safetyTrace: safetyTrace,
+      __trace: {
+        version: 1,
+        inputs: {
+          age: ageNum, equipmentTypes: tierList,
+          readiness: o.readiness || null, intensityOverride: intensityOverride,
+          profileLevel: profile.level
+        },
+        resolution: {
+          initialCeiling: ceiling, bucket: bucket,
+          slotsTemplate: slots.slice(), slotsSource: intensityOverride ? 'legacy-intensity' : 'bucket'
+        },
+        slots: safetyTrace.picks,
+        outputs: {
+          durationMin: duration, intensity: sessionInt,
+          tierList: tierList, exerciseCount: exercises.length,
+          requiresWarmup: requiresWarmup
+        }
+      }
     };
   }
 
