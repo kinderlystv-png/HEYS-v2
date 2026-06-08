@@ -122,6 +122,13 @@ export default function DemoSection() {
                                   <iframe
                                       src={iframeSrc}
                                       title="HEYS Demo"
+                                      // SEC-012 (2026-06-08): `allow-same-origin + allow-scripts` в одном
+                                      // sandbox'е — классический escape-паттерн ТОЛЬКО когда iframe-src ===
+                                      // parent-origin. У нас parent=heyslab.ru, src=try.heyslab.ru
+                                      // (DEMO_BASE_URL) → cross-origin; iframe не может обратиться к
+                                      // parent.window независимо от sandbox-настроек. Защита держится на
+                                      // инварианте `DEMO_BASE_URL !== window.location.host`. Если поменяешь
+                                      // DEMO_BASE_URL на same-host — снять `allow-same-origin`.
                                       sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
                                       className="w-full h-full bg-white border-0"
                                   />
@@ -147,7 +154,14 @@ export default function DemoSection() {
                                           <iframe
                                               src={iframeSrc}
                                               title="HEYS Demo"
-                                              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                                              // SEC-012 (2026-06-08): `allow-same-origin + allow-scripts` в одном
+                                      // sandbox'е — классический escape-паттерн ТОЛЬКО когда iframe-src ===
+                                      // parent-origin. У нас parent=heyslab.ru, src=try.heyslab.ru
+                                      // (DEMO_BASE_URL) → cross-origin; iframe не может обратиться к
+                                      // parent.window независимо от sandbox-настроек. Защита держится на
+                                      // инварианте `DEMO_BASE_URL !== window.location.host`. Если поменяешь
+                                      // DEMO_BASE_URL на same-host — снять `allow-same-origin`.
+                                      sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
                                               className="absolute inset-0 bg-white border-0"
                                               style={{
                                                   width: NATIVE_W,
