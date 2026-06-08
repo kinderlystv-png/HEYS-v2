@@ -160,24 +160,33 @@ async function resolveIdentity(authHeader, cookieHeader) {
   }
 }
 
-// ── Rate limit (in-memory; reset on cold start) ──────────────────────────
-// Защита от accidental flood: max 30 сообщений/минуту/client.
-// Cold-start race (≤2 instances): documented behavior, MVP-accepted.
-const RATE_LIMIT_WINDOW_MS = 60_000;
+// ── Rate limit (DB-side, SEC-009 fix 2026-06-08) ─────────────────────────
+// До этого был in-memory Map → reset на cold-start + race между N инстансами
+// автоскейла (каждый видит 0 attempts → лимит обходится).
+// Теперь — атомарный UPSERT в messages_rate_limits через SECDEF-функцию.
+// Fixed window (не sliding) — пропустит до 2× max на границе, accepted.
+const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_MAX = 30;
-const rateMap = new Map(); // clientId → [{ts}, ...]
 
-function rateLimitCheck(clientId) {
-  const now = Date.now();
-  const cutoff = now - RATE_LIMIT_WINDOW_MS;
-  let timestamps = rateMap.get(clientId) || [];
-  timestamps = timestamps.filter((t) => t > cutoff);
-  if (timestamps.length >= RATE_LIMIT_MAX) {
-    return { allowed: false, retryAfter: Math.ceil((timestamps[0] + RATE_LIMIT_WINDOW_MS - now) / 1000) };
+async function rateLimitCheck(clientId) {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      'SELECT check_messages_rate_limit($1::uuid, $2::int, $3::int) AS r',
+      [clientId, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_SECONDS],
+    );
+    const r = res.rows?.[0]?.r || {};
+    if (r.allowed) return { allowed: true };
+    return { allowed: false, retryAfter: r.retry_after || RATE_LIMIT_WINDOW_SECONDS };
+  } catch (e) {
+    // Если БД-функция упала — лучше пропустить (open mode) чем заблокировать
+    // легитимных пользователей. Это accepted ослабление при инфра-проблеме.
+    console.warn('[MSG] rate-limit check failed, fail-open:', e.message);
+    return { allowed: true };
+  } finally {
+    client.release();
   }
-  timestamps.push(now);
-  rateMap.set(clientId, timestamps);
-  return { allowed: true };
 }
 
 // ── Validation helpers ───────────────────────────────────────────────────
@@ -357,7 +366,7 @@ function buildIntentPushBody(intentType, payload) {
 
 async function handleSend(identity, body) {
   if (identity.kind === 'client') {
-    const rateRes = rateLimitCheck(identity.id);
+    const rateRes = await rateLimitCheck(identity.id);
     if (!rateRes.allowed) {
       return {
         statusCode: 429,
