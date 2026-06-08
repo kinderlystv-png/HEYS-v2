@@ -66,18 +66,23 @@
 
 ### Немедленный backlog (P0/P1)
 
-| Приор. | Действие                                                                                                                                                                                                                 | Почему                                                                                 | Находка          |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ---------------- |
-| **P0** | Включить `HEYS_WRITE_CONTEXT_STRICT=1` в проде (после суток Phase B и чистки ложных `data_loss_audit`)                                                                                                                   | Главная защита от межклиентского затирания работает в режиме «логируем, но пропускаем» | SEC-004          |
-| **P0** | Зависимости: разнести 160 advisories на runtime vs dev-only, закрыть 5 critical/72 high в runtime-пути                                                                                                                   | `pnpm audit`: 5 critical / 72 high; нельзя оставлять в проде                           | SEC-010          |
-| ✅ P0  | Починить `scripts/security/dependency-check.js` (ложный «0»)                                                                                                                                                             | Гейт всегда показывал 0 → ложный зелёный; **исправлено 2026-06-08**                    | SEC-001          |
-| **P1** | Добавить `Content-Security-Policy` на ответы functions/статику                                                                                                                                                           | Нет второго рубежа против XSS                                                          | SEC-005          |
-| ✅ P1  | SAST: ENFILE + ruleset тюнинг + baseline-ratchet (2026-06-08); `continue-on-error` снят с SAST шага → CI блокирует НОВЫЕ critical/high                                                                                   | SAST теперь даёт fail только на находках вне `security-reports/sast-baseline.json`     | SEC-002, SEC-014 |
-| ✅ P1  | REST POST `/rest/shared_products`: отдавать явный 403/405, не утечку `code:42601` — **исправлено 2026-06-08** (`heys-api-rest` deployed)                                                                                 | Прод-ответ раскрывает внутреннюю ошибку БД                                             | SEC-003          |
-| ✅ P1  | Снять снимок грантов/RLS из прод-БД (L2) — сделано, вскрыло гэпы ниже                                                                                                                                                    | Миграции ≠ задеплоено — подтвердилось                                                  | SEC-013          |
-| ✅ P1  | БД-hardening: **обе миграции применены в проде 2026-06-08** — `…_harden_secdef_search_path.sql` (M1) + `…_revoke_public_execute_secdef.sql` (M2)                                                                         | Crown-jewel функции без search_path; PUBLIC-execute ломает least-privilege             | SEC-015, SEC-016 |
-| **P1** | Auth куратора: MFA (TOTP) + per-account lockout; задать ротацию `JWT_SECRET`                                                                                                                                             | Сейчас только per-IP rate-limit, нет MFA/ротации                                       | SEC-011          |
-| **P1** | Cloud Functions: ввести `MAX_BODY_BYTES` guard (по образцу `heys-api-rpc/index.js:1517-1518`) в `heys-api-rest` / `-photos` / `-payments` / `-leads`. Caps: REST=512KB, photos=8MB (под base64 5MB), payments/leads=64KB | DoS / OOM через гигантский JSON-тело; cold-start lag; billing spike                    | SEC-018          |
+| Приор.                      | Действие                                                                                                                                                                                                                               | Почему                                                                                                                                                                 | Находка          |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| **P0 🚦 pre-launch блокер** | Включить `HEYS_WRITE_CONTEXT_STRICT=1` в проде (после суток Phase B и чистки ложных `data_loss_audit`). По threat-model — топ-риск №1 (cross-client writes/IDOR). Самый дешёвый P0: env-var flip + sutki soak.                         | Главная защита от межклиентского затирания работает в режиме «логируем, но пропускаем». Reviewer (`SECURITY_REVIEW_tier2.md` §R1): pre-launch блокер, не «желательно». | SEC-004          |
+| **P0**                      | Зависимости: разнести 160 advisories на runtime vs dev-only + **сначала триаж 5 critical** (какие CVE, достижимы ли в runtime), потом решать «закрыть/defer».                                                                          | `pnpm audit`: 5 critical / 72 high; нельзя «может подождать» без триажа (reviewer §R-minor)                                                                            | SEC-010          |
+| ✅ P0                       | Починить `scripts/security/dependency-check.js` (ложный «0»)                                                                                                                                                                           | Гейт всегда показывал 0 → ложный зелёный; **исправлено 2026-06-08**                                                                                                    | SEC-001          |
+| **P1**                      | Добавить `Content-Security-Policy` на ответы functions/статику                                                                                                                                                                         | Нет второго рубежа против XSS                                                                                                                                          | SEC-005          |
+| ✅ P1                       | SAST: ENFILE + ruleset тюнинг + baseline-ratchet (2026-06-08); `continue-on-error` снят с SAST шага → CI блокирует НОВЫЕ critical/high                                                                                                 | SAST теперь даёт fail только на находках вне `security-reports/sast-baseline.json`                                                                                     | SEC-002, SEC-014 |
+| ✅ P1                       | REST POST `/rest/shared_products`: отдавать явный 403/405, не утечку `code:42601` — **исправлено 2026-06-08** (`heys-api-rest` deployed)                                                                                               | Прод-ответ раскрывает внутреннюю ошибку БД                                                                                                                             | SEC-003          |
+| ✅ P1                       | Снять снимок грантов/RLS из прод-БД (L2) — сделано, вскрыло гэпы ниже                                                                                                                                                                  | Миграции ≠ задеплоено — подтвердилось                                                                                                                                  | SEC-013          |
+| ✅ P1                       | БД-hardening: **обе миграции применены в проде 2026-06-08** — `…_harden_secdef_search_path.sql` (M1) + `…_revoke_public_execute_secdef.sql` (M2)                                                                                       | Crown-jewel функции без search_path; PUBLIC-execute ломает least-privilege                                                                                             | SEC-015, SEC-016 |
+| **P1**                      | Auth куратора: MFA (TOTP) + per-account lockout; задать ротацию `JWT_SECRET`                                                                                                                                                           | Сейчас только per-IP rate-limit, нет MFA/ротации                                                                                                                       | SEC-011          |
+| ✅ P1                       | Cloud Functions: `MAX_BODY_BYTES` guard введён в `heys-api-rest`/`-photos`/`-leads` (`-payments` ждёт YUKASSA-creds deploy). Caps: REST=512KB, photos=8MB, leads/payments=64KB. **Исправлено 2026-06-08**, live-verified curl-пробами. | DoS / OOM через гигантский JSON-тело; cold-start lag; billing spike                                                                                                    | SEC-018          |
+| ✅ P1                       | Leads CSRF: добавлен origin guard (раньше evil-origin POST тихо проходил с подменой ACAO). **Исправлено 2026-06-08**, live-verified.                                                                                                   | Evil-origin POST → 403 cors_denied (раньше 400 «Consent required», запрос принимался)                                                                                  | SEC-019          |
+| ✅ P1                       | Telegram bot `/bot/webhook` secret_token check. **Код deployed, warn-only** (env-var не выставлен в YC). Активация: env `TELEGRAM_WEBHOOK_SECRET` + `setWebhook` с тем же `secret_token`.                                              | До активации fake-updates принимаются (DoS/spoof). Активация — 5 мин user-action.                                                                                      | SEC-020          |
+| **P1 pre-launch**           | L3 IDOR sanity-check: cross-client read/write isolation. **Не предполагать, проверить.** Нужны 2 PIN/phone пары от user'а. Reviewer (§R2): главный незакрытый unknown для мультитенант-приложения.                                     | Запуск без verified изоляции = неприемлемо для health-данных                                                                                                           | L3.3/L3.4        |
+| **P1 pre-launch**           | SEC-006: фото-bucket `anonymous_access_flags.read=true`. Quick fix: `yc storage bucket update heys-photos --anonymous-access-flags read=false`; signed URLs — отдельно. Reviewer: 🔴 единственное активно-эксплуатируемое сейчас.      | Знание URL = доступ к фото (PII)                                                                                                                                       | SEC-006          |
+| **P2 pre-launch**           | L6 baseline: restore-drill, retention для перс-данных, deletion-cascade, RPO/RTO. Reviewer (§R3): для РФ 152-ФЗ — юридическая база, не «может подождать».                                                                              | Юридическое требование для перс-данных health-приложения                                                                                                               | L6               |
 
 ---
 
@@ -116,11 +121,33 @@
 ### Позиция одной строкой
 
 Периметр выстроен зрело (RPC-only доступ, least-privilege роли, параметризация,
-хешированные секреты/токены, аудит-слой, pre-commit-гейты). Реальные риски
-сосредоточены в трёх местах: **изоляция арендаторов в наблюдательном режиме**,
-**сломанная/несблокирующая security-автоматизация** (dependency-check починен,
-SAST/CI — нет) и **отсутствие CSP**. Плюс половина матрицы (L2–L8) ещё ждёт
-живой проверки.
+хешированные секреты/токены, аудит-слой, pre-commit-гейты). Ядро хардненинга
+2026-06-08 сделано: search_path на 70 SECDEF, REVOKE PUBLIC, CSP на 7 cloud
+functions + index.html, body-size DoS guards, leads CSRF guard, messages
+rate-limit перенесён в БД, SAST baseline-ratchet с CI-gate'ом, новые
+SEC-018/019/020 закрыты или с deployed-fix.
+
+**До публичного запуска НЕ закрыты (по reviewer'у `SECURITY_REVIEW_tier2.md`):**
+
+- **SEC-004** — `HEYS_WRITE_CONTEXT_STRICT=0`: cross-client writes всё ещё
+  проходят (warn-only). Top tenant-isolation risk, pre-launch блокер.
+- **L3 IDOR не verified** — read/write изоляция между клиентами предположена, не
+  проверена. Нужны 2 cred-пары для curl-проб.
+- **SEC-006** — фото-bucket `anonymous_access_flags.read=true`: знание URL =
+  доступ. Единственное активно-эксплуатируемое сейчас.
+- **SEC-010** — 5 critical / 72 high в `pnpm audit`, не триажены (какие
+  достижимы в runtime).
+- **L6** — restore-drill, 152-ФЗ retention/deletion-cascade, RPO/RTO baseline не
+  начат. Юридическое требование для перс-данных.
+- **SEC-020 warn-only** — bot webhook secret_token check deployed, но env-var в
+  YC не выставлен → активируется после 5-мин user-action.
+
+**Непройденные слои:** L3 (частично — L3.5 done), L4 (частично — L4.1/4.2/4.6
+done), L5 (частично — L5.1/5.3/5.4/5.5 done), L6 (не начат), L7 (SAST done,
+dep-check + gitleaks + SBOM открыты), L8 (внешний пентест — третья сторона).
+
+**Что не моя зона:** go/no-go вердикт «можно ли пускать пользователей» — решение
+владельца на основе risk-ledger выше, не само-сертификация агента.
 
 ---
 
