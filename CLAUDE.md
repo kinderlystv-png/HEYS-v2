@@ -121,81 +121,82 @@ agent-mode), `legacy-sync` (rebundle+auto-stage в integration-mode, report-only
 в agent-mode), `prepare-release:check` (whats-new, pre-push),
 `lint-direct-localstorage-writes`, `lint-shared-cache-writes`.
 
-## Default flow: `pnpm ship`
+## Default flow: `pnpm ship` на `main`
 
-Для соло-работы (один агент, серийно) — **default-флоу одна команда**:
+**Один поток работы — `pnpm ship` на `main`.** Без worktree'ев, без feature-
+веток. Соло-агент серийно правит main одной командой:
 
 ```bash
-pnpm ship "feat(fingers): reorder layout cards"
-pnpm ship "fix(sync): drop stale dayv2" --dry-run
-pnpm ship "chore(scripts): refactor logging" --no-push
+pnpm ship "feat(fingers): добавить grid hint"   # UI-правка
+pnpm ship "chore(scripts): refactor logging"    # внутренняя
+pnpm ship "fix(sync): drop stale dayv2" --dry-run   # план без push
+pnpm ship "..." --no-push                       # commit без push
 ```
 
 Что делает [scripts/ship.mjs](scripts/ship.mjs):
 
-1. `git add -A` — стейджит всё что изменено (source).
-2. `git commit -m "<msg>"` — pre-commit hook в `integration`-режиме сам
-   пересобирает затронутые бандлы из staged source и стейджит их в тот же
-   коммит. Источник списка бандлов —
-   [scripts/legacy-bundle-config.mjs](scripts/legacy-bundle-config.mjs).
-3. Если коммит user-facing (`feat`/`fix`/`perf`) — автогенерирует whats-new
-   entry из subject коммита (`type`, `title`, `description = subject`) и делает
-   второй `chore(release): whats-new for <subject>` коммит.
-4. `git push origin <current-branch>`.
-5. Если ты на `main` — ждёт зелёного `Deploy to Yandex Cloud` через
-   `gh run watch`.
+1. Стейджит и коммитит твои правки. Pre-commit в `integration`-режиме сам
+   пересобирает **только бандлы, затронутые твоей правкой** (через
+   `bundle:legacy:auto --files=<staged source>`).
+2. Генерит whats-new entry и коммитит её отдельным `chore(release):` коммитом —
+   kind зависит от типа основного коммита (см. таблицу ниже).
+3. Push и (если ты на `main`) — `gh run watch` для деплоя.
 
-Под капотом ship ставит env-флаги: `HEYS_SHIP=1` (bypass agent-mode
-generated/release-блока в
-[check-agent-staging.mjs](scripts/check-agent-staging.mjs)),
-`HEYS_INTEGRATION=1` (разрешает task-work коммит на `main`/`develop`),
-`HEYS_STAGING_MODE=integration` (форсит auto-sync hook на rebuild+stage). Все
-три снимают блоки которые иначе разводили flow на трёх шагах.
+### Тип коммита определяет whats-new
 
-**Работаешь сразу в `main`.** Никаких worktree/feature-branch, никаких
-`git switch -c <task>` перед правкой. Один тред — один ship.
+| Правка                                                            | Type                            | Whats-new                                             |
+| ----------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------- |
+| Видна пользователю в UI: новая кнопка/экран/текст, поведение фичи | `feat`/`fix`/`perf`             | user-facing entry показывается в модалке «Что нового» |
+| Сборка, скрипты, CI, tooling, dev-инструменты                     | `chore(scripts)`/`chore(build)` | technical entry — НЕ показывается пользователю        |
+| Security-аудит, миграции БД, RLS, гранты, capability-токены       | `chore(security)`               | technical entry                                       |
+| Документация, methodology, doc-комменты                           | `docs(...)`                     | technical entry                                       |
+| Тесты, фикстуры                                                   | `test(...)` или `chore(tests)`  | technical entry                                       |
+| Рефакторинг без видимых изменений поведения                       | `refactor(...)`                 | technical entry                                       |
 
-### Когда нужны worktree (opt-in для реальной параллели)
+Правило: **«если пользователь не заметит правку без диффа — это не
+`feat`/`fix`/`perf`»**. Technical-entry создаётся всё равно (deploy-gate требует
+entry per build hash), но в user-facing модалке whats-new её не видно. Никакого
+спама пользователю про внутренние работы.
 
-Если правда 2+ агента одновременно правят разные куски кода (редкий случай) —
-тогда:
+### Никогда руками
+
+- **`pnpm bundle:legacy`** (полный rebuild) — задевает чужие бандлы и плодит
+  hash-коллизии. Pre-commit `legacy-sync` сам пересоберёт ровно нужные. Для
+  локального превью без коммита —
+  `pnpm bundle:legacy:auto --files=<твои файлы>`.
+- **`git push`** — только по явной команде («пуш», «push», «выкатывай»).
+- **`--no-verify`** — только по явному разрешению.
+- **`pnpm agent:worktree`** «на всякий случай». См. ниже.
+
+### Worktree — только настоящая параллель
+
+Worktree оправдан только когда прямо сейчас **2+ агента одновременно правят
+разные куски кода** (редкий случай — обычно ты один). Если да:
 
 ```bash
-pnpm agent:worktree <task>   # создаст .claude/worktrees/<task> на claude/<task>
+pnpm agent:worktree <task>            # .claude/worktrees/<task> на claude/<task>
 # каждый агент работает в своём worktree, source-only коммиты
-pnpm agents:integrate --branches=claude/a,claude/b --title="..." \
-  --items='[{"type":"fix","title":"...","description":"..."}]'
+pnpm agents:integrate --branches=claude/a,claude/b ...
+git worktree remove .claude/worktrees/<task>   # ОБЯЗАТЕЛЬНО после интеграции
 ```
 
-В этом режиме pre-commit (без `HEYS_SHIP=1`) блокирует бандлы и whats-new в
-agent-mode (см. [check-agent-staging.mjs](scripts/check-agent-staging.mjs)) —
-каждый агент коммитит только source, а bundle rebuild + whats-new делает один
-`agents:integrate` проход на main. Это спасает от hash-коллизий бандлов, если
-два агента ребилдят одновременно.
+**Stale-worktree'и накапливаются и ломают соло-агентам коммиты** (триггерят
+«shared root checkout» guard в pre-commit). Перед заведением нового worktree
+проверь `git worktree list` — если там 3+ старых, сначала `git worktree prune` и
+`git worktree remove` ненужные.
 
-### Прочие push-инструменты (legacy)
+### Legacy push-инструменты (избегай)
 
-- `pnpm push:agent` — non-interactive push с генерацией whats-new из CLI
-  аргументов (`--title`, `--item-title`, `--item-description`). Эквивалент ship
-  для случая «коммиты уже есть, нужен только release-entry + push». ship
-  предпочтительнее когда коммиты ещё не сделаны.
-- `pnpm push:safe` — для чисто технических пушей (без whats-new).
-- `pnpm push:ready` — интерактивный flow для ручной редактуры release-текста.
+`pnpm push:agent` / `pnpm push:safe` / `pnpm push:ready` — старые multi-step
+flows. Дефолт = `ship`. Эти команды трогай только когда ship не подходит
+(например коммиты уже сделаны без ship'a).
 
-Текст user-facing release-entry — по
-[apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md). ship использует
-subject коммита как title и description — для серьёзных user-facing релизов
-лучше потом поправить вручную через `push:ready` или прямой edit
-`whats-new.json`.
+**Dev-цикл «увидеть свою правку без коммита»**: `pnpm dev:web` грузит хеш-бандлы
+из `public/` как статику (без HMR). Чтобы увидеть свою правку —
+`pnpm bundle:legacy:auto --files=<твои>` и reload. После `ship`'a этот ручной
+rebuild не нужен.
 
-**Dev-цикл «увидеть свою правку».** `pnpm dev:web` грузит закоммиченные
-хеш-бандлы из `public/` как статику — vite их не HMR-ит. Чтобы увидеть правку
-inside бандла без коммита — пересобери: `pnpm bundle:legacy:auto --files=<твои>`
-(селективно) или `pnpm bundle:legacy` (полный) и reload. После ship'a этот
-ручной rebuild не нужен.
-
-**Когда хук срабатывает — следуй его stderr.** Никогда `--no-verify` без явного
-разрешения пользователя.
+**Когда хук срабатывает — следуй его stderr.** В тексте — точные инструкции.
 
 ---
 

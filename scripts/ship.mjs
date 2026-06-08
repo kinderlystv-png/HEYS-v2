@@ -173,8 +173,13 @@ function main() {
     // First commit: source + freshly rebuilt bundles (via pre-commit auto-sync).
     run('git', ['commit', '-m', message], { label: `💾 commit: ${message}` });
 
+    // Always generate a whats-new entry — the pre-push deploy gate requires
+    // one per build hash. user-facing (feat/fix/perf) gets a visible entry
+    // built from the commit subject; everything else gets a technical entry
+    // auto-classified by changed files (technical entries don't surface in the
+    // user-facing whats-new modal, but satisfy the gate).
     if (isUserFacing) {
-        out('[ship] 📋 generating whats-new entry from subject');
+        out('[ship] 📋 generating whats-new entry from subject (user-facing)');
         const items = JSON.stringify([{ type, title: subject, description: subject }]);
         run(process.execPath, [
             PREPARE_RELEASE,
@@ -184,15 +189,21 @@ function main() {
             `--title=${subject}`,
             `--items=${items}`,
         ], { label: '   prepare-release --auto' });
+    } else {
+        out('[ship] 📋 generating technical whats-new entry (not user-visible)');
+        run(process.execPath, [
+            PREPARE_RELEASE,
+            '--auto',
+            '--covered-commits=auto',
+        ], { label: '   prepare-release --auto' });
+    }
 
-        run('git', ['add', '--', 'apps/web/public/whats-new.json', 'apps/web/public/whats-new'], {});
-        // Only commit if prepare-release actually produced staged changes.
-        const staged = gitSafe(['diff', '--cached', '--name-only']);
-        if (staged) {
-            run('git', ['commit', '-m', `chore(release): whats-new for ${subject}`], { label: '💾 commit: whats-new' });
-        } else {
-            out('[ship] whats-new already up-to-date — no release commit needed.');
-        }
+    run('git', ['add', '--', 'apps/web/public/whats-new.json', 'apps/web/public/whats-new'], {});
+    const staged = gitSafe(['diff', '--cached', '--name-only']);
+    if (staged) {
+        run('git', ['commit', '-m', `chore(release): whats-new for ${subject}`], { label: '💾 commit: whats-new' });
+    } else {
+        out('[ship] whats-new already up-to-date — no release commit needed.');
     }
 
     if (flags.noPush) {
