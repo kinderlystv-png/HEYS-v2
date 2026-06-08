@@ -77,6 +77,23 @@ describe('sessionBuilder: fail-closed', () => {
       painFlag: 'pain'
     })).toBeNull();
   });
+
+  it('ревью 4.2 находка #1: без level → null (НЕ silent intermediate-дефолт)', () => {
+    // Раньше level дефолтился в 'intermediate', обходя S1 для beginner.
+    // Теперь — fail-closed на верхнем уровне.
+    expect(SB().recommendDay({
+      equipmentTypes: ['full'], age: 14, readiness: 'max'
+      // level: undefined — beginner age, нет уровня → должно быть null
+    })).toBeNull();
+  });
+
+  it('явный profile с level — работает (path не сломан)', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, readiness: 'max',
+      profile: { age: 25, level: 'advanced' }
+    });
+    expect(s).not.toBeNull();
+  });
 });
 
 describe('sessionBuilder: safety-floor (Риск 1 ревью)', () => {

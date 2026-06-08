@@ -91,12 +91,17 @@
 
   // Выбрать первый подходящий атом для слота. Порядок атомов в block_catalog
   // зафиксирован (= порядок в PROTOCOL_POOL) → детерминизм без random.
+  // Профиль ОБЯЗАТЕЛЕН с явным `level` — без него возвращаем null (fail-closed
+  // вместо silent intermediate-дефолта, который обходил S1 для beginner — см.
+  // ревью 4.2 находка #1).
   function _pickAtomForSlot(slot, opts) {
     if (!Fingers.blockCatalog) return null;
     const qualities = SLOT_QUALITIES[slot] || [];
     const tissuePrefs = SLOT_TISSUE_PREF[slot] || [];
     const allowed = _allowedModalities(opts.equipmentTypes || ['full']);
-    const profile = opts.profile || { age: opts.age, level: opts.level || 'intermediate' };
+    const profile = opts.profile ||
+      (opts.level ? { age: opts.age, level: opts.level } : null);
+    if (!profile) return null; // fail-closed
 
     // 1-я попытка — match quality + tissue preference.
     for (let i = 0; i < qualities.length; i++) {
@@ -146,13 +151,18 @@
     const ageNum = num(o.age);
     if (ageNum === null) return null; // S1 fail-closed на верхнем уровне.
 
+    // Level fail-closed (ревью 4.2 находка #1): убрали `|| 'intermediate'`,
+    // который тихо подставлял intermediate-контент beginner-пользователю и
+    // обходил S1 `S1.profile_level_missing`. Без явного profile/level → null.
+    if (!o.profile && !o.level) return null;
+
     const ceiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
     const bucket = ceiling;
     const slots = (SLOT_TEMPLATES[bucket] || SLOT_TEMPLATES.moderate).slice();
 
     const profile = o.profile || {
       age: ageNum,
-      level: o.level || 'intermediate',
+      level: o.level,
       painFlag: o.painFlag || null
     };
 
