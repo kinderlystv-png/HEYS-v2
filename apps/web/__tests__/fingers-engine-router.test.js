@@ -239,6 +239,102 @@ describe('engineRouter: contract-guard (Риск 2 ревью)', () => {
   });
 });
 
+describe('engineRouter: plumbing Гейта #1 (ревью #8) — enrichment opts', () => {
+  beforeAll(setupOnce);
+  beforeEach(() => {
+    F().flags.newEngine = false;
+    F().flags.shadowCompare = false;
+    // Reset stub stores
+    delete F().records;
+    delete F().getBodyWeight;
+    delete F().bodyMetrics;
+    delete F().getProfile;
+  });
+
+  it('нет records/bw → opts as-is (без mvcPctBW)', () => {
+    const enriched = R()._enrichOpts({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+    expect(enriched.mvcPctBW).toBeUndefined();
+    expect(enriched.level).toBeUndefined();
+  });
+
+  it('records.getMVC + getBodyWeight → mvcPctBW = (addedKg/bw)×100', () => {
+    F().records = { getMVC: (g, e) => (g === 'halfcrimp' && e === 20) ? { addedKg: 30, mvcKg: 105 } : null };
+    F().getBodyWeight = () => ({ kg: 75, source: 'profile' });
+    const enriched = R()._enrichOpts({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+    expect(enriched.mvcPctBW).toBeCloseTo((30 / 75) * 100, 3); // 40 → derive 'beginner'
+  });
+
+  it('bodyMetrics namespace тоже работает (legacy alias)', () => {
+    F().records = { getMVC: () => ({ addedKg: 50 }) };
+    F().bodyMetrics = { getBodyWeight: () => ({ kg: 70 }) };
+    const enriched = R()._enrichOpts({ age: 25 });
+    expect(enriched.mvcPctBW).toBeCloseTo((50 / 70) * 100, 3); // ~71 → derive 'intermediate'
+  });
+
+  it('addedKg отсутствует (только time-record) → mvcPctBW не задаётся', () => {
+    F().records = { getMVC: () => ({ holdTime: 13, addedKg: null }) }; // time-only record
+    F().getBodyWeight = () => ({ kg: 75 });
+    const enriched = R()._enrichOpts({ age: 25 });
+    expect(enriched.mvcPctBW).toBeUndefined();
+  });
+
+  it('bw=0 → защита от деления на 0 → mvcPctBW не задаётся', () => {
+    F().records = { getMVC: () => ({ addedKg: 30 }) };
+    F().getBodyWeight = () => ({ kg: 0 });
+    const enriched = R()._enrichOpts({ age: 25 });
+    expect(enriched.mvcPctBW).toBeUndefined();
+  });
+
+  it('explicit opts.mvcPctBW > enrichment (не перезаписывается)', () => {
+    F().records = { getMVC: () => ({ addedKg: 30 }) };
+    F().getBodyWeight = () => ({ kg: 75 });
+    const enriched = R()._enrichOpts({ age: 25, mvcPctBW: 90 }); // explicit
+    expect(enriched.mvcPctBW).toBe(90);
+  });
+
+  it('explicit profile.level → MVC enrichment пропускается', () => {
+    F().records = { getMVC: () => ({ addedKg: 30 }) };
+    F().getBodyWeight = () => ({ kg: 75 });
+    const enriched = R()._enrichOpts({ age: 25, profile: { age: 25, level: 'advanced' } });
+    expect(enriched.mvcPctBW).toBeUndefined(); // не дёргаем records
+    expect(enriched.profile.level).toBe('advanced');
+  });
+
+  it('getProfile().level → opts.level (если не задан)', () => {
+    F().getProfile = () => ({ level: 'intermediate', age: 30 });
+    const enriched = R()._enrichOpts({ age: 30 });
+    expect(enriched.level).toBe('intermediate');
+  });
+
+  it('getProfile.level НЕ перезаписывает explicit opts.level', () => {
+    F().getProfile = () => ({ level: 'advanced' });
+    const enriched = R()._enrichOpts({ age: 30, level: 'beginner' });
+    expect(enriched.level).toBe('beginner');
+  });
+
+  it('enrichment безопасна: исключения в источниках не валят', () => {
+    F().records = { getMVC: () => { throw new Error('LS corrupted'); } };
+    F().getBodyWeight = () => { throw new Error('profile null'); };
+    F().getProfile = () => { throw new Error('boom'); };
+    expect(() => R()._enrichOpts({ age: 25 })).not.toThrow();
+    const enriched = R()._enrichOpts({ age: 25 });
+    expect(enriched.mvcPctBW).toBeUndefined();
+    expect(enriched.level).toBeUndefined();
+  });
+
+  it('mixEngine получает enriched opts (поля игнорируются — нет регресса)', () => {
+    F().records = { getMVC: () => ({ addedKg: 30 }) };
+    F().getBodyWeight = () => ({ kg: 75 });
+    // flag=off, builder не вызывается; mixEngine получает enriched, но
+    // не читает mvcPctBW → результат как раньше.
+    const opts = { equipmentTypes: ['full'], age: 25, readiness: 'max' };
+    const direct = F().mixEngine.recommendDay(opts);
+    const viaRouter = R().recommendDay(opts);
+    expect(viaRouter.intensity).toBe(direct.intensity);
+    expect(viaRouter.exercises.length).toBe(direct.exercises.length);
+  });
+});
+
 describe('engineRouter: shadow-compare (ревью 4.3 #4.3e — наблюдаемость)', () => {
   beforeAll(setupOnce);
   beforeEach(() => {

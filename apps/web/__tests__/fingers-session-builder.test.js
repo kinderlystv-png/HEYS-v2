@@ -639,6 +639,53 @@ describe('sessionBuilder: ревью #7 — дедуп grip+edge внутри с
   });
 });
 
+describe('sessionBuilder: plumbing Гейта #1 E2E через роутер (ревью #8)', () => {
+  beforeAll(setupOnce);
+  beforeEach(() => {
+    F().flags.newEngine = true;
+    delete F().records;
+    delete F().getBodyWeight;
+  });
+
+  it('live-like opts + records (advanced MVC) → builder получает advanced, не beginner-floor', () => {
+    // Симулируем продвинутого юзера: addedKg=67.5, bw=75 → 90%BW → derive 'advanced'.
+    F().records = { getMVC: () => ({ addedKg: 67.5 }) };
+    F().getBodyWeight = () => ({ kg: 75 });
+    const opts = { equipmentTypes: ['full'], age: 25, readiness: 'max' };
+    const result = R().recommendDay(opts);
+    expect(R().lastSource).toBe('new');
+    expect(result.__trace.inputs.profileLevel).toBe('advanced');
+    expect(result.__trace.inputs.levelIsExplicit).toBe(false);
+    // Derived → seededCreds=[] (ревью #6 provenance). Advanced контент типа
+    // min-edge всё равно блокируется S9 без attested base_>=2y.
+    expect(result.__trace.inputs.seededCredsCount).toBe(0);
+  });
+
+  it('без records → beginner-floor (как было после #8)', () => {
+    // Никаких records/bw → enrichment не сработал → ultimate floor.
+    const opts = { equipmentTypes: ['full'], age: 25, readiness: 'max' };
+    const result = R().recommendDay(opts);
+    expect(R().lastSource).toBe('new');
+    expect(result.__trace.inputs.profileLevel).toBe('beginner');
+  });
+
+  it('beginner MVC (40% BW) → derive beginner — порог 58% работает', () => {
+    F().records = { getMVC: () => ({ addedKg: 30 }) }; // 30/75 = 40%
+    F().getBodyWeight = () => ({ kg: 75 });
+    const opts = { equipmentTypes: ['full'], age: 25, readiness: 'max' };
+    const result = R().recommendDay(opts);
+    expect(result.__trace.inputs.profileLevel).toBe('beginner');
+  });
+
+  it('intermediate MVC (65% BW) → derive intermediate', () => {
+    F().records = { getMVC: () => ({ addedKg: 48.75 }) }; // 48.75/75 = 65%
+    F().getBodyWeight = () => ({ kg: 75 });
+    const opts = { equipmentTypes: ['full'], age: 25, readiness: 'max' };
+    const result = R().recommendDay(opts);
+    expect(result.__trace.inputs.profileLevel).toBe('intermediate');
+  });
+});
+
 describe('sessionBuilder: equipment-фильтрация', () => {
   beforeAll(setupOnce);
 

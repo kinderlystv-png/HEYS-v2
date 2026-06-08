@@ -47,6 +47,56 @@
   // Диагностика последнего вызова (для тестов/телеметрии).
   let _lastSource = null;
 
+  // ─── Plumbing Гейта #1 (ревью #8) ────────────────────────────────────────────
+  // Цель: пробросить РЕАЛЬНЫЙ уровень/MVC юзера в opts, чтобы новый билдер не
+  // выдавал beginner-floor каждому. До этого fix'а live-opts (зеркало mixEngine)
+  // не несли ни level, ни mvcPctBW → ultimate floor = 'beginner' для всех.
+  //
+  // Источники:
+  //   - mvcPctBW = (addedKg / bw) × 100 на canonical halfcrimp 20mm (§3.5 bench)
+  //   - level из profile, если задан явно
+  //
+  // Safety: enrichment ДО branch (legacy mixEngine игнорирует unknown opts —
+  // verified в его recommendDay чтении: только {equipmentTypes, intensity, age,
+  // readiness, goal}). Если sources недоступны → opts as-is → builder свалится
+  // на ultimate floor (beginner) корректно.
+  //
+  // Никогда не перезаписываем уже-заданные поля: explicit > derive > floor.
+  function _enrichOpts(opts) {
+    const o = Object.assign({}, opts || {});
+
+    // MVC: только если ни mvcPctBW не задан, ни explicit profile.level — иначе
+    // юзер уже сообщил, не дёргаем LS.
+    if (o.mvcPctBW === undefined && !(o.profile && o.profile.level) && !o.level) {
+      try {
+        const recordsStore = Fingers.records;
+        const bodyMetrics = Fingers.getBodyWeight || (Fingers.bodyMetrics && Fingers.bodyMetrics.getBodyWeight);
+        if (recordsStore && typeof recordsStore.getMVC === 'function' && typeof bodyMetrics === 'function') {
+          const rec = recordsStore.getMVC('halfcrimp', 20);
+          const bw = bodyMetrics();
+          const addedKg = rec && typeof rec.addedKg === 'number' ? rec.addedKg : null;
+          const bwKg = bw && typeof bw.kg === 'number' ? bw.kg : null;
+          if (addedKg !== null && bwKg !== null && bwKg > 0) {
+            o.mvcPctBW = (addedKg / bwKg) * 100;
+          }
+        }
+      } catch (_) { /* silent — enrichment best-effort */ }
+    }
+
+    // Level из profile API — если есть. Никаких эвристик.
+    if (o.level === undefined && !(o.profile && o.profile.level)) {
+      try {
+        const getProfile = Fingers.getProfile;
+        if (typeof getProfile === 'function') {
+          const p = getProfile();
+          if (p && typeof p.level === 'string' && p.level) o.level = p.level;
+        }
+      } catch (_) { /* silent */ }
+    }
+
+    return o;
+  }
+
   // Primitive: вызов старого движка БЕЗ побочного эффекта на lastSource.
   // lastSource выставляется в recommendDay (точка маршрутизации).
   function _callOld(opts) {
@@ -130,23 +180,27 @@
   }
 
   function recommendDay(opts) {
+    // Plumbing Гейта #1: enrichment ДО branch — mixEngine игнорирует unknown
+    // opts, builder при flag=on получает реальные MVC/level.
+    const enriched = _enrichOpts(opts);
+
     const useNew = Fingers.flags && Fingers.flags.newEngine === true;
     if (!useNew) {
       _lastSource = 'old';
-      return _callOld(opts);
+      return _callOld(enriched);
     }
     // Путь новой логики — Phase 4.2+. Пока sessionBuilder не зарегистрирован,
     // прозрачно fallback'имся на старый движок.
     const builder = Fingers.sessionBuilder;
     if (!builder || typeof builder.recommendDay !== 'function') {
       _lastSource = 'fallback';
-      return _callOld(opts);
+      return _callOld(enriched);
     }
     try {
-      const result = builder.recommendDay(opts);
+      const result = builder.recommendDay(enriched);
       if (result === null || result === undefined) {
         _lastSource = 'fallback';
-        return _callOld(opts);
+        return _callOld(enriched);
       }
       // Контракт-guard перед отдачей пользователю: форма должна соответствовать
       // mixEngine. Это закрывает Риск 2 — кривой builder-выход НЕ попадает в прод.
@@ -155,7 +209,7 @@
           console.warn('[fingers.engineRouter] new engine output failed contract — fallback to old', result);
         }
         _lastSource = 'fallback-contract';
-        return _callOld(opts);
+        return _callOld(enriched);
       }
       _lastSource = 'new';
       // Shadow-compare: возвращаем builder-результат, но логируем дифф.
@@ -183,6 +237,7 @@
   Fingers.engineRouter = {
     recommendDay: recommendDay,
     isValidSession: isValidSession,
+    _enrichOpts: _enrichOpts, // exposed for tests
     get lastSource() { return _lastSource; },
     get lastShadowDiff() { return _lastShadowDiff; }
   };
