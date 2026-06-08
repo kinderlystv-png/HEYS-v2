@@ -20,14 +20,6 @@ const DEPENDENCY_CONFIG = {
   projectRoot: path.resolve(__dirname, '../../'),
   outputDir: path.resolve(__dirname, '../../security-reports'),
 
-  // Уровни критичности
-  severityLevels: {
-    critical: { threshold: 9.0, weight: 50 },
-    high: { threshold: 7.0, weight: 20 },
-    moderate: { threshold: 4.0, weight: 10 },
-    low: { threshold: 0.1, weight: 5 },
-  },
-
   // Пороги для принятия решений
   thresholds: {
     maxCritical: 0,
@@ -176,103 +168,179 @@ class DependencySecurityChecker {
   }
 
   /**
-   * Выполнение аудита зависимостей
+   * Выполнение аудита зависимостей.
+   *
+   * ВАЖНО: раньше парсер искал NDJSON-строки вида `{type:'auditAdvisory'}` —
+   * это формат npm v6, который `pnpm audit --json` НЕ выдаёт. В результате
+   * скрипт ВСЕГДА рапортовал 0 уязвимостей (ложный «зелёный» гейт), пока
+   * `pnpm audit` показывал реальные сотни. Теперь парсим фактический формат:
+   * единый JSON-объект с `metadata.vulnerabilities` (authoritative-счётчики) и
+   * детализацией в `advisories` (pnpm/npm v6) либо `vulnerabilities` (npm v7+),
+   * с NDJSON-fallback для совсем старого формата.
    */
   async runDependencyAudit() {
     console.log('\n🔍 Running dependency audit...');
 
+    let raw = '';
     try {
-      // Запускаем pnpm audit для получения JSON отчета
-      const auditOutput = execSync('pnpm audit --json', {
+      raw = execSync('pnpm audit --json', {
         cwd: this.config.projectRoot || DEPENDENCY_CONFIG.projectRoot,
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe'],
+        maxBuffer: 64 * 1024 * 1024,
       });
-
-      // Парсим результаты аудита
-      const auditLines = auditOutput.trim().split('\n');
-      for (const line of auditLines) {
-        try {
-          const auditData = JSON.parse(line);
-
-          if (auditData.type === 'auditAdvisory') {
-            const advisory = auditData.data.advisory;
-            const vulnerability = {
-              id: advisory.id,
-              title: advisory.title,
-              severity: advisory.severity,
-              package: advisory.module_name,
-              versions: advisory.vulnerable_versions,
-              patched: advisory.patched_versions,
-              recommendation: advisory.recommendation,
-              overview: advisory.overview,
-              references: advisory.references || [],
-              cwe: advisory.cwe || [],
-              cvss: advisory.cvss || {},
-              found: auditData.data.resolution || {},
-              timestamp: new Date().toISOString(),
-            };
-
-            // Проверяем, не игнорируется ли эта уязвимость
-            if (!DEPENDENCY_CONFIG.ignoredVulnerabilities.includes(vulnerability.id)) {
-              this.results.vulnerabilities.push(vulnerability);
-              this.results.summary[vulnerability.severity]++;
-              this.results.summary.total++;
-            }
-          }
-        } catch (parseError) {
-          // Игнорируем строки, которые не являются JSON
-        }
-      }
     } catch (error) {
-      // pnpm audit может возвращать ненулевой код при наличии уязвимостей
-      if (error.status !== 1) {
+      // pnpm audit возвращает ненулевой код, когда найдены уязвимости —
+      // сам отчёт при этом лежит в stdout.
+      raw = (error.stdout || '').toString();
+      if (!raw.trim() && error.message) {
         console.warn('⚠️ Audit command failed:', error.message);
-      }
-
-      // Пытаемся парсить вывод даже при ошибке
-      if (error.stdout) {
-        try {
-          const auditLines = error.stdout.trim().split('\n');
-          for (const line of auditLines) {
-            try {
-              const auditData = JSON.parse(line);
-              if (auditData.type === 'auditAdvisory') {
-                // Аналогичная обработка как выше
-                const advisory = auditData.data.advisory;
-                const vulnerability = {
-                  id: advisory.id,
-                  title: advisory.title,
-                  severity: advisory.severity,
-                  package: advisory.module_name,
-                  versions: advisory.vulnerable_versions,
-                  patched: advisory.patched_versions,
-                  recommendation: advisory.recommendation,
-                  overview: advisory.overview,
-                  references: advisory.references || [],
-                  cwe: advisory.cwe || [],
-                  cvss: advisory.cvss || {},
-                  found: auditData.data.resolution || {},
-                  timestamp: new Date().toISOString(),
-                };
-
-                if (!DEPENDENCY_CONFIG.ignoredVulnerabilities.includes(vulnerability.id)) {
-                  this.results.vulnerabilities.push(vulnerability);
-                  this.results.summary[vulnerability.severity]++;
-                  this.results.summary.total++;
-                }
-              }
-            } catch (parseError) {
-              // Игнорируем
-            }
-          }
-        } catch (parseError) {
-          console.warn('⚠️ Could not parse audit output');
-        }
       }
     }
 
+    this.ingestAuditReport(raw);
     console.log(`   🔍 Found ${this.results.summary.total} vulnerabilities`);
+  }
+
+  /**
+   * Добавить запись об уязвимости (с учётом allowlist игнора).
+   */
+  pushVuln(v) {
+    if (!v || DEPENDENCY_CONFIG.ignoredVulnerabilities.includes(v.id)) return;
+    v.timestamp = new Date().toISOString();
+    this.results.vulnerabilities.push(v);
+  }
+
+  /**
+   * Разобрать вывод `pnpm audit --json` в любом из поддерживаемых форматов.
+   * Счётчики severity берём из `metadata.vulnerabilities` как источник истины;
+   * детали — best-effort. Пустой вывод трактуем как UNKNOWN (а не «чисто»),
+   * чтобы сломанный/недоступный аудит не давал ложный зелёный.
+   */
+  ingestAuditReport(raw) {
+    const SEVS = ['critical', 'high', 'moderate', 'low', 'info'];
+
+    if (!raw || !raw.trim()) {
+      console.warn(
+        '⚠️ Empty audit output — registry unreachable or audit failed. Marking status=unknown (NOT clean).',
+      );
+      this.results.auditStatus = 'unknown';
+      return;
+    }
+
+    let report = null;
+    try {
+      report = JSON.parse(raw);
+    } catch (_) {
+      /* возможно NDJSON — обработаем ниже */
+    }
+
+    if (report && typeof report === 'object' && !Array.isArray(report)) {
+      this.results.auditStatus = 'ok';
+
+      // 1) Authoritative-счётчики из summary, если он есть.
+      const metaV = report.metadata && report.metadata.vulnerabilities;
+      const haveMeta = metaV && typeof metaV === 'object';
+      if (haveMeta) {
+        for (const sev of SEVS) {
+          const n = Number(metaV[sev] || 0);
+          this.results.summary[sev] = n;
+          this.results.summary.total += n;
+        }
+      }
+
+      // 2) Детали: pnpm / npm v6 → advisories{}, npm v7+ → vulnerabilities{}.
+      if (report.advisories && typeof report.advisories === 'object') {
+        for (const adv of Object.values(report.advisories)) {
+          this.pushVuln({
+            id: adv.id,
+            title: adv.title,
+            severity: adv.severity,
+            package: adv.module_name,
+            versions: adv.vulnerable_versions,
+            patched: adv.patched_versions,
+            recommendation: adv.recommendation,
+            overview: adv.overview,
+            references: adv.references || [],
+            cwe: adv.cwe || [],
+            cvss: adv.cvss || {},
+            found: adv.findings || {},
+          });
+        }
+      } else if (report.vulnerabilities && typeof report.vulnerabilities === 'object') {
+        for (const v of Object.values(report.vulnerabilities)) {
+          const via = Array.isArray(v.via)
+            ? v.via.find((x) => x && typeof x === 'object')
+            : null;
+          this.pushVuln({
+            id: (via && via.source) || v.name,
+            title: (via && via.title) || `${v.name}: vulnerable dependency`,
+            severity: v.severity,
+            package: v.name,
+            versions: v.range,
+            patched:
+              v.fixAvailable === true
+                ? 'fix available (pnpm update/override)'
+                : v.fixAvailable && v.fixAvailable.version
+                  ? `${v.fixAvailable.name}@${v.fixAvailable.version}`
+                  : 'N/A',
+            recommendation: v.fixAvailable
+              ? 'Run pnpm update or add an override'
+              : 'No fix available — pin/replace or document exception',
+            overview: (via && via.url) || '',
+            references: via && via.url ? [via.url] : [],
+            cwe: (via && via.cwe) || [],
+            cvss: (via && via.cvss) || {},
+            found: {},
+          });
+        }
+      }
+
+      // 3) Если summary отсутствовал — вывести счётчики из собранных деталей.
+      if (!haveMeta) {
+        for (const sev of SEVS) this.results.summary[sev] = 0;
+        this.results.summary.total = 0;
+        for (const v of this.results.vulnerabilities) {
+          if (this.results.summary[v.severity] !== undefined) {
+            this.results.summary[v.severity]++;
+            this.results.summary.total++;
+          }
+        }
+      }
+      return;
+    }
+
+    // 4) Legacy NDJSON ({type:'auditAdvisory'}) — на случай старого формата.
+    this.results.auditStatus = 'ok';
+    for (const line of raw.trim().split('\n')) {
+      let obj;
+      try {
+        obj = JSON.parse(line);
+      } catch (_) {
+        continue;
+      }
+      if (obj && obj.type === 'auditAdvisory' && obj.data && obj.data.advisory) {
+        const adv = obj.data.advisory;
+        this.pushVuln({
+          id: adv.id,
+          title: adv.title,
+          severity: adv.severity,
+          package: adv.module_name,
+          versions: adv.vulnerable_versions,
+          patched: adv.patched_versions,
+          recommendation: adv.recommendation,
+          overview: adv.overview,
+          references: adv.references || [],
+          cwe: adv.cwe || [],
+          cvss: adv.cvss || {},
+          found: obj.data.resolution || {},
+        });
+        if (this.results.summary[adv.severity] !== undefined) {
+          this.results.summary[adv.severity]++;
+          this.results.summary.total++;
+        }
+      }
+    }
   }
 
   /**
@@ -601,6 +669,9 @@ class DependencySecurityChecker {
   getExitCode() {
     const { critical, high } = this.results.summary;
 
+    // Сломанный/недоступный аудит — НЕ «зелёный». Иначе вернётся старый баг
+    // ложного прохода гейта.
+    if (this.results.auditStatus === 'unknown') return 1;
     if (critical > 0) return 2; // Критические уязвимости
     if (high > 0) return 1; // Высокие уязвимости
     return 0; // Нет критических/высоких уязвимостей

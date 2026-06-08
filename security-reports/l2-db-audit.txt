@@ -1,0 +1,639 @@
+Постраничник выключен.
+Секундомер выключен.
+
+== 1. SECURITY DEFINER функции БЕЗ явного search_path (риск hijack) ==
+   Ожидаем: пусто. Любая строка — потенциальная привилегированная эскалация.
+ schema |                  function                  |                                                                                                                                                             args                                                                                                                                                              
+--------+--------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ public | admin_activate_trial                       | p_client_id uuid, p_start_date date, p_trial_days integer, p_curator_id uuid
+ public | admin_add_to_queue                         | p_client_id uuid, p_source text, p_priority integer, p_curator_id uuid
+ public | admin_cancel_subscription                  | p_curator_id uuid, p_client_id uuid
+ public | admin_extend_subscription                  | p_curator_id uuid, p_client_id uuid, p_months integer
+ public | admin_extend_trial                         | p_client_id uuid, p_days integer, p_curator_id uuid
+ public | admin_get_all_clients                      | p_curator_id uuid
+ public | admin_get_leads                            | p_status text, p_curator_id uuid
+ public | admin_get_queue_stats                      | 
+ public | admin_get_queue_stats                      | p_curator_id uuid
+ public | admin_get_trial_queue_list                 | p_curator_id uuid, p_status_filter text, p_search text, p_limit integer, p_offset integer
+ public | admin_regenerate_pin                       | p_client_id uuid, p_curator_id uuid
+ public | admin_reject_request                       | p_queue_id uuid, p_reason text, p_curator_id uuid
+ public | admin_remove_from_queue                    | p_client_id uuid, p_reason text, p_curator_id uuid
+ public | admin_send_offer                           | p_client_id uuid, p_offer_window_minutes integer, p_curator_id uuid
+ public | admin_set_client_pin                       | p_client_id uuid, p_pin text, p_curator_id uuid
+ public | admin_update_lead_status                   | p_lead_id uuid, p_status text, p_reason text, p_curator_id uuid
+ public | admin_update_queue_settings                | p_is_accepting boolean, p_max_active integer, p_offer_window_minutes integer, p_trial_days integer, p_curator_id uuid
+ public | approve_pending_products_bulk              | p_curator_id uuid, p_pending_ids uuid[]
+ public | backfill_shared_harm                       | p_updates jsonb
+ public | batch_get_client_kv_by_client_id           | p_client_id uuid, p_keys text[]
+ public | batch_get_client_kv_by_session             | p_session_token text, p_keys text[]
+ public | batch_upsert_client_kv_by_client_id        | p_client_id uuid, p_items jsonb
+ public | check_day_overwrite_allowed                | p_client_id uuid, p_key text, p_new_value jsonb
+ public | check_subscription_status                  | p_client_id uuid
+ public | check_suspicious_days                      | p_days_back integer
+ public | claim_pin_token_chat                       | p_pin_token uuid, p_chat_id bigint
+ public | cleanup_expired_curator_sessions           | 
+ public | cleanup_old_ews_weekly_snapshots           | 
+ public | client_pin_auth                            | p_phone text, p_pin text
+ public | create_client_with_pin                     | p_name text, p_phone text, p_pin_salt text, p_pin_hash text, p_curator_id uuid
+ public | create_curator_session                     | p_user_id uuid, p_token text, p_expires_in_hours integer, p_ip_address inet, p_user_agent text
+ public | create_pending_product                     | p_client_id uuid, p_product_data jsonb, p_name_norm text, p_fingerprint text
+ public | create_pending_product                     | p_client_id uuid, p_name text, p_kcal100 numeric, p_protein100 numeric, p_carbs100 numeric, p_fat100 numeric, p_simple100 numeric, p_complex100 numeric, p_good_fat100 numeric, p_bad_fat100 numeric, p_trans100 numeric, p_fiber100 numeric, p_gi integer, p_harm integer, p_category text, p_portions jsonb, p_barcode text
+ public | decrypt_health_data                        | p_encrypted bytea
+ public | delete_gamification_events_by_curator      | p_curator_id uuid, p_event_ids uuid[]
+ public | delete_old_weekly_snapshots_by_session     | p_session_token text, p_weeks_to_keep integer
+ public | encrypt_health_data                        | p_value jsonb
+ public | ensure_subscription_exists                 | 
+ public | fn_bump_change_marker                      | 
+ public | get_change_markers_by_session              | p_session_token text, p_since timestamp with time zone, p_since_revision bigint
+ public | get_client_blocklist                       | p_client_id uuid
+ public | get_client_consents                        | p_client_id uuid
+ public | get_client_data                            | p_client_id uuid
+ public | get_client_salt                            | p_phone text
+ public | get_encryption_key                         | 
+ public | get_leaderboard_by_session                 | p_session_token text, p_snapshot_date date
+ public | get_leaderboard_weekly_by_session          | p_session_token text, p_today_date date
+ public | get_public_trial_capacity                  | 
+ public | get_recent_data_loss_alerts                | p_hours integer
+ public | get_trial_drip_targets                     | 
+ public | get_trial_queue_status                     | p_session_token text
+ public | get_weekly_snapshots_by_session            | p_session_token text, p_weeks_count integer
+ public | increment_pin_attempt                      | p_phone text, p_ip text, p_max_attempts integer, p_lockout_minutes integer
+ public | log_client_event_by_session                | p_session_token text, p_events jsonb
+ public | mark_drip_sent                             | p_client_id uuid, p_stage text
+ public | publish_leaderboard_snapshot_by_session    | p_session_token text, p_snapshot_date date, p_display_name text, p_day_balance numeric, p_cascade_pct numeric
+ public | read_client_kv_value                       | p_client_id uuid, p_key text
+ public | request_trial                              | p_session_token text, p_source text
+ public | revoke_all_curator_sessions                | p_user_id uuid
+ public | revoke_curator_session                     | p_token text
+ public | safe_upsert_client_kv                      | p_client_id uuid, p_key text, p_value jsonb
+ public | toggle_leaderboard_sharing_by_session      | p_session_token text, p_enabled boolean, p_display_name text
+ public | trigger_audit_log                          | 
+ public | trigger_cancel_trial_queue_on_subscription | 
+ public | update_client_profile_by_session           | p_session_token text, p_name text
+ public | update_shared_product_portions_by_curator  | p_curator_id uuid, p_product_id uuid, p_portions jsonb
+ public | upsert_weekly_snapshot_by_session          | p_session_token text, p_week_start date, p_week_end date, p_week_number integer, p_year integer, p_warnings_count integer, p_global_score integer, p_severity_breakdown jsonb, p_top_warnings jsonb
+ public | validate_curator_session                   | p_token text
+ public | verify_client_pin                          | p_phone text, p_pin_hash text
+ public | write_client_kv_value                      | p_client_id uuid, p_key text, p_value jsonb
+(70 строк)
+
+
+== 2. Функции, исполнимые ролью PUBLIC (sensitive не должны) ==
+ schema |                  function                  |                                                                                                                             args                                                                                                                             | security_definer 
+--------+--------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------
+ public | activate_trial_timer_by_session            | p_session_token text, p_trial_days integer                                                                                                                                                                                                                   | t
+ public | add_working_days                           | start_ts timestamp with time zone, days integer                                                                                                                                                                                                              | f
+ public | admin_activate_trial                       | p_client_id uuid, p_start_date date, p_trial_days integer, p_curator_id uuid                                                                                                                                                                                 | t
+ public | admin_add_to_queue                         | p_client_id uuid, p_source text, p_priority integer, p_curator_id uuid                                                                                                                                                                                       | t
+ public | admin_cancel_subscription                  | p_curator_id uuid, p_client_id uuid                                                                                                                                                                                                                          | t
+ public | admin_convert_lead                         | p_lead_id uuid, p_curator_id uuid                                                                                                                                                                                                                            | t
+ public | admin_extend_subscription                  | p_curator_id uuid, p_client_id uuid, p_months integer                                                                                                                                                                                                        | t
+ public | admin_extend_trial                         | p_client_id uuid, p_days integer, p_curator_id uuid                                                                                                                                                                                                          | t
+ public | admin_get_all_clients                      | p_curator_id uuid                                                                                                                                                                                                                                            | t
+ public | admin_get_leads                            | p_status text, p_curator_id uuid                                                                                                                                                                                                                             | t
+ public | admin_get_queue_stats                      |                                                                                                                                                                                                                                                              | t
+ public | admin_get_queue_stats                      | p_curator_id uuid                                                                                                                                                                                                                                            | t
+ public | admin_get_trial_queue_list                 | p_curator_id uuid, p_status_filter text, p_search text, p_limit integer, p_offset integer                                                                                                                                                                    | t
+ public | admin_regenerate_pin                       | p_client_id uuid, p_curator_id uuid                                                                                                                                                                                                                          | t
+ public | admin_reject_request                       | p_queue_id uuid, p_reason text, p_curator_id uuid                                                                                                                                                                                                            | t
+ public | admin_remove_from_queue                    | p_client_id uuid, p_reason text, p_curator_id uuid                                                                                                                                                                                                           | t
+ public | admin_send_offer                           | p_client_id uuid, p_offer_window_minutes integer, p_curator_id uuid                                                                                                                                                                                          | t
+ public | admin_set_client_pin                       | p_client_id uuid, p_pin text, p_curator_id uuid                                                                                                                                                                                                              | t
+ public | admin_update_lead_status                   | p_lead_id uuid, p_status text, p_reason text, p_curator_id uuid                                                                                                                                                                                              | t
+ public | admin_update_queue_settings                | p_is_accepting boolean, p_max_active integer, p_offer_window_minutes integer, p_trial_days integer, p_curator_id uuid                                                                                                                                        | t
+ public | anonymize_lead_on_client_delete            |                                                                                                                                                                                                                                                              | f
+ public | approve_pending_products_bulk              | p_curator_id uuid, p_pending_ids uuid[]                                                                                                                                                                                                                      | t
+ public | armor                                      | bytea, text[], text[]                                                                                                                                                                                                                                        | f
+ public | armor                                      | bytea                                                                                                                                                                                                                                                        | f
+ public | assign_trials_from_queue                   | p_limit integer                                                                                                                                                                                                                                              | t
+ public | audit_session_revoke                       |                                                                                                                                                                                                                                                              | t
+ public | backfill_shared_harm                       | p_updates jsonb                                                                                                                                                                                                                                              | t
+ public | batch_get_client_kv_by_client_id           | p_client_id uuid, p_keys text[]                                                                                                                                                                                                                              | t
+ public | batch_get_client_kv_by_session             | p_session_token text, p_keys text[]                                                                                                                                                                                                                          | t
+ public | batch_upsert_client_kv_by_client_id        | p_client_id uuid, p_items jsonb                                                                                                                                                                                                                              | t
+ public | batch_upsert_client_kv_by_session          | p_session_token text, p_items jsonb                                                                                                                                                                                                                          | t
+ public | block_curator_write_if_locked              |                                                                                                                                                                                                                                                              | f
+ public | block_kv_under_restriction                 |                                                                                                                                                                                                                                                              | f
+ public | bump_client_kv_revision                    |                                                                                                                                                                                                                                                              | f
+ public | calculate_harm_score                       | p_simple100 numeric, p_protein100 numeric, p_badfat100 numeric, p_goodfat100 numeric, p_trans100 numeric, p_fiber100 numeric, p_gi numeric, p_sodium100 numeric, p_nova_group integer                                                                        | f
+ public | cancel_sub_on_payment_oferta_revoke        |                                                                                                                                                                                                                                                              | f
+ public | cancel_trial_queue                         | p_session_token text                                                                                                                                                                                                                                         | t
+ public | cancel_trial_queue_on_purchase             | p_client_id uuid                                                                                                                                                                                                                                             | t
+ public | check_day_overwrite_allowed                | p_client_id uuid, p_key text, p_new_value jsonb                                                                                                                                                                                                              | t
+ public | check_required_consents                    | p_client_id uuid                                                                                                                                                                                                                                             | t
+ public | check_required_consents_by_session         | p_session_token text, p_expected_versions jsonb                                                                                                                                                                                                              | t
+ public | check_required_consents_v2                 | p_client_id uuid, p_expected_versions jsonb                                                                                                                                                                                                                  | t
+ public | check_subscription_status                  | p_client_id uuid                                                                                                                                                                                                                                             | t
+ public | check_suspicious_days                      | p_days_back integer                                                                                                                                                                                                                                          | t
+ public | claim_pin_token_chat                       | p_pin_token uuid, p_chat_id bigint                                                                                                                                                                                                                           | t
+ public | claim_trial_offer                          | p_session_token text                                                                                                                                                                                                                                         | t
+ public | cleanup_expired_sessions                   |                                                                                                                                                                                                                                                              | t
+ public | cleanup_lead_submission_attempts           |                                                                                                                                                                                                                                                              | f
+ public | cleanup_old_ews_weekly_snapshots           |                                                                                                                                                                                                                                                              | t
+ public | cleanup_security_logs                      | p_days_to_keep integer                                                                                                                                                                                                                                       | t
+ public | client_data_changelog_dedup_guard          |                                                                                                                                                                                                                                                              | f
+ public | client_pin_auth                            | p_phone text, p_pin text                                                                                                                                                                                                                                     | t
+ public | complete_dsar                              | p_curator_id uuid, p_request_id uuid, p_notes text                                                                                                                                                                                                           | t
+ public | compute_ceb_from_day_jsonb                 | p_day_data jsonb, p_profile jsonb                                                                                                                                                                                                                            | f
+ public | compute_product_fingerprint                | p_product jsonb                                                                                                                                                                                                                                              | f
+ public | confirm_age_by_session                     | p_session_token text, p_birth_year smallint                                                                                                                                                                                                                  | t
+ public | consents_immutability_guard                |                                                                                                                                                                                                                                                              | f
+ public | create_client_with_pin                     | p_name text, p_phone text, p_pin_salt text, p_pin_hash text, p_curator_id uuid                                                                                                                                                                               | t
+ public | create_pending_product_by_session          | p_session_token text, p_name text, p_product_data jsonb, p_fingerprint text, p_name_norm text                                                                                                                                                                | t
+ public | crypt                                      | text, text                                                                                                                                                                                                                                                   | f
+ public | dearmor                                    | text                                                                                                                                                                                                                                                         | f
+ public | decrypt                                    | bytea, bytea, text                                                                                                                                                                                                                                           | f
+ public | decrypt_health_data                        | p_encrypted bytea                                                                                                                                                                                                                                            | t
+ public | decrypt_iv                                 | bytea, bytea, bytea, text                                                                                                                                                                                                                                    | f
+ public | delete_client_kv_by_session                | p_session_token text, p_key text                                                                                                                                                                                                                             | t
+ public | delete_gamification_events_by_curator      | p_curator_id uuid, p_event_ids uuid[]                                                                                                                                                                                                                        | t
+ public | delete_my_account                          | p_session_token text                                                                                                                                                                                                                                         | t
+ public | delete_old_weekly_snapshots_by_session     | p_session_token text, p_weeks_to_keep integer                                                                                                                                                                                                                | t
+ public | digest                                     | bytea, text                                                                                                                                                                                                                                                  | f
+ public | digest                                     | text, text                                                                                                                                                                                                                                                   | f
+ public | encrypt                                    | bytea, bytea, text                                                                                                                                                                                                                                           | f
+ public | encrypt_health_data                        | p_value jsonb                                                                                                                                                                                                                                                | t
+ public | encrypt_iv                                 | bytea, bytea, bytea, text                                                                                                                                                                                                                                    | f
+ public | ensure_subscription_exists                 |                                                                                                                                                                                                                                                              | t
+ public | export_my_data_by_session                  | p_session_token text                                                                                                                                                                                                                                         | t
+ public | fn_bump_change_marker                      |                                                                                                                                                                                                                                                              | t
+ public | gen_random_bytes                           | integer                                                                                                                                                                                                                                                      | f
+ public | gen_random_uuid                            |                                                                                                                                                                                                                                                              | f
+ public | gen_salt                                   | text, integer                                                                                                                                                                                                                                                | f
+ public | gen_salt                                   | text                                                                                                                                                                                                                                                         | f
+ public | generate_salt                              |                                                                                                                                                                                                                                                              | f
+ public | get_change_markers_by_session              | p_session_token text, p_since timestamp with time zone, p_since_revision bigint                                                                                                                                                                              | t
+ public | get_client_blocklist                       | p_client_id uuid                                                                                                                                                                                                                                             | t
+ public | get_client_consents                        | p_client_id uuid                                                                                                                                                                                                                                             | t
+ public | get_client_data_by_session                 | p_session_token text                                                                                                                                                                                                                                         | t
+ public | get_client_kv                              | p_client_id uuid, p_key text                                                                                                                                                                                                                                 | f
+ public | get_client_kv_by_session                   | p_session_token text, p_key text                                                                                                                                                                                                                             | t
+ public | get_client_salt                            | p_phone text                                                                                                                                                                                                                                                 | t
+ public | get_consent_proof_by_session               | p_session_token text, p_consent_type text                                                                                                                                                                                                                    | t
+ public | get_curator_clients                        | p_curator_id uuid                                                                                                                                                                                                                                            | t
+ public | get_effective_subscription_status          | p_client_id uuid                                                                                                                                                                                                                                             | f
+ public | get_encryption_key                         |                                                                                                                                                                                                                                                              | t
+ public | get_gamification_events_by_curator         | p_curator_id uuid, p_client_id uuid, p_limit integer, p_offset integer                                                                                                                                                                                       | t
+ public | get_gamification_events_by_session         | p_session_token text, p_limit integer, p_offset integer                                                                                                                                                                                                      | t
+ public | get_leaderboard_by_session                 | p_session_token text, p_snapshot_date date                                                                                                                                                                                                                   | t
+ public | get_leaderboard_weekly_by_session          | p_session_token text, p_today_date date                                                                                                                                                                                                                      | t
+ public | get_my_consents_by_session                 | p_session_token text                                                                                                                                                                                                                                         | t
+ public | get_public_trial_capacity                  |                                                                                                                                                                                                                                                              | t
+ public | get_recent_data_loss_alerts                | p_hours integer                                                                                                                                                                                                                                              | t
+ public | get_shared_products                        | p_search text, p_limit integer, p_offset integer                                                                                                                                                                                                             | t
+ public | get_subscription_status_by_session         | p_session_token text                                                                                                                                                                                                                                         | t
+ public | get_subscription_status_for_curator        | p_client_id uuid                                                                                                                                                                                                                                             | t
+ public | get_trial_drip_targets                     |                                                                                                                                                                                                                                                              | t
+ public | get_trial_queue_status                     | p_session_token text                                                                                                                                                                                                                                         | t
+ public | get_weekly_snapshots_by_session            | p_session_token text, p_weeks_count integer                                                                                                                                                                                                                  | t
+ public | gin_extract_query_trgm                     | text, internal, smallint, internal, internal, internal, internal                                                                                                                                                                                             | f
+ public | gin_extract_value_trgm                     | text, internal                                                                                                                                                                                                                                               | f
+ public | gin_trgm_consistent                        | internal, smallint, text, integer, internal, internal, internal, internal                                                                                                                                                                                    | f
+ public | gin_trgm_triconsistent                     | internal, smallint, text, integer, internal, internal, internal                                                                                                                                                                                              | f
+ public | gtrgm_compress                             | internal                                                                                                                                                                                                                                                     | f
+ public | gtrgm_consistent                           | internal, text, smallint, oid, internal                                                                                                                                                                                                                      | f
+ public | gtrgm_decompress                           | internal                                                                                                                                                                                                                                                     | f
+ public | gtrgm_distance                             | internal, text, smallint, oid, internal                                                                                                                                                                                                                      | f
+ public | gtrgm_in                                   | cstring                                                                                                                                                                                                                                                      | f
+ public | gtrgm_options                              | internal                                                                                                                                                                                                                                                     | f
+ public | gtrgm_out                                  | gtrgm                                                                                                                                                                                                                                                        | f
+ public | gtrgm_penalty                              | internal, internal, internal                                                                                                                                                                                                                                 | f
+ public | gtrgm_picksplit                            | internal, internal                                                                                                                                                                                                                                           | f
+ public | gtrgm_same                                 | gtrgm, gtrgm, internal                                                                                                                                                                                                                                       | f
+ public | gtrgm_union                                | internal, internal                                                                                                                                                                                                                                           | f
+ public | hash_pin                                   | pin text, salt text                                                                                                                                                                                                                                          | f
+ public | hmac                                       | bytea, bytea, text                                                                                                                                                                                                                                           | f
+ public | hmac                                       | text, text, text                                                                                                                                                                                                                                             | f
+ public | increment_pin_attempt                      | p_phone text, p_ip text, p_max_attempts integer, p_lockout_minutes integer                                                                                                                                                                                   | t
+ public | is_always_writable_key                     | p_key text                                                                                                                                                                                                                                                   | f
+ public | is_health_key                              | p_key text                                                                                                                                                                                                                                                   | f
+ public | issue_client_session                       | p_client_id uuid, p_ttl_hours integer                                                                                                                                                                                                                        | t
+ public | issue_write_context_by_curator             | p_curator_id uuid, p_client_id uuid, p_ttl_seconds integer, p_user_agent text, p_ip inet                                                                                                                                                                     | t
+ public | issue_write_context_by_session             | p_session_token text, p_ttl_seconds integer, p_user_agent text, p_ip inet                                                                                                                                                                                    | t
+ public | log_api_dsar                               | p_client_id uuid, p_request_type text, p_metadata jsonb                                                                                                                                                                                                      | t
+ public | log_client_event_by_session                | p_session_token text, p_events jsonb                                                                                                                                                                                                                         | t
+ public | log_consents                               | p_client_id uuid, p_consents jsonb, p_ip text, p_user_agent text                                                                                                                                                                                             | t
+ public | log_data_access                            | p_accessor_type text, p_accessor_id uuid, p_client_id uuid, p_action text, p_resource_keys text[], p_is_health boolean, p_ip text, p_user_agent text, p_metadata jsonb                                                                                       | t
+ public | log_gamification_event_by_curator          | p_curator_id uuid, p_client_id uuid, p_action text, p_reason text, p_xp_before integer, p_xp_after integer, p_xp_delta integer, p_level_before integer, p_level_after integer, p_achievements_before integer, p_achievements_after integer, p_metadata jsonb | t
+ public | log_gamification_event_by_session          | p_session_token text, p_action text, p_reason text, p_xp_before integer, p_xp_after integer, p_xp_delta integer, p_level_before integer, p_level_after integer, p_achievements_before integer, p_achievements_after integer, p_metadata jsonb                | t
+ public | mark_drip_sent                             | p_client_id uuid, p_stage text                                                                                                                                                                                                                               | t
+ public | mark_inactive_for_cleanup                  |                                                                                                                                                                                                                                                              | t
+ public | normalize_phone                            | phone text                                                                                                                                                                                                                                                   | f
+ public | parse_time_mins                            | p_time text                                                                                                                                                                                                                                                  | f
+ public | pgp_armor_headers                          | text, OUT key text, OUT value text                                                                                                                                                                                                                           | f
+ public | pgp_key_id                                 | bytea                                                                                                                                                                                                                                                        | f
+ public | pgp_pub_decrypt                            | bytea, bytea, text, text                                                                                                                                                                                                                                     | f
+ public | pgp_pub_decrypt                            | bytea, bytea                                                                                                                                                                                                                                                 | f
+ public | pgp_pub_decrypt                            | bytea, bytea, text                                                                                                                                                                                                                                           | f
+ public | pgp_pub_decrypt_bytea                      | bytea, bytea                                                                                                                                                                                                                                                 | f
+ public | pgp_pub_decrypt_bytea                      | bytea, bytea, text                                                                                                                                                                                                                                           | f
+ public | pgp_pub_decrypt_bytea                      | bytea, bytea, text, text                                                                                                                                                                                                                                     | f
+ public | pgp_pub_encrypt                            | text, bytea                                                                                                                                                                                                                                                  | f
+ public | pgp_pub_encrypt                            | text, bytea, text                                                                                                                                                                                                                                            | f
+ public | pgp_pub_encrypt_bytea                      | bytea, bytea                                                                                                                                                                                                                                                 | f
+ public | pgp_pub_encrypt_bytea                      | bytea, bytea, text                                                                                                                                                                                                                                           | f
+ public | pgp_sym_decrypt                            | bytea, text                                                                                                                                                                                                                                                  | f
+ public | pgp_sym_decrypt                            | bytea, text, text                                                                                                                                                                                                                                            | f
+ public | pgp_sym_decrypt_bytea                      | bytea, text                                                                                                                                                                                                                                                  | f
+ public | pgp_sym_decrypt_bytea                      | bytea, text, text                                                                                                                                                                                                                                            | f
+ public | pgp_sym_encrypt                            | text, text, text                                                                                                                                                                                                                                             | f
+ public | pgp_sym_encrypt                            | text, text                                                                                                                                                                                                                                                   | f
+ public | pgp_sym_encrypt_bytea                      | bytea, text                                                                                                                                                                                                                                                  | f
+ public | pgp_sym_encrypt_bytea                      | bytea, text, text                                                                                                                                                                                                                                            | f
+ public | publish_leaderboard_snapshot_by_session    | p_session_token text, p_snapshot_date date, p_display_name text, p_day_balance numeric, p_cascade_pct numeric                                                                                                                                                | t
+ public | publish_shared_product_by_session          | p_session_token text, p_product_data jsonb                                                                                                                                                                                                                   | t
+ public | purge_gamification_events                  | p_days integer                                                                                                                                                                                                                                               | t
+ public | purge_health_data                          | p_client_id uuid                                                                                                                                                                                                                                             | t
+ public | read_client_kv_value                       | p_client_id uuid, p_key text                                                                                                                                                                                                                                 | t
+ public | record_offline_dsar                        | p_curator_id uuid, p_client_id uuid, p_request_type text, p_source text, p_notes text                                                                                                                                                                        | t
+ public | request_restriction_by_session             | p_session_token text, p_active boolean                                                                                                                                                                                                                       | t
+ public | request_trial                              | p_session_token text, p_source text                                                                                                                                                                                                                          | t
+ public | require_client_id                          | p_session_token text                                                                                                                                                                                                                                         | t
+ public | restore_profile_snapshot                   | p_snapshot_id bigint                                                                                                                                                                                                                                         | f
+ public | revoke_all_sessions_for_client             | p_client_id uuid, p_except_token_hash bytea                                                                                                                                                                                                                  | t
+ public | revoke_consent                             | p_client_id uuid, p_consent_type text                                                                                                                                                                                                                        | t
+ public | revoke_consent_by_session                  | p_session_token text, p_consent_type text                                                                                                                                                                                                                    | t
+ public | revoke_curator_access_by_session           | p_session_token text                                                                                                                                                                                                                                         | t
+ public | revoke_session                             | p_session_token text                                                                                                                                                                                                                                         | t
+ public | revoke_write_contexts_for_curator          | p_curator_id uuid, p_reason text                                                                                                                                                                                                                             | t
+ public | safe_upsert_client_kv                      | p_client_id uuid, p_key text, p_value jsonb                                                                                                                                                                                                                  | t
+ public | set_limit                                  | real                                                                                                                                                                                                                                                         | f
+ public | set_subscription_active_until              | p_client_id uuid, p_active_until timestamp with time zone                                                                                                                                                                                                    | t
+ public | set_updated_at                             |                                                                                                                                                                                                                                                              | f
+ public | shared_products_pending_set_fingerprint    |                                                                                                                                                                                                                                                              | f
+ public | show_limit                                 |                                                                                                                                                                                                                                                              | f
+ public | show_trgm                                  | text                                                                                                                                                                                                                                                         | f
+ public | similarity                                 | text, text                                                                                                                                                                                                                                                   | f
+ public | similarity_dist                            | text, text                                                                                                                                                                                                                                                   | f
+ public | similarity_op                              | text, text                                                                                                                                                                                                                                                   | f
+ public | start_trial_by_session                     | p_session_token text, p_trial_days integer                                                                                                                                                                                                                   | t
+ public | strict_word_similarity                     | text, text                                                                                                                                                                                                                                                   | f
+ public | strict_word_similarity_commutator_op       | text, text                                                                                                                                                                                                                                                   | f
+ public | strict_word_similarity_dist_commutator_op  | text, text                                                                                                                                                                                                                                                   | f
+ public | strict_word_similarity_dist_op             | text, text                                                                                                                                                                                                                                                   | f
+ public | strict_word_similarity_op                  | text, text                                                                                                                                                                                                                                                   | f
+ public | toggle_leaderboard_sharing_by_session      | p_session_token text, p_enabled boolean, p_display_name text                                                                                                                                                                                                 | t
+ public | trigger_audit_log                          |                                                                                                                                                                                                                                                              | t
+ public | trigger_cancel_trial_queue_on_subscription |                                                                                                                                                                                                                                                              | t
+ public | trigger_set_updated_at                     |                                                                                                                                                                                                                                                              | f
+ public | update_client_profile_by_session           | p_session_token text, p_name text                                                                                                                                                                                                                            | t
+ public | update_ews_weekly_updated_at               |                                                                                                                                                                                                                                                              | f
+ public | update_leaderboard_snapshot_ts             |                                                                                                                                                                                                                                                              | f
+ public | update_shared_product_portions_by_curator  | p_curator_id uuid, p_product_id uuid, p_portions jsonb                                                                                                                                                                                                       | t
+ public | update_updated_at_column                   |                                                                                                                                                                                                                                                              | f
+ public | upsert_client_kv_by_session                | p_session_token text, p_key text, p_value jsonb                                                                                                                                                                                                              | t
+ public | upsert_weekly_snapshot_by_session          | p_session_token text, p_week_start date, p_week_end date, p_week_number integer, p_year integer, p_warnings_count integer, p_global_score integer, p_severity_breakdown jsonb, p_top_warnings jsonb                                                          | t
+ public | validate_profile_jsonb                     |                                                                                                                                                                                                                                                              | f
+ public | validate_write_context                     | p_context_id uuid, p_expected_curator_id uuid, p_expected_session_id uuid                                                                                                                                                                                    | f
+ public | word_similarity                            | text, text                                                                                                                                                                                                                                                   | f
+ public | word_similarity_commutator_op              | text, text                                                                                                                                                                                                                                                   | f
+ public | word_similarity_dist_commutator_op         | text, text                                                                                                                                                                                                                                                   | f
+ public | word_similarity_dist_op                    | text, text                                                                                                                                                                                                                                                   | f
+ public | word_similarity_op                         | text, text                                                                                                                                                                                                                                                   | f
+ public | write_client_kv_value                      | p_client_id uuid, p_key text, p_value jsonb                                                                                                                                                                                                                  | t
+(210 строк)
+
+
+== 3. Гранты EXECUTE по runtime-ролям (least-privilege проверка) ==
+  grantee  |                routine_name                |      privs      
+-----------+--------------------------------------------+-----------------
+ PUBLIC    | activate_trial_timer_by_session            | EXECUTE
+ PUBLIC    | add_working_days                           | EXECUTE
+ PUBLIC    | admin_activate_trial                       | EXECUTE
+ PUBLIC    | admin_add_to_queue                         | EXECUTE
+ PUBLIC    | admin_cancel_subscription                  | EXECUTE
+ PUBLIC    | admin_convert_lead                         | EXECUTE
+ PUBLIC    | admin_extend_subscription                  | EXECUTE
+ PUBLIC    | admin_extend_trial                         | EXECUTE
+ PUBLIC    | admin_get_all_clients                      | EXECUTE
+ PUBLIC    | admin_get_leads                            | EXECUTE
+ PUBLIC    | admin_get_queue_stats                      | EXECUTE,EXECUTE
+ PUBLIC    | admin_get_trial_queue_list                 | EXECUTE
+ PUBLIC    | admin_regenerate_pin                       | EXECUTE
+ PUBLIC    | admin_reject_request                       | EXECUTE
+ PUBLIC    | admin_remove_from_queue                    | EXECUTE
+ PUBLIC    | admin_send_offer                           | EXECUTE
+ PUBLIC    | admin_set_client_pin                       | EXECUTE
+ PUBLIC    | admin_update_lead_status                   | EXECUTE
+ PUBLIC    | admin_update_queue_settings                | EXECUTE
+ PUBLIC    | anonymize_lead_on_client_delete            | EXECUTE
+ PUBLIC    | approve_pending_products_bulk              | EXECUTE
+ PUBLIC    | assign_trials_from_queue                   | EXECUTE
+ PUBLIC    | audit_session_revoke                       | EXECUTE
+ PUBLIC    | backfill_shared_harm                       | EXECUTE
+ PUBLIC    | batch_get_client_kv_by_client_id           | EXECUTE
+ PUBLIC    | batch_get_client_kv_by_session             | EXECUTE
+ PUBLIC    | batch_upsert_client_kv_by_client_id        | EXECUTE
+ PUBLIC    | batch_upsert_client_kv_by_session          | EXECUTE
+ PUBLIC    | block_curator_write_if_locked              | EXECUTE
+ PUBLIC    | block_kv_under_restriction                 | EXECUTE
+ PUBLIC    | bump_client_kv_revision                    | EXECUTE
+ PUBLIC    | calculate_harm_score                       | EXECUTE
+ PUBLIC    | cancel_sub_on_payment_oferta_revoke        | EXECUTE
+ PUBLIC    | cancel_trial_queue                         | EXECUTE
+ PUBLIC    | cancel_trial_queue_on_purchase             | EXECUTE
+ PUBLIC    | check_day_overwrite_allowed                | EXECUTE
+ PUBLIC    | check_required_consents                    | EXECUTE
+ PUBLIC    | check_required_consents_by_session         | EXECUTE
+ PUBLIC    | check_required_consents_v2                 | EXECUTE
+ PUBLIC    | check_subscription_status                  | EXECUTE
+ PUBLIC    | check_suspicious_days                      | EXECUTE
+ PUBLIC    | claim_pin_token_chat                       | EXECUTE
+ PUBLIC    | claim_trial_offer                          | EXECUTE
+ PUBLIC    | cleanup_expired_sessions                   | EXECUTE
+ PUBLIC    | cleanup_lead_submission_attempts           | EXECUTE
+ PUBLIC    | cleanup_old_ews_weekly_snapshots           | EXECUTE
+ PUBLIC    | cleanup_security_logs                      | EXECUTE
+ PUBLIC    | client_data_changelog_dedup_guard          | EXECUTE
+ PUBLIC    | client_pin_auth                            | EXECUTE
+ PUBLIC    | complete_dsar                              | EXECUTE
+ PUBLIC    | compute_ceb_from_day_jsonb                 | EXECUTE
+ PUBLIC    | compute_product_fingerprint                | EXECUTE
+ PUBLIC    | confirm_age_by_session                     | EXECUTE
+ PUBLIC    | consents_immutability_guard                | EXECUTE
+ PUBLIC    | create_client_with_pin                     | EXECUTE
+ PUBLIC    | create_pending_product_by_session          | EXECUTE
+ PUBLIC    | decrypt_health_data                        | EXECUTE
+ PUBLIC    | delete_client_kv_by_session                | EXECUTE
+ PUBLIC    | delete_gamification_events_by_curator      | EXECUTE
+ PUBLIC    | delete_my_account                          | EXECUTE
+ PUBLIC    | delete_old_weekly_snapshots_by_session     | EXECUTE
+ PUBLIC    | encrypt_health_data                        | EXECUTE
+ PUBLIC    | ensure_subscription_exists                 | EXECUTE
+ PUBLIC    | export_my_data_by_session                  | EXECUTE
+ PUBLIC    | fn_bump_change_marker                      | EXECUTE
+ PUBLIC    | generate_salt                              | EXECUTE
+ PUBLIC    | get_change_markers_by_session              | EXECUTE
+ PUBLIC    | get_client_blocklist                       | EXECUTE
+ PUBLIC    | get_client_consents                        | EXECUTE
+ PUBLIC    | get_client_data_by_session                 | EXECUTE
+ PUBLIC    | get_client_kv                              | EXECUTE
+ PUBLIC    | get_client_kv_by_session                   | EXECUTE
+ PUBLIC    | get_client_salt                            | EXECUTE
+ PUBLIC    | get_consent_proof_by_session               | EXECUTE
+ PUBLIC    | get_curator_clients                        | EXECUTE
+ PUBLIC    | get_effective_subscription_status          | EXECUTE
+ PUBLIC    | get_encryption_key                         | EXECUTE
+ PUBLIC    | get_gamification_events_by_curator         | EXECUTE
+ PUBLIC    | get_gamification_events_by_session         | EXECUTE
+ PUBLIC    | get_leaderboard_by_session                 | EXECUTE
+ PUBLIC    | get_leaderboard_weekly_by_session          | EXECUTE
+ PUBLIC    | get_my_consents_by_session                 | EXECUTE
+ PUBLIC    | get_public_trial_capacity                  | EXECUTE
+ PUBLIC    | get_recent_data_loss_alerts                | EXECUTE
+ PUBLIC    | get_shared_products                        | EXECUTE
+ PUBLIC    | get_subscription_status_by_session         | EXECUTE
+ PUBLIC    | get_subscription_status_for_curator        | EXECUTE
+ PUBLIC    | get_trial_drip_targets                     | EXECUTE
+ PUBLIC    | get_trial_queue_status                     | EXECUTE
+ PUBLIC    | get_weekly_snapshots_by_session            | EXECUTE
+ PUBLIC    | hash_pin                                   | EXECUTE
+ PUBLIC    | increment_pin_attempt                      | EXECUTE
+ PUBLIC    | is_always_writable_key                     | EXECUTE
+ PUBLIC    | is_health_key                              | EXECUTE
+ PUBLIC    | issue_client_session                       | EXECUTE
+ PUBLIC    | issue_write_context_by_curator             | EXECUTE
+ PUBLIC    | issue_write_context_by_session             | EXECUTE
+ PUBLIC    | log_api_dsar                               | EXECUTE
+ PUBLIC    | log_client_event_by_session                | EXECUTE
+ PUBLIC    | log_consents                               | EXECUTE
+ PUBLIC    | log_data_access                            | EXECUTE
+ PUBLIC    | log_gamification_event_by_curator          | EXECUTE
+ PUBLIC    | log_gamification_event_by_session          | EXECUTE
+ PUBLIC    | mark_drip_sent                             | EXECUTE
+ PUBLIC    | mark_inactive_for_cleanup                  | EXECUTE
+ PUBLIC    | normalize_phone                            | EXECUTE
+ PUBLIC    | parse_time_mins                            | EXECUTE
+ PUBLIC    | publish_leaderboard_snapshot_by_session    | EXECUTE
+ PUBLIC    | publish_shared_product_by_session          | EXECUTE
+ PUBLIC    | purge_gamification_events                  | EXECUTE
+ PUBLIC    | purge_health_data                          | EXECUTE
+ PUBLIC    | read_client_kv_value                       | EXECUTE
+ PUBLIC    | record_offline_dsar                        | EXECUTE
+ PUBLIC    | request_restriction_by_session             | EXECUTE
+ PUBLIC    | request_trial                              | EXECUTE
+ PUBLIC    | require_client_id                          | EXECUTE
+ PUBLIC    | restore_profile_snapshot                   | EXECUTE
+ PUBLIC    | revoke_all_sessions_for_client             | EXECUTE
+ PUBLIC    | revoke_consent                             | EXECUTE
+ PUBLIC    | revoke_consent_by_session                  | EXECUTE
+ PUBLIC    | revoke_curator_access_by_session           | EXECUTE
+ PUBLIC    | revoke_session                             | EXECUTE
+ PUBLIC    | revoke_write_contexts_for_curator          | EXECUTE
+ PUBLIC    | safe_upsert_client_kv                      | EXECUTE
+ PUBLIC    | set_subscription_active_until              | EXECUTE
+ PUBLIC    | set_updated_at                             | EXECUTE
+ PUBLIC    | shared_products_pending_set_fingerprint    | EXECUTE
+ PUBLIC    | start_trial_by_session                     | EXECUTE
+ PUBLIC    | toggle_leaderboard_sharing_by_session      | EXECUTE
+ PUBLIC    | trigger_audit_log                          | EXECUTE
+ PUBLIC    | trigger_cancel_trial_queue_on_subscription | EXECUTE
+ PUBLIC    | trigger_set_updated_at                     | EXECUTE
+ PUBLIC    | update_client_profile_by_session           | EXECUTE
+ PUBLIC    | update_ews_weekly_updated_at               | EXECUTE
+ PUBLIC    | update_leaderboard_snapshot_ts             | EXECUTE
+ PUBLIC    | update_shared_product_portions_by_curator  | EXECUTE
+ PUBLIC    | update_updated_at_column                   | EXECUTE
+ PUBLIC    | upsert_client_kv_by_session                | EXECUTE
+ PUBLIC    | upsert_weekly_snapshot_by_session          | EXECUTE
+ PUBLIC    | validate_profile_jsonb                     | EXECUTE
+ PUBLIC    | validate_write_context                     | EXECUTE
+ PUBLIC    | write_client_kv_value                      | EXECUTE
+ heys_rest | delete_old_weekly_snapshots_by_session     | EXECUTE
+ heys_rest | get_weekly_snapshots_by_session            | EXECUTE
+ heys_rest | upsert_weekly_snapshot_by_session          | EXECUTE
+ heys_rest | validate_write_context                     | EXECUTE
+ heys_rpc  | activate_trial_timer_by_session            | EXECUTE
+ heys_rpc  | admin_activate_trial                       | EXECUTE
+ heys_rpc  | admin_cancel_subscription                  | EXECUTE
+ heys_rpc  | admin_convert_lead                         | EXECUTE
+ heys_rpc  | admin_extend_subscription                  | EXECUTE
+ heys_rpc  | admin_extend_trial                         | EXECUTE
+ heys_rpc  | admin_get_all_clients                      | EXECUTE
+ heys_rpc  | admin_get_leads                            | EXECUTE
+ heys_rpc  | admin_regenerate_pin                       | EXECUTE
+ heys_rpc  | admin_set_client_pin                       | EXECUTE
+ heys_rpc  | approve_pending_products_bulk              | EXECUTE
+ heys_rpc  | backfill_shared_harm                       | EXECUTE
+ heys_rpc  | batch_get_client_kv_by_client_id           | EXECUTE
+ heys_rpc  | batch_get_client_kv_by_session             | EXECUTE
+ heys_rpc  | batch_upsert_client_kv_by_client_id        | EXECUTE
+ heys_rpc  | batch_upsert_client_kv_by_curator          | EXECUTE
+ heys_rpc  | batch_upsert_client_kv_by_session          | EXECUTE
+ heys_rpc  | check_payment_consent_by_session           | EXECUTE
+ heys_rpc  | check_required_consents                    | EXECUTE
+ heys_rpc  | check_required_consents_by_session         | EXECUTE
+ heys_rpc  | check_required_consents_v2                 | EXECUTE
+ heys_rpc  | claim_pin_token_chat                       | EXECUTE
+ heys_rpc  | client_pin_auth                            | EXECUTE
+ heys_rpc  | complete_dsar                              | EXECUTE
+ heys_rpc  | compute_product_fingerprint                | EXECUTE
+ heys_rpc  | confirm_age_by_session                     | EXECUTE
+ heys_rpc  | create_client_with_pin                     | EXECUTE
+ heys_rpc  | create_pending_product_by_session          | EXECUTE
+ heys_rpc  | delete_client_kv_by_session                | EXECUTE
+ heys_rpc  | delete_gamification_events_by_curator      | EXECUTE
+ heys_rpc  | delete_message_as_client                   | EXECUTE
+ heys_rpc  | delete_message_as_curator                  | EXECUTE
+ heys_rpc  | delete_my_account                          | EXECUTE
+ heys_rpc  | delete_old_weekly_snapshots_by_session     | EXECUTE
+ heys_rpc  | edit_message_as_client                     | EXECUTE
+ heys_rpc  | edit_message_as_curator                    | EXECUTE
+ heys_rpc  | export_my_data_by_session                  | EXECUTE
+ heys_rpc  | get_change_markers_by_session              | EXECUTE
+ heys_rpc  | get_client_consents                        | EXECUTE
+ heys_rpc  | get_client_data_by_session                 | EXECUTE
+ heys_rpc  | get_client_kv_by_session                   | EXECUTE
+ heys_rpc  | get_client_salt                            | EXECUTE
+ heys_rpc  | get_consent_proof_by_session               | EXECUTE
+ heys_rpc  | get_curator_clients                        | EXECUTE
+ heys_rpc  | get_curator_unread_counts                  | EXECUTE
+ heys_rpc  | get_effective_subscription_status          | EXECUTE
+ heys_rpc  | get_gamification_events_by_curator         | EXECUTE
+ heys_rpc  | get_gamification_events_by_session         | EXECUTE
+ heys_rpc  | get_messages_thread_as_client              | EXECUTE
+ heys_rpc  | get_messages_thread_as_curator             | EXECUTE
+ heys_rpc  | get_my_consents_by_session                 | EXECUTE
+ heys_rpc  | get_my_unread_count_as_client              | EXECUTE
+ heys_rpc  | get_shared_products                        | EXECUTE
+ heys_rpc  | get_subscription_status_by_session         | EXECUTE
+ heys_rpc  | get_trial_drip_targets                     | EXECUTE
+ heys_rpc  | get_weekly_snapshots_by_session            | EXECUTE
+ heys_rpc  | issue_write_context_by_curator             | EXECUTE
+ heys_rpc  | issue_write_context_by_session             | EXECUTE
+ heys_rpc  | log_api_dsar                               | EXECUTE
+ heys_rpc  | log_client_event_by_session                | EXECUTE
+ heys_rpc  | log_consents                               | EXECUTE
+ heys_rpc  | log_consents_by_session                    | EXECUTE
+ heys_rpc  | log_data_access                            | EXECUTE
+ heys_rpc  | log_gamification_event_by_curator          | EXECUTE
+ heys_rpc  | log_gamification_event_by_session          | EXECUTE
+ heys_rpc  | mark_drip_sent                             | EXECUTE
+ heys_rpc  | mark_messages_read_as_client               | EXECUTE
+ heys_rpc  | mark_messages_read_as_curator              | EXECUTE
+ heys_rpc  | publish_shared_product_by_curator          | EXECUTE
+ heys_rpc  | publish_shared_product_by_session          | EXECUTE
+ heys_rpc  | record_offline_dsar                        | EXECUTE
+ heys_rpc  | request_restriction_by_session             | EXECUTE
+ heys_rpc  | reset_client_pin                           | EXECUTE
+ heys_rpc  | revoke_all_sessions_for_client             | EXECUTE
+ heys_rpc  | revoke_consent                             | EXECUTE
+ heys_rpc  | revoke_consent_by_session                  | EXECUTE
+ heys_rpc  | revoke_curator_access_by_session           | EXECUTE
+ heys_rpc  | revoke_session                             | EXECUTE
+ heys_rpc  | revoke_write_contexts_for_curator          | EXECUTE
+ heys_rpc  | send_message_as_client                     | EXECUTE,EXECUTE
+ heys_rpc  | send_message_as_curator                    | EXECUTE,EXECUTE
+ heys_rpc  | start_trial_by_session                     | EXECUTE
+ heys_rpc  | subscription_can_write                     | EXECUTE
+ heys_rpc  | toggle_message_acked_as_client             | EXECUTE
+ heys_rpc  | toggle_message_done_by_curator             | EXECUTE
+ heys_rpc  | update_shared_product_portions             | EXECUTE
+ heys_rpc  | upsert_client_kv_by_session                | EXECUTE
+ heys_rpc  | upsert_weekly_snapshot_by_session          | EXECUTE
+ heys_rpc  | validate_write_context                     | EXECUTE
+ heys_rpc  | verify_client_pin_v3                       | EXECUTE
+(236 строк)
+
+
+== 4. Таблицы public БЕЗ включённого RLS ==
+   Sensitive-таблицы (client_*, payments, sessions, consents) тут быть НЕ должны.
+              table               | rls_enabled | rls_forced 
+----------------------------------+-------------+------------
+ audit_logs                       | f           | f
+ auth_rate_limits                 | f           | f
+ breach_incidents                 | f           | f
+ client_change_markers            | f           | f
+ client_data_changelog            | f           | f
+ client_event_log                 | f           | f
+ client_kv_store                  | f           | f
+ client_kv_store_archive_20260511 | f           | f
+ client_log_trace                 | f           | f
+ client_messages                  | f           | f
+ client_sessions                  | f           | f
+ clients                          | f           | f
+ consents                         | f           | f
+ curator_push_subscriptions       | f           | f
+ curator_sessions                 | f           | f
+ curator_trial_limits             | f           | f
+ curators                         | f           | f
+ data_access_audit_log            | f           | f
+ data_loss_audit                  | f           | f
+ data_subject_requests            | f           | f
+ gamification_events              | f           | f
+ kv_store                         | f           | f
+ lead_submission_attempts         | f           | f
+ leads                            | f           | f
+ leads_pre_rkn_test_archive       | f           | f
+ maintenance_heartbeat            | f           | f
+ payment_events                   | f           | f
+ payments                         | f           | f
+ pending_products                 | f           | f
+ pin_login_attempts               | f           | f
+ profile_snapshots                | f           | f
+ push_idempotency                 | f           | f
+ push_subscriptions               | f           | f
+ security_alerts_log              | f           | f
+ security_events                  | f           | f
+ shared_products                  | f           | f
+ shared_products_blocklist        | f           | f
+ shared_products_pending          | f           | f
+ subscriptions                    | f           | f
+ trial_queue                      | f           | f
+ trial_queue_events               | f           | f
+ ews_weekly_snapshots             | t           | f
+ leaderboard_preferences          | t           | f
+ leaderboard_snapshots            | t           | f
+ write_contexts                   | t           | f
+(45 строк)
+
+
+== 5. RLS-политики (pg_policies) ==
+      tablename       |             policyname              | cmd |  roles   |             using_expr              | with_check 
+----------------------+-------------------------------------+-----+----------+-------------------------------------+------------
+ ews_weekly_snapshots | heys_admin can access all snapshots | ALL | {public} | (CURRENT_USER = 'heys_admin'::name) | 
+ ews_weekly_snapshots | heys_rest can access all snapshots  | ALL | {public} | (CURRENT_USER = 'heys_rest'::name)  | 
+ ews_weekly_snapshots | heys_rpc can access all snapshots   | ALL | {public} | (CURRENT_USER = 'heys_rpc'::name)   | 
+ write_contexts       | write_contexts_no_direct_access     | ALL | {public} | false                               | 
+(4 строки)
+
+
+== 6. Прямой доступ к таблицам у anon/authenticated/PUBLIC ==
+   Ожидаем: пусто/минимум. Прямой SELECT/INSERT в обход RPC — риск.
+ grantee | table_name | privs 
+---------+------------+-------
+(0 строк)
+
+
+== 7. FK на clients(id): тип ON DELETE (orphan-leak проверка) ==
+   confdeltype: a=NO ACTION, r=RESTRICT, c=CASCADE, n=SET NULL, d=SET DEFAULT
+   Ожидаем c (или n для leads). a/r у per-client таблицы = будущая утечка сирот.
+          table          |               constraint               | on_delete 
+-------------------------+----------------------------------------+-----------
+ client_kv_store         | client_kv_store_client_id_fkey         | c
+ consents                | fk_consents_client                     | c
+ payments                | fk_payments_client                     | c
+ leads                   | leads_client_id_fkey                   | n
+ pending_products        | pending_products_client_id_fkey        | c
+ client_sessions         | client_sessions_client_id_fkey         | c
+ subscriptions           | subscriptions_client_id_fkey           | c
+ trial_queue             | trial_queue_client_id_fkey             | c
+ ews_weekly_snapshots    | ews_weekly_snapshots_client_id_fkey    | c
+ leaderboard_preferences | leaderboard_preferences_client_id_fkey | c
+ leaderboard_snapshots   | leaderboard_snapshots_client_id_fkey   | c
+ client_change_markers   | client_change_markers_client_id_fkey   | c
+ push_subscriptions      | push_subscriptions_client_id_fkey      | c
+ client_data_changelog   | client_data_changelog_client_id_fkey   | c
+ client_event_log        | client_event_log_client_id_fkey        | c
+ client_messages         | client_messages_client_id_fkey         | c
+ client_log_trace        | client_log_trace_client_id_fkey        | c
+ profile_snapshots       | profile_snapshots_client_id_fkey       | c
+ write_contexts          | write_contexts_client_id_fkey          | c
+(19 строк)
+
+
+== 8. Прод-проверка инварианта №8: UPSERT с auth-триггерами ==
+   (ручная сверка) убедись, что client_kv_store ON CONFLICT делает
+   SET user_id = EXCLUDED.user_id — иначе stale user_id блокирует writes.
+
+== Готово. Перенеси находки в docs/SECURITY_REVIEW.md ==

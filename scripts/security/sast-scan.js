@@ -221,15 +221,53 @@ class SASTScanner {
       ) {
         return true;
       }
+      // Генерируемые бандлы и минифицированные файлы — не источник, только шум.
+      if (/_bundle_v\d+\.js$/.test(normalized) || /\.min\.js$/.test(normalized)) {
+        return true;
+      }
       return /\.(test|spec)\.[jt]sx?$/.test(normalized);
     };
 
-    const walk = (entryPath) => {
-      if (!fs.existsSync(entryPath)) return;
+    // Каталоги, в которые НЕ заходим вообще. Прежний обход рекурсировал ВНУТРЬ
+    // node_modules и pnpm-симлинк-фермы `.pnpm` (исключение применялось только
+    // к файлам), что исчерпывало файловые дескрипторы → `ENFILE: file table
+    // overflow`. Прунинг на уровне каталога + отказ ходить по симлинкам это чинит.
+    const EXCLUDED_DIRS = new Set([
+      'node_modules',
+      'dist',
+      'build',
+      'out',
+      'coverage',
+      'public',
+      '.git',
+      '.next',
+      '.turbo',
+      '.cache',
+      '.pnpm',
+      '.husky',
+      'security-reports',
+    ]);
 
-      const stat = fs.statSync(entryPath);
+    const walk = (entryPath) => {
+      let stat;
+      try {
+        // lstat (не stat): распознать симлинки и НЕ идти по ним — `.pnpm` полон
+        // симлинков и может зациклить/раздуть обход.
+        stat = fs.lstatSync(entryPath);
+      } catch {
+        return;
+      }
+      if (stat.isSymbolicLink()) return;
+
       if (stat.isDirectory()) {
-        for (const child of fs.readdirSync(entryPath)) {
+        if (EXCLUDED_DIRS.has(path.basename(entryPath))) return; // прунинг ДО рекурсии
+        let children;
+        try {
+          children = fs.readdirSync(entryPath);
+        } catch {
+          return;
+        }
+        for (const child of children) {
           walk(path.join(entryPath, child));
         }
         return;
