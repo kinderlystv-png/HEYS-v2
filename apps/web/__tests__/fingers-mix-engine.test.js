@@ -335,3 +335,54 @@ describe('mixEngine Phase 2b: goal axis (goal предлагает, bucket ре�
     expect(p.intensity).toBe('recovery');
   });
 });
+
+// Базовая регрессия safety ПЕРЕД strangler-рефактором логики (Фаза 1 / Шаг 1).
+// Фиксирует инварианты, ещё НЕ покрытые тестами выше: danger-budget по bucket,
+// порядок энергосистем в слотах, age-gate 14 лет, идемпотентность пересборки.
+// Все ассерты сверены с живым движком node-зондом (vitest в CI — источник истины).
+describe('mixEngine: safety regression (pre-strangler baseline)', () => {
+  beforeAll(setupOnce);
+
+  it('danger-budget: сумма dangerCost слотов ≤ DANGER_BUDGET[bucket] (max)', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' });
+    const t = p.__trace;
+    const cap = t.constants.DANGER_BUDGET[t.resolution.bucket];
+    const spent = t.slots.reduce((s, sl) => s + (sl.chosen ? sl.chosen.dangerCost : 0), 0);
+    expect(t.resolution.bucket).toBe('max');
+    expect(spent).toBeLessThanOrEqual(cap);
+  });
+
+  it('danger-budget: соблюдается и в recovery (cap жёстче)', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'recovery' });
+    const t = p.__trace;
+    const cap = t.constants.DANGER_BUDGET[t.resolution.bucket];
+    const spent = t.slots.reduce((s, sl) => s + (sl.chosen ? sl.chosen.dangerCost : 0), 0);
+    expect(t.resolution.bucket).toBe('recovery');
+    expect(spent).toBeLessThanOrEqual(cap);
+  });
+
+  it('порядок энергосистем: power/max-strength раньше strength-endurance/capacity', () => {
+    const p = E().recommendDay({ equipmentTypes: ['block'], intensity: 'all', age: 25, readiness: 'max' });
+    const rs = roles(p);
+    const hardMax = Math.max(rs.indexOf('power'), rs.indexOf('max-strength'));
+    const endurIdx = ['strength-endurance', 'capacity'].map((r) => rs.indexOf(r)).filter((i) => i >= 0);
+    const minEndur = endurIdx.length ? Math.min(...endurIdx) : Infinity;
+    expect(hardMax === -1 || hardMax < minEndur).toBe(true);
+  });
+
+  it('age-gate 14 лет: ни одного addedWeightKg>0 и нет max-strength/power', () => {
+    const p = E().recommendDay({ equipmentTypes: ['full', 'block'], intensity: 'all', age: 14, readiness: 'max' });
+    if (p === null) return; // fail-closed тоже допустимо
+    expect(p.exercises.every((e) => !(Number(e.addedWeightKg) > 0))).toBe(true);
+    expect(p.exercises.every((e) => e.__role !== 'max-strength' && e.__role !== 'power')).toBe(true);
+  });
+
+  it('идемпотентность: два вызова с тем же входом → те же роли, bucket, intensity', () => {
+    const opt = { equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'moderate' };
+    const a = E().recommendDay(opt);
+    const b = E().recommendDay(opt);
+    expect(roles(a)).toEqual(roles(b));
+    expect(a.__trace.resolution.bucket).toBe(b.__trace.resolution.bucket);
+    expect(a.intensity).toBe(b.intensity);
+  });
+});
