@@ -386,3 +386,74 @@ describe('mixEngine: safety regression (pre-strangler baseline)', () => {
     expect(a.intensity).toBe(b.intensity);
   });
 });
+
+// Фаза 1 / Шаг 2: методологический data-слой (quality_catalog). Аддитивный —
+// PROGRAMS не мутируется, движок не меняется. Проверяем покрытие, валидность
+// enum'ов, правило коллизии «intermittent → явный energySystem» и enrichProgram.
+describe('quality_catalog: methodology data layer (Phase 1 / step 2)', () => {
+  beforeAll(setupOnce);
+  beforeAll(() => {
+    // eslint-disable-next-line no-eval
+    eval(fs.readFileSync(path.join(FINGERS_DIR, 'heys_fingers_quality_catalog_v1.js'), 'utf8'));
+  });
+
+  const QC = () => globalThis.HEYS.Fingers.qualityCatalog;
+  const P = () => globalThis.HEYS.Fingers.PROGRAMS;
+
+  it('9 канонических качеств (METHODOLOGY ч.2)', () => {
+    expect(QC().QUALITIES).toEqual([
+      'finger_strength', 'max_strength', 'power', 'anaerobic_capacity',
+      'aerobic_base', 'technique', 'antagonist', 'mobility', 'mental'
+    ]);
+  });
+
+  it('deriveEnergySystem: границы ≤12 / 12–180 / >180 (карта 1.1 / §3.1)', () => {
+    const d = QC().deriveEnergySystem;
+    expect(d(5)).toBe('phosphagen');
+    expect(d(12)).toBe('phosphagen');
+    expect(d(30)).toBe('glycolytic');
+    expect(d(180)).toBe('glycolytic');
+    expect(d(181)).toBe('aerobic');
+    expect(d(0)).toBeNull();
+    expect(d(NaN)).toBeNull();
+  });
+
+  it('validateProgramMeta: 0 ошибок (enum + правило intermittent + полное покрытие)', () => {
+    expect(QC().validateProgramMeta()).toEqual([]);
+  });
+
+  it('каждая программа каталога имеет PROGRAM_META', () => {
+    expect(P().every((p) => QC().metaFor(p.id))).toBe(true);
+  });
+
+  it('коллизия закрыта: repeaters 7:3 → glycolytic (explicit), НЕ phosphagen', () => {
+    const rp = globalThis.HEYS.Fingers.getProgramById('repeaters_7_3');
+    const am = QC().atomMetaFor('repeaters_7_3', 0);
+    // naive derive по одиночному hangSec=7 дал бы phosphagen — поэтому нужен explicit
+    expect(QC().deriveEnergySystem(rp.exercises[0].hangSec)).toBe('phosphagen');
+    expect(QC().energySystemOf(rp.exercises[0], am)).toBe('glycolytic');
+  });
+
+  it('single-effort max-hang (10×1) → phosphagen через derive', () => {
+    const mh = globalThis.HEYS.Fingers.getProgramById('horst_max_hangs');
+    const am = QC().atomMetaFor('horst_max_hangs', 0);
+    expect(QC().energySystemOf(mh.exercises[0], am)).toBe('phosphagen');
+  });
+
+  it('enrichProgram: аддитивно (поля добавлены) и НЕ мутирует PROGRAMS', () => {
+    const mh = globalThis.HEYS.Fingers.getProgramById('horst_max_hangs');
+    const before = JSON.stringify(mh.exercises[0]);
+    const en = QC().enrichProgram(mh);
+    expect(en.exercises[0].quality).toBe('finger_strength');
+    expect(en.exercises[0].emphasis).toBe('max');
+    expect(en.exercises[0].energySystem).toBe('phosphagen');
+    expect(en.exercises[0].hangSec).toBe(mh.exercises[0].hangSec); // старые поля целы
+    expect(JSON.stringify(mh.exercises[0])).toBe(before); // источник не тронут
+  });
+
+  it('PROGRAMS остаётся чистым (методология живёт отдельным слоем)', () => {
+    const mh = globalThis.HEYS.Fingers.getProgramById('horst_max_hangs');
+    expect(mh.exercises[0].quality).toBeUndefined();
+    expect(mh.exercises[0].emphasis).toBeUndefined();
+  });
+});

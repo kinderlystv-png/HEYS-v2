@@ -26,7 +26,12 @@ const SCAN_CONFIG = {
     'src/**/*.{ts,tsx,js,jsx}',
   ],
 
-  // Исключения из сканирования
+  // Исключения из сканирования.
+  // SEC-014 (2026-06-08): добавлены `.claude/**` (агентские worktrees), `.git/**`,
+  // `apps/web/public/**` (собранные бандлы — продукт сборки, не source), `archive/**`,
+  // bundle-файлы и `*-vendor.js`. До этого SAST сканировал дубликаты исходников из
+  // worktree-копий и давал 85 critical SQL-injection + 100 high XSS — все ложные
+  // (pattern-matching на строках вроде `query + ${var}` в production-коде).
   excludePatterns: [
     '**/node_modules/**',
     '**/dist/**',
@@ -34,6 +39,20 @@ const SCAN_CONFIG = {
     '**/*.test.{ts,tsx,js,jsx}',
     '**/*.spec.{ts,tsx,js,jsx}',
     '**/coverage/**',
+    '.claude/**',
+    '.git/**',
+    'apps/web/public/**',
+    'archive/**',
+    '**/*.bundle.*.js',
+    '**/*.bundle.js',
+    '**/*-vendor.js',
+    // bundled vendor JS не имеет смысл сканировать pattern-matching сканером:
+    // 100% находок — токены минификации, ложные срабатывания.
+    'apps/web/react-bundle.js',
+    // self-match: scanner ловит свои же regex'ы как «потенциальный SQL-injection».
+    'scripts/security/sast-scan.js',
+    // pentest-инструмент содержит intentional test-payloads (hardcoded-secrets маркеры).
+    'packages/shared/src/security/pentest.ts',
   ],
 
   // Правила безопасности
@@ -217,14 +236,28 @@ class SASTScanner {
         normalized.includes('/node_modules/') ||
         normalized.includes('/dist/') ||
         normalized.includes('/build/') ||
-        normalized.includes('/coverage/')
+        normalized.includes('/coverage/') ||
+        normalized.includes('/.claude/') ||
+        normalized.includes('/archive/')
       ) {
         return true;
       }
       // Генерируемые бандлы и минифицированные файлы — не источник, только шум.
-      if (/_bundle_v\d+\.js$/.test(normalized) || /\.min\.js$/.test(normalized)) {
+      // SEC-014 (2026-06-08): расширено — `*.bundle.<hash>.js` (legacy public bundles),
+      // `react-bundle.js` (vendor React), `*-vendor.js`.
+      if (
+        /_bundle_v\d+\.js$/.test(normalized) ||
+        /\.min\.js$/.test(normalized) ||
+        /\.bundle\.[a-f0-9]+\.js$/.test(normalized) ||
+        /\/react-bundle\.js$/.test(normalized) ||
+        /-vendor\.js$/.test(normalized)
+      ) {
         return true;
       }
+      // Сам сканер содержит regex-паттерны вида `SELECT.*\+.*\$\{` — self-match.
+      if (/\/scripts\/security\/sast-scan\.js$/.test(normalized)) return true;
+      // Pentest-инструмент содержит intentional test-payloads (mock secrets/SQL).
+      if (/\/packages\/shared\/src\/security\/pentest\.ts$/.test(normalized)) return true;
       return /\.(test|spec)\.[jt]sx?$/.test(normalized);
     };
 
@@ -245,6 +278,8 @@ class SASTScanner {
       '.cache',
       '.pnpm',
       '.husky',
+      '.claude', // SEC-014: агентские worktrees — копии исходников, не production-код
+      'archive', // SEC-014: исторический хлам
       'security-reports',
     ]);
 
@@ -303,6 +338,21 @@ class SASTScanner {
           for (const match of matches) {
             const lineNumber = this.getLineNumber(content, match.index);
 
+            // SEC-014 false-positive filters для sqlInjection rule:
+            //   1) `$${...}` в evidence — JS template-literal placeholder (`$2`), параметризация.
+            //   2) строка совпадения — log/console-сообщение, не SQL.
+            //   3) совпадение — на слово `query` как часть идентификатора (searchQuery,
+            //      queryString, и т.п.), а не на SQL-объект.
+            // Без этого regex даёт 14 critical на pg-параметризованных запросах + log'ах.
+            if (ruleName === 'sqlInjection') {
+              if (/\$\$\{/.test(match[0])) continue;
+              const lineText = this.getLineText(content, match.index);
+              if (/\bconsole\.(log|info|warn|error|debug)\b/.test(lineText)) continue;
+              if (/\b(?:search|query|param)Query\b|\bqueryString\b|\brule\.key\b/.test(lineText)) {
+                continue;
+              }
+            }
+
             const normalizedRule = this.normalizeRuleName(ruleName);
             const vulnerability = {
               id: `${ruleName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -349,6 +399,16 @@ class SASTScanner {
   getLineNumber(content, index) {
     const lines = content.substring(0, index).split('\n');
     return lines.length;
+  }
+
+  /**
+   * Возвращает полный текст строки, в которой находится символ с заданным индексом.
+   * Используется в SEC-014 false-positive фильтрах (нужен контекст вокруг match[0]).
+   */
+  getLineText(content, index) {
+    const before = content.lastIndexOf('\n', index - 1);
+    const after = content.indexOf('\n', index);
+    return content.slice(before + 1, after === -1 ? content.length : after);
   }
 
   /**
