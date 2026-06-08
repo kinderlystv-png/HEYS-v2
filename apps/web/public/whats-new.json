@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.08.25a81041",
+      "buildHash": "25a81041",
+      "date": "2026-06-08",
+      "kind": "technical",
+      "profile": "technical-backend-api",
+      "title": "Исправления серверной логики",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Улучшили стабильность серверных сценариев",
+          "description": "В этом обновлении мы внесли внутренние исправления в серверную логику и API-сценарии."
+        }
+      ],
+      "coveredCommits": ["a71d87fc"]
+    },
+    {
       "version": "2026.06.08.a71d87fc",
       "buildHash": "a71d87fc",
       "date": "2026-06-08",
@@ -125,21 +141,6 @@
     {
       "version": "2026.06.08.9ee0398e",
       "buildHash": "9ee0398e",
-      "date": "2026-06-08",
-      "kind": "technical",
-      "profile": "technical-data-security",
-      "title": "Улучшения обработки данных и защиты",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Усилили внутренние механизмы защиты",
-          "description": "В этом обновлении мы улучшили внутреннюю обработку данных и защитные сценарии системы."
-        }
-      ]
-    },
-    {
-      "version": "2026.06.08.629bb680",
-      "buildHash": "629bb680",
       "date": "2026-06-08",
       "kind": "technical",
       "profile": "technical-data-security",
