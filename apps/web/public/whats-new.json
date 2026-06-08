@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.08.dc1fcee7",
+      "buildHash": "dc1fcee7",
+      "date": "2026-06-08",
+      "kind": "technical",
+      "profile": "technical-general",
+      "title": "Исправления ошибок и улучшение стабильности",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Исправили внутренние ошибки и улучшили стабильность",
+          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
+        }
+      ],
+      "coveredCommits": ["94f04a06", "5fabebad"]
+    },
+    {
       "version": "2026.06.08.b0e72df1",
       "buildHash": "b0e72df1",
       "date": "2026-06-08",
@@ -140,22 +156,6 @@
           "description": "Мы доработали внутреннюю логику синхронизации и хранения данных, чтобы приложение работало стабильнее и надёжнее в сложных сценариях."
         }
       ]
-    },
-    {
-      "version": "2026.06.08.5b27336a",
-      "buildHash": "5b27336a",
-      "date": "2026-06-08",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "freeze step list during wizard session",
-      "items": [
-        {
-          "type": "fix",
-          "title": "freeze step list during wizard session",
-          "description": "freeze step list during wizard session"
-        }
-      ],
-      "coveredCommits": ["5b27336a"]
     }
   ]
 }
