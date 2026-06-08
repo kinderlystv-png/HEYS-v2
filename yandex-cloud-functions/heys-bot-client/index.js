@@ -281,6 +281,37 @@ module.exports.handler = async function (event) {
   }
 
   if (method === 'POST' && path.includes('/webhook')) {
+    // 🛡️ SEC-020 (2026-06-08): verify Telegram secret_token header.
+    // Telegram setWebhook позволяет настроить `secret_token` — Telegram потом
+    // шлёт его в каждом webhook'е через заголовок `X-Telegram-Bot-Api-Secret-Token`.
+    // Без этой проверки любой может слать fake updates (spam users, race
+    // claim_pin_token_chat утечённым UUID и т.д.).
+    //
+    // Graceful fallback: если TELEGRAM_WEBHOOK_SECRET не настроен в env — warn,
+    // но не блокируем (чтобы не сломать прод до того как user вызовет setWebhook
+    // с правильным secret_token). Когда env-var выставлен и Telegram шлёт
+    // header — проверяем строго.
+    const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
+    if (expected) {
+      const headers = event?.headers || {};
+      const provided =
+        headers['x-telegram-bot-api-secret-token'] ||
+        headers['X-Telegram-Bot-Api-Secret-Token'] ||
+        '';
+      if (!provided || typeof provided !== 'string') {
+        console.warn('[BOT] webhook rejected: missing secret_token header');
+        return jsonResponse(403, { error: 'forbidden' });
+      }
+      const a = Buffer.from(provided, 'utf8');
+      const b = Buffer.from(expected, 'utf8');
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        console.warn('[BOT] webhook rejected: secret_token mismatch');
+        return jsonResponse(403, { error: 'forbidden' });
+      }
+    } else {
+      console.warn('[BOT] TELEGRAM_WEBHOOK_SECRET not set — webhook accepts ANY caller. ' +
+        'Set env-var + setWebhook with secret_token=<same> to enable SEC-020 защиту.');
+    }
     return await handleTelegramWebhook(body);
   }
 
