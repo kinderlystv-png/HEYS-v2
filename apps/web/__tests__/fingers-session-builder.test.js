@@ -470,6 +470,84 @@ describe('sessionBuilder: _seedCredentialsFromLevel (ревью #5 (B))', () => 
   });
 });
 
+describe('sessionBuilder: ревью #6 — провенанс level (derived НЕ сеет creds)', () => {
+  beforeAll(setupOnce);
+
+  it('derived-advanced (MVC=120) БЕЗ explicit level → S9 БЛОКирует min-edge (закрытие #6)', () => {
+    // Прямой тест дыры: сильный новичок с MVC=120 → derive 'advanced'.
+    // До #6 фикса: seed=[base_>=1y, base_>=2y, strength_base], S9 пропускает.
+    // После: seededCreds=[] (derived), S9.prereq_missing → block.
+    const builderOpts = { age: 25, mvcPctBW: 120, level: undefined, profile: undefined };
+    // _atomFits недоступен публично; проверяем через S9 на профиле, который
+    // recommendDay построит для этих opts.
+    const minEdge = F().blockCatalog.getAtom('fs_minedge_recruit');
+    // Реконструируем профиль как builder: derived advanced + NO seed
+    const profile = { age: 25, level: 'advanced', completedPrerequisites: [] };
+    const issues = F().validators.S9_prerequisitesGate(minEdge, profile);
+    expect(issues[0].code).toBe('S9.prereq_missing');
+    expect(issues[0].missing).toContain('base_>=2y');
+    expect(issues[0].missing).toContain('strength_base');
+  });
+
+  it('derived-advanced → trace.levelIsExplicit=false, seededCredsCount=0', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, mvcPctBW: 120, readiness: 'max'
+    });
+    expect(s).not.toBeNull();
+    expect(s.__trace.inputs.profileLevel).toBe('advanced');
+    expect(s.__trace.inputs.levelIsExplicit).toBe(false);
+    expect(s.__trace.inputs.seededCredsCount).toBe(0);
+  });
+
+  it('контроль (explicit advanced): seed работает, min-edge доступен', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 30, readiness: 'max',
+      profile: { age: 30, level: 'advanced' } // explicit
+    });
+    expect(s.__trace.inputs.levelIsExplicit).toBe(true);
+    expect(s.__trace.inputs.seededCredsCount).toBe(3); // base_>=1y, base_>=2y, strength_base
+    // S9 для min-edge с этим профилем должен пройти.
+    const minEdge = F().blockCatalog.getAtom('fs_minedge_recruit');
+    const profile = { age: 30, level: 'advanced',
+      completedPrerequisites: ['base_>=1y', 'base_>=2y', 'strength_base'] };
+    const issues = F().validators.S9_prerequisitesGate(minEdge, profile);
+    expect(issues[0].code).toBe('S9.pass');
+  });
+
+  it('сильный новичок (derived advanced) — сессия НЕ содержит min-edge', () => {
+    // Не только S9 в изоляции, но и реальная сессия не должна включать high-danger
+    // протоколы для derived-without-explicit-tenure.
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, mvcPctBW: 120, readiness: 'max'
+    });
+    expect(s).not.toBeNull();
+    s.exercises.forEach((e) => {
+      expect(e.atomId).not.toBe('fs_minedge_recruit');
+    });
+  });
+
+  it('explicit creds union для derived-level: юзер может явно засеять base_>=2y', () => {
+    // Юзер сам атtest'ил стаж 2 года, MVC показывает advanced силу.
+    // Тогда explicit creds должны разблокировать min-edge.
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, mvcPctBW: 120, readiness: 'max',
+      profile: {
+        age: 25,
+        completedPrerequisites: ['base_>=1y', 'base_>=2y', 'strength_base']
+      }
+    });
+    expect(s.__trace.inputs.levelIsExplicit).toBe(false); // level всё ещё derived
+    expect(s.__trace.inputs.explicitCredsCount).toBe(3);
+    // min-edge теперь физически доступен (S9 проходит) — может быть в сессии
+    // или нет в зависимости от slot-mapping, главное что S9 не блокирует.
+    const minEdge = F().blockCatalog.getAtom('fs_minedge_recruit');
+    const profile = { age: 25, level: 'advanced',
+      completedPrerequisites: ['base_>=1y', 'base_>=2y', 'strength_base'] };
+    const issues = F().validators.S9_prerequisitesGate(minEdge, profile);
+    expect(issues[0].code).toBe('S9.pass');
+  });
+});
+
 describe('sessionBuilder: ревью #5 находка #5 — runtime warmup_done отделена от credential', () => {
   beforeAll(setupOnce);
 

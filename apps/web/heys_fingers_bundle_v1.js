@@ -8438,11 +8438,18 @@
     return 'advanced'; // cap: даже elite-MVC не выдаёт 'elite' из derive
   }
 
-  // ─── _seedCredentialsFromLevel (ревью #5 (B)) ────────────────────────────────
-  // Level кодирует тренировочную зрелость (Q-7-1) → naturally maps to
-  // training-maturity credentials. Safety-attestation токены
-  // (bfr_cuff_technique, safe_fall_setup, injury_screen) — другой домен
-  // (знание/обстановка/здоровье), не выводятся из стажа НИКОГДА.
+  // ─── _seedCredentialsFromLevel (ревью #5 (B), уточнено ревью #6) ─────────────
+  // Возвращает training-maturity credentials по уровню. Caller ОБЯЗАН вызывать
+  // ТОЛЬКО для EXPLICIT level (атtest юзера: profile.level или opts.level).
+  // НИКОГДА для MVC-derived level — это конфляция доменов (ревью #6):
+  //   MVC меряет силу пальцев, `base_>=2y` кодирует тканевый возраст связок (2
+  //   года адаптации). Strong-but-unadapted (сильный новичок, mvcPctBW≥90) — это
+  //   ровно та injury-prone популяция, для которой gate `base_>=2y` существует.
+  //   Сеять `base_>=2y` из MVC = открыть для них самый опасный протокол
+  //   (`fs_minedge_recruit`, dangerLevel:high). Cap='advanced' это НЕ закрывает
+  //   потому что base_>=2y сеется уже на advanced.
+  // Safety-attestation токены (bfr_cuff_technique, safe_fall_setup,
+  // injury_screen) — другой домен (знание/обстановка/здоровье), explicit-only.
   function _seedCredentialsFromLevel(level) {
     switch (level) {
       case 'beginner':     return [];
@@ -8620,12 +8627,14 @@
     const ageNum = num(o.age) ?? (o.profile && num(o.profile.age));
     if (ageNum === null) return null; // S1 fail-closed на верхнем уровне.
 
-    // Level resolution (ревью #4-#5 (b)):
-    //   приоритет: explicit profile.level > o.level > derive(mvcPctBW) > floor.
+    // Level resolution (ревью #4-#5 (b), provenance ревью #6):
+    //   приоритет: explicit profile.level > o.level > derive(mvcPctBW) > null.
     // Без любого из источников → null (fail-closed).
+    // Provenance важна для seed: derived level НЕ сеет training-maturity creds.
     const explicitLevel = (o.profile && o.profile.level) || o.level || null;
     const derivedLevel = (o.mvcPctBW !== undefined) ? _deriveLevel(o.mvcPctBW) : null;
     const effectiveLevel = explicitLevel || derivedLevel;
+    const levelIsExplicit = !!explicitLevel;
     if (!effectiveLevel) return null;
 
     let ceiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
@@ -8639,9 +8648,11 @@
     }
     const slots = (SLOT_TEMPLATES[bucket] || SLOT_TEMPLATES.moderate).slice();
 
-    // Credentials: seed по level (training-maturity ⇒ base_>=Ny/strength_base)
-    // ∪ explicit (safety-attestation остаются только explicit, см. ревью #5 (B)).
-    const seededCreds = _seedCredentialsFromLevel(effectiveLevel);
+    // Credentials: seed по level ТОЛЬКО если level explicit (ревью #6).
+    // Derived level (MVC) → seed=[] потому что сила ≠ тканевый возраст.
+    // Explicit creds юзера всегда добавляются (safety-attestation
+    // и/или явные training-maturity tokens).
+    const seededCreds = levelIsExplicit ? _seedCredentialsFromLevel(effectiveLevel) : [];
     const explicitCreds = (o.profile && Array.isArray(o.profile.completedPrerequisites))
       ? o.profile.completedPrerequisites : [];
     const allCreds = Array.from(new Set(seededCreds.concat(explicitCreds)));
@@ -8778,7 +8789,10 @@
         inputs: {
           age: ageNum, equipmentTypes: tierList,
           readiness: o.readiness || null, intensityOverride: intensityOverride,
-          profileLevel: profile.level
+          profileLevel: profile.level,
+          levelIsExplicit: levelIsExplicit,
+          seededCredsCount: seededCreds.length,
+          explicitCredsCount: explicitCreds.length
         },
         resolution: {
           initialCeiling: ceiling, bucket: bucket,
