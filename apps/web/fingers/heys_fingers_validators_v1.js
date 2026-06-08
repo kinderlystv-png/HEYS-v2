@@ -103,11 +103,18 @@
       // fail-safe: нет истории → допускаем (первая сессия)
       return [ok('S2.no_history', 'нет истории, допускаем', { atomId: atom.id })];
     }
-    const ts = num(now) || Date.now();
+    // Нит ревью: now=0 — легитимное значение (Unix epoch). Используем ??, не ||.
+    // Date.now()-fallback оставлен сознательно как практический default — это
+    // ЕДИНСТВЕННАЯ нечистая точка в модуле; пометить при вызове из CI/тестов.
+    const ts = num(now) ?? Date.now();
     const cutoff = ts - 48 * 60 * 60 * 1000;
     const violations = history.filter(function (h) {
+      // Окно [cutoff, ts]: и нижняя, и верхняя граница. До фикса не было ts —
+      // запись с timestamp ПОСЛЕ now считалась нарушением (бессмыслица для
+      // легитимных данных, но открывало семантическую дыру).
       return num(h && h.timestamp) !== null &&
              h.timestamp >= cutoff &&
+             h.timestamp <= ts &&
              (h.tissueLoad === 'high' || h.tissueLoad === 'max');
     });
     if (violations.length > 0) {

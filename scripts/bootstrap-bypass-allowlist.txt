@@ -111,13 +111,13 @@ apps/web/heys_day_utils.js:48
 apps/web/heys_day_utils.js:484
 apps/web/heys_day_hooks.js:39
 # fingers bundle — regen after d4e9761d feat(fingers) shifted line numbers
-apps/web/heys_fingers_bundle_v1.js:4705
-apps/web/heys_fingers_bundle_v1.js:5097
-apps/web/heys_fingers_bundle_v1.js:5434
-apps/web/heys_fingers_bundle_v1.js:6349
-apps/web/heys_fingers_bundle_v1.js:6459
-apps/web/heys_fingers_bundle_v1.js:10045
-apps/web/heys_fingers_bundle_v1.js:15825
+apps/web/heys_fingers_bundle_v1.js:4713
+apps/web/heys_fingers_bundle_v1.js:5105
+apps/web/heys_fingers_bundle_v1.js:5442
+apps/web/heys_fingers_bundle_v1.js:6357
+apps/web/heys_fingers_bundle_v1.js:6467
+apps/web/heys_fingers_bundle_v1.js:10074
+apps/web/heys_fingers_bundle_v1.js:15854
 apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144

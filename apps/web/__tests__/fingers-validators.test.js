@@ -105,6 +105,30 @@ describe('S2 — tissue freshness ≥48ч', () => {
     );
     expect(r[0].code).toBe('S2.pass');
   });
+
+  it('нит ревью: now=0 (Unix epoch) — легитимное значение, не падает в Date.now()', () => {
+    // С now=0 история с timestamp=1ч (то есть 1970-01-01 01:00) попадает в окно
+    // [now-48ч, now] = [-48ч, 0], где -48ч = -172800000. timestamp 3600000 > 0,
+    // значит ВНЕ окна → S2.pass. Главное: не упало в Date.now() (где сейчас 2026).
+    const r = V().S2_tissueFreshness(
+      makeAtom({ tissueLoad: 'high' }),
+      [{ timestamp: 3600000, atomId: 'prev', tissueLoad: 'high' }],
+      0
+    );
+    expect(r[0].code).toBe('S2.pass'); // если бы упало в Date.now()=2026, было бы вне окна тем более; но если бы now=0→falsy→Date.now(), история с ts=3600000 (1970) была бы давно вне 48ч окна → тоже pass. Тогда отличить через окно с now=0:
+  });
+
+  it('нит ревью: now=0 — событие в окне 24ч (timestamp -24ч от 0)', () => {
+    // С now=0 и timestamp=-86400000 (24ч назад): попадает в окно [-48ч, 0] → нарушение.
+    // Если бы баг с || был жив (now=0→Date.now()=2026), timestamp -86400000 был бы
+    // ~56 лет назад → вне окна → S2.pass. Отличие явное.
+    const r = V().S2_tissueFreshness(
+      makeAtom({ tissueLoad: 'high' }),
+      [{ timestamp: -24 * 3600 * 1000, atomId: 'prev', tissueLoad: 'high' }],
+      0
+    );
+    expect(r[0].code).toBe('S2.fresh_tissue_violation');
+  });
 });
 
 describe('S3 — warmup required', () => {

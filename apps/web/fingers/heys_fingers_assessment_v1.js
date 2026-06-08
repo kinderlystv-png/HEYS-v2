@@ -13,7 +13,8 @@
 //     deficits,              // {quality: 0..1}
 //     flags,                 // {quality: 0..1}  (только technique/mental)
 //     blockWeights,          // {quality: 0..1}, сумма = 1.0 (normalize)
-//     stimulus               // {quality: 'develop'|'maintain'} — Q-1.4-3 гибрид
+//     stimulus,              // {quality: 'develop'|'maintain'} — Q-1.4-3 гибрид
+//     maxLimiterScore        // scalar = limiterScores[leadingLimiter]; для телеметрии/отладки
 //   }
 //
 // Public API:

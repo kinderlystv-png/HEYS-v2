@@ -20,7 +20,8 @@
 // Public API:
 //   HEYS.Fingers.flags.newEngine               — boolean флаг (default false)
 //   HEYS.Fingers.engineRouter.recommendDay(opts)
-//   HEYS.Fingers.engineRouter.lastSource       — 'old'|'new'|'fallback'|'fallback-error'
+//   HEYS.Fingers.engineRouter.lastSource       — 'old'|'new'|'fallback'|'fallback-error'|'fallback-contract'
+//   HEYS.Fingers.engineRouter.isValidSession(s)— контракт-guard (для тестов/телеметрии)
 
 ;(function (global) {
   'use strict';
@@ -49,6 +50,16 @@
     return Fingers.mixEngine.recommendDay(opts);
   }
 
+  // Контракт-guard: новый движок должен возвращать форму, совместимую с
+  // mixEngine.recommendDay → `{intensity:string, exercises:Array}` с непустым
+  // exercises. Иначе кривой выход уйдёт пользователю молча (Риск 2 ревью).
+  function isValidSession(s) {
+    if (!s || typeof s !== 'object') return false;
+    if (typeof s.intensity !== 'string' || !s.intensity) return false;
+    if (!Array.isArray(s.exercises) || s.exercises.length === 0) return false;
+    return true;
+  }
+
   function recommendDay(opts) {
     const useNew = Fingers.flags && Fingers.flags.newEngine === true;
     if (!useNew) {
@@ -68,6 +79,15 @@
         _lastSource = 'fallback';
         return _callOld(opts);
       }
+      // Контракт-guard перед отдачей пользователю: форма должна соответствовать
+      // mixEngine. Это закрывает Риск 2 — кривой builder-выход НЕ попадает в прод.
+      if (!isValidSession(result)) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[fingers.engineRouter] new engine output failed contract — fallback to old', result);
+        }
+        _lastSource = 'fallback-contract';
+        return _callOld(opts);
+      }
       _lastSource = 'new';
       return result;
     } catch (e) {
@@ -82,6 +102,7 @@
 
   Fingers.engineRouter = {
     recommendDay: recommendDay,
+    isValidSession: isValidSession,
     get lastSource() { return _lastSource; }
   };
 

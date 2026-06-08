@@ -2880,11 +2880,18 @@
       // fail-safe: нет истории → допускаем (первая сессия)
       return [ok('S2.no_history', 'нет истории, допускаем', { atomId: atom.id })];
     }
-    const ts = num(now) || Date.now();
+    // Нит ревью: now=0 — легитимное значение (Unix epoch). Используем ??, не ||.
+    // Date.now()-fallback оставлен сознательно как практический default — это
+    // ЕДИНСТВЕННАЯ нечистая точка в модуле; пометить при вызове из CI/тестов.
+    const ts = num(now) ?? Date.now();
     const cutoff = ts - 48 * 60 * 60 * 1000;
     const violations = history.filter(function (h) {
+      // Окно [cutoff, ts]: и нижняя, и верхняя граница. До фикса не было ts —
+      // запись с timestamp ПОСЛЕ now считалась нарушением (бессмыслица для
+      // легитимных данных, но открывало семантическую дыру).
       return num(h && h.timestamp) !== null &&
              h.timestamp >= cutoff &&
+             h.timestamp <= ts &&
              (h.tissueLoad === 'high' || h.tissueLoad === 'max');
     });
     if (violations.length > 0) {
@@ -3200,7 +3207,8 @@
 //     deficits,              // {quality: 0..1}
 //     flags,                 // {quality: 0..1}  (только technique/mental)
 //     blockWeights,          // {quality: 0..1}, сумма = 1.0 (normalize)
-//     stimulus               // {quality: 'develop'|'maintain'} — Q-1.4-3 гибрид
+//     stimulus,              // {quality: 'develop'|'maintain'} — Q-1.4-3 гибрид
+//     maxLimiterScore        // scalar = limiterScores[leadingLimiter]; для телеметрии/отладки
 //   }
 //
 // Public API:
@@ -8298,7 +8306,8 @@
 // Public API:
 //   HEYS.Fingers.flags.newEngine               — boolean флаг (default false)
 //   HEYS.Fingers.engineRouter.recommendDay(opts)
-//   HEYS.Fingers.engineRouter.lastSource       — 'old'|'new'|'fallback'|'fallback-error'
+//   HEYS.Fingers.engineRouter.lastSource       — 'old'|'new'|'fallback'|'fallback-error'|'fallback-contract'
+//   HEYS.Fingers.engineRouter.isValidSession(s)— контракт-guard (для тестов/телеметрии)
 
 ;(function (global) {
   'use strict';
@@ -8327,6 +8336,16 @@
     return Fingers.mixEngine.recommendDay(opts);
   }
 
+  // Контракт-guard: новый движок должен возвращать форму, совместимую с
+  // mixEngine.recommendDay → `{intensity:string, exercises:Array}` с непустым
+  // exercises. Иначе кривой выход уйдёт пользователю молча (Риск 2 ревью).
+  function isValidSession(s) {
+    if (!s || typeof s !== 'object') return false;
+    if (typeof s.intensity !== 'string' || !s.intensity) return false;
+    if (!Array.isArray(s.exercises) || s.exercises.length === 0) return false;
+    return true;
+  }
+
   function recommendDay(opts) {
     const useNew = Fingers.flags && Fingers.flags.newEngine === true;
     if (!useNew) {
@@ -8346,6 +8365,15 @@
         _lastSource = 'fallback';
         return _callOld(opts);
       }
+      // Контракт-guard перед отдачей пользователю: форма должна соответствовать
+      // mixEngine. Это закрывает Риск 2 — кривой builder-выход НЕ попадает в прод.
+      if (!isValidSession(result)) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[fingers.engineRouter] new engine output failed contract — fallback to old', result);
+        }
+        _lastSource = 'fallback-contract';
+        return _callOld(opts);
+      }
       _lastSource = 'new';
       return result;
     } catch (e) {
@@ -8360,6 +8388,7 @@
 
   Fingers.engineRouter = {
     recommendDay: recommendDay,
+    isValidSession: isValidSession,
     get lastSource() { return _lastSource; }
   };
 

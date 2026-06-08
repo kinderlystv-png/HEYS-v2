@@ -50,14 +50,30 @@ describe('engineRouter: flag=off — прозрачное делегирован
     expect(R().lastSource).toBe('old');
   });
 
-  it('результат router(off) бит-в-бит == прямой mixEngine для max-сессии', () => {
+  it('результат router(off) структурно == прямой mixEngine для max-сессии', () => {
     const opts = { equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' };
     const direct = F().mixEngine.recommendDay(opts);
     const viaRouter = R().recommendDay(opts);
-    // Структурное равенство: одинаковая интенсивность, роли, число упражнений.
+    // Нит ревью: попытка усилить до toEqual упёрлась в неидемпотентность
+    // mixEngine (random/перетасовка внутри). Bit-identity при flag=off
+    // доказывается КОНСТРУКЦИЕЙ (router L49: `return mixEngine.recommendDay(opts)`
+    // — тот же ref-объект из одного вызова). Здесь — структурный поднабор:
+    // intensity, последовательность ролей, длина.
     expect(viaRouter.intensity).toBe(direct.intensity);
     expect(viaRouter.exercises.map((e) => e.__role)).toEqual(direct.exercises.map((e) => e.__role));
     expect(viaRouter.exercises.length).toBe(direct.exercises.length);
+  });
+
+  it('reference passthrough при flag=off: stub mixEngine → router возвращает тот самый объект (===)', () => {
+    const stubResult = { intensity: 'max', exercises: [{ __role: 'x' }], __stub: true };
+    const origRecommend = F().mixEngine.recommendDay;
+    F().mixEngine.recommendDay = () => stubResult;
+    try {
+      const viaRouter = R().recommendDay({});
+      expect(viaRouter).toBe(stubResult); // reference equality — passthrough доказан
+    } finally {
+      F().mixEngine.recommendDay = origRecommend;
+    }
   });
 
   it('результат router(off) == прямой mixEngine для recovery-сессии', () => {
@@ -139,5 +155,49 @@ describe('engineRouter: flag=on, sessionBuilder вернул валидную с
     expect(R().lastSource).toBe('new');
     expect(viaRouter.__from).toBe('new');
     expect(viaRouter.exercises[0].__role).toBe('stub');
+  });
+});
+
+describe('engineRouter: contract-guard (Риск 2 ревью)', () => {
+  beforeAll(setupOnce);
+  beforeEach(() => { F().flags.newEngine = true; });
+
+  it('isValidSession: валидная форма', () => {
+    expect(R().isValidSession({ intensity: 'max', exercises: [{}] })).toBe(true);
+  });
+
+  it('isValidSession: пустой exercises → false', () => {
+    expect(R().isValidSession({ intensity: 'max', exercises: [] })).toBe(false);
+  });
+
+  it('isValidSession: нет intensity → false', () => {
+    expect(R().isValidSession({ exercises: [{}] })).toBe(false);
+  });
+
+  it('isValidSession: intensity не строка → false', () => {
+    expect(R().isValidSession({ intensity: 42, exercises: [{}] })).toBe(false);
+  });
+
+  it('builder вернул объект без exercises → fallback-contract, прод не видит кривое', () => {
+    F().sessionBuilder = { recommendDay: () => ({ intensity: 'max' /* нет exercises */ }) };
+    const opts = { equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' };
+    const viaRouter = R().recommendDay(opts);
+    expect(R().lastSource).toBe('fallback-contract');
+    // fallback вернул сессию от mixEngine
+    expect(viaRouter.exercises.length).toBeGreaterThan(0);
+  });
+
+  it('builder вернул пустой exercises → fallback-contract', () => {
+    F().sessionBuilder = { recommendDay: () => ({ intensity: 'max', exercises: [] }) };
+    const opts = { equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' };
+    R().recommendDay(opts);
+    expect(R().lastSource).toBe('fallback-contract');
+  });
+
+  it('builder вернул строку (не объект) → fallback-contract', () => {
+    F().sessionBuilder = { recommendDay: () => 'oops' };
+    const opts = { equipmentTypes: ['full'], intensity: 'all', age: 25, readiness: 'max' };
+    R().recommendDay(opts);
+    expect(R().lastSource).toBe('fallback-contract');
   });
 });

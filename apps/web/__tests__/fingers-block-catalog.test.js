@@ -84,6 +84,13 @@ describe('block_catalog: validate() — enum sanity + fail-closed', () => {
     expect(v.errors).toEqual([]);
   });
 
+  it('нит ревью: validate().errors массив именно пуст (CI guard, не truthy-check)', () => {
+    const v = BC().validate();
+    expect(Array.isArray(v.errors)).toBe(true);
+    expect(v.errors.length).toBe(0);
+    expect(Array.isArray(v.warnings)).toBe(true);
+  });
+
   it('никакой атом не имеет gates.minAge=null (§1.2 fail-closed)', () => {
     BC().ATOMS.forEach((a) => {
       expect(a.gates.minAge, a.id).not.toBeNull();
