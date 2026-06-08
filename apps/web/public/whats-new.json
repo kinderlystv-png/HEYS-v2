@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.08.6ec7912f",
+      "buildHash": "6ec7912f",
+      "date": "2026-06-08",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Phase 3 — auto-mark pending via setBlockCloudUpdates setter",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Phase 3 — auto-mark pending via setBlockCloudUpdates setter",
+          "description": "Phase 3 — auto-mark pending via setBlockCloudUpdates setter"
+        }
+      ],
+      "coveredCommits": ["6ec7912f"]
+    },
+    {
       "version": "2026.06.08.6305a4d0",
       "buildHash": "6305a4d0",
       "date": "2026-06-08",
@@ -136,21 +152,6 @@
           "type": "fix",
           "title": "Исправили внутренние ошибки",
           "description": "В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения."
-        }
-      ]
-    },
-    {
-      "version": "2026.06.08.707b1e21",
-      "buildHash": "707b1e21",
-      "date": "2026-06-08",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления ошибок и улучшение стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки и улучшили стабильность",
-          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
         }
       ]
     }
