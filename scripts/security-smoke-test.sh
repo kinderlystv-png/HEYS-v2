@@ -93,11 +93,24 @@ echo "--- Test 5: Forbidden tables ---"
 RESULT=$(curl -s "$API_BASE/rest/clients?limit=1")
 test_result "clients table not accessible" "Not found\|404" "$RESULT"
 
-# Test 7: REST POST blocked
-echo "--- Test 6: REST write methods blocked ---"
+# Test 7: REST POST на shared_products с пустым телом — не утекает SQLSTATE
+# (SEC-003: раньше пустой POST'ом получали 42601 syntax_error, наводящий на структуру таблицы)
+echo "--- Test 6: REST POST validates body, no SQLSTATE leak ---"
 RESULT=$(curl -s -X POST "$API_BASE/rest/shared_products" \
   -H "Content-Type: application/json" -d '{}')
-test_result "POST blocked on REST" "not allowed\|405" "$RESULT"
+# Принимаем любой clean reject (400 Empty body / 405 not allowed). НЕ принимаем утечку 42601/42703.
+if echo "$RESULT" | grep -qE '"code":"?(42[0-9]{3})"?'; then
+  echo -e "${RED}✗${NC} REST POST leaks SQLSTATE"
+  echo "  Got: $RESULT"
+  ((FAILED++))
+elif echo "$RESULT" | grep -qE 'Empty body|not allowed|400|405'; then
+  echo -e "${GREEN}✓${NC} REST POST rejects empty body cleanly (no SQLSTATE leak)"
+  ((PASSED++))
+else
+  echo -e "${RED}✗${NC} REST POST unexpected response"
+  echo "  Got: $RESULT"
+  ((FAILED++))
+fi
 
 # Test 8: CORS evil origin (только для prod)
 if [ "$ENV" = "prod" ]; then

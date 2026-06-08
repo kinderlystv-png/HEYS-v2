@@ -966,8 +966,17 @@ module.exports.handler = async function (event, context) {
           };
         }
 
-        // Колонки берём из первого объекта (все объекты должны иметь те же колонки)
-        const columns = Object.keys(rows[0]);
+        // Колонки берём из первого объекта (все объекты должны иметь те же колонки).
+        // Пустое тело {} или [{}] → нет колонок → отбиваем 400 до SQL, иначе
+        // PG отдаёт 42601 syntax_error, который раньше прорастал в response (SEC-003).
+        const columns = Object.keys(rows[0] || {});
+        if (columns.length === 0) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: 'Empty body — no columns to insert' })
+          };
+        }
 
         // 🔐 FIX v2: JSON/JSONB колонки нужно сериализовать в JSON строку
         // 🔐 FIX v3: TEXT[] массивы нужно преобразовывать в PostgreSQL array format
@@ -1203,15 +1212,16 @@ module.exports.handler = async function (event, context) {
     }
 
   } catch (error) {
-    console.error('[REST Error]', error.message);
+    // SEC-003: лог содержит SQLSTATE для diagnostics, response — нет (не утекаем
+    // pg error.code типа 42601/42703 в публичный JSON; они подсказывают атакующему
+    // структуру запроса/таблицы).
+    console.error('[REST Error]', { message: error.message, code: error.code });
 
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
-        error: 'Database error',
-        message: 'Internal server error',
-        code: error.code || 'INTERNAL_ERROR'
+        error: 'Internal server error'
       })
     };
 
