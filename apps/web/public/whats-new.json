@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.06.08.5ddaa0ff",
+      "buildHash": "5ddaa0ff",
+      "date": "2026-06-08",
+      "kind": "technical",
+      "profile": "technical-infra-tests",
+      "title": "Технические улучшения качества",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Улучшили внутренние процессы",
+          "description": "Мы обновили внутренние инструменты и проверки, чтобы релизы были стабильнее и предсказуемее."
+        }
+      ]
+    },
+    {
       "version": "2026.06.08.fef706ba",
       "buildHash": "fef706ba",
       "date": "2026-06-08",
@@ -150,35 +165,6 @@
         }
       ],
       "coveredCommits": ["a3a35353"]
-    },
-    {
-      "version": "2026.06.06.2edf2ac1",
-      "buildHash": "2edf2ac1",
-      "date": "2026-06-06",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Тренировка пальцев: новый экран «Сегодня» и журнал нагрузки",
-      "items": [
-        {
-          "type": "feat",
-          "title": "Экран «Сегодня» для силы хвата",
-          "description": "Оценка готовности, рекомендация программы под цель, журнал нагрузки и экспорт данных"
-        }
-      ],
-      "coveredCommits": [
-        "b20074e0",
-        "3b6d4c62",
-        "7dd3d09c",
-        "881742af",
-        "a0887080",
-        "916977eb",
-        "f28f8511",
-        "77f6cd4c",
-        "ecff52c3",
-        "03f4a8f2",
-        "c80e93a7",
-        "a7c7781c"
-      ]
     }
   ]
 }
