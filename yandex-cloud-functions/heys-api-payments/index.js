@@ -95,7 +95,9 @@ function getCorsHeaders(requestOrigin) {
     'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
-    'Referrer-Policy': 'strict-origin-when-cross-origin'
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    // SEC-005 (2026-06-08): CSP на JSON-ответ — defense-in-depth.
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'"
   };
 }
 

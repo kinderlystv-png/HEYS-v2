@@ -128,7 +128,11 @@ function getCorsHeaders(origin) {
     'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
-    'Referrer-Policy': 'strict-origin-when-cross-origin'
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    // SEC-005 (2026-06-08): CSP на JSON-ответ. Браузер не исполняет JSON, но эта
+    // строгая политика блокирует любые попытки рендера ответа как HTML и любые
+    // встраивания через iframe — defense-in-depth, не ломает API-клиента.
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'"
   };
 
   if (origin && ALLOWED_ORIGINS.has(origin)) {
