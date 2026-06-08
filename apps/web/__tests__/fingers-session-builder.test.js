@@ -242,6 +242,51 @@ describe('sessionBuilder через engine_router (flag=on)', () => {
   });
 });
 
+describe('sessionBuilder: B1.5 cut — RENDERABLE_DOSESHAPES (ревью #3 ограничение 2)', () => {
+  beforeAll(setupOnce);
+
+  it('RENDERABLE_DOSESHAPES = {hang, reps} (Шаг 5 расширит)', () => {
+    expect(SB().RENDERABLE_DOSESHAPES).toEqual({ hang: true, reps: true });
+  });
+
+  it('каждый выбранный exercise имеет doseShape ∈ {hang, reps}', () => {
+    ['max', 'moderate', 'recovery'].forEach((readiness) => {
+      const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness });
+      if (s !== null) {
+        s.exercises.forEach((e) => {
+          expect(['hang', 'reps']).toContain(e.doseShape);
+        });
+      }
+    });
+  });
+
+  it('antagonist/mobility-floor — атомы блоков G/H — доступны как reps (safety-floor цел)', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' });
+    expect(s.exercises.some((e) => e.__role === 'antagonist')).toBe(true);
+    expect(s.exercises.some((e) => e.__role === 'mobility')).toBe(true);
+  });
+
+  it('power-слот теперь резолвится пусто (атомы block C — все attempts) — в trace skipped:true', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' });
+    const powerSlot = s.__safetyTrace.picks.find((p) => p.slot === 'power');
+    expect(powerSlot && powerSlot.skipped === true).toBe(true);
+  });
+
+  it('shadow-diff на max-сессии: nonHangCount ≥ 1 (antagonist+mobility reps), но НЕ из attempts/circuit/continuous', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' });
+    const distribution = s.exercises.reduce((acc, e) => {
+      acc[e.doseShape] = (acc[e.doseShape] || 0) + 1;
+      return acc;
+    }, {});
+    expect(distribution.attempts).toBeUndefined();
+    expect(distribution.circuit).toBeUndefined();
+    expect(distribution.continuous).toBeUndefined();
+    expect(distribution.process).toBeUndefined();
+    // reps присутствует (antagonist/mobility):
+    expect(distribution.reps).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('sessionBuilder: equipment-фильтрация', () => {
   beforeAll(setupOnce);
 

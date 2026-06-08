@@ -8347,6 +8347,16 @@
     'antagonist':         ['low']
   };
 
+  // UI renderable doseShape (ревью #3 ограничение 2 / план B1.5):
+  // Существующий UI player знает только hang-протокол; reps добавляется в
+  // следующем UI-шаге (минимальный rep-set трекер). Атомы вне этого набора
+  // НЕ попадают в сессию пока player не расширен — иначе UI рендерит их как
+  // вырожденный «7с виса × 1 повт». Шаг 5 расширит set'ом attempts/circuit/
+  // continuous/process когда player получит соответствующие ветки.
+  // Без этого cut'а каждая сессия содержит non-hang атомы из safety-floor
+  // (antagonist/mobility — reps-only), что подтвердила эмпирика ревью #3.
+  const RENDERABLE_DOSESHAPES = { hang: true, reps: true };
+
   // Equipment compatibility: какие modality допустимы в каждом equipmentType.
   const EQUIPMENT_MODALITIES = {
     'full':  ['fingerboard', 'board', 'wall', 'campus', 'weights', 'drill', 'mobility', 'antagonist'],
@@ -8432,6 +8442,10 @@
   function _atomFits(atom, profile, allowedModalities) {
     if (!allowedModalities[atom.modality]) return false;
     if (!profile) return false;
+    // Единый chokepoint UI-renderability (план B1.5). Не разрешаем атом, чей
+    // doseShape player не умеет показать. Покрывает и slot-picks, и
+    // safety-floor через тот же путь.
+    if (!RENDERABLE_DOSESHAPES[atom.doseShape]) return false;
     // S1 explicit: возраст/уровень.
     const issues = Fingers.validators.S1_ageLevelGate(atom, profile);
     if (issues.some(function (i) { return i.level === 'error'; })) return false;
@@ -8679,6 +8693,7 @@
     recommendDay: recommendDay,
     SLOT_TEMPLATES: SLOT_TEMPLATES,
     SLOT_QUALITIES: SLOT_QUALITIES,
+    RENDERABLE_DOSESHAPES: RENDERABLE_DOSESHAPES,
     _pickAtomForSlot: _pickAtomForSlot
   };
 
