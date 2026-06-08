@@ -323,6 +323,85 @@ describe('Sync Race Condition Protection', () => {
       expect(skipWrite).toBe(false);
     });
 
+    // Incident 2026-06-08 Phase 2: block-window истекает по таймеру (3с) или
+    // обнуляется SKEW-clear защитой раньше чем flush успевает записать LS.
+    // На медленном Android Chrome long-task 22с пожирал debounce setTimeout(500ms).
+    // pendingDayMutation flag живёт пока flush явно не подтвердит запись (или
+    // 30с auto-expire) — независимый от блок-окна сигнал «есть несохранённая
+    // правка». flush() force-write при наличии флага, даже если block уже истёк
+    // и даже если disabled=true (re-bootstrap flap).
+    test('flush pending-mutation override: force-write when block expired but pending active', () => {
+      // Setup: block-window истёк, disabled=true (re-bootstrap), но pending активен.
+      vi.mocked(Date.now).mockReturnValue(1734000010000); // 10s после клика
+      const blockCloudUpdatesUntilRef = { current: 1734000003000 }; // expired 7s назад
+      const disabled = true;
+      // Mirror pending-flag API (apps/web/heys_day_global_exports_v1.js):
+      const _pending = new Map();
+      _pending.set('2026-06-08', { ts: 1734000000000 });
+      global.HEYS.Day = global.HEYS.Day || {};
+      global.HEYS.Day.hasPendingMutation = (date) => {
+        const entry = _pending.get(date);
+        if (!entry) return false;
+        if (Date.now() - entry.ts > 30000) { _pending.delete(date); return false; }
+        return true;
+      };
+      global.HEYS.Day.isBlockingCloudUpdates = () => Date.now() < blockCloudUpdatesUntilRef.current;
+
+      // Production logic mirror — flush() entry:
+      const day = { date: '2026-06-08' };
+      const isUnmountedRef = { current: false };
+      let force = false;
+      // Pending/block check BEFORE disabled (the actual fix in heys_day_hooks.js):
+      const hasPending = typeof global.HEYS?.Day?.hasPendingMutation === 'function'
+        ? global.HEYS.Day.hasPendingMutation(day.date) === true : false;
+      const isBlocking = typeof global.HEYS?.Day?.isBlockingCloudUpdates === 'function'
+        ? global.HEYS.Day.isBlockingCloudUpdates() === true : false;
+      if (!force && (hasPending || isBlocking)) force = true;
+      // Disabled check AFTER override → force=true bypasses it
+      const bailedOnDisabled = !force && (disabled || isUnmountedRef.current);
+
+      expect(hasPending).toBe(true);
+      expect(isBlocking).toBe(false); // block expired
+      expect(force).toBe(true); // override armed by pending alone
+      expect(bailedOnDisabled).toBe(false); // disabled=true ignored
+    });
+
+    test('flush pending auto-expires after 30s — sync resumes', () => {
+      const _pending = new Map();
+      _pending.set('2026-06-08', { ts: 1734000000000 });
+      vi.mocked(Date.now).mockReturnValue(1734000031000); // 31s после mark
+      global.HEYS.Day = global.HEYS.Day || {};
+      global.HEYS.Day.hasPendingMutation = (date) => {
+        const entry = _pending.get(date);
+        if (!entry) return false;
+        if (Date.now() - entry.ts > 30000) { _pending.delete(date); return false; }
+        return true;
+      };
+
+      expect(global.HEYS.Day.hasPendingMutation('2026-06-08')).toBe(false);
+      expect(_pending.size).toBe(0); // self-cleaned
+    });
+
+    test('setBlockCloudUpdates caps skewed payload.updatedAt to Date.now() + 15s', () => {
+      // Incident 2026-06-08: handler getting payload.updatedAt from PIN device with
+      // future-skewed clock would set blockUntil 10 минут вперёд. SKEW-clear
+      // защита потом обнуляла его, но между этими событиями flush видел
+      // огромный остаточный block. Cap = 15s prevents that.
+      const blockRef = { current: 0 };
+      const MAX_LEGIT_BLOCK_MS = 15000;
+      const setBlockCloudUpdatesCapped = (ref, until) => {
+        const safeMax = Date.now() + MAX_LEGIT_BLOCK_MS;
+        ref.current = (typeof until === 'number' && until > safeMax) ? safeMax : until;
+      };
+
+      vi.mocked(Date.now).mockReturnValue(1734000000000);
+      setBlockCloudUpdatesCapped(blockRef, 1734000600000); // 600s ahead — clear skew
+      expect(blockRef.current).toBe(1734000015000); // capped to now + 15s
+
+      setBlockCloudUpdatesCapped(blockRef, 1734000003000); // 3s ahead — legitimate
+      expect(blockRef.current).toBe(1734000003000); // unchanged
+    });
+
     test('flush block-window NOT active: original preserve-fresher behavior unchanged', () => {
       // Counter-case: when block is NOT active (e.g. unrelated React re-render, no
       // pending user edit), the original guard still wins — stale React state must

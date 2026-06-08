@@ -1530,6 +1530,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         pushKV('is_blocking_cloud_updates', (HEYS.Day && typeof HEYS.Day.isBlockingCloudUpdates === 'function') ? HEYS.Day.isBlockingCloudUpdates() : null);
                         pushKV('block_until_in_ms', blockUntil ? (blockUntil - Date.now()) : 0);
                         pushKV('last_loaded_updatedAt', (HEYS.Day && typeof HEYS.Day.getLastLoadedUpdatedAt === 'function') ? HEYS.Day.getLastLoadedUpdatedAt() : null);
+                        // Pending-mutation registry (2026-06-08 curator add-item fix Phase 2)
+                        try {
+                            const pendings = (HEYS.Day && typeof HEYS.Day.listPendingMutations === 'function')
+                                ? HEYS.Day.listPendingMutations() : [];
+                            pushKV('pending_day_mutations', pendings.length
+                                ? pendings.map(p => `${p.date}(${Math.round(p.ageMs / 100) / 10}s)`).join(', ')
+                                : '—');
+                        } catch (_) { pushKV('pending_day_mutations', '<error>'); }
                         const divergent = (rTs === lTs) && (onlyReact.length || onlyLs.length || diffGrams.length);
                         pushKV('VERDICT', divergent ? '⚠️ RENDER-DESYNC (same updatedAt, different content)'
                             : (rTs !== lTs ? 'updatedAt differs (sync in flight)' : 'in sync'));

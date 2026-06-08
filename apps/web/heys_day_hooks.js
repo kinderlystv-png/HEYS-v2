@@ -315,25 +315,37 @@
 
         const flush = React.useCallback((options = {}) => {
             let force = options && options.force === true;
-            if (!force && (disabled || isUnmountedRef.current)) return;
-            // 🛡️ Block-window override (incident 2026-06-08 curator add-item silently dropped):
-            // when user just edited (handleAdd / removeItem / etc. armed setBlockCloudUpdates),
-            // external writers can have stamped LS with newer Date.now() ts inside the same
-            // tick — live-refresh's mergeDayData uses `Math.max(cloud, local, Date.now())`
-            // (heys_sync_merge_v1.js:558), so its merged write into LS lands ~ms after the
-            // user's add and ends up > React's just-set updatedAt. Without force, the
-            // shouldPreserveFreshestPersistedDay branch below would silently bail and the
-            // user's edit would never persist. We respect the explicit "user is editing"
-            // signal from blockCloudUpdates and write through.
-            if (!force) {
-                try {
-                    const isBlocking = global.HEYS && global.HEYS.Day
-                        && typeof global.HEYS.Day.isBlockingCloudUpdates === 'function'
-                        ? global.HEYS.Day.isBlockingCloudUpdates()
-                        : false;
-                    if (isBlocking) force = true;
-                } catch (_) { /* noop */ }
+            // 🛡️ Pending-mutation / block-window override (incident 2026-06-08
+            // curator add-item silently dropped). Checked BEFORE disabled guard:
+            // disabled может временно стать true при re-bootstrap / visibility-visible,
+            // и debounced flush() в эту секунду провалится без записи. Если есть
+            // явная pending user-mutation — нужно записать в любом случае.
+            //
+            // Два независимых сигнала "user editing":
+            //  (1) blockCloudUpdates window — короткое таймерное окно (3-15с).
+            //      Защищает от live-refresh / hot-sync которые стампят LS с
+            //      Math.max(cloud, local, Date.now()) > React.updatedAt
+            //      (heys_sync_merge_v1.js:558), что иначе бы trigger'ило
+            //      shouldPreserveFreshestPersistedDay bail-guard ниже.
+            //  (2) pendingDayMutation flag — живёт пока flush явно не очистит.
+            //      Закрывает зазор когда block истёк (skew-clear / 3s timeout) но
+            //      flush ещё не успел записать LS (long-task 22с на медленном
+            //      Android Chrome пожирал debounce setTimeout).
+            const _dayDateForPending = (day && day.date) || null;
+            let _hasPending = false;
+            try {
+                if (_dayDateForPending && global.HEYS?.Day?.hasPendingMutation) {
+                    _hasPending = global.HEYS.Day.hasPendingMutation(_dayDateForPending) === true;
+                }
+            } catch (_) { /* noop */ }
+            let _isBlocking = false;
+            try {
+                _isBlocking = global.HEYS?.Day?.isBlockingCloudUpdates?.() === true;
+            } catch (_) { /* noop */ }
+            if (!force && (_hasPending || _isBlocking)) {
+                force = true;
             }
+            if (!force && (disabled || isUnmountedRef.current)) return;
             // 🔧 RACE FIX: prefer ref-based day if it's newer than the closure-day.
             // flush() is invoked via RAF+setTimeout from addProductToMeal, which can
             // fire before React has committed the setDay state update — meaning the
@@ -466,6 +478,17 @@
             saveToDate(_effDay.date, payload);
             prevStoredSnapRef.current = JSON.stringify(payload);
             prevDaySnapRef.current = daySnap;
+            // 🛡️ Pending mutation written through LS path → cleared so reconciler /
+            // hot-sync / live-refresh могут снова свободно применять облако.
+            // saveToDate сам имеет внутренние guards (updatedAt/sourceId order, payload.date
+            // mismatch); если он silent-returned, очистка флага «забывает» pending edit и
+            // следующий cycle reconciler перезатрёт React. Trade-off: при auto-clear
+            // через 30s то же самое произойдёт — нет регрессии, но раньше.
+            try {
+                if (_effDay && _effDay.date && global.HEYS?.Day?.clearPendingMutation) {
+                    global.HEYS.Day.clearPendingMutation(_effDay.date);
+                }
+            } catch (_) { /* noop */ }
         }, [day, now, saveToDate, stripMeta, disabled, getKey, readExisting, isMeaningfulDayData, getFreshestPersistedDay, computeDaySnap]);
 
         React.useEffect(() => {

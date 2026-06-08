@@ -30,8 +30,8 @@ apps/web/heys_morning_checkin_v1.js:156
 # demo mode — удалить и entries.
 apps/web/heys_demo_mode_v1.js:185
 
-# heys_day_add_product.js:721: emergency fallback в add-product path когда
+# heys_day_add_product.js:731: emergency fallback в add-product path когда
 # и HEYS.store.set, и U.lsSet недоступны (только interceptor live). Rare edge
 # case на ранней загрузке. grams_history — usage stat, не критичный per-client
 # canonical. TODO: убрать fallback path entirely after audit.
-apps/web/heys_day_add_product.js:721
+apps/web/heys_day_add_product.js:731

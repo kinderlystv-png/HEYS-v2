@@ -1024,6 +1024,15 @@
                 try {
                     if (typeof document !== 'undefined' && document.visibilityState && document.visibilityState !== 'visible') return;
                     if (Date.now() < (blockCloudUpdatesUntilRef.current || 0)) return; // protect in-flight local edit
+                    // 🛡️ Pending-mutation guard (incident 2026-06-08): block-window истекает
+                    // по таймеру, но flush мог не успеть записать LS из-за long-task. Если
+                    // pending-флаг активен — есть несохранённая React-правка, и applying LS
+                    // (которое СТАРЕЕ React) затрёт её. Reconciler ждёт пока flush либо
+                    // запишет (и сам уберёт флаг), либо pending auto-expire (30с — failure
+                    // safety net не должна навсегда заблокировать sync).
+                    try {
+                        if (HEYS.Day && typeof HEYS.Day.hasPendingMutation === 'function' && HEYS.Day.hasPendingMutation(date)) return;
+                    } catch (_) { /* noop */ }
                     if (_readDayV2Cache) _readDayV2Cache.invalidate((HEYS.currentClientId || '') + '|' + date);
                     const lsDay = readDayV2(date, lsGet).value;
                     if (!lsDay || typeof lsDay !== 'object' || !isMeaningfulDayData(lsDay)) return;

@@ -5333,7 +5333,7 @@
 
   // Import utilities from dayUtils
   const U = HEYS.dayUtils || {};
-  const uid = U.uid || (() => 'id_' + Date.now());
+  const uid = U.uid || ((prefix = 'id_') => prefix + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
   const buildProductIndex = U.buildProductIndex || (() => ({}));
   const getProductFromItem = U.getProductFromItem || (() => null);
   const per100 = U.per100 || ((p) => ({ kcal100: 0, carbs100: 0, prot100: 0, fat100: 0, simple100: 0, complex100: 0, bad100: 0, good100: 0, trans100: 0, fiber100: 0 }));
@@ -5930,6 +5930,16 @@
         } else {
           console.warn('[HEYS.day] ⚠️ setLastLoadedUpdatedAt missing');
         }
+        // 🛡️ Pending-mutation marker (incident 2026-06-08 curator add-item dropped):
+        // живёт пока flush явно не подтвердит запись. Закрывает зазор когда block
+        // window истёк (3s timeout или SKEW-clear), но flush ещё не отстрелял из-за
+        // long-task / disabled-flap / debounce reset. Reconciler / hot-sync /
+        // live-refresh должны уважать этот флаг и не затирать React состояние.
+        try {
+          if (HEYS.Day?.markPendingMutation && date) {
+            HEYS.Day.markPendingMutation(date);
+          }
+        } catch (_) { /* noop */ }
 
         setDay((prevDay = {}) => {
           const mealsList = prevDay.meals || [];

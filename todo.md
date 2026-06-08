@@ -4,6 +4,62 @@
 
 ---
 
+## ✅ FIXED 2026-06-08 (Phase 2) — curator add-item Phase 1 не закрыл медленный Android
+
+Live-проверка Phase 1 в проде показала что в курaторской сессии с тяжёлыми
+long-task'ами (Android Chrome, 22с blocked main thread, 32 long tasks за 60с)
+правка по-прежнему теряется. Snapshot подтвердил:
+
+- React: 5 items (включая молоко), LS: 4, divergence 155с
+- `block_until_in_ms: -152084` — block истёк давно
+- `BLOCK_WINDOW_SKEW_CLEARED (remaining 599072ms > 15000ms cap)` — handler
+  получил `payload.updatedAt + 3000` от PIN-устройства с future-skewed clock и
+  поставил blockUntil на 10 минут вперёд, потом SKEW-clear обнулил его прямо
+  посреди user-edit окна
+- 0 dayv2 writes за 155с — flush() либо завис в long-task, либо вышел на
+  `(disabled || isUnmountedRef.current)` early-return до моего Phase 1 fix
+
+**Phase 2 (3 связанных фикса):**
+
+1. **Pending-mutation registry**
+   ([heys_day_global_exports_v1.js](apps/web/heys_day_global_exports_v1.js)) —
+   независимый от блок-окна сигнал «есть несохранённая user-правка». Map
+   `date → ts`, auto-expire 30с. API: `HEYS.Day.markPendingMutation(date)` /
+   `hasPendingMutation(date)` / `clearPendingMutation(date)` /
+   `listPendingMutations()`. handleAdd
+   ([heys_day_add_product.js](apps/web/heys_day_add_product.js#L608)) ставит
+   флаг; flush() ([heys_day_hooks.js](apps/web/heys_day_hooks.js#L316))
+   force-write при наличии флага И clear после успешного `saveToDate`;
+   reconciler ([heys_day_effects.js:1023](apps/web/heys_day_effects.js#L1023))
+   skip если pending. Закрывает зазор «block истёк, flush ещё не успел».
+
+2. **Block-window cap = Date.now() + 15s** в `HEYS.Day.setBlockCloudUpdates`.
+   Предотвращает skewed block из payload.updatedAt PIN-устройства с опережающими
+   часами. Cap = MAX_LEGIT_BLOCK_MS из heys_day_effects.js:467 (markUndoWindow ≤
+   5с + запас).
+
+3. **Pending/block override ПЕРЕД disabled guard** в flush(). Раньше Phase 1
+   override стоял после
+   `if (!force && (disabled || isUnmountedRef.current)) return`, и при
+   re-bootstrap-flap (visibility-visible триггерил setIsHydrated(false) на
+   короткий срок) flush молча выходил. Теперь pending/block — независимый сигнал
+   «надо записать», override действует даже при disabled=true.
+
+Покрыто в
+[apps/web/**tests**/sync-race-condition.test.js](apps/web/__tests__/sync-race-condition.test.js):
++3 теста (`flush pending-mutation override`, `pending auto-expires after 30s`,
+`setBlockCloudUpdates caps skewed payload`). Полный набор: 1378 passed.
+
+В Sync Debug Snapshot добавлено поле `pending_day_mutations:` для верификации.
+
+**Live-проверка после deploy:** курaтор → добавить item → snapshot в течение 3с
+показывает `pending_day_mutations: 2026-06-08(<1s)`. Через 2-3с — flush
+завершается, `pending_day_mutations: —`, в `saveClientKey history` есть
+`heys_dayv2_*`, в Sync Log — `upload_ok`. На медленном Android Chrome даже при
+long-task флаг доживёт до flush (auto-expire 30с).
+
+---
+
 ## ✅ FIXED 2026-06-08 — curator add-item silently dropped (live-refresh races flush)
 
 **Симптом (из Sync Debug Snapshot курaтора 12:14, клиент
