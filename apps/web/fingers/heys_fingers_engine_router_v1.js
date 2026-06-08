@@ -87,8 +87,25 @@
   // расхождения. Это **наблюдаемость**, не safety-guard: фактический выход не
   // меняется (его уже гарантирует isValidSession + fallback-цепочка).
   // Цель: дать методологу/тебе видимость «насколько разные сессии генерятся».
+  // Распределение значения поля по exercises → {value: count}.
+  function _distribution(exercises, field) {
+    const out = Object.create(null);
+    (exercises || []).forEach(function (e) {
+      const v = (e && e[field] != null) ? String(e[field]) : '(missing)';
+      out[v] = (out[v] || 0) + 1;
+    });
+    return out;
+  }
+
   function _diffSessions(newS, oldS) {
     if (!newS || !oldS) return { onlyOne: !newS ? 'old' : 'new' };
+    // Ревью #3 ограничение 2: UI рендерит только hang-протокол. Считаем долю
+    // non-hang атомов в builder-сессии — прямая метрика «сколько из них UI
+    // покажет как вырожденный 7с×N виса». Если nonHangCount > 0 — это сигнал
+    // что builder тащит атомы, которые player не умеет.
+    const newNonHang = (newS.exercises || []).filter(function (e) {
+      return e && e.doseShape && e.doseShape !== 'hang';
+    }).length;
     return {
       intensity: { new: newS.intensity, old: oldS.intensity, same: newS.intensity === oldS.intensity },
       durationMin: { new: newS.durationMin, old: oldS.durationMin, deltaMin: (newS.durationMin || 0) - (oldS.durationMin || 0) },
@@ -97,7 +114,11 @@
         new: newS.exercises.map(function (e) { return e.__role; }),
         old: oldS.exercises.map(function (e) { return e.__role; })
       },
-      requiresWarmup: { new: newS.requiresWarmup, old: oldS.requiresWarmup, same: newS.requiresWarmup === oldS.requiresWarmup }
+      requiresWarmup: { new: newS.requiresWarmup, old: oldS.requiresWarmup, same: newS.requiresWarmup === oldS.requiresWarmup },
+      // Ревью #3 #2 метрика: распределение shape/modality + non-hang risk.
+      doseShape: { new: _distribution(newS.exercises, 'doseShape'), old: _distribution(oldS.exercises, 'doseShape') },
+      modality: { new: _distribution(newS.exercises, 'modality'), old: _distribution(oldS.exercises, 'modality') },
+      nonHangCount: { new: newNonHang, uiRendererRisk: newNonHang > 0 }
     };
   }
 

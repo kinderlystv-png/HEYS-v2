@@ -270,6 +270,28 @@ describe('engineRouter: shadow-compare (ревью 4.3 #4.3e — наблюда�
     expect(Array.isArray(diff.roles.old)).toBe(true);
   });
 
+  it('ревью #3 ограничение 2: shadow-diff содержит doseShape/modality distribution + nonHangCount', () => {
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'max',
+        exercises: [
+          { __role: 'power', doseShape: 'attempts', modality: 'campus' },
+          { __role: 'max-strength', doseShape: 'hang', modality: 'fingerboard' },
+          { __role: 'antagonist', doseShape: 'reps', modality: 'antagonist' }
+        ],
+        name: 'Mixed shapes', durationMin: 40, requiresWarmup: true
+      })
+    };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+    const diff = R().lastShadowDiff;
+    expect(diff.doseShape.new).toEqual({ attempts: 1, hang: 1, reps: 1 });
+    expect(diff.modality.new).toEqual({ campus: 1, fingerboard: 1, antagonist: 1 });
+    // 2 атома non-hang → uiRendererRisk должен быть true.
+    expect(diff.nonHangCount.new).toBe(2);
+    expect(diff.nonHangCount.uiRendererRisk).toBe(true);
+  });
+
   it('shadowCompare ошибка mixEngine не валит builder-выход', () => {
     F().flags.shadowCompare = true;
     F().sessionBuilder = {
