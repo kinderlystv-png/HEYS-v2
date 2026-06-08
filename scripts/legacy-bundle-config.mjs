@@ -426,6 +426,7 @@ export const LEGACY_GENERATORS = {
             'apps/web/fingers/heys_fingers_safety_v1.js',
             'apps/web/fingers/heys_fingers_warmup_runner_v1.js',
             'apps/web/fingers/heys_fingers_mix_engine_v1.js',
+            'apps/web/fingers/heys_fingers_session_builder_v1.js',
             'apps/web/fingers/heys_fingers_engine_router_v1.js',
             // Layer 4
             'apps/web/fingers/heys_fingers_muscle_detail_v1.js',
