@@ -830,10 +830,27 @@
       }, []);
     }
 
+    // 🛡️ Замораживаем список шагов на время сессии визарда.
+    // Без заморозки: WeightStepComponent immediate-write (500ms debounce) кладёт
+    // dayv2.weightMorning в LS до того как пользователь нажмёт «Далее». На любом
+    // следующем re-render'е MorningCheckin фильтр в getCheckinSteps выкидывает
+    // 'weight' (он считается заполненным), массив укорачивается, currentStepIndex
+    // в StepModal остаётся 0 — и под ним оказывается уже следующий шаг (сон).
+    // Наружу это выглядит как «само перепрыгнуло на след. шаг, не давая ввести
+    // десятые». Аналогично для sleep/mood/stepsGoal — любой шаг с immediate-write
+    // или с записью в фоне будет страдать. Список шагов мастера — инвариант
+    // сессии: открыли с N шагов → пройдём ровно эти N.
+    const stepsRef = (window.React && typeof window.React.useRef === 'function')
+      ? window.React.useRef(null)
+      : { current: null };
+    if (stepsRef.current === null) {
+      const profileForSteps = readStoredValue('heys_profile', {});
+      stepsRef.current = getCheckinSteps(profileForSteps, { filterCompleted: true });
+    }
+
     // Если StepModal доступен — используем его
     if (HEYS.StepModal && HEYS.StepModal.Component) {
-      const profile = readStoredValue('heys_profile', {});
-      const steps = getCheckinSteps(profile, { filterCompleted: true });
+      const steps = stepsRef.current;
 
       // Определяем: это регистрационный чек-ин (есть profile-шаги)?
       const isRegistrationCheckin = steps.includes('profile-personal');
