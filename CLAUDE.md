@@ -121,105 +121,81 @@ agent-mode), `legacy-sync` (rebundle+auto-stage в integration-mode, report-only
 в agent-mode), `prepare-release:check` (whats-new, pre-push),
 `lint-direct-localstorage-writes`, `lint-shared-cache-writes`.
 
-## Параллельная работа агентов (bundle isolation)
+## Default flow: `pnpm ship`
 
-**Шаг 0 любой задачи: уйди с trunk на свою ветку СРАЗУ, до правок.** Для
-реальной параллельной работы — свой worktree одной командой:
-**`pnpm agent:worktree <task>`** (ветка `claude/<task>` от свежего origin/main,
-настоящий `pnpm install`, рабочие хуки; **никогда не симлинкай node_modules** —
-это рушит `core.bare`). Соло на `main`/`develop` без параллели — достаточно
-`git switch -c <task>` (незакоммиченные правки переедут на ветку в том же
-каталоге). Не по схеме «правлю в main → на коммите убегаю»: pre-commit
-([check-agent-staging.mjs](scripts/check-agent-staging.mjs)) **блокирует
-task-work (source/test/docs) в staged на `main`/`develop`**. Причина — несколько
-агентов на одном trunk сцепляются в одну ветку: `git push` (толкает всю ветку)
-не отправит твой фикс без чужих коммитов, а чужой красный коммит заблокирует
-твой деплой. Release-коммиты (whats-new от `push:agent`) и rebuild бандлов
-проходят (в staged нет task-work). `agents:integrate` ставит
-`HEYS_INTEGRATION=1`; осознанный ручной trunk-коммит —
-`HEYS_ALLOW_MAIN_COMMIT=1`. Поймало на коммите — не страшно:
-`git switch -c <task>` уносит правки на ветку, коммить там.
-
-**Главное правило: агенты коммитят ТОЛЬКО source. Бандлы и whats-new не
-трогают.** Приложение деплоится из закоммиченных бандлов с content-hash в именах
-(`public/*.bundle.<hash>.js`, `bundle-manifest.json`, `index.html`, `sw.js`,
-`react-bundle.js`). Если каждый из 2–5 агентов пересобирает их в своём коммите —
-hash-коллизии и порча чужих несобранных артефактов. Поэтому generated-файлы
-собирает **один integration-проход**, а не каждый агент.
-
-**Режим определяется автоматически**
-([check-agent-staging.mjs](scripts/check-agent-staging.mjs)): worktree под
-`.claude/worktrees/`, ветки `codex/`·`claude/`·`copilot/`· `worktree-agent/`, и
-**по умолчанию любая ветка кроме `main`/`develop`/`integration/*`/`release/*`**
-→ **agent mode** (source-only). В этом режиме pre-commit hook `legacy-sync`
-только репортит, какие бандлы нужно будет пересобрать, и **блокирует staging
-generated/release-файлов** (если случайно сделал `git add -A`). Источник списка
-generated-путей —
-[scripts/legacy-bundle-config.mjs](scripts/legacy-bundle-config.mjs) (single
-source of truth, не дублируй).
-
-**Изоляция рабочего дерева:** если коммитишь agent-mode правки из общего
-root-checkout, пока живы другие `.claude/worktrees/`, pre-commit падает — два
-агента в одном дереве перемешали бы незакоммиченные правки. Работай в своём
-worktree (`git worktree add`). Интеграторы на `main`/`integration` исключены;
-override — `HEYS_ALLOW_SHARED_TREE=1` (если этот checkout точно только твой).
-
-Workflow:
-
-1. Агент в своём worktree/ветке коммитит source/test/docs своей задачи. Бандлы,
-   `whats-new.json`, `buildHash` — **не его забота**. Push не делает.
-2. Когда задачи закрыты — **integration-проход** (на `main`/`integration/*`)
-   собирает всё за один раз:
-   ```bash
-   pnpm agents:integrate --branches=codex/a,codex/b --title="..." \
-     --items='[{"type":"fix","title":"...","description":"..."}]'
-   ```
-   (или `--branches=auto --yes` — авто-сбор agent-веток из worktrees;
-   `--dry-run` — показать план без мутаций). Он мержит ветки (откат при
-   конфликте), делает full rebuild, стейджит generated, гоняет
-   `verify:legacy-bundles`, создаёт один `chore(build)` + один `chore(release)`
-   whats-new коммит. Push не делает.
-
-**Не пересобирай бандлы вручную перед коммитом.** На integration-ветке
-pre-commit `legacy-sync` сам пересоберёт затронутые бандлы из _закоммиченного_
-source и застейджит их; на agent-ветке бандлы вообще не коммитятся. Ручной
-`pnpm bundle:legacy` до коммита только делает baseline «грязным» — `legacy-sync`
-тогда падает и заставляет откатывать generated к HEAD. Легитимная пересборка —
-это `pnpm agents:integrate` (full rebuild в проходе) и локальный `predev`/dev-
-сервер (не коммитится). Коммить только source — артефакты соберёт
-хук/интеграция.
-
-**Dev-цикл «увидеть свою правку» (в своём worktree, не коммитится).**
-`pnpm dev:web` грузит уже собранные хеш-бандлы из `public/` как статику — vite
-их не HMR-ит, поэтому правка _внутри_ бандла в dev сама не появится. Чтобы
-увидеть: пересобери затронутый бандл —
-`pnpm bundle:legacy:auto --files=<твои файлы>` (селективно, быстро) или
-`pnpm bundle:legacy` (полный) — и reload. Пересобранные бандлы остаются
-**грязными в твоём worktree, и это нормально**: они изолированы (у каждого
-worktree свои), коммитишь ты только source (guard блокирует бандлы), а канон
-соберёт интеграция один раз. У каждого agent-worktree свой `node_modules` —
-собираешься независимо, чужие правки не подмешиваются.
-
-**Когда хук срабатывает — следуй его stderr.** Сообщение содержит точные
-инструкции. Никогда `--no-verify` без явного разрешения пользователя.
-
-### Релиз / push (integration-only)
-
-Эти инструменты — для **integration-прохода и ручных technical-пушей**, не для
-рядовых agent-коммитов. whats-new (`feat|fix|perf` → entry в
-`apps/web/public/whats-new.json`, `coveredCommits` покрывают user-facing коммиты
-push-range) генерится автоматически через `agents:integrate` или, для одиночного
-technical/ручного пуша:
+Для соло-работы (один агент, серийно) — **default-флоу одна команда**:
 
 ```bash
-pnpm push:agent -- --title="..." --item-title="..." --item-description="..."
+pnpm ship "feat(fingers): reorder layout cards"
+pnpm ship "fix(sync): drop stale dayv2" --dry-run
+pnpm ship "chore(scripts): refactor logging" --no-push
 ```
 
-Текст релиза — по [apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md).
-`--dry-run --no-push` для проверки, `--print-command` для шаблона. `push:safe` —
-для чисто технических изменений (не для user-facing, где текст должен быть
-точным). `prepare-release:check` гоняется на pre-push и в CI; bundle rebuild
-(`legacy-sync`) — на pre-commit только в integration-режиме.
+Что делает [scripts/ship.mjs](scripts/ship.mjs):
+
+1. `git add -A` — стейджит всё что изменено (source).
+2. `git commit -m "<msg>"` — pre-commit hook в `integration`-режиме сам
+   пересобирает затронутые бандлы из staged source и стейджит их в тот же
+   коммит. Источник списка бандлов —
+   [scripts/legacy-bundle-config.mjs](scripts/legacy-bundle-config.mjs).
+3. Если коммит user-facing (`feat`/`fix`/`perf`) — автогенерирует whats-new
+   entry из subject коммита (`type`, `title`, `description = subject`) и делает
+   второй `chore(release): whats-new for <subject>` коммит.
+4. `git push origin <current-branch>`.
+5. Если ты на `main` — ждёт зелёного `Deploy to Yandex Cloud` через
+   `gh run watch`.
+
+Под капотом ship ставит env-флаги: `HEYS_SHIP=1` (bypass agent-mode
+generated/release-блока в
+[check-agent-staging.mjs](scripts/check-agent-staging.mjs)),
+`HEYS_INTEGRATION=1` (разрешает task-work коммит на `main`/`develop`),
+`HEYS_STAGING_MODE=integration` (форсит auto-sync hook на rebuild+stage). Все
+три снимают блоки которые иначе разводили flow на трёх шагах.
+
+**Работаешь сразу в `main`.** Никаких worktree/feature-branch, никаких
+`git switch -c <task>` перед правкой. Один тред — один ship.
+
+### Когда нужны worktree (opt-in для реальной параллели)
+
+Если правда 2+ агента одновременно правят разные куски кода (редкий случай) —
+тогда:
+
+```bash
+pnpm agent:worktree <task>   # создаст .claude/worktrees/<task> на claude/<task>
+# каждый агент работает в своём worktree, source-only коммиты
+pnpm agents:integrate --branches=claude/a,claude/b --title="..." \
+  --items='[{"type":"fix","title":"...","description":"..."}]'
+```
+
+В этом режиме pre-commit (без `HEYS_SHIP=1`) блокирует бандлы и whats-new в
+agent-mode (см. [check-agent-staging.mjs](scripts/check-agent-staging.mjs)) —
+каждый агент коммитит только source, а bundle rebuild + whats-new делает один
+`agents:integrate` проход на main. Это спасает от hash-коллизий бандлов, если
+два агента ребилдят одновременно.
+
+### Прочие push-инструменты (legacy)
+
+- `pnpm push:agent` — non-interactive push с генерацией whats-new из CLI
+  аргументов (`--title`, `--item-title`, `--item-description`). Эквивалент ship
+  для случая «коммиты уже есть, нужен только release-entry + push». ship
+  предпочтительнее когда коммиты ещё не сделаны.
+- `pnpm push:safe` — для чисто технических пушей (без whats-new).
+- `pnpm push:ready` — интерактивный flow для ручной редактуры release-текста.
+
+Текст user-facing release-entry — по
+[apps/web/WHATS_NEW_COPY.md](apps/web/WHATS_NEW_COPY.md). ship использует
+subject коммита как title и description — для серьёзных user-facing релизов
+лучше потом поправить вручную через `push:ready` или прямой edit
+`whats-new.json`.
+
+**Dev-цикл «увидеть свою правку».** `pnpm dev:web` грузит закоммиченные
+хеш-бандлы из `public/` как статику — vite их не HMR-ит. Чтобы увидеть правку
+inside бандла без коммита — пересобери: `pnpm bundle:legacy:auto --files=<твои>`
+(селективно) или `pnpm bundle:legacy` (полный) и reload. После ship'a этот
+ручной rebuild не нужен.
+
+**Когда хук срабатывает — следуй его stderr.** Никогда `--no-verify` без явного
+разрешения пользователя.
 
 ---
 
