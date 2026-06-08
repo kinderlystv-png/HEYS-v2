@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.06.08.c3099358",
+      "buildHash": "c3099358",
+      "date": "2026-06-08",
+      "kind": "technical",
+      "profile": "technical-general",
+      "title": "Исправления ошибок и улучшение стабильности",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Исправили внутренние ошибки и улучшили стабильность",
+          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
+        }
+      ]
+    },
+    {
       "version": "2026.06.08.9ee0398e",
       "buildHash": "9ee0398e",
       "date": "2026-06-08",
@@ -135,22 +150,6 @@
         }
       ],
       "coveredCommits": ["cc9f0caf", "c07a5bd4"]
-    },
-    {
-      "version": "2026.06.06.40bb9c17",
-      "buildHash": "40bb9c17",
-      "date": "2026-06-06",
-      "kind": "technical",
-      "profile": "technical-infra-tests",
-      "title": "Gantt v2: backlog + minimap + undo",
-      "items": [
-        {
-          "type": "feat",
-          "title": "Планирование: Gantt v2",
-          "description": "Зона незапланированных задач, мини-карта таймлайна, undo и поля прогресса"
-        }
-      ],
-      "coveredCommits": ["49e3a1c0"]
     }
   ]
 }
