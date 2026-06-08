@@ -28,7 +28,7 @@ const required = new Set();
 // подразделы N.M
 for (const m of METH.matchAll(/^### (\d+\.\d+)\./gm)) required.add(m[1]);
 // блоки
-for (const m of METH.matchAll(/^### Блок ([A-I])\./gm)) required.add('block-' + m[1]);
+for (const m of METH.matchAll(/^### Блок ([A-Z])\./gm)) required.add('block-' + m[1]); // [A-Z]: sport-agnostic
 // валидаторы S1..Sn (строки таблицы)
 for (const m of METH.matchAll(/^\| (S\d+) /gm)) required.add(m[1]);
 
