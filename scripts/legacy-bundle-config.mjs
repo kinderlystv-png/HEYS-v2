@@ -410,6 +410,7 @@ export const LEGACY_GENERATORS = {
             'apps/web/fingers/heys_fingers_quality_catalog_v1.js',
             'apps/web/fingers/heys_fingers_block_catalog_v1.js',
             'apps/web/fingers/heys_fingers_validators_v1.js',
+            'apps/web/fingers/heys_fingers_assessment_v1.js',
             'apps/web/fingers/heys_fingers_age_gating_v1.js',
             'apps/web/fingers/heys_fingers_readiness_v1.js',
             // Layer 2
