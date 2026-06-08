@@ -44,6 +44,9 @@ const flags = {
     noPush: args.includes('--no-push'),
     noWatch: args.includes('--no-watch'),
     allowNonMain: args.includes('--allow-non-main'),
+    // SEC: skip ship-lock acquisition. Use for emergency hot-fix only when you
+    // KNOW no other agent is shipping — bypasses the multi-agent serialisation.
+    noLock: args.includes('--no-lock'),
     noVerify: false, // intentionally unsupported
 };
 const message = args.find((a) => !a.startsWith('--'));
@@ -187,6 +190,146 @@ function watchDeploy(branch) {
 }
 
 /**
+ * Ship-lock — Variant D from docs/PUSH_TRAIN_DESIGN.md.
+ *
+ * Serialise `pnpm ship` across 5+ parallel agents working on the same `main`
+ * checkout. Editing remains parallel (last-writer-wins on a per-file basis,
+ * unchanged from current behaviour). Only the commit+push sequence is
+ * serialised, because that's where today's pain lives:
+ *   - non-fast-forward push storms (5 agents racing for tip-of-main),
+ *   - duplicated whats-new.json entries (each agent generates its own),
+ *   - git index.lock chaos when multiple `git commit` race.
+ *
+ * Lock file: .claude/ship-lock — owned by the current ship's PID, contains
+ *   <pid>\n<unix_ms>\n<branch>\n<short_msg>
+ * TTL: 5 minutes. If an existing lock is stale (PID dead OR mtime older than
+ * TTL), the current ship steals it with a warning. If it's live, the current
+ * ship refuses with a helpful message — the agent decides whether to wait/retry
+ * or investigate.
+ *
+ * Override: --no-lock for emergency hot-fixes (use sparingly).
+ */
+const SHIP_LOCK_PATH = path.join(ROOT_DIR, '.claude', 'ship-lock');
+const SHIP_LOCK_TTL_MS = 5 * 60 * 1000;
+let shipLockHeld = false;
+
+function isPidAlive(pid) {
+    if (!Number.isInteger(pid) || pid <= 0) return false;
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function readShipLock() {
+    try {
+        const raw = fs.readFileSync(SHIP_LOCK_PATH, 'utf8');
+        const [pidStr, tsStr, branch, ...msgParts] = raw.split('\n');
+        return {
+            pid: Number.parseInt(pidStr, 10),
+            ts: Number.parseInt(tsStr, 10),
+            branch: branch || '?',
+            message: msgParts.join('\n').trim() || '?',
+        };
+    } catch {
+        return null;
+    }
+}
+
+function acquireShipLock(branch, message) {
+    if (flags.noLock) {
+        err('[ship] ⚠️  --no-lock: skipping ship-lock acquisition (emergency mode).');
+        return;
+    }
+    fs.mkdirSync(path.dirname(SHIP_LOCK_PATH), { recursive: true });
+    const lockBody = `${process.pid}\n${Date.now()}\n${branch}\n${message.slice(0, 200)}\n`;
+
+    // Atomic create — `wx` fails if file exists.
+    try {
+        fs.writeFileSync(SHIP_LOCK_PATH, lockBody, { flag: 'wx' });
+        shipLockHeld = true;
+        return;
+    } catch (e) {
+        if (e.code !== 'EEXIST') {
+            fail(`Failed to write ship-lock: ${e.message}`);
+        }
+    }
+
+    // Lock exists — decide if it's live or stale.
+    const existing = readShipLock();
+    if (!existing) {
+        // Corrupt lock — steal.
+        err('[ship] ⚠️  Found corrupt ship-lock — stealing.');
+        fs.writeFileSync(SHIP_LOCK_PATH, lockBody);
+        shipLockHeld = true;
+        return;
+    }
+    const ageMs = Date.now() - existing.ts;
+    const ageSec = Math.floor(ageMs / 1000);
+    const pidAlive = isPidAlive(existing.pid);
+
+    if (!pidAlive) {
+        err(`[ship] ⚠️  Found ship-lock from dead PID ${existing.pid} (${ageSec}s old) — stealing.`);
+        fs.writeFileSync(SHIP_LOCK_PATH, lockBody);
+        shipLockHeld = true;
+        return;
+    }
+    if (ageMs > SHIP_LOCK_TTL_MS) {
+        err(`[ship] ⚠️  Found ship-lock from PID ${existing.pid} but it's ${ageSec}s old (>${SHIP_LOCK_TTL_MS / 1000}s TTL) — stealing.`);
+        err(`[ship]    If that ship is actually live and slow, kill -9 me and let it finish.`);
+        fs.writeFileSync(SHIP_LOCK_PATH, lockBody);
+        shipLockHeld = true;
+        return;
+    }
+
+    // Live lock — refuse, agent decides retry strategy.
+    err(`[ship] ❌ Another agent is currently shipping:`);
+    err(`[ship]     PID:     ${existing.pid}  (alive)`);
+    err(`[ship]     branch:  ${existing.branch}`);
+    err(`[ship]     started: ${ageSec}s ago`);
+    err(`[ship]     msg:     ${existing.message}`);
+    err(``);
+    err(`[ship]    Wait ~30s and retry, or:`);
+    err(`[ship]      ps -p ${existing.pid}                # confirm it's actually running`);
+    err(`[ship]      kill -9 ${existing.pid} && rm ${path.relative(ROOT_DIR, SHIP_LOCK_PATH)}    # if hung`);
+    err(`[ship]    Emergency bypass (skips lock entirely):`);
+    err(`[ship]      pnpm ship "<msg>" --no-lock`);
+    process.exit(1);
+}
+
+function releaseShipLock() {
+    if (!shipLockHeld) return;
+    try {
+        const existing = readShipLock();
+        if (existing && existing.pid === process.pid) {
+            fs.unlinkSync(SHIP_LOCK_PATH);
+        }
+        // If existing.pid !== process.pid, another ship stole the lock from us
+        // (we ran longer than TTL). Don't delete — it belongs to them now.
+    } catch {
+        // Best-effort cleanup; if file already gone, nothing to do.
+    }
+    shipLockHeld = false;
+}
+
+// Register lock release on every exit path. Node calls 'exit' for normal
+// termination; signals need explicit handlers to fire 'exit' afterwards.
+process.on('exit', releaseShipLock);
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+    process.on(sig, () => {
+        releaseShipLock();
+        process.exit(130);
+    });
+}
+process.on('uncaughtException', (e) => {
+    releaseShipLock();
+    err(`[ship] uncaught: ${e.stack || e.message}`);
+    process.exit(1);
+});
+
+/**
  * Stale git-lock cleanup. Multi-agent reality: when one agent crashes
  * mid-commit (Ctrl-C, OOM, network drop), it leaves `.git/index.lock` /
  * `.git/next-index-<pid>.lock` on disk. The next agent's first git op fails
@@ -239,6 +382,8 @@ function main() {
     }
 
     cleanupStaleGitLocks();
+    // After lock cleanup so we can read branch reliably without race.
+    acquireShipLock(getCurrentBranch(), message);
 
     const { type, subject, isUserFacing } = parseSubject(message);
     const branch = getCurrentBranch();
