@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.08.5b27336a",
+      "buildHash": "5b27336a",
+      "date": "2026-06-08",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "freeze step list during wizard session",
+      "items": [
+        {
+          "type": "fix",
+          "title": "freeze step list during wizard session",
+          "description": "freeze step list during wizard session"
+        }
+      ],
+      "coveredCommits": ["5b27336a"]
+    },
+    {
       "version": "2026.06.08.6ec7912f",
       "buildHash": "6ec7912f",
       "date": "2026-06-08",
@@ -139,21 +155,6 @@
         }
       ],
       "coveredCommits": ["9f762b02"]
-    },
-    {
-      "version": "2026.06.08.1c00fd30",
-      "buildHash": "1c00fd30",
-      "date": "2026-06-08",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления и улучшения стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки",
-          "description": "В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения."
-        }
-      ]
     }
   ]
 }
