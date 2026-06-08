@@ -31,6 +31,7 @@ const MODULES = [
     { file: 'heys_fingers_programs_catalog_v1.js',label: 'protocol catalog' },
     { file: 'heys_fingers_quality_catalog_v1.js', label: 'methodology data layer (9 qualities)' },
     { file: 'heys_fingers_block_catalog_v1.js',   label: '36 atoms × 9 blocks (METHODOLOGY ч.4)' },
+    { file: 'heys_fingers_validators_v1.js',      label: 'safety validators S1–S8 + homed V_*' },
     { file: 'heys_fingers_age_gating_v1.js',      label: 'UIAA/BMC age gate' },
     { file: 'heys_fingers_readiness_v1.js',       label: 'readiness assess' },
 
