@@ -900,6 +900,14 @@ module.exports.handler = async function (event, context) {
   const method = event.httpMethod;
   const path = event.path || event.url || '';
 
+  // 🛡️ SEC-018 (2026-06-08): Body size limit — защита от DoS/OOM.
+  // 64 KB: payment-init payload'ы + ЮKassa webhook'и реально <10KB.
+  // Аналог heys-api-rpc/index.js:1517-1518 (256 KB). Payments может быть меньше.
+  const MAX_BODY_BYTES = 64 * 1024;
+  if (event.body && typeof event.body === 'string' && Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES) {
+    return { statusCode: 413, headers: _currentCorsHeaders, body: JSON.stringify({ error: 'Payload too large' }) };
+  }
+
   // Parse body
   let body = {};
   if (event.body) {

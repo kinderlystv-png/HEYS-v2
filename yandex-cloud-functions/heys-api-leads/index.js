@@ -147,6 +147,13 @@ module.exports.handler = async function (event, context) {
     };
   }
 
+  // 🛡️ SEC-018 (2026-06-08): Body size limit — защита от DoS/OOM.
+  // 64 KB: lead-форма ~1KB. Аналог heys-api-rpc/index.js:1517-1518 (256 KB).
+  const MAX_BODY_BYTES = 64 * 1024;
+  if (event.body && typeof event.body === 'string' && Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES) {
+    return { statusCode: 413, headers: corsHeaders, body: JSON.stringify({ error: 'Payload too large' }) };
+  }
+
   try {
     // Парсим тело запроса
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;

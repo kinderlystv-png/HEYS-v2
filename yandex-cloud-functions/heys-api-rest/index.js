@@ -403,6 +403,18 @@ module.exports.handler = async function (event, context) {
     };
   }
 
+  // 🛡️ SEC-018 (2026-06-08): Body size limit — защита от DoS/OOM через гигантский JSON.
+  // 512 KB покрывает реалистичный batch upsert client_kv_store (десятки meals/products).
+  // Аналог heys-api-rpc/index.js:1517-1518 (256 KB там). REST допускает больше из-за batch'ей.
+  const MAX_BODY_BYTES = 512 * 1024;
+  if (event.body && typeof event.body === 'string' && Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES) {
+    return {
+      statusCode: 413,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Payload too large' })
+    };
+  }
+
   // Debug: логируем структуру event для диагностики
   console.log('[REST Debug] Event:', JSON.stringify({
     path: event.path,

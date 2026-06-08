@@ -298,6 +298,14 @@ module.exports.handler = async function (event) {
     return { statusCode: 204, headers: cors, body: '' };
   }
 
+  // 🛡️ SEC-018 (2026-06-08): Body size limit — защита от DoS/OOM.
+  // 8 MB: base64-payload до ~5MB после декода (см. line ~215) + 33% base64-оверхед.
+  // Аналог heys-api-rpc/index.js:1517-1518 (256 KB). Photos нужно больше из-за base64.
+  const MAX_BODY_BYTES = 8 * 1024 * 1024;
+  if (event.body && typeof event.body === 'string' && Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES) {
+    return { statusCode: 413, headers: cors, body: JSON.stringify({ error: 'Payload too large' }) };
+  }
+
   const path = event.path || event.url || '';
   const pathParts = path.split('?')[0].split('/').filter(Boolean);
   // ['photos', 'upload' | 'delete']
