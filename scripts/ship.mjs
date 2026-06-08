@@ -87,9 +87,48 @@ function parseSubject(msg) {
     return { type, subject, isUserFacing: type === 'feat' || type === 'fix' || type === 'perf' };
 }
 
-function ensureSomethingToCommit() {
+function ensureStagedAndReady(message) {
     const status = gitSafe(['status', '--porcelain']);
     if (!status) fail('Nothing to commit (working tree clean).');
+
+    const stagedRaw = gitSafe(['diff', '--cached', '--name-only']);
+    const dirtyRaw = gitSafe(['diff', '--name-only']);
+    const untrackedRaw = gitSafe(['ls-files', '--others', '--exclude-standard']);
+
+    const staged = stagedRaw ? stagedRaw.split('\n').filter(Boolean) : [];
+    const dirty = dirtyRaw ? dirtyRaw.split('\n').filter(Boolean) : [];
+    const untracked = untrackedRaw ? untrackedRaw.split('\n').filter(Boolean) : [];
+
+    if (staged.length === 0) {
+        // Nothing staged — agent ran ship over auto-`git add -A` would silently
+        // capture other agents' WIP in the same checkout (real incident, see
+        // CLAUDE.md). Refuse to auto-stage. Make staging an explicit git signal
+        // that the agent is claiming "these files are mine".
+        err(`[ship] ❌ Nothing is staged for commit, but working tree has dirty/untracked files.`);
+        err(`[ship]    ship no longer auto-stages — explicit \`git add\` prevents silent capture`);
+        err(`[ship]    of other agents' WIP in this checkout. Choose:`);
+        err(``);
+        err(`[ship]    Selective (recommended):`);
+        err(`[ship]        git add <your files> && pnpm ship "${message}"`);
+        err(``);
+        err(`[ship]    All-dirty (only if every dirty file is yours):`);
+        err(`[ship]        git add -A && pnpm ship "${message}"`);
+        err(``);
+        if (dirty.length > 0) {
+            err(`[ship]    Dirty modified (${dirty.length}):`);
+            dirty.slice(0, 10).forEach((f) => err(`[ship]        M ${f}`));
+            if (dirty.length > 10) err(`[ship]        ...+${dirty.length - 10} more`);
+        }
+        if (untracked.length > 0) {
+            err(`[ship]    Untracked (${untracked.length}):`);
+            untracked.slice(0, 10).forEach((f) => err(`[ship]        ?? ${f}`));
+            if (untracked.length > 10) err(`[ship]        ...+${untracked.length - 10} more`);
+        }
+        process.exit(1);
+    }
+
+    const unstagedCount = dirty.length + untracked.length;
+    out(`[ship] 📝 staged=${staged.length} unstaged=${unstagedCount} (unstaged stays in working tree)`);
 }
 
 function getCurrentBranch() {

@@ -86,15 +86,22 @@ function isGeneratedStatusFile(filePath) {
 }
 
 function getDirtyGeneratedFiles() {
+    // NB: do NOT `.trim()` — git status --porcelain uses leading whitespace as
+    // status (e.g. " M file" = worktree-only modified, no index change). Trim
+    // would silently drop the leading space and `.slice(3)` would chop the
+    // first 1-2 chars of the filename, hiding the file from the dirty check.
+    // This bug let foreign worktree edits to hybrid files like apps/web/index.html
+    // slip through and get captured by the hook's later `git add -A` (incident
+    // 2026-06-08: SEC-005 work pulled into chore(fingers): block_catalog commit
+    // because index.html had unstaged manual edits the hook didn't detect).
     const output = execSync('git status --porcelain --untracked-files=all', {
         encoding: 'utf8',
         cwd: ROOT_DIR,
     });
     return output
         .split('\n')
-        .map(line => line.trim())
-        .filter(Boolean)
-        .map(line => line.slice(3).replace(/^"|"$/g, ''))
+        .filter((line) => line.length >= 3)
+        .map((line) => line.slice(3).replace(/^"|"$/g, ''))
         .filter(isGeneratedStatusFile);
 }
 
