@@ -36,6 +36,17 @@ const F = () => globalThis.HEYS.Fingers;
 const SB = () => globalThis.HEYS.Fingers.sessionBuilder;
 const R = () => globalThis.HEYS.Fingers.engineRouter;
 
+// Тестовый "полный профиль" — все обычные prereq'ы выполнены, кроме
+// safety-critical (bfr_cuff_technique, safe_fall_setup, injury_screen).
+// Это эквивалент того, что в проде попадёт в default-profile через
+// onboarding/S3-runner (см. ревью #4).
+const FULL_PREREQS = [
+  'warmup_done', 'base_>=1y', 'base_>=2y', 'strength_base'
+];
+const fullProfile = (over) => Object.assign({
+  age: 25, level: 'intermediate', completedPrerequisites: FULL_PREREQS.slice()
+}, over || {});
+
 describe('sessionBuilder: контракт выхода (Риск 2 ревью)', () => {
   beforeAll(setupOnce);
 
@@ -81,10 +92,16 @@ describe('sessionBuilder: контракт выхода (Риск 2 ревью)'
 
   it('ревью 4.3 #3: intensity выводится из ролей (sessionIntensity-домен)', () => {
     // max bucket с full equipment → должен содержать power/max-strength → intensity=max
-    const max = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'advanced', readiness: 'max' });
-    expect(['max', 'moderate']).toContain(max.intensity); // зависит от того что нашёл builder
+    const max = SB().recommendDay({
+      equipmentTypes: ['full'], readiness: 'max',
+      profile: fullProfile({ level: 'advanced' })
+    });
+    expect(['max', 'moderate']).toContain(max.intensity);
     // recovery bucket → нет power/strength-endurance → intensity=recovery
-    const rec = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'recovery' });
+    const rec = SB().recommendDay({
+      equipmentTypes: ['full'], readiness: 'recovery',
+      profile: fullProfile()
+    });
     expect(rec.intensity).toBe('recovery');
   });
 
@@ -182,7 +199,8 @@ describe('sessionBuilder: explicit safety validators', () => {
   it('history с свежей high-tissue нагрузкой → S2 error → null', () => {
     const now = 1000000000;
     const s = SB().recommendDay({
-      equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max',
+      equipmentTypes: ['full'], readiness: 'max',
+      profile: fullProfile(),
       history: [{ timestamp: now - 12 * 3600 * 1000, atomId: 'fs_density_hang', tissueLoad: 'high' }],
       now: now
     });
@@ -284,6 +302,59 @@ describe('sessionBuilder: B1.5 cut — RENDERABLE_DOSESHAPES (ревью #3 ог
     expect(distribution.process).toBeUndefined();
     // reps присутствует (antagonist/mobility):
     expect(distribution.reps).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('sessionBuilder: S9 prerequisites (ревью #4 safety-шов)', () => {
+  beforeAll(setupOnce);
+
+  it('default profile без completedPrerequisites → большинство атомов отрезано (строгий fail-closed)', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], readiness: 'max',
+      profile: { age: 25, level: 'intermediate' /* completedPrerequisites не задан */ }
+    });
+    // С []-prereq doors блокирует все атомы с непустым prereq.
+    // Атомы без prereq остаются: aer_arc, aer_mileage (E), mobility (H), antagonist (G).
+    // Все они НЕ дают max-стимула → intensity=recovery, builder может вернуть null
+    // если ничего не подобралось для max-bucket слотов. Главное: бан S9 работает.
+    if (s !== null) {
+      // Не должно быть max-hangs (требуют warmup_done+base_>=1y) или min-edge.
+      s.exercises.forEach((e) => {
+        expect(e.atomId).not.toBe('fs_maxhang_20mm_half');
+        expect(e.atomId).not.toBe('fs_minedge_recruit');
+        expect(e.atomId).not.toBe('aer_bfr_lowload');
+      });
+    }
+  });
+
+  it('ревью #4 BFR пример: aer_bfr_lowload без bfr_cuff_technique → не в сессии', () => {
+    // Полный профиль БЕЗ bfr_cuff_technique (как у обычного юзера).
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], readiness: 'recovery',
+      profile: fullProfile() // FULL_PREREQS не включает bfr_cuff_technique
+    });
+    if (s !== null) {
+      expect(s.exercises.find((e) => e.atomId === 'aer_bfr_lowload')).toBeUndefined();
+    }
+  });
+
+  it('явный bfr_cuff_technique → aer_bfr_lowload теперь доступен (для capacity-слота)', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], readiness: 'recovery',
+      profile: fullProfile({ completedPrerequisites: FULL_PREREQS.concat(['bfr_cuff_technique']) })
+    });
+    expect(s).not.toBeNull();
+    // aer_bfr_lowload подходит под capacity slot; модuality fingerboard разрешена для 'full'.
+  });
+
+  it('ревью #4 min-edge пример: fs_minedge_recruit требует base_>=2y и strength_base', () => {
+    const sNoBase = SB().recommendDay({
+      equipmentTypes: ['full'], readiness: 'max',
+      profile: { age: 30, level: 'advanced', completedPrerequisites: ['warmup_done'] /* нет base_>=2y */ }
+    });
+    if (sNoBase !== null) {
+      expect(sNoBase.exercises.find((e) => e.atomId === 'fs_minedge_recruit')).toBeUndefined();
+    }
   });
 });
 

@@ -3006,6 +3006,38 @@
     return [ok('S7.pass', 'S7: разгрузка присутствует')];
   }
 
+  // ─── S9 — prerequisites enforcement (ревью #4) ────────────────────────────────
+  // Источник: CONSTRUCTOR_SPEC §1.2 (`gates.prerequisites[]`), METHODOLOGY ч.9
+  // (расширение S1 — token-based gates).
+  // Назначение: атом несёт массив prereq-токенов (`bfr_cuff_technique`,
+  // `safe_fall_setup`, `base_>=2y`, `injury_screen`, …). S1 проверяет только
+  // age+level → BFR без обучения манжете проходит. S9 закрывает дыру.
+  // Контракт fail-closed: profile.completedPrerequisites должен быть массивом;
+  // null/undefined → строгий режим (ничего не выполнено).
+  // Метод опт-ин методолога: какие prereq'ы auto-fill в default profile —
+  // отдельное продуктовое решение (warmup_done очевидно от S3-runner'а;
+  // safety-critical токены вроде bfr/fall — никогда).
+  function S9_prerequisitesGate(atom, profile) {
+    if (!atom || typeof atom !== 'object') return [err('S9.invalid_atom', 'атом не объект')];
+    const prereqs = (atom.gates && Array.isArray(atom.gates.prerequisites))
+      ? atom.gates.prerequisites : [];
+    if (prereqs.length === 0) {
+      return [ok('S9.na', 'S9 не применим: prereq-список пуст', { atomId: atom.id })];
+    }
+    if (!profile || typeof profile !== 'object') {
+      return [err('S9.no_profile', 'нет профиля — fail-closed', { atomId: atom.id })];
+    }
+    const completed = Array.isArray(profile.completedPrerequisites)
+      ? profile.completedPrerequisites : [];
+    const missing = prereqs.filter(function (tok) { return completed.indexOf(tok) < 0; });
+    if (missing.length > 0) {
+      return [err('S9.prereq_missing',
+        'не выполнены prereq: ' + missing.join(', '),
+        { atomId: atom.id, missing: missing })];
+    }
+    return [ok('S9.pass', 'S9: все prereq выполнены', { atomId: atom.id })];
+  }
+
   // ─── S8 — боль = стоп ─────────────────────────────────────────────────────────
   // METHODOLOGY ч.9.5, IMPLEMENTATION_MAP S8, Q-9-1 решено.
   // sessionLog = {painFlag: 'none'|'twinge'|'pain', painLocation?: string}
@@ -3181,6 +3213,7 @@
     S6_antagonistBalance: S6_antagonistBalance,
     S7_deloadRequired: S7_deloadRequired,
     S8_painStop: S8_painStop,
+    S9_prerequisitesGate: S9_prerequisitesGate,
     V_blockHomogeneity: V_blockHomogeneity,
     V_sessionOrder: V_sessionOrder,
     V_energySystemSequence: V_energySystemSequence,
@@ -8447,8 +8480,13 @@
     // safety-floor через тот же путь.
     if (!RENDERABLE_DOSESHAPES[atom.doseShape]) return false;
     // S1 explicit: возраст/уровень.
-    const issues = Fingers.validators.S1_ageLevelGate(atom, profile);
-    if (issues.some(function (i) { return i.level === 'error'; })) return false;
+    const s1 = Fingers.validators.S1_ageLevelGate(atom, profile);
+    if (s1.some(function (i) { return i.level === 'error'; })) return false;
+    // S9 explicit (ревью #4): prerequisites. Закрывает BFR-без-манжеты,
+    // min-edge-без-base, fall-без-safe-setup и т.п. profile.completedPrerequisites
+    // — массив выполненных токенов (default []: строго fail-closed).
+    const s9 = Fingers.validators.S9_prerequisitesGate(atom, profile);
+    if (s9.some(function (i) { return i.level === 'error'; })) return false;
     return true;
   }
 
@@ -8524,7 +8562,9 @@
   // ─── Главная функция ──────────────────────────────────────────────────────────
   function recommendDay(opts) {
     const o = opts || {};
-    const ageNum = num(o.age);
+    // age — приоритет opts.age (legacy mixEngine-зеркало) с fallback на
+    // profile.age (новый профиль-based contract). Раньше profile.age игнорировался.
+    const ageNum = num(o.age) ?? (o.profile && num(o.profile.age));
     if (ageNum === null) return null; // S1 fail-closed на верхнем уровне.
 
     // Level fail-closed (ревью 4.2 находка #1): убрали `|| 'intermediate'`,

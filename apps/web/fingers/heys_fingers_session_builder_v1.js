@@ -161,8 +161,13 @@
     // safety-floor через тот же путь.
     if (!RENDERABLE_DOSESHAPES[atom.doseShape]) return false;
     // S1 explicit: возраст/уровень.
-    const issues = Fingers.validators.S1_ageLevelGate(atom, profile);
-    if (issues.some(function (i) { return i.level === 'error'; })) return false;
+    const s1 = Fingers.validators.S1_ageLevelGate(atom, profile);
+    if (s1.some(function (i) { return i.level === 'error'; })) return false;
+    // S9 explicit (ревью #4): prerequisites. Закрывает BFR-без-манжеты,
+    // min-edge-без-base, fall-без-safe-setup и т.п. profile.completedPrerequisites
+    // — массив выполненных токенов (default []: строго fail-closed).
+    const s9 = Fingers.validators.S9_prerequisitesGate(atom, profile);
+    if (s9.some(function (i) { return i.level === 'error'; })) return false;
     return true;
   }
 
@@ -238,7 +243,9 @@
   // ─── Главная функция ──────────────────────────────────────────────────────────
   function recommendDay(opts) {
     const o = opts || {};
-    const ageNum = num(o.age);
+    // age — приоритет opts.age (legacy mixEngine-зеркало) с fallback на
+    // profile.age (новый профиль-based contract). Раньше profile.age игнорировался.
+    const ageNum = num(o.age) ?? (o.profile && num(o.profile.age));
     if (ageNum === null) return null; // S1 fail-closed на верхнем уровне.
 
     // Level fail-closed (ревью 4.2 находка #1): убрали `|| 'intermediate'`,

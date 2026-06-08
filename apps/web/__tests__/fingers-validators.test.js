@@ -269,6 +269,47 @@ describe('S8 — pain stop', () => {
   });
 });
 
+describe('S9 — prerequisites gate (ревью #4 safety-шов)', () => {
+  beforeAll(setupOnce);
+
+  it('na: атом без prereq → ok', () => {
+    const r = V().S9_prerequisitesGate(makeAtom({ gates: { minLevel: 'beginner', minAge: 0, dangerLevel: 'low', prerequisites: [] } }), { age: 25, level: 'intermediate' });
+    expect(r[0].code).toBe('S9.na');
+  });
+
+  it('fail-closed: профиль null → error', () => {
+    const r = V().S9_prerequisitesGate(makeAtom({ gates: { minLevel: 'beginner', minAge: 0, dangerLevel: 'low', prerequisites: ['warmup_done'] } }), null);
+    expect(r[0].code).toBe('S9.no_profile');
+  });
+
+  it('error: prereq не выполнен → S9.prereq_missing с list', () => {
+    const r = V().S9_prerequisitesGate(
+      makeAtom({ gates: { minLevel: 'intermediate', minAge: 18, dangerLevel: 'moderate', prerequisites: ['bfr_cuff_technique', 'warmup_done'] } }),
+      { age: 30, level: 'advanced', completedPrerequisites: ['warmup_done'] }
+    );
+    expect(r[0].level).toBe('error');
+    expect(r[0].code).toBe('S9.prereq_missing');
+    expect(r[0].missing).toEqual(['bfr_cuff_technique']);
+  });
+
+  it('ok: все prereq выполнены', () => {
+    const r = V().S9_prerequisitesGate(
+      makeAtom({ gates: { minLevel: 'intermediate', minAge: 18, dangerLevel: 'moderate', prerequisites: ['bfr_cuff_technique', 'warmup_done'] } }),
+      { age: 30, level: 'advanced', completedPrerequisites: ['warmup_done', 'bfr_cuff_technique'] }
+    );
+    expect(r[0].code).toBe('S9.pass');
+  });
+
+  it('default completedPrerequisites=undefined → строгий fail-closed', () => {
+    const r = V().S9_prerequisitesGate(
+      makeAtom({ gates: { minLevel: 'beginner', minAge: 0, dangerLevel: 'low', prerequisites: ['safe_fall_setup'] } }),
+      { age: 30, level: 'advanced' /* completedPrerequisites не задан */ }
+    );
+    expect(r[0].code).toBe('S9.prereq_missing');
+    expect(r[0].missing).toEqual(['safe_fall_setup']);
+  });
+});
+
 describe('V_blockHomogeneity', () => {
   beforeAll(setupOnce);
 
