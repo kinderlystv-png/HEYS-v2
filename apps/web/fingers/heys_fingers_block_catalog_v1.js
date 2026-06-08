@@ -462,6 +462,24 @@
     }
   ];
 
+  // ─── Runtime-state vs credential separation (ревью #5 находка #5) ────────────
+  // PROTOCOL_POOL.md документирует `warmup_done` в `gates.prerequisites` чтобы
+  // отметить «этому атому нужна разминка». Но это **runtime session-context**:
+  // S3_warmupRequired валидирует наличие warmup-блока на собранной сессии, не
+  // на атоме. Если оставить warmup_done в build-time S9-гейте, билдер блокирует
+  // ВСЕ тренировочные атомы пока кто-то не засеет credential — итог в проде
+  // = вырожденная сессия. Поэтому здесь пост-фильтруем runtime-токены, оставляя
+  // в prerequisites ТОЛЬКО credentials (training-maturity + safety-attestation).
+  // PROTOCOL_POOL.md как источник истины **не правится** — там документация.
+  const RUNTIME_PREREQ_TOKENS = { warmup_done: true };
+  ATOMS.forEach(function (a) {
+    if (a.gates && Array.isArray(a.gates.prerequisites)) {
+      a.gates.prerequisites = a.gates.prerequisites.filter(function (p) {
+        return !RUNTIME_PREREQ_TOKENS[p];
+      });
+    }
+  });
+
   // ─── Производные индексы ──────────────────────────────────────────────────────
   const ATOMS_BY_ID = Object.create(null);
   const ATOMS_BY_BLOCK = Object.create(null);

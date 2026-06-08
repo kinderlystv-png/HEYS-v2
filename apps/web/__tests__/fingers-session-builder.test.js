@@ -308,23 +308,21 @@ describe('sessionBuilder: B1.5 cut — RENDERABLE_DOSESHAPES (ревью #3 ог
 describe('sessionBuilder: S9 prerequisites (ревью #4 safety-шов)', () => {
   beforeAll(setupOnce);
 
-  it('default profile без completedPrerequisites → большинство атомов отрезано (строгий fail-closed)', () => {
+  it('ревью #5 (B): intermediate без explicit creds → seed base_>=1y, max-hang проходит, min-edge/BFR блокируются', () => {
     const s = SB().recommendDay({
       equipmentTypes: ['full'], readiness: 'max',
       profile: { age: 25, level: 'intermediate' /* completedPrerequisites не задан */ }
     });
-    // С []-prereq doors блокирует все атомы с непустым prereq.
-    // Атомы без prereq остаются: aer_arc, aer_mileage (E), mobility (H), antagonist (G).
-    // Все они НЕ дают max-стимула → intensity=recovery, builder может вернуть null
-    // если ничего не подобралось для max-bucket слотов. Главное: бан S9 работает.
-    if (s !== null) {
-      // Не должно быть max-hangs (требуют warmup_done+base_>=1y) или min-edge.
-      s.exercises.forEach((e) => {
-        expect(e.atomId).not.toBe('fs_maxhang_20mm_half');
-        expect(e.atomId).not.toBe('fs_minedge_recruit');
-        expect(e.atomId).not.toBe('aer_bfr_lowload');
-      });
-    }
+    expect(s).not.toBeNull();
+    // intermediate seed = ['base_>=1y'] → max-hangs доступны.
+    // Главное: НЕ блокирует тренировочный контент (после ревью #5 #5 fix).
+    expect(s.exercises.length).toBeGreaterThan(2); // не вырожденная сессия
+    s.exercises.forEach((e) => {
+      // base_>=2y отсутствует → min-edge НЕ должен попасть.
+      expect(e.atomId).not.toBe('fs_minedge_recruit');
+      // bfr_cuff_technique never auto-seeded → BFR НЕ должен попасть.
+      expect(e.atomId).not.toBe('aer_bfr_lowload');
+    });
   });
 
   it('ревью #4 BFR пример: aer_bfr_lowload без bfr_cuff_technique → не в сессии', () => {
@@ -355,6 +353,150 @@ describe('sessionBuilder: S9 prerequisites (ревью #4 safety-шов)', () =>
     if (sNoBase !== null) {
       expect(sNoBase.exercises.find((e) => e.atomId === 'fs_minedge_recruit')).toBeUndefined();
     }
+  });
+});
+
+describe('sessionBuilder: _deriveLevel (ревью #4-#5 (b) MVC mapping)', () => {
+  beforeAll(setupOnce);
+
+  it('floor: нет MVC → beginner', () => {
+    expect(SB()._deriveLevel(null)).toBe('beginner');
+    expect(SB()._deriveLevel(undefined)).toBe('beginner');
+    expect(SB()._deriveLevel(NaN)).toBe('beginner');
+  });
+
+  it('mvcPctBW < 58 → beginner', () => {
+    expect(SB()._deriveLevel(20)).toBe('beginner');
+    expect(SB()._deriveLevel(57.99)).toBe('beginner');
+  });
+
+  it('58 ≤ mvcPctBW < 82 → intermediate', () => {
+    expect(SB()._deriveLevel(58)).toBe('intermediate');
+    expect(SB()._deriveLevel(70)).toBe('intermediate');
+    expect(SB()._deriveLevel(81.99)).toBe('intermediate');
+  });
+
+  it('82 ≤ mvcPctBW → advanced (cap)', () => {
+    expect(SB()._deriveLevel(82)).toBe('advanced');
+    expect(SB()._deriveLevel(90)).toBe('advanced');
+  });
+
+  it('ревью #4 cap: даже elite-MVC (≥107) → advanced, не elite', () => {
+    expect(SB()._deriveLevel(107)).toBe('advanced');
+    expect(SB()._deriveLevel(120)).toBe('advanced');
+    expect(SB()._deriveLevel(200)).toBe('advanced');
+  });
+
+  it('opts.mvcPctBW в recommendDay → derived level применяется', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, mvcPctBW: 90, readiness: 'max'
+    });
+    expect(s).not.toBeNull();
+    expect(s.__trace.inputs.profileLevel).toBe('advanced');
+  });
+
+  it('explicit profile.level > derive (ревью #5 explicit > derive)', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, mvcPctBW: 120, readiness: 'max',
+      profile: { age: 25, level: 'beginner' } // explicit overrides MVC=120
+    });
+    expect(s).not.toBeNull();
+    expect(s.__trace.inputs.profileLevel).toBe('beginner');
+  });
+
+  it('explicit opts.level > derive (ниже-уровень explicit имеет приоритет)', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, mvcPctBW: 120, readiness: 'max',
+      level: 'intermediate'
+    });
+    expect(s.__trace.inputs.profileLevel).toBe('intermediate');
+  });
+});
+
+describe('sessionBuilder: _seedCredentialsFromLevel (ревью #5 (B))', () => {
+  beforeAll(setupOnce);
+
+  it('beginner → no credentials', () => {
+    expect(SB()._seedCredentialsFromLevel('beginner')).toEqual([]);
+  });
+
+  it('intermediate → base_>=1y', () => {
+    expect(SB()._seedCredentialsFromLevel('intermediate')).toEqual(['base_>=1y']);
+  });
+
+  it('advanced → base_>=1y + base_>=2y + strength_base', () => {
+    expect(SB()._seedCredentialsFromLevel('advanced')).toEqual(['base_>=1y', 'base_>=2y', 'strength_base']);
+  });
+
+  it('elite → same as advanced (одинаковый opyt-set; elite добавляет explicit-only)', () => {
+    expect(SB()._seedCredentialsFromLevel('elite')).toEqual(['base_>=1y', 'base_>=2y', 'strength_base']);
+  });
+
+  it('ревью #5 invariant: safety-tokens НИКОГДА не сеются из level', () => {
+    ['beginner', 'intermediate', 'advanced', 'elite'].forEach((lvl) => {
+      const seeded = SB()._seedCredentialsFromLevel(lvl);
+      expect(seeded).not.toContain('bfr_cuff_technique');
+      expect(seeded).not.toContain('safe_fall_setup');
+      expect(seeded).not.toContain('injury_screen');
+    });
+  });
+
+  it('intermediate seed union explicit safety-attestation → BFR доступен', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], readiness: 'recovery',
+      profile: {
+        age: 30, level: 'intermediate',
+        completedPrerequisites: ['bfr_cuff_technique']
+      }
+    });
+    expect(s).not.toBeNull();
+    // BFR (intermediate, требует bfr_cuff_technique) теперь должен быть в пуле.
+  });
+
+  it('advanced без явного base_>=2y → seed добирает; min-edge проходит', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 30, readiness: 'max',
+      profile: { age: 30, level: 'advanced' } // explicit empty
+    });
+    expect(s).not.toBeNull();
+    // min-edge требует base_>=2y + strength_base, оба seed'нулись по advanced.
+    // Проверка: атом доступен в пуле, builder может его выбрать (но slot-mapping
+    // может предпочесть другой); главное — S9 не блокирует его.
+    const issues = F().validators.S9_prerequisitesGate(
+      F().blockCatalog.getAtom('fs_minedge_recruit'),
+      { age: 30, level: 'advanced', completedPrerequisites: ['base_>=1y', 'base_>=2y', 'strength_base'] }
+    );
+    expect(issues[0].code).toBe('S9.pass');
+  });
+});
+
+describe('sessionBuilder: ревью #5 находка #5 — runtime warmup_done отделена от credential', () => {
+  beforeAll(setupOnce);
+
+  it('(A) ATOMS пост-фильтр: ни один атом не несёт warmup_done в gates.prerequisites', () => {
+    F().blockCatalog.ATOMS.forEach((a) => {
+      expect(a.gates.prerequisites).not.toContain('warmup_done');
+    });
+  });
+
+  it('(A) live-билдер с пустыми creds + level=intermediate → НЕ вырожденная сессия (находка #5 закрыта)', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], readiness: 'max',
+      profile: { age: 25, level: 'intermediate' /* нет explicit creds */ }
+    });
+    expect(s).not.toBeNull();
+    expect(s.exercises.length).toBeGreaterThan(2); // НЕ только antagonist+mobility
+    expect(s.exercises.some((e) => e.__role === 'max-strength' || e.__role === 'strength-endurance')).toBe(true);
+  });
+
+  it('(A) S3 по-прежнему гейтит warmup на уровне сессии (не на атомах)', () => {
+    // S3 принимает session, проверяет context.warmupDone. Логика не зависит от
+    // S9/atom-prereqs — после удаления warmup_done из catalog она работает.
+    const r = F().validators.S3_warmupRequired({
+      blocks: [{ id: 'mh', fatigueCost: 'high' }],
+      context: { warmupDone: false }
+    });
+    expect(r[0].code).toBe('S3.warmup_missing');
   });
 });
 

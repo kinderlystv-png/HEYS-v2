@@ -2662,6 +2662,24 @@
     }
   ];
 
+  // ─── Runtime-state vs credential separation (ревью #5 находка #5) ────────────
+  // PROTOCOL_POOL.md документирует `warmup_done` в `gates.prerequisites` чтобы
+  // отметить «этому атому нужна разминка». Но это **runtime session-context**:
+  // S3_warmupRequired валидирует наличие warmup-блока на собранной сессии, не
+  // на атоме. Если оставить warmup_done в build-time S9-гейте, билдер блокирует
+  // ВСЕ тренировочные атомы пока кто-то не засеет credential — итог в проде
+  // = вырожденная сессия. Поэтому здесь пост-фильтруем runtime-токены, оставляя
+  // в prerequisites ТОЛЬКО credentials (training-maturity + safety-attestation).
+  // PROTOCOL_POOL.md как источник истины **не правится** — там документация.
+  const RUNTIME_PREREQ_TOKENS = { warmup_done: true };
+  ATOMS.forEach(function (a) {
+    if (a.gates && Array.isArray(a.gates.prerequisites)) {
+      a.gates.prerequisites = a.gates.prerequisites.filter(function (p) {
+        return !RUNTIME_PREREQ_TOKENS[p];
+      });
+    }
+  });
+
   // ─── Производные индексы ──────────────────────────────────────────────────────
   const ATOMS_BY_ID = Object.create(null);
   const ATOMS_BY_BLOCK = Object.create(null);
@@ -8400,6 +8418,41 @@
 
   function num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
 
+  // ─── _deriveLevel (ревью #4-#5 (b)) ──────────────────────────────────────────
+  // Маппинг MVC %BW → level через assessment.BENCHMARKS.finger_strength (§3.5).
+  // Floor: нет MVC → 'beginner' (безопасная сторона — недооценка стажа).
+  // Cap: 'advanced' (никогда не выдаём 'elite' из одного только MVC; настоящий
+  // elite требует ещё чего-то кроме силы пальцев — explicit profile).
+  // Reviewer #4: «MVC меряет силу. Сильный-от-природы новичок (высокий %BW,
+  // низкий стаж) — именно injury-prone — получит от MVC 'advanced' → переоценка
+  // в самую опасную сторону. Так что MVC-derived level надо кэпить, не брать
+  // как единственный определитель.» Cap='advanced' закрывает elite-overshoot;
+  // min-edge с base_>=2y prereq всё равно блокируется S9 без атtest'а.
+  function _deriveLevel(mvcPctBW) {
+    const m = num(mvcPctBW);
+    if (m === null) return 'beginner';
+    const BENCH = (Fingers.assessment && Fingers.assessment.BENCHMARKS.finger_strength) ||
+      { intermediate: 58, advanced: 82, elite: 107 };
+    if (m < BENCH.intermediate) return 'beginner';
+    if (m < BENCH.advanced) return 'intermediate';
+    return 'advanced'; // cap: даже elite-MVC не выдаёт 'elite' из derive
+  }
+
+  // ─── _seedCredentialsFromLevel (ревью #5 (B)) ────────────────────────────────
+  // Level кодирует тренировочную зрелость (Q-7-1) → naturally maps to
+  // training-maturity credentials. Safety-attestation токены
+  // (bfr_cuff_technique, safe_fall_setup, injury_screen) — другой домен
+  // (знание/обстановка/здоровье), не выводятся из стажа НИКОГДА.
+  function _seedCredentialsFromLevel(level) {
+    switch (level) {
+      case 'beginner':     return [];
+      case 'intermediate': return ['base_>=1y'];
+      case 'advanced':     return ['base_>=1y', 'base_>=2y', 'strength_base'];
+      case 'elite':        return ['base_>=1y', 'base_>=2y', 'strength_base'];
+      default:             return [];
+    }
+  }
+
   // ─── Session intensity — выводится из НАПОЛНЕНИЯ (зеркало mixEngine L126-130) ─
   // Ревью 4.2 находка #3: intensity-домен расходился (bucket vs sessionIntensity).
   // Используем sessionIntensity → домен совпадает с mixEngine.
@@ -8567,10 +8620,13 @@
     const ageNum = num(o.age) ?? (o.profile && num(o.profile.age));
     if (ageNum === null) return null; // S1 fail-closed на верхнем уровне.
 
-    // Level fail-closed (ревью 4.2 находка #1): убрали `|| 'intermediate'`,
-    // который тихо подставлял intermediate-контент beginner-пользователю и
-    // обходил S1 `S1.profile_level_missing`. Без явного profile/level → null.
-    if (!o.profile && !o.level) return null;
+    // Level resolution (ревью #4-#5 (b)):
+    //   приоритет: explicit profile.level > o.level > derive(mvcPctBW) > floor.
+    // Без любого из источников → null (fail-closed).
+    const explicitLevel = (o.profile && o.profile.level) || o.level || null;
+    const derivedLevel = (o.mvcPctBW !== undefined) ? _deriveLevel(o.mvcPctBW) : null;
+    const effectiveLevel = explicitLevel || derivedLevel;
+    if (!effectiveLevel) return null;
 
     let ceiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
     // Legacy intensity-override (зеркало mixEngine L385): ручная даунгрейд-кнопка.
@@ -8583,11 +8639,20 @@
     }
     const slots = (SLOT_TEMPLATES[bucket] || SLOT_TEMPLATES.moderate).slice();
 
-    const profile = o.profile || {
+    // Credentials: seed по level (training-maturity ⇒ base_>=Ny/strength_base)
+    // ∪ explicit (safety-attestation остаются только explicit, см. ревью #5 (B)).
+    const seededCreds = _seedCredentialsFromLevel(effectiveLevel);
+    const explicitCreds = (o.profile && Array.isArray(o.profile.completedPrerequisites))
+      ? o.profile.completedPrerequisites : [];
+    const allCreds = Array.from(new Set(seededCreds.concat(explicitCreds)));
+
+    const baseProfile = o.profile || {};
+    const profile = Object.assign({}, baseProfile, {
       age: ageNum,
-      level: o.level,
-      painFlag: o.painFlag || null
-    };
+      level: effectiveLevel,
+      painFlag: (baseProfile.painFlag != null) ? baseProfile.painFlag : (o.painFlag || null),
+      completedPrerequisites: allCreds
+    });
 
     // S8: боль = стоп до сборки.
     if (profile.painFlag === 'pain') return null;
@@ -8734,7 +8799,9 @@
     SLOT_TEMPLATES: SLOT_TEMPLATES,
     SLOT_QUALITIES: SLOT_QUALITIES,
     RENDERABLE_DOSESHAPES: RENDERABLE_DOSESHAPES,
-    _pickAtomForSlot: _pickAtomForSlot
+    _pickAtomForSlot: _pickAtomForSlot,
+    _deriveLevel: _deriveLevel,
+    _seedCredentialsFromLevel: _seedCredentialsFromLevel
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);
