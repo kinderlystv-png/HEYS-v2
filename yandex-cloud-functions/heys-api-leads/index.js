@@ -147,6 +147,19 @@ module.exports.handler = async function (event, context) {
     };
   }
 
+  // 🛡️ SEC-019 (2026-06-08): Origin guard. До этого функция тихо подменяла ACAO
+  // на ALLOWED_ORIGINS[0] для запрещённых origin'ов — браузер блокировал чтение
+  // ответа, но lead УЖЕ был залит в БД + Telegram-уведомление ушло (CSRF).
+  // Server-to-server (origin === '') допустим, как в heys-api-rest.
+  const isAllowedOrigin = !origin || ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+  if (!isAllowedOrigin) {
+    return {
+      statusCode: 403,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'cors_denied' })
+    };
+  }
+
   // 🛡️ SEC-018 (2026-06-08): Body size limit — защита от DoS/OOM.
   // 64 KB: lead-форма ~1KB. Аналог heys-api-rpc/index.js:1517-1518 (256 KB).
   const MAX_BODY_BYTES = 64 * 1024;
