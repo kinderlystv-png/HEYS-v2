@@ -140,13 +140,24 @@ describe('sessionBuilder: fail-closed', () => {
     })).toBeNull();
   });
 
-  it('ревью 4.2 находка #1: без level → null (НЕ silent intermediate-дефолт)', () => {
-    // Раньше level дефолтился в 'intermediate', обходя S1 для beginner.
-    // Теперь — fail-closed на верхнем уровне.
-    expect(SB().recommendDay({
-      equipmentTypes: ['full'], age: 14, readiness: 'max'
-      // level: undefined — beginner age, нет уровня → должно быть null
-    })).toBeNull();
+  it('ревью #8: без level/mvc → ultimate floor beginner (не null, не silent intermediate)', () => {
+    // Раньше null (ревью 4.2 #1) → builder инертен на live-opts (ревью #7-#8).
+    // Теперь: ultimate floor = 'beginner' — безопасное поведение для unknown-юзера.
+    // Беginner level + creds=[] → только safe атомы (minLevel:'beginner', no prereqs).
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, readiness: 'max'
+      // level: undefined, mvcPctBW: undefined — live-like opts от mixEngine
+    });
+    expect(s).not.toBeNull();
+    expect(s.__trace.inputs.profileLevel).toBe('beginner');
+    expect(s.__trace.inputs.levelIsExplicit).toBe(false);
+    expect(s.__trace.inputs.seededCredsCount).toBe(0);
+    // Никаких max-hangs / min-edge / bfr / прочих advanced атомов.
+    s.exercises.forEach((e) => {
+      expect(e.atomId).not.toBe('fs_maxhang_20mm_half');
+      expect(e.atomId).not.toBe('fs_minedge_recruit');
+      expect(e.atomId).not.toBe('aer_bfr_lowload');
+    });
   });
 
   it('явный profile с level — работает (path не сломан)', () => {
@@ -575,6 +586,56 @@ describe('sessionBuilder: ревью #5 находка #5 — runtime warmup_don
       context: { warmupDone: false }
     });
     expect(r[0].code).toBe('S3.warmup_missing');
+  });
+});
+
+describe('sessionBuilder: ревью #7 — дедуп grip+edge внутри сессии', () => {
+  beforeAll(setupOnce);
+
+  it('один и тот же gripId+edgeSizeMm не повторяется в сессии', () => {
+    // Прогон по нескольким bucket'ам — везде дубль должен быть исключён.
+    ['max', 'moderate', 'recovery'].forEach((readiness) => {
+      ['intermediate', 'advanced'].forEach((level) => {
+        const s = SB().recommendDay({
+          equipmentTypes: ['full'], age: 25, readiness,
+          profile: fullProfile({ level, completedPrerequisites: ['base_>=1y', 'base_>=2y', 'strength_base', 'bfr_cuff_technique'] })
+        });
+        if (!s) return;
+        const seen = new Set();
+        s.exercises.forEach((e) => {
+          if (e.gripId && e.edgeSizeMm != null) {
+            const key = e.gripId + ':' + e.edgeSizeMm;
+            expect(seen.has(key)).toBe(false);
+            seen.add(key);
+          }
+        });
+      });
+    });
+  });
+
+  it('ревью #7 регрессия: derived-новичок раньше получал fs_repeater_73 дважды', () => {
+    // Этот сценарий зафиксирован ревьюером прогоном до #7 фикса.
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, mvcPctBW: 120, readiness: 'max'
+    });
+    if (!s) return;
+    const ids = s.exercises.map((e) => e.atomId);
+    // Считаем сколько раз fs_repeater_73 (или любой другой) встречается.
+    const counts = ids.reduce((acc, id) => { acc[id] = (acc[id] || 0) + 1; return acc; }, {});
+    Object.values(counts).forEach((c) => expect(c).toBeLessThanOrEqual(1));
+  });
+
+  it('атомы без gripId (mobility/antagonist reps) дедуп не задевает', () => {
+    // Хотя в одной сессии mobility и antagonist обычно по одному — проверяем
+    // что отсутствие gripId не вызывает ложного дедупа.
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'], age: 25, readiness: 'max',
+      profile: fullProfile()
+    });
+    if (!s) return;
+    const nonGripExercises = s.exercises.filter((e) => !e.gripId);
+    // Они должны существовать (mobility-floor + antagonist).
+    expect(nonGripExercises.length).toBeGreaterThan(0);
   });
 });
 

@@ -213,12 +213,17 @@
     return true;
   }
 
+  // grip+edge ключ для дедупа (ревью #7). Без grip — атом не дедупится.
+  function _gripEdgeKey(atom) {
+    if (!atom || !atom.gripId || atom.edgeSizeMm == null) return null;
+    return atom.gripId + ':' + atom.edgeSizeMm;
+  }
+
   // Выбрать первый подходящий атом для слота. Порядок атомов в block_catalog
   // зафиксирован (= порядок в PROTOCOL_POOL) → детерминизм без random.
-  // Профиль ОБЯЗАТЕЛЕН с явным `level` — без него возвращаем null (fail-closed
-  // вместо silent intermediate-дефолта, который обходил S1 для beginner — см.
-  // ревью 4.2 находка #1).
-  function _pickAtomForSlot(slot, opts) {
+  // usedGripEdge — set ключей grip+edge, уже выбранных в этой сессии (ревью #7
+  // дедуп: legacy mix_engine не повторяет хват+ребро в одной сессии).
+  function _pickAtomForSlot(slot, opts, usedGripEdge) {
     if (!Fingers.blockCatalog) return null;
     const qualities = SLOT_QUALITIES[slot] || [];
     const tissuePrefs = SLOT_TISSUE_PREF[slot] || [];
@@ -226,8 +231,14 @@
     const profile = opts.profile ||
       (opts.level ? { age: opts.age, level: opts.level } : null);
     if (!profile) return null; // fail-closed
+    const used = usedGripEdge || Object.create(null);
 
-    // 1-я попытка — match quality + tissue preference.
+    function notDuplicate(a) {
+      const k = _gripEdgeKey(a);
+      return !k || !used[k];
+    }
+
+    // 1-я попытка — match quality + tissue preference + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
       const candidates = Fingers.blockCatalog.atomsByQuality(q);
@@ -236,16 +247,18 @@
         for (let k = 0; k < candidates.length; k++) {
           const a = candidates[k];
           if (a.tissueLoad !== tissue) continue;
+          if (!notDuplicate(a)) continue;
           if (_atomFits(a, profile, allowed)) return a;
         }
       }
     }
-    // 2-я попытка — любой подходящий атом quality, без tissue-preference.
+    // 2-я попытка — любой подходящий атом quality + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
       const candidates = Fingers.blockCatalog.atomsByQuality(q);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
+        if (!notDuplicate(a)) continue;
         if (_atomFits(a, profile, allowed)) return a;
       }
     }
@@ -290,15 +303,19 @@
     const ageNum = num(o.age) ?? (o.profile && num(o.profile.age));
     if (ageNum === null) return null; // S1 fail-closed на верхнем уровне.
 
-    // Level resolution (ревью #4-#5 (b), provenance ревью #6):
-    //   приоритет: explicit profile.level > o.level > derive(mvcPctBW) > null.
-    // Без любого из источников → null (fail-closed).
+    // Level resolution (ревью #4-#5 (b), provenance ревью #6, ultimate floor #8):
+    //   приоритет: explicit profile.level > o.level > derive(mvcPctBW) > 'beginner'.
     // Provenance важна для seed: derived level НЕ сеет training-maturity creds.
+    // Ultimate floor (ревью #8): live-opts (зеркало mixEngine) не несут ни level,
+    // ни mvcPctBW; раньше билдер возвращал null → роутер всегда fallback на legacy
+    // и движок был инертен. Теперь builder отдаёт beginner-сессию: level
+    // 'beginner' + creds=[] → только атомы с minLevel:'beginner' и пустыми
+    // prereq. Никакого silent intermediate (ревью #2 #1 уважается — beginner
+    // консервативнее, не наоборот).
     const explicitLevel = (o.profile && o.profile.level) || o.level || null;
     const derivedLevel = (o.mvcPctBW !== undefined) ? _deriveLevel(o.mvcPctBW) : null;
-    const effectiveLevel = explicitLevel || derivedLevel;
+    const effectiveLevel = explicitLevel || derivedLevel || 'beginner';
     const levelIsExplicit = !!explicitLevel;
-    if (!effectiveLevel) return null;
 
     let ceiling = (o.readiness && READINESS_CEILING[o.readiness]) || 'max';
     // Legacy intensity-override (зеркало mixEngine L385): ручная даунгрейд-кнопка.
@@ -333,12 +350,21 @@
 
     const exercises = [];
     const safetyTrace = { picks: [], issues: [] };
+    // Ревью #7: дедуп grip+edge внутри сессии — зеркало legacy mix_engine
+    // `ctx.usedGripEdge`. Без этого max-strength слот мог упасть на тот же
+    // grip+edge что fs_repeater_73 → дубль атома (видно в shadow snapshot'е).
+    const usedGripEdge = Object.create(null);
+    function _trackPick(atom) {
+      const k = _gripEdgeKey(atom);
+      if (k) usedGripEdge[k] = true;
+    }
 
     slots.forEach(function (slot) {
-      const atom = _pickAtomForSlot(slot, Object.assign({}, o, { profile: profile }));
+      const atom = _pickAtomForSlot(slot, Object.assign({}, o, { profile: profile }), usedGripEdge);
       if (atom) {
         exercises.push(_materializeExercise(atom, slot));
         safetyTrace.picks.push({ slot: slot, atomId: atom.id });
+        _trackPick(atom);
       } else {
         safetyTrace.picks.push({ slot: slot, atomId: null, skipped: true });
       }
@@ -349,10 +375,11 @@
     // Не выводим из blockWeights — это пол, не вес.
     const hasRole = function (r) { return exercises.some(function (e) { return e.__role === r; }); };
     if ((bucket === 'max' || bucket === 'moderate') && !hasRole('antagonist')) {
-      const antAtom = _pickAtomForSlot('antagonist', Object.assign({}, o, { profile: profile }));
+      const antAtom = _pickAtomForSlot('antagonist', Object.assign({}, o, { profile: profile }), usedGripEdge);
       if (antAtom) {
         exercises.push(_materializeExercise(antAtom, 'antagonist'));
         safetyTrace.picks.push({ slot: 'antagonist-floor', atomId: antAtom.id });
+        _trackPick(antAtom);
       }
     }
     if (bucket === 'max' && Fingers.blockCatalog) {
