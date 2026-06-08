@@ -3,7 +3,17 @@
 
 <head>
     <meta charset="UTF-8" />
-    <!-- � Preconnect: DNS+TCP+TLS ahead of time -->
+    <!-- 🛡️ SEC-005 (2026-06-08): Content-Security-Policy через meta http-equiv.
+         Object Storage не пропускает кастомные HTTP-заголовки, поэтому используем meta.
+         Ограничения meta: НЕ работают frame-ancestors, report-to/uri, sandbox.
+         'unsafe-inline'/'unsafe-eval' в script-src — компромисс: ~28 inline-скриптов
+         в index.html (boot, PWA install, debug snapshot). Дальнейшее усиление —
+         через nonce/hash после рефактора inline-кода в external. Allowlist внешних
+         доменов основан на аудите apps/web/heys_*.js (jsdelivr/twemoji, qrserver,
+         storage.yandexcloud.net, api.heyslab.ru). -->
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.jsdelivr.net https://api.qrserver.com https://storage.yandexcloud.net; connect-src 'self' https://api.heyslab.ru https://storage.yandexcloud.net; font-src 'self' data:; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://api.heyslab.ru; upgrade-insecure-requests" />
+    <!-- 🛡️ Preconnect: DNS+TCP+TLS ahead of time -->
     <link rel="preconnect" href="https://api.heyslab.ru" crossorigin />
     <!-- 🟦 Telegram in-app browser detection: показывает баннер с инструкцией
          «открыть в Safari/Chrome» для возможности установить PWA на главный экран -->
