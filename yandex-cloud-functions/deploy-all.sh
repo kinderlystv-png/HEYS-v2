@@ -24,12 +24,14 @@ TARGET_FUNC=""
 SKIP_CHECKS=false
 SKIP_HEALTH=false
 CI_MODE=false
+FORCE_DIRTY=false
 
 for arg in "$@"; do
     case "$arg" in
         --skip-checks) SKIP_CHECKS=true ;;
         --skip-health) SKIP_HEALTH=true ;;
         --ci) CI_MODE=true ;;
+        --force-dirty) FORCE_DIRTY=true ;;
         -*) echo -e "${RED}Unknown flag: $arg${NC}"; exit 1 ;;
         *) TARGET_FUNC="$arg" ;;
     esac
@@ -294,7 +296,35 @@ deploy_function() {
     fi
     
     read -r runtime entrypoint memory timeout <<< "$config"
-    
+
+    # Guard: prevent deploy-before-commit drift.
+    # Incident 2026-06-08: SEC-005 CSP added to 5 cloud functions, deployed to
+    # YC via this script BEFORE source was committed. YC was 30+ min ahead of git
+    # — any later CI deploy from clean source would have reverted the CSP silently.
+    # This check refuses to deploy if the function's source dir has uncommitted
+    # changes vs HEAD. Skip in CI (clean checkout by definition) or with
+    # --force-dirty for genuine emergency hotpatches.
+    if [ "$CI_MODE" != true ] && [ "$FORCE_DIRTY" != true ]; then
+        # Run from repo root so git sees correct relative paths.
+        REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"
+        if [ -n "$REPO_ROOT" ]; then
+            REL_FUNC_DIR="yandex-cloud-functions/$func_name"
+            DIRTY=$(git -C "$REPO_ROOT" status --porcelain -- "$REL_FUNC_DIR" 2>/dev/null | head -5)
+            if [ -n "$DIRTY" ]; then
+                echo ""
+                echo -e "${RED}❌ Refuse to deploy: uncommitted changes in $REL_FUNC_DIR${NC}"
+                echo -e "${YELLOW}   Source dirt:${NC}"
+                echo "$DIRTY" | sed 's/^/      /'
+                echo ""
+                echo -e "${YELLOW}   Commit source first (so git = YC):${NC}"
+                echo -e "      git add $REL_FUNC_DIR && pnpm ship \"chore(cloudfn): <what>\""
+                echo -e "${YELLOW}   Or override (emergency hotpatch only — git stays behind):${NC}"
+                echo -e "      ./deploy-all.sh $func_name --force-dirty"
+                return 1
+            fi
+        fi
+    fi
+
     echo ""
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${YELLOW}🚀 Deploying $func_name${NC}"

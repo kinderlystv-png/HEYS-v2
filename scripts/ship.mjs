@@ -29,6 +29,7 @@
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -185,12 +186,59 @@ function watchDeploy(branch) {
     out('[ship] ✅ Deploy green.');
 }
 
+/**
+ * Stale git-lock cleanup. Multi-agent reality: when one agent crashes
+ * mid-commit (Ctrl-C, OOM, network drop), it leaves `.git/index.lock` /
+ * `.git/next-index-<pid>.lock` on disk. The next agent's first git op fails
+ * with "Unable to create '.git/index.lock'" and the user has to manually
+ * intervene. This function clears those locks IF no live git process owns
+ * them. Conservative: bail out (no auto-cleanup) if any git is live.
+ *
+ * Incident 2026-06-08: PID 50604 died holding both locks; my session was
+ * blocked for ~20 min on rebase + push until manual `rm`.
+ */
+function cleanupStaleGitLocks() {
+    const gitDir = path.join(ROOT_DIR, '.git');
+    const lockNames = ['index.lock'];
+    try {
+        for (const entry of fs.readdirSync(gitDir)) {
+            if (/^next-index-\d+\.lock$/.test(entry)) lockNames.push(entry);
+        }
+    } catch { return; }
+
+    const presentLocks = lockNames.filter((n) => {
+        try { fs.statSync(path.join(gitDir, n)); return true; } catch { return false; }
+    });
+    if (presentLocks.length === 0) return;
+
+    // Is any git process live? If yes — DON'T touch, may be legit ongoing op.
+    const psResult = spawnSync('pgrep', ['-x', 'git'], { encoding: 'utf8' });
+    const liveGitPids = (psResult.stdout || '').trim();
+    if (liveGitPids) {
+        err(`[ship] ⚠️  stale lock(s) detected (${presentLocks.join(', ')}) but live git PID(s) ${liveGitPids} — not removing.`);
+        err(`[ship]    Wait for that git process to finish, or kill it manually if you know it's hung.`);
+        return;
+    }
+
+    for (const n of presentLocks) {
+        const p = path.join(gitDir, n);
+        try {
+            fs.unlinkSync(p);
+            out(`[ship] 🧹 removed stale lock: .git/${n} (no live git process owns it)`);
+        } catch (e) {
+            err(`[ship] ⚠️  could not remove .git/${n}: ${e.message}`);
+        }
+    }
+}
+
 function main() {
     if (!message) {
         err('Usage: pnpm ship "<conventional commit message>" [--dry-run] [--no-push] [--no-watch]');
         err('Example: pnpm ship "feat(fingers): reorder layout cards"');
         process.exit(1);
     }
+
+    cleanupStaleGitLocks();
 
     const { type, subject, isUserFacing } = parseSubject(message);
     const branch = getCurrentBranch();
