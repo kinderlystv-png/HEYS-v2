@@ -780,6 +780,79 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
     });
   });
 
+  describe('Шаг 5d process-path — useRepsCycle reuse через ProcessRunner (1-set checklist)', () => {
+    function installRepsCycleStub() {
+      const captured = {
+        config: null, onComplete: null, onStateChange: null,
+        state: 'IDLE', setIdx: 0, repIdx: 0, secondsLeft: 0,
+      };
+      globalThis.HEYS.Fingers.useRepsCycle = function (cfg) {
+        captured.config = cfg;
+        captured.onComplete = cfg.onComplete;
+        captured.onStateChange = cfg.onStateChange;
+        return {
+          get state() { return captured.state; },
+          get setIdx() { return captured.setIdx; },
+          repIdx: 0,
+          get secondsLeft() { return captured.secondsLeft; },
+          totalElapsed: 0,
+          start: () => {}, pause: () => {}, resume: () => {},
+          abort: () => {}, completeSet: () => {}, skipPhase: () => {},
+          startFromSnapshot: () => {},
+        };
+      };
+      return captured;
+    }
+
+    const processExercise = (over = {}) => ({
+      doseShape: 'process',
+      gripId: 'mental_redpoint_tactics',
+      dose: { checklist: ['сегменты', 'beta-план', 'точки отдыха', 'дыхание'] },
+      addedWeightKg: 0,
+      ...over
+    });
+
+    it('exercise.doseShape="process" → ProcessRunner (useRepsCycle с setsCount=1)', () => {
+      const repsCycle = installRepsCycleStub();
+      cycle.startCalled = false; cycle.config = null;
+      render(React.createElement(ER(), {
+        exercise: processExercise(),
+        exIdx: 0, totalExercises: 1, exercises: [processExercise()]
+      }));
+      expect(repsCycle.config).not.toBeNull();
+      expect(repsCycle.config.setsCount).toBe(1);
+      expect(repsCycle.config.restBetweenSetsSec).toBe(0);
+      expect(cycle.config).toBeNull();
+    });
+
+    it('process onComplete → final RPE → onSetFeedback(0) + onDone (один проход)', () => {
+      const repsCycle = installRepsCycleStub();
+      const onSetFeedback = vi.fn();
+      const onDone = vi.fn();
+      const { container } = render(React.createElement(ER(), {
+        exercise: processExercise(), exIdx: 3, totalExercises: 4,
+        exercises: [processExercise()], onSetFeedback, onDone
+      }));
+      act(() => { repsCycle.onComplete(); });
+      expect(container.textContent).toMatch(/Последний подход — как прошёл/);
+      const okBtn = Array.from(container.querySelectorAll('button')).find(b => b.textContent.includes('Норм'));
+      fireEvent.click(okBtn);
+      // setsCount=1 → lastSet=0
+      expect(onSetFeedback).toHaveBeenCalledWith(3, 0, { rpe: 'ok', pain: false });
+      expect(onDone).toHaveBeenCalledTimes(1);
+    });
+
+    it('process без dose.checklist → setsCount=1 fallback OK', () => {
+      const repsCycle = installRepsCycleStub();
+      render(React.createElement(ER(), {
+        exercise: { doseShape: 'process', dose: {} },
+        exIdx: 0, totalExercises: 1, exercises: [{}]
+      }));
+      expect(repsCycle.config.setsCount).toBe(1);
+      expect(repsCycle.config.restBetweenSetsSec).toBe(0);
+    });
+  });
+
   describe('persistence: handleStateChange (бонус #9)', () => {
     it('persistence.save вызывается на не-final state переходе', () => {
       const save = vi.fn();

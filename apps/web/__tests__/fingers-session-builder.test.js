@@ -274,18 +274,18 @@ describe('sessionBuilder через engine_router (flag=on)', () => {
 describe('sessionBuilder: B1.5 cut — RENDERABLE_DOSESHAPES (ревью #3 ограничение 2)', () => {
   beforeAll(setupOnce);
 
-  it('RENDERABLE_DOSESHAPES = {hang, reps, continuous, attempts, circuit} (Шаг 5c: circuit добавлен)', () => {
+  it('RENDERABLE_DOSESHAPES = все 6 doseShape (Шаг 5d полный набор)', () => {
     expect(SB().RENDERABLE_DOSESHAPES).toEqual({
-      hang: true, reps: true, continuous: true, attempts: true, circuit: true
+      hang: true, reps: true, continuous: true, attempts: true, circuit: true, process: true
     });
   });
 
-  it('каждый выбранный exercise имеет doseShape ∈ {hang, reps, continuous, attempts, circuit}', () => {
+  it('каждый выбранный exercise имеет doseShape ∈ всех 6 поддержанных', () => {
     ['max', 'moderate', 'recovery'].forEach((readiness) => {
       const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness });
       if (s !== null) {
         s.exercises.forEach((e) => {
-          expect(['hang', 'reps', 'continuous', 'attempts', 'circuit']).toContain(e.doseShape);
+          expect(['hang', 'reps', 'continuous', 'attempts', 'circuit', 'process']).toContain(e.doseShape);
         });
       }
     });
@@ -304,13 +304,12 @@ describe('sessionBuilder: B1.5 cut — RENDERABLE_DOSESHAPES (ревью #3 ог
     expect(powerSlot && powerSlot.skipped === true).not.toBe(true);
   });
 
-  it('shadow-diff на max-сессии: process всё ещё не в наборе (Шаг 5d pending — checklist для тактики)', () => {
+  it('shadow-diff на max-сессии: reps по-прежнему присутствует (antagonist/mobility)', () => {
     const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' });
     const distribution = s.exercises.reduce((acc, e) => {
       acc[e.doseShape] = (acc[e.doseShape] || 0) + 1;
       return acc;
     }, {});
-    expect(distribution.process).toBeUndefined();
     // reps присутствует (antagonist/mobility):
     expect(distribution.reps).toBeGreaterThanOrEqual(2);
   });

@@ -3316,19 +3316,85 @@
     );
   }
 
+  // ─── ProcessRunner (Шаг 5d / non-hang doseShape: process) ────────────────────
+  // Тактика redpoint: разбор трассы на сегменты, beta-план, точки отдыха,
+  // дыхание, меморизация. Когнитивный процесс без таймера: чек-лист item'ов,
+  // юзер ставит галочки и жмёт «Закончить». Reuses useRepsCycle с setsCount=1
+  // (один проход чек-листа → DONE). S8 RPE/pain через handleStateChangeRpe.
+  function ProcessRunner(props) {
+    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const cycleRef = React.useRef(null);
+
+    const dose = exercise.dose || {};
+    const checklist = Array.isArray(dose.checklist) ? dose.checklist : [];
+
+    // Enriched exercise: setsCount=1 (один проход) для shell final RPE.
+    const enrichedExercise = Object.assign({}, exercise, { setsCount: 1 });
+    const shell = useExerciseShell(Object.assign({}, props, {
+      exercise: enrichedExercise, cycleRef: cycleRef
+    }));
+
+    const cycle = Fingers.useRepsCycle({
+      setsCount: 1,
+      restBetweenSetsSec: 0,
+      onComplete: shell.handleCycleComplete,
+      onStateChange: shell.handleStateChangeRpe
+    });
+    cycleRef.current = cycle;
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+
+    if (Fingers.ProcessDisplay) {
+      return h(React.Fragment, null,
+        h(Fingers.ProcessDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          checklist: checklist,
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          equipmentTier: exercise.equipmentTier,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onProcessDone: cycle.completeSet,
+          onPause: shell.togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: shell.requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        shell.rpeOverlay
+      );
+    }
+
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel || 'Process exercise'),
+        checklist.length > 0
+          ? h('ul', null, checklist.map((item, i) => h('li', { key: i }, item)))
+          : null,
+        h('button', {
+          className: 'fingers-fs-btn',
+          onClick: cycle.completeSet
+        }, '✓ Закончить')
+      ),
+      shell.rpeOverlay
+    );
+  }
+
   // ─── ExerciseRunner (Step 4 dispatcher) ──────────────────────────────────────
   // Рендерит HangRunner / RepsRunner / ContinuousRunner / AttemptsRunner /
-  // CircuitRunner по exercise.doseShape. ВСЕ runner'ы безусловно вызывают свой
-  // хук (Rules of Hooks: hook count ≠ зависит от condition в SAME component;
-  // здесь component'ы РАЗНЫЕ). Только ОДИН runner монтируется → activeTimerLock/
-  // wakeLock не конфликтуют. Default (без doseShape, legacy mixEngine output)
-  // → HangRunner = поведение бит-в-бит как до Step 4.
+  // CircuitRunner / ProcessRunner по exercise.doseShape. ВСЕ runner'ы
+  // безусловно вызывают свой хук (Rules of Hooks: hook count ≠ зависит от
+  // condition в SAME component; здесь component'ы РАЗНЫЕ). Только ОДИН runner
+  // монтируется → activeTimerLock/wakeLock не конфликтуют. Default (без
+  // doseShape, legacy mixEngine output) → HangRunner = поведение бит-в-бит
+  // как до Step 4.
   function ExerciseRunner(props) {
     const shape = props && props.exercise && props.exercise.doseShape;
     if (shape === 'reps') return h(RepsRunner, props);
     if (shape === 'continuous') return h(ContinuousRunner, props);
     if (shape === 'attempts') return h(AttemptsRunner, props);
     if (shape === 'circuit') return h(CircuitRunner, props);
+    if (shape === 'process') return h(ProcessRunner, props);
     return h(HangRunner, props);
   }
 

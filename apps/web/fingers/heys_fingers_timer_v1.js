@@ -1527,6 +1527,180 @@
     );
   }
 
+  // ─── Component: ProcessDisplay (Шаг 5d / non-hang doseShape: process) ────────
+  //
+  // View для process-сессии (тактика redpoint: разбор трассы на сегменты,
+  // beta-план, точки отдыха, дыхание, меморизация). Это не timed работа — это
+  // когнитивный процесс. UX: чек-лист item'ов, юзер ставит галочки по мере
+  // прохождения, кнопка «Закончить» (= cycle.completeSet). Reuses useRepsCycle
+  // c setsCount=1 (один проход чек-листа → DONE).
+  // Differences vs RepsCounterDisplay:
+  //   - REPS_INPUT phase → CHECKLIST UI (список items с checkbox'ами).
+  //   - phaseLabel REPS_INPUT → 'ПРОЦЕСС'.
+  //   - doneBtn enabled только когда хотя бы один item отмечен (опциональная
+  //     валидация — все галки не обязательно для completion).
+  function ProcessDisplay(props) {
+    const React = global.React;
+    if (!React) return null;
+    const h = React.createElement;
+
+    const {
+      state, secondsLeft, checklist,
+      gripLabel, gripId, equipmentTier,
+      onProcessDone, onPause, onAbort, onSkip,
+    } = props || {};
+
+    const [checked, setChecked] = React.useState({});
+    const items = Array.isArray(checklist) ? checklist : [];
+    const anyChecked = Object.keys(checked).some((k) => checked[k]);
+
+    const tieredGripSrc = gripId
+      ? (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none'
+          ? '/exercises/' + gripId + '_' + equipmentTier + '.webp'
+          : '/exercises/' + gripId + '.webp')
+      : null;
+    const baseGripSrc = gripId ? '/exercises/' + gripId + '.webp' : null;
+
+    const phaseKey = state === STATES.REPS_INPUT ? 'process'
+      : state === STATES.SET_PREP ? 'prep'
+      : state === STATES.PAUSED ? 'paused'
+      : state === STATES.DONE ? 'done'
+      : state === STATES.ABORTED ? 'aborted'
+      : 'idle';
+
+    const phaseLabel = state === STATES.REPS_INPUT ? 'ПРОЦЕСС'
+      : state === STATES.SET_PREP ? 'Готовься'
+      : state === STATES.PAUSED ? 'Пауза'
+      : state === STATES.DONE ? 'Готово!'
+      : state === STATES.ABORTED ? 'Прервано'
+      : state === STATES.IDLE ? 'Готов к старту' : state;
+
+    const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
+    const isProcessPhase = state === STATES.REPS_INPUT;
+    const isTimedPhase = state === STATES.SET_PREP;
+    const ringRadius = 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const phaseMaxSec = state === STATES.SET_PREP ? 5 : 1;
+    const ratio = isTimedPhase ? Math.max(0, Math.min(1, secondsLeft / phaseMaxSec)) : 0;
+    const dashoffset = ringCircum * (1 - ratio);
+    const isFinalCount = isTimedPhase && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
+
+    function toggleItem(idx) {
+      setChecked(function (prev) {
+        const next = Object.assign({}, prev);
+        next[idx] = !prev[idx];
+        return next;
+      });
+    }
+
+    return h('div', {
+      className: 'heys-fingers-countdown heys-fingers-process',
+      'data-phase': phaseKey
+    },
+      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
+
+      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
+        h('img', {
+          src: tieredGripSrc,
+          alt: gripLabel || gripId,
+          loading: 'eager',
+          decoding: 'async',
+          'data-fallback-tried': tieredGripSrc === baseGripSrc ? 'true' : 'false',
+          onError: function (e) {
+            try {
+              const el = e.target;
+              if (el.getAttribute('data-fallback-tried') !== 'true' && baseGripSrc && baseGripSrc !== tieredGripSrc) {
+                el.setAttribute('data-fallback-tried', 'true');
+                el.src = baseGripSrc;
+                return;
+              }
+              el.parentNode.style.display = 'none';
+            } catch (_) {}
+          }
+        })
+      ) : null,
+
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
+
+      isProcessPhase
+        ? h('div', { className: 'heys-fingers-process__checklist' },
+            items.length === 0
+              ? h('div', { className: 'heys-fingers-process__empty' },
+                  'Пройди процесс по своему чек-листу')
+              : items.map(function (item, idx) {
+                  const id = 'heys-fingers-process-item-' + idx;
+                  return h('label', {
+                    key: idx,
+                    className: 'heys-fingers-process__item'
+                      + (checked[idx] ? ' is-checked' : ''),
+                    htmlFor: id
+                  },
+                    h('input', {
+                      id: id,
+                      type: 'checkbox',
+                      checked: !!checked[idx],
+                      onChange: function () { toggleItem(idx); }
+                    }),
+                    h('span', { className: 'heys-fingers-process__item-text' }, item)
+                  );
+                }),
+            h('button', {
+              type: 'button',
+              className: 'heys-fingers-reps-counter__done-btn'
+                + (items.length > 0 && !anyChecked ? ' is-disabled' : ''),
+              onClick: onProcessDone,
+              disabled: items.length > 0 && !anyChecked,
+              'aria-label': 'Закончить процесс'
+            }, '✓ Закончить')
+          )
+        : h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+            h('svg', {
+              className: 'heys-fingers-countdown__ring',
+              width: 200, height: 200, viewBox: '0 0 200 200'
+            },
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-track',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none'
+              }),
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-fill',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none',
+                strokeDasharray: ringCircum,
+                strokeDashoffset: dashoffset,
+                transform: 'rotate(-90 100 100)'
+              })
+            ),
+            h('div', {
+              className: 'heys-fingers-countdown__digit'
+                + (isFinalCount ? ' is-final-count' : '')
+            }, String(Math.max(0, secondsLeft | 0)))
+          ),
+
+      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        Fingers.VoiceMiniControls
+          ? h(Fingers.VoiceMiniControls, null)
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onPause
+        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
+        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onSkip,
+          'aria-label': 'Пропустить фазу',
+          title: 'Пропустить фазу'
+        }, '→') : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
+          onClick: onAbort
+        }, 'Прервать')
+      ) : null
+    );
+  }
+
   Fingers.useCountdownCycle = useCountdownCycle;
   Fingers.useRepsCycle = useRepsCycle;
   Fingers.CountdownDisplay = CountdownDisplay;
@@ -1534,4 +1708,5 @@
   Fingers.ContinuousDisplay = ContinuousDisplay;
   Fingers.AttemptsDisplay = AttemptsDisplay;
   Fingers.CircuitDisplay = CircuitDisplay;
+  Fingers.ProcessDisplay = ProcessDisplay;
 })(typeof window !== 'undefined' ? window : globalThis);

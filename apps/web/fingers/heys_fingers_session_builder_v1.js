@@ -62,7 +62,7 @@
   };
 
   // UI renderable doseShape (ревью #3 ограничение 2 / план B1.5 + Шаг 5):
-  // UI player умеет рендерить:
+  // UI player умеет рендерить все 6 doseShape из методологии:
   //   - hang (CountdownDisplay, useCountdownCycle)
   //   - reps (RepsCounterDisplay, useRepsCycle, manual completeSet)
   //   - continuous (ContinuousDisplay, useCountdownCycle с workSec=hangSec,
@@ -71,11 +71,12 @@
   //     болдер-лимит/дайно/кампус/RFD: серия атак с длинным rest 240с)
   //   - circuit (CircuitDisplay, useRepsCycle с rounds→setsCount —
   //     4x4/EMOM/связки/power intervals: round-based с rest restRoundsSec)
-  // НЕ в наборе: process (Шаг 5d — checklist для тактики, 1 атом). Атомы вне
-  // этого набора НЕ попадают в сессию пока player не расширен — иначе UI
-  // рендерит их как вырожденный «7с виса × 1 повт».
+  //   - process (ProcessDisplay, useRepsCycle setsCount=1 — чек-лист тактики
+  //     redpoint без таймера: сегменты, beta-план, дыхание, меморизация)
+  // План B1.5 закрыт полностью: каталог из 36 атомов теперь полностью
+  // renderable, никаких «вырожденных 7с виса × 1 повт» (ревью #3).
   const RENDERABLE_DOSESHAPES = {
-    hang: true, reps: true, continuous: true, attempts: true, circuit: true
+    hang: true, reps: true, continuous: true, attempts: true, circuit: true, process: true
   };
 
   // Equipment compatibility: какие modality допустимы в каждом equipmentType.

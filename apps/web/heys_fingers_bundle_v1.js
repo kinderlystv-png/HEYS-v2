@@ -7266,6 +7266,180 @@
     );
   }
 
+  // ─── Component: ProcessDisplay (Шаг 5d / non-hang doseShape: process) ────────
+  //
+  // View для process-сессии (тактика redpoint: разбор трассы на сегменты,
+  // beta-план, точки отдыха, дыхание, меморизация). Это не timed работа — это
+  // когнитивный процесс. UX: чек-лист item'ов, юзер ставит галочки по мере
+  // прохождения, кнопка «Закончить» (= cycle.completeSet). Reuses useRepsCycle
+  // c setsCount=1 (один проход чек-листа → DONE).
+  // Differences vs RepsCounterDisplay:
+  //   - REPS_INPUT phase → CHECKLIST UI (список items с checkbox'ами).
+  //   - phaseLabel REPS_INPUT → 'ПРОЦЕСС'.
+  //   - doneBtn enabled только когда хотя бы один item отмечен (опциональная
+  //     валидация — все галки не обязательно для completion).
+  function ProcessDisplay(props) {
+    const React = global.React;
+    if (!React) return null;
+    const h = React.createElement;
+
+    const {
+      state, secondsLeft, checklist,
+      gripLabel, gripId, equipmentTier,
+      onProcessDone, onPause, onAbort, onSkip,
+    } = props || {};
+
+    const [checked, setChecked] = React.useState({});
+    const items = Array.isArray(checklist) ? checklist : [];
+    const anyChecked = Object.keys(checked).some((k) => checked[k]);
+
+    const tieredGripSrc = gripId
+      ? (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none'
+          ? '/exercises/' + gripId + '_' + equipmentTier + '.webp'
+          : '/exercises/' + gripId + '.webp')
+      : null;
+    const baseGripSrc = gripId ? '/exercises/' + gripId + '.webp' : null;
+
+    const phaseKey = state === STATES.REPS_INPUT ? 'process'
+      : state === STATES.SET_PREP ? 'prep'
+      : state === STATES.PAUSED ? 'paused'
+      : state === STATES.DONE ? 'done'
+      : state === STATES.ABORTED ? 'aborted'
+      : 'idle';
+
+    const phaseLabel = state === STATES.REPS_INPUT ? 'ПРОЦЕСС'
+      : state === STATES.SET_PREP ? 'Готовься'
+      : state === STATES.PAUSED ? 'Пауза'
+      : state === STATES.DONE ? 'Готово!'
+      : state === STATES.ABORTED ? 'Прервано'
+      : state === STATES.IDLE ? 'Готов к старту' : state;
+
+    const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
+    const isProcessPhase = state === STATES.REPS_INPUT;
+    const isTimedPhase = state === STATES.SET_PREP;
+    const ringRadius = 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const phaseMaxSec = state === STATES.SET_PREP ? 5 : 1;
+    const ratio = isTimedPhase ? Math.max(0, Math.min(1, secondsLeft / phaseMaxSec)) : 0;
+    const dashoffset = ringCircum * (1 - ratio);
+    const isFinalCount = isTimedPhase && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
+
+    function toggleItem(idx) {
+      setChecked(function (prev) {
+        const next = Object.assign({}, prev);
+        next[idx] = !prev[idx];
+        return next;
+      });
+    }
+
+    return h('div', {
+      className: 'heys-fingers-countdown heys-fingers-process',
+      'data-phase': phaseKey
+    },
+      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
+
+      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
+        h('img', {
+          src: tieredGripSrc,
+          alt: gripLabel || gripId,
+          loading: 'eager',
+          decoding: 'async',
+          'data-fallback-tried': tieredGripSrc === baseGripSrc ? 'true' : 'false',
+          onError: function (e) {
+            try {
+              const el = e.target;
+              if (el.getAttribute('data-fallback-tried') !== 'true' && baseGripSrc && baseGripSrc !== tieredGripSrc) {
+                el.setAttribute('data-fallback-tried', 'true');
+                el.src = baseGripSrc;
+                return;
+              }
+              el.parentNode.style.display = 'none';
+            } catch (_) {}
+          }
+        })
+      ) : null,
+
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
+
+      isProcessPhase
+        ? h('div', { className: 'heys-fingers-process__checklist' },
+            items.length === 0
+              ? h('div', { className: 'heys-fingers-process__empty' },
+                  'Пройди процесс по своему чек-листу')
+              : items.map(function (item, idx) {
+                  const id = 'heys-fingers-process-item-' + idx;
+                  return h('label', {
+                    key: idx,
+                    className: 'heys-fingers-process__item'
+                      + (checked[idx] ? ' is-checked' : ''),
+                    htmlFor: id
+                  },
+                    h('input', {
+                      id: id,
+                      type: 'checkbox',
+                      checked: !!checked[idx],
+                      onChange: function () { toggleItem(idx); }
+                    }),
+                    h('span', { className: 'heys-fingers-process__item-text' }, item)
+                  );
+                }),
+            h('button', {
+              type: 'button',
+              className: 'heys-fingers-reps-counter__done-btn'
+                + (items.length > 0 && !anyChecked ? ' is-disabled' : ''),
+              onClick: onProcessDone,
+              disabled: items.length > 0 && !anyChecked,
+              'aria-label': 'Закончить процесс'
+            }, '✓ Закончить')
+          )
+        : h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+            h('svg', {
+              className: 'heys-fingers-countdown__ring',
+              width: 200, height: 200, viewBox: '0 0 200 200'
+            },
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-track',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none'
+              }),
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-fill',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none',
+                strokeDasharray: ringCircum,
+                strokeDashoffset: dashoffset,
+                transform: 'rotate(-90 100 100)'
+              })
+            ),
+            h('div', {
+              className: 'heys-fingers-countdown__digit'
+                + (isFinalCount ? ' is-final-count' : '')
+            }, String(Math.max(0, secondsLeft | 0)))
+          ),
+
+      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        Fingers.VoiceMiniControls
+          ? h(Fingers.VoiceMiniControls, null)
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onPause
+        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
+        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onSkip,
+          'aria-label': 'Пропустить фазу',
+          title: 'Пропустить фазу'
+        }, '→') : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
+          onClick: onAbort
+        }, 'Прервать')
+      ) : null
+    );
+  }
+
   Fingers.useCountdownCycle = useCountdownCycle;
   Fingers.useRepsCycle = useRepsCycle;
   Fingers.CountdownDisplay = CountdownDisplay;
@@ -7273,6 +7447,7 @@
   Fingers.ContinuousDisplay = ContinuousDisplay;
   Fingers.AttemptsDisplay = AttemptsDisplay;
   Fingers.CircuitDisplay = CircuitDisplay;
+  Fingers.ProcessDisplay = ProcessDisplay;
 })(typeof window !== 'undefined' ? window : globalThis);
 // ===== End heys_fingers_timer_v1.js =====
 
@@ -9355,7 +9530,7 @@
   };
 
   // UI renderable doseShape (ревью #3 ограничение 2 / план B1.5 + Шаг 5):
-  // UI player умеет рендерить:
+  // UI player умеет рендерить все 6 doseShape из методологии:
   //   - hang (CountdownDisplay, useCountdownCycle)
   //   - reps (RepsCounterDisplay, useRepsCycle, manual completeSet)
   //   - continuous (ContinuousDisplay, useCountdownCycle с workSec=hangSec,
@@ -9364,11 +9539,12 @@
   //     болдер-лимит/дайно/кампус/RFD: серия атак с длинным rest 240с)
   //   - circuit (CircuitDisplay, useRepsCycle с rounds→setsCount —
   //     4x4/EMOM/связки/power intervals: round-based с rest restRoundsSec)
-  // НЕ в наборе: process (Шаг 5d — checklist для тактики, 1 атом). Атомы вне
-  // этого набора НЕ попадают в сессию пока player не расширен — иначе UI
-  // рендерит их как вырожденный «7с виса × 1 повт».
+  //   - process (ProcessDisplay, useRepsCycle setsCount=1 — чек-лист тактики
+  //     redpoint без таймера: сегменты, beta-план, дыхание, меморизация)
+  // План B1.5 закрыт полностью: каталог из 36 атомов теперь полностью
+  // renderable, никаких «вырожденных 7с виса × 1 повт» (ревью #3).
   const RENDERABLE_DOSESHAPES = {
-    hang: true, reps: true, continuous: true, attempts: true, circuit: true
+    hang: true, reps: true, continuous: true, attempts: true, circuit: true, process: true
   };
 
   // Equipment compatibility: какие modality допустимы в каждом equipmentType.
@@ -15746,19 +15922,85 @@
     );
   }
 
+  // ─── ProcessRunner (Шаг 5d / non-hang doseShape: process) ────────────────────
+  // Тактика redpoint: разбор трассы на сегменты, beta-план, точки отдыха,
+  // дыхание, меморизация. Когнитивный процесс без таймера: чек-лист item'ов,
+  // юзер ставит галочки и жмёт «Закончить». Reuses useRepsCycle с setsCount=1
+  // (один проход чек-листа → DONE). S8 RPE/pain через handleStateChangeRpe.
+  function ProcessRunner(props) {
+    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const cycleRef = React.useRef(null);
+
+    const dose = exercise.dose || {};
+    const checklist = Array.isArray(dose.checklist) ? dose.checklist : [];
+
+    // Enriched exercise: setsCount=1 (один проход) для shell final RPE.
+    const enrichedExercise = Object.assign({}, exercise, { setsCount: 1 });
+    const shell = useExerciseShell(Object.assign({}, props, {
+      exercise: enrichedExercise, cycleRef: cycleRef
+    }));
+
+    const cycle = Fingers.useRepsCycle({
+      setsCount: 1,
+      restBetweenSetsSec: 0,
+      onComplete: shell.handleCycleComplete,
+      onStateChange: shell.handleStateChangeRpe
+    });
+    cycleRef.current = cycle;
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+
+    if (Fingers.ProcessDisplay) {
+      return h(React.Fragment, null,
+        h(Fingers.ProcessDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          checklist: checklist,
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          equipmentTier: exercise.equipmentTier,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onProcessDone: cycle.completeSet,
+          onPause: shell.togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: shell.requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        shell.rpeOverlay
+      );
+    }
+
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel || 'Process exercise'),
+        checklist.length > 0
+          ? h('ul', null, checklist.map((item, i) => h('li', { key: i }, item)))
+          : null,
+        h('button', {
+          className: 'fingers-fs-btn',
+          onClick: cycle.completeSet
+        }, '✓ Закончить')
+      ),
+      shell.rpeOverlay
+    );
+  }
+
   // ─── ExerciseRunner (Step 4 dispatcher) ──────────────────────────────────────
   // Рендерит HangRunner / RepsRunner / ContinuousRunner / AttemptsRunner /
-  // CircuitRunner по exercise.doseShape. ВСЕ runner'ы безусловно вызывают свой
-  // хук (Rules of Hooks: hook count ≠ зависит от condition в SAME component;
-  // здесь component'ы РАЗНЫЕ). Только ОДИН runner монтируется → activeTimerLock/
-  // wakeLock не конфликтуют. Default (без doseShape, legacy mixEngine output)
-  // → HangRunner = поведение бит-в-бит как до Step 4.
+  // CircuitRunner / ProcessRunner по exercise.doseShape. ВСЕ runner'ы
+  // безусловно вызывают свой хук (Rules of Hooks: hook count ≠ зависит от
+  // condition в SAME component; здесь component'ы РАЗНЫЕ). Только ОДИН runner
+  // монтируется → activeTimerLock/wakeLock не конфликтуют. Default (без
+  // doseShape, legacy mixEngine output) → HangRunner = поведение бит-в-бит
+  // как до Step 4.
   function ExerciseRunner(props) {
     const shape = props && props.exercise && props.exercise.doseShape;
     if (shape === 'reps') return h(RepsRunner, props);
     if (shape === 'continuous') return h(ContinuousRunner, props);
     if (shape === 'attempts') return h(AttemptsRunner, props);
     if (shape === 'circuit') return h(CircuitRunner, props);
+    if (shape === 'process') return h(ProcessRunner, props);
     return h(HangRunner, props);
   }
 
