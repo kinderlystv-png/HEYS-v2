@@ -233,3 +233,6 @@ yandex-cloud-functions/*/certs/
 
 # Local multi-root workspace files (machine-specific paths)
 *.code-workspace
+
+# Personal bug/improvement backlog (Cowork review-agent system, stays local)
+tasks/
