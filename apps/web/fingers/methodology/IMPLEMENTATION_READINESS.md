@@ -8,8 +8,8 @@
 
 **MVP-рекомендатель сессии близок к включению, но full planner ещё не готов.**
 Знаниевый слой методологии в целом согласован; текущие блокеры относятся к
-исполняемому контракту: недельная прогрессия/периодизация, runtime-prereq split
-и полная тест-батарея.
+исполняемому контракту: недельная прогрессия/периодизация, shadow-envelope перед
+флипом и браузерный smoke в рабочем dev-окружении.
 
 | Слой                        | Статус      | Суть                                                                        |
 | --------------------------- | ----------- | --------------------------------------------------------------------------- |
@@ -24,8 +24,8 @@
 - `PROTOCOL_POOL.md`: `doseConfidence: A|B|C` теперь явное поле на всех 36
   атомах; trailing-комментарий остался только визуальной подсказкой.
 - `block_catalog`: атомы несут `doseConfidence`, проходят enum/source sanity;
-  runtime `warmup_done` пока нормализуется в catalog, чтобы S9 не требовал
-  разминку как постоянный credential профиля.
+  runtime `warmup_done` фильтруется из build-time `gates.prerequisites`, чтобы
+  S9 не требовал разминку как постоянный credential профиля.
 - `validators`: S1–S9 покрыты тестами; S2 теперь учитывает `high=48ч`,
   `max=72ч`, `gripGroup`, и legacy-историю без группы трактует консервативно.
 - `sessionBuilder`: все 6 `doseShape` поддержаны UI; shadow-compare больше не
@@ -33,22 +33,27 @@
 
 ## Осталось перед включением `flags.newEngine=true`
 
-1. **Runtime-prereq split.** Вынести `warmup_done` из `gates.prerequisites` в
-   явное runtime-поле (`requiresWarmup` / `sessionRequirements`) и убрать
-   post-filter из `block_catalog`.
+1. **Shadow-envelope перед flip.** Re-shadow с live-like opts: beginner/no-MVC,
+   MVC 40/65/90% BW, explicit advanced, equipment `full/block/none`; подтвердить
+   duration envelope и отсутствие UI-risk.
 2. **S4 enforcement.** Сейчас недельный FTL-прогресс даёт warning; генератор ещё
    не режет объём автоматически при превышении лимита.
 3. **Phase-2 planning.** Нет `periodization_engine`: deload/taper/maintenance
    описаны методологически, но не управляют генерацией недель.
 4. **Assessment depth.** Бенчмарки Berta/IRCRA подключены как методология, но
    полной тест-батареи и частоты ретеста в продукте ещё нет.
+5. **Dev smoke unblock.** `pnpm dev:local` должен стартовать для браузерной
+   проверки режима; текущий lockfile даёт Express 4 несовместимый
+   `path-to-regexp@6`.
 
 ## Definition of Done для safe rollout
 
 - [x] S2 freshness совпадает со spec: 48/72 ч + `gripGroup` + legacy fallback.
 - [x] `doseConfidence` не теряется при парсинге пула.
 - [x] Shadow telemetry не помечает renderable non-hang shapes как UI risk.
-- [ ] Runtime requirements отделены от profile credentials.
+- [x] Runtime `warmup_done` отделён от profile credentials в build-time S9.
+- [ ] Shadow-envelope принят методологом: duration/roles/warmup не хуже legacy
+      для live-like сценариев.
 - [ ] S4 недельный cap влияет на генерацию, а не только предупреждает.
 - [ ] Browser smoke: минимум `hang + reps + attempts/circuit` сессия без
       деградации UI перед flip.

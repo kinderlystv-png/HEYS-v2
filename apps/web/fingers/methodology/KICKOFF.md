@@ -46,6 +46,7 @@
 pnpm vitest run apps/web/__tests__/fingers*.test.js
 node apps/web/fingers/methodology/tools/impl-coverage.mjs
 node apps/web/fingers/methodology/tools/school-weights.mjs --check
+pnpm --filter @heys/web run bundle:fingers
 pnpm dev:local       # API:4001 + web:3001 — увидеть режим
 ```
 
@@ -108,14 +109,14 @@ plumbing из `Fingers.records`), сборка сессии (`sessionBuilder` с
 
 **Что осталось до `flag=on`**:
 
-1. **Runtime-prereq split**: вынести `warmup_done` из profile-credentials в
-   явное session/runtime-поле, чтобы `block_catalog` не нормализовал это
-   post-filter'ом.
-2. **Re-shadow с реальными уровнями** (зона методолога): прогнать
+1. **Re-shadow с реальными уровнями** (зона методолога): прогнать
    `shadowCompare=true` на dev/prод с stub'ом `Fingers.records` для derived
    advanced/intermediate/beginner — снять distribution `doseShape`/`modality` +
    кумулятив danger, сравнить с legacy конвертом. См.
    `engineRouter.lastShadowDiff`.
+2. **Duration envelope**: отдельно принять или ограничить сценарий
+   beginner/no-MVC, где новый builder может дать сильно более короткую сессию,
+   чем legacy.
 3. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
    дефолт. Прежний `mix_engine` остаётся fallback (router catches null/throw).
 

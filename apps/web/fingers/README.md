@@ -47,7 +47,8 @@ HEYS.Fingers.readiness.assess(today, history)
 3. Регистрировать API на `HEYS.Fingers.<feature>` с idempotent-флагом.
 4. Вписать в [`scripts/bundle-fingers.cjs`](../scripts/bundle-fingers.cjs)
    `MODULES` массив в правильный layer-блок.
-5. Прогнать `pnpm bundle:fingers` (или дождаться `predev` хука).
+5. Прогнать `pnpm --filter @heys/web run bundle:fingers` из корня репозитория
+   или `pnpm bundle:fingers` из `apps/web/` (или дождаться `predev` хука).
 6. Если safety-критичная логика — добавить regression test в
    [`TESTS/heys_fingers_safety.test.js`](../../../TESTS/heys_fingers_safety.test.js).
 

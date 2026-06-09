@@ -10458,14 +10458,19 @@
     return out;
   }
 
+  const RENDERABLE_DOSESHAPES = {
+    hang: true, reps: true, continuous: true, attempts: true, circuit: true, process: true
+  };
+
   function _diffSessions(newS, oldS) {
     if (!newS || !oldS) return { onlyOne: !newS ? 'old' : 'new' };
-    // Ревью #3 ограничение 2: UI рендерит только hang-протокол. Считаем долю
-    // non-hang атомов в builder-сессии — прямая метрика «сколько из них UI
-    // покажет как вырожденный 7с×N виса». Если nonHangCount > 0 — это сигнал
-    // что builder тащит атомы, которые player не умеет.
+    // UI умеет все 6 doseShape. Non-hang оставляем как диагностическое
+    // распределение, но risk считаем только для реально нерендеримых shape.
     const newNonHang = (newS.exercises || []).filter(function (e) {
       return e && e.doseShape && e.doseShape !== 'hang';
+    }).length;
+    const newNonRenderable = (newS.exercises || []).filter(function (e) {
+      return e && e.doseShape && !RENDERABLE_DOSESHAPES[e.doseShape];
     }).length;
     return {
       intensity: { new: newS.intensity, old: oldS.intensity, same: newS.intensity === oldS.intensity },
@@ -10476,10 +10481,11 @@
         old: oldS.exercises.map(function (e) { return e.__role; })
       },
       requiresWarmup: { new: newS.requiresWarmup, old: oldS.requiresWarmup, same: newS.requiresWarmup === oldS.requiresWarmup },
-      // Ревью #3 #2 метрика: распределение shape/modality + non-hang risk.
+      // Ревью #3 #2 метрика: распределение shape/modality + renderability risk.
       doseShape: { new: _distribution(newS.exercises, 'doseShape'), old: _distribution(oldS.exercises, 'doseShape') },
       modality: { new: _distribution(newS.exercises, 'modality'), old: _distribution(oldS.exercises, 'modality') },
-      nonHangCount: { new: newNonHang, uiRendererRisk: newNonHang > 0 }
+      nonHangCount: { new: newNonHang },
+      nonRenderableCount: { new: newNonRenderable, uiRendererRisk: newNonRenderable > 0 }
     };
   }
 
