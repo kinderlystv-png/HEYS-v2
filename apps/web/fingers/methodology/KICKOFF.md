@@ -35,20 +35,18 @@
   power/max-strength→ endurance, age-gate 14 лет без добавочного веса,
   идемпотентность пересборки). Остальные safety-инварианты (age
   fail-closed→null, antagonist-closer, pain-gate, ramp-разминка, bucket режет
-  goal) уже были покрыты существующими 33 тестами в этом же файле. **Подтвердить
-  зелёным локально** (см. ниже) — vitest в песочнице не идёт, ассерты сверены
-  node-зондом.
+  goal) уже были покрыты существующими 33 тестами в этом же файле. Подтверждать
+  через `pnpm vitest run ...` в текущей рабочей среде.
 
-## ⚠️ Проверка тестов — только локально
+## Проверка тестов
 
-vitest **не запускается в Cowork-песочнице** (нативный rollup под Linux
-отсутствует, node_modules собраны под macOS). Поэтому Шаг 1 верифицирован
-node-зондом, а не vitest. **Первым делом в локальной среде прогони:**
+Минимальный smoke после правок методологии/движка:
 
 ```bash
-pnpm vitest run apps/web/__tests__/fingers-mix-engine.test.js   # safety baseline зелёный
+pnpm vitest run apps/web/__tests__/fingers*.test.js
+node apps/web/fingers/methodology/tools/impl-coverage.mjs
+node apps/web/fingers/methodology/tools/school-weights.mjs --check
 pnpm dev:local       # API:4001 + web:3001 — увидеть режим
-node apps/web/fingers/methodology/tools/impl-coverage.mjs   # 61/61, пул 28/28
 ```
 
 ## Стратегия: strangler-fig (в том же режиме `fingers`)
@@ -110,14 +108,17 @@ plumbing из `Fingers.records`), сборка сессии (`sessionBuilder` с
 
 **Что осталось до `flag=on`**:
 
-1. **Re-shadow с реальными уровнями** (зона методолога): прогнать
+1. **Runtime-prereq split**: вынести `warmup_done` из profile-credentials в
+   явное session/runtime-поле, чтобы `block_catalog` не нормализовал это
+   post-filter'ом.
+2. **Re-shadow с реальными уровнями** (зона методолога): прогнать
    `shadowCompare=true` на dev/prод с stub'ом `Fingers.records` для derived
    advanced/intermediate/beginner — снять distribution `doseShape`/`modality` +
    кумулятив danger, сравнить с legacy конвертом. См.
    `engineRouter.lastShadowDiff`.
-2. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
+3. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
    дефолт. Прежний `mix_engine` остаётся fallback (router catches null/throw).
 
 **Tech-debt не блокер**: консолидация `useCountdownCycle`+`useRepsCycle` в общий
 timer-core (после приземления strangler'a — теперь оба покрыты characterization,
-вынос безопасен). `quality_catalog` потреблять).
+вынос безопасен); перевести оставшиеся legacy-точки на `quality_catalog`.

@@ -366,7 +366,7 @@ describe('engineRouter: shadow-compare (ревью 4.3 #4.3e — наблюда�
     expect(Array.isArray(diff.roles.old)).toBe(true);
   });
 
-  it('ревью #3 ограничение 2: shadow-diff содержит doseShape/modality distribution + nonHangCount', () => {
+  it('ревью #3 ограничение 2: shadow-diff содержит doseShape/modality + renderability metrics', () => {
     F().flags.shadowCompare = true;
     F().sessionBuilder = {
       recommendDay: () => ({
@@ -383,9 +383,11 @@ describe('engineRouter: shadow-compare (ревью 4.3 #4.3e — наблюда�
     const diff = R().lastShadowDiff;
     expect(diff.doseShape.new).toEqual({ attempts: 1, hang: 1, reps: 1 });
     expect(diff.modality.new).toEqual({ campus: 1, fingerboard: 1, antagonist: 1 });
-    // 2 атома non-hang → uiRendererRisk должен быть true.
+    // 2 атома non-hang — это диагностическая метрика, но не UI risk:
+    // все эти doseShape уже renderable.
     expect(diff.nonHangCount.new).toBe(2);
-    expect(diff.nonHangCount.uiRendererRisk).toBe(true);
+    expect(diff.nonRenderableCount.new).toBe(0);
+    expect(diff.nonRenderableCount.uiRendererRisk).toBe(false);
   });
 
   it('shadowCompare ошибка mixEngine не валит builder-выход', () => {
