@@ -57,12 +57,12 @@ node apps/web/fingers/methodology/tools/impl-coverage.mjs   # 61/61, пул 28/2
 **оставляем** — пользователю нравится. Меняем только «мозг» (логику/методологию)
 инкрементально за фиче-флагом, со старым mix_engine как fallback.
 
-| Шаг | Что                                                                                                                                                                                           | Статус                                                     |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| 1   | safety-тесты ДО рефактора                                                                                                                                                                     | ✅ добавлены в `__tests__` — подтвердить `pnpm vitest run` |
-| 2   | аддитивный data-слой: `quality_catalog` (9 осей, enum'ы §1.2, `deriveEnergySystem`, `PROGRAM_META` на 20 программ, `enrichProgram`). **PROGRAMS не мутируется** — методология отдельным слоем | ✅ модуль+тесты, probe-green — `pnpm vitest run`           |
-| 3   | новые модули логики (`block_catalog` из пула, `validators` S1–S8, `assessment`) **за флагом**, вне live-пути                                                                                  |                                                            |
-| 4   | strangle генерации сессии по флагу: A/B новый движок vs старый, fallback, флип дефолта когда новый ≥ старый + safety зелёный                                                                  |                                                            |
+| Шаг | Что                                                                                                                                                                                           | Статус                                                                                                                                     |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | safety-тесты ДО рефактора                                                                                                                                                                     | ✅ добавлены в `__tests__` — подтвердить `pnpm vitest run`                                                                                 |
+| 2   | аддитивный data-слой: `quality_catalog` (9 осей, enum'ы §1.2, `deriveEnergySystem`, `PROGRAM_META` на 20 программ, `enrichProgram`). **PROGRAMS не мутируется** — методология отдельным слоем | ✅ модуль+тесты, probe-green — `pnpm vitest run`                                                                                           |
+| 3   | новые модули логики (`block_catalog` из пула, `validators` S1–S8, `assessment`) **за флагом**, вне live-пути                                                                                  | ✅ в проде: `block_catalog` 36 атомов × 9 блоков, `validators` S1–S9 + homed `V_*`, `assessment` §3.2                                      |
+| 4   | strangle генерации сессии по флагу: A/B новый движок vs старый, fallback, флип дефолта когда новый ≥ старый + safety зелёный                                                                  | ✅ инфраструктура в проде: `engine_router` + `sessionBuilder` + UI runner split (Hang/Reps). `flag=on` ждёт re-shadow с реальными уровнями |
 
 ## Инварианты реализации (не нарушать)
 
@@ -93,8 +93,22 @@ node apps/web/fingers/methodology/tools/impl-coverage.mjs   # 61/61, пул 28/2
 
 ## Следующее конкретное действие
 
-Шаг 3: новые модули логики `block_catalog` (из PROTOCOL*POOL, потребляет
-`quality_catalog.enrichProgram`), `validators` (S1–S8 + homed
-`V*\*`), `assessment`(scoreLimiters §3.2). Всё **за фиче-флагом, вне live-пути** — движок пока читает старые поля.`quality_catalog`
-ещё НЕ в bundle-loader (подключить на Шаге 3, когда логика начнёт его
-потреблять).
+**Шаги 1-4 ✅ в проде** (см. таблицу выше). Strangler-цепочка собрана: данные
+(`block_catalog`), safety (`validators` S1–S9 + homed `V_*`), приоритезация
+(`assessment`), маршрутизация (`engine_router` с MVC/level plumbing из
+`Fingers.records`), сборка сессии (`sessionBuilder` со shared
+`useExerciseShell`), UI (`HangRunner`/`RepsRunner` с общим S8 RPE/pain capture).
+
+**Что осталось до `flag=on`**:
+
+1. **Re-shadow с реальными уровнями** (зона методолога): прогнать
+   `shadowCompare=true` на dev/prод с stub'ом `Fingers.records` для derived
+   advanced/intermediate/beginner — снять distribution `doseShape`/`modality` +
+   кумулятив danger, сравнить с legacy конвертом. См.
+   `engineRouter.lastShadowDiff`.
+2. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
+   дефолт. Прежний `mix_engine` остаётся fallback (router catches null/throw).
+
+**Tech-debt не блокер**: консолидация `useCountdownCycle`+`useRepsCycle` в общий
+timer-core (после приземления strangler'a — теперь оба покрыты characterization,
+вынос безопасен). `quality_catalog` потреблять).
