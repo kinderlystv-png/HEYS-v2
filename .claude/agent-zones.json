@@ -1,0 +1,44 @@
+{
+  "_doc": "Source zones owned by each parallel agent. Used by scripts/check-agent-staging.mjs (forbid cross-zone staging) and scripts/auto-sync-legacy-bundles.mjs (auto-stash foreign-dirty before integration rebuild). Glob-style: trailing /** matches dir, * within name matches filename glob.",
+  "_invariants": [
+    "Generated files (apps/web/public/**, apps/web/*bundle*, apps/web/index.html, manifests, sw.js) are owned by `_generated` zone — any agent's source change may touch them via hook auto-rebuild.",
+    "Zone overlap is forbidden: a file matches at most one explicit source zone (lookup fails fast)."
+  ],
+  "zones": {
+    "fingers": ["apps/web/fingers/**", "apps/web/__tests__/fingers-*"],
+    "gamification": ["apps/web/heys_gamification_v1.js", "apps/web/heys_advice_*.js", "apps/web/heys_insights_*.js"],
+    "day": [
+      "apps/web/heys_day_*.js",
+      "apps/web/heys_day_*.cjs",
+      "apps/web/__tests__/*day*",
+      "apps/web/__tests__/*dayv2*"
+    ],
+    "sync": [
+      "apps/web/heys_storage_supabase_v1.js",
+      "apps/web/heys_sync_merge_v1.js",
+      "apps/web/heys_sync_merge_v1.cjs",
+      "apps/web/heys_content_hash_v1.js",
+      "apps/web/__tests__/sync-*"
+    ],
+    "core": ["apps/web/heys_core_v12.js", "apps/web/heys_app_entry_v1.js", "apps/web/heys_app_shell_v1.js"],
+    "security": [
+      "docs/SECURITY_REVIEW*.md",
+      "scripts/security/**",
+      "security-reports/**",
+      "yandex-cloud-functions/**",
+      "database/*secdef*.sql",
+      "database/*sast*.sql"
+    ],
+    "deps": ["package.json", "pnpm-lock.yaml", "packages/*/package.json", "apps/*/package.json"],
+    "landing": ["apps/landing/**"],
+    "scripts": ["scripts/**", ".husky/**", ".github/workflows/**"],
+    "_generated": [
+      "apps/web/public/**",
+      "apps/web/bundle-manifest.json",
+      "apps/web/index.html",
+      "apps/web/heys_fingers_bundle_v1.js",
+      "apps/web/heys_day_*_bundle_v1.js",
+      "apps/web/heys_advice_bundle_v1.js"
+    ]
+  }
+}

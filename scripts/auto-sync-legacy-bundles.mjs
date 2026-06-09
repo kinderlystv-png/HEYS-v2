@@ -17,6 +17,7 @@ import {
     LEGACY_GENERATOR_ORDER,
     isGeneratedFile,
 } from './legacy-bundle-config.mjs';
+import { getZoneForFile } from './agent-zones.mjs';
 
 const ROOT_DIR = process.cwd();
 const WEB_DIR = path.join(ROOT_DIR, 'apps/web');
@@ -105,12 +106,93 @@ function getDirtyGeneratedFiles() {
         .filter(isGeneratedStatusFile);
 }
 
-function assertGeneratedBaselineClean() {
+// Auto-stash foreign-dirty generated files (improvement B + C).
+//
+// Когда integration-rebuild сталкивается с dirty generated:
+//   - Если они в зоне ПАРАЛЛЕЛЬНОГО агента (через agent-zones manifest) и
+//     НЕ относятся к нашему staged source → stash их с marker'ом, продолжаем,
+//     `.husky/post-commit` сделает pop.
+//   - Если это наши изменения (или manifest не объявил зоны) → fail как раньше.
+//
+// Heuristics для "наши":
+//   - Если staged source files есть → owning zone = их union; dirty generated
+//     с тем же owning zone → НЕ stash (это последствие наших правок).
+//   - Если staged source пустой → fail-safe не stash'им (не знаем кто хозяин).
+function tryAutoStashForeignDirty() {
     const dirty = getDirtyGeneratedFiles();
-    if (dirty.length === 0) return;
+    if (dirty.length === 0) return { stashed: false, files: [] };
+
+    // Получить staged source files (НЕ generated).
+    const stagedOutput = execSync('git diff --cached --name-only', { encoding: 'utf8', cwd: ROOT_DIR });
+    const stagedFiles = stagedOutput.split('\n').filter(Boolean);
+    const stagedSources = stagedFiles.filter(f => !isGeneratedStatusFile(f));
+
+    // Если у нас НЕТ staged source — не знаем чьи это generated → safe fail.
+    if (stagedSources.length === 0) return { stashed: false, files: dirty, reason: 'no-staged-source' };
+
+    // Определяем "наши" zones по staged source.
+    const ourZones = new Set(stagedSources.map(getZoneForFile).filter(Boolean));
+    if (ourZones.size === 0) return { stashed: false, files: dirty, reason: 'unknown-zones' };
+
+    // Все ли dirty generated файлы НЕ помечены нашей зоной? (Generated zone =
+    // `_generated`, owner определяем не им, а по тому какой агент их раздул.
+    // Берём конкретный hack: если рядом с dirty generated есть staged source
+    // нашей зоны который мог бы его триггернуть — считаем «нашим», не stash'им.)
+    //
+    // Простая безопасная эвристика: если ВСЕ staged source — одной зоны, и
+    // dirty generated — пересборка чужой работы (есть unstaged source файлы
+    // в другой зоне) → stash dirty generated.
+    const unstagedOutput = execSync('git status --porcelain --untracked-files=no', { encoding: 'utf8', cwd: ROOT_DIR });
+    const unstagedSourcesByZone = new Map();
+    unstagedOutput.split('\n').filter(line => line.length >= 3).forEach(line => {
+        // Worktree-modified files: " M filename" or "M  filename" (we want either)
+        const filePath = line.slice(3).replace(/^"|"$/g, '');
+        if (isGeneratedStatusFile(filePath)) return;
+        if (stagedFiles.includes(filePath)) return; // already staged
+        const zone = getZoneForFile(filePath);
+        if (!zone || zone === '_generated') return;
+        if (!unstagedSourcesByZone.has(zone)) unstagedSourcesByZone.set(zone, []);
+        unstagedSourcesByZone.get(zone).push(filePath);
+    });
+
+    // Foreign source = zones что НЕ наши.
+    const foreignZones = [...unstagedSourcesByZone.keys()].filter(z => !ourZones.has(z));
+    if (foreignZones.length === 0) {
+        return { stashed: false, files: dirty, reason: 'no-foreign-source' };
+    }
+
+    // Есть foreign-зона с unstaged source → их generated dirty похожи на их работу.
+    // Auto-stash dirty generated + foreign unstaged source как один пакет.
+    const filesToStash = [
+        ...dirty,
+        ...foreignZones.flatMap(z => unstagedSourcesByZone.get(z))
+    ];
+    const stashLabel = `auto-stash:foreign-zones:${foreignZones.join(',')}`;
+    try {
+        execSync(
+            `git stash push --include-untracked -m "${stashLabel}" -- ${filesToStash.map(f => JSON.stringify(f)).join(' ')}`,
+            { encoding: 'utf8', cwd: ROOT_DIR, stdio: 'pipe' }
+        );
+        return { stashed: true, files: filesToStash, foreignZones, stashLabel };
+    } catch (e) {
+        return { stashed: false, files: dirty, reason: 'stash-failed: ' + (e.message || e) };
+    }
+}
+
+function assertGeneratedBaselineClean() {
+    const result = tryAutoStashForeignDirty();
+    if (result.stashed) {
+        console.info(`[legacy-sync] 🧹 Auto-stash чужих зон (${result.foreignZones.join(', ')}):`);
+        result.files.forEach(f => console.info(`  - ${f}`));
+        console.info(`[legacy-sync] post-commit hook вернёт через 'git stash pop' (${result.stashLabel}).`);
+        return; // продолжаем integration rebuild с clean baseline
+    }
+    if (result.files.length === 0) return; // ничего не было dirty
+
     console.error('[legacy-sync] ❌ Generated files are already dirty before bundle sync.');
+    if (result.reason) console.error(`[legacy-sync] auto-stash не применился: ${result.reason}`);
     console.error('[legacy-sync] Commit/stash/revert them first, then run integration rebuild from a clean baseline:');
-    dirty.forEach(filePath => console.error(`  - ${filePath}`));
+    result.files.forEach(filePath => console.error(`  - ${filePath}`));
     process.exit(1);
 }
 
@@ -229,6 +311,17 @@ function main() {
     const mode = getMode();
     const stagedFiles = getStagedFiles();
     const isTestMode = !!getCliFilesOverride();
+
+    // A-light (improvement A): source-only opt-in для commit'а. Skipает bundle
+    // rebuild на этом коммите — generated собираются в CI на deploy, либо в
+    // следующем integration-mode commit'е. Полезно для атомарных source-only
+    // коммитов в параллельных потоках, чтобы не дёргать generated.
+    // Активируется через env HEYS_COMMIT_SOURCE_ONLY=1.
+    if (process.env.HEYS_COMMIT_SOURCE_ONLY === '1') {
+        console.info('[legacy-sync] 🪶 source-only mode (HEYS_COMMIT_SOURCE_ONLY=1) — пропускаю bundle rebuild.');
+        console.info('[legacy-sync] Generated артефакты соберутся в CI или следующем integration-коммите.');
+        return;
+    }
 
     if (stagedFiles.length === 0) {
         console.info('[legacy-sync] Нет staged-файлов — пропускаю sync legacy bundles.');

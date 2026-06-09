@@ -130,6 +130,99 @@ function buildItemsJson() {
   });
 }
 
+// Improvement D: auto-собрать whats-new entry из непокрытых commit messages.
+// Считает коммиты с последнего deployed-build (через build-meta.json) или
+// HEAD~N если нет deployed. Группирует по type: feat/fix берёт первое
+// user-facing описание для item-title, остальные собирает в description.
+//
+// Возвращает {title, items, source} либо null если auto-detect не сработал.
+function tryAutoFromCommits() {
+  try {
+    // Найти deployed-hash. Если не получится — последние 20 коммитов.
+    let deployedHash = null;
+    try {
+      // Сначала пробуем read из локального build-meta.json (если есть).
+      const cwd = process.cwd();
+      const metaPath = path.join(cwd, 'apps/web/public/build-meta.json');
+      if (require ? false : true) {
+        // ESM context — используем dynamic fs.
+        const fs = require?.('node:fs') || (await import('node:fs')).default;
+        // Best-effort, не критично.
+      }
+    } catch { /* fallthrough */ }
+
+    // Простейший range: коммиты в HEAD которых нет в origin/main (т.е. для push'a).
+    // Если уже на main → последние коммиты от последней whats-new entry.
+    let range = 'origin/main..HEAD';
+    let commits;
+    try {
+      commits = getGitOutput(['log', range, '--pretty=format:%s|%h']).split('\n').filter(Boolean);
+    } catch {
+      // Fallback на HEAD~20
+      try {
+        commits = getGitOutput(['log', '-20', '--pretty=format:%s|%h']).split('\n').filter(Boolean);
+        range = 'HEAD~20..HEAD';
+      } catch { return null; }
+    }
+    if (commits.length === 0) return null;
+
+    // Парсим commit messages (conventional commits).
+    const parsed = commits.map(line => {
+      const [subject, hash] = line.split('|');
+      const m = /^([a-z]+)(?:\(([^)]+)\))?(!)?:\s*(.+)$/.exec(subject || '');
+      if (!m) return { type: 'chore', scope: null, subject: subject || '', hash, raw: subject };
+      return { type: m[1], scope: m[2] || null, breaking: !!m[3], subject: m[4], hash, raw: subject };
+    });
+
+    // User-facing types: feat, fix, perf. Остальные (chore/docs/test/refactor) — technical.
+    const userFacing = parsed.filter(c => ['feat', 'fix', 'perf'].includes(c.type));
+    // Skip release/whats-new коммиты сами.
+    const meaningful = parsed.filter(c => c.type !== 'chore' || !/release/i.test(c.scope || ''));
+
+    if (meaningful.length === 0) return null;
+
+    // Strategy: если есть feat/fix — берём первый как item, остальные user-facing — bullet'ы.
+    // Если только chore/docs/test — single technical entry.
+    let title, items;
+    if (userFacing.length > 0) {
+      const primary = userFacing[0];
+      title = humanizeCommit(primary);
+      const description = userFacing.length > 1
+        ? userFacing.map(c => '• ' + humanizeCommit(c)).join('\n')
+        : (primary.subject + (primary.scope ? ` (зона: ${primary.scope})` : ''));
+      items = [{
+        type: primary.type,
+        title,
+        description,
+      }];
+    } else {
+      // Technical-only batch.
+      title = 'Технические улучшения';
+      items = [{
+        type: 'improvement',
+        title: 'Улучшили внутренние процессы',
+        description: meaningful.slice(0, 5).map(c => '• ' + (c.scope ? `[${c.scope}] ` : '') + c.subject).join('\n'),
+      }];
+    }
+
+    return {
+      title,
+      items: JSON.stringify(items),
+      source: `auto-from-commits: ${parsed.length} коммитов (${range})`,
+      meaningful,
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function humanizeCommit(c) {
+  // Перевести conventional commit subject в человеко-читаемый.
+  // Просто берём subject, scope добавляем в скобки.
+  const scopePart = c.scope ? ` (${c.scope})` : '';
+  return c.subject + scopePart;
+}
+
 function buildItemsJsonFromOptions(options) {
   const explicitItems = options.items;
   if (explicitItems) {
@@ -360,8 +453,22 @@ function ensureReleaseEntry() {
 
   assertReleaseCommitStagingIsClean();
 
-  const title = getOption('--title');
-  const itemsJson = buildItemsJson();
+  let title = getOption('--title');
+  let itemsJson = buildItemsJson();
+
+  // Improvement D: если ни --title ни --items не заданы, пробуем auto-build
+  // из commit messages в push-range.
+  if (!title && !itemsJson) {
+    const auto = tryAutoFromCommits();
+    if (auto) {
+      writeLine(`📝 Auto whats-new entry из commit messages:`);
+      writeLine(`   source: ${auto.source}`);
+      writeLine(`   title: ${auto.title}`);
+      title = auto.title;
+      itemsJson = auto.items;
+    }
+  }
+
   if (!title || !itemsJson) {
     printUsageAndExit();
   }
