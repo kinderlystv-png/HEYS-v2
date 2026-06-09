@@ -2803,7 +2803,7 @@
 //
 // Public API:
 //   HEYS.Fingers.validators.S1_ageLevelGate(atom, profile)        — fail-closed возраст/уровень
-//   HEYS.Fingers.validators.S2_tissueFreshness(atom, history, now)— ≥48ч свежесть high-tissue
+//   HEYS.Fingers.validators.S2_tissueFreshness(atom, history, now)— 48/72ч свежесть high/max по gripGroup
 //   HEYS.Fingers.validators.S3_warmupRequired(session)            — intensive без warmup_done = invalid
 //   HEYS.Fingers.validators.S4_progressionCap(ftlWeek, trailingAvg)— рост >10%/нед = warn
 //   HEYS.Fingers.validators.S5_openhandFirst(atom, profile)       — beginner на замке = warn
@@ -2885,9 +2885,38 @@
     return [ok('S1.pass', 'S1: возраст/уровень в норме', { atomId: atom.id })];
   }
 
-  // ─── S2 — tissue freshness ≥48ч ────────────────────────────────────────────────
+  // ─── S2 — tissue freshness 48/72ч ─────────────────────────────────────────────
   // METHODOLOGY ч.1.6/9.2, IMPLEMENTATION_MAP S2.
-  // history: [{timestamp: ms, atomId, tissueLoad}], now: ms (default Date.now()).
+  // history: [{timestamp: ms, atomId, tissueLoad, gripGroup?, gripId?}], now: ms.
+  const GRIP_GROUP_BY_ID = {
+    openhand4: 'open_drag',
+    front3: 'open_drag',
+    back3: 'open_drag',
+    halfcrimp: 'crimp',
+    fullcrimp: 'crimp',
+    mono: 'mono',
+    pinch: 'pinch',
+    sloper: 'sloper'
+  };
+
+  function tissueRecoveryHours(currentLoad, historyLoad) {
+    return currentLoad === 'max' || historyLoad === 'max' ? 72 : 48;
+  }
+
+  function gripGroupOf(x) {
+    if (!x || typeof x !== 'object') return null;
+    if (typeof x.gripGroup === 'string' && x.gripGroup) return x.gripGroup;
+    if (typeof x.gripId === 'string' && x.gripId) return GRIP_GROUP_BY_ID[x.gripId] || x.gripId;
+    return null;
+  }
+
+  function sameGripGroupOrUnknown(atomGroup, historyGroup) {
+    // Legacy session history did not store gripGroup/gripId. Unknown means we
+    // cannot prove freshness for this tissue group, so keep the old fail-safe.
+    if (!atomGroup || !historyGroup) return true;
+    return atomGroup === historyGroup;
+  }
+
   function S2_tissueFreshness(atom, history, now) {
     if (!atom) return [err('S2.invalid_atom', 'атом не задан')];
     const t = atom.tissueLoad;
@@ -2902,22 +2931,27 @@
     // Date.now()-fallback оставлен сознательно как практический default — это
     // ЕДИНСТВЕННАЯ нечистая точка в модуле; пометить при вызове из CI/тестов.
     const ts = num(now) ?? Date.now();
-    const cutoff = ts - 48 * 60 * 60 * 1000;
+    const atomGroup = gripGroupOf(atom);
     const violations = history.filter(function (h) {
+      const ht = h && h.tissueLoad;
+      if (ht !== 'high' && ht !== 'max') return false;
+      const hours = tissueRecoveryHours(t, ht);
+      const cutoff = ts - hours * 60 * 60 * 1000;
       // Окно [cutoff, ts]: и нижняя, и верхняя граница. До фикса не было ts —
       // запись с timestamp ПОСЛЕ now считалась нарушением (бессмыслица для
       // легитимных данных, но открывало семантическую дыру).
       return num(h && h.timestamp) !== null &&
              h.timestamp >= cutoff &&
              h.timestamp <= ts &&
-             (h.tissueLoad === 'high' || h.tissueLoad === 'max');
+             sameGripGroupOrUnknown(atomGroup, gripGroupOf(h));
     });
     if (violations.length > 0) {
       const last = violations[violations.length - 1];
       const hoursAgo = ((ts - last.timestamp) / 3600000).toFixed(1);
+      const windowHours = tissueRecoveryHours(t, last.tissueLoad);
       return [err('S2.fresh_tissue_violation',
-        'высокая нагрузка на ткань пальцев за последние 48ч (' + hoursAgo + 'ч назад)',
-        { atomId: atom.id, hoursAgo: parseFloat(hoursAgo) })];
+        'высокая нагрузка на ткань пальцев за последние ' + windowHours + 'ч (' + hoursAgo + 'ч назад)',
+        { atomId: atom.id, hoursAgo: parseFloat(hoursAgo), windowHours: windowHours, gripGroup: atomGroup || null })];
     }
     return [ok('S2.pass', 'S2: ткань свежая', { atomId: atom.id })];
   }

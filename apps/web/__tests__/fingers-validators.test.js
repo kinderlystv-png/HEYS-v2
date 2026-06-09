@@ -72,7 +72,7 @@ describe('S1 — age/level gate (fail-closed)', () => {
   });
 });
 
-describe('S2 — tissue freshness ≥48ч', () => {
+describe('S2 — tissue freshness 48/72ч по gripGroup', () => {
   beforeAll(setupOnce);
 
   it('na: tissueLoad не high/max — не применим', () => {
@@ -104,6 +104,48 @@ describe('S2 — tissue freshness ≥48ч', () => {
       now
     );
     expect(r[0].code).toBe('S2.pass');
+  });
+
+  it('error: max-tissue нагрузка 60ч назад → блок по 72ч окну', () => {
+    const now = Date.now();
+    const r = V().S2_tissueFreshness(
+      makeAtom({ tissueLoad: 'high', gripId: 'halfcrimp' }),
+      [{ timestamp: now - 60 * 3600 * 1000, atomId: 'prev', tissueLoad: 'max', gripId: 'halfcrimp' }],
+      now
+    );
+    expect(r[0].code).toBe('S2.fresh_tissue_violation');
+    expect(r[0].windowHours).toBe(72);
+  });
+
+  it('ok: high-tissue нагрузка 60ч назад → за 48ч окном', () => {
+    const now = Date.now();
+    const r = V().S2_tissueFreshness(
+      makeAtom({ tissueLoad: 'high', gripId: 'halfcrimp' }),
+      [{ timestamp: now - 60 * 3600 * 1000, atomId: 'prev', tissueLoad: 'high', gripId: 'halfcrimp' }],
+      now
+    );
+    expect(r[0].code).toBe('S2.pass');
+  });
+
+  it('ok: явная другая gripGroup в истории не блокирует текущий хват', () => {
+    const now = Date.now();
+    const r = V().S2_tissueFreshness(
+      makeAtom({ tissueLoad: 'max', gripId: 'halfcrimp' }),
+      [{ timestamp: now - 12 * 3600 * 1000, atomId: 'prev', tissueLoad: 'high', gripGroup: 'open_drag' }],
+      now
+    );
+    expect(r[0].code).toBe('S2.pass');
+  });
+
+  it('error: совместимые crimp-хваты считаются одной gripGroup', () => {
+    const now = Date.now();
+    const r = V().S2_tissueFreshness(
+      makeAtom({ tissueLoad: 'high', gripId: 'fullcrimp' }),
+      [{ timestamp: now - 24 * 3600 * 1000, atomId: 'prev', tissueLoad: 'high', gripId: 'halfcrimp' }],
+      now
+    );
+    expect(r[0].code).toBe('S2.fresh_tissue_violation');
+    expect(r[0].gripGroup).toBe('crimp');
   });
 
   it('нит ревью: now=0 (Unix epoch) — легитимное значение, не падает в Date.now()', () => {
