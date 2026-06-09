@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.09.f3f836da",
+      "buildHash": "f3f836da",
+      "date": "2026-06-09",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Шаг 5b — UI на attempts doseShape (болдер-лимит/дайно/кампус/RFD)",
+      "items": [
+        {
+          "type": "feat",
+          "title": "Шаг 5b — UI на attempts doseShape (болдер-лимит/дайно/кампус/RFD)",
+          "description": "Шаг 5b — UI на attempts doseShape (болдер-лимит/дайно/кампус/RFD)"
+        }
+      ],
+      "coveredCommits": ["f3f836da"]
+    },
+    {
       "version": "2026.06.09.9802684f",
       "buildHash": "9802684f",
       "date": "2026-06-09",
@@ -130,22 +146,6 @@
     {
       "version": "2026.06.08.7949b5f9",
       "buildHash": "7949b5f9",
-      "date": "2026-06-08",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления и улучшения стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки",
-          "description": "В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения."
-        }
-      ],
-      "coveredCommits": ["7add4450", "a69132c8", "fc6f1b61"]
-    },
-    {
-      "version": "2026.06.08.9598ce2a",
-      "buildHash": "9598ce2a",
       "date": "2026-06-08",
       "kind": "technical",
       "profile": "technical-general",
