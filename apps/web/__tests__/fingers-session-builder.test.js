@@ -666,6 +666,9 @@ describe('sessionBuilder: plumbing Гейта #1 E2E через роутер (р
     const result = R().recommendDay(opts);
     expect(R().lastSource).toBe('new');
     expect(result.__trace.inputs.profileLevel).toBe('beginner');
+    expect(result.__trace.resolution.bucket).toBe('moderate');
+    expect(result.__trace.resolution.bucketCapReason).toBe('beginner_max_to_moderate');
+    expect(result.durationMin).toBeGreaterThanOrEqual(35);
   });
 
   it('beginner MVC (40% BW) → derive beginner — порог 58% работает', () => {
@@ -674,6 +677,9 @@ describe('sessionBuilder: plumbing Гейта #1 E2E через роутер (р
     const opts = { equipmentTypes: ['full'], age: 25, readiness: 'max' };
     const result = R().recommendDay(opts);
     expect(result.__trace.inputs.profileLevel).toBe('beginner');
+    expect(result.__trace.resolution.bucket).toBe('moderate');
+    expect(result.__trace.resolution.bucketCapReason).toBe('beginner_max_to_moderate');
+    expect(result.durationMin).toBeGreaterThanOrEqual(35);
   });
 
   it('intermediate MVC (65% BW) → derive intermediate', () => {

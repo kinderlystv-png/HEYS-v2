@@ -111,12 +111,11 @@ plumbing из `Fingers.records`), сборка сессии (`sessionBuilder` с
 
 1. **Re-shadow с реальными уровнями** (зона методолога): прогнать
    `shadowCompare=true` на dev/prод с stub'ом `Fingers.records` для derived
-   advanced/intermediate/beginner — снять distribution `doseShape`/`modality` +
-   кумулятив danger, сравнить с legacy конвертом. См.
-   `engineRouter.lastShadowDiff`.
-2. **Duration envelope**: отдельно принять или ограничить сценарий
-   beginner/no-MVC, где новый builder может дать сильно более короткую сессию,
-   чем legacy.
+   advanced/intermediate — снять distribution `doseShape`/`modality` + кумулятив
+   danger, сравнить с legacy конвертом. См. `engineRouter.lastShadowDiff`.
+2. **Duration envelope**: beginner/no-MVC уже cap'ится `max→moderate`; отдельно
+   принять или ограничить hangboard-only `block` сценарий, где power RFD
+   attempts делает max-сессию длиннее legacy.
 3. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
    дефолт. Прежний `mix_engine` остаётся fallback (router catches null/throw).
 

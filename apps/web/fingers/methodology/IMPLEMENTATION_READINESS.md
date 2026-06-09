@@ -8,8 +8,8 @@
 
 **MVP-рекомендатель сессии близок к включению, но full planner ещё не готов.**
 Знаниевый слой методологии в целом согласован; текущие блокеры относятся к
-исполняемому контракту: недельная прогрессия/периодизация, shadow-envelope перед
-флипом и браузерный smoke в рабочем dev-окружении.
+исполняемому контракту: недельная прогрессия/периодизация и финальный
+shadow-envelope перед флипом.
 
 | Слой                        | Статус      | Суть                                                                        |
 | --------------------------- | ----------- | --------------------------------------------------------------------------- |
@@ -30,21 +30,23 @@
   `max=72ч`, `gripGroup`, и legacy-историю без группы трактует консервативно.
 - `sessionBuilder`: все 6 `doseShape` поддержаны UI; shadow-compare больше не
   считает `attempts/reps/circuit/continuous/process` renderer-risk.
+- `dev:local`: Express 4 снова получает совместимый `path-to-regexp@0.1.12`;
+  browser smoke на `localhost:3001` зелёный (`HEYS.Fingers.isReady`, bundle 200,
+  console/page errors 0).
+- `duration envelope`: beginner/no-MVC и beginner MVC cap'ятся с `max` на
+  `moderate`, чтобы не выдавать короткую max-сессию вне legacy-конверта.
 
 ## Осталось перед включением `flags.newEngine=true`
 
-1. **Shadow-envelope перед flip.** Re-shadow с live-like opts: beginner/no-MVC,
-   MVC 40/65/90% BW, explicit advanced, equipment `full/block/none`; подтвердить
-   duration envelope и отсутствие UI-risk.
+1. **Shadow-envelope перед flip.** Re-shadow с live-like opts: MVC 65/90% BW,
+   explicit advanced, equipment `full/block/none`; подтвердить отсутствие
+   UI-risk и принять/ограничить длинный `block`+power RFD сценарий.
 2. **S4 enforcement.** Сейчас недельный FTL-прогресс даёт warning; генератор ещё
    не режет объём автоматически при превышении лимита.
 3. **Phase-2 planning.** Нет `periodization_engine`: deload/taper/maintenance
    описаны методологически, но не управляют генерацией недель.
 4. **Assessment depth.** Бенчмарки Berta/IRCRA подключены как методология, но
    полной тест-батареи и частоты ретеста в продукте ещё нет.
-5. **Dev smoke unblock.** `pnpm dev:local` должен стартовать для браузерной
-   проверки режима; текущий lockfile даёт Express 4 несовместимый
-   `path-to-regexp@6`.
 
 ## Definition of Done для safe rollout
 
@@ -52,8 +54,7 @@
 - [x] `doseConfidence` не теряется при парсинге пула.
 - [x] Shadow telemetry не помечает renderable non-hang shapes как UI risk.
 - [x] Runtime `warmup_done` отделён от profile credentials в build-time S9.
-- [ ] Shadow-envelope принят методологом: duration/roles/warmup не хуже legacy
-      для live-like сценариев.
+- [x] Browser smoke: `dev:local`, `HEYS.Fingers.isReady`, bundle 200, errors 0.
+- [ ] Shadow-envelope принят методологом: `block` equipment max-duration
+      (`pow_rfd_pulls`) не хуже legacy или явно ограничен.
 - [ ] S4 недельный cap влияет на генерацию, а не только предупреждает.
-- [ ] Browser smoke: минимум `hang + reps + attempts/circuit` сессия без
-      деградации UI перед flip.

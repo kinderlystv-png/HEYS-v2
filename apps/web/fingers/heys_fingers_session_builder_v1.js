@@ -365,6 +365,15 @@
     if (intensityOverride && RANK[intensityOverride] < RANK[ceiling]) {
       bucket = intensityOverride;
     }
+    // Duration/safety envelope before flip: beginner-level users do not get max
+    // bucket even when readiness=max. Otherwise the only beginner-compatible
+    // max-strength atom creates a very short max session (no capacity block),
+    // outside the legacy envelope seen in shadow runs.
+    let bucketCapReason = null;
+    if (bucket === 'max' && effectiveLevel === 'beginner') {
+      bucket = 'moderate';
+      bucketCapReason = 'beginner_max_to_moderate';
+    }
     const slots = (SLOT_TEMPLATES[bucket] || SLOT_TEMPLATES.moderate).slice();
 
     // Credentials: seed по level ТОЛЬКО если level explicit (ревью #6).
@@ -531,6 +540,7 @@
         },
         resolution: {
           initialCeiling: ceiling, bucket: bucket,
+          bucketCapReason: bucketCapReason,
           slotsTemplate: slots.slice(), slotsSource: intensityOverride ? 'legacy-intensity' : 'bucket'
         },
         slots: safetyTrace.picks,
