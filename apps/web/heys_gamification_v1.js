@@ -4687,12 +4687,19 @@
             const cloudXP = cloudData_.totalXP || 0;
             const cloudUpdatedAt = cloudData_.updatedAt || 0;
 
-            // 🛡️ v2.2: Проверка "качества" данных — не перезаписывать богатые данные бедными
+            // 🛡️ v2.2: Проверка "качества" данных — не перезаписывать богатые данные бедными.
+            // dailyXP: cloud считаем только по записям ≤30 дней, как validateAndMigrate чистит
+            // локально. Без симметрии stale-cloud со старыми датами вечно выигрывает по
+            // cloudDailyXPCount > localDailyXPCount → BLOCKED-loop (syncToCloud → BLOCKED →
+            // loadFromCloud → dispatch heysGameUpdate → handleWeeklyUpdate → saveData → repeat).
+            const _dailyXPCutoff = new Date();
+            _dailyXPCutoff.setDate(_dailyXPCutoff.getDate() - MAX_DAILY_XP_DAYS);
+            const _dailyXPCutoffStr = _dailyXPCutoff.toISOString().slice(0, 10);
             const cloudAchievements = Array.isArray(cloudData_.unlockedAchievements) ? cloudData_.unlockedAchievements.length : 0;
             const localAchievements = Array.isArray(data.unlockedAchievements) ? data.unlockedAchievements.length : 0;
             const cloudStatsCount = Object.keys(cloudData_.stats || {}).filter(k => cloudData_.stats[k] > 0).length;
             const localStatsCount = Object.keys(data.stats || {}).filter(k => data.stats[k] > 0).length;
-            const cloudDailyXPCount = Object.keys(cloudData_.dailyXP || {}).length;
+            const cloudDailyXPCount = Object.keys(cloudData_.dailyXP || {}).filter(d => d >= _dailyXPCutoffStr).length;
             const localDailyXPCount = Object.keys(data.dailyXP || {}).length;
 
             // Облако "богаче" если: больше XP ИЛИ (XP равен И больше деталей)
