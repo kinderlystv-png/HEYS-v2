@@ -138,21 +138,7 @@ function buildItemsJson() {
 // Возвращает {title, items, source} либо null если auto-detect не сработал.
 function tryAutoFromCommits() {
   try {
-    // Найти deployed-hash. Если не получится — последние 20 коммитов.
-    let deployedHash = null;
-    try {
-      // Сначала пробуем read из локального build-meta.json (если есть).
-      const cwd = process.cwd();
-      const metaPath = path.join(cwd, 'apps/web/public/build-meta.json');
-      if (require ? false : true) {
-        // ESM context — используем dynamic fs.
-        const fs = require?.('node:fs') || (await import('node:fs')).default;
-        // Best-effort, не критично.
-      }
-    } catch { /* fallthrough */ }
-
     // Простейший range: коммиты в HEAD которых нет в origin/main (т.е. для push'a).
-    // Если уже на main → последние коммиты от последней whats-new entry.
     let range = 'origin/main..HEAD';
     let commits;
     try {
