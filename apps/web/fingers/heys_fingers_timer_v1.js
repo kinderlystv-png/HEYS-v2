@@ -46,6 +46,9 @@
     ABORTED: 'ABORTED',
     EXPIRED: 'EXPIRED',
     PAUSED: 'PAUSED',
+    // Step 2 (reps phase-view): юзер сам пейсит повторы, машина ждёт completeSet().
+    // Нет HANG/REST под-таймера — повторы непрерывны, REST только BIG_REST между сетами.
+    REPS_INPUT: 'REPS_INPUT',
   });
 
   // SET_PREP всегда 5 секунд (countdown до HANG).
@@ -576,6 +579,457 @@
     );
   }
 
+  // ─── Hook: useRepsCycle (Step 2 / ревью #9 scope) ────────────────────────────
+  //
+  // State graph (A-структура, ревью #8):
+  //   IDLE → SET_PREP (5s) → REPS_INPUT (юзер сам жмёт completeSet()) →
+  //     если последний сет → DONE; иначе → BIG_REST (restSetsSec) → SET_PREP …
+  //   Orthogonal: ANY → ABORTED | PAUSED → previous.
+  //
+  // Отличия от useCountdownCycle:
+  //   - НЕТ HANG/REST под-таймера в сете (повторы непрерывны, юзер пейсит).
+  //   - Внутри сета — состояние REPS_INPUT, ждёт `completeSet()` от view.
+  //   - reps в config — диапазон [min,max] или число, машина его НЕ использует;
+  //     это для display (Step 3 RepsCounterDisplay).
+  //   - addedWeightKg в config — тоже для display.
+  //
+  // API ПАРАЛЛЕЛЕН useCountdownCycle (одни callbacks, один shape return) →
+  // ExerciseRunner (Step 4) подключает любой из хуков через один shell.
+  function useRepsCycle(config) {
+    const React = global.React;
+    if (!React) {
+      console.warn('[Fingers.useRepsCycle] React not loaded — returning stub');
+      return { state: STATES.IDLE, setIdx: 0, repIdx: 0, secondsLeft: 0, totalElapsed: 0,
+        start: () => {}, pause: () => {}, resume: () => {}, abort: () => {},
+        completeSet: () => {}, skipPhase: () => {}, startFromSnapshot: () => {} };
+    }
+
+    const cfg = config || {};
+    const setsCount = Math.max(1, Number(cfg.setsCount || cfg.sets) || 3);
+    const restBetweenSetsSec = Number(cfg.restBetweenSetsSec || cfg.restSetsSec) || 60;
+
+    const [state, setState] = React.useState(STATES.IDLE);
+    const [setIdx, setSetIdx] = React.useState(0);
+    const [secondsLeft, setSecondsLeft] = React.useState(0);
+    const [totalElapsed, setTotalElapsed] = React.useState(0);
+
+    const tickRef = React.useRef(null);
+    const phaseStartedAtRef = React.useRef(0);
+    const phaseDurationMsRef = React.useRef(0);
+    const sessionStartedAtRef = React.useRef(0);
+    const pauseStartedAtRef = React.useRef(0);
+    const pauseTotalMsRef = React.useRef(0);
+    const previousStateRef = React.useRef(STATES.IDLE);
+
+    const wakeLock = HEYS.AppHooks && typeof HEYS.AppHooks.useWakeLock === 'function'
+      ? HEYS.AppHooks.useWakeLock() : null;
+
+    const onStateChange = cfg.onStateChange;
+    const onComplete = cfg.onComplete;
+
+    const fireStateChange = React.useCallback((nextState, meta) => {
+      if (typeof onStateChange === 'function') {
+        try { onStateChange(nextState, meta || {}); } catch (e) {
+          console.warn('[Fingers.timer] onStateChange threw:', e);
+        }
+      }
+    }, [onStateChange]);
+
+    const clearTick = React.useCallback(() => {
+      if (tickRef.current) {
+        clearTimeout(tickRef.current);
+        tickRef.current = null;
+      }
+    }, []);
+
+    // Tick стартует только для TIMED фаз: SET_PREP и BIG_REST.
+    // REPS_INPUT — manual (ждёт completeSet()), без тика.
+    const advancePhaseRef = React.useRef(null);
+    const startTick = React.useCallback(() => {
+      clearTick();
+      const tickFn = function () {
+        const elapsedMs = _now() - phaseStartedAtRef.current;
+        const remainingMs = Math.max(0, phaseDurationMsRef.current - elapsedMs);
+        const remainingSec = Math.ceil(remainingMs / 1000);
+        setSecondsLeft(remainingSec);
+        setTotalElapsed(Math.floor((_now() - sessionStartedAtRef.current - pauseTotalMsRef.current) / 1000));
+        if (remainingMs <= 0) {
+          tickRef.current = null;
+          if (advancePhaseRef.current) advancePhaseRef.current();
+          return;
+        }
+        tickRef.current = setTimeout(tickFn, TICK_MS);
+      };
+      tickRef.current = setTimeout(tickFn, TICK_MS);
+    }, [clearTick]);
+
+    const enterPhase = React.useCallback((nextState, durationSec, meta) => {
+      phaseStartedAtRef.current = _now();
+      phaseDurationMsRef.current = Math.max(0, durationSec * 1000);
+      setSecondsLeft(durationSec);
+      setState(nextState);
+      previousStateRef.current = nextState;
+      fireStateChange(nextState, Object.assign({ durationSec }, meta || {}));
+
+      if (nextState === STATES.SET_PREP) {
+        _say('cue.countdown_5');
+        _beep('notify');
+      } else if (nextState === STATES.REPS_INPUT) {
+        // Manual фаза — wakelock держит экран пока юзер делает повторы.
+        if (wakeLock && wakeLock.requestWakeLock && !wakeLock.isWakeLockActive) {
+          wakeLock.requestWakeLock();
+        }
+        // Голосовая cue для начала повторов (Step 3 voice asset).
+        _say('cue.go_reps');
+        _vibrate([80, 60, 80]);
+        // НЕТ startTick: REPS_INPUT ждёт completeSet() от юзера.
+        return;
+      } else if (nextState === STATES.BIG_REST) {
+        _say('cue.big_rest_start');
+        _beep('caution');
+      } else if (nextState === STATES.DONE) {
+        _beep('triumph');
+        _say('cue.session_done');
+        clearTick();
+        Fingers.activeTimerLock = false;
+        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
+        if (typeof onComplete === 'function') {
+          try { onComplete(); } catch (e) { console.warn('[Fingers.timer] onComplete threw:', e); }
+        }
+        return;
+      } else if (nextState === STATES.ABORTED || nextState === STATES.EXPIRED) {
+        clearTick();
+        Fingers.activeTimerLock = false;
+        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
+        return;
+      } else if (nextState === STATES.IDLE) {
+        clearTick();
+        Fingers.activeTimerLock = false;
+        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
+        return;
+      }
+
+      startTick();
+    }, [fireStateChange, startTick, clearTick, wakeLock, onComplete]);
+
+    advancePhaseRef.current = function realAdvancePhase() {
+      // From SET_PREP → REPS_INPUT (manual фаза)
+      if (state === STATES.SET_PREP) {
+        enterPhase(STATES.REPS_INPUT, 0, { setIdx });
+        return;
+      }
+      // From BIG_REST → SET_PREP (next set)
+      if (state === STATES.BIG_REST) {
+        setSetIdx((s) => s + 1);
+        enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: setIdx + 1 });
+        return;
+      }
+    };
+
+    // ─── Control API ─────────────────────────────────────────────────────
+    const start = React.useCallback(() => {
+      sessionStartedAtRef.current = _now();
+      pauseTotalMsRef.current = 0;
+      setSetIdx(0);
+      setTotalElapsed(0);
+      Fingers.activeTimerLock = true;
+      enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: 0 });
+    }, [enterPhase]);
+
+    // ✨ Reps-specific: юзер сигналит «подход выполнен».
+    // Из REPS_INPUT → BIG_REST (если есть ещё сеты) или DONE (если последний).
+    const completeSet = React.useCallback(() => {
+      if (state !== STATES.REPS_INPUT) return;
+      const isLastSet = (setIdx + 1) >= setsCount;
+      if (isLastSet) {
+        enterPhase(STATES.DONE, 0, { setIdx });
+      } else {
+        enterPhase(STATES.BIG_REST, restBetweenSetsSec, { setIdx });
+      }
+    }, [state, setIdx, setsCount, restBetweenSetsSec, enterPhase]);
+
+    const pause = React.useCallback(() => {
+      if (state === STATES.PAUSED || state === STATES.IDLE
+          || state === STATES.DONE || state === STATES.ABORTED) return;
+      previousStateRef.current = state;
+      pauseStartedAtRef.current = _now();
+      clearTick();
+      setState(STATES.PAUSED);
+      fireStateChange(STATES.PAUSED, { resumeTo: previousStateRef.current, secondsLeft, setIdx, repIdx: 0 });
+    }, [state, secondsLeft, setIdx, clearTick, fireStateChange]);
+
+    const resume = React.useCallback(() => {
+      if (state !== STATES.PAUSED) return;
+      const pauseDurMs = _now() - pauseStartedAtRef.current;
+      pauseTotalMsRef.current += pauseDurMs;
+      // For REPS_INPUT (manual) — нет tick, просто восстанавливаем state.
+      const restored = previousStateRef.current;
+      if (restored !== STATES.REPS_INPUT) {
+        phaseStartedAtRef.current += pauseDurMs;
+      }
+      setState(restored);
+      fireStateChange(restored, {
+        resumed: true, setIdx, repIdx: 0,
+        durationSec: Math.ceil(phaseDurationMsRef.current / 1000)
+      });
+      if (restored !== STATES.REPS_INPUT) startTick();
+    }, [state, setIdx, startTick, fireStateChange]);
+
+    const abort = React.useCallback(() => {
+      enterPhase(STATES.ABORTED, 0, {});
+    }, [enterPhase]);
+
+    const skipPhase = React.useCallback(() => {
+      if (state === STATES.IDLE || state === STATES.DONE
+          || state === STATES.ABORTED || state === STATES.PAUSED) return;
+      clearTick();
+      // For REPS_INPUT — skip эквивалентен completeSet (одинаковый эффект).
+      if (state === STATES.REPS_INPUT) {
+        completeSet();
+        return;
+      }
+      if (advancePhaseRef.current) advancePhaseRef.current();
+    }, [state, clearTick, completeSet]);
+
+    const startFromSnapshot = React.useCallback((snap) => {
+      if (!snap || !snap.state
+          || snap.state === STATES.IDLE || snap.state === STATES.DONE
+          || snap.state === STATES.ABORTED || snap.state === STATES.EXPIRED) {
+        start();
+        return;
+      }
+      sessionStartedAtRef.current = _now();
+      pauseTotalMsRef.current = 0;
+      const snapSetIdx = Number(snap.setIdx) || 0;
+      setSetIdx(snapSetIdx);
+      Fingers.activeTimerLock = true;
+
+      const wasPaused = snap.state === STATES.PAUSED;
+      const targetState = wasPaused ? (snap.resumeTo || STATES.REPS_INPUT) : snap.state;
+
+      if (targetState === STATES.REPS_INPUT) {
+        // Manual фаза — продолжаем с нуля (юзер сам жмёт completeSet).
+        enterPhase(STATES.REPS_INPUT, 0, { setIdx: snapSetIdx });
+      } else {
+        let targetSec;
+        if (wasPaused) {
+          targetSec = Math.max(1, Number(snap.pausedAtRemainingSec) || 0);
+        } else {
+          const elapsedMs = Date.now() - (Number(snap.phaseStartedAt) || Date.now());
+          const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
+          targetSec = remainingSec >= 0.5 ? Math.ceil(remainingSec) : 0.5;
+        }
+        enterPhase(targetState, targetSec, { setIdx: snapSetIdx });
+      }
+
+      if (wasPaused) {
+        setTimeout(function () { try { pause(); } catch (_) {} }, 50);
+      }
+    }, [start, enterPhase, pause]);
+
+    // Cleanup on unmount.
+    const wakeLockRef = React.useRef(wakeLock);
+    wakeLockRef.current = wakeLock;
+    React.useEffect(() => {
+      return () => {
+        clearTick();
+        Fingers.activeTimerLock = false;
+        const wl = wakeLockRef.current;
+        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    return {
+      state, setIdx, repIdx: 0, secondsLeft, totalElapsed,
+      start, pause, resume, abort, completeSet, skipPhase, startFromSnapshot
+    };
+  }
+
+  // ─── Component: RepsCounterDisplay (Step 3 / ревью #9 scope) ─────────────────
+  //
+  // View для reps-сессии. Зеркалит CountdownDisplay props где общие
+  // (state, setIdx, totalSets, secondsLeft, gripLabel, edgeLabel, addedWeightKg,
+  //  onPause, onAbort), плюс reps-специфичные:
+  //   - reps: number | [min, max] | null — целевые повторы (display)
+  //   - onSetDone — кнопка «Подход выполнен» (вызывает useRepsCycle.completeSet())
+  //
+  // Phase-rendering:
+  //   - SET_PREP — таймер countdown (как hang); preview «N повт. × M подх.»
+  //   - REPS_INPUT — БОЛЬШАЯ кнопка «Подход выполнен», без ring, с reps-target
+  //     и addedWeight chip. Это и есть отличие от hang.
+  //   - BIG_REST — countdown ring (как hang).
+  //   - PAUSED/DONE/ABORTED — как hang.
+  function RepsCounterDisplay(props) {
+    const React = global.React;
+    if (!React) return null;
+    const h = React.createElement;
+
+    const {
+      state, secondsLeft, setIdx, totalSets,
+      reps, addedWeightKg,
+      gripLabel, gripId, equipmentTier, edgeLabel,
+      onSetDone, onPause, onAbort, onSkip,
+    } = props || {};
+
+    // Reuse hero/chip CSS из countdown (тот же data-phase theming).
+    const tieredGripSrc = gripId
+      ? (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none'
+          ? '/exercises/' + gripId + '_' + equipmentTier + '.webp'
+          : '/exercises/' + gripId + '.webp')
+      : null;
+    const baseGripSrc = gripId ? '/exercises/' + gripId + '.webp' : null;
+
+    const phaseKey = state === STATES.REPS_INPUT ? 'reps'
+      : state === STATES.BIG_REST ? 'big-rest'
+      : state === STATES.SET_PREP ? 'prep'
+      : state === STATES.PAUSED ? 'paused'
+      : state === STATES.DONE ? 'done'
+      : state === STATES.ABORTED ? 'aborted'
+      : 'idle';
+
+    const phaseLabel = state === STATES.REPS_INPUT ? 'ПОВТОРЫ'
+      : state === STATES.BIG_REST ? 'Большой отдых'
+      : state === STATES.SET_PREP ? 'Готовься'
+      : state === STATES.PAUSED ? 'Пауза'
+      : state === STATES.DONE ? 'Готово!'
+      : state === STATES.ABORTED ? 'Прервано'
+      : state === STATES.IDLE ? 'Готов к старту' : state;
+
+    // Reps target в человеко-читаемом виде.
+    const repsLabel = (function () {
+      if (Array.isArray(reps) && reps.length >= 2) {
+        return reps[0] + '–' + reps[1] + ' повт.';
+      }
+      if (typeof reps === 'number' && isFinite(reps) && reps > 0) {
+        return reps + ' повт.';
+      }
+      return 'Подход';
+    })();
+
+    const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
+    const isManualReps = state === STATES.REPS_INPUT;
+
+    // SVG ring — только для TIMED фаз (SET_PREP, BIG_REST); REPS_INPUT без ring.
+    const isTimedPhase = state === STATES.SET_PREP || state === STATES.BIG_REST;
+    const ringRadius = 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const phaseMaxSec = state === STATES.SET_PREP ? 5
+      : state === STATES.BIG_REST ? Math.max(secondsLeft, 60) : 1;
+    const ratio = isTimedPhase ? Math.max(0, Math.min(1, secondsLeft / phaseMaxSec)) : 0;
+    const dashoffset = ringCircum * (1 - ratio);
+    const isFinalCount = isTimedPhase && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
+
+    return h('div', {
+      className: 'heys-fingers-countdown heys-fingers-reps-counter',
+      'data-phase': phaseKey
+    },
+      // Set counter (без rep-counter — повторы manual)
+      h('div', { className: 'heys-fingers-countdown__counter' },
+        totalSets ? ('Подход ' + ((setIdx || 0) + 1) + '/' + totalSets) : ''
+      ),
+
+      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
+
+      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
+        h('img', {
+          src: tieredGripSrc,
+          alt: gripLabel || gripId,
+          loading: 'eager',
+          decoding: 'async',
+          'data-fallback-tried': tieredGripSrc === baseGripSrc ? 'true' : 'false',
+          onError: function (e) {
+            try {
+              const el = e.target;
+              if (el.getAttribute('data-fallback-tried') !== 'true' && baseGripSrc && baseGripSrc !== tieredGripSrc) {
+                el.setAttribute('data-fallback-tried', 'true');
+                el.src = baseGripSrc;
+                return;
+              }
+              el.parentNode.style.display = 'none';
+            } catch (_) {}
+          }
+        })
+      ) : null,
+
+      (edgeLabel || addedWeightKg != null) ? h('div', { className: 'heys-fingers-countdown__chips' },
+        edgeLabel ? h('div', { className: 'heys-fingers-countdown__chip' },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Грань'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' }, edgeLabel)
+        ) : null,
+        addedWeightKg != null ? h('div', {
+          className: 'heys-fingers-countdown__chip heys-fingers-countdown__chip--weight',
+          'data-weight-sign': addedWeightKg > 0 ? 'plus' : addedWeightKg < 0 ? 'minus' : 'zero'
+        },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Доп. вес'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' },
+            (addedWeightKg > 0 ? '+' : '') + addedWeightKg + ' кг')
+        ) : null
+      ) : null,
+
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
+
+      // Центральная зона: либо ring+digit (timed), либо большая reps-кнопка (manual).
+      isManualReps
+        ? h('div', { className: 'heys-fingers-reps-counter__manual' },
+            h('div', { className: 'heys-fingers-reps-counter__target' }, repsLabel),
+            h('button', {
+              type: 'button',
+              className: 'heys-fingers-reps-counter__done-btn',
+              onClick: onSetDone,
+              'aria-label': 'Подход выполнен'
+            }, '✓ Подход выполнен')
+          )
+        : h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+            h('svg', {
+              className: 'heys-fingers-countdown__ring',
+              width: 200, height: 200, viewBox: '0 0 200 200'
+            },
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-track',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none'
+              }),
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-fill',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none',
+                strokeDasharray: ringCircum,
+                strokeDashoffset: dashoffset,
+                transform: 'rotate(-90 100 100)'
+              })
+            ),
+            h('div', {
+              className: 'heys-fingers-countdown__digit'
+                + (isFinalCount ? ' is-final-count' : '')
+            }, String(Math.max(0, secondsLeft | 0)))
+          ),
+
+      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        Fingers.VoiceMiniControls
+          ? h(Fingers.VoiceMiniControls, null)
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onPause
+        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
+        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onSkip,
+          'aria-label': 'Пропустить фазу',
+          title: 'Пропустить фазу'
+        }, '→') : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
+          onClick: onAbort
+        }, 'Прервать')
+      ) : null
+    );
+  }
+
   Fingers.useCountdownCycle = useCountdownCycle;
+  Fingers.useRepsCycle = useRepsCycle;
   Fingers.CountdownDisplay = CountdownDisplay;
+  Fingers.RepsCounterDisplay = RepsCounterDisplay;
 })(typeof window !== 'undefined' ? window : globalThis);
