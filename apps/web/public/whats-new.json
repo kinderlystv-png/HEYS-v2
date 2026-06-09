@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.09.b267acbc",
+      "buildHash": "b267acbc",
+      "date": "2026-06-09",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Шаг 5c — UI на circuit doseShape (4x4/EMOM/связки/повторы трассы/power intervals)",
+      "items": [
+        {
+          "type": "feat",
+          "title": "Шаг 5c — UI на circuit doseShape (4x4/EMOM/связки/повторы трассы/power intervals)",
+          "description": "Шаг 5c — UI на circuit doseShape (4x4/EMOM/связки/повторы трассы/power intervals)"
+        }
+      ],
+      "coveredCommits": ["b267acbc"]
+    },
+    {
       "version": "2026.06.09.f3f836da",
       "buildHash": "f3f836da",
       "date": "2026-06-09",
@@ -142,22 +158,6 @@
         }
       ],
       "coveredCommits": ["7bbb3d62"]
-    },
-    {
-      "version": "2026.06.08.7949b5f9",
-      "buildHash": "7949b5f9",
-      "date": "2026-06-08",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления и улучшения стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки",
-          "description": "В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения."
-        }
-      ],
-      "coveredCommits": ["7add4450", "a69132c8", "fc6f1b61"]
     }
   ]
 }
