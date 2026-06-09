@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.09.c60c048b",
+      "buildHash": "c60c048b",
+      "date": "2026-06-09",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Зарядка не возвращается после завершения",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Зарядка не возвращается после завершения",
+          "description": "После завершённой зарядки приложение больше не предлагает добавить её заново при следующем приёме пищи. Повторное добавление остаётся доступным, если Вы удалили зарядку вручную."
+        }
+      ],
+      "coveredCommits": ["1ad6c757"]
+    },
+    {
       "version": "2026.06.09.0f9ef53e",
       "buildHash": "0f9ef53e",
       "date": "2026-06-09",
@@ -140,22 +156,6 @@
         }
       ],
       "coveredCommits": ["f39bfc7f"]
-    },
-    {
-      "version": "2026.06.09.9b3ca706",
-      "buildHash": "9b3ca706",
-      "date": "2026-06-09",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Стабильность синхронизации gamification + инфраструктура fingers",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Починили рассинхрон игровых данных с облаком",
-          "description": "Прекратился loop повторной синхронизации gamification в режиме разработки."
-        }
-      ],
-      "coveredCommits": ["9b3ca706", "9c831441", "92cdc19a", "d89e854d", "6b67df65", "038d6747", "53e12315"]
     }
   ]
 }
