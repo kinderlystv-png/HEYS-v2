@@ -452,7 +452,15 @@ function main() {
     run('git', ['add', '--', 'apps/web/public/whats-new.json', 'apps/web/public/whats-new'], {});
     const staged = gitSafe(['diff', '--cached', '--name-only']);
     if (staged) {
-        run('git', ['commit', '-m', `chore(release): whats-new for ${subject}`], { label: '💾 commit: whats-new' });
+        // commitlint header-max-length=100. Prefix 'chore(release): whats-new for '
+        // = 31 chars → subject capped at 65 to leave room for trailing '…'.
+        const HEADER_PREFIX = 'chore(release): whats-new for ';
+        const HEADER_MAX = 100;
+        const subjectBudget = HEADER_MAX - HEADER_PREFIX.length;
+        const wnSubject = subject.length > subjectBudget
+            ? subject.slice(0, subjectBudget - 1).trimEnd() + '…'
+            : subject;
+        run('git', ['commit', '-m', `${HEADER_PREFIX}${wnSubject}`], { label: '💾 commit: whats-new' });
     } else {
         out('[ship] whats-new already up-to-date — no release commit needed.');
     }
