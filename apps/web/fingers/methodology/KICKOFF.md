@@ -57,12 +57,13 @@ node apps/web/fingers/methodology/tools/impl-coverage.mjs   # 61/61, пул 28/2
 **оставляем** — пользователю нравится. Меняем только «мозг» (логику/методологию)
 инкрементально за фиче-флагом, со старым mix_engine как fallback.
 
-| Шаг | Что                                                                                                                                                                                           | Статус                                                                                                                                     |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | safety-тесты ДО рефактора                                                                                                                                                                     | ✅ добавлены в `__tests__` — подтвердить `pnpm vitest run`                                                                                 |
-| 2   | аддитивный data-слой: `quality_catalog` (9 осей, enum'ы §1.2, `deriveEnergySystem`, `PROGRAM_META` на 20 программ, `enrichProgram`). **PROGRAMS не мутируется** — методология отдельным слоем | ✅ модуль+тесты, probe-green — `pnpm vitest run`                                                                                           |
-| 3   | новые модули логики (`block_catalog` из пула, `validators` S1–S8, `assessment`) **за флагом**, вне live-пути                                                                                  | ✅ в проде: `block_catalog` 36 атомов × 9 блоков, `validators` S1–S9 + homed `V_*`, `assessment` §3.2                                      |
-| 4   | strangle генерации сессии по флагу: A/B новый движок vs старый, fallback, флип дефолта когда новый ≥ старый + safety зелёный                                                                  | ✅ инфраструктура в проде: `engine_router` + `sessionBuilder` + UI runner split (Hang/Reps). `flag=on` ждёт re-shadow с реальными уровнями |
+| Шаг | Что                                                                                                                                                                                           | Статус                                                                                                                                                                             |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | safety-тесты ДО рефактора                                                                                                                                                                     | ✅ добавлены в `__tests__` — подтвердить `pnpm vitest run`                                                                                                                         |
+| 2   | аддитивный data-слой: `quality_catalog` (9 осей, enum'ы §1.2, `deriveEnergySystem`, `PROGRAM_META` на 20 программ, `enrichProgram`). **PROGRAMS не мутируется** — методология отдельным слоем | ✅ модуль+тесты, probe-green — `pnpm vitest run`                                                                                                                                   |
+| 3   | новые модули логики (`block_catalog` из пула, `validators` S1–S8, `assessment`) **за флагом**, вне live-пути                                                                                  | ✅ в проде: `block_catalog` 36 атомов × 9 блоков, `validators` S1–S9 + homed `V_*`, `assessment` §3.2                                                                              |
+| 4   | strangle генерации сессии по флагу: A/B новый движок vs старый, fallback, флип дефолта когда новый ≥ старый + safety зелёный                                                                  | ✅ инфраструктура в проде: `engine_router` + `sessionBuilder` + UI runner split (Hang/Reps). `flag=on` ждёт re-shadow с реальными уровнями                                         |
+| 5   | UI-плееры на все doseShape (a continuous · b attempts · c circuit · d process) + B3 прогрессия-advisory (`detectPlateau`/`nextAxis`/`suggestProgression`)                                     | ✅ 2026-06-09 в проде: `RENDERABLE_DOSESHAPES`=все 6 (Runner+Display каждого); `progression` advisory в `sessionBuilder` без влияния на генерацию. Enforcement прогрессии — Фаза 2 |
 
 ## Инварианты реализации (не нарушать)
 
@@ -85,6 +86,12 @@ node apps/web/fingers/methodology/tools/impl-coverage.mjs   # 61/61, пул 28/2
 
 ## Открытый бэклог
 
+- **Периодизация (Фаза 2)** — `periodization_engine`: мезо/макро-циклы (linear
+  6.1 / nonlinear 6.2 / DUP 6.3, выбор 6.4, тейпер 6.5). Сейчас сборка только на
+  1 день.
+- **Enforcement прогрессии/вариативности (Фаза 2)** — `progression` (B3) сейчас
+  только advisory-hints в `sessionBuilder`; завести влияние на генерацию (смена
+  переменной по `detectPlateau`/`nextAxis`).
 - **Фаза 2 homed-items** (см. IMPLEMENTATION_MAP «Заметки целостности»):
   `V_skillBalance`, FDP/FDS edge-ротация, `V_energySystemSequence`,
   `skinStatus`, `ageModifier` 35+, density-hang явный energySystem.
@@ -93,11 +100,13 @@ node apps/web/fingers/methodology/tools/impl-coverage.mjs   # 61/61, пул 28/2
 
 ## Следующее конкретное действие
 
-**Шаги 1-4 ✅ в проде** (см. таблицу выше). Strangler-цепочка собрана: данные
-(`block_catalog`), safety (`validators` S1–S9 + homed `V_*`), приоритезация
-(`assessment`), маршрутизация (`engine_router` с MVC/level plumbing из
-`Fingers.records`), сборка сессии (`sessionBuilder` со shared
-`useExerciseShell`), UI (`HangRunner`/`RepsRunner` с общим S8 RPE/pain capture).
+**Шаги 1-5 ✅ + B3 advisory в проде** (см. таблицу выше). Strangler-цепочка
+собрана: данные (`block_catalog`), safety (`validators` S1–S9 + homed `V_*`),
+приоритезация (`assessment`), маршрутизация (`engine_router` с MVC/level
+plumbing из `Fingers.records`), сборка сессии (`sessionBuilder` со shared
+`useExerciseShell` + advisory progression-hints), UI всех 6 doseShape
+(`Hang`/`Reps`/`Continuous`/`Attempts`/`Circuit`/`Process` Runner+Display с
+общим S8 RPE/pain capture).
 
 **Что осталось до `flag=on`**:
 
