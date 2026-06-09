@@ -19,12 +19,18 @@ Tone, communication length, adjacent observations — см. user-level AGENTS.md
 
 - Делай шаги сам в текущей сессии: SQL миграции через
   `bash scripts/db/psql.sh -f ...`, cloud functions через
-  `cd yandex-cloud-functions && ./deploy-all.sh <name>`, коммиты через
-  `git commit`. Сетевые таймауты, IAM, checksum-warnings — твои проблемы, не
-  задачи пользователю.
-- **`git push` — только по явной команде** («пуш», «push», «запушь»,
-  «выкатывай»). Approval задачи ≠ approval push. После commit: «закоммитил,
-  пушить?». HARD invariant — push виден другим клиентам.
+  `cd yandex-cloud-functions && ./deploy-all.sh <name>`. Сетевые таймауты, IAM,
+  checksum-warnings — твои проблемы, не задачи пользователю.
+- **Запрещено без прямой команды пользователя:** `git commit`, staging под
+  commit, пересборка/генерация legacy bundles (`bundle:*`, `bundle:legacy`,
+  `pnpm build`, `legacy-sync` и похожие команды, которые меняют bundle-файлы),
+  `git push`, `pnpm push:*`, создание PR и любые действия, которые публикуют
+  изменения наружу.
+- **Approval задачи ≠ approval commit/bundle/push.** Команда «сделай» означает
+  внести правки и проверить их, но не коммитить, не собирать bundles и не
+  пушить. Для commit нужна отдельная явная команда («закоммить», «commit»), для
+  bundle rebuild — отдельная команда («собери бандлы», «build»), для push —
+  отдельная команда («пуш», «push», «запушь», «выкатывай»).
 - Просить пользователя — только: 2FA / hardware key, чужой доступ, destructive
   вне согласованного плана, push на remote.
 
