@@ -585,6 +585,105 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
     });
   });
 
+  describe('Шаг 5b attempts-path — useRepsCycle reuse через AttemptsRunner', () => {
+    function installRepsCycleStub() {
+      const captured = {
+        config: null, onComplete: null, onStateChange: null,
+        state: 'IDLE', setIdx: 0, repIdx: 0, secondsLeft: 0,
+        completeSetCalled: false,
+      };
+      globalThis.HEYS.Fingers.useRepsCycle = function (cfg) {
+        captured.config = cfg;
+        captured.onComplete = cfg.onComplete;
+        captured.onStateChange = cfg.onStateChange;
+        return {
+          get state() { return captured.state; },
+          get setIdx() { return captured.setIdx; },
+          repIdx: 0,
+          get secondsLeft() { return captured.secondsLeft; },
+          totalElapsed: 0,
+          start: () => {},
+          pause: () => {}, resume: () => {},
+          abort: () => {},
+          completeSet: () => { captured.completeSetCalled = true; },
+          skipPhase: () => {},
+          startFromSnapshot: () => {},
+        };
+      };
+      return captured;
+    }
+
+    const attemptsExercise = (over = {}) => ({
+      doseShape: 'attempts',
+      gripId: 'halfcrimp', edgeSizeMm: 20,
+      dose: { movesPerAttempt: [1, 5], attempts: [6, 12], restSetsSec: 240 },
+      addedWeightKg: 0,
+      ...over
+    });
+
+    it('exercise.doseShape="attempts" → AttemptsRunner (useRepsCycle с setsCount=upper(attempts)=12)', () => {
+      const repsCycle = installRepsCycleStub();
+      cycle.startCalled = false; cycle.config = null;
+      render(React.createElement(ER(), {
+        exercise: attemptsExercise(),
+        exIdx: 0, totalExercises: 1, exercises: [attemptsExercise()]
+      }));
+      expect(repsCycle.config).not.toBeNull();
+      expect(repsCycle.config.setsCount).toBe(12);
+      expect(repsCycle.config.restBetweenSetsSec).toBe(240);
+      // useCountdownCycle НЕ вызван.
+      expect(cycle.config).toBeNull();
+    });
+
+    it('attempts scalar dose.attempts=9 → setsCount=9', () => {
+      const repsCycle = installRepsCycleStub();
+      render(React.createElement(ER(), {
+        exercise: attemptsExercise({ dose: { movesPerAttempt: 3, attempts: 9, restSetsSec: 180 } }),
+        exIdx: 0, totalExercises: 1, exercises: [attemptsExercise()]
+      }));
+      expect(repsCycle.config.setsCount).toBe(9);
+      expect(repsCycle.config.restBetweenSetsSec).toBe(180);
+    });
+
+    it('attempts BIG_REST → non-final RPE-prompt (S8 наследуется)', () => {
+      const repsCycle = installRepsCycleStub();
+      const onSetFeedback = vi.fn();
+      const { container } = render(React.createElement(ER(), {
+        exercise: attemptsExercise(), exIdx: 0, totalExercises: 1,
+        exercises: [attemptsExercise()], onSetFeedback, onDone: vi.fn()
+      }));
+      act(() => { repsCycle.onStateChange(S().BIG_REST, { setIdx: 0 }); });
+      expect(container.textContent).toMatch(/Подход 1.*как прошёл/);
+    });
+
+    it('attempts onComplete → final RPE → onSetFeedback + onDone (последняя попытка)', () => {
+      const repsCycle = installRepsCycleStub();
+      const onSetFeedback = vi.fn();
+      const onDone = vi.fn();
+      const { container } = render(React.createElement(ER(), {
+        exercise: attemptsExercise(), exIdx: 1, totalExercises: 2,
+        exercises: [attemptsExercise()], onSetFeedback, onDone
+      }));
+      act(() => { repsCycle.onComplete(); });
+      expect(container.textContent).toMatch(/Последний подход — как прошёл/);
+      const okBtn = Array.from(container.querySelectorAll('button')).find(b => b.textContent.includes('Норм'));
+      fireEvent.click(okBtn);
+      // setIdx последней попытки = setsCount-1 = 11 (upper bound dose.attempts)
+      expect(onSetFeedback).toHaveBeenCalledWith(1, 11, { rpe: 'ok', pain: false });
+      expect(onDone).toHaveBeenCalledTimes(1);
+    });
+
+    it('attempts по умолчанию (нет dose.attempts) → setsCount=6 fallback', () => {
+      const repsCycle = installRepsCycleStub();
+      render(React.createElement(ER(), {
+        exercise: { doseShape: 'attempts', dose: { movesPerAttempt: [1, 3] } },
+        exIdx: 0, totalExercises: 1, exercises: [{}]
+      }));
+      expect(repsCycle.config.setsCount).toBe(6);
+      expect(repsCycle.config.restBetweenSetsSec).toBe(240);
+    });
+  });
+
   describe('persistence: handleStateChange (бонус #9)', () => {
     it('persistence.save вызывается на не-final state переходе', () => {
       const save = vi.fn();

@@ -3166,17 +3166,96 @@
     );
   }
 
+  // ─── AttemptsRunner (Шаг 5b / non-hang doseShape: attempts) ──────────────────
+  // Болдер-лимит, дайно, кампус, RFD pulls — серия коротких атак (1-5 движений)
+  // с длинным отдыхом 150-300с между. Reuses useRepsCycle (manual + timed rest)
+  // map: setsCount = upper bound of dose.attempts (top-of-range), пользователь
+  // может остановиться раньше через abort (attempt-to-failure pattern).
+  // S8 RPE/pain наследуется через shell.handleStateChangeRpe.
+  function AttemptsRunner(props) {
+    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const cycleRef = React.useRef(null);
+
+    const dose = exercise.dose || {};
+    const attemptsRange = dose.attempts;
+    const targetAttempts = Array.isArray(attemptsRange)
+      ? (Number(attemptsRange[1]) || 6)
+      : (Number(attemptsRange) || 6);
+    const restBetween = Number(dose.restSetsSec) || 240;
+
+    // Enriched exercise: shell.handleCycleComplete вычисляет lastSet =
+    // exercise.setsCount-1 для финального RPE. Для attempts exercise.setsCount
+    // из session_builder = 1 (legacy, нет d.sets); подменяем на targetAttempts
+    // чтобы final RPE репортил последнюю попытку, а не setIdx=0.
+    const enrichedExercise = Object.assign({}, exercise, { setsCount: targetAttempts });
+    const shell = useExerciseShell(Object.assign({}, props, {
+      exercise: enrichedExercise, cycleRef: cycleRef
+    }));
+
+    const cycle = Fingers.useRepsCycle({
+      setsCount: targetAttempts,
+      restBetweenSetsSec: restBetween,
+      onComplete: shell.handleCycleComplete,
+      onStateChange: shell.handleStateChangeRpe
+    });
+    cycleRef.current = cycle;
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
+    const addedWeight = Number(exercise.addedWeightKg) || 0;
+    const movesPerAttempt = dose.movesPerAttempt;
+
+    if (Fingers.AttemptsDisplay) {
+      return h(React.Fragment, null,
+        h(Fingers.AttemptsDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          setIdx: cycle.setIdx,
+          totalAttempts: targetAttempts,
+          movesPerAttempt: movesPerAttempt,
+          addedWeightKg: addedWeight ? addedWeight : undefined,
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          equipmentTier: exercise.equipmentTier,
+          edgeLabel: edgeLabel,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onAttemptDone: cycle.completeSet,
+          onPause: shell.togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: shell.requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        shell.rpeOverlay
+      );
+    }
+
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel || 'Attempts exercise'),
+        h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
+          'Попытка ' + (cycle.setIdx + 1) + '/' + targetAttempts),
+        h('button', {
+          className: 'fingers-fs-btn',
+          onClick: cycle.completeSet
+        }, '✓ Попытка выполнена')
+      ),
+      shell.rpeOverlay
+    );
+  }
+
   // ─── ExerciseRunner (Step 4 dispatcher) ──────────────────────────────────────
-  // Рендерит HangRunner / RepsRunner / ContinuousRunner по exercise.doseShape.
-  // ВСЕ runner'ы безусловно вызывают свой хук (Rules of Hooks: hook count ≠
-  // зависит от condition в SAME component; здесь component'ы РАЗНЫЕ). Только
-  // ОДИН runner монтируется → activeTimerLock/wakeLock не конфликтуют.
-  // Default (без doseShape, legacy mixEngine output) → HangRunner = поведение
-  // бит-в-бит как до Step 4.
+  // Рендерит HangRunner / RepsRunner / ContinuousRunner / AttemptsRunner по
+  // exercise.doseShape. ВСЕ runner'ы безусловно вызывают свой хук (Rules of
+  // Hooks: hook count ≠ зависит от condition в SAME component; здесь
+  // component'ы РАЗНЫЕ). Только ОДИН runner монтируется → activeTimerLock/
+  // wakeLock не конфликтуют. Default (без doseShape, legacy mixEngine output)
+  // → HangRunner = поведение бит-в-бит как до Step 4.
   function ExerciseRunner(props) {
     const shape = props && props.exercise && props.exercise.doseShape;
     if (shape === 'reps') return h(RepsRunner, props);
     if (shape === 'continuous') return h(ContinuousRunner, props);
+    if (shape === 'attempts') return h(AttemptsRunner, props);
     return h(HangRunner, props);
   }
 

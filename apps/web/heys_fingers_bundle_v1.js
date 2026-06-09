@@ -6928,11 +6928,187 @@
     );
   }
 
+  // ─── Component: AttemptsDisplay (Шаг 5b / non-hang doseShape: attempts) ──────
+  //
+  // View для attempts-сессии (лимит-болдер, дайно, кампус, RFD pulls): серия
+  // коротких атак (1-5 движений / 1-5 сек) с длинным отдыхом 150-300с между.
+  // Reuses useRepsCycle (manual phase = ATTEMPT_INPUT, BIG_REST = rest между
+  // попытками). Differences vs RepsCounterDisplay:
+  //   - REPS_INPUT phase label → 'ПОПЫТКА' (не 'ПОВТОРЫ').
+  //   - counter → 'Попытка N/M' (не 'Подход').
+  //   - doneBtn → '✓ Попытка выполнена'.
+  //   - movesPerAttempt → target chip ('3 движения' / '1-5 движений').
+  //   - BIG_REST badge → 'Отдых между попытками'.
+  function AttemptsDisplay(props) {
+    const React = global.React;
+    if (!React) return null;
+    const h = React.createElement;
+
+    const {
+      state, secondsLeft, setIdx, totalAttempts,
+      movesPerAttempt, addedWeightKg,
+      gripLabel, gripId, equipmentTier, edgeLabel,
+      onAttemptDone, onPause, onAbort, onSkip,
+    } = props || {};
+
+    const tieredGripSrc = gripId
+      ? (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none'
+          ? '/exercises/' + gripId + '_' + equipmentTier + '.webp'
+          : '/exercises/' + gripId + '.webp')
+      : null;
+    const baseGripSrc = gripId ? '/exercises/' + gripId + '.webp' : null;
+
+    const phaseKey = state === STATES.REPS_INPUT ? 'attempt'
+      : state === STATES.BIG_REST ? 'big-rest'
+      : state === STATES.SET_PREP ? 'prep'
+      : state === STATES.PAUSED ? 'paused'
+      : state === STATES.DONE ? 'done'
+      : state === STATES.ABORTED ? 'aborted'
+      : 'idle';
+
+    const phaseLabel = state === STATES.REPS_INPUT ? 'ПОПЫТКА'
+      : state === STATES.BIG_REST ? 'Отдых между попытками'
+      : state === STATES.SET_PREP ? 'Готовься'
+      : state === STATES.PAUSED ? 'Пауза'
+      : state === STATES.DONE ? 'Готово!'
+      : state === STATES.ABORTED ? 'Прервано'
+      : state === STATES.IDLE ? 'Готов к старту' : state;
+
+    // Moves target в человеко-читаемом виде.
+    const movesLabel = (function () {
+      if (Array.isArray(movesPerAttempt) && movesPerAttempt.length >= 2) {
+        return movesPerAttempt[0] + '–' + movesPerAttempt[1] + ' движ.';
+      }
+      if (typeof movesPerAttempt === 'number' && isFinite(movesPerAttempt) && movesPerAttempt > 0) {
+        return movesPerAttempt + ' движ.';
+      }
+      return 'Попытка';
+    })();
+
+    const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
+    const isManualAttempt = state === STATES.REPS_INPUT;
+
+    const isTimedPhase = state === STATES.SET_PREP || state === STATES.BIG_REST;
+    const ringRadius = 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const phaseMaxSec = state === STATES.SET_PREP ? 5
+      : state === STATES.BIG_REST ? Math.max(secondsLeft, 60) : 1;
+    const ratio = isTimedPhase ? Math.max(0, Math.min(1, secondsLeft / phaseMaxSec)) : 0;
+    const dashoffset = ringCircum * (1 - ratio);
+    const isFinalCount = isTimedPhase && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
+
+    return h('div', {
+      className: 'heys-fingers-countdown heys-fingers-attempts',
+      'data-phase': phaseKey
+    },
+      h('div', { className: 'heys-fingers-countdown__counter' },
+        totalAttempts ? ('Попытка ' + ((setIdx || 0) + 1) + '/' + totalAttempts) : ''
+      ),
+
+      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
+
+      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
+        h('img', {
+          src: tieredGripSrc,
+          alt: gripLabel || gripId,
+          loading: 'eager',
+          decoding: 'async',
+          'data-fallback-tried': tieredGripSrc === baseGripSrc ? 'true' : 'false',
+          onError: function (e) {
+            try {
+              const el = e.target;
+              if (el.getAttribute('data-fallback-tried') !== 'true' && baseGripSrc && baseGripSrc !== tieredGripSrc) {
+                el.setAttribute('data-fallback-tried', 'true');
+                el.src = baseGripSrc;
+                return;
+              }
+              el.parentNode.style.display = 'none';
+            } catch (_) {}
+          }
+        })
+      ) : null,
+
+      (edgeLabel || addedWeightKg != null) ? h('div', { className: 'heys-fingers-countdown__chips' },
+        edgeLabel ? h('div', { className: 'heys-fingers-countdown__chip' },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Грань'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' }, edgeLabel)
+        ) : null,
+        addedWeightKg != null ? h('div', {
+          className: 'heys-fingers-countdown__chip heys-fingers-countdown__chip--weight',
+          'data-weight-sign': addedWeightKg > 0 ? 'plus' : addedWeightKg < 0 ? 'minus' : 'zero'
+        },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Доп. вес'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' },
+            (addedWeightKg > 0 ? '+' : '') + addedWeightKg + ' кг')
+        ) : null
+      ) : null,
+
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
+
+      isManualAttempt
+        ? h('div', { className: 'heys-fingers-reps-counter__manual' },
+            h('div', { className: 'heys-fingers-reps-counter__target' }, movesLabel),
+            h('button', {
+              type: 'button',
+              className: 'heys-fingers-reps-counter__done-btn',
+              onClick: onAttemptDone,
+              'aria-label': 'Попытка выполнена'
+            }, '✓ Попытка выполнена')
+          )
+        : h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+            h('svg', {
+              className: 'heys-fingers-countdown__ring',
+              width: 200, height: 200, viewBox: '0 0 200 200'
+            },
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-track',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none'
+              }),
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-fill',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none',
+                strokeDasharray: ringCircum,
+                strokeDashoffset: dashoffset,
+                transform: 'rotate(-90 100 100)'
+              })
+            ),
+            h('div', {
+              className: 'heys-fingers-countdown__digit'
+                + (isFinalCount ? ' is-final-count' : '')
+            }, String(Math.max(0, secondsLeft | 0)))
+          ),
+
+      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        Fingers.VoiceMiniControls
+          ? h(Fingers.VoiceMiniControls, null)
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onPause
+        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
+        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onSkip,
+          'aria-label': 'Пропустить фазу',
+          title: 'Пропустить фазу'
+        }, '→') : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
+          onClick: onAbort
+        }, 'Прервать')
+      ) : null
+    );
+  }
+
   Fingers.useCountdownCycle = useCountdownCycle;
   Fingers.useRepsCycle = useRepsCycle;
   Fingers.CountdownDisplay = CountdownDisplay;
   Fingers.RepsCounterDisplay = RepsCounterDisplay;
   Fingers.ContinuousDisplay = ContinuousDisplay;
+  Fingers.AttemptsDisplay = AttemptsDisplay;
 })(typeof window !== 'undefined' ? window : globalThis);
 // ===== End heys_fingers_timer_v1.js =====
 
@@ -9020,11 +9196,12 @@
   //   - reps (RepsCounterDisplay, useRepsCycle, manual completeSet)
   //   - continuous (ContinuousDisplay, useCountdownCycle с workSec=hangSec,
   //     repsPerSet=1 — один длинный таймер; ARC/mileage/technique drills)
-  // НЕ в наборе: attempts (Шаг 5b — пока без UI: болдер/кампус попытки),
-  // circuit (Шаг 5c — 4x4/EMOM), process (Шаг 5d — checklist для тактики).
-  // Атомы вне этого набора НЕ попадают в сессию пока player не расширен —
-  // иначе UI рендерит их как вырожденный «7с виса × 1 повт» (ревью #3).
-  const RENDERABLE_DOSESHAPES = { hang: true, reps: true, continuous: true };
+  //   - attempts (AttemptsDisplay, useRepsCycle с attempts→setsCount —
+  //     болдер-лимит/дайно/кампус/RFD: серия атак с длинным rest 240с)
+  // НЕ в наборе: circuit (Шаг 5c — 4x4/EMOM), process (Шаг 5d — checklist для
+  // тактики). Атомы вне этого набора НЕ попадают в сессию пока player не
+  // расширен — иначе UI рендерит их как вырожденный «7с виса × 1 повт».
+  const RENDERABLE_DOSESHAPES = { hang: true, reps: true, continuous: true, attempts: true };
 
   // Equipment compatibility: какие modality допустимы в каждом equipmentType.
   const EQUIPMENT_MODALITIES = {
@@ -15251,17 +15428,96 @@
     );
   }
 
+  // ─── AttemptsRunner (Шаг 5b / non-hang doseShape: attempts) ──────────────────
+  // Болдер-лимит, дайно, кампус, RFD pulls — серия коротких атак (1-5 движений)
+  // с длинным отдыхом 150-300с между. Reuses useRepsCycle (manual + timed rest)
+  // map: setsCount = upper bound of dose.attempts (top-of-range), пользователь
+  // может остановиться раньше через abort (attempt-to-failure pattern).
+  // S8 RPE/pain наследуется через shell.handleStateChangeRpe.
+  function AttemptsRunner(props) {
+    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const cycleRef = React.useRef(null);
+
+    const dose = exercise.dose || {};
+    const attemptsRange = dose.attempts;
+    const targetAttempts = Array.isArray(attemptsRange)
+      ? (Number(attemptsRange[1]) || 6)
+      : (Number(attemptsRange) || 6);
+    const restBetween = Number(dose.restSetsSec) || 240;
+
+    // Enriched exercise: shell.handleCycleComplete вычисляет lastSet =
+    // exercise.setsCount-1 для финального RPE. Для attempts exercise.setsCount
+    // из session_builder = 1 (legacy, нет d.sets); подменяем на targetAttempts
+    // чтобы final RPE репортил последнюю попытку, а не setIdx=0.
+    const enrichedExercise = Object.assign({}, exercise, { setsCount: targetAttempts });
+    const shell = useExerciseShell(Object.assign({}, props, {
+      exercise: enrichedExercise, cycleRef: cycleRef
+    }));
+
+    const cycle = Fingers.useRepsCycle({
+      setsCount: targetAttempts,
+      restBetweenSetsSec: restBetween,
+      onComplete: shell.handleCycleComplete,
+      onStateChange: shell.handleStateChangeRpe
+    });
+    cycleRef.current = cycle;
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
+    const addedWeight = Number(exercise.addedWeightKg) || 0;
+    const movesPerAttempt = dose.movesPerAttempt;
+
+    if (Fingers.AttemptsDisplay) {
+      return h(React.Fragment, null,
+        h(Fingers.AttemptsDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          setIdx: cycle.setIdx,
+          totalAttempts: targetAttempts,
+          movesPerAttempt: movesPerAttempt,
+          addedWeightKg: addedWeight ? addedWeight : undefined,
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          equipmentTier: exercise.equipmentTier,
+          edgeLabel: edgeLabel,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onAttemptDone: cycle.completeSet,
+          onPause: shell.togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: shell.requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        shell.rpeOverlay
+      );
+    }
+
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel || 'Attempts exercise'),
+        h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
+          'Попытка ' + (cycle.setIdx + 1) + '/' + targetAttempts),
+        h('button', {
+          className: 'fingers-fs-btn',
+          onClick: cycle.completeSet
+        }, '✓ Попытка выполнена')
+      ),
+      shell.rpeOverlay
+    );
+  }
+
   // ─── ExerciseRunner (Step 4 dispatcher) ──────────────────────────────────────
-  // Рендерит HangRunner / RepsRunner / ContinuousRunner по exercise.doseShape.
-  // ВСЕ runner'ы безусловно вызывают свой хук (Rules of Hooks: hook count ≠
-  // зависит от condition в SAME component; здесь component'ы РАЗНЫЕ). Только
-  // ОДИН runner монтируется → activeTimerLock/wakeLock не конфликтуют.
-  // Default (без doseShape, legacy mixEngine output) → HangRunner = поведение
-  // бит-в-бит как до Step 4.
+  // Рендерит HangRunner / RepsRunner / ContinuousRunner / AttemptsRunner по
+  // exercise.doseShape. ВСЕ runner'ы безусловно вызывают свой хук (Rules of
+  // Hooks: hook count ≠ зависит от condition в SAME component; здесь
+  // component'ы РАЗНЫЕ). Только ОДИН runner монтируется → activeTimerLock/
+  // wakeLock не конфликтуют. Default (без doseShape, legacy mixEngine output)
+  // → HangRunner = поведение бит-в-бит как до Step 4.
   function ExerciseRunner(props) {
     const shape = props && props.exercise && props.exercise.doseShape;
     if (shape === 'reps') return h(RepsRunner, props);
     if (shape === 'continuous') return h(ContinuousRunner, props);
+    if (shape === 'attempts') return h(AttemptsRunner, props);
     return h(HangRunner, props);
   }
 
