@@ -3244,11 +3244,83 @@
     );
   }
 
+  // ─── CircuitRunner (Шаг 5c / non-hang doseShape: circuit) ────────────────────
+  // 4x4 (болдер-четвёрки), EMOM (на минуту), связки, повторы трассы, power
+  // intervals. Round-based: N проблем / раунд × M раундов с rest restRoundsSec
+  // между раундами. Reuses useRepsCycle (manual round + timed rest).
+  // Map: setsCount = dose.rounds, restBetweenSetsSec = dose.restRoundsSec.
+  // S8 RPE/pain наследуется через shell.handleStateChangeRpe.
+  function CircuitRunner(props) {
+    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const cycleRef = React.useRef(null);
+
+    const dose = exercise.dose || {};
+    const totalRounds = Number(dose.rounds) || 4;
+    const restBetween = Number(dose.restRoundsSec) || 240;
+
+    // Enriched exercise: shell.handleCycleComplete вычисляет lastSet =
+    // exercise.setsCount-1. Для circuit exercise.setsCount из session_builder = 1
+    // (legacy, нет d.sets); подменяем на totalRounds.
+    const enrichedExercise = Object.assign({}, exercise, { setsCount: totalRounds });
+    const shell = useExerciseShell(Object.assign({}, props, {
+      exercise: enrichedExercise, cycleRef: cycleRef
+    }));
+
+    const cycle = Fingers.useRepsCycle({
+      setsCount: totalRounds,
+      restBetweenSetsSec: restBetween,
+      onComplete: shell.handleCycleComplete,
+      onStateChange: shell.handleStateChangeRpe
+    });
+    cycleRef.current = cycle;
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
+    const problemsPerRound = Number(dose.problemsPerRound) || 1;
+
+    if (Fingers.CircuitDisplay) {
+      return h(React.Fragment, null,
+        h(Fingers.CircuitDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          setIdx: cycle.setIdx,
+          totalRounds: totalRounds,
+          problemsPerRound: problemsPerRound,
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          equipmentTier: exercise.equipmentTier,
+          edgeLabel: edgeLabel,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onRoundDone: cycle.completeSet,
+          onPause: shell.togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: shell.requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        shell.rpeOverlay
+      );
+    }
+
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel || 'Circuit exercise'),
+        h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
+          'Раунд ' + (cycle.setIdx + 1) + '/' + totalRounds),
+        h('button', {
+          className: 'fingers-fs-btn',
+          onClick: cycle.completeSet
+        }, '✓ Раунд выполнен')
+      ),
+      shell.rpeOverlay
+    );
+  }
+
   // ─── ExerciseRunner (Step 4 dispatcher) ──────────────────────────────────────
-  // Рендерит HangRunner / RepsRunner / ContinuousRunner / AttemptsRunner по
-  // exercise.doseShape. ВСЕ runner'ы безусловно вызывают свой хук (Rules of
-  // Hooks: hook count ≠ зависит от condition в SAME component; здесь
-  // component'ы РАЗНЫЕ). Только ОДИН runner монтируется → activeTimerLock/
+  // Рендерит HangRunner / RepsRunner / ContinuousRunner / AttemptsRunner /
+  // CircuitRunner по exercise.doseShape. ВСЕ runner'ы безусловно вызывают свой
+  // хук (Rules of Hooks: hook count ≠ зависит от condition в SAME component;
+  // здесь component'ы РАЗНЫЕ). Только ОДИН runner монтируется → activeTimerLock/
   // wakeLock не конфликтуют. Default (без doseShape, legacy mixEngine output)
   // → HangRunner = поведение бит-в-бит как до Step 4.
   function ExerciseRunner(props) {
@@ -3256,6 +3328,7 @@
     if (shape === 'reps') return h(RepsRunner, props);
     if (shape === 'continuous') return h(ContinuousRunner, props);
     if (shape === 'attempts') return h(AttemptsRunner, props);
+    if (shape === 'circuit') return h(CircuitRunner, props);
     return h(HangRunner, props);
   }
 

@@ -684,6 +684,102 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
     });
   });
 
+  describe('Шаг 5c circuit-path — useRepsCycle reuse через CircuitRunner', () => {
+    function installRepsCycleStub() {
+      const captured = {
+        config: null, onComplete: null, onStateChange: null,
+        state: 'IDLE', setIdx: 0, repIdx: 0, secondsLeft: 0,
+      };
+      globalThis.HEYS.Fingers.useRepsCycle = function (cfg) {
+        captured.config = cfg;
+        captured.onComplete = cfg.onComplete;
+        captured.onStateChange = cfg.onStateChange;
+        return {
+          get state() { return captured.state; },
+          get setIdx() { return captured.setIdx; },
+          repIdx: 0,
+          get secondsLeft() { return captured.secondsLeft; },
+          totalElapsed: 0,
+          start: () => {}, pause: () => {}, resume: () => {},
+          abort: () => {}, completeSet: () => {}, skipPhase: () => {},
+          startFromSnapshot: () => {},
+        };
+      };
+      return captured;
+    }
+
+    const circuitExercise = (over = {}) => ({
+      doseShape: 'circuit',
+      gripId: 'pe_boulder_4x4',
+      dose: { problemsPerRound: 4, rounds: 4, restRoundsSec: 240 },
+      addedWeightKg: 0,
+      ...over
+    });
+
+    it('exercise.doseShape="circuit" → CircuitRunner (useRepsCycle с setsCount=rounds=4)', () => {
+      const repsCycle = installRepsCycleStub();
+      cycle.startCalled = false; cycle.config = null;
+      render(React.createElement(ER(), {
+        exercise: circuitExercise(),
+        exIdx: 0, totalExercises: 1, exercises: [circuitExercise()]
+      }));
+      expect(repsCycle.config).not.toBeNull();
+      expect(repsCycle.config.setsCount).toBe(4);
+      expect(repsCycle.config.restBetweenSetsSec).toBe(240);
+      expect(cycle.config).toBeNull();
+    });
+
+    it('circuit dose.rounds=10 (EMOM) → setsCount=10', () => {
+      const repsCycle = installRepsCycleStub();
+      render(React.createElement(ER(), {
+        exercise: circuitExercise({
+          dose: { problemsPerRound: 1, rounds: 10, restRoundsSec: 60 }
+        }),
+        exIdx: 0, totalExercises: 1, exercises: [circuitExercise()]
+      }));
+      expect(repsCycle.config.setsCount).toBe(10);
+      expect(repsCycle.config.restBetweenSetsSec).toBe(60);
+    });
+
+    it('circuit BIG_REST → non-final RPE-prompt (S8 наследуется)', () => {
+      const repsCycle = installRepsCycleStub();
+      const onSetFeedback = vi.fn();
+      const { container } = render(React.createElement(ER(), {
+        exercise: circuitExercise(), exIdx: 0, totalExercises: 1,
+        exercises: [circuitExercise()], onSetFeedback, onDone: vi.fn()
+      }));
+      act(() => { repsCycle.onStateChange(S().BIG_REST, { setIdx: 0 }); });
+      expect(container.textContent).toMatch(/Подход 1.*как прошёл/);
+    });
+
+    it('circuit onComplete → final RPE → onSetFeedback(setsCount-1) + onDone', () => {
+      const repsCycle = installRepsCycleStub();
+      const onSetFeedback = vi.fn();
+      const onDone = vi.fn();
+      const { container } = render(React.createElement(ER(), {
+        exercise: circuitExercise(), exIdx: 2, totalExercises: 3,
+        exercises: [circuitExercise()], onSetFeedback, onDone
+      }));
+      act(() => { repsCycle.onComplete(); });
+      expect(container.textContent).toMatch(/Последний подход — как прошёл/);
+      const okBtn = Array.from(container.querySelectorAll('button')).find(b => b.textContent.includes('Норм'));
+      fireEvent.click(okBtn);
+      // setsCount=4 (rounds) → lastSet=3
+      expect(onSetFeedback).toHaveBeenCalledWith(2, 3, { rpe: 'ok', pain: false });
+      expect(onDone).toHaveBeenCalledTimes(1);
+    });
+
+    it('circuit без dose → setsCount=4 fallback, restBetweenSetsSec=240', () => {
+      const repsCycle = installRepsCycleStub();
+      render(React.createElement(ER(), {
+        exercise: { doseShape: 'circuit', dose: {} },
+        exIdx: 0, totalExercises: 1, exercises: [{}]
+      }));
+      expect(repsCycle.config.setsCount).toBe(4);
+      expect(repsCycle.config.restBetweenSetsSec).toBe(240);
+    });
+  });
+
   describe('persistence: handleStateChange (бонус #9)', () => {
     it('persistence.save вызывается на не-final state переходе', () => {
       const save = vi.fn();

@@ -7103,12 +7103,176 @@
     );
   }
 
+  // ─── Component: CircuitDisplay (Шаг 5c / non-hang doseShape: circuit) ────────
+  //
+  // View для circuit-сессии (4x4, EMOM, связки, повторы трассы, power intervals):
+  // serie of rounds где каждый round = N problems с rest restRoundsSec между.
+  // Reuses useRepsCycle (manual + timed rest). Differences vs AttemptsDisplay:
+  //   - REPS_INPUT phase label → 'РАУНД'
+  //   - counter → 'Раунд N/M'
+  //   - doneBtn → '✓ Раунд выполнен'
+  //   - problemsPerRound → target chip ('4 проблемы' / '1 связка')
+  //   - BIG_REST badge → 'Отдых между раундами'
+  function CircuitDisplay(props) {
+    const React = global.React;
+    if (!React) return null;
+    const h = React.createElement;
+
+    const {
+      state, secondsLeft, setIdx, totalRounds,
+      problemsPerRound, gripLabel, gripId, equipmentTier, edgeLabel,
+      onRoundDone, onPause, onAbort, onSkip,
+    } = props || {};
+
+    const tieredGripSrc = gripId
+      ? (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none'
+          ? '/exercises/' + gripId + '_' + equipmentTier + '.webp'
+          : '/exercises/' + gripId + '.webp')
+      : null;
+    const baseGripSrc = gripId ? '/exercises/' + gripId + '.webp' : null;
+
+    const phaseKey = state === STATES.REPS_INPUT ? 'round'
+      : state === STATES.BIG_REST ? 'big-rest'
+      : state === STATES.SET_PREP ? 'prep'
+      : state === STATES.PAUSED ? 'paused'
+      : state === STATES.DONE ? 'done'
+      : state === STATES.ABORTED ? 'aborted'
+      : 'idle';
+
+    const phaseLabel = state === STATES.REPS_INPUT ? 'РАУНД'
+      : state === STATES.BIG_REST ? 'Отдых между раундами'
+      : state === STATES.SET_PREP ? 'Готовься'
+      : state === STATES.PAUSED ? 'Пауза'
+      : state === STATES.DONE ? 'Готово!'
+      : state === STATES.ABORTED ? 'Прервано'
+      : state === STATES.IDLE ? 'Готов к старту' : state;
+
+    // Problems-per-round target в человеко-читаемом виде.
+    const problemsLabel = (function () {
+      const n = Number(problemsPerRound);
+      if (!isFinite(n) || n <= 0) return 'Раунд';
+      if (n === 1) return '1 проблема';
+      if (n >= 2 && n <= 4) return n + ' проблемы';
+      return n + ' проблем';
+    })();
+
+    const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
+    const isManualRound = state === STATES.REPS_INPUT;
+
+    const isTimedPhase = state === STATES.SET_PREP || state === STATES.BIG_REST;
+    const ringRadius = 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const phaseMaxSec = state === STATES.SET_PREP ? 5
+      : state === STATES.BIG_REST ? Math.max(secondsLeft, 60) : 1;
+    const ratio = isTimedPhase ? Math.max(0, Math.min(1, secondsLeft / phaseMaxSec)) : 0;
+    const dashoffset = ringCircum * (1 - ratio);
+    const isFinalCount = isTimedPhase && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
+
+    return h('div', {
+      className: 'heys-fingers-countdown heys-fingers-circuit',
+      'data-phase': phaseKey
+    },
+      h('div', { className: 'heys-fingers-countdown__counter' },
+        totalRounds ? ('Раунд ' + ((setIdx || 0) + 1) + '/' + totalRounds) : ''
+      ),
+
+      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
+
+      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
+        h('img', {
+          src: tieredGripSrc,
+          alt: gripLabel || gripId,
+          loading: 'eager',
+          decoding: 'async',
+          'data-fallback-tried': tieredGripSrc === baseGripSrc ? 'true' : 'false',
+          onError: function (e) {
+            try {
+              const el = e.target;
+              if (el.getAttribute('data-fallback-tried') !== 'true' && baseGripSrc && baseGripSrc !== tieredGripSrc) {
+                el.setAttribute('data-fallback-tried', 'true');
+                el.src = baseGripSrc;
+                return;
+              }
+              el.parentNode.style.display = 'none';
+            } catch (_) {}
+          }
+        })
+      ) : null,
+
+      edgeLabel ? h('div', { className: 'heys-fingers-countdown__chips' },
+        h('div', { className: 'heys-fingers-countdown__chip' },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Грань'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' }, edgeLabel)
+        )
+      ) : null,
+
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
+
+      isManualRound
+        ? h('div', { className: 'heys-fingers-reps-counter__manual' },
+            h('div', { className: 'heys-fingers-reps-counter__target' }, problemsLabel),
+            h('button', {
+              type: 'button',
+              className: 'heys-fingers-reps-counter__done-btn',
+              onClick: onRoundDone,
+              'aria-label': 'Раунд выполнен'
+            }, '✓ Раунд выполнен')
+          )
+        : h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+            h('svg', {
+              className: 'heys-fingers-countdown__ring',
+              width: 200, height: 200, viewBox: '0 0 200 200'
+            },
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-track',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none'
+              }),
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-fill',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none',
+                strokeDasharray: ringCircum,
+                strokeDashoffset: dashoffset,
+                transform: 'rotate(-90 100 100)'
+              })
+            ),
+            h('div', {
+              className: 'heys-fingers-countdown__digit'
+                + (isFinalCount ? ' is-final-count' : '')
+            }, String(Math.max(0, secondsLeft | 0)))
+          ),
+
+      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        Fingers.VoiceMiniControls
+          ? h(Fingers.VoiceMiniControls, null)
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onPause
+        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
+        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onSkip,
+          'aria-label': 'Пропустить фазу',
+          title: 'Пропустить фазу'
+        }, '→') : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
+          onClick: onAbort
+        }, 'Прервать')
+      ) : null
+    );
+  }
+
   Fingers.useCountdownCycle = useCountdownCycle;
   Fingers.useRepsCycle = useRepsCycle;
   Fingers.CountdownDisplay = CountdownDisplay;
   Fingers.RepsCounterDisplay = RepsCounterDisplay;
   Fingers.ContinuousDisplay = ContinuousDisplay;
   Fingers.AttemptsDisplay = AttemptsDisplay;
+  Fingers.CircuitDisplay = CircuitDisplay;
 })(typeof window !== 'undefined' ? window : globalThis);
 // ===== End heys_fingers_timer_v1.js =====
 
@@ -9198,10 +9362,14 @@
   //     repsPerSet=1 — один длинный таймер; ARC/mileage/technique drills)
   //   - attempts (AttemptsDisplay, useRepsCycle с attempts→setsCount —
   //     болдер-лимит/дайно/кампус/RFD: серия атак с длинным rest 240с)
-  // НЕ в наборе: circuit (Шаг 5c — 4x4/EMOM), process (Шаг 5d — checklist для
-  // тактики). Атомы вне этого набора НЕ попадают в сессию пока player не
-  // расширен — иначе UI рендерит их как вырожденный «7с виса × 1 повт».
-  const RENDERABLE_DOSESHAPES = { hang: true, reps: true, continuous: true, attempts: true };
+  //   - circuit (CircuitDisplay, useRepsCycle с rounds→setsCount —
+  //     4x4/EMOM/связки/power intervals: round-based с rest restRoundsSec)
+  // НЕ в наборе: process (Шаг 5d — checklist для тактики, 1 атом). Атомы вне
+  // этого набора НЕ попадают в сессию пока player не расширен — иначе UI
+  // рендерит их как вырожденный «7с виса × 1 повт».
+  const RENDERABLE_DOSESHAPES = {
+    hang: true, reps: true, continuous: true, attempts: true, circuit: true
+  };
 
   // Equipment compatibility: какие modality допустимы в каждом equipmentType.
   const EQUIPMENT_MODALITIES = {
@@ -15506,11 +15674,83 @@
     );
   }
 
+  // ─── CircuitRunner (Шаг 5c / non-hang doseShape: circuit) ────────────────────
+  // 4x4 (болдер-четвёрки), EMOM (на минуту), связки, повторы трассы, power
+  // intervals. Round-based: N проблем / раунд × M раундов с rest restRoundsSec
+  // между раундами. Reuses useRepsCycle (manual round + timed rest).
+  // Map: setsCount = dose.rounds, restBetweenSetsSec = dose.restRoundsSec.
+  // S8 RPE/pain наследуется через shell.handleStateChangeRpe.
+  function CircuitRunner(props) {
+    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const cycleRef = React.useRef(null);
+
+    const dose = exercise.dose || {};
+    const totalRounds = Number(dose.rounds) || 4;
+    const restBetween = Number(dose.restRoundsSec) || 240;
+
+    // Enriched exercise: shell.handleCycleComplete вычисляет lastSet =
+    // exercise.setsCount-1. Для circuit exercise.setsCount из session_builder = 1
+    // (legacy, нет d.sets); подменяем на totalRounds.
+    const enrichedExercise = Object.assign({}, exercise, { setsCount: totalRounds });
+    const shell = useExerciseShell(Object.assign({}, props, {
+      exercise: enrichedExercise, cycleRef: cycleRef
+    }));
+
+    const cycle = Fingers.useRepsCycle({
+      setsCount: totalRounds,
+      restBetweenSetsSec: restBetween,
+      onComplete: shell.handleCycleComplete,
+      onStateChange: shell.handleStateChangeRpe
+    });
+    cycleRef.current = cycle;
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
+    const problemsPerRound = Number(dose.problemsPerRound) || 1;
+
+    if (Fingers.CircuitDisplay) {
+      return h(React.Fragment, null,
+        h(Fingers.CircuitDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          setIdx: cycle.setIdx,
+          totalRounds: totalRounds,
+          problemsPerRound: problemsPerRound,
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          equipmentTier: exercise.equipmentTier,
+          edgeLabel: edgeLabel,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onRoundDone: cycle.completeSet,
+          onPause: shell.togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: shell.requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        shell.rpeOverlay
+      );
+    }
+
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel || 'Circuit exercise'),
+        h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
+          'Раунд ' + (cycle.setIdx + 1) + '/' + totalRounds),
+        h('button', {
+          className: 'fingers-fs-btn',
+          onClick: cycle.completeSet
+        }, '✓ Раунд выполнен')
+      ),
+      shell.rpeOverlay
+    );
+  }
+
   // ─── ExerciseRunner (Step 4 dispatcher) ──────────────────────────────────────
-  // Рендерит HangRunner / RepsRunner / ContinuousRunner / AttemptsRunner по
-  // exercise.doseShape. ВСЕ runner'ы безусловно вызывают свой хук (Rules of
-  // Hooks: hook count ≠ зависит от condition в SAME component; здесь
-  // component'ы РАЗНЫЕ). Только ОДИН runner монтируется → activeTimerLock/
+  // Рендерит HangRunner / RepsRunner / ContinuousRunner / AttemptsRunner /
+  // CircuitRunner по exercise.doseShape. ВСЕ runner'ы безусловно вызывают свой
+  // хук (Rules of Hooks: hook count ≠ зависит от condition в SAME component;
+  // здесь component'ы РАЗНЫЕ). Только ОДИН runner монтируется → activeTimerLock/
   // wakeLock не конфликтуют. Default (без doseShape, legacy mixEngine output)
   // → HangRunner = поведение бит-в-бит как до Step 4.
   function ExerciseRunner(props) {
@@ -15518,6 +15758,7 @@
     if (shape === 'reps') return h(RepsRunner, props);
     if (shape === 'continuous') return h(ContinuousRunner, props);
     if (shape === 'attempts') return h(AttemptsRunner, props);
+    if (shape === 'circuit') return h(CircuitRunner, props);
     return h(HangRunner, props);
   }
 

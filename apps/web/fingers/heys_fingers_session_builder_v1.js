@@ -69,10 +69,14 @@
   //     repsPerSet=1 — один длинный таймер; ARC/mileage/technique drills)
   //   - attempts (AttemptsDisplay, useRepsCycle с attempts→setsCount —
   //     болдер-лимит/дайно/кампус/RFD: серия атак с длинным rest 240с)
-  // НЕ в наборе: circuit (Шаг 5c — 4x4/EMOM), process (Шаг 5d — checklist для
-  // тактики). Атомы вне этого набора НЕ попадают в сессию пока player не
-  // расширен — иначе UI рендерит их как вырожденный «7с виса × 1 повт».
-  const RENDERABLE_DOSESHAPES = { hang: true, reps: true, continuous: true, attempts: true };
+  //   - circuit (CircuitDisplay, useRepsCycle с rounds→setsCount —
+  //     4x4/EMOM/связки/power intervals: round-based с rest restRoundsSec)
+  // НЕ в наборе: process (Шаг 5d — checklist для тактики, 1 атом). Атомы вне
+  // этого набора НЕ попадают в сессию пока player не расширен — иначе UI
+  // рендерит их как вырожденный «7с виса × 1 повт».
+  const RENDERABLE_DOSESHAPES = {
+    hang: true, reps: true, continuous: true, attempts: true, circuit: true
+  };
 
   // Equipment compatibility: какие modality допустимы в каждом equipmentType.
   const EQUIPMENT_MODALITIES = {

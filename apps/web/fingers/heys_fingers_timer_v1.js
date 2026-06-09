@@ -1364,10 +1364,174 @@
     );
   }
 
+  // ─── Component: CircuitDisplay (Шаг 5c / non-hang doseShape: circuit) ────────
+  //
+  // View для circuit-сессии (4x4, EMOM, связки, повторы трассы, power intervals):
+  // serie of rounds где каждый round = N problems с rest restRoundsSec между.
+  // Reuses useRepsCycle (manual + timed rest). Differences vs AttemptsDisplay:
+  //   - REPS_INPUT phase label → 'РАУНД'
+  //   - counter → 'Раунд N/M'
+  //   - doneBtn → '✓ Раунд выполнен'
+  //   - problemsPerRound → target chip ('4 проблемы' / '1 связка')
+  //   - BIG_REST badge → 'Отдых между раундами'
+  function CircuitDisplay(props) {
+    const React = global.React;
+    if (!React) return null;
+    const h = React.createElement;
+
+    const {
+      state, secondsLeft, setIdx, totalRounds,
+      problemsPerRound, gripLabel, gripId, equipmentTier, edgeLabel,
+      onRoundDone, onPause, onAbort, onSkip,
+    } = props || {};
+
+    const tieredGripSrc = gripId
+      ? (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none'
+          ? '/exercises/' + gripId + '_' + equipmentTier + '.webp'
+          : '/exercises/' + gripId + '.webp')
+      : null;
+    const baseGripSrc = gripId ? '/exercises/' + gripId + '.webp' : null;
+
+    const phaseKey = state === STATES.REPS_INPUT ? 'round'
+      : state === STATES.BIG_REST ? 'big-rest'
+      : state === STATES.SET_PREP ? 'prep'
+      : state === STATES.PAUSED ? 'paused'
+      : state === STATES.DONE ? 'done'
+      : state === STATES.ABORTED ? 'aborted'
+      : 'idle';
+
+    const phaseLabel = state === STATES.REPS_INPUT ? 'РАУНД'
+      : state === STATES.BIG_REST ? 'Отдых между раундами'
+      : state === STATES.SET_PREP ? 'Готовься'
+      : state === STATES.PAUSED ? 'Пауза'
+      : state === STATES.DONE ? 'Готово!'
+      : state === STATES.ABORTED ? 'Прервано'
+      : state === STATES.IDLE ? 'Готов к старту' : state;
+
+    // Problems-per-round target в человеко-читаемом виде.
+    const problemsLabel = (function () {
+      const n = Number(problemsPerRound);
+      if (!isFinite(n) || n <= 0) return 'Раунд';
+      if (n === 1) return '1 проблема';
+      if (n >= 2 && n <= 4) return n + ' проблемы';
+      return n + ' проблем';
+    })();
+
+    const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
+    const isManualRound = state === STATES.REPS_INPUT;
+
+    const isTimedPhase = state === STATES.SET_PREP || state === STATES.BIG_REST;
+    const ringRadius = 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const phaseMaxSec = state === STATES.SET_PREP ? 5
+      : state === STATES.BIG_REST ? Math.max(secondsLeft, 60) : 1;
+    const ratio = isTimedPhase ? Math.max(0, Math.min(1, secondsLeft / phaseMaxSec)) : 0;
+    const dashoffset = ringCircum * (1 - ratio);
+    const isFinalCount = isTimedPhase && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
+
+    return h('div', {
+      className: 'heys-fingers-countdown heys-fingers-circuit',
+      'data-phase': phaseKey
+    },
+      h('div', { className: 'heys-fingers-countdown__counter' },
+        totalRounds ? ('Раунд ' + ((setIdx || 0) + 1) + '/' + totalRounds) : ''
+      ),
+
+      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
+
+      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
+        h('img', {
+          src: tieredGripSrc,
+          alt: gripLabel || gripId,
+          loading: 'eager',
+          decoding: 'async',
+          'data-fallback-tried': tieredGripSrc === baseGripSrc ? 'true' : 'false',
+          onError: function (e) {
+            try {
+              const el = e.target;
+              if (el.getAttribute('data-fallback-tried') !== 'true' && baseGripSrc && baseGripSrc !== tieredGripSrc) {
+                el.setAttribute('data-fallback-tried', 'true');
+                el.src = baseGripSrc;
+                return;
+              }
+              el.parentNode.style.display = 'none';
+            } catch (_) {}
+          }
+        })
+      ) : null,
+
+      edgeLabel ? h('div', { className: 'heys-fingers-countdown__chips' },
+        h('div', { className: 'heys-fingers-countdown__chip' },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Грань'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' }, edgeLabel)
+        )
+      ) : null,
+
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
+
+      isManualRound
+        ? h('div', { className: 'heys-fingers-reps-counter__manual' },
+            h('div', { className: 'heys-fingers-reps-counter__target' }, problemsLabel),
+            h('button', {
+              type: 'button',
+              className: 'heys-fingers-reps-counter__done-btn',
+              onClick: onRoundDone,
+              'aria-label': 'Раунд выполнен'
+            }, '✓ Раунд выполнен')
+          )
+        : h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+            h('svg', {
+              className: 'heys-fingers-countdown__ring',
+              width: 200, height: 200, viewBox: '0 0 200 200'
+            },
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-track',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none'
+              }),
+              h('circle', {
+                className: 'heys-fingers-countdown__ring-fill',
+                cx: 100, cy: 100, r: ringRadius, fill: 'none',
+                strokeDasharray: ringCircum,
+                strokeDashoffset: dashoffset,
+                transform: 'rotate(-90 100 100)'
+              })
+            ),
+            h('div', {
+              className: 'heys-fingers-countdown__digit'
+                + (isFinalCount ? ' is-final-count' : '')
+            }, String(Math.max(0, secondsLeft | 0)))
+          ),
+
+      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        Fingers.VoiceMiniControls
+          ? h(Fingers.VoiceMiniControls, null)
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onPause
+        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
+        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onSkip,
+          'aria-label': 'Пропустить фазу',
+          title: 'Пропустить фазу'
+        }, '→') : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
+          onClick: onAbort
+        }, 'Прервать')
+      ) : null
+    );
+  }
+
   Fingers.useCountdownCycle = useCountdownCycle;
   Fingers.useRepsCycle = useRepsCycle;
   Fingers.CountdownDisplay = CountdownDisplay;
   Fingers.RepsCounterDisplay = RepsCounterDisplay;
   Fingers.ContinuousDisplay = ContinuousDisplay;
   Fingers.AttemptsDisplay = AttemptsDisplay;
+  Fingers.CircuitDisplay = CircuitDisplay;
 })(typeof window !== 'undefined' ? window : globalThis);
