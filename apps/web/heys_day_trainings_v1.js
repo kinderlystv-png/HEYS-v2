@@ -2421,6 +2421,10 @@
       const previousTrainings = safeTrainings.map(cloneTraining);
       const previousVisibleTrainings = safeVisibleTrainings;
       const removedTraining = previousTrainings[ti] || emptyTraining;
+      const removedMorningActivation = isMorningActivationTraining(removedTraining);
+      const previousMorningActivation = removedMorningActivation
+        ? { ...(HEYS.Day?.getDay?.()?.morningActivation || {}) }
+        : null;
       const trainingType = safeTrainingTypes.find((item) => item.id === removedTraining.type);
       const label = getTrainingDisplayLabel(removedTraining, trainingType, ti) + ' удалена';
 
@@ -2437,7 +2441,15 @@
                 ...oldTrainings.slice(ti + 1),
                 emptyTraining
               ].slice(0, 3);
-              return { ...prevDay, trainings: newTrainings, updatedAt: Date.now() };
+              const nextDay = { ...prevDay, trainings: newTrainings, updatedAt: Date.now() };
+              if (removedMorningActivation) {
+                nextDay.morningActivation = {
+                  ...(prevDay.morningActivation || {}),
+                  clearedByUser: true,
+                  clearedAt: nextDay.updatedAt
+                };
+              }
+              return nextDay;
             });
           }
           if (typeof setVisibleTrainings === 'function') {
@@ -2460,15 +2472,22 @@
           return {
             trainings: previousTrainings,
             visibleTrainings: previousVisibleTrainings,
+            morningActivation: previousMorningActivation,
           };
         },
         undo: (context) => {
           if (typeof setDay === 'function') {
-            setDay((prevDay) => ({
-              ...prevDay,
-              trainings: (context?.trainings || []).map(cloneTraining),
-              updatedAt: Date.now(),
-            }));
+            setDay((prevDay) => {
+              const nextDay = {
+                ...prevDay,
+                trainings: (context?.trainings || []).map(cloneTraining),
+                updatedAt: Date.now(),
+              };
+              if (context?.morningActivation) {
+                nextDay.morningActivation = context.morningActivation;
+              }
+              return nextDay;
+            });
           }
           if (typeof setVisibleTrainings === 'function' && context) {
             setVisibleTrainings(context.visibleTrainings);

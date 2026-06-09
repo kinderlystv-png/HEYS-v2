@@ -269,10 +269,17 @@
     return false;
   }
 
+  function isMorningActivationClearedByUser(dayData) {
+    const ma = dayData?.morningActivation;
+    if (!ma || typeof ma !== 'object') return false;
+    return ma.clearedByUser === true || Number(ma.clearedAt) > 0;
+  }
+
   function shouldOpenMorningActivationFollowup(dayData) {
     const hasMealsWithItems = countMealsWithItems(dayData) > 0;
     const firstMealTime = getFirstMealTime(dayData);
     const maStatus = dayData?.morningActivation?.status;
+    const maClearedByUser = isMorningActivationClearedByUser(dayData);
     const hasSynced = dayHasMorningActivationSyncedActivity(dayData);
     const trainings = (dayData?.trainings || []).map(t => ({
       source: t?.source,
@@ -282,6 +289,7 @@
     console.info('[MA.should] CHECK', {
       hasMealsWithItems,
       maStatus,
+      maClearedByUser,
       hasSynced,
       trainings,
       household: (dayData?.householdActivities || []).map(h => ({ source: h?.source, label: h?.label }))
@@ -294,13 +302,14 @@
       console.info('[MA.should] SKIP — morningActivation missed');
       return { ok: false, firstMealTime };
     }
-    // «done» в storage без карточки зарядки в trainings — пользователь удалил активность; флаг done устарел.
-    if (maStatus === 'done' && hasSynced) {
-      console.info('[MA.should] SKIP — done и карточка зарядки ещё в дне');
+    // status=done is authoritative. Reopen only after an explicit user-cleared marker,
+    // not from transient absence of the generated training card.
+    if (maStatus === 'done' && !maClearedByUser) {
+      console.info('[MA.should] SKIP — morningActivation done');
       return { ok: false, firstMealTime };
     }
-    if (maStatus === 'done' && !hasSynced) {
-      console.info('[MA.should] CONTINUE — status done, но synced MA-активности нет (после удаления карточки)');
+    if (maStatus === 'done' && maClearedByUser && !hasSynced) {
+      console.info('[MA.should] CONTINUE — done, но пользователь явно удалил MA-карточку');
     }
     if (hasSynced) {
       console.info('[MA.should] SKIP — synced MA-like activity in day');
@@ -455,10 +464,11 @@
     const followupSessionGuard = Number(followupSessionGuardRaw);
     if (Number.isFinite(followupSessionGuard) && mealCount <= followupSessionGuard) {
       const actualStatus = dayData?.morningActivation?.status;
+      const clearedByUser = isMorningActivationClearedByUser(dayData);
       const syncedNow = dayHasMorningActivationSyncedActivity(dayData);
-      const hasRealData = actualStatus === 'missed' || (actualStatus === 'done' && syncedNow) || syncedNow;
+      const hasRealData = actualStatus === 'missed' || (actualStatus === 'done' && !clearedByUser) || syncedNow;
       if (hasRealData) {
-        console.info(_tag, 'GUARD: confirmed by data', { guard: followupSessionGuard, mealCount, actualStatus, reason });
+        console.info(_tag, 'GUARD: confirmed by data', { guard: followupSessionGuard, mealCount, actualStatus, clearedByUser, reason });
         return;
       }
       const userActionReasons = ['product-added', 'stepmodal-closed'];
@@ -492,7 +502,9 @@
     if (currentState.status !== 'pending' || currentState.firstMealTime !== check.firstMealTime) {
       persistMorningActivationPatch(todayKey, {
         status: 'pending',
-        firstMealTime: check.firstMealTime
+        firstMealTime: check.firstMealTime,
+        clearedByUser: null,
+        clearedAt: null
       }, 'morning-activation-followup-open');
     }
 
@@ -967,6 +979,9 @@
   // isProfileIncomplete defensive read) чтобы избежать race с устаревшим cache.
   HEYS.MorningCheckinUtils = HEYS.MorningCheckinUtils || {};
   HEYS.MorningCheckinUtils.readProfileForceRawScoped = readProfileForceRawScoped;
+  HEYS.MorningCheckinUtils.shouldOpenMorningActivationFollowup = shouldOpenMorningActivationFollowup;
+  HEYS.MorningCheckinUtils.dayHasMorningActivationSyncedActivity = dayHasMorningActivationSyncedActivity;
+  HEYS.MorningCheckinUtils.isMorningActivationClearedByUser = isMorningActivationClearedByUser;
 
   // PERF v7.1: notify boot-chain hook that deferred module is ready
   window.dispatchEvent(new CustomEvent('heys-morning-checkin-ready'));
