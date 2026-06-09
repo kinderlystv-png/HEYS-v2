@@ -2676,13 +2676,23 @@
 
   // --- Live session — ведомое выполнение упражнения с countdown timer ---
   // Каждое exercise = собственный cycle (key={exIdx} → re-mount hook'a).
-  function ExerciseRunner({ exercise, exIdx, totalExercises, dateKey, trainingIndex, exercises, programId, initialSnapshot, onDone, onAbort, onSetFeedback }) {
-    // keepSnapshotOnAbortRef — флаг для «Прервать → Не записывать» сценария.
-    // Когда true: при переходе в ABORTED НЕ очищаем persistence, чтобы остался
-    // snapshot и в SessionUI появился resume-баннер. При DONE/EXPIRED очищаем
-    // всегда (нет смысла хранить завершённое).
+  // ─── useExerciseShell (Step 4 / ревью #9 архитектура) ────────────────────────
+  // Общий каркас для HangRunner и RepsRunner: RPE/pain-захват (S8),
+  // persistence-snapshot, snapshot-resume, abort confirm-flow, pause/resume.
+  // ВСЯ safety-логика (onSetFeedback wiring, final RPE → onDone, pain-чекбокс)
+  // живёт здесь — один источник истины, без дубля между runner'ами.
+  //
+  // Dependency loop chicken-and-egg: shell нужен cycle для abort/start/pause,
+  // cycle нужен shell-callbacks для onComplete/onStateChange. Решение —
+  // `cycleRef` ref-late-binding: shell хранит ref, runner кладёт cycle в ref
+  // после своего хук-вызова. Все эффекты/коллбэки шелла бьют через ref на
+  // момент исполнения (после render), не на момент создания.
+  function useExerciseShell({
+    exercise, exIdx, totalExercises, dateKey, trainingIndex, exercises, programId,
+    initialSnapshot, onDone, onAbort, onSetFeedback,
+    cycleRef
+  }) {
     const keepSnapshotOnAbortRef = React.useRef(false);
-    // B1: промпт RPE/боли по завершении сета. null | { setIdx, isFinal }.
     const [rpePrompt, setRpePrompt] = useState(null);
     const [rpePain, setRpePain] = useState(false);
 
@@ -2738,7 +2748,9 @@
       if (nextState === STATES.BIG_REST) {
         const sIdx = meta && meta.setIdx != null ? meta.setIdx : 0;
         setRpePrompt({ setIdx: sIdx, isFinal: false });
-      } else if (nextState === STATES.HANG || nextState === STATES.SET_PREP) {
+      } else if (nextState === STATES.HANG || nextState === STATES.SET_PREP || nextState === STATES.REPS_INPUT) {
+        // REPS_INPUT добавлен (Step 4): для reps-cycle активная фаза = REPS_INPUT,
+        // не HANG. Тот же auto-dismiss non-final prompt при заходе в активную фазу.
         setRpePrompt(function (p) { return (p && !p.isFinal) ? null : p; });
       }
     }, [handleStateChange, onSetFeedback]);
@@ -2751,16 +2763,6 @@
       const lastSet = Math.max(0, (Number(exercise.setsCount) || 1) - 1);
       setRpePrompt({ setIdx: lastSet, isFinal: true });
     }, [onSetFeedback, onDone, exercise.setsCount]);
-
-    const cycle = Fingers.useCountdownCycle({
-      hangSec: Number(exercise.hangSec) || 7,
-      restSec: Number(exercise.restSec) || 3,
-      repsPerSet: Number(exercise.repsPerSet) || 6,
-      setsCount: Number(exercise.setsCount) || 3,
-      restBetweenSetsSec: Number(exercise.restBetweenSetsSec) || 180,
-      onComplete: handleCycleComplete,
-      onStateChange: handleStateChangeRpe
-    });
 
     // B1: submit/skip RPE-промпта. submit пишет feedback наверх (recordSetFeedback);
     // на финальном сете оба пути завершают упражнение через onDone.
@@ -2782,33 +2784,23 @@
       setRpePain(false);
     }, [onDone]);
 
-    // Auto-start session на mount. НЕ блокируем повторный запуск ref'ом —
-    // React Strict Mode mount-unmount-remount убивает setInterval из cleanup
-    // первого mount; на втором mount нужно перезапустить start, чтобы setInterval
-    // ожил снова. start() сам идемпотентен: переустанавливает phaseStartedAtRef
-    // и setState(SET_PREP) → новый setInterval.
+    // Auto-start session на mount через cycleRef (late-binding cycle).
     useEffect(function () {
       let cancelled = false;
-      // Ждём voice queue (если играется pre-flight cue.start_session «Начнём
-      // тренировку. Проверь разогрев.»), чтобы countdown 5→0 начался ПОСЛЕ
-      // фразы, а не параллельно. Без этого user слышит «Готовься. Пять.»
-      // когда display уже на 3 — voice/render desync.
       const waitPromise = (HEYS.Fingers?.voice?.waitForQueue)
         ? HEYS.Fingers.voice.waitForQueue()
         : Promise.resolve();
-      // Resume from snapshot if it matches this exercise; иначе обычный start.
-      const useResume = initialSnapshot
-        && initialSnapshot.exIdx === exIdx
-        && typeof cycle.startFromSnapshot === 'function';
       const launch = function () {
         try {
-          if (useResume) {
-            cycle.startFromSnapshot(initialSnapshot);
-          } else if (typeof cycle.start === 'function') {
-            cycle.start();
-          }
+          const cycle = cycleRef && cycleRef.current;
+          if (!cycle) return;
+          const useResume = initialSnapshot
+            && initialSnapshot.exIdx === exIdx
+            && typeof cycle.startFromSnapshot === 'function';
+          if (useResume) cycle.startFromSnapshot(initialSnapshot);
+          else if (typeof cycle.start === 'function') cycle.start();
         } catch (e) {
-          console.warn('[Fingers.ExerciseRunner] start failed:', e);
+          console.warn('[Fingers.useExerciseShell] start failed:', e);
         }
       };
       waitPromise.then(function () {
@@ -2820,11 +2812,6 @@
       return function () { cancelled = true; };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : exercise.gripId;
-    const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : '—';
-    const addedWeight = Number(exercise.addedWeightKg) || 0;
 
     // B1: RPE/боль оверлей. Рендерится поверх любой ветки (CountdownDisplay или
     // fallback), чтобы финальный сет (isFinal) гарантированно мог завершить
@@ -2884,103 +2871,127 @@
       );
     })() : null;
 
-    if (Fingers.CountdownDisplay) {
-      // Smart pause/resume: CountdownDisplay читает только onPause prop;
-      // если state===PAUSED — вызываем resume, иначе pause.
-      const togglePauseResume = function () {
-        try {
-          if (cycle.state === (Fingers.STATES && Fingers.STATES.PAUSED)) {
-            cycle.resume && cycle.resume();
-          } else {
-            cycle.pause && cycle.pause();
-          }
-        } catch (e) { console.warn('[Fingers.ExerciseRunner] pause/resume failed:', e); }
+    // Smart pause/resume через cycleRef.
+    const togglePauseResume = useCallback(function () {
+      const cycle = cycleRef && cycleRef.current;
+      if (!cycle) return;
+      try {
+        if (cycle.state === (Fingers.STATES && Fingers.STATES.PAUSED)) {
+          cycle.resume && cycle.resume();
+        } else {
+          cycle.pause && cycle.pause();
+        }
+      } catch (e) { console.warn('[Fingers.useExerciseShell] pause/resume failed:', e); }
+    }, [cycleRef]);
+
+    // 2-step abort flow: "Прервать?" → "Записать частично?".
+    const requestAbort = useCallback(function () {
+      const cycle = cycleRef && cycleRef.current;
+      const finalize = function () {
+        try { if (cycle) cycle.abort(); } catch (_) {}
+        if (onAbort) onAbort();
       };
+      keepSnapshotOnAbortRef.current = true;
+      if (!HEYS.ConfirmModal?.show) { finalize(); return; }
+      const doneExercises = exIdx;
+      const doneSets = (cycle && cycle.setIdx) || 0;
+      const doneReps = (cycle && cycle.repIdx) || 0;
+      const hasProgress = doneExercises > 0 || doneSets > 0 || doneReps > 0;
 
-      // 2-step abort flow: "Прервать?" → "Записать частично?".
-      // Fallback (нет ConfirmModal) — старое поведение (немедленный abort).
-      const requestAbort = function () {
-        const finalize = function () {
-          try { cycle.abort(); } catch (_) {}
-          if (onAbort) onAbort();
-        };
-        // По умолчанию snapshot переживает abort — юзер сам решает «продолжить»
-        // или «удалить» через resume-banner после возврата. Очистка происходит
-        // только в одном явном случае: «Записать как частично» (см. ниже).
-        keepSnapshotOnAbortRef.current = true;
-        if (!HEYS.ConfirmModal?.show) { finalize(); return; }
-        // Snap progress в момент клика (closure ловит свежие значения).
-        const doneExercises = exIdx;
-        const doneSets = cycle.setIdx || 0;
-        const doneReps = cycle.repIdx || 0;
-        const hasProgress = doneExercises > 0 || doneSets > 0 || doneReps > 0;
-
-        HEYS.ConfirmModal.show({
-          icon: '⚠',
-          title: 'Прервать тренировку?',
-          text: 'Сессия останется как «незавершённая» — сможешь продолжить позже.',
-          confirmText: 'Прервать',
-          cancelText: 'Продолжить',
-          confirmStyle: 'warning',
-          onConfirm: function () {
-            if (!hasProgress) { finalize(); return; }
-            HEYS.ConfirmModal.show({
-              icon: '💾',
-              title: 'Записать прогресс?',
-              text: 'Выполнено: ' + doneExercises + ' упр., '
-                    + doneSets + ' подходов, ' + doneReps + ' повторов в текущем подходе.',
-              confirmText: 'Записать как частично',
-              cancelText: 'Не записывать',
-              onConfirm: function () {
-                try {
-                  const totalMin = Array.isArray(exercises)
-                    ? exercises.reduce(function (s, e) {
-                        const oneSet = (Number(e.hangSec) + Number(e.restSec)) * Number(e.repsPerSet) + Number(e.restBetweenSetsSec);
-                        return s + (oneSet * Number(e.setsCount)) / 60;
-                      }, 0)
-                    : 0;
-                  const partialLog = {
-                    version: 2,
-                    programId: programId,
-                    totalDurationMinutes: Math.round(totalMin),
-                    exercises: exercises,
-                    completedAt: new Date().toISOString(),
-                    viaTimer: true,
-                    partial: true,
-                    partialProgress: {
-                      completedExercises: doneExercises,
-                      currentExerciseCompletedSets: doneSets,
-                      currentExerciseCompletedRepsInCurrentSet: doneReps
-                    }
-                  };
-                  HEYS.TrainingStep?.saveFingers?.(
-                    { dateKey: dateKey, trainingIndex: trainingIndex },
-                    partialLog,
-                    { activityLabel: (programId && programId !== 'custom' ? programId : 'Свой конструктор') + ' (частично)' }
-                  );
-                  if (HEYS.Toast?.success) {
-                    HEYS.Toast.success('Записано: ' + doneExercises + ' упр., ' + doneSets + ' подходов');
+      HEYS.ConfirmModal.show({
+        icon: '⚠',
+        title: 'Прервать тренировку?',
+        text: 'Сессия останется как «незавершённая» — сможешь продолжить позже.',
+        confirmText: 'Прервать',
+        cancelText: 'Продолжить',
+        confirmStyle: 'warning',
+        onConfirm: function () {
+          if (!hasProgress) { finalize(); return; }
+          HEYS.ConfirmModal.show({
+            icon: '💾',
+            title: 'Записать прогресс?',
+            text: 'Выполнено: ' + doneExercises + ' упр., '
+                  + doneSets + ' подходов, ' + doneReps + ' повторов в текущем подходе.',
+            confirmText: 'Записать как частично',
+            cancelText: 'Не записывать',
+            onConfirm: function () {
+              try {
+                const totalMin = Array.isArray(exercises)
+                  ? exercises.reduce(function (s, e) {
+                      const oneSet = (Number(e.hangSec) + Number(e.restSec)) * Number(e.repsPerSet) + Number(e.restBetweenSetsSec);
+                      return s + (oneSet * Number(e.setsCount)) / 60;
+                    }, 0)
+                  : 0;
+                const partialLog = {
+                  version: 2,
+                  programId: programId,
+                  totalDurationMinutes: Math.round(totalMin),
+                  exercises: exercises,
+                  completedAt: new Date().toISOString(),
+                  viaTimer: true,
+                  partial: true,
+                  partialProgress: {
+                    completedExercises: doneExercises,
+                    currentExerciseCompletedSets: doneSets,
+                    currentExerciseCompletedRepsInCurrentSet: doneReps
                   }
-                } catch (e) {
-                  console.warn('[Fingers.ExerciseRunner] partial save failed:', e);
+                };
+                HEYS.TrainingStep?.saveFingers?.(
+                  { dateKey: dateKey, trainingIndex: trainingIndex },
+                  partialLog,
+                  { activityLabel: (programId && programId !== 'custom' ? programId : 'Свой конструктор') + ' (частично)' }
+                );
+                if (HEYS.Toast?.success) {
+                  HEYS.Toast.success('Записано: ' + doneExercises + ' упр., ' + doneSets + ' подходов');
                 }
-                try { Fingers.persistence?.clear?.(); } catch (_) {}
-                finalize();
-              },
-              onCancel: function () {
-                // «Не записывать» = юзер захочет вернуться → оставляем snapshot
-                // нетронутым, флаг блокирует clear в handleStateChange(ABORTED).
-                // После finalize → onAbort → liveActive=false → useEffect
-                // подхватит snapshot и покажет банер «Незавершённая тренировка».
-                keepSnapshotOnAbortRef.current = true;
-                if (HEYS.Toast?.info) HEYS.Toast.info('Сессия прервана — можно продолжить позже');
-                finalize();
+              } catch (e) {
+                console.warn('[Fingers.useExerciseShell] partial save failed:', e);
               }
-            });
-          }
-        });
-      };
+              try { Fingers.persistence?.clear?.(); } catch (_) {}
+              finalize();
+            },
+            onCancel: function () {
+              keepSnapshotOnAbortRef.current = true;
+              if (HEYS.Toast?.info) HEYS.Toast.info('Сессия прервана — можно продолжить позже');
+              finalize();
+            }
+          });
+        }
+      });
+    }, [cycleRef, exIdx, onAbort, dateKey, trainingIndex, programId, exercises]);
 
+    return {
+      handleCycleComplete,
+      handleStateChangeRpe,
+      togglePauseResume,
+      requestAbort,
+      rpeOverlay
+    };
+  }
+
+  // ─── HangRunner (Step 4) — hang-cycle runner на shared shell ─────────────────
+  function HangRunner(props) {
+    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const cycleRef = React.useRef(null);
+    const shell = useExerciseShell(Object.assign({}, props, { cycleRef: cycleRef }));
+
+    const cycle = Fingers.useCountdownCycle({
+      hangSec: Number(exercise.hangSec) || 7,
+      restSec: Number(exercise.restSec) || 3,
+      repsPerSet: Number(exercise.repsPerSet) || 6,
+      setsCount: Number(exercise.setsCount) || 3,
+      restBetweenSetsSec: Number(exercise.restBetweenSetsSec) || 180,
+      onComplete: shell.handleCycleComplete,
+      onStateChange: shell.handleStateChangeRpe
+    });
+    cycleRef.current = cycle;
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : exercise.gripId;
+    const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : '—';
+    const addedWeight = Number(exercise.addedWeightKg) || 0;
+
+    if (Fingers.CountdownDisplay) {
       return h(React.Fragment, null,
         h(Fingers.CountdownDisplay, {
           state: cycle.state,
@@ -2989,24 +3000,21 @@
           totalSets: Number(exercise.setsCount) || 3,
           repIdx: cycle.repIdx,
           totalReps: Number(exercise.repsPerSet) || 6,
-          // Только название хвата — edge/вес передаются отдельными prop'ами
-          // чтобы CountdownDisplay сам форматировал без дубликатов.
           gripLabel: gripLabel,
           gripId: exercise.gripId,
           equipmentTier: exercise.equipmentTier,
           edgeLabel: edgeLabel,
           addedWeightKg: addedWeight,
           exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
-          onPause: togglePauseResume,
+          onPause: shell.togglePauseResume,
           onResume: cycle.resume,
-          onAbort: requestAbort,
+          onAbort: shell.requestAbort,
           onSkip: cycle.skipPhase
         }),
-        rpeOverlay
+        shell.rpeOverlay
       );
     }
 
-    // Fallback если CountdownDisplay не загружен
     return h(React.Fragment, null,
       h('div', { style: { padding: 32, textAlign: 'center' } },
         h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel),
@@ -3020,8 +3028,85 @@
           style: { marginTop: 16 }
         }, '✕ Прервать')
       ),
-      rpeOverlay
+      shell.rpeOverlay
     );
+  }
+
+  // ─── RepsRunner (Step 4) — reps-cycle runner на ТОМ ЖЕ shared shell ──────────
+  // Reps НАСЛЕДУЕТ S8 (onSetFeedback/pain через shell.handleStateChangeRpe и
+  // shell.handleCycleComplete) — это и есть весь смысл общего каркаса.
+  function RepsRunner(props) {
+    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const cycleRef = React.useRef(null);
+    const shell = useExerciseShell(Object.assign({}, props, { cycleRef: cycleRef }));
+
+    const cycle = Fingers.useRepsCycle({
+      setsCount: Number(exercise.setsCount) || 3,
+      restBetweenSetsSec: Number(exercise.restBetweenSetsSec) || 60,
+      onComplete: shell.handleCycleComplete,
+      onStateChange: shell.handleStateChangeRpe
+    });
+    cycleRef.current = cycle;
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : exercise.gripId;
+    const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
+    const addedWeight = Number(exercise.addedWeightKg) || 0;
+    // reps target из dose (block_catalog v2) или legacy repsPerSet.
+    const reps = (exercise.dose && exercise.dose.reps !== undefined)
+      ? exercise.dose.reps
+      : (exercise.repsPerSet || null);
+
+    if (Fingers.RepsCounterDisplay) {
+      return h(React.Fragment, null,
+        h(Fingers.RepsCounterDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          setIdx: cycle.setIdx,
+          totalSets: Number(exercise.setsCount) || 3,
+          reps: reps,
+          addedWeightKg: addedWeight ? addedWeight : undefined,
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          equipmentTier: exercise.equipmentTier,
+          edgeLabel: edgeLabel,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onSetDone: cycle.completeSet,
+          onPause: shell.togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: shell.requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        shell.rpeOverlay
+      );
+    }
+
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel || 'Reps exercise'),
+        h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
+          'Сет ' + (cycle.setIdx + 1) + '/' + (exercise.setsCount || 3)),
+        h('button', {
+          className: 'fingers-fs-btn',
+          onClick: cycle.completeSet
+        }, '✓ Подход выполнен')
+      ),
+      shell.rpeOverlay
+    );
+  }
+
+  // ─── ExerciseRunner (Step 4 dispatcher) ──────────────────────────────────────
+  // Рендерит HangRunner или RepsRunner по exercise.doseShape. ОБА runner'а
+  // безусловно вызывают свой хук (Rules of Hooks: hook count ≠ зависит от
+  // condition в SAME component; здесь component'ы РАЗНЫЕ). Только ОДИН runner
+  // монтируется → activeTimerLock/wakeLock не конфликтуют.
+  // Default (без doseShape, legacy mixEngine output) → HangRunner = поведение
+  // бит-в-бит как до Step 4.
+  function ExerciseRunner(props) {
+    const isReps = props && props.exercise && props.exercise.doseShape === 'reps';
+    return isReps
+      ? h(RepsRunner, props)
+      : h(HangRunner, props);
   }
 
   function LiveSession({ exercises, dateKey, trainingIndex, programId, initialSnapshot, onAllDone, onAbort, onSetFeedback }) {
@@ -4541,6 +4626,9 @@
   Fingers._mergeSetFeedback = _mergeSetFeedback;
   // Exposed for tests (B19): чистая сборка контракта fingersLog.
   Fingers._buildFingersLog = _buildFingersLog;
+  // Exposed for tests (Step 4 prep / ревью #9 ExerciseRunner-characterization):
+  // pin RPE/onSetFeedback/snapshot/abort до того, как Step 4 добавит doseShape branch.
+  Fingers._ExerciseRunner = ExerciseRunner;
 
   Fingers.startSession = function startSession(opts) {
     // Stub for future direct session launch from outside fullscreen.
