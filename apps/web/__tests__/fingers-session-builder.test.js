@@ -700,4 +700,12 @@ describe('sessionBuilder: equipment-фильтрация', () => {
       s.exercises.forEach((e) => expect(e.modality).not.toBe('fingerboard'));
     }
   });
+
+  it('equipmentTypes=["block"] max → не тянет длинный pow_rfd_pulls до принятия envelope', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['block'], age: 25, level: 'intermediate', readiness: 'max' });
+    expect(s).not.toBeNull();
+    expect(s.exercises.find((e) => e.atomId === 'pow_rfd_pulls')).toBeUndefined();
+    expect(s.durationMin).toBeLessThanOrEqual(55);
+    expect(s.intensity).toBe('max');
+  });
 });

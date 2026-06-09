@@ -2838,7 +2838,9 @@
           comment: rawT.comment || '',
           strengthEntryMode: rawT.strengthEntryMode,
           workoutLog: rawT.workoutLog,
-          fingersLog: rawT.fingersLog || null
+          fingersLog: rawT.fingersLog || null,
+          hobbySubtype: rawT.hobbySubtype || '',
+          hobbyLog: rawT.hobbyLog || null
         };
 
         // 🤚 Fingers branch — рендерим компактный pill вместо обычной карточки.
@@ -2846,6 +2848,16 @@
         if (String(T.type) === 'fingers' && HEYS.Fingers?.renderPreviewPill) {
           return React.createElement('div', { key: 'training-' + ti, className: 'compact-train-wrap' },
             HEYS.Fingers.renderPreviewPill({
+              training: T,
+              dateKey: dateKey,
+              trainingIndex: ti
+            })
+          );
+        }
+
+        if (HEYS.Hobby?.DrumsFingerControl?.isDrumsTraining?.(T) && HEYS.Hobby.DrumsFingerControl.renderPreviewPill) {
+          return React.createElement('div', { key: 'training-' + ti, className: 'compact-train-wrap' },
+            HEYS.Hobby.DrumsFingerControl.renderPreviewPill({
               training: T,
               dateKey: dateKey,
               trainingIndex: ti

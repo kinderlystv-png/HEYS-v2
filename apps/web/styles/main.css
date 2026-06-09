@@ -13,6 +13,7 @@
  * 06. PWA & Offline UI ........... modules/500-pwa-and-offline.css
  * 07. Steps & APS Flow ........... modules/600-steps-and-aps.css
  * 07a. Fingers (climbing fb) ..... modules/fingers.css
+ * 07b. Drums finger trainer ...... modules/drums-finger-trainer.css
  * 08. Profile Wizard ............. modules/700-profile-wizard.css
  * 09. Refeed Day ................. modules/710-refeed.css
  * 09a. Yesterday Verify .......... modules/715-yesterday-verify.css
@@ -23,52 +24,53 @@
  * 13. Meal Optimizer ............. modules/800-meal-optimizer.css
  * 14. Planning ................... modules/900-planning.css            → main-deferred.css
  */
-@import url("./modules/001-design-tokens.css");
-@import url("./modules/000-base-and-gamification.css");
-@import url("./modules/100-metrics-and-graphs.css");
-@import url("./modules/200-dark-and-effects.css");
-@import url("./modules/300-modals-and-day.css");
-@import url("./modules/310-client-switch-overlay.css");
-@import url("./modules/400-water-and-hydration.css");
-@import url("./modules/500-pwa-and-offline.css");
-@import url("./modules/600-steps-and-aps.css");
-@import url("./modules/fingers.css");
-@import url("./modules/700-profile-wizard.css");
-@import url("./modules/710-refeed.css");
-@import url("./modules/715-yesterday-verify.css");
+@import url('./modules/001-design-tokens.css');
+@import url('./modules/000-base-and-gamification.css');
+@import url('./modules/100-metrics-and-graphs.css');
+@import url('./modules/200-dark-and-effects.css');
+@import url('./modules/300-modals-and-day.css');
+@import url('./modules/310-client-switch-overlay.css');
+@import url('./modules/400-water-and-hydration.css');
+@import url('./modules/500-pwa-and-offline.css');
+@import url('./modules/600-steps-and-aps.css');
+@import url('./modules/fingers.css');
+@import url('./modules/drums-finger-trainer.css');
+@import url('./modules/700-profile-wizard.css');
+@import url('./modules/710-refeed.css');
+@import url('./modules/715-yesterday-verify.css');
 /* 720-predictive-insights, 725-metabolic-intelligence, 900-planning moved to main-deferred.css
  * (chained preload after main.css onload — see index.html). 2026-04-25 split. */
-@import url("./modules/730-widgets-dashboard.css");
-@import url("./modules/740-cascade-card.css");
-@import url("./modules/800-meal-optimizer.css");
-@import url("./modules/1000-messenger.css");
+@import url('./modules/730-widgets-dashboard.css');
+@import url('./modules/740-cascade-card.css');
+@import url('./modules/800-meal-optimizer.css');
+@import url('./modules/1000-messenger.css');
 
 /* Component-specific styles (BEM) */
-@import url("./heys-components.css");
+@import url('./heys-components.css');
 
 /* ── Cascade chain-dots animation override — legacy clip-path reveal disabled ── */
 .cascade-chain-dots {
-    clip-path: none !important;
-    transition: none !important;
+  clip-path: none !important;
+  transition: none !important;
 }
 
 .cascade-chain-dots.is-revealed {
-    clip-path: none !important;
+  clip-path: none !important;
 }
 
 /* ── Progress bar clip wrapper — clips fill/markers to rounded track shape (badge stays outside) ── */
 .goal-progress-bar-clip {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    overflow: hidden;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
 }
 
 /* ── Cascade card progress bar — smooth 1.4s fill (override cached module) ── */
 .cascade-card__progress-bar {
-    transition: width 1.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: width 1.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .cascade-card__progress-bar.no-transition {
-    transition: none !important;
+  transition: none !important;
 }

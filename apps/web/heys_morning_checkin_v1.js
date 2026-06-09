@@ -114,12 +114,13 @@
   }
 
   /** Согласовано с heys_steps_v1.js readDayData: сначала scoped dayv2, иначе legacy unscoped. */
-  function readDayV2ScopedFirst(dateKey, fallback = {}) {
+  function readDayV2ScopedFirst(dateKey, fallback = {}, options = {}) {
     const cid = getCurrentClientId();
     if (cid) {
       const scopedKey = `heys_${cid}_dayv2_${dateKey}`;
       const scoped = readStoredValue(scopedKey, null);
       if (scoped && typeof scoped === 'object') return scoped;
+      if (options && options.allowUnscopedFallback === false) return fallback;
     }
     return readStoredValue(`heys_dayv2_${dateKey}`, fallback) || fallback;
   }
@@ -979,6 +980,7 @@
   // isProfileIncomplete defensive read) чтобы избежать race с устаревшим cache.
   HEYS.MorningCheckinUtils = HEYS.MorningCheckinUtils || {};
   HEYS.MorningCheckinUtils.readProfileForceRawScoped = readProfileForceRawScoped;
+  HEYS.MorningCheckinUtils.readDayV2ScopedFirst = readDayV2ScopedFirst;
   HEYS.MorningCheckinUtils.shouldOpenMorningActivationFollowup = shouldOpenMorningActivationFollowup;
   HEYS.MorningCheckinUtils.dayHasMorningActivationSyncedActivity = dayHasMorningActivationSyncedActivity;
   HEYS.MorningCheckinUtils.isMorningActivationClearedByUser = isMorningActivationClearedByUser;

@@ -41,6 +41,7 @@
     { id: 'cardio', icon: '🏃', label: 'Кардио' },
     { id: 'strength', icon: '🏋️', label: 'Силовая' },
     { id: 'hobby', icon: '⚽', label: 'Хобби' },
+    { id: 'drums', icon: '🥁', label: 'Барабаны' },
     { id: 'fingers', icon: '🤚', label: 'Пальцы' }
   ];
 
@@ -48,6 +49,7 @@
     cardio: { icon: '🏃', label: 'Кардио' },
     strength: { icon: '🏋️', label: 'Силовая' },
     hobby: { icon: '⚽', label: 'Активное хобби' },
+    drums: { icon: '🥁', label: 'Барабанный пад' },
     fingers: { icon: '🤚', label: 'Пальцы (скалолазание)' }
   };
 
@@ -66,6 +68,7 @@
     { type: 'hobby', icon: '🤸', label: 'Пилатес' },
     { type: 'hobby', icon: '🎾', label: 'Теннис' },
     { type: 'hobby', icon: '💃', label: 'Танцы' },
+    { type: 'hobby', icon: '🥁', label: 'Барабанный пад', hobbySubtype: 'drums_finger_control' },
     { type: 'fingers', icon: '🤚', label: 'Fingerboard' },
     { type: 'fingers', icon: '🧗', label: 'Hangboard' },
     { type: 'fingers', icon: '💪', label: 'Block pulling' }
@@ -81,7 +84,33 @@
   }
 
   function getDefaultActivityLabel(type) {
+    if (type === 'drums') return 'Барабанный пад';
     return getTrainingTypeMeta(type).label;
+  }
+
+  function buildDrumsTrainingInfo() {
+    return {
+      type: 'hobby',
+      activityLabel: 'Барабанный пад',
+      hobbySubtype: 'drums_finger_control'
+    };
+  }
+
+  function openDrumsTrainerFromStep(context, meta) {
+    if (!window.HEYS?.Hobby?.DrumsFingerControl?.openFullscreen) return false;
+
+    try { HEYS.StepModal.hide(); } catch (_) { /* noop */ }
+    try {
+      HEYS.Hobby.DrumsFingerControl.openFullscreen({
+        dateKey: context?.dateKey,
+        trainingIndex: context?.trainingIndex,
+        mode: meta?.mode || 'new'
+      });
+      return true;
+    } catch (e) {
+      console.warn('[TrainingStep] DrumsFingerControl.openFullscreen failed:', e);
+      return false;
+    }
   }
 
   function readTrainingActivityOptions() {
@@ -98,6 +127,7 @@
           label,
           type,
           icon: typeof item?.icon === 'string' && item.icon ? item.icon : getTrainingTypeMeta(type).icon,
+          hobbySubtype: typeof item?.hobbySubtype === 'string' ? item.hobbySubtype : '',
           usedAt: Number(item?.usedAt) || 0
         };
       })
@@ -120,6 +150,7 @@
         label: normalizedLabel,
         type: nextType,
         icon: getTrainingTypeMeta(nextType).icon,
+        hobbySubtype: '',
         usedAt
       },
       ...existing
@@ -147,6 +178,7 @@
         label: normalizedLabel,
         icon: option.icon || getTrainingTypeMeta(nextType).icon,
         type: nextType,
+        hobbySubtype: typeof option.hobbySubtype === 'string' ? option.hobbySubtype : '',
         source: option.source || 'preset'
       });
     };
@@ -207,7 +239,8 @@
       mood: normalizeTrainingRating(source.mood),
       wellbeing: normalizeTrainingRating(source.wellbeing),
       stress: normalizeTrainingRating(source.stress),
-      comment: typeof source.comment === 'string' ? source.comment : ''
+      comment: typeof source.comment === 'string' ? source.comment : '',
+      hobbySubtype: typeof source.hobbySubtype === 'string' ? source.hobbySubtype : ''
     };
     if (source.strengthEntryMode === 'hr_zones' || source.strengthEntryMode === 'workout_builder') {
       out.strengthEntryMode = source.strengthEntryMode;
@@ -217,6 +250,9 @@
     }
     if (source.fingersLog && typeof source.fingersLog === 'object') {
       out.fingersLog = source.fingersLog;
+    }
+    if (source.hobbyLog && typeof source.hobbyLog === 'object') {
+      out.hobbyLog = source.hobbyLog;
     }
     return out;
   }
@@ -254,6 +290,12 @@
 
     if (merged.fingersLog && typeof merged.fingersLog === 'object') {
       finalTraining.fingersLog = merged.fingersLog;
+    }
+    if (merged.hobbySubtype) {
+      finalTraining.hobbySubtype = merged.hobbySubtype;
+    }
+    if (merged.hobbyLog && typeof merged.hobbyLog === 'object') {
+      finalTraining.hobbyLog = merged.hobbyLog;
     }
 
     if (merged.strengthEntryMode) {
@@ -403,6 +445,21 @@
     };
 
     const handleTypeChange = (nextType) => {
+      if (nextType === 'drums') {
+        haptic('light');
+        const drumsInfo = buildDrumsTrainingInfo();
+        if (openDrumsTrainerFromStep(context, { mode: 'new' })) {
+          updateData({ ...drumsInfo, time });
+          return;
+        }
+
+        updateData({
+          ...drumsInfo,
+          time
+        });
+        return;
+      }
+
       // 🤚 Fingers handoff to dedicated full-screen overlay (skip remaining steps).
       // Wave 1: handoff stub — opens fullscreen if module loaded; Wave 3 will mount UI.
       if (nextType === 'fingers' && window.HEYS?.Fingers?.openFullscreen) {
@@ -430,7 +487,8 @@
       setCustomActivityDraft('');
       updateData({
         type: nextType,
-        activityLabel: canKeepCurrentActivity ? activityLabel : getDefaultActivityLabel(nextType)
+        activityLabel: canKeepCurrentActivity ? activityLabel : getDefaultActivityLabel(nextType),
+        hobbySubtype: ''
       });
     };
 
@@ -444,7 +502,11 @@
 
       haptic('light');
       setShowCustomActivityInput(false);
-      updateData({ activityLabel: value });
+      const selected = activityOptions.find((option) => option.label === value);
+      updateData({
+        activityLabel: value,
+        hobbySubtype: selected?.hobbySubtype || ''
+      });
     };
 
     const handleSaveCustomActivity = () => {
@@ -459,7 +521,7 @@
       setShowCustomActivityInput(false);
       setCustomActivityDraft('');
       haptic('success');
-      updateData({ activityLabel: normalizedLabel });
+      updateData({ activityLabel: normalizedLabel, hobbySubtype: '' });
     };
 
     return React.createElement('div', { className: 'training-step' },
@@ -471,7 +533,8 @@
             React.createElement('button', {
               key: t.id,
               className: 'ts-type-btn' + (type === t.id ? ' active' : ''),
-              onClick: () => handleTypeChange(t.id)
+              onClick: () => handleTypeChange(t.id),
+              title: t.id === 'drums' ? 'Открыть тренажёр барабанных пальцев' : undefined
             },
               React.createElement('span', { className: 'ts-type-icon' }, t.icon),
               React.createElement('span', { className: 'ts-type-label' }, t.label)

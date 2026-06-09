@@ -203,6 +203,12 @@
     return set;
   }
 
+  function _isBlockOnly(equipmentTypes) {
+    return Array.isArray(equipmentTypes) &&
+      equipmentTypes.length === 1 &&
+      equipmentTypes[0] === 'block';
+  }
+
   function _atomFits(atom, profile, allowedModalities) {
     if (!allowedModalities[atom.modality]) return false;
     if (!profile) return false;
@@ -240,10 +246,22 @@
       (opts.level ? { age: opts.age, level: opts.level } : null);
     if (!profile) return null; // fail-closed
     const used = usedGripEdge || Object.create(null);
+    const blockOnly = _isBlockOnly(opts.equipmentTypes || ['full']);
 
     function notDuplicate(a) {
       const k = _gripEdgeKey(a);
       return !k || !used[k];
+    }
+
+    function fitsEnvelope(a) {
+      // Pre-flip duration envelope: pow_rfd_pulls is a valid methodology atom,
+      // but in block-only max sessions it adds 15-25 attempts × 150s rest as a
+      // separate power slot. Keep it out until the block-only RFD dose is
+      // explicitly accepted/tuned; full-equipment power remains unaffected.
+      if (slot === 'power' && blockOnly && a && a.id === 'pow_rfd_pulls') {
+        return false;
+      }
+      return true;
     }
 
     // 1-я попытка — match quality + tissue preference + не дубль.
@@ -255,6 +273,7 @@
         for (let k = 0; k < candidates.length; k++) {
           const a = candidates[k];
           if (a.tissueLoad !== tissue) continue;
+          if (!fitsEnvelope(a)) continue;
           if (!notDuplicate(a)) continue;
           if (_atomFits(a, profile, allowed)) return a;
         }
@@ -266,6 +285,7 @@
       const candidates = Fingers.blockCatalog.atomsByQuality(q);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
+        if (!fitsEnvelope(a)) continue;
         if (!notDuplicate(a)) continue;
         if (_atomFits(a, profile, allowed)) return a;
       }

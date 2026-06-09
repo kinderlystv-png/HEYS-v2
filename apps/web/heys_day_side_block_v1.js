@@ -6,6 +6,24 @@
 
   HEYS.daySideBlock = HEYS.daySideBlock || {};
 
+  function readDayV2ForCheckinRefresh(dateKey, fallback = {}) {
+    const reader = HEYS.MorningCheckinUtils?.readDayV2ScopedFirst;
+    if (typeof reader === 'function') {
+      return reader(dateKey, fallback, { allowUnscopedFallback: false });
+    }
+
+    const currentClientId = HEYS.utils?.getCurrentClientId?.() || HEYS.currentClientId || '';
+    if (currentClientId) {
+      const scopedKey = `heys_${currentClientId}_dayv2_${dateKey}`;
+      const scoped = HEYS.store?.readSafe
+        ? HEYS.store.readSafe(scopedKey, null)
+        : (HEYS.utils?.lsGet ? HEYS.utils.lsGet(scopedKey, null) : null);
+      return (scoped && typeof scoped === 'object') ? scoped : fallback;
+    }
+
+    return HEYS.utils?.lsGet ? HEYS.utils.lsGet(`heys_dayv2_${dateKey}`, fallback) : fallback;
+  }
+
   HEYS.daySideBlock.renderSideBlock = function renderSideBlock(ctx) {
     const {
       React,
@@ -54,7 +72,7 @@
 
       const dateKey = date || new Date().toISOString().slice(0, 10);
       const refreshDayFromStorage = () => {
-        const storedDay = HEYS.utils?.lsGet ? HEYS.utils.lsGet(`heys_dayv2_${dateKey}`, {}) : null;
+        const storedDay = readDayV2ForCheckinRefresh(dateKey, {});
 
         if (storedDay) {
           console.info('[HEYS.daySideBlock] daySleep updated from storage', { dateKey });
@@ -91,7 +109,7 @@
       if (HEYS.showCheckin?.morningMood) {
         HEYS.showCheckin.morningMood(date, () => {
           const dateKey = date || new Date().toISOString().slice(0, 10);
-          const storedDay = HEYS.utils?.lsGet ? HEYS.utils.lsGet(`heys_dayv2_${dateKey}`, {}) : null;
+          const storedDay = readDayV2ForCheckinRefresh(dateKey, {});
 
           setDay(prev => {
             const merged = { ...prev, ...(storedDay || {}) };
@@ -398,4 +416,5 @@
       )
     );
   };
+  HEYS.daySideBlock.readDayV2ForCheckinRefresh = readDayV2ForCheckinRefresh;
 })();
