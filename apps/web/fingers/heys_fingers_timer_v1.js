@@ -88,6 +88,297 @@
   }
 
   // ─── Hook: useCountdownCycle ─────────────────────────────────────────────
+  // ─── INTERNAL: useTimerCore — общее ядро таймера (A4 strangler-консолидация) ─
+  //
+  // Управляет: React-state (state/secondsLeft/totalElapsed), tick-петлёй,
+  // pause/resume, wakeLock, activeTimerLock, fireStateChange, cleanup.
+  // State-graph специфика делегирована caller'у через config-функции:
+  //   - onAdvance(currentState)   — tick-expiry router; вызывается когда тик
+  //     дошёл до 0; обязан вызвать exposed enterPhase для перехода.
+  //   - onPhaseEnter(state, meta) — side-effects state-graph (state-specific
+  //     audio cues, такие как 'cue.go_hang' для HANG). Вызывается ПОСЛЕ того
+  //     как state записан и shared cues (SET_PREP / BIG_REST / DONE) сыграны.
+  //   - getExtraMeta()           — wrapper отдаёт {setIdx, repIdx} для merge
+  //     в state-change meta (pause/resume/phase-enter).
+  //
+  // Опции:
+  //   - manualPhases:    string[]; для них tick НЕ стартует, wakeLock хранится.
+  //   - wakeLockPhases:  string[]; для них wakeLock запрашивается при enter.
+  //   - visibilityWarning: bool; включает HEYS.Toast предупреждение при
+  //     возвращении из фона >5с во время activePhases.
+  //   - activePhases:    string[]; набор active states для visibilityWarning.
+  //
+  // Returns:
+  //   { state, secondsLeft, totalElapsed,
+  //     enterPhase(state, durationSec, meta),
+  //     pause, resume, abort, skipPhase, markSessionStart }
+  //
+  // Контракт: enterPhase + skipPhase + pause/resume — единственный путь
+  // изменения state. activeTimerLock / wakeLock — single-owner (только core
+  // их трогает; wrapper'у нельзя их менять напрямую).
+  function useTimerCore(coreConfig) {
+    const React = global.React;
+    const cfg = coreConfig || {};
+    const manualPhases = Array.isArray(cfg.manualPhases) ? cfg.manualPhases : [];
+    const wakeLockPhases = Array.isArray(cfg.wakeLockPhases) ? cfg.wakeLockPhases : [];
+    const activePhases = Array.isArray(cfg.activePhases) ? cfg.activePhases : [];
+    const visibilityWarning = !!cfg.visibilityWarning;
+
+    const [state, setState] = React.useState(STATES.IDLE);
+    const [secondsLeft, setSecondsLeft] = React.useState(0);
+    const [totalElapsed, setTotalElapsed] = React.useState(0);
+
+    const tickRef = React.useRef(null);
+    const phaseStartedAtRef = React.useRef(0);
+    const phaseDurationMsRef = React.useRef(0);
+    const sessionStartedAtRef = React.useRef(0);
+    const pauseStartedAtRef = React.useRef(0);
+    const pauseTotalMsRef = React.useRef(0);
+    const previousStateRef = React.useRef(STATES.IDLE);
+    // stateRef — immediate state mirror для callbacks (tick читает state до того,
+    // как React зафлашит setState).
+    const stateRef = React.useRef(STATES.IDLE);
+
+    const wakeLock = HEYS.AppHooks && typeof HEYS.AppHooks.useWakeLock === 'function'
+      ? HEYS.AppHooks.useWakeLock() : null;
+    const wakeLockRef = React.useRef(wakeLock);
+    wakeLockRef.current = wakeLock;
+
+    // State-graph callbacks через refs — wrapper переоткрывает каждый рендер.
+    const onAdvanceRef = React.useRef(cfg.onAdvance);
+    onAdvanceRef.current = cfg.onAdvance;
+    const onPhaseEnterRef = React.useRef(cfg.onPhaseEnter);
+    onPhaseEnterRef.current = cfg.onPhaseEnter;
+    const getExtraMetaRef = React.useRef(cfg.getExtraMeta);
+    getExtraMetaRef.current = cfg.getExtraMeta;
+    const onStateChangeRef = React.useRef(cfg.onStateChange);
+    onStateChangeRef.current = cfg.onStateChange;
+    const onCompleteRef = React.useRef(cfg.onComplete);
+    onCompleteRef.current = cfg.onComplete;
+
+    const fireStateChange = React.useCallback(function (nextState, meta) {
+      const fn = onStateChangeRef.current;
+      if (typeof fn !== 'function') return;
+      const getMeta = getExtraMetaRef.current;
+      const extra = typeof getMeta === 'function' ? (getMeta() || {}) : {};
+      const merged = Object.assign({}, extra, meta || {});
+      try { fn(nextState, merged); } catch (e) {
+        console.warn('[Fingers.timer] onStateChange threw:', e);
+      }
+    }, []);
+
+    const clearTick = React.useCallback(function () {
+      if (tickRef.current) {
+        // setTimeout (рекурсивный) вместо setInterval — clearTimeout работает
+        // одинаково; setInterval тротлится в HEYS-окружении (perf-monitor или
+        // browser policy при mobile-эмуляции в DevTools).
+        clearTimeout(tickRef.current);
+        tickRef.current = null;
+      }
+    }, []);
+
+    const startTick = React.useCallback(function () {
+      clearTick();
+      const tickFn = function () {
+        const elapsedMs = _now() - phaseStartedAtRef.current;
+        const remainingMs = Math.max(0, phaseDurationMsRef.current - elapsedMs);
+        const remainingSec = Math.ceil(remainingMs / 1000);
+        setSecondsLeft(remainingSec);
+        setTotalElapsed(Math.floor((_now() - sessionStartedAtRef.current - pauseTotalMsRef.current) / 1000));
+        if (remainingMs <= 0) {
+          tickRef.current = null;
+          if (typeof onAdvanceRef.current === 'function') {
+            try { onAdvanceRef.current(stateRef.current); }
+            catch (e) { console.warn('[Fingers.timer] onAdvance threw:', e); }
+          }
+          return;
+        }
+        tickRef.current = setTimeout(tickFn, TICK_MS);
+      };
+      tickRef.current = setTimeout(tickFn, TICK_MS);
+    }, [clearTick]);
+
+    const enterPhase = React.useCallback(function (nextState, durationSec, meta) {
+      phaseStartedAtRef.current = _now();
+      phaseDurationMsRef.current = Math.max(0, durationSec * 1000);
+      setSecondsLeft(durationSec);
+      setState(nextState);
+      stateRef.current = nextState; // immediate — tick/skip читают сразу
+      previousStateRef.current = nextState;
+      fireStateChange(nextState, Object.assign({ durationSec: durationSec }, meta || {}));
+
+      // Shared cues (идентичны в обоих state-graph): SET_PREP / BIG_REST.
+      // DONE-cue (триумф) тоже общий — см. ниже terminal-handling.
+      if (nextState === STATES.SET_PREP) {
+        _say('cue.countdown_5');
+        _beep('notify');
+      } else if (nextState === STATES.BIG_REST) {
+        _say('cue.big_rest_start');
+        _beep('caution');
+      }
+
+      // wakeLock — запрашивается на phase enter если фаза в wakeLockPhases.
+      // Используем check !isWakeLockActive чтобы не дублировать.
+      if (wakeLockPhases.indexOf(nextState) >= 0) {
+        const wl = wakeLockRef.current;
+        if (wl && wl.requestWakeLock && !wl.isWakeLockActive) wl.requestWakeLock();
+      }
+
+      // State-graph side effects (HANG cue для countdown, REPS_INPUT cue для reps).
+      // Вызывается ПОСЛЕ shared cues, ДО tick/terminal — wrapper может dispatch
+      // дополнительные audio/vibrate без race c shared.
+      if (typeof onPhaseEnterRef.current === 'function') {
+        try { onPhaseEnterRef.current(nextState, meta || {}); }
+        catch (e) { console.warn('[Fingers.timer] onPhaseEnter threw:', e); }
+      }
+
+      // Terminal: DONE → cue + onComplete + release locks
+      if (nextState === STATES.DONE) {
+        _beep('triumph');
+        _say('cue.session_done');
+        clearTick();
+        Fingers.activeTimerLock = false;
+        const wl = wakeLockRef.current;
+        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
+        if (typeof onCompleteRef.current === 'function') {
+          try { onCompleteRef.current(); }
+          catch (e) { console.warn('[Fingers.timer] onComplete threw:', e); }
+        }
+        return;
+      }
+      // Terminal: ABORTED / EXPIRED / IDLE — release locks без cue
+      if (nextState === STATES.ABORTED || nextState === STATES.EXPIRED || nextState === STATES.IDLE) {
+        clearTick();
+        Fingers.activeTimerLock = false;
+        const wl = wakeLockRef.current;
+        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
+        return;
+      }
+
+      // Manual phase — wakeLock уже запрошен (если в wakeLockPhases), tick НЕ
+      // стартуем. Wrapper сам решает когда advance (e.g. completeSet).
+      if (manualPhases.indexOf(nextState) >= 0) return;
+
+      // Timed phase — стартуем tick.
+      startTick();
+    }, [fireStateChange, startTick, clearTick, manualPhases, wakeLockPhases]);
+
+    const pause = React.useCallback(function () {
+      if (state === STATES.PAUSED || state === STATES.IDLE
+          || state === STATES.DONE || state === STATES.ABORTED) return;
+      previousStateRef.current = state;
+      pauseStartedAtRef.current = _now();
+      clearTick();
+      setState(STATES.PAUSED);
+      stateRef.current = STATES.PAUSED;
+      fireStateChange(STATES.PAUSED, { resumeTo: previousStateRef.current, secondsLeft: secondsLeft });
+    }, [state, secondsLeft, clearTick, fireStateChange]);
+
+    const resume = React.useCallback(function () {
+      if (state !== STATES.PAUSED) return;
+      const pauseDurMs = _now() - pauseStartedAtRef.current;
+      pauseTotalMsRef.current += pauseDurMs;
+      const restored = previousStateRef.current;
+      const isManual = manualPhases.indexOf(restored) >= 0;
+      // Для timed-фаз adjust phaseStartedAt чтобы remaining time не уехал.
+      // Для manual — нет тика, никаких корректировок.
+      if (!isManual) phaseStartedAtRef.current += pauseDurMs;
+      setState(restored);
+      stateRef.current = restored;
+      fireStateChange(restored, {
+        resumed: true,
+        durationSec: Math.ceil(phaseDurationMsRef.current / 1000)
+      });
+      if (!isManual) startTick();
+    }, [state, manualPhases, startTick, fireStateChange]);
+
+    const abort = React.useCallback(function () {
+      enterPhase(STATES.ABORTED, 0, {});
+    }, [enterPhase]);
+
+    const skipPhase = React.useCallback(function () {
+      if (state === STATES.IDLE || state === STATES.DONE
+          || state === STATES.ABORTED || state === STATES.PAUSED) return;
+      clearTick();
+      if (typeof onAdvanceRef.current === 'function') {
+        try { onAdvanceRef.current(state); }
+        catch (e) { console.warn('[Fingers.timer] onAdvance threw:', e); }
+      }
+    }, [state, clearTick]);
+
+    const markSessionStart = React.useCallback(function () {
+      sessionStartedAtRef.current = _now();
+      pauseTotalMsRef.current = 0;
+      setTotalElapsed(0);
+      Fingers.activeTimerLock = true;
+    }, []);
+
+    // Cleanup unmount-only — deps=[] (wakeLock объект меняется каждый render,
+    // привязать к deps → cleanup срабатывает на каждый rerender → setTimeout
+    // убит сразу после запуска → таймер не тикает; wakeLockRef хранит свежий).
+    React.useEffect(function () {
+      return function () {
+        clearTick();
+        Fingers.activeTimerLock = false;
+        const wl = wakeLockRef.current;
+        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Visibility warning — если юзер был в фоне >5с во время activePhases,
+    // показать toast (browser throttle setTimeout до 1Hz, voice cues могут
+    // не сработать, юзер не слышит «3,2,1» отказа).
+    React.useEffect(function () {
+      if (!visibilityWarning || typeof document === 'undefined') return undefined;
+      let hiddenAt = 0;
+      const onVis = function () {
+        const isActive = activePhases.indexOf(stateRef.current) >= 0;
+        if (document.visibilityState === 'hidden') {
+          if (isActive) hiddenAt = _now();
+        } else if (document.visibilityState === 'visible' && hiddenAt > 0) {
+          const hiddenMs = _now() - hiddenAt;
+          hiddenAt = 0;
+          if (hiddenMs > 5000 && isActive) {
+            try {
+              const sec = Math.round(hiddenMs / 1000);
+              const msg = '⚠ Вкладка была в фоне ' + sec +
+                ' сек — звуковые команды могли не сработать, перепроверь данные.';
+              if (HEYS.Toast && typeof HEYS.Toast.warn === 'function') HEYS.Toast.warn(msg);
+              else if (HEYS.Toast && typeof HEYS.Toast.info === 'function') HEYS.Toast.info(msg);
+              else if (HEYS.Toast && typeof HEYS.Toast.show === 'function') HEYS.Toast.show(msg);
+            } catch (_) {}
+          }
+        }
+      };
+      document.addEventListener('visibilitychange', onVis);
+      return function () { document.removeEventListener('visibilitychange', onVis); };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visibilityWarning]);
+
+    return {
+      state: state, secondsLeft: secondsLeft, totalElapsed: totalElapsed,
+      enterPhase: enterPhase, pause: pause, resume: resume,
+      abort: abort, skipPhase: skipPhase, markSessionStart: markSessionStart
+    };
+  }
+
+  // ─── Hook: useCountdownCycle — hang state-graph через useTimerCore ──────────
+  //
+  // State-graph (hang flow):
+  //   IDLE → SET_PREP(5s) → HANG(hangSec) → REST(restSec) → SET_PREP(next rep)
+  //          → ... → HANG(last rep) → BIG_REST(restBetweenSetsSec) → SET_PREP
+  //          → ... → HANG(last set/last rep) → DONE
+  //   Orthogonal: ANY → ABORTED | PAUSED ↔ previous.
+  //
+  // Specific side-effects:
+  //   - HANG enter: _fingerSound('fingerStart') + 'cue.go_hang' + vibrate
+  //                 + wakeLock request (через wakeLockPhases=[HANG])
+  //   - REST enter: _fingerSound('fingerRelease') + 'cue.rest_start' + beep
+  //   SET_PREP / BIG_REST / DONE — общие cues в core.
+  //
+  // Public API unchanged: {state, setIdx, repIdx, secondsLeft, totalElapsed,
+  //   start, startFromSnapshot, pause, resume, abort, skipPhase}.
   function useCountdownCycle(config) {
     const React = global.React;
     if (!React) {
@@ -103,233 +394,118 @@
     const setsCount = Math.max(1, Number(cfg.setsCount) || 5);
     const restBetweenSetsSec = Number(cfg.restBetweenSetsSec) || 180;
 
-    const [state, setState] = React.useState(STATES.IDLE);
     const [setIdx, setSetIdx] = React.useState(0);
     const [repIdx, setRepIdx] = React.useState(0);
-    const [secondsLeft, setSecondsLeft] = React.useState(0);
-    const [totalElapsed, setTotalElapsed] = React.useState(0);
+    // Immediate mirrors для onAdvance (читает свежие индексы синхронно).
+    const setIdxRef = React.useRef(0);
+    const repIdxRef = React.useRef(0);
+    setIdxRef.current = setIdx;
+    repIdxRef.current = repIdx;
 
-    const tickRef = React.useRef(null);
-    const phaseStartedAtRef = React.useRef(0);
-    const phaseDurationMsRef = React.useRef(0);
-    const sessionStartedAtRef = React.useRef(0);
-    const pauseStartedAtRef = React.useRef(0);
-    const pauseTotalMsRef = React.useRef(0);
-    const previousStateRef = React.useRef(STATES.IDLE);
+    // Forward-ref на core.enterPhase — нужен в onAdvance до того как core
+    // инициализирован (chicken-and-egg: core.config.onAdvance замыкается на
+    // enterPhase, который сам внутри core).
+    const enterPhaseRef = React.useRef(null);
 
-    // Wake lock integration — optional, через HEYS.AppHooks.useWakeLock
-    const wakeLock = HEYS.AppHooks && typeof HEYS.AppHooks.useWakeLock === 'function'
-      ? HEYS.AppHooks.useWakeLock() : null;
-
-    const onStateChange = cfg.onStateChange;
-    const onComplete = cfg.onComplete;
-
-    const fireStateChange = React.useCallback((nextState, meta) => {
-      if (typeof onStateChange === 'function') {
-        try { onStateChange(nextState, meta || {}); } catch (e) {
-          console.warn('[Fingers.timer] onStateChange threw:', e);
-        }
+    const handleAdvance = React.useCallback(function (currentState) {
+      const enterPhase = enterPhaseRef.current;
+      if (!enterPhase) return;
+      const curSet = setIdxRef.current;
+      const curRep = repIdxRef.current;
+      // SET_PREP → HANG
+      if (currentState === STATES.SET_PREP) {
+        enterPhase(STATES.HANG, hangSec, { setIdx: curSet, repIdx: curRep });
+        return;
       }
-    }, [onStateChange]);
+      // HANG → REST | BIG_REST | DONE
+      if (currentState === STATES.HANG) {
+        const isLastRep = (curRep + 1) >= repsPerSet;
+        const isLastSet = (curSet + 1) >= setsCount;
+        if (isLastRep && isLastSet) { enterPhase(STATES.DONE, 0, {}); return; }
+        if (isLastRep) {
+          enterPhase(STATES.BIG_REST, restBetweenSetsSec, { setIdx: curSet });
+          return;
+        }
+        enterPhase(STATES.REST, restSec, { setIdx: curSet, repIdx: curRep });
+        return;
+      }
+      // REST → SET_PREP (next rep)
+      if (currentState === STATES.REST) {
+        const nextRep = curRep + 1;
+        setRepIdx(nextRep);
+        repIdxRef.current = nextRep;
+        enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: curSet, repIdx: nextRep });
+        return;
+      }
+      // BIG_REST → SET_PREP (next set, rep=0)
+      if (currentState === STATES.BIG_REST) {
+        const nextSet = curSet + 1;
+        setSetIdx(nextSet);
+        setRepIdx(0);
+        setIdxRef.current = nextSet;
+        repIdxRef.current = 0;
+        enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: nextSet, repIdx: 0 });
+        return;
+      }
+    }, [hangSec, restSec, repsPerSet, setsCount, restBetweenSetsSec]);
 
-    const clearTick = React.useCallback(() => {
-      if (tickRef.current) {
-        // Используется setTimeout (рекурсивный) вместо setInterval — clearTimeout
-        // независимо работает для timeouts. setInterval throttled в этом
-        // окружении (HEYS perf optimizations либо browser policy).
-        clearTimeout(tickRef.current);
-        tickRef.current = null;
+    const handlePhaseEnter = React.useCallback(function (s, _meta) {
+      // SET_PREP/BIG_REST/DONE cues — обрабатывает core. Здесь только
+      // hang-state-graph-specific cues.
+      if (s === STATES.HANG) {
+        _fingerSound('fingerStart');
+        _say('cue.go_hang');
+        _vibrate([80, 60, 80]);
+      } else if (s === STATES.REST) {
+        _fingerSound('fingerRelease');
+        _say('cue.rest_start');
+        _beep('caution');
       }
     }, []);
 
-    // Рекурсивный setTimeout вместо setInterval — более надёжный в HEYS
-    // окружении (setInterval не fires; возможно perf-main-thread наблюдатель
-    // или background throttling). Преимущества: каждый next tick планируется
-    // только после завершения предыдущего, нет накопления pending callbacks.
-    const tickFnRef = React.useRef(null);
-    const startTick = React.useCallback(() => {
-      clearTick();
-      const tickFn = function () {
-        const elapsedMs = _now() - phaseStartedAtRef.current;
-        const remainingMs = Math.max(0, phaseDurationMsRef.current - elapsedMs);
-        const remainingSec = Math.ceil(remainingMs / 1000);
-        setSecondsLeft(remainingSec);
-        setTotalElapsed(Math.floor((_now() - sessionStartedAtRef.current - pauseTotalMsRef.current) / 1000));
-        if (remainingMs <= 0) {
-          tickRef.current = null;
-          advancePhase();
-          return;
-        }
-        // Рекурсивный setTimeout вместо setInterval — setInterval blocked
-        // в HEYS окружении (возможно perf-monitor patches либо browser policy
-        // в DevTools mobile emulation). Каждый next tick планируется только
-        // после завершения предыдущего.
-        tickRef.current = setTimeout(tickFn, TICK_MS);
-      };
-      tickFnRef.current = tickFn;
-      tickRef.current = setTimeout(tickFn, TICK_MS);
-    }, [clearTick]); // advancePhase прямой ref внизу — eslint disable-line
+    const getExtraMeta = React.useCallback(function () {
+      return { setIdx: setIdxRef.current, repIdx: repIdxRef.current };
+    }, []);
 
-    // Forward-declared advancePhase (создаётся ниже через ref).
-    const advancePhaseRef = React.useRef(null);
-    function advancePhase() { if (advancePhaseRef.current) advancePhaseRef.current(); }
+    const core = useTimerCore({
+      manualPhases: [],
+      wakeLockPhases: [STATES.HANG],
+      visibilityWarning: true,
+      activePhases: [STATES.HANG, STATES.REST, STATES.BIG_REST, STATES.SET_PREP],
+      onAdvance: handleAdvance,
+      onPhaseEnter: handlePhaseEnter,
+      getExtraMeta: getExtraMeta,
+      onStateChange: cfg.onStateChange,
+      onComplete: cfg.onComplete
+    });
 
-    const enterPhase = React.useCallback((nextState, durationSec, meta) => {
-      phaseStartedAtRef.current = _now();
-      phaseDurationMsRef.current = Math.max(0, durationSec * 1000);
-      setSecondsLeft(durationSec);
-      setState(nextState);
-      previousStateRef.current = nextState;
-      fireStateChange(nextState, Object.assign({ durationSec }, meta || {}));
+    enterPhaseRef.current = core.enterPhase;
 
-      // Phase cues. ВАЖНО: cue ID должны совпадать с MP3 файлами в
-      // apps/web/public/voice/fingers-ru/. Mismatch → 404 → TTS fallback с
-      // дефолтным voice (часто en-US) → дублирование RU и EN голоса.
-      if (nextState === STATES.HANG) {
-        _fingerSound('fingerStart');
-        _say('cue.go_hang'); // MP3: «Вис.»
-        _vibrate([80, 60, 80]);
-        if (wakeLock && wakeLock.requestWakeLock && !wakeLock.isWakeLockActive) {
-          wakeLock.requestWakeLock();
-        }
-      } else if (nextState === STATES.REST) {
-        _fingerSound('fingerRelease');
-        _say('cue.rest_start'); // MP3: «Отдых.»
-        _beep('caution');
-      } else if (nextState === STATES.BIG_REST) {
-        _say('cue.big_rest_start'); // MP3: «Большой отдых...»
-        _beep('caution');
-      } else if (nextState === STATES.SET_PREP) {
-        _say('cue.countdown_5'); // MP3: «Готовься. Пять.»
-        _beep('notify');
-      } else if (nextState === STATES.DONE) {
-        _beep('triumph');
-        _say('cue.session_done');
-        clearTick();
-        Fingers.activeTimerLock = false;
-        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
-        if (typeof onComplete === 'function') {
-          try { onComplete(); } catch (e) { console.warn('[Fingers.timer] onComplete threw:', e); }
-        }
-        return; // no tick to start
-      } else if (nextState === STATES.ABORTED || nextState === STATES.EXPIRED) {
-        clearTick();
-        Fingers.activeTimerLock = false;
-        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
-        return;
-      } else if (nextState === STATES.IDLE) {
-        clearTick();
-        Fingers.activeTimerLock = false;
-        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
-        return;
-      }
-
-      startTick();
-    }, [fireStateChange, startTick, clearTick, wakeLock, onComplete]);
-
-    // Real advancePhase (after enterPhase available).
-    advancePhaseRef.current = function realAdvancePhase() {
-      // From SET_PREP → HANG
-      if (state === STATES.SET_PREP) {
-        enterPhase(STATES.HANG, hangSec, { setIdx, repIdx });
-        return;
-      }
-      // From HANG → REST (или DONE если последний rep последнего сета)
-      if (state === STATES.HANG) {
-        const isLastRep = (repIdx + 1) >= repsPerSet;
-        const isLastSet = (setIdx + 1) >= setsCount;
-        if (isLastRep && isLastSet) {
-          enterPhase(STATES.DONE, 0, {});
-          return;
-        }
-        if (isLastRep) {
-          // Конец сета — переходим в BIG_REST, увеличиваем setIdx после.
-          enterPhase(STATES.BIG_REST, restBetweenSetsSec, { setIdx });
-          return;
-        }
-        // Просто rest между подходами
-        enterPhase(STATES.REST, restSec, { setIdx, repIdx });
-        return;
-      }
-      // From REST → next rep (SET_PREP)
-      if (state === STATES.REST) {
-        setRepIdx((r) => r + 1);
-        enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx, repIdx: repIdx + 1 });
-        return;
-      }
-      // From BIG_REST → next set, rep=0, SET_PREP
-      if (state === STATES.BIG_REST) {
-        setSetIdx((s) => s + 1);
-        setRepIdx(0);
-        enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: setIdx + 1, repIdx: 0 });
-        return;
-      }
-    };
-
-    // ─── Control API ─────────────────────────────────────────────────────
-    const start = React.useCallback(() => {
-      sessionStartedAtRef.current = _now();
-      pauseTotalMsRef.current = 0;
+    const start = React.useCallback(function () {
+      core.markSessionStart();
       setSetIdx(0);
       setRepIdx(0);
-      setTotalElapsed(0);
-      // Lock close/swipe-confirm while timer running (read by fullscreen swipe guard
-      // и close handler). Cleared on abort/DONE/unmount ниже.
-      Fingers.activeTimerLock = true;
-      enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: 0, repIdx: 0 });
-    }, [enterPhase]);
+      setIdxRef.current = 0;
+      repIdxRef.current = 0;
+      core.enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: 0, repIdx: 0 });
+    }, [core]);
 
-    const pause = React.useCallback(() => {
-      if (state === STATES.PAUSED || state === STATES.IDLE
-          || state === STATES.DONE || state === STATES.ABORTED) return;
-      previousStateRef.current = state;
-      pauseStartedAtRef.current = _now();
-      clearTick();
-      setState(STATES.PAUSED);
-      fireStateChange(STATES.PAUSED, { resumeTo: previousStateRef.current, secondsLeft, setIdx, repIdx });
-    }, [state, secondsLeft, setIdx, repIdx, clearTick, fireStateChange]);
-
-    const resume = React.useCallback(() => {
-      if (state !== STATES.PAUSED) return;
-      const pauseDurMs = _now() - pauseStartedAtRef.current;
-      pauseTotalMsRef.current += pauseDurMs;
-      // Adjust phaseStartedAt чтобы оставшееся время сохранилось.
-      phaseStartedAtRef.current += pauseDurMs;
-      setState(previousStateRef.current);
-      fireStateChange(previousStateRef.current, { resumed: true, setIdx, repIdx, durationSec: Math.ceil(phaseDurationMsRef.current / 1000) });
-      startTick();
-    }, [state, setIdx, repIdx, startTick, fireStateChange]);
-
-    const abort = React.useCallback(() => {
-      enterPhase(STATES.ABORTED, 0, {});
-    }, [enterPhase]);
-
-    const skipPhase = React.useCallback(() => {
-      if (state === STATES.IDLE || state === STATES.DONE
-          || state === STATES.ABORTED || state === STATES.PAUSED) return;
-      clearTick();
-      advancePhase();
-    }, [state, clearTick]);
-
-    // ─── Resume from persistence snapshot ──────────────────────────────────
-    // Round-в-пользу-безопасности: фаза которая «истекла пока юзера не было»
-    // не auto-completes (можно проскочить целый вис) — вместо этого даём
-    // короткий 0.5s tail, чтобы тик дошёл до 0 и advancePhase сам перевёл
-    // на следующую фазу через нормальный путь.
-    const startFromSnapshot = React.useCallback((snap) => {
+    // Round-в-пользу-безопасности: фаза «истекшая в фоне» не auto-completes,
+    // даём короткий 0.5s tail чтобы tick дошёл до 0 и advancePhase сам перевёл.
+    const startFromSnapshot = React.useCallback(function (snap) {
       if (!snap || !snap.state
           || snap.state === STATES.IDLE || snap.state === STATES.DONE
           || snap.state === STATES.ABORTED || snap.state === STATES.EXPIRED) {
         start();
         return;
       }
-      sessionStartedAtRef.current = _now();
-      pauseTotalMsRef.current = 0;
+      core.markSessionStart();
       const snapSetIdx = Number(snap.setIdx) || 0;
       const snapRepIdx = Number(snap.repIdx) || 0;
       setSetIdx(snapSetIdx);
       setRepIdx(snapRepIdx);
-      Fingers.activeTimerLock = true;
+      setIdxRef.current = snapSetIdx;
+      repIdxRef.current = snapRepIdx;
 
       const wasPaused = snap.state === STATES.PAUSED;
       const targetState = wasPaused ? (snap.resumeTo || STATES.HANG) : snap.state;
@@ -339,75 +515,25 @@
       } else {
         const elapsedMs = Date.now() - (Number(snap.phaseStartedAt) || Date.now());
         const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
-        if (remainingSec >= 0.5) {
-          targetSec = Math.ceil(remainingSec);
-        } else {
-          targetSec = 0.5; // istекло — короткий tail, advancePhase сам переведёт
-        }
+        targetSec = remainingSec >= 0.5 ? Math.ceil(remainingSec) : 0.5;
       }
 
-      enterPhase(targetState, targetSec, { setIdx: snapSetIdx, repIdx: snapRepIdx });
+      core.enterPhase(targetState, targetSec, { setIdx: snapSetIdx, repIdx: snapRepIdx });
 
       if (wasPaused) {
-        // Defer: даём enterPhase отработать React state update, потом ставим pause.
-        setTimeout(function () { try { pause(); } catch (_) {} }, 50);
+        setTimeout(function () { try { core.pause(); } catch (_) {} }, 50);
       }
-    }, [start, enterPhase, pause]);
+    }, [start, core]);
 
-    // Cleanup on unmount ONLY. ВАЖНО: deps=[] (пустой массив), иначе wakeLock
-    // (новый объект каждый render из HEYS.AppHooks.useWakeLock()) триггерил
-    // cleanup → clearTick на КАЖДОМ ререндере → setTimeout убит сразу после
-    // запуска → таймер не tick. Сохраняем wakeLock через ref для cleanup.
-    const wakeLockRef = React.useRef(wakeLock);
-    wakeLockRef.current = wakeLock;
-    React.useEffect(() => {
-      return () => {
-        clearTick();
-        Fingers.activeTimerLock = false;
-        const wl = wakeLockRef.current;
-        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
-      };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Visibility hook: если юзер ушёл на фоновую вкладку дольше 5с во время
-    // активной фазы (HANG/REST/BIG_REST/SET_PREP) — браузер throttle'ит
-    // setTimeout до 1Hz и приостанавливает Web Audio. Voice cues могут не
-    // сработать → юзер не слышит «3...2...1» отказа. На возвращении показываем
-    // тост-предупреждение, чтобы он перепроверил данные.
-    const stateRef = React.useRef(state);
-    stateRef.current = state;
-    React.useEffect(() => {
-      if (typeof document === 'undefined') return;
-      let hiddenAt = 0;
-      const onVis = function () {
-        const isActivePhase = stateRef.current === STATES.HANG
-          || stateRef.current === STATES.REST
-          || stateRef.current === STATES.BIG_REST
-          || stateRef.current === STATES.SET_PREP;
-        if (document.visibilityState === 'hidden') {
-          if (isActivePhase) hiddenAt = _now();
-        } else if (document.visibilityState === 'visible' && hiddenAt > 0) {
-          const hiddenMs = _now() - hiddenAt;
-          hiddenAt = 0;
-          if (hiddenMs > 5000 && isActivePhase) {
-            try {
-              const sec = Math.round(hiddenMs / 1000);
-              const msg = '⚠ Вкладка была в фоне ' + sec +
-                ' сек — звуковые команды могли не сработать, перепроверь данные.';
-              if (HEYS.Toast && typeof HEYS.Toast.warn === 'function') HEYS.Toast.warn(msg);
-              else if (HEYS.Toast && typeof HEYS.Toast.info === 'function') HEYS.Toast.info(msg);
-              else if (HEYS.Toast && typeof HEYS.Toast.show === 'function') HEYS.Toast.show(msg);
-            } catch (_) {}
-          }
-        }
-      };
-      document.addEventListener('visibilitychange', onVis);
-      return function () { document.removeEventListener('visibilitychange', onVis); };
-    }, []);
-
-    return { state, setIdx, repIdx, secondsLeft, totalElapsed,
-      start, startFromSnapshot, pause, resume, abort, skipPhase };
+    return {
+      state: core.state,
+      setIdx: setIdx, repIdx: repIdx,
+      secondsLeft: core.secondsLeft,
+      totalElapsed: core.totalElapsed,
+      start: start, startFromSnapshot: startFromSnapshot,
+      pause: core.pause, resume: core.resume,
+      abort: core.abort, skipPhase: core.skipPhase
+    };
   }
 
   // ─── Component: CountdownDisplay ─────────────────────────────────────────
@@ -595,6 +721,21 @@
   //
   // API ПАРАЛЛЕЛЕН useCountdownCycle (одни callbacks, один shape return) →
   // ExerciseRunner (Step 4) подключает любой из хуков через один shell.
+  // ─── Hook: useRepsCycle — reps state-graph через useTimerCore ───────────────
+  //
+  // State-graph (reps flow):
+  //   IDLE → SET_PREP(5s) → REPS_INPUT (manual; ждёт completeSet()) →
+  //         если последний сет → DONE; иначе → BIG_REST(restBetweenSetsSec)
+  //         → SET_PREP → ...
+  //   Orthogonal: ANY → ABORTED | PAUSED ↔ previous.
+  //
+  // Отличия от useCountdownCycle:
+  //   - REPS_INPUT — manual phase (нет тика, ждёт completeSet()).
+  //   - Нет HANG/REST внутрисетового цикла.
+  //   - Дополнительный API: completeSet(); skipPhase в REPS_INPUT = completeSet.
+  //
+  // Public API unchanged: {state, setIdx, repIdx:0, secondsLeft, totalElapsed,
+  //   start, startFromSnapshot, pause, resume, abort, completeSet, skipPhase}.
   function useRepsCycle(config) {
     const React = global.React;
     if (!React) {
@@ -608,208 +749,111 @@
     const setsCount = Math.max(1, Number(cfg.setsCount || cfg.sets) || 3);
     const restBetweenSetsSec = Number(cfg.restBetweenSetsSec || cfg.restSetsSec) || 60;
 
-    const [state, setState] = React.useState(STATES.IDLE);
     const [setIdx, setSetIdx] = React.useState(0);
-    const [secondsLeft, setSecondsLeft] = React.useState(0);
-    const [totalElapsed, setTotalElapsed] = React.useState(0);
+    const setIdxRef = React.useRef(0);
+    setIdxRef.current = setIdx;
 
-    const tickRef = React.useRef(null);
-    const phaseStartedAtRef = React.useRef(0);
-    const phaseDurationMsRef = React.useRef(0);
-    const sessionStartedAtRef = React.useRef(0);
-    const pauseStartedAtRef = React.useRef(0);
-    const pauseTotalMsRef = React.useRef(0);
-    const previousStateRef = React.useRef(STATES.IDLE);
+    const enterPhaseRef = React.useRef(null);
 
-    const wakeLock = HEYS.AppHooks && typeof HEYS.AppHooks.useWakeLock === 'function'
-      ? HEYS.AppHooks.useWakeLock() : null;
-
-    const onStateChange = cfg.onStateChange;
-    const onComplete = cfg.onComplete;
-
-    const fireStateChange = React.useCallback((nextState, meta) => {
-      if (typeof onStateChange === 'function') {
-        try { onStateChange(nextState, meta || {}); } catch (e) {
-          console.warn('[Fingers.timer] onStateChange threw:', e);
-        }
+    const handleAdvance = React.useCallback(function (currentState) {
+      const enterPhase = enterPhaseRef.current;
+      if (!enterPhase) return;
+      const curSet = setIdxRef.current;
+      // SET_PREP → REPS_INPUT (manual)
+      if (currentState === STATES.SET_PREP) {
+        enterPhase(STATES.REPS_INPUT, 0, { setIdx: curSet });
+        return;
       }
-    }, [onStateChange]);
-
-    const clearTick = React.useCallback(() => {
-      if (tickRef.current) {
-        clearTimeout(tickRef.current);
-        tickRef.current = null;
+      // BIG_REST → SET_PREP (next set)
+      if (currentState === STATES.BIG_REST) {
+        const nextSet = curSet + 1;
+        setSetIdx(nextSet);
+        setIdxRef.current = nextSet;
+        enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: nextSet });
+        return;
       }
     }, []);
 
-    // Tick стартует только для TIMED фаз: SET_PREP и BIG_REST.
-    // REPS_INPUT — manual (ждёт completeSet()), без тика.
-    const advancePhaseRef = React.useRef(null);
-    const startTick = React.useCallback(() => {
-      clearTick();
-      const tickFn = function () {
-        const elapsedMs = _now() - phaseStartedAtRef.current;
-        const remainingMs = Math.max(0, phaseDurationMsRef.current - elapsedMs);
-        const remainingSec = Math.ceil(remainingMs / 1000);
-        setSecondsLeft(remainingSec);
-        setTotalElapsed(Math.floor((_now() - sessionStartedAtRef.current - pauseTotalMsRef.current) / 1000));
-        if (remainingMs <= 0) {
-          tickRef.current = null;
-          if (advancePhaseRef.current) advancePhaseRef.current();
-          return;
-        }
-        tickRef.current = setTimeout(tickFn, TICK_MS);
-      };
-      tickRef.current = setTimeout(tickFn, TICK_MS);
-    }, [clearTick]);
-
-    const enterPhase = React.useCallback((nextState, durationSec, meta) => {
-      phaseStartedAtRef.current = _now();
-      phaseDurationMsRef.current = Math.max(0, durationSec * 1000);
-      setSecondsLeft(durationSec);
-      setState(nextState);
-      previousStateRef.current = nextState;
-      fireStateChange(nextState, Object.assign({ durationSec }, meta || {}));
-
-      if (nextState === STATES.SET_PREP) {
-        _say('cue.countdown_5');
-        _beep('notify');
-      } else if (nextState === STATES.REPS_INPUT) {
-        // Manual фаза — wakelock держит экран пока юзер делает повторы.
-        if (wakeLock && wakeLock.requestWakeLock && !wakeLock.isWakeLockActive) {
-          wakeLock.requestWakeLock();
-        }
-        // Голосовая cue для начала повторов (Step 3 voice asset).
+    const handlePhaseEnter = React.useCallback(function (s, _meta) {
+      // SET_PREP/BIG_REST/DONE cues — обрабатывает core.
+      // REPS_INPUT — manual cue (юзер начинает повторы) + vibrate.
+      // wakeLock на REPS_INPUT — запрашивает core (wakeLockPhases ниже).
+      if (s === STATES.REPS_INPUT) {
         _say('cue.go_reps');
         _vibrate([80, 60, 80]);
-        // НЕТ startTick: REPS_INPUT ждёт completeSet() от юзера.
-        return;
-      } else if (nextState === STATES.BIG_REST) {
-        _say('cue.big_rest_start');
-        _beep('caution');
-      } else if (nextState === STATES.DONE) {
-        _beep('triumph');
-        _say('cue.session_done');
-        clearTick();
-        Fingers.activeTimerLock = false;
-        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
-        if (typeof onComplete === 'function') {
-          try { onComplete(); } catch (e) { console.warn('[Fingers.timer] onComplete threw:', e); }
-        }
-        return;
-      } else if (nextState === STATES.ABORTED || nextState === STATES.EXPIRED) {
-        clearTick();
-        Fingers.activeTimerLock = false;
-        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
-        return;
-      } else if (nextState === STATES.IDLE) {
-        clearTick();
-        Fingers.activeTimerLock = false;
-        if (wakeLock && wakeLock.releaseWakeLock) wakeLock.releaseWakeLock();
-        return;
       }
+    }, []);
 
-      startTick();
-    }, [fireStateChange, startTick, clearTick, wakeLock, onComplete]);
+    const getExtraMeta = React.useCallback(function () {
+      // repIdx всегда 0 в reps-cycle (нет внутрисетового цикла); pause/resume
+      // оригинальной useRepsCycle передавал repIdx:0, сохраняем для совместимости.
+      return { setIdx: setIdxRef.current, repIdx: 0 };
+    }, []);
 
-    advancePhaseRef.current = function realAdvancePhase() {
-      // From SET_PREP → REPS_INPUT (manual фаза)
-      if (state === STATES.SET_PREP) {
-        enterPhase(STATES.REPS_INPUT, 0, { setIdx });
-        return;
-      }
-      // From BIG_REST → SET_PREP (next set)
-      if (state === STATES.BIG_REST) {
-        setSetIdx((s) => s + 1);
-        enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: setIdx + 1 });
-        return;
-      }
-    };
+    const core = useTimerCore({
+      manualPhases: [STATES.REPS_INPUT],
+      wakeLockPhases: [STATES.REPS_INPUT],
+      visibilityWarning: false, // reps без visibility-toast (legacy parity)
+      activePhases: [],
+      onAdvance: handleAdvance,
+      onPhaseEnter: handlePhaseEnter,
+      getExtraMeta: getExtraMeta,
+      onStateChange: cfg.onStateChange,
+      onComplete: cfg.onComplete
+    });
 
-    // ─── Control API ─────────────────────────────────────────────────────
-    const start = React.useCallback(() => {
-      sessionStartedAtRef.current = _now();
-      pauseTotalMsRef.current = 0;
+    enterPhaseRef.current = core.enterPhase;
+
+    const start = React.useCallback(function () {
+      core.markSessionStart();
       setSetIdx(0);
-      setTotalElapsed(0);
-      Fingers.activeTimerLock = true;
-      enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: 0 });
-    }, [enterPhase]);
+      setIdxRef.current = 0;
+      core.enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: 0 });
+    }, [core]);
 
-    // ✨ Reps-specific: юзер сигналит «подход выполнен».
-    // Из REPS_INPUT → BIG_REST (если есть ещё сеты) или DONE (если последний).
-    const completeSet = React.useCallback(() => {
-      if (state !== STATES.REPS_INPUT) return;
-      const isLastSet = (setIdx + 1) >= setsCount;
+    // Reps-specific manual advance: юзер сигналит «подход выполнен».
+    // Из REPS_INPUT → BIG_REST (если ещё есть сеты) или DONE (последний).
+    const completeSet = React.useCallback(function () {
+      if (core.state !== STATES.REPS_INPUT) return;
+      const curSet = setIdxRef.current;
+      const isLastSet = (curSet + 1) >= setsCount;
       if (isLastSet) {
-        enterPhase(STATES.DONE, 0, { setIdx });
+        core.enterPhase(STATES.DONE, 0, { setIdx: curSet });
       } else {
-        enterPhase(STATES.BIG_REST, restBetweenSetsSec, { setIdx });
+        core.enterPhase(STATES.BIG_REST, restBetweenSetsSec, { setIdx: curSet });
       }
-    }, [state, setIdx, setsCount, restBetweenSetsSec, enterPhase]);
+    }, [core, setsCount, restBetweenSetsSec]);
 
-    const pause = React.useCallback(() => {
-      if (state === STATES.PAUSED || state === STATES.IDLE
-          || state === STATES.DONE || state === STATES.ABORTED) return;
-      previousStateRef.current = state;
-      pauseStartedAtRef.current = _now();
-      clearTick();
-      setState(STATES.PAUSED);
-      fireStateChange(STATES.PAUSED, { resumeTo: previousStateRef.current, secondsLeft, setIdx, repIdx: 0 });
-    }, [state, secondsLeft, setIdx, clearTick, fireStateChange]);
-
-    const resume = React.useCallback(() => {
-      if (state !== STATES.PAUSED) return;
-      const pauseDurMs = _now() - pauseStartedAtRef.current;
-      pauseTotalMsRef.current += pauseDurMs;
-      // For REPS_INPUT (manual) — нет tick, просто восстанавливаем state.
-      const restored = previousStateRef.current;
-      if (restored !== STATES.REPS_INPUT) {
-        phaseStartedAtRef.current += pauseDurMs;
-      }
-      setState(restored);
-      fireStateChange(restored, {
-        resumed: true, setIdx, repIdx: 0,
-        durationSec: Math.ceil(phaseDurationMsRef.current / 1000)
-      });
-      if (restored !== STATES.REPS_INPUT) startTick();
-    }, [state, setIdx, startTick, fireStateChange]);
-
-    const abort = React.useCallback(() => {
-      enterPhase(STATES.ABORTED, 0, {});
-    }, [enterPhase]);
-
-    const skipPhase = React.useCallback(() => {
-      if (state === STATES.IDLE || state === STATES.DONE
-          || state === STATES.ABORTED || state === STATES.PAUSED) return;
-      clearTick();
-      // For REPS_INPUT — skip эквивалентен completeSet (одинаковый эффект).
-      if (state === STATES.REPS_INPUT) {
+    // skipPhase для REPS_INPUT эквивалентен completeSet — core делегирует
+    // skipPhase в onAdvance, но onAdvance не обрабатывает REPS_INPUT (это
+    // manual phase). Перехватываем здесь: если REPS_INPUT — completeSet;
+    // иначе core.skipPhase (для timed фаз).
+    const skipPhase = React.useCallback(function () {
+      if (core.state === STATES.REPS_INPUT) {
         completeSet();
         return;
       }
-      if (advancePhaseRef.current) advancePhaseRef.current();
-    }, [state, clearTick, completeSet]);
+      core.skipPhase();
+    }, [core, completeSet]);
 
-    const startFromSnapshot = React.useCallback((snap) => {
+    const startFromSnapshot = React.useCallback(function (snap) {
       if (!snap || !snap.state
           || snap.state === STATES.IDLE || snap.state === STATES.DONE
           || snap.state === STATES.ABORTED || snap.state === STATES.EXPIRED) {
         start();
         return;
       }
-      sessionStartedAtRef.current = _now();
-      pauseTotalMsRef.current = 0;
+      core.markSessionStart();
       const snapSetIdx = Number(snap.setIdx) || 0;
       setSetIdx(snapSetIdx);
-      Fingers.activeTimerLock = true;
+      setIdxRef.current = snapSetIdx;
 
       const wasPaused = snap.state === STATES.PAUSED;
       const targetState = wasPaused ? (snap.resumeTo || STATES.REPS_INPUT) : snap.state;
 
       if (targetState === STATES.REPS_INPUT) {
         // Manual фаза — продолжаем с нуля (юзер сам жмёт completeSet).
-        enterPhase(STATES.REPS_INPUT, 0, { setIdx: snapSetIdx });
+        core.enterPhase(STATES.REPS_INPUT, 0, { setIdx: snapSetIdx });
       } else {
         let targetSec;
         if (wasPaused) {
@@ -819,30 +863,23 @@
           const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
           targetSec = remainingSec >= 0.5 ? Math.ceil(remainingSec) : 0.5;
         }
-        enterPhase(targetState, targetSec, { setIdx: snapSetIdx });
+        core.enterPhase(targetState, targetSec, { setIdx: snapSetIdx });
       }
 
       if (wasPaused) {
-        setTimeout(function () { try { pause(); } catch (_) {} }, 50);
+        setTimeout(function () { try { core.pause(); } catch (_) {} }, 50);
       }
-    }, [start, enterPhase, pause]);
-
-    // Cleanup on unmount.
-    const wakeLockRef = React.useRef(wakeLock);
-    wakeLockRef.current = wakeLock;
-    React.useEffect(() => {
-      return () => {
-        clearTick();
-        Fingers.activeTimerLock = false;
-        const wl = wakeLockRef.current;
-        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
-      };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [start, core]);
 
     return {
-      state, setIdx, repIdx: 0, secondsLeft, totalElapsed,
-      start, pause, resume, abort, completeSet, skipPhase, startFromSnapshot
+      state: core.state,
+      setIdx: setIdx, repIdx: 0,
+      secondsLeft: core.secondsLeft,
+      totalElapsed: core.totalElapsed,
+      start: start, startFromSnapshot: startFromSnapshot,
+      pause: core.pause, resume: core.resume,
+      abort: core.abort,
+      completeSet: completeSet, skipPhase: skipPhase
     };
   }
 
