@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.09.762476a2",
+      "buildHash": "762476a2",
+      "date": "2026-06-09",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "B3 — detectPlateau + axes policy (§1.2/§1.3 advisory)",
+      "items": [
+        {
+          "type": "feat",
+          "title": "B3 — detectPlateau + axes policy (§1.2/§1.3 advisory)",
+          "description": "B3 — detectPlateau + axes policy (§1.2/§1.3 advisory)"
+        }
+      ],
+      "coveredCommits": ["762476a2"]
+    },
+    {
       "version": "2026.06.09.c69d3e73",
       "buildHash": "c69d3e73",
       "date": "2026-06-09",
@@ -141,22 +157,6 @@
         }
       ],
       "coveredCommits": ["94f04a06", "5fabebad"]
-    },
-    {
-      "version": "2026.06.08.b0e72df1",
-      "buildHash": "b0e72df1",
-      "date": "2026-06-08",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления и улучшения стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки",
-          "description": "В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения."
-        }
-      ],
-      "coveredCommits": ["7bbb3d62"]
     }
   ]
 }
