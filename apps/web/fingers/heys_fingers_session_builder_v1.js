@@ -61,15 +61,17 @@
     'antagonist':         ['low']
   };
 
-  // UI renderable doseShape (ревью #3 ограничение 2 / план B1.5):
-  // Существующий UI player знает только hang-протокол; reps добавляется в
-  // следующем UI-шаге (минимальный rep-set трекер). Атомы вне этого набора
-  // НЕ попадают в сессию пока player не расширен — иначе UI рендерит их как
-  // вырожденный «7с виса × 1 повт». Шаг 5 расширит set'ом attempts/circuit/
-  // continuous/process когда player получит соответствующие ветки.
-  // Без этого cut'а каждая сессия содержит non-hang атомы из safety-floor
-  // (antagonist/mobility — reps-only), что подтвердила эмпирика ревью #3.
-  const RENDERABLE_DOSESHAPES = { hang: true, reps: true };
+  // UI renderable doseShape (ревью #3 ограничение 2 / план B1.5 + Шаг 5):
+  // UI player умеет рендерить:
+  //   - hang (CountdownDisplay, useCountdownCycle)
+  //   - reps (RepsCounterDisplay, useRepsCycle, manual completeSet)
+  //   - continuous (ContinuousDisplay, useCountdownCycle с workSec=hangSec,
+  //     repsPerSet=1 — один длинный таймер; ARC/mileage/technique drills)
+  // НЕ в наборе: attempts (Шаг 5b — пока без UI: болдер/кампус попытки),
+  // circuit (Шаг 5c — 4x4/EMOM), process (Шаг 5d — checklist для тактики).
+  // Атомы вне этого набора НЕ попадают в сессию пока player не расширен —
+  // иначе UI рендерит их как вырожденный «7с виса × 1 повт» (ревью #3).
+  const RENDERABLE_DOSESHAPES = { hang: true, reps: true, continuous: true };
 
   // Equipment compatibility: какие modality допустимы в каждом equipmentType.
   const EQUIPMENT_MODALITIES = {

@@ -524,6 +524,67 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
     });
   });
 
+  describe('Шаг 5 continuous-path — useCountdownCycle reuse через ContinuousRunner', () => {
+    const continuousExercise = (over = {}) => ({
+      doseShape: 'continuous',
+      gripId: 'aer_arc',
+      dose: { workSec: 1800, sets: 1 },
+      setsCount: 1, restBetweenSetsSec: 0,
+      ...over
+    });
+
+    it('exercise.doseShape="continuous" → ContinuousRunner (useCountdownCycle с hangSec=workSec, repsPerSet=1)', () => {
+      cycle.startCalled = false; cycle.config = null;
+      render(React.createElement(ER(), {
+        exercise: continuousExercise(),
+        exIdx: 0, totalExercises: 1, exercises: [continuousExercise()]
+      }));
+      expect(cycle.config).not.toBeNull();
+      expect(cycle.config.hangSec).toBe(1800);
+      expect(cycle.config.repsPerSet).toBe(1);
+      expect(cycle.config.restSec).toBe(0);
+      expect(cycle.config.setsCount).toBe(1);
+    });
+
+    it('continuous BIG_REST (sets>1) → non-final RPE-prompt (S8 наследуется)', () => {
+      const onSetFeedback = vi.fn();
+      const { container } = render(React.createElement(ER(), {
+        exercise: continuousExercise({ dose: { workSec: 900, sets: 2 }, setsCount: 2 }),
+        exIdx: 0, totalExercises: 1,
+        exercises: [continuousExercise({ dose: { workSec: 900, sets: 2 }, setsCount: 2 })],
+        onSetFeedback, onDone: vi.fn()
+      }));
+      act(() => { cycle.onStateChange(S().BIG_REST, { setIdx: 0 }); });
+      expect(container.textContent).toMatch(/Подход 1.*как прошёл/);
+    });
+
+    it('continuous onComplete → final RPE → onSetFeedback + onDone (sets=1 единственный)', () => {
+      const onSetFeedback = vi.fn();
+      const onDone = vi.fn();
+      const { container } = render(React.createElement(ER(), {
+        exercise: continuousExercise(), exIdx: 2, totalExercises: 3,
+        exercises: [continuousExercise()], onSetFeedback, onDone
+      }));
+      act(() => { cycle.onComplete(); });
+      expect(container.textContent).toMatch(/Последний подход — как прошёл/);
+      const okBtn = Array.from(container.querySelectorAll('button')).find(b => b.textContent.includes('Норм'));
+      fireEvent.click(okBtn);
+      expect(onSetFeedback).toHaveBeenCalledWith(2, 0, { rpe: 'ok', pain: false });
+      expect(onDone).toHaveBeenCalledTimes(1);
+    });
+
+    it('continuous dose.restSetsSec → проброс в restBetweenSetsSec', () => {
+      render(React.createElement(ER(), {
+        exercise: continuousExercise({
+          dose: { workSec: 900, sets: 2, restSetsSec: 240 },
+          setsCount: 2
+        }),
+        exIdx: 0, totalExercises: 1, exercises: [continuousExercise()]
+      }));
+      expect(cycle.config.restBetweenSetsSec).toBe(240);
+    });
+  });
+
   describe('persistence: handleStateChange (бонус #9)', () => {
     it('persistence.save вызывается на не-final state переходе', () => {
       const save = vi.fn();

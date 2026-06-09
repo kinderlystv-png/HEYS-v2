@@ -274,16 +274,16 @@ describe('sessionBuilder через engine_router (flag=on)', () => {
 describe('sessionBuilder: B1.5 cut — RENDERABLE_DOSESHAPES (ревью #3 ограничение 2)', () => {
   beforeAll(setupOnce);
 
-  it('RENDERABLE_DOSESHAPES = {hang, reps} (Шаг 5 расширит)', () => {
-    expect(SB().RENDERABLE_DOSESHAPES).toEqual({ hang: true, reps: true });
+  it('RENDERABLE_DOSESHAPES = {hang, reps, continuous} (Шаг 5: continuous добавлен)', () => {
+    expect(SB().RENDERABLE_DOSESHAPES).toEqual({ hang: true, reps: true, continuous: true });
   });
 
-  it('каждый выбранный exercise имеет doseShape ∈ {hang, reps}', () => {
+  it('каждый выбранный exercise имеет doseShape ∈ {hang, reps, continuous}', () => {
     ['max', 'moderate', 'recovery'].forEach((readiness) => {
       const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness });
       if (s !== null) {
         s.exercises.forEach((e) => {
-          expect(['hang', 'reps']).toContain(e.doseShape);
+          expect(['hang', 'reps', 'continuous']).toContain(e.doseShape);
         });
       }
     });

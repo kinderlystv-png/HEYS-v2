@@ -3095,18 +3095,89 @@
     );
   }
 
+  // ─── ContinuousRunner (Шаг 5 / non-hang doseShape: continuous) ───────────────
+  // ARC, mileage, technique drills — один длинный workSec-таймер на сет.
+  // Reuses useCountdownCycle:
+  //   hangSec = exercise.dose.workSec (реальная длительность)
+  //   repsPerSet = 1, restSec = 0 (нет внутреннего цикла reps/rest)
+  //   setsCount = exercise.dose.sets || 1
+  //   restBetweenSetsSec = exercise.dose.restSetsSec || 0
+  // S8 RPE/pain capture наследуется через shell.handleStateChangeRpe
+  // (state=HANG здесь семантически = «РАБОТА», но дрейф наружу не нужен —
+  // shell слушает CYCLE state, а не label'ы display).
+  function ContinuousRunner(props) {
+    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const cycleRef = React.useRef(null);
+    const shell = useExerciseShell(Object.assign({}, props, { cycleRef: cycleRef }));
+
+    const dose = exercise.dose || {};
+    const workSec = Number(dose.workSec) || 0;
+    const setsCount = Number(dose.sets) || 1;
+    const restBetweenSetsSec = Number(dose.restSetsSec) || 0;
+
+    const cycle = Fingers.useCountdownCycle({
+      hangSec: workSec,
+      restSec: 0,
+      repsPerSet: 1,
+      setsCount: setsCount,
+      restBetweenSetsSec: restBetweenSetsSec,
+      onComplete: shell.handleCycleComplete,
+      onStateChange: shell.handleStateChangeRpe
+    });
+    cycleRef.current = cycle;
+
+    const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
+    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const durationMin = workSec >= 60 ? Math.round(workSec / 60) + ' мин' : workSec + ' с';
+
+    if (Fingers.ContinuousDisplay) {
+      return h(React.Fragment, null,
+        h(Fingers.ContinuousDisplay, {
+          state: cycle.state,
+          secondsLeft: cycle.secondsLeft,
+          setIdx: cycle.setIdx,
+          totalSets: setsCount,
+          workSec: workSec,
+          durationMinLabel: durationMin,
+          gripLabel: gripLabel,
+          gripId: exercise.gripId,
+          equipmentTier: exercise.equipmentTier,
+          exerciseProgress: 'Упр ' + (exIdx + 1) + '/' + totalExercises,
+          onPause: shell.togglePauseResume,
+          onResume: cycle.resume,
+          onAbort: shell.requestAbort,
+          onSkip: cycle.skipPhase
+        }),
+        shell.rpeOverlay
+      );
+    }
+
+    return h(React.Fragment, null,
+      h('div', { style: { padding: 32, textAlign: 'center' } },
+        h('div', { style: { fontSize: 18, marginBottom: 16 } }, gripLabel || 'Continuous exercise'),
+        h('div', { style: { fontSize: 14, opacity: 0.6, marginBottom: 24 } },
+          'Состояние: ' + cycle.state + ' · ' + cycle.secondsLeft + 'с осталось'),
+        h('button', {
+          className: 'fingers-fs-ghost',
+          onClick: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); }
+        }, '✕ Прервать')
+      ),
+      shell.rpeOverlay
+    );
+  }
+
   // ─── ExerciseRunner (Step 4 dispatcher) ──────────────────────────────────────
-  // Рендерит HangRunner или RepsRunner по exercise.doseShape. ОБА runner'а
-  // безусловно вызывают свой хук (Rules of Hooks: hook count ≠ зависит от
-  // condition в SAME component; здесь component'ы РАЗНЫЕ). Только ОДИН runner
-  // монтируется → activeTimerLock/wakeLock не конфликтуют.
+  // Рендерит HangRunner / RepsRunner / ContinuousRunner по exercise.doseShape.
+  // ВСЕ runner'ы безусловно вызывают свой хук (Rules of Hooks: hook count ≠
+  // зависит от condition в SAME component; здесь component'ы РАЗНЫЕ). Только
+  // ОДИН runner монтируется → activeTimerLock/wakeLock не конфликтуют.
   // Default (без doseShape, legacy mixEngine output) → HangRunner = поведение
   // бит-в-бит как до Step 4.
   function ExerciseRunner(props) {
-    const isReps = props && props.exercise && props.exercise.doseShape === 'reps';
-    return isReps
-      ? h(RepsRunner, props)
-      : h(HangRunner, props);
+    const shape = props && props.exercise && props.exercise.doseShape;
+    if (shape === 'reps') return h(RepsRunner, props);
+    if (shape === 'continuous') return h(ContinuousRunner, props);
+    return h(HangRunner, props);
   }
 
   function LiveSession({ exercises, dateKey, trainingIndex, programId, initialSnapshot, onAllDone, onAbort, onSetFeedback }) {

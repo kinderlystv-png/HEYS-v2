@@ -1028,8 +1028,170 @@
     );
   }
 
+  // ─── Component: ContinuousDisplay (Шаг 5 / non-hang doseShape: continuous) ───
+  //
+  // View для continuous-сессии (ARC, mileage, technique drills): один большой
+  // workSec-таймер на сет. Reuses useCountdownCycle (hangSec=workSec, repsPerSet=1,
+  // setsCount=sets). Differences vs CountdownDisplay:
+  //   - HANG-phase label → 'РАБОТА' (semantically «непрерывная работа», не вис).
+  //   - Без rep-counter — только 'Подход N/M' (или ничего, если sets=1).
+  //   - phaseMaxSec для HANG = workSec (long progress ring без clamp на 7с).
+  //   - Optional `durationMinLabel` chip (например «30 мин» для ARC) — replaces
+  //     edge/addedWeight chips для continuous-атомов (у них нет veca/edge).
+  function ContinuousDisplay(props) {
+    const React = global.React;
+    if (!React) return null;
+    const h = React.createElement;
+
+    const {
+      state, secondsLeft, setIdx, totalSets,
+      workSec, durationMinLabel, gripLabel, gripId, equipmentTier,
+      onPause, onAbort, onSkip,
+    } = props || {};
+
+    const tieredGripSrc = gripId
+      ? (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none'
+          ? '/exercises/' + gripId + '_' + equipmentTier + '.webp'
+          : '/exercises/' + gripId + '.webp')
+      : null;
+    const baseGripSrc = gripId ? '/exercises/' + gripId + '.webp' : null;
+
+    const phaseKey = state === STATES.HANG ? 'work'
+      : state === STATES.BIG_REST ? 'big-rest'
+      : state === STATES.SET_PREP ? 'prep'
+      : state === STATES.PAUSED ? 'paused'
+      : state === STATES.DONE ? 'done'
+      : state === STATES.ABORTED ? 'aborted'
+      : 'idle';
+
+    const phaseLabel = state === STATES.HANG ? 'РАБОТА'
+      : state === STATES.BIG_REST ? 'Большой отдых'
+      : state === STATES.SET_PREP ? 'Готовься'
+      : state === STATES.PAUSED ? 'Пауза'
+      : state === STATES.DONE ? 'Готово!'
+      : state === STATES.ABORTED ? 'Прервано'
+      : state === STATES.IDLE ? 'Готов к старту' : state;
+
+    const ringRadius = 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const workClamp = Math.max(Number(workSec) || 0, 60);
+    const phaseMaxSec = state === STATES.HANG ? workClamp
+      : state === STATES.BIG_REST ? Math.max(secondsLeft, 180)
+      : state === STATES.SET_PREP ? 5
+      : 60;
+    const ratio = Math.max(0, Math.min(1, secondsLeft / phaseMaxSec));
+    const dashoffset = ringCircum * (1 - ratio);
+
+    const isCountingActive = state === STATES.HANG || state === STATES.BIG_REST
+      || state === STATES.SET_PREP;
+    const isFinalCount = isCountingActive && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
+    const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
+
+    // For long workSec (>=60s) — показываем mm:ss, иначе s.
+    // Решение по СЫРОМУ workSec, не по workClamp (иначе short atom 30s
+    // получит '0:30' вместо '30').
+    const rawWorkSec = Number(workSec) || 0;
+    const digitLabel = (function () {
+      const sec = Math.max(0, secondsLeft | 0);
+      if (state === STATES.HANG && rawWorkSec >= 60) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return m + ':' + (s < 10 ? '0' + s : String(s));
+      }
+      return String(sec);
+    })();
+
+    return h('div', {
+      className: 'heys-fingers-countdown heys-fingers-continuous',
+      'data-phase': phaseKey
+    },
+      h('div', { className: 'heys-fingers-countdown__counter' },
+        totalSets && totalSets > 1 ? ('Подход ' + ((setIdx || 0) + 1) + '/' + totalSets) : ''
+      ),
+
+      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
+
+      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
+        h('img', {
+          src: tieredGripSrc,
+          alt: gripLabel || gripId,
+          loading: 'eager',
+          decoding: 'async',
+          'data-fallback-tried': tieredGripSrc === baseGripSrc ? 'true' : 'false',
+          onError: function (e) {
+            try {
+              const el = e.target;
+              if (el.getAttribute('data-fallback-tried') !== 'true' && baseGripSrc && baseGripSrc !== tieredGripSrc) {
+                el.setAttribute('data-fallback-tried', 'true');
+                el.src = baseGripSrc;
+                return;
+              }
+              el.parentNode.style.display = 'none';
+            } catch (_) {}
+          }
+        })
+      ) : null,
+
+      durationMinLabel ? h('div', { className: 'heys-fingers-countdown__chips' },
+        h('div', { className: 'heys-fingers-countdown__chip' },
+          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Длительность'),
+          h('span', { className: 'heys-fingers-countdown__chip-value' }, durationMinLabel)
+        )
+      ) : null,
+
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
+
+      h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+        h('svg', {
+          className: 'heys-fingers-countdown__ring',
+          width: 200, height: 200, viewBox: '0 0 200 200'
+        },
+          h('circle', {
+            className: 'heys-fingers-countdown__ring-track',
+            cx: 100, cy: 100, r: ringRadius, fill: 'none'
+          }),
+          h('circle', {
+            className: 'heys-fingers-countdown__ring-fill',
+            cx: 100, cy: 100, r: ringRadius, fill: 'none',
+            strokeDasharray: ringCircum,
+            strokeDashoffset: dashoffset,
+            transform: 'rotate(-90 100 100)'
+          })
+        ),
+        h('div', {
+          className: 'heys-fingers-countdown__digit'
+            + (isFinalCount ? ' is-final-count' : '')
+        }, digitLabel)
+      ),
+
+      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
+        Fingers.VoiceMiniControls
+          ? h(Fingers.VoiceMiniControls, null)
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onPause
+        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
+        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn',
+          onClick: onSkip,
+          'aria-label': 'Пропустить фазу',
+          title: 'Пропустить фазу'
+        }, '→') : null,
+        h('button', {
+          type: 'button',
+          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
+          onClick: onAbort
+        }, 'Прервать')
+      ) : null
+    );
+  }
+
   Fingers.useCountdownCycle = useCountdownCycle;
   Fingers.useRepsCycle = useRepsCycle;
   Fingers.CountdownDisplay = CountdownDisplay;
   Fingers.RepsCounterDisplay = RepsCounterDisplay;
+  Fingers.ContinuousDisplay = ContinuousDisplay;
 })(typeof window !== 'undefined' ? window : globalThis);
