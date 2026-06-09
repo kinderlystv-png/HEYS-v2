@@ -303,6 +303,37 @@
     };
   }
 
+  // ─── B3: подсказки прогрессии (ADVISORY, без влияния на генерацию) ─────────
+  // Собирает hints per-quality из переданных opts.recordsByQuality + opts.currentAxes.
+  // Hints формируются ТОЛЬКО для качеств, которые есть в текущей сессии (по
+  // атомам). Без переданных series → null (не блокирует ничего).
+  function _computeProgressionHints(o, exercises) {
+    if (!Fingers.progression || !o || !o.recordsByQuality) return null;
+    const qualities = Object.create(null);
+    for (let i = 0; i < exercises.length; i++) {
+      const ex = exercises[i];
+      let q = null;
+      if (Fingers.blockCatalog && typeof Fingers.blockCatalog.getAtom === 'function' && ex.atomId) {
+        const atom = Fingers.blockCatalog.getAtom(ex.atomId);
+        if (atom && atom.quality) q = atom.quality;
+      }
+      if (q) qualities[q] = true;
+    }
+    const hints = {};
+    Object.keys(qualities).forEach(function (q) {
+      const series = o.recordsByQuality[q];
+      if (!Array.isArray(series)) return;
+      hints[q] = Fingers.progression.suggestProgression({
+        quality: q,
+        currentAxis: (o.currentAxes && o.currentAxes[q]) || null,
+        series: series,
+        windowSessions: o.progressionWindow,
+        improvementThreshold: o.progressionThreshold
+      });
+    });
+    return Object.keys(hints).length > 0 ? hints : null;
+  }
+
   // ─── Главная функция ──────────────────────────────────────────────────────────
   function recommendDay(opts) {
     const o = opts || {};
@@ -460,6 +491,11 @@
       (e.sourceIds || []).forEach(function (sid) { allSourceIds[sid] = true; });
     });
 
+    // Прогрессия / детектор плато (B3, ADVISORY ТОЛЬКО). Если caller передал
+    // opts.recordsByQuality + opts.currentAxes — добавляем hints per-quality.
+    // Не меняет генерацию сессии: каркас движка остаётся flag-gated.
+    const progressionHints = _computeProgressionHints(o, exercises);
+
     // Полный контракт mixEngine (ревью 4.2 находка #2). 16 полей, UI-совместимо.
     return {
       id: 'session_builder_' + bucket + '_' + exercises.length,
@@ -482,6 +518,7 @@
       warmupType: requiresWarmup ? 'ramp' : 'quick',
       __bucket: bucket,
       __safetyTrace: safetyTrace,
+      __progressionHints: progressionHints,
       __trace: {
         version: 1,
         inputs: {
