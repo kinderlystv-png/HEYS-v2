@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.09.9802684f",
+      "buildHash": "9802684f",
+      "date": "2026-06-09",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Шаг 5 — UI на continuous doseShape (ARC/mileage/technique drills)",
+      "items": [
+        {
+          "type": "feat",
+          "title": "Шаг 5 — UI на continuous doseShape (ARC/mileage/technique drills)",
+          "description": "Шаг 5 — UI на continuous doseShape (ARC/mileage/technique drills)"
+        }
+      ],
+      "coveredCommits": ["9802684f"]
+    },
+    {
       "version": "2026.06.09.d0cc6e6d",
       "buildHash": "d0cc6e6d",
       "date": "2026-06-09",
@@ -142,22 +158,6 @@
         }
       ],
       "coveredCommits": ["7add4450", "a69132c8", "fc6f1b61"]
-    },
-    {
-      "version": "2026.06.08.a28d8b78",
-      "buildHash": "a28d8b78",
-      "date": "2026-06-08",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления ошибок и улучшение стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки и улучшили стабильность",
-          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
-        }
-      ],
-      "coveredCommits": ["fc6f1b61"]
     }
   ]
 }
