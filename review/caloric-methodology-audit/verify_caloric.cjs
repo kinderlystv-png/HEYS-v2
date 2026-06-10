@@ -3,7 +3,7 @@
 // alternate code paths verbatim from verified source lines.
 const fs = require('fs');
 const path = require('path');
-const WEB = '/sessions/zen-nice-goldberg/mnt/HEYS-v2/apps/web';
+const WEB = path.join(__dirname, '..', '..', 'apps', 'web');
 
 // --- Load real canonical modules into Node global (their IIFE targets `global` when window is undefined) ---
 function load(f) { eval(fs.readFileSync(path.join(WEB, f), 'utf8')); }
