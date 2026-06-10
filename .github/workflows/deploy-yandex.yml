@@ -118,7 +118,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 1
+          # The unit suite includes prepare-release range tests against older
+          # commits, so this job still needs full history.
+          fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
