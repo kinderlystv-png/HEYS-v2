@@ -9,6 +9,9 @@
 //   HEYS.Fingers.records.updateIfPR(gripId, edgeMm, newRecord) → boolean
 //   HEYS.Fingers.records.asymmetries() → Array<{ kind, edgeMm, ratio, flag, hint }>
 //   HEYS.Fingers.records.byGrade(grade) → { mvcRatio, holdSec, description }
+//   HEYS.Fingers.records.saveAssessmentBattery(rawResults, opts?) → normalized
+//   HEYS.Fingers.records.loadAssessmentBattery() → { [testId]: result }
+//   HEYS.Fingers.records.assessLatestBattery(level) → AssessResult | null
 //
 // LS-key: `heys_<cid>_fingers_records_v1` (или global если нет cid).
 //
@@ -318,6 +321,61 @@
     return GRADE_TABLE[key] || null;
   }
 
+  function _normalizeAssessmentBattery(raw, opts) {
+    const o = opts || {};
+    const source = o.source || 'manual';
+    const testedAt = o.testedAt || new Date().toISOString();
+    if (Fingers.assessment && typeof Fingers.assessment.normalizeBatteryResults === 'function') {
+      const normalized = Fingers.assessment.normalizeBatteryResults(raw || {});
+      const out = {};
+      Object.keys(normalized).forEach((id) => {
+        const r = normalized[id];
+        out[id] = Object.assign({}, r, {
+          testedAt: r.testedAt || testedAt,
+          source: o.source || r.source || source,
+          updatedAt: Date.now(),
+        });
+      });
+      return out;
+    }
+    const out = {};
+    Object.keys(raw || {}).forEach((id) => {
+      const r = raw[id];
+      if (!r || typeof r !== 'object') return;
+      out[id] = Object.assign({}, r, {
+        id,
+        testedAt: r.testedAt || testedAt,
+        source: r.source || source,
+        updatedAt: Date.now(),
+      });
+    });
+    return out;
+  }
+
+  function saveAssessmentBattery(rawResults, opts) {
+    const normalized = _normalizeAssessmentBattery(rawResults, opts || {});
+    const ids = Object.keys(normalized);
+    if (!ids.length) return {};
+    const all = _readAll();
+    if (!all.assessmentBattery) all.assessmentBattery = {};
+    ids.forEach((id) => {
+      all.assessmentBattery[id] = normalized[id];
+    });
+    all.updatedAt = Date.now();
+    _writeAll(all);
+    return Object.assign({}, all.assessmentBattery);
+  }
+
+  function loadAssessmentBattery() {
+    const all = _readAll();
+    return Object.assign({}, all.assessmentBattery || {});
+  }
+
+  function assessLatestBattery(level) {
+    if (!Fingers.assessment || typeof Fingers.assessment.assessBattery !== 'function') return null;
+    return Fingers.assessment.assessBattery(loadAssessmentBattery(), level);
+  }
+
   Fingers.records = {
     get,
     getMVC,
@@ -326,6 +384,9 @@
     asymmetries,
     asymmetryAdvice,
     byGrade,
+    saveAssessmentBattery,
+    loadAssessmentBattery,
+    assessLatestBattery,
     GRADE_TABLE: Object.freeze(Object.assign({}, GRADE_TABLE)),
     __registered: true,
     __getKey: _getKey,

@@ -178,6 +178,16 @@ describe('useRepsCycle — characterization (Step 2 / ревью #9)', () => {
       act(() => result.current.completeSet()); // no-op
       expect(result.current.state).toBe(before);
     });
+
+    it('completeSet() через stale SET_PREP controller завершает текущий REPS_INPUT', () => {
+      const { result } = renderHook(() => useReps(defaultCfg()));
+      act(() => result.current.start());
+      const ctrl = result.current;
+      act(() => { vi.advanceTimersByTime(5100); }); // → REPS_INPUT
+      expect(result.current.state).toBe(S().REPS_INPUT);
+      act(() => ctrl.completeSet());
+      expect(result.current.state).toBe(S().BIG_REST);
+    });
   });
 
   describe('pause / resume / abort', () => {
@@ -200,6 +210,18 @@ describe('useRepsCycle — characterization (Step 2 / ревью #9)', () => {
       expect(result.current.state).toBe(S().PAUSED);
       act(() => result.current.resume());
       expect(result.current.state).toBe(S().BIG_REST);
+    });
+
+    it('pause()+resume() через stale controller ref возвращает текущую manual фазу', () => {
+      const { result } = renderHook(() => useReps(defaultCfg()));
+      act(() => result.current.start());
+      act(() => { vi.advanceTimersByTime(5100); }); // → REPS_INPUT
+      const ctrl = result.current;
+      act(() => {
+        ctrl.pause();
+        ctrl.resume();
+      });
+      expect(result.current.state).toBe(S().REPS_INPUT);
     });
 
     it('pause() из IDLE — no-op', () => {

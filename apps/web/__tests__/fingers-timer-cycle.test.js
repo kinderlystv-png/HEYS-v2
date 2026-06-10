@@ -58,6 +58,8 @@ describe('useCountdownCycle — parity pin (Step 1, ревью #9 для reps-ru
     window.localStorage.clear();
     delete globalThis.HEYS.Fingers.activeTimerLock;
     delete globalThis.HEYS.Fingers.lastTimerLockDenied;
+    delete globalThis.HEYS.AppHooks;
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
   });
 
   describe('IDLE / start()', () => {
@@ -137,6 +139,29 @@ describe('useCountdownCycle — parity pin (Step 1, ревью #9 для reps-ru
       expect(result.current.state).toBe(S().EXPIRED);
       expect(globalThis.HEYS.Fingers.activeTimerLock).toBe(false);
       expect(onSC).toHaveBeenCalledWith(S().EXPIRED, expect.objectContaining({ reason: 'timer_lock_lost' }));
+    });
+
+    it('после возврата вкладки повторно запрашивает wake-lock для активной фазы', () => {
+      const requestWakeLock = vi.fn();
+      const wakeLockApi = {
+        isWakeLockActive: false,
+        requestWakeLock,
+        releaseWakeLock: vi.fn()
+      };
+      globalThis.HEYS.AppHooks = { useWakeLock: () => wakeLockApi };
+      const { result } = renderHook(() => useCycle(defaultCfg()));
+      act(() => result.current.start());
+      act(() => { vi.advanceTimersByTime(5100); }); // → HANG
+      requestWakeLock.mockClear();
+
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+      act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+      act(() => { vi.advanceTimersByTime(6000); });
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+      act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+
+      expect(requestWakeLock).toHaveBeenCalledTimes(1);
+      delete globalThis.HEYS.AppHooks;
     });
   });
 
@@ -251,6 +276,18 @@ describe('useCountdownCycle — parity pin (Step 1, ревью #9 для reps-ru
       expect(result.current.state).toBe(S().HANG);
     });
 
+    it('pause()+resume() через stale controller ref работает без ожидания rerender', () => {
+      const { result } = renderHook(() => useCycle(defaultCfg()));
+      act(() => result.current.start());
+      act(() => { vi.advanceTimersByTime(5100); }); // → HANG
+      const ctrl = result.current;
+      act(() => {
+        ctrl.pause();
+        ctrl.resume();
+      });
+      expect(result.current.state).toBe(S().HANG);
+    });
+
     it('abort() → ABORTED, activeTimerLock=false', () => {
       const { result } = renderHook(() => useCycle(defaultCfg()));
       act(() => result.current.start());
@@ -284,6 +321,18 @@ describe('useCountdownCycle — parity pin (Step 1, ревью #9 для reps-ru
       const { result } = renderHook(() => useCycle(defaultCfg()));
       act(() => result.current.startFromSnapshot({ state: S().DONE }));
       expect(result.current.state).toBe(S().SET_PREP);
+    });
+  });
+
+  describe('fast-click stale controller refs', () => {
+    it('skipPhase через stale SET_PREP controller skips текущий HANG, не старую фазу', () => {
+      const { result } = renderHook(() => useCycle(defaultCfg()));
+      act(() => result.current.start());
+      const ctrl = result.current;
+      act(() => { vi.advanceTimersByTime(5100); }); // → HANG
+      expect(result.current.state).toBe(S().HANG);
+      act(() => ctrl.skipPhase());
+      expect(result.current.state).toBe(S().REST);
     });
   });
 

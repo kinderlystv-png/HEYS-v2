@@ -1,7 +1,7 @@
 # `apps/web/fingers/` — Climbing Fingerboard Module
 
 Под-продукт уровня отдельного приложения, интегрированный в HEYS-дневник как
-`training.type === 'fingers'`. 24 IIFE-модуля собираются в один
+`training.type === 'fingers'`. Source IIFE-модули собираются в один
 `apps/web/heys_fingers_bundle_v1.js` через
 [`scripts/bundle-fingers.cjs`](../scripts/bundle-fingers.cjs).
 

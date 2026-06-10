@@ -191,6 +191,22 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
       expect(container.textContent).toMatch(/Подход 2.*как прошёл/);
     });
 
+    it('RPE-prompt has dialog semantics and Escape closes it', () => {
+      const onSetFeedback = vi.fn();
+      const { container } = render(React.createElement(ER(), {
+        exercise: defaultExercise(), exIdx: 2, totalExercises: 5,
+        exercises: [defaultExercise()], onSetFeedback, onDone: vi.fn()
+      }));
+      act(() => { cycle.onStateChange(S().BIG_REST, { setIdx: 1 }); });
+      const dialog = container.querySelector('.fingers-fs-rpe-overlay');
+      expect(dialog.getAttribute('role')).toBe('dialog');
+      expect(dialog.getAttribute('aria-modal')).toBe('true');
+      expect(dialog.getAttribute('aria-labelledby')).toBe('fingers-fs-rpe-title-2');
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(container.querySelector('.fingers-fs-rpe-overlay')).toBeNull();
+      expect(onSetFeedback).not.toHaveBeenCalled();
+    });
+
     it('submit RPE из BIG_REST → onSetFeedback(exIdx, setIdx, {rpe, pain}) с верными индексами', () => {
       const onSetFeedback = vi.fn();
       const { container } = render(React.createElement(ER(), {

@@ -26,7 +26,7 @@ be rolled out behind telemetry, and every safety-critical path has tests.
 - [x] Create this TODO document.
 - [x] Run current focused baseline:
       `cd apps/web && pnpm exec vitest run $(printf '%s ' __tests__/fingers-*.test.js)`.
-      Latest result 2026-06-10: 27 files passed, 553 tests passed.
+      Latest result 2026-06-10: 32 files passed, 599 tests passed.
 - [x] Run methodology coverage checker:
       `node apps/web/fingers/methodology/tools/impl-coverage.mjs`. Result
       2026-06-10: 61/61 methodology units mapped, 0 orphan rows, 28/28 questions
@@ -34,7 +34,7 @@ be rolled out behind telemetry, and every safety-critical path has tests.
 - [x] Run shadow envelope:
       `node apps/web/fingers/methodology/tools/shadow-envelope.mjs --check`.
       Result 2026-06-10: 8/8 scenarios pass.
-- [ ] Run browser smoke without forbidden bundle rebuild, or request explicit
+- [x] Run browser smoke without forbidden bundle rebuild, or request explicit
       bundle/dev permission first. Target path: hang session + reps session +
       RPE/pain/abort/resume render path. Note: `pnpm dev:local`/web `predev`
       triggers `bundle-fingers.cjs`, so it is not used silently.
@@ -44,8 +44,8 @@ be rolled out behind telemetry, and every safety-critical path has tests.
 Review packet 0:
 
 - Baseline command outputs: fingers Vitest 24/24 files, 513/513 tests before
-  implementation; latest focused output: fingers Vitest 27/27 files, 553/553
-  tests after P0 + pre-flip fixes.
+  implementation; latest focused output: fingers Vitest 32/32 files, 599/599
+  tests after runtime quality and assessment UI/storage passes.
 - Methodology checks: impl-coverage 61/61, 0 orphan rows, 28/28 questions;
   shadow-envelope 8/8.
 - Current failure list: none in focused automated baseline.
@@ -53,10 +53,12 @@ Review packet 0:
   calendar/boards catalog and related fingers tests; new TODO document plus
   board/calendar tests.
 - Confirmed no bundle rebuild / commit / push.
-- Stage 0 status: partially closed. Automated baseline and methodology audit
-  intake are done; browser smoke is deferred until it can run without bundle
-  rebuild or after explicit permission; code audit intake is merged into this
-  TODO.
+- Browser smoke 2026-06-10: user-provided local browser canary-flow is green
+  after reload: `newEngine=true`, `shadowCompare=true`, `newEngineCanary=true`,
+  route telemetry `new=4`, `old=0`, `shadowCompareTotal=4`,
+  `shadowCompareErrors=0`, `fallbackRate=0`.
+- Stage 0 status: closed. Automated baseline, methodology audit intake, code
+  audit intake, and local browser canary smoke are done.
 
 ## Stage 1 - Safe rollout gates for `flags.newEngine`
 
@@ -146,7 +148,7 @@ Additional runtime telemetry status 2026-06-10:
 - [x] Add/verify tests for explicit level, missing level, and client-switch
       behavior. MVC-derived level already has existing coverage/review; do not
       reimplement it as new work.
-- [ ] Bridge saved profile/prerequisite data into the expanded assessment flow
+- [x] Bridge saved profile/prerequisite data into the expanded assessment flow
       once Stage 5 battery fields exist.
 
 Done 2026-06-10:
@@ -160,6 +162,14 @@ Done 2026-06-10:
   training history, not climbing grade, and requires confirmation before it can
   seed advanced prerequisites.
 - Bundle source order updated; generated bundle intentionally not rebuilt yet.
+- Router enrichment now uses saved profile level plus
+  `records.assessLatestBattery(level)` to attach `assessmentResult` and
+  `focusQuality` from the persisted assessment battery. Explicit
+  `assessment`/`assessmentResult`/`focusQuality` still wins, and this bridge
+  does not seed or infer `completedPrerequisites`.
+- Verification:
+  `cd apps/web && pnpm exec vitest run __tests__/fingers-engine-router.test.js __tests__/fingers-assessment.test.js __tests__/fingers-periodization.test.js`
+  -> 3 files passed, 96 tests passed.
 
 Acceptance:
 
@@ -233,15 +243,17 @@ Review packet 4:
 
 ## Stage 5 - Full assessment battery and retest cadence
 
-- [ ] Expand assessment UI for the full test battery described in methodology:
+- [x] Expand assessment UI for the full test battery described in methodology:
       finger strength, power/contact, pull, critical force, mobility.
 - [x] Expand assessment data model for the full test battery described in
       methodology: finger strength, power/contact, pull, critical force,
       mobility.
-- [ ] Store test results in the existing records/client-scoped model.
+- [x] Store test results in the existing records/client-scoped model.
 - [x] Add retest reminders tied to mesocycle boundaries once periodization
       exists; before that, add inert metadata only.
-- [ ] Replace default benchmark placeholders when vetted tables are available.
+- [x] Keep default benchmark placeholders until vetted tables are available;
+      repo audit found no replacement benchmark table to import without
+      inventing data.
 
 Done 2026-06-10:
 
@@ -250,6 +262,22 @@ Done 2026-06-10:
   existing limiter scoring without changing the old `assess()` contract.
 - `dueTests()` adds per-test retest cadence metadata (28/56 days) without UI
   spam or scheduling side effects.
+- `records.saveAssessmentBattery()`, `loadAssessmentBattery()`, and
+  `assessLatestBattery()` persist normalized partial battery results inside the
+  existing `heys_<cid>_fingers_records_v1` model; client switches stay isolated
+  through the current records key resolver, with no new localStorage scan.
+- `SettingsSheet` now renders the full `assessment.TEST_BATTERY` as editable
+  score/marker fields and saves through
+  `records.saveAssessmentBattery(..., { source: 'settings' })`.
+- Benchmark source status: still an explicit source gap. No vetted replacement
+  table is present in `apps/web/fingers/methodology`, so defaults remain
+  conservative placeholders instead of fabricated norms.
+- Verification:
+  `cd apps/web && pnpm exec vitest run __tests__/fingers-assessment.test.js __tests__/fingers-mvc-history.test.js`
+  -> 2 files passed, 40 tests passed.
+- UI verification:
+  `cd apps/web && pnpm exec vitest run __tests__/fingers-settings-assessment.test.js __tests__/fingers-assessment.test.js __tests__/fingers-happy-path.test.js`
+  -> 3 files passed, 44 tests passed.
 
 Acceptance:
 
@@ -301,17 +329,17 @@ Review packet 6:
 
 ## Stage 7 - UI architecture and runtime quality
 
-- [ ] Split or isolate `heys_fingers_session_ui_v1.js` hot paths without
+- [x] Split or isolate `heys_fingers_session_ui_v1.js` hot paths without
       changing public API.
-- [ ] Consolidate duplicated timer cycle logic from `useCountdownCycle` and
+- [x] Consolidate duplicated timer cycle logic from `useCountdownCycle` and
       `useRepsCycle` behind the existing characterized hook tests
       (`fingers-timer-cycle`, `fingers-reps-cycle`).
-- [ ] Audit intervals, legacy wake-lock paths, audio handles, and fullscreen
+- [x] Audit intervals, legacy wake-lock paths, audio handles, and fullscreen
       cleanup. New timer hooks already use `HEYS.AppHooks.useWakeLock`; do not
       count that as missing global work.
-- [ ] Add accessibility coverage for timer controls, abort confirmation, manual
+- [x] Add accessibility coverage for timer controls, abort confirmation, manual
       phase buttons, and RPE/pain prompts.
-- [ ] Add performance smoke around repeated state changes in the session UI.
+- [x] Add performance smoke around repeated state changes in the session UI.
 - [x] Review-pass Step-5 runners before flip: `continuous`, `attempts`,
       `circuit`, and `process` keep the shared RPE/pain/abort shell. Result
       2026-06-10: no runtime changes needed; added ExerciseRunner coverage
@@ -333,16 +361,31 @@ Review packet 7:
 - Verification 2026-06-10:
   `pnpm exec vitest run __tests__/fingers-exercise-runner.test.js __tests__/fingers-continuous-display.test.js __tests__/fingers-attempts-display.test.js __tests__/fingers-circuit-display.test.js __tests__/fingers-process-display.test.js`
   -> 5 files passed, 109/109 tests passed.
+- Runtime quality pass 2026-06-10:
+  - Hot paths are isolated through pure helper paths for log/session metrics
+    (`_summarizeFingersExercises`, `_buildPartialExercises`) and memoized
+    progress scans; no public API change.
+  - `useCountdownCycle` and `useRepsCycle` share `useTimerCore`; stale
+    pause/resume/skip/complete commands read refs, not old render closures.
+  - Visibility recovery now re-requests wake-lock on active phase return from
+    background; timer/reps focused suite: 2 files passed, 58/58 tests passed.
+  - RPE overlay has dialog semantics, Escape close, focus trap, and focus
+    restoration; ExerciseRunner coverage pins the behavior.
+  - Voice assets use a bounded LRU HTMLAudioElement cache with explicit
+    `stopAll()` / `clearAudioCache()`.
+  - SessionUI repeated tab/settings smoke keeps one tab content tree and no
+    leaked settings backdrops; focused runtime suite: 3 files passed, 55/55
+    tests passed.
 
 ## Stage 8 - Product gaps
 
 - [x] History view for finger sessions and per-grip progression.
 - [x] Charts for MVC, RPE, pain, tissue load, and quality balance.
 - [x] Export/debug dump for review of a generated recommendation.
-- [ ] Optional wake-lock visibility and recovery after browser release; new
+- [x] Optional wake-lock visibility and recovery after browser release; new
       timer hooks already acquire wake lock, so this is UX/legacy-path
       hardening.
-- [ ] Better offline/resume UX for active sessions.
+- [x] Better offline/resume UX for active sessions.
 - [x] Human-readable recommendation reasons / `coachReason` for generated
       sessions, so rollout review can inspect why a plan was chosen. Result
       2026-06-10: `sessionBuilder` no longer exposes internal
@@ -356,6 +399,11 @@ Done 2026-06-10:
   CSV export.
 - Added `buildFingersDebugDump()` / `exportFingersDebugJson()` and settings
   button for review/support snapshots.
+- Active-session resume UX already shows a persistent banner with progress, age,
+  continue/discard actions, and stale-session wording; storage remains
+  client-scoped.
+- Wake-lock/background UX now warns after long hidden periods and re-requests
+  wake-lock after returning to visible active phases.
 
 Acceptance:
 
@@ -366,7 +414,7 @@ Acceptance:
 
 Items below are placeholders until the two detailed audits are merged.
 
-- [ ] Methodology audit: list all remaining `TODO`, `future`, `Phase 2`, known
+- [x] Methodology audit: list all remaining `TODO`, `future`, `Phase 2`, known
       issues, and not-implemented points.
 - [x] Methodology audit: first pass merged 2026-06-10. Live backlog confirmed:
       canary/fallback observation, `periodization_engine`, full planner with
@@ -376,8 +424,16 @@ Items below are placeholders until the two detailed audits are merged.
       validators/items (FDP/FDS edge rotation, `skinStatus`, `ageModifier 35+`;
       `V_skillBalance` and `V_energySystemSequence` already exist as validator
       functions, remaining work is wiring/enforcement if needed).
-- [ ] Methodology audit follow-up: decide whether S10/danger-budget remains a
+- [x] Methodology audit follow-up: decide whether S10/danger-budget remains a
       separate validator/entity or stays inside current danger-budget checks.
+- [x] Methodology audit: final pass 2026-06-10. Remaining hits are terminology
+      or external-source gaps, not implementation blockers: sport-fork playbook
+      TODOs, future sport modules, `Phase 2a/2b` labels in tests/comments, and
+      benchmark replacement once vetted tables exist.
+- [x] S10 decision 2026-06-10: keep S10/danger-budget inside current
+      `mixEngine`/`engineRouter` danger-budget checks. Do not add a separate
+      validator until methodology defines independent S10 inputs beyond the
+      existing `a2ForceRatio`/bucket budget gates.
 - [x] Code audit: list real TODO/FIXME/stub/dead-code findings with file and
       function names.
 - [x] Code audit: verify persistence direction and localStorage client-scoping.
@@ -431,19 +487,46 @@ Code audit live findings 2026-06-10:
       portable block is `lattice_hang_block`; `fingers-boards-catalog.test.js`
       pins unique ids and kind separation. Legacy `blockBoardId:'lattice_block'`
       is normalized to `lattice_hang_block` in block context.
-- [ ] P1/P2: make non-hang completion, partial save, and summary use
+- [x] P1/P2: make non-hang completion, partial save, and summary use
       `doseShape`-aware duration/volume instead of legacy hang-only fields.
-- [ ] P2: partial save should store completed portion semantics, not full
+- [x] P2: partial save should store completed portion semantics, not full
       planned `exercises` as if all volume was done.
-- [ ] P2: abort progress should record completed counts, not raw cycle indices.
+- [x] P2: abort progress should record completed counts, not raw cycle indices.
 - [x] P2: document/verify active-session localStorage key behavior under storage
       interceptor; module assumes it is local-only. Result 2026-06-10: active
       snapshot writes remain raw `localStorage.setItem`, and scans are now
       current-client scoped.
-- [ ] P2: timer callbacks should prefer refs over stale closure state for
-      pause/resume/skip fast-click safety.
-- [ ] P2: add focus trap/restoration and dialog semantics for fullscreen/RPE
+- [x] P2: timer callbacks should prefer refs over stale closure state for
+      pause/resume/skip fast-click safety. Result 2026-06-10: `useTimerCore`
+      commands now read current state and seconds-left from refs; countdown/reps
+      tests cover stale controller refs for pause/resume, skipPhase, and
+      completeSet.
+- [x] P2: add focus trap/restoration and dialog semantics for fullscreen/RPE
       overlays.
-- [ ] P2: add bounded audio cache or lifecycle cleanup for voice assets.
-- [ ] P3: replace raw `programId` in partial activity labels with human labels.
-- [ ] P3: update stale comments: bundle module count and programs Phase-2 note.
+- [x] P2: add bounded audio cache or lifecycle cleanup for voice assets.
+- [x] P3: replace raw `programId` in partial activity labels with human labels.
+- [x] P3: update stale comments: bundle module count and programs Phase-2 note.
+
+Progress/logging pass 2026-06-10:
+
+- Added one dose-shape metrics path for `hang`, `reps`, `continuous`,
+  `attempts`, `circuit`, and `process`; legacy hang duration keeps the old
+  inclusive rest formula for compatibility.
+- `_buildFingersLog()` now adds `totalWorkSeconds`, `totalUnits`, `unitLabel`,
+  and `shapeCounts`; existing `totalDurationMinutes`, `exercises`,
+  `startedAt`/`endedAt`/`completedAt`, and RPE/pain fields remain.
+- Live completion summary now uses dose-aware labels instead of always "Время в
+  висе" / "висов".
+- Partial abort save writes only fully completed exercises plus the completed
+  portion of the current exercise, with `completion` metadata and
+  `partialProgress.currentExerciseCompletedUnits`; toast/activity labels use
+  human program names where the catalog can resolve them.
+- Verification:
+  `cd apps/web && pnpm exec vitest run __tests__/fingers-happy-path.test.js __tests__/fingers-exercise-runner.test.js __tests__/fingers-progress-ext.test.js`
+  -> 3 files passed, 70 tests passed.
+- Full fingers gate after runtime change:
+  `cd apps/web && pnpm exec vitest run $(printf '%s ' __tests__/fingers-*.test.js)`
+  -> 32 files passed, 599 tests passed after Stage 7/8 runtime pass.
+- Stale comments cleaned after the runtime pass: bundle script and README no
+  longer hardcode obsolete module counts; `programs_catalog` no longer promises
+  a stale Phase-2 program expansion.

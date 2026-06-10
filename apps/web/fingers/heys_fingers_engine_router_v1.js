@@ -306,6 +306,22 @@
       } catch (_) { /* silent */ }
     }
 
+    if (!o.assessment && !o.assessmentResult) {
+      try {
+        const recordsStore = Fingers.records;
+        const level = o.level || (o.profile && o.profile.level) || null;
+        if (level && recordsStore && typeof recordsStore.assessLatestBattery === 'function') {
+          const assessmentResult = recordsStore.assessLatestBattery(level);
+          if (assessmentResult && !assessmentResult.error) {
+            o.assessmentResult = assessmentResult;
+            if (!o.focusQuality && assessmentResult.leadingLimiter) {
+              o.focusQuality = assessmentResult.leadingLimiter;
+            }
+          }
+        }
+      } catch (_) { /* silent */ }
+    }
+
     if (!o.plannerContext && !o.periodizationContext) {
       try {
         if (Fingers.periodization && typeof Fingers.periodization.current === 'function') {

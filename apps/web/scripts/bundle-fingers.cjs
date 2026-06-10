@@ -1,5 +1,5 @@
-// bundle-fingers.cjs — собирает 25 IIFE-модулей Fingers в один heys_fingers_bundle_v1.js
-// для сокращения 25 sequential <script> requests до 1 file load.
+// bundle-fingers.cjs — собирает IIFE-модули Fingers в один heys_fingers_bundle_v1.js
+// для сокращения множества sequential <script> requests до 1 file load.
 //
 // Запуск:
 //   node apps/web/scripts/bundle-fingers.cjs       — пересобрать bundle

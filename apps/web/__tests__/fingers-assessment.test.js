@@ -5,7 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +19,37 @@ const setupOnce = () => {
 };
 
 const A = () => globalThis.HEYS.Fingers.assessment;
+
+const createStorageMock = () => {
+  const store = {};
+  return {
+    get length() { return Object.keys(store).length; },
+    key: (i) => Object.keys(store)[i] ?? null,
+    getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  };
+};
+
+const setupRecords = () => {
+  globalThis.localStorage = createStorageMock();
+  globalThis.window.localStorage = globalThis.localStorage;
+  globalThis.HEYS.utils = {
+    lsGet: (key, dflt) => {
+      try {
+        const raw = globalThis.localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : dflt;
+      } catch (_) { return dflt; }
+    },
+    lsSet: (key, value) => {
+      globalThis.localStorage.setItem(key, JSON.stringify(value));
+    },
+  };
+  const src = fs.readFileSync(path.join(FINGERS_DIR, 'heys_fingers_records_store_v1.js'), 'utf8');
+  // eslint-disable-next-line no-eval
+  eval(src);
+};
 
 describe('BENCHMARKS — таблица §3.5 (только finger_strength имеет числа)', () => {
   beforeAll(setupOnce);
@@ -273,5 +304,55 @@ describe('assessment battery — full limiter audit data model', () => {
     expect(byId.maxHang20mmHalf.due).toBe(false);
     expect(byId.techniqueMarkers.due).toBe(true);
     expect(byId.criticalForce.due).toBe(true);
+  });
+});
+
+describe('assessment battery — records-store persistence', () => {
+  const CLIENT_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const CLIENT_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+  beforeAll(setupOnce);
+  beforeEach(() => {
+    setupRecords();
+    globalThis.HEYS.currentClientId = CLIENT_A;
+  });
+
+  it('saveAssessmentBattery stores normalized partial battery in records_v1', () => {
+    const R = globalThis.HEYS.Fingers.records;
+    const stored = R.saveAssessmentBattery({
+      maxHang20mmHalf: { score: 55, testedAt: '2026-06-01T00:00:00.000Z' },
+      techniqueMarkers: { markers: 2, maxMarkers: 5 },
+    }, { source: 'settings' });
+
+    expect(stored.maxHang20mmHalf.quality).toBe('finger_strength');
+    expect(stored.maxHang20mmHalf.score).toBe(55);
+    expect(stored.techniqueMarkers.markers).toBe(2);
+    expect(stored.techniqueMarkers.source).toBe('settings');
+    expect(R.loadAssessmentBattery().maxHang20mmHalf.score).toBe(55);
+  });
+
+  it('assessment battery stays client-scoped through the existing records key', () => {
+    const R = globalThis.HEYS.Fingers.records;
+    R.saveAssessmentBattery({ maxHang20mmHalf: { score: 55 } });
+
+    globalThis.HEYS.currentClientId = CLIENT_B;
+    expect(R.loadAssessmentBattery()).toEqual({});
+    R.saveAssessmentBattery({ maxHang20mmHalf: { score: 80 } });
+
+    globalThis.HEYS.currentClientId = CLIENT_A;
+    expect(R.loadAssessmentBattery().maxHang20mmHalf.score).toBe(55);
+    globalThis.HEYS.currentClientId = CLIENT_B;
+    expect(R.loadAssessmentBattery().maxHang20mmHalf.score).toBe(80);
+  });
+
+  it('assessLatestBattery reuses assessment.assessBattery on saved records', () => {
+    const R = globalThis.HEYS.Fingers.records;
+    R.saveAssessmentBattery({
+      maxHang20mmHalf: { score: 40 },
+      techniqueMarkers: { markers: 1, maxMarkers: 5 },
+    });
+    const result = R.assessLatestBattery('intermediate');
+    expect(result.leadingLimiter).toBe('finger_strength');
+    expect(result.battery.maxHang20mmHalf.score).toBe(40);
   });
 });

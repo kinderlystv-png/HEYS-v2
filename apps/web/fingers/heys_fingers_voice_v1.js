@@ -172,15 +172,45 @@
 
   // ===== Audio engine =====
   // Кэш HTMLAudioElement, чтобы повторное воспроизведение было быстрым.
+  const MAX_AUDIO_CACHE = 12;
   const audioCache = Object.create(null);
+  const audioCacheOrder = [];
+
+  function stopAudio(a) {
+    if (!a) return;
+    try { a.pause(); } catch (_) {}
+    try { a.currentTime = 0; } catch (_) {}
+    try { a.removeAttribute && a.removeAttribute('src'); } catch (_) {}
+    try { a.load && a.load(); } catch (_) {}
+  }
+
+  function touchAudioCache(url) {
+    const idx = audioCacheOrder.indexOf(url);
+    if (idx >= 0) audioCacheOrder.splice(idx, 1);
+    audioCacheOrder.push(url);
+  }
+
+  function evictAudioCache() {
+    while (audioCacheOrder.length > MAX_AUDIO_CACHE) {
+      const oldUrl = audioCacheOrder.shift();
+      const oldAudio = audioCache[oldUrl];
+      delete audioCache[oldUrl];
+      stopAudio(oldAudio);
+    }
+  }
 
   function ensureAudio(url) {
-    if (audioCache[url]) return audioCache[url];
+    if (audioCache[url]) {
+      touchAudioCache(url);
+      return audioCache[url];
+    }
     if (typeof Audio === 'undefined') return null;
     const a = new Audio();
     a.preload = 'auto';
     a.src = url;
     audioCache[url] = a;
+    touchAudioCache(url);
+    evictAudioCache();
     return a;
   }
 
@@ -193,20 +223,29 @@
         a.volume = Math.max(0, Math.min(1, opts.volume));
         a.playbackRate = Math.max(0.8, Math.min(1.2, opts.speed));
         a.currentTime = 0;
-        const onEnded = () => { cleanup(); resolve(true); };
-        const onError = () => { cleanup(); resolve(false); };
+        let settled = false;
+        const finish = (ok) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve(ok);
+        };
+        const onEnded = () => { finish(true); };
+        const onError = () => { finish(false); };
+        const onAbort = () => { try { a.pause(); } catch (_) {} finish(false); };
         function cleanup() {
           a.removeEventListener('ended', onEnded);
           a.removeEventListener('error', onError);
+          if (opts.signal) opts.signal.removeEventListener('abort', onAbort);
         }
         a.addEventListener('ended', onEnded, { once: true });
         a.addEventListener('error', onError, { once: true });
         if (opts.signal) {
-          opts.signal.addEventListener('abort', () => { try { a.pause(); } catch (_) {} cleanup(); resolve(false); }, { once: true });
+          opts.signal.addEventListener('abort', onAbort, { once: true });
         }
         const playPromise = a.play();
         if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch(() => { cleanup(); resolve(false); });
+          playPromise.catch(() => { finish(false); });
         }
       } catch (_) {
         resolve(false);
@@ -287,6 +326,23 @@
     if (typeof Audio !== 'undefined') return 'mp3';
     if (typeof speechSynthesis !== 'undefined') return 'tts';
     return 'none';
+  };
+
+  voice.stopAll = function stopAll() {
+    Object.keys(audioCache).forEach(function (url) { stopAudio(audioCache[url]); });
+    try {
+      if (typeof speechSynthesis !== 'undefined' && speechSynthesis.cancel) speechSynthesis.cancel();
+    } catch (_) {}
+  };
+
+  voice.clearAudioCache = function clearAudioCache() {
+    voice.stopAll();
+    Object.keys(audioCache).forEach(function (url) { delete audioCache[url]; });
+    audioCacheOrder.splice(0, audioCacheOrder.length);
+  };
+
+  voice.getAudioCacheSize = function getAudioCacheSize() {
+    return audioCacheOrder.length;
   };
 
   // ===== VoiceMiniControls (React) =====

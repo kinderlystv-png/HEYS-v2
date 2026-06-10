@@ -1,4 +1,4 @@
-// heys_fingers_programs_catalog_v1.js — Каталог 7 пресетных программ (Phase 1).
+// heys_fingers_programs_catalog_v1.js — каталог пресетных finger-training программ.
 // Wave 2-A: статичные конфиги + хелпер buildLogFromProgram() для конструктора.
 // 2026-05-31 redesign: уникальные методически-корректные наборы хватов по первоисточникам
 // (Beastmaker 1000, Hörst Max Hangs, López MaxHangs MAW, Hörst 7:3 Repeaters,
@@ -19,9 +19,6 @@
 //   { gripId, edgeSizeMm, addedWeightKg, hangSec, restSec,
 //     repsPerSet, setsCount, restBetweenSetsSec }
 //
-// Phase 2 добавит ещё 4 программы — функция _PHASE_KEY используется loader chain'ом
-// для постепенного раскрытия (sequence #4 в bundle loader).
-
 ;(function (global) {
   'use strict';
 

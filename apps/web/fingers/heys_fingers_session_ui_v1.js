@@ -78,22 +78,22 @@
         if (!lastSessionKey) lastSessionKey = key;
         const log = tr.fingersLog || {};
         if (log.programId === currentLog.programId) prevOfProgram++;
-        // Volume PR: общее время виса предыдущих сессий
-        let hangSec = 0;
-        if (Array.isArray(log.exercises)) {
+        // Volume PR: рабочее время предыдущих сессий, legacy fallback — время виса.
+        let workSec = Number(log.totalWorkSeconds) || 0;
+        if (!workSec && Array.isArray(log.exercises)) {
           for (let e = 0; e < log.exercises.length; e++) {
             const ex = log.exercises[e];
-            hangSec += (Number(ex.hangSec) || 0)
+            workSec += (Number(ex.hangSec) || 0)
               * (Number(ex.repsPerSet) || 0)
               * (Number(ex.setsCount) || 0);
           }
         }
-        if (hangSec > prevBestHangSec) prevBestHangSec = hangSec;
+        if (workSec > prevBestHangSec) prevBestHangSec = workSec;
       }
     }
-    // Compute current session totalHangSec
-    let curHangSec = 0;
-    if (Array.isArray(currentLog.exercises)) {
+    // Current session work seconds, legacy fallback — hang TUT.
+    let curHangSec = Number(currentLog.totalWorkSeconds) || 0;
+    if (!curHangSec && Array.isArray(currentLog.exercises)) {
       for (let e = 0; e < currentLog.exercises.length; e++) {
         const ex = currentLog.exercises[e];
         curHangSec += (Number(ex.hangSec) || 0)
@@ -342,6 +342,15 @@
     return intensity === 'max' ? '#dc2626'
       : intensity === 'moderate' ? '#f59e0b'
       : intensity === 'recovery' ? '#10b981' : '#6b7280';
+  }
+
+  function _programLabel(programId) {
+    if (!programId || programId === 'custom') return 'Свой конструктор';
+    try {
+      const p = Fingers.getProgramById && Fingers.getProgramById(programId);
+      if (p && p.name) return p.name;
+    } catch (_) { /* fallback below */ }
+    return String(programId);
   }
 
   // Pre-flight checklist — Wave 6 polish: пункты загораются зелёным
@@ -693,6 +702,181 @@
     return eligible[0];
   }
 
+  function _num(x, fallback) {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : (fallback == null ? 0 : fallback);
+  }
+
+  function _rangeAvg(x, fallback) {
+    if (Array.isArray(x)) return (_num(x[0], fallback) + _num(x[1], fallback)) / 2;
+    return _num(x, fallback);
+  }
+
+  function _pluralRu(n, one, few, many) {
+    const v = Math.abs(Number(n) || 0) % 100;
+    const d = v % 10;
+    if (v > 10 && v < 20) return many;
+    if (d === 1) return one;
+    if (d >= 2 && d <= 4) return few;
+    return many;
+  }
+
+  function _doseShapeOf(ex) {
+    return (ex && ex.doseShape) || 'hang';
+  }
+
+  function _plannedExerciseMetrics(ex) {
+    const shape = _doseShapeOf(ex);
+    const dose = (ex && ex.dose) || {};
+    if (shape === 'continuous') {
+      const sets = Math.max(1, _num(dose.sets, 1));
+      const workSec = _num(dose.workSec, 0) * sets;
+      const restSec = _num(dose.restSetsSec, 0) * Math.max(0, sets - 1);
+      return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: sets, unitKind: 'sets' };
+    }
+    if (shape === 'attempts') {
+      const attempts = Math.max(1, _rangeAvg(dose.attempts, 1));
+      const moves = _rangeAvg(dose.movesPerAttempt, 1);
+      const workSec = moves * 2.5 * attempts;
+      const restSec = _num(dose.restSetsSec, 0) * Math.max(0, attempts - 1);
+      return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: attempts, unitKind: 'attempts' };
+    }
+    if (shape === 'circuit') {
+      const rounds = Math.max(1, _num(dose.rounds, 1));
+      const problems = Math.max(1, _num(dose.problemsPerRound, 1));
+      const workSec = problems * rounds * 25;
+      const restSec = _num(dose.restRoundsSec, 0) * Math.max(0, rounds - 1);
+      return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: rounds, unitKind: 'rounds' };
+    }
+    if (shape === 'reps') {
+      const sets = Math.max(1, _num(dose.sets, ex && ex.setsCount != null ? ex.setsCount : 1));
+      const reps = _rangeAvg(dose.reps !== undefined ? dose.reps : (ex && ex.repsPerSet), 1);
+      const workSec = reps * 3 * sets;
+      const restSec = _num(dose.restSetsSec, ex && ex.restBetweenSetsSec != null ? ex.restBetweenSetsSec : 0) * Math.max(0, sets - 1);
+      return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: reps * sets, unitKind: 'reps' };
+    }
+    if (shape === 'process') {
+      const checklist = Array.isArray(dose.checklist) ? dose.checklist : [];
+      return { shape: shape, durationSec: 0, workSec: 0, units: Math.max(1, checklist.length || 1), unitKind: 'items' };
+    }
+
+    const workSec = _num(dose.workSec, ex && ex.hangSec != null ? ex.hangSec : 0);
+    const restSec = _num(dose.restSec, ex && ex.restSec != null ? ex.restSec : 0);
+    const reps = _num(dose.reps, ex && ex.repsPerSet != null ? ex.repsPerSet : 1);
+    const sets = _num(dose.sets, ex && ex.setsCount != null ? ex.setsCount : 1);
+    const restSetsSec = _num(dose.restSetsSec, ex && ex.restBetweenSetsSec != null ? ex.restBetweenSetsSec : 0);
+    // Legacy hang contract: keep the old inclusive per-set rest formula.
+    const oneSet = (workSec + restSec) * reps + restSetsSec;
+    return { shape: 'hang', durationSec: oneSet * sets, workSec: workSec * reps * sets, units: reps * sets, unitKind: 'hangs' };
+  }
+
+  function _applyCompletionToMetrics(metrics, ex) {
+    const c = ex && ex.completion;
+    if (!c || !metrics || !metrics.units) return metrics;
+    const done = Math.max(0, Math.min(metrics.units, _num(c.completedUnits, 0)));
+    const ratio = Math.max(0, Math.min(1, done / metrics.units));
+    return Object.assign({}, metrics, {
+      durationSec: metrics.durationSec * ratio,
+      workSec: metrics.workSec * ratio,
+      units: done,
+      plannedUnits: metrics.units,
+      partial: ratio < 1
+    });
+  }
+
+  function _exerciseMetrics(ex) {
+    return _applyCompletionToMetrics(_plannedExerciseMetrics(ex), ex);
+  }
+
+  function _unitLabel(kind, count) {
+    if (kind === 'hangs') return _pluralRu(count, 'вис', 'виса', 'висов');
+    if (kind === 'attempts') return _pluralRu(count, 'попытка', 'попытки', 'попыток');
+    if (kind === 'rounds') return _pluralRu(count, 'раунд', 'раунда', 'раундов');
+    if (kind === 'reps') return _pluralRu(count, 'повтор', 'повтора', 'повторов');
+    if (kind === 'sets') return _pluralRu(count, 'подход', 'подхода', 'подходов');
+    if (kind === 'items') return _pluralRu(count, 'пункт', 'пункта', 'пунктов');
+    return _pluralRu(count, 'единица', 'единицы', 'единиц');
+  }
+
+  function _summarizeFingersExercises(exercises) {
+    const out = {
+      durationSec: 0,
+      workSec: 0,
+      units: 0,
+      unitKind: null,
+      shapeCounts: {},
+      mixedUnits: false
+    };
+    (Array.isArray(exercises) ? exercises : []).forEach(function (ex) {
+      const m = _exerciseMetrics(ex);
+      out.durationSec += m.durationSec || 0;
+      out.workSec += m.workSec || 0;
+      out.units += m.units || 0;
+      out.shapeCounts[m.shape] = (out.shapeCounts[m.shape] || 0) + 1;
+      if (!out.unitKind) out.unitKind = m.unitKind;
+      else if (out.unitKind !== m.unitKind) out.mixedUnits = true;
+    });
+    out.totalDurationMinutes = Math.round(out.durationSec / 60);
+    out.totalWorkSeconds = Math.round(out.workSec);
+    out.totalUnits = Math.round(out.units);
+    out.workLabel = out.shapeCounts.hang && Object.keys(out.shapeCounts).length === 1
+      ? 'Время в висе' : 'Рабочее время';
+    out.unitLabel = out.mixedUnits ? 'единиц' : _unitLabel(out.unitKind, out.totalUnits);
+    return out;
+  }
+
+  function _completedProgressForCycle(exercise, cycle) {
+    const STATES = Fingers.STATES || {};
+    const metrics = _plannedExerciseMetrics(exercise);
+    const shape = metrics.shape;
+    const state = cycle && cycle.state;
+    const setIdx = Math.max(0, _num(cycle && cycle.setIdx, 0));
+    const repIdx = Math.max(0, _num(cycle && cycle.repIdx, 0));
+    let completedSets = 0;
+    let completedRepsInCurrentSet = 0;
+    let completedUnits = 0;
+
+    if (shape === 'hang') {
+      const repsPerSet = Math.max(1, _num((exercise && exercise.dose && exercise.dose.reps), exercise && exercise.repsPerSet != null ? exercise.repsPerSet : 1));
+      if (state === STATES.BIG_REST) {
+        completedSets = setIdx + 1;
+      } else if (state === STATES.REST) {
+        completedSets = setIdx;
+        completedRepsInCurrentSet = repIdx + 1;
+      } else {
+        completedSets = setIdx;
+        completedRepsInCurrentSet = repIdx;
+      }
+      completedUnits = completedSets * repsPerSet + completedRepsInCurrentSet;
+    } else {
+      completedSets = state === STATES.BIG_REST ? setIdx + 1 : setIdx;
+      completedUnits = completedSets;
+    }
+
+    completedUnits = Math.max(0, Math.min(metrics.units, completedUnits));
+    return {
+      completedSets: Math.max(0, completedSets),
+      completedRepsInCurrentSet: Math.max(0, completedRepsInCurrentSet),
+      completedUnits: completedUnits,
+      plannedUnits: metrics.units,
+      unitKind: metrics.unitKind,
+      unitLabel: _unitLabel(metrics.unitKind, completedUnits)
+    };
+  }
+
+  function _buildPartialExercises(exercises, activeExIdx, cycle) {
+    const list = Array.isArray(exercises) ? exercises : [];
+    const idx = Math.max(0, Math.min(list.length, _num(activeExIdx, 0)));
+    const out = list.slice(0, idx);
+    if (idx < list.length) {
+      const progress = _completedProgressForCycle(list[idx], cycle || {});
+      if (progress.completedUnits > 0) {
+        out.push(Object.assign({}, list[idx], { partial: true, completion: progress }));
+      }
+    }
+    return out;
+  }
+
   // B1: мержит per-set feedback (RPE/боль) в КОПИЮ exercises для fingersLog.
   // feedbackByExIdx: { [exIdx]: [{ rpe:'easy'|'ok'|'hard'|null, pain:bool }, ...] }.
   // Additive-инвариант: пусто/нет → возвращаем исходный массив без изменений
@@ -732,10 +916,7 @@
   function _buildFingersLog(exercises, opts) {
     const o = opts || {};
     const list = Array.isArray(exercises) ? exercises : [];
-    const totalMin = list.reduce(function (s, e) {
-      const oneSet = (e.hangSec + e.restSec) * e.repsPerSet + e.restBetweenSetsSec;
-      return s + (oneSet * e.setsCount) / 60;
-    }, 0);
+    const summary = _summarizeFingersExercises(list);
     const loggedExercises = _mergeSetFeedback(list, o.feedback);
     const hadPain = loggedExercises.some(function (e) {
       return Array.isArray(e.setFeedback) && e.setFeedback.some(function (f) { return f && f.pain; });
@@ -745,9 +926,13 @@
     const fingersLog = {
       version: 1,
       programId: o.programId || 'custom',
-      totalDurationMinutes: Math.round(totalMin),
+      totalDurationMinutes: summary.totalDurationMinutes,
+      totalWorkSeconds: summary.totalWorkSeconds,
+      totalUnits: summary.totalUnits,
+      unitLabel: summary.unitLabel,
+      shapeCounts: summary.shapeCounts,
       exercises: loggedExercises,
-      startedAt: o.startedAtIso || _estimateStartedAtIso(endedAt, totalMin),
+      startedAt: o.startedAtIso || _estimateStartedAtIso(endedAt, summary.totalDurationMinutes),
       endedAt: endedAt,
       completedAt: completedAt,
       viaTimer: !!o.viaTimer
@@ -2882,6 +3067,49 @@
       setRpePain(false);
     }, [onDone]);
 
+    useEffect(function () {
+      if (!rpePrompt || typeof document === 'undefined') return undefined;
+      const previousFocus = document.activeElement;
+      const selector = '.fingers-fs-rpe-overlay button, .fingers-fs-rpe-overlay input';
+      const focusFirst = function () {
+        const first = document.querySelector(selector);
+        if (first && typeof first.focus === 'function') first.focus();
+      };
+      const usesRaf = (typeof requestAnimationFrame === 'function');
+      const focusTask = usesRaf
+        ? requestAnimationFrame(focusFirst)
+        : setTimeout(focusFirst, 0);
+      const onKeyDown = function (e) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          skipRpe();
+          return;
+        }
+        if (e.key !== 'Tab') return;
+        const items = Array.from(document.querySelectorAll(selector))
+          .filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      };
+      document.addEventListener('keydown', onKeyDown);
+      return function () {
+        if (usesRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(focusTask);
+        else clearTimeout(focusTask);
+        document.removeEventListener('keydown', onKeyDown);
+        if (previousFocus && typeof previousFocus.focus === 'function') {
+          try { previousFocus.focus(); } catch (_) {}
+        }
+      };
+    }, [rpePrompt, skipRpe]);
+
     // Auto-start session на mount через cycleRef (late-binding cycle).
     useEffect(function () {
       let cancelled = false;
@@ -2916,6 +3144,7 @@
     // сессию через submit/skip. Non-final — поверх отдыха, не блокирует таймер.
     const rpeOverlay = rpePrompt ? (function () {
       const setNo = (Number(rpePrompt.setIdx) || 0) + 1;
+      const titleId = 'fingers-fs-rpe-title-' + exIdx;
       const title = rpePrompt.isFinal
         ? 'Последний подход — как прошёл?'
         : ('Подход ' + setNo + ' — как прошёл?');
@@ -2939,6 +3168,9 @@
       };
       return h('div', {
         className: 'fingers-fs-rpe-overlay',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-labelledby': titleId,
         style: {
           position: 'fixed', inset: 0, zIndex: 40,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2954,7 +3186,7 @@
             color: '#fff'
           }
         },
-          h('h3', { style: { margin: '0 0 14px', fontSize: 17, textAlign: 'center', color: '#fff' } }, title),
+          h('h3', { id: titleId, style: { margin: '0 0 14px', fontSize: 17, textAlign: 'center', color: '#fff' } }, title),
           h('div', { style: { display: 'flex', gap: 8, marginBottom: 14 } },
             btn('easy', '😎 Легко', 'easy'),
             btn('ok', '😐 Норм', 'ok'),
@@ -3011,9 +3243,11 @@
       keepSnapshotOnAbortRef.current = true;
       if (!HEYS.ConfirmModal?.show) { finalize(); return; }
       const doneExercises = exIdx;
-      const doneSets = (cycle && cycle.setIdx) || 0;
-      const doneReps = (cycle && cycle.repIdx) || 0;
-      const hasProgress = doneExercises > 0 || doneSets > 0 || doneReps > 0;
+      const currentProgress = _completedProgressForCycle(exercise, cycle || {});
+      const doneSets = currentProgress.completedSets || 0;
+      const doneReps = currentProgress.completedRepsInCurrentSet || 0;
+      const doneUnits = currentProgress.completedUnits || 0;
+      const hasProgress = doneExercises > 0 || doneUnits > 0;
 
       HEYS.ConfirmModal.show({
         icon: '⚠',
@@ -3027,43 +3261,38 @@
           HEYS.ConfirmModal.show({
             icon: '💾',
             title: 'Записать прогресс?',
-            text: 'Выполнено: ' + doneExercises + ' упр., '
-                  + doneSets + ' подходов, ' + doneReps + ' повторов в текущем подходе.',
+            text: 'Выполнено: ' + doneExercises + ' упр. полностью'
+                  + (doneUnits > 0 ? ', в текущем — ' + doneUnits + ' ' + currentProgress.unitLabel : '') + '.',
             confirmText: 'Записать как частично',
             cancelText: 'Не записывать',
             onConfirm: function () {
               try {
-                const totalMin = Array.isArray(exercises)
-                  ? exercises.reduce(function (s, e) {
-                      const oneSet = (Number(e.hangSec) + Number(e.restSec)) * Number(e.repsPerSet) + Number(e.restBetweenSetsSec);
-                      return s + (oneSet * Number(e.setsCount)) / 60;
-                    }, 0)
-                  : 0;
                 const completedAt = new Date().toISOString();
-                const partialLog = {
-                  version: 2,
+                const partialExercises = _buildPartialExercises(exercises, exIdx, cycle || {});
+                const partialLog = _buildFingersLog(partialExercises, {
                   programId: programId,
-                  totalDurationMinutes: Math.round(totalMin),
-                  exercises: exercises,
-                  startedAt: _estimateStartedAtIso(completedAt, totalMin),
-                  endedAt: completedAt,
-                  completedAt: completedAt,
                   viaTimer: true,
-                  partial: true,
-                  partialProgress: {
-                    completedExercises: doneExercises,
-                    currentExerciseCompletedSets: doneSets,
-                    currentExerciseCompletedRepsInCurrentSet: doneReps
-                  }
+                  nowIso: completedAt
+                });
+                partialLog.version = 2;
+                partialLog.partial = true;
+                partialLog.partialProgress = {
+                  completedExercises: doneExercises,
+                  currentExerciseCompletedSets: doneSets,
+                  currentExerciseCompletedRepsInCurrentSet: doneReps,
+                  currentExerciseCompletedUnits: doneUnits,
+                  currentExercisePlannedUnits: currentProgress.plannedUnits,
+                  unitKind: currentProgress.unitKind,
+                  unitLabel: currentProgress.unitLabel
                 };
                 HEYS.TrainingStep?.saveFingers?.(
                   { dateKey: dateKey, trainingIndex: trainingIndex },
                   partialLog,
-                  { activityLabel: (programId && programId !== 'custom' ? programId : 'Свой конструктор') + ' (частично)' }
+                  { activityLabel: _programLabel(programId) + ' (частично)' }
                 );
                 _bumpFingersDiaryVersion();
                 if (HEYS.Toast?.success) {
-                  HEYS.Toast.success('Записано: ' + doneExercises + ' упр., ' + doneSets + ' подходов');
+                  HEYS.Toast.success('Записано: ' + partialLog.totalUnits + ' ' + partialLog.unitLabel);
                 }
               } catch (e) {
                 console.warn('[Fingers.useExerciseShell] partial save failed:', e);
@@ -3878,6 +4107,14 @@
       } catch (_) { return 'C'; }
     })();
     const [theme, setTheme] = useState(initialTheme);
+    const [assessmentDraft, setAssessmentDraft] = useState(function () {
+      try {
+        if (Fingers.records && typeof Fingers.records.loadAssessmentBattery === 'function') {
+          return Fingers.records.loadAssessmentBattery() || {};
+        }
+      } catch (_) { /* ignore */ }
+      return {};
+    });
 
     function applyVoiceEnabled(b) {
       setVoiceEnabled(b);
@@ -3905,6 +4142,26 @@
           HEYS_utils.lsSet('heys_profile', Object.assign({}, p, { fingerboardProfile: fp }));
         }
       } catch (_) {}
+    }
+
+    function updateAssessmentDraft(testId, patch) {
+      setAssessmentDraft(function (prev) {
+        const next = Object.assign({}, prev || {});
+        next[testId] = Object.assign({}, next[testId] || {}, patch || {});
+        return next;
+      });
+    }
+
+    function saveAssessmentDraft() {
+      try {
+        if (!Fingers.records || typeof Fingers.records.saveAssessmentBattery !== 'function') return;
+        const saved = Fingers.records.saveAssessmentBattery(assessmentDraft || {}, { source: 'settings' });
+        setAssessmentDraft(saved || {});
+        if (HEYS.Toast && HEYS.Toast.success) HEYS.Toast.success('Результаты тестов сохранены');
+      } catch (e) {
+        console.warn('[Fingers.Settings] assessment save failed:', e);
+        if (HEYS.Toast && HEYS.Toast.info) HEYS.Toast.info('Не удалось сохранить результаты тестов');
+      }
     }
 
     function handleResetOnboarding() {
@@ -3951,6 +4208,38 @@
       { id: 'elite', label: 'Элитный', hint: 'Долгая история целевой подготовки пальцев без травм; высокий объем и интенсивность уже привычны.' }
     ];
     const currentLevelMeta = levelMeta.find(function (m) { return m.id === profile.level; });
+    const assessmentLabels = {
+      maxHang20mmHalf: 'Сила пальцев',
+      pullStrength: 'Тяга',
+      contactPower: 'Контактная мощность',
+      criticalForce: 'Критическая сила',
+      anaerobicCapacity: 'Анаэробная ёмкость',
+      techniqueMarkers: 'Техника',
+      mentalMarkers: 'Ментальная устойчивость',
+      mobilityMarkers: 'Мобильность',
+      antagonistMarkers: 'Антагонисты'
+    };
+    const assessmentTests = (Fingers.assessment && Fingers.assessment.TEST_BATTERY)
+      ? Object.keys(Fingers.assessment.TEST_BATTERY).map(function (id) {
+          return Object.assign({ id: id }, Fingers.assessment.TEST_BATTERY[id]);
+        })
+      : [];
+    const savedAssessmentCount = Object.keys(assessmentDraft || {}).filter(function (id) {
+      const r = assessmentDraft[id] || {};
+      return r.score != null || r.markers != null;
+    }).length;
+
+    function assessmentValue(id, key) {
+      const r = (assessmentDraft && assessmentDraft[id]) || {};
+      const v = r[key];
+      return v == null ? '' : String(v);
+    }
+
+    function updateAssessmentNumber(id, key, raw) {
+      const patch = {};
+      patch[key] = raw === '' ? null : Number(raw);
+      updateAssessmentDraft(id, patch);
+    }
 
     function _levelMeta(level) {
       return levelMeta.find(function (m) { return m.id === level; }) || { label: level };
@@ -4131,6 +4420,59 @@
             h('p', { className: 'fingers-settings__profile-hint' },
               'Возраст определяет какие хваты безопасны (UIAA/BMC), вес — точный % MVC. ',
               'Уровень влияет на подбор блоков нового движка.')
+          ),
+
+          // ─── Assessment battery ───
+          h('section', { className: 'fingers-settings__section' },
+            h('div', { className: 'fingers-settings__section-title' }, 'Тесты'),
+            h('p', { className: 'fingers-settings__profile-hint', style: { marginTop: 0 } },
+              savedAssessmentCount > 0
+                ? 'Сохранено результатов: ' + savedAssessmentCount + '. Они помогают определить главный лимитер.'
+                : 'Введите результаты тестов, чтобы рекомендация учитывала главный лимитер.'),
+            assessmentTests.length
+              ? h('div', { className: 'fingers-settings__profile-grid' },
+                  assessmentTests.map(function (test) {
+                    const isMarker = !!test.flagKey || !test.scoreKey;
+                    return h('div', { key: test.id, className: 'fingers-settings__profile-tile' },
+                      h('div', { className: 'fingers-settings__profile-label' },
+                        assessmentLabels[test.id] || test.quality || test.id),
+                      isMarker
+                        ? h('div', { className: 'fingers-settings__row', style: { gap: 8, alignItems: 'center' } },
+                            h('input', {
+                              type: 'number',
+                              min: 0,
+                              max: test.maxMarkers || 10,
+                              value: assessmentValue(test.id, 'markers'),
+                              onChange: function (e) { updateAssessmentNumber(test.id, 'markers', e.target.value); },
+                              className: 'fingers-ob-input',
+                              'aria-label': (assessmentLabels[test.id] || test.id) + ': отмечено'
+                            }),
+                            h('span', { className: 'fingers-settings__profile-hint', style: { margin: 0 } },
+                              '/ ' + (test.maxMarkers || 10))
+                          )
+                        : h('input', {
+                            type: 'number',
+                            min: 0,
+                            step: '0.1',
+                            value: assessmentValue(test.id, 'score'),
+                            onChange: function (e) { updateAssessmentNumber(test.id, 'score', e.target.value); },
+                            className: 'fingers-ob-input',
+                            'aria-label': (assessmentLabels[test.id] || test.id) + ': результат'
+                          })
+                    );
+                  })
+                )
+              : h('p', { className: 'fingers-settings__profile-hint' },
+                  'Батарея тестов недоступна в этом окружении.'),
+            h('button', {
+              type: 'button',
+              className: 'fingers-settings__reset-btn',
+              onClick: saveAssessmentDraft,
+              disabled: !assessmentTests.length
+            },
+              h('span', { 'aria-hidden': 'true' }, '✓'),
+              ' Сохранить тесты'
+            )
           ),
 
           // ─── Training cycle (B7) ───
@@ -4445,15 +4787,7 @@
       // чтобы юзер видел результат и понял что данные сохранены.
       // Manual-save (с конструктора) → сразу close, summary не нужен.
       if (o.viaTimer && saveOk) {
-        const totalReps = exercises.reduce(function (s, e) {
-          return s + (Number(e.repsPerSet) || 0) * (Number(e.setsCount) || 0);
-        }, 0);
-        // Считаем общее время удержания (висы только, без отдыха) — premium-метрика.
-        const totalHangSec = exercises.reduce(function (s, e) {
-          return s + (Number(e.hangSec) || 0)
-            * (Number(e.repsPerSet) || 0)
-            * (Number(e.setsCount) || 0);
-        }, 0);
+        const summary = _summarizeFingersExercises(exercises);
         // Intensity протокола для phase-цвета и next-step рекомендации.
         const programIntensity = (pendingProgram?.id && typeof Fingers.getProgramIntensity === 'function')
           ? Fingers.getProgramIntensity(pendingProgram.id)
@@ -4472,9 +4806,11 @@
         }
         setSessionSummary({
           programName: pendingProgram?.name || 'Свой конструктор',
-          totalMin: Math.round(totalMin),
-          totalHangSec: Math.round(totalHangSec),
-          totalReps: totalReps,
+          totalMin: summary.totalDurationMinutes,
+          totalWorkSec: summary.totalWorkSeconds,
+          totalUnits: summary.totalUnits,
+          workLabel: summary.workLabel,
+          unitLabel: summary.unitLabel,
           exercisesCount: exercises.length,
           dateKey: dateKey || _todayDateKey(),
           intensity: programIntensity,
@@ -5014,11 +5350,11 @@
           : ss.intensity === 'recovery'
             ? 'Recovery — можно тренировать на следующий день. Базовая активация без стресса для шкивов.'
             : 'Через 24–48ч можно повторить или сделать max-сессию если готовность позволит.';
-        const totalHangMin = Math.floor((ss.totalHangSec || 0) / 60);
-        const totalHangSec = (ss.totalHangSec || 0) % 60;
-        const totalHangLabel = totalHangMin > 0
-          ? totalHangMin + ':' + String(totalHangSec).padStart(2, '0')
-          : (ss.totalHangSec || 0) + ' с';
+        const totalWorkMin = Math.floor((ss.totalWorkSec || 0) / 60);
+        const totalWorkSec = (ss.totalWorkSec || 0) % 60;
+        const totalWorkLabel = totalWorkMin > 0
+          ? totalWorkMin + ':' + String(totalWorkSec).padStart(2, '0')
+          : (ss.totalWorkSec || 0) + ' с';
 
         return h('div', {
           className: 'fingers-fs-summary__backdrop',
@@ -5050,8 +5386,8 @@
 
             // Hero metric — суммарное время удержания, крупно gradient
             h('div', { className: 'fingers-fs-summary__hero-metric' },
-              h('div', { className: 'fingers-fs-summary__hero-metric-label' }, 'Время в висе'),
-              h('div', { className: 'fingers-fs-summary__hero-metric-value' }, totalHangLabel)
+              h('div', { className: 'fingers-fs-summary__hero-metric-label' }, ss.workLabel || 'Рабочее время'),
+              h('div', { className: 'fingers-fs-summary__hero-metric-value' }, totalWorkLabel)
             ),
 
             // Secondary metrics row — 3 tiles
@@ -5066,9 +5402,8 @@
                   ss.exercisesCount === 1 ? 'упражнение' : ss.exercisesCount < 5 ? 'упражнения' : 'упражнений')
               ),
               h('div', { className: 'fingers-fs-summary__metric' },
-                h('div', { className: 'fingers-fs-summary__metric-value' }, String(ss.totalReps)),
-                h('div', { className: 'fingers-fs-summary__metric-label' },
-                  ss.totalReps === 1 ? 'вис' : ss.totalReps < 5 ? 'виса' : 'висов')
+                h('div', { className: 'fingers-fs-summary__metric-value' }, String(ss.totalUnits)),
+                h('div', { className: 'fingers-fs-summary__metric-label' }, ss.unitLabel || 'единиц')
               )
             ),
 
@@ -5118,6 +5453,8 @@
   Fingers._mergeSetFeedback = _mergeSetFeedback;
   // Exposed for tests (B19): чистая сборка контракта fingersLog.
   Fingers._buildFingersLog = _buildFingersLog;
+  Fingers._summarizeFingersExercises = _summarizeFingersExercises;
+  Fingers._buildPartialExercises = _buildPartialExercises;
   // Exposed for tests: generated-mix path must route through engineRouter when available.
   Fingers._recommendMixedWorkout = _recommendMixedWorkout;
   // Exposed for tests: local date fallback and progress memo invalidation.

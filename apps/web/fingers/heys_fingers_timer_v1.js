@@ -234,6 +234,7 @@
     const [totalElapsed, setTotalElapsed] = React.useState(0);
 
     const tickRef = React.useRef(null);
+    const secondsLeftRef = React.useRef(0);
     const phaseStartedAtRef = React.useRef(0);
     const phaseDurationMsRef = React.useRef(0);
     const sessionStartedAtRef = React.useRef(0);
@@ -324,6 +325,7 @@
         const elapsedMs = _now() - phaseStartedAtRef.current;
         const remainingMs = Math.max(0, phaseDurationMsRef.current - elapsedMs);
         const remainingSec = Math.ceil(remainingMs / 1000);
+        secondsLeftRef.current = remainingSec;
         setSecondsLeft(remainingSec);
         setTotalElapsed(Math.floor((_now() - sessionStartedAtRef.current - pauseTotalMsRef.current) / 1000));
         if (remainingMs <= 0) {
@@ -342,6 +344,7 @@
     const enterPhase = React.useCallback(function (nextState, durationSec, meta) {
       phaseStartedAtRef.current = _now();
       phaseDurationMsRef.current = Math.max(0, durationSec * 1000);
+      secondsLeftRef.current = durationSec;
       setSecondsLeft(durationSec);
       setState(nextState);
       stateRef.current = nextState; // immediate — tick/skip читают сразу
@@ -405,18 +408,23 @@
     }, [fireStateChange, startTick, clearTick, manualPhases, wakeLockPhases]);
 
     const pause = React.useCallback(function () {
-      if (state === STATES.PAUSED || state === STATES.IDLE
-          || state === STATES.DONE || state === STATES.ABORTED) return;
-      previousStateRef.current = state;
+      const currentState = stateRef.current;
+      if (currentState === STATES.PAUSED || currentState === STATES.IDLE
+          || currentState === STATES.DONE || currentState === STATES.ABORTED
+          || currentState === STATES.EXPIRED) return;
+      previousStateRef.current = currentState;
       pauseStartedAtRef.current = _now();
       clearTick();
       setState(STATES.PAUSED);
       stateRef.current = STATES.PAUSED;
-      fireStateChange(STATES.PAUSED, { resumeTo: previousStateRef.current, secondsLeft: secondsLeft });
-    }, [state, secondsLeft, clearTick, fireStateChange]);
+      fireStateChange(STATES.PAUSED, {
+        resumeTo: previousStateRef.current,
+        secondsLeft: secondsLeftRef.current
+      });
+    }, [clearTick, fireStateChange]);
 
     const resume = React.useCallback(function () {
-      if (state !== STATES.PAUSED) return;
+      if (stateRef.current !== STATES.PAUSED) return;
       const pauseDurMs = _now() - pauseStartedAtRef.current;
       pauseTotalMsRef.current += pauseDurMs;
       const restored = previousStateRef.current;
@@ -431,21 +439,27 @@
         durationSec: Math.ceil(phaseDurationMsRef.current / 1000)
       });
       if (!isManual) startTick();
-    }, [state, manualPhases, startTick, fireStateChange]);
+    }, [manualPhases, startTick, fireStateChange]);
 
     const abort = React.useCallback(function () {
       enterPhase(STATES.ABORTED, 0, {});
     }, [enterPhase]);
 
     const skipPhase = React.useCallback(function () {
-      if (state === STATES.IDLE || state === STATES.DONE
-          || state === STATES.ABORTED || state === STATES.PAUSED) return;
+      const currentState = stateRef.current;
+      if (currentState === STATES.IDLE || currentState === STATES.DONE
+          || currentState === STATES.ABORTED || currentState === STATES.PAUSED
+          || currentState === STATES.EXPIRED) return;
       clearTick();
       if (typeof onAdvanceRef.current === 'function') {
-        try { onAdvanceRef.current(state); }
+        try { onAdvanceRef.current(currentState); }
         catch (e) { console.warn('[Fingers.timer] onAdvance threw:', e); }
       }
-    }, [state, clearTick]);
+    }, [clearTick]);
+
+    const getCurrentState = React.useCallback(function () {
+      return stateRef.current;
+    }, []);
 
     const markSessionStart = React.useCallback(function () {
       if (!_acquireTimerLock('start')) {
@@ -484,8 +498,14 @@
         const isActive = activePhases.indexOf(stateRef.current) >= 0;
         if (document.visibilityState === 'hidden') {
           if (isActive) hiddenAt = _now();
-        } else if (document.visibilityState === 'visible' && hiddenAt > 0) {
-          const hiddenMs = _now() - hiddenAt;
+        } else if (document.visibilityState === 'visible') {
+          if (wakeLockPhases.indexOf(stateRef.current) >= 0) {
+            try {
+              const wl = wakeLockRef.current;
+              if (wl && wl.requestWakeLock && !wl.isWakeLockActive) wl.requestWakeLock();
+            } catch (_) {}
+          }
+          const hiddenMs = hiddenAt > 0 ? (_now() - hiddenAt) : 0;
           hiddenAt = 0;
           if (hiddenMs > 5000 && isActive) {
             try {
@@ -502,12 +522,13 @@
       document.addEventListener('visibilitychange', onVis);
       return function () { document.removeEventListener('visibilitychange', onVis); };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [visibilityWarning]);
+    }, [visibilityWarning, wakeLockPhases]);
 
     return {
       state: state, secondsLeft: secondsLeft, totalElapsed: totalElapsed,
       enterPhase: enterPhase, pause: pause, resume: resume,
-      abort: abort, skipPhase: skipPhase, markSessionStart: markSessionStart
+      abort: abort, skipPhase: skipPhase, markSessionStart: markSessionStart,
+      getCurrentState: getCurrentState
     };
   }
 
@@ -964,7 +985,8 @@
     // Reps-specific manual advance: юзер сигналит «подход выполнен».
     // Из REPS_INPUT → BIG_REST (если ещё есть сеты) или DONE (последний).
     const completeSet = React.useCallback(function () {
-      if (core.state !== STATES.REPS_INPUT) return;
+      const currentState = core.getCurrentState ? core.getCurrentState() : core.state;
+      if (currentState !== STATES.REPS_INPUT) return;
       const curSet = setIdxRef.current;
       const isLastSet = (curSet + 1) >= setsCount;
       if (isLastSet) {
@@ -979,7 +1001,8 @@
     // manual phase). Перехватываем здесь: если REPS_INPUT — completeSet;
     // иначе core.skipPhase (для timed фаз).
     const skipPhase = React.useCallback(function () {
-      if (core.state === STATES.REPS_INPUT) {
+      const currentState = core.getCurrentState ? core.getCurrentState() : core.state;
+      if (currentState === STATES.REPS_INPUT) {
         completeSet();
         return;
       }

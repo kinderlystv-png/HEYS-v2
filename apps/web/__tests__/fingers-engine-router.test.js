@@ -321,6 +321,48 @@ describe('engineRouter: plumbing Гейта #1 (ревью #8) — enrichment op
     expect(enriched.level).toBe('beginner');
   });
 
+  it('saved assessment battery + profile.level → assessmentResult и focusQuality', () => {
+    F().getProfile = () => ({ level: 'intermediate', age: 30 });
+    F().records = {
+      assessLatestBattery: (level) => {
+        expect(level).toBe('intermediate');
+        return { leadingLimiter: 'finger_strength', battery: { maxHang20mmHalf: { score: 40 } } };
+      }
+    };
+    const enriched = R()._enrichOpts({ age: 30 });
+    expect(enriched.level).toBe('intermediate');
+    expect(enriched.assessmentResult.leadingLimiter).toBe('finger_strength');
+    expect(enriched.focusQuality).toBe('finger_strength');
+  });
+
+  it('explicit assessmentResult/focusQuality не перезаписываются saved battery', () => {
+    let called = false;
+    F().records = {
+      assessLatestBattery: () => {
+        called = true;
+        return { leadingLimiter: 'finger_strength' };
+      }
+    };
+    const enriched = R()._enrichOpts({
+      age: 30,
+      level: 'intermediate',
+      assessmentResult: { leadingLimiter: 'technique' },
+      focusQuality: 'technique'
+    });
+    expect(called).toBe(false);
+    expect(enriched.assessmentResult.leadingLimiter).toBe('technique');
+    expect(enriched.focusQuality).toBe('technique');
+  });
+
+  it('assessment error из saved battery игнорируется и не создаёт focusQuality', () => {
+    F().records = {
+      assessLatestBattery: () => ({ error: 'assessment.level_unknown', level: 'godlike' })
+    };
+    const enriched = R()._enrichOpts({ age: 30, level: 'intermediate' });
+    expect(enriched.assessmentResult).toBeUndefined();
+    expect(enriched.focusQuality).toBeUndefined();
+  });
+
   it('enrichment безопасна: исключения в источниках не валят', () => {
     F().records = { getMVC: () => { throw new Error('LS corrupted'); } };
     F().getBodyWeight = () => { throw new Error('profile null'); };

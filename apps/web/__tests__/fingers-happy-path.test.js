@@ -65,6 +65,7 @@ const setupOnce = () => {
   };
   evalSource('heys_fingers_programs_catalog_v1.js');
   evalSource('heys_fingers_age_gating_v1.js');
+  evalSource('heys_fingers_timer_v1.js');
   evalSource('heys_fingers_session_ui_v1.js');
 };
 
@@ -142,6 +143,49 @@ describe('B19 happy-path: профиль → рекомендация → Today 
     expect(log.exercises[0].setFeedback).toBeUndefined();
     expect('hadPain' in log).toBe(false);        // флаг боли не выставлен
     expect(log.totalDurationMinutes).toBe(12);
+  });
+
+  it('finish для non-hang doseShape считает длительность и объём не как hang', () => {
+    const F = globalThis.HEYS.Fingers;
+    const circuit = [{
+      doseShape: 'circuit',
+      dose: { problemsPerRound: 4, rounds: 4, restRoundsSec: 180 },
+      gripId: 'pe_boulder_4x4',
+    }];
+    const log = F._buildFingersLog(circuit, {
+      programId: 'session_builder_test',
+      viaTimer: true,
+      nowIso: '2026-06-05T10:00:00.000Z',
+    });
+    expect(log.totalDurationMinutes).toBe(16); // 4*4*25s work + 3*180s rest
+    expect(log.totalWorkSeconds).toBe(400);
+    expect(log.totalUnits).toBe(4);
+    expect(log.unitLabel).toBe('раунда');
+    expect(log.shapeCounts).toEqual({ circuit: 1 });
+  });
+
+  it('partial abort сохраняет только выполненную часть текущего doseShape', () => {
+    const F = globalThis.HEYS.Fingers;
+    const S = F.STATES;
+    const attempts = [{
+      doseShape: 'attempts',
+      dose: { movesPerAttempt: [1, 3], attempts: [6, 8], restSetsSec: 240 },
+      gripId: 'pow_limit_boulder',
+    }];
+    const partialExercises = F._buildPartialExercises(attempts, 0, {
+      state: S.BIG_REST,
+      setIdx: 2,
+      repIdx: 0,
+    });
+    expect(partialExercises).toHaveLength(1);
+    expect(partialExercises[0].completion.completedUnits).toBe(3);
+    expect(partialExercises[0].completion.plannedUnits).toBe(7);
+
+    const full = F._buildFingersLog(attempts, { programId: 'attempts', nowIso: '2026-06-05T10:00:00.000Z' });
+    const partial = F._buildFingersLog(partialExercises, { programId: 'attempts', nowIso: '2026-06-05T10:00:00.000Z' });
+    expect(partial.totalUnits).toBe(3);
+    expect(partial.totalDurationMinutes).toBeLessThan(full.totalDurationMinutes);
+    expect(partial.exercises[0].partial).toBe(true);
   });
 
   it('local date fallback uses local calendar date, not UTC ISO day', () => {
