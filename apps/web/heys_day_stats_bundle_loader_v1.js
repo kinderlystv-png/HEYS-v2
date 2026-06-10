@@ -26,6 +26,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'hobby/drums-finger-control/heys_drums_catalog_v1.js',
         'hobby/drums-finger-control/heys_drums_persistence_v1.js',
         'hobby/drums-finger-control/heys_drums_engine_v1.js',
+        'hobby/drums-finger-control/heys_drums_notation_v1.js',
         'hobby/drums-finger-control/heys_drums_ui_v1.js'
     ];
 

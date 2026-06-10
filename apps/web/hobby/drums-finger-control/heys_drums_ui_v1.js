@@ -41,6 +41,9 @@
     calculateStreak,
     getMetronomeIntervalSec,
     getMetronomeNoteKind,
+    expandBlockPattern,
+    getPlaybackPosition,
+    getNotationWindow,
     resyncMetronomeCursor,
     getRampStep,
     applyRampStep,
@@ -59,6 +62,7 @@
     writeActiveSession,
     clearActiveSession,
     getActiveSessionKeys,
+    NotationPanel,
   } = DFC;
 
   let activeRoot = null;
@@ -106,7 +110,7 @@
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [savedLog, setSavedLog] = useState(null);
     const [progressSeed, setProgressSeed] = useState(0);
-    const metronomeRef = useRef({ nextNoteTime: 0, noteIndex: 0 });
+    const metronomeRef = useRef({ nextNoteTime: 0, noteIndex: 0, scheduledNotes: [], ctx: null });
 
     const session = expandSession(sessionState.sessionId);
     const activeBlock = session.blockItems[sessionState.activeIndex] || session.blockItems[0];
@@ -134,21 +138,30 @@
         if (!soundEnabled) return undefined;
         const ctx = getMetronomeContext();
         if (!ctx) return undefined;
-        metronomeRef.current = { nextNoteTime: ctx.currentTime + 0.02, noteIndex: 0 };
+        metronomeRef.current = {
+          nextNoteTime: ctx.currentTime + 0.02,
+          noteIndex: 0,
+          scheduledNotes: [],
+          ctx,
+        };
         const id = global.setInterval(function () {
           const cursor = metronomeRef.current;
+          const beforeResync = cursor.nextNoteTime;
           resyncMetronomeCursor(cursor, ctx.currentTime);
+          if (cursor.nextNoteTime !== beforeResync) cursor.scheduledNotes = [];
           while (cursor.nextNoteTime < ctx.currentTime + METRONOME_SCHEDULE_AHEAD_SEC) {
+            const scheduledTime = cursor.nextNoteTime;
+            const scheduledIndex = cursor.noteIndex;
             const kind = sessionState.countInSec ? 'bar' : getMetronomeNoteKind(activeBlock, cursor.noteIndex);
-            scheduleTick(ctx, cursor.nextNoteTime, kind);
-            cursor.nextNoteTime += sessionState.countInSec
-              ? 1
-              : getMetronomeIntervalSec(activeBlock, activeResult.bpm, cursor.noteIndex);
+            scheduleTick(ctx, scheduledTime, kind);
+            cursor.scheduledNotes = (cursor.scheduledNotes || []).concat({ index: scheduledIndex, time: scheduledTime }).slice(-96);
+            cursor.nextNoteTime += sessionState.countInSec ? 1 : getMetronomeIntervalSec(activeBlock, activeResult.bpm, scheduledIndex);
             cursor.noteIndex += 1;
           }
         }, METRONOME_LOOKAHEAD_MS);
         return function () {
           global.clearInterval(id);
+          metronomeRef.current.ctx = null;
         };
       },
       [screen, soundEnabled, sessionState.running, sessionState.countInSec, activeResult.bpm, activeBlock?.id]
@@ -585,6 +598,16 @@
         sessionState.countInSec
           ? h('div', { className: 'drums-ft-count-in' }, h('strong', null, sessionState.countInSec), h('span', null, 'отсчёт'))
           : null,
+        NotationPanel
+          ? h(NotationPanel, {
+              session,
+              blockIndex: sessionState.activeIndex,
+              metronomeRef,
+              running: sessionState.running,
+              countInSec: sessionState.countInSec,
+              results: sessionState.results,
+            })
+          : null,
         h(
           'div',
           { className: 'drums-ft-controls' },
@@ -982,6 +1005,9 @@
       getSubdivisionConfig,
       getMetronomeIntervalSec,
       getMetronomeNoteKind,
+      expandBlockPattern,
+      getPlaybackPosition,
+      getNotationWindow,
       resyncMetronomeCursor,
       getRampStep,
       applyRampStep,

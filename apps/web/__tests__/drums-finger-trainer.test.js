@@ -9,6 +9,7 @@ const MODULE_PATHS = [
   'heys_drums_catalog_v1.js',
   'heys_drums_persistence_v1.js',
   'heys_drums_engine_v1.js',
+  'heys_drums_notation_v1.js',
   'heys_drums_ui_v1.js',
 ].map((fileName) =>
   path.resolve(
@@ -528,6 +529,99 @@ describe('drums finger trainer', () => {
     expect(api._test.getMetronomeNoteKind(moeller, 4)).toBe('accent');
     expect(api._test.getMetronomeNoteKind(singles, 4)).toBe('beat');
     expect(api._test.getMetronomeNoteKind(singles, 1)).toBe('sub');
+  });
+
+  it('expands one-line notation patterns for all drum blocks', () => {
+    const { api } = setupModule();
+    const expected = {
+      free_stroke: { length: 8, first: 'R', second: 'L', rests: 0 },
+      finger_rebound: { length: 8, first: 'R', second: 'R', rests: 0 },
+      singles: { length: 16, first: 'R', second: 'L', rests: 0 },
+      doubles: { length: 16, first: 'R', second: 'R', rests: 0 },
+      moeller_fingers: { length: 16, first: 'R', second: 'L', rests: 0 },
+      burst_8_8: { length: 16, first: 'R', second: 'L', rests: 8 },
+      buzz_roll: { length: 4, first: 'R', second: 'L', rests: 0 },
+      improv_pad: { length: 8, first: 'R', second: 'L', rests: 2 },
+    };
+
+    api.BLOCKS.forEach((block) => {
+      const pattern = api._test.expandBlockPattern(block);
+      expect(pattern).toHaveLength(expected[block.id].length);
+      expect(pattern[0].sticking).toBe(expected[block.id].first);
+      expect(pattern[1].sticking).toBe(expected[block.id].second);
+      expect(pattern.filter((note) => note.rest)).toHaveLength(expected[block.id].rests);
+    });
+  });
+
+  it('keeps notation accents aligned with metronome accent kinds', () => {
+    const { api } = setupModule();
+
+    api.BLOCKS.forEach((block) => {
+      api._test.expandBlockPattern(block).forEach((note, index) => {
+        const kind = api._test.getMetronomeNoteKind(block, index);
+        expect(note.accent).toBe(kind === 'bar' || kind === 'accent');
+      });
+    });
+  });
+
+  it('maps metronome noteIndex to notation playback position', () => {
+    const { api } = setupModule();
+    const moeller = api.BLOCKS.find((block) => block.id === 'moeller_fingers');
+    const burst = api.BLOCKS.find((block) => block.id === 'burst_8_8');
+
+    expect(api._test.getPlaybackPosition(moeller, 4)).toMatchObject({
+      barIndex: 0,
+      noteInBar: 4,
+      sticking: 'R',
+      accent: true,
+      kind: 'accent',
+    });
+    expect(api._test.getPlaybackPosition(moeller, 16)).toMatchObject({
+      barIndex: 1,
+      noteInBar: 0,
+      sticking: 'R',
+      accent: true,
+      kind: 'bar',
+    });
+    expect(api._test.getPlaybackPosition(burst, 8)).toMatchObject({
+      noteInBar: 8,
+      sticking: null,
+      rest: true,
+    });
+  });
+
+  it('builds rolling two-bar notation windows and previews the next block at boundaries', () => {
+    const { api } = setupModule();
+    const session = api.expandSession('micro_15');
+    session.blockItems[0].targetSec = 8;
+    const state = api._test.makeSessionState('micro_15', { logs: [] });
+    state.results[0].bpm = 120;
+
+    const first = api._test.getNotationWindow(session, 0, 0, { results: state.results });
+    expect(first.active).toHaveLength(16);
+    expect(first.preview).toHaveLength(16);
+    expect(first.activeStart).toBe(0);
+    expect(first.previewIsNextBlock).toBe(false);
+
+    const boundary = api._test.getNotationWindow(session, 0, 16, { results: state.results });
+    expect(boundary.activeStart).toBe(16);
+    expect(boundary.active[0].absoluteIndex).toBe(16);
+    expect(boundary.previewIsNextBlock).toBe(true);
+    expect(boundary.preview[0].blockId).toBe('singles');
+    expect(boundary.preview[0].absoluteIndex).toBe(0);
+  });
+
+  it('marks upcoming ramp BPM in notation preview windows', () => {
+    const { api } = setupModule();
+    const session = api.expandSession('balanced_25');
+    const singlesIndex = session.blockItems.findIndex((block) => block.id === 'singles');
+    const state = api._test.makeSessionState('balanced_25', { logs: [] });
+    const result = state.results[singlesIndex];
+    result.bpm = 120;
+    result.rampEnabled = true;
+
+    const window = api._test.getNotationWindow(session, singlesIndex, 96, { results: state.results });
+    expect(window.preview[0].bpmMarker).toBe('122 BPM');
   });
 
   it('drops stale metronome notes after background throttling', () => {

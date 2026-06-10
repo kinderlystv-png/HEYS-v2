@@ -254,6 +254,140 @@
     return 'sub';
   }
 
+  function makeFallbackNotationPattern(block) {
+    const subdivision = getSubdivisionConfig(block);
+    const notesPerBar = Math.max(1, subdivision.notesPerBeat * 4);
+    return Array.from({ length: notesPerBar }, function (_, index) {
+      return { sticking: index % 2 === 0 ? 'R' : 'L', accent: index === 0, rest: false };
+    });
+  }
+
+  function expandBlockPattern(block) {
+    const subdivision = getSubdivisionConfig(block);
+    const notesPerBar = Math.max(1, subdivision.notesPerBeat * 4);
+    const source = Array.isArray(block?.notationPattern) && block.notationPattern.length ? block.notationPattern : makeFallbackNotationPattern(block);
+    return source.map(function (event, index) {
+      const kind = getMetronomeNoteKind(block, index);
+      const sticking = event?.sticking === 'L' ? 'L' : event?.sticking === 'R' ? 'R' : null;
+      return {
+        slot: index,
+        noteInBar: index % notesPerBar,
+        barIndex: Math.floor(index / notesPerBar),
+        sticking,
+        accent: !!event?.accent || kind === 'bar' || kind === 'accent',
+        rest: !!event?.rest,
+        kind,
+      };
+    });
+  }
+
+  function getPlaybackPosition(block, noteIndex) {
+    const subdivision = getSubdivisionConfig(block);
+    const notesPerBar = Math.max(1, subdivision.notesPerBeat * 4);
+    const index = Math.max(0, Math.floor(Number(noteIndex) || 0));
+    const cycle = expandBlockPattern(block);
+    const cycleNote = cycle[index % Math.max(1, cycle.length)] || cycle[0] || {};
+    const kind = getMetronomeNoteKind(block, index);
+    return {
+      barIndex: Math.floor(index / notesPerBar),
+      noteInBar: index % notesPerBar,
+      cycleIndex: index % Math.max(1, cycle.length),
+      slot: cycleNote.slot || 0,
+      sticking: cycleNote.sticking || null,
+      accent: !!cycleNote.accent || kind === 'bar' || kind === 'accent',
+      rest: !!cycleNote.rest,
+      kind,
+    };
+  }
+
+  function getNotationBlockBpm(block, result) {
+    return clampNumber(result?.bpm, 30, 260, block?.bpm || 80);
+  }
+
+  function getEstimatedBlockBars(block, result) {
+    const bpm = getNotationBlockBpm(block, result);
+    const targetSec = Math.max(0, Number(block?.targetSec) || 0);
+    if (!targetSec) return 2;
+    return Math.max(2, Math.ceil(targetSec / Math.max(0.1, (60 / bpm) * 4)));
+  }
+
+  function getNotationRampMarker(block, result, startNoteIndex) {
+    const ramp = block && block.ramp;
+    if (!ramp || !result?.rampEnabled) return '';
+    const subdivision = getSubdivisionConfig(block);
+    const notesPerBar = Math.max(1, subdivision.notesPerBeat * 4);
+    const startBar = Math.floor(Math.max(0, Number(startNoteIndex) || 0) / notesPerBar);
+    const everyBars = clampNumber(ramp.everyBars, 1, 64, 8);
+    if (startBar <= 0 || startBar % everyBars !== 0) return '';
+    if (startBar <= (Number(result.rampBars) || 0)) return '';
+    const bpm = getNotationBlockBpm(block, result);
+    const nextBpm = Math.min(clampNumber(ramp.maxBpm, 30, 260, 180), bpm + clampNumber(ramp.stepBpm, 1, 12, 2));
+    return nextBpm > bpm ? nextBpm + ' BPM' : '';
+  }
+
+  function buildNotationNotes(block, startNoteIndex, count, section, options) {
+    const notes = [];
+    const safeStart = Math.max(0, Math.floor(Number(startNoteIndex) || 0));
+    const total = Math.max(0, Math.floor(Number(count) || 0));
+    const marker = options?.rampMarker || '';
+    for (let i = 0; i < total; i++) {
+      const absoluteIndex = safeStart + i;
+      const pos = getPlaybackPosition(block, absoluteIndex);
+      notes.push({
+        ...pos,
+        blockId: block?.id || '',
+        blockLabel: block?.label || '',
+        absoluteIndex,
+        section,
+        isBarStart: pos.noteInBar === 0,
+        bpmMarker: i === 0 ? marker : '',
+      });
+    }
+    return notes;
+  }
+
+  function getNotationWindow(sessionInput, blockIndex, noteIndex, options) {
+    const session =
+      typeof sessionInput === 'string'
+        ? expandSession(sessionInput)
+        : sessionInput?.blockItems
+          ? sessionInput
+          : expandSession(sessionInput?.id || 'balanced_25');
+    const blocks = Array.isArray(session.blockItems) ? session.blockItems : [];
+    const safeBlockIndex = Math.max(0, Math.min(blocks.length - 1, clampNumber(blockIndex, 0, blocks.length - 1, 0)));
+    const block = blocks[safeBlockIndex] || blocks[0] || {};
+    const result = options?.result || (Array.isArray(options?.results) ? options.results[safeBlockIndex] : null);
+    const subdivision = getSubdivisionConfig(block);
+    const notesPerBar = Math.max(1, subdivision.notesPerBeat * 4);
+    const windowNotes = notesPerBar * 2;
+    const safeNoteIndex = Math.max(0, Math.floor(Number(noteIndex) || 0));
+    const activeStart = Math.floor(safeNoteIndex / windowNotes) * windowNotes;
+    const totalNotes = getEstimatedBlockBars(block, result) * notesPerBar;
+    const previewStart = activeStart + windowNotes;
+    const nextBlock = blocks[safeBlockIndex + 1] || null;
+    const previewIsNextBlock = !!nextBlock && previewStart >= totalNotes;
+    const previewBlock = previewIsNextBlock ? nextBlock : block;
+    const previewResult = previewIsNextBlock && Array.isArray(options?.results) ? options.results[safeBlockIndex + 1] : result;
+    const previewNoteStart = previewIsNextBlock ? 0 : previewStart;
+    const previewMarker = previewIsNextBlock ? '' : getNotationRampMarker(block, result, previewStart);
+    return {
+      active: buildNotationNotes(block, activeStart, windowNotes, 'active', { rampMarker: getNotationRampMarker(block, result, activeStart) }),
+      preview: buildNotationNotes(previewBlock, previewNoteStart, windowNotes, 'preview', { rampMarker: previewMarker }),
+      activeStart,
+      previewStart: previewNoteStart,
+      activeBlockId: block.id || '',
+      previewBlockId: previewBlock?.id || '',
+      previewBlockLabel: previewBlock?.label || '',
+      previewIsNextBlock,
+      activeWindowIndex: Math.floor(activeStart / windowNotes),
+      notesPerBar,
+      windowNotes,
+      currentNoteIndex: safeNoteIndex,
+      currentBpm: getNotationBlockBpm(block, result),
+      previewBpm: getNotationBlockBpm(previewBlock, previewResult),
+    };
+  }
+
   function resyncMetronomeCursor(cursor, currentTime) {
     if (!cursor || !Number.isFinite(Number(currentTime))) return cursor;
     if (Number(cursor.nextNoteTime) < Number(currentTime) - 0.2) {
@@ -552,6 +686,9 @@
     copySessionProgressToSession,
     getMetronomeIntervalSec,
     getMetronomeNoteKind,
+    expandBlockPattern,
+    getPlaybackPosition,
+    getNotationWindow,
     resyncMetronomeCursor,
     getRampStep,
     applyRampStep,

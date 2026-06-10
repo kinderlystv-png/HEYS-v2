@@ -384,6 +384,140 @@
   font-size: 13px;
 }
 
+.drums-ft-notation {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.drums-ft-notation__head {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.drums-ft-notation__head div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.drums-ft-notation__head strong,
+.drums-ft-notation__head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drums-ft-notation__head strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.drums-ft-notation__head span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.drums-ft-notation__scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.drums-ft-notation__svg {
+  display: block;
+  width: 100%;
+  min-width: 520px;
+  height: auto;
+}
+
+.drums-ft-notation__staff line {
+  stroke: rgba(15, 23, 42, 0.24);
+  stroke-width: 1.5;
+}
+
+.drums-ft-notation__staff--preview {
+  opacity: 0.68;
+}
+
+.drums-ft-notation__barline {
+  stroke: rgba(15, 23, 42, 0.18) !important;
+  stroke-width: 1 !important;
+}
+
+.drums-ft-notation__divider {
+  stroke: rgba(15, 23, 42, 0.08);
+  stroke-dasharray: 4 6;
+}
+
+.drums-ft-notation__note-head {
+  fill: #0f172a;
+}
+
+.drums-ft-notation__stem {
+  stroke: #0f172a !important;
+  stroke-width: 2 !important;
+}
+
+.drums-ft-notation__accent,
+.drums-ft-notation__stick,
+.drums-ft-notation__bpm {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.drums-ft-notation__accent {
+  fill: #ea580c;
+  font-size: 17px;
+}
+
+.drums-ft-notation__stick {
+  fill: #64748b;
+  font-size: 13px;
+}
+
+.drums-ft-notation__bpm {
+  fill: #0f766e;
+  font-size: 11px;
+}
+
+.drums-ft-notation__rest {
+  fill: none;
+  stroke: #64748b;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+.drums-ft-note-mark.is-right .drums-ft-notation__note-head,
+.drums-ft-note-mark.is-right .drums-ft-notation__stick {
+  fill: #0f766e;
+}
+
+.drums-ft-note-mark.is-left .drums-ft-notation__note-head,
+.drums-ft-note-mark.is-left .drums-ft-notation__stick {
+  fill: #2563eb;
+}
+
+.drums-ft-note-mark.is-now .drums-ft-notation__note-head {
+  filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.55));
+  stroke: #f59e0b;
+  stroke-width: 2;
+}
+
+.drums-ft-notation__cursor line {
+  stroke: #f59e0b;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
 .drums-ft-ramp {
   grid-template-columns: 1fr auto auto;
   align-items: center;
@@ -675,6 +809,7 @@
 [data-theme='dark'] .drums-ft-count-in,
 [data-theme='dark'] .drums-ft-ramp,
 [data-theme='dark'] .drums-ft-tap-test,
+[data-theme='dark'] .drums-ft-notation,
 [data-theme='dark'] .drums-ft-safety-stop,
 [data-theme='dark'] .drums-ft-saved-card,
 [data-theme='dark'] .drums-ft-finish-hero,
@@ -698,10 +833,29 @@
 [data-theme='dark'] .drums-ft-ramp strong,
 [data-theme='dark'] .drums-ft-tap-test__head strong,
 [data-theme='dark'] .drums-ft-tap-test__meta strong,
+[data-theme='dark'] .drums-ft-notation__head strong,
 [data-theme='dark'] .drums-ft-safety-stop strong,
 [data-theme='dark'] .drums-ft-input-grid input[type='number'],
 [data-theme='dark'] .drums-ft-note {
   color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-notation__staff line {
+  stroke: rgba(226, 232, 240, 0.32);
+}
+
+[data-theme='dark'] .drums-ft-notation__note-head,
+[data-theme='dark'] .drums-ft-notation__stem {
+  fill: #e5e7eb;
+  stroke: #e5e7eb !important;
+}
+
+[data-theme='dark'] .drums-ft-notation__barline {
+  stroke: rgba(226, 232, 240, 0.22) !important;
+}
+
+[data-theme='dark'] .drums-ft-notation__divider {
+  stroke: rgba(226, 232, 240, 0.14);
 }
 
 [data-theme='dark'] .drums-ft-safety-stop span {
@@ -745,6 +899,14 @@
 
   .drums-ft-ramp {
     grid-template-columns: 1fr;
+  }
+
+  .drums-ft-notation__head {
+    grid-template-columns: 1fr;
+  }
+
+  .drums-ft-notation__svg {
+    min-width: 460px;
   }
 
   .drums-ft-tap-test__body {
