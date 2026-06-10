@@ -394,46 +394,105 @@
 }
 
 .drums-ft-notation__head {
+  display: block;
+}
+
+.drums-ft-tempo-picker {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: 48px 42px minmax(108px, 1fr) 42px 48px;
+  gap: 6px;
+  align-items: center;
 }
 
-.drums-ft-notation__head div {
-  display: flex;
+.drums-ft-tempo-picker button {
+  display: grid;
   min-width: 0;
-  flex-direction: column;
-  gap: 3px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
 }
 
-.drums-ft-notation__head strong,
-.drums-ft-notation__head span {
+.drums-ft-tempo-picker button:disabled {
+  opacity: 0.38;
+}
+
+.drums-ft-tempo-picker__wheel {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-width: 0;
+  height: 52px;
+  padding: 4px 8px 2px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 42%, #fff 58%, #f8fafc 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
 }
 
-.drums-ft-notation__head strong {
+.drums-ft-tempo-picker__wheel::before,
+.drums-ft-tempo-picker__wheel::after {
+  position: absolute;
+  right: 8px;
+  left: 8px;
+  height: 1px;
+  background: rgba(15, 118, 110, 0.14);
+  content: '';
+}
+
+.drums-ft-tempo-picker__wheel::before {
+  top: 11px;
+}
+
+.drums-ft-tempo-picker__wheel::after {
+  bottom: 11px;
+}
+
+.drums-ft-tempo-picker__wheel strong {
   color: #0f172a;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+}
+
+.drums-ft-tempo-picker__wheel em {
+  position: absolute;
+  right: 8px;
+  bottom: 3px;
+  left: 8px;
+  color: #64748b;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.drums-ft-tempo-picker__side {
+  color: #94a3b8;
   font-size: 14px;
   font-weight: 900;
-}
-
-.drums-ft-notation__head span {
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 800;
+  line-height: 1;
+  text-align: center;
 }
 
 .drums-ft-notation__scroll {
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
+  overflow: hidden;
 }
 
 .drums-ft-notation__svg {
   display: block;
   width: 100%;
-  min-width: 520px;
   height: auto;
 }
 
@@ -574,6 +633,38 @@
   color: #fff;
 }
 
+.drums-ft-volume-control {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.drums-ft-volume-control strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.drums-ft-volume-control input {
+  width: 100%;
+  min-width: 0;
+  accent-color: #0f766e;
+}
+
+.drums-ft-volume-control input:disabled {
+  opacity: 0.45;
+}
+
 .drums-ft-controls button:disabled,
 .drums-ft-bottom-actions button:disabled {
   cursor: not-allowed;
@@ -622,6 +713,110 @@
   font-weight: 900;
 }
 
+.drums-ft-quality {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.drums-ft-quality__head {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.drums-ft-quality__head strong {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.drums-ft-quality__head span {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.drums-ft-quality-card,
+.drums-ft-quality-check,
+.drums-ft-pain {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.drums-ft-quality-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drums-ft-quality-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.drums-ft-quality-card strong,
+.drums-ft-quality-check strong,
+.drums-ft-pain strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.drums-ft-quality-card em {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.drums-ft-quality-card small,
+.drums-ft-quality-check small,
+.drums-ft-pain small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.drums-ft-quality-card input[type='range'] {
+  width: 100%;
+  accent-color: #2563eb;
+}
+
+.drums-ft-quality-check,
+.drums-ft-pain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drums-ft-quality-check span,
+.drums-ft-pain span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.drums-ft-quality-check input,
+.drums-ft-pain input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  accent-color: #0f766e;
+}
+
 .drums-ft-input-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -658,22 +853,17 @@
   width: 100%;
 }
 
-.drums-ft-check,
-.drums-ft-pain {
-  flex-direction: row !important;
-  align-items: center;
-}
-
-.drums-ft-check input,
-.drums-ft-pain input {
-  width: 18px;
-  height: 18px;
-  flex: none;
-}
-
 .drums-ft-pain {
   border-color: rgba(239, 68, 68, 0.2);
+  background: #fffafa;
+}
+
+.drums-ft-pain strong {
   color: #9a3412;
+}
+
+.drums-ft-pain input {
+  accent-color: #ea580c;
 }
 
 .drums-ft-finish-hero,
@@ -813,6 +1003,9 @@
 [data-theme='dark'] .drums-ft-safety-stop,
 [data-theme='dark'] .drums-ft-saved-card,
 [data-theme='dark'] .drums-ft-finish-hero,
+[data-theme='dark'] .drums-ft-quality-card,
+[data-theme='dark'] .drums-ft-quality-check,
+[data-theme='dark'] .drums-ft-pain,
 [data-theme='dark'] .drums-ft-input-grid label,
 [data-theme='dark'] .drums-ft-note {
   border-color: rgba(148, 163, 184, 0.18);
@@ -824,6 +1017,8 @@
 [data-theme='dark'] .drums-ft-bottom-actions button,
 [data-theme='dark'] .drums-ft-ramp button,
 [data-theme='dark'] .drums-ft-tap-test button,
+[data-theme='dark'] .drums-ft-tempo-picker button,
+[data-theme='dark'] .drums-ft-volume-control,
 [data-theme='dark'] .drums-ft-block-tab {
   background: rgba(148, 163, 184, 0.12);
   color: #e5e7eb;
@@ -833,11 +1028,41 @@
 [data-theme='dark'] .drums-ft-ramp strong,
 [data-theme='dark'] .drums-ft-tap-test__head strong,
 [data-theme='dark'] .drums-ft-tap-test__meta strong,
-[data-theme='dark'] .drums-ft-notation__head strong,
+[data-theme='dark'] .drums-ft-tempo-picker__wheel strong,
 [data-theme='dark'] .drums-ft-safety-stop strong,
+[data-theme='dark'] .drums-ft-volume-control strong,
+[data-theme='dark'] .drums-ft-quality__head strong,
+[data-theme='dark'] .drums-ft-quality-card strong,
+[data-theme='dark'] .drums-ft-quality-check strong,
 [data-theme='dark'] .drums-ft-input-grid input[type='number'],
 [data-theme='dark'] .drums-ft-note {
   color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-quality__head span,
+[data-theme='dark'] .drums-ft-quality-card small,
+[data-theme='dark'] .drums-ft-quality-check small,
+[data-theme='dark'] .drums-ft-pain small {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .drums-ft-pain {
+  border-color: rgba(251, 146, 60, 0.28);
+  background: rgba(67, 20, 7, 0.42);
+}
+
+[data-theme='dark'] .drums-ft-pain strong {
+  color: #fed7aa;
+}
+
+[data-theme='dark'] .drums-ft-tempo-picker__wheel {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.96) 42%, rgba(15, 23, 42, 0.96) 58%, rgba(15, 23, 42, 0.75) 100%);
+}
+
+[data-theme='dark'] .drums-ft-tempo-picker__side,
+[data-theme='dark'] .drums-ft-tempo-picker__wheel em {
+  color: #94a3b8;
 }
 
 [data-theme='dark'] .drums-ft-notation__staff line {
@@ -901,12 +1126,13 @@
     grid-template-columns: 1fr;
   }
 
-  .drums-ft-notation__head {
-    grid-template-columns: 1fr;
+  .drums-ft-tempo-picker {
+    grid-template-columns: 44px 38px minmax(96px, 1fr) 38px 44px;
+    gap: 5px;
   }
 
-  .drums-ft-notation__svg {
-    min-width: 460px;
+  .drums-ft-tempo-picker button {
+    height: 40px;
   }
 
   .drums-ft-tap-test__body {

@@ -628,16 +628,24 @@
     return { state: editState || makeSessionState(training.hobbyLog?.sessionId || 'balanced_25', props), resume: null };
   }
 
-  function scheduleTick(ctx, startTime, kind) {
+  function clampVolume(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 1;
+    return Math.max(0, Math.min(1, n));
+  }
+
+  function scheduleTick(ctx, startTime, kind, volume) {
     try {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       const t0 = Math.max(ctx.currentTime, Number(startTime) || ctx.currentTime);
       const strong = kind === 'bar' || kind === true;
+      const level = clampVolume(volume);
+      const peak = Math.max(0.0001, (strong ? 0.18 : kind === 'sub' ? 0.07 : 0.11) * level);
       osc.type = 'sine';
       osc.frequency.setValueAtTime(kind === 'sub' ? 660 : strong ? 1320 : 880, t0);
       gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(strong ? 0.18 : kind === 'sub' ? 0.07 : 0.11, t0 + 0.006);
+      gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.006);
       gain.gain.exponentialRampToValueAtTime(0.0001, t0 + (kind === 'sub' ? 0.04 : 0.055));
       osc.connect(gain).connect(ctx.destination);
       osc.start(t0);
@@ -647,13 +655,13 @@
     }
   }
 
-  function playTick(kind) {
+  function playTick(kind, volume) {
     try {
       const Ctx = global.AudioContext || global.webkitAudioContext;
       if (!Ctx) return;
       const ctx = playTick._ctx || (playTick._ctx = new Ctx());
       if (ctx.state === 'suspended') ctx.resume();
-      scheduleTick(ctx, ctx.currentTime, kind === true ? 'bar' : kind || 'beat');
+      scheduleTick(ctx, ctx.currentTime, kind === true ? 'bar' : kind || 'beat', volume);
     } catch (_) {
       /* noop */
     }

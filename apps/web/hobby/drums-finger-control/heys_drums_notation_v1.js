@@ -31,6 +31,12 @@
     return Math.max(360, STAFF_LEFT + STAFF_RIGHT + Math.max(1, count) * NOTE_GAP);
   }
 
+  function clampBpm(value, fallback) {
+    const n = Math.round(Number(value));
+    if (!Number.isFinite(n)) return clampBpm(fallback || 80, 80);
+    return Math.max(30, Math.min(260, n));
+  }
+
   function mutateActiveNote(svg, absoluteIndex) {
     if (!svg) return;
     const prev = svg.querySelector('.drums-ft-note-mark.is-now');
@@ -71,6 +77,8 @@
       running,
       countInSec,
       results,
+      bpm,
+      onBpmChange,
     } = props || {};
     const [visualNoteIndex, setVisualNoteIndex] = useState(0);
     const cursorRef = useRef(null);
@@ -129,9 +137,13 @@
     );
 
     const width = getWindowWidth(notation.windowNotes);
-    const activeTitle = 'Сейчас · ' + (notation.active[0]?.blockLabel || '');
-    const previewTitle =
-      (notation.previewIsNextBlock ? 'Дальше · ' : 'Следующие 2 такта · ') + (notation.preview[0]?.blockLabel || '');
+    const tempo = clampBpm(bpm, notation.currentBpm);
+    const canChangeBpm = typeof onBpmChange === 'function';
+
+    function changeBpm(delta) {
+      if (!canChangeBpm) return;
+      onBpmChange(clampBpm(tempo + delta, notation.currentBpm));
+    }
 
     function renderStaff(y, notes, mode) {
       return h(
@@ -180,8 +192,22 @@
       h(
         'div',
         { className: 'drums-ft-notation__head' },
-        h('div', null, h('strong', null, activeTitle), h('span', null, countInSec ? 'приготовься' : notation.currentBpm + ' BPM')),
-        h('div', null, h('strong', null, previewTitle), h('span', null, notation.previewIsNextBlock ? 'смена блока' : 'read-ahead'))
+        h(
+          'div',
+          { className: 'drums-ft-tempo-picker', role: 'group', 'aria-label': 'Темп метронома' },
+          h('button', { type: 'button', onClick: () => changeBpm(-10), disabled: !canChangeBpm || tempo <= 30, 'aria-label': 'Уменьшить темп на 10 BPM' }, '-10'),
+          h('button', { type: 'button', onClick: () => changeBpm(-1), disabled: !canChangeBpm || tempo <= 30, 'aria-label': 'Уменьшить темп на 1 BPM' }, '−'),
+          h(
+            'div',
+            { className: 'drums-ft-tempo-picker__wheel', 'aria-live': 'polite' },
+            h('span', { className: 'drums-ft-tempo-picker__side' }, clampBpm(tempo - 1, tempo)),
+            h('strong', null, tempo),
+            h('span', { className: 'drums-ft-tempo-picker__side' }, clampBpm(tempo + 1, tempo)),
+            h('em', null, countInSec ? 'готовься' : 'BPM')
+          ),
+          h('button', { type: 'button', onClick: () => changeBpm(1), disabled: !canChangeBpm || tempo >= 260, 'aria-label': 'Увеличить темп на 1 BPM' }, '+'),
+          h('button', { type: 'button', onClick: () => changeBpm(10), disabled: !canChangeBpm || tempo >= 260, 'aria-label': 'Увеличить темп на 10 BPM' }, '+10')
+        )
       ),
       h(
         'div',

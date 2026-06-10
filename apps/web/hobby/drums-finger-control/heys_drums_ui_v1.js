@@ -108,6 +108,7 @@
     const [sessionState, setSessionState] = useState(initialState);
     const [resumeSnapshot, setResumeSnapshot] = useState(initial.resume);
     const [soundEnabled, setSoundEnabled] = useState(true);
+    const [soundVolume, setSoundVolume] = useState(100);
     const [savedLog, setSavedLog] = useState(null);
     const [progressSeed, setProgressSeed] = useState(0);
     const metronomeRef = useRef({ nextNoteTime: 0, noteIndex: 0, scheduledNotes: [], ctx: null });
@@ -117,6 +118,8 @@
     const activeResult = sessionState.results[sessionState.activeIndex] || makeInitialBlockResult(activeBlock);
     const completedCount = sessionState.results.filter((result) => result.done).length;
     const progress = Math.round((completedCount / Math.max(1, sessionState.results.length)) * 100);
+    const tensionLabel = activeResult.tension <= 3 ? 'мягко' : activeResult.tension <= 6 ? 'норма' : 'зажим';
+    const soundLabel = activeResult.sound >= 4 ? 'ровно' : activeResult.sound >= 3 ? 'средне' : 'рвано';
     const historyStats = useMemo(function () {
       progressSeed;
       return summarizeProgress();
@@ -153,7 +156,7 @@
             const scheduledTime = cursor.nextNoteTime;
             const scheduledIndex = cursor.noteIndex;
             const kind = sessionState.countInSec ? 'bar' : getMetronomeNoteKind(activeBlock, cursor.noteIndex);
-            scheduleTick(ctx, scheduledTime, kind);
+            scheduleTick(ctx, scheduledTime, kind, soundVolume / 100);
             cursor.scheduledNotes = (cursor.scheduledNotes || []).concat({ index: scheduledIndex, time: scheduledTime }).slice(-96);
             cursor.nextNoteTime += sessionState.countInSec ? 1 : getMetronomeIntervalSec(activeBlock, activeResult.bpm, scheduledIndex);
             cursor.noteIndex += 1;
@@ -164,7 +167,7 @@
           metronomeRef.current.ctx = null;
         };
       },
-      [screen, soundEnabled, sessionState.running, sessionState.countInSec, activeResult.bpm, activeBlock?.id]
+      [screen, soundEnabled, soundVolume, sessionState.running, sessionState.countInSec, activeResult.bpm, activeBlock?.id]
     );
 
     useEffect(
@@ -199,7 +202,7 @@
               try {
                 HEYS.__playRestDoneBeep?.();
               } catch (_) {
-                playTick(true);
+                playTick(true, soundVolume / 100);
               }
             }
             return { ...prev, results, remainingSec: nextSec, running: nextSec > 0 ? prev.running : false };
@@ -209,7 +212,7 @@
           global.clearInterval(id);
         };
       },
-      [screen, sessionState.running, sessionState.activeIndex, sessionState.sessionId, activeBlock?.id]
+      [screen, soundVolume, sessionState.running, sessionState.activeIndex, sessionState.sessionId, activeBlock?.id]
     );
 
     useEffect(
@@ -606,6 +609,8 @@
               running: sessionState.running,
               countInSec: sessionState.countInSec,
               results: sessionState.results,
+              bpm: activeResult.bpm,
+              onBpmChange: (bpm) => patchActiveResult({ bpm: clampNumber(bpm, 30, 260, activeBlock.bpm) }),
             })
           : null,
         h(
@@ -626,6 +631,21 @@
             'button',
             { type: 'button', className: soundEnabled ? 'is-active' : '', onClick: () => setSoundEnabled((v) => !v) },
             soundEnabled ? 'Клик' : 'Без клика'
+          ),
+          h(
+            'label',
+            { className: 'drums-ft-volume-control' },
+            h('span', null, 'Громкость'),
+            h('strong', null, soundVolume + '%'),
+            h('input', {
+              type: 'range',
+              min: 0,
+              max: 100,
+              step: 5,
+              value: soundVolume,
+              disabled: !soundEnabled,
+              onChange: (event) => setSoundVolume(clampNumber(event.target.value, 0, 100, 100)),
+            })
           )
         ),
         h(
@@ -640,53 +660,44 @@
           )
         ),
         h(
-          'div',
-          { className: 'drums-ft-input-grid' },
+          'section',
+          { className: 'drums-ft-quality', 'aria-label': 'Оценка блока' },
+          h('div', { className: 'drums-ft-quality__head' }, h('strong', null, 'Оценка блока'), h('span', null, 'после подхода')),
           h(
             'label',
-            null,
-            h('span', null, 'BPM'),
-            h('input', {
-              type: 'number',
-              min: 30,
-              max: 260,
-              value: activeResult.bpm,
-              onChange: (event) => patchActiveResult({ bpm: clampNumber(event.target.value, 30, 260, activeBlock.bpm) }),
-            })
-          ),
-          h(
-            'label',
-            null,
-            h('span', null, 'Зажим'),
+            { className: 'drums-ft-quality-card' },
+            h('span', { className: 'drums-ft-quality-card__top' }, h('strong', null, 'Напряжение'), h('em', null, tensionLabel)),
             h('input', {
               type: 'range',
               min: 1,
               max: 10,
               value: activeResult.tension,
               onChange: (event) => patchActiveResult({ tension: clampNumber(event.target.value, 1, 10, 3) }),
-            })
+            }),
+            h('small', null, '1 мягко · 10 зажим')
           ),
           h(
             'label',
-            null,
-            h('span', null, 'Звук'),
+            { className: 'drums-ft-quality-card' },
+            h('span', { className: 'drums-ft-quality-card__top' }, h('strong', null, 'Ровность удара'), h('em', null, soundLabel)),
             h('input', {
               type: 'range',
               min: 1,
               max: 5,
               value: activeResult.sound,
               onChange: (event) => patchActiveResult({ sound: clampNumber(event.target.value, 1, 5, 4) }),
-            })
+            }),
+            h('small', null, '1 рвано · 5 ровно')
           ),
           h(
             'label',
-            { className: 'drums-ft-check' },
+            { className: 'drums-ft-quality-check' },
             h('input', {
               type: 'checkbox',
               checked: !!activeResult.clean,
               onChange: (event) => patchActiveResult({ clean: event.target.checked }),
             }),
-            h('span', null, 'чисто')
+            h('span', null, h('strong', null, 'Чисто выполнено'), h('small', null, 'без сбивок и лишнего зажима'))
           )
         ),
         activeBlock.ramp
@@ -720,7 +731,7 @@
               else setSessionState((prev) => ({ ...prev, pain: false, safetyStop: false, running: false, countInSec: 0 }));
             },
           }),
-          h('span', null, 'есть боль, онемение или палка теряет контроль')
+          h('span', null, h('strong', null, 'Стоп: боль или онемение'), h('small', null, 'сразу закончит блок и предложит отдых'))
         ),
         h(
           'div',
@@ -1009,6 +1020,7 @@
       getPlaybackPosition,
       getNotationWindow,
       resyncMetronomeCursor,
+      scheduleTick,
       getRampStep,
       applyRampStep,
       rollbackRamp,

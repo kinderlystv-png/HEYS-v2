@@ -636,6 +636,47 @@ describe('drums finger trainer', () => {
     expect(cursor.noteIndex).toBe(32);
   });
 
+  it('scales metronome tick gain by volume and defaults to max volume', () => {
+    const { api } = setupModule();
+    const peaks = [];
+    const makeCtx = () => ({
+      currentTime: 1,
+      destination: {},
+      createOscillator() {
+        return {
+          type: '',
+          frequency: { setValueAtTime() {} },
+          connect(gain) {
+            return gain;
+          },
+          start() {},
+          stop() {},
+        };
+      },
+      createGain() {
+        return {
+          gain: {
+            setValueAtTime() {},
+            exponentialRampToValueAtTime(value) {
+              peaks.push(value);
+            },
+          },
+          connect(destination) {
+            return destination;
+          },
+        };
+      },
+    });
+
+    api._test.scheduleTick(makeCtx(), 1, 'bar');
+    api._test.scheduleTick(makeCtx(), 1, 'bar', 0.5);
+    api._test.scheduleTick(makeCtx(), 1, 'sub', 0);
+
+    expect(peaks[0]).toBeCloseTo(0.18, 5);
+    expect(peaks[2]).toBeCloseTo(0.09, 5);
+    expect(peaks[4]).toBeCloseTo(0.0001, 5);
+  });
+
   it('applies and rolls back tempo ramp steps', () => {
     const { api } = setupModule();
     const singles = api.BLOCKS.find((block) => block.id === 'singles');
