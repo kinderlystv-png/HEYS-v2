@@ -31,7 +31,7 @@
   // Должны совпадать с apps/landing/src/config/pricing.ts.
   HEYS.config = HEYS.config || {};
   HEYS.config.prices = HEYS.config.prices || {
-    base: 2990,
+    base: 490,
     pro: 7990,
     proPlus: 14990,
   };
@@ -388,9 +388,9 @@
     const plans = [
       {
         id: 'base',
-        name: 'Base',
+        name: 'Self',
         price: PAYWALL_CONFIG.prices.base,
-        desc: 'Приложение + подсказки + 1 чек-ин/неделю',
+        desc: 'Самостоятельный дневник: КБЖУ, динамика, виджеты',
         popular: false
       },
       {

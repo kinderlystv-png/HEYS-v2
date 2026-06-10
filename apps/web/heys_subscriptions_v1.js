@@ -27,7 +27,7 @@
   // Должны совпадать с apps/landing/src/config/pricing.ts.
   HEYS.config = HEYS.config || {};
   HEYS.config.prices = HEYS.config.prices || {
-    base: 2990,
+    base: 490,
     pro: 7990,
     proPlus: 14990,
   };
@@ -40,12 +40,12 @@
     PLANS: {
       base: {
         id: 'base',
-        name: 'Base',
+        name: 'Self',
         price: HEYS.config.prices.base,
         currency: 'RUB',
         features: [
-          'Приложение + умные подсказки',
-          '1 чек-ин в неделю (async)'
+          'Самостоятельный дневник: КБЖУ и приёмы',
+          'Базовая динамика, виджеты, задачник'
         ]
       },
       pro: {
@@ -55,7 +55,7 @@
         currency: 'RUB',
         recommended: true,
         features: [
-          'Всё из Base',
+          'Всё из Self',
           'Ведение дневника куратором',
           'Чат с куратором',
           'Созвон раз в неделю'

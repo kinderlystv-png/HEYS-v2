@@ -297,7 +297,7 @@ function InsulinWaveBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean,
                                 После каждого приёма пищи организм сначала запасает энергию, а потом возвращается к сжиганию жира. Обычные диеты говорят: «не ешь после 18:00» или «окошко 2 часа».
                             </p>
                             <p className="text-gray-600 mb-4 leading-relaxed">
-                                HEYS не гадает. Система выстраивает <strong className="font-semibold text-gray-900">Инсулиновую волну</strong> индивидуально для каждого приёма пищи по <strong className="font-semibold text-gray-900">37 параметрам</strong>
+                                HEYS не гадает. Система выстраивает <strong className="font-semibold text-gray-900">Инсулиновую волну</strong> индивидуально для каждого приёма пищи — по его составу и вашему состоянию
                                 {' '}(БЖУ, клетчатка, гликемический индекс, текущий стресс и качество сна).
                             </p>
                             <ul className="space-y-3 mb-4 bg-white/50 p-5 rounded-2xl border border-sky-50">

@@ -179,7 +179,7 @@ function MatrixSection({ content }: { content: VariantContent }) {
               <thead>
                 <tr className="bg-gray-100">
                   <th className="text-left px-6 py-4 text-gray-900 font-semibold">Аспект</th>
-                  <th className="text-center px-6 py-4 text-gray-900 font-semibold">Base</th>
+                  <th className="text-center px-6 py-4 text-gray-900 font-semibold">Self</th>
                   <th className="text-center px-6 py-4 text-gray-900 font-semibold">Pro</th>
                   <th className="text-center px-6 py-4 text-gray-900 font-semibold">Pro+</th>
                 </tr>

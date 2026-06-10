@@ -9,8 +9,12 @@ export interface PricingPlan {
   period: string // '₽/мес'
 }
 
+// Pro-first Фаза 0 (метод. 19, решение 2026-06-09): Self — бюджетный якорь
+// без куратора, Pro — главный оффер. Внутренний ключ 'base' сохранён, чтобы
+// не трогать plan-id в paywall/subscriptions/payments — меняется только
+// отображаемое имя и цена.
 export const PRICING = {
-  base: { name: 'Base', price: '2 990', period: '₽/мес' },
+  base: { name: 'Self', price: '490', period: '₽/мес' },
   pro: { name: 'Pro', price: '7 990', period: '₽/мес' },
   proPlus: { name: 'Pro+', price: '14 990', period: '₽/мес' },
 } as const satisfies Record<string, PricingPlan>

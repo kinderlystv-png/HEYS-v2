@@ -11,9 +11,9 @@ export interface LegalDocMeta {
 
 export const LEGAL_DOCS = {
   userAgreement: {
-    version: '1.5',
-    effectiveDate: '20 мая 2026 г.',
-    lastUpdated: '20 мая 2026 г.',
+    version: '1.6',
+    effectiveDate: '10 июня 2026 г.',
+    lastUpdated: '10 июня 2026 г.',
   },
   privacyPolicy: {
     version: '1.5',

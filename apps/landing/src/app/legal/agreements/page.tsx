@@ -34,7 +34,7 @@ export default function AgreementsPage() {
             title: 'Условия возврата денежных средств',
             href: '/legal/refund',
             version: LEGAL_DOCS.refund.version,
-            description: 'Сроки и порядок возврата средств за оплаченные подписки тарифов Base, Pro, Pro+.',
+            description: 'Сроки и порядок возврата средств за оплаченные подписки тарифов Self, Pro, Pro+.',
             icon: '💰',
         },
         {

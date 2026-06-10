@@ -65,7 +65,7 @@ function isYukassaIp(rawIp) {
 // и HEYS.config.prices в apps/web/heys_paywall_v1.js — иначе клиент покажет
 // одну сумму, а ЮKassa спишет другую (нарушение оферты, п. 4.2 user-agreement).
 const PLANS = {
-  base: { price: 2990, name: 'Base', description: 'HEYS Base подписка на 1 месяц' },
+  base: { price: 490, name: 'Self', description: 'HEYS Self подписка на 1 месяц' },
   pro: { price: 7990, name: 'Pro', description: 'HEYS Pro подписка на 1 месяц' },
   proplus: { price: 14990, name: 'Pro+', description: 'HEYS Pro+ подписка на 1 месяц' }
 };

@@ -20,15 +20,15 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
       name: PRICING.base.name,
       price: PRICING.base.price,
       period: PRICING.base.period,
-      description: 'Самостоятельный контроль + ревью от куратора раз в неделю.',
+      description: 'Самостоятельный дневник и базовый контроль. Без куратора.',
       features: [
-        'Вы ведете дневник питания сами',
-        'Полный доступ к приложению и виджетам',
-        'Алгоритмы предсказывают риск срывов',
-        'Глубокая аналитика метрик под капотом',
-        'Ревью и объективная оценка ситуации 1 раз в неделю',
+        'Вы ведёте дневник питания сами',
+        'Расчёт КБЖУ и приёмов пищи',
+        'Базовая динамика по дням и неделям',
+        'Виджеты и задачник',
+        'Своя база продуктов и история',
       ],
-      cta: 'Попробовать Pro (0 ₽)', hasTrial: true, directCta: 'Выбрать Base',
+      cta: 'Попробовать Pro (0 ₽)', hasTrial: true, directCta: 'Выбрать Self',
       featured: false,
     },
     {
@@ -47,7 +47,8 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
       ],
       cta: 'Попробовать неделю (0 ₽)', hasTrial: true, directCta: 'Оформить подписку',
       featured: true,
-      badge: 'Хит',
+      badge: 'Первый набор — цена фиксируется',
+      note: 'Цена первого набора. Для тех, кто подключился сейчас, она не меняется. Дальше Pro будет дороже.',
     },
     {
       id: 'pro-plus',
@@ -82,7 +83,7 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{pricing.intro}</h2>
             <p className="text-gray-600 max-w-xl mx-auto">
-              Во всех тарифах с вами работает куратор, не алгоритм. Разница — в глубине сопровождения.
+              В Pro и Pro+ с вами работает куратор, не алгоритм. Self — самостоятельный режим, если нужен только дневник и базовый контроль.
             </p>
           </div>
 
@@ -113,6 +114,9 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
                     <span className={plan.premium ? 'text-indigo-200/70' : 'text-gray-500'}>{plan.period}</span>
                   </div>
                   <p className={`mt-2 text-sm ${plan.premium ? 'text-indigo-100/90' : 'text-gray-600'}`}>{plan.description}</p>
+                  {plan.note ? (
+                    <p className="mt-2 text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">{plan.note}</p>
+                  ) : null}
                 </div>
 
                 <ul className="space-y-3 mb-8">
