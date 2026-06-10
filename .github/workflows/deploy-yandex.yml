@@ -19,6 +19,10 @@ concurrency:
   group: deploy-yandex-main
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: read
+
 env:
   NODE_VERSION: "18"
   PNPM_VERSION: "8"
@@ -44,11 +48,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # fetch-depth: 0 needed because pushes >2 commits would otherwise fail
-          # `git log $BEFORE..$AFTER` with shallow clone. Dynamic depth via
-          # `commits.length` unreliable: GitHub API caps the array at 20.
-          # Trade-off: +5-15s per push, but fast-path saves 3-4min on release-bumps.
-          fetch-depth: 0
+          # Usually enough to include the currently deployed hash. The classifier
+          # deepens below only when production is older than this shallow window.
+          fetch-depth: 256
 
       - uses: actions/setup-node@v4
         with:
@@ -80,6 +82,11 @@ jobs:
           fi
 
           if ! git cat-file -e "$DEPLOYED_HASH" 2>/dev/null; then
+            echo "ℹ️ Deployed hash $DEPLOYED_HASH is outside shallow checkout — fetching full history"
+            git fetch --no-tags --prune --unshallow origin 2>/dev/null || git fetch --no-tags --prune origin
+          fi
+
+          if ! git cat-file -e "$DEPLOYED_HASH" 2>/dev/null; then
             echo "⚠️ Deployed hash $DEPLOYED_HASH not in git history (force-push? rebase?) — full build"
             echo "release_only=false" >> $GITHUB_OUTPUT
             exit 0
@@ -106,12 +113,12 @@ jobs:
     runs-on: ubuntu-latest
     # HARD gate: a red suite blocks the deploy. The full apps/web suite is green under
     # the CI timezone (UTC) — the one tz-fragile test (heys_relapse_risk) was fixed to
-    # use a tz-naive `now`. If this job goes red, build-and-deploy is skipped by design.
+    # use a tz-naive `now`. If this job goes red, deploy-artifact is skipped by design.
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -125,9 +132,9 @@ jobs:
       - name: Run unit tests (same command as the pre-push gate)
         run: cd apps/web && pnpm exec vitest run --retry=1
 
-  build-and-deploy:
-    name: Build & Deploy to Yandex Cloud
-    needs: [detect, test]
+  build-artifact:
+    name: Build deploy artifact
+    needs: detect
     if: needs.detect.outputs.release_only != 'true'
     runs-on: ubuntu-latest
 
@@ -135,7 +142,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0 # Full history for git commands
+          # Deep enough for normal deployed..HEAD checks; deepened on demand below.
+          fetch-depth: 256
           submodules: false
 
       - name: Fix git safe directory
@@ -186,6 +194,10 @@ jobs:
             | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{console.log(JSON.parse(d).hash||"")}catch{console.log("")}})' \
             || echo "")
           echo "Whats-new range baseline (deployed hash): ${DEPLOYED:-<none>}"
+          if [ -n "$DEPLOYED" ] && ! git cat-file -e "$DEPLOYED" 2>/dev/null; then
+            echo "ℹ️ Deployed hash is outside shallow checkout — fetching full history"
+            git fetch --no-tags --prune --unshallow origin 2>/dev/null || git fetch --no-tags --prune origin
+          fi
           HEYS_DEPLOYED_HASH="$DEPLOYED" HEYS_REQUIRE_COVERED_COMMITS=1 node scripts/prepare-release.mjs --check
 
       # TODO: Fix CI test environment (tests pass locally but fail in CI)
@@ -334,19 +346,79 @@ jobs:
             echo "SW_CACHE_VERSION=unknown" >> $GITHUB_ENV
           fi
 
+      - name: Upload PWA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pwa-dist
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload Landing artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: landing-out
+          path: apps/landing/out
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy-artifact:
+    name: Deploy artifact to Yandex Cloud
+    needs: [detect, test, build-artifact]
+    if: needs.detect.outputs.release_only != 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download PWA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pwa-dist
+          path: apps/web/dist
+
+      - name: Download Landing artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: landing-out
+          path: apps/landing/out
+
+      - name: Read build version from artifact
+        run: |
+          if [ -f apps/web/dist/version.json ]; then
+            VERSION=$(jq -r '.version' apps/web/dist/version.json)
+            echo "BUILD_VERSION=$VERSION" >> $GITHUB_ENV
+            echo "✅ Build version from artifact: $VERSION"
+            cat apps/web/dist/version.json
+          else
+            echo "::error::version.json missing in PWA artifact"
+            exit 1
+          fi
+
+      - name: Read SW cache version
+        run: |
+          if [ -f apps/web/dist/sw.js ]; then
+            CACHE_VERSION=$(node -e "const fs=require('fs');const s=fs.readFileSync('apps/web/dist/sw.js','utf8');const m=s.match(/const CACHE_VERSION = '([^']+)'/);process.stdout.write(m?m[1]:'');")
+            echo "SW_CACHE_VERSION=$CACHE_VERSION" >> $GITHUB_ENV
+            echo "✅ SW cache version: $CACHE_VERSION"
+          else
+            echo "⚠️ sw.js not found in PWA artifact"
+            echo "SW_CACHE_VERSION=unknown" >> $GITHUB_ENV
+          fi
+
       - name: Configure AWS CLI for Yandex Cloud
         # AWS CLI уже предустановлен на ubuntu-latest!
         run: |
           aws configure set aws_access_key_id ${{ secrets.YC_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ secrets.YC_SECRET_ACCESS_KEY }}
           aws configure set default.region ru-central1
+          aws configure set default.s3.max_concurrent_requests 30
+          aws configure set default.s3.max_queue_size 10000
 
       - name: Deploy PWA to Yandex Object Storage
         run: |
           # === PWA Application → heys-app bucket ===
           # GOLDEN STANDARD CACHING STRATEGY
 
-          DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
+          DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/dist/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
           echo "📜 Legal docs version: ${DOCS_VERSION:-unknown}"
 
           # === STEP 1: Immutable Assets (1 year cache) ===
@@ -395,25 +467,23 @@ jobs:
           # === STEP 2: Mutable JS Files (0 cache, must-revalidate) ===
           # These files change often but keep the same name
           echo "📜 Updating mutable JS files (max-age=0)..."
-          JS_UPLOAD_COUNT=0
-          for jsfile in apps/web/dist/heys_*.js; do
-            if [ -f "$jsfile" ]; then
-              filename=$(basename "$jsfile")
-              aws s3 cp "$jsfile" s3://${{ env.YC_BUCKET_PWA }}/$filename \
-                --endpoint-url=${{ env.YC_ENDPOINT }} \
-                --cache-control "public, max-age=0, must-revalidate" \
-                --content-type "application/javascript" &
-              JS_UPLOAD_COUNT=$((JS_UPLOAD_COUNT + 1))
-            fi
-          done
-          wait
+          JS_UPLOAD_COUNT=$(find apps/web/dist -maxdepth 1 -type f -name "heys_*.js" | wc -l | tr -d ' ')
 
-          # 🛡️ ЗАЩИТА: Проверяем что файлы реально загрузились
+          # 🛡️ ЗАЩИТА: Проверяем что build создал ожидаемый набор mutable JS
           if [ "$JS_UPLOAD_COUNT" -lt 50 ]; then
-            echo "::error::Only $JS_UPLOAD_COUNT heys_*.js files were uploaded (expected 50+)!"
+            echo "::error::Only $JS_UPLOAD_COUNT heys_*.js files found in dist (expected 50+)!"
             echo "Build likely failed silently. Check build logs."
             exit 1
           fi
+
+          aws s3 sync apps/web/dist/ s3://${{ env.YC_BUCKET_PWA }}/ \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --exclude "*" \
+            --include "heys_*.js" \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --content-type "application/javascript" \
+            --no-progress
+
           echo "✅ Uploaded $JS_UPLOAD_COUNT heys_*.js files"
 
           # === STEP 2.1: React bundle (critical, gzipped, no cache) ===
@@ -601,7 +671,7 @@ jobs:
 
           # Юридические документы — ВСЕГДА инвалидируем (152-ФЗ compliance)
           echo "🔄 Purging legal docs from CDN cache..."
-          DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
+          DOCS_VERSION=$(node -e "const fs=require('fs'); const s=fs.readFileSync('apps/web/dist/heys_consents_v1.js','utf8'); const m=s.match(/user_agreement:\\s*'([^']+)'/); process.stdout.write(m?m[1]:'');")
           echo "  Legal docs version: ${DOCS_VERSION:-unknown}"
 
           yc cdn cache purge --resource-id "$CDN_PWA_ID" \
@@ -701,7 +771,7 @@ jobs:
           "
 
       - name: Setup AWS CLI for Yandex S3
-        # Secret names синхронизированы с build-and-deploy job (line 218) —
+        # Secret names синхронизированы с deploy-artifact job —
         # YC_ACCESS_KEY_ID / YC_SECRET_ACCESS_KEY, не S3_KEY_ID/SECRET.
         run: |
           aws configure set aws_access_key_id ${{ secrets.YC_ACCESS_KEY_ID }}
@@ -749,7 +819,7 @@ jobs:
         env:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
-          # Same CDN_PWA_ID as in build-and-deploy job (line 436)
+          # Same CDN_PWA_ID as in deploy-artifact job.
           CDN_PWA_ID: bc8rvrvenqslkmti5yts
         run: |
           if [ -z "$YC_TOKEN" ]; then
@@ -788,14 +858,14 @@ jobs:
   verify-deploy:
     name: Verify deployed state vs HEAD
     runs-on: ubuntu-latest
-    needs: [detect, build-and-deploy, fast-release-bump]
+    needs: [detect, deploy-artifact, fast-release-bump]
     if: |
       always() && needs.detect.result == 'success' &&
-      (needs.build-and-deploy.result == 'success' || needs.fast-release-bump.result == 'success')
+      (needs.deploy-artifact.result == 'success' || needs.fast-release-bump.result == 'success')
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 256
 
       - name: Compare deployed hash with HEAD
         run: |
@@ -815,6 +885,11 @@ jobs:
           if [ -z "$DEPLOYED" ]; then
             echo "::error::Cannot fetch deployed build-meta.json after deploy — upload broken or CDN stale"
             exit 1
+          fi
+
+          if ! git cat-file -e "$DEPLOYED" 2>/dev/null; then
+            echo "ℹ️ Deployed hash is outside shallow checkout — fetching full history"
+            git fetch --no-tags --prune --unshallow origin 2>/dev/null || git fetch --no-tags --prune origin
           fi
 
           if [ "$DEPLOYED" = "$HEAD" ]; then
