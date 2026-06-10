@@ -120,6 +120,8 @@ async function sendTelegramNotification(message) {
 // ─────────────────────────────────────────────────────────────────────────
 // Dead-man's switch (2026-06-03). The whole monitor — synthetic defense, KV
 // health, daily/weekly reports — is worthless if heys-maintenance silently
+// (watcher теперь бежит в конце КАЖДОГО триггера, не только trial_queue — см.
+// checkHeartbeats call-site перед return handler'а).
 // stops running (dead cron trigger, broken initSecrets / Lockbox rotation,
 // exhausted DB pool). recordHeartbeat() stamps each task's last SUCCESS;
 // checkHeartbeats() is the watcher, run by the high-frequency trial_queue
@@ -162,11 +164,19 @@ async function checkHeartbeats(client) {
     return;
   }
   if (stale.length === 0) return;
+  // Severity растёт с длительностью молчания: >72h (3× типового порога 25h) —
+  // это не рутинный «один таск чихнул», а затяжная авария. Меняем заголовок и
+  // помечаем строки 🔴, чтобы 157h визуально не читался как 25h (alert fatigue).
+  const worstSilentH = Math.max(...stale.map((r) => r.silent_h));
+  const escalated = worstSilentH >= 72;
+  const header = escalated
+    ? `🔴 *Monitor dead-man's switch — ЭСКАЛАЦИЯ (${Math.round(worstSilentH / 24)} сут молчания)*`
+    : `🚑 *Monitor dead-man's switch*`;
   await sendTelegramNotification(
-    `🚑 *Monitor dead-man's switch*\n\n` +
+    header + `\n\n` +
     `Таск(и) heys-maintenance молчат дольше порога — возможно умер cron-триггер, ` +
     `секреты (Lockbox) или DB-pool:\n\n` +
-    stale.map((r) => `• \`${r.task}\` молчит ${r.silent_h}h _(порог ${r.max_silence})_`).join('\n') +
+    stale.map((r) => `• \`${r.task}\` молчит ${r.silent_h}h _(порог ${r.max_silence})_${r.silent_h >= 72 ? ' 🔴' : ''}`).join('\n') +
     `\n\n_Проверь Yandex Cloud → Functions → triggers и логи heys-maintenance._`
   );
 }
@@ -778,8 +788,15 @@ async function dailyReport(client, once) {
         `🍽 meal-add: ${a.meal_add} · 💊 supps: ${a.supplement_mark}` +
         (a.product_delete > 0 ? ` · 🗑 del: ${a.product_delete}` : '') +
         (a.sync_products > 0 ? ` · 🔄 sync: ${a.sync_products}` : '');
+      // Аномалия: синки идут, но событий еды/добавок нет N-й день. Это не «тихо»,
+      // а скорее всего телеметрия meal-add/supplement-mark не пишется в event log
+      // (клиент не эмитит эти kind, либо миграция Wave 5.3 не докатана). Без флага
+      // отчёт читается как здоровый — маскирует поломку аналитики/churn-сигнала.
+      if (a.meal_add === 0 && a.supplement_mark === 0 && a.sync_products > 0) {
+        activityBlock += `\n⚠️ _Только sync-события: meal-add/supps не логируются — телеметрия еды сломана либо клиент реально не вносит. Проверь client_event_log / миграцию Wave 5.3._`;
+      }
     } else {
-      activityBlock = `👥 *Активность за 24 часа*\nСобытий нет (event log пуст или не применена миграция)`;
+      activityBlock = `👥 *Активность за 24 часа*\n⚠️ _Событий нет совсем — event log пуст. Это поломка (cron не пишет или миграция Wave 5.3 не применена), а не тихий день._`;
     }
   } catch (e) {
     activityBlock = `👥 *Активность*: ⚠️ ${e.message.slice(0, 80)}`;
@@ -1011,6 +1028,10 @@ async function weeklyReport(client) {
   const startStr = weekAgo.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: 'Europe/Moscow' });
   const header = `📈 *Еженедельный дайджест HEYS* — ${startStr}–${endStr}`;
 
+  // Числовые значения держим отдельно (null = блок упал на ошибке), чтобы в
+  // конце решить: слать полный дайджест или сжатую строку при пустой неделе.
+  let conv = null, newClients = null, pushes = null, funnel = null;
+
   // A: Trial → paid конверсии за 7 дней
   let conversionsBlock = '';
   try {
@@ -1018,7 +1039,8 @@ async function weeklyReport(client) {
       SELECT count(*)::int AS conversions FROM trial_queue_events
       WHERE event_type = 'purchased' AND created_at > now() - interval '7 days'
     `);
-    conversionsBlock = `💰 *Конверсии trial → paid*: ${cRes.rows[0].conversions}`;
+    conv = cRes.rows[0].conversions;
+    conversionsBlock = `💰 *Конверсии trial → paid*: ${conv}`;
   } catch (e) {
     conversionsBlock = `💰 *Конверсии*: ⚠️ ${e.message.slice(0, 60)}`;
   }
@@ -1030,7 +1052,8 @@ async function weeklyReport(client) {
       SELECT count(*)::int AS new_clients FROM clients
       WHERE created_at > now() - interval '7 days'
     `);
-    newClientsBlock = `🆕 *Новых клиентов*: ${ncRes.rows[0].new_clients}`;
+    newClients = ncRes.rows[0].new_clients;
+    newClientsBlock = `🆕 *Новых клиентов*: ${newClients}`;
   } catch (e) {
     newClientsBlock = `🆕 *Новых клиентов*: ⚠️ ${e.message.slice(0, 60)}`;
   }
@@ -1042,7 +1065,8 @@ async function weeklyReport(client) {
       SELECT count(*)::int AS pushes_sent FROM client_data_changelog
       WHERE notified_at > now() - interval '7 days'
     `);
-    pushBlock = `📱 *Push-уведомлений*: ${pRes.rows[0].pushes_sent}`;
+    pushes = pRes.rows[0].pushes_sent;
+    pushBlock = `📱 *Push-уведомлений*: ${pushes}`;
   } catch (e) {
     pushBlock = `📱 *Push*: ⚠️ ${e.message.slice(0, 60)}`;
   }
@@ -1057,13 +1081,29 @@ async function weeklyReport(client) {
         count(*) FILTER (WHERE status = 'canceled_by_purchase')::int AS converted_ever
       FROM trial_queue
     `);
-    const f = fRes.rows[0];
-    funnelBlock = `🎟 *Trial воронка*:\nОчередь: ${f.queued} → Вовлечены: ${f.engaged} → Конвертировано всего: ${f.converted_ever}`;
+    funnel = fRes.rows[0];
+    funnelBlock = `🎟 *Trial воронка*:\nОчередь: ${funnel.queued} → Вовлечены: ${funnel.engaged} → Конвертировано всего: ${funnel.converted_ever}`;
   } catch (e) {
     funnelBlock = `🎟 *Trial воронка*: ⚠️ ${e.message.slice(0, 60)}`;
   }
 
-  const parts = [header, conversionsBlock, newClientsBlock, pushBlock, funnelBlock].filter(Boolean);
+  // Пустая неделя (всё посчиталось и всё по нулям) → одна строка вместо четырёх
+  // блоков нулей. Полный дайджест приучает скроллить мимо, когда смотреть не на
+  // что; реальные движения сразу видны, т.к. ломают этот «зелёный» путь.
+  const allZero =
+    conv === 0 && newClients === 0 &&
+    funnel && funnel.queued === 0 && funnel.engaged === 0;
+
+  let parts;
+  if (allZero) {
+    parts = [
+      header,
+      `🟢 Без изменений за неделю: 0 новых, 0 конверсий, очередь пуста.` +
+      (pushes != null ? ` Push: ${pushes}.` : ''),
+    ];
+  } else {
+    parts = [header, conversionsBlock, newClientsBlock, pushBlock, funnelBlock].filter(Boolean);
+  }
   await sendTelegramNotification(parts.join('\n\n'));
   return { sent: true };
 }
@@ -1202,9 +1242,6 @@ module.exports.handler = async (event, context) => {
     if (runTrialQueue) {
       results.trial_queue = await processTrialQueue(client);
       await recordHeartbeat(client, 'trial_queue');
-      // trial_queue is the highest-frequency trigger → it's the watcher for the
-      // dead-man's switch over the daily/weekly tasks.
-      await checkHeartbeats(client);
     }
 
     // Cleanup security logs
@@ -1392,6 +1429,14 @@ module.exports.handler = async (event, context) => {
         );
       }
     }
+
+    // Dead-man's switch watcher — РАНЬШЕ висел только под trial_queue-триггером
+    // (SPOF: умри trial_queue — умри и наблюдатель, тишина = «всё ок»). Теперь
+    // checkHeartbeats бежит в конце ЛЮБОГО триггера. Idempotent: атомарный латч
+    // (stale_alerted_at, re-alert ≤1/6h) защищает от двойной отправки, поэтому
+    // повтор на trial_queue/all-инвокациях безвреден. Внешнего watchdog'а это не
+    // заменяет (падение всей функции/Yandex по-прежнему = тишина) — см. handoff.
+    await checkHeartbeats(client);
 
     return {
       statusCode: 200,
