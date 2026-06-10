@@ -1576,6 +1576,23 @@ module.exports.handler = async function (event, context) {
     params.p_session_token = cookieSessionToken;
   }
 
+  // Cookie-only PIN sessions rely on the gateway forwarding the HttpOnly
+  // `heys_session_token`. If neither body nor cookie supplied it, fail before
+  // generic SQL dispatch; otherwise Postgres sees only p_items/p_key and
+  // reports "function ... does not exist", which surfaced as a misleading 500.
+  if (fnName.endsWith('_by_session') && !params.p_session_token) {
+    return {
+      statusCode: 401,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        ok: false,
+        success: false,
+        error: 'invalid_session',
+        reason: 'missing_session_token',
+      }),
+    };
+  }
+
   // API-first ingest endpoint (custom handler, not direct SQL function wrapper)
   if (fnName === 'planning_context_ingest' || fnName === 'planning_context_agent_ingest') {
     let kv;

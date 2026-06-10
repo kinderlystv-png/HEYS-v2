@@ -10199,7 +10199,11 @@
           } else {
             anyError = result.error;
             // 🔧 v58 FIX: Проверяем auth ошибку — НЕ retry в этом случае!
-            if (anyError === 'No auth token available' || anyError === 'No session token') {
+            if (
+              anyError === 'No auth token available' ||
+              anyError === 'No session token' ||
+              isAuthFailure(anyError)
+            ) {
               isAuthError = true;
             }
             // Вернуть в очередь
