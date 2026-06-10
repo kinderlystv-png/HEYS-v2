@@ -2141,11 +2141,16 @@
 [data-theme="dark"] .fingers-settings__theme-id { color: #f9fafb; }
 [data-theme="dark"] .fingers-settings__theme-label { color: rgba(235, 235, 245, 0.55); }
 
-/* Profile grid — 2-col info tiles */
+/* Profile grid — compact info tiles */
 .fingers-settings__profile-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+@media (max-width: 420px) {
+  .fingers-settings__profile-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .fingers-settings__profile-tile {
   padding: 12px 14px;
@@ -2180,6 +2185,37 @@
 [data-theme="dark"] .fingers-settings__profile-label { color: rgba(235, 235, 245, 0.50); }
 [data-theme="dark"] .fingers-settings__profile-value { color: #f9fafb; }
 [data-theme="dark"] .fingers-settings__profile-value.is-missing { color: #fcd34d; }
+.fingers-settings__level-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.fingers-settings__level-chip {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--fingers-text, #0f172a);
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.fingers-settings__level-chip.is-active {
+  border-color: rgba(194, 65, 12, 0.44);
+  background: rgba(251, 146, 60, 0.16);
+  color: #9a3412;
+}
+[data-theme="dark"] .fingers-settings__level-chip {
+  background: rgba(40, 40, 46, 0.78);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #f9fafb;
+}
+[data-theme="dark"] .fingers-settings__level-chip.is-active {
+  border-color: rgba(251, 146, 60, 0.46);
+  background: rgba(251, 146, 60, 0.16);
+  color: #fed7aa;
+}
 .fingers-settings__profile-hint {
   margin: 8px 4px 0;
   font-size: 12px;
@@ -6243,6 +6279,12 @@
   min-height: 50px;
   font-size: 14px;
 }
+.fingers-ob-root .fingers-ob-note {
+  margin: 8px 2px 0;
+  color: rgba(60, 60, 67, 0.64);
+  font-size: 12px;
+  line-height: 1.45;
+}
 
 /* Radio rows (equipment-like) */
 .fingers-ob-root .fingers-ob-radio {
@@ -6365,6 +6407,7 @@
   border-color: rgba(255, 255, 255, 0.12);
 }
 [data-theme="dark"] .fingers-ob-root .fingers-ob-label { color: rgba(235, 235, 245, 0.55); }
+[data-theme="dark"] .fingers-ob-root .fingers-ob-note { color: rgba(235, 235, 245, 0.58); }
 [data-theme="dark"] .fingers-ob-root .fingers-ob-dot { background: rgba(255, 255, 255, 0.18); }
 
 /* ---- weekly volume bar chart ---- */

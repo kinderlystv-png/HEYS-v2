@@ -286,6 +286,85 @@
   }
 
   const S4_DROP_ORDER = ['strength-endurance', 'capacity', 'power', 'max-strength'];
+
+  // CONSTRUCTOR_SPEC §3.7: прямых MEV/MAV по пальцам нет, поэтому это proxy по
+  // weekly TUT. MAV режет сессию; MEV только объясняет недобор, не добавляет
+  // нагрузку поверх safety-caps.
+  const QUALITY_WEEKLY_TUT_BANDS = {
+    finger_strength:    { mev: 30,  mav: 300 },
+    max_strength:       { mev: 30,  mav: 250 },
+    anaerobic_capacity: { mev: 120, mav: 750 },
+    aerobic_base:       { mev: 600, mav: 5400 },
+    power:              { mev: 30,  mav: 360 }
+  };
+
+  function _qualityTutWeekToDate(o) {
+    const ftl = (o && o.ftl) || {};
+    return (o && (o.qualityTutWeekToDate || o.weeklyQualityTutSec)) ||
+      ftl.qualityTutWeekToDate ||
+      ftl.weeklyQualityTutSec ||
+      {};
+  }
+
+  function _estimateSessionTutByQuality(exercises) {
+    const out = {};
+    for (let i = 0; i < exercises.length; i++) {
+      const atom = Fingers.blockCatalog && Fingers.blockCatalog.getAtom(exercises[i].atomId);
+      if (!atom || !atom.quality) continue;
+      out[atom.quality] = Math.round(((out[atom.quality] || 0) + _estimateAtomTutSec(atom)) * 10) / 10;
+    }
+    return out;
+  }
+
+  function _computeQualityBandTrace(o, exercises) {
+    const week = _qualityTutWeekToDate(o || {});
+    const session = _estimateSessionTutByQuality(exercises);
+    const perQuality = {};
+    Object.keys(QUALITY_WEEKLY_TUT_BANDS).forEach(function (q) {
+      const band = QUALITY_WEEKLY_TUT_BANDS[q];
+      const before = num(week[q]) || 0;
+      const sessionTut = num(session[q]) || 0;
+      const projected = Math.round((before + sessionTut) * 10) / 10;
+      perQuality[q] = {
+        weekBefore: before,
+        sessionTut: sessionTut,
+        projected: projected,
+        mev: band.mev,
+        mav: band.mav,
+        underMev: projected > 0 && projected < band.mev,
+        overMav: projected > band.mav
+      };
+    });
+    return {
+      perQuality: perQuality,
+      underMev: Object.keys(perQuality).filter(function (q) { return perQuality[q].underMev; }),
+      overMav: Object.keys(perQuality).filter(function (q) { return perQuality[q].overMav; })
+    };
+  }
+
+  function _enforceQualityMav(o, exercises) {
+    let trace = _computeQualityBandTrace(o, exercises);
+    const drops = [];
+    while (trace.overMav.length > 0) {
+      let removed = null;
+      for (let i = 0; i < S4_DROP_ORDER.length && !removed; i++) {
+        const role = S4_DROP_ORDER[i];
+        const idx = exercises.findIndex(function (e) {
+          if (e.__role !== role) return false;
+          const atom = Fingers.blockCatalog && Fingers.blockCatalog.getAtom(e.atomId);
+          return atom && trace.overMav.indexOf(atom.quality) >= 0;
+        });
+        if (idx >= 0) removed = exercises.splice(idx, 1)[0];
+      }
+      if (!removed) break;
+      drops.push({ role: removed.__role, atomId: removed.atomId });
+      trace = _computeQualityBandTrace(o, exercises);
+    }
+    trace.enforced = drops.length > 0;
+    trace.drops = drops;
+    return trace;
+  }
+
   function _enforceS4(o, exercises) {
     let trace = _computeS4Trace(o, exercises);
     const drops = [];
@@ -307,6 +386,40 @@
     return trace;
   }
 
+  function _enforcePlannerVolume(o, exercises, plannerContext) {
+    const multiplier = num(plannerContext && plannerContext.volumeMultiplier);
+    const drops = [];
+    const beforeFtl = _estimateSessionFtl(exercises, o || {});
+    if (multiplier === null || multiplier >= 1 || multiplier <= 0 || beforeFtl <= 0) {
+      return {
+        enforced: false,
+        drops: drops,
+        multiplier: multiplier,
+        beforeFtl: beforeFtl,
+        afterFtl: beforeFtl,
+        targetFtl: null
+      };
+    }
+    const target = Math.round(beforeFtl * multiplier * 10) / 10;
+    let after = beforeFtl;
+    for (let i = 0; i < S4_DROP_ORDER.length && after > target; i++) {
+      const role = S4_DROP_ORDER[i];
+      const idx = exercises.findIndex(function (e) { return e.__role === role; });
+      if (idx < 0) continue;
+      const removed = exercises.splice(idx, 1)[0];
+      drops.push({ role: role, atomId: removed.atomId });
+      after = _estimateSessionFtl(exercises, o || {});
+    }
+    return {
+      enforced: drops.length > 0,
+      drops: drops,
+      multiplier: multiplier,
+      beforeFtl: beforeFtl,
+      afterFtl: after,
+      targetFtl: target
+    };
+  }
+
   function totalDurationMin(exercises) {
     let totalSec = 0;
     for (let i = 0; i < exercises.length; i++) {
@@ -315,6 +428,56 @@
       if (atom) totalSec += _estimateAtomSec(atom);
     }
     return Math.max(10, Math.round(totalSec / 60));
+  }
+
+  function _sessionFocusLabel(bucket, sessionInt) {
+    if (sessionInt === 'max') return 'силовой акцент для пальцев';
+    if (bucket === 'recovery' || sessionInt === 'recovery') return 'легкая восстановительная работа';
+    return 'умеренная силовая выносливость';
+  }
+
+  function _buildDescription(bucket, sessionInt, duration, exercises) {
+    const focus = _sessionFocusLabel(bucket, sessionInt);
+    const count = exercises.length;
+    return 'На сегодня подобрана ' + focus + ': ' + count + ' упражн. примерно на ' + duration + ' мин.';
+  }
+
+  function _buildCoachReason(bucket, sessionInt, requiresWarmup, levelIsExplicit, bucketCapReason, plannerCapReason, plannerVolumeTrace, s4Trace, qualityBandTrace, exercises) {
+    const parts = [];
+    if (bucketCapReason === 'beginner_max_to_moderate') {
+      parts.push('Нагрузка снижена до умеренной: пока нет подтвержденного опыта для максимальной работы.');
+    } else if (sessionInt === 'max') {
+      parts.push('Основной блок выбран под готовность к тяжелой работе пальцев сегодня.');
+    } else if (bucket === 'recovery') {
+      parts.push('Сессия сделана легкой, чтобы сохранить движение без лишней нагрузки на пальцы.');
+    } else {
+      parts.push('Выбран умеренный объем: он дает стимул, но оставляет запас для восстановления.');
+    }
+    if (!levelIsExplicit) {
+      parts.push('Уровень не задан явно, поэтому протоколы выбраны консервативно.');
+    }
+    if (plannerCapReason) {
+      parts.push('Фаза плана ограничила интенсивность дня.');
+    }
+    if (plannerVolumeTrace && plannerVolumeTrace.enforced) {
+      parts.push('Фаза плана уменьшила объем сессии.');
+    }
+    if (requiresWarmup) {
+      parts.push('Перед основной частью нужен полный разогрев.');
+    }
+    if (s4Trace && s4Trace.enforced) {
+      parts.push('Объем подрезан по недельной нагрузке, чтобы не делать резкий скачок.');
+    }
+    if (qualityBandTrace && qualityBandTrace.enforced) {
+      parts.push('Объем подрезан по недельному потолку качества.');
+    }
+    if (qualityBandTrace && qualityBandTrace.underMev && qualityBandTrace.underMev.length > 0) {
+      parts.push('По части качеств неделя пока ниже минимального полезного объема.');
+    }
+    if (exercises.some(function (e) { return e.__role === 'antagonist' || e.__role === 'mobility'; })) {
+      parts.push('В конце добавлена работа на баланс и подвижность.');
+    }
+    return parts.join(' ');
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -330,6 +493,12 @@
     return Array.isArray(equipmentTypes) &&
       equipmentTypes.length === 1 &&
       equipmentTypes[0] === 'block';
+  }
+
+  function _qualitiesForSlot(slot, focusQuality) {
+    const base = (SLOT_QUALITIES[slot] || []).slice();
+    if (!focusQuality || base.indexOf(focusQuality) < 0) return base;
+    return [focusQuality].concat(base.filter(function (q) { return q !== focusQuality; }));
   }
 
   function _atomFits(atom, profile, allowedModalities) {
@@ -362,7 +531,11 @@
   // дедуп: legacy mix_engine не повторяет хват+ребро в одной сессии).
   function _pickAtomForSlot(slot, opts, usedGripEdge) {
     if (!Fingers.blockCatalog) return null;
-    const qualities = SLOT_QUALITIES[slot] || [];
+    const focusQuality = opts.focusQuality ||
+      (opts.plannerContext && opts.plannerContext.focusQuality) ||
+      (opts.periodizationContext && opts.periodizationContext.focusQuality) ||
+      null;
+    const qualities = _qualitiesForSlot(slot, focusQuality);
     const tissuePrefs = SLOT_TISSUE_PREF[slot] || [];
     const allowed = _allowedModalities(opts.equipmentTypes || ['full']);
     const profile = opts.profile ||
@@ -376,6 +549,10 @@
       return !k || !used[k];
     }
 
+    function progressionAllowed(a) {
+      return _progressionAllowsAtom(a, opts.progressionConstraints);
+    }
+
     function fitsEnvelope(a) {
       // Pre-flip duration envelope: pow_rfd_pulls is a valid methodology atom,
       // but in block-only max sessions it adds 15-25 attempts × 150s rest as a
@@ -385,6 +562,19 @@
         return false;
       }
       return true;
+    }
+
+    // Focus pass: только если quality уже входит в slot. Не расширяет пул слота,
+    // а лишь даёт лимитеру мезоцикла шанс до tissue-pref fallback'ов.
+    if (focusQuality && qualities.indexOf(focusQuality) >= 0) {
+      const candidates = Fingers.blockCatalog.atomsByQuality(focusQuality);
+      for (let k = 0; k < candidates.length; k++) {
+        const a = candidates[k];
+        if (!fitsEnvelope(a)) continue;
+        if (!progressionAllowed(a)) continue;
+        if (!notDuplicate(a)) continue;
+        if (_atomFits(a, profile, allowed)) return a;
+      }
     }
 
     // 1-я попытка — match quality + tissue preference + не дубль.
@@ -397,6 +587,7 @@
           const a = candidates[k];
           if (a.tissueLoad !== tissue) continue;
           if (!fitsEnvelope(a)) continue;
+          if (!progressionAllowed(a)) continue;
           if (!notDuplicate(a)) continue;
           if (_atomFits(a, profile, allowed)) return a;
         }
@@ -409,6 +600,7 @@
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
+        if (!progressionAllowed(a)) continue;
         if (!notDuplicate(a)) continue;
         if (_atomFits(a, profile, allowed)) return a;
       }
@@ -446,33 +638,90 @@
     };
   }
 
-  // ─── B3: подсказки прогрессии (ADVISORY, без влияния на генерацию) ─────────
-  // Собирает hints per-quality из переданных opts.recordsByQuality + opts.currentAxes.
-  // Hints формируются ТОЛЬКО для качеств, которые есть в текущей сессии (по
-  // атомам). Без переданных series → null (не блокирует ничего).
-  function _computeProgressionHints(o, exercises) {
-    if (!Fingers.progression || !o || !o.recordsByQuality) return null;
-    const qualities = Object.create(null);
-    for (let i = 0; i < exercises.length; i++) {
-      const ex = exercises[i];
-      let q = null;
-      if (Fingers.blockCatalog && typeof Fingers.blockCatalog.getAtom === 'function' && ex.atomId) {
-        const atom = Fingers.blockCatalog.getAtom(ex.atomId);
-        if (atom && atom.quality) q = atom.quality;
-      }
-      if (q) qualities[q] = true;
+  // ─── B3: progression constraints ────────────────────────────────────────────
+  // Раньше progression жил только как advisory `__progressionHints`. Теперь те же
+  // hints становятся мягким generator-constraint: atom с осью тяжелее текущей
+  // разрешенной оси не выбирается. Safety-гейты (pain/readiness/S4) остаются
+  // сильнее и могут дополнительно занулить/подрезать сессию.
+  const ATOM_AXIS_OVERRIDES = {
+    fs_repeater_73: 'volume',
+    fs_density_hang: 'volume',
+    fs_nohang_pickup: 'load',
+    fs_maxhang_20mm_half: 'load',
+    fs_maxhang_20mm_open: 'load',
+    fs_minedge_recruit: 'edge',
+    pe_on_the_minute: 'density',
+    pe_fingerboard_lactic: 'density',
+    aer_power_intervals: 'density',
+    aer_bfr_lowload: 'density'
+  };
+
+  function _atomProgressionAxis(atom) {
+    if (!atom) return 'volume';
+    if (ATOM_AXIS_OVERRIDES[atom.id]) return ATOM_AXIS_OVERRIDES[atom.id];
+    if (atom.quality === 'power') return 'speed';
+    if (atom.edgeSizeMm != null && atom.edgeSizeMm < 20) return 'edge';
+    if (atom.loadModel === 'addedWeightKg' || atom.loadModel === 'pctMax' || atom.loadModel === 'rm_margin') {
+      return 'load';
     }
-    const hints = {};
-    Object.keys(qualities).forEach(function (q) {
+    return 'volume';
+  }
+
+  function _axisPolicyIndex(quality, axis) {
+    const policy = (Fingers.progression && Fingers.progression.POLICY && Fingers.progression.POLICY[quality]) || ['volume'];
+    const idx = policy.indexOf(axis);
+    return idx >= 0 ? idx : 0;
+  }
+
+  function _buildProgressionConstraints(o) {
+    if (!Fingers.progression || !o || !o.recordsByQuality) return null;
+    const constraints = {};
+    Object.keys(o.recordsByQuality).forEach(function (q) {
       const series = o.recordsByQuality[q];
       if (!Array.isArray(series)) return;
-      hints[q] = Fingers.progression.suggestProgression({
+      const hint = Fingers.progression.suggestProgression({
         quality: q,
         currentAxis: (o.currentAxes && o.currentAxes[q]) || null,
         series: series,
         windowSessions: o.progressionWindow,
         improvementThreshold: o.progressionThreshold
       });
+      const policy = hint.policy || ['volume'];
+      let allowedAxis = null;
+      if (hint.action === 'switch') {
+        allowedAxis = hint.nextAxis || policy[0];
+      } else if (hint.action === 'exhausted') {
+        allowedAxis = hint.currentAxis || policy[policy.length - 1] || 'volume';
+      } else {
+        allowedAxis = hint.currentAxis || policy[0] || 'volume';
+      }
+      constraints[q] = {
+        hint: hint,
+        allowedAxis: allowedAxis,
+        allowedPolicyIndex: _axisPolicyIndex(q, allowedAxis)
+      };
+    });
+    return Object.keys(constraints).length > 0 ? constraints : null;
+  }
+
+  function _progressionAllowsAtom(atom, constraints) {
+    if (!atom || !constraints) return true;
+    const c = constraints[atom.quality];
+    if (!c) return true;
+    const axis = _atomProgressionAxis(atom);
+    return _axisPolicyIndex(atom.quality, axis) <= c.allowedPolicyIndex;
+  }
+
+  function _computeProgressionHintsFromConstraints(constraints, exercises) {
+    if (!constraints) return null;
+    const qualities = Object.create(null);
+    for (let i = 0; i < exercises.length; i++) {
+      const atom = Fingers.blockCatalog && Fingers.blockCatalog.getAtom(exercises[i].atomId);
+      if (atom && atom.quality) qualities[atom.quality] = true;
+    }
+    const hints = {};
+    Object.keys(qualities).forEach(function (q) {
+      if (constraints[q] && constraints[q].hint) hints[q] = constraints[q].hint;
     });
     return Object.keys(hints).length > 0 ? hints : null;
   }
@@ -508,6 +757,13 @@
     if (intensityOverride && RANK[intensityOverride] < RANK[ceiling]) {
       bucket = intensityOverride;
     }
+    const plannerContext = o.plannerContext || o.periodizationContext || null;
+    let plannerCapReason = null;
+    if (plannerContext && plannerContext.ceiling && RANK[plannerContext.ceiling] != null &&
+        RANK[plannerContext.ceiling] < RANK[bucket]) {
+      bucket = plannerContext.ceiling;
+      plannerCapReason = plannerContext.phase || 'planner';
+    }
     // Duration/safety envelope before flip: beginner-level users do not get max
     // bucket even when readiness=max. Otherwise the only beginner-compatible
     // max-strength atom creates a very short max session (no capacity block),
@@ -541,6 +797,7 @@
 
     const exercises = [];
     const safetyTrace = { picks: [], issues: [] };
+    const progressionConstraints = _buildProgressionConstraints(o);
     // Ревью #7: дедуп grip+edge внутри сессии — зеркало legacy mix_engine
     // `ctx.usedGripEdge`. Без этого max-strength слот мог упасть на тот же
     // grip+edge что fs_repeater_73 → дубль атома (видно в shadow snapshot'е).
@@ -551,7 +808,10 @@
     }
 
     slots.forEach(function (slot) {
-      const atom = _pickAtomForSlot(slot, Object.assign({}, o, { profile: profile }), usedGripEdge);
+      const atom = _pickAtomForSlot(slot, Object.assign({}, o, {
+        profile: profile,
+        progressionConstraints: progressionConstraints
+      }), usedGripEdge);
       if (atom) {
         exercises.push(_materializeExercise(atom, slot));
         safetyTrace.picks.push({ slot: slot, atomId: atom.id });
@@ -566,7 +826,10 @@
     // Не выводим из blockWeights — это пол, не вес.
     const hasRole = function (r) { return exercises.some(function (e) { return e.__role === r; }); };
     if ((bucket === 'max' || bucket === 'moderate') && !hasRole('antagonist')) {
-      const antAtom = _pickAtomForSlot('antagonist', Object.assign({}, o, { profile: profile }), usedGripEdge);
+      const antAtom = _pickAtomForSlot('antagonist', Object.assign({}, o, {
+        profile: profile,
+        progressionConstraints: progressionConstraints
+      }), usedGripEdge);
       if (antAtom) {
         exercises.push(_materializeExercise(antAtom, 'antagonist'));
         safetyTrace.picks.push({ slot: 'antagonist-floor', atomId: antAtom.id });
@@ -629,11 +892,21 @@
     // но честнее вернуть null здесь).
     if (exercises.length === 0) return null;
 
+    // MAV enforcement: quality-specific weekly TUT caps first, then S4 global FTL.
+    const mavTrace = _enforceQualityMav(o, exercises);
+    const plannerVolumeTrace = _enforcePlannerVolume(o, exercises, plannerContext);
+    if (exercises.length === 0) return null;
+
     // S4 enforcement: если кандидатная сессия пробивает недельный FTL-cap
     // (>10% к trailing average), режем объёмные load-slots из текущей сессии.
     // Нельзя слепо max→moderate: moderate/recovery могут иметь больший TUT и
     // больший FTL. Поэтому cap применяется к фактической сумме FTL упражнений.
     const s4Trace = _enforceS4(o, exercises);
+    if (exercises.length === 0) return null;
+
+    const qualityBandTrace = _computeQualityBandTrace(o, exercises);
+    qualityBandTrace.enforced = mavTrace.enforced;
+    qualityBandTrace.drops = mavTrace.drops;
 
     // intensity — sessionIntensity(exercises) (ревью 4.2 находка #3): домен
     // совпадает с mixEngine; equipment-starved max автоматически даунгрейдится.
@@ -649,10 +922,7 @@
       (e.sourceIds || []).forEach(function (sid) { allSourceIds[sid] = true; });
     });
 
-    // Прогрессия / детектор плато (B3, ADVISORY ТОЛЬКО). Если caller передал
-    // opts.recordsByQuality + opts.currentAxes — добавляем hints per-quality.
-    // Не меняет генерацию сессии: каркас движка остаётся flag-gated.
-    const progressionHints = _computeProgressionHints(o, exercises);
+    const progressionHints = _computeProgressionHintsFromConstraints(progressionConstraints, exercises);
 
     // Полный контракт mixEngine (ревью 4.2 находка #2). 16 полей, UI-совместимо.
     return {
@@ -661,8 +931,8 @@
       __engine: 'sessionBuilder_v1',
       __from: 'sessionBuilder_v1', // legacy alias (для существующих router-тестов)
       name: 'Сессия по методологии',
-      description: 'Собрано из block_catalog по bucket=' + bucket,
-      coachReason: 'Bucket=' + bucket + '; safety-floor antagonist/mobility активен',
+      description: _buildDescription(bucket, sessionInt, duration, exercises),
+      coachReason: _buildCoachReason(bucket, sessionInt, requiresWarmup, levelIsExplicit, bucketCapReason, plannerCapReason, plannerVolumeTrace, s4Trace, qualityBandTrace, exercises),
       level: 'mixed',
       durationMin: duration,
       intensity: sessionInt,
@@ -682,6 +952,8 @@
         inputs: {
           age: ageNum, equipmentTypes: tierList,
           readiness: o.readiness || null, intensityOverride: intensityOverride,
+          plannerPhase: plannerContext && plannerContext.phase || null,
+          plannerFocusQuality: plannerContext && plannerContext.focusQuality || null,
           profileLevel: profile.level,
           levelIsExplicit: levelIsExplicit,
           seededCredsCount: seededCreds.length,
@@ -690,8 +962,11 @@
         resolution: {
           initialCeiling: ceiling, bucket: bucket,
           bucketCapReason: bucketCapReason,
+          plannerCapReason: plannerCapReason,
           slotsTemplate: slots.slice(), slotsSource: intensityOverride ? 'legacy-intensity' : 'bucket',
-          s4DroppedSlots: s4Trace.drops
+          s4DroppedSlots: s4Trace.drops,
+          progression: progressionConstraints,
+          plannerVolume: plannerVolumeTrace
         },
         slots: safetyTrace.picks,
         s4: {
@@ -704,6 +979,7 @@
           enforced: s4Trace.enforced,
           drops: s4Trace.drops
         },
+        qualityBands: qualityBandTrace,
         outputs: {
           durationMin: duration, intensity: sessionInt,
           tierList: tierList, exerciseCount: exercises.length,
@@ -723,7 +999,14 @@
     _seedCredentialsFromLevel: _seedCredentialsFromLevel,
     _estimateAtomTutSec: _estimateAtomTutSec,
     _estimateAtomFtl: _estimateAtomFtl,
-    _estimateSessionFtl: _estimateSessionFtl
+    _estimateSessionFtl: _estimateSessionFtl,
+    _atomProgressionAxis: _atomProgressionAxis,
+    _buildProgressionConstraints: _buildProgressionConstraints,
+    _estimateSessionTutByQuality: _estimateSessionTutByQuality,
+    _computeQualityBandTrace: _computeQualityBandTrace,
+    _qualitiesForSlot: _qualitiesForSlot,
+    _enforcePlannerVolume: _enforcePlannerVolume,
+    QUALITY_WEEKLY_TUT_BANDS: QUALITY_WEEKLY_TUT_BANDS
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);

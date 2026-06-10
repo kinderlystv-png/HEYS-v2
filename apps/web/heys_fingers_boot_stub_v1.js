@@ -177,13 +177,16 @@
     try {
       const ls = global.localStorage;
       if (!ls) return false;
+      const cid = (HEYS && HEYS.currentClientId) ? String(HEYS.currentClientId) : '';
+      const currentKey = cid
+        ? `heys_${cid}_finger_active_session`
+        : 'heys_finger_active_session';
       for (let i = 0; i < ls.length; i++) {
         const key = ls.key(i);
         if (!key) continue;
         // _getKey() pattern в session_persistence_v1.js:
         //   heys_<cid>_finger_active_session или heys_finger_active_session
-        if (key === 'heys_finger_active_session') return true;
-        if (key.startsWith('heys_') && key.endsWith('_finger_active_session')) return true;
+        if (key === currentKey) return true;
       }
     } catch (_) { /* noop */ }
     return false;

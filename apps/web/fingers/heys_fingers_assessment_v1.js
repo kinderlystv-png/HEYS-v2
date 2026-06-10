@@ -57,7 +57,7 @@
   };
 
   // Качества с flag-based scoring (нет числового теста — навыковые маркеры §8.3).
-  const FLAG_QUALITIES = ['technique', 'mental'];
+  const FLAG_QUALITIES = ['technique', 'mental', 'mobility', 'antagonist'];
   const ALL_QUALITIES = [
     'finger_strength', 'max_strength', 'power',
     'anaerobic_capacity', 'aerobic_base',
@@ -96,6 +96,85 @@
     }
   };
 
+  const TEST_BATTERY = Object.freeze({
+    maxHang20mmHalf: {
+      id: 'maxHang20mmHalf',
+      quality: 'finger_strength',
+      scoreKey: 'finger_strength',
+      label: '20mm half-crimp max hang',
+      unit: 'pctBW',
+      cadenceDays: 56
+    },
+    weightedPull: {
+      id: 'weightedPull',
+      quality: 'max_strength',
+      scoreKey: 'max_strength',
+      label: 'Weighted pull / pull strength',
+      unit: 'pctBW',
+      cadenceDays: 56
+    },
+    rfdContact: {
+      id: 'rfdContact',
+      quality: 'power',
+      scoreKey: 'power',
+      label: 'Contact strength / RFD',
+      unit: 'score',
+      cadenceDays: 56
+    },
+    criticalForce: {
+      id: 'criticalForce',
+      quality: 'aerobic_base',
+      scoreKey: 'aerobic_base',
+      label: 'Critical Force',
+      unit: 'pctMVC',
+      cadenceDays: 56
+    },
+    wPrime: {
+      id: 'wPrime',
+      quality: 'anaerobic_capacity',
+      scoreKey: 'anaerobic_capacity',
+      label: 'W prime / capacity',
+      unit: 'score',
+      cadenceDays: 56
+    },
+    techniqueMarkers: {
+      id: 'techniqueMarkers',
+      quality: 'technique',
+      flagKey: 'technique',
+      label: 'Technique checklist',
+      unit: 'markers',
+      maxMarkers: 5,
+      cadenceDays: 28
+    },
+    mentalMarkers: {
+      id: 'mentalMarkers',
+      quality: 'mental',
+      flagKey: 'mental',
+      label: 'Mental / tactics checklist',
+      unit: 'markers',
+      maxMarkers: 3,
+      cadenceDays: 28
+    },
+    mobilityMarkers: {
+      id: 'mobilityMarkers',
+      quality: 'mobility',
+      flagKey: 'mobility',
+      label: 'Mobility checklist',
+      unit: 'markers',
+      maxMarkers: 3,
+      cadenceDays: 28
+    },
+    antagonistMarkers: {
+      id: 'antagonistMarkers',
+      quality: 'antagonist',
+      flagKey: 'antagonist',
+      label: 'Antagonist / prehab checklist',
+      unit: 'markers',
+      maxMarkers: 3,
+      cadenceDays: 28
+    }
+  });
+
   // ─── Хелперы ──────────────────────────────────────────────────────────────────
   function num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
   function clamp01(x) { return Math.max(0, Math.min(1, x)); }
@@ -120,6 +199,45 @@
     const mx = num(max);
     if (m === null || mx === null || mx <= 0) return 0;
     return clamp01(m / mx);
+  }
+
+  function normalizeBatteryResults(raw) {
+    const input = raw || {};
+    const out = {};
+    Object.keys(TEST_BATTERY).forEach(function (id) {
+      const test = TEST_BATTERY[id];
+      const r = input[id] || input[test.quality] || null;
+      if (!r || typeof r !== 'object') return;
+      const score = num(r.score);
+      const markers = num(r.markers);
+      out[id] = {
+        id: id,
+        quality: test.quality,
+        score: score,
+        markers: markers,
+        maxMarkers: num(r.maxMarkers) || test.maxMarkers || null,
+        testedAt: r.testedAt || null,
+        source: r.source || 'manual'
+      };
+    });
+    return out;
+  }
+
+  function scoresFromBattery(raw) {
+    const normalized = normalizeBatteryResults(raw);
+    const testScores = {};
+    const skillFlags = {};
+    Object.keys(normalized).forEach(function (id) {
+      const test = TEST_BATTERY[id];
+      const r = normalized[id];
+      if (test.scoreKey && r.score !== null) {
+        testScores[test.scoreKey] = r.score;
+      }
+      if (test.flagKey) {
+        skillFlags[test.flagKey] = computeFlag(r.markers, r.maxMarkers || test.maxMarkers);
+      }
+    });
+    return { testScores: testScores, skillFlags: skillFlags, normalized: normalized };
   }
 
   // ─── assess (§3.2 шаги 3–5 + Q-1.4-3 гибрид) ──────────────────────────────────
@@ -186,14 +304,48 @@
     };
   }
 
+  function assessBattery(rawBatteryResults, level) {
+    const mapped = scoresFromBattery(rawBatteryResults);
+    const result = assess(mapped.testScores, mapped.skillFlags, level);
+    return Object.assign({}, result, {
+      battery: mapped.normalized,
+      testScores: mapped.testScores,
+      skillFlags: mapped.skillFlags
+    });
+  }
+
+  function dueTests(rawBatteryResults, nowMs) {
+    const normalized = normalizeBatteryResults(rawBatteryResults);
+    const now = num(nowMs) || Date.now();
+    return Object.keys(TEST_BATTERY).map(function (id) {
+      const test = TEST_BATTERY[id];
+      const r = normalized[id];
+      const t = r && r.testedAt ? Date.parse(r.testedAt) : 0;
+      const daysSince = t > 0 ? Math.floor((now - t) / (1000 * 60 * 60 * 24)) : null;
+      const due = daysSince === null || daysSince >= test.cadenceDays;
+      return {
+        id: id,
+        quality: test.quality,
+        due: due,
+        daysSince: daysSince,
+        cadenceDays: test.cadenceDays
+      };
+    });
+  }
+
   Fingers.assessment = {
     BENCHMARKS: BENCHMARKS,
     LEVEL_PRIOR: LEVEL_PRIOR,
+    TEST_BATTERY: TEST_BATTERY,
     ALL_QUALITIES: ALL_QUALITIES,
     FLAG_QUALITIES: FLAG_QUALITIES,
     computeDeficit: computeDeficit,
     computeFlag: computeFlag,
-    assess: assess
+    normalizeBatteryResults: normalizeBatteryResults,
+    scoresFromBattery: scoresFromBattery,
+    assess: assess,
+    assessBattery: assessBattery,
+    dueTests: dueTests
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);

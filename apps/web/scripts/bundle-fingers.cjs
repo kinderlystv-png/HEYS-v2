@@ -25,6 +25,7 @@ const MODULES = [
     // ── Layer 1: core data + features (no fingers deps) ──
     { file: 'heys_fingers_audio_extension_v1.js', label: 'audio capability' },
     { file: 'heys_fingers_body_metrics_v1.js',    label: 'body weight resolver' },
+    { file: 'heys_fingers_profile_store_v1.js',   label: 'shared fingers profile store' },
     { file: 'heys_fingers_bibliography_v1.js',    label: 'sources + SourceBadge' },
     { file: 'heys_fingers_grips_catalog_v1.js',   label: 'grip catalog' },
     { file: 'heys_fingers_boards_catalog_v1.js',  label: 'fingerboard catalog' },
@@ -51,6 +52,7 @@ const MODULES = [
     { file: 'heys_fingers_safety_v1.js',          label: 'RAMP-warmup defs' },
     { file: 'heys_fingers_warmup_runner_v1.js',   label: 'warmup runner' },
     { file: 'heys_fingers_mix_engine_v1.js',      label: 'role-based mix engine' },
+    { file: 'heys_fingers_periodization_engine_v1.js', label: 'periodization planner' },
     { file: 'heys_fingers_session_builder_v1.js', label: 'new engine — block_catalog→session' },
     { file: 'heys_fingers_engine_router_v1.js',   label: 'strangler router (flag-gated)' },
 

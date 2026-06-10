@@ -33,6 +33,8 @@
   if (Fingers.useCountdownCycle && Fingers.CountdownDisplay) return; // idempotent
 
   const TICK_MS = 100;
+  const TIMER_LOCK_HEARTBEAT_MS = 2000;
+  const TIMER_LOCK_TTL_MS = 15000;
 
   // State constants (избегаем magic strings в коде потребителей).
   const STATES = Fingers.STATES = Object.freeze({
@@ -87,6 +89,109 @@
     } catch (_e) { /* swallow */ }
   }
 
+  function _getCurrentClientId() {
+    const cid = (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
+    return cid ? String(cid) : '';
+  }
+
+  function _timerLockKey() {
+    const cid = _getCurrentClientId();
+    return cid ? ('heys_' + cid + '_fingers_timer_lock_v1') : 'heys_fingers_timer_lock_v1';
+  }
+
+  function _makeTimerTabId() {
+    try {
+      const cryptoObj = global.crypto;
+      if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
+        return cryptoObj.randomUUID();
+      }
+    } catch (_) { /* noop */ }
+    return 'tab_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
+  }
+
+  const TIMER_TAB_ID = Fingers.__timerTabId || _makeTimerTabId();
+  Fingers.__timerTabId = TIMER_TAB_ID;
+
+  function _readTimerLock() {
+    try {
+      const raw = global.localStorage && global.localStorage.getItem(_timerLockKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+
+  function _writeTimerLock(lock) {
+    try {
+      if (!global.localStorage) return false;
+      global.localStorage.setItem(_timerLockKey(), JSON.stringify(lock));
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function _removeTimerLock() {
+    try {
+      const lock = _readTimerLock();
+      if (lock && lock.ownerTabId && lock.ownerTabId !== TIMER_TAB_ID) return false;
+      if (global.localStorage) global.localStorage.removeItem(_timerLockKey());
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function _isTimerLockFresh(lock, now) {
+    if (!lock || !lock.ownerTabId) return false;
+    const heartbeatAt = Number(lock.heartbeatAt) || 0;
+    return heartbeatAt > 0 && (now - heartbeatAt) <= TIMER_LOCK_TTL_MS;
+  }
+
+  function _acquireTimerLock(reason) {
+    const now = _now();
+    const existing = _readTimerLock();
+    if (_isTimerLockFresh(existing, now) && existing.ownerTabId !== TIMER_TAB_ID) {
+      Fingers.lastTimerLockDenied = {
+        key: _timerLockKey(),
+        ownerTabId: existing.ownerTabId,
+        heartbeatAt: existing.heartbeatAt,
+        deniedAt: now,
+        reason: 'held-by-another-tab'
+      };
+      return false;
+    }
+    const next = {
+      ownerTabId: TIMER_TAB_ID,
+      acquiredAt: existing && existing.ownerTabId === TIMER_TAB_ID ? (existing.acquiredAt || now) : now,
+      heartbeatAt: now,
+      reason: reason || 'start'
+    };
+    if (!_writeTimerLock(next)) return true; // storage unavailable: keep legacy single-tab behavior
+    const verify = _readTimerLock();
+    const ok = !!(verify && verify.ownerTabId === TIMER_TAB_ID);
+    if (!ok) {
+      Fingers.lastTimerLockDenied = {
+        key: _timerLockKey(),
+        ownerTabId: verify && verify.ownerTabId,
+        heartbeatAt: verify && verify.heartbeatAt,
+        deniedAt: now,
+        reason: 'write-race-lost'
+      };
+    }
+    return ok;
+  }
+
+  function _touchTimerLock() {
+    const lock = _readTimerLock();
+    if (!lock || lock.ownerTabId !== TIMER_TAB_ID) return false;
+    lock.heartbeatAt = _now();
+    return _writeTimerLock(lock);
+  }
+
+  function _warnTimerLockDenied() {
+    try {
+      const msg = 'Тренировка пальцев уже открыта в другой вкладке. Закрой или заверши её там, затем попробуй снова.';
+      if (HEYS.Toast && typeof HEYS.Toast.warn === 'function') HEYS.Toast.warn(msg);
+      else if (HEYS.Toast && typeof HEYS.Toast.info === 'function') HEYS.Toast.info(msg);
+      else if (HEYS.Toast && typeof HEYS.Toast.show === 'function') HEYS.Toast.show(msg);
+    } catch (_) { /* noop */ }
+  }
+
   // ─── Hook: useCountdownCycle ─────────────────────────────────────────────
   // ─── INTERNAL: useTimerCore — общее ядро таймера (A4 strangler-консолидация) ─
   //
@@ -138,6 +243,8 @@
     // stateRef — immediate state mirror для callbacks (tick читает state до того,
     // как React зафлашит setState).
     const stateRef = React.useRef(STATES.IDLE);
+    const lockHeldRef = React.useRef(false);
+    const lockHeartbeatRef = React.useRef(null);
 
     const wakeLock = HEYS.AppHooks && typeof HEYS.AppHooks.useWakeLock === 'function'
       ? HEYS.AppHooks.useWakeLock() : null;
@@ -176,6 +283,40 @@
         tickRef.current = null;
       }
     }, []);
+
+    const clearLockHeartbeat = React.useCallback(function () {
+      if (lockHeartbeatRef.current) {
+        clearInterval(lockHeartbeatRef.current);
+        lockHeartbeatRef.current = null;
+      }
+    }, []);
+
+    const releaseActiveTimerLock = React.useCallback(function () {
+      clearLockHeartbeat();
+      if (lockHeldRef.current) _removeTimerLock();
+      lockHeldRef.current = false;
+      Fingers.activeTimerLock = false;
+    }, [clearLockHeartbeat]);
+
+    const expireFromLockLoss = React.useCallback(function () {
+      clearTick();
+      clearLockHeartbeat();
+      lockHeldRef.current = false;
+      Fingers.activeTimerLock = false;
+      setState(STATES.EXPIRED);
+      stateRef.current = STATES.EXPIRED;
+      fireStateChange(STATES.EXPIRED, { reason: 'timer_lock_lost' });
+      const wl = wakeLockRef.current;
+      if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
+    }, [clearTick, clearLockHeartbeat, fireStateChange]);
+
+    const startLockHeartbeat = React.useCallback(function () {
+      clearLockHeartbeat();
+      lockHeartbeatRef.current = setInterval(function () {
+        if (!lockHeldRef.current) return;
+        if (!_touchTimerLock()) expireFromLockLoss();
+      }, TIMER_LOCK_HEARTBEAT_MS);
+    }, [clearLockHeartbeat, expireFromLockLoss]);
 
     const startTick = React.useCallback(function () {
       clearTick();
@@ -237,7 +378,7 @@
         _beep('triumph');
         _say('cue.session_done');
         clearTick();
-        Fingers.activeTimerLock = false;
+        releaseActiveTimerLock();
         const wl = wakeLockRef.current;
         if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
         if (typeof onCompleteRef.current === 'function') {
@@ -249,7 +390,7 @@
       // Terminal: ABORTED / EXPIRED / IDLE — release locks без cue
       if (nextState === STATES.ABORTED || nextState === STATES.EXPIRED || nextState === STATES.IDLE) {
         clearTick();
-        Fingers.activeTimerLock = false;
+        releaseActiveTimerLock();
         const wl = wakeLockRef.current;
         if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
         return;
@@ -307,11 +448,18 @@
     }, [state, clearTick]);
 
     const markSessionStart = React.useCallback(function () {
+      if (!_acquireTimerLock('start')) {
+        _warnTimerLockDenied();
+        return false;
+      }
+      lockHeldRef.current = true;
       sessionStartedAtRef.current = _now();
       pauseTotalMsRef.current = 0;
       setTotalElapsed(0);
       Fingers.activeTimerLock = true;
-    }, []);
+      startLockHeartbeat();
+      return true;
+    }, [startLockHeartbeat]);
 
     // Cleanup unmount-only — deps=[] (wakeLock объект меняется каждый render,
     // привязать к deps → cleanup срабатывает на каждый rerender → setTimeout
@@ -319,7 +467,7 @@
     React.useEffect(function () {
       return function () {
         clearTick();
-        Fingers.activeTimerLock = false;
+        releaseActiveTimerLock();
         const wl = wakeLockRef.current;
         if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
       };
@@ -482,12 +630,13 @@
     enterPhaseRef.current = core.enterPhase;
 
     const start = React.useCallback(function () {
-      core.markSessionStart();
+      if (core.markSessionStart() === false) return false;
       setSetIdx(0);
       setRepIdx(0);
       setIdxRef.current = 0;
       repIdxRef.current = 0;
       core.enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: 0, repIdx: 0 });
+      return true;
     }, [core]);
 
     // Round-в-пользу-безопасности: фаза «истекшая в фоне» не auto-completes,
@@ -496,10 +645,9 @@
       if (!snap || !snap.state
           || snap.state === STATES.IDLE || snap.state === STATES.DONE
           || snap.state === STATES.ABORTED || snap.state === STATES.EXPIRED) {
-        start();
-        return;
+        return start();
       }
-      core.markSessionStart();
+      if (core.markSessionStart() === false) return false;
       const snapSetIdx = Number(snap.setIdx) || 0;
       const snapRepIdx = Number(snap.repIdx) || 0;
       setSetIdx(snapSetIdx);
@@ -523,6 +671,7 @@
       if (wasPaused) {
         setTimeout(function () { try { core.pause(); } catch (_) {} }, 50);
       }
+      return true;
     }, [start, core]);
 
     return {
@@ -805,10 +954,11 @@
     enterPhaseRef.current = core.enterPhase;
 
     const start = React.useCallback(function () {
-      core.markSessionStart();
+      if (core.markSessionStart() === false) return false;
       setSetIdx(0);
       setIdxRef.current = 0;
       core.enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: 0 });
+      return true;
     }, [core]);
 
     // Reps-specific manual advance: юзер сигналит «подход выполнен».
@@ -840,10 +990,9 @@
       if (!snap || !snap.state
           || snap.state === STATES.IDLE || snap.state === STATES.DONE
           || snap.state === STATES.ABORTED || snap.state === STATES.EXPIRED) {
-        start();
-        return;
+        return start();
       }
-      core.markSessionStart();
+      if (core.markSessionStart() === false) return false;
       const snapSetIdx = Number(snap.setIdx) || 0;
       setSetIdx(snapSetIdx);
       setIdxRef.current = snapSetIdx;
@@ -869,6 +1018,7 @@
       if (wasPaused) {
         setTimeout(function () { try { core.pause(); } catch (_) {} }, 50);
       }
+      return true;
     }, [start, core]);
 
     return {

@@ -14,7 +14,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,6 +84,10 @@ const EX = [{
 describe('B19 happy-path: профиль → рекомендация → Today → дневник', () => {
   beforeAll(setupOnce);
   beforeEach(() => setProfile('strength'));
+  afterEach(() => {
+    vi.useRealTimers();
+    delete globalThis.window.HEYS.__fingersDiaryVersion;
+  });
 
   it('strength-профиль: онбординг-рекомендация = max-протокол', () => {
     const F = globalThis.HEYS.Fingers;
@@ -123,6 +127,8 @@ describe('B19 happy-path: профиль → рекомендация → Today 
     expect(log.programId).toBe('horst_max_hangs');
     expect(log.viaTimer).toBe(true);
     expect(log.completedAt).toBe('2026-06-05T10:00:00.000Z');
+    expect(log.endedAt).toBe('2026-06-05T10:00:00.000Z');
+    expect(log.startedAt).toBe('2026-06-05T09:48:00.000Z');
     expect(log.totalDurationMinutes).toBe(12); // ((7+3)*6+180)*3/60
     expect(log.exercises[0].setFeedback).toHaveLength(3);
     expect(log.exercises[0].setFeedback[1]).toEqual({ rpe: 'hard', pain: true });
@@ -136,5 +142,23 @@ describe('B19 happy-path: профиль → рекомендация → Today 
     expect(log.exercises[0].setFeedback).toBeUndefined();
     expect('hadPain' in log).toBe(false);        // флаг боли не выставлен
     expect(log.totalDurationMinutes).toBe(12);
+  });
+
+  it('local date fallback uses local calendar date, not UTC ISO day', () => {
+    const F = globalThis.HEYS.Fingers;
+    vi.useFakeTimers();
+    const localTime = new Date(2026, 0, 2, 0, 30);
+    vi.setSystemTime(localTime);
+    const expected = localTime.getFullYear() + '-'
+      + String(localTime.getMonth() + 1).padStart(2, '0') + '-'
+      + String(localTime.getDate()).padStart(2, '0');
+    expect(F._todayDateKey()).toBe(expected);
+  });
+
+  it('diary version bump invalidates progress/program memo dependencies', () => {
+    const F = globalThis.HEYS.Fingers;
+    delete globalThis.window.HEYS.__fingersDiaryVersion;
+    expect(F._bumpFingersDiaryVersion()).toBe(1);
+    expect(F._bumpFingersDiaryVersion()).toBe(2);
   });
 });

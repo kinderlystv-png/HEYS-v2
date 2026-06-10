@@ -8,6 +8,7 @@ const SRC = readFileSync(
 );
 
 const CID = '12345678-aaaa-bbbb-cccc-1234567890ab';
+const OTHER_CID = '87654321-aaaa-bbbb-cccc-1234567890ab';
 
 function loadPersistence() {
   window.HEYS = {
@@ -66,14 +67,25 @@ describe('Fingers session persistence', () => {
   it('clearForTraining removes only matching active-session snapshots', () => {
     const persistence = loadPersistence();
     const matchingKey = `heys_${CID}_finger_active_session`;
-    const otherKey = 'heys_finger_active_session';
+    const globalKey = 'heys_finger_active_session';
+    const foreignKey = `heys_${OTHER_CID}_finger_active_session`;
 
     window.localStorage.setItem(matchingKey, JSON.stringify({
       dateKey: '2026-06-02',
       trainingIndex: 1,
       exercises: [{}],
     }));
-    window.localStorage.setItem(otherKey, JSON.stringify({
+    window.localStorage.setItem(globalKey, JSON.stringify({
+      dateKey: '2026-06-02',
+      trainingIndex: 1,
+      exercises: [{}],
+    }));
+    window.localStorage.setItem(foreignKey, JSON.stringify({
+      dateKey: '2026-06-02',
+      trainingIndex: 1,
+      exercises: [{}],
+    }));
+    window.localStorage.setItem('heys_unrelated_key', JSON.stringify({
       dateKey: '2026-06-03',
       trainingIndex: 0,
       exercises: [{}],
@@ -86,6 +98,20 @@ describe('Fingers session persistence', () => {
 
     expect(cleared).toBe(1);
     expect(window.localStorage.getItem(matchingKey)).toBeNull();
-    expect(window.localStorage.getItem(otherKey)).not.toBeNull();
+    expect(window.localStorage.getItem(globalKey)).not.toBeNull();
+    expect(window.localStorage.getItem(foreignKey)).not.toBeNull();
+  });
+
+  it('load ignores foreign-scoped active-session snapshots', () => {
+    const persistence = loadPersistence();
+    const foreignKey = `heys_${OTHER_CID}_finger_active_session`;
+    window.localStorage.setItem(foreignKey, JSON.stringify({
+      dateKey: '2026-06-02',
+      trainingIndex: 1,
+      exercises: [{}],
+      lastTickAt: Date.now(),
+    }));
+
+    expect(persistence.load()).toBeNull();
   });
 });

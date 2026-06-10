@@ -25,6 +25,7 @@ const setupOnce = () => {
   ev('heys_fingers_quality_catalog_v1.js');
   ev('heys_fingers_block_catalog_v1.js');
   ev('heys_fingers_validators_v1.js');
+  ev('heys_fingers_progression_v1.js');
   ev('heys_fingers_assessment_v1.js');
   ev('heys_fingers_age_gating_v1.js');
   ev('heys_fingers_mix_engine_v1.js');
@@ -77,6 +78,14 @@ describe('sessionBuilder: контракт выхода (Риск 2 ревью)'
     expect(['ramp', 'quick']).toContain(s.warmupType);
     expect(s.__engine).toBe('sessionBuilder_v1');
     expect(s.__trace).toBeDefined();
+  });
+
+  it('coachReason/description не протекают внутренними bucket/block_catalog терминами', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+    expect(s).not.toBeNull();
+    expect(s.description).not.toMatch(/bucket|block_catalog|safety-floor|Bucket=/i);
+    expect(s.coachReason).not.toMatch(/bucket|block_catalog|safety-floor|Bucket=/i);
+    expect(s.coachReason).toMatch(/нагруз|разогрев|уровень|баланс|восстанов/i);
   });
 
   it('ревью 4.3 #2: exercises[] имеют legacy aliases (hangSec/repsPerSet/setsCount) для UI', () => {
@@ -725,6 +734,197 @@ describe('sessionBuilder: S4 FTL enforcement', () => {
     expect(capped.__trace.s4.sessionFtl).toBeLessThan(maxSession.__trace.s4.sessionFtl);
     expect(capped.__trace.s4.overload).toBe(false);
     expect(capped.__trace.s4.projectedWeek).toBeLessThanOrEqual(cap);
+  });
+});
+
+describe('sessionBuilder: progression constraints', () => {
+  beforeAll(setupOnce);
+
+  const profile = () => fullProfile({
+    age: 30,
+    level: 'advanced',
+    completedPrerequisites: FULL_PREREQS
+  });
+
+  it('no plateau on volume axis keeps finger_strength on volume atoms', () => {
+    const constraints = SB()._buildProgressionConstraints({
+      recordsByQuality: {
+        finger_strength: [
+          { ts: 1, value: 100 },
+          { ts: 2, value: 108 },
+          { ts: 3, value: 116 }
+        ]
+      },
+      currentAxes: { finger_strength: 'volume' }
+    });
+
+    expect(constraints.finger_strength.allowedAxis).toBe('volume');
+    const atom = SB()._pickAtomForSlot('max-strength', {
+      equipmentTypes: ['full'],
+      profile: profile(),
+      progressionConstraints: constraints
+    });
+    expect(atom.id).toBe('fs_repeater_73');
+    expect(SB()._atomProgressionAxis(atom)).toBe('volume');
+  });
+
+  it('plateau on volume axis allows edge before load', () => {
+    const constraints = SB()._buildProgressionConstraints({
+      recordsByQuality: {
+        finger_strength: [
+          { ts: 1, value: 100 },
+          { ts: 2, value: 100 },
+          { ts: 3, value: 99 }
+        ]
+      },
+      currentAxes: { finger_strength: 'volume' }
+    });
+
+    expect(constraints.finger_strength.hint.action).toBe('switch');
+    expect(constraints.finger_strength.allowedAxis).toBe('edge');
+    const atom = SB()._pickAtomForSlot('max-strength', {
+      equipmentTypes: ['full'],
+      profile: profile(),
+      progressionConstraints: constraints
+    });
+    expect(atom.id).toBe('fs_minedge_recruit');
+    expect(SB()._atomProgressionAxis(atom)).toBe('edge');
+  });
+
+  it('pain stop stays stronger than progression switch', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'],
+      age: 30,
+      readiness: 'max',
+      profile: Object.assign({}, profile(), { painFlag: 'pain' }),
+      recordsByQuality: {
+        finger_strength: [
+          { ts: 1, value: 100 },
+          { ts: 2, value: 100 },
+          { ts: 3, value: 99 }
+        ]
+      },
+      currentAxes: { finger_strength: 'volume' }
+    });
+    expect(s).toBeNull();
+  });
+
+  it('session trace exposes progression hints when records are provided', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'],
+      age: 30,
+      readiness: 'max',
+      profile: profile(),
+      recordsByQuality: {
+        finger_strength: [
+          { ts: 1, value: 100 },
+          { ts: 2, value: 100 },
+          { ts: 3, value: 99 }
+        ]
+      },
+      currentAxes: { finger_strength: 'volume' }
+    });
+
+    expect(s.__progressionHints.finger_strength.action).toBe('switch');
+    expect(s.__trace.resolution.progression.finger_strength.allowedAxis).toBe('edge');
+  });
+});
+
+describe('sessionBuilder: MEV/MAV weekly quality bands', () => {
+  beforeAll(setupOnce);
+
+  it('reports under-MEV qualities without forcing extra load', () => {
+    const trace = SB()._computeQualityBandTrace({}, [
+      { atomId: 'fs_minedge_recruit' }
+    ]);
+    expect(trace.perQuality.finger_strength.sessionTut).toBe(20);
+    expect(trace.underMev).toContain('finger_strength');
+    expect(trace.overMav).not.toContain('finger_strength');
+  });
+
+  it('trims quality slots when projected weekly TUT would exceed MAV', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'],
+      age: 30,
+      level: 'advanced',
+      readiness: 'max',
+      profile: fullProfile({
+        age: 30,
+        level: 'advanced',
+        completedPrerequisites: FULL_PREREQS
+      }),
+      qualityTutWeekToDate: { finger_strength: 295 }
+    });
+
+    expect(s.__trace.qualityBands.enforced).toBe(true);
+    expect(s.__trace.qualityBands.drops.length).toBeGreaterThan(0);
+    expect(s.__trace.qualityBands.perQuality.finger_strength.projected)
+      .toBeLessThanOrEqual(SB().QUALITY_WEEKLY_TUT_BANDS.finger_strength.mav);
+    const remainingFingerStrength = s.exercises.filter((e) => {
+      const atom = F().blockCatalog.getAtom(e.atomId);
+      return atom && atom.quality === 'finger_strength';
+    });
+    expect(remainingFingerStrength.length).toBe(0);
+    expect(s.coachReason).toContain('недельному потолку');
+  });
+});
+
+describe('sessionBuilder: periodization planner context', () => {
+  beforeAll(setupOnce);
+
+  it('deload planner context clamps max day to recovery before slot selection', () => {
+    const s = SB().recommendDay({
+      equipmentTypes: ['full'],
+      age: 25,
+      level: 'intermediate',
+      readiness: 'max',
+      profile: fullProfile({ age: 25, level: 'intermediate' }),
+      plannerContext: { phase: 'deload', ceiling: 'recovery', volumeMultiplier: 0.5 }
+    });
+
+    expect(s.__trace.inputs.plannerPhase).toBe('deload');
+    expect(s.__trace.resolution.plannerCapReason).toBe('deload');
+    expect(s.__trace.resolution.bucket).toBe('recovery');
+    expect(s.intensity).toBe('recovery');
+    expect(s.coachReason).toContain('Фаза плана');
+  });
+
+  it('planner volumeMultiplier trims only by removing slots', () => {
+    const baseOpts = {
+      equipmentTypes: ['full'],
+      age: 25,
+      level: 'intermediate',
+      readiness: 'max',
+      profile: fullProfile({ age: 25, level: 'intermediate' })
+    };
+    const base = SB().recommendDay(baseOpts);
+    const planned = SB().recommendDay(Object.assign({}, baseOpts, {
+      plannerContext: { phase: 'deload', ceiling: 'max', volumeMultiplier: 0.5 }
+    }));
+
+    expect(planned.__trace.resolution.plannerVolume.enforced).toBe(true);
+    expect(planned.__trace.resolution.plannerVolume.afterFtl)
+      .toBeLessThan(planned.__trace.resolution.plannerVolume.beforeFtl);
+    expect(planned.exercises.length).toBeLessThan(base.exercises.length);
+    expect(planned.coachReason).toContain('уменьшила объем');
+  });
+
+  it('focusQuality reorders allowed slot qualities without expanding slot pool', () => {
+    expect(SB()._qualitiesForSlot('max-strength', 'max_strength'))
+      .toEqual(['max_strength', 'finger_strength']);
+    expect(SB()._qualitiesForSlot('max-strength', 'aerobic_base'))
+      .toEqual(['finger_strength', 'max_strength']);
+
+    const atom = SB()._pickAtomForSlot('max-strength', {
+      equipmentTypes: ['full'],
+      profile: fullProfile({
+        age: 30,
+        level: 'advanced',
+        completedPrerequisites: FULL_PREREQS.concat(['safe_fall_setup'])
+      }),
+      plannerContext: { focusQuality: 'max_strength' }
+    });
+    expect(F().blockCatalog.getAtom(atom.id).quality).toBe('max_strength');
   });
 });
 

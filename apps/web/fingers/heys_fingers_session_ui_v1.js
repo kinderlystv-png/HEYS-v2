@@ -34,6 +34,15 @@
   const { useState, useMemo, useEffect, useCallback } = React;
 
   // --- helpers ---
+  function _todayDateKey() {
+    return _formatDateKey(new Date());
+  }
+
+  function _bumpFingersDiaryVersion() {
+    HEYS.__fingersDiaryVersion = (Number(HEYS.__fingersDiaryVersion) || 0) + 1;
+    return HEYS.__fingersDiaryVersion;
+  }
+
   // Сканирует историю fingers-сессий за lookbackDays и считает session-level
   // achievements для текущей завершённой сессии. Возвращает {
   //   isFirstEver, isFirstOfProgram, isVolumePR, prevBestHangSec, comebackDays
@@ -44,7 +53,7 @@
     if (!u || !u.lsGet || !currentLog) {
       return { isFirstEver: true, isFirstOfProgram: true, isVolumePR: false, prevBestHangSec: 0, comebackDays: 0 };
     }
-    const todayKey = dateKey || new Date().toISOString().slice(0, 10);
+    const todayKey = dateKey || _todayDateKey();
     let prevSessions = 0;
     let prevOfProgram = 0;
     let prevBestHangSec = 0;
@@ -227,6 +236,9 @@
   }
 
   function getProfile() {
+    if (Fingers.getProfile && Fingers.getProfile !== getProfile) {
+      try { return Fingers.getProfile() || {}; } catch (_) { /* fallback below */ }
+    }
     const u = HEYS.utils;
     if (!u || !u.lsGet) return {};
     const p = u.lsGet('heys_profile', {}) || {};
@@ -251,7 +263,9 @@
   // доску — для остальных. null если соответствующая модель не выбрана.
   function _resolveBoardForProgram(program) {
     const fp = getProfile();
-    const id = _isBlockProgram(program) ? (fp.blockBoardId || null) : (fp.fingerboardId || null);
+    const id = _isBlockProgram(program)
+      ? (Fingers.normalizeBlockBoardId ? Fingers.normalizeBlockBoardId(fp.blockBoardId) : fp.blockBoardId)
+      : (fp.fingerboardId || null);
     return (id && Fingers.getBoardById) ? Fingers.getBoardById(id) : null;
   }
 
@@ -703,9 +717,16 @@
     return touched ? out : exercises;
   }
 
+  function _estimateStartedAtIso(endedAtIso, totalMin) {
+    const endMs = Date.parse(endedAtIso);
+    if (!isFinite(endMs)) return endedAtIso;
+    const durationMs = Math.max(0, Math.round(Number(totalMin) || 0)) * 60 * 1000;
+    return new Date(endMs - durationMs).toISOString();
+  }
+
   // B1/B19: чистая сборка контракта fingersLog («finish → дневник»). Вынесена
   // из handleComplete ради unit-тестов happy-path. opts:
-  //   { programId, feedback, viaTimer, nowIso? }.
+  //   { programId, feedback, viaTimer, nowIso?, startedAtIso?, endedAtIso? }.
   // hadPain ставится только при наличии боли в каком-либо сете. Additive:
   // без feedback exercises остаётся прежним (см. _mergeSetFeedback).
   function _buildFingersLog(exercises, opts) {
@@ -719,12 +740,16 @@
     const hadPain = loggedExercises.some(function (e) {
       return Array.isArray(e.setFeedback) && e.setFeedback.some(function (f) { return f && f.pain; });
     });
+    const completedAt = o.nowIso || o.endedAtIso || new Date().toISOString();
+    const endedAt = o.endedAtIso || completedAt;
     const fingersLog = {
       version: 1,
       programId: o.programId || 'custom',
       totalDurationMinutes: Math.round(totalMin),
       exercises: loggedExercises,
-      completedAt: o.nowIso || new Date().toISOString(),
+      startedAt: o.startedAtIso || _estimateStartedAtIso(endedAt, totalMin),
+      endedAt: endedAt,
+      completedAt: completedAt,
       viaTimer: !!o.viaTimer
     };
     if (hadPain) fingersLog.hadPain = true;
@@ -962,6 +987,19 @@
     );
   }
 
+  function _recommendMixedWorkout(mixOpts) {
+    if (Fingers.engineRouter && typeof Fingers.engineRouter.recommendDay === 'function') {
+      return Fingers.engineRouter.recommendDay(mixOpts);
+    }
+    if (Fingers.mixEngine && typeof Fingers.mixEngine.recommendDay === 'function') {
+      return Fingers.mixEngine.recommendDay(mixOpts);
+    }
+    if (typeof Fingers.generateMixedWorkout === 'function') {
+      return Fingers.generateMixedWorkout(mixOpts);
+    }
+    return null;
+  }
+
   // ─── Mix card ──────────────────────────────────────────────────────────────
   // Генерируемая «случайная сборка» — отдельный компонент, который раньше жил
   // только в Протоколах. Перенесён в Today (рядом с рекомендованным официальным
@@ -994,11 +1032,7 @@
         age: ageRaw,
         readiness: cool && cool.recommendation
       };
-      let w = (Fingers.mixEngine && Fingers.mixEngine.recommendDay)
-        ? Fingers.mixEngine.recommendDay(mixOpts)
-        : null;
-      if (!w && Fingers.generateMixedWorkout) w = Fingers.generateMixedWorkout(mixOpts);
-      setMixedWorkout(w);
+      setMixedWorkout(_recommendMixedWorkout(mixOpts));
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userTypes.join(','), mixGoal, ageRaw, cool && cool.recommendation, mixSeed]);
     const onGenerateMix = useCallback(function () { setMixSeed(function (n) { return n + 1; }); }, []);
@@ -1242,6 +1276,7 @@
       blockMode: !!profile.blockMode,
       edgeLimit: profile.edgeLimit
     };
+    const diaryVersion = HEYS && HEYS.__fingersDiaryVersion;
     const filtered = (Fingers.filterProgramsByEquipment)
       ? Fingers.filterProgramsByEquipment(ageFilteredAll, eqOpts)
       : ageFilteredAll;
@@ -1249,7 +1284,7 @@
     // Скан 90 дней (~3 мес), useMemo чтоб не перерасчитывать на каждый render.
     const lastDoneByProgram = useMemo(function () {
       return _scanLastDoneByProgram(90);
-    }, []);
+    }, [diaryVersion]);
 
     // Бинарный фильтр «Под цель / Все». Под цель: оставляем только протоколы
     // с intensity, соответствующей маппингу profile.goal → intensity (см.
@@ -2095,6 +2130,66 @@
   }
   Fingers.exportFingersCsv = exportFingersCsv;
 
+  function buildFingersDebugDump(recommendation, opts) {
+    const o = opts || {};
+    const nowMs = Number(o.nowMs) || Date.now();
+    const rec = recommendation || null;
+    let profile = {};
+    let periodization = null;
+    let assessmentDue = null;
+    try { profile = Fingers.getProfile ? Fingers.getProfile() : getProfile(); } catch (_) { profile = {}; }
+    try {
+      periodization = Fingers.periodization && Fingers.periodization.current
+        ? Fingers.periodization.current(null, o.dateKey || null) : null;
+    } catch (_) { periodization = null; }
+    try {
+      assessmentDue = Fingers.assessment && Fingers.assessment.dueTests
+        ? Fingers.assessment.dueTests(o.assessmentResults || {}, nowMs) : null;
+    } catch (_) { assessmentDue = null; }
+    return {
+      version: 1,
+      generatedAt: new Date(nowMs).toISOString(),
+      dateKey: o.dateKey || _formatDateKey(new Date(nowMs)),
+      profile: profile,
+      periodization: periodization,
+      assessmentDue: assessmentDue,
+      recommendation: rec ? {
+        id: rec.id || null,
+        name: rec.name || null,
+        intensity: rec.intensity || null,
+        durationMin: rec.durationMin || null,
+        coachReason: rec.coachReason || null,
+        trace: rec.__trace || null,
+        progressionHints: rec.__progressionHints || null,
+        safetyTrace: rec.__safetyTrace || null
+      } : null,
+      progressStats: computeProgressStats(),
+      exportRows: _collectFingersExportRows(o.lookbackDays || 30)
+    };
+  }
+  Fingers.buildFingersDebugDump = buildFingersDebugDump;
+
+  function exportFingersDebugJson(recommendation) {
+    try {
+      if (typeof document === 'undefined' || typeof Blob === 'undefined') return false;
+      const dump = buildFingersDebugDump(recommendation, { lookbackDays: 30 });
+      const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fingers-debug-dump.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return true;
+    } catch (e) {
+      console.warn('[Fingers] exportFingersDebugJson failed:', e);
+      return false;
+    }
+  }
+  Fingers.exportFingersDebugJson = exportFingersDebugJson;
+
   /**
    * Один проход по последним 365 дням → streak, totals, последние 5 сессий.
    * @returns {{streak:number, totalSessions:number, totalHolds:number, totalMinutes:number, lastSessions:Array}}
@@ -2237,8 +2332,11 @@
     const mvcDue = Fingers.calibration && Fingers.calibration.isDue
       ? Fingers.calibration.isDue('maxHang', 'openhand4_20mm')
       : false;
-    // Memo чтобы 365-day scan не пересчитывался на каждый render таба.
-    const stats = React.useMemo(computeProgressStats, []);
+    const recordsVersion = Number(records.updatedAt) || 0;
+    const diaryVersion = HEYS && HEYS.__fingersDiaryVersion;
+    // Memo чтобы 365-day scan не пересчитывался на каждый render таба, но
+    // обновлялся после сохранения fingers-сессии или PR-record.
+    const stats = React.useMemo(computeProgressStats, [recordsVersion, diaryVersion]);
     const currentYear = new Date().getFullYear();
 
     const isEmpty = slugs.length === 0 && stats.totalSessions === 0;
@@ -2826,7 +2924,16 @@
           key: key,
           type: 'button',
           className: 'fingers-fs-btn',
-          style: { flex: 1, fontSize: 15, padding: '12px 8px' },
+          style: {
+            flex: 1,
+            fontSize: 15,
+            padding: '12px 8px',
+            borderRadius: 12,
+            border: '1px solid rgba(255,255,255,0.16)',
+            background: 'rgba(255,255,255,0.10)',
+            color: '#fff',
+            fontWeight: 700
+          },
           onClick: function () { submitRpe(rpeVal, rpePain); }
         }, label);
       };
@@ -2842,21 +2949,27 @@
           style: {
             width: '100%', maxWidth: 360, borderRadius: 16, padding: 20,
             background: 'var(--fingers-fs-card-bg, #1b1b1f)',
-            border: '1px solid rgba(255,255,255,0.12)'
+            border: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: '0 22px 60px rgba(0,0,0,0.35)',
+            color: '#fff'
           }
         },
-          h('h3', { style: { margin: '0 0 14px', fontSize: 17, textAlign: 'center' } }, title),
+          h('h3', { style: { margin: '0 0 14px', fontSize: 17, textAlign: 'center', color: '#fff' } }, title),
           h('div', { style: { display: 'flex', gap: 8, marginBottom: 14 } },
             btn('easy', '😎 Легко', 'easy'),
             btn('ok', '😐 Норм', 'ok'),
             btn('hard', '🥵 Тяжело', 'hard')
           ),
           h('label', {
-            style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, opacity: 0.85, cursor: 'pointer', marginBottom: 14 }
+            style: {
+              display: 'flex', alignItems: 'center', gap: 10, fontSize: 14,
+              color: 'rgba(255,255,255,0.88)', cursor: 'pointer', marginBottom: 14
+            }
           },
             h('input', {
               type: 'checkbox',
               checked: rpePain,
+              style: { width: 20, height: 20, accentColor: '#f59e0b' },
               onChange: function (e) { setRpePain(!!e.target.checked); }
             }),
             'Была боль в пальцах / суставах'
@@ -2864,7 +2977,11 @@
           h('button', {
             type: 'button',
             className: 'fingers-fs-ghost',
-            style: { width: '100%', fontSize: 13, opacity: 0.7 },
+            style: {
+              width: '100%', fontSize: 13,
+              color: 'rgba(255,255,255,0.78)',
+              borderColor: 'rgba(255,255,255,0.16)'
+            },
             onClick: skipRpe
           }, 'Пропустить')
         )
@@ -2922,12 +3039,15 @@
                       return s + (oneSet * Number(e.setsCount)) / 60;
                     }, 0)
                   : 0;
+                const completedAt = new Date().toISOString();
                 const partialLog = {
                   version: 2,
                   programId: programId,
                   totalDurationMinutes: Math.round(totalMin),
                   exercises: exercises,
-                  completedAt: new Date().toISOString(),
+                  startedAt: _estimateStartedAtIso(completedAt, totalMin),
+                  endedAt: completedAt,
+                  completedAt: completedAt,
                   viaTimer: true,
                   partial: true,
                   partialProgress: {
@@ -2941,6 +3061,7 @@
                   partialLog,
                   { activityLabel: (programId && programId !== 'custom' ? programId : 'Свой конструктор') + ' (частично)' }
                 );
+                _bumpFingersDiaryVersion();
                 if (HEYS.Toast?.success) {
                   HEYS.Toast.success('Записано: ' + doneExercises + ' упр., ' + doneSets + ' подходов');
                 }
@@ -2971,7 +3092,7 @@
 
   // ─── HangRunner (Step 4) — hang-cycle runner на shared shell ─────────────────
   function HangRunner(props) {
-    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const { exercise, exIdx, totalExercises } = props;
     const cycleRef = React.useRef(null);
     const shell = useExerciseShell(Object.assign({}, props, { cycleRef: cycleRef }));
 
@@ -3024,7 +3145,7 @@
           'Состояние: ' + cycle.state + ' · Сет ' + (cycle.setIdx + 1) + '/' + exercise.setsCount),
         h('button', {
           className: 'fingers-fs-ghost',
-          onClick: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); },
+          onClick: shell.requestAbort,
           style: { marginTop: 16 }
         }, '✕ Прервать')
       ),
@@ -3106,7 +3227,7 @@
   // (state=HANG здесь семантически = «РАБОТА», но дрейф наружу не нужен —
   // shell слушает CYCLE state, а не label'ы display).
   function ContinuousRunner(props) {
-    const { exercise, exIdx, totalExercises, onAbort } = props;
+    const { exercise, exIdx, totalExercises } = props;
     const cycleRef = React.useRef(null);
     const shell = useExerciseShell(Object.assign({}, props, { cycleRef: cycleRef }));
 
@@ -3159,7 +3280,7 @@
           'Состояние: ' + cycle.state + ' · ' + cycle.secondsLeft + 'с осталось'),
         h('button', {
           className: 'fingers-fs-ghost',
-          onClick: function () { try { cycle.abort(); } catch (_) {} if (onAbort) onAbort(); }
+          onClick: shell.requestAbort
         }, '✕ Прервать')
       ),
       shell.rpeOverlay
@@ -3469,7 +3590,7 @@
     const blockBoards = allBoards.filter(function (b) { return b.kind === 'block'; });
     const _getB = function (id) { return id && Fingers.getBoardById ? Fingers.getBoardById(id) : null; };
     const currentFullBoard  = _getB(profile.fingerboardId);
-    const currentBlockBoard = _getB(profile.blockBoardId);
+    const currentBlockBoard = _getB(Fingers.normalizeBlockBoardId ? Fingers.normalizeBlockBoardId(profile.blockBoardId) : profile.blockBoardId);
     // openPicker: null | 'full' | 'block' — какой дропдаун раскрыт (взаимоисключающе).
     const [openPicker, setOpenPicker] = useState(null);
 
@@ -3732,7 +3853,9 @@
   function FingersSettingsSheet(props) {
     const onClose = (props && props.onClose) || function () {};
     const onRequestReset = props && props.onRequestReset;
+    const [profileTick, setProfileTick] = useState(0);
     const profile = getProfile();
+    void profileTick;
     const HEYS_utils = HEYS.utils || {};
 
     // Voice settings — берём актуальные через voice.getSettings()
@@ -3821,6 +3944,48 @@
       C: { label: 'Climbing',     color: 'linear-gradient(135deg, #c2410c, #7c2d12)' },
       A: { label: 'HEYS native',  color: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }
     };
+    const levelMeta = [
+      { id: 'beginner', label: 'Новичок', hint: 'Первые месяцы работы на пальцы: базовые и щадящие протоколы.' },
+      { id: 'intermediate', label: 'Средний', hint: 'Есть регулярная база лазания и пальцы спокойно переносят умеренные висы.' },
+      { id: 'advanced', label: 'Продвинутый', hint: '2+ года регулярной нагрузки на пальцы без травм связок; могут открываться малые ребра.' },
+      { id: 'elite', label: 'Элитный', hint: 'Долгая история целевой подготовки пальцев без травм; высокий объем и интенсивность уже привычны.' }
+    ];
+    const currentLevelMeta = levelMeta.find(function (m) { return m.id === profile.level; });
+
+    function _levelMeta(level) {
+      return levelMeta.find(function (m) { return m.id === level; }) || { label: level };
+    }
+
+    function confirmLevelChange(level, apply) {
+      if (level !== 'advanced' && level !== 'elite') {
+        apply();
+        return;
+      }
+      const meta = _levelMeta(level);
+      const text = meta.label + ' уровень означает не грейд лазания, а стаж адаптации пальцев: регулярная нагрузка на пальцы, спокойная переносимость висов и отсутствие травм связок. Этот выбор может открыть протоколы с малым ребром и высокой нагрузкой.';
+      if (HEYS.ConfirmModal && HEYS.ConfirmModal.show) {
+        HEYS.ConfirmModal.show({
+          icon: '!',
+          title: 'Подтвердить уровень',
+          text: text,
+          confirmText: 'Подтвердить',
+          cancelText: 'Отмена',
+          onConfirm: apply
+        });
+      } else if (typeof window === 'undefined' || window.confirm(text)) {
+        apply();
+      }
+    }
+
+    function applyLevel(level) {
+      confirmLevelChange(level, function () {
+        const ok = Fingers.saveProfilePatch && Fingers.saveProfilePatch({ level: level });
+        if (ok) {
+          setProfileTick(function (v) { return v + 1; });
+          if (HEYS.Toast && HEYS.Toast.success) HEYS.Toast.success('Уровень сохранён');
+        }
+      });
+    }
 
     return h('div', {
       className: 'fingers-settings__backdrop',
@@ -3938,11 +4103,34 @@
                   className: 'fingers-settings__profile-value' +
                     (bm.source === 'fallback' ? ' is-missing' : '')
                 }, weightStr)
+              ),
+              h('div', { className: 'fingers-settings__profile-tile' },
+                h('div', { className: 'fingers-settings__profile-label' }, 'Уровень'),
+                h('div', {
+                  className: 'fingers-settings__profile-value' +
+                    (!profile.level ? ' is-missing' : '')
+                }, levelMeta.find(function (m) { return m.id === profile.level; })?.label || 'не указан')
               )
             ),
+            h('div', { className: 'fingers-settings__level-row', role: 'group', 'aria-label': 'Уровень fingerboard-тренировок' },
+              levelMeta.map(function (m) {
+                const active = profile.level === m.id;
+                return h('button', {
+                  key: m.id,
+                  type: 'button',
+                  className: 'fingers-settings__level-chip' + (active ? ' is-active' : ''),
+                  onClick: function () { applyLevel(m.id); },
+                  'aria-pressed': active
+                }, m.label);
+              })
+            ),
+            h('p', { className: 'fingers-settings__profile-hint' },
+              currentLevelMeta
+                ? currentLevelMeta.hint
+                : 'Уровень здесь — это опыт нагрузки на пальцы, а не максимальный грейд.'),
             h('p', { className: 'fingers-settings__profile-hint' },
               'Возраст определяет какие хваты безопасны (UIAA/BMC), вес — точный % MVC. ',
-              'Изменить можно в общем Профиле HEYS.')
+              'Уровень влияет на подбор блоков нового движка.')
           ),
 
           // ─── Training cycle (B7) ───
@@ -3991,6 +4179,20 @@
             },
               h('span', { 'aria-hidden': 'true' }, '⬇'),
               ' Экспорт тренировок (CSV)'
+            ),
+            h('button', {
+              type: 'button',
+              className: 'fingers-settings__reset-btn',
+              onClick: function () {
+                const ok = Fingers.exportFingersDebugJson && Fingers.exportFingersDebugJson();
+                if (HEYS.Toast) {
+                  if (ok && HEYS.Toast.success) HEYS.Toast.success('Debug JSON скачан');
+                  else if (!ok && HEYS.Toast.info) HEYS.Toast.info('Debug JSON недоступен в этом окружении');
+                }
+              }
+            },
+              h('span', { 'aria-hidden': 'true' }, '{}'),
+              ' Экспорт debug JSON'
             ),
             h('p', { className: 'fingers-settings__profile-hint' },
               'Скачать историю за год: дата, программа, хват, зацеп, вес, подходы, RPE, боль. '
@@ -4168,7 +4370,7 @@
     // userBoard для конструктора — модель под текущую загруженную программу:
     // block-протокол → blockBoardId, иначе fingerboardId (грани берутся из неё).
     const userBoard = _isBlockProgram(pendingProgram)
-      ? (profile.blockBoardId || null)
+      ? ((Fingers.normalizeBlockBoardId ? Fingers.normalizeBlockBoardId(profile.blockBoardId) : profile.blockBoardId) || null)
       : (profile.fingerboardId || null);
     // Age fail-closed: null если не указан в профиле — конструктор покажет
     // guard вместо опасных хватов (ранее дефолтилось 18 → fail-open).
@@ -4228,6 +4430,7 @@
           fingersLog,
           { activityLabel: pendingProgram?.name || 'Свой конструктор' }
         );
+        _bumpFingersDiaryVersion();
         // Toast только для manual-save (план). При завершении через таймер
         // показываем summary-карточку (см. ниже) — она сама подтверждает save.
         if (!o.viaTimer && HEYS.Toast?.success) {
@@ -4273,7 +4476,7 @@
           totalHangSec: Math.round(totalHangSec),
           totalReps: totalReps,
           exercisesCount: exercises.length,
-          dateKey: dateKey || (new Date().toISOString().slice(0, 10)),
+          dateKey: dateKey || _todayDateKey(),
           intensity: programIntensity,
           streak: stats ? stats.streak : 0,
           totalSessions: stats ? stats.totalSessions : 1,
@@ -4299,7 +4502,7 @@
       let readinessBucket = 'moderate-only';
       let readinessReasons = [];
       try {
-        const todayKey = (typeof dateKey === 'string' ? dateKey : new Date().toISOString().slice(0, 10));
+        const todayKey = (typeof dateKey === 'string' ? dateKey : _todayDateKey());
         if (Fingers.readiness && typeof Fingers.readiness.assess === 'function') {
           const rIn = _buildReadinessInputs(todayKey);
           const r = Fingers.readiness.assess(rIn.today, rIn.history);
@@ -4915,6 +5118,11 @@
   Fingers._mergeSetFeedback = _mergeSetFeedback;
   // Exposed for tests (B19): чистая сборка контракта fingersLog.
   Fingers._buildFingersLog = _buildFingersLog;
+  // Exposed for tests: generated-mix path must route through engineRouter when available.
+  Fingers._recommendMixedWorkout = _recommendMixedWorkout;
+  // Exposed for tests: local date fallback and progress memo invalidation.
+  Fingers._todayDateKey = _todayDateKey;
+  Fingers._bumpFingersDiaryVersion = _bumpFingersDiaryVersion;
   // Exposed for tests (Step 4 prep / ревью #9 ExerciseRunner-characterization):
   // pin RPE/onSetFeedback/snapshot/abort до того, как Step 4 добавит doseShape branch.
   Fingers._ExerciseRunner = ExerciseRunner;

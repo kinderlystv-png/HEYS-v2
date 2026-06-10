@@ -39,6 +39,8 @@ beforeAll(() => {
 
 const useCycle = (cfg) => globalThis.HEYS.Fingers.useCountdownCycle(cfg);
 const S = () => globalThis.HEYS.Fingers.STATES;
+const timerLockKey = () => 'heys_fingers_timer_lock_v1';
+const timerTabId = () => globalThis.HEYS.Fingers.__timerTabId;
 
 const defaultCfg = (over = {}) => ({
   hangSec: 7, restSec: 3, repsPerSet: 2, setsCount: 2, restBetweenSetsSec: 60,
@@ -46,10 +48,16 @@ const defaultCfg = (over = {}) => ({
 });
 
 describe('useCountdownCycle — parity pin (Step 1, ревью #9 для reps-runner refactor)', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+    window.localStorage.clear();
+    delete globalThis.HEYS.Fingers.lastTimerLockDenied;
+  });
   afterEach(() => {
     vi.useRealTimers();
+    window.localStorage.clear();
     delete globalThis.HEYS.Fingers.activeTimerLock;
+    delete globalThis.HEYS.Fingers.lastTimerLockDenied;
   });
 
   describe('IDLE / start()', () => {
@@ -74,6 +82,61 @@ describe('useCountdownCycle — parity pin (Step 1, ревью #9 для reps-ru
       const { result } = renderHook(() => useCycle(defaultCfg()));
       act(() => result.current.start());
       expect(globalThis.HEYS.Fingers.activeTimerLock).toBe(true);
+    });
+
+    it('start() не запускает таймер если свежий lock держит другая вкладка', () => {
+      window.localStorage.setItem(timerLockKey(), JSON.stringify({
+        ownerTabId: 'other-tab',
+        acquiredAt: Date.now(),
+        heartbeatAt: Date.now()
+      }));
+      const { result } = renderHook(() => useCycle(defaultCfg()));
+      let ok;
+      act(() => { ok = result.current.start(); });
+      expect(ok).toBe(false);
+      expect(result.current.state).toBe(S().IDLE);
+      expect(globalThis.HEYS.Fingers.activeTimerLock).not.toBe(true);
+      expect(globalThis.HEYS.Fingers.lastTimerLockDenied.reason).toBe('held-by-another-tab');
+    });
+
+    it('start() перехватывает stale lock другой вкладки', () => {
+      window.localStorage.setItem(timerLockKey(), JSON.stringify({
+        ownerTabId: 'old-tab',
+        acquiredAt: Date.now() - 20000,
+        heartbeatAt: Date.now() - 20000
+      }));
+      const { result } = renderHook(() => useCycle(defaultCfg()));
+      let ok;
+      act(() => { ok = result.current.start(); });
+      const lock = JSON.parse(window.localStorage.getItem(timerLockKey()));
+      expect(ok).toBe(true);
+      expect(result.current.state).toBe(S().SET_PREP);
+      expect(lock.ownerTabId).toBe(timerTabId());
+    });
+
+    it('heartbeat продлевает lock текущей вкладки', () => {
+      const { result } = renderHook(() => useCycle(defaultCfg()));
+      act(() => result.current.start());
+      const first = JSON.parse(window.localStorage.getItem(timerLockKey())).heartbeatAt;
+      act(() => { vi.advanceTimersByTime(2100); });
+      const next = JSON.parse(window.localStorage.getItem(timerLockKey())).heartbeatAt;
+      expect(next).toBeGreaterThan(first);
+      expect(result.current.state).toBe(S().SET_PREP);
+    });
+
+    it('если lock украден во время работы — таймер уходит в EXPIRED', () => {
+      const onSC = vi.fn();
+      const { result } = renderHook(() => useCycle({ ...defaultCfg(), onStateChange: onSC }));
+      act(() => result.current.start());
+      window.localStorage.setItem(timerLockKey(), JSON.stringify({
+        ownerTabId: 'other-tab',
+        acquiredAt: Date.now(),
+        heartbeatAt: Date.now()
+      }));
+      act(() => { vi.advanceTimersByTime(2100); });
+      expect(result.current.state).toBe(S().EXPIRED);
+      expect(globalThis.HEYS.Fingers.activeTimerLock).toBe(false);
+      expect(onSC).toHaveBeenCalledWith(S().EXPIRED, expect.objectContaining({ reason: 'timer_lock_lost' }));
     });
   });
 

@@ -223,3 +223,55 @@ describe('intermediate worked example — реалистичный сценар�
     expect(r.blockWeights.technique).toBeGreaterThan(r.blockWeights.finger_strength);
   });
 });
+
+describe('assessment battery — full limiter audit data model', () => {
+  beforeAll(setupOnce);
+
+  it('TEST_BATTERY covers physical tests and skill marker checklists', () => {
+    expect(A().TEST_BATTERY.maxHang20mmHalf.quality).toBe('finger_strength');
+    expect(A().TEST_BATTERY.criticalForce.quality).toBe('aerobic_base');
+    expect(A().TEST_BATTERY.wPrime.quality).toBe('anaerobic_capacity');
+    expect(A().TEST_BATTERY.techniqueMarkers.flagKey).toBe('technique');
+    expect(A().TEST_BATTERY.mobilityMarkers.flagKey).toBe('mobility');
+  });
+
+  it('scoresFromBattery maps numeric tests and checklist markers', () => {
+    const mapped = A().scoresFromBattery({
+      maxHang20mmHalf: { score: 40, testedAt: '2026-01-01T00:00:00.000Z' },
+      criticalForce: { score: 42 },
+      techniqueMarkers: { markers: 3 },
+      mentalMarkers: { markers: 1, maxMarkers: 2 }
+    });
+
+    expect(mapped.testScores.finger_strength).toBe(40);
+    expect(mapped.testScores.aerobic_base).toBe(42);
+    expect(mapped.skillFlags.technique).toBeCloseTo(3 / 5);
+    expect(mapped.skillFlags.mental).toBeCloseTo(1 / 2);
+    expect(mapped.normalized.maxHang20mmHalf.quality).toBe('finger_strength');
+  });
+
+  it('assessBattery preserves old assess result shape and adds battery context', () => {
+    const r = A().assessBattery({
+      maxHang20mmHalf: { score: 40 },
+      techniqueMarkers: { markers: 1 }
+    }, 'intermediate');
+
+    expect(r.leadingLimiter).toBe('finger_strength');
+    expect(r.battery.maxHang20mmHalf.score).toBe(40);
+    expect(r.testScores.finger_strength).toBe(40);
+    expect(r.skillFlags.technique).toBeCloseTo(0.2);
+  });
+
+  it('dueTests marks missing and stale tests as due using per-test cadence', () => {
+    const now = Date.parse('2026-06-10T00:00:00.000Z');
+    const due = A().dueTests({
+      maxHang20mmHalf: { score: 70, testedAt: '2026-05-20T00:00:00.000Z' },
+      techniqueMarkers: { markers: 1, testedAt: '2026-04-01T00:00:00.000Z' }
+    }, now);
+    const byId = Object.fromEntries(due.map((d) => [d.id, d]));
+
+    expect(byId.maxHang20mmHalf.due).toBe(false);
+    expect(byId.techniqueMarkers.due).toBe(true);
+    expect(byId.criticalForce.due).toBe(true);
+  });
+});

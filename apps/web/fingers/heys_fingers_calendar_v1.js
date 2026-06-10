@@ -78,6 +78,7 @@
       if (tr && tr.type === 'fingers') {
         const log = tr.fingersLog || {};
         const intensity = _classifyProgramId(log.programId);
+        const completedAt = log.completedAt || null;
         sessions.push({
           dateKey,
           trainingIndex: idx,
@@ -85,8 +86,8 @@
           intensity,
           holdsCount: Array.isArray(log.holds) ? log.holds.length : 0,
           notes: tr.notes || '',
-          startedAt: log.startedAt || null,
-          endedAt: log.endedAt || null,
+          startedAt: log.startedAt || completedAt,
+          endedAt: log.endedAt || completedAt,
         });
       }
     });

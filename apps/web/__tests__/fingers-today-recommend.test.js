@@ -12,7 +12,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -165,6 +165,42 @@ describe('B16 goal → getRecommendedProgramId', () => {
   it('maintenance → repeaters_7_3', () => {
     setGoal('maintenance');
     expect(globalThis.HEYS.Fingers.getRecommendedProgramId()).toBe('repeaters_7_3');
+  });
+});
+
+describe('generated mix routing', () => {
+  beforeAll(setupOnce);
+  beforeEach(() => {
+    delete globalThis.HEYS.Fingers.engineRouter;
+    delete globalThis.HEYS.Fingers.mixEngine;
+    delete globalThis.HEYS.Fingers.generateMixedWorkout;
+  });
+
+  it('uses engineRouter when available, so newEngine/telemetry are on the mix path', () => {
+    const F = globalThis.HEYS.Fingers;
+    const routerResult = { name: 'router-result', exercises: [] };
+    const oldResult = { name: 'old-result', exercises: [] };
+    F.engineRouter = { recommendDay: vi.fn(() => routerResult) };
+    F.mixEngine = { recommendDay: vi.fn(() => oldResult) };
+
+    expect(F._recommendMixedWorkout({ readiness: 'max' })).toBe(routerResult);
+    expect(F.engineRouter.recommendDay).toHaveBeenCalledWith({ readiness: 'max' });
+    expect(F.mixEngine.recommendDay).not.toHaveBeenCalled();
+  });
+
+  it('falls back to mixEngine, then legacy generateMixedWorkout', () => {
+    const F = globalThis.HEYS.Fingers;
+    const oldResult = { name: 'old-result', exercises: [] };
+    const legacyResult = { name: 'legacy-result', exercises: [] };
+
+    F.mixEngine = { recommendDay: vi.fn(() => oldResult) };
+    F.generateMixedWorkout = vi.fn(() => legacyResult);
+    expect(F._recommendMixedWorkout({ readiness: 'max' })).toBe(oldResult);
+    expect(F.generateMixedWorkout).not.toHaveBeenCalled();
+
+    delete F.mixEngine;
+    expect(F._recommendMixedWorkout({ readiness: 'recovery' })).toBe(legacyResult);
+    expect(F.generateMixedWorkout).toHaveBeenCalledWith({ readiness: 'recovery' });
   });
 });
 

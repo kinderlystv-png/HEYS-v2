@@ -1,9 +1,10 @@
-// heys_fingers_boards_catalog_v1.js — Каталог fingerboard-моделей (6 пресетов + generic).
+// heys_fingers_boards_catalog_v1.js — Каталог fingerboard-моделей и hang blocks.
 // Wave 2-A: статичный массив с реальными edge-размерами от производителей.
 //
 // Public API:
 //   HEYS.Fingers.BOARDS               — массив досок
 //   HEYS.Fingers.getBoardById(id)     — lookup
+//   HEYS.Fingers.normalizeBlockBoardId(id) — legacy block id alias
 //   HEYS.Fingers.getEdgeById(boardId, edgeId)
 //   HEYS.Fingers.findCompatibleEdges(boardId, gripId) — список edge подходящих хвату
 //
@@ -145,7 +146,7 @@
       ]
     },
     {
-      id: 'lattice_block',
+      id: 'lattice_hang_block',
       kind: 'block',
       label: 'Lattice Hang Block',
       manufacturer: 'Lattice Training (UK)',
@@ -174,6 +175,13 @@
 
   function getBoardById(id) {
     return BOARDS_BY_ID[id] || null;
+  }
+
+  function normalizeBlockBoardId(id) {
+    // Compatibility: до 2026-06-10 portable Lattice Hang Block делил id с full
+    // Lattice board. В block-контексте старый id должен резолвиться в block.
+    if (id === 'lattice_block') return 'lattice_hang_block';
+    return id;
   }
 
   function getEdgeById(boardId, edgeId) {
@@ -215,6 +223,7 @@
   Fingers.BOARDS = BOARDS;
   Fingers.BOARDS_BY_ID = BOARDS_BY_ID;
   Fingers.getBoardById = getBoardById;
+  Fingers.normalizeBlockBoardId = normalizeBlockBoardId;
   Fingers.getEdgeById = getEdgeById;
   Fingers.findCompatibleEdges = findCompatibleEdges;
   Fingers.getBoardsByKind = getBoardsByKind;

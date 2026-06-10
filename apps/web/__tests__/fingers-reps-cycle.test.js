@@ -28,16 +28,23 @@ beforeAll(() => {
 
 const useReps = (cfg) => globalThis.HEYS.Fingers.useRepsCycle(cfg);
 const S = () => globalThis.HEYS.Fingers.STATES;
+const timerLockKey = () => 'heys_fingers_timer_lock_v1';
 
 const defaultCfg = (over = {}) => ({
   setsCount: 2, restBetweenSetsSec: 60, ...over
 });
 
 describe('useRepsCycle — characterization (Step 2 / ревью #9)', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+    window.localStorage.clear();
+    delete globalThis.HEYS.Fingers.lastTimerLockDenied;
+  });
   afterEach(() => {
     vi.useRealTimers();
+    window.localStorage.clear();
     delete globalThis.HEYS.Fingers.activeTimerLock;
+    delete globalThis.HEYS.Fingers.lastTimerLockDenied;
   });
 
   describe('IDLE / start()', () => {
@@ -61,6 +68,20 @@ describe('useRepsCycle — characterization (Step 2 / ревью #9)', () => {
       const { result } = renderHook(() => useReps(defaultCfg()));
       act(() => result.current.start());
       expect(globalThis.HEYS.Fingers.activeTimerLock).toBe(true);
+    });
+
+    it('start() не запускает reps-таймер если свежий lock держит другая вкладка', () => {
+      window.localStorage.setItem(timerLockKey(), JSON.stringify({
+        ownerTabId: 'other-tab',
+        acquiredAt: Date.now(),
+        heartbeatAt: Date.now()
+      }));
+      const { result } = renderHook(() => useReps(defaultCfg()));
+      let ok;
+      act(() => { ok = result.current.start(); });
+      expect(ok).toBe(false);
+      expect(result.current.state).toBe(S().IDLE);
+      expect(globalThis.HEYS.Fingers.lastTimerLockDenied.reason).toBe('held-by-another-tab');
     });
 
     it('repIdx всегда 0 (reps machine не трекает per-rep state)', () => {

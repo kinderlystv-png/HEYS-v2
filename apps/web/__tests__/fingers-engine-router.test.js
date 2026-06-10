@@ -23,6 +23,7 @@ const setupOnce = () => {
   ev('heys_fingers_programs_catalog_v1.js');
   ev('heys_fingers_age_gating_v1.js');
   ev('heys_fingers_mix_engine_v1.js');
+  ev('heys_fingers_periodization_engine_v1.js');
   ev('heys_fingers_engine_router_v1.js');
 };
 
@@ -38,6 +39,14 @@ describe('engineRouter: флаг и default', () => {
 
   it('engineRouter.recommendDay существует', () => {
     expect(typeof R().recommendDay).toBe('function');
+  });
+
+  it('engineRouter telemetry API существует', () => {
+    expect(typeof R().getTelemetry).toBe('function');
+    expect(typeof R().resetTelemetry).toBe('function');
+    expect(typeof R().configureCanary).toBe('function');
+    expect(typeof R().evaluateRolloutGate).toBe('function');
+    expect(typeof R().enableCanaryIfGatePasses).toBe('function');
   });
 });
 
@@ -335,6 +344,320 @@ describe('engineRouter: plumbing Гейта #1 (ревью #8) — enrichment op
   });
 });
 
+describe('engineRouter: rollout telemetry counters', () => {
+  beforeAll(setupOnce);
+  beforeEach(() => {
+    F().flags.newEngine = false;
+    F().flags.shadowCompare = false;
+    delete F().sessionBuilder;
+    R().resetTelemetry();
+  });
+
+  it('считает old/new/fallback и fallbackRate по фактическим маршрутам', () => {
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+
+    F().flags.newEngine = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'max',
+        exercises: [{ __role: 'stub' }],
+        name: 'New session',
+        durationMin: 30,
+        requiresWarmup: true
+      })
+    };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+
+    F().sessionBuilder = { recommendDay: () => null };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+
+    const t = R().getTelemetry();
+    expect(t.total).toBe(3);
+    expect(t.bySource.old).toBe(1);
+    expect(t.bySource.new).toBe(1);
+    expect(t.bySource.fallback).toBe(1);
+    expect(t.fallbackTotal).toBe(1);
+    expect(t.fallbackRate).toBeCloseTo(1 / 3, 5);
+    expect(t.lastFallbackReason).toBe('empty-builder-result');
+    expect(typeof t.lastFallbackAt).toBe('number');
+  });
+
+  it('contract fallback и exception fallback имеют отдельные counters', () => {
+    F().flags.newEngine = true;
+    F().sessionBuilder = { recommendDay: () => ({ intensity: 'max', exercises: [] }) };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+
+    F().sessionBuilder = { recommendDay: () => { throw new Error('boom'); } };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+
+    const t = R().getTelemetry();
+    expect(t.total).toBe(2);
+    expect(t.bySource['fallback-contract']).toBe(1);
+    expect(t.bySource['fallback-error']).toBe(1);
+    expect(t.fallbackTotal).toBe(2);
+    expect(t.fallbackRate).toBe(1);
+    expect(t.lastFallbackReason).toBe('exception');
+  });
+
+  it('shadowCompare counters не увеличивают route total второй раз', () => {
+    F().flags.newEngine = true;
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'max',
+        exercises: [{ __role: 'stub' }],
+        name: 'New session',
+        durationMin: 30,
+        requiresWarmup: true
+      })
+    };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+
+    const t = R().getTelemetry();
+    expect(t.total).toBe(1);
+    expect(t.bySource.new).toBe(1);
+    expect(t.shadowCompareTotal).toBe(1);
+    expect(t.shadowCompareErrors).toBe(0);
+    expect(typeof t.lastShadowAt).toBe('number');
+  });
+
+  it('shadowCompare error считается отдельно и не меняет lastSource=new', () => {
+    F().flags.newEngine = true;
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'max',
+        exercises: [{ __role: 'stub' }],
+        name: 'New session',
+        durationMin: 30,
+        requiresWarmup: true
+      })
+    };
+    const orig = F().mixEngine.recommendDay;
+    F().mixEngine.recommendDay = () => { throw new Error('shadow boom'); };
+    try {
+      R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+    } finally {
+      F().mixEngine.recommendDay = orig;
+    }
+
+    const t = R().getTelemetry();
+    expect(R().lastSource).toBe('new');
+    expect(t.total).toBe(1);
+    expect(t.bySource.new).toBe(1);
+    expect(t.shadowCompareTotal).toBe(0);
+    expect(t.shadowCompareErrors).toBe(1);
+  });
+
+  it('resetTelemetry очищает counters и last diagnostics', () => {
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+    expect(R().getTelemetry().total).toBe(1);
+    expect(R().lastSource).toBe('old');
+
+    R().resetTelemetry();
+    const t = R().getTelemetry();
+    expect(t.total).toBe(0);
+    expect(t.fallbackRate).toBe(0);
+    expect(R().lastSource).toBeNull();
+    expect(R().lastShadowDiff).toBeNull();
+  });
+});
+
+describe('engineRouter: canary rollout gate', () => {
+  beforeAll(setupOnce);
+  beforeEach(() => {
+    F().flags.newEngine = false;
+    F().flags.shadowCompare = false;
+    F().flags.newEngineCanary = false;
+    delete F().sessionBuilder;
+    delete globalThis.HEYS.currentClientId;
+    delete globalThis.localStorage;
+    R().resetTelemetry();
+  });
+
+  it('configureCanary явно включает/выключает newEngine и shadowCompare', () => {
+    const on = R().configureCanary({ enabled: true });
+    expect(on.enabled).toBe(true);
+    expect(on.shadowCompare).toBe(true);
+    expect(F().flags.newEngine).toBe(true);
+    expect(F().flags.shadowCompare).toBe(true);
+    expect(F().flags.newEngineCanary).toBe(true);
+
+    const off = R().configureCanary({ enabled: false });
+    expect(off.enabled).toBe(false);
+    expect(off.shadowCompare).toBe(false);
+    expect(F().flags.newEngine).toBe(false);
+    expect(F().flags.shadowCompare).toBe(false);
+    expect(F().flags.newEngineCanary).toBe(false);
+  });
+
+  it('persisted canary flag uses current-client scoped key', () => {
+    const store = new Map();
+    globalThis.localStorage = {
+      getItem: (k) => store.has(k) ? store.get(k) : null,
+      setItem: (k, v) => { store.set(k, String(v)); },
+      removeItem: (k) => { store.delete(k); }
+    };
+    globalThis.HEYS.currentClientId = '11111111-1111-4111-8111-111111111111';
+
+    const res = R().configureCanary({ enabled: true, persist: true });
+    expect(res.persisted).toBe(true);
+    expect(res.key).toBe('heys_11111111-1111-4111-8111-111111111111_fingers_new_engine_canary_v1');
+    expect(store.get(res.key)).toBe('1');
+
+    R().configureCanary({ enabled: false });
+    const loaded = R().loadCanaryFlag();
+    expect(loaded.enabled).toBe(true);
+    expect(F().flags.newEngine).toBe(true);
+  });
+
+  it('loadCanaryFlag resolves scoped key from heys_client_current when HEYS.currentClientId is not ready', () => {
+    const store = new Map();
+    const cid = '22222222-2222-4222-8222-222222222222';
+    globalThis.localStorage = {
+      getItem: (k) => store.has(k) ? store.get(k) : null,
+      setItem: (k, v) => { store.set(k, String(v)); },
+      removeItem: (k) => { store.delete(k); }
+    };
+    store.set('heys_client_current', JSON.stringify(cid));
+    store.set('heys_' + cid + '_fingers_new_engine_canary_v1', '1');
+    delete globalThis.HEYS.currentClientId;
+
+    const loaded = R().loadCanaryFlag();
+    expect(loaded.enabled).toBe(true);
+    expect(loaded.shadowCompare).toBe(true);
+    expect(F().flags.newEngine).toBe(true);
+    expect(F().flags.shadowCompare).toBe(true);
+  });
+
+  it('loadCanaryFlag resolves scoped key from heys_pin_auth_client fallback', () => {
+    const store = new Map();
+    const cid = '33333333-3333-4333-8333-333333333333';
+    globalThis.localStorage = {
+      getItem: (k) => store.has(k) ? store.get(k) : null,
+      setItem: (k, v) => { store.set(k, String(v)); },
+      removeItem: (k) => { store.delete(k); }
+    };
+    store.set('heys_pin_auth_client', cid);
+    store.set('heys_' + cid + '_fingers_new_engine_canary_v1', '1');
+    delete globalThis.HEYS.currentClientId;
+
+    const loaded = R().loadCanaryFlag();
+    expect(loaded.enabled).toBe(true);
+    expect(F().flags.newEngine).toBe(true);
+  });
+
+  it('enableCanaryIfGatePasses blocks rollout when fallback-rate is above threshold', () => {
+    F().flags.newEngine = true;
+    delete F().sessionBuilder;
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+
+    F().flags.newEngine = false;
+    F().flags.shadowCompare = false;
+    const res = R().enableCanaryIfGatePasses();
+    expect(res.ok).toBe(false);
+    expect(res.gate.reasons).toContain('fallback-rate');
+    expect(F().flags.newEngine).toBe(false);
+  });
+
+  it('enableCanaryIfGatePasses fails closed when there is no shadow data', () => {
+    const res = R().enableCanaryIfGatePasses();
+    expect(res.ok).toBe(false);
+    expect(res.gate.reasons).toContain('no-shadow-data');
+    expect(res.gate.reasons).toContain('insufficient-routes');
+    expect(res.gate.reasons).toContain('insufficient-shadow-samples');
+    expect(F().flags.newEngine).toBe(false);
+  });
+
+  it('evaluateRolloutGate blocks renderer-risk from last shadow diff', () => {
+    F().flags.newEngine = true;
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'max',
+        exercises: [{ __role: 'max-strength', doseShape: 'isometric_cluster', modality: 'fingerboard' }],
+        name: 'Unknown shape',
+        durationMin: 30,
+        requiresWarmup: true
+      })
+    };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+
+    const gate = R().evaluateRolloutGate({ maxFallbackRate: 1 });
+    expect(gate.ok).toBe(false);
+    expect(gate.reasons).toContain('ui-renderer-risk');
+  });
+
+  it('evaluateRolloutGate blocks danger-budget overrun from last shadow diff', () => {
+    F().flags.newEngine = true;
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'recovery',
+        __trace: { resolution: { bucket: 'recovery' } },
+        exercises: [
+          { __role: 'capacity', doseShape: 'hang', modality: 'fingerboard', gripId: 'fullcrimp' }
+        ],
+        name: 'Danger overrun',
+        durationMin: 30,
+        requiresWarmup: false
+      })
+    };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'recovery' });
+
+    const gate = R().evaluateRolloutGate({
+      minRoutes: 1,
+      minShadowCompareTotal: 1,
+      maxFallbackRate: 1,
+      maxDurationDeltaMin: 100,
+      maxExerciseDelta: 10
+    });
+    expect(gate.ok).toBe(false);
+    expect(gate.lastShadowDiff.dangerBudget.new).toMatchObject({
+      bucket: 'recovery',
+      spent: 33,
+      cap: 8,
+      overBudget: true
+    });
+    expect(gate.reasons).toContain('danger-budget');
+  });
+
+  it('enableCanaryIfGatePasses enables canary only when telemetry and shadow sample are clean', () => {
+    F().flags.newEngine = true;
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'max',
+        __trace: { resolution: { bucket: 'max' } },
+        exercises: [
+          { __role: 'max-strength', doseShape: 'hang', modality: 'fingerboard', gripId: 'halfcrimp' },
+          { __role: 'strength-endurance', doseShape: 'hang', modality: 'fingerboard', gripId: 'openhand4' },
+          { __role: 'antagonist', doseShape: 'reps', modality: 'antagonist' }
+        ],
+        name: 'Clean shadow',
+        durationMin: 45,
+        requiresWarmup: true
+      })
+    };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+
+    F().flags.newEngine = false;
+    F().flags.shadowCompare = false;
+    const res = R().enableCanaryIfGatePasses({
+      thresholds: {
+        minRoutes: 1,
+        minShadowCompareTotal: 1,
+        maxDurationDeltaMin: 100,
+        maxExerciseDelta: 10
+      }
+    });
+    expect(res.ok).toBe(true);
+    expect(F().flags.newEngine).toBe(true);
+    expect(F().flags.shadowCompare).toBe(true);
+    expect(F().flags.newEngineCanary).toBe(true);
+  });
+});
+
 describe('engineRouter: shadow-compare (ревью 4.3 #4.3e — наблюдаемость)', () => {
   beforeAll(setupOnce);
   beforeEach(() => {
@@ -388,6 +711,51 @@ describe('engineRouter: shadow-compare (ревью 4.3 #4.3e — наблюда�
     expect(diff.nonHangCount.new).toBe(2);
     expect(diff.nonRenderableCount.new).toBe(0);
     expect(diff.nonRenderableCount.uiRendererRisk).toBe(false);
+  });
+
+  it('shadow-diff считает все 6 поддержанных doseShape renderable', () => {
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'max',
+        exercises: [
+          { __role: 'max-strength', doseShape: 'hang', modality: 'fingerboard' },
+          { __role: 'antagonist', doseShape: 'reps', modality: 'antagonist' },
+          { __role: 'capacity', doseShape: 'continuous', modality: 'wall' },
+          { __role: 'power', doseShape: 'attempts', modality: 'campus' },
+          { __role: 'capacity', doseShape: 'circuit', modality: 'wall' },
+          { __role: 'mental', doseShape: 'process', modality: 'wall' }
+        ],
+        name: 'All supported shapes', durationMin: 45, requiresWarmup: true
+      })
+    };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+    const diff = R().lastShadowDiff;
+    expect(diff.doseShape.new).toEqual({
+      hang: 1, reps: 1, continuous: 1, attempts: 1, circuit: 1, process: 1
+    });
+    expect(diff.nonHangCount.new).toBe(5);
+    expect(diff.nonRenderableCount.new).toBe(0);
+    expect(diff.nonRenderableCount.uiRendererRisk).toBe(false);
+  });
+
+  it('shadow-diff оставляет renderer-risk для неизвестного doseShape', () => {
+    F().flags.shadowCompare = true;
+    F().sessionBuilder = {
+      recommendDay: () => ({
+        intensity: 'max',
+        exercises: [
+          { __role: 'unknown', doseShape: 'isometric_cluster', modality: 'fingerboard' }
+        ],
+        name: 'Unknown shape', durationMin: 20, requiresWarmup: true
+      })
+    };
+    R().recommendDay({ equipmentTypes: ['full'], age: 25, readiness: 'max' });
+    const diff = R().lastShadowDiff;
+    expect(diff.doseShape.new).toEqual({ isometric_cluster: 1 });
+    expect(diff.nonHangCount.new).toBe(1);
+    expect(diff.nonRenderableCount.new).toBe(1);
+    expect(diff.nonRenderableCount.uiRendererRisk).toBe(true);
   });
 
   it('shadowCompare ошибка mixEngine не валит builder-выход', () => {

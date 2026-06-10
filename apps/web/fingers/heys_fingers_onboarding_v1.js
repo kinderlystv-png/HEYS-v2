@@ -81,6 +81,8 @@
         age: ageFromBirth || ageFromProfile || null,
         climbingYears: Number(fp.climbingYears) || 0,
         maxVGrade: fp.maxVGrade || null,
+        level: fp.level || null,
+        completedPrerequisites: Array.isArray(fp.completedPrerequisites) ? fp.completedPrerequisites : [],
         // B16: цель тренировки. null → трактуется как 'strength' (старое
         // grade-поведение), чтобы апгрейд не менял рекомендации существующим.
         goal: fp.goal || null,
@@ -152,6 +154,9 @@
         themeId: state.themeId,
         climbingYears: state.profile?.climbingYears,
         maxVGrade: state.profile?.maxVGrade,
+        level: state.profile?.level,
+        completedPrerequisites: Array.isArray(state.profile?.completedPrerequisites)
+          ? state.profile.completedPrerequisites : [],
         goal: state.profile?.goal,
         hasFingerboard: state.profile?.hasFingerboard,
         hasScale: state.profile?.hasScale,
@@ -319,6 +324,19 @@
   function _renderProfile(state, setState) {
     const GRADES = ['V0-V2', 'V3-V4', 'V5-V6', 'V7-V8', 'V9+', 'none'];
     const GRADE_LABELS = { 'V0-V2': 'V0-V2', 'V3-V4': 'V3-V4', 'V5-V6': 'V5-V6', 'V7-V8': 'V7-V8', 'V9+': 'V9+', 'none': 'Не лажу' };
+    const LEVELS = ['beginner', 'intermediate', 'advanced', 'elite'];
+    const LEVEL_LABELS = {
+      beginner: 'Новичок',
+      intermediate: 'Средний',
+      advanced: 'Продвинутый',
+      elite: 'Элитный'
+    };
+    const LEVEL_HINTS = {
+      beginner: 'Первые месяцы работы на пальцы: только базовые и щадящие протоколы.',
+      intermediate: 'Есть регулярная база лазания и пальцы спокойно переносят умеренные висы.',
+      advanced: '2+ года регулярной нагрузки на пальцы без травм связок; могут открываться малые ребра.',
+      elite: 'Долгая история целевой подготовки пальцев без травм; высокий объём и интенсивность уже привычны.'
+    };
     // B16: цель тренировки. Влияет на рекомендацию программы.
     const GOALS = ['strength', 'endurance', 'recovery', 'maintenance'];
     const GOAL_LABELS = { strength: '💪 Сила', endurance: '🔄 Выносливость', recovery: '🌿 Восстановление', maintenance: '⚖️ Поддержка' };
@@ -328,6 +346,27 @@
       const next = Object.assign({}, state, { profile: profile });
       _writeState(next);
       setState(next);
+    }
+
+    function chooseLevel(level) {
+      const apply = function () { updateProfile({ level: level }); };
+      if (level !== 'advanced' && level !== 'elite') {
+        apply();
+        return;
+      }
+      const text = (LEVEL_LABELS[level] || level) + ' уровень означает не грейд лазания, а стаж адаптации пальцев: регулярная нагрузка на пальцы, спокойная переносимость висов и отсутствие травм связок. Этот выбор может открыть протоколы с малым ребром и высокой нагрузкой.';
+      if (HEYS.ConfirmModal && HEYS.ConfirmModal.show) {
+        HEYS.ConfirmModal.show({
+          icon: '!',
+          title: 'Подтвердить уровень',
+          text: text,
+          confirmText: 'Подтвердить',
+          cancelText: 'Отмена',
+          onConfirm: apply
+        });
+      } else if (typeof window === 'undefined' || window.confirm(text)) {
+        apply();
+      }
     }
 
     // Late-binding prefill: глобальный profile может подгружаться из cloud
@@ -401,6 +440,19 @@
               className: 'fingers-ob-chip' + (state.profile.maxVGrade === g ? ' is-active' : '')
             }, GRADE_LABELS[g]))
           )
+        ),
+        h('div', null,
+          h('div', { className: 'fingers-ob-label' }, 'Уровень fingerboard-тренировок'),
+          h('div', { className: 'fingers-ob-chip-row' },
+            LEVELS.map((level) => h('button', {
+              key: level,
+              type: 'button',
+              onClick: () => chooseLevel(level),
+              className: 'fingers-ob-chip' + (state.profile.level === level ? ' is-active' : '')
+            }, LEVEL_LABELS[level]))
+          ),
+          h('p', { className: 'fingers-ob-note' },
+            LEVEL_HINTS[state.profile.level] || 'Уровень здесь — это опыт нагрузки на пальцы, а не максимальный грейд.')
         ),
         h('div', null,
           h('div', { className: 'fingers-ob-label' }, 'Цель тренировок'),

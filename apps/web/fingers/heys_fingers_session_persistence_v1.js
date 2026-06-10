@@ -37,8 +37,13 @@
   const AGING_THRESHOLD_MS = 60 * 60 * 1000;       // 1 hour — soft "aging" warning
   const DEBOUNCE_MS = 250;
 
-  function _getKey() {
+  function _getCurrentClientId() {
     const cid = (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
+    return cid ? String(cid) : '';
+  }
+
+  function _getKey() {
+    const cid = _getCurrentClientId();
     return cid ? `heys_${cid}_finger_active_session` : 'heys_finger_active_session';
   }
 
@@ -59,6 +64,11 @@
     return /^heys_[a-f0-9-]{36}_finger_active_session$/i.test(String(key));
   }
 
+  function _isCurrentActiveSessionKey(key) {
+    if (!_isActiveSessionKey(key)) return false;
+    return String(key) === _getKey();
+  }
+
   function _listActiveSessionKeys() {
     const keys = [];
     const seen = new Set();
@@ -68,11 +78,10 @@
       keys.push(key);
     };
     add(_getKey());
-    add('heys_finger_active_session');
     try {
       for (let i = 0; i < localStorage.length; i += 1) {
         const key = localStorage.key(i);
-        if (_isActiveSessionKey(key)) add(key);
+        if (_isCurrentActiveSessionKey(key)) add(key);
       }
     } catch (_) { /* noop */ }
     return keys;
@@ -266,6 +275,7 @@
     // Test/internal helpers (не публичный API, но удобно для дебага)
     __getKey: _getKey,
     __isActiveSessionKey: _isActiveSessionKey,
+    __isCurrentActiveSessionKey: _isCurrentActiveSessionKey,
     __STALE_THRESHOLD_MS: STALE_THRESHOLD_MS,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

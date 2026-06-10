@@ -353,6 +353,32 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
       expect(onAbort).not.toHaveBeenCalled();
     });
 
+    it('fallback HangRunner abort тоже идёт через shared confirm-shell', () => {
+      const originalDisplay = globalThis.HEYS.Fingers.CountdownDisplay;
+      const onAbort = vi.fn();
+      const confirmShow = vi.fn();
+      globalThis.HEYS.ConfirmModal = { show: confirmShow };
+      delete globalThis.HEYS.Fingers.CountdownDisplay;
+      try {
+        const { container } = render(React.createElement(ER(), {
+          exercise: defaultExercise(), exIdx: 0, totalExercises: 1,
+          exercises: [defaultExercise()], onAbort, onDone: vi.fn()
+        }));
+        const abortBtn = Array.from(container.querySelectorAll('button')).find(b => b.textContent.includes('Прервать'));
+        fireEvent.click(abortBtn);
+        expect(confirmShow).toHaveBeenCalledWith(expect.objectContaining({
+          title: 'Прервать тренировку?',
+          confirmText: 'Прервать',
+        }));
+        expect(cycle.abortCalled).toBe(false);
+        act(() => { confirmShow.mock.calls[0][0].onConfirm(); });
+        expect(cycle.abortCalled).toBe(true);
+        expect(onAbort).toHaveBeenCalledTimes(1);
+      } finally {
+        globalThis.HEYS.Fingers.CountdownDisplay = originalDisplay;
+      }
+    });
+
     it('Confirm "Прервать" БЕЗ прогресса → сразу finalize (abort + onAbort)', () => {
       const onAbort = vi.fn();
       const confirmShow = vi.fn();
@@ -583,6 +609,57 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
       }));
       expect(cycle.config.restBetweenSetsSec).toBe(240);
     });
+
+    it('continuous onAbort идёт через shared confirm-shell', () => {
+      const onAbort = vi.fn();
+      const confirmShow = vi.fn();
+      const displayPropsCapture = vi.fn();
+      globalThis.HEYS.ConfirmModal = { show: confirmShow };
+      globalThis.HEYS.Fingers.ContinuousDisplay = function (props) {
+        displayPropsCapture(props);
+        return React.createElement('div');
+      };
+      render(React.createElement(ER(), {
+        exercise: continuousExercise(), exIdx: 0, totalExercises: 1,
+        exercises: [continuousExercise()], onAbort, onDone: vi.fn()
+      }));
+      const lastProps = displayPropsCapture.mock.calls[displayPropsCapture.mock.calls.length - 1][0];
+      act(() => { lastProps.onAbort(); });
+      expect(confirmShow).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Прервать тренировку?',
+        confirmText: 'Прервать',
+      }));
+      expect(cycle.abortCalled).toBe(false);
+      act(() => { confirmShow.mock.calls[0][0].onConfirm(); });
+      expect(cycle.abortCalled).toBe(true);
+      expect(onAbort).toHaveBeenCalledTimes(1);
+    });
+
+    it('continuous fallback abort тоже идёт через shared confirm-shell', () => {
+      const originalDisplay = globalThis.HEYS.Fingers.ContinuousDisplay;
+      const onAbort = vi.fn();
+      const confirmShow = vi.fn();
+      globalThis.HEYS.ConfirmModal = { show: confirmShow };
+      delete globalThis.HEYS.Fingers.ContinuousDisplay;
+      try {
+        const { container } = render(React.createElement(ER(), {
+          exercise: continuousExercise(), exIdx: 0, totalExercises: 1,
+          exercises: [continuousExercise()], onAbort, onDone: vi.fn()
+        }));
+        const abortBtn = Array.from(container.querySelectorAll('button')).find(b => b.textContent.includes('Прервать'));
+        fireEvent.click(abortBtn);
+        expect(confirmShow).toHaveBeenCalledWith(expect.objectContaining({
+          title: 'Прервать тренировку?',
+          confirmText: 'Прервать',
+        }));
+        expect(cycle.abortCalled).toBe(false);
+        act(() => { confirmShow.mock.calls[0][0].onConfirm(); });
+        expect(cycle.abortCalled).toBe(true);
+        expect(onAbort).toHaveBeenCalledTimes(1);
+      } finally {
+        globalThis.HEYS.Fingers.ContinuousDisplay = originalDisplay;
+      }
+    });
   });
 
   describe('Шаг 5b attempts-path — useRepsCycle reuse через AttemptsRunner', () => {
@@ -590,7 +667,7 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
       const captured = {
         config: null, onComplete: null, onStateChange: null,
         state: 'IDLE', setIdx: 0, repIdx: 0, secondsLeft: 0,
-        completeSetCalled: false,
+        completeSetCalled: false, abortCalled: false,
       };
       globalThis.HEYS.Fingers.useRepsCycle = function (cfg) {
         captured.config = cfg;
@@ -604,7 +681,7 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
           totalElapsed: 0,
           start: () => {},
           pause: () => {}, resume: () => {},
-          abort: () => {},
+          abort: () => { captured.abortCalled = true; },
           completeSet: () => { captured.completeSetCalled = true; },
           skipPhase: () => {},
           startFromSnapshot: () => {},
@@ -682,6 +759,32 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
       expect(repsCycle.config.setsCount).toBe(6);
       expect(repsCycle.config.restBetweenSetsSec).toBe(240);
     });
+
+    it('attempts onAbort идёт через shared confirm-shell', () => {
+      const repsCycle = installRepsCycleStub();
+      const onAbort = vi.fn();
+      const confirmShow = vi.fn();
+      const displayPropsCapture = vi.fn();
+      globalThis.HEYS.ConfirmModal = { show: confirmShow };
+      globalThis.HEYS.Fingers.AttemptsDisplay = function (props) {
+        displayPropsCapture(props);
+        return React.createElement('div');
+      };
+      render(React.createElement(ER(), {
+        exercise: attemptsExercise(), exIdx: 0, totalExercises: 1,
+        exercises: [attemptsExercise()], onAbort, onDone: vi.fn()
+      }));
+      const lastProps = displayPropsCapture.mock.calls[displayPropsCapture.mock.calls.length - 1][0];
+      act(() => { lastProps.onAbort(); });
+      expect(confirmShow).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Прервать тренировку?',
+        confirmText: 'Прервать',
+      }));
+      expect(repsCycle.abortCalled).toBe(false);
+      act(() => { confirmShow.mock.calls[0][0].onConfirm(); });
+      expect(repsCycle.abortCalled).toBe(true);
+      expect(onAbort).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Шаг 5c circuit-path — useRepsCycle reuse через CircuitRunner', () => {
@@ -689,6 +792,7 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
       const captured = {
         config: null, onComplete: null, onStateChange: null,
         state: 'IDLE', setIdx: 0, repIdx: 0, secondsLeft: 0,
+        abortCalled: false,
       };
       globalThis.HEYS.Fingers.useRepsCycle = function (cfg) {
         captured.config = cfg;
@@ -701,7 +805,7 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
           get secondsLeft() { return captured.secondsLeft; },
           totalElapsed: 0,
           start: () => {}, pause: () => {}, resume: () => {},
-          abort: () => {}, completeSet: () => {}, skipPhase: () => {},
+          abort: () => { captured.abortCalled = true; }, completeSet: () => {}, skipPhase: () => {},
           startFromSnapshot: () => {},
         };
       };
@@ -778,6 +882,32 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
       expect(repsCycle.config.setsCount).toBe(4);
       expect(repsCycle.config.restBetweenSetsSec).toBe(240);
     });
+
+    it('circuit onAbort идёт через shared confirm-shell', () => {
+      const repsCycle = installRepsCycleStub();
+      const onAbort = vi.fn();
+      const confirmShow = vi.fn();
+      const displayPropsCapture = vi.fn();
+      globalThis.HEYS.ConfirmModal = { show: confirmShow };
+      globalThis.HEYS.Fingers.CircuitDisplay = function (props) {
+        displayPropsCapture(props);
+        return React.createElement('div');
+      };
+      render(React.createElement(ER(), {
+        exercise: circuitExercise(), exIdx: 0, totalExercises: 1,
+        exercises: [circuitExercise()], onAbort, onDone: vi.fn()
+      }));
+      const lastProps = displayPropsCapture.mock.calls[displayPropsCapture.mock.calls.length - 1][0];
+      act(() => { lastProps.onAbort(); });
+      expect(confirmShow).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Прервать тренировку?',
+        confirmText: 'Прервать',
+      }));
+      expect(repsCycle.abortCalled).toBe(false);
+      act(() => { confirmShow.mock.calls[0][0].onConfirm(); });
+      expect(repsCycle.abortCalled).toBe(true);
+      expect(onAbort).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Шаг 5d process-path — useRepsCycle reuse через ProcessRunner (1-set checklist)', () => {
@@ -785,6 +915,7 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
       const captured = {
         config: null, onComplete: null, onStateChange: null,
         state: 'IDLE', setIdx: 0, repIdx: 0, secondsLeft: 0,
+        abortCalled: false,
       };
       globalThis.HEYS.Fingers.useRepsCycle = function (cfg) {
         captured.config = cfg;
@@ -797,7 +928,7 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
           get secondsLeft() { return captured.secondsLeft; },
           totalElapsed: 0,
           start: () => {}, pause: () => {}, resume: () => {},
-          abort: () => {}, completeSet: () => {}, skipPhase: () => {},
+          abort: () => { captured.abortCalled = true; }, completeSet: () => {}, skipPhase: () => {},
           startFromSnapshot: () => {},
         };
       };
@@ -850,6 +981,32 @@ describe('ExerciseRunner — characterization до Step 4 рефактора (г
       }));
       expect(repsCycle.config.setsCount).toBe(1);
       expect(repsCycle.config.restBetweenSetsSec).toBe(0);
+    });
+
+    it('process onAbort идёт через shared confirm-shell', () => {
+      const repsCycle = installRepsCycleStub();
+      const onAbort = vi.fn();
+      const confirmShow = vi.fn();
+      const displayPropsCapture = vi.fn();
+      globalThis.HEYS.ConfirmModal = { show: confirmShow };
+      globalThis.HEYS.Fingers.ProcessDisplay = function (props) {
+        displayPropsCapture(props);
+        return React.createElement('div');
+      };
+      render(React.createElement(ER(), {
+        exercise: processExercise(), exIdx: 0, totalExercises: 1,
+        exercises: [processExercise()], onAbort, onDone: vi.fn()
+      }));
+      const lastProps = displayPropsCapture.mock.calls[displayPropsCapture.mock.calls.length - 1][0];
+      act(() => { lastProps.onAbort(); });
+      expect(confirmShow).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Прервать тренировку?',
+        confirmText: 'Прервать',
+      }));
+      expect(repsCycle.abortCalled).toBe(false);
+      act(() => { confirmShow.mock.calls[0][0].onConfirm(); });
+      expect(repsCycle.abortCalled).toBe(true);
+      expect(onAbort).toHaveBeenCalledTimes(1);
     });
   });
 

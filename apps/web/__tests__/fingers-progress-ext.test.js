@@ -126,3 +126,40 @@ describe('B12 buildFingersCsv', () => {
     expect(line).toContain('"x""y"');    // кавычка удвоена
   });
 });
+
+describe('B12 debug dump', () => {
+  beforeAll(setupOnce);
+
+  it('buildFingersDebugDump returns review-ready JSON shape', () => {
+    globalThis.HEYS.Fingers.getProfile = () => ({ level: 'advanced' });
+    globalThis.HEYS.Fingers.periodization = {
+      current: () => ({ phase: 'deload', ceiling: 'recovery' })
+    };
+    globalThis.HEYS.Fingers.assessment = {
+      dueTests: () => [{ id: 'maxHang20mmHalf', due: true }]
+    };
+    const rec = {
+      id: 'session_builder_recovery_2',
+      name: 'Сессия',
+      intensity: 'recovery',
+      durationMin: 20,
+      coachReason: 'Фаза плана ограничила интенсивность дня.',
+      __trace: { resolution: { bucket: 'recovery' } },
+      __progressionHints: { finger_strength: { action: 'keep' } },
+      __safetyTrace: { picks: [] }
+    };
+
+    const dump = globalThis.HEYS.Fingers.buildFingersDebugDump(rec, {
+      nowMs: Date.parse('2026-06-10T00:00:00.000Z'),
+      dateKey: '2026-06-10',
+      lookbackDays: 1
+    });
+
+    expect(dump.version).toBe(1);
+    expect(dump.profile.level).toBe('advanced');
+    expect(dump.periodization.phase).toBe('deload');
+    expect(dump.assessmentDue[0].due).toBe(true);
+    expect(dump.recommendation.trace.resolution.bucket).toBe('recovery');
+    expect(Array.isArray(dump.exportRows)).toBe(true);
+  });
+});
