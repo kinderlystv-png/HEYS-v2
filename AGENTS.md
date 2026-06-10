@@ -22,6 +22,15 @@ Tone, communication length, adjacent observations — см. user-level AGENTS.md
   не пытается делать commit, staging под commit, bundle rebuild, build,
   legacy-sync, push, PR или публикацию без отдельной прямой команды
   пользователя.
+- Для локального теста legacy UI кодер может пересобирать бандлы
+  (`pnpm bundle:legacy` или точечный `bundle:legacy:auto --files=...`), потому
+  что `index.html` грузит hash-bundles и без этого часть правок не видна в
+  браузере. Это локальная черновая сборка для reload/QA, не результат кодера.
+- Кодер не коммитит generated/release artifacts (`apps/web/public` bundles,
+  `bundle-manifest.json`, `index.html` hash sync, `whats-new` release files) на
+  agent-ветке. Если дана отдельная команда commit, коммит source-only; финальные
+  generated artifacts собирает integration flow (`pnpm agents:integrate`) или
+  отдельный явно разрешённый release/integration-проход.
 - В начале такой работы агент создаёт «Протокол реализации» для ревьюера:
   короткий список крупных шагов, статусов и фактов проверки. После каждого
   крупного шага агент добавляет туда summary сделанного, риски/открытые вопросы
