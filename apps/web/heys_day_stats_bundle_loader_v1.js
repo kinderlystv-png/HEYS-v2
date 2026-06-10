@@ -22,8 +22,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         // Bundle source: heys_fingers_bundle_v1.js (auto-gen, см. scripts/bundle-fingers.cjs)
         'heys_platform_features_v1.js',
         'heys_fingers_boot_stub_v1.js',
-        // 🥁 Drums finger-control hobby trainer — small standalone module.
-        'hobby/drums-finger-control/heys_drums_finger_trainer_v1.js'
+        // 🥁 Drums finger-control hobby trainer.
+        'hobby/drums-finger-control/heys_drums_catalog_v1.js',
+        'hobby/drums-finger-control/heys_drums_persistence_v1.js',
+        'hobby/drums-finger-control/heys_drums_engine_v1.js',
+        'hobby/drums-finger-control/heys_drums_ui_v1.js'
     ];
 
     function reportError(error, src) {

@@ -5,12 +5,19 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const MODULE_PATH = path.resolve(
-  __dirname,
-  '..',
-  'hobby',
-  'drums-finger-control',
-  'heys_drums_finger_trainer_v1.js',
+const MODULE_PATHS = [
+  'heys_drums_catalog_v1.js',
+  'heys_drums_persistence_v1.js',
+  'heys_drums_engine_v1.js',
+  'heys_drums_ui_v1.js',
+].map((fileName) =>
+  path.resolve(
+    __dirname,
+    '..',
+    'hobby',
+    'drums-finger-control',
+    fileName,
+  ),
 );
 
 function setupModule({ clientId = '' } = {}) {
@@ -55,8 +62,10 @@ function setupModule({ clientId = '' } = {}) {
   };
   globalThis.dispatchEvent = () => true;
 
-  // eslint-disable-next-line no-eval
-  eval(fs.readFileSync(MODULE_PATH, 'utf8'));
+  MODULE_PATHS.forEach((modulePath) => {
+    // eslint-disable-next-line no-eval
+    eval(fs.readFileSync(modulePath, 'utf8'));
+  });
   return { api: globalThis.HEYS.Hobby.DrumsFingerControl, store };
 }
 
