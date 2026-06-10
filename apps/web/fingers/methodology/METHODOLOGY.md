@@ -1082,9 +1082,9 @@ _Психология — кандидат в отдельную строку-ш
 | ------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | 5.1     | Сила пальцев       | `fs_maxhang_20mm_half`, `fs_maxhang_20mm_open`, `fs_repeater_73`, `fs_nohang_pickup`, `fs_density_hang`, `fs_minedge_recruit` |
 | 5.2     | Макс. сила тела    | `str_limit_boulder`, `str_weighted_pullup`, `str_lockoff_iso`, `str_body_tension`                                             |
-| 5.3     | Мощность           | `pow_dyno_limit`, `pow_first_move_max`, `pow_plyo_catch`, `pow_campus_ladder`                                                 |
+| 5.3     | Мощность           | `pow_dyno_limit`, `pow_first_move_max`, `pow_plyo_catch`, `pow_campus_ladder`, `pow_rfd_pulls`                                |
 | 5.4     | Анаэробная ёмкость | `pe_boulder_4x4`, `pe_fingerboard_lactic`, `pe_linkups`, `pe_route_repeats`, `pe_on_the_minute`                               |
-| 5.5     | Аэробная база      | `aer_arc`, `aer_power_intervals`, `aer_mileage`                                                                               |
+| 5.5     | Аэробная база      | `aer_arc`, `aer_power_intervals`, `aer_mileage`, `aer_bfr_lowload`                                                            |
 | 5.6     | Антагонисты/прехаб | `ant_push_shoulder`, `ant_finger_extensors`, `ant_prehab_targeted`                                                            |
 | 5.7     | Разминка           | (процедура сессии, не атом)                                                                                                   |
 | —       | Техника            | `tech_silent_feet`, `tech_constraint_led`, `tech_limit_project_movement`, `tech_variety_mileage`                              |

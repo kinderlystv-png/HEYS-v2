@@ -691,6 +691,43 @@ describe('sessionBuilder: plumbing Гейта #1 E2E через роутер (р
   });
 });
 
+describe('sessionBuilder: S4 FTL enforcement', () => {
+  beforeAll(setupOnce);
+
+  it('считает FTL атома по TUT × intensityW × tissueW (§3.1)', () => {
+    const atom = F().blockCatalog.getAtom('fs_repeater_73');
+    expect(SB()._estimateAtomTutSec(atom)).toBe(168); // 7с × 6 reps × 4 sets
+    // rm_margin=2 → intensityW=1.3, tissueLoad=moderate=0.6 → 131.04
+    expect(SB()._estimateAtomFtl(atom, {})).toBeCloseTo(131.04, 5);
+  });
+
+  it('trace всегда содержит sessionFtl без недельной базы', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' });
+    expect(s.__trace.s4.sessionFtl).toBeGreaterThan(0);
+    expect(s.__trace.s4.weekBefore).toBeNull();
+    expect(s.__trace.s4.enforced).toBe(false);
+  });
+
+  it('если projected FTL пробивает +10%, builder снимает объёмный slot', () => {
+    const opts = { equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'max' };
+    const maxSession = SB().recommendDay(opts);
+
+    const trailingAvg = 10000;
+    const cap = trailingAvg * 1.10;
+    const weekToDate = cap - maxSession.__trace.s4.sessionFtl + 1;
+    const capped = SB().recommendDay(Object.assign({}, opts, {
+      ftl: { weekToDate, trailingAvg }
+    }));
+
+    expect(capped.__trace.s4.enforced).toBe(true);
+    expect(capped.__trace.s4.drops[0].role).toBe('strength-endurance');
+    expect(capped.exercises.some((e) => e.__role === 'strength-endurance')).toBe(false);
+    expect(capped.__trace.s4.sessionFtl).toBeLessThan(maxSession.__trace.s4.sessionFtl);
+    expect(capped.__trace.s4.overload).toBe(false);
+    expect(capped.__trace.s4.projectedWeek).toBeLessThanOrEqual(cap);
+  });
+});
+
 describe('sessionBuilder: equipment-фильтрация', () => {
   beforeAll(setupOnce);
 

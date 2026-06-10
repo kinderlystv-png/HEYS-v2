@@ -105,33 +105,33 @@ re-shadow → флип.** Логика: периодизация (капстоу
 частично · ⬜ Фаза 2 · — n/a (текст/обоснование). Это «готовность кода» (в
 отличие от «Заполн.» ниже — авторство карты).
 
-| Подраздел                      | Метод. | Код | Модуль / что осталось                                                                                         |
-| ------------------------------ | :----: | :-: | ------------------------------------------------------------------------------------------------------------- |
-| 1.1 Специфичность              |   ✅   | 🟡  | `quality_catalog` (emphasis/energySystem); transfer-мостик M3 — Фаза 2                                        |
-| 1.2 Прогресс. перегрузка       |   ✅   | 🟡  | `S4_progressionCap` (FTL-кап) + `progression.nextAxis/suggestProgression` advisory (B3); enforcement — Фаза 2 |
-| 1.3 Вариативность / плато      |   ✅   | 🟡  | `progression.detectPlateau` advisory (B3); смена переменной в генераторе — Фаза 2                             |
-| 1.4 Лимитер (индивидуализация) |   ✅   | ✅  | `assessment` scoreLimiters §3.2                                                                               |
-| 1.5 Техника / железо           |   ✅   | ✅  | `V_skillBalance` + доли §3.8                                                                                  |
-| 1.6 Восстановление             |   ✅   | ✅  | `S2_tissueFreshness` + FTL                                                                                    |
-| 1.7 МЭД (MEV/MAV)              |   ✅   | 🟡  | §3.7 полосы — частично                                                                                        |
-| 1.8 Нагрузка / риск            |   ✅   | ✅  | `S4` FTL-кап + danger-модель                                                                                  |
-| 2. 9 качеств                   |   ✅   | ✅  | `quality_catalog`                                                                                             |
-| 3.1 Сила/выносл. по времени    |   ✅   | ✅  | `deriveEnergySystem`                                                                                          |
-| 3.2 Энергосистемы (под-режимы) |   ✅   | 🟡  | `block_catalog` — частично                                                                                    |
-| 3.3 Ткани / горлышко           |   ✅   | ✅  | `grips_catalog` danger + S2/S9                                                                                |
-| 4. Блоки A–I (каталог)         |   ✅   | ✅  | `block_catalog` 36 атомов × 9 блоков; non-hang атомы рендерятся (Шаг 5 a–d ✅)                                |
-| 5.x Протоколы (числа)          |   ✅   | ✅  | атомы (доза/loadModel/doseConfidence); 5.7→S3, 5.6→S6                                                         |
-| 6.1–6.5 Периодизация           |   ✅   | ⬜  | мезо/макро — Фаза 2 (движка нет)                                                                              |
-| 7.1–7.4 Уровни                 |   ✅   | ✅  | `S1` гейт + derive level + seed-creds; level-assign hybrid 🟡                                                 |
-| 8.1 Тест-батарея               |   ✅   | 🟡  | `cf_test` атом; полная батарея + UI — Фаза 2                                                                  |
-| 8.2 Бенчмарки                  |   ✅   | 🟡  | `assessment.BENCHMARKS` — 🟠 дефолт (Berta 2025 pending)                                                      |
-| 8.3 Аудит лимитера             |   ✅   | ✅  | scoreLimiters                                                                                                 |
-| 8.4 Частота тестов             |   ✅   | ⬜  | Фаза 2                                                                                                        |
-| 9.2 Правила → валидаторы       |   ✅   | ✅  | **S1–S9 все** + V_blockHomogeneity / energySystemSequence / sessionOrder / skillBalance                       |
-| 9.3 Возраст / зоны роста       |   ✅   | ✅  | `S1` + `age_gating`                                                                                           |
-| 9.4 Вес / RED-S                |   ✅   | 🟡  | рамка-инвариант (advisory), не жёсткий гейт                                                                   |
-| 9.5 Реабилитация / red-flags   |   ✅   | ✅  | `S8_painStop` + `S9` prerequisites                                                                            |
-| 10. Источники                  |   ✅   | ✅  | `sourceIds` на атомах (`bibliography`)                                                                        |
+| Подраздел                      | Метод. | Код | Модуль / что осталось                                                                                             |
+| ------------------------------ | :----: | :-: | ----------------------------------------------------------------------------------------------------------------- |
+| 1.1 Специфичность              |   ✅   | 🟡  | `quality_catalog` (emphasis/energySystem); transfer-мостик M3 — Фаза 2                                            |
+| 1.2 Прогресс. перегрузка       |   ✅   | 🟡  | `S4_progressionCap` + `sessionBuilder` FTL slot-trimming; `progression.nextAxis/suggestProgression` advisory (B3) |
+| 1.3 Вариативность / плато      |   ✅   | 🟡  | `progression.detectPlateau` advisory (B3); смена переменной в генераторе — Фаза 2                                 |
+| 1.4 Лимитер (индивидуализация) |   ✅   | ✅  | `assessment` scoreLimiters §3.2                                                                                   |
+| 1.5 Техника / железо           |   ✅   | ✅  | `V_skillBalance` + доли §3.8                                                                                      |
+| 1.6 Восстановление             |   ✅   | ✅  | `S2_tissueFreshness` + FTL                                                                                        |
+| 1.7 МЭД (MEV/MAV)              |   ✅   | 🟡  | §3.7 полосы — частично                                                                                            |
+| 1.8 Нагрузка / риск            |   ✅   | ✅  | `S4` FTL-кап + danger-модель                                                                                      |
+| 2. 9 качеств                   |   ✅   | ✅  | `quality_catalog`                                                                                                 |
+| 3.1 Сила/выносл. по времени    |   ✅   | ✅  | `deriveEnergySystem`                                                                                              |
+| 3.2 Энергосистемы (под-режимы) |   ✅   | 🟡  | `block_catalog` — частично                                                                                        |
+| 3.3 Ткани / горлышко           |   ✅   | ✅  | `grips_catalog` danger + S2/S9                                                                                    |
+| 4. Блоки A–I (каталог)         |   ✅   | ✅  | `block_catalog` 36 атомов × 9 блоков; non-hang атомы рендерятся (Шаг 5 a–d ✅)                                    |
+| 5.x Протоколы (числа)          |   ✅   | ✅  | атомы (доза/loadModel/doseConfidence); 5.7→S3, 5.6→S6                                                             |
+| 6.1–6.5 Периодизация           |   ✅   | ⬜  | мезо/макро — Фаза 2 (движка нет)                                                                                  |
+| 7.1–7.4 Уровни                 |   ✅   | ✅  | `S1` гейт + derive level + seed-creds; level-assign hybrid 🟡                                                     |
+| 8.1 Тест-батарея               |   ✅   | 🟡  | `cf_test` атом; полная батарея + UI — Фаза 2                                                                      |
+| 8.2 Бенчмарки                  |   ✅   | 🟡  | `assessment.BENCHMARKS` — 🟠 дефолт (Berta 2025 pending)                                                          |
+| 8.3 Аудит лимитера             |   ✅   | ✅  | scoreLimiters                                                                                                     |
+| 8.4 Частота тестов             |   ✅   | ⬜  | Фаза 2                                                                                                            |
+| 9.2 Правила → валидаторы       |   ✅   | ✅  | **S1–S9 все** + V_blockHomogeneity / energySystemSequence / sessionOrder / skillBalance                           |
+| 9.3 Возраст / зоны роста       |   ✅   | ✅  | `S1` + `age_gating`                                                                                               |
+| 9.4 Вес / RED-S                |   ✅   | 🟡  | рамка-инвариант (advisory), не жёсткий гейт                                                                       |
+| 9.5 Реабилитация / red-flags   |   ✅   | ✅  | `S8_painStop` + `S9` prerequisites                                                                                |
+| 10. Источники                  |   ✅   | ✅  | `sourceIds` на атомах (`bibliography`)                                                                            |
 
 > **Сводка:** ядро (каталог, 9 качеств, энергосистемы, лимитер, уровни, **вся
 > safety S1–S9**, сборка дня, plumbing MVC/уровня, **UI всех 6 doseShape — Шаг 5

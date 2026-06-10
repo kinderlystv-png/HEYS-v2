@@ -99,11 +99,12 @@ pnpm dev:local       # API:4001 + web:3001 — увидеть режим
 
 ## Следующее конкретное действие
 
-**Шаги 1-5 ✅ + B3 advisory в проде** (см. таблицу выше). Strangler-цепочка
-собрана: данные (`block_catalog`), safety (`validators` S1–S9 + homed `V_*`),
-приоритезация (`assessment`), маршрутизация (`engine_router` с MVC/level
-plumbing из `Fingers.records`), сборка сессии (`sessionBuilder` со shared
-`useExerciseShell` + advisory progression-hints), UI всех 6 doseShape
+**Шаги 1-5 ✅ + B3 advisory + S4 FTL enforcement в проде** (см. таблицу выше).
+Strangler-цепочка собрана: данные (`block_catalog`), safety (`validators`
+S1–S9 + homed `V_*`), приоритезация (`assessment`), маршрутизация
+(`engine_router` с MVC/level plumbing из `Fingers.records`), сборка сессии
+(`sessionBuilder` со shared `useExerciseShell`, advisory progression-hints и
+FTL-cap slot trimming), UI всех 6 doseShape
 (`Hang`/`Reps`/`Continuous`/`Attempts`/`Circuit`/`Process` Runner+Display с
 общим S8 RPE/pain capture).
 
@@ -113,10 +114,7 @@ plumbing из `Fingers.records`), сборка сессии (`sessionBuilder` с
    `shadowCompare=true` на dev/prод с stub'ом `Fingers.records` для derived
    advanced/intermediate — снять distribution `doseShape`/`modality` + кумулятив
    danger, сравнить с legacy конвертом. См. `engineRouter.lastShadowDiff`.
-2. **Duration envelope**: beginner/no-MVC уже cap'ится `max→moderate`; отдельно
-   принять или ограничить hangboard-only `block` сценарий, где power RFD
-   attempts делает max-сессию длиннее legacy.
-3. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
+2. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
    дефолт. Прежний `mix_engine` остаётся fallback (router catches null/throw).
 
 **Tech-debt не блокер**: консолидация `useCountdownCycle`+`useRepsCycle` в общий

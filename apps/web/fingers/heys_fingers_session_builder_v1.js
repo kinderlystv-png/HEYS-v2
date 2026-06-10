@@ -88,6 +88,7 @@
   };
 
   function num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
+  function avg(rng) { return Array.isArray(rng) ? (rng[0] + rng[1]) / 2 : (rng || 0); }
 
   // ─── _deriveLevel (ревью #4-#5 (b)) ──────────────────────────────────────────
   // Маппинг MVC %BW → level через assessment.BENCHMARKS.finger_strength (§3.5).
@@ -146,11 +147,10 @@
     return 'recovery';
   }
 
-  // ─── Длительность сессии — TUT_sec по doseShape (CONSTRUCTOR_SPEC §3.1) ──────
+  // ─── Длительность сессии — TUT + rest по doseShape ───────────────────────────
   function _estimateAtomSec(atom) {
     const d = atom && atom.dose;
     if (!d) return 0;
-    function avg(rng) { return Array.isArray(rng) ? (rng[0] + rng[1]) / 2 : (rng || 0); }
     const sets = num(d.sets) || 1;
     const reps = num(d.reps) || (Array.isArray(d.reps) ? avg(d.reps) : 1);
     const workSec = num(d.workSec) || 0;
@@ -182,6 +182,129 @@
       default:
         return 0;
     }
+  }
+
+  // ─── FTL — finger training load (CONSTRUCTOR_SPEC §3.1) ─────────────────────
+  const TISSUE_WEIGHTS = { low: 0.3, moderate: 0.6, high: 1.0, max: 1.3 };
+  const GRADE_WEIGHTS = {
+    'easy-mid': 0.5, submax: 0.8, 'near-limit': 1.0,
+    limit: 1.2, 'limit-skill': 0.6
+  };
+
+  function _estimateAtomTutSec(atom) {
+    const d = atom && atom.dose;
+    if (!d) return 0;
+    const sets = num(d.sets) || 1;
+    const reps = num(d.reps) || (Array.isArray(d.reps) ? avg(d.reps) : 1);
+    const workSec = num(d.workSec) || 0;
+    switch (atom.doseShape) {
+      case 'hang':
+        return workSec * reps * sets;
+      case 'attempts':
+        return avg(d.movesPerAttempt) * 2.5 * avg(d.attempts);
+      case 'circuit':
+        return (num(d.problemsPerRound) || 0) * (num(d.rounds) || 1) * 25;
+      case 'continuous':
+        return workSec * sets;
+      case 'reps':
+        return avg(d.reps) * 3 * sets;
+      case 'process':
+        return 0;
+      default:
+        return 0;
+    }
+  }
+
+  function _bodyWeightKg(o) {
+    const fromOpts = num(o && (o.bodyWeightKg ?? (o.profile && o.profile.bodyWeightKg)));
+    if (fromOpts !== null && fromOpts > 0) return fromOpts;
+    try {
+      const bm = Fingers.getBodyWeight && Fingers.getBodyWeight();
+      const kg = num(bm && bm.kg);
+      if (kg !== null && kg > 0) return kg;
+    } catch (_) {}
+    return 70;
+  }
+
+  function _intensityWeight(atom, o) {
+    if (!atom) return 0;
+    const v = num(atom.loadValue);
+    switch (atom.loadModel) {
+      case 'rm_margin':
+        return Math.max(0.3, Math.min(1.5, 1.5 - 0.1 * (v !== null ? v : 3)));
+      case 'pctMax':
+        return Math.max(0.3, Math.min(1.5, (v !== null ? v : 50) / 100));
+      case 'addedWeightKg': {
+        const added = v !== null ? v : 0;
+        return Math.max(0.3, Math.min(1.5, 1 + added / _bodyWeightKg(o || {})));
+      }
+      case 'bodyweight':
+        return 1.0;
+      case 'rpe':
+        return Math.max(0.3, Math.min(1.5, (v !== null ? v : 7) / 7));
+      case 'grade':
+        return GRADE_WEIGHTS[atom.loadValue] || 0.8;
+      case 'none':
+        return 0;
+      default:
+        return 1.0;
+    }
+  }
+
+  function _estimateAtomFtl(atom, o) {
+    const tut = _estimateAtomTutSec(atom);
+    const intensityW = _intensityWeight(atom, o);
+    const tissueW = TISSUE_WEIGHTS[atom && atom.tissueLoad] || 0.6;
+    return tut * intensityW * tissueW;
+  }
+
+  function _estimateSessionFtl(exercises, o) {
+    let total = 0;
+    for (let i = 0; i < exercises.length; i++) {
+      const atom = Fingers.blockCatalog && Fingers.blockCatalog.getAtom(exercises[i].atomId);
+      if (atom) total += _estimateAtomFtl(atom, o);
+    }
+    return Math.round(total * 10) / 10;
+  }
+
+  function _computeS4Trace(o, exercises) {
+    const ftl = (o && o.ftl) || {};
+    const weekBefore = num(ftl.weekToDate) ?? num(ftl.currentWeek) ?? num(o && o.ftlWeekToDate);
+    const trailingAvg = num(ftl.trailingAvg) ?? num(o && o.ftlTrailingAvg);
+    const sessionFtl = _estimateSessionFtl(exercises, o || {});
+    const projectedWeek = weekBefore !== null ? Math.round((weekBefore + sessionFtl) * 10) / 10 : null;
+    const issues = (projectedWeek !== null && Fingers.validators && Fingers.validators.S4_progressionCap)
+      ? Fingers.validators.S4_progressionCap(projectedWeek, trailingAvg) : [];
+    return {
+      sessionFtl: sessionFtl,
+      weekBefore: weekBefore,
+      projectedWeek: projectedWeek,
+      trailingAvg: trailingAvg,
+      issues: issues,
+      overload: issues.some(function (i) { return i.code === 'S4.acute_overload'; })
+    };
+  }
+
+  const S4_DROP_ORDER = ['strength-endurance', 'capacity', 'power', 'max-strength'];
+  function _enforceS4(o, exercises) {
+    let trace = _computeS4Trace(o, exercises);
+    const drops = [];
+    if (!trace.overload) {
+      trace.enforced = false;
+      trace.drops = drops;
+      return trace;
+    }
+    for (let i = 0; i < S4_DROP_ORDER.length && trace.overload; i++) {
+      const role = S4_DROP_ORDER[i];
+      const idx = exercises.findIndex(function (e) { return e.__role === role; });
+      if (idx < 0) continue;
+      const removed = exercises.splice(idx, 1)[0];
+      drops.push({ role: role, atomId: removed.atomId });
+      trace = _computeS4Trace(o, exercises);
+    }
+    trace.enforced = drops.length > 0;
+    trace.drops = drops;
+    return trace;
   }
 
   function totalDurationMin(exercises) {
@@ -506,6 +629,12 @@
     // но честнее вернуть null здесь).
     if (exercises.length === 0) return null;
 
+    // S4 enforcement: если кандидатная сессия пробивает недельный FTL-cap
+    // (>10% к trailing average), режем объёмные load-slots из текущей сессии.
+    // Нельзя слепо max→moderate: moderate/recovery могут иметь больший TUT и
+    // больший FTL. Поэтому cap применяется к фактической сумме FTL упражнений.
+    const s4Trace = _enforceS4(o, exercises);
+
     // intensity — sessionIntensity(exercises) (ревью 4.2 находка #3): домен
     // совпадает с mixEngine; equipment-starved max автоматически даунгрейдится.
     const sessionInt = sessionIntensity(exercises);
@@ -561,9 +690,20 @@
         resolution: {
           initialCeiling: ceiling, bucket: bucket,
           bucketCapReason: bucketCapReason,
-          slotsTemplate: slots.slice(), slotsSource: intensityOverride ? 'legacy-intensity' : 'bucket'
+          slotsTemplate: slots.slice(), slotsSource: intensityOverride ? 'legacy-intensity' : 'bucket',
+          s4DroppedSlots: s4Trace.drops
         },
         slots: safetyTrace.picks,
+        s4: {
+          sessionFtl: s4Trace.sessionFtl,
+          weekBefore: s4Trace.weekBefore,
+          projectedWeek: s4Trace.projectedWeek,
+          trailingAvg: s4Trace.trailingAvg,
+          issues: s4Trace.issues,
+          overload: s4Trace.overload,
+          enforced: s4Trace.enforced,
+          drops: s4Trace.drops
+        },
         outputs: {
           durationMin: duration, intensity: sessionInt,
           tierList: tierList, exerciseCount: exercises.length,
@@ -580,7 +720,10 @@
     RENDERABLE_DOSESHAPES: RENDERABLE_DOSESHAPES,
     _pickAtomForSlot: _pickAtomForSlot,
     _deriveLevel: _deriveLevel,
-    _seedCredentialsFromLevel: _seedCredentialsFromLevel
+    _seedCredentialsFromLevel: _seedCredentialsFromLevel,
+    _estimateAtomTutSec: _estimateAtomTutSec,
+    _estimateAtomFtl: _estimateAtomFtl,
+    _estimateSessionFtl: _estimateSessionFtl
   };
 
 })(typeof window !== 'undefined' ? window : globalThis);
