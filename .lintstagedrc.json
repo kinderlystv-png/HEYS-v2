@@ -1,3 +1,6 @@
 {
-  "*.{json,md,yml,yaml}": ["prettier --write"]
+  "*.{json,md,yml,yaml}": ["prettier --write"],
+  "маркетинг/{00_Сводная_панель.xlsx,22_План_реализации_маркетинга.md,25_Roadmap_Ф0_Ф1.md,tools/build_dashboard.py}": [
+    "node scripts/sync-marketing-dashboard.mjs"
+  ]
 }
