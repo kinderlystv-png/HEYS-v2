@@ -130,6 +130,7 @@ describe('storage registry — Phase 1 surface', () => {
     expect(names).toContain('perf_log');
     expect(names).toContain('products_pre_overlay_snapshot');
     expect(names).toContain('fingers_active_session');
+    expect(names).toContain('drums_finger_active_session');
     expect(names).toContain('dayv2');
     expect(names).toContain('test_large_fixture');
     expect(names).toContain('audit_log');
@@ -153,6 +154,8 @@ describe('storage registry — Phase 1 surface', () => {
     expect(HEYS.storageRegistry.match('heys_finger_active_session')?.name).toBe('fingers_active_session');
     expect(HEYS.storageRegistry.match(`heys_${cid}_finger_active_session`)?.name).toBe('fingers_active_session');
     expect(HEYS.storageRegistry.match('fingers.resume.snoozedUntil')?.name).toBe('fingers_active_session');
+    expect(HEYS.storageRegistry.match('heys_drums_finger_active_session')?.name).toBe('drums_finger_active_session');
+    expect(HEYS.storageRegistry.match(`heys_${cid}_drums_finger_active_session`)?.name).toBe('drums_finger_active_session');
     expect(HEYS.storageRegistry.match('completely_unknown_key')).toBeNull();
   });
 

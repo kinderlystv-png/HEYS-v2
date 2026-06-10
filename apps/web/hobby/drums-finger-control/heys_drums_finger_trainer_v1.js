@@ -14,7 +14,20 @@
 
   const MODULE_ID = 'drums_finger_control';
   const ACTIVE_SESSION_KEY = 'heys_drums_finger_active_session';
+  const DAY_SCOPED_RE = /^heys_([0-9a-f-]{36})_dayv2_(\d{4}-\d{2}-\d{2})$/i;
+  const DAY_BASE_RE = /^heys_dayv2_(\d{4}-\d{2}-\d{2})$/;
   const ROOT_ID = 'drums-finger-trainer-root';
+  const COUNT_IN_SEC = 4;
+  const TAP_TEST_SECONDS = 20;
+  const SAFETY_REST_DAYS = 2;
+  const METRONOME_LOOKAHEAD_MS = 25;
+  const METRONOME_SCHEDULE_AHEAD_SEC = 0.12;
+  const SUBDIVISIONS = {
+    quarters: { notesPerBeat: 1, label: 'четверти' },
+    eighths: { notesPerBeat: 2, label: 'восьмые' },
+    sixteenths: { notesPerBeat: 4, label: '16-е' },
+    triplets: { notesPerBeat: 3, label: 'триоли' },
+  };
 
   if (Hobby.DrumsFingerControl && Hobby.DrumsFingerControl.__registered) return;
 
@@ -26,6 +39,7 @@
       minutes: 3,
       bpm: 70,
       pattern: 'восьмые',
+      subdivision: 'eighths',
       cues: ['кисть мягкая', 'палка сама возвращается', 'не сжимай хват'],
     },
     {
@@ -35,6 +49,7 @@
       minutes: 5,
       bpm: 70,
       pattern: 'одной рукой, затем RLRL',
+      subdivision: 'eighths',
       cues: ['маленькая амплитуда', 'тихое предплечье', 'мягкий fulcrum'],
     },
     {
@@ -44,6 +59,8 @@
       minutes: 5,
       bpm: 90,
       pattern: 'RLRL',
+      subdivision: 'sixteenths',
+      ramp: { everyBars: 8, stepBpm: 2, maxBpm: 180 },
       metric: 'cleanBpmSingles16',
       cues: ['одинаковый звук', 'плечи не поднимаются', 'BPM растёт только чисто'],
     },
@@ -54,6 +71,8 @@
       minutes: 5,
       bpm: 80,
       pattern: 'RRLL',
+      subdivision: 'sixteenths',
+      ramp: { everyBars: 8, stepBpm: 2, maxBpm: 160 },
       metric: 'cleanBpmDoubles16',
       cues: ['второй удар слышен', 'не дави палку в пад', 'руки звучат одинаково'],
     },
@@ -64,6 +83,8 @@
       minutes: 5,
       bpm: 75,
       pattern: 'акцент каждая 4-я',
+      subdivision: 'sixteenths',
+      accentEvery: 4,
       cues: ['акцент без силы', 'три тихих ноты после', 'волна, не удар предплечьем'],
     },
     {
@@ -73,6 +94,9 @@
       minutes: 8,
       bpm: 110,
       pattern: '8 быстро / 8 медленно',
+      subdivision: 'sixteenths',
+      burst: { fastNotes: 8, slowNotes: 8, fastMultiplier: 2 },
+      ramp: { everyBars: 4, stepBpm: 4, maxBpm: 190 },
       cues: ['быстро, но чисто', 'медленные 8 — полный сброс', 'не гони максимум'],
     },
     {
@@ -82,6 +106,7 @@
       minutes: 5,
       bpm: 60,
       pattern: 'легкий buzz',
+      subdivision: 'quarters',
       cues: ['минимальное давление', 'ровная текстура', 'мягкая кисть'],
     },
     {
@@ -91,6 +116,7 @@
       minutes: 5,
       bpm: 80,
       pattern: 'singles, doubles, accents, rests',
+      subdivision: 'eighths',
       cues: ['оставляй паузы', 'играй только расслабленно', 'звук важнее плотности'],
     },
   ];
@@ -163,6 +189,17 @@
   const BLOCK_BY_ID = Object.fromEntries(BLOCKS.map((block) => [block.id, block]));
   const SESSION_BY_ID = Object.fromEntries(SESSIONS.map((session) => [session.id, session]));
 
+  function localDateKey(date) {
+    const d = date && typeof date.getFullYear === 'function' ? date : new Date();
+    return (
+      d.getFullYear() +
+      '-' +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(d.getDate()).padStart(2, '0')
+    );
+  }
+
   function clampNumber(value, min, max, fallback) {
     const n = Number(value);
     if (!Number.isFinite(n)) return fallback;
@@ -171,7 +208,7 @@
 
   function safeDateKey(value) {
     if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-    return new Date().toISOString().slice(0, 10);
+    return localDateKey();
   }
 
   function lsGet(key, fallback) {
@@ -220,11 +257,35 @@
     };
   }
 
+  function getActiveSessionKeys() {
+    const cid = getCurrentClientId();
+    return {
+      scoped: cid ? 'heys_' + cid + '_drums_finger_active_session' : '',
+      base: ACTIVE_SESSION_KEY,
+    };
+  }
+
+  function getReadableDayInfo(key) {
+    const currentClientId = getCurrentClientId();
+    const scopedMatch = String(key || '').match(DAY_SCOPED_RE);
+    if (scopedMatch) {
+      if (!currentClientId || scopedMatch[1].toLowerCase() !== String(currentClientId).toLowerCase()) return null;
+      return { dateKey: scopedMatch[2], scoped: true };
+    }
+    const baseMatch = String(key || '').match(DAY_BASE_RE);
+    if (baseMatch) {
+      if (currentClientId) return null;
+      return { dateKey: baseMatch[1], scoped: false };
+    }
+    return null;
+  }
+
   function readDay(dateKey) {
     const keys = getDayKeys(dateKey);
     if (keys.scoped) {
       const scoped = lsGet(keys.scoped, null);
       if (scoped && scoped.date === dateKey) return { day: scoped, key: keys.scoped };
+      return { day: { date: dateKey, meals: [], trainings: [] }, key: keys.scoped };
     }
     const base = lsGet(keys.base, null);
     if (base && base.date === dateKey) return { day: base, key: keys.base };
@@ -235,9 +296,6 @@
     const keys = getDayKeys(dateKey);
     const targetKey = keys.scoped || keys.base;
     lsSet(targetKey, day);
-    if (!keys.scoped) return;
-    const base = lsGet(keys.base, null);
-    if (!base || base.date === dateKey) lsSet(keys.base, day);
   }
 
   function isDrumsTraining(training) {
@@ -272,20 +330,172 @@
     return n + ' мин';
   }
 
-  function makeInitialBlockResult(block) {
+  function normalizeSessionMetrics(metrics) {
+    const src = metrics || {};
+    return {
+      cleanBpmSingles16: clampNumber(src.cleanBpmSingles16, 0, 320, 0),
+      cleanBpmDoubles16: clampNumber(src.cleanBpmDoubles16, 0, 320, 0),
+      oneHandFingerTapBpmRight: clampNumber(src.oneHandFingerTapBpmRight, 0, 320, 0),
+      oneHandFingerTapBpmLeft: clampNumber(src.oneHandFingerTapBpmLeft, 0, 320, 0),
+      tensionScore: clampNumber(src.tensionScore, 1, 10, 3),
+      forearmPumpScore: clampNumber(src.forearmPumpScore, 1, 10, 3),
+      soundEvenness: clampNumber(src.soundEvenness, 1, 5, 4),
+    };
+  }
+
+  function getBlockAttemptFromLog(row, blockId) {
+    const blocks = Array.isArray(row?.log?.blockResults) ? row.log.blockResults : [];
+    const result = blocks.find((item) => item && item.blockId === blockId && item.done);
+    if (!result) return null;
+    return {
+      clean: !!result.clean,
+      bpm: clampNumber(result.bpm, 0, 320, 0),
+      completedAt: Number(row?.log?.completedAt) || 0,
+    };
+  }
+
+  function getProgressionBpm(block, logs) {
+    const baseBpm = clampNumber(block?.bpm, 30, 260, 80);
+    const rows = Array.isArray(logs) ? logs : [];
+    const attempts = rows
+      .map((row) => getBlockAttemptFromLog(row, block?.id))
+      .filter((attempt) => attempt && attempt.bpm > 0)
+      .sort((a, b) => b.completedAt - a.completedAt);
+    const lastClean = attempts.find((attempt) => attempt.clean);
+    const metricFallback =
+      block?.metric && !lastClean
+        ? rows.find((row) => clampNumber(row?.log?.metrics?.[block.metric], 0, 320, 0) > 0)?.log?.metrics?.[block.metric]
+        : 0;
+    const cleanBpm = lastClean ? lastClean.bpm : clampNumber(metricFallback, 0, 320, 0);
+    if (!cleanBpm) return baseBpm;
+    const hasCleanStreak = attempts.length >= 2 && attempts[0].clean && attempts[1].clean;
+    const step = hasCleanStreak ? clampNumber(block?.ramp?.stepBpm, 1, 12, 2) : 0;
+    const maxBpm = clampNumber(block?.ramp?.maxBpm, 30, 260, 260);
+    return Math.min(maxBpm, cleanBpm + step);
+  }
+
+  function makeInitialBlockResult(block, logs) {
+    const bpm = getProgressionBpm(block, logs);
     return {
       blockId: block.id,
-      bpm: block.bpm || 80,
+      bpm,
       clean: false,
       done: false,
       tension: 3,
       sound: 4,
       note: '',
+      rampEnabled: !!block.ramp,
+      rampStartBpm: bpm,
+      rampLastBpm: 0,
+      rampBars: 0,
+    };
+  }
+
+  function deriveMetricsFromResults(sessionId, results, metrics) {
+    const next = normalizeSessionMetrics(metrics);
+    const expanded = expandSession(sessionId);
+    const blockById = new Map(expanded.blockItems.map((block) => [block.id, block]));
+    (Array.isArray(results) ? results : []).forEach((result) => {
+      const block = blockById.get(result?.blockId);
+      if (!block?.metric || !result?.done || !result.clean) return;
+      const bpm = clampNumber(result.bpm, 0, 320, 0);
+      if (!bpm) return;
+      next[block.metric] = Math.max(clampNumber(next[block.metric], 0, 320, 0), bpm);
+    });
+    return next;
+  }
+
+  function getTapBpm(taps, durationSec) {
+    const sec = clampNumber(durationSec, 1, 120, TAP_TEST_SECONDS);
+    return clampNumber(Math.round((Math.max(0, Number(taps) || 0) * 60) / sec), 0, 320, 0);
+  }
+
+  function applyTapCountToMetrics(metrics, hand, taps, durationSec) {
+    const field = hand === 'left' ? 'oneHandFingerTapBpmLeft' : 'oneHandFingerTapBpmRight';
+    return {
+      ...normalizeSessionMetrics(metrics),
+      [field]: getTapBpm(taps, durationSec),
+    };
+  }
+
+  function makeInitialTapTest(tapTest) {
+    return {
+      hand: tapTest?.hand === 'left' ? 'left' : 'right',
+      running: !!tapTest?.running,
+      remainingSec: clampNumber(tapTest?.remainingSec, 0, TAP_TEST_SECONDS, TAP_TEST_SECONDS),
+      tapsRight: clampNumber(tapTest?.tapsRight, 0, 999, 0),
+      tapsLeft: clampNumber(tapTest?.tapsLeft, 0, 999, 0),
+    };
+  }
+
+  function applyPainSafetyGate(state) {
+    const metrics = normalizeSessionMetrics(state?.metrics);
+    return {
+      ...(state || {}),
+      pain: true,
+      safetyStop: true,
+      safetyStopAt: Date.now(),
+      running: false,
+      countInSec: 0,
+      metrics: {
+        ...metrics,
+        tensionScore: Math.max(metrics.tensionScore, 7),
+        forearmPumpScore: Math.max(metrics.forearmPumpScore, 5),
+      },
+      tapTest: state?.tapTest ? { ...makeInitialTapTest(state.tapTest), running: false } : makeInitialTapTest(),
+    };
+  }
+
+  function makeSessionStateFromLog(training, opts) {
+    const log = training && training.hobbyLog;
+    if (!log || !isDrumsTraining(training)) return null;
+    const expanded = expandSession(log.sessionId || 'balanced_25');
+    const byBlockId = new Map((Array.isArray(log.blockResults) ? log.blockResults : []).map((result) => [result.blockId, result]));
+    const results = expanded.blockItems.map((block) => {
+      const saved = byBlockId.get(block.id);
+      return saved
+        ? {
+            blockId: block.id,
+            bpm: clampNumber(saved.bpm, 0, 320, block.bpm || 80),
+            clean: !!saved.clean,
+            done: !!saved.done,
+            tension: clampNumber(saved.tension, 1, 10, 3),
+            sound: clampNumber(saved.sound, 1, 5, 4),
+            note: saved.note || '',
+            rampEnabled: saved.rampEnabled != null ? !!saved.rampEnabled : !!block.ramp,
+            rampStartBpm: clampNumber(saved.rampStartBpm, 0, 320, block.bpm || 80),
+            rampLastBpm: clampNumber(saved.rampLastBpm, 0, 320, 0),
+            rampBars: clampNumber(saved.rampBars, 0, 999, 0),
+          }
+        : makeInitialBlockResult(block);
+    });
+    const firstOpenIndex = results.findIndex((result) => !result.done);
+    const activeIndex = firstOpenIndex >= 0 ? firstOpenIndex : 0;
+    const metrics = normalizeSessionMetrics(log.metrics);
+    return {
+      version: 1,
+      moduleId: MODULE_ID,
+      dateKey: safeDateKey(opts?.dateKey),
+      trainingIndex: Number.isFinite(+opts?.trainingIndex) ? +opts.trainingIndex : 0,
+      sessionId: expanded.id,
+      startedAt: Number(log.startedAt) || Date.now(),
+      activeIndex,
+      remainingSec: expanded.blockItems[activeIndex]?.targetSec || 60,
+      running: false,
+      results,
+      countInSec: 0,
+      metrics,
+      tapTest: makeInitialTapTest(),
+      pain: !!log.pain,
+      safetyStop: !!log.safetyStop,
+      safetyStopAt: Number(log.safetyStopAt) || 0,
+      note: log.note || '',
     };
   }
 
   function makeSessionState(sessionId, opts) {
     const expanded = expandSession(sessionId);
+    const logs = Array.isArray(opts?.logs) ? opts.logs : scanLogs();
     return {
       version: 1,
       moduleId: MODULE_ID,
@@ -296,37 +506,140 @@
       activeIndex: 0,
       remainingSec: expanded.blockItems[0]?.targetSec || 60,
       running: false,
-      results: expanded.blockItems.map(makeInitialBlockResult),
-      metrics: {
-        cleanBpmSingles16: 0,
-        cleanBpmDoubles16: 0,
-        oneHandFingerTapBpmRight: 0,
-        oneHandFingerTapBpmLeft: 0,
-        tensionScore: 3,
-        forearmPumpScore: 3,
-        soundEvenness: 4,
-      },
+      results: expanded.blockItems.map((block) => makeInitialBlockResult(block, logs)),
+      countInSec: 0,
+      metrics: normalizeSessionMetrics(),
+      tapTest: makeInitialTapTest(),
       pain: false,
+      safetyStop: false,
+      safetyStopAt: 0,
       note: '',
     };
   }
 
+  function copySessionProgressToSession(currentState, sessionId) {
+    const prev = currentState || {};
+    const expanded = expandSession(sessionId);
+    const prevResults = Array.isArray(prev.results) ? prev.results : [];
+    return {
+      ...prev,
+      sessionId: expanded.id,
+      activeIndex: 0,
+      remainingSec: expanded.blockItems[0]?.targetSec || 60,
+      running: false,
+      countInSec: 0,
+      results: expanded.blockItems.map((block) => {
+        const current = prevResults.find((result) => result && result.blockId === block.id);
+        return current ? { ...makeInitialBlockResult(block), ...current } : makeInitialBlockResult(block);
+      }),
+    };
+  }
+
   function readActiveSession() {
-    const snapshot = lsGet(ACTIVE_SESSION_KEY, null);
+    const keys = getActiveSessionKeys();
+    const snapshot = lsGet(keys.scoped || keys.base, null);
     if (!snapshot || snapshot.moduleId !== MODULE_ID) return null;
     return snapshot;
   }
 
+  function getSubdivisionConfig(block) {
+    return SUBDIVISIONS[block?.subdivision] || SUBDIVISIONS.quarters;
+  }
+
+  function getMetronomeIntervalSec(block, bpm, noteIndex) {
+    const safeBpm = clampNumber(bpm, 30, 260, block?.bpm || 80);
+    const subdivision = getSubdivisionConfig(block);
+    const burst = block && block.burst;
+    let multiplier = 1;
+    if (burst) {
+      const cycle = Math.max(1, clampNumber(burst.fastNotes, 1, 64, 8) + clampNumber(burst.slowNotes, 1, 64, 8));
+      const pos = noteIndex % cycle;
+      if (pos < burst.fastNotes) multiplier = Math.max(1, Number(burst.fastMultiplier) || 2);
+    }
+    return 60 / safeBpm / Math.max(1, subdivision.notesPerBeat) / multiplier;
+  }
+
+  function getMetronomeNoteKind(block, noteIndex) {
+    const subdivision = getSubdivisionConfig(block);
+    const notesPerBar = Math.max(1, subdivision.notesPerBeat * 4);
+    if (noteIndex % notesPerBar === 0) return 'bar';
+    if (block?.accentEvery && noteIndex % block.accentEvery === 0) return 'accent';
+    if (noteIndex % subdivision.notesPerBeat === 0) return 'beat';
+    return 'sub';
+  }
+
+  function resyncMetronomeCursor(cursor, currentTime) {
+    if (!cursor || !Number.isFinite(Number(currentTime))) return cursor;
+    if (Number(cursor.nextNoteTime) < Number(currentTime) - 0.2) {
+      cursor.nextNoteTime = Number(currentTime) + 0.02;
+    }
+    return cursor;
+  }
+
+  function getRampStep(block, result, elapsedSec) {
+    const ramp = block && block.ramp;
+    if (!ramp || !result?.rampEnabled) return null;
+    const bpm = clampNumber(result.bpm, 30, 260, block.bpm || 80);
+    const subdivision = getSubdivisionConfig(block);
+    const barSec = (60 / bpm) * 4;
+    const completedBars = Math.floor(Math.max(0, Number(elapsedSec) || 0) / Math.max(0.1, barSec));
+    const everyBars = clampNumber(ramp.everyBars, 1, 64, 8);
+    if (completedBars <= 0 || completedBars % everyBars !== 0) return null;
+    if (completedBars <= (Number(result.rampBars) || 0)) return null;
+    const nextBpm = Math.min(clampNumber(ramp.maxBpm, 30, 260, 180), bpm + clampNumber(ramp.stepBpm, 1, 12, 2));
+    if (nextBpm <= bpm) return { bars: completedBars, bpm };
+    return {
+      bars: completedBars,
+      bpm: nextBpm,
+      label: '+' + clampNumber(ramp.stepBpm, 1, 12, 2) + ' BPM / ' + everyBars + ' тактов',
+      subdivision: subdivision.label,
+    };
+  }
+
+  function applyRampStep(result, step) {
+    if (!step) return result;
+    return {
+      ...result,
+      rampLastBpm: clampNumber(result.bpm, 30, 260, 0),
+      rampBars: step.bars,
+      bpm: step.bpm,
+    };
+  }
+
+  function rollbackRamp(result) {
+    const last = clampNumber(result?.rampLastBpm, 0, 320, 0);
+    if (!last) return result;
+    return {
+      ...result,
+      bpm: last,
+      clean: false,
+      rampLastBpm: 0,
+      rampEnabled: false,
+    };
+  }
+
   function writeActiveSession(state) {
+    const keys = getActiveSessionKeys();
+    const targetKey = keys.scoped || keys.base;
     if (!state || state.completedAt) {
-      lsRemove(ACTIVE_SESSION_KEY);
+      lsRemove(targetKey);
+      if (keys.scoped) lsRemove(keys.base);
       return;
     }
-    lsSet(ACTIVE_SESSION_KEY, { ...state, savedAt: Date.now(), running: false });
+    lsSet(targetKey, {
+      ...state,
+      savedAt: Date.now(),
+      running: false,
+      countInSec: 0,
+      tapTest: state.tapTest ? { ...makeInitialTapTest(state.tapTest), running: false } : undefined,
+    });
+    if (keys.scoped) lsRemove(keys.base);
   }
 
   function clearActiveSession() {
-    lsRemove(ACTIVE_SESSION_KEY);
+    const keys = getActiveSessionKeys();
+    lsRemove(keys.scoped || keys.base);
+    if (keys.scoped) lsRemove(keys.base);
   }
 
   function scanLogs(limitDays) {
@@ -337,10 +650,11 @@
       if (!ls) return out;
       for (let i = 0; i < ls.length; i++) {
         const key = ls.key(i);
-        if (!key || key.indexOf('dayv2_') < 0) continue;
+        const dayInfo = getReadableDayInfo(key);
+        if (!dayInfo) continue;
         const day = lsGet(key, null);
         if (!day || !Array.isArray(day.trainings)) continue;
-        const dateKey = day.date || String(key).slice(-10);
+        const dateKey = day.date || dayInfo.dateKey;
         day.trainings.forEach((training, trainingIndex) => {
           if (!isDrumsTraining(training)) return;
           const log = training.hobbyLog || {};
@@ -353,6 +667,25 @@
     }
     out.sort((a, b) => (b.log.completedAt || 0) - (a.log.completedAt || 0));
     return out.slice(0, max);
+  }
+
+  function calculateStreak(dateSet, todayDate) {
+    const dates = dateSet instanceof Set ? dateSet : new Set(dateSet || []);
+    let streak = 0;
+    const cur = todayDate && typeof todayDate.getFullYear === 'function' ? new Date(todayDate.getTime()) : new Date();
+    for (let i = 0; i < 60; i++) {
+      const key = localDateKey(cur);
+      if (!dates.has(key)) {
+        if (i === 0) {
+          cur.setDate(cur.getDate() - 1);
+          continue;
+        }
+        break;
+      }
+      streak += 1;
+      cur.setDate(cur.getDate() - 1);
+    }
+    return streak;
   }
 
   function summarizeProgress(logs) {
@@ -392,26 +725,22 @@
     stats.avgTension = tensionCount ? Math.round((tensionSum / tensionCount) * 10) / 10 : 0;
     stats.cleanRate = stats.totalBlocks ? Math.round((stats.cleanBlocks / stats.totalBlocks) * 100) : 0;
     stats.lastSessionId = rows[0]?.log?.sessionId || '';
+    stats.weeklySessionCounts = {};
 
-    let cur = new Date();
-    for (let i = 0; i < 60; i++) {
-      const key = cur.toISOString().slice(0, 10);
-      if (!dates.has(key)) {
-        if (i === 0) {
-          cur.setDate(cur.getDate() - 1);
-          continue;
-        }
-        break;
-      }
-      stats.streak += 1;
-      cur.setDate(cur.getDate() - 1);
-    }
+    stats.streak = calculateStreak(dates);
 
     const recentTensionHigh = rows.slice(0, 2).some((row) => Number(row.log?.metrics?.tensionScore) >= 7);
-    const recentSpeedCount = rows
-      .slice(0, 7)
-      .filter((row) => row.log?.sessionId === 'speed_breakthrough_30').length;
-    if (recentTensionHigh) stats.nextSuggestion = 'low_tension_rebuild_23';
+    const recentPainStop = rows.slice(0, 3).some((row) => !!row.log?.pain || !!row.log?.safetyStop);
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 6);
+    const weekStartKey = localDateKey(weekStart);
+    rows.forEach((row) => {
+      const sessionId = row.log?.sessionId;
+      if (!sessionId || !row.dateKey || row.dateKey < weekStartKey) return;
+      stats.weeklySessionCounts[sessionId] = (stats.weeklySessionCounts[sessionId] || 0) + 1;
+    });
+    const recentSpeedCount = stats.weeklySessionCounts.speed_breakthrough_30 || 0;
+    if (recentPainStop || recentTensionHigh) stats.nextSuggestion = 'low_tension_rebuild_23';
     else if (recentSpeedCount >= 2) stats.nextSuggestion = 'balanced_25';
     else if (stats.totalSessions >= 3 && stats.avgTension <= 5) stats.nextSuggestion = 'speed_breakthrough_30';
     else stats.nextSuggestion = 'balanced_25';
@@ -421,15 +750,7 @@
   function buildHobbyLog(state) {
     const session = getSession(state.sessionId);
     const completedBlocks = state.results.filter((result) => result.done).length;
-    const metrics = {
-      cleanBpmSingles16: clampNumber(state.metrics.cleanBpmSingles16, 0, 320, 0),
-      cleanBpmDoubles16: clampNumber(state.metrics.cleanBpmDoubles16, 0, 320, 0),
-      oneHandFingerTapBpmRight: clampNumber(state.metrics.oneHandFingerTapBpmRight, 0, 320, 0),
-      oneHandFingerTapBpmLeft: clampNumber(state.metrics.oneHandFingerTapBpmLeft, 0, 320, 0),
-      tensionScore: clampNumber(state.metrics.tensionScore, 1, 10, 3),
-      forearmPumpScore: clampNumber(state.metrics.forearmPumpScore, 1, 10, 3),
-      soundEvenness: clampNumber(state.metrics.soundEvenness, 1, 5, 4),
-    };
+    const metrics = deriveMetricsFromResults(state.sessionId, state.results, state.metrics);
     return {
       version: 1,
       moduleId: MODULE_ID,
@@ -442,6 +763,9 @@
       startedAt: state.startedAt,
       metrics,
       pain: !!state.pain,
+      safetyStop: !!state.safetyStop || !!state.pain,
+      safetyStopAt: Number(state.safetyStopAt) || 0,
+      safetyRestDays: state.pain || state.safetyStop ? SAFETY_REST_DAYS : 0,
       note: state.note || '',
       blockResults: state.results.map((result) => ({
         blockId: result.blockId,
@@ -451,6 +775,10 @@
         tension: clampNumber(result.tension, 1, 10, 3),
         sound: clampNumber(result.sound, 1, 5, 4),
         note: result.note || '',
+        rampEnabled: !!result.rampEnabled,
+        rampStartBpm: clampNumber(result.rampStartBpm, 0, 320, 0),
+        rampLastBpm: clampNumber(result.rampLastBpm, 0, 320, 0),
+        rampBars: clampNumber(result.rampBars, 0, 999, 0),
       })),
     };
   }
@@ -522,26 +850,56 @@
     return log;
   }
 
-  function playTick(strong) {
+  function buildInitialAppState(props) {
+    const resume = readActiveSession();
+    if (resume) return { state: resume, resume };
+    const dateKey = safeDateKey(props?.dateKey);
+    const training = readDay(dateKey).day?.trainings?.[props?.trainingIndex] || {};
+    const editState = props?.mode === 'edit' ? makeSessionStateFromLog(training, props) : null;
+    return { state: editState || makeSessionState(training.hobbyLog?.sessionId || 'balanced_25', props), resume: null };
+  }
+
+  function scheduleTick(ctx, startTime, kind) {
     try {
-      const Ctx = global.AudioContext || global.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = playTick._ctx || (playTick._ctx = new Ctx());
-      if (ctx.state === 'suspended') ctx.resume();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      const t0 = ctx.currentTime;
+      const t0 = Math.max(ctx.currentTime, Number(startTime) || ctx.currentTime);
+      const strong = kind === 'bar' || kind === true;
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(strong ? 1320 : 880, t0);
+      osc.frequency.setValueAtTime(kind === 'sub' ? 660 : strong ? 1320 : 880, t0);
       gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(strong ? 0.18 : 0.11, t0 + 0.006);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.055);
+      gain.gain.exponentialRampToValueAtTime(strong ? 0.18 : kind === 'sub' ? 0.07 : 0.11, t0 + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + (kind === 'sub' ? 0.04 : 0.055));
       osc.connect(gain).connect(ctx.destination);
       osc.start(t0);
       osc.stop(t0 + 0.07);
     } catch (_) {
       /* noop */
     }
+  }
+
+  function playTick(kind) {
+    try {
+      const Ctx = global.AudioContext || global.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = playTick._ctx || (playTick._ctx = new Ctx());
+      if (ctx.state === 'suspended') ctx.resume();
+      scheduleTick(ctx, ctx.currentTime, kind === true ? 'bar' : kind || 'beat');
+    } catch (_) {
+      /* noop */
+    }
+  }
+
+  function getMetronomeContext() {
+    const Ctx = global.AudioContext || global.webkitAudioContext;
+    if (!Ctx) return null;
+    const ctx = playTick._ctx || (playTick._ctx = new Ctx());
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+    } catch (_) {
+      /* noop */
+    }
+    return ctx;
   }
 
   let activeRoot = null;
@@ -577,19 +935,19 @@
 
   function DrumsTrainerApp(props) {
     const h = React.createElement;
-    const { useEffect, useMemo, useState } = React;
-    const initialState = useMemo(function () {
-      const resume = readActiveSession();
-      if (resume && resume.dateKey === safeDateKey(props.dateKey)) return resume;
-      const training = readDay(safeDateKey(props.dateKey)).day?.trainings?.[props.trainingIndex] || {};
-      return makeSessionState(training.hobbyLog?.sessionId || 'balanced_25', props);
+    const { useEffect, useMemo, useRef, useState } = React;
+    const initial = useMemo(function () {
+      return buildInitialAppState(props);
     }, []);
 
+    const initialState = initial.state;
     const [screen, setScreen] = useState(initialState.startedAt && initialState.results?.some((r) => r.done) ? 'run' : 'home');
     const [sessionState, setSessionState] = useState(initialState);
-    const [metronome, setMetronome] = useState(false);
+    const [resumeSnapshot, setResumeSnapshot] = useState(initial.resume);
+    const [soundEnabled, setSoundEnabled] = useState(true);
     const [savedLog, setSavedLog] = useState(null);
     const [progressSeed, setProgressSeed] = useState(0);
+    const metronomeRef = useRef({ nextNoteTime: 0, noteIndex: 0 });
 
     const session = expandSession(sessionState.sessionId);
     const activeBlock = session.blockItems[sessionState.activeIndex] || session.blockItems[0];
@@ -603,9 +961,54 @@
 
     useEffect(
       function () {
-        if (screen === 'run') writeActiveSession(sessionState);
+        if (screen === 'run') {
+          writeActiveSession(sessionState);
+          setResumeSnapshot({ ...sessionState, running: false, savedAt: Date.now() });
+        }
       },
       [screen, sessionState]
+    );
+
+    useEffect(
+      function () {
+        if (screen !== 'run' || (!sessionState.running && !sessionState.countInSec) || !activeBlock) return undefined;
+        if (!soundEnabled) return undefined;
+        const ctx = getMetronomeContext();
+        if (!ctx) return undefined;
+        metronomeRef.current = { nextNoteTime: ctx.currentTime + 0.02, noteIndex: 0 };
+        const id = global.setInterval(function () {
+          const cursor = metronomeRef.current;
+          resyncMetronomeCursor(cursor, ctx.currentTime);
+          while (cursor.nextNoteTime < ctx.currentTime + METRONOME_SCHEDULE_AHEAD_SEC) {
+            const kind = sessionState.countInSec ? 'bar' : getMetronomeNoteKind(activeBlock, cursor.noteIndex);
+            scheduleTick(ctx, cursor.nextNoteTime, kind);
+            cursor.nextNoteTime += sessionState.countInSec
+              ? 1
+              : getMetronomeIntervalSec(activeBlock, activeResult.bpm, cursor.noteIndex);
+            cursor.noteIndex += 1;
+          }
+        }, METRONOME_LOOKAHEAD_MS);
+        return function () {
+          global.clearInterval(id);
+        };
+      },
+      [screen, soundEnabled, sessionState.running, sessionState.countInSec, activeResult.bpm, activeBlock?.id]
+    );
+
+    useEffect(
+      function () {
+        if (screen !== 'run' || !sessionState.countInSec) return undefined;
+        const id = global.setInterval(function () {
+          setSessionState(function (prev) {
+            const nextCount = Math.max(0, (Number(prev.countInSec) || 0) - 1);
+            return { ...prev, countInSec: nextCount, running: nextCount === 0 && prev.remainingSec > 0 };
+          });
+        }, 1000);
+        return function () {
+          global.clearInterval(id);
+        };
+      },
+      [screen, sessionState.countInSec]
     );
 
     useEffect(
@@ -614,6 +1017,12 @@
         const id = global.setInterval(function () {
           setSessionState(function (prev) {
             const nextSec = Math.max(0, (Number(prev.remainingSec) || 0) - 1);
+            const currentBlock = session.blockItems[prev.activeIndex] || activeBlock;
+            const elapsedSec = Math.max(0, (currentBlock.targetSec || 0) - nextSec);
+            const results = prev.results.slice();
+            const currentResult = results[prev.activeIndex] || makeInitialBlockResult(currentBlock);
+            const rampStep = getRampStep(currentBlock, currentResult, elapsedSec);
+            if (rampStep) results[prev.activeIndex] = applyRampStep(currentResult, rampStep);
             if (nextSec === 0 && prev.remainingSec > 0) {
               try {
                 HEYS.__playRestDoneBeep?.();
@@ -621,31 +1030,84 @@
                 playTick(true);
               }
             }
-            return { ...prev, remainingSec: nextSec, running: nextSec > 0 ? prev.running : false };
+            return { ...prev, results, remainingSec: nextSec, running: nextSec > 0 ? prev.running : false };
           });
         }, 1000);
         return function () {
           global.clearInterval(id);
         };
       },
-      [screen, sessionState.running, sessionState.activeIndex, activeBlock?.id]
+      [screen, sessionState.running, sessionState.activeIndex, sessionState.sessionId, activeBlock?.id]
     );
 
     useEffect(
       function () {
-        if (!metronome || screen !== 'run') return undefined;
-        const bpm = clampNumber(activeResult.bpm, 30, 260, activeBlock?.bpm || 80);
-        let beat = 0;
-        playTick(true);
+        if (screen !== 'finish' || !sessionState.tapTest?.running) return undefined;
         const id = global.setInterval(function () {
-          beat += 1;
-          playTick(beat % 4 === 0);
-        }, Math.max(120, Math.round(60000 / bpm)));
+          setSessionState(function (prev) {
+            const tapTest = makeInitialTapTest(prev.tapTest);
+            if (!tapTest.running) return prev;
+            const remainingSec = Math.max(0, tapTest.remainingSec - 1);
+            return { ...prev, tapTest: { ...tapTest, remainingSec, running: remainingSec > 0 } };
+          });
+        }, 1000);
         return function () {
           global.clearInterval(id);
         };
       },
-      [metronome, screen, activeResult.bpm, activeBlock?.id]
+      [screen, sessionState.tapTest?.running]
+    );
+
+    useEffect(
+      function () {
+        if (typeof navigator === 'undefined' || !navigator.wakeLock || !navigator.wakeLock.request) return undefined;
+        if (screen !== 'run' || (!sessionState.running && !sessionState.countInSec)) return undefined;
+        let sentinel = null;
+        let cancelled = false;
+        function acquire() {
+          navigator.wakeLock
+            .request('screen')
+            .then(function (s) {
+              if (cancelled) {
+                try {
+                  s.release();
+                } catch (_) {
+                  /* noop */
+                }
+                return;
+              }
+              sentinel = s;
+              try {
+                sentinel.addEventListener('release', function () {
+                  if (!cancelled) sentinel = null;
+                });
+              } catch (_) {
+                /* noop */
+              }
+            })
+            .catch(function () {
+              /* noop */
+            });
+        }
+        function onVisibility() {
+          if (document.visibilityState === 'visible' && !sentinel && !cancelled) acquire();
+        }
+        acquire();
+        document.addEventListener('visibilitychange', onVisibility);
+        return function () {
+          cancelled = true;
+          document.removeEventListener('visibilitychange', onVisibility);
+          if (sentinel) {
+            try {
+              sentinel.release();
+            } catch (_) {
+              /* noop */
+            }
+            sentinel = null;
+          }
+        };
+      },
+      [screen, sessionState.running, sessionState.countInSec]
     );
 
     useEffect(function () {
@@ -658,8 +1120,16 @@
       };
     }, []);
 
+    function isSessionLocked(sessionId) {
+      const candidate = getSession(sessionId);
+      if (!candidate.weeklyLimit) return false;
+      return (historyStats.weeklySessionCounts?.[candidate.id] || 0) >= candidate.weeklyLimit;
+    }
+
     function setSession(sessionId) {
+      if (isSessionLocked(sessionId)) return;
       setSessionState(makeSessionState(sessionId, props));
+      setResumeSnapshot(null);
       setScreen('run');
     }
 
@@ -683,6 +1153,7 @@
           activeIndex: nextIndex,
           remainingSec: nextIndex === prev.activeIndex ? 0 : nextBlock.targetSec,
           running: false,
+          countInSec: 0,
         };
       });
       try {
@@ -700,6 +1171,7 @@
           activeIndex: next,
           remainingSec: session.blockItems[next]?.targetSec || 60,
           running: false,
+          countInSec: 0,
         };
       });
     }
@@ -710,9 +1182,39 @@
       });
     }
 
+    function prepareFinishState(state) {
+      return {
+        ...state,
+        running: false,
+        countInSec: 0,
+        metrics: deriveMetricsFromResults(state.sessionId, state.results, state.metrics),
+        tapTest: state.tapTest ? { ...makeInitialTapTest(state.tapTest), running: false } : makeInitialTapTest(),
+      };
+    }
+
+    function openFinish() {
+      setSessionState((prev) => prepareFinishState(prev));
+      setScreen('finish');
+    }
+
+    function triggerPainSafetyGate() {
+      clearActiveSession();
+      setResumeSnapshot(null);
+      setSessionState((prev) => prepareFinishState(applyPainSafetyGate(prev)));
+      setScreen('finish');
+      try {
+        navigator.vibrate?.([30, 40, 30]);
+      } catch (_) {
+        /* noop */
+      }
+    }
+
     function finishAndSave() {
-      const log = saveSessionToTraining(sessionState);
+      const readyState = prepareFinishState(sessionState);
+      const log = saveSessionToTraining(readyState);
       setSavedLog(log);
+      setSessionState({ ...readyState, hobbyLog: log });
+      setResumeSnapshot(null);
       setProgressSeed((n) => n + 1);
       setScreen('saved');
       try {
@@ -725,6 +1227,7 @@
     function resetActive() {
       clearActiveSession();
       setSessionState(makeSessionState('balanced_25', props));
+      setResumeSnapshot(null);
       setScreen('home');
     }
 
@@ -735,17 +1238,93 @@
       return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
     }
 
+    function toggleRun() {
+      setSessionState(function (prev) {
+        if (prev.running || prev.countInSec) return { ...prev, running: false, countInSec: 0 };
+        return { ...prev, running: false, countInSec: COUNT_IN_SEC };
+      });
+    }
+
+    function rollbackActiveRamp() {
+      setSessionState(function (prev) {
+        const results = prev.results.slice();
+        results[prev.activeIndex] = rollbackRamp(results[prev.activeIndex] || activeResult);
+        return { ...prev, results };
+      });
+    }
+
+    function setRampEnabled(enabled) {
+      patchActiveResult({
+        rampEnabled: !!enabled,
+        rampStartBpm: activeResult.rampStartBpm || activeResult.bpm,
+        rampLastBpm: enabled ? activeResult.rampLastBpm : 0,
+      });
+    }
+
+    function setTapHand(hand) {
+      setSessionState(function (prev) {
+        const tapTest = makeInitialTapTest(prev.tapTest);
+        return { ...prev, tapTest: { ...tapTest, hand: hand === 'left' ? 'left' : 'right', running: false, remainingSec: TAP_TEST_SECONDS } };
+      });
+    }
+
+    function toggleTapTest() {
+      setSessionState(function (prev) {
+        const tapTest = makeInitialTapTest(prev.tapTest);
+        if (tapTest.running) return { ...prev, tapTest: { ...tapTest, running: false } };
+        const countField = tapTest.hand === 'left' ? 'tapsLeft' : 'tapsRight';
+        const resetForNewRun = tapTest.remainingSec <= 0;
+        return {
+          ...prev,
+          tapTest: {
+            ...tapTest,
+            [countField]: resetForNewRun ? 0 : tapTest[countField],
+            remainingSec: resetForNewRun ? TAP_TEST_SECONDS : tapTest.remainingSec,
+            running: true,
+          },
+        };
+      });
+    }
+
+    function resetTapTest() {
+      setSessionState(function (prev) {
+        const tapTest = makeInitialTapTest(prev.tapTest);
+        const countField = tapTest.hand === 'left' ? 'tapsLeft' : 'tapsRight';
+        const metricField = tapTest.hand === 'left' ? 'oneHandFingerTapBpmLeft' : 'oneHandFingerTapBpmRight';
+        return {
+          ...prev,
+          metrics: { ...prev.metrics, [metricField]: 0 },
+          tapTest: { ...tapTest, [countField]: 0, running: false, remainingSec: TAP_TEST_SECONDS },
+        };
+      });
+    }
+
+    function recordTapTestHit() {
+      setSessionState(function (prev) {
+        const tapTest = makeInitialTapTest(prev.tapTest);
+        if (!tapTest.running || tapTest.remainingSec <= 0) return prev;
+        const countField = tapTest.hand === 'left' ? 'tapsLeft' : 'tapsRight';
+        const taps = tapTest[countField] + 1;
+        return {
+          ...prev,
+          metrics: applyTapCountToMetrics(prev.metrics, tapTest.hand, taps, TAP_TEST_SECONDS),
+          tapTest: { ...tapTest, [countField]: taps },
+        };
+      });
+    }
+
     function HomeScreen() {
       const rec = getSession(historyStats.nextSuggestion);
+      const recLocked = isSessionLocked(rec.id);
       return h(
         'div',
         { className: 'drums-ft__body' },
-        readActiveSession()
+        resumeSnapshot
           ? h(
               'button',
               { type: 'button', className: 'drums-ft-resume', onClick: () => setScreen('run') },
               h('span', null, 'Продолжить прерванную сессию'),
-              h('strong', null, getSession(readActiveSession().sessionId).label)
+              h('strong', null, getSession(resumeSnapshot.sessionId).label + ' · ' + resumeSnapshot.dateKey)
             )
           : null,
         h(
@@ -760,25 +1339,30 @@
           'section',
           { className: 'drums-ft-recommend' },
           h('div', null, h('span', null, 'Сегодня лучше'), h('strong', null, rec.shortLabel)),
-          h('button', { type: 'button', onClick: () => setSession(rec.id) }, 'Старт')
+          h('button', { type: 'button', onClick: () => setSession(rec.id), disabled: recLocked }, recLocked ? 'Лимит' : 'Старт')
         ),
         h(
           'div',
           { className: 'drums-ft-session-grid' },
           SESSIONS.map((item) =>
-            h(
-              'button',
-              {
-                type: 'button',
-                key: item.id,
-                className: 'drums-ft-session-card',
-                onClick: () => setSession(item.id),
-              },
-              h('span', { className: 'drums-ft-session-card__icon' }, item.icon),
-              h('strong', null, item.label),
-              h('span', null, item.intent),
-              h('em', null, formatMinutes(item.minutes))
-            )
+            {
+              const locked = isSessionLocked(item.id);
+              return h(
+                'button',
+                {
+                  type: 'button',
+                  key: item.id,
+                  className: 'drums-ft-session-card' + (locked ? ' is-disabled' : ''),
+                  onClick: () => setSession(item.id),
+                  disabled: locked,
+                  title: locked ? 'Недельный лимит для speed-сессий уже достигнут' : item.label,
+                },
+                h('span', { className: 'drums-ft-session-card__icon' }, item.icon),
+                h('strong', null, item.label),
+                h('span', null, locked ? 'недельный лимит выполнен' : item.intent),
+                h('em', null, item.weeklyLimit ? (historyStats.weeklySessionCounts?.[item.id] || 0) + '/' + item.weeklyLimit + ' в неделю' : formatMinutes(item.minutes))
+              );
+            }
           )
         ),
         h(
@@ -792,6 +1376,10 @@
           )
         )
       );
+    }
+
+    function switchToLowTensionMode() {
+      setSessionState((prev) => copySessionProgressToSession(prev, 'low_tension_rebuild_23'));
     }
 
     function RunScreen() {
@@ -831,10 +1419,13 @@
               { className: 'drums-ft-alert' },
               h('strong', null, sessionState.pain ? 'Стоп-сигнал' : 'Зажим высокий'),
               h('span', null, sessionState.pain ? 'Заверши сессию и не добивай руку.' : 'Перейди в мягкий режим или снизь BPM на 10.'),
-              h('button', { type: 'button', onClick: () => setSession('low_tension_rebuild_23') }, 'Мягкий режим')
+              h('button', { type: 'button', onClick: switchToLowTensionMode }, 'Мягкий режим')
             )
           : null,
         h('div', { className: 'drums-ft-timer' }, h('span', null, formatClock(sessionState.remainingSec))),
+        sessionState.countInSec
+          ? h('div', { className: 'drums-ft-count-in' }, h('strong', null, sessionState.countInSec), h('span', null, 'отсчёт'))
+          : null,
         h(
           'div',
           { className: 'drums-ft-controls' },
@@ -843,16 +1434,16 @@
             {
               type: 'button',
               className: 'drums-ft-main-btn',
-              onClick: () => setSessionState((prev) => ({ ...prev, running: !prev.running })),
+              onClick: toggleRun,
               disabled: sessionState.remainingSec <= 0,
             },
-            sessionState.running ? 'Пауза' : 'Старт'
+            sessionState.running || sessionState.countInSec ? 'Пауза' : 'Старт'
           ),
           h('button', { type: 'button', onClick: markCurrentDone }, activeResult.done ? 'Готово' : 'Блок выполнен'),
           h(
             'button',
-            { type: 'button', className: metronome ? 'is-active' : '', onClick: () => setMetronome((v) => !v) },
-            'Метроном'
+            { type: 'button', className: soundEnabled ? 'is-active' : '', onClick: () => setSoundEnabled((v) => !v) },
+            soundEnabled ? 'Клик' : 'Без клика'
           )
         ),
         h(
@@ -916,13 +1507,36 @@
             h('span', null, 'чисто')
           )
         ),
+        activeBlock.ramp
+          ? h(
+              'section',
+              { className: 'drums-ft-ramp' },
+              h(
+                'div',
+                null,
+                h('strong', null, activeResult.rampEnabled ? 'Разгон темпа включён' : 'Разгон темпа выключен'),
+                h(
+                  'span',
+                  null,
+                  activeResult.rampEnabled
+                    ? '+' + activeBlock.ramp.stepBpm + ' BPM каждые ' + activeBlock.ramp.everyBars + ' тактов'
+                    : 'темп меняется только вручную'
+                )
+              ),
+              h('button', { type: 'button', onClick: () => setRampEnabled(!activeResult.rampEnabled) }, activeResult.rampEnabled ? 'Выкл.' : 'Вкл.'),
+              h('button', { type: 'button', onClick: rollbackActiveRamp, disabled: !activeResult.rampLastBpm }, 'Грязно')
+            )
+          : null,
         h(
           'label',
           { className: 'drums-ft-pain' },
           h('input', {
             type: 'checkbox',
             checked: !!sessionState.pain,
-            onChange: (event) => setSessionState((prev) => ({ ...prev, pain: event.target.checked, running: false })),
+            onChange: (event) => {
+              if (event.target.checked) triggerPainSafetyGate();
+              else setSessionState((prev) => ({ ...prev, pain: false, safetyStop: false, running: false, countInSec: 0 }));
+            },
           }),
           h('span', null, 'есть боль, онемение или палка теряет контроль')
         ),
@@ -935,16 +1549,51 @@
             { type: 'button', onClick: () => goToBlock(sessionState.activeIndex + 1), disabled: sessionState.activeIndex >= session.blockItems.length - 1 },
             'Дальше'
           ),
-          h('button', { type: 'button', className: 'drums-ft-save-btn', onClick: () => setScreen('finish') }, 'Финиш')
+          h('button', { type: 'button', className: 'drums-ft-save-btn', onClick: openFinish }, 'Финиш')
         )
       );
     }
 
     function FinishScreen() {
+      const tapTest = makeInitialTapTest(sessionState.tapTest);
+      const tapCount = tapTest.hand === 'left' ? tapTest.tapsLeft : tapTest.tapsRight;
+      const tapMetric = tapTest.hand === 'left' ? sessionState.metrics.oneHandFingerTapBpmLeft : sessionState.metrics.oneHandFingerTapBpmRight;
       return h(
         'div',
         { className: 'drums-ft__body drums-ft-finish' },
         h('section', { className: 'drums-ft-finish-hero' }, h('strong', null, progress + '%'), h('span', null, 'пройдено')),
+        sessionState.pain || sessionState.safetyStop
+          ? h(
+              'section',
+              { className: 'drums-ft-safety-stop' },
+              h('strong', null, 'Сессия остановлена'),
+              h('span', null, 'Сегодня не продолжай нагрузку. Следующая тренировка — мягкая, после 1–2 дней паузы.')
+            )
+          : null,
+        h(
+          'section',
+          { className: 'drums-ft-tap-test' },
+          h(
+            'div',
+            { className: 'drums-ft-tap-test__head' },
+            h('strong', null, '20-сек тест одной руки'),
+            h('span', null, formatClock(tapTest.remainingSec))
+          ),
+          h(
+            'div',
+            { className: 'drums-ft-tap-test__hands' },
+            h('button', { type: 'button', className: tapTest.hand === 'right' ? 'is-active' : '', onClick: () => setTapHand('right') }, 'Правая'),
+            h('button', { type: 'button', className: tapTest.hand === 'left' ? 'is-active' : '', onClick: () => setTapHand('left') }, 'Левая')
+          ),
+          h(
+            'div',
+            { className: 'drums-ft-tap-test__body' },
+            h('button', { type: 'button', onClick: toggleTapTest }, tapTest.running ? 'Пауза' : 'Старт'),
+            h('button', { type: 'button', className: 'drums-ft-tap-test__tap', onClick: recordTapTestHit, disabled: !tapTest.running }, 'Тап'),
+            h('button', { type: 'button', onClick: resetTapTest }, 'Сброс')
+          ),
+          h('div', { className: 'drums-ft-tap-test__meta' }, h('span', null, tapCount + ' ударов'), h('strong', null, tapMetric + ' BPM'))
+        ),
         h(
           'div',
           { className: 'drums-ft-input-grid drums-ft-input-grid--metrics' },
@@ -1013,7 +1662,7 @@
         h(
           'div',
           { className: 'drums-ft-bottom-actions' },
-          h('button', { type: 'button', onClick: () => setScreen('run') }, 'Вернуться'),
+          h('button', { type: 'button', onClick: () => setScreen('run'), disabled: !!sessionState.pain || !!sessionState.safetyStop }, 'Вернуться'),
           h('button', { type: 'button', className: 'drums-ft-save-btn', onClick: finishAndSave }, 'Сохранить в день')
         )
       );
@@ -1159,10 +1808,34 @@
     renderPreviewPill,
     _test: {
       makeSessionState,
+      makeSessionStateFromLog,
+      makeInitialBlockResult,
+      normalizeSessionMetrics,
+      getProgressionBpm,
+      deriveMetricsFromResults,
+      getTapBpm,
+      applyTapCountToMetrics,
+      makeInitialTapTest,
+      applyPainSafetyGate,
+      buildInitialAppState,
+      copySessionProgressToSession,
+      calculateStreak,
+      getSubdivisionConfig,
+      getMetronomeIntervalSec,
+      getMetronomeNoteKind,
+      resyncMetronomeCursor,
+      getRampStep,
+      applyRampStep,
+      rollbackRamp,
       buildHobbyLog,
       saveSessionToTraining,
       readDay,
       writeDay,
+      readActiveSession,
+      writeActiveSession,
+      clearActiveSession,
+      getActiveSessionKeys,
+      localDateKey,
     },
   };
 

@@ -351,6 +351,73 @@
   line-height: 1;
 }
 
+.drums-ft-count-in,
+.drums-ft-ramp {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.drums-ft-count-in {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.drums-ft-count-in strong {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.drums-ft-count-in span,
+.drums-ft-ramp span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.drums-ft-ramp {
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+}
+
+.drums-ft-ramp div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.drums-ft-ramp strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.drums-ft-ramp button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.drums-ft-ramp button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .drums-ft-controls,
 .drums-ft-bottom-actions {
   display: grid;
@@ -493,6 +560,92 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.drums-ft-safety-stop {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 12px;
+  background: #fff7ed;
+}
+
+.drums-ft-safety-stop strong {
+  color: #9a3412;
+  font-weight: 900;
+}
+
+.drums-ft-safety-stop span {
+  color: #7c2d12;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.drums-ft-tap-test {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.drums-ft-tap-test__head,
+.drums-ft-tap-test__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.drums-ft-tap-test__head strong,
+.drums-ft-tap-test__meta strong {
+  color: #0f172a;
+  font-weight: 900;
+}
+
+.drums-ft-tap-test__head span,
+.drums-ft-tap-test__meta span {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.drums-ft-tap-test__hands,
+.drums-ft-tap-test__body {
+  display: grid;
+  gap: 8px;
+}
+
+.drums-ft-tap-test__hands {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.drums-ft-tap-test__body {
+  grid-template-columns: minmax(0, 1fr) minmax(96px, 1.2fr) minmax(0, 1fr);
+}
+
+.drums-ft-tap-test button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.drums-ft-tap-test button.is-active,
+.drums-ft-tap-test__tap {
+  background: #0f766e;
+  color: #fff;
+}
+
+.drums-ft-tap-test button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .drums-ft-note {
   min-height: 92px;
   resize: vertical;
@@ -519,6 +672,10 @@
 [data-theme='dark'] .drums-ft-recommend,
 [data-theme='dark'] .drums-ft-method,
 [data-theme='dark'] .drums-ft-current,
+[data-theme='dark'] .drums-ft-count-in,
+[data-theme='dark'] .drums-ft-ramp,
+[data-theme='dark'] .drums-ft-tap-test,
+[data-theme='dark'] .drums-ft-safety-stop,
 [data-theme='dark'] .drums-ft-saved-card,
 [data-theme='dark'] .drums-ft-finish-hero,
 [data-theme='dark'] .drums-ft-input-grid label,
@@ -530,15 +687,31 @@
 [data-theme='dark'] .drums-ft__close,
 [data-theme='dark'] .drums-ft-controls button,
 [data-theme='dark'] .drums-ft-bottom-actions button,
+[data-theme='dark'] .drums-ft-ramp button,
+[data-theme='dark'] .drums-ft-tap-test button,
 [data-theme='dark'] .drums-ft-block-tab {
   background: rgba(148, 163, 184, 0.12);
   color: #e5e7eb;
 }
 
 [data-theme='dark'] .drums-ft-pill__body strong,
+[data-theme='dark'] .drums-ft-ramp strong,
+[data-theme='dark'] .drums-ft-tap-test__head strong,
+[data-theme='dark'] .drums-ft-tap-test__meta strong,
+[data-theme='dark'] .drums-ft-safety-stop strong,
 [data-theme='dark'] .drums-ft-input-grid input[type='number'],
 [data-theme='dark'] .drums-ft-note {
   color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-safety-stop span {
+  color: #fed7aa;
+}
+
+[data-theme='dark'] .drums-ft-tap-test button.is-active,
+[data-theme='dark'] .drums-ft-tap-test__tap {
+  background: #0f766e;
+  color: #fff;
 }
 
 @media (max-width: 640px) {
@@ -567,6 +740,14 @@
   }
 
   .drums-ft-alert {
+    grid-template-columns: 1fr;
+  }
+
+  .drums-ft-ramp {
+    grid-template-columns: 1fr;
+  }
+
+  .drums-ft-tap-test__body {
     grid-template-columns: 1fr;
   }
 

@@ -279,6 +279,12 @@
     cloudSync: 'never', pruneStrategy: 'manual',
     description: 'Fingers active timer recovery snapshot/snooze. Local-only; never cloud-synced.',
   });
+  register('drums_finger_active_session', {
+    pattern: /^(heys_drums_finger_active_session|heys_[a-f0-9-]{36}_drums_finger_active_session)$/,
+    scope: 'global', maxSize: 16 * KB, maxAge: 1 * DAY_MS,
+    cloudSync: 'never', pruneStrategy: 'manual',
+    description: 'Drums finger-control active session recovery snapshot. Local-only; never cloud-synced.',
+  });
   register('products_overlay', {
     pattern: /^heys_[a-f0-9-]{36}_heys_products_overlay_v2$/,
     scope: 'per-client', /* maxSize unbounded */ maxAge: 0,

@@ -13,11 +13,15 @@ const MODULE_PATH = path.resolve(
   'heys_drums_finger_trainer_v1.js',
 );
 
-function setupModule() {
+function setupModule({ clientId = '' } = {}) {
   const store = new Map();
   globalThis.window = globalThis;
   globalThis.HEYS = {
+    currentClientId: clientId,
     utils: {
+      getCurrentClientId() {
+        return globalThis.HEYS.currentClientId || '';
+      },
       lsGet(key, fallback) {
         return store.has(key) ? JSON.parse(store.get(key)) : fallback;
       },
@@ -96,6 +100,81 @@ describe('drums finger trainer', () => {
     expect(log.completedBlocks).toBe(1);
   });
 
+  it('starts metric blocks from recent clean history and adds a small streak step', () => {
+    const { api } = setupModule();
+    const singles = api.BLOCKS.find((block) => block.id === 'singles');
+    const logs = [
+      {
+        log: {
+          completedAt: 3000,
+          blockResults: [{ blockId: 'singles', bpm: 120, done: true, clean: true }],
+          metrics: { cleanBpmSingles16: 120 },
+        },
+      },
+      {
+        log: {
+          completedAt: 2000,
+          blockResults: [{ blockId: 'singles', bpm: 118, done: true, clean: true }],
+          metrics: { cleanBpmSingles16: 118 },
+        },
+      },
+    ];
+
+    expect(api._test.getProgressionBpm(singles, logs)).toBe(122);
+
+    const state = api._test.makeSessionState('balanced_25', {
+      dateKey: '2026-06-09',
+      logs,
+    });
+    expect(state.results.find((result) => result.blockId === 'singles').bpm).toBe(122);
+  });
+
+  it('does not add a progression step after a dirty recent attempt', () => {
+    const { api } = setupModule();
+    const singles = api.BLOCKS.find((block) => block.id === 'singles');
+    const logs = [
+      { log: { completedAt: 3000, blockResults: [{ blockId: 'singles', bpm: 124, done: true, clean: false }] } },
+      { log: { completedAt: 2000, blockResults: [{ blockId: 'singles', bpm: 118, done: true, clean: true }] } },
+      { log: { completedAt: 1000, blockResults: [{ blockId: 'singles', bpm: 116, done: true, clean: true }] } },
+    ];
+
+    expect(api._test.getProgressionBpm(singles, logs)).toBe(118);
+  });
+
+  it('derives clean BPM metrics from completed metric blocks', () => {
+    const { api } = setupModule();
+    const state = api._test.makeSessionState('speed_breakthrough_30', {
+      dateKey: '2026-06-09',
+      logs: [],
+    });
+    const singles = state.results.find((result) => result.blockId === 'singles');
+    singles.done = true;
+    singles.clean = true;
+    singles.bpm = 126;
+    const doubles = state.results.find((result) => result.blockId === 'doubles');
+    doubles.done = true;
+    doubles.clean = true;
+    doubles.bpm = 102;
+    state.metrics.cleanBpmSingles16 = 120;
+    state.metrics.cleanBpmDoubles16 = 0;
+
+    const metrics = api._test.deriveMetricsFromResults(state.sessionId, state.results, state.metrics);
+    expect(metrics.cleanBpmSingles16).toBe(126);
+    expect(metrics.cleanBpmDoubles16).toBe(102);
+
+    const log = api._test.buildHobbyLog(state);
+    expect(log.metrics.cleanBpmSingles16).toBe(126);
+    expect(log.metrics.cleanBpmDoubles16).toBe(102);
+  });
+
+  it('converts a 20-second one-hand tap test into BPM metrics', () => {
+    const { api } = setupModule();
+
+    expect(api._test.getTapBpm(40, 20)).toBe(120);
+    expect(api._test.applyTapCountToMetrics({}, 'right', 37, 20).oneHandFingerTapBpmRight).toBe(111);
+    expect(api._test.applyTapCountToMetrics({}, 'left', 35, 20).oneHandFingerTapBpmLeft).toBe(105);
+  });
+
   it('saves session into hobby training without changing it to strength/fingers', () => {
     const { api } = setupModule();
     const state = api._test.makeSessionState('micro_15', {
@@ -110,6 +189,144 @@ describe('drums finger trainer', () => {
     expect(saved.hobbySubtype).toBe('drums_finger_control');
     expect(saved.hobbyLog.sessionId).toBe('micro_15');
     expect(saved.z[0]).toBe(15);
+  });
+
+  it('writes scoped day only when a current client is selected', () => {
+    const cid = '12345678-aaaa-bbbb-cccc-1234567890ab';
+    const { api, store } = setupModule({ clientId: cid });
+    api._test.writeDay('2026-06-09', { date: '2026-06-09', trainings: [] });
+
+    expect(store.has(`heys_${cid}_dayv2_2026-06-09`)).toBe(true);
+    expect(store.has('heys_dayv2_2026-06-09')).toBe(false);
+  });
+
+  it('does not read unscoped base day while a current client is selected', () => {
+    const cid = '12345678-aaaa-bbbb-cccc-1234567890ab';
+    const { api, store } = setupModule({ clientId: cid });
+    store.set(
+      'heys_dayv2_2026-06-09',
+      JSON.stringify({ date: '2026-06-09', trainings: [{ hobbySubtype: 'drums_finger_control' }] }),
+    );
+
+    const read = api._test.readDay('2026-06-09');
+    expect(read.key).toBe(`heys_${cid}_dayv2_2026-06-09`);
+    expect(read.day.trainings).toEqual([]);
+  });
+
+  it('scanLogs ignores other clients and unscoped days in scoped context', () => {
+    const cid = '12345678-aaaa-bbbb-cccc-1234567890ab';
+    const otherCid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    const { api, store } = setupModule({ clientId: cid });
+    const makeDay = (sessionId, bpm) => ({
+      date: '2026-06-09',
+      trainings: [
+        {
+          type: 'hobby',
+          hobbySubtype: 'drums_finger_control',
+          hobbyLog: {
+            moduleId: 'drums_finger_control',
+            sessionId,
+            completedAt: bpm,
+            totalDurationMinutes: 25,
+            metrics: { cleanBpmSingles16: bpm },
+            blockResults: [],
+          },
+        },
+      ],
+    });
+
+    store.set(`heys_${cid}_dayv2_2026-06-09`, JSON.stringify(makeDay('balanced_25', 120)));
+    store.set(`heys_${otherCid}_dayv2_2026-06-09`, JSON.stringify(makeDay('speed_breakthrough_30', 140)));
+    store.set('heys_dayv2_2026-06-09', JSON.stringify(makeDay('micro_15', 160)));
+
+    const logs = api.scanLogs();
+    expect(logs).toHaveLength(1);
+    expect(logs[0].log.sessionId).toBe('balanced_25');
+    expect(api.summarizeProgress(logs).bestSingles).toBe(120);
+  });
+
+  it('scopes active session recovery by current client', () => {
+    const cid = '12345678-aaaa-bbbb-cccc-1234567890ab';
+    const otherCid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    const { api, store } = setupModule({ clientId: cid });
+    store.set(
+      'heys_drums_finger_active_session',
+      JSON.stringify({ moduleId: 'drums_finger_control', sessionId: 'micro_15' }),
+    );
+    store.set(
+      `heys_${otherCid}_drums_finger_active_session`,
+      JSON.stringify({ moduleId: 'drums_finger_control', sessionId: 'speed_breakthrough_30' }),
+    );
+
+    expect(api._test.readActiveSession()).toBeNull();
+
+    api._test.writeActiveSession(api._test.makeSessionState('balanced_25', { dateKey: '2026-06-09' }));
+    expect(store.has(`heys_${cid}_drums_finger_active_session`)).toBe(true);
+    expect(store.has('heys_drums_finger_active_session')).toBe(false);
+    expect(api._test.readActiveSession().sessionId).toBe('balanced_25');
+  });
+
+  it('stores interrupted active session as paused without count-in', () => {
+    const { api } = setupModule();
+    const state = api._test.makeSessionState('balanced_25', { dateKey: '2026-06-09' });
+    state.running = true;
+    state.countInSec = 3;
+
+    api._test.writeActiveSession(state);
+
+    const saved = api._test.readActiveSession();
+    expect(saved.running).toBe(false);
+    expect(saved.countInSec).toBe(0);
+  });
+
+  it('uses active session date when resume does not match opened date', () => {
+    const { api } = setupModule();
+    const active = api._test.makeSessionState('micro_15', {
+      dateKey: '2026-06-08',
+      trainingIndex: 3,
+    });
+    api._test.writeActiveSession(active);
+
+    const initial = api._test.buildInitialAppState({
+      dateKey: '2026-06-09',
+      trainingIndex: 0,
+      mode: 'new',
+    });
+
+    expect(initial.resume.dateKey).toBe('2026-06-08');
+    expect(initial.state.dateKey).toBe('2026-06-08');
+    expect(initial.state.trainingIndex).toBe(3);
+    expect(initial.state.sessionId).toBe('micro_15');
+  });
+
+  it('restores edit state from a completed hobbyLog', () => {
+    const { api } = setupModule();
+    const training = {
+      hobbySubtype: 'drums_finger_control',
+      hobbyLog: {
+        moduleId: 'drums_finger_control',
+        sessionId: 'micro_15',
+        startedAt: 1000,
+        pain: true,
+        note: 'left hand felt stiff',
+        metrics: { cleanBpmSingles16: 118, tensionScore: 6, forearmPumpScore: 5, soundEvenness: 3 },
+        blockResults: [
+          { blockId: 'singles', bpm: 118, clean: true, done: true, tension: 4, sound: 4, note: 'ok' },
+        ],
+      },
+    };
+
+    const state = api._test.makeSessionStateFromLog(training, {
+      dateKey: '2026-06-09',
+      trainingIndex: 2,
+    });
+
+    expect(state.sessionId).toBe('micro_15');
+    expect(state.trainingIndex).toBe(2);
+    expect(state.metrics.cleanBpmSingles16).toBe(118);
+    expect(state.results.find((result) => result.blockId === 'singles').done).toBe(true);
+    expect(state.pain).toBe(true);
+    expect(state.note).toBe('left hand felt stiff');
   });
 
   it('summarizes progress and downshifts recommendation after high tension', () => {
@@ -132,5 +349,210 @@ describe('drums finger trainer', () => {
     expect(stats.bestSingles).toBe(120);
     expect(stats.cleanRate).toBe(50);
     expect(stats.nextSuggestion).toBe('low_tension_rebuild_23');
+  });
+
+  it('downshifts recommendation after a pain safety stop', () => {
+    const { api } = setupModule();
+    const logs = [
+      {
+        dateKey: '2026-06-10',
+        log: {
+          sessionId: 'balanced_25',
+          totalDurationMinutes: 25,
+          completedAt: 3000,
+          pain: true,
+          safetyStop: true,
+          metrics: { tensionScore: 4, cleanBpmSingles16: 130 },
+          blockResults: [{ clean: true }],
+        },
+      },
+      {
+        dateKey: '2026-06-09',
+        log: {
+          sessionId: 'balanced_25',
+          totalDurationMinutes: 25,
+          completedAt: 2000,
+          metrics: { tensionScore: 4, cleanBpmSingles16: 128 },
+          blockResults: [{ clean: true }],
+        },
+      },
+      {
+        dateKey: '2026-06-08',
+        log: {
+          sessionId: 'balanced_25',
+          totalDurationMinutes: 25,
+          completedAt: 1000,
+          metrics: { tensionScore: 4, cleanBpmSingles16: 126 },
+          blockResults: [{ clean: true }],
+        },
+      },
+    ];
+
+    expect(api.summarizeProgress(logs).nextSuggestion).toBe('low_tension_rebuild_23');
+  });
+
+  it('applies pain safety gate before finish and persists safety fields', () => {
+    const { api } = setupModule();
+    const state = api._test.makeSessionState('speed_breakthrough_30', {
+      dateKey: '2026-06-09',
+      logs: [],
+    });
+    state.running = true;
+    state.countInSec = 2;
+    state.metrics.tensionScore = 3;
+    state.metrics.forearmPumpScore = 2;
+
+    const safe = api._test.applyPainSafetyGate(state);
+    expect(safe.pain).toBe(true);
+    expect(safe.safetyStop).toBe(true);
+    expect(safe.running).toBe(false);
+    expect(safe.countInSec).toBe(0);
+    expect(safe.metrics.tensionScore).toBe(7);
+    expect(safe.metrics.forearmPumpScore).toBe(5);
+
+    const log = api._test.buildHobbyLog(safe);
+    expect(log.pain).toBe(true);
+    expect(log.safetyStop).toBe(true);
+    expect(log.safetyRestDays).toBe(2);
+  });
+
+  it('can clear resumable active session when pain safety gate fires', () => {
+    const { api } = setupModule();
+    const state = api._test.makeSessionState('balanced_25', {
+      dateKey: '2026-06-09',
+      logs: [],
+    });
+    api._test.writeActiveSession(state);
+    expect(api._test.readActiveSession().sessionId).toBe('balanced_25');
+
+    const safe = api._test.applyPainSafetyGate(state);
+    api._test.clearActiveSession();
+
+    expect(safe.safetyStop).toBe(true);
+    expect(api._test.readActiveSession()).toBeNull();
+  });
+
+  it('calculates streak with local dates and today grace day', () => {
+    const { api } = setupModule();
+    const todayLateLocal = new Date(2026, 5, 10, 23, 30, 0);
+
+    expect(api._test.calculateStreak(new Set(['2026-06-10', '2026-06-09']), todayLateLocal)).toBe(2);
+    expect(api._test.calculateStreak(new Set(['2026-06-09']), todayLateLocal)).toBe(1);
+    expect(api._test.calculateStreak(new Set(['2026-06-08']), todayLateLocal)).toBe(0);
+  });
+
+  it('keeps existing block progress when switching into low tension session', () => {
+    const { api } = setupModule();
+    const state = api._test.makeSessionState('speed_breakthrough_30', {
+      dateKey: '2026-06-09',
+    });
+    const singles = state.results.find((result) => result.blockId === 'singles');
+    singles.done = true;
+    singles.clean = true;
+    singles.bpm = 126;
+    const doubles = state.results.find((result) => result.blockId === 'doubles');
+    doubles.done = true;
+    doubles.clean = true;
+    doubles.bpm = 104;
+    const burst = state.results.find((result) => result.blockId === 'burst_8_8');
+    burst.done = true;
+    burst.bpm = 140;
+    state.activeIndex = 4;
+    state.running = true;
+
+    const next = api._test.copySessionProgressToSession(state, 'low_tension_rebuild_23');
+
+    expect(next.sessionId).toBe('low_tension_rebuild_23');
+    expect(next.running).toBe(false);
+    expect(next.activeIndex).toBe(0);
+    expect(next.results.find((result) => result.blockId === 'singles')).toBeUndefined();
+    const kept = next.results.find((result) => result.blockId === 'doubles');
+    expect(kept.done).toBe(true);
+    expect(kept.clean).toBe(true);
+    expect(kept.bpm).toBe(104);
+    expect(next.results.find((result) => result.blockId === 'burst_8_8')).toBeUndefined();
+  });
+
+  it('counts speed sessions against the weekly limit', () => {
+    const { api } = setupModule();
+    const today = api._test.localDateKey(new Date());
+    const logs = [1, 2].map((n) => ({
+      dateKey: today,
+      log: {
+        sessionId: 'speed_breakthrough_30',
+        totalDurationMinutes: 30,
+        completedAt: n,
+        metrics: { tensionScore: 4 },
+        blockResults: [],
+      },
+    }));
+
+    const stats = api.summarizeProgress(logs);
+    expect(stats.weeklySessionCounts.speed_breakthrough_30).toBe(2);
+    expect(stats.nextSuggestion).toBe('balanced_25');
+  });
+
+  it('builds subdivision-aware metronome intervals', () => {
+    const { api } = setupModule();
+    const singles = api.BLOCKS.find((block) => block.id === 'singles');
+    const freeStroke = api.BLOCKS.find((block) => block.id === 'free_stroke');
+
+    expect(api._test.getMetronomeIntervalSec(singles, 120, 0)).toBeCloseTo(0.125, 5);
+    expect(api._test.getMetronomeIntervalSec(freeStroke, 120, 0)).toBeCloseTo(0.25, 5);
+  });
+
+  it('alternates fast and slow burst intervals', () => {
+    const { api } = setupModule();
+    const burst = api.BLOCKS.find((block) => block.id === 'burst_8_8');
+
+    expect(api._test.getMetronomeIntervalSec(burst, 120, 0)).toBeCloseTo(0.0625, 5);
+    expect(api._test.getMetronomeIntervalSec(burst, 120, 7)).toBeCloseTo(0.0625, 5);
+    expect(api._test.getMetronomeIntervalSec(burst, 120, 8)).toBeCloseTo(0.125, 5);
+  });
+
+  it('marks bar, beat, accent, and subdivision notes', () => {
+    const { api } = setupModule();
+    const moeller = api.BLOCKS.find((block) => block.id === 'moeller_fingers');
+    const singles = api.BLOCKS.find((block) => block.id === 'singles');
+
+    expect(api._test.getMetronomeNoteKind(moeller, 0)).toBe('bar');
+    expect(api._test.getMetronomeNoteKind(moeller, 4)).toBe('accent');
+    expect(api._test.getMetronomeNoteKind(singles, 4)).toBe('beat');
+    expect(api._test.getMetronomeNoteKind(singles, 1)).toBe('sub');
+  });
+
+  it('drops stale metronome notes after background throttling', () => {
+    const { api } = setupModule();
+    const cursor = { nextNoteTime: 10, noteIndex: 32 };
+
+    api._test.resyncMetronomeCursor(cursor, 10.15);
+    expect(cursor.nextNoteTime).toBe(10);
+
+    api._test.resyncMetronomeCursor(cursor, 10.25);
+    expect(cursor.nextNoteTime).toBeCloseTo(10.27, 5);
+    expect(cursor.noteIndex).toBe(32);
+  });
+
+  it('applies and rolls back tempo ramp steps', () => {
+    const { api } = setupModule();
+    const singles = api.BLOCKS.find((block) => block.id === 'singles');
+    const result = api._test.makeInitialBlockResult(singles);
+    result.bpm = 120;
+    result.rampEnabled = true;
+    const eightBarsAt120 = 16;
+
+    const step = api._test.getRampStep(singles, result, eightBarsAt120);
+    expect(step.bpm).toBe(122);
+    expect(step.bars).toBe(8);
+
+    const applied = api._test.applyRampStep(result, step);
+    expect(applied.bpm).toBe(122);
+    expect(applied.rampLastBpm).toBe(120);
+    expect(applied.rampBars).toBe(8);
+
+    const rolledBack = api._test.rollbackRamp(applied);
+    expect(rolledBack.bpm).toBe(120);
+    expect(rolledBack.clean).toBe(false);
+    expect(rolledBack.rampEnabled).toBe(false);
   });
 });
