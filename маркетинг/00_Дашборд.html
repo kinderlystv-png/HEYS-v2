@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HEYS · Панель управления маркетингом</title>
+<style>
+:root { --bg:#0b1020; --card:#121931; --card2:#0f1530; --line:#1f2a4d;
+  --txt:#e8ecf8; --dim:#8b96b8; --acc:#4f8cff; --ok:#2dd4a7; --warn:#f5b14c;
+  --red:#f0647c; }
+* { box-sizing:border-box; margin:0; }
+body { background:radial-gradient(1100px 500px at 80% -10%,#16224a 0%,var(--bg) 55%);
+  color:var(--txt); font:13.5px/1.45 -apple-system,'SF Pro Text',Segoe UI,Roboto,sans-serif;
+  padding:18px clamp(12px,3vw,36px) 40px; }
+h1 { font-size:clamp(17px,2.2vw,23px); letter-spacing:-.4px; }
+h2 { font-size:11px; text-transform:uppercase; letter-spacing:.12em;
+  color:var(--dim); margin:0 0 8px; }
+.header { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center;
+  justify-content:space-between; margin-bottom:8px; }
+.badge { background:linear-gradient(135deg,#4f8cff33,#2dd4a733);
+  border:1px solid #4f8cff55; padding:4px 12px; border-radius:999px; font-size:12px; }
+.sub { color:var(--dim); font-size:12.5px; max-width:1000px; margin-bottom:12px; }
+.tabs { display:flex; gap:6px; margin:4px 0 16px; border-bottom:1px solid var(--line); }
+.tab { background:none; border:none; color:var(--dim); font:600 13px inherit;
+  padding:8px 14px; cursor:pointer; border-bottom:2px solid transparent; }
+.tab.active { color:var(--txt); border-bottom-color:var(--acc); }
+.pane { display:none; } .pane.active { display:block; }
+.grid { display:grid; gap:12px; }
+.cards3 { grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }
+.card { background:linear-gradient(180deg,var(--card),var(--card2));
+  border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+.big { font-size:clamp(24px,3vw,34px); font-weight:700; letter-spacing:-.5px; }
+.big.ok { color:var(--ok); } .big.acc { color:var(--acc); }
+.label { color:var(--dim); font-size:11.5px; }
+.sm { font-size:12.5px; }
+section { margin-top:18px; }
+table { width:100%; border-collapse:collapse; font-size:12.5px; }
+th { text-align:left; color:var(--dim); font-weight:500; font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.07em; padding:6px 8px;
+  border-bottom:1px solid var(--line); }
+td { padding:6px 8px; border-bottom:1px solid #16203f; vertical-align:top; }
+td.num { white-space:nowrap; font-weight:600; }
+td.hl { color:var(--ok); font-weight:600; }
+.dim { color:var(--dim); }
+.chip { padding:2px 9px; border-radius:999px; font-size:11px; white-space:nowrap; }
+.chip.ok { background:#2dd4a722; color:var(--ok); border:1px solid #2dd4a744; }
+.chip.mid { background:#f5b14c22; color:var(--warn); border:1px solid #f5b14c44; }
+.chip.wait { background:#8b96b81e; color:var(--dim); border:1px solid #8b96b833; }
+.tariffs { grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }
+.tariff { background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:10px 12px; }
+.tariff.featured { border-color:var(--acc); box-shadow:0 0 0 1px var(--acc); }
+.tariff.archive { opacity:.5; }
+.t-name { font-weight:700; font-size:13px; }
+.t-price { font-size:19px; font-weight:700; margin-bottom:6px; color:var(--acc); }
+.tariff.featured .t-price { color:var(--ok); }
+.t-row { display:flex; justify-content:space-between; gap:8px; font-size:11.5px;
+  padding:2.5px 0; border-top:1px dashed #1f2a4d; }
+.t-row span { color:var(--dim); } .t-row b { font-weight:500; text-align:right; }
+.stage { display:grid; grid-template-columns:minmax(150px,1fr) 1.6fr; gap:10px;
+  align-items:center; padding:6px 0; border-bottom:1px solid #16203f; font-size:12.5px; }
+.s-head { display:flex; flex-direction:column; }
+.s-bar { display:flex; align-items:center; gap:8px; }
+.bar { flex:1; height:6px; background:#1a2447; border-radius:99px; overflow:hidden; }
+.bar-fill { height:100%; background:linear-gradient(90deg,var(--acc),var(--ok)); }
+.bar-num { font-weight:700; font-size:12px; min-width:34px; }
+.s-count { font-size:11px; min-width:36px; text-align:right; }
+.kpis { grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }
+.kpi { background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:9px 11px; }
+.kpi.k-wait .k-val { color:var(--dim); }
+.k-name { font-size:11px; color:var(--dim); min-height:26px; }
+.k-val { font-size:19px; font-weight:700; }
+.k-goal { font-size:11px; color:var(--dim); }
+.prios { display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); }
+.prio { display:flex; gap:10px; background:var(--card); border:1px solid var(--line);
+  border-left:3px solid var(--red); border-radius:10px; padding:9px 12px; font-size:12.5px; }
+.prio.top5 { border-left-color:var(--acc); }
+.p-num { font-size:16px; font-weight:800; color:var(--red); line-height:1.3; }
+.p-num.acc2 { color:var(--acc); }
+.cols2 { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
+ul { padding-left:18px; } li { margin-bottom:4px; font-size:12.5px; }
+footer { margin-top:26px; color:var(--dim); font-size:11px;
+  border-top:1px solid var(--line); padding-top:10px; }
+</style></head><body>
+
+<div class="header">
+  <h1>HEYS · Панель управления маркетингом</h1>
+  <div class="tabs">
+    <button class="tab active" data-pane="overview">Обзор</button>
+    <button class="tab" data-pane="comp">Конкуренты</button>
+    <button class="tab" data-pane="tg">Telegram</button>
+  </div>
+  <span class="badge">Фаза 0 · Pro-first · план: 47%</span>
+</div>
+
+<div class="pane active" id="overview">
+<p class="sub">Приложение + живой куратор + протоколы. Продаём заботу и анти-срыв — «вас ведут, а не оставляют с цифрами», а не диету. Между DIY-трекерами (нет человека, 0–500 ₽) и нутрициологом 1:1 (25 000+ ₽, нет приложения): ежедневный человек + приложение по доступной цене.</p>
+<div class="grid cards3">
+  <div class="card"><div class="label">LTV:CAC реальный (триал = время куратора)</div>
+    <div class="big ok">3,99×</div><div class="label">цель ≥ 3,0×</div></div>
+  <div class="card"><div class="label">LTV:CAC модельный</div>
+    <div class="big acc">5,63×</div><div class="label">микс Self 20 / Pro 65 / Pro+ 15</div></div>
+  <div class="card"><div class="label">Готовность плана (22)</div>
+    <div class="big">47%</div><div class="label">14.5 из 31 задач</div></div>
+</div>
+<p class="label" style="margin-top:6px">Pro-first микс (Self 20/Pro 65/Pro+ 15): реальный CAC ~10 575 ₽ (триал = время куратора), базовый ~7 500 ₽. Реальный LTV:CAC 3,99× — выше цели. Кэш Ф0 при 15 клиентах ~111 000 ₽/мес. Пересчёт 2026-06-10 (05_Финмодель).</p>
+
+<section><h2>Приоритеты сейчас</h2><div class="prios"><div class="prio"><div class="p-num">1</div><div>Включение продаж Self: деплой heys-api-payments (лендинг 490 vs ЮKassa 2 990!), re-consent оферты v1.6, Self-гейтинг функций (~50%). До этого закреп П0 не публиковать.</div></div><div class="prio"><div class="p-num">2</div><div>Бот «Твой тип срыва» (17) + контур измеримости (18): без них гейты roadmap 25 слепы.</div></div><div class="prio"><div class="p-num">3</div><div>Юрист: договор НПД на результат (22 п.1.3); плейбук 23 вычитать вместе с договором.</div></div><div class="prio"><div class="p-num">4</div><div>ERID — назначить ответственного (22 п.1.4) · запустить поиск медэксперта по RFP 27.</div></div></div></section>
+
+<section><h2>Гейты Ф0 → Ф1 (roadmap 25)</h2>
+<div class="card" style="padding:4px 8px"><table>
+<tr><th>Гейт</th><th>Цель</th><th>🔴 Триггер</th><th>Действие при провале</th><th>Статус</th></tr>
+<tr><td>Объём: оплат за фазу</td><td class="num">15</td><td class="dim">темп набора не выводит на 15 к концу Ф0</td><td class="dim">пересмотреть оффер/каналы; не растягивать Ф0 бесконечно</td><td><span class="chip wait">ожидает</span></td></tr><tr><td>Триал → оплата</td><td class="num">≥ 30%</td><td class="dim">&lt; 30%</td><td class="dim">чинить онбординг 1-й недели и работу куратора; **не масштабировать трафик**</td><td><span class="chip wait">ожидает</span></td></tr><tr><td>Лид → триал</td><td class="num">≥ 40%</td><td class="dim">&lt; 40%</td><td class="dim">сузить семантику до горячего интента; усилить лид-магнит/оффер</td><td><span class="chip wait">ожидает</span></td></tr><tr><td>Отток / мес</td><td class="num">≤ 9%</td><td class="dim">&gt; 9%</td><td class="dim">win-back, момент ценности 1-й недели, разбор причин отмен</td><td><span class="chip wait">ожидает</span></td></tr><tr><td>SLA-нарушения</td><td class="num">≤ 5%</td><td class="dim">&gt; 5%</td><td class="dim">снизить загрузку; список ожидания вместо переполнения</td><td><span class="chip wait">ожидает</span></td></tr><tr><td>Отзывы / кейсы</td><td class="num">5+</td><td class="dim">к концу Ф0 &lt; 5</td><td class="dim">системный сбор отзывов; пилотные кейсы (с согласия, без цифр веса)</td><td><span class="chip wait">ожидает</span></td></tr><tr><td>Плейбук куратора</td><td class="num">готов «передать незнакомцу»</td><td class="dim">—</td><td class="dim">дорабатывать из реального опыта ведения</td><td><span class="chip mid">в работе</span></td></tr><tr><td>Юр-структура НПД</td><td class="num">договор на результат готов</td><td class="dim">найм внешнего куратора без договора</td><td class="dim">юрист (`22` п.1.3): договор на результат до первого внешнего куратора</td><td><span class="chip wait">ожидает</span></td></tr></table></div></section>
+
+<div class="cols2" style="margin-top:18px">
+<div><h2>Этапы плана 22</h2><div class="card"><div class="stage"><div class="s-head"><b>Этап 0</b><span class="dim">рассинхроны и лендинг (блокер запуска, 1–2 дня)</span></div><div class="s-bar"><div class="bar"><div class="bar-fill" style="width:100%"></div></div><span class="bar-num">100%</span><span class="dim s-count">5/5</span></div></div><div class="stage"><div class="s-head"><b>Этап 1</b><span class="dim">запуск-критичное Ф0 (1–2 недели)</span></div><div class="s-bar"><div class="bar"><div class="bar-fill" style="width:33%"></div></div><span class="bar-num">33%</span><span class="dim s-count">2/6</span></div></div><div class="stage"><div class="s-head"><b>Этап 2</b><span class="dim">корпус как система</span></div><div class="s-bar"><div class="bar"><div class="bar-fill" style="width:100%"></div></div><span class="bar-num">100%</span><span class="dim s-count">5/5</span></div></div><div class="stage"><div class="s-head"><b>Этап 3</b><span class="dim">связка маркетинг ↔ продукт</span></div><div class="s-bar"><div class="bar"><div class="bar-fill" style="width:0%"></div></div><span class="bar-num">0%</span><span class="dim s-count">0/4</span></div></div><div class="stage"><div class="s-head"><b>Этап 4</b><span class="dim">стратегические развилки (назначить владельца и срок)</span></div><div class="s-bar"><div class="bar"><div class="bar-fill" style="width:21%"></div></div><span class="bar-num">21%</span><span class="dim s-count">1.5/7</span></div></div><div class="stage"><div class="s-head"><b>Этап 5</b><span class="dim">автоматизация (`маркетинг/tools/`)</span></div><div class="s-bar"><div class="bar"><div class="bar-fill" style="width:25%"></div></div><span class="bar-num">25%</span><span class="dim s-count">1/4</span></div></div></div></div>
+<div><h2>Тарифная сетка</h2><div class="grid tariffs"><div class="tariff"><div class="t-name">Self</div><div class="t-price">490 ₽</div><div class="t-row"><span>Куратор</span><b>—</b></div><div class="t-row"><span>AI</span><b>—</b></div><div class="t-row"><span>Удержание</span><b>продление вручную</b></div></div><div class="tariff featured"><div class="t-name">Pro</div><div class="t-price">7 990 ₽*</div><div class="t-row"><span>Куратор</span><b>ежедневно</b></div><div class="t-row"><span>AI</span><b>нет (ввод руками — фича)</b></div><div class="t-row"><span>Удержание</span><b>продление ведёт куратор</b></div></div><div class="tariff"><div class="t-name">Pro+</div><div class="t-price">14 990 ₽</div><div class="t-row"><span>Куратор</span><b>ежедн. +</b></div><div class="t-row"><span>AI</span><b>нет (ввод руками — фича)</b></div><div class="t-row"><span>Удержание</span><b>продление ведёт куратор</b></div></div><div class="tariff archive"><div class="t-name">Solo / Lite</div><div class="t-price">архив</div><div class="t-row"><span>Куратор</span><b>—</b></div><div class="t-row"><span>AI</span><b>—</b></div><div class="t-row"><span>Удержание</span><b>R&amp;D / вопрос после Ф0</b></div></div></div>
+<p class="label" style="margin-top:6px">*Ф0 (основатель), первые 8–12 фиксируются; в Ф1 ~9 900–10 900 ₽. Free — вход (квиз/демо/заявка), не тариф. Удержание: Self — вручную; Pro/Pro+ — продление ведёт куратор.</p></div>
+</div>
+
+<section><h2>KPI-трекер (факт — с первого трафика)</h2>
+<div class="grid kpis"><div class="kpi k-wait"><div class="k-name">Активных клиентов</div><div class="k-val">—</div><div class="k-goal">цель ≥ 15</div></div><div class="kpi k-wait"><div class="k-name">Свободная ёмкость кураторов</div><div class="k-val">—</div><div class="k-goal">цель  </div></div><div class="kpi k-wait"><div class="k-name">Новых триалов / нед</div><div class="k-val">—</div><div class="k-goal">цель  </div></div><div class="kpi k-wait"><div class="k-name">Лид → триал</div><div class="k-val">—</div><div class="k-goal">цель ≥ 40%</div></div><div class="kpi k-wait"><div class="k-name">Триал → оплата</div><div class="k-val">—</div><div class="k-goal">цель ≥ 30%</div></div><div class="kpi k-wait"><div class="k-name">CPL, ₽</div><div class="k-val">—</div><div class="k-goal">цель ≤ 400</div></div><div class="kpi k-wait"><div class="k-name">Реальный CAC, ₽</div><div class="k-val">—</div><div class="k-goal">цель ≤ 10500</div></div><div class="kpi k-wait"><div class="k-name">LTV : CAC</div><div class="k-val">—</div><div class="k-goal">цель ≥ 3</div></div><div class="kpi k-wait"><div class="k-name">Отток / мес</div><div class="k-val">—</div><div class="k-goal">цель ≤ 9%</div></div><div class="kpi k-wait"><div class="k-name">SLA-нарушения</div><div class="k-val">—</div><div class="k-goal">цель ≤ 5%</div></div><div class="kpi k-wait"><div class="k-name">ERID-покрытие креативов</div><div class="k-val">—</div><div class="k-goal">цель ≥ 1</div></div><div class="kpi k-wait"><div class="k-name">Выручка / мес, ₽</div><div class="k-val">—</div><div class="k-goal">цель  </div></div><div class="kpi k-wait"><div class="k-name">✅ в норме · ⚠ ниже цели · — нет данных / нет числовой цели. Меняй цели под текущую фазу (Ф0/Ф1).</div><div class="k-val">—</div><div class="k-goal">цель  </div></div></div></section>
+
+<section class="cols2">
+<div class="card"><h2>Каналы</h2><p class="sm">Старт: Яндекс.Директ (горячий интент «как не срываться») + свой Telegram-контент. Далее: Telegram Ads/посевы, VK, РСЯ-ретаргет. Instagram-реклама — НЕТ.</p></div>
+<div class="card"><h2>Правило роста</h2><p class="sm">Объём маркетинга = ёмкость кураторов, а не размер бюджета. Найм опережает закупку трафика.</p></div>
+</section>
+</div>
+
+<div class="pane" id="comp">
+<p class="sub"><b>CalZen — главный референс:</b> AI-счётчик калорий по фото (3 сек, без весов). ~$10/мес фрименим. 3 млн+ польз., 4.8★. Натив iOS/Android. Сила: скорость ввода + доказательная база. Слабость: НЕТ живого человека (их же стат: 80% бросают трекер в 1-ю неделю).</p>
+<section><h2>Сводная таблица сегментов</h2>
+<div class="card" style="padding:4px 8px"><table><tr><th>Критерий</th><th>HEYS</th><th>CalZen</th><th>Трекеры</th><th>Марафоны</th><th>Нутрициолог 1:1</th></tr><tr><td class="dim">Суть</td><td class="hl">Прил.+куратор</td><td>AI-трекер фото</td><td>Ручной КБЖУ</td><td>Курс-поток</td><td>Консультации</td></tr><tr><td class="dim">Цена/мес</td><td class="hl">Self 490 / Pro 7 990* / Pro+ 14 990 ₽</td><td>~900 ₽</td><td>0–500 ₽</td><td>1,5–7 тыс/поток</td><td>25–50 тыс+</td></tr><tr><td class="dim">Ввод еды</td><td class="hl">Фото→куратор вручную</td><td>Фото→AI 3 сек</td><td>Вручную</td><td>Меню в чате</td><td>Вручную</td></tr><tr><td class="dim">Живой человек</td><td class="hl">Да, ежедневно</td><td>Нет</td><td>Нет</td><td>На поток</td><td>Эпизодически</td></tr><tr><td class="dim">Анти-срыв</td><td class="hl">Да</td><td>Нет</td><td>Нет</td><td>Слабо</td><td>Нет</td></tr><tr><td class="dim">Платформа</td><td class="hl">PWA</td><td>iOS/Android</td><td>Натив</td><td>Telegram</td><td>—</td></tr><tr><td class="dim">Пруф / масштаб</td><td class="hl">Старт</td><td>3М, 4.8★</td><td>Большой</td><td>Отзывы</td><td>Сарафан</td></tr><tr><td class="dim">Данные в РФ (152-ФЗ)</td><td class="hl">Да</td><td>Нет</td><td>Нет</td><td>Разное</td><td>Да</td></tr><tr><td class="dim">Главная сила</td><td class="hl">Человек+анти-срыв</td><td>Скорость+пруф</td><td>Бесплатно</td><td>Дёшево</td><td>Глубина 1:1</td></tr><tr><td class="dim">Главная слабость</td><td class="hl">Ввод вручную</td><td>Нет человека</td><td>Бросают</td><td>Отток</td><td>Дорого</td></tr></table></div></section>
+<section><h2>Лендинги: CalZen vs наш — что перенять</h2>
+<div class="card" style="padding:4px 8px"><table><tr><th>Блок</th><th>CalZen</th><th>Наш</th><th>Что перенять</th></tr><tr><td class="dim">Hero / посыл</td><td>Outcome + боль угадывания</td><td>Эмпатия, «без насилия»</td><td class="hl">Усилить измеримость обещания</td></tr><tr><td class="dim">Пруф над сгибом</td><td>4.8★ / 3 млн / бэйджи — сразу</td><td>Отзывы ниже по странице</td><td class="hl">Поднять пруф выше</td></tr><tr><td class="dim">Как работает</td><td>3 шага + тайминги + стат «80% бросают»</td><td>3 шага без цифр</td><td class="hl">Тайминги + перевернуть стат в свою пользу</td></tr><tr><td class="dim">Демо продукта</td><td>Богатые мокапы UI</td><td>Скромно, «пара экранов»</td><td class="hl">Показать «фото→куратор внёс»</td></tr><tr><td class="dim">Доверие / цитаты</td><td>Научные ссылки, «90%»</td><td>«Не медуслуга», 152-ФЗ</td><td class="hl">+ медэксперт и методология (CRS/41 паттерн)</td></tr><tr><td class="dim">CTA / трение</td><td>Скачать, 3 дня, мгновенно</td><td>7 дней, без карты, по записи</td><td class="hl">Оставить (премиум); risk-reversal к тарифам</td></tr><tr><td class="dim">SEO-актив</td><td>Калькуляторы TDEE/BMI</td><td>Нет</td><td class="hl">Сделать калькуляторы</td></tr><tr><td class="dim">Платформа-пруф</td><td>Бэйджи сторов + рейтинги</td><td>PWA — нет</td><td class="hl">RuStore / нативное приложение</td></tr></table></div></section>
+<section><h2>Топ-5 перенять в продукт</h2><div class="prio top5"><div class="p-num acc2">1</div><div>AI авто-распознавание = Solo-тариф — АРХИВ/R&amp;D после Ф0 (Pro-first, 19/21). В кураторском тарифе AI — «вторая пара глаз» (качество, не скорость); ввод остаётся ручным как фича. [R&amp;D после Ф0]</div></div><div class="prio top5"><div class="p-num acc2">2</div><div>Нативное приложение / RuStore — сторовые пруф-сигналы и доверие (закрыть PWA-разрыв). [NEXT]</div></div><div class="prio top5"><div class="p-num acc2">3</div><div>Инфраструктура доказательств — счётчики, рейтинги, кейсы процесса, научные ссылки. [NEXT]</div></div><div class="prio top5"><div class="p-num acc2">4</div><div>SEO-калькуляторы (TDEE / калорийность / дефицит / BMI) — бесплатный органический трафик. [NEXT]</div></div><div class="prio top5"><div class="p-num acc2">5</div><div>Лендинг: поднять пруф выше + квантифицировать усилие + перевернуть стат «бросают без человека». [NOW]</div></div></section>
+<section class="card"><h2>Чего не копировать</h2><p class="sm">Масс-маркет тон, эмодзи-стиль, обещания «−N кг», чистый self-serve без человека. Наш ров — живой человек; AI-ввод берём, чтобы куратор был эффективнее, а не чтобы его убрать.</p></section>
+<p class="label" style="margin-top:10px">Детали: 12 (CalZen/лендинги) · 06 (позиционирование) · 16 (паттерны) · навигатор — 26.</p>
+</div>
+
+<div class="pane" id="tg">
+<p class="sub">Главный канал РФ (~40% инфлюенс-рынка). Связка: канал (прогрев) → бот-магнит → заявка на неделю → куратор. 35–40% каналов накручены → проверять TGStat.</p>
+<div class="cols2">
+<div><h2>Рубрики (банк тем — 14, батч №1 — 24)</h2>
+<div class="card" style="padding:4px 8px"><table><tr><th>Рубрика</th><th>Цель</th><th>Частота</th></tr><tr><td>Механика срывов</td><td class="dim">Захват боли (верх)</td><td class="num">1/нед</td></tr><tr><td>Анти-марафон</td><td class="dim">Отстройка</td><td class="num">1–2/мес</td></tr><tr><td>Кухня сопровождения</td><td class="dim">Ценность куратора</td><td class="num">1/нед</td></tr><tr><td>Кейсы (процесс)</td><td class="dim">Доверие (низ)</td><td class="num">2–3/мес</td></tr><tr><td>Прозрачность</td><td class="dim">Честный SLA, «не медуслуга»</td><td class="num">1–2/мес</td></tr><tr><td>Польза / режим</td><td class="dim">Образование</td><td class="num">1/нед</td></tr></table></div>
+<section><h2>Продвижение</h2><div class="card"><ul><li>Органика: закреп → бот-магнит, взаимопиар с непрямыми (тренеры/ЗОЖ/выгорание), UGC и отзывы.</li><li>Посевы: только TGStat-проверка — ER ≥ 1,5–2%, доля ботов &lt; 10%; тест с промокодом/UTM.</li><li>Telegram Ads: через eLama (от 0 €, комиссия 15%); CPM €4–6 — считать CPL; вести на канал/магнит, не в оплату.</li></ul></div></section></div>
+<div class="grid" style="align-content:start"><div class="card"><h2>Ритм ведения</h2><p class="sm">3–4 поста/нед + 1 лонгрид. Батч раз в неделю (пишешь наперёд) → отложенный постинг. Время: 8–10 и 19–22. Первые 30–60 мин после поста — отвечать в комментариях.</p></div><div class="card"><h2>Воронка</h2><p class="sm">Холодный (Ads/посев) и тёплый (контент) → бот-магнит (тест/чек-лист) → запись на неделю (по ёмкости куратора!) → куратор. Все ссылки — с UTM/промокодом (аналитика урезана под 152-ФЗ).</p></div><div class="card"><h2>Метрики</h2><p class="sm">ER ≥ 1,5–2%   ·   доля ботов в доноре &lt; 10%   ·   CPL под целевым   ·   лид→неделя ≥ 40%   ·   неделя→оплата ≥ 30%</p></div><div class="card"><h2>Легал (ERID)</h2><p class="sm">Свой контент в своём канале — ERID не нужен. Посевы/Ads — ERID + отчёт в ОРД до 30 числа + 3% рекламный сбор. Формулировки по COPY_VOICE.</p></div><div class="card"><h2>Чего не делать</h2><p class="sm">Накрученные каналы; холодный трафик сразу в оплату; спам в чаты без разрешения; «−N кг» / «24/7» / «психолог».</p></div></div>
+</div>
+</div>
+
+<footer>Сгенерировано 2026-06-10 · данные: 00_Сводная_панель.xlsx · 22_План · 25_Roadmap ·
+обновить: <code>python3 маркетинг/tools/build_dashboard.py</code></footer>
+
+<script>
+document.querySelectorAll('.tab').forEach(function (t) {
+  t.addEventListener('click', function () {
+    document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('active'); });
+    document.querySelectorAll('.pane').forEach(function (x) { x.classList.remove('active'); });
+    t.classList.add('active');
+    document.getElementById(t.dataset.pane).classList.add('active');
+  });
+});
+</script>
+</body></html>

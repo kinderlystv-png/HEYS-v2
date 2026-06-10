@@ -1,0 +1,344 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Генератор HTML-дашборда маркетинга HEYS (план 22, п.5.1).
+
+Читает: 00_Сводная_панель.xlsx (Сводка, Конкуренты, Telegram, KPI-трекер),
+22_План (статусы), 25_Roadmap (гейты). Пишет: 00_Дашборд.html
+(самодостаточный, офлайн; вкладки: Обзор / Конкуренты / Telegram).
+
+Запуск:  python3 маркетинг/tools/build_dashboard.py
+"""
+import datetime
+import html
+import re
+from pathlib import Path
+
+import openpyxl
+
+ROOT = Path(__file__).resolve().parent.parent  # маркетинг/
+
+
+def esc(v):
+    return html.escape(str(v)) if v is not None else ''
+
+
+wb = openpyxl.load_workbook(ROOT / '00_Сводная_панель.xlsx', data_only=True)
+
+# ---------- Сводка ----------
+sv = wb['Сводка']
+tariffs = [[sv.cell(row=r, column=c).value for c in range(2, 7)]
+           for r in range(12, 16) if sv.cell(row=r, column=2).value]
+tariff_note = sv['B17'].value or ''
+eco = {'base': sv['B21'].value, 'real': sv['D21'].value, 'goal': sv['F21'].value,
+       'note': sv['B22'].value or ''}
+priorities = [sv.cell(row=r, column=2).value for r in range(25, 29)
+              if sv.cell(row=r, column=2).value]
+sut, pos = sv['B5'].value or '', sv['B8'].value or ''
+channels, rule = sv['B31'].value or '', sv['B40'].value or ''
+
+kpi = []
+kws = wb['KPI-трекер']
+for r in range(4, kws.max_row + 1):
+    if kws.cell(row=r, column=1).value:
+        kpi.append({'name': kws.cell(row=r, column=1).value,
+                    'goal': kws.cell(row=r, column=2).value,
+                    'dir': kws.cell(row=r, column=3).value,
+                    'fact': kws.cell(row=r, column=4).value})
+
+# ---------- Конкуренты ----------
+cw = wb['Конкуренты']
+calzen_short = cw['A5'].value or ''
+comp_head = [cw.cell(row=9, column=c).value for c in range(1, 7)]
+comp_rows = [[cw.cell(row=r, column=c).value for c in range(1, 7)]
+             for r in range(10, 20) if cw.cell(row=r, column=1).value]
+land_rows = [[cw.cell(row=r, column=1).value, cw.cell(row=r, column=2).value,
+              cw.cell(row=r, column=4).value, cw.cell(row=r, column=5).value]
+             for r in range(23, 31) if cw.cell(row=r, column=1).value]
+top5 = [cw.cell(row=r, column=1).value for r in range(33, 42)
+        if cw.cell(row=r, column=1).value]
+no_copy = cw['A44'].value or ''
+
+# ---------- Telegram ----------
+tg = wb['Telegram']
+tg_role = tg['B5'].value or ''
+tg_rubrics = [[tg.cell(row=r, column=2).value, tg.cell(row=r, column=3).value,
+               tg.cell(row=r, column=5).value]
+              for r in range(9, 15) if tg.cell(row=r, column=2).value]
+tg_blocks = [('Ритм ведения', tg['B17'].value), ('Воронка', tg['B25'].value),
+             ('Метрики', tg['B28'].value), ('Легал (ERID)', tg['B31'].value),
+             ('Чего не делать', tg['B34'].value)]
+tg_promo = [tg['B20'].value, tg['B21'].value, tg['B22'].value]
+
+# ---------- статусы этапов из 22 ----------
+plan_text = (ROOT / '22_План_реализации_маркетинга.md').read_text(encoding='utf-8')
+stages = []
+for m in re.finditer(r'^## (Этап \d[^\n]*)\n(.*?)(?=^## |\Z)', plan_text, re.M | re.S):
+    rows = re.findall(r'^\|\s*\d+\.\d+\s*\|.*\|\s*(✅|⬜|🟡)\s*\|', m.group(2), re.M)
+    if rows:
+        t = m.group(1)
+        stages.append({'title': t.split('—')[0].strip(),
+                       'desc': t.split('—')[1].strip() if '—' in t else '',
+                       'done': rows.count('✅') + 0.5 * rows.count('🟡'),
+                       'total': len(rows)})
+
+# ---------- гейты из 25 ----------
+gates = []
+lines = (ROOT / '25_Roadmap_Ф0_Ф1.md').read_text(encoding='utf-8').splitlines()
+start = next((i for i, ln in enumerate(lines) if 'Гейт / метрика' in ln), None)
+if start is not None:
+    for line in lines[start + 1:]:
+        if not line.strip().startswith('|'):
+            break
+        cells = [c.strip() for c in line.strip().strip('|').split('|')]
+        if len(cells) >= 7 and not set(cells[0]) <= {'-', ' '}:
+            gates.append({'name': re.sub(r'\*\*', '', cells[0]), 'goal': cells[1],
+                          'trigger': cells[2], 'action': cells[3],
+                          'status': cells[6]})
+
+
+def chip(s):
+    if '✅' in s:
+        return '<span class="chip ok">готово</span>'
+    if '🟡' in s:
+        return '<span class="chip mid">в работе</span>'
+    return '<span class="chip wait">ожидает</span>'
+
+
+today = datetime.date.today().isoformat()
+total_done = sum(s['done'] for s in stages)
+total_all = sum(s['total'] for s in stages)
+plan_pct = round(total_done / total_all * 100) if total_all else 0
+
+# ---------- фрагменты: Обзор ----------
+tariff_cards = ''
+for t in tariffs:
+    feat = ' featured' if t[0] == 'Pro' else (' archive' if 'Lite' in str(t[0]) else '')
+    tariff_cards += (f'<div class="tariff{feat}"><div class="t-name">{esc(t[0])}</div>'
+                     f'<div class="t-price">{esc(t[1])}</div>'
+                     f'<div class="t-row"><span>Куратор</span><b>{esc(t[2])}</b></div>'
+                     f'<div class="t-row"><span>AI</span><b>{esc(t[3])}</b></div>'
+                     f'<div class="t-row"><span>Удержание</span><b>{esc(t[4])}</b></div></div>')
+
+gate_rows = ''.join(
+    f'<tr><td>{esc(g["name"])}</td><td class="num">{esc(g["goal"])}</td>'
+    f'<td class="dim">{esc(g["trigger"])}</td><td class="dim">{esc(g["action"])}</td>'
+    f'<td>{chip(g["status"])}</td></tr>' for g in gates)
+
+stage_rows = ''
+for s in stages:
+    pct = round(s['done'] / s['total'] * 100)
+    stage_rows += (f'<div class="stage"><div class="s-head"><b>{esc(s["title"])}</b>'
+                   f'<span class="dim">{esc(s["desc"])}</span></div>'
+                   f'<div class="s-bar"><div class="bar"><div class="bar-fill" '
+                   f'style="width:{pct}%"></div></div>'
+                   f'<span class="bar-num">{pct}%</span>'
+                   f'<span class="dim s-count">{s["done"]:g}/{s["total"]}</span></div></div>')
+
+kpi_rows = ''
+for k in kpi:
+    goal = k['goal']
+    if isinstance(goal, float) and goal <= 1:
+        goal = f'{goal:.0%}'
+    fact = k['fact'] if k['fact'] not in (None, '') else '—'
+    kpi_rows += (f'<div class="kpi{" k-wait" if fact == "—" else ""}'
+                 f'"><div class="k-name">{esc(k["name"])}</div>'
+                 f'<div class="k-val">{esc(fact)}</div>'
+                 f'<div class="k-goal">цель {esc(k["dir"] or "")} {esc(goal)}</div></div>')
+
+prio_rows = ''.join(
+    f'<div class="prio"><div class="p-num">{i}</div>'
+    f'<div>{esc(re.sub(r"^[0-9]+[.][ ]*", "", str(p)))}</div></div>'
+    for i, p in enumerate(priorities, 1))
+
+# ---------- фрагменты: Конкуренты ----------
+comp_table = '<tr>' + ''.join(f'<th>{esc(h)}</th>' for h in comp_head) + '</tr>'
+for r in comp_rows:
+    comp_table += ('<tr><td class="dim">' + esc(r[0]) + '</td><td class="hl">' +
+                   esc(r[1]) + '</td>' +
+                   ''.join(f'<td>{esc(x)}</td>' for x in r[2:]) + '</tr>')
+
+land_table = ('<tr><th>Блок</th><th>CalZen</th><th>Наш</th><th>Что перенять</th></tr>' +
+              ''.join('<tr><td class="dim">' + esc(r[0]) + '</td><td>' + esc(r[1]) +
+                      '</td><td>' + esc(r[2]) + '</td><td class="hl">' + esc(r[3]) +
+                      '</td></tr>' for r in land_rows))
+
+top5_rows = ''.join(f'<div class="prio top5"><div class="p-num acc2">{i}</div>'
+                    f'<div>{esc(re.sub(r"^[0-9]+[.][ ]*", "", str(p)))}</div></div>'
+                    for i, p in enumerate(top5, 1))
+
+# ---------- фрагменты: Telegram ----------
+tg_rubric_rows = ('<tr><th>Рубрика</th><th>Цель</th><th>Частота</th></tr>' +
+                  ''.join(f'<tr><td>{esc(r[0])}</td><td class="dim">{esc(r[1])}</td>'
+                          f'<td class="num">{esc(r[2])}</td></tr>' for r in tg_rubrics))
+tg_block_cards = ''.join(f'<div class="card"><h2>{esc(t)}</h2><p class="sm">{esc(b)}</p></div>'
+                         for t, b in tg_blocks if b)
+tg_promo_list = ''.join(f'<li>{esc(p)}</li>' for p in tg_promo if p)
+
+html_out = f'''<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HEYS · Панель управления маркетингом</title>
+<style>
+:root {{ --bg:#0b1020; --card:#121931; --card2:#0f1530; --line:#1f2a4d;
+  --txt:#e8ecf8; --dim:#8b96b8; --acc:#4f8cff; --ok:#2dd4a7; --warn:#f5b14c;
+  --red:#f0647c; }}
+* {{ box-sizing:border-box; margin:0; }}
+body {{ background:radial-gradient(1100px 500px at 80% -10%,#16224a 0%,var(--bg) 55%);
+  color:var(--txt); font:13.5px/1.45 -apple-system,'SF Pro Text',Segoe UI,Roboto,sans-serif;
+  padding:18px clamp(12px,3vw,36px) 40px; }}
+h1 {{ font-size:clamp(17px,2.2vw,23px); letter-spacing:-.4px; }}
+h2 {{ font-size:11px; text-transform:uppercase; letter-spacing:.12em;
+  color:var(--dim); margin:0 0 8px; }}
+.header {{ display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center;
+  justify-content:space-between; margin-bottom:8px; }}
+.badge {{ background:linear-gradient(135deg,#4f8cff33,#2dd4a733);
+  border:1px solid #4f8cff55; padding:4px 12px; border-radius:999px; font-size:12px; }}
+.sub {{ color:var(--dim); font-size:12.5px; max-width:1000px; margin-bottom:12px; }}
+.tabs {{ display:flex; gap:6px; margin:4px 0 16px; border-bottom:1px solid var(--line); }}
+.tab {{ background:none; border:none; color:var(--dim); font:600 13px inherit;
+  padding:8px 14px; cursor:pointer; border-bottom:2px solid transparent; }}
+.tab.active {{ color:var(--txt); border-bottom-color:var(--acc); }}
+.pane {{ display:none; }} .pane.active {{ display:block; }}
+.grid {{ display:grid; gap:12px; }}
+.cards3 {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }}
+.card {{ background:linear-gradient(180deg,var(--card),var(--card2));
+  border:1px solid var(--line); border-radius:12px; padding:12px 14px; }}
+.big {{ font-size:clamp(24px,3vw,34px); font-weight:700; letter-spacing:-.5px; }}
+.big.ok {{ color:var(--ok); }} .big.acc {{ color:var(--acc); }}
+.label {{ color:var(--dim); font-size:11.5px; }}
+.sm {{ font-size:12.5px; }}
+section {{ margin-top:18px; }}
+table {{ width:100%; border-collapse:collapse; font-size:12.5px; }}
+th {{ text-align:left; color:var(--dim); font-weight:500; font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.07em; padding:6px 8px;
+  border-bottom:1px solid var(--line); }}
+td {{ padding:6px 8px; border-bottom:1px solid #16203f; vertical-align:top; }}
+td.num {{ white-space:nowrap; font-weight:600; }}
+td.hl {{ color:var(--ok); font-weight:600; }}
+.dim {{ color:var(--dim); }}
+.chip {{ padding:2px 9px; border-radius:999px; font-size:11px; white-space:nowrap; }}
+.chip.ok {{ background:#2dd4a722; color:var(--ok); border:1px solid #2dd4a744; }}
+.chip.mid {{ background:#f5b14c22; color:var(--warn); border:1px solid #f5b14c44; }}
+.chip.wait {{ background:#8b96b81e; color:var(--dim); border:1px solid #8b96b833; }}
+.tariffs {{ grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }}
+.tariff {{ background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:10px 12px; }}
+.tariff.featured {{ border-color:var(--acc); box-shadow:0 0 0 1px var(--acc); }}
+.tariff.archive {{ opacity:.5; }}
+.t-name {{ font-weight:700; font-size:13px; }}
+.t-price {{ font-size:19px; font-weight:700; margin-bottom:6px; color:var(--acc); }}
+.tariff.featured .t-price {{ color:var(--ok); }}
+.t-row {{ display:flex; justify-content:space-between; gap:8px; font-size:11.5px;
+  padding:2.5px 0; border-top:1px dashed #1f2a4d; }}
+.t-row span {{ color:var(--dim); }} .t-row b {{ font-weight:500; text-align:right; }}
+.stage {{ display:grid; grid-template-columns:minmax(150px,1fr) 1.6fr; gap:10px;
+  align-items:center; padding:6px 0; border-bottom:1px solid #16203f; font-size:12.5px; }}
+.s-head {{ display:flex; flex-direction:column; }}
+.s-bar {{ display:flex; align-items:center; gap:8px; }}
+.bar {{ flex:1; height:6px; background:#1a2447; border-radius:99px; overflow:hidden; }}
+.bar-fill {{ height:100%; background:linear-gradient(90deg,var(--acc),var(--ok)); }}
+.bar-num {{ font-weight:700; font-size:12px; min-width:34px; }}
+.s-count {{ font-size:11px; min-width:36px; text-align:right; }}
+.kpis {{ grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }}
+.kpi {{ background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:9px 11px; }}
+.kpi.k-wait .k-val {{ color:var(--dim); }}
+.k-name {{ font-size:11px; color:var(--dim); min-height:26px; }}
+.k-val {{ font-size:19px; font-weight:700; }}
+.k-goal {{ font-size:11px; color:var(--dim); }}
+.prios {{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); }}
+.prio {{ display:flex; gap:10px; background:var(--card); border:1px solid var(--line);
+  border-left:3px solid var(--red); border-radius:10px; padding:9px 12px; font-size:12.5px; }}
+.prio.top5 {{ border-left-color:var(--acc); }}
+.p-num {{ font-size:16px; font-weight:800; color:var(--red); line-height:1.3; }}
+.p-num.acc2 {{ color:var(--acc); }}
+.cols2 {{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }}
+ul {{ padding-left:18px; }} li {{ margin-bottom:4px; font-size:12.5px; }}
+footer {{ margin-top:26px; color:var(--dim); font-size:11px;
+  border-top:1px solid var(--line); padding-top:10px; }}
+</style></head><body>
+
+<div class="header">
+  <h1>HEYS · Панель управления маркетингом</h1>
+  <div class="tabs">
+    <button class="tab active" data-pane="overview">Обзор</button>
+    <button class="tab" data-pane="comp">Конкуренты</button>
+    <button class="tab" data-pane="tg">Telegram</button>
+  </div>
+  <span class="badge">Фаза 0 · Pro-first · план: {plan_pct}%</span>
+</div>
+
+<div class="pane active" id="overview">
+<p class="sub">{esc(sut)} {esc(pos)}</p>
+<div class="grid cards3">
+  <div class="card"><div class="label">LTV:CAC реальный (триал = время куратора)</div>
+    <div class="big ok">{esc(eco['real'])}</div><div class="label">цель {esc(eco['goal'])}</div></div>
+  <div class="card"><div class="label">LTV:CAC модельный</div>
+    <div class="big acc">{esc(eco['base'])}</div><div class="label">микс Self 20 / Pro 65 / Pro+ 15</div></div>
+  <div class="card"><div class="label">Готовность плана (22)</div>
+    <div class="big">{plan_pct}%</div><div class="label">{total_done:g} из {total_all} задач</div></div>
+</div>
+<p class="label" style="margin-top:6px">{esc(eco['note'])}</p>
+
+<section><h2>Приоритеты сейчас</h2><div class="prios">{prio_rows}</div></section>
+
+<section><h2>Гейты Ф0 → Ф1 (roadmap 25)</h2>
+<div class="card" style="padding:4px 8px"><table>
+<tr><th>Гейт</th><th>Цель</th><th>🔴 Триггер</th><th>Действие при провале</th><th>Статус</th></tr>
+{gate_rows}</table></div></section>
+
+<div class="cols2" style="margin-top:18px">
+<div><h2>Этапы плана 22</h2><div class="card">{stage_rows}</div></div>
+<div><h2>Тарифная сетка</h2><div class="grid tariffs">{tariff_cards}</div>
+<p class="label" style="margin-top:6px">{esc(tariff_note)}</p></div>
+</div>
+
+<section><h2>KPI-трекер (факт — с первого трафика)</h2>
+<div class="grid kpis">{kpi_rows}</div></section>
+
+<section class="cols2">
+<div class="card"><h2>Каналы</h2><p class="sm">{esc(channels)}</p></div>
+<div class="card"><h2>Правило роста</h2><p class="sm">{esc(rule)}</p></div>
+</section>
+</div>
+
+<div class="pane" id="comp">
+<p class="sub"><b>CalZen — главный референс:</b> {esc(calzen_short)}</p>
+<section><h2>Сводная таблица сегментов</h2>
+<div class="card" style="padding:4px 8px"><table>{comp_table}</table></div></section>
+<section><h2>Лендинги: CalZen vs наш — что перенять</h2>
+<div class="card" style="padding:4px 8px"><table>{land_table}</table></div></section>
+<section><h2>Топ-5 перенять в продукт</h2>{top5_rows}</section>
+<section class="card"><h2>Чего не копировать</h2><p class="sm">{esc(no_copy)}</p></section>
+<p class="label" style="margin-top:10px">Детали: 12 (CalZen/лендинги) · 06 (позиционирование) · 16 (паттерны) · навигатор — 26.</p>
+</div>
+
+<div class="pane" id="tg">
+<p class="sub">{esc(tg_role)}</p>
+<div class="cols2">
+<div><h2>Рубрики (банк тем — 14, батч №1 — 24)</h2>
+<div class="card" style="padding:4px 8px"><table>{tg_rubric_rows}</table></div>
+<section><h2>Продвижение</h2><div class="card"><ul>{tg_promo_list}</ul></div></section></div>
+<div class="grid" style="align-content:start">{tg_block_cards}</div>
+</div>
+</div>
+
+<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 22_План · 25_Roadmap ·
+обновить: <code>python3 маркетинг/tools/build_dashboard.py</code></footer>
+
+<script>
+document.querySelectorAll('.tab').forEach(function (t) {{
+  t.addEventListener('click', function () {{
+    document.querySelectorAll('.tab').forEach(function (x) {{ x.classList.remove('active'); }});
+    document.querySelectorAll('.pane').forEach(function (x) {{ x.classList.remove('active'); }});
+    t.classList.add('active');
+    document.getElementById(t.dataset.pane).classList.add('active');
+  }});
+}});
+</script>
+</body></html>'''
+
+out = ROOT / '00_Дашборд.html'
+out.write_text(html_out, encoding='utf-8')
+print(f'OK → {out} ({len(html_out)} bytes; этапов {len(stages)}, гейтов {len(gates)}, '
+      f'KPI {len(kpi)}, конкуренты {len(comp_rows)} строк, рубрик {len(tg_rubrics)})')
