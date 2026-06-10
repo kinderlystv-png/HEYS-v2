@@ -110,12 +110,12 @@ FTL-cap slot trimming), UI всех 6 doseShape
 
 **Что осталось до `flag=on`**:
 
-1. **Re-shadow с реальными уровнями** (зона методолога): прогнать
-   `shadowCompare=true` на dev/prод с stub'ом `Fingers.records` для derived
-   advanced/intermediate — снять distribution `doseShape`/`modality` + кумулятив
-   danger, сравнить с legacy конвертом. См. `engineRouter.lastShadowDiff`.
-2. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
+1. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
    дефолт. Прежний `mix_engine` остаётся fallback (router catches null/throw).
+   Scripted shadow-envelope уже закрыт:
+   `node apps/web/fingers/methodology/tools/shadow-envelope.mjs --check`.
+2. **Canary-наблюдение**: после flip следить за `engineRouter.lastShadowDiff`,
+   fallback-rate и S4 trimming telemetry.
 
 **Tech-debt не блокер**: консолидация `useCountdownCycle`+`useRepsCycle` в общий
 timer-core (после приземления strangler'a — теперь оба покрыты characterization,

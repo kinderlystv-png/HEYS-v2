@@ -6,9 +6,9 @@
 
 ## Короткий вердикт
 
-**MVP-рекомендатель сессии технически близок к safe flip, но full planner ещё не
-готов.** Знаниевый слой методологии в целом согласован; текущий pre-flip блокер
-— финальный shadow-envelope на live-like сценариях.
+**MVP-рекомендатель сессии готов к safe flip как strangler-режим, но full
+planner ещё не готов.** Знаниевый слой методологии в целом согласован; перед
+`flag=on` остаётся rollout-решение, а не известный кодовый blocker.
 
 | Слой                        | Статус      | Суть                                                                        |
 | --------------------------- | ----------- | --------------------------------------------------------------------------- |
@@ -40,12 +40,17 @@
 - `S4 enforcement`: `sessionBuilder` считает `FTL_session`, прогнозирует
   `weekToDate + sessionFtl` и при `>1.10 × trailingAvg` снимает объёмные
   load-slots из текущей сессии до прохождения cap.
+- `final shadow-envelope`:
+  `node apps/web/fingers/methodology/tools/shadow-envelope.mjs --check` проходит
+  8/8 live-like сценариев: no-records, MVC 40/65/90% BW, explicit advanced,
+  `block`, `none`, S4-overload. UI-risk = 0; `block` max = 31 мин без
+  `pow_rfd_pulls`; S4-overload снимает `strength-endurance` и остаётся под cap.
 
 ## Осталось перед включением `flags.newEngine=true`
 
-1. **Final shadow-envelope перед flip.** Re-shadow с live-like opts: MVC 65/90%
-   BW, explicit advanced, equipment `full/block/none`; подтвердить отсутствие
-   UI-risk и что duration/FTL-envelope остаётся в принятом коридоре.
+1. **Rollout / canary.** Включить `flags.newEngine=true` поэтапно и наблюдать
+   `engineRouter.lastShadowDiff`/fallback-rate; прежний `mix_engine` остаётся
+   fallback.
 2. **Phase-2 planning.** Нет `periodization_engine`: deload/taper/maintenance
    описаны методологически, но не управляют генерацией недель.
 3. **Assessment depth.** Бенчмарки Berta/IRCRA подключены как методология, но
@@ -61,4 +66,4 @@
 - [x] Shadow-envelope ограничивает `block` equipment max-duration:
       `pow_rfd_pulls` не попадает в block-only pre-flip power-slot.
 - [x] S4 недельный cap влияет на генерацию, а не только предупреждает.
-- [ ] Финальный shadow-envelope принят методологом на live-like сценариях.
+- [x] Финальный shadow-envelope принят на live-like scripted сценариях.
