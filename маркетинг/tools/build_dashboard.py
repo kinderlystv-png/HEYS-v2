@@ -57,6 +57,13 @@ land_rows = [[cw.cell(row=r, column=1).value, cw.cell(row=r, column=2).value,
 top5 = [cw.cell(row=r, column=1).value for r in range(33, 42)
         if cw.cell(row=r, column=1).value]
 no_copy = cw['A44'].value or ''
+# Глубокий аудит 2026-06-10 (строки 46+)
+audit_head = cw['A47'].value or ''
+human_rows = [[cw.cell(row=r, column=c).value for c in range(1, 6)]
+              for r in range(51, 57) if cw.cell(row=r, column=1).value]
+price_ladder = cw['A59'].value or ''
+landing_patterns = [cw.cell(row=r, column=1).value for r in range(62, 67)
+                    if cw.cell(row=r, column=1).value]
 
 # ---------- Telegram ----------
 tg = wb['Telegram']
@@ -167,6 +174,16 @@ top5_rows = ''.join(f'<div class="prio top5"><div class="p-num acc2">{i}</div>'
                     for i, p in enumerate(top5, 1))
 
 # ---------- фрагменты: Telegram ----------
+human_table = ''.join(
+    '<tr>' + ''.join(
+        ('<td class="hl">' if i == 0 and 'HEYS' in str(r[0]) else '<td>') + esc(x) + '</td>'
+        for i, x in enumerate(r)) + '</tr>'
+    for r in human_rows)
+landing_pat_rows = ''.join(
+    f'<div class="prio top5"><div class="p-num acc2">{i}</div>'
+    f'<div>{esc(re.sub(r"^[0-9]+[.][ ]*", "", str(p)))}</div></div>'
+    for i, p in enumerate(landing_patterns, 1))
+
 tg_rubric_rows = ('<tr><th>Рубрика</th><th>Цель</th><th>Частота</th></tr>' +
                   ''.join(f'<tr><td>{esc(r[0])}</td><td class="dim">{esc(r[1])}</td>'
                           f'<td class="num">{esc(r[2])}</td></tr>' for r in tg_rubrics))
@@ -303,7 +320,17 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 </div>
 
 <div class="pane" id="comp">
-<p class="sub"><b>CalZen — главный референс:</b> {esc(calzen_short)}</p>
+<p class="sub"><b>Главный вывод аудита 2026-06-10:</b> {esc(audit_head)}</p>
+<section><h2>Карта «живой человек» (кто реально даёт)</h2>
+<div class="card" style="padding:4px 8px"><table>
+<tr><th>Игрок</th><th>Человек</th><th>Частота</th><th>Цена/мес</th><th>РФ-оплата</th></tr>
+{human_table}
+</table></div>
+<p class="label" style="margin-top:6px">{esc(price_ladder)}</p></section>
+<section><h2>Лендинги лидеров — 5 паттернов</h2>
+{landing_pat_rows}
+</section>
+<p class="sub" style="margin-top:14px"><b>CalZen — главный референс:</b> {esc(calzen_short)}</p>
 <section><h2>Сводная таблица сегментов</h2>
 <div class="card" style="padding:4px 8px"><table>{comp_table}</table></div></section>
 <section><h2>Лендинги: CalZen vs наш — что перенять</h2>

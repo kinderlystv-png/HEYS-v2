@@ -22,11 +22,11 @@
   };
 
   const CURRENT_VERSIONS = {
-    user_agreement: '1.5',
+    user_agreement: '1.6',  // 2026-06-10: документ уже 1.6 (новые цены Self/Pro/Pro+); реестр догоняет — иначе loader падает на version mismatch
     personal_data: '1.5',
     health_data: '1.3',  // Отдельный документ согласия на данные о здоровье
     marketing: '1.2',
-    payment_oferta: '1.2'  // Акцепт оферты при оплате (ст. 438 ГК РФ)
+    payment_oferta: '1.3'  // Акцепт оферты при оплате (ст. 438 ГК РФ). Бамп 1.2→1.3 (2026-06-10): изменены цены (Self/Pro/Pro+) → текст оферты изменился. СИНХРОННО: heys_legal_versions_v1.js + PAYMENT_OFERTA_VERSION в heys-api-payments (+ редеплой функции вместе с фронтендом)
   };
 
   const REQUIRED_CONSENTS = [

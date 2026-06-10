@@ -12,14 +12,14 @@
   const HEYS = global.HEYS = global.HEYS || {};
 
   const versions = {
-    user_agreement:     '1.5',
+    user_agreement:     '1.6',
     personal_data:      '1.5',
     health_data:        '1.3',
     marketing:          '1.2',
-    payment_oferta:     '1.2',
+    payment_oferta:     '1.3',
     push_notifications: '1.0',
     curator_access:     '1.0',
-    _updatedAt:         '2026-05-20'
+    _updatedAt:         '2026-06-10'
   };
 
   // Required types для check_required_consents_v2 — обязательные согласия,

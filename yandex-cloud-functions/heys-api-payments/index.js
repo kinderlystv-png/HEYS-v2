@@ -169,7 +169,10 @@ async function createPayment(body, clientId) {
   // Текущая версия оферты — должна совпадать с CURRENT_VERSIONS.payment_oferta
   // в apps/web/heys_consents_v1.js (источник истины для legal-документов).
   // Если бампается версия оферты — обновить здесь.
-  const PAYMENT_OFERTA_VERSION = '1.2';
+  // ⚠️ СИНХРОН: эта константа, CURRENT_VERSIONS.payment_oferta (heys_consents_v1.js)
+  // и payment_oferta в heys_legal_versions_v1.js должны быть РАВНЫ, и функция
+  // деплоится В ОДНОМ релизе с фронтендом — иначе все оплаты BLOCKED.
+  const PAYMENT_OFERTA_VERSION = '1.3'; // бамп 1.2→1.3 (2026-06-10): цены Self/Pro/Pro+ изменились
 
   // 1. Создаём запись платежа в БД (pending) через connection pool
   // + получаем телефон клиента для чека 54-ФЗ
