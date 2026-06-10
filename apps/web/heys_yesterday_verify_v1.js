@@ -623,9 +623,9 @@
     const carbPct = +normPerc.carbsPct || 45;
     const protPct = +normPerc.proteinPct || 25;
     const fatPct = Math.max(0, 100 - carbPct - protPct);
-    const carbs = safeKcal ? (safeKcal * carbPct / 100) / 4 : 0;
-    const prot = safeKcal ? (safeKcal * protPct / 100) / 4 : 0;
-    const fat = safeKcal ? (safeKcal * fatPct / 100) / 9 : 0;
+    const carbs = safeKcal ? (safeKcal * carbPct / 100) / (HEYS.TEF?.ATWATER?.carbs || 4) : 0;
+    const prot = safeKcal ? (safeKcal * protPct / 100) / (HEYS.TEF?.ATWATER?.protein || 3) : 0;
+    const fat = safeKcal ? (safeKcal * fatPct / 100) / (HEYS.TEF?.ATWATER?.fat || 9) : 0;
     const simple = carbs * ((+normPerc.simpleCarbPct || 30) / 100);
     const complex = Math.max(0, carbs - simple);
     const bad = fat * ((+normPerc.badFatPct || 30) / 100);

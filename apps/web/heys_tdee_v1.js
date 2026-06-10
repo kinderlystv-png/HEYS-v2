@@ -55,12 +55,20 @@
    * @returns {number} ккал/день
    */
   const calcBMR = (weight, profile) => {
+    // Overload: calcBMR(profileObject) — если первый аргумент объект, трактуем как профиль.
+    // Оживляет делегацию day_utils (звала calcBMR({...prof, weight})) и фиксит
+    // pi_calculations/pi_analytics_api/predictive_insights (звали calcBMR(profile) одним аргументом → 0).
+    if (weight && typeof weight === 'object') {
+      profile = weight;
+      weight = +profile.weight || 0;
+    }
     const p = profile || {};
     const age = +p.age || 30;
     const height = +p.height || 170;
-    const isMale = p.gender !== 'Женский';
+    // Пол: gender ('Женский') ИЛИ sex ('female') — day_utils нормализует пол в .sex.
+    const isFemale = (p.gender === 'Женский') || (p.sex === 'female');
     // Mifflin-St Jeor: 10×вес + 6.25×рост − 5×возраст + (5 муж / −161 жен)
-    return r0(10 * weight + 6.25 * height - 5 * age + (isMale ? 5 : -161));
+    return r0(10 * (+weight || 0) + 6.25 * height - 5 * age + (isFemale ? -161 : 5));
   };
 
   /**

@@ -1626,17 +1626,17 @@
           if (avgProtPct < CFG.PROTEIN_CRITICAL_PCT) {
             proteinDebt.hasDebt = true;
             proteinDebt.severity = 'critical';
-            proteinDebt.debt = Math.round((targetPct - avgProtPct) * optimum / 4); // граммы
+            proteinDebt.debt = Math.round((targetPct - avgProtPct) * optimum / (HEYS.TEF?.ATWATER?.protein || 3)); // граммы
             proteinDebt.recommendation = `Критический недобор белка! Добавь ${Math.round(proteinDebt.debt * 0.5)}г белка сегодня`;
           } else if (avgProtPct < targetPct * 0.85) {
             proteinDebt.hasDebt = true;
             proteinDebt.severity = 'moderate';
-            proteinDebt.debt = Math.round((targetPct - avgProtPct) * optimum / 4);
+            proteinDebt.debt = Math.round((targetPct - avgProtPct) * optimum / (HEYS.TEF?.ATWATER?.protein || 3));
             proteinDebt.recommendation = `Маловато белка. Добавь ${Math.round(proteinDebt.debt * 0.3)}г к обычному рациону`;
           } else if (avgProtPct < targetPct * 0.95) {
             proteinDebt.hasDebt = true;
             proteinDebt.severity = 'mild';
-            proteinDebt.debt = Math.round((targetPct - avgProtPct) * optimum / 4);
+            proteinDebt.debt = Math.round((targetPct - avgProtPct) * optimum / (HEYS.TEF?.ATWATER?.protein || 3));
             proteinDebt.recommendation = 'Белок немного ниже оптимума. Добавь яйцо или порцию творога';
           }
         }

@@ -804,9 +804,10 @@
     const fatPct = profile?.fatPct || 0.30;
 
     return {
-      prot: (optimum * protPct) / 4,
-      carbs: (optimum * carbsPct) / 4,
-      fat: (optimum * fatPct) / 9
+      // NET Atwater — единый источник HEYS.TEF.ATWATER (белок 3, согласовано с приходом ×3 на :793)
+      prot: (optimum * protPct) / (HEYS.TEF?.ATWATER?.protein || 3),
+      carbs: (optimum * carbsPct) / (HEYS.TEF?.ATWATER?.carbs || 4),
+      fat: (optimum * fatPct) / (HEYS.TEF?.ATWATER?.fat || 9)
     };
   }
 

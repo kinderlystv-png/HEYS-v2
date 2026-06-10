@@ -70,9 +70,11 @@
         const carbPct = +normPerc.carbsPct || 0;
         const protPct = +normPerc.proteinPct || 0;
         const fatPct = Math.max(0, 100 - carbPct - protPct);
-        const carbs = K ? (K * carbPct / 100) / 4 : 0;
-        const prot = K ? (K * protPct / 100) / 4 : 0;
-        const fat = K ? (K * fatPct / 100) / 9 : 0; // 9 ккал/г
+        // NET Atwater — единый источник факторов HEYS.TEF.ATWATER (белок 3, угл 4, жир 9).
+        // Согласовано со счётчиком прихода (mealTotals тоже белок×3). Fallback на случай, если TEF не загружен.
+        const carbs = K ? (K * carbPct / 100) / (HEYS.TEF?.ATWATER?.carbs || 4) : 0;
+        const prot = K ? (K * protPct / 100) / (HEYS.TEF?.ATWATER?.protein || 3) : 0;
+        const fat = K ? (K * fatPct / 100) / (HEYS.TEF?.ATWATER?.fat || 9) : 0;
         const simplePct = +normPerc.simpleCarbPct || 0;
         const simple = carbs * simplePct / 100;
         const complex = Math.max(0, carbs - simple);

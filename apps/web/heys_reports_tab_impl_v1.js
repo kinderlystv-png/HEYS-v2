@@ -361,9 +361,9 @@
             const carbPct = +normsPerc.carbsPct || 0;
             const protPct = +normsPerc.proteinPct || 0;
             const fatPct = Math.max(0, 100 - carbPct - protPct);
-            const carbs = K ? (K * carbPct / 100) / 4 : 0;
-            const prot = K ? (K * protPct / 100) / 4 : 0;
-            const fat = K ? (K * fatPct / 100) / 8 : 0;
+            const carbs = K ? (K * carbPct / 100) / (HEYS.TEF?.ATWATER?.carbs || 4) : 0;
+            const prot = K ? (K * protPct / 100) / (HEYS.TEF?.ATWATER?.protein || 3) : 0;
+            const fat = K ? (K * fatPct / 100) / (HEYS.TEF?.ATWATER?.fat || 9) : 0;
             const simplePct = +normsPerc.simpleCarbPct || 0;
             const simple = carbs * simplePct / 100;
             const complex = Math.max(0, carbs - simple);
@@ -508,9 +508,9 @@
             const carbPct = +normsPerc.carbsPct || 0;
             const protPct = +normsPerc.proteinPct || 0;
             const fatPct = Math.max(0, 100 - carbPct - protPct);
-            const carbs = K ? (K * carbPct / 100) / 4 : 0;
-            const prot = K ? (K * protPct / 100) / 4 : 0;
-            const fat = K ? (K * fatPct / 100) / 8 : 0;
+            const carbs = K ? (K * carbPct / 100) / (HEYS.TEF?.ATWATER?.carbs || 4) : 0;
+            const prot = K ? (K * protPct / 100) / (HEYS.TEF?.ATWATER?.protein || 3) : 0;
+            const fat = K ? (K * fatPct / 100) / (HEYS.TEF?.ATWATER?.fat || 9) : 0;
             const simplePct = +normsPerc.simpleCarbPct || 0;
             const simple = carbs * simplePct / 100;
             const complex = Math.max(0, carbs - simple);
@@ -612,7 +612,7 @@
             +(profile.deficitPctTarget || 0); // fallback к профилю
         const optimum = tdeeAvg ? Math.round(tdeeAvg * (1 + targetDef / 100)) : 0;
         const carbPct = +normsPerc.carbsPct || 0; const protPct = +normsPerc.proteinPct || 0; const fatPct = Math.max(0, 100 - carbPct - protPct);
-        const carbs = optimum ? (optimum * carbPct / 100) / 4 : 0; const prot = optimum ? (optimum * protPct / 100) / 4 : 0; const fat = optimum ? (optimum * fatPct / 100) / 8 : 0;
+        const carbs = optimum ? (optimum * carbPct / 100) / (HEYS.TEF?.ATWATER?.carbs || 4) : 0; const prot = optimum ? (optimum * protPct / 100) / (HEYS.TEF?.ATWATER?.protein || 3) : 0; const fat = optimum ? (optimum * fatPct / 100) / (HEYS.TEF?.ATWATER?.fat || 9) : 0;
         const simplePct = +normsPerc.simpleCarbPct || 0; const simple = carbs * simplePct / 100; const complex = Math.max(0, carbs - simple);
         const badPct = +normsPerc.badFatPct || 0; const transPct = +normsPerc.superbadFatPct || 0; const bad = fat * badPct / 100; const trans = fat * transPct / 100; const good = Math.max(0, fat - bad - trans);
         const fiberPct = +normsPerc.fiberPct || 0; const fiber = carbs * fiberPct / 100; const giN = +normsPerc.giPct || 0; const harmN = +normsPerc.harmPct || 0;
@@ -731,7 +731,7 @@
             +(profile.deficitPctTarget || 0); // fallback к профилю
         const optimum = tdeeAvg ? Math.round(tdeeAvg * (1 + targetDef / 100)) : 0;
         const carbPct = +normsPerc.carbsPct || 0; const protPct = +normsPerc.proteinPct || 0; const fatPct = Math.max(0, 100 - carbPct - protPct);
-        const carbs = optimum ? (optimum * carbPct / 100) / 4 : 0; const prot = optimum ? (optimum * protPct / 100) / 4 : 0; const fat = optimum ? (optimum * fatPct / 100) / 8 : 0;
+        const carbs = optimum ? (optimum * carbPct / 100) / (HEYS.TEF?.ATWATER?.carbs || 4) : 0; const prot = optimum ? (optimum * protPct / 100) / (HEYS.TEF?.ATWATER?.protein || 3) : 0; const fat = optimum ? (optimum * fatPct / 100) / (HEYS.TEF?.ATWATER?.fat || 9) : 0;
         const simplePct = +normsPerc.simpleCarbPct || 0; const simple = carbs * simplePct / 100; const complex = Math.max(0, carbs - simple);
         const badPct = +normsPerc.badFatPct || 0; const transPct = +normsPerc.superbadFatPct || 0; const bad = fat * badPct / 100; const trans = fat * transPct / 100; const good = Math.max(0, fat - bad - trans);
         const fiberPct = +normsPerc.fiberPct || 0; const fiber = carbs * fiberPct / 100; const giN = +normsPerc.giPct || 0; const harmN = +normsPerc.harmPct || 0;

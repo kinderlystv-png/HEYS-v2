@@ -142,11 +142,11 @@ apps/web/heys_leaderboard_v1.js:98
 apps/web/heys_meal_optimizer_v1.js:1822
 apps/web/heys_meal_step_v1.js:30
 apps/web/heys_meal_step_v1.js:54
-apps/web/heys_metabolic_intelligence_v1.js:1254
-apps/web/heys_metabolic_intelligence_v1.js:2011
-apps/web/heys_metabolic_intelligence_v1.js:2190
-apps/web/heys_metabolic_intelligence_v1.js:2332
-apps/web/heys_metabolic_intelligence_v1.js:2416
+apps/web/heys_metabolic_intelligence_v1.js:1255
+apps/web/heys_metabolic_intelligence_v1.js:2012
+apps/web/heys_metabolic_intelligence_v1.js:2191
+apps/web/heys_metabolic_intelligence_v1.js:2333
+apps/web/heys_metabolic_intelligence_v1.js:2417
 apps/web/heys_models_v1.js:404
 apps/web/heys_module_perf_v1.js:43
 apps/web/heys_module_perf_v1.js:67
