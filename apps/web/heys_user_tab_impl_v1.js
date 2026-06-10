@@ -878,9 +878,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 // === НАУЧНЫЙ РАСЧЁТ ===
                                 // BMR по Mifflin-St Jeor (Mifflin MD et al., Am J Clin Nutr 1990)
                                 // Рекомендован ADA как наиболее точный для здоровых людей
-                                const bmr = gender === 'Женский'
-                                    ? round1(447.593 + 9.247 * currentWeight + 3.098 * (height * 100) - 4.330 * age)
-                                    : round1(88.362 + 13.397 * currentWeight + 4.799 * (height * 100) - 5.677 * age);
+                                // Единый источник BMR — HEYS.TDEE.calcBMR (Mifflin). height тут в метрах → ×100 в см.
+                                const bmr = (HEYS.TDEE && HEYS.TDEE.calcBMR)
+                                    ? HEYS.TDEE.calcBMR(currentWeight, { gender, height: height * 100, age })
+                                    : round1(10 * currentWeight + 6.25 * (height * 100) - 5 * age + (gender === 'Женский' ? -161 : 5));
 
                                 // === АДАПТИВНЫЙ TDEE ===
                                 // Сначала ищем реальные данные активности за последние 7 дней
@@ -1237,9 +1238,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             // Возраст: из даты рождения или вручную
                             const a = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : toNum(profile.age || 30);
                             const bmi = h > 0 ? round1(w / (h * h)) : 0;
-                            const bmr = profile.gender === 'Женский'
-                                ? round1(447.593 + 9.247 * w + 3.098 * (h * 100) - 4.330 * a)
-                                : round1(88.362 + 13.397 * w + 4.799 * (h * 100) - 5.677 * a);
+                            const bmr = (HEYS.TDEE && HEYS.TDEE.calcBMR)
+                                ? HEYS.TDEE.calcBMR(w, { gender: profile.gender, height: h * 100, age: a })
+                                : round1(10 * w + 6.25 * (h * 100) - 5 * a + (profile.gender === 'Женский' ? -161 : 5));
                             // BMI категория
                             let bmiCat = '', bmiColor = '#6b7280';
                             if (bmi < 18.5) { bmiCat = 'недовес'; bmiColor = '#eab308'; }

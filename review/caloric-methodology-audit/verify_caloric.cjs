@@ -30,7 +30,9 @@ function trainKcal_net(zoneMin, w, mets = [2.5, 6, 8, 10]) {
   zoneMin.forEach((min, i) => { k += (min || 0) * ((mets[i] * w * 0.0175) - 1); });
   return k;
 }
-// day_calculations.js:74 / metabolic_intelligence:807  norm protein at /4
+// ⚠️ PRE-FIX демонстратор (намеренно /4): показывает баг B-2 до фикса 2026-06-10.
+// «ProteinNorm gap: SHORT …» в выводе — НЕ регрессия. Живой код (norm /3) проверяет
+// test_calc_gates.cjs на реальном computeDailyNorms.
 function normProteinGrams(optimum, protPct) { return (optimum * protPct) / 4; }
 // models/metabolic intake: protein at *3 (NET Atwater)
 function intakeKcal_net(protG, carbG, fatG) { return protG * 3 + carbG * 4 + fatG * 9; }
