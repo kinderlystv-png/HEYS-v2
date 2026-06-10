@@ -597,8 +597,27 @@
    * КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем чек-ин!
    * Это нужно чтобы новый пользователь обязательно прошёл регистрационные шаги.
    */
+  // 🆕 TASK-003 follow-up: при переоткрытии чек-ина из-за пропавших/недокачанных
+  // данных (session-флаг стоит, но core-поля дня отсутствуют) показываем ТОЛЬКО
+  // недостающие обязательные шаги, без опционального хвоста (cold/supplements/routine)
+  // и без повторного прогона уже заполненного. Флаг выставляет shouldShowMorningCheckin,
+  // читает MorningCheckin при заморозке списка шагов. Сбрасывается в начале каждого
+  // shouldShowMorningCheckin, чтобы не протекать в ручной showCheckin.morning().
+  let _reopenRequiredOnly = false;
+
+  /** Отсутствуют ли core-поля утреннего чек-ина (вес/время сна/качество/настроение) в дне. */
+  function coreCheckinDataMissing(mergedDay) {
+    const d = mergedDay || {};
+    if (!(d.weightMorning != null && d.weightMorning !== '' && d.weightMorning !== 0)) return true;
+    if (!(d.sleepStart != null && d.sleepEnd != null)) return true;
+    if (!(d.sleepQuality != null)) return true;
+    if (!(d.moodMorning != null)) return true;
+    return false;
+  }
+
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
+    _reopenRequiredOnly = false;
 
     // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
     const currentClientId = getCurrentClientId();
@@ -609,6 +628,13 @@
 
     const todayKey = getTodayKey();
     const sessionKey = getCheckinSessionKey(currentClientId, todayKey);
+
+    // Свежий день (todayKey + календарный для кросс-полуночной проверки) — нужен и
+    // для решения по session-флагу (есть ли реально данные чекина), и для pending ниже.
+    const _dayData = readDayV2ScopedFirst(todayKey, {}) || {};
+    const _calendarKey = new Date().toISOString().slice(0, 10);
+    const _altDayData = _calendarKey !== todayKey ? (readDayV2ScopedFirst(_calendarKey, {}) || {}) : {};
+    const mergedDay = { ..._altDayData, ..._dayData };
 
     // 🆕 v1.9.1: Если чек-ин уже был показан/пропущен в этой сессии — НЕ показываем
     // Переводим legacy-флаг в per-client/per-day ключ, чтобы не блокировать других клиентов
@@ -621,8 +647,23 @@
       // sessionStorage may be unavailable in private mode
     }
     if (sessionStorage.getItem(sessionKey) === 'true') {
-      console.info('[MorningCheckin] 🚫 Skip — sessionStorage флаг активен:', sessionKey);
-      return false;
+      // 🆕 TASK-003 follow-up: session-флаг подавляет повтор ТОЛЬКО когда данные
+      // чекина реально на месте. Если core-поля (сон/самочувствие/вес) пропали или
+      // не докачались из облака — переоткрываем чек-ин с недостающими шагами, а не
+      // прячем их за «уже проходили сегодня».
+      if (!coreCheckinDataMissing(mergedDay)) {
+        console.info('[MorningCheckin] 🚫 Skip — sessionStorage флаг активен, данные чекина на месте:', sessionKey);
+        return false;
+      }
+      _reopenRequiredOnly = true;
+      console.warn('[MorningCheckin] ⚠️ session-флаг стоит, но core-данные чекина отсутствуют — переоткрываем недостающие шаги', {
+        sessionKey,
+        hasWeight: !(mergedDay.weightMorning == null || mergedDay.weightMorning === '' || mergedDay.weightMorning === 0),
+        hasSleep: !!(mergedDay.sleepStart != null && mergedDay.sleepEnd != null),
+        hasSleepQuality: mergedDay.sleepQuality != null,
+        hasMood: mergedDay.moodMorning != null,
+      });
+      // fall through — ниже pending наберётся и вернём true
     }
 
     // 🔒 КРИТИЧНО: Если профиль не заполнен — ВСЕГДА показываем!
@@ -683,12 +724,8 @@
       }
     }
 
-    const dayData = readDayV2ScopedFirst(todayKey, {}) || {};
-    const calendarKey = new Date().toISOString().slice(0, 10);
-    const altDayData = calendarKey !== todayKey ? (readDayV2ScopedFirst(calendarKey, {}) || {}) : {};
-    // Шаг считаем выполненным если данные есть в любом из двух dateKey
-    // (до 3:00 todayKey=вчера, dayData=вчерашний; altDayData=календарный для корректной кросс-полуночной проверки)
-    const mergedDay = { ...altDayData, ...dayData };
+    // mergedDay уже посчитан выше (todayKey + календарный, кросс-полуночная проверка).
+    const calendarKey = _calendarKey;
 
     const pending = [];
     if (!(mergedDay.weightMorning != null && mergedDay.weightMorning !== '' && mergedDay.weightMorning !== 0)) pending.push('weight');
@@ -721,7 +758,7 @@
    * Используется и в MorningCheckin, и в showCheckin.morning()
    */
   function getCheckinSteps(profile, opts) {
-    const { filterCompleted = false } = opts || {};
+    const { filterCompleted = false, requiredOnly = false } = opts || {};
     const steps = [];
     let hasProfileSteps = false;
 
@@ -784,7 +821,7 @@
     // 7. 🌟 Мотивирующий финальный шаг
     steps.push('morningRoutine');
 
-    if (!filterCompleted) return steps;
+    if (!filterCompleted && !requiredOnly) return steps;
 
     // Фильтруем уже-выполненные required-шаги (data-derived completion).
     // Регистрационные / opaque / opt-in шаги оставляем как есть — они либо нужны атомарно (registration),
@@ -795,7 +832,7 @@
     const altDayDataF = calendarKey !== todayKey ? (readDayV2ScopedFirst(calendarKey, {}) || {}) : {};
     const day = { ...altDayDataF, ...dayDataF };
 
-    return steps.filter(id => {
+    const filtered = steps.filter(id => {
       switch (id) {
         case 'weight': return !(day.weightMorning != null && day.weightMorning !== '' && day.weightMorning !== 0);
         case 'sleepTime': return !(day.sleepStart != null && day.sleepEnd != null);
@@ -805,6 +842,16 @@
         default: return true;
       }
     });
+
+    // 🆕 TASK-003 follow-up: режим «переоткрытие для восстановления» — только
+    // недостающие обязательные шаги, без опционального хвоста. Регистрацию
+    // (profile-incomplete) не урезаем — её шаги нужны атомарно.
+    if (requiredOnly && !hasProfileSteps) {
+      const REQUIRED = new Set(['weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal', 'yesterdayVerify']);
+      return filtered.filter(id => REQUIRED.has(id));
+    }
+
+    return filtered;
   }
 
   /**
@@ -858,7 +905,13 @@
       : { current: null };
     if (stepsRef.current === null) {
       const profileForSteps = readStoredValue('heys_profile', {});
-      stepsRef.current = getCheckinSteps(profileForSteps, { filterCompleted: true });
+      // 🆕 TASK-003 follow-up: если shouldShowMorningCheckin открыл визард для
+      // восстановления пропавших данных (session-флаг стоял, но core-поля пусты) —
+      // показываем только недостающие обязательные шаги, без опционального хвоста.
+      stepsRef.current = getCheckinSteps(profileForSteps, {
+        filterCompleted: true,
+        requiredOnly: !!_reopenRequiredOnly
+      });
     }
 
     // Если StepModal доступен — используем его
@@ -984,6 +1037,8 @@
   HEYS.MorningCheckinUtils.shouldOpenMorningActivationFollowup = shouldOpenMorningActivationFollowup;
   HEYS.MorningCheckinUtils.dayHasMorningActivationSyncedActivity = dayHasMorningActivationSyncedActivity;
   HEYS.MorningCheckinUtils.isMorningActivationClearedByUser = isMorningActivationClearedByUser;
+  HEYS.MorningCheckinUtils.getCheckinSteps = getCheckinSteps;
+  HEYS.MorningCheckinUtils.coreCheckinDataMissing = coreCheckinDataMissing;
 
   // PERF v7.1: notify boot-chain hook that deferred module is ready
   window.dispatchEvent(new CustomEvent('heys-morning-checkin-ready'));

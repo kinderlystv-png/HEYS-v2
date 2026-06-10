@@ -34,6 +34,28 @@
             setGrams
         } = deps;
 
+        /**
+         * Свежий day из scoped LS текущего клиента (инв. №9 — только scoped, без
+         * cross-client fallback на unscoped). Читаем после invalidate, чтобы поймать
+         * запись шага чекина даже если она ещё не «остыла» в store-кэше.
+         */
+        function readFreshScopedDay(dateKey) {
+            try {
+                const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+                if (cid) {
+                    const scopedKey = 'heys_' + cid + '_dayv2_' + dateKey;
+                    try { HEYS.store?.invalidate?.(scopedKey); } catch (_) { /* noop */ }
+                    const v = typeof lsGet === 'function' ? lsGet(scopedKey, null) : null;
+                    return (v && typeof v === 'object') ? v : null;
+                }
+                // Нет client-scope (редко): unscoped как единственный путь
+                const v = typeof lsGet === 'function' ? lsGet('heys_dayv2_' + dateKey, null) : null;
+                return (v && typeof v === 'object') ? v : null;
+            } catch (_) {
+                return null;
+            }
+        }
+
         function getLatestDaySnapshot() {
             const baseKey = 'heys_dayv2_' + date;
             const storedDay = typeof lsGet === 'function' ? lsGet(baseKey, null) : null;
@@ -49,13 +71,28 @@
                 snapshot = runtimeDay;
             }
 
-            return snapshot && typeof snapshot === 'object'
-                ? { ...snapshot }
-                : { date };
+            let result = snapshot && typeof snapshot === 'object' ? { ...snapshot } : { date };
+
+            // 🛡️ TASK-003 анти-клоббер: subjective-поля чекина (сон/самочувствие) могли
+            // не доехать в React/выбранный снапшот (apply дропнут под троттлингом таба),
+            // но присутствуют в свежем scoped LS. Добираем их, чтобы снапшот дня
+            // (addWater и пр.) не зацементировал их отсутствие. Explicit-мёрж (инв. №7).
+            if (HEYS.dayUtils && typeof HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh === 'function') {
+                result = HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh(result, readFreshScopedDay(date));
+            }
+
+            return result;
         }
 
         function persistDaySnapshotImmediately(nextDayData) {
             if (!nextDayData || typeof nextDayData !== 'object') return;
+
+            // 🛡️ TASK-003 анти-клоббер (последний рубеж): даже если caller собрал снапшот
+            // мимо getLatestDaySnapshot, не теряем subjective-поля чекина, присутствующие
+            // в свежем scoped LS, но отсутствующие в снапшоте. Fill-if-missing, инв. №7.
+            if (HEYS.dayUtils && typeof HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh === 'function') {
+                nextDayData = HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh(nextDayData, readFreshScopedDay(date));
+            }
 
             const baseKey = 'heys_dayv2_' + date;
 

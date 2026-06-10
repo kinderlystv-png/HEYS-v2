@@ -1253,8 +1253,14 @@
       dayData.updatedAt = Date.now();
       saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, daySleepMinutes, sleepHours: dayData.sleepHours });
+      // TASK-003: несём полный payload дня (с live-meals merge), чтобы apply пошёл
+      // immediate-путём (heys_day_effects.js:488) и значения сна доехали в React
+      // даже под троттлингом таба, минуя SKIP_RAF_PENDING.
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: { date: dateKey, field: 'sleep', source: 'sleep-step', forceReload: true }
+        detail: {
+          date: dateKey, field: 'sleep', source: 'sleep-step', forceReload: true,
+          data: mergeDayMealsPreferLiveIfRicher(dateKey, { ...dayData, date: dateKey })
+        }
       }));
     },
     xpAction: 'sleep_logged'
@@ -1357,8 +1363,12 @@
       dayData.updatedAt = Date.now();
       saveDayData(dateKey, dayData);
       console.info('[HEYS.daySleep] ✅ Saved:', { dateKey, daySleepMinutes, sleepHours: dayData.sleepHours });
+      // TASK-003: полный payload → immediate apply минуя SKIP_RAF_PENDING.
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: { date: dateKey, field: 'daySleepMinutes', source: 'day-sleep-step', forceReload: true }
+        detail: {
+          date: dateKey, field: 'daySleepMinutes', source: 'day-sleep-step', forceReload: true,
+          data: mergeDayMealsPreferLiveIfRicher(dateKey, { ...dayData, date: dateKey })
+        }
       }));
     },
     xpAction: 'sleep_logged'
@@ -1564,8 +1574,12 @@
       dayData.updatedAt = Date.now();
       saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepQuality] ✅ Saved:', { dateKey, sleepQuality: dayData.sleepQuality, sleepStart: dayData.sleepStart, sleepEnd: dayData.sleepEnd });
+      // TASK-003: полный payload → immediate apply минуя SKIP_RAF_PENDING.
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: { date: dateKey, field: 'sleep', source: 'sleep-quality-step', forceReload: true }
+        detail: {
+          date: dateKey, field: 'sleep', source: 'sleep-quality-step', forceReload: true,
+          data: mergeDayMealsPreferLiveIfRicher(dateKey, { ...dayData, date: dateKey })
+        }
       }));
     }
   });
@@ -3579,8 +3593,12 @@
       window.dispatchEvent(new CustomEvent('heys:data-saved', {
         detail: { key: `day:${dateKey}`, type: 'morningMood' }
       }));
+      // TASK-003: полный payload → immediate apply минуя SKIP_RAF_PENDING.
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
-        detail: { date: dateKey, field: 'morningMood', source: 'morning-mood-step', forceReload: true }
+        detail: {
+          date: dateKey, field: 'morningMood', source: 'morning-mood-step', forceReload: true,
+          data: mergeDayMealsPreferLiveIfRicher(dateKey, { ...dayData, date: dateKey })
+        }
       }));
     },
     xpAction: 'morning_mood_logged'

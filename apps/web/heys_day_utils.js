@@ -2023,6 +2023,45 @@
             prevDay.householdMin === newDay.householdMin;
     }
 
+    // === Subjective (check-in) field anti-clobber ===
+    // Поля утреннего чекина, которые пишутся одним шагом и редко обнуляются.
+    // Apply этих значений в React может потеряться под троттлингом таба
+    // (SKIP_RAF_PENDING в heys_day_effects.js), а последующий снапшот дня
+    // (addWater → persistDaySnapshotImmediately) — затереть их в LS.
+    // См. TASK-003 / инвариант №7 (explicit-мёрж, не shape-inference).
+    const SUBJECTIVE_DAY_FIELDS = [
+        'sleepStart', 'sleepEnd', 'sleepHours', 'daySleepMinutes',
+        'sleepQuality', 'sleepNote',
+        'moodMorning', 'wellbeingMorning', 'stressMorning'
+    ];
+
+    const hasDefinedValue = (v) => v !== undefined && v !== null && v !== '';
+
+    /**
+     * Fill-if-missing мёрж subjective-полей чекина из свежего LS-дня поверх снапшота.
+     * Снапшот авторитетен для всех своих полей; недостающие subjective-поля
+     * (потерянные при дропнутом apply) добираются из LS, который пишется немедленно
+     * на каждом шаге чекина. Никогда не перетирает значение, уже присутствующее в
+     * снапшоте (включая 0 — валидное значение для mood/stress/daySleepMinutes).
+     * Чистая функция — обе стороны передаются вызывающим (scoped LS, инв. №9).
+     * @param {Object} snapshot — снимок дня, который собираемся персистить
+     * @param {Object|null} lsDay — свежий day из scoped LS того же клиента
+     * @returns {Object} snapshot либо его копия с добранными subjective-полями
+     */
+    function mergeSubjectiveFieldsPreferFresh(snapshot, lsDay) {
+        const base = (snapshot && typeof snapshot === 'object') ? snapshot : {};
+        if (!lsDay || typeof lsDay !== 'object') return base;
+        let merged = base;
+        for (let i = 0; i < SUBJECTIVE_DAY_FIELDS.length; i++) {
+            const f = SUBJECTIVE_DAY_FIELDS[i];
+            if (hasDefinedValue(lsDay[f]) && !hasDefinedValue(base[f])) {
+                if (merged === base) merged = { ...base };
+                merged[f] = lsDay[f];
+            }
+        }
+        return merged;
+    }
+
     // === Exports ===
     // Всё экспортируется через HEYS.dayUtils
     // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
@@ -2096,6 +2135,9 @@
         preloadMonthDays,
         isSameDayHydratedContent,
         isSameDayStorageMergeContent,
+        // Subjective (check-in) anti-clobber
+        SUBJECTIVE_DAY_FIELDS,
+        mergeSubjectiveFieldsPreferFresh,
         // Predicates
         isSyntheticEstimatedItem
     };
