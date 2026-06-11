@@ -11132,12 +11132,29 @@
       .map(function (o) { return o.a; });
   }
 
-  // Кандидаты качества с учётом §3.2 (под-режим аэробной) и §1.3 (FDP/FDS ротация).
-  function _candidatesForQuality(quality, level) {
+  // §1.3 variantSeed — «другой равноценный набор» (reroll микса). Циклический
+  // сдвиг УЖЕ упорядоченного по методологии списка кандидатов: seed=0 → каноничный
+  // выбор (методология «как лучше»), seed>0 → следующий равноценный атом первым.
+  // Все кандидаты всё равно проходят `_atomFits` (цель-слот + S1/S9 + уровень +
+  // снаряжение) в цикле подбора, поэтому смена seed не меняет ни цель, ни
+  // безопасность — только КАКОЙ из взаимозаменяемых атомов взят. Слот с единственным
+  // подходящим атомом не меняется (нечем варьировать). Reorder-only (slice).
+  function _rotateBySeed(list, seed) {
+    const n = list.length;
+    if (!n || !seed) return list;
+    const off = ((Math.floor(seed) % n) + n) % n;
+    if (off === 0) return list;
+    return list.slice(off).concat(list.slice(0, off));
+  }
+
+  // Кандидаты качества с учётом §3.2 (под-режим аэробной), §1.3 (FDP/FDS ротация)
+  // и §1.3 variantSeed (reroll — другой равноценный набор).
+  function _candidatesForQuality(quality, level, variantSeed) {
     const list = Fingers.blockCatalog.atomsByQuality(quality);
-    if (quality === 'aerobic_base' && level) return _orderAerobicCandidates(list, level);
-    if (quality === 'finger_strength') return _orderByEdgeRotation(list);
-    return list;
+    let ordered = list;
+    if (quality === 'aerobic_base' && level) ordered = _orderAerobicCandidates(list, level);
+    else if (quality === 'finger_strength') ordered = _orderByEdgeRotation(list);
+    return variantSeed ? _rotateBySeed(ordered, variantSeed) : ordered;
   }
 
   function _atomFits(atom, profile, allowedModalities) {
@@ -11181,6 +11198,7 @@
       (opts.level ? { age: opts.age, level: opts.level } : null);
     if (!profile) return null; // fail-closed
     const level = (profile && profile.level) || opts.level || null; // §3.2 aerobic под-режим
+    const variantSeed = Number(opts.variantSeed) || 0; // §1.3 reroll — другой равноценный набор
     const used = usedGripEdge || Object.create(null);
     const blockOnly = _isBlockOnly(opts.equipmentTypes || ['full']);
 
@@ -11207,7 +11225,7 @@
     // Focus pass: только если quality уже входит в slot. Не расширяет пул слота,
     // а лишь даёт лимитеру мезоцикла шанс до tissue-pref fallback'ов.
     if (focusQuality && qualities.indexOf(focusQuality) >= 0) {
-      const candidates = _candidatesForQuality(focusQuality, level);
+      const candidates = _candidatesForQuality(focusQuality, level, variantSeed);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
@@ -11220,7 +11238,7 @@
     // 1-я попытка — match quality + tissue preference + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
-      const candidates = _candidatesForQuality(q, level);
+      const candidates = _candidatesForQuality(q, level, variantSeed);
       for (let j = 0; j < tissuePrefs.length; j++) {
         const tissue = tissuePrefs[j];
         for (let k = 0; k < candidates.length; k++) {
@@ -11236,7 +11254,7 @@
     // 2-я попытка — любой подходящий атом quality + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
-      const candidates = _candidatesForQuality(q, level);
+      const candidates = _candidatesForQuality(q, level, variantSeed);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
@@ -15852,6 +15870,76 @@
   }
 
   // ─── Mix card ──────────────────────────────────────────────────────────────
+  // Короткая сводка дозы упражнения по doseShape (для превью набора в карточке).
+  function _mixDoseHint(e) {
+    const d = (e && e.dose) || {};
+    switch (e && e.doseShape) {
+      case 'hang': {
+        const w = d.workSec != null ? d.workSec : (e.hangSec || 0);
+        const sets = d.sets || e.setsCount || d.reps || 1;
+        return w ? ('вис ' + w + 'с × ' + sets) : ('висы × ' + sets);
+      }
+      case 'continuous': {
+        const w = d.workSec || 0;
+        return w >= 60 ? (Math.round(w / 60) + ' мин') : (w ? w + ' с' : 'непрерывно');
+      }
+      case 'circuit': {
+        const r = d.rounds || 0;
+        return r ? (r + ' раундов') : 'круговая';
+      }
+      case 'attempts': {
+        const a = d.attempts || d.problems || d.problemsPerRound || 0;
+        return a ? (a + ' попыток') : 'попытки';
+      }
+      case 'reps': {
+        const reps = d.reps || e.repsPerSet || 0;
+        const sets = d.sets || e.setsCount || 1;
+        return reps ? (reps + ' повт × ' + sets) : ('повторы × ' + sets);
+      }
+      default:
+        return '';
+    }
+  }
+
+  // Превью набора: что за упражнения собрались, с мини-фото хвата (или эмодзи
+  // блока для не-хватовых). Имя = хват+ребро или название блока; подзаголовок =
+  // категория + доза. Помогает увидеть состав до запуска и решить про reroll.
+  function MixExerciseList({ workout }) {
+    const list = (workout && workout.exercises) || [];
+    if (!list.length) return null;
+    const QEMOJI = {
+      finger_strength: '🤏', max_strength: '💪', power: '⚡', anaerobic_capacity: '🔥',
+      aerobic_base: '🫀', technique: '🎯', antagonist: '🦾', mobility: '🤸', mental: '🧠'
+    };
+    const bc = Fingers.blockCatalog;
+    return h('div', { className: 'fingers-fs-mixcard__exlist' },
+      h('div', { className: 'fingers-fs-mixcard__exlist-title' }, 'Что внутри'),
+      list.map(function (e, i) {
+        const atom = (bc && bc.getAtom) ? bc.getAtom(e.atomId) : null;
+        const block = (atom && bc.getBlock) ? bc.getBlock(atom.blockId) : null;
+        const grip = e.gripId && Fingers.GRIPS_BY_ID ? Fingers.GRIPS_BY_ID[e.gripId] : null;
+        const quality = atom ? atom.quality : null;
+        const category = block ? block.label : '';
+        const name = grip
+          ? (grip.label + (e.edgeSizeMm ? ' · ' + e.edgeSizeMm + ' мм' : ''))
+          : (category || e.atomId || 'Упражнение');
+        const dose = _mixDoseHint(e);
+        const sub = grip ? (category + (dose ? ' · ' + dose : '')) : dose;
+        const thumb = (e.gripId && Fingers.GripIcon)
+          ? h(Fingers.GripIcon, { gripId: e.gripId, equipmentTier: e.equipmentTier, size: 46 })
+          : h('span', { className: 'fingers-fs-mixcard__exemoji', 'aria-hidden': 'true' },
+              QEMOJI[quality] || '•');
+        return h('div', { key: e.atomId + '-' + i, className: 'fingers-fs-mixcard__exrow' },
+          h('span', { className: 'fingers-fs-mixcard__exthumb' }, thumb),
+          h('span', { className: 'fingers-fs-mixcard__exinfo' },
+            h('span', { className: 'fingers-fs-mixcard__exname' }, name),
+            sub ? h('span', { className: 'fingers-fs-mixcard__exsub' }, sub) : null
+          )
+        );
+      })
+    );
+  }
+
   // Генерируемая «случайная сборка» — отдельный компонент, который раньше жил
   // только в Протоколах. Перенесён в Today (рядом с рекомендованным официальным
   // протоколом), чтобы Протоколы остались чистым каталогом, а Today давал две
@@ -15881,7 +15969,10 @@
         goal: mixGoal,
         intensity: GOAL_TO_INTENSITY_MIX[mixGoal] || 'moderate',
         age: ageRaw,
-        readiness: cool && cool.recommendation
+        readiness: cool && cool.recommendation,
+        // §1.3 reroll: seed варьирует выбор среди равноценных атомов (та же цель/
+        // контекст/безопасность). seed=0 — каноничный набор «как по методологии».
+        variantSeed: mixSeed
       };
       setMixedWorkout(_recommendMixedWorkout(mixOpts));
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -15897,8 +15988,8 @@
       }) : null,
       h('div', { className: 'fingers-fs-mixcard' },
       h('div', { className: 'fingers-fs-mixcard__hint' },
-        h('span', { 'aria-hidden': 'true' }, '🎲 '),
-        'Случайная сборка под цель и готовность — альтернатива официальному протоколу.'
+        h('span', { 'aria-hidden': 'true' }, '🧬 '),
+        'Сессия по методологии под твою цель и готовность — альтернатива официальному протоколу. Кнопка 🔄 даёт другой равноценный набор под ту же цель.'
       ),
       h('div', { className: 'fingers-fs-mixcard__inner' },
         h('div', { className: 'fingers-fs-mixcard__head-row' },
@@ -15938,12 +16029,14 @@
             );
           })
         ),
+        h(MixExerciseList, { workout: mixedWorkout }),
         h('div', { className: 'fingers-fs-mixcard__actions' },
           h('button', {
             type: 'button',
             className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--reroll',
             onClick: onGenerateMix,
-            title: 'Другой набор упражнений'
+            'aria-label': 'Другой равноценный набор',
+            title: 'Другой равноценный набор под ту же цель. Цель, готовность и безопасность те же — меняются только взаимозаменяемые упражнения (методология §1.3: «меняй переменную, сохраняя качество-цель»).'
           },
             h('span', { 'aria-hidden': 'true' }, '🔄')
           ),
