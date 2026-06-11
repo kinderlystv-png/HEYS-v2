@@ -37,7 +37,12 @@
   // Флаги — namespace. Не перезаписываем, если установлен внешне.
   Fingers.flags = Fingers.flags || {};
   if (typeof Fingers.flags.newEngine !== 'boolean') {
-    Fingers.flags.newEngine = false; // безопасный default
+    // FLIP 2026-06-11: новый движок включён для всех (canary валидирован).
+    // Откат: вернуть `false` здесь (+rebundle+deploy) или рантайм
+    // `HEYS.Fingers.flags.newEngine = false`. Safety: при null/throw/контракт-fail
+    // sessionBuilder роутер всё равно падает на mixEngine (fallback-цепочка
+    // в recommendDay ниже) — это деградация к legacy, не поломка сессии.
+    Fingers.flags.newEngine = true;
   }
   if (typeof Fingers.flags.shadowCompare !== 'boolean') {
     Fingers.flags.shadowCompare = false; // shadow-compare выключен по умолчанию

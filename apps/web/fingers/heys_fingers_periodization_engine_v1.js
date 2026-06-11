@@ -70,14 +70,52 @@
     return 'recovery';
   }
 
+  // selectModel — авто-выбор модели периодизации (METHODOLOGY §6.4): формат-цели
+  // + ведущий лимитер (8.3). Инвариант: лимитер первичен. Возврат {model,
+  // periodize, reason}; periodize:false → новичок/навыковый лимитер (тяжёлую
+  // периодизацию не гнать). Все возвращаемые модели клампят нагрузку безопасно.
+  function selectModel(input) {
+    const o = input || {};
+    const level = o.level || 'beginner';
+    const limiter = o.leadingLimiter || o.focusQuality || null;
+    const hasGoalDate = !!o.goalDate;
+    const spw = Number(o.sessionsPerWeek) || 0;
+    const onSeason = o.onSeason === true || o.season === 'on';
+
+    if (level === 'beginner') {
+      return { model: 'maintenance', periodize: false, reason: 'новичок: объём+база+техника, без периодизации' };
+    }
+    if (limiter === 'technique' || limiter === 'mental') {
+      return { model: 'maintenance', periodize: false, reason: 'лимитер=' + limiter + ': навык первичен, силовое поддерживающее' };
+    }
+    if (hasGoalDate) {
+      return { model: 'linear', periodize: true, reason: 'дата-цель → линейная (Anderson) к пику' };
+    }
+    if (limiter === 'finger_strength' || limiter === 'max_strength') {
+      return { model: 'linear', periodize: true, reason: 'лимитер=сила пальцев → силовой мезо (линейная)' };
+    }
+    if (limiter === 'anaerobic_capacity' || limiter === 'aerobic_base') {
+      return { model: 'nonlinear', periodize: true, reason: 'лимитер=энергосистема → нелинейная' };
+    }
+    if (spw >= 3 && onSeason) {
+      return { model: 'dup', periodize: true, reason: '3+ сессий/нед on-season → DUP (Hörst)' };
+    }
+    return { model: 'nonlinear', periodize: true, reason: 'круглый год → нелинейная (Bechtel, по умолчанию)' };
+  }
+
   function buildPlan(opts) {
     const o = opts || {};
     const focusQuality = o.focusQuality ||
       (o.assessment && o.assessment.leadingLimiter) ||
       (o.assessmentResult && o.assessmentResult.leadingLimiter) ||
       null;
-    const model = ['linear', 'nonlinear', 'dup', 'taper', 'maintenance'].indexOf(o.model) >= 0
-      ? o.model : 'linear';
+    const explicitModel = ['linear', 'nonlinear', 'dup', 'taper', 'maintenance'].indexOf(o.model) >= 0
+      ? o.model : null;
+    const auto = explicitModel ? null : selectModel({
+      level: o.level, leadingLimiter: focusQuality, goalDate: o.goalDate,
+      sessionsPerWeek: o.sessionsPerWeek, onSeason: o.onSeason, season: o.season
+    });
+    const model = explicitModel || (auto && auto.model) || 'linear';
     const weeks = Math.max(1, Math.min(12, Number(o.weeks) || DEFAULT_WEEKS));
     const startedAt = o.startedAt || _todayKey();
     const planWeeks = [];
@@ -98,6 +136,8 @@
       weeksTotal: weeks,
       focusQuality: focusQuality,
       goalDate: o.goalDate || null,
+      modelAutoSelected: !explicitModel,
+      modelReason: auto ? auto.reason : ('явная модель: ' + model),
       weeks: planWeeks
     };
   }
@@ -156,6 +196,7 @@
 
   Fingers.periodization = {
     buildPlan: buildPlan,
+    selectModel: selectModel,
     current: current,
     savePlan: savePlan,
     loadPlan: loadPlan,

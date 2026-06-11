@@ -946,3 +946,82 @@ describe('sessionBuilder: equipment-фильтрация', () => {
     expect(s.intensity).toBe('max');
   });
 });
+
+describe('sessionBuilder §3.2: под-режимы аэробной (capacity vs power)', () => {
+  beforeAll(setupOnce);
+
+  const QC = () => globalThis.HEYS.Fingers.qualityCatalog;
+  const aerProf = (level) => ({
+    age: 25, level: level,
+    completedPrerequisites: ['warmup_done', 'bfr_cuff_technique', 'base_>=1y', 'base_>=2y']
+  });
+
+  it('deriveAerobicMode: явные теги атомов', () => {
+    const byId = (id) => F().blockCatalog.atomsByQuality('aerobic_base').find((a) => a.id === id);
+    expect(QC().deriveAerobicMode(byId('aer_arc'))).toBe('capacity');
+    expect(QC().deriveAerobicMode(byId('aer_mileage'))).toBe('capacity');
+    expect(QC().deriveAerobicMode(byId('aer_power_intervals'))).toBe('power');
+    expect(QC().deriveAerobicMode(byId('aer_bfr_lowload'))).toBe('capacity');
+  });
+
+  it('deriveAerobicMode: вывод по форме дозы + приоритет явного тега', () => {
+    expect(QC().deriveAerobicMode({ energySystem: 'aerobic', doseShape: 'continuous' })).toBe('capacity');
+    expect(QC().deriveAerobicMode({ energySystem: 'aerobic', doseShape: 'circuit' })).toBe('power');
+    expect(QC().deriveAerobicMode({ energySystem: 'aerobic', doseShape: 'continuous', energySubMode: 'power' })).toBe('power');
+    expect(QC().deriveAerobicMode({ energySystem: 'glycolytic', doseShape: 'circuit' })).toBeNull();
+  });
+
+  it('Baláš 2016: новичок → непрерывная ёмкость, продвинутый → интервалы (мощность)', () => {
+    const beg = SB()._pickAtomForSlot('capacity', { profile: aerProf('beginner'), equipmentTypes: ['full'] });
+    const adv = SB()._pickAtomForSlot('capacity', { profile: aerProf('advanced'), equipmentTypes: ['full'] });
+    expect(QC().deriveAerobicMode(beg)).toBe('capacity');
+    expect(adv.id).toBe('aer_power_intervals');
+  });
+
+  it('reorder не мутирует общий catalog-массив', () => {
+    const before = F().blockCatalog.atomsByQuality('aerobic_base').map((a) => a.id).join(',');
+    SB()._pickAtomForSlot('capacity', { profile: aerProf('advanced'), equipmentTypes: ['full'] });
+    const after = F().blockCatalog.atomsByQuality('aerobic_base').map((a) => a.id).join(',');
+    expect(after).toBe(before);
+  });
+});
+
+describe('sessionBuilder §1.1 M3: transfer-мостик (сила → применение)', () => {
+  beforeAll(setupOnce);
+
+  const isFb = (e) => {
+    const a = F().blockCatalog.getAtom(e.atomId);
+    return !!a && a.modality === 'fingerboard' && (a.quality === 'finger_strength' || a.quality === 'max_strength');
+  };
+  const isApp = (e) => {
+    const a = F().blockCatalog.getAtom(e.atomId);
+    return !!a && (a.modality === 'board' || a.modality === 'wall') && (a.quality === 'max_strength' || a.quality === 'power');
+  };
+
+  it('инвариант: фингерборд-сила в сессии ⇒ есть application-блок (board/wall)', () => {
+    ['max', 'moderate'].forEach((rd) => {
+      const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: rd, focusQuality: 'finger_strength' });
+      expect(s).not.toBeNull();
+      if (s.exercises.some(isFb)) expect(s.exercises.some(isApp)).toBe(true);
+    });
+  });
+
+  it('moderate: мостик добирает application (роль transfer), когда штатных слотов не хватило', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'moderate', focusQuality: 'finger_strength' });
+    expect(s.exercises.some(isFb)).toBe(true);
+    expect(s.exercises.some(isApp)).toBe(true);
+    expect(s.exercises.find((e) => e.__role === 'transfer')).toBeTruthy();
+  });
+
+  it('fail-safe: нет board/wall в снаряжении (block-only) → мостик не навязывается', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['block'], age: 25, level: 'intermediate', readiness: 'max', focusQuality: 'finger_strength' });
+    expect(s).not.toBeNull();
+    expect(s.exercises.some(isApp)).toBe(false);
+    expect(s.exercises.find((e) => e.__role === 'transfer')).toBeFalsy();
+  });
+
+  it('recovery: мостик не для восстановительных сессий', () => {
+    const s = SB().recommendDay({ equipmentTypes: ['full'], age: 25, level: 'intermediate', readiness: 'recovery' });
+    expect(s.exercises.find((e) => e.__role === 'transfer')).toBeFalsy();
+  });
+});

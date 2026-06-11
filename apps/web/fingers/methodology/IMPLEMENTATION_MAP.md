@@ -38,13 +38,14 @@ _этой карты_ (✅ ячейка заполнена / 🟫 чернови
 пользователя **0 изменений**. Ниже — что осталось до «полного режима пальцев».
 Отмечай `[x]` по мере.
 
-**Решение (2026-06-09): доводим до 100% методологии, `flag=on` — последним
-шагом.** Очередь исполнения по зависимостям (группы A/B/C ниже — те же пункты,
-это — порядок): **A4 (старт) → прогрессия-enforce → MEV/MAV → мелкие
-методологические → тест-батарея + level-capture → периодизация (капстоун) →
-re-shadow → флип.** Логика: периодизация (капстоун) опирается на лимитер +
-применённую прогрессию + тест-батарею, поэтому идёт после них; A4 —
-техдолг-фундамент, безопасен сейчас.
+**Решение (2026-06-11, обновлено): ГИБРИД — canary-флип сейчас → доводка 100% на
+живых данных.** Все methodology/safety-куски ядра реализованы и выверены (P0,
+gate fail-closed, S1–S9, прогрессия-enforce, периодизация volume+focus, S8 во
+всех runner'ах), поэтому ждать «100% до флипа» больше нет смысла: мёртвый код не
+валидируется, а оставшийся UI-бэклог (тест-ввод, графики, план мезо) правильнее
+строить на реальном юзедже. Порядок: **dev-смоук → shadow-накопление →
+gate(fail-closed) → canary per-client → расширение → снос `mix_engine`.**
+Параллельно — 100% (UI-бэклог) на живых данных.
 
 **A. До включения нового движка (flag=on) — ближайшее:**
 
@@ -52,31 +53,52 @@ re-shadow → флип.** Логика: периодизация (капстоу
       `RepsCounterDisplay`)
 - [ ] Поэтапный rollout (canary) + наблюдение `engineRouter.lastShadowDiff` в
       проде
-- [ ] (продукт) level-capture UI — иначе большинство юзеров на консервативном
-      контенте (полный силовой — только при явно заявленном уровне)
-- [ ] tech-debt: консолидация `useCountdownCycle`/`useRepsCycle` в общее ядро
-      (теперь безопасно — оба под характеризацией)
+- [x] level-capture UI ✅ — onboarding+settings; уровень = стаж нагрузки на
+      пальцы (не грейд); advanced/elite требуют confirm (открывают малое
+      ребро/высокую нагрузку) — safety-трение на self-attestation
+- [x] tech-debt: консолидация `useCountdownCycle`/`useRepsCycle` в общее ядро ✅
+      (commit `0f9ef53e`, A4): `useTimerCore` — общее ядро, оба хука тонкие
+      обёртки; покрыто `fingers-timer-cycle`/`fingers-reps-cycle`
 
-**B. Фаза 2 — методология есть, движка нет:**
+**B. Фаза 2 — методология есть, движок отсутствует или частичный:**
 
-- [ ] **Периодизация (ч.6)** — `periodization_engine`: мезо/макро-циклы (linear
-      6.1 / nonlinear 6.2 / DUP 6.3, выбор 6.4, тейпер 6.5). Сейчас сборка
-      только на 1 день.
+- [x] **Периодизация (ч.6) — ядро в проде** ✅ (commit `3b6d4c62` B7):
+      `periodization_engine` есть — `buildPlan`/`current`, модели linear 6.1 /
+      nonlinear 6.2 / DUP 6.3 / taper 6.5 / maintenance 6.6, фазы
+      accumulation/intensification/deload/retest/taper/maintenance/dup с
+      `ceiling`+`volumeMultiplier`. Потребляется `engine_router` (авто-инжект
+      `periodization.current` в контекст) и `session_builder` (`plannerContext`)
+      → clamp интенсивности дня по фазе мезоцикла. Тесты `fingers-periodization`
+      (5) + `fingers-mesocycle` (6). **Осталось Фаза 2:** авто-выбор модели 6.4
+      (`selectModel(формат×лимитер)` — сейчас `model` передаётся вручную),
+      transfer-sequencing (M3, ниже), enforcement смены переменной прогрессии
+      (B3, ниже).
 - [x] **UI-плеер на остальные doseShape (Шаг 5 a–d)** ✅ 2026-06-09 —
       attempts/circuit/continuous/process в проде: Runner+Display каждого,
       `RENDERABLE_DOSESHAPES` расширен с `{hang,reps}` до всех 6 (B1.5-cut
       снят), тесты `fingers-{continuous,attempts,circuit,process}-display`.
       Non-hang атомы (болдер/ARC/кампус/техника/тактика) теперь рендерятся.
-- [ ] Прогрессия/вариативность (1.2/1.3) — _частично:_
-      `detectPlateau`/`nextAxis`/ `suggestProgression` ✅ 2026-06-09 в модуле
-      `progression` (B3), потребляются `session_builder` как **advisory hints**
-      (без влияния на генерацию). Осталось (Фаза 2): enforcement «смена
-      переменной» в генераторе.
-- [ ] МЭД / MEV-MAV полосы (1.7 / §3.7) — полноценно в генераторе
+- [x] Прогрессия/вариативность (1.2/1.3) — **enforced** ✅: `detectPlateau`/
+      `nextAxis`/`suggestProgression` (B3) теперь констрейнят выбор атома в
+      `session_builder` (`_progressionAllowsAtom` — кап оси, ANDed с
+      `_atomFits`, safety-floor цел).
+- [x] FDP/FDS edge-ротация (1.3 / §3.3) ✅ — `edge_history` копит
+      кросс-сессионный lean-лог хватов (crimp=FDP / open=FDS из grips
+      primaryMuscles, client-scoped, окно 21д), `session_builder` чередует хваты
+      к под-нагруженному сгибателю (reorder-only); запись на завершении сессии в
+      `session_ui`
+- [x] МЭД / MEV-MAV (1.7 / §3.7) ✅ — MAV режет недельный quality-объём
+      (`_enforceQualityMav`), MEV объясняет недобор без форса нагрузки
 - [ ] Полная тест-батарея (8.1) + частота ретеста (8.4) + UI тестов
-- [ ] transfer-мостик (1.1 M3): max-сила → применение (board/wall)
-- [ ] homed Фаза-2 валидаторы («Заметки целостности»): FDP/FDS edge-ротация,
-      `ageModifier` 35+, `skinStatus`, под-режимы aerobic (3.2)
+- [x] transfer-мостик (1.1 M3) ✅ — фингерборд-сила в сессии без
+      application-блока добирает один атом max_strength/power на board/wall
+      (`session_builder` additive-floor); fail-safe: нет board/wall → не
+      навязывается
+- [x] под-режимы aerobic (3.2) ✅ — `energySubMode` capacity/power на атомах E +
+      `qualityCatalog.deriveAerobicMode`; selector клонит долю интермиттента по
+      уровню (Baláš 2016)
+- [ ] homed Фаза-2 валидаторы («Заметки целостности»): `ageModifier` 35+,
+      `skinStatus`
 
 **C. Числовая база:**
 
@@ -99,44 +121,97 @@ re-shadow → флип.** Логика: периодизация (капстоу
 
 ---
 
-## 📊 Статус реализации в коде (детально · 2026-06-09)
+## 📍 Сводка готовности (КАНОН — синкается в METHODOLOGY + KICKOFF)
 
-Оси: **Метод.** (наука) · **Код** (в strangler-движке). Легенда: ✅ готово · 🟡
-частично · ⬜ Фаза 2 · — n/a (текст/обоснование). Это «готовность кода» (в
-отличие от «Заполн.» ниже — авторство карты).
+<!-- STATUS:SOURCE:START -->
 
-| Подраздел                      | Метод. | Код | Модуль / что осталось                                                                                             |
-| ------------------------------ | :----: | :-: | ----------------------------------------------------------------------------------------------------------------- |
-| 1.1 Специфичность              |   ✅   | 🟡  | `quality_catalog` (emphasis/energySystem); transfer-мостик M3 — Фаза 2                                            |
-| 1.2 Прогресс. перегрузка       |   ✅   | 🟡  | `S4_progressionCap` + `sessionBuilder` FTL slot-trimming; `progression.nextAxis/suggestProgression` advisory (B3) |
-| 1.3 Вариативность / плато      |   ✅   | 🟡  | `progression.detectPlateau` advisory (B3); смена переменной в генераторе — Фаза 2                                 |
-| 1.4 Лимитер (индивидуализация) |   ✅   | ✅  | `assessment` scoreLimiters §3.2                                                                                   |
-| 1.5 Техника / железо           |   ✅   | ✅  | `V_skillBalance` + доли §3.8                                                                                      |
-| 1.6 Восстановление             |   ✅   | ✅  | `S2_tissueFreshness` + FTL                                                                                        |
-| 1.7 МЭД (MEV/MAV)              |   ✅   | 🟡  | §3.7 полосы — частично                                                                                            |
-| 1.8 Нагрузка / риск            |   ✅   | ✅  | `S4` FTL-кап + danger-модель                                                                                      |
-| 2. 9 качеств                   |   ✅   | ✅  | `quality_catalog`                                                                                                 |
-| 3.1 Сила/выносл. по времени    |   ✅   | ✅  | `deriveEnergySystem`                                                                                              |
-| 3.2 Энергосистемы (под-режимы) |   ✅   | 🟡  | `block_catalog` — частично                                                                                        |
-| 3.3 Ткани / горлышко           |   ✅   | ✅  | `grips_catalog` danger + S2/S9                                                                                    |
-| 4. Блоки A–I (каталог)         |   ✅   | ✅  | `block_catalog` 36 атомов × 9 блоков; non-hang атомы рендерятся (Шаг 5 a–d ✅)                                    |
-| 5.x Протоколы (числа)          |   ✅   | ✅  | атомы (доза/loadModel/doseConfidence); 5.7→S3, 5.6→S6                                                             |
-| 6.1–6.5 Периодизация           |   ✅   | ⬜  | мезо/макро — Фаза 2 (движка нет)                                                                                  |
-| 7.1–7.4 Уровни                 |   ✅   | ✅  | `S1` гейт + derive level + seed-creds; level-assign hybrid 🟡                                                     |
-| 8.1 Тест-батарея               |   ✅   | 🟡  | `cf_test` атом; полная батарея + UI — Фаза 2                                                                      |
-| 8.2 Бенчмарки                  |   ✅   | 🟡  | `assessment.BENCHMARKS` — 🟠 дефолт (Berta 2025 pending)                                                          |
-| 8.3 Аудит лимитера             |   ✅   | ✅  | scoreLimiters                                                                                                     |
-| 8.4 Частота тестов             |   ✅   | ⬜  | Фаза 2                                                                                                            |
-| 9.2 Правила → валидаторы       |   ✅   | ✅  | **S1–S9 все** + V_blockHomogeneity / energySystemSequence / sessionOrder / skillBalance                           |
-| 9.3 Возраст / зоны роста       |   ✅   | ✅  | `S1` + `age_gating`                                                                                               |
-| 9.4 Вес / RED-S                |   ✅   | 🟡  | рамка-инвариант (advisory), не жёсткий гейт                                                                       |
-| 9.5 Реабилитация / red-flags   |   ✅   | ✅  | `S8_painStop` + `S9` prerequisites                                                                                |
-| 10. Источники                  |   ✅   | ✅  | `sourceIds` на атомах (`bibliography`)                                                                            |
+### Готовность режима пальцев · Методология / Движок / UI
 
-> **Сводка:** ядро (каталог, 9 качеств, энергосистемы, лимитер, уровни, **вся
-> safety S1–S9**, сборка дня, plumbing MVC/уровня, **UI всех 6 doseShape — Шаг 5
-> a–d ✅**, прогрессия-advisory B3) — в коде. Бэклог: периодизация, enforcement
-> прогрессии/вариативности в генераторе, полная тест-батарея, числа бенчмарков.
+Оси: **Метод.** (наука) · **Движок** (логика strangler) · **UI**
+(пользовательский поток). Легенда: ✅ готово · 🟡 частично · ⬜ Фаза 2 (бэклог)
+· — n/a.
+
+| Раздел               | Метод. | Движок | UI  |
+| -------------------- | :----: | :----: | :-: |
+| 0. Сводка школ       |   ✅   |   ✅   |  —  |
+| 1. Принципы          |   ✅   |   ✅   | 🟡  |
+| 2. 9 качеств         |   ✅   |   ✅   |  —  |
+| 3. Физиология        |   ✅   |   ✅   |  —  |
+| 4. Каталог A–I       |   ✅   |   ✅   | ✅  |
+| 5. Протоколы         |   ✅   |   ✅   | ✅  |
+| 6. Периодизация      |   ✅   |   ✅   | ⬜  |
+| 7. Уровни            |   ✅   |   ✅   | ✅  |
+| 8. Тесты / бенчмарки |   ✅   |   🟡   | ⬜  |
+| 9. Безопасность      |   ✅   |   ✅   | ✅  |
+| 10. Источники        |   ✅   |   ✅   |  —  |
+
+**Поставка:** движок + UI всех 6 doseShape — в проде за `flags.newEngine=false`
+(юзер на legacy). Безопасность выверена полностью. Дальше — **гибрид:
+canary-флип → 100% на живых данных.** Детальный per-подраздел аудит — в таблице
+«Аудит: Движок vs UI» ниже в этом файле.
+
+<!-- STATUS:SOURCE:END -->
+
+> Правишь сводку — **только здесь** (между `STATUS:SOURCE`), потом
+> `node tools/status-sync.mjs` синкнёт в `METHODOLOGY.md` и `KICKOFF.md`.
+
+---
+
+## 📊 Аудит реализации: Движок vs UI (детально · 2026-06-11)
+
+Четыре оси аудита: **Метод.** (наука написана/проаудирована) · **Движок**
+(логика в strangler-цепочке) · **UI** (пользовательский рендер/поток). Легенда:
+✅ готово · 🟡 частично · ⬜ Фаза 2 (бэклог) · — n/a (внутренняя логика, нет
+user-surface).
+
+| Подраздел                      | Метод. | Движок | UI  | Что в коде / что осталось                                                                                                                                                                                |
+| ------------------------------ | :----: | :----: | :-: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.1 Специфичность              |   ✅   |   ✅   |  —  | `quality_catalog` emphasis/energySystem + `focusQuality` (лимитер→фокус); transfer-мостик M3 ✅ (`session_builder`: фингерборд-сила ⇒ application board/wall)                                            |
+| 1.2 Прогресс. перегрузка       |   ✅   |   ✅   |  —  | progression **enforced** в `session_builder` (`_progressionAllowsAtom` — кап оси выбора, ANDed с `_atomFits`) + `S4` FTL-trim                                                                            |
+| 1.3 Вариативность / плато      |   ✅   |   ✅   |  —  | `detectPlateau`+`nextAxis` enforced; FDP/FDS edge-ротация ✅ (`edge_history` кросс-сессионный lean-лог → `session_builder` чередует FDP/FDS хваты по под-нагруженному)                                   |
+| 1.4 Лимитер                    |   ✅   |   ✅   |  —  | `assessment` scoreLimiters §3.2 → `leadingLimiter` → фокус мезо                                                                                                                                          |
+| 1.5 Техника / железо           |   ✅   |   ✅   |  —  | `V_skillBalance` + доли §3.8                                                                                                                                                                             |
+| 1.6 Восстановление             |   ✅   |   ✅   | 🟡  | `S2_tissueFreshness` + FTL; UI ввода readiness — частично                                                                                                                                                |
+| 1.7 МЭД (MEV/MAV)              |   ✅   |   ✅   |  —  | MAV режет недельный объём, MEV объясняет — в генераторе (`_enforceQualityMav`)                                                                                                                           |
+| 1.8 Нагрузка / риск            |   ✅   |   ✅   |  —  | `S4` FTL-кап + danger-модель                                                                                                                                                                             |
+| 2. 9 качеств                   |   ✅   |   ✅   |  —  | `quality_catalog`                                                                                                                                                                                        |
+| 3.1 Сила/выносл. по времени    |   ✅   |   ✅   |  —  | `deriveEnergySystem`                                                                                                                                                                                     |
+| 3.2 Энергосистемы (под-режимы) |   ✅   |   ✅   |  —  | `energySubMode` capacity/power на атомах E + `qualityCatalog.deriveAerobicMode`; selector клонит долю интермиттента по уровню (Baláš 2016)                                                               |
+| 3.3 Ткани / горлышко           |   ✅   |   ✅   |  —  | `grips_catalog` danger + S2/S9                                                                                                                                                                           |
+| 4. Каталог A–I                 |   ✅   |   ✅   | ✅  | `block_catalog` 36×9; **все 6 doseShape рендерятся** (Hang/Reps/Continuous/Attempts/Circuit/Process)                                                                                                     |
+| 5.x Протоколы                  |   ✅   |   ✅   | ✅  | атомы доза/loadModel/doseConfidence; рендер через 6 runner'ов                                                                                                                                            |
+| 6. Периодизация                |   ✅   |   ✅   | ⬜  | `periodization_engine`: модели 6.1-6.3/6.5/6.6, фазы clamp интенсивности+**объёма**+**фокуса**, **авто-`selectModel` 6.4 ✅** (формат+лимитер); **осталось:** **UI плана мезоцикла / forward-календарь** |
+| 7. Уровни                      |   ✅   |   ✅   | ✅  | `S1` гейт + derive level + seed-creds; **level-capture UI** (onboarding+settings, трение/confirm на advanced/elite)                                                                                      |
+| 8.1 Тест-батарея               |   ✅   |   ✅   | ⬜  | `TEST_BATTERY`+`assessBattery` (ядро); **UI ввода результатов теста — нет**                                                                                                                              |
+| 8.2 Бенчмарки                  |   ✅   |   🟡   |  —  | `assessment.BENCHMARKS` — 🟠 дефолт (Berta 2025 pending)                                                                                                                                                 |
+| 8.3 Аудит лимитера             |   ✅   |   ✅   |  —  | scoreLimiters §3.2                                                                                                                                                                                       |
+| 8.4 Частота тестов             |   ✅   |   ✅   | ⬜  | `dueTests` (ядро); **UI ретест-напоминаний — нет**                                                                                                                                                       |
+| 9.2 Правила → валидаторы       |   ✅   |   ✅   | ✅  | **S1–S9** + V_blockHomogeneity/energySystemSequence/sessionOrder/skillBalance; pain/warmup/abort surfaced в UI                                                                                           |
+| 9.3 Возраст / зоны роста       |   ✅   |   ✅   | ✅  | `S1`+`age_gating`; age-warning в onboarding                                                                                                                                                              |
+| 9.4 Вес / RED-S                |   ✅   |   🟡   | 🟡  | рамка-инвариант (advisory), не жёсткий гейт                                                                                                                                                              |
+| 9.5 Реабилитация / red-flags   |   ✅   |   ✅   | ✅  | `S8_painStop`+`S9`; pain-промпт в UI                                                                                                                                                                     |
+| 10. Источники                  |   ✅   |   ✅   |  —  | `sourceIds` + `bibliography`                                                                                                                                                                             |
+
+**Инфраструктура (вне нумерации методологии):**
+
+| Слой                           | Движок | UI  | Заметка                                                                                                                  |
+| ------------------------------ | :----: | :-: | ------------------------------------------------------------------------------------------------------------------------ |
+| Strangler-роутер + canary-gate |   ✅   |  —  | `engine_router`: fail-closed gate (≥50 маршрутов + ≥8 shadow), shadowCompare, danger-budget; **`flags.newEngine=false`** |
+| Timer-ядро (A4)                |   ✅   | ✅  | `useTimerCore` — оба хука тонкие обёртки; все 6 runner'ов на shared `useExerciseShell` (S8 pain/RPE/snapshot/abort)      |
+| Персистенция / boot            |   ✅   |  —  | client-scoped (инвариант №9, P0.1) + multi-tab timer-lock (P0.2)                                                         |
+| Профиль                        |   ✅   | ✅  | `getProfile`/`saveProfilePatch` + level-capture                                                                          |
+| Экспорт                        |   ✅   | ✅  | CSV + debug-JSON (current-client-scoped)                                                                                 |
+
+> **Поставка:** ядро тренировочной логики и UI всех 6 doseShape — в проде, но за
+> **`flags.newEngine=false`** (юзер на legacy `mix_engine`). Безопасность
+> выверена полностью (P0, gate fail-closed, S1–S9, S8 во всех runner'ах). Дальше
+> — **гибрид: canary-флип → доводка 100% на живых данных** (решение 2026-06-11).
+>
+> **Главный UI-бэклог:** ввод результатов тест-батареи (8.1), ретест-напоминания
+> (8.4), визуализация плана мезоцикла / forward-календарь (ч.6), графики
+> прогресса. **Engine-бэклог:** числа бенчмарков Berta (8.2). _Движковый бэклог
+> Фазы 2 закрыт:_ auto-`selectModel` 6.4 + aerobic-под-режимы 3.2 +
+> transfer-мостик M3 (1.1) + FDP/FDS edge-ротация (1.3) — ✅ 2026-06-11.
 
 ---
 
@@ -351,14 +426,17 @@ re-shadow → флип.** Логика: периодизация (капстоу
   `atom.quality`, `SLOT_ACCEPT` под 9 качеств; правило порядка вынести в
   тестируемый `validators.sessionOrder`.
 
-### M3 — правило переноса (transfer-sequencing, Фаза 2)
+### M3 — правило переноса (transfer-sequencing) ✅ 2026-06-11
 
-- В мезо/микро блок «сырой силы» (`finger_strength`, fingerboard) сопровождается
-  блоком «применения» того же качества в движении (`max_strength`/`power` на
-  board/wall) — в одном мезоцикле, не изолированно.
-- Реализация: `periodization_engine` — правило парности
-  `requireApplication(finger_strength → {board|wall})`; при генерации меса
-  проверять наличие application-блока, иначе warn.
+- В сессии блок «сырой силы» (`finger_strength`/`max_strength` на fingerboard)
+  сопровождается блоком «применения» в движении (`max_strength`/`power` на
+  board/wall) — сила переносится в результат только через специфичное движение.
+- **Реализация:** `session_builder` — additive-floor (по образцу antagonist):
+  если сессия (bucket max/moderate) содержит фингерборд-силу, но НЕ содержит
+  application-атома на board/wall — добирается один такой атом через `_atomFits`
+  (S1/S9/equipment/level/renderable) + дедуп grip+edge, роль `transfer`.
+  **Fail-safe:** нет board/wall в снаряжении → атом не fit'ится → мостик не
+  навязывается. Тесты — блок «§1.1 M3» в `fingers-session-builder.test.js`.
 
 **Тесты:**
 
@@ -369,8 +447,8 @@ re-shadow → флип.** Логика: периодизация (капстоу
   `roleOf`.
 
 **Модули:** `quality_catalog` (enum+derive), `validators` (homogeneity/order),
-`mix_engine` (roleOf/SLOT_ACCEPT), `periodization_engine` (transfer, Ф2).
-**Фаза:** 1 — M1+M2; 2 — M3 + ось «позиция».
+`mix_engine` (roleOf/SLOT_ACCEPT), `session_builder` (M3 transfer-floor ✅).
+**Фаза:** 1 — M1+M2; 2 — M3 ✅; ось «позиция» — осталось.
 
 **Открытые вопросы** (канон — в пуле выше):
 
@@ -676,8 +754,11 @@ S-строках.
 **Методология ч.6:** 3 модели (линейная Anderson / нелинейная Bechtel / DUP
 Hörst)
 
-- выбор по формату×лимитеру + тейпер + maintenance. Сейчас выше сессии в коде
-  **нет ничего** — это `periodization_engine` (greenfield, Фаза 2).
+- выбор по формату×лимитеру + тейпер + maintenance. **Ядро в проде** (commit
+  `3b6d4c62`, B7): `periodization_engine` строит макро/мезо-план (`buildPlan`),
+  `current` резолвит фазу дня, `engine_router`/`session_builder` clamp'ят
+  интенсивность дня по фазе. Осталось Фаза 2: авто-`selectModel` 6.4 (модель
+  пока передаётся вручную) и transfer-sequencing M3.
 
 * `6.1` линейная → генератор фаз base→strength→power→PE→peak→rest; кодируется
   прямо.
@@ -694,7 +775,8 @@ Hörst)
 
 Общая зависимость: **метрика объёма** (`Q-1.2-1`) для deload/taper/maintenance
 магнитуд; персистенция плана — **client-scoped** (инвариант #9). **Модуль:**
-`periodization_engine`. **Фаза:** 2. **Вопросы:** `Q-6-1` шаблоны ротации
+`periodization_engine`. **Фаза:** ядро ✅ (B7), остаток (авто-выбор 6.4,
+transfer M3, шаблоны ротации) — 2. **Вопросы:** `Q-6-1` шаблоны ротации
 nonlinear/DUP; `Q-6-2` представление плана (где хранить макро/мезо,
 client-scoped).
 
@@ -782,9 +864,10 @@ client-scoped).
 - **1.5 верхний кэп «железо не вытесняет лазание»** → валидатор
   `V_skillBalance`: warn, если доля железа > уровневой (§3.8). Был только нижний
   гард «не одно железо». Фаза 2.
-- **3.3 ротация размеров зацепа для FDP/FDS** → правило вариации: варьировать
-  `edgeSizeMm` (мелкий грузит FDP, крупный — FDS) для полного развития
-  сгибателей; ось вариации в 1.3 / `progressionPolicy` (1.2). Фаза 2.
+- **3.3 ротация хватов/зацепа для FDP/FDS** ✅ 2026-06-11 — реализовано через
+  `edge_history` (кросс-сессионный lean-лог: crimp=FDP / open=FDS) +
+  `session_builder._orderByEdgeRotation` (чередует хваты к под-нагруженному
+  сгибателю). См. карточку 1.3.
 - **density-hang (A4): derive↔intent коллизия** → density-hang несёт **явный**
   `energySystem:phosphagen` (намерение блока A — сила/ткань);
   `deriveEnergySystem` по workSec=30 дал бы glycolytic. Правило: явное поле

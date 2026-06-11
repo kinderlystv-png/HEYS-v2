@@ -3,6 +3,38 @@
 Точка входа для агента/разработчика, который продолжает сборку режима `fingers`
 в локальной среде. Прочитай это первым, затем `CLAUDE.md` рядом.
 
+## Сводка готовности
+
+<!-- STATUS:AUTO:START -->
+<!-- ⚙ Сгенерировано tools/status-sync.mjs из IMPLEMENTATION_MAP.md — НЕ редактировать вручную. -->
+
+### Готовность режима пальцев · Методология / Движок / UI
+
+Оси: **Метод.** (наука) · **Движок** (логика strangler) · **UI**
+(пользовательский поток). Легенда: ✅ готово · 🟡 частично · ⬜ Фаза 2 (бэклог)
+· — n/a.
+
+| Раздел               | Метод. | Движок | UI  |
+| -------------------- | :----: | :----: | :-: |
+| 0. Сводка школ       |   ✅   |   ✅   |  —  |
+| 1. Принципы          |   ✅   |   ✅   | 🟡  |
+| 2. 9 качеств         |   ✅   |   ✅   |  —  |
+| 3. Физиология        |   ✅   |   ✅   |  —  |
+| 4. Каталог A–I       |   ✅   |   ✅   | ✅  |
+| 5. Протоколы         |   ✅   |   ✅   | ✅  |
+| 6. Периодизация      |   ✅   |   ✅   | ⬜  |
+| 7. Уровни            |   ✅   |   ✅   | ✅  |
+| 8. Тесты / бенчмарки |   ✅   |   🟡   | ⬜  |
+| 9. Безопасность      |   ✅   |   ✅   | ✅  |
+| 10. Источники        |   ✅   |   ✅   |  —  |
+
+**Поставка:** движок + UI всех 6 doseShape — в проде за `flags.newEngine=false`
+(юзер на legacy). Безопасность выверена полностью. Дальше — **гибрид:
+canary-флип → 100% на живых данных.** Детальный per-подраздел аудит — в таблице
+«Аудит: Движок vs UI» ниже в этом файле.
+
+<!-- STATUS:AUTO:END -->
+
 ## Где что лежит
 
 Всё в `apps/web/fingers/methodology/`:
@@ -16,7 +48,7 @@
 | `IMPLEMENTATION_MAP.md`       | трассировка «единица методологии→код» по ID + карточки + заметки целостности            |
 | `IMPLEMENTATION_READINESS.md` | аудит готовности + фазовый план                                                         |
 | `PLAYBOOK.md`                 | тиражирование на другие спорты + FORK_CHECKLIST                                         |
-| `tools/`                      | чекеры `impl-coverage.mjs`, `school-weights.mjs`                                        |
+| `tools/`                      | чекеры `impl-coverage.mjs`, `school-weights.mjs`, `status-sync.mjs` (сводка готовности) |
 
 Код режима: `apps/web/fingers/*.js` (IIFE-модули `HEYS.Fingers.*`). «Мозг» —
 `heys_fingers_mix_engine_v1.js`.
@@ -75,7 +107,10 @@ pnpm dev:local       # API:4001 + web:3001 — увидеть режим
 5. **Числа — в пуле/конфиге**, не в прозе/литералах. Новый спорт =
    `SPORT_CONFIG`.
 6. **После правок методологии** — гонять `tools/impl-coverage.mjs` +
-   `school-weights.mjs`.
+   `school-weights.mjs`. **Сводку готовности правишь ТОЛЬКО в
+   `IMPLEMENTATION_MAP.md`** (между `STATUS:SOURCE`), затем
+   `node tools/status-sync.mjs` синкнёт её в METHODOLOGY+KICKOFF (`--check` —
+   для CI/pre-commit, падает при дрейфе).
 
 ## Дисциплина git (HEYS-v2 CLAUDE.md)
 
@@ -85,15 +120,21 @@ pnpm dev:local       # API:4001 + web:3001 — увидеть режим
 
 ## Открытый бэклог
 
-- **Периодизация (Фаза 2)** — `periodization_engine`: мезо/макро-циклы (linear
-  6.1 / nonlinear 6.2 / DUP 6.3, выбор 6.4, тейпер 6.5). Сейчас сборка только на
-  1 день.
+- **Периодизация — ядро в проде** ✅ (commit `3b6d4c62`, B7):
+  `periodization_engine` строит макро/мезо-план (модели linear 6.1 / nonlinear
+  6.2 / DUP 6.3 / taper 6.5 / maintenance 6.6, фазы с `ceiling`+
+  `volumeMultiplier`), `current` резолвит фазу дня, `engine_router`+
+  `sessionBuilder` clamp'ят интенсивность дня по фазе мезоцикла. Тесты
+  `fingers-periodization`+`fingers-mesocycle`. **Осталось Фаза 2:** авто-выбор
+  модели 6.4 (`selectModel(формат×лимитер)` — сейчас `model` задаётся вручную),
+  transfer-sequencing M3.
 - **Enforcement прогрессии/вариативности (Фаза 2)** — `progression` (B3) сейчас
   только advisory-hints в `sessionBuilder`; завести влияние на генерацию (смена
   переменной по `detectPlateau`/`nextAxis`).
-- **Фаза 2 homed-items** (см. IMPLEMENTATION_MAP «Заметки целостности»):
-  `V_skillBalance`, FDP/FDS edge-ротация, `V_energySystemSequence`,
-  `skinStatus`, `ageModifier` 35+, density-hang явный energySystem.
+- **Фаза 2 homed-items** (см. IMPLEMENTATION*MAP «Заметки целостности»):
+  `V_skillBalance`, `V_energySystemSequence`, `skinStatus`, `ageModifier` 35+,
+  density-hang явный energySystem. *(FDP/FDS edge-ротация — ✅ 2026-06-11:
+  `edge_history` + `session_builder` ротация.)\_
 - **🟢-апгрейд числбазы:** достать supplementary Berta 2025 (Tables S2–S5) для
   замены 🟠-дефолт-бенчмарков §3.5.
 
@@ -117,6 +158,7 @@ FTL-cap slot trimming), UI всех 6 doseShape
 2. **Canary-наблюдение**: после flip следить за `engineRouter.lastShadowDiff`,
    fallback-rate и S4 trimming telemetry.
 
-**Tech-debt не блокер**: консолидация `useCountdownCycle`+`useRepsCycle` в общий
-timer-core (после приземления strangler'a — теперь оба покрыты characterization,
-вынос безопасен); перевести оставшиеся legacy-точки на `quality_catalog`.
+**Tech-debt**: консолидация `useCountdownCycle`+`useRepsCycle` в общий
+timer-core — ✅ сделано (commit `0f9ef53e`, A4: `useTimerCore` ядро, оба хука
+тонкие обёртки). Осталось: перевести оставшиеся legacy-точки на
+`quality_catalog`.

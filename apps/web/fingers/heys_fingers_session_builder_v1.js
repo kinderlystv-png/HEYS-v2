@@ -501,6 +501,69 @@
     return [focusQuality].concat(base.filter(function (q) { return q !== focusQuality; }));
   }
 
+  // §3.2 аэробные под-режимы: доля интермиттента («аэробная мощность») растёт с
+  // уровнем (Baláš 2016 `balas2016`). Новичок — только непрерывная ёмкость (ARC/
+  // mileage); продвинутый/элита — приоритет интервалов/репитеров. Это ПОРЯДОК
+  // предпочтения, не фильтр: под-режим не из списка падает в хвост, но остаётся
+  // доступен как fallback (fail-safe — слот не пустеет).
+  const AEROBIC_MODE_PREF_BY_LEVEL = {
+    beginner:     ['capacity'],
+    intermediate: ['capacity', 'power'],
+    advanced:     ['power', 'capacity'],
+    elite:        ['power', 'capacity']
+  };
+
+  function _aerobicModeOf(atom) {
+    const qc = Fingers.qualityCatalog;
+    if (qc && typeof qc.deriveAerobicMode === 'function') return qc.deriveAerobicMode(atom);
+    return atom && atom.energySubMode ? atom.energySubMode : null;
+  }
+
+  // Стабильный reorder кандидатов aerobic_base по под-режиму для уровня.
+  // Чистый порядок (slice → не мутируем общий catalog-массив); вторичный ключ —
+  // исходный индекс, чтобы внутри одного под-режима порядок пула сохранялся.
+  function _orderAerobicCandidates(candidates, level) {
+    const pref = AEROBIC_MODE_PREF_BY_LEVEL[level] || AEROBIC_MODE_PREF_BY_LEVEL.intermediate;
+    return candidates
+      .map(function (a, i) { return { a: a, i: i }; })
+      .sort(function (x, y) {
+        const px = pref.indexOf(_aerobicModeOf(x.a));
+        const py = pref.indexOf(_aerobicModeOf(y.a));
+        const rx = px < 0 ? pref.length : px;
+        const ry = py < 0 ? pref.length : py;
+        return rx !== ry ? rx - ry : x.i - y.i;
+      })
+      .map(function (o) { return o.a; });
+  }
+
+  // §1.3/§3.3 FDP/FDS ротация: серия сессий с одним доминантным хватом (напр.
+  // crimp=FDP) недогружает второй сгибатель → приоритезируем атомы под-нагруженного
+  // lean (open=FDS) по кросс-сессионной истории. Reorder-only (slice → общий
+  // catalog-массив не мутируется); нет истории/баланс → catalog-порядок.
+  function _orderByEdgeRotation(candidates) {
+    const eh = Fingers.edgeHistory;
+    if (!eh || typeof eh.underusedLean !== 'function') return candidates;
+    const want = eh.underusedLean();
+    if (!want) return candidates;
+    const leanOf = function (a) { return (a && a.gripId) ? eh.leanOfGrip(a.gripId) : null; };
+    return candidates
+      .map(function (a, i) { return { a: a, i: i }; })
+      .sort(function (x, y) {
+        const mx = leanOf(x.a) === want ? 0 : 1;
+        const my = leanOf(y.a) === want ? 0 : 1;
+        return mx !== my ? mx - my : x.i - y.i;
+      })
+      .map(function (o) { return o.a; });
+  }
+
+  // Кандидаты качества с учётом §3.2 (под-режим аэробной) и §1.3 (FDP/FDS ротация).
+  function _candidatesForQuality(quality, level) {
+    const list = Fingers.blockCatalog.atomsByQuality(quality);
+    if (quality === 'aerobic_base' && level) return _orderAerobicCandidates(list, level);
+    if (quality === 'finger_strength') return _orderByEdgeRotation(list);
+    return list;
+  }
+
   function _atomFits(atom, profile, allowedModalities) {
     if (!allowedModalities[atom.modality]) return false;
     if (!profile) return false;
@@ -541,6 +604,7 @@
     const profile = opts.profile ||
       (opts.level ? { age: opts.age, level: opts.level } : null);
     if (!profile) return null; // fail-closed
+    const level = (profile && profile.level) || opts.level || null; // §3.2 aerobic под-режим
     const used = usedGripEdge || Object.create(null);
     const blockOnly = _isBlockOnly(opts.equipmentTypes || ['full']);
 
@@ -567,7 +631,7 @@
     // Focus pass: только если quality уже входит в slot. Не расширяет пул слота,
     // а лишь даёт лимитеру мезоцикла шанс до tissue-pref fallback'ов.
     if (focusQuality && qualities.indexOf(focusQuality) >= 0) {
-      const candidates = Fingers.blockCatalog.atomsByQuality(focusQuality);
+      const candidates = _candidatesForQuality(focusQuality, level);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
@@ -580,7 +644,7 @@
     // 1-я попытка — match quality + tissue preference + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
-      const candidates = Fingers.blockCatalog.atomsByQuality(q);
+      const candidates = _candidatesForQuality(q, level);
       for (let j = 0; j < tissuePrefs.length; j++) {
         const tissue = tissuePrefs[j];
         for (let k = 0; k < candidates.length; k++) {
@@ -596,7 +660,7 @@
     // 2-я попытка — любой подходящий атом quality + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
-      const candidates = Fingers.blockCatalog.atomsByQuality(q);
+      const candidates = _candidatesForQuality(q, level);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
@@ -624,6 +688,7 @@
       edgeSizeMm: atom.edgeSizeMm || null,
       doseShape: atom.doseShape,
       dose: d,
+      energySubMode: atom.energySubMode || _aerobicModeOf(atom) || null, // §3.2 capacity|power
       loadModel: atom.loadModel,
       loadValue: atom.loadValue,
       sourceIds: atom.sourceIds,
@@ -820,6 +885,49 @@
         safetyTrace.picks.push({ slot: slot, atomId: null, skipped: true });
       }
     });
+
+    // ── M3 transfer-мостик (§1.1 специфичность) ─────────────────────────────────
+    // Сырая сила на фингерборде переносится в результат только через применение в
+    // специфичном движении (METHODOLOGY §1.1 M3). Если в сессии есть фингерборд-
+    // стимул силы (finger_strength/max_strength на fingerboard), но НЕТ application-
+    // блока (max_strength/power на board/wall — лимит-болдер/первый-мув/дайно),
+    // добираем один application-атом. Additive-floor (как antagonist), gated через
+    // `_atomFits` (S1/S9/equipment/level/renderable) + дедуп grip+edge. Fail-safe:
+    // нет board/wall в снаряжении → атом не fit'ится → мостик не навязывается.
+    if ((bucket === 'max' || bucket === 'moderate') && Fingers.blockCatalog) {
+      const _atomOf = function (e) { return Fingers.blockCatalog.getAtom(e.atomId); };
+      const isFingerboardStrength = function (e) {
+        const a = _atomOf(e);
+        return !!a && a.modality === 'fingerboard' &&
+          (a.quality === 'finger_strength' || a.quality === 'max_strength');
+      };
+      const isApplication = function (e) {
+        const a = _atomOf(e);
+        return !!a && (a.modality === 'board' || a.modality === 'wall') &&
+          (a.quality === 'max_strength' || a.quality === 'power');
+      };
+      if (exercises.some(isFingerboardStrength) && !exercises.some(isApplication)) {
+        const allowedTransfer = _allowedModalities(o.equipmentTypes || ['full']);
+        let appAtom = null;
+        const qOrder = ['max_strength', 'power'];
+        for (let qi = 0; qi < qOrder.length && !appAtom; qi++) {
+          const cands = Fingers.blockCatalog.atomsByQuality(qOrder[qi]);
+          for (let i = 0; i < cands.length; i++) {
+            const a = cands[i];
+            if (a.modality !== 'board' && a.modality !== 'wall') continue;
+            if (!_atomFits(a, profile, allowedTransfer)) continue;
+            const k = _gripEdgeKey(a);
+            if (k && usedGripEdge[k]) continue;
+            appAtom = a; break;
+          }
+        }
+        if (appAtom) {
+          exercises.push(_materializeExercise(appAtom, 'transfer'));
+          safetyTrace.picks.push({ slot: 'transfer-bridge', atomId: appAtom.id });
+          _trackPick(appAtom);
+        }
+      }
+    }
 
     // ── Safety-floor (Риск 1 ревью) ─────────────────────────────────────────────
     // antagonist обязан быть для intensive bucket; mobility — добор разминки.

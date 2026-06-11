@@ -86,6 +86,38 @@
     return deriveEnergySystem(workSecOf(ex));
   }
 
+  // ─── deriveAerobicMode (§3.2 под-режимы аэробной) ─────────────────────────
+  // Аэробная база делится на два под-режима (METHODOLOGY §3.2, Baláš 2016):
+  //   'capacity' — оксидативная ёмкость: длинная непрерывная работа (ARC,
+  //                mileage, BFR-окклюзия) на низкой интенсивности.
+  //   'power'    — аэробная мощность: интермиттент (репитеры/интервалы), упор
+  //                на скорость реперфузии в микропаузах, выше интенсивность.
+  // Авторитетен ЯВНЫЙ energySubMode атома; иначе вывод по форме дозы: непрерывная
+  // (continuous) → capacity, интермиттент (circuit/repeaters) → power. Для
+  // не-аэробных энергосистем → null.
+  function deriveAerobicMode(meta) {
+    if (!meta) return null;
+    if (Object.prototype.hasOwnProperty.call(meta, 'energySubMode') && meta.energySubMode) {
+      return meta.energySubMode;
+    }
+    const es = Object.prototype.hasOwnProperty.call(meta, 'energySystem')
+      ? meta.energySystem : null;
+    if (es !== 'aerobic') return null;
+    const shape = meta.doseShape;
+    if (shape === 'continuous') return 'capacity';
+    if (shape === 'circuit' || shape === 'attempts') return 'power';
+    // hang/прочее без явного тега — не угадываем, считаем capacity (низконагруз.)
+    return 'capacity';
+  }
+
+  function aerobicModeOf(ex, atomMeta) {
+    if (atomMeta) {
+      const m = deriveAerobicMode(atomMeta);
+      if (m) return m;
+    }
+    return energySystemOf(ex, atomMeta) === 'aerobic' ? 'capacity' : null;
+  }
+
   // ─── PROGRAM_META — методологическая разметка каталога ───────────────────
   // block:  поля блока (§1.3): quality/targetStimulus/fatigueCost/tissueLoad
   // atom:   общие методологические поля атомов программы (§1.2)
@@ -265,6 +297,8 @@
     workSecOf: workSecOf,
     isIntermittent: isIntermittent,
     energySystemOf: energySystemOf,
+    deriveAerobicMode: deriveAerobicMode,
+    aerobicModeOf: aerobicModeOf,
     metaFor: metaFor,
     atomMetaFor: atomMetaFor,
     enrichProgram: enrichProgram,

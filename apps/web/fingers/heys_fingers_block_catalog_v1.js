@@ -288,7 +288,7 @@
     // ─── Блок E — aerobic_base (4) ────────────────────────────────────────────
     {
       id: 'aer_arc', blockId: 'E',
-      quality: 'aerobic_base', energySystem: 'aerobic',
+      quality: 'aerobic_base', energySystem: 'aerobic', energySubMode: 'capacity',
       modality: 'wall', doseShape: 'continuous',
       dose: { workSec: 1800, sets: 1 },
       loadModel: 'rpe', loadValue: 3,
@@ -298,7 +298,7 @@
     },
     {
       id: 'aer_power_intervals', blockId: 'E',
-      quality: 'aerobic_base', energySystem: 'aerobic',
+      quality: 'aerobic_base', energySystem: 'aerobic', energySubMode: 'power',
       modality: 'wall', doseShape: 'circuit',
       dose: { problemsPerRound: 1, rounds: 4, restRoundsSec: 300 },
       loadModel: 'rpe', loadValue: 6,
@@ -309,7 +309,7 @@
     },
     {
       id: 'aer_mileage', blockId: 'E',
-      quality: 'aerobic_base', energySystem: 'aerobic',
+      quality: 'aerobic_base', energySystem: 'aerobic', energySubMode: 'capacity',
       modality: 'wall', doseShape: 'continuous',
       dose: { workSec: 2700, sets: 1 },
       loadModel: 'grade', loadValue: 'easy-mid',
@@ -319,7 +319,7 @@
     },
     {
       id: 'aer_bfr_lowload', blockId: 'E',
-      quality: 'aerobic_base', energySystem: 'aerobic',
+      quality: 'aerobic_base', energySystem: 'aerobic', energySubMode: 'capacity',
       modality: 'fingerboard', doseShape: 'hang',
       dose: { workSec: 0, restSec: 0, reps: 1, sets: 4, restSetsSec: 60 },
       loadModel: 'pctMax', loadValue: 40,

@@ -107,3 +107,46 @@ describe('periodization engine', () => {
     ]);
   });
 });
+
+describe('selectModel (§6.4 авто-выбор модели)', () => {
+  const sm = (i) => boot().P.selectModel(i);
+
+  it('новичок → maintenance, periodize:false (без периодизации)', () => {
+    expect(sm({ level: 'beginner' })).toMatchObject({ model: 'maintenance', periodize: false });
+  });
+  it('лимитер technique/mental → periodize:false', () => {
+    expect(sm({ level: 'intermediate', leadingLimiter: 'technique' }).periodize).toBe(false);
+    expect(sm({ level: 'intermediate', leadingLimiter: 'mental' }).periodize).toBe(false);
+  });
+  it('дата-цель → linear (Anderson к пику)', () => {
+    expect(sm({ level: 'intermediate', goalDate: '2026-08-01' }).model).toBe('linear');
+  });
+  it('лимитер сила пальцев / max_strength → linear', () => {
+    expect(sm({ level: 'intermediate', leadingLimiter: 'finger_strength' }).model).toBe('linear');
+    expect(sm({ level: 'advanced', leadingLimiter: 'max_strength' }).model).toBe('linear');
+  });
+  it('лимитер аэробная/анаэробная → nonlinear', () => {
+    expect(sm({ level: 'intermediate', leadingLimiter: 'aerobic_base' }).model).toBe('nonlinear');
+    expect(sm({ level: 'intermediate', leadingLimiter: 'anaerobic_capacity' }).model).toBe('nonlinear');
+  });
+  it('3+ сессий/нед on-season → dup', () => {
+    expect(sm({ level: 'intermediate', sessionsPerWeek: 4, onSeason: true }).model).toBe('dup');
+  });
+  it('дефолт (круглый год) → nonlinear', () => {
+    expect(sm({ level: 'intermediate' }).model).toBe('nonlinear');
+  });
+  it('приоритет: дата-цель побеждает частоту', () => {
+    expect(sm({ level: 'intermediate', goalDate: '2026-08-01', sessionsPerWeek: 5, onSeason: true }).model).toBe('linear');
+  });
+
+  it('buildPlan авто-выбирает модель из лимитера (autoSelected)', () => {
+    const plan = boot().P.buildPlan({ level: 'intermediate', assessment: { leadingLimiter: 'finger_strength' } });
+    expect(plan.model).toBe('linear');
+    expect(plan.modelAutoSelected).toBe(true);
+  });
+  it('buildPlan: явная model побеждает авто-выбор', () => {
+    const plan = boot().P.buildPlan({ level: 'beginner', model: 'dup' });
+    expect(plan.model).toBe('dup');
+    expect(plan.modelAutoSelected).toBe(false);
+  });
+});

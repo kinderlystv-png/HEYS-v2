@@ -3291,6 +3291,8 @@
                   { activityLabel: _programLabel(programId) + ' (частично)' }
                 );
                 _bumpFingersDiaryVersion();
+                // §1.3 FDP/FDS ротация — фиксируем хваты и для частичного завершения.
+                try { Fingers.edgeHistory?.recordSession?.(partialLog); } catch (_) {}
                 if (HEYS.Toast?.success) {
                   HEYS.Toast.success('Записано: ' + partialLog.totalUnits + ' ' + partialLog.unitLabel);
                 }
@@ -4773,6 +4775,9 @@
           { activityLabel: pendingProgram?.name || 'Свой конструктор' }
         );
         _bumpFingersDiaryVersion();
+        // §1.3 FDP/FDS ротация: фиксируем какие хваты реально тренировались,
+        // чтобы следующая генерация чередовала FDP/FDS. No-op если модуль/висов нет.
+        try { Fingers.edgeHistory?.recordSession?.(fingersLog); } catch (_) {}
         // Toast только для manual-save (план). При завершении через таймер
         // показываем summary-карточку (см. ниже) — она сама подтверждает save.
         if (!o.viaTimer && HEYS.Toast?.success) {
@@ -5047,15 +5052,23 @@
         { tag: 'rect', attrs: { x: 3.5, y: 5, width: 15, height: 13.5, rx: 2 } },
         { tag: 'path', attrs: { d: 'M3.5 9h15M7.5 3v3.5M14.5 3v3.5' } },
         { tag: 'circle', attrs: { cx: 11, cy: 13, r: 1.2, fill: 'currentColor', stroke: 'none' } }
+      ]),
+      tests: svgIcon([
+        { tag: 'rect', attrs: { x: 4.5, y: 3.5, width: 13, height: 15, rx: 2 } },
+        { tag: 'path', attrs: { d: 'M8 3.5h6v2.5H8z' } },
+        { tag: 'path', attrs: { d: 'M7.5 10l1.5 1.5 2.5-2.5M7.5 14.5h7' } }
       ])
     };
     const tabs = [
       { id: 'today',       label: 'Сегодня',     icon: ICONS.today },
       { id: 'programs',    label: 'Протоколы',   icon: ICONS.programs },
       { id: 'constructor', label: 'Своя',        icon: ICONS.constructor },
+      Fingers.TestBatteryTab
+        ? { id: 'tests',   label: 'Тесты',       icon: ICONS.tests }
+        : null,
       { id: 'progress',    label: 'Прогресс',    icon: ICONS.progress },
       { id: 'calendar',    label: 'Календарь',   icon: ICONS.calendar }
-    ];
+    ].filter(Boolean);
 
     return h('div', { className: 'fingers-fs-session' },
       // Warmup runner overlay (floats над всем когда warmupActive=true).
@@ -5258,6 +5271,9 @@
             }, 'Сохранить план без таймера')
           )
         ),
+        tab === 'tests' && Fingers.TestBatteryTab && h(Fingers.TestBatteryTab, {
+          level: (getProfile() || {}).level
+        }),
         tab === 'progress' && h(ProgressTab, {
           recommendedProgramId: recommendedId,
           onPickProgram: handlePickProgram
