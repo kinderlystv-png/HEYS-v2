@@ -694,6 +694,117 @@
   font-weight: 800;
 }
 
+.drums-ft-technique {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.drums-ft-technique__summary {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.drums-ft-technique__motion {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
+}
+
+.drums-ft-technique__step {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: auto 72px auto;
+  gap: 5px;
+  align-items: center;
+  padding: 9px 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.drums-ft-technique__step strong {
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+}
+
+.drums-ft-technique__step span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.drums-ft-technique__svg {
+  display: block;
+  width: 100%;
+  height: 72px;
+}
+
+.drums-ft-technique__pad {
+  stroke: rgba(15, 23, 42, 0.22);
+  stroke-linecap: round;
+  stroke-width: 4;
+}
+
+.drums-ft-technique__path {
+  fill: none;
+  stroke: #0f766e;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.drums-ft-technique__step--up .drums-ft-technique__path,
+.drums-ft-technique__step--tap .drums-ft-technique__path {
+  stroke: #2563eb;
+}
+
+.drums-ft-technique__step--buzz .drums-ft-technique__path {
+  stroke: #f59e0b;
+}
+
+.drums-ft-technique__tip {
+  fill: #f59e0b;
+}
+
+.drums-ft-technique__pause path {
+  fill: none;
+  stroke: #64748b;
+  stroke-linecap: round;
+  stroke-width: 5;
+}
+
+.drums-ft-technique__accent {
+  fill: #ea580c;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.drums-ft-technique__checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.drums-ft-technique__checks span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
 .drums-ft-current ul {
   display: grid;
   gap: 6px;

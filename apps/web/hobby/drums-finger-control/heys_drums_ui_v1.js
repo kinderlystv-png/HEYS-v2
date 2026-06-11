@@ -557,6 +557,75 @@
       setSessionState((prev) => copySessionProgressToSession(prev, 'low_tension_rebuild_23'));
     }
 
+    function renderTechniqueGuide(block) {
+      const guide = block?.technique || {};
+      const motion = Array.isArray(guide.motion) ? guide.motion : [];
+      const checkpoints = Array.isArray(guide.checkpoints) ? guide.checkpoints : [];
+      if (!guide.summary && !motion.length && !checkpoints.length) return null;
+
+      function renderMotionSvg(item) {
+        const stroke = item?.stroke || 'tap';
+        const pathByStroke = {
+          down: 'M26 12 C34 24 34 40 26 54',
+          up: 'M26 54 C18 40 18 24 26 12',
+          tap: 'M26 31 C31 39 31 48 26 54',
+          full: 'M20 13 C35 25 35 43 20 54 M32 54 C17 43 17 25 32 13',
+          buzz: 'M12 52 C16 45 20 59 24 52 S32 45 36 52 S44 59 48 52',
+          rest: 'M17 26 L17 48 M35 26 L35 48',
+        };
+        return h(
+          'svg',
+          {
+            className: 'drums-ft-technique__svg',
+            viewBox: '0 0 64 72',
+            role: 'img',
+            'aria-label': item?.text || item?.label || stroke,
+          },
+          h('line', { className: 'drums-ft-technique__pad', x1: 8, x2: 56, y1: 58, y2: 58 }),
+          stroke === 'rest'
+            ? h('g', { className: 'drums-ft-technique__pause' }, h('path', { d: pathByStroke.rest }))
+            : h(
+                'g',
+                null,
+                h('path', { className: 'drums-ft-technique__path', d: pathByStroke[stroke] || pathByStroke.tap }),
+                stroke === 'buzz' ? null : h('circle', { className: 'drums-ft-technique__tip', cx: stroke === 'up' ? 26 : 26, cy: stroke === 'down' || stroke === 'tap' ? 54 : 13, r: 3.5 })
+              ),
+          item?.accent ? h('text', { className: 'drums-ft-technique__accent', x: 49, y: 17 }, '>') : null
+        );
+      }
+
+      return h(
+        'div',
+        { className: 'drums-ft-technique' },
+        h('div', { className: 'drums-ft-technique__summary' }, guide.summary),
+        motion.length
+          ? h(
+              'div',
+              { className: 'drums-ft-technique__motion', 'aria-label': 'Схема движения палки' },
+              motion.map((item, index) =>
+                h(
+                  'div',
+                  {
+                    key: (item?.label || item?.stroke || 'step') + '-' + index,
+                    className: 'drums-ft-technique__step drums-ft-technique__step--' + (item?.stroke || 'tap'),
+                  },
+                  h('strong', null, item?.label || index + 1),
+                  renderMotionSvg(item),
+                  h('span', null, item?.text || '')
+                )
+              )
+            )
+          : null,
+        checkpoints.length
+          ? h(
+              'div',
+              { className: 'drums-ft-technique__checks' },
+              checkpoints.map((item) => h('span', { key: item }, item))
+            )
+          : null
+      );
+    }
+
     function RunScreen() {
       const tensionAlert = activeResult.tension >= 7 || sessionState.metrics.tensionScore >= 7 || sessionState.pain;
       return h(
@@ -653,6 +722,7 @@
           { className: 'drums-ft-current' },
           h('p', null, activeBlock.goal),
           h('div', { className: 'drums-ft-pattern' }, activeBlock.pattern),
+          renderTechniqueGuide(activeBlock),
           h(
             'ul',
             null,

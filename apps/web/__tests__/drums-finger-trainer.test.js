@@ -553,6 +553,38 @@ describe('drums finger trainer', () => {
     });
   });
 
+  it('keeps technique annotations with motion drawings for every drum block', () => {
+    const { api } = setupModule();
+
+    api.BLOCKS.forEach((block) => {
+      expect(block.technique?.summary).toEqual(expect.any(String));
+      expect(block.technique.summary.length).toBeGreaterThan(12);
+      expect(block.technique?.motion?.length).toBeGreaterThan(0);
+      expect(block.technique?.checkpoints?.length).toBeGreaterThan(0);
+      block.technique.motion.forEach((step) => {
+        expect(['down', 'up', 'tap', 'full', 'buzz', 'rest']).toContain(step.stroke);
+        expect(step.label).toEqual(expect.any(String));
+        expect(step.text).toEqual(expect.any(String));
+      });
+    });
+
+    const doubles = api.BLOCKS.find((block) => block.id === 'doubles');
+    expect(doubles.technique.motion.map((step) => step.stroke)).toEqual([
+      'down',
+      'up',
+      'down',
+      'up',
+    ]);
+
+    const moeller = api.BLOCKS.find((block) => block.id === 'moeller_fingers');
+    expect(moeller.technique.motion.map((step) => step.stroke)).toEqual([
+      'down',
+      'tap',
+      'tap',
+      'up',
+    ]);
+  });
+
   it('keeps notation accents aligned with metronome accent kinds', () => {
     const { api } = setupModule();
 
