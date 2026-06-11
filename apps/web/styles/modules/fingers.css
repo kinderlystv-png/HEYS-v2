@@ -7642,3 +7642,34 @@
 [data-theme="dark"] .fingers-tb__chart {
   background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.08);
 }
+
+/* Превью набора упражнений в карточке микса (с мини-фото) */
+.fingers-fs-mixcard__exlist {
+  display: flex; flex-direction: column; gap: 6px; margin: 10px 0 4px;
+}
+.fingers-fs-mixcard__exlist-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--fingers-text-muted, rgba(60, 50, 42, 0.55)); margin-bottom: 2px;
+}
+.fingers-fs-mixcard__exrow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px; border-radius: 10px;
+  background: rgba(0, 0, 0, 0.03);
+}
+.fingers-fs-mixcard__exthumb {
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 9px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.05);
+}
+.fingers-fs-mixcard__exthumb img { width: 46px; height: 46px; object-fit: cover; }
+.fingers-fs-mixcard__exemoji { font-size: 24px; line-height: 1; }
+.fingers-fs-mixcard__exinfo { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fingers-fs-mixcard__exname {
+  font-size: 13.5px; font-weight: 600; color: var(--fingers-text, #1c1b19);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fingers-fs-mixcard__exsub {
+  font-size: 11.5px; color: var(--fingers-text-muted, rgba(60, 50, 42, 0.6));
+}
+[data-theme="dark"] .fingers-fs-mixcard__exrow { background: rgba(255, 255, 255, 0.04); }
+[data-theme="dark"] .fingers-fs-mixcard__exthumb { background: rgba(255, 255, 255, 0.06); }

@@ -1025,3 +1025,38 @@ describe('sessionBuilder §1.1 M3: transfer-мостик (сила → прим�
     expect(s.exercises.find((e) => e.__role === 'transfer')).toBeFalsy();
   });
 });
+
+describe('sessionBuilder §1.3: variantSeed (reroll — другой равноценный набор)', () => {
+  beforeAll(setupOnce);
+
+  const base = { equipmentTypes: ['full'], age: 28, level: 'intermediate', readiness: 'max', goal: 'strength', intensity: 'max' };
+  const sig = (s) => (s ? s.exercises.map((e) => e.atomId).join('|') : 'null');
+
+  it('seed=0 воспроизводим и совпадает с дефолтом (каноничный набор)', () => {
+    const def = sig(SB().recommendDay(base));
+    const s0 = sig(SB().recommendDay(Object.assign({}, base, { variantSeed: 0 })));
+    const s0b = sig(SB().recommendDay(Object.assign({}, base, { variantSeed: 0 })));
+    expect(s0).toBe(def);
+    expect(s0b).toBe(s0);
+  });
+
+  it('разные seed дают другой набор (вариативность есть)', () => {
+    const variants = [0, 1, 2, 3, 4].map((seed) => sig(SB().recommendDay(Object.assign({}, base, { variantSeed: seed }))));
+    expect(new Set(variants).size).toBeGreaterThan(1);
+  });
+
+  it('тот же seed воспроизводим (детерминизм по seed)', () => {
+    const a = sig(SB().recommendDay(Object.assign({}, base, { variantSeed: 3 })));
+    const b = sig(SB().recommendDay(Object.assign({}, base, { variantSeed: 3 })));
+    expect(a).toBe(b);
+  });
+
+  it('любой вариант — валидная непустая сессия (safety/контракт целы)', () => {
+    [1, 2, 5, 9].forEach((seed) => {
+      const s = SB().recommendDay(Object.assign({}, base, { variantSeed: seed }));
+      expect(s).not.toBeNull();
+      expect(s.exercises.length).toBeGreaterThan(0);
+      s.exercises.forEach((e) => expect(typeof e.__role).toBe('string'));
+    });
+  });
+});

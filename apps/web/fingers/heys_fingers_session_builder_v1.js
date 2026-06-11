@@ -556,12 +556,29 @@
       .map(function (o) { return o.a; });
   }
 
-  // Кандидаты качества с учётом §3.2 (под-режим аэробной) и §1.3 (FDP/FDS ротация).
-  function _candidatesForQuality(quality, level) {
+  // §1.3 variantSeed — «другой равноценный набор» (reroll микса). Циклический
+  // сдвиг УЖЕ упорядоченного по методологии списка кандидатов: seed=0 → каноничный
+  // выбор (методология «как лучше»), seed>0 → следующий равноценный атом первым.
+  // Все кандидаты всё равно проходят `_atomFits` (цель-слот + S1/S9 + уровень +
+  // снаряжение) в цикле подбора, поэтому смена seed не меняет ни цель, ни
+  // безопасность — только КАКОЙ из взаимозаменяемых атомов взят. Слот с единственным
+  // подходящим атомом не меняется (нечем варьировать). Reorder-only (slice).
+  function _rotateBySeed(list, seed) {
+    const n = list.length;
+    if (!n || !seed) return list;
+    const off = ((Math.floor(seed) % n) + n) % n;
+    if (off === 0) return list;
+    return list.slice(off).concat(list.slice(0, off));
+  }
+
+  // Кандидаты качества с учётом §3.2 (под-режим аэробной), §1.3 (FDP/FDS ротация)
+  // и §1.3 variantSeed (reroll — другой равноценный набор).
+  function _candidatesForQuality(quality, level, variantSeed) {
     const list = Fingers.blockCatalog.atomsByQuality(quality);
-    if (quality === 'aerobic_base' && level) return _orderAerobicCandidates(list, level);
-    if (quality === 'finger_strength') return _orderByEdgeRotation(list);
-    return list;
+    let ordered = list;
+    if (quality === 'aerobic_base' && level) ordered = _orderAerobicCandidates(list, level);
+    else if (quality === 'finger_strength') ordered = _orderByEdgeRotation(list);
+    return variantSeed ? _rotateBySeed(ordered, variantSeed) : ordered;
   }
 
   function _atomFits(atom, profile, allowedModalities) {
@@ -605,6 +622,7 @@
       (opts.level ? { age: opts.age, level: opts.level } : null);
     if (!profile) return null; // fail-closed
     const level = (profile && profile.level) || opts.level || null; // §3.2 aerobic под-режим
+    const variantSeed = Number(opts.variantSeed) || 0; // §1.3 reroll — другой равноценный набор
     const used = usedGripEdge || Object.create(null);
     const blockOnly = _isBlockOnly(opts.equipmentTypes || ['full']);
 
@@ -631,7 +649,7 @@
     // Focus pass: только если quality уже входит в slot. Не расширяет пул слота,
     // а лишь даёт лимитеру мезоцикла шанс до tissue-pref fallback'ов.
     if (focusQuality && qualities.indexOf(focusQuality) >= 0) {
-      const candidates = _candidatesForQuality(focusQuality, level);
+      const candidates = _candidatesForQuality(focusQuality, level, variantSeed);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
@@ -644,7 +662,7 @@
     // 1-я попытка — match quality + tissue preference + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
-      const candidates = _candidatesForQuality(q, level);
+      const candidates = _candidatesForQuality(q, level, variantSeed);
       for (let j = 0; j < tissuePrefs.length; j++) {
         const tissue = tissuePrefs[j];
         for (let k = 0; k < candidates.length; k++) {
@@ -660,7 +678,7 @@
     // 2-я попытка — любой подходящий атом quality + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
-      const candidates = _candidatesForQuality(q, level);
+      const candidates = _candidatesForQuality(q, level, variantSeed);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;

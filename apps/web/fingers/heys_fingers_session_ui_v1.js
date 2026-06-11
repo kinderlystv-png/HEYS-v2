@@ -1186,6 +1186,76 @@
   }
 
   // ─── Mix card ──────────────────────────────────────────────────────────────
+  // Короткая сводка дозы упражнения по doseShape (для превью набора в карточке).
+  function _mixDoseHint(e) {
+    const d = (e && e.dose) || {};
+    switch (e && e.doseShape) {
+      case 'hang': {
+        const w = d.workSec != null ? d.workSec : (e.hangSec || 0);
+        const sets = d.sets || e.setsCount || d.reps || 1;
+        return w ? ('вис ' + w + 'с × ' + sets) : ('висы × ' + sets);
+      }
+      case 'continuous': {
+        const w = d.workSec || 0;
+        return w >= 60 ? (Math.round(w / 60) + ' мин') : (w ? w + ' с' : 'непрерывно');
+      }
+      case 'circuit': {
+        const r = d.rounds || 0;
+        return r ? (r + ' раундов') : 'круговая';
+      }
+      case 'attempts': {
+        const a = d.attempts || d.problems || d.problemsPerRound || 0;
+        return a ? (a + ' попыток') : 'попытки';
+      }
+      case 'reps': {
+        const reps = d.reps || e.repsPerSet || 0;
+        const sets = d.sets || e.setsCount || 1;
+        return reps ? (reps + ' повт × ' + sets) : ('повторы × ' + sets);
+      }
+      default:
+        return '';
+    }
+  }
+
+  // Превью набора: что за упражнения собрались, с мини-фото хвата (или эмодзи
+  // блока для не-хватовых). Имя = хват+ребро или название блока; подзаголовок =
+  // категория + доза. Помогает увидеть состав до запуска и решить про reroll.
+  function MixExerciseList({ workout }) {
+    const list = (workout && workout.exercises) || [];
+    if (!list.length) return null;
+    const QEMOJI = {
+      finger_strength: '🤏', max_strength: '💪', power: '⚡', anaerobic_capacity: '🔥',
+      aerobic_base: '🫀', technique: '🎯', antagonist: '🦾', mobility: '🤸', mental: '🧠'
+    };
+    const bc = Fingers.blockCatalog;
+    return h('div', { className: 'fingers-fs-mixcard__exlist' },
+      h('div', { className: 'fingers-fs-mixcard__exlist-title' }, 'Что внутри'),
+      list.map(function (e, i) {
+        const atom = (bc && bc.getAtom) ? bc.getAtom(e.atomId) : null;
+        const block = (atom && bc.getBlock) ? bc.getBlock(atom.blockId) : null;
+        const grip = e.gripId && Fingers.GRIPS_BY_ID ? Fingers.GRIPS_BY_ID[e.gripId] : null;
+        const quality = atom ? atom.quality : null;
+        const category = block ? block.label : '';
+        const name = grip
+          ? (grip.label + (e.edgeSizeMm ? ' · ' + e.edgeSizeMm + ' мм' : ''))
+          : (category || e.atomId || 'Упражнение');
+        const dose = _mixDoseHint(e);
+        const sub = grip ? (category + (dose ? ' · ' + dose : '')) : dose;
+        const thumb = (e.gripId && Fingers.GripIcon)
+          ? h(Fingers.GripIcon, { gripId: e.gripId, equipmentTier: e.equipmentTier, size: 46 })
+          : h('span', { className: 'fingers-fs-mixcard__exemoji', 'aria-hidden': 'true' },
+              QEMOJI[quality] || '•');
+        return h('div', { key: e.atomId + '-' + i, className: 'fingers-fs-mixcard__exrow' },
+          h('span', { className: 'fingers-fs-mixcard__exthumb' }, thumb),
+          h('span', { className: 'fingers-fs-mixcard__exinfo' },
+            h('span', { className: 'fingers-fs-mixcard__exname' }, name),
+            sub ? h('span', { className: 'fingers-fs-mixcard__exsub' }, sub) : null
+          )
+        );
+      })
+    );
+  }
+
   // Генерируемая «случайная сборка» — отдельный компонент, который раньше жил
   // только в Протоколах. Перенесён в Today (рядом с рекомендованным официальным
   // протоколом), чтобы Протоколы остались чистым каталогом, а Today давал две
@@ -1215,7 +1285,10 @@
         goal: mixGoal,
         intensity: GOAL_TO_INTENSITY_MIX[mixGoal] || 'moderate',
         age: ageRaw,
-        readiness: cool && cool.recommendation
+        readiness: cool && cool.recommendation,
+        // §1.3 reroll: seed варьирует выбор среди равноценных атомов (та же цель/
+        // контекст/безопасность). seed=0 — каноничный набор «как по методологии».
+        variantSeed: mixSeed
       };
       setMixedWorkout(_recommendMixedWorkout(mixOpts));
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1231,8 +1304,8 @@
       }) : null,
       h('div', { className: 'fingers-fs-mixcard' },
       h('div', { className: 'fingers-fs-mixcard__hint' },
-        h('span', { 'aria-hidden': 'true' }, '🎲 '),
-        'Случайная сборка под цель и готовность — альтернатива официальному протоколу.'
+        h('span', { 'aria-hidden': 'true' }, '🧬 '),
+        'Сессия по методологии под твою цель и готовность — альтернатива официальному протоколу. Кнопка 🔄 даёт другой равноценный набор под ту же цель.'
       ),
       h('div', { className: 'fingers-fs-mixcard__inner' },
         h('div', { className: 'fingers-fs-mixcard__head-row' },
@@ -1272,12 +1345,14 @@
             );
           })
         ),
+        h(MixExerciseList, { workout: mixedWorkout }),
         h('div', { className: 'fingers-fs-mixcard__actions' },
           h('button', {
             type: 'button',
             className: 'fingers-fs-mixcard__btn fingers-fs-mixcard__btn--reroll',
             onClick: onGenerateMix,
-            title: 'Другой набор упражнений'
+            'aria-label': 'Другой равноценный набор',
+            title: 'Другой равноценный набор под ту же цель. Цель, готовность и безопасность те же — меняются только взаимозаменяемые упражнения (методология §1.3: «меняй переменную, сохраняя качество-цель»).'
           },
             h('span', { 'aria-hidden': 'true' }, '🔄')
           ),
