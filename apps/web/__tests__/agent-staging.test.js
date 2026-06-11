@@ -97,21 +97,21 @@ describe('agent staging guard', () => {
     }).ok).toBe(true);
   });
 
-  describe('main is integration-only', () => {
-    it('blocks task-work (source/test) committed to main', () => {
+  describe('main/develop trunk commits', () => {
+    it('allows task-work (source/test) committed to main by explicit user command', () => {
       const r = assertMainIsIntegrationOnly({
         branchName: 'main',
         files: ['apps/web/heys_sync_merge_v1.js', 'apps/web/__tests__/x.test.js'],
         env: {},
       });
-      expect(r.ok).toBe(false);
-      expect(r.taskWork).toContain('apps/web/heys_sync_merge_v1.js');
+      expect(r.ok).toBe(true);
+      expect(r.taskWork).toEqual([]);
     });
 
-    it('blocks task-work on develop too', () => {
+    it('allows task-work on develop too', () => {
       expect(assertMainIsIntegrationOnly({
         branchName: 'develop', files: ['apps/web/heys_x.js'], env: {},
-      }).ok).toBe(false);
+      }).ok).toBe(true);
     });
 
     it('allows release-only commits on main (whats-new via push:agent)', () => {
