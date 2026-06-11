@@ -85,6 +85,9 @@ export default function PricingSSR({ content, variant: _variant }: PricingSSRPro
             <p className="text-gray-600 max-w-xl mx-auto">
               В Pro и Pro+ с вами работает куратор, не алгоритм. Self — самостоятельный режим, если нужен только дневник и базовый контроль.
             </p>
+            <p className="mt-3 text-sm text-gray-500 max-w-xl mx-auto">
+              Цена на сайте — окончательная: без скидок с таймером, обязательных созвонов и автосписаний.
+            </p>
           </div>
 
           {/* Pricing cards */}

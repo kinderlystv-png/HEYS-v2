@@ -76,6 +76,52 @@ tg_blocks = [('Ритм ведения', tg['B17'].value), ('Воронка', tg
              ('Чего не делать', tg['B34'].value)]
 tg_promo = [tg['B20'].value, tg['B21'].value, tg['B22'].value]
 
+# ---------- сводные таблицы из 29 (приложения / лендинги) ----------
+def parse_md_table(lines, start_idx):
+    """Читает markdown-таблицу начиная с строки заголовка."""
+    head = [c.strip().replace('**', '') for c in
+            lines[start_idx].strip().strip('|').split('|')]
+    rows = []
+    for line in lines[start_idx + 1:]:
+        if not line.strip().startswith('|'):
+            break
+        cells = [c.strip().replace('**', '') for c in
+                 line.strip().strip('|').split('|')]
+        if set(cells[0]) <= {'-', ' ', ':'}:
+            continue
+        rows.append(cells)
+    return head, rows
+
+
+audit_apps, audit_landings = ([], []), ([], [])
+adopt_landing, adopt_product = ([], []), ([], [])
+no_copy_decided = ''
+audit_path = ROOT / '29_Аудит_конкурентов_глубокий.md'
+if audit_path.exists():
+    a_text = audit_path.read_text(encoding='utf-8')
+    a_lines = a_text.splitlines()
+    in_landing_sec = in_product_sec = False
+    for i, ln in enumerate(a_lines):
+        if ln.startswith('### В ЛЕНДИНГ'):
+            in_landing_sec, in_product_sec = True, False
+        elif ln.startswith('### В ПРОДУКТ'):
+            in_landing_sec, in_product_sec = False, True
+        elif ln.startswith('#'):
+            in_landing_sec = in_product_sec = False
+        if ln.startswith('|') and 'Ввод еды' in ln:
+            audit_apps = parse_md_table(a_lines, i)
+        elif ln.startswith('|') and 'Hero-фрейм' in ln:
+            audit_landings = parse_md_table(a_lines, i)
+        elif ln.startswith('|') and 'У кого подсмотрено' in ln:
+            if in_landing_sec:
+                adopt_landing = parse_md_table(a_lines, i)
+            elif in_product_sec:
+                adopt_product = parse_md_table(a_lines, i)
+    m = re.search(r'### НЕ КОПИРУЕМ[^\n]*\n+(.*?)\n\n---', a_text, re.S)
+    if m:
+        no_copy_decided = ' '.join(m.group(1).split())
+
+
 # ---------- статусы этапов из 22 ----------
 plan_text = (ROOT / '22_План_реализации_маркетинга.md').read_text(encoding='utf-8')
 stages = []
@@ -111,7 +157,9 @@ def chip(s):
     return '<span class="chip wait">ожидает</span>'
 
 
-today = datetime.date.today().isoformat()
+now = datetime.datetime.now()
+today = now.strftime('%Y-%m-%d %H:%M')
+gen_epoch_ms = int(now.timestamp() * 1000)
 total_done = sum(s['done'] for s in stages)
 total_all = sum(s['total'] for s in stages)
 plan_pct = round(total_done / total_all * 100) if total_all else 0
@@ -184,6 +232,39 @@ landing_pat_rows = ''.join(
     f'<div>{esc(re.sub(r"^[0-9]+[.][ ]*", "", str(p)))}</div></div>'
     for i, p in enumerate(landing_patterns, 1))
 
+
+def render_audit_table(head_rows):
+    head, rows = head_rows
+    if not rows:
+        return '<p class="dim">таблица не найдена в 29</p>'
+    out = '<tr>' + ''.join(f'<th>{esc(h)}</th>' for h in head) + '</tr>'
+    for r in rows:
+        hl = ' class="hl-row"' if 'HEYS' in r[0] else ''
+        out += f'<tr{hl}>' + ''.join(f'<td>{esc(c)}</td>' for c in r) + '</tr>'
+    return out
+
+
+audit_apps_table = render_audit_table(audit_apps)
+audit_landings_table = render_audit_table(audit_landings)
+
+
+def render_adopt(head_rows):
+    _, rows = head_rows
+    out = ''
+    for r in rows:
+        if len(r) < 4:
+            continue
+        st = r[3]
+        cls = 'ok' if '✅' in st else ('mid' if '🟡' in st else 'wait')
+        out += (f'<div class="adopt"><span class="chip {cls}">{esc(st)}</span>'
+                f'<div><b>{esc(r[0])}</b>'
+                f'<div class="label">{esc(r[1])} → {esc(r[2])}</div></div></div>')
+    return out or '<p class="dim">нет данных (29 §10)</p>'
+
+
+adopt_landing_html = render_adopt(adopt_landing)
+adopt_product_html = render_adopt(adopt_product)
+
 tg_rubric_rows = ('<tr><th>Рубрика</th><th>Цель</th><th>Частота</th></tr>' +
                   ''.join(f'<tr><td>{esc(r[0])}</td><td class="dim">{esc(r[1])}</td>'
                           f'<td class="num">{esc(r[2])}</td></tr>' for r in tg_rubrics))
@@ -232,6 +313,8 @@ th {{ text-align:left; color:var(--dim); font-weight:500; font-size:10.5px;
 td {{ padding:6px 8px; border-bottom:1px solid #16203f; vertical-align:top; }}
 td.num {{ white-space:nowrap; font-weight:600; }}
 td.hl {{ color:var(--ok); font-weight:600; }}
+tr.hl-row td {{ color:var(--ok); font-weight:600; background:#2dd4a70d; }}
+.scrollx {{ overflow-x:auto; }} .scrollx table {{ min-width:760px; }}
 .dim {{ color:var(--dim); }}
 .chip {{ padding:2px 9px; border-radius:999px; font-size:11px; white-space:nowrap; }}
 .chip.ok {{ background:#2dd4a722; color:var(--ok); border:1px solid #2dd4a744; }}
@@ -267,6 +350,13 @@ td.hl {{ color:var(--ok); font-weight:600; }}
 .prio {{ display:flex; gap:10px; background:var(--card); border:1px solid var(--line);
   border-left:3px solid var(--red); border-radius:10px; padding:9px 12px; font-size:12.5px; }}
 .prio.top5 {{ border-left-color:var(--acc); }}
+.adopt {{ display:flex; gap:10px; align-items:flex-start; background:var(--card);
+  border:1px solid var(--line); border-radius:10px; padding:9px 12px;
+  margin-bottom:8px; font-size:12.5px; }}
+.adopt .chip {{ flex-shrink:0; margin-top:2px; }}
+#stale-warn {{ display:none; background:#f5b14c22; border:1px solid #f5b14c66;
+  color:var(--warn); border-radius:10px; padding:8px 14px; margin-bottom:14px;
+  font-size:12.5px; }}
 .p-num {{ font-size:16px; font-weight:800; color:var(--red); line-height:1.3; }}
 .p-num.acc2 {{ color:var(--acc); }}
 .cols2 {{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }}
@@ -282,8 +372,11 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
     <button class="tab" data-pane="comp">Конкуренты</button>
     <button class="tab" data-pane="tg">Telegram</button>
   </div>
-  <span class="badge">Фаза 0 · Pro-first · план: {plan_pct}%</span>
+  <span class="badge">Фаза 0 · Pro-first · план: {plan_pct}% · собрано {today}</span>
 </div>
+<div id="stale-warn">⚠ Этот снимок дашборда собран больше суток назад — данные могли устареть.
+Обновить: двойной клик по <b>Обновить_дашборд.command</b> (или
+<code>python3 маркетинг/tools/build_dashboard.py</code>).</div>
 
 <div class="pane active" id="overview">
 <p class="sub">{esc(sut)} {esc(pos)}</p>
@@ -321,12 +414,22 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 
 <div class="pane" id="comp">
 <p class="sub"><b>Главный вывод аудита 2026-06-10:</b> {esc(audit_head)}</p>
+<div class="cols2">
+<section><h2>→ Перенять в ЛЕНДИНГ (29 §10)</h2>{adopt_landing_html}</section>
+<section><h2>→ Перенять в ПРОДУКТ (29 §10)</h2>{adopt_product_html}
+<section style="margin-top:14px"><h2>Не копируем (решено)</h2>
+<div class="card"><p class="sm">{esc(no_copy_decided)}</p></div></section></section>
+</div>
 <section><h2>Карта «живой человек» (кто реально даёт)</h2>
 <div class="card" style="padding:4px 8px"><table>
 <tr><th>Игрок</th><th>Человек</th><th>Частота</th><th>Цена/мес</th><th>РФ-оплата</th></tr>
 {human_table}
 </table></div>
 <p class="label" style="margin-top:6px">{esc(price_ladder)}</p></section>
+<section><h2>Сводная: ПРИЛОЖЕНИЯ — все игроки (29 §4)</h2>
+<div class="card scrollx" style="padding:4px 8px"><table>{audit_apps_table}</table></div></section>
+<section><h2>Сводная: ЛЕНДИНГИ — все игроки (29 §5)</h2>
+<div class="card scrollx" style="padding:4px 8px"><table>{audit_landings_table}</table></div></section>
 <section><h2>Лендинги лидеров — 5 паттернов</h2>
 {landing_pat_rows}
 </section>
@@ -350,9 +453,16 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 </div>
 </div>
 
-<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 22_План · 25_Roadmap ·
-обновить: <code>python3 маркетинг/tools/build_dashboard.py</code></footer>
+<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 22_План · 25_Roadmap · 29_Аудит ·
+обновление: <b>Обновить_дашборд.command</b> (двойной клик) · авто на каждом коммите источников ·
+<code>python3 маркетинг/tools/build_dashboard.py</code></footer>
 
+<script>
+(function () {{
+  var age = Date.now() - {gen_epoch_ms};
+  if (age > 24 * 3600 * 1000) document.getElementById('stale-warn').style.display = 'block';
+}})();
+</script>
 <script>
 document.querySelectorAll('.tab').forEach(function (t) {{
   t.addEventListener('click', function () {{
