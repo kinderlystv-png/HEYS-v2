@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.11.a79a6deb",
+      "buildHash": "a79a6deb",
+      "date": "2026-06-11",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "finger-control тренажёр — каталог, UI, тест",
+      "items": [
+        {
+          "type": "feat",
+          "title": "finger-control тренажёр — каталог, UI, тест",
+          "description": "finger-control тренажёр — каталог, UI, тест"
+        }
+      ],
+      "coveredCommits": ["a79a6deb", "a4ffc8ed"]
+    },
+    {
       "version": "2026.06.11.d236cdde",
       "buildHash": "d236cdde",
       "date": "2026-06-11",
@@ -151,21 +167,6 @@
         }
       ],
       "coveredCommits": ["f829a6fa", "8601b51e", "161b31fd", "8892b48f"]
-    },
-    {
-      "version": "2026.06.10.fa003fa4",
-      "buildHash": "fa003fa4",
-      "date": "2026-06-10",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления ошибок и улучшение стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки и улучшили стабильность",
-          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
-        }
-      ]
     }
   ]
 }
