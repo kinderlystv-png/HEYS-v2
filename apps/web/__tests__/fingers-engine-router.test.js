@@ -33,8 +33,8 @@ const R = () => globalThis.HEYS.Fingers.engineRouter;
 describe('engineRouter: флаг и default', () => {
   beforeAll(setupOnce);
 
-  it('default флаг newEngine = false', () => {
-    expect(F().flags.newEngine).toBe(false);
+  it('default флаг newEngine = true после rollout flip', () => {
+    expect(F().flags.newEngine).toBe(true);
   });
 
   it('engineRouter.recommendDay существует', () => {
