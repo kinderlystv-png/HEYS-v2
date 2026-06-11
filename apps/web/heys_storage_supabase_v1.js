@@ -345,6 +345,9 @@
     ONLINE: 'online'
   };
 
+  const WRITE_CONTEXT_ISSUE_TIMEOUT_MS = 5000;
+  const WRITE_CONTEXT_UPLOAD_WAIT_MS = WRITE_CONTEXT_ISSUE_TIMEOUT_MS + 250;
+
   // ═══════════════════════════════════════════════════════════════════
   // 🔧 УТИЛИТЫ
   // ═══════════════════════════════════════════════════════════════════
@@ -367,6 +370,21 @@
     }
 
     return { key: normalized, strippedClientIds };
+  }
+
+  function raceWithTimeout(promise, timeoutMs, fallbackValue, onTimeout) {
+    let timer = null;
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise(resolve => {
+        timer = setTimeout(() => {
+          try { if (typeof onTimeout === 'function') onTimeout(); } catch (_) { }
+          resolve(fallbackValue);
+        }, timeoutMs);
+      })
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
   }
 
   function getLeadingClientScopeId(key) {
@@ -6117,27 +6135,24 @@
     }
 
     try {
-      // 🛡️ Phase B2.5: gate boot race — await context issuance до отправки batch'а.
-      // Если context ещё в полёте (issue_write_context RPC not yet returned),
-      // ждём до 3 сек. Иначе saves на boot уходят с p_context_id: null и
-      // обходят routing-protection. После Phase C strict mode такие writes
-      // получат 403 — критично закрыть здесь.
-      if (cloud._writeContextReady && !cloud._writeContextReady._settled) {
-        try {
-          await Promise.race([
-            cloud._writeContextReady,
-            new Promise(r => setTimeout(r, 3000))
-          ]);
-        } catch (_) { /* noop */ }
-      }
       // Преобразуем items в формат для YandexAPI.
       // 🛡️ Phase B2 — preserve _ctx из queue item; для items без _ctx (например
       // direct push'ы из interceptSetItem) fallback на live cloud._writeContext
       // если он для того же clientId. Без этого fallback'a saves через
       // interceptSetItem не получали бы context (большинство писей идёт через
       // этот путь, не через saveClientKey).
-      const liveCtx = (cloud._writeContext && cloud._writeContext.clientId === clientId)
-        ? cloud._writeContext.contextId : null;
+      // 2026-06-11 / TASK-005: для non-PIN write-context обязателен. Если он не
+      // выпустился, не отправляем null-ctx batch как будто всё хорошо: оставляем
+      // pending + показываем sync-error.
+      const contextState = await ensureWriteContextForUpload(clientId, items);
+      if (contextState.required && !contextState.contextId && !contextState.itemsHaveContext) {
+        const keys = items.map(item => item?.k).filter(Boolean).join(', ').slice(0, 160);
+        recordWriteContextUnavailable('upload_blocked_no_context', { clientId, keys });
+        return { success: false, error: 'write_context_unavailable' };
+      }
+      const liveCtx = contextState.contextId
+        || ((cloud._writeContext && cloud._writeContext.clientId === clientId)
+          ? cloud._writeContext.contextId : null);
       const yandexItems = items.map(item => ({
         originalKey: item.k, // preserve scoped key for LS write-back
         k: normalizeKeyForSupabase(item.k, clientId),
@@ -9892,6 +9907,9 @@
   let _uploadStartedAt = 0;       // Date.now() в момент _uploadInProgress=true (для diag)
   let _lastUploadOkAt = 0;        // Date.now() последнего успешного upload
   let _lastUploadFailAt = 0;      // Date.now() последней upload-ошибки
+  let _lastWriteContextUnavailableSignalAt = 0;
+  let _writeContextUnavailableUploads = 0;
+  let _writeContextIssueTimeouts = 0;
   let _clientUpsertTimerSetAt = 0; // Date.now() когда clientUpsertTimer был выставлен
   let _uploadLogTimer = null;
   let _uploadLogBufferedTotal = 0;
@@ -9910,6 +9928,78 @@
     logCritical(`[SYNC] ✅ Сохранено в облако: ${_uploadLogBufferedTotal} записей${suffix}`);
     _uploadLogBufferedTotal = 0;
     _uploadLogBufferedBatches = 0;
+  }
+
+  function isWriteContextRequiredForClient(clientId) {
+    const isPinAuthTarget = !!(_pinAuthClientId && _pinAuthClientId === clientId && !user);
+    return !(isPinAuthTarget || cloud.isPinAuthClient?.() === true);
+  }
+
+  function recordWriteContextUnavailable(reason, details) {
+    _writeContextUnavailableUploads++;
+    try {
+      HEYS._writeContextUnavailableUploads = _writeContextUnavailableUploads;
+      HEYS._lastWriteContextUnavailable = {
+        at: Date.now(),
+        reason,
+        ...(details || {})
+      };
+    } catch (_) { }
+
+    try {
+      addSyncLogEntry('write_context_unavailable', {
+        reason,
+        count: _writeContextUnavailableUploads,
+        client: details?.clientId ? String(details.clientId).slice(0, 8) : null,
+        keys: details?.keys || ''
+      });
+    } catch (_) { }
+
+    const now = Date.now();
+    if (now - _lastWriteContextUnavailableSignalAt < 10000) return;
+    _lastWriteContextUnavailableSignalAt = now;
+
+    try {
+      global.dispatchEvent(new CustomEvent('heys:sync-error', {
+        detail: {
+          error: 'write_context_unavailable',
+          reason,
+          persistent: true
+        }
+      }));
+    } catch (_) { }
+  }
+
+  async function ensureWriteContextForUpload(clientId, items) {
+    if (!isWriteContextRequiredForClient(clientId)) {
+      return { required: false, contextId: null };
+    }
+
+    const allItemsHaveContext = Array.isArray(items) && items.length > 0 && items.every(item => item && item._ctx);
+    if (allItemsHaveContext) {
+      return { required: true, contextId: null, itemsHaveContext: true };
+    }
+
+    if (cloud._writeContext && cloud._writeContext.clientId === clientId && cloud._writeContext.contextId) {
+      return { required: true, contextId: cloud._writeContext.contextId };
+    }
+
+    const ready = (cloud._writeContextReady && !cloud._writeContextReady._settled)
+      ? cloud._writeContextReady
+      : cloud._issueWriteContext?.(clientId);
+
+    const ctx = await raceWithTimeout(ready, WRITE_CONTEXT_UPLOAD_WAIT_MS, null, () => {
+      recordWriteContextUnavailable('upload_wait_timeout', { clientId });
+    });
+
+    if (ctx && ctx.clientId === clientId && ctx.contextId) {
+      return { required: true, contextId: ctx.contextId };
+    }
+    if (cloud._writeContext && cloud._writeContext.clientId === clientId && cloud._writeContext.contextId) {
+      return { required: true, contextId: cloud._writeContext.contextId };
+    }
+
+    return { required: true, contextId: null, error: 'write_context_unavailable' };
   }
 
   function logUploadSummaryBuffered(savedCount) {
@@ -10174,7 +10264,7 @@
         hydratedBatch.forEach(item => {
           const cid = item.client_id;
           if (!byClientId[cid]) byClientId[cid] = [];
-          byClientId[cid].push({ k: item.k, v: item.v, updated_at: item.updated_at });
+          byClientId[cid].push({ k: item.k, v: item.v, updated_at: item.updated_at, _ctx: item._ctx });
         });
 
         // 🔇 v4.7.1: Debug лог отключён
@@ -10250,6 +10340,7 @@
           }
         } else {
           resetRetry();
+          _writeContextUnavailableUploads = 0;
           _clientUpload413BackoffUntil = 0;
           logUploadSummaryBuffered(totalSaved);
           const _uploadDurationMs = Date.now() - (_uploadStartTs || 0);
@@ -10720,11 +10811,29 @@
       let res;
       if (isCurator) {
         if (!targetClientId) return finish(null);
-        res = await api.rpc('issue_write_context_by_curator', { p_client_id: targetClientId });
+        res = await raceWithTimeout(
+          api.rpc('issue_write_context_by_curator', { p_client_id: targetClientId }),
+          WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
+          { error: { message: 'write_context_issue_timeout', code: 'timeout' } },
+          () => {
+            _writeContextIssueTimeouts++;
+            try { HEYS._writeContextIssueTimeouts = _writeContextIssueTimeouts; } catch (_) { }
+            console.warn('[write-context] issue timeout:', targetClientId?.slice?.(0, 8) || targetClientId);
+          }
+        );
       } else {
         const sessionToken = global.localStorage?.getItem?.('heys_session_token') || null;
         if (!sessionToken) return finish(null);
-        res = await api.rpc('issue_write_context_by_session', { p_session_token: sessionToken });
+        res = await raceWithTimeout(
+          api.rpc('issue_write_context_by_session', { p_session_token: sessionToken }),
+          WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
+          { error: { message: 'write_context_issue_timeout', code: 'timeout' } },
+          () => {
+            _writeContextIssueTimeouts++;
+            try { HEYS._writeContextIssueTimeouts = _writeContextIssueTimeouts; } catch (_) { }
+            console.warn('[write-context] issue timeout: session');
+          }
+        );
       }
       if (res?.error) {
         console.warn('[write-context] issue failed:', res.error.message || res.error.code || res.error);
