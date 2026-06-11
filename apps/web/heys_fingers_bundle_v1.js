@@ -2135,6 +2135,38 @@
     return deriveEnergySystem(workSecOf(ex));
   }
 
+  // ─── deriveAerobicMode (§3.2 под-режимы аэробной) ─────────────────────────
+  // Аэробная база делится на два под-режима (METHODOLOGY §3.2, Baláš 2016):
+  //   'capacity' — оксидативная ёмкость: длинная непрерывная работа (ARC,
+  //                mileage, BFR-окклюзия) на низкой интенсивности.
+  //   'power'    — аэробная мощность: интермиттент (репитеры/интервалы), упор
+  //                на скорость реперфузии в микропаузах, выше интенсивность.
+  // Авторитетен ЯВНЫЙ energySubMode атома; иначе вывод по форме дозы: непрерывная
+  // (continuous) → capacity, интермиттент (circuit/repeaters) → power. Для
+  // не-аэробных энергосистем → null.
+  function deriveAerobicMode(meta) {
+    if (!meta) return null;
+    if (Object.prototype.hasOwnProperty.call(meta, 'energySubMode') && meta.energySubMode) {
+      return meta.energySubMode;
+    }
+    const es = Object.prototype.hasOwnProperty.call(meta, 'energySystem')
+      ? meta.energySystem : null;
+    if (es !== 'aerobic') return null;
+    const shape = meta.doseShape;
+    if (shape === 'continuous') return 'capacity';
+    if (shape === 'circuit' || shape === 'attempts') return 'power';
+    // hang/прочее без явного тега — не угадываем, считаем capacity (низконагруз.)
+    return 'capacity';
+  }
+
+  function aerobicModeOf(ex, atomMeta) {
+    if (atomMeta) {
+      const m = deriveAerobicMode(atomMeta);
+      if (m) return m;
+    }
+    return energySystemOf(ex, atomMeta) === 'aerobic' ? 'capacity' : null;
+  }
+
   // ─── PROGRAM_META — методологическая разметка каталога ───────────────────
   // block:  поля блока (§1.3): quality/targetStimulus/fatigueCost/tissueLoad
   // atom:   общие методологические поля атомов программы (§1.2)
@@ -2314,6 +2346,8 @@
     workSecOf: workSecOf,
     isIntermittent: isIntermittent,
     energySystemOf: energySystemOf,
+    deriveAerobicMode: deriveAerobicMode,
+    aerobicModeOf: aerobicModeOf,
     metaFor: metaFor,
     atomMetaFor: atomMetaFor,
     enrichProgram: enrichProgram,
@@ -2613,7 +2647,7 @@
     // ─── Блок E — aerobic_base (4) ────────────────────────────────────────────
     {
       id: 'aer_arc', blockId: 'E',
-      quality: 'aerobic_base', energySystem: 'aerobic',
+      quality: 'aerobic_base', energySystem: 'aerobic', energySubMode: 'capacity',
       modality: 'wall', doseShape: 'continuous',
       dose: { workSec: 1800, sets: 1 },
       loadModel: 'rpe', loadValue: 3,
@@ -2623,7 +2657,7 @@
     },
     {
       id: 'aer_power_intervals', blockId: 'E',
-      quality: 'aerobic_base', energySystem: 'aerobic',
+      quality: 'aerobic_base', energySystem: 'aerobic', energySubMode: 'power',
       modality: 'wall', doseShape: 'circuit',
       dose: { problemsPerRound: 1, rounds: 4, restRoundsSec: 300 },
       loadModel: 'rpe', loadValue: 6,
@@ -2634,7 +2668,7 @@
     },
     {
       id: 'aer_mileage', blockId: 'E',
-      quality: 'aerobic_base', energySystem: 'aerobic',
+      quality: 'aerobic_base', energySystem: 'aerobic', energySubMode: 'capacity',
       modality: 'wall', doseShape: 'continuous',
       dose: { workSec: 2700, sets: 1 },
       loadModel: 'grade', loadValue: 'easy-mid',
@@ -2644,7 +2678,7 @@
     },
     {
       id: 'aer_bfr_lowload', blockId: 'E',
-      quality: 'aerobic_base', energySystem: 'aerobic',
+      quality: 'aerobic_base', energySystem: 'aerobic', energySubMode: 'capacity',
       modality: 'fingerboard', doseShape: 'hang',
       dose: { workSec: 0, restSec: 0, reps: 1, sets: 4, restSetsSec: 60 },
       loadModel: 'pctMax', loadValue: 40,
@@ -10400,14 +10434,52 @@
     return 'recovery';
   }
 
+  // selectModel — авто-выбор модели периодизации (METHODOLOGY §6.4): формат-цели
+  // + ведущий лимитер (8.3). Инвариант: лимитер первичен. Возврат {model,
+  // periodize, reason}; periodize:false → новичок/навыковый лимитер (тяжёлую
+  // периодизацию не гнать). Все возвращаемые модели клампят нагрузку безопасно.
+  function selectModel(input) {
+    const o = input || {};
+    const level = o.level || 'beginner';
+    const limiter = o.leadingLimiter || o.focusQuality || null;
+    const hasGoalDate = !!o.goalDate;
+    const spw = Number(o.sessionsPerWeek) || 0;
+    const onSeason = o.onSeason === true || o.season === 'on';
+
+    if (level === 'beginner') {
+      return { model: 'maintenance', periodize: false, reason: 'новичок: объём+база+техника, без периодизации' };
+    }
+    if (limiter === 'technique' || limiter === 'mental') {
+      return { model: 'maintenance', periodize: false, reason: 'лимитер=' + limiter + ': навык первичен, силовое поддерживающее' };
+    }
+    if (hasGoalDate) {
+      return { model: 'linear', periodize: true, reason: 'дата-цель → линейная (Anderson) к пику' };
+    }
+    if (limiter === 'finger_strength' || limiter === 'max_strength') {
+      return { model: 'linear', periodize: true, reason: 'лимитер=сила пальцев → силовой мезо (линейная)' };
+    }
+    if (limiter === 'anaerobic_capacity' || limiter === 'aerobic_base') {
+      return { model: 'nonlinear', periodize: true, reason: 'лимитер=энергосистема → нелинейная' };
+    }
+    if (spw >= 3 && onSeason) {
+      return { model: 'dup', periodize: true, reason: '3+ сессий/нед on-season → DUP (Hörst)' };
+    }
+    return { model: 'nonlinear', periodize: true, reason: 'круглый год → нелинейная (Bechtel, по умолчанию)' };
+  }
+
   function buildPlan(opts) {
     const o = opts || {};
     const focusQuality = o.focusQuality ||
       (o.assessment && o.assessment.leadingLimiter) ||
       (o.assessmentResult && o.assessmentResult.leadingLimiter) ||
       null;
-    const model = ['linear', 'nonlinear', 'dup', 'taper', 'maintenance'].indexOf(o.model) >= 0
-      ? o.model : 'linear';
+    const explicitModel = ['linear', 'nonlinear', 'dup', 'taper', 'maintenance'].indexOf(o.model) >= 0
+      ? o.model : null;
+    const auto = explicitModel ? null : selectModel({
+      level: o.level, leadingLimiter: focusQuality, goalDate: o.goalDate,
+      sessionsPerWeek: o.sessionsPerWeek, onSeason: o.onSeason, season: o.season
+    });
+    const model = explicitModel || (auto && auto.model) || 'linear';
     const weeks = Math.max(1, Math.min(12, Number(o.weeks) || DEFAULT_WEEKS));
     const startedAt = o.startedAt || _todayKey();
     const planWeeks = [];
@@ -10428,6 +10500,8 @@
       weeksTotal: weeks,
       focusQuality: focusQuality,
       goalDate: o.goalDate || null,
+      modelAutoSelected: !explicitModel,
+      modelReason: auto ? auto.reason : ('явная модель: ' + model),
       weeks: planWeeks
     };
   }
@@ -10486,6 +10560,7 @@
 
   Fingers.periodization = {
     buildPlan: buildPlan,
+    selectModel: selectModel,
     current: current,
     savePlan: savePlan,
     loadPlan: loadPlan,
@@ -11002,6 +11077,69 @@
     return [focusQuality].concat(base.filter(function (q) { return q !== focusQuality; }));
   }
 
+  // §3.2 аэробные под-режимы: доля интермиттента («аэробная мощность») растёт с
+  // уровнем (Baláš 2016 `balas2016`). Новичок — только непрерывная ёмкость (ARC/
+  // mileage); продвинутый/элита — приоритет интервалов/репитеров. Это ПОРЯДОК
+  // предпочтения, не фильтр: под-режим не из списка падает в хвост, но остаётся
+  // доступен как fallback (fail-safe — слот не пустеет).
+  const AEROBIC_MODE_PREF_BY_LEVEL = {
+    beginner:     ['capacity'],
+    intermediate: ['capacity', 'power'],
+    advanced:     ['power', 'capacity'],
+    elite:        ['power', 'capacity']
+  };
+
+  function _aerobicModeOf(atom) {
+    const qc = Fingers.qualityCatalog;
+    if (qc && typeof qc.deriveAerobicMode === 'function') return qc.deriveAerobicMode(atom);
+    return atom && atom.energySubMode ? atom.energySubMode : null;
+  }
+
+  // Стабильный reorder кандидатов aerobic_base по под-режиму для уровня.
+  // Чистый порядок (slice → не мутируем общий catalog-массив); вторичный ключ —
+  // исходный индекс, чтобы внутри одного под-режима порядок пула сохранялся.
+  function _orderAerobicCandidates(candidates, level) {
+    const pref = AEROBIC_MODE_PREF_BY_LEVEL[level] || AEROBIC_MODE_PREF_BY_LEVEL.intermediate;
+    return candidates
+      .map(function (a, i) { return { a: a, i: i }; })
+      .sort(function (x, y) {
+        const px = pref.indexOf(_aerobicModeOf(x.a));
+        const py = pref.indexOf(_aerobicModeOf(y.a));
+        const rx = px < 0 ? pref.length : px;
+        const ry = py < 0 ? pref.length : py;
+        return rx !== ry ? rx - ry : x.i - y.i;
+      })
+      .map(function (o) { return o.a; });
+  }
+
+  // §1.3/§3.3 FDP/FDS ротация: серия сессий с одним доминантным хватом (напр.
+  // crimp=FDP) недогружает второй сгибатель → приоритезируем атомы под-нагруженного
+  // lean (open=FDS) по кросс-сессионной истории. Reorder-only (slice → общий
+  // catalog-массив не мутируется); нет истории/баланс → catalog-порядок.
+  function _orderByEdgeRotation(candidates) {
+    const eh = Fingers.edgeHistory;
+    if (!eh || typeof eh.underusedLean !== 'function') return candidates;
+    const want = eh.underusedLean();
+    if (!want) return candidates;
+    const leanOf = function (a) { return (a && a.gripId) ? eh.leanOfGrip(a.gripId) : null; };
+    return candidates
+      .map(function (a, i) { return { a: a, i: i }; })
+      .sort(function (x, y) {
+        const mx = leanOf(x.a) === want ? 0 : 1;
+        const my = leanOf(y.a) === want ? 0 : 1;
+        return mx !== my ? mx - my : x.i - y.i;
+      })
+      .map(function (o) { return o.a; });
+  }
+
+  // Кандидаты качества с учётом §3.2 (под-режим аэробной) и §1.3 (FDP/FDS ротация).
+  function _candidatesForQuality(quality, level) {
+    const list = Fingers.blockCatalog.atomsByQuality(quality);
+    if (quality === 'aerobic_base' && level) return _orderAerobicCandidates(list, level);
+    if (quality === 'finger_strength') return _orderByEdgeRotation(list);
+    return list;
+  }
+
   function _atomFits(atom, profile, allowedModalities) {
     if (!allowedModalities[atom.modality]) return false;
     if (!profile) return false;
@@ -11042,6 +11180,7 @@
     const profile = opts.profile ||
       (opts.level ? { age: opts.age, level: opts.level } : null);
     if (!profile) return null; // fail-closed
+    const level = (profile && profile.level) || opts.level || null; // §3.2 aerobic под-режим
     const used = usedGripEdge || Object.create(null);
     const blockOnly = _isBlockOnly(opts.equipmentTypes || ['full']);
 
@@ -11068,7 +11207,7 @@
     // Focus pass: только если quality уже входит в slot. Не расширяет пул слота,
     // а лишь даёт лимитеру мезоцикла шанс до tissue-pref fallback'ов.
     if (focusQuality && qualities.indexOf(focusQuality) >= 0) {
-      const candidates = Fingers.blockCatalog.atomsByQuality(focusQuality);
+      const candidates = _candidatesForQuality(focusQuality, level);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
@@ -11081,7 +11220,7 @@
     // 1-я попытка — match quality + tissue preference + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
-      const candidates = Fingers.blockCatalog.atomsByQuality(q);
+      const candidates = _candidatesForQuality(q, level);
       for (let j = 0; j < tissuePrefs.length; j++) {
         const tissue = tissuePrefs[j];
         for (let k = 0; k < candidates.length; k++) {
@@ -11097,7 +11236,7 @@
     // 2-я попытка — любой подходящий атом quality + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
-      const candidates = Fingers.blockCatalog.atomsByQuality(q);
+      const candidates = _candidatesForQuality(q, level);
       for (let k = 0; k < candidates.length; k++) {
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
@@ -11125,6 +11264,7 @@
       edgeSizeMm: atom.edgeSizeMm || null,
       doseShape: atom.doseShape,
       dose: d,
+      energySubMode: atom.energySubMode || _aerobicModeOf(atom) || null, // §3.2 capacity|power
       loadModel: atom.loadModel,
       loadValue: atom.loadValue,
       sourceIds: atom.sourceIds,
@@ -11321,6 +11461,49 @@
         safetyTrace.picks.push({ slot: slot, atomId: null, skipped: true });
       }
     });
+
+    // ── M3 transfer-мостик (§1.1 специфичность) ─────────────────────────────────
+    // Сырая сила на фингерборде переносится в результат только через применение в
+    // специфичном движении (METHODOLOGY §1.1 M3). Если в сессии есть фингерборд-
+    // стимул силы (finger_strength/max_strength на fingerboard), но НЕТ application-
+    // блока (max_strength/power на board/wall — лимит-болдер/первый-мув/дайно),
+    // добираем один application-атом. Additive-floor (как antagonist), gated через
+    // `_atomFits` (S1/S9/equipment/level/renderable) + дедуп grip+edge. Fail-safe:
+    // нет board/wall в снаряжении → атом не fit'ится → мостик не навязывается.
+    if ((bucket === 'max' || bucket === 'moderate') && Fingers.blockCatalog) {
+      const _atomOf = function (e) { return Fingers.blockCatalog.getAtom(e.atomId); };
+      const isFingerboardStrength = function (e) {
+        const a = _atomOf(e);
+        return !!a && a.modality === 'fingerboard' &&
+          (a.quality === 'finger_strength' || a.quality === 'max_strength');
+      };
+      const isApplication = function (e) {
+        const a = _atomOf(e);
+        return !!a && (a.modality === 'board' || a.modality === 'wall') &&
+          (a.quality === 'max_strength' || a.quality === 'power');
+      };
+      if (exercises.some(isFingerboardStrength) && !exercises.some(isApplication)) {
+        const allowedTransfer = _allowedModalities(o.equipmentTypes || ['full']);
+        let appAtom = null;
+        const qOrder = ['max_strength', 'power'];
+        for (let qi = 0; qi < qOrder.length && !appAtom; qi++) {
+          const cands = Fingers.blockCatalog.atomsByQuality(qOrder[qi]);
+          for (let i = 0; i < cands.length; i++) {
+            const a = cands[i];
+            if (a.modality !== 'board' && a.modality !== 'wall') continue;
+            if (!_atomFits(a, profile, allowedTransfer)) continue;
+            const k = _gripEdgeKey(a);
+            if (k && usedGripEdge[k]) continue;
+            appAtom = a; break;
+          }
+        }
+        if (appAtom) {
+          exercises.push(_materializeExercise(appAtom, 'transfer'));
+          safetyTrace.picks.push({ slot: 'transfer-bridge', atomId: appAtom.id });
+          _trackPick(appAtom);
+        }
+      }
+    }
 
     // ── Safety-floor (Риск 1 ревью) ─────────────────────────────────────────────
     // antagonist обязан быть для intensive bucket; mobility — добор разминки.
@@ -11553,7 +11736,12 @@
   // Флаги — namespace. Не перезаписываем, если установлен внешне.
   Fingers.flags = Fingers.flags || {};
   if (typeof Fingers.flags.newEngine !== 'boolean') {
-    Fingers.flags.newEngine = false; // безопасный default
+    // FLIP 2026-06-11: новый движок включён для всех (canary валидирован).
+    // Откат: вернуть `false` здесь (+rebundle+deploy) или рантайм
+    // `HEYS.Fingers.flags.newEngine = false`. Safety: при null/throw/контракт-fail
+    // sessionBuilder роутер всё равно падает на mixEngine (fallback-цепочка
+    // в recommendDay ниже) — это деградация к legacy, не поломка сессии.
+    Fingers.flags.newEngine = true;
   }
   if (typeof Fingers.flags.shadowCompare !== 'boolean') {
     Fingers.flags.shadowCompare = false; // shadow-compare выключен по умолчанию
@@ -17769,6 +17957,8 @@
                   { activityLabel: _programLabel(programId) + ' (частично)' }
                 );
                 _bumpFingersDiaryVersion();
+                // §1.3 FDP/FDS ротация — фиксируем хваты и для частичного завершения.
+                try { Fingers.edgeHistory?.recordSession?.(partialLog); } catch (_) {}
                 if (HEYS.Toast?.success) {
                   HEYS.Toast.success('Записано: ' + partialLog.totalUnits + ' ' + partialLog.unitLabel);
                 }
@@ -19251,6 +19441,9 @@
           { activityLabel: pendingProgram?.name || 'Свой конструктор' }
         );
         _bumpFingersDiaryVersion();
+        // §1.3 FDP/FDS ротация: фиксируем какие хваты реально тренировались,
+        // чтобы следующая генерация чередовала FDP/FDS. No-op если модуль/висов нет.
+        try { Fingers.edgeHistory?.recordSession?.(fingersLog); } catch (_) {}
         // Toast только для manual-save (план). При завершении через таймер
         // показываем summary-карточку (см. ниже) — она сама подтверждает save.
         if (!o.viaTimer && HEYS.Toast?.success) {
@@ -19525,15 +19718,23 @@
         { tag: 'rect', attrs: { x: 3.5, y: 5, width: 15, height: 13.5, rx: 2 } },
         { tag: 'path', attrs: { d: 'M3.5 9h15M7.5 3v3.5M14.5 3v3.5' } },
         { tag: 'circle', attrs: { cx: 11, cy: 13, r: 1.2, fill: 'currentColor', stroke: 'none' } }
+      ]),
+      tests: svgIcon([
+        { tag: 'rect', attrs: { x: 4.5, y: 3.5, width: 13, height: 15, rx: 2 } },
+        { tag: 'path', attrs: { d: 'M8 3.5h6v2.5H8z' } },
+        { tag: 'path', attrs: { d: 'M7.5 10l1.5 1.5 2.5-2.5M7.5 14.5h7' } }
       ])
     };
     const tabs = [
       { id: 'today',       label: 'Сегодня',     icon: ICONS.today },
       { id: 'programs',    label: 'Протоколы',   icon: ICONS.programs },
       { id: 'constructor', label: 'Своя',        icon: ICONS.constructor },
+      Fingers.TestBatteryTab
+        ? { id: 'tests',   label: 'Тесты',       icon: ICONS.tests }
+        : null,
       { id: 'progress',    label: 'Прогресс',    icon: ICONS.progress },
       { id: 'calendar',    label: 'Календарь',   icon: ICONS.calendar }
-    ];
+    ].filter(Boolean);
 
     return h('div', { className: 'fingers-fs-session' },
       // Warmup runner overlay (floats над всем когда warmupActive=true).
@@ -19736,6 +19937,9 @@
             }, 'Сохранить план без таймера')
           )
         ),
+        tab === 'tests' && Fingers.TestBatteryTab && h(Fingers.TestBatteryTab, {
+          level: (getProfile() || {}).level
+        }),
         tab === 'progress' && h(ProgressTab, {
           recommendedProgramId: recommendedId,
           onPickProgram: handlePickProgram

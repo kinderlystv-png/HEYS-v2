@@ -2028,6 +2028,45 @@
             prevDay.householdMin === newDay.householdMin;
     }
 
+    // === Subjective (check-in) field anti-clobber ===
+    // Поля утреннего чекина, которые пишутся одним шагом и редко обнуляются.
+    // Apply этих значений в React может потеряться под троттлингом таба
+    // (SKIP_RAF_PENDING в heys_day_effects.js), а последующий снапшот дня
+    // (addWater → persistDaySnapshotImmediately) — затереть их в LS.
+    // См. TASK-003 / инвариант №7 (explicit-мёрж, не shape-inference).
+    const SUBJECTIVE_DAY_FIELDS = [
+        'sleepStart', 'sleepEnd', 'sleepHours', 'daySleepMinutes',
+        'sleepQuality', 'sleepNote',
+        'moodMorning', 'wellbeingMorning', 'stressMorning'
+    ];
+
+    const hasDefinedValue = (v) => v !== undefined && v !== null && v !== '';
+
+    /**
+     * Fill-if-missing мёрж subjective-полей чекина из свежего LS-дня поверх снапшота.
+     * Снапшот авторитетен для всех своих полей; недостающие subjective-поля
+     * (потерянные при дропнутом apply) добираются из LS, который пишется немедленно
+     * на каждом шаге чекина. Никогда не перетирает значение, уже присутствующее в
+     * снапшоте (включая 0 — валидное значение для mood/stress/daySleepMinutes).
+     * Чистая функция — обе стороны передаются вызывающим (scoped LS, инв. №9).
+     * @param {Object} snapshot — снимок дня, который собираемся персистить
+     * @param {Object|null} lsDay — свежий day из scoped LS того же клиента
+     * @returns {Object} snapshot либо его копия с добранными subjective-полями
+     */
+    function mergeSubjectiveFieldsPreferFresh(snapshot, lsDay) {
+        const base = (snapshot && typeof snapshot === 'object') ? snapshot : {};
+        if (!lsDay || typeof lsDay !== 'object') return base;
+        let merged = base;
+        for (let i = 0; i < SUBJECTIVE_DAY_FIELDS.length; i++) {
+            const f = SUBJECTIVE_DAY_FIELDS[i];
+            if (hasDefinedValue(lsDay[f]) && !hasDefinedValue(base[f])) {
+                if (merged === base) merged = { ...base };
+                merged[f] = lsDay[f];
+            }
+        }
+        return merged;
+    }
+
     // === Exports ===
     // Всё экспортируется через HEYS.dayUtils
     // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
@@ -2101,6 +2140,9 @@
         preloadMonthDays,
         isSameDayHydratedContent,
         isSameDayStorageMergeContent,
+        // Subjective (check-in) anti-clobber
+        SUBJECTIVE_DAY_FIELDS,
+        mergeSubjectiveFieldsPreferFresh,
         // Predicates
         isSyntheticEstimatedItem
     };
@@ -2880,9 +2922,11 @@
         const carbPct = +normPerc.carbsPct || 0;
         const protPct = +normPerc.proteinPct || 0;
         const fatPct = Math.max(0, 100 - carbPct - protPct);
-        const carbs = K ? (K * carbPct / 100) / 4 : 0;
-        const prot = K ? (K * protPct / 100) / 4 : 0;
-        const fat = K ? (K * fatPct / 100) / 9 : 0; // 9 ккал/г
+        // NET Atwater — единый источник факторов HEYS.TEF.ATWATER (белок 3, угл 4, жир 9).
+        // Согласовано со счётчиком прихода (mealTotals тоже белок×3). Fallback на случай, если TEF не загружен.
+        const carbs = K ? (K * carbPct / 100) / (HEYS.TEF?.ATWATER?.carbs || 4) : 0;
+        const prot = K ? (K * protPct / 100) / (HEYS.TEF?.ATWATER?.protein || 3) : 0;
+        const fat = K ? (K * fatPct / 100) / (HEYS.TEF?.ATWATER?.fat || 9) : 0;
         const simplePct = +normPerc.simpleCarbPct || 0;
         const simple = carbs * simplePct / 100;
         const complex = Math.max(0, carbs - simple);
@@ -4812,6 +4856,28 @@
             setGrams
         } = deps;
 
+        /**
+         * Свежий day из scoped LS текущего клиента (инв. №9 — только scoped, без
+         * cross-client fallback на unscoped). Читаем после invalidate, чтобы поймать
+         * запись шага чекина даже если она ещё не «остыла» в store-кэше.
+         */
+        function readFreshScopedDay(dateKey) {
+            try {
+                const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+                if (cid) {
+                    const scopedKey = 'heys_' + cid + '_dayv2_' + dateKey;
+                    try { HEYS.store?.invalidate?.(scopedKey); } catch (_) { /* noop */ }
+                    const v = typeof lsGet === 'function' ? lsGet(scopedKey, null) : null;
+                    return (v && typeof v === 'object') ? v : null;
+                }
+                // Нет client-scope (редко): unscoped как единственный путь
+                const v = typeof lsGet === 'function' ? lsGet('heys_dayv2_' + dateKey, null) : null;
+                return (v && typeof v === 'object') ? v : null;
+            } catch (_) {
+                return null;
+            }
+        }
+
         function getLatestDaySnapshot() {
             const baseKey = 'heys_dayv2_' + date;
             const storedDay = typeof lsGet === 'function' ? lsGet(baseKey, null) : null;
@@ -4827,13 +4893,28 @@
                 snapshot = runtimeDay;
             }
 
-            return snapshot && typeof snapshot === 'object'
-                ? { ...snapshot }
-                : { date };
+            let result = snapshot && typeof snapshot === 'object' ? { ...snapshot } : { date };
+
+            // 🛡️ TASK-003 анти-клоббер: subjective-поля чекина (сон/самочувствие) могли
+            // не доехать в React/выбранный снапшот (apply дропнут под троттлингом таба),
+            // но присутствуют в свежем scoped LS. Добираем их, чтобы снапшот дня
+            // (addWater и пр.) не зацементировал их отсутствие. Explicit-мёрж (инв. №7).
+            if (HEYS.dayUtils && typeof HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh === 'function') {
+                result = HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh(result, readFreshScopedDay(date));
+            }
+
+            return result;
         }
 
         function persistDaySnapshotImmediately(nextDayData) {
             if (!nextDayData || typeof nextDayData !== 'object') return;
+
+            // 🛡️ TASK-003 анти-клоббер (последний рубеж): даже если caller собрал снапшот
+            // мимо getLatestDaySnapshot, не теряем subjective-поля чекина, присутствующие
+            // в свежем scoped LS, но отсутствующие в снапшоте. Fill-if-missing, инв. №7.
+            if (HEYS.dayUtils && typeof HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh === 'function') {
+                nextDayData = HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh(nextDayData, readFreshScopedDay(date));
+            }
 
             const baseKey = 'heys_dayv2_' + date;
 
