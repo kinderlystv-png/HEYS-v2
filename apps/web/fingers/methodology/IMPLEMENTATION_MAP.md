@@ -89,7 +89,11 @@ gate(fail-closed) → canary per-client → расширение → снос `m
       `session_ui`
 - [x] МЭД / MEV-MAV (1.7 / §3.7) ✅ — MAV режет недельный quality-объём
       (`_enforceQualityMav`), MEV объясняет недобор без форса нагрузки
-- [ ] Полная тест-батарея (8.1) + частота ретеста (8.4) + UI тестов
+- [x] UI ввода тест-батареи (8.1) ✅ — вкладка «Тесты» (`test_battery`): форма 9
+      тестов → `saveAssessmentBattery` → лимитёр + веса блоков + due-бейджи
+- [x] Ретест-напоминания (8.4) + графики прогресса (8.6) ✅ — баннер
+      due-тестов + спарклайны MVC-истории (тренд силы по бенчмарк-хватам) во
+      вкладке «Тесты»
 - [x] transfer-мостик (1.1 M3) ✅ — фингерборд-сила в сессии без
       application-блока добирает один атом max_strength/power на board/wall
       (`session_builder` additive-floor); fail-safe: нет board/wall → не
@@ -141,7 +145,7 @@ gate(fail-closed) → canary per-client → расширение → снос `m
 | 5. Протоколы         |   ✅   |   ✅   | ✅  |
 | 6. Периодизация      |   ✅   |   ✅   | ⬜  |
 | 7. Уровни            |   ✅   |   ✅   | ✅  |
-| 8. Тесты / бенчмарки |   ✅   |   🟡   | ⬜  |
+| 8. Тесты / бенчмарки |   ✅   |   🟡   | ✅  |
 | 9. Безопасность      |   ✅   |   ✅   | ✅  |
 | 10. Источники        |   ✅   |   ✅   |  —  |
 
@@ -164,33 +168,33 @@ canary-флип → 100% на живых данных.** Детальный per-
 ✅ готово · 🟡 частично · ⬜ Фаза 2 (бэклог) · — n/a (внутренняя логика, нет
 user-surface).
 
-| Подраздел                      | Метод. | Движок | UI  | Что в коде / что осталось                                                                                                                                                                                |
-| ------------------------------ | :----: | :----: | :-: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1.1 Специфичность              |   ✅   |   ✅   |  —  | `quality_catalog` emphasis/energySystem + `focusQuality` (лимитер→фокус); transfer-мостик M3 ✅ (`session_builder`: фингерборд-сила ⇒ application board/wall)                                            |
-| 1.2 Прогресс. перегрузка       |   ✅   |   ✅   |  —  | progression **enforced** в `session_builder` (`_progressionAllowsAtom` — кап оси выбора, ANDed с `_atomFits`) + `S4` FTL-trim                                                                            |
-| 1.3 Вариативность / плато      |   ✅   |   ✅   |  —  | `detectPlateau`+`nextAxis` enforced; FDP/FDS edge-ротация ✅ (`edge_history` кросс-сессионный lean-лог → `session_builder` чередует FDP/FDS хваты по под-нагруженному)                                   |
-| 1.4 Лимитер                    |   ✅   |   ✅   |  —  | `assessment` scoreLimiters §3.2 → `leadingLimiter` → фокус мезо                                                                                                                                          |
-| 1.5 Техника / железо           |   ✅   |   ✅   |  —  | `V_skillBalance` + доли §3.8                                                                                                                                                                             |
-| 1.6 Восстановление             |   ✅   |   ✅   | 🟡  | `S2_tissueFreshness` + FTL; UI ввода readiness — частично                                                                                                                                                |
-| 1.7 МЭД (MEV/MAV)              |   ✅   |   ✅   |  —  | MAV режет недельный объём, MEV объясняет — в генераторе (`_enforceQualityMav`)                                                                                                                           |
-| 1.8 Нагрузка / риск            |   ✅   |   ✅   |  —  | `S4` FTL-кап + danger-модель                                                                                                                                                                             |
-| 2. 9 качеств                   |   ✅   |   ✅   |  —  | `quality_catalog`                                                                                                                                                                                        |
-| 3.1 Сила/выносл. по времени    |   ✅   |   ✅   |  —  | `deriveEnergySystem`                                                                                                                                                                                     |
-| 3.2 Энергосистемы (под-режимы) |   ✅   |   ✅   |  —  | `energySubMode` capacity/power на атомах E + `qualityCatalog.deriveAerobicMode`; selector клонит долю интермиттента по уровню (Baláš 2016)                                                               |
-| 3.3 Ткани / горлышко           |   ✅   |   ✅   |  —  | `grips_catalog` danger + S2/S9                                                                                                                                                                           |
-| 4. Каталог A–I                 |   ✅   |   ✅   | ✅  | `block_catalog` 36×9; **все 6 doseShape рендерятся** (Hang/Reps/Continuous/Attempts/Circuit/Process)                                                                                                     |
-| 5.x Протоколы                  |   ✅   |   ✅   | ✅  | атомы доза/loadModel/doseConfidence; рендер через 6 runner'ов                                                                                                                                            |
-| 6. Периодизация                |   ✅   |   ✅   | ⬜  | `periodization_engine`: модели 6.1-6.3/6.5/6.6, фазы clamp интенсивности+**объёма**+**фокуса**, **авто-`selectModel` 6.4 ✅** (формат+лимитер); **осталось:** **UI плана мезоцикла / forward-календарь** |
-| 7. Уровни                      |   ✅   |   ✅   | ✅  | `S1` гейт + derive level + seed-creds; **level-capture UI** (onboarding+settings, трение/confirm на advanced/elite)                                                                                      |
-| 8.1 Тест-батарея               |   ✅   |   ✅   | ⬜  | `TEST_BATTERY`+`assessBattery` (ядро); **UI ввода результатов теста — нет**                                                                                                                              |
-| 8.2 Бенчмарки                  |   ✅   |   🟡   |  —  | `assessment.BENCHMARKS` — 🟠 дефолт (Berta 2025 pending)                                                                                                                                                 |
-| 8.3 Аудит лимитера             |   ✅   |   ✅   |  —  | scoreLimiters §3.2                                                                                                                                                                                       |
-| 8.4 Частота тестов             |   ✅   |   ✅   | ⬜  | `dueTests` (ядро); **UI ретест-напоминаний — нет**                                                                                                                                                       |
-| 9.2 Правила → валидаторы       |   ✅   |   ✅   | ✅  | **S1–S9** + V_blockHomogeneity/energySystemSequence/sessionOrder/skillBalance; pain/warmup/abort surfaced в UI                                                                                           |
-| 9.3 Возраст / зоны роста       |   ✅   |   ✅   | ✅  | `S1`+`age_gating`; age-warning в onboarding                                                                                                                                                              |
-| 9.4 Вес / RED-S                |   ✅   |   🟡   | 🟡  | рамка-инвариант (advisory), не жёсткий гейт                                                                                                                                                              |
-| 9.5 Реабилитация / red-flags   |   ✅   |   ✅   | ✅  | `S8_painStop`+`S9`; pain-промпт в UI                                                                                                                                                                     |
-| 10. Источники                  |   ✅   |   ✅   |  —  | `sourceIds` + `bibliography`                                                                                                                                                                             |
+| Подраздел                      | Метод. | Движок | UI  | Что в коде / что осталось                                                                                                                                                                                                     |
+| ------------------------------ | :----: | :----: | :-: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.1 Специфичность              |   ✅   |   ✅   |  —  | `quality_catalog` emphasis/energySystem + `focusQuality` (лимитер→фокус); transfer-мостик M3 ✅ (`session_builder`: фингерборд-сила ⇒ application board/wall)                                                                 |
+| 1.2 Прогресс. перегрузка       |   ✅   |   ✅   |  —  | progression **enforced** в `session_builder` (`_progressionAllowsAtom` — кап оси выбора, ANDed с `_atomFits`) + `S4` FTL-trim                                                                                                 |
+| 1.3 Вариативность / плато      |   ✅   |   ✅   |  —  | `detectPlateau`+`nextAxis` enforced; FDP/FDS edge-ротация ✅ (`edge_history` кросс-сессионный lean-лог → `session_builder` чередует FDP/FDS хваты по под-нагруженному)                                                        |
+| 1.4 Лимитер                    |   ✅   |   ✅   |  —  | `assessment` scoreLimiters §3.2 → `leadingLimiter` → фокус мезо                                                                                                                                                               |
+| 1.5 Техника / железо           |   ✅   |   ✅   |  —  | `V_skillBalance` + доли §3.8                                                                                                                                                                                                  |
+| 1.6 Восстановление             |   ✅   |   ✅   | 🟡  | `S2_tissueFreshness` + FTL; UI ввода readiness — частично                                                                                                                                                                     |
+| 1.7 МЭД (MEV/MAV)              |   ✅   |   ✅   |  —  | MAV режет недельный объём, MEV объясняет — в генераторе (`_enforceQualityMav`)                                                                                                                                                |
+| 1.8 Нагрузка / риск            |   ✅   |   ✅   |  —  | `S4` FTL-кап + danger-модель                                                                                                                                                                                                  |
+| 2. 9 качеств                   |   ✅   |   ✅   |  —  | `quality_catalog`                                                                                                                                                                                                             |
+| 3.1 Сила/выносл. по времени    |   ✅   |   ✅   |  —  | `deriveEnergySystem`                                                                                                                                                                                                          |
+| 3.2 Энергосистемы (под-режимы) |   ✅   |   ✅   |  —  | `energySubMode` capacity/power на атомах E + `qualityCatalog.deriveAerobicMode`; selector клонит долю интермиттента по уровню (Baláš 2016)                                                                                    |
+| 3.3 Ткани / горлышко           |   ✅   |   ✅   |  —  | `grips_catalog` danger + S2/S9                                                                                                                                                                                                |
+| 4. Каталог A–I                 |   ✅   |   ✅   | ✅  | `block_catalog` 36×9; **все 6 doseShape рендерятся** (Hang/Reps/Continuous/Attempts/Circuit/Process)                                                                                                                          |
+| 5.x Протоколы                  |   ✅   |   ✅   | ✅  | атомы доза/loadModel/doseConfidence; рендер через 6 runner'ов                                                                                                                                                                 |
+| 6. Периодизация                |   ✅   |   ✅   | ⬜  | `periodization_engine`: модели 6.1-6.3/6.5/6.6, фазы clamp интенсивности+**объёма**+**фокуса**, **авто-`selectModel` 6.4 ✅** (формат+лимитер); **осталось:** **UI плана мезоцикла / forward-календарь**                      |
+| 7. Уровни                      |   ✅   |   ✅   | ✅  | `S1` гейт + derive level + seed-creds; **level-capture UI** (onboarding+settings, трение/confirm на advanced/elite)                                                                                                           |
+| 8.1 Тест-батарея               |   ✅   |   ✅   | ✅  | `TEST_BATTERY`+`assessBattery` (ядро) + **вкладка «Тесты»** (`test_battery`): ввод 9 тестов → `saveAssessmentBattery` → показ лимитёра + весов блоков + due-бейджи                                                            |
+| 8.2 Бенчмарки                  |   ✅   |   🟡   |  —  | `assessment.BENCHMARKS` — 🟠 дефолт (Berta 2025 pending)                                                                                                                                                                      |
+| 8.3 Аудит лимитера             |   ✅   |   ✅   |  —  | scoreLimiters §3.2                                                                                                                                                                                                            |
+| 8.4 Частота тестов             |   ✅   |   ✅   | ✅  | `dueTests` (ядро) + UI: due-бейджи у тестов + баннер «N тестов пора пересдать» во вкладке «Тесты»; **графики прогресса силы** (§8.6) — спарклайны MVC-истории по бенчмарк-хватам (`buildSparkline` + `records.getMvcHistory`) |
+| 9.2 Правила → валидаторы       |   ✅   |   ✅   | ✅  | **S1–S9** + V_blockHomogeneity/energySystemSequence/sessionOrder/skillBalance; pain/warmup/abort surfaced в UI                                                                                                                |
+| 9.3 Возраст / зоны роста       |   ✅   |   ✅   | ✅  | `S1`+`age_gating`; age-warning в onboarding                                                                                                                                                                                   |
+| 9.4 Вес / RED-S                |   ✅   |   🟡   | 🟡  | рамка-инвариант (advisory), не жёсткий гейт                                                                                                                                                                                   |
+| 9.5 Реабилитация / red-flags   |   ✅   |   ✅   | ✅  | `S8_painStop`+`S9`; pain-промпт в UI                                                                                                                                                                                          |
+| 10. Источники                  |   ✅   |   ✅   |  —  | `sourceIds` + `bibliography`                                                                                                                                                                                                  |
 
 **Инфраструктура (вне нумерации методологии):**
 
@@ -207,10 +211,10 @@ user-surface).
 > выверена полностью (P0, gate fail-closed, S1–S9, S8 во всех runner'ах). Дальше
 > — **гибрид: canary-флип → доводка 100% на живых данных** (решение 2026-06-11).
 >
-> **Главный UI-бэклог:** ввод результатов тест-батареи (8.1), ретест-напоминания
-> (8.4), визуализация плана мезоцикла / forward-календарь (ч.6), графики
-> прогресса. **Engine-бэклог:** числа бенчмарков Berta (8.2). _Движковый бэклог
-> Фазы 2 закрыт:_ auto-`selectModel` 6.4 + aerobic-под-режимы 3.2 +
+> **Главный UI-бэклог:** визуализация плана мезоцикла / forward-календарь (ч.6).
+> _(ввод тест-батареи 8.1 + ретест-напоминания 8.4 + графики прогресса 8.6 — ✅
+> 2026-06-11.)_ **Engine-бэклог:** числа бенчмарков Berta (8.2). _Движковый
+> бэклог Фазы 2 закрыт:_ auto-`selectModel` 6.4 + aerobic-под-режимы 3.2 +
 > transfer-мостик M3 (1.1) + FDP/FDS edge-ротация (1.3) — ✅ 2026-06-11.
 
 ---
