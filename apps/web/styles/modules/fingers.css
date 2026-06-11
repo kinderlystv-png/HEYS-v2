@@ -7549,3 +7549,96 @@
   .fingers-grip-picker { animation: none !important; }
   .fingers-grip-tile { transition: none !important; }
 }
+
+/* ─── Тест-батарея (§8.1 ввод результатов) ───────────────────────────────── */
+.fingers-tb { display: flex; flex-direction: column; gap: 18px; padding: 4px 2px 24px; }
+.fingers-tb__intro {
+  margin: 0; font-size: 13.5px; line-height: 1.5;
+  color: var(--fingers-text-muted, rgba(60, 50, 42, 0.7));
+}
+.fingers-tb__group { display: flex; flex-direction: column; gap: 8px; }
+.fingers-tb__group-title {
+  margin: 4px 0 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.03em;
+  text-transform: uppercase; color: var(--fingers-text-muted, rgba(60, 50, 42, 0.6));
+}
+.fingers-tb__row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.fingers-tb__label { font-size: 14px; color: var(--fingers-text, #1c1b19); flex: 1; }
+.fingers-tb__unit { font-size: 12px; color: var(--fingers-text-muted, rgba(60, 50, 42, 0.55)); }
+.fingers-tb__due {
+  font-size: 11px; font-weight: 700; color: #c0561f;
+  margin-left: 6px; white-space: nowrap;
+}
+.fingers-tb .fingers-ob-input {
+  width: 96px; min-height: 40px; padding: 8px 10px; flex: 0 0 auto;
+  border: 1.5px solid rgba(60, 50, 42, 0.22); border-radius: 10px;
+  font-size: 16px; text-align: right; box-sizing: border-box;
+  background: rgba(255, 253, 250, 0.92); color: var(--fingers-text, #1c1b19);
+}
+.fingers-tb__result {
+  margin-top: 6px; padding: 16px; border-radius: 12px;
+  background: rgba(40, 120, 70, 0.07); border: 1px solid rgba(40, 120, 70, 0.18);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.fingers-tb__result-title { margin: 0; font-size: 15px; }
+.fingers-tb__hint {
+  margin: 0; font-size: 12.5px; line-height: 1.45;
+  color: var(--fingers-text-muted, rgba(60, 50, 42, 0.7));
+}
+.fingers-tb__bars { display: flex; flex-direction: column; gap: 6px; }
+.fingers-tb__bar-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.fingers-tb__bar-label { flex: 0 0 38%; color: var(--fingers-text, #1c1b19); }
+.fingers-tb__bar-track {
+  flex: 1; height: 8px; border-radius: 4px;
+  background: rgba(60, 50, 42, 0.12); overflow: hidden;
+}
+.fingers-tb__bar-fill {
+  display: block; height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #4a9d6a, #2f7d4a);
+}
+.fingers-tb__bar-pct {
+  flex: 0 0 auto; font-variant-numeric: tabular-nums;
+  color: var(--fingers-text-muted, rgba(60, 50, 42, 0.6));
+}
+[data-theme="dark"] .fingers-tb .fingers-ob-input {
+  background: rgba(255, 255, 255, 0.04); color: rgba(235, 235, 245, 0.95);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] .fingers-tb__result {
+  background: rgba(74, 157, 106, 0.12); border-color: rgba(74, 157, 106, 0.25);
+}
+[data-theme="dark"] .fingers-tb__bar-track { background: rgba(255, 255, 255, 0.1); }
+
+/* §8.4 ретест-напоминание */
+.fingers-tb__reminder {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border-radius: 12px; font-size: 13px; line-height: 1.4;
+  background: rgba(192, 86, 31, 0.09); border: 1px solid rgba(192, 86, 31, 0.22);
+  color: var(--fingers-text, #1c1b19);
+}
+.fingers-tb__reminder-icon { font-size: 16px; flex: 0 0 auto; }
+[data-theme="dark"] .fingers-tb__reminder {
+  background: rgba(220, 120, 60, 0.14); border-color: rgba(220, 120, 60, 0.3);
+  color: rgba(235, 235, 245, 0.95);
+}
+
+/* §8.6 графики прогресса */
+.fingers-tb__progress { display: flex; flex-direction: column; gap: 12px; }
+.fingers-tb__chart {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 14px; border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03); border: 1px solid rgba(60, 50, 42, 0.1);
+}
+.fingers-tb__chart-head { display: flex; align-items: center; justify-content: space-between; }
+.fingers-tb__chart-label { font-size: 13px; font-weight: 600; color: var(--fingers-text, #1c1b19); }
+.fingers-tb__chart-delta { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fingers-tb__chart-delta.is-up { color: #2f7d4a; }
+.fingers-tb__chart-delta.is-down { color: #c0561f; }
+.fingers-tb__spark { width: 100%; height: auto; display: block; }
+.fingers-tb__chart-last {
+  font-size: 11.5px; color: var(--fingers-text-muted, rgba(60, 50, 42, 0.6));
+}
+[data-theme="dark"] .fingers-tb__chart {
+  background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.08);
+}
