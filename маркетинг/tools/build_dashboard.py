@@ -3,8 +3,14 @@
 """Генератор HTML-дашборда маркетинга HEYS (план 22, п.5.1).
 
 Читает: 00_Сводная_панель.xlsx (Сводка, Конкуренты, Telegram, KPI-трекер),
-22_План (статусы), 25_Roadmap (гейты). Пишет: 00_Дашборд.html
-(самодостаточный, офлайн; вкладки: Обзор / Конкуренты / Telegram).
+22_План (единый источник статусов задач), 25_Roadmap (гейты), 29_Аудит
+(сводные таблицы конкурентов), 30_Имплемент_мап (эталон; статусы пунктов
+с задачей «22 N.N» подтягиваются из 22), 24_посты (контент-батч).
+Пишет: 00_Дашборд.html (самодостаточный, офлайн; вкладки:
+Обзор / Конкуренты / Имплемент-мап / Telegram).
+
+При сломанной структуре источников падает с ненулевым кодом — pre-commit
+хук тогда блокирует коммит рассинхронизированного дашборда.
 
 Запуск:  python3 маркетинг/tools/build_dashboard.py
 """
@@ -20,6 +26,22 @@ ROOT = Path(__file__).resolve().parent.parent  # маркетинг/
 
 def esc(v):
     return html.escape(str(v)) if v is not None else ''
+
+
+def parse_md_table(lines, start_idx):
+    """Читает markdown-таблицу начиная с строки заголовка."""
+    head = [c.strip().replace('**', '') for c in
+            lines[start_idx].strip().strip('|').split('|')]
+    rows = []
+    for line in lines[start_idx + 1:]:
+        if not line.strip().startswith('|'):
+            break
+        cells = [c.strip().replace('**', '') for c in
+                 line.strip().strip('|').split('|')]
+        if set(cells[0]) <= {'-', ' ', ':'}:
+            continue
+        rows.append(cells)
+    return head, rows
 
 
 wb = openpyxl.load_workbook(ROOT / '00_Сводная_панель.xlsx', data_only=True)
@@ -65,6 +87,25 @@ price_ladder = cw['A59'].value or ''
 landing_patterns = [cw.cell(row=r, column=1).value for r in range(62, 67)
                     if cw.cell(row=r, column=1).value]
 
+# ---------- контент-батч из 24 ----------
+posts, post_calendar, post_prereq = [], '', ''
+posts_path = ROOT / '24_Telegram_посты_батч1.md'
+if posts_path.exists():
+    p_text = posts_path.read_text(encoding='utf-8')
+    posts = re.findall(r'^## (П\d+) — ([^\n*]+)', p_text, re.M)
+    p_lines = p_text.splitlines()
+    cal_idx = next((i for i, ln in enumerate(p_lines)
+                    if ln.startswith('|') and 'Нед' in ln), None)
+    if cal_idx is not None:
+        _, cal_rows = parse_md_table(p_lines, cal_idx)
+        post_calendar = ('<tr><th>Нед</th><th>Пн</th><th>Ср</th><th>Пт</th>'
+                         '<th>Вс</th></tr>' +
+                         ''.join('<tr>' + ''.join(f'<td>{esc(c)}</td>' for c in r)
+                                 + '</tr>' for r in cal_rows))
+    m = re.search(r'Prerequisite публикации П0:(.*?)(?=\n\n|\Z)', p_text, re.S)
+    if m:
+        post_prereq = ' '.join(m.group(1).replace('>', ' ').split())
+
 # ---------- Telegram ----------
 tg = wb['Telegram']
 tg_role = tg['B5'].value or ''
@@ -77,22 +118,6 @@ tg_blocks = [('Ритм ведения', tg['B17'].value), ('Воронка', tg
 tg_promo = [tg['B20'].value, tg['B21'].value, tg['B22'].value]
 
 # ---------- сводные таблицы из 29 (приложения / лендинги) ----------
-def parse_md_table(lines, start_idx):
-    """Читает markdown-таблицу начиная с строки заголовка."""
-    head = [c.strip().replace('**', '') for c in
-            lines[start_idx].strip().strip('|').split('|')]
-    rows = []
-    for line in lines[start_idx + 1:]:
-        if not line.strip().startswith('|'):
-            break
-        cells = [c.strip().replace('**', '') for c in
-                 line.strip().strip('|').split('|')]
-        if set(cells[0]) <= {'-', ' ', ':'}:
-            continue
-        rows.append(cells)
-    return head, rows
-
-
 audit_apps, audit_landings = ([], []), ([], [])
 adopt_landing, adopt_product = ([], []), ([], [])
 no_copy_decided = ''
@@ -121,18 +146,52 @@ if audit_path.exists():
     if m:
         no_copy_decided = ' '.join(m.group(1).split())
 
+# ---------- имплемент-мап из 30 ----------
+imap_landing, imap_product = ([], []), ([], [])
+imap_rule = imap_no_copy = ''
+imap_path = ROOT / '30_Имплемент_мап.md'
+if imap_path.exists():
+    i_text = imap_path.read_text(encoding='utf-8')
+    i_lines = i_text.splitlines()
+    cur = None
+    for i, ln in enumerate(i_lines):
+        if ln.startswith('## В ЛЕНДИНГ'):
+            cur = 'L'
+        elif ln.startswith('## В ПРИЛОЖЕНИЕ'):
+            cur = 'P'
+        elif ln.startswith('## '):
+            cur = None
+        if ln.startswith('|') and 'Почему' in ln:
+            if cur == 'L':
+                imap_landing = parse_md_table(i_lines, i)
+            elif cur == 'P':
+                imap_product = parse_md_table(i_lines, i)
+    m = re.search(r'\*\*Правило актуализации:\*\*(.*?)\n\n', i_text, re.S)
+    if m:
+        imap_rule = ' '.join(m.group(1).replace('>', ' ').split())
+    m = re.search(r'## Не копируем[^\n]*\n\n(.*?)\n\n---', i_text, re.S)
+    if m:
+        imap_no_copy = ' '.join(m.group(1).split())
+
 
 # ---------- статусы этапов из 22 ----------
 plan_text = (ROOT / '22_План_реализации_маркетинга.md').read_text(encoding='utf-8')
 stages = []
+task_status = {}  # '3.7' -> '✅'/'🟡'/'⬜' — единый источник статусов задач
 for m in re.finditer(r'^## (Этап \d[^\n]*)\n(.*?)(?=^## |\Z)', plan_text, re.M | re.S):
-    rows = re.findall(r'^\|\s*\d+\.\d+\s*\|.*\|\s*(✅|⬜|🟡)\s*\|', m.group(2), re.M)
+    rows = re.findall(r'^\|\s*(\d+\.\d+)\s*\|\s*([^|]+?)\s*\|.*\|\s*(✅|⬜|🟡)\s*\|',
+                      m.group(2), re.M)
     if rows:
         t = m.group(1)
+        for tid, name, st in rows:
+            task_status[tid] = st
         stages.append({'title': t.split('—')[0].strip(),
                        'desc': t.split('—')[1].strip() if '—' in t else '',
-                       'done': rows.count('✅') + 0.5 * rows.count('🟡'),
-                       'total': len(rows)})
+                       'done': sum(1 for r in rows if r[2] == '✅')
+                       + 0.5 * sum(1 for r in rows if r[2] == '🟡'),
+                       'total': len(rows),
+                       'tasks': [(tid, re.sub(r'\*\*', '', name), st)
+                                 for tid, name, st in rows]})
 
 # ---------- гейты из 25 ----------
 gates = []
@@ -182,12 +241,19 @@ gate_rows = ''.join(
 stage_rows = ''
 for s in stages:
     pct = round(s['done'] / s['total'] * 100)
-    stage_rows += (f'<div class="stage"><div class="s-head"><b>{esc(s["title"])}</b>'
-                   f'<span class="dim">{esc(s["desc"])}</span></div>'
-                   f'<div class="s-bar"><div class="bar"><div class="bar-fill" '
-                   f'style="width:{pct}%"></div></div>'
-                   f'<span class="bar-num">{pct}%</span>'
-                   f'<span class="dim s-count">{s["done"]:g}/{s["total"]}</span></div></div>')
+    task_list = ''.join(
+        f'<li><span class="chip {"ok" if st == "✅" else ("mid" if st == "🟡" else "wait")}">'
+        f'{esc(tid)}</span> {esc(name)}</li>'
+        for tid, name, st in s['tasks'])
+    stage_rows += (
+        f'<details class="stage-d"><summary class="stage">'
+        f'<div class="s-head"><b>{esc(s["title"])}</b>'
+        f'<span class="dim">{esc(s["desc"])}</span></div>'
+        f'<div class="s-bar"><div class="bar"><div class="bar-fill" '
+        f'style="width:{pct}%"></div></div>'
+        f'<span class="bar-num">{pct}%</span>'
+        f'<span class="dim s-count">{s["done"]:g}/{s["total"]}</span></div></summary>'
+        f'<ul class="task-list">{task_list}</ul></details>')
 
 kpi_rows = ''
 for k in kpi:
@@ -265,6 +331,34 @@ def render_adopt(head_rows):
 adopt_landing_html = render_adopt(adopt_landing)
 adopt_product_html = render_adopt(adopt_product)
 
+
+def render_imap(head_rows):
+    _, rows = head_rows
+    out = ('<tr><th>№</th><th>Что</th><th>Почему (29)</th><th>Задача</th>'
+           '<th>Очередь</th><th>Статус</th></tr>')
+    done = 0
+    for r in rows:
+        if len(r) < 6:
+            continue
+        st = r[5]
+        # live-статус из 22, если в колонке «Задача» есть ссылка `22` N.N
+        tm = re.search(r'22[`»\s]*\s*(\d+\.\d+)', r[3])
+        if tm and tm.group(1) in task_status:
+            st = task_status[tm.group(1)]
+        cls = 'ok' if '✅' in st else ('mid' if '🟡' in st else 'wait')
+        if '✅' in st:
+            done += 1
+        label = 'готово' if '✅' in st else ('в работе' if '🟡' in st else 'ожидает')
+        out += (f'<tr><td class="num">{esc(r[0])}</td><td><b>{esc(r[1])}</b></td>'
+                f'<td class="dim">{esc(r[2])}</td><td>{esc(r[3])}</td>'
+                f'<td class="dim">{esc(r[4])}</td>'
+                f'<td><span class="chip {cls}">{label}</span></td></tr>')
+    return out, done, len(rows)
+
+
+imap_landing_table, imap_l_done, imap_l_total = render_imap(imap_landing)
+imap_product_table, imap_p_done, imap_p_total = render_imap(imap_product)
+
 tg_rubric_rows = ('<tr><th>Рубрика</th><th>Цель</th><th>Частота</th></tr>' +
                   ''.join(f'<tr><td>{esc(r[0])}</td><td class="dim">{esc(r[1])}</td>'
                           f'<td class="num">{esc(r[2])}</td></tr>' for r in tg_rubrics))
@@ -339,6 +433,12 @@ tr.hl-row td {{ color:var(--ok); font-weight:600; background:#2dd4a70d; }}
 .bar-fill {{ height:100%; background:linear-gradient(90deg,var(--acc),var(--ok)); }}
 .bar-num {{ font-weight:700; font-size:12px; min-width:34px; }}
 .s-count {{ font-size:11px; min-width:36px; text-align:right; }}
+details.stage-d > summary {{ cursor:pointer; list-style:none; }}
+details.stage-d > summary::-webkit-details-marker {{ display:none; }}
+details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
+.task-list {{ margin:4px 0 10px; padding-left:6px; list-style:none; }}
+.task-list li {{ font-size:12px; padding:3px 0; border-bottom:1px dashed #16203f; }}
+.task-list .chip {{ margin-right:6px; }}
 .kpis {{ grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }}
 .kpi {{ background:var(--card); border:1px solid var(--line); border-radius:10px;
   padding:9px 11px; }}
@@ -370,6 +470,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
   <div class="tabs">
     <button class="tab active" data-pane="overview">Обзор</button>
     <button class="tab" data-pane="comp">Конкуренты</button>
+    <button class="tab" data-pane="imap">Имплемент-мап</button>
     <button class="tab" data-pane="tg">Telegram</button>
   </div>
   <span class="badge">Фаза 0 · Pro-first · план: {plan_pct}% · собрано {today}</span>
@@ -414,12 +515,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 
 <div class="pane" id="comp">
 <p class="sub"><b>Главный вывод аудита 2026-06-10:</b> {esc(audit_head)}</p>
-<div class="cols2">
-<section><h2>→ Перенять в ЛЕНДИНГ (29 §10)</h2>{adopt_landing_html}</section>
-<section><h2>→ Перенять в ПРОДУКТ (29 §10)</h2>{adopt_product_html}
-<section style="margin-top:14px"><h2>Не копируем (решено)</h2>
-<div class="card"><p class="sm">{esc(no_copy_decided)}</p></div></section></section>
-</div>
+<p class="label">Что переносим в лендинг/продукт и статусы — вкладка <b>«Имплемент-мап»</b> (источник: 30).</p>
 <section><h2>Карта «живой человек» (кто реально даёт)</h2>
 <div class="card" style="padding:4px 8px"><table>
 <tr><th>Игрок</th><th>Человек</th><th>Частота</th><th>Цена/мес</th><th>РФ-оплата</th></tr>
@@ -443,8 +539,24 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 <p class="label" style="margin-top:10px">Детали: 12 (CalZen/лендинги) · 06 (позиционирование) · 16 (паттерны) · навигатор — 26.</p>
 </div>
 
+<div class="pane" id="imap">
+<p class="sub"><b>Эталон конкурентной комбинации</b> (источник: 30_Имплемент_мап). {esc(imap_rule)}</p>
+<section><h2>В ЛЕНДИНГ — {imap_l_done}/{imap_l_total} готово</h2>
+<div class="card scrollx" style="padding:4px 8px"><table>{imap_landing_table}</table></div></section>
+<section><h2>В ПРИЛОЖЕНИЕ — {imap_p_done}/{imap_p_total} готово</h2>
+<div class="card scrollx" style="padding:4px 8px"><table>{imap_product_table}</table></div></section>
+<section class="card"><h2>Не копируем (анти-эталон)</h2><p class="sm">{esc(imap_no_copy)}</p></section>
+</div>
+
 <div class="pane" id="tg">
 <p class="sub">{esc(tg_role)}</p>
+<section><h2>Контент-батч №1 — {len(posts)} постов готово (24)</h2>
+<div class="cols2">
+<div class="card" style="padding:4px 8px"><table>{post_calendar}</table>
+<p class="label" style="padding:6px">⚠ {esc(post_prereq)}</p></div>
+<div class="card"><ul class="task-list">
+{''.join(f'<li><span class="chip wait">{esc(pid)}</span> {esc(t.strip())}</li>' for pid, t in posts)}
+</ul></div></div></section>
 <div class="cols2">
 <div><h2>Рубрики (банк тем — 14, батч №1 — 24)</h2>
 <div class="card" style="padding:4px 8px"><table>{tg_rubric_rows}</table></div>
@@ -474,6 +586,33 @@ document.querySelectorAll('.tab').forEach(function (t) {{
 }});
 </script>
 </body></html>'''
+
+# ---------- sanity-checks: громко падаем при сломанной структуре ----------
+problems = []
+for cond, msg in [
+    (len(tariffs) >= 3, 'Сводка: тарифная сетка < 3 строк (B12:F15)'),
+    (eco['real'] and eco['base'], 'Сводка: пустая экономика (B21/D21)'),
+    (len(priorities) >= 3, 'Сводка: приоритеты < 3 (B25:B28)'),
+    (len(stages) >= 5, '22_План: найдено < 5 этапов'),
+    (sum(s['total'] for s in stages) >= 20, '22_План: подозрительно мало задач'),
+    (len(gates) >= 7, '25_Roadmap: гейтов < 7'),
+    (len(kpi) >= 10, 'KPI-трекер: метрик < 10'),
+    (len(audit_apps[1]) >= 10, '29 §4: таблица приложений < 10 строк'),
+    (len(audit_landings[1]) >= 10, '29 §5: таблица лендингов < 10 строк'),
+    (len(human_rows) >= 4, 'xlsx Конкуренты: карта «живой человек» < 4 строк (A51+)'),
+    (len(imap_landing[1]) >= 5, '30: секция «В ЛЕНДИНГ» < 5 пунктов'),
+    (len(imap_product[1]) >= 4, '30: секция «В ПРИЛОЖЕНИЕ» < 4 пунктов'),
+    (len(posts) >= 5, '24: найдено < 5 постов (заголовки «## ПN — …»)'),
+]:
+    if not cond:
+        problems.append(msg)
+if problems:
+    import sys
+    print('❌ Структура источников сломана — дашборд НЕ пересобран:')
+    for p in problems:
+        print('   •', p)
+    print('Почини источник (см. docstring) и перезапусти.')
+    sys.exit(1)
 
 out = ROOT / '00_Дашборд.html'
 out.write_text(html_out, encoding='utf-8')
