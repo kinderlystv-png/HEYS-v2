@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "moduleId": "drums_finger_control",
+  "trainingType": "hobby",
+  "defaultIntensity": "light_medium",
+  "createdAt": "2026-06-09",
+  "metrics": [
+    "cleanBpmSingles16",
+    "cleanBpmDoubles16",
+    "oneHandFingerTapBpmRight",
+    "oneHandFingerTapBpmLeft",
+    "tensionScore",
+    "forearmPumpScore",
+    "soundEvenness"
+  ],
+  "safetyRules": [
+    {
+      "id": "stop_pain_numbness",
+      "severity": "block",
+      "text": "Stop the session on pain, numbness, tingling, or loss of stick control."
+    },
+    {
+      "id": "downshift_tension",
+      "severity": "downshift",
+      "text": "If tensionScore or forearmPumpScore is 7 or higher, switch to low_tension_rebuild."
+    },
+    {
+      "id": "limit_speed_days",
+      "severity": "schedule",
+      "text": "Run speed_breakthrough no more than twice per week and not on consecutive days."
+    },
+    {
+      "id": "progress_clean_only",
+      "severity": "progression",
+      "text": "Add 5 BPM only after 2 clean minutes with even sound and relaxed rebound."
+    }
+  ],
+  "blocks": [
+    {
+      "id": "free_stroke",
+      "label": "Free Stroke",
+      "goal": "Relaxed rebound and open sound.",
+      "defaultMinutes": 3,
+      "instructions": [
+        "Use eighth notes.",
+        "Let the stick rebound naturally.",
+        "Keep the grip soft and the sound even."
+      ],
+      "qualityCues": ["relaxed wrist", "open rebound", "no squeeze"]
+    },
+    {
+      "id": "finger_rebound",
+      "label": "Finger Rebound",
+      "goal": "Catch and guide rebound with fingers.",
+      "defaultMinutes": 5,
+      "bpmRange": [60, 80],
+      "instructions": [
+        "Keep the stroke small but not cramped.",
+        "Use fingers to bring the stick back.",
+        "Work hands separately before alternating."
+      ],
+      "qualityCues": ["small motion", "loose fulcrum", "quiet forearm"]
+    },
+    {
+      "id": "singles",
+      "label": "Singles RLRL",
+      "goal": "Even alternating strokes.",
+      "defaultMinutes": 5,
+      "instructions": [
+        "Start below clean BPM.",
+        "Increase only when timing and sound stay even.",
+        "Back off 10 BPM if shoulders or forearms tighten."
+      ],
+      "qualityCues": ["even dynamic", "stable time", "no rush"]
+    },
+    {
+      "id": "doubles",
+      "label": "Doubles RRLL",
+      "goal": "Controlled second stroke.",
+      "defaultMinutes": 5,
+      "instructions": [
+        "Make the second note intentional, not accidental bounce.",
+        "Use fingers to return the stick.",
+        "Practice slowly enough that both notes sound clear."
+      ],
+      "qualityCues": ["second note present", "no crushed rebound", "matched hands"]
+    },
+    {
+      "id": "moeller_fingers",
+      "label": "Moeller + Fingers",
+      "goal": "Accent with a relaxed whip, then maintain rebound.",
+      "defaultMinutes": 5,
+      "instructions": [
+        "Accent every fourth note.",
+        "Keep the three following notes small and relaxed.",
+        "Do not force volume with the forearm."
+      ],
+      "qualityCues": ["clear accent", "soft recovery notes", "wave motion"]
+    },
+    {
+      "id": "burst_8_8",
+      "label": "Burst 8 fast / 8 slow",
+      "goal": "Speed exposure without losing control.",
+      "defaultMinutes": 8,
+      "instructions": [
+        "Play 8 fast strokes, then 8 slow strokes.",
+        "The fast part must stay clean.",
+        "Stop increasing BPM after the first sign of squeezing."
+      ],
+      "qualityCues": ["clean burst", "full reset", "no max grinding"]
+    },
+    {
+      "id": "buzz_roll",
+      "label": "Buzz Roll",
+      "goal": "Rebound sensitivity and relaxed contact.",
+      "defaultMinutes": 5,
+      "instructions": [
+        "Use light pressure.",
+        "Avoid squeezing the stick into the pad.",
+        "Keep shoulders and jaw relaxed."
+      ],
+      "qualityCues": ["soft contact", "steady texture", "low effort"]
+    },
+    {
+      "id": "improv_pad",
+      "label": "Free Pad Improvisation",
+      "goal": "Transfer technique into musical movement.",
+      "defaultMinutes": 5,
+      "instructions": [
+        "Use only patterns that stay relaxed.",
+        "Mix singles, doubles, accents, and rests.",
+        "Prioritize sound over density."
+      ],
+      "qualityCues": ["musical phrasing", "easy motion", "no stiffness"]
+    }
+  ],
+  "sessions": [
+    {
+      "id": "balanced_25",
+      "label": "Balanced 25",
+      "durationMinutes": 25,
+      "goal": "Universal technique growth.",
+      "blocks": [
+        { "blockId": "free_stroke", "minutes": 3 },
+        { "blockId": "finger_rebound", "minutes": 5 },
+        { "blockId": "singles", "minutes": 5 },
+        { "blockId": "doubles", "minutes": 5 },
+        { "blockId": "moeller_fingers", "minutes": 5 },
+        { "blockId": "buzz_roll", "minutes": 2 }
+      ]
+    },
+    {
+      "id": "speed_breakthrough_30",
+      "label": "Speed Breakthrough 30",
+      "durationMinutes": 30,
+      "goal": "Short speed exposure with control.",
+      "weeklyLimit": 2,
+      "blocks": [
+        { "blockId": "free_stroke", "minutes": 3 },
+        { "blockId": "finger_rebound", "minutes": 4 },
+        { "blockId": "singles", "minutes": 8 },
+        { "blockId": "doubles", "minutes": 5 },
+        { "blockId": "burst_8_8", "minutes": 8 },
+        { "blockId": "buzz_roll", "minutes": 2 }
+      ]
+    },
+    {
+      "id": "low_tension_rebuild_23",
+      "label": "Low Tension Rebuild 23",
+      "durationMinutes": 23,
+      "goal": "Rebuild relaxed rebound when forearms overwork.",
+      "blocks": [
+        { "blockId": "free_stroke", "minutes": 3 },
+        { "blockId": "finger_rebound", "minutes": 5 },
+        { "blockId": "buzz_roll", "minutes": 5 },
+        { "blockId": "doubles", "minutes": 5 },
+        { "blockId": "improv_pad", "minutes": 5 }
+      ]
+    },
+    {
+      "id": "micro_15",
+      "label": "Micro 15",
+      "durationMinutes": 15,
+      "goal": "Minimum effective daily session.",
+      "blocks": [
+        { "blockId": "finger_rebound", "minutes": 3 },
+        { "blockId": "singles", "minutes": 4 },
+        { "blockId": "doubles", "minutes": 4 },
+        { "blockId": "burst_8_8", "minutes": 4 }
+      ]
+    }
+  ],
+  "progression": {
+    "bpmStep": 5,
+    "promotionRule": "Promote BPM after 2 clean minutes with soundEvenness >= 4 and tensionScore <= 5.",
+    "regressionRule": "Drop 10 BPM or switch session if timing falls apart or tensionScore >= 7.",
+    "deloadRule": "Reduce volume by 20-30% every fourth week or after three sessions with declining clean BPM."
+  },
+  "thirtyDayPlan": [
+    { "days": [1, 3, 5, 8, 10, 12, 16, 19, 22, 24], "sessionId": "balanced_25" },
+    { "days": [2, 4, 9, 17, 23], "sessionId": "low_tension_rebuild_23" },
+    { "days": [11, 15, 18, 25], "sessionId": "speed_breakthrough_30" },
+    { "days": [6, 13, 20, 26], "sessionId": "micro_15" },
+    { "days": [7, 14, 21, 28], "sessionId": "rest_or_light_taps" },
+    { "days": [29], "sessionId": "assessment_retest" },
+    { "days": [30], "sessionId": "review_and_next_cycle" }
+  ]
+}
