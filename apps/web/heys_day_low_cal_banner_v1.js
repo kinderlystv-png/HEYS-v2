@@ -1,6 +1,12 @@
 // heys_day_low_cal_banner_v1.js — Banner for days with kcal ratio < 50%
 // that haven't been verified (fasting/incomplete). Lets user decide retroactively
 // so the day starts being counted in stats (or stays excluded explicitly).
+//
+// Также закрывает кейс ПОЛНОСТЬЮ пустого прошлого дня (meals:0): обычный low-cal
+// баннер раньше резал такой день гейтом `!hasMeals`, и разобрать его можно было
+// только автошагом утреннего чекина (1×/день). Теперь, если день pending по
+// версии YesterdayVerify (то же окно, что у чекина), показываем тот же баннер
+// выбора прямо в DayTab.
 
 (function (global) {
   'use strict';
@@ -11,17 +17,64 @@
 
   const THRESHOLD = 0.5;
 
+  // === Кэш pending-дней ===========================================
+  // getPendingPastDays() сканирует все dayv2-ключи в LS + считает review-инфо
+  // по каждому — дорого звать на каждый рендер DayTab (который ререндерится
+  // часто: вода, анимации). Кэшируем результат на короткий TTL и сбрасываем по
+  // мутациям дня. Это держит источник правды о «pending» единым с автошагом
+  // чекина (HEYS.YesterdayVerify.getPendingPastDays), не платя за это перфом.
+  const PENDING_CACHE_TTL_MS = 4000;
+  let _pendingCache = { ts: 0, set: null };
+
+  function getPendingDatesSet() {
+    const now = Date.now();
+    if (_pendingCache.set && (now - _pendingCache.ts) < PENDING_CACHE_TTL_MS) {
+      return _pendingCache.set;
+    }
+    const set = new Set();
+    try {
+      const pend = HEYS.YesterdayVerify?.getPendingPastDays?.();
+      if (pend && Array.isArray(pend.missingDays)) {
+        pend.missingDays.forEach((d) => {
+          if (d && d.date) set.add(d.date);
+        });
+      }
+    } catch (_) { /* YesterdayVerify не загружен — пустой набор, баннер не покажем */ }
+    _pendingCache = { ts: now, set };
+    return set;
+  }
+
+  function invalidatePendingCache() {
+    _pendingCache = { ts: 0, set: null };
+  }
+
+  try {
+    window.addEventListener('heys:day-updated', invalidatePendingCache);
+    window.addEventListener('heys:data-saved', invalidatePendingCache);
+  } catch (_) { }
+
+  // Пустой прошлый день показываем для разбора, только если он реально pending
+  // (в окне yesterday-verify). Иначе баннер вылезал бы на всех исторических
+  // пустых днях, которые юзер листает в статистике.
+  function isPendingEmptyDay(date) {
+    if (!date) return false;
+    return getPendingDatesSet().has(date);
+  }
+
   function applyAndPersist(date, mutator) {
     const U = HEYS.utils || {};
     if (!U.lsSet || !U.lsGet) {
       console.warn('[low-cal-banner] HEYS.utils not ready, skipping write');
       return;
     }
+    // HEYS.utils.lsSet/lsGet для dayv2-ключей маршрутизируются через HEYS.store
+    // → scoped()-ключ текущего клиента (инв. №9). Прямого unscoped-доступа нет.
     const key = 'heys_dayv2_' + date;
     const day = U.lsGet(key, null) || {};
     mutator(day);
     day.updatedAt = Date.now();
     U.lsSet(key, day);
+    invalidatePendingCache();
     // Сбрасываем кэш активных дней — иначе sparkline/график продолжит показывать
     // прочерк/старое значение для этой даты до естественной инвалидации (TTL).
     try {
@@ -121,56 +174,16 @@
     color: '#1f2937'
   };
 
-  function renderLowCalBanner(params) {
-    const { date, day, eatenKcal, displayOptimum, isToday } = params || {};
-    if (!day || isToday) return null;
-
-    // State B — отмечен как голодание (флаг показываем всегда, независимо от ratio)
-    if (day.isFastingDay === true) {
-      return React.createElement('div', { className: 'low-cal-banner low-cal-banner-compact', style: COMPACT_BANNER_STYLE },
-        React.createElement('span', null, '🍽 День отмечен как осознанное голодание'),
-        React.createElement('button', {
-          type: 'button',
-          onClick: () => resetDecision(date),
-          style: CHANGE_BTN_STYLE,
-          title: 'Сбросить решение и показать варианты заново'
-        }, 'Изменить')
-      );
-    }
-
-    // State C — помечен как пропуск (флаг показываем всегда, независимо от ratio)
-    if (day.isIncomplete === true) {
-      return React.createElement('div', { className: 'low-cal-banner low-cal-banner-compact', style: COMPACT_BANNER_STYLE },
-        React.createElement('span', null, '🚫 День помечен как пропуск (не учитывается)'),
-        React.createElement('button', {
-          type: 'button',
-          onClick: () => resetDecision(date),
-          style: CHANGE_BTN_STYLE,
-          title: 'Сбросить решение и показать варианты заново'
-        }, 'Изменить')
-      );
-    }
-
-    const hasMeals = Array.isArray(day.meals)
-      && day.meals.some((m) => Array.isArray(m && m.items) && m.items.length > 0);
-    if (!hasMeals) return null;
-
-    const target = displayOptimum || day.savedDisplayOptimum || 0;
-    const kcal = eatenKcal || day.savedEatenKcal || 0;
-    if (target <= 0 || kcal <= 0) return null;
-
-    const ratio = kcal / target;
-    if (ratio >= THRESHOLD) return null;
-
-    // State A — решение не принято
-    const pct = Math.round(ratio * 100);
+  // Общий рендер баннера выбора (State A) — переиспользуется и для дня с едой
+  // <50%, и для полностью пустого pending-дня. Меняется только строка-описание.
+  function renderChoiceBanner(date, descLine) {
     return React.createElement('div', { className: 'low-cal-banner low-cal-banner-full', style: FULL_BANNER_STYLE },
       React.createElement('div', {
         style: { fontSize: 14, fontWeight: 700, color: '#92400e', marginBottom: 4 }
       }, '⚠️ Этот день не учитывается в статистике'),
       React.createElement('div', {
         style: { fontSize: 12, color: '#78350f', marginBottom: 10 }
-      }, `Съедено ${Math.round(kcal)} ккал из ${Math.round(target)} (${pct}%) — ниже порога 50%. Выбери что делать:`),
+      }, descLine),
       React.createElement('div', {
         style: { display: 'flex', flexWrap: 'wrap', gap: 8 }
       },
@@ -196,10 +209,69 @@
     );
   }
 
+  function renderCompactDecision(date, label) {
+    return React.createElement('div', { className: 'low-cal-banner low-cal-banner-compact', style: COMPACT_BANNER_STYLE },
+      React.createElement('span', null, label),
+      React.createElement('button', {
+        type: 'button',
+        onClick: () => resetDecision(date),
+        style: CHANGE_BTN_STYLE,
+        title: 'Сбросить решение и показать варианты заново'
+      }, 'Изменить')
+    );
+  }
+
+  function renderLowCalBanner(params) {
+    const { date, day, eatenKcal, displayOptimum, isToday } = params || {};
+    if (!day || isToday) return null;
+
+    // State B — отмечен как голодание (флаг показываем всегда, независимо от ratio)
+    if (day.isFastingDay === true) {
+      return renderCompactDecision(date, '🍽 День отмечен как осознанное голодание');
+    }
+
+    // State C — помечен как пропуск (флаг показываем всегда, независимо от ratio)
+    if (day.isIncomplete === true) {
+      return renderCompactDecision(date, '🚫 День помечен как пропуск (не учитывается)');
+    }
+
+    const hasMeals = Array.isArray(day.meals)
+      && day.meals.some((m) => Array.isArray(m && m.items) && m.items.length > 0);
+
+    // State A' — полностью пустой прошлый день (meals:0). Раньше резался здесь
+    // (`return null`), и разобрать его можно было только автошагом чекина.
+    // Показываем тот же баннер выбора, но лишь если день pending по версии
+    // YesterdayVerify (то же окно, что у автошага) — иначе баннер засорил бы
+    // все исторические пустые дни.
+    if (!hasMeals) {
+      if (isPendingEmptyDay(date)) {
+        return renderChoiceBanner(date, 'За этот день нет данных — он не попадёт в статистику. Выбери, что делать:');
+      }
+      return null;
+    }
+
+    const target = displayOptimum || day.savedDisplayOptimum || 0;
+    const kcal = eatenKcal || day.savedEatenKcal || 0;
+    if (target <= 0 || kcal <= 0) return null;
+
+    const ratio = kcal / target;
+    if (ratio >= THRESHOLD) return null;
+
+    // State A — решение не принято, в дне есть еда но < 50% нормы
+    const pct = Math.round(ratio * 100);
+    return renderChoiceBanner(
+      date,
+      `Съедено ${Math.round(kcal)} ккал из ${Math.round(target)} (${pct}%) — ниже порога 50%. Выбери, что делать:`
+    );
+  }
+
   HEYS.dayLowCalBanner = {
     renderLowCalBanner,
     markFasting,
     markIncomplete,
-    resetDecision
+    resetDecision,
+    // экспортируется для регресс-теста и потенциального использования из спарклайна
+    isPendingEmptyDay,
+    invalidatePendingCache
   };
 })(typeof window !== 'undefined' ? window : globalThis);
