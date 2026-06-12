@@ -1483,8 +1483,22 @@
     return chips;
   }
 
-  // Превью набора: что за упражнения собрались, с мини-фото хвата (или эмодзи
-  // блока для не-хватовых). Имя = хват+ребро или название блока; подзаголовок =
+  function MixAtomThumb({ src, emoji, alt }) {
+    const [failed, setFailed] = useState(false);
+    if (!src || failed) {
+      return h('span', { className: 'fingers-fs-mixcard__exemoji', 'aria-hidden': 'true' }, emoji || '•');
+    }
+    return h('img', {
+      src: src,
+      alt: alt || '',
+      loading: 'lazy',
+      decoding: 'async',
+      onError: function () { setFailed(true); }
+    });
+  }
+
+  // Превью набора: что за упражнения собрались, с мини-фото хвата/атома (emoji
+  // остаётся fallback). Имя = хват+ребро или название блока; подзаголовок =
   // категория + доза. Помогает увидеть состав до запуска и решить про reroll.
   function MixExerciseList({ workout }) {
     const list = (workout && workout.exercises) || [];
@@ -1509,8 +1523,11 @@
         const sub = grip ? (category + (dose ? ' · ' + dose : '')) : dose;
         const thumb = (e.gripId && Fingers.GripIcon)
           ? h(Fingers.GripIcon, { gripId: e.gripId, equipmentTier: e.equipmentTier, size: 46 })
-          : h('span', { className: 'fingers-fs-mixcard__exemoji', 'aria-hidden': 'true' },
-              QEMOJI[quality] || '•');
+          : h(MixAtomThumb, {
+              src: e.atomId ? ('/exercises/' + e.atomId + '.webp') : '',
+              emoji: QEMOJI[quality] || '•',
+              alt: name
+            });
         const chips = _mixExerciseChips(e, atom);
         return h('div', { key: e.atomId + '-' + i, className: 'fingers-fs-mixcard__exrow' },
           h('span', { className: 'fingers-fs-mixcard__exthumb' }, thumb),
@@ -5114,12 +5131,473 @@
   }
   Fingers.SettingsSheet = FingersSettingsSheet;
 
+  const EXERCISE_REGISTRY_LABELS = {
+    fs_maxhang_20mm_half: 'Max hang 20 мм · полузамок',
+    fs_maxhang_20mm_open: 'Max hang 20 мм · открытый хват',
+    fs_repeater_73: 'Repeaters 7/3',
+    fs_nohang_pickup: 'No-hang pickup',
+    fs_density_hang: 'Density hang',
+    fs_minedge_recruit: 'Мини-ребро · рекрутирование',
+    str_limit_boulder: 'Лимитный болдер',
+    str_weighted_pullup: 'Подтягивание с весом',
+    str_lockoff_iso: 'Изометрия lock-off',
+    str_body_tension: 'Body tension',
+    pow_dyno_limit: 'Лимитный dyno',
+    pow_first_move_max: 'Первый ход на максимум',
+    pow_plyo_catch: 'Plyo catch',
+    pow_campus_ladder: 'Campus ladder',
+    pow_rfd_pulls: 'RFD pulls',
+    pe_boulder_4x4: 'Boulder 4×4',
+    pe_fingerboard_lactic: 'Лактатный фингерборд',
+    pe_linkups: 'Link-ups',
+    pe_route_repeats: 'Route repeats',
+    pe_on_the_minute: 'On-the-minute',
+    aer_arc: 'ARC',
+    aer_power_intervals: 'Aerobic power intervals',
+    aer_mileage: 'Mileage',
+    aer_bfr_lowload: 'BFR low-load',
+    tech_silent_feet: 'Silent feet',
+    tech_constraint_led: 'Constraint-led drill',
+    tech_limit_project_movement: 'Limit project movement',
+    tech_variety_mileage: 'Variety mileage',
+    ant_push_shoulder: 'Push / shoulder balance',
+    ant_finger_extensors: 'Finger extensors',
+    ant_prehab_targeted: 'Targeted prehab',
+    mob_hip_turnout: 'Hip turnout',
+    mob_shoulder: 'Shoulder mobility',
+    mental_fall_practice: 'Fall practice',
+    mental_redpoint_tactics: 'Redpoint tactics',
+    mental_efficiency_under_load: 'Efficiency under load'
+  };
+
+  const EXERCISE_REGISTRY_TEXT = {
+    finger_strength: {
+      what: 'Локальная сила пальцев и способность держать заданный хват на ребре.',
+      why: 'Это основной специфичный стимул для фингерборда: нагрузка дозируется через хват, ребро, время и запас до отказа.',
+      ui: 'В движке влияет на S2 fresh­ness, danger-budget, прогрессию по оси volume/edge/load и выбор хвата.'
+    },
+    max_strength: {
+      what: 'Максимальная сила тела и способность применить силу пальцев в движении.',
+      why: 'Мостит “сырую” силу фингерборда в прикладной лазательный паттерн: болдер, тяга, lock-off, корпус.',
+      ui: 'В миксе часто добавляется как transfer-блок, если день содержит силу пальцев без применения на стене.'
+    },
+    power: {
+      what: 'Контактная мощность, RFD и быстрое приложение силы.',
+      why: 'Нужна для коротких взрывных движений, первых ходов, динамики и campus-стимула.',
+      ui: 'Гейтится уровнем, возрастом, базой силы и warmup; относится к нейро-требовательным блокам.'
+    },
+    anaerobic_capacity: {
+      what: 'Анаэробная ёмкость: переносить высокую локальную усталость в сериях.',
+      why: 'Связывает силу с повторяемостью: 4×4, link-ups, route repeats и лактатные интервалы.',
+      ui: 'Контролируется недельным MAV/FTL, чтобы объём не рос быстрее восстановления тканей.'
+    },
+    aerobic_base: {
+      what: 'Аэробная база предплечий: восстановление между усилиями и длительная лёгкая работа.',
+      why: 'Поддерживает капилляризацию, экономичность и повторяемость без лишней нагрузки на A2.',
+      ui: 'Движок различает capacity/power/base и подбирает низко- или умеренно-интенсивную дозу.'
+    },
+    technique: {
+      what: 'Техника движения: ноги, позиция корпуса, ограничения, разнообразие решений.',
+      why: 'Методология запрещает сводить прогресс только к “железу”: навык должен оставаться в тренировочном дне.',
+      ui: 'Если техника/ментал — ведущий лимитер, builder добирает skill-floor в live session.'
+    },
+    antagonist: {
+      what: 'Антагонисты и прехаб: плечо, разгибатели пальцев, баланс тканей.',
+      why: 'Это не главный performance-стимул, а страховка от односторонней нагрузки фингерборда.',
+      ui: 'Добавляется как floor-блок и держит сессию ближе к безопасной структуре.'
+    },
+    mobility: {
+      what: 'Мобильность плеча/таза и доступные позиции для лазания.',
+      why: 'Улучшает движение без повышения пальцевого риска, особенно в recovery/moderate днях.',
+      ui: 'Может добираться как мягкий блок, когда нужна низкая тканевая нагрузка.'
+    },
+    mental: {
+      what: 'Ментальные и тактические навыки: падения, redpoint-план, экономичность под нагрузкой.',
+      why: 'Закрывает лимитер, который тестом MVC не поймать: страх, плохая beta, дыхание, темп.',
+      ui: 'В process-упражнениях показывается чек-лист, а в генераторе участвует как отдельное качество.'
+    }
+  };
+
+  const REGISTRY_QUALITY_LABELS = {
+    finger_strength: 'Сила пальцев', max_strength: 'Макс. сила тела', power: 'Мощность',
+    anaerobic_capacity: 'Анаэробная ёмкость', aerobic_base: 'Аэробная база',
+    technique: 'Техника', antagonist: 'Антагонисты', mobility: 'Мобильность', mental: 'Ментальное'
+  };
+  const REGISTRY_DOSE_LABELS = {
+    hang: 'Вис / изометрия', reps: 'Повторы', attempts: 'Попытки',
+    circuit: 'Круги', continuous: 'Непрерывно', process: 'Чек-лист'
+  };
+  const REGISTRY_MODALITY_LABELS = {
+    fingerboard: 'Фингерборд', board: 'Болдер/доска', wall: 'Стена',
+    campus: 'Campus', weights: 'Вес/турник', drill: 'Дрилл',
+    antagonist: 'Прехаб', mobility: 'Мобильность'
+  };
+  const REGISTRY_ENERGY_LABELS = {
+    phosphagen: 'Фосфагенная', glycolytic: 'Гликолитическая', aerobic: 'Аэробная'
+  };
+  const REGISTRY_SUBMODE_LABELS = { capacity: 'capacity', power: 'power', base: 'base' };
+  const REGISTRY_LOAD_LABELS = {
+    rm_margin: 'запас до отказа',
+    grade: 'грейд',
+    addedWeightKg: 'добавочный вес',
+    bodyweight: 'вес тела',
+    rpe: 'RPE',
+    pctMax: '% от максимума',
+    none: 'без внешней нагрузки'
+  };
+  const REGISTRY_FATIGUE_LABELS = { low: 'низкая', moderate: 'умеренная', high: 'высокая', max: 'максимальная' };
+  const REGISTRY_DANGER_LABELS = { low: 'низкий', moderate: 'умеренный', high: 'высокий', 'very-high': 'очень высокий' };
+  const REGISTRY_AXIS_BY_QUALITY = {
+    finger_strength: 'volume → edge → load',
+    max_strength: 'volume → load',
+    power: 'volume → speed',
+    anaerobic_capacity: 'volume → density',
+    aerobic_base: 'duration → density',
+    technique: 'сложность задачи → вариативность',
+    antagonist: 'volume → контроль',
+    mobility: 'range → контроль',
+    mental: 'экспозиция → сложность'
+  };
+
+  function _registryAtomTitle(atom) {
+    if (!atom) return 'Упражнение';
+    if (EXERCISE_REGISTRY_LABELS[atom.id]) return EXERCISE_REGISTRY_LABELS[atom.id];
+    const bc = Fingers.blockCatalog;
+    const block = bc && bc.getBlock ? bc.getBlock(atom.blockId) : null;
+    return (block && block.label) || atom.id;
+  }
+
+  function _registryImageSrc(atom) {
+    if (!atom) return '';
+    if (atom.gripId) {
+      const suffix = atom.id === 'fs_nohang_pickup' ? '_block' : '';
+      return '/exercises/' + atom.gripId + suffix + '.webp';
+    }
+    return '/exercises/' + atom.id + '.webp';
+  }
+
+  function _registryEmoji(atom) {
+    const q = atom && atom.quality;
+    return q === 'finger_strength' ? '🤏'
+      : q === 'max_strength' ? '💪'
+      : q === 'power' ? '⚡'
+      : q === 'anaerobic_capacity' ? '🔥'
+      : q === 'aerobic_base' ? '🫀'
+      : q === 'technique' ? '🎯'
+      : q === 'antagonist' ? '🦾'
+      : q === 'mobility' ? '🤸'
+      : q === 'mental' ? '🧠' : '•';
+  }
+
+  function RegistryAtomImage({ atom, className }) {
+    const [failed, setFailed] = useState(false);
+    const src = _registryImageSrc(atom);
+    if (!src || failed) {
+      return h('span', { className: (className || '') + ' fingers-registry__emoji', 'aria-hidden': 'true' }, _registryEmoji(atom));
+    }
+    return h('img', {
+      className: className || '',
+      src: src,
+      alt: _registryAtomTitle(atom),
+      loading: 'lazy',
+      decoding: 'async',
+      onError: function () { setFailed(true); }
+    });
+  }
+
+  function _formatSeconds(sec) {
+    const n = Number(sec);
+    if (!Number.isFinite(n)) return '';
+    if (n >= 60 && n % 60 === 0) return (n / 60) + ' мин';
+    return n + ' с';
+  }
+
+  function _rangeText(v, unit) {
+    if (Array.isArray(v)) return v[0] + '–' + v[1] + (unit || '');
+    if (v === null || typeof v === 'undefined') return '';
+    return String(v) + (unit || '');
+  }
+
+  function _registryDoseText(atom) {
+    const d = (atom && atom.dose) || {};
+    const parts = [];
+    if (d.workSec) parts.push('работа ' + _formatSeconds(d.workSec));
+    if (d.restSec) parts.push('пауза ' + _formatSeconds(d.restSec));
+    if (d.reps) parts.push('повторы ' + _rangeText(d.reps));
+    if (d.sets) parts.push('подходы ' + _rangeText(d.sets));
+    if (d.attempts) parts.push('попытки ' + _rangeText(d.attempts));
+    if (d.movesPerAttempt) parts.push('ходы/попытка ' + _rangeText(d.movesPerAttempt));
+    if (d.problemsPerRound) parts.push('проблем/круг ' + _rangeText(d.problemsPerRound));
+    if (d.rounds) parts.push('круги ' + _rangeText(d.rounds));
+    if (d.restSetsSec) parts.push('отдых между подходами ' + _formatSeconds(d.restSetsSec));
+    if (d.restRoundsSec) parts.push('отдых между кругами ' + _formatSeconds(d.restRoundsSec));
+    if (Array.isArray(d.checklist)) parts.push('чек-лист: ' + d.checklist.join(' · '));
+    return parts.length ? parts.join(' · ') : 'Доза задаётся контекстом сессии.';
+  }
+
+  function _registryLoadText(atom) {
+    if (!atom) return '';
+    const label = REGISTRY_LOAD_LABELS[atom.loadModel] || atom.loadModel || 'нагрузка';
+    if (atom.loadValue === null || typeof atom.loadValue === 'undefined') return label;
+    if (atom.loadModel === 'rm_margin') return label + ': ' + atom.loadValue + ' с в запасе';
+    if (atom.loadModel === 'rpe') return label + ': ' + atom.loadValue + '/10';
+    if (atom.loadModel === 'pctMax') return label + ': ' + atom.loadValue + '%';
+    return label + ': ' + atom.loadValue;
+  }
+
+  function _registryGatesText(atom) {
+    const g = (atom && atom.gates) || {};
+    const parts = [];
+    if (g.minLevel) parts.push('уровень ≥ ' + g.minLevel);
+    if (typeof g.minAge !== 'undefined') parts.push('возраст ≥ ' + g.minAge);
+    if (g.dangerLevel) parts.push('риск: ' + (REGISTRY_DANGER_LABELS[g.dangerLevel] || g.dangerLevel));
+    if (Array.isArray(g.prerequisites) && g.prerequisites.length) {
+      parts.push('условия: ' + g.prerequisites.join(', '));
+    }
+    return parts.length ? parts.join(' · ') : 'без специальных гейтов';
+  }
+
+  function _registryMetaPill(text, title) {
+    return h('span', { className: 'fingers-registry__pill', title: title || text }, text);
+  }
+
+  function _registryDetailRow(label, value) {
+    if (!value) return null;
+    return h('div', { className: 'fingers-registry-detail__row' },
+      h('span', { className: 'fingers-registry-detail__row-label' }, label),
+      h('span', { className: 'fingers-registry-detail__row-value' }, value)
+    );
+  }
+
+  function ExerciseRegistryDetailModal({ atom, onClose, onOpenSource }) {
+    if (!atom) return null;
+    const bc = Fingers.blockCatalog;
+    const block = bc && bc.getBlock ? bc.getBlock(atom.blockId) : null;
+    const grip = atom.gripId && Fingers.GRIPS_BY_ID ? Fingers.GRIPS_BY_ID[atom.gripId] : null;
+    const method = EXERCISE_REGISTRY_TEXT[atom.quality] || {};
+    const energyText = (REGISTRY_ENERGY_LABELS[atom.energySystem] || atom.energySystem || 'не задана')
+      + (atom.energySubMode ? ' · ' + (REGISTRY_SUBMODE_LABELS[atom.energySubMode] || atom.energySubMode) : '');
+    const sourceIds = Array.isArray(atom.sourceIds) ? atom.sourceIds : [];
+
+    return h('div', {
+      className: 'fingers-registry-detail__backdrop',
+      onClick: function (e) { if (e.target === e.currentTarget) onClose(); },
+      role: 'presentation'
+    },
+      h('article', {
+        className: 'fingers-registry-detail',
+        role: 'dialog',
+        'aria-label': 'Описание упражнения',
+        onClick: function (e) { e.stopPropagation(); }
+      },
+        h('button', {
+          type: 'button',
+          className: 'fingers-registry-detail__close',
+          'aria-label': 'Закрыть описание упражнения',
+          onClick: onClose
+        },
+          h('svg', { width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', 'aria-hidden': 'true' },
+            h('path', { d: 'M5 5l10 10M15 5L5 15' })
+          )
+        ),
+        h('div', { className: 'fingers-registry-detail__hero' },
+          h(RegistryAtomImage, { atom: atom, className: 'fingers-registry-detail__img' }),
+          h('div', { className: 'fingers-registry-detail__hero-text' },
+            h('div', { className: 'fingers-registry-detail__eyebrow' },
+              (block ? block.id + ' · ' + block.label : atom.blockId) + ' · ' + atom.id),
+            h('h3', { className: 'fingers-registry-detail__title' }, _registryAtomTitle(atom)),
+            h('div', { className: 'fingers-registry-detail__pills' },
+              _registryMetaPill(REGISTRY_QUALITY_LABELS[atom.quality] || atom.quality),
+              _registryMetaPill(REGISTRY_DOSE_LABELS[atom.doseShape] || atom.doseShape),
+              _registryMetaPill(REGISTRY_MODALITY_LABELS[atom.modality] || atom.modality),
+              _registryMetaPill(energyText)
+            )
+          )
+        ),
+        h('div', { className: 'fingers-registry-detail__body' },
+          h('section', { className: 'fingers-registry-detail__section' },
+            h('h4', null, 'Зачем это упражнение'),
+            h('p', null, method.what || 'Упражнение из протокольного пула fingers.'),
+            h('p', null, method.why || 'Используется движком как атом тренировочного воздействия.')
+          ),
+          h('section', { className: 'fingers-registry-detail__section' },
+            h('h4', null, 'Как движок его использует'),
+            h('p', null, method.ui || 'Попадает в сессию через goal/limiter, готовность, уровень, оборудование и safety gates.'),
+            h('div', { className: 'fingers-registry-detail__rows' },
+              _registryDetailRow('Доза', _registryDoseText(atom)),
+              _registryDetailRow('Нагрузка', _registryLoadText(atom)),
+              _registryDetailRow('Ось прогрессии', REGISTRY_AXIS_BY_QUALITY[atom.quality]),
+              grip ? _registryDetailRow('Хват', grip.label + (atom.edgeSizeMm ? ' · ' + atom.edgeSizeMm + ' мм' : '')) : null,
+              _registryDetailRow('Усталость', REGISTRY_FATIGUE_LABELS[atom.fatigueCost] || atom.fatigueCost),
+              _registryDetailRow('Тканевая нагрузка', REGISTRY_FATIGUE_LABELS[atom.tissueLoad] || atom.tissueLoad)
+            )
+          ),
+          h('section', { className: 'fingers-registry-detail__section' },
+            h('h4', null, 'Безопасность и допуск'),
+            h('p', null, _registryGatesText(atom)),
+            grip && grip.methodTips ? h('p', { className: 'fingers-registry-detail__tip' }, grip.methodTips) : null
+          ),
+          h('section', { className: 'fingers-registry-detail__section' },
+            h('h4', null, 'Источники'),
+            sourceIds.length && Fingers.SourceBadge
+              ? h('div', { className: 'fingers-registry-detail__sources' },
+                  sourceIds.map(function (sid) {
+                    return h(Fingers.SourceBadge, {
+                      key: sid,
+                      sourceId: sid,
+                      onClick: onOpenSource
+                        ? function (src) { onOpenSource(src && src.id ? src.id : sid); }
+                        : undefined
+                    });
+                  })
+                )
+              : h('p', null, 'Источник не задан в атоме.')
+          )
+        )
+      )
+    );
+  }
+
+  function ExerciseRegistryModal({ onClose, onOpenSource }) {
+    const bc = Fingers.blockCatalog;
+    const atoms = bc && Array.isArray(bc.ATOMS) ? bc.ATOMS : [];
+    const blocks = bc && Array.isArray(bc.BLOCKS) ? bc.BLOCKS : [];
+    const [query, setQuery] = useState('');
+    const [blockId, setBlockId] = useState('all');
+    const [selectedAtom, setSelectedAtom] = useState(null);
+
+    useEffect(function () {
+      function onKey(e) {
+        if (e.key !== 'Escape') return;
+        if (selectedAtom) setSelectedAtom(null);
+        else onClose();
+      }
+      document.addEventListener('keydown', onKey);
+      return function () { document.removeEventListener('keydown', onKey); };
+    }, [onClose, selectedAtom]);
+
+    const filtered = useMemo(function () {
+      const q = String(query || '').trim().toLowerCase();
+      return atoms.filter(function (atom) {
+        if (blockId !== 'all' && atom.blockId !== blockId) return false;
+        if (!q) return true;
+        const block = bc && bc.getBlock ? bc.getBlock(atom.blockId) : null;
+        const title = _registryAtomTitle(atom);
+        const hay = [atom.id, title, atom.quality, atom.modality, atom.doseShape, block && block.label].join(' ').toLowerCase();
+        return hay.indexOf(q) >= 0;
+      });
+    }, [atoms, blockId, query, bc]);
+
+    return h('div', {
+      className: 'fingers-registry__backdrop',
+      onClick: function (e) { if (e.target === e.currentTarget) onClose(); },
+      role: 'presentation'
+    },
+      h('div', {
+        className: 'fingers-registry',
+        role: 'dialog',
+        'aria-label': 'Реестр упражнений',
+        onClick: function (e) { e.stopPropagation(); }
+      },
+        h('div', { className: 'fingers-registry__header' },
+          h('div', { className: 'fingers-registry__header-text' },
+            h('h2', { className: 'fingers-registry__title' },
+              h('span', { 'aria-hidden': 'true' }, '▦'),
+              ' Реестр упражнений'),
+            h('p', { className: 'fingers-registry__sub' },
+              atoms.length + ' атомов: фото, доза, гейты, прогрессия и источники')
+          ),
+          h('button', {
+            type: 'button',
+            className: 'fingers-registry__close',
+            'aria-label': 'Закрыть реестр упражнений',
+            onClick: onClose
+          },
+            h('svg', { width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', 'aria-hidden': 'true' },
+              h('path', { d: 'M5 5l10 10M15 5L5 15' })
+            )
+          )
+        ),
+        h('div', { className: 'fingers-registry__filters' },
+          h('div', { className: 'fingers-registry__search' },
+            h('span', { className: 'fingers-registry__search-icon', 'aria-hidden': 'true' }, '🔍'),
+            h('input', {
+              type: 'search',
+              className: 'fingers-registry__search-input',
+              placeholder: 'Поиск по названию, id, качеству…',
+              value: query,
+              onChange: function (e) { setQuery(e.target.value); },
+              'aria-label': 'Поиск по реестру упражнений'
+            })
+          ),
+          h('div', { className: 'fingers-registry__block-tabs', role: 'tablist' },
+            h('button', {
+              type: 'button',
+              className: 'fingers-registry__block-tab' + (blockId === 'all' ? ' is-active' : ''),
+              onClick: function () { setBlockId('all'); }
+            }, 'Все'),
+            blocks.map(function (b) {
+              return h('button', {
+                key: b.id,
+                type: 'button',
+                className: 'fingers-registry__block-tab' + (blockId === b.id ? ' is-active' : ''),
+                onClick: function () { setBlockId(b.id); },
+                title: b.label
+              }, b.id);
+            })
+          )
+        ),
+        h('div', { className: 'fingers-registry__body' },
+          filtered.length
+            ? h('div', { className: 'fingers-registry__grid' },
+                filtered.map(function (atom) {
+                  const block = bc && bc.getBlock ? bc.getBlock(atom.blockId) : null;
+                  const title = _registryAtomTitle(atom);
+                  return h('button', {
+                    key: atom.id,
+                    type: 'button',
+                    className: 'fingers-registry-card',
+                    onClick: function () { setSelectedAtom(atom); }
+                  },
+                    h('span', { className: 'fingers-registry-card__photo' },
+                      h(RegistryAtomImage, { atom: atom, className: 'fingers-registry-card__img' })
+                    ),
+                    h('span', { className: 'fingers-registry-card__body' },
+                      h('span', { className: 'fingers-registry-card__name' }, title),
+                      h('span', { className: 'fingers-registry-card__meta' },
+                        (block ? block.id + ' · ' : '') + (REGISTRY_QUALITY_LABELS[atom.quality] || atom.quality)),
+                      h('span', { className: 'fingers-registry-card__chips' },
+                        _registryMetaPill(REGISTRY_DOSE_LABELS[atom.doseShape] || atom.doseShape),
+                        _registryMetaPill(REGISTRY_MODALITY_LABELS[atom.modality] || atom.modality)
+                      )
+                    )
+                  );
+                })
+              )
+            : h('div', { className: 'fingers-registry__empty' }, 'Ничего не найдено')
+        ),
+        selectedAtom ? h(ExerciseRegistryDetailModal, {
+          atom: selectedAtom,
+          onClose: function () { setSelectedAtom(null); },
+          onOpenSource: function (sourceId) {
+            if (onOpenSource) onOpenSource(sourceId);
+          }
+        }) : null
+      )
+    );
+  }
+  Fingers.ExerciseRegistryModal = ExerciseRegistryModal;
+
   function SessionUI({ dateKey, trainingIndex, mode, onClose, onRequestOnboarding }) {
     const [tab, setTab] = useState('today');
     const [exercises, setExercises] = useState([]);
     // showBib: false | true | {focusSourceId: string} — last form открывает
     // модалку с автоскроллом и expanded card конкретного источника.
     const [showBib, setShowBib] = useState(false);
+    // Registry modal — каталог всех атомов упражнений из blockCatalog.
+    const [showRegistry, setShowRegistry] = useState(false);
     // Settings popover — единая точка для voice/тема/профиль/reset.
     const [showSettings, setShowSettings] = useState(false);
     // EquipmentBar bumps this on change → SessionUI re-renders, getProfile()
@@ -5657,6 +6135,13 @@
           h('button', {
             type: 'button',
             className: 'fingers-fs__icon-btn',
+            onClick: function () { setShowRegistry(true); },
+            'aria-label': 'Реестр упражнений',
+            title: 'Реестр упражнений'
+          }, h('span', { 'aria-hidden': 'true' }, '▦')),
+          h('button', {
+            type: 'button',
+            className: 'fingers-fs__icon-btn',
             onClick: function () { setShowBib(true); },
             'aria-label': 'Источники и методология',
             title: 'Источники'
@@ -5843,6 +6328,15 @@
       showBib && Fingers.BibliographyModal && h(Fingers.BibliographyModal, {
         onClose: function () { setShowBib(false); },
         focusSourceId: (showBib && typeof showBib === 'object') ? showBib.focusSourceId : undefined
+      }),
+
+      // Exercise registry modal (▦) — атомы упражнений, фото, дозы, гейты, источники
+      showRegistry && Fingers.ExerciseRegistryModal && h(Fingers.ExerciseRegistryModal, {
+        onClose: function () { setShowRegistry(false); },
+        onOpenSource: function (sourceId) {
+          setShowRegistry(false);
+          setShowBib(sourceId ? { focusSourceId: sourceId } : true);
+        }
       }),
 
       // Settings sheet (⚙) — voice/theme/profile/reset

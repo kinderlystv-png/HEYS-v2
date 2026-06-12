@@ -263,6 +263,15 @@
 
   function saveDayData(dateKey, dayData) {
     const scopedKey = getScopedDayKey(dateKey);
+    const notifyDayCache = () => {
+      try {
+        if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
+          HEYS.dayCache.notifyDateUpdated(dateKey);
+        }
+      } catch (_) {
+        // ignore
+      }
+    };
     if (scopedKey) {
       if (HEYS.store?.set) {
         HEYS.store.set(scopedKey, dayData);
@@ -275,6 +284,7 @@
       // это создавало cross-client contamination когда curator работает с
       // несколькими клиентами в одной сессии. Legacy модули которые читают
       // unscoped должны быть обновлены на scoped path (через HEYS.store).
+      notifyDayCache();
       return;
     }
     // Только если нет client-scope (нет авторизации/инициализации) — пишем
@@ -284,13 +294,7 @@
     } else {
       lsSet(getUnscopedDayKey(dateKey), dayData);
     }
-    try {
-      if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
-        HEYS.dayCache.notifyDateUpdated(dateKey);
-      }
-    } catch (_) {
-      // ignore
-    }
+    notifyDayCache();
   }
 
   const MORNING_ACTIVATION_COPY_HISTORY_KEY = 'heys_morning_activation_copy_history_v1';
@@ -872,7 +876,7 @@
       }
       const timer = setTimeout(() => {
         const dateKey = getTodayKey();
-        const dayData = readDayData(dateKey, {});
+        const dayData = getFreshDayData(dateKey);
         const weight = (weightKg || 70) + (weightG || 0) / 10;
         dayData.date = dateKey;
         dayData.weightMorning = weight;
@@ -973,7 +977,7 @@
     save: (data, context) => {
       // Используем dateKey из context, или сегодняшний день как fallback
       const dateKey = (context && context.dateKey) || getTodayKey();
-      const dayData = readDayData(dateKey, {});
+      const dayData = getFreshDayData(dateKey);
       const weight = (data.weightKg || 70) + (data.weightG || 0) / 10;
       dayData.date = dateKey;
       dayData.weightMorning = weight;
@@ -1239,7 +1243,7 @@
     },
     save: (data, context) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = readDayData(dateKey, {});
+      const dayData = getFreshDayData(dateKey);
       const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
       const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
       const daySleepMinutes = normalizeDaySleepMinutes(dayData.daySleepMinutes ?? data.daySleepMinutes);
@@ -1344,7 +1348,7 @@
     },
     save: (data, context) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = readDayData(dateKey, {});
+      const dayData = getFreshDayData(dateKey);
       const daySleepMinutes = normalizeDaySleepMinutes(data.daySleepMinutes);
       const nightSleepHours = HEYS.dayUtils?.getNightSleepHours
         ? HEYS.dayUtils.getNightSleepHours(dayData)
@@ -1549,7 +1553,7 @@
     },
     save: (data, context, allStepData) => {
       const dateKey = resolveDateKey(context?.dateKey);
-      const dayData = readDayData(dateKey, {});
+      const dayData = getFreshDayData(dateKey);
       dayData.sleepQuality = data.sleepQuality;
 
       // Убеждаемся, что не затираем данные времени сна из sleepTime-шага
@@ -1571,6 +1575,7 @@
           : noteWithTime;
       }
 
+      dayData.date = dateKey;
       dayData.updatedAt = Date.now();
       saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepQuality] ✅ Saved:', { dateKey, sleepQuality: dayData.sleepQuality, sleepStart: dayData.sleepStart, sleepEnd: dayData.sleepEnd });
@@ -1872,10 +1877,11 @@
     },
     save: (data) => {
       const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
-      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+      const day = getFreshDayData(dateKey);
+      day.date = dateKey;
       day.deficitPct = data.deficit;
       day.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, day);
+      saveDayData(dateKey, day);
 
       // Уведомляем о изменении дня
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -2284,7 +2290,8 @@
       const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
       const editIndex = data.editIndex;
       console.log('[Household save] editIndex:', editIndex, 'typeof:', typeof editIndex);
-      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+      const day = getFreshDayData(dateKey);
+      day.date = dateKey;
       console.log('[Household save] day.householdActivities:', day.householdActivities);
 
       // Инициализируем массив если его нет
@@ -2311,7 +2318,7 @@
       day.householdMin = day.householdActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
       day.householdTime = day.householdActivities[0]?.time || '';
       day.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, day);
+      saveDayData(dateKey, day);
 
       // Уведомляем о изменении дня
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -2371,11 +2378,12 @@
     },
     save: (data) => {
       const dateKey = data.dateKey || new Date().toISOString().slice(0, 10);
-      const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+      const day = getFreshDayData(dateKey);
+      day.date = dateKey;
       day.householdMin = data.minutes;
       day.householdTime = data.householdTime || '';
       day.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, day);
+      saveDayData(dateKey, day);
 
       // Уведомляем о изменении дня
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
@@ -2621,10 +2629,11 @@
           HEYS.Cycle.setCycleDaysAuto(dateKey, cycleDay, lsGet, lsSet);
         } else {
           // Fallback: просто сохраняем один день
-          const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+          const day = getFreshDayData(dateKey);
+          day.date = dateKey;
           day.cycleDay = cycleDay;
           day.updatedAt = Date.now();
-          lsSet(`heys_dayv2_${dateKey}`, day);
+          saveDayData(dateKey, day);
         }
       } else if (cycleDay === null) {
         // Очищаем все связанные дни цикла
@@ -2632,10 +2641,11 @@
           HEYS.Cycle.clearCycleDays(dateKey, lsGet, lsSet);
         } else {
           // Fallback: очищаем только текущий день
-          const day = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+          const day = getFreshDayData(dateKey);
+          day.date = dateKey;
           day.cycleDay = null;
           day.updatedAt = Date.now();
-          lsSet(`heys_dayv2_${dateKey}`, day);
+          saveDayData(dateKey, day);
         }
       }
 
@@ -2928,7 +2938,8 @@
     save: (data) => {
       // Используем дату из data._dateKey (переданную из getInitialData) или сегодня
       const dateKey = data._dateKey || getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const dayData = getFreshDayData(dateKey);
+      dayData.date = dateKey;
       const hasData = ['waist', 'hips', 'thigh', 'biceps'].some(k => data[k] !== null && data[k] !== undefined && !Number.isNaN(data[k]));
 
       if (hasData) {
@@ -2941,7 +2952,7 @@
           measuredAt: dateKey
         };
         dayData.updatedAt = newUpdatedAt;
-        lsSet(`heys_dayv2_${dateKey}`, dayData);
+        saveDayData(dateKey, dayData);
 
         // Триггер облачной синхронизации
         window.dispatchEvent(new CustomEvent('heys:data-saved', {
@@ -3189,7 +3200,8 @@
     },
     save: (data) => {
       const dateKey = data._dateKey || getTodayKey();
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const dayData = getFreshDayData(dateKey);
+      dayData.date = dateKey;
 
       if (data.coldType && data.coldType !== 'none') {
         dayData.coldExposure = {
@@ -3204,7 +3216,7 @@
       }
 
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
 
       window.dispatchEvent(new CustomEvent('heys:data-saved', {
         detail: { key: `day:${dateKey}`, type: 'coldExposure' }
@@ -3581,8 +3593,9 @@
     },
     save: (data) => {
       const dateKey = data._dateKey || getTodayKey();
-      const dayData = readDayData(dateKey, { date: dateKey });
+      const dayData = getFreshDayData(dateKey);
 
+      dayData.date = dateKey;
       dayData.moodMorning = data.mood ?? 5;
       dayData.wellbeingMorning = data.wellbeing ?? 5;
       dayData.stressMorning = data.stress ?? 5;
@@ -4278,10 +4291,11 @@
         return;
       }
 
-      const dayData = lsGet(`heys_dayv2_${dateKey}`, { date: dateKey });
+      const dayData = getFreshDayData(dateKey);
+      dayData.date = dateKey;
       dayData.supplementsPlanned = selected;
       dayData.updatedAt = Date.now();
-      lsSet(`heys_dayv2_${dateKey}`, dayData);
+      saveDayData(dateKey, dayData);
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('heys:day-updated', {

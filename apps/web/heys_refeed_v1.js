@@ -77,6 +77,37 @@
     } catch (_) { }
   };
 
+  const getCurrentClientId = () => {
+    const fromRuntime = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+    if (fromRuntime) return String(fromRuntime);
+    const fromStore = readStoredValue('heys_client_current', '');
+    return fromStore ? String(fromStore) : '';
+  };
+
+  const getDayStorageKey = (dateKey) => {
+    const cid = getCurrentClientId();
+    return cid ? `heys_${cid}_dayv2_${dateKey}` : `heys_dayv2_${dateKey}`;
+  };
+
+  const readDayValue = (dateKey, fallback = {}) => {
+    const reader = HEYS.MorningCheckinUtils?.readDayV2ScopedFirst;
+    if (typeof reader === 'function') {
+      const scoped = reader(dateKey, null, { allowUnscopedFallback: false });
+      if (scoped && typeof scoped === 'object') return scoped;
+    }
+    const key = getDayStorageKey(dateKey);
+    return readStoredValue(key, fallback) || fallback;
+  };
+
+  const writeDayValue = (dateKey, day) => {
+    writeStoredValue(getDayStorageKey(dateKey), day);
+    try {
+      if (HEYS.dayCache && typeof HEYS.dayCache.notifyDateUpdated === 'function') {
+        HEYS.dayCache.notifyDateUpdated(dateKey);
+      }
+    } catch (_) { }
+  };
+
   /**
    * Получить зону refeed дня по ratio
    * @param {number} ratio - eaten/optimum
@@ -672,20 +703,21 @@
 
       getInitialData: (ctx) => {
         const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
-        const day = readStoredValue(`heys_dayv2_${dateKey}`, {}) || {};
+        const day = readDayValue(dateKey, {});
         return {
           isRefeedDay: day.isRefeedDay ?? null,
           refeedReason: day.refeedReason ?? null
         };
       },
 
-      save: (data) => {
-        const dateKey = new Date().toISOString().slice(0, 10);
-        const day = readStoredValue(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
+      save: (data, ctx) => {
+        const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
+        const day = readDayValue(dateKey, { date: dateKey }) || { date: dateKey };
+        day.date = dateKey;
         day.isRefeedDay = data.isRefeedDay;
         day.refeedReason = data.refeedReason || null;
         day.updatedAt = Date.now();
-        writeStoredValue(`heys_dayv2_${dateKey}`, day);
+        writeDayValue(dateKey, day);
 
         // Уведомляем о изменении
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
