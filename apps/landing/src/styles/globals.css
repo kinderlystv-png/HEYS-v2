@@ -1,9 +1,9 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --color-heys-primary: #3B82F6;
-  --color-heys-secondary: #10B981;
-  --color-heys-accent: #F97316;
+  --color-heys-primary: #3b82f6;
+  --color-heys-secondary: #10b981;
+  --color-heys-accent: #f97316;
 }
 
 html {
@@ -29,7 +29,7 @@ body {
 
 /* Hero gradient */
 .hero-gradient {
-  background: linear-gradient(180deg, #F8FAFC 0%, #EEF2FF 100%);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
 }
 
 /* CTA Button */
@@ -50,7 +50,7 @@ body {
 
 .btn-secondary {
   padding: 0.75rem 1.5rem;
-  border: 2px solid #3B82F6;
+  border: 2px solid #3b82f6;
   color: #2563eb;
   font-weight: 600;
   border-radius: 0.75rem;
@@ -83,7 +83,7 @@ body {
 }
 
 .pricing-card.featured {
-  border: 2px solid #3B82F6;
+  border: 2px solid #3b82f6;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   position: relative;
 }
@@ -134,7 +134,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .hero-anim-bg,
   .hero-anim-fade,
   .hero-anim-rise {
@@ -204,12 +203,57 @@ body {
   }
 }
 
+/* Hero flow demo — real app screenshots */
+@keyframes heysHeroRealFrame {
+  0%,
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  25%,
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1.015);
+  }
+}
+
+.hero-flow-demo {
+  --hero-flow-duration: 16s;
+  --hero-frame-duration: 4s;
+}
+
+.hero-flow-screen {
+  border-top: 1px solid rgba(229, 231, 235, 0.85);
+}
+
+.hero-flow-frame {
+  opacity: 0;
+  transform-origin: center top;
+  will-change: opacity, transform;
+  animation: heysHeroRealFrame var(--hero-flow-duration) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-flow-frame {
+    animation: none;
+  }
+
+  .hero-flow-frame {
+    opacity: 0;
+    transform: none;
+  }
+
+  .hero-flow-frame:nth-child(3) {
+    opacity: 1;
+  }
+}
+
 /* ═══════════════════════════════════════════════
    Navigator Section — CRS Scale & Timer animations
    ═══════════════════════════════════════════════ */
 
 @keyframes heysCrsPulse {
-
   0%,
   100% {
     opacity: 0.7;
@@ -221,7 +265,6 @@ body {
 }
 
 @keyframes heysTimerPulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -246,7 +289,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .crs-bar-active,
   .timer-ring-active {
     animation: none;
