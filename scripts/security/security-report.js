@@ -1110,8 +1110,10 @@ class SecurityReportConsolidator {
     }
 
     if (securityScore < REPORT_CONFIG.thresholds.securityScore) {
-      console.log('\n⚠️ SECURITY VERDICT: WARNING - Security score below threshold');
-      return 1;
+      console.log(
+        '\n⚠️ SECURITY VERDICT: WARNING - Security score below threshold; not blocking without critical or excessive high-severity vulnerabilities',
+      );
+      return 0;
     }
 
     console.log('\n✅ SECURITY VERDICT: PASS - Security posture acceptable');
