@@ -1,126 +1,165 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react';
 
-import { LEGAL_DOCS, SUPPORT_CONTACTS, SUPPORT_HOURS } from '@/config/legal-versions'
+import { DEFAULT_VARIANT } from '@/config/landing-variants';
+import { LEGAL_DOCS, SUPPORT_CONTACTS, SUPPORT_HOURS } from '@/config/legal-versions';
 
 declare global {
   interface Window {
-    gtag?: (...args: unknown[]) => void
-    fbq?: (...args: unknown[]) => void
+    gtag?: (...args: unknown[]) => void;
+    fbq?: (...args: unknown[]) => void;
+    ym?: (...args: unknown[]) => void;
   }
 }
 
-type FormState = 'idle' | 'loading' | 'success' | 'error'
-type Messenger = 'telegram' | 'whatsapp' | 'max'
+type FormState = 'idle' | 'loading' | 'success' | 'error';
+type Messenger = 'telegram' | 'whatsapp' | 'max';
+
+const YM_ID = process.env.NEXT_PUBLIC_YM_ID || '';
+
+const HOW_HEARD_OPTIONS = [
+  { value: '', label: 'Не выбрано' },
+  { value: 'telegram', label: 'Telegram' },
+  { value: 'friend', label: 'От знакомых' },
+  { value: 'search', label: 'Поиск' },
+  { value: 'vk', label: 'VK' },
+  { value: 'yandex', label: 'Реклама в Яндексе' },
+  { value: 'curator', label: 'От куратора' },
+  { value: 'other', label: 'Другое' },
+];
 
 // UTM параметры
 interface UTMParams {
-  utm_source?: string
-  utm_medium?: string
-  utm_campaign?: string
-  utm_term?: string
-  utm_content?: string
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_term?: string;
+  utm_content?: string;
 }
 
 interface TrialFormProps {
-  ctaLabel?: string
+  ctaLabel?: string;
 }
 
 export default function TrialForm({ ctaLabel }: TrialFormProps) {
-  const [name, setName] = useState('')
-  const [phoneDigits, setPhoneDigits] = useState('') // только 10 цифр без ведущей 7
-  const [email, setEmail] = useState('')
-  const [messenger, setMessenger] = useState<Messenger>('telegram')
-  const [formState, setFormState] = useState<FormState>('idle')
-  const [errorMessage, setErrorMessage] = useState('')
-  const [utmParams, setUtmParams] = useState<UTMParams>({})
-  const [consentAccepted, setConsentAccepted] = useState(false)
+  const [name, setName] = useState('');
+  const [phoneDigits, setPhoneDigits] = useState(''); // только 10 цифр без ведущей 7
+  const [email, setEmail] = useState('');
+  const [messenger, setMessenger] = useState<Messenger>('telegram');
+  const [formState, setFormState] = useState<FormState>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [utmParams, setUtmParams] = useState<UTMParams>({});
+  const [howHeard, setHowHeard] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
   // 152-ФЗ ст.9.5: возрастной gate. Храним только год для минимизации.
-  const [birthYear, setBirthYear] = useState('')
+  const [birthYear, setBirthYear] = useState('');
   // Опциональный consent на маркетинговые материалы (отдельно от обязательной
   // privacy/user-agreement галки). Без этого нельзя слать рассылку.
-  const [marketingAccepted, setMarketingAccepted] = useState(false)
+  const [marketingAccepted, setMarketingAccepted] = useState(false);
   // 🍯 Honeypot (P0.13): скрытое поле, которое настоящие пользователи не видят.
   // Боты часто заполняют все поля автоматически — если website непустой, отбраковываем.
-  const [website, setWebsite] = useState('')
+  const [website, setWebsite] = useState('');
 
   // Парсим UTM из URL при загрузке
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
+      const params = new URLSearchParams(window.location.search);
       setUtmParams({
         utm_source: params.get('utm_source') || undefined,
         utm_medium: params.get('utm_medium') || undefined,
         utm_campaign: params.get('utm_campaign') || undefined,
         utm_term: params.get('utm_term') || undefined,
-        utm_content: params.get('utm_content') || undefined
-      })
+        utm_content: params.get('utm_content') || undefined,
+      });
     }
-  }, [])
+  }, []);
 
   // Форматирует локальную часть (10 цифр без кода страны) в маску XXX) XXX-XX-XX
   const formatLocalDisplay = (digits: string) => {
-    if (digits.length === 0) return ''
-    if (digits.length <= 3) return digits
-    if (digits.length <= 6) return `${digits.slice(0, 3)}) ${digits.slice(3)}`
-    if (digits.length <= 8) return `${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
-    return `${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`
-  }
+    if (digits.length === 0) return '';
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    if (digits.length <= 8)
+      return `${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+  };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Берём только цифры из введённого значения, ограничиваем 10
-    const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
-    setPhoneDigits(digits)
-  }
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setPhoneDigits(digits);
+  };
+
+  const getYandexClientId = () => {
+    if (typeof window === 'undefined' || !consentAccepted || !YM_ID || !window.ym) {
+      return Promise.resolve<string | undefined>(undefined);
+    }
+
+    return new Promise<string | undefined>((resolve) => {
+      const timer = window.setTimeout(() => resolve(undefined), 300);
+      try {
+        window.ym?.(Number(YM_ID), 'getClientID', (clientId: unknown) => {
+          window.clearTimeout(timer);
+          resolve(typeof clientId === 'string' && clientId.trim() ? clientId.trim() : undefined);
+        });
+      } catch {
+        window.clearTimeout(timer);
+        resolve(undefined);
+      }
+    });
+  };
 
   const validateForm = (): boolean => {
     if (!name.trim()) {
-      setErrorMessage('Пожалуйста, введите ваше имя')
-      return false
+      setErrorMessage('Пожалуйста, введите ваше имя');
+      return false;
     }
 
     if (phoneDigits.length !== 10) {
-      setErrorMessage('Введите корректный номер телефона')
-      return false
+      setErrorMessage('Введите корректный номер телефона');
+      return false;
     }
 
     // Email опционален, но если введён — должен быть валиден
-    const emailTrim = email.trim()
+    const emailTrim = email.trim();
     if (emailTrim && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
-      setErrorMessage('Проверьте формат email')
-      return false
+      setErrorMessage('Проверьте формат email');
+      return false;
     }
 
     if (!consentAccepted) {
-      setErrorMessage('Необходимо принять политику конфиденциальности')
-      return false
+      setErrorMessage('Необходимо принять политику конфиденциальности');
+      return false;
     }
 
     // 18+ gate (152-ФЗ ст.9.5)
-    const currentYear = new Date().getFullYear()
-    const yearNum = parseInt(birthYear, 10)
+    const currentYear = new Date().getFullYear();
+    const yearNum = parseInt(birthYear, 10);
     if (!Number.isInteger(yearNum) || yearNum < 1900 || yearNum > currentYear) {
-      setErrorMessage('Укажите корректный год рождения')
-      return false
+      setErrorMessage('Укажите корректный год рождения');
+      return false;
     }
     if (currentYear - yearNum < 18) {
-      setErrorMessage('Сервис доступен только лицам старше 18 лет (152-ФЗ ст.9.5)')
-      return false
+      setErrorMessage('Сервис доступен только лицам старше 18 лет (152-ФЗ ст.9.5)');
+      return false;
     }
 
-    return true
-  }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setErrorMessage('')
+    e.preventDefault();
+    setErrorMessage('');
 
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
-    setFormState('loading')
+    setFormState('loading');
 
     try {
+      const ymClientId = await getYandexClientId();
+
       // Yandex Cloud Function API (152-ФЗ compliant, данные хранятся в РФ)
       const response = await fetch('https://api.heyslab.ru/leads', {
         method: 'POST',
@@ -133,6 +172,10 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           email: email.trim() || undefined,
           messenger,
           website, // honeypot — должен быть пустым
+          how_heard: howHeard || undefined,
+          promo_code: promoCode.trim() || undefined,
+          ab_variant: DEFAULT_VARIANT,
+          ym_client_id: ymClientId,
           // 152-ФЗ ст.9.5: возрастной gate. Минимизация — только год.
           birth_year: parseInt(birthYear, 10),
           // UTM параметры
@@ -151,17 +194,17 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           // Опциональное согласие на маркетинговые материалы (152-ФЗ ст.15).
           // Если null — рассылку слать нельзя. Сервер пишет в leads.consent_marketing_accepted_at.
           marketing_accepted_at: marketingAccepted ? new Date().toISOString() : null,
-        })
-      })
+        }),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Ошибка отправки')
+        throw new Error(data.message || 'Ошибка отправки');
       }
 
       // Успех
-      setFormState('success')
+      setFormState('success');
 
       // ⚠️ GA4/Meta Pixel ОТКЛЮЧЕНЫ для 152-ФЗ compliance (трансграничная передача)
       // Вызовы ниже не выполнятся пока GA4_ID/META_PIXEL_ID = null в layout.tsx
@@ -173,26 +216,26 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             event_category: 'conversion',
             event_label: messenger,
             messenger: messenger,
-            utm_source: utmParams.utm_source
-          })
+            utm_source: utmParams.utm_source,
+          });
         }
         // Meta Pixel (disabled until RKN notification)
         if (window.fbq) {
           window.fbq('track', 'Lead', {
             content_name: 'trial_signup',
-            messenger: messenger
-          })
+            messenger: messenger,
+          });
         }
       }
     } catch (error) {
-      setFormState('error')
+      setFormState('error');
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'Произошла ошибка. Попробуйте ещё раз или напишите нам напрямую.'
-      )
+          : 'Произошла ошибка. Попробуйте ещё раз или напишите нам напрямую.',
+      );
     }
-  }
+  };
 
   // Успешная отправка
   if (formState === 'success') {
@@ -202,13 +245,18 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         <h3 className="text-2xl font-bold text-gray-900 mb-2">Заявка отправлена!</h3>
         <p className="text-gray-600 mb-4">
           Ваш куратор свяжется с вами в рабочее время ({SUPPORT_HOURS})
-          {messenger === 'telegram' ? ' в Telegram' : messenger === 'whatsapp' ? ' в WhatsApp' : ' в MAX'}
+          {messenger === 'telegram'
+            ? ' в Telegram'
+            : messenger === 'whatsapp'
+              ? ' в WhatsApp'
+              : ' в MAX'}
         </p>
         <p className="text-gray-500 text-sm">
-          Если не получили сообщение — проверьте папку «Запросы» или напишите нам: {SUPPORT_CONTACTS.telegramHandle}
+          Если не получили сообщение — проверьте папку «Запросы» или напишите нам:{' '}
+          {SUPPORT_CONTACTS.telegramHandle}
         </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -270,7 +318,10 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
 
       {/* 🍯 Honeypot (P0.13): скрыто от людей, видно ботам.
           Если бот заполнит — на сервере отбрасываем тихо. */}
-      <div aria-hidden="true" className="absolute -left-[9999px] -top-[9999px] w-px h-px overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="absolute -left-[9999px] -top-[9999px] w-px h-px overflow-hidden"
+      >
         <label htmlFor="website-bot-check">Website (do not fill)</label>
         <input
           type="text"
@@ -292,10 +343,11 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           <button
             type="button"
             onClick={() => setMessenger('telegram')}
-            className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${messenger === 'telegram'
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-              }`}
+            className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${
+              messenger === 'telegram'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+            }`}
             disabled={formState === 'loading'}
           >
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -307,10 +359,11 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           <button
             type="button"
             onClick={() => setMessenger('whatsapp')}
-            className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${messenger === 'whatsapp'
-              ? 'bg-emerald-600 text-white border-emerald-600'
-              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-              }`}
+            className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${
+              messenger === 'whatsapp'
+                ? 'bg-emerald-600 text-white border-emerald-600'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+            }`}
             disabled={formState === 'loading'}
           >
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -322,10 +375,11 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           <button
             type="button"
             onClick={() => setMessenger('max')}
-            className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${messenger === 'max'
-              ? 'bg-purple-600 text-white border-purple-600'
-              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-              }`}
+            className={`py-3 px-2 rounded-xl border-2 transition-all flex items-center justify-center gap-1 text-sm ${
+              messenger === 'max'
+                ? 'bg-purple-600 text-white border-purple-600'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+            }`}
             disabled={formState === 'loading'}
           >
             {/* MAX (VK Messenger) icon */}
@@ -340,6 +394,43 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         </p>
       </div>
 
+      {/* Атрибуция источника — необязательно, без свободного текста */}
+      <div className="mb-4">
+        <label htmlFor="how_heard" className="block text-sm font-medium text-gray-700 mb-2">
+          Откуда вы узнали о HEYS?{' '}
+          <span className="text-gray-400 font-normal">(необязательно)</span>
+        </label>
+        <select
+          id="how_heard"
+          value={howHeard}
+          onChange={(e) => setHowHeard(e.target.value)}
+          disabled={formState === 'loading'}
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+        >
+          {HOW_HEARD_OPTIONS.map((option) => (
+            <option key={option.value || 'empty'} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="promo_code" className="block text-sm font-medium text-gray-700 mb-2">
+          Промокод или код приглашения{' '}
+          <span className="text-gray-400 font-normal">(если есть)</span>
+        </label>
+        <input
+          id="promo_code"
+          type="text"
+          value={promoCode}
+          onChange={(e) => setPromoCode(e.target.value.slice(0, 64))}
+          disabled={formState === 'loading'}
+          autoComplete="off"
+          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+        />
+      </div>
+
       {/* Год рождения — 18+ gate (152-ФЗ ст.9.5) */}
       <div className="mb-4">
         <label htmlFor="birth_year" className="block text-sm font-medium text-gray-700 mb-2">
@@ -351,15 +442,13 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           min={1900}
           max={new Date().getFullYear()}
           value={birthYear}
-          onChange={e => setBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
           disabled={formState === 'loading'}
           placeholder="Например, 1990"
           className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
           required
         />
-        <p className="text-gray-500 text-xs mt-1">
-          Сервис доступен только лицам старше 18 лет.
-        </p>
+        <p className="text-gray-500 text-xs mt-1">Сервис доступен только лицам старше 18 лет.</p>
       </div>
 
       {/* Согласие */}
@@ -367,17 +456,29 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         <input
           type="checkbox"
           checked={consentAccepted}
-          onChange={e => setConsentAccepted(e.target.checked)}
+          onChange={(e) => setConsentAccepted(e.target.checked)}
           disabled={formState === 'loading'}
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <span className="text-gray-500 text-xs leading-5">
           Даю согласие на обработку персональных данных в соответствии с{' '}
-          <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+          <a
+            href="/legal/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
             политикой конфиденциальности
           </a>{' '}
           и принимаю{' '}
-          <a href="/legal/user-agreement" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
+          <a
+            href="/legal/user-agreement"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
             условия использования
           </a>
         </span>
@@ -388,7 +489,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         <input
           type="checkbox"
           checked={marketingAccepted}
-          onChange={e => setMarketingAccepted(e.target.checked)}
+          onChange={(e) => setMarketingAccepted(e.target.checked)}
           disabled={formState === 'loading'}
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
@@ -413,8 +514,20 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         {formState === 'loading' ? (
           <span className="flex items-center justify-center gap-2">
             <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
             </svg>
             Отправляем...
           </span>
@@ -423,5 +536,5 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         )}
       </button>
     </form>
-  )
+  );
 }

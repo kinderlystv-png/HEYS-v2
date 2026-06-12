@@ -606,6 +606,17 @@ for cond, msg in [
 ]:
     if not cond:
         problems.append(msg)
+
+# ВСЕ ссылки «22 N.N» из имплемент-мапа должны существовать в 22
+for sec_name, (_, rows) in (('В ЛЕНДИНГ', imap_landing), ('В ПРИЛОЖЕНИЕ', imap_product)):
+    for r in rows:
+        if len(r) < 6:
+            continue
+        for tid in re.findall(r'22[`»\s]*\s*(\d+\.\d+)', r[3]):
+            if tid not in task_status:
+                problems.append(
+                    f'30 ({sec_name}, {r[0]}): ссылка на задачу 22 {tid} — '
+                    f'такой задачи нет в 22 (потеряна/переименована?)')
 if problems:
     import sys
     print('❌ Структура источников сломана — дашборд НЕ пересобран:')

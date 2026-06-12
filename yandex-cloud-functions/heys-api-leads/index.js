@@ -53,7 +53,7 @@ function normalizePhone(phone) {
 }
 
 function getCorsHeaders(origin) {
-  const isAllowed = ALLOWED_ORIGINS.some(allowed => origin?.startsWith(allowed));
+  const isAllowed = ALLOWED_ORIGINS.some((allowed) => origin?.startsWith(allowed));
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -66,7 +66,7 @@ function getCorsHeaders(origin) {
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     // SEC-005 (2026-06-08): CSP на JSON-ответ — defense-in-depth.
-    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'"
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
   };
 }
 
@@ -81,7 +81,7 @@ async function sendTelegramNotification(lead) {
   const messengerLabels = {
     telegram: '📱 Telegram',
     whatsapp: '💬 WhatsApp',
-    max: '🟣 MAX'
+    max: '🟣 MAX',
   };
 
   // ⚠️ МИНИМИЗАЦИЯ ПДн: Telegram сервера за рубежом (ст.12 152-ФЗ)
@@ -100,8 +100,8 @@ ${lead.utm_source ? `📊 UTM: ${lead.utm_source}` : ''}
 
   const keyboard = {
     inline_keyboard: [
-      [{ text: '✅ Взял в работу', callback_data: `lead_taken_${lead.id || Date.now()}` }]
-    ]
+      [{ text: '✅ Взял в работу', callback_data: `lead_taken_${lead.id || Date.now()}` }],
+    ],
   };
 
   try {
@@ -112,8 +112,8 @@ ${lead.utm_source ? `📊 UTM: ${lead.utm_source}` : ''}
         chat_id: chatId,
         text: text,
         parse_mode: 'Markdown',
-        reply_markup: keyboard
-      })
+        reply_markup: keyboard,
+      }),
     });
 
     const result = await response.json();
@@ -121,6 +121,112 @@ ${lead.utm_source ? `📊 UTM: ${lead.utm_source}` : ''}
   } catch (error) {
     console.error('[Telegram Error]', error.message);
   }
+}
+
+function cleanOptionalText(value, maxLength = 128) {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text ? text.slice(0, maxLength) : null;
+}
+
+async function markFunnelEventMetricaStatus(client, eventId, status, error) {
+  if (!eventId) return;
+  try {
+    await client.query(
+      `SELECT public.mark_funnel_event_metrica_status($1::uuid, $2::text, $3::text)`,
+      [eventId, status, error ? String(error).slice(0, 500) : null],
+    );
+  } catch (e) {
+    console.warn('[Metrica] Failed to mark funnel event status:', e.message);
+  }
+}
+
+async function sendMetricaEvent(client, funnelEvent, landingPage) {
+  if (!funnelEvent?.id) return;
+
+  const counterId = process.env.YANDEX_METRICA_COUNTER_ID;
+  const token = process.env.YANDEX_METRICA_MP_TOKEN;
+  const dryRun =
+    process.env.YANDEX_METRICA_DRY_RUN === '1' || process.env.YANDEX_METRICA_DRY_RUN === 'true';
+
+  if (!funnelEvent.ym_client_id) {
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'skipped:no_client_id');
+    return;
+  }
+
+  if (dryRun) {
+    console.log('[Metrica] Dry-run event:', funnelEvent.event_type, funnelEvent.id);
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'dry_run');
+    return;
+  }
+
+  if (!counterId || !token) {
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'skipped:not_configured');
+    return;
+  }
+
+  const url = new URL('https://mc.yandex.ru/collect/');
+  url.searchParams.set('tid', counterId);
+  url.searchParams.set('cid', funnelEvent.ym_client_id);
+  url.searchParams.set('t', 'event');
+  url.searchParams.set('ea', funnelEvent.event_type);
+  url.searchParams.set('ms', token);
+  url.searchParams.set('dl', landingPage || 'https://heyslab.ru/');
+  url.searchParams.set(
+    'params',
+    JSON.stringify({
+      heys: {
+        source: funnelEvent.source || 'unknown',
+        campaign: funnelEvent.campaign || 'unknown',
+        segment: funnelEvent.segment || undefined,
+        tariff: funnelEvent.tariff || undefined,
+      },
+    }),
+  );
+
+  try {
+    const res = await fetch(url, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
+    }
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'sent');
+  } catch (e) {
+    console.warn('[Metrica] Send failed:', e.message);
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'error', e.message);
+  }
+}
+
+async function recordLeadFunnelEvent(client, lead) {
+  const result = await client.query(
+    `SELECT public.record_funnel_event(
+       $1::text, $2::uuid, $3::uuid, $4::text, $5::text, $6::text, $7::text,
+       $8::text, $9::jsonb, $10::text, $11::timestamptz
+     ) AS event`,
+    [
+      'lead',
+      lead.id,
+      null,
+      lead.utm_source || null,
+      lead.utm_campaign || null,
+      lead.quiz_segment || null,
+      lead.plan || null,
+      lead.ym_client_id || null,
+      JSON.stringify({
+        messenger: lead.messenger || null,
+        utm_medium: lead.utm_medium || null,
+        utm_content: lead.utm_content || null,
+        promo_code: lead.promo_code || null,
+        how_heard: lead.how_heard || null,
+        readiness: lead.readiness || null,
+        ab_variant: lead.ab_variant || null,
+        intent: lead.intent || null,
+      }),
+      `lead:${lead.id}`,
+      new Date().toISOString(),
+    ],
+  );
+  return result.rows?.[0]?.event || null;
 }
 
 module.exports.handler = async function (event, context) {
@@ -134,7 +240,7 @@ module.exports.handler = async function (event, context) {
     return {
       statusCode: 204,
       headers: corsHeaders,
-      body: ''
+      body: '',
     };
   }
 
@@ -143,7 +249,7 @@ module.exports.handler = async function (event, context) {
     return {
       statusCode: 405,
       headers: corsHeaders,
-      body: JSON.stringify({ error: 'Method not allowed' })
+      body: JSON.stringify({ error: 'Method not allowed' }),
     };
   }
 
@@ -151,20 +257,28 @@ module.exports.handler = async function (event, context) {
   // на ALLOWED_ORIGINS[0] для запрещённых origin'ов — браузер блокировал чтение
   // ответа, но lead УЖЕ был залит в БД + Telegram-уведомление ушло (CSRF).
   // Server-to-server (origin === '') допустим, как в heys-api-rest.
-  const isAllowedOrigin = !origin || ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed));
+  const isAllowedOrigin = !origin || ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed));
   if (!isAllowedOrigin) {
     return {
       statusCode: 403,
       headers: corsHeaders,
-      body: JSON.stringify({ error: 'cors_denied' })
+      body: JSON.stringify({ error: 'cors_denied' }),
     };
   }
 
   // 🛡️ SEC-018 (2026-06-08): Body size limit — защита от DoS/OOM.
   // 64 KB: lead-форма ~1KB. Аналог heys-api-rpc/index.js:1517-1518 (256 KB).
   const MAX_BODY_BYTES = 64 * 1024;
-  if (event.body && typeof event.body === 'string' && Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES) {
-    return { statusCode: 413, headers: corsHeaders, body: JSON.stringify({ error: 'Payload too large' }) };
+  if (
+    event.body &&
+    typeof event.body === 'string' &&
+    Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES
+  ) {
+    return {
+      statusCode: 413,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Payload too large' }),
+    };
   }
 
   try {
@@ -181,6 +295,12 @@ module.exports.handler = async function (event, context) {
       utm_campaign,
       utm_term,
       utm_content,
+      promo_code,
+      how_heard,
+      ym_client_id,
+      quiz_segment,
+      readiness,
+      ab_variant,
       referrer,
       landing_page,
       intent,
@@ -209,8 +329,8 @@ module.exports.handler = async function (event, context) {
         headers: corsHeaders,
         body: JSON.stringify({
           success: false,
-          error: 'Missing required fields: name, phone, messenger'
-        })
+          error: 'Missing required fields: name, phone, messenger',
+        }),
       };
     }
 
@@ -227,12 +347,7 @@ module.exports.handler = async function (event, context) {
     // UI уже валидирует checkbox; сервер дополнительно отбрасывает запросы
     // без consent-поля (защита от подмены клиента и backwards-compat для
     // старых сборок landing, которые могут отправлять заявку без поля).
-    if (
-      !consent ||
-      typeof consent !== 'object' ||
-      !consent.privacy_version ||
-      !consent.method
-    ) {
+    if (!consent || typeof consent !== 'object' || !consent.privacy_version || !consent.method) {
       console.warn('[Leads] REJECTED missing consent payload');
       return {
         statusCode: 400,
@@ -245,9 +360,7 @@ module.exports.handler = async function (event, context) {
       };
     }
 
-    const consentAcceptedAt = consent.accepted_at
-      ? new Date(consent.accepted_at)
-      : new Date();
+    const consentAcceptedAt = consent.accepted_at ? new Date(consent.accepted_at) : new Date();
     const consentUserAgent = consent.user_agent
       ? String(consent.user_agent).slice(0, 500)
       : event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
@@ -257,26 +370,42 @@ module.exports.handler = async function (event, context) {
     // 152-ФЗ ст.9.5 серверная валидация 18+ (UI уже проверил, но не доверяем).
     // Старые сборки landing могут не присылать birth_year — допускаем для backwards-compat,
     // но логируем для мониторинга. После rollout landing >2 недель — сделать REJECTED.
-    const birthYearNum = Number.isInteger(birth_year) ? birth_year
-      : (typeof birth_year === 'string' ? parseInt(birth_year, 10) : null);
+    const birthYearNum = Number.isInteger(birth_year)
+      ? birth_year
+      : typeof birth_year === 'string'
+        ? parseInt(birth_year, 10)
+        : null;
     const currentYear = new Date().getFullYear();
     if (birthYearNum != null) {
       if (birthYearNum < 1900 || birthYearNum > currentYear) {
-        return { statusCode: 400, headers: corsHeaders,
-          body: JSON.stringify({ success: false, error: 'Invalid birth_year' }) };
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ success: false, error: 'Invalid birth_year' }),
+        };
       }
       if (currentYear - birthYearNum < 18) {
-        return { statusCode: 400, headers: corsHeaders,
-          body: JSON.stringify({ success: false, error: 'Under 18 not allowed',
-            message: 'Сервис доступен только лицам старше 18 лет (152-ФЗ ст.9.5).' }) };
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            success: false,
+            error: 'Under 18 not allowed',
+            message: 'Сервис доступен только лицам старше 18 лет (152-ФЗ ст.9.5).',
+          }),
+        };
       }
     } else {
       console.warn('[Leads] WARN birth_year missing (legacy landing build)');
     }
 
-    const consentMarketingAt = marketing_accepted_at
-      ? new Date(marketing_accepted_at)
-      : null;
+    const consentMarketingAt = marketing_accepted_at ? new Date(marketing_accepted_at) : null;
+    const safeYmClientId = consentAcceptedAt ? cleanOptionalText(ym_client_id, 64) : null;
+    const safePromoCode = cleanOptionalText(promo_code, 64);
+    const safeHowHeard = cleanOptionalText(how_heard, 64);
+    const safeQuizSegment = cleanOptionalText(quiz_segment, 64);
+    const safeReadiness = cleanOptionalText(readiness, 64);
+    const safeAbVariant = cleanOptionalText(ab_variant, 256);
 
     // IP клиента для rate-limit
     const clientIp =
@@ -300,7 +429,7 @@ module.exports.handler = async function (event, context) {
          FROM lead_submission_attempts
          WHERE ip_address = $1
            AND attempted_at > NOW() - ($2 || ' minutes')::INTERVAL`,
-        [clientIp, RATE_LIMIT_WINDOW_MINUTES]
+        [clientIp, RATE_LIMIT_WINDOW_MINUTES],
       );
       const recentAttempts = rateRes.rows?.[0]?.cnt || 0;
       if (recentAttempts >= RATE_LIMIT_MAX_PER_WINDOW) {
@@ -320,21 +449,24 @@ module.exports.handler = async function (event, context) {
       await client.query(
         `INSERT INTO lead_submission_attempts (ip_address, honeypot_filled)
          VALUES ($1, false)`,
-        [clientIp]
+        [clientIp],
       );
 
       // Таблица leads создаётся миграциями (database/yandex_migration/001_schema.sql)
       // с правильным типом id UUID DEFAULT gen_random_uuid()
 
       // 1. Проверяем дубликаты за последние N минут
-      const duplicateCheck = await client.query(`
+      const duplicateCheck = await client.query(
+        `
         SELECT id, created_at
         FROM leads
         WHERE phone = $1
           AND created_at > NOW() - INTERVAL '${DEDUPLICATION_WINDOW_MINUTES} minutes'
         ORDER BY created_at DESC
         LIMIT 1
-      `, [normalizedPhone]);
+      `,
+        [normalizedPhone],
+      );
 
       let leadId;
       let isDuplicate = false;
@@ -343,16 +475,24 @@ module.exports.handler = async function (event, context) {
         // Дубликат в скользящем окне — возвращаем существующий ID
         leadId = duplicateCheck.rows[0].id;
         isDuplicate = true;
-        console.log('[Leads] Duplicate (window) detected:', leadId, 'within', DEDUPLICATION_WINDOW_MINUTES, 'minutes');
+        console.log(
+          '[Leads] Duplicate (window) detected:',
+          leadId,
+          'within',
+          DEDUPLICATION_WINDOW_MINUTES,
+          'minutes',
+        );
       } else {
         // 2. Вставляем новый лид. Partial UNIQUE-индекс leads_active_phone_idx
         // (миграция 2026-04-28_leads_dedup) может бросить 23505 если phone уже
         // имеет активный лид (status IN 'new'/'contacted'/'trial_started').
         try {
-          const result = await client.query(`
+          const result = await client.query(
+            `
             INSERT INTO leads (
               name, phone, email, messenger,
               utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+              promo_code, how_heard, ym_client_id, quiz_segment, readiness, ab_variant,
               referrer, landing_page, ip_address,
               consent_privacy_version, consent_accepted_at, consent_method, consent_user_agent,
               birth_year, consent_marketing_accepted_at
@@ -360,18 +500,40 @@ module.exports.handler = async function (event, context) {
             VALUES (
               $1, $2, $3, $4,
               $5, $6, $7, $8, $9,
-              $10, $11, $12,
-              $13, $14, $15, $16,
-              $17, $18
+              $10, $11, $12, $13, $14, $15,
+              $16, $17, $18,
+              $19, $20, $21, $22,
+              $23, $24
             )
             RETURNING id
-          `, [
-            name, normalizedPhone, email || null, messenger,
-            utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-            referrer, landing_page, clientIp,
-            consentPrivacyVersion, consentAcceptedAt, consentMethod, consentUserAgent,
-            birthYearNum, consentMarketingAt,
-          ]);
+          `,
+            [
+              name,
+              normalizedPhone,
+              email || null,
+              messenger,
+              utm_source,
+              utm_medium,
+              utm_campaign,
+              utm_term,
+              utm_content,
+              safePromoCode,
+              safeHowHeard,
+              safeYmClientId,
+              safeQuizSegment,
+              safeReadiness,
+              safeAbVariant,
+              referrer,
+              landing_page,
+              clientIp,
+              consentPrivacyVersion,
+              consentAcceptedAt,
+              consentMethod,
+              consentUserAgent,
+              birthYearNum,
+              consentMarketingAt,
+            ],
+          );
 
           leadId = result.rows[0].id;
         } catch (insErr) {
@@ -383,7 +545,7 @@ module.exports.handler = async function (event, context) {
                  AND status IN ('new', 'contacted', 'trial_started')
                ORDER BY created_at DESC
                LIMIT 1`,
-              [normalizedPhone]
+              [normalizedPhone],
             );
             leadId = existing.rows?.[0]?.id || null;
             isDuplicate = true;
@@ -396,6 +558,25 @@ module.exports.handler = async function (event, context) {
 
       // 3. Отправляем уведомление в Telegram только для новых лидов
       if (!isDuplicate) {
+        const funnelEvent = await recordLeadFunnelEvent(client, {
+          id: leadId,
+          messenger,
+          utm_source,
+          utm_medium,
+          utm_campaign,
+          utm_content,
+          promo_code: safePromoCode,
+          how_heard: safeHowHeard,
+          ym_client_id: safeYmClientId,
+          quiz_segment: safeQuizSegment,
+          readiness: safeReadiness,
+          ab_variant: safeAbVariant,
+          intent,
+          plan,
+        });
+
+        await sendMetricaEvent(client, funnelEvent, landing_page || 'https://heyslab.ru/');
+
         await sendTelegramNotification({
           id: leadId,
           name,
@@ -404,7 +585,7 @@ module.exports.handler = async function (event, context) {
           utm_source,
           referrer,
           intent,
-          plan
+          plan,
         });
 
         console.log('[Leads] New lead saved:', leadId);
@@ -418,14 +599,12 @@ module.exports.handler = async function (event, context) {
         body: JSON.stringify({
           success: true,
           id: leadId,
-          duplicate: isDuplicate
-        })
+          duplicate: isDuplicate,
+        }),
       };
-
     } finally {
       client.release();
     }
-
   } catch (error) {
     console.error('[Leads Error]', error.message);
 
@@ -435,8 +614,8 @@ module.exports.handler = async function (event, context) {
       body: JSON.stringify({
         success: false,
         error: 'Failed to save lead',
-        message: error.message
-      })
+        message: error.message,
+      }),
     };
   }
 };

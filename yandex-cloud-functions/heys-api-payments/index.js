@@ -1,11 +1,11 @@
 /**
  * heys-api-payments — Cloud Function для интеграции с ЮKassa
- * 
+ *
  * Endpoints:
  *   POST /payments/create   — Создать платёж, вернуть URL для редиректа
  *   POST /payments/webhook  — Обработать webhook от ЮKassa
  *   GET  /payments/status   — Проверить статус платежа
- * 
+ *
  * Env variables:
  *   YUKASSA_SHOP_ID     — ID магазина ЮKassa
  *   YUKASSA_SECRET_KEY  — Секретный ключ ЮKassa
@@ -42,7 +42,7 @@ function ipToInt(parts) {
 }
 
 function isInCidr(ip, base, prefix) {
-  const mask = prefix === 32 ? 0xFFFFFFFF : ((~0 << (32 - prefix)) >>> 0);
+  const mask = prefix === 32 ? 0xffffffff : (~0 << (32 - prefix)) >>> 0;
   return (ipToInt(ip) & mask) === (ipToInt(base) & mask);
 }
 
@@ -67,7 +67,7 @@ function isYukassaIp(rawIp) {
 const PLANS = {
   base: { price: 490, name: 'Self', description: 'HEYS Self подписка на 1 месяц' },
   pro: { price: 7990, name: 'Pro', description: 'HEYS Pro подписка на 1 месяц' },
-  proplus: { price: 14990, name: 'Pro+', description: 'HEYS Pro+ подписка на 1 месяц' }
+  proplus: { price: 14990, name: 'Pro+', description: 'HEYS Pro+ подписка на 1 месяц' },
 };
 
 // PostgreSQL — используем shared/db-pool (getPool() ниже), он сам грузит CA cert.
@@ -78,10 +78,7 @@ const ALLOWED_ORIGINS = [
   'https://app.heyslab.ru',
   'https://heyslab.ru',
   'https://www.heyslab.ru',
-  ...(ALLOW_LOCALHOST_ORIGINS ? [
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-  ] : []),
+  ...(ALLOW_LOCALHOST_ORIGINS ? ['http://localhost:3001', 'http://127.0.0.1:3001'] : []),
 ];
 
 function getCorsHeaders(requestOrigin) {
@@ -97,7 +94,7 @@ function getCorsHeaders(requestOrigin) {
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     // SEC-005 (2026-06-08): CSP на JSON-ответ — defense-in-depth.
-    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'"
+    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
   };
 }
 
@@ -112,13 +109,81 @@ function jsonResponse(statusCode, body) {
   return {
     statusCode,
     headers: _currentCorsHeaders,
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   };
 }
 
 function errorResponse(statusCode, message, code = 'ERROR') {
   console.error(`[ERROR] ${code}: ${message}`);
   return jsonResponse(statusCode, { error: message, code });
+}
+
+async function markFunnelEventMetricaStatus(client, eventId, status, error) {
+  if (!eventId) return;
+  try {
+    await client.query(
+      `SELECT public.mark_funnel_event_metrica_status($1::uuid, $2::text, $3::text)`,
+      [eventId, status, error ? String(error).slice(0, 500) : null],
+    );
+  } catch (e) {
+    console.warn('[Metrica] Failed to mark funnel event status:', e.message);
+  }
+}
+
+async function sendMetricaEvent(client, funnelEvent, pageUrl) {
+  if (!funnelEvent?.id) return;
+
+  const counterId = process.env.YANDEX_METRICA_COUNTER_ID;
+  const token = process.env.YANDEX_METRICA_MP_TOKEN;
+  const dryRun =
+    process.env.YANDEX_METRICA_DRY_RUN === '1' || process.env.YANDEX_METRICA_DRY_RUN === 'true';
+
+  if (!funnelEvent.ym_client_id) {
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'skipped:no_client_id');
+    return;
+  }
+
+  if (dryRun) {
+    console.log('[Metrica] Dry-run event:', funnelEvent.event_type, funnelEvent.id);
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'dry_run');
+    return;
+  }
+
+  if (!counterId || !token) {
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'skipped:not_configured');
+    return;
+  }
+
+  const url = new URL('https://mc.yandex.ru/collect/');
+  url.searchParams.set('tid', counterId);
+  url.searchParams.set('cid', funnelEvent.ym_client_id);
+  url.searchParams.set('t', 'event');
+  url.searchParams.set('ea', funnelEvent.event_type);
+  url.searchParams.set('ms', token);
+  url.searchParams.set('dl', pageUrl || 'https://app.heyslab.ru/');
+  url.searchParams.set(
+    'params',
+    JSON.stringify({
+      heys: {
+        source: funnelEvent.source || 'unknown',
+        campaign: funnelEvent.campaign || 'unknown',
+        segment: funnelEvent.segment || undefined,
+        tariff: funnelEvent.tariff || undefined,
+      },
+    }),
+  );
+
+  try {
+    const res = await fetch(url, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
+    }
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'sent');
+  } catch (e) {
+    console.warn('[Metrica] Send failed:', e.message);
+    await markFunnelEventMetricaStatus(client, funnelEvent.id, 'error', e.message);
+  }
 }
 
 // ЮKassa Basic Auth header
@@ -142,7 +207,11 @@ async function createPayment(body, clientId) {
 
   // Валидация
   if (!plan || !PLANS[plan]) {
-    return errorResponse(400, `Invalid plan. Valid: ${Object.keys(PLANS).join(', ')}`, 'INVALID_PLAN');
+    return errorResponse(
+      400,
+      `Invalid plan. Valid: ${Object.keys(PLANS).join(', ')}`,
+      'INVALID_PLAN',
+    );
   }
   if (!clientId) {
     return errorResponse(400, 'Client ID required', 'NO_CLIENT_ID');
@@ -196,40 +265,52 @@ async function createPayment(body, clientId) {
             AND document_version = $2
             AND revoked_at IS NULL
        ) AS has_consent`,
-      [clientId, PAYMENT_OFERTA_VERSION]
+      [clientId, PAYMENT_OFERTA_VERSION],
     );
 
     if (!consentRes.rows[0]?.has_consent) {
-      console.warn(`[PAYMENTS] BLOCKED no payment_oferta v${PAYMENT_OFERTA_VERSION} for client=${clientId}`);
+      console.warn(
+        `[PAYMENTS] BLOCKED no payment_oferta v${PAYMENT_OFERTA_VERSION} for client=${clientId}`,
+      );
       return errorResponse(
         400,
         'Необходимо принять условия публичной оферты',
-        'PAYMENT_OFERTA_REQUIRED'
+        'PAYMENT_OFERTA_REQUIRED',
       );
     }
 
     // Получаем телефон + email клиента для чека 54-ФЗ
-    const clientResult = await client.query(`
+    const clientResult = await client.query(
+      `
       SELECT phone, email FROM clients WHERE id = $1
-    `, [clientId]);
+    `,
+      [clientId],
+    );
 
     if (clientResult.rows.length > 0) {
       clientPhone = clientResult.rows[0].phone;
       clientEmail = clientResult.rows[0].email;
     }
 
-    const insertResult = await client.query(`
+    const insertResult = await client.query(
+      `
       INSERT INTO payments (client_id, amount, plan, status, payment_provider, metadata)
       VALUES ($1, $2, $3, 'pending', 'yukassa', $4)
       RETURNING id
-    `, [clientId, planInfo.price, plan, JSON.stringify({
-      idempotence_key: idempotenceKey,
-      oferta_version_accepted: PAYMENT_OFERTA_VERSION,
-    })]);
+    `,
+      [
+        clientId,
+        planInfo.price,
+        plan,
+        JSON.stringify({
+          idempotence_key: idempotenceKey,
+          oferta_version_accepted: PAYMENT_OFERTA_VERSION,
+        }),
+      ],
+    );
 
     paymentId = insertResult.rows[0].id;
     console.log(`[PAYMENTS] Created pending payment: ${paymentId} for client ${clientId}`);
-
   } catch (dbError) {
     console.error('[PAYMENTS] DB error creating payment:', dbError);
     return errorResponse(500, 'Failed to create payment record', 'DB_ERROR');
@@ -242,12 +323,12 @@ async function createPayment(body, clientId) {
     const yukassaPayload = {
       amount: {
         value: planInfo.price.toFixed(2),
-        currency: 'RUB'
+        currency: 'RUB',
       },
       capture: true, // Автоматическое подтверждение платежа
       confirmation: {
         type: 'redirect',
-        return_url: returnUrl
+        return_url: returnUrl,
       },
       description: planInfo.description,
       // 54-ФЗ: электронный чек (онлайн-касса через ЮKassa).
@@ -258,23 +339,25 @@ async function createPayment(body, clientId) {
           ...(clientEmail ? { email: clientEmail } : {}),
           ...(clientPhone ? { phone: clientPhone } : {}),
         },
-        items: [{
-          description: planInfo.description,
-          quantity: '1.00',
-          amount: {
-            value: planInfo.price.toFixed(2),
-            currency: 'RUB'
+        items: [
+          {
+            description: planInfo.description,
+            quantity: '1.00',
+            amount: {
+              value: planInfo.price.toFixed(2),
+              currency: 'RUB',
+            },
+            vat_code: 1, // Без НДС (ИП на УСН)
+            payment_mode: 'full_payment',
+            payment_subject: 'service',
           },
-          vat_code: 1, // Без НДС (ИП на УСН)
-          payment_mode: 'full_payment',
-          payment_subject: 'service'
-        }]
+        ],
       },
       metadata: {
         client_id: clientId,
         plan: plan,
-        internal_payment_id: paymentId
-      }
+        internal_payment_id: paymentId,
+      },
     };
 
     console.log(`[PAYMENTS] Calling YuKassa API for payment ${paymentId}`);
@@ -282,11 +365,11 @@ async function createPayment(body, clientId) {
     const response = await fetch(YUKASSA_API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': getYukassaAuthHeader(),
+        Authorization: getYukassaAuthHeader(),
         'Idempotence-Key': idempotenceKey,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(yukassaPayload)
+      body: JSON.stringify(yukassaPayload),
     });
 
     const yukassaResult = await response.json();
@@ -297,11 +380,14 @@ async function createPayment(body, clientId) {
       // Обновляем статус платежа на failed через connection pool
       const updateClient = await pool.connect();
       try {
-        await updateClient.query(`
+        await updateClient.query(
+          `
           UPDATE payments SET status = 'failed', 
             metadata = metadata || $2, updated_at = NOW()
           WHERE id = $1
-        `, [paymentId, JSON.stringify({ yukassa_error: yukassaResult })]);
+        `,
+          [paymentId, JSON.stringify({ yukassa_error: yukassaResult })],
+        );
       } finally {
         updateClient.release();
       }
@@ -312,24 +398,29 @@ async function createPayment(body, clientId) {
     // 3. Обновляем запись платежа с external_payment_id через connection pool
     const updateClient = await pool.connect();
     try {
-      await updateClient.query(`
+      await updateClient.query(
+        `
         UPDATE payments 
         SET external_payment_id = $2, 
             external_status = $3,
             metadata = metadata || $4,
             updated_at = NOW()
         WHERE id = $1
-      `, [
-        paymentId,
-        yukassaResult.id,
-        yukassaResult.status,
-        JSON.stringify({ yukassa_response: yukassaResult })
-      ]);
+      `,
+        [
+          paymentId,
+          yukassaResult.id,
+          yukassaResult.status,
+          JSON.stringify({ yukassa_response: yukassaResult }),
+        ],
+      );
     } finally {
       updateClient.release();
     }
 
-    console.log(`[PAYMENTS] YuKassa payment created: ${yukassaResult.id}, status: ${yukassaResult.status}`);
+    console.log(
+      `[PAYMENTS] YuKassa payment created: ${yukassaResult.id}, status: ${yukassaResult.status}`,
+    );
 
     // 4. Возвращаем URL для редиректа
     const confirmationUrl = yukassaResult.confirmation?.confirmation_url;
@@ -339,9 +430,8 @@ async function createPayment(body, clientId) {
       paymentId: paymentId,
       externalPaymentId: yukassaResult.id,
       confirmationUrl: confirmationUrl,
-      status: yukassaResult.status
+      status: yukassaResult.status,
     });
-
   } catch (apiError) {
     console.error('[PAYMENTS] API call error:', apiError);
     return errorResponse(500, 'Failed to call YuKassa API', 'API_ERROR');
@@ -411,6 +501,7 @@ function verifyWebhookSignature(rawBody, headers) {
  */
 async function applyPaymentStatus(client, ctx) {
   const { externalPaymentId, eventType, externalStatus, rawPayload, sourceIp } = ctx;
+  let funnelEvent = null;
 
   await client.query('BEGIN');
 
@@ -420,7 +511,7 @@ async function applyPaymentStatus(client, ctx) {
       `SELECT id, client_id, plan, status FROM payments
        WHERE external_payment_id = $1
        FOR UPDATE`,
-      [externalPaymentId]
+      [externalPaymentId],
     );
 
     const payment = findResult.rows[0] || null;
@@ -439,14 +530,14 @@ async function applyPaymentStatus(client, ctx) {
         externalStatus,
         JSON.stringify(rawPayload || {}),
         sourceIp || null,
-      ]
+      ],
     );
 
     if (insertResult.rows.length === 0) {
       // Событие уже обрабатывалось — выходим, не трогая БД
       await client.query('COMMIT');
       console.log(
-        `[PAYMENT_EVENT] duplicate ${eventType}/${externalStatus} for ${externalPaymentId} — skipped`
+        `[PAYMENT_EVENT] duplicate ${eventType}/${externalStatus} for ${externalPaymentId} — skipped`,
       );
       return { applied: false, reason: 'duplicate' };
     }
@@ -485,7 +576,7 @@ async function applyPaymentStatus(client, ctx) {
           last_event: eventType,
           last_event_at: new Date().toISOString(),
         }),
-      ]
+      ],
     );
 
     // 6. Применяем эффекты к подписке клиента
@@ -503,7 +594,7 @@ async function applyPaymentStatus(client, ctx) {
              updated_at = NOW()
          WHERE id = $1
          RETURNING subscription_ends_at`,
-        [payment.client_id, payment.plan]
+        [payment.client_id, payment.plan],
       );
 
       const newEndsAt = updRes.rows?.[0]?.subscription_ends_at;
@@ -514,11 +605,55 @@ async function applyPaymentStatus(client, ctx) {
          SET period_start = COALESCE(period_start, NOW()),
              period_end = $2
          WHERE id = $1`,
-        [payment.id, newEndsAt]
+        [payment.id, newEndsAt],
       );
 
+      const prevPaymentRes = await client.query(
+        `SELECT COUNT(*)::int AS previous_count,
+                MAX(period_end) AS previous_period_end
+           FROM payments
+          WHERE client_id = $1
+            AND id <> $2
+            AND status = 'completed'`,
+        [payment.client_id, payment.id],
+      );
+      const previousCount = prevPaymentRes.rows?.[0]?.previous_count || 0;
+      const previousPeriodEnd = prevPaymentRes.rows?.[0]?.previous_period_end || null;
+      const funnelEventType = previousCount > 0 ? 'renewal' : 'payment';
+      const gapDays = previousPeriodEnd
+        ? Math.floor((Date.now() - new Date(previousPeriodEnd).getTime()) / 86400000)
+        : null;
+
+      const eventRes = await client.query(
+        `SELECT public.record_funnel_event(
+           $1::text, $2::uuid, $3::uuid, $4::text, $5::text, $6::text, $7::text,
+           $8::text, $9::jsonb, $10::text, $11::timestamptz
+         ) AS event`,
+        [
+          funnelEventType,
+          null,
+          payment.client_id,
+          null,
+          null,
+          null,
+          payment.plan,
+          null,
+          JSON.stringify({
+            internal_payment_id: payment.id,
+            external_payment_id: externalPaymentId,
+            previous_successful_payments: previousCount,
+            previous_period_end: previousPeriodEnd,
+            gap_days: gapDays,
+            source: 'yukassa_webhook',
+          }),
+          `${funnelEventType}:payment:${payment.id}`,
+          new Date().toISOString(),
+        ],
+      );
+      funnelEvent = eventRes.rows?.[0]?.event || null;
+
       console.log(
-        `[PAYMENT_EVENT] activated subscription ${payment.plan} for client ${payment.client_id} until ${newEndsAt?.toISOString?.() || newEndsAt}`
+        `[PAYMENT_EVENT] activated subscription ${payment.plan} for client ${payment.client_id} until ${newEndsAt?.toISOString?.() || newEndsAt}`,
       );
     } else if (eventType === 'refund.succeeded') {
       // Возврат: переводим клиента в read_only немедленно, обнуляем ends_at.
@@ -528,17 +663,15 @@ async function applyPaymentStatus(client, ctx) {
              subscription_ends_at = NOW(),
              updated_at = NOW()
          WHERE id = $1`,
-        [payment.client_id]
+        [payment.client_id],
       );
-      console.log(
-        `[PAYMENT_EVENT] refund applied: client ${payment.client_id} → read_only`
-      );
+      console.log(`[PAYMENT_EVENT] refund applied: client ${payment.client_id} → read_only`);
     }
     // payment.canceled / payment.waiting_for_capture не трогают clients —
     // подписка не активируется, но и не отзывается.
 
     await client.query('COMMIT');
-    return { applied: true, payment };
+    return { applied: true, payment, funnelEvent };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -556,10 +689,7 @@ async function applyPaymentStatus(client, ctx) {
 function isInternalCronCall(headers) {
   const expected = process.env.INTERNAL_CRON_TOKEN;
   if (!expected) return false;
-  const provided =
-    headers?.['x-internal-cron-token'] ||
-    headers?.['X-Internal-Cron-Token'] ||
-    null;
+  const provided = headers?.['x-internal-cron-token'] || headers?.['X-Internal-Cron-Token'] || null;
   if (!provided || typeof provided !== 'string') return false;
   const a = Buffer.from(provided, 'utf8');
   const b = Buffer.from(expected, 'utf8');
@@ -585,9 +715,7 @@ async function handleWebhook(body, event) {
     }
 
     // 🔐 HMAC-проверка подписи (если YUKASSA_WEBHOOK_SECRET настроен)
-    const rawBody = typeof event?.body === 'string'
-      ? event.body
-      : JSON.stringify(body || {});
+    const rawBody = typeof event?.body === 'string' ? event.body : JSON.stringify(body || {});
     const sigCheck = verifyWebhookSignature(rawBody, headers);
     if (!sigCheck.ok) {
       console.warn(`[WEBHOOK] HMAC signature check failed: ${sigCheck.reason}`);
@@ -609,7 +737,9 @@ async function handleWebhook(body, event) {
     return errorResponse(400, 'Invalid webhook payload', 'INVALID_WEBHOOK');
   }
 
-  console.log(`[WEBHOOK] Received: ${webhookEvent}, payment_id: ${object.id}, status: ${object.status}`);
+  console.log(
+    `[WEBHOOK] Received: ${webhookEvent}, payment_id: ${object.id}, status: ${object.status}`,
+  );
 
   const pool = getPool();
   const client = await pool.connect();
@@ -622,6 +752,8 @@ async function handleWebhook(body, event) {
       rawPayload: body,
       sourceIp: sourceIp,
     });
+
+    await sendMetricaEvent(client, result.funnelEvent, 'https://app.heyslab.ru/');
 
     return jsonResponse(200, {
       received: true,
@@ -666,7 +798,7 @@ async function refundPayment(body, curatorId) {
        FROM payments p
        JOIN clients c ON c.id = p.client_id
        WHERE p.id = $1`,
-      [paymentId]
+      [paymentId],
     );
 
     if (findResult.rows.length === 0) {
@@ -675,9 +807,7 @@ async function refundPayment(body, curatorId) {
     const payment = findResult.rows[0];
 
     if (String(payment.curator_id) !== String(curatorId)) {
-      console.warn(
-        `[REFUND] curator ${curatorId} tried to refund foreign payment ${paymentId}`
-      );
+      console.warn(`[REFUND] curator ${curatorId} tried to refund foreign payment ${paymentId}`);
       return errorResponse(403, 'Forbidden — not your client', 'FORBIDDEN');
     }
 
@@ -685,7 +815,7 @@ async function refundPayment(body, curatorId) {
       return errorResponse(
         400,
         `Cannot refund payment in status '${payment.status}' — only 'completed' allowed`,
-        'INVALID_STATUS'
+        'INVALID_STATUS',
       );
     }
 
@@ -721,12 +851,12 @@ async function refundPayment(body, curatorId) {
       return errorResponse(
         502,
         `YuKassa refund failed: ${yukassaResult?.description || 'unknown'}`,
-        'YUKASSA_ERROR'
+        'YUKASSA_ERROR',
       );
     }
 
     console.log(
-      `[REFUND] Refund created: ${yukassaResult.id} for payment ${payment.id}, amount ${refundAmount}`
+      `[REFUND] Refund created: ${yukassaResult.id} for payment ${payment.id}, amount ${refundAmount}`,
     );
 
     // 3. Метим в нашей БД, что refund initiated. Финальный переход в 'refunded'
@@ -744,7 +874,7 @@ async function refundPayment(body, curatorId) {
           refund_external_id: yukassaResult.id,
           refund_status: yukassaResult.status,
         }),
-      ]
+      ],
     );
 
     return jsonResponse(200, {
@@ -774,13 +904,15 @@ async function getPaymentStatus(paymentId, clientId) {
   const client = await pool.connect();
 
   try {
-
-    const result = await client.query(`
+    const result = await client.query(
+      `
       SELECT id, client_id, amount, plan, status, external_status, 
              payment_provider, created_at, period_start, period_end
       FROM payments 
       WHERE id = $1 ${clientId ? 'AND client_id = $2' : ''}
-    `, clientId ? [paymentId, clientId] : [paymentId]);
+    `,
+      clientId ? [paymentId, clientId] : [paymentId],
+    );
 
     if (result.rows.length === 0) {
       return errorResponse(404, 'Payment not found', 'NOT_FOUND');
@@ -796,9 +928,8 @@ async function getPaymentStatus(paymentId, clientId) {
       amount: payment.amount,
       createdAt: payment.created_at,
       periodStart: payment.period_start,
-      periodEnd: payment.period_end
+      periodEnd: payment.period_end,
     });
-
   } catch (error) {
     console.error('[STATUS] Query error:', error);
     return errorResponse(500, 'Failed to get payment status', 'DB_ERROR');
@@ -874,7 +1005,7 @@ async function authenticateClientRequest(event, requestedClientId) {
 
     if (requestedClientId && String(requestedClientId) !== String(session.client_id)) {
       console.warn(
-        `[PAYMENTS] clientId mismatch: requested=${requestedClientId} session=${session.client_id}`
+        `[PAYMENTS] clientId mismatch: requested=${requestedClientId} session=${session.client_id}`,
       );
       return { error: errorResponse(403, 'Client ID mismatch', 'CLIENT_ID_MISMATCH') };
     }
@@ -907,8 +1038,16 @@ module.exports.handler = async function (event, context) {
   // 64 KB: payment-init payload'ы + ЮKassa webhook'и реально <10KB.
   // Аналог heys-api-rpc/index.js:1517-1518 (256 KB). Payments может быть меньше.
   const MAX_BODY_BYTES = 64 * 1024;
-  if (event.body && typeof event.body === 'string' && Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES) {
-    return { statusCode: 413, headers: _currentCorsHeaders, body: JSON.stringify({ error: 'Payload too large' }) };
+  if (
+    event.body &&
+    typeof event.body === 'string' &&
+    Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES
+  ) {
+    return {
+      statusCode: 413,
+      headers: _currentCorsHeaders,
+      body: JSON.stringify({ error: 'Payload too large' }),
+    };
   }
 
   // Parse body
@@ -926,7 +1065,8 @@ module.exports.handler = async function (event, context) {
 
   // Client ID указанный явно (для логирования). Доверять ему НЕЛЬЗЯ —
   // окончательный clientId будет получен из проверенной сессии ниже.
-  const requestedClientId = event.headers?.['x-client-id'] ||
+  const requestedClientId =
+    event.headers?.['x-client-id'] ||
     event.headers?.['X-Client-Id'] ||
     body.clientId ||
     params.clientId;
@@ -967,12 +1107,11 @@ module.exports.handler = async function (event, context) {
         service: 'heys-api-payments',
         status: 'ok',
         version: '1.0.0',
-        endpoints: ['/payments/create', '/payments/webhook', '/payments/status']
+        endpoints: ['/payments/create', '/payments/webhook', '/payments/status'],
       });
     }
 
     return errorResponse(404, 'Endpoint not found', 'NOT_FOUND');
-
   } catch (error) {
     console.error('[PAYMENTS] Unhandled error:', error);
     return errorResponse(500, 'Internal server error', 'INTERNAL_ERROR');
