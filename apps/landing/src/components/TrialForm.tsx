@@ -53,7 +53,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
   const [howHeard, setHowHeard] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [consentAccepted, setConsentAccepted] = useState(false);
-  // 152-ФЗ ст.9.5: возрастной gate. Храним только год для минимизации.
+  // Age gate: store only birth year for data minimization.
   const [birthYear, setBirthYear] = useState('');
   // Опциональный consent на маркетинговые материалы (отдельно от обязательной
   // privacy/user-agreement галки). Без этого нельзя слать рассылку.
@@ -134,7 +134,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       return false;
     }
 
-    // 18+ gate (152-ФЗ ст.9.5)
+    // 18+ gate.
     const currentYear = new Date().getFullYear();
     const yearNum = parseInt(birthYear, 10);
     if (!Number.isInteger(yearNum) || yearNum < 1900 || yearNum > currentYear) {
@@ -142,7 +142,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
       return false;
     }
     if (currentYear - yearNum < 18) {
-      setErrorMessage('Сервис доступен только лицам старше 18 лет (152-ФЗ ст.9.5)');
+      setErrorMessage('Сервис доступен только лицам старше 18 лет.');
       return false;
     }
 
@@ -176,7 +176,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           promo_code: promoCode.trim() || undefined,
           ab_variant: DEFAULT_VARIANT,
           ym_client_id: ymClientId,
-          // 152-ФЗ ст.9.5: возрастной gate. Минимизация — только год.
+          // Age gate: keep only the year, not the full birth date.
           birth_year: parseInt(birthYear, 10),
           // UTM параметры
           ...utmParams,
@@ -431,7 +431,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
         />
       </div>
 
-      {/* Год рождения — 18+ gate (152-ФЗ ст.9.5) */}
+      {/* Год рождения — 18+ gate */}
       <div className="mb-4">
         <label htmlFor="birth_year" className="block text-sm font-medium text-gray-700 mb-2">
           Год рождения

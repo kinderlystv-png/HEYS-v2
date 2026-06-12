@@ -662,13 +662,13 @@
      * 🔧 (2026-05-18): bumped thresholds. 3с было слишком агрессивно для фоновых
      * sync-тиков (live-refresh polling каждые 30с делает merge → upload даже на
      * чистом скролле без правок). Модалка всплывала при базовом скроллинге,
-     * блокируя UI на секунду. 6с даёт обычному upload (<2с на хорошей сети)
-     * комфортный запас, а реально зависшие save'ы всё равно ловятся. */
+     * блокируя UI на секунду. 10с даёт фоновым hot-sync пачкам больше времени
+     * закончиться без психологически тревожного fullscreen lock. */
     const getPinProxySyncOverlayDelaysMs = () => {
-        const DEFAULT_LOCK_MS = 6000;   // было 3000
-        const DEFAULT_HINT_MS = 8000;   // было 5000 — поднял пропорционально
-        const PIN_PROXY_LOCK_MS = 7500; // было 4500
-        const PIN_PROXY_HINT_MS = 12000; // было 10000
+        const DEFAULT_LOCK_MS = 10000;   // было 6000
+        const DEFAULT_HINT_MS = 14000;   // было 8000 — после lock, не вместе с ним
+        const PIN_PROXY_LOCK_MS = 15000; // было 7500
+        const PIN_PROXY_HINT_MS = 20000; // было 12000
         try {
             const cloud = HEYS.cloud;
             if (cloud?.isPinAuthClient?.() === true && cloud?.isUsingDirectConnection?.() === false) {
