@@ -17570,155 +17570,20 @@
     );
   }
 
-  // --- Grip Picker Sheet ─────────────────────────────────────────────────
-  // Bottom-sheet модалка выбора хвата для нового упражнения. Filter chips
-  // по типу нагрузки + grid 8 хватов с safety-меткой (a2-ratio). Возрастной
-  // age-gate автоматически прячет full crimp/mono подросткам.
-
-  const GRIP_CATEGORIES = [
-    { id: 'all',     label: 'Все',       match: function () { return true; } },
-    { id: 'open',    label: 'Открытые',  match: function (g) {
-      return ['openhand4', 'sloper', 'pinch'].indexOf(g.id) >= 0;
-    } },
-    { id: 'crimps',  label: 'Замки',     match: function (g) {
-      return ['halfcrimp', 'fullcrimp'].indexOf(g.id) >= 0;
-    } },
-    { id: 'narrow',  label: 'N-палец',   match: function (g) {
-      return ['front3', 'back3', 'mono'].indexOf(g.id) >= 0;
-    } }
-  ];
-
-  function _dangerLabel(d) {
-    return d === 'low' ? 'низкий риск'
-      : d === 'moderate' ? 'средний риск'
-      : d === 'high' ? 'высокий риск'
-      : d === 'very-high' ? 'максимум' : '';
-  }
-
-  function GripPickerSheet(props) {
-    const onPick = (props && props.onPick) || function () {};
-    const onClose = (props && props.onClose) || function () {};
-    const userAge = props && props.userAge;
-    const [filter, setFilter] = useState('all');
-
-    // Age-gate: даже если grip есть в каталоге, для возраста он может быть
-    // запрещён (full crimp/mono до 18, back-3 до 16 и т.п.). Используем
-    // существующий ageGate.filterGrips — fail-closed.
-    const allGrips = Array.isArray(Fingers.GRIPS) ? Fingers.GRIPS : [];
-    const ageFiltered = (Fingers.ageGate && Fingers.ageGate.filterGrips)
-      ? Fingers.ageGate.filterGrips(allGrips, userAge)
-      : allGrips;
-    const category = GRIP_CATEGORIES.find(function (c) { return c.id === filter; }) || GRIP_CATEGORIES[0];
-    const visible = ageFiltered.filter(category.match);
-
-    // Escape для закрытия
-    useEffect(function () {
-      const onKey = function (e) { if (e.key === 'Escape') onClose(); };
-      document.addEventListener('keydown', onKey);
-      return function () { document.removeEventListener('keydown', onKey); };
-    }, [onClose]);
-
-    return h('div', {
-      className: 'fingers-grip-picker__backdrop',
-      onClick: onClose,
-      role: 'presentation'
-    },
-      h('div', {
-        className: 'fingers-grip-picker',
-        role: 'dialog',
-        'aria-label': 'Выбор хвата',
-        onClick: function (e) { e.stopPropagation(); }
-      },
-        h('div', { className: 'fingers-grip-picker__handle', 'aria-hidden': 'true' }),
-        h('div', { className: 'fingers-grip-picker__header' },
-          h('h2', { className: 'fingers-grip-picker__title' }, 'Выбери хват'),
-          h('button', {
-            type: 'button',
-            className: 'fingers-grip-picker__close',
-            onClick: onClose,
-            'aria-label': 'Закрыть'
-          },
-            h('svg', { width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none',
-              stroke: 'currentColor', strokeWidth: 1.6 },
-              h('path', { d: 'M5 5l10 10M15 5L5 15', strokeLinecap: 'round' })
-            )
-          )
-        ),
-
-        // Filter chips
-        h('div', { className: 'fingers-grip-picker__filters', role: 'tablist' },
-          GRIP_CATEGORIES.map(function (c) {
-            const active = filter === c.id;
-            const count = ageFiltered.filter(c.match).length;
-            return h('button', {
-              key: c.id,
-              type: 'button',
-              role: 'tab',
-              'aria-selected': active,
-              className: 'fingers-grip-picker__chip' + (active ? ' is-active' : ''),
-              onClick: function () { setFilter(c.id); }
-            }, c.label, count > 0 ? h('span', { className: 'fingers-grip-picker__chip-count' }, count) : null);
-          })
-        ),
-
-        // Grid of grips
-        visible.length === 0
-          ? h('div', { className: 'fingers-grip-picker__empty' },
-              h('p', null, 'Для твоего возраста в этой категории хваты недоступны.'))
-          : h('div', { className: 'fingers-grip-picker__grid' },
-              visible.map(function (g) {
-                return h('button', {
-                  key: g.id,
-                  type: 'button',
-                  className: 'fingers-grip-tile',
-                  'data-fingers-danger': g.dangerLevel,
-                  onClick: function () { onPick(g); }
-                },
-                  h('div', { className: 'fingers-grip-tile__icon', 'aria-hidden': 'true' },
-                    h('img', {
-                      src: '/exercises/' + g.id + '.webp',
-                      alt: '',
-                      loading: 'eager',
-                      decoding: 'async',
-                      onError: function (e) {
-                        // Fallback на emoji-иконку если SVG-арт нет
-                        try {
-                          const span = document.createElement('span');
-                          span.style.fontSize = '32px';
-                          span.textContent = g.icon || '🖐';
-                          e.target.replaceWith(span);
-                        } catch (_) {}
-                      }
-                    })
-                  ),
-                  h('div', { className: 'fingers-grip-tile__name' }, g.label),
-                  h('div', { className: 'fingers-grip-tile__meta' },
-                    h('span', { className: 'fingers-grip-tile__a2' },
-                      'A2 ×' + (g.a2ForceRatio || 1).toFixed(1)),
-                    h('span', { className: 'fingers-grip-tile__danger' }, _dangerLabel(g.dangerLevel))
-                  )
-                );
-              })
-            )
-      )
-    );
-  }
-
   // --- Constructor tab ---
   function ConstructorTab({ exercises, setExercises, userBoard, userAge, programName, programIntensity, onUnbindProgram }) {
-    const [pickerOpen, setPickerOpen] = useState(false);
+    const [registryOpen, setRegistryOpen] = useState(false);
 
-    const addExerciseForGrip = function (grip) {
-      const opts = { boardId: userBoard, gripId: grip && grip.id ? grip.id : 'openhand4' };
-      const blank = Fingers.createBlankExercise
-        ? Fingers.createBlankExercise(opts)
-        : { gripId: opts.gripId, edgeSizeMm: 20, addedWeightKg: 0,
-            hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180 };
-      setExercises(exercises.concat([blank]));
-      setPickerOpen(false);
+    const addExerciseForAtom = function (atom) {
+      if (!atom) return;
+      setExercises(exercises.concat([_registryAtomToExercise(atom, {
+        boardId: userBoard,
+        role: 'custom'
+      })]));
+      setRegistryOpen(false);
     };
 
-    const add = function () { setPickerOpen(true); };
+    const add = function () { setRegistryOpen(true); };
 
     const updateAt = function (i, updated) {
       const next = exercises.slice();
@@ -17788,6 +17653,15 @@
                   'Упражнение ' + (i + 1) + (exercises.length > 1 ? ' из ' + exercises.length : '')),
                 h('span', { style: { flex: 1, height: 1, background: 'rgba(0,0,0,0.08)' } })
               );
+              if (ex && ex.atomId) {
+                return h(React.Fragment, { key: i },
+                  separator,
+                  h(RegistrySelectedExerciseCard, {
+                    exercise: ex,
+                    onRemove: function () { removeAt(i); }
+                  })
+                );
+              }
               if (Fingers.ExerciseConstructor) {
                 return h(React.Fragment, { key: i },
                   separator,
@@ -17816,11 +17690,11 @@
               style: { width: '100%', marginTop: 16 }
             }, '+ Добавить ещё упражнение')
           ),
-      // Grip picker bottom-sheet (рендерится поверх контента)
-      pickerOpen ? h(GripPickerSheet, {
-        userAge: userAge,
-        onPick: addExerciseForGrip,
-        onClose: function () { setPickerOpen(false); }
+      // Единый реестр упражнений: тот же модуль, что открывается из верхнего меню.
+      registryOpen ? h(ExerciseRegistryModal, {
+        mode: 'pick',
+        onPickAtom: addExerciseForAtom,
+        onClose: function () { setRegistryOpen(false); }
       }) : null
     );
   }
@@ -20573,6 +20447,12 @@
     mobility: 'range → контроль',
     mental: 'экспозиция → сложность'
   };
+  const REGISTRY_IMAGE_ALTS = {
+    openhand4: ['openhand4_alt'],
+    front3: ['front3_alt'],
+    halfcrimp: ['halfcrimp_alt'],
+    fullcrimp: ['fullcrimp_alt']
+  };
 
   function _registryAtomTitle(atom) {
     if (!atom) return 'Упражнение';
@@ -20591,6 +20471,25 @@
     return '/exercises/' + atom.id + '.webp';
   }
 
+  function _registryImageKey(atom) {
+    if (!atom) return '';
+    if (atom.gripId) {
+      const suffix = atom.id === 'fs_nohang_pickup' ? '_block' : '';
+      return atom.gripId + suffix;
+    }
+    return atom.id;
+  }
+
+  function _registryImageSources(atom) {
+    const primary = _registryImageSrc(atom);
+    if (!primary) return [];
+    const key = _registryImageKey(atom);
+    const alts = (REGISTRY_IMAGE_ALTS[key] || []).map(function (id) {
+      return '/exercises/' + id + '.webp';
+    });
+    return [primary].concat(alts);
+  }
+
   function _registryEmoji(atom) {
     const q = atom && atom.quality;
     return q === 'finger_strength' ? '🤏'
@@ -20604,20 +20503,62 @@
       : q === 'mental' ? '🧠' : '•';
   }
 
-  function RegistryAtomImage({ atom, className }) {
-    const [failed, setFailed] = useState(false);
-    const src = _registryImageSrc(atom);
-    if (!src || failed) {
+  function RegistryAtomImage({ atom, className, compact }) {
+    const [idx, setIdx] = useState(0);
+    const [failed, setFailed] = useState({});
+    const sources = _registryImageSources(atom).filter(function (src) { return !failed[src]; });
+    const total = sources.length;
+    const safeIdx = total ? Math.min(idx, total - 1) : 0;
+    const src = total ? sources[safeIdx] : '';
+    const canSlide = total > 1;
+    useEffect(function () {
+      setIdx(0);
+      setFailed({});
+    }, [atom && atom.id]);
+    if (!src) {
       return h('span', { className: (className || '') + ' fingers-registry__emoji', 'aria-hidden': 'true' }, _registryEmoji(atom));
     }
-    return h('img', {
-      className: className || '',
-      src: src,
-      alt: _registryAtomTitle(atom),
-      loading: 'lazy',
-      decoding: 'async',
-      onError: function () { setFailed(true); }
-    });
+    return h('span', {
+      className: (className || '') + ' fingers-registry-carousel' + (canSlide ? ' has-many' : '') + (compact ? ' is-compact' : '')
+    },
+      h('img', {
+        className: 'fingers-registry-carousel__img',
+        src: src,
+        alt: _registryAtomTitle(atom),
+        loading: 'lazy',
+        decoding: 'async',
+        onError: function () {
+          setFailed(function (prev) {
+            const next = Object.assign({}, prev);
+            next[src] = true;
+            return next;
+          });
+        }
+      }),
+      canSlide && !compact ? h('button', {
+        type: 'button',
+        className: 'fingers-registry-carousel__nav fingers-registry-carousel__nav--prev',
+        'aria-label': 'Предыдущее фото',
+        onClick: function (e) {
+          e.stopPropagation();
+          setIdx(function (n) { return (n + total - 1) % total; });
+        }
+      }, '‹') : null,
+      canSlide && !compact ? h('button', {
+        type: 'button',
+        className: 'fingers-registry-carousel__nav fingers-registry-carousel__nav--next',
+        'aria-label': 'Следующее фото',
+        onClick: function (e) {
+          e.stopPropagation();
+          setIdx(function (n) { return (n + 1) % total; });
+        }
+      }, '›') : null,
+      canSlide ? h('span', { className: 'fingers-registry-carousel__dots', 'aria-hidden': 'true' },
+        sources.map(function (_, i) {
+          return h('span', { key: i, className: 'fingers-registry-carousel__dot' + (i === safeIdx ? ' is-active' : '') });
+        })
+      ) : null
+    );
   }
 
   function _formatSeconds(sec) {
@@ -20658,6 +20599,81 @@
     if (atom.loadModel === 'rpe') return label + ': ' + atom.loadValue + '/10';
     if (atom.loadModel === 'pctMax') return label + ': ' + atom.loadValue + '%';
     return label + ': ' + atom.loadValue;
+  }
+
+  function _registryRoleForAtom(atom, fallback) {
+    if (!atom) return fallback || 'custom';
+    if (atom.quality === 'finger_strength') return atom.loadModel === 'rm_margin' ? 'max-strength' : 'strength-endurance';
+    if (atom.quality === 'max_strength') return 'max-strength';
+    if (atom.quality === 'power') return 'power';
+    if (atom.quality === 'anaerobic_capacity' || atom.quality === 'aerobic_base') return 'strength-endurance';
+    if (atom.quality === 'technique') return 'skill';
+    if (atom.quality === 'antagonist') return 'antagonist';
+    if (atom.quality === 'mobility') return 'mobility';
+    if (atom.quality === 'mental') return 'mental';
+    return fallback || 'custom';
+  }
+
+  function _registryAtomToExercise(atom, opts) {
+    const o = opts || {};
+    const d = (atom && atom.dose) || {};
+    const isHang = atom && atom.doseShape === 'hang';
+    return {
+      __role: _registryRoleForAtom(atom, o.role),
+      atomId: atom.id,
+      name: _registryAtomTitle(atom),
+      quality: atom.quality || null,
+      energySystem: atom.energySystem || null,
+      tissueLoad: atom.tissueLoad || null,
+      dangerLevel: (atom.gates && atom.gates.dangerLevel) || atom.dangerLevel || null,
+      progressionAxis: atom.quality || null,
+      modality: atom.modality || null,
+      gripId: atom.gripId || null,
+      edgeSizeMm: atom.edgeSizeMm || null,
+      doseShape: atom.doseShape || 'hang',
+      dose: d,
+      energySubMode: atom.energySubMode || null,
+      loadModel: atom.loadModel || null,
+      loadValue: atom.loadValue,
+      sourceIds: atom.sourceIds,
+      boardId: o.boardId || null,
+      hangSec: isHang ? (_num(d.workSec, 0) || 0) : 0,
+      restSec: isHang ? (_num(d.restSec, 0) || 0) : 0,
+      repsPerSet: isHang ? (_num(d.reps, 1) || 1) : 1,
+      setsCount: _num(d.sets, 1) || 1,
+      restBetweenSetsSec: _num(d.restSetsSec, 0) || 0,
+      addedWeightKg: atom.loadModel === 'addedWeightKg' ? (_num(atom.loadValue, 0) || 0) : 0
+    };
+  }
+
+  function RegistrySelectedExerciseCard({ exercise, onRemove }) {
+    const atom = exercise && exercise.atomId && Fingers.blockCatalog && Fingers.blockCatalog.getAtom
+      ? Fingers.blockCatalog.getAtom(exercise.atomId)
+      : null;
+    if (!atom) return null;
+    const block = Fingers.blockCatalog && Fingers.blockCatalog.getBlock ? Fingers.blockCatalog.getBlock(atom.blockId) : null;
+    return h('div', { className: 'fingers-registry-selected-card fingers-fs-constructor-card' },
+      h('span', { className: 'fingers-registry-selected-card__photo' },
+        h(RegistryAtomImage, { atom: atom, className: 'fingers-registry-selected-card__img', compact: true })
+      ),
+      h('span', { className: 'fingers-registry-selected-card__body' },
+        h('span', { className: 'fingers-registry-selected-card__eyebrow' },
+          (block ? block.id + ' · ' : '') + (REGISTRY_QUALITY_LABELS[atom.quality] || atom.quality || 'Упражнение')),
+        h('span', { className: 'fingers-registry-selected-card__name' }, _registryAtomTitle(atom)),
+        h('span', { className: 'fingers-registry-selected-card__meta' }, _registryDoseText(atom)),
+        h('span', { className: 'fingers-registry-card__chips' },
+          _registryMetaPill(REGISTRY_DOSE_LABELS[atom.doseShape] || atom.doseShape),
+          _registryMetaPill(REGISTRY_MODALITY_LABELS[atom.modality] || atom.modality),
+          _registryMetaPill(_registryLoadText(atom))
+        )
+      ),
+      h('button', {
+        type: 'button',
+        className: 'fingers-registry-selected-card__remove',
+        onClick: onRemove,
+        'aria-label': 'Удалить упражнение'
+      }, 'Удалить')
+    );
   }
 
   function _registryGatesText(atom) {
@@ -20774,12 +20790,14 @@
     );
   }
 
-  function ExerciseRegistryModal({ onClose, onOpenSource }) {
+  function ExerciseRegistryModal({ onClose, onOpenSource, mode, onPickAtom }) {
     const bc = Fingers.blockCatalog;
     const atoms = bc && Array.isArray(bc.ATOMS) ? bc.ATOMS : [];
     const blocks = bc && Array.isArray(bc.BLOCKS) ? bc.BLOCKS : [];
+    const isPicker = mode === 'pick' && typeof onPickAtom === 'function';
     const [query, setQuery] = useState('');
     const [blockId, setBlockId] = useState('all');
+    const [qualityId, setQualityId] = useState('all');
     const [selectedAtom, setSelectedAtom] = useState(null);
 
     useEffect(function () {
@@ -20796,13 +20814,24 @@
       const q = String(query || '').trim().toLowerCase();
       return atoms.filter(function (atom) {
         if (blockId !== 'all' && atom.blockId !== blockId) return false;
+        if (qualityId !== 'all' && atom.quality !== qualityId) return false;
         if (!q) return true;
         const block = bc && bc.getBlock ? bc.getBlock(atom.blockId) : null;
         const title = _registryAtomTitle(atom);
         const hay = [atom.id, title, atom.quality, atom.modality, atom.doseShape, block && block.label].join(' ').toLowerCase();
         return hay.indexOf(q) >= 0;
       });
-    }, [atoms, blockId, query, bc]);
+    }, [atoms, blockId, qualityId, query, bc]);
+
+    const qualities = useMemo(function () {
+      const seen = Object.create(null);
+      return atoms.reduce(function (out, atom) {
+        if (!atom || !atom.quality || seen[atom.quality]) return out;
+        seen[atom.quality] = true;
+        out.push(atom.quality);
+        return out;
+      }, []);
+    }, [atoms]);
 
     return h('div', {
       className: 'fingers-registry__backdrop',
@@ -20812,16 +20841,18 @@
       h('div', {
         className: 'fingers-registry',
         role: 'dialog',
-        'aria-label': 'Реестр упражнений',
+        'aria-label': isPicker ? 'Добавить упражнение' : 'Реестр упражнений',
         onClick: function (e) { e.stopPropagation(); }
       },
         h('div', { className: 'fingers-registry__header' },
           h('div', { className: 'fingers-registry__header-text' },
             h('h2', { className: 'fingers-registry__title' },
               h('span', { 'aria-hidden': 'true' }, '▦'),
-              ' Реестр упражнений'),
+              isPicker ? ' Добавить упражнение' : ' Реестр упражнений'),
             h('p', { className: 'fingers-registry__sub' },
-              atoms.length + ' атомов: фото, доза, гейты, прогрессия и источники')
+              isPicker
+                ? atoms.length + ' упражнений из методологии. Выбери карточку — она добавится в свою сессию.'
+                : atoms.length + ' атомов: фото, доза, гейты, прогрессия и источники')
           ),
           h('button', {
             type: 'button',
@@ -20862,6 +20893,21 @@
                 title: b.label
               }, b.id);
             })
+          ),
+          h('div', { className: 'fingers-registry__type-tabs', role: 'tablist', 'aria-label': 'Фильтр по типу упражнения' },
+            h('button', {
+              type: 'button',
+              className: 'fingers-registry__type-tab' + (qualityId === 'all' ? ' is-active' : ''),
+              onClick: function () { setQualityId('all'); }
+            }, 'Все типы'),
+            qualities.map(function (q) {
+              return h('button', {
+                key: q,
+                type: 'button',
+                className: 'fingers-registry__type-tab' + (qualityId === q ? ' is-active' : ''),
+                onClick: function () { setQualityId(q); }
+              }, REGISTRY_QUALITY_LABELS[q] || q);
+            })
           )
         ),
         h('div', { className: 'fingers-registry__body' },
@@ -20874,10 +20920,13 @@
                     key: atom.id,
                     type: 'button',
                     className: 'fingers-registry-card',
-                    onClick: function () { setSelectedAtom(atom); }
+                    onClick: function () {
+                      if (isPicker) onPickAtom(atom);
+                      else setSelectedAtom(atom);
+                    }
                   },
                     h('span', { className: 'fingers-registry-card__photo' },
-                      h(RegistryAtomImage, { atom: atom, className: 'fingers-registry-card__img' })
+                      h(RegistryAtomImage, { atom: atom, className: 'fingers-registry-card__img', compact: true })
                     ),
                     h('span', { className: 'fingers-registry-card__body' },
                       h('span', { className: 'fingers-registry-card__name' }, title),
@@ -20886,7 +20935,8 @@
                       h('span', { className: 'fingers-registry-card__chips' },
                         _registryMetaPill(REGISTRY_DOSE_LABELS[atom.doseShape] || atom.doseShape),
                         _registryMetaPill(REGISTRY_MODALITY_LABELS[atom.modality] || atom.modality)
-                      )
+                      ),
+                      isPicker ? h('span', { className: 'fingers-registry-card__action' }, 'Добавить') : null
                     )
                   );
                 })
