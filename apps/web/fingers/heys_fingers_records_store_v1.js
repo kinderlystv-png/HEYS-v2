@@ -9,6 +9,9 @@
 //   HEYS.Fingers.records.updateIfPR(gripId, edgeMm, newRecord) → boolean
 //   HEYS.Fingers.records.asymmetries() → Array<{ kind, edgeMm, ratio, flag, hint }>
 //   HEYS.Fingers.records.byGrade(grade) → { mvcRatio, holdSec, description }
+//   HEYS.Fingers.records.progressionSnapshot() → { recordsByQuality, currentAxes } | null
+//   HEYS.Fingers.records.recordProgressionSession(fingersLog) → boolean
+//   HEYS.Fingers.records.saveProgressionAxis(quality, axis) → boolean
 //   HEYS.Fingers.records.saveAssessmentBattery(rawResults, opts?) → normalized
 //   HEYS.Fingers.records.loadAssessmentBattery() → { [testId]: result }
 //   HEYS.Fingers.records.assessLatestBattery(level) → AssessResult | null
@@ -196,6 +199,217 @@
     }).sort(function (a, b) { return (Date.parse(a.testedAt) || 0) - (Date.parse(b.testedAt) || 0); });
   }
 
+  function _progressionPoint(p) {
+    if (!p || typeof p !== 'object') return null;
+    const ts = Date.parse(p.testedAt);
+    if (!isFinite(ts) || ts <= 0) return null;
+    const mvc = Number(p.mvcKg) || null;
+    const bw = Number(p.bw) || null;
+    const ratio = (mvc && bw) ? mvc / bw : null;
+    const hold = Number(p.holdTime) || null;
+    const value = ratio || mvc || hold;
+    if (!(value > 0)) return null;
+    return { ts: ts, value: Number(value.toFixed(4)) };
+  }
+
+  function _historySeries(hist) {
+    return (Array.isArray(hist) ? hist : [])
+      .map(_progressionPoint)
+      .filter(Boolean)
+      .sort(function (a, b) { return a.ts - b.ts; });
+  }
+
+  const FALLBACK_PROGRESSION_POLICY = Object.freeze({
+    finger_strength: ['volume', 'edge', 'load'],
+    max_strength: ['volume', 'edge', 'load'],
+    aerobic_base: ['volume', 'density'],
+    anaerobic_capacity: ['volume', 'density'],
+    capacity: ['volume', 'density'],
+    power: ['volume', 'speed'],
+    technique: ['volume'],
+    antagonist: ['volume'],
+    mobility: ['volume'],
+    mental: ['volume'],
+  });
+
+  function _progressionPolicy(quality) {
+    const q = typeof quality === 'string' ? quality : '';
+    const live = Fingers.progression && Fingers.progression.POLICY && Fingers.progression.POLICY[q];
+    return Array.isArray(live) ? live : (FALLBACK_PROGRESSION_POLICY[q] || null);
+  }
+
+  function _validProgressionAxis(quality, axis) {
+    if (!axis || typeof axis !== 'string') return null;
+    const policy = _progressionPolicy(quality);
+    if (Array.isArray(policy) && policy.indexOf(axis) >= 0) return axis;
+    return null;
+  }
+
+  function saveProgressionAxis(quality, axis) {
+    const q = typeof quality === 'string' ? quality : '';
+    const valid = _validProgressionAxis(q, axis);
+    if (!q || !valid) return false;
+    const all = _readAll();
+    if (!all.progressionAxes || typeof all.progressionAxes !== 'object') all.progressionAxes = {};
+    all.progressionAxes[q] = valid;
+    all.updatedAt = Date.now();
+    return _writeAll(all);
+  }
+
+  function loadProgressionAxes() {
+    const all = _readAll();
+    return Object.assign({}, all.progressionAxes || {});
+  }
+
+  function _doseValue(ex) {
+    const dose = (ex && ex.dose) || {};
+    const n = function (v, fallback) {
+      if (Array.isArray(v)) return Number(v[1] != null ? v[1] : v[0]) || fallback || 0;
+      const x = Number(v);
+      return Number.isFinite(x) ? x : (fallback || 0);
+    };
+    const shape = ex && ex.doseShape;
+    const sets = Math.max(1, n(dose.sets, 1));
+    if (shape === 'hang') return Math.max(1, n(dose.workSec, 7)) * Math.max(1, n(dose.reps, 1)) * sets;
+    if (shape === 'continuous') return Math.max(1, n(dose.workSec, 60)) * sets;
+    if (shape === 'reps') return Math.max(1, n(dose.reps, 1)) * sets;
+    if (shape === 'attempts') return Math.max(1, n(dose.attempts, 1));
+    if (shape === 'circuit') return Math.max(1, n(dose.problemsPerRound, 1)) * Math.max(1, n(dose.rounds, 1));
+    if (shape === 'process') return Math.max(1, n(dose.workSec, 60)) * sets;
+    return Math.max(1, n(ex && ex.totalWorkSeconds, 1));
+  }
+
+  function _progressionQuality(ex) {
+    const q = ex && typeof ex.quality === 'string' ? ex.quality : null;
+    if (q && _progressionPolicy(q)) return q;
+    try {
+      const atom = ex && ex.atomId && Fingers.blockCatalog && Fingers.blockCatalog.getAtom
+        ? Fingers.blockCatalog.getAtom(ex.atomId) : null;
+      const aq = atom && atom.quality;
+      return aq && _progressionPolicy(aq) ? aq : null;
+    } catch (_) { return null; }
+  }
+
+  function _sessionTs(log, nowMs) {
+    const candidates = [
+      log && log.completedAt,
+      log && log.endedAt,
+      log && log.startedAt
+    ];
+    for (let i = 0; i < candidates.length; i++) {
+      const ts = Date.parse(candidates[i]);
+      if (isFinite(ts) && ts > 0) return ts;
+    }
+    const n = Number(nowMs);
+    return Number.isFinite(n) && n > 0 ? n : Date.now();
+  }
+
+  function recordProgressionSession(fingersLog, nowMs) {
+    const log = fingersLog || {};
+    const list = Array.isArray(log.exercises) ? log.exercises : [];
+    if (!list.length) return false;
+    const byQuality = {};
+    list.forEach(function (ex) {
+      const q = _progressionQuality(ex);
+      if (!q) return;
+      byQuality[q] = (byQuality[q] || 0) + _doseValue(ex);
+    });
+    const qualities = Object.keys(byQuality).filter(function (q) { return byQuality[q] > 0; });
+    if (!qualities.length) return false;
+    const all = _readAll();
+    if (!all.progressionHistory || typeof all.progressionHistory !== 'object') all.progressionHistory = {};
+    const ts = _sessionTs(log, nowMs);
+    qualities.forEach(function (q) {
+      const hist = Array.isArray(all.progressionHistory[q]) ? all.progressionHistory[q] : [];
+      hist.push({ ts: ts, value: Number(byQuality[q].toFixed(4)), source: 'session' });
+      hist.sort(function (a, b) { return (Number(a.ts) || 0) - (Number(b.ts) || 0); });
+      if (hist.length > 100) hist.splice(0, hist.length - 100);
+      all.progressionHistory[q] = hist;
+    });
+    all.updatedAt = Date.now();
+    return _writeAll(all);
+  }
+
+  function _sessionProgressionSeries(points) {
+    return (Array.isArray(points) ? points : [])
+      .map(function (p) {
+        const ts = Number(p && p.ts) || Date.parse(p && p.testedAt);
+        const value = Number(p && p.value);
+        return (isFinite(ts) && ts > 0 && value > 0)
+          ? { ts: ts, value: Number(value.toFixed(4)) } : null;
+      })
+      .filter(Boolean)
+      .sort(function (a, b) { return a.ts - b.ts; });
+  }
+
+  /**
+   * B3: live input для progression-cap (§1.2) и plateau detector (§1.3).
+   * Берём одну однородную MVC-серию: сначала canonical halfcrimp 20mm, иначе
+   * самый длинный slug. Не смешиваем разные хваты/рёбра, чтобы trend был честным.
+   */
+  function progressionSnapshot() {
+    const all = _readAll();
+    const history = all.history || {};
+    const canonical = _slug('halfcrimp', 20);
+    let chosenSlug = null;
+    let chosenSeries = [];
+
+    const canonicalSeries = _historySeries(history[canonical]);
+    if (canonicalSeries.length) {
+      chosenSlug = canonical;
+      chosenSeries = canonicalSeries;
+    } else {
+      Object.keys(history).forEach(function (slug) {
+        const series = _historySeries(history[slug]);
+        if (!series.length) return;
+        const last = series[series.length - 1].ts;
+        const chosenLast = chosenSeries.length ? chosenSeries[chosenSeries.length - 1].ts : 0;
+        if (series.length > chosenSeries.length || (series.length === chosenSeries.length && last > chosenLast)) {
+          chosenSlug = slug;
+          chosenSeries = series;
+        }
+      });
+    }
+
+    const recordsByQuality = {};
+    const currentAxes = {};
+    const axisSources = {};
+    const qualitySources = {};
+
+    if (chosenSeries.length) {
+      recordsByQuality.finger_strength = chosenSeries;
+      qualitySources.finger_strength = { source: 'mvcHistory', slug: chosenSlug, points: chosenSeries.length };
+    }
+
+    const progressionHistory = all.progressionHistory || {};
+    Object.keys(progressionHistory).forEach(function (q) {
+      if (!_progressionPolicy(q)) return;
+      if (q === 'finger_strength' && recordsByQuality.finger_strength) return;
+      const series = _sessionProgressionSeries(progressionHistory[q]);
+      if (!series.length) return;
+      recordsByQuality[q] = series;
+      qualitySources[q] = { source: 'sessionLog', points: series.length };
+    });
+
+    const qualities = Object.keys(recordsByQuality);
+    if (!qualities.length) return null;
+
+    qualities.forEach(function (q) {
+      const storedAxis = all.progressionAxes && all.progressionAxes[q];
+      const validStoredAxis = _validProgressionAxis(q, storedAxis);
+      currentAxes[q] = validStoredAxis || 'volume';
+      axisSources[q] = validStoredAxis ? 'stored' : 'default';
+    });
+
+    return {
+      recordsByQuality: recordsByQuality,
+      currentAxes: currentAxes,
+      axisSources: axisSources,
+      source: 'records.progressionSnapshot',
+      qualitySources: qualitySources
+    };
+  }
+
   /**
    * Анализирует ratio между разными хватами/руками. Возвращает массив flags
    * с предупреждениями (для UI badge «асимметрия!»).
@@ -376,12 +590,16 @@
     return Fingers.assessment.assessBattery(loadAssessmentBattery(), level);
   }
 
-  Fingers.records = {
-    get,
-    getMVC,
-    getMvcHistory,
-    updateIfPR,
-    asymmetries,
+	  Fingers.records = {
+	    get,
+	    getMVC,
+	    getMvcHistory,
+	    progressionSnapshot,
+	    recordProgressionSession,
+	    saveProgressionAxis,
+	    loadProgressionAxes,
+	    updateIfPR,
+	    asymmetries,
     asymmetryAdvice,
     byGrade,
     saveAssessmentBattery,

@@ -269,11 +269,14 @@
         onClick: handleSave,
         style: { width: '100%', marginTop: 14 }
       }, 'Сохранить и оценить'),
-      summary ? h('div', { className: 'fingers-tb__result' },
-        h('h4', { className: 'fingers-tb__result-title' },
-          'Ведущий лимитёр: ', h('strong', null, summary.label)),
-        h('p', { className: 'fingers-tb__hint' },
-          'Лимитёр становится фокусом «develop» мезоцикла, остальное — поддержание.'),
+	      summary ? h('div', { className: 'fingers-tb__result' },
+	        h('h4', { className: 'fingers-tb__result-title' },
+	          'Ведущий лимитёр: ', h('strong', null, summary.label)),
+	        Fingers.SourceBadge ? h('div', { className: 'fingers-tb__sources', 'aria-label': 'Источник бенчмарков силы' },
+	          h(Fingers.SourceBadge, { sourceId: 'berta2025_norms' })
+	        ) : null,
+	        h('p', { className: 'fingers-tb__hint' },
+	          'Лимитёр становится фокусом «develop» мезоцикла, остальное — поддержание.'),
         h('div', { className: 'fingers-tb__bars' },
           summary.weights.map(function (w) {
             return h('div', { key: w.quality, className: 'fingers-tb__bar-row' },

@@ -22,6 +22,8 @@
   Fingers.__profileStoreRegistered = true;
 
   const LEVELS = ['beginner', 'intermediate', 'advanced', 'elite'];
+  const READINESS = ['max', 'moderate', 'recovery', 'rest'];
+  const SKIN_STATUS = ['ok', 'normal', 'dry', 'tender', 'sore', 'split', 'flapper'];
 
   function _readGlobalProfile() {
     try {
@@ -62,6 +64,14 @@
     return LEVELS.indexOf(level) >= 0 ? level : null;
   }
 
+  function normalizeReadiness(value) {
+    return READINESS.indexOf(value) >= 0 ? value : null;
+  }
+
+  function normalizeSkinStatus(value) {
+    return SKIN_STATUS.indexOf(value) >= 0 ? value : null;
+  }
+
   function _normalizePrerequisites(value) {
     if (!Array.isArray(value)) return [];
     const out = [];
@@ -88,6 +98,8 @@
     else if (Number.isFinite(bw) && bw > 0) fp.bodyWeightKg = bw;
 
     fp.level = normalizeLevel(fp.level);
+    fp.readinessOverride = normalizeReadiness(fp.readinessOverride);
+    fp.skinStatus = normalizeSkinStatus(fp.skinStatus);
     fp.completedPrerequisites = _normalizePrerequisites(fp.completedPrerequisites);
     return fp;
   }
@@ -98,6 +110,8 @@
     const nextFp = Object.assign({}, globalProfile.fingerboardProfile || {}, patch);
 
     if ('level' in patch) nextFp.level = normalizeLevel(patch.level);
+    if ('readinessOverride' in patch) nextFp.readinessOverride = normalizeReadiness(patch.readinessOverride);
+    if ('skinStatus' in patch) nextFp.skinStatus = normalizeSkinStatus(patch.skinStatus);
     if ('completedPrerequisites' in patch) {
       nextFp.completedPrerequisites = _normalizePrerequisites(patch.completedPrerequisites);
     }
@@ -111,6 +125,8 @@
     get: getProfile,
     savePatch: saveProfilePatch,
     normalizeLevel: normalizeLevel,
+    normalizeReadiness: normalizeReadiness,
+    normalizeSkinStatus: normalizeSkinStatus,
     LEVELS: LEVELS.slice()
   };
 })(typeof window !== 'undefined' ? window : globalThis);

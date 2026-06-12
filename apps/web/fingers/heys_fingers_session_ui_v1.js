@@ -488,7 +488,78 @@
     return phase === 'accumulation' ? 'накопление'
       : phase === 'intensification' ? 'интенсификация'
       : phase === 'deload' ? 'разгрузка'
+      : phase === 'taper' ? 'тейпер'
+      : phase === 'maintenance' ? 'поддержание'
+      : phase === 'dup' ? 'DUP'
       : phase === 'retest' ? 'пере-тест' : phase;
+  }
+  function _periodizationCurrent(todayKey) {
+    try {
+      return Fingers.periodization && typeof Fingers.periodization.current === 'function'
+        ? Fingers.periodization.current(null, todayKey || null) : null;
+    } catch (_) { return null; }
+  }
+  function _addDaysKey(dateKey, days) {
+    const base = Date.parse(String(dateKey || '') + 'T00:00:00');
+    if (!isFinite(base)) return null;
+    const d = new Date(base + (Number(days) || 0) * 86400000);
+    return _formatDateKey(d);
+  }
+  function _loadPeriodizationPlan() {
+    try {
+      return Fingers.periodization && typeof Fingers.periodization.loadPlan === 'function'
+        ? Fingers.periodization.loadPlan() : null;
+    } catch (_) { return null; }
+  }
+  function _periodizationPreview(todayKey) {
+    const key = todayKey || _formatDateKey(new Date());
+    const plan = _loadPeriodizationPlan();
+    if (plan && plan.startedAt && Array.isArray(plan.weeks) && plan.weeks.length) {
+      const cur = Fingers.periodization && typeof Fingers.periodization.current === 'function'
+        ? Fingers.periodization.current(plan, key) : null;
+      const weekIdx = cur && Number.isFinite(Number(cur.weekIdx)) ? Number(cur.weekIdx) : 0;
+      return {
+        source: 'periodization',
+        model: plan.model || 'linear',
+        reason: plan.modelReason || null,
+        focusQuality: plan.focusQuality || null,
+        current: cur,
+        complete: !!(cur && cur.complete),
+        weeks: plan.weeks.map(function (w, i) {
+          const startKey = _addDaysKey(plan.startedAt, i * 7);
+          return Object.assign({}, w, {
+            week: w.week || i + 1,
+            weekIdx: i,
+            label: _mesoLabel(w.phase),
+            startKey: startKey,
+            endKey: startKey ? _addDaysKey(startKey, 6) : null,
+            volumePct: Math.round((Number(w.volumeMultiplier) || 1) * 100),
+            status: i < weekIdx ? 'done' : (i === weekIdx ? 'current' : 'next')
+          });
+        })
+      };
+    }
+    const cs = _getCycleState();
+    if (!cs) return null;
+    const cur = _mesoCurrent(cs, key);
+    const weekIdx = cur && Number.isFinite(Number(cur.weekIdx)) ? Number(cur.weekIdx) : 0;
+    const weeks = [];
+    for (let i = 0; i < cs.weeks; i++) {
+      const phase = _mesoPhaseForWeek(i, cs.weeks);
+      const startKey = _addDaysKey(cs.startedAt, i * 7);
+      weeks.push({
+        week: i + 1,
+        weekIdx: i,
+        phase: phase,
+        label: _mesoLabel(phase),
+        ceiling: _mesoIntensityCeiling(phase),
+        startKey: startKey,
+        endKey: startKey ? _addDaysKey(startKey, 6) : null,
+        volumePct: phase === 'deload' ? 50 : (phase === 'intensification' ? 90 : 100),
+        status: i < weekIdx ? 'done' : (i === weekIdx ? 'current' : 'next')
+      });
+    }
+    return { source: 'legacy-mesocycle', model: 'linear', reason: null, current: cur, complete: !!(cur && cur.complete), weeks: weeks };
   }
   function _getCycleState() {
     const fp = getProfile();
@@ -497,6 +568,15 @@
     return { startedAt: cs.startedAt, weeks: Number(cs.weeks) || _MESO_DEFAULT_WEEKS };
   }
   function _mesoCurrent(cycleState, todayKey) {
+    if (!cycleState) {
+      const planCur = _periodizationCurrent(todayKey);
+      if (planCur) {
+        return Object.assign({}, planCur, {
+          label: _mesoLabel(planCur.phase),
+          week: Math.min(planCur.week || 1, planCur.weeksTotal || _MESO_DEFAULT_WEEKS)
+        });
+      }
+    }
     const cs = cycleState || _getCycleState();
     if (!cs || !cs.startedAt) return null;
     const start = new Date(cs.startedAt + 'T00:00:00');
@@ -517,14 +597,41 @@
       complete: weekIdx >= weeks,
     };
   }
-  function _startMesocycle(weeks) {
+  function _buildPeriodizationPlanFromProfile(startedAt, weeks) {
+    try {
+      if (!Fingers.periodization || typeof Fingers.periodization.buildPlan !== 'function') return null;
+      const profile = getProfile() || {};
+      const level = profile.level || null;
+      let assessmentResult = null;
+      try {
+        if (level && Fingers.records && typeof Fingers.records.assessLatestBattery === 'function') {
+          assessmentResult = Fingers.records.assessLatestBattery(level);
+        }
+      } catch (_) { assessmentResult = null; }
+      return Fingers.periodization.buildPlan({
+        startedAt: startedAt,
+        weeks: Number(weeks) || _MESO_DEFAULT_WEEKS,
+        level: level,
+        assessmentResult: assessmentResult && !assessmentResult.error ? assessmentResult : null
+      });
+    } catch (_) { return null; }
+  }
+  function _startMesocycle(weeks, opts) {
+    const o = opts || {};
+    const startedAt = o.startedAt || _formatDateKey(new Date());
     const u = HEYS.utils;
     if (!u || !u.lsGet || !u.lsSet) return false;
     const raw = u.lsGet('heys_profile', {}) || {};
     const fp = Object.assign({}, raw.fingerboardProfile || {}, {
-      mesocycle: { startedAt: _formatDateKey(new Date()), weeks: Number(weeks) || _MESO_DEFAULT_WEEKS }
+      mesocycle: { startedAt: startedAt, weeks: Number(weeks) || _MESO_DEFAULT_WEEKS }
     });
     u.lsSet('heys_profile', Object.assign({}, raw, { fingerboardProfile: fp }));
+    try {
+      const plan = _buildPeriodizationPlanFromProfile(startedAt, weeks);
+      if (plan && Fingers.periodization && typeof Fingers.periodization.savePlan === 'function') {
+        Fingers.periodization.savePlan(plan);
+      }
+    } catch (_) { /* legacy mesocycle already saved */ }
     return true;
   }
   Fingers.mesocycle = {
@@ -532,6 +639,7 @@
     intensityCeiling: _mesoIntensityCeiling,
     label: _mesoLabel,
     current: _mesoCurrent,
+    preview: _periodizationPreview,
     start: _startMesocycle,
   };
 
@@ -979,6 +1087,19 @@
       'antagonist': 'антагонист'
     };
     const BUCKET_LABELS = { max: 'максимум', moderate: 'умеренный', recovery: 'восстановление' };
+    const QUALITY_LABELS = {
+      finger_strength: 'сила пальцев',
+      max_strength: 'макс. сила',
+      power: 'мощность',
+      anaerobic_capacity: 'анаэробная ёмкость',
+      aerobic_base: 'аэробная база',
+      technique: 'техника',
+      antagonist: 'антагонисты',
+      mobility: 'мобильность',
+      mental: 'ментальная работа'
+    };
+    const AXIS_LABELS = { volume: 'объём', edge: 'ребро', load: 'нагрузка', density: 'плотность', speed: 'скорость' };
+    const PHASE_LABELS = { base: 'база', accumulation: 'накопление', intensification: 'интенсификация', strength: 'сила', power: 'мощность', power_endurance: 'силовая выносливость', deload: 'разгрузка', taper: 'тейпер', peak: 'пик', maintenance: 'поддержка', dup: 'DUP', retest: 'ретест', test: 'ретест' };
 
     const section = function (title, children) {
       return h('section', { className: 'fingers-fs-trace__section' },
@@ -992,22 +1113,98 @@
         h('span', { className: 'fingers-fs-trace__v' }, value)
       );
     };
+    const formatProgression = function (p) {
+      if (!p) return 'нет истории для ограничения оси';
+      return Object.keys(p).map(function (q) {
+        const c = p[q] || {};
+        const hint = c.hint || {};
+        const axis = AXIS_LABELS[c.allowedAxis] || c.allowedAxis || '—';
+        const action = hint.action === 'switch' ? 'плато: перейти дальше'
+          : hint.action === 'hold' ? 'держать текущую ось'
+          : hint.action === 'exhausted' ? 'верхняя ось уже доступна'
+          : 'учтено';
+        return (QUALITY_LABELS[q] || q) + ': разрешена ось «' + axis + '» (' + action + ')';
+      }).join('; ');
+    };
+    const formatTissueFreshness = function (t) {
+      if (!t || !t.checked) return 'нет tissue-history для проверки';
+      if (!t.blocked) return 'проверена, конфликтов за 48/72ч нет';
+      const groups = Object.keys(t.byGripGroup || {}).map(function (g) { return g + ':' + t.byGripGroup[g]; }).join(', ');
+      return 'убрано ' + t.blocked + ' кандидатов после недавней нагрузки' + (groups ? ' (' + groups + ')' : '');
+    };
+    const formatSoftModifiers = function (m) {
+      if (!m || !m.issues || !m.issues.length) return 'нет возраст/skin ограничений';
+      const pct = Math.round((m.multiplier || 1) * 100);
+      return 'мягкий cap ' + pct + '% объёма' + (m.enforced ? ', объём сессии урезан' : ', без удаления упражнений');
+    };
+    const formatS4Ftl = function (s4) {
+      if (!s4) return 'нет live-истории недельной нагрузки';
+      const base = 'сессия FTL ' + Math.round(s4.sessionFtl || 0)
+        + ', неделя ' + Math.round(s4.weekBefore || 0) + ' → ' + Math.round(s4.projectedWeek || 0);
+      if (s4.enforced) return base + '; резкий скачок срезал ' + ((s4.drops || []).length || 0) + ' слот(а)';
+      return base + '; резкого скачка нет';
+    };
+    const formatQualityBands = function (qb) {
+      if (!qb || !qb.perQuality) return 'нет недельной серии по качествам';
+      const over = Array.isArray(qb.overMav) ? qb.overMav : [];
+      const under = Array.isArray(qb.underMev) ? qb.underMev : [];
+      if (qb.enforced) return 'MAV срезал ' + ((qb.drops || []).length || 0) + ' слот(а): ' + (over.join(', ') || 'качество уже выше потолка');
+      if (under.length) return 'ниже MEV по: ' + under.join(', ') + ' — это объяснение, не форс нагрузки';
+      return 'недельные MEV/MAV границы не требуют правки сессии';
+    };
+    const formatDangerBudget = function (w, bucket) {
+      const list = w && Array.isArray(w.exercises) ? w.exercises : [];
+      if (!list.length) return 'нет упражнений для оценки';
+      let spent = 0;
+      list.forEach(function (e) {
+        const grip = e && e.gripId && Fingers.GRIPS_BY_ID ? Fingers.GRIPS_BY_ID[e.gripId] : null;
+        spent += (grip && Number(grip.a2ForceRatio)) || 0;
+      });
+      const cap = constants.DANGER_BUDGET && constants.DANGER_BUDGET[bucket];
+      return 'оценка A2 ' + Math.round(spent * 10) / 10 + (cap != null ? (' / бюджет ' + cap) : '') + '; риск-чипы видны у упражнений';
+    };
 
-    // ── 1. Входные данные
+	    const inputs = (trace && trace.inputs) || {};
+	    const safety = (trace && trace.safety) || {};
+	    const r = (trace && trace.resolution) || {};
+	    const constants = Object.assign({
+	      DANGER_BUDGET: {},
+	      MVC_TARGET_PCT: {},
+	      MVC_CEILING_PCT: '—',
+	      RECOVERY_TRIM: '—',
+	      MAV_SETS_PER_GRIP: '—'
+	    }, (trace && trace.constants) || {});
+	    const slots = Array.isArray(trace && trace.slots) ? trace.slots : [];
+	    const dosing = Array.isArray(trace && trace.dosing) ? trace.dosing : [];
+	    const volume = Array.isArray(trace && trace.volume) ? trace.volume : [];
+	    const warmup = (trace && trace.warmup) || {
+	      type: workout && workout.requiresWarmup ? 'ramp' : 'quick',
+	      reason: workout && workout.requiresWarmup ? 'requiresWarmup=true' : 'лёгкая/умеренная сессия'
+	    };
+	    const outputs = Object.assign({
+	      durationMin: workout && workout.durationMin,
+	      intensity: workout && workout.intensity,
+	      tierList: workout && workout.equipmentTypes,
+	      sourceIds: workout && workout.sourceIds,
+	      hasAntagonist: workout && Array.isArray(workout.exercises)
+	        ? workout.exercises.some(function (e) { return e && (e.__role === 'antagonist' || e.quality === 'antagonist'); })
+	        : null
+	    }, (trace && trace.outputs) || {});
+
+	    // ── 1. Входные данные
     const inSec = section('1. Входные данные',
       h('div', null,
-        kv('Цель тренировки', GOAL_LABELS[trace.inputs.goal] || trace.inputs.goal || '—'),
-        kv('Готовность (cooldown)', READINESS_LABELS[trace.inputs.readiness] || trace.inputs.readiness || '—'),
-        kv('Возраст', String(trace.inputs.age)),
-        kv('Оборудование', trace.inputs.equipmentTypes.join(', ')),
-        trace.inputs.intensityOverride ? kv('Legacy intensity-override', trace.inputs.intensityOverride) : null,
-        kv('Есть боль в пальцах?', trace.safety.hasPain ? '⚠ да — потолок снижен до moderate' : 'нет'),
-        kv('Доступных хватов (после age+pain)', String(trace.safety.allowedGripCount))
+        kv('Цель тренировки', GOAL_LABELS[inputs.goal] || inputs.goal || '—'),
+        kv('Готовность (cooldown)', READINESS_LABELS[inputs.readiness] || inputs.readiness || '—'),
+        kv('Возраст', inputs.age != null ? String(inputs.age) : '—'),
+        kv('Оборудование', Array.isArray(inputs.equipmentTypes) ? inputs.equipmentTypes.join(', ') : '—'),
+        inputs.intensityOverride ? kv('Legacy intensity-override', inputs.intensityOverride) : null,
+        kv('Есть боль в пальцах?', safety.hasPain ? '⚠ да — потолок снижен до moderate' : 'нет'),
+        kv('Доступных хватов (после age+pain)', safety.allowedGripCount != null ? String(safety.allowedGripCount) : '—')
       )
     );
 
     // ── 2. Решение
-    const r = trace.resolution;
     const downgradeNote = r.downgraded
       ? 'Цель естественно требует «' + (BUCKET_LABELS[r.goalNatural] || r.goalNatural) + '», но bucket = «'
         + (BUCKET_LABELS[r.bucket] || r.bucket) + '» — цель снижена ради восстановления связок.'
@@ -1018,23 +1215,55 @@
         r.initialCeiling !== r.finalCeiling
           ? kv('Финальный ceiling (после pain-cap)', BUCKET_LABELS[r.finalCeiling] || r.finalCeiling) : null,
         kv('Bucket (рабочий потолок)', BUCKET_LABELS[r.bucket] || r.bucket),
-        kv('Источник шаблона', r.slotsSource === 'goal' ? 'GOAL_TEMPLATES[' + trace.inputs.goal + '] обрезан bucket\'ом'
-          : r.slotsSource === 'legacy-intensity' ? 'legacy: intensity-override (' + trace.inputs.intensityOverride + ')'
+        kv('Источник шаблона', r.slotsSource === 'goal' ? 'GOAL_TEMPLATES[' + inputs.goal + '] обрезан bucket\'ом'
+          : r.slotsSource === 'legacy-intensity' ? 'legacy: intensity-override (' + inputs.intensityOverride + ')'
           : 'SLOT_TEMPLATES[' + r.bucket + ']'),
-        kv('Шаблон слотов', r.slotsTemplate.join(' → ')),
+        kv('Шаблон слотов', Array.isArray(r.slotsTemplate) ? r.slotsTemplate.join(' → ') : '—'),
+        inputs.plannerPhase ? kv('Фаза плана', PHASE_LABELS[inputs.plannerPhase] || inputs.plannerPhase) : null,
+        r.plannerCapReason ? kv('Ограничение фазы', 'ceiling снижен фазой «' + (PHASE_LABELS[r.plannerCapReason] || r.plannerCapReason) + '»') : null,
+        r.plannerVolume && r.plannerVolume.enforced ? kv('Объём фазы', 'фаза уменьшила FTL ' + Math.round(r.plannerVolume.beforeFtl) + ' → ' + Math.round(r.plannerVolume.afterFtl)) : null,
+        kv('Progression-cap', formatProgression(r.progression)),
+        kv('Свежесть тканей S2', formatTissueFreshness(r.tissueFreshness)),
+        kv('S4 FTL-cap', formatS4Ftl(trace && trace.s4)),
+        kv('MEV/MAV качества', formatQualityBands(trace && trace.qualityBands)),
+        kv('Danger-budget', formatDangerBudget(workout, r.bucket)),
+        kv('Возраст / кожа', formatSoftModifiers(r.softModifiers)),
         kv('Понижена ли цель готовностью?', downgradeNote),
         kv('Кандидатных программ (после age+pain+intensity≤ceiling)', String(r.candidatePoolSize))
       )
     );
 
-    // ── 3. Заполнение слотов
+	    const exerciseByAtomId = Object.create(null);
+	    (workout && Array.isArray(workout.exercises) ? workout.exercises : []).forEach(function (e) {
+	      if (e && e.atomId && !exerciseByAtomId[e.atomId]) exerciseByAtomId[e.atomId] = e;
+	    });
+	    const fallbackChosen = function (slot) {
+	      if (!slot || !slot.atomId) return null;
+	      const e = exerciseByAtomId[slot.atomId] || {};
+	      const d = e.dose || {};
+	      return {
+	        programName: e.name || slot.atomId,
+	        programId: slot.atomId,
+	        gripId: e.gripId || e.modality || '—',
+	        edgeMm: e.edgeSizeMm != null ? e.edgeSizeMm : '—',
+	        tier: e.quality || e.doseShape || '—',
+	        hangSec: e.hangSec || d.workSec || 0,
+	        restSec: e.restSec || d.restSec || 0,
+	        repsPerSet: e.repsPerSet || d.reps || 1,
+	        setsCount: e.setsCount || d.sets || 1,
+	        restBetweenSetsSec: e.restBetweenSetsSec || d.restSetsSec || 0,
+	        catalogAddedKg: e.addedWeightKg || e.loadValue || 0
+	      };
+	    };
+
+	    // ── 3. Заполнение слотов
     const slotsSec = section('3. Заполнение слотов',
       h('div', null,
-        trace.slots.map(function (s, i) {
+        slots.map(function (s, i) {
           const head = h('div', { className: 'fingers-fs-trace__slot-head' },
             h('span', { className: 'fingers-fs-trace__slot-idx' }, '#' + (i + 1)),
-            h('span', { className: 'fingers-fs-trace__slot-role' }, s.role + ' · ' + s.roleLabel),
-            h('span', { className: 'fingers-fs-trace__slot-pool' }, 'пул: ' + s.poolSize)
+            h('span', { className: 'fingers-fs-trace__slot-role' }, (s.role || s.slot || 'slot') + (s.roleLabel ? ' · ' + s.roleLabel : '')),
+            s.poolSize != null ? h('span', { className: 'fingers-fs-trace__slot-pool' }, 'пул: ' + s.poolSize) : null
           );
           if (s.skipped) {
             return h('div', { key: i, className: 'fingers-fs-trace__slot fingers-fs-trace__slot--skipped' },
@@ -1042,7 +1271,15 @@
               h('div', { className: 'fingers-fs-trace__slot-skip' }, '⊘ слот пропущен: ' + s.skipped)
             );
           }
-          const c = s.chosen;
+          const c = s.chosen || fallbackChosen(s);
+          if (!c) {
+            return h('div', { key: i, className: 'fingers-fs-trace__slot fingers-fs-trace__slot--skipped' },
+              head,
+              h('div', { className: 'fingers-fs-trace__slot-skip' }, 'слот записан без atomId')
+            );
+          }
+          const dangerCost = Number(c.dangerCost);
+          const dangerTotal = Number(c.dangerSpentTotal);
           return h('div', { key: i, className: 'fingers-fs-trace__slot' },
             head,
             h('div', { className: 'fingers-fs-trace__slot-chosen' },
@@ -1054,10 +1291,10 @@
                 + ' повт × ' + c.setsCount + ' сетов, пауза ' + c.restBetweenSetsSec + 'с · каталог: '
                 + (c.catalogAddedKg || 0) + ' кг'
             ),
-            h('div', { className: 'fingers-fs-trace__slot-danger' },
+            isFinite(dangerCost) && isFinite(dangerTotal) ? h('div', { className: 'fingers-fs-trace__slot-danger' },
               'danger A2: +' + c.dangerCost.toFixed(2) + ' → итого ' + c.dangerSpentTotal.toFixed(2)
-                + ' / бюджет ' + trace.constants.DANGER_BUDGET[r.bucket]
-            ),
+                + ' / бюджет ' + (constants.DANGER_BUDGET && constants.DANGER_BUDGET[r.bucket] != null ? constants.DANGER_BUDGET[r.bucket] : '—')
+            ) : null,
             s.candidates && s.candidates.length > 1 ? h('details', { className: 'fingers-fs-trace__details' },
               h('summary', null, 'Все кандидаты (' + s.candidates.length + ')'),
               s.candidates.map(function (ct, j) {
@@ -1074,12 +1311,12 @@
     );
 
     // ── 4. Дозировка веса (MVC)
-    const dosingItems = trace.dosing.filter(function (d) { return d.role === 'max-strength'; });
+    const dosingItems = dosing.filter(function (d) { return d.role === 'max-strength'; });
     const dosingSec = dosingItems.length ? section('4. Дозировка веса (Phase 2a · MVC × bucket%)',
       h('div', null,
         h('p', { className: 'fingers-fs-trace__hint' },
-          'Цель ' + trace.constants.MVC_TARGET_PCT[r.bucket] + '% MVC, потолок '
-            + trace.constants.MVC_CEILING_PCT + '% (выше — риск pulley-травмы). '
+          'Цель ' + (constants.MVC_TARGET_PCT && constants.MVC_TARGET_PCT[r.bucket] != null ? constants.MVC_TARGET_PCT[r.bucket] : '—') + '% MVC, потолок '
+            + constants.MVC_CEILING_PCT + '% (выше — риск pulley-травмы). '
             + 'Снижается при отсутствии калибровки или возрастных ограничениях.'),
         dosingItems.map(function (d, i) {
           if (d.ageClamp) {
@@ -1114,34 +1351,36 @@
     ) : null;
 
     // ── 5. Объём (recovery-trim / MAV-cap)
-    const volSec = section('5. Объём — recovery-trim × ' + trace.constants.RECOVERY_TRIM + ' + MAV-кап ' + trace.constants.MAV_SETS_PER_GRIP + ' сетов/хват',
+    const volSec = section('5. Объём — recovery-trim × ' + constants.RECOVERY_TRIM + ' + MAV-кап ' + constants.MAV_SETS_PER_GRIP + ' сетов/хват',
       h('div', null,
-        trace.volume.map(function (v, i) {
+        volume.length ? volume.map(function (v, i) {
           return h('div', { key: i, className: 'fingers-fs-trace__vol' },
             h('strong', null, v.gripId + ' @ ' + v.edgeMm + ' (' + v.role + ')'),
             ' — ' + v.origSets + ' → ' + v.finalSets + ' сетов',
             h('div', { className: 'fingers-fs-trace__vol-sub' }, v.reason)
           );
-        })
+        }) : h('p', { className: 'fingers-fs-trace__hint' }, r.plannerVolume && r.plannerVolume.enforced
+          ? 'Фаза плана уже уменьшила общий FTL; детальный per-grip trim не передан.'
+          : 'Детальный per-grip trim не применялся или не передан.')
       )
     );
 
     // ── 6. Разминка
     const wuSec = section('6. Разминка',
       h('div', null,
-        kv('Тип', trace.warmup.type === 'ramp' ? 'полный RAMP (15-20 мин)' : 'короткая targeted (5-8 мин)'),
-        kv('Обоснование', trace.warmup.reason)
+        kv('Тип', warmup.type === 'ramp' ? 'полный RAMP (15-20 мин)' : 'короткая targeted (5-8 мин)'),
+        kv('Обоснование', warmup.reason || '—')
       )
     );
 
     // ── 7. Итог
     const outSec = section('7. Итог сессии',
       h('div', null,
-        kv('Длительность', trace.outputs.durationMin + ' мин'),
-        kv('Финальная интенсивность (по выбранным ролям)', trace.outputs.intensity),
-        kv('Tiers оборудования', trace.outputs.tierList.join(', ') || '—'),
-        kv('Источников цитирования', String(trace.outputs.sourceIds.length)),
-        kv('Антагонист в сессии?', trace.outputs.hasAntagonist ? '✓ есть' : '⚠ нет — UI подскажет добавить резинку')
+        kv('Длительность', (outputs.durationMin != null ? outputs.durationMin : '—') + ' мин'),
+        kv('Финальная интенсивность (по выбранным ролям)', outputs.intensity || '—'),
+        kv('Tiers оборудования', Array.isArray(outputs.tierList) ? (outputs.tierList.join(', ') || '—') : '—'),
+        kv('Источников цитирования', String(Array.isArray(outputs.sourceIds) ? outputs.sourceIds.length : 0)),
+        kv('Антагонист в сессии?', outputs.hasAntagonist ? '✓ есть' : '⚠ нет — UI подскажет добавить резинку')
       )
     );
 
@@ -1217,6 +1456,33 @@
     }
   }
 
+  function _mixExerciseChips(e, atom) {
+    const QUALITY_LABELS = {
+      finger_strength: 'Пальцы', max_strength: 'Сила', power: 'RFD',
+      anaerobic_capacity: 'PE', aerobic_base: 'ARC',
+      technique: 'Техника', antagonist: 'Баланс', mobility: 'Мобилити', mental: 'Ментал'
+    };
+    const ENERGY_LABELS = {
+      alactic: 'алактат', anaerobic: 'анаэроб', aerobic: 'аэроб',
+      mixed: 'смеш.', strength: 'сила', skill: 'скилл', recovery: 'восст.',
+      capacity: 'capacity', power: 'power', base: 'base'
+    };
+    const TISSUE_LABELS = { low: 'ткань low', moderate: 'ткань mod', high: 'ткань high', max: 'ткань max' };
+    const AXIS_LABELS = { volume: 'ось объём', edge: 'ось ребро', load: 'ось вес', density: 'ось плотн.', speed: 'ось скорость' };
+    const q = (e && e.quality) || (atom && atom.quality) || null;
+    const energy = (e && (e.energySubMode || e.energySystem)) || (atom && (atom.energySubMode || atom.energySystem)) || null;
+    const tissue = (e && e.tissueLoad) || (atom && atom.tissueLoad) || null;
+    const danger = (e && e.dangerLevel) || (atom && atom.dangerLevel) || null;
+    const axis = (e && e.progressionAxis) || null;
+    const chips = [];
+    if (q) chips.push({ text: QUALITY_LABELS[q] || q, title: 'Качество: что тренирует этот блок.' });
+    if (energy) chips.push({ text: ENERGY_LABELS[energy] || energy, title: 'Энергосистема или под-режим: почему такая длительность/пауза.' });
+    if (tissue) chips.push({ text: TISSUE_LABELS[tissue] || ('ткань ' + tissue), title: 'Тканевая нагрузка: влияет на свежесть S2 и восстановление.' });
+    if (danger) chips.push({ text: 'риск ' + danger, title: 'Профиль риска хвата: влияет на danger-budget.' });
+    if (axis) chips.push({ text: AXIS_LABELS[axis] || ('ось ' + axis), title: 'Ось прогрессии: объём, ребро, вес, плотность или скорость.' });
+    return chips;
+  }
+
   // Превью набора: что за упражнения собрались, с мини-фото хвата (или эмодзи
   // блока для не-хватовых). Имя = хват+ребро или название блока; подзаголовок =
   // категория + доза. Помогает увидеть состав до запуска и решить про reroll.
@@ -1245,14 +1511,61 @@
           ? h(Fingers.GripIcon, { gripId: e.gripId, equipmentTier: e.equipmentTier, size: 46 })
           : h('span', { className: 'fingers-fs-mixcard__exemoji', 'aria-hidden': 'true' },
               QEMOJI[quality] || '•');
+        const chips = _mixExerciseChips(e, atom);
         return h('div', { key: e.atomId + '-' + i, className: 'fingers-fs-mixcard__exrow' },
           h('span', { className: 'fingers-fs-mixcard__exthumb' }, thumb),
           h('span', { className: 'fingers-fs-mixcard__exinfo' },
             h('span', { className: 'fingers-fs-mixcard__exname' }, name),
-            sub ? h('span', { className: 'fingers-fs-mixcard__exsub' }, sub) : null
+            sub ? h('span', { className: 'fingers-fs-mixcard__exsub' }, sub) : null,
+            chips.length ? h('span', { className: 'fingers-fs-mixcard__exchips' },
+              chips.map(function (c, idx) {
+                return h('span', { key: idx, className: 'fingers-fs-mixcard__exchip', title: c.title }, c.text);
+              })
+            ) : null
           )
         );
       })
+    );
+  }
+
+  function PeriodizationPlanStrip({ preview }) {
+    if (!preview || !Array.isArray(preview.weeks) || !preview.weeks.length) return null;
+    const CEILING_LABELS = { max: 'max', moderate: 'moderate', recovery: 'recovery', rest: 'rest' };
+    const modelLabel = preview.model === 'linear' ? 'линейная'
+      : preview.model === 'nonlinear' ? 'нелинейная'
+      : preview.model === 'dup' ? 'DUP'
+      : preview.model === 'taper' ? 'тейпер'
+      : preview.model === 'maintenance' ? 'поддержание'
+      : preview.model;
+    const cur = preview.current || {};
+    const currentText = preview.complete
+      ? 'цикл завершён: пора ретест'
+      : ('неделя ' + (cur.week || '?') + '/' + (cur.weeksTotal || preview.weeks.length)
+        + ' · ' + (cur.label || _mesoLabel(cur.phase)) + ' · потолок ' + (CEILING_LABELS[cur.ceiling] || cur.ceiling || '—'));
+    return h('section', { className: 'fingers-fs-cycle-plan', 'aria-label': 'План тренировочного цикла' },
+      h('div', { className: 'fingers-fs-cycle-plan__head' },
+        h('div', { className: 'fingers-fs-cycle-plan__title' }, 'План цикла'),
+        h('div', { className: 'fingers-fs-cycle-plan__meta' }, modelLabel + ' · ' + currentText)
+      ),
+      preview.reason ? h('div', { className: 'fingers-fs-cycle-plan__reason' }, preview.reason) : null,
+      h('div', { className: 'fingers-fs-cycle-plan__weeks' },
+        preview.weeks.map(function (w) {
+          const title = 'Неделя ' + w.week + ': ' + w.label
+            + '. Потолок ' + (CEILING_LABELS[w.ceiling] || w.ceiling || '—')
+            + ', объём ' + (w.volumePct || 100) + '%'
+            + (w.startKey && w.endKey ? '. ' + w.startKey + ' — ' + w.endKey : '');
+          return h('div', {
+            key: w.weekIdx,
+            className: 'fingers-fs-cycle-plan__week is-' + (w.status || 'next'),
+            title: title
+          },
+            h('span', { className: 'fingers-fs-cycle-plan__weeknum' }, 'W' + w.week),
+            h('span', { className: 'fingers-fs-cycle-plan__phase' }, w.label),
+            h('span', { className: 'fingers-fs-cycle-plan__dose' },
+              (CEILING_LABELS[w.ceiling] || w.ceiling || '—') + ' · ' + (w.volumePct || 100) + '%')
+          );
+        })
+      )
     );
   }
 
@@ -1285,14 +1598,16 @@
         goal: mixGoal,
         intensity: GOAL_TO_INTENSITY_MIX[mixGoal] || 'moderate',
         age: ageRaw,
-        readiness: cool && cool.recommendation,
+        profile: profile,
+        readiness: profile.readinessOverride || (cool && cool.recommendation),
+        skinStatus: profile.skinStatus || null,
         // §1.3 reroll: seed варьирует выбор среди равноценных атомов (та же цель/
         // контекст/безопасность). seed=0 — каноничный набор «как по методологии».
         variantSeed: mixSeed
       };
       setMixedWorkout(_recommendMixedWorkout(mixOpts));
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userTypes.join(','), mixGoal, ageRaw, cool && cool.recommendation, mixSeed]);
+    }, [userTypes.join(','), mixGoal, ageRaw, profile.level, profile.readinessOverride, profile.skinStatus, cool && cool.recommendation, mixSeed]);
     const onGenerateMix = useCallback(function () { setMixSeed(function (n) { return n + 1; }); }, []);
     const [traceOpen, setTraceOpen] = useState(false);
     if (!mixedWorkout) return null;
@@ -1318,18 +1633,29 @@
         ),
         h('h3', { className: 'fingers-fs-mixcard__title' }, mixedWorkout.name),
         h('p', { className: 'fingers-fs-mixcard__desc' }, mixedWorkout.description),
-        h('div', { className: 'fingers-fs-mixcard__chips' },
-          h('span', { className: 'fingers-fs-chip fingers-fs-chip--intensity',
-            'data-fingers-intensity': mixedWorkout.intensity || 'moderate'
-          }, intensityLabel(mixedWorkout.intensity)),
+        mixedWorkout.coachReason ? h('p', { className: 'fingers-fs-mixcard__reason' }, mixedWorkout.coachReason) : null,
+	        h('div', { className: 'fingers-fs-mixcard__chips' },
+	          h('span', { className: 'fingers-fs-chip fingers-fs-chip--intensity',
+	            'data-fingers-intensity': mixedWorkout.intensity || 'moderate'
+	          }, intensityLabel(mixedWorkout.intensity)),
           h('span', { className: 'fingers-fs-chip' },
             h('span', { 'aria-hidden': 'true' }, '⏱ '),
             mixedWorkout.durationMin + ' мин'),
-          h('span', { className: 'fingers-fs-chip' },
-            mixedWorkout.exercises.length + ' упр')
-        ),
-        h('div', { className: 'fingers-fs-mixcard__equipment' },
-          (mixedWorkout.equipmentTypes || []).map(function (t) {
+	          h('span', { className: 'fingers-fs-chip' },
+	            mixedWorkout.exercises.length + ' упр')
+	        ),
+	        Fingers.SourceBadge && Array.isArray(mixedWorkout.sourceIds) && mixedWorkout.sourceIds.length
+	          ? h('div', { className: 'fingers-fs-mixcard__sources', 'aria-label': 'Источники методологии сессии' },
+	              mixedWorkout.sourceIds.slice(0, 4).map(function (sid) {
+	                return h(Fingers.SourceBadge, { key: sid, sourceId: sid });
+	              }),
+	              mixedWorkout.sourceIds.length > 4
+	                ? h('span', { className: 'fingers-fs-mixcard__source-more' }, '+' + (mixedWorkout.sourceIds.length - 4))
+	                : null
+	            )
+	          : null,
+	        h('div', { className: 'fingers-fs-mixcard__equipment' },
+	          (mixedWorkout.equipmentTypes || []).map(function (t) {
             const meta = ({
               full: { icon: '🪜', label: 'Board' },
               block: { icon: '💪', label: 'Block' },
@@ -1382,6 +1708,7 @@
     // Re-compute on mount + при возвращении на таб; не пересчитываем на каждый
     // render. Cooldown/readiness меняются медленно — раз в открытие достаточно.
     const data = useMemo(function () { return _buildTodayData(todayKey); }, [todayKey]);
+    const cyclePreview = useMemo(function () { return _periodizationPreview(todayKey); }, [todayKey]);
     const meta = _bucketMeta(data.bucket);
 
     // Profile incomplete — CTA на onboarding, никаких рекомендаций.
@@ -1460,6 +1787,8 @@
             )
           : null
       ),
+
+      cyclePreview ? h(PeriodizationPlanStrip, { preview: cyclePreview }) : null,
 
       // ─── Mix — goal-driven случайная сборка, перед официальной рекомендацией.
       // Юзер видит две альтернативы на сегодня: микс или курированный протокол.
@@ -3364,13 +3693,15 @@
                   { dateKey: dateKey, trainingIndex: trainingIndex },
                   partialLog,
                   { activityLabel: _programLabel(programId) + ' (частично)' }
-                );
-                _bumpFingersDiaryVersion();
-                // §1.3 FDP/FDS ротация — фиксируем хваты и для частичного завершения.
-                try { Fingers.edgeHistory?.recordSession?.(partialLog); } catch (_) {}
-                if (HEYS.Toast?.success) {
-                  HEYS.Toast.success('Записано: ' + partialLog.totalUnits + ' ' + partialLog.unitLabel);
-                }
+	                );
+	                _bumpFingersDiaryVersion();
+	                // §1.3 FDP/FDS ротация — фиксируем хваты и для частичного завершения.
+	                try { Fingers.edgeHistory?.recordSession?.(partialLog); } catch (_) {}
+	                try { Fingers.tissueHistory?.recordSession?.(partialLog); } catch (_) {}
+	                try { Fingers.records?.recordProgressionSession?.(partialLog); } catch (_) {}
+	                if (HEYS.Toast?.success) {
+	                  HEYS.Toast.success('Записано: ' + partialLog.totalUnits + ' ' + partialLog.unitLabel);
+	                }
               } catch (e) {
                 console.warn('[Fingers.useExerciseShell] partial save failed:', e);
               }
@@ -4159,9 +4490,11 @@
   function FingersSettingsSheet(props) {
     const onClose = (props && props.onClose) || function () {};
     const onRequestReset = props && props.onRequestReset;
-    const [profileTick, setProfileTick] = useState(0);
-    const profile = getProfile();
-    void profileTick;
+	    const [profileTick, setProfileTick] = useState(0);
+	    const [axisTick, setAxisTick] = useState(0);
+	    const profile = getProfile();
+	    void profileTick;
+	    void axisTick;
     const HEYS_utils = HEYS.utils || {};
 
     // Voice settings — берём актуальные через voice.getSettings()
@@ -4284,6 +4617,21 @@
       { id: 'advanced', label: 'Продвинутый', hint: '2+ года регулярной нагрузки на пальцы без травм связок; могут открываться малые ребра.' },
       { id: 'elite', label: 'Элитный', hint: 'Долгая история целевой подготовки пальцев без травм; высокий объем и интенсивность уже привычны.' }
     ];
+    const readinessMeta = [
+      { id: '', label: 'Авто', hint: 'Берём cooldown и историю последних сессий.' },
+      { id: 'max', label: 'Макс', hint: 'Можно тяжёлую работу, если safety-гейты не против.' },
+      { id: 'moderate', label: 'Умеренно', hint: 'Силовой стимул без максимальной ткани-нагрузки.' },
+      { id: 'recovery', label: 'Легко', hint: 'Только восстановительная сессия.' },
+      { id: 'rest', label: 'Отдых', hint: 'Микс будет самым щадящим.' }
+    ];
+	    const skinMeta = [
+	      { id: 'ok', label: 'Кожа ок', hint: 'Без дополнительного ограничения объёма.' },
+      { id: 'dry', label: 'Сухая', hint: 'Мягкий cap объёма.' },
+      { id: 'tender', label: 'Чувствит.', hint: 'Снизит объём тяжёлых хватов.' },
+      { id: 'sore', label: 'Болит кожа', hint: 'Сильно снизит объём.' },
+      { id: 'split', label: 'Трещина', hint: 'Оставит только щадящий объём.' },
+      { id: 'flapper', label: 'Срыв', hint: 'Максимально режет объём.' }
+    ];
     const currentLevelMeta = levelMeta.find(function (m) { return m.id === profile.level; });
     const assessmentLabels = {
       maxHang20mmHalf: 'Сила пальцев',
@@ -4301,10 +4649,40 @@
           return Object.assign({ id: id }, Fingers.assessment.TEST_BATTERY[id]);
         })
       : [];
-    const savedAssessmentCount = Object.keys(assessmentDraft || {}).filter(function (id) {
-      const r = assessmentDraft[id] || {};
-      return r.score != null || r.markers != null;
-    }).length;
+	    const savedAssessmentCount = Object.keys(assessmentDraft || {}).filter(function (id) {
+	      const r = assessmentDraft[id] || {};
+	      return r.score != null || r.markers != null;
+	    }).length;
+	    const progressionSnapshot = (function () {
+	      try {
+	        return Fingers.records && typeof Fingers.records.progressionSnapshot === 'function'
+	          ? Fingers.records.progressionSnapshot() : null;
+	      } catch (_) { return null; }
+	    })();
+	    const progressionRows = progressionSnapshot && progressionSnapshot.recordsByQuality
+	      ? Object.keys(progressionSnapshot.recordsByQuality).filter(function (q) {
+	          return Fingers.progression && Fingers.progression.POLICY && Fingers.progression.POLICY[q];
+	        })
+	      : [];
+	    const progressionLabels = {
+	      finger_strength: 'Сила пальцев',
+	      max_strength: 'Макс. сила',
+	      aerobic_base: 'Аэробная база',
+	      anaerobic_capacity: 'Анаэробная ёмкость',
+	      capacity: 'Ёмкость',
+	      power: 'Мощность',
+	      technique: 'Техника',
+	      antagonist: 'Антагонисты',
+	      mobility: 'Мобильность',
+	      mental: 'Психика'
+	    };
+	    const axisLabels = {
+	      volume: 'объём',
+	      density: 'плотность',
+	      edge: 'ребро',
+	      load: 'вес',
+	      speed: 'скорость'
+	    };
 
     function assessmentValue(id, key) {
       const r = (assessmentDraft && assessmentDraft[id]) || {};
@@ -4352,6 +4730,27 @@
         }
       });
     }
+
+	    function applyProfilePatch(patch, toastText) {
+	      const ok = Fingers.saveProfilePatch && Fingers.saveProfilePatch(patch);
+	      if (ok) {
+	        setProfileTick(function (v) { return v + 1; });
+	        if (HEYS.Toast && HEYS.Toast.success && toastText) HEYS.Toast.success(toastText);
+	      }
+	    }
+
+	    function saveProgressionAxis(quality, axis) {
+	      try {
+	        const ok = Fingers.records && Fingers.records.saveProgressionAxis
+	          && Fingers.records.saveProgressionAxis(quality, axis);
+	        if (ok) {
+	          setAxisTick(function (v) { return v + 1; });
+	          if (HEYS.Toast && HEYS.Toast.success) HEYS.Toast.success('Ось прогрессии сохранена');
+	        }
+	      } catch (e) {
+	        console.warn('[Fingers.Settings] progression axis save failed:', e);
+	      }
+	    }
 
     return h('div', {
       className: 'fingers-settings__backdrop',
@@ -4494,12 +4893,92 @@
               currentLevelMeta
                 ? currentLevelMeta.hint
                 : 'Уровень здесь — это опыт нагрузки на пальцы, а не максимальный грейд.'),
-            h('p', { className: 'fingers-settings__profile-hint' },
-              'Возраст определяет какие хваты безопасны (UIAA/BMC), вес — точный % MVC. ',
-              'Уровень влияет на подбор блоков нового движка.')
-          ),
+            h('div', { className: 'fingers-settings__row fingers-settings__row--stacked' },
+              h('div', { className: 'fingers-settings__row-text' },
+                h('div', { className: 'fingers-settings__row-label' }, 'Самочувствие сегодня'),
+                h('div', { className: 'fingers-settings__row-hint' },
+                  'Влияет на ceiling микса: максимум, умеренно или восстановление.')
+              ),
+              h('div', { className: 'fingers-settings__level-row fingers-settings__level-row--compact', role: 'group', 'aria-label': 'Самочувствие сегодня' },
+                readinessMeta.map(function (m) {
+                  const active = (profile.readinessOverride || '') === m.id;
+                  return h('button', {
+                    key: m.id || 'auto',
+                    type: 'button',
+                    className: 'fingers-settings__level-chip' + (active ? ' is-active' : ''),
+                    onClick: function () { applyProfilePatch({ readinessOverride: m.id || null }, 'Самочувствие сохранено'); },
+                    'aria-pressed': active,
+                    title: m.hint
+                  }, m.label);
+                })
+              )
+            ),
+            h('div', { className: 'fingers-settings__row fingers-settings__row--stacked' },
+              h('div', { className: 'fingers-settings__row-text' },
+                h('div', { className: 'fingers-settings__row-label' }, 'Кожа пальцев'),
+                h('div', { className: 'fingers-settings__row-hint' },
+                  'Влияет на мягкий cap объёма: плохая кожа укорачивает тяжёлую сессию.')
+              ),
+              h('div', { className: 'fingers-settings__level-row fingers-settings__level-row--compact', role: 'group', 'aria-label': 'Состояние кожи пальцев' },
+                skinMeta.map(function (m) {
+                  const active = (profile.skinStatus || 'ok') === m.id;
+                  return h('button', {
+                    key: m.id,
+                    type: 'button',
+                    className: 'fingers-settings__level-chip' + (active ? ' is-active' : ''),
+                    onClick: function () { applyProfilePatch({ skinStatus: m.id }, 'Состояние кожи сохранено'); },
+                    'aria-pressed': active,
+                    title: m.hint
+                  }, m.label);
+                })
+              )
+	            ),
+	            h('p', { className: 'fingers-settings__profile-hint' },
+	              'Возраст определяет какие хваты безопасны (UIAA/BMC), вес — точный % MVC. ',
+	              'Уровень влияет на подбор блоков нового движка.'),
+	            h('div', { className: 'fingers-settings__advisory' },
+	              h('strong', null, 'Вес и здоровье: '),
+	              'вес используется только для нормировки силы (%BW/%MVC). Приложение не назначает снижение веса; при признаках RED-S, усталости или нарушенного питания цель — снизить нагрузку и обратиться к специалисту.')
+	          ),
 
-          // ─── Assessment battery ───
+	          progressionRows.length
+	            ? h('section', { className: 'fingers-settings__section' },
+	                h('div', { className: 'fingers-settings__section-title' }, 'Оси прогрессии'),
+	                h('p', { className: 'fingers-settings__profile-hint', style: { marginTop: 0 } },
+	                  'Движок сравнивает последние сессии по качеству и не прыгает на более тяжёлую ось раньше времени. Меняй вручную только если этот уровень уже стабилен.'),
+	                h('div', { className: 'fingers-settings__axis-list' },
+	                  progressionRows.map(function (q) {
+	                    const policy = Fingers.progression.POLICY[q] || [];
+	                    const current = progressionSnapshot.currentAxes && progressionSnapshot.currentAxes[q];
+	                    const source = progressionSnapshot.axisSources && progressionSnapshot.axisSources[q];
+	                    const points = progressionSnapshot.qualitySources && progressionSnapshot.qualitySources[q]
+	                      ? progressionSnapshot.qualitySources[q].points : 0;
+	                    return h('div', { key: q, className: 'fingers-settings__axis-row' },
+	                      h('div', { className: 'fingers-settings__axis-head' },
+	                        h('span', { className: 'fingers-settings__row-label' }, progressionLabels[q] || q),
+	                        h('span', { className: 'fingers-settings__row-hint' },
+	                          points + ' сесс.; ' + (source === 'stored' ? 'выбрано вручную' : 'по умолчанию'))
+	                      ),
+	                      h('div', { className: 'fingers-settings__level-row fingers-settings__level-row--compact', role: 'group', 'aria-label': 'Ось прогрессии: ' + (progressionLabels[q] || q) },
+	                        policy.map(function (axis) {
+	                          const active = current === axis;
+	                          return h('button', {
+	                            key: axis,
+	                            type: 'button',
+	                            className: 'fingers-settings__level-chip' + (active ? ' is-active' : ''),
+	                            onClick: function () { saveProgressionAxis(q, axis); },
+	                            'aria-pressed': active,
+	                            title: 'Текущая ось влияет на то, какие блоки движок считает доступными.'
+	                          }, axisLabels[axis] || axis);
+	                        })
+	                      )
+	                    );
+	                  })
+	                )
+	              )
+	            : null,
+
+	          // ─── Assessment battery ───
           h('section', { className: 'fingers-settings__section' },
             h('div', { className: 'fingers-settings__section-title' }, 'Тесты'),
             h('p', { className: 'fingers-settings__profile-hint', style: { marginTop: 0 } },
@@ -4849,11 +5328,15 @@
           fingersLog,
           { activityLabel: pendingProgram?.name || 'Свой конструктор' }
         );
-        _bumpFingersDiaryVersion();
-        // §1.3 FDP/FDS ротация: фиксируем какие хваты реально тренировались,
-        // чтобы следующая генерация чередовала FDP/FDS. No-op если модуль/висов нет.
-        try { Fingers.edgeHistory?.recordSession?.(fingersLog); } catch (_) {}
-        // Toast только для manual-save (план). При завершении через таймер
+	        _bumpFingersDiaryVersion();
+	        // §1.3 FDP/FDS ротация: фиксируем какие хваты реально тренировались,
+	        // чтобы следующая генерация чередовала FDP/FDS. No-op если модуль/висов нет.
+	        try { Fingers.edgeHistory?.recordSession?.(fingersLog); } catch (_) {}
+	        // §1.6 S2 freshness: фиксируем high/max tissue-load для 48/72ч окна.
+	        try { Fingers.tissueHistory?.recordSession?.(fingersLog); } catch (_) {}
+	        // §1.2/§1.3 progression breadth: session-log proxy для non-MVC качеств.
+	        try { Fingers.records?.recordProgressionSession?.(fingersLog); } catch (_) {}
+	        // Toast только для manual-save (план). При завершении через таймер
         // показываем summary-карточку (см. ниже) — она сама подтверждает save.
         if (!o.viaTimer && HEYS.Toast?.success) {
           HEYS.Toast.success('План тренировки сохранён');

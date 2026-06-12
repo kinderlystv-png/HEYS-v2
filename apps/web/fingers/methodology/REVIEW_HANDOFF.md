@@ -5,6 +5,71 @@
 
 ---
 
+## Latest pass · 2026-06-12 · implementation-map closeout
+
+Этот блок — актуальный handoff после прохода по `IMPLEMENTATION_MAP.md`. Старые
+секции ниже оставлены как история ревью strangler, но часть их TODO уже закрыта
+последующими проходами.
+
+**Что реализовано в этом pass:**
+
+- **1.2 Progression live wiring:** `records.progressionSnapshot()` строит
+  `recordsByQuality` из MVC-history (`finger_strength`) и session-log proxy
+  остальных качеств, `engine_router._enrichOpts` прокидывает series/currentAxes,
+  builder реально применяет `_progressionAllowsAtom`. `saveProgressionAxis()` и
+  Settings «Оси прогрессии» сохраняют ручной выбор текущей оси.
+- **1.5 Skill balance:** если leading limiter = `technique`/`mental`, live
+  builder добавляет `skill-floor` через те же `_atomFits`/equipment/prereq
+  gates.
+- **1.6 Readiness/S2:** добавлен client-scoped `tissueHistory`; UI пишет
+  high/max tissue-load при сохранении сессии, router прокидывает `history+now`,
+  builder фильтрует S2 до выбора atom.
+- **6 Periodization:** UI-старт цикла создаёт `periodization` plan и mirror
+  legacy `mesocycle`; router читает `periodization.current()`, builder применяет
+  `plannerContext`; Today показывает forward-календарь
+  недель/фаз/ceiling/volume.
+- **8.2 Benchmarks:** runtime targets переведены на Berta et al. 2025 Table 3
+  weighted means: intermediate 70, advanced 87, elite 102% BW; Berta добавлен в
+  bibliography и показан как SourceBadge в тест-батарее.
+- **9.4/9.5 Safety explainability:** age/skin soft caps работают через
+  validators, Settings даёт `skinStatus` и RED-S/weight advisory без назначения
+  снижения веса.
+- **UI explainability:** MixCard показывает `coachReason`, exercise chips,
+  SourceBadge; MixTrace теперь выдерживает и legacy rich trace, и новый
+  sessionBuilder trace, показывает progression/S2/S4/MEV-MAV/danger/age-skin.
+
+**Что ревьюеру проверять первым:**
+
+1. Живые цепочки, а не наличие модулей: progression → builder, tissueHistory →
+   S2, periodization plan → plannerContext, assessment technique limiter →
+   skill-floor.
+2. Trace/modal compatibility: открыть 🧮 на live mix от `sessionBuilder`; он не
+   должен падать при отсутствии legacy fields
+   (`safety/constants/volume/dosing`).
+3. UI rule: каждый методологический фактор, влияющий на рекомендацию, должен
+   быть виден в `coachReason`, chips, MixTrace, Settings advisory или
+   SourceBadge.
+4. Остатки в карте должны остаться остатками: content photos for non-grip
+   exercises, optional Berta percentile UI. Это не hidden live-wiring: первое —
+   asset/content backlog, второе требует Supplementary decile Tables S2–S5,
+   которых нет в repo-data, поэтому процентили нельзя рисовать научно из текущих
+   данных.
+
+**Проверки уже пройдены:**
+
+- `pnpm exec vitest run ...` fingers subset: 16 files, 375 tests passed.
+- `node apps/web/fingers/methodology/tools/status-sync.mjs --check` — OK.
+- `node apps/web/fingers/methodology/tools/impl-coverage.mjs` — 61/61 coverage,
+  0 orphans, 28/28 questions resolved.
+- `git diff --check` — clean.
+
+**Не делалось намеренно:** bundle rebuild / `pnpm build` / commit / push. В
+рабочем дереве есть unrelated marketing/cloud changes; ревью fingers-scope лучше
+ограничивать `apps/web/fingers`, `apps/web/__tests__/fingers-*`,
+`apps/web/styles/modules/fingers.css`, `apps/web/scripts/bundle-fingers.cjs`.
+
+---
+
 ## 0. Как пользоваться этим файлом
 
 Ты — **code/methodology reviewer** между слоями strangler-fig рефактора движка

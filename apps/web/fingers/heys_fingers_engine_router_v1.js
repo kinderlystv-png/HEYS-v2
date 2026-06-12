@@ -327,6 +327,39 @@
       } catch (_) { /* silent */ }
     }
 
+    // B3 / methodology §1.2-1.3: live progression input.
+    // Builder уже умеет progression-cap, но ему нужна реальная series
+    // recordsByQuality. Берём её из records-store MVC history; explicit opts
+    // не трогаем, чтобы тесты/ручные сценарии могли задать свой источник.
+    if (!o.recordsByQuality) {
+      try {
+        const recordsStore = Fingers.records;
+        if (recordsStore && typeof recordsStore.progressionSnapshot === 'function') {
+          const snap = recordsStore.progressionSnapshot();
+          if (snap && snap.recordsByQuality) {
+            o.recordsByQuality = snap.recordsByQuality;
+            if (!o.currentAxes && snap.currentAxes) {
+              o.currentAxes = _seedProgressionAxesFromMaturity(snap.currentAxes, snap.axisSources, o);
+            }
+          }
+        }
+      } catch (_) { /* silent */ }
+    }
+
+    if (!Array.isArray(o.history)) {
+      try {
+        const tissueHistory = Fingers.tissueHistory;
+        if (tissueHistory && typeof tissueHistory.recent === 'function') {
+          const nowMs = (typeof o.now === 'number' && isFinite(o.now)) ? o.now : Date.now();
+          const hist = tissueHistory.recent({ nowMs: nowMs });
+          if (Array.isArray(hist) && hist.length) {
+            o.history = hist;
+            if (o.now === undefined) o.now = nowMs;
+          }
+        }
+      } catch (_) { /* silent */ }
+    }
+
     if (!o.plannerContext && !o.periodizationContext) {
       try {
         if (Fingers.periodization && typeof Fingers.periodization.current === 'function') {
@@ -337,6 +370,29 @@
     }
 
     return o;
+  }
+
+  function _levelRank(level) {
+    return ['beginner', 'intermediate', 'advanced', 'elite'].indexOf(level);
+  }
+
+  function _seedProgressionAxesFromMaturity(currentAxes, axisSources, opts) {
+    const axes = Object.assign({}, currentAxes || {});
+    const sources = axisSources || {};
+    if (sources.finger_strength !== 'default') return axes;
+
+    const o = opts || {};
+    const explicitLevel = (o.profile && o.profile.level) || o.level || null;
+    const prereqs = (o.profile && Array.isArray(o.profile.completedPrerequisites))
+      ? o.profile.completedPrerequisites : [];
+    const hasBase = prereqs.indexOf('base_>=1y') >= 0;
+    const matureByLevel = explicitLevel && _levelRank(explicitLevel) >= _levelRank('intermediate');
+
+    // MVC-history proves measured finger strength, not tissue age. We only seed
+    // load-axis from explicit maturity signals; MVC-derived level remains gated
+    // by builder S9 and does not get auto-upgraded here.
+    if (matureByLevel || hasBase) axes.finger_strength = 'load';
+    return axes;
   }
 
   // Primitive: вызов старого движка БЕЗ побочного эффекта на lastSource.

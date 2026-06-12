@@ -52,11 +52,11 @@ planner ещё не готов.** Знаниевый слой методолог
    `engineRouter.lastShadowDiff`/fallback-rate; прежний `mix_engine` остаётся
    fallback.
 2. **Phase-2 planning.** `periodization_engine` уже управляет интенсивностью дня
-   по фазе мезоцикла (B7: deload/taper/maintenance/dup clamp'ят `ceiling`).
-   Осталось: авто-выбор модели 6.4 (`selectModel`), transfer-sequencing M3,
-   enforcement смены переменной прогрессии (B3 пока advisory).
-3. **Assessment depth.** Бенчмарки Berta/IRCRA подключены как методология, но
-   полной тест-батареи и частоты ретеста в продукте ещё нет.
+   по фазе мезоцикла и получает live-plan из UI-старта цикла. Осталось:
+   forward-календарь/объяснение фаз в UI.
+3. **Assessment depth.** Тест-батарея, due/retest и MVC-графики есть; runtime
+   benchmark силы пальцев обновлён на Berta 2025 Table 3. Осталось:
+   percentile-UI по supplementary deciles S2–S5 и более широкие non-MVC нормы.
 
 ## Definition of Done для safe rollout
 

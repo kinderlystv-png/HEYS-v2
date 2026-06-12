@@ -35,18 +35,21 @@
   if (Fingers.__assessmentRegistered) return; // idempotent
   Fingers.__assessmentRegistered = true;
 
-  // ─── BENCHMARKS — §3.5 🟠 default-таблица ─────────────────────────────────────
-  // Только finger_strength имеет уровневую таблицу (1-arm pull, 20мм half-crimp,
-  // 7–10с, %BW). Остальные качества: CF/aerobic_base, W′/anaerobic_capacity —
-  // нет уровневых нормативов (§3.5), max_strength/power/mobility — нет открытых.
-  // Для них на первом тесте deficit=0; лимитер через flag-маркеры (§8.3).
-  // null означает «нет данных» → используем flag/нейтрально.
+  // ─── BENCHMARKS — §3.5 🟢 Berta 2025 baseline ─────────────────────────────────
+  // Только finger_strength имеет уровневую таблицу: MVC on rung, normalized to
+  // body mass. Berta et al. 2025 Table 3 даёт mean MVC %BW по IRCRA-группам и
+  // полу; ниже — sex-neutral weighted means по n (intermediate 70, advanced 87,
+  // elite 102). Supplementary deciles S2–S5 нужны для будущей percentile-UI, но
+  // runtime limiter использует один target на уровень. Остальные качества:
+  // CF/aerobic_base, W′/anaerobic_capacity — нет уровневых нормативов (§3.5),
+  // max_strength/power/mobility — нет открытых. Для них на первом тесте
+  // deficit=0; лимитер через flag-маркеры (§8.3). null = «нет данных».
   const BENCHMARKS = {
     finger_strength: {
       beginner: null,        // §3.5: нет данных, экстраполяция вниз недостоверна
-      intermediate: 58,      // V4–V7, середина 49–67%
-      advanced: 82,          // V8–V11, середина 73–91%
-      elite: 107             // V12+, середина 96–118%
+      intermediate: 70,      // Berta 2025 Table 3: (48×73 + 27×64) / 75
+      advanced: 87,          // Berta 2025 Table 3: (85×92 + 55×78) / 140
+      elite: 102             // Berta 2025 Table 3: (45×107 + 39×96) / 84
     },
     // Остальные q не имеют валидированных уровневых бенчмарков (§3.5):
     max_strength: { beginner: null, intermediate: null, advanced: null, elite: null },

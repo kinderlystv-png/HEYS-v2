@@ -43,23 +43,25 @@
   // Slot → quality(ies) приоритетных блоков из block_catalog. Порядок = приоритет.
   // 'max-strength' слот тянет finger_strength high-tissue (max-hang) ИЛИ
   // max_strength блок B; в нашем пуле fs приоритетнее для пальцев.
-  const SLOT_QUALITIES = {
-    'power':              ['power'],
-    'max-strength':       ['finger_strength', 'max_strength'],
-    'strength-endurance': ['finger_strength', 'anaerobic_capacity'],
-    'capacity':           ['aerobic_base', 'anaerobic_capacity'],
-    'antagonist':         ['antagonist']
-  };
+	  const SLOT_QUALITIES = {
+	    'power':              ['power'],
+	    'max-strength':       ['finger_strength', 'max_strength'],
+	    'strength-endurance': ['finger_strength', 'anaerobic_capacity'],
+	    'capacity':           ['aerobic_base', 'anaerobic_capacity'],
+	    'antagonist':         ['antagonist'],
+	    'skill':              ['technique', 'mental']
+	  };
 
   // Для 'max-strength' хотим high tissueLoad (max-hangs), для 'strength-endurance'
   // — moderate (repeaters). Различитель внутри одного quality.
-  const SLOT_TISSUE_PREF = {
-    'power':              ['moderate', 'high'],
-    'max-strength':       ['high', 'max'],
-    'strength-endurance': ['moderate'],
-    'capacity':           ['low'],
-    'antagonist':         ['low']
-  };
+	  const SLOT_TISSUE_PREF = {
+	    'power':              ['moderate', 'high'],
+	    'max-strength':       ['high', 'max'],
+	    'strength-endurance': ['moderate'],
+	    'capacity':           ['low'],
+	    'antagonist':         ['low'],
+	    'skill':              ['low']
+	  };
 
   // UI renderable doseShape (ревью #3 ограничение 2 / план B1.5 + Шаг 5):
   // UI player умеет рендерить все 6 doseShape из методологии:
@@ -104,7 +106,7 @@
     const m = num(mvcPctBW);
     if (m === null) return 'beginner';
     const BENCH = (Fingers.assessment && Fingers.assessment.BENCHMARKS.finger_strength) ||
-      { intermediate: 58, advanced: 82, elite: 107 };
+      { intermediate: 70, advanced: 87, elite: 102 };
     if (m < BENCH.intermediate) return 'beginner';
     if (m < BENCH.advanced) return 'intermediate';
     return 'advanced'; // cap: даже elite-MVC не выдаёт 'elite' из derive
@@ -420,6 +422,55 @@
     };
   }
 
+  function _enforceSoftModifiers(o, profile, exercises) {
+    const issues = [];
+    if (!Fingers.validators) {
+      return { enforced: false, drops: [], issues: issues, multiplier: 1, beforeFtl: _estimateSessionFtl(exercises, o || {}), afterFtl: _estimateSessionFtl(exercises, o || {}), targetFtl: null };
+    }
+    try {
+      if (typeof Fingers.validators.V_ageModifier === 'function') {
+        Fingers.validators.V_ageModifier(profile).forEach(function (i) { if (i.level !== 'ok') issues.push(i); });
+      }
+      if (typeof Fingers.validators.V_skinStatus === 'function') {
+        Fingers.validators.V_skinStatus(o || {}, profile).forEach(function (i) { if (i.level !== 'ok') issues.push(i); });
+      }
+    } catch (_) { /* advisory only */ }
+    const multipliers = issues.map(function (i) { return num(i && i.volumeMultiplier); })
+      .filter(function (m) { return m !== null && m > 0 && m < 1; });
+    const multiplier = multipliers.length ? Math.min.apply(null, multipliers) : 1;
+    const drops = [];
+    const beforeFtl = _estimateSessionFtl(exercises, o || {});
+    if (multiplier >= 1 || beforeFtl <= 0) {
+      return {
+        enforced: false, drops: drops, issues: issues, multiplier: multiplier,
+        beforeFtl: beforeFtl, afterFtl: beforeFtl, targetFtl: null
+      };
+    }
+    const target = Math.round(beforeFtl * multiplier * 10) / 10;
+    let after = beforeFtl;
+    for (let i = 0; i < S4_DROP_ORDER.length && after > target && exercises.length > 1; i++) {
+      const role = S4_DROP_ORDER[i];
+      const idx = exercises.findIndex(function (e) {
+        if (e.__role !== role) return false;
+        const atom = Fingers.blockCatalog && Fingers.blockCatalog.getAtom(e.atomId);
+        return atom && (atom.tissueLoad === 'high' || atom.tissueLoad === 'max');
+      });
+      if (idx < 0) continue;
+      const removed = exercises.splice(idx, 1)[0];
+      drops.push({ role: role, atomId: removed.atomId });
+      after = _estimateSessionFtl(exercises, o || {});
+    }
+    return {
+      enforced: drops.length > 0,
+      drops: drops,
+      issues: issues,
+      multiplier: multiplier,
+      beforeFtl: beforeFtl,
+      afterFtl: after,
+      targetFtl: target
+    };
+  }
+
   function totalDurationMin(exercises) {
     let totalSec = 0;
     for (let i = 0; i < exercises.length; i++) {
@@ -442,7 +493,7 @@
     return 'На сегодня подобрана ' + focus + ': ' + count + ' упражн. примерно на ' + duration + ' мин.';
   }
 
-  function _buildCoachReason(bucket, sessionInt, requiresWarmup, levelIsExplicit, bucketCapReason, plannerCapReason, plannerVolumeTrace, s4Trace, qualityBandTrace, exercises) {
+  function _buildCoachReason(bucket, sessionInt, requiresWarmup, levelIsExplicit, bucketCapReason, plannerCapReason, plannerVolumeTrace, s4Trace, qualityBandTrace, exercises, progressionConstraints, tissueFreshnessTrace, softModifierTrace) {
     const parts = [];
     if (bucketCapReason === 'beginner_max_to_moderate') {
       parts.push('Нагрузка снижена до умеренной: пока нет подтвержденного опыта для максимальной работы.');
@@ -473,6 +524,21 @@
     }
     if (qualityBandTrace && qualityBandTrace.underMev && qualityBandTrace.underMev.length > 0) {
       parts.push('По части качеств неделя пока ниже минимального полезного объема.');
+    }
+    if (progressionConstraints) {
+      parts.push('История тестов учтена: прогрессия не перепрыгивает через текущую ось нагрузки.');
+    }
+    if (tissueFreshnessTrace && tissueFreshnessTrace.blocked > 0) {
+      parts.push('Свежесть тканей учтена: часть тяжелых вариантов убрана после недавней нагрузки.');
+    }
+    if (softModifierTrace && softModifierTrace.enforced) {
+      parts.push('Объем снижен по возрасту или состоянию кожи.');
+    }
+    if (exercises.some(function (e) { return e.__role === 'transfer'; })) {
+      parts.push('Добавлен блок применения: сила с фингерборда должна переноситься в движение на стене или борде.');
+    }
+    if (exercises.some(function (e) { return e && (e.__role === 'skill' || e.quality === 'technique'); })) {
+      parts.push('Сохранён навык: техника не вытесняется силовым блоком.');
     }
     if (exercises.some(function (e) { return e.__role === 'antagonist' || e.__role === 'mobility'; })) {
       parts.push('В конце добавлена работа на баланс и подвижность.');
@@ -605,6 +671,22 @@
     return atom.gripId + ':' + atom.edgeSizeMm;
   }
 
+  function _recordTissueFilter(opts, atom) {
+    if (!opts || !opts.filterTrace || !atom) return;
+    const t = opts.filterTrace.tissueFreshness || (opts.filterTrace.tissueFreshness = {
+      checked: false,
+      blocked: 0,
+      byQuality: Object.create(null),
+      byGripGroup: Object.create(null)
+    });
+    t.checked = true;
+    t.blocked += 1;
+    if (atom.quality) t.byQuality[atom.quality] = (t.byQuality[atom.quality] || 0) + 1;
+    const grip = atom.gripId && Fingers.GRIPS_BY_ID ? Fingers.GRIPS_BY_ID[atom.gripId] : null;
+    const group = (grip && grip.group) || (atom.gripId ? 'unknown' : atom.modality || 'general');
+    t.byGripGroup[group] = (t.byGripGroup[group] || 0) + 1;
+  }
+
   // Выбрать первый подходящий атом для слота. Порядок атомов в block_catalog
   // зафиксирован (= порядок в PROTOCOL_POOL) → детерминизм без random.
   // usedGripEdge — set ключей grip+edge, уже выбранных в этой сессии (ревью #7
@@ -635,6 +717,26 @@
       return _progressionAllowsAtom(a, opts.progressionConstraints);
     }
 
+    function s2Fresh(a) {
+      if (!Array.isArray(opts.history) || !Fingers.validators ||
+          typeof Fingers.validators.S2_tissueFreshness !== 'function') {
+        return true;
+      }
+      if (opts.filterTrace) {
+        const t = opts.filterTrace.tissueFreshness || (opts.filterTrace.tissueFreshness = {
+          checked: false,
+          blocked: 0,
+          byQuality: Object.create(null),
+          byGripGroup: Object.create(null)
+        });
+        t.checked = true;
+      }
+      const r = Fingers.validators.S2_tissueFreshness(a, opts.history, opts.now);
+      const ok = !r.some(function (i) { return i && i.level === 'error'; });
+      if (!ok) _recordTissueFilter(opts, a);
+      return ok;
+    }
+
     function fitsEnvelope(a) {
       // Pre-flip duration envelope: pow_rfd_pulls is a valid methodology atom,
       // but in block-only max sessions it adds 15-25 attempts × 150s rest as a
@@ -654,6 +756,7 @@
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
         if (!progressionAllowed(a)) continue;
+        if (!s2Fresh(a)) continue;
         if (!notDuplicate(a)) continue;
         if (_atomFits(a, profile, allowed)) return a;
       }
@@ -670,6 +773,7 @@
           if (a.tissueLoad !== tissue) continue;
           if (!fitsEnvelope(a)) continue;
           if (!progressionAllowed(a)) continue;
+          if (!s2Fresh(a)) continue;
           if (!notDuplicate(a)) continue;
           if (_atomFits(a, profile, allowed)) return a;
         }
@@ -683,6 +787,7 @@
         const a = candidates[k];
         if (!fitsEnvelope(a)) continue;
         if (!progressionAllowed(a)) continue;
+        if (!s2Fresh(a)) continue;
         if (!notDuplicate(a)) continue;
         if (_atomFits(a, profile, allowed)) return a;
       }
@@ -701,6 +806,11 @@
       __role: role,
       atomId: atom.id,
       name: atom.id, // плейсхолдер; ui-friendly название — отдельный слой
+      quality: atom.quality || null,
+      energySystem: atom.energySystem || null,
+      tissueLoad: atom.tissueLoad || null,
+      dangerLevel: atom.dangerLevel || null,
+      progressionAxis: _atomProgressionAxis(atom),
       modality: atom.modality,
       gripId: atom.gripId || null,
       edgeSizeMm: atom.edgeSizeMm || null,
@@ -872,6 +982,7 @@
       age: ageNum,
       level: effectiveLevel,
       painFlag: (baseProfile.painFlag != null) ? baseProfile.painFlag : (o.painFlag || null),
+      skinStatus: (baseProfile.skinStatus != null) ? baseProfile.skinStatus : (o.skinStatus || null),
       completedPrerequisites: allCreds
     });
 
@@ -881,6 +992,7 @@
     const exercises = [];
     const safetyTrace = { picks: [], issues: [] };
     const progressionConstraints = _buildProgressionConstraints(o);
+    const filterTrace = {};
     // Ревью #7: дедуп grip+edge внутри сессии — зеркало legacy mix_engine
     // `ctx.usedGripEdge`. Без этого max-strength слот мог упасть на тот же
     // grip+edge что fs_repeater_73 → дубль атома (видно в shadow snapshot'е).
@@ -893,7 +1005,8 @@
     slots.forEach(function (slot) {
       const atom = _pickAtomForSlot(slot, Object.assign({}, o, {
         profile: profile,
-        progressionConstraints: progressionConstraints
+        progressionConstraints: progressionConstraints,
+        filterTrace: filterTrace
       }), usedGripEdge);
       if (atom) {
         exercises.push(_materializeExercise(atom, slot));
@@ -954,7 +1067,8 @@
     if ((bucket === 'max' || bucket === 'moderate') && !hasRole('antagonist')) {
       const antAtom = _pickAtomForSlot('antagonist', Object.assign({}, o, {
         profile: profile,
-        progressionConstraints: progressionConstraints
+        progressionConstraints: progressionConstraints,
+        filterTrace: filterTrace
       }), usedGripEdge);
       if (antAtom) {
         exercises.push(_materializeExercise(antAtom, 'antagonist'));
@@ -962,18 +1076,37 @@
         _trackPick(antAtom);
       }
     }
-    if (bucket === 'max' && Fingers.blockCatalog) {
-      // Mobility-floor: добавляем 1 атом из block H в конец.
-      const mob = Fingers.blockCatalog.atomsByBlock('H').find(function (a) {
-        return _atomFits(a, profile, _allowedModalities(o.equipmentTypes || ['full']));
-      });
-      if (mob) {
-        exercises.push(_materializeExercise(mob, 'mobility'));
-        safetyTrace.picks.push({ slot: 'mobility-floor', atomId: mob.id });
-      }
-    }
+	    if (bucket === 'max' && Fingers.blockCatalog) {
+	      // Mobility-floor: добавляем 1 атом из block H в конец.
+	      const mob = Fingers.blockCatalog.atomsByBlock('H').find(function (a) {
+	        return _atomFits(a, profile, _allowedModalities(o.equipmentTypes || ['full']));
+	      });
+	      if (mob) {
+	        exercises.push(_materializeExercise(mob, 'mobility'));
+	        safetyTrace.picks.push({ slot: 'mobility-floor', atomId: mob.id });
+	      }
+	    }
+	    // §1.5: если assessment ведёт в technique/mental, не превращаем день в
+	    // «только железо». Это floor, не замена safety: тот же `_atomFits`, те же
+	    // prerequisites/equipment, fail-safe без skill-атома.
+	    const skillFocus = o.focusQuality === 'technique' || o.focusQuality === 'mental';
+	    const hasSkillQuality = exercises.some(function (e) {
+	      return e && (e.quality === 'technique' || e.quality === 'mental');
+	    });
+	    if (skillFocus && !hasSkillQuality) {
+	      const skillAtom = _pickAtomForSlot('skill', Object.assign({}, o, {
+	        profile: profile,
+	        progressionConstraints: progressionConstraints,
+	        filterTrace: filterTrace
+	      }), usedGripEdge);
+	      if (skillAtom) {
+	        exercises.push(_materializeExercise(skillAtom, 'skill'));
+	        safetyTrace.picks.push({ slot: 'skill-floor', atomId: skillAtom.id });
+	        _trackPick(skillAtom);
+	      }
+	    }
 
-    // ── Explicit safety validators (не через runAll presence-dispatch) ──────────
+	    // ── Explicit safety validators (не через runAll presence-dispatch) ──────────
     // S1 на каждом атоме сессии.
     exercises.forEach(function (ex) {
       const atom = Fingers.blockCatalog.getAtom(ex.atomId);
@@ -1021,6 +1154,8 @@
     // MAV enforcement: quality-specific weekly TUT caps first, then S4 global FTL.
     const mavTrace = _enforceQualityMav(o, exercises);
     const plannerVolumeTrace = _enforcePlannerVolume(o, exercises, plannerContext);
+    const softModifierTrace = _enforceSoftModifiers(o, profile, exercises);
+    softModifierTrace.issues.forEach(function (i) { safetyTrace.issues.push(i); });
     if (exercises.length === 0) return null;
 
     // S4 enforcement: если кандидатная сессия пробивает недельный FTL-cap
@@ -1058,7 +1193,7 @@
       __from: 'sessionBuilder_v1', // legacy alias (для существующих router-тестов)
       name: 'Сессия по методологии',
       description: _buildDescription(bucket, sessionInt, duration, exercises),
-      coachReason: _buildCoachReason(bucket, sessionInt, requiresWarmup, levelIsExplicit, bucketCapReason, plannerCapReason, plannerVolumeTrace, s4Trace, qualityBandTrace, exercises),
+      coachReason: _buildCoachReason(bucket, sessionInt, requiresWarmup, levelIsExplicit, bucketCapReason, plannerCapReason, plannerVolumeTrace, s4Trace, qualityBandTrace, exercises, progressionConstraints, filterTrace.tissueFreshness, softModifierTrace),
       level: 'mixed',
       durationMin: duration,
       intensity: sessionInt,
@@ -1092,7 +1227,9 @@
           slotsTemplate: slots.slice(), slotsSource: intensityOverride ? 'legacy-intensity' : 'bucket',
           s4DroppedSlots: s4Trace.drops,
           progression: progressionConstraints,
-          plannerVolume: plannerVolumeTrace
+          tissueFreshness: filterTrace.tissueFreshness || null,
+          plannerVolume: plannerVolumeTrace,
+          softModifiers: softModifierTrace
         },
         slots: safetyTrace.picks,
         s4: {

@@ -90,4 +90,27 @@ describe('Fingers profile store', () => {
     expect(Fingers.getProfile().level).toBeNull();
     expect(Fingers.getProfile().completedPrerequisites).toEqual([]);
   });
+
+  it('normalizes readinessOverride and skinStatus enums', () => {
+    const { store, Fingers } = boot({
+      fingerboardProfile: {
+        readinessOverride: 'max',
+        skinStatus: 'flapper'
+      }
+    });
+
+    expect(Fingers.getProfile().readinessOverride).toBe('max');
+    expect(Fingers.getProfile().skinStatus).toBe('flapper');
+
+    expect(Fingers.saveProfilePatch({
+      readinessOverride: 'too-hard',
+      skinStatus: 'unknown'
+    })).toBe(true);
+
+    const saved = store.get('heys_profile').fingerboardProfile;
+    expect(saved.readinessOverride).toBeNull();
+    expect(saved.skinStatus).toBeNull();
+    expect(Fingers.getProfile().readinessOverride).toBeNull();
+    expect(Fingers.getProfile().skinStatus).toBeNull();
+  });
 });

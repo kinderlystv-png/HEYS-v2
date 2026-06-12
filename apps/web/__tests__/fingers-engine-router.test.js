@@ -10,6 +10,27 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const FINGERS_DIR = path.resolve(__dirname, '..', 'fingers');
 
+const loadModule = (f) => {
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(FINGERS_DIR, f), 'utf8'));
+};
+
+const createStorageMock = () => {
+  const store = {};
+  return {
+    get length() { return Object.keys(store).length; },
+    key: (i) => Object.keys(store)[i] ?? null,
+    getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  };
+};
+
+const wRec = (mvcKg, addedKg, testedAt) => ({
+  type: 'weight', mvcKg, addedKg, bw: 70, holdTime: 7, testedAt, source: 'calibration',
+});
+
 const setupOnce = () => {
   if (!globalThis.window) globalThis.window = globalThis;
   globalThis.window.HEYS = globalThis.HEYS = {};
@@ -18,17 +39,17 @@ const setupOnce = () => {
     useState: (i) => [typeof i === 'function' ? i() : i, () => {}],
     useMemo: (fn) => fn(), useEffect: () => {}, useCallback: (fn) => fn, useRef: (i) => ({ current: i }),
   };
-  const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(FINGERS_DIR, f), 'utf8')); };
-  ev('heys_fingers_grips_catalog_v1.js');
-  ev('heys_fingers_programs_catalog_v1.js');
-  ev('heys_fingers_age_gating_v1.js');
-  ev('heys_fingers_mix_engine_v1.js');
-  ev('heys_fingers_periodization_engine_v1.js');
-  ev('heys_fingers_engine_router_v1.js');
+  loadModule('heys_fingers_grips_catalog_v1.js');
+  loadModule('heys_fingers_programs_catalog_v1.js');
+  loadModule('heys_fingers_age_gating_v1.js');
+  loadModule('heys_fingers_mix_engine_v1.js');
+  loadModule('heys_fingers_periodization_engine_v1.js');
+  loadModule('heys_fingers_engine_router_v1.js');
 };
 
 const F = () => globalThis.HEYS.Fingers;
 const R = () => globalThis.HEYS.Fingers.engineRouter;
+const FULL_PREREQS = ['warmup_done', 'base_>=1y', 'base_>=2y', 'strength_base'];
 
 describe('engineRouter: флаг и default', () => {
   beforeAll(setupOnce);
@@ -363,6 +384,44 @@ describe('engineRouter: plumbing Гейта #1 (ревью #8) — enrichment op
     expect(enriched.focusQuality).toBeUndefined();
   });
 
+  it('records.progressionSnapshot → recordsByQuality/currentAxes в live opts', () => {
+    const series = [{ ts: 1, value: 1 }, { ts: 2, value: 1.05 }, { ts: 3, value: 1.1 }];
+    F().records = {
+      progressionSnapshot: () => ({
+        recordsByQuality: { finger_strength: series },
+        currentAxes: { finger_strength: 'volume' }
+      })
+    };
+    const enriched = R()._enrichOpts({ age: 30, level: 'intermediate' });
+    expect(enriched.recordsByQuality.finger_strength).toBe(series);
+    expect(enriched.currentAxes.finger_strength).toBe('volume');
+  });
+
+  it('explicit recordsByQuality/currentAxes не перезаписываются progressionSnapshot', () => {
+    const explicit = [{ ts: 9, value: 9 }];
+    F().records = {
+      progressionSnapshot: () => ({
+        recordsByQuality: { finger_strength: [{ ts: 1, value: 1 }] },
+        currentAxes: { finger_strength: 'volume' }
+      })
+    };
+    const enriched = R()._enrichOpts({
+      age: 30,
+      level: 'intermediate',
+      recordsByQuality: { finger_strength: explicit },
+      currentAxes: { finger_strength: 'load' }
+    });
+    expect(enriched.recordsByQuality.finger_strength).toBe(explicit);
+    expect(enriched.currentAxes.finger_strength).toBe('load');
+  });
+
+  it('progressionSnapshot throws/null → fail-safe, opts не ломаются', () => {
+    F().records = { progressionSnapshot: () => { throw new Error('bad history'); } };
+    expect(() => R()._enrichOpts({ age: 30, level: 'intermediate' })).not.toThrow();
+    const enriched = R()._enrichOpts({ age: 30, level: 'intermediate' });
+    expect(enriched.recordsByQuality).toBeUndefined();
+  });
+
   it('enrichment безопасна: исключения в источниках не валят', () => {
     F().records = { getMVC: () => { throw new Error('LS corrupted'); } };
     F().getBodyWeight = () => { throw new Error('profile null'); };
@@ -383,6 +442,151 @@ describe('engineRouter: plumbing Гейта #1 (ревью #8) — enrichment op
     const viaRouter = R().recommendDay(opts);
     expect(viaRouter.intensity).toBe(direct.intensity);
     expect(viaRouter.exercises.length).toBe(direct.exercises.length);
+  });
+});
+
+describe('engineRouter: live progression-cap через records snapshot', () => {
+  beforeAll(() => {
+    setupOnce();
+    loadModule('heys_fingers_quality_catalog_v1.js');
+    loadModule('heys_fingers_block_catalog_v1.js');
+    loadModule('heys_fingers_validators_v1.js');
+    loadModule('heys_fingers_progression_v1.js');
+    loadModule('heys_fingers_assessment_v1.js');
+    loadModule('heys_fingers_tissue_history_v1.js');
+    loadModule('heys_fingers_session_builder_v1.js');
+    loadModule('heys_fingers_session_ui_v1.js');
+  });
+
+  beforeEach(() => {
+    F().flags.newEngine = true;
+    F().flags.shadowCompare = false;
+    globalThis.localStorage = createStorageMock();
+    globalThis.window.localStorage = globalThis.localStorage;
+    delete F().records;
+    R().resetTelemetry();
+  });
+
+  const maxStrengthAtom = (session) => {
+    const ex = session && session.exercises && session.exercises.find((e) => e.__role === 'max-strength');
+    return ex && ex.atomId;
+  };
+
+  it('live recordsByQuality меняет выбор атома: load без истории, volume-cap с историей', () => {
+    const opts = {
+      equipmentTypes: ['full'],
+      age: 30,
+      readiness: 'max',
+      profile: { age: 30, level: 'advanced', completedPrerequisites: FULL_PREREQS.slice() },
+      focusQuality: 'finger_strength'
+    };
+
+    const withoutHistory = R().recommendDay(opts);
+    expect(R().lastSource).toBe('new');
+    expect(maxStrengthAtom(withoutHistory)).toBe('fs_maxhang_20mm_half');
+    expect(withoutHistory.__progressionHints).toBe(null);
+
+    F().records = {
+      progressionSnapshot: () => ({
+        recordsByQuality: {
+          finger_strength: [
+            { ts: 1, value: 1.0 },
+            { ts: 2, value: 1.08 },
+            { ts: 3, value: 1.16 }
+          ]
+        },
+        currentAxes: { finger_strength: 'volume' }
+      })
+    };
+
+    const withHistory = R().recommendDay(opts);
+    expect(R().lastSource).toBe('new');
+    expect(maxStrengthAtom(withHistory)).toBe('fs_repeater_73');
+    expect(withHistory.__progressionHints.finger_strength.action).toBe('keep');
+    expect(withHistory.__trace.resolution.progression.finger_strength.allowedAxis).toBe('volume');
+  });
+
+  it('реальная MVC-history не запирает explicit intermediate ниже max-hang', () => {
+    loadModule('heys_fingers_records_store_v1.js');
+    F().records.updateIfPR('halfcrimp', 20, wRec(70, 0, '2026-06-01T10:00:00Z'));
+    F().records.updateIfPR('halfcrimp', 20, wRec(76, 6, '2026-06-03T10:00:00Z'));
+    F().records.updateIfPR('halfcrimp', 20, wRec(82, 12, '2026-06-05T10:00:00Z'));
+
+    const session = R().recommendDay({
+      equipmentTypes: ['full'],
+      age: 30,
+      readiness: 'max',
+      profile: { age: 30, level: 'intermediate' },
+      focusQuality: 'finger_strength'
+    });
+
+    expect(R().lastSource).toBe('new');
+    expect(maxStrengthAtom(session)).toBe('fs_maxhang_20mm_half');
+    expect(session.__trace.resolution.progression.finger_strength.allowedAxis).toBe('load');
+  });
+
+  it('реальная tissueHistory защищает S2: свежий crimp high-load убирает halfcrimp max-hang без fallback', () => {
+    const now = Date.parse('2026-06-12T10:00:00Z');
+    const opts = {
+      equipmentTypes: ['full'],
+      age: 30,
+      readiness: 'max',
+      now: now,
+      profile: { age: 30, level: 'intermediate' },
+      focusQuality: 'finger_strength'
+    };
+
+    F().tissueHistory.clear();
+    const withoutHistory = R().recommendDay(opts);
+    expect(R().lastSource).toBe('new');
+    expect(maxStrengthAtom(withoutHistory)).toBe('fs_maxhang_20mm_half');
+
+    F().tissueHistory.recordSession({
+      exercises: [{ atomId: 'fs_maxhang_20mm_half' }]
+    }, now - 12 * 3600 * 1000);
+
+    const withHistory = R().recommendDay(opts);
+    expect(R().lastSource).toBe('new');
+    expect(withHistory).not.toBeNull();
+    expect(maxStrengthAtom(withHistory)).not.toBe('fs_maxhang_20mm_half');
+    expect(withHistory.__safetyTrace.issues.some((i) => i.code === 'S2.fresh_tissue_violation')).toBe(false);
+  });
+
+  it('старт цикла в UI создаёт periodization plan, который live-router применяет как plannerContext', () => {
+    globalThis.HEYS.utils = {
+      lsGet: (k, d) => {
+        const raw = globalThis.localStorage.getItem(k);
+        return raw ? JSON.parse(raw) : d;
+      },
+      lsSet: (k, v) => { globalThis.localStorage.setItem(k, JSON.stringify(v)); return true; }
+    };
+    globalThis.HEYS.utils.lsSet('heys_profile', {
+      age: 30,
+      fingerboardProfile: {
+        age: 30,
+        level: 'intermediate',
+        equipmentTypes: ['full', 'none'],
+        completedPrerequisites: FULL_PREREQS.slice()
+      }
+    });
+
+    expect(F().mesocycle.start(4, { startedAt: '2026-05-15' })).toBe(true);
+    expect(F().periodization.loadPlan().startedAt).toBe('2026-05-15');
+    expect(F().periodization.current(null, '2026-06-05').phase).toBe('deload');
+
+    const session = R().recommendDay({
+      equipmentTypes: ['full'],
+      age: 30,
+      readiness: 'max',
+      dateKey: '2026-06-05',
+      profile: { age: 30, level: 'intermediate', completedPrerequisites: FULL_PREREQS.slice() },
+      focusQuality: 'finger_strength'
+    });
+
+    expect(R().lastSource).toBe('new');
+    expect(session.intensity).toBe('recovery');
+    expect(session.__trace.inputs.plannerPhase).toBe('deload');
+    expect(session.__trace.resolution.plannerCapReason).toBe('deload');
   });
 });
 

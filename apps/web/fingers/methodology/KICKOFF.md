@@ -17,16 +17,16 @@
 | Раздел               | Метод. | Движок | UI  |
 | -------------------- | :----: | :----: | :-: |
 | 0. Сводка школ       |   ✅   |   ✅   |  —  |
-| 1. Принципы          |   ✅   |   🟡   | 🟡  |
-| 2. 9 качеств         |   ✅   |   ✅   | 🟡  |
-| 3. Физиология        |   ✅   |   ✅   | 🟡  |
-| 4. Каталог A–I       |   ✅   |   ✅   | ✅  |
+| 1. Принципы          |   ✅   |   ✅   | ✅  |
+| 2. 9 качеств         |   ✅   |   ✅   | ✅  |
+| 3. Физиология        |   ✅   |   ✅   | ✅  |
+| 4. Каталог A–I       |   ✅   |   ✅   | 🟡  |
 | 5. Протоколы         |   ✅   |   ✅   | ✅  |
-| 6. Периодизация      |   ✅   |   🟡   | ⬜  |
+| 6. Периодизация      |   ✅   |   ✅   | ✅  |
 | 7. Уровни            |   ✅   |   ✅   | ✅  |
-| 8. Тесты / бенчмарки |   ✅   |   🟡   | ✅  |
+| 8. Тесты / бенчмарки |   ✅   |   ✅   | ✅  |
 | 9. Безопасность      |   ✅   |   ✅   | ✅  |
-| 10. Источники        |   ✅   |   ✅   | 🟡  |
+| 10. Источники        |   ✅   |   ✅   | ✅  |
 
 **Поставка:** движок + UI всех 6 doseShape включены через `flags.newEngine=true`
 по default с fail-safe fallback на legacy. Безопасность и рендер рабочие;
@@ -129,15 +129,17 @@ pnpm dev:local       # API:4001 + web:3001 — увидеть режим
   `fingers-periodization`+`fingers-mesocycle`. **Осталось Фаза 2:** авто-выбор
   модели 6.4 (`selectModel(формат×лимитер)` — сейчас `model` задаётся вручную),
   transfer-sequencing M3.
-- **Enforcement прогрессии/вариативности (Фаза 2)** — `progression` (B3) сейчас
-  только advisory-hints в `sessionBuilder`; завести влияние на генерацию (смена
-  переменной по `detectPlateau`/`nextAxis`).
-- **Фаза 2 homed-items** (см. IMPLEMENTATION*MAP «Заметки целостности»):
+- **Enforcement прогрессии/вариативности (Фаза 2)** ✅: `recordsByQuality`
+  доезжает в builder: `finger_strength` из MVC-history, остальные качества из
+  session-log proxy; axis-cap реально меняет выбор, `saveProgressionAxis()` +
+  Settings сохраняют ручную текущую ось.
+- **Фаза 2 homed-items** (см. IMPLEMENTATION_MAP «Заметки целостности»):
   `V_skillBalance`, `V_energySystemSequence`, `skinStatus`, `ageModifier` 35+,
-  density-hang явный energySystem. *(FDP/FDS edge-ротация — ✅ 2026-06-11:
-  `edge_history` + `session_builder` ротация.)\_
-- **🟢-апгрейд числбазы:** достать supplementary Berta 2025 (Tables S2–S5) для
-  замены 🟠-дефолт-бенчмарков §3.5.
+  density-hang явный energySystem и FDP/FDS edge-ротация — ✅. Осталось UI для
+  forward-календаря/source popovers и расширение explainability.
+- **🟢-апгрейд числбазы:** runtime-бенчмарки §3.5 переведены на Berta 2025 Table
+  3 weighted means (70/87/102% BW). Supplementary Tables S2–S5 — будущая
+  percentile-UI, не блокер scoring.
 
 ## Следующее конкретное действие
 

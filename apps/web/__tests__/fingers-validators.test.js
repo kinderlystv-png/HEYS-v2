@@ -444,6 +444,30 @@ describe('V_skillBalance', () => {
   });
 });
 
+describe('V_ageModifier / V_skinStatus', () => {
+  beforeAll(setupOnce);
+
+  it('35+ даёт мягкий volumeMultiplier, не hard-error', () => {
+    const r = V().V_ageModifier({ age: 45 });
+    expect(r[0].code).toBe('V.age.35plus_modifier');
+    expect(r[0].level).toBe('warn');
+    expect(r[0].volumeMultiplier).toBeLessThan(1);
+  });
+
+  it('normal skin проходит без ограничения', () => {
+    const r = V().V_skinStatus({ skinStatus: 'ok' });
+    expect(r[0].code).toBe('V.skin.pass');
+    expect(r[0].volumeMultiplier).toBe(1);
+  });
+
+  it('flapper даёт мягкий cap объёма', () => {
+    const r = V().V_skinStatus({ skinStatus: 'flapper' });
+    expect(r[0].code).toBe('V.skin.volume_cap');
+    expect(r[0].level).toBe('warn');
+    expect(r[0].volumeMultiplier).toBe(0.5);
+  });
+});
+
 describe('runAll — оркестратор', () => {
   beforeAll(setupOnce);
 

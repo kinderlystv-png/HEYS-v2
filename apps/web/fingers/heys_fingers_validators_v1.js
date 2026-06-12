@@ -19,6 +19,8 @@
 //   HEYS.Fingers.validators.V_sessionOrder(session)               — порядок power→endurance→ant
 //   HEYS.Fingers.validators.V_energySystemSequence(mesocycle)     — сила→ёмкость→аэробика
 //   HEYS.Fingers.validators.V_skillBalance(week, level)           — железо ≤ skill-доля
+//   HEYS.Fingers.validators.V_ageModifier(profile)                — 35+ мягкий объёмный модификатор
+//   HEYS.Fingers.validators.V_skinStatus(input/profile)           — кожа как мягкий cap объёма
 //   HEYS.Fingers.validators.runAll(input, profile, history)       — прогон всех применимых
 
 ;(function (global) {
@@ -426,6 +428,45 @@
     return [ok('V.skill.pass', 'баланс навык/железо в норме', { skillFraction: skillFraction })];
   }
 
+  // ─── V_ageModifier / V_skinStatus (homed integrity notes) ─────────────────────
+  // 35+ и кожа — не hard-gate: это практический advisory и мягкий объёмный cap.
+  // Движок может читать `volumeMultiplier`, UI может показать reason.
+  function V_ageModifier(profile) {
+    if (!profile || typeof profile !== 'object')
+      return [ok('V.age.na', 'нет профиля: возрастной модификатор пропущен')];
+    const age = num(profile.age);
+    if (age === null) return [ok('V.age.na', 'возраст не задан: модификатор пропущен')];
+    if (age < 35) return [ok('V.age.pass', 'возрастной модификатор не нужен', { age: age, volumeMultiplier: 1 })];
+    const multiplier = age >= 55 ? 0.75 : (age >= 45 ? 0.85 : 0.9);
+    return [warn('V.age.35plus_modifier',
+      '35+: мягко снижаем объём пальцевой нагрузки и следим за восстановлением',
+      { age: age, volumeMultiplier: multiplier })];
+  }
+
+  const SKIN_MULTIPLIER = {
+    dry: 0.9,
+    tender: 0.85,
+    sore: 0.75,
+    split: 0.6,
+    flapper: 0.5
+  };
+  function V_skinStatus(input, profile) {
+    const src = input || profile || {};
+    const status = src && typeof src.skinStatus === 'string' ? src.skinStatus : null;
+    if (!status || status === 'ok' || status === 'normal') {
+      return [ok('V.skin.pass', 'кожа без ограничений', { skinStatus: status || null, volumeMultiplier: 1 })];
+    }
+    const multiplier = SKIN_MULTIPLIER[status];
+    if (typeof multiplier !== 'number') {
+      return [warn('V.skin.unknown_status',
+        'статус кожи неизвестен: не усиливаем нагрузку',
+        { skinStatus: status, volumeMultiplier: 0.9 })];
+    }
+    return [warn('V.skin.volume_cap',
+      'кожа ограничивает объём: лучше укоротить пальцевую нагрузку',
+      { skinStatus: status, volumeMultiplier: multiplier })];
+  }
+
   // ─── runAll — оркестратор для типичного contextset ────────────────────────────
   // Запускает применимые валидаторы по входу. Возвращает плоский массив Issue[].
   function runAll(input, profile, history) {
@@ -452,6 +493,10 @@
     if (input && input.week && profile) {
       all.push.apply(all, V_skillBalance(input.week, profile.level));
     }
+    if (profile) {
+      all.push.apply(all, V_ageModifier(profile));
+      all.push.apply(all, V_skinStatus(input, profile));
+    }
     if (input && input.ftl && typeof input.ftl.week === 'number') {
       all.push.apply(all, S4_progressionCap(input.ftl.week, input.ftl.trailingAvg));
     }
@@ -475,6 +520,8 @@
     V_sessionOrder: V_sessionOrder,
     V_energySystemSequence: V_energySystemSequence,
     V_skillBalance: V_skillBalance,
+    V_ageModifier: V_ageModifier,
+    V_skinStatus: V_skinStatus,
     runAll: runAll
   };
 

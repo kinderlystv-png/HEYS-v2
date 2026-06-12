@@ -41,6 +41,7 @@ const setupOnce = () => {
   const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(FINGERS_DIR, f), 'utf8')); };
   ev('heys_fingers_programs_catalog_v1.js');
   ev('heys_fingers_age_gating_v1.js');
+  ev('heys_fingers_periodization_engine_v1.js');
   ev('heys_fingers_session_ui_v1.js');
 };
 
@@ -75,13 +76,52 @@ describe('B7 mesocycle engine', () => {
   });
 
   it('нет цикла → current null', () => {
+    globalThis.HEYS.Fingers.periodization.clearPlan();
     expect(M().current(null, '2026-06-05')).toBeNull();
+  });
+
+  it('start создаёт periodization plan для live-router и legacy mesocycle mirror', () => {
+    globalThis.HEYS.Fingers.periodization.clearPlan();
+    globalThis.window.HEYS.utils.lsSet('heys_profile', {
+      age: 25,
+      fingerboardProfile: { age: 25, level: 'intermediate', equipmentTypes: ['full', 'none'] },
+    });
+
+    expect(M().start(4, { startedAt: '2026-05-15' })).toBe(true);
+
+    const plan = globalThis.HEYS.Fingers.periodization.loadPlan();
+    expect(plan.startedAt).toBe('2026-05-15');
+    expect(plan.weeksTotal).toBe(4);
+    expect(globalThis.window.HEYS.utils.lsGet('heys_profile', {}).fingerboardProfile.mesocycle)
+      .toEqual({ startedAt: '2026-05-15', weeks: 4 });
+    expect(M().current(null, '2026-06-05').phase).toBe('deload');
+    expect(M().current(null, '2026-06-05').ceiling).toBe('recovery');
+  });
+
+  it('preview показывает forward-календарь сохранённого periodization plan', () => {
+    globalThis.HEYS.Fingers.periodization.clearPlan();
+    globalThis.window.HEYS.utils.lsSet('heys_profile', {
+      age: 25,
+      fingerboardProfile: { age: 25, level: 'intermediate', equipmentTypes: ['full', 'none'] },
+    });
+
+    expect(M().start(4, { startedAt: '2026-05-15' })).toBe(true);
+    const preview = M().preview('2026-05-30');
+
+    expect(preview.source).toBe('periodization');
+    expect(preview.model).toBe('nonlinear');
+    expect(preview.weeks).toHaveLength(4);
+    expect(preview.current.week).toBe(3);
+    expect(preview.weeks[0]).toMatchObject({ status: 'done', startKey: '2026-05-15', endKey: '2026-05-21' });
+    expect(preview.weeks[2]).toMatchObject({ status: 'current', phase: 'accumulation', ceiling: 'moderate', volumePct: 100 });
+    expect(preview.weeks[3]).toMatchObject({ status: 'next', phase: 'deload', ceiling: 'recovery', volumePct: 50 });
   });
 });
 
 describe('B7 mesocycle clamps Today bucket', () => {
   beforeAll(setupOnce);
   beforeEach(() => {
+    globalThis.HEYS.Fingers.periodization.clearPlan();
     globalThis.window.HEYS.utils.lsSet('heys_profile', {
       age: 25,
       fingerboardProfile: { age: 25, maxVGrade: 'V7-V8', equipmentTypes: ['full', 'none'],

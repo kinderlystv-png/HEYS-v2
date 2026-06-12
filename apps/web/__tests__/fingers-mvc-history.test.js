@@ -68,6 +68,92 @@ describe('B3 MVC timeseries', () => {
     expect(hist[1].strengthRatio).toBe(1.2);    // 84/70
   });
 
+  it('progressionSnapshot отдаёт recordsByQuality/currentAxes из canonical halfcrimp 20mm', () => {
+    const r = R();
+    r.updateIfPR('openhand4', 18, wRec(90, 20, 7, '2026-06-01T10:00:00Z'));
+    r.updateIfPR('halfcrimp', 20, wRec(70, 0, 7, '2026-06-01T10:00:00Z'));
+    r.updateIfPR('halfcrimp', 20, wRec(77, 7, 7, '2026-06-03T10:00:00Z'));
+
+    const snap = r.progressionSnapshot();
+    expect(snap.recordsByQuality.finger_strength).toEqual([
+      { ts: Date.parse('2026-06-01T10:00:00Z'), value: 1 },
+      { ts: Date.parse('2026-06-03T10:00:00Z'), value: 1.1 }
+    ]);
+    expect(snap.currentAxes.finger_strength).toBe('volume');
+    expect(snap.axisSources.finger_strength).toBe('default');
+    expect(snap.qualitySources.finger_strength.slug).toBe('halfcrimp_20mm');
+  });
+
+  it('progressionSnapshot уважает сохранённую progressionAxes', () => {
+    const r = R();
+    r.updateIfPR('halfcrimp', 20, wRec(70, 0, 7, '2026-06-01T10:00:00Z'));
+    expect(r.saveProgressionAxis('finger_strength', 'edge')).toBe(true);
+
+    const snap = r.progressionSnapshot();
+    expect(snap.currentAxes.finger_strength).toBe('edge');
+    expect(snap.axisSources.finger_strength).toBe('stored');
+  });
+
+  it('recordProgressionSession пишет non-MVC quality series для live progression breadth', () => {
+    const r = R();
+    r.recordProgressionSession({
+      completedAt: '2026-06-01T10:00:00Z',
+      exercises: [
+        { quality: 'power', doseShape: 'attempts', dose: { attempts: 8 } },
+        { quality: 'power', doseShape: 'attempts', dose: { attempts: 10 } },
+        { quality: 'aerobic_base', doseShape: 'continuous', dose: { workSec: 1200, sets: 1 } }
+      ]
+    });
+    r.recordProgressionSession({
+      completedAt: '2026-06-03T10:00:00Z',
+      exercises: [
+        { quality: 'power', doseShape: 'attempts', dose: { attempts: 12 } }
+      ]
+    });
+
+    const snap = r.progressionSnapshot();
+    expect(snap.recordsByQuality.power).toEqual([
+      { ts: Date.parse('2026-06-01T10:00:00Z'), value: 18 },
+      { ts: Date.parse('2026-06-03T10:00:00Z'), value: 12 }
+    ]);
+    expect(snap.recordsByQuality.aerobic_base).toEqual([
+      { ts: Date.parse('2026-06-01T10:00:00Z'), value: 1200 }
+    ]);
+    expect(snap.currentAxes.power).toBe('volume');
+    expect(snap.qualitySources.power.source).toBe('sessionLog');
+  });
+
+  it('saveProgressionAxis сохраняет оси non-MVC качеств и валидирует policy', () => {
+    const r = R();
+    r.recordProgressionSession({
+      completedAt: '2026-06-01T10:00:00Z',
+      exercises: [{ quality: 'power', doseShape: 'attempts', dose: { attempts: 8 } }]
+    });
+
+    expect(r.saveProgressionAxis('power', 'speed')).toBe(true);
+    expect(r.saveProgressionAxis('power', 'load')).toBe(false);
+    expect(r.loadProgressionAxes().power).toBe('speed');
+
+    const snap = r.progressionSnapshot();
+    expect(snap.currentAxes.power).toBe('speed');
+    expect(snap.axisSources.power).toBe('stored');
+  });
+
+  it('progressionSnapshot без canonical берёт один самый длинный slug, не смешивает хваты', () => {
+    const r = R();
+    r.updateIfPR('openhand4', 18, wRec(70, 0, 7, '2026-06-01T10:00:00Z'));
+    r.updateIfPR('openhand4', 18, wRec(72, 2, 7, '2026-06-03T10:00:00Z'));
+    r.updateIfPR('pinch', 25, wRec(80, 10, 7, '2026-06-04T10:00:00Z'));
+
+    const snap = r.progressionSnapshot();
+    expect(snap.recordsByQuality.finger_strength).toHaveLength(2);
+    expect(snap.qualitySources.finger_strength.slug).toBe('openhand4_18mm');
+  });
+
+  it('progressionSnapshot без history → null (fail-safe для router)', () => {
+    expect(R().progressionSnapshot()).toBeNull();
+  });
+
   it('backward compat: slug без history → []', () => {
     expect(R().getMvcHistory('pinch', 25)).toEqual([]);
   });

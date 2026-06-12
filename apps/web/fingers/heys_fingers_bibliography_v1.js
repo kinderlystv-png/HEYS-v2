@@ -205,6 +205,16 @@
       topics: ['calibration', 'protocols']
     },
     {
+      id: 'berta2025_norms',
+      author: 'Berta et al.',
+      year: 2025,
+      title: 'Validity and normative scores of finger flexor strength and endurance tests estimated from a large sample of female and male climbers',
+      type: 'peer-reviewed',
+      url: 'https://doi.org/10.1080/02640414.2024.2449316',
+      keyFinding: 'Крупная выборка climbers: finger-flexor MVC, нормированный к массе тела, даёт нормативы по уровням и сильнее всего объясняет уровень лазания. Runtime-бенчмарки HEYS используют Table 3 weighted means: intermediate 70%, advanced 87%, elite 102% BW.',
+      topics: ['calibration', 'protocols']
+    },
+    {
       id: 'kellawan2014',
       author: 'Kellawan & Tschakovsky',
       year: 2014,
