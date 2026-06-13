@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.a3406ad3",
+      "buildHash": "a3406ad3",
+      "date": "2026-06-13",
+      "kind": "technical",
+      "profile": "technical-backend-api",
+      "title": "HEYS Старт",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Бот HEYS Старт отвечает без таймаута",
+          "description": "Webhook HEYS Старт теперь отвечает Telegram напрямую через webhook response methods, поэтому /start не зависит от исходящего доступа функции к Telegram API."
+        }
+      ],
+      "coveredCommits": ["a3406ad3", "239c346c"]
+    },
+    {
       "version": "2026.06.13.239c346c",
       "buildHash": "239c346c",
       "date": "2026-06-13",
@@ -143,22 +159,6 @@
         }
       ],
       "coveredCommits": ["ce6be6a5", "914551ee", "5d1572fa"]
-    },
-    {
-      "version": "2026.06.13.02110fe8",
-      "buildHash": "02110fe8",
-      "date": "2026-06-13",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления и улучшения стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки",
-          "description": "В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения."
-        }
-      ],
-      "coveredCommits": ["914551ee", "5d1572fa"]
     }
   ]
 }
