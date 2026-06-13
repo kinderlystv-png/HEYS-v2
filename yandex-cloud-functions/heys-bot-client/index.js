@@ -88,6 +88,10 @@ function jsonResponse(statusCode, body) {
   };
 }
 
+function telegramMethodResponse(method, payload) {
+  return jsonResponse(200, { method, ...payload });
+}
+
 function isInternalCronCall(headers) {
   if (!INTERNAL_CRON_TOKEN) return false;
   const provided = headers?.['x-internal-cron-token'] || headers?.['X-Internal-Cron-Token'];
@@ -434,25 +438,31 @@ function queueStartFunnelEvent(eventType, opts = {}) {
   });
 }
 
-async function sendQuizQuestion(chatId, step, answers, source, editMessageId = null) {
+function sendQuizQuestion(chatId, step, answers, source, editMessageId = null) {
   const question = QUIZ_QUESTIONS[step];
   const text = `<b>${step + 1}/${QUIZ_QUESTIONS.length}</b>\n${escapeHtml(question.text)}`;
   const reply_markup = buildInlineKeyboard(question, step, answers, source);
 
   if (editMessageId) {
-    return tgRequest('editMessageText', {
+    return telegramMethodResponse('editMessageText', {
       chat_id: chatId,
       message_id: editMessageId,
       text,
       parse_mode: 'HTML',
       reply_markup,
-    }, START_BOT);
+    });
   }
 
-  return sendMessage(chatId, text, { reply_markup }, START_BOT);
+  return telegramMethodResponse('sendMessage', {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    reply_markup,
+  });
 }
 
-async function sendQuizResult(chatId, answers, source, editMessageId = null) {
+function sendQuizResult(chatId, answers, source, editMessageId = null) {
   const segment = getQuizSegment(answers);
   const result = RESULT_COPY[segment] || RESULT_COPY.mixed;
   const summary = getQuizSummary(answers);
@@ -482,19 +492,25 @@ async function sendQuizResult(chatId, answers, source, editMessageId = null) {
   });
 
   if (editMessageId) {
-    return tgRequest('editMessageText', {
+    return telegramMethodResponse('editMessageText', {
       chat_id: chatId,
       message_id: editMessageId,
       text,
       parse_mode: 'HTML',
       reply_markup,
-    }, START_BOT);
+    });
   }
 
-  return sendMessage(chatId, text, { reply_markup }, START_BOT);
+  return telegramMethodResponse('sendMessage', {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    reply_markup,
+  });
 }
 
-async function handleStartBotStart(chatId, payload) {
+function handleStartBotStart(chatId, payload) {
   const source = sanitizeSource(payload);
   queueStartFunnelEvent('quiz_start', {
     source,
@@ -502,36 +518,31 @@ async function handleStartBotStart(chatId, payload) {
     dedupeKey: `quiz_start:start:${chatId}:${source}`,
   });
 
-  await sendMessage(
-    chatId,
-    'Здравствуйте. За одну минуту покажем, какой паттерн чаще всего мешает удерживать режим, и что можно сделать первым шагом.',
-    {
-      reply_markup: {
-        inline_keyboard: [[{ text: 'Начать', callback_data: encodeQuizData(0, [], source) }]],
-      },
+  return telegramMethodResponse('sendMessage', {
+    chat_id: chatId,
+    text: 'Здравствуйте. За одну минуту покажем, какой паттерн чаще всего мешает удерживать режим, и что можно сделать первым шагом.',
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    reply_markup: {
+      inline_keyboard: [[{ text: 'Начать', callback_data: encodeQuizData(0, [], source) }]],
     },
-    START_BOT,
-  );
+  });
 }
 
-async function handleStartBotCallback(query) {
+function handleStartBotCallback(query) {
   const chatId = query?.message?.chat?.id;
   const messageId = query?.message?.message_id;
   const data = query?.data || '';
 
-  await tgRequest('answerCallbackQuery', { callback_query_id: query.id }, START_BOT);
-
-  if (!chatId || !messageId) return;
+  if (!chatId || !messageId) return jsonResponse(200, { ok: true });
 
   if (data.startsWith('qs|')) {
     const state = decodeQuizData(data);
-    if (!Number.isFinite(state.step) || state.step < 0) return;
+    if (!Number.isFinite(state.step) || state.step < 0) return jsonResponse(200, { ok: true });
     if (state.step >= QUIZ_QUESTIONS.length) {
-      await sendQuizResult(chatId, state.answers, state.source, messageId);
-      return;
+      return sendQuizResult(chatId, state.answers, state.source, messageId);
     }
-    await sendQuizQuestion(chatId, state.step, state.answers, state.source, messageId);
-    return;
+    return sendQuizQuestion(chatId, state.step, state.answers, state.source, messageId);
   }
 
   if (data.startsWith('qa|')) {
@@ -540,7 +551,7 @@ async function handleStartBotCallback(query) {
     const source = sanitizeSource(sourceRaw);
 
     if (action === 'week') {
-      await tgRequest('editMessageText', {
+      return telegramMethodResponse('editMessageText', {
         chat_id: chatId,
         message_id: messageId,
         text:
@@ -552,17 +563,15 @@ async function handleStartBotCallback(query) {
             [{ text: 'На следующей', callback_data: `qr|next_week|${answers.join(',')}|${source}` }],
           ],
         },
-      }, START_BOT);
-      return;
+      });
     }
 
-    await tgRequest('editMessageText', {
+    return telegramMethodResponse('editMessageText', {
       chat_id: chatId,
       message_id: messageId,
       text:
         'Хорошо. Можно вернуться к разбору позже: отправьте /start, когда будете готовы.',
-    }, START_BOT);
-    return;
+    });
   }
 
   if (data.startsWith('qr|')) {
@@ -576,21 +585,23 @@ async function handleStartBotCallback(query) {
       metadata: { bot: 'heys_start', readiness, ...getQuizSummary(answers) },
       dedupeKey: `week_request:start:${chatId}:${readiness}:${answers.join('-')}`,
     });
-    await tgRequest('editMessageText', {
+    return telegramMethodResponse('editMessageText', {
       chat_id: chatId,
       message_id: messageId,
       text:
         'Принято. Куратор знакомится с заявкой и связывается с вами, когда есть свободное место для старта.\n\n' +
         'Если хотите ускорить контакт, отправьте номер телефона сообщением в этот чат.',
-    }, START_BOT);
+    });
   }
+
+  return jsonResponse(200, { ok: true });
 }
 
 async function handleStartBotWebhook(body) {
   const callbackQuery = body?.callback_query;
   if (callbackQuery) {
     try {
-      await handleStartBotCallback(callbackQuery);
+      return handleStartBotCallback(callbackQuery);
     } catch (e) {
       console.error('[HEYS Start] callback error:', e.message);
     }
@@ -608,21 +619,21 @@ async function handleStartBotWebhook(body) {
   try {
     if (text.startsWith('/start')) {
       const payload = text.replace(/^\/start\s*/, '');
-      await handleStartBotStart(chatId, payload);
+      return handleStartBotStart(chatId, payload);
     } else if (text === '/help' || text === '/menu') {
-      await sendMessage(
-        chatId,
-        'HEYS Старт помогает пройти короткий разбор «Твой тип срыва». Отправьте /start, чтобы начать.',
-        {},
-        START_BOT,
-      );
+      return telegramMethodResponse('sendMessage', {
+        chat_id: chatId,
+        text: 'HEYS Старт помогает пройти короткий разбор «Твой тип срыва». Отправьте /start, чтобы начать.',
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      });
     } else {
-      await sendMessage(
-        chatId,
-        'Чтобы пройти короткий разбор, отправьте /start.',
-        {},
-        START_BOT,
-      );
+      return telegramMethodResponse('sendMessage', {
+        chat_id: chatId,
+        text: 'Чтобы пройти короткий разбор, отправьте /start.',
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      });
     }
   } catch (e) {
     console.error('[HEYS Start] webhook handler error:', e.message);
