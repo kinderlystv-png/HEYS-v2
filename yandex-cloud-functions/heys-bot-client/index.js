@@ -540,9 +540,9 @@ function handleStartBotCallback(query) {
     const state = decodeQuizData(data);
     if (!Number.isFinite(state.step) || state.step < 0) return jsonResponse(200, { ok: true });
     if (state.step >= QUIZ_QUESTIONS.length) {
-      return sendQuizResult(chatId, state.answers, state.source, messageId);
+      return sendQuizResult(chatId, state.answers, state.source);
     }
-    return sendQuizQuestion(chatId, state.step, state.answers, state.source, messageId);
+    return sendQuizQuestion(chatId, state.step, state.answers, state.source);
   }
 
   if (data.startsWith('qa|')) {
@@ -551,9 +551,8 @@ function handleStartBotCallback(query) {
     const source = sanitizeSource(sourceRaw);
 
     if (action === 'week') {
-      return telegramMethodResponse('editMessageText', {
+      return telegramMethodResponse('sendMessage', {
         chat_id: chatId,
-        message_id: messageId,
         text:
           'Спасибо. Первая неделя проходит без карты и по свободной ёмкости куратора.\n\n' +
           'Следующий шаг: отправьте, пожалуйста, контакт в этом чате или напишите, когда вам удобнее начать: на этой неделе или на следующей.',
@@ -566,9 +565,8 @@ function handleStartBotCallback(query) {
       });
     }
 
-    return telegramMethodResponse('editMessageText', {
+    return telegramMethodResponse('sendMessage', {
       chat_id: chatId,
-      message_id: messageId,
       text:
         'Хорошо. Можно вернуться к разбору позже: отправьте /start, когда будете готовы.',
     });
@@ -585,9 +583,8 @@ function handleStartBotCallback(query) {
       metadata: { bot: 'heys_start', readiness, ...getQuizSummary(answers) },
       dedupeKey: `week_request:start:${chatId}:${readiness}:${answers.join('-')}`,
     });
-    return telegramMethodResponse('editMessageText', {
+    return telegramMethodResponse('sendMessage', {
       chat_id: chatId,
-      message_id: messageId,
       text:
         'Принято. Куратор знакомится с заявкой и связывается с вами, когда есть свободное место для старта.\n\n' +
         'Если хотите ускорить контакт, отправьте номер телефона сообщением в этот чат.',
