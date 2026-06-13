@@ -11,11 +11,15 @@ const path = require('path');
 
 const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, 'mobility');
+const KERNEL_DIR = path.join(ROOT, '_kernel');
 const OUT_FILE = path.join(ROOT, 'heys_mobility_bundle_v1.js');
 
 const MODULES = [
+  { file: 'heys_training_focus_ui_v1.js', label: 'shared training focus UI primitives', dir: KERNEL_DIR },
+  { file: 'heys_kernel_bibliography_v1.js', label: 'shared bibliography registry (kernel)', dir: KERNEL_DIR },
+  { file: 'heys_kernel_bibliography_ui_v1.js', label: 'shared bibliography UI: badge+modal (kernel)', dir: KERNEL_DIR },
   { file: 'heys_mobility_axis_catalog_v1.js', label: 'axis catalog + enums' },
-  { file: 'heys_mobility_bibliography_v1.js', label: 'sources + effect map' },
+  { file: 'heys_mobility_bibliography_v1.js', label: 'sources + effect map (kernel registry)' },
   { file: 'heys_mobility_atom_catalog_v1.js', label: 'atom catalog A-J' },
   { file: 'heys_mobility_validators_v1.js', label: 'safety validators S1-S9' },
   { file: 'heys_mobility_assessment_v1.js', label: 'ROM assessment + limiter audit' },
@@ -24,6 +28,7 @@ const MODULES = [
   { file: 'heys_mobility_records_store_v1.js', label: 'client-scoped records' },
   { file: 'heys_mobility_progression_v1.js', label: 'progression policy' },
   { file: 'heys_mobility_mode_engine_v1.js', label: 'mode engine' },
+  { file: 'heys_mobility_protocols_catalog_v1.js', label: 'ready-to-run protocol catalog' },
   { file: 'heys_mobility_calendar_v1.js', label: 'weekly calendar planner' },
   { file: 'heys_mobility_routine_builder_v1.js', label: 'hybrid routine builder' },
   { file: 'heys_mobility_breath_runner_v1.js', label: 'breath runner' },
@@ -44,7 +49,7 @@ const chunks = [banner];
 const missing = [];
 
 for (const mod of MODULES) {
-  const srcPath = path.join(SRC_DIR, mod.file);
+  const srcPath = path.join(mod.dir || SRC_DIR, mod.file);
   if (!fs.existsSync(srcPath)) {
     missing.push(mod.file);
     continue;

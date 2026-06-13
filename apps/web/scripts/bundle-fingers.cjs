@@ -15,6 +15,7 @@ const path = require('path');
 
 const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, 'fingers');
+const KERNEL_DIR = path.join(ROOT, '_kernel');
 const OUT_FILE = path.join(ROOT, 'heys_fingers_bundle_v1.js');
 
 // Порядок зависимостей. Если добавляешь новый модуль — впиши его в правильное
@@ -22,6 +23,10 @@ const OUT_FILE = path.join(ROOT, 'heys_fingers_bundle_v1.js');
 // в `HEYS.Fingers.*` строго sequential; consumer-модули ниже по списку
 // предполагают что upstream API уже на месте.
 const MODULES = [
+    { file: 'heys_training_focus_ui_v1.js', label: 'shared training focus UI primitives', dir: KERNEL_DIR },
+    { file: 'heys_kernel_bibliography_v1.js', label: 'shared bibliography registry (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_bibliography_ui_v1.js', label: 'shared bibliography UI: badge+modal (kernel)', dir: KERNEL_DIR },
+
     // ── Layer 1: core data + features (no fingers deps) ──
     { file: 'heys_fingers_audio_extension_v1.js', label: 'audio capability' },
     { file: 'heys_fingers_body_metrics_v1.js',    label: 'body weight resolver' },
@@ -80,7 +85,7 @@ const chunks = [banner];
 const missing = [];
 
 for (const mod of MODULES) {
-    const srcPath = path.join(SRC_DIR, mod.file);
+    const srcPath = path.join(mod.dir || SRC_DIR, mod.file);
     if (!fs.existsSync(srcPath)) {
         missing.push(mod.file);
         continue;
