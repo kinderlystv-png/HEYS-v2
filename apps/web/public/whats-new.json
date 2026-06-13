@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.8524ae9a",
+      "buildHash": "8524ae9a",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Изображение упражнения обновлено",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Карточка pull-apart выглядит корректнее",
+          "description": "Обновлено изображение для упражнения с резинкой в режиме мобильности, чтобы карточка лучше соответствовала движению."
+        }
+      ]
+    },
+    {
       "version": "2026.06.13.11faa268",
       "buildHash": "11faa268",
       "date": "2026-06-13",
@@ -142,22 +157,6 @@
         }
       ],
       "coveredCommits": ["58b0eeb1", "ac9f134e", "31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
-    },
-    {
-      "version": "2026.06.13.ac9f134e",
-      "buildHash": "ac9f134e",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "бюджет сериализации log-trace и ступенчатая загрузка lazy-чанков",
-      "items": [
-        {
-          "type": "perf",
-          "title": "бюджет сериализации log-trace и ступенчатая загрузка lazy-чанков",
-          "description": "бюджет сериализации log-trace и ступенчатая загрузка lazy-чанков"
-        }
-      ],
-      "coveredCommits": ["ac9f134e", "31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
     }
   ]
 }
