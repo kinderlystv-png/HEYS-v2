@@ -66,9 +66,22 @@
         }
     }
 
-    async function base64ToBlob(base64Data) {
-        const response = await fetch(base64Data);
-        return response.blob();
+    function base64ToBlob(base64Data) {
+        // CSP-safe: конвертируем синхронно через atob, БЕЗ fetch('data:...').
+        // Раньше fetch(base64Data) на data:-URI блокировался CSP connect-src
+        // (нет `data:` в директиве) → photo_upload_failed ещё до отправки.
+        // Поддерживает и data:-URI ("data:image/webp;base64,AAAA"), и сырой base64.
+        const str = String(base64Data || '');
+        const commaIdx = str.indexOf(',');
+        const hasMeta = commaIdx !== -1 && /^data:/i.test(str.slice(0, commaIdx));
+        const b64 = hasMeta ? str.slice(commaIdx + 1) : str;
+        const mimeMatch = hasMeta ? str.slice(0, commaIdx).match(/data:([^;]+)/i) : null;
+        const mime = (mimeMatch && mimeMatch[1]) || 'image/jpeg';
+        const binary = atob(b64);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+        return new Blob([bytes], { type: mime });
     }
 
     async function uploadViaYandex({ base64Data, clientId, date, mealId, blob }) {
