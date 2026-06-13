@@ -584,9 +584,14 @@
           TRAINING_TYPES.map(t =>
             React.createElement('button', {
               key: t.id,
+              type: 'button',
               className: 'ts-type-btn' + (type === t.id ? ' active' : ''),
               onClick: () => handleTypeChange(t.id),
-              title: t.id === 'drums' ? 'Открыть тренажёр барабанных пальцев' : undefined
+              title: t.id === 'drums'
+                ? 'Открыть тренажёр барабанных пальцев'
+                : t.id === 'mobility'
+                  ? 'Открыть режим мобильности'
+                  : undefined
             },
               React.createElement('span', { className: 'ts-type-icon' }, t.icon),
               React.createElement('span', { className: 'ts-type-label' }, t.label)
@@ -981,6 +986,7 @@
     shouldShow: (ctx, sd) => {
       const t = (sd['training-info'] || {}).type;
       if (t === 'fingers') return false; // 🤚 fingers handoff to dedicated overlay, never reach zones
+      if (t === 'mobility') return false; // 🧘 mobility handoff to dedicated overlay, never reach zones
       if (t !== 'strength') return true;
       return (sd['training-strength-mode'] || {}).mode === 'hr_zones';
     },

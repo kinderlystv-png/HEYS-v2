@@ -68,11 +68,12 @@ readiness/records/progression.
 | 9.23 TrainingStep bridge (type tab + fullscreen handoff + guarded mobilityLog persistence)                | `heys_training_step_v1.js`, `heys_mobility_entry_v1.js`, `heys_mobility_ui_v1.js`, `__tests__/training-step-drums-tab.test.js`, `__tests__/mobility-ui.test.js`       | ✅     |
 | 9.24 implementation-map coverage guard                                                                    | `methodology/tools/impl-coverage.mjs`, `package.json` (`check:mobility-map`)                                                                                          | ✅     |
 | 9.25 visual prompt pack + atom image slots                                                                | `methodology/VISUAL_PROMPTS.md`, `heys_mobility_atom_catalog_v1.js`, `heys_mobility_ui_v1.js`, `__tests__/mobility-catalog.test.js`                                   | ✅     |
-| 9.26 верификация зелёная                                                                                  | `pnpm vitest run apps/web/__tests__/mobility-*.test.js apps/web/__tests__/training-step-drums-tab.test.js` → 124/124; `pnpm --dir apps/web check:mobility-map` → pass | ✅     |
+| 9.26 TrainingStep mobile-tab click guard                                                                  | `heys_training_step_v1.js`, `__tests__/training-step-drums-tab.test.js`                                                                                               | ✅     |
+| 9.27 верификация зелёная                                                                                  | `pnpm vitest run apps/web/__tests__/mobility-*.test.js apps/web/__tests__/training-step-drums-tab.test.js` → 126/126; `pnpm --dir apps/web check:mobility-map` → pass | ✅     |
 
 **Верификация.** Официальный
 `pnpm vitest run apps/web/__tests__/mobility-*.test.js apps/web/__tests__/training-step-drums-tab.test.js`
-проходит штатно: **124/124**, каталог 29 атомов, `validateAll` без ошибок, все
+проходит штатно: **126/126**, каталог 29 атомов, `validateAll` без ошибок, все
 `sourceIds` резолвятся в bibliography, entry/stub/bundler/TrainingStep-контракты
 покрыты. Запись `mobilityLog` в дневник guarded: вызывается только при явном
 `dateKey`, standalone сохранение остаётся в `recordsStore`. Дополнительно
@@ -88,6 +89,11 @@ readiness/records/progression.
 атом получил `visualAsset` `/exercises/mobility/<atomId>.webp` и
 `visualPromptRef`; session UI показывает фото, если файл уже сгенерирован, и
 скрывает слот при 404.
+
+**TrainingStep click guard (2026-06-13):** кнопки типа тренировки получили
+`type="button"` внутри шага формы; mobility-tab теперь имеет явный title,
+fallback-сохранение типа при недоступном fullscreen-модуле покрыто тестом, а
+`training-zones.shouldShow` пропускает `mobility` как dedicated overlay-flow.
 
 **После возврата stash (2026-06-13):** исправлен UI-регресс пересборки сессии
 при изменении входных props (`screens`, CWI, phase/key-load), добавлены тесты на

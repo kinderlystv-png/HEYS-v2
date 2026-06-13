@@ -135,6 +135,8 @@ describe('training step drums tab', () => {
 
     const button = findButtonByText(tree, 'Мобильность');
     expect(button).not.toBeNull();
+    expect(button.args[1].type).toBe('button');
+    expect(button.args[1].title).toBe('Открыть режим мобильности');
     button.args[1].onClick();
 
     expect(opened).toEqual([{
@@ -142,5 +144,37 @@ describe('training step drums tab', () => {
       trainingIndex: 3,
       mode: 'new',
     }]);
+  });
+
+  it('keeps Mobility as a normal selected type when fullscreen module is unavailable', () => {
+    const { registeredSteps } = setupTrainingStep();
+    const changes = [];
+    const tree = registeredSteps['training-info'].component({
+      data: { type: 'cardio', time: '09:00' },
+      onChange: (next) => changes.push(next),
+      context: { dateKey: '2026-06-13', trainingIndex: 0 },
+    });
+
+    const button = findButtonByText(tree, 'Мобильность');
+    expect(button).not.toBeNull();
+    expect(button.args[1].type).toBe('button');
+    button.args[1].onClick();
+
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({
+      type: 'mobility',
+      activityLabel: 'Мобильность',
+      hobbySubtype: '',
+      time: '09:00',
+    });
+  });
+
+  it('skips shared heart-rate zones for Mobility dedicated overlay flow', () => {
+    const { registeredSteps } = setupTrainingStep();
+    const shouldShow = registeredSteps['training-zones'].shouldShow;
+
+    expect(shouldShow({}, { 'training-info': { type: 'mobility' } })).toBe(false);
+    expect(shouldShow({}, { 'training-info': { type: 'fingers' } })).toBe(false);
+    expect(shouldShow({}, { 'training-info': { type: 'cardio' } })).toBe(true);
   });
 });

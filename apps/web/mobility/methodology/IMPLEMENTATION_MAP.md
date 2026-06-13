@@ -596,5 +596,5 @@ CONSTRUCTOR_SPEC). Source-модули построены до UI/entry/lazy/Tra
 integration; coverage-guard подключён
 (`pnpm --dir apps/web check:mobility-map`); проверка:
 `pnpm vitest run apps/web/__tests__/mobility-*.test.js apps/web/__tests__/training-step-drums-tab.test.js`
-→ 124/124. Mobility bundle создан; legacy-sync выполнил pre-commit hook. Browser
+→ 126/126. Mobility bundle создан; legacy-sync выполнил pre-commit hook. Browser
 QA — отдельный integration-шаг по явной команде._
