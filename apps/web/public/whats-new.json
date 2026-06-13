@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.914551ee",
+      "buildHash": "914551ee",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "sticky-bar на IntersectionObserver и стабильные keys — в исходниках meals-бандла",
+      "items": [
+        {
+          "type": "perf",
+          "title": "sticky-bar на IntersectionObserver и стабильные keys — в исходниках meals-бандла",
+          "description": "sticky-bar на IntersectionObserver и стабильные keys — в исходниках meals-бандла"
+        }
+      ],
+      "coveredCommits": ["914551ee", "5d1572fa"]
+    },
+    {
       "version": "2026.06.13.5d1572fa",
       "buildHash": "5d1572fa",
       "date": "2026-06-13",
@@ -143,21 +159,6 @@
         }
       ],
       "coveredCommits": ["66a982f2", "eca96299"]
-    },
-    {
-      "version": "2026.06.12.cd0e7d46",
-      "buildHash": "cd0e7d46",
-      "date": "2026-06-12",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Рекомендации станут понятнее",
-      "items": [
-        {
-          "type": "fix",
-          "title": "План улучшений стал прозрачнее",
-          "description": "Зафиксировали, какие факторы должны объясняться в интерфейсе при подборе тренировок. Это поможет дальше показывать не только саму рекомендацию, но и почему она выбрана."
-        }
-      ]
     }
   ]
 }
