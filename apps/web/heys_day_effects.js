@@ -1020,6 +1020,26 @@
             // Belt-and-suspenders against any residual flap — apply each distinct storage
             // state at most once so the reconciler can never become a write loop.
             let lastReconciledKey = '';
+            // ⚡ PERF A1 (2026-06-13): fast-path — если сырая LS-строка дня не менялась
+            // с прошлого тика, пропускаем parse (50–150 КБ) и deep compare целиком.
+            // Сравнение строк — микросекунды; parse — десятки мс на слабых устройствах.
+            // Откат: localStorage heys_disable_reconcile_fastpath = '1'.
+            const fastPathDisabled = (() => {
+                try { return global.localStorage.getItem('heys_disable_reconcile_fastpath') === '1'; } catch (_) { return false; }
+            })();
+            let lastRawSig = null;
+            const readRawSig = () => {
+                try {
+                    const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+                    if (cid) {
+                        const s = global.localStorage.getItem('heys_' + cid + '_dayv2_' + date);
+                        if (s !== null) return 's ' + s;
+                    }
+                    const u = global.localStorage.getItem('heys_dayv2_' + date);
+                    if (u !== null) return 'u ' + u;
+                    return null; // данные в legacy-ключах — fast-path не применяем
+                } catch (_) { return null; }
+            };
             const reconcile = () => {
                 try {
                     if (typeof document !== 'undefined' && document.visibilityState && document.visibilityState !== 'visible') return;
@@ -1033,8 +1053,15 @@
                     try {
                         if (HEYS.Day && typeof HEYS.Day.hasPendingMutation === 'function' && HEYS.Day.hasPendingMutation(date)) return;
                     } catch (_) { /* noop */ }
+                    // ⚡ PERF A1: LS не менялся с прошлого тика → сверять нечего.
+                    let rawSig = null;
+                    if (!fastPathDisabled) {
+                        rawSig = readRawSig();
+                        if (rawSig !== null && rawSig === lastRawSig) return;
+                    }
                     if (_readDayV2Cache) _readDayV2Cache.invalidate((HEYS.currentClientId || '') + '|' + date);
                     const lsDay = readDayV2(date, lsGet).value;
+                    if (rawSig !== null) lastRawSig = rawSig; // это LS-состояние сейчас будет обработано
                     if (!lsDay || typeof lsDay !== 'object' || !isMeaningfulDayData(lsDay)) return;
                     const reactDay = (HEYS.Day && typeof HEYS.Day.getDay === 'function') ? HEYS.Day.getDay() : null;
                     if (!reactDay) return;
