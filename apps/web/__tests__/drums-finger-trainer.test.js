@@ -731,4 +731,258 @@ describe('drums finger trainer', () => {
     expect(rolledBack.clean).toBe(false);
     expect(rolledBack.rampEnabled).toBe(false);
   });
+
+  it('arms warmup phase when a clean record exists for the block', () => {
+    const { api } = setupModule();
+    const singles = api.BLOCKS.find((block) => block.id === 'singles');
+    const logs = [
+      {
+        log: {
+          completedAt: 3000,
+          blockResults: [{ blockId: 'singles', bpm: 120, done: true, clean: true }],
+          metrics: { cleanBpmSingles16: 120 },
+        },
+      },
+      {
+        log: {
+          completedAt: 2000,
+          blockResults: [{ blockId: 'singles', bpm: 118, done: true, clean: true }],
+          metrics: { cleanBpmSingles16: 118 },
+        },
+      },
+    ];
+
+    const state = api._test.makeSessionState('balanced_25', { logs });
+    const singlesResult = state.results.find((result) => result.blockId === 'singles');
+    expect(singlesResult.bpm).toBe(122);
+    expect(singlesResult.phase).toBe('warmup');
+    expect(singlesResult.warmupTotalSec).toBeGreaterThan(0);
+    expect(singlesResult.warmupStartBpm).toBe(Math.max(singles.bpm, 122 - 20));
+  });
+
+  it('skips warmup when there is no clean record (first attempt)', () => {
+    const { api } = setupModule();
+    const state = api._test.makeSessionState('balanced_25', { logs: [] });
+    const freeStroke = state.results.find((result) => result.blockId === 'free_stroke');
+    expect(freeStroke.phase).toBe('work');
+    expect(freeStroke.warmupTotalSec).toBe(0);
+  });
+
+  it('interpolates effective BPM linearly across warmup countdown', () => {
+    const { api } = setupModule();
+    const result = {
+      bpm: 122,
+      phase: 'warmup',
+      warmupTotalSec: 90,
+      warmupStartBpm: 102,
+    };
+    expect(api._test.getEffectiveBpm(result, 90)).toBe(102);
+    expect(api._test.getEffectiveBpm(result, 45)).toBe(112);
+    expect(api._test.getEffectiveBpm(result, 0)).toBe(122);
+    expect(api._test.getEffectiveBpm({ ...result, phase: 'work' }, 45)).toBe(122);
+  });
+
+  it('finishWarmup transitions phase to work without touching BPM target', () => {
+    const { api } = setupModule();
+    const result = { bpm: 122, phase: 'warmup', warmupTotalSec: 90, warmupStartBpm: 102 };
+    const next = api._test.finishWarmup(result);
+    expect(next.phase).toBe('work');
+    expect(next.bpm).toBe(122);
+    expect(next.warmupTotalSec).toBe(90);
+  });
+
+  it('disableWarmupForReplay clears warmup and resets done/clean for restart', () => {
+    const { api } = setupModule();
+    const result = { bpm: 122, phase: 'warmup', warmupTotalSec: 90, warmupStartBpm: 102, done: true, clean: true };
+    const replay = api._test.disableWarmupForReplay(result, 119);
+    expect(replay.phase).toBe('work');
+    expect(replay.warmupTotalSec).toBe(0);
+    expect(replay.bpm).toBe(119);
+    expect(replay.done).toBe(false);
+    expect(replay.clean).toBe(false);
+  });
+
+  it('initial remaining sec uses warmup duration for armed blocks', () => {
+    const { api } = setupModule();
+    const singles = api.BLOCKS.find((block) => block.id === 'singles');
+    const armed = { bpm: 122, phase: 'warmup', warmupTotalSec: 90, warmupStartBpm: 102 };
+    expect(api._test.getInitialRemainingSec({ targetSec: 300 }, armed)).toBe(90);
+    expect(api._test.getInitialRemainingSec({ targetSec: 300 }, { ...armed, phase: 'work' })).toBe(300);
+    expect(api._test.getInitialRemainingSec(singles, { phase: 'work' })).toBe(Math.max(1, singles.targetSec || 60));
+  });
+
+  it('summarizes per-block progress: best clean, attempts, recent trend', () => {
+    const { api } = setupModule();
+    const logs = [
+      {
+        dateKey: '2026-06-13',
+        log: {
+          completedAt: 5000,
+          sessionId: 'balanced_25',
+          sessionLabel: 'Balanced 25',
+          blockResults: [
+            { blockId: 'singles', bpm: 126, done: true, clean: true },
+            { blockId: 'doubles', bpm: 108, done: true, clean: true },
+          ],
+        },
+      },
+      {
+        dateKey: '2026-06-10',
+        log: {
+          completedAt: 4000,
+          sessionId: 'balanced_25',
+          sessionLabel: 'Balanced 25',
+          blockResults: [
+            { blockId: 'singles', bpm: 124, done: true, clean: true },
+            { blockId: 'singles', bpm: 130, done: true, clean: false },
+          ],
+        },
+      },
+      {
+        dateKey: '2026-06-05',
+        log: {
+          completedAt: 3000,
+          sessionId: 'speed_breakthrough_30',
+          sessionLabel: 'Speed 30',
+          blockResults: [{ blockId: 'singles', bpm: 120, done: true, clean: true }],
+        },
+      },
+    ];
+
+    const singles = api._test.summarizeBlockProgress('singles', logs);
+    expect(singles.bestClean).toBe(126);
+    expect(singles.cleanAttempts).toBe(3);
+    expect(singles.totalAttempts).toBe(4);
+    expect(singles.lastAttempt.bpm).toBe(126);
+    expect(singles.recent.length).toBeGreaterThan(0);
+    expect(singles.recent[singles.recent.length - 1].bpm).toBe(126);
+    expect(singles.bestCleanDateKey).toBe('2026-06-13');
+
+    const empty = api._test.summarizeBlockProgress('finger_rebound', logs);
+    expect(empty.bestClean).toBe(0);
+    expect(empty.totalAttempts).toBe(0);
+  });
+
+  it('appendBlockPR persists per-block PRs to LS even without finishing the session', () => {
+    const { api, store } = setupModule();
+    api._test.appendBlockPR({
+      blockId: 'singles',
+      bpm: 105,
+      clean: true,
+      completedAt: 1717000000000,
+      dateKey: '2026-06-13',
+      sessionId: 'balanced_25',
+      sessionLabel: 'Balanced 25',
+    });
+    const written = JSON.parse(store.get('heys_drums_block_prs_v1') || '[]');
+    expect(written).toHaveLength(1);
+    expect(written[0]).toMatchObject({ blockId: 'singles', bpm: 105, clean: true });
+
+    const summary = api._test.summarizeBlockProgress('singles', []);
+    expect(summary.bestClean).toBe(105);
+    expect(summary.totalAttempts).toBe(1);
+    expect(summary.cleanAttempts).toBe(1);
+  });
+
+  it('merges block PR log with day logs without double-counting same attempt', () => {
+    const { api } = setupModule();
+    const completedAt = 1717100000000;
+    api._test.appendBlockPR({
+      blockId: 'doubles',
+      bpm: 95,
+      clean: true,
+      completedAt,
+      dateKey: '2026-06-13',
+      sessionId: 'balanced_25',
+    });
+    const logs = [
+      {
+        dateKey: '2026-06-13',
+        log: {
+          completedAt,
+          blockResults: [{ blockId: 'doubles', bpm: 95, done: true, clean: true }],
+        },
+      },
+    ];
+    const history = api._test.getBlockHistory('doubles', logs);
+    expect(history).toHaveLength(1);
+    expect(history[0].bpm).toBe(95);
+  });
+
+  it('block PR log only counts most recent record per fix (capped at 500)', () => {
+    const { api, store } = setupModule();
+    for (let i = 0; i < 510; i += 1) {
+      api._test.appendBlockPR({
+        blockId: 'singles',
+        bpm: 80 + (i % 30),
+        clean: true,
+        completedAt: 1717200000000 + i,
+        dateKey: '2026-06-13',
+      });
+    }
+    const written = JSON.parse(store.get('heys_drums_block_prs_v1') || '[]');
+    expect(written).toHaveLength(500);
+  });
+
+  it('getBlockHistory returns attempts sorted from newest to oldest', () => {
+    const { api } = setupModule();
+    const logs = [
+      {
+        dateKey: '2026-06-01',
+        log: {
+          completedAt: 1000,
+          blockResults: [{ blockId: 'doubles', bpm: 100, done: true, clean: true }],
+        },
+      },
+      {
+        dateKey: '2026-06-08',
+        log: {
+          completedAt: 5000,
+          blockResults: [{ blockId: 'doubles', bpm: 110, done: true, clean: false }],
+        },
+      },
+      {
+        dateKey: '2026-06-05',
+        log: {
+          completedAt: 3000,
+          blockResults: [{ blockId: 'doubles', bpm: 104, done: true, clean: true }],
+        },
+      },
+    ];
+
+    const history = api._test.getBlockHistory('doubles', logs);
+    expect(history.map((row) => row.bpm)).toEqual([110, 104, 100]);
+    expect(history.map((row) => row.clean)).toEqual([false, true, true]);
+  });
+
+  it('persists warmup phase fields in hobbyLog blockResults', () => {
+    const { api } = setupModule();
+    const state = api._test.makeSessionState('balanced_25', {
+      dateKey: '2026-06-13',
+      logs: [
+        {
+          log: {
+            completedAt: 3000,
+            blockResults: [{ blockId: 'singles', bpm: 120, done: true, clean: true }],
+          },
+        },
+        {
+          log: {
+            completedAt: 2000,
+            blockResults: [{ blockId: 'singles', bpm: 118, done: true, clean: true }],
+          },
+        },
+      ],
+    });
+    const singlesIndex = state.results.findIndex((r) => r.blockId === 'singles');
+    state.results[singlesIndex].done = true;
+    state.results[singlesIndex].clean = true;
+
+    const log = api._test.buildHobbyLog(state);
+    const persisted = log.blockResults.find((r) => r.blockId === 'singles');
+    expect(persisted.phase).toBe('warmup');
+    expect(persisted.warmupTotalSec).toBeGreaterThan(0);
+    expect(persisted.warmupStartBpm).toBeGreaterThan(0);
+    expect(persisted.bpm).toBe(122);
+  });
 });

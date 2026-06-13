@@ -10,6 +10,10 @@ const MODULE_PATH = path.resolve(__dirname, '..', 'heys_training_step_v1.js');
 function setupTrainingStep() {
   const registeredSteps = {};
   const storage = new Map();
+  if (globalThis.document) {
+    globalThis.document.head.innerHTML = '';
+    globalThis.document.body.innerHTML = '';
+  }
   globalThis.window = globalThis;
   globalThis.navigator = { vibrate: () => true };
   globalThis.CustomEvent = globalThis.CustomEvent || class CustomEvent extends Event {
@@ -167,6 +171,7 @@ describe('training step drums tab', () => {
       hobbySubtype: '',
       time: '09:00',
     });
+    expect(document.head.querySelector('script[src="heys_mobility_boot_stub_v1.js"]')).not.toBeNull();
   });
 
   it('skips shared heart-rate zones for Mobility dedicated overlay flow', () => {

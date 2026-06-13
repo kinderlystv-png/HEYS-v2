@@ -155,6 +155,42 @@
     return out.slice(0, max);
   }
 
+  function getBlockPRLogKey() {
+    const cid = getCurrentClientId();
+    return cid ? 'heys_' + cid + '_drums_block_prs_v1' : 'heys_drums_block_prs_v1';
+  }
+
+  function readBlockPRLog() {
+    const list = lsGet(getBlockPRLogKey(), []);
+    return Array.isArray(list) ? list : [];
+  }
+
+  function writeBlockPRLog(entries) {
+    lsSet(getBlockPRLogKey(), Array.isArray(entries) ? entries : []);
+  }
+
+  function appendBlockPR(entry) {
+    if (!entry || !entry.blockId) return null;
+    const cleaned = {
+      blockId: String(entry.blockId),
+      bpm: Number(entry.bpm) || 0,
+      clean: !!entry.clean,
+      completedAt: Number(entry.completedAt) || Date.now(),
+      dateKey: typeof entry.dateKey === 'string' ? entry.dateKey : '',
+      sessionId: typeof entry.sessionId === 'string' ? entry.sessionId : '',
+      sessionLabel: typeof entry.sessionLabel === 'string' ? entry.sessionLabel : '',
+    };
+    if (!cleaned.bpm) return null;
+    const existing = readBlockPRLog();
+    const filtered = existing.filter(
+      (row) => !(row && row.blockId === cleaned.blockId && Number(row.completedAt) === cleaned.completedAt)
+    );
+    filtered.push(cleaned);
+    if (filtered.length > 500) filtered.splice(0, filtered.length - 500);
+    writeBlockPRLog(filtered);
+    return cleaned;
+  }
+
   Object.assign(DFC, {
     lsGet,
     lsSet,
@@ -169,5 +205,9 @@
     writeActiveSession,
     clearActiveSession,
     scanLogs,
+    getBlockPRLogKey,
+    readBlockPRLog,
+    writeBlockPRLog,
+    appendBlockPR,
   });
 })(typeof window !== 'undefined' ? window : globalThis);

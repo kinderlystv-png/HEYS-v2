@@ -1256,3 +1256,839 @@
     grid-row: auto;
   }
 }
+
+.drums-ft-phase-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.drums-ft-phase-banner strong {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.drums-ft-phase-banner.is-warmup {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+}
+
+.drums-ft-pain-btn {
+  background: rgba(220, 38, 38, 0.08) !important;
+  color: #b91c1c !important;
+  font-weight: 700;
+}
+
+.drums-ft-pain-btn:hover {
+  background: rgba(220, 38, 38, 0.16) !important;
+}
+
+.drums-ft-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.55);
+  padding: 24px;
+}
+
+.drums-ft-modal__card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(420px, 100%);
+  padding: 24px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.32);
+  text-align: center;
+}
+
+.drums-ft-modal__title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.drums-ft-modal__hint {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.drums-ft-modal__bpm {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+
+.drums-ft-modal__bpm strong {
+  font-size: 56px;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.drums-ft-modal__bpm span {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.drums-ft-modal__steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.drums-ft-modal__steps button {
+  min-height: 44px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  font-weight: 800;
+  border: 0;
+  cursor: pointer;
+}
+
+.drums-ft-modal__steps button:hover {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.drums-ft-modal__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drums-ft-modal__primary,
+.drums-ft-modal__secondary {
+  min-height: 48px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 14px;
+  border: 0;
+  cursor: pointer;
+}
+
+.drums-ft-modal__primary {
+  background: #0f766e;
+  color: #fff;
+}
+
+.drums-ft-modal__primary:hover {
+  background: #115e59;
+}
+
+.drums-ft-modal__secondary {
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+
+.drums-ft-modal__secondary:hover {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme='dark'] .drums-ft-modal__card {
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-modal__title,
+[data-theme='dark'] .drums-ft-modal__bpm strong {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-modal__hint,
+[data-theme='dark'] .drums-ft-modal__bpm span {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .drums-ft-modal__steps button,
+[data-theme='dark'] .drums-ft-modal__secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-phase-banner {
+  background: rgba(15, 118, 110, 0.22);
+  color: #99f6e4;
+}
+
+[data-theme='dark'] .drums-ft-phase-banner strong {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-phase-banner.is-warmup {
+  background: rgba(217, 119, 6, 0.22);
+  color: #fde68a;
+}
+
+/* === Schematic variant switch === */
+.drums-ft-technique__variant-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.05);
+  margin-bottom: 8px;
+}
+
+.drums-ft-technique__variant-btn {
+  flex: 1;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.drums-ft-technique__variant-btn:hover {
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+.drums-ft-technique__variant-btn.is-active {
+  background: #0f766e;
+  color: #fff;
+}
+
+[data-theme='dark'] .drums-ft-technique__variant-switch {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .drums-ft-technique__variant-btn {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .drums-ft-technique__variant-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+/* === Animated schematic === */
+@keyframes drums-tip-down {
+  0% { transform: translateY(-20px); opacity: 0.7; }
+  35% { transform: translateY(20px); opacity: 1; }
+  55% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-20px); opacity: 0.7; }
+}
+
+@keyframes drums-tip-up {
+  0% { transform: translateY(22px); opacity: 1; }
+  45% { transform: translateY(-18px); opacity: 1; }
+  100% { transform: translateY(22px); opacity: 0.7; }
+}
+
+@keyframes drums-tip-tap {
+  0% { transform: translateY(-6px); opacity: 0.8; }
+  40% { transform: translateY(18px); opacity: 1; }
+  55% { transform: translateY(8px); opacity: 1; }
+  100% { transform: translateY(-6px); opacity: 0.8; }
+}
+
+@keyframes drums-tip-full {
+  0% { transform: translateY(-22px); opacity: 0.8; }
+  30% { transform: translateY(22px); opacity: 1; }
+  60% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-22px); opacity: 0.8; }
+}
+
+@keyframes drums-tip-buzz {
+  0%, 100% { transform: translateY(0); }
+  10% { transform: translateY(-1px); }
+  20% { transform: translateY(1px); }
+  30% { transform: translateY(-1.5px); }
+  40% { transform: translateY(1.5px); }
+  50% { transform: translateY(-1px); }
+  60% { transform: translateY(1px); }
+  70% { transform: translateY(-1.5px); }
+  80% { transform: translateY(1.5px); }
+  90% { transform: translateY(-1px); }
+}
+
+.drums-ft-technique__tip--anim {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-duration: 1.6s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.drums-ft-technique__tip--anim-down { animation-name: drums-tip-down; }
+.drums-ft-technique__tip--anim-up { animation-name: drums-tip-up; }
+.drums-ft-technique__tip--anim-tap { animation-name: drums-tip-tap; animation-duration: 1.2s; }
+.drums-ft-technique__tip--anim-full { animation-name: drums-tip-full; animation-duration: 2s; }
+.drums-ft-technique__tip--buzz { animation: drums-tip-buzz 0.3s infinite linear; transform-box: fill-box; transform-origin: center; }
+
+.drums-ft-technique__svg--anim .drums-ft-technique__path {
+  opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drums-ft-technique__tip--anim,
+  .drums-ft-technique__tip--buzz {
+    animation: none;
+  }
+}
+
+/* === Storyboard schematic === */
+.drums-ft-technique__story {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.04);
+  border-radius: 10px;
+}
+
+.drums-ft-technique__story-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: #fff;
+  border-radius: 8px;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.drums-ft-technique__story-frame svg {
+  width: 100%;
+  height: 56px;
+}
+
+.drums-ft-technique__path--ghost {
+  opacity: 0.25;
+}
+
+[data-theme='dark'] .drums-ft-technique__story {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .drums-ft-technique__story-frame {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+/* === Video schematic === */
+.drums-ft-technique__video-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.drums-ft-technique__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.drums-ft-technique__video.is-missing {
+  display: none;
+}
+
+.drums-ft-technique__video-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  color: #64748b;
+  font-size: 11px;
+  text-align: center;
+  font-weight: 600;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.drums-ft-technique__video.is-missing + .drums-ft-technique__video-fallback {
+  opacity: 1;
+}
+
+[data-theme='dark'] .drums-ft-technique__video-wrap {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .drums-ft-technique__video-fallback {
+  color: #94a3b8;
+}
+
+/* === Progress CTA on home === */
+.drums-ft-progress-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(15, 118, 110, 0.04));
+  color: #0f172a;
+  text-align: left;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.drums-ft-progress-cta:hover {
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.2), rgba(15, 118, 110, 0.08));
+}
+
+.drums-ft-progress-cta__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.drums-ft-progress-cta__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.drums-ft-progress-cta__body strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.drums-ft-progress-cta__body span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.drums-ft-progress-cta__chev {
+  color: #0f766e;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+[data-theme='dark'] .drums-ft-progress-cta {
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.28), rgba(15, 118, 110, 0.12));
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-progress-cta__body span {
+  color: #94a3b8;
+}
+
+/* === Progress screen === */
+.drums-ft-progress-screen,
+.drums-ft-progress-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drums-ft-progress-screen__head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 4px 12px;
+  align-items: center;
+}
+
+.drums-ft-progress-screen__head strong {
+  grid-column: 2;
+  font-size: 17px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.drums-ft-progress-screen__head span {
+  grid-column: 2;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.drums-ft-back-btn {
+  grid-row: 1 / span 2;
+  align-self: stretch;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.drums-ft-back-btn:hover {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+[data-theme='dark'] .drums-ft-progress-screen__head strong {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-progress-screen__head span {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .drums-ft-back-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.drums-ft-progress-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.drums-ft-progress-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06), 0 6px 20px rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.drums-ft-progress-card:hover {
+  border-color: rgba(15, 118, 110, 0.4);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08), 0 10px 28px rgba(15, 118, 110, 0.12);
+}
+
+.drums-ft-progress-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.drums-ft-progress-card__head strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.drums-ft-progress-card__head span {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.drums-ft-progress-card__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.drums-ft-progress-card__metric strong {
+  display: block;
+  font-size: 32px;
+  font-weight: 900;
+  color: #0f766e;
+  line-height: 1;
+}
+
+.drums-ft-progress-card__metric span {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.drums-ft-progress-card__foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+[data-theme='dark'] .drums-ft-progress-card {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .drums-ft-progress-card__head strong {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-progress-card__head span,
+[data-theme='dark'] .drums-ft-progress-card__metric span,
+[data-theme='dark'] .drums-ft-progress-card__foot {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .drums-ft-progress-card__metric strong {
+  color: #5eead4;
+}
+
+/* === Sparkline === */
+.drums-ft-sparkline {
+  color: #0f766e;
+  flex-shrink: 0;
+}
+
+.drums-ft-sparkline--empty {
+  font-size: 18px;
+  color: #cbd5e1;
+  font-weight: 800;
+}
+
+[data-theme='dark'] .drums-ft-sparkline {
+  color: #5eead4;
+}
+
+/* === Detail screen === */
+.drums-ft-progress-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.drums-ft-progress-summary .drums-ft-stat {
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
+  text-align: center;
+}
+
+.drums-ft-progress-summary .drums-ft-stat--accent {
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+}
+
+.drums-ft-progress-target {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.1), rgba(20, 184, 166, 0.04));
+  color: #0f172a;
+}
+
+.drums-ft-progress-target strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.drums-ft-progress-target span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+[data-theme='dark'] .drums-ft-progress-target {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-progress-target span {
+  color: #94a3b8;
+}
+
+.drums-ft-chart-wrap {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.03);
+  overflow-x: auto;
+}
+
+.drums-ft-chart {
+  display: block;
+  margin: 0 auto;
+  color: #0f766e;
+  max-width: 100%;
+  height: auto;
+}
+
+.drums-ft-chart__axis {
+  stroke: rgba(15, 23, 42, 0.18);
+  stroke-width: 1;
+}
+
+.drums-ft-chart__label {
+  fill: #64748b;
+  font-size: 10px;
+}
+
+.drums-ft-chart__line {
+  stroke: currentColor;
+  fill: none;
+}
+
+.drums-ft-chart__dot.is-clean {
+  fill: #0f766e;
+  stroke: #0f766e;
+}
+
+.drums-ft-chart__dot.is-dirty {
+  fill: #fff;
+  stroke: #ef4444;
+  stroke-width: 1.5;
+}
+
+.drums-ft-chart--empty {
+  display: grid;
+  place-items: center;
+  height: 160px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+[data-theme='dark'] .drums-ft-chart-wrap {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme='dark'] .drums-ft-chart {
+  color: #5eead4;
+}
+
+[data-theme='dark'] .drums-ft-chart__axis {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+[data-theme='dark'] .drums-ft-chart__label {
+  fill: #94a3b8;
+}
+
+[data-theme='dark'] .drums-ft-chart__dot.is-clean {
+  fill: #5eead4;
+  stroke: #5eead4;
+}
+
+[data-theme='dark'] .drums-ft-chart__dot.is-dirty {
+  fill: #1e293b;
+  stroke: #f87171;
+}
+
+/* === History list === */
+.drums-ft-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drums-ft-history > strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.drums-ft-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drums-ft-history__row {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.03);
+  font-size: 12px;
+}
+
+.drums-ft-history__row.is-clean {
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.drums-ft-history__date {
+  color: #64748b;
+  font-weight: 700;
+  min-width: 56px;
+}
+
+.drums-ft-history__bpm {
+  color: #0f172a;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.drums-ft-history__tag {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.16);
+  color: #b91c1c;
+  text-transform: uppercase;
+}
+
+.drums-ft-history__row.is-clean .drums-ft-history__tag {
+  background: rgba(15, 118, 110, 0.16);
+  color: #0f766e;
+}
+
+.drums-ft-history__session {
+  color: #94a3b8;
+  font-size: 11px;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drums-ft-history__empty {
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
+  color: #64748b;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+[data-theme='dark'] .drums-ft-history > strong {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-history__row {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme='dark'] .drums-ft-history__row.is-clean {
+  background: rgba(15, 118, 110, 0.18);
+}
+
+[data-theme='dark'] .drums-ft-history__bpm {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .drums-ft-history__date,
+[data-theme='dark'] .drums-ft-history__session {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .drums-ft-history__empty {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+}
+

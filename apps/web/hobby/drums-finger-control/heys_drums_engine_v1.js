@@ -25,6 +25,8 @@
     writeDay,
     readActiveSession,
     clearActiveSession,
+    readBlockPRLog,
+    appendBlockPR,
   } = DFC;
 
   function normalizeSessionMetrics(metrics) {
@@ -71,11 +73,21 @@
     return Math.min(maxBpm, cleanBpm + step);
   }
 
+  const WARMUP_TOTAL_SEC = 90;
+  const WARMUP_DROP_BPM = 20;
+
   function makeInitialBlockResult(block, logs) {
+    const baseBpm = clampNumber(block?.bpm, 30, 260, 80);
     const bpm = getProgressionBpm(block, logs);
+    const hasRecord = bpm > baseBpm;
+    const warmupTotalSec = hasRecord ? WARMUP_TOTAL_SEC : 0;
+    const warmupStartBpm = hasRecord ? Math.max(baseBpm, bpm - WARMUP_DROP_BPM) : bpm;
     return {
       blockId: block.id,
       bpm,
+      phase: hasRecord ? 'warmup' : 'work',
+      warmupTotalSec,
+      warmupStartBpm,
       clean: false,
       done: false,
       tension: 3,
@@ -85,6 +97,48 @@
       rampStartBpm: bpm,
       rampLastBpm: 0,
       rampBars: 0,
+    };
+  }
+
+  function getInitialRemainingSec(block, result) {
+    if (result && result.phase === 'warmup' && Number(result.warmupTotalSec) > 0) {
+      return clampNumber(result.warmupTotalSec, 1, 600, WARMUP_TOTAL_SEC);
+    }
+    return Math.max(1, Number(block?.targetSec) || 60);
+  }
+
+  function getEffectiveBpm(result, remainingSec) {
+    if (!result) return 0;
+    const targetBpm = clampNumber(result.bpm, 30, 260, 80);
+    if (result.phase !== 'warmup' || !Number(result.warmupTotalSec)) return targetBpm;
+    const startBpm = clampNumber(result.warmupStartBpm, 30, 260, targetBpm);
+    if (startBpm >= targetBpm) return targetBpm;
+    const total = clampNumber(result.warmupTotalSec, 1, 600, WARMUP_TOTAL_SEC);
+    const remaining = Math.max(0, Math.min(total, Number(remainingSec) || 0));
+    const elapsed = total - remaining;
+    const t = Math.max(0, Math.min(1, elapsed / total));
+    return Math.round(startBpm + (targetBpm - startBpm) * t);
+  }
+
+  function finishWarmup(result) {
+    if (!result || result.phase !== 'warmup') return result;
+    return { ...result, phase: 'work' };
+  }
+
+  function disableWarmupForReplay(result, bpm) {
+    if (!result) return result;
+    const safeBpm = clampNumber(bpm != null ? bpm : result.bpm, 30, 260, result.bpm || 80);
+    return {
+      ...result,
+      bpm: safeBpm,
+      phase: 'work',
+      warmupTotalSec: 0,
+      warmupStartBpm: safeBpm,
+      rampStartBpm: safeBpm,
+      rampLastBpm: 0,
+      rampBars: 0,
+      done: false,
+      clean: false,
     };
   }
 
@@ -150,21 +204,27 @@
     const byBlockId = new Map((Array.isArray(log.blockResults) ? log.blockResults : []).map((result) => [result.blockId, result]));
     const results = expanded.blockItems.map((block) => {
       const saved = byBlockId.get(block.id);
-      return saved
-        ? {
-            blockId: block.id,
-            bpm: clampNumber(saved.bpm, 0, 320, block.bpm || 80),
-            clean: !!saved.clean,
-            done: !!saved.done,
-            tension: clampNumber(saved.tension, 1, 10, 3),
-            sound: clampNumber(saved.sound, 1, 5, 4),
-            note: saved.note || '',
-            rampEnabled: saved.rampEnabled != null ? !!saved.rampEnabled : !!block.ramp,
-            rampStartBpm: clampNumber(saved.rampStartBpm, 0, 320, block.bpm || 80),
-            rampLastBpm: clampNumber(saved.rampLastBpm, 0, 320, 0),
-            rampBars: clampNumber(saved.rampBars, 0, 999, 0),
-          }
-        : makeInitialBlockResult(block);
+      if (!saved) return makeInitialBlockResult(block);
+      const savedBpm = clampNumber(saved.bpm, 0, 320, block.bpm || 80);
+      const savedPhase = saved.phase === 'warmup' ? 'warmup' : 'work';
+      const savedWarmupTotal = clampNumber(saved.warmupTotalSec, 0, 600, 0);
+      const savedWarmupStart = clampNumber(saved.warmupStartBpm, 0, 320, savedBpm);
+      return {
+        blockId: block.id,
+        bpm: savedBpm,
+        phase: savedPhase,
+        warmupTotalSec: savedWarmupTotal,
+        warmupStartBpm: savedWarmupStart,
+        clean: !!saved.clean,
+        done: !!saved.done,
+        tension: clampNumber(saved.tension, 1, 10, 3),
+        sound: clampNumber(saved.sound, 1, 5, 4),
+        note: saved.note || '',
+        rampEnabled: saved.rampEnabled != null ? !!saved.rampEnabled : !!block.ramp,
+        rampStartBpm: clampNumber(saved.rampStartBpm, 0, 320, block.bpm || 80),
+        rampLastBpm: clampNumber(saved.rampLastBpm, 0, 320, 0),
+        rampBars: clampNumber(saved.rampBars, 0, 999, 0),
+      };
     });
     const firstOpenIndex = results.findIndex((result) => !result.done);
     const activeIndex = firstOpenIndex >= 0 ? firstOpenIndex : 0;
@@ -177,7 +237,7 @@
       sessionId: expanded.id,
       startedAt: Number(log.startedAt) || Date.now(),
       activeIndex,
-      remainingSec: expanded.blockItems[activeIndex]?.targetSec || 60,
+      remainingSec: getInitialRemainingSec(expanded.blockItems[activeIndex], results[activeIndex]),
       running: false,
       results,
       countInSec: 0,
@@ -193,6 +253,7 @@
   function makeSessionState(sessionId, opts) {
     const expanded = expandSession(sessionId);
     const logs = Array.isArray(opts?.logs) ? opts.logs : scanLogs();
+    const results = expanded.blockItems.map((block) => makeInitialBlockResult(block, logs));
     return {
       version: 1,
       moduleId: MODULE_ID,
@@ -201,9 +262,9 @@
       sessionId: expanded.id,
       startedAt: Date.now(),
       activeIndex: 0,
-      remainingSec: expanded.blockItems[0]?.targetSec || 60,
+      remainingSec: getInitialRemainingSec(expanded.blockItems[0], results[0]),
       running: false,
-      results: expanded.blockItems.map((block) => makeInitialBlockResult(block, logs)),
+      results,
       countInSec: 0,
       metrics: normalizeSessionMetrics(),
       tapTest: makeInitialTapTest(),
@@ -218,17 +279,18 @@
     const prev = currentState || {};
     const expanded = expandSession(sessionId);
     const prevResults = Array.isArray(prev.results) ? prev.results : [];
+    const results = expanded.blockItems.map((block) => {
+      const current = prevResults.find((result) => result && result.blockId === block.id);
+      return current ? { ...makeInitialBlockResult(block), ...current } : makeInitialBlockResult(block);
+    });
     return {
       ...prev,
       sessionId: expanded.id,
       activeIndex: 0,
-      remainingSec: expanded.blockItems[0]?.targetSec || 60,
+      remainingSec: getInitialRemainingSec(expanded.blockItems[0], results[0]),
       running: false,
       countInSec: 0,
-      results: expanded.blockItems.map((block) => {
-        const current = prevResults.find((result) => result && result.blockId === block.id);
-        return current ? { ...makeInitialBlockResult(block), ...current } : makeInitialBlockResult(block);
-      }),
+      results,
     };
   }
 
@@ -516,6 +578,84 @@
     return stats;
   }
 
+  function getBlockHistory(blockId, logs, options) {
+    const rows = Array.isArray(logs) ? logs : scanLogs();
+    const attempts = [];
+    const seen = new Set();
+    rows.forEach((row) => {
+      const log = row?.log;
+      const blocks = Array.isArray(log?.blockResults) ? log.blockResults : [];
+      blocks.forEach((block) => {
+        if (!block || block.blockId !== blockId || !block.done) return;
+        const bpm = clampNumber(block.bpm, 0, 320, 0);
+        if (!bpm) return;
+        const completedAt = Number(log?.completedAt) || 0;
+        const dedupeKey = completedAt + ':' + bpm + ':' + (block.clean ? 1 : 0);
+        seen.add(dedupeKey);
+        attempts.push({
+          bpm,
+          clean: !!block.clean,
+          completedAt,
+          dateKey: row?.dateKey || '',
+          sessionId: log?.sessionId || '',
+          sessionLabel: log?.sessionLabel || '',
+        });
+      });
+    });
+    const includePRLog = !options || options.includePRLog !== false;
+    if (includePRLog) {
+      const prRows = Array.isArray(options?.prLog) ? options.prLog : typeof readBlockPRLog === 'function' ? readBlockPRLog() : [];
+      prRows.forEach((entry) => {
+        if (!entry || entry.blockId !== blockId) return;
+        const bpm = clampNumber(entry.bpm, 0, 320, 0);
+        if (!bpm) return;
+        const completedAt = Number(entry.completedAt) || 0;
+        const dedupeKey = completedAt + ':' + bpm + ':' + (entry.clean ? 1 : 0);
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+        attempts.push({
+          bpm,
+          clean: !!entry.clean,
+          completedAt,
+          dateKey: entry.dateKey || '',
+          sessionId: entry.sessionId || '',
+          sessionLabel: entry.sessionLabel || '',
+        });
+      });
+    }
+    attempts.sort((a, b) => b.completedAt - a.completedAt);
+    return attempts;
+  }
+
+  function summarizeBlockProgress(blockId, logs) {
+    const history = getBlockHistory(blockId, logs);
+    const cleanHistory = history.filter((attempt) => attempt.clean);
+    const bestClean = cleanHistory.reduce((best, attempt) => (attempt.bpm > best ? attempt.bpm : best), 0);
+    const bestCleanRow = cleanHistory.find((attempt) => attempt.bpm === bestClean) || null;
+    const lastAttempt = history[0] || null;
+    const recent = history.slice(0, 15).reverse();
+    const now = Date.now();
+    const monthMs = 30 * 24 * 60 * 60 * 1000;
+    const cleanInMonth = cleanHistory.filter((a) => a.completedAt && now - a.completedAt <= monthMs);
+    const cleanBeforeMonth = cleanHistory.filter((a) => a.completedAt && now - a.completedAt > monthMs);
+    const bestInMonth = cleanInMonth.reduce((m, a) => Math.max(m, a.bpm), 0);
+    const bestBeforeMonth = cleanBeforeMonth.reduce((m, a) => Math.max(m, a.bpm), 0);
+    const deltaMonth = bestInMonth && bestBeforeMonth ? bestInMonth - bestBeforeMonth : bestInMonth ? bestInMonth : 0;
+    return {
+      blockId,
+      totalAttempts: history.length,
+      cleanAttempts: cleanHistory.length,
+      bestClean,
+      bestCleanAt: bestCleanRow ? bestCleanRow.completedAt : 0,
+      bestCleanDateKey: bestCleanRow ? bestCleanRow.dateKey : '',
+      lastAttempt,
+      recent,
+      deltaMonth,
+      bestInMonth,
+      bestBeforeMonth,
+    };
+  }
+
   function buildHobbyLog(state) {
     const session = getSession(state.sessionId);
     const completedBlocks = state.results.filter((result) => result.done).length;
@@ -541,6 +681,9 @@
         bpm: clampNumber(result.bpm, 0, 320, 0),
         clean: !!result.clean,
         done: !!result.done,
+        phase: result.phase === 'warmup' ? 'warmup' : 'work',
+        warmupTotalSec: clampNumber(result.warmupTotalSec, 0, 600, 0),
+        warmupStartBpm: clampNumber(result.warmupStartBpm, 0, 320, 0),
         tension: clampNumber(result.tension, 1, 10, 3),
         sound: clampNumber(result.sound, 1, 5, 4),
         note: result.note || '',
@@ -680,10 +823,16 @@
   }
 
   Object.assign(DFC, {
+    WARMUP_TOTAL_SEC,
+    WARMUP_DROP_BPM,
     normalizeSessionMetrics,
     getBlockAttemptFromLog,
     getProgressionBpm,
     makeInitialBlockResult,
+    getInitialRemainingSec,
+    getEffectiveBpm,
+    finishWarmup,
+    disableWarmupForReplay,
     deriveMetricsFromResults,
     getTapBpm,
     applyTapCountToMetrics,
@@ -703,6 +852,8 @@
     rollbackRamp,
     calculateStreak,
     summarizeProgress,
+    getBlockHistory,
+    summarizeBlockProgress,
     buildHobbyLog,
     saveSessionToTraining,
     buildInitialAppState,
