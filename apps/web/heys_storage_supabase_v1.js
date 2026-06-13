@@ -9167,6 +9167,11 @@
                         if (ls.getItem(key) !== reserialized) {
                           ls.setItem(key, reserialized);
                           log(`  ✅ Merged chrono to localStorage: ${key}`);
+                          // Прямой ls.setItem не триггерит storage event в той же
+                          // tab, поэтому usePlanningState не узнал бы об апдейте
+                          // без re-mount PlanningTab → юзер видел бы пусто, пока
+                          // не переоткроет вкладку.
+                          maybeDispatchPlanningUpdated(row.k, 'bootstrap');
                         }
                         return; // handled — skip wholesale write
                       }
@@ -9182,6 +9187,10 @@
                 } else {
                   ls.setItem(key, JSON.stringify(valueToSave));
                   log(`  ✅ Saved to localStorage: ${key}`);
+                  // Planning ключи (projects/tasks/slots/links/chrono_*): ls.setItem
+                  // не триггерит storage event в текущей tab → usePlanningState
+                  // не узнал бы об апдейте.
+                  maybeDispatchPlanningUpdated(row.k, 'bootstrap');
                 }
               }
 
@@ -12252,6 +12261,22 @@
     return Boolean(isPinAuth || user || hasCuratorTok);
   }
 
+  // Both bootstrapClientSync (full-sync row processing) и applyForegroundHotSyncValue
+  // пишут planning ключи в LS через global.localStorage.setItem напрямую — это
+  // НЕ триггерит `storage` event в той же tab (storage event приходит только
+  // в другие tabs). Поэтому usePlanningState в открытой Задачах не узнаёт об
+  // апдейте до re-mount или до собственного refreshPlanningFromCloud. Этот
+  // helper сигналит явно для всех planning ключей.
+  function maybeDispatchPlanningUpdated(baseKey, source) {
+    if (typeof baseKey !== 'string' || !baseKey.startsWith('heys_planning_')) return;
+    if (typeof window === 'undefined' || !window.dispatchEvent) return;
+    try {
+      window.dispatchEvent(new CustomEvent('heys:planning-updated', {
+        detail: { source: source || 'cloud-sync', key: baseKey },
+      }));
+    } catch (_) { /* noop */ }
+  }
+
   function getForegroundHotSyncKeys(reason) {
     const today = new Date().toISOString().slice(0, 10);
     const allClientKeys = Array.isArray(CLIENT_SPECIFIC_KEYS) ? CLIENT_SPECIFIC_KEYS.slice() : [];
@@ -12607,8 +12632,13 @@
         if (!appliedMergedChrono) {
           global.localStorage.setItem(scopedKey, serialized);
         }
+        maybeDispatchPlanningUpdated(baseKey, source);
       } else {
         global.localStorage.setItem(scopedKey, serialized);
+        // Planning ключи (projects/tasks/slots/links/snapshots/tombstones): прямой
+        // ls.setItem не триггерит storage event в текущей tab. Сигналим явно,
+        // чтобы usePlanningState увидел апдейт без re-mount PlanningTab.
+        maybeDispatchPlanningUpdated(baseKey, source);
       }
 
       if (global.HEYS?.store?.invalidate) {

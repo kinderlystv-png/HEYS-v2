@@ -2959,6 +2959,31 @@
             return { active, inactive };
         }, [displayActivities, minutesByActivity]);
 
+        // Cold-load syncing placeholder.
+        // На первом заходе в Задачи после reload `usePlanningState` читает LS
+        // синхронно — пусто, потому что bootstrapClientSync ещё качает данные
+        // с облака. Без этой защиты юзеру с реальными занятиями показывали
+        // empty state «нажмите + Новая», и только через секунду подгружались
+        // его чипы. Теперь до завершения первого pull рисуем «Обновление…».
+        // Реально пустой список (новый юзер) — не маскируем: после успешного
+        // pull `didCompleteCloudPull()` вернёт true и empty state покажется.
+        const checkPullCompleted = () =>
+            !!(HEYS.Planning && typeof HEYS.Planning.didCompleteCloudPull === 'function'
+                && HEYS.Planning.didCompleteCloudPull());
+        const [pullCompleted, setPullCompleted] = useState(checkPullCompleted);
+        useEffect(() => {
+            // Двунаправленно: при переключении клиента в той же сессии
+            // `didCompleteCloudPull()` вернёт false для нового клиента, пока
+            // его собственный pull не завершится — снова показываем спиннер.
+            const sync = () => setPullCompleted(checkPullCompleted());
+            sync();
+            window.addEventListener('heys:planning-updated', sync);
+            return () => window.removeEventListener('heys:planning-updated', sync);
+        }, []);
+        const chronoSyncing = !pullCompleted
+            && partition.active.length === 0
+            && partition.inactive.length === 0;
+
         // Распределение времени по дням недели для режима week.
         const weekBreakdown = useMemo(() => {
             if (scope !== 'week') return null;
@@ -3253,12 +3278,13 @@
             }),
             h(ChronoOverviewPanel, { insights, balance: categoryBalance, streaks, timeOfDay }),
             h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
-            h(ChronoStrip, {
+            chronoSyncing && h('div', { className: 'chrono-empty', role: 'status' }, 'Обновление занятий…'),
+            !chronoSyncing && h(ChronoStrip, {
                 activities: partition.inactive,
                 onPick: handleBubbleClick,
                 onAddNew: () => setPickerOpen(true),
             }),
-            h(ChronoCloud, {
+            !chronoSyncing && h(ChronoCloud, {
                 activities: partition.active,
                 minutesByActivity,
                 maxMin,

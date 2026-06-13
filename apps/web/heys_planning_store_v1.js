@@ -1219,6 +1219,22 @@
         return '';
     }
 
+    // Per-client флаг «первый pull облака для этого клиента уже завершился».
+    // Нужен ChronoScreen'у: на cold-load до прихода ответа надо показывать
+    // «Обновление занятий…» вместо empty state «нажмите + Новая», иначе у
+    // юзера с реальными занятиями моргает ложное «у тебя нет занятий».
+    // Отдельно от bootstrapClientSync — он пишет в LS напрямую, planning
+    // state узнаёт об этом только через cloud pull, поэтому именно его и
+    // ждём.
+    let _cloudPullDoneClientId = null;
+
+    function didCompleteCloudPull() {
+        if (_cloudPullDoneClientId == null) return false;
+        const current = getPlanningCloudClientId();
+        if (!current) return _cloudPullDoneClientId !== null;
+        return _cloudPullDoneClientId === current;
+    }
+
     function refreshPlanningFromCloud() {
         const YandexAPI = HEYS.YandexAPI;
         const Store = HEYS.Planning && HEYS.Planning.Store;
@@ -1281,9 +1297,12 @@
                     Store.saveChronoTombstones(item.v); // tombstones already union-merge in saveChronoTombstones
                 }
             });
+            _cloudPullDoneClientId = clientId || _cloudPullDoneClientId;
             try {
                 if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-                    window.dispatchEvent(new CustomEvent('heys:planning-updated'));
+                    window.dispatchEvent(new CustomEvent('heys:planning-updated', {
+                        detail: { source: 'cloud-pull', initial: true },
+                    }));
                 }
             } catch (e) { /* noop */ }
             return { ok: true };
@@ -1468,4 +1487,5 @@
     };
 
     Planning.refreshPlanningFromCloud = refreshPlanningFromCloud;
+    Planning.didCompleteCloudPull = didCompleteCloudPull;
 })();
