@@ -3057,6 +3057,36 @@
     <script defer src="boot-init.bundle.6ccbd951db49.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
+    <!-- ⚡ PERF 2026-06-13: D1 (solid-шапка на Android вместо frosted glass —
+         Mali-GPU блюрит полосу под шапкой каждый кадр скролла; откат:
+         localStorage heys_perf_header_glass = 'blur'), A5 (пауза CSS-анимаций
+         при скрытой вкладке), A9 (build-hash в log-trace для диагностики
+         stale-SW). CSS-правила: 730-widgets-dashboard.css (D1),
+         000-base-and-gamification.css (A5). -->
+    <script>
+        (function () {
+            try {
+                var glassPref = null;
+                try { glassPref = localStorage.getItem('heys_perf_header_glass'); } catch (_) { }
+                if (/Android/i.test(navigator.userAgent || '') && glassPref !== 'blur') {
+                    document.documentElement.classList.add('heys-android');
+                }
+            } catch (_) { }
+            try {
+                document.addEventListener('visibilitychange', function () {
+                    try {
+                        document.documentElement.classList.toggle('heys-bg-paused', document.visibilityState === 'hidden');
+                    } catch (_) { }
+                });
+            } catch (_) { }
+            try {
+                var bs = document.querySelector('script[src*="boot-app.bundle."]');
+                var bm = bs && (bs.getAttribute('src') || '').match(/boot-app\.bundle\.([a-f0-9]+)\.js/);
+                if (bm) console.info('[HEYS.build] boot-app=' + bm[1]);
+            } catch (_) { }
+        })();
+    </script>
+
     <!-- PERF: Detect returning user (localStorage has profile) → skip card unfold animations -->
     <script>
         (function () {
