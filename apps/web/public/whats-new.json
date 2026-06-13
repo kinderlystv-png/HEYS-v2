@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.d2c03e71",
+      "buildHash": "d2c03e71",
+      "date": "2026-06-13",
+      "kind": "technical",
+      "profile": "technical-backend-api",
+      "title": "HEYS Старт",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Бот HEYS Старт",
+          "description": "Добавлен отдельный Telegram-webhook для квиза «Твой тип срыва»: старый клиентский бот остаётся на своём маршруте, новый бот ведёт сценарий до заявки на неделю."
+        }
+      ],
+      "coveredCommits": ["d2c03e71"]
+    },
+    {
       "version": "2026.06.13.1e0f1452",
       "buildHash": "1e0f1452",
       "date": "2026-06-13",
@@ -143,22 +159,6 @@
         }
       ],
       "coveredCommits": ["914551ee", "5d1572fa"]
-    },
-    {
-      "version": "2026.06.13.5d1572fa",
-      "buildHash": "5d1572fa",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "reconcile fast-path, sticky-bar через IntersectionObserver, стабильные keys",
-      "items": [
-        {
-          "type": "perf",
-          "title": "reconcile fast-path, sticky-bar через IntersectionObserver, стабильные keys",
-          "description": "reconcile fast-path, sticky-bar через IntersectionObserver, стабильные keys"
-        }
-      ],
-      "coveredCommits": ["5d1572fa"]
     }
   ]
 }
