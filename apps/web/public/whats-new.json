@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.31fd8d35",
+      "buildHash": "31fd8d35",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "perf-классы Android и visibility-pause + build-hash лог",
+      "items": [
+        {
+          "type": "perf",
+          "title": "perf-классы Android и visibility-pause + build-hash лог",
+          "description": "perf-классы Android и visibility-pause + build-hash лог"
+        }
+      ],
+      "coveredCommits": ["31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
+    },
+    {
       "version": "2026.06.13.ce6be6a5",
       "buildHash": "ce6be6a5",
       "date": "2026-06-13",
@@ -139,21 +155,6 @@
         }
       ],
       "coveredCommits": ["da823897"]
-    },
-    {
-      "version": "2026.06.13.b3ab1a0e",
-      "buildHash": "b3ab1a0e",
-      "date": "2026-06-13",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления ошибок и улучшение стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки и улучшили стабильность",
-          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
-        }
-      ]
     }
   ]
 }
