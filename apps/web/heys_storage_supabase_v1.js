@@ -4463,6 +4463,19 @@
       // at the high-water mark and fired SHRINK on every legitimate delete forever
       // (since deletes always produce items < max). Fixed: distinguish by updatedAt.
       const _dayv2LastSeen = new Map(); // key → { items, updatedAt }
+      const DAYV2_LASTSEEN_MAX = 300; // ⚡ PERF A6 (2026-06-13): кап роста за длинную сессию
+      // ⚡ PERF A3 (2026-06-13): verbose day-trace (console.info на КАЖДЫЙ нормальный
+      // dayv2-write) шёл через log-trace в сериализацию на каждое действие с едой.
+      // По умолчанию выкл в проде. Включить: HEYS.debugDayTrace = true (runtime)
+      // или localStorage heys_debug_daytrace = '1'. STALE-WRITER warn остаётся всегда.
+      let _dayTraceVerboseLS = null;
+      const _dayTraceVerbose = () => {
+        if (global.HEYS && global.HEYS.debugDayTrace != null) return !!global.HEYS.debugDayTrace;
+        if (_dayTraceVerboseLS === null) {
+          try { _dayTraceVerboseLS = global.localStorage.getItem('heys_debug_daytrace') === '1'; } catch (_) { _dayTraceVerboseLS = false; }
+        }
+        return _dayTraceVerboseLS;
+      };
       global.localStorage.setItem = function (k, v) {
         // 🔬 [HEYS.day-trace] 5b/8 LS interceptor — every dayv2 setItem is captured here.
         try {
@@ -4492,6 +4505,11 @@
             if (_totalItems != null && _newUpdatedAt != null) {
               if (!_last || _last.updatedAt == null || _newUpdatedAt >= _last.updatedAt) {
                 _dayv2LastSeen.set(k, { items: _totalItems, updatedAt: _newUpdatedAt });
+                if (_dayv2LastSeen.size > DAYV2_LASTSEEN_MAX) {
+                  // ⚡ PERF A6: вытесняем самую старую запись (bounded map)
+                  const _oldestKey = _dayv2LastSeen.keys().next().value;
+                  if (_oldestKey !== undefined) _dayv2LastSeen.delete(_oldestKey);
+                }
               }
             }
             if (_shouldWarn) {
@@ -4507,8 +4525,9 @@
                 sourceId: parsed && parsed._sourceId,
                 stack: new Error().stack.split('\n').slice(1, 10).join('\n'),
               });
-            } else {
+            } else if (_dayTraceVerbose()) {
               // Normal write — single-line info, no stack noise.
+              // ⚡ PERF A3: за флагом — не сериализуем в log-trace каждый ввод еды.
               console.info('[HEYS.day-trace] 5b/8 LS interceptor', {
                 key: k,
                 mealsCount: _meals ? _meals.length : '<not-array>',
