@@ -53,6 +53,60 @@
   var lastFlushAt = 0;
   var flushInProgress = false;
 
+  // ⚡ PERF A2 (2026-06-13): бюджетная сериализация. Раньше каждый console.* с
+  // объектом шёл в полный JSON.stringify (цена платится ДО обрезки по
+  // MAX_MSG_LEN), а args уходили в batch сырыми объектами без капа. Теперь:
+  // depth ≤ 3, ≤ 24 ключей/элементов на уровень, строки ≤ 256 симв., ≤ 400
+  // узлов на вызов. Полный режим (отладка): localStorage heys_logtrace_full = '1'.
+  var FULL_TRACE = (function () {
+    try { return localStorage.getItem('heys_logtrace_full') === '1'; } catch (_) { return false; }
+  })();
+  var BUDGET_DEPTH = 3;
+  var BUDGET_KEYS = 24;
+  var BUDGET_STR = 256;
+  var BUDGET_NODES = 400;
+
+  function budgetSerialize(v, depth, state) {
+    if (++state.nodes > BUDGET_NODES) return '"…"';
+    if (v === null) return 'null';
+    var t = typeof v;
+    if (t === 'undefined') return '"undefined"';
+    if (t === 'number' || t === 'boolean') return String(v);
+    if (t === 'string') {
+      var s = v.length > BUDGET_STR ? v.slice(0, BUDGET_STR) + '…' : v;
+      try { return JSON.stringify(s); } catch (_) { return '"…"'; }
+    }
+    if (t === 'function') return '"[fn]"';
+    if (v instanceof Error) {
+      try { return JSON.stringify(v.name + ': ' + v.message); } catch (_) { return '"[error]"'; }
+    }
+    if (depth >= BUDGET_DEPTH) return Array.isArray(v) ? '"[…array]"' : '"{…object}"';
+    var i, out;
+    if (Array.isArray(v)) {
+      out = [];
+      var n = Math.min(v.length, BUDGET_KEYS);
+      for (i = 0; i < n; i++) out.push(budgetSerialize(v[i], depth + 1, state));
+      if (v.length > n) out.push('"…+' + (v.length - n) + '"');
+      return '[' + out.join(',') + ']';
+    }
+    if (t === 'object') {
+      out = [];
+      var count = 0, total = 0, k, vv;
+      for (k in v) {
+        if (!Object.prototype.hasOwnProperty.call(v, k)) continue;
+        total++;
+        if (count < BUDGET_KEYS) {
+          try { vv = v[k]; } catch (_) { vv = '[getter]'; }
+          out.push(JSON.stringify(k) + ':' + budgetSerialize(vv, depth + 1, state));
+          count++;
+        }
+      }
+      if (total > count) out.push('"…":"+' + (total - count) + ' keys"');
+      return '{' + out.join(',') + '}';
+    }
+    return '"' + t + '"';
+  }
+
   function safeStringify(v) {
     if (v === null) return 'null';
     if (v === undefined) return 'undefined';
@@ -63,6 +117,10 @@
       // Stack может быть длинным — обрежем разумно
       var stack = v.stack || '';
       return v.name + ': ' + v.message + (stack ? '\n' + stack.split('\n').slice(0, 8).join('\n') : '');
+    }
+    if (!FULL_TRACE) {
+      try { return budgetSerialize(v, 0, { nodes: 0 }); }
+      catch (_) { try { return String(v); } catch (__) { return '[unserializable]'; } }
     }
     try {
       return JSON.stringify(v, function (k, val) {
@@ -80,7 +138,9 @@
     var extras = [];
     for (var i = 0; i < args.length; i++) {
       parts.push(safeStringify(args[i]));
-      if (i > 0) extras.push(args[i]);
+      // ⚡ PERF A2: в batch уходит бюджетная строка, а не сырой объект —
+      // иначе JSON.stringify(batch) на flush сериализует объекты целиком.
+      if (i > 0) extras.push(FULL_TRACE ? args[i] : parts[i]);
     }
     var msg = parts.join(' ');
     if (msg.length > MAX_MSG_LEN) msg = msg.slice(0, MAX_MSG_LEN) + ' …[truncated]';

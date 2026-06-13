@@ -67,9 +67,14 @@
     var HEYS = window.HEYS = window.HEYS || {};
     HEYS.__loadPostboot1Game = _loadLazyChunk;
 
+    // ⚡ PERF A7 (2026-06-13): timeout 2000 форсировал парс 1.4 МБ в первые 2с
+    // после бута (вместе с остальными чанками — парс-шторм 5 МБ на слабых
+    // устройствах ровно когда пользователь начинает тыкать). Ступенчато:
+    // game 6с → ui 12с. Клик по вкладке грузит мгновенно через force-load
+    // (HEYS.__loadPostboot1Game) — UX перехода не меняется.
     if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(_loadLazyChunk, { timeout: 2000 });
+        requestIdleCallback(_loadLazyChunk, { timeout: 6000 });
     } else {
-        setTimeout(_loadLazyChunk, 100);
+        setTimeout(_loadLazyChunk, 2000);
     }
 })();

@@ -62,9 +62,12 @@
     var HEYS = window.HEYS = window.HEYS || {};
     HEYS.__loadPostboot3Ui = _loadLazyChunk;
 
+    // ⚡ PERF A7 (2026-06-13): ступенчатая загрузка чанков (game 6с → ui 12с),
+    // см. комментарий в heys_game_facade_v1.js. Force-load по клику вкладки
+    // (HEYS.__loadPostboot3Ui) не затронут.
     if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(_loadLazyChunk, { timeout: 2000 });
+        requestIdleCallback(_loadLazyChunk, { timeout: 12000 });
     } else {
-        setTimeout(_loadLazyChunk, 100);
+        setTimeout(_loadLazyChunk, 4000);
     }
 })();
