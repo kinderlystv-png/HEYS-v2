@@ -5256,7 +5256,7 @@
                             ),
                             productsList.length > 0 && React.createElement('div', { style: { flex: 1, padding: '6px', background: 'var(--bg-secondary, #f9fafb)', borderRadius: '6px' } },
                                 React.createElement('div', { style: { fontWeight: 600, marginBottom: '2px', fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' } }, '📋 Состав'),
-                                productsList.slice(0, 3).map((p, i) => React.createElement('div', { key: i, style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
+                                productsList.slice(0, 3).map((p, i) => React.createElement('div', { key: (p && p.id != null) ? p.id : ((p && p.name || '') + '-' + i), style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
                                     p.name + ' ' + p.grams + 'г',
                                 )),
                                 meal.items && meal.items.length > 3 && React.createElement('div', { style: { color: 'var(--text-muted)' } }, '+' + (meal.items.length - 3) + ' ещё'),
@@ -5269,7 +5269,7 @@
                                 const isPositive = badge.ok === true;
                                 const badgeType = typeof badge === 'object' ? badge.type : String(badge);
                                 return React.createElement('span', {
-                                    key: i,
+                                    key: badgeType || ('b' + i), // ⚡ PERF A8: стабильный key вместо index
                                     style: {
                                         background: isPositive ? '#dcfce7' : '#fee2e2',
                                         color: isPositive ? '#166534' : '#dc2626',
@@ -8712,6 +8712,51 @@
             // Только мобильный — на десктопе не нужно (нет scroll problem).
             if (!isMobile) return undefined;
 
+            // ⚡ PERF A10 (2026-06-13): вместо getBoundingClientRect всех карточек
+            // в каждом кадре скролла (forced layout 3–8 мс/кадр на слабых
+            // устройствах) — IntersectionObserver на полосу-линию
+            // y=[STICKY_BAR_LINE, STICKY_BAR_LINE+1): карточка, пересекающая её,
+            // «активна» — та же геометрия, что rect.top <= LINE && rect.bottom > LINE.
+            // Ноль main-thread работы в кадре скролла; callback только при смене.
+            // Откат на старый scroll-путь: localStorage heys_disable_io_stickybar = '1'.
+            const ioDisabled = (() => {
+                try { return localStorage.getItem('heys_disable_io_stickybar') === '1'; } catch (_) { return false; }
+            })();
+            const ioCards = Array.from(document.querySelectorAll('.meal-card[data-meal-index]'));
+
+            if (!ioDisabled && typeof IntersectionObserver === 'function' && ioCards.length > 0) {
+                let io = null;
+                const states = new Map();
+                const computeActive = () => {
+                    let active = null;
+                    for (const card of ioCards) {
+                        if (states.get(card)) active = parseInt(card.dataset.mealIndex, 10);
+                    }
+                    setCurrentIdx((prev) => (prev === active ? prev : active));
+                };
+                const attach = () => {
+                    if (io) io.disconnect();
+                    states.clear();
+                    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+                    io = new IntersectionObserver((entries) => {
+                        for (const e of entries) states.set(e.target, e.isIntersecting);
+                        computeActive();
+                    }, {
+                        rootMargin: '-' + STICKY_BAR_LINE + 'px 0px ' + (-Math.max(0, vh - STICKY_BAR_LINE - 1)) + 'px 0px',
+                        threshold: 0,
+                    });
+                    ioCards.forEach((c) => io.observe(c));
+                };
+                attach();
+                const onResize = () => attach(); // редкое событие — пересоздаём полосу под новый viewport
+                window.addEventListener('resize', onResize);
+                return () => {
+                    window.removeEventListener('resize', onResize);
+                    if (io) io.disconnect();
+                };
+            }
+
+            // Fallback: старый scroll+rAF путь (нет IO, флаг отката или карточки ещё не в DOM).
             const updateCurrent = () => {
                 rafRef.current = null;
                 const cards = document.querySelectorAll('.meal-card[data-meal-index]');

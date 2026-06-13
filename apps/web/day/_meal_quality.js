@@ -1671,7 +1671,7 @@
                             ),
                             productsList.length > 0 && React.createElement('div', { style: { flex: 1, padding: '6px', background: 'var(--bg-secondary, #f9fafb)', borderRadius: '6px' } },
                                 React.createElement('div', { style: { fontWeight: 600, marginBottom: '2px', fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' } }, '📋 Состав'),
-                                productsList.slice(0, 3).map((p, i) => React.createElement('div', { key: i, style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
+                                productsList.slice(0, 3).map((p, i) => React.createElement('div', { key: (p && p.id != null) ? p.id : ((p && p.name || '') + '-' + i), style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
                                     p.name + ' ' + p.grams + 'г',
                                 )),
                                 meal.items && meal.items.length > 3 && React.createElement('div', { style: { color: 'var(--text-muted)' } }, '+' + (meal.items.length - 3) + ' ещё'),
@@ -1684,7 +1684,7 @@
                                 const isPositive = badge.ok === true;
                                 const badgeType = typeof badge === 'object' ? badge.type : String(badge);
                                 return React.createElement('span', {
-                                    key: i,
+                                    key: badgeType || ('b' + i), // ⚡ PERF A8: стабильный key вместо index
                                     style: {
                                         background: isPositive ? '#dcfce7' : '#fee2e2',
                                         color: isPositive ? '#166534' : '#dc2626',
