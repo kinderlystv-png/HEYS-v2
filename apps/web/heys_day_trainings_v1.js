@@ -2839,6 +2839,7 @@
           strengthEntryMode: rawT.strengthEntryMode,
           workoutLog: rawT.workoutLog,
           fingersLog: rawT.fingersLog || null,
+          mobilityLog: rawT.mobilityLog || null,
           hobbySubtype: rawT.hobbySubtype || '',
           hobbyLog: rawT.hobbyLog || null
         };
@@ -2848,6 +2849,16 @@
         if (String(T.type) === 'fingers' && HEYS.Fingers?.renderPreviewPill) {
           return React.createElement('div', { key: 'training-' + ti, className: 'compact-train-wrap' },
             HEYS.Fingers.renderPreviewPill({
+              training: T,
+              dateKey: dateKey,
+              trainingIndex: ti
+            })
+          );
+        }
+
+        if (String(T.type) === 'mobility' && HEYS.Mobility?.renderPreviewPill) {
+          return React.createElement('div', { key: 'training-' + ti, className: 'compact-train-wrap' },
+            HEYS.Mobility.renderPreviewPill({
               training: T,
               dateKey: dateKey,
               trainingIndex: ti

@@ -76,15 +76,16 @@ Atom {
   loadModel       // 'bodyweight'|'addedWeightKg'|'rpe'|'amplitude'|'none'
   loadValue       // число в смысле loadModel; 'amplitude' = доля доступного диапазона 0..1
 
-  // — гейты (входы валидаторов §1.6) —
-  minLevel        // 'beginner'|'intermediate'|'advanced'
-  minAge          // число | null. null = НЕТ ДАННЫХ → fail-closed (S1). 0 = явно без гейта.
-  populationGate[]// популяции, для которых атом ОГРАНИЧЕН: ['hypermobile','pregnancy',...]
-  contraind[]     // токены противопоказаний: 'over_bone'|'over_nerve'|'acute_injury'|
-                  //   'varicose'|'valsalva_risk'|'pre_power'  (S5/S6/S8)
-  equipment[]     // требуемый инвентарь: ['foam_roll']|['band']|['strap']|['ball']|
-                  //   ['percussion']|['bolster']|[]  → гейт по equipment_profile (Q-equip-1)
-  prerequisites[] // ['warmup_done', ...] (§3.4-токены)
+  // — гейты (входы валидаторов §1.6) — ПОДОБЪЕКТ `gates` (форма контракта ядра,
+  //   как у пальцев `atom.gates.*`):
+  gates: {
+    minLevel        // 'beginner'|'intermediate'|'advanced'
+    minAge          // число. null = НЕТ ДАННЫХ → fail-closed (S1). 0 = явно без гейта.
+    populationGate[]// популяции, для которых атом ОГРАНИЧЕН: ['hypermobile','pregnancy',...]
+    contraind[]     // 'over_bone'|'over_nerve'|'acute_injury'|'varicose'|'valsalva_risk'|'pre_power'
+    equipment[]     // ['foam_roll']|['band']|['strap']|['ball']|['percussion']|['bolster']|[]  (Q-equip-1)
+    prerequisites[] // ['warmup_done', ...] (§3.4-токены)
+  }
 
   // — мета —
   sourceIds[]     // привязка к bibliography (сила источника живёт там)

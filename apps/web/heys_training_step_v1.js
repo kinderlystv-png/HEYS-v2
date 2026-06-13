@@ -42,7 +42,8 @@
     { id: 'strength', icon: '🏋️', label: 'Силовая' },
     { id: 'hobby', icon: '⚽', label: 'Хобби' },
     { id: 'drums', icon: '🥁', label: 'Барабаны' },
-    { id: 'fingers', icon: '🤚', label: 'Пальцы' }
+    { id: 'fingers', icon: '🤚', label: 'Пальцы' },
+    { id: 'mobility', icon: '🧘', label: 'Мобильность' }
   ];
 
   const TRAINING_TYPE_META = {
@@ -50,7 +51,8 @@
     strength: { icon: '🏋️', label: 'Силовая' },
     hobby: { icon: '⚽', label: 'Активное хобби' },
     drums: { icon: '🥁', label: 'Барабанный пад' },
-    fingers: { icon: '🤚', label: 'Пальцы (скалолазание)' }
+    fingers: { icon: '🤚', label: 'Пальцы (скалолазание)' },
+    mobility: { icon: '🧘', label: 'Мобильность' }
   };
 
   const TRAINING_ACTIVITY_STORAGE_KEY = 'heys_training_activity_options_v1';
@@ -71,7 +73,11 @@
     { type: 'hobby', icon: '🥁', label: 'Барабанный пад', hobbySubtype: 'drums_finger_control' },
     { type: 'fingers', icon: '🤚', label: 'Fingerboard' },
     { type: 'fingers', icon: '🧗', label: 'Hangboard' },
-    { type: 'fingers', icon: '💪', label: 'Block pulling' }
+    { type: 'fingers', icon: '💪', label: 'Block pulling' },
+    { type: 'mobility', icon: '🧘', label: 'Мобильность' },
+    { type: 'mobility', icon: '🌅', label: 'Утренняя разминка' },
+    { type: 'mobility', icon: '🪑', label: 'После сидения' },
+    { type: 'mobility', icon: '🌙', label: 'Вечернее восстановление' }
   ];
 
   function normalizeActivityLabel(value) {
@@ -96,6 +102,14 @@
     };
   }
 
+  function buildMobilityTrainingInfo() {
+    return {
+      type: 'mobility',
+      activityLabel: 'Мобильность',
+      hobbySubtype: ''
+    };
+  }
+
   function openDrumsTrainerFromStep(context, meta) {
     if (!window.HEYS?.Hobby?.DrumsFingerControl?.openFullscreen) return false;
 
@@ -109,6 +123,23 @@
       return true;
     } catch (e) {
       console.warn('[TrainingStep] DrumsFingerControl.openFullscreen failed:', e);
+      return false;
+    }
+  }
+
+  function openMobilityTrainerFromStep(context, meta) {
+    if (!window.HEYS?.Mobility?.openFullscreen) return false;
+
+    try { HEYS.StepModal.hide(); } catch (_) { /* noop */ }
+    try {
+      HEYS.Mobility.openFullscreen({
+        dateKey: context?.dateKey,
+        trainingIndex: context?.trainingIndex,
+        mode: meta?.mode || 'new'
+      });
+      return true;
+    } catch (e) {
+      console.warn('[TrainingStep] Mobility.openFullscreen failed:', e);
       return false;
     }
   }
@@ -251,6 +282,9 @@
     if (source.fingersLog && typeof source.fingersLog === 'object') {
       out.fingersLog = source.fingersLog;
     }
+    if (source.mobilityLog && typeof source.mobilityLog === 'object') {
+      out.mobilityLog = source.mobilityLog;
+    }
     if (source.hobbyLog && typeof source.hobbyLog === 'object') {
       out.hobbyLog = source.hobbyLog;
     }
@@ -290,6 +324,9 @@
 
     if (merged.fingersLog && typeof merged.fingersLog === 'object') {
       finalTraining.fingersLog = merged.fingersLog;
+    }
+    if (merged.mobilityLog && typeof merged.mobilityLog === 'object') {
+      finalTraining.mobilityLog = merged.mobilityLog;
     }
     if (merged.hobbySubtype) {
       finalTraining.hobbySubtype = merged.hobbySubtype;
@@ -474,6 +511,21 @@
         } catch (e) {
           console.warn('[TrainingStep] Fingers.openFullscreen failed:', e);
         }
+        return;
+      }
+
+      if (nextType === 'mobility') {
+        haptic('light');
+        const mobilityInfo = buildMobilityTrainingInfo();
+        if (openMobilityTrainerFromStep(context, { mode: 'new' })) {
+          updateData({ ...mobilityInfo, time });
+          return;
+        }
+
+        updateData({
+          ...mobilityInfo,
+          time
+        });
         return;
       }
 
@@ -1032,10 +1084,26 @@
     }
   }
 
+  function saveMobility(ctx, mobilityLog, meta) {
+    const baseMeta = meta && typeof meta === 'object' ? meta : {};
+    persistMergedTraining(ctx, {}, {
+      type: 'mobility',
+      activityLabel: baseMeta.activityLabel || 'Мобильность',
+      time: baseMeta.time || getRoundedCurrentTime(),
+      zones: [0, 0, 0, 0],
+      mood: baseMeta.mood || 0,
+      wellbeing: baseMeta.wellbeing || 0,
+      stress: baseMeta.stress || 0,
+      comment: typeof baseMeta.comment === 'string' ? baseMeta.comment : '',
+      mobilityLog
+    });
+  }
+
   // === Экспорт ===
   HEYS.TrainingStep = {
     show: showTrainingModal,
     saveFingers,
+    saveMobility,
     InfoComponent: TrainingInfoStep,
     FeedbackComponent: TrainingFeedbackStep,
     ZonesComponent: TrainingZonesStep,
