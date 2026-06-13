@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.239c346c",
+      "buildHash": "239c346c",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "HEYS Старт",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Бот HEYS Старт отвечает быстрее",
+          "description": "Webhook бота больше не ждёт запись аналитики перед ответом и может работать напрямую через Cloud Function, поэтому /start не зависает из-за таймаута."
+        }
+      ],
+      "coveredCommits": ["239c346c"]
+    },
+    {
       "version": "2026.06.13.d2c03e71",
       "buildHash": "d2c03e71",
       "date": "2026-06-13",
@@ -140,22 +156,6 @@
           "type": "fix",
           "title": "Исправили внутренние ошибки",
           "description": "В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения."
-        }
-      ],
-      "coveredCommits": ["914551ee", "5d1572fa"]
-    },
-    {
-      "version": "2026.06.13.914551ee",
-      "buildHash": "914551ee",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "sticky-bar на IntersectionObserver и стабильные keys — в исходниках meals-бандла",
-      "items": [
-        {
-          "type": "perf",
-          "title": "sticky-bar на IntersectionObserver и стабильные keys — в исходниках meals-бандла",
-          "description": "sticky-bar на IntersectionObserver и стабильные keys — в исходниках meals-бандла"
         }
       ],
       "coveredCommits": ["914551ee", "5d1572fa"]
