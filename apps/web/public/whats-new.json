@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.14.8c182abd",
+      "buildHash": "8c182abd",
+      "date": "2026-06-14",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "expand rich-bibliography, add protocol catalog, lazy boot stub, refreshed visuals",
+      "items": [
+        {
+          "type": "feat",
+          "title": "expand rich-bibliography, add protocol catalog, lazy boot stub, refreshed visuals",
+          "description": "expand rich-bibliography, add protocol catalog, lazy boot stub, refreshed visuals"
+        }
+      ],
+      "coveredCommits": ["8c182abd", "5465f5b1", "7d50d6be"]
+    },
+    {
       "version": "2026.06.14.5465f5b1",
       "buildHash": "5465f5b1",
       "date": "2026-06-14",
@@ -137,22 +153,6 @@
           "description": "В карточках упражнений мобильности обновлены визуальные материалы, чтобы сессию было проще читать во время тренировки."
         }
       ]
-    },
-    {
-      "version": "2026.06.13.983177c3",
-      "buildHash": "983177c3",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Режим мобильности появился в дневнике",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Мобильность можно вести как тренировку",
-          "description": "В дневнике появился отдельный режим мобильности с подбором сессии, подсказками по безопасности и сохранением результата тренировки."
-        }
-      ],
-      "coveredCommits": ["d4d23630", "6af4490b"]
     }
   ]
 }
