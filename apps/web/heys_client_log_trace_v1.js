@@ -300,4 +300,68 @@
 
   // Маркер для timing-диагностики (отдельный console.info чтобы поймать сам бутстрап в логе)
   orig.info('[heys.log-trace] installed v1, session=' + SESSION_ID + ', endpoint=' + ENDPOINT);
+
+  // === [CHECKIN.trace] — облачный трейс шагов чекина (TASK-012) ===
+  // Слушает heys:day-updated, логирует presence ключевых полей дня + source +
+  // dropped (поле было true → стало пусто = клоббер, см. TASK-010). Чистый
+  // listener: НЕ трогает запись дня, всё в try/catch — трейс не ломает app.
+  // console.info перехватывается этим же модулем → уезжает в client_log_trace.
+  // Приватность: только presence (true/false) + имена полей, НЕ значения.
+  (function () {
+    function present(v) { return !(v === undefined || v === null || v === ''); }
+    function presenceMap(d) {
+      if (!d || typeof d !== 'object') return null;
+      return {
+        sleepStart: present(d.sleepStart),
+        sleepEnd: present(d.sleepEnd),
+        sleepQuality: present(d.sleepQuality),
+        sleepHours: present(d.sleepHours) && Number(d.sleepHours) > 0,
+        moodMorning: present(d.moodMorning),
+        wellbeingMorning: present(d.wellbeingMorning),
+        stressMorning: present(d.stressMorning),
+        weightMorning: present(d.weightMorning),
+        mealItems: Array.isArray(d.meals) ? d.meals.reduce(function (s, m) { return s + ((m && Array.isArray(m.items)) ? m.items.length : 0); }, 0) : 0,
+        yvAction: d.yesterdayVerifyAction || null,
+        updatedAt: d.updatedAt || null
+      };
+    }
+    function readScopedDay(date) {
+      try {
+        var H = global.HEYS;
+        var cid = (H && typeof H.currentClientId === 'string') ? H.currentClientId : '';
+        var raw = cid ? global.localStorage.getItem('heys_' + cid + '_dayv2_' + date) : null;
+        if (!raw) raw = global.localStorage.getItem('heys_dayv2_' + date);
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) { return null; }
+    }
+    var SUBJ = ['sleepStart', 'sleepEnd', 'sleepQuality', 'sleepHours', 'moodMorning', 'wellbeingMorning', 'stressMorning', 'weightMorning'];
+    var prevByDate = {};
+    var CHECKIN_RE = /checkin|sleep|mood|weight|supplement|cold-exposure|morning|yesterday-verify|step|persist|water/i;
+    try {
+      global.addEventListener('heys:day-updated', function (ev) {
+        try {
+          var detail = (ev && ev.detail) || {};
+          var date = detail.date;
+          if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+          var src = detail.source || detail.field || 'unknown';
+          var d = (detail.data && typeof detail.data === 'object') ? detail.data : readScopedDay(date);
+          var cur = presenceMap(d);
+          if (!cur) return;
+          var prev = prevByDate[date];
+          var dropped = [];
+          if (prev) {
+            for (var i = 0; i < SUBJ.length; i++) {
+              var k = SUBJ[i];
+              if (prev[k] === true && cur[k] === false) dropped.push(k);
+            }
+          }
+          prevByDate[date] = cur;
+          // Шумоподавление: логируем только чекин-related источники ИЛИ клоббер.
+          if (dropped.length || CHECKIN_RE.test(String(src))) {
+            console.info('[CHECKIN.trace]', { date: date, source: src, dropped: dropped, presence: cur });
+          }
+        } catch (_) { /* trace must never break app */ }
+      });
+    } catch (_) { /* noop */ }
+  })();
 })(typeof window !== 'undefined' ? window : globalThis);
