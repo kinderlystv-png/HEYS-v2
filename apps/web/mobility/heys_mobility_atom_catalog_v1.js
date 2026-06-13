@@ -323,6 +323,8 @@
 
   ATOMS.forEach(function (atom) {
     Object.assign(atom, CONTENT[atom.id] || {});
+    atom.visualAsset = '/exercises/mobility/' + atom.id + '.webp';
+    atom.visualPromptRef = 'methodology/VISUAL_PROMPTS.md#' + atom.id;
   });
 
   // ─── API ──────────────────────────────────────────────────────────────────────
@@ -404,6 +406,12 @@
     if (!atom.title || typeof atom.title !== 'string') errs.push(id + ': title отсутствует');
     if (!atom.instruction || typeof atom.instruction !== 'string') errs.push(id + ': instruction отсутствует');
     if (!Array.isArray(atom.cues) || atom.cues.length < 2) errs.push(id + ': cues требует минимум 2 подсказки');
+    if (!atom.visualAsset || !/^\/exercises\/mobility\/[a-z0-9_]+\.webp$/.test(atom.visualAsset)) {
+      errs.push(id + ': visualAsset отсутствует или не по схеме /exercises/mobility/<atomId>.webp');
+    }
+    if (!atom.visualPromptRef || atom.visualPromptRef.indexOf('VISUAL_PROMPTS.md#' + id) === -1) {
+      errs.push(id + ': visualPromptRef отсутствует');
+    }
     return errs;
   }
 

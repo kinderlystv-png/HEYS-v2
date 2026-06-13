@@ -118,6 +118,7 @@ const requiredArtifacts = [
   join(mobilityDir, 'heys_mobility_ui_v1.js'),
   join(mobilityDir, 'heys_mobility_entry_v1.js'),
   join(webDir, 'heys_mobility_boot_stub_v1.js'),
+  join(methodDir, 'VISUAL_PROMPTS.md'),
   join(webDir, 'heys_training_step_v1.js'),
   join(webDir, 'heys_day_stats_bundle_loader_v1.js'),
   join(webDir, 'heys_day_trainings_v1.js'),

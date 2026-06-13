@@ -67,11 +67,12 @@ readiness/records/progression.
 | 9.22 execution lifecycle reset on mode change                                                             | `heys_mobility_ui_v1.js`, `__tests__/mobility-ui.test.js`                                                                                                             | ✅     |
 | 9.23 TrainingStep bridge (type tab + fullscreen handoff + guarded mobilityLog persistence)                | `heys_training_step_v1.js`, `heys_mobility_entry_v1.js`, `heys_mobility_ui_v1.js`, `__tests__/training-step-drums-tab.test.js`, `__tests__/mobility-ui.test.js`       | ✅     |
 | 9.24 implementation-map coverage guard                                                                    | `methodology/tools/impl-coverage.mjs`, `package.json` (`check:mobility-map`)                                                                                          | ✅     |
-| 9.25 верификация зелёная                                                                                  | `pnpm vitest run apps/web/__tests__/mobility-*.test.js apps/web/__tests__/training-step-drums-tab.test.js` → 123/123; `pnpm --dir apps/web check:mobility-map` → pass | ✅     |
+| 9.25 visual prompt pack + atom image slots                                                                | `methodology/VISUAL_PROMPTS.md`, `heys_mobility_atom_catalog_v1.js`, `heys_mobility_ui_v1.js`, `__tests__/mobility-catalog.test.js`                                   | ✅     |
+| 9.26 верификация зелёная                                                                                  | `pnpm vitest run apps/web/__tests__/mobility-*.test.js apps/web/__tests__/training-step-drums-tab.test.js` → 124/124; `pnpm --dir apps/web check:mobility-map` → pass | ✅     |
 
 **Верификация.** Официальный
 `pnpm vitest run apps/web/__tests__/mobility-*.test.js apps/web/__tests__/training-step-drums-tab.test.js`
-проходит штатно: **123/123**, каталог 29 атомов, `validateAll` без ошибок, все
+проходит штатно: **124/124**, каталог 29 атомов, `validateAll` без ошибок, все
 `sourceIds` резолвятся в bibliography, entry/stub/bundler/TrainingStep-контракты
 покрыты. Запись `mobilityLog` в дневник guarded: вызывается только при явном
 `dateKey`, standalone сохранение остаётся в `recordsStore`. Дополнительно
@@ -81,6 +82,12 @@ readiness/records/progression.
 **Coverage guard (2026-06-13):** добавлен `methodology/tools/impl-coverage.mjs`
 и npm-скрипт `check:mobility-map`; guard сверяет методологию ↔ карту, Q-пул и
 наличие обязательных source/test артефактов мобильности.
+
+**Visual prompt pack (2026-06-13):** добавлен `methodology/VISUAL_PROMPTS.md` —
+единый premium photo style, negative prompt и 29 atom-specific промптов. Каждый
+атом получил `visualAsset` `/exercises/mobility/<atomId>.webp` и
+`visualPromptRef`; session UI показывает фото, если файл уже сгенерирован, и
+скрывает слот при 404.
 
 **После возврата stash (2026-06-13):** исправлен UI-регресс пересборки сессии
 при изменении входных props (`screens`, CWI, phase/key-load), добавлены тесты на
@@ -158,21 +165,20 @@ dose-schema). Builder обязан гонять `runSession` перед `runAtom
 (форма ядра, как у пальцев). Атом-схема — CONSTRUCTOR_SPEC §1.2 (правка:
 `gates`-подобъект для совместимости с контрактом валидаторов ядра).
 
-**Что НЕ делаю без команды:** commit, генерация bundle/legacy-sync, push. Source
-bundler для mobility добавлен, но `heys_mobility_bundle_v1.js` не генерировался.
+**Команда commit/push получена (2026-06-13):** source-коммиты сделаны,
+pre-commit hook выполнил legacy-sync. `heys_mobility_bundle_v1.js` сгенерирован
+через `pnpm --dir apps/web bundle:mobility`, потому что lazy stub уже грузит
+этот runtime-артефакт.
 
 ## Риски / открытые
 
 - atom_catalog покрывает все блоки A–J и у каждого атома есть `title`,
-  `instruction`, `cues`; видео/фото-контент остаётся будущей мультимедийной
-  надстройкой, не блокером алгоритма и runner.
-- Generated bundle/legacy-sync не запускался по правилам проекта; при явной
-  команде `pnpm --dir apps/web bundle:mobility` создаст
-  `heys_mobility_bundle_v1.js`.
-- UI-flow подключён source-only через lazy stub/loader/diary branch. До
-  генерации bundle пользовательское открытие будет пытаться загрузить
-  отсутствующий generated file, поэтому это готово к integration flow, но не к
-  ручному QA в браузере без bundle-команды.
+  `instruction`, `cues`, `visualAsset` и prompt-ref. Базовые `.webp`-файлы
+  добавлены для 29/29 атомов; полноценная фото/AI-production остаётся будущей
+  мультимедийной полировкой, не блокером алгоритма и runner.
+- Mobility bundle создан и готов для lazy-load через stub. Legacy-sync был
+  выполнен pre-commit hook'ом при feature-коммите; отдельный browser QA не
+  запускался.
 - `IMPLEMENTATION_MAP.md` синхронизирован как source-ready; ROM-прогресс теперь
   считается через `progression.romTrend` и показывается в UI вместе со статусом
   ретеста.

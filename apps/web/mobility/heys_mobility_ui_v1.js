@@ -206,6 +206,26 @@
     );
   }
 
+  function AtomVisual(props) {
+    const atom = props.atom || {};
+    if (!atom.visualAsset) return null;
+    return h('div', {
+      className: 'mobility-block__visual',
+      style: { width: '100%', aspectRatio: '4 / 3', overflow: 'hidden', borderRadius: 8, background: '#f3f0ea', marginBottom: 10 }
+    },
+      h('img', {
+        src: atom.visualAsset,
+        alt: 'Фото упражнения: ' + (atom.title || atom.id),
+        loading: 'lazy',
+        decoding: 'async',
+        style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+        onError: function (e) {
+          try { e.currentTarget.parentNode.style.display = 'none'; } catch (_) {}
+        }
+      })
+    );
+  }
+
   function ModePicker(props) {
     const modeEngine = deps().modeEngine;
     const modes = modeEngine ? modeEngine.listModes() : [];
@@ -539,6 +559,7 @@
         session.blocks.map(function (b) {
           const atom = b.atoms[0];
           return h('article', { key: b.id, className: 'mobility-block' },
+            h(AtomVisual, { atom: atom }),
             h('div', { className: 'mobility-block__top' },
               h('strong', null, atom.title || atom.id),
               chip('axis', AXIS_LABEL[atom.axis] || atom.axis)
@@ -751,6 +772,7 @@
     ProgressPanel: ProgressPanel,
     CalendarPanel: CalendarPanel,
     SessionPanel: SessionPanel,
+    AtomVisual: AtomVisual,
     ExecutionPanel: ExecutionPanel,
     RunnerPlanPanel: RunnerPlanPanel,
     EffectMapPanel: EffectMapPanel,

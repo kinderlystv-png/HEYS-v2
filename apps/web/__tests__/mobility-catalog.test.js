@@ -9,6 +9,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const MOB_DIR = path.resolve(__dirname, '..', 'mobility');
+const VISUAL_PROMPTS_PATH = path.join(MOB_DIR, 'methodology', 'VISUAL_PROMPTS.md');
+let axisCatalogRef;
+let atomCatalogRef;
 
 const setupOnce = () => {
   if (!globalThis.window) globalThis.window = globalThis;
@@ -16,10 +19,12 @@ const setupOnce = () => {
   const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(MOB_DIR, f), 'utf8')); };
   ev('heys_mobility_axis_catalog_v1.js');
   ev('heys_mobility_atom_catalog_v1.js');
+  axisCatalogRef = globalThis.HEYS.Mobility.axisCatalog;
+  atomCatalogRef = globalThis.HEYS.Mobility.atomCatalog;
 };
 
-const AC = () => globalThis.HEYS.Mobility.axisCatalog;
-const CAT = () => globalThis.HEYS.Mobility.atomCatalog;
+const AC = () => axisCatalogRef;
+const CAT = () => atomCatalogRef;
 
 describe('axis_catalog', () => {
   beforeAll(setupOnce);
@@ -88,6 +93,16 @@ describe('atom_catalog — целостность', () => {
       expect(a.instruction.length).toBeGreaterThan(20);
       expect(Array.isArray(a.cues)).toBe(true);
       expect(a.cues.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it('каждый атом имеет visual asset path и prompt для генерации фото', () => {
+    const prompts = fs.readFileSync(VISUAL_PROMPTS_PATH, 'utf8');
+    CAT().ATOMS.forEach((a) => {
+      expect(a.visualAsset).toBe(`/exercises/mobility/${a.id}.webp`);
+      expect(a.visualPromptRef).toBe(`methodology/VISUAL_PROMPTS.md#${a.id}`);
+      expect(prompts).toContain(`### ${a.id}`);
+      expect(prompts).toContain(`Asset: \`/exercises/mobility/${a.id}.webp\``);
     });
   });
 
