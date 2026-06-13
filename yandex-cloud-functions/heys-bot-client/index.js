@@ -398,9 +398,10 @@ function getQuizSummary(answers) {
 }
 
 async function recordStartFunnelEvent(eventType, opts = {}) {
-  const pool = getPool();
-  const client = await pool.connect();
+  let client = null;
   try {
+    const pool = getPool();
+    client = await pool.connect();
     await client.query(
       `SELECT public.record_funnel_event(
          $1::text, $2::uuid, $3::uuid, $4::text, $5::text, $6::text, $7::text,
@@ -423,8 +424,14 @@ async function recordStartFunnelEvent(eventType, opts = {}) {
   } catch (e) {
     console.warn('[HEYS Start] funnel event failed:', eventType, e.message);
   } finally {
-    client.release();
+    if (client) client.release();
   }
+}
+
+function queueStartFunnelEvent(eventType, opts = {}) {
+  recordStartFunnelEvent(eventType, opts).catch((e) => {
+    console.warn('[HEYS Start] funnel event async failed:', eventType, e.message);
+  });
 }
 
 async function sendQuizQuestion(chatId, step, answers, source, editMessageId = null) {
@@ -464,7 +471,7 @@ async function sendQuizResult(chatId, answers, source, editMessageId = null) {
     ],
   };
 
-  await recordStartFunnelEvent('quiz_complete', {
+  queueStartFunnelEvent('quiz_complete', {
     source,
     segment,
     metadata: {
@@ -489,7 +496,7 @@ async function sendQuizResult(chatId, answers, source, editMessageId = null) {
 
 async function handleStartBotStart(chatId, payload) {
   const source = sanitizeSource(payload);
-  await recordStartFunnelEvent('quiz_start', {
+  queueStartFunnelEvent('quiz_start', {
     source,
     metadata: { bot: 'heys_start', start_payload: payload || null },
     dedupeKey: `quiz_start:start:${chatId}:${source}`,
@@ -563,7 +570,7 @@ async function handleStartBotCallback(query) {
     const answers = answersRaw ? answersRaw.split(',').filter(Boolean) : [];
     const source = sanitizeSource(sourceRaw);
     const segment = getQuizSegment(answers);
-    await recordStartFunnelEvent('week_request', {
+    queueStartFunnelEvent('week_request', {
       source,
       segment,
       metadata: { bot: 'heys_start', readiness, ...getQuizSummary(answers) },
@@ -726,7 +733,7 @@ module.exports.handler = async function (event) {
     });
   }
 
-  if (method === 'POST' && path.includes('/start-bot/webhook')) {
+  if (method === 'POST' && (!path || path.includes('/start-bot/webhook'))) {
     const expected = process.env.HEYS_START_WEBHOOK_SECRET;
     if (expected) {
       const headers = event?.headers || {};
