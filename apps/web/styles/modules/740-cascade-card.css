@@ -75,8 +75,10 @@
   --cascade-tone-overlay: none;
 }
 
-.cascade-card:hover {
+@media (hover: hover) {
+  .cascade-card:hover {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.09);
+}
 }
 
 /* ─────────────────────────────────────────────────────
@@ -237,11 +239,13 @@
   justify-content: center;
 }
 
-.cascade-card__copy-btn:hover {
+@media (hover: hover) {
+  .cascade-card__copy-btn:hover {
   background: rgba(100, 116, 139, 0.08);
   border-color: rgba(100, 116, 139, 0.42);
   color: var(--text, #1e293b);
   opacity: 0.9;
+}
 }
 
 .cascade-card__copy-btn:active {
@@ -1049,10 +1053,12 @@
   color: rgba(148, 163, 184, 0.92);
 }
 
-[data-theme="dark"] .cascade-card__copy-btn:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .cascade-card__copy-btn:hover {
   background: rgba(148, 163, 184, 0.08);
   border-color: rgba(148, 163, 184, 0.5);
   color: var(--text, #f1f5f9);
+}
 }
 
 [data-theme="dark"] .cascade-card__progress-track {

@@ -188,9 +188,11 @@
   transition: all 0.2s ease;
 }
 
-.yv-day-action-btn:hover {
+@media (hover: hover) {
+  .yv-day-action-btn:hover {
   background: #eef2ff;
   border-color: #93c5fd;
+}
 }
 
 .yv-day-action-btn--ghost {
@@ -240,9 +242,11 @@
   transition: all 0.2s ease;
 }
 
-.yv-preset:hover {
+@media (hover: hover) {
+  .yv-preset:hover {
   border-color: #cbd5e1;
   transform: translateY(-1px);
+}
 }
 
 .yv-preset--active {
@@ -330,10 +334,12 @@
   width: 100%;
 }
 
-.yv-option:hover {
+@media (hover: hover) {
+  .yv-option:hover {
   background: #f3f4f6;
   border-color: #d1d5db;
   transform: translateY(-1px);
+}
 }
 
 .yv-option--selected {
@@ -406,10 +412,12 @@
   transition: all 0.2s ease;
 }
 
-.yv-back:hover {
+@media (hover: hover) {
+  .yv-back:hover {
   background: #f3f4f6;
   border-color: #d1d5db;
   color: #374151;
+}
 }
 
 /* Подсказка */
@@ -486,11 +494,13 @@
   border: 1px solid var(--heys-border-default);
 }
 
-[data-theme="dark"] .yv-option:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .yv-option:hover {
   background: var(--heys-bg-elevated);
   border-color: var(--heys-border-focus);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
 }
 
 [data-theme="dark"] .yv-option--selected {
@@ -518,10 +528,12 @@
   border: 1px solid var(--heys-border-default);
 }
 
-[data-theme="dark"] .yv-back:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .yv-back:hover {
   background: var(--heys-bg-elevated);
   color: var(--heys-text-primary);
   border-color: var(--heys-border-focus);
+}
 }
 
 [data-theme="dark"] .yv-hint {
@@ -575,9 +587,11 @@
   color: var(--heys-text-primary);
 }
 
-[data-theme="dark"] .yv-day-action-btn:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .yv-day-action-btn:hover {
   border-color: var(--heys-border-focus);
   background: rgba(59, 130, 246, 0.14);
+}
 }
 
 [data-theme="dark"] .yv-day-action-btn--ghost {
@@ -604,8 +618,10 @@
   border-color: var(--heys-border-default);
 }
 
-[data-theme="dark"] .yv-preset:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .yv-preset:hover {
   border-color: var(--heys-border-focus);
+}
 }
 
 [data-theme="dark"] .yv-preset--active {

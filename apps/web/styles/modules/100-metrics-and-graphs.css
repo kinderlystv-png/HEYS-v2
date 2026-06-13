@@ -424,8 +424,10 @@
 }
 
 /* Hover-эффект — утолщение линии при наведении */
-.sparkline-svg:hover .sparkline-line {
+@media (hover: hover) {
+  .sparkline-svg:hover .sparkline-line {
   stroke-width: 4;
+}
 }
 
 /* Transition между периодами — плавная смена данных */
@@ -492,8 +494,10 @@
   transition: r 0.15s ease, filter 0.15s ease, stroke-width 0.15s ease;
 }
 
-.meal-sparkline-dot:hover circle {
+@media (hover: hover) {
+  .meal-sparkline-dot:hover circle {
   filter: drop-shadow(0 0 4px currentColor);
+}
 }
 
 /* Линия вчерашнего дня для сравнения */
@@ -611,9 +615,11 @@
   stroke-width: 1;
 }
 
-.sparkline-dot:hover {
+@media (hover: hover) {
+  .sparkline-dot:hover {
   r: 7;
   filter: drop-shadow(0 0 4px currentColor) brightness(1.1);
+}
 }
 
 .sparkline-dot-ok {
@@ -881,8 +887,10 @@
   transition: all 0.15s;
 }
 
-.sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
+@media (hover: hover) {
+  .sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
   background: var(--color-slate-200);
+}
 }
 
 .sparkline-popup-v2 .sparkline-popup-btn-v2.perfect {
@@ -891,8 +899,10 @@
   border: 1px solid #fcd34d;
 }
 
-.sparkline-popup-v2 .sparkline-popup-btn-v2.perfect:hover {
+@media (hover: hover) {
+  .sparkline-popup-v2 .sparkline-popup-btn-v2.perfect:hover {
   background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+}
 }
 
 .sparkline-popup-v2 .sparkline-popup-close {
@@ -910,9 +920,11 @@
   transition: all 0.15s;
 }
 
-.sparkline-popup-v2 .sparkline-popup-close:hover {
+@media (hover: hover) {
+  .sparkline-popup-v2 .sparkline-popup-close:hover {
   background: rgba(0, 0, 0, 0.1);
   color: var(--color-slate-700);
+}
 }
 
 .sparkline-popup-v2 .sparkline-popup-close.perfect {
@@ -1231,8 +1243,10 @@
   transition: background 0.15s;
 }
 
-.sparkline-popup-btn:hover {
+@media (hover: hover) {
+  .sparkline-popup-btn:hover {
   background: var(--color-slate-200);
+}
 }
 
 /* Popup для идеального дня */
@@ -1315,8 +1329,10 @@
   color: var(--color-slate-400);
 }
 
-[data-theme="dark"] .sparkline-popup-btn:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .sparkline-popup-btn:hover {
   background: #475569;
+}
 }
 
 /* Dark mode: sparkline-popup-v2 */
@@ -1382,8 +1398,10 @@
   color: var(--color-slate-400);
 }
 
-[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
   background: #475569;
+}
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2.perfect {
@@ -1397,9 +1415,11 @@
   color: var(--color-slate-400);
 }
 
-[data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-close:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-close:hover {
   background: rgba(255, 255, 255, 0.2);
   color: var(--color-slate-100);
+}
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-arrow {
@@ -1448,8 +1468,10 @@
   transition: transform 0.15s, opacity 0.15s;
 }
 
-.sparkline-heatmap-day:hover {
+@media (hover: hover) {
+  .sparkline-heatmap-day:hover {
   transform: scaleY(1.5);
+}
 }
 
 .sparkline-heatmap-day.level-0 {
@@ -1710,8 +1732,10 @@
   transition: background-color 0.15s;
 }
 
-.sparkline-brush-stats:hover {
+@media (hover: hover) {
+  .sparkline-brush-stats:hover {
   background: rgba(59, 130, 246, 0.25);
+}
 }
 
 .sparkline-brush-stats span {
@@ -1735,8 +1759,10 @@
   transition: opacity 0.15s;
 }
 
-.sparkline-brush-stats:hover .brush-close {
+@media (hover: hover) {
+  .sparkline-brush-stats:hover .brush-close {
   opacity: 1;
+}
 }
 
 @keyframes sparkline-brush-stats-appear {
@@ -1767,8 +1793,10 @@
   z-index: 5;
 }
 
-.sparkline-zoom-indicator:hover {
+@media (hover: hover) {
+  .sparkline-zoom-indicator:hover {
   opacity: 1;
+}
 }
 
 /* Zoomed state — overflow hidden */
@@ -2380,9 +2408,11 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.correlation-clickable:hover {
+@media (hover: hover) {
+  .correlation-clickable:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
 }
 
 .correlation-clickable:active {
@@ -2465,8 +2495,10 @@
   letter-spacing: 0.01em;
 }
 
-.week-heatmap-action-wrap:hover .week-heatmap-action-label {
+@media (hover: hover) {
+  .week-heatmap-action-wrap:hover .week-heatmap-action-label {
   color: var(--color-blue-600);
+}
 }
 
 .week-heatmap-action {
@@ -2485,10 +2517,12 @@
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 
-.week-heatmap-action:hover {
+@media (hover: hover) {
+  .week-heatmap-action:hover {
   background: rgba(59, 130, 246, 0.08);
   border-color: rgba(59, 130, 246, 0.3);
   color: var(--color-blue-600);
+}
 }
 
 .week-heatmap-action:active {
@@ -2566,9 +2600,11 @@
   white-space: nowrap;
 }
 
-.week-heatmap-norm:hover {
+@media (hover: hover) {
+  .week-heatmap-norm:hover {
   background: rgba(59, 130, 246, 0.1);
   color: var(--color-blue-600);
+}
 }
 
 /* Средний дефицит в header - цвет по близости к цели */
@@ -2602,8 +2638,10 @@
   transition: transform 0.15s ease;
 }
 
-.week-heatmap-day:hover {
+@media (hover: hover) {
+  .week-heatmap-day:hover {
   transform: translateY(-1px);
+}
 }
 
 .week-heatmap-day:active {
@@ -2670,8 +2708,10 @@
 }
 
 /* Hover эффект на ячейке */
-.week-heatmap-day:not(.empty) .week-heatmap-cell:hover {
+@media (hover: hover) {
+  .week-heatmap-day:not(.empty) .week-heatmap-cell:hover {
   transform: scale(1.08);
+}
 }
 
 /* Статусы — fallback если нет inline градиента */
@@ -2855,11 +2895,13 @@
 }
 
 /* Hover на всём блоке */
-.week-heatmap:hover {
+@media (hover: hover) {
+  .week-heatmap:hover {
   border-color: rgba(96, 165, 250, 0.5);
   box-shadow:
     0 24px 42px -32px rgba(37, 99, 235, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
 }
 
 [data-theme="dark"] .week-heatmap {
@@ -3027,8 +3069,10 @@
   user-select: none;
 }
 
-.caloric-balance-card:hover {
+@media (hover: hover) {
+  .caloric-balance-card:hover {
   border-color: var(--balance-color, rgba(59, 130, 246, 0.4));
+}
 }
 
 .caloric-balance-card.excess {
@@ -3104,9 +3148,11 @@
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-.balance-viz-bar-clickable:hover {
+@media (hover: hover) {
+  .balance-viz-bar-clickable:hover {
   transform: scale(1.2);
   opacity: 0.85;
+}
 }
 
 .balance-viz-bar-clickable:active {
@@ -3206,8 +3252,10 @@
   transition: background 0.2s ease;
 }
 
-.caloric-excess-science-summary:hover {
+@media (hover: hover) {
+  .caloric-excess-science-summary:hover {
   background: rgba(59, 130, 246, 0.12) !important;
+}
 }
 
 /* День недели вместо номера */
@@ -3233,8 +3281,10 @@
   transition: all 0.2s ease;
 }
 
-.caloric-debt-card:hover {
+@media (hover: hover) {
+  .caloric-debt-card:hover {
   border-color: var(--debt-color, rgba(59, 130, 246, 0.4));
+}
 }
 
 /* Header */
@@ -3392,9 +3442,11 @@
   user-select: none;
 }
 
-.debt-card:hover {
+@media (hover: hover) {
+  .debt-card:hover {
   border-color: rgba(59, 130, 246, 0.35);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
 }
 
 /* Collapsed row — одна строка */
@@ -3457,10 +3509,12 @@
   transition: all 0.15s ease;
 }
 
-.debt-science-btn:hover {
+@media (hover: hover) {
+  .debt-science-btn:hover {
   background: rgba(59, 130, 246, 0.15);
   border-color: rgba(59, 130, 246, 0.5);
   transform: scale(1.1);
+}
 }
 
 .debt-card-chevron {
@@ -3656,9 +3710,11 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.debt-insight-row:hover {
+@media (hover: hover) {
+  .debt-insight-row:hover {
   transform: translateX(2px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
 }
 
 /* Protein debt row */
@@ -3716,8 +3772,10 @@
   transition: opacity 0.15s ease;
 }
 
-.debt-insight-row:hover a {
+@media (hover: hover) {
+  .debt-insight-row:hover a {
   opacity: 1;
+}
 }
 
 /* Dark mode support */
@@ -3776,8 +3834,10 @@
   transition: all 0.2s ease;
 }
 
-.caloric-excess-card:hover {
+@media (hover: hover) {
+  .caloric-excess-card:hover {
   border-color: var(--excess-color, rgba(34, 197, 94, 0.4));
+}
 }
 
 /* Recommendation для excess — с иконкой активности */
@@ -3905,9 +3965,11 @@
   overflow: hidden;
 }
 
-.caloric-insights-card:hover {
+@media (hover: hover) {
+  .caloric-insights-card:hover {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.10) 0%, rgba(99, 102, 241, 0.06) 100%);
   border-color: rgba(59, 130, 246, 0.25);
+}
 }
 
 .caloric-insights-card.expanded {
@@ -3987,8 +4049,10 @@
   transition: transform 0.15s ease, text-shadow 0.15s ease;
 }
 
-.balance-viz-bar:hover {
+@media (hover: hover) {
+  .balance-viz-bar:hover {
   transform: scaleY(1.3);
+}
 }
 
 /* Details */
@@ -4017,8 +4081,10 @@
   transition: background 0.2s ease;
 }
 
-.caloric-insight-item:hover {
+@media (hover: hover) {
+  .caloric-insight-item:hover {
   background: rgba(255, 255, 255, 0.9);
+}
 }
 
 .caloric-insight-emoji {
@@ -4067,9 +4133,11 @@
   transition: all 0.2s ease;
 }
 
-.caloric-insight-item-v2:hover {
+@media (hover: hover) {
+  .caloric-insight-item-v2:hover {
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
 }
 
 /* Severity colors (border-left-color) */
@@ -4448,8 +4516,10 @@
 }
 
 /* Hover-эффект для весового графика */
-.weight-sparkline-svg:hover .weight-sparkline-line {
+@media (hover: hover) {
+  .weight-sparkline-svg:hover .weight-sparkline-line {
   stroke-width: 4;
+}
 }
 
 .weight-sparkline-svg.transitioning {
@@ -4482,9 +4552,11 @@
   /* Цвет задаётся inline через style */
 }
 
-.weight-sparkline-dot:hover {
+@media (hover: hover) {
+  .weight-sparkline-dot:hover {
   r: 7;
   filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.35)) brightness(1.05);
+}
 }
 
 .weight-sparkline-dot-today {
@@ -4573,8 +4645,10 @@
   font-size: inherit;
 }
 
-.weight-goal-hint-link:hover {
+@media (hover: hover) {
+  .weight-goal-hint-link:hover {
   color: #b45309;
+}
 }
 
 /* Горизонтальная линия целевого веса */
@@ -5102,9 +5176,11 @@
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.context-badge:hover {
+@media (hover: hover) {
+  .context-badge:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 }
 
 /* Circadian badge — time-based urgency */
@@ -5739,9 +5815,11 @@
   transition: all 0.15s;
 }
 
-.macro-badge-popup-close:hover {
+@media (hover: hover) {
+  .macro-badge-popup-close:hover {
   background: rgba(0, 0, 0, 0.1);
   color: var(--color-slate-700);
+}
 }
 
 .macro-badge-popup-close:active {
@@ -5935,9 +6013,11 @@
   transition: all 0.15s;
 }
 
-.metric-popup-close:hover {
+@media (hover: hover) {
+  .metric-popup-close:hover {
   background: rgba(0, 0, 0, 0.1);
   color: var(--color-slate-700);
+}
 }
 
 .metric-popup-close:active {
@@ -5984,9 +6064,14 @@
   animation: none;
 }
 
-.macro-ring.macro-ring-pulse:hover,
 .macro-ring.macro-ring-pulse:focus-within {
   animation: macroPulse 1.2s ease-in-out 1;
+}
+
+@media (hover: hover) {
+  .macro-ring.macro-ring-pulse:hover {
+  animation: macroPulse 1.2s ease-in-out 1;
+}
 }
 
 @keyframes macroPulse {
@@ -6075,9 +6160,11 @@
   flex-shrink: 0;
 }
 
-.weight-card-modern:hover {
+@media (hover: hover) {
+  .weight-card-modern:hover {
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(16, 185, 129, 0.18) 100%);
   border-color: rgba(34, 197, 94, 0.3);
+}
 }
 
 .weight-card-modern:active {
@@ -6179,10 +6266,12 @@
   justify-content: center;
 }
 
-.dev-clear-weight-mini:hover {
+@media (hover: hover) {
+  .dev-clear-weight-mini:hover {
   opacity: 1;
   background: rgba(220, 38, 38, 0.2);
   color: #dc2626;
+}
 }
 
 .weight-clear-btn-mini {
@@ -6203,9 +6292,11 @@
   justify-content: center;
 }
 
-.weight-clear-btn-mini:hover {
+@media (hover: hover) {
+  .weight-clear-btn-mini:hover {
   opacity: 1;
   background: rgba(220, 38, 38, 0.25);
+}
 }
 
 .trend-arrow {
@@ -6243,9 +6334,11 @@
   flex-shrink: 0;
 }
 
-.deficit-card-modern:hover {
+@media (hover: hover) {
+  .deficit-card-modern:hover {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.18) 100%);
   border-color: rgba(99, 102, 241, 0.3);
+}
 }
 
 .deficit-card-modern:active {
@@ -6367,10 +6460,12 @@
   contain: layout style paint;
 }
 
-.household-activity-card:hover {
+@media (hover: hover) {
+  .household-activity-card:hover {
   border-color: #22c55e;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+}
 }
 
 .household-activity-card:active {
@@ -6474,9 +6569,11 @@
   transition: all 0.15s ease;
 }
 
-.household-add-btn:hover {
+@media (hover: hover) {
+  .household-add-btn:hover {
   border-color: #16a34a;
   background: rgba(34, 197, 94, 0.15);
+}
 }
 
 .household-add-btn:active {
@@ -6497,10 +6594,12 @@
   white-space: nowrap;
 }
 
-.add-training-btn:hover {
+@media (hover: hover) {
+  .add-training-btn:hover {
   border-color: #ea580c;
   color: #c2410c;
   background: rgba(249, 115, 22, 0.15);
+}
 }
 
 .add-training-btn:active {
@@ -6527,10 +6626,12 @@
   box-shadow: 0 1px 0 rgba(245, 158, 11, 0.12);
 }
 
-.add-training-btn.add-charge-btn:hover {
+@media (hover: hover) {
+  .add-training-btn.add-charge-btn:hover {
   border-color: #f59e0b;
   color: #92400e;
   background: linear-gradient(180deg, rgba(253, 230, 138, 0.5), rgba(255, 251, 235, 0.98));
+}
 }
 
 .add-training-btn.add-charge-btn:active {
@@ -7303,8 +7404,10 @@
   transition: transform 0.15s ease;
 }
 
-.training-card-rating:hover {
+@media (hover: hover) {
+  .training-card-rating:hover {
   transform: translateY(-1px);
+}
 }
 
 .training-card-rating.quality {
@@ -7505,8 +7608,10 @@
   transition: all 0.15s ease;
 }
 
-.dev-clear-weight-btn:hover {
+@media (hover: hover) {
+  .dev-clear-weight-btn:hover {
   background: rgba(239, 68, 68, 0.2);
+}
 }
 
 .dev-clear-weight-btn:active {
@@ -7535,11 +7640,13 @@
   opacity: 0.6;
 }
 
-.dev-clear-weight-btn-mini:hover {
+@media (hover: hover) {
+  .dev-clear-weight-btn-mini:hover {
   color: var(--color-red-500);
   border-color: var(--color-red-500);
   background: rgba(239, 68, 68, 0.1);
   opacity: 1;
+}
 }
 
 .dev-clear-weight-btn-mini:active {
@@ -7684,9 +7791,11 @@
   z-index: 100;
 }
 
-.fab-add-meal:hover {
+@media (hover: hover) {
+  .fab-add-meal:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+}
 }
 
 .fab-add-meal:active {
@@ -7755,9 +7864,11 @@
   margin-left: 4px;
 }
 
-.macro-toast-close:hover {
+@media (hover: hover) {
+  .macro-toast-close:hover {
   background: var(--color-slate-200);
   color: var(--color-slate-700);
+}
 }
 
 /* Цвета по типу */
@@ -7954,9 +8065,11 @@
   transition: all 0.2s ease;
 }
 
-.macro-toast-rating-btn:hover {
+@media (hover: hover) {
+  .macro-toast-rating-btn:hover {
   background: rgba(255, 255, 255, 0.25);
   transform: scale(1.1);
+}
 }
 
 .macro-toast-rating-btn:active {
@@ -7994,9 +8107,11 @@
   gap: 4px;
 }
 
-.macro-toast-snooze-btn:hover {
+@media (hover: hover) {
+  .macro-toast-snooze-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.05);
+}
 }
 
 .macro-toast-snooze-btn:active {
@@ -8281,8 +8396,10 @@
   transition: all 0.2s ease;
 }
 
-.macro-toast-hint:hover {
+@media (hover: hover) {
+  .macro-toast-hint:hover {
   background: rgba(255, 255, 255, 0.25);
+}
 }
 
 .macro-toast-hint:active {
@@ -8622,10 +8739,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.add-meal-btn-full:hover {
+@media (hover: hover) {
+  .add-meal-btn-full:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(34, 197, 94, 0.45);
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
 }
 
 .add-meal-btn-full:active {
@@ -8639,8 +8758,10 @@
   box-shadow: 0 4px 14px rgba(34, 197, 94, 0.25);
 }
 
-[data-theme="dark"] .add-meal-btn-full:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .add-meal-btn-full:hover {
   box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+}
 }
 
 /* MODULE 02 — Metrics & Graphs

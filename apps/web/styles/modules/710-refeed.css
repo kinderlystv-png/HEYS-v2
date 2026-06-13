@@ -91,10 +91,12 @@
   position: relative;
 }
 
-.refeed-option:hover {
+@media (hover: hover) {
+  .refeed-option:hover {
   background: #f3f4f6;
   border-color: #f59e0b;
   transform: translateY(-1px);
+}
 }
 
 .refeed-option.active {
@@ -166,9 +168,11 @@
   text-align: center;
 }
 
-.refeed-reason:hover {
+@media (hover: hover) {
+  .refeed-reason:hover {
   background: #f3f4f6;
   border-color: #f59e0b;
+}
 }
 
 .refeed-reason.active {
@@ -378,8 +382,10 @@
   border: 1px dashed #f59e0b;
 }
 
-.refeed-badge--recommended:hover {
+@media (hover: hover) {
+  .refeed-badge--recommended:hover {
   background: rgba(245, 158, 11, 0.25);
+}
 }
 
 @keyframes refeed-pulse {
@@ -413,10 +419,12 @@
   transition: all 0.2s ease;
 }
 
-.refeed-toggle:hover {
+@media (hover: hover) {
+  .refeed-toggle:hover {
   background: #fef3c7;
   border-color: #f59e0b;
   color: #b45309;
+}
 }
 
 .refeed-toggle--active {
@@ -439,10 +447,12 @@
   font-size: 14px;
 }
 
-.refeed-toggle--minimal:hover {
+@media (hover: hover) {
+  .refeed-toggle--minimal:hover {
   opacity: 1;
   background: #fef3c7;
   border-style: solid;
+}
 }
 
 /* Toggle внутри goal-progress-track (слева от бара) */
@@ -525,9 +535,11 @@
   border-color: #374151;
 }
 
-[data-theme="dark"] .refeed-option:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .refeed-option:hover {
   background: #374151;
   border-color: #f59e0b;
+}
 }
 
 [data-theme="dark"] .refeed-option--yes.active {
@@ -548,8 +560,10 @@
   border-color: #374151;
 }
 
-[data-theme="dark"] .refeed-reason:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .refeed-reason:hover {
   background: #374151;
+}
 }
 
 [data-theme="dark"] .refeed-reason.active {
@@ -615,9 +629,11 @@
   color: #9ca3af;
 }
 
-[data-theme="dark"] .refeed-toggle:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .refeed-toggle:hover {
   background: #374151;
   color: #fcd34d;
+}
 }
 
 [data-theme="dark"] .refeed-toggle--active {

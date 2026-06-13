@@ -30,8 +30,10 @@
   gap: 10px;
 }
 
-.meal-optimizer__header:hover {
+@media (hover: hover) {
+  .meal-optimizer__header:hover {
   background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
 }
 
 .meal-optimizer__header-icon {
@@ -102,9 +104,11 @@
   line-height: 1;
 }
 
-.meal-optimizer__dismiss:hover {
+@media (hover: hover) {
+  .meal-optimizer__dismiss:hover {
   opacity: 1;
   color: #64748b;
+}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -139,8 +143,10 @@
   border-bottom: none;
 }
 
-.meal-optimizer__item:hover {
+@media (hover: hover) {
+  .meal-optimizer__item:hover {
   background: #f8fafc;
+}
 }
 
 .meal-optimizer__item--warning {
@@ -148,8 +154,10 @@
   border-left: 3px solid #f59e0b;
 }
 
-.meal-optimizer__item--warning:hover {
+@media (hover: hover) {
+  .meal-optimizer__item--warning:hover {
   background: #fef3c7;
+}
 }
 
 .meal-optimizer__item--info {
@@ -157,8 +165,10 @@
   border-left: 3px solid #22c55e;
 }
 
-.meal-optimizer__item--info:hover {
+@media (hover: hover) {
+  .meal-optimizer__item--info:hover {
   background: #dcfce7;
+}
 }
 
 .meal-optimizer__item--first {
@@ -166,8 +176,10 @@
   border-left: 3px solid #eab308;
 }
 
-.meal-optimizer__item--first:hover {
+@media (hover: hover) {
+  .meal-optimizer__item--first:hover {
   background: #fef9c3;
+}
 }
 
 .meal-optimizer__item-header {
@@ -218,12 +230,16 @@
   transition: opacity 0.15s, color 0.15s;
 }
 
-.meal-optimizer__item:hover .meal-optimizer__item-dismiss {
+@media (hover: hover) {
+  .meal-optimizer__item:hover .meal-optimizer__item-dismiss {
   opacity: 1;
 }
+}
 
-.meal-optimizer__item-dismiss:hover {
+@media (hover: hover) {
+  .meal-optimizer__item-dismiss:hover {
   color: #64748b;
+}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -251,12 +267,14 @@
   transition: all 0.15s ease;
 }
 
-.meal-optimizer__product:hover {
+@media (hover: hover) {
+  .meal-optimizer__product:hover {
   background: #0ea5e9;
   border-color: #0ea5e9;
   color: white;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(14, 165, 233, 0.3);
+}
 }
 
 .meal-optimizer__product:active {
@@ -276,8 +294,10 @@
   font-weight: 500;
 }
 
-.meal-optimizer__product:hover .meal-optimizer__product-portion {
+@media (hover: hover) {
+  .meal-optimizer__product:hover .meal-optimizer__product-portion {
   color: rgba(255, 255, 255, 0.8);
+}
 }
 
 .meal-optimizer__product-add {
@@ -373,8 +393,10 @@
   background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
 }
 
-.dark-theme .meal-optimizer__header:hover {
+@media (hover: hover) {
+  .dark-theme .meal-optimizer__header:hover {
   background: linear-gradient(135deg, #1e4a6f 0%, #2e3a4b 100%);
+}
 }
 
 .dark-theme .meal-optimizer__header-title {
@@ -389,8 +411,10 @@
   color: #64748b;
 }
 
-.dark-theme .meal-optimizer__dismiss:hover {
+@media (hover: hover) {
+  .dark-theme .meal-optimizer__dismiss:hover {
   color: #94a3b8;
+}
 }
 
 .dark-theme .meal-optimizer>.meal-optimizer__products {
@@ -425,8 +449,10 @@
   border-color: #334155;
 }
 
-.dark-theme .meal-optimizer__item:hover {
+@media (hover: hover) {
+  .dark-theme .meal-optimizer__item:hover {
   background: #334155;
+}
 }
 
 .dark-theme .meal-optimizer__item--warning {
@@ -462,10 +488,12 @@
   color: #e2e8f0;
 }
 
-.dark-theme .meal-optimizer__product:hover {
+@media (hover: hover) {
+  .dark-theme .meal-optimizer__product:hover {
   background: #0ea5e9;
   border-color: #0ea5e9;
   color: white;
+}
 }
 
 .dark-theme .meal-optimizer__product-portion {

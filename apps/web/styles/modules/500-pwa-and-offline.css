@@ -544,9 +544,11 @@
   line-height: 1;
 }
 
-.mc-close-btn:hover {
+@media (hover: hover) {
+  .mc-close-btn:hover {
   background: #fecaca;
   color: #b91c1c;
+}
 }
 
 .mc-close-btn:active {
@@ -612,9 +614,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.mc-progress-dot:hover {
+@media (hover: hover) {
+  .mc-progress-dot:hover {
   transform: scale(1.3);
   background: var(--color-slate-300);
+}
 }
 
 .mc-progress-dot:active {
@@ -626,16 +630,20 @@
   cursor: default;
 }
 
-.mc-progress-dot.active:hover {
+@media (hover: hover) {
+  .mc-progress-dot.active:hover {
   transform: scale(1);
+}
 }
 
 .mc-progress-dot.completed {
   background: var(--color-emerald-400);
 }
 
-.mc-progress-dot.completed:hover {
+@media (hover: hover) {
+  .mc-progress-dot.completed:hover {
   background: var(--color-emerald-500);
+}
 }
 
 .mc-progress-dot.current {
@@ -1190,10 +1198,12 @@
   border-radius: 6px;
 }
 
-.household-example:hover {
+@media (hover: hover) {
+  .household-example:hover {
   background: rgba(16, 185, 129, 0.1);
   color: var(--color-emerald-600, #059669);
   box-shadow: none;
+}
 }
 
 .household-example:active {
@@ -1456,10 +1466,12 @@
   transition: all 0.15s ease;
 }
 
-.household-time-skip:hover {
+@media (hover: hover) {
+  .household-time-skip:hover {
   border-color: var(--color-red-300, #fca5a5);
   color: var(--color-red-500, #ef4444);
   background: rgba(239, 68, 68, 0.05);
+}
 }
 
 /* Секция времени в первом шаге (компактная) */
@@ -1507,9 +1519,11 @@
   transition: all 0.15s ease;
 }
 
-.household-time-clear:hover {
+@media (hover: hover) {
+  .household-time-clear:hover {
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);
+}
 }
 
 /* Шаг 2: Статистика */
@@ -1559,8 +1573,10 @@
   opacity: 0.8;
 }
 
-.household-example.readonly:hover {
+@media (hover: hover) {
+  .household-example.readonly:hover {
   background: transparent;
+}
 }
 
 .household-time-presets {
@@ -1582,9 +1598,11 @@
   text-align: center;
 }
 
-.household-time-preset:hover {
+@media (hover: hover) {
+  .household-time-preset:hover {
   border-color: var(--color-indigo-300, #a5b4fc);
   background: rgba(99, 102, 241, 0.05);
+}
 }
 
 .household-time-preset:active {
@@ -1643,9 +1661,11 @@
   justify-content: center;
 }
 
-.household-time-clear:hover {
+@media (hover: hover) {
+  .household-time-clear:hover {
   background: var(--color-red-100, #fee2e2);
   color: var(--color-red-500, #ef4444);
+}
 }
 
 .household-time-info {
@@ -2023,9 +2043,11 @@
   background: #7f1d1d;
 }
 
-[data-theme="dark"] .mc-close-btn:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .mc-close-btn:hover {
   background: #991b1b;
   color: #fecaca;
+}
 }
 
 /* Dark mode - Sleep Quality */
@@ -2085,8 +2107,10 @@
   color: var(--color-slate-400);
 }
 
-[data-theme="dark"] .deficit-preset:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .deficit-preset:hover {
   background: #475569;
+}
 }
 
 /* === 03. Morning Check-in v2 Enhancements === */
@@ -2120,8 +2144,10 @@
   margin-right: 4px;
 }
 
-.mc-dev-btn:hover {
+@media (hover: hover) {
+  .mc-dev-btn:hover {
   background: rgba(239, 68, 68, 0.2);
+}
 }
 
 .mc-dev-btn:active {
@@ -2461,8 +2487,10 @@
   opacity: 0.4;
 }
 
-.mc-wheel-value--far:hover {
+@media (hover: hover) {
+  .mc-wheel-value--far:hover {
   opacity: 0.7;
+}
 }
 
 .mc-wheel-value--prev,
@@ -2472,9 +2500,11 @@
   opacity: 0.6;
 }
 
-.mc-wheel-value--prev:hover,
+@media (hover: hover) {
+  .mc-wheel-value--prev:hover,
 .mc-wheel-value--next:hover {
   opacity: 1;
+}
 }
 
 .mc-wheel-value--current {

@@ -137,13 +137,17 @@ html.chrono-bubble-dragging .chrono-screen {
     color: var(--planning-accent, #2563eb);
 }
 
-.chrono-timer-banner__control:hover,
+@media (hover: hover) {
+  .chrono-timer-banner__control:hover,
 .chrono-timer-banner__stop:hover {
     background: rgba(236, 72, 153, 0.12);
 }
+}
 
-.chrono-timer-banner__control:hover {
+@media (hover: hover) {
+  .chrono-timer-banner__control:hover {
     background: rgba(37, 99, 235, 0.12);
+}
 }
 
 /* --- Timer complete / stop modals --- */
@@ -240,12 +244,14 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-.chrono-duration__timer-chip:hover:not(:disabled) {
+@media (hover: hover) {
+  .chrono-duration__timer-chip:hover:not(:disabled) {
     border-color: var(--planning-text, #0f172a);
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.06),
         0 4px 10px -4px rgba(15, 23, 42, 0.18);
     transform: translateY(-1px);
+}
 }
 
 .chrono-duration__timer-chip:disabled {
@@ -439,8 +445,10 @@ html.chrono-bubble-dragging .chrono-screen {
     cursor: not-allowed;
 }
 
-.chrono-scope-bar__today:hover {
+@media (hover: hover) {
+  .chrono-scope-bar__today:hover {
     background: var(--planning-surface-elevated, #f1f5f9);
+}
 }
 
 /* --- Strip (занятия без часов в выбранном охвате — «пресеты»). ---
@@ -472,9 +480,11 @@ html.chrono-bubble-dragging .chrono-screen {
     -webkit-tap-highlight-color: transparent;
 }
 
-.chrono-strip__item:hover {
+@media (hover: hover) {
+  .chrono-strip__item:hover {
     background: hsl(var(--hue) 60% 92%);
     border-color: hsl(var(--hue) 50% 65%);
+}
 }
 
 .chrono-strip__item:active {
@@ -497,11 +507,13 @@ html.chrono-bubble-dragging .chrono-screen {
     font-weight: 600;
 }
 
-.chrono-strip__item--add:hover {
+@media (hover: hover) {
+  .chrono-strip__item--add:hover {
     background: var(--planning-accent, #2563eb);
     border-color: var(--planning-accent, #2563eb);
     color: #fff;
     filter: brightness(1.08);
+}
 }
 
 /* --- Insights + plan/fact --- */
@@ -539,8 +551,10 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: background 0.15s ease;
 }
 
-.chrono-overview__toggle:hover {
+@media (hover: hover) {
+  .chrono-overview__toggle:hover {
     background: rgba(15, 23, 42, 0.04);
+}
 }
 
 .chrono-overview__toggle-label {
@@ -1123,9 +1137,11 @@ html.chrono-bubble-dragging .chrono-screen {
     transform-origin: center;
 }
 
-.chrono-bubble:hover {
+@media (hover: hover) {
+  .chrono-bubble:hover {
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.22);
     filter: brightness(1.06);
+}
 }
 
 .chrono-bubble:active {
@@ -1407,14 +1423,18 @@ html.chrono-bubble-dragging .chrono-screen {
     justify-content: center;
 }
 
-.chrono-picker__icon-btn:hover {
+@media (hover: hover) {
+  .chrono-picker__icon-btn:hover {
     background: rgba(15, 23, 42, 0.06);
     color: var(--planning-text, #0f172a);
 }
+}
 
-.chrono-picker__icon-btn--danger:hover {
+@media (hover: hover) {
+  .chrono-picker__icon-btn--danger:hover {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
+}
 }
 
 .chrono-picker__create {
@@ -1476,8 +1496,10 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.chrono-emoji-palette__item:hover {
+@media (hover: hover) {
+  .chrono-emoji-palette__item:hover {
     background: var(--planning-surface-elevated, #f1f5f9);
+}
 }
 
 .chrono-emoji-palette__item.active {
@@ -1695,10 +1717,12 @@ html.chrono-bubble-dragging .chrono-screen {
     background: transparent !important;
 }
 
-.chrono-heatmap__cell:hover {
+@media (hover: hover) {
+  .chrono-heatmap__cell:hover {
     transform: scale(1.4);
     z-index: 2;
     position: relative;
+}
 }
 
 .chrono-heatmap__legend {
@@ -1753,8 +1777,10 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: filter 0.15s ease, transform 0.12s ease;
 }
 
-.chrono-week-breakdown__col:hover .chrono-week-breakdown__col-fill {
+@media (hover: hover) {
+  .chrono-week-breakdown__col:hover .chrono-week-breakdown__col-fill {
     filter: brightness(1.08);
+}
 }
 
 .chrono-week-breakdown__col:active .chrono-week-breakdown__col-fill {
@@ -1949,11 +1975,13 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
 }
 
-.chrono-history .planning-modal__close:hover,
+@media (hover: hover) {
+  .chrono-history .planning-modal__close:hover,
 .chrono-delete .planning-modal__close:hover,
 .chrono-picker .planning-modal__close:hover {
     background: rgba(236, 72, 153, 0.12);
     color: #db2777;
+}
 }
 
 .chrono-history .planning-modal__close:active,
@@ -1973,9 +2001,11 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
 }
 
-.chrono-duration .planning-modal__close:hover {
+@media (hover: hover) {
+  .chrono-duration .planning-modal__close:hover {
     background: var(--planning-surface-elevated, rgba(15, 23, 42, 0.05));
     color: var(--planning-text, #0f172a);
+}
 }
 
 .chrono-duration .planning-modal__close:active {
@@ -2019,13 +2049,15 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
-.chrono-duration__preset:hover {
+@media (hover: hover) {
+  .chrono-duration__preset:hover {
     background: var(--planning-surface, #fff);
     border-color: var(--planning-text, #0f172a);
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.06),
         0 6px 14px -6px rgba(15, 23, 42, 0.18);
     transform: translateY(-1px);
+}
 }
 
 .chrono-duration__preset:active {
@@ -2150,9 +2182,11 @@ html.chrono-bubble-dragging .chrono-screen {
     border-radius: 8px;
 }
 
-.chrono-duration__target-clear:hover {
+@media (hover: hover) {
+  .chrono-duration__target-clear:hover {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
+}
 }
 
 /* Кнопка Сохранить/Обновить — синяя, при flash зеленеет на 900мс
@@ -2172,8 +2206,10 @@ html.chrono-bubble-dragging .chrono-screen {
     white-space: nowrap;
 }
 
-.chrono-duration__target-save:hover:not(:disabled) {
+@media (hover: hover) {
+  .chrono-duration__target-save:hover:not(:disabled) {
     filter: brightness(1.06);
+}
 }
 
 .chrono-duration__target-save:active:not(:disabled) {
@@ -2273,9 +2309,11 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
-.chrono-duration__category-chip:hover,
+@media (hover: hover) {
+  .chrono-duration__category-chip:hover,
 .chrono-duration__smart-chip:hover {
     border-color: var(--planning-text, #0f172a);
+}
 }
 
 .chrono-duration__category-chip.active {

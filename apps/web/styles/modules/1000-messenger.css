@@ -26,11 +26,13 @@
   touch-action: manipulation;
 }
 
-.fab-group .message-fab:hover {
+@media (hover: hover) {
+  .fab-group .message-fab:hover {
   transform: scale(1.04);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08),
               0 10px 24px rgba(15, 23, 42, 0.16),
               inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
 }
 
 .fab-group .message-fab:active {
@@ -154,8 +156,10 @@ body.planning-tab-active .fab-group .message-fab {
   color: var(--heys-text-secondary, #6b7280);
 }
 
-.messenger-close:hover {
+@media (hover: hover) {
+  .messenger-close:hover {
   background: var(--heys-bg-muted, rgba(0, 0, 0, 0.05));
+}
 }
 
 .messenger-thread {
@@ -267,8 +271,10 @@ body.planning-tab-active .fab-group .message-fab {
   flex-shrink: 0;
 }
 
-.msg-done-toggle:hover {
+@media (hover: hover) {
+  .msg-done-toggle:hover {
   opacity: 1;
+}
 }
 
 .msg-done-toggle.msg-done-toggle-active {
@@ -315,10 +321,12 @@ body.planning-tab-active .fab-group .message-fab {
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.messenger-show-older:hover {
+@media (hover: hover) {
+  .messenger-show-older:hover {
   background: var(--heys-bg-elevated, #e2e8f0);
   color: #2563eb;
   border-color: #2563eb;
+}
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -381,14 +389,18 @@ body.planning-tab-active .fab-group .message-fab {
   flex-shrink: 0;
 }
 
-.msg-reply-btn:hover {
+@media (hover: hover) {
+  .msg-reply-btn:hover {
   opacity: 1;
   background: rgba(0, 0, 0, 0.08);
 }
+}
 
-.msg-bubble-mine .msg-reply-btn:hover,
+@media (hover: hover) {
+  .msg-bubble-mine .msg-reply-btn:hover,
 .msg-bubble-done .msg-reply-btn:hover {
   background: rgba(255, 255, 255, 0.18);
+}
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -438,8 +450,10 @@ body.planning-tab-active .fab-group .message-fab {
   transition: transform 0.2s ease;
 }
 
-.msg-attachment-item:hover img {
+@media (hover: hover) {
+  .msg-attachment-item:hover img {
   transform: scale(1.03);
+}
 }
 
 .msg-attachment-pending {
@@ -532,8 +546,10 @@ body.planning-tab-active .fab-group .message-fab {
   z-index: 3;
 }
 
-.messenger-pending-remove:hover {
+@media (hover: hover) {
+  .messenger-pending-remove:hover {
   background: rgba(220, 38, 38, 0.9);
+}
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -556,8 +572,10 @@ body.planning-tab-active .fab-group .message-fab {
   transition: background 0.15s ease;
 }
 
-.messenger-attach:hover {
+@media (hover: hover) {
+  .messenger-attach:hover {
   background: var(--heys-bg-elevated, #e2e8f0);
+}
 }
 
 .messenger-attach:disabled {
@@ -713,14 +731,18 @@ body.planning-tab-active .fab-group .message-fab {
   flex-shrink: 0;
 }
 
-.msg-edit-btn:hover {
+@media (hover: hover) {
+  .msg-edit-btn:hover {
   opacity: 1;
   background: rgba(0, 0, 0, 0.08);
 }
+}
 
-.msg-bubble-mine .msg-edit-btn:hover,
+@media (hover: hover) {
+  .msg-bubble-mine .msg-edit-btn:hover,
 .msg-bubble-done .msg-edit-btn:hover {
   background: rgba(255, 255, 255, 0.18);
+}
 }
 
 .msg-edited-marker {
@@ -784,8 +806,10 @@ body.planning-tab-active .fab-group .message-fab {
   transition: opacity 0.15s ease;
 }
 
-.messenger-reply-preview-close:hover {
+@media (hover: hover) {
+  .messenger-reply-preview-close:hover {
   opacity: 1;
+}
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -818,10 +842,12 @@ body.planning-tab-active .fab-group .message-fab {
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.messenger-template-chip:hover {
+@media (hover: hover) {
+  .messenger-template-chip:hover {
   background: var(--heys-bg-elevated, #e2e8f0);
   border-color: #2563eb;
   color: #2563eb;
+}
 }
 
 .messenger-template-chip:disabled {
@@ -856,8 +882,10 @@ body.planning-tab-active .fab-group .message-fab {
   margin-bottom: 6px;
 }
 
-.msg-delete-outside:hover {
+@media (hover: hover) {
+  .msg-delete-outside:hover {
   opacity: 0.9;
+}
 }
 
 .messenger-error {
@@ -922,6 +950,8 @@ body.planning-tab-active .fab-group .message-fab {
   cursor: not-allowed;
 }
 
-.messenger-send:not(:disabled):hover {
+@media (hover: hover) {
+  .messenger-send:not(:disabled):hover {
   background: #1d4ed8;
+}
 }

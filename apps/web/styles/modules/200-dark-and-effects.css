@@ -283,9 +283,11 @@
   color: var(--heys-text-muted);
 }
 
-[data-theme="dark"] .macro-badge-popup-close:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .macro-badge-popup-close:hover {
   background: rgba(255, 255, 255, 0.2);
   color: var(--heys-text-primary);
+}
 }
 
 /* Dark theme: Metric Popup */
@@ -362,9 +364,11 @@
   color: var(--color-slate-400);
 }
 
-[data-theme="dark"] .metric-popup-close:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .metric-popup-close:hover {
   background: rgba(255, 255, 255, 0.2);
   color: var(--color-slate-100);
+}
 }
 
 [data-theme="dark"] .skeleton-item {
@@ -422,8 +426,10 @@
   color: #93c5fd;
 }
 
-[data-theme="dark"] .meal-type-label:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .meal-type-label:hover {
   background: linear-gradient(135deg, #2547a8 0%, #3b5bbd 100%);
+}
 }
 
 [data-theme="dark"] .meal-type-arrow {
@@ -469,8 +475,10 @@
   color: #fcd34d;
 }
 
-[data-theme="dark"] .meal-time-badge-inside:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .meal-time-badge-inside:hover {
   background: #92400e;
+}
 }
 
 [data-theme="dark"] .meal-kcal-badge-inside {
@@ -543,9 +551,11 @@
   border-color: var(--border);
 }
 
-[data-theme="dark"] .btn:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .btn:hover {
   background: var(--heys-bg-elevated);
   border-color: var(--heys-border-focus);
+}
 }
 
 [data-theme="dark"] .btn-primary {
@@ -554,9 +564,11 @@
   border-color: var(--heys-primary);
 }
 
-[data-theme="dark"] .btn-primary:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .btn-primary:hover {
   background: var(--heys-primary-hover);
   border-color: var(--heys-primary-hover);
+}
 }
 
 /* Navigation */
@@ -1050,9 +1062,11 @@
   color: var(--heys-text-primary);
 }
 
-[data-theme="dark"] .correlation-clickable:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .correlation-clickable:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
 }
 
 /* Caloric balance cards */
@@ -1097,8 +1111,10 @@
   border: 1px solid rgba(96, 165, 250, 0.3);
 }
 
-[data-theme="dark"] .caloric-excess-science-summary:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .caloric-excess-science-summary:hover {
   background: rgba(96, 165, 250, 0.25) !important;
+}
 }
 
 /* Caloric debt */
@@ -1178,9 +1194,11 @@
   box-shadow: 0 2px 8px rgba(96, 165, 250, 0.15);
 }
 
-[data-theme="dark"] .caloric-insights-card:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .caloric-insights-card:hover {
   background: linear-gradient(135deg, rgba(96, 165, 250, 0.22) 0%, rgba(139, 92, 246, 0.15) 100%);
   box-shadow: 0 4px 12px rgba(96, 165, 250, 0.2);
+}
 }
 
 [data-theme="dark"] .caloric-insights-label {
@@ -1204,9 +1222,11 @@
   border-color: var(--heys-border-default);
 }
 
-[data-theme="dark"] .caloric-insight-item:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .caloric-insight-item:hover {
   background: var(--heys-bg-card);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1223,10 +1243,12 @@
   border: 1px solid var(--heys-border-default);
 }
 
-[data-theme="dark"] .caloric-insight-item-v2:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .caloric-insight-item-v2:hover {
   background: var(--heys-bg-card);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
   transform: translateY(-1px);
+}
 }
 
 [data-theme="dark"] .caloric-insight-item-v2.severity-critical {
@@ -1312,9 +1334,11 @@
   border: 1px solid var(--heys-border-default);
 }
 
-[data-theme="dark"] .balance-day-popup button:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .balance-day-popup button:hover {
   background: var(--heys-bg-elevated);
   border-color: var(--heys-border-focus);
+}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1454,8 +1478,10 @@
   color: #fcd34d;
 }
 
-[data-theme="dark"] .weight-goal-hint-link:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .weight-goal-hint-link:hover {
   color: #fbbf24;
+}
 }
 
 [data-theme="dark"] .weight-goal-line {
@@ -1565,9 +1591,11 @@
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
 }
 
-[data-theme="dark"] .zone-formula-edit-btn:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .zone-formula-edit-btn:hover {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+}
 }
 
 [data-theme="dark"] .mood-hint-change {
@@ -1681,9 +1709,11 @@
   border-color: rgba(249, 115, 22, 0.3) !important;
 }
 
-[data-theme="dark"] .compact-train:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .compact-train:hover {
   background: rgba(249, 115, 22, 0.2) !important;
   border-color: rgba(249, 115, 22, 0.4) !important;
+}
 }
 
 [data-theme="dark"] .compact-train-time {
@@ -1776,9 +1806,11 @@
   border-color: #38383a;
 }
 
-[data-theme="dark"] .compact-zone-inline:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .compact-zone-inline:hover {
   background: #3a3a3c;
   border-color: #48484a;
+}
 }
 
 [data-theme="dark"] .compact-zone-inline.has-value {
@@ -2104,9 +2136,11 @@
   background: #fb923c;
 }
 
-[data-theme="dark"] .ews-badge--medium:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .ews-badge--medium:hover {
   background: rgba(251, 146, 60, 0.3);
   box-shadow: 0 2px 8px rgba(251, 146, 60, 0.4);
+}
 }
 
 [data-theme="dark"] .ews-badge--high {
@@ -2118,9 +2152,11 @@
   background: #f87171;
 }
 
-[data-theme="dark"] .ews-badge--high:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .ews-badge--high:hover {
   background: rgba(248, 113, 113, 0.3);
   box-shadow: 0 2px 8px rgba(248, 113, 113, 0.4);
+}
 }
 
 /* Offline banner dark */
@@ -2154,8 +2190,10 @@
   color: #e5e5e5;
 }
 
-[data-theme="dark"] .yesterday-quick-btn:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .yesterday-quick-btn:hover {
   background: #3c3c3e;
+}
 }
 
 [data-theme="dark"] .yesterday-quick-btn.active {
@@ -2171,8 +2209,10 @@
   box-shadow: 0 2px 4px rgba(96, 165, 250, 0.3);
 }
 
-[data-theme="dark"] .today-quick-btn:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .today-quick-btn:hover {
   background: var(--color-blue-500);
+}
 }
 
 [data-theme="dark"] .today-quick-btn.active {
@@ -2193,8 +2233,10 @@
   color: #aeaeb2;
 }
 
-[data-theme="dark"] .tabs .tab:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .tabs .tab:hover {
   background: rgba(255, 255, 255, 0.05);
+}
 }
 
 [data-theme="dark"] .tabs .tab.active {
@@ -2227,9 +2269,11 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.theme-toggle:hover {
+@media (hover: hover) {
+  .theme-toggle:hover {
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
 }
 
 .theme-toggle:active {
@@ -2429,9 +2473,11 @@
   box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
 }
 
-.sparkline-empty-btn:hover {
+@media (hover: hover) {
+  .sparkline-empty-btn:hover {
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+}
 }
 
 .sparkline-empty-btn:active {
@@ -2651,9 +2697,11 @@
   }
 }
 
-.metrics-card:hover {
+@media (hover: hover) {
+  .metrics-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
 }
 
 .metrics-progress {
@@ -2917,12 +2965,20 @@ button.sleep-breakdown-item {
   transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
-button.sleep-breakdown-item:hover,
 button.sleep-breakdown-item:focus-visible {
   outline: none;
   transform: translateY(-1px);
   background: #f3e8ff;
   border-color: #d8b4fe;
+}
+
+@media (hover: hover) {
+  button.sleep-breakdown-item:hover {
+  outline: none;
+  transform: translateY(-1px);
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+}
 }
 
 .sleep-breakdown-item--nap.has-value {
@@ -2953,12 +3009,19 @@ button.sleep-breakdown-item:focus-visible {
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
-.sleep-breakdown-cta:hover,
 .sleep-breakdown-cta:focus-visible,
 .sleep-breakdown-cta:active {
   outline: none;
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(139, 92, 246, 0.18);
+}
+
+@media (hover: hover) {
+  .sleep-breakdown-cta:hover {
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(139, 92, 246, 0.18);
+}
 }
 
 .sleep-breakdown-cta.subtle {
@@ -3368,9 +3431,11 @@ button.sleep-breakdown-item:focus-visible {
   animation: ndtePulse 2.5s ease-in-out infinite;
 }
 
-.ndte-badge--active:hover {
+@media (hover: hover) {
+  .ndte-badge--active:hover {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(34, 197, 94, 0.15));
   transform: scale(1.05);
+}
 }
 
 .ndte-badge--active:active {

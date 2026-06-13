@@ -224,8 +224,10 @@
   text-align: left;
 }
 
-.drums-ft-session-card:hover {
+@media (hover: hover) {
+  .drums-ft-session-card:hover {
   border-color: rgba(20, 184, 166, 0.45);
+}
 }
 
 .drums-ft-session-card__icon {

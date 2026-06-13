@@ -86,10 +86,12 @@
     transition: all 0.2s ease;
 }
 
-.planning-subnav__item:hover {
+@media (hover: hover) {
+  .planning-subnav__item:hover {
     background: rgba(255, 255, 255, 0.95);
     color: var(--planning-accent);
     transform: translateY(-1px);
+}
 }
 
 .planning-subnav__item.active {
@@ -133,9 +135,11 @@
     box-shadow: 0 4px 12px rgba(2, 6, 23, 0.3);
 }
 
-[data-theme="dark"] .planning-subnav__item:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .planning-subnav__item:hover {
     background: rgba(30, 41, 59, 0.9);
     color: #93c5fd;
+}
 }
 
 [data-theme="dark"] .planning-subnav__item.active {
@@ -392,10 +396,12 @@
     transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
-.planning-filter-toggle:hover {
+@media (hover: hover) {
+  .planning-filter-toggle:hover {
     color: var(--planning-text);
     border-color: var(--planning-border-soft);
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
 }
 
 .planning-filter-toggle.active,
@@ -593,8 +599,10 @@
     font-weight: 400;
 }
 
-.planning-quick-target-option:hover {
+@media (hover: hover) {
+  .planning-quick-target-option:hover {
     background: rgba(148, 163, 184, 0.12);
+}
 }
 
 .planning-quick-target-option.active {
@@ -697,9 +705,11 @@
     border-right: none;
 }
 
-.planning-date-picker__btn:hover {
+@media (hover: hover) {
+  .planning-date-picker__btn:hover {
     background: rgba(148, 163, 184, 0.08);
     color: var(--planning-text);
+}
 }
 
 .planning-date-picker__btn.active {
@@ -765,8 +775,10 @@
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, transform 0.15s;
 }
 
-.planning-duration-trigger:hover {
+@media (hover: hover) {
+  .planning-duration-trigger:hover {
     transform: translateY(-1px);
+}
 }
 
 .planning-duration-trigger:focus-visible {
@@ -944,12 +956,14 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
-.planning-add-btn:hover {
+@media (hover: hover) {
+  .planning-add-btn:hover {
     transform: translateY(-1px);
     filter: saturate(1.03);
     box-shadow:
         0 6px 16px rgba(34, 197, 94, 0.38),
         inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
 }
 
 .planning-add-btn--project {
@@ -1079,10 +1093,12 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--planning-project-color, #94a3b8) 16%, transparent);
 }
 
-.planning-project-group__color-btn:hover {
+@media (hover: hover) {
+  .planning-project-group__color-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 14px rgba(15, 23, 42, 0.1);
     filter: saturate(1.08);
+}
 }
 
 .planning-project-group__color-icon {
@@ -1107,10 +1123,12 @@
     transition: transform 0.15s, box-shadow 0.15s, filter 0.15s, background 0.15s, color 0.15s;
 }
 
-.planning-project-group__action-btn:hover {
+@media (hover: hover) {
+  .planning-project-group__action-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 14px rgba(15, 23, 42, 0.1);
     filter: saturate(1.06);
+}
 }
 
 .planning-project-group__action-btn--danger {
@@ -1119,9 +1137,11 @@
     border-color: rgba(239, 68, 68, 0.18);
 }
 
-.planning-project-group__action-btn--danger:hover {
+@media (hover: hover) {
+  .planning-project-group__action-btn--danger:hover {
     background: rgba(239, 68, 68, 0.12);
     box-shadow: 0 6px 14px rgba(239, 68, 68, 0.16);
+}
 }
 
 .planning-project-group__quick-add-btn {
@@ -1142,10 +1162,12 @@
     transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
 }
 
-.planning-project-group__quick-add-btn:hover {
+@media (hover: hover) {
+  .planning-project-group__quick-add-btn:hover {
     transform: translateY(-1px);
     filter: saturate(1.05);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
 }
 
 .planning-project-group__quick-add-btn:focus-visible {
@@ -1171,10 +1193,12 @@
     transition: transform 0.15s, box-shadow 0.15s, filter 0.15s, background 0.15s;
 }
 
-.planning-completed-toggle:hover {
+@media (hover: hover) {
+  .planning-completed-toggle:hover {
     transform: translateY(-1px);
     filter: saturate(1.04);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
 }
 
 .planning-completed-toggle.active {
@@ -1241,11 +1265,13 @@
     transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
 }
 
-.planning-project-group__swatch:hover:not(:disabled) {
+@media (hover: hover) {
+  .planning-project-group__swatch:hover:not(:disabled) {
     transform: scale(1.08);
     box-shadow:
         0 8px 16px rgba(15, 23, 42, 0.18),
         inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
 }
 
 .planning-project-group__swatch.active {
@@ -1566,9 +1592,11 @@
     position: relative;
 }
 
-.planning-task-row__delete:hover {
+@media (hover: hover) {
+  .planning-task-row__delete:hover {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
+}
 }
 
 .planning-task-row__actions {
@@ -1637,28 +1665,36 @@
     background: rgba(239, 68, 68, 0.05);
 }
 
-.planning-icon-btn:hover {
+@media (hover: hover) {
+  .planning-icon-btn:hover {
     background: var(--planning-surface-elevated);
     color: var(--planning-text);
     border-color: var(--planning-border-soft);
 }
+}
 
-.planning-icon-btn--subtask:hover {
+@media (hover: hover) {
+  .planning-icon-btn--subtask:hover {
     background: rgba(187, 247, 208, 0.5);
     color: #166534;
     border-color: rgba(34, 197, 94, 0.45);
 }
+}
 
-.planning-icon-btn--edit:hover {
+@media (hover: hover) {
+  .planning-icon-btn--edit:hover {
     background: rgba(254, 240, 138, 0.5);
     color: #854d0e;
     border-color: rgba(234, 179, 8, 0.5);
 }
+}
 
-.planning-icon-btn--danger:hover {
+@media (hover: hover) {
+  .planning-icon-btn--danger:hover {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
     border-color: rgba(239, 68, 68, 0.16);
+}
 }
 
 /* Расширенная зона тапа на тач-устройствах: визуальный размер не меняется,
@@ -1754,8 +1790,10 @@
     transition: color 120ms ease, opacity 120ms ease;
 }
 
-.planning-tasks-scale-fab__btn:hover:not(:disabled) {
+@media (hover: hover) {
+  .planning-tasks-scale-fab__btn:hover:not(:disabled) {
     color: var(--planning-text, #1e293b);
+}
 }
 
 .planning-tasks-scale-fab__btn:disabled {
@@ -2040,8 +2078,10 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     text-underline-offset: 2px;
 }
 
-.planning-slot-edit-duration-link__btn:hover {
+@media (hover: hover) {
+  .planning-slot-edit-duration-link__btn:hover {
     color: var(--planning-text);
+}
 }
 
 .planning-slot-edit-duration-link__value {
@@ -3440,10 +3480,12 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
-.planning-duration-modal__option:hover {
+@media (hover: hover) {
+  .planning-duration-modal__option:hover {
     transform: translateY(-1px);
     border-color: rgba(37, 99, 235, 0.2);
     box-shadow: 0 12px 22px rgba(15, 23, 42, 0.08);
+}
 }
 
 .planning-duration-modal__option.active {
@@ -3559,11 +3601,18 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     transition: background 0.15s, transform 0.15s, border-color 0.15s;
 }
 
-.planning-modal__icon-btn:hover,
 .planning-modal__icon-btn:focus-visible {
     background: rgba(37, 99, 235, 0.14);
     border-color: rgba(37, 99, 235, 0.24);
     transform: translateY(-1px);
+}
+
+@media (hover: hover) {
+  .planning-modal__icon-btn:hover {
+    background: rgba(37, 99, 235, 0.14);
+    border-color: rgba(37, 99, 235, 0.24);
+    transform: translateY(-1px);
+}
 }
 
 .planning-modal__icon-btn--inline {
@@ -3682,9 +3731,11 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     background: rgba(254, 242, 242, 0.92);
 }
 
-.planning-btn--danger:hover:not(:disabled) {
+@media (hover: hover) {
+  .planning-btn--danger:hover:not(:disabled) {
     background: rgba(254, 226, 226, 0.95);
     border-color: rgba(220, 38, 38, 0.5);
+}
 }
 
 .planning-btn--danger-armed {
@@ -3694,10 +3745,12 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     animation: planning-btn-armed-pulse 1.6s ease-in-out infinite;
 }
 
-.planning-btn--danger-armed:hover:not(:disabled) {
+@media (hover: hover) {
+  .planning-btn--danger-armed:hover:not(:disabled) {
     background: #b91c1c;
     border-color: #991b1b;
     color: #fff;
+}
 }
 
 @keyframes planning-btn-armed-pulse {
@@ -3760,9 +3813,11 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     transition: background-color 120ms ease, color 120ms ease;
 }
 
-.planning-dependency-chip__remove:hover {
+@media (hover: hover) {
+  .planning-dependency-chip__remove:hover {
     background: rgba(220, 38, 38, 0.12);
     color: #dc2626;
+}
 }
 
 .planning-dependency-add {
@@ -3809,8 +3864,10 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     border-bottom: 0;
 }
 
-.planning-dependency-picker__item:hover {
+@media (hover: hover) {
+  .planning-dependency-picker__item:hover {
     background: rgba(148, 163, 184, 0.12);
+}
 }
 
 .planning-dependency-picker__plus {
@@ -3888,8 +3945,10 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     z-index: 2;
 }
 
-.planning-calendar-nav__theme-btn:hover {
+@media (hover: hover) {
+  .planning-calendar-nav__theme-btn:hover {
     transform: translateY(-50%);
+}
 }
 
 .planning-calendar-nav__theme-btn:active {
@@ -4750,11 +4809,18 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
         transform 0.12s ease;
 }
 
-.planning-calendar-slot__complete:hover,
 .planning-calendar-slot__complete:focus-visible {
     border-color: rgba(255, 255, 255, 0.92);
     background: rgba(15, 23, 42, 0.28);
     outline: none;
+}
+
+@media (hover: hover) {
+  .planning-calendar-slot__complete:hover {
+    border-color: rgba(255, 255, 255, 0.92);
+    background: rgba(15, 23, 42, 0.28);
+    outline: none;
+}
 }
 
 .planning-calendar-slot__complete:active {
@@ -4789,11 +4855,18 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
         transform 0.12s ease;
 }
 
-.planning-calendar-slot__delete:hover,
 .planning-calendar-slot__delete:focus-visible {
     background: rgba(127, 29, 29, 0.55);
     color: #fff;
     outline: none;
+}
+
+@media (hover: hover) {
+  .planning-calendar-slot__delete:hover {
+    background: rgba(127, 29, 29, 0.55);
+    color: #fff;
+    outline: none;
+}
 }
 
 .planning-calendar-slot__delete:active {
@@ -4830,8 +4903,10 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     transition: background 0.14s ease, transform 0.1s ease;
 }
 
-.planning-calendar-slot__carryover:hover {
+@media (hover: hover) {
+  .planning-calendar-slot__carryover:hover {
     background: rgba(37, 99, 235, 0.22);
+}
 }
 
 .planning-calendar-slot__carryover:active {
@@ -4843,8 +4918,10 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     color: #93c5fd;
 }
 
-[data-theme="dark"] .planning-calendar-slot__carryover:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .planning-calendar-slot__carryover:hover {
     background: rgba(96, 165, 250, 0.3);
+}
 }
 
 /* Bottom sheet: удаление слота календаря */
@@ -4916,10 +4993,16 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     color: rgb(30, 64, 175);
 }
 
-.planning-slot-delete-sheet__btn--soft:hover,
 .planning-slot-delete-sheet__btn--soft:focus-visible {
     background: rgba(59, 130, 246, 0.18);
     outline: none;
+}
+
+@media (hover: hover) {
+  .planning-slot-delete-sheet__btn--soft:hover {
+    background: rgba(59, 130, 246, 0.18);
+    outline: none;
+}
 }
 
 .planning-slot-delete-sheet__btn--danger {
@@ -4928,10 +5011,16 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     color: rgb(153, 27, 27);
 }
 
-.planning-slot-delete-sheet__btn--danger:hover,
 .planning-slot-delete-sheet__btn--danger:focus-visible {
     background: rgba(220, 38, 38, 0.2);
     outline: none;
+}
+
+@media (hover: hover) {
+  .planning-slot-delete-sheet__btn--danger:hover {
+    background: rgba(220, 38, 38, 0.2);
+    outline: none;
+}
 }
 
 .planning-slot-delete-sheet__btn--ghost {
@@ -4941,10 +5030,16 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     font-weight: 500;
 }
 
-.planning-slot-delete-sheet__btn--ghost:hover,
 .planning-slot-delete-sheet__btn--ghost:focus-visible {
     background: rgba(148, 163, 184, 0.12);
     outline: none;
+}
+
+@media (hover: hover) {
+  .planning-slot-delete-sheet__btn--ghost:hover {
+    background: rgba(148, 163, 184, 0.12);
+    outline: none;
+}
 }
 
 .planning-calendar-slot__complete--done {
@@ -4953,11 +5048,18 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     color: rgb(21, 128, 61);
 }
 
-.planning-calendar-slot__complete--done:hover,
 .planning-calendar-slot__complete--done:focus-visible {
     border-color: #fff;
     background: #fff;
     color: rgb(22, 101, 52);
+}
+
+@media (hover: hover) {
+  .planning-calendar-slot__complete--done:hover {
+    border-color: #fff;
+    background: #fff;
+    color: rgb(22, 101, 52);
+}
 }
 
 .planning-calendar-slot__complete--done:active {
@@ -5027,7 +5129,6 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     bottom: 2px;
 }
 
-.planning-calendar-slot__resize:hover::before,
 .planning-calendar-slot__resize:active::before,
 .planning-calendar-slot__resize:focus-visible::before,
 .planning-calendar-slot:focus-within .planning-calendar-slot__resize::before {
@@ -5035,9 +5136,21 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     background: rgba(255, 255, 255, 0.9);
 }
 
-.planning-calendar-slot__resize:hover::before,
+@media (hover: hover) {
+  .planning-calendar-slot__resize:hover::before {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.9);
+}
+}
+
 .planning-calendar-slot__resize:active::before {
     transform: scaleX(1.02);
+}
+
+@media (hover: hover) {
+  .planning-calendar-slot__resize:hover::before {
+    transform: scaleX(1.02);
+}
 }
 
 .planning-calendar-slot--touch-dragging .planning-calendar-slot__resize {
@@ -6174,9 +6287,12 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     .planning-gantt2-mini-indicator {
         transition: none !important;
     }
-    .planning-gantt2-bar:hover {
+
+@media (hover: hover) {
+  .planning-gantt2-bar:hover {
         transform: none !important;
     }
+}
 }
 
 .planning-gantt2-row {
@@ -6230,9 +6346,11 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
 /* Show hints only on bars wide enough for resize; we approximate via a min-width media-like
    trick: bars get the .can-resize class when wider than 66px. JS adds it conditionally — but
    for now keep it always-on at low opacity (still subtle, no JS coupling). */
-.planning-gantt2-bar:hover::before,
+@media (hover: hover) {
+  .planning-gantt2-bar:hover::before,
 .planning-gantt2-bar:hover::after {
     opacity: 0.85;
+}
 }
 
 .planning-gantt2-bar.is-done {
@@ -6759,8 +6877,10 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     border-top-color: var(--planning-border-soft);
 }
 
-[data-theme="dark"] .planning-subnav__item:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .planning-subnav__item:hover {
     background: rgba(148, 163, 184, 0.12);
+}
 }
 
 [data-theme="dark"] .planning-subnav__item.active {
@@ -6899,8 +7019,10 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     background: rgba(17, 24, 39, 0.9);
 }
 
-[data-theme="dark"] .planning-modal__details-summary:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .planning-modal__details-summary:hover {
     background: rgba(148, 163, 184, 0.08);
+}
 }
 
 [data-theme="dark"] .planning-modal__title-inline {
@@ -6942,10 +7064,16 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     color: #93c5fd;
 }
 
-[data-theme="dark"] .planning-modal__icon-btn:hover,
 [data-theme="dark"] .planning-modal__icon-btn:focus-visible {
     background: rgba(59, 130, 246, 0.28);
     border-color: rgba(147, 197, 253, 0.42);
+}
+
+@media (hover: hover) {
+  [data-theme="dark"] .planning-modal__icon-btn:hover {
+    background: rgba(59, 130, 246, 0.28);
+    border-color: rgba(147, 197, 253, 0.42);
+}
 }
 
 [data-theme="dark"] .planning-quick-link-cancel--danger {
@@ -6978,8 +7106,10 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     border-top-color: rgba(148, 163, 184, 0.12);
 }
 
-[data-theme="dark"] .planning-duration-modal__option:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .planning-duration-modal__option:hover {
     box-shadow: 0 12px 22px rgba(0, 0, 0, 0.35);
+}
 }
 
 [data-theme="dark"] .planning-calendar-nav {
@@ -7278,8 +7408,10 @@ body:has(.planning-modal-overlay) .planning-tasks-scale-fab {
     color: #fff;
 }
 
-[data-theme="dark"] .planning-quick-target-option:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .planning-quick-target-option:hover {
     background: rgba(148, 163, 184, 0.14);
+}
 }
 
 [data-theme="dark"] .planning-quick-target-option.active {

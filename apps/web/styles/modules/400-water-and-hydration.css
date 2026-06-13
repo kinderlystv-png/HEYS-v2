@@ -1219,8 +1219,10 @@ body.planning-tab-active .fab-group {
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-.advice-list-dismiss-all:hover {
+@media (hover: hover) {
+  .advice-list-dismiss-all:hover {
   transform: scale(1.05);
+}
 }
 
 .advice-list-dismiss-all:active {
@@ -1247,8 +1249,10 @@ body.planning-tab-active .fab-group {
   transition: background 0.15s ease;
 }
 
-.advice-list-close:hover {
+@media (hover: hover) {
+  .advice-list-close:hover {
   background: var(--bg-tertiary, #e5e7eb);
+}
 }
 
 .advice-list-items {
@@ -1558,9 +1562,11 @@ body.planning-tab-active .fab-group {
   text-underline-offset: 2px;
 }
 
-.advice-card-footnote-link:hover {
+@media (hover: hover) {
+  .advice-card-footnote-link:hover {
   color: #475569;
   opacity: 1;
+}
 }
 
 .advice-list-text {
@@ -1633,8 +1639,10 @@ body.planning-tab-active .fab-group {
   color: #94a3b8;
 }
 
-[data-theme="dark"] .advice-card-footnote-link:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .advice-card-footnote-link:hover {
   color: #cbd5e1;
+}
 }
 
 [data-theme="dark"] .advice-list-item-insight {
@@ -1683,11 +1691,13 @@ body.planning-tab-active .fab-group {
   line-height: 1;
 }
 
-.meal-fab:hover {
+@media (hover: hover) {
+  .meal-fab:hover {
   transform: scale(1.04);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08),
               0 10px 24px rgba(15, 23, 42, 0.16),
               inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
 }
 
 .meal-fab:active {
@@ -1726,11 +1736,13 @@ body.planning-tab-active .fab-group {
   line-height: 1;
 }
 
-.water-fab:hover {
+@media (hover: hover) {
+  .water-fab:hover {
   transform: scale(1.04);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08),
               0 10px 24px rgba(15, 23, 42, 0.16),
               inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
 }
 
 .water-fab:active {
@@ -1972,8 +1984,10 @@ body.planning-tab-active .fab-group {
   transition: background 0.15s ease;
 }
 
-.data-overview-table tbody tr:hover {
+@media (hover: hover) {
+  .data-overview-table tbody tr:hover {
   background: #f9fafb;
+}
 }
 
 .data-overview-table tbody tr:active {
@@ -2057,8 +2071,10 @@ body.planning-tab-active .fab-group {
   background: #1f2937;
 }
 
-[data-theme="dark"] .data-overview-table tbody tr:hover {
+@media (hover: hover) {
+  [data-theme="dark"] .data-overview-table tbody tr:hover {
   background: #374151;
+}
 }
 
 [data-theme="dark"] .data-overview-table tbody tr:active {
