@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.ce6be6a5",
+      "buildHash": "ce6be6a5",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "day-trace console.info за флаг + кап _dayv2LastSeen",
+      "items": [
+        {
+          "type": "perf",
+          "title": "day-trace console.info за флаг + кап _dayv2LastSeen",
+          "description": "day-trace console.info за флаг + кап _dayv2LastSeen"
+        }
+      ],
+      "coveredCommits": ["ce6be6a5", "914551ee", "5d1572fa"]
+    },
+    {
       "version": "2026.06.13.02110fe8",
       "buildHash": "02110fe8",
       "date": "2026-06-13",
@@ -138,22 +154,6 @@
           "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
         }
       ]
-    },
-    {
-      "version": "2026.06.12.4c1172b9",
-      "buildHash": "4c1172b9",
-      "date": "2026-06-12",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Первый экран показывает реальное приложение",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Первый экран показывает реальный сценарий HEYS",
-          "description": "На лендинге вместо условной иллюстрации теперь показан реальный путь: сообщение куратору, дневник, виджеты и отдельный совет. Это помогает быстрее понять, как работает сопровождение в Pro."
-        }
-      ],
-      "coveredCommits": ["4c1172b9", "cf0115aa"]
     }
   ]
 }
