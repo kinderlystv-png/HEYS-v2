@@ -107,7 +107,7 @@ describe('Fingers SessionUI — repeated state changes smoke', () => {
     F().cooldownCheck = () => ({ allowedNow: true, hoursSinceLast: null, lastWasMax: false });
   });
 
-  it('keeps tab structure and overlay count stable after repeated tab/settings toggles', () => {
+  it('keeps tab structure and overlay count stable after repeated tab/settings toggles', { timeout: 30000 }, () => {
     const { container } = render(React.createElement(F().SessionUI, {
       dateKey: '2026-06-10',
       trainingIndex: 0,

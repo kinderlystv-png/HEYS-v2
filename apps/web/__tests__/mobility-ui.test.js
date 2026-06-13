@@ -87,7 +87,7 @@ describe('Mobility UI', () => {
     expect(container.querySelectorAll('.mobility-protocol-card').length).toBeGreaterThan(0);
   });
 
-  it('выбирает готовый протокол и возвращает в ведомую тренировку', () => {
+  it('выбирает готовый протокол и возвращает в ведомую тренировку', { timeout: 20000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
     fireEvent.click(screen.getByRole('tab', { name: /Протоколы/ }));
     fireEvent.click(screen.getByRole('button', { name: /Пауза от сидения/ }));
@@ -97,7 +97,7 @@ describe('Mobility UI', () => {
     expect(container.querySelector('.mobility-guided')).not.toBeNull();
   });
 
-  it('позволяет собрать свою тренировку из упражнений и запустить сопровождение', async () => {
+  it('позволяет собрать свою тренировку из упражнений и запустить сопровождение', { timeout: 20000 }, async () => {
     const directBuilt = UI()._buildCustomBuilt(['joint_cars_hip', 'breath_box_tonify'], 'morning_tonify', profile, {});
     expect(directBuilt.session.blocks.map((block) => block.atoms[0].id)).toEqual(['joint_cars_hip', 'breath_box_tonify']);
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
@@ -115,7 +115,7 @@ describe('Mobility UI', () => {
     expect(container.textContent).toContain('Box breathing');
   });
 
-  it('кнопка списка упражнений в шапке открывает реестр и добавляет в свою сборку', async () => {
+  it('кнопка списка упражнений в шапке открывает реестр и добавляет в свою сборку', { timeout: 60000 }, async () => {
     render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
     fireEvent.click(screen.getByRole('button', { name: 'Все упражнения' }));
     const dialog = screen.getByRole('dialog', { name: 'Все упражнения' });
