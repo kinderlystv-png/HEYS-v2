@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.5d1572fa",
+      "buildHash": "5d1572fa",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "reconcile fast-path, sticky-bar через IntersectionObserver, стабильные keys",
+      "items": [
+        {
+          "type": "perf",
+          "title": "reconcile fast-path, sticky-bar через IntersectionObserver, стабильные keys",
+          "description": "reconcile fast-path, sticky-bar через IntersectionObserver, стабильные keys"
+        }
+      ],
+      "coveredCommits": ["5d1572fa"]
+    },
+    {
       "version": "2026.06.13.3dcdb5f0",
       "buildHash": "3dcdb5f0",
       "date": "2026-06-13",
@@ -142,27 +158,6 @@
           "description": "Зафиксировали, какие факторы должны объясняться в интерфейсе при подборе тренировок. Это поможет дальше показывать не только саму рекомендацию, но и почему она выбрана."
         }
       ]
-    },
-    {
-      "version": "2026.06.12.532f5bd6",
-      "buildHash": "532f5bd6",
-      "date": "2026-06-12",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Тренировки и дневник стали яснее",
-      "items": [
-        {
-          "type": "feat",
-          "title": "Сборка упражнений показывает состав",
-          "description": "В тренировках пальцев альтернативный набор теперь показывает упражнения и дозировку до старта. Можно запросить другой равноценный набор под ту же цель и готовность."
-        },
-        {
-          "type": "fix",
-          "title": "Пустой день можно разобрать сразу",
-          "description": "Если прошлый день остался без записей, дневник показывает выбор: отметить голодание, дописать данные или не учитывать день в статистике."
-        }
-      ],
-      "coveredCommits": ["966c0b36", "a00474b1"]
     }
   ]
 }
