@@ -325,6 +325,19 @@
         updatedAt: d.updatedAt || null
       };
     }
+    function getDayDateFromKey(k) {
+      var m = String(k || '').match(/(?:^|_)dayv2_(\d{4}-\d{2}-\d{2})$/);
+      return m ? m[1] : null;
+    }
+    function parseDayValue(v) {
+      if (!v || typeof v !== 'string') return null;
+      try {
+        var d = JSON.parse(v);
+        return d && typeof d === 'object' ? d : null;
+      } catch (_) {
+        return null;
+      }
+    }
     function readScopedDay(date) {
       try {
         var H = global.HEYS;
@@ -362,6 +375,48 @@
           }
         } catch (_) { /* trace must never break app */ }
       });
+    } catch (_) { /* noop */ }
+
+    // Storage-level trace: ловит фактические dayv2 writes, включая bypass через
+    // сохранённый originalSetItem в storage bridge. Важно патчить prototype: сам
+    // storage bridge позже оборачивает localStorage.setItem на instance-level.
+    try {
+      var proto = global.Storage && global.Storage.prototype;
+      if (proto && typeof proto.setItem === 'function' && !proto.setItem.__HEYS_CHECKIN_TRACE__) {
+        var rawSetItem = proto.setItem;
+        var previousByDate = prevByDate;
+        var tracedSetItem = function (k, v) {
+          var ret = rawSetItem.apply(this, arguments);
+          try {
+            var date = getDayDateFromKey(k);
+            if (!date) return ret;
+            var d = parseDayValue(v);
+            var cur = presenceMap(d);
+            if (!cur) return ret;
+            var prev = previousByDate[date];
+            var dropped = [];
+            if (prev) {
+              for (var i = 0; i < SUBJ.length; i++) {
+                var name = SUBJ[i];
+                if (prev[name] === true && cur[name] === false) dropped.push(name);
+              }
+            }
+            previousByDate[date] = cur;
+            if (dropped.length || cur.weightMorning || cur.sleepHours || cur.sleepStart || cur.sleepEnd) {
+              console.info('[CHECKIN.trace]', {
+                date: date,
+                source: 'storage-setItem',
+                key: String(k || '').slice(0, 140),
+                dropped: dropped,
+                presence: cur
+              });
+            }
+          } catch (_) { /* trace must never break storage */ }
+          return ret;
+        };
+        tracedSetItem.__HEYS_CHECKIN_TRACE__ = true;
+        proto.setItem = tracedSetItem;
+      }
     } catch (_) { /* noop */ }
   })();
 })(typeof window !== 'undefined' ? window : globalThis);
