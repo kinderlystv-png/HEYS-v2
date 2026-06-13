@@ -1,8 +1,13 @@
 # Mobility Visual Prompts
 
-Prompt index for future generated exercise images. Runtime uses images only when
-`atom.visualAsset` is set; these anchors keep atom metadata traceable before the
-bitmap asset pack exists.
+Prompt index for generated exercise images. Runtime reads `atom.visualAsset`
+from the atom catalog; these anchors keep each bitmap traceable to its intended
+instructional photo brief.
+
+Shared style: premium photorealistic instructional fitness photography in a
+clean warm-neutral physiotherapy studio, one adult demonstrator in plain
+non-branded training clothes, no text, no logos, no watermark, safe anatomy, and
+the exercise action readable in one vertical app-card image.
 
 ## Atom Prompts
 

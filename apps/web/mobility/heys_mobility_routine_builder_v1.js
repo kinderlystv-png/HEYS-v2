@@ -30,6 +30,16 @@
   function isHighTissueAtom(atom) {
     return !!atom && (atom.fatigueCost === 'high' || atom.tissueLoad === 'high');
   }
+  function seededNoise(id, seed) {
+    if (!seed) return 0;
+    const raw = String(id || '') + ':' + String(seed);
+    let h = 2166136261;
+    for (let i = 0; i < raw.length; i++) {
+      h ^= raw.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return ((h >>> 0) % 1000) / 100;
+  }
   function atomAllowedByMode(atom, mode) {
     if (!atom || !mode) return false;
     if (atom.autonomic !== 'neutral' && atom.autonomic !== mode.autonomic) return false;
@@ -59,6 +69,7 @@
     if (atom.timeOfDayPref && atom.timeOfDayPref === (options.timeOfDay || mode.timeOfDay)) score += 5;
     if (atom.doseConfidence === 'A') score += 3;
     if (atom.doseConfidence === 'B') score += 2;
+    if (options.randomSeed) score += seededNoise(atom.id, options.randomSeed);
     return score;
   }
   function blockMeta(slot, atom) {
@@ -276,6 +287,7 @@
     __registered: true,
     buildSession: buildSession,
     _atomAllowedByMode: atomAllowedByMode,
-    _isHighTissueAtom: isHighTissueAtom
+    _isHighTissueAtom: isHighTissueAtom,
+    _seededNoise: seededNoise
   };
 })(typeof window !== 'undefined' ? window : globalThis);

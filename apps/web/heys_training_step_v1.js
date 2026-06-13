@@ -127,16 +127,63 @@
     }
   }
 
+  let mobilityBootStubLoadPromise = null;
+
+  function loadMobilityBootStub() {
+    if (window.HEYS?.Mobility?.openFullscreen) return Promise.resolve();
+    if (mobilityBootStubLoadPromise) return mobilityBootStubLoadPromise;
+    if (!window.document || !document.createElement || !document.head) {
+      return Promise.reject(new Error('document unavailable'));
+    }
+
+    mobilityBootStubLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'heys_mobility_boot_stub_v1.js';
+      script.async = false;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = (e) => {
+        mobilityBootStubLoadPromise = null;
+        reject(e);
+      };
+      document.head.appendChild(script);
+    });
+
+    return mobilityBootStubLoadPromise;
+  }
+
   function openMobilityTrainerFromStep(context, meta) {
-    if (!window.HEYS?.Mobility?.openFullscreen) return false;
+    const opts = {
+      dateKey: context?.dateKey,
+      trainingIndex: context?.trainingIndex,
+      mode: meta?.mode || 'new'
+    };
+    const openFullscreen = window.HEYS?.Mobility?.openFullscreen;
+
+    if (typeof openFullscreen !== 'function') {
+      if (!window.document || !document.createElement || !document.head) return false;
+
+      try { HEYS.StepModal.hide(); } catch (_) { /* noop */ }
+      loadMobilityBootStub()
+        .then(() => {
+          if (typeof window.HEYS?.Mobility?.openFullscreen === 'function') {
+            window.HEYS.Mobility.openFullscreen(opts);
+          }
+        })
+        .catch((e) => {
+          console.warn('[TrainingStep] Mobility boot stub load failed:', e);
+          try {
+            const msg = 'Не удалось загрузить режим мобильности.';
+            if (HEYS.Toast?.error) HEYS.Toast.error(msg);
+            else if (HEYS.Toast?.show) HEYS.Toast.show(msg);
+          } catch (_) { /* noop */ }
+        });
+      return true;
+    }
 
     try { HEYS.StepModal.hide(); } catch (_) { /* noop */ }
     try {
-      HEYS.Mobility.openFullscreen({
-        dateKey: context?.dateKey,
-        trainingIndex: context?.trainingIndex,
-        mode: meta?.mode || 'new'
-      });
+      openFullscreen(opts);
       return true;
     } catch (e) {
       console.warn('[TrainingStep] Mobility.openFullscreen failed:', e);

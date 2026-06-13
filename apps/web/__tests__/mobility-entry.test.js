@@ -22,6 +22,7 @@ const MODULES = [
   'heys_mobility_records_store_v1.js',
   'heys_mobility_progression_v1.js',
   'heys_mobility_mode_engine_v1.js',
+  'heys_mobility_protocols_catalog_v1.js',
   'heys_mobility_calendar_v1.js',
   'heys_mobility_routine_builder_v1.js',
   'heys_mobility_breath_runner_v1.js',
@@ -42,6 +43,9 @@ function setupFull() {
   globalThis.ReactDOM = globalThis.window.ReactDOM = {
     createRoot: vi.fn(() => ({ render: vi.fn(), unmount: vi.fn() }))
   };
+  // общее ядро грузится раньше доменных модулей (как в bundler'е)
+  ev('heys_kernel_bibliography_v1.js', path.join(WEB_DIR, '_kernel'));
+  ev('heys_kernel_bibliography_ui_v1.js', path.join(WEB_DIR, '_kernel'));
   MODULES.forEach((f) => ev(f));
   return globalThis.HEYS.Mobility;
 }
@@ -97,11 +101,16 @@ describe('Mobility public entry', () => {
 
   it('openFullscreen mounts UI overlay and close removes it', () => {
     const M = setupFull();
+    const style = document.head.querySelector('#heys-mobility-ui-style');
+    expect(style).not.toBeNull();
+    expect(style.textContent).toContain('.mobility-overlay-root');
     M.openFullscreen({ modeId: 'anti_sedentary', profile });
     expect(globalThis.ReactDOM.createRoot).toHaveBeenCalledTimes(1);
     expect(document.body.querySelector('.mobility-overlay-root')).not.toBeNull();
+    expect(document.body.style.overflow).toBe('hidden');
     M.close();
     expect(document.body.querySelector('.mobility-overlay-root')).toBeNull();
+    expect(document.body.style.overflow).toBe('');
   });
 });
 

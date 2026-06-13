@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const MOB_DIR = path.resolve(__dirname, '..', 'mobility');
+const WEB_DIR = path.resolve(__dirname, '..');
 const VISUAL_PROMPTS_PATH = path.join(MOB_DIR, 'methodology', 'VISUAL_PROMPTS.md');
 let axisCatalogRef;
 let atomCatalogRef;
@@ -103,6 +104,7 @@ describe('atom_catalog — целостность', () => {
       expect(a.visualPromptRef).toBe(`methodology/VISUAL_PROMPTS.md#${a.id}`);
       expect(prompts).toContain(`### ${a.id}`);
       expect(prompts).toContain(`Asset: \`/exercises/mobility/${a.id}.webp\``);
+      expect(fs.existsSync(path.join(WEB_DIR, 'public', a.visualAsset))).toBe(true);
     });
   });
 

@@ -13,6 +13,8 @@ const setupOnce = () => {
   if (!globalThis.window) globalThis.window = globalThis;
   globalThis.window.HEYS = globalThis.HEYS = {};
   const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(MOB_DIR, f), 'utf8')); };
+  /* eslint-disable-next-line no-eval */
+  eval(fs.readFileSync(path.resolve(MOB_DIR, '..', '_kernel', 'heys_kernel_bibliography_v1.js'), 'utf8'));
   ev('heys_mobility_axis_catalog_v1.js');
   ev('heys_mobility_atom_catalog_v1.js');
   ev('heys_mobility_bibliography_v1.js');

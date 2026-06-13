@@ -17,6 +17,9 @@
 
   let overlayNode = null;
   let overlayRoot = null;
+  let previousBodyOverflow = '';
+  let previousHtmlOverflow = '';
+  let bodyScrollLocked = false;
 
   const DEFAULT_PROFILE = {
     age: 30,
@@ -71,8 +74,19 @@
     return normalizeProfile(Object.assign({}, readStoredProfile(), overrides || {}));
   }
 
+  function protocolFromOptions(opts) {
+    const o = opts || {};
+    if (!Mobility.protocolCatalog) return null;
+    if (o.protocolId && typeof Mobility.protocolCatalog.getProtocol === 'function') {
+      return Mobility.protocolCatalog.getProtocol(o.protocolId);
+    }
+    return null;
+  }
+
   function resolveMode(modeId, profile, opts) {
     if (modeId) return modeId;
+    const protocol = protocolFromOptions(opts);
+    if (protocol && protocol.modeId) return protocol.modeId;
     if (Mobility.onboarding && typeof Mobility.onboarding.recommendMode === 'function') {
       return Mobility.onboarding.recommendMode(profile, opts || {});
     }
@@ -84,7 +98,12 @@
       return { ok: false, errors: [{ level: 'error', code: 'mobility.not_loaded', msg: 'модуль мобильности не загружен' }], session: null };
     }
     const p = getProfile(profile);
-    return Mobility.routineBuilder.buildSession(resolveMode(modeId, p, opts), p, opts || {});
+    const protocol = protocolFromOptions(opts);
+    const protocolOptions = protocol && Mobility.protocolCatalog && typeof Mobility.protocolCatalog.buildOptions === 'function'
+      ? Mobility.protocolCatalog.buildOptions(protocol)
+      : {};
+    const options = Object.assign({}, protocolOptions, opts || {});
+    return Mobility.routineBuilder.buildSession(resolveMode(modeId, p, options), p, options);
   }
 
   function buildRunPlan(sessionOrResult) {
@@ -171,11 +190,27 @@
     if (overlayNode.parentNode) overlayNode.parentNode.removeChild(overlayNode);
     overlayNode = null;
     overlayRoot = null;
+    if (bodyScrollLocked && global.document) {
+      try {
+        if (global.document.body) global.document.body.style.overflow = previousBodyOverflow;
+        if (global.document.documentElement) global.document.documentElement.style.overflow = previousHtmlOverflow;
+      } catch (_) { /* noop */ }
+    }
+    bodyScrollLocked = false;
   }
 
   function mountElement(element) {
     close();
     if (!global.document || !global.document.body || !ReactDOM) return false;
+    previousBodyOverflow = global.document.body.style.overflow || '';
+    previousHtmlOverflow = global.document.documentElement ? (global.document.documentElement.style.overflow || '') : '';
+    try {
+      global.document.body.style.overflow = 'hidden';
+      if (global.document.documentElement) global.document.documentElement.style.overflow = 'hidden';
+      bodyScrollLocked = true;
+    } catch (_) {
+      bodyScrollLocked = false;
+    }
     overlayNode = global.document.createElement('div');
     overlayNode.className = 'mobility-overlay-root';
     global.document.body.appendChild(overlayNode);
@@ -206,17 +241,15 @@
       'aria-modal': 'true',
       'aria-label': 'Мобильность'
     },
-      h('div', { className: 'mobility-overlay__bar' },
-        h('strong', null, 'Мобильность'),
-        h('button', { type: 'button', onClick: close, 'aria-label': 'Закрыть' }, 'Закрыть')
-      ),
       h(Mobility.UI.MobilityApp, {
         profile: profile,
+        onClose: close,
         dateKey: o.dateKey,
         trainingIndex: o.trainingIndex,
         clientId: o.clientId,
         storage: o.storage,
         modeId: modeId,
+        protocolId: o.protocolId,
         timeOfDay: o.timeOfDay,
         readiness: o.readiness,
         screens: o.screens,
