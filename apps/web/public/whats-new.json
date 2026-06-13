@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.58b0eeb1",
+      "buildHash": "58b0eeb1",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "hover-гард, shimmer на transform, solid-шапка Android, пауза скрытых анимаций",
+      "items": [
+        {
+          "type": "perf",
+          "title": "hover-гард, shimmer на transform, solid-шапка Android, пауза скрытых анимаций",
+          "description": "hover-гард, shimmer на transform, solid-шапка Android, пауза скрытых анимаций"
+        }
+      ],
+      "coveredCommits": ["58b0eeb1", "ac9f134e", "31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
+    },
+    {
       "version": "2026.06.13.ac9f134e",
       "buildHash": "ac9f134e",
       "date": "2026-06-13",
@@ -129,21 +145,6 @@
     {
       "version": "2026.06.13.7a021d8f",
       "buildHash": "7a021d8f",
-      "date": "2026-06-13",
-      "kind": "technical",
-      "profile": "technical-general",
-      "title": "Исправления ошибок и улучшение стабильности",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили внутренние ошибки и улучшили стабильность",
-          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
-        }
-      ]
-    },
-    {
-      "version": "2026.06.13.65013095",
-      "buildHash": "65013095",
       "date": "2026-06-13",
       "kind": "technical",
       "profile": "technical-general",
