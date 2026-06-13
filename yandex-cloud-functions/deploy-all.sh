@@ -270,6 +270,16 @@ build_env_flags() {
         done
     fi
 
+    # Telegram bots: existing client PIN/notification bot + HEYS Start quiz bot.
+    # Keep tokens separate: TELEGRAM_CLIENT_BOT_TOKEN serves /bot/webhook,
+    # HEYS_START_BOT_TOKEN serves /start-bot/webhook.
+    if [[ "$func_name" == "heys-bot-client" ]]; then
+        local k
+        for k in TELEGRAM_CLIENT_BOT_TOKEN HEYS_START_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET HEYS_START_WEBHOOK_SECRET INTERNAL_CRON_TOKEN APP_URL; do
+            _add "$k"
+        done
+    fi
+
     # Web Push (VAPID) — api-push, cron-reminders, api-messages.
     # ВАЖНО: _add_required (не _add). yc CLI заменяет ВЕСЬ env на каждый deploy,
     # _add молча пропускает пустые vars → wipe'нет VAPID из cloud function →

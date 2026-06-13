@@ -10,6 +10,7 @@
  * Источник секретов — Lockbox (если задан LOCKBOX_APP_SECRET_ID и функции
  * привязан SA с lockbox.payloadViewer), с fallback на env-переменные:
  *   TELEGRAM_CLIENT_BOT_TOKEN — токен бота (отдельный от куратор-канала!)
+ *   HEYS_START_BOT_TOKEN      — токен бота HEYS Старт (@heys_start_bot)
  *   APP_URL                   — куда вести клиента (default: https://app.heyslab.ru)
  *   INTERNAL_CRON_TOKEN       — общий с heys-api-payments, для /bot/send
  *   PG_*                      — БД (пока только env, не в Lockbox)
@@ -23,9 +24,11 @@ const crypto = require('crypto');
 // Конфиг загружается лениво в ensureConfig() — первый запрос дергает Lockbox
 // (если задан LOCKBOX_APP_SECRET_ID), остальные используют кеш модуля.
 let TELEGRAM_BOT_TOKEN = null;
+let HEYS_START_BOT_TOKEN = null;
 let APP_URL = null;
 let INTERNAL_CRON_TOKEN = null;
 let TELEGRAM_API = null;
+let HEYS_START_API = null;
 let configLoaded = false;
 let configPromise = null;
 
@@ -44,19 +47,30 @@ async function ensureConfig() {
       // ⚠️ Только TELEGRAM_CLIENT_BOT_TOKEN — это отдельный клиент-бот,
       // куратор-бот (TELEGRAM_BOT_TOKEN) сюда не подставлять: уйдёт в чужой чат.
       TELEGRAM_BOT_TOKEN = pick('TELEGRAM_CLIENT_BOT_TOKEN');
+      HEYS_START_BOT_TOKEN = pick('HEYS_START_BOT_TOKEN');
       APP_URL = pick('APP_URL') || 'https://app.heyslab.ru';
       INTERNAL_CRON_TOKEN = pick('INTERNAL_CRON_TOKEN');
 
       TELEGRAM_API = TELEGRAM_BOT_TOKEN
         ? `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
         : null;
+      HEYS_START_API = HEYS_START_BOT_TOKEN
+        ? `https://api.telegram.org/bot${HEYS_START_BOT_TOKEN}`
+        : null;
 
       configLoaded = true;
       if (!TELEGRAM_BOT_TOKEN) {
         console.error('[heys-bot-client] TELEGRAM_CLIENT_BOT_TOKEN not configured — sendMessage will throw');
       }
+      if (!HEYS_START_BOT_TOKEN) {
+        console.warn('[heys-bot-client] HEYS_START_BOT_TOKEN not configured — HEYS Start bot is disabled');
+      }
       console.log('[heys-bot-client] config loaded',
-        { from: secrets ? 'lockbox' : 'env', hasToken: !!TELEGRAM_BOT_TOKEN });
+        {
+          from: secrets ? 'lockbox' : 'env',
+          hasClientToken: !!TELEGRAM_BOT_TOKEN,
+          hasStartToken: !!HEYS_START_BOT_TOKEN,
+        });
     })();
   }
   await configPromise;
@@ -84,11 +98,26 @@ function isInternalCronCall(headers) {
   return crypto.timingSafeEqual(a, b);
 }
 
-async function tgRequest(method, payload) {
-  if (!TELEGRAM_API) {
-    throw new Error('TELEGRAM_CLIENT_BOT_TOKEN not configured');
+function getTelegramApi(bot = 'client') {
+  if (bot === 'start') {
+    return {
+      api: HEYS_START_API,
+      tokenName: 'HEYS_START_BOT_TOKEN',
+    };
   }
-  const res = await fetch(`${TELEGRAM_API}/${method}`, {
+  return {
+    api: TELEGRAM_API,
+    tokenName: 'TELEGRAM_CLIENT_BOT_TOKEN',
+  };
+}
+
+async function tgRequest(method, payload, bot = 'client') {
+  const { api, tokenName } = getTelegramApi(bot);
+  if (!api) {
+    throw new Error(`${tokenName} not configured`);
+  }
+
+  const res = await fetch(`${api}/${method}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -100,14 +129,14 @@ async function tgRequest(method, payload) {
   return data.result;
 }
 
-async function sendMessage(chatId, text, opts = {}) {
+async function sendMessage(chatId, text, opts = {}, bot = 'client') {
   return tgRequest('sendMessage', {
     chat_id: chatId,
     text,
     parse_mode: 'HTML',
     disable_web_page_preview: true,
     ...opts,
-  });
+  }, bot);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -186,6 +215,413 @@ function escapeHtml(s) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HEYS Старт — квиз «Твой тип срыва»
+// Отдельный Telegram bot token: HEYS_START_BOT_TOKEN.
+// Старый PIN/notification bot остаётся на TELEGRAM_CLIENT_BOT_TOKEN.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const START_BOT = 'start';
+
+const QUIZ_QUESTIONS = [
+  {
+    id: 'time',
+    text: 'Когда чаще всего сложнее удержать режим?',
+    answers: [
+      ['m', 'Утром'],
+      ['d', 'Днём'],
+      ['e', 'Вечером'],
+      ['n', 'Ночью'],
+      ['x', 'По-разному'],
+    ],
+  },
+  {
+    id: 'trigger',
+    text: 'Что чаще всего запускает срыв?',
+    answers: [
+      ['s', 'Стресс или эмоции'],
+      ['f', 'Усталость или недосып'],
+      ['c', 'Компания, кафе, праздник'],
+      ['a', 'Один промах — и режим уже не важен'],
+      ['u', 'Не понимаю'],
+    ],
+  },
+  {
+    id: 'frequency',
+    text: 'Как часто это повторяется?',
+    answers: [
+      ['d', 'Почти каждый день'],
+      ['w', 'Несколько раз в неделю'],
+      ['e', 'В основном по выходным'],
+      ['r', 'Редко, но сильно'],
+    ],
+  },
+  {
+    id: 'past_method',
+    text: 'Что вы уже пробовали?',
+    answers: [
+      ['d', 'Диеты или марафоны'],
+      ['t', 'Трекер калорий'],
+      ['s', 'Самостоятельно, понемногу'],
+      ['n', 'Ничего системного'],
+    ],
+  },
+  {
+    id: 'barrier',
+    text: 'Что сложнее всего сейчас?',
+    answers: [
+      ['r', 'Вести рутину'],
+      ['s', 'Оставаться без поддержки'],
+      ['t', 'Найти время'],
+      ['a', 'Знаю, что делать, но не удерживаю'],
+    ],
+  },
+  {
+    id: 'goal',
+    text: 'Что важнее на ближайший месяц?',
+    answers: [
+      ['w', 'Снизить вес'],
+      ['m', 'Удержать результат'],
+      ['n', 'Разобраться в питании'],
+      ['f', 'Снизить количество срывов'],
+    ],
+  },
+];
+
+const RESULT_COPY = {
+  evening: {
+    title: 'Вечерний паттерн',
+    body:
+      'К вечеру может накапливаться усталость и дневной недобор. Организм ищет быстрый способ восстановить энергию.',
+    tip: 'Первый шаг: не урезать день в ноль. Ровный завтрак и обед часто снижают вечерние срывы.',
+  },
+  emotional: {
+    title: 'Эмоциональный паттерн',
+    body:
+      'Еда становится быстрым способом снять напряжение. Важен не запрет, а момент, когда напряжение начинает расти.',
+    tip: 'Первый шаг: за несколько минут до срыва сделать паузу и отметить, что именно стало триггером.',
+  },
+  social: {
+    title: 'Социальный паттерн',
+    body:
+      'Срыв чаще запускает среда: компания, кафе, праздник или поездка. Здесь обычно помогает подготовка заранее.',
+    tip: 'Первый шаг: выбирать блюдо до того, как вы сядете за стол.',
+  },
+  all_or_nothing: {
+    title: 'Паттерн «всё или ничего»',
+    body:
+      'Один промах ощущается как провал всего режима. Но один приём пищи редко решает неделю; важнее следующий шаг.',
+    tip: 'Первый шаг: возвращаться к режиму со следующего приёма, а не ждать понедельника.',
+  },
+  fatigue: {
+    title: 'Уставший паттерн',
+    body:
+      'Недосып и перегруз могут усиливать голод и тягу к быстрым углеводам. Это вопрос режима, а не слабости.',
+    tip: 'Первый шаг: проверить сон, воду и нагрузку перед тем, как ужесточать питание.',
+  },
+  mixed: {
+    title: 'Смешанный паттерн',
+    body:
+      'Похоже, срыв запускает не один фактор, а сочетание режима, усталости и контекста.',
+    tip: 'Первый шаг: заметить первый сигнал, что режим сейчас может сорваться.',
+  },
+};
+
+function sanitizeSource(payload) {
+  return String(payload || 'organic')
+    .replace(/^src_/, '')
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .slice(0, 24) || 'organic';
+}
+
+function encodeQuizData(step, answers, source) {
+  return ['qs', step, answers.join(','), sanitizeSource(source)].join('|');
+}
+
+function decodeQuizData(data) {
+  const [, stepRaw, answersRaw = '', sourceRaw = 'organic'] = String(data || '').split('|');
+  return {
+    step: Number(stepRaw),
+    answers: answersRaw ? answersRaw.split(',').filter(Boolean) : [],
+    source: sanitizeSource(sourceRaw),
+  };
+}
+
+function buildInlineKeyboard(question, step, answers, source) {
+  return {
+    inline_keyboard: question.answers.map(([value, label]) => [
+      {
+        text: label,
+        callback_data: encodeQuizData(step + 1, [...answers, value], source),
+      },
+    ]),
+  };
+}
+
+function getAnswerMap(answers) {
+  const map = {};
+  QUIZ_QUESTIONS.forEach((q, i) => {
+    map[q.id] = answers[i] || null;
+  });
+  return map;
+}
+
+function getQuizSegment(answers) {
+  const a = getAnswerMap(answers);
+  if (a.trigger === 's') return 'emotional';
+  if (a.trigger === 'f') return 'fatigue';
+  if (a.trigger === 'c') return 'social';
+  if (a.trigger === 'a') return 'all_or_nothing';
+  if (a.trigger === 'u' && (a.time === 'e' || a.time === 'n')) return 'evening';
+  return 'mixed';
+}
+
+function getQuizSummary(answers) {
+  const a = getAnswerMap(answers);
+  const labelFor = (questionId) => {
+    const question = QUIZ_QUESTIONS.find((q) => q.id === questionId);
+    const answer = question?.answers.find(([value]) => value === a[questionId]);
+    return answer ? answer[1] : null;
+  };
+  return {
+    frequency_code: a.frequency,
+    frequency: labelFor('frequency'),
+    past_method_code: a.past_method,
+    past_method: labelFor('past_method'),
+    barrier_code: a.barrier,
+    barrier: labelFor('barrier'),
+    goal_code: a.goal,
+    goal: labelFor('goal'),
+  };
+}
+
+async function recordStartFunnelEvent(eventType, opts = {}) {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `SELECT public.record_funnel_event(
+         $1::text, $2::uuid, $3::uuid, $4::text, $5::text, $6::text, $7::text,
+         $8::text, $9::jsonb, $10::text, $11::timestamptz
+       )`,
+      [
+        eventType,
+        null,
+        null,
+        opts.source || 'telegram',
+        'heys_start',
+        opts.segment || null,
+        null,
+        null,
+        JSON.stringify(opts.metadata || {}),
+        opts.dedupeKey || null,
+        new Date().toISOString(),
+      ],
+    );
+  } catch (e) {
+    console.warn('[HEYS Start] funnel event failed:', eventType, e.message);
+  } finally {
+    client.release();
+  }
+}
+
+async function sendQuizQuestion(chatId, step, answers, source, editMessageId = null) {
+  const question = QUIZ_QUESTIONS[step];
+  const text = `<b>${step + 1}/${QUIZ_QUESTIONS.length}</b>\n${escapeHtml(question.text)}`;
+  const reply_markup = buildInlineKeyboard(question, step, answers, source);
+
+  if (editMessageId) {
+    return tgRequest('editMessageText', {
+      chat_id: chatId,
+      message_id: editMessageId,
+      text,
+      parse_mode: 'HTML',
+      reply_markup,
+    }, START_BOT);
+  }
+
+  return sendMessage(chatId, text, { reply_markup }, START_BOT);
+}
+
+async function sendQuizResult(chatId, answers, source, editMessageId = null) {
+  const segment = getQuizSegment(answers);
+  const result = RESULT_COPY[segment] || RESULT_COPY.mixed;
+  const summary = getQuizSummary(answers);
+  const text =
+    `<b>${escapeHtml(result.title)}</b>\n\n` +
+    `${escapeHtml(result.body)}\n\n` +
+    `${escapeHtml(result.tip)}\n\n` +
+    'HEYS помогает собрать питание, режим и контекст в одну картину. ' +
+    'Куратор видит паттерны недели и помогает выбрать первый устойчивый шаг.\n\n' +
+    'Хотите разобрать ваш случай на бесплатной неделе?';
+
+  const reply_markup = {
+    inline_keyboard: [
+      [{ text: 'Записаться на неделю', callback_data: `qa|week|${answers.join(',')}|${sanitizeSource(source)}` }],
+      [{ text: 'Пока просто почитаю', callback_data: `qa|read|${answers.join(',')}|${sanitizeSource(source)}` }],
+    ],
+  };
+
+  await recordStartFunnelEvent('quiz_complete', {
+    source,
+    segment,
+    metadata: {
+      bot: 'heys_start',
+      ...summary,
+    },
+    dedupeKey: `quiz_complete:start:${chatId}:${answers.join('-')}`,
+  });
+
+  if (editMessageId) {
+    return tgRequest('editMessageText', {
+      chat_id: chatId,
+      message_id: editMessageId,
+      text,
+      parse_mode: 'HTML',
+      reply_markup,
+    }, START_BOT);
+  }
+
+  return sendMessage(chatId, text, { reply_markup }, START_BOT);
+}
+
+async function handleStartBotStart(chatId, payload) {
+  const source = sanitizeSource(payload);
+  await recordStartFunnelEvent('quiz_start', {
+    source,
+    metadata: { bot: 'heys_start', start_payload: payload || null },
+    dedupeKey: `quiz_start:start:${chatId}:${source}`,
+  });
+
+  await sendMessage(
+    chatId,
+    'Здравствуйте. За одну минуту покажем, какой паттерн чаще всего мешает удерживать режим, и что можно сделать первым шагом.',
+    {
+      reply_markup: {
+        inline_keyboard: [[{ text: 'Начать', callback_data: encodeQuizData(0, [], source) }]],
+      },
+    },
+    START_BOT,
+  );
+}
+
+async function handleStartBotCallback(query) {
+  const chatId = query?.message?.chat?.id;
+  const messageId = query?.message?.message_id;
+  const data = query?.data || '';
+
+  await tgRequest('answerCallbackQuery', { callback_query_id: query.id }, START_BOT);
+
+  if (!chatId || !messageId) return;
+
+  if (data.startsWith('qs|')) {
+    const state = decodeQuizData(data);
+    if (!Number.isFinite(state.step) || state.step < 0) return;
+    if (state.step >= QUIZ_QUESTIONS.length) {
+      await sendQuizResult(chatId, state.answers, state.source, messageId);
+      return;
+    }
+    await sendQuizQuestion(chatId, state.step, state.answers, state.source, messageId);
+    return;
+  }
+
+  if (data.startsWith('qa|')) {
+    const [, action, answersRaw = '', sourceRaw = 'organic'] = data.split('|');
+    const answers = answersRaw ? answersRaw.split(',').filter(Boolean) : [];
+    const source = sanitizeSource(sourceRaw);
+
+    if (action === 'week') {
+      await tgRequest('editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        text:
+          'Спасибо. Первая неделя проходит без карты и по свободной ёмкости куратора.\n\n' +
+          'Следующий шаг: отправьте, пожалуйста, контакт в этом чате или напишите, когда вам удобнее начать: на этой неделе или на следующей.',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: 'На этой неделе', callback_data: `qr|this_week|${answers.join(',')}|${source}` }],
+            [{ text: 'На следующей', callback_data: `qr|next_week|${answers.join(',')}|${source}` }],
+          ],
+        },
+      }, START_BOT);
+      return;
+    }
+
+    await tgRequest('editMessageText', {
+      chat_id: chatId,
+      message_id: messageId,
+      text:
+        'Хорошо. Можно вернуться к разбору позже: отправьте /start, когда будете готовы.',
+    }, START_BOT);
+    return;
+  }
+
+  if (data.startsWith('qr|')) {
+    const [, readiness, answersRaw = '', sourceRaw = 'organic'] = data.split('|');
+    const answers = answersRaw ? answersRaw.split(',').filter(Boolean) : [];
+    const source = sanitizeSource(sourceRaw);
+    const segment = getQuizSegment(answers);
+    await recordStartFunnelEvent('week_request', {
+      source,
+      segment,
+      metadata: { bot: 'heys_start', readiness, ...getQuizSummary(answers) },
+      dedupeKey: `week_request:start:${chatId}:${readiness}:${answers.join('-')}`,
+    });
+    await tgRequest('editMessageText', {
+      chat_id: chatId,
+      message_id: messageId,
+      text:
+        'Принято. Куратор знакомится с заявкой и связывается с вами, когда есть свободное место для старта.\n\n' +
+        'Если хотите ускорить контакт, отправьте номер телефона сообщением в этот чат.',
+    }, START_BOT);
+  }
+}
+
+async function handleStartBotWebhook(body) {
+  const callbackQuery = body?.callback_query;
+  if (callbackQuery) {
+    try {
+      await handleStartBotCallback(callbackQuery);
+    } catch (e) {
+      console.error('[HEYS Start] callback error:', e.message);
+    }
+    return jsonResponse(200, { ok: true });
+  }
+
+  const message = body?.message;
+  if (!message || !message.chat || !message.chat.id) {
+    return jsonResponse(200, { ok: true, ignored: 'no-message' });
+  }
+
+  const chatId = message.chat.id;
+  const text = (message.text || '').trim();
+
+  try {
+    if (text.startsWith('/start')) {
+      const payload = text.replace(/^\/start\s*/, '');
+      await handleStartBotStart(chatId, payload);
+    } else if (text === '/help' || text === '/menu') {
+      await sendMessage(
+        chatId,
+        'HEYS Старт помогает пройти короткий разбор «Твой тип срыва». Отправьте /start, чтобы начать.',
+        {},
+        START_BOT,
+      );
+    } else {
+      await sendMessage(
+        chatId,
+        'Чтобы пройти короткий разбор, отправьте /start.',
+        {},
+        START_BOT,
+      );
+    }
+  } catch (e) {
+    console.error('[HEYS Start] webhook handler error:', e.message);
+  }
+
+  return jsonResponse(200, { ok: true });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -271,13 +707,47 @@ module.exports.handler = async function (event) {
     }
   }
 
-  if (method === 'GET' && (path === '/bot/health' || path.endsWith('/health'))) {
+  if (method === 'GET' && (path === '/start-bot/health' || path.endsWith('/start-bot/health'))) {
+    return jsonResponse(200, {
+      service: 'heys-start-bot',
+      ok: true,
+      hasToken: !!HEYS_START_BOT_TOKEN,
+      configSource: process.env.LOCKBOX_APP_SECRET_ID ? 'lockbox' : 'env',
+    });
+  }
+
+  if (method === 'GET' && (path === '/bot/health' || path.endsWith('/bot/health'))) {
     return jsonResponse(200, {
       service: 'heys-bot-client',
       ok: true,
       hasToken: !!TELEGRAM_BOT_TOKEN,
+      hasStartToken: !!HEYS_START_BOT_TOKEN,
       configSource: process.env.LOCKBOX_APP_SECRET_ID ? 'lockbox' : 'env',
     });
+  }
+
+  if (method === 'POST' && path.includes('/start-bot/webhook')) {
+    const expected = process.env.HEYS_START_WEBHOOK_SECRET;
+    if (expected) {
+      const headers = event?.headers || {};
+      const provided =
+        headers['x-telegram-bot-api-secret-token'] ||
+        headers['X-Telegram-Bot-Api-Secret-Token'] ||
+        '';
+      if (!provided || typeof provided !== 'string') {
+        console.warn('[HEYS Start] webhook rejected: missing secret_token header');
+        return jsonResponse(403, { error: 'forbidden' });
+      }
+      const a = Buffer.from(provided, 'utf8');
+      const b = Buffer.from(expected, 'utf8');
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        console.warn('[HEYS Start] webhook rejected: secret_token mismatch');
+        return jsonResponse(403, { error: 'forbidden' });
+      }
+    } else {
+      console.warn('[HEYS Start] HEYS_START_WEBHOOK_SECRET not set — webhook accepts ANY caller.');
+    }
+    return await handleStartBotWebhook(body);
   }
 
   if (method === 'POST' && path.includes('/webhook')) {

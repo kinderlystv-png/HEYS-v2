@@ -295,6 +295,22 @@ paths:
         type: cloud_functions
         function_id: d4ednfmrg21i8j1svtqs
 
+  # HEYS Старт — отдельный Telegram bot для квиза «Твой тип срыва».
+  # Токен: HEYS_START_BOT_TOKEN. Webhook: https://api.heyslab.ru/start-bot/webhook
+  /start-bot/webhook:
+    post:
+      summary: HEYS Start quiz bot webhook
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ednfmrg21i8j1svtqs
+
+  /start-bot/health:
+    get:
+      summary: HEYS Start bot healthcheck
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ednfmrg21i8j1svtqs
+
   # ═══════════════════════════════════════════════════════════════
   # Payments — ЮKassa интеграция
   # ═══════════════════════════════════════════════════════════════
