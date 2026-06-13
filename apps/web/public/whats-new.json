@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.90140938",
+      "buildHash": "90140938",
+      "date": "2026-06-13",
+      "kind": "technical",
+      "profile": "technical-infra-tests",
+      "title": "Мобильность открывается из тренировки",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Исправили вход в режим мобильности",
+          "description": "Кнопка «Мобильность» в добавлении тренировки теперь открывает отдельный режим без срыва на обычную форму. Обновили runtime-бандл и кэш приложения."
+        }
+      ],
+      "coveredCommits": ["dc3d0e3f"]
+    },
+    {
       "version": "2026.06.13.956bc41f",
       "buildHash": "956bc41f",
       "date": "2026-06-13",
@@ -136,22 +152,6 @@
           "type": "fix",
           "title": "Исправили внутренние ошибки и улучшили стабильность",
           "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
-        }
-      ],
-      "coveredCommits": ["8339cbca", "58b0eeb1", "ac9f134e", "31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
-    },
-    {
-      "version": "2026.06.13.8339cbca",
-      "buildHash": "8339cbca",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "CSP-safe base64ToBlob через atob вместо fetch data:-URI",
-      "items": [
-        {
-          "type": "fix",
-          "title": "CSP-safe base64ToBlob через atob вместо fetch data:-URI",
-          "description": "CSP-safe base64ToBlob через atob вместо fetch data:-URI"
         }
       ],
       "coveredCommits": ["8339cbca", "58b0eeb1", "ac9f134e", "31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
