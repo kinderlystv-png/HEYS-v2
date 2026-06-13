@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.14.7d50d6be",
+      "buildHash": "7d50d6be",
+      "date": "2026-06-14",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "extract shared bibliography registry + UI into _kernel/",
+      "items": [
+        {
+          "type": "feat",
+          "title": "extract shared bibliography registry + UI into _kernel/",
+          "description": "extract shared bibliography registry + UI into _kernel/"
+        }
+      ],
+      "coveredCommits": ["7d50d6be"]
+    },
+    {
       "version": "2026.06.13.4d724888",
       "buildHash": "4d724888",
       "date": "2026-06-13",
@@ -137,22 +153,6 @@
         }
       ],
       "coveredCommits": ["a3406ad3", "239c346c"]
-    },
-    {
-      "version": "2026.06.13.239c346c",
-      "buildHash": "239c346c",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "HEYS Старт",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Бот HEYS Старт отвечает быстрее",
-          "description": "Webhook бота больше не ждёт запись аналитики перед ответом и может работать напрямую через Cloud Function, поэтому /start не зависает из-за таймаута."
-        }
-      ],
-      "coveredCommits": ["239c346c"]
     }
   ]
 }
