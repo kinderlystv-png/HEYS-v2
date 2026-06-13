@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.11faa268",
+      "buildHash": "11faa268",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Изображения мобильности обновлены",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Карточки мобильности получили изображения",
+          "description": "В карточках упражнений мобильности обновлены визуальные материалы, чтобы сессию было проще читать во время тренировки."
+        }
+      ]
+    },
+    {
       "version": "2026.06.13.983177c3",
       "buildHash": "983177c3",
       "date": "2026-06-13",
@@ -143,22 +158,6 @@
         }
       ],
       "coveredCommits": ["ac9f134e", "31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
-    },
-    {
-      "version": "2026.06.13.31fd8d35",
-      "buildHash": "31fd8d35",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "perf-классы Android и visibility-pause + build-hash лог",
-      "items": [
-        {
-          "type": "perf",
-          "title": "perf-классы Android и visibility-pause + build-hash лог",
-          "description": "perf-классы Android и visibility-pause + build-hash лог"
-        }
-      ],
-      "coveredCommits": ["31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
     }
   ]
 }
