@@ -1,5 +1,12 @@
 # Производительность Android — прогон №4: скролл
 
+> **Статус реализации (2026-06-13):** блок A (A1–A10) и блок D (D1, D2)
+> реализованы — коммиты `perf(day)`, `perf(sync)`, `perf(boot)`, `perf(ui)`.
+> Флаги отката: `heys_disable_reconcile_fastpath`, `heys_disable_io_stickybar`,
+> `heys_debug_daytrace` (вкл. трейс), `heys_logtrace_full`,
+> `heys_perf_header_glass='blur'`. A11 (contain) отложен до скриншот-проверки;
+> блок B — после INP-базлайна (блок 0).
+
 Дата: 2026-06-13. Продолжение [PASS2](PERF_ANDROID_2026-06_PASS2.md) /
 [PASS3](PERF_ANDROID_2026-06_PASS3.md). Фокус: «скролл сильно фризит на Huawei,
 нет суперплавности как на iPhone». Проверены оба пути: JS (листенеры,
