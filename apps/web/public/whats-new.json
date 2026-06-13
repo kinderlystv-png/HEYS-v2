@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.52672f77",
+      "buildHash": "52672f77",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Изображения упражнений дополнены",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Карточки мобильности стали нагляднее",
+          "description": "Обновлены изображения для нескольких упражнений мобильности: активации, икр и задней поверхности бедра."
+        }
+      ]
+    },
+    {
       "version": "2026.06.13.8524ae9a",
       "buildHash": "8524ae9a",
       "date": "2026-06-13",
@@ -138,22 +153,6 @@
           "type": "fix",
           "title": "Исправили внутренние ошибки",
           "description": "В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения."
-        }
-      ],
-      "coveredCommits": ["58b0eeb1", "ac9f134e", "31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
-    },
-    {
-      "version": "2026.06.13.58b0eeb1",
-      "buildHash": "58b0eeb1",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "hover-гард, shimmer на transform, solid-шапка Android, пауза скрытых анимаций",
-      "items": [
-        {
-          "type": "perf",
-          "title": "hover-гард, shimmer на transform, solid-шапка Android, пауза скрытых анимаций",
-          "description": "hover-гард, shimmer на transform, solid-шапка Android, пауза скрытых анимаций"
         }
       ],
       "coveredCommits": ["58b0eeb1", "ac9f134e", "31fd8d35", "ce6be6a5", "914551ee", "5d1572fa"]
