@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2026.06.13.4d724888",
+      "buildHash": "4d724888",
+      "date": "2026-06-13",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Обновлено фото МФР упражнения",
+      "items": [
+        {
+          "type": "improvement",
+          "title": "Обновили фото МФР квадрицепса",
+          "description": "Добавили более понятное изображение для упражнения с foam roller в режиме мобильности."
+        }
+      ]
+    },
+    {
       "version": "2026.06.13.5af9dbdf",
       "buildHash": "5af9dbdf",
       "date": "2026-06-13",
@@ -138,22 +153,6 @@
         }
       ],
       "coveredCommits": ["239c346c"]
-    },
-    {
-      "version": "2026.06.13.d2c03e71",
-      "buildHash": "d2c03e71",
-      "date": "2026-06-13",
-      "kind": "technical",
-      "profile": "technical-backend-api",
-      "title": "HEYS Старт",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Бот HEYS Старт",
-          "description": "Добавлен отдельный Telegram-webhook для квиза «Твой тип срыва»: старый клиентский бот остаётся на своём маршруте, новый бот ведёт сценарий до заявки на неделю."
-        }
-      ],
-      "coveredCommits": ["d2c03e71"]
     }
   ]
 }
