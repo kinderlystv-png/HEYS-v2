@@ -4215,33 +4215,41 @@
       );
     };
 
+    const Focus = HEYS.TrainingFocus;
     return h('div', { className: 'fingers-fs-equipment-bar' },
-      h('div', { className: 'fingers-fs-equipment-bar__tabs',
-        role: 'group',
-        'aria-label': 'Оборудование (можно выбрать несколько)' },
-        tabs.map(function (t) {
-          const active = activeTypes.indexOf(t.id) >= 0;
-          const isOnlyActive = active && activeTypes.length === 1;
-          return h('button', {
-            key: t.id,
-            type: 'button',
-            role: 'checkbox',
-            'aria-checked': active,
-            'aria-disabled': isOnlyActive,
-            title: isOnlyActive ? 'Минимум один тип должен быть активен' : null,
-            className: 'fingers-fs-equipment-tab' + (active ? ' is-active' : ''),
-            onClick: function () { toggleType(t.id); }
-          },
-            // Чекбокс-индикатор в углу для multi-select clarity
-            h('span', {
-              className: 'fingers-fs-equipment-tab__check' + (active ? ' is-checked' : ''),
-              'aria-hidden': 'true'
-            }, active ? '✓' : null),
-            h('span', { className: 'fingers-fs-equipment-tab__icon', 'aria-hidden': 'true' }, t.icon),
-            h('span', { className: 'fingers-fs-equipment-tab__label' }, t.label)
-          );
-        })
-      ),
+      Focus && Focus.EquipmentBar
+        ? h(Focus.EquipmentBar, {
+            classPrefix: 'fingers-fs',
+            items: tabs,
+            value: activeTypes,
+            ariaLabel: 'Оборудование (можно выбрать несколько)',
+            onToggle: toggleType
+          })
+        : h('div', { className: 'fingers-fs-equipment-bar__tabs',
+          role: 'group',
+          'aria-label': 'Оборудование (можно выбрать несколько)' },
+          tabs.map(function (t) {
+            const active = activeTypes.indexOf(t.id) >= 0;
+            const isOnlyActive = active && activeTypes.length === 1;
+            return h('button', {
+              key: t.id,
+              type: 'button',
+              role: 'checkbox',
+              'aria-checked': active,
+              'aria-disabled': isOnlyActive,
+              title: isOnlyActive ? 'Минимум один тип должен быть активен' : null,
+              className: 'fingers-fs-equipment-tab' + (active ? ' is-active' : ''),
+              onClick: function () { toggleType(t.id); }
+            },
+              h('span', {
+                className: 'fingers-fs-equipment-tab__check' + (active ? ' is-checked' : ''),
+                'aria-hidden': 'true'
+              }, active ? '✓' : null),
+              h('span', { className: 'fingers-fs-equipment-tab__icon', 'aria-hidden': 'true' }, t.icon),
+              h('span', { className: 'fingers-fs-equipment-tab__label' }, t.label)
+            );
+          })
+        ),
       // Пикеры модели — на каждый активный тип (доска | блок) в строку, без
       // перекрытия. Если выбраны оба — два пикера рядом, каждый со своим выбором.
       (wantFull || wantBlock) ? h('div', {
@@ -4314,29 +4322,46 @@
         console.warn('[FingersGoalSelector] write failed:', e);
       }
     }
-    return h('div', { className: 'fingers-fs-goalsel' },
-      h('div', { className: 'fingers-fs-goalsel__label' }, 'Цель тренировки'),
-      h('div', { className: 'fingers-fs-goalsel__grid', role: 'tablist', 'aria-label': 'Цель тренировки' },
-        GOAL_LIST.map(function (g) {
-          const active = currentGoal === g.id;
-          const cnt = goalCounts[g.id] || 0;
-          return h('button', {
-            key: g.id,
-            type: 'button',
-            role: 'tab',
-            'aria-selected': active,
-            className: 'fingers-fs-goalsel__btn' + (active ? ' is-active' : '') + (cnt === 0 ? ' is-empty' : ''),
-            'data-goal': g.id,
-            title: cnt + ' протоколов под текущее оборудование и возраст',
-            onClick: function () { if (currentGoal !== g.id) writeGoal(g.id); }
-          },
-            h('span', { className: 'fingers-fs-goalsel__emoji', 'aria-hidden': 'true' }, GOAL_EMOJI[g.id] || '🎯'),
-            h('span', { className: 'fingers-fs-goalsel__text' }, g.label),
-            h('span', { className: 'fingers-fs-goalsel__count', 'aria-label': cnt + ' протоколов' }, cnt)
-          );
+    const Focus = HEYS.TrainingFocus;
+    const items = GOAL_LIST.map(function (g) {
+      return {
+        id: g.id,
+        label: g.label,
+        icon: GOAL_EMOJI[g.id] || '🎯',
+        count: goalCounts[g.id] || 0
+      };
+    });
+    return Focus && Focus.GoalSelector
+      ? h(Focus.GoalSelector, {
+          classPrefix: 'fingers-fs',
+          label: 'Цель тренировки',
+          items: items,
+          value: currentGoal,
+          onChange: function (goalId) { if (currentGoal !== goalId) writeGoal(goalId); }
         })
-      )
-    );
+      : h('div', { className: 'fingers-fs-goalsel' },
+        h('div', { className: 'fingers-fs-goalsel__label' }, 'Цель тренировки'),
+        h('div', { className: 'fingers-fs-goalsel__grid', role: 'tablist', 'aria-label': 'Цель тренировки' },
+          items.map(function (g) {
+            const active = currentGoal === g.id;
+            const cnt = g.count || 0;
+            return h('button', {
+              key: g.id,
+              type: 'button',
+              role: 'tab',
+              'aria-selected': active,
+              className: 'fingers-fs-goalsel__btn' + (active ? ' is-active' : '') + (cnt === 0 ? ' is-empty' : ''),
+              'data-goal': g.id,
+              title: cnt + ' протоколов под текущее оборудование и возраст',
+              onClick: function () { if (currentGoal !== g.id) writeGoal(g.id); }
+            },
+              h('span', { className: 'fingers-fs-goalsel__emoji', 'aria-hidden': 'true' }, g.icon),
+              h('span', { className: 'fingers-fs-goalsel__text' }, g.label),
+              h('span', { className: 'fingers-fs-goalsel__count', 'aria-label': cnt + ' протоколов' }, cnt)
+            );
+          })
+        )
+      );
   }
   Fingers.GoalSelector = FingersGoalSelector;
 
@@ -5597,34 +5622,62 @@
         ),
         h('div', { className: 'fingers-registry__body' },
           filtered.length
-            ? h('div', { className: 'fingers-registry__grid' },
-                filtered.map(function (atom) {
-                  const block = bc && bc.getBlock ? bc.getBlock(atom.blockId) : null;
-                  const title = _registryAtomTitle(atom);
-                  return h('button', {
-                    key: atom.id,
-                    type: 'button',
-                    className: 'fingers-registry-card',
-                    onClick: function () {
+            ? (HEYS.TrainingFocus && HEYS.TrainingFocus.RegistryGrid
+                ? h(HEYS.TrainingFocus.RegistryGrid, {
+                    classPrefix: 'fingers',
+                    items: filtered.map(function (atom) {
+                      const block = bc && bc.getBlock ? bc.getBlock(atom.blockId) : null;
+                      return {
+                        id: atom.id,
+                        title: _registryAtomTitle(atom),
+                        image: _registryImageSrc(atom),
+                        imageAlt: _registryAtomTitle(atom),
+                        icon: _registryEmoji(atom),
+                        meta: (block ? block.id + ' · ' : '') + (REGISTRY_QUALITY_LABELS[atom.quality] || atom.quality),
+                        chips: [
+                          REGISTRY_DOSE_LABELS[atom.doseShape] || atom.doseShape,
+                          REGISTRY_MODALITY_LABELS[atom.modality] || atom.modality
+                        ].filter(Boolean),
+                        actionHint: isPicker ? 'Добавить' : null,
+                        atom: atom
+                      };
+                    }),
+                    onOpenItem: function (id, item) {
+                      const atom = item && item.atom ? item.atom : (bc && bc.getAtom ? bc.getAtom(id) : null);
+                      if (!atom) return;
                       if (isPicker) onPickAtom(atom);
                       else setSelectedAtom(atom);
                     }
-                  },
-                    h('span', { className: 'fingers-registry-card__photo' },
-                      h(RegistryAtomImage, { atom: atom, className: 'fingers-registry-card__img', compact: true })
-                    ),
-                    h('span', { className: 'fingers-registry-card__body' },
-                      h('span', { className: 'fingers-registry-card__name' }, title),
-                      h('span', { className: 'fingers-registry-card__meta' },
-                        (block ? block.id + ' · ' : '') + (REGISTRY_QUALITY_LABELS[atom.quality] || atom.quality)),
-                      h('span', { className: 'fingers-registry-card__chips' },
-                        _registryMetaPill(REGISTRY_DOSE_LABELS[atom.doseShape] || atom.doseShape),
-                        _registryMetaPill(REGISTRY_MODALITY_LABELS[atom.modality] || atom.modality)
-                      ),
-                      isPicker ? h('span', { className: 'fingers-registry-card__action' }, 'Добавить') : null
-                    )
-                  );
-                })
+                  })
+                : h('div', { className: 'fingers-registry__grid' },
+                    filtered.map(function (atom) {
+                      const block = bc && bc.getBlock ? bc.getBlock(atom.blockId) : null;
+                      const title = _registryAtomTitle(atom);
+                      return h('button', {
+                        key: atom.id,
+                        type: 'button',
+                        className: 'fingers-registry-card',
+                        onClick: function () {
+                          if (isPicker) onPickAtom(atom);
+                          else setSelectedAtom(atom);
+                        }
+                      },
+                        h('span', { className: 'fingers-registry-card__photo' },
+                          h(RegistryAtomImage, { atom: atom, className: 'fingers-registry-card__img', compact: true })
+                        ),
+                        h('span', { className: 'fingers-registry-card__body' },
+                          h('span', { className: 'fingers-registry-card__name' }, title),
+                          h('span', { className: 'fingers-registry-card__meta' },
+                            (block ? block.id + ' · ' : '') + (REGISTRY_QUALITY_LABELS[atom.quality] || atom.quality)),
+                          h('span', { className: 'fingers-registry-card__chips' },
+                            _registryMetaPill(REGISTRY_DOSE_LABELS[atom.doseShape] || atom.doseShape),
+                            _registryMetaPill(REGISTRY_MODALITY_LABELS[atom.modality] || atom.modality)
+                          ),
+                          isPicker ? h('span', { className: 'fingers-registry-card__action' }, 'Добавить') : null
+                        )
+                      );
+                    })
+                  )
               )
             : h('div', { className: 'fingers-registry__empty' }, 'Ничего не найдено')
         ),
@@ -6155,6 +6208,118 @@
       { id: 'progress',    label: 'Прогресс',    icon: ICONS.progress },
       { id: 'calendar',    label: 'Календарь',   icon: ICONS.calendar }
     ].filter(Boolean);
+    const Focus = HEYS.TrainingFocus;
+
+    function renderHeader() {
+      const actions = [
+        {
+          id: 'settings',
+          icon: '⚙',
+          title: 'Настройки',
+          ariaLabel: 'Настройки тренировки',
+          onClick: function () { setShowSettings(true); }
+        },
+        {
+          id: 'registry',
+          icon: '▦',
+          title: 'Реестр упражнений',
+          ariaLabel: 'Реестр упражнений',
+          onClick: function () { setShowRegistry(true); }
+        },
+        {
+          id: 'sources',
+          icon: '📚',
+          title: 'Источники',
+          ariaLabel: 'Источники и методология',
+          onClick: function () { setShowBib(true); }
+        },
+        {
+          id: 'diagnostic',
+          icon: '🧮',
+          title: 'Диагностика расчётов',
+          ariaLabel: 'Скопировать диагностику расчётов',
+          onClick: function () {
+            try {
+              const txt = _buildFingersDiagnostic();
+              const done = function () {
+                if (HEYS.Toast && HEYS.Toast.success) HEYS.Toast.success('Диагностика расчётов скопирована');
+              };
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).then(done).catch(function () {
+                  console.log('[Fingers diagnostic]\n' + txt);
+                  if (HEYS.Toast && HEYS.Toast.info) HEYS.Toast.info('Скопировано в консоль (clipboard недоступен)');
+                });
+              } else {
+                console.log('[Fingers diagnostic]\n' + txt);
+                if (HEYS.Toast && HEYS.Toast.info) HEYS.Toast.info('Выведено в консоль (clipboard недоступен)');
+              }
+            } catch (e) { console.warn('[Fingers] diagnostic copy failed:', e); }
+          }
+        }
+      ];
+      if (onClose) {
+        actions.push({
+          id: 'close',
+          kind: 'close',
+          icon: h('svg', { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', 'aria-hidden': 'true' },
+            h('path', { d: 'M5 5l10 10M15 5L5 15' })
+          ),
+          title: 'Закрыть',
+          ariaLabel: 'Закрыть режим тренировки',
+          onClick: function () { try { onClose(); } catch (_) {} }
+        });
+      }
+      return Focus && Focus.Header
+        ? h(Focus.Header, {
+            classPrefix: 'fingers-fs',
+            title: 'Сила хвата',
+            actions: actions
+          })
+        : h('div', { className: 'fingers-fs__header fingers-fs__header--premium' },
+          h('h1', { className: 'fingers-fs__title' },
+            h('span', { className: 'fingers-fs__title-text' }, 'Сила хвата')
+          ),
+          h('div', { className: 'fingers-fs__header-actions' },
+            actions.map(function (action) {
+              return h('button', {
+                key: action.id,
+                type: 'button',
+                className: 'fingers-fs__icon-btn' + (action.kind === 'close' ? ' fingers-fs__icon-btn--close' : ''),
+                onClick: action.onClick,
+                'aria-label': action.ariaLabel,
+                title: action.title
+              }, action.icon);
+            })
+          )
+        );
+    }
+
+    function renderTabs() {
+      return Focus && Focus.Tabs
+        ? h(Focus.Tabs, {
+            classPrefix: 'fingers-fs',
+            items: tabs,
+            value: tab,
+            onChange: setTab
+          })
+        : h('div', { className: 'fingers-fs-tabs', role: 'tablist' },
+          tabs.map(function (t, idx) {
+            const active = tab === t.id;
+            return h('button', {
+              key: t.id,
+              role: 'tab',
+              'aria-selected': active,
+              className: 'fingers-fs-tab' + (active ? ' fingers-fs-tab--active' : ''),
+              style: { animationDelay: (idx * 40) + 'ms' },
+              onClick: function () { setTab(t.id); }
+            },
+              h('span', { key: 'i', className: 'fingers-fs-tab__icon' }, t.icon),
+              h('span', { key: 'l', className: 'fingers-fs-tab__label' }, t.label)
+            );
+          })
+        );
+    }
 
     return h('div', { className: 'fingers-fs-session' },
       // Warmup runner overlay (floats над всем когда warmupActive=true).
@@ -6170,73 +6335,7 @@
         onCancel: handleWarmupCancel
       }) : null,
       // Header
-      h('div', { className: 'fingers-fs__header fingers-fs__header--premium' },
-        h('h1', { className: 'fingers-fs__title' },
-          h('span', { className: 'fingers-fs__title-text' }, 'Сила хвата')
-        ),
-        h('div', { className: 'fingers-fs__header-actions' },
-          h('button', {
-            type: 'button',
-            className: 'fingers-fs__icon-btn',
-            onClick: function () { setShowSettings(true); },
-            'aria-label': 'Настройки тренировки',
-            title: 'Настройки'
-          }, h('span', { 'aria-hidden': 'true' }, '⚙')),
-          h('button', {
-            type: 'button',
-            className: 'fingers-fs__icon-btn',
-            onClick: function () { setShowRegistry(true); },
-            'aria-label': 'Реестр упражнений',
-            title: 'Реестр упражнений'
-          }, h('span', { 'aria-hidden': 'true' }, '▦')),
-          h('button', {
-            type: 'button',
-            className: 'fingers-fs__icon-btn',
-            onClick: function () { setShowBib(true); },
-            'aria-label': 'Источники и методология',
-            title: 'Источники'
-          }, h('span', { 'aria-hidden': 'true' }, '📚')),
-          // Прозрачность: копирует диагностику всех расчётов (готовность,
-          // рекомендация, бакет, мезоцикл) в буфер обмена.
-          h('button', {
-            type: 'button',
-            className: 'fingers-fs__icon-btn',
-            onClick: function () {
-              try {
-                const txt = _buildFingersDiagnostic();
-                const done = function () {
-                  if (HEYS.Toast && HEYS.Toast.success) HEYS.Toast.success('Диагностика расчётов скопирована');
-                };
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard.writeText(txt).then(done).catch(function () {
-                    console.log('[Fingers diagnostic]\n' + txt);
-                    if (HEYS.Toast && HEYS.Toast.info) HEYS.Toast.info('Скопировано в консоль (clipboard недоступен)');
-                  });
-                } else {
-                  console.log('[Fingers diagnostic]\n' + txt);
-                  if (HEYS.Toast && HEYS.Toast.info) HEYS.Toast.info('Выведено в консоль (clipboard недоступен)');
-                }
-              } catch (e) { console.warn('[Fingers] diagnostic copy failed:', e); }
-            },
-            'aria-label': 'Скопировать диагностику расчётов',
-            title: 'Диагностика расчётов'
-          }, h('span', { 'aria-hidden': 'true' }, '🧮')),
-          // Розовый × — выход из Fingers (закрыть fullscreen-режим).
-          // В одну строку с остальными иконками шапки.
-          onClose ? h('button', {
-            type: 'button',
-            className: 'fingers-fs__icon-btn fingers-fs__icon-btn--close',
-            onClick: function () { try { onClose(); } catch (_) {} },
-            'aria-label': 'Закрыть режим тренировки',
-            title: 'Закрыть'
-          },
-            h('svg', { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none',
-              stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', 'aria-hidden': 'true' },
-              h('path', { d: 'M5 5l10 10M15 5L5 15' })
-            )
-          ) : null
-        )
-      ),
+      renderHeader(),
 
       // Resume banner — постоянный, над табами, пока есть snapshot.
       pendingResume ? (function () {
@@ -6292,22 +6391,7 @@
       })() : null,
 
       // Tabs
-      h('div', { className: 'fingers-fs-tabs', role: 'tablist' },
-        tabs.map(function (t, idx) {
-          const active = tab === t.id;
-          return h('button', {
-            key: t.id,
-            role: 'tab',
-            'aria-selected': active,
-            className: 'fingers-fs-tab' + (active ? ' fingers-fs-tab--active' : ''),
-            style: { animationDelay: (idx * 40) + 'ms' },
-            onClick: function () { setTab(t.id); }
-          },
-            h('span', { key: 'i', className: 'fingers-fs-tab__icon' }, t.icon),
-            h('span', { key: 'l', className: 'fingers-fs-tab__label' }, t.label)
-          );
-        })
-      ),
+      renderTabs(),
 
       // Equipment bar — под табами, всегда видим для смены оборудования.
       Fingers.EquipmentBar ? h(Fingers.EquipmentBar, {

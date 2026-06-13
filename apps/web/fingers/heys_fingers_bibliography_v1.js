@@ -286,12 +286,19 @@
     }
   ];
 
-  /** Lookup-индекс id → объект для O(1) доступа в SourceBadge. */
-  const BY_ID = Object.create(null);
-  BIBLIOGRAPHY.forEach((src) => { BY_ID[src.id] = src; });
+  // Lookup — через ОБЩЕЕ ЯДРО (single source: _kernel/heys_kernel_bibliography_v1.js).
+  // Данные (BIBLIOGRAPHY) и UI (SourceBadge/Modal) остаются доменными.
+  // fail-safe: прод-модуль не падает, если ядро не успело загрузиться (линейный
+  // поиск по 29 записям — пренебрежимо), но в проде bundler грузит ядро раньше.
+  const _KB = HEYS.TrainingKernel && HEYS.TrainingKernel.bibliography;
+  const _reg = (_KB && typeof _KB.createRegistry === 'function') ? _KB.createRegistry(BIBLIOGRAPHY) : null;
 
   function getSourceById(sourceId) {
-    return BY_ID[sourceId] || null;
+    if (_reg) return _reg.get(sourceId);
+    for (let i = 0; i < BIBLIOGRAPHY.length; i++) {
+      if (BIBLIOGRAPHY[i].id === sourceId) return BIBLIOGRAPHY[i];
+    }
+    return null;
   }
 
   /**
@@ -302,6 +309,11 @@
     if (!React) return null;
     const src = getSourceById(props && props.sourceId);
     if (!src) return null;
+    // kernel-first: общий UI-компонент из ядра; ниже — локальный фолбэк (прод-safety)
+    const _kuiS = HEYS.TrainingKernel && HEYS.TrainingKernel.bibliographyUI;
+    if (_kuiS && _kuiS.SourceBadge) {
+      return _kuiS.SourceBadge({ source: src, classPrefix: 'fingers-source-badge', icon: '📖', eventName: 'fingers-open-bibliography', onClick: props && props.onClick });
+    }
     const customClick = props && props.onClick;
     // Default behavior: dispatch event 'fingers-open-bibliography' с source id
     // → SessionUI слушает и открывает BibliographyModal с focus на этой записи.
@@ -371,6 +383,21 @@
    */
   function BibliographyModal(props) {
     if (!React) return null;
+    // kernel-first: общая модалка из ядра; ниже — локальный фолбэк (прод-safety)
+    const _kuiB = HEYS.TrainingKernel && HEYS.TrainingKernel.bibliographyUI;
+    if (_kuiB && _kuiB.BibliographyModal) {
+      return _kuiB.BibliographyModal({
+        sources: BIBLIOGRAPHY,
+        onClose: props && props.onClose,
+        focusSourceId: props && props.focusSourceId,
+        classPrefix: 'fingers-bib',
+        title: 'Источники и методология',
+        topicLabels: TOPIC_LABELS,
+        typeLabels: TYPE_LABELS,
+        typeOrder: TYPE_ORDER,
+        typeGroupLabels: TYPE_GROUP_LABELS
+      });
+    }
     const onClose = (props && props.onClose) || function () {};
     const focusSourceId = props && props.focusSourceId;
 

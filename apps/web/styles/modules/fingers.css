@@ -20,7 +20,7 @@
 .fingers-fs {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 2147483000;
   background: var(--fingers-bg, #fff);
   color: var(--fingers-text, #1a1a1f);
   font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -1194,6 +1194,12 @@
   position: relative;
 }
 
+.fingers-fs-equipment {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
 /* Goal selector — отдельный блок ниже бара оборудования. Свои поля сверху и
    снизу, чтобы не слипался с барами выше и с табовым контентом ниже. */
 .fingers-fs-goalsel {
@@ -2291,6 +2297,17 @@
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
+.fingers-registry-card__pick {
+  appearance: none;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 @media (hover: hover) {
   .fingers-registry-card:hover {
   transform: translateY(-1px);
@@ -2315,6 +2332,7 @@
   display: block;
   position: relative;
   overflow: hidden;
+  object-fit: cover;
 }
 .fingers-registry-carousel__img {
   width: 100%;
