@@ -149,6 +149,35 @@ const RULES = [
       LIMIT 10
     `,
   },
+  // SEC-021 (2026-06-14): backup-chain watchdog. Существующее alerting в
+  // heys-client-daily-backup срабатывает ТОЛЬКО когда функция запустилась
+  // (partial failure). Если функция вообще не запускается (как в инциденте
+  // 2026-04-14 → 2026-05-10, 27-дневная дыра, root-cause = accidentally
+  // deleted version) — silence. Это правило ловит SILENT FAILURE: за
+  // last 7 дней должно быть ≥5 success-INSERT'ов в backup_run_log; если
+  // меньше — alert.
+  {
+    key: 'backup_chain_gap',
+    label: '🔴 Backup-chain прерван',
+    description:
+      'За последние 7 дней зафиксировано <5 успешных backup-run\'ов. ' +
+      'Возможно heys-client-daily-backup функция не запускается. Проверь: ' +
+      '(1) yc serverless function version list --function-id <id> — есть ли активная версия; ' +
+      '(2) yc serverless trigger get heys-client-daily-backup-timer — ACTIVE; ' +
+      '(3) Cloud Functions web-console logs за последние сутки.',
+    sql: `
+      SELECT
+        $1::text AS _window_unused,
+        COUNT(*) FILTER (WHERE status = 'ok')::int AS ok_count_7d,
+        COUNT(*) FILTER (WHERE status = 'partial')::int AS partial_count_7d,
+        COUNT(*) FILTER (WHERE status = 'failed')::int AS failed_count_7d,
+        MAX(run_at) AS last_run_at,
+        EXTRACT(EPOCH FROM (now() - COALESCE(MAX(run_at), '2000-01-01'::timestamptz)))/3600 AS hours_since_last
+      FROM backup_run_log
+      WHERE run_at > NOW() - INTERVAL '7 days'
+      HAVING COUNT(*) FILTER (WHERE status = 'ok') < 5
+    `,
+  },
 ];
 
 async function isOnCooldown(client, ruleKey) {

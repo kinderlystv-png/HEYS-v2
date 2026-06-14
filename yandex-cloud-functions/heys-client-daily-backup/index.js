@@ -492,6 +492,35 @@ module.exports.handler = async function handler(_event, _context) {
 
     console.log('[ClientBackup] Done:', JSON.stringify(summary));
 
+    // SEC-021 (2026-06-14): success-marker для external watchdog.
+    // Если этого INSERT'a нет в backup_run_log за last 7 дней — external
+    // alert (heys-cron-security-alerts rule `backup_chain_gap`) сработает.
+    // Best-effort: ошибка INSERT'a не должна валить весь backup-run.
+    try {
+        const pool = getPool();
+        const logClient = await pool.connect();
+        try {
+            const runStatus = results.failed === 0 ? 'ok' : (results.success > 0 ? 'partial' : 'failed');
+            await logClient.query(
+                `INSERT INTO backup_run_log (run_at, business_date, status, total_clients, success_count, error_count, duration_sec, details)
+                 VALUES (NOW(), $1::date, $2::text, $3::int, $4::int, $5::int, $6::int, $7::jsonb)`,
+                [
+                    businessDate,
+                    runStatus,
+                    results.total,
+                    results.success,
+                    results.failed,
+                    Math.round(parseFloat(durationSec)),
+                    JSON.stringify({ cleaned, errors: results.errors.slice(0, 10) }),
+                ],
+            );
+        } finally {
+            logClient.release();
+        }
+    } catch (logErr) {
+        console.error('[ClientBackup] backup_run_log INSERT failed (non-fatal):', logErr.message);
+    }
+
     // Alert on failures
     if (results.failed > 0) {
         await sendAlert(
