@@ -2961,10 +2961,15 @@
 
         // Cold-load syncing placeholder.
         // На первом заходе в Задачи после reload `usePlanningState` читает LS
-        // синхронно — пусто, потому что bootstrapClientSync ещё качает данные
-        // с облака. Без этой защиты юзеру с реальными занятиями показывали
-        // empty state «нажмите + Новая», и только через секунду подгружались
-        // его чипы. Теперь до завершения первого pull рисуем «Обновление…».
+        // синхронно — без реальных activities, потому что bootstrapClientSync
+        // ещё качает их с облака. Без этой защиты юзеру показывали:
+        //   • пустой strip («нет занятий», только «+ Новая») — если ничего нет
+        //   • круги-плейсхолдеры с надписью «Занятие» и часами — если уже
+        //     накоплены entries (минуты), но имена активностей не доехали
+        // (см. mobile incident: entries горячие, activities холодные → strip
+        // подгрузился через ~10 сек).
+        // Чекаем именно `visibleActivities` (реальные records из LS), а не
+        // partition.active (там placeholder из buildDisplayChronoActivities).
         // Реально пустой список (новый юзер) — не маскируем: после успешного
         // pull `didCompleteCloudPull()` вернёт true и empty state покажется.
         const checkPullCompleted = () =>
@@ -2980,9 +2985,7 @@
             window.addEventListener('heys:planning-updated', sync);
             return () => window.removeEventListener('heys:planning-updated', sync);
         }, []);
-        const chronoSyncing = !pullCompleted
-            && partition.active.length === 0
-            && partition.inactive.length === 0;
+        const chronoSyncing = !pullCompleted && visibleActivities.length === 0;
 
         // Распределение времени по дням недели для режима week.
         const weekBreakdown = useMemo(() => {

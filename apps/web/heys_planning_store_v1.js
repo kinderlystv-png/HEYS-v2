@@ -1488,4 +1488,22 @@
 
     Planning.refreshPlanningFromCloud = refreshPlanningFromCloud;
     Planning.didCompleteCloudPull = didCompleteCloudPull;
+
+    // bootstrapClientSync Phase A пишет planning ключи прямым ls.setItem минуя
+    // interceptor (см. heys_storage_supabase_v1.js:7283-7288) — usePlanningState
+    // не узнаёт об апдейте, и ChronoScreen остаётся в `chronoSyncing=true`.
+    // Слушаем `heysSyncCompleted` (диспатчится после Phase A line 7306 и
+    // полного sync): помечаем pull done для клиента + дёргаем planning-updated
+    // чтобы LS дочитался и спиннер сменился на чипы.
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        window.addEventListener('heysSyncCompleted', function (ev) {
+            const cid = ev && ev.detail && ev.detail.clientId;
+            if (cid) _cloudPullDoneClientId = cid;
+            try {
+                window.dispatchEvent(new CustomEvent('heys:planning-updated', {
+                    detail: { source: 'phase-a', initial: true, clientId: cid },
+                }));
+            } catch (e) { /* noop */ }
+        });
+    }
 })();

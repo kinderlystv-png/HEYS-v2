@@ -7224,7 +7224,22 @@
                 // Stage 5 (2026-05-23): widget layout (~2-3 KB). Читается синхронно
                 // при первом рендере dashboard — без него виджеты раскладываются по
                 // дефолту и перестраиваются когда полный sync приземлит layout.
-                'heys_widget_layout_v1', 'heys_widget_layout_meta_v1'
+                'heys_widget_layout_v1', 'heys_widget_layout_meta_v1',
+                // Stage 6 (2026-06-14): planning (projects/tasks/slots/links + chrono).
+                // До этого planning ключи попадали только в Phase B paginated fetch —
+                // вкладка Задачи показывала пустоту/placeholder-круги до прихода
+                // полного sync (~5-10 сек на cellular). Размер ~5-30 KB на клиента
+                // (мелкие массивы id+title+ts) — приемлемо для Phase A round-trip.
+                // chrono_entries / snapshots могут быть крупнее у активных юзеров,
+                // но всё равно намного меньше heys_game/products в той же фазе.
+                'heys_planning_projects',
+                'heys_planning_tasks',
+                'heys_planning_slots',
+                'heys_planning_links_v1',
+                'heys_planning_chrono_activities',
+                'heys_planning_chrono_entries',
+                'heys_planning_chrono_snapshots',
+                'heys_planning_chrono_tombstones_v1'
               ];
               const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
               const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];
