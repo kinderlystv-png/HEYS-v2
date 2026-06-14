@@ -34,6 +34,40 @@ function isIdentityGuardKey(k) {
   return typeof k === 'string' && IDENTITY_GUARD_KEY_RE.test(k);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔐 SEC-024 v2 (2026-06-14): curator-JWT verify для cross-client read detection
+// Inline copy от shared/auth-helpers.js verifyCuratorJwt (heys-api-rest НЕ имеет
+// shared/ инфраструктуры). Алгоритм идентичен heys-api-auth/index.js:189+ HS256.
+// payload schema: { sub: curator_id (uuid), email, role: 'curator', iat, exp }.
+// ═══════════════════════════════════════════════════════════════════════════
+function verifyCuratorJwt(token, jwtSecret) {
+  if (!token || !jwtSecret) return { valid: false, error: 'missing-token-or-secret' };
+  const crypto = require('crypto');
+  const base64UrlDecode = (str) =>
+    Buffer.from(str.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return { valid: false, error: 'malformed' };
+    const [headerB64, payloadB64, signature] = parts;
+    const expectedSig = crypto
+      .createHmac('sha256', jwtSecret)
+      .update(`${headerB64}.${payloadB64}`)
+      .digest('base64')
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const a = Buffer.from(signature, 'utf8');
+    const b = Buffer.from(expectedSig, 'utf8');
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      return { valid: false, error: 'invalid-signature' };
+    }
+    const payload = JSON.parse(base64UrlDecode(payloadB64));
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) return { valid: false, error: 'expired' };
+    return { valid: true, payload };
+  } catch (e) {
+    return { valid: false, error: e.message || 'parse-error' };
+  }
+}
+
 // 🛡️ Content-fingerprint dup check для dayv2 (incident 2026-06-02 #8):
 // ловит partial pollution где writer_cid правильный (свой) но meals
 // идентичны свежей записи другого клиента того же curator. REST POST
@@ -602,10 +636,71 @@ module.exports.handler = async function (event, context) {
         await audit('rest_read_no_auth_warn', true, 'phase_b');
         return { decision: 'allow', warn: true };
       }
-      // Case 2: JWT (curator path) — hot-fix v1 пропускает, warn-log
+      // Case 2: JWT (curator path) — SEC-024 v2 (2026-06-14): полный verify.
+      // verifyCuratorJwt → если invalid/expired → 401 (strict) или warn.
+      // Если valid → payload.sub = curator_id, SELECT clients WHERE curator_id=$1
+      // → allowedCids set, проверяем что requestedCid в нём.
       if (isJwt) {
-        await audit('rest_read_curator_jwt_unverified', true, 'jwt_skipped_v1');
-        return { decision: 'allow', warn: true };
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+          // env-misconfig — fail-open warn (defense lost, но не ломаем endpoint).
+          await audit('rest_read_curator_jwt_no_secret', true, 'env_misconfig');
+          return { decision: 'allow', warn: true };
+        }
+        const verifyResult = verifyCuratorJwt(token, jwtSecret);
+        if (!verifyResult.valid) {
+          if (READ_STRICT) {
+            await audit('rest_read_curator_jwt_blocked', false, verifyResult.error);
+            return { decision: 'block', status: 401, body: { error: 'invalid_curator_jwt', detail: verifyResult.error } };
+          }
+          await audit('rest_read_curator_jwt_invalid_warn', true, verifyResult.error);
+          return { decision: 'allow', warn: true };
+        }
+        const payload = verifyResult.payload || {};
+        if (payload.role !== 'curator') {
+          if (READ_STRICT) {
+            await audit('rest_read_curator_role_blocked', false, `role=${payload.role || 'null'}`);
+            return { decision: 'block', status: 403, body: { error: 'curator_role_required' } };
+          }
+          await audit('rest_read_curator_role_warn', true, `role=${payload.role || 'null'}`);
+          return { decision: 'allow', warn: true };
+        }
+        const curatorId = payload.sub;
+        if (!curatorId) {
+          if (READ_STRICT) {
+            await audit('rest_read_curator_no_sub_blocked', false, 'missing_sub');
+            return { decision: 'block', status: 401, body: { error: 'invalid_curator_jwt' } };
+          }
+          await audit('rest_read_curator_no_sub_warn', true, 'missing_sub');
+          return { decision: 'allow', warn: true };
+        }
+        // Если запрос без client_id (list/filter без cid) — kurator может видеть
+        // всех своих, но фильтра нет → не определимо. Logging-only.
+        if (!requestedCid) {
+          await audit('rest_read_curator_no_filter_warn', true, `curator=${String(curatorId).slice(0,8)}`);
+          return { decision: 'allow', warn: true };
+        }
+        // Проверяем что requestedCid принадлежит этому куратору.
+        let owns = false;
+        try {
+          const r = await client.query(
+            'SELECT 1 FROM clients WHERE id = $1::uuid AND curator_id = $2::uuid LIMIT 1',
+            [requestedCid, curatorId]
+          );
+          owns = r.rowCount > 0;
+        } catch (_) { /* swallow */ }
+        if (!owns) {
+          if (READ_STRICT) {
+            await audit('rest_read_curator_cross_client_blocked', false,
+              `curator=${String(curatorId).slice(0,8)} requested=${String(requestedCid).slice(0,8)}`);
+            return { decision: 'block', status: 403, body: { error: 'cross_client_forbidden' } };
+          }
+          await audit('rest_read_curator_cross_client_warn', true,
+            `curator=${String(curatorId).slice(0,8)} requested=${String(requestedCid).slice(0,8)}`);
+          return { decision: 'allow', warn: true };
+        }
+        // OK — kurator владеет этим client_id
+        return { decision: 'allow', warn: false };
       }
       // Case 3: session_token но invalid/expired
       if (!authedCid) {

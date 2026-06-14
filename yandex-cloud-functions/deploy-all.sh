@@ -247,7 +247,9 @@ build_env_flags() {
     fi
 
     # JWT_SECRET — для rpc, auth, push, messages, photos (curator-JWT identity resolution)
-    if [[ "$func_name" =~ (rpc|auth) ]] || [[ "$func_name" == "heys-api-push" ]] || [[ "$func_name" == "heys-api-messages" ]] || [[ "$func_name" == "heys-api-photos" ]]; then
+    # SEC-024 v2 (2026-06-14): добавлен heys-api-rest для curator-JWT verify в
+    # enforceClientKvAuthForGet middleware (cross-client read detection для кураторов).
+    if [[ "$func_name" =~ (rpc|auth) ]] || [[ "$func_name" == "heys-api-push" ]] || [[ "$func_name" == "heys-api-messages" ]] || [[ "$func_name" == "heys-api-photos" ]] || [[ "$func_name" == "heys-api-rest" ]]; then
         _add_required JWT_SECRET
     fi
 
