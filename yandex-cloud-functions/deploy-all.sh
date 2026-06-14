@@ -206,9 +206,9 @@ build_env_flags() {
         env_flags+=" --environment LOCKBOX_APP_SECRET_ID=$LOCKBOX_APP_ID"
     fi
 
-    # Backup-функции (heys-client-daily-backup, heys-snapshot-demo): S3 + TG
-    # (env fallback пока .env активен — initSecrets overlay'ит Lockbox значениями)
-    if [[ "$func_name" =~ (backup|snapshot-demo) ]]; then
+    # Backup-функции (heys-client-daily-backup, heys-snapshot-demo) + photo-cleanup:
+    # S3 + TG (env fallback пока .env активен — initSecrets overlay'ит Lockbox значениями)
+    if [[ "$func_name" =~ (backup|snapshot-demo|photo-cleanup) ]]; then
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
         local k
         for k in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY; do
