@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.14.b8126552",
+      "buildHash": "b8126552",
+      "date": "2026-06-14",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "extract robust-stats + catalog index into _kernel/",
+      "items": [
+        {
+          "type": "feat",
+          "title": "extract robust-stats + catalog index into _kernel/",
+          "description": "extract robust-stats + catalog index into _kernel/"
+        }
+      ],
+      "coveredCommits": ["b8126552"]
+    },
+    {
       "version": "2026.06.14.71fad701",
       "buildHash": "71fad701",
       "date": "2026-06-14",
@@ -141,21 +157,6 @@
         }
       ],
       "coveredCommits": ["dc3d0e3f"]
-    },
-    {
-      "version": "2026.06.13.956bc41f",
-      "buildHash": "956bc41f",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Изображения растяжек обновлены",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Карточки растяжек стали нагляднее",
-          "description": "Обновлены изображения для растяжек сгибателя бедра и восстановительной позиции в режиме мобильности."
-        }
-      ]
     }
   ]
 }
