@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.14.de302c9c",
+      "buildHash": "de302c9c",
+      "date": "2026-06-14",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "route block catalog index + readiness stats through shared kernel",
+      "items": [
+        {
+          "type": "feat",
+          "title": "route block catalog index + readiness stats through shared kernel",
+          "description": "route block catalog index + readiness stats through shared kernel"
+        }
+      ],
+      "coveredCommits": ["de302c9c", "b8126552"]
+    },
+    {
       "version": "2026.06.14.b8126552",
       "buildHash": "b8126552",
       "date": "2026-06-14",
@@ -141,22 +157,6 @@
           "description": "Обновили визуальные материалы для упражнений мобильности, чтобы карточки режима показывали более понятные фотографии движений."
         }
       ]
-    },
-    {
-      "version": "2026.06.13.90140938",
-      "buildHash": "90140938",
-      "date": "2026-06-13",
-      "kind": "technical",
-      "profile": "technical-infra-tests",
-      "title": "Мобильность открывается из тренировки",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Исправили вход в режим мобильности",
-          "description": "Кнопка «Мобильность» в добавлении тренировки теперь открывает отдельный режим без срыва на обычную форму. Обновили runtime-бандл и кэш приложения."
-        }
-      ],
-      "coveredCommits": ["dc3d0e3f"]
     }
   ]
 }
