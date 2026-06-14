@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.15.01abf4e5",
+      "buildHash": "01abf4e5",
+      "date": "2026-06-15",
+      "kind": "technical",
+      "profile": "technical-general",
+      "title": "Исправления ошибок и улучшение стабильности",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Исправили внутренние ошибки и улучшили стабильность",
+          "description": "В этом обновлении мы устранили несколько внутренних проблем, улучшили стабильность работы приложения и подготовили основу для следующих улучшений."
+        }
+      ],
+      "coveredCommits": ["8fe96871", "644b1e4c"]
+    },
+    {
       "version": "2026.06.14.fc291a71",
       "buildHash": "fc291a71",
       "date": "2026-06-14",
@@ -142,22 +158,6 @@
         }
       ],
       "coveredCommits": ["6e9e08dc", "8c182abd", "5465f5b1", "7d50d6be"]
-    },
-    {
-      "version": "2026.06.14.8c182abd",
-      "buildHash": "8c182abd",
-      "date": "2026-06-14",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "expand rich-bibliography, add protocol catalog, lazy boot stub, refreshed visuals",
-      "items": [
-        {
-          "type": "feat",
-          "title": "expand rich-bibliography, add protocol catalog, lazy boot stub, refreshed visuals",
-          "description": "expand rich-bibliography, add protocol catalog, lazy boot stub, refreshed visuals"
-        }
-      ],
-      "coveredCommits": ["8c182abd", "5465f5b1", "7d50d6be"]
     }
   ]
 }
