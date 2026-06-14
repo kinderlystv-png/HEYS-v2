@@ -113,6 +113,19 @@
     return cid ? `heys_${cid}_dayv2_${dateKey}` : null;
   }
 
+  function hasStepValue(value) {
+    return value !== undefined && value !== null && value !== '';
+  }
+
+  function hasPositiveStepNumber(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0;
+  }
+
+  function hasSleepTime(dayData) {
+    return hasStepValue(dayData?.sleepStart) && hasStepValue(dayData?.sleepEnd);
+  }
+
   function getUnscopedDayKey(dateKey) {
     return `heys_dayv2_${dateKey}`;
   }
@@ -1206,7 +1219,7 @@
       // Если есть dateKey в context — берём данные из того дня
       if (dateKey) {
         const dayData = readDayData(dateKey, {});
-        if (dayData.sleepStart && dayData.sleepEnd) {
+        if (hasSleepTime(dayData)) {
           const sleepStartH = parseInt(dayData.sleepStart.split(':')[0], 10);
           const sleepStartM = parseInt(dayData.sleepStart.split(':')[1], 10);
           const sleepEndH = parseInt(dayData.sleepEnd.split(':')[0], 10);
@@ -1537,7 +1550,7 @@
       // Если есть dateKey в context — берём данные из того дня
       if (dateKey) {
         const dayData = readDayData(dateKey, {});
-        if (dayData.sleepQuality !== undefined) {
+        if (hasPositiveStepNumber(dayData.sleepQuality)) {
           return {
             sleepQuality: dayData.sleepQuality,
             sleepNote: ''  // Не предзаполняем заметку — каждый раз новая
@@ -3573,7 +3586,7 @@
       const dayData = readDayData(dateKey, {});
 
       // Если уже есть данные за сегодня — берём их
-      if (dayData.moodMorning !== undefined) {
+      if (hasPositiveStepNumber(dayData.moodMorning)) {
         return {
           mood: dayData.moodMorning,
           wellbeing: dayData.wellbeingMorning ?? 5,

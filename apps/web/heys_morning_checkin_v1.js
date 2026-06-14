@@ -605,13 +605,42 @@
   // shouldShowMorningCheckin, чтобы не протекать в ручной showCheckin.morning().
   let _reopenRequiredOnly = false;
 
+  function hasCheckinValue(value) {
+    return value !== undefined && value !== null && value !== '';
+  }
+
+  function hasPositiveCheckinNumber(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0;
+  }
+
+  function hasSleepTime(day) {
+    return hasCheckinValue(day?.sleepStart) && hasCheckinValue(day?.sleepEnd);
+  }
+
+  function hasCheckinWeight(day) {
+    return hasPositiveCheckinNumber(day?.weightMorning);
+  }
+
+  function hasSleepQuality(day) {
+    return hasPositiveCheckinNumber(day?.sleepQuality);
+  }
+
+  function hasMorningMood(day) {
+    return hasPositiveCheckinNumber(day?.moodMorning);
+  }
+
+  function hasStepsGoal(profile) {
+    return hasPositiveCheckinNumber(profile?.stepsGoal);
+  }
+
   /** Отсутствуют ли core-поля утреннего чек-ина (вес/время сна/качество/настроение) в дне. */
   function coreCheckinDataMissing(mergedDay) {
     const d = mergedDay || {};
-    if (!(d.weightMorning != null && d.weightMorning !== '' && d.weightMorning !== 0)) return true;
-    if (!(d.sleepStart != null && d.sleepEnd != null)) return true;
-    if (!(d.sleepQuality != null)) return true;
-    if (!(d.moodMorning != null)) return true;
+    if (!hasCheckinWeight(d)) return true;
+    if (!hasSleepTime(d)) return true;
+    if (!hasSleepQuality(d)) return true;
+    if (!hasMorningMood(d)) return true;
     return false;
   }
 
@@ -658,10 +687,10 @@
       _reopenRequiredOnly = true;
       console.warn('[MorningCheckin] ⚠️ session-флаг стоит, но core-данные чекина отсутствуют — переоткрываем недостающие шаги', {
         sessionKey,
-        hasWeight: !(mergedDay.weightMorning == null || mergedDay.weightMorning === '' || mergedDay.weightMorning === 0),
-        hasSleep: !!(mergedDay.sleepStart != null && mergedDay.sleepEnd != null),
-        hasSleepQuality: mergedDay.sleepQuality != null,
-        hasMood: mergedDay.moodMorning != null,
+        hasWeight: hasCheckinWeight(mergedDay),
+        hasSleep: hasSleepTime(mergedDay),
+        hasSleepQuality: hasSleepQuality(mergedDay),
+        hasMood: hasMorningMood(mergedDay),
       });
       // fall through — ниже pending наберётся и вернём true
     }
@@ -728,11 +757,11 @@
     const calendarKey = _calendarKey;
 
     const pending = [];
-    if (!(mergedDay.weightMorning != null && mergedDay.weightMorning !== '' && mergedDay.weightMorning !== 0)) pending.push('weight');
-    if (!(mergedDay.sleepStart != null && mergedDay.sleepEnd != null)) pending.push('sleepTime');
-    if (!(mergedDay.sleepQuality != null)) pending.push('sleepQuality');
-    if (!(mergedDay.moodMorning != null)) pending.push('morning_mood');
-    if (!(profile && profile.stepsGoal != null && profile.stepsGoal > 0)) pending.push('stepsGoal');
+    if (!hasCheckinWeight(mergedDay)) pending.push('weight');
+    if (!hasSleepTime(mergedDay)) pending.push('sleepTime');
+    if (!hasSleepQuality(mergedDay)) pending.push('sleepQuality');
+    if (!hasMorningMood(mergedDay)) pending.push('morning_mood');
+    if (!hasStepsGoal(profile)) pending.push('stepsGoal');
 
     try {
       if (HEYS.YesterdayVerify
@@ -834,11 +863,11 @@
 
     const filtered = steps.filter(id => {
       switch (id) {
-        case 'weight': return !(day.weightMorning != null && day.weightMorning !== '' && day.weightMorning !== 0);
-        case 'sleepTime': return !(day.sleepStart != null && day.sleepEnd != null);
-        case 'sleepQuality': return !(day.sleepQuality != null);
-        case 'morning_mood': return !(day.moodMorning != null);
-        case 'stepsGoal': return !(profile && profile.stepsGoal != null && profile.stepsGoal > 0);
+        case 'weight': return !hasCheckinWeight(day);
+        case 'sleepTime': return !hasSleepTime(day);
+        case 'sleepQuality': return !hasSleepQuality(day);
+        case 'morning_mood': return !hasMorningMood(day);
+        case 'stepsGoal': return !hasStepsGoal(profile);
         default: return true;
       }
     });

@@ -154,8 +154,18 @@
       // а читаются из heys_products (legacy ключ с другими данными)
       if (window.HEYS?.store?.get && window.HEYS?.currentClientId) {
         // Проверяем, это client-specific ключ?
+        // 2026-06-14: добавлены planning_chrono_*. До этого fallback на line 183
+        // делал localStorage.getItem(scopedKey) + JSON.parse(v) — а в LS лежит
+        // compressed value (через Store.set → rawSet → compress). JSON.parse
+        // компрессированной строки падал → caught → return def → UI видел null
+        // даже когда данные есть. Через Store.get идёт корректный decompress.
         const clientSpecificKeys = ['heys_products', 'heys_profile', 'heys_hr_zones', 'heys_norms', 'heys_game'];
-        const isClientSpecific = clientSpecificKeys.some(k => key === k || key.includes('dayv2_'));
+        // includes() ловит оба варианта: unscoped (`heys_planning_chrono_activities`)
+        // и уже scoped через nsKey (`heys_<cid>_planning_chrono_activities`).
+        // Прошлая версия с `/^heys_planning_/` не матчила scoped — отсюда тек
+        // null из lsGet даже когда данные были в LS.
+        const isClientSpecific = clientSpecificKeys.some(k => key === k || key.includes('dayv2_'))
+          || key.includes('_planning_');
         if (isClientSpecific) {
           const result = window.HEYS.store.get(key, def);
           // 🔍 DEBUG v59: Логируем загрузку dayv2

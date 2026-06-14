@@ -500,6 +500,7 @@
     const containerRef = useRef(null);
     const touchStartX = useRef(0);
     const touchStartY = useRef(0);
+    const savedStepSigsRef = useRef({});
 
     const contextKey = useMemo(() => JSON.stringify(context), [context]);
 
@@ -545,6 +546,7 @@
     useEffect(() => {
       if (lastContextKeyRef.current !== contextKey) {
         lastContextKeyRef.current = contextKey;
+        savedStepSigsRef.current = {};
         const initialData = {};
         visibleStepConfigs.forEach((config) => {
           if (config.getInitialData) {
@@ -564,6 +566,45 @@
         return next;
       });
     }, [contextKey, visibleIdsSig, context, visibleStepConfigs]);
+
+    const getStepSaveSignature = useCallback((config, allStepData) => {
+      try {
+        const configIndex = visibleStepConfigs.findIndex((item) => item && item.id === config?.id);
+        const dependencyIds = configIndex >= 0
+          ? visibleStepConfigs.slice(0, configIndex + 1).map((item) => item.id)
+          : [config?.id].filter(Boolean);
+        const dependencyData = {};
+        dependencyIds.forEach((id) => {
+          dependencyData[id] = allStepData?.[id];
+        });
+        return JSON.stringify({
+          id: config?.id || '',
+          data: dependencyData
+        });
+      } catch (_) {
+        return String(Date.now());
+      }
+    }, [visibleStepConfigs]);
+
+    const saveStepConfig = useCallback((config, allStepData) => {
+      if (!config || typeof config.save !== 'function') return true;
+      const sig = getStepSaveSignature(config, allStepData);
+      if (savedStepSigsRef.current[config.id] === sig) return true;
+      try {
+        config.save(allStepData?.[config.id], context, allStepData);
+        savedStepSigsRef.current[config.id] = sig;
+        return true;
+      } catch (e) {
+        console.error('[StepModal] step save failed:', config.id, e);
+        setValidationMessage('Не удалось сохранить шаг. Попробуйте ещё раз.');
+        setValidationError(true);
+        setTimeout(() => {
+          setValidationError(false);
+          setValidationMessage(null);
+        }, 2500);
+        return false;
+      }
+    }, [context, getStepSaveSignature]);
 
     useEffect(() => {
       setCurrentStepIndex((i) => {
@@ -626,15 +667,13 @@
       // синхронный, goToStep уже сам управляет анимацией через свой
       // setTimeout(200), второй внешний wrapper избыточен.
       if (currentStepIndex < totalSteps - 1) {
+        if (!saveStepConfig(currentConfig, stepData)) return;
         goToStep(currentStepIndex + 1, 'left');
       } else {
         // Сохраняем все данные
-        visibleStepConfigs.forEach(config => {
-          if (config.save) {
-            // Передаём: данные этого шага, context, и все данные всех шагов
-            config.save(stepData[config.id], context, stepData);
-          }
-        });
+        for (const config of visibleStepConfigs) {
+          if (!saveStepConfig(config, stepData)) return;
+        }
 
         // XP за чек-ин
         if (HEYS.gamification) {
@@ -659,7 +698,7 @@
 
         onComplete && onComplete(stepData);
       }
-    }, [currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete]);
+    }, [currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig]);
 
     const handlePrev = useCallback(() => {
       if (currentStepIndex > 0) {
@@ -733,12 +772,12 @@
 
       if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
         if (deltaX < 0 && currentStepIndex < totalSteps - 1) {
-          goToStep(currentStepIndex + 1, 'left');
+          handleNext();
         } else if (deltaX > 0 && currentStepIndex > 0) {
           goToStep(currentStepIndex - 1, 'right');
         }
       }
-    }, [stepAllowSwipe, currentStepIndex, totalSteps, goToStep, currentConfig]);
+    }, [stepAllowSwipe, currentStepIndex, totalSteps, goToStep, currentConfig, handleNext]);
 
     // Закрытие
     const handleClose = useCallback(() => {
@@ -834,7 +873,8 @@
                     className: 'mc-progress-dot' + (i === currentStepIndex ? ' active' : '') + (i < currentStepIndex ? ' completed' : ''),
                     onClick: () => {
                       if (i !== currentStepIndex) {
-                        goToStep(i, i > currentStepIndex ? 'left' : 'right');
+                        if (i > currentStepIndex) handleNext();
+                        else goToStep(i, 'right');
                       }
                     },
                     'aria-label': `Шаг ${i + 1}`

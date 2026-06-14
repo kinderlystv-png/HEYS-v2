@@ -17,7 +17,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +36,8 @@ const evalScript = (relativePath) => {
 
 beforeEach(() => {
   if (!globalThis.window) globalThis.window = globalThis;
+  window.dispatchEvent = vi.fn();
+  window.addEventListener = vi.fn();
   kv = {};
   window.HEYS = {
     currentClientId: CID,
@@ -79,6 +81,28 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
     expect(steps).not.toContain('supplements');
     expect(steps).not.toContain('morningRoutine');
     expect(steps).not.toContain('weight'); // уже заполнен
+  });
+
+  it('пустые дефолты дня не считаются пройденными шагами сна/настроения', () => {
+    setDay({
+      weightMorning: 90.9,
+      sleepStart: '',
+      sleepEnd: '',
+      sleepQuality: '',
+      moodMorning: 0,
+      wellbeingMorning: 0,
+      stressMorning: 0,
+    });
+    const profile = { stepsGoal: 6000 };
+
+    const missing = window.HEYS.MorningCheckinUtils.coreCheckinDataMissing;
+    const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
+      filterCompleted: true,
+      requiredOnly: true,
+    });
+
+    expect(missing(kv[`heys_${CID}_dayv2_${TODAY}`])).toBe(true);
+    expect(steps).toEqual(['sleepTime', 'sleepQuality', 'morning_mood']);
   });
 
   it('обычный режим (без requiredOnly) сохраняет опциональный хвост', () => {

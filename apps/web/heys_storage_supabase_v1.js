@@ -2303,6 +2303,26 @@
     } catch (_) { return 0; }
   }
 
+  // 🧹 One-time cleanup устаревших planning_chrono fence-ов из прошлых сессий
+  // (incident 2026-06-14): если предыдущий бандл вызвал _dropRejectedKey для
+  // planning_chrono_*, fence остался в sessionStorage и блокирует Store.set
+  // ещё до того, как новый guard выше успеет сработать. Чистим один раз на старте.
+  try {
+    if (typeof global.sessionStorage !== 'undefined') {
+      const toRemove = [];
+      for (let i = 0; i < global.sessionStorage.length; i++) {
+        const k = global.sessionStorage.key(i);
+        if (k && k.startsWith('heys_drop_fence_') && /planning_chrono_(activities|entries|snapshots)/i.test(k)) {
+          toRemove.push(k);
+        }
+      }
+      if (toRemove.length > 0) {
+        toRemove.forEach((k) => { try { global.sessionStorage.removeItem(k); } catch (_) { /* noop */ } });
+        try { console.warn(`[drop-fence] cleared ${toRemove.length} stale planning_chrono fence(s) on boot`); } catch (_) { /* noop */ }
+      }
+    }
+  } catch (_) { /* noop */ }
+
   // 🛡️ Layer 4 (incident 2026-06-02): handle server rejection.
   // Когда сервер отвергает запись с `cross_client_*` / `content_dup` / etc —
   // локальные LS/queue могут держать polluted data (попавшую туда через
@@ -2322,6 +2342,43 @@
       // Unscoped — добавляем prefix per-client.
       scopedKey = 'heys_' + clientId + '_' + k.slice(5);
     } else {
+      return;
+    }
+    // 🛡️ Anti-wipe guard для planning chrono ключей (incident 2026-06-14):
+    // hot-sync пишет client-side merged массив (с правильными stamps), потом
+    // upload падает на server identity check (identity_blocked) → drop рушит
+    // живой LS + fence на 10 сек блокирует follow-up writes → пилюли пропали
+    // в UI на 1-2 сек. Для planning_chrono client-side merge — авторитет;
+    // server reject лечится только purge из upload queue, без destructive
+    // drop местного LS. Tombstones синкаются через MERGEABLE_KEY_RE path,
+    // там reject обрабатывается отдельно.
+    const isPlanningChrono = /^heys_[0-9a-f-]+_planning_chrono_(activities|entries|snapshots)$/i.test(scopedKey)
+      || /^heys_planning_chrono_(activities|entries|snapshots)$/i.test(k);
+    if (isPlanningChrono) {
+      try {
+        console.warn(`[drop-rejected] ${reason || 'server_rejected'} for planning chrono key ${scopedKey.slice(0, 80)} — SKIP destructive drop (LS+fence preserved); only queue purged`);
+      } catch (_) { /* noop */ }
+      // Purge upload queue (steps 3+) только. LS / fence / memory не трогаем.
+      try {
+        let purged = 0;
+        if (Array.isArray(clientUpsertQueue)) {
+          for (let i = clientUpsertQueue.length - 1; i >= 0; i--) {
+            const it = clientUpsertQueue[i];
+            if (it && it.client_id === clientId && (it.k === scopedKey || it.k === k)) {
+              clientUpsertQueue.splice(i, 1); purged++;
+            }
+          }
+        }
+        if (Array.isArray(clientUpsertInFlightQueue)) {
+          for (let i = clientUpsertInFlightQueue.length - 1; i >= 0; i--) {
+            const it = clientUpsertInFlightQueue[i];
+            if (it && it.client_id === clientId && (it.k === scopedKey || it.k === k)) {
+              clientUpsertInFlightQueue.splice(i, 1); purged++;
+            }
+          }
+        }
+        if (purged > 0) console.warn(`[drop-rejected] purged ${purged} pending upload(s) for ${scopedKey.slice(0, 80)}`);
+      } catch (_) { /* noop */ }
       return;
     }
     try {
@@ -7294,6 +7351,39 @@
                       } catch (_) { /* fall through — пишем как есть */ }
                     }
                   }
+                  // 🛡️ Anti-wipe guard для planning chrono: если cloud вернул
+                  // пустой массив, а local в LS уже содержит занятия — это почти
+                  // всегда транзиентный пустой ответ (stale row, RPC inconsistency,
+                  // edge pagination), а не реальное массовое удаление. Реальное
+                  // удаление шло бы через tombstones (heys_planning_chrono_tombstones_v1)
+                  // которые мы тоже пуллим в Phase A. Затирка валидного local
+                  // даёт на UI 10-секундное «пилюли пропали → восстановились»
+                  // (mount читает LS → пилюли видны; Phase A пишет [] → пропадают;
+                  // позднее hot-sync через 12с привозит реальный массив → восстанавл.).
+                  const isPlanningChrono = row.k === 'heys_planning_chrono_activities'
+                      || row.k === 'heys_planning_chrono_entries'
+                      || row.k === 'heys_planning_chrono_snapshots';
+                  // Strict guard: считаем cloud валидным ТОЛЬКО если это
+                  // непустой массив. Всё остальное (пустой [], объект {},
+                  // строка "null", любой mock dev-API) — невалидно и не
+                  // должно затирать местный массив. Mock dev API часто
+                  // возвращает `{}`/null для отсутствующих rows, что после
+                  // JSON.stringify уходило в LS как "null"/"{}" → coerce → [].
+                  if (isPlanningChrono) {
+                    const cloudInvalid = !Array.isArray(row.v) || row.v.length === 0;
+                    if (cloudInvalid) {
+                      try {
+                        const existingRaw = lsPhaseA.getItem(pKey);
+                        if (existingRaw) {
+                          const existing = JSON.parse(existingRaw);
+                          if (Array.isArray(existing) && existing.length > 0) {
+                            logCritical(`🛡️ [PHASE A] BLOCKED invalid chrono ${row.k} (cloud=${Array.isArray(row.v) ? '[]' : typeof row.v}); local has ${existing.length} items`);
+                            continue;
+                          }
+                        }
+                      } catch (_) { /* fall through — пишем как есть */ }
+                    }
+                  }
                   // Все гарды прошли — serializeem и queue write
                   writePairs.push([pKey, JSON.stringify(row.v)]);
                 }
@@ -9178,6 +9268,18 @@
                       } catch (_) { localArr = null; }
                       const mergedArr = PStore.mergeCloudPlanningArray(row.k, Array.isArray(localArr) ? localArr : [], valueToSave);
                       if (mergedArr) {
+                        // 🛡️ Anti-wipe guard через planning helper — он умеет
+                        // отличать транзиентный пустой ответ от настоящего
+                        // массового удаления (последнее идёт через tombstones,
+                        // которые helper сверяет). Fallback на наивную проверку
+                        // если helper недоступен (старая версия planning store).
+                        const _isSuspect = typeof PStore.isCloudChronoWipeSuspicious === 'function'
+                          ? PStore.isCloudChronoWipeSuspicious(row.k, Array.isArray(localArr) ? localArr : [], valueToSave)
+                          : (mergedArr.length === 0 && Array.isArray(localArr) && localArr.length > 0);
+                        if (_isSuspect) {
+                          logCritical(`🛡️ [BOOTSTRAP] BLOCKED chrono wipe (${key}); local has ${(Array.isArray(localArr) ? localArr.length : 0)} items`);
+                          return; // handled — skip wholesale fallback тоже
+                        }
                         const reserialized = JSON.stringify(mergedArr);
                         if (ls.getItem(key) !== reserialized) {
                           ls.setItem(key, reserialized);
@@ -9200,6 +9302,26 @@
                   // 🚀 PERF: Defer dayv2 write to batch — prevents N individual re-renders
                   batchedDayV2Writes.push({ key, valueToSave });
                 } else {
+                  // 🛡️ Anti-wipe chrono fallback: если merge path выше не сработал
+                  // (valueToSave не Array — null/undefined/object), wholesale write
+                  // запишет в LS "null"/"{}", и coerceChronoArray вернёт []. Это
+                  // ровно тот же visible баг — пилюли пропали. Защищаем local.
+                  const isPlanningChronoArrKey = row.k === 'heys_planning_chrono_activities'
+                      || row.k === 'heys_planning_chrono_entries'
+                      || row.k === 'heys_planning_chrono_snapshots';
+                  if (isPlanningChronoArrKey
+                      && (!Array.isArray(valueToSave) || valueToSave.length === 0)) {
+                    try {
+                      const existingRaw = ls.getItem(key);
+                      if (existingRaw) {
+                        const existing = JSON.parse(existingRaw);
+                        if (Array.isArray(existing) && existing.length > 0) {
+                          logCritical(`🛡️ [BOOTSTRAP] BLOCKED empty chrono wholesale ${row.k}; local has ${existing.length} items`);
+                          return;
+                        }
+                      }
+                    } catch (_) { /* fall through */ }
+                  }
                   ls.setItem(key, JSON.stringify(valueToSave));
                   log(`  ✅ Saved to localStorage: ${key}`);
                   // Planning ключи (projects/tasks/slots/links/chrono_*): ls.setItem
@@ -12630,21 +12752,41 @@
         // adds or resurrect local deletes. Only activities/entries are merge-safe
         // (id + tombstone coverage); the pure helper returns null otherwise.
         let appliedMergedChrono = false;
+        let blockedEmptyChrono = false;
         try {
           const PStore = global.HEYS?.Planning?.Store;
           if (PStore && typeof PStore.mergeCloudPlanningArray === 'function' && Array.isArray(value)) {
             const localArr = Array.isArray(previousValue) ? previousValue : [];
             const mergedArr = PStore.mergeCloudPlanningArray(baseKey, localArr, value);
             if (mergedArr) {
-              const reserialized = JSON.stringify(mergedArr);
-              if (currentRaw === reserialized) return false; // idempotent no-op → no echo upload
-              global.localStorage.setItem(scopedKey, reserialized);
-              value = mergedArr; // downstream event dispatch uses value
-              appliedMergedChrono = true;
+              // 🛡️ Anti-wipe guard через planning helper. Реальное массовое
+              // удаление пройдёт (tombstones покрывают local IDs), транзиентный
+              // пустой cloud row блокируется до следующего sync tick.
+              const _isSuspect = typeof PStore.isCloudChronoWipeSuspicious === 'function'
+                ? PStore.isCloudChronoWipeSuspicious(baseKey, localArr, value)
+                : (mergedArr.length === 0 && localArr.length > 0);
+              if (_isSuspect) {
+                logCritical(`🛡️ [HOT-SYNC] BLOCKED chrono wipe (${baseKey}); local has ${localArr.length} items`);
+                blockedEmptyChrono = true;
+              } else {
+                const reserialized = JSON.stringify(mergedArr);
+                if (currentRaw === reserialized) return false; // idempotent no-op → no echo upload
+                global.localStorage.setItem(scopedKey, reserialized);
+                value = mergedArr; // downstream event dispatch uses value
+                appliedMergedChrono = true;
+              }
             }
           }
         } catch (_) { /* parse/store error — fallback to wholesale */ }
+        if (blockedEmptyChrono) return false; // skip events too — нет апдейта
         if (!appliedMergedChrono) {
+          // Wholesale fallback срабатывает когда cloud вернул не-Array
+          // (null/object/string). Тоже защищаем local от затирки.
+          if ((!Array.isArray(value) || value.length === 0)
+              && Array.isArray(previousValue) && previousValue.length > 0) {
+            logCritical(`🛡️ [HOT-SYNC] BLOCKED non-array chrono wipe (${baseKey}); local has ${previousValue.length} items`);
+            return false;
+          }
           global.localStorage.setItem(scopedKey, serialized);
         }
         maybeDispatchPlanningUpdated(baseKey, source);

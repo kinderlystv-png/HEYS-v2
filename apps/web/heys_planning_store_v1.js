@@ -1288,9 +1288,24 @@
                 } else if (item.k === 'heys_planning_links_v1' && typeof Store.saveLinks === 'function') {
                     Store.saveLinks(item.v);
                 } else if (item.k === 'heys_planning_chrono_activities' && typeof Store.saveChronoActivities === 'function') {
-                    Store.saveChronoActivities(mergeCloudPlanningArray(item.k, getChronoActivities(), item.v) || item.v);
+                    const _localAct = getChronoActivities();
+                    // 🛡️ Anti-wipe guard через tombstone-aware helper: пропускаем
+                    // запись если cloud прислал пустоту, но local непустой и
+                    // tombstones не покрывают local IDs (транзиентный пустой
+                    // ответ). Реальное массовое удаление с другого устройства
+                    // пройдёт нормально (tombstones первой фазой выше).
+                    if (isCloudChronoWipeSuspicious(item.k, _localAct, item.v)) {
+                        console.warn('[HEYS.planning] BLOCKED suspicious chrono activities wipe; local has', _localAct.length, 'items');
+                    } else {
+                        Store.saveChronoActivities(mergeCloudPlanningArray(item.k, _localAct, item.v) || item.v);
+                    }
                 } else if (item.k === 'heys_planning_chrono_entries' && typeof Store.saveChronoEntries === 'function') {
-                    Store.saveChronoEntries(mergeCloudPlanningArray(item.k, getChronoEntries(), item.v) || item.v);
+                    const _localEnt = getChronoEntries();
+                    if (isCloudChronoWipeSuspicious(item.k, _localEnt, item.v)) {
+                        console.warn('[HEYS.planning] BLOCKED suspicious chrono entries wipe; local has', _localEnt.length, 'items');
+                    } else {
+                        Store.saveChronoEntries(mergeCloudPlanningArray(item.k, _localEnt, item.v) || item.v);
+                    }
                 } else if (item.k === 'heys_planning_chrono_snapshots' && typeof Store.saveChronoSnapshots === 'function') {
                     Store.saveChronoSnapshots(item.v);
                 } else if (item.k === 'heys_planning_chrono_tombstones_v1' && typeof Store.saveChronoTombstones === 'function') {
@@ -1463,6 +1478,7 @@
         saveChronoTombstones,
         mergeArrayById,
         mergeCloudPlanningArray,
+        isCloudChronoWipeSuspicious,
         getChronoEntries,
         saveChronoEntries,
         addChronoEntry,
@@ -1486,8 +1502,38 @@
         usePlanningViewport,
     };
 
+    // Anti-wipe guard для cloud writes. Если cloud прислал пустой массив
+    // chrono_activities/entries, а в local лежит непустой — это почти всегда
+    // транзиентный пустой ответ облака (stale row / RPC inconsistency).
+    // Реальное массовое удаление шло бы через tombstones, которые мы
+    // отдельно синкаем. Возвращает true если такую запись надо ПРОПУСТИТЬ
+    // (т.е. cloud wipe «подозрительный»). False — пишите как обычно.
+    // Используется в bootstrap (boot-core), hot-sync и refreshPlanningFromCloud.
+    function isCloudChronoWipeSuspicious(baseKey, localArr, cloudArr) {
+        if (!Array.isArray(cloudArr) || cloudArr.length > 0) return false;
+        if (!Array.isArray(localArr) || localArr.length === 0) return false;
+        if (baseKey === KEYS.CHRONO_ACTIVITIES) {
+            const tombSet = getChronoTombstoneSet('activity');
+            // Все local activities покрыты tombstones → реальное удаление,
+            // не блокируем. Иначе — подозрительная пустота, блокируем.
+            return !localArr.every((a) => tombSet.has(String((a && a.id) || '')));
+        }
+        if (baseKey === KEYS.CHRONO_ENTRIES) {
+            const entryTomb = getChronoTombstoneSet('entry');
+            const actTomb = getChronoTombstoneSet('activity');
+            return !localArr.every((e) => {
+                const id = String((e && e.id) || '');
+                const aid = String((e && e.activityId) || '');
+                return entryTomb.has(id) || actTomb.has(aid);
+            });
+        }
+        // По умолчанию — блокируем (snapshots и любые иные пустоты)
+        return true;
+    }
+
     Planning.refreshPlanningFromCloud = refreshPlanningFromCloud;
     Planning.didCompleteCloudPull = didCompleteCloudPull;
+    Planning.isCloudChronoWipeSuspicious = isCloudChronoWipeSuspicious;
 
     // bootstrapClientSync Phase A пишет planning ключи прямым ls.setItem минуя
     // interceptor (см. heys_storage_supabase_v1.js:7283-7288) — usePlanningState
