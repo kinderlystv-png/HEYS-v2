@@ -91,11 +91,11 @@ broken, what was fixed, and the pattern to watch for.
   телефон со stale данными может выиграть конфликт. Окончательный фикс —
   server-revision write-merge (L4+, см. project_sync_revision_rollout),
   deferred.
-- **L3 server-revision pull-gate** активен в коде
-  ([heys_storage_supabase_v1.js:12187](apps/web/heys_storage_supabase_v1.js#L12187)),
-  но возвращает `true` (apply) если сервер не шлёт `server_revision` в
-  kv-строках. Эффективный гейтинг требует end-to-end подтверждения от
-  server-RPC; на дату фикса не подтверждено в проде.
+- **L3 server-revision pull-gate** source-fixed 2026-06-14: после того как
+  клиент увидел server-revision checkpoint, no-revision pull больше не может
+  перезаписать ключ, для которого уже известна local revision. Остающийся
+  ceiling — write-merge/CAS для device-clock конфликтов и production
+  deploy/bundle.
 
 ### Pattern to watch
 

@@ -68,7 +68,12 @@
     // revision it carries vs the highest revision this client has already applied for
     // the key. This is ADDITIVE and conservative:
     //   * remoteRevision absent / non-positive (old DB row, deploy-lag) → return true
-    //     ("no revision info" → defer to the caller's legacy updatedAt / pending guards).
+    //     by default ("no revision info" → defer to the caller's legacy updatedAt /
+    //     pending guards).
+    //   * requireRemoteRevision=true + localRevision known + remoteRevision absent →
+    //     return false. This is the post-rollout ceiling: once a client has already
+    //     applied a server revision for a key, a later legacy/no-revision pull cannot
+    //     overwrite that key.
     //   * localRevision unknown (never applied this key) → return true (apply).
     //   * otherwise apply ONLY when remoteRevision > localRevision.
     // It NEVER forces an apply past a legacy guard — callers still run their
@@ -76,8 +81,10 @@
     // to SKIP re-applying a revision we have already seen (remote <= local).
     function shouldApplyByRevision(params) {
         const remote = Number(params && params.remoteRevision);
-        if (!Number.isFinite(remote) || remote <= 0) return true;
         const local = Number(params && params.localRevision);
+        if (!Number.isFinite(remote) || remote <= 0) {
+            return !(params && params.requireRemoteRevision && Number.isFinite(local) && local > 0);
+        }
         if (!Number.isFinite(local) || local <= 0) return true;
         return remote > local;
     }

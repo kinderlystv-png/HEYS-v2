@@ -2446,7 +2446,7 @@
                     removeGlobalValue('heys_remember_email');
                 }
 
-                const res = await cloud.signIn(email, password);
+                const res = await cloud.signIn(email, password, opts.mfaCode || opts.mfa_code || '');
                 if (!res || res.error) {
                     const message = res?.error?.message || 'Ошибка подключения к серверу';
                     setLoginError(message);

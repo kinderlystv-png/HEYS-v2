@@ -71,3 +71,15 @@ describe('foreground hot-sync overlay tail reassembly (incident 2026-06-03)', ()
     expect(source).toMatch(/lateArrivals \+= flushOverlayHotBuf\(\)/);
   });
 });
+
+describe('foreground hot-sync server-revision gate', () => {
+  it('requires remote revisions after a revision checkpoint is active', () => {
+    expect(source).toContain('function isServerRevisionCheckpointActive()');
+    expect(source).toContain('requireRemoteRevision: isServerRevisionCheckpointActive()');
+  });
+
+  it('records skipped no-revision pulls for diagnostics', () => {
+    expect(source).toContain('_serverRevisionGateBlocks');
+    expect(source).toContain('checkpoint: Number(_lastMarkerCheckRevision) || 0');
+  });
+});

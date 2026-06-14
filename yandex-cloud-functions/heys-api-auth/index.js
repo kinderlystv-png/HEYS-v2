@@ -3,9 +3,12 @@
  * @version 2.2.0 — 2026-02-10: Добавлен LEFT JOIN с subscriptions для active_until в getClients
  * 
  * Endpoints:
- *   POST /auth/login — вход по email+password, возвращает JWT
+ *   POST /auth/login — вход по email+password(+mfa_code), возвращает JWT
  *   POST /auth/verify — проверка JWT токена
  *   POST /auth/refresh — обновление токена (опционально)
+ *   POST /auth/mfa/setup — выпуск TOTP-секрета для авторизованного куратора
+ *   POST /auth/mfa/enable — включение TOTP после проверки кода
+ *   POST /auth/mfa/disable — выключение TOTP после проверки кода
  *   GET  /auth/clients — список клиентов куратора (с subscription_status, trial_ends_at, active_until)
  * 
  * JWT payload: { sub: curator_id, email, role: 'curator', iat, exp }
@@ -70,6 +73,11 @@ const ALLOWED_ORIGINS = new Set([
 // Migration: database/2026-04-23_curator_login_rate_limits.sql
 // ═══════════════════════════════════════════════════════════════════════════
 const LOGIN_MAX_ATTEMPTS = 10;
+const ACCOUNT_LOCK_MAX_ATTEMPTS = 10;
+const ACCOUNT_LOCK_MINUTES = 15;
+const TOTP_STEP_SECONDS = 30;
+const TOTP_WINDOW_STEPS = 1;
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 async function checkLoginRateLimit(ip) {
   const pool = getPool();
@@ -225,6 +233,118 @@ function verifyJwt(token, jwtSecret) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Curator MFA (TOTP) — без внешних зависимостей
+// ═══════════════════════════════════════════════════════════════════════════
+
+function base32Encode(buffer) {
+  let bits = '';
+  for (const byte of buffer) bits += byte.toString(2).padStart(8, '0');
+
+  let out = '';
+  for (let i = 0; i < bits.length; i += 5) {
+    const chunk = bits.slice(i, i + 5).padEnd(5, '0');
+    out += BASE32_ALPHABET[parseInt(chunk, 2)];
+  }
+  return out;
+}
+
+function base32Decode(value) {
+  const clean = String(value || '')
+    .toUpperCase()
+    .replace(/[\s=-]/g, '');
+
+  let bits = '';
+  for (const ch of clean) {
+    const idx = BASE32_ALPHABET.indexOf(ch);
+    if (idx === -1) throw new Error('Invalid base32 character');
+    bits += idx.toString(2).padStart(5, '0');
+  }
+
+  const bytes = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  }
+  return Buffer.from(bytes);
+}
+
+function createTotpSecret() {
+  return base32Encode(crypto.randomBytes(20));
+}
+
+function generateTotpCode(secretBase32, timestampMs = Date.now()) {
+  const secret = base32Decode(secretBase32);
+  const counter = Math.floor(timestampMs / 1000 / TOTP_STEP_SECONDS);
+  const counterBuffer = Buffer.alloc(8);
+  counterBuffer.writeBigUInt64BE(BigInt(counter));
+
+  const hmac = crypto.createHmac('sha1', secret).update(counterBuffer).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const binCode = (
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff)
+  );
+  return String(binCode % 1000000).padStart(6, '0');
+}
+
+function safeEqualString(a, b) {
+  const left = Buffer.from(String(a));
+  const right = Buffer.from(String(b));
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+function verifyTotpCode(secretBase32, code, timestampMs = Date.now(), windowSteps = TOTP_WINDOW_STEPS) {
+  const cleanCode = String(code || '').replace(/\s+/g, '');
+  if (!/^\d{6}$/.test(cleanCode)) return false;
+
+  for (let offset = -windowSteps; offset <= windowSteps; offset++) {
+    const expected = generateTotpCode(secretBase32, timestampMs + offset * TOTP_STEP_SECONDS * 1000);
+    if (safeEqualString(cleanCode, expected)) return true;
+  }
+  return false;
+}
+
+function getMfaCipherKey(jwtSecret) {
+  return crypto.createHash('sha256').update(`heys-curator-mfa-v1:${jwtSecret}`).digest();
+}
+
+function encryptMfaSecret(secret, jwtSecret) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', getMfaCipherKey(jwtSecret), iv);
+  const ciphertext = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return [
+    'v1',
+    iv.toString('base64url'),
+    tag.toString('base64url'),
+    ciphertext.toString('base64url')
+  ].join(':');
+}
+
+function decryptMfaSecret(ciphertext, jwtSecret) {
+  const [version, ivB64, tagB64, dataB64] = String(ciphertext || '').split(':');
+  if (version !== 'v1' || !ivB64 || !tagB64 || !dataB64) throw new Error('Invalid MFA secret format');
+
+  const decipher = crypto.createDecipheriv(
+    'aes-256-gcm',
+    getMfaCipherKey(jwtSecret),
+    Buffer.from(ivB64, 'base64url')
+  );
+  decipher.setAuthTag(Buffer.from(tagB64, 'base64url'));
+  return Buffer.concat([
+    decipher.update(Buffer.from(dataB64, 'base64url')),
+    decipher.final()
+  ]).toString('utf8');
+}
+
+function makeOtpAuthUrl(email, secret) {
+  const label = encodeURIComponent(`HEYS:${email}`);
+  const issuer = encodeURIComponent('HEYS');
+  return `otpauth://totp/${label}?secret=${encodeURIComponent(secret)}&issuer=${issuer}&algorithm=SHA1&digits=6&period=${TOTP_STEP_SECONDS}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Password hashing (bcrypt-like с PBKDF2)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -237,6 +357,62 @@ function hashPassword(password, salt = null) {
 function verifyPassword(password, hash, salt) {
   const { hash: computed } = hashPassword(password, salt);
   return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(computed));
+}
+
+async function recordAccountLoginFailure(client, curatorId) {
+  if (!curatorId) return null;
+  const result = await client.query(`
+    UPDATE curators
+    SET
+      failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1,
+      last_failed_login_at = NOW(),
+      login_locked_until = CASE
+        WHEN COALESCE(failed_login_attempts, 0) + 1 >= $2
+          THEN NOW() + ($3::int * INTERVAL '1 minute')
+        ELSE login_locked_until
+      END
+    WHERE id = $1
+    RETURNING login_locked_until
+  `, [curatorId, ACCOUNT_LOCK_MAX_ATTEMPTS, ACCOUNT_LOCK_MINUTES]);
+
+  return result.rows[0]?.login_locked_until || null;
+}
+
+async function resetAccountLoginFailures(client, curatorId) {
+  await client.query(
+    `UPDATE curators
+     SET failed_login_attempts = 0,
+         login_locked_until = NULL,
+         last_failed_login_at = NULL,
+         last_login_at = NOW()
+     WHERE id = $1`,
+    [curatorId]
+  );
+}
+
+function isAccountLocked(curator) {
+  if (!curator?.login_locked_until) return false;
+  return new Date(curator.login_locked_until).getTime() > Date.now();
+}
+
+function accountLockRetryAfter(curator) {
+  if (!curator?.login_locked_until) return 1;
+  return Math.max(1, Math.ceil((new Date(curator.login_locked_until).getTime() - Date.now()) / 1000));
+}
+
+function getMfaCodeFromBody(body) {
+  return body?.mfa_code || body?.mfaCode || body?.totp || body?.otp || '';
+}
+
+function authenticateCuratorFromHeader(authHeader, jwtSecret) {
+  if (!authHeader) return { valid: false, statusCode: 401, error: 'Authorization required' };
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const jwtResult = verifyJwt(token, jwtSecret);
+  if (!jwtResult.valid) return { valid: false, statusCode: 401, error: jwtResult.error };
+  if (jwtResult.payload.role !== 'curator') {
+    return { valid: false, statusCode: 403, error: 'Curator role required' };
+  }
+  return { valid: true, curatorId: jwtResult.payload.sub, email: jwtResult.payload.email };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -268,7 +444,11 @@ async function handleLogin(body, jwtSecret, ip) {
 
     // Ищем куратора по email
     const result = await client.query(
-      'SELECT id, email, password_hash, password_salt, name FROM curators WHERE email = $1 AND is_active = true',
+      `SELECT id, email, password_hash, password_salt, name,
+              mfa_enabled, mfa_totp_secret_ciphertext,
+              failed_login_attempts, login_locked_until
+       FROM curators
+       WHERE email = $1 AND is_active = true`,
       [email.toLowerCase().trim()]
     );
 
@@ -282,8 +462,19 @@ async function handleLogin(body, jwtSecret, ip) {
 
     const curator = result.rows[0];
 
+    if (isAccountLocked(curator)) {
+      return {
+        statusCode: 429,
+        body: JSON.stringify({
+          error: 'Too many login attempts',
+          retryAfter: accountLockRetryAfter(curator)
+        })
+      };
+    }
+
     // Проверяем пароль
     if (!verifyPassword(password, curator.password_hash, curator.password_salt)) {
+      await recordAccountLoginFailure(client, curator.id);
       await recordLoginAttempt(ip, false);
       return {
         statusCode: 401,
@@ -291,13 +482,39 @@ async function handleLogin(body, jwtSecret, ip) {
       };
     }
 
-    await recordLoginAttempt(ip, true);
+    if (curator.mfa_enabled) {
+      const mfaCode = getMfaCodeFromBody(body);
+      if (!mfaCode) {
+        return {
+          statusCode: 401,
+          body: JSON.stringify({
+            error: 'mfa_required',
+            mfa_required: true,
+            message: 'MFA code required'
+          })
+        };
+      }
 
-    // Обновляем last_login
-    await client.query(
-      'UPDATE curators SET last_login_at = NOW() WHERE id = $1',
-      [curator.id]
-    );
+      let mfaOk = false;
+      try {
+        const secret = decryptMfaSecret(curator.mfa_totp_secret_ciphertext, jwtSecret);
+        mfaOk = verifyTotpCode(secret, mfaCode);
+      } catch (e) {
+        console.error('MFA secret verification error:', e.message);
+      }
+
+      if (!mfaOk) {
+        await recordAccountLoginFailure(client, curator.id);
+        await recordLoginAttempt(ip, false);
+        return {
+          statusCode: 401,
+          body: JSON.stringify({ error: 'Invalid credentials' })
+        };
+      }
+    }
+
+    await recordLoginAttempt(ip, true);
+    await resetAccountLoginFailures(client, curator.id);
 
     // Создаём JWT
     const accessToken = createJwt({
@@ -341,6 +558,111 @@ async function handleLogin(body, jwtSecret, ip) {
 
   } catch (e) {
     console.error('Login error:', e);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal server error' })
+    };
+  } finally {
+    client.release();
+  }
+}
+
+async function handleMfa(action, body, authHeader, jwtSecret) {
+  const auth = authenticateCuratorFromHeader(authHeader, jwtSecret);
+  if (!auth.valid) {
+    return {
+      statusCode: auth.statusCode,
+      body: JSON.stringify({ error: auth.error })
+    };
+  }
+
+  const client = await getClient();
+  try {
+    const current = await client.query(
+      `SELECT id, email, mfa_enabled, mfa_totp_secret_ciphertext
+       FROM curators
+       WHERE id = $1 AND is_active = true`,
+      [auth.curatorId]
+    );
+
+    if (current.rows.length === 0) {
+      return { statusCode: 404, body: JSON.stringify({ error: 'Curator not found' }) };
+    }
+
+    const curator = current.rows[0];
+
+    if (action === 'status') {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          mfa_enabled: !!curator.mfa_enabled,
+          has_secret: !!curator.mfa_totp_secret_ciphertext
+        })
+      };
+    }
+
+    if (action === 'setup') {
+      const secret = createTotpSecret();
+      const encrypted = encryptMfaSecret(secret, jwtSecret);
+      await client.query(
+        `UPDATE curators
+         SET mfa_totp_secret_ciphertext = $2,
+             mfa_enabled = false,
+             mfa_enabled_at = NULL
+         WHERE id = $1`,
+        [curator.id, encrypted]
+      );
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          secret,
+          otpauth_url: makeOtpAuthUrl(curator.email, secret),
+          mfa_enabled: false
+        })
+      };
+    }
+
+    if (action === 'enable') {
+      if (!curator.mfa_totp_secret_ciphertext) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'MFA setup required' }) };
+      }
+      const secret = decryptMfaSecret(curator.mfa_totp_secret_ciphertext, jwtSecret);
+      if (!verifyTotpCode(secret, getMfaCodeFromBody(body))) {
+        return { statusCode: 401, body: JSON.stringify({ error: 'Invalid MFA code' }) };
+      }
+      await client.query(
+        `UPDATE curators
+         SET mfa_enabled = true,
+             mfa_enabled_at = NOW()
+         WHERE id = $1`,
+        [curator.id]
+      );
+      return { statusCode: 200, body: JSON.stringify({ mfa_enabled: true }) };
+    }
+
+    if (action === 'disable') {
+      if (!curator.mfa_enabled) {
+        return { statusCode: 200, body: JSON.stringify({ mfa_enabled: false }) };
+      }
+      const secret = decryptMfaSecret(curator.mfa_totp_secret_ciphertext, jwtSecret);
+      if (!verifyTotpCode(secret, getMfaCodeFromBody(body))) {
+        return { statusCode: 401, body: JSON.stringify({ error: 'Invalid MFA code' }) };
+      }
+      await client.query(
+        `UPDATE curators
+         SET mfa_enabled = false,
+             mfa_enabled_at = NULL,
+             mfa_totp_secret_ciphertext = NULL
+         WHERE id = $1`,
+        [curator.id]
+      );
+      return { statusCode: 200, body: JSON.stringify({ mfa_enabled: false }) };
+    }
+
+    return { statusCode: 404, body: JSON.stringify({ error: 'Unknown MFA action' }) };
+  } catch (e) {
+    console.error('MFA error:', e);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Internal server error' })
@@ -941,6 +1263,7 @@ module.exports.handler = async function (event, context) {
   const path = event.path || event.url || '';
   const pathParts = path.split('/').filter(Boolean); // ['auth', 'clients'] или ['auth', 'clients', '{clientId}']
   const action = pathParts[1]; // login, verify, register, clients
+  const mfaAction = pathParts[2]; // setup, enable, disable, status
   const subAction = pathParts[3]; // kv
 
   // Client ID из path parameters (Yandex API Gateway использует event.params)
@@ -982,6 +1305,9 @@ module.exports.handler = async function (event, context) {
       break;
     case 'register':
       result = await handleRegister(body, JWT_SECRET);
+      break;
+    case 'mfa':
+      result = await handleMfa(mfaAction, body, authHeader, JWT_SECRET);
       break;
     case 'client-logout':
       // P0.15: отзыв клиентской PIN-сессии
@@ -1052,4 +1378,17 @@ module.exports.handler = async function (event, context) {
     ...result,
     headers: { ...corsHeaders, ...result.headers }
   };
+};
+
+module.exports._test = {
+  base32Encode,
+  base32Decode,
+  createTotpSecret,
+  generateTotpCode,
+  verifyTotpCode,
+  encryptMfaSecret,
+  decryptMfaSecret,
+  makeOtpAuthUrl,
+  isAccountLocked,
+  accountLockRetryAfter
 };

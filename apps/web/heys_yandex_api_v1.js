@@ -525,12 +525,13 @@
   // ═══════════════════════════════════════════════════════════════════
 
   /**
-   * Вход куратора (email + password)
+   * Вход куратора (email + password + optional MFA code)
    * @param {string} email - Email куратора
    * @param {string} password - Пароль
+   * @param {string} [mfaCode] - TOTP-код куратора
    * @returns {Promise<{data: {access_token, user, expires_in, expires_at}, error: any}>}
    */
-  async function curatorLogin(email, password) {
+  async function curatorLogin(email, password, mfaCode) {
     const url = `${CONFIG.API_URL}${CONFIG.ENDPOINTS.AUTH_LOGIN}`;
 
     try {
@@ -541,7 +542,7 @@
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, mfa_code: mfaCode || undefined }),
         // PR-B (2026-05-20): принимаем Set-Cookie от heys-api-auth
         // (heys_curator_jwt, HttpOnly, Domain=.heyslab.ru). credentials:'include'
         // обязателен для cross-subdomain cookie carriage.
@@ -553,7 +554,11 @@
       if (!response.ok || data.error) {
         return {
           data: null,
-          error: { message: data.error || 'Login failed', code: response.status }
+          error: {
+            message: data.mfa_required ? 'Введите код 2FA из приложения' : (data.error || 'Login failed'),
+            code: response.status,
+            mfa_required: !!data.mfa_required
+          }
         };
       }
 
@@ -963,7 +968,11 @@
 
       // Fallback: PIN auth client (no curator token). Post PR-C cookie-only —
       // buildSessionRpcParams даёт безтокенный body для cookie carrier.
-      const sessionRpc = buildSessionRpcParams({ p_key: key, p_value: value });
+      const sessionRpc = buildSessionRpcParams({
+        p_key: key,
+        p_value: value,
+        p_context_id: contextId || null, // 🛡️ Phase B2 write context
+      });
       if (!sessionRpc.ok) {
         return { success: false, error: 'No auth token (neither curator nor session)' };
       }
@@ -1572,11 +1581,16 @@
       // are bound to one client. Post PR-C: токен может быть только в HttpOnly
       // cookie — buildSessionRpcParams отдаст RPC-параметры без
       // p_session_token, и heys-api-rpc заполнит из cookie.
-      // 🛡️ Phase B2: session path не получает p_context_id потому что server
-      // ignore'ит browser-supplied client_id (резолвит из session_token).
-      // Pollution vector здесь структурно отсутствует — context-validation skip.
+      // 🛡️ Phase B2: session path тоже передаёт p_context_id. Хотя server
+      // резолвит client_id из session_token/cookie, strict write-context gate
+      // всё равно требует capability token, иначе legitimate PIN writes
+      // попадают в context_missing_warn и блокируют future STRICT=1 flip.
+      const sessionContextId = items.find((item) => item && item._ctx)?._ctx || contextId || null;
       const cleanItemsSession = items.map(({ _ctx: _stripped, ...rest }) => rest);
-      const sessionRpc = buildSessionRpcParams({ p_items: cleanItemsSession });
+      const sessionRpc = buildSessionRpcParams({
+        p_items: cleanItemsSession,
+        p_context_id: sessionContextId,
+      });
       if (sessionRpc.ok) {
         const result = await rpc('batch_upsert_client_kv_by_session', sessionRpc.params);
         if (result.error) {

@@ -1960,6 +1960,9 @@
   // would wrongly skip a concurrent other-client write). Keyed by `${clientId}|${cloudKey}`.
   const localRevisionByKey = new Map();
   function _revMapKey(clientId, k) { return String(clientId || '') + '|' + String(k || ''); }
+  function isServerRevisionCheckpointActive() {
+    return Number.isFinite(Number(_lastMarkerCheckRevision)) && Number(_lastMarkerCheckRevision) > 0;
+  }
 
   function getPendingQueueLocalStorageKey(item) {
     if (!item || typeof item !== 'object') return '';
@@ -5327,7 +5330,7 @@
     } catch (e) { err('init failed', e); }
   };
 
-  cloud.signIn = async function (email, password) {
+  cloud.signIn = async function (email, password, mfaCode) {
     // 🆕 v2.0: Используем собственный Yandex Cloud Auth (не Supabase SDK)
     // Это решает проблемы с CORS и соответствует 152-ФЗ
 
@@ -5365,7 +5368,7 @@
       } catch (_) { }
 
       // 🆕 Используем наш Yandex Cloud Auth endpoint
-      const { data, error } = await HEYS.YandexAPI.curatorLogin(email, password);
+      const { data, error } = await HEYS.YandexAPI.curatorLogin(email, password, mfaCode);
 
       if (error) {
         status = 'offline';
@@ -10096,8 +10099,10 @@
   }
 
   function isWriteContextRequiredForClient(clientId) {
-    const isPinAuthTarget = !!(_pinAuthClientId && _pinAuthClientId === clientId && !user);
-    return !(isPinAuthTarget || cloud.isPinAuthClient?.() === true);
+    // Phase B+ ratchet: server-side strict mode requires context for curator
+    // and PIN/session writes alike. PIN is bound to one client, but without a
+    // context it still trips context_missing_warn and blocks STRICT=1 rollout.
+    return !!clientId;
   }
 
   function recordWriteContextUnavailable(reason, details) {
@@ -10952,12 +10957,6 @@
 	  cloud._writeContextReady = null; // Promise<context|null>
 
 	  cloud._issueWriteContext = async function (targetClientId) {
-	    const isPinAuthTarget = !!(_pinAuthClientId && _pinAuthClientId === targetClientId && !user);
-	    if (isPinAuthTarget || cloud.isPinAuthClient?.() === true) {
-	      cloud._writeContext = null;
-	      cloud._writeContextReady = null;
-	      return null;
-	    }
 	    // Возвращаем in-flight promise при concurrent issue (типа boot + первый save fire).
 	    if (cloud._writeContextReady && !cloud._writeContextReady._settled) {
 	      return cloud._writeContextReady;
@@ -10988,9 +10987,11 @@
         );
       } else {
         const sessionToken = global.localStorage?.getItem?.('heys_session_token') || null;
-        if (!sessionToken) return finish(null);
+        const hasCookieSession = !!cloud.isPinAuthClient?.();
+        if (!sessionToken && !hasCookieSession) return finish(null);
+        const sessionParams = sessionToken ? { p_session_token: sessionToken } : {};
         res = await raceWithTimeout(
-          api.rpc('issue_write_context_by_session', { p_session_token: sessionToken }),
+          api.rpc('issue_write_context_by_session', sessionParams),
           WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
           { error: { message: 'write_context_issue_timeout', code: 'timeout' } },
           () => {
@@ -11039,8 +11040,6 @@
         if (detail.error) return;
 	        const cid = detail.clientId || global.HEYS?.currentClientId;
 	        if (!cid) return;
-	        const isPinAuthTarget = !!(_pinAuthClientId && _pinAuthClientId === cid && !user);
-	        if (isPinAuthTarget || cloud.isPinAuthClient?.() === true) return;
 	        // Re-issue только если current context для другого клиента (или нет
 	        // вообще). Hot-syncs того же клиента → no-op (context живёт 24h).
         if (cloud._writeContext && cloud._writeContext.clientId === cid &&
@@ -12597,11 +12596,31 @@
 
       // 🔢 L3 revision gate (pull-side, additive). Skip applying a revision we have
       // already seen (remote <= local). When remoteRevision is absent/unknown (old DB
-      // row or deploy-lag) this is a no-op and we fall through to the legacy updatedAt /
-      // pending guards below. A genuinely newer remote (remote > local) still passes
-      // through every guard below — this NEVER weakens the pending-local-edit protection.
+      // row or deploy-lag) this is usually a no-op and we fall through to the legacy
+      // updatedAt / pending guards below. Once the browser has observed a server
+      // revision checkpoint, missing remoteRevision becomes suspicious for keys where
+      // we already know the applied local revision: skip instead of letting legacy
+      // no-revision pulls overwrite newer server-stamped state.
       const _revMapK = _revMapKey(clientId, baseKey);
-      if (!shouldApplyByRevision({ remoteRevision, localRevision: localRevisionByKey.get(_revMapK) })) {
+      if (!shouldApplyByRevision({
+        remoteRevision,
+        localRevision: localRevisionByKey.get(_revMapK),
+        requireRemoteRevision: isServerRevisionCheckpointActive()
+      })) {
+        try {
+          global.HEYS = global.HEYS || {};
+          global.HEYS._serverRevisionGateBlocks = global.HEYS._serverRevisionGateBlocks || [];
+          global.HEYS._serverRevisionGateBlocks.push({
+            ts: Date.now(),
+            clientId: clientId ? String(clientId).slice(0, 8) : null,
+            key: baseKey,
+            source,
+            remoteRevision: Number(remoteRevision) || 0,
+            localRevision: Number(localRevisionByKey.get(_revMapK)) || 0,
+            checkpoint: Number(_lastMarkerCheckRevision) || 0
+          });
+          if (global.HEYS._serverRevisionGateBlocks.length > 25) global.HEYS._serverRevisionGateBlocks.shift();
+        } catch (_) { /* noop */ }
         return false;
       }
 

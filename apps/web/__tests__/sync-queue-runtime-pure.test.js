@@ -319,6 +319,19 @@ describe('HEYS.syncQueueRuntimePure', () => {
       expect(shouldApply({ remoteRevision: 0, localRevision: 9 })).toBe(true);
     });
 
+    it('blocks no-revision pulls after the rollout gate requires server revisions', () => {
+      const shouldApply = gate();
+      expect(shouldApply({ remoteRevision: undefined, localRevision: 9, requireRemoteRevision: true })).toBe(false);
+      expect(shouldApply({ remoteRevision: null, localRevision: 9, requireRemoteRevision: true })).toBe(false);
+      expect(shouldApply({ remoteRevision: 0, localRevision: 9, requireRemoteRevision: true })).toBe(false);
+    });
+
+    it('still allows first hydration without a known local revision', () => {
+      const shouldApply = gate();
+      expect(shouldApply({ remoteRevision: undefined, localRevision: undefined, requireRemoteRevision: true })).toBe(true);
+      expect(shouldApply({ remoteRevision: 0, localRevision: 0, requireRemoteRevision: true })).toBe(true);
+    });
+
     it('is robust to missing params', () => {
       const shouldApply = gate();
       expect(shouldApply({})).toBe(true);

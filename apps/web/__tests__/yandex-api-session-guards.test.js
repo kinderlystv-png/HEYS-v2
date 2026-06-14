@@ -93,6 +93,7 @@ describe('HEYS.YandexAPI session-safe access', () => {
       p_session_token: 'session-123',
       p_key: 'heys_profile',
       p_value: { calories: 1800 },
+      p_context_id: null,
     });
   });
 
