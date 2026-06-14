@@ -192,7 +192,9 @@
     if (benchmark === null || benchmark <= 0) return 0; // нет уровневого бенчмарка
     const s = num(score);
     if (s === null) return 0; // нет данных теста
-    return clamp01((benchmark - s) / benchmark);
+    // формула дефицита — из ОБЩЕГО ЯДРА (HEYS.TrainingKernel.assess); фолбэк локальный
+    const ka = HEYS.TrainingKernel && HEYS.TrainingKernel.assess;
+    return ka && ka.deficit ? ka.deficit(benchmark, s) : clamp01((benchmark - s) / benchmark);
   }
 
   // ─── computeFlag (§3.2 шаг 2) ─────────────────────────────────────────────────

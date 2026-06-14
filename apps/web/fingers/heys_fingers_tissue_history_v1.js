@@ -32,6 +32,10 @@
     sloper: 'sloper'
   };
 
+  function _recordsKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.records;
+  }
+
   function _getKey() {
     const cid = HEYS && HEYS.currentClientId;
     return cid ? 'heys_' + cid + '_fingers_tissue_history_v1' : 'heys_fingers_tissue_history_v1';
@@ -102,11 +106,20 @@
         gripGroup: e.gripGroup || _gripGroupOf(gripId)
       });
     });
-    const cutoff = ts - WINDOW_HOURS * 3600 * 1000;
-    let pruned = next.filter(function (e) {
-      return typeof e.timestamp !== 'number' || e.timestamp >= cutoff;
-    });
-    if (pruned.length > MAX_ENTRIES) pruned = pruned.slice(pruned.length - MAX_ENTRIES);
+    const kr = _recordsKernel();
+    let pruned = kr && kr.appendWindowed
+      ? kr.appendWindowed([], next, {
+        timestampKey: 'timestamp',
+        nowMs: ts,
+        windowHours: WINDOW_HOURS,
+        cap: MAX_ENTRIES
+      })
+      : next.filter(function (e) {
+        return typeof e.timestamp !== 'number' || e.timestamp >= ts - WINDOW_HOURS * 3600 * 1000;
+      });
+    if (!kr || !kr.appendWindowed) {
+      if (pruned.length > MAX_ENTRIES) pruned = pruned.slice(pruned.length - MAX_ENTRIES);
+    }
     return _write({ version: 1, entries: pruned });
   }
 
@@ -119,12 +132,20 @@
     const nowMs = typeof o.nowMs === 'number' ? o.nowMs : _now();
     const windowHours = typeof o.windowHours === 'number' ? o.windowHours : WINDOW_HOURS;
     const limit = typeof o.limit === 'number' ? o.limit : MAX_ENTRIES;
-    const cutoff = nowMs - windowHours * 3600 * 1000;
-    const filtered = _entries()
-      .filter(function (e) {
-        return typeof e.timestamp !== 'number' || (e.timestamp >= cutoff && e.timestamp <= nowMs);
+    const kr = _recordsKernel();
+    const filtered = kr && kr.recentWindow
+      ? kr.recentWindow(_entries(), {
+        timestampKey: 'timestamp',
+        nowMs: nowMs,
+        windowHours: windowHours,
+        upperBoundNow: true,
+        limit: 0
       })
-      .sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+      : _entries()
+        .filter(function (e) {
+          return typeof e.timestamp !== 'number' || (e.timestamp >= nowMs - windowHours * 3600 * 1000 && e.timestamp <= nowMs);
+        })
+        .sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
     return limit > 0 ? filtered.slice(Math.max(0, filtered.length - limit)) : filtered;
   }
 

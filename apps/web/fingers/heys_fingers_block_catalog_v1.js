@@ -529,8 +529,10 @@
     const CONFIDENCE = ['A', 'B', 'C'];
 
     // Проверка покрытия: каждый блок должен иметь >=1 атом.
+    // Через atomsByBlock() — работает и на kernel-индексе, и на fallback
+    // (локальный ATOMS_BY_BLOCK пуст, когда активен kernel; см. прод-порядок загрузки).
     BLOCKS.forEach(function (b) {
-      if (ATOMS_BY_BLOCK[b.id].length === 0) {
+      if (atomsByBlock(b.id).length === 0) {
         errors.push('block ' + b.id + ' (' + b.label + ') пуст');
       }
     });

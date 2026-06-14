@@ -4,6 +4,9 @@
 //   block_catalog (атомы) + assessment (приоритеты) + validators (S1/S6/S8/S2).
 // Вызывается через engine_router при flag=on. Под flag=off лежит мёртвым.
 //
+// КОНТРАКТ для kernel.router (strangler): builder.recommendDay(opts) → Session|null.
+// Ядро дёргает именно recommendDay; имя Fingers.sessionBuilder — доменное.
+//
 // Ключевые методологические швы (из ревью 3.1-4.1):
 //   Риск 1: safety-floor для antagonist/mobility — НЕ из blockWeights (assessment
 //           даёт им =0 по §3.5 «нет нормативов»). Builder заставляет их быть
@@ -89,6 +92,10 @@
     'none':  ['drill', 'mobility', 'antagonist']
   };
 
+  function _kernelSession() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.session;
+  }
+
   function num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
   function avg(rng) { return Array.isArray(rng) ? (rng[0] + rng[1]) / 2 : (rng || 0); }
 
@@ -150,7 +157,76 @@
   }
 
   // ─── Длительность сессии — TUT + rest по doseShape ───────────────────────────
+  function _runnerKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+
+  const DURATION_FORMULAS = {
+    hang: function (ctx) {
+      const d = ctx.dose;
+      const sets = ctx.num(d.sets, 1);
+      const reps = ctx.num(d.reps, Array.isArray(d.reps) ? ctx.avg(d.reps, 1) : 1);
+      const workSec = ctx.num(d.workSec);
+      const restSec = ctx.num(d.restSec);
+      const restSetsSec = ctx.num(d.restSetsSec);
+      return workSec * reps * sets +
+             restSec * Math.max(0, reps - 1) * sets +
+             restSetsSec * Math.max(0, sets - 1);
+    },
+    attempts: function (ctx) {
+      const d = ctx.dose;
+      const moves = ctx.avg(d.movesPerAttempt) * 2.5;
+      const attempts = ctx.avg(d.attempts);
+      return moves * attempts + ctx.num(d.restSetsSec) * Math.max(0, attempts - 1);
+    },
+    circuit: function (ctx) {
+      const d = ctx.dose;
+      const ppr = ctx.num(d.problemsPerRound);
+      const rounds = ctx.num(d.rounds, 1);
+      const restRounds = ctx.num(d.restRoundsSec);
+      return ppr * rounds * 25 + restRounds * Math.max(0, rounds - 1);
+    },
+    continuous: function (ctx) {
+      const d = ctx.dose;
+      return ctx.num(d.workSec) * ctx.num(d.sets, 1);
+    },
+    reps: function (ctx) {
+      const d = ctx.dose;
+      return ctx.avg(d.reps) * 3 * ctx.num(d.sets, 1) +
+             ctx.num(d.restSetsSec) * Math.max(0, ctx.num(d.sets, 1) - 1);
+    },
+    process: function () { return 0; }
+  };
+
+  const TUT_FORMULAS = {
+    hang: function (ctx) {
+      const d = ctx.dose;
+      const sets = ctx.num(d.sets, 1);
+      const reps = ctx.num(d.reps, Array.isArray(d.reps) ? ctx.avg(d.reps, 1) : 1);
+      return ctx.num(d.workSec) * reps * sets;
+    },
+    attempts: function (ctx) {
+      const d = ctx.dose;
+      return ctx.avg(d.movesPerAttempt) * 2.5 * ctx.avg(d.attempts);
+    },
+    circuit: function (ctx) {
+      const d = ctx.dose;
+      return ctx.num(d.problemsPerRound) * ctx.num(d.rounds, 1) * 25;
+    },
+    continuous: function (ctx) {
+      const d = ctx.dose;
+      return ctx.num(d.workSec) * ctx.num(d.sets, 1);
+    },
+    reps: function (ctx) {
+      const d = ctx.dose;
+      return ctx.avg(d.reps) * 3 * ctx.num(d.sets, 1);
+    },
+    process: function () { return 0; }
+  };
+
   function _estimateAtomSec(atom) {
+    const kr = _runnerKernel();
+    if (kr && typeof kr.estimateDoseSec === 'function') return kr.estimateDoseSec(atom, DURATION_FORMULAS);
     const d = atom && atom.dose;
     if (!d) return 0;
     const sets = num(d.sets) || 1;
@@ -194,6 +270,8 @@
   };
 
   function _estimateAtomTutSec(atom) {
+    const kr = _runnerKernel();
+    if (kr && typeof kr.estimateDoseSec === 'function') return kr.estimateDoseSec(atom, TUT_FORMULAS);
     const d = atom && atom.dose;
     if (!d) return 0;
     const sets = num(d.sets) || 1;
@@ -590,16 +668,21 @@
   // исходный индекс, чтобы внутри одного под-режима порядок пула сохранялся.
   function _orderAerobicCandidates(candidates, level) {
     const pref = AEROBIC_MODE_PREF_BY_LEVEL[level] || AEROBIC_MODE_PREF_BY_LEVEL.intermediate;
-    return candidates
-      .map(function (a, i) { return { a: a, i: i }; })
-      .sort(function (x, y) {
-        const px = pref.indexOf(_aerobicModeOf(x.a));
-        const py = pref.indexOf(_aerobicModeOf(y.a));
-        const rx = px < 0 ? pref.length : px;
-        const ry = py < 0 ? pref.length : py;
-        return rx !== ry ? rx - ry : x.i - y.i;
-      })
-      .map(function (o) { return o.a; });
+    const rank = function (a) {
+      const pos = pref.indexOf(_aerobicModeOf(a));
+      return pos < 0 ? pref.length : pos;
+    };
+    const ks = _kernelSession();
+    return ks && typeof ks.stableSortByScore === 'function'
+      ? ks.stableSortByScore(candidates, rank, 'asc')
+      : candidates
+        .map(function (a, i) { return { a: a, i: i }; })
+        .sort(function (x, y) {
+          const rx = rank(x.a);
+          const ry = rank(y.a);
+          return rx !== ry ? rx - ry : x.i - y.i;
+        })
+        .map(function (o) { return o.a; });
   }
 
   // §1.3/§3.3 FDP/FDS ротация: серия сессий с одним доминантным хватом (напр.
@@ -612,14 +695,18 @@
     const want = eh.underusedLean();
     if (!want) return candidates;
     const leanOf = function (a) { return (a && a.gripId) ? eh.leanOfGrip(a.gripId) : null; };
-    return candidates
-      .map(function (a, i) { return { a: a, i: i }; })
-      .sort(function (x, y) {
-        const mx = leanOf(x.a) === want ? 0 : 1;
-        const my = leanOf(y.a) === want ? 0 : 1;
-        return mx !== my ? mx - my : x.i - y.i;
-      })
-      .map(function (o) { return o.a; });
+    const rank = function (a) { return leanOf(a) === want ? 0 : 1; };
+    const ks = _kernelSession();
+    return ks && typeof ks.stableSortByScore === 'function'
+      ? ks.stableSortByScore(candidates, rank, 'asc')
+      : candidates
+        .map(function (a, i) { return { a: a, i: i }; })
+        .sort(function (x, y) {
+          const mx = rank(x.a);
+          const my = rank(y.a);
+          return mx !== my ? mx - my : x.i - y.i;
+        })
+        .map(function (o) { return o.a; });
   }
 
   // §1.3 variantSeed — «другой равноценный набор» (reroll микса). Циклический
@@ -630,6 +717,8 @@
   // безопасность — только КАКОЙ из взаимозаменяемых атомов взят. Слот с единственным
   // подходящим атомом не меняется (нечем варьировать). Reorder-only (slice).
   function _rotateBySeed(list, seed) {
+    const ks = _kernelSession();
+    if (ks && typeof ks.rotateBySeed === 'function') return ks.rotateBySeed(list, seed);
     const n = list.length;
     if (!n || !seed) return list;
     const off = ((Math.floor(seed) % n) + n) % n;
@@ -656,12 +745,13 @@
     if (!RENDERABLE_DOSESHAPES[atom.doseShape]) return false;
     // S1 explicit: возраст/уровень.
     const s1 = Fingers.validators.S1_ageLevelGate(atom, profile);
-    if (s1.some(function (i) { return i.level === 'error'; })) return false;
+    const ks = _kernelSession();
+    if (ks && ks.hasIssueLevel ? ks.hasIssueLevel(s1, 'error') : s1.some(function (i) { return i.level === 'error'; })) return false;
     // S9 explicit (ревью #4): prerequisites. Закрывает BFR-без-манжеты,
     // min-edge-без-base, fall-без-safe-setup и т.п. profile.completedPrerequisites
     // — массив выполненных токенов (default []: строго fail-closed).
     const s9 = Fingers.validators.S9_prerequisitesGate(atom, profile);
-    if (s9.some(function (i) { return i.level === 'error'; })) return false;
+    if (ks && ks.hasIssueLevel ? ks.hasIssueLevel(s9, 'error') : s9.some(function (i) { return i.level === 'error'; })) return false;
     return true;
   }
 
@@ -732,10 +822,32 @@
         t.checked = true;
       }
       const r = Fingers.validators.S2_tissueFreshness(a, opts.history, opts.now);
-      const ok = !r.some(function (i) { return i && i.level === 'error'; });
+      const ks = _kernelSession();
+      const ok = !(ks && ks.hasIssueLevel ? ks.hasIssueLevel(r, 'error') : r.some(function (i) { return i && i.level === 'error'; }));
       if (!ok) _recordTissueFilter(opts, a);
       return ok;
     }
+
+    function firstPassing(candidates, checks) {
+      const ks = _kernelSession();
+      if (ks && typeof ks.firstPassing === 'function') return ks.firstPassing(candidates, checks);
+      for (let i = 0; i < candidates.length; i++) {
+        let ok = true;
+        for (let j = 0; j < checks.length; j++) {
+          if (!checks[j](candidates[i])) { ok = false; break; }
+        }
+        if (ok) return candidates[i];
+      }
+      return null;
+    }
+
+    const commonChecks = [
+      fitsEnvelope,
+      progressionAllowed,
+      s2Fresh,
+      notDuplicate,
+      function (a) { return _atomFits(a, profile, allowed); }
+    ];
 
     function fitsEnvelope(a) {
       // Pre-flip duration envelope: pow_rfd_pulls is a valid methodology atom,
@@ -752,14 +864,8 @@
     // а лишь даёт лимитеру мезоцикла шанс до tissue-pref fallback'ов.
     if (focusQuality && qualities.indexOf(focusQuality) >= 0) {
       const candidates = _candidatesForQuality(focusQuality, level, variantSeed);
-      for (let k = 0; k < candidates.length; k++) {
-        const a = candidates[k];
-        if (!fitsEnvelope(a)) continue;
-        if (!progressionAllowed(a)) continue;
-        if (!s2Fresh(a)) continue;
-        if (!notDuplicate(a)) continue;
-        if (_atomFits(a, profile, allowed)) return a;
-      }
+      const picked = firstPassing(candidates, commonChecks);
+      if (picked) return picked;
     }
 
     // 1-я попытка — match quality + tissue preference + не дубль.
@@ -768,29 +874,16 @@
       const candidates = _candidatesForQuality(q, level, variantSeed);
       for (let j = 0; j < tissuePrefs.length; j++) {
         const tissue = tissuePrefs[j];
-        for (let k = 0; k < candidates.length; k++) {
-          const a = candidates[k];
-          if (a.tissueLoad !== tissue) continue;
-          if (!fitsEnvelope(a)) continue;
-          if (!progressionAllowed(a)) continue;
-          if (!s2Fresh(a)) continue;
-          if (!notDuplicate(a)) continue;
-          if (_atomFits(a, profile, allowed)) return a;
-        }
+        const picked = firstPassing(candidates, [function (a) { return a.tissueLoad === tissue; }].concat(commonChecks));
+        if (picked) return picked;
       }
     }
     // 2-я попытка — любой подходящий атом quality + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
       const candidates = _candidatesForQuality(q, level, variantSeed);
-      for (let k = 0; k < candidates.length; k++) {
-        const a = candidates[k];
-        if (!fitsEnvelope(a)) continue;
-        if (!progressionAllowed(a)) continue;
-        if (!s2Fresh(a)) continue;
-        if (!notDuplicate(a)) continue;
-        if (_atomFits(a, profile, allowed)) return a;
-      }
+      const picked = firstPassing(candidates, commonChecks);
+      if (picked) return picked;
     }
     return null;
   }
@@ -1143,7 +1236,8 @@
     }
 
     // Fail-closed по error.
-    if (safetyTrace.issues.some(function (i) { return i.level === 'error'; })) {
+    const ks = _kernelSession();
+    if (ks && ks.hasIssueLevel ? ks.hasIssueLevel(safetyTrace.issues, 'error') : safetyTrace.issues.some(function (i) { return i.level === 'error'; })) {
       return null;
     }
 

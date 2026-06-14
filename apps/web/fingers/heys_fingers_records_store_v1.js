@@ -35,21 +35,36 @@
 
   if (Fingers.records && Fingers.records.__registered) return;
 
+  function _kernelRecords() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.records;
+  }
+  function _kernelRunner() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+
+  function _emptyRecords() {
+    return { maxHangs: {}, updatedAt: 0 };
+  }
+
   function _getKey() {
     const cid = (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
+    const kr = _kernelRecords();
+    if (kr && kr.clientKey) return kr.clientKey('fingers_records_v1', cid, { style: 'heys-client-prefix' });
     return cid ? `heys_${cid}_fingers_records_v1` : 'heys_fingers_records_v1';
   }
 
   function _readAll() {
     try {
       if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
-        return HEYS.utils.lsGet(_getKey(), null) || { maxHangs: {}, updatedAt: 0 };
+        return HEYS.utils.lsGet(_getKey(), null) || _emptyRecords();
       }
+      const kr = _kernelRecords();
+      if (kr && kr.readJson) return kr.readJson(global.localStorage, _getKey(), _emptyRecords);
       const raw = localStorage.getItem(_getKey());
-      return raw ? JSON.parse(raw) : { maxHangs: {}, updatedAt: 0 };
+      return raw ? JSON.parse(raw) : _emptyRecords();
     } catch (e) {
       console.warn('[Fingers.records] read failed:', e);
-      return { maxHangs: {}, updatedAt: 0 };
+      return _emptyRecords();
     }
   }
 
@@ -59,6 +74,8 @@
         HEYS.utils.lsSet(_getKey(), data);
         return true;
       }
+      const kr = _kernelRecords();
+      if (kr && kr.writeJson) return kr.writeJson(global.localStorage, _getKey(), data, _emptyRecords);
       localStorage.setItem(_getKey(), JSON.stringify(data));
       return true;
     } catch (e) {
@@ -68,6 +85,8 @@
   }
 
   function _slug(gripId, edgeMm) {
+    const kr = _kernelRecords();
+    if (kr && kr.makeId) return kr.makeId([gripId, edgeMm + 'mm']);
     return `${gripId}_${edgeMm}mm`;
   }
 
@@ -110,32 +129,36 @@
       testedAt: newRecord.testedAt || new Date().toISOString(),
     });
 
-    let isPR = false;
-
-    if (!existing) {
-      isPR = true;
-    } else {
-      // Type may differ (user switched from no-scale to scale). Always accept newer test.
-      if (existing.type !== stamped.type) {
+    const kr = _kernelRecords();
+    let isPR = kr && kr.maxWins
+      ? kr.maxWins(existing, stamped, { metricsByType: { weight: 'mvcKg', time: 'holdTime' } })
+      : false;
+    if (!kr || !kr.maxWins) {
+      if (!existing) {
         isPR = true;
-      } else if (stamped.type === 'weight') {
-        const newVal = Number(stamped.mvcKg) || 0;
-        const oldVal = Number(existing.mvcKg) || 0;
-        if (newVal > oldVal) isPR = true;
-        else if (newVal === oldVal) {
-          // Tiebreak by testedAt
-          const newT = Date.parse(stamped.testedAt) || 0;
-          const oldT = Date.parse(existing.testedAt) || 0;
-          if (newT >= oldT) isPR = true;
-        }
-      } else if (stamped.type === 'time') {
-        const newVal = Number(stamped.holdTime) || 0;
-        const oldVal = Number(existing.holdTime) || 0;
-        if (newVal > oldVal) isPR = true;
-        else if (newVal === oldVal) {
-          const newT = Date.parse(stamped.testedAt) || 0;
-          const oldT = Date.parse(existing.testedAt) || 0;
-          if (newT >= oldT) isPR = true;
+      } else {
+        // Type may differ (user switched from no-scale to scale). Always accept newer test.
+        if (existing.type !== stamped.type) {
+          isPR = true;
+        } else if (stamped.type === 'weight') {
+          const newVal = Number(stamped.mvcKg) || 0;
+          const oldVal = Number(existing.mvcKg) || 0;
+          if (newVal > oldVal) isPR = true;
+          else if (newVal === oldVal) {
+            // Tiebreak by testedAt
+            const newT = Date.parse(stamped.testedAt) || 0;
+            const oldT = Date.parse(existing.testedAt) || 0;
+            if (newT >= oldT) isPR = true;
+          }
+        } else if (stamped.type === 'time') {
+          const newVal = Number(stamped.holdTime) || 0;
+          const oldVal = Number(existing.holdTime) || 0;
+          if (newVal > oldVal) isPR = true;
+          else if (newVal === oldVal) {
+            const newT = Date.parse(stamped.testedAt) || 0;
+            const oldT = Date.parse(existing.testedAt) || 0;
+            if (newT >= oldT) isPR = true;
+          }
         }
       }
     }
@@ -145,15 +168,19 @@
     // перетрена). maxHangs остаётся max-wins PR (backward compat). Кап 100 точек.
     if (!all.history) all.history = {};
     const hist = Array.isArray(all.history[slug]) ? all.history[slug] : [];
-    hist.push({
+    const point = {
       testedAt: stamped.testedAt,
       type: stamped.type,
       mvcKg: Number(stamped.mvcKg) || null,
       holdTime: Number(stamped.holdTime) || null,
       addedKg: Number(stamped.addedKg) || null,
       bw: Number(stamped.bw) || null,
-    });
-    if (hist.length > 100) hist.splice(0, hist.length - 100);
+    };
+    if (kr && kr.appendCapped) kr.appendCapped(hist, point, 100);
+    else {
+      hist.push(point);
+      if (hist.length > 100) hist.splice(0, hist.length - 100);
+    }
     all.history[slug] = hist;
 
     if (isPR) all.maxHangs[slug] = stamped;
@@ -187,7 +214,7 @@
     const all = _readAll();
     const slug = _slug(gripId, edgeMm);
     const hist = (all.history && Array.isArray(all.history[slug])) ? all.history[slug] : [];
-    return hist.map(function (p) {
+    const rows = hist.map(function (p) {
       const mvc = Number(p.mvcKg) || null;
       const bw = Number(p.bw) || null;
       return {
@@ -196,7 +223,11 @@
         holdTime: Number(p.holdTime) || null,
         strengthRatio: (mvc && bw) ? Number((mvc / bw).toFixed(3)) : null,
       };
-    }).sort(function (a, b) { return (Date.parse(a.testedAt) || 0) - (Date.parse(b.testedAt) || 0); });
+    });
+    const kr = _kernelRecords();
+    return kr && kr.sortByTimestamp
+      ? kr.sortByTimestamp(rows, { timestampKey: 'testedAt' })
+      : rows.sort(function (a, b) { return (Date.parse(a.testedAt) || 0) - (Date.parse(b.testedAt) || 0); });
   }
 
   function _progressionPoint(p) {
@@ -213,6 +244,10 @@
   }
 
   function _historySeries(hist) {
+    const kr = _kernelRecords();
+    if (kr && kr.mapTimeSeries) {
+      return kr.mapTimeSeries(hist, _progressionPoint, { valueKey: 'value' });
+    }
     return (Array.isArray(hist) ? hist : [])
       .map(_progressionPoint)
       .filter(Boolean)
@@ -261,7 +296,37 @@
     return Object.assign({}, all.progressionAxes || {});
   }
 
+  const PROGRESSION_DOSE_VALUE_FORMULAS = {
+    hang: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.workSec, 7)) * Math.max(1, ctx.num(d.reps, 1)) * Math.max(1, ctx.num(d.sets, 1));
+    },
+    continuous: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.workSec, 60)) * Math.max(1, ctx.num(d.sets, 1));
+    },
+    reps: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.reps, 1)) * Math.max(1, ctx.num(d.sets, 1));
+    },
+    attempts: function (ctx) {
+      return Math.max(1, ctx.num(ctx.dose.attempts, 1));
+    },
+    circuit: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.problemsPerRound, 1)) * Math.max(1, ctx.num(d.rounds, 1));
+    },
+    process: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.workSec, 60)) * Math.max(1, ctx.num(d.sets, 1));
+    }
+  };
+
   function _doseValue(ex) {
+    const krun = _kernelRunner();
+    if (krun && typeof krun.estimateDoseSec === 'function') {
+      return Math.max(1, krun.estimateDoseSec(ex, PROGRESSION_DOSE_VALUE_FORMULAS, { defaultSec: Number(ex && ex.totalWorkSeconds) || 1 }));
+    }
     const dose = (ex && ex.dose) || {};
     const n = function (v, fallback) {
       if (Array.isArray(v)) return Number(v[1] != null ? v[1] : v[0]) || fallback || 0;
@@ -321,9 +386,12 @@
     const ts = _sessionTs(log, nowMs);
     qualities.forEach(function (q) {
       const hist = Array.isArray(all.progressionHistory[q]) ? all.progressionHistory[q] : [];
-      hist.push({ ts: ts, value: Number(byQuality[q].toFixed(4)), source: 'session' });
+      const point = { ts: ts, value: Number(byQuality[q].toFixed(4)), source: 'session' };
+      hist.push(point);
       hist.sort(function (a, b) { return (Number(a.ts) || 0) - (Number(b.ts) || 0); });
-      if (hist.length > 100) hist.splice(0, hist.length - 100);
+      const kr = _kernelRecords();
+      if (kr && kr.capList) kr.capList(hist, 100);
+      else if (hist.length > 100) hist.splice(0, hist.length - 100);
       all.progressionHistory[q] = hist;
     });
     all.updatedAt = Date.now();
@@ -331,6 +399,15 @@
   }
 
   function _sessionProgressionSeries(points) {
+    const kr = _kernelRecords();
+    if (kr && kr.mapTimeSeries) {
+      return kr.mapTimeSeries(points, function (p) {
+        const ts = Number(p && p.ts) || Date.parse(p && p.testedAt);
+        const value = Number(p && p.value);
+        return (isFinite(ts) && ts > 0 && value > 0)
+          ? { ts: ts, value: Number(value.toFixed(4)) } : null;
+      }, { valueKey: 'value' });
+    }
     return (Array.isArray(points) ? points : [])
       .map(function (p) {
         const ts = Number(p && p.ts) || Date.parse(p && p.testedAt);
@@ -353,22 +430,32 @@
     const canonical = _slug('halfcrimp', 20);
     let chosenSlug = null;
     let chosenSeries = [];
-
-    const canonicalSeries = _historySeries(history[canonical]);
-    if (canonicalSeries.length) {
-      chosenSlug = canonical;
-      chosenSeries = canonicalSeries;
-    } else {
+    const kr = _kernelRecords();
+    if (kr && kr.selectSeries) {
+      const seriesBySlug = {};
       Object.keys(history).forEach(function (slug) {
-        const series = _historySeries(history[slug]);
-        if (!series.length) return;
-        const last = series[series.length - 1].ts;
-        const chosenLast = chosenSeries.length ? chosenSeries[chosenSeries.length - 1].ts : 0;
-        if (series.length > chosenSeries.length || (series.length === chosenSeries.length && last > chosenLast)) {
-          chosenSlug = slug;
-          chosenSeries = series;
-        }
+        seriesBySlug[slug] = _historySeries(history[slug]);
       });
+      const picked = kr.selectSeries(seriesBySlug, { canonicalKey: canonical, timestampKey: 'ts' });
+      chosenSlug = picked.key;
+      chosenSeries = picked.series;
+    } else {
+      const canonicalSeries = _historySeries(history[canonical]);
+      if (canonicalSeries.length) {
+        chosenSlug = canonical;
+        chosenSeries = canonicalSeries;
+      } else {
+        Object.keys(history).forEach(function (slug) {
+          const series = _historySeries(history[slug]);
+          if (!series.length) return;
+          const last = series[series.length - 1].ts;
+          const chosenLast = chosenSeries.length ? chosenSeries[chosenSeries.length - 1].ts : 0;
+          if (series.length > chosenSeries.length || (series.length === chosenSeries.length && last > chosenLast)) {
+            chosenSlug = slug;
+            chosenSeries = series;
+          }
+        });
+      }
     }
 
     const recordsByQuality = {};

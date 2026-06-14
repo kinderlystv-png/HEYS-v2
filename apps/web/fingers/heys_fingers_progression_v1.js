@@ -59,6 +59,10 @@
   // Default window для плато (Q-1.3-1: 2-3 нед / 3+ сессий, tunable).
   const DEFAULT_WINDOW_SESSIONS = 3;
 
+  function _kernelProgression() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.progression;
+  }
+
   function _num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
 
   /**
@@ -79,6 +83,9 @@
    * }}
    */
   function detectPlateau(opts) {
+    const kp = _kernelProgression();
+    if (kp && kp.relativePlateau) return kp.relativePlateau(opts);
+
     const o = opts || {};
     const series = Array.isArray(o.series) ? o.series : [];
     const win = Math.max(2, _num(o.windowSessions) || DEFAULT_WINDOW_SESSIONS);
@@ -130,16 +137,12 @@
    */
   function nextAxis(quality, currentAxis) {
     const policy = PROGRESSION_POLICY[quality] || ['volume'];
-    if (!currentAxis) {
-      return { nextAxis: policy[0], exhausted: false, policy: policy };
-    }
+    const kp = _kernelProgression();
+    if (kp && kp.nextAxis) return kp.nextAxis(policy, currentAxis);
+    if (!currentAxis) return { nextAxis: policy[0], exhausted: false, policy: policy };
     const idx = policy.indexOf(currentAxis);
-    if (idx < 0) {
-      return { nextAxis: policy[0], exhausted: false, policy: policy };
-    }
-    if (idx + 1 >= policy.length) {
-      return { nextAxis: null, exhausted: true, policy: policy };
-    }
+    if (idx < 0) return { nextAxis: policy[0], exhausted: false, policy: policy };
+    if (idx + 1 >= policy.length) return { nextAxis: null, exhausted: true, policy: policy };
     return { nextAxis: policy[idx + 1], exhausted: false, policy: policy };
   }
 

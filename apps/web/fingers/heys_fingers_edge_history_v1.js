@@ -33,8 +33,14 @@
   const RECENT_DEFAULT = 6;   // сколько последних записей смотреть для lean
   const DAY_MS = 24 * 60 * 60 * 1000;
 
+  function _recordsKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.records;
+  }
+
   function _getKey() {
     const cid = HEYS && HEYS.currentClientId;
+    const kr = _recordsKernel();
+    if (kr && kr.clientKey) return kr.clientKey('fingers_edge_history_v1', cid, { style: 'heys-client-prefix' });
     return cid ? 'heys_' + cid + '_fingers_edge_history_v1' : 'heys_fingers_edge_history_v1';
   }
 
@@ -105,12 +111,20 @@
         lean: p.lean
       });
     });
-    // prune: окно по времени, затем cap по количеству.
-    const cutoff = ts - WINDOW_DAYS * DAY_MS;
-    let pruned = entries.filter(function (e) {
-      return typeof e.ts !== 'number' || e.ts >= cutoff;
-    });
-    if (pruned.length > MAX_ENTRIES) pruned = pruned.slice(pruned.length - MAX_ENTRIES);
+    const kr = _recordsKernel();
+    let pruned = kr && kr.appendWindowed
+      ? kr.appendWindowed([], entries, {
+        timestampKey: 'ts',
+        nowMs: ts,
+        windowDays: WINDOW_DAYS,
+        cap: MAX_ENTRIES
+      })
+      : entries.filter(function (e) {
+        return typeof e.ts !== 'number' || e.ts >= ts - WINDOW_DAYS * DAY_MS;
+      });
+    if (!kr || !kr.appendWindowed) {
+      if (pruned.length > MAX_ENTRIES) pruned = pruned.slice(pruned.length - MAX_ENTRIES);
+    }
     return _write({ version: 1, entries: pruned });
   }
 
@@ -123,10 +137,18 @@
     const limit = typeof o.limit === 'number' ? o.limit : RECENT_DEFAULT;
     const nowMs = typeof o.nowMs === 'number' ? o.nowMs : _now();
     const windowDays = typeof o.windowDays === 'number' ? o.windowDays : WINDOW_DAYS;
-    const cutoff = nowMs - windowDays * DAY_MS;
-    const all = _entries().filter(function (e) {
-      return typeof e.ts !== 'number' || e.ts >= cutoff;
-    });
+    const kr = _recordsKernel();
+    const all = kr && kr.recentWindow
+      ? kr.recentWindow(_entries(), {
+        timestampKey: 'ts',
+        nowMs: nowMs,
+        windowDays: windowDays,
+        limit: 0,
+        sortAsc: false
+      })
+      : _entries().filter(function (e) {
+        return typeof e.ts !== 'number' || e.ts >= nowMs - windowDays * DAY_MS;
+      });
     return limit > 0 ? all.slice(Math.max(0, all.length - limit)) : all;
   }
 

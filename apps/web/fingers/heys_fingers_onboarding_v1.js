@@ -36,6 +36,10 @@
   const React = global.React;
   const h = React && React.createElement;
 
+  function _kernelOnboarding() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.onboarding;
+  }
+
   // ─── Storage helpers ─────────────────────────────────────────────────
 
   function _getKey() {
@@ -46,6 +50,8 @@
   // Prefill из глобального профиля HEYS (birthDate → age, ранее введённый
   // fingerboardProfile если onboarding запускается повторно).
   function _calcAgeFromBirthDate(birthDate) {
+    const ko = _kernelOnboarding();
+    if (ko && ko.ageFromBirthDate) return ko.ageFromBirthDate(birthDate);
     if (!birthDate) return null;
     const birth = new Date(birthDate);
     if (isNaN(birth.getTime())) return null;
@@ -174,6 +180,8 @@
   // Темы: оставлены 2 — 'A' (HEYS native) и 'C' (Climbing, default).
   // Тема 'B' (Custom blue) удалена; legacy profile со старым value мигрируется в 'C'.
   function _normalizeTheme(themeId) {
+    const ko = _kernelOnboarding();
+    if (ko && ko.enumValue) return ko.enumValue(themeId, ['A', 'C'], 'C');
     return (themeId === 'A' || themeId === 'C') ? themeId : 'C';
   }
 

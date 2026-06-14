@@ -48,10 +48,16 @@
   }
 
   function _formatDateKey(d) {
+    const kd = HEYS.TrainingKernel && HEYS.TrainingKernel.dates;
+    if (kd && typeof kd.dateKeyLocal === 'function') return kd.dateKeyLocal(d);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
+  }
+
+  function _calendarKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.calendar;
   }
 
   function _readDay(dateKey) {
@@ -194,18 +200,24 @@
     const weekdayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
     const year = monthDate.getFullYear();
     const month = monthDate.getMonth();
-    const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7; // 0=Mon
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    const cells = [];
-    for (let i = 0; i < firstDayOfWeek; i++) {
-      cells.push({ empty: true, key: 'e-' + i });
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      const d = new Date(year, month, day);
-      const k = _formatDateKey(d);
-      cells.push({ day: day, dateKey: k, info: data[k], key: k });
-    }
+    const kc = _calendarKernel();
+    const cells = kc && typeof kc.monthCells === 'function'
+      ? kc.monthCells(year, month).map(function (cell) {
+        if (cell.empty) return cell;
+        return Object.assign({}, cell, { info: data[cell.dateKey] });
+      })
+      : (function () {
+        const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7; // 0=Mon
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const out = [];
+        for (let i = 0; i < firstDayOfWeek; i++) out.push({ empty: true, key: 'e-' + i });
+        for (let day = 1; day <= daysInMonth; day++) {
+          const d = new Date(year, month, day);
+          const k = _formatDateKey(d);
+          out.push({ day: day, dateKey: k, info: data[k], key: k });
+        }
+        return out;
+      })();
 
     const cellColor = (info) => {
       if (!info) return 'transparent';
@@ -346,6 +358,14 @@
 
     // Build grid: array of 53 weeks × 7 days, каждый день = {date, info}
     const grid = React.useMemo(() => {
+      const kc = _calendarKernel();
+      if (kc && typeof kc.yearGrid === 'function') {
+        return kc.yearGrid(year).map(function (week) {
+          return week.map(function (cell) {
+            return Object.assign({}, cell, { info: cell.dateKey ? data[cell.dateKey] : null });
+          });
+        });
+      }
       const start = new Date(year, 0, 1);
       // Align к Monday — week starts Mon в RU UX.
       const dayOfWeek = (start.getDay() + 6) % 7; // 0=Mon

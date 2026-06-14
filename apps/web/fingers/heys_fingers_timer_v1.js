@@ -112,7 +112,26 @@
   const TIMER_TAB_ID = Fingers.__timerTabId || _makeTimerTabId();
   Fingers.__timerTabId = TIMER_TAB_ID;
 
+  function _runnerKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+
+  function _timerOwnerLock() {
+    const kr = _runnerKernel();
+    if (!kr || typeof kr.createOwnerLock !== 'function') return null;
+    return kr.createOwnerLock({
+      storage: global.localStorage || null,
+      key: _timerLockKey(),
+      ownerId: TIMER_TAB_ID,
+      ttlMs: TIMER_LOCK_TTL_MS,
+      now: _now,
+      failOpenOnStorageUnavailable: true
+    });
+  }
+
   function _readTimerLock() {
+    const lock = _timerOwnerLock();
+    if (lock && typeof lock.read === 'function') return lock.read();
     try {
       const raw = global.localStorage && global.localStorage.getItem(_timerLockKey());
       return raw ? JSON.parse(raw) : null;
@@ -120,6 +139,8 @@
   }
 
   function _writeTimerLock(lock) {
+    const ownerLock = _timerOwnerLock();
+    if (ownerLock && typeof ownerLock.write === 'function') return ownerLock.write(lock);
     try {
       if (!global.localStorage) return false;
       global.localStorage.setItem(_timerLockKey(), JSON.stringify(lock));
@@ -128,6 +149,8 @@
   }
 
   function _removeTimerLock() {
+    const lock = _timerOwnerLock();
+    if (lock && typeof lock.release === 'function') return lock.release();
     try {
       const lock = _readTimerLock();
       if (lock && lock.ownerTabId && lock.ownerTabId !== TIMER_TAB_ID) return false;
@@ -137,12 +160,38 @@
   }
 
   function _isTimerLockFresh(lock, now) {
+    const kr = _runnerKernel();
+    if (kr && typeof kr.isOwnerLockFresh === 'function') return kr.isOwnerLockFresh(lock, now, TIMER_LOCK_TTL_MS);
     if (!lock || !lock.ownerTabId) return false;
     const heartbeatAt = Number(lock.heartbeatAt) || 0;
     return heartbeatAt > 0 && (now - heartbeatAt) <= TIMER_LOCK_TTL_MS;
   }
 
+  function _remainingSecFromSnapshot(snap) {
+    const kr = _runnerKernel();
+    if (kr && typeof kr.remainingSecFromSnapshot === 'function') {
+      return kr.remainingSecFromSnapshot(snap, { minSec: 0.5 });
+    }
+    const elapsedMs = Date.now() - (Number(snap.phaseStartedAt) || Date.now());
+    const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
+    return remainingSec >= 0.5 ? Math.ceil(remainingSec) : 0.5;
+  }
+
   function _acquireTimerLock(reason) {
+    const ownerLock = _timerOwnerLock();
+    if (ownerLock && typeof ownerLock.acquire === 'function') {
+      const result = ownerLock.acquire(reason || 'start');
+      if (result.ok) return true;
+      const existing = result.existing || {};
+      Fingers.lastTimerLockDenied = {
+        key: _timerLockKey(),
+        ownerTabId: existing.ownerTabId,
+        heartbeatAt: existing.heartbeatAt,
+        deniedAt: result.deniedAt || _now(),
+        reason: result.reason === 'held-by-another-owner' ? 'held-by-another-tab' : result.reason
+      };
+      return false;
+    }
     const now = _now();
     const existing = _readTimerLock();
     if (_isTimerLockFresh(existing, now) && existing.ownerTabId !== TIMER_TAB_ID) {
@@ -177,6 +226,8 @@
   }
 
   function _touchTimerLock() {
+    const ownerLock = _timerOwnerLock();
+    if (ownerLock && typeof ownerLock.touch === 'function') return ownerLock.touch();
     const lock = _readTimerLock();
     if (!lock || lock.ownerTabId !== TIMER_TAB_ID) return false;
     lock.heartbeatAt = _now();
@@ -682,9 +733,7 @@
       if (wasPaused) {
         targetSec = Math.max(1, Number(snap.pausedAtRemainingSec) || 0);
       } else {
-        const elapsedMs = Date.now() - (Number(snap.phaseStartedAt) || Date.now());
-        const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
-        targetSec = remainingSec >= 0.5 ? Math.ceil(remainingSec) : 0.5;
+        targetSec = _remainingSecFromSnapshot(snap);
       }
 
       core.enterPhase(targetState, targetSec, { setIdx: snapSetIdx, repIdx: snapRepIdx });
@@ -1031,9 +1080,7 @@
         if (wasPaused) {
           targetSec = Math.max(1, Number(snap.pausedAtRemainingSec) || 0);
         } else {
-          const elapsedMs = Date.now() - (Number(snap.phaseStartedAt) || Date.now());
-          const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
-          targetSec = remainingSec >= 0.5 ? Math.ceil(remainingSec) : 0.5;
+          targetSec = _remainingSecFromSnapshot(snap);
         }
         core.enterPhase(targetState, targetSec, { setIdx: snapSetIdx });
       }

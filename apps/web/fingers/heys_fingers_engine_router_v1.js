@@ -108,6 +108,11 @@
 
   // Диагностика последнего вызова (для тестов/телеметрии).
   let _lastSource = null;
+  let _kernelRouterCore = null;
+
+  function _kernelRouter() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.router;
+  }
 
   const SOURCE_KEYS = ['old', 'new', 'fallback', 'fallback-error', 'fallback-contract'];
   function _emptyTelemetry() {
@@ -194,6 +199,15 @@
   }
 
   function evaluateRolloutGate(thresholds) {
+    const kr = _kernelRouter();
+    const core = _getKernelRouterCore();
+    if (kr && typeof kr.evaluateRolloutGate === 'function' && core) {
+      return kr.evaluateRolloutGate({
+        telemetry: core.getTelemetry(),
+        lastShadowDiff: core.lastShadowDiff,
+        thresholds: Object.assign({}, DEFAULT_ROLLOUT_GATE, thresholds || {})
+      });
+    }
     const cfg = Object.assign({}, DEFAULT_ROLLOUT_GATE, thresholds || {});
     const telemetry = _copyTelemetry();
     const diff = _lastShadowDiff;
@@ -518,7 +532,38 @@
     }
   }
 
+  function _getKernelRouterCore() {
+    if (_kernelRouterCore) return _kernelRouterCore;
+    const kr = _kernelRouter();
+    if (!kr || typeof kr.createStranglerRouter !== 'function') return null;
+    _kernelRouterCore = kr.createStranglerRouter({
+      sourceKeys: SOURCE_KEYS,
+      oldEngine: _callOld,
+      newEngine: function () { return Fingers.sessionBuilder; },
+      enrich: _enrichOpts,
+      validate: isValidSession,
+      useNew: function () { return Fingers.flags && Fingers.flags.newEngine === true; },
+      useShadow: function () { return Fingers.flags && Fingers.flags.shadowCompare === true; },
+      shadowDiff: _diffSessions,
+      warn: function (kind, payload) {
+        if (typeof console === 'undefined' || !console.warn) return;
+        if (kind === 'contract') console.warn('[fingers.engineRouter] new engine output failed contract — fallback to old', payload);
+        else if (kind === 'shadow-error') console.warn('[fingers.engineRouter] shadow-compare error (ignored)', payload);
+        else if (kind === 'exception') console.warn('[fingers.engineRouter] new engine threw — fallback to old', payload);
+      },
+      debug: function (diff) {
+        if (typeof console !== 'undefined' && console.debug) {
+          console.debug('[fingers.engineRouter] shadow-compare diff', diff);
+        }
+      }
+    });
+    return _kernelRouterCore;
+  }
+
   function recommendDay(opts) {
+    const core = _getKernelRouterCore();
+    if (core) return core.recommend(opts);
+
     // Plumbing Гейта #1: enrichment ДО branch — mixEngine игнорирует unknown
     // opts, builder при flag=on получает реальные MVC/level.
     const enriched = _enrichOpts(opts);
@@ -578,15 +623,28 @@
     recommendDay: recommendDay,
     isValidSession: isValidSession,
     _enrichOpts: _enrichOpts, // exposed for tests
-    getTelemetry: _copyTelemetry,
-    resetTelemetry: _resetTelemetry,
+    getTelemetry: function () {
+      const core = _getKernelRouterCore();
+      return core ? core.getTelemetry() : _copyTelemetry();
+    },
+    resetTelemetry: function () {
+      const core = _getKernelRouterCore();
+      if (core) core.resetTelemetry();
+      _resetTelemetry();
+    },
     DEFAULT_ROLLOUT_GATE: DEFAULT_ROLLOUT_GATE,
     configureCanary: configureCanary,
     loadCanaryFlag: loadCanaryFlag,
     evaluateRolloutGate: evaluateRolloutGate,
     enableCanaryIfGatePasses: enableCanaryIfGatePasses,
-    get lastSource() { return _lastSource; },
-    get lastShadowDiff() { return _lastShadowDiff; }
+    get lastSource() {
+      const core = _getKernelRouterCore();
+      return core ? core.lastSource : _lastSource;
+    },
+    get lastShadowDiff() {
+      const core = _getKernelRouterCore();
+      return core ? core.lastShadowDiff : _lastShadowDiff;
+    }
   };
 
   _loadCanaryFlagSoon();

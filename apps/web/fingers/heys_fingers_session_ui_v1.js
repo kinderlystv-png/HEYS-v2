@@ -833,49 +833,79 @@
     return (ex && ex.doseShape) || 'hang';
   }
 
-  function _plannedExerciseMetrics(ex) {
-    const shape = _doseShapeOf(ex);
-    const dose = (ex && ex.dose) || {};
-    if (shape === 'continuous') {
+  function _runnerKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+
+  const PLANNED_METRIC_FORMULAS = {
+    continuous: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const sets = Math.max(1, _num(dose.sets, 1));
       const workSec = _num(dose.workSec, 0) * sets;
       const restSec = _num(dose.restSetsSec, 0) * Math.max(0, sets - 1);
       return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: sets, unitKind: 'sets' };
-    }
-    if (shape === 'attempts') {
+    },
+    attempts: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const attempts = Math.max(1, _rangeAvg(dose.attempts, 1));
       const moves = _rangeAvg(dose.movesPerAttempt, 1);
       const workSec = moves * 2.5 * attempts;
       const restSec = _num(dose.restSetsSec, 0) * Math.max(0, attempts - 1);
       return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: attempts, unitKind: 'attempts' };
-    }
-    if (shape === 'circuit') {
+    },
+    circuit: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const rounds = Math.max(1, _num(dose.rounds, 1));
       const problems = Math.max(1, _num(dose.problemsPerRound, 1));
       const workSec = problems * rounds * 25;
       const restSec = _num(dose.restRoundsSec, 0) * Math.max(0, rounds - 1);
       return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: rounds, unitKind: 'rounds' };
-    }
-    if (shape === 'reps') {
+    },
+    reps: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const sets = Math.max(1, _num(dose.sets, ex && ex.setsCount != null ? ex.setsCount : 1));
       const reps = _rangeAvg(dose.reps !== undefined ? dose.reps : (ex && ex.repsPerSet), 1);
       const workSec = reps * 3 * sets;
       const restSec = _num(dose.restSetsSec, ex && ex.restBetweenSetsSec != null ? ex.restBetweenSetsSec : 0) * Math.max(0, sets - 1);
       return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: reps * sets, unitKind: 'reps' };
-    }
-    if (shape === 'process') {
+    },
+    process: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const checklist = Array.isArray(dose.checklist) ? dose.checklist : [];
       return { shape: shape, durationSec: 0, workSec: 0, units: Math.max(1, checklist.length || 1), unitKind: 'items' };
+    },
+    default: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const workSec = _num(dose.workSec, ex && ex.hangSec != null ? ex.hangSec : 0);
+      const restSec = _num(dose.restSec, ex && ex.restSec != null ? ex.restSec : 0);
+      const reps = _num(dose.reps, ex && ex.repsPerSet != null ? ex.repsPerSet : 1);
+      const sets = _num(dose.sets, ex && ex.setsCount != null ? ex.setsCount : 1);
+      const restSetsSec = _num(dose.restSetsSec, ex && ex.restBetweenSetsSec != null ? ex.restBetweenSetsSec : 0);
+      // Legacy hang contract: keep the old inclusive per-set rest formula.
+      const oneSet = (workSec + restSec) * reps + restSetsSec;
+      return { shape: 'hang', durationSec: oneSet * sets, workSec: workSec * reps * sets, units: reps * sets, unitKind: 'hangs' };
     }
+  };
 
-    const workSec = _num(dose.workSec, ex && ex.hangSec != null ? ex.hangSec : 0);
-    const restSec = _num(dose.restSec, ex && ex.restSec != null ? ex.restSec : 0);
-    const reps = _num(dose.reps, ex && ex.repsPerSet != null ? ex.repsPerSet : 1);
-    const sets = _num(dose.sets, ex && ex.setsCount != null ? ex.setsCount : 1);
-    const restSetsSec = _num(dose.restSetsSec, ex && ex.restBetweenSetsSec != null ? ex.restBetweenSetsSec : 0);
-    // Legacy hang contract: keep the old inclusive per-set rest formula.
-    const oneSet = (workSec + restSec) * reps + restSetsSec;
-    return { shape: 'hang', durationSec: oneSet * sets, workSec: workSec * reps * sets, units: reps * sets, unitKind: 'hangs' };
+  function _plannedExerciseMetrics(ex) {
+    const rk = _runnerKernel();
+    if (rk && typeof rk.estimateDoseMetrics === 'function') {
+      return rk.estimateDoseMetrics(ex, PLANNED_METRIC_FORMULAS, { defaultShape: 'hang' });
+    }
+    const shape = _doseShapeOf(ex);
+    const fn = PLANNED_METRIC_FORMULAS[shape] || PLANNED_METRIC_FORMULAS.default;
+    return fn({ exercise: ex, dose: (ex && ex.dose) || {}, shape: shape });
   }
 
   function _applyCompletionToMetrics(metrics, ex) {
@@ -883,9 +913,15 @@
     if (!c || !metrics || !metrics.units) return metrics;
     const done = Math.max(0, Math.min(metrics.units, _num(c.completedUnits, 0)));
     const ratio = Math.max(0, Math.min(1, done / metrics.units));
-    return Object.assign({}, metrics, {
-      durationSec: metrics.durationSec * ratio,
-      workSec: metrics.workSec * ratio,
+    const rk = _runnerKernel();
+    const scaled = rk && typeof rk.scaleMetrics === 'function'
+      ? rk.scaleMetrics(metrics, ratio)
+      : Object.assign({}, metrics, {
+        durationSec: metrics.durationSec * ratio,
+        workSec: metrics.workSec * ratio,
+        units: metrics.units * ratio
+      });
+    return Object.assign({}, scaled, {
       units: done,
       plannedUnits: metrics.units,
       partial: ratio < 1
@@ -907,23 +943,28 @@
   }
 
   function _summarizeFingersExercises(exercises) {
-    const out = {
-      durationSec: 0,
-      workSec: 0,
-      units: 0,
-      unitKind: null,
-      shapeCounts: {},
-      mixedUnits: false
-    };
-    (Array.isArray(exercises) ? exercises : []).forEach(function (ex) {
-      const m = _exerciseMetrics(ex);
-      out.durationSec += m.durationSec || 0;
-      out.workSec += m.workSec || 0;
-      out.units += m.units || 0;
-      out.shapeCounts[m.shape] = (out.shapeCounts[m.shape] || 0) + 1;
-      if (!out.unitKind) out.unitKind = m.unitKind;
-      else if (out.unitKind !== m.unitKind) out.mixedUnits = true;
-    });
+    const rk = _runnerKernel();
+    const out = rk && typeof rk.summarizeMetrics === 'function'
+      ? rk.summarizeMetrics(exercises, _exerciseMetrics)
+      : {
+        durationSec: 0,
+        workSec: 0,
+        units: 0,
+        unitKind: null,
+        shapeCounts: {},
+        mixedUnits: false
+      };
+    if (!(rk && typeof rk.summarizeMetrics === 'function')) {
+      (Array.isArray(exercises) ? exercises : []).forEach(function (ex) {
+        const m = _exerciseMetrics(ex);
+        out.durationSec += m.durationSec || 0;
+        out.workSec += m.workSec || 0;
+        out.units += m.units || 0;
+        out.shapeCounts[m.shape] = (out.shapeCounts[m.shape] || 0) + 1;
+        if (!out.unitKind) out.unitKind = m.unitKind;
+        else if (out.unitKind !== m.unitKind) out.mixedUnits = true;
+      });
+    }
     out.totalDurationMinutes = Math.round(out.durationSec / 60);
     out.totalWorkSeconds = Math.round(out.workSec);
     out.totalUnits = Math.round(out.units);

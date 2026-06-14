@@ -5480,8 +5480,10 @@
     const CONFIDENCE = ['A', 'B', 'C'];
 
     // Проверка покрытия: каждый блок должен иметь >=1 атом.
+    // Через atomsByBlock() — работает и на kernel-индексе, и на fallback
+    // (локальный ATOMS_BY_BLOCK пуст, когда активен kernel; см. прод-порядок загрузки).
     BLOCKS.forEach(function (b) {
-      if (ATOMS_BY_BLOCK[b.id].length === 0) {
+      if (atomsByBlock(b.id).length === 0) {
         errors.push('block ' + b.id + ' (' + b.label + ') пуст');
       }
     });
@@ -5604,6 +5606,9 @@
   // ─── S1 — age/level gate (fail-closed) ────────────────────────────────────────
   // METHODOLOGY ч.9.2/9.3, IMPLEMENTATION_MAP S1.
   function S1_ageLevelGate(atom, profile) {
+    // S1 — из ОБЩЕГО ЯДРА (HEYS.TrainingKernel.gate.levelAgeGate); ниже локальный фолбэк
+    const _kg = HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+    if (_kg && _kg.levelAgeGate) return _kg.levelAgeGate(atom, profile, LEVEL_ORDER);
     if (!atom || typeof atom !== 'object') return [err('S1.invalid_atom', 'атом не объект')];
     if (!profile || typeof profile !== 'object')
       return [err('S1.no_profile', 'нет профиля — fail-closed')];
@@ -5717,6 +5722,25 @@
   // METHODOLOGY ч.5.7/9.2, IMPLEMENTATION_MAP S3.
   // session = {blocks: [...], context: {warmupDone: bool}}
   function S3_warmupRequired(session) {
+    const _kg = HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+    if (_kg && _kg.warmupRequired) {
+      return _kg.warmupRequired(session, {
+        invalid: function (s) { return !s || !Array.isArray(s.blocks); },
+        invalidMsg: 'сессия без blocks',
+        items: function (s) { return s.blocks; },
+        isIntensive: function (b) { return b && (b.fatigueCost === 'high' || b.fatigueCost === 'max'); },
+        warmupDone: function (s) { return !!(s.context && s.context.warmupDone); },
+        emptyCode: 'S3.na',
+        emptyMsg: 'S3 не применим: нет intensive-блоков',
+        missingCode: 'S3.warmup_missing',
+        missingMsg: 'intensive-блок(и) без warmup_done — сессия невалидна',
+        missingExtra: function (intensive) {
+          return { intensiveBlockIds: intensive.map(function (b) { return b.id; }) };
+        },
+        passCode: 'S3.pass',
+        passMsg: 'S3: разминка выполнена'
+      });
+    }
     if (!session || !Array.isArray(session.blocks))
       return [err('S3.invalid_session', 'сессия без blocks')];
     const intensive = session.blocks.filter(function (b) {
@@ -5827,6 +5851,8 @@
   // отдельное продуктовое решение (warmup_done очевидно от S3-runner'а;
   // safety-critical токены вроде bfr/fall — никогда).
   function S9_prerequisitesGate(atom, profile) {
+    const _kg = HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+    if (_kg && _kg.prerequisitesGate) return _kg.prerequisitesGate(atom, profile, { codePrefix: 'S9' });
     if (!atom || typeof atom !== 'object') return [err('S9.invalid_atom', 'атом не объект')];
     const prereqs = (atom.gates && Array.isArray(atom.gates.prerequisites))
       ? atom.gates.prerequisites : [];
@@ -6019,41 +6045,49 @@
 
   // ─── runAll — оркестратор для типичного contextset ────────────────────────────
   // Запускает применимые валидаторы по входу. Возвращает плоский массив Issue[].
+  function _gateKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+  }
+  function _runRuleList(rules) {
+    const kg = _gateKernel();
+    if (kg && kg.runRules) return kg.runRules(rules);
+    return rules.reduce(function (acc, fn) { return acc.concat(fn()); }, []);
+  }
   function runAll(input, profile, history) {
-    const all = [];
+    const rules = [];
     if (input && input.atom) {
-      all.push.apply(all, S1_ageLevelGate(input.atom, profile));
-      all.push.apply(all, S5_openhandFirst(input.atom, profile));
-      all.push.apply(all, S2_tissueFreshness(input.atom, history, input.now));
+      rules.push(function () { return S1_ageLevelGate(input.atom, profile); });
+      rules.push(function () { return S5_openhandFirst(input.atom, profile); });
+      rules.push(function () { return S2_tissueFreshness(input.atom, history, input.now); });
     }
     if (input && input.session) {
-      all.push.apply(all, S3_warmupRequired(input.session));
-      all.push.apply(all, V_sessionOrder(input.session));
+      rules.push(function () { return S3_warmupRequired(input.session); });
+      rules.push(function () { return V_sessionOrder(input.session); });
     }
     if (input && input.block) {
-      all.push.apply(all, V_blockHomogeneity(input.block));
+      rules.push(function () { return V_blockHomogeneity(input.block); });
     }
     if (input && input.microcycle) {
-      all.push.apply(all, S6_antagonistBalance(input.microcycle));
+      rules.push(function () { return S6_antagonistBalance(input.microcycle); });
     }
     if (input && input.mesocycle) {
-      all.push.apply(all, S7_deloadRequired(input.mesocycle));
-      all.push.apply(all, V_energySystemSequence(input.mesocycle));
+      rules.push(function () { return S7_deloadRequired(input.mesocycle); });
+      rules.push(function () { return V_energySystemSequence(input.mesocycle); });
     }
     if (input && input.week && profile) {
-      all.push.apply(all, V_skillBalance(input.week, profile.level));
+      rules.push(function () { return V_skillBalance(input.week, profile.level); });
     }
     if (profile) {
-      all.push.apply(all, V_ageModifier(profile));
-      all.push.apply(all, V_skinStatus(input, profile));
+      rules.push(function () { return V_ageModifier(profile); });
+      rules.push(function () { return V_skinStatus(input, profile); });
     }
     if (input && input.ftl && typeof input.ftl.week === 'number') {
-      all.push.apply(all, S4_progressionCap(input.ftl.week, input.ftl.trailingAvg));
+      rules.push(function () { return S4_progressionCap(input.ftl.week, input.ftl.trailingAvg); });
     }
     if (input && input.sessionLog) {
-      all.push.apply(all, S8_painStop(input.sessionLog));
+      rules.push(function () { return S8_painStop(input.sessionLog); });
     }
-    return all;
+    return _runRuleList(rules);
   }
 
   Fingers.validators = {
@@ -6140,6 +6174,10 @@
   // Default window для плато (Q-1.3-1: 2-3 нед / 3+ сессий, tunable).
   const DEFAULT_WINDOW_SESSIONS = 3;
 
+  function _kernelProgression() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.progression;
+  }
+
   function _num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
 
   /**
@@ -6160,6 +6198,9 @@
    * }}
    */
   function detectPlateau(opts) {
+    const kp = _kernelProgression();
+    if (kp && kp.relativePlateau) return kp.relativePlateau(opts);
+
     const o = opts || {};
     const series = Array.isArray(o.series) ? o.series : [];
     const win = Math.max(2, _num(o.windowSessions) || DEFAULT_WINDOW_SESSIONS);
@@ -6211,16 +6252,12 @@
    */
   function nextAxis(quality, currentAxis) {
     const policy = PROGRESSION_POLICY[quality] || ['volume'];
-    if (!currentAxis) {
-      return { nextAxis: policy[0], exhausted: false, policy: policy };
-    }
+    const kp = _kernelProgression();
+    if (kp && kp.nextAxis) return kp.nextAxis(policy, currentAxis);
+    if (!currentAxis) return { nextAxis: policy[0], exhausted: false, policy: policy };
     const idx = policy.indexOf(currentAxis);
-    if (idx < 0) {
-      return { nextAxis: policy[0], exhausted: false, policy: policy };
-    }
-    if (idx + 1 >= policy.length) {
-      return { nextAxis: null, exhausted: true, policy: policy };
-    }
+    if (idx < 0) return { nextAxis: policy[0], exhausted: false, policy: policy };
+    if (idx + 1 >= policy.length) return { nextAxis: null, exhausted: true, policy: policy };
     return { nextAxis: policy[idx + 1], exhausted: false, policy: policy };
   }
 
@@ -6486,7 +6523,9 @@
     if (benchmark === null || benchmark <= 0) return 0; // нет уровневого бенчмарка
     const s = num(score);
     if (s === null) return 0; // нет данных теста
-    return clamp01((benchmark - s) / benchmark);
+    // формула дефицита — из ОБЩЕГО ЯДРА (HEYS.TrainingKernel.assess); фолбэк локальный
+    const ka = HEYS.TrainingKernel && HEYS.TrainingKernel.assess;
+    return ka && ka.deficit ? ka.deficit(benchmark, s) : clamp01((benchmark - s) / benchmark);
   }
 
   // ─── computeFlag (§3.2 шаг 2) ─────────────────────────────────────────────────
@@ -8403,21 +8442,36 @@
 
   if (Fingers.records && Fingers.records.__registered) return;
 
+  function _kernelRecords() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.records;
+  }
+  function _kernelRunner() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+
+  function _emptyRecords() {
+    return { maxHangs: {}, updatedAt: 0 };
+  }
+
   function _getKey() {
     const cid = (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
+    const kr = _kernelRecords();
+    if (kr && kr.clientKey) return kr.clientKey('fingers_records_v1', cid, { style: 'heys-client-prefix' });
     return cid ? `heys_${cid}_fingers_records_v1` : 'heys_fingers_records_v1';
   }
 
   function _readAll() {
     try {
       if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
-        return HEYS.utils.lsGet(_getKey(), null) || { maxHangs: {}, updatedAt: 0 };
+        return HEYS.utils.lsGet(_getKey(), null) || _emptyRecords();
       }
+      const kr = _kernelRecords();
+      if (kr && kr.readJson) return kr.readJson(global.localStorage, _getKey(), _emptyRecords);
       const raw = localStorage.getItem(_getKey());
-      return raw ? JSON.parse(raw) : { maxHangs: {}, updatedAt: 0 };
+      return raw ? JSON.parse(raw) : _emptyRecords();
     } catch (e) {
       console.warn('[Fingers.records] read failed:', e);
-      return { maxHangs: {}, updatedAt: 0 };
+      return _emptyRecords();
     }
   }
 
@@ -8427,6 +8481,8 @@
         HEYS.utils.lsSet(_getKey(), data);
         return true;
       }
+      const kr = _kernelRecords();
+      if (kr && kr.writeJson) return kr.writeJson(global.localStorage, _getKey(), data, _emptyRecords);
       localStorage.setItem(_getKey(), JSON.stringify(data));
       return true;
     } catch (e) {
@@ -8436,6 +8492,8 @@
   }
 
   function _slug(gripId, edgeMm) {
+    const kr = _kernelRecords();
+    if (kr && kr.makeId) return kr.makeId([gripId, edgeMm + 'mm']);
     return `${gripId}_${edgeMm}mm`;
   }
 
@@ -8478,32 +8536,36 @@
       testedAt: newRecord.testedAt || new Date().toISOString(),
     });
 
-    let isPR = false;
-
-    if (!existing) {
-      isPR = true;
-    } else {
-      // Type may differ (user switched from no-scale to scale). Always accept newer test.
-      if (existing.type !== stamped.type) {
+    const kr = _kernelRecords();
+    let isPR = kr && kr.maxWins
+      ? kr.maxWins(existing, stamped, { metricsByType: { weight: 'mvcKg', time: 'holdTime' } })
+      : false;
+    if (!kr || !kr.maxWins) {
+      if (!existing) {
         isPR = true;
-      } else if (stamped.type === 'weight') {
-        const newVal = Number(stamped.mvcKg) || 0;
-        const oldVal = Number(existing.mvcKg) || 0;
-        if (newVal > oldVal) isPR = true;
-        else if (newVal === oldVal) {
-          // Tiebreak by testedAt
-          const newT = Date.parse(stamped.testedAt) || 0;
-          const oldT = Date.parse(existing.testedAt) || 0;
-          if (newT >= oldT) isPR = true;
-        }
-      } else if (stamped.type === 'time') {
-        const newVal = Number(stamped.holdTime) || 0;
-        const oldVal = Number(existing.holdTime) || 0;
-        if (newVal > oldVal) isPR = true;
-        else if (newVal === oldVal) {
-          const newT = Date.parse(stamped.testedAt) || 0;
-          const oldT = Date.parse(existing.testedAt) || 0;
-          if (newT >= oldT) isPR = true;
+      } else {
+        // Type may differ (user switched from no-scale to scale). Always accept newer test.
+        if (existing.type !== stamped.type) {
+          isPR = true;
+        } else if (stamped.type === 'weight') {
+          const newVal = Number(stamped.mvcKg) || 0;
+          const oldVal = Number(existing.mvcKg) || 0;
+          if (newVal > oldVal) isPR = true;
+          else if (newVal === oldVal) {
+            // Tiebreak by testedAt
+            const newT = Date.parse(stamped.testedAt) || 0;
+            const oldT = Date.parse(existing.testedAt) || 0;
+            if (newT >= oldT) isPR = true;
+          }
+        } else if (stamped.type === 'time') {
+          const newVal = Number(stamped.holdTime) || 0;
+          const oldVal = Number(existing.holdTime) || 0;
+          if (newVal > oldVal) isPR = true;
+          else if (newVal === oldVal) {
+            const newT = Date.parse(stamped.testedAt) || 0;
+            const oldT = Date.parse(existing.testedAt) || 0;
+            if (newT >= oldT) isPR = true;
+          }
         }
       }
     }
@@ -8513,15 +8575,19 @@
     // перетрена). maxHangs остаётся max-wins PR (backward compat). Кап 100 точек.
     if (!all.history) all.history = {};
     const hist = Array.isArray(all.history[slug]) ? all.history[slug] : [];
-    hist.push({
+    const point = {
       testedAt: stamped.testedAt,
       type: stamped.type,
       mvcKg: Number(stamped.mvcKg) || null,
       holdTime: Number(stamped.holdTime) || null,
       addedKg: Number(stamped.addedKg) || null,
       bw: Number(stamped.bw) || null,
-    });
-    if (hist.length > 100) hist.splice(0, hist.length - 100);
+    };
+    if (kr && kr.appendCapped) kr.appendCapped(hist, point, 100);
+    else {
+      hist.push(point);
+      if (hist.length > 100) hist.splice(0, hist.length - 100);
+    }
     all.history[slug] = hist;
 
     if (isPR) all.maxHangs[slug] = stamped;
@@ -8555,7 +8621,7 @@
     const all = _readAll();
     const slug = _slug(gripId, edgeMm);
     const hist = (all.history && Array.isArray(all.history[slug])) ? all.history[slug] : [];
-    return hist.map(function (p) {
+    const rows = hist.map(function (p) {
       const mvc = Number(p.mvcKg) || null;
       const bw = Number(p.bw) || null;
       return {
@@ -8564,7 +8630,11 @@
         holdTime: Number(p.holdTime) || null,
         strengthRatio: (mvc && bw) ? Number((mvc / bw).toFixed(3)) : null,
       };
-    }).sort(function (a, b) { return (Date.parse(a.testedAt) || 0) - (Date.parse(b.testedAt) || 0); });
+    });
+    const kr = _kernelRecords();
+    return kr && kr.sortByTimestamp
+      ? kr.sortByTimestamp(rows, { timestampKey: 'testedAt' })
+      : rows.sort(function (a, b) { return (Date.parse(a.testedAt) || 0) - (Date.parse(b.testedAt) || 0); });
   }
 
   function _progressionPoint(p) {
@@ -8581,6 +8651,10 @@
   }
 
   function _historySeries(hist) {
+    const kr = _kernelRecords();
+    if (kr && kr.mapTimeSeries) {
+      return kr.mapTimeSeries(hist, _progressionPoint, { valueKey: 'value' });
+    }
     return (Array.isArray(hist) ? hist : [])
       .map(_progressionPoint)
       .filter(Boolean)
@@ -8629,7 +8703,37 @@
     return Object.assign({}, all.progressionAxes || {});
   }
 
+  const PROGRESSION_DOSE_VALUE_FORMULAS = {
+    hang: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.workSec, 7)) * Math.max(1, ctx.num(d.reps, 1)) * Math.max(1, ctx.num(d.sets, 1));
+    },
+    continuous: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.workSec, 60)) * Math.max(1, ctx.num(d.sets, 1));
+    },
+    reps: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.reps, 1)) * Math.max(1, ctx.num(d.sets, 1));
+    },
+    attempts: function (ctx) {
+      return Math.max(1, ctx.num(ctx.dose.attempts, 1));
+    },
+    circuit: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.problemsPerRound, 1)) * Math.max(1, ctx.num(d.rounds, 1));
+    },
+    process: function (ctx) {
+      const d = ctx.dose;
+      return Math.max(1, ctx.num(d.workSec, 60)) * Math.max(1, ctx.num(d.sets, 1));
+    }
+  };
+
   function _doseValue(ex) {
+    const krun = _kernelRunner();
+    if (krun && typeof krun.estimateDoseSec === 'function') {
+      return Math.max(1, krun.estimateDoseSec(ex, PROGRESSION_DOSE_VALUE_FORMULAS, { defaultSec: Number(ex && ex.totalWorkSeconds) || 1 }));
+    }
     const dose = (ex && ex.dose) || {};
     const n = function (v, fallback) {
       if (Array.isArray(v)) return Number(v[1] != null ? v[1] : v[0]) || fallback || 0;
@@ -8689,9 +8793,12 @@
     const ts = _sessionTs(log, nowMs);
     qualities.forEach(function (q) {
       const hist = Array.isArray(all.progressionHistory[q]) ? all.progressionHistory[q] : [];
-      hist.push({ ts: ts, value: Number(byQuality[q].toFixed(4)), source: 'session' });
+      const point = { ts: ts, value: Number(byQuality[q].toFixed(4)), source: 'session' };
+      hist.push(point);
       hist.sort(function (a, b) { return (Number(a.ts) || 0) - (Number(b.ts) || 0); });
-      if (hist.length > 100) hist.splice(0, hist.length - 100);
+      const kr = _kernelRecords();
+      if (kr && kr.capList) kr.capList(hist, 100);
+      else if (hist.length > 100) hist.splice(0, hist.length - 100);
       all.progressionHistory[q] = hist;
     });
     all.updatedAt = Date.now();
@@ -8699,6 +8806,15 @@
   }
 
   function _sessionProgressionSeries(points) {
+    const kr = _kernelRecords();
+    if (kr && kr.mapTimeSeries) {
+      return kr.mapTimeSeries(points, function (p) {
+        const ts = Number(p && p.ts) || Date.parse(p && p.testedAt);
+        const value = Number(p && p.value);
+        return (isFinite(ts) && ts > 0 && value > 0)
+          ? { ts: ts, value: Number(value.toFixed(4)) } : null;
+      }, { valueKey: 'value' });
+    }
     return (Array.isArray(points) ? points : [])
       .map(function (p) {
         const ts = Number(p && p.ts) || Date.parse(p && p.testedAt);
@@ -8721,22 +8837,32 @@
     const canonical = _slug('halfcrimp', 20);
     let chosenSlug = null;
     let chosenSeries = [];
-
-    const canonicalSeries = _historySeries(history[canonical]);
-    if (canonicalSeries.length) {
-      chosenSlug = canonical;
-      chosenSeries = canonicalSeries;
-    } else {
+    const kr = _kernelRecords();
+    if (kr && kr.selectSeries) {
+      const seriesBySlug = {};
       Object.keys(history).forEach(function (slug) {
-        const series = _historySeries(history[slug]);
-        if (!series.length) return;
-        const last = series[series.length - 1].ts;
-        const chosenLast = chosenSeries.length ? chosenSeries[chosenSeries.length - 1].ts : 0;
-        if (series.length > chosenSeries.length || (series.length === chosenSeries.length && last > chosenLast)) {
-          chosenSlug = slug;
-          chosenSeries = series;
-        }
+        seriesBySlug[slug] = _historySeries(history[slug]);
       });
+      const picked = kr.selectSeries(seriesBySlug, { canonicalKey: canonical, timestampKey: 'ts' });
+      chosenSlug = picked.key;
+      chosenSeries = picked.series;
+    } else {
+      const canonicalSeries = _historySeries(history[canonical]);
+      if (canonicalSeries.length) {
+        chosenSlug = canonical;
+        chosenSeries = canonicalSeries;
+      } else {
+        Object.keys(history).forEach(function (slug) {
+          const series = _historySeries(history[slug]);
+          if (!series.length) return;
+          const last = series[series.length - 1].ts;
+          const chosenLast = chosenSeries.length ? chosenSeries[chosenSeries.length - 1].ts : 0;
+          if (series.length > chosenSeries.length || (series.length === chosenSeries.length && last > chosenLast)) {
+            chosenSlug = slug;
+            chosenSeries = series;
+          }
+        });
+      }
     }
 
     const recordsByQuality = {};
@@ -9398,7 +9524,26 @@
   const TIMER_TAB_ID = Fingers.__timerTabId || _makeTimerTabId();
   Fingers.__timerTabId = TIMER_TAB_ID;
 
+  function _runnerKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+
+  function _timerOwnerLock() {
+    const kr = _runnerKernel();
+    if (!kr || typeof kr.createOwnerLock !== 'function') return null;
+    return kr.createOwnerLock({
+      storage: global.localStorage || null,
+      key: _timerLockKey(),
+      ownerId: TIMER_TAB_ID,
+      ttlMs: TIMER_LOCK_TTL_MS,
+      now: _now,
+      failOpenOnStorageUnavailable: true
+    });
+  }
+
   function _readTimerLock() {
+    const lock = _timerOwnerLock();
+    if (lock && typeof lock.read === 'function') return lock.read();
     try {
       const raw = global.localStorage && global.localStorage.getItem(_timerLockKey());
       return raw ? JSON.parse(raw) : null;
@@ -9406,6 +9551,8 @@
   }
 
   function _writeTimerLock(lock) {
+    const ownerLock = _timerOwnerLock();
+    if (ownerLock && typeof ownerLock.write === 'function') return ownerLock.write(lock);
     try {
       if (!global.localStorage) return false;
       global.localStorage.setItem(_timerLockKey(), JSON.stringify(lock));
@@ -9414,6 +9561,8 @@
   }
 
   function _removeTimerLock() {
+    const lock = _timerOwnerLock();
+    if (lock && typeof lock.release === 'function') return lock.release();
     try {
       const lock = _readTimerLock();
       if (lock && lock.ownerTabId && lock.ownerTabId !== TIMER_TAB_ID) return false;
@@ -9423,12 +9572,38 @@
   }
 
   function _isTimerLockFresh(lock, now) {
+    const kr = _runnerKernel();
+    if (kr && typeof kr.isOwnerLockFresh === 'function') return kr.isOwnerLockFresh(lock, now, TIMER_LOCK_TTL_MS);
     if (!lock || !lock.ownerTabId) return false;
     const heartbeatAt = Number(lock.heartbeatAt) || 0;
     return heartbeatAt > 0 && (now - heartbeatAt) <= TIMER_LOCK_TTL_MS;
   }
 
+  function _remainingSecFromSnapshot(snap) {
+    const kr = _runnerKernel();
+    if (kr && typeof kr.remainingSecFromSnapshot === 'function') {
+      return kr.remainingSecFromSnapshot(snap, { minSec: 0.5 });
+    }
+    const elapsedMs = Date.now() - (Number(snap.phaseStartedAt) || Date.now());
+    const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
+    return remainingSec >= 0.5 ? Math.ceil(remainingSec) : 0.5;
+  }
+
   function _acquireTimerLock(reason) {
+    const ownerLock = _timerOwnerLock();
+    if (ownerLock && typeof ownerLock.acquire === 'function') {
+      const result = ownerLock.acquire(reason || 'start');
+      if (result.ok) return true;
+      const existing = result.existing || {};
+      Fingers.lastTimerLockDenied = {
+        key: _timerLockKey(),
+        ownerTabId: existing.ownerTabId,
+        heartbeatAt: existing.heartbeatAt,
+        deniedAt: result.deniedAt || _now(),
+        reason: result.reason === 'held-by-another-owner' ? 'held-by-another-tab' : result.reason
+      };
+      return false;
+    }
     const now = _now();
     const existing = _readTimerLock();
     if (_isTimerLockFresh(existing, now) && existing.ownerTabId !== TIMER_TAB_ID) {
@@ -9463,6 +9638,8 @@
   }
 
   function _touchTimerLock() {
+    const ownerLock = _timerOwnerLock();
+    if (ownerLock && typeof ownerLock.touch === 'function') return ownerLock.touch();
     const lock = _readTimerLock();
     if (!lock || lock.ownerTabId !== TIMER_TAB_ID) return false;
     lock.heartbeatAt = _now();
@@ -9968,9 +10145,7 @@
       if (wasPaused) {
         targetSec = Math.max(1, Number(snap.pausedAtRemainingSec) || 0);
       } else {
-        const elapsedMs = Date.now() - (Number(snap.phaseStartedAt) || Date.now());
-        const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
-        targetSec = remainingSec >= 0.5 ? Math.ceil(remainingSec) : 0.5;
+        targetSec = _remainingSecFromSnapshot(snap);
       }
 
       core.enterPhase(targetState, targetSec, { setIdx: snapSetIdx, repIdx: snapRepIdx });
@@ -10317,9 +10492,7 @@
         if (wasPaused) {
           targetSec = Math.max(1, Number(snap.pausedAtRemainingSec) || 0);
         } else {
-          const elapsedMs = Date.now() - (Number(snap.phaseStartedAt) || Date.now());
-          const remainingSec = (Number(snap.durationSec) || 0) - elapsedMs / 1000;
-          targetSec = remainingSec >= 0.5 ? Math.ceil(remainingSec) : 0.5;
+          targetSec = _remainingSecFromSnapshot(snap);
         }
         core.enterPhase(targetState, targetSec, { setIdx: snapSetIdx });
       }
@@ -11543,10 +11716,16 @@
   }
 
   function _formatDateKey(d) {
+    const kd = HEYS.TrainingKernel && HEYS.TrainingKernel.dates;
+    if (kd && typeof kd.dateKeyLocal === 'function') return kd.dateKeyLocal(d);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
+  }
+
+  function _calendarKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.calendar;
   }
 
   function _readDay(dateKey) {
@@ -11689,18 +11868,24 @@
     const weekdayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
     const year = monthDate.getFullYear();
     const month = monthDate.getMonth();
-    const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7; // 0=Mon
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    const cells = [];
-    for (let i = 0; i < firstDayOfWeek; i++) {
-      cells.push({ empty: true, key: 'e-' + i });
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      const d = new Date(year, month, day);
-      const k = _formatDateKey(d);
-      cells.push({ day: day, dateKey: k, info: data[k], key: k });
-    }
+    const kc = _calendarKernel();
+    const cells = kc && typeof kc.monthCells === 'function'
+      ? kc.monthCells(year, month).map(function (cell) {
+        if (cell.empty) return cell;
+        return Object.assign({}, cell, { info: data[cell.dateKey] });
+      })
+      : (function () {
+        const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7; // 0=Mon
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const out = [];
+        for (let i = 0; i < firstDayOfWeek; i++) out.push({ empty: true, key: 'e-' + i });
+        for (let day = 1; day <= daysInMonth; day++) {
+          const d = new Date(year, month, day);
+          const k = _formatDateKey(d);
+          out.push({ day: day, dateKey: k, info: data[k], key: k });
+        }
+        return out;
+      })();
 
     const cellColor = (info) => {
       if (!info) return 'transparent';
@@ -11841,6 +12026,14 @@
 
     // Build grid: array of 53 weeks × 7 days, каждый день = {date, info}
     const grid = React.useMemo(() => {
+      const kc = _calendarKernel();
+      if (kc && typeof kc.yearGrid === 'function') {
+        return kc.yearGrid(year).map(function (week) {
+          return week.map(function (cell) {
+            return Object.assign({}, cell, { info: cell.dateKey ? data[cell.dateKey] : null });
+          });
+        });
+      }
       const start = new Date(year, 0, 1);
       // Align к Monday — week starts Mon в RU UX.
       const dayOfWeek = (start.getDay() + 6) % 7; // 0=Mon
@@ -11977,6 +12170,10 @@
     sloper: 'sloper'
   };
 
+  function _recordsKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.records;
+  }
+
   function _getKey() {
     const cid = HEYS && HEYS.currentClientId;
     return cid ? 'heys_' + cid + '_fingers_tissue_history_v1' : 'heys_fingers_tissue_history_v1';
@@ -12047,11 +12244,20 @@
         gripGroup: e.gripGroup || _gripGroupOf(gripId)
       });
     });
-    const cutoff = ts - WINDOW_HOURS * 3600 * 1000;
-    let pruned = next.filter(function (e) {
-      return typeof e.timestamp !== 'number' || e.timestamp >= cutoff;
-    });
-    if (pruned.length > MAX_ENTRIES) pruned = pruned.slice(pruned.length - MAX_ENTRIES);
+    const kr = _recordsKernel();
+    let pruned = kr && kr.appendWindowed
+      ? kr.appendWindowed([], next, {
+        timestampKey: 'timestamp',
+        nowMs: ts,
+        windowHours: WINDOW_HOURS,
+        cap: MAX_ENTRIES
+      })
+      : next.filter(function (e) {
+        return typeof e.timestamp !== 'number' || e.timestamp >= ts - WINDOW_HOURS * 3600 * 1000;
+      });
+    if (!kr || !kr.appendWindowed) {
+      if (pruned.length > MAX_ENTRIES) pruned = pruned.slice(pruned.length - MAX_ENTRIES);
+    }
     return _write({ version: 1, entries: pruned });
   }
 
@@ -12064,12 +12270,20 @@
     const nowMs = typeof o.nowMs === 'number' ? o.nowMs : _now();
     const windowHours = typeof o.windowHours === 'number' ? o.windowHours : WINDOW_HOURS;
     const limit = typeof o.limit === 'number' ? o.limit : MAX_ENTRIES;
-    const cutoff = nowMs - windowHours * 3600 * 1000;
-    const filtered = _entries()
-      .filter(function (e) {
-        return typeof e.timestamp !== 'number' || (e.timestamp >= cutoff && e.timestamp <= nowMs);
+    const kr = _recordsKernel();
+    const filtered = kr && kr.recentWindow
+      ? kr.recentWindow(_entries(), {
+        timestampKey: 'timestamp',
+        nowMs: nowMs,
+        windowHours: windowHours,
+        upperBoundNow: true,
+        limit: 0
       })
-      .sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
+      : _entries()
+        .filter(function (e) {
+          return typeof e.timestamp !== 'number' || (e.timestamp >= nowMs - windowHours * 3600 * 1000 && e.timestamp <= nowMs);
+        })
+        .sort(function (a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
     return limit > 0 ? filtered.slice(Math.max(0, filtered.length - limit)) : filtered;
   }
 
@@ -13408,12 +13622,18 @@
     dup: { ceiling: 'max', volumeMultiplier: 0.85, dailyPattern: ['moderate', 'max', 'recovery'] }
   };
 
+  function _kernelPeriodization() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.periodization;
+  }
+
   function _getKey() {
     const cid = HEYS && HEYS.currentClientId;
     return cid ? 'heys_' + cid + '_fingers_periodization_v1' : 'heys_fingers_periodization_v1';
   }
 
   function _todayKey() {
+    const kd = HEYS.TrainingKernel && HEYS.TrainingKernel.dates;
+    if (kd && typeof kd.todayKeyLocal === 'function') return kd.todayKeyLocal();
     const d = new Date();
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -13422,6 +13642,8 @@
   }
 
   function _daysBetween(startKey, todayKey) {
+    const kd = HEYS.TrainingKernel && HEYS.TrainingKernel.dates;
+    if (kd && typeof kd.daysBetweenDateKeys === 'function') return kd.daysBetweenDateKeys(startKey, todayKey);
     const a = Date.parse(startKey + 'T00:00:00');
     const b = Date.parse(todayKey + 'T00:00:00');
     if (!isFinite(a) || !isFinite(b)) return 0;
@@ -13429,6 +13651,8 @@
   }
 
   function _phaseForModel(model, weekIdx, weeksTotal) {
+    const kp = _kernelPeriodization();
+    if (kp && typeof kp.phaseForModel === 'function') return kp.phaseForModel(model, weekIdx, weeksTotal);
     const w = Number(weekIdx);
     const total = Number(weeksTotal) || DEFAULT_WEEKS;
     if (!Number.isFinite(w) || w < 0) return 'accumulation';
@@ -13443,6 +13667,8 @@
   }
 
   function _energyFocusForPhase(phase) {
+    const kp = _kernelPeriodization();
+    if (kp && typeof kp.energyFocusForPhase === 'function') return kp.energyFocusForPhase(phase);
     if (phase === 'accumulation') return 'aerobic';
     if (phase === 'intensification' || phase === 'taper') return 'phosphagen';
     if (phase === 'dup') return 'undulating';
@@ -13498,17 +13724,23 @@
     const model = explicitModel || (auto && auto.model) || 'linear';
     const weeks = Math.max(1, Math.min(12, Number(o.weeks) || DEFAULT_WEEKS));
     const startedAt = o.startedAt || _todayKey();
-    const planWeeks = [];
-    for (let i = 0; i < weeks; i++) {
-      const phase = _phaseForModel(model, i, weeks);
-      planWeeks.push(Object.assign({
-        weekIdx: i,
-        week: i + 1,
-        phase: phase,
-        focusQuality: focusQuality,
-        energyFocus: _energyFocusForPhase(phase)
-      }, PHASE_META[phase] || PHASE_META.accumulation));
-    }
+    const kp = _kernelPeriodization();
+    const planWeeks = kp && typeof kp.buildWeeks === 'function'
+      ? kp.buildWeeks({ model: model, weeks: weeks, focusQuality: focusQuality })
+      : (function () {
+          const out = [];
+          for (let i = 0; i < weeks; i++) {
+            const phase = _phaseForModel(model, i, weeks);
+            out.push(Object.assign({
+              weekIdx: i,
+              week: i + 1,
+              phase: phase,
+              focusQuality: focusQuality,
+              energyFocus: _energyFocusForPhase(phase)
+            }, PHASE_META[phase] || PHASE_META.accumulation));
+          }
+          return out;
+        })();
     return {
       version: 1,
       model: model,
@@ -13525,6 +13757,8 @@
   function current(plan, todayKey) {
     const p = plan || loadPlan();
     if (!p || !p.startedAt) return null;
+    const kp = _kernelPeriodization();
+    if (kp && typeof kp.current === 'function') return kp.current(p, todayKey || _todayKey());
     const days = _daysBetween(p.startedAt, todayKey || _todayKey());
     const weekIdx = Math.floor(days / 7);
     const phase = _phaseForModel(p.model, weekIdx, p.weeksTotal || p.weeks || DEFAULT_WEEKS);
@@ -13595,6 +13829,9 @@
 // Реализует генерацию сессии на новых модулях:
 //   block_catalog (атомы) + assessment (приоритеты) + validators (S1/S6/S8/S2).
 // Вызывается через engine_router при flag=on. Под flag=off лежит мёртвым.
+//
+// КОНТРАКТ для kernel.router (strangler): builder.recommendDay(opts) → Session|null.
+// Ядро дёргает именно recommendDay; имя Fingers.sessionBuilder — доменное.
 //
 // Ключевые методологические швы (из ревью 3.1-4.1):
 //   Риск 1: safety-floor для antagonist/mobility — НЕ из blockWeights (assessment
@@ -13681,6 +13918,10 @@
     'none':  ['drill', 'mobility', 'antagonist']
   };
 
+  function _kernelSession() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.session;
+  }
+
   function num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
   function avg(rng) { return Array.isArray(rng) ? (rng[0] + rng[1]) / 2 : (rng || 0); }
 
@@ -13742,7 +13983,76 @@
   }
 
   // ─── Длительность сессии — TUT + rest по doseShape ───────────────────────────
+  function _runnerKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+
+  const DURATION_FORMULAS = {
+    hang: function (ctx) {
+      const d = ctx.dose;
+      const sets = ctx.num(d.sets, 1);
+      const reps = ctx.num(d.reps, Array.isArray(d.reps) ? ctx.avg(d.reps, 1) : 1);
+      const workSec = ctx.num(d.workSec);
+      const restSec = ctx.num(d.restSec);
+      const restSetsSec = ctx.num(d.restSetsSec);
+      return workSec * reps * sets +
+             restSec * Math.max(0, reps - 1) * sets +
+             restSetsSec * Math.max(0, sets - 1);
+    },
+    attempts: function (ctx) {
+      const d = ctx.dose;
+      const moves = ctx.avg(d.movesPerAttempt) * 2.5;
+      const attempts = ctx.avg(d.attempts);
+      return moves * attempts + ctx.num(d.restSetsSec) * Math.max(0, attempts - 1);
+    },
+    circuit: function (ctx) {
+      const d = ctx.dose;
+      const ppr = ctx.num(d.problemsPerRound);
+      const rounds = ctx.num(d.rounds, 1);
+      const restRounds = ctx.num(d.restRoundsSec);
+      return ppr * rounds * 25 + restRounds * Math.max(0, rounds - 1);
+    },
+    continuous: function (ctx) {
+      const d = ctx.dose;
+      return ctx.num(d.workSec) * ctx.num(d.sets, 1);
+    },
+    reps: function (ctx) {
+      const d = ctx.dose;
+      return ctx.avg(d.reps) * 3 * ctx.num(d.sets, 1) +
+             ctx.num(d.restSetsSec) * Math.max(0, ctx.num(d.sets, 1) - 1);
+    },
+    process: function () { return 0; }
+  };
+
+  const TUT_FORMULAS = {
+    hang: function (ctx) {
+      const d = ctx.dose;
+      const sets = ctx.num(d.sets, 1);
+      const reps = ctx.num(d.reps, Array.isArray(d.reps) ? ctx.avg(d.reps, 1) : 1);
+      return ctx.num(d.workSec) * reps * sets;
+    },
+    attempts: function (ctx) {
+      const d = ctx.dose;
+      return ctx.avg(d.movesPerAttempt) * 2.5 * ctx.avg(d.attempts);
+    },
+    circuit: function (ctx) {
+      const d = ctx.dose;
+      return ctx.num(d.problemsPerRound) * ctx.num(d.rounds, 1) * 25;
+    },
+    continuous: function (ctx) {
+      const d = ctx.dose;
+      return ctx.num(d.workSec) * ctx.num(d.sets, 1);
+    },
+    reps: function (ctx) {
+      const d = ctx.dose;
+      return ctx.avg(d.reps) * 3 * ctx.num(d.sets, 1);
+    },
+    process: function () { return 0; }
+  };
+
   function _estimateAtomSec(atom) {
+    const kr = _runnerKernel();
+    if (kr && typeof kr.estimateDoseSec === 'function') return kr.estimateDoseSec(atom, DURATION_FORMULAS);
     const d = atom && atom.dose;
     if (!d) return 0;
     const sets = num(d.sets) || 1;
@@ -13786,6 +14096,8 @@
   };
 
   function _estimateAtomTutSec(atom) {
+    const kr = _runnerKernel();
+    if (kr && typeof kr.estimateDoseSec === 'function') return kr.estimateDoseSec(atom, TUT_FORMULAS);
     const d = atom && atom.dose;
     if (!d) return 0;
     const sets = num(d.sets) || 1;
@@ -14182,16 +14494,21 @@
   // исходный индекс, чтобы внутри одного под-режима порядок пула сохранялся.
   function _orderAerobicCandidates(candidates, level) {
     const pref = AEROBIC_MODE_PREF_BY_LEVEL[level] || AEROBIC_MODE_PREF_BY_LEVEL.intermediate;
-    return candidates
-      .map(function (a, i) { return { a: a, i: i }; })
-      .sort(function (x, y) {
-        const px = pref.indexOf(_aerobicModeOf(x.a));
-        const py = pref.indexOf(_aerobicModeOf(y.a));
-        const rx = px < 0 ? pref.length : px;
-        const ry = py < 0 ? pref.length : py;
-        return rx !== ry ? rx - ry : x.i - y.i;
-      })
-      .map(function (o) { return o.a; });
+    const rank = function (a) {
+      const pos = pref.indexOf(_aerobicModeOf(a));
+      return pos < 0 ? pref.length : pos;
+    };
+    const ks = _kernelSession();
+    return ks && typeof ks.stableSortByScore === 'function'
+      ? ks.stableSortByScore(candidates, rank, 'asc')
+      : candidates
+        .map(function (a, i) { return { a: a, i: i }; })
+        .sort(function (x, y) {
+          const rx = rank(x.a);
+          const ry = rank(y.a);
+          return rx !== ry ? rx - ry : x.i - y.i;
+        })
+        .map(function (o) { return o.a; });
   }
 
   // §1.3/§3.3 FDP/FDS ротация: серия сессий с одним доминантным хватом (напр.
@@ -14204,14 +14521,18 @@
     const want = eh.underusedLean();
     if (!want) return candidates;
     const leanOf = function (a) { return (a && a.gripId) ? eh.leanOfGrip(a.gripId) : null; };
-    return candidates
-      .map(function (a, i) { return { a: a, i: i }; })
-      .sort(function (x, y) {
-        const mx = leanOf(x.a) === want ? 0 : 1;
-        const my = leanOf(y.a) === want ? 0 : 1;
-        return mx !== my ? mx - my : x.i - y.i;
-      })
-      .map(function (o) { return o.a; });
+    const rank = function (a) { return leanOf(a) === want ? 0 : 1; };
+    const ks = _kernelSession();
+    return ks && typeof ks.stableSortByScore === 'function'
+      ? ks.stableSortByScore(candidates, rank, 'asc')
+      : candidates
+        .map(function (a, i) { return { a: a, i: i }; })
+        .sort(function (x, y) {
+          const mx = rank(x.a);
+          const my = rank(y.a);
+          return mx !== my ? mx - my : x.i - y.i;
+        })
+        .map(function (o) { return o.a; });
   }
 
   // §1.3 variantSeed — «другой равноценный набор» (reroll микса). Циклический
@@ -14222,6 +14543,8 @@
   // безопасность — только КАКОЙ из взаимозаменяемых атомов взят. Слот с единственным
   // подходящим атомом не меняется (нечем варьировать). Reorder-only (slice).
   function _rotateBySeed(list, seed) {
+    const ks = _kernelSession();
+    if (ks && typeof ks.rotateBySeed === 'function') return ks.rotateBySeed(list, seed);
     const n = list.length;
     if (!n || !seed) return list;
     const off = ((Math.floor(seed) % n) + n) % n;
@@ -14248,12 +14571,13 @@
     if (!RENDERABLE_DOSESHAPES[atom.doseShape]) return false;
     // S1 explicit: возраст/уровень.
     const s1 = Fingers.validators.S1_ageLevelGate(atom, profile);
-    if (s1.some(function (i) { return i.level === 'error'; })) return false;
+    const ks = _kernelSession();
+    if (ks && ks.hasIssueLevel ? ks.hasIssueLevel(s1, 'error') : s1.some(function (i) { return i.level === 'error'; })) return false;
     // S9 explicit (ревью #4): prerequisites. Закрывает BFR-без-манжеты,
     // min-edge-без-base, fall-без-safe-setup и т.п. profile.completedPrerequisites
     // — массив выполненных токенов (default []: строго fail-closed).
     const s9 = Fingers.validators.S9_prerequisitesGate(atom, profile);
-    if (s9.some(function (i) { return i.level === 'error'; })) return false;
+    if (ks && ks.hasIssueLevel ? ks.hasIssueLevel(s9, 'error') : s9.some(function (i) { return i.level === 'error'; })) return false;
     return true;
   }
 
@@ -14324,10 +14648,32 @@
         t.checked = true;
       }
       const r = Fingers.validators.S2_tissueFreshness(a, opts.history, opts.now);
-      const ok = !r.some(function (i) { return i && i.level === 'error'; });
+      const ks = _kernelSession();
+      const ok = !(ks && ks.hasIssueLevel ? ks.hasIssueLevel(r, 'error') : r.some(function (i) { return i && i.level === 'error'; }));
       if (!ok) _recordTissueFilter(opts, a);
       return ok;
     }
+
+    function firstPassing(candidates, checks) {
+      const ks = _kernelSession();
+      if (ks && typeof ks.firstPassing === 'function') return ks.firstPassing(candidates, checks);
+      for (let i = 0; i < candidates.length; i++) {
+        let ok = true;
+        for (let j = 0; j < checks.length; j++) {
+          if (!checks[j](candidates[i])) { ok = false; break; }
+        }
+        if (ok) return candidates[i];
+      }
+      return null;
+    }
+
+    const commonChecks = [
+      fitsEnvelope,
+      progressionAllowed,
+      s2Fresh,
+      notDuplicate,
+      function (a) { return _atomFits(a, profile, allowed); }
+    ];
 
     function fitsEnvelope(a) {
       // Pre-flip duration envelope: pow_rfd_pulls is a valid methodology atom,
@@ -14344,14 +14690,8 @@
     // а лишь даёт лимитеру мезоцикла шанс до tissue-pref fallback'ов.
     if (focusQuality && qualities.indexOf(focusQuality) >= 0) {
       const candidates = _candidatesForQuality(focusQuality, level, variantSeed);
-      for (let k = 0; k < candidates.length; k++) {
-        const a = candidates[k];
-        if (!fitsEnvelope(a)) continue;
-        if (!progressionAllowed(a)) continue;
-        if (!s2Fresh(a)) continue;
-        if (!notDuplicate(a)) continue;
-        if (_atomFits(a, profile, allowed)) return a;
-      }
+      const picked = firstPassing(candidates, commonChecks);
+      if (picked) return picked;
     }
 
     // 1-я попытка — match quality + tissue preference + не дубль.
@@ -14360,29 +14700,16 @@
       const candidates = _candidatesForQuality(q, level, variantSeed);
       for (let j = 0; j < tissuePrefs.length; j++) {
         const tissue = tissuePrefs[j];
-        for (let k = 0; k < candidates.length; k++) {
-          const a = candidates[k];
-          if (a.tissueLoad !== tissue) continue;
-          if (!fitsEnvelope(a)) continue;
-          if (!progressionAllowed(a)) continue;
-          if (!s2Fresh(a)) continue;
-          if (!notDuplicate(a)) continue;
-          if (_atomFits(a, profile, allowed)) return a;
-        }
+        const picked = firstPassing(candidates, [function (a) { return a.tissueLoad === tissue; }].concat(commonChecks));
+        if (picked) return picked;
       }
     }
     // 2-я попытка — любой подходящий атом quality + не дубль.
     for (let i = 0; i < qualities.length; i++) {
       const q = qualities[i];
       const candidates = _candidatesForQuality(q, level, variantSeed);
-      for (let k = 0; k < candidates.length; k++) {
-        const a = candidates[k];
-        if (!fitsEnvelope(a)) continue;
-        if (!progressionAllowed(a)) continue;
-        if (!s2Fresh(a)) continue;
-        if (!notDuplicate(a)) continue;
-        if (_atomFits(a, profile, allowed)) return a;
-      }
+      const picked = firstPassing(candidates, commonChecks);
+      if (picked) return picked;
     }
     return null;
   }
@@ -14735,7 +15062,8 @@
     }
 
     // Fail-closed по error.
-    if (safetyTrace.issues.some(function (i) { return i.level === 'error'; })) {
+    const ks = _kernelSession();
+    if (ks && ks.hasIssueLevel ? ks.hasIssueLevel(safetyTrace.issues, 'error') : safetyTrace.issues.some(function (i) { return i.level === 'error'; })) {
       return null;
     }
 
@@ -14978,6 +15306,11 @@
 
   // Диагностика последнего вызова (для тестов/телеметрии).
   let _lastSource = null;
+  let _kernelRouterCore = null;
+
+  function _kernelRouter() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.router;
+  }
 
   const SOURCE_KEYS = ['old', 'new', 'fallback', 'fallback-error', 'fallback-contract'];
   function _emptyTelemetry() {
@@ -15064,6 +15397,15 @@
   }
 
   function evaluateRolloutGate(thresholds) {
+    const kr = _kernelRouter();
+    const core = _getKernelRouterCore();
+    if (kr && typeof kr.evaluateRolloutGate === 'function' && core) {
+      return kr.evaluateRolloutGate({
+        telemetry: core.getTelemetry(),
+        lastShadowDiff: core.lastShadowDiff,
+        thresholds: Object.assign({}, DEFAULT_ROLLOUT_GATE, thresholds || {})
+      });
+    }
     const cfg = Object.assign({}, DEFAULT_ROLLOUT_GATE, thresholds || {});
     const telemetry = _copyTelemetry();
     const diff = _lastShadowDiff;
@@ -15388,7 +15730,38 @@
     }
   }
 
+  function _getKernelRouterCore() {
+    if (_kernelRouterCore) return _kernelRouterCore;
+    const kr = _kernelRouter();
+    if (!kr || typeof kr.createStranglerRouter !== 'function') return null;
+    _kernelRouterCore = kr.createStranglerRouter({
+      sourceKeys: SOURCE_KEYS,
+      oldEngine: _callOld,
+      newEngine: function () { return Fingers.sessionBuilder; },
+      enrich: _enrichOpts,
+      validate: isValidSession,
+      useNew: function () { return Fingers.flags && Fingers.flags.newEngine === true; },
+      useShadow: function () { return Fingers.flags && Fingers.flags.shadowCompare === true; },
+      shadowDiff: _diffSessions,
+      warn: function (kind, payload) {
+        if (typeof console === 'undefined' || !console.warn) return;
+        if (kind === 'contract') console.warn('[fingers.engineRouter] new engine output failed contract — fallback to old', payload);
+        else if (kind === 'shadow-error') console.warn('[fingers.engineRouter] shadow-compare error (ignored)', payload);
+        else if (kind === 'exception') console.warn('[fingers.engineRouter] new engine threw — fallback to old', payload);
+      },
+      debug: function (diff) {
+        if (typeof console !== 'undefined' && console.debug) {
+          console.debug('[fingers.engineRouter] shadow-compare diff', diff);
+        }
+      }
+    });
+    return _kernelRouterCore;
+  }
+
   function recommendDay(opts) {
+    const core = _getKernelRouterCore();
+    if (core) return core.recommend(opts);
+
     // Plumbing Гейта #1: enrichment ДО branch — mixEngine игнорирует unknown
     // opts, builder при flag=on получает реальные MVC/level.
     const enriched = _enrichOpts(opts);
@@ -15448,15 +15821,28 @@
     recommendDay: recommendDay,
     isValidSession: isValidSession,
     _enrichOpts: _enrichOpts, // exposed for tests
-    getTelemetry: _copyTelemetry,
-    resetTelemetry: _resetTelemetry,
+    getTelemetry: function () {
+      const core = _getKernelRouterCore();
+      return core ? core.getTelemetry() : _copyTelemetry();
+    },
+    resetTelemetry: function () {
+      const core = _getKernelRouterCore();
+      if (core) core.resetTelemetry();
+      _resetTelemetry();
+    },
     DEFAULT_ROLLOUT_GATE: DEFAULT_ROLLOUT_GATE,
     configureCanary: configureCanary,
     loadCanaryFlag: loadCanaryFlag,
     evaluateRolloutGate: evaluateRolloutGate,
     enableCanaryIfGatePasses: enableCanaryIfGatePasses,
-    get lastSource() { return _lastSource; },
-    get lastShadowDiff() { return _lastShadowDiff; }
+    get lastSource() {
+      const core = _getKernelRouterCore();
+      return core ? core.lastSource : _lastSource;
+    },
+    get lastShadowDiff() {
+      const core = _getKernelRouterCore();
+      return core ? core.lastShadowDiff : _lastShadowDiff;
+    }
   };
 
   _loadCanaryFlagSoon();
@@ -17053,6 +17439,10 @@
   const React = global.React;
   const h = React && React.createElement;
 
+  function _kernelOnboarding() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.onboarding;
+  }
+
   // ─── Storage helpers ─────────────────────────────────────────────────
 
   function _getKey() {
@@ -17063,6 +17453,8 @@
   // Prefill из глобального профиля HEYS (birthDate → age, ранее введённый
   // fingerboardProfile если onboarding запускается повторно).
   function _calcAgeFromBirthDate(birthDate) {
+    const ko = _kernelOnboarding();
+    if (ko && ko.ageFromBirthDate) return ko.ageFromBirthDate(birthDate);
     if (!birthDate) return null;
     const birth = new Date(birthDate);
     if (isNaN(birth.getTime())) return null;
@@ -17191,6 +17583,8 @@
   // Темы: оставлены 2 — 'A' (HEYS native) и 'C' (Climbing, default).
   // Тема 'B' (Custom blue) удалена; legacy profile со старым value мигрируется в 'C'.
   function _normalizeTheme(themeId) {
+    const ko = _kernelOnboarding();
+    if (ko && ko.enumValue) return ko.enumValue(themeId, ['A', 'C'], 'C');
     return (themeId === 'A' || themeId === 'C') ? themeId : 'C';
   }
 
@@ -18726,49 +19120,79 @@
     return (ex && ex.doseShape) || 'hang';
   }
 
-  function _plannedExerciseMetrics(ex) {
-    const shape = _doseShapeOf(ex);
-    const dose = (ex && ex.dose) || {};
-    if (shape === 'continuous') {
+  function _runnerKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+
+  const PLANNED_METRIC_FORMULAS = {
+    continuous: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const sets = Math.max(1, _num(dose.sets, 1));
       const workSec = _num(dose.workSec, 0) * sets;
       const restSec = _num(dose.restSetsSec, 0) * Math.max(0, sets - 1);
       return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: sets, unitKind: 'sets' };
-    }
-    if (shape === 'attempts') {
+    },
+    attempts: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const attempts = Math.max(1, _rangeAvg(dose.attempts, 1));
       const moves = _rangeAvg(dose.movesPerAttempt, 1);
       const workSec = moves * 2.5 * attempts;
       const restSec = _num(dose.restSetsSec, 0) * Math.max(0, attempts - 1);
       return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: attempts, unitKind: 'attempts' };
-    }
-    if (shape === 'circuit') {
+    },
+    circuit: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const rounds = Math.max(1, _num(dose.rounds, 1));
       const problems = Math.max(1, _num(dose.problemsPerRound, 1));
       const workSec = problems * rounds * 25;
       const restSec = _num(dose.restRoundsSec, 0) * Math.max(0, rounds - 1);
       return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: rounds, unitKind: 'rounds' };
-    }
-    if (shape === 'reps') {
+    },
+    reps: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const sets = Math.max(1, _num(dose.sets, ex && ex.setsCount != null ? ex.setsCount : 1));
       const reps = _rangeAvg(dose.reps !== undefined ? dose.reps : (ex && ex.repsPerSet), 1);
       const workSec = reps * 3 * sets;
       const restSec = _num(dose.restSetsSec, ex && ex.restBetweenSetsSec != null ? ex.restBetweenSetsSec : 0) * Math.max(0, sets - 1);
       return { shape: shape, durationSec: workSec + restSec, workSec: workSec, units: reps * sets, unitKind: 'reps' };
-    }
-    if (shape === 'process') {
+    },
+    process: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const shape = ctx.shape || _doseShapeOf(ex);
       const checklist = Array.isArray(dose.checklist) ? dose.checklist : [];
       return { shape: shape, durationSec: 0, workSec: 0, units: Math.max(1, checklist.length || 1), unitKind: 'items' };
+    },
+    default: function (ctx) {
+      const ex = ctx.exercise || {};
+      const dose = ctx.dose || {};
+      const workSec = _num(dose.workSec, ex && ex.hangSec != null ? ex.hangSec : 0);
+      const restSec = _num(dose.restSec, ex && ex.restSec != null ? ex.restSec : 0);
+      const reps = _num(dose.reps, ex && ex.repsPerSet != null ? ex.repsPerSet : 1);
+      const sets = _num(dose.sets, ex && ex.setsCount != null ? ex.setsCount : 1);
+      const restSetsSec = _num(dose.restSetsSec, ex && ex.restBetweenSetsSec != null ? ex.restBetweenSetsSec : 0);
+      // Legacy hang contract: keep the old inclusive per-set rest formula.
+      const oneSet = (workSec + restSec) * reps + restSetsSec;
+      return { shape: 'hang', durationSec: oneSet * sets, workSec: workSec * reps * sets, units: reps * sets, unitKind: 'hangs' };
     }
+  };
 
-    const workSec = _num(dose.workSec, ex && ex.hangSec != null ? ex.hangSec : 0);
-    const restSec = _num(dose.restSec, ex && ex.restSec != null ? ex.restSec : 0);
-    const reps = _num(dose.reps, ex && ex.repsPerSet != null ? ex.repsPerSet : 1);
-    const sets = _num(dose.sets, ex && ex.setsCount != null ? ex.setsCount : 1);
-    const restSetsSec = _num(dose.restSetsSec, ex && ex.restBetweenSetsSec != null ? ex.restBetweenSetsSec : 0);
-    // Legacy hang contract: keep the old inclusive per-set rest formula.
-    const oneSet = (workSec + restSec) * reps + restSetsSec;
-    return { shape: 'hang', durationSec: oneSet * sets, workSec: workSec * reps * sets, units: reps * sets, unitKind: 'hangs' };
+  function _plannedExerciseMetrics(ex) {
+    const rk = _runnerKernel();
+    if (rk && typeof rk.estimateDoseMetrics === 'function') {
+      return rk.estimateDoseMetrics(ex, PLANNED_METRIC_FORMULAS, { defaultShape: 'hang' });
+    }
+    const shape = _doseShapeOf(ex);
+    const fn = PLANNED_METRIC_FORMULAS[shape] || PLANNED_METRIC_FORMULAS.default;
+    return fn({ exercise: ex, dose: (ex && ex.dose) || {}, shape: shape });
   }
 
   function _applyCompletionToMetrics(metrics, ex) {
@@ -18776,9 +19200,15 @@
     if (!c || !metrics || !metrics.units) return metrics;
     const done = Math.max(0, Math.min(metrics.units, _num(c.completedUnits, 0)));
     const ratio = Math.max(0, Math.min(1, done / metrics.units));
-    return Object.assign({}, metrics, {
-      durationSec: metrics.durationSec * ratio,
-      workSec: metrics.workSec * ratio,
+    const rk = _runnerKernel();
+    const scaled = rk && typeof rk.scaleMetrics === 'function'
+      ? rk.scaleMetrics(metrics, ratio)
+      : Object.assign({}, metrics, {
+        durationSec: metrics.durationSec * ratio,
+        workSec: metrics.workSec * ratio,
+        units: metrics.units * ratio
+      });
+    return Object.assign({}, scaled, {
       units: done,
       plannedUnits: metrics.units,
       partial: ratio < 1
@@ -18800,23 +19230,28 @@
   }
 
   function _summarizeFingersExercises(exercises) {
-    const out = {
-      durationSec: 0,
-      workSec: 0,
-      units: 0,
-      unitKind: null,
-      shapeCounts: {},
-      mixedUnits: false
-    };
-    (Array.isArray(exercises) ? exercises : []).forEach(function (ex) {
-      const m = _exerciseMetrics(ex);
-      out.durationSec += m.durationSec || 0;
-      out.workSec += m.workSec || 0;
-      out.units += m.units || 0;
-      out.shapeCounts[m.shape] = (out.shapeCounts[m.shape] || 0) + 1;
-      if (!out.unitKind) out.unitKind = m.unitKind;
-      else if (out.unitKind !== m.unitKind) out.mixedUnits = true;
-    });
+    const rk = _runnerKernel();
+    const out = rk && typeof rk.summarizeMetrics === 'function'
+      ? rk.summarizeMetrics(exercises, _exerciseMetrics)
+      : {
+        durationSec: 0,
+        workSec: 0,
+        units: 0,
+        unitKind: null,
+        shapeCounts: {},
+        mixedUnits: false
+      };
+    if (!(rk && typeof rk.summarizeMetrics === 'function')) {
+      (Array.isArray(exercises) ? exercises : []).forEach(function (ex) {
+        const m = _exerciseMetrics(ex);
+        out.durationSec += m.durationSec || 0;
+        out.workSec += m.workSec || 0;
+        out.units += m.units || 0;
+        out.shapeCounts[m.shape] = (out.shapeCounts[m.shape] || 0) + 1;
+        if (!out.unitKind) out.unitKind = m.unitKind;
+        else if (out.unitKind !== m.unitKind) out.mixedUnits = true;
+      });
+    }
     out.totalDurationMinutes = Math.round(out.durationSec / 60);
     out.totalWorkSeconds = Math.round(out.workSec);
     out.totalUnits = Math.round(out.units);

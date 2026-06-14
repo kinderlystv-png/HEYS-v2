@@ -28,12 +28,18 @@
     dup: { ceiling: 'max', volumeMultiplier: 0.85, dailyPattern: ['moderate', 'max', 'recovery'] }
   };
 
+  function _kernelPeriodization() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.periodization;
+  }
+
   function _getKey() {
     const cid = HEYS && HEYS.currentClientId;
     return cid ? 'heys_' + cid + '_fingers_periodization_v1' : 'heys_fingers_periodization_v1';
   }
 
   function _todayKey() {
+    const kd = HEYS.TrainingKernel && HEYS.TrainingKernel.dates;
+    if (kd && typeof kd.todayKeyLocal === 'function') return kd.todayKeyLocal();
     const d = new Date();
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -42,6 +48,8 @@
   }
 
   function _daysBetween(startKey, todayKey) {
+    const kd = HEYS.TrainingKernel && HEYS.TrainingKernel.dates;
+    if (kd && typeof kd.daysBetweenDateKeys === 'function') return kd.daysBetweenDateKeys(startKey, todayKey);
     const a = Date.parse(startKey + 'T00:00:00');
     const b = Date.parse(todayKey + 'T00:00:00');
     if (!isFinite(a) || !isFinite(b)) return 0;
@@ -49,6 +57,8 @@
   }
 
   function _phaseForModel(model, weekIdx, weeksTotal) {
+    const kp = _kernelPeriodization();
+    if (kp && typeof kp.phaseForModel === 'function') return kp.phaseForModel(model, weekIdx, weeksTotal);
     const w = Number(weekIdx);
     const total = Number(weeksTotal) || DEFAULT_WEEKS;
     if (!Number.isFinite(w) || w < 0) return 'accumulation';
@@ -63,6 +73,8 @@
   }
 
   function _energyFocusForPhase(phase) {
+    const kp = _kernelPeriodization();
+    if (kp && typeof kp.energyFocusForPhase === 'function') return kp.energyFocusForPhase(phase);
     if (phase === 'accumulation') return 'aerobic';
     if (phase === 'intensification' || phase === 'taper') return 'phosphagen';
     if (phase === 'dup') return 'undulating';
@@ -118,17 +130,23 @@
     const model = explicitModel || (auto && auto.model) || 'linear';
     const weeks = Math.max(1, Math.min(12, Number(o.weeks) || DEFAULT_WEEKS));
     const startedAt = o.startedAt || _todayKey();
-    const planWeeks = [];
-    for (let i = 0; i < weeks; i++) {
-      const phase = _phaseForModel(model, i, weeks);
-      planWeeks.push(Object.assign({
-        weekIdx: i,
-        week: i + 1,
-        phase: phase,
-        focusQuality: focusQuality,
-        energyFocus: _energyFocusForPhase(phase)
-      }, PHASE_META[phase] || PHASE_META.accumulation));
-    }
+    const kp = _kernelPeriodization();
+    const planWeeks = kp && typeof kp.buildWeeks === 'function'
+      ? kp.buildWeeks({ model: model, weeks: weeks, focusQuality: focusQuality })
+      : (function () {
+          const out = [];
+          for (let i = 0; i < weeks; i++) {
+            const phase = _phaseForModel(model, i, weeks);
+            out.push(Object.assign({
+              weekIdx: i,
+              week: i + 1,
+              phase: phase,
+              focusQuality: focusQuality,
+              energyFocus: _energyFocusForPhase(phase)
+            }, PHASE_META[phase] || PHASE_META.accumulation));
+          }
+          return out;
+        })();
     return {
       version: 1,
       model: model,
@@ -145,6 +163,8 @@
   function current(plan, todayKey) {
     const p = plan || loadPlan();
     if (!p || !p.startedAt) return null;
+    const kp = _kernelPeriodization();
+    if (kp && typeof kp.current === 'function') return kp.current(p, todayKey || _todayKey());
     const days = _daysBetween(p.startedAt, todayKey || _todayKey());
     const weekIdx = Math.floor(days / 7);
     const phase = _phaseForModel(p.model, weekIdx, p.weeksTotal || p.weeks || DEFAULT_WEEKS);

@@ -54,6 +54,9 @@
   // ─── S1 — age/level gate (fail-closed) ────────────────────────────────────────
   // METHODOLOGY ч.9.2/9.3, IMPLEMENTATION_MAP S1.
   function S1_ageLevelGate(atom, profile) {
+    // S1 — из ОБЩЕГО ЯДРА (HEYS.TrainingKernel.gate.levelAgeGate); ниже локальный фолбэк
+    const _kg = HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+    if (_kg && _kg.levelAgeGate) return _kg.levelAgeGate(atom, profile, LEVEL_ORDER);
     if (!atom || typeof atom !== 'object') return [err('S1.invalid_atom', 'атом не объект')];
     if (!profile || typeof profile !== 'object')
       return [err('S1.no_profile', 'нет профиля — fail-closed')];
@@ -167,6 +170,25 @@
   // METHODOLOGY ч.5.7/9.2, IMPLEMENTATION_MAP S3.
   // session = {blocks: [...], context: {warmupDone: bool}}
   function S3_warmupRequired(session) {
+    const _kg = HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+    if (_kg && _kg.warmupRequired) {
+      return _kg.warmupRequired(session, {
+        invalid: function (s) { return !s || !Array.isArray(s.blocks); },
+        invalidMsg: 'сессия без blocks',
+        items: function (s) { return s.blocks; },
+        isIntensive: function (b) { return b && (b.fatigueCost === 'high' || b.fatigueCost === 'max'); },
+        warmupDone: function (s) { return !!(s.context && s.context.warmupDone); },
+        emptyCode: 'S3.na',
+        emptyMsg: 'S3 не применим: нет intensive-блоков',
+        missingCode: 'S3.warmup_missing',
+        missingMsg: 'intensive-блок(и) без warmup_done — сессия невалидна',
+        missingExtra: function (intensive) {
+          return { intensiveBlockIds: intensive.map(function (b) { return b.id; }) };
+        },
+        passCode: 'S3.pass',
+        passMsg: 'S3: разминка выполнена'
+      });
+    }
     if (!session || !Array.isArray(session.blocks))
       return [err('S3.invalid_session', 'сессия без blocks')];
     const intensive = session.blocks.filter(function (b) {
@@ -277,6 +299,8 @@
   // отдельное продуктовое решение (warmup_done очевидно от S3-runner'а;
   // safety-critical токены вроде bfr/fall — никогда).
   function S9_prerequisitesGate(atom, profile) {
+    const _kg = HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+    if (_kg && _kg.prerequisitesGate) return _kg.prerequisitesGate(atom, profile, { codePrefix: 'S9' });
     if (!atom || typeof atom !== 'object') return [err('S9.invalid_atom', 'атом не объект')];
     const prereqs = (atom.gates && Array.isArray(atom.gates.prerequisites))
       ? atom.gates.prerequisites : [];
@@ -469,41 +493,49 @@
 
   // ─── runAll — оркестратор для типичного contextset ────────────────────────────
   // Запускает применимые валидаторы по входу. Возвращает плоский массив Issue[].
+  function _gateKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+  }
+  function _runRuleList(rules) {
+    const kg = _gateKernel();
+    if (kg && kg.runRules) return kg.runRules(rules);
+    return rules.reduce(function (acc, fn) { return acc.concat(fn()); }, []);
+  }
   function runAll(input, profile, history) {
-    const all = [];
+    const rules = [];
     if (input && input.atom) {
-      all.push.apply(all, S1_ageLevelGate(input.atom, profile));
-      all.push.apply(all, S5_openhandFirst(input.atom, profile));
-      all.push.apply(all, S2_tissueFreshness(input.atom, history, input.now));
+      rules.push(function () { return S1_ageLevelGate(input.atom, profile); });
+      rules.push(function () { return S5_openhandFirst(input.atom, profile); });
+      rules.push(function () { return S2_tissueFreshness(input.atom, history, input.now); });
     }
     if (input && input.session) {
-      all.push.apply(all, S3_warmupRequired(input.session));
-      all.push.apply(all, V_sessionOrder(input.session));
+      rules.push(function () { return S3_warmupRequired(input.session); });
+      rules.push(function () { return V_sessionOrder(input.session); });
     }
     if (input && input.block) {
-      all.push.apply(all, V_blockHomogeneity(input.block));
+      rules.push(function () { return V_blockHomogeneity(input.block); });
     }
     if (input && input.microcycle) {
-      all.push.apply(all, S6_antagonistBalance(input.microcycle));
+      rules.push(function () { return S6_antagonistBalance(input.microcycle); });
     }
     if (input && input.mesocycle) {
-      all.push.apply(all, S7_deloadRequired(input.mesocycle));
-      all.push.apply(all, V_energySystemSequence(input.mesocycle));
+      rules.push(function () { return S7_deloadRequired(input.mesocycle); });
+      rules.push(function () { return V_energySystemSequence(input.mesocycle); });
     }
     if (input && input.week && profile) {
-      all.push.apply(all, V_skillBalance(input.week, profile.level));
+      rules.push(function () { return V_skillBalance(input.week, profile.level); });
     }
     if (profile) {
-      all.push.apply(all, V_ageModifier(profile));
-      all.push.apply(all, V_skinStatus(input, profile));
+      rules.push(function () { return V_ageModifier(profile); });
+      rules.push(function () { return V_skinStatus(input, profile); });
     }
     if (input && input.ftl && typeof input.ftl.week === 'number') {
-      all.push.apply(all, S4_progressionCap(input.ftl.week, input.ftl.trailingAvg));
+      rules.push(function () { return S4_progressionCap(input.ftl.week, input.ftl.trailingAvg); });
     }
     if (input && input.sessionLog) {
-      all.push.apply(all, S8_painStop(input.sessionLog));
+      rules.push(function () { return S8_painStop(input.sessionLog); });
     }
-    return all;
+    return _runRuleList(rules);
   }
 
   Fingers.validators = {
