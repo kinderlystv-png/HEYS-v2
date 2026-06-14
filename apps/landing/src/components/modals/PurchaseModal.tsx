@@ -116,15 +116,6 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
             }
 
             setFormState('success')
-
-            if (typeof window !== 'undefined') {
-                if (window.gtag) {
-                    window.gtag('event', 'purchase_request', { plan: planName })
-                }
-                if (window.fbq) {
-                    window.fbq('track', 'PurchaseRequest')
-                }
-            }
         } catch (err: any) {
             setFormState('error')
             setErrorMessage(err.message || 'Произошла ошибка. Пожалуйста, попробуйте позже или напишите нам в Telegram.')

@@ -7,8 +7,6 @@ import { LEGAL_DOCS, SUPPORT_CONTACTS, SUPPORT_HOURS } from '@/config/legal-vers
 
 declare global {
   interface Window {
-    gtag?: (...args: unknown[]) => void;
-    fbq?: (...args: unknown[]) => void;
     ym?: (...args: unknown[]) => void;
   }
 }
@@ -205,28 +203,6 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
 
       // Успех
       setFormState('success');
-
-      // ⚠️ GA4/Meta Pixel ОТКЛЮЧЕНЫ для 152-ФЗ compliance (трансграничная передача)
-      // Вызовы ниже не выполнятся пока GA4_ID/META_PIXEL_ID = null в layout.tsx
-      // TODO: Включить после уведомления РКН о трансграничной передаче
-      if (typeof window !== 'undefined') {
-        // Google Analytics 4 (disabled until RKN notification)
-        if (window.gtag) {
-          window.gtag('event', 'trial_signup', {
-            event_category: 'conversion',
-            event_label: messenger,
-            messenger: messenger,
-            utm_source: utmParams.utm_source,
-          });
-        }
-        // Meta Pixel (disabled until RKN notification)
-        if (window.fbq) {
-          window.fbq('track', 'Lead', {
-            content_name: 'trial_signup',
-            messenger: messenger,
-          });
-        }
-      }
     } catch (error) {
       setFormState('error');
       setErrorMessage(
