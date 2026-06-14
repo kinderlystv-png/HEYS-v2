@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.14.834686bf",
+      "buildHash": "834686bf",
+      "date": "2026-06-14",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "preload planning keys in Phase A so chrono strip loads without blank state",
+      "items": [
+        {
+          "type": "fix",
+          "title": "preload planning keys in Phase A so chrono strip loads without blank state",
+          "description": "preload planning keys in Phase A so chrono strip loads without blank state"
+        }
+      ],
+      "coveredCommits": ["834686bf", "a0544878", "de302c9c", "b8126552"]
+    },
+    {
       "version": "2026.06.14.a0544878",
       "buildHash": "a0544878",
       "date": "2026-06-14",
@@ -143,21 +159,6 @@
         }
       ],
       "coveredCommits": ["7d50d6be"]
-    },
-    {
-      "version": "2026.06.13.4d724888",
-      "buildHash": "4d724888",
-      "date": "2026-06-13",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "Обновлено фото МФР упражнения",
-      "items": [
-        {
-          "type": "improvement",
-          "title": "Обновили фото МФР квадрицепса",
-          "description": "Добавили более понятное изображение для упражнения с foam roller в режиме мобильности."
-        }
-      ]
     }
   ]
 }
