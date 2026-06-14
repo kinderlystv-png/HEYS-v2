@@ -2404,7 +2404,12 @@
             }
 
             // Очищаем фото от base64 перед сохранением
-            const cleanedPayload = stripPhotoData(payload);
+            const cleanedPayloadRaw = stripPhotoData(payload);
+            // TASK-003: if React is behind LS after morning check-in (rAF throttled),
+            // do not let autosave cement a snapshot without sleep/mood fields.
+            const cleanedPayload = typeof global.HEYS?.dayUtils?.mergeSubjectiveFieldsPreferFresh === 'function'
+                ? global.HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh(cleanedPayloadRaw, current)
+                : cleanedPayloadRaw;
 
             const toStore = {
                 ...cleanedPayload,

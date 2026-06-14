@@ -29,6 +29,9 @@ const evalScript = (relativePath) => {
   eval(source);
 };
 
+const readSource = (relativePath) =>
+  fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
+
 beforeEach(() => {
   if (!globalThis.window) globalThis.window = globalThis;
   window.HEYS = {};
@@ -130,5 +133,14 @@ describe('TASK-003: anti-clobber subjective-полей чекина', () => {
     expect(merged.moodMorning).toBe(6);
     // Исходный снапшот не мутирован
     expect('moodMorning' in snapshot).toBe(false);
+  });
+
+  it('autosave подключает anti-clobber перед записью дня', () => {
+    const source = readSource('../../apps/web/heys_day_hooks.js');
+    const mergeIndex = source.indexOf('mergeSubjectiveFieldsPreferFresh');
+    const writeIndex = source.indexOf('lsSetFn(key, toStore)');
+
+    expect(mergeIndex).toBeGreaterThanOrEqual(0);
+    expect(writeIndex).toBeGreaterThan(mergeIndex);
   });
 });
