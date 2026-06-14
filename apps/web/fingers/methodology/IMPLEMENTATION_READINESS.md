@@ -6,17 +6,17 @@
 
 ## Короткий вердикт
 
-**MVP-рекомендатель сессии готов к safe flip как strangler-режим, но full
-planner ещё не готов.** Знаниевый слой методологии в целом согласован; перед
-`flag=on` остаётся rollout-решение, а не известный кодовый blocker.
+**Рекомендатель сессии флипнут в прод (FLIP 2026-06-11, `flags.newEngine=true`
+дефолт), full planner — частично.** Знаниевый слой методологии согласован; после
+flip остаётся canary-наблюдение, не кодовый blocker.
 
-| Слой                        | Статус      | Суть                                                                                                                                                   |
-| --------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Методология (части 1–10)    | 🟢 готово   | Структура и источники есть; завышенные evidence-grade снижены                                                                                          |
-| Пул как данные (§1.2 схема) | 🟢 готово   | 36 атомов, явный `doseConfidence`, enum/source sanity под тестами                                                                                      |
-| Safety validators           | 🟡 частично | S1–S9 есть; S2 48/72+`gripGroup` исправлен; S4 режет FTL; S7 пока advisory                                                                             |
-| Session builder / UI shapes | 🟢 готово   | 6 `doseShape` renderable; shadow metric считает non-renderable, не non-hang                                                                            |
-| Периодизация / full planner | 🟡 частично | `periodization_engine` есть (B7): макро/мезо-план + clamp интенсивности дня по фазе; осталось авто-`selectModel` 6.4, transfer M3, полная тест-батарея |
+| Слой                        | Статус      | Суть                                                                                                                                                                           |
+| --------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Методология (части 1–10)    | 🟢 готово   | Структура и источники есть; завышенные evidence-grade снижены                                                                                                                  |
+| Пул как данные (§1.2 схема) | 🟢 готово   | 36 атомов, явный `doseConfidence`, enum/source sanity под тестами                                                                                                              |
+| Safety validators           | 🟡 частично | S1–S9 есть; S2 48/72+`gripGroup` исправлен; S4 режет FTL; S7 пока advisory                                                                                                     |
+| Session builder / UI shapes | 🟢 готово   | 6 `doseShape` renderable; shadow metric считает non-renderable, не non-hang                                                                                                    |
+| Периодизация / full planner | 🟡 частично | `periodization_engine` есть (B7): макро/мезо-план + clamp интенсивности дня по фазе; авто-`selectModel` 6.4 ✅ реализован+подключён; осталось transfer M3, полная тест-батарея |
 
 ## Что уже закрыто
 
@@ -46,11 +46,11 @@ planner ещё не готов.** Знаниевый слой методолог
   `block`, `none`, S4-overload. UI-risk = 0; `block` max = 31 мин без
   `pow_rfd_pulls`; S4-overload снимает `strength-endurance` и остаётся под cap.
 
-## Осталось перед включением `flags.newEngine=true`
+## Осталось после флипа `flags.newEngine=true` (FLIP 2026-06-11)
 
-1. **Rollout / canary.** Включить `flags.newEngine=true` поэтапно и наблюдать
-   `engineRouter.lastShadowDiff`/fallback-rate; прежний `mix_engine` остаётся
-   fallback.
+1. **Canary / наблюдение.** Флаг уже включён дефолтом (`engine_router:45`);
+   наблюдать `engineRouter.lastShadowDiff`/fallback-rate; прежний `mix_engine`
+   остаётся fallback, откат — `newEngine=false`.
 2. **Phase-2 planning.** `periodization_engine` уже управляет интенсивностью дня
    по фазе мезоцикла и получает live-plan из UI-старта цикла. Осталось:
    forward-календарь/объяснение фаз в UI.

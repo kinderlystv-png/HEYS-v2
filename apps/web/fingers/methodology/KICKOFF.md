@@ -89,13 +89,13 @@ pnpm dev:local       # API:4001 + web:3001 — увидеть режим
 **оставляем** — пользователю нравится. Меняем только «мозг» (логику/методологию)
 инкрементально за фиче-флагом, со старым mix_engine как fallback.
 
-| Шаг | Что                                                                                                                                                                                           | Статус                                                                                                                                                                             |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | safety-тесты ДО рефактора                                                                                                                                                                     | ✅ добавлены в `__tests__` — подтвердить `pnpm vitest run`                                                                                                                         |
-| 2   | аддитивный data-слой: `quality_catalog` (9 осей, enum'ы §1.2, `deriveEnergySystem`, `PROGRAM_META` на 20 программ, `enrichProgram`). **PROGRAMS не мутируется** — методология отдельным слоем | ✅ модуль+тесты, probe-green — `pnpm vitest run`                                                                                                                                   |
-| 3   | новые модули логики (`block_catalog` из пула, `validators` S1–S8, `assessment`) **за флагом**, вне live-пути                                                                                  | ✅ в проде: `block_catalog` 36 атомов × 9 блоков, `validators` S1–S9 + homed `V_*`, `assessment` §3.2                                                                              |
-| 4   | strangle генерации сессии по флагу: A/B новый движок vs старый, fallback, флип дефолта когда новый ≥ старый + safety зелёный                                                                  | ✅ инфраструктура в проде: `engine_router` + `sessionBuilder` + UI runner split (Hang/Reps). `flag=on` ждёт re-shadow с реальными уровнями                                         |
-| 5   | UI-плееры на все doseShape (a continuous · b attempts · c circuit · d process) + B3 прогрессия-advisory (`detectPlateau`/`nextAxis`/`suggestProgression`)                                     | ✅ 2026-06-09 в проде: `RENDERABLE_DOSESHAPES`=все 6 (Runner+Display каждого); `progression` advisory в `sessionBuilder` без влияния на генерацию. Enforcement прогрессии — Фаза 2 |
+| Шаг | Что                                                                                                                                                                                           | Статус                                                                                                                                                                                                                                                    |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | safety-тесты ДО рефактора                                                                                                                                                                     | ✅ добавлены в `__tests__` — подтвердить `pnpm vitest run`                                                                                                                                                                                                |
+| 2   | аддитивный data-слой: `quality_catalog` (9 осей, enum'ы §1.2, `deriveEnergySystem`, `PROGRAM_META` на 20 программ, `enrichProgram`). **PROGRAMS не мутируется** — методология отдельным слоем | ✅ модуль+тесты, probe-green — `pnpm vitest run`                                                                                                                                                                                                          |
+| 3   | новые модули логики (`block_catalog` из пула, `validators` S1–S8, `assessment`) **за флагом**, вне live-пути                                                                                  | ✅ в проде: `block_catalog` 36 атомов × 9 блоков, `validators` S1–S9 + homed `V_*`, `assessment` §3.2                                                                                                                                                     |
+| 4   | strangle генерации сессии по флагу: A/B новый движок vs старый, fallback, флип дефолта когда новый ≥ старый + safety зелёный                                                                  | ✅ **FLIP 2026-06-11: `flags.newEngine=true` дефолт для всех** (canary валидирован, `engine_router:45`); `engine_router` + `sessionBuilder` + UI runner split в проде. `mix_engine` остаётся fallback при null/throw. Осталось — только canary-наблюдение |
+| 5   | UI-плееры на все doseShape (a continuous · b attempts · c circuit · d process) + B3 прогрессия-advisory (`detectPlateau`/`nextAxis`/`suggestProgression`)                                     | ✅ 2026-06-09 в проде: `RENDERABLE_DOSESHAPES`=все 6 (Runner+Display каждого); `progression` advisory в `sessionBuilder` без влияния на генерацию. Enforcement прогрессии — Фаза 2                                                                        |
 
 ## Инварианты реализации (не нарушать)
 
@@ -126,9 +126,11 @@ pnpm dev:local       # API:4001 + web:3001 — увидеть режим
   6.2 / DUP 6.3 / taper 6.5 / maintenance 6.6, фазы с `ceiling`+
   `volumeMultiplier`), `current` резолвит фазу дня, `engine_router`+
   `sessionBuilder` clamp'ят интенсивность дня по фазе мезоцикла. Тесты
-  `fingers-periodization`+`fingers-mesocycle`. **Осталось Фаза 2:** авто-выбор
-  модели 6.4 (`selectModel(формат×лимитер)` — сейчас `model` задаётся вручную),
-  transfer-sequencing M3.
+  `fingers-periodization`+`fingers-mesocycle`. Авто-выбор модели 6.4
+  (`selectModel(формат×лимитер)`) — ✅ реализован и подключён в
+  `periodization_engine` (`explicitModel ? null : selectModel(...)`, ветки
+  beginner/limiter/goalDate/DUP). **Осталось Фаза 2:** transfer-sequencing M3 +
+  полная тест-батарея периодизации.
 - **Enforcement прогрессии/вариативности (Фаза 2)** ✅: `recordsByQuality`
   доезжает в builder: `finger_strength` из MVC-history, остальные качества из
   session-log proxy; axis-cap реально меняет выбор, `saveProgressionAxis()` +
@@ -152,14 +154,16 @@ FTL-cap slot trimming), UI всех 6 doseShape
 (`Hang`/`Reps`/`Continuous`/`Attempts`/`Circuit`/`Process` Runner+Display с
 общим S8 RPE/pain capture).
 
-**Что осталось до `flag=on`**:
+**`flag=on` сделан (FLIP 2026-06-11).** `HEYS.Fingers.flags.newEngine = true` —
+дефолт для всех в `engine_router:45` (canary валидирован). Прежний `mix_engine`
+остаётся fallback (router catches null/throw). Scripted shadow-envelope закрыт:
+`node apps/web/fingers/methodology/tools/shadow-envelope.mjs --check`.
 
-1. **Финальный go-flip** методологом: `HEYS.Fingers.flags.newEngine = true` как
-   дефолт. Прежний `mix_engine` остаётся fallback (router catches null/throw).
-   Scripted shadow-envelope уже закрыт:
-   `node apps/web/fingers/methodology/tools/shadow-envelope.mjs --check`.
-2. **Canary-наблюдение**: после flip следить за `engineRouter.lastShadowDiff`,
-   fallback-rate и S4 trimming telemetry.
+**Осталось после flip:**
+
+1. **Canary-наблюдение**: следить за `engineRouter.lastShadowDiff`,
+   fallback-rate и S4 trimming telemetry; откат — `newEngine=false` в
+   `engine_router:45` (+rebundle/deploy) или рантайм-флаг.
 
 **Tech-debt**: консолидация `useCountdownCycle`+`useRepsCycle` в общий
 timer-core — ✅ сделано (commit `0f9ef53e`, A4: `useTimerCore` ядро, оба хука

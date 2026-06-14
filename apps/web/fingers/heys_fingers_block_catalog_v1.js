@@ -480,29 +480,33 @@
     }
   });
 
-  // ─── Производные индексы ──────────────────────────────────────────────────────
+  // ─── Производные индексы (механизм — из ОБЩЕГО ЯДРА; локальный фолбэк) ─────────
+  const _kc = HEYS.TrainingKernel && HEYS.TrainingKernel.catalog;
+  const _idx = (_kc && _kc.createIndex) ? _kc.createIndex(ATOMS, { idKey: 'id', groupBy: ['blockId', 'quality'] }) : null;
+
   const ATOMS_BY_ID = Object.create(null);
   const ATOMS_BY_BLOCK = Object.create(null);
   const ATOMS_BY_QUALITY = Object.create(null);
-  BLOCKS.forEach(function (b) { ATOMS_BY_BLOCK[b.id] = []; });
-
-  for (var i = 0; i < ATOMS.length; i++) {
-    var a = ATOMS[i];
-    ATOMS_BY_ID[a.id] = a;
-    if (ATOMS_BY_BLOCK[a.blockId]) ATOMS_BY_BLOCK[a.blockId].push(a);
-    if (!ATOMS_BY_QUALITY[a.quality]) ATOMS_BY_QUALITY[a.quality] = [];
-    ATOMS_BY_QUALITY[a.quality].push(a);
-  }
-
-  // Заполнить blocks[].atomIds после построения индекса
-  for (var j = 0; j < BLOCKS.length; j++) {
-    BLOCKS[j].atomIds = ATOMS_BY_BLOCK[BLOCKS[j].id].map(function (a) { return a.id; });
+  if (!_idx) {
+    BLOCKS.forEach(function (b) { ATOMS_BY_BLOCK[b.id] = []; });
+    for (var i = 0; i < ATOMS.length; i++) {
+      var a = ATOMS[i];
+      ATOMS_BY_ID[a.id] = a;
+      if (ATOMS_BY_BLOCK[a.blockId]) ATOMS_BY_BLOCK[a.blockId].push(a);
+      if (!ATOMS_BY_QUALITY[a.quality]) ATOMS_BY_QUALITY[a.quality] = [];
+      ATOMS_BY_QUALITY[a.quality].push(a);
+    }
   }
 
   function getBlock(id) { return BLOCKS.find(function (b) { return b.id === id; }) || null; }
-  function getAtom(id) { return ATOMS_BY_ID[id] || null; }
-  function atomsByBlock(blockId) { return (ATOMS_BY_BLOCK[blockId] || []).slice(); }
-  function atomsByQuality(q) { return (ATOMS_BY_QUALITY[q] || []).slice(); }
+  function getAtom(id) { return _idx ? _idx.get(id) : (ATOMS_BY_ID[id] || null); }
+  function atomsByBlock(blockId) { return _idx ? _idx.by('blockId', blockId) : (ATOMS_BY_BLOCK[blockId] || []).slice(); }
+  function atomsByQuality(q) { return _idx ? _idx.by('quality', q) : (ATOMS_BY_QUALITY[q] || []).slice(); }
+
+  // Заполнить blocks[].atomIds через активный индекс (kernel или fallback)
+  for (var j = 0; j < BLOCKS.length; j++) {
+    BLOCKS[j].atomIds = atomsByBlock(BLOCKS[j].id).map(function (a) { return a.id; });
+  }
 
   // ─── validate() — sanity enum'ов + сверка с qualityCatalog ───────────────────
   // Запускать на CI/в тестах. Возвращает {errors:[...], warnings:[...]}.

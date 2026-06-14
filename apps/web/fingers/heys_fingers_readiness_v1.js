@@ -40,15 +40,23 @@
     return x;
   }
 
+  // robust-статистика — из ОБЩЕГО ЯДРА (HEYS.TrainingKernel.stats); ниже локальный
+  // фолбэк (прод-safety, если ядро не загрузилось). Поведение идентично.
+  function _ks() { return HEYS.TrainingKernel && HEYS.TrainingKernel.stats; }
+
   function median(arr) {
+    const ks = _ks();
+    if (ks && ks.median) return ks.median(arr);
     if (!arr.length) return 0;
     const sorted = arr.slice().sort(function (a, b) { return a - b; });
     const mid = Math.floor(sorted.length / 2);
     return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
   }
 
-  /** Median Absolute Deviation × 1.4826 = robust sigma estimate. */
+  /** Median Absolute Deviation × 1.4826 = robust sigma estimate (floor 0.5). */
   function madSigma(arr) {
+    const ks = _ks();
+    if (ks && ks.madSigma) return ks.madSigma(arr, 0.5);
     if (!arr.length) return 1;
     const med = median(arr);
     const deviations = arr.map(function (v) { return Math.abs(v - med); });
