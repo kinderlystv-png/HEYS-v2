@@ -151,6 +151,8 @@ get_function_config() {
             echo "nodejs18 index.handler 256m 30s" ;;
         "heys-cron-reminders")
             echo "nodejs18 index.handler 512m 120s" ;;
+        "heys-cron-photo-cleanup")
+            echo "nodejs18 index.handler 256m 600s" ;;
         "heys-client-daily-backup")
             echo "nodejs18 index.handler 256m 300s" ;;
         "heys-snapshot-demo")
