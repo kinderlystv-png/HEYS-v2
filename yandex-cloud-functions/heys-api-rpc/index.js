@@ -580,6 +580,17 @@ async function validateContextForWrite(client, params, isCurator, curatorId, ses
       } catch (_) { /* noop */ }
       return { ok: false, status: 'context_required', effectiveClientId: resolvedClientId };
     }
+    // SEC-004 (2026-06-14): Phase B+ pre-flip ratchet — см. эквивалент в
+    // heys-api-rest/index.js. Логируем no-context cases в warn-mode чтобы
+    // через 7 дней мониторинга решить — flip STRICT=1 безопасен или есть
+    // legitimate writes без context_id (старые клиентские билды).
+    try {
+      await client.query(
+        `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+         VALUES ($1::uuid, $2::text, 'context_missing_warn', TRUE, $3)`,
+        [resolvedClientId, auditKey, isCurator ? 'curator_phase_b' : 'session_phase_b']
+      );
+    } catch (_) { /* noop */ }
     return { ok: true, status: 'no_context_phase_b', effectiveClientId: resolvedClientId };
   }
 

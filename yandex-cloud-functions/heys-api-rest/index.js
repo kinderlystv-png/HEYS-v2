@@ -125,6 +125,19 @@ async function validateContextForWriteRest(client, ctxId, suppliedClientId, k) {
       } catch (_) { /* noop */ }
       return { ok: false, status: 'context_required', effectiveClientId: suppliedClientId };
     }
+    // SEC-004 (2026-06-14): Phase B+ — warn-only теперь ЛОГИРУЕТ no-context cases,
+    // а не пропускает silent (как раньше). Это pre-flip ratchet: запускаем
+    // мониторинг 7 дней, если 0 событий `context_missing_warn` → flip STRICT=1
+    // безопасен; иначе видим какие endpoints/клиенты ещё посылают без context_id
+    // (старые билды) и обновляем перед flip. allowed=true потому что write
+    // продолжает идти (не блокируется).
+    try {
+      await client.query(
+        `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+         VALUES ($1::uuid, $2::text, 'context_missing_warn', TRUE, 'rest_phase_b')`,
+        [suppliedClientId, auditKey]
+      );
+    } catch (_) { /* noop */ }
     return { ok: true, status: 'no_context_phase_b', effectiveClientId: suppliedClientId };
   }
 
