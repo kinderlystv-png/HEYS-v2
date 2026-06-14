@@ -44,6 +44,10 @@ def parse_md_table(lines, start_idx):
     return head, rows
 
 
+def clean_md_cell(v):
+    return re.sub(r'\*\*', '', str(v or '').strip())
+
+
 wb = openpyxl.load_workbook(ROOT / '00_Сводная_панель.xlsx', data_only=True)
 
 # ---------- Сводка ----------
@@ -183,23 +187,61 @@ if imap_path.exists():
 
 
 # ---------- статусы этапов из 22 ----------
+TASK_ID_RE = re.compile(r'^(\d+[A-ZА-Я]?\.\d+(?:\.\d+)?)')
+
+
+def parse_task_id(cell):
+    m = TASK_ID_RE.match(cell.strip())
+    return m.group(1) if m else None
+
+
+def is_top_level_task(tid):
+    return re.fullmatch(r'\d+[A-ZА-Я]?\.\d+', tid) is not None
+
+
 plan_text = (ROOT / '22_План_реализации_маркетинга.md').read_text(encoding='utf-8')
 stages = []
 task_status = {}  # '3.7' -> '✅'/'🟡'/'⬜' — единый источник статусов задач
 for m in re.finditer(r'^## (Этап \d[^\n]*)\n(.*?)(?=^## |\Z)', plan_text, re.M | re.S):
-    rows = re.findall(r'^\|\s*(\d+\.\d+)\s*\|\s*([^|]+?)\s*\|.*\|\s*(✅|⬜|🟡)\s*\|',
-                      m.group(2), re.M)
-    if rows:
+    tasks = []
+    task_by_id = {}
+    current_status_idx = None
+    for line in m.group(2).splitlines():
+        if not line.strip().startswith('|'):
+            current_status_idx = None
+            continue
+        cells = [clean_md_cell(c) for c in line.strip().strip('|').split('|')]
+        if len(cells) < 4 or set(cells[0]) <= {'-', ' ', ':'}:
+            continue
+        if 'Статус' in cells:
+            current_status_idx = cells.index('Статус')
+            continue
+        tid = parse_task_id(cells[0])
+        if not tid:
+            continue
+        if current_status_idx is None or current_status_idx >= len(cells):
+            continue
+        st = cells[current_status_idx]
+        if '✅' not in st and '🟡' not in st and '⬜' not in st:
+            continue
+        status = '✅' if '✅' in st else ('🟡' if '🟡' in st else '⬜')
+        item = {'id': tid, 'name': cells[1], 'status': status, 'subtasks': []}
+        if is_top_level_task(tid):
+            task_status[tid] = status
+            tasks.append(item)
+            task_by_id[tid] = item
+        else:
+            parent_id = '.'.join(tid.split('.')[:2])
+            if parent_id in task_by_id:
+                task_by_id[parent_id]['subtasks'].append(item)
+    if tasks:
         t = m.group(1)
-        for tid, name, st in rows:
-            task_status[tid] = st
         stages.append({'title': t.split('—')[0].strip(),
                        'desc': t.split('—')[1].strip() if '—' in t else '',
-                       'done': sum(1 for r in rows if r[2] == '✅')
-                       + 0.5 * sum(1 for r in rows if r[2] == '🟡'),
-                       'total': len(rows),
-                       'tasks': [(tid, re.sub(r'\*\*', '', name), st)
-                                 for tid, name, st in rows]})
+                       'done': sum(1 for r in tasks if r['status'] == '✅')
+                       + 0.5 * sum(1 for r in tasks if r['status'] == '🟡'),
+                       'total': len(tasks),
+                       'tasks': tasks})
 
 # ---------- гейты из 25 ----------
 gates = []
@@ -222,6 +264,10 @@ def chip(s):
     if '🟡' in s:
         return '<span class="chip mid">в работе</span>'
     return '<span class="chip wait">ожидает</span>'
+
+
+def status_class(st):
+    return 'ok' if st == '✅' else ('mid' if st == '🟡' else 'wait')
 
 
 now = datetime.datetime.now()
@@ -249,10 +295,18 @@ gate_rows = ''.join(
 stage_rows = ''
 for s in stages:
     pct = round(s['done'] / s['total'] * 100)
-    task_list = ''.join(
-        f'<li><span class="chip {"ok" if st == "✅" else ("mid" if st == "🟡" else "wait")}">'
-        f'{esc(tid)}</span> {esc(name)}</li>'
-        for tid, name, st in s['tasks'])
+    task_items = []
+    for task in s['tasks']:
+        subitems = ''
+        if task['subtasks']:
+            subitems = '<ul class="subtask-list">' + ''.join(
+                f'<li><span class="chip {status_class(sub["status"])}">'
+                f'{esc(sub["id"])}</span> {esc(sub["name"])}</li>'
+                for sub in task['subtasks']) + '</ul>'
+        task_items.append(
+            f'<li><span class="chip {status_class(task["status"])}">'
+            f'{esc(task["id"])}</span> {esc(task["name"])}{subitems}</li>')
+    task_list = ''.join(task_items)
     stage_rows += (
         f'<details class="stage-d"><summary class="stage">'
         f'<div class="s-head"><b>{esc(s["title"])}</b>'
@@ -450,6 +504,10 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .task-list {{ margin:4px 0 10px; padding-left:6px; list-style:none; }}
 .task-list li {{ font-size:12px; padding:3px 0; border-bottom:1px dashed #16203f; }}
 .task-list .chip {{ margin-right:6px; }}
+.subtask-list {{ margin:4px 0 1px 22px; padding-left:0; list-style:none; }}
+.subtask-list li {{ color:var(--dim); font-size:11.5px; padding:2px 0;
+  border-bottom:0; }}
+.subtask-list .chip {{ margin-right:6px; opacity:.92; }}
 .kpis {{ grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }}
 .kpi {{ background:var(--card); border:1px solid var(--line); border-radius:10px;
   padding:9px 11px; }}
