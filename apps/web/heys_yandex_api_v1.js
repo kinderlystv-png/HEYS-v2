@@ -398,11 +398,21 @@
     try {
       log(`REST: ${method} ${table}`, filters);
 
+      // 🔐 SEC-023 (2026-06-14): передаём session_token в /rest/ чтобы heys-api-rest
+      // мог отрезать cross-client read (anon read PII любого клиента — критическая дыра).
+      // Сейчас server в HEYS_REST_READ_STRICT=0 (warn-mode) — НЕ ломаем legacy если
+      // токен не передан. После 24-48ч observation flip strict → 401/403.
+      // Курaторам JWT передавать не нужно: hot-fix v1 пропускает JWT с warn-log;
+      // curator-доступ к client_kv_store через /rest закрываем отдельной итерацией.
+      const headers = { 'Content-Type': 'application/json' };
+      try {
+        const tok = (typeof getSessionTokenForKV === 'function') ? getSessionTokenForKV() : null;
+        if (tok) headers['X-Session-Token'] = tok;
+      } catch (_) { /* noop */ }
+
       const fetchOptions = {
         method,
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers
       };
 
       if (data && (method === 'POST' || method === 'PATCH' || method === 'PUT')) {

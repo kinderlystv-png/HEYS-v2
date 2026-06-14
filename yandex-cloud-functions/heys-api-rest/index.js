@@ -530,12 +530,125 @@ module.exports.handler = async function (event, context) {
 
     let result;
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🔐 SEC-023 hot-fix 2026-06-14: anon read-block для client_kv_store.
+    // До hot-fix: GET /rest/client_kv_store?client_id=eq.<UUID>&k=eq.heys_profile
+    //   возвращал PII любого клиента **без любого** Authorization-header (anon).
+    // Live-проба 2026-06-14: 557 ключей Александры читались anon curl'ом.
+    //
+    // Архитектурный контекст: YandexAPI.rest() (apps/web/heys_yandex_api_v1.js:401)
+    //   шлёт fetch БЕЗ Authorization header по дизайну. Поэтому реализуем
+    //   capability-style auth: клиент-side добавит `X-Session-Token` к /rest fetch'ам,
+    //   server резолвит → определяет authedClientId → блок при mismatch.
+    //
+    // Ratchet (как SEC-004 Phase B):
+    //   HEYS_REST_READ_STRICT=0 (warn): audit-log + пропуск (НЕ ломаем legacy
+    //     клиентов которые ещё не передают X-Session-Token).
+    //   HEYS_REST_READ_STRICT=1 (strict): mismatch/no-auth → 401/403.
+    // ═══════════════════════════════════════════════════════════════════════════
+    async function enforceClientKvAuthForGet(event, qParams) {
+      const READ_STRICT = process.env.HEYS_REST_READ_STRICT === '1';
+      const requestedRaw = qParams.client_id;
+      let requestedCid = null;
+      if (typeof requestedRaw === 'string') {
+        requestedCid = requestedRaw.startsWith('eq.') ? requestedRaw.slice(3) : requestedRaw;
+      } else if (typeof qParams['eq.client_id'] === 'string') {
+        requestedCid = qParams['eq.client_id'];
+      }
+
+      const h = event.headers || {};
+      const auth = h.Authorization || h.authorization || '';
+      let token = null;
+      if (auth.startsWith('Bearer ')) token = auth.slice(7).trim();
+      const xs = h['X-Session-Token'] || h['x-session-token'] || '';
+      if (!token && xs) token = String(xs).trim();
+      // Heuristic: JWT (3 dot-separated parts) — это curator JWT (legacy path),
+      // НЕ session_token. Пропускаем — curator auth в hot-fix v1 не покрываем
+      // (отдельная итерация). Defense: warn-log если запрос крос-клиентский.
+      const isJwt = token && token.split('.').length === 3;
+      const sessionToken = (token && !isJwt) ? token : null;
+
+      let authedCid = null;
+      if (sessionToken) {
+        try {
+          const r = await client.query(
+            'SELECT client_id FROM client_sessions WHERE token_hash = sha256($1::bytea) AND expires_at > now() AND revoked_at IS NULL LIMIT 1',
+            [sessionToken]
+          );
+          authedCid = r.rows[0]?.client_id || null;
+        } catch (_) { /* swallow */ }
+      }
+
+      async function audit(action, allowed, reason) {
+        try {
+          await client.query(
+            `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+             VALUES ($1::uuid, $2::text, $3::text, $4::boolean, $5)`,
+            [
+              authedCid || requestedCid || '00000000-0000-0000-0000-000000000000',
+              String(qParams.k || qParams['eq.k'] || '<list>').slice(0, 200),
+              action, allowed, reason
+            ]
+          );
+        } catch (_) { /* noop */ }
+      }
+
+      // Case 1: no auth header at all
+      if (!sessionToken && !isJwt) {
+        if (READ_STRICT) {
+          await audit('rest_read_no_auth_blocked', false, 'session_token_required');
+          return { decision: 'block', status: 401, body: { error: 'session_token_required' } };
+        }
+        await audit('rest_read_no_auth_warn', true, 'phase_b');
+        return { decision: 'allow', warn: true };
+      }
+      // Case 2: JWT (curator path) — hot-fix v1 пропускает, warn-log
+      if (isJwt) {
+        await audit('rest_read_curator_jwt_unverified', true, 'jwt_skipped_v1');
+        return { decision: 'allow', warn: true };
+      }
+      // Case 3: session_token но invalid/expired
+      if (!authedCid) {
+        if (READ_STRICT) {
+          await audit('rest_read_invalid_session_blocked', false, 'invalid_session');
+          return { decision: 'block', status: 401, body: { error: 'invalid_or_expired_session' } };
+        }
+        await audit('rest_read_invalid_session_warn', true, 'phase_b');
+        return { decision: 'allow', warn: true };
+      }
+      // Case 4: session_token валиден — сравниваем с requestedCid
+      if (requestedCid && String(requestedCid).toLowerCase() !== String(authedCid).toLowerCase()) {
+        if (READ_STRICT) {
+          await audit('rest_read_cross_client_blocked', false,
+            `authed=${String(authedCid).slice(0,8)} requested=${String(requestedCid).slice(0,8)}`);
+          return { decision: 'block', status: 403, body: { error: 'cross_client_forbidden' } };
+        }
+        await audit('rest_read_cross_client_warn', true,
+          `authed=${String(authedCid).slice(0,8)} requested=${String(requestedCid).slice(0,8)}`);
+        return { decision: 'allow', warn: true };
+      }
+      // OK — own client or no requestedCid filter
+      return { decision: 'allow', warn: false };
+    }
+
     switch (method) {
       case 'GET': {
         // Простой SELECT с фильтрами из query params
         const params = { ...event.queryStringParameters };
         delete params.table;
         delete params.select; // Уже обработано выше
+
+        // 🔐 SEC-023 auth-check для client_kv_store
+        if (tableName === 'client_kv_store') {
+          const authDecision = await enforceClientKvAuthForGet(event, params);
+          if (authDecision.decision === 'block') {
+            return {
+              statusCode: authDecision.status,
+              headers: corsHeaders,
+              body: JSON.stringify(authDecision.body)
+            };
+          }
+        }
 
         // selectColumns уже валидированы и санитизированы выше (early validation)
         let query = `SELECT ${selectColumns} FROM "${tableName}"`;

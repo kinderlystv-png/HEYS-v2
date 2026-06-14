@@ -294,6 +294,15 @@ build_env_flags() {
         done
     fi
 
+    # SEC-023 hot-fix 2026-06-14: heys-api-rest в STRICT-mode для write-context.
+    # POST на /rest/client_kv_store без row.context_id → 400 context_required.
+    # Безопасно: 0 real REST writes без context_id за 7 дней audit'a (1 событие
+    # = моя SEC-L3 проба). heys-api-rpc остаётся в warn-mode до 2026-06-21
+    # (SEC-004 monitoring — там 3 события session_phase_b за 12h = реальные клиенты).
+    if [[ "$func_name" == "heys-api-rest" ]]; then
+        env_flags+=" --environment HEYS_WRITE_CONTEXT_STRICT=1"
+    fi
+
     echo "$env_flags"
 }
 
