@@ -233,12 +233,30 @@
     );
   }
 
+  function itemSearchText(item) {
+    const chips = Array.isArray(item && item.chips) ? item.chips.join(' ') : '';
+    return [
+      item && item.id,
+      item && item.title,
+      item && item.meta,
+      chips
+    ].filter(Boolean).join(' ').toLowerCase();
+  }
+
   function Registry(props) {
     const prefix = props.classPrefix || 'fingers-fs';
     const items = Array.isArray(props.items) ? props.items : [];
     const selected = Array.isArray(props.selectedIds) ? props.selectedIds : [];
     const title = props.title || 'Реестр упражнений';
     const subtitle = props.subtitle || (items.length + ' упражнений');
+    const searchable = props.searchable !== false;
+    const useState = React.useState;
+    const queryState = useState ? useState('') : ['', function () {}];
+    const query = String(queryState[0] || '').trim().toLowerCase();
+    const setQuery = queryState[1];
+    const visibleItems = query
+      ? items.filter(function (item) { return itemSearchText(item).indexOf(query) >= 0; })
+      : items;
     return h('div', {
       className: prefixClass(prefix, '-registry__backdrop'),
       role: 'presentation',
@@ -264,7 +282,22 @@
             'aria-label': props.closeLabel || 'Закрыть реестр упражнений'
           }, props.closeIcon || '×')
         ),
-        h(RegistryGrid, props),
+        searchable ? h('div', { className: prefixClass(prefix, '-registry__filters') },
+          h('label', { className: prefixClass(prefix, '-registry__search') },
+            h('span', { className: prefixClass(prefix, '-registry__search-icon'), 'aria-hidden': 'true' }, props.searchIcon || '🔍'),
+            h('input', {
+              type: 'search',
+              className: prefixClass(prefix, '-registry__search-input'),
+              placeholder: props.searchPlaceholder || 'Поиск по упражнениям',
+              value: queryState[0],
+              onChange: function (e) { setQuery(e && e.target ? e.target.value : ''); },
+              'aria-label': props.searchLabel || 'Поиск по упражнениям'
+            })
+          )
+        ) : null,
+        visibleItems.length
+          ? h(RegistryGrid, Object.assign({}, props, { items: visibleItems }))
+          : h('div', { className: prefixClass(prefix, '-registry__empty') }, props.emptyText || 'Ничего не найдено'),
         h('div', { className: prefixClass(prefix, '-registry__footer') },
           props.footerAction ? h('button', {
             type: 'button',

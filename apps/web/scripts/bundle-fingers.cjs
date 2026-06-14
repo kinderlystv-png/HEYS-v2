@@ -27,7 +27,18 @@ const MODULES = [
     { file: 'heys_kernel_bibliography_v1.js', label: 'shared bibliography registry (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_bibliography_ui_v1.js', label: 'shared bibliography UI: badge+modal (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_stats_v1.js', label: 'shared robust stats: median/MAD/z (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_dates_v1.js', label: 'shared date keys + day arithmetic (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_calendar_v1.js', label: 'shared calendar/grid primitives (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_periodization_v1.js', label: 'shared periodization phase machine (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_progression_v1.js', label: 'shared progression primitives (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_session_v1.js', label: 'shared session builder primitives (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_runner_v1.js', label: 'shared runner lifecycle primitives (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_router_v1.js', label: 'shared strangler router primitives (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_catalog_v1.js', label: 'shared catalog index: id+groupBy (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_assess_v1.js', label: 'shared assess math: deficit/normalize (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_gate_v1.js', label: 'shared validator gate: Issue+S1 level/age (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_records_v1.js', label: 'shared records storage: client key + JSON (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_onboarding_v1.js', label: 'shared onboarding/profile primitives (kernel)', dir: KERNEL_DIR },
 
     // ── Layer 1: core data + features (no fingers deps) ──
     { file: 'heys_fingers_audio_extension_v1.js', label: 'audio capability' },

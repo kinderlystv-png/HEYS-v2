@@ -8,8 +8,13 @@
 
 **Статус извлечения:**
 
-- ✅ `heys_training_focus_ui_v1.js` — общий UI-примитив focus-режима (использует
-  и Fingers, и Mobility). Первый кирпич ядра.
+- ✅ **`heys_training_focus_ui_v1.js` — общий UI-примитив focus-режима**
+  (использует и Fingers, и Mobility). Вынесены `Header`, `Tabs`, `EquipmentBar`,
+  `GoalSelector`, `ReadinessCard`, `RegistryGrid`, `Registry`; общий `Registry`
+  теперь включает поиск по id/title/meta/chips и selected actions. Mobility
+  использует полный `Registry`, Fingers — общий `RegistryGrid` внутри своего
+  расширенного реестра. Поменяешь базовую сетку / карточку / search в ядре →
+  режимы получают это через общий компонент.
 - ✅ **`heys_kernel_bibliography_ui_v1.js` — ОБЩИЙ UI библиографии
   (SourceBadge + BibliographyModal), data-driven (classPrefix/лейблы/sources
   через props).** Оба режима рендерят ОДНУ модалку «Источники и методология»:
@@ -36,10 +41,166 @@
   block/axis/purpose) зовут ядро; validate/validateAtom (схемы) — доменные.
   Verified: equivalence 9/9 (kernel vs fallback идентично). Прод-safety:
   fallback.
-- ⬜ остаётся (тяжёлые, трогают прод-логику — делаются поэтапно с verify+QA):
-  validator-framework, assessment-scoring, records-core (persist+lift-id),
-  runner/timer state-machine, session_builder, periodization/progression,
-  UI-примитивы/calendar.
+- ✅ **`heys_kernel_assess_v1.js` — математика оценки.** Единой сделана
+  **формула дефицита** §3.1 (зовут оба: `computeDeficit` / `scoreMeasurement`).
+  `normalize`/ `argmaxKey` — утилиты ядра, но домены ПОКА считают
+  leadingLimiter/blockWeights локально (нюанс пальцев: при total=0 веса
+  равномерны 1/N) — не вотвайрим, чтобы не менять поведение. Verified:
+  equivalence 8/8. Прод-safety: fallback.
+- 🛠 **Фикс прод-бага (catalog):** `validate()` пальцев читал локальный
+  `ATOMS_BY_BLOCK` (пуст при активном kernel) → теперь через `atomsByBlock()`.
+  Добавлены **прод-порядк-тесты** (kernel → домен):
+  `fingers-block-catalog-kernel`, `kernel-integration` (stats+assess+catalog,
+  оба домена) — kernel-ветка реально прогоняется в vitest (закрыто слепое пятно
+  «тесты грузили без kernel»).
+- ✅ **`heys_kernel_gate_v1.js` — validator-framework.** Вынесены Issue
+  constructors (`ok/warn/err`), S1 level/age gate, S3 warmup-required каркас с
+  доменными hooks, простые token-gates (`equipmentGate`, `prerequisitesGate`),
+  `runRules` и `nonOk`. Оба домена делегируют S1 (набор уровней инъектируется: 3
+  у мобильности / 4 c elite у пальцев); mobility `runAtom/runSession` и fingers
+  `runAll` идут через общий rule-runner. `S3_warmupRequired` у обоих режимов
+  теперь kernel-first: ядро проверяет общий flow, а домены передают
+  `isIntensive/items/warmupDone` и свои коды (`S3.no_warmup` vs
+  `S3.warmup_missing`). Mobility `E_equipmentGate` и Fingers
+  `S9_prerequisitesGate` тоже kernel-first с локальным фолбэком; коды/тексты
+  сохранены для существующего UI/тестов. Остальные S-правила остаются доменными
+  (ткань/боль/популяция/МФР — методология различается). Прод-safety: fallback.
+- ✅ **`heys_kernel_records_v1.js` — нижний storage-слой records.** Вынесены
+  client-scoped key builder (colon / `heys_<cid>_...` стили), safe JSON
+  read/write, memory storage для тестов, capped/windowed append + recent-window
+  для историй, append/latest для именованных history-полей, stable `makeId`,
+  generic `maxWins` для PR-сравнений, а также time-series helpers
+  (`timestampFrom`, `sortByTimestamp`, `mapTimeSeries`, `selectSeries`) для
+  истории измерений. Мобильность (`recordsStore`) и пальцы (`records`) зовут
+  ядро для storage/key/cap; пальцы используют `maxWins` для MVC PR и общий
+  windowed-history для `edgeHistory`/`tissueHistory`; MVC progression series и
+  выбор canonical/longest history тоже идут через generic time-series helpers.
+  Мобильность — `makeId` для ids, общий append/latest для
+  `sessions/assessments/painFlags` и kernel-sort для ROM assessment series.
+  Fingers progression-history использует общий `runner.estimateDoseSec` executor
+  для domain-owned dose-value формул. Доменные semantics (MVC value mapping,
+  ROM/audit/session shape, assessment battery, FDP/FDS/tissue extraction)
+  остаются в режимах. Прод-safety: fallback.
+- ✅ **`heys_kernel_onboarding_v1.js` — onboarding/profile primitives.**
+  Вынесены `uniqueKnown`, `enumValue`, `numberValue`, `booleanValue`,
+  `ageFromBirthDate` и schema-driven `normalizeProfile`. Мобильность делегирует
+  полную `normalizeProfile` в ядро, передавая свои
+  `LEVELS/POPULATIONS/EQUIPMENT/GOALS`; пальцы используют ядро для age prefill
+  из `heys_profile.birthDate` и нормализации legacy theme. React wizard,
+  рекомендации программ, disclaimers и mode mapping остаются доменными.
+  Прод-safety: fallback.
+- ✅ **`heys_kernel_dates_v1.js` — date-key слой и day arithmetic.** Вынесены
+  `dateKeyUTC`, `dateKeyLocal`, `todayKeyLocal`, `addDays`, `dayLabel`,
+  `sequenceDays`, `daysBetweenDateKeys`. Важно: ядро НЕ смешивает UTC/local —
+  мобильность сохраняет прежние UTC ISO-дни в weekly planner, пальцы сохраняют
+  local day-keys для дневника/календаря/periodization. Cooldown/режимы недели
+  остаются доменными; ядро только даёт последовательность дней. Прод-safety:
+  fallback.
+- ✅ **`heys_kernel_calendar_v1.js` — calendar/grid primitives.** Вынесены
+  `buildDays`, `monthCells`, `yearGrid` и thin wrappers над date-key/day-label.
+  Мобильность делегирует 7-дневный weekly planner grid в ядро, сохраняя доменные
+  `modeId/focus/retest`; пальцы делегируют month grid и 53×7 Monday-first
+  heatmap grid в ядро, сохраняя extraction sessions/cooldown/цвета/UI.
+  Прод-safety: fallback.
+- ✅ **`heys_kernel_periodization_v1.js` — phase-machine периодизации.**
+  Вынесены `PHASE_META`, `phaseForModel`, `energyFocusForPhase`, `buildWeeks`,
+  `current`, `loadPolicy`. Пальцы делегируют построение недель/current/phase в
+  ядро; мобильность делегирует phase→load policy (`peak/keyLoad`→maintain,
+  `deload`→deload, base→develop) с доменными текстами. Выбор модели,
+  slot-templates и доменные ограничения остаются в режимах. Прод-safety:
+  fallback.
+- ✅ **`heys_kernel_progression_v1.js` — progression primitives.** Вынесены
+  `relativePlateau` (серия `{ts,value}` → plateau/deltaPct), `rangePlateau`
+  (окно ROM/values → plateau) и `nextAxis(policy,currentAxis)`. Пальцы
+  делегируют `detectPlateau` и axis-advance в ядро, передавая свой
+  `PROGRESSION_POLICY`; мобильность делегирует ROM plateau и axis-advance,
+  передавая свой `AXIS_ORDER`. Доменные пороги/оси/semantics остаются в режимах.
+  Прод-safety: fallback.
+- ✅ **`heys_kernel_session_v1.js` — builder-kit для session/routine builders.**
+  Вынесены `cloneJson`, `uniq`, `hasIssueLevel`, `issueCodes`, `seededNoise`,
+  `rotateBySeed`, `stableSortByScore`, `sortByScoreThenKey`, `firstPassing`,
+  `rankCandidates` (filters → issues → blockIssue → score → stable/key sort).
+  Мобильность использует ядро для clone/uniq/score-priority/seed noise и полного
+  candidate pipeline в `routine_builder`; пальцы — для `variantSeed` rotation,
+  методологических reorder pass (aerobic submode + FDP/FDS edge rotation),
+  error-level checks и first-safe candidate selection внутри slot-fill. Slot
+  maps, scoring, safety floors, dose materialization остаются доменными.
+  Прод-safety: fallback.
+- ✅ **`heys_kernel_runner_v1.js` — runner lifecycle + owner-lock.** Вынесены
+  `createLinearState`, `transitionLinear`, `totalStepsOf` для пошаговых планов и
+  generic owner-lock (`createOwnerLock`, TTL heartbeat, acquire/touch/release)
+  для активных runner/timer экранов, а также cyclic phase-plan
+  (`buildCyclicPhasePlan`) для дыхательных/интервальных плееров и
+  `remainingSecFromSnapshot` для восстановления активной фазы после reload,
+  `estimateStepsDurationSec/createRunPlan` для materialized run plans, а также
+  `estimateDoseSec` с общими `num/avg` helpers для domain-owned doseShape формул
+  и `estimateDoseMetrics/scaleMetrics` для общего исполнения domain-owned
+  doseShape metric formulas (`durationSec/workSec/units`) плюс
+  `summarizeMetrics` для суммирования списка упражнений без доменных подписей.
+  Мобильность (`routineRunner`, `breathRunner`) делегирует lifecycle и расчёт
+  `cycleSec/cycles`, `totalSteps/estimatedDurationSec` в ядро; пальцевый
+  session-builder делегирует исполнение формул длительности/TUT в ядро
+  (`DURATION_FORMULAS`/`TUT_FORMULAS` остаются climbing-data), session UI
+  делегирует расчёт planned/partial exercise metrics в ядро через локальные
+  `PLANNED_METRIC_FORMULAS` и сводку `duration/work/units` через
+  `summarizeMetrics`, countdown использует общий owner-lock и общий расчёт
+  remaining-sec из snapshot, но state-graph hang/reps/wake/snapshot/cues
+  остаётся доменным до отдельного контракта. Прод-safety: fallback.
+- ✅ **`heys_kernel_router_v1.js` — strangler-router primitives.** Вынесены
+  generic telemetry, old/new/fallback routing, contract fallback, shadow-compare
+  counters и rollout gate. Fingers `engineRouter` теперь kernel-first делегирует
+  общий маршрут в ядро; domain-enrichment (MVC/level/history/planner), contract
+  predicate и shadow-diff/danger budget остаются в пальцах как hook'и. Mobility
+  пока не имеет strangler-роутера, но будущие режимы получают тот же каркас.
+  Прод-safety: fallback.
+- 📝 **progression — НЕ выносим как общий доменный движок:** общий только
+  primitive-слой (`relativePlateau`, `rangePlateau`, `nextAxis`). Полные
+  политики отличаются по методологии (ROM-диапазон у мобильности vs
+  strength-дельта% у пальцев) и оси перегрузки разные → это легитимное доменное
+  отличие, шарить нельзя.
+- ⬜ остаётся (тяжёлые stateful/прод — отдельными верифицированными проходами +
+  пересборка/QA): abstract lift-id/records merge policies, fingers timer
+  state-graph (hang/reps/wake/snapshot/cues), session_builder advanced
+  slot-fill/scoring, calendar UI, UI-примитивы.
+
+## Ревью-фиксы (2026-06-14, глубокий аудит)
+
+После полного аудита выноса (бандлеры, порядок загрузки, equivalence
+kernel↔fallback, sync-скоупинг ключей, матрица покрытия) закрыты:
+
+- **P0 cross-client (mobility records):** ключ переведён на канон
+  `heys_<cid>_mobility_records_v1` (был colon `…v1:default` — не матчил
+  `CLIENT_SCOPED_KEY_RE`, не чистился при смене клиента, общий `default`-бакет
+  при незаданном clientId). Дефолт clientId → `HEYS.currentClientId`, не
+  `'default'`. UI убрал `|| 'default'`. (Инвариант #4/#9.)
+- **P0 `periodization.loadPolicy`:** добавлен `typeof number` guard — `null`/
+  `undefined` больше не приводятся к 0 и не триггерят ложный `maintain`
+  (`keyLoadWithinHours: null` из props). Магическое 48 →
+  `PEAK_LOAD_WINDOW_HOURS`. Числовой 0 (нагрузка сейчас) корректно → `maintain`.
+- **P1 equivalence-тест тяжёлых путей пальцев:**
+  `__tests__/fingers-engine-equivalence.test.js` строит домен С ядром и БЕЗ и
+  сверяет байт-в-байт `periodization.buildPlan/current`,
+  `progression.detectPlateau`, `sessionBuilder.recommendDay`,
+  `engineRouter.recommendDay`, `isValidSession`. Node-харнесс: 6/6 identical.
+- **P1/P2 доки:** `dates.daysBetweenDateKeys` помечен local-only (не смешивать с
+  UTC-ключами); `mode_engine` — почему mobility без макро-периодизации;
+  `session_builder` — контракт `recommendDay(opts)→Session|null` для router.
+
+Подтверждено хорошим (аудит): оба бандлера грузят все 16 kernel-модулей
+kernel-first, `dates` раньше `calendar`/`periodization`; идемпотентность везде;
+climbing-специфики в ядре нет; records читает один явный ключ (не сканирует LS).
+
+**Осталось (extraction-долг, не баги):** DI до конца (пальцы records ещё читают
+глобальный `currentClientId`), `SPORT_CONFIG` как единый регистрируемый
+контракт; abstract lift-id + records merge-policy; timer state-graph пальцев;
+advanced slot-fill/scoring; calendar UI и UI-примитивы; в `assess`
+`leadingLimiter`/`blockWeights` ещё локальны.
+
+**Итог:** «листовые» общие механизмы вынесены (15 kernel-модулей: bibliography
+реестр+UI, stats, dates, calendar-grid, periodization, progression-primitives,
+session-kit, runner-lifecycle, router, catalog, assess, gate, records-storage,
+onboarding-primitives). Дальше — крупные stateful-движки, их делаем по одному с
+пересборкой и визуальным QA в проде между шагами.
 
 Цель: одно **переиспользуемое ядро** (движок) + разная **начинка/методология**
 на домен, чтобы правка в одном месте меняла поведение всех режимов (пальцы,
