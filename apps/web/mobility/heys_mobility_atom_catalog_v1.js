@@ -327,14 +327,16 @@
     atom.visualPromptRef = 'methodology/VISUAL_PROMPTS.md#' + atom.id;
   });
 
-  // ─── API ──────────────────────────────────────────────────────────────────────
+  // ─── API (индекс — из ОБЩЕГО ЯДРА; локальный фолбэк) ───────────────────────────
+  const _kc = HEYS.TrainingKernel && HEYS.TrainingKernel.catalog;
+  const _idx = (_kc && _kc.createIndex) ? _kc.createIndex(ATOMS, { idKey: 'id', groupBy: ['block', 'axis', 'purpose'] }) : null;
   const byId = {};
-  ATOMS.forEach(function (a) { byId[a.id] = a; });
+  if (!_idx) ATOMS.forEach(function (a) { byId[a.id] = a; });
 
-  function getAtom(id) { return byId[id] || null; }
-  function byBlock(b) { return ATOMS.filter(function (a) { return a.block === b; }); }
-  function byAxis(ax) { return ATOMS.filter(function (a) { return a.axis === ax; }); }
-  function byPurpose(p) { return ATOMS.filter(function (a) { return a.purpose === p; }); }
+  function getAtom(id) { return _idx ? _idx.get(id) : (byId[id] || null); }
+  function byBlock(b) { return _idx ? _idx.by('block', b) : ATOMS.filter(function (a) { return a.block === b; }); }
+  function byAxis(ax) { return _idx ? _idx.by('axis', ax) : ATOMS.filter(function (a) { return a.axis === ax; }); }
+  function byPurpose(p) { return _idx ? _idx.by('purpose', p) : ATOMS.filter(function (a) { return a.purpose === p; }); }
 
   // Обязательные поля dose по doseShape (CONSTRUCTOR_SPEC §1.3).
   const DOSE_REQUIRED = {

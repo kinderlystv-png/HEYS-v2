@@ -13,10 +13,14 @@
 
   function num(x) { return typeof x === 'number' && isFinite(x) ? x : null; }
   function clamp(x, min, max) { return Math.max(min, Math.min(max, x)); }
+  // robust z — из ОБЩЕГО ЯДРА (HEYS.TrainingKernel.stats); фолбэк локальный.
   function hrvZ(today, baseline, mad) {
     const t = num(today), b = num(baseline), m = num(mad);
     if (t === null || b === null || !m) return null;
-    return (t - b) / (1.4826 * m);
+    const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.stats;
+    const scale = ks && ks.MAD_SCALE ? ks.MAD_SCALE : 1.4826;
+    const sigma = m * scale;
+    return ks && ks.robustZ ? ks.robustZ(t, b, sigma) : (t - b) / sigma;
   }
   function score(input) {
     const x = input || {};
