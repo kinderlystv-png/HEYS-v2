@@ -18,6 +18,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const WEB_DIR = path.resolve(__dirname, '..');
 const FINGERS_DIR = path.resolve(__dirname, '..', 'fingers');
 
 const createStorageMock = () => {
@@ -48,6 +49,12 @@ const evalSource = (relPath) => {
   eval(src);
 };
 
+const evalKernel = (relPath) => {
+  const src = fs.readFileSync(path.join(WEB_DIR, '_kernel', relPath), 'utf8');
+  // eslint-disable-next-line no-eval
+  eval(src);
+};
+
 const setupOnce = () => {
   if (!globalThis.window) globalThis.window = globalThis;
   globalThis.window.HEYS = globalThis.HEYS = {};
@@ -63,6 +70,7 @@ const setupOnce = () => {
     },
     lsSet: (key, val) => { globalThis.localStorage.setItem(key, JSON.stringify(val)); },
   };
+  evalKernel('heys_kernel_runner_v1.js');
   evalSource('heys_fingers_programs_catalog_v1.js');
   evalSource('heys_fingers_age_gating_v1.js');
   evalSource('heys_fingers_timer_v1.js');

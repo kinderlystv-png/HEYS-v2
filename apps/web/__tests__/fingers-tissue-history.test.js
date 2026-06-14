@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const WEB = path.resolve(__dirname, '..');
 const FINGERS_DIR = path.resolve(__dirname, '..', 'fingers');
 
 function boot(clientId = 'client-a') {
@@ -26,6 +27,8 @@ function boot(clientId = 'client-a') {
       lsSet: (k, v) => { localStorage.setItem(k, JSON.stringify(v)); return true; }
     }
   };
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_records_v1.js'), 'utf8'));
   const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(FINGERS_DIR, f), 'utf8')); };
   ev('heys_fingers_grips_catalog_v1.js');
   ev('heys_fingers_block_catalog_v1.js');

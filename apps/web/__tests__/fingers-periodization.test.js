@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const WEB = path.resolve(__dirname, '..');
 const FINGERS_DIR = path.resolve(__dirname, '..', 'fingers');
 
 function createStorageMock() {
@@ -33,6 +34,10 @@ function boot(clientId = 'client-a') {
       lsSet: (k, v) => { localStorage.setItem(k, JSON.stringify(v)); return true; }
     }
   };
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_dates_v1.js'), 'utf8'));
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_periodization_v1.js'), 'utf8'));
   // eslint-disable-next-line no-eval
   eval(fs.readFileSync(path.join(FINGERS_DIR, 'heys_fingers_periodization_engine_v1.js'), 'utf8'));
   return { storage: localStorage, P: globalThis.HEYS.Fingers.periodization };

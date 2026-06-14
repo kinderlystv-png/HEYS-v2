@@ -8,10 +8,15 @@ import { beforeAll, describe, expect, it } from 'vitest';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const MOB_DIR = path.resolve(__dirname, '..', 'mobility');
+const KERNEL_DIR = path.resolve(__dirname, '..', '_kernel');
 
 const setupOnce = () => {
   if (!globalThis.window) globalThis.window = globalThis;
   globalThis.window.HEYS = globalThis.HEYS = {};
+  /* eslint-disable-next-line no-eval */
+  eval(fs.readFileSync(path.join(KERNEL_DIR, 'heys_kernel_records_v1.js'), 'utf8'));
+  /* eslint-disable-next-line no-eval */
+  eval(fs.readFileSync(path.join(KERNEL_DIR, 'heys_kernel_progression_v1.js'), 'utf8'));
   const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(MOB_DIR, f), 'utf8')); };
   ev('heys_mobility_axis_catalog_v1.js');
   ev('heys_mobility_atom_catalog_v1.js');
@@ -26,6 +31,7 @@ describe('mobility records store', () => {
 
   it('сохраняет session client-scoped', () => {
     const storage = M().recordsStore.createMemoryStorage();
+    expect(globalThis.HEYS.TrainingKernel.records).toBeTruthy();
     M().recordsStore.addSession('c1', { ok: true, session: { mode: 'evening_relax', blocks: [] } }, storage);
     expect(M().recordsStore.listSessions('c1', storage).length).toBe(1);
     expect(M().recordsStore.listSessions('c2', storage).length).toBe(0);
@@ -49,6 +55,7 @@ describe('mobility progression', () => {
   });
 
   it('plateau переключает ось прогрессии', () => {
+    expect(globalThis.HEYS.TrainingKernel.progression).toBeTruthy();
     const atom = M().atomCatalog.getAtom('flex_static_hamstring');
     const r = M().progression.suggest(atom, { romValues: [70, 71, 70.5], progressionAxis: 'amplitude' }, { band: 'green' });
     expect(r.action).toBe('switch_axis');

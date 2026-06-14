@@ -7,6 +7,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const WEB = path.resolve(__dirname, '..');
 const FINGERS_DIR = path.resolve(__dirname, '..', 'fingers');
 
 const createStorageMock = () => {
@@ -41,6 +42,10 @@ const setupOnce = () => {
     },
     lsSet: (key, val) => { globalThis.localStorage.setItem(key, JSON.stringify(val)); },
   };
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_dates_v1.js'), 'utf8'));
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_calendar_v1.js'), 'utf8'));
   evalSource('heys_fingers_programs_catalog_v1.js');
   evalSource('heys_fingers_calendar_v1.js');
 };
@@ -89,4 +94,3 @@ describe('calendar cooldown timestamp compatibility', () => {
     expect(result.recommendation).toBe('rest');
   });
 });
-

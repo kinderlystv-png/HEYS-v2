@@ -27,10 +27,33 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const createStorageMock = () => {
+  const store = {};
+  return {
+    get length() { return Object.keys(store).length; },
+    key: (i) => Object.keys(store)[i] ?? null,
+    getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  };
+};
+
+const ensureLocalStorage = () => {
+  if (!globalThis.window) globalThis.window = globalThis;
+  if (!globalThis.window.localStorage || typeof globalThis.window.localStorage.clear !== 'function') {
+    globalThis.localStorage = createStorageMock();
+    globalThis.window.localStorage = globalThis.localStorage;
+  }
+};
+
 beforeAll(() => {
   if (!globalThis.window) globalThis.window = globalThis;
+  ensureLocalStorage();
   globalThis.window.HEYS = globalThis.HEYS = {};
   globalThis.React = React;
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.resolve(__dirname, '..', '_kernel', 'heys_kernel_runner_v1.js'), 'utf8'));
   // Загружаем timer-модуль (IIFE регистрирует Fingers.useCountdownCycle).
   const file = path.resolve(__dirname, '..', 'fingers', 'heys_fingers_timer_v1.js');
   // eslint-disable-next-line no-eval
@@ -50,11 +73,13 @@ const defaultCfg = (over = {}) => ({
 describe('useCountdownCycle — parity pin (Step 1, ревью #9 для reps-runner refactor)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    ensureLocalStorage();
     window.localStorage.clear();
     delete globalThis.HEYS.Fingers.lastTimerLockDenied;
   });
   afterEach(() => {
     vi.useRealTimers();
+    ensureLocalStorage();
     window.localStorage.clear();
     delete globalThis.HEYS.Fingers.activeTimerLock;
     delete globalThis.HEYS.Fingers.lastTimerLockDenied;

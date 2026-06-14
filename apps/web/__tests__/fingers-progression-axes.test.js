@@ -20,6 +20,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const KERNEL_DIR = path.resolve(__dirname, '..', '_kernel');
 const FINGERS_DIR = path.resolve(__dirname, '..', 'fingers');
 
 function loadModule(name) {
@@ -27,15 +28,25 @@ function loadModule(name) {
   eval(fs.readFileSync(path.join(FINGERS_DIR, name), 'utf8'));
 }
 
+function loadKernel(name) {
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(KERNEL_DIR, name), 'utf8'));
+}
+
 beforeAll(() => {
   if (!globalThis.window) globalThis.window = globalThis;
   globalThis.window.HEYS = globalThis.HEYS = {};
+  loadKernel('heys_kernel_progression_v1.js');
   loadModule('heys_fingers_progression_v1.js');
 });
 
 const P = () => globalThis.HEYS.Fingers.progression;
 
 describe('progression.detectPlateau — window + threshold', () => {
+  it('delegates to kernel progression when loaded', () => {
+    expect(globalThis.HEYS.TrainingKernel.progression).toBeTruthy();
+  });
+
   it('недостаточно данных (<window) → hasPlateau:false', () => {
     const r = P().detectPlateau({ series: [{ ts: 1, value: 10 }, { ts: 2, value: 11 }] });
     expect(r.hasPlateau).toBe(false);

@@ -9,6 +9,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const WEB = path.resolve(__dirname, '..');
 const FINGERS_DIR = path.resolve(__dirname, '..', 'fingers');
 
 const setupOnce = () => {
@@ -19,6 +20,10 @@ const setupOnce = () => {
     useState: (i) => [typeof i === 'function' ? i() : i, () => {}],
     useMemo: (fn) => fn(), useEffect: () => {}, useCallback: (fn) => fn, useRef: (i) => ({ current: i }),
   };
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_session_v1.js'), 'utf8'));
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_runner_v1.js'), 'utf8'));
   const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(FINGERS_DIR, f), 'utf8')); };
   ev('heys_fingers_grips_catalog_v1.js');
   ev('heys_fingers_programs_catalog_v1.js');

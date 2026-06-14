@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const WEB = path.resolve(__dirname, '..');
 const FINGERS_DIR = path.resolve(__dirname, '..', 'fingers');
 
 const createStorageMock = () => {
@@ -34,6 +35,10 @@ const setup = () => {
     lsGet: (k, d) => { try { const r = globalThis.localStorage.getItem(k); return r ? JSON.parse(r) : d; } catch (_) { return d; } },
     lsSet: (k, v) => { globalThis.localStorage.setItem(k, JSON.stringify(v)); },
   };
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_runner_v1.js'), 'utf8'));
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_records_v1.js'), 'utf8'));
   // records_store — IIFE с idempotent-гардом __registered; HEYS свежий → регистрируется.
   // eslint-disable-next-line no-eval
   eval(fs.readFileSync(path.join(FINGERS_DIR, 'heys_fingers_records_store_v1.js'), 'utf8'));

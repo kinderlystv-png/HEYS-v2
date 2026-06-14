@@ -16,12 +16,25 @@ const setupOnce = () => {
   globalThis.window.HEYS = globalThis.HEYS = {};
   globalThis.React = globalThis.window.React = React;
   const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(MOB_DIR, f), 'utf8')); };
-  /* eslint-disable-next-line no-eval */
-  eval(fs.readFileSync(path.resolve(MOB_DIR, '..', '_kernel', 'heys_training_focus_ui_v1.js'), 'utf8'));
-  /* eslint-disable-next-line no-eval */
-  eval(fs.readFileSync(path.resolve(MOB_DIR, '..', '_kernel', 'heys_kernel_bibliography_v1.js'), 'utf8'));
-  /* eslint-disable-next-line no-eval */
-  eval(fs.readFileSync(path.resolve(MOB_DIR, '..', '_kernel', 'heys_kernel_bibliography_ui_v1.js'), 'utf8'));
+  const evKernel = (f) => {
+    /* eslint-disable-next-line no-eval */
+    eval(fs.readFileSync(path.resolve(MOB_DIR, '..', '_kernel', f), 'utf8'));
+  };
+  [
+    'heys_training_focus_ui_v1.js',
+    'heys_kernel_bibliography_v1.js',
+    'heys_kernel_bibliography_ui_v1.js',
+    'heys_kernel_stats_v1.js',
+    'heys_kernel_assess_v1.js',
+    'heys_kernel_gate_v1.js',
+    'heys_kernel_session_v1.js',
+    'heys_kernel_runner_v1.js',
+    'heys_kernel_records_v1.js',
+    'heys_kernel_progression_v1.js',
+    'heys_kernel_dates_v1.js',
+    'heys_kernel_calendar_v1.js',
+    'heys_kernel_periodization_v1.js'
+  ].forEach(evKernel);
   ev('heys_mobility_axis_catalog_v1.js');
   ev('heys_mobility_validators_v1.js');
   ev('heys_mobility_atom_catalog_v1.js');
@@ -122,6 +135,11 @@ describe('Mobility UI', () => {
     expect(dialog).toBeTruthy();
     expect(within(dialog).getByText('29 атомов · фото, доза и назначение')).toBeTruthy();
     expect(dialog.querySelectorAll('.mobility-fs-registry-card__img').length).toBeGreaterThan(0);
+    fireEvent.change(within(dialog).getByRole('searchbox', { name: 'Поиск по упражнениям' }), {
+      target: { value: 'Hip CARs' }
+    });
+    expect(within(dialog).getByText('Hip CARs')).toBeTruthy();
+    expect(within(dialog).queryByText('Box breathing')).toBeNull();
     fireEvent.click(within(dialog).getAllByRole('button', { name: 'Добавить' })[0]);
     await waitFor(() => expect(within(dialog).getByText('1 выбрано')).toBeTruthy());
     fireEvent.click(within(dialog).getByRole('button', { name: 'Открыть свою сборку' }));

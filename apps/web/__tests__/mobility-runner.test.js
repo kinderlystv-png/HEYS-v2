@@ -7,12 +7,15 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const WEB = path.resolve(__dirname, '..');
 const MOB_DIR = path.resolve(__dirname, '..', 'mobility');
 
 const setupOnce = () => {
   if (!globalThis.window) globalThis.window = globalThis;
   globalThis.window.HEYS = globalThis.HEYS = {};
   const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(MOB_DIR, f), 'utf8')); };
+  /* eslint-disable-next-line no-eval */
+  eval(fs.readFileSync(path.join(WEB, '_kernel', 'heys_kernel_runner_v1.js'), 'utf8'));
   ev('heys_mobility_axis_catalog_v1.js');
   ev('heys_mobility_validators_v1.js');
   ev('heys_mobility_atom_catalog_v1.js');
