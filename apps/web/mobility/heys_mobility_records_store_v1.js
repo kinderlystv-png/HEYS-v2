@@ -11,10 +11,27 @@
   if (Mobility.__recordsStoreRegistered) return;
   Mobility.__recordsStoreRegistered = true;
 
-  const PREFIX = 'heys_mobility_records_v1';
+  // Канонический client-scoped ключ: heys_<clientId>_mobility_records_v1 — матчит
+  // CLIENT_SCOPED_KEY_RE (/^heys_([a-f0-9-]{36})_/) в heys_storage_supabase_v1.js,
+  // поэтому корректно синкается per-client и чистится при смене клиента (инвариант
+  // #4/#9). НЕ colon-стиль и НЕ общий 'default'-бакет (был cross-client риск).
+  const PREFIX = 'mobility_records_v1';
+  function kernelRecords() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.records;
+  }
+
+  // clientId резолвится так же, как у пальцев: явный аргумент → HEYS.currentClientId
+  // → global-ключ (без cid). Никогда не 'default', чтобы клиенты не делили бакет.
+  function resolveClientId(clientId) {
+    if (clientId) return clientId;
+    return (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
+  }
 
   function key(clientId) {
-    return PREFIX + ':' + (clientId || 'default');
+    const cid = resolveClientId(clientId);
+    const kr = kernelRecords();
+    if (kr && kr.clientKey) return kr.clientKey(PREFIX, cid, { style: 'heys-client-prefix' });
+    return cid ? ('heys_' + cid + '_' + PREFIX) : ('heys_' + PREFIX);
   }
   function storageOf(storage) {
     return storage || global.localStorage || null;
@@ -23,6 +40,8 @@
     return { sessions: [], assessments: [], painFlags: [] };
   }
   function load(clientId, storage) {
+    const kr = kernelRecords();
+    if (kr && kr.readJson) return kr.readJson(storageOf(storage), key(clientId), empty);
     const s = storageOf(storage);
     if (!s || typeof s.getItem !== 'function') return empty();
     try {
@@ -32,51 +51,61 @@
     }
   }
   function save(clientId, data, storage) {
+    const kr = kernelRecords();
+    if (kr && kr.writeJson) return kr.writeJson(storageOf(storage), key(clientId), data, empty);
     const s = storageOf(storage);
     if (!s || typeof s.setItem !== 'function') return false;
     s.setItem(key(clientId), JSON.stringify(Object.assign(empty(), data || {})));
     return true;
   }
+  function recordId(parts) {
+    const kr = kernelRecords();
+    if (kr && kr.makeId) return kr.makeId(parts);
+    return parts.join('_');
+  }
   function addSession(clientId, sessionResult, storage) {
     const data = load(clientId, storage);
+    const kr = kernelRecords();
     const item = {
-      id: 'mob_sess_' + Date.now() + '_' + data.sessions.length,
+      id: recordId(['mob_sess', Date.now(), data.sessions.length]),
       savedAt: new Date().toISOString(),
       mode: sessionResult && sessionResult.session && sessionResult.session.mode,
       ok: !!(sessionResult && sessionResult.ok),
       issues: (sessionResult && sessionResult.issues) || [],
       session: (sessionResult && sessionResult.session) || sessionResult || null
     };
-    data.sessions.push(item);
-    save(clientId, data, storage);
+    save(clientId, kr && kr.appendField ? kr.appendField(data, 'sessions', item) : Object.assign(data, { sessions: data.sessions.concat([item]) }), storage);
     return item;
   }
   function addAssessment(clientId, audit, storage) {
     const data = load(clientId, storage);
+    const kr = kernelRecords();
     const item = {
-      id: 'mob_assess_' + Date.now() + '_' + data.assessments.length,
+      id: recordId(['mob_assess', Date.now(), data.assessments.length]),
       savedAt: new Date().toISOString(),
       audit: audit
     };
-    data.assessments.push(item);
-    save(clientId, data, storage);
+    save(clientId, kr && kr.appendField ? kr.appendField(data, 'assessments', item) : Object.assign(data, { assessments: data.assessments.concat([item]) }), storage);
     return item;
   }
   function addPainFlag(clientId, flag, storage) {
     const data = load(clientId, storage);
+    const kr = kernelRecords();
     const item = Object.assign({ savedAt: new Date().toISOString() }, flag || {});
-    data.painFlags.push(item);
-    save(clientId, data, storage);
+    save(clientId, kr && kr.appendField ? kr.appendField(data, 'painFlags', item) : Object.assign(data, { painFlags: data.painFlags.concat([item]) }), storage);
     return item;
   }
   function latestAssessment(clientId, storage) {
-    const items = load(clientId, storage).assessments;
-    return items.length ? items[items.length - 1] : null;
+    const data = load(clientId, storage);
+    const kr = kernelRecords();
+    return kr && kr.latestInField ? kr.latestInField(data, 'assessments') : (data.assessments.length ? data.assessments[data.assessments.length - 1] : null);
   }
   function listSessions(clientId, storage) {
     return load(clientId, storage).sessions;
   }
   function createMemoryStorage() {
+    const kr = kernelRecords();
+    if (kr && kr.createMemoryStorage) return kr.createMemoryStorage();
     const data = {};
     return {
       getItem: function (k) { return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },

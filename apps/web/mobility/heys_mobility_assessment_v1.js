@@ -33,7 +33,9 @@
     const measure = num(item.measure);
     if (measure === null) return { ok: false, code: 'assessment.measure_missing', testId: item.testId };
     const norm = num(item.norm) || test.norm;
-    const deficit = clamp((norm - measure) / norm, 0, 1);
+    // формула дефицита — из ОБЩЕГО ЯДРА (HEYS.TrainingKernel.assess); фолбэк локальный
+    const ka = HEYS.TrainingKernel && HEYS.TrainingKernel.assess;
+    const deficit = ka && ka.deficit ? ka.deficit(norm, measure) : clamp((norm - measure) / norm, 0, 1);
     const passiveROM = num(item.passiveROM);
     const activeROM = num(item.activeROM);
     const gap = passiveROM !== null && activeROM !== null ? Math.max(0, passiveROM - activeROM) : null;

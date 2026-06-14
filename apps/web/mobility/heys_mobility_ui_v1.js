@@ -360,6 +360,11 @@
 .mobility-fs-registry__title{margin:0;color:#172033;font-size:22px!important;line-height:1.15;font-weight:850}
 .mobility-fs-registry__sub{margin:4px 0 0;color:#667085;font-size:12px;line-height:1.35;font-weight:800}
 .mobility-fs-registry__close{appearance:none;width:48px;height:48px;border:1px solid #fecdd3;border-radius:14px;background:#fff5f8;color:#ec4899;font:900 22px/1 system-ui;cursor:pointer;flex:0 0 auto}
+.mobility-fs-registry__filters{margin:0 0 12px}
+.mobility-fs-registry__search{position:relative;display:block}
+.mobility-fs-registry__search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;color:#667085;pointer-events:none}
+.mobility-fs-registry__search-input{width:100%;min-height:42px;border:1px solid rgba(15,23,42,.1);border-radius:12px;background:#f8fbfa;color:#172033;padding:9px 12px 9px 34px;font:800 13px/1.2 system-ui;outline:none}
+.mobility-fs-registry__search-input:focus{border-color:#16a66a;box-shadow:0 0 0 3px rgba(22,166,106,.13);background:#fff}
 .mobility-fs-registry__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .mobility-fs-registry-card{display:flex;flex-direction:column;gap:8px;min-width:0;border:1px solid rgba(15,23,42,.08);border-radius:12px;background:#fff;color:#253045;box-shadow:0 8px 22px rgba(15,23,42,.05);overflow:hidden}
 .mobility-fs-registry-card.is-selected{border-color:#16a66a;background:#f2fbf6;box-shadow:0 0 0 2px rgba(22,166,106,.12),0 10px 24px rgba(15,23,42,.06)}
@@ -374,6 +379,7 @@
 .mobility-fs-registry-card__chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto}
 .mobility-fs-registry__pill{display:inline-flex;align-items:center;min-height:22px;border-radius:999px;background:#eef6f2;color:#527064;padding:3px 7px;font-size:10px;font-weight:850;line-height:1}
 .mobility-fs-registry-card__action-btn{align-self:flex-start;margin:0 10px 10px!important}
+.mobility-fs-registry__empty{border:1px dashed rgba(15,23,42,.14);border-radius:12px;background:#f8fbfa;color:#667085;padding:18px;text-align:center;font-size:13px;font-weight:850}
 .mobility-fs-registry__footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(15,23,42,.07)}
 .mobility-fs-registry__footer-text{color:#667085;font-size:12px;font-weight:850}
 .mobility-protocol-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 12px}
@@ -1598,7 +1604,7 @@
 
     function saveSession() {
       if (!d.recordsStore || !activeBuilt) return;
-      d.recordsStore.addSession(props.clientId || 'default', activeBuilt, props.storage);
+      d.recordsStore.addSession(props.clientId, activeBuilt, props.storage);
       if (props.dateKey && global.HEYS && global.HEYS.TrainingStep && typeof global.HEYS.TrainingStep.saveMobility === 'function') {
         const mobilityLog = {
           version: 1,
@@ -1622,12 +1628,12 @@
     }
     function saveAssessment(audit) {
       if (!d.recordsStore || !audit) return;
-      d.recordsStore.addAssessment(props.clientId || 'default', audit, props.storage);
+      d.recordsStore.addAssessment(props.clientId, audit, props.storage);
       setSaveStatus('assessment');
     }
     function savePainFlag(step) {
       if (!d.recordsStore) return;
-      d.recordsStore.addPainFlag(props.clientId || 'default', {
+      d.recordsStore.addPainFlag(props.clientId, {
         level: 'pain',
         atomId: step && step.atomId,
         zone: step && step.jointRegion || null

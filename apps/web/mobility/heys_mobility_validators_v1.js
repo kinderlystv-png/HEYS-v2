@@ -68,6 +68,9 @@
 
   // ─── S1 — age/level gate (fail-closed) ────────────────────────────────────────
   function S1_ageLevelGate(atom, profile) {
+    // S1 — из ОБЩЕГО ЯДРА (HEYS.TrainingKernel.gate.levelAgeGate); ниже локальный фолбэк
+    const _kg = HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+    if (_kg && _kg.levelAgeGate) return _kg.levelAgeGate(atom, profile, LEVEL_ORDER);
     if (!atom || typeof atom !== 'object') return [err('S1.invalid_atom', 'атом не объект')];
     if (!profile || typeof profile !== 'object') return [err('S1.no_profile', 'нет профиля — fail-closed')];
     const g = gatesOf(atom);
@@ -104,6 +107,27 @@
 
   // ─── S3 — разминка обязательна перед интенсивным ──────────────────────────────
   function S3_warmupRequired(session) {
+    const _kg = HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+    if (_kg && _kg.warmupRequired) {
+      return _kg.warmupRequired(session, {
+        invalid: function (s) { return !s || typeof s !== 'object'; },
+        invalidMsg: 'сессия не объект',
+        items: function (s) {
+          const atoms = [];
+          eachAtom(s, function (a) { atoms.push(a); });
+          return atoms;
+        },
+        isIntensive: function (a) { return isIntensive(a); },
+        warmupDone: function (s) { return s.warmupCompleted === true; },
+        emptyCode: 'S3.pass',
+        emptyMsg: 'разминка не требуется или выполнена',
+        missingCode: 'S3.no_warmup',
+        missingMsg: 'интенсивный/end-range/баллистический блок без разминки',
+        missingExtra: function (intensive) { return { atomId: intensive[0] && intensive[0].id }; },
+        passCode: 'S3.pass',
+        passMsg: 'разминка не требуется или выполнена'
+      });
+    }
     if (!session || typeof session !== 'object') return [err('S3.invalid_session', 'сессия не объект')];
     let intensive = null;
     eachAtom(session, function (a) { if (!intensive && isIntensive(a)) intensive = a; });
@@ -212,6 +236,8 @@
 
   // ─── E — equipment gate (доступность инвентаря) ───────────────────────────────
   function E_equipmentGate(atom, profile) {
+    const _kg = HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+    if (_kg && _kg.equipmentGate) return _kg.equipmentGate(atom, profile);
     if (!atom || typeof atom !== 'object') return [err('E.invalid_atom', 'атом не объект')];
     const req = gatesOf(atom).equipment || [];
     const have = (profile && Array.isArray(profile.equipment)) ? profile.equipment : [];
@@ -221,32 +247,44 @@
   }
 
   // ─── Агрегаторы ───────────────────────────────────────────────────────────────
+  function gateKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.gate;
+  }
+  function runRuleList(rules) {
+    const kg = gateKernel();
+    const issues = kg && kg.runRules
+      ? kg.runRules(rules)
+      : rules.reduce(function (acc, fn) { return acc.concat(fn()); }, []);
+    return kg && kg.nonOk
+      ? kg.nonOk(issues)
+      : issues.filter(function (i) { return i.level !== 'ok'; });
+  }
   function runAtom(atom, profile, context) {
     const ctx = context || {};
     // боль, зона-скоуп: блокируем атом по болящей зоне (общий контракт S2)
     const zonePain = (Array.isArray(ctx.painFlags) ? ctx.painFlags : [])
       .filter(function (f) { return f && f.zone === (atom && atom.jointRegion); });
-    return [].concat(
-      S1_ageLevelGate(atom, profile),
-      S2_painStop(zonePain),
-      S4_populationGate(atom, profile),
-      S5_pnfControl(atom, profile),
-      S6_contraindication(atom, context),
-      S7_rehabGate(atom, context),
-      S9_morningEndRange(atom, context),
-      E_equipmentGate(atom, profile)
-    ).filter(function (i) { return i.level !== 'ok'; });
+    return runRuleList([
+      function () { return S1_ageLevelGate(atom, profile); },
+      function () { return S2_painStop(zonePain); },
+      function () { return S4_populationGate(atom, profile); },
+      function () { return S5_pnfControl(atom, profile); },
+      function () { return S6_contraindication(atom, context); },
+      function () { return S7_rehabGate(atom, context); },
+      function () { return S9_morningEndRange(atom, context); },
+      function () { return E_equipmentGate(atom, profile); }
+    ]);
   }
   function runSession(session, profile, context) {
     const ctx = context || {};
     const pain = (Array.isArray(ctx.painFlags) && ctx.painFlags)
       || (session && Array.isArray(session.painFlags) && session.painFlags) || [];
-    return [].concat(
-      S2_painStop(pain),
-      S3_warmupRequired(session),
-      S8_longStaticBeforePower(session),
-      R1_autonomicCoherence(session)
-    ).filter(function (i) { return i.level !== 'ok'; });
+    return runRuleList([
+      function () { return S2_painStop(pain); },
+      function () { return S3_warmupRequired(session); },
+      function () { return S8_longStaticBeforePower(session); },
+      function () { return R1_autonomicCoherence(session); }
+    ]);
   }
 
   // ─── Экспорт ───────────────────────────────────────────────────────────────────

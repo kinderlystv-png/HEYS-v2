@@ -11,6 +11,10 @@
   if (Mobility.__breathRunnerRegistered) return;
   Mobility.__breathRunnerRegistered = true;
 
+  function kernelRunner() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+
   function ratioOf(atom) {
     const d = (atom && atom.dose) || {};
     const r = d.ratio || {};
@@ -43,17 +47,17 @@
     const dose = atom.dose || {};
     const pattern = dose.pattern || 'resonant';
     const phases = phasesForPattern(pattern, ratioOf(atom));
+    const kr = kernelRunner();
+    if (kr && typeof kr.buildCyclicPhasePlan === 'function') {
+      return kr.buildCyclicPhasePlan(phases, {
+        durationSec: Number(dose.durationSec) || 0,
+        minCycles: 1,
+        meta: { atomId: atom.id, pattern: pattern }
+      });
+    }
     const cycleSec = phases.reduce(function (sum, p) { return sum + p.durationSec; }, 0);
     const durationSec = Number(dose.durationSec) || cycleSec;
-    return {
-      ok: true,
-      atomId: atom.id,
-      pattern: pattern,
-      durationSec: durationSec,
-      cycleSec: cycleSec,
-      cycles: cycleSec > 0 ? Math.max(1, Math.floor(durationSec / cycleSec)) : 1,
-      phases: phases
-    };
+    return { ok: true, atomId: atom.id, pattern: pattern, durationSec: durationSec, cycleSec: cycleSec, cycles: cycleSec > 0 ? Math.max(1, Math.floor(durationSec / cycleSec)) : 1, phases: phases };
   }
 
   Mobility.breathRunner = {

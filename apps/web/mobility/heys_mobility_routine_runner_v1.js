@@ -12,6 +12,9 @@
   if (Mobility.__routineRunnerRegistered) return;
   Mobility.__routineRunnerRegistered = true;
 
+  function kernelRunner() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
   function doseOf(atom) { return (atom && atom.dose) || {}; }
   function repsLabel(reps) {
     return Array.isArray(reps) ? reps[0] + '-' + reps[1] : String(reps || 1);
@@ -75,6 +78,14 @@
         });
       });
     });
+    const kr = kernelRunner();
+    if (kr && typeof kr.createRunPlan === 'function') {
+      return kr.createRunPlan(session, steps, {
+        multiplier: function (s) {
+          return (Number(s.sets) || 1) * (Number(s.reps) && s.kind === 'hold' ? Number(s.reps) : 1);
+        }
+      });
+    }
     return {
       sessionMode: session && session.mode,
       totalSteps: steps.length,
@@ -85,9 +96,13 @@
     };
   }
   function createState(plan) {
+    const kr = kernelRunner();
+    if (kr && kr.createLinearState) return kr.createLinearState(plan);
     return { status: 'idle', index: 0, totalSteps: (plan && plan.steps && plan.steps.length) || 0, aborted: false };
   }
   function transition(state, event) {
+    const kr = kernelRunner();
+    if (kr && kr.transitionLinear) return kr.transitionLinear(state, event);
     const s = Object.assign({}, state || createState());
     if (event === 'start') s.status = 'running';
     if (event === 'pause' && s.status === 'running') s.status = 'paused';

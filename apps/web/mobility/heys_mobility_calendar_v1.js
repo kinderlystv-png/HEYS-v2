@@ -13,10 +13,21 @@
 
   const DAY_MS = 24 * 60 * 60 * 1000;
 
+  function kernelDates() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.dates;
+  }
+  function kernelCalendar() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.calendar;
+  }
+
   function isoDate(date) {
+    const kd = kernelDates();
+    if (kd && typeof kd.dateKeyUTC === 'function') return kd.dateKeyUTC(date);
     return new Date(date).toISOString().slice(0, 10);
   }
   function startDateOf(input) {
+    const kd = kernelDates();
+    if (kd && typeof kd.startDate === 'function') return kd.startDate(input);
     const d = input ? new Date(input) : new Date();
     if (!isFinite(d.getTime())) return new Date();
     return d;
@@ -44,6 +55,8 @@
     return ['develop_mobility', 'anti_sedentary', 'develop_mobility', 'evening_relax'];
   }
   function dayLabel(idx) {
+    const kd = kernelDates();
+    if (kd && typeof kd.dayLabel === 'function') return kd.dayLabel(idx);
     return ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][idx] || String(idx + 1);
   }
   function buildWeekPlan(profile, opts) {
@@ -55,20 +68,28 @@
     const modes = baseModesForFocus(period.focus, profile);
     const start = startDateOf(o.startDate);
     const retest = retestInfo(records, o);
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(start.getTime() + i * DAY_MS);
-      const modeId = modes[i % modes.length];
+    const kc = kernelCalendar();
+    const kd = kernelDates();
+    const calendarDays = kc && typeof kc.buildDays === 'function'
+      ? kc.buildDays(start, 7, { utc: true })
+      : (kd && typeof kd.sequenceDays === 'function' ? kd.sequenceDays(start, 7, { utc: true }) : null);
+    const days = (calendarDays || Array.from({ length: 7 }, function (_, i) {
+      const date = kd && typeof kd.addDays === 'function'
+        ? kd.addDays(start, i)
+        : new Date(start.getTime() + i * DAY_MS);
+      return { index: i, date: date, dateKey: isoDate(date), label: dayLabel(i) };
+    })).map(function (day) {
+      const modeId = modes[day.index % modes.length];
       const mode = Mobility.modeEngine && Mobility.modeEngine.getMode ? Mobility.modeEngine.getMode(modeId) : null;
-      days.push({
-        date: isoDate(date),
-        label: dayLabel(i),
+      return {
+        date: day.dateKey || isoDate(day.date),
+        label: day.label || dayLabel(day.index),
         modeId: modeId,
         modeLabel: mode ? mode.label : modeId,
         focus: period.focus,
         reason: period.msg
-      });
-    }
+      };
+    });
     return {
       focus: period.focus,
       avoidHighTissueLoad: !!period.avoidHighTissueLoad,

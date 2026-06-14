@@ -12,8 +12,16 @@
   if (Mobility.__routineBuilderRegistered) return;
   Mobility.__routineBuilderRegistered = true;
 
-  function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+  function kernelSession() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.session;
+  }
+  function clone(obj) {
+    const ks = kernelSession();
+    return ks && ks.cloneJson ? ks.cloneJson(obj) : JSON.parse(JSON.stringify(obj));
+  }
   function uniq(arr) {
+    const ks = kernelSession();
+    if (ks && ks.uniq) return ks.uniq(arr);
     const seen = {};
     return (arr || []).filter(function (x) {
       if (!x || seen[x]) return false;
@@ -22,6 +30,8 @@
     });
   }
   function hasIssueLevel(issues, level) {
+    const ks = kernelSession();
+    if (ks && ks.hasIssueLevel) return ks.hasIssueLevel(issues, level);
     return (issues || []).some(function (i) { return i && i.level === level; });
   }
   function blocksAutopick(issue) {
@@ -31,6 +41,8 @@
     return !!atom && (atom.fatigueCost === 'high' || atom.tissueLoad === 'high');
   }
   function seededNoise(id, seed) {
+    const ks = kernelSession();
+    if (ks && ks.seededNoise) return ks.seededNoise(id, seed);
     if (!seed) return 0;
     const raw = String(id || '') + ':' + String(seed);
     let h = 2166136261;
@@ -130,9 +142,13 @@
   function applyBlockPriority(blocks, blockWeights, trace) {
     const weights = blockWeights || {};
     if (!Object.keys(weights).length) return blocks;
-    const indexed = blocks.map(function (b, idx) { return { block: b, idx: idx, weight: Number(weights[b.axis]) || Number(weights[b.atoms[0].block]) || Number(weights[b.id]) || Number(weights[b.block]) || 0 }; });
-    indexed.sort(function (a, b) { return b.weight - a.weight || a.idx - b.idx; });
-    const reordered = indexed.map(function (x) { return x.block; });
+    const scoreOf = function (b) { return Number(weights[b.axis]) || Number(weights[b.atoms[0].block]) || Number(weights[b.id]) || Number(weights[b.block]) || 0; };
+    const ks = kernelSession();
+    const reordered = ks && ks.stableSortByScore
+      ? ks.stableSortByScore(blocks, scoreOf, 'desc')
+      : blocks.map(function (b, idx) { return { block: b, idx: idx, weight: scoreOf(b) }; })
+        .sort(function (a, b) { return b.weight - a.weight || a.idx - b.idx; })
+        .map(function (x) { return x.block; });
     const changed = reordered.some(function (b, idx) { return b !== blocks[idx]; });
     if (changed && trace) {
       trace.push({
@@ -151,7 +167,23 @@
     if (slot.atomIds && slot.atomIds.length) {
       atoms = slot.atomIds.map(function (id) { return d.cat.getAtom(id); }).filter(Boolean);
     }
-    return atoms
+    const ks = kernelSession();
+    if (ks && typeof ks.rankCandidates === 'function') {
+      return ks.rankCandidates(atoms, {
+        filters: [
+          function (a) { return excluded.indexOf(a.id) < 0; },
+          function (a) { return atomAllowedByMode(a, mode); },
+          function (a) { return !(context && context.avoidHighTissueLoad && isHighTissueAtom(a)); }
+        ],
+        issues: function (a) { return d.validators.runAtom(a, profile, context); },
+        blockIssue: blocksAutopick,
+        score: function (a) { return scoreAtom(a, slot, mode, options); },
+        candidate: function (a, issues, score) { return { atom: a, issues: issues, score: score }; },
+        key: function (x) { return x.atom.id; },
+        direction: 'desc'
+      });
+    }
+    const scored = atoms
       .filter(function (a) { return excluded.indexOf(a.id) < 0; })
       .filter(function (a) { return atomAllowedByMode(a, mode); })
       .filter(function (a) { return !(context && context.avoidHighTissueLoad && isHighTissueAtom(a)); })
@@ -159,8 +191,10 @@
         const issues = d.validators.runAtom(a, profile, context);
         return { atom: a, issues: issues, score: scoreAtom(a, slot, mode, options) };
       })
-      .filter(function (x) { return !x.issues.some(blocksAutopick); })
-      .sort(function (a, b) { return b.score - a.score || a.atom.id.localeCompare(b.atom.id); });
+      .filter(function (x) { return !x.issues.some(blocksAutopick); });
+    return ks && ks.sortByScoreThenKey
+      ? ks.sortByScoreThenKey(scored, function (x) { return x.score; }, function (x) { return x.atom.id; }, 'desc')
+      : scored.sort(function (a, b) { return b.score - a.score || a.atom.id.localeCompare(b.atom.id); });
   }
   function pickSlot(slot, mode, profile, context, options) {
     const candidates = candidateAtoms(slot, mode, profile, context, options);

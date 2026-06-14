@@ -23,11 +23,30 @@
     desk: 'anti_sedentary'
   };
 
+  function onboardingKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.onboarding;
+  }
+
   function pickKnown(arr, allowed) {
+    const ko = onboardingKernel();
+    if (ko && ko.uniqueKnown) return ko.uniqueKnown(arr, allowed);
     const input = Array.isArray(arr) ? arr : [];
     return input.filter(function (x, idx) { return allowed.indexOf(x) >= 0 && input.indexOf(x) === idx; });
   }
   function normalizeProfile(input) {
+    const ko = onboardingKernel();
+    if (ko && ko.normalizeProfile) {
+      return ko.normalizeProfile(input || {}, {
+        fields: {
+          age: { type: 'number', default: null },
+          level: { type: 'enum', allowed: LEVELS, default: 'beginner' },
+          populations: { type: 'list', allowed: POPULATIONS },
+          equipment: { type: 'list', allowed: EQUIPMENT },
+          goal: { type: 'enum', allowed: GOALS, default: 'morning' },
+          acceptedDisclaimer: { type: 'boolean', default: false }
+        }
+      });
+    }
     const src = input || {};
     const age = Number(src.age);
     const level = LEVELS.indexOf(src.level) >= 0 ? src.level : 'beginner';

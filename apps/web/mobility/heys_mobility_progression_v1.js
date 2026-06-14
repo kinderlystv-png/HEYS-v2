@@ -10,12 +10,20 @@
   Mobility.__progressionRegistered = true;
 
   const AXIS_ORDER = ['amplitude', 'tempo', 'load', 'endrange'];
+  function recordsKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.records;
+  }
+  function progressionKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.progression;
+  }
 
   function hasPain(history) {
     return (history && Array.isArray(history.painFlags) ? history.painFlags : []).some(function (f) { return f && f.level === 'pain'; });
   }
   function isPlateau(history) {
     const vals = history && Array.isArray(history.romValues) ? history.romValues : [];
+    const kp = progressionKernel();
+    if (kp && kp.rangePlateau) return kp.rangePlateau(vals, { windowSize: 3, rangeThreshold: 2 }).hasPlateau;
     if (vals.length < 3) return false;
     const last = vals.slice(-3);
     return Math.max.apply(null, last) - Math.min.apply(null, last) < 2;
@@ -44,7 +52,7 @@
   }
   function romSeries(records, testId) {
     const assessments = records && Array.isArray(records.assessments) ? records.assessments : [];
-    return assessments.reduce(function (out, item) {
+    const rows = assessments.reduce(function (out, item) {
       rowFromAssessment(item).forEach(function (row) {
         if (!row || row.ok !== true) return;
         if (testId && row.testId !== testId) return;
@@ -61,11 +69,15 @@
         });
       });
       return out;
-    }, []).sort(function (a, b) {
-      const ta = a.savedAt ? new Date(a.savedAt).getTime() : 0;
-      const tb = b.savedAt ? new Date(b.savedAt).getTime() : 0;
-      return ta - tb;
-    });
+    }, []);
+    const kr = recordsKernel();
+    return kr && kr.sortByTimestamp
+      ? kr.sortByTimestamp(rows, { timestampKey: 'savedAt' })
+      : rows.sort(function (a, b) {
+        const ta = a.savedAt ? new Date(a.savedAt).getTime() : 0;
+        const tb = b.savedAt ? new Date(b.savedAt).getTime() : 0;
+        return ta - tb;
+      });
   }
   function romTrend(records, testId) {
     const series = romSeries(records, testId);
@@ -92,8 +104,10 @@
     }
     if (isPlateau(history)) {
       const current = history.progressionAxis || 'amplitude';
+      const kp = progressionKernel();
+      const axis = kp && kp.nextAxis ? kp.nextAxis(AXIS_ORDER, current) : null;
       const idx = AXIS_ORDER.indexOf(current);
-      const next = AXIS_ORDER[Math.min(AXIS_ORDER.length - 1, idx + 1)];
+      const next = axis && axis.nextAxis ? axis.nextAxis : AXIS_ORDER[Math.min(AXIS_ORDER.length - 1, idx + 1)];
       return { action: 'switch_axis', axis: next, reason: 'plateau_detected' };
     }
     if (atom.doseConfidence === 'C') {

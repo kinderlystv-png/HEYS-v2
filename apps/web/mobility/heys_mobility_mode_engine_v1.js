@@ -3,6 +3,12 @@
 // Данные режима: 7 режимов из METHODOLOGY ч.6 / CONSTRUCTOR_SPEC §4.
 // Движок не хранит каталог упражнений; он задаёт purpose/autonomic/слоты и
 // контекст валидаторов. Сборку атомов делает HEYS.Mobility.routineBuilder.
+//
+// Периодизация: мобильность НЕ строит макроцикл (как пальцы через
+// kernel.periodization.buildWeeks/current). Используется только phase→load policy
+// (periodizationAdvice → kernel.periodization.loadPolicy). Причина: мобильность —
+// поддерживающая работа без мезоциклов peak/taper; недельный план сейчас плоский.
+// Когда появится макроцикл — переходить на kernel.periodization целиком, не дублируя.
 
 ;(function (global) {
   'use strict';
@@ -166,6 +172,14 @@
   }
   function periodizationAdvice(input) {
     const ctx = input || {};
+    const kp = HEYS.TrainingKernel && HEYS.TrainingKernel.periodization;
+    if (kp && typeof kp.loadPolicy === 'function') {
+      return kp.loadPolicy(ctx, {
+        maintain: 'в пик/перед ключевой нагрузкой держим поддержание, без тяжёлой F-нагрузки',
+        deload: 'deload: лёгкая мобильность, CARs, дыхание',
+        develop: 'базовая фаза: можно развивать ROM отдельной сессией'
+      });
+    }
     if (ctx.phase === 'peak' || ctx.keyLoadWithinHours <= 48) {
       return {
         focus: 'maintain',
