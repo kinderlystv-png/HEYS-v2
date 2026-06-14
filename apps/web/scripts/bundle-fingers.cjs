@@ -26,6 +26,8 @@ const MODULES = [
     { file: 'heys_training_focus_ui_v1.js', label: 'shared training focus UI primitives', dir: KERNEL_DIR },
     { file: 'heys_kernel_bibliography_v1.js', label: 'shared bibliography registry (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_bibliography_ui_v1.js', label: 'shared bibliography UI: badge+modal (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_stats_v1.js', label: 'shared robust stats: median/MAD/z (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_catalog_v1.js', label: 'shared catalog index: id+groupBy (kernel)', dir: KERNEL_DIR },
 
     // ── Layer 1: core data + features (no fingers deps) ──
     { file: 'heys_fingers_audio_extension_v1.js', label: 'audio capability' },

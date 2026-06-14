@@ -18,6 +18,8 @@ const MODULES = [
   { file: 'heys_training_focus_ui_v1.js', label: 'shared training focus UI primitives', dir: KERNEL_DIR },
   { file: 'heys_kernel_bibliography_v1.js', label: 'shared bibliography registry (kernel)', dir: KERNEL_DIR },
   { file: 'heys_kernel_bibliography_ui_v1.js', label: 'shared bibliography UI: badge+modal (kernel)', dir: KERNEL_DIR },
+  { file: 'heys_kernel_stats_v1.js', label: 'shared robust stats: median/MAD/z (kernel)', dir: KERNEL_DIR },
+  { file: 'heys_kernel_catalog_v1.js', label: 'shared catalog index: id+groupBy (kernel)', dir: KERNEL_DIR },
   { file: 'heys_mobility_axis_catalog_v1.js', label: 'axis catalog + enums' },
   { file: 'heys_mobility_bibliography_v1.js', label: 'sources + effect map (kernel registry)' },
   { file: 'heys_mobility_atom_catalog_v1.js', label: 'atom catalog A-J' },

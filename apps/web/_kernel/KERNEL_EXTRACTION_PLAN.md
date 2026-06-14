@@ -23,7 +23,23 @@
   EFFECT_MAP и UI (SourceBadge/Modal) остались доменными. Mobility — строго
   (throws без ядра), Fingers (прод) — с fail-safe. Verified: node-harness
   17/17 + тесты `kernel-bibliography` / `mobility-bibliography` обновлены.
-- ⬜ остальное по §4 (readiness-math → catalog API → validator-framework → …).
+- ✅ **`heys_kernel_stats_v1.js` — robust-статистика (median / MAD-σ /
+  robustZ).** Дубль `readiness`-математики вынесен: пальцы (median/madSigma) и
+  мобильность (hrvZ через robustZ+MAD_SCALE) зовут ядро; доменные
+  сигналы/пороги/advisory остались. Verified: equivalence-harness 25/25,
+  `fingers.readiness.assess` и `mobility.readiness.score` идентичны (kernel vs
+  fallback). Прод-safety: fallback.
+- ✅ **`heys_kernel_catalog_v1.js` — индекс каталога (id + группировки).**
+  `createIndex(items,{idKey,groupBy})`. Пальцы (`block_catalog`: getAtom/
+  atomsByBlock/atomsByQuality + atomIds-backfill по blockId/quality) и
+  мобильность (`atom_catalog`: getAtom/byBlock/byAxis/byPurpose по
+  block/axis/purpose) зовут ядро; validate/validateAtom (схемы) — доменные.
+  Verified: equivalence 9/9 (kernel vs fallback идентично). Прод-safety:
+  fallback.
+- ⬜ остаётся (тяжёлые, трогают прод-логику — делаются поэтапно с verify+QA):
+  validator-framework, assessment-scoring, records-core (persist+lift-id),
+  runner/timer state-machine, session_builder, periodization/progression,
+  UI-примитивы/calendar.
 
 Цель: одно **переиспользуемое ядро** (движок) + разная **начинка/методология**
 на домен, чтобы правка в одном месте меняла поведение всех режимов (пальцы,
