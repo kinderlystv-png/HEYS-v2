@@ -230,6 +230,13 @@ async function handleUpload(identity, body) {
       Key: key,
       Body: buf,
       ContentType: realContentType,
+      // SEC-006 (2026-06-14, Вариант B accepted-risk): bucket остаётся
+      // anonymous-readable (см. docs/SECURITY_REVIEW_sec006_recommendation.md),
+      // защита держится на ~318 битах энтропии ключа. Митигация против URL
+      // leakage: Cache-Control private + no-store → ответ не кэшируется в
+      // shared/intermediate caches (CDN, proxy), не оседает в browser-history
+      // shared-cache, минимизирует window утечки URL через cache inspection.
+      CacheControl: 'private, no-store, max-age=0',
       ACL: 'public-read',
     }));
   } catch (err) {
