@@ -186,6 +186,250 @@
     );
   }
 
+  function GuidedRunnerPanel(props) {
+    const prefix = props.classPrefix || 'training-focus';
+    const metrics = Array.isArray(props.metrics) ? props.metrics : [];
+    const controls = Array.isArray(props.controls) ? props.controls : [];
+    const steps = Array.isArray(props.steps) ? props.steps : [];
+    const phases = Array.isArray(props.phases) ? props.phases : [];
+    const progress = Math.max(0, Math.min(100, Number(props.progress) || 0));
+    return h('section', {
+      className: cx(
+        prefixClass(prefix, '-panel'),
+        prefixClass(prefix, '-execution'),
+        prefixClass(prefix, '-guided'),
+        props.className
+      ),
+      'data-training-runner': 'guided',
+      'aria-label': props.ariaLabel || 'Ведомая тренировка'
+    },
+      h('div', { className: prefixClass(prefix, '-guided__hero') },
+        h('div', { className: prefixClass(prefix, '-guided__visual') },
+          props.image
+            ? h('img', {
+                src: props.image,
+                alt: props.imageAlt || props.title || 'Фото упражнения',
+                loading: 'lazy',
+                decoding: 'async'
+              })
+            : h('div', { className: prefixClass(prefix, '-guided__fallback'), 'aria-hidden': 'true' }, props.fallbackIcon || '•')
+        ),
+        h('div', { className: prefixClass(prefix, '-guided__body') },
+          h('div', { className: prefixClass(prefix, '-guided__kicker') }, props.kicker || 'Ведомая тренировка'),
+          h('h3', { className: prefixClass(prefix, '-guided__title') }, props.title || 'Упражнение'),
+          props.instruction ? h('p', { className: prefixClass(prefix, '-guided__instruction') }, props.instruction) : null,
+          metrics.length ? h('div', { className: prefixClass(prefix, '-guided__metric') },
+            metrics.map(function (metric, idx) {
+              return h('div', { key: metric.id || idx },
+                h('strong', null, metric.value == null ? '—' : String(metric.value)),
+                h('span', null, metric.label || '')
+              );
+            })
+          ) : null,
+          h('div', { className: prefixClass(prefix, '-guided__progress'), 'aria-label': props.progressLabel || 'Прогресс тренировки' },
+            h('span', { style: { width: progress + '%' } })
+          ),
+          phases.length ? h('ol', { className: prefixClass(prefix, '-breath-phases'), 'aria-label': props.phasesLabel || 'Фазы дыхания' },
+            phases.map(function (phase, idx) {
+              return h('li', { key: (phase.type || 'phase') + idx, 'data-phase': phase.type || null },
+                phase.label || phase.type || 'Фаза',
+                phase.durationSec != null ? ' ' + phase.durationSec + ' сек' : ''
+              );
+            })
+          ) : null,
+          controls.length ? h('div', { className: prefixClass(prefix, '-guided__controls') },
+            controls.filter(Boolean).map(function (control, idx) {
+              return h('button', {
+                key: control.id || idx,
+                type: 'button',
+                disabled: !!control.disabled,
+                onClick: control.onClick,
+                'aria-label': control.ariaLabel || control.label
+              }, control.label || control.id || 'Действие');
+            })
+          ) : null
+        )
+      ),
+      h('div', {
+        className: prefixClass(prefix, '-execution__status'),
+        'data-status': props.status || 'idle',
+        style: { display: 'none' }
+      }),
+      steps.length ? h('div', { className: prefixClass(prefix, '-guided__list'), 'aria-label': props.stepsLabel || 'Шаги тренировки' },
+        steps.map(function (step, idx) {
+          return h('div', {
+            key: step.id || idx,
+            className: cx(
+              prefixClass(prefix, '-guided-step'),
+              step.current && 'is-current',
+              step.done && 'is-done'
+            )
+          },
+            h('span', null, step.title || step.label || 'Шаг'),
+            h('span', null, step.metric || '')
+          );
+        })
+      ) : null
+    );
+  }
+
+  function LiveRoadmap(props) {
+    const rows = Array.isArray(props.items) ? props.items : Array.isArray(props.steps) ? props.steps : [];
+    if (!rows.length) return null;
+    // Domain supplies its own BEM base (e.g. its catalog-styled class); the
+    // kernel stays free of domain literals and defaults to a neutral base.
+    const base = props.baseClass || 'heys-training-roadmap';
+    const currentIndex = Math.max(0, Math.min(rows.length - 1, Number(props.currentIndex) || 0));
+    const densityClass = rows.length > 8 ? ' is-ultra-dense' : rows.length > 4 ? ' is-dense' : '';
+    return h('section', {
+      className: cx(base + densityClass, props.className),
+      'aria-label': props.ariaLabel || 'Этапы тренировки'
+    },
+      h('div', { className: base + '__head' },
+        h('span', null, props.title || 'Этапы тренировки'),
+        h('strong', null, (currentIndex + 1) + '/' + rows.length)
+      ),
+      h('ol', { className: base + '__list' },
+        rows.map(function (item, idx) {
+          const isCurrent = idx === currentIndex || item.current;
+          const isDone = idx < currentIndex || item.done;
+          return h('li', {
+            key: item.id || idx,
+            className: cx(
+              base + '__item',
+              props.itemClassName,
+              isCurrent && 'is-current',
+              isDone && 'is-done'
+            ),
+            'aria-current': isCurrent ? 'step' : undefined
+          },
+            h('span', { className: base + '__index' }, isDone ? '✓' : String(idx + 1)),
+            h('span', { className: base + '__body' },
+              h('span', { className: base + '__title' }, item.title || item.label || 'Упражнение'),
+              h('span', { className: base + '__meta' }, item.meta || item.metric || '')
+            )
+          );
+        })
+      )
+    );
+  }
+
+  function LiveRunnerShell(props) {
+    const base = props.baseClass || 'heys-training-live';
+    const roadmap = props.roadmap || h(LiveRoadmap, {
+      items: props.items || props.steps || [],
+      currentIndex: props.currentIndex,
+      baseClass: props.roadmapBaseClass,
+      className: props.roadmapClassName,
+      itemClassName: props.roadmapItemClassName,
+      title: props.roadmapTitle,
+      ariaLabel: props.roadmapLabel
+    });
+    return h('div', {
+      className: cx(base, props.className),
+      'data-training-runner': props.trainingRunner || 'guided',
+      role: props.role || undefined,
+      'aria-label': props.ariaLabel || undefined
+    },
+      props.ariaLabel ? h('span', {
+        style: {
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: 0
+        }
+      }, props.ariaLabel) : null,
+      props.runner || props.children || null,
+      roadmap
+    );
+  }
+
+  function LiveCountdownDisplay(props) {
+    const controls = Array.isArray(props.controls) ? props.controls.filter(Boolean) : [];
+    const chips = Array.isArray(props.chips) ? props.chips.filter(Boolean) : [];
+    const ringRadius = Number(props.ringRadius) || 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const ratio = Math.max(0, Math.min(1, Number(props.ratio) || 0));
+    const digit = props.digit == null ? '' : String(props.digit);
+    const finalCount = !!props.finalCount;
+    // Domain passes its catalog-styled base/continuous classes; kernel default
+    // is neutral so this runtime file carries no domain literals.
+    const base = props.baseClass || 'heys-training-countdown';
+    const continuousClass = props.continuousClass || 'heys-training-continuous';
+    return h('div', {
+      className: cx(base, props.continuous && continuousClass, props.className),
+      'data-phase': props.phaseKey || 'idle'
+    },
+      h('div', { className: base + '__counter' }, props.counter || ''),
+      props.title ? h('h2', { className: base + '__grip' }, props.title) : null,
+      props.image ? h('div', { className: base + '__hero' },
+        h('img', {
+          src: props.image,
+          alt: props.imageAlt || props.title || 'Упражнение',
+          loading: props.imageLoading || 'eager',
+          decoding: 'async',
+          onError: function (e) {
+            try { e.currentTarget.parentNode.style.display = 'none'; } catch (_) {}
+          }
+        })
+      ) : null,
+      chips.length ? h('div', { className: base + '__chips' },
+        chips.map(function (chip, idx) {
+          return h('div', {
+            key: chip.id || idx,
+            className: cx(base + '__chip', chip.className),
+            'data-weight-sign': chip.weightSign || undefined
+          },
+            h('span', { className: base + '__chip-label' }, chip.label || ''),
+            h('span', { className: base + '__chip-value' }, chip.value == null ? '—' : String(chip.value))
+          );
+        })
+      ) : null,
+      h('div', { className: base + '__phase-badge' }, props.phaseLabel || ''),
+      h('div', { className: base + '__ring-wrap' },
+        h('svg', {
+          className: base + '__ring',
+          width: 200,
+          height: 200,
+          viewBox: '0 0 200 200',
+          'aria-hidden': 'true'
+        },
+          h('circle', { className: base + '__ring-track', cx: 100, cy: 100, r: ringRadius, fill: 'none' }),
+          h('circle', {
+            className: base + '__ring-fill',
+            cx: 100,
+            cy: 100,
+            r: ringRadius,
+            fill: 'none',
+            strokeDasharray: ringCircum,
+            strokeDashoffset: ringCircum * (1 - ratio),
+            transform: 'rotate(-90 100 100)'
+          })
+        ),
+        h('div', { className: base + '__digit' + (finalCount ? ' is-final-count' : '') }, digit)
+      ),
+      props.afterRing || null,
+      controls.length ? h('div', { className: base + '__controls' },
+        controls.map(function (control, idx) {
+          return h('button', {
+            key: control.id || idx,
+            type: 'button',
+            className: cx(base + '__btn', control.abort && base + '__btn--abort', control.className),
+            disabled: !!control.disabled,
+            onClick: control.onClick,
+            'aria-label': control.ariaLabel || control.label,
+            title: control.title
+          }, control.label || control.id || 'Действие');
+        })
+      ) : null
+    );
+  }
+
   function RegistryGrid(props) {
     const prefix = props.classPrefix || 'training-focus';
     const items = Array.isArray(props.items) ? props.items : [];
@@ -385,6 +629,10 @@
     EquipmentBar: EquipmentBar,
     GoalSelector: GoalSelector,
     ReadinessCard: ReadinessCard,
+    GuidedRunnerPanel: GuidedRunnerPanel,
+    LiveRoadmap: LiveRoadmap,
+    LiveRunnerShell: LiveRunnerShell,
+    LiveCountdownDisplay: LiveCountdownDisplay,
     RegistryGrid: RegistryGrid,
     Registry: Registry
   };
@@ -5911,6 +6159,8 @@
   const h = React.createElement;
   const useMemo = React.useMemo;
   const useState = React.useState;
+  const useEffect = React.useEffect;
+  const useRef = React.useRef;
 
   const DEFAULT_PROFILE = {
     age: 30,
@@ -6181,6 +6431,10 @@
 .mobility-fs-mixcard__btn--reroll{width:48px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
 .mobility-fs-mixcard__btn--secondary{background:#f8fafc;color:#334155;border:1px solid rgba(15,23,42,.08)}
 .mobility-fs-mixcard__btn--launch{flex:1;background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;box-shadow:0 10px 24px rgba(249,115,22,.22)}
+.mobility-fs-guided-launch .mobility-fs-mixcard__inner{border-color:rgba(22,166,106,.22);background:linear-gradient(180deg,#ffffff,#f4fbf7)}
+.mobility-fs-cta,.mobility-fs-ghost{appearance:none;width:100%;border-radius:12px;padding:14px 16px;font:900 15px/1.15 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}
+.mobility-fs-cta{border:0;background:linear-gradient(135deg,#16a66a,#0f8a55);color:#fff;box-shadow:0 12px 28px rgba(22,166,106,.24)}
+.mobility-fs-ghost{border:1px solid rgba(15,23,42,.10);background:#fff;color:#334155}
 .mobility-today-hero{position:relative;overflow:hidden;border-radius:8px;padding:16px;margin:0 0 12px;background:linear-gradient(135deg,#14312a 0%,#1f6b4d 55%,#e7f4ee 100%);color:#fff;box-shadow:0 18px 42px rgba(20,49,42,.22)}
 .mobility-today-hero:after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.16)}
 .mobility-today-hero__content{position:relative;z-index:1}
@@ -6299,6 +6553,30 @@
 .mobility-guided-step{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px;border-radius:8px;color:#667085;font-size:12px;font-weight:800}
 .mobility-guided-step.is-current{background:#e9f8f1;color:#0f6b43}
 .mobility-guided-step.is-done{color:#94a3b8}
+.mobility-preflight{display:grid;gap:13px;text-align:left}
+.mobility-preflight__lead{margin:0;color:#475569;font-size:14px;line-height:1.4}
+.mobility-preflight__prep{padding:12px;border-radius:14px;background:#f0fdf4;border:1px solid rgba(22,166,106,.16);color:#0f6b43;font-size:14px;font-weight:900;line-height:1.35}
+.mobility-preflight__list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.mobility-preflight__item{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;color:#172033;font-size:14px;font-weight:750;line-height:1.35}
+.mobility-preflight__check{display:inline-flex;width:22px;height:22px;border-radius:999px;align-items:center;justify-content:center;background:#dcfce7;color:#16a66a;font-weight:1000}
+.mobility-guided-live{position:fixed!important;inset:0!important;z-index:2147483200;width:100vw!important;max-width:none!important;min-height:100vh;min-height:100dvh;margin:0!important;padding:calc(14px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))!important;border:0!important;border-radius:0!important;background:linear-gradient(180deg,#fff 0%,#fbfcfb 100%)!important;box-shadow:none!important;overflow:hidden!important;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.mobility-guided-live .mobility-guided__visual{display:none}
+.mobility-guided-live .heys-fingers-countdown{width:min(100%,430px)}
+.mobility-guided-live .heys-fingers-countdown__grip{max-width:min(100%,360px)}
+.mobility-guided-live .heys-fingers-countdown__digit{width:100%;max-width:100%;padding:0 18px;box-sizing:border-box;text-align:center;font-size:clamp(50px,14vw,64px);letter-spacing:-.035em;white-space:nowrap}
+.mobility-live-roadmap{width:min(100% - 24px,392px);margin:8px auto 0}
+.mobility-live-roadmap .fingers-fs-live-roadmap__list{display:flex;flex-direction:column}
+.mobility-guided-live .fingers-fs-live-roadmap__item{min-width:0}
+.mobility-guided-live .mobility-guided-step{min-width:0}
+.mobility-guided-step__index{width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:#e2e8f0;color:currentColor;font-size:11px;font-weight:950;font-variant-numeric:tabular-nums}
+.mobility-guided-step__body{min-width:0;display:flex;flex-direction:column;gap:2px}
+.mobility-guided-step__title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:currentColor;font-size:12.5px;font-weight:900;line-height:1.18}
+.mobility-guided-step__meta{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:currentColor;opacity:.66;font-size:10.5px;font-weight:800;line-height:1.16}
+.mobility-guided-live .mobility-guided-step.is-current{background:#fff;color:#020617;border-color:rgba(2,6,23,.16);box-shadow:0 8px 24px -18px rgba(2,6,23,.36)}
+.mobility-guided-step.is-current .mobility-guided-step__index{background:#020617;color:#fff}
+.mobility-guided-live .mobility-guided-step.is-done{color:#cbd5e1;background:#f8fafc}
+.mobility-guided-live .mobility-breath-phases{width:min(100% - 24px,392px);margin:0 auto!important;padding:0!important;list-style:none;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.mobility-guided-live .mobility-breath-phases li{border-radius:999px;background:#ecfdf5;color:#0f6b43;padding:5px 8px;font-size:11px;font-weight:850}
 @media (max-width:760px){
   .mobility-overlay-root{background:#f6faf8;backdrop-filter:none;-webkit-backdrop-filter:none}
   .mobility-app{padding:calc(env(safe-area-inset-top,16px) + 48px) 10px calc(28px + env(safe-area-inset-bottom))}
@@ -6329,6 +6607,11 @@
   .mobility-protocol-grid{grid-template-columns:1fr}
   .mobility-guided__hero{display:block}
   .mobility-guided__visual{min-height:220px}
+  .mobility-guided-live{min-height:100vh;min-height:100dvh}
+  .mobility-guided-live .heys-fingers-countdown{padding-top:0;gap:7px}
+  .mobility-guided-live .heys-fingers-countdown__ring-wrap{width:166px;height:166px}
+  .mobility-guided-live .heys-fingers-countdown__chip{min-width:96px}
+  .mobility-guided-live .heys-fingers-countdown__controls{width:100%}
 }
 `;
     doc.head.appendChild(style);
@@ -6831,73 +7114,341 @@
     if (step.reps) return Array.isArray(step.reps) ? step.reps.join('-') + ' повт.' : step.reps + ' повт.';
     return step.kind || 'шаг';
   }
+  function stepDurationSec(step) {
+    return Math.max(0, Math.round(Number(step && step.durationSec) || 0));
+  }
+  function timerMetric(step, remainingSec) {
+    const total = stepDurationSec(step);
+    if (!total) return stepMetric(step);
+    return Math.max(0, Math.round(Number(remainingSec) || 0)) + ' сек';
+  }
+
+  function formatClock(sec) {
+    const total = Math.max(0, Math.round(Number(sec) || 0));
+    if (total >= 60) {
+      const min = Math.floor(total / 60);
+      const rest = total % 60;
+      return String(min) + ':' + String(rest).padStart(2, '0');
+    }
+    return String(total);
+  }
+
+  function liveStepTitle(step) {
+    const atom = atomForStep(step);
+    return atom && atom.title || step && step.label || 'Упражнение';
+  }
+
+  function liveStepMeta(step) {
+    if (!step) return '';
+    const parts = [];
+    if (step.kind) parts.push(step.kind);
+    const metric = stepMetric(step);
+    if (metric && metric !== step.kind) parts.push(metric);
+    if (step.sets) parts.push(step.sets + ' подх.');
+    return parts.join(' · ');
+  }
+
+  function livePhase(status) {
+    if (status === 'running') return 'hang';
+    if (status === 'paused') return 'paused';
+    if (status === 'complete') return 'done';
+    if (status === 'aborted') return 'aborted';
+    return 'prep';
+  }
+
+  function livePhaseLabel(status) {
+    if (status === 'running') return 'РАБОТА';
+    if (status === 'paused') return 'Пауза';
+    if (status === 'complete') return 'Готово!';
+    if (status === 'aborted') return 'Прервано';
+    return 'Готов к старту';
+  }
+
+  function liveDigit(step, remainingSec) {
+    const total = stepDurationSec(step);
+    if (total) return formatClock(remainingSec);
+    if (step && step.reps) return Array.isArray(step.reps) ? step.reps.join('-') : String(step.reps);
+    return '→';
+  }
+
+  function mobilityPreflightPreset(modeId, mode) {
+    const autonomic = mode && mode.autonomic;
+    if (modeId === 'evening_relax' || autonomic === 'relax') {
+      return {
+        icon: '🌙',
+        prep: '60 секунд: лечь в позу мертвеца или сесть, расслабить челюсть и плечи, сделать длинный спокойный выдох.',
+        checks: [
+          'Дыхание спокойное, без задержек.',
+          'Нет острой боли и онемения.',
+          'Движения делаем мягко, не через силу.'
+        ]
+      };
+    }
+    if (modeId === 'pre_workout_ramp') {
+      return {
+        icon: '⚡',
+        prep: '60 секунд: марш или лёгкие прыжки на месте, затем 3-4 суставных круга без боли.',
+        checks: [
+          'Пульс чуть поднялся, тело тёплое.',
+          'Нет острой боли в целевых суставах.',
+          'Перед мощной работой не уходим в долгую пассивную статику.'
+        ]
+      };
+    }
+    if (modeId === 'post_workout' || modeId === 'rehab') {
+      return {
+        icon: '🌿',
+        prep: '60 секунд: спокойная ходьба или мягкое дыхание, затем оценить боль по ощущениям.',
+        checks: [
+          'Интенсивность ниже тренировочной.',
+          'Боль не усиливается при первом движении.',
+          'Цель — восстановить движение, а не добрать нагрузку.'
+        ]
+      };
+    }
+    if (modeId === 'anti_sedentary') {
+      return {
+        icon: '🪑',
+        prep: '60 секунд: встать, пройтись, сделать 5 мягких кругов плечами и тазом.',
+        checks: [
+          'Двигаемся без рывков.',
+          'Шея и поясница не зажимаются.',
+          'Если появилась боль — остановиться.'
+        ]
+      };
+    }
+    return {
+      icon: '🤸',
+      prep: '60 секунд: лёгкий марш или прыжки на месте, чтобы поднять температуру и пульс.',
+      checks: [
+        'Тело стало теплее, дыхание ровное.',
+        'Нет острой боли в суставах.',
+        'Первый повтор делаем как пробный.'
+      ]
+    };
+  }
+
+  function MobilityPreflightChecklist(props) {
+    const preset = props.preset || mobilityPreflightPreset();
+    return h('div', { className: 'mobility-preflight' },
+      h('p', { className: 'mobility-preflight__lead' }, 'Перед ведомой сессией коротко настрой тело под режим. Это снижает риск резкого старта.'),
+      h('div', { className: 'mobility-preflight__prep' }, preset.prep),
+      h('ul', { className: 'mobility-preflight__list' },
+        (preset.checks || []).map(function (text, idx) {
+          return h('li', { key: idx, className: 'mobility-preflight__item' },
+            h('span', { className: 'mobility-preflight__check', 'aria-hidden': 'true' }, '✓'),
+            h('span', null, text)
+          );
+        })
+      ),
+      props.issueCount
+        ? h('p', { className: 'mobility-preflight__lead' }, 'Есть ограничения в плане: выполняй только без усиления боли.')
+        : null
+    );
+  }
+
+  function showMobilityPreflight(options) {
+    const opts = options || {};
+    const modal = global.HEYS && global.HEYS.ConfirmModal;
+    const start = typeof opts.onStart === 'function' ? opts.onStart : function () {};
+    if (!modal || typeof modal.show !== 'function') {
+      start();
+      return;
+    }
+    const preset = mobilityPreflightPreset(opts.modeId, opts.selectedMode);
+    modal.show({
+      icon: preset.icon,
+      title: 'Готовы начать?',
+      text: h(MobilityPreflightChecklist, { preset: preset, issueCount: opts.issueCount }),
+      confirmStyle: 'success',
+      actions: [
+        { key: 'cancel', label: 'Отмена', style: 'neutral', variant: 'text', isCancel: true, row: 0 },
+        {
+          key: 'go',
+          label: 'Всё ОК, начинаем',
+          style: 'success',
+          variant: 'fill',
+          value: 'go',
+          row: 1,
+          isDefault: true,
+          className: 'fingers-fs-preflight-go',
+          onClick: start
+        }
+      ]
+    });
+  }
+
+  function MobilityLiveRoadmap(props) {
+    const steps = Array.isArray(props.steps) ? props.steps : [];
+    const currentIndex = Math.max(0, Number(props.currentIndex) || 0);
+    const denseClass = steps.length > 8 ? ' is-ultra-dense' : steps.length > 4 ? ' is-dense' : '';
+    return h('div', { className: 'mobility-live-roadmap' + denseClass, 'aria-label': 'Этапы тренировки' },
+      h('div', { className: 'mobility-live-roadmap__head' },
+        h('span', null, 'Этапы тренировки'),
+        h('span', null, Math.min(currentIndex + 1, steps.length || 1), '/', steps.length || 1)
+      ),
+      h('div', { className: 'mobility-live-roadmap__list' },
+        steps.map(function (s, idx) {
+          return h('div', {
+            key: idx + ':' + (s.atomId || s.label || ''),
+            className: 'mobility-guided-step' + (idx === currentIndex ? ' is-current' : '') + (idx < currentIndex ? ' is-done' : '')
+          },
+            h('span', { className: 'mobility-guided-step__index' }, idx + 1),
+            h('span', { className: 'mobility-guided-step__body' },
+              h('span', { className: 'mobility-guided-step__title' }, liveStepTitle(s)),
+              h('span', { className: 'mobility-guided-step__meta' }, liveStepMeta(s))
+            )
+          );
+        })
+      )
+    );
+  }
 
   function ExecutionPanel(props) {
     const runner = deps().routineRunner;
     const plan = props.plan;
+    const steps = plan && Array.isArray(plan.steps) ? plan.steps : [];
     const [state, setState] = useState(function () {
       return runner && plan ? runner.createState(plan) : { status: 'idle', index: 0, totalSteps: 0, aborted: false };
     });
-    if (!runner || !plan || !plan.steps || !plan.steps.length) return null;
-    const current = plan.steps[Math.min(state.index, plan.steps.length - 1)] || plan.steps[0];
+    const current = steps[Math.min(state.index, steps.length - 1)] || steps[0] || null;
     const currentAtom = atomForStep(current);
-    const progress = plan.steps.length ? Math.round(((state.index + 1) / plan.steps.length) * 100) : 0;
+    const currentDurationSec = stepDurationSec(current);
+    const [remainingSec, setRemainingSec] = useState(currentDurationSec);
+    const autoStartedRef = useRef(false);
+    const progress = steps.length ? Math.round(((state.index + 1) / steps.length) * 100) : 0;
     function send(event) {
       setState(function (s) { return runner.transition(s, event); });
     }
-    return h('section', { className: 'mobility-panel mobility-execution mobility-guided', 'aria-label': 'Ведомая тренировка' },
-      h('div', { className: 'mobility-guided__hero' },
-        h('div', { className: 'mobility-guided__visual' },
-          currentAtom && currentAtom.visualAsset
-            ? h('img', {
-                src: currentAtom.visualAsset,
-                alt: 'Фото упражнения: ' + (currentAtom.title || current.label),
-                loading: 'lazy',
-                decoding: 'async'
-              })
-            : h('div', { className: 'mobility-guided__fallback', 'aria-hidden': 'true' }, 'M')
-        ),
-        h('div', { className: 'mobility-guided__body' },
-          h('div', { className: 'mobility-guided__kicker' }, 'Ведомая тренировка'),
-          h('h3', { className: 'mobility-guided__title' }, currentAtom && currentAtom.title || current.label),
-          h('p', { className: 'mobility-guided__instruction' }, current.instruction || currentAtom && currentAtom.instruction || ''),
-          h('div', { className: 'mobility-guided__metric' },
-            h('div', null, h('strong', null, stepMetric(current)), h('span', null, 'доза')),
-            h('div', null, h('strong', null, (state.index + 1) + '/' + plan.steps.length), h('span', null, 'шаг')),
-            h('div', null, h('strong', null, state.status), h('span', null, 'статус'))
-          ),
-          h('div', { className: 'mobility-guided__progress', 'aria-label': 'Прогресс тренировки' },
-            h('span', { style: { width: progress + '%' } })
-          ),
-          current.breath && current.breath.phases
-            ? h('ol', { className: 'mobility-breath-phases', 'aria-label': 'Фазы дыхания' },
-                current.breath.phases.map(function (p, idx) {
-                  return h('li', { key: p.type + idx, 'data-phase': p.type }, p.label, ' ', p.durationSec, ' сек');
-                }))
-            : null,
-          h('div', { className: 'mobility-guided__controls' },
-            state.status === 'idle' ? h('button', { type: 'button', onClick: function () { send('start'); } }, 'Старт') : null,
-            state.status === 'running' ? h('button', { type: 'button', onClick: function () { send('pause'); } }, 'Пауза') : null,
-            state.status === 'paused' ? h('button', { type: 'button', onClick: function () { send('resume'); } }, 'Продолжить') : null,
-            h('button', { type: 'button', onClick: function () { send('next'); } }, 'Дальше'),
-            props.onPain ? h('button', { type: 'button', onClick: function () { props.onPain(current); } }, 'Отметить боль') : null,
-            h('button', { type: 'button', onClick: function () { send('abort'); } }, 'Стоп')
-          )
-        )
+    useEffect(function () {
+      setRemainingSec(currentDurationSec);
+    }, [state.index, currentDurationSec]);
+    useEffect(function () {
+      if (!props.autoStart || autoStartedRef.current || state.status !== 'idle') return;
+      autoStartedRef.current = true;
+      if (!runner) return;
+      setState(function (s) { return runner.transition(s, 'start'); });
+    }, [props.autoStart, runner, state.status]);
+    useEffect(function () {
+      if (state.status !== 'running' || !currentDurationSec) return undefined;
+      const id = setInterval(function () {
+        setRemainingSec(function (prev) { return Math.max(0, (Number(prev) || 0) - 1); });
+      }, 1000);
+      return function () { clearInterval(id); };
+    }, [state.status, state.index, currentDurationSec]);
+    useEffect(function () {
+      if (state.status !== 'running' || !currentDurationSec || remainingSec > 0) return;
+      if (!runner) return;
+      setState(function (s) {
+        const atLast = (Number(s.index) || 0) >= Math.max(0, (Number(s.totalSteps) || 0) - 1);
+        return runner.transition(s, atLast ? 'complete' : 'next');
+      });
+    }, [state.status, state.index, currentDurationSec, remainingSec, runner]);
+    if (!runner || !steps.length || !current) return null;
+    const radius = 82;
+    const circumference = 2 * Math.PI * radius;
+    const ratio = currentDurationSec ? Math.max(0, Math.min(1, (Number(remainingSec) || 0) / currentDurationSec)) : 1;
+    const digit = liveDigit(current, remainingSec);
+    const Focus = global.HEYS && global.HEYS.TrainingFocus;
+    const afterRing = current.breath && current.breath.phases
+      ? h('ol', { className: 'mobility-breath-phases', 'aria-label': 'Фазы дыхания' },
+          current.breath.phases.map(function (p, idx) {
+            return h('li', { key: p.type + idx, 'data-phase': p.type }, p.label, ' ', p.durationSec, ' сек');
+          }))
+      : null;
+    const controls = [
+      state.status === 'idle' ? { id: 'start', label: 'Старт', onClick: function () { send('start'); } } : null,
+      state.status === 'running' ? { id: 'pause', label: '⏸ Пауза', ariaLabel: 'Пауза', onClick: function () { send('pause'); } } : null,
+      state.status === 'paused' ? { id: 'resume', label: '▶ Возобновить', onClick: function () { send('resume'); } } : null,
+      { id: 'next', label: '→', ariaLabel: 'Пропустить фазу', title: 'Пропустить фазу', onClick: function () { send('next'); } },
+      props.onPain ? { id: 'pain', label: 'Боль', ariaLabel: 'Отметить боль', onClick: function () { props.onPain(current); } } : null,
+      { id: 'abort', label: 'Прервать', ariaLabel: 'Стоп', abort: true, onClick: function () { send('abort'); } }
+    ].filter(Boolean);
+    const runnerNode = h(React.Fragment, null,
+      h('div', { className: 'mobility-guided__visual', 'aria-hidden': 'true' },
+        currentAtom && currentAtom.visualAsset
+          ? h('img', {
+              src: currentAtom.visualAsset,
+              alt: 'Фото упражнения: ' + (currentAtom.title || current.label),
+              loading: 'lazy',
+              decoding: 'async'
+            })
+          : h('div', { className: 'mobility-guided__fallback', 'aria-hidden': 'true' }, 'M')
       ),
-      h('div', { className: 'mobility-execution__status', 'data-status': state.status, style: { display: 'none' } }),
-      h('div', { className: 'mobility-guided__list', 'aria-label': 'Шаги тренировки' },
-        plan.steps.slice(0, 8).map(function (s, idx) {
-          const atom = atomForStep(s);
-          return h('div', {
-            key: idx,
-            className: 'mobility-guided-step' + (idx === state.index ? ' is-current' : '') + (idx < state.index ? ' is-done' : '')
-          },
-            h('span', null, idx + 1, '. ', atom && atom.title || s.label),
-            h('strong', null, stepMetric(s))
-          );
-        })
-      )
+      Focus && typeof Focus.LiveCountdownDisplay === 'function'
+        ? h(Focus.LiveCountdownDisplay, {
+            baseClass: 'heys-fingers-countdown',
+            continuousClass: 'heys-fingers-continuous',
+            continuous: true,
+            phaseKey: livePhase(state.status),
+            phaseLabel: livePhaseLabel(state.status),
+            counter: 'Упр ' + (state.index + 1) + '/' + steps.length,
+            title: liveStepTitle(current),
+            image: currentAtom && currentAtom.visualAsset,
+            imageAlt: 'Фото упражнения: ' + (currentAtom && currentAtom.title || current.label || 'упражнение'),
+            digit: digit,
+            ratio: ratio,
+            chips: [
+              {
+                id: 'duration',
+                label: currentDurationSec ? 'Длительность' : 'Доза',
+                value: currentDurationSec ? Math.round(currentDurationSec / 60) + ' мин' : stepMetric(current)
+              }
+            ],
+            afterRing: afterRing,
+            controls: controls
+          })
+        : h('div', { className: 'heys-fingers-countdown heys-fingers-continuous', 'data-phase': livePhase(state.status) },
+            h('div', { className: 'heys-fingers-countdown__counter' }, 'Упр ', state.index + 1, '/', steps.length),
+            h('h2', { className: 'heys-fingers-countdown__grip' }, liveStepTitle(current)),
+            h('div', { className: 'heys-fingers-countdown__phase-badge' }, livePhaseLabel(state.status)),
+            h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+              h('svg', { className: 'heys-fingers-countdown__ring', width: 200, height: 200, viewBox: '0 0 200 200', 'aria-hidden': 'true' },
+                h('circle', { className: 'heys-fingers-countdown__ring-track', cx: 100, cy: 100, r: radius, fill: 'none' }),
+                h('circle', { className: 'heys-fingers-countdown__ring-fill', cx: 100, cy: 100, r: radius, fill: 'none', strokeDasharray: circumference, strokeDashoffset: circumference * (1 - ratio), transform: 'rotate(-90 100 100)' })
+              ),
+              h('div', { className: 'heys-fingers-countdown__digit' }, digit)
+            ),
+            afterRing,
+            h('div', { className: 'heys-fingers-countdown__controls' },
+              controls.map(function (control) {
+                return h('button', {
+                  key: control.id,
+                  type: 'button',
+                  className: 'heys-fingers-countdown__btn' + (control.abort ? ' heys-fingers-countdown__btn--abort' : ''),
+                  onClick: control.onClick,
+                  'aria-label': control.ariaLabel || control.label,
+                  title: control.title
+                }, control.label);
+              })
+            )
+          ),
+      h('div', { className: 'mobility-execution__status', 'data-status': state.status, style: { display: 'none' } })
+    );
+    const roadmapItems = steps.map(function (s, idx) {
+      return {
+        id: idx + ':' + (s.atomId || s.label || ''),
+        title: liveStepTitle(s),
+        meta: liveStepMeta(s)
+      };
+    });
+    if (Focus && typeof Focus.LiveRunnerShell === 'function') {
+      return h(Focus.LiveRunnerShell, {
+        baseClass: 'fingers-fs-live',
+        className: 'mobility-panel mobility-execution mobility-guided mobility-guided-live',
+        ariaLabel: 'Ведомая тренировка',
+        runner: runnerNode,
+        items: roadmapItems,
+        currentIndex: state.index,
+        roadmapBaseClass: 'fingers-fs-live-roadmap',
+        roadmapClassName: 'mobility-live-roadmap',
+        roadmapItemClassName: 'mobility-guided-step',
+        roadmapLabel: 'Этапы тренировки'
+      });
+    }
+    return h('section', { className: 'mobility-panel mobility-execution mobility-guided mobility-guided-live', 'data-training-runner': 'guided', 'aria-label': 'Ведомая тренировка' },
+      runnerNode,
+      h(MobilityLiveRoadmap, { steps: steps, currentIndex: state.index })
     );
   }
 
@@ -7290,6 +7841,45 @@
     );
   }
 
+  function GuidedLaunchCard(props) {
+    const built = props.built;
+    const plan = props.plan;
+    const atoms = sessionAtoms(built);
+    const durationMin = plan && plan.estimatedDurationSec ? Math.round(plan.estimatedDurationSec / 60) : null;
+    const blockCount = built && built.session && Array.isArray(built.session.blocks) ? built.session.blocks.length : atoms.length;
+    return h('section', { className: 'mobility-fs-mixcard mobility-fs-guided-launch', 'aria-label': 'Запуск ведомой сессии' },
+      h('div', { className: 'mobility-fs-mixcard__inner' },
+        h('div', { className: 'mobility-fs-mixcard__head-row' },
+          h('div', { className: 'mobility-fs-mixcard__badge' },
+            h('span', { 'aria-hidden': 'true' }, '▶'),
+            ' Ведомая'
+          ),
+          durationMin ? h('div', { className: 'mobility-fs-mixcard__goalhint' }, durationMin + ' мин') : null
+        ),
+        h('h3', { className: 'mobility-fs-mixcard__title' }, props.title || 'Ведомая сессия'),
+        h('p', { className: 'mobility-fs-mixcard__desc' }, props.text || 'План готов. Запусти сопровождение: таймер будет вести шаги, а фото и подсказки останутся перед глазами.'),
+        h('div', { className: 'mobility-fs-mixcard__chips' },
+          chip('steps', (plan ? plan.totalSteps : 0) + ' шагов'),
+          chip('blocks', blockCount + ' упр.'),
+          props.issueCount ? chip('warn', props.issueCount + ' огранич.') : chip('ok', 'без блокировок')
+        ),
+        h(ExercisePreviewList, { atoms: atoms, limit: 4 }),
+        h('div', { className: 'mobility-constructor-actions' },
+          h('button', {
+            type: 'button',
+            className: 'mobility-fs-cta',
+            onClick: props.onStart
+          }, '▶ Запустить ведомую сессию'),
+          h('button', {
+            type: 'button',
+            className: 'mobility-fs-ghost',
+            onClick: props.onSavePlan
+          }, 'Сохранить план без таймера')
+        )
+      )
+    );
+  }
+
   function MixTodayCard(props) {
     const built = props.built;
     const plan = props.plan;
@@ -7386,6 +7976,7 @@
     const [saveStatus, setSaveStatus] = useState(null);
     const [activeTab, setActiveTab] = useState('today');
     const [flowMode, setFlowMode] = useState('choose');
+    const [runnerStarted, setRunnerStarted] = useState(false);
     const [mixSeed, setMixSeed] = useState(0);
     const [customAtomIds, setCustomAtomIds] = useState([]);
     const [customRunAtomIds, setCustomRunAtomIds] = useState([]);
@@ -7401,6 +7992,7 @@
     function applyMode(nextModeId) {
       setModeId(nextModeId);
       setFlowMode('choose');
+      setRunnerStarted(false);
       if (d.protocolCatalog && typeof d.protocolCatalog.defaultForMode === 'function') {
         const p = d.protocolCatalog.defaultForMode(nextModeId);
         if (p && p.id) setProtocolId(p.id);
@@ -7411,6 +8003,7 @@
       setProtocolId(protocol.id);
       setModeId(protocol.modeId);
       setFlowMode('protocol');
+      setRunnerStarted(false);
       setActiveTab('today');
     }
     function handleProfileChange(nextProfile) {
@@ -7423,6 +8016,7 @@
           setModeId(d.onboarding.recommendMode(nextProfile, { timeOfDay: props.timeOfDay }));
         }
         setFlowMode('choose');
+        setRunnerStarted(false);
       }
     }
 
@@ -7545,6 +8139,15 @@
       { id: 'progress', label: 'Прогресс', icon: '↗' },
       { id: 'calendar', label: 'Календарь', icon: '□' }
     ];
+
+    function startGuidedSession() {
+      showMobilityPreflight({
+        modeId: modeId,
+        selectedMode: selectedMode,
+        issueCount: issueCount,
+        onStart: function () { setRunnerStarted(true); }
+      });
+    }
 
     function renderTabs() {
       if (Focus && Focus.Tabs) {
@@ -7692,13 +8295,13 @@
             built: built,
             plan: d.routineRunner && built && built.session ? d.routineRunner.buildRunPlan(built.session) : null,
             goal: profile.goal,
-            onReroll: function () { setMixSeed(Date.now()); },
-            onLaunch: function () { setFlowMode('mix'); }
+            onReroll: function () { setMixSeed(Date.now()); setRunnerStarted(false); },
+            onLaunch: function () { setFlowMode('mix'); setRunnerStarted(false); }
           }),
           h(RecommendedProtocolCard, {
             protocol: selectedProtocol,
             onOpenProtocols: function () { setActiveTab('protocols'); },
-            onLaunch: applyProtocol
+            onLaunch: function (protocol) { applyProtocol(protocol); setRunnerStarted(false); }
           })
         );
       }
@@ -7731,9 +8334,19 @@
               h('strong', null, blockCount || 0, ' упражн.'),
               h('span', null, durationMin ? durationMin + ' мин · ' + (plan ? plan.totalSteps : 0) + ' шагов' : 'план собирается')
             ),
-            h('button', { type: 'button', onClick: function () { setFlowMode('choose'); } }, 'Назад')
+            h('button', { type: 'button', onClick: function () { setFlowMode('choose'); setRunnerStarted(false); } }, 'Назад')
           ),
-          h(ExecutionPanel, { key: flowMode + ':' + modeId + ':' + protocolId + ':' + customRunAtomIds.join(',') + ':' + mixSeed + ':' + (plan ? plan.totalSteps : 0), plan: plan, onPain: savePainFlag }),
+          runnerStarted
+            ? h(ExecutionPanel, { key: flowMode + ':' + modeId + ':' + protocolId + ':' + customRunAtomIds.join(',') + ':' + mixSeed + ':' + (plan ? plan.totalSteps : 0), plan: plan, autoStart: true, onPain: savePainFlag })
+            : h(GuidedLaunchCard, {
+                built: activeBuilt,
+                plan: plan,
+                title: title,
+                text: text,
+                issueCount: issueCount,
+                onStart: startGuidedSession,
+                onSavePlan: saveSession
+              }),
           h('div', { className: 'mobility-today-hero__actions' },
             h('button', { type: 'button', className: 'mobility-primary-btn', onClick: saveSession }, props.dateKey ? 'Сохранить в тренировку' : 'Сохранить сессию')
           )
@@ -7755,11 +8368,12 @@
             onChange: setCustomAtomIds,
             onStart: function (ids) {
               const nextIds = Array.isArray(ids) ? ids : customAtomIds;
-              setCustomAtomIds(nextIds);
-              setCustomRunAtomIds(nextIds);
-              setFlowMode('custom');
-              setActiveTab('today');
-            }
+	              setCustomAtomIds(nextIds);
+	              setCustomRunAtomIds(nextIds);
+	              setFlowMode('custom');
+	              setRunnerStarted(false);
+	              setActiveTab('today');
+	            }
           })
         );
       }

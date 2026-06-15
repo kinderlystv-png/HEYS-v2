@@ -186,6 +186,250 @@
     );
   }
 
+  function GuidedRunnerPanel(props) {
+    const prefix = props.classPrefix || 'training-focus';
+    const metrics = Array.isArray(props.metrics) ? props.metrics : [];
+    const controls = Array.isArray(props.controls) ? props.controls : [];
+    const steps = Array.isArray(props.steps) ? props.steps : [];
+    const phases = Array.isArray(props.phases) ? props.phases : [];
+    const progress = Math.max(0, Math.min(100, Number(props.progress) || 0));
+    return h('section', {
+      className: cx(
+        prefixClass(prefix, '-panel'),
+        prefixClass(prefix, '-execution'),
+        prefixClass(prefix, '-guided'),
+        props.className
+      ),
+      'data-training-runner': 'guided',
+      'aria-label': props.ariaLabel || 'Ведомая тренировка'
+    },
+      h('div', { className: prefixClass(prefix, '-guided__hero') },
+        h('div', { className: prefixClass(prefix, '-guided__visual') },
+          props.image
+            ? h('img', {
+                src: props.image,
+                alt: props.imageAlt || props.title || 'Фото упражнения',
+                loading: 'lazy',
+                decoding: 'async'
+              })
+            : h('div', { className: prefixClass(prefix, '-guided__fallback'), 'aria-hidden': 'true' }, props.fallbackIcon || '•')
+        ),
+        h('div', { className: prefixClass(prefix, '-guided__body') },
+          h('div', { className: prefixClass(prefix, '-guided__kicker') }, props.kicker || 'Ведомая тренировка'),
+          h('h3', { className: prefixClass(prefix, '-guided__title') }, props.title || 'Упражнение'),
+          props.instruction ? h('p', { className: prefixClass(prefix, '-guided__instruction') }, props.instruction) : null,
+          metrics.length ? h('div', { className: prefixClass(prefix, '-guided__metric') },
+            metrics.map(function (metric, idx) {
+              return h('div', { key: metric.id || idx },
+                h('strong', null, metric.value == null ? '—' : String(metric.value)),
+                h('span', null, metric.label || '')
+              );
+            })
+          ) : null,
+          h('div', { className: prefixClass(prefix, '-guided__progress'), 'aria-label': props.progressLabel || 'Прогресс тренировки' },
+            h('span', { style: { width: progress + '%' } })
+          ),
+          phases.length ? h('ol', { className: prefixClass(prefix, '-breath-phases'), 'aria-label': props.phasesLabel || 'Фазы дыхания' },
+            phases.map(function (phase, idx) {
+              return h('li', { key: (phase.type || 'phase') + idx, 'data-phase': phase.type || null },
+                phase.label || phase.type || 'Фаза',
+                phase.durationSec != null ? ' ' + phase.durationSec + ' сек' : ''
+              );
+            })
+          ) : null,
+          controls.length ? h('div', { className: prefixClass(prefix, '-guided__controls') },
+            controls.filter(Boolean).map(function (control, idx) {
+              return h('button', {
+                key: control.id || idx,
+                type: 'button',
+                disabled: !!control.disabled,
+                onClick: control.onClick,
+                'aria-label': control.ariaLabel || control.label
+              }, control.label || control.id || 'Действие');
+            })
+          ) : null
+        )
+      ),
+      h('div', {
+        className: prefixClass(prefix, '-execution__status'),
+        'data-status': props.status || 'idle',
+        style: { display: 'none' }
+      }),
+      steps.length ? h('div', { className: prefixClass(prefix, '-guided__list'), 'aria-label': props.stepsLabel || 'Шаги тренировки' },
+        steps.map(function (step, idx) {
+          return h('div', {
+            key: step.id || idx,
+            className: cx(
+              prefixClass(prefix, '-guided-step'),
+              step.current && 'is-current',
+              step.done && 'is-done'
+            )
+          },
+            h('span', null, step.title || step.label || 'Шаг'),
+            h('span', null, step.metric || '')
+          );
+        })
+      ) : null
+    );
+  }
+
+  function LiveRoadmap(props) {
+    const rows = Array.isArray(props.items) ? props.items : Array.isArray(props.steps) ? props.steps : [];
+    if (!rows.length) return null;
+    // Domain supplies its own BEM base (e.g. its catalog-styled class); the
+    // kernel stays free of domain literals and defaults to a neutral base.
+    const base = props.baseClass || 'heys-training-roadmap';
+    const currentIndex = Math.max(0, Math.min(rows.length - 1, Number(props.currentIndex) || 0));
+    const densityClass = rows.length > 8 ? ' is-ultra-dense' : rows.length > 4 ? ' is-dense' : '';
+    return h('section', {
+      className: cx(base + densityClass, props.className),
+      'aria-label': props.ariaLabel || 'Этапы тренировки'
+    },
+      h('div', { className: base + '__head' },
+        h('span', null, props.title || 'Этапы тренировки'),
+        h('strong', null, (currentIndex + 1) + '/' + rows.length)
+      ),
+      h('ol', { className: base + '__list' },
+        rows.map(function (item, idx) {
+          const isCurrent = idx === currentIndex || item.current;
+          const isDone = idx < currentIndex || item.done;
+          return h('li', {
+            key: item.id || idx,
+            className: cx(
+              base + '__item',
+              props.itemClassName,
+              isCurrent && 'is-current',
+              isDone && 'is-done'
+            ),
+            'aria-current': isCurrent ? 'step' : undefined
+          },
+            h('span', { className: base + '__index' }, isDone ? '✓' : String(idx + 1)),
+            h('span', { className: base + '__body' },
+              h('span', { className: base + '__title' }, item.title || item.label || 'Упражнение'),
+              h('span', { className: base + '__meta' }, item.meta || item.metric || '')
+            )
+          );
+        })
+      )
+    );
+  }
+
+  function LiveRunnerShell(props) {
+    const base = props.baseClass || 'heys-training-live';
+    const roadmap = props.roadmap || h(LiveRoadmap, {
+      items: props.items || props.steps || [],
+      currentIndex: props.currentIndex,
+      baseClass: props.roadmapBaseClass,
+      className: props.roadmapClassName,
+      itemClassName: props.roadmapItemClassName,
+      title: props.roadmapTitle,
+      ariaLabel: props.roadmapLabel
+    });
+    return h('div', {
+      className: cx(base, props.className),
+      'data-training-runner': props.trainingRunner || 'guided',
+      role: props.role || undefined,
+      'aria-label': props.ariaLabel || undefined
+    },
+      props.ariaLabel ? h('span', {
+        style: {
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: 0
+        }
+      }, props.ariaLabel) : null,
+      props.runner || props.children || null,
+      roadmap
+    );
+  }
+
+  function LiveCountdownDisplay(props) {
+    const controls = Array.isArray(props.controls) ? props.controls.filter(Boolean) : [];
+    const chips = Array.isArray(props.chips) ? props.chips.filter(Boolean) : [];
+    const ringRadius = Number(props.ringRadius) || 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const ratio = Math.max(0, Math.min(1, Number(props.ratio) || 0));
+    const digit = props.digit == null ? '' : String(props.digit);
+    const finalCount = !!props.finalCount;
+    // Domain passes its catalog-styled base/continuous classes; kernel default
+    // is neutral so this runtime file carries no domain literals.
+    const base = props.baseClass || 'heys-training-countdown';
+    const continuousClass = props.continuousClass || 'heys-training-continuous';
+    return h('div', {
+      className: cx(base, props.continuous && continuousClass, props.className),
+      'data-phase': props.phaseKey || 'idle'
+    },
+      h('div', { className: base + '__counter' }, props.counter || ''),
+      props.title ? h('h2', { className: base + '__grip' }, props.title) : null,
+      props.image ? h('div', { className: base + '__hero' },
+        h('img', {
+          src: props.image,
+          alt: props.imageAlt || props.title || 'Упражнение',
+          loading: props.imageLoading || 'eager',
+          decoding: 'async',
+          onError: function (e) {
+            try { e.currentTarget.parentNode.style.display = 'none'; } catch (_) {}
+          }
+        })
+      ) : null,
+      chips.length ? h('div', { className: base + '__chips' },
+        chips.map(function (chip, idx) {
+          return h('div', {
+            key: chip.id || idx,
+            className: cx(base + '__chip', chip.className),
+            'data-weight-sign': chip.weightSign || undefined
+          },
+            h('span', { className: base + '__chip-label' }, chip.label || ''),
+            h('span', { className: base + '__chip-value' }, chip.value == null ? '—' : String(chip.value))
+          );
+        })
+      ) : null,
+      h('div', { className: base + '__phase-badge' }, props.phaseLabel || ''),
+      h('div', { className: base + '__ring-wrap' },
+        h('svg', {
+          className: base + '__ring',
+          width: 200,
+          height: 200,
+          viewBox: '0 0 200 200',
+          'aria-hidden': 'true'
+        },
+          h('circle', { className: base + '__ring-track', cx: 100, cy: 100, r: ringRadius, fill: 'none' }),
+          h('circle', {
+            className: base + '__ring-fill',
+            cx: 100,
+            cy: 100,
+            r: ringRadius,
+            fill: 'none',
+            strokeDasharray: ringCircum,
+            strokeDashoffset: ringCircum * (1 - ratio),
+            transform: 'rotate(-90 100 100)'
+          })
+        ),
+        h('div', { className: base + '__digit' + (finalCount ? ' is-final-count' : '') }, digit)
+      ),
+      props.afterRing || null,
+      controls.length ? h('div', { className: base + '__controls' },
+        controls.map(function (control, idx) {
+          return h('button', {
+            key: control.id || idx,
+            type: 'button',
+            className: cx(base + '__btn', control.abort && base + '__btn--abort', control.className),
+            disabled: !!control.disabled,
+            onClick: control.onClick,
+            'aria-label': control.ariaLabel || control.label,
+            title: control.title
+          }, control.label || control.id || 'Действие');
+        })
+      ) : null
+    );
+  }
+
   function RegistryGrid(props) {
     const prefix = props.classPrefix || 'training-focus';
     const items = Array.isArray(props.items) ? props.items : [];
@@ -385,6 +629,10 @@
     EquipmentBar: EquipmentBar,
     GoalSelector: GoalSelector,
     ReadinessCard: ReadinessCard,
+    GuidedRunnerPanel: GuidedRunnerPanel,
+    LiveRoadmap: LiveRoadmap,
+    LiveRunnerShell: LiveRunnerShell,
+    LiveCountdownDisplay: LiveCountdownDisplay,
     RegistryGrid: RegistryGrid,
     Registry: Registry
   };
@@ -22765,6 +23013,10 @@
   }
 
   // ─── HangRunner (Step 4) — hang-cycle runner на shared shell ─────────────────
+  function _exerciseDisplayTitle(exercise) {
+    return _liveExerciseTitle(exercise);
+  }
+
   function HangRunner(props) {
     const { exercise, exIdx, totalExercises } = props;
     const cycleRef = React.useRef(null);
@@ -22782,7 +23034,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : exercise.gripId;
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : '—';
     const addedWeight = Number(exercise.addedWeightKg) || 0;
 
@@ -22844,7 +23096,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : exercise.gripId;
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
     const addedWeight = Number(exercise.addedWeightKg) || 0;
     // reps target из dose (block_catalog v2) или legacy repsPerSet.
@@ -22922,7 +23174,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const durationMin = workSec >= 60 ? Math.round(workSec / 60) + ' мин' : workSec + ' с';
 
     if (Fingers.ContinuousDisplay) {
@@ -22996,7 +23248,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
     const addedWeight = Number(exercise.addedWeightKg) || 0;
     const movesPerAttempt = dose.movesPerAttempt;
@@ -23070,7 +23322,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
     const problemsPerRound = Number(dose.problemsPerRound) || 1;
 
@@ -23138,7 +23390,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
 
     if (Fingers.ProcessDisplay) {
       return h(React.Fragment, null,
@@ -23193,6 +23445,93 @@
     return h(HangRunner, props);
   }
 
+  function _liveExerciseTitle(exercise) {
+    const ex = exercise || {};
+    if (ex.atomId && EXERCISE_REGISTRY_LABELS[ex.atomId]) return EXERCISE_REGISTRY_LABELS[ex.atomId];
+    if (ex.gripId && EXERCISE_REGISTRY_LABELS[ex.gripId]) return EXERCISE_REGISTRY_LABELS[ex.gripId];
+    if (ex.atomId && Fingers.blockCatalog && typeof Fingers.blockCatalog.getAtom === 'function') {
+      const atom = Fingers.blockCatalog.getAtom(ex.atomId);
+      if (atom) return _registryAtomTitle(atom);
+    }
+    if (ex.name) return ex.name;
+    if (ex.label) return ex.label;
+    if (ex.gripId && Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[ex.gripId]) {
+      return Fingers.GRIPS_BY_ID[ex.gripId].label || ex.gripId;
+    }
+    return ex.gripId || ex.atomId || ex.blockId || 'Упражнение';
+  }
+
+  const LIVE_DOSE_SHAPE_LABELS = {
+    hang: 'вис',
+    reps: 'повторы',
+    attempts: 'попытки',
+    circuit: 'круги',
+    continuous: 'непрерывно',
+    process: 'чек-лист'
+  };
+
+  function _liveExerciseMeta(exercise) {
+    const ex = exercise || {};
+    const d = ex.dose || {};
+    const parts = [];
+    if (ex.doseShape) parts.push(LIVE_DOSE_SHAPE_LABELS[ex.doseShape] || ex.doseShape);
+    if (d.workSec) parts.push(_formatSeconds(d.workSec));
+    else if (ex.hangSec) parts.push(_formatSeconds(ex.hangSec));
+    if (d.reps) parts.push(_rangeText(d.reps, ' повт.'));
+    else if (ex.repsPerSet) parts.push(String(ex.repsPerSet) + ' повт.');
+    if (d.sets || ex.setsCount) parts.push(String(d.sets || ex.setsCount) + ' подх.');
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  function LiveExerciseRoadmap({ exercises, currentIndex }) {
+    const rows = Array.isArray(exercises) ? exercises : [];
+    if (!rows.length) return null;
+    const cur = Math.max(0, Math.min(rows.length - 1, Number(currentIndex) || 0));
+    if (HEYS.TrainingFocus && typeof HEYS.TrainingFocus.LiveRoadmap === 'function') {
+      return h(HEYS.TrainingFocus.LiveRoadmap, {
+        baseClass: 'fingers-fs-live-roadmap',
+        items: rows.map(function (exercise, idx) {
+          return {
+            id: ((exercise && (exercise.atomId || exercise.gripId || exercise.name)) || 'exercise') + '-' + idx,
+            title: _liveExerciseTitle(exercise),
+            meta: _liveExerciseMeta(exercise)
+          };
+        }),
+        currentIndex: cur,
+        ariaLabel: 'Этапы тренировки'
+      });
+    }
+    const densityClass = rows.length > 8 ? ' is-ultra-dense' : rows.length > 4 ? ' is-dense' : '';
+    return h('section', {
+      className: 'fingers-fs-live-roadmap' + densityClass,
+      'aria-label': 'Этапы тренировки'
+    },
+      h('div', { className: 'fingers-fs-live-roadmap__head' },
+        h('span', null, 'Этапы тренировки'),
+        h('strong', null, (cur + 1) + '/' + rows.length)
+      ),
+      h('ol', { className: 'fingers-fs-live-roadmap__list' },
+        rows.map(function (exercise, idx) {
+          const isCurrent = idx === cur;
+          const isDone = idx < cur;
+          return h('li', {
+            key: ((exercise && (exercise.atomId || exercise.gripId || exercise.name)) || 'exercise') + '-' + idx,
+            className: 'fingers-fs-live-roadmap__item'
+              + (isCurrent ? ' is-current' : '')
+              + (isDone ? ' is-done' : ''),
+            'aria-current': isCurrent ? 'step' : undefined
+          },
+            h('span', { className: 'fingers-fs-live-roadmap__index' }, isDone ? '✓' : String(idx + 1)),
+            h('span', { className: 'fingers-fs-live-roadmap__body' },
+              h('span', { className: 'fingers-fs-live-roadmap__title' }, _liveExerciseTitle(exercise)),
+              h('span', { className: 'fingers-fs-live-roadmap__meta' }, _liveExerciseMeta(exercise))
+            )
+          );
+        })
+      )
+    );
+  }
+
   function LiveSession({ exercises, dateKey, trainingIndex, programId, initialSnapshot, onAllDone, onAbort, onSetFeedback }) {
     // Start at snapshot.exIdx if resuming; иначе с первого упражнения.
     const startIdx = (initialSnapshot && Number.isInteger(initialSnapshot.exIdx))
@@ -23214,20 +23553,24 @@
     }
 
     const current = exercises[exIdx];
-    return h(ExerciseRunner, {
-      key: exIdx, // forces re-mount of useCountdownCycle hook on exercise switch
-      exercise: current,
-      exIdx: exIdx,
-      totalExercises: exercises.length,
-      dateKey: dateKey,
-      trainingIndex: trainingIndex,
-      exercises: exercises,
-      programId: programId,
-      initialSnapshot: initialSnapshot,
-      onDone: handleExerciseDone,
-      onAbort: onAbort,
-      onSetFeedback: onSetFeedback
-    });
+    const runnerNode = h(ExerciseRunner, {
+        key: exIdx, // forces re-mount of useCountdownCycle hook on exercise switch
+        exercise: current,
+        exIdx: exIdx,
+        totalExercises: exercises.length,
+        dateKey: dateKey,
+        trainingIndex: trainingIndex,
+        exercises: exercises,
+        programId: programId,
+        initialSnapshot: initialSnapshot,
+        onDone: handleExerciseDone,
+        onAbort: onAbort,
+        onSetFeedback: onSetFeedback
+      });
+    const roadmapNode = h(LiveExerciseRoadmap, { exercises: exercises, currentIndex: exIdx });
+    return HEYS.TrainingFocus && typeof HEYS.TrainingFocus.LiveRunnerShell === 'function'
+      ? h(HEYS.TrainingFocus.LiveRunnerShell, { baseClass: 'fingers-fs-live', runner: runnerNode, roadmap: roadmapNode })
+      : h('div', { className: 'fingers-fs-live' }, runnerNode, roadmapNode);
   }
 
   // --- Main SessionUI ---
@@ -25286,18 +25629,16 @@
 
     // Live session берёт весь экран — табы и header скрыты
     if (liveActive) {
-      return h('div', { className: 'fingers-fs-live' },
-        h(LiveSession, {
-          exercises: exercises,
-          dateKey: dateKey,
-          trainingIndex: trainingIndex,
-          programId: pendingProgram?.id || 'custom',
-          initialSnapshot: initialSnapshot,
-          onAllDone: handleLiveAllDone,
-          onAbort: handleLiveAbort,
-          onSetFeedback: recordSetFeedback
-        })
-      );
+      return h(LiveSession, {
+        exercises: exercises,
+        dateKey: dateKey,
+        trainingIndex: trainingIndex,
+        programId: pendingProgram?.id || 'custom',
+        initialSnapshot: initialSnapshot,
+        onAllDone: handleLiveAllDone,
+        onAbort: handleLiveAbort,
+        onSetFeedback: recordSetFeedback
+      });
     }
 
     // Custom SF-style monoline SVG icons — единый визуальный язык вместо смешанных emoji.
@@ -25811,6 +26152,8 @@
   // Exposed for tests (Step 4 prep / ревью #9 ExerciseRunner-characterization):
   // pin RPE/onSetFeedback/snapshot/abort до того, как Step 4 добавит doseShape branch.
   Fingers._ExerciseRunner = ExerciseRunner;
+  Fingers._LiveExerciseRoadmap = LiveExerciseRoadmap;
+  Fingers._liveExerciseTitle = _liveExerciseTitle;
 
   Fingers.startSession = function startSession(opts) {
     // Stub for future direct session launch from outside fullscreen.
