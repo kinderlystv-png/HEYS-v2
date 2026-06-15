@@ -25,4 +25,15 @@ describe('TASK-005: write-context upload resilience', () => {
     expect(source).toContain("return { success: false, error: 'write_context_unavailable' }");
     expect(source).toContain("global.dispatchEvent(new CustomEvent('heys:sync-error'");
   });
+
+  // Regression 2026-06-15: PIN-сессии всегда били в curator-RPC → 401.
+  // Причина — решение isCurator читало флаги lastIsCuratorAuth/lastIsPinAuth,
+  // которые НИКОГДА не выставлялись (мертвы с a08ca222) → всегда true.
+  it('routes the write-context RPC by real auth mode, not dead flags', () => {
+    // Мёртвые флаги больше не читаются в коде (упоминание в комментарии ок).
+    expect(source).not.toContain('global.HEYS?.lastIsCuratorAuth');
+    expect(source).not.toContain('global.HEYS?.lastIsPinAuth');
+    // Решение опирается на авторитетный module-state isPinAuthClient().
+    expect(source).toMatch(/const isCurator = !cloud\.isPinAuthClient\?\.\(\)/);
+  });
 });

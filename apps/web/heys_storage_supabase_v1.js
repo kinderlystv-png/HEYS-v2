@@ -10971,7 +10971,16 @@
       if (!api?.rpc) return finish(null);
       // Curator path: targetClientId требуется, server резолвит curator_id из JWT.
       // Session path: targetClientId игнорируется — server берёт client_id из session_token.
-      const isCurator = !!(global.HEYS?.lastIsCuratorAuth || !global.HEYS?.lastIsPinAuth);
+      //
+      // FIX 2026-06-15: было `!!(lastIsCuratorAuth || !lastIsPinAuth)`. Оба
+      // флага НИКОГДА не выставлялись в коде (мертвы с a08ca222, 2026-06-02,
+      // Phase B1+B2) → выражение всегда = true → PIN-сессии всегда били в
+      // issue_write_context_by_curator и ловили 401 "Authorization required
+      // for curator functions" (write-context для PIN не работал ни разу).
+      // Авторитетный источник режима — module-state: PIN-сессия = есть
+      // _pinAuthClientId и нет curator-user (та же проверка, что session-ветка
+      // ниже и syncClient используют). См. invariant #10.
+      const isCurator = !cloud.isPinAuthClient?.();
       let res;
       if (isCurator) {
         if (!targetClientId) return finish(null);
