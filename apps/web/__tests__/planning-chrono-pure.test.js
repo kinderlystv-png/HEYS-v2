@@ -284,6 +284,31 @@ describe('Store — chrono tombstones', () => {
         expect(Store.getChronoSnapshots()).toHaveLength(1);
     });
 
+    it('reorderChronoRows rewrites real entry intervals for every row entry', () => {
+        const a = Store.addChronoActivity({ name: 'Code' });
+        const b = Store.addChronoActivity({ name: 'Podcast' });
+        const e1 = Store.addChronoEntry({ activityId: a.id, date: '2026-06-02', minutes: 30 });
+        const e2 = Store.addChronoEntry({ activityId: b.id, date: '2026-06-02', minutes: 30, parallelGroupId: 'g1' });
+        const startMs = new Date('2026-06-02T07:00:00').getTime();
+        const endMs = new Date('2026-06-02T08:30:00').getTime();
+
+        const updated = Store.reorderChronoRows([{
+            entryIds: [e1.id, e2.id],
+            date: '2026-06-02',
+            startMs,
+            endMs,
+            minutes: 90,
+        }]);
+
+        expect(updated).toHaveLength(2);
+        Store.getChronoEntries().forEach((entry) => {
+            expect(entry.minutes).toBe(90);
+            expect(entry.date).toBe('2026-06-02');
+            expect(entry.at).toBe(new Date(startMs).toISOString());
+            expect(entry.createdAt).toBe(new Date(endMs).toISOString());
+        });
+    });
+
     it('merges incoming tombstones instead of replacing local delete history', () => {
         const localActivity = Store.addChronoActivity({ name: 'Local delete' });
         Store.deleteChronoActivity(localActivity.id);
@@ -381,6 +406,7 @@ describe('Store — cloud pull merge by record (mergeCloudPlanningArray)', () =>
     beforeEach(() => { ({ Store } = loadModules()); });
 
     const K_ENTRIES = 'heys_planning_chrono_entries';
+    const K_CHECKLISTS = 'heys_planning_checklists_v1';
 
     it('returns null for non-merge-safe keys (caller keeps wholesale replace)', () => {
         expect(Store.mergeCloudPlanningArray('heys_planning_tasks', [], [])).toBeNull();
@@ -457,6 +483,76 @@ describe('Store — cloud pull merge by record (mergeCloudPlanningArray)', () =>
         const once = Store.mergeCloudPlanningArray(K_ENTRIES, local, remote);
         const twice = Store.mergeCloudPlanningArray(K_ENTRIES, once, remote);
         expect(JSON.stringify(twice)).toBe(JSON.stringify(once));
+    });
+
+    it('checklists: creates records with a sync-safe key and merges local plus remote', () => {
+        const local = Store.addChecklist({
+            title: 'Local checklist',
+            presetId: 'sea-tent-camping',
+            adults: 2,
+            children: 2,
+            childAges: [1, 7],
+            items: [
+                { id: 'tent', group: 'Палаточный лагерь', text: 'Палатка', quantity: '4 места' },
+            ],
+        });
+        const remote = {
+            id: 'remote-checklist',
+            title: 'Remote checklist',
+            items: [],
+            order: 1,
+            createdAt: '2026-06-04T11:00:00Z',
+            updatedAt: '2026-06-04T11:00:00Z',
+        };
+
+        const merged = Store.mergeCloudPlanningArray(K_CHECKLISTS, Store.getChecklists(), [remote]);
+
+        expect(local.title).toBe('Local checklist');
+        expect(local).toMatchObject({
+            presetId: 'sea-tent-camping',
+            adults: 2,
+            children: 2,
+            childAges: [1, 7],
+        });
+        expect(local.items[0]).toMatchObject({
+            group: 'Палаточный лагерь',
+            text: 'Палатка',
+            quantity: '4 места',
+            done: false,
+        });
+        expect(merged.map((item) => item.id).sort()).toEqual([local.id, 'remote-checklist'].sort());
+    });
+
+    it('checklists: checked item state is persisted in the sync-backed checklist key', () => {
+        const checklist = Store.addChecklist({
+            title: 'Packing',
+            items: [
+                { id: 'passport', group: 'Документы', text: 'Паспорт' },
+                { id: 'ticket', group: 'Документы', text: 'Билет' },
+            ],
+        });
+
+        Store.updateChecklist(checklist.id, {
+            items: checklist.items.map((item) => (
+                item.id === 'passport' ? { ...item, done: true } : item
+            )),
+        });
+
+        const saved = Store.getChecklists().find((item) => item.id === checklist.id);
+        expect(saved.items.find((item) => item.id === 'passport').done).toBe(true);
+        expect(saved.items.find((item) => item.id === 'ticket').done).toBe(false);
+    });
+
+    it('checklists: tombstones prevent stale cloud arrays from resurrecting deleted lists', () => {
+        const keep = Store.addChecklist({ title: 'Keep' });
+        const gone = Store.addChecklist({ title: 'Gone' });
+        Store.deleteChecklist(gone.id);
+
+        const merged = Store.mergeCloudPlanningArray(K_CHECKLISTS, Store.getChecklists(), [keep, gone]);
+
+        expect(merged.map((item) => item.id)).toContain(keep.id);
+        expect(merged.find((item) => item.id === gone.id)).toBeUndefined();
+        expect(Store.isCloudChecklistWipeSuspicious(K_CHECKLISTS, [keep], [])).toBe(true);
     });
 });
 
@@ -923,6 +1019,52 @@ describe('chrono analytics helpers', () => {
             timeLabel: '08:00',
             detail: '+15м Read',
         });
+    });
+
+    it('buildChronoLoggedRows uses wake time, previous end and parallel names', () => {
+        const rows = Chrono.buildChronoLoggedRows(
+            { sleepEnd: '07:00' },
+            [
+                { id: 'first', activityId: 'a', date: '2026-06-02', minutes: 60, createdAt: '2026-06-02T08:00:00' },
+                { id: 'p1', activityId: 'b', date: '2026-06-02', minutes: 90, createdAt: '2026-06-02T10:30:00', parallelGroupId: 'g1' },
+                { id: 'p2', activityId: 'c', date: '2026-06-02', minutes: 90, createdAt: '2026-06-02T10:30:00', parallelGroupId: 'g1' },
+            ],
+            [{ id: 'a', name: 'Read' }, { id: 'b', name: 'Code' }, { id: 'c', name: 'Podcast' }],
+            '2026-06-02',
+        );
+
+        expect(rows).toMatchObject([
+            { id: 'entry:first', entryIds: ['first'], timeRange: '07:00–08:00', durationLabel: '1ч', name: 'Read' },
+            { id: 'parallel:g1', entryIds: ['p1', 'p2'], timeRange: '08:00–10:30', durationLabel: '2ч 30м', name: 'Code + Podcast' },
+        ]);
+    });
+
+    it('buildChronoReorderAssignments keeps durations and rewrites contiguous intervals', () => {
+        const start = new Date('2026-06-02T07:00:00').getTime();
+        const rows = [
+            { id: 'a', entryIds: ['a1'], durationMinutes: 60 },
+            { id: 'b', entryIds: ['b1', 'b2'], durationMinutes: 150 },
+        ];
+        const assignments = Chrono.buildChronoReorderAssignments([rows[1], rows[0]], '2026-06-02', start);
+
+        expect(assignments).toMatchObject([
+            {
+                id: 'b',
+                entryIds: ['b1', 'b2'],
+                date: '2026-06-02',
+                startMs: start,
+                endMs: start + 150 * 60000,
+                minutes: 150,
+            },
+            {
+                id: 'a',
+                entryIds: ['a1'],
+                date: '2026-06-02',
+                startMs: start + 150 * 60000,
+                endMs: start + 210 * 60000,
+                minutes: 60,
+            },
+        ]);
     });
 
     it('computeChronoCoveredMinutes counts parallel entries as one real period', () => {

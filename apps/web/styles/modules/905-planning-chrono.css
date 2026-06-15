@@ -370,17 +370,17 @@ html.chrono-bubble-dragging .chrono-screen {
    чтобы при изменении высоты основных табов оба двигались синхронно. */
 .chrono-bottom-total {
     position: fixed;
-    /* Слева от корзины (72px + угол 16px + зазор 8px = 96px), растёт влево —
-       не пересекается с корзиной ни при какой длине времени. */
-    right: calc(96px + env(safe-area-inset-right, 0px));
+    /* Компактно в коридоре между левыми FAB-ами и правой корзиной. */
+    right: calc(92px + env(safe-area-inset-right, 0px));
     bottom: calc(var(--planning-main-tabs-height, calc(76px + env(safe-area-inset-bottom, 0px))) + 4px);
     white-space: nowrap;
     z-index: 940;
     height: 36px;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 0 14px;
+    padding: 0 10px;
+    min-width: 58px;
+    justify-content: center;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid rgba(0, 0, 0, 0.08);
@@ -390,12 +390,6 @@ html.chrono-bubble-dragging .chrono-screen {
     backdrop-filter: blur(12px);
     pointer-events: none;
     font-variant-numeric: tabular-nums;
-}
-
-.chrono-bottom-total__label {
-    font-size: 12px;
-    color: var(--planning-muted, #64748b);
-    font-weight: 500;
 }
 
 .chrono-bottom-total__value {
@@ -588,15 +582,109 @@ html.chrono-bubble-dragging .chrono-screen {
     transform: rotate(180deg);
 }
 
+.chrono-overview__ledger {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 0 14px 5px;
+    min-width: 0;
+}
+
+.chrono-overview__ledger-row {
+    appearance: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    min-width: 0;
+    color: var(--planning-muted, #64748b);
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+    touch-action: pan-y;
+    transition: background 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+}
+
+.chrono-overview__ledger-row:hover {
+    background: rgba(15, 23, 42, 0.04);
+}
+
+.chrono-overview__ledger-row:active {
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.chrono-overview__ledger-row.is-reorder-mode {
+    cursor: grabbing;
+}
+
+.chrono-overview__ledger-row.is-dragging {
+    background: rgba(37, 99, 235, 0.1);
+    box-shadow: 0 6px 14px -10px rgba(15, 23, 42, 0.35);
+    transform: translateX(4px);
+}
+
+.chrono-overview__ledger-handle {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1;
+    cursor: grab;
+    touch-action: none;
+    opacity: 0.72;
+}
+
+.chrono-overview__ledger-row:hover .chrono-overview__ledger-handle,
+.chrono-overview__ledger-row.is-reorder-mode .chrono-overview__ledger-handle {
+    background: rgba(15, 23, 42, 0.06);
+    opacity: 1;
+}
+
+.chrono-overview__ledger-row.is-dragging .chrono-overview__ledger-handle {
+    cursor: grabbing;
+    background: rgba(37, 99, 235, 0.12);
+}
+
+.chrono-overview__ledger-time {
+    flex: 0 0 auto;
+    color: var(--planning-text, #0f172a);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-overview__ledger-duration {
+    flex: 0 0 auto;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-overview__ledger-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
 .chrono-overview__last {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
     padding: 0 14px 9px;
     color: var(--planning-muted, #64748b);
     line-height: 1.25;
     min-width: 0;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .chrono-overview__last-time {
@@ -608,8 +696,8 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-overview__last-detail {
+    flex: 1 1 auto;
     min-width: 0;
-    max-width: 100%;
     font-size: 11px;
     font-weight: 700;
     overflow: hidden;
@@ -619,7 +707,6 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-overview__last-now {
     flex: 0 0 auto;
-    margin-left: auto;
     font-size: 11px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -636,6 +723,7 @@ html.chrono-bubble-dragging .chrono-screen {
     font-size: 11px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    line-height: 1.1;
     white-space: nowrap;
     cursor: pointer;
     transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
@@ -647,9 +735,10 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-overview__untracked-badge.active {
-    background: #fee2e2;
-    border-color: rgba(220, 38, 38, 0.5);
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+    background: rgba(34, 197, 94, 0.14);
+    border-color: rgba(22, 163, 74, 0.42);
+    color: #15803d;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
     transform: translateY(-1px);
 }
 
@@ -986,13 +1075,12 @@ html.chrono-bubble-dragging .chrono-screen {
    Outer = flex-центрирование (горизонталь + вертикаль) внутри доступной высоты.
    Inner (__items) = flex-wrap с gap, чтобы кружки оставались рядом друг с другом. */
 .chrono-cloud {
-    /* Растёт под содержимое, но не меньше minHeight — чтобы оставалось
-       пространство для вертикального центрирования баблов между strip и
-       breakdown/низом. Скролл — на chrono-screen, не на cloud, чтобы
-       breakdown-бар в недельном режиме не уезжал за край без возможности
-       прокрутить. */
-    flex: 1 0 auto;
-    min-height: 240px;
+    /* Занимает ровно оставшуюся видимую высоту. Когда сводка/strip сверху
+       растут, cloud сжимается, а центр radial-layout остаётся в центре этой
+       оставшейся области, не уезжая вниз вместе со всей страницей. */
+    flex: 1 1 0;
+    min-height: 0;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1269,7 +1357,7 @@ html.chrono-bubble-dragging .chrono-screen {
     line-height: 1.15;
     letter-spacing: 0;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1747,6 +1835,116 @@ html.chrono-bubble-dragging .chrono-screen {
     margin-top: 4px;
 }
 
+/* --- Entry edit modal (tap on summary ledger row) --- */
+.chrono-entry-edit-overlay {
+    z-index: 1106;
+}
+
+.chrono-entry-edit {
+    max-width: 420px;
+    width: calc(100% - 24px);
+}
+
+.chrono-entry-edit__body {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    max-height: 72vh;
+    overflow-y: auto;
+}
+
+.chrono-entry-edit__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--planning-surface-elevated, #f8fafc);
+    color: var(--planning-text, #0f172a);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.chrono-entry-edit__badge {
+    flex: 0 0 auto;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.chrono-entry-edit__field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.chrono-entry-edit__label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--planning-muted, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.chrono-entry-edit__select:disabled {
+    opacity: 0.72;
+}
+
+.chrono-entry-edit__minutes-row {
+    display: grid;
+    grid-template-columns: auto minmax(80px, 1fr) auto auto;
+    gap: 6px;
+    align-items: center;
+}
+
+.chrono-entry-edit__minutes {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-entry-edit__minutes-label {
+    min-width: 58px;
+    color: var(--planning-text, #0f172a);
+    font-size: 13px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.chrono-entry-edit__actions {
+    display: flex;
+    gap: 7px;
+    margin-top: 1px;
+}
+
+.chrono-entry-edit__actions .planning-btn {
+    flex: 1 1 0;
+    justify-content: center;
+}
+
+.chrono-entry-edit .chrono-duration__category,
+.chrono-entry-edit .chrono-duration__target,
+.chrono-entry-edit .chrono-duration__link {
+    padding: 10px 12px;
+    border-radius: 12px;
+}
+
+.chrono-entry-edit .chrono-duration__category-list {
+    gap: 6px;
+}
+
+.chrono-entry-edit .chrono-duration__target {
+    gap: 8px;
+}
+
+.chrono-entry-edit .chrono-duration__link {
+    gap: 7px;
+}
+
 /* ---- Heatmap (13 недель × 7 дней) ---- */
 .chrono-heatmap {
     display: grid;
@@ -1962,8 +2160,8 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-duration__body {
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 18px 20px 22px;
+    gap: 12px;
+    padding: 14px 18px 18px;
 }
 
 /* Sticky header: название активности + крестик остаются видны при скролле.
@@ -1973,7 +2171,7 @@ html.chrono-bubble-dragging .chrono-screen {
     position: sticky;
     top: 0;
     margin: 0;
-    padding: 16px 20px 14px;
+    padding: 13px 18px 11px;
     background: var(--planning-surface);
     border-bottom: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.06));
     z-index: 5;
@@ -2100,16 +2298,17 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-duration__grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 8px;
 }
 
 .chrono-duration__preset {
-    padding: 16px 8px;
-    border-radius: 14px;
+    min-height: 48px;
+    padding: 10px 6px;
+    border-radius: 12px;
     border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.08));
     background: var(--planning-surface, #fff);
     color: var(--planning-text, #0f172a);
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.01em;
     font-variant-numeric: tabular-nums;
@@ -2135,7 +2334,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__custom-label {
-    margin-top: 4px;
+    margin-top: 0;
     font-size: 11px;
     font-weight: 700;
     color: var(--planning-muted, #64748b);
@@ -2146,7 +2345,7 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-duration__custom {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     align-items: stretch;
 }
 
@@ -2172,10 +2371,10 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-duration__parallel {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 7px;
     margin-top: 0;
-    padding: 12px 14px;
-    border-radius: 16px;
+    padding: 9px 12px;
+    border-radius: 14px;
     background: var(--planning-surface-elevated, #f8fafc);
     border: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.06));
 }
@@ -2224,8 +2423,8 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-duration__parallel-switch {
     position: relative;
     flex: 0 0 auto;
-    width: 48px;
-    height: 28px;
+    width: 44px;
+    height: 26px;
     border-radius: 999px;
     background: #cbd5e1;
     box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.14);
@@ -2236,8 +2435,8 @@ html.chrono-bubble-dragging .chrono-screen {
     position: absolute;
     left: 3px;
     top: 3px;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: #fff;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
@@ -2249,7 +2448,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__parallel-toggle.active .chrono-duration__parallel-knob {
-    transform: translateX(20px);
+    transform: translateX(18px);
 }
 
 .chrono-duration__parallel-select {
@@ -2756,7 +2955,7 @@ html.chrono-bubble-dragging .chrono-screen {
     .chrono-cloud { gap: 12px; }
     .chrono-bubble { --size: 52px; }
     .chrono-emoji-palette { grid-template-columns: repeat(7, 1fr); }
-    .chrono-duration__grid { grid-template-columns: repeat(2, 1fr); }
+    .chrono-duration__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .chrono-scope-bar { row-gap: 6px; }
     .chrono-overview { grid-template-columns: minmax(0, 1fr); }
     .chrono-overview__top { border-right: 0; border-bottom: 1px solid rgba(15, 23, 42, 0.06); }

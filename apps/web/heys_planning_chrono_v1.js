@@ -25,6 +25,7 @@
 
     const r_min = 28;
     const r_max = 80;
+    const MIN_BUBBLE_SIZE_SCALE = 0.44;
 
     const CHRONO_EMOJI_PALETTE = [
         '👶', '🎨', '💻', '📱', '🏃', '📚', '🧹', '😴',
@@ -66,9 +67,9 @@
     function radiusForMinutes(minutes, maxMin, sizeScale) {
         const m = Math.max(0, Number(minutes) || 0);
         const M = Math.max(0, Number(maxMin) || 0);
-        const scale = Math.max(0.62, Math.min(1, Number(sizeScale) || 1));
-        const minR = r_min * (0.9 + scale * 0.1);
-        const maxR = r_max * scale;
+        const scale = Math.max(MIN_BUBBLE_SIZE_SCALE, Math.min(1, Number(sizeScale) || 1));
+        const minR = r_min * (scale >= 0.62 ? (0.9 + scale * 0.1) : (0.55 + scale * 0.45));
+        const maxR = Math.max(minR, r_max * scale);
         if (M <= 0) return minR;
         const t = Math.min(1, m / M);
         return minR + (maxR - minR) * Math.sqrt(t);
@@ -248,6 +249,81 @@
             detail: `+${formatMinutes(last.minutes)} ${activity.name || 'Занятие'}`,
             elapsedHoursLabel: elapsedHours.toFixed(1).replace('.', ',') + 'ч',
         };
+    }
+
+    function buildChronoLoggedRows(day, entries, activities, date) {
+        const activityById = new Map((Array.isArray(activities) ? activities : []).map((a) => [a.id, a]));
+        const wakeClock = day && (day.sleepEnd || day.wakeTime || day.wokeAt);
+        const wakeMs = buildDateTimeMs(date, wakeClock);
+        const groups = new Map();
+        (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
+            if (!entry || entry.date !== date || !entry.createdAt || Number(entry.minutes) <= 0) return;
+            const activity = activityById.get(entry.activityId);
+            if (!activity) return;
+            const endMs = new Date(entry.createdAt).getTime();
+            if (!Number.isFinite(endMs)) return;
+            const groupId = entry.parallelGroupId ? `parallel:${entry.parallelGroupId}` : `entry:${entry.id || index}`;
+            const group = groups.get(groupId) || {
+                id: groupId,
+                endMs,
+                minutes: 0,
+                entryIds: [],
+                activityIds: [],
+                names: [],
+            };
+            group.endMs = Math.max(group.endMs, endMs);
+            group.minutes = Math.max(group.minutes, Number(entry.minutes) || 0);
+            group.entryIds.push(entry.id);
+            group.activityIds.push(entry.activityId);
+            group.names.push(activity.name || 'Занятие');
+            groups.set(groupId, group);
+        });
+        let previousEndMs = Number.isFinite(wakeMs) ? wakeMs : null;
+        return Array.from(groups.values())
+            .sort((a, b) => a.endMs - b.endMs)
+            .map((group) => {
+                const fallbackStartMs = group.endMs - Math.max(1, group.minutes) * 60000;
+                const startMs = previousEndMs != null ? Math.min(previousEndMs, group.endMs) : fallbackStartMs;
+                previousEndMs = group.endMs;
+                const minutes = Math.max(0, Math.round((group.endMs - startMs) / 60000));
+                return {
+                    id: group.id,
+                    startMs,
+                    endMs: group.endMs,
+                    entryIds: group.entryIds.slice(),
+                    primaryEntryId: group.entryIds[0] || '',
+                    activityIds: Array.from(new Set(group.activityIds)),
+                    primaryActivityId: group.activityIds[0] || '',
+                    minutes: group.minutes,
+                    durationMinutes: Math.max(1, minutes),
+                    timeRange: `${formatClockTime(startMs)}–${formatClockTime(group.endMs)}`,
+                    durationLabel: formatMinutes(minutes),
+                    name: Array.from(new Set(group.names)).join(' + '),
+                };
+            });
+    }
+
+    function buildChronoReorderAssignments(rows, date, anchorMs) {
+        if (!Array.isArray(rows) || rows.length === 0 || !date) return [];
+        let cursor = Number(anchorMs);
+        if (!Number.isFinite(cursor)) {
+            cursor = Number(rows[0] && rows[0].startMs);
+        }
+        if (!Number.isFinite(cursor)) return [];
+        return rows.map((row) => {
+            const durationMinutes = Math.max(1, Math.round(Number(row && row.durationMinutes) || Number(row && row.minutes) || 0));
+            const startMs = cursor;
+            const endMs = startMs + durationMinutes * 60000;
+            cursor = endMs;
+            return {
+                id: row.id,
+                entryIds: Array.isArray(row.entryIds) ? row.entryIds.slice() : [],
+                date,
+                startMs,
+                endMs,
+                minutes: durationMinutes,
+            };
+        });
     }
 
     function getLastChronoEntryMs(entries, date) {
@@ -1293,6 +1369,8 @@
 
     // UI-prefs: свёрнут ли блок «Сводка». Локальный per-device ключ, не client-data.
     const OVERVIEW_COLLAPSED_KEY = 'heys_planning_chrono_overview_collapsed_v1';
+    const LEDGER_LONG_PRESS_MS = 450;
+    const LEDGER_DRAG_CANCEL_PX = 8;
 
     // === Timer (Pomodoro-style встроенный таймер) ===
 
@@ -1665,6 +1743,160 @@
                             );
                         }),
                     ),
+                ),
+            ),
+        );
+    }
+
+    function ChronoEntryEditModal({ row, entries, activities, tasks, projects, onUpdateEntry, onDeleteEntry, onUpdateActivity, onClose }) {
+        const overlayRef = useRef(null);
+        const rowEntryIds = useMemo(() => new Set(Array.isArray(row && row.entryIds) ? row.entryIds : []), [row]);
+        const rowEntries = useMemo(() => (Array.isArray(entries) ? entries : [])
+            .filter((entry) => entry && rowEntryIds.has(entry.id)), [entries, rowEntryIds]);
+        const primaryEntry = rowEntries.find((entry) => entry.id === (row && row.primaryEntryId)) || rowEntries[0] || null;
+        const [draftMinutes, setDraftMinutes] = useState(() => String((row && row.minutes) || (primaryEntry && primaryEntry.minutes) || ''));
+        const [activityId, setActivityId] = useState(() => (primaryEntry && primaryEntry.activityId) || (row && row.primaryActivityId) || '');
+        const isParallel = rowEntries.length > 1;
+        const selectedActivity = activities.find((item) => item.id === activityId)
+            || activities.find((item) => item.id === (row && row.primaryActivityId))
+            || {};
+        const activeMinutes = Math.max(1, Math.round(Number(draftMinutes) || 0));
+
+        useEffect(() => {
+            const ModalManager = HEYS.ModalManager;
+            if (!ModalManager || typeof ModalManager.register !== 'function') return undefined;
+            return ModalManager.register('chrono-entry-edit', () => onClose());
+        }, [onClose]);
+
+        useEffect(() => {
+            function onKey(e) { if (e.key === 'Escape') onClose(); }
+            window.addEventListener('keydown', onKey);
+            return () => window.removeEventListener('keydown', onKey);
+        }, [onClose]);
+
+        useEffect(() => {
+            setDraftMinutes(String((row && row.minutes) || (primaryEntry && primaryEntry.minutes) || ''));
+            setActivityId((primaryEntry && primaryEntry.activityId) || (row && row.primaryActivityId) || '');
+        }, [row && row.id, primaryEntry && primaryEntry.id]);
+
+        const commitMinutes = useCallback((minutes) => {
+            const next = Math.round(Number(minutes) || 0);
+            if (next <= 0) return;
+            rowEntries.forEach((entry) => onUpdateEntry && onUpdateEntry(entry.id, { minutes: next }));
+            setDraftMinutes(String(next));
+        }, [rowEntries, onUpdateEntry]);
+
+        const commitActivity = useCallback((nextActivityId) => {
+            if (!primaryEntry || !nextActivityId || isParallel) return;
+            onUpdateEntry && onUpdateEntry(primaryEntry.id, { activityId: nextActivityId });
+            setActivityId(nextActivityId);
+        }, [primaryEntry, isParallel, onUpdateEntry]);
+
+        const updateSelectedActivity = useCallback((patch) => {
+            if (!selectedActivity || !selectedActivity.id || typeof onUpdateActivity !== 'function') return;
+            onUpdateActivity(selectedActivity.id, patch);
+        }, [selectedActivity && selectedActivity.id, onUpdateActivity]);
+
+        return h('div', {
+            className: 'planning-modal-overlay planning-modal-overlay--nested chrono-entry-edit-overlay',
+            ref: overlayRef,
+            onClick: (e) => { if (e.target === overlayRef.current) onClose(); },
+        },
+            h('div', { className: 'planning-modal planning-modal--picker chrono-entry-edit', onClick: (e) => e.stopPropagation() },
+                h('div', { className: 'planning-modal__header' },
+                    h('span', null, 'Запись · ', row ? row.timeRange : ''),
+                    h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose, 'aria-label': 'Закрыть' }, '×'),
+                ),
+                h('div', { className: 'planning-modal__body chrono-entry-edit__body' },
+                    h('div', { className: 'chrono-entry-edit__summary' },
+                        h('span', null, row ? row.name : 'Занятие'),
+                        isParallel && h('span', { className: 'chrono-entry-edit__badge' }, 'параллельно'),
+                    ),
+                    h('label', { className: 'chrono-entry-edit__field' },
+                        h('span', { className: 'chrono-entry-edit__label' }, 'Активность'),
+                        h('select', {
+                            className: 'planning-modal__input chrono-entry-edit__select',
+                            value: activityId,
+                            disabled: isParallel,
+                            onChange: (e) => commitActivity(e.target.value),
+                        },
+                            activities.filter((item) => item && (!item.archived || item.id === activityId)).map((item) => h('option', {
+                                key: item.id,
+                                value: item.id,
+                            }, `${item.emoji || '·'} ${item.name || 'Занятие'}`)),
+                        ),
+                    ),
+                    h('label', { className: 'chrono-entry-edit__field' },
+                        h('span', { className: 'chrono-entry-edit__label' }, isParallel ? 'Длительность для всех параллельных записей' : 'Длительность'),
+                        h('div', { className: 'chrono-entry-edit__minutes-row' },
+                            h('button', {
+                                type: 'button',
+                                className: 'chrono-history__tiny-btn',
+                                onClick: () => commitMinutes(Math.max(1, activeMinutes - 5)),
+                                'aria-label': 'Уменьшить на 5 минут',
+                            }, '−'),
+                            h('input', {
+                                className: 'planning-modal__input chrono-entry-edit__minutes',
+                                type: 'number',
+                                min: 1,
+                                step: 5,
+                                inputMode: 'numeric',
+                                value: draftMinutes,
+                                onChange: (e) => setDraftMinutes(e.target.value),
+                                onBlur: () => commitMinutes(draftMinutes),
+                                onKeyDown: (e) => {
+                                    if (e.key === 'Enter') {
+                                        commitMinutes(draftMinutes);
+                                        e.preventDefault();
+                                    }
+                                },
+                            }),
+                            h('span', { className: 'chrono-entry-edit__minutes-label' }, formatMinutes(activeMinutes)),
+                            h('button', {
+                                type: 'button',
+                                className: 'chrono-history__tiny-btn',
+                                onClick: () => commitMinutes(activeMinutes + 5),
+                                'aria-label': 'Добавить 5 минут',
+                            }, '+'),
+                        ),
+                    ),
+                    h('div', { className: 'chrono-entry-edit__actions' },
+                        h('button', { type: 'button', className: 'planning-btn planning-btn--primary', onClick: onClose }, 'Готово'),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-btn planning-btn--danger',
+                            onClick: () => {
+                                rowEntries.forEach((entry) => onDeleteEntry && onDeleteEntry(entry.id));
+                                onClose();
+                            },
+                        }, isParallel ? 'Удалить группу' : 'Удалить запись'),
+                    ),
+                    selectedActivity && selectedActivity.id && h(ChronoCategoryRow, {
+                        activity: selectedActivity,
+                        onSave: (category) => updateSelectedActivity({ category }),
+                    }),
+                    selectedActivity && selectedActivity.id && h(ChronoTargetRow, {
+                        label: 'За день:',
+                        valueInMinutes: (selectedActivity.budgetMinutesPerDay || selectedActivity.targetMinutesPerDay) || 0,
+                        initialKind: selectedActivity.budgetMinutesPerDay ? 'budget' : 'target',
+                        onSave: ({ kind, minutes }) => updateSelectedActivity({
+                            [kind === 'budget' ? 'budgetMinutesPerDay' : 'targetMinutesPerDay']: minutes,
+                        }),
+                    }),
+                    selectedActivity && selectedActivity.id && h(ChronoTargetRow, {
+                        label: 'За неделю:',
+                        valueInMinutes: (selectedActivity.budgetMinutesPerWeek || selectedActivity.targetMinutesPerWeek) || 0,
+                        initialKind: selectedActivity.budgetMinutesPerWeek ? 'budget' : 'target',
+                        onSave: ({ kind, minutes }) => updateSelectedActivity({
+                            [kind === 'budget' ? 'budgetMinutesPerWeek' : 'targetMinutesPerWeek']: minutes,
+                        }),
+                    }),
+                    selectedActivity && selectedActivity.id && h(ChronoLinkRow, {
+                        activity: selectedActivity,
+                        tasks,
+                        projects,
+                        onLink: updateSelectedActivity,
+                    }),
                 ),
             ),
         );
@@ -2125,8 +2357,8 @@
         const progressDeg = hasGoal ? Math.round(progress.value * 360) : 0;
         const ringColor = ringColorForProgress(progress, activity.hue);
         const goalKind = progress ? progress.kind : null;
-        const nameFontSize = Math.max(10, Math.min(20, diameter * 0.125));
-        const timeFontSize = Math.max(12, Math.min(23, diameter * 0.145));
+        const nameFontSize = Math.max(9.2, Math.min(20, diameter * 0.118));
+        const timeFontSize = Math.max(11, Math.min(23, diameter * 0.138));
 
         const pressTimer = useRef(null);
         const longFiredRef = useRef(false);
@@ -2354,14 +2586,27 @@
         );
     }
 
-    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay, lastAdded, untracked, untrackedActive, onUntrackedClick }) {
+    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay, lastAdded, loggedRows, untracked, untrackedActive, onUntrackedClick, onLoggedRowClick, onLoggedRowsReorder }) {
         const list = Array.isArray(insights) ? insights : [];
         const top = list.find((item) => item && item.kind === 'top');
         const alerts = list.filter((item) => item && item.kind !== 'top').slice(0, 2);
         const categories = Array.isArray(balance) ? balance.filter((item) => item && item.minutes > 0).slice(0, 4) : [];
         const streakList = Array.isArray(streaks) ? streaks.slice(0, 3) : [];
+        const rows = Array.isArray(loggedRows) ? loggedRows : [];
+        const [dragRows, setDragRows] = useState(null);
+        const [draggingRowId, setDraggingRowId] = useState('');
+        const rowRefs = useRef(new Map());
+        const ledgerDragRef = useRef({
+            active: false,
+            suppressClick: false,
+            startId: '',
+            startX: 0,
+            startY: 0,
+            timer: 0,
+            rows: null,
+        });
         const pattern = timeOfDay && timeOfDay.headline ? timeOfDay.headline : '';
-        if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern && !lastAdded && !untracked) return null;
+        if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern && !lastAdded && rows.length === 0 && !untracked) return null;
 
         // По дефолту свёрнуто; локальный UI-prefs ключ, не client-data (не синкается).
         const [collapsed, setCollapsed] = useState(() => {
@@ -2379,6 +2624,136 @@
             });
         }, []);
 
+        const clearLedgerPress = useCallback(() => {
+            if (ledgerDragRef.current.timer) {
+                clearTimeout(ledgerDragRef.current.timer);
+                ledgerDragRef.current.timer = 0;
+            }
+        }, []);
+
+        useEffect(() => () => clearLedgerPress(), [clearLedgerPress]);
+
+        useEffect(() => {
+            if (!ledgerDragRef.current.active) setDragRows(null);
+        }, [rows]);
+
+        function reorderRows(listRows, sourceId, targetId) {
+            if (!sourceId || !targetId || sourceId === targetId) return listRows;
+            const next = listRows.slice();
+            const from = next.findIndex((item) => item.id === sourceId);
+            const to = next.findIndex((item) => item.id === targetId);
+            if (from < 0 || to < 0 || from === to) return listRows;
+            const [item] = next.splice(from, 1);
+            next.splice(to, 0, item);
+            return next;
+        }
+
+        const getTargetLedgerRowId = useCallback((clientY) => {
+            let best = '';
+            let bestDist = Infinity;
+            rowRefs.current.forEach((node, id) => {
+                if (!node) return;
+                const rect = node.getBoundingClientRect();
+                const mid = rect.top + rect.height / 2;
+                const dist = Math.abs(clientY - mid);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = id;
+                }
+            });
+            return best;
+        }, []);
+
+        const handleLedgerPointerDown = useCallback((row, e, immediate) => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            clearLedgerPress();
+            ledgerDragRef.current = {
+                active: !!immediate,
+                suppressClick: !!immediate,
+                startId: row.id,
+                startX: e.clientX || 0,
+                startY: e.clientY || 0,
+                timer: 0,
+                rows: rows.slice(),
+            };
+            if (immediate) {
+                ledgerDragRef.current.active = true;
+                ledgerDragRef.current.suppressClick = true;
+                ledgerDragRef.current.rows = rows.slice();
+                setDragRows(rows.slice());
+                setDraggingRowId(row.id);
+                e.preventDefault();
+            } else {
+                ledgerDragRef.current.timer = setTimeout(() => {
+                    ledgerDragRef.current.active = true;
+                    ledgerDragRef.current.suppressClick = true;
+                    ledgerDragRef.current.rows = rows.slice();
+                    setDragRows(rows.slice());
+                    setDraggingRowId(row.id);
+                }, LEDGER_LONG_PRESS_MS);
+            }
+            try {
+                if (e.pointerId !== undefined && e.currentTarget && e.currentTarget.setPointerCapture) {
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                }
+            } catch (_) { /* noop */ }
+        }, [clearLedgerPress, rows]);
+
+        const handleLedgerPointerMove = useCallback((e) => {
+            const state = ledgerDragRef.current;
+            if (!state.startId) return;
+            const dx = (e.clientX || 0) - state.startX;
+            const dy = (e.clientY || 0) - state.startY;
+            if (!state.active) {
+                if (Math.hypot(dx, dy) > LEDGER_DRAG_CANCEL_PX) clearLedgerPress();
+                return;
+            }
+            e.preventDefault();
+            const targetId = getTargetLedgerRowId(e.clientY || 0);
+            if (!targetId || targetId === state.startId) return;
+            const nextRows = reorderRows(state.rows || rows, state.startId, targetId);
+            if (nextRows === state.rows) return;
+            state.rows = nextRows;
+            setDragRows(nextRows);
+        }, [clearLedgerPress, getTargetLedgerRowId, rows]);
+
+        const finishLedgerPointer = useCallback((e) => {
+            clearLedgerPress();
+            const state = ledgerDragRef.current;
+            try {
+                if (e && e.pointerId !== undefined && e.currentTarget && e.currentTarget.releasePointerCapture) {
+                    e.currentTarget.releasePointerCapture(e.pointerId);
+                }
+            } catch (_) { /* noop */ }
+            if (state.active && Array.isArray(state.rows)) {
+                const changed = state.rows.map((item) => item.id).join('|') !== rows.map((item) => item.id).join('|');
+                if (changed && typeof onLoggedRowsReorder === 'function') onLoggedRowsReorder(state.rows);
+            }
+            const suppressClick = state.suppressClick;
+            ledgerDragRef.current = {
+                active: false,
+                suppressClick,
+                startId: '',
+                startX: 0,
+                startY: 0,
+                timer: 0,
+                rows: null,
+            };
+            setDraggingRowId('');
+            setDragRows(null);
+        }, [clearLedgerPress, onLoggedRowsReorder, rows]);
+
+        const handleLedgerClick = useCallback((row, e) => {
+            if (ledgerDragRef.current.suppressClick) {
+                ledgerDragRef.current.suppressClick = false;
+                e.preventDefault();
+                return;
+            }
+            onLoggedRowClick && onLoggedRowClick(row);
+        }, [onLoggedRowClick]);
+
+        const visibleRows = draggingRowId && dragRows ? dragRows : rows;
+
         return h('div', {
             className: 'chrono-overview' + (collapsed ? ' is-collapsed' : ''),
             'aria-label': 'Сводка хронометража',
@@ -2394,13 +2769,43 @@
                 top && collapsed && h('span', { className: 'chrono-overview__toggle-hint' }, top.value),
                 h('span', { className: 'chrono-overview__toggle-chevron', 'aria-hidden': 'true' }, '▾'),
             ),
+            rows.length > 0 && h('div', { className: 'chrono-overview__ledger' },
+                visibleRows.map((row) => h('button', {
+                    key: row.id,
+                    type: 'button',
+                    ref: (node) => {
+                        if (node) rowRefs.current.set(row.id, node);
+                        else rowRefs.current.delete(row.id);
+                    },
+                    className: 'chrono-overview__ledger-row'
+                        + (row.id === draggingRowId ? ' is-dragging' : '')
+                        + (draggingRowId ? ' is-reorder-mode' : ''),
+                    onPointerDown: (e) => handleLedgerPointerDown(row, e, false),
+                    onPointerMove: handleLedgerPointerMove,
+                    onPointerUp: finishLedgerPointer,
+                    onPointerCancel: finishLedgerPointer,
+                    onClick: (e) => handleLedgerClick(row, e),
+                    title: draggingRowId ? 'Перетащите строку' : 'Изменить запись',
+                },
+                    h('span', {
+                        className: 'chrono-overview__ledger-handle',
+                        'aria-hidden': 'true',
+                        onPointerDown: (e) => {
+                            e.stopPropagation();
+                            handleLedgerPointerDown(row, e, true);
+                        },
+                    }, '↕️'),
+                    h('span', { className: 'chrono-overview__ledger-time' }, row.timeRange),
+                    h('span', { className: 'chrono-overview__ledger-duration' }, row.durationLabel),
+                    h('span', { className: 'chrono-overview__ledger-name' }, row.name),
+                )),
+            ),
             (lastAdded || untracked) && h('div', {
                 className: 'chrono-overview__last' + (!lastAdded ? ' chrono-overview__last--badge-only' : ''),
             },
                 lastAdded && h('span', { className: 'chrono-overview__last-time' }, lastAdded.timeLabel),
-                lastAdded && h('span', { className: 'chrono-overview__last-detail' }, lastAdded.detail),
                 lastAdded && h('span', { className: 'chrono-overview__last-now' },
-                    `сейчас ${lastAdded.nowLabel} (${lastAdded.elapsedHoursLabel})`),
+                    `сейчас ${lastAdded.nowLabel}`),
                 untracked && h('button', {
                     type: 'button',
                     className: 'chrono-overview__untracked-badge' + (untrackedActive ? ' active' : ''),
@@ -2409,7 +2814,7 @@
                     title: untracked.sinceKind === 'last-entry'
                         ? `С последней записи в ${untracked.sinceLabel}`
                         : (untracked.wakeLabel ? `С пробуждения в ${untracked.wakeLabel}` : undefined),
-                }, `не хронометрировано ${untracked.hoursLabel}`),
+                }, `не записано ${untracked.hoursLabel}`),
             ),
             !collapsed && h('div', { id: 'chrono-overview-body', className: 'chrono-overview__body' },
                 h('div', { className: 'chrono-overview__top' },
@@ -2634,11 +3039,42 @@
     const PHYLLOTAXIS_STEP = 4;     // шаг наружу при коллизии (px)
     const PHYLLOTAXIS_MAX_ATTEMPTS = 400;
 
-    function sizeScaleForCount(count, halfW) {
+    function sizeScaleForCount(count, halfW, availableH) {
         const n = Math.max(1, Number(count) || 1);
         const byCount = n <= 4 ? 1 : Math.max(0.68, 1 - (n - 4) * 0.055);
         const byWidth = halfW > 0 ? Math.max(0.7, Math.min(1, halfW / 190)) : 1;
-        return Math.max(0.62, Math.min(1, byCount, byWidth));
+        // Для малого числа кругов не режем размер заранее: пусть они остаются
+        // крупными, а shrink включится ниже только если фактический layout не
+        // помещается. Начиная с 5 кругов включаем мягкие ступени, не резкий shrink.
+        const heightTarget = n <= 4 ? 0 : (n <= 6 ? 300 : (n <= 8 ? 330 : 360));
+        const byHeight = availableH > 0 && heightTarget > 0
+            ? Math.max(MIN_BUBBLE_SIZE_SCALE, Math.min(1, availableH / heightTarget))
+            : 1;
+        return Math.max(MIN_BUBBLE_SIZE_SCALE, Math.min(1, byCount, byWidth, byHeight));
+    }
+
+    function computeRadialLayoutFit(activities, minutesByActivity, maxMin, halfW, baseSizeScale, availableH) {
+        const count = Array.isArray(activities) ? activities.length : 0;
+        const softMinFitScale = count <= 4 ? 0.86 : (count <= 6 ? 0.76 : (count <= 8 ? 0.68 : MIN_BUBBLE_SIZE_SCALE));
+        let sizeScale = Math.max(MIN_BUBBLE_SIZE_SCALE, Math.min(1, Number(baseSizeScale) || 1));
+        let layout = computeRadialLayout(activities, minutesByActivity, maxMin, halfW, sizeScale);
+        const limit = Math.max(0, Number(availableH) || 0);
+        if (!limit) return { ...layout, sizeScale };
+        for (let i = 0; i < 4 && layout.cloudHeight > limit && sizeScale > softMinFitScale + 0.005; i += 1) {
+            const ratio = Math.max(softMinFitScale, Math.min(1, (limit / layout.cloudHeight) * 0.96));
+            const nextScale = Math.max(softMinFitScale, sizeScale * ratio);
+            if (Math.abs(nextScale - sizeScale) < 0.005) break;
+            sizeScale = nextScale;
+            layout = computeRadialLayout(activities, minutesByActivity, maxMin, halfW, sizeScale);
+        }
+        for (let i = 0; i < 8 && sizeScale > MIN_BUBBLE_SIZE_SCALE + 0.005; i += 1) {
+            const fittedH = Math.max(120, Math.min(layout.cloudHeight, limit));
+            const clamped = reflowAroundOverrides(layout.positioned, {}, halfW, fittedH / 2, {}, BUBBLE_GAP);
+            if (!hasBubbleOverlap(clamped, BUBBLE_GAP)) break;
+            sizeScale = Math.max(MIN_BUBBLE_SIZE_SCALE, sizeScale * 0.94);
+            layout = computeRadialLayout(activities, minutesByActivity, maxMin, halfW, sizeScale);
+        }
+        return { ...layout, sizeScale };
     }
 
     // Концентрический пакинг: центральный кружок (самый большой, pos[0]) пришпилен
@@ -2778,7 +3214,7 @@
             const yExt = Math.abs(p.y) + p.radius;
             if (yExt > packedYExtent) packedYExtent = yExt;
         });
-        const cloudHeight = Math.max(280, packedYExtent * 2 + 56);
+        const cloudHeight = Math.max(160, packedYExtent * 2 + 56);
         return { positioned: packed, cloudHeight };
     }
 
@@ -2885,13 +3321,21 @@
             return h('div', { className: 'chrono-empty' }, text);
         }
 
-        // Измерение ширины контейнера для clamp'а позиций в safe zone.
-        const containerRef = useRef(null);
-        const [containerWidth, setContainerWidth] = useState(0);
+        // Измерение доступной зоны для clamp'а и adaptive scale.
+        const cloudRef = useRef(null);
+        const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
         useEffect(() => {
-            const el = containerRef.current;
+            const el = cloudRef.current;
             if (!el) return undefined;
-            const update = () => setContainerWidth(el.clientWidth || 0);
+            const update = () => {
+                const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+                const padTop = style ? parseFloat(style.paddingTop) || 0 : 0;
+                const padBottom = style ? parseFloat(style.paddingBottom) || 0 : 0;
+                setContainerSize({
+                    width: el.clientWidth || 0,
+                    height: Math.max(0, (el.clientHeight || 0) - padTop - padBottom),
+                });
+            };
             update();
             if (typeof ResizeObserver !== 'undefined') {
                 const ro = new ResizeObserver(update);
@@ -2905,18 +3349,21 @@
         const [drag, setDrag] = useState(null);
         const [slotOverrides, setSlotOverrides] = useState({});
 
-        const halfW = containerWidth / 2;
-        const sizeScale = sizeScaleForCount(activities.length, halfW);
+        const halfW = containerSize.width / 2;
+        const baseSizeScale = sizeScaleForCount(activities.length, halfW, containerSize.height);
         // Базовый layout — чистый phyllotaxis с adaptive scale к safe zone.
         // Передаём halfW, чтобы orbits вписывались по ширине контейнера.
-        const { positioned, cloudHeight } = useMemo(() =>
-            computeRadialLayout(activities, minutesByActivity, maxMin, halfW, sizeScale),
-            [activities, minutesByActivity, maxMin, halfW, sizeScale]
+        const { positioned, cloudHeight, sizeScale } = useMemo(() =>
+            computeRadialLayoutFit(activities, minutesByActivity, maxMin, halfW, baseSizeScale, containerSize.height),
+            [activities, minutesByActivity, maxMin, halfW, baseSizeScale, containerSize.height]
         );
 
+        const fittedCloudHeight = containerSize.height > 0
+            ? Math.max(120, Math.min(cloudHeight, containerSize.height))
+            : cloudHeight;
         const dragHeightReserve = drag ? (drag.releasing ? 72 : 112) : 0;
-        const displayCloudHeight = cloudHeight + dragHeightReserve;
-        const halfH = displayCloudHeight / 2;
+        const displayCloudHeight = fittedCloudHeight + dragHeightReserve;
+        const halfH = fittedCloudHeight / 2;
 
         // Permanent overrides из drag-release + временный override активного drag.
         // Во время drag/release сам dragged bubble locked: он идёт за пальцем
@@ -3061,9 +3508,8 @@
         // и к layout/reflow для resting positions. Это даёт ощущение "оттянуть подальше
         // и отпустить — пузырь сам найдёт дорогу домой".
 
-        return h('div', { className: 'chrono-cloud' },
+        return h('div', { className: 'chrono-cloud', ref: cloudRef },
             h('div', {
-                ref: containerRef,
                 className: 'chrono-cloud__items chrono-cloud__items--radial' + (releasing ? ' is-releasing' : ''),
                 style: { '--cloud-height': displayCloudHeight + 'px' },
             },
@@ -3131,6 +3577,7 @@
         const [pickerOpen, setPickerOpen] = useState(false);
         const [deleteTarget, setDeleteTarget] = useState(null);
         const [historyTarget, setHistoryTarget] = useState(null);
+        const [entryEditTarget, setEntryEditTarget] = useState(null);
         const [toast, setToast] = useState(null);
         const [recentBadge, setRecentBadge] = useState(null);
         const [timerCompleteShown, setTimerCompleteShown] = useState(false);
@@ -3362,6 +3809,10 @@
             if (typeof state.adjustChronoEntryMinutes === 'function') state.adjustChronoEntryMinutes(id, deltaMinutes);
         }, [state]);
 
+        const handleUpdateActivity = useCallback((id, patch) => {
+            if (typeof state.updateChronoActivity === 'function') state.updateChronoActivity(id, patch);
+        }, [state]);
+
         const handleTimerAccept = useCallback((minutes) => {
             if (!timer) return;
             const entry = state.addChronoEntry({
@@ -3452,6 +3903,15 @@
 
         const lastAdded = useMemo(() => buildLastAddedSummary(entries, activities, timerNow, activeDate),
             [entries, activities, timerNow, activeDate]);
+        const activeDay = useMemo(() => readChronoDayV2(activeDate), [activeDate, entries, timerNow]);
+        const loggedRows = useMemo(() => buildChronoLoggedRows(activeDay, entries, activities, activeDate),
+            [activeDay, entries, activities, activeDate]);
+        const handleLoggedRowsReorder = useCallback((nextRows) => {
+            if (typeof state.reorderChronoRows !== 'function') return;
+            const anchorMs = loggedRows.length > 0 ? loggedRows[0].startMs : null;
+            const assignments = buildChronoReorderAssignments(nextRows, activeDate, anchorMs);
+            if (assignments.length > 0) state.reorderChronoRows(assignments);
+        }, [state, loggedRows, activeDate]);
 
         const todayDay = useMemo(() => readChronoDayV2(todayStr), [todayStr, timerNow]);
         const untracked = useMemo(() => {
@@ -3577,9 +4037,12 @@
                 streaks,
                 timeOfDay,
                 lastAdded,
+                loggedRows,
                 untracked,
                 untrackedActive: !!untrackedDraft,
                 onUntrackedClick: handleUntrackedBadgeClick,
+                onLoggedRowClick: setEntryEditTarget,
+                onLoggedRowsReorder: handleLoggedRowsReorder,
             }),
             h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
             chronoSyncing && h('div', { className: 'chrono-empty', role: 'status' }, 'Обновление занятий…'),
@@ -3678,6 +4141,17 @@
                 onDeleteEntry: (id) => state.deleteChronoEntry(id),
                 onClose: () => setHistoryTarget(null),
             }),
+            entryEditTarget && h(ChronoEntryEditModal, {
+                row: entryEditTarget,
+                entries: state.chronoEntries || [],
+                activities,
+                tasks,
+                projects,
+                onUpdateEntry: handleUpdateEntry,
+                onDeleteEntry: (id) => state.deleteChronoEntry(id),
+                onUpdateActivity: handleUpdateActivity,
+                onClose: () => setEntryEditTarget(null),
+            }),
             h(ChronoUndoToast, {
                 toast,
                 onUndo: handleUndo,
@@ -3715,7 +4189,6 @@
                 title: `Суммарное время ${scope === 'week' ? 'за неделю' : 'за день'}`,
                 'aria-label': `Всего: ${formatMinutes(totalMinutes)}`,
             },
-                h('span', { className: 'chrono-bottom-total__label' }, 'всего:'),
                 h('span', { className: 'chrono-bottom-total__value' }, formatMinutes(totalMinutes)),
             ),
         );
@@ -3726,6 +4199,7 @@
     HEYS.PlanningChrono = {
         ChronoScreen,
         ChronoDurationModal,
+        ChronoEntryEditModal,
         ChronoHistoryModal,
         ChronoHeatmap,
         ChronoWeekBreakdown,
@@ -3756,6 +4230,8 @@
         buildDayTimeline,
         computeChronoCoveredMinutes,
         splitMinutesForWheel,
+        buildChronoLoggedRows,
+        buildChronoReorderAssignments,
         buildLastAddedSummary,
         buildUntrackedChronoSummary,
         buildSmartSuggestions,
