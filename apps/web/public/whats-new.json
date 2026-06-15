@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.15.05dd4181",
+      "buildHash": "05dd4181",
+      "date": "2026-06-15",
+      "kind": "technical",
+      "profile": "technical-backend-api",
+      "title": "Сохранение данных стало устойчивее",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Изменения корректнее сохраняются",
+          "description": "Исправили сценарий, из-за которого отдельные изменения могли не сохраняться после работы в приложении. Теперь данные стабильнее остаются доступными между входами в аккаунт."
+        }
+      ],
+      "coveredCommits": ["05dd4181"]
+    },
+    {
       "version": "2026.06.15.4b88047a",
       "buildHash": "4b88047a",
       "date": "2026-06-15",
@@ -141,22 +157,6 @@
         }
       ],
       "coveredCommits": ["de302c9c", "b8126552"]
-    },
-    {
-      "version": "2026.06.14.b8126552",
-      "buildHash": "b8126552",
-      "date": "2026-06-14",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "extract robust-stats + catalog index into _kernel/",
-      "items": [
-        {
-          "type": "feat",
-          "title": "extract robust-stats + catalog index into _kernel/",
-          "description": "extract robust-stats + catalog index into _kernel/"
-        }
-      ],
-      "coveredCommits": ["b8126552"]
     }
   ]
 }
