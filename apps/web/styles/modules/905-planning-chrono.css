@@ -627,6 +627,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-overview__untracked-badge {
     flex: 0 0 auto;
+    appearance: none;
     padding: 4px 8px;
     border-radius: 999px;
     background: rgba(239, 68, 68, 0.12);
@@ -636,6 +637,20 @@ html.chrono-bubble-dragging .chrono-screen {
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.chrono-overview__untracked-badge:hover {
+    background: rgba(239, 68, 68, 0.16);
+    border-color: rgba(239, 68, 68, 0.34);
+}
+
+.chrono-overview__untracked-badge.active {
+    background: #fee2e2;
+    border-color: rgba(220, 38, 38, 0.5);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+    transform: translateY(-1px);
 }
 
 .chrono-overview__last--badge-only .chrono-overview__untracked-badge {

@@ -977,6 +977,12 @@ describe('chrono analytics helpers', () => {
         });
     });
 
+    it('splitMinutesForWheel prepares untracked duration for custom picker', () => {
+        expect(Chrono.splitMinutesForWheel(228)).toEqual({ hours: 3, minutes: 48 });
+        expect(Chrono.splitMinutesForWheel(24 * 60 + 30)).toEqual({ hours: 23, minutes: 59 });
+        expect(Chrono.splitMinutesForWheel(-10)).toEqual({ hours: 0, minutes: 0 });
+    });
+
     it('buildSmartSuggestions returns last and yesterday presets', () => {
         const suggestions = Chrono.buildSmartSuggestions(
             { id: 'a', name: 'Focus' },

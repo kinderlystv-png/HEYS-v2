@@ -198,6 +198,14 @@
         return (Math.max(0, Number(minutes) || 0) / 60).toFixed(1).replace('.', ',') + 'ч';
     }
 
+    function splitMinutesForWheel(minutes) {
+        const safe = Math.max(0, Math.min(23 * 60 + 59, Math.round(Number(minutes) || 0)));
+        return {
+            hours: Math.floor(safe / 60),
+            minutes: safe % 60,
+        };
+    }
+
     function computeChronoCoveredMinutes(entries, snapshots, date) {
         const groups = new Map();
         (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
@@ -1891,9 +1899,10 @@
             .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
     }
 
-    function ChronoDurationModal({ activity, activities, currentMinutes, scopeLabel, timerRunning, tasks, projects, entries, activeDate, onAdd, onSetTarget, onCategory, onLink, onStartTimer, onClose }) {
-        const [hourIdx, setHourIdx] = useState(0);
-        const [minuteIdx, setMinuteIdx] = useState(30);
+    function ChronoDurationModal({ activity, activities, currentMinutes, scopeLabel, timerRunning, tasks, projects, entries, activeDate, initialMinutes, onAdd, onSetTarget, onCategory, onLink, onStartTimer, onClose }) {
+        const initialWheelTime = splitMinutesForWheel(initialMinutes || 30);
+        const [hourIdx, setHourIdx] = useState(initialWheelTime.hours);
+        const [minuteIdx, setMinuteIdx] = useState(initialWheelTime.minutes);
         const [parallelEnabled, setParallelEnabled] = useState(false);
         const [parallelActivityId, setParallelActivityId] = useState('');
         const overlayRef = useRef(null);
@@ -1923,6 +1932,12 @@
             setParallelEnabled(false);
             setParallelActivityId('');
         }, [activity && activity.id]);
+
+        useEffect(() => {
+            const next = splitMinutesForWheel(initialMinutes || 30);
+            setHourIdx(next.hours);
+            setMinuteIdx(next.minutes);
+        }, [activity && activity.id, initialMinutes]);
 
         useEffect(() => {
             if (!parallelEnabled || parallelActivityId) return;
@@ -2339,7 +2354,7 @@
         );
     }
 
-    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay, lastAdded, untracked }) {
+    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay, lastAdded, untracked, untrackedActive, onUntrackedClick }) {
         const list = Array.isArray(insights) ? insights : [];
         const top = list.find((item) => item && item.kind === 'top');
         const alerts = list.filter((item) => item && item.kind !== 'top').slice(0, 2);
@@ -2386,8 +2401,11 @@
                 lastAdded && h('span', { className: 'chrono-overview__last-detail' }, lastAdded.detail),
                 lastAdded && h('span', { className: 'chrono-overview__last-now' },
                     `сейчас ${lastAdded.nowLabel} (${lastAdded.elapsedHoursLabel})`),
-                untracked && h('span', {
-                    className: 'chrono-overview__untracked-badge',
+                untracked && h('button', {
+                    type: 'button',
+                    className: 'chrono-overview__untracked-badge' + (untrackedActive ? ' active' : ''),
+                    onClick: onUntrackedClick,
+                    'aria-pressed': untrackedActive ? 'true' : 'false',
                     title: untracked.sinceKind === 'last-entry'
                         ? `С последней записи в ${untracked.sinceLabel}`
                         : (untracked.wakeLabel ? `С пробуждения в ${untracked.wakeLabel}` : undefined),
@@ -3108,6 +3126,8 @@
         const [scope, setScope] = useState('day');
         const [activeDate, setActiveDate] = useState(() => Utils.dateStr());
         const [durationTarget, setDurationTarget] = useState(null);
+        const [durationInitialMinutes, setDurationInitialMinutes] = useState(null);
+        const [untrackedDraft, setUntrackedDraft] = useState(null);
         const [pickerOpen, setPickerOpen] = useState(false);
         const [deleteTarget, setDeleteTarget] = useState(null);
         const [historyTarget, setHistoryTarget] = useState(null);
@@ -3239,8 +3259,10 @@
         }, [deleteTarget, activities]);
 
         const handleBubbleClick = useCallback((activity) => {
+            setDurationInitialMinutes(untrackedDraft ? untrackedDraft.minutes : null);
             setDurationTarget(activity);
-        }, []);
+            if (untrackedDraft) setUntrackedDraft(null);
+        }, [untrackedDraft]);
 
         const handleLongPress = useCallback((activity) => {
             setHistoryTarget(activity);
@@ -3271,6 +3293,7 @@
             if (entry && entry.id) {
                 setToast({ id: entry.id, ids, minutes, parallelCount: ids.length });
                 setRecentBadge({ activityId: durationTarget.id, minutes, key: entry.id });
+                setDurationInitialMinutes(null);
             }
         }, [durationTarget, activeDate, state]);
 
@@ -3435,6 +3458,20 @@
             if (activeDate !== todayStr) return null;
             return buildUntrackedChronoSummary(todayDay, entries, todayStr, timerNow);
         }, [activeDate, todayStr, entries, todayDay, timerNow]);
+        const untrackedKey = untracked
+            ? `${untracked.sinceKind}:${untracked.sinceLabel}:${untracked.minutes}`
+            : '';
+
+        useEffect(() => {
+            if (!untrackedDraft) return;
+            if (!untracked || untrackedDraft.key !== untrackedKey) setUntrackedDraft(null);
+        }, [untracked, untrackedKey, untrackedDraft]);
+
+        const handleUntrackedBadgeClick = useCallback(() => {
+            if (!untracked || !untracked.minutes) return;
+            const next = { key: untrackedKey, minutes: untracked.minutes };
+            setUntrackedDraft((current) => (current && current.key === next.key ? null : next));
+        }, [untracked, untrackedKey]);
 
         // Запрещаем листать в будущее: следующий шаг (день или неделя) не должен
         // выходить за «сегодня». Для недельного режима ориентируемся на старт
@@ -3534,7 +3571,16 @@
                 onResume: handleTimerResume,
                 onStop: () => setTimerStopOpen(true),
             }),
-            h(ChronoOverviewPanel, { insights, balance: categoryBalance, streaks, timeOfDay, lastAdded, untracked }),
+            h(ChronoOverviewPanel, {
+                insights,
+                balance: categoryBalance,
+                streaks,
+                timeOfDay,
+                lastAdded,
+                untracked,
+                untrackedActive: !!untrackedDraft,
+                onUntrackedClick: handleUntrackedBadgeClick,
+            }),
             h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
             chronoSyncing && h('div', { className: 'chrono-empty', role: 'status' }, 'Обновление занятий…'),
             !chronoSyncing && h(ChronoStrip, {
@@ -3583,6 +3629,7 @@
                 projects,
                 entries,
                 activeDate,
+                initialMinutes: durationInitialMinutes,
                 onStartTimer: handleStartTimer,
                 onAdd: handleAddMinutes,
                 onCategory: (category) => state.updateChronoActivity(durationTarget.id, { category }),
@@ -3598,7 +3645,10 @@
                         : (kind === 'budget' ? 'budgetMinutesPerDay' : 'targetMinutesPerDay');
                     state.updateChronoActivity(durationTarget.id, { [field]: m });
                 },
-                onClose: () => setDurationTarget(null),
+                onClose: () => {
+                    setDurationTarget(null);
+                    setDurationInitialMinutes(null);
+                },
             }),
             pickerOpen && h(ActivityPicker, {
                 activities,
@@ -3654,7 +3704,9 @@
                 activities,
                 onPickActivity: (activity) => {
                     setTimelineOpen(false);
+                    setDurationInitialMinutes(untrackedDraft ? untrackedDraft.minutes : null);
                     setDurationTarget(activity);
+                    if (untrackedDraft) setUntrackedDraft(null);
                 },
                 onClose: () => setTimelineOpen(false),
             }),
@@ -3703,6 +3755,7 @@
         buildCategoryBalance,
         buildDayTimeline,
         computeChronoCoveredMinutes,
+        splitMinutesForWheel,
         buildLastAddedSummary,
         buildUntrackedChronoSummary,
         buildSmartSuggestions,
