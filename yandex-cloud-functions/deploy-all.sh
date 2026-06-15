@@ -420,14 +420,19 @@ deploy_function() {
         sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
     fi
 
-    # Concurrency: API-функции получают concurrency=2 — один контейнер
-    # обслуживает до двух параллельных запросов, что уменьшает количество
-    # cold start'ов под нагрузкой. Memory 512m / 2 = 256m на запрос (запас
-    # есть), DB pool max=3 (см. shared/db-pool.js:96) — 2 concurrent fit'ам.
+    # Concurrency: API-функции получают concurrency=4 — один контейнер
+    # обслуживает до 4 параллельных запросов. Подняли с 2 → 4 (2026-06-15)
+    # для запаса под burst/cold-start: при всплеске (напр. хвост sync-инцидента)
+    # YC не успевал масштабировать инстансы → ALB/gateway отдавал 429 Too Many
+    # Requests с дефолтным CORS '*', который браузер не читает при
+    # credentials:include → клиент видел «CORS/Failed to fetch» и слепо ретраил.
+    # Memory 512m / 4 = 128m на запрос (max used ~110m — ок), DB pool max=5
+    # (см. shared/db-pool.js) — 4 concurrent укладываются с запасом.
+    # PG max_connections=400 (занято ~13) — суммарных коннектов хватает с избытком.
     # Кроны остаются на default=1 (триггер запускает по одной задаче за раз).
     local concurrency_flag=""
     if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push|messages|photos)$ ]]; then
-        concurrency_flag="--concurrency 2"
+        concurrency_flag="--concurrency 4"
     fi
 
     # Pre-build zip with explicit exclusions.
