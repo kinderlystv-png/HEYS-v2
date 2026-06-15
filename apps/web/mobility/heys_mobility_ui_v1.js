@@ -1141,6 +1141,56 @@
     });
   }
 
+  function completedMobilitySteps(plan, state, remainingSec) {
+    const steps = plan && Array.isArray(plan.steps) ? plan.steps : [];
+    if (!steps.length) return [];
+    const index = Math.max(0, Math.min(steps.length - 1, Number(state && state.index) || 0));
+    const out = steps.slice(0, index);
+    const current = steps[index];
+    const duration = stepDurationSec(current);
+    const hasCurrentProgress = current && (
+      index > 0 ||
+      (state && state.status && state.status !== 'idle') ||
+      (duration && Number(remainingSec) < duration)
+    );
+    if (hasCurrentProgress && current) out.push(current);
+    return out;
+  }
+
+  function partialMobilityResult(built, plan, progress) {
+    const session = built && built.session;
+    const steps = progress && Array.isArray(progress.steps) ? progress.steps : [];
+    if (!session || !steps.length) return null;
+    const usedBlocks = {};
+    steps.forEach(function (step) {
+      if (step && step.blockId) usedBlocks[step.blockId] = true;
+    });
+    const blocks = (Array.isArray(session.blocks) ? session.blocks : []).filter(function (block) {
+      return block && usedBlocks[block.id];
+    });
+    if (!blocks.length) return null;
+    return Object.assign({}, built, {
+      ok: built.ok !== false,
+      partial: true,
+      partialProgress: {
+        completedSteps: steps.length,
+        totalSteps: plan && plan.totalSteps || steps.length,
+        currentIndex: Math.max(0, Number(progress.index) || 0),
+        elapsedSec: Math.max(0, Math.round(Number(progress.elapsedSec) || 0))
+      },
+      session: Object.assign({}, session, {
+        partial: true,
+        partialProgress: {
+          completedSteps: steps.length,
+          totalSteps: plan && plan.totalSteps || steps.length,
+          currentIndex: Math.max(0, Number(progress.index) || 0),
+          elapsedSec: Math.max(0, Math.round(Number(progress.elapsedSec) || 0))
+        },
+        blocks: blocks
+      })
+    });
+  }
+
   function MobilityLiveRoadmap(props) {
     const steps = Array.isArray(props.steps) ? props.steps : [];
     const currentIndex = Math.max(0, Number(props.currentIndex) || 0);
@@ -1182,6 +1232,56 @@
     const progress = steps.length ? Math.round(((state.index + 1) / steps.length) * 100) : 0;
     function send(event) {
       setState(function (s) { return runner.transition(s, event); });
+    }
+    function finalizeAbort(saved) {
+      send('abort');
+      props.onAbortComplete && props.onAbortComplete({ saved: !!saved });
+    }
+    function requestAbort() {
+      const modal = global.HEYS && global.HEYS.ConfirmModal;
+      const completedSteps = completedMobilitySteps(plan, state, remainingSec);
+      const progress = {
+        steps: completedSteps,
+        index: state.index,
+        elapsedSec: currentDurationSec ? Math.max(0, currentDurationSec - (Number(remainingSec) || 0)) : 0
+      };
+      const hasProgress = completedSteps.length > 0;
+      const doAbort = function () {
+        if (!hasProgress) { finalizeAbort(false); return; }
+        if (!modal || typeof modal.show !== 'function') {
+          props.onAbortSave && props.onAbortSave(progress);
+          finalizeAbort(true);
+          return;
+        }
+        modal.show({
+          icon: '💾',
+          title: 'Записать прогресс?',
+          text: 'Выполнено: ' + completedSteps.length + ' из ' + steps.length + ' шагов. Можно сохранить как незавершённую сессию.',
+          confirmText: 'Записать как частично',
+          cancelText: 'Не записывать',
+          confirmStyle: 'success',
+          onConfirm: function () {
+            props.onAbortSave && props.onAbortSave(progress);
+            finalizeAbort(true);
+          },
+          onCancel: function () {
+            finalizeAbort(false);
+          }
+        });
+      };
+      if (!modal || typeof modal.show !== 'function') {
+        doAbort();
+        return;
+      }
+      modal.show({
+        icon: '⚠',
+        title: 'Прервать тренировку?',
+        text: 'Сессия останется как незавершённая — сможешь вернуться к плану позже.',
+        confirmText: 'Прервать',
+        cancelText: 'Продолжить',
+        confirmStyle: 'warning',
+        onConfirm: doAbort
+      });
     }
     useEffect(function () {
       setRemainingSec(currentDurationSec);
@@ -1225,7 +1325,7 @@
       state.status === 'paused' ? { id: 'resume', label: '▶ Возобновить', onClick: function () { send('resume'); } } : null,
       { id: 'next', label: '→', ariaLabel: 'Пропустить фазу', title: 'Пропустить фазу', onClick: function () { send('next'); } },
       props.onPain ? { id: 'pain', label: 'Боль', ariaLabel: 'Отметить боль', onClick: function () { props.onPain(current); } } : null,
-      { id: 'abort', label: 'Прервать', ariaLabel: 'Стоп', abort: true, onClick: function () { send('abort'); } }
+      { id: 'abort', label: 'Прервать', ariaLabel: 'Стоп', abort: true, onClick: requestAbort }
     ].filter(Boolean);
     const runnerNode = h(React.Fragment, null,
       h('div', { className: 'mobility-guided__visual', 'aria-hidden': 'true' },
@@ -1948,28 +2048,45 @@
       return d.routineRunner.buildRunPlan(activeBuilt.session);
     }, [activeBuilt]);
 
-    function saveSession() {
-      if (!d.recordsStore || !activeBuilt) return;
-      d.recordsStore.addSession(props.clientId, activeBuilt, props.storage);
+    function persistMobilitySession(result, planOverride, flags) {
+      const target = result || activeBuilt;
+      const p = planOverride || plan;
+      if (!d.recordsStore || !target) return null;
+      const record = d.recordsStore.addSession(props.clientId, target, props.storage);
       if (props.dateKey && global.HEYS && global.HEYS.TrainingStep && typeof global.HEYS.TrainingStep.saveMobility === 'function') {
         const mobilityLog = {
           version: 1,
-          mode: activeBuilt.session && activeBuilt.session.mode,
-          purpose: activeBuilt.session && activeBuilt.session.purpose,
-          autonomic: activeBuilt.session && activeBuilt.session.autonomic,
-          ok: activeBuilt.ok !== false,
-          totalDurationMinutes: plan && plan.estimatedDurationSec ? Math.round(plan.estimatedDurationSec / 60) : null,
-          plan: plan,
-          issues: activeBuilt.issues || [],
+          mode: target.session && target.session.mode,
+          purpose: target.session && target.session.purpose,
+          autonomic: target.session && target.session.autonomic,
+          ok: target.ok !== false,
+          partial: !!(flags && flags.partial || target.partial),
+          partialProgress: target.partialProgress || target.session && target.session.partialProgress || null,
+          totalDurationMinutes: p && p.estimatedDurationSec ? Math.round(p.estimatedDurationSec / 60) : null,
+          plan: p,
+          issues: target.issues || [],
           savedAt: new Date().toISOString()
         };
         global.HEYS.TrainingStep.saveMobility({
           dateKey: props.dateKey,
           trainingIndex: props.trainingIndex
         }, mobilityLog, {
-          activityLabel: 'Мобильность'
+          activityLabel: 'Мобильность' + (mobilityLog.partial ? ' (частично)' : '')
         });
       }
+      return record;
+    }
+    function saveSession() {
+      const record = persistMobilitySession(activeBuilt, plan, {});
+      if (!record) return;
+      setSaveStatus('session');
+    }
+    function savePartialSession(progress) {
+      if (!activeBuilt || !plan) return;
+      const partial = partialMobilityResult(activeBuilt, plan, progress);
+      if (!partial) return;
+      const partialPlan = d.routineRunner && partial.session ? d.routineRunner.buildRunPlan(partial.session) : plan;
+      persistMobilitySession(partial, partialPlan, { partial: true });
       setSaveStatus('session');
     }
     function saveAssessment(audit) {
@@ -2200,7 +2317,14 @@
             h('button', { type: 'button', onClick: function () { setFlowMode('choose'); setRunnerStarted(false); } }, 'Назад')
           ),
           runnerStarted
-            ? h(ExecutionPanel, { key: flowMode + ':' + modeId + ':' + protocolId + ':' + customRunAtomIds.join(',') + ':' + mixSeed + ':' + (plan ? plan.totalSteps : 0), plan: plan, autoStart: true, onPain: savePainFlag })
+            ? h(ExecutionPanel, {
+                key: flowMode + ':' + modeId + ':' + protocolId + ':' + customRunAtomIds.join(',') + ':' + mixSeed + ':' + (plan ? plan.totalSteps : 0),
+                plan: plan,
+                autoStart: true,
+                onPain: savePainFlag,
+                onAbortSave: savePartialSession,
+                onAbortComplete: function () { setRunnerStarted(false); }
+              })
             : h(GuidedLaunchCard, {
                 built: activeBuilt,
                 plan: plan,

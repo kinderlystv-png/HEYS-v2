@@ -390,10 +390,20 @@ describe('Mobility UI', () => {
   });
 
   it('execution panel показывает дыхательные фазы и lifecycle controls', () => {
+    let modalOptions = null;
+    globalThis.HEYS.ConfirmModal = {
+      show: vi.fn((options) => {
+        modalOptions = options;
+      })
+    };
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));
     fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
     expect(container.querySelector('.mobility-guided')).toBeNull();
     startGuidedSession();
+    expect(modalOptions.title).toBe('Готовы начать?');
+    act(() => {
+      modalOptions.actions.find((action) => action.key === 'go').onClick();
+    });
     expect(screen.getAllByText('Ведомая тренировка').length).toBeGreaterThan(0);
     expect(container.querySelector('.mobility-breath-phases')).not.toBeNull();
     expect(container.querySelector('.mobility-guided__visual img')).not.toBeNull();
@@ -404,7 +414,64 @@ describe('Mobility UI', () => {
     fireEvent.click(within(execution).getByRole('button', { name: 'Пауза' }));
     expect(status()).toBe('paused');
     fireEvent.click(within(execution).getByRole('button', { name: 'Стоп' }));
-    expect(status()).toBe('aborted');
+    expect(globalThis.HEYS.ConfirmModal.show).toHaveBeenCalled();
+    expect(modalOptions.title).toBe('Прервать тренировку?');
+    expect(status()).toBe('paused');
+    act(() => {
+      modalOptions.onConfirm();
+    });
+    expect(modalOptions.title).toBe('Записать прогресс?');
+    act(() => {
+      modalOptions.onCancel();
+    });
+    expect(container.querySelector('.mobility-guided')).toBeNull();
+  });
+
+  it('abort-flow записывает частичный прогресс после подтверждения как у пальцев', () => {
+    const storage = globalThis.HEYS.Mobility.recordsStore.createMemoryStorage();
+    const savedTrainings = [];
+    let modalOptions = null;
+    globalThis.HEYS.ConfirmModal = {
+      show: vi.fn((options) => {
+        modalOptions = options;
+      })
+    };
+    globalThis.HEYS.TrainingStep = {
+      saveMobility: (ctx, mobilityLog, meta) => savedTrainings.push({ ctx, mobilityLog, meta })
+    };
+    const { container } = render(React.createElement(UI().MobilityApp, {
+      profile,
+      modeId: 'morning_tonify',
+      clientId: 'client-a',
+      storage,
+      dateKey: '2026-06-13',
+      trainingIndex: 3
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
+    startGuidedSession();
+    expect(modalOptions.title).toBe('Готовы начать?');
+    act(() => {
+      modalOptions.actions.find((action) => action.key === 'go').onClick();
+    });
+    const execution = container.querySelector('.mobility-execution');
+    fireEvent.click(within(execution).getByRole('button', { name: 'Стоп' }));
+    expect(modalOptions.title).toBe('Прервать тренировку?');
+    act(() => {
+      modalOptions.onConfirm();
+    });
+    expect(modalOptions.title).toBe('Записать прогресс?');
+    act(() => {
+      modalOptions.onConfirm();
+    });
+    expect(container.querySelector('.mobility-guided')).toBeNull();
+    expect(container.textContent).toContain('Сессия сохранена');
+    const records = globalThis.HEYS.Mobility.recordsStore.load('client-a', storage);
+    expect(records.sessions).toHaveLength(1);
+    expect(records.sessions[0].session.partial).toBe(true);
+    expect(records.sessions[0].session.partialProgress.completedSteps).toBeGreaterThan(0);
+    expect(savedTrainings).toHaveLength(1);
+    expect(savedTrainings[0].mobilityLog.partial).toBe(true);
+    expect(savedTrainings[0].meta.activityLabel).toContain('частично');
   });
 
   it('execution lifecycle сбрасывается при смене режима', () => {

@@ -343,6 +343,17 @@ runtime-артефакт.
   roadmap `flex-direction:column`, `digitCenterDeltaX=0`, controls =
   `Пауза/→/Боль/Прервать`.
 
+### Abort confirm-flow parity (2026-06-16)
+
+- `Прервать` в mobility runner больше не вызывает `abort` напрямую. Теперь
+  повторяет поведение пальцев: `Прервать тренировку?` → при прогрессе
+  `Записать прогресс?` → частичная сессия пишется в `recordsStore` и
+  `TrainingStep.saveMobility` с `partial=true`, затем live runner закрывается.
+- Тесты: добавлен regression на partial abort save; targeted UI прогон
+  `mobility-ui + fingers-exercise-runner + confirm-modal-layering` = 77/77.
+  Browser QA на 390×844 подтвердил две ConfirmModal, `partialProgress` в
+  `heys_<clientId>_mobility_records_v1`, `liveStillOpen=false` после записи.
+
 ## Риски / открытые
 
 - atom_catalog покрывает все блоки A–J и у каждого атома есть `title`,
