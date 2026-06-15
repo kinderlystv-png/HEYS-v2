@@ -42,6 +42,10 @@ const DEPENDENCY_CONFIG = {
     // Добавить ID уязвимостей для игнорирования если необходимо
   ],
 
+  // CI security gate проверяет именно vulnerabilities. `pnpm outdated` может
+  // зависнуть на registry и не должен превращать security gate в сетевой таймер.
+  skipOutdatedCheck: process.env.HEYS_SKIP_OUTDATED_CHECK === '1',
+
   // Критические пакеты, требующие особого внимания
   criticalPackages: [
     'express',

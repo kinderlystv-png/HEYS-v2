@@ -24,22 +24,22 @@
     <div class="container">
         <div class="header">
             <h1>📦 Dependency Security Report</h1>
-            <p class="meta">Project: test-project v1.0.0</p>
-            <p class="meta">Generated: 2026-02-12T17:41:30.397Z</p>
+            <p class="meta">Project: @heys/monorepo v13.0.0</p>
+            <p class="meta">Generated: 2026-06-14T20:17:12.146Z</p>
         </div>
         
         <div class="stats">
             <div class="stat-card">
                 <h3>Total Packages</h3>
-                <p style="font-size: 24px; margin: 5px 0; color: #3b82f6;">50</p>
+                <p style="font-size: 24px; margin: 5px 0; color: #3b82f6;">44</p>
             </div>
             <div class="stat-card">
                 <h3>Direct Dependencies</h3>
-                <p style="font-size: 24px; margin: 5px 0; color: #059669;">10</p>
+                <p style="font-size: 24px; margin: 5px 0; color: #059669;">16</p>
             </div>
             <div class="stat-card">
                 <h3>Total Vulnerabilities</h3>
-                <p style="font-size: 24px; margin: 5px 0; color: #dc2626;">1</p>
+                <p style="font-size: 24px; margin: 5px 0; color: #dc2626;">4</p>
             </div>
             <div class="stat-card">
                 <h3>Critical</h3>
@@ -47,30 +47,95 @@
             </div>
             <div class="stat-card">
                 <h3>High</h3>
-                <p style="font-size: 24px; margin: 5px 0; color: #ea580c;">1</p>
+                <p style="font-size: 24px; margin: 5px 0; color: #ea580c;">0</p>
             </div>
         </div>
         
         <h2>Vulnerabilities</h2>
         
-            <div class="vulnerability high">
-                <h3>Test Vulnerability</h3>
-                <p class="meta">Package: test-package | Severity: HIGH | ID: TEST-001</p>
-                <p>Test vulnerability for testing purposes</p>
+            <div class="vulnerability low">
+                <h3>tsup DOM Clobbering vulnerability</h3>
+                <p class="meta">Package: tsup | Severity: LOW | ID: 1102664</p>
+                <p>A DOM Clobbering vulnerability in tsup v8.3.4 allows attackers to execute arbitrary code via a crafted script in the import.meta.url to document.currentScript in cjs_shims.js components</p>
                 <div class="recommendation">
-                    <strong>Recommendation:</strong> Update to latest version
+                    <strong>Recommendation:</strong> None
                 </div>
-                <p class="meta">Vulnerable versions: >= 1.0.0 | Patched: 1.2.0</p>
+                <p class="meta">Vulnerable versions: <=8.3.4 | Patched: <0.0.0</p>
             </div>
         
+            <div class="vulnerability moderate">
+                <h3>js-yaml has prototype pollution in merge (<<)</h3>
+                <p class="meta">Package: js-yaml | Severity: MODERATE | ID: 1112715</p>
+                <p>### Impact
+
+In js-yaml 4.1.0, 4.0.0, and 3.14.1 and below, it's possible for an attacker to modify the prototype of the result of a parsed yaml document via prototype pollution (`__proto__`). All users who parse untrusted yaml documents may be impacted.
+
+### Patches
+
+Problem is patched in js-yaml 4.1.1 and 3.14.2.
+
+### Workarounds
+
+You can protect against this kind of attack on the server by using `node --disable-proto=delete` or `deno` (in Deno, pollution protection is on by default).
+
+### References
+
+https://cheatsheetseries.owasp.org/cheatsheets/Prototype_Pollution_Prevention_Cheat_Sheet.html</p>
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> Upgrade to version 4.1.1 or later
+                </div>
+                <p class="meta">Vulnerable versions: >=4.0.0 <4.1.1 | Patched: >=4.1.1</p>
+            </div>
         
+            <div class="vulnerability moderate">
+                <h3>ajv has ReDoS when using `$data` option</h3>
+                <p class="meta">Package: ajv | Severity: MODERATE | ID: 1113715</p>
+                <p>ajv (Another JSON Schema Validator) through version 8.17.1 is vulnerable to Regular Expression Denial of Service (ReDoS) when the `$data` option is enabled. The pattern keyword accepts runtime data via JSON Pointer syntax (`$data` reference), which is passed directly to the JavaScript `RegExp()` constructor without validation. An attacker can inject a malicious regex pattern (e.g., `\"^(a|a)*$\"`) combined with crafted input to cause catastrophic backtracking. A 31-character payload causes approximately 44 seconds of CPU blocking, with each additional character doubling execution time. This enables complete denial of service with a single HTTP request against any API using ajv with `$data`: true for dynamic schema validation.</p>
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> Upgrade to version 8.18.0 or later
+                </div>
+                <p class="meta">Vulnerable versions: >=7.0.0-alpha.0 <8.18.0 | Patched: >=8.18.0</p>
+            </div>
+        
+            <div class="vulnerability moderate">
+                <h3>brace-expansion: Zero-step sequence causes process hang and memory exhaustion</h3>
+                <p class="meta">Package: brace-expansion | Severity: MODERATE | ID: 1115541</p>
+                <p>### Impact
+
+A brace pattern with a zero step value (e.g., `{1..2..0}`) causes the sequence generation loop to run indefinitely, making the process hang for seconds and allocate heaps of memory.
+
+The loop in question:
+
+https://github.com/juliangruber/brace-expansion/blob/daa71bcb4a30a2df9bcb7f7b8daaf2ab30e5794a/src/index.ts#L184
+
+`test()` is one of
+
+https://github.com/juliangruber/brace-expansion/blob/daa71bcb4a30a2df9bcb7f7b8daaf2ab30e5794a/src/index.ts#L107-L113
+
+The increment is computed as `Math.abs(0) = 0`, so the loop variable never advances. On a test machine, the process hangs for about 3.5 seconds and allocates roughly 1.9 GB of memory before throwing a `RangeError`. Setting max to any value has no effect because the limit is only checked at the output combination step, not during sequence generation.
+
+This affects any application that passes untrusted strings to expand(), or by error sets a step value of `0`. That includes tools built on minimatch/glob that resolve patterns from CLI arguments or config files. The input needed is just 10 bytes.
+
+### Patches
+
+
+Upgrade to versions
+- 5.0.5+
+
+A step increment of 0 is now sanitized to 1, which matches bash behavior.
+
+### Workarounds
+
+Sanitize strings passed to `expand()` to ensure a step value of `0` is not used.</p>
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> Upgrade to version 2.0.3 or later
+                </div>
+                <p class="meta">Vulnerable versions: >=2.0.0 <2.0.3 | Patched: >=2.0.3</p>
+            </div>
+
+
         <h2>Security Recommendations</h2>
-        
-            <div class="vulnerability info">
-                <h3>[HIGH] High Priority Updates</h3>
-                <p>Update vulnerable packages</p>
-            </div>
-        
+
     </div>
 </body>
 </html>
