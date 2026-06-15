@@ -147,19 +147,19 @@ describe('HEYS default tab sync regression', () => {
     it('stores defaultTasksSubtab when tasks are chosen as home with a nested target', () => {
         let tabState = mountTabState(fakeReact);
 
-        tabState.setDefaultTab('tasks', { tasksSubtab: 'chrono' });
+        tabState.setDefaultTab('tasks', { tasksSubtab: 'checklists' });
         tabState = renderTabState(fakeReact);
 
         expect(profileStore.utils.lsSet).toHaveBeenCalledWith('heys_profile', expect.objectContaining({
             defaultTab: 'tasks',
-            defaultTasksSubtab: 'chrono',
+            defaultTasksSubtab: 'checklists',
         }));
         expect(window.HEYS._pendingProfileSyncFlags?.defaultTab).toEqual(expect.objectContaining({
             requestedTab: 'tasks',
-            requestedTasksSubtab: 'chrono',
+            requestedTasksSubtab: 'checklists',
         }));
-        expect(tabState.defaultTasksSubtab).toBe('chrono');
-        expect(window.HEYS.App.getDefaultTasksSubtab()).toBe('chrono');
+        expect(tabState.defaultTasksSubtab).toBe('checklists');
+        expect(window.HEYS.App.getDefaultTasksSubtab()).toBe('checklists');
     });
 
     it('follows synced defaultTab when current tab still matches stale startup tab', () => {

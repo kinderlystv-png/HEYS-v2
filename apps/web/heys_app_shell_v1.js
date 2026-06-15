@@ -3517,6 +3517,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
                 { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
                 { id: 'chrono', label: 'Хронометраж', shortLabel: 'Хроно', icon: '⏱️' },
+                { id: 'checklists', label: 'Чеклисты', shortLabel: 'Чеклисты', icon: '📋' },
             ];
             const sourceItems = Array.isArray(window.HEYS?.Planning?.SUBNAV_ITEMS) && window.HEYS.Planning.SUBNAV_ITEMS.length > 0
                 ? window.HEYS.Planning.SUBNAV_ITEMS

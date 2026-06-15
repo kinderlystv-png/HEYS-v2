@@ -111,17 +111,17 @@ apps/web/heys_day_utils.js:48
 apps/web/heys_day_utils.js:484
 apps/web/heys_day_hooks.js:39
 # fingers bundle — regen after eca96299 feat(fingers) shifted line numbers
-apps/web/heys_fingers_bundle_v1.js:8648
-apps/web/heys_fingers_bundle_v1.js:9168
-apps/web/heys_fingers_bundle_v1.js:9850
-apps/web/heys_fingers_bundle_v1.js:10242
-apps/web/heys_fingers_bundle_v1.js:12279
-apps/web/heys_fingers_bundle_v1.js:12389
-apps/web/heys_fingers_bundle_v1.js:13015
-apps/web/heys_fingers_bundle_v1.js:14603
-apps/web/heys_fingers_bundle_v1.js:16117
-apps/web/heys_fingers_bundle_v1.js:18361
-apps/web/heys_fingers_bundle_v1.js:26358
+apps/web/heys_fingers_bundle_v1.js:8887
+apps/web/heys_fingers_bundle_v1.js:9407
+apps/web/heys_fingers_bundle_v1.js:10089
+apps/web/heys_fingers_bundle_v1.js:10481
+apps/web/heys_fingers_bundle_v1.js:12518
+apps/web/heys_fingers_bundle_v1.js:12628
+apps/web/heys_fingers_bundle_v1.js:13254
+apps/web/heys_fingers_bundle_v1.js:14842
+apps/web/heys_fingers_bundle_v1.js:16356
+apps/web/heys_fingers_bundle_v1.js:18600
+apps/web/heys_fingers_bundle_v1.js:26691
 apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
@@ -163,7 +163,7 @@ apps/web/heys_planning_schedule_v1.js:3239
 apps/web/heys_planning_schedule_v1.js:4415
 apps/web/heys_planning_schedule_v1.js:4416
 apps/web/heys_planning_schedule_v1.js:4417
-apps/web/heys_planning_store_v1.js:318
+apps/web/heys_planning_store_v1.js:320
 apps/web/heys_planning_tasks_v1.js:2295
 apps/web/heys_platform_apis_v1.js:205
 apps/web/heys_platform_apis_v1.js:609
@@ -247,4 +247,4 @@ apps/web/advice/_core.js:3290
 # chrono planning UI state (collapsed toggle) — added by parallel agent
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не
 # bootstrap-critical и не data-bearing (UI collapse флаг).
-apps/web/heys_planning_chrono_v1.js:2376
+apps/web/heys_planning_chrono_v1.js:2621

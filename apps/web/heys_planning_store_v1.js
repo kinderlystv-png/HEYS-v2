@@ -20,6 +20,8 @@
         CHRONO_SNAPSHOTS: 'heys_planning_chrono_snapshots',
         CHRONO_TOMBSTONES: 'heys_planning_chrono_tombstones_v1',
         CHRONO_TIMER: 'heys_planning_chrono_timer',
+        CHECKLISTS: 'heys_planning_checklists_v1',
+        CHECKLIST_TOMBSTONES: 'heys_planning_checklist_tombstones_v1',
     };
 
     const CHRONO_TOMBSTONE_TTL_MS = 180 * 86400000;
@@ -527,6 +529,9 @@
         if (key === KEYS.CHRONO_ENTRIES) {
             return sortChronoEntriesStable(filterChronoEntries(mergeArrayById(localArr, remoteArr)));
         }
+        if (key === KEYS.CHECKLISTS) {
+            return sortByOrder(filterChecklists(mergeArrayById(localArr, remoteArr)));
+        }
         return null; // not merge-safe — caller keeps wholesale replace
     }
 
@@ -820,6 +825,173 @@
         });
     }
 
+    // ── Checklists ─────────────────────────────────────────────────
+
+    function normalizeChecklistTombstone(entry) {
+        const id = String(entry?.id || '').trim();
+        if (!id) return null;
+        return {
+            id,
+            deletedAt: Number(entry.deletedAt) || Date.now(),
+            source: entry.source ? String(entry.source) : undefined,
+        };
+    }
+
+    function pruneChecklistTombstones(items) {
+        const now = Date.now();
+        const byId = new Map();
+        (Array.isArray(items) ? items : []).forEach((raw) => {
+            const tomb = normalizeChecklistTombstone(raw);
+            if (!tomb) return;
+            if ((now - tomb.deletedAt) > CHRONO_TOMBSTONE_TTL_MS) return;
+            const prev = byId.get(tomb.id);
+            if (!prev || tomb.deletedAt >= prev.deletedAt) byId.set(tomb.id, tomb);
+        });
+        return Array.from(byId.values()).sort((left, right) => right.deletedAt - left.deletedAt).slice(0, 500);
+    }
+
+    function getChecklistTombstones() {
+        return pruneChecklistTombstones(lsGet(KEYS.CHECKLIST_TOMBSTONES, []));
+    }
+
+    function saveChecklistTombstones(tombstones) {
+        const current = lsGet(KEYS.CHECKLIST_TOMBSTONES, []);
+        const incoming = Array.isArray(tombstones) ? tombstones : [];
+        lsSet(KEYS.CHECKLIST_TOMBSTONES, pruneChecklistTombstones(current.concat(incoming)));
+    }
+
+    function addChecklistTombstone(id, source) {
+        const tomb = normalizeChecklistTombstone({ id, source, deletedAt: Date.now() });
+        if (!tomb) return;
+        saveChecklistTombstones(getChecklistTombstones().concat(tomb));
+    }
+
+    function getChecklistTombstoneTimes() {
+        const map = new Map();
+        getChecklistTombstones().forEach((item) => {
+            const prev = map.get(item.id);
+            if (prev == null || item.deletedAt > prev) map.set(item.id, item.deletedAt);
+        });
+        return map;
+    }
+
+    function coerceChecklistArray(value) {
+        if (Array.isArray(value)) return value;
+        if (value && typeof value === 'object') {
+            if (Array.isArray(value.v)) return value.v;
+            if (value.id != null && (value.title != null || Array.isArray(value.items))) return [value];
+            const vals = Object.values(value);
+            if (vals.length && vals.every((x) => x && typeof x === 'object')) return vals;
+        }
+        return [];
+    }
+
+    function normalizeChecklistItem(raw, index) {
+        if (!raw || typeof raw !== 'object') return null;
+        const text = String(raw.text || '').trim();
+        if (!text) return null;
+        return {
+            id: raw.id ? String(raw.id) : uid(),
+            text,
+            group: raw.group ? String(raw.group) : undefined,
+            quantity: raw.quantity ? String(raw.quantity) : undefined,
+            note: raw.note ? String(raw.note) : undefined,
+            done: raw.done === true,
+            order: Number.isFinite(Number(raw.order)) ? Number(raw.order) : index,
+            createdAt: raw.createdAt || nowISO(),
+            updatedAt: raw.updatedAt || raw.createdAt || nowISO(),
+        };
+    }
+
+    function normalizeChecklistItems(items) {
+        return (Array.isArray(items) ? items : [])
+            .map((item, index) => normalizeChecklistItem(item, index))
+            .filter(Boolean)
+            .sort((left, right) => {
+                const orderDelta = Number(left.order || 0) - Number(right.order || 0);
+                if (orderDelta !== 0) return orderDelta;
+                return String(left.createdAt || '').localeCompare(String(right.createdAt || ''));
+            });
+    }
+
+    function filterChecklists(checklists) {
+        const tombTimes = getChecklistTombstoneTimes();
+        return (Array.isArray(checklists) ? checklists : []).filter((checklist) => {
+            if (!checklist) return false;
+            const id = String(checklist.id || '');
+            if (!id) return false;
+            const tombAt = tombTimes.get(id);
+            return tombAt == null || chronoStampMs(checklist) > tombAt;
+        });
+    }
+
+    function getChecklists() {
+        return sortByOrder(filterChecklists(coerceChecklistArray(lsGet(KEYS.CHECKLISTS, []))));
+    }
+
+    function saveChecklists(checklists) {
+        const normalized = (Array.isArray(checklists) ? checklists : []).map((checklist, index) => {
+            if (!checklist || typeof checklist !== 'object') return null;
+            const title = String(checklist.title || '').trim();
+            if (!title) return null;
+            return {
+                ...checklist,
+                id: checklist.id ? String(checklist.id) : uid(),
+                title,
+                items: normalizeChecklistItems(checklist.items),
+                status: checklist.status === 'archived' ? 'archived' : 'active',
+                order: Number.isFinite(Number(checklist.order)) ? Number(checklist.order) : index,
+                createdAt: checklist.createdAt || nowISO(),
+                updatedAt: checklist.updatedAt || checklist.createdAt || nowISO(),
+            };
+        }).filter(Boolean);
+        lsSet(KEYS.CHECKLISTS, sortByOrder(filterChecklists(normalized)));
+    }
+
+    function addChecklist(input) {
+        const checklists = getChecklists();
+        const title = String(input?.title || '').trim() || 'Новый чек-лист';
+        const now = nowISO();
+        const checklist = {
+            ...(input && typeof input === 'object' ? input : {}),
+            id: uid(),
+            title,
+            items: normalizeChecklistItems(input?.items),
+            status: 'active',
+            order: checklists.length,
+            createdAt: now,
+            updatedAt: now,
+        };
+        saveChecklists(checklists.concat(checklist));
+        return checklist;
+    }
+
+    function updateChecklist(id, patch) {
+        const checklists = getChecklists();
+        const index = checklists.findIndex((checklist) => checklist.id === id);
+        if (index === -1) return null;
+        const current = checklists[index];
+        const next = {
+            ...current,
+            ...patch,
+            title: Object.prototype.hasOwnProperty.call(patch || {}, 'title')
+                ? (String(patch.title || '').trim() || current.title)
+                : current.title,
+            items: Object.prototype.hasOwnProperty.call(patch || {}, 'items')
+                ? normalizeChecklistItems(patch.items)
+                : current.items,
+            updatedAt: nowISO(),
+        };
+        checklists[index] = next;
+        saveChecklists(checklists);
+        return next;
+    }
+
+    function deleteChecklist(id) {
+        addChecklistTombstone(id, 'delete-checklist');
+        saveChecklists(getChecklists().filter((checklist) => checklist.id !== id));
+    }
+
     // ── Chrono activities / entries / snapshots ─────────────────────
     // Отдельная сущность хранения: dayv2 рискован из-за hashDay по meals/items
     // и `...remote` spread в mergeDayData — chrono-поля терялись бы при cross-client merge,
@@ -1023,6 +1195,37 @@
         entries[index] = next;
         saveChronoEntries(entries);
         return next;
+    }
+
+    function reorderChronoRows(assignments) {
+        if (!Array.isArray(assignments) || assignments.length === 0) return [];
+        const byEntryId = new Map();
+        assignments.forEach((item) => {
+            const ids = Array.isArray(item && item.entryIds) ? item.entryIds : [];
+            const minutes = Math.round(Number(item && item.minutes) || 0);
+            const startMs = Number(item && item.startMs);
+            const endMs = Number(item && item.endMs);
+            if (minutes <= 0 || !Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) return;
+            ids.filter(Boolean).forEach((id) => byEntryId.set(String(id), {
+                date: dateStr(item.date),
+                minutes,
+                at: new Date(startMs).toISOString(),
+                createdAt: new Date(endMs).toISOString(),
+            }));
+        });
+        if (byEntryId.size === 0) return [];
+
+        const updated = [];
+        const now = nowISO();
+        const entries = getChronoEntries().map((entry) => {
+            const patch = byEntryId.get(String(entry && entry.id));
+            if (!patch) return entry;
+            const next = { ...entry, ...patch, updatedAt: now };
+            updated.push(next);
+            return next;
+        });
+        if (updated.length > 0) saveChronoEntries(entries);
+        return updated;
     }
 
     function adjustChronoEntryMinutes(id, deltaMinutes) {
@@ -1252,6 +1455,8 @@
             'heys_planning_chrono_entries',
             'heys_planning_chrono_snapshots',
             'heys_planning_chrono_tombstones_v1',
+            'heys_planning_checklists_v1',
+            'heys_planning_checklist_tombstones_v1',
             // heys_planning_chrono_timer не тянем: активный stopwatch локальный,
             // не синкается на push-стороне (см. CLIENT_SPECIFIC_KEYS в storage).
         ];
@@ -1262,6 +1467,8 @@
             res.data.forEach(function (item) {
                 if (item && item.k === 'heys_planning_chrono_tombstones_v1' && item.v != null) {
                     saveChronoTombstones(item.v);
+                } else if (item && item.k === 'heys_planning_checklist_tombstones_v1' && item.v != null) {
+                    saveChecklistTombstones(item.v);
                 }
             });
             res.data.forEach(function (item) {
@@ -1311,6 +1518,15 @@
                     Store.saveChronoSnapshots(item.v);
                 } else if (item.k === 'heys_planning_chrono_tombstones_v1' && typeof Store.saveChronoTombstones === 'function') {
                     Store.saveChronoTombstones(item.v); // tombstones already union-merge in saveChronoTombstones
+                } else if (item.k === 'heys_planning_checklists_v1' && typeof Store.saveChecklists === 'function') {
+                    const _localChecklists = getChecklists();
+                    if (isCloudChecklistWipeSuspicious(item.k, _localChecklists, item.v)) {
+                        console.warn('[HEYS.planning] BLOCKED suspicious checklist wipe; local has', _localChecklists.length, 'items');
+                    } else {
+                        Store.saveChecklists(mergeCloudPlanningArray(item.k, _localChecklists, item.v) || item.v);
+                    }
+                } else if (item.k === 'heys_planning_checklist_tombstones_v1' && typeof Store.saveChecklistTombstones === 'function') {
+                    Store.saveChecklistTombstones(item.v);
                 }
             });
             _cloudPullDoneClientId = clientId || _cloudPullDoneClientId;
@@ -1334,6 +1550,7 @@
         const [chronoEntries, setChronoEntries] = useState(getChronoEntries);
         const [chronoSnapshots, setChronoSnapshots] = useState(getChronoSnapshots);
         const [chronoTimer, setChronoTimer] = useState(getChronoTimer);
+        const [checklists, setChecklists] = useState(getChecklists);
 
         const refresh = useCallback(() => {
             setProjects(getProjects());
@@ -1344,6 +1561,7 @@
             setChronoEntries(getChronoEntries());
             setChronoSnapshots(getChronoSnapshots());
             setChronoTimer(getChronoTimer());
+            setChecklists(getChecklists());
         }, []);
 
         useEffect(() => {
@@ -1382,6 +1600,7 @@
             mergeChronoActivities: (fromId, toId) => { const ok = mergeChronoActivities(fromId, toId); if (ok) refresh(); return ok; },
             addChronoEntry: (input) => { const e = addChronoEntry(input); if (e) refresh(); return e; },
             updateChronoEntry: (id, patch) => { const e = updateChronoEntry(id, patch); if (e) refresh(); return e; },
+            reorderChronoRows: (assignments) => { const rows = reorderChronoRows(assignments); if (rows.length) refresh(); return rows; },
             adjustChronoEntryMinutes: (id, deltaMinutes) => { const e = adjustChronoEntryMinutes(id, deltaMinutes); refresh(); return e; },
             deleteChronoEntry: (id) => { deleteChronoEntry(id); refresh(); },
             clearChronoScope: (activityId, dates) => { const r = clearChronoScope(activityId, dates); refresh(); return r; },
@@ -1389,10 +1608,13 @@
             pauseChronoTimer: () => { const t = pauseChronoTimer(); refresh(); return t; },
             resumeChronoTimer: () => { const t = resumeChronoTimer(); refresh(); return t; },
             clearChronoTimer: () => { clearChronoTimer(); refresh(); },
+            addChecklist: (input) => { const checklist = addChecklist(input); refresh(); return checklist; },
+            updateChecklist: (id, patch) => { const checklist = updateChecklist(id, patch); refresh(); return checklist; },
+            deleteChecklist: (id) => { deleteChecklist(id); refresh(); },
             refresh,
         }), [refresh]);
 
-        return { projects, tasks, slots, links, chronoActivities, chronoEntries, chronoSnapshots, chronoTimer, ...api };
+        return { projects, tasks, slots, links, chronoActivities, chronoEntries, chronoSnapshots, chronoTimer, checklists, ...api };
     }
 
     function usePlanningViewport() {
@@ -1484,6 +1706,7 @@
         saveChronoEntries,
         addChronoEntry,
         updateChronoEntry,
+        reorderChronoRows,
         adjustChronoEntryMinutes,
         deleteChronoEntry,
         clearChronoScope,
@@ -1496,6 +1719,14 @@
         pauseChronoTimer,
         resumeChronoTimer,
         clearChronoTimer,
+        getChecklists,
+        saveChecklists,
+        addChecklist,
+        updateChecklist,
+        deleteChecklist,
+        getChecklistTombstones,
+        saveChecklistTombstones,
+        isCloudChecklistWipeSuspicious,
     };
 
     Planning.Hooks = {
@@ -1532,9 +1763,18 @@
         return true;
     }
 
+    function isCloudChecklistWipeSuspicious(baseKey, localArr, cloudArr) {
+        if (baseKey !== KEYS.CHECKLISTS) return false;
+        if (!Array.isArray(cloudArr) || cloudArr.length > 0) return false;
+        if (!Array.isArray(localArr) || localArr.length === 0) return false;
+        const tombTimes = getChecklistTombstoneTimes();
+        return !localArr.every((checklist) => tombTimes.has(String((checklist && checklist.id) || '')));
+    }
+
     Planning.refreshPlanningFromCloud = refreshPlanningFromCloud;
     Planning.didCompleteCloudPull = didCompleteCloudPull;
     Planning.isCloudChronoWipeSuspicious = isCloudChronoWipeSuspicious;
+    Planning.isCloudChecklistWipeSuspicious = isCloudChecklistWipeSuspicious;
 
     // bootstrapClientSync Phase A пишет planning ключи прямым ls.setItem минуя
     // interceptor (см. heys_storage_supabase_v1.js:7283-7288) — usePlanningState

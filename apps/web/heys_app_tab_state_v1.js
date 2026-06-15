@@ -4,7 +4,7 @@
     const DEV = window.DEV || {};
     const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
     const HOME_TABS = ['widgets', 'stats', 'diary', 'insights', 'month', 'tasks'];
-    const TASKS_HOME_SUBTABS = ['tasks', 'calendar', 'gantt', 'chrono'];
+    const TASKS_HOME_SUBTABS = ['tasks', 'calendar', 'gantt', 'chrono', 'checklists'];
     const DEFAULT_TASKS_SUBTAB = 'calendar';
 
     function resolveHomeTab(candidate) {
