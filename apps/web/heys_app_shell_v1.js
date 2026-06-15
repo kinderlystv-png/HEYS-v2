@@ -3516,7 +3516,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 { id: 'tasks', label: 'Список', shortLabel: 'Список', icon: '☑️' },
                 { id: 'calendar', label: 'Календарь', shortLabel: 'Кален.', icon: '📅' },
                 { id: 'gantt', label: 'Гант', shortLabel: 'Гант', icon: '📊' },
-                { id: 'context', label: 'Контекст', shortLabel: 'Конт.', icon: '🧠' },
+                { id: 'chrono', label: 'Хронометраж', shortLabel: 'Хроно', icon: '⏱️' },
             ];
             const sourceItems = Array.isArray(window.HEYS?.Planning?.SUBNAV_ITEMS) && window.HEYS.Planning.SUBNAV_ITEMS.length > 0
                 ? window.HEYS.Planning.SUBNAV_ITEMS
@@ -3530,7 +3530,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 }))
                 .filter((item) => typeof item.key === 'string' && item.key.length > 0);
         }, []);
-        const resolvedDefaultTasksSubtab = typeof defaultTasksSubtab === 'string' && defaultTasksSubtab.length > 0
+        const resolvedDefaultTasksSubtab = TASKS_HOME_SUBTAB_OPTIONS.some((option) => option.key === defaultTasksSubtab)
             ? defaultTasksSubtab
             : 'calendar';
         const currentTasksHomeOption = React.useMemo(() => {
