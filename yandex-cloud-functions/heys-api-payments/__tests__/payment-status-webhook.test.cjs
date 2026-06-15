@@ -61,6 +61,37 @@ function createClient({ duplicate = false, previousCount = 0 } = {}) {
   return { client, queries };
 }
 
+test('buildYukassaPaymentPayload keeps customer contacts out of payment metadata', async () => {
+  const { buildYukassaPaymentPayload, PLANS } = loadPaymentsModule();
+  const payload = buildYukassaPaymentPayload({
+    planInfo: PLANS.pro,
+    plan: 'pro',
+    paymentId: PAYMENT_ID,
+    clientId: CLIENT_ID,
+    returnUrl: 'https://app.heyslab.ru/payments/return',
+    clientEmail: 'client@example.com',
+    clientPhone: '+79990000000',
+  });
+
+  assert.equal(payload.amount.value, '7990.00');
+  assert.equal(payload.confirmation.return_url, 'https://app.heyslab.ru/payments/return');
+  assert.deepEqual(payload.receipt.customer, {
+    email: 'client@example.com',
+    phone: '+79990000000',
+  });
+  assert.deepEqual(payload.metadata, {
+    client_id: CLIENT_ID,
+    plan: 'pro',
+    internal_payment_id: PAYMENT_ID,
+  });
+  assert.equal(
+    /phone|email|name|health|profile|meal|food|weight|height|bmi|symptom|diagnosis/i.test(
+      JSON.stringify(payload.metadata),
+    ),
+    false,
+  );
+});
+
 test('applyPaymentStatus activates first payment and records PII-free funnel metadata', async (t) => {
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});

@@ -198,6 +198,49 @@ function getYukassaAuthHeader() {
   return 'Basic ' + Buffer.from(`${shopId}:${secretKey}`).toString('base64');
 }
 
+function buildYukassaPaymentPayload(input) {
+  const { planInfo, plan, paymentId, clientId, returnUrl, clientEmail, clientPhone } = input;
+
+  return {
+    amount: {
+      value: planInfo.price.toFixed(2),
+      currency: 'RUB',
+    },
+    capture: true,
+    confirmation: {
+      type: 'redirect',
+      return_url: returnUrl,
+    },
+    description: planInfo.description,
+    // 54-ФЗ: receipt customer may contain contact PII, but payment metadata below
+    // stays limited to routing IDs and plan. Do not put health/profile values there.
+    receipt: {
+      customer: {
+        ...(clientEmail ? { email: clientEmail } : {}),
+        ...(clientPhone ? { phone: clientPhone } : {}),
+      },
+      items: [
+        {
+          description: planInfo.description,
+          quantity: '1.00',
+          amount: {
+            value: planInfo.price.toFixed(2),
+            currency: 'RUB',
+          },
+          vat_code: 1,
+          payment_mode: 'full_payment',
+          payment_subject: 'service',
+        },
+      ],
+    },
+    metadata: {
+      client_id: clientId,
+      plan: plan,
+      internal_payment_id: paymentId,
+    },
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 💳 CREATE PAYMENT — Создание платежа в ЮKassa
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -320,45 +363,15 @@ async function createPayment(body, clientId) {
 
   // 2. Вызываем ЮKassa API
   try {
-    const yukassaPayload = {
-      amount: {
-        value: planInfo.price.toFixed(2),
-        currency: 'RUB',
-      },
-      capture: true, // Автоматическое подтверждение платежа
-      confirmation: {
-        type: 'redirect',
-        return_url: returnUrl,
-      },
-      description: planInfo.description,
-      // 54-ФЗ: электронный чек (онлайн-касса через ЮKassa).
-      // ЮKassa требует phone ИЛИ email в customer. Приоритет email при наличии,
-      // дополнительно прикладываем phone — клиент получает чек на оба канала.
-      receipt: {
-        customer: {
-          ...(clientEmail ? { email: clientEmail } : {}),
-          ...(clientPhone ? { phone: clientPhone } : {}),
-        },
-        items: [
-          {
-            description: planInfo.description,
-            quantity: '1.00',
-            amount: {
-              value: planInfo.price.toFixed(2),
-              currency: 'RUB',
-            },
-            vat_code: 1, // Без НДС (ИП на УСН)
-            payment_mode: 'full_payment',
-            payment_subject: 'service',
-          },
-        ],
-      },
-      metadata: {
-        client_id: clientId,
-        plan: plan,
-        internal_payment_id: paymentId,
-      },
-    };
+    const yukassaPayload = buildYukassaPaymentPayload({
+      planInfo,
+      plan,
+      paymentId,
+      clientId,
+      returnUrl,
+      clientEmail,
+      clientPhone,
+    });
 
     console.log(`[PAYMENTS] Calling YuKassa API for payment ${paymentId}`);
 
@@ -1120,4 +1133,5 @@ module.exports.handler = async function (event, context) {
 
 // Экспортируем applyPaymentStatus для переиспользования в cron-poll (P0.4)
 module.exports.applyPaymentStatus = applyPaymentStatus;
+module.exports.buildYukassaPaymentPayload = buildYukassaPaymentPayload;
 module.exports.PLANS = PLANS;

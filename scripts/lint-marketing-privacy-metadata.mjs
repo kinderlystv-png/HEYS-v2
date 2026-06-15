@@ -96,9 +96,11 @@ function checkTelegramLeadHandoff() {
 function checkPaymentMetadata() {
   const source = read(PAYMENTS_FILE);
   const createPayment = extractFunction(source, 'createPayment');
+  const buildYukassaPaymentPayload = extractFunction(source, 'buildYukassaPaymentPayload');
   const applyPaymentStatus = extractFunction(source, 'applyPaymentStatus');
 
-  const yukassaPayload = extractBlockAfter(createPayment, 'const yukassaPayload =');
+  assertHas(/buildYukassaPaymentPayload\(/, createPayment, 'create payment payload builder');
+  const yukassaPayload = buildYukassaPaymentPayload;
   const yukassaMetadata = extractBlockAfter(yukassaPayload, 'metadata:');
   assertHas(/\bclient_id:\s*clientId\b/, yukassaMetadata, 'YuKassa metadata');
   assertHas(/\bplan:\s*plan\b/, yukassaMetadata, 'YuKassa metadata');
@@ -109,10 +111,10 @@ function checkPaymentMetadata() {
   assertHas(/\bexternal_payment_id:\s*externalPaymentId\b/, funnelMetadata, 'payment funnel metadata');
   assertHas(/\bsource:\s*'yukassa_webhook'/, funnelMetadata, 'payment funnel metadata');
 
-  const forbiddenHealth =
-    /\b(?:health|profile|dayv2|meal|food|kcal|calorie|weight|height|bmi|glucose|pressure|symptom|diagnosis|medicine|hr_zone|heart_rate)\b/i;
-  assertNo(forbiddenHealth, yukassaMetadata, 'YuKassa metadata');
-  assertNo(forbiddenHealth, funnelMetadata, 'payment funnel metadata');
+  const forbiddenPaymentMetadata =
+    /\b(?:phone|email|name|health|profile|dayv2|meal|food|kcal|calorie|weight|height|bmi|glucose|pressure|symptom|diagnosis|medicine|hr_zone|heart_rate)\b/i;
+  assertNo(forbiddenPaymentMetadata, yukassaMetadata, 'YuKassa metadata');
+  assertNo(forbiddenPaymentMetadata, funnelMetadata, 'payment funnel metadata');
 }
 
 try {
