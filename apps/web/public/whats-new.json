@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.16.ad359aca",
+      "buildHash": "ad359aca",
+      "date": "2026-06-16",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Чек-листы стали удобнее",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Чек-листы можно точнее настроить",
+          "description": "Теперь можно редактировать пункты, количество и разделы прямо в чек-листе. Прогресс сборов виден в шапке, а изменения пресетов сохраняются при пересчёте списка."
+        }
+      ],
+      "coveredCommits": ["ad359aca"]
+    },
+    {
       "version": "2026.06.16.0af18a65",
       "buildHash": "0af18a65",
       "date": "2026-06-16",
@@ -153,22 +169,6 @@
         }
       ],
       "coveredCommits": ["b72bfc16"]
-    },
-    {
-      "version": "2026.06.15.15a068d7",
-      "buildHash": "15a068d7",
-      "date": "2026-06-15",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "cross-domain sport_config registry + kernel/fingers/mobility upgrades",
-      "items": [
-        {
-          "type": "feat",
-          "title": "cross-domain sport_config registry + kernel/fingers/mobility upgrades",
-          "description": "cross-domain sport_config registry + kernel/fingers/mobility upgrades"
-        }
-      ],
-      "coveredCommits": ["15a068d7", "9c1636e0", "a6ba4074", "0327c2d1", "8fe96871", "644b1e4c"]
     }
   ]
 }
