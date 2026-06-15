@@ -285,6 +285,8 @@
     'heys_planning_chrono_entries',
     'heys_planning_chrono_snapshots',
     'heys_planning_chrono_tombstones_v1',
+    'heys_planning_checklists_v1',
+    'heys_planning_checklist_tombstones_v1',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */
@@ -6264,7 +6266,7 @@
       // cross-client _writerCid guard (см. yandex-cloud-functions/heys-api-rpc/index.js
       // в merge_save handler). Раньше эти keys шли через batch upsert, что обходило
       // server-side guard — теоретическая cross-client pollution не ловилась.
-      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1)$/;
+      const MERGEABLE_KEY_RE = /^(heys_dayv2_\d{4}-\d{2}-\d{2}|heys_norms|heys_profile|heys_game|heys_hr_zones|heys_planning_chrono_tombstones_v1|heys_planning_checklist_tombstones_v1)$/;
       const mergeableItems = yandexItems.filter(it => MERGEABLE_KEY_RE.test(it.k));
       const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
 
@@ -7299,7 +7301,9 @@
                 'heys_planning_chrono_activities',
                 'heys_planning_chrono_entries',
                 'heys_planning_chrono_snapshots',
-                'heys_planning_chrono_tombstones_v1'
+                'heys_planning_chrono_tombstones_v1',
+                'heys_planning_checklists_v1',
+                'heys_planning_checklist_tombstones_v1'
               ];
               const criticalScopedKeys = criticalBaseKeys.map(bk => `heys_${client_id}_${bk.slice('heys_'.length)}`);
               const allCriticalKeys = [...criticalBaseKeys, ...criticalScopedKeys];
@@ -7366,13 +7370,14 @@
                   const isPlanningChrono = row.k === 'heys_planning_chrono_activities'
                       || row.k === 'heys_planning_chrono_entries'
                       || row.k === 'heys_planning_chrono_snapshots';
+                  const isPlanningChecklist = row.k === 'heys_planning_checklists_v1';
                   // Strict guard: считаем cloud валидным ТОЛЬКО если это
                   // непустой массив. Всё остальное (пустой [], объект {},
                   // строка "null", любой mock dev-API) — невалидно и не
                   // должно затирать местный массив. Mock dev API часто
                   // возвращает `{}`/null для отсутствующих rows, что после
                   // JSON.stringify уходило в LS как "null"/"{}" → coerce → [].
-                  if (isPlanningChrono) {
+                  if (isPlanningChrono || isPlanningChecklist) {
                     const cloudInvalid = !Array.isArray(row.v) || row.v.length === 0;
                     if (cloudInvalid) {
                       try {
@@ -7380,7 +7385,7 @@
                         if (existingRaw) {
                           const existing = JSON.parse(existingRaw);
                           if (Array.isArray(existing) && existing.length > 0) {
-                            logCritical(`🛡️ [PHASE A] BLOCKED invalid chrono ${row.k} (cloud=${Array.isArray(row.v) ? '[]' : typeof row.v}); local has ${existing.length} items`);
+                            logCritical(`🛡️ [PHASE A] BLOCKED invalid planning ${row.k} (cloud=${Array.isArray(row.v) ? '[]' : typeof row.v}); local has ${existing.length} items`);
                             continue;
                           }
                         }
@@ -9254,7 +9259,9 @@
                 // replace (parallel-edit loss fix). Read THIS scoped key directly — NOT
                 // Planning.Store getters, which are currentClientId-scoped and could read
                 // a different client during a full-sync of another client_id.
-                if (row.k === 'heys_planning_chrono_activities' || row.k === 'heys_planning_chrono_entries') {
+                if (row.k === 'heys_planning_chrono_activities'
+                    || row.k === 'heys_planning_chrono_entries'
+                    || row.k === 'heys_planning_checklists_v1') {
                   try {
                     const PStore = global.HEYS?.Planning?.Store;
                     if (PStore && typeof PStore.mergeCloudPlanningArray === 'function' && Array.isArray(valueToSave)) {
@@ -9276,17 +9283,21 @@
                         // массового удаления (последнее идёт через tombstones,
                         // которые helper сверяет). Fallback на наивную проверку
                         // если helper недоступен (старая версия planning store).
-                        const _isSuspect = typeof PStore.isCloudChronoWipeSuspicious === 'function'
-                          ? PStore.isCloudChronoWipeSuspicious(row.k, Array.isArray(localArr) ? localArr : [], valueToSave)
-                          : (mergedArr.length === 0 && Array.isArray(localArr) && localArr.length > 0);
+                        const _isSuspect = row.k === 'heys_planning_checklists_v1'
+                          ? (typeof PStore.isCloudChecklistWipeSuspicious === 'function'
+                            ? PStore.isCloudChecklistWipeSuspicious(row.k, Array.isArray(localArr) ? localArr : [], valueToSave)
+                            : (mergedArr.length === 0 && Array.isArray(localArr) && localArr.length > 0))
+                          : (typeof PStore.isCloudChronoWipeSuspicious === 'function'
+                            ? PStore.isCloudChronoWipeSuspicious(row.k, Array.isArray(localArr) ? localArr : [], valueToSave)
+                            : (mergedArr.length === 0 && Array.isArray(localArr) && localArr.length > 0));
                         if (_isSuspect) {
-                          logCritical(`🛡️ [BOOTSTRAP] BLOCKED chrono wipe (${key}); local has ${(Array.isArray(localArr) ? localArr.length : 0)} items`);
+                          logCritical(`🛡️ [BOOTSTRAP] BLOCKED planning wipe (${key}); local has ${(Array.isArray(localArr) ? localArr.length : 0)} items`);
                           return; // handled — skip wholesale fallback тоже
                         }
                         const reserialized = JSON.stringify(mergedArr);
                         if (ls.getItem(key) !== reserialized) {
                           ls.setItem(key, reserialized);
-                          log(`  ✅ Merged chrono to localStorage: ${key}`);
+                          log(`  ✅ Merged planning to localStorage: ${key}`);
                           // Прямой ls.setItem не триггерит storage event в той же
                           // tab, поэтому usePlanningState не узнал бы об апдейте
                           // без re-mount PlanningTab → юзер видел бы пусто, пока
@@ -9312,6 +9323,7 @@
                   const isPlanningChronoArrKey = row.k === 'heys_planning_chrono_activities'
                       || row.k === 'heys_planning_chrono_entries'
                       || row.k === 'heys_planning_chrono_snapshots';
+                  const isPlanningChecklistArrKey = row.k === 'heys_planning_checklists_v1';
                   if (isPlanningChronoArrKey
                       && (!Array.isArray(valueToSave) || valueToSave.length === 0)) {
                     try {
@@ -9320,6 +9332,19 @@
                         const existing = JSON.parse(existingRaw);
                         if (Array.isArray(existing) && existing.length > 0) {
                           logCritical(`🛡️ [BOOTSTRAP] BLOCKED empty chrono wholesale ${row.k}; local has ${existing.length} items`);
+                          return;
+                        }
+                      }
+                    } catch (_) { /* fall through */ }
+                  }
+                  if (isPlanningChecklistArrKey
+                      && (!Array.isArray(valueToSave) || valueToSave.length === 0)) {
+                    try {
+                      const existingRaw = ls.getItem(key);
+                      if (existingRaw) {
+                        const existing = JSON.parse(existingRaw);
+                        if (Array.isArray(existing) && existing.length > 0) {
+                          logCritical(`🛡️ [BOOTSTRAP] BLOCKED empty checklist wholesale ${row.k}; local has ${existing.length} items`);
                           return;
                         }
                       }
@@ -12791,11 +12816,13 @@
         if (!appliedMergedGame) {
           global.localStorage.setItem(scopedKey, serialized);
         }
-      } else if (baseKey === 'heys_planning_chrono_activities' || baseKey === 'heys_planning_chrono_entries') {
-        // 🛡️ Chrono merge-by-record (parallel-edit loss fix). Union local with cloud
+      } else if (baseKey === 'heys_planning_chrono_activities'
+          || baseKey === 'heys_planning_chrono_entries'
+          || baseKey === 'heys_planning_checklists_v1') {
+        // 🛡️ Planning merge-by-record (parallel-edit loss fix). Union local with cloud
         // instead of wholesale replace, so a stale cloud array can't drop local-only
-        // adds or resurrect local deletes. Only activities/entries are merge-safe
-        // (id + tombstone coverage); the pure helper returns null otherwise.
+        // adds or resurrect local deletes. Only keys with id + tombstone coverage
+        // are merge-safe; the pure helper returns null otherwise.
         let appliedMergedChrono = false;
         let blockedEmptyChrono = false;
         try {
@@ -12807,11 +12834,15 @@
               // 🛡️ Anti-wipe guard через planning helper. Реальное массовое
               // удаление пройдёт (tombstones покрывают local IDs), транзиентный
               // пустой cloud row блокируется до следующего sync tick.
-              const _isSuspect = typeof PStore.isCloudChronoWipeSuspicious === 'function'
-                ? PStore.isCloudChronoWipeSuspicious(baseKey, localArr, value)
-                : (mergedArr.length === 0 && localArr.length > 0);
+              const _isSuspect = baseKey === 'heys_planning_checklists_v1'
+                ? (typeof PStore.isCloudChecklistWipeSuspicious === 'function'
+                  ? PStore.isCloudChecklistWipeSuspicious(baseKey, localArr, value)
+                  : (mergedArr.length === 0 && localArr.length > 0))
+                : (typeof PStore.isCloudChronoWipeSuspicious === 'function'
+                  ? PStore.isCloudChronoWipeSuspicious(baseKey, localArr, value)
+                  : (mergedArr.length === 0 && localArr.length > 0));
               if (_isSuspect) {
-                logCritical(`🛡️ [HOT-SYNC] BLOCKED chrono wipe (${baseKey}); local has ${localArr.length} items`);
+                logCritical(`🛡️ [HOT-SYNC] BLOCKED planning wipe (${baseKey}); local has ${localArr.length} items`);
                 blockedEmptyChrono = true;
               } else {
                 const reserialized = JSON.stringify(mergedArr);
@@ -12829,7 +12860,7 @@
           // (null/object/string). Тоже защищаем local от затирки.
           if ((!Array.isArray(value) || value.length === 0)
               && Array.isArray(previousValue) && previousValue.length > 0) {
-            logCritical(`🛡️ [HOT-SYNC] BLOCKED non-array chrono wipe (${baseKey}); local has ${previousValue.length} items`);
+            logCritical(`🛡️ [HOT-SYNC] BLOCKED non-array planning wipe (${baseKey}); local has ${previousValue.length} items`);
             return false;
           }
           global.localStorage.setItem(scopedKey, serialized);

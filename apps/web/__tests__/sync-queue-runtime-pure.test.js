@@ -153,6 +153,34 @@ describe('HEYS.syncQueueRuntimePure', () => {
     expect(doImmediateClientUpload).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    'heys_planning_checklists_v1',
+    'heys_planning_checklist_tombstones_v1',
+  ])('enqueueClientSave treats %s as an immediate critical write', (key) => {
+    global.HEYS = {};
+    loadModule();
+    const { enqueueClientSave } = global.HEYS.syncQueueRuntimePure;
+
+    const queue = [];
+    const doImmediateClientUpload = vi.fn(() => Promise.resolve());
+
+    const result = enqueueClientSave({
+      queue,
+      item: { k: key, v: [] },
+      normalizedKey: key,
+      waitingForSync: false,
+      isOnline: true,
+      persistQueue: vi.fn(),
+      notifyPendingChange: vi.fn(),
+      scheduleClientPush: vi.fn(),
+      doImmediateClientUpload,
+      onImmediateUploadError: vi.fn(),
+    });
+
+    expect(result.shouldImmediate).toBe(true);
+    expect(doImmediateClientUpload).toHaveBeenCalledTimes(1);
+  });
+
   it('restorePersistentQueueState rehydrates in-flight batch after reload', () => {
     global.HEYS = {};
     loadModule();
