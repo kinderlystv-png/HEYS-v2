@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.15.b72bfc16",
+      "buildHash": "b72bfc16",
+      "date": "2026-06-15",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "route PIN write-context to issue_write_context_by_session — restore PIN cloud-sync",
+      "items": [
+        {
+          "type": "fix",
+          "title": "route PIN write-context to issue_write_context_by_session — restore PIN cloud-sync",
+          "description": "route PIN write-context to issue_write_context_by_session — restore PIN cloud-sync"
+        }
+      ],
+      "coveredCommits": ["b72bfc16"]
+    },
+    {
       "version": "2026.06.15.15a068d7",
       "buildHash": "15a068d7",
       "date": "2026-06-15",
@@ -139,22 +155,6 @@
           "type": "fix",
           "title": "Исправили внутренние ошибки",
           "description": "В этом обновлении мы исправили внутренние ошибки и улучшили стабильность приложения."
-        }
-      ],
-      "coveredCommits": ["155e2a78", "6e9e08dc", "8c182abd", "5465f5b1", "7d50d6be"]
-    },
-    {
-      "version": "2026.06.14.155e2a78",
-      "buildHash": "155e2a78",
-      "date": "2026-06-14",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "show «Обновление занятий…» placeholder until first cloud pull completes",
-      "items": [
-        {
-          "type": "fix",
-          "title": "show «Обновление занятий…» placeholder until first cloud pull completes",
-          "description": "show «Обновление занятий…» placeholder until first cloud pull completes"
         }
       ],
       "coveredCommits": ["155e2a78", "6e9e08dc", "8c182abd", "5465f5b1", "7d50d6be"]
