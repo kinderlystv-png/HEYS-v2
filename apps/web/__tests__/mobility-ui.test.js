@@ -5,7 +5,7 @@ import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,6 +54,9 @@ const setupOnce = () => {
 };
 
 const UI = () => globalThis.HEYS.Mobility.UI;
+const startGuidedSession = () => {
+  fireEvent.click(screen.getByRole('button', { name: '▶ Запустить ведомую сессию' }));
+};
 
 const profile = {
   age: 30,
@@ -71,6 +74,7 @@ describe('Mobility UI', () => {
     cleanup();
     vi.restoreAllMocks();
     delete globalThis.HEYS.TrainingStep;
+    delete globalThis.HEYS.ConfirmModal;
   });
 
   it('рендерит focus-mode как у пальцев и открывает runner только после запуска микса', () => {
@@ -86,6 +90,9 @@ describe('Mobility UI', () => {
     expect(screen.queryByLabelText('Возраст')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
+    expect(screen.getByRole('button', { name: '▶ Запустить ведомую сессию' })).toBeTruthy();
+    expect(container.querySelector('.mobility-guided')).toBeNull();
+    startGuidedSession();
     expect(container.querySelector('.mobility-execution')).not.toBeNull();
     expect(container.querySelector('.mobility-guided')).not.toBeNull();
     expect(container.querySelector('[data-training-runner="guided"]')).not.toBeNull();
@@ -107,6 +114,31 @@ describe('Mobility UI', () => {
     expect(container.querySelectorAll('.mobility-protocol-card').length).toBeGreaterThan(0);
   });
 
+  it('перед ведомой сессией показывает preflight-модалку и запускает runner после подтверждения', () => {
+    let modalOptions = null;
+    globalThis.HEYS.ConfirmModal = {
+      show: vi.fn((options) => {
+        modalOptions = options;
+      })
+    };
+    const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
+    startGuidedSession();
+
+    expect(globalThis.HEYS.ConfirmModal.show).toHaveBeenCalledTimes(1);
+    expect(modalOptions.title).toBe('Готовы начать?');
+    expect(modalOptions.icon).toBe('🌙');
+    expect(container.querySelector('.mobility-guided')).toBeNull();
+
+    act(() => {
+      modalOptions.actions.find((action) => action.key === 'go').onClick();
+    });
+
+    expect(container.querySelector('.mobility-execution')).not.toBeNull();
+    expect(container.querySelector('[data-training-runner="guided"]')).not.toBeNull();
+    expect(screen.getAllByText('Ведомая тренировка').length).toBeGreaterThan(0);
+  });
+
   it('выбирает готовый протокол и возвращает в ведомую тренировку', { timeout: 20000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'morning_tonify' }));
     fireEvent.click(screen.getByRole('tab', { name: /Протоколы/ }));
@@ -114,6 +146,8 @@ describe('Mobility UI', () => {
     expect(container.querySelector('.mobility-app').getAttribute('data-mode')).toBe('anti_sedentary');
     expect(screen.getByRole('tab', { name: /Сегодня/ }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getAllByText('Пауза от сидения').length).toBeGreaterThan(0);
+    expect(container.querySelector('.mobility-guided')).toBeNull();
+    startGuidedSession();
     expect(container.querySelector('.mobility-guided')).not.toBeNull();
   });
 
@@ -129,6 +163,8 @@ describe('Mobility UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Запустить свою' }));
     expect(screen.getByRole('tab', { name: /Сегодня/ }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getAllByText('Своя сборка').length).toBeGreaterThan(0);
+    expect(container.querySelector('.mobility-guided')).toBeNull();
+    startGuidedSession();
     expect(container.querySelector('.mobility-guided')).not.toBeNull();
     expect(container.querySelectorAll('.mobility-guided-step').length).toBeGreaterThan(0);
     expect(container.textContent).toContain('Hip CARs');
@@ -268,6 +304,7 @@ describe('Mobility UI', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Сегодня/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить в тренировку' }));
     expect(container.textContent).toContain('Сессия сохранена');
+    startGuidedSession();
     fireEvent.click(screen.getByRole('button', { name: 'Отметить боль' }));
     expect(container.textContent).toContain('Боль отмечена');
     const records = globalThis.HEYS.Mobility.recordsStore.load('client-a', storage);
@@ -355,14 +392,14 @@ describe('Mobility UI', () => {
   it('execution panel показывает дыхательные фазы и lifecycle controls', () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));
     fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
+    expect(container.querySelector('.mobility-guided')).toBeNull();
+    startGuidedSession();
     expect(screen.getAllByText('Ведомая тренировка').length).toBeGreaterThan(0);
     expect(container.querySelector('.mobility-breath-phases')).not.toBeNull();
     expect(container.querySelector('.mobility-guided__visual img')).not.toBeNull();
     expect(container.textContent).toContain('длинный выдох');
     const execution = container.querySelector('.mobility-execution');
     const status = () => execution.querySelector('.mobility-execution__status').getAttribute('data-status');
-    expect(status()).toBe('idle');
-    fireEvent.click(within(execution).getByRole('button', { name: 'Старт' }));
     expect(status()).toBe('running');
     fireEvent.click(within(execution).getByRole('button', { name: 'Пауза' }));
     expect(status()).toBe('paused');
@@ -373,13 +410,15 @@ describe('Mobility UI', () => {
   it('execution lifecycle сбрасывается при смене режима', () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));
     fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
+    startGuidedSession();
     let execution = container.querySelector('.mobility-execution');
-    fireEvent.click(within(execution).getByRole('button', { name: 'Старт' }));
     expect(execution.querySelector('.mobility-execution__status').getAttribute('data-status')).toBe('running');
     fireEvent.click(screen.getByRole('button', { name: 'Назад' }));
     fireEvent.click(screen.getByRole('tab', { name: /Нагрузка/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
+    expect(container.querySelector('.mobility-execution')).toBeNull();
+    startGuidedSession();
     execution = container.querySelector('.mobility-execution');
-    expect(execution.querySelector('.mobility-execution__status').getAttribute('data-status')).toBe('idle');
+    expect(execution.querySelector('.mobility-execution__status').getAttribute('data-status')).toBe('running');
   });
 });

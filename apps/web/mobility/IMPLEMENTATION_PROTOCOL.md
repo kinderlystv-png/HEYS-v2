@@ -265,6 +265,84 @@ runtime-артефакт.
   `pnpm vitest run apps/web/__tests__/kernel-training-focus-ui.test.js apps/web/__tests__/mobility-ui.test.js apps/web/__tests__/mobility-runner.test.js apps/web/__tests__/fingers-exercise-runner.test.js apps/web/__tests__/fingers-timer-kernel-equivalence.test.js`
   → 82/82.
 
+## Guided launch + timer parity (2026-06-15)
+
+- Исправлен UX-разрыв с режимом пальцев: выбор `Запустить микс`/протокола/своей
+  сборки теперь только выбирает план, а не проваливает пользователя сразу в
+  `idle` runner. На экране плана появляется большая кнопка
+  `▶ Запустить ведомую сессию` и вторичная `Сохранить план без таймера`, как в
+  пальцах.
+- После `▶ Запустить ведомую сессию` мобильность открывает общий
+  `GuidedRunnerPanel` с `autoStart`: первый timed-step сразу переходит в
+  `running`, показывает countdown `осталось`, поддерживает `Пауза`/
+  `Продолжить`/`Дальше`/`Отметить боль`/`Стоп` и авто-переход по окончании
+  timed-step.
+- Проверки:
+  `pnpm vitest run apps/web/__tests__/kernel-training-focus-ui.test.js apps/web/__tests__/mobility-ui.test.js apps/web/__tests__/mobility-runner.test.js apps/web/__tests__/fingers-exercise-runner.test.js apps/web/__tests__/fingers-timer-kernel-equivalence.test.js`
+  → 82/82.
+
+## Guided preflight + circular runner parity (2026-06-15)
+
+- UX доведён до поведения режима пальцев: кнопка `▶ Запустить ведомую сессию`
+  теперь сначала открывает `HEYS.ConfirmModal` с preflight-чеклистом. Текст
+  подготовки доменный: утром/перед нагрузкой — 60 секунд лёгкого марша или
+  прыжков; вечером — поза мертвеца/длинный выдох; восстановление/rehab —
+  спокойная ходьба и мягкая оценка боли.
+- После подтверждения мобильность показывает тот же тип live-runner, что и
+  пальцы: круговой таймер SVG, phase badge, `Пауза`/`Продолжить`/`Дальше`/
+  `Боль`/`Стоп` в одной зоне controls и нижний список всех этапов тренировки.
+  Текущий этап выделяется чёрным, остальные серые; фото текущего атома остаётся
+  в DOM для совместимости, но live-view больше не занимает экран большой
+  карточкой.
+- Source-eval/test fallback сохранён: если `HEYS.ConfirmModal.show` отсутствует,
+  старт остаётся прямым, как раньше, поэтому старые unit-тесты без ConfirmModal
+  не ломаются.
+- Проверки:
+  `pnpm vitest run apps/web/__tests__/mobility-ui.test.js apps/web/__tests__/mobility-runner.test.js apps/web/__tests__/training-confirm-modal-layering.test.js`
+  → 27/27.
+- Browser QA на `http://localhost:3001/`: `HEYS.Mobility.openFullscreen()` →
+  `Запустить микс` → `▶ Запустить ведомую сессию` показывает preflight поверх
+  mobility overlay (`2147483400` > `2147483000`), вечерний preset содержит
+  `позу мертвеца`, после `Всё ОК, начинаем` открыт `.mobility-guided-live` со
+  статусом `running`, кольцом, roadmap и кнопками `Пауза`/`Стоп`.
+
+### Follow-up polish (2026-06-15)
+
+- `.mobility-guided-live` переведён из inline-card в отдельный fullscreen
+  overlay (`position: fixed`, `z-index: 2147483200`), чтобы сопровождение
+  открывалось как отдельный режим, а не ниже карточек плана.
+- Roadmap этапов сделан строго построчным: у mobility и fingers dense/ultra
+  dense больше не раскладывает упражнения по 2 в строку.
+- Countdown digit центрируется явно через `width:100%`/`text-align:center`;
+  browser QA на 390×844 показал `digitCenterDeltaX=0`, `listColumns=320px`, live
+  overlay `top=0`, `height=844`.
+
+### Shared live shell correction (2026-06-15)
+
+- Причина визуального рассинхрона была в том, что раньше переиспользовались
+  lifecycle/countdown CSS, но не сам live-shell пальцев. Общий каркас вынесен в
+  `HEYS.TrainingFocus.LiveRunnerShell` и `HEYS.TrainingFocus.LiveRoadmap`.
+- `Fingers.LiveSession` и `Mobility.ExecutionPanel` теперь рендерят общий root
+  `.fingers-fs-live` и общий roadmap `.fingers-fs-live-roadmap`; домены
+  добавляют только свои данные и доменные классы/controls.
+- Browser QA на 390×844: mobility live root =
+  `.fingers-fs-live.mobility-guided-live`, roadmap =
+  `.fingers-fs-live-roadmap.mobility-live-roadmap`,
+  `data-training-runner=guided`, список `display:flex; flex-direction:column`,
+  `digitCenterDeltaX=0`.
+
+### Shared countdown display correction (2026-06-15)
+
+- Оставшийся рассинхрон был внутри runner: mobility уже использовала общий
+  shell, но таймер/круг оставались доменным JSX. Вынесен общий
+  `HEYS.TrainingFocus.LiveCountdownDisplay`; mobility теперь передаёт туда
+  только данные упражнения, фото, фазу, прогресс и callbacks.
+- Локальный browser QA после `bundle:fingers` + `bundle:mobility`: mobility live
+  root `.fingers-fs-live.mobility-guided-live`, countdown
+  `.heys-fingers-countdown.heys-fingers-continuous`, `--phase-color=#dc2626`,
+  roadmap `flex-direction:column`, `digitCenterDeltaX=0`, controls =
+  `Пауза/→/Боль/Прервать`.
+
 ## Риски / открытые
 
 - atom_catalog покрывает все блоки A–J и у каждого атома есть `title`,
