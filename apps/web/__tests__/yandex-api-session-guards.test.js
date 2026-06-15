@@ -43,6 +43,7 @@ function createJsonResponse(body, { ok = true, status = 200 } = {}) {
 function loadYandexAPI({
   storageSeed = {},
   sessionToken = null,
+  hasPinCookieSession = false,
 } = {}) {
   global.window = global;
   global.localStorage = createMockStorage(storageSeed);
@@ -51,6 +52,9 @@ function loadYandexAPI({
   global.HEYS = {
     auth: {
       getSessionToken: vi.fn(() => sessionToken),
+    },
+    cloud: {
+      isPinAuthClient: vi.fn(() => hasPinCookieSession),
     },
   };
   delete global.YandexAPI;
@@ -166,6 +170,53 @@ describe('HEYS.YandexAPI session-safe access', () => {
 
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe('https://api.heyslab.ru/auth/clients/client-42/kv');
+    expect(options.headers).toMatchObject({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer curator-jwt-1',
+    });
+  });
+
+  it('REST reads include cookie credentials for HttpOnly PIN sessions', async () => {
+    const api = loadYandexAPI({ hasPinCookieSession: true });
+    global.fetch.mockResolvedValue(
+      createJsonResponse([{ k: 'heys_profile', v: { targetKcal: 1800 } }]),
+    );
+
+    const result = await api.rest('client_kv_store', {
+      select: 'k,v',
+      filters: {
+        'eq.client_id': 'client-42',
+        'eq.k': 'heys_profile',
+      },
+    });
+
+    expect(result.error).toBeNull();
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/rest/client_kv_store?');
+    expect(options.credentials).toBe('include');
+    expect(options.headers).toMatchObject({
+      'Content-Type': 'application/json',
+    });
+    expect(options.headers).not.toHaveProperty('X-Session-Token');
+    expect(options.headers).not.toHaveProperty('Authorization');
+  });
+
+  it('REST reads include curator JWT when curator session exists', async () => {
+    const api = loadYandexAPI({
+      storageSeed: {
+        heys_curator_session: 'curator-jwt-1',
+      },
+    });
+    global.fetch.mockResolvedValue(
+      createJsonResponse([{ k: 'heys_profile', v: { targetKcal: 1800 } }]),
+    );
+
+    const result = await api.getKVBatchByCurator('client-42', ['heys_profile']);
+
+    expect(result.error).toBeNull();
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/rest/client_kv_store?');
+    expect(options.credentials).toBe('include');
     expect(options.headers).toMatchObject({
       'Content-Type': 'application/json',
       Authorization: 'Bearer curator-jwt-1',

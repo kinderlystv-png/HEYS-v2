@@ -68,6 +68,22 @@ function verifyCuratorJwt(token, jwtSecret) {
   }
 }
 
+function getCookieValue(cookieHeader, name) {
+  if (!cookieHeader || typeof cookieHeader !== 'string') return null;
+  for (const part of cookieHeader.split(';')) {
+    const eqIdx = part.indexOf('=');
+    if (eqIdx === -1) continue;
+    if (part.slice(0, eqIdx).trim() !== name) continue;
+    const raw = part.slice(eqIdx + 1).trim();
+    try {
+      return decodeURIComponent(raw);
+    } catch (_e) {
+      return raw;
+    }
+  }
+  return null;
+}
+
 // 🛡️ Content-fingerprint dup check для dayv2 (incident 2026-06-02 #8):
 // ловит partial pollution где writer_cid правильный (свой) но meals
 // идентичны свежей записи другого клиента того же curator. REST POST
@@ -596,6 +612,9 @@ module.exports.handler = async function (event, context) {
       if (auth.startsWith('Bearer ')) token = auth.slice(7).trim();
       const xs = h['X-Session-Token'] || h['x-session-token'] || '';
       if (!token && xs) token = String(xs).trim();
+      if (!token) {
+        token = getCookieValue(h.cookie || h.Cookie || '', 'heys_session_token');
+      }
       // Heuristic: JWT (3 dot-separated parts) — это curator JWT (legacy path),
       // НЕ session_token. Пропускаем — curator auth в hot-fix v1 не покрываем
       // (отдельная итерация). Defense: warn-log если запрос крос-клиентский.

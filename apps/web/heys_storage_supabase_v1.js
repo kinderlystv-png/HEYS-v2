@@ -10998,9 +10998,8 @@
         const sessionToken = global.localStorage?.getItem?.('heys_session_token') || null;
         const hasCookieSession = !!cloud.isPinAuthClient?.();
         if (!sessionToken && !hasCookieSession) return finish(null);
-        const sessionParams = sessionToken ? { p_session_token: sessionToken } : {};
-        res = await raceWithTimeout(
-          api.rpc('issue_write_context_by_session', sessionParams),
+        const issueBySession = (params) => raceWithTimeout(
+          api.rpc('issue_write_context_by_session', params),
           WRITE_CONTEXT_ISSUE_TIMEOUT_MS,
           { error: { message: 'write_context_issue_timeout', code: 'timeout' } },
           () => {
@@ -11009,9 +11008,27 @@
             console.warn('[write-context] issue timeout: session');
           }
         );
+        const isSessionTokenMissing = (result) => {
+          const raw = result?.error?.raw || result?.data || {};
+          const reason = String(raw.reason || result?.error?.message || raw.error || '').toLowerCase();
+          return reason.includes('missing_session_token') || reason.includes('invalid_session');
+        };
+
+        // Post PR-C PIN sessions use HttpOnly cookie. Prefer cookie-only issue
+        // first: a stale legacy LS token in the body would otherwise mask the
+        // fresh cookie because the server trusts explicit p_session_token.
+        if (hasCookieSession) {
+          res = await issueBySession({});
+          if (sessionToken && isSessionTokenMissing(res)) {
+            res = await issueBySession({ p_session_token: sessionToken });
+          }
+        } else {
+          res = await issueBySession({ p_session_token: sessionToken });
+        }
       }
-      if (res?.error) {
-        console.warn('[write-context] issue failed:', res.error.message || res.error.code || res.error);
+      if (res?.error || res?.data?.error) {
+        const issueError = res?.error || res?.data || {};
+        console.warn('[write-context] issue failed:', issueError.message || issueError.code || issueError.error || issueError);
         return finish(null);
       }
       const data = res?.data || {};
