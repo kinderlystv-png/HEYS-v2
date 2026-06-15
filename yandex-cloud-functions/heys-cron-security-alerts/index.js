@@ -153,29 +153,41 @@ const RULES = [
   // heys-client-daily-backup срабатывает ТОЛЬКО когда функция запустилась
   // (partial failure). Если функция вообще не запускается (как в инциденте
   // 2026-04-14 → 2026-05-10, 27-дневная дыра, root-cause = accidentally
-  // deleted version) — silence. Это правило ловит SILENT FAILURE: за
-  // last 7 дней должно быть ≥5 success-INSERT'ов в backup_run_log; если
-  // меньше — alert.
+  // deleted version) — silence. Это правило ловит SILENT FAILURE.
+  //
+  // 2026-06-15 fix: было `count(ok) < 5 за 7 дней`. Это давало гарантированный
+  // false-positive storm первые ~5 дней после деплоя инструментации
+  // (backup_run_log создан 2026-06-14, копится по 1 успешному run'у в сутки →
+  // порог в 5 недостижим до ~2026-06-19). Перешли на GAP-based: алертим, если
+  // последний успешный (ok/partial) run старше 30ч — это прямой признак
+  // «cron отработал, а бэкапа нет / функция молчит» и не зависит от истории.
+  // Daily cron = 24h; 30h = терпим до 6ч джиттера/задержки, но ловим полностью
+  // пропущенный суточный слот в течение ~6ч. Пустая таблица (run'ов вообще не
+  // было) → COALESCE к 2000 → тоже алерт.
   {
     key: 'backup_chain_gap',
     label: '🔴 Backup-chain прерван',
     description:
-      'За последние 7 дней зафиксировано <5 успешных backup-run\'ов. ' +
-      'Возможно heys-client-daily-backup функция не запускается. Проверь: ' +
-      '(1) yc serverless function version list --function-id <id> — есть ли активная версия; ' +
+      'За >30ч не зафиксировано ни одного успешного backup-run\'а в backup_run_log. ' +
+      'Возможно heys-client-daily-backup функция не запускается (silent failure). Проверь: ' +
+      '(1) yc serverless function version list --function-id <id> — есть ли версия с тегом $latest; ' +
       '(2) yc serverless trigger get heys-client-daily-backup-timer — ACTIVE; ' +
-      '(3) Cloud Functions web-console logs за последние сутки.',
+      '(3) s3://heys-backups/client-daily/<сегодня>/ — есть ли свежие снапшоты; ' +
+      '(4) Cloud Functions web-console logs за последние сутки.',
     sql: `
       SELECT
         $1::text AS _window_unused,
         COUNT(*) FILTER (WHERE status = 'ok')::int AS ok_count_7d,
         COUNT(*) FILTER (WHERE status = 'partial')::int AS partial_count_7d,
         COUNT(*) FILTER (WHERE status = 'failed')::int AS failed_count_7d,
-        MAX(run_at) AS last_run_at,
-        EXTRACT(EPOCH FROM (now() - COALESCE(MAX(run_at), '2000-01-01'::timestamptz)))/3600 AS hours_since_last
+        MAX(run_at) FILTER (WHERE status IN ('ok','partial')) AS last_ok_run_at,
+        EXTRACT(EPOCH FROM (
+          now() - COALESCE(MAX(run_at) FILTER (WHERE status IN ('ok','partial')), '2000-01-01'::timestamptz)
+        ))/3600 AS hours_since_last_ok
       FROM backup_run_log
-      WHERE run_at > NOW() - INTERVAL '7 days'
-      HAVING COUNT(*) FILTER (WHERE status = 'ok') < 5
+      WHERE run_at > NOW() - INTERVAL '14 days'
+      HAVING COALESCE(MAX(run_at) FILTER (WHERE status IN ('ok','partial')), '2000-01-01'::timestamptz)
+             < NOW() - INTERVAL '30 hours'
     `,
   },
 ];

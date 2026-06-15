@@ -9,9 +9,13 @@
 -- запускается совсем — silence.
 --
 -- Решение: внешний watchdog в heys-cron-security-alerts проверяет таблицу
--- `backup_run_log` (success-маркеры от backup function). Если за last 7 дней
--- < 5 успешных runs → Telegram alert. Каждый backup-run пишет INSERT по
--- завершении — пропуск run означает отсутствие INSERT.
+-- `backup_run_log` (success-маркеры от backup function). Каждый backup-run
+-- пишет INSERT по завершении — пропуск run означает отсутствие INSERT.
+-- Watchdog (rule `backup_chain_gap`): алерт, если последний успешный
+-- (ok/partial) run старше 30ч (daily cron = 24h + запас на джиттер) или
+-- run'ов нет вовсе. 2026-06-15: исходный порог `< 5 ok за 7 дней` заменён на
+-- gap-based — count-порог давал гарантированный false-positive storm первые
+-- ~5 дней после деплоя инструментации (таблица копится по 1 ok/сутки).
 --
 -- Apply:
 --   bash scripts/db/psql.sh --single-transaction -f database/2026-06-14_backup_run_log.sql
