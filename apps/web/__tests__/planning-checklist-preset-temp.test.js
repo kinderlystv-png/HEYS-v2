@@ -188,6 +188,44 @@ describe('Sea-tent checklist preset — per-checklist item overlay', () => {
         expect(rebuilt.find((entry) => entry.id === 'docs-passports').done).toBe(true);
     });
 
+    it('applies per-checklist item overrides to preset items through rebuild', () => {
+        const presetA = Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18);
+        const current = presetA.items.map((entry) => (
+            entry.id === 'docs-passports'
+                ? { ...entry, text: 'Документы семьи', quantity: '1 папка', group: 'Перед выездом' }
+                : entry
+        ));
+        const presetB = Planning.buildSeaTentChecklistPreset(3, 0, [], 34, 18);
+        const rebuilt = Planning.materializeSeaTentItems(presetB.items, current, [], {
+            'docs-passports': {
+                text: 'Документы семьи',
+                quantity: '1 папка',
+                group: 'Перед выездом',
+            },
+        });
+        const item = rebuilt.find((entry) => entry.id === 'docs-passports');
+        expect(item).toMatchObject({
+            text: 'Документы семьи',
+            quantity: '1 папка',
+            group: 'Перед выездом',
+        });
+    });
+
+    it('applies per-checklist group overrides to newly generated preset items', () => {
+        const presetWarm = Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18);
+        const presetHot = Planning.buildSeaTentChecklistPreset(2, 0, [], 34, 18);
+        const rebuilt = Planning.materializeSeaTentItems(
+            presetHot.items,
+            presetWarm.items,
+            [],
+            {},
+            { 'кухня и вода': 'Вода и кухня' },
+        );
+        expect(rebuilt.find((entry) => entry.id === 'heat-extra-water')).toMatchObject({
+            group: 'Вода и кухня',
+        });
+    });
+
     it('keeps the manual item done state as stored', () => {
         const preset = Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18);
         const custom = { id: 'custom-x', group: 'Еда', text: 'Чай', done: true, order: 9999 };

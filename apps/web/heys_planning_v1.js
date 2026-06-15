@@ -1418,14 +1418,55 @@
         return String(id || '').startsWith('custom-');
     }
 
+    function normalizeChecklistItemOverrides(value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+        return Object.keys(value).reduce((overrides, id) => {
+            const entry = value[id];
+            if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return overrides;
+            const patch = {};
+            if (Object.prototype.hasOwnProperty.call(entry, 'text')) {
+                const text = String(entry.text || '').trim();
+                if (text) patch.text = text;
+            }
+            if (Object.prototype.hasOwnProperty.call(entry, 'quantity')) {
+                const quantity = String(entry.quantity || '').trim();
+                patch.quantity = quantity;
+            }
+            if (Object.prototype.hasOwnProperty.call(entry, 'group')) {
+                patch.group = normalizeChecklistGroupName(entry.group);
+            }
+            if (Object.keys(patch).length) overrides[String(id)] = patch;
+            return overrides;
+        }, {});
+    }
+
+    function normalizeChecklistGroupOverrides(value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+        return Object.keys(value).reduce((overrides, key) => {
+            const source = normalizeChecklistGroupName(key).toLocaleLowerCase('ru-RU');
+            const target = normalizeChecklistGroupName(value[key]);
+            if (source && target) overrides[source] = target;
+            return overrides;
+        }, {});
+    }
+
     // Собирает items сохранённого пресет-чеклиста из свежего шаблона + per-checklist
     // оверлея: убирает пункты-тумбстоны (removedPresetIds) и доклеивает ручные пункты
     // (id `custom-…`). Оверлей переживает пересборку при смене взрослых/детей/t —
     // удаление и добавление влияют только на этот чеклист, не на шаблон пресета.
-    function materializeSeaTentItems(presetItems, currentItems, removedPresetIds) {
+    function materializeSeaTentItems(presetItems, currentItems, removedPresetIds, itemOverrides, groupOverrides) {
         const removed = new Set((Array.isArray(removedPresetIds) ? removedPresetIds : []).map(String));
+        const overrides = normalizeChecklistItemOverrides(itemOverrides);
+        const groupMap = normalizeChecklistGroupOverrides(groupOverrides);
         const visiblePreset = (Array.isArray(presetItems) ? presetItems : [])
-            .filter((entry) => !removed.has(String(entry.id)));
+            .filter((entry) => !removed.has(String(entry.id)))
+            .map((entry) => {
+                const group = normalizeChecklistGroupName(entry.group);
+                const groupPatch = groupMap[group.toLocaleLowerCase('ru-RU')]
+                    ? { group: groupMap[group.toLocaleLowerCase('ru-RU')] }
+                    : {};
+                return { ...entry, ...groupPatch, ...(overrides[String(entry.id)] || {}) };
+            });
         const merged = mergeChecklistDoneState(visiblePreset, currentItems);
         const customs = (Array.isArray(currentItems) ? currentItems : [])
             .filter((entry) => isCustomChecklistItemId(entry && entry.id));
@@ -1576,6 +1617,37 @@
             state.updateChecklist(checklist.id, patch);
         };
 
+        const editSavedItem = (checklist, itemId) => {
+            if (!checklist || typeof state?.updateChecklist !== 'function') return;
+            if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
+            const items = Array.isArray(checklist.items) ? checklist.items : [];
+            const current = items.find((entry) => entry.id === itemId);
+            if (!current) return;
+            const nextTextRaw = window.prompt('Название пункта', String(current.text || ''));
+            if (nextTextRaw == null) return;
+            const nextText = String(nextTextRaw || '').trim();
+            if (!nextText) return;
+            const nextQtyRaw = window.prompt('Количество', String(current.quantity || ''));
+            if (nextQtyRaw == null) return;
+            const nextQuantity = String(nextQtyRaw || '').trim();
+            const nextItems = items.map((entry) => (
+                entry.id === itemId
+                    ? { ...entry, text: nextText, quantity: nextQuantity || undefined }
+                    : entry
+            ));
+            const patch = { items: nextItems };
+            if (getChecklistPreset(checklist) && !isCustomChecklistItemId(itemId)) {
+                const overrides = normalizeChecklistItemOverrides(checklist.itemOverrides);
+                overrides[String(itemId)] = {
+                    ...(overrides[String(itemId)] || {}),
+                    text: nextText,
+                    quantity: nextQuantity,
+                };
+                patch.itemOverrides = overrides;
+            }
+            state.updateChecklist(checklist.id, patch);
+        };
+
         // Добавление ручного пункта в группу — только этот чеклист. Кастомный id
         // (custom-…) переживает пересборку пресета через materializeSeaTentItems.
         const addSavedItem = (checklist, group, details) => {
@@ -1615,6 +1687,55 @@
                 .map((section) => section.group.toLocaleLowerCase('ru-RU'));
             if (existingNames.includes(group.toLocaleLowerCase('ru-RU'))) return;
             state.updateChecklist(checklist.id, { customGroups: groups.concat(group) });
+        };
+
+        const renameSavedSection = (checklist, groupName) => {
+            if (!checklist || typeof state?.updateChecklist !== 'function') return;
+            if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
+            const currentGroup = normalizeChecklistGroupName(groupName);
+            const nextRaw = window.prompt('Название раздела', currentGroup);
+            if (nextRaw == null) return;
+            const nextGroup = normalizeChecklistGroupName(nextRaw);
+            if (!nextGroup || nextGroup.toLocaleLowerCase('ru-RU') === currentGroup.toLocaleLowerCase('ru-RU')) return;
+            const items = Array.isArray(checklist.items) ? checklist.items : [];
+            const nextItems = items.map((entry) => (
+                normalizeChecklistGroupName(entry?.group).toLocaleLowerCase('ru-RU') === currentGroup.toLocaleLowerCase('ru-RU')
+                    ? { ...entry, group: nextGroup }
+                    : entry
+            ));
+            const groups = getChecklistCustomGroups(checklist).map((group) => (
+                group.toLocaleLowerCase('ru-RU') === currentGroup.toLocaleLowerCase('ru-RU') ? nextGroup : group
+            ));
+            const patch = {
+                items: nextItems,
+                customGroups: getChecklistCustomGroups({ customGroups: groups }),
+            };
+            const preset = getChecklistPreset(checklist);
+            if (preset) {
+                const overrides = normalizeChecklistItemOverrides(checklist.itemOverrides);
+                const groupOverrides = normalizeChecklistGroupOverrides(checklist.groupOverrides);
+                let hasExistingGroupOverride = false;
+                Object.keys(groupOverrides).forEach((key) => {
+                    if (String(groupOverrides[key]).toLocaleLowerCase('ru-RU') === currentGroup.toLocaleLowerCase('ru-RU')) {
+                        groupOverrides[key] = nextGroup;
+                        hasExistingGroupOverride = true;
+                    }
+                });
+                if (!hasExistingGroupOverride) {
+                    groupOverrides[currentGroup.toLocaleLowerCase('ru-RU')] = nextGroup;
+                }
+                items.forEach((entry) => {
+                    if (!entry || isCustomChecklistItemId(entry.id)) return;
+                    if (normalizeChecklistGroupName(entry.group).toLocaleLowerCase('ru-RU') !== currentGroup.toLocaleLowerCase('ru-RU')) return;
+                    overrides[String(entry.id)] = {
+                        ...(overrides[String(entry.id)] || {}),
+                        group: nextGroup,
+                    };
+                });
+                patch.itemOverrides = overrides;
+                patch.groupOverrides = groupOverrides;
+            }
+            state.updateChecklist(checklist.id, patch);
         };
 
         const closeAddItemModal = () => {
@@ -1734,7 +1855,15 @@
                 nightTemp: nextPreset.nightTemp,
                 ...toggleFields,
                 removedPresetIds,
-                items: materializeSeaTentItems(nextPreset.items, checklist.items, removedPresetIds),
+                itemOverrides: normalizeChecklistItemOverrides(checklist.itemOverrides),
+                groupOverrides: normalizeChecklistGroupOverrides(checklist.groupOverrides),
+                items: materializeSeaTentItems(
+                    nextPreset.items,
+                    checklist.items,
+                    removedPresetIds,
+                    checklist.itemOverrides,
+                    checklist.groupOverrides,
+                ),
             });
         };
 
@@ -1839,7 +1968,13 @@
             return count + ' пунктов · ' + built.audienceLabel + ' · ' + built.tempLabel + ' · ' + built.utilityLabel;
         };
 
-        const renderItem = (entry, onToggle, keyPrefix, onDelete) => h('div', {
+        const renderChecklistProgress = (checklist) => {
+            const items = Array.isArray(checklist?.items) ? checklist.items : [];
+            const done = items.filter((entry) => entry?.done === true).length;
+            return done + '/' + items.length + ' собрано';
+        };
+
+        const renderItem = (entry, onToggle, keyPrefix, onDelete, onEdit) => h('div', {
             key: keyPrefix + entry.id,
             className: 'planning-checklists-screen__item-row',
         },
@@ -1857,6 +1992,13 @@
                     entry.note && h('span', { className: 'planning-checklists-screen__item-note' }, entry.note),
                 ),
             ),
+            onEdit && h('button', {
+                type: 'button',
+                className: 'planning-checklists-screen__item-edit',
+                onClick: () => onEdit(entry.id),
+                'aria-label': 'Редактировать пункт',
+                title: 'Редактировать пункт',
+            }, '✎'),
             onDelete && h('button', {
                 type: 'button',
                 className: 'planning-checklists-screen__item-delete',
@@ -1875,16 +2017,25 @@
                 },
                     h('div', { className: 'planning-checklists-screen__group-head' },
                         h('h3', { className: 'planning-checklists-screen__group-title' }, section.group),
-                        typeof opts.onAddToGroup === 'function' && h('button', {
-                            type: 'button',
-                            className: 'planning-checklists-screen__group-add',
-                            onClick: () => opts.onAddToGroup(section.group),
-                            'aria-label': 'Добавить пункт в группу «' + section.group + '»',
-                            title: 'Добавить пункт',
-                        }, '+'),
+                        h('span', { className: 'planning-checklists-screen__group-actions' },
+                            typeof opts.onEditGroup === 'function' && h('button', {
+                                type: 'button',
+                                className: 'planning-checklists-screen__group-edit',
+                                onClick: () => opts.onEditGroup(section.group),
+                                'aria-label': 'Редактировать раздел «' + section.group + '»',
+                                title: 'Редактировать раздел',
+                            }, '✎'),
+                            typeof opts.onAddToGroup === 'function' && h('button', {
+                                type: 'button',
+                                className: 'planning-checklists-screen__group-add',
+                                onClick: () => opts.onAddToGroup(section.group),
+                                'aria-label': 'Добавить пункт в группу «' + section.group + '»',
+                                title: 'Добавить пункт',
+                            }, '+'),
+                        ),
                     ),
                     h('div', { className: 'planning-checklists-screen__group-list' },
-                        section.items.map((entry) => renderItem(entry, onToggle, keyPrefix, opts.onDelete)),
+                        section.items.map((entry) => renderItem(entry, onToggle, keyPrefix, opts.onDelete, opts.onEditItem)),
                     ),
                 )),
             );
@@ -2206,7 +2357,10 @@
                                     'aria-label': isCollapsed ? 'Развернуть чек-лист' : 'Свернуть чек-лист',
                                 },
                                     h('span', { className: 'planning-checklists-screen__card-copy' },
-                                        h('span', { className: 'planning-checklists-screen__card-title' }, checklist.title || 'Чек-лист'),
+                                        h('span', { className: 'planning-checklists-screen__card-title-row' },
+                                            h('span', { className: 'planning-checklists-screen__card-title' }, checklist.title || 'Чек-лист'),
+                                            !isCollapsed && h('span', { className: 'planning-checklists-screen__card-progress' }, renderChecklistProgress(checklist)),
+                                        ),
                                         isCollapsed && h('span', { className: 'planning-checklists-screen__card-meta' },
                                             renderChecklistMeta(checklist),
                                         ),
@@ -2245,7 +2399,9 @@
                                     customGroups: getChecklistCustomGroups(checklist),
                                     groupOrder: getChecklistPreset(checklist)?.groups,
                                     onDelete: (itemId) => deleteSavedItem(checklist, itemId),
+                                    onEditItem: (itemId) => editSavedItem(checklist, itemId),
                                     onAddToGroup: (group) => openAddItemModal(checklist, group),
+                                    onEditGroup: (group) => renameSavedSection(checklist, group),
                                 },
                             ),
                         );

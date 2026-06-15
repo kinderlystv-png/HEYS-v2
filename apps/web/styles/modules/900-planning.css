@@ -702,6 +702,7 @@
     min-width: 0;
 }
 
+.planning-checklists-screen__item-edit,
 .planning-checklists-screen__item-delete {
     flex: 0 0 auto;
     display: grid;
@@ -717,6 +718,17 @@
     line-height: 1;
     cursor: pointer;
     transition: color 0.12s ease, background 0.12s ease;
+}
+
+.planning-checklists-screen__item-edit {
+    color: #93c5fd;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.planning-checklists-screen__item-edit:hover {
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
 }
 
 .planning-checklists-screen__item-delete:hover {
@@ -739,6 +751,14 @@
     text-overflow: ellipsis;
 }
 
+.planning-checklists-screen__group-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+}
+
+.planning-checklists-screen__group-edit,
 .planning-checklists-screen__group-add {
     flex: 0 0 auto;
     display: grid;
@@ -756,6 +776,11 @@
     cursor: pointer;
 }
 
+.planning-checklists-screen__group-edit {
+    font-size: 12px;
+}
+
+.planning-checklists-screen__group-edit:hover,
 .planning-checklists-screen__group-add:hover {
     background: color-mix(in srgb, var(--planning-checklist-group-bg) 58%, #fff 42%);
 }
@@ -935,6 +960,26 @@
     line-height: 1.15;
     overflow-wrap: anywhere;
     white-space: normal;
+}
+
+.planning-checklists-screen__card-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.planning-checklists-screen__card-progress {
+    flex: 0 0 auto;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .planning-checklists-screen__card-meta {
