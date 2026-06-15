@@ -10,6 +10,7 @@ const FILES = {
   pdnCalendar: 'docs/legal/operator/heys-pdn-calendar.ics',
   signoffPackage: 'docs/legal/operator/heys-r0-r2-signoff-package.md',
   dsarLogTemplate: 'docs/legal/operator/heys-dsar-request-log-template.md',
+  privacyIntakeRunbook: 'docs/legal/operator/heys-privacy-intake-runbook.md',
   incidentDrillTemplate: 'docs/legal/operator/heys-pdn-incident-drill-template.md',
   retentionRunbook: 'docs/legal/operator/heys-retention-job-runbook.md',
   dsarProcedure: 'docs/legal/operator/heys-dsar-procedure-draft.md',
@@ -154,6 +155,7 @@ function checkSignoffPackage() {
       'heys-retention-policy-draft.md',
       'heys-dsar-procedure-draft.md',
       'heys-dsar-request-log-template.md',
+      'heys-privacy-intake-runbook.md',
       'heys-retention-job-runbook.md',
       '33_ERID_регламент_и_шаблоны.md',
     ],
@@ -174,6 +176,21 @@ function checkDsarLogTemplate() {
       'Не хранить в git реальные DSAR rows',
     ],
     'DSAR request log template is repo-safe',
+  );
+}
+
+function checkPrivacyIntakeRunbook() {
+  requireIncludes(
+    FILES.privacyIntakeRunbook,
+    [
+      'poplanton@mail.ru',
+      'privacy@heyslab.ru',
+      'DSAR-YYYY-MM-NN',
+      'heys-pdn-calendar.ics',
+      'repo-safe summary',
+      'legal-version bump',
+    ],
+    'privacy/DSAR intake runbook uses current public contact and future alias checklist',
   );
 }
 
@@ -410,6 +427,7 @@ try {
   checkPdnCalendar();
   checkSignoffPackage();
   checkDsarLogTemplate();
+  checkPrivacyIntakeRunbook();
   checkIncidentDrillTemplate();
   checkDsarSelfServicePath();
   checkRetentionRunbook();
