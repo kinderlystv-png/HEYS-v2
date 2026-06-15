@@ -270,34 +270,37 @@
   function LiveRoadmap(props) {
     const rows = Array.isArray(props.items) ? props.items : Array.isArray(props.steps) ? props.steps : [];
     if (!rows.length) return null;
+    // Domain supplies its own BEM base (e.g. its catalog-styled class); the
+    // kernel stays free of domain literals and defaults to a neutral base.
+    const base = props.baseClass || 'heys-training-roadmap';
     const currentIndex = Math.max(0, Math.min(rows.length - 1, Number(props.currentIndex) || 0));
     const densityClass = rows.length > 8 ? ' is-ultra-dense' : rows.length > 4 ? ' is-dense' : '';
     return h('section', {
-      className: cx('fingers-fs-live-roadmap' + densityClass, props.className),
+      className: cx(base + densityClass, props.className),
       'aria-label': props.ariaLabel || 'Этапы тренировки'
     },
-      h('div', { className: 'fingers-fs-live-roadmap__head' },
+      h('div', { className: base + '__head' },
         h('span', null, props.title || 'Этапы тренировки'),
         h('strong', null, (currentIndex + 1) + '/' + rows.length)
       ),
-      h('ol', { className: 'fingers-fs-live-roadmap__list' },
+      h('ol', { className: base + '__list' },
         rows.map(function (item, idx) {
           const isCurrent = idx === currentIndex || item.current;
           const isDone = idx < currentIndex || item.done;
           return h('li', {
             key: item.id || idx,
             className: cx(
-              'fingers-fs-live-roadmap__item',
+              base + '__item',
               props.itemClassName,
               isCurrent && 'is-current',
               isDone && 'is-done'
             ),
             'aria-current': isCurrent ? 'step' : undefined
           },
-            h('span', { className: 'fingers-fs-live-roadmap__index' }, isDone ? '✓' : String(idx + 1)),
-            h('span', { className: 'fingers-fs-live-roadmap__body' },
-              h('span', { className: 'fingers-fs-live-roadmap__title' }, item.title || item.label || 'Упражнение'),
-              h('span', { className: 'fingers-fs-live-roadmap__meta' }, item.meta || item.metric || '')
+            h('span', { className: base + '__index' }, isDone ? '✓' : String(idx + 1)),
+            h('span', { className: base + '__body' },
+              h('span', { className: base + '__title' }, item.title || item.label || 'Упражнение'),
+              h('span', { className: base + '__meta' }, item.meta || item.metric || '')
             )
           );
         })
@@ -306,16 +309,18 @@
   }
 
   function LiveRunnerShell(props) {
+    const base = props.baseClass || 'heys-training-live';
     const roadmap = props.roadmap || h(LiveRoadmap, {
       items: props.items || props.steps || [],
       currentIndex: props.currentIndex,
+      baseClass: props.roadmapBaseClass,
       className: props.roadmapClassName,
       itemClassName: props.roadmapItemClassName,
       title: props.roadmapTitle,
       ariaLabel: props.roadmapLabel
     });
     return h('div', {
-      className: cx('fingers-fs-live', props.className),
+      className: cx(base, props.className),
       'data-training-runner': props.trainingRunner || 'guided',
       role: props.role || undefined,
       'aria-label': props.ariaLabel || undefined
@@ -346,13 +351,17 @@
     const ratio = Math.max(0, Math.min(1, Number(props.ratio) || 0));
     const digit = props.digit == null ? '' : String(props.digit);
     const finalCount = !!props.finalCount;
+    // Domain passes its catalog-styled base/continuous classes; kernel default
+    // is neutral so this runtime file carries no domain literals.
+    const base = props.baseClass || 'heys-training-countdown';
+    const continuousClass = props.continuousClass || 'heys-training-continuous';
     return h('div', {
-      className: cx('heys-fingers-countdown', props.continuous && 'heys-fingers-continuous', props.className),
+      className: cx(base, props.continuous && continuousClass, props.className),
       'data-phase': props.phaseKey || 'idle'
     },
-      h('div', { className: 'heys-fingers-countdown__counter' }, props.counter || ''),
-      props.title ? h('h2', { className: 'heys-fingers-countdown__grip' }, props.title) : null,
-      props.image ? h('div', { className: 'heys-fingers-countdown__hero' },
+      h('div', { className: base + '__counter' }, props.counter || ''),
+      props.title ? h('h2', { className: base + '__grip' }, props.title) : null,
+      props.image ? h('div', { className: base + '__hero' },
         h('img', {
           src: props.image,
           alt: props.imageAlt || props.title || 'Упражнение',
@@ -363,30 +372,30 @@
           }
         })
       ) : null,
-      chips.length ? h('div', { className: 'heys-fingers-countdown__chips' },
+      chips.length ? h('div', { className: base + '__chips' },
         chips.map(function (chip, idx) {
           return h('div', {
             key: chip.id || idx,
-            className: cx('heys-fingers-countdown__chip', chip.className),
+            className: cx(base + '__chip', chip.className),
             'data-weight-sign': chip.weightSign || undefined
           },
-            h('span', { className: 'heys-fingers-countdown__chip-label' }, chip.label || ''),
-            h('span', { className: 'heys-fingers-countdown__chip-value' }, chip.value == null ? '—' : String(chip.value))
+            h('span', { className: base + '__chip-label' }, chip.label || ''),
+            h('span', { className: base + '__chip-value' }, chip.value == null ? '—' : String(chip.value))
           );
         })
       ) : null,
-      h('div', { className: 'heys-fingers-countdown__phase-badge' }, props.phaseLabel || ''),
-      h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+      h('div', { className: base + '__phase-badge' }, props.phaseLabel || ''),
+      h('div', { className: base + '__ring-wrap' },
         h('svg', {
-          className: 'heys-fingers-countdown__ring',
+          className: base + '__ring',
           width: 200,
           height: 200,
           viewBox: '0 0 200 200',
           'aria-hidden': 'true'
         },
-          h('circle', { className: 'heys-fingers-countdown__ring-track', cx: 100, cy: 100, r: ringRadius, fill: 'none' }),
+          h('circle', { className: base + '__ring-track', cx: 100, cy: 100, r: ringRadius, fill: 'none' }),
           h('circle', {
-            className: 'heys-fingers-countdown__ring-fill',
+            className: base + '__ring-fill',
             cx: 100,
             cy: 100,
             r: ringRadius,
@@ -396,15 +405,15 @@
             transform: 'rotate(-90 100 100)'
           })
         ),
-        h('div', { className: 'heys-fingers-countdown__digit' + (finalCount ? ' is-final-count' : '') }, digit)
+        h('div', { className: base + '__digit' + (finalCount ? ' is-final-count' : '') }, digit)
       ),
       props.afterRing || null,
-      controls.length ? h('div', { className: 'heys-fingers-countdown__controls' },
+      controls.length ? h('div', { className: base + '__controls' },
         controls.map(function (control, idx) {
           return h('button', {
             key: control.id || idx,
             type: 'button',
-            className: cx('heys-fingers-countdown__btn', control.abort && 'heys-fingers-countdown__btn--abort', control.className),
+            className: cx(base + '__btn', control.abort && base + '__btn--abort', control.className),
             disabled: !!control.disabled,
             onClick: control.onClick,
             'aria-label': control.ariaLabel || control.label,

@@ -4136,6 +4136,7 @@
     const cur = Math.max(0, Math.min(rows.length - 1, Number(currentIndex) || 0));
     if (HEYS.TrainingFocus && typeof HEYS.TrainingFocus.LiveRoadmap === 'function') {
       return h(HEYS.TrainingFocus.LiveRoadmap, {
+        baseClass: 'fingers-fs-live-roadmap',
         items: rows.map(function (exercise, idx) {
           return {
             id: ((exercise && (exercise.atomId || exercise.gripId || exercise.name)) || 'exercise') + '-' + idx,
@@ -4215,7 +4216,7 @@
       });
     const roadmapNode = h(LiveExerciseRoadmap, { exercises: exercises, currentIndex: exIdx });
     return HEYS.TrainingFocus && typeof HEYS.TrainingFocus.LiveRunnerShell === 'function'
-      ? h(HEYS.TrainingFocus.LiveRunnerShell, { runner: runnerNode, roadmap: roadmapNode })
+      ? h(HEYS.TrainingFocus.LiveRunnerShell, { baseClass: 'fingers-fs-live', runner: runnerNode, roadmap: roadmapNode })
       : h('div', { className: 'fingers-fs-live' }, runnerNode, roadmapNode);
   }
 

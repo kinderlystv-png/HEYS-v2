@@ -1240,6 +1240,8 @@
       ),
       Focus && typeof Focus.LiveCountdownDisplay === 'function'
         ? h(Focus.LiveCountdownDisplay, {
+            baseClass: 'heys-fingers-countdown',
+            continuousClass: 'heys-fingers-continuous',
             continuous: true,
             phaseKey: livePhase(state.status),
             phaseLabel: livePhaseLabel(state.status),
@@ -1295,11 +1297,13 @@
     });
     if (Focus && typeof Focus.LiveRunnerShell === 'function') {
       return h(Focus.LiveRunnerShell, {
+        baseClass: 'fingers-fs-live',
         className: 'mobility-panel mobility-execution mobility-guided mobility-guided-live',
         ariaLabel: 'Ведомая тренировка',
         runner: runnerNode,
         items: roadmapItems,
         currentIndex: state.index,
+        roadmapBaseClass: 'fingers-fs-live-roadmap',
         roadmapClassName: 'mobility-live-roadmap',
         roadmapItemClassName: 'mobility-guided-step',
         roadmapLabel: 'Этапы тренировки'
