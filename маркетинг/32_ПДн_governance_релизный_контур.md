@@ -151,12 +151,12 @@ Acceptance:
 
 Acceptance:
 
-| Проверка                                                                                   | Статус | Что осталось                     |
-| ------------------------------------------------------------------------------------------ | ------ | -------------------------------- |
-| Health consent отдельный от общего согласия                                                | ✅     | сверять версии документа         |
-| Marketing consent необязательный и отделен от сервиса                                      | ✅     | не связывать с доступом к услуге |
-| Отзыв согласия имеет понятный сценарий                                                     | ✅     | проверить в фактическом flow     |
-| Новый пользователь без health consent не попадает в полноценный дневник/аналитику здоровья | 🟡     | smoke без health consent         |
+| Проверка                                                                                   | Статус | Что осталось                                                                                 |
+| ------------------------------------------------------------------------------------------ | ------ | -------------------------------------------------------------------------------------------- |
+| Health consent отдельный от общего согласия                                                | ✅     | сверять версии документа                                                                     |
+| Marketing consent необязательный и отделен от сервиса                                      | ✅     | не связывать с доступом к услуге                                                             |
+| Отзыв согласия имеет понятный сценарий                                                     | ✅     | проверить в фактическом flow                                                                 |
+| Новый пользователь без health consent не попадает в полноценный дневник/аналитику здоровья | ✅     | consent/proof smoke PASS: `missing` включает `health_data`, gate `valid=false` до подписания |
 
 ### D. Технический контур защиты
 
@@ -302,16 +302,16 @@ Acceptance:
 
 Задачу `22` 1.9 можно переводить в ✅ только если выполнено всё:
 
-| Проверка                                       | Доказательство                                                                                               | Статус                                                           |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
-| Реестр данных заполнен                         | `docs/legal/operator/heys-data-register.md`                                                                  | 🟡 заполнен; финальная сверка после РКН-подачи                   |
-| Data-change gate встроен в pre-release процесс | `docs/legal/operator/heys-data-change-gate.md`                                                               | ✅                                                               |
-| Согласия логируются и проверены smoke-тестом   | версия документа + результат smoke                                                                           | 🟡 код/БД есть; smoke без health consent pending                 |
-| Health-data техконтур описан                   | `docs/legal/operator/heys-access-matrix.md` + `heys-ispdn-gap-list.md`                                       | 🟡 описан; финальный ИСПДн-level pending                         |
-| Incident playbook готов                        | `docs/legal/operator/heys-pdn-incident-playbook.md` + `heys-pdn-incident-drill-template.md` + владелец 24/72 | 🟡 playbook/owner/template готовы; drill pending                 |
-| Календарь обязательств назначен                | `docs/legal/operator/heys-pdn-monthly-audit.md` + `heys-pdn-calendar.ics`                                    | 🟡 owner/ритм/`.ics` есть; импорт/первая запись pending          |
-| R1 для платежей запланирован                   | задача/чеклист до включения ЮKassa                                                                           | ✅                                                               |
-| R2/R3 legal sign-off определён                 | `docs/legal/operator/heys-r0-r2-signoff-package.md` + `legal-signoff-template.md`                            | 🟡 package/DSAR log/intake template есть; юрист/sign-off pending |
+| Проверка                                       | Доказательство                                                                                               | Статус                                                                      |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Реестр данных заполнен                         | `docs/legal/operator/heys-data-register.md`                                                                  | 🟡 заполнен; финальная сверка после РКН-подачи                              |
+| Data-change gate встроен в pre-release процесс | `docs/legal/operator/heys-data-change-gate.md`                                                               | ✅                                                                          |
+| Согласия логируются и проверены smoke-тестом   | версия документа + результат smoke                                                                           | ✅ consent/proof smoke PASS 2026-06-14; `health_data` missing до подписания |
+| Health-data техконтур описан                   | `docs/legal/operator/heys-access-matrix.md` + `heys-ispdn-gap-list.md`                                       | 🟡 описан; финальный ИСПДн-level pending                                    |
+| Incident playbook готов                        | `docs/legal/operator/heys-pdn-incident-playbook.md` + `heys-pdn-incident-drill-template.md` + владелец 24/72 | 🟡 playbook/owner/template готовы; drill pending                            |
+| Календарь обязательств назначен                | `docs/legal/operator/heys-pdn-monthly-audit.md` + `heys-pdn-calendar.ics`                                    | 🟡 owner/ритм/`.ics` есть; импорт/первая запись pending                     |
+| R1 для платежей запланирован                   | задача/чеклист до включения ЮKassa                                                                           | ✅                                                                          |
+| R2/R3 legal sign-off определён                 | `docs/legal/operator/heys-r0-r2-signoff-package.md` + `legal-signoff-template.md`                            | 🟡 package/DSAR log/intake template есть; юрист/sign-off pending            |
 
 Если один пункт не закрыт, но запуск всё равно нужен, это не ✅. Это отдельное
 решение о принятии риска: запись в `15`, срок закрытия gap и явный владелец.
