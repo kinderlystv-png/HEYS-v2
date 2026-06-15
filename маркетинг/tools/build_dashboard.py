@@ -48,6 +48,63 @@ def clean_md_cell(v):
     return re.sub(r'\*\*', '', str(v or '').strip())
 
 
+def parse_bullets(block, title):
+    m = re.search(rf'{re.escape(title)}:\n\n(.*?)(?=\n\n[A-ЯA-Z][^:\n]+:|\n### |\n---|\Z)',
+                  block, re.S)
+    if not m:
+        return []
+    items = []
+    for ln in m.group(1).splitlines():
+        if ln.startswith('- '):
+            items.append(ln[2:].strip())
+        elif items and ln.startswith('  '):
+            items[-1] += ' ' + ln.strip()
+    return items
+
+
+def parse_line_field(block, name):
+    lines = block.splitlines()
+    for idx, ln in enumerate(lines):
+        prefix = f'{name}:'
+        if not ln.startswith(prefix):
+            continue
+        parts = [ln[len(prefix):].strip()]
+        for next_ln in lines[idx + 1:]:
+            if not next_ln.strip():
+                break
+            if re.match(r'^[^:\n]{2,60}:\s+', next_ln):
+                break
+            parts.append(next_ln.strip())
+        return ' '.join(p for p in parts if p).strip()
+    return ''
+
+
+def parse_table_after_heading(text, heading):
+    lines = text.splitlines()
+    start_idx = next((i for i, ln in enumerate(lines) if ln.strip() == heading), None)
+    if start_idx is None:
+        return [], []
+    table_idx = next((i for i in range(start_idx + 1, len(lines))
+                      if lines[i].strip().startswith('|')), None)
+    if table_idx is None:
+        return [], []
+    return parse_md_table(lines, table_idx)
+
+
+def parse_paragraph_after_heading(text, heading):
+    lines = text.splitlines()
+    start_idx = next((i for i, ln in enumerate(lines) if ln.strip() == heading), None)
+    if start_idx is None:
+        return ''
+    parts = []
+    for ln in lines[start_idx + 1:]:
+        if ln.startswith('#') or ln == '---':
+            break
+        if ln.strip():
+            parts.append(ln.strip())
+    return ' '.join(parts)
+
+
 wb = openpyxl.load_workbook(ROOT / '00_Сводная_панель.xlsx', data_only=True)
 
 # ---------- Сводка ----------
@@ -121,13 +178,55 @@ tg_blocks = [('Ритм ведения', tg['B17'].value), ('Воронка', tg
              ('Чего не делать', tg['B34'].value)]
 tg_promo = [tg['B20'].value, tg['B21'].value, tg['B22'].value]
 tg_start14_rows = []
+tg_ad_examples = []
+tg_channel_examples = []
+tg_contour_sources = ([], [])
+tg_contour_layers = ([], [])
+tg_contour_cycle = ([], [])
+tg_contour_formula = ''
 tg_playbook_path = ROOT / '14_Telegram_плейбук.md'
 if tg_playbook_path.exists():
-    tg_playbook_lines = tg_playbook_path.read_text(encoding='utf-8').splitlines()
+    tg_playbook_text = tg_playbook_path.read_text(encoding='utf-8')
+    tg_playbook_lines = tg_playbook_text.splitlines()
     start14_idx = next((i for i, ln in enumerate(tg_playbook_lines)
                         if ln.startswith('|') and 'День' in ln and 'Действие' in ln), None)
     if start14_idx is not None:
         _, tg_start14_rows = parse_md_table(tg_playbook_lines, start14_idx)
+    for m in re.finditer(r'^### (TG-AD-\d+) — ([^\n]+)\n(.*?)(?=^### |\n---\n\n## |\Z)',
+                         tg_playbook_text, re.M | re.S):
+        body = m.group(3)
+        tg_ad_examples.append({
+            'id': m.group(1),
+            'title': m.group(2).strip(),
+            'screenshot': parse_line_field(body, 'Скрин'),
+            'format': parse_line_field(body, 'Формат'),
+            'offer': parse_line_field(body, 'Оффер'),
+            'pattern': parse_line_field(body, 'Паттерн'),
+            'scores': parse_line_field(body, 'Оценки'),
+            'conclusion': parse_line_field(body, 'Вывод для HEYS'),
+            'take': parse_bullets(body, 'Что взять для HEYS'),
+            'avoid': parse_bullets(body, 'Чего избегать'),
+        })
+    for m in re.finditer(r'^### (TG-CH-\d+) — ([^\n]+)\n(.*?)(?=^### |\n---\n\n## |\Z)',
+                         tg_playbook_text, re.M | re.S):
+        body = m.group(3)
+        tg_channel_examples.append({
+            'id': m.group(1),
+            'title': m.group(2).strip(),
+            'link': parse_line_field(body, 'Ссылка'),
+            'niche': parse_line_field(body, 'Ниша'),
+            'audience': parse_line_field(body, 'Аудитория'),
+            'offer': parse_line_field(body, 'Оффер'),
+            'pattern': parse_line_field(body, 'Паттерн'),
+            'scores': parse_line_field(body, 'Оценки'),
+            'conclusion': parse_line_field(body, 'Вывод для HEYS'),
+            'take': parse_bullets(body, 'Что взять для HEYS'),
+            'avoid': parse_bullets(body, 'Чего избегать'),
+        })
+    tg_contour_sources = parse_table_after_heading(tg_playbook_text, '### Что реально берём из каналов')
+    tg_contour_layers = parse_table_after_heading(tg_playbook_text, '### Сборка в один контур')
+    tg_contour_cycle = parse_table_after_heading(tg_playbook_text, '### Канальный цикл на 4 недели')
+    tg_contour_formula = parse_paragraph_after_heading(tg_playbook_text, '### Итоговая формула')
 
 # ---------- сводные таблицы из 29 (приложения / лендинги) ----------
 audit_apps, audit_landings = ([], []), ([], [])
@@ -421,6 +520,21 @@ def render_imap(head_rows):
 imap_landing_table, imap_l_done, imap_l_total = render_imap(imap_landing)
 imap_product_table, imap_p_done, imap_p_total = render_imap(imap_product)
 
+
+def render_plain_table(head_rows, empty_msg):
+    head, rows = head_rows
+    if not rows:
+        return f'<p class="dim">{esc(empty_msg)}</p>'
+    out = '<tr>' + ''.join(f'<th>{esc(h)}</th>' for h in head) + '</tr>'
+    for r in rows:
+        out += '<tr>' + ''.join(f'<td>{esc(c)}</td>' for c in r) + '</tr>'
+    return '<table>' + out + '</table>'
+
+
+tg_contour_sources_table = render_plain_table(tg_contour_sources, 'контур источников не найден в 14 §13')
+tg_contour_layers_table = render_plain_table(tg_contour_layers, 'слои контура не найдены в 14 §13')
+tg_contour_cycle_table = render_plain_table(tg_contour_cycle, 'цикл на 4 недели не найден в 14 §13')
+
 tg_rubric_rows = ('<tr><th>Рубрика</th><th>Цель</th><th>Частота</th></tr>' +
                   ''.join(f'<tr><td>{esc(r[0])}</td><td class="dim">{esc(r[1])}</td>'
                           f'<td class="num">{esc(r[2])}</td></tr>' for r in tg_rubrics))
@@ -430,6 +544,47 @@ tg_promo_list = ''.join(f'<li>{esc(p)}</li>' for p in tg_promo if p)
 tg_start14_table = ('<tr><th>День</th><th>Действие</th></tr>' +
                     ''.join(f'<tr><td class="num">{esc(r[0])}</td><td>{esc(r[1])}</td></tr>'
                             for r in tg_start14_rows))
+tg_ad_cards = ''
+for ad in tg_ad_examples:
+    take = '<ul>' + ''.join(f'<li>{esc(x)}</li>' for x in ad['take'][:3]) + '</ul>'
+    avoid = '<ul>' + ''.join(f'<li>{esc(x)}</li>' for x in ad['avoid'][:3]) + '</ul>'
+    screenshot = (f'<a class="tg-shot-link" href="{esc(ad["screenshot"])}" target="_blank" '
+                  f'rel="noopener" title="Открыть скрин в полном размере">'
+                  f'<img class="tg-shot" src="{esc(ad["screenshot"])}" alt="{esc(ad["id"])}"></a>'
+                  if ad['screenshot'] else '')
+    conclusion = (f'<div class="tg-conclusion"><b>Вывод для HEYS:</b> '
+                  f'{esc(ad["conclusion"])}</div>') if ad.get('conclusion') else ''
+    tg_ad_cards += (
+        f'<article class="tg-example-card tg-example-card--ad">'
+        f'<div class="tg-example-media">{screenshot}'
+        f'<div class="tg-example-id">{esc(ad["id"])}</div>'
+        f'<div class="dim">{esc(ad["title"])}</div></div>'
+        f'<div class="tg-example-main"><div class="tg-example-head">'
+        f'<div><h3>{esc(ad["format"])}</h3><p>{esc(ad["offer"])}</p>'
+        f'<p class="label">{esc(ad["pattern"])}</p></div>'
+        f'<div class="tg-score">{esc(ad["scores"])}</div></div>'
+        f'{conclusion}'
+        f'<div class="tg-example-cols"><div><h4>Взять для HEYS</h4>{take}</div>'
+        f'<div><h4>Избегать</h4>{avoid}</div></div></div></article>')
+tg_channel_cards = ''
+for ch in tg_channel_examples:
+    take = '<ul>' + ''.join(f'<li>{esc(x)}</li>' for x in ch['take'][:3]) + '</ul>'
+    avoid = '<ul>' + ''.join(f'<li>{esc(x)}</li>' for x in ch['avoid'][:3]) + '</ul>'
+    link = (f'<a href="{esc(ch["link"])}" target="_blank" rel="noopener">'
+            f'{esc(ch["link"])}</a>') if ch['link'] else ''
+    conclusion = (f'<div class="tg-conclusion"><b>Вывод для HEYS:</b> '
+                  f'{esc(ch["conclusion"])}</div>') if ch.get('conclusion') else ''
+    tg_channel_cards += (
+        f'<article class="tg-example-card">'
+        f'<div class="tg-example-media"><div class="tg-example-id">{esc(ch["id"])}</div>'
+        f'<h3>{esc(ch["title"])}</h3><p>{link}</p></div>'
+        f'<div class="tg-example-main"><div class="tg-example-head">'
+        f'<div><h3>{esc(ch["niche"])}</h3><p>{esc(ch["audience"])}</p>'
+        f'<p class="label">{esc(ch["offer"])}</p><p class="label">{esc(ch["pattern"])}</p></div>'
+        f'<div class="tg-score">{esc(ch["scores"])}</div></div>'
+        f'{conclusion}'
+        f'<div class="tg-example-cols"><div><h4>Взять для HEYS</h4>{take}</div>'
+        f'<div><h4>Избегать</h4>{avoid}</div></div></div></article>')
 
 html_out = f'''<!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8">
@@ -523,6 +678,39 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
   border:1px solid var(--line); border-radius:10px; padding:9px 12px;
   margin-bottom:8px; font-size:12.5px; }}
 .adopt .chip {{ flex-shrink:0; margin-top:2px; }}
+.tg-examples {{ display:grid; gap:12px; }}
+.tg-example-card {{ display:grid; grid-template-columns:220px minmax(0,1fr); gap:14px;
+  background:linear-gradient(180deg,var(--card),var(--card2)); border:1px solid var(--line);
+  border-radius:12px; padding:12px; }}
+.tg-example-media {{ min-width:0; }}
+.tg-example-id {{ font-weight:800; letter-spacing:.02em; margin-bottom:4px; }}
+.tg-example-media h3,.tg-example-main h3 {{ font-size:13px; margin:0 0 4px; color:var(--txt); }}
+.tg-example-media p,.tg-example-main p {{ margin:0 0 5px; overflow-wrap:anywhere; }}
+.tg-example-head {{ display:grid; grid-template-columns:minmax(0,1fr) 220px; gap:12px;
+  align-items:start; margin-bottom:10px; }}
+.tg-score {{ color:var(--ok); font-weight:700; font-size:12px; line-height:1.45;
+  background:#2dd4a712; border:1px solid #2dd4a733; border-radius:8px; padding:8px; }}
+.tg-conclusion {{ margin:0 0 10px; padding:9px 10px; border-radius:8px;
+  background:#4f8cff14; border:1px solid #4f8cff33; font-size:12.5px; }}
+.tg-contour {{ display:grid; gap:12px; }}
+.tg-contour-formula {{ border-left:3px solid var(--ok); }}
+.tg-contour-grid {{ display:grid; gap:12px; grid-template-columns:1.1fr .9fr; }}
+.tg-contour .card {{ overflow-x:auto; }}
+.tg-contour table {{ min-width:680px; }}
+.tg-example-cols {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }}
+.tg-example-cols h4 {{ margin:0 0 6px; color:var(--dim); font-size:10.5px; text-transform:uppercase;
+  letter-spacing:.08em; }}
+.tg-example-cols ul {{ margin:0; }}
+.tg-shot-link {{ display:block; width:190px; max-width:100%; margin:0 0 8px; }}
+.tg-shot {{ display:block; width:100%; height:auto; border-radius:8px;
+  border:1px solid #2c3a66; background:#0b1020; transition:transform .12s ease,border-color .12s ease; }}
+.tg-shot-link:hover .tg-shot {{ transform:scale(1.02); border-color:var(--acc); }}
+@media (max-width:760px) {{
+  .stage {{ grid-template-columns:1fr; }}
+  .tg-example-card,.tg-example-head,.tg-example-cols {{ grid-template-columns:1fr; }}
+  .tg-contour-grid {{ grid-template-columns:1fr; }}
+  .tg-shot-link {{ width:100%; max-width:260px; }}
+}}
 #stale-warn {{ display:none; background:#f5b14c22; border:1px solid #f5b14c66;
   color:var(--warn); border-radius:10px; padding:8px 14px; margin-bottom:14px;
   font-size:12.5px; }}
@@ -634,6 +822,17 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 	</div>
 	<section><h2>Первые 14 дней канала (14)</h2>
 	<div class="card scrollx" style="padding:4px 8px"><table>{tg_start14_table}</table></div></section>
+	<section class="tg-contour"><h2>Единый контур Telegram-канала HEYS (14 §13)</h2>
+	<div class="card tg-contour-formula"><h2>Итоговая формула</h2><p class="sm">{esc(tg_contour_formula)}</p></div>
+	<div class="card">{tg_contour_sources_table}</div>
+	<div class="tg-contour-grid">
+	<div class="card">{tg_contour_layers_table}</div>
+	<div class="card">{tg_contour_cycle_table}</div>
+	</div></section>
+	<section><h2>Библиотека рекламных примеров (14 §11)</h2>
+	<div class="tg-examples">{tg_ad_cards}</div></section>
+	<section><h2>Библиотека Telegram-каналов (14 §12)</h2>
+	<div class="tg-examples">{tg_channel_cards}</div></section>
 	</div>
 
 <footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 22_План · 25_Roadmap · 29_Аудит ·
@@ -675,6 +874,16 @@ for cond, msg in [
     (len(imap_product[1]) >= 2, '30: секция «После релиза» < 2 пунктов'),
     (len(posts) >= 5, '24: найдено < 5 постов (заголовки «## ПN — …»)'),
     (len(tg_start14_rows) >= 5, '14: план первых 14 дней Telegram < 5 строк'),
+    (len(tg_ad_examples) >= 1, '14 §11: библиотека рекламных примеров пуста'),
+    (len(tg_channel_examples) >= 1, '14 §12: библиотека Telegram-каналов пуста'),
+    (all(ad.get('conclusion') for ad in tg_ad_examples),
+     '14 §11: у каждого TG-AD-* должен быть «Вывод для HEYS»'),
+    (all(ch.get('conclusion') for ch in tg_channel_examples),
+     '14 §12: у каждого TG-CH-* должен быть «Вывод для HEYS»'),
+    (len(tg_contour_sources[1]) >= 7, '14 §13: таблица «Что реально берём» < 7 строк'),
+    (len(tg_contour_layers[1]) >= 6, '14 §13: таблица «Сборка в один контур» < 6 строк'),
+    (len(tg_contour_cycle[1]) >= 4, '14 §13: цикл на 4 недели < 4 строк'),
+    (bool(tg_contour_formula), '14 §13: пустая итоговая формула'),
 ]:
     if not cond:
         problems.append(msg)
