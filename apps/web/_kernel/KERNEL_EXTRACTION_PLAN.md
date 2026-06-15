@@ -33,6 +33,12 @@ lifecycle, bibliography, readiness/statistics, catalog index, shared focus UI.
 | Session pipeline              | `heys_kernel_session_v1.js`                                           | slots/candidates/scoring/dose hooks        |
 | Shared focus UI               | `heys_training_focus_ui_v1.js`                                        | domain panels, visuals, copy, measurements |
 
+Runner fallback guard:
+`apps/web/__tests__/fingers-timer-kernel-equivalence.test.js` сравнивает живые
+`useCountdownCycle` и `useRepsCycle` с `TrainingKernel.runner.createPhaseGraph`
+и без него. Это закрывает риск "kernel не загрузился, а таймер пальцев должен
+остаться рабочим".
+
 ## Definition of done для "100%"
 
 Режим считается построенным на общем ядре, если:
