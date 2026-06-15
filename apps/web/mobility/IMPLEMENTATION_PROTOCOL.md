@@ -251,6 +251,20 @@ runtime-артефакт.
   kernel contracts. Если приходится копировать механику выбора, records merge,
   runner state или registry/cards/search — это сигнал вынести механику в kernel.
 
+## Guided runner shell (2026-06-15)
+
+- В `HEYS.TrainingFocus` добавлен общий `GuidedRunnerPanel`: фото/фолбэк,
+  заголовок, инструкция, метрики, progress, дыхательные фазы, controls и список
+  шагов. Компонент помечает DOM `data-training-runner="guided"`, чтобы тесты
+  ловили возврат к доменной самописной разметке.
+- `Mobility.ExecutionPanel` теперь только готовит domain data из `routineRunner`
+  и отдаёт её в `TrainingFocus.GuidedRunnerPanel`. При отсутствии
+  `TrainingFocus` сохранён старый fallback, чтобы source-eval и деградация не
+  ломались.
+- Проверки:
+  `pnpm vitest run apps/web/__tests__/kernel-training-focus-ui.test.js apps/web/__tests__/mobility-ui.test.js apps/web/__tests__/mobility-runner.test.js apps/web/__tests__/fingers-exercise-runner.test.js apps/web/__tests__/fingers-timer-kernel-equivalence.test.js`
+  → 82/82.
+
 ## Риски / открытые
 
 - atom_catalog покрывает все блоки A–J и у каждого атома есть `title`,

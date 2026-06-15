@@ -88,6 +88,7 @@ describe('Mobility UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
     expect(container.querySelector('.mobility-execution')).not.toBeNull();
     expect(container.querySelector('.mobility-guided')).not.toBeNull();
+    expect(container.querySelector('[data-training-runner="guided"]')).not.toBeNull();
     expect(screen.getAllByText('Быстрый микс').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('tab', { name: /Прогресс/ }));

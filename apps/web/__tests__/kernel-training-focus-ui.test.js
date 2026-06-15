@@ -88,4 +88,35 @@ describe('TrainingFocus UI primitives', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Добавить' }));
     expect(onToggle).toHaveBeenCalledWith('calf_hold', expect.objectContaining({ id: 'calf_hold' }));
   });
+
+  it('GuidedRunnerPanel provides the shared guided training surface', () => {
+    const onStart = vi.fn();
+    render(React.createElement(Focus().GuidedRunnerPanel, {
+      classPrefix: 'test-focus',
+      title: 'Hip CARs',
+      instruction: 'Move slowly',
+      image: '/exercises/mobility/hip.webp',
+      imageAlt: 'Фото упражнения: Hip CARs',
+      status: 'idle',
+      progress: 25,
+      metrics: [
+        { id: 'dose', value: '2 повт.', label: 'доза' },
+        { id: 'step', value: '1/4', label: 'шаг' }
+      ],
+      phases: [{ type: 'inhale', label: 'Вдох', durationSec: 4 }],
+      controls: [{ id: 'start', label: 'Старт', onClick: onStart }],
+      steps: [
+        { id: 'hip', title: 'Hip CARs', metric: '2 повт.', current: true },
+        { id: 'breath', title: 'Box breathing', metric: '4 мин' }
+      ]
+    }));
+
+    const runner = screen.getByLabelText('Ведомая тренировка');
+    expect(runner.getAttribute('data-training-runner')).toBe('guided');
+    expect(within(runner).getAllByText('Hip CARs').length).toBeGreaterThan(0);
+    expect(within(runner).getByAltText('Фото упражнения: Hip CARs')).toBeTruthy();
+    expect(within(runner).getByText('Вдох 4 сек')).toBeTruthy();
+    fireEvent.click(within(runner).getByRole('button', { name: 'Старт' }));
+    expect(onStart).toHaveBeenCalledTimes(1);
+  });
 });

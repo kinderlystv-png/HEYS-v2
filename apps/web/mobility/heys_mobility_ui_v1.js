@@ -945,6 +945,7 @@
 
   function ExecutionPanel(props) {
     const runner = deps().routineRunner;
+    const Focus = global.HEYS && global.HEYS.TrainingFocus;
     const plan = props.plan;
     const [state, setState] = useState(function () {
       return runner && plan ? runner.createState(plan) : { status: 'idle', index: 0, totalSteps: 0, aborted: false };
@@ -955,6 +956,44 @@
     const progress = plan.steps.length ? Math.round(((state.index + 1) / plan.steps.length) * 100) : 0;
     function send(event) {
       setState(function (s) { return runner.transition(s, event); });
+    }
+    if (Focus && Focus.GuidedRunnerPanel) {
+      return h(Focus.GuidedRunnerPanel, {
+        classPrefix: 'mobility',
+        ariaLabel: 'Ведомая тренировка',
+        image: currentAtom && currentAtom.visualAsset,
+        imageAlt: 'Фото упражнения: ' + (currentAtom && currentAtom.title || current.label),
+        fallbackIcon: 'M',
+        kicker: 'Ведомая тренировка',
+        title: currentAtom && currentAtom.title || current.label,
+        instruction: current.instruction || currentAtom && currentAtom.instruction || '',
+        status: state.status,
+        progress: progress,
+        metrics: [
+          { id: 'dose', value: stepMetric(current), label: 'доза' },
+          { id: 'step', value: (state.index + 1) + '/' + plan.steps.length, label: 'шаг' },
+          { id: 'status', value: state.status, label: 'статус' }
+        ],
+        phases: current.breath && current.breath.phases,
+        controls: [
+          state.status === 'idle' ? { id: 'start', label: 'Старт', onClick: function () { send('start'); } } : null,
+          state.status === 'running' ? { id: 'pause', label: 'Пауза', onClick: function () { send('pause'); } } : null,
+          state.status === 'paused' ? { id: 'resume', label: 'Продолжить', onClick: function () { send('resume'); } } : null,
+          { id: 'next', label: 'Дальше', onClick: function () { send('next'); } },
+          props.onPain ? { id: 'pain', label: 'Отметить боль', onClick: function () { props.onPain(current); } } : null,
+          { id: 'abort', label: 'Стоп', onClick: function () { send('abort'); } }
+        ],
+        steps: plan.steps.slice(0, 8).map(function (s, idx) {
+          const atom = atomForStep(s);
+          return {
+            id: String(idx) + ':' + (s.atomId || s.label || ''),
+            title: atom && atom.title || s.label,
+            metric: stepMetric(s),
+            current: idx === state.index,
+            done: idx < state.index
+          };
+        })
+      });
     }
     return h('section', { className: 'mobility-panel mobility-execution mobility-guided', 'aria-label': 'Ведомая тренировка' },
       h('div', { className: 'mobility-guided__hero' },

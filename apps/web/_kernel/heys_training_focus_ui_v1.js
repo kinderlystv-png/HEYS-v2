@@ -180,6 +180,93 @@
     );
   }
 
+  function GuidedRunnerPanel(props) {
+    const prefix = props.classPrefix || 'training-focus';
+    const metrics = Array.isArray(props.metrics) ? props.metrics : [];
+    const controls = Array.isArray(props.controls) ? props.controls : [];
+    const steps = Array.isArray(props.steps) ? props.steps : [];
+    const phases = Array.isArray(props.phases) ? props.phases : [];
+    const progress = Math.max(0, Math.min(100, Number(props.progress) || 0));
+    return h('section', {
+      className: cx(
+        prefixClass(prefix, '-panel'),
+        prefixClass(prefix, '-execution'),
+        prefixClass(prefix, '-guided'),
+        props.className
+      ),
+      'data-training-runner': 'guided',
+      'aria-label': props.ariaLabel || 'Ведомая тренировка'
+    },
+      h('div', { className: prefixClass(prefix, '-guided__hero') },
+        h('div', { className: prefixClass(prefix, '-guided__visual') },
+          props.image
+            ? h('img', {
+                src: props.image,
+                alt: props.imageAlt || props.title || 'Фото упражнения',
+                loading: 'lazy',
+                decoding: 'async'
+              })
+            : h('div', { className: prefixClass(prefix, '-guided__fallback'), 'aria-hidden': 'true' }, props.fallbackIcon || '•')
+        ),
+        h('div', { className: prefixClass(prefix, '-guided__body') },
+          h('div', { className: prefixClass(prefix, '-guided__kicker') }, props.kicker || 'Ведомая тренировка'),
+          h('h3', { className: prefixClass(prefix, '-guided__title') }, props.title || 'Упражнение'),
+          props.instruction ? h('p', { className: prefixClass(prefix, '-guided__instruction') }, props.instruction) : null,
+          metrics.length ? h('div', { className: prefixClass(prefix, '-guided__metric') },
+            metrics.map(function (metric, idx) {
+              return h('div', { key: metric.id || idx },
+                h('strong', null, metric.value == null ? '—' : String(metric.value)),
+                h('span', null, metric.label || '')
+              );
+            })
+          ) : null,
+          h('div', { className: prefixClass(prefix, '-guided__progress'), 'aria-label': props.progressLabel || 'Прогресс тренировки' },
+            h('span', { style: { width: progress + '%' } })
+          ),
+          phases.length ? h('ol', { className: prefixClass(prefix, '-breath-phases'), 'aria-label': props.phasesLabel || 'Фазы дыхания' },
+            phases.map(function (phase, idx) {
+              return h('li', { key: (phase.type || 'phase') + idx, 'data-phase': phase.type || null },
+                phase.label || phase.type || 'Фаза',
+                phase.durationSec != null ? ' ' + phase.durationSec + ' сек' : ''
+              );
+            })
+          ) : null,
+          controls.length ? h('div', { className: prefixClass(prefix, '-guided__controls') },
+            controls.filter(Boolean).map(function (control, idx) {
+              return h('button', {
+                key: control.id || idx,
+                type: 'button',
+                disabled: !!control.disabled,
+                onClick: control.onClick,
+                'aria-label': control.ariaLabel || control.label
+              }, control.label || control.id || 'Действие');
+            })
+          ) : null
+        )
+      ),
+      h('div', {
+        className: prefixClass(prefix, '-execution__status'),
+        'data-status': props.status || 'idle',
+        style: { display: 'none' }
+      }),
+      steps.length ? h('div', { className: prefixClass(prefix, '-guided__list'), 'aria-label': props.stepsLabel || 'Шаги тренировки' },
+        steps.map(function (step, idx) {
+          return h('div', {
+            key: step.id || idx,
+            className: cx(
+              prefixClass(prefix, '-guided-step'),
+              step.current && 'is-current',
+              step.done && 'is-done'
+            )
+          },
+            h('span', null, step.title || step.label || 'Шаг'),
+            h('span', null, step.metric || '')
+          );
+        })
+      ) : null
+    );
+  }
+
   function RegistryGrid(props) {
     const prefix = props.classPrefix || 'training-focus';
     const items = Array.isArray(props.items) ? props.items : [];
@@ -379,6 +466,7 @@
     EquipmentBar: EquipmentBar,
     GoalSelector: GoalSelector,
     ReadinessCard: ReadinessCard,
+    GuidedRunnerPanel: GuidedRunnerPanel,
     RegistryGrid: RegistryGrid,
     Registry: Registry
   };
