@@ -1,8 +1,8 @@
 // heys_kernel_dates_v1.js — ОБЩЕЕ ЯДРО: date keys and day arithmetic.
 //
 // Training modes intentionally use both local and UTC date keys:
-// - fingers calendar/day logs are local user days;
-// - mobility weekly helper already used UTC ISO days for incoming Date values.
+// - calendar/day logs are local user days;
+// - machine-generated weekly helpers may use UTC ISO days for incoming Date values.
 // Kernel exposes both variants explicitly so domains do not accidentally change
 // calendar semantics while sharing one tested implementation.
 
@@ -77,7 +77,7 @@
 
   // ТОЛЬКО для LOCAL date-keys (YYYY-MM-DD от dateKeyLocal): 'T00:00:00' без Z
   // парсится в локальной зоне. НЕ смешивать с dateKeyUTC-ключами — разница зон/DST
-  // даст дрейф на сутки. mobility weekly planner (UTC-дни) не должен звать это.
+  // даст дрейф на сутки. UTC weekly planners should use UTC arithmetic instead.
   function daysBetweenDateKeys(startKey, endKey) {
     const a = Date.parse(String(startKey || '') + 'T00:00:00');
     const b = Date.parse(String(endKey || '') + 'T00:00:00');

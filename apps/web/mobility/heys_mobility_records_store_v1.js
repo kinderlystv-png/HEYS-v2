@@ -39,7 +39,20 @@
   function empty() {
     return { sessions: [], assessments: [], painFlags: [] };
   }
+  function adapter(storage) {
+    const kr = kernelRecords();
+    if (!kr || typeof kr.createStoreAdapter !== 'function') return null;
+    return kr.createStoreAdapter({
+      prefix: PREFIX,
+      style: 'heys-client-prefix',
+      empty: empty,
+      storage: storageOf(storage),
+      getClientId: function () { return resolveClientId(); }
+    });
+  }
   function load(clientId, storage) {
+    const a = adapter(storage);
+    if (a) return a.load(clientId, storageOf(storage));
     const kr = kernelRecords();
     if (kr && kr.readJson) return kr.readJson(storageOf(storage), key(clientId), empty);
     const s = storageOf(storage);
@@ -51,6 +64,8 @@
     }
   }
   function save(clientId, data, storage) {
+    const a = adapter(storage);
+    if (a) return a.save(clientId, data, storageOf(storage));
     const kr = kernelRecords();
     if (kr && kr.writeJson) return kr.writeJson(storageOf(storage), key(clientId), data, empty);
     const s = storageOf(storage);
@@ -65,7 +80,6 @@
   }
   function addSession(clientId, sessionResult, storage) {
     const data = load(clientId, storage);
-    const kr = kernelRecords();
     const item = {
       id: recordId(['mob_sess', Date.now(), data.sessions.length]),
       savedAt: new Date().toISOString(),
@@ -74,31 +88,36 @@
       issues: (sessionResult && sessionResult.issues) || [],
       session: (sessionResult && sessionResult.session) || sessionResult || null
     };
-    save(clientId, kr && kr.appendField ? kr.appendField(data, 'sessions', item) : Object.assign(data, { sessions: data.sessions.concat([item]) }), storage);
+    const a = adapter(storage);
+    if (a) a.append(clientId, 'sessions', item, { cap: 500 }, storageOf(storage));
+    else save(clientId, Object.assign(data, { sessions: data.sessions.concat([item]) }), storage);
     return item;
   }
   function addAssessment(clientId, audit, storage) {
     const data = load(clientId, storage);
-    const kr = kernelRecords();
     const item = {
       id: recordId(['mob_assess', Date.now(), data.assessments.length]),
       savedAt: new Date().toISOString(),
       audit: audit
     };
-    save(clientId, kr && kr.appendField ? kr.appendField(data, 'assessments', item) : Object.assign(data, { assessments: data.assessments.concat([item]) }), storage);
+    const a = adapter(storage);
+    if (a) a.append(clientId, 'assessments', item, { cap: 200 }, storageOf(storage));
+    else save(clientId, Object.assign(data, { assessments: data.assessments.concat([item]) }), storage);
     return item;
   }
   function addPainFlag(clientId, flag, storage) {
     const data = load(clientId, storage);
-    const kr = kernelRecords();
     const item = Object.assign({ savedAt: new Date().toISOString() }, flag || {});
-    save(clientId, kr && kr.appendField ? kr.appendField(data, 'painFlags', item) : Object.assign(data, { painFlags: data.painFlags.concat([item]) }), storage);
+    const a = adapter(storage);
+    if (a) a.append(clientId, 'painFlags', item, { cap: 200 }, storageOf(storage));
+    else save(clientId, Object.assign(data, { painFlags: data.painFlags.concat([item]) }), storage);
     return item;
   }
   function latestAssessment(clientId, storage) {
+    const a = adapter(storage);
+    if (a) return a.latest(clientId, 'assessments', storageOf(storage));
     const data = load(clientId, storage);
-    const kr = kernelRecords();
-    return kr && kr.latestInField ? kr.latestInField(data, 'assessments') : (data.assessments.length ? data.assessments[data.assessments.length - 1] : null);
+    return data.assessments.length ? data.assessments[data.assessments.length - 1] : null;
   }
   function listSessions(clientId, storage) {
     return load(clientId, storage).sessions;

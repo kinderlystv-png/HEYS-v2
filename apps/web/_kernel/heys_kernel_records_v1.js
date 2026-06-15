@@ -2,7 +2,7 @@
 //
 // Single source нижнего storage-слоя для тренировочных режимов: построение
 // client-scoped ключей, safe JSON read/write, memory storage для тестов,
-// capped/windowed append для историй. Доменные PR/ROM/session semantics остаются
+// capped/windowed append для историй. Доменные merge/session semantics остаются
 // в режимах.
 
 ;(function (global) {
@@ -214,6 +214,43 @@
     }).filter(Boolean).join(sep);
   }
 
+  function axisId(axis) {
+    if (typeof axis === 'string') return axis;
+    if (axis && typeof axis === 'object') return axis.id || axis.key || axis.field || '';
+    return '';
+  }
+
+  function positionValue(position, axis) {
+    const pos = position && typeof position === 'object' ? position : {};
+    const id = axisId(axis);
+    if (id && Object.prototype.hasOwnProperty.call(pos, id)) return pos[id];
+    const aliases = axis && typeof axis === 'object' && Array.isArray(axis.aliases) ? axis.aliases : [];
+    for (let i = 0; i < aliases.length; i++) {
+      if (Object.prototype.hasOwnProperty.call(pos, aliases[i])) return pos[aliases[i]];
+    }
+    return null;
+  }
+
+  function positionId(position, axes, opts) {
+    const o = opts || {};
+    const list = Array.isArray(axes) ? axes : [];
+    const suffixes = o.suffixes || {};
+    const parts = [];
+    list.forEach(function (axis) {
+      const id = axisId(axis);
+      let value = positionValue(position, axis);
+      if (value == null || value === '') {
+        if (o.missingToken) parts.push(o.missingToken);
+        return;
+      }
+      const suffix = Object.prototype.hasOwnProperty.call(suffixes, id)
+        ? suffixes[id]
+        : ((axis && typeof axis === 'object' && axis.suffix) || '');
+      parts.push(String(value) + String(suffix || ''));
+    });
+    return makeId(parts, o);
+  }
+
   function maxWins(existing, candidate, opts) {
     const o = opts || {};
     if (!existing) return true;
@@ -233,6 +270,146 @@
     return newT >= oldT;
   }
 
+  function stableEntryKey(entry, opts) {
+    const o = opts || {};
+    if (!entry || typeof entry !== 'object') return '';
+    const idKey = o.idKey || 'id';
+    if (entry[idKey] != null && entry[idKey] !== '') return String(entry[idKey]);
+    const ts = timestampFrom(entry, o.timestampKeys || o.timestampKey || ['savedAt', 'testedAt', 'timestamp', 'ts']);
+    return ts != null ? String(ts) : '';
+  }
+
+  function mergeAppendDedupe(existing, incoming, opts) {
+    const o = opts || {};
+    const out = [];
+    const seen = new Set();
+    function push(entry) {
+      if (!entry || typeof entry !== 'object') return;
+      const key = stableEntryKey(entry, o);
+      if (key && seen.has(key)) return;
+      if (key) seen.add(key);
+      out.push(entry);
+    }
+    (Array.isArray(existing) ? existing : []).forEach(push);
+    (Array.isArray(incoming) ? incoming : []).forEach(push);
+    const sorted = o.sort === false ? out : sortByTimestamp(out, {
+      timestampKeys: o.timestampKeys || o.timestampKey || ['savedAt', 'testedAt', 'timestamp', 'ts'],
+      desc: o.desc === true
+    });
+    return capList(sorted, o.cap);
+  }
+
+  function mergeLatestByKey(existing, incoming, opts) {
+    const o = opts || {};
+    const keyField = o.keyField || 'testId';
+    const tsKeys = o.timestampKeys || o.timestampKey || ['savedAt', 'testedAt', 'updatedAt', 'timestamp'];
+    const map = {};
+    function visit(entry) {
+      if (!entry || typeof entry !== 'object') return;
+      const key = entry[keyField] || entry.id;
+      if (!key) return;
+      const prev = map[key];
+      if (!prev || (timestampFrom(entry, tsKeys) || 0) >= (timestampFrom(prev, tsKeys) || 0)) {
+        map[key] = entry;
+      }
+    }
+    const fromObj = function (obj) {
+      Object.keys(obj || {}).forEach(function (key) {
+        const entry = obj[key];
+        visit(entry && typeof entry === 'object' ? Object.assign({ [keyField]: key }, entry) : null);
+      });
+    };
+    Array.isArray(existing) ? existing.forEach(visit) : fromObj(existing);
+    Array.isArray(incoming) ? incoming.forEach(visit) : fromObj(incoming);
+    return o.asArray === true ? Object.keys(map).map(function (key) { return map[key]; }) : map;
+  }
+
+  function mergeMaxWinsMap(existing, incoming, opts) {
+    const out = Object.assign({}, existing || {});
+    Object.keys(incoming || {}).forEach(function (key) {
+      const candidate = incoming[key];
+      if (maxWins(out[key], candidate, opts)) out[key] = candidate;
+    });
+    return out;
+  }
+
+  function mergeRecords(base, incoming, policies) {
+    const left = base && typeof base === 'object' ? base : {};
+    const right = incoming && typeof incoming === 'object' ? incoming : {};
+    const out = Object.assign({}, left, right);
+    Object.keys(policies || {}).forEach(function (field) {
+      const policy = policies[field] || {};
+      if (policy.type === 'max-wins-map') {
+        out[field] = mergeMaxWinsMap(left[field], right[field], policy);
+      } else if (policy.type === 'append-dedupe') {
+        out[field] = mergeAppendDedupe(left[field], right[field], policy);
+      } else if (policy.type === 'latest-by-key') {
+        out[field] = mergeLatestByKey(left[field], right[field], policy);
+      } else if (typeof policy.merge === 'function') {
+        out[field] = policy.merge(left[field], right[field], { base: left, incoming: right });
+      }
+    });
+    out.updatedAt = Math.max(Number(left.updatedAt) || 0, Number(right.updatedAt) || 0, Date.now());
+    return out;
+  }
+
+  function createStoreAdapter(opts) {
+    const o = opts || {};
+    const prefix = o.prefix || '';
+    const empty = o.empty || function () { return {}; };
+    const keyStyle = o.keyStyle || o.style || 'heys-client-prefix';
+    function resolveStorage(storage) {
+      if (storage && typeof storage.getItem === 'function') return storage;
+      if (typeof o.getStorage === 'function') return o.getStorage() || null;
+      return o.storage || global.localStorage || null;
+    }
+    function resolveClientId(clientId) {
+      if (clientId != null && clientId !== '') return clientId;
+      if (typeof o.getClientId === 'function') {
+        try { return o.getClientId() || ''; } catch (_e) { return ''; }
+      }
+      return o.clientId || '';
+    }
+    function adapterKey(clientId) {
+      return clientKey(prefix, resolveClientId(clientId), {
+        style: keyStyle,
+        separator: o.separator,
+        defaultClientId: o.defaultClientId
+      });
+    }
+    function adapterLoad(clientId, storage) {
+      return readJson(resolveStorage(storage), adapterKey(clientId), empty);
+    }
+    function adapterSave(clientId, data, storage) {
+      return writeJson(resolveStorage(storage), adapterKey(clientId), data, empty);
+    }
+    function adapterAppend(clientId, field, item, appendOpts, storage) {
+      const current = adapterLoad(clientId, storage);
+      const next = appendField(current, field, item, appendOpts || {});
+      adapterSave(clientId, next, storage);
+      return next;
+    }
+    function adapterLatest(clientId, field, storage) {
+      return latestInField(adapterLoad(clientId, storage), field);
+    }
+    function adapterMerge(clientId, incoming, policies, storage) {
+      const current = adapterLoad(clientId, storage);
+      const next = mergeRecords(current, incoming, policies || o.policies || {});
+      adapterSave(clientId, next, storage);
+      return next;
+    }
+    return {
+      key: adapterKey,
+      load: adapterLoad,
+      save: adapterSave,
+      append: adapterAppend,
+      latest: adapterLatest,
+      merge: adapterMerge,
+      storage: resolveStorage,
+      clientId: resolveClientId
+    };
+  }
+
   TK.records = {
     __registered: true,
     createMemoryStorage: createMemoryStorage,
@@ -250,6 +427,13 @@
     appendField: appendField,
     latestInField: latestInField,
     makeId: makeId,
-    maxWins: maxWins
+    positionId: positionId,
+    maxWins: maxWins,
+    stableEntryKey: stableEntryKey,
+    mergeAppendDedupe: mergeAppendDedupe,
+    mergeLatestByKey: mergeLatestByKey,
+    mergeMaxWinsMap: mergeMaxWinsMap,
+    mergeRecords: mergeRecords,
+    createStoreAdapter: createStoreAdapter
   };
 })(typeof window !== 'undefined' ? window : globalThis);

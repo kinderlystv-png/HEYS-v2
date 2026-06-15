@@ -116,11 +116,77 @@ describe('kernel records', () => {
     expect(R().makeId(['mob_sess', 123, 0])).toBe('mob_sess_123_0');
   });
 
+  it('positionId builds abstract lift/position ids from sport axes', () => {
+    expect(R().positionId(
+      { gripId: 'halfcrimp', edgeMm: 20 },
+      [{ id: 'gripId' }, { id: 'edgeMm' }],
+      { suffixes: { edgeMm: 'mm' } }
+    )).toBe('halfcrimp_20mm');
+    expect(R().positionId(
+      { jointRegion: 'hip', timeOfDay: 'morning' },
+      [{ id: 'jointRegion' }, { id: 'timeOfDay' }]
+    )).toBe('hip_morning');
+  });
+
   it('maxWins compares by metric and testedAt tiebreak', () => {
     const oldRec = { type: 'weight', mvcKg: 80, testedAt: '2026-06-01T10:00:00Z' };
     const opts = { metricsByType: { weight: 'mvcKg', time: 'holdTime' } };
     expect(R().maxWins(oldRec, { type: 'weight', mvcKg: 79, testedAt: '2026-06-02T10:00:00Z' }, opts)).toBe(false);
     expect(R().maxWins(oldRec, { type: 'weight', mvcKg: 80, testedAt: '2026-06-03T10:00:00Z' }, opts)).toBe(true);
     expect(R().maxWins(oldRec, { type: 'time', holdTime: 7, testedAt: '2026-06-01T10:00:00Z' }, opts)).toBe(true);
+  });
+
+  it('createStoreAdapter resolves client key, storage DI and append/latest helpers', () => {
+    const storage = R().createMemoryStorage();
+    let cid = 'client-a';
+    const store = R().createStoreAdapter({
+      prefix: 'training_records_v1',
+      empty: () => ({ sessions: [] }),
+      storage,
+      getClientId: () => cid,
+    });
+
+    expect(store.key()).toBe('heys_client-a_training_records_v1');
+    store.append(null, 'sessions', { id: 's1', savedAt: '2026-06-01T00:00:00Z' });
+    expect(store.latest(null, 'sessions')).toEqual({ id: 's1', savedAt: '2026-06-01T00:00:00Z' });
+    cid = 'client-b';
+    expect(store.load().sessions).toEqual([]);
+    expect(Object.keys(storage._data)).toEqual(['heys_client-a_training_records_v1']);
+  });
+
+  it('mergeRecords applies PR max-wins and append history dedupe policies', () => {
+    const merged = R().mergeRecords(
+      {
+        maxHangs: { half_20mm: { type: 'weight', mvcKg: 80, testedAt: '2026-06-01T00:00:00Z' } },
+        history: [{ id: 'h1', testedAt: '2026-06-01T00:00:00Z' }],
+        updatedAt: 1
+      },
+      {
+        maxHangs: { half_20mm: { type: 'weight', mvcKg: 79, testedAt: '2026-06-02T00:00:00Z' } },
+        history: [
+          { id: 'h1', testedAt: '2026-06-01T00:00:00Z' },
+          { id: 'h2', testedAt: '2026-06-02T00:00:00Z' }
+        ],
+        updatedAt: 2
+      },
+      {
+        maxHangs: { type: 'max-wins-map', metricsByType: { weight: 'mvcKg', time: 'holdTime' } },
+        history: { type: 'append-dedupe', timestampKey: 'testedAt' }
+      }
+    );
+
+    expect(merged.maxHangs.half_20mm.mvcKg).toBe(80);
+    expect(merged.history.map((x) => x.id)).toEqual(['h1', 'h2']);
+  });
+
+  it('mergeRecords supports latest-by-testId assessment policy', () => {
+    const merged = R().mergeRecords(
+      { assessmentBattery: { maxHang: { score: 50, testedAt: '2026-06-01T00:00:00Z' } } },
+      { assessmentBattery: { maxHang: { score: 55, testedAt: '2026-06-03T00:00:00Z' } } },
+      { assessmentBattery: { type: 'latest-by-key', keyField: 'testId', timestampKey: 'testedAt' } }
+    );
+
+    expect(merged.assessmentBattery.maxHang.score).toBe(55);
+    expect(merged.assessmentBattery.maxHang.testId).toBe('maxHang');
   });
 });

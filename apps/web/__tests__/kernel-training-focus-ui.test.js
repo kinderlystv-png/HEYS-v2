@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +23,41 @@ const Focus = () => globalThis.HEYS.TrainingFocus;
 
 describe('TrainingFocus UI primitives', () => {
   beforeAll(setupOnce);
+  afterEach(() => cleanup());
+
+  it('Shell and ViewContainer provide common header/tabs/view containers', () => {
+    const onTabChange = vi.fn();
+    render(React.createElement(Focus().Shell, {
+      classPrefix: 'test-focus',
+      title: 'Режим',
+      actions: [{ id: 'close', label: '×', kind: 'close', onClick: vi.fn() }],
+      tabs: [
+        { id: 'today', icon: '✓', label: 'Сегодня' },
+        { id: 'protocols', icon: '▦', label: 'Протоколы' }
+      ],
+      activeTab: 'today',
+      onTabChange
+    },
+      React.createElement(Focus().ViewContainer, {
+        classPrefix: 'test-focus',
+        view: 'today',
+        title: 'Сегодня',
+        subtitle: 'Готовая тренировка'
+      }, React.createElement('button', null, 'Запустить')),
+      React.createElement(Focus().EmptyState, {
+        classPrefix: 'test-focus',
+        title: 'Нет протоколов',
+        text: 'Добавь упражнения в свою сборку'
+      })
+    ));
+
+    expect(screen.getByRole('dialog', { name: 'Режим' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Сегодня/ }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('tab', { name: /Протоколы/ }));
+    expect(onTabChange).toHaveBeenCalledWith('protocols');
+    expect(screen.getByLabelText('Сегодня').getAttribute('data-training-view')).toBe('today');
+    expect(screen.getByText('Нет протоколов')).toBeTruthy();
+  });
 
   it('Registry filters by title, meta and chips without changing selection actions', () => {
     const onToggle = vi.fn();

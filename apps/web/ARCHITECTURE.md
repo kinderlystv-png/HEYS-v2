@@ -7,6 +7,18 @@ Stable architecture facts. Project-status / TODO lives in
 
 ---
 
+## Training modes kernel
+
+Training modes (fingers, mobility and future sports) share one runtime kernel:
+`HEYS.TrainingKernel.*` plus `HEYS.TrainingFocus.*`. Domain modules provide
+`SPORT_CONFIG`, catalogs, safety rules, assessment hooks, specialized players
+and UI panels. The canonical implementation rulebook is
+[\_kernel/TRAINING_MODE_REGULATION.md](_kernel/TRAINING_MODE_REGULATION.md);
+current extraction status is in
+[\_kernel/KERNEL_EXTRACTION_PLAN.md](_kernel/KERNEL_EXTRACTION_PLAN.md).
+
+---
+
 ## Products storage (overlay)
 
 `heys_products` is no longer a denormalized snapshot per client. Canonical

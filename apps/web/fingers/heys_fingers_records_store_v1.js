@@ -42,24 +42,67 @@
     return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
   }
 
+  let injectedStorage = null;
+  let injectedGetClientId = null;
+
+  function configure(opts) {
+    const o = opts || {};
+    if (Object.prototype.hasOwnProperty.call(o, 'storage')) {
+      injectedStorage = o.storage && typeof o.storage.getItem === 'function' ? o.storage : null;
+    }
+    if (Object.prototype.hasOwnProperty.call(o, 'getClientId')) {
+      injectedGetClientId = typeof o.getClientId === 'function' ? o.getClientId : null;
+    }
+    return recordsApi;
+  }
+
+  function _storage() {
+    return injectedStorage || global.localStorage || null;
+  }
+
+  function _clientId() {
+    if (injectedGetClientId) {
+      try { return injectedGetClientId() || ''; } catch (_e) { return ''; }
+    }
+    return (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
+  }
+
+  function _adapter() {
+    const kr = _kernelRecords();
+    if (!kr || typeof kr.createStoreAdapter !== 'function') return null;
+    return kr.createStoreAdapter({
+      prefix: 'fingers_records_v1',
+      style: 'heys-client-prefix',
+      empty: _emptyRecords,
+      storage: _storage(),
+      getClientId: _clientId
+    });
+  }
+
   function _emptyRecords() {
     return { maxHangs: {}, updatedAt: 0 };
   }
 
   function _getKey() {
-    const cid = (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
-    const kr = _kernelRecords();
-    if (kr && kr.clientKey) return kr.clientKey('fingers_records_v1', cid, { style: 'heys-client-prefix' });
+    const a = _adapter();
+    if (a) return a.key(_clientId());
+    const cid = _clientId();
     return cid ? `heys_${cid}_fingers_records_v1` : 'heys_fingers_records_v1';
   }
 
   function _readAll() {
     try {
+      const storage = _storage();
+      const a = _adapter();
+      if (injectedStorage) {
+        if (a) return a.load(_clientId(), storage);
+        const raw = storage.getItem(_getKey());
+        return raw ? JSON.parse(raw) : _emptyRecords();
+      }
       if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
         return HEYS.utils.lsGet(_getKey(), null) || _emptyRecords();
       }
-      const kr = _kernelRecords();
-      if (kr && kr.readJson) return kr.readJson(global.localStorage, _getKey(), _emptyRecords);
+      if (a) return a.load(_clientId(), storage);
       const raw = localStorage.getItem(_getKey());
       return raw ? JSON.parse(raw) : _emptyRecords();
     } catch (e) {
@@ -70,12 +113,18 @@
 
   function _writeAll(data) {
     try {
+      const storage = _storage();
+      const a = _adapter();
+      if (injectedStorage) {
+        if (a) return a.save(_clientId(), data, storage);
+        storage.setItem(_getKey(), JSON.stringify(data));
+        return true;
+      }
       if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
         HEYS.utils.lsSet(_getKey(), data);
         return true;
       }
-      const kr = _kernelRecords();
-      if (kr && kr.writeJson) return kr.writeJson(global.localStorage, _getKey(), data, _emptyRecords);
+      if (a) return a.save(_clientId(), data, storage);
       localStorage.setItem(_getKey(), JSON.stringify(data));
       return true;
     } catch (e) {
@@ -677,7 +726,8 @@
     return Fingers.assessment.assessBattery(loadAssessmentBattery(), level);
   }
 
-	  Fingers.records = {
+  const recordsApi = {
+    configure,
 	    get,
 	    getMVC,
 	    getMvcHistory,
@@ -696,4 +746,5 @@
     __registered: true,
     __getKey: _getKey,
   };
+  Fingers.records = recordsApi;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -154,6 +154,60 @@ describe('TrainingKernel.runner', () => {
     });
   });
 
+  it('createPhaseGraph routes timed/manual phase transitions from config', () => {
+    const graph = R().createPhaseGraph({
+      initialState: 'prep',
+      terminalStates: ['done'],
+      initialContext: { setIdx: 0, repIdx: 0 },
+      transitions: {
+        prep: {
+          advance: () => ({ state: 'work', durationSec: 7 })
+        },
+        work: {
+          advance: (ctx) => ctx.repIdx >= 1
+            ? { state: 'done', durationSec: 0, context: ctx }
+            : { state: 'rest', durationSec: 3, context: ctx }
+        },
+        rest: {
+          advance: (ctx) => ({ state: 'prep', durationSec: 5, context: { repIdx: ctx.repIdx + 1 } })
+        }
+      }
+    });
+
+    let s = graph.state('prep', { setIdx: 0, repIdx: 0 });
+    s = graph.transition(s, 'advance');
+    expect(s).toMatchObject({ state: 'work', durationSec: 7, context: { setIdx: 0, repIdx: 0 }, changed: true });
+    s = graph.transition(s, 'advance');
+    expect(s).toMatchObject({ state: 'rest', durationSec: 3, context: { setIdx: 0, repIdx: 0 }, changed: true });
+    s = graph.transition(s, 'advance');
+    expect(s).toMatchObject({ state: 'prep', durationSec: 5, context: { setIdx: 0, repIdx: 1 }, changed: true });
+    s = graph.transition(graph.state('done'), 'advance');
+    expect(s).toMatchObject({ state: 'done', changed: false });
+  });
+
+  it('createPhaseGraph restores paused and timed snapshots with shared remaining logic', () => {
+    const graph = R().createPhaseGraph({ initialState: 'prep' });
+    expect(graph.restore({
+      state: 'paused',
+      resumeTo: 'work',
+      pausedAtRemainingSec: 4
+    }, { pausedState: 'paused', context: { setIdx: 2 } })).toMatchObject({
+      state: 'work',
+      durationSec: 4,
+      context: { setIdx: 2 },
+      wasPaused: true
+    });
+    expect(graph.restore({
+      state: 'rest',
+      phaseStartedAt: 10_000,
+      durationSec: 10
+    }, { nowMs: 13_400, minSec: 0.5 })).toMatchObject({
+      state: 'rest',
+      durationSec: 7,
+      wasPaused: false
+    });
+  });
+
   it('owner lock acquires, denies fresh foreign owner, steals stale and touches heartbeat', () => {
     let now = 1000;
     const storage = R().createMemoryStorage

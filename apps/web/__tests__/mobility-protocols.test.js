@@ -52,6 +52,8 @@ describe('Mobility protocol catalog', () => {
     expect(catalog.defaultForMode('anti_sedentary').id).toBe('desk_reset_4');
     expect(catalog.recommend({ goal: 'develop' }, {}).id).toBe('develop_posterior_chain_18');
     expect(catalog.recommend({ populations: ['desk'] }, {}).id).toBe('desk_reset_4');
+    expect(catalog.recommend({}, { keyLoadWithinHours: null }).id).toBe('morning_reset_6');
+    expect(catalog.recommend({}, { keyLoadWithinHours: 24 }).id).toBe('peak_maintenance_6');
     expect(catalog.buildOptions('desk_reset_4')).toMatchObject({
       protocolId: 'desk_reset_4',
       preferredAtomIds: expect.arrayContaining(['recov_movement_snack', 'mob_dynamic_thoracic_openbook'])

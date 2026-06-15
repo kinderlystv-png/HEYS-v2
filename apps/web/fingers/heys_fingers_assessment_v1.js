@@ -275,28 +275,40 @@
       limiterScores[q] = Math.max(deficit, flag) * (prior !== null ? prior : 1.0);
     });
 
-    // argmax leadingLimiter
-    let leadingLimiter = null;
-    let maxScore = -1;
-    ALL_QUALITIES.forEach(function (q) {
-      if (limiterScores[q] > maxScore) {
-        maxScore = limiterScores[q];
-        leadingLimiter = q;
-      }
+    const ka = HEYS.TrainingKernel && HEYS.TrainingKernel.assess;
+    const candidates = ALL_QUALITIES.map(function (q) {
+      return { id: q, deficit: deficits[q], flag: flagOut[q], prior: priors[q] };
     });
+    const kResult = ka && typeof ka.limiter === 'function'
+      ? ka.limiter(candidates, { zeroTotalPolicy: 'uniform' })
+      : null;
 
-    // normalize blockWeights (сумма = 1)
-    const total = ALL_QUALITIES.reduce(function (s, q) { return s + limiterScores[q]; }, 0);
-    const blockWeights = {};
-    ALL_QUALITIES.forEach(function (q) {
-      blockWeights[q] = total > 0 ? limiterScores[q] / total : (1 / ALL_QUALITIES.length);
-    });
+    let leadingLimiter = kResult && kResult.leadingLimiter;
+    let maxScore = kResult ? kResult.maxLimiterScore : -1;
+    let blockWeights = kResult && kResult.blockWeights;
+    let stimulus = kResult && kResult.stimulus;
 
-    // Q-1.4-3 гибрид: ведущий = develop, остальные = maintain (порог 0).
-    const stimulus = {};
-    ALL_QUALITIES.forEach(function (q) {
-      stimulus[q] = (q === leadingLimiter) ? 'develop' : 'maintain';
-    });
+    if (!kResult) {
+      ALL_QUALITIES.forEach(function (q) {
+        if (limiterScores[q] > maxScore) {
+          maxScore = limiterScores[q];
+          leadingLimiter = q;
+        }
+      });
+      const total = ALL_QUALITIES.reduce(function (s, q) { return s + limiterScores[q]; }, 0);
+      blockWeights = {};
+      ALL_QUALITIES.forEach(function (q) {
+        blockWeights[q] = total > 0 ? limiterScores[q] / total : (1 / ALL_QUALITIES.length);
+      });
+      stimulus = {};
+      ALL_QUALITIES.forEach(function (q) {
+        stimulus[q] = (q === leadingLimiter) ? 'develop' : 'maintain';
+      });
+    } else {
+      Object.keys(kResult.limiterScores || {}).forEach(function (q) {
+        limiterScores[q] = kResult.limiterScores[q];
+      });
+    }
 
     return {
       leadingLimiter: leadingLimiter,

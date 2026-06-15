@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +35,11 @@ describe('Fingers SettingsSheet — assessment battery UI', () => {
     F().getBodyWeight = () => ({ kg: 70, source: 'profile' });
     F().voice = { getSettings: () => ({ enabled: true, volume: 0.8 }) };
     globalThis.HEYS.Toast = { success: vi.fn(), info: vi.fn() };
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
   });
 
   it('prefills saved battery values from records store', () => {

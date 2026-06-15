@@ -10,6 +10,25 @@ const SRC = readFileSync(
 const CID = '12345678-aaaa-bbbb-cccc-1234567890ab';
 const OTHER_CID = '87654321-aaaa-bbbb-cccc-1234567890ab';
 
+const createStorageMock = () => {
+  const store = {};
+  return {
+    get length() { return Object.keys(store).length; },
+    key: (i) => Object.keys(store)[i] ?? null,
+    getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  };
+};
+
+const ensureLocalStorage = () => {
+  if (!window.localStorage || typeof window.localStorage.clear !== 'function') {
+    window.localStorage = createStorageMock();
+    globalThis.localStorage = window.localStorage;
+  }
+};
+
 function evalStub(currentClientId = CID) {
   window.HEYS = {
     currentClientId,
@@ -26,6 +45,7 @@ describe('Fingers boot stub active-session scan', () => {
 
   beforeEach(() => {
     appended = [];
+    ensureLocalStorage();
     window.localStorage.clear();
     delete window.HEYS;
     delete window.__heysSyncCompletedFired;
@@ -36,7 +56,8 @@ describe('Fingers boot stub active-session scan', () => {
   });
 
   afterEach(() => {
-    appendSpy.mockRestore();
+    if (appendSpy) appendSpy.mockRestore();
+    ensureLocalStorage();
     window.localStorage.clear();
     delete window.HEYS;
     delete window.__heysSyncCompletedFired;

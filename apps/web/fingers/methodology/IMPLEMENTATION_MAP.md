@@ -8,6 +8,13 @@
 [`CONSTRUCTOR_SPEC.md`](CONSTRUCTOR_SPEC.md); пробелы готовности — в
 [`IMPLEMENTATION_READINESS.md`](IMPLEMENTATION_READINESS.md). Здесь — связка.
 
+**Архитектурный канон тренировочных режимов** живёт в
+[`../../_kernel/TRAINING_MODE_REGULATION.md`](../../_kernel/TRAINING_MODE_REGULATION.md).
+Режим пальцев — первая реф-реализация домена, но не копипаст-шаблон для новых
+спортов. Общая механика должна идти через `HEYS.TrainingKernel.*` и
+`HEYS.TrainingFocus.*`; здесь фиксируются только climbing/fingers-методология,
+каталоги, конфиги, доменные hooks и специализированные плееры.
+
 **Синхронизация.** Документы НЕ синхронизируются по содержанию (это
 небезопасно). Синхронизация — по **покрытию ID**: скрипт
 [`tools/impl-coverage.mjs`](tools/impl-coverage.mjs) сверяет, что у каждой

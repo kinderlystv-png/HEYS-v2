@@ -1,9 +1,9 @@
 // heys_kernel_runner_v1.js — ОБЩЕЕ ЯДРО: runner lifecycle primitives.
 //
 // This is the small domain-agnostic lifecycle for linear step plans plus shared
-// owner-lock helpers for active runners. Rich domain players (fingers countdown,
-// breathing pacer, snapshots, cues) stay in domain modules until their shared
-// contract is explicit.
+// owner-lock helpers for active runners. Rich domain players, snapshots, and
+// domain-specific cues stay in domain modules until their shared contract is
+// explicit.
 
 ;(function (global) {
   'use strict';
@@ -198,6 +198,75 @@
     };
   }
 
+  function createPhaseGraph(config) {
+    const cfg = config || {};
+    const transitions = cfg.transitions || {};
+    const terminal = new Set(cfg.terminalStates || []);
+    const initialState = cfg.initialState || 'idle';
+    const initialContext = Object.assign({}, cfg.initialContext || {});
+
+    function state(name, context, over) {
+      return Object.assign({
+        state: name || initialState,
+        context: Object.assign({}, initialContext, context || {})
+      }, over || {});
+    }
+
+    function normalizeSpec(spec, current) {
+      if (!spec) return null;
+      const cur = current || state();
+      return {
+        state: spec.state || cur.state,
+        durationSec: Number(spec.durationSec) || 0,
+        context: Object.assign({}, cur.context || {}, spec.context || {}),
+        meta: Object.assign({}, spec.meta || {})
+      };
+    }
+
+    function resolveRule(rule, current, payload, event) {
+      if (typeof rule === 'function') return rule(current.context || {}, payload || {}, current, event);
+      return rule;
+    }
+
+    function transition(current, event, payload) {
+      const cur = current && typeof current === 'object'
+        ? state(current.state, current.context, current)
+        : state();
+      if (!event || terminal.has(cur.state)) {
+        return Object.assign({}, cur, { changed: false, event: event || null });
+      }
+      const byEvent = transitions[cur.state] || {};
+      const rule = byEvent[event] || null;
+      const next = normalizeSpec(resolveRule(rule, cur, payload, event), cur);
+      if (!next) return Object.assign({}, cur, { changed: false, event: event });
+      return Object.assign({}, next, {
+        changed: next.state !== cur.state || JSON.stringify(next.context) !== JSON.stringify(cur.context || {}),
+        event: event
+      });
+    }
+
+    function restore(snapshot, opts) {
+      const snap = snapshot || {};
+      const o = opts || {};
+      const wasPaused = snap.state === o.pausedState;
+      const targetState = wasPaused ? (snap.resumeTo || o.defaultResumeState || initialState) : (snap.state || initialState);
+      const targetContext = Object.assign({}, snap.context || {}, o.context || {});
+      let durationSec = Number(o.durationSec);
+      if (!isFinite(durationSec)) {
+        durationSec = wasPaused
+          ? Math.max(Number(o.pausedMinSec) || 1, Number(snap.pausedAtRemainingSec) || 0)
+          : remainingSecFromSnapshot(snap, o);
+      }
+      return state(targetState, targetContext, { durationSec: durationSec, wasPaused: wasPaused });
+    }
+
+    return {
+      state: state,
+      transition: transition,
+      restore: restore
+    };
+  }
+
   function readLock(storage, key) {
     if (!storage || typeof storage.getItem !== 'function' || !key) return null;
     try {
@@ -304,6 +373,7 @@
     num: num,
     avg: avg,
     createRunPlan: createRunPlan,
+    createPhaseGraph: createPhaseGraph,
     readLock: readLock,
     writeLock: writeLock,
     isOwnerLockFresh: isOwnerLockFresh,

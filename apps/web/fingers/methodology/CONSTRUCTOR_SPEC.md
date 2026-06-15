@@ -9,6 +9,13 @@
 > методологического документа; ссылки вида «§1.6» — внутренние, на этот
 > документ.
 
+> **Kernel-contract note.** Пальцы сейчас считаются доменным инстансом общего
+> тренировочного ядра, а не самостоятельным движком. Общий регламент:
+> [`../../_kernel/TRAINING_MODE_REGULATION.md`](../../_kernel/TRAINING_MODE_REGULATION.md).
+> Этот spec описывает climbing/fingers данные и hooks поверх kernel-контрактов:
+> `SPORT_CONFIG`, catalog, gates, assessment limiter, records adapter, session
+> pipeline, runner lifecycle и `TrainingFocus` shell.
+
 ---
 
 ## Часть 1. Конструктор тренировок

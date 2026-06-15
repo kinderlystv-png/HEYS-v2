@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { beforeAll, describe, expect, it } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,6 +66,12 @@ const profile = {
 
 describe('Mobility UI', () => {
   beforeAll(setupOnce);
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    delete globalThis.HEYS.TrainingStep;
+  });
 
   it('рендерит focus-mode как у пальцев и открывает runner только после запуска микса', () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));

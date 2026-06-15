@@ -39,6 +39,7 @@ const MODULES = [
     { file: 'heys_kernel_gate_v1.js', label: 'shared validator gate: Issue+S1 level/age (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_records_v1.js', label: 'shared records storage: client key + JSON (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_onboarding_v1.js', label: 'shared onboarding/profile primitives (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_sports_v1.js', label: 'shared SPORT_CONFIG registry (kernel)', dir: KERNEL_DIR },
 
     // ── Layer 1: core data + features (no fingers deps) ──
     { file: 'heys_fingers_audio_extension_v1.js', label: 'audio capability' },
@@ -49,6 +50,7 @@ const MODULES = [
     { file: 'heys_fingers_boards_catalog_v1.js',  label: 'fingerboard catalog' },
     { file: 'heys_fingers_programs_catalog_v1.js',label: 'protocol catalog' },
     { file: 'heys_fingers_quality_catalog_v1.js', label: 'methodology data layer (9 qualities)' },
+    { file: 'heys_fingers_sport_config_v1.js',    label: 'SPORT_CONFIG instance' },
     { file: 'heys_fingers_block_catalog_v1.js',   label: '36 atoms × 9 blocks (METHODOLOGY ч.4)' },
     { file: 'heys_fingers_validators_v1.js',      label: 'safety validators S1–S8 + homed V_*' },
     { file: 'heys_fingers_progression_v1.js',     label: 'B3 — detectPlateau + axes policy (§1.2/1.3)' },

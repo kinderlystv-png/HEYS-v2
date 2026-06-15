@@ -270,11 +270,53 @@
     const trace = [];
     let blocks = [];
 
-    mode.slots.forEach(function (slot) {
-      const picked = pickSlot(slot, mode, profile, context, pickerOptions);
-      trace.push(picked.trace);
-      if (picked.block) blocks.push(picked.block);
-    });
+    const ks = kernelSession();
+    if (ks && typeof ks.buildPipeline === 'function') {
+      const excluded = pickerOptions.excludeAtomIds || pickerOptions.removeAtomIds || [];
+      const pipeline = ks.buildPipeline(mode.slots, {
+        candidates: function (slot) {
+          if (slot.atomIds && slot.atomIds.length) {
+            return slot.atomIds.map(function (id) { return d.cat.getAtom(id); }).filter(Boolean);
+          }
+          return d.cat.byBlock(slot.block);
+        },
+        filters: function (_slot) {
+          return [
+            function (a) { return excluded.indexOf(a.id) < 0; },
+            function (a) { return atomAllowedByMode(a, mode); },
+            function (a) { return !(context && context.avoidHighTissueLoad && isHighTissueAtom(a)); }
+          ];
+        },
+        issues: function (a) { return d.validators.runAtom(a, profile, context); },
+        blockIssue: blocksAutopick,
+        score: function (a, slot) { return scoreAtom(a, slot, mode, pickerOptions); },
+        candidate: function (a, issues, score) { return { atom: a, issues: issues, score: score }; },
+        key: function (x) { return x.atom.id; },
+        materialize: function (x, slot) { return blockMeta(slot, clone(x.atom)); },
+        trace: function (row) {
+          const slot = row.slot;
+          const picked = row.picked;
+          if (!picked) {
+            return { slot: slot.id, block: slot.block, picked: null, optional: !!slot.optional, reason: 'no_safe_candidate' };
+          }
+          return {
+            slot: slot.id,
+            block: slot.block,
+            picked: picked.atom.id,
+            candidateCount: row.candidates.length,
+            filteredWarnings: picked.issues.filter(function (i) { return i.level === 'warn'; }).map(function (i) { return i.code; })
+          };
+        }
+      });
+      blocks = pipeline.items;
+      pipeline.trace.forEach(function (row) { trace.push(row); });
+    } else {
+      mode.slots.forEach(function (slot) {
+        const picked = pickSlot(slot, mode, profile, context, pickerOptions);
+        trace.push(picked.trace);
+        if (picked.block) blocks.push(picked.block);
+      });
+    }
     blocks = applyReplacements(blocks, mode, profile, context, pickerOptions);
     appendExtraAtoms(blocks, mode, profile, context, pickerOptions, trace);
     blocks = applyBlockPriority(blocks, blockWeights, trace);

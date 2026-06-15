@@ -36,7 +36,20 @@
     return HEYS.TrainingKernel && HEYS.TrainingKernel.records;
   }
 
+  function _adapter() {
+    const kr = _recordsKernel();
+    if (!kr || typeof kr.createStoreAdapter !== 'function') return null;
+    return kr.createStoreAdapter({
+      prefix: 'fingers_tissue_history_v1',
+      style: 'heys-client-prefix',
+      empty: function () { return { version: 1, entries: [] }; },
+      getClientId: function () { return (HEYS && HEYS.currentClientId) || ''; }
+    });
+  }
+
   function _getKey() {
+    const a = _adapter();
+    if (a) return a.key();
     const cid = HEYS && HEYS.currentClientId;
     return cid ? 'heys_' + cid + '_fingers_tissue_history_v1' : 'heys_fingers_tissue_history_v1';
   }
@@ -45,6 +58,8 @@
 
   function _read() {
     try {
+      const a = _adapter();
+      if (a) return a.load();
       const u = HEYS.utils;
       if (u && typeof u.lsGet === 'function') return u.lsGet(_getKey(), null);
       const raw = localStorage.getItem(_getKey());
@@ -54,6 +69,8 @@
 
   function _write(obj) {
     try {
+      const a = _adapter();
+      if (a) return a.save(null, obj);
       const u = HEYS.utils;
       if (u && typeof u.lsSet === 'function') { u.lsSet(_getKey(), obj); return true; }
       localStorage.setItem(_getKey(), JSON.stringify(obj));

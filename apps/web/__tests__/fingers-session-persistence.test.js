@@ -10,7 +10,28 @@ const SRC = readFileSync(
 const CID = '12345678-aaaa-bbbb-cccc-1234567890ab';
 const OTHER_CID = '87654321-aaaa-bbbb-cccc-1234567890ab';
 
+const createStorageMock = () => {
+  const store = {};
+  return {
+    get length() { return Object.keys(store).length; },
+    key: (i) => Object.keys(store)[i] ?? null,
+    getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  };
+};
+
+const ensureLocalStorage = () => {
+  if (typeof window === 'undefined') globalThis.window = globalThis;
+  if (!window.localStorage || typeof window.localStorage.clear !== 'function') {
+    window.localStorage = createStorageMock();
+  }
+  globalThis.localStorage = window.localStorage;
+};
+
 function loadPersistence() {
+  ensureLocalStorage();
   window.HEYS = {
     currentClientId: CID,
     Fingers: {},
@@ -28,11 +49,15 @@ describe('Fingers session persistence', () => {
   // соседний файл может обнулить window.localStorage между хуками. Teardown/
   // setup не должен кидать из-за чужого загрязнения — гардим существование.
   const safeClearLS = () => {
-    try { if (typeof window !== 'undefined' && window.localStorage) window.localStorage.clear(); } catch (_) { /* noop */ }
+    try {
+      ensureLocalStorage();
+      window.localStorage.clear();
+    } catch (_) { /* noop */ }
   };
 
   beforeEach(() => {
     vi.useFakeTimers();
+    ensureLocalStorage();
     safeClearLS();
     if (typeof window !== 'undefined') delete window.HEYS;
   });

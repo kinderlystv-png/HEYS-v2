@@ -72,11 +72,32 @@
       return Object.assign({}, scored, { limiter: limiter });
     });
     const valid = rows.filter(function (r) { return r.ok; });
-    const leading = valid.slice().sort(function (a, b) {
-      return b.limiter.priority - a.limiter.priority;
-    })[0] || null;
-    const blockWeights = {};
-    if (leading && leading.limiter.blocks) {
+    const ka = HEYS.TrainingKernel && HEYS.TrainingKernel.assess;
+    const kResult = ka && typeof ka.limiter === 'function'
+      ? ka.limiter(valid.map(function (row) {
+        return {
+          id: row.testId,
+          score: row.limiter.priority,
+          deficit: row.deficit,
+          prior: 1,
+          row: row
+        };
+      }), {
+        blockWeights: function (_items, leadingItem) {
+          const leadingRow = leadingItem && (leadingItem.payload || leadingItem.raw.row);
+          const weights = {};
+          if (leadingRow && leadingRow.limiter && Array.isArray(leadingRow.limiter.blocks)) {
+            leadingRow.limiter.blocks.forEach(function (b, idx) { weights[b] = Math.max(0.4, 1 - idx * 0.15); });
+          }
+          return weights;
+        }
+      })
+      : null;
+    const leading = kResult && kResult.leading ? (kResult.leading.payload || kResult.leading.raw.row) : (
+      valid.slice().sort(function (a, b) { return b.limiter.priority - a.limiter.priority; })[0] || null
+    );
+    const blockWeights = kResult ? kResult.blockWeights : {};
+    if (!kResult && leading && leading.limiter.blocks) {
       leading.limiter.blocks.forEach(function (b, idx) { blockWeights[b] = Math.max(0.4, 1 - idx * 0.15); });
     }
     return {

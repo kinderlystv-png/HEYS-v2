@@ -117,6 +117,71 @@
       : stableSortByScore(out, function (x) { return Number(x.score) || 0; }, o.direction || 'desc');
   }
 
+  function asList(value, fallback) {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'function') return value;
+    return fallback || [];
+  }
+
+  function buildPipeline(slots, opts) {
+    const o = opts || {};
+    const slotList = Array.isArray(slots) ? slots : [];
+    const out = [];
+    const trace = [];
+    const slotResults = [];
+    const candidatesFn = typeof o.candidates === 'function' ? o.candidates : function () { return []; };
+    const filtersOpt = asList(o.filters, []);
+    const issuesFn = typeof o.issues === 'function' ? o.issues : function () { return []; };
+    const blockIssue = typeof o.blockIssue === 'function' ? o.blockIssue : null;
+    const scoreFn = typeof o.score === 'function' ? o.score : function () { return 0; };
+    const candidateFn = typeof o.candidate === 'function'
+      ? o.candidate
+      : function (item, issues, score, index, slot) {
+        return { item: item, issues: issues, score: score, index: index, slot: slot };
+      };
+    const keyFn = typeof o.key === 'function' ? o.key : null;
+    const selectFn = typeof o.select === 'function' ? o.select : function (ranked) { return ranked[0] || null; };
+    const materializeFn = typeof o.materialize === 'function'
+      ? o.materialize
+      : function (picked) { return picked && (picked.item || picked); };
+    const traceFn = typeof o.trace === 'function' ? o.trace : null;
+
+    slotList.forEach(function (slot, slotIndex) {
+      const raw = candidatesFn(slot, slotIndex) || [];
+      const filters = typeof filtersOpt === 'function' ? (filtersOpt(slot, slotIndex) || []) : filtersOpt;
+      const ranked = rankCandidates(raw, {
+        filters: filters,
+        issues: function (item, index) { return issuesFn(item, slot, index); },
+        blockIssue: blockIssue ? function (issue, item, index) { return blockIssue(issue, item, slot, index); } : null,
+        score: function (item, issues, index) { return scoreFn(item, slot, issues, index); },
+        candidate: function (item, issues, score, index) {
+          return candidateFn(item, issues, score, index, slot);
+        },
+        key: keyFn ? function (candidate) { return keyFn(candidate, slot); } : null,
+        direction: o.direction || 'desc'
+      });
+      const picked = selectFn(ranked, slot, slotIndex);
+      const item = picked ? materializeFn(picked, slot, slotIndex) : null;
+      const traceRow = traceFn
+        ? traceFn({ slot: slot, slotIndex: slotIndex, raw: raw, candidates: ranked, picked: picked, item: item })
+        : {
+          slot: slot && slot.id,
+          picked: picked && (picked.id || (picked.item && picked.item.id) || (picked.atom && picked.atom.id)) || null,
+          candidateCount: ranked.length,
+          reason: picked ? 'picked' : 'no_safe_candidate'
+        };
+      trace.push(traceRow);
+      slotResults.push({ slot: slot, raw: raw, candidates: ranked, picked: picked, item: item, trace: traceRow });
+      if (item) out.push(item);
+    });
+
+    return {
+      items: out,
+      trace: trace,
+      slots: slotResults
+    };
+  }
+
   TK.session = {
     __registered: true,
     cloneJson: cloneJson,
@@ -128,6 +193,7 @@
     stableSortByScore: stableSortByScore,
     sortByScoreThenKey: sortByScoreThenKey,
     firstPassing: firstPassing,
-    rankCandidates: rankCandidates
+    rankCandidates: rankCandidates,
+    buildPipeline: buildPipeline
   };
 })(typeof window !== 'undefined' ? window : globalThis);

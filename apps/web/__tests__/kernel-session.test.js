@@ -81,4 +81,34 @@ describe('TrainingKernel.session', () => {
     });
     expect(out.map((x) => x.id)).toEqual(['a', 'z']);
   });
+
+  it('buildPipeline runs slots through candidates, gates, scoring, materialization and trace', () => {
+    const slots = [{ id: 'warmup', block: 'A' }, { id: 'main', block: 'B' }];
+    const atoms = {
+      A: [{ id: 'a2', score: 2, safe: true }, { id: 'a1', score: 2, safe: true }],
+      B: [{ id: 'b_bad', score: 9, safe: false }, { id: 'b_ok', score: 1, safe: true }]
+    };
+    const out = S().buildPipeline(slots, {
+      candidates: (slot) => atoms[slot.block],
+      issues: (atom) => atom.safe ? [] : [{ level: 'error', code: 'blocked' }],
+      blockIssue: (issue) => issue.level === 'error',
+      score: (atom) => atom.score,
+      candidate: (atom, issues, score) => ({ atom, issues, score }),
+      key: (candidate) => candidate.atom.id,
+      materialize: (candidate, slot) => ({ slot: slot.id, atomId: candidate.atom.id }),
+      trace: ({ slot, candidates, picked }) => ({
+        slot: slot.id,
+        picked: picked && picked.atom.id,
+        candidateCount: candidates.length
+      })
+    });
+    expect(out.items).toEqual([
+      { slot: 'warmup', atomId: 'a1' },
+      { slot: 'main', atomId: 'b_ok' }
+    ]);
+    expect(out.trace).toEqual([
+      { slot: 'warmup', picked: 'a1', candidateCount: 2 },
+      { slot: 'main', picked: 'b_ok', candidateCount: 1 }
+    ]);
+  });
 });

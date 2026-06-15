@@ -627,11 +627,71 @@
     // enterPhase, который сам внутри core).
     const enterPhaseRef = React.useRef(null);
 
+    const phaseGraph = React.useMemo(function () {
+      const kr = _runnerKernel();
+      if (!kr || typeof kr.createPhaseGraph !== 'function') return null;
+      return kr.createPhaseGraph({
+        initialState: STATES.IDLE,
+        terminalStates: [STATES.DONE, STATES.ABORTED, STATES.EXPIRED],
+        initialContext: { setIdx: 0, repIdx: 0 },
+        transitions: {
+          [STATES.SET_PREP]: {
+            advance: function (ctx) {
+              return { state: STATES.HANG, durationSec: hangSec, context: ctx };
+            }
+          },
+          [STATES.HANG]: {
+            advance: function (ctx) {
+              const curSet = Number(ctx.setIdx) || 0;
+              const curRep = Number(ctx.repIdx) || 0;
+              const isLastRep = (curRep + 1) >= repsPerSet;
+              const isLastSet = (curSet + 1) >= setsCount;
+              if (isLastRep && isLastSet) return { state: STATES.DONE, durationSec: 0, context: ctx };
+              if (isLastRep) return { state: STATES.BIG_REST, durationSec: restBetweenSetsSec, context: ctx };
+              return { state: STATES.REST, durationSec: restSec, context: ctx };
+            }
+          },
+          [STATES.REST]: {
+            advance: function (ctx) {
+              const curSet = Number(ctx.setIdx) || 0;
+              const nextRep = (Number(ctx.repIdx) || 0) + 1;
+              return { state: STATES.SET_PREP, durationSec: SET_PREP_SEC, context: { setIdx: curSet, repIdx: nextRep } };
+            }
+          },
+          [STATES.BIG_REST]: {
+            advance: function (ctx) {
+              const nextSet = (Number(ctx.setIdx) || 0) + 1;
+              return { state: STATES.SET_PREP, durationSec: SET_PREP_SEC, context: { setIdx: nextSet, repIdx: 0 } };
+            }
+          }
+        }
+      });
+    }, [hangSec, restSec, repsPerSet, setsCount, restBetweenSetsSec]);
+
     const handleAdvance = React.useCallback(function (currentState) {
       const enterPhase = enterPhaseRef.current;
       if (!enterPhase) return;
       const curSet = setIdxRef.current;
       const curRep = repIdxRef.current;
+      if (phaseGraph) {
+        const next = phaseGraph.transition({
+          state: currentState,
+          context: { setIdx: curSet, repIdx: curRep }
+        }, 'advance');
+        if (!next || !next.changed) return;
+        const nextSet = Number(next.context && next.context.setIdx);
+        const nextRep = Number(next.context && next.context.repIdx);
+        if (isFinite(nextSet) && nextSet !== curSet) {
+          setSetIdx(nextSet);
+          setIdxRef.current = nextSet;
+        }
+        if (isFinite(nextRep) && nextRep !== curRep) {
+          setRepIdx(nextRep);
+          repIdxRef.current = nextRep;
+        }
+        enterPhase(next.state, next.durationSec, next.context || {});
+        return;
+      }
       // SET_PREP → HANG
       if (currentState === STATES.SET_PREP) {
         enterPhase(STATES.HANG, hangSec, { setIdx: curSet, repIdx: curRep });
@@ -667,7 +727,7 @@
         enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: nextSet, repIdx: 0 });
         return;
       }
-    }, [hangSec, restSec, repsPerSet, setsCount, restBetweenSetsSec]);
+    }, [hangSec, restSec, repsPerSet, setsCount, restBetweenSetsSec, phaseGraph]);
 
     const handlePhaseEnter = React.useCallback(function (s, _meta) {
       // SET_PREP/BIG_REST/DONE cues — обрабатывает core. Здесь только
@@ -974,10 +1034,58 @@
 
     const enterPhaseRef = React.useRef(null);
 
+    const phaseGraph = React.useMemo(function () {
+      const kr = _runnerKernel();
+      if (!kr || typeof kr.createPhaseGraph !== 'function') return null;
+      return kr.createPhaseGraph({
+        initialState: STATES.IDLE,
+        terminalStates: [STATES.DONE, STATES.ABORTED, STATES.EXPIRED],
+        initialContext: { setIdx: 0, repIdx: 0 },
+        transitions: {
+          [STATES.SET_PREP]: {
+            advance: function (ctx) {
+              return { state: STATES.REPS_INPUT, durationSec: 0, context: ctx };
+            }
+          },
+          [STATES.BIG_REST]: {
+            advance: function (ctx) {
+              const nextSet = (Number(ctx.setIdx) || 0) + 1;
+              return { state: STATES.SET_PREP, durationSec: SET_PREP_SEC, context: { setIdx: nextSet, repIdx: 0 } };
+            }
+          },
+          [STATES.REPS_INPUT]: {
+            complete: function (ctx) {
+              const curSet = Number(ctx.setIdx) || 0;
+              const isLastSet = (curSet + 1) >= setsCount;
+              return {
+                state: isLastSet ? STATES.DONE : STATES.BIG_REST,
+                durationSec: isLastSet ? 0 : restBetweenSetsSec,
+                context: { setIdx: curSet, repIdx: 0 }
+              };
+            }
+          }
+        }
+      });
+    }, [setsCount, restBetweenSetsSec]);
+
     const handleAdvance = React.useCallback(function (currentState) {
       const enterPhase = enterPhaseRef.current;
       if (!enterPhase) return;
       const curSet = setIdxRef.current;
+      if (phaseGraph) {
+        const next = phaseGraph.transition({
+          state: currentState,
+          context: { setIdx: curSet, repIdx: 0 }
+        }, 'advance');
+        if (!next || !next.changed) return;
+        const nextSet = Number(next.context && next.context.setIdx);
+        if (isFinite(nextSet) && nextSet !== curSet) {
+          setSetIdx(nextSet);
+          setIdxRef.current = nextSet;
+        }
+        enterPhase(next.state, next.durationSec, next.context || {});
+        return;
+      }
       // SET_PREP → REPS_INPUT (manual)
       if (currentState === STATES.SET_PREP) {
         enterPhase(STATES.REPS_INPUT, 0, { setIdx: curSet });
@@ -991,7 +1099,7 @@
         enterPhase(STATES.SET_PREP, SET_PREP_SEC, { setIdx: nextSet });
         return;
       }
-    }, []);
+    }, [phaseGraph]);
 
     const handlePhaseEnter = React.useCallback(function (s, _meta) {
       // SET_PREP/BIG_REST/DONE cues — обрабатывает core.
@@ -1037,13 +1145,22 @@
       const currentState = core.getCurrentState ? core.getCurrentState() : core.state;
       if (currentState !== STATES.REPS_INPUT) return;
       const curSet = setIdxRef.current;
+      if (phaseGraph) {
+        const next = phaseGraph.transition({
+          state: currentState,
+          context: { setIdx: curSet, repIdx: 0 }
+        }, 'complete');
+        if (!next || !next.changed) return;
+        core.enterPhase(next.state, next.durationSec, next.context || {});
+        return;
+      }
       const isLastSet = (curSet + 1) >= setsCount;
       if (isLastSet) {
         core.enterPhase(STATES.DONE, 0, { setIdx: curSet });
       } else {
         core.enterPhase(STATES.BIG_REST, restBetweenSetsSec, { setIdx: curSet });
       }
-    }, [core, setsCount, restBetweenSetsSec]);
+    }, [core, setsCount, restBetweenSetsSec, phaseGraph]);
 
     // skipPhase для REPS_INPUT эквивалентен completeSet — core делегирует
     // skipPhase в onAdvance, но onAdvance не обрабатывает REPS_INPUT (это

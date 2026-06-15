@@ -236,6 +236,21 @@ runtime-артефакт.
   goals/registry-grid через `HEYS.TrainingFocus`, реестр: 36/36 фото и 2
   карточки в первой строке, клики `Протоколы`/`Своя`, z-index `2147483000`.
 
+## Итог унификации ядра (2026-06)
+
+- Общий регламент для всех тренировочных режимов зафиксирован в
+  [`../_kernel/TRAINING_MODE_REGULATION.md`](../_kernel/TRAINING_MODE_REGULATION.md).
+  Мобильность больше не считается отдельным движком; это domain layer поверх
+  `HEYS.TrainingKernel.*` и `HEYS.TrainingFocus.*`.
+- Новая общая логика должна идти в `_kernel`: sport registry, records adapter,
+  assessment limiter, gate/issues, session pipeline, runner lifecycle, shared
+  focus UI. Mobility-файлы оставляют только контент, правила S1–S9/R1, ROM/
+  breath/PNF/SMR специфику, visual assets и практичные user-facing объяснения.
+- Future-mode правило: бег/армрестлинг/плавание стартуют не с копирования
+  mobility/fingers UI, а с `SPORT_CONFIG` + каталогов + тонких hooks против
+  kernel contracts. Если приходится копировать механику выбора, records merge,
+  runner state или registry/cards/search — это сигнал вынести механику в kernel.
+
 ## Риски / открытые
 
 - atom_catalog покрывает все блоки A–J и у каждого атома есть `title`,

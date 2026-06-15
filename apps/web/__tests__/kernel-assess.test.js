@@ -44,4 +44,26 @@ describe('kernel assess', () => {
     expect(A().argmaxKey({ a: 0.2, b: 0.9, c: 0.5 })).toBe('b');
     expect(A().argmaxKey({})).toBe(null);
   });
+
+  it('limiter builds leadingLimiter, normalized weights and stimulus', () => {
+    const r = A().limiter([
+      { id: 'strength', deficit: 0.2, prior: 1 },
+      { id: 'technique', flag: 0.5, prior: 1.2 }
+    ]);
+    expect(r.leadingLimiter).toBe('technique');
+    expect(r.limiterScores.technique).toBeCloseTo(0.6);
+    expect(r.blockWeights.technique).toBeGreaterThan(r.blockWeights.strength);
+    expect(r.stimulus.technique).toBe('develop');
+    expect(r.stimulus.strength).toBe('maintain');
+  });
+
+  it('limiter supports uniform zero-total policy and domain blockWeights hook', () => {
+    const zero = A().limiter([{ id: 'a' }, { id: 'b' }], { zeroTotalPolicy: 'uniform' });
+    expect(zero.blockWeights).toEqual({ a: 0.5, b: 0.5 });
+
+    const hooked = A().limiter([{ id: 'ankle', score: 0.4, row: { blocks: ['D', 'E'] } }], {
+      blockWeights: (_items, leading) => Object.fromEntries(leading.payload.blocks.map((b, i) => [b, 1 - i * 0.25]))
+    });
+    expect(hooked.blockWeights).toEqual({ D: 1, E: 0.75 });
+  });
 });

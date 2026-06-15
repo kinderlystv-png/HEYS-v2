@@ -180,7 +180,10 @@
         develop: 'базовая фаза: можно развивать ROM отдельной сессией'
       });
     }
-    if (ctx.phase === 'peak' || ctx.keyLoadWithinHours <= 48) {
+    const keyLoadSoon = typeof ctx.keyLoadWithinHours === 'number' &&
+      isFinite(ctx.keyLoadWithinHours) &&
+      ctx.keyLoadWithinHours <= 48;
+    if (ctx.phase === 'peak' || keyLoadSoon) {
       return {
         focus: 'maintain',
         avoidHighTissueLoad: true,

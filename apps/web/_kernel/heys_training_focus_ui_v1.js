@@ -1,7 +1,7 @@
 // heys_training_focus_ui_v1.js — shared focus-mode UI primitives for training modes.
 //
 // Domain modules pass labels/data/actions; this layer owns the common modal
-// layout used by Fingers, Mobility, and future training modes.
+// layout used by current and future training modes.
 
 ;(function (global) {
   'use strict';
@@ -28,7 +28,7 @@
   }
 
   function Header(props) {
-    const prefix = props.classPrefix || 'fingers-fs';
+    const prefix = props.classPrefix || 'training-focus';
     const actions = Array.isArray(props.actions) ? props.actions : [];
     return h('div', { className: cx(prefixClass(prefix, '__header'), props.premium !== false && prefixClass(prefix, '__header--premium')) },
       h('h1', { className: prefixClass(prefix, '__title') },
@@ -50,7 +50,7 @@
   }
 
   function Tabs(props) {
-    const prefix = props.classPrefix || 'fingers-fs';
+    const prefix = props.classPrefix || 'training-focus';
     const items = Array.isArray(props.items) ? props.items : [];
     return h('div', { className: prefixClass(prefix, '-tabs'), role: 'tablist', 'aria-label': props.ariaLabel || 'Разделы тренировки' },
       items.map(function (item, idx) {
@@ -72,7 +72,7 @@
   }
 
   function EquipmentBar(props) {
-    const prefix = props.classPrefix || 'fingers-fs';
+    const prefix = props.classPrefix || 'training-focus';
     const items = Array.isArray(props.items) ? props.items : [];
     const selected = Array.isArray(props.value) ? props.value : [];
     return h('div', { className: prefixClass(prefix, '-equipment'), role: 'group', 'aria-label': props.ariaLabel || 'Оборудование' },
@@ -94,7 +94,7 @@
   }
 
   function GoalSelector(props) {
-    const prefix = props.classPrefix || 'fingers-fs';
+    const prefix = props.classPrefix || 'training-focus';
     const items = Array.isArray(props.items) ? props.items : [];
     return h('div', { className: prefixClass(prefix, '-goalsel') },
       h('div', { className: prefixClass(prefix, '-goalsel__label') }, props.label || 'Цель тренировки'),
@@ -122,7 +122,7 @@
   }
 
   function ReadinessCard(props) {
-    const prefix = props.classPrefix || 'fingers-fs';
+    const prefix = props.classPrefix || 'training-focus';
     const color = props.color || '#16a66a';
     const score = props.score == null ? null : String(props.score);
     const reasons = Array.isArray(props.reasons) ? props.reasons.slice(0, 3) : [];
@@ -181,7 +181,7 @@
   }
 
   function RegistryGrid(props) {
-    const prefix = props.classPrefix || 'fingers-fs';
+    const prefix = props.classPrefix || 'training-focus';
     const items = Array.isArray(props.items) ? props.items : [];
     const selected = Array.isArray(props.selectedIds) ? props.selectedIds : [];
     return h('div', { className: prefixClass(prefix, '-registry__grid') },
@@ -243,8 +243,68 @@
     ].filter(Boolean).join(' ').toLowerCase();
   }
 
+  function Shell(props) {
+    const prefix = props.classPrefix || 'training-focus';
+    return h('section', {
+      className: cx(prefix, props.compact && prefixClass(prefix, '--compact')),
+      role: props.role || 'dialog',
+      'aria-label': props.ariaLabel || props.title || 'Тренировка'
+    },
+      h(Header, {
+        classPrefix: prefix,
+        title: props.title,
+        actions: props.actions,
+        premium: props.premium
+      }),
+      props.tabs ? h(Tabs, {
+        classPrefix: prefix,
+        items: props.tabs,
+        value: props.activeTab,
+        onChange: props.onTabChange,
+        ariaLabel: props.tabsLabel
+      }) : null,
+      h('main', { className: prefixClass(prefix, '__body') }, props.children),
+      props.footer ? h('footer', { className: prefixClass(prefix, '__footer') }, props.footer) : null
+    );
+  }
+
+  function ViewContainer(props) {
+    const prefix = props.classPrefix || 'training-focus';
+    const view = props.view || 'view';
+    return h('section', {
+      className: cx(prefixClass(prefix, '-view'), prefixClass(prefix, '-view--' + view)),
+      'data-training-view': view,
+      'aria-label': props.ariaLabel || props.title || view
+    },
+      (props.title || props.subtitle || props.toolbar) ? h('div', { className: prefixClass(prefix, '-view__head') },
+        h('div', { className: prefixClass(prefix, '-view__titlebox') },
+          props.title ? h('h2', { className: prefixClass(prefix, '-view__title') }, props.title) : null,
+          props.subtitle ? h('p', { className: prefixClass(prefix, '-view__sub') }, props.subtitle) : null
+        ),
+        props.toolbar ? h('div', { className: prefixClass(prefix, '-view__toolbar') }, props.toolbar) : null
+      ) : null,
+      h('div', { className: prefixClass(prefix, '-view__content') }, props.children)
+    );
+  }
+
+  function EmptyState(props) {
+    const prefix = props.classPrefix || 'training-focus';
+    return h('div', { className: prefixClass(prefix, '-empty') },
+      props.icon ? h('span', { className: prefixClass(prefix, '-empty__icon'), 'aria-hidden': 'true' }, props.icon) : null,
+      h('div', { className: prefixClass(prefix, '-empty__body') },
+        h('h3', { className: prefixClass(prefix, '-empty__title') }, props.title || 'Пока пусто'),
+        props.text ? h('p', { className: prefixClass(prefix, '-empty__text') }, props.text) : null,
+        props.action ? h('button', {
+          type: 'button',
+          className: prefixClass(prefix, '-empty__action'),
+          onClick: props.action.onClick
+        }, props.action.label) : null
+      )
+    );
+  }
+
   function Registry(props) {
-    const prefix = props.classPrefix || 'fingers-fs';
+    const prefix = props.classPrefix || 'training-focus';
     const items = Array.isArray(props.items) ? props.items : [];
     const selected = Array.isArray(props.selectedIds) ? props.selectedIds : [];
     const title = props.title || 'Реестр упражнений';
@@ -311,6 +371,9 @@
 
   HEYS.TrainingFocus = {
     __registered: true,
+    Shell: Shell,
+    ViewContainer: ViewContainer,
+    EmptyState: EmptyState,
     Header: Header,
     Tabs: Tabs,
     EquipmentBar: EquipmentBar,

@@ -17,8 +17,29 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const createStorageMock = () => {
+  const store = {};
+  return {
+    get length() { return Object.keys(store).length; },
+    key: (i) => Object.keys(store)[i] ?? null,
+    getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  };
+};
+
+const ensureLocalStorage = () => {
+  if (!globalThis.window) globalThis.window = globalThis;
+  if (!globalThis.window.localStorage || typeof globalThis.window.localStorage.clear !== 'function') {
+    globalThis.localStorage = createStorageMock();
+    globalThis.window.localStorage = globalThis.localStorage;
+  }
+};
+
 beforeAll(() => {
   if (!globalThis.window) globalThis.window = globalThis;
+  ensureLocalStorage();
   globalThis.window.HEYS = globalThis.HEYS = {};
   globalThis.React = React;
   const file = path.resolve(__dirname, '..', 'fingers', 'heys_fingers_timer_v1.js');
@@ -37,6 +58,7 @@ const defaultCfg = (over = {}) => ({
 describe('useRepsCycle — characterization (Step 2 / ревью #9)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    ensureLocalStorage();
     window.localStorage.clear();
     delete globalThis.HEYS.Fingers.lastTimerLockDenied;
   });

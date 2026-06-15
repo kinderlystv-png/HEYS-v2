@@ -30,7 +30,7 @@
 
   function defaultTypeIcon(t) {
     return t === 'peer-reviewed' ? '🔬'
-      : t === 'practitioner' ? '🧗'
+      : t === 'practitioner' ? '🧑‍🏫'
       : t === 'guideline' ? '📋' : '📚';
   }
 
@@ -38,9 +38,9 @@
   function SourceBadge(props) {
     const src = props && props.source;
     if (!src) return null;
-    const prefix = (props && props.classPrefix) || 'fingers-source-badge';
+    const prefix = (props && props.classPrefix) || 'training-source-badge';
     const icon = (props && props.icon) || '📖';
-    const eventName = (props && props.eventName) || 'fingers-open-bibliography';
+    const eventName = (props && props.eventName) || 'training-open-bibliography';
     const customClick = props && props.onClick;
     const handleClick = customClick
       ? function (e) {
@@ -150,7 +150,7 @@
     const onClose = (props && props.onClose) || function () {};
     const focusSourceId = props && props.focusSourceId;
     const sources = (props && props.sources) || [];
-    const prefix = (props && props.classPrefix) || 'fingers-bib';
+    const prefix = (props && props.classPrefix) || 'training-bib';
     const titleIcon = (props && props.titleIcon) || '📚';
     const title = (props && props.title) || 'Источники и методология';
     const topicLabels = (props && props.topicLabels) || {};

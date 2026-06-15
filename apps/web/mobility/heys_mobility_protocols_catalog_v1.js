@@ -169,12 +169,16 @@
     const p = profile || {};
     const goal = p.goal || (options && options.goal);
     const pops = Array.isArray(p.populations) ? p.populations : [];
+    const keyLoadSoon = options &&
+      typeof options.keyLoadWithinHours === 'number' &&
+      isFinite(options.keyLoadWithinHours) &&
+      options.keyLoadWithinHours <= 48;
     if (pops.indexOf('desk') >= 0 || goal === 'desk') return getProtocol('desk_reset_4');
     if (goal === 'relax') return getProtocol('evening_downshift_8');
     if (goal === 'recover') return getProtocol('post_workout_restore_12');
     if (goal === 'develop') return getProtocol('develop_posterior_chain_18');
     if (goal === 'pre_workout') return getProtocol('pre_workout_ramp_10');
-    if (options && (options.phase === 'peak' || options.keyLoadWithinHours <= 48)) return getProtocol('peak_maintenance_6');
+    if (options && (options.phase === 'peak' || keyLoadSoon)) return getProtocol('peak_maintenance_6');
     return getProtocol('morning_reset_6');
   }
   function buildOptions(protocol) {

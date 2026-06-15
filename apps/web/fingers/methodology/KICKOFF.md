@@ -38,7 +38,12 @@
 
 ## Где что лежит
 
-Всё в `apps/web/fingers/methodology/`:
+Сначала прочитай общий регламент тренировочных режимов:
+[`../../_kernel/TRAINING_MODE_REGULATION.md`](../../_kernel/TRAINING_MODE_REGULATION.md).
+Он фиксирует, что пальцы, мобильность и будущие режимы используют одно runtime
+ядро, а этот каталог документов описывает именно climbing/fingers-контекст.
+
+Всё доменное — в `apps/web/fingers/methodology/`:
 
 | Файл                          | Роль                                                                                    |
 | ----------------------------- | --------------------------------------------------------------------------------------- |
@@ -52,7 +57,9 @@
 | `tools/`                      | чекеры `impl-coverage.mjs`, `school-weights.mjs`, `status-sync.mjs` (сводка готовности) |
 
 Код режима: `apps/web/fingers/*.js` (IIFE-модули `HEYS.Fingers.*`). «Мозг» —
-`heys_fingers_mix_engine_v1.js`.
+тонкие доменные адаптеры поверх `HEYS.TrainingKernel.*`; legacy
+`heys_fingers_mix_engine_v1.js` остаётся только как совместимость/fallback там,
+где это явно указано тестами.
 
 ## Что уже готово
 
@@ -79,9 +86,10 @@
 pnpm vitest run apps/web/__tests__/fingers*.test.js
 node apps/web/fingers/methodology/tools/impl-coverage.mjs
 node apps/web/fingers/methodology/tools/school-weights.mjs --check
-pnpm --filter @heys/web run bundle:fingers
-pnpm dev:local       # API:4001 + web:3001 — увидеть режим
 ```
+
+Legacy bundle rebuild и браузерный QA (`pnpm dev:local`) запускаются только как
+отдельный integration/release шаг по явной команде.
 
 ## Стратегия: strangler-fig (в том же режиме `fingers`)
 
@@ -107,7 +115,10 @@ pnpm dev:local       # API:4001 + web:3001 — увидеть режим
 4. **За флагом.** Новая логика не на live-пути, пока safety не зелёный.
 5. **Числа — в пуле/конфиге**, не в прозе/литералах. Новый спорт =
    `SPORT_CONFIG`.
-6. **После правок методологии** — гонять `tools/impl-coverage.mjs` +
+6. **Общая логика — в kernel.** Если поведение повторяется у пальцев и
+   мобильности, оно переносится в `apps/web/_kernel/`; домен оставляет config,
+   hooks и специализированный player/visual.
+7. **После правок методологии** — гонять `tools/impl-coverage.mjs` +
    `school-weights.mjs`. **Сводку готовности правишь ТОЛЬКО в
    `IMPLEMENTATION_MAP.md`** (между `STATUS:SOURCE`), затем
    `node tools/status-sync.mjs` синкнёт её в METHODOLOGY+KICKOFF (`--check` —

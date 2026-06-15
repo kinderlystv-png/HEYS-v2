@@ -18,6 +18,28 @@ flip остаётся canary-наблюдение, не кодовый blocker.
 | Session builder / UI shapes | 🟢 готово   | 6 `doseShape` renderable; shadow metric считает non-renderable, не non-hang                                                                                                    |
 | Периодизация / full planner | 🟡 частично | `periodization_engine` есть (B7): макро/мезо-план + clamp интенсивности дня по фазе; авто-`selectModel` 6.4 ✅ реализован+подключён; осталось transfer M3, полная тест-батарея |
 
+## Пост-snapshot: вынос общего ядра (2026-06-13…14)
+
+После этого среза (2026-06-10) общая механика тренировочных режимов вынесена в
+`apps/web/_kernel/` (домен-агностичные модули: catalog/gate/assess/session/
+router/runner/records/periodization/progression/stats/bibliography +
+onboarding/calendar/dates). Режим пальцев переведён на тонкие доменные адаптеры
+поверх `HEYS.TrainingKernel.*`; legacy `mix_engine` остаётся fallback (commits
+`79bed012` extract kernel, `58111ede` wire fingers to kernel contracts,
+`b8126552`/`7d50d6be`/`de302c9c`/`5465f5b1` частичные выносы). Мобильность
+собрана как **вторая реф-реализация против контрактов** (тесты `mobility-*`,
+`kernel-*`) — это и был запланированный триггер «вынос ядра после мобильности»
+(корневой `CLAUDE.md`). Канон архитектуры режимов:
+[`../../_kernel/TRAINING_MODE_REGULATION.md`](../../_kernel/TRAINING_MODE_REGULATION.md).
+
+Готовность методологии/safety пальцев это не понижает: рефактор меняет
+**размещение** общей логики, не знаниевый слой. Per-row колонка «Код» в
+[`IMPLEMENTATION_MAP.md`](IMPLEMENTATION_MAP.md) местами ещё указывает
+`mix_engine` как трассировку — это валидно (модули существуют, fallback живой);
+переименование трассировки на kernel-контракты — отдельный пункт бэклога, не
+блокер. Тесты подтвердить через `pnpm vitest run` в рабочей среде (в песочнице
+агента vitest не идёт).
+
 ## Что уже закрыто
 
 - `PROTOCOL_POOL.md`: `doseConfidence: A|B|C` теперь явное поле на всех 36

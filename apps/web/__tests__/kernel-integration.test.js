@@ -29,10 +29,12 @@ const setupOnce = () => {
   evf('_kernel', 'heys_kernel_gate_v1.js');
   evf('_kernel', 'heys_kernel_records_v1.js');
   evf('_kernel', 'heys_kernel_onboarding_v1.js');
+  evf('_kernel', 'heys_kernel_sports_v1.js');
   globalThis.localStorage = globalThis.HEYS.TrainingKernel.records.createMemoryStorage();
   globalThis.window.localStorage = globalThis.localStorage;
   // mobility домен
   evf('mobility', 'heys_mobility_axis_catalog_v1.js');
+  evf('mobility', 'heys_mobility_sport_config_v1.js');
   evf('mobility', 'heys_mobility_atom_catalog_v1.js');
   evf('mobility', 'heys_mobility_validators_v1.js');
   evf('mobility', 'heys_mobility_readiness_v1.js');
@@ -41,11 +43,15 @@ const setupOnce = () => {
   evf('mobility', 'heys_mobility_records_store_v1.js');
   evf('mobility', 'heys_mobility_mode_engine_v1.js');
   evf('mobility', 'heys_mobility_calendar_v1.js');
-  // fingers домен (readiness + assessment + validators самодостаточны)
+  // fingers домен
   evf('fingers', 'heys_fingers_programs_catalog_v1.js');
-  evf('fingers', 'heys_fingers_readiness_v1.js');
-  evf('fingers', 'heys_fingers_assessment_v1.js');
+  evf('fingers', 'heys_fingers_grips_catalog_v1.js');
+  evf('fingers', 'heys_fingers_boards_catalog_v1.js');
+  evf('fingers', 'heys_fingers_quality_catalog_v1.js');
+  evf('fingers', 'heys_fingers_sport_config_v1.js');
   evf('fingers', 'heys_fingers_validators_v1.js');
+  evf('fingers', 'heys_fingers_assessment_v1.js');
+  evf('fingers', 'heys_fingers_readiness_v1.js');
   evf('fingers', 'heys_fingers_records_store_v1.js');
   evf('fingers', 'heys_fingers_periodization_engine_v1.js');
   evf('fingers', 'heys_fingers_calendar_v1.js');
@@ -59,7 +65,16 @@ describe('kernel integration (прод-порядок: kernel → домены)'
 
   it('kernel-модули активны', () => {
     const TK = globalThis.HEYS.TrainingKernel;
-    expect(TK.stats && TK.dates && TK.calendar && TK.periodization && TK.progression && TK.session && TK.runner && TK.router && TK.assess && TK.catalog && TK.gate && TK.records && TK.onboarding).toBeTruthy();
+    expect(TK.stats && TK.dates && TK.calendar && TK.periodization && TK.progression && TK.session && TK.runner && TK.router && TK.assess && TK.catalog && TK.gate && TK.records && TK.onboarding && TK.sports).toBeTruthy();
+  });
+
+  it('оба домена регистрируют SPORT_CONFIG в kernel registry', () => {
+    const sports = globalThis.HEYS.TrainingKernel.sports;
+    expect(sports.get('mobility')).toMatchObject({ sportId: 'mobility', namespace: 'Mobility' });
+    expect(sports.get('climbing-fingers')).toMatchObject({ sportId: 'climbing-fingers', namespace: 'Fingers' });
+    expect(M().SPORT_CONFIG.qualityAxes.length).toBeGreaterThan(0);
+    expect(F().SPORT_CONFIG.qualityAxes.length).toBe(9);
+    expect(sports.list().map((cfg) => cfg.sportId)).toEqual(['climbing-fingers', 'mobility']);
   });
 
   it('mobility onboarding delegates profile normalization to kernel in prod-order', () => {

@@ -68,6 +68,12 @@ describe('mobility mode_engine', () => {
     expect(r.focus).toBe('maintain');
     expect(r.avoidHighTissueLoad).toBe(true);
   });
+
+  it('periodizationAdvice не трактует null keyLoadWithinHours как ключевую нагрузку', () => {
+    const r = ME().periodizationAdvice({ phase: 'base', keyLoadWithinHours: null });
+    expect(r.focus).toBe('develop');
+    expect(r.avoidHighTissueLoad).toBe(false);
+  });
 });
 
 describe('mobility routine_builder', () => {

@@ -14,6 +14,8 @@ const setupOnce = () => {
   if (!globalThis.window) globalThis.window = globalThis;
   globalThis.window.HEYS = globalThis.HEYS = {};
   // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(KERNEL_DIR, 'heys_kernel_assess_v1.js'), 'utf8'));
+  // eslint-disable-next-line no-eval
   eval(fs.readFileSync(path.join(KERNEL_DIR, 'heys_kernel_onboarding_v1.js'), 'utf8'));
   const ev = (f) => { /* eslint-disable-next-line no-eval */ eval(fs.readFileSync(path.join(MOB_DIR, f), 'utf8')); };
   ev('heys_mobility_assessment_v1.js');
