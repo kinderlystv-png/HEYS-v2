@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-06-15 — Создан триггер heys-maintenance-daily-cleanup
+
+**Проблема:** dead-man's switch бил тревогу `daily_cleanup молчит 277ч` — задача
+никогда не запускалась с момента написания кода. У триггера
+`heys-maintenance-daily` не было payload → функция уходила в `default`, а не
+`daily_cleanup`.
+
+**Фикс:** создан YC trigger `heys-maintenance-daily-cleanup` (ID:
+`a1skdfs43127r29uiqen`):
+
+- cron: `30 3 * * ? *` (03:30 UTC ежедневно)
+- payload: `{"trigger_id":"daily_cleanup"}`
+- function: `d4e4q2l8p0jdui3703bv` (heys-maintenance, $latest)
+- service account: `aje85rjgpj4nk9m384ek`
+
+Первый ручной прогон: очистил 10 145 строк / 938 KB log_trace, synthetic_defense
+4/4, profile_integrity 0 mismatches.
+
+---
+
 ## 🎯 Решённая проблема
 
 **До**: API возвращал 502 Bad Gateway → узнавали о проблеме от пользователей →
