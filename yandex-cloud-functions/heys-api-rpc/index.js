@@ -3487,6 +3487,20 @@ module.exports.handler = async function (event, context) {
     // Формируем вызов RPC функции
     paramKeys = Object.keys(params);
 
+    // 🛡️ FIX 2026-06-15: p_context_id — это handler-level capability token
+    // (см. validateContextForWrite), а НЕ аргумент SQL-функций. Curator-batch
+    // и merge_save валидируют контекст и строят свой SQL, сюда не доходя.
+    // А generic-dispatched session writes (batch_upsert/upsert/delete
+    // _by_session) иначе передали бы p_context_id в SQL-вызов → ошибка
+    // "function ...(... p_context_id ...) does not exist" → 500. Это вскрылось
+    // когда PIN write-context починили на by_session путь (раньше PIN всегда
+    // 401'ил на by_curator, и эти session-write вызовы с context'ом не
+    // выполнялись). Срезаем перед построением named-args вызова.
+    // STRICT/reroute для session не нужен: PIN-сессия привязана к одному
+    // client_id (cross-client pollution невозможна), curator-путь свою
+    // валидацию сохраняет.
+    paramKeys = paramKeys.filter((k) => k !== 'p_context_id');
+
     // Ticket B follow-up: PIN-path defence-in-depth для generic dispatch.
     // merge_save_*_by_session / batch_upsert_client_kv_by_curator уже гейтятся
     // в specific handlers выше. Здесь покрываем single+batch PIN-write paths.
