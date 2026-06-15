@@ -11766,7 +11766,8 @@ svg.date-picker-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
+    /* Above fullscreen training overlays (fingers/mobility use 2147483000). */
+    z-index: 2147483400;
     animation: fadeIn 0.15s ease-out;
     padding: 20px;
   }

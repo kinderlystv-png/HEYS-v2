@@ -267,6 +267,154 @@
     );
   }
 
+  function LiveRoadmap(props) {
+    const rows = Array.isArray(props.items) ? props.items : Array.isArray(props.steps) ? props.steps : [];
+    if (!rows.length) return null;
+    const currentIndex = Math.max(0, Math.min(rows.length - 1, Number(props.currentIndex) || 0));
+    const densityClass = rows.length > 8 ? ' is-ultra-dense' : rows.length > 4 ? ' is-dense' : '';
+    return h('section', {
+      className: cx('fingers-fs-live-roadmap' + densityClass, props.className),
+      'aria-label': props.ariaLabel || 'Этапы тренировки'
+    },
+      h('div', { className: 'fingers-fs-live-roadmap__head' },
+        h('span', null, props.title || 'Этапы тренировки'),
+        h('strong', null, (currentIndex + 1) + '/' + rows.length)
+      ),
+      h('ol', { className: 'fingers-fs-live-roadmap__list' },
+        rows.map(function (item, idx) {
+          const isCurrent = idx === currentIndex || item.current;
+          const isDone = idx < currentIndex || item.done;
+          return h('li', {
+            key: item.id || idx,
+            className: cx(
+              'fingers-fs-live-roadmap__item',
+              props.itemClassName,
+              isCurrent && 'is-current',
+              isDone && 'is-done'
+            ),
+            'aria-current': isCurrent ? 'step' : undefined
+          },
+            h('span', { className: 'fingers-fs-live-roadmap__index' }, isDone ? '✓' : String(idx + 1)),
+            h('span', { className: 'fingers-fs-live-roadmap__body' },
+              h('span', { className: 'fingers-fs-live-roadmap__title' }, item.title || item.label || 'Упражнение'),
+              h('span', { className: 'fingers-fs-live-roadmap__meta' }, item.meta || item.metric || '')
+            )
+          );
+        })
+      )
+    );
+  }
+
+  function LiveRunnerShell(props) {
+    const roadmap = props.roadmap || h(LiveRoadmap, {
+      items: props.items || props.steps || [],
+      currentIndex: props.currentIndex,
+      className: props.roadmapClassName,
+      itemClassName: props.roadmapItemClassName,
+      title: props.roadmapTitle,
+      ariaLabel: props.roadmapLabel
+    });
+    return h('div', {
+      className: cx('fingers-fs-live', props.className),
+      'data-training-runner': props.trainingRunner || 'guided',
+      role: props.role || undefined,
+      'aria-label': props.ariaLabel || undefined
+    },
+      props.ariaLabel ? h('span', {
+        style: {
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: 0
+        }
+      }, props.ariaLabel) : null,
+      props.runner || props.children || null,
+      roadmap
+    );
+  }
+
+  function LiveCountdownDisplay(props) {
+    const controls = Array.isArray(props.controls) ? props.controls.filter(Boolean) : [];
+    const chips = Array.isArray(props.chips) ? props.chips.filter(Boolean) : [];
+    const ringRadius = Number(props.ringRadius) || 86;
+    const ringCircum = 2 * Math.PI * ringRadius;
+    const ratio = Math.max(0, Math.min(1, Number(props.ratio) || 0));
+    const digit = props.digit == null ? '' : String(props.digit);
+    const finalCount = !!props.finalCount;
+    return h('div', {
+      className: cx('heys-fingers-countdown', props.continuous && 'heys-fingers-continuous', props.className),
+      'data-phase': props.phaseKey || 'idle'
+    },
+      h('div', { className: 'heys-fingers-countdown__counter' }, props.counter || ''),
+      props.title ? h('h2', { className: 'heys-fingers-countdown__grip' }, props.title) : null,
+      props.image ? h('div', { className: 'heys-fingers-countdown__hero' },
+        h('img', {
+          src: props.image,
+          alt: props.imageAlt || props.title || 'Упражнение',
+          loading: props.imageLoading || 'eager',
+          decoding: 'async',
+          onError: function (e) {
+            try { e.currentTarget.parentNode.style.display = 'none'; } catch (_) {}
+          }
+        })
+      ) : null,
+      chips.length ? h('div', { className: 'heys-fingers-countdown__chips' },
+        chips.map(function (chip, idx) {
+          return h('div', {
+            key: chip.id || idx,
+            className: cx('heys-fingers-countdown__chip', chip.className),
+            'data-weight-sign': chip.weightSign || undefined
+          },
+            h('span', { className: 'heys-fingers-countdown__chip-label' }, chip.label || ''),
+            h('span', { className: 'heys-fingers-countdown__chip-value' }, chip.value == null ? '—' : String(chip.value))
+          );
+        })
+      ) : null,
+      h('div', { className: 'heys-fingers-countdown__phase-badge' }, props.phaseLabel || ''),
+      h('div', { className: 'heys-fingers-countdown__ring-wrap' },
+        h('svg', {
+          className: 'heys-fingers-countdown__ring',
+          width: 200,
+          height: 200,
+          viewBox: '0 0 200 200',
+          'aria-hidden': 'true'
+        },
+          h('circle', { className: 'heys-fingers-countdown__ring-track', cx: 100, cy: 100, r: ringRadius, fill: 'none' }),
+          h('circle', {
+            className: 'heys-fingers-countdown__ring-fill',
+            cx: 100,
+            cy: 100,
+            r: ringRadius,
+            fill: 'none',
+            strokeDasharray: ringCircum,
+            strokeDashoffset: ringCircum * (1 - ratio),
+            transform: 'rotate(-90 100 100)'
+          })
+        ),
+        h('div', { className: 'heys-fingers-countdown__digit' + (finalCount ? ' is-final-count' : '') }, digit)
+      ),
+      props.afterRing || null,
+      controls.length ? h('div', { className: 'heys-fingers-countdown__controls' },
+        controls.map(function (control, idx) {
+          return h('button', {
+            key: control.id || idx,
+            type: 'button',
+            className: cx('heys-fingers-countdown__btn', control.abort && 'heys-fingers-countdown__btn--abort', control.className),
+            disabled: !!control.disabled,
+            onClick: control.onClick,
+            'aria-label': control.ariaLabel || control.label,
+            title: control.title
+          }, control.label || control.id || 'Действие');
+        })
+      ) : null
+    );
+  }
+
   function RegistryGrid(props) {
     const prefix = props.classPrefix || 'training-focus';
     const items = Array.isArray(props.items) ? props.items : [];
@@ -467,6 +615,9 @@
     GoalSelector: GoalSelector,
     ReadinessCard: ReadinessCard,
     GuidedRunnerPanel: GuidedRunnerPanel,
+    LiveRoadmap: LiveRoadmap,
+    LiveRunnerShell: LiveRunnerShell,
+    LiveCountdownDisplay: LiveCountdownDisplay,
     RegistryGrid: RegistryGrid,
     Registry: Registry
   };
