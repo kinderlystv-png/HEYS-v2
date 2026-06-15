@@ -76,7 +76,7 @@ function CRSScaleBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, is
                     </div>
 
                     <p className="mt-6 text-sm text-gray-500 italic bg-white/50 p-5 rounded-xl border border-white/60">
-                        Обычное приложение оценивает каждый день отдельно — сегодня хороший, вчера плохой. HEYS смотрит непрерывный график недели: видит сдвиги в биохимии и помогает скорректировать ритм без жёстких диет.
+                        Обычное приложение оценивает каждый день отдельно — сегодня хороший, вчера плохой. HEYS смотрит непрерывный график недели: видит сдвиги в режиме и помогает скорректировать ритм без жёстких диет.
                     </p>
                 </div>
             </div>
@@ -115,11 +115,11 @@ function CausesBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, isOp
             <div className="flex justify-between items-start gap-5">
                 <div>
                     <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-                        Сила воли ни при чём. Ищем причину в биохимии.
+                        Сила воли ни при чём. Ищем причину в режиме недели.
                     </h3>
                     <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100 mt-2'}`}>
                         <p className="text-gray-600 text-sm md:text-base overflow-hidden">
-                            Вечерняя тяга к сладкому — это не ваша слабость, а следствие недосыпа или накопленного стресса.
+                            Вечерняя тяга к сладкому часто связана с недосыпом, усталостью или накопленным стрессом.
                         </p>
                     </div>
                 </div>
@@ -133,7 +133,7 @@ function CausesBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, isOp
             <div className={`grid transition-all duration-500 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100 mt-6' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
                 <div className="overflow-hidden">
                     <p className="text-gray-600 mb-4 leading-relaxed">
-                        Калории — это только часть картины. Алгоритм учитывает накопленный стресс, гормональные ритмы и качество сна:
+                        Калории — это только часть картины. Система учитывает накопленный стресс, ритм дня и качество сна:
                     </p>
 
                     <div className="space-y-3">
@@ -151,8 +151,8 @@ function CausesBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean, isOp
 
                     <p className="mt-6 text-gray-600 text-sm leading-relaxed bg-emerald-50/30 p-5 rounded-xl border border-emerald-100/50">
                         Главный вопрос замученного диетами человека — «почему у меня не получается?».
-                        Обычный ответ: «мало силы воли». Реальный ответ: недосып вызывает голод, а стресс
-                        вызывает тягу к сладкому. HEYS даёт этот реальный ответ.
+                        Обычный ответ: «мало силы воли». Практичнее смотреть на недосып, усталость,
+                        стресс и пропуски еды. HEYS помогает увидеть эту связку и выбрать первый шаг.
                     </p>
                 </div>
             </div>
@@ -274,11 +274,11 @@ function InsulinWaveBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean,
             <div className="flex justify-between items-start gap-5">
                 <div>
                     <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-                        Инсулиновая волна: точная математика сжигания жира.
+                        Инсулиновая волна: понятное окно после еды.
                     </h3>
                     <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100 mt-2'}`}>
                         <p className="text-gray-600 text-sm md:text-base overflow-hidden">
-                            Система знает: одни и те же калории могут дать энергию или уйти в жир. Мы вычисляем идеальные окна усвоения для вас.
+                            Система показывает, как состав приёма пищи и состояние дня влияют на окно усвоения.
                         </p>
                     </div>
                 </div>
@@ -315,7 +315,7 @@ function InsulinWaveBlock({ isVisible, isOpen, onToggle }: { isVisible: boolean,
                                 </li>
                             </ul>
                             <p className="text-sm text-gray-600 italic border-l-2 border-sky-300 pl-3">
-                                Вы точно знаете, когда уровень инсулина опустится, и организм начнёт работать на вас.
+                                Вы видите ориентир по окну после еды и понимаете, когда лучше планировать следующий приём или активность.
                             </p>
                         </div>
 
@@ -522,6 +522,13 @@ export default function NavigatorSection() {
                     >
                         Не просто что вы едите — а как складывается ваш ритм прямо сейчас: сон, активность, стресс, восстановление. Куратор видит сдвиги за 2-3 дня до того, как вы их почувствуете — и пишет первым.
                     </p>
+
+                    <div
+                        className={`mx-auto mb-8 max-w-3xl rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4 text-sm leading-relaxed text-blue-950 transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                        style={{ transitionDelay: '180ms' }}
+                    >
+                        Navigator опирается на 41 паттерн питания и состояния. В методологии у каждого паттерна есть ссылка на исследование с PMID; на лендинге мы показываем это только здесь, в разделе «Под капотом».
+                    </div>
 
                     {/* 4 blocks (Accordion). Scroll-on-open реализован в toggleAccordion */}
                     {/* через window.scrollTo с замером headerRef.offsetHeight. */}
