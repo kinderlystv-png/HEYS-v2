@@ -543,6 +543,38 @@ describe('Store — cloud pull merge by record (mergeCloudPlanningArray)', () =>
         expect(saved.items.find((item) => item.id === 'ticket').done).toBe(false);
     });
 
+    it('checklists: custom empty sections persist across item updates', () => {
+        const checklist = Store.addChecklist({
+            title: 'Packing',
+            customGroups: ['Документы'],
+            items: [],
+        });
+
+        Store.updateChecklist(checklist.id, {
+            customGroups: ['Документы', 'Аптечка'],
+        });
+        Store.updateChecklist(checklist.id, {
+            items: [{ id: 'passport', group: 'Документы', text: 'Паспорт' }],
+        });
+
+        const saved = Store.getChecklists().find((item) => item.id === checklist.id);
+        expect(saved.customGroups).toEqual(['Документы', 'Аптечка']);
+        expect(saved.items[0]).toMatchObject({ group: 'Документы', text: 'Паспорт' });
+    });
+
+    it('checklists: archive status persists and hard delete removes archived records', () => {
+        const checklist = Store.addChecklist({ title: 'Old packing' });
+
+        Store.updateChecklist(checklist.id, { status: 'archived' });
+        expect(Store.getChecklists().find((item) => item.id === checklist.id).status).toBe('archived');
+
+        Store.updateChecklist(checklist.id, { status: 'active' });
+        expect(Store.getChecklists().find((item) => item.id === checklist.id).status).toBe('active');
+
+        Store.deleteChecklist(checklist.id);
+        expect(Store.getChecklists().find((item) => item.id === checklist.id)).toBeUndefined();
+    });
+
     it('checklists: tombstones prevent stale cloud arrays from resurrecting deleted lists', () => {
         const keep = Store.addChecklist({ title: 'Keep' });
         const gone = Store.addChecklist({ title: 'Gone' });
