@@ -44,3 +44,30 @@
 | Календарь добавлен в release governance           | ✅     | `маркетинг/32`                |
 | Владелец календаря и способ напоминания назначены | 🟡     | назначить владельца           |
 | Первая фактическая запись создана                 | 🟡     | после запуска или перед R2    |
+
+## Автоматический preflight
+
+Команда:
+
+```bash
+pnpm pdn:monthly-audit
+```
+
+Что проверяет до первой фактической сверки:
+
+- наличие monthly audit, реестра данных, РКН-драфта, `22`, `15` и governance;
+- что чеклист покрывает слои `код/БД`, логи, лендинг, согласия, РКН, кураторов,
+  интеграции и gaps;
+- что реестр содержит текущие code/database-якоря: `heys_profile`,
+  `heys_dayv2_*`, `heys_hr_zones`, `leads`, `funnel_events`, `consents`,
+  `payments`, `ym_client_id`, `health_data`;
+- что версии legal-документов синхронны между landing config,
+  `heys_consents_v1.js`, `heys_legal_versions_v1.js` и archived public docs;
+- что GA4/Meta не загружаются, а Yandex Metrica остаётся отдельным gated
+  контуром;
+- что privacy/payment guards подключены: `pnpm privacy:marketing` и
+  `pnpm payments:gateway`.
+
+2026-06-15 preflight: `33 checks OK`, `1 pending` = сверка с фактически поданной
+РКН-записью. Это pending не закрывается в репо: нужны номер/ключ/PDF поданной
+формы вне репо.
