@@ -1,0 +1,85 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//HEYS//PDN Operator Calendar//RU
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:HEYS PDN operator obligations
+X-WR-TIMEZONE:Europe/Moscow
+BEGIN:VTIMEZONE
+TZID:Europe/Moscow
+BEGIN:STANDARD
+DTSTART:19700101T000000
+TZOFFSETFROM:+0300
+TZOFFSETTO:+0300
+TZNAME:MSK
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:heys-pdn-monthly-audit@heyslab
+DTSTAMP:20260615T090000Z
+DTSTART;TZID=Europe/Moscow:20260701T100000
+DTEND;TZID=Europe/Moscow:20260701T110000
+RRULE:FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=1
+SUMMARY:HEYS PDN monthly audit
+DESCRIPTION:Run pnpm pdn:monthly-audit. Fill heys-pdn-monthly-audit outside repo if real PDN/RKN evidence exists. Check code DB landing docs RKN integrations gaps.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:HEYS PDN monthly audit
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:heys-rkn-change-check@heyslab
+DTSTAMP:20260615T090000Z
+DTSTART;TZID=Europe/Moscow:20260710T100000
+DTEND;TZID=Europe/Moscow:20260710T103000
+RRULE:FREQ=MONTHLY;BYMONTHDAY=10
+SUMMARY:HEYS RKN change check
+DESCRIPTION:Check whether last month changed PDN purpose category recipient system cross-border transfer or operator data. If changed prepare updateform before the 15th.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:HEYS RKN change check
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:heys-dsar-incident-triage@heyslab
+DTSTAMP:20260615T090000Z
+DTSTART;TZID=Europe/Moscow:20260706T093000
+DTEND;TZID=Europe/Moscow:20260706T100000
+RRULE:FREQ=WEEKLY;BYDAY=MO
+SUMMARY:HEYS DSAR and incident triage
+DESCRIPTION:Check DSAR requests 10-working-day SLA incident queue 24h/72h deadlines photo cleanup log and open PDN gaps in marketing plan 22.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:HEYS DSAR and incident triage
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:heys-sec021-backup-chain-20260621@heyslab
+DTSTAMP:20260615T090000Z
+DTSTART;TZID=Europe/Moscow:20260621T110000
+DTEND;TZID=Europe/Moscow:20260621T113000
+SUMMARY:HEYS SEC-021 backup-chain observation
+DESCRIPTION:Check support bot for backup_chain_gap alerts and backup_run_log. If no Backup-chain interrupted alert then mitigation is healthy. If alert exists investigate backup function and trigger.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:HEYS SEC-021 backup-chain observation
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:heys-sec022-photo-cleanup-20260621@heyslab
+DTSTAMP:20260615T090000Z
+DTSTART;TZID=Europe/Moscow:20260621T113000
+DTEND;TZID=Europe/Moscow:20260621T120000
+SUMMARY:HEYS SEC-022 photo cleanup dry-run review
+DESCRIPTION:Check photo_cleanup_log for dry-run results. If zero or known orphans after observation then switch heys-cron-photo-cleanup DRY_RUN=0 via controlled deploy/env update.
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:HEYS SEC-022 photo cleanup dry-run review
+END:VALARM
+END:VEVENT
+END:VCALENDAR

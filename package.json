@@ -79,6 +79,7 @@
     "push:safe": "node scripts/push-safe.mjs",
     "release": "pnpm run build:packages && changeset publish",
     "release:prepare-and-commit": "node scripts/release-prepare-and-commit.mjs",
+    "security:l6-watchdogs": "node scripts/security/l6-watchdogs-check.mjs",
     "security:sbom": "node scripts/security/generate-sbom.js",
     "security:strict-readiness": "node scripts/security/strict-readiness-check.mjs",
     "ship": "node scripts/ship.mjs",

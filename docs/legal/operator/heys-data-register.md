@@ -13,13 +13,13 @@
 
 ## Карта готовности реестра
 
-| Группа                    | Статус | Что уже закрыто                                                            | Что осталось                                 |
-| ------------------------- | ------ | -------------------------------------------------------------------------- | -------------------------------------------- |
-| Идентификаторы и контакты | ✅     | `client_id`, phone/email/messenger, `birth_year` внесены                   | сверять новые CRM/бот-поля через gate        |
-| Маркетинг и аналитика     | 🟡     | лиды, UTM, promo, `ym_client_id`, funnel events описаны                    | Telegram lead notification smoke             |
-| Health/profile/day data   | 🟡     | профиль, дневник, сон, активность, самочувствие, цикл внесены              | финальная сверка с РКН/privacy/consent       |
-| Согласия и права субъекта | ✅     | consent proof, DSAR/RPC и smoke без health consent подтверждены 2026-06-14 | сверять при bump версий документов           |
-| Платежи                   | 🟡     | запрещены health-values в metadata                                         | повторная проверка после `heys-api-payments` |
+| Группа                    | Статус | Что уже закрыто                                                            | Что осталось                                             |
+| ------------------------- | ------ | -------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Идентификаторы и контакты | ✅     | `client_id`, phone/email/messenger, `birth_year` внесены                   | сверять новые CRM/бот-поля через gate                    |
+| Маркетинг и аналитика     | 🟡     | лиды, UTM, promo, `ym_client_id`, funnel events описаны                    | Telegram lead notification smoke                         |
+| Health/profile/day data   | 🟡     | профиль, дневник, сон, активность, самочувствие, цикл внесены              | финальная сверка с РКН/privacy/consent                   |
+| Согласия и права субъекта | ✅     | consent proof, DSAR/RPC и smoke без health consent подтверждены 2026-06-14 | сверять при bump версий документов                       |
+| Платежи                   | 🟡     | payload/webhook tests запрещают contacts/health-values в payment metadata  | повторная live-проверка после `heys-api-payments` deploy |
 
 ## Реестр
 
@@ -49,5 +49,5 @@
 | Health-values не попадают в funnel metadata               | ✅     | `funnel_metadata_strip_pii()` убирает phone/email/IP/user-agent; health-data не передаются в metadata по контракту |
 | Debug event log фильтрует health-values                   | ✅     | `kcal100`, `weightMorning`, `moodMorning`, `sleepHours`, `waterMl` → `<filtered>`                                  |
 | Telegram lead notification содержит только `lead_id`      | 🟡     | проверить на фактическом webhook/боте                                                                              |
-| Payment metadata не содержит health-values                | 🟡     | проверить после реализации `heys-api-payments`                                                                     |
+| Payment metadata не содержит contact/health-values        | ✅     | `pnpm privacy:marketing` + `pnpm payments:webhook-test`; повторить live после deploy                               |
 | Реестр совпадает с privacy, health consent, `31` и РКН    | 🟡     | сверить после подачи изменений                                                                                     |

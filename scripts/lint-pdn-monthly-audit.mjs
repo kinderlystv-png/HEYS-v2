@@ -7,7 +7,17 @@ const ROOT = path.resolve(new URL('..', import.meta.url).pathname);
 
 const FILES = {
   monthlyAudit: 'docs/legal/operator/heys-pdn-monthly-audit.md',
+  pdnCalendar: 'docs/legal/operator/heys-pdn-calendar.ics',
+  signoffPackage: 'docs/legal/operator/heys-r0-r2-signoff-package.md',
+  dsarLogTemplate: 'docs/legal/operator/heys-dsar-request-log-template.md',
+  incidentDrillTemplate: 'docs/legal/operator/heys-pdn-incident-drill-template.md',
+  retentionRunbook: 'docs/legal/operator/heys-retention-job-runbook.md',
+  dsarProcedure: 'docs/legal/operator/heys-dsar-procedure-draft.md',
+  dsarMigration: 'database/2026-05-20_compliance_overhaul.sql',
+  rpcFunction: 'yandex-cloud-functions/heys-api-rpc/index.js',
+  userTab: 'apps/web/heys_user_tab_impl_v1.js',
   dataRegister: 'docs/legal/operator/heys-data-register.md',
+  ispdnGapList: 'docs/legal/operator/heys-ispdn-gap-list.md',
   rknHeys: 'docs/legal/operator/rkn-notification-heys.md',
   governance: 'маркетинг/32_ПДн_governance_релизный_контур.md',
   plan22: 'маркетинг/22_План_реализации_маркетинга.md',
@@ -108,6 +118,133 @@ function checkMonthlyChecklist() {
   );
 }
 
+function checkPdnCalendar() {
+  requireIncludes(
+    FILES.pdnCalendar,
+    [
+      'BEGIN:VCALENDAR',
+      'UID:heys-pdn-monthly-audit@heyslab',
+      'RRULE:FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=1',
+      'UID:heys-rkn-change-check@heyslab',
+      'RRULE:FREQ=MONTHLY;BYMONTHDAY=10',
+      'UID:heys-dsar-incident-triage@heyslab',
+      'UID:heys-sec021-backup-chain-20260621@heyslab',
+      'UID:heys-sec022-photo-cleanup-20260621@heyslab',
+    ],
+    'PDN operator calendar covers monthly, RKN, DSAR, SEC-021 and SEC-022 reminders',
+  );
+}
+
+function checkSignoffPackage() {
+  requireIncludes(
+    FILES.signoffPackage,
+    [
+      '## R0',
+      '## R1',
+      '## R2/R3',
+      'rkn-notification-heys.md',
+      'heys-ispdn-gap-list.md',
+      'heys-pdn-calendar.ics',
+      'heys-pdn-incident-drill-template.md',
+      'pnpm payments:webhook-test',
+      'payload unit test',
+      'contact/health',
+      'pnpm security:l6-watchdogs',
+      'legal-signoff-template.md',
+      'heys-retention-policy-draft.md',
+      'heys-dsar-procedure-draft.md',
+      'heys-dsar-request-log-template.md',
+      'heys-retention-job-runbook.md',
+      '33_ERID_регламент_и_шаблоны.md',
+    ],
+    'R0/R1/R2 sign-off package keeps external gates visible',
+  );
+}
+
+function checkDsarLogTemplate() {
+  requireIncludes(
+    FILES.dsarLogTemplate,
+    [
+      'DSAR-YYYY-MM-NN',
+      'Owner до делегирования',
+      'outside git',
+      'Identity check result',
+      'Systems checked',
+      'Repo-safe monthly summary',
+      'Не хранить в git реальные DSAR rows',
+    ],
+    'DSAR request log template is repo-safe',
+  );
+}
+
+function checkIncidentDrillTemplate() {
+  requireIncludes(
+    FILES.incidentDrillTemplate,
+    [
+      'INC-DRILL-YYYY-MM-NN',
+      'Owner до делегирования',
+      'outside git',
+      'RKN 24h notification decision',
+      '72h investigation output',
+      'Break-glass used',
+      'Repo-safe summary',
+      'не попадает в git',
+    ],
+    'incident drill template is repo-safe',
+  );
+}
+
+function checkDsarSelfServicePath() {
+  requireIncludes(
+    FILES.dsarProcedure,
+    [
+      'export_my_data_by_session',
+      'log_data_access',
+      'Скачать мои данные',
+      'operator fallback',
+    ],
+    'DSAR procedure reflects self-service export path',
+  );
+  requireIncludes(
+    FILES.dsarMigration,
+    [
+      'CREATE OR REPLACE FUNCTION public.export_my_data_by_session',
+      "log_data_access('client_self'",
+      'client_kv_store',
+      'GRANT EXECUTE ON FUNCTION public.export_my_data_by_session(TEXT) TO heys_rpc',
+    ],
+    'DSAR export RPC exists and audits access',
+  );
+  requireIncludes(
+    FILES.rpcFunction,
+    ["'export_my_data_by_session'", "'delete_my_account'", "'purge_health_data'"],
+    'DSAR/account lifecycle RPCs are allowlisted',
+  );
+  requireIncludes(
+    FILES.userTab,
+    ['handleDownloadData', 'Скачать мои данные', 'DSAR, 152-ФЗ ст.14'],
+    'DSAR download action is visible in user profile',
+  );
+}
+
+function checkRetentionRunbook() {
+  requireIncludes(
+    FILES.retentionRunbook,
+    [
+      'dry-run-first',
+      'client_log_trace',
+      'security_events',
+      'data_loss_audit',
+      'data_access_audit_log',
+      'photo_cleanup_log',
+      'backup_run_log',
+      'ROLLBACK',
+      'Repo-safe monthly summary',
+    ],
+    'retention job runbook is dry-run-first and repo-safe',
+  );
+}
+
 function checkDataRegister() {
   requireIncludes(
     FILES.dataRegister,
@@ -124,6 +261,22 @@ function checkDataRegister() {
       'health_data',
     ],
     'data register covers current code/database anchors',
+  );
+}
+
+function checkIspdnGapList() {
+  requireIncludes(
+    FILES.ispdnGapList,
+    [
+      '26-22-005319',
+      'ПП РФ № 1119',
+      'модель угроз',
+      '`6Б.3`',
+      '`6Б.4`',
+      'Telegram lead notification live smoke',
+      'Payment metadata live smoke',
+    ],
+    'ISPDn gap-list keeps R0/R1 blockers visible',
   );
 }
 
@@ -196,6 +349,14 @@ function checkMarketingPrivacyGuards() {
   } else {
     fail('package script payments:gateway is wired');
   }
+  if (
+    pkg.scripts?.['payments:webhook-test'] ===
+    'node --test yandex-cloud-functions/heys-api-payments/__tests__/payment-status-webhook.test.cjs'
+  ) {
+    ok('package script payments:webhook-test is wired');
+  } else {
+    fail('package script payments:webhook-test is wired');
+  }
 }
 
 function checkAnalyticsBoundary() {
@@ -246,7 +407,14 @@ function printResult() {
 try {
   checkFiles();
   checkMonthlyChecklist();
+  checkPdnCalendar();
+  checkSignoffPackage();
+  checkDsarLogTemplate();
+  checkIncidentDrillTemplate();
+  checkDsarSelfServicePath();
+  checkRetentionRunbook();
   checkDataRegister();
+  checkIspdnGapList();
   checkRknDraft();
   checkLegalVersions();
   checkMarketingPrivacyGuards();

@@ -2,7 +2,8 @@
 
 Статус: R2/R3 ready template / external sign-off pending. Используется перед
 R2/R3: paid-scale, Ф1, внешние кураторы, новые обработчики или существенное
-изменение состава данных.
+изменение состава данных. Навигационный пакет для проверки:
+[heys-r0-r2-signoff-package.md](heys-r0-r2-signoff-package.md).
 
 > Не хранить в репо юркомментарии с привилегированной информацией, сканы
 > документов, номера/ключи уведомлений или ПДн клиентов. Этот файл — только
@@ -32,6 +33,7 @@ R2/R3: paid-scale, Ф1, внешние кураторы, новые обрабо
 - [ ] `heys-data-register.md`
 - [ ] `heys-access-matrix.md`
 - [ ] `heys-pdn-incident-playbook.md`
+- [ ] `heys-r0-r2-signoff-package.md`
 - [ ] Privacy policy
 - [ ] Health data consent
 - [ ] User agreement

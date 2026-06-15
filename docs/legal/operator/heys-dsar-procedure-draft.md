@@ -1,8 +1,8 @@
 # HEYS · Draft DSAR procedure
 
 Статус: technical/legal draft. Codex-часть строки `7.10` закрыта: процесс, SLA,
-роли, evidence и ручной runbook описаны. Перед публичным использованием нужен
-юридический sign-off и назначенный владелец.
+owner, evidence, self-service RPC/UI, ручной runbook и safe journal template
+описаны. Перед публичным использованием нужен юридический sign-off.
 
 ## Какие запросы покрываем
 
@@ -18,9 +18,11 @@
 
 1. Канал запроса: `privacy@heyslab.ru` или Telegram/service chat, если identity
    можно подтвердить.
-2. Владелец приема: основатель до делегирования privacy owner.
+2. Владелец приема: ИП Поплавский Антон Сергеевич до делегирования privacy
+   owner.
 3. Запрос получает внутренний ID формата `DSAR-YYYY-MM-NN`.
-4. Фактический журнал DSAR хранится вне репо; в репо остаётся только шаблон.
+4. Фактический журнал DSAR хранится вне репо; repo-safe шаблон:
+   [heys-dsar-request-log-template.md](heys-dsar-request-log-template.md).
 
 ## Identity check
 
@@ -32,6 +34,11 @@
 | Невозможно подтвердить личность | запрос отклонить с нейтральным объяснением                       |
 
 ## Runbook: access export
+
+Self-service путь уже есть: `export_my_data_by_session` открыт в `heys-api-rpc`
+allowlist, логирует `log_data_access('client_self', ...)`, а UI кнопка «Скачать
+мои данные» вызывает этот путь из user profile. Ручной runbook ниже нужен для
+operator fallback, спорного запроса или проверки внешним reviewer'ом.
 
 1. Найти `client_id` по подтверждённому телефону/session.
 2. Экспортировать account data: `clients`, `consents`, `subscriptions`,
@@ -73,10 +80,14 @@
 | Дата ответа субъекту    |                                                           |
 | Закрыто                 | да / нет                                                  |
 
+Полный журнал вести по
+[heys-dsar-request-log-template.md](heys-dsar-request-log-template.md); сюда не
+копировать реальные строки с ПДн.
+
 ## Product gaps before automation
 
-| Gap                                      | Почему не блокирует draft                            | Следующий технический шаг             |
-| ---------------------------------------- | ---------------------------------------------------- | ------------------------------------- |
-| Нет single-call RPC `export_client_data` | ручной export возможен по таблицам и backup snapshot | добавить RPC/скрипт экспорта          |
-| S3 cleanup пока safety-first             | есть deployed cron с `DRY_RUN=1` и log               | после наблюдения включить `DRY_RUN=0` |
-| Нет отдельного privacy mailbox в коде    | intake можно вести вручную                           | создать alias и внести в privacy docs |
+| Gap                                   | Почему не блокирует draft                                                 | Следующий технический шаг                                       |
+| ------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Operator-side disputed export         | self-service `export_my_data_by_session` уже есть; ручной fallback описан | отдельный operator script/RPC только после первых реальных DSAR |
+| S3 cleanup пока safety-first          | есть deployed cron с `DRY_RUN=1` и log                                    | после наблюдения включить `DRY_RUN=0`                           |
+| Нет отдельного privacy mailbox в коде | intake можно вести вручную                                                | создать alias и внести в privacy docs                           |
