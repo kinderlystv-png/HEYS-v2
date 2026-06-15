@@ -7728,6 +7728,222 @@
 }
 
 /* ============================================================
+ * === LIVE SESSION ROADMAP ===================================
+ * Compact list under the guided timer: current step is black,
+ * the rest is intentionally quiet so the user sees where they are.
+ * ============================================================ */
+
+.fingers-fs-live {
+  min-height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.fingers-fs-live .heys-fingers-countdown {
+  flex: 0 0 auto;
+}
+
+.fingers-fs-live-roadmap {
+  width: min(100% - 32px, 460px);
+  flex: 0 0 auto;
+  margin: 0 auto 18px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 0.5px solid rgba(15, 23, 42, 0.08);
+  box-shadow:
+    0 12px 32px -26px rgba(15, 23, 42, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+[data-theme="dark"] .fingers-fs-live-roadmap {
+  background: rgba(20, 20, 24, 0.78);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 14px 34px -24px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.fingers-fs-live-roadmap__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: rgba(71, 85, 105, 0.72);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fingers-fs-live-roadmap__head strong {
+  color: rgba(15, 23, 42, 0.78);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme="dark"] .fingers-fs-live-roadmap__head {
+  color: rgba(226, 232, 240, 0.58);
+}
+
+[data-theme="dark"] .fingers-fs-live-roadmap__head strong {
+  color: rgba(248, 250, 252, 0.78);
+}
+
+.fingers-fs-live-roadmap__list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fingers-fs-live-roadmap.is-dense .fingers-fs-live-roadmap__list,
+.fingers-fs-live-roadmap.is-ultra-dense .fingers-fs-live-roadmap__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fingers-fs-live-roadmap__item {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 12px;
+  color: rgba(100, 116, 139, 0.92);
+  background: rgba(248, 250, 252, 0.74);
+  border: 0.5px solid rgba(15, 23, 42, 0.05);
+}
+
+.fingers-fs-live-roadmap__item.is-current {
+  color: #020617;
+  background: #ffffff;
+  border-color: rgba(2, 6, 23, 0.16);
+  box-shadow:
+    0 8px 24px -18px rgba(2, 6, 23, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.fingers-fs-live-roadmap__item.is-done {
+  color: rgba(148, 163, 184, 0.96);
+}
+
+[data-theme="dark"] .fingers-fs-live-roadmap__item {
+  color: rgba(148, 163, 184, 0.88);
+  background: rgba(31, 41, 55, 0.55);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .fingers-fs-live-roadmap__item.is-current {
+  color: #f8fafc;
+  background: rgba(248, 250, 252, 0.10);
+  border-color: rgba(248, 250, 252, 0.25);
+  box-shadow:
+    0 8px 24px -16px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.fingers-fs-live-roadmap__index {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(148, 163, 184, 0.16);
+  color: currentColor;
+  font-size: 12px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.fingers-fs-live-roadmap__item.is-current .fingers-fs-live-roadmap__index {
+  background: #020617;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .fingers-fs-live-roadmap__item.is-current .fingers-fs-live-roadmap__index {
+  background: #f8fafc;
+  color: #020617;
+}
+
+.fingers-fs-live-roadmap__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fingers-fs-live-roadmap__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 760;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.fingers-fs-live-roadmap__item.is-current .fingers-fs-live-roadmap__title {
+  font-weight: 880;
+}
+
+.fingers-fs-live-roadmap__meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 680;
+  line-height: 1.25;
+  color: currentColor;
+  opacity: 0.62;
+}
+
+.fingers-fs-live-roadmap.is-dense .fingers-fs-live-roadmap__item,
+.fingers-fs-live-roadmap.is-ultra-dense .fingers-fs-live-roadmap__item {
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 6px;
+  padding: 6px 7px;
+}
+
+.fingers-fs-live-roadmap.is-dense .fingers-fs-live-roadmap__index,
+.fingers-fs-live-roadmap.is-ultra-dense .fingers-fs-live-roadmap__index {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.fingers-fs-live-roadmap.is-dense .fingers-fs-live-roadmap__title,
+.fingers-fs-live-roadmap.is-ultra-dense .fingers-fs-live-roadmap__title {
+  font-size: 12.5px;
+}
+
+.fingers-fs-live-roadmap.is-dense .fingers-fs-live-roadmap__meta,
+.fingers-fs-live-roadmap.is-ultra-dense .fingers-fs-live-roadmap__meta {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .fingers-fs-live-roadmap {
+    width: calc(100% - 22px);
+    margin-bottom: 14px;
+    padding: 10px;
+    border-radius: 15px;
+  }
+  .fingers-fs-live-roadmap__item {
+    padding: 7px 8px;
+  }
+}
+
+/* ============================================================
  * === COUNTDOWN DISPLAY — premium timer screen ==============
  * Wave 6 polish: фаза-цветное theming через data-phase,
  * ring с glow + smooth transition, digit pulse в финальные
@@ -7738,8 +7954,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 20px 24px;
+  gap: 10px;
+  padding: 10px 20px 12px;
   font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
   /* Phase-цвет — переменная, перекрывается через [data-phase]. Default neutral. */
@@ -7842,7 +8058,7 @@
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 16px;
+  padding: 7px 14px;
   border-radius: 14px;
   min-width: 84px;
   background: rgba(255, 255, 255, 0.82);
@@ -7890,7 +8106,7 @@
 .heys-fingers-countdown__phase-badge {
   display: inline-block;
   padding: 7px 22px;
-  margin: 6px 0 2px;
+  margin: 2px 0 0;
   border-radius: 999px;
   font-size: 12.5px;
   font-weight: 700;
@@ -7909,9 +8125,9 @@
 /* Ring + digit */
 .heys-fingers-countdown__ring-wrap {
   position: relative;
-  width: 220px;
-  height: 220px;
-  margin-top: 2px;
+  width: 196px;
+  height: 196px;
+  margin-top: 0;
 }
 .heys-fingers-countdown__ring {
   position: absolute;
@@ -7952,13 +8168,23 @@
   align-items: center;
   justify-content: center;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
-  font-size: 84px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0 18px;
+  text-align: center;
+  overflow: hidden;
+  font-size: clamp(58px, 16vw, 76px);
   font-weight: 700;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   color: var(--phase-color);
   text-shadow: 0 2px 8px var(--phase-color-soft);
   transition: color 240ms ease;
+}
+
+.heys-fingers-continuous .heys-fingers-countdown__digit {
+  font-size: clamp(52px, 15vw, 64px);
 }
 
 /* Финальные 3 секунды HANG/REST — digit pulse'ит, attention grab */
@@ -7975,16 +8201,17 @@
  * автоматически из своих стилей выше. */
 .heys-fingers-countdown__controls {
   display: flex;
-  gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
+  width: min(100% - 24px, 360px);
 }
 .heys-fingers-countdown__btn {
   height: 44px;
   min-width: 44px;
-  padding: 0 18px;
+  padding: 0 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7992,7 +8219,7 @@
   border: 0.5px solid rgba(0, 0, 0, 0.08);
   background: rgba(255, 255, 255, 0.85);
   color: var(--fingers-text, #0f172a);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   letter-spacing: -0.005em;
   cursor: pointer;
@@ -8030,6 +8257,8 @@
   background: linear-gradient(180deg, rgba(254, 226, 226, 0.85), rgba(254, 202, 202, 0.7));
   border-color: rgba(220, 38, 38, 0.22);
   color: #b91c1c;
+  min-width: 84px;
+  padding-inline: 10px;
   box-shadow:
     0 1px 2px rgba(220, 38, 38, 0.06),
     0 4px 12px rgba(220, 38, 38, 0.10),

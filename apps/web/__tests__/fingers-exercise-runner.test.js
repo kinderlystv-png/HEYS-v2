@@ -40,6 +40,7 @@ beforeAll(() => {
 });
 
 const ER = () => globalThis.HEYS.Fingers._ExerciseRunner;
+const Roadmap = () => globalThis.HEYS.Fingers._LiveExerciseRoadmap;
 const S = () => globalThis.HEYS.Fingers.STATES;
 
 // Stub useCountdownCycle: захватывает config + предоставляет controllable handlers.
@@ -98,6 +99,54 @@ const defaultExercise = (over = {}) => ({
   hangSec: 7, restSec: 3, repsPerSet: 6, setsCount: 3, restBetweenSetsSec: 180,
   addedWeightKg: 0,
   ...over
+});
+
+describe('LiveExerciseRoadmap — список этапов ведомой сессии', () => {
+  it('shows every exercise and marks the current step', () => {
+    globalThis.HEYS.Fingers.GRIPS_BY_ID = {
+      halfcrimp: { label: 'Half crimp' }
+    };
+    const exercises = [
+      { name: 'ARC', doseShape: 'continuous', dose: { workSec: 1800 } },
+      { gripId: 'halfcrimp', doseShape: 'hang', hangSec: 7, repsPerSet: 6, setsCount: 3 },
+      { name: 'Antagonists', doseShape: 'reps', dose: { reps: [8, 15], sets: 3 } }
+    ];
+
+    const { container } = render(React.createElement(Roadmap(), { exercises, currentIndex: 1 }));
+
+    expect(screen.getByText('Этапы тренировки')).toBeTruthy();
+    expect(screen.getByText('2/3')).toBeTruthy();
+    expect(screen.getByText('ARC')).toBeTruthy();
+    expect(screen.getByText('Half crimp')).toBeTruthy();
+    expect(screen.getByText('Antagonists')).toBeTruthy();
+    const current = container.querySelector('[aria-current="step"]');
+    expect(current).toBeTruthy();
+    expect(current.textContent).toContain('Half crimp');
+    expect(current.className).toContain('is-current');
+    const done = container.querySelector('.is-done');
+    expect(done).toBeTruthy();
+    expect(done.textContent).toContain('ARC');
+  });
+
+  it('uses registry labels instead of technical atom ids', () => {
+    expect(globalThis.HEYS.Fingers._liveExerciseTitle({ gripId: 'aer_arc' })).toBe('ARC');
+    expect(globalThis.HEYS.Fingers._liveExerciseTitle({ atomId: 'ant_push_shoulder' })).toBe('Push / shoulder balance');
+  });
+
+  it('switches to dense layout for longer sessions without hiding steps', () => {
+    const exercises = Array.from({ length: 10 }, (_, idx) => ({
+      name: 'Exercise ' + (idx + 1),
+      doseShape: 'reps',
+      dose: { reps: [8, 12], sets: 2 }
+    }));
+
+    const { container } = render(React.createElement(Roadmap(), { exercises, currentIndex: 5 }));
+
+    expect(container.querySelector('.fingers-fs-live-roadmap').className).toContain('is-ultra-dense');
+    expect(container.querySelectorAll('.fingers-fs-live-roadmap__item')).toHaveLength(10);
+    const current = container.querySelector('[aria-current="step"]');
+    expect(current.textContent).toContain('Exercise 6');
+  });
 });
 
 describe('ExerciseRunner — characterization до Step 4 рефактора (гейт #9)', () => {

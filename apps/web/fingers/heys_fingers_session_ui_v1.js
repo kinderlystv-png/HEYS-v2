@@ -3660,6 +3660,10 @@
   }
 
   // ─── HangRunner (Step 4) — hang-cycle runner на shared shell ─────────────────
+  function _exerciseDisplayTitle(exercise) {
+    return _liveExerciseTitle(exercise);
+  }
+
   function HangRunner(props) {
     const { exercise, exIdx, totalExercises } = props;
     const cycleRef = React.useRef(null);
@@ -3677,7 +3681,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : exercise.gripId;
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : '—';
     const addedWeight = Number(exercise.addedWeightKg) || 0;
 
@@ -3739,7 +3743,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : exercise.gripId;
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
     const addedWeight = Number(exercise.addedWeightKg) || 0;
     // reps target из dose (block_catalog v2) или legacy repsPerSet.
@@ -3817,7 +3821,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const durationMin = workSec >= 60 ? Math.round(workSec / 60) + ' мин' : workSec + ' с';
 
     if (Fingers.ContinuousDisplay) {
@@ -3891,7 +3895,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
     const addedWeight = Number(exercise.addedWeightKg) || 0;
     const movesPerAttempt = dose.movesPerAttempt;
@@ -3965,7 +3969,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
     const edgeLabel = exercise.edgeSizeMm ? exercise.edgeSizeMm + 'мм' : null;
     const problemsPerRound = Number(dose.problemsPerRound) || 1;
 
@@ -4033,7 +4037,7 @@
     cycleRef.current = cycle;
 
     const grip = Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[exercise.gripId];
-    const gripLabel = grip ? grip.label : (exercise.gripId || exercise.atomId || exercise.name);
+    const gripLabel = grip ? grip.label : _exerciseDisplayTitle(exercise);
 
     if (Fingers.ProcessDisplay) {
       return h(React.Fragment, null,
@@ -4088,6 +4092,92 @@
     return h(HangRunner, props);
   }
 
+  function _liveExerciseTitle(exercise) {
+    const ex = exercise || {};
+    if (ex.atomId && EXERCISE_REGISTRY_LABELS[ex.atomId]) return EXERCISE_REGISTRY_LABELS[ex.atomId];
+    if (ex.gripId && EXERCISE_REGISTRY_LABELS[ex.gripId]) return EXERCISE_REGISTRY_LABELS[ex.gripId];
+    if (ex.atomId && Fingers.blockCatalog && typeof Fingers.blockCatalog.getAtom === 'function') {
+      const atom = Fingers.blockCatalog.getAtom(ex.atomId);
+      if (atom) return _registryAtomTitle(atom);
+    }
+    if (ex.name) return ex.name;
+    if (ex.label) return ex.label;
+    if (ex.gripId && Fingers.GRIPS_BY_ID && Fingers.GRIPS_BY_ID[ex.gripId]) {
+      return Fingers.GRIPS_BY_ID[ex.gripId].label || ex.gripId;
+    }
+    return ex.gripId || ex.atomId || ex.blockId || 'Упражнение';
+  }
+
+  const LIVE_DOSE_SHAPE_LABELS = {
+    hang: 'вис',
+    reps: 'повторы',
+    attempts: 'попытки',
+    circuit: 'круги',
+    continuous: 'непрерывно',
+    process: 'чек-лист'
+  };
+
+  function _liveExerciseMeta(exercise) {
+    const ex = exercise || {};
+    const d = ex.dose || {};
+    const parts = [];
+    if (ex.doseShape) parts.push(LIVE_DOSE_SHAPE_LABELS[ex.doseShape] || ex.doseShape);
+    if (d.workSec) parts.push(_formatSeconds(d.workSec));
+    else if (ex.hangSec) parts.push(_formatSeconds(ex.hangSec));
+    if (d.reps) parts.push(_rangeText(d.reps, ' повт.'));
+    else if (ex.repsPerSet) parts.push(String(ex.repsPerSet) + ' повт.');
+    if (d.sets || ex.setsCount) parts.push(String(d.sets || ex.setsCount) + ' подх.');
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  function LiveExerciseRoadmap({ exercises, currentIndex }) {
+    const rows = Array.isArray(exercises) ? exercises : [];
+    if (!rows.length) return null;
+    const cur = Math.max(0, Math.min(rows.length - 1, Number(currentIndex) || 0));
+    if (HEYS.TrainingFocus && typeof HEYS.TrainingFocus.LiveRoadmap === 'function') {
+      return h(HEYS.TrainingFocus.LiveRoadmap, {
+        items: rows.map(function (exercise, idx) {
+          return {
+            id: ((exercise && (exercise.atomId || exercise.gripId || exercise.name)) || 'exercise') + '-' + idx,
+            title: _liveExerciseTitle(exercise),
+            meta: _liveExerciseMeta(exercise)
+          };
+        }),
+        currentIndex: cur,
+        ariaLabel: 'Этапы тренировки'
+      });
+    }
+    const densityClass = rows.length > 8 ? ' is-ultra-dense' : rows.length > 4 ? ' is-dense' : '';
+    return h('section', {
+      className: 'fingers-fs-live-roadmap' + densityClass,
+      'aria-label': 'Этапы тренировки'
+    },
+      h('div', { className: 'fingers-fs-live-roadmap__head' },
+        h('span', null, 'Этапы тренировки'),
+        h('strong', null, (cur + 1) + '/' + rows.length)
+      ),
+      h('ol', { className: 'fingers-fs-live-roadmap__list' },
+        rows.map(function (exercise, idx) {
+          const isCurrent = idx === cur;
+          const isDone = idx < cur;
+          return h('li', {
+            key: ((exercise && (exercise.atomId || exercise.gripId || exercise.name)) || 'exercise') + '-' + idx,
+            className: 'fingers-fs-live-roadmap__item'
+              + (isCurrent ? ' is-current' : '')
+              + (isDone ? ' is-done' : ''),
+            'aria-current': isCurrent ? 'step' : undefined
+          },
+            h('span', { className: 'fingers-fs-live-roadmap__index' }, isDone ? '✓' : String(idx + 1)),
+            h('span', { className: 'fingers-fs-live-roadmap__body' },
+              h('span', { className: 'fingers-fs-live-roadmap__title' }, _liveExerciseTitle(exercise)),
+              h('span', { className: 'fingers-fs-live-roadmap__meta' }, _liveExerciseMeta(exercise))
+            )
+          );
+        })
+      )
+    );
+  }
+
   function LiveSession({ exercises, dateKey, trainingIndex, programId, initialSnapshot, onAllDone, onAbort, onSetFeedback }) {
     // Start at snapshot.exIdx if resuming; иначе с первого упражнения.
     const startIdx = (initialSnapshot && Number.isInteger(initialSnapshot.exIdx))
@@ -4109,20 +4199,24 @@
     }
 
     const current = exercises[exIdx];
-    return h(ExerciseRunner, {
-      key: exIdx, // forces re-mount of useCountdownCycle hook on exercise switch
-      exercise: current,
-      exIdx: exIdx,
-      totalExercises: exercises.length,
-      dateKey: dateKey,
-      trainingIndex: trainingIndex,
-      exercises: exercises,
-      programId: programId,
-      initialSnapshot: initialSnapshot,
-      onDone: handleExerciseDone,
-      onAbort: onAbort,
-      onSetFeedback: onSetFeedback
-    });
+    const runnerNode = h(ExerciseRunner, {
+        key: exIdx, // forces re-mount of useCountdownCycle hook on exercise switch
+        exercise: current,
+        exIdx: exIdx,
+        totalExercises: exercises.length,
+        dateKey: dateKey,
+        trainingIndex: trainingIndex,
+        exercises: exercises,
+        programId: programId,
+        initialSnapshot: initialSnapshot,
+        onDone: handleExerciseDone,
+        onAbort: onAbort,
+        onSetFeedback: onSetFeedback
+      });
+    const roadmapNode = h(LiveExerciseRoadmap, { exercises: exercises, currentIndex: exIdx });
+    return HEYS.TrainingFocus && typeof HEYS.TrainingFocus.LiveRunnerShell === 'function'
+      ? h(HEYS.TrainingFocus.LiveRunnerShell, { runner: runnerNode, roadmap: roadmapNode })
+      : h('div', { className: 'fingers-fs-live' }, runnerNode, roadmapNode);
   }
 
   // --- Main SessionUI ---
@@ -6181,18 +6275,16 @@
 
     // Live session берёт весь экран — табы и header скрыты
     if (liveActive) {
-      return h('div', { className: 'fingers-fs-live' },
-        h(LiveSession, {
-          exercises: exercises,
-          dateKey: dateKey,
-          trainingIndex: trainingIndex,
-          programId: pendingProgram?.id || 'custom',
-          initialSnapshot: initialSnapshot,
-          onAllDone: handleLiveAllDone,
-          onAbort: handleLiveAbort,
-          onSetFeedback: recordSetFeedback
-        })
-      );
+      return h(LiveSession, {
+        exercises: exercises,
+        dateKey: dateKey,
+        trainingIndex: trainingIndex,
+        programId: pendingProgram?.id || 'custom',
+        initialSnapshot: initialSnapshot,
+        onAllDone: handleLiveAllDone,
+        onAbort: handleLiveAbort,
+        onSetFeedback: recordSetFeedback
+      });
     }
 
     // Custom SF-style monoline SVG icons — единый визуальный язык вместо смешанных emoji.
@@ -6706,6 +6798,8 @@
   // Exposed for tests (Step 4 prep / ревью #9 ExerciseRunner-characterization):
   // pin RPE/onSetFeedback/snapshot/abort до того, как Step 4 добавит doseShape branch.
   Fingers._ExerciseRunner = ExerciseRunner;
+  Fingers._LiveExerciseRoadmap = LiveExerciseRoadmap;
+  Fingers._liveExerciseTitle = _liveExerciseTitle;
 
   Fingers.startSession = function startSession(opts) {
     // Stub for future direct session launch from outside fullscreen.
