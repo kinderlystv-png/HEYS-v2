@@ -169,6 +169,107 @@
             .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
     }
 
+    function formatClockTime(ms) {
+        const d = new Date(ms);
+        if (Number.isNaN(d.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function parseClockMinutes(value) {
+        const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+        if (!m) return null;
+        const hh = Number(m[1]);
+        const mm = Number(m[2]);
+        if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+        return hh * 60 + mm;
+    }
+
+    function buildDateTimeMs(date, clock) {
+        const minutes = parseClockMinutes(clock);
+        if (minutes == null || !date) return null;
+        const base = new Date(`${date}T00:00:00`);
+        if (Number.isNaN(base.getTime())) return null;
+        base.setMinutes(minutes);
+        return base.getTime();
+    }
+
+    function formatDecimalHoursFromMinutes(minutes) {
+        return (Math.max(0, Number(minutes) || 0) / 60).toFixed(1).replace('.', ',') + 'ч';
+    }
+
+    function computeChronoCoveredMinutes(entries, snapshots, date) {
+        const groups = new Map();
+        (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
+            if (!entry || entry.date !== date) return;
+            const minutes = Math.max(0, Number(entry.minutes) || 0);
+            if (minutes <= 0) return;
+            const groupId = entry.parallelGroupId ? `parallel:${entry.parallelGroupId}` : `entry:${entry.id || index}`;
+            const prev = groups.get(groupId) || 0;
+            groups.set(groupId, Math.max(prev, minutes));
+        });
+        let total = 0;
+        groups.forEach((minutes) => { total += minutes; });
+        (Array.isArray(snapshots) ? snapshots : []).forEach((snapshot) => {
+            if (!snapshot || snapshot.date !== date) return;
+            total += Math.max(0, Number(snapshot.totalMinutes) || 0);
+        });
+        return total;
+    }
+
+    function buildLastAddedSummary(entries, activities, nowMs, date) {
+        const activityById = new Map((Array.isArray(activities) ? activities : []).map((a) => [a.id, a]));
+        const sorted = (Array.isArray(entries) ? entries : [])
+            .filter((entry) => {
+                if (!entry || !entry.createdAt || Number(entry.minutes) <= 0) return false;
+                if (date && entry.date !== date) return false;
+                return activityById.has(entry.activityId);
+            })
+            .slice()
+            .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+        const last = sorted[0];
+        if (!last) return null;
+        const createdMs = new Date(last.createdAt).getTime();
+        if (!Number.isFinite(createdMs)) return null;
+        const now = Number(nowMs) || Date.now();
+        const activity = activityById.get(last.activityId) || {};
+        const elapsedHours = Math.max(0, (now - createdMs) / 36e5);
+        return {
+            timeLabel: formatClockTime(createdMs),
+            nowLabel: formatClockTime(now),
+            detail: `+${formatMinutes(last.minutes)} ${activity.name || 'Занятие'}`,
+            elapsedHoursLabel: elapsedHours.toFixed(1).replace('.', ',') + 'ч',
+        };
+    }
+
+    function getLastChronoEntryMs(entries, date) {
+        const latest = (Array.isArray(entries) ? entries : [])
+            .filter((entry) => entry && entry.date === date && entry.createdAt && Number(entry.minutes) > 0)
+            .map((entry) => new Date(entry.createdAt).getTime())
+            .filter((ms) => Number.isFinite(ms))
+            .sort((a, b) => b - a)[0];
+        return Number.isFinite(latest) ? latest : null;
+    }
+
+    function buildUntrackedChronoSummary(day, entries, date, nowMs) {
+        const wakeClock = day && (day.sleepEnd || day.wakeTime || day.wokeAt);
+        const wakeMs = buildDateTimeMs(date, wakeClock);
+        const now = Number(nowMs) || Date.now();
+        if (wakeMs == null || !Number.isFinite(now) || wakeMs > now) return null;
+        const lastEntryMs = getLastChronoEntryMs(entries, date);
+        const startMs = lastEntryMs != null ? Math.max(wakeMs, lastEntryMs) : wakeMs;
+        if (startMs > now) return null;
+        const untrackedMinutes = Math.max(0, (now - startMs) / 60000);
+        if (untrackedMinutes < 1) return null;
+        return {
+            minutes: Math.round(untrackedMinutes),
+            hoursLabel: formatDecimalHoursFromMinutes(untrackedMinutes),
+            wakeLabel: String(wakeClock || ''),
+            sinceLabel: formatClockTime(startMs),
+            sinceKind: lastEntryMs != null ? 'last-entry' : 'wake',
+        };
+    }
+
     function buildSmartSuggestions(activity, entries, activeDate) {
         if (!activity) return [];
         const list = (Array.isArray(entries) ? entries : []).filter((entry) => entry && entry.activityId === activity.id);
@@ -719,6 +820,59 @@
         return true;
     }
 
+    function readStoredValue(key, fallback) {
+        try {
+            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                return HEYS.utils.lsGet(key, fallback);
+            }
+        } catch (_) { /* noop */ }
+        try {
+            if (typeof localStorage === 'undefined') return fallback;
+            const raw = localStorage.getItem(key);
+            return raw == null ? fallback : JSON.parse(raw);
+        } catch (_) {
+            return fallback;
+        }
+    }
+
+    function getCurrentClientId() {
+        try {
+            if (HEYS.utils && typeof HEYS.utils.getCurrentClientId === 'function') {
+                const id = String(HEYS.utils.getCurrentClientId() || '');
+                if (id) return id;
+            }
+        } catch (_) { /* noop */ }
+        try {
+            if (HEYS.cloud && typeof HEYS.cloud.getClientId === 'function') {
+                const id = String(HEYS.cloud.getClientId() || '');
+                if (id) return id;
+            }
+        } catch (_) { /* noop */ }
+        try {
+            if (typeof localStorage !== 'undefined') {
+                return localStorage.getItem('heys_pin_auth_client')
+                    || localStorage.getItem('heys_client_current')
+                    || localStorage.getItem('heys_current_client')
+                    || '';
+            }
+        } catch (_) { /* noop */ }
+        return '';
+    }
+
+    function readChronoDayV2(dateKey) {
+        try {
+            if (HEYS.MorningCheckinUtils && typeof HEYS.MorningCheckinUtils.readDayV2ScopedFirst === 'function') {
+                return HEYS.MorningCheckinUtils.readDayV2ScopedFirst(dateKey, {}) || {};
+            }
+        } catch (_) { /* noop */ }
+        const clientId = getCurrentClientId();
+        if (clientId) {
+            const scoped = readStoredValue(`heys_${clientId}_dayv2_${dateKey}`, null);
+            if (scoped && typeof scoped === 'object') return scoped;
+        }
+        return readStoredValue(`heys_dayv2_${dateKey}`, {}) || {};
+    }
+
     // === Дата-навигация ===
 
     function shiftDateStr(dateStrValue, deltaDays) {
@@ -754,7 +908,7 @@
                     ? `Убрано ${toast.scope === 'week' ? 'из недели' : 'из дня'}${toast.minutes > 0 ? ': ' + formatMinutes(toast.minutes) : ''}`
                     : toast.adjusted
                         ? `Изменено ${toast.minutes > 0 ? '+' : '-'}${formatMinutes(Math.abs(toast.minutes))}`
-                        : `Добавлено ${formatMinutes(toast.minutes)}`),
+                        : `Добавлено ${formatMinutes(toast.minutes)}${toast.parallelCount > 1 ? ' в 2 активности' : ''}`),
             h('button', {
                 type: 'button',
                 className: 'chrono-undo-toast__action',
@@ -1731,12 +1885,26 @@
         );
     }
 
-    function ChronoDurationModal({ activity, currentMinutes, scopeLabel, timerRunning, tasks, projects, entries, activeDate, onAdd, onSetTarget, onCategory, onLink, onStartTimer, onClose }) {
+    function getParallelActivityOptions(activities, currentActivityId) {
+        return (Array.isArray(activities) ? activities : [])
+            .filter((item) => item && item.id && item.id !== currentActivityId && !item.archived)
+            .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    }
+
+    function ChronoDurationModal({ activity, activities, currentMinutes, scopeLabel, timerRunning, tasks, projects, entries, activeDate, onAdd, onSetTarget, onCategory, onLink, onStartTimer, onClose }) {
         const [hourIdx, setHourIdx] = useState(0);
         const [minuteIdx, setMinuteIdx] = useState(30);
+        const [parallelEnabled, setParallelEnabled] = useState(false);
+        const [parallelActivityId, setParallelActivityId] = useState('');
         const overlayRef = useRef(null);
         const smartSuggestions = useMemo(() => buildSmartSuggestions(activity, entries, activeDate),
             [activity && activity.id, entries, activeDate]);
+        const parallelOptions = useMemo(() => getParallelActivityOptions(activities, activity && activity.id),
+            [activities, activity && activity.id]);
+        const selectedParallelActivityId = parallelOptions.some((item) => item.id === parallelActivityId)
+            ? parallelActivityId
+            : (parallelOptions[0] && parallelOptions[0].id) || '';
+        const effectiveParallelActivityId = parallelEnabled ? selectedParallelActivityId : '';
 
 
         useEffect(() => {
@@ -1751,15 +1919,25 @@
             return () => window.removeEventListener('keydown', onKey);
         }, [onClose]);
 
+        useEffect(() => {
+            setParallelEnabled(false);
+            setParallelActivityId('');
+        }, [activity && activity.id]);
+
+        useEffect(() => {
+            if (!parallelEnabled || parallelActivityId) return;
+            if (parallelOptions.length > 0) setParallelActivityId(parallelOptions[0].id);
+        }, [parallelEnabled, parallelActivityId, parallelOptions]);
+
         function applyPreset(min) {
-            onAdd(min);
+            onAdd(min, { parallelActivityId: effectiveParallelActivityId });
             onClose();
         }
 
         function applyCustom() {
             const min = hourIdx * 60 + minuteIdx;
             if (min <= 0) return;
-            onAdd(min);
+            onAdd(min, { parallelActivityId: effectiveParallelActivityId });
             onClose();
         }
 
@@ -1797,6 +1975,40 @@
                         suggestions: smartSuggestions,
                         onPick: applyPreset,
                     }),
+                    h('div', { className: 'chrono-duration__parallel' },
+                        h('button', {
+                            type: 'button',
+                            className: 'chrono-duration__parallel-toggle' + (parallelEnabled ? ' active' : ''),
+                            role: 'switch',
+                            'aria-checked': parallelEnabled ? 'true' : 'false',
+                            disabled: parallelOptions.length === 0,
+                            onClick: () => {
+                                if (parallelOptions.length === 0) return;
+                                setParallelEnabled((value) => !value);
+                            },
+                        },
+                            h('span', { className: 'chrono-duration__parallel-copy' },
+                                h('span', { className: 'chrono-duration__parallel-title' }, 'Параллельно'),
+                                h('span', { className: 'chrono-duration__parallel-subtitle' },
+                                    parallelEnabled && effectiveParallelActivityId
+                                        ? 'Время прибавится двум активностям'
+                                        : 'Доп. занятие в то же время'),
+                            ),
+                            h('span', { className: 'chrono-duration__parallel-switch', 'aria-hidden': 'true' },
+                                h('span', { className: 'chrono-duration__parallel-knob' }),
+                            ),
+                        ),
+                        parallelEnabled && parallelOptions.length > 0 && h('select', {
+                            className: 'planning-modal__input chrono-duration__parallel-select',
+                            value: selectedParallelActivityId,
+                            onChange: (e) => setParallelActivityId(e.target.value),
+                            'aria-label': 'Параллельная активность',
+                        },
+                            parallelOptions.map((item) => h('option', { key: item.id, value: item.id },
+                                `${item.emoji || '·'} ${item.name || 'Занятие'}`,
+                            )),
+                        ),
+                    ),
                     h('div', { className: 'chrono-duration__custom-label' }, 'Своё время'),
                     WheelColumn && h('div', { className: 'chrono-duration__custom' },
                         h('div', { className: 'chrono-duration__wheels' },
@@ -2127,14 +2339,14 @@
         );
     }
 
-    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay }) {
+    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay, lastAdded, untracked }) {
         const list = Array.isArray(insights) ? insights : [];
         const top = list.find((item) => item && item.kind === 'top');
         const alerts = list.filter((item) => item && item.kind !== 'top').slice(0, 2);
         const categories = Array.isArray(balance) ? balance.filter((item) => item && item.minutes > 0).slice(0, 4) : [];
         const streakList = Array.isArray(streaks) ? streaks.slice(0, 3) : [];
         const pattern = timeOfDay && timeOfDay.headline ? timeOfDay.headline : '';
-        if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern) return null;
+        if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern && !lastAdded && !untracked) return null;
 
         // По дефолту свёрнуто; локальный UI-prefs ключ, не client-data (не синкается).
         const [collapsed, setCollapsed] = useState(() => {
@@ -2166,6 +2378,20 @@
                 h('span', { className: 'chrono-overview__toggle-label' }, 'Сводка'),
                 top && collapsed && h('span', { className: 'chrono-overview__toggle-hint' }, top.value),
                 h('span', { className: 'chrono-overview__toggle-chevron', 'aria-hidden': 'true' }, '▾'),
+            ),
+            (lastAdded || untracked) && h('div', {
+                className: 'chrono-overview__last' + (!lastAdded ? ' chrono-overview__last--badge-only' : ''),
+            },
+                lastAdded && h('span', { className: 'chrono-overview__last-time' }, lastAdded.timeLabel),
+                lastAdded && h('span', { className: 'chrono-overview__last-detail' }, lastAdded.detail),
+                lastAdded && h('span', { className: 'chrono-overview__last-now' },
+                    `сейчас ${lastAdded.nowLabel} (${lastAdded.elapsedHoursLabel})`),
+                untracked && h('span', {
+                    className: 'chrono-overview__untracked-badge',
+                    title: untracked.sinceKind === 'last-entry'
+                        ? `С последней записи в ${untracked.sinceLabel}`
+                        : (untracked.wakeLabel ? `С пробуждения в ${untracked.wakeLabel}` : undefined),
+                }, `не хронометрировано ${untracked.hoursLabel}`),
             ),
             !collapsed && h('div', { id: 'chrono-overview-body', className: 'chrono-overview__body' },
                 h('div', { className: 'chrono-overview__top' },
@@ -2891,6 +3117,8 @@
         const [timerStopOpen, setTimerStopOpen] = useState(false);
         const [timelineOpen, setTimelineOpen] = useState(false);
         const [timerNow, setTimerNow] = useState(() => Date.now());
+        const todayStr = Utils.dateStr();
+        const dateLabel = scope === 'week' ? formatWeekLabel(activeDate) : formatDateLabel(activeDate);
 
         useEffect(() => {
             seedDefaultChronoOnce();
@@ -2912,13 +3140,14 @@
         const timerElapsedMs = timer ? getTimerElapsedMs(timer, timerNow) : 0;
         const timerExpired = timer ? !timerPaused && timerRemainingMs <= 0 : false;
 
-        // Тикаем секундным интервалом только когда есть активный таймер.
+        // Секундный тикер нужен только таймеру. Без таймера обновляем раз в
+        // минуту строку «последнее добавление / сейчас».
         useEffect(() => {
-            if (!timer) return undefined;
             setTimerNow(Date.now());
-            const id = setInterval(() => setTimerNow(Date.now()), 1000);
+            if (!timer && entries.length === 0 && activeDate !== todayStr) return undefined;
+            const id = setInterval(() => setTimerNow(Date.now()), timer ? 1000 : 60000);
             return () => clearInterval(id);
-        }, [timer && timer.activityId, timer && timer.startMs, timer && timer.pausedAt]);
+        }, [timer && timer.activityId, timer && timer.startMs, timer && timer.pausedAt, entries.length, activeDate, todayStr]);
 
         // При истечении — показываем complete-modal один раз.
         useEffect(() => {
@@ -3017,15 +3246,30 @@
             setHistoryTarget(activity);
         }, []);
 
-        const handleAddMinutes = useCallback((minutes) => {
+        const handleAddMinutes = useCallback((minutes, options = {}) => {
             if (!durationTarget || minutes <= 0) return;
+            const parallelActivityId = options && options.parallelActivityId;
+            const hasParallel = parallelActivityId && parallelActivityId !== durationTarget.id;
+            const parallelGroupId = hasParallel ? `parallel_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}` : '';
             const entry = state.addChronoEntry({
                 activityId: durationTarget.id,
                 date: activeDate,
                 minutes,
+                parallelGroupId,
             });
+            const ids = [];
+            if (entry && entry.id) ids.push(entry.id);
+            if (entry && hasParallel) {
+                const parallelEntry = state.addChronoEntry({
+                    activityId: parallelActivityId,
+                    date: activeDate,
+                    minutes,
+                    parallelGroupId,
+                });
+                if (parallelEntry && parallelEntry.id) ids.push(parallelEntry.id);
+            }
             if (entry && entry.id) {
-                setToast({ id: entry.id, minutes });
+                setToast({ id: entry.id, ids, minutes, parallelCount: ids.length });
                 setRecentBadge({ activityId: durationTarget.id, minutes, key: entry.id });
             }
         }, [durationTarget, activeDate, state]);
@@ -3035,13 +3279,18 @@
             if (toast.kind === 'cleared') {
                 // Возвращаем убранные записи (новые id — старые в tombstone'ах).
                 (toast.removed || []).forEach((e) => {
-                    state.addChronoEntry({ activityId: e.activityId, date: e.date, minutes: e.minutes });
+                    state.addChronoEntry({
+                        activityId: e.activityId,
+                        date: e.date,
+                        minutes: e.minutes,
+                        parallelGroupId: e.parallelGroupId,
+                    });
                 });
                 setToast(null);
                 return;
             }
-            if (!toast.id) return;
-            state.deleteChronoEntry(toast.id);
+            const ids = Array.isArray(toast.ids) && toast.ids.length > 0 ? toast.ids : [toast.id];
+            ids.filter(Boolean).forEach((id) => state.deleteChronoEntry(id));
             setToast(null);
         }, [toast, state]);
 
@@ -3149,9 +3398,6 @@
             setTimerStopOpen(false);
         }, [state]);
 
-        const dateLabel = scope === 'week' ? formatWeekLabel(activeDate) : formatDateLabel(activeDate);
-        const todayStr = Utils.dateStr();
-
         // Суммарное время за выбранный охват — для счётчика в шапке.
         const totalMinutes = useMemo(() => {
             let sum = 0;
@@ -3180,6 +3426,15 @@
 
         const timeOfDay = useMemo(() => buildTimeOfDayPattern(displayActivities, entries, todayStr),
             [displayActivities, entries, todayStr]);
+
+        const lastAdded = useMemo(() => buildLastAddedSummary(entries, activities, timerNow, activeDate),
+            [entries, activities, timerNow, activeDate]);
+
+        const todayDay = useMemo(() => readChronoDayV2(todayStr), [todayStr, timerNow]);
+        const untracked = useMemo(() => {
+            if (activeDate !== todayStr) return null;
+            return buildUntrackedChronoSummary(todayDay, entries, todayStr, timerNow);
+        }, [activeDate, todayStr, entries, todayDay, timerNow]);
 
         // Запрещаем листать в будущее: следующий шаг (день или неделя) не должен
         // выходить за «сегодня». Для недельного режима ориентируемся на старт
@@ -3279,7 +3534,7 @@
                 onResume: handleTimerResume,
                 onStop: () => setTimerStopOpen(true),
             }),
-            h(ChronoOverviewPanel, { insights, balance: categoryBalance, streaks, timeOfDay }),
+            h(ChronoOverviewPanel, { insights, balance: categoryBalance, streaks, timeOfDay, lastAdded, untracked }),
             h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
             chronoSyncing && h('div', { className: 'chrono-empty', role: 'status' }, 'Обновление занятий…'),
             !chronoSyncing && h(ChronoStrip, {
@@ -3320,6 +3575,7 @@
             }),
             durationTarget && h(ChronoDurationModal, {
                 activity: activities.find((a) => a.id === durationTarget.id) || durationTarget,
+                activities: visibleActivities,
                 currentMinutes: minutesByActivity[durationTarget.id] || 0,
                 scopeLabel: scope === 'week' ? 'за неделю' : 'за день',
                 timerRunning: !!timer,
@@ -3446,7 +3702,11 @@
         buildChronoWeekInsights,
         buildCategoryBalance,
         buildDayTimeline,
+        computeChronoCoveredMinutes,
+        buildLastAddedSummary,
+        buildUntrackedChronoSummary,
         buildSmartSuggestions,
+        getParallelActivityOptions,
         buildWeeklyReport,
         buildGoalStreaks,
         buildWeekGoalHitRate,

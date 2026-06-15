@@ -729,6 +729,20 @@ describe('Planning.Store chrono helpers — addChronoEntry + compaction', () => 
         expect(Store.getChronoEntries()[0].id).toBe(e.id);
     });
 
+    it('represents parallel activity as two same-duration entries', () => {
+        const primary = Store.addChronoActivity({ name: 'Programming' });
+        const parallel = Store.addChronoActivity({ name: 'Phone calls' });
+
+        const first = Store.addChronoEntry({ activityId: primary.id, date: '2026-06-02', minutes: 30, parallelGroupId: 'g1' });
+        const second = Store.addChronoEntry({ activityId: parallel.id, date: '2026-06-02', minutes: 30, parallelGroupId: 'g1' });
+
+        expect(first.id).not.toBe(second.id);
+        expect(Store.getChronoEntries()).toEqual(expect.arrayContaining([
+            expect.objectContaining({ activityId: primary.id, minutes: 30, parallelGroupId: 'g1' }),
+            expect.objectContaining({ activityId: parallel.id, minutes: 30, parallelGroupId: 'g1' }),
+        ]));
+    });
+
     it('archives and restores activities without deleting history', () => {
         const a = Store.addChronoActivity({ name: 'Archive' });
         const e = Store.addChronoEntry({ activityId: a.id, date: '2026-06-02', minutes: 30 });
@@ -803,6 +817,22 @@ describe('Planning.Store chrono helpers — addChronoEntry + compaction', () => 
     });
 });
 
+describe('chrono parallel activity options', () => {
+    let Chrono;
+    beforeEach(() => { ({ Chrono } = loadModules()); });
+
+    it('filters current and archived activities, then sorts by name', () => {
+        const options = Chrono.getParallelActivityOptions([
+            { id: 'coding', name: 'Programming', emoji: '💻' },
+            { id: 'sport', name: 'Sport', emoji: '🏃' },
+            { id: 'phone', name: 'Phone', emoji: '📱' },
+            { id: 'old', name: 'Archived', archived: true },
+        ], 'coding');
+
+        expect(options.map((item) => item.id)).toEqual(['phone', 'sport']);
+    });
+});
+
 describe('chrono analytics helpers', () => {
     let Chrono;
     beforeEach(() => { ({ Chrono } = loadModules()); });
@@ -857,6 +887,94 @@ describe('chrono analytics helpers', () => {
         );
         expect(timeline.map((entry) => entry.id)).toEqual(['e1', 'e2']);
         expect(timeline[0].category).toBe('growth');
+    });
+
+    it('buildLastAddedSummary formats last entry, current time and elapsed decimal hours', () => {
+        const summary = Chrono.buildLastAddedSummary(
+            [
+                { id: 'old', activityId: 'a', date: '2026-06-02', minutes: 15, createdAt: '2026-06-02T08:00:00' },
+                { id: 'new', activityId: 'b', date: '2026-06-02', minutes: 30, createdAt: '2026-06-02T09:00:00' },
+            ],
+            [{ id: 'a', name: 'Read' }, { id: 'b', name: 'Programming' }],
+            new Date('2026-06-02T10:30:00').getTime(),
+        );
+
+        expect(summary).toMatchObject({
+            timeLabel: '09:00',
+            nowLabel: '10:30',
+            detail: '+30м Programming',
+            elapsedHoursLabel: '1,5ч',
+        });
+    });
+
+    it('buildLastAddedSummary ignores deleted activities and other dates', () => {
+        const summary = Chrono.buildLastAddedSummary(
+            [
+                { id: 'alive', activityId: 'a', date: '2026-06-02', minutes: 15, createdAt: '2026-06-02T08:00:00' },
+                { id: 'deleted-activity', activityId: 'deleted', date: '2026-06-02', minutes: 120, createdAt: '2026-06-02T09:00:00' },
+                { id: 'other-day', activityId: 'b', date: '2026-06-03', minutes: 60, createdAt: '2026-06-03T11:00:00' },
+            ],
+            [{ id: 'a', name: 'Read' }, { id: 'b', name: 'Programming' }],
+            new Date('2026-06-02T10:00:00').getTime(),
+            '2026-06-02',
+        );
+
+        expect(summary).toMatchObject({
+            timeLabel: '08:00',
+            detail: '+15м Read',
+        });
+    });
+
+    it('computeChronoCoveredMinutes counts parallel entries as one real period', () => {
+        const covered = Chrono.computeChronoCoveredMinutes(
+            [
+                { id: 'a1', activityId: 'a', date: '2026-06-02', minutes: 60, parallelGroupId: 'g1' },
+                { id: 'b1', activityId: 'b', date: '2026-06-02', minutes: 60, parallelGroupId: 'g1' },
+                { id: 'c1', activityId: 'c', date: '2026-06-02', minutes: 30 },
+            ],
+            [],
+            '2026-06-02',
+        );
+
+        expect(covered).toBe(90);
+    });
+
+    it('buildUntrackedChronoSummary counts from the last remaining entry', () => {
+        const summary = Chrono.buildUntrackedChronoSummary(
+            { sleepEnd: '07:00' },
+            [
+                { id: 'old', date: '2026-06-02', minutes: 60, createdAt: '2026-06-02T08:00:00' },
+                { id: 'last', date: '2026-06-02', minutes: 30, createdAt: '2026-06-02T09:30:00' },
+                { id: 'other-day', date: '2026-06-01', minutes: 120, createdAt: '2026-06-01T12:00:00' },
+            ],
+            '2026-06-02',
+            new Date('2026-06-02T10:00:00').getTime(),
+        );
+
+        expect(summary).toMatchObject({
+            minutes: 30,
+            hoursLabel: '0,5ч',
+            wakeLabel: '07:00',
+            sinceLabel: '09:30',
+            sinceKind: 'last-entry',
+        });
+    });
+
+    it('buildUntrackedChronoSummary counts from wake time when there are no entries', () => {
+        const summary = Chrono.buildUntrackedChronoSummary(
+            { sleepEnd: '07:00' },
+            [],
+            '2026-06-02',
+            new Date('2026-06-02T10:00:00').getTime(),
+        );
+
+        expect(summary).toMatchObject({
+            minutes: 180,
+            hoursLabel: '3,0ч',
+            wakeLabel: '07:00',
+            sinceLabel: '07:00',
+            sinceKind: 'wake',
+        });
     });
 
     it('buildSmartSuggestions returns last and yesterday presets', () => {

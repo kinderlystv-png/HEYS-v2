@@ -992,6 +992,7 @@
             // entry.at || entry.createdAt.
             at: input?.at || nowISO(),
         };
+        if (input?.parallelGroupId) entry.parallelGroupId = String(input.parallelGroupId);
         saveChronoEntries(getChronoEntries().concat(entry));
         return entry;
     }

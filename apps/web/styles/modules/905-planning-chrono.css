@@ -588,6 +588,60 @@ html.chrono-bubble-dragging .chrono-screen {
     transform: rotate(180deg);
 }
 
+.chrono-overview__last {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 0 14px 9px;
+    color: var(--planning-muted, #64748b);
+    line-height: 1.25;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.chrono-overview__last-time {
+    flex: 0 0 auto;
+    color: var(--planning-text, #0f172a);
+    font-size: 12px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-overview__last-detail {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 11px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chrono-overview__last-now {
+    flex: 0 0 auto;
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.chrono-overview__untracked-badge {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.24);
+    color: #b91c1c;
+    font-size: 11px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.chrono-overview__last--badge-only .chrono-overview__untracked-badge {
+    margin-left: auto;
+}
+
 .chrono-overview__body {
     display: grid;
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.35fr);
@@ -2098,6 +2152,93 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-duration__custom-add {
     align-self: stretch;
     justify-content: center;
+}
+
+.chrono-duration__parallel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 0;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--planning-surface-elevated, #f8fafc);
+    border: 1px solid var(--planning-border-soft, rgba(15, 23, 42, 0.06));
+}
+
+.chrono-duration__parallel-toggle {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: var(--planning-text, #0f172a);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+}
+
+.chrono-duration__parallel-toggle:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+.chrono-duration__parallel-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.chrono-duration__parallel-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--planning-text, #0f172a);
+    letter-spacing: 0;
+}
+
+.chrono-duration__parallel-subtitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--planning-muted, #64748b);
+    line-height: 1.25;
+    letter-spacing: 0;
+}
+
+.chrono-duration__parallel-switch {
+    position: relative;
+    flex: 0 0 auto;
+    width: 48px;
+    height: 28px;
+    border-radius: 999px;
+    background: #cbd5e1;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.14);
+    transition: background 0.18s ease;
+}
+
+.chrono-duration__parallel-knob {
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
+    transition: transform 0.18s ease;
+}
+
+.chrono-duration__parallel-toggle.active .chrono-duration__parallel-switch {
+    background: var(--planning-accent, #2563eb);
+}
+
+.chrono-duration__parallel-toggle.active .chrono-duration__parallel-knob {
+    transform: translateX(20px);
+}
+
+.chrono-duration__parallel-select {
+    width: 100%;
 }
 
 /* Цель в день — встроена в модалку, чтобы можно было задать/править/убрать
