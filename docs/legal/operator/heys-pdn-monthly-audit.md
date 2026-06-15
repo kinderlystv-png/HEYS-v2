@@ -80,6 +80,6 @@ pnpm pdn:monthly-audit
 - что privacy/payment guards подключены: `pnpm privacy:marketing`,
   `pnpm payments:gateway` и `pnpm payments:webhook-test`.
 
-2026-06-15 preflight: `54 checks OK`, `1 pending` = сверка с фактически поданной
+2026-06-15 preflight: `60 checks OK`, `1 pending` = сверка с фактически поданной
 РКН-записью. Это pending не закрывается в репо: нужны номер/ключ/PDF поданной
 формы вне репо.

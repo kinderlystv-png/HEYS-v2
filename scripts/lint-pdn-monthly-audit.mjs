@@ -22,6 +22,7 @@ const FILES = {
   rknHeys: 'docs/legal/operator/rkn-notification-heys.md',
   governance: 'маркетинг/32_ПДн_governance_релизный_контур.md',
   plan22: 'маркетинг/22_План_реализации_маркетинга.md',
+  roadmap25: 'маркетинг/25_Roadmap_Ф0_Ф1.md',
   decisionLog15: 'маркетинг/15_Ревизия_и_лог_решений.md',
   landingLegalVersions: 'apps/landing/src/config/legal-versions.ts',
   webConsents: 'apps/web/heys_consents_v1.js',
@@ -117,6 +118,12 @@ function checkMonthlyChecklist() {
     ['Продукт', 'БД/логи', 'Лендинг', 'Документы', 'РКН', 'Кураторы/операции'],
     'governance doc defines monthly audit layers',
   );
+  const governance = read(FILES.governance);
+  if (governance.includes('smoke без health consent pending')) {
+    fail('governance consent smoke status is current', 'stale pending wording found');
+  } else {
+    ok('governance consent smoke status is current');
+  }
 }
 
 function checkPdnCalendar() {
@@ -217,11 +224,16 @@ function checkDsarSelfServicePath() {
     [
       'export_my_data_by_session',
       'log_data_access',
-      'Скачать мои данные',
       'operator fallback',
     ],
     'DSAR procedure reflects self-service export path',
   );
+  const dsarProcedure = read(FILES.dsarProcedure).replace(/\s+/g, ' ');
+  if (dsarProcedure.includes('Скачать мои данные')) {
+    ok('DSAR procedure names the self-service download UI');
+  } else {
+    fail('DSAR procedure names the self-service download UI');
+  }
   requireIncludes(
     FILES.dsarMigration,
     [
@@ -395,6 +407,11 @@ function checkPlanAndDecisionLog() {
     FILES.plan22,
     ['1.9.6', 'heys-pdn-monthly-audit.md', 'РКН-подачи'],
     'marketing plan keeps 1.9.6 external blocker visible',
+  );
+  requireIncludes(
+    FILES.roadmap25,
+    ['R0: заявки и триалы', '`6Б.3/6Б.4`', 'импорт `.ics`', 'payment metadata live smoke', 'retention dry-run', 'ERID-001'],
+    'roadmap 25 release gate mirrors R0/R1/R2 blockers from 22/32',
   );
   requireIncludes(
     FILES.decisionLog15,
