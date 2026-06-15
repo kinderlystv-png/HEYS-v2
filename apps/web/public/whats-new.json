@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.15.ee1a741c",
+      "buildHash": "ee1a741c",
+      "date": "2026-06-15",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Домашняя вкладка задач",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Вернули выбор Хроно для старта",
+          "description": "В настройке домашней вкладки задач вместо удалённого Контекста снова доступен Хроно. Старые сохранённые значения Контекст безопасно открывают календарь."
+        }
+      ],
+      "coveredCommits": ["ee1a741c"]
+    },
+    {
       "version": "2026.06.15.05dd4181",
       "buildHash": "05dd4181",
       "date": "2026-06-15",
@@ -142,22 +158,6 @@
         }
       ],
       "coveredCommits": ["a0544878", "de302c9c", "b8126552"]
-    },
-    {
-      "version": "2026.06.14.de302c9c",
-      "buildHash": "de302c9c",
-      "date": "2026-06-14",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "route block catalog index + readiness stats through shared kernel",
-      "items": [
-        {
-          "type": "feat",
-          "title": "route block catalog index + readiness stats through shared kernel",
-          "description": "route block catalog index + readiness stats through shared kernel"
-        }
-      ],
-      "coveredCommits": ["de302c9c", "b8126552"]
     }
   ]
 }
