@@ -5,8 +5,9 @@
 
 import { useEffect, useState } from 'react';
 
-import { LandingVariant, VariantContent } from '@/config/landing-variants';
 import HeroFlowDemo from './HeroFlowDemo';
+
+import { LandingVariant, VariantContent } from '@/config/landing-variants';
 
 interface HeroSSRProps {
   content: VariantContent;

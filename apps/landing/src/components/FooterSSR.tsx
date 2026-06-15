@@ -24,6 +24,12 @@ export default function FooterSSR() {
                 Пользовательское соглашение
               </a>
               <a
+                href="/calculators"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                Калькуляторы
+              </a>
+              <a
                 href="/legal/privacy-policy"
                 className="text-gray-400 hover:text-white transition-colors"
               >
