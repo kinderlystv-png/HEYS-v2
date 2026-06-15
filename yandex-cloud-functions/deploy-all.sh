@@ -80,7 +80,9 @@ echo -e "${GREEN}✅ All required variables loaded${NC}"
 echo -e "${BLUE}🔐 PG_PASSWORD: ${PG_PASSWORD:0:4}...${PG_PASSWORD: -4}${NC}"
 
 payments_env_ready() {
-    [ -n "$YUKASSA_SHOP_ID" ] && [ -n "$YUKASSA_SECRET_KEY" ]
+    [ -n "$YUKASSA_SHOP_ID" ] &&
+        [ -n "$YUKASSA_SECRET_KEY" ] &&
+        [ -n "$YUKASSA_WEBHOOK_SECRET" ]
 }
 
 # Validate per-function secrets
@@ -402,7 +404,7 @@ deploy_function() {
             return 0
         fi
 
-        echo -e "${RED}❌ ERROR: YUKASSA_SHOP_ID and YUKASSA_SECRET_KEY are required for $func_name${NC}"
+        echo -e "${RED}❌ ERROR: YUKASSA_SHOP_ID, YUKASSA_SECRET_KEY and YUKASSA_WEBHOOK_SECRET are required for $func_name${NC}"
         exit 1
     fi
     
@@ -445,6 +447,14 @@ deploy_function() {
            '.ycignore' 'README.md'
     ZIP_SIZE=$(du -k "$DEPLOY_ZIP" | awk '{print $1}')
     echo -e "${BLUE}ℹ️  Packaged $func_name → ${ZIP_SIZE}KB${NC}"
+
+    # First deploy for optional functions (notably heys-api-payments) needs the
+    # function shell to exist before `version create` can attach code to it.
+    if ! yc serverless function get --name "$func_name" >/dev/null 2>&1; then
+        echo -e "${YELLOW}ℹ️  Function $func_name does not exist — creating shell...${NC}"
+        yc serverless function create --name "$func_name" >/dev/null
+        echo -e "${GREEN}✅ Function shell created: $func_name${NC}"
+    fi
 
     # Deploy function
     eval yc serverless function version create \

@@ -340,6 +340,31 @@ function sanitizeSource(payload) {
     .slice(0, 24) || 'organic';
 }
 
+function hashTelegramChatId(chatId) {
+  return crypto
+    .createHash('sha256')
+    .update(`heys-start:${String(chatId)}`)
+    .digest('hex')
+    .slice(0, 32);
+}
+
+function normalizePhone(phone) {
+  let digits = String(phone || '').replace(/[^\d+]/g, '').replace(/^\+/, '');
+  if (digits.startsWith('8')) digits = `7${digits.slice(1)}`;
+  if (!digits.startsWith('7')) digits = `7${digits}`;
+  return `+${digits}`;
+}
+
+function looksLikePhone(text) {
+  return String(text || '').replace(/\D/g, '').length >= 10;
+}
+
+function cleanOptionalText(value, maxLength = 128) {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text ? text.slice(0, maxLength) : null;
+}
+
 function encodeQuizData(step, answers, source) {
   return ['qs', step, answers.join(','), sanitizeSource(source)].join('|');
 }
@@ -432,6 +457,177 @@ async function recordStartFunnelEvent(eventType, opts = {}) {
   }
 }
 
+async function sendStartLeadHandoff(lead) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) {
+    console.log('[HEYS Start] curator handoff skipped: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID not configured');
+    return;
+  }
+
+  const lines = [
+    '🆕 HEYS Старт: заявка на неделю',
+    '',
+    `lead_id: ${lead.id}`,
+    `source: ${lead.source || 'unknown'}`,
+    `segment: ${lead.segment || 'unknown'}`,
+    `readiness: ${lead.readiness || 'unknown'}`,
+  ];
+  if (lead.frequency) lines.push(`frequency: ${lead.frequency}`);
+  if (lead.barrier) lines.push(`barrier: ${lead.barrier}`);
+  if (lead.goal) lines.push(`goal: ${lead.goal}`);
+  lines.push('', 'ПДн не отправлены в Telegram. Полные данные — в PostgreSQL РФ.');
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: lines.join('\n'),
+        disable_web_page_preview: true,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    console.log('[HEYS Start] curator handoff sent:', !!result.ok);
+  } catch (error) {
+    console.warn('[HEYS Start] curator handoff failed:', error.message);
+  }
+}
+
+async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram lead') {
+  const pool = getPool();
+  const client = await pool.connect();
+  const normalizedPhone = normalizePhone(phone);
+  const chatHash = hashTelegramChatId(chatId);
+  const privacyVersion = process.env.PRIVACY_POLICY_VERSION || '1.5';
+
+  try {
+    await client.query('BEGIN');
+
+    const stateRes = await client.query(
+      `SELECT id, source, campaign, segment, metadata
+         FROM public.funnel_events
+        WHERE event_type = 'week_request'
+          AND metadata->>'chat_hash' = $1
+        ORDER BY occurred_at DESC
+        LIMIT 1`,
+      [chatHash],
+    );
+    const state = stateRes.rows?.[0];
+    if (!state) {
+      await client.query('ROLLBACK');
+      return { success: false, error: 'no_week_request' };
+    }
+
+    const metadata = state.metadata || {};
+    const existingRes = await client.query(
+      `SELECT id
+         FROM public.leads
+        WHERE phone = $1
+          AND status IN ('new', 'contacted', 'trial_started')
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [normalizedPhone],
+    );
+
+    let leadId = existingRes.rows?.[0]?.id;
+    if (!leadId) {
+      const insertRes = await client.query(
+        `INSERT INTO public.leads (
+           name, phone, messenger,
+           utm_source, utm_medium, utm_campaign,
+           quiz_segment, readiness, how_heard,
+           landing_page, consent_privacy_version, consent_accepted_at,
+           consent_method, notes
+         )
+         VALUES (
+           $1, $2, 'telegram',
+           $3, 'bot', $4,
+           $5, $6, 'telegram_bot',
+           'https://t.me/heys_start_bot', $7, NOW(),
+           'telegram_contact',
+           $8
+         )
+         RETURNING id`,
+        [
+          cleanOptionalText(displayName, 120) || 'Telegram lead',
+          normalizedPhone,
+          state.source || 'telegram',
+          state.campaign || 'heys_start',
+          state.segment || null,
+          metadata.readiness || null,
+          privacyVersion,
+          [
+            'HEYS Start handoff',
+            `segment=${state.segment || 'unknown'}`,
+            `readiness=${metadata.readiness || 'unknown'}`,
+            `frequency=${metadata.frequency || 'unknown'}`,
+            `barrier=${metadata.barrier || 'unknown'}`,
+            `goal=${metadata.goal || 'unknown'}`,
+          ].join('; '),
+        ],
+      );
+      leadId = insertRes.rows?.[0]?.id;
+    }
+
+    await client.query(
+      `UPDATE public.funnel_events
+          SET lead_id = $1
+        WHERE id = $2
+          AND lead_id IS NULL`,
+      [leadId, state.id],
+    );
+
+    await client.query(
+      `SELECT public.record_funnel_event(
+         $1::text, $2::uuid, $3::uuid, $4::text, $5::text, $6::text, $7::text,
+         $8::text, $9::jsonb, $10::text, $11::timestamptz
+       )`,
+      [
+        'lead',
+        leadId,
+        null,
+        state.source || 'telegram',
+        state.campaign || 'heys_start',
+        state.segment || null,
+        null,
+        null,
+        JSON.stringify({
+          bot: 'heys_start',
+          handoff: true,
+          readiness: metadata.readiness || null,
+          frequency: metadata.frequency || null,
+          barrier: metadata.barrier || null,
+          goal: metadata.goal || null,
+        }),
+        `lead:start:${leadId}`,
+        new Date().toISOString(),
+      ],
+    );
+
+    await client.query('COMMIT');
+
+    const lead = {
+      id: leadId,
+      source: state.source || 'telegram',
+      segment: state.segment || null,
+      readiness: metadata.readiness || null,
+      frequency: metadata.frequency || null,
+      barrier: metadata.barrier || null,
+      goal: metadata.goal || null,
+    };
+    await sendStartLeadHandoff(lead);
+    return { success: true, lead };
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.warn('[HEYS Start] lead handoff failed:', e.message);
+    return { success: false, error: 'handoff_failed' };
+  } finally {
+    client.release();
+  }
+}
+
 function queueStartFunnelEvent(eventType, opts = {}) {
   recordStartFunnelEvent(eventType, opts).catch((e) => {
     console.warn('[HEYS Start] funnel event async failed:', eventType, e.message);
@@ -466,6 +662,7 @@ function sendQuizResult(chatId, answers, source, editMessageId = null) {
   const segment = getQuizSegment(answers);
   const result = RESULT_COPY[segment] || RESULT_COPY.mixed;
   const summary = getQuizSummary(answers);
+  const chatHash = hashTelegramChatId(chatId);
   const text =
     `<b>${escapeHtml(result.title)}</b>\n\n` +
     `${escapeHtml(result.body)}\n\n` +
@@ -488,7 +685,7 @@ function sendQuizResult(chatId, answers, source, editMessageId = null) {
       bot: 'heys_start',
       ...summary,
     },
-    dedupeKey: `quiz_complete:start:${chatId}:${answers.join('-')}`,
+    dedupeKey: `quiz_complete:start:${chatHash}:${answers.join('-')}`,
   });
 
   if (editMessageId) {
@@ -512,10 +709,11 @@ function sendQuizResult(chatId, answers, source, editMessageId = null) {
 
 function handleStartBotStart(chatId, payload) {
   const source = sanitizeSource(payload);
+  const chatHash = hashTelegramChatId(chatId);
   queueStartFunnelEvent('quiz_start', {
     source,
     metadata: { bot: 'heys_start', start_payload: payload || null },
-    dedupeKey: `quiz_start:start:${chatId}:${source}`,
+    dedupeKey: `quiz_start:start:${chatHash}:${source}`,
   });
 
   return telegramMethodResponse('sendMessage', {
@@ -577,17 +775,28 @@ function handleStartBotCallback(query) {
     const answers = answersRaw ? answersRaw.split(',').filter(Boolean) : [];
     const source = sanitizeSource(sourceRaw);
     const segment = getQuizSegment(answers);
+    const chatHash = hashTelegramChatId(chatId);
     queueStartFunnelEvent('week_request', {
       source,
       segment,
-      metadata: { bot: 'heys_start', readiness, ...getQuizSummary(answers) },
-      dedupeKey: `week_request:start:${chatId}:${readiness}:${answers.join('-')}`,
+      metadata: {
+        bot: 'heys_start',
+        readiness,
+        chat_hash: chatHash,
+        ...getQuizSummary(answers),
+      },
+      dedupeKey: `week_request:start:${chatHash}:${readiness}:${answers.join('-')}`,
     });
     return telegramMethodResponse('sendMessage', {
       chat_id: chatId,
       text:
-        'Принято. Куратор знакомится с заявкой и связывается с вами, когда есть свободное место для старта.\n\n' +
-        'Если хотите ускорить контакт, отправьте номер телефона сообщением в этот чат.',
+        'Принято. Чтобы куратор мог связаться с вами по заявке, отправьте номер телефона.\n\n' +
+        'Нажимая кнопку или отправляя номер, вы соглашаетесь на обработку контактных данных для связи по бесплатной неделе HEYS.',
+      reply_markup: {
+        keyboard: [[{ text: 'Отправить телефон', request_contact: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
     });
   }
 
@@ -617,6 +826,37 @@ async function handleStartBotWebhook(body) {
     if (text.startsWith('/start')) {
       const payload = text.replace(/^\/start\s*/, '');
       return handleStartBotStart(chatId, payload);
+    } else if (message.contact?.phone_number || looksLikePhone(text)) {
+      const contact = message.contact;
+      const phone = contact?.phone_number || text;
+      const firstName = contact?.first_name || message.from?.first_name || '';
+      const lastName = contact?.last_name || message.from?.last_name || '';
+      const displayName = `${firstName} ${lastName}`.trim() || 'Telegram lead';
+      const result = await createStartLeadFromContact(chatId, phone, displayName);
+      if (!result.success && result.error === 'no_week_request') {
+        return telegramMethodResponse('sendMessage', {
+          chat_id: chatId,
+          text: 'Сначала пройдите короткий разбор: отправьте /start.',
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+        });
+      }
+      if (!result.success) {
+        return telegramMethodResponse('sendMessage', {
+          chat_id: chatId,
+          text: 'Не удалось сохранить заявку. Попробуйте ещё раз или отправьте /start.',
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+        });
+      }
+      return telegramMethodResponse('sendMessage', {
+        chat_id: chatId,
+        text:
+          'Спасибо. Заявка сохранена: куратор знакомится с ней и связывается с вами, когда есть свободное место для старта.',
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        reply_markup: { remove_keyboard: true },
+      });
     } else if (text === '/help' || text === '/menu') {
       return telegramMethodResponse('sendMessage', {
         chat_id: chatId,

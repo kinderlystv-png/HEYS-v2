@@ -1,118 +1,166 @@
-# 💳 Деплой heys-api-payments (ЮKassa)
+# heys-api-payments deploy and smoke
 
-## Шаг 1: Подготовка
+This function is the YuKassa production payment API:
+
+- `GET /payments`
+- `POST /payments/create`
+- `POST /payments/webhook`
+- `GET /payments/status`
+- `POST /payments/refund`
+
+Current deployment source of truth is `../deploy-all.sh`. Do not use the old
+manual zip flow unless `deploy-all.sh` is unavailable and the fallback is
+explicitly approved.
+
+## Required secrets
+
+`../deploy-all.sh heys-api-payments` fails closed unless these values are
+present in `../.env`:
 
 ```bash
-cd /Users/poplavskijanton/HEYS-v2/yandex-cloud-functions/heys-api-payments
-
-# Установить зависимости
-npm install
-
-# Создать ZIP архив
-zip -r ../heys-api-payments.zip .
+YUKASSA_SHOP_ID=...
+YUKASSA_SECRET_KEY=...
+YUKASSA_WEBHOOK_SECRET=...
+INTERNAL_CRON_TOKEN=...
 ```
 
-## Шаг 2: Создание функции через yc CLI
+Optional Metrica Measurement Protocol variables:
 
 ```bash
-# Убедитесь что yc настроен
-yc config list
-
-# Создать функцию
-yc serverless function create --name=heys-api-payments
-
-# Создать версию с кодом
-yc serverless function version create \
-  --function-name=heys-api-payments \
-  --runtime=nodejs18 \
-  --entrypoint=index.handler \
-  --memory=128m \
-  --execution-timeout=10s \
-  --source-path=../heys-api-payments.zip \
-  --environment "PG_HOST=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net,PG_PORT=6432,PG_DATABASE=heys_production,PG_USER=heys_admin,PG_PASSWORD=<ПАРОЛЬ>,YUKASSA_SHOP_ID=<SHOP_ID>,YUKASSA_SECRET_KEY=<SECRET_KEY>"
+YANDEX_METRICA_COUNTER_ID=...
+YANDEX_METRICA_MP_TOKEN=...
+YANDEX_METRICA_DRY_RUN=1
 ```
 
-## Шаг 3: Получить function_id
+`YANDEX_METRICA_DRY_RUN=1` is suitable for the first smoke pass: the function
+marks funnel events as `dry_run` without sending them to Metrica.
+
+## Preflight without secrets
+
+These checks do not publish anything:
+
+```bash
+cd /Users/poplavskijanton/HEYS-v2
+node --check yandex-cloud-functions/heys-api-payments/index.js
+node scripts/check-pricing-sync.cjs
+yc serverless function list --format json
+curl -sS https://api.heyslab.ru/payments
+```
+
+Expected state before first deploy:
+
+- `heys-api-payments` is absent from `yc serverless function list`;
+- `https://api.heyslab.ru/payments` returns the generic `HEYS API` health
+  service, because API Gateway is still routed to health.
+
+Expected state after deploy + gateway update:
+
+- `heys-api-payments` is `ACTIVE`;
+- `GET /payments` returns `{"service":"heys-api-payments","status":"ok",...}`;
+- CORS is origin-whitelisted, not `Access-Control-Allow-Origin: *`.
+
+## Deploy
+
+Only run this after the secrets above are configured:
+
+```bash
+cd /Users/poplavskijanton/HEYS-v2/yandex-cloud-functions
+./deploy-all.sh heys-api-payments
+```
+
+`deploy-all.sh` creates the function shell automatically if `heys-api-payments`
+does not exist yet. After deploy, get its id:
 
 ```bash
 yc serverless function get --name=heys-api-payments --format=json | jq -r '.id'
 ```
 
-Результат: `d4eXXXXXXXXXXXXXXXX` — это и есть function_id
-
-## Шаг 4: Обновить API Gateway спецификацию
-
-В файле `api-gateway-spec-v2.yaml` заменить все `${PAYMENTS_FUNCTION_ID}` на полученный ID:
+Prepare API Gateway so every `/payments*` route points to the new function id.
+The helper is dry-run by default:
 
 ```bash
-# Например, если ID = d4e123456789abcdef
-sed -i '' 's/\${PAYMENTS_FUNCTION_ID}/d4e123456789abcdef/g' ../api-gateway-spec-v2.yaml
+cd /Users/poplavskijanton/HEYS-v2
+pnpm payments:gateway -- --function-id "$PAYMENTS_FUNCTION_ID"
+pnpm payments:gateway -- --function-id "$PAYMENTS_FUNCTION_ID" --write
+pnpm payments:gateway -- --function-id "$PAYMENTS_FUNCTION_ID" --check
 ```
 
-## Шаг 5: Применить спецификацию к API Gateway
+It adds or updates these routes:
+
+- `GET /payments`
+- `POST /payments/create`
+- `POST /payments/webhook`
+- `GET /payments/status`
+- `POST /payments/refund`
+
+Apply the spec:
 
 ```bash
 yc serverless api-gateway update \
   --id=d5d7939njvjp27ofsok0 \
-  --spec=../api-gateway-spec-v2.yaml
+  --spec=../api-gateway-spec.yaml
 ```
 
-## Шаг 6: Настроить webhook в ЮKassa
+## YuKassa webhook
 
-1. Зайти в https://yookassa.ru/my/merchant/integration
-2. HTTP-уведомления → Добавить URL:
-   ```
-   https://api.heyslab.ru/payments/webhook
-   ```
-3. Выбрать события:
-   - `payment.succeeded`
-   - `payment.canceled`
-   - `refund.succeeded`
+In the YuKassa merchant cabinet, set webhook URL:
 
-## Шаг 7: Тестирование
+```text
+https://api.heyslab.ru/payments/webhook
+```
+
+Events:
+
+- `payment.succeeded`
+- `payment.canceled`
+- `refund.succeeded`
+
+The function checks YuKassa source IPs and, when `YUKASSA_WEBHOOK_SECRET` is
+set, also checks the HMAC signature header.
+
+## Smoke checklist
+
+1. Health:
 
 ```bash
-# Health check
-curl https://api.heyslab.ru/payments
+curl -sS https://api.heyslab.ru/payments
+```
 
-# Создание платежа (тестовый)
-curl -X POST "https://api.heyslab.ru/payments/create" \
-  -H "Content-Type: application/json" \
+2. CORS preflight:
+
+```bash
+curl -sS -i -X OPTIONS https://api.heyslab.ru/payments/create \
+  -H 'Origin: https://app.heyslab.ru' \
+  -H 'Access-Control-Request-Method: POST'
+```
+
+3. Payment create from a real PIN session:
+
+```bash
+curl -sS -X POST 'https://api.heyslab.ru/payments/create' \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $CLIENT_SESSION_TOKEN" \
   -d '{
-    "clientId": "test-123",
+    "clientId": "'"$CLIENT_ID"'",
     "plan": "base",
-    "returnUrl": "https://heyslab.ru/payment-success"
+    "returnUrl": "https://app.heyslab.ru/payment-result?clientId='"$CLIENT_ID"'"
   }'
 ```
 
-## Переменные окружения
+4. Verify DB side effects:
 
-| Переменная | Описание | Пример |
-|------------|----------|--------|
-| `PG_HOST` | Хост PostgreSQL | `rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net` |
-| `PG_PORT` | Порт PostgreSQL | `6432` |
-| `PG_DATABASE` | Имя базы данных | `heys_production` |
-| `PG_USER` | Пользователь | `heys_admin` |
-| `PG_PASSWORD` | Пароль | `***` |
-| `YUKASSA_SHOP_ID` | ID магазина ЮKassa | `12345` |
-| `YUKASSA_SECRET_KEY` | Секретный ключ ЮKassa | `test_***` или `live_***` |
+- `payments.status = pending` after create;
+- `payment_events` has exactly one row per webhook event;
+- duplicate webhook does not create a second event;
+- `funnel_events.event_type` is `payment` for first success and `renewal` for
+  later success;
+- Metrica status is `dry_run`, `sent` or explicit `skipped:*`.
 
-## Тестовые данные карты (sandbox)
+5. Refund smoke is curator-only and must use a real curator JWT:
 
-- Номер: `5555555555554444`
-- Срок: любой в будущем
-- CVV: любые 3 цифры
-- 3D-Secure: `1234` (если запросит)
-
-## Чеклист
-
-- [ ] npm install + zip
-- [ ] Создать функцию в Yandex Cloud
-- [ ] Задать env variables
-- [ ] Получить function_id
-- [ ] Обновить api-gateway-spec-v2.yaml
-- [ ] Применить спецификацию
-- [ ] Настроить webhook в ЮKassa
-- [ ] Протестировать создание платежа
-- [ ] Протестировать webhook
-- [ ] Переключиться на production ключи
+```bash
+curl -sS -X POST 'https://api.heyslab.ru/payments/refund' \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $CURATOR_JWT" \
+  -d '{"paymentId":"'"$PAYMENT_ID"'"}'
+```

@@ -233,6 +233,32 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
+  /auth/mfa/{action}:
+    post:
+      summary: Curator MFA action (status, setup, enable, disable)
+      parameters:
+        - name: action
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for curator MFA
+      parameters:
+        - name: action
+          in: path
+          required: true
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+
   /auth/clients:
     get:
       summary: Get curator's clients list (requires JWT)
