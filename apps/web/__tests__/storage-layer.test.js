@@ -329,6 +329,9 @@ describe('HEYS.store auth/session key scoping guards', () => {
     store.set('heys_session_token', 'session-1');
     expect(mockStorage._store.heys_session_token).toBe(JSON.stringify('session-1'));
     expect(mockStorage._store[`heys_${CLIENT_ID}_session_token`]).toBeUndefined();
+    store.set('heys_pin_cookie_session_hint', '1');
+    expect(mockStorage._store.heys_pin_cookie_session_hint).toBe(JSON.stringify('1'));
+    expect(mockStorage._store[`heys_${CLIENT_ID}_heys_pin_cookie_session_hint`]).toBeUndefined();
   });
 
   test('cleanup v2 removes old scoped auth/session copies', () => {

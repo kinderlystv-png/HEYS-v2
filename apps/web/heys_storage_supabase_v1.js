@@ -312,6 +312,8 @@
     'heys_supabase_auth_token',
     'heys_pin_auth_client',
     'heys_session_token',
+    'heys_pin_cookie_session_hint',
+    'heys_curator_cookie_session_hint',
     'heys_debug_events',      // Analytics курaторской сессии
     // 2026-05-31: расширение после incident'а cross-client leak (Poplanton ↔ Aleksandra).
     // Browser-global UI state и app-wide markers — не привязаны к клиенту:
@@ -426,7 +428,9 @@
     return normalizedKey === 'heys_supabase_auth_token'
       || normalizedKey === 'heys_pin_auth_client'
       || normalizedKey === 'heys_curator_session'
-      || normalizedKey === 'heys_session_token';
+      || normalizedKey === 'heys_session_token'
+      || normalizedKey === 'heys_pin_cookie_session_hint'
+      || normalizedKey === 'heys_curator_cookie_session_hint';
   }
 
   function extractProfileBasics(value) {
@@ -4571,6 +4575,8 @@
     'heys_curator_session',
     'heys_pin_auth_client',
     'heys_session_token',
+    'heys_pin_cookie_session_hint',
+    'heys_curator_cookie_session_hint',
     'heys_supabase_auth_token',
     'sb-ukqolcziqcuplqfgrmsh-auth-token'
   ]);

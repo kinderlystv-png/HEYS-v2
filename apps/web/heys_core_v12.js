@@ -5382,7 +5382,7 @@
       }
       // 2) служебные ключи НЕ префиксуем (глобальные)
       // 🔧 v55/v71 FIX: auth/session keys are global and must never be client-scoped.
-      if (/^heys_(clients|client_current|last_client_id|session_token|supabase_auth_token|curator_session|pin_auth_client)$/i.test(k)) return k;
+      if (/^heys_(clients|client_current|last_client_id|session_token|supabase_auth_token|curator_session|pin_auth_client|pin_cookie_session_hint|curator_cookie_session_hint)$/i.test(k)) return k;
       // 3) если клиента нет — работаем как есть
       if (!cid) return k;
       // 3.5) если ключ уже client-scoped — не добавляем clientId повторно.

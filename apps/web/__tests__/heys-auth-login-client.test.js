@@ -224,6 +224,7 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         expect(mockStorage.removeItem).toHaveBeenCalledWith('heys_curator_session');
         expect(curatorLogout).toHaveBeenCalledTimes(1);
         expect(mockStorage.setItem).toHaveBeenCalledWith('heys_pin_auth_client', 'client-uuid-1');
+        expect(mockStorage.setItem).toHaveBeenCalledWith('heys_pin_cookie_session_hint', '1');
         expect(mockStorage.setItem).toHaveBeenCalledWith(
             'heys_pending_client_name',
             JSON.stringify('Иван'),

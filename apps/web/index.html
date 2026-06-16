@@ -1660,11 +1660,13 @@
 	                    } catch (_) { return false; }
 	                }
 	                var curatorSession = localStorage.getItem('heys_curator_session');
-	                var hasCuratorSession = !!(curatorSession && curatorSession.length > 10);
-	                var restoredCuratorCompat = hasCuratorSession ? restoreCompatCuratorAuth(curatorSession) : false;
-	                hasCuratorSession = !!localStorage.getItem('heys_curator_session');
-	                var hasPinAuth = hasCuratorSession ? false : !!localStorage.getItem('heys_pin_auth_client');
-	                var hasSupabaseToken = (function () {
+		                var hasCuratorSession = !!(curatorSession && curatorSession.length > 10);
+		                var restoredCuratorCompat = hasCuratorSession ? restoreCompatCuratorAuth(curatorSession) : false;
+		                hasCuratorSession = !!localStorage.getItem('heys_curator_session');
+		                var hasPinAuth = hasCuratorSession ? false : !!localStorage.getItem('heys_pin_auth_client');
+                        var hasPinCookieHint = hasCuratorSession ? false : !!localStorage.getItem('heys_pin_cookie_session_hint');
+                        var hasCuratorCookieHint = !!localStorage.getItem('heys_curator_cookie_session_hint');
+		                var hasSupabaseToken = (function () {
 	                    try {
 	                        var raw = localStorage.getItem('heys_supabase_auth_token');
                         if (!raw) return false;
@@ -1694,7 +1696,7 @@
                         return typeof lastId === 'string' && lastId.length >= 8;
                     } catch (_) { return false; }
                 })();
-	                window.__heysHasSession = hasPinAuth || hasCuratorSession || hasSupabaseToken || restoredCuratorCompat || hasRecoverablePin;
+		                window.__heysHasSession = hasPinAuth || hasCuratorSession || hasSupabaseToken || restoredCuratorCompat || hasRecoverablePin || hasPinCookieHint || hasCuratorCookieHint;
                 window.__heysHasRecoverablePin = hasRecoverablePin;
             } catch (_) {
                 window.__heysHasSession = false;
@@ -2166,6 +2168,11 @@
                 } else {
                     lsDel('heys_session_token');
                 }
+            }
+            function hlgSetCookieSessionHint(kind, active) {
+                var key = kind === 'curator' ? 'heys_curator_cookie_session_hint' : 'heys_pin_cookie_session_hint';
+                if (active) lsRaw(key, '1');
+                else lsDel(key);
             }
 
             window.__hlgTempCuratorAutoLogin = TEMP_CURATOR_AUTOLOGIN.enabled === true;
@@ -2713,13 +2720,15 @@
                                 return;
                             }
 
-                            var finishClientLogin = function () {
-                                // Сохраняем сессию (те же ключи что heys_auth_v1.js:loginClient)
-                                lsDel('heys_supabase_auth_token');
-                                lsDel('heys_curator_session');
-                                hlgStoreClientSessionToken(sessionToken);
-                                lsRaw('heys_pin_auth_client', clientId);
-                                if (clientName) lsRaw('heys_pending_client_name', JSON.stringify(clientName));
+	                            var finishClientLogin = function () {
+	                                // Сохраняем сессию (те же ключи что heys_auth_v1.js:loginClient)
+	                                lsDel('heys_supabase_auth_token');
+	                                lsDel('heys_curator_session');
+                                    hlgSetCookieSessionHint('curator', false);
+	                                hlgStoreClientSessionToken(sessionToken);
+	                                lsRaw('heys_pin_auth_client', clientId);
+                                    hlgSetCookieSessionHint('pin', true);
+	                                if (clientName) lsRaw('heys_pending_client_name', JSON.stringify(clientName));
 
                                 // Передаём данные в React через глобальную переменную
                                 window.__heysPreAuth = {
@@ -2826,17 +2835,19 @@
                         }
 
                         var finishCuratorLogin = function () {
-                            // Сохраняем (те же ключи что heys_yandex_api_v1.js:curatorLogin)
-                            lsDel('heys_pin_auth_client');
-                            lsDel('heys_session_token');
-                            var tokenData = {
+	                            // Сохраняем (те же ключи что heys_yandex_api_v1.js:curatorLogin)
+	                            lsDel('heys_pin_auth_client');
+	                            lsDel('heys_session_token');
+                                hlgSetCookieSessionHint('pin', false);
+	                            var tokenData = {
                                 access_token: d.access_token,
                                 expires_in: d.expires_in || 86400,
                                 expires_at: Math.floor(Date.now() / 1000) + (d.expires_in || 86400),
                                 user: d.user
                             };
-                            lsRaw('heys_supabase_auth_token', JSON.stringify(tokenData));
-                            lsRaw('heys_curator_session', d.access_token);
+	                            lsRaw('heys_supabase_auth_token', JSON.stringify(tokenData));
+	                            lsRaw('heys_curator_session', d.access_token);
+                                hlgSetCookieSessionHint('curator', true);
 
                             // Передаём данные в React
                             window.__heysPreAuth = {

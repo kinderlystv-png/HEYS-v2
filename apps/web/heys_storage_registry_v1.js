@@ -72,6 +72,8 @@
     /^heys_curator_session$/,
     /^heys_pin_auth_client$/,
     /^heys_session_token$/,
+    /^heys_pin_cookie_session_hint$/,
+    /^heys_curator_cookie_session_hint$/,
     /^sb-/,
     /^heys_deleted_ids$/,
   ];

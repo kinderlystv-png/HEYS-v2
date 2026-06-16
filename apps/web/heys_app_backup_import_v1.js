@@ -52,6 +52,8 @@
                 || k === 'heys_pin_auth_client'
                 || k === 'heys_session_token'
                 || k === 'heys_curator_session'
+                || k === 'heys_pin_cookie_session_hint'
+                || k === 'heys_curator_cookie_session_hint'
                 || (typeof k === 'string' && k.startsWith('sb-')));
     }
     function isDenied(k) {

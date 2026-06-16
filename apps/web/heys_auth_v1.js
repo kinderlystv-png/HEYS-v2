@@ -19,6 +19,25 @@
   };
 
   const AUTH_RATE_KEY = 'heys_auth_rate_limit_v1';
+  const PIN_COOKIE_SESSION_HINT_KEY = 'heys_pin_cookie_session_hint';
+  const CURATOR_COOKIE_SESSION_HINT_KEY = 'heys_curator_cookie_session_hint';
+
+  function setCookieSessionHint(kind, active) {
+    const key = kind === 'curator' ? CURATOR_COOKIE_SESSION_HINT_KEY : PIN_COOKIE_SESSION_HINT_KEY;
+    try {
+      if (active) localStorage.setItem(key, '1');
+      else localStorage.removeItem(key);
+    } catch (_) { }
+  }
+
+  function hasCookieSessionHint(kind) {
+    const key = kind === 'curator' ? CURATOR_COOKIE_SESSION_HINT_KEY : PIN_COOKIE_SESSION_HINT_KEY;
+    try {
+      return !!localStorage.getItem(key);
+    } catch (_) {
+      return false;
+    }
+  }
 
   function nowMs() {
     return Date.now();
@@ -226,6 +245,7 @@
     try {
       localStorage.removeItem('heys_supabase_auth_token');
       localStorage.removeItem('heys_curator_session');
+      setCookieSessionHint('curator', false);
     } catch (_) { }
 
     const phoneNorm = normalizePhone(phone);
@@ -341,6 +361,7 @@
       // 🔐 Сохраняем PIN-клиента заранее (на случай сбоя switchClient)
       try {
         localStorage.setItem('heys_pin_auth_client', clientId);
+        setCookieSessionHint('pin', true);
       } catch (_) { }
 
       // 💡 Сохраняем имя клиента для предзаполнения профиля
@@ -534,8 +555,7 @@
     const token = getSessionToken();
     let shouldTryCookieLogout = false;
     try {
-      const host = window.location && window.location.hostname || '';
-      shouldTryCookieLogout = !!host && host !== 'localhost' && host !== '127.0.0.1';
+      shouldTryCookieLogout = hasCookieSessionHint('pin');
     } catch (_) { /* noop */ }
 
     const api = HEYS.YandexAPI;
@@ -553,6 +573,7 @@
       localStorage.removeItem('heys_session_token');
       localStorage.removeItem('heys_pin_auth_client');
       localStorage.removeItem('heys_client_current');
+      setCookieSessionHint('pin', false);
     } catch (_) { }
 
     console.info('[HEYS.auth] 🚪 Выход из системы');

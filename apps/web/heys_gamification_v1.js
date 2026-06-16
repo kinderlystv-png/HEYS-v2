@@ -793,8 +793,9 @@
   function hasCookieSessionCarrier() {
     try {
       if (HEYS.cloud?.isPinAuthClient?.()) return true;
-      const host = window.location && window.location.hostname || '';
-      return !!host && host !== 'localhost' && host !== '127.0.0.1';
+      if (localStorage.getItem('heys_pin_auth_client')) return true;
+      if (HEYS.YandexAPI?.hasCookieSessionHint?.('pin')) return true;
+      return !!localStorage.getItem('heys_pin_cookie_session_hint');
     } catch (_) {
       return false;
     }
@@ -5996,6 +5997,8 @@
         const hasSession = HEYS.cloud?.getSessionToken?.() ||
           localStorage.getItem('heys_session_token') ||
           HEYS.cloud?.isPinAuthClient?.() ||
+          localStorage.getItem('heys_pin_auth_client') ||
+          localStorage.getItem('heys_pin_cookie_session_hint') ||
           HEYS.auth?.isCuratorSession?.() === true ||
           localStorage.getItem('heys_curator_session');
         if (!hasSession) {

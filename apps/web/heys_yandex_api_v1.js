@@ -84,6 +84,25 @@
   let _lastError = null;
   let _lastErrorAt = 0;
   let _curatorTokenLogged = false;
+  const PIN_COOKIE_SESSION_HINT_KEY = 'heys_pin_cookie_session_hint';
+  const CURATOR_COOKIE_SESSION_HINT_KEY = 'heys_curator_cookie_session_hint';
+
+  function setCookieSessionHint(kind, active) {
+    const key = kind === 'curator' ? CURATOR_COOKIE_SESSION_HINT_KEY : PIN_COOKIE_SESSION_HINT_KEY;
+    try {
+      if (active) localStorage.setItem(key, '1');
+      else localStorage.removeItem(key);
+    } catch (_) { /* noop */ }
+  }
+
+  function hasCookieSessionHint(kind) {
+    const key = kind === 'curator' ? CURATOR_COOKIE_SESSION_HINT_KEY : PIN_COOKIE_SESSION_HINT_KEY;
+    try {
+      return !!localStorage.getItem(key);
+    } catch (_) {
+      return false;
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔧 УТИЛИТЫ
@@ -644,6 +663,7 @@
       } else {
         logInfo('🔐 [HEYS.auth] Вход куратора OK');
       }
+      setCookieSessionHint('curator', true);
 
       try {
         const cleanup = await clientLogout();
@@ -1029,8 +1049,9 @@
 
   function shouldTryCookieSessionRequest() {
     try {
-      const host = window.location && window.location.hostname || '';
-      return !!host && host !== 'localhost' && host !== '127.0.0.1';
+      if (global?.HEYS?.cloud?.isPinAuthClient?.()) return true;
+      if (localStorage.getItem('heys_pin_auth_client')) return true;
+      return hasCookieSessionHint('pin');
     } catch (_) {
       return false;
     }
@@ -2653,15 +2674,13 @@
       try { localStorage.removeItem('heys_pin_auth_client'); } catch {}
       try { localStorage.removeItem('heys_client_current'); } catch {}
       try { localStorage.removeItem('heys_last_client_id'); } catch {}
+      setCookieSessionHint('pin', false);
     };
 
     try {
       const sessionToken = getSessionTokenForKV();
-      let shouldTryCookieLogout = false;
-      try {
-        const host = window.location && window.location.hostname || '';
-        shouldTryCookieLogout = !!host && host !== 'localhost' && host !== '127.0.0.1';
-      } catch (_) { /* noop */ }
+      const shouldTryCookieLogout = hasCookieSessionHint('pin')
+        || !!global?.HEYS?.cloud?.isPinAuthClient?.();
 
       if (!sessionToken && !shouldTryCookieLogout) {
         // Нечего отзывать
@@ -2702,6 +2721,7 @@
     const clearLocalCuratorAuth = () => {
       try { localStorage.removeItem('heys_curator_session'); } catch {}
       try { localStorage.removeItem('heys_supabase_auth_token'); } catch {}
+      setCookieSessionHint('curator', false);
     };
 
     try {
@@ -2835,6 +2855,8 @@
     curatorLogin,
     verifyCuratorToken,
     getCuratorToken,  // exposed для гейта в curator-only фичах (см. heys_curator_actions_banner_v1.js)
+    setCookieSessionHint,
+    hasCookieSessionHint,
 
     // 👥 Clients
     getClients,

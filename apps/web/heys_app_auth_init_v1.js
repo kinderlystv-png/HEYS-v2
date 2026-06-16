@@ -365,6 +365,28 @@
         }
 
         const hasPinSession = !!pinAuthClient;
+        const hasCookieSessionHint = (kind) => {
+            try {
+                if (typeof HEYS.YandexAPI?.hasCookieSessionHint === 'function') {
+                    return HEYS.YandexAPI.hasCookieSessionHint(kind);
+                }
+                const key = kind === 'curator' ? 'heys_curator_cookie_session_hint' : 'heys_pin_cookie_session_hint';
+                return !!localStorage.getItem(key);
+            } catch (_) {
+                return false;
+            }
+        };
+        const setCookieSessionHint = (kind, active) => {
+            try {
+                if (typeof HEYS.YandexAPI?.setCookieSessionHint === 'function') {
+                    HEYS.YandexAPI.setCookieSessionHint(kind, active);
+                    return;
+                }
+                const key = kind === 'curator' ? 'heys_curator_cookie_session_hint' : 'heys_pin_cookie_session_hint';
+                if (active) localStorage.setItem(key, '1');
+                else localStorage.removeItem(key);
+            } catch (_) { /* noop */ }
+        };
         const finishNoSession = () => {
             console.info('[HEYS.entry] ➡️ Branch: no session (show login)');
             initLocalData();
@@ -374,11 +396,13 @@
         const shouldProbeCookiePinSession = !storedUser
             && !hasCuratorJwtSession
             && !hasPinSession
+            && hasCookieSessionHint('pin')
             && !!cloudRef
             && typeof HEYS.YandexAPI?.getCurrentClientBySession === 'function';
         const shouldProbeCookieCuratorSession = !storedUser
             && !hasCuratorJwtSession
             && !hasPinSession
+            && hasCookieSessionHint('curator')
             && !!cloudRef
             && typeof HEYS.YandexAPI?.verifyCuratorToken === 'function';
 
@@ -600,6 +624,7 @@
                 removeGlobalValue('heys_pin_auth_client');
                 removeGlobalValue('heys_client_current');
                 removeGlobalValue('heys_session_token');
+                setCookieSessionHint('pin', false);
                 setClientId(null);
                 setStatus('offline');
 
@@ -631,6 +656,7 @@
                         const user = data.user;
                         const email = user.email || readGlobalValue('heys_remember_email', null) || readGlobalValue('heys_saved_email', null) || '';
                         if (email) setEmail(email);
+                        setCookieSessionHint('curator', true);
                         setRestoredCuratorUser(user);
                         setStatus('online');
                         initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
@@ -659,6 +685,7 @@
                     if (res?.data?.name) {
                         try { localStorage.setItem('heys_client_name', res.data.name); } catch (_) { }
                     }
+                    setCookieSessionHint('pin', true);
                     if (cloudRef.setPinAuthClient) cloudRef.setPinAuthClient(cid);
                     initLocalData();
                     setStatus('online');
@@ -722,6 +749,8 @@
                 if (!cid || !cloudRef) return;
                 removeGlobalValue('heys_supabase_auth_token');
                 removeGlobalValue('heys_curator_session');
+                setCookieSessionHint('pin', true);
+                setCookieSessionHint('curator', false);
                 if (cloudRef.setPinAuthClient) cloudRef.setPinAuthClient(cid);
                 initLocalData();
                 setStatus('online');
@@ -753,6 +782,8 @@
                 var user = detail.user || readStoredAuthUser();
                 if (!user || !cloudRef) return;
                 var email = user.email || readGlobalValue('heys_remember_email', null) || '';
+                setCookieSessionHint('curator', true);
+                setCookieSessionHint('pin', false);
                 if (email) setEmail(email);
                 setRestoredCuratorUser(user);
                 setStatus('online');

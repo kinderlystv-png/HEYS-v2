@@ -130,6 +130,41 @@ describe('HEYS.YandexAPI session-safe access', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it('saveKV does not infer a cookie session from production hostname alone', async () => {
+    const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
+
+    const result = await api.saveKV('ignored-client', 'heys_profile', { calories: 1800 });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'No auth token (neither curator nor session)',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('saveKV uses cookie session RPC when the PIN cookie session hint exists', async () => {
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      storageSeed: {
+        heys_pin_cookie_session_hint: '1',
+      },
+    });
+    global.fetch.mockResolvedValue(
+      createJsonResponse({ success: true }),
+    );
+
+    const result = await api.saveKV('ignored-client', 'heys_profile', { calories: 1800 });
+
+    expect(result).toEqual({ success: true });
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/rpc?fn=upsert_client_kv_by_session');
+    expect(JSON.parse(options.body)).toEqual({
+      p_key: 'heys_profile',
+      p_value: { calories: 1800 },
+      p_context_id: null,
+    });
+  });
+
   it('reads legacy namespaced session token for protected KV RPC (one-shot, не мигрирует в LS)', async () => {
     // PR-C (d94ebfc9, 2026-05-20) умышленно убрал migration namespaced→global,
     // чтобы XSS-доступный LS-key не появлялся в JS снова. Legacy namespaced
@@ -246,7 +281,10 @@ describe('HEYS.YandexAPI session-safe access', () => {
   });
 
   it('createPayment can use HttpOnly cookie-only PIN session on production host', async () => {
-    const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      storageSeed: { heys_pin_cookie_session_hint: '1' },
+    });
     global.fetch.mockResolvedValue(
       createJsonResponse({
         paymentId: 'payment-cookie-1',
@@ -275,7 +313,10 @@ describe('HEYS.YandexAPI session-safe access', () => {
   });
 
   it('getPaymentStatus can use HttpOnly cookie-only PIN session on production host', async () => {
-    const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      storageSeed: { heys_pin_cookie_session_hint: '1' },
+    });
     global.fetch.mockResolvedValue(
       createJsonResponse({
         status: 'succeeded',
@@ -297,7 +338,10 @@ describe('HEYS.YandexAPI session-safe access', () => {
   });
 
   it('logConsentsBySession can use HttpOnly cookie-only PIN session', async () => {
-    const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      storageSeed: { heys_pin_cookie_session_hint: '1' },
+    });
     global.fetch.mockResolvedValue(createJsonResponse({ success: true }));
 
     const result = await api.logConsentsBySession([
@@ -318,7 +362,10 @@ describe('HEYS.YandexAPI session-safe access', () => {
   });
 
   it('curator changelog client RPC can use HttpOnly cookie-only PIN session', async () => {
-    const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      storageSeed: { heys_pin_cookie_session_hint: '1' },
+    });
     global.fetch.mockResolvedValue(createJsonResponse({
       ok: true,
       since: '2026-06-16T00:00:00.000Z',
@@ -416,7 +463,10 @@ describe('HEYS.YandexAPI session-safe access', () => {
   });
 
   it('curatorLogin clears stale client HttpOnly cookie after successful login', async () => {
-    const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      storageSeed: { heys_pin_cookie_session_hint: '1' },
+    });
     global.fetch
       .mockResolvedValueOnce(createJsonResponse({
         access_token: 'curator-jwt-new',
@@ -440,7 +490,10 @@ describe('HEYS.YandexAPI session-safe access', () => {
   });
 
   it('curatorLogin fails closed and rolls back curator cookie when stale client cookie cleanup fails', async () => {
-    const api = loadYandexAPI({ hostname: 'app.heyslab.ru' });
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      storageSeed: { heys_pin_cookie_session_hint: '1' },
+    });
     global.fetch
       .mockResolvedValueOnce(createJsonResponse({
         access_token: 'curator-jwt-new',

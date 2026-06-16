@@ -73,6 +73,7 @@ describe('HEYS.AppAuthInit session restore', () => {
   });
 
   it('restores cookie-only curator sessions into the cloud auth runtime', async () => {
+    storage._store.heys_curator_cookie_session_hint = '1';
     const setAuthUser = vi.fn();
     const setCloudUser = vi.fn();
     const setStatus = vi.fn();
@@ -105,6 +106,7 @@ describe('HEYS.AppAuthInit session restore', () => {
   });
 
   it('clears invalid cookie-only PIN sessions before falling back to login', async () => {
+    storage._store.heys_pin_cookie_session_hint = '1';
     window.HEYS.YandexAPI.getCurrentClientBySession = vi.fn().mockResolvedValue({
       data: null,
       error: { code: 401, message: 'invalid_session' },
@@ -142,7 +144,38 @@ describe('HEYS.AppAuthInit session restore', () => {
     });
     expect(storage.removeItem).toHaveBeenCalledWith('heys_pin_auth_client');
     expect(storage.removeItem).toHaveBeenCalledWith('heys_client_current');
+    expect(storage.removeItem).toHaveBeenCalledWith('heys_pin_cookie_session_hint');
     expect(setClientId).toHaveBeenCalledWith(null);
+    expect(setStatus).toHaveBeenCalledWith('offline');
+    expect(setIsInitializing).toHaveBeenCalledWith(false);
+  });
+
+  it('does not probe cookie-only sessions without a local session hint', async () => {
+    window.HEYS.YandexAPI.getCurrentClientBySession = vi.fn();
+    window.HEYS.YandexAPI.verifyCuratorToken = vi.fn();
+
+    const setStatus = vi.fn();
+    const setIsInitializing = vi.fn();
+    const appAuthInit = loadAppAuthInit();
+
+    appAuthInit.runAuthInit({
+      U: { lsGet: vi.fn((_, fallback) => fallback) },
+      cloud: {},
+      setProducts: vi.fn(),
+      setClients: vi.fn(),
+      setClientsSource: vi.fn(),
+      setClientId: vi.fn(),
+      setSyncVer: vi.fn((fn) => fn(0)),
+      setEmail: vi.fn(),
+      setCloudUser: vi.fn(),
+      setStatus,
+      setIsInitializing,
+    });
+
+    await flushPromises();
+
+    expect(window.HEYS.YandexAPI.getCurrentClientBySession).not.toHaveBeenCalled();
+    expect(window.HEYS.YandexAPI.verifyCuratorToken).not.toHaveBeenCalled();
     expect(setStatus).toHaveBeenCalledWith('offline');
     expect(setIsInitializing).toHaveBeenCalledWith(false);
   });

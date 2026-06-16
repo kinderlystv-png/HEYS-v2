@@ -42,6 +42,8 @@
         /^heys_pin_auth_client$/,
         /^heys_session_token$/,
         /^heys_curator_session$/,
+        /^heys_pin_cookie_session_hint$/,
+        /^heys_curator_cookie_session_hint$/,
         /^sb-/,
 
         // 2. Boot/session/debug
@@ -104,6 +106,8 @@
         'heys_pin_auth_client',
         'heys_session_token',
         'heys_curator_session',
+        'heys_pin_cookie_session_hint',
+        'heys_curator_cookie_session_hint',
     ]);
 
     function isForbiddenKey(k) {
@@ -357,7 +361,7 @@
                 // Leak-probe: финальная проверка перед сериализацией.
                 // ─────────────────────────────────────────
                 const leakProbe = JSON.stringify(backup);
-                if (/heys_supabase_auth_token|heys_pin_auth_client|heys_session_token|heys_curator_session|"sb-[a-z0-9-]+"/.test(leakProbe)) {
+                if (/heys_supabase_auth_token|heys_pin_auth_client|heys_session_token|heys_curator_session|heys_pin_cookie_session_hint|heys_curator_cookie_session_hint|"sb-[a-z0-9-]+"/.test(leakProbe)) {
                     console.error('[BACKUP] 🚨 SECURITY: auth-token-like substring detected in backup; aborting.');
                     HEYS.Toast?.error?.('Экспорт отменён: обнаружены auth-токены');
                     return { ok: false, error: 'auth_token_leak_protected' };

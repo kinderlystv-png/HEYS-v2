@@ -164,6 +164,8 @@ describe('storage registry — Phase 1 surface', () => {
     expect(HEYS.storageRegistry.isNeverTouch('heys_supabase_auth_token')).toBe(true);
     expect(HEYS.storageRegistry.isNeverTouch('heys_curator_session')).toBe(true);
     expect(HEYS.storageRegistry.isNeverTouch('heys_pin_auth_client')).toBe(true);
+    expect(HEYS.storageRegistry.isNeverTouch('heys_pin_cookie_session_hint')).toBe(true);
+    expect(HEYS.storageRegistry.isNeverTouch('heys_curator_cookie_session_hint')).toBe(true);
     expect(HEYS.storageRegistry.isNeverTouch('sb-auth-token')).toBe(true);
     expect(HEYS.storageRegistry.isNeverTouch('heys_clients')).toBe(false);
   });
