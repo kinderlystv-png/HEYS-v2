@@ -68,16 +68,22 @@
         DEFAULT_CHILD_AGE,
         DEFAULT_DAY_TEMP,
         DEFAULT_NIGHT_TEMP,
+        DEFAULT_NIGHTS,
+        NIGHTS_MIN,
+        NIGHTS_MAX,
         CHECKLIST_PRESETS,
         clampCount,
         clampDayTemp,
         clampNightTemp,
+        clampNights,
+        formatNightsLabel,
         formatTemp,
         getDayTempBand,
         getNightTempBand,
         formatChildAgeInline,
         normalizeChildAges,
         buildPresetToggleOptions,
+        resolveToggleValue,
         getChecklistCustomGroups,
         normalizeChecklistGroupName,
         groupChecklistItems,
@@ -91,6 +97,10 @@
         buildSeaHotelChecklistPreset,
         buildCityRentChecklistPreset,
         buildCityHotelChecklistPreset,
+        buildSkiChecklistPreset,
+        buildBusinessChecklistPreset,
+        buildDachaChecklistPreset,
+        buildAbroadChecklistPreset,
         materializeSeaTentItems,
     } = Checklists;
 
@@ -107,12 +117,19 @@
         const [childAges, setChildAges] = useState([]);
         const [dayTemp, setDayTemp] = useState(DEFAULT_DAY_TEMP);
         const [nightTemp, setNightTemp] = useState(DEFAULT_NIGHT_TEMP);
+        const [nights, setNights] = useState(DEFAULT_NIGHTS);
         const [toggleState, setToggleState] = useState({});
         const [selectedPresetId, setSelectedPresetId] = useState(CHECKLIST_PRESETS[0].id);
         const [addItemTarget, setAddItemTarget] = useState(null);
         const [newItemText, setNewItemText] = useState('');
         const [newItemQty, setNewItemQty] = useState('');
+        const [addSectionTarget, setAddSectionTarget] = useState(null);
+        const [newSectionName, setNewSectionName] = useState('');
+        const [confirmState, setConfirmState] = useState(null);
+        const [promptState, setPromptState] = useState(null);
+        const [promptValues, setPromptValues] = useState({});
         const [collapsedById, setCollapsedById] = useState({});
+        const [paramsCollapsedById, setParamsCollapsedById] = useState({});
         const selectedPresetDef = useMemo(
             () => CHECKLIST_PRESETS.find((preset) => preset.id === selectedPresetId) || CHECKLIST_PRESETS[0],
             [selectedPresetId],
@@ -121,16 +138,21 @@
             () => buildPresetToggleOptions(selectedPresetDef, toggleState),
             [selectedPresetDef, toggleState],
         );
+        const presetBuildOptions = useMemo(
+            () => ({ ...presetToggleOptions, nights }),
+            [presetToggleOptions, nights],
+        );
         const builtPreset = useMemo(
-            () => selectedPresetDef.build(adults, children, childAges, dayTemp, nightTemp, presetToggleOptions),
-            [selectedPresetDef, adults, children, childAges, dayTemp, nightTemp, presetToggleOptions],
+            () => selectedPresetDef.build(adults, children, childAges, dayTemp, nightTemp, presetBuildOptions),
+            [selectedPresetDef, adults, children, childAges, dayTemp, nightTemp, presetBuildOptions],
         );
         const previewItems = useMemo(
             () => builtPreset.items.map((entry) => ({ ...entry, done: false })),
             [builtPreset],
         );
 
-        const anyModalOpen = createOpen || archiveOpen || addItemTarget != null;
+        const anyModalOpen = createOpen || archiveOpen || addItemTarget != null
+            || addSectionTarget != null || confirmState != null || promptState != null;
         useEffect(() => {
             if (typeof document === 'undefined' || !document.body || !anyModalOpen) return undefined;
             document.body.classList.add('planning-checklist-modal-open');
@@ -157,6 +179,10 @@
             } else {
                 setNightTemp((value) => clampNightTemp(value + delta));
             }
+        };
+
+        const setNightsDelta = (delta) => {
+            setNights((value) => clampNights(value + delta));
         };
 
         const setPreviewChildAge = (index, delta) => {
@@ -196,7 +222,7 @@
             if (typeof state?.addChecklist !== 'function') return;
             const toggleFields = {};
             selectedPresetDef.toggles.forEach((toggle) => {
-                toggleFields[toggle.key] = presetToggleOptions[toggle.key] === true;
+                toggleFields[toggle.key] = presetToggleOptions[toggle.key];
             });
             state.addChecklist({
                 title: builtPreset.title,
@@ -206,6 +232,7 @@
                 childAges: builtPreset.childAges,
                 dayTemp: builtPreset.dayTemp,
                 nightTemp: builtPreset.nightTemp,
+                nights: builtPreset.nights,
                 ...toggleFields,
                 items: previewItems,
             });
@@ -240,33 +267,38 @@
 
         const editSavedItem = (checklist, itemId) => {
             if (!checklist || typeof state?.updateChecklist !== 'function') return;
-            if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
             const items = Array.isArray(checklist.items) ? checklist.items : [];
             const current = items.find((entry) => entry.id === itemId);
             if (!current) return;
-            const nextTextRaw = window.prompt('Название пункта', String(current.text || ''));
-            if (nextTextRaw == null) return;
-            const nextText = String(nextTextRaw || '').trim();
-            if (!nextText) return;
-            const nextQtyRaw = window.prompt('Количество', String(current.quantity || ''));
-            if (nextQtyRaw == null) return;
-            const nextQuantity = String(nextQtyRaw || '').trim();
-            const nextItems = items.map((entry) => (
-                entry.id === itemId
-                    ? { ...entry, text: nextText, quantity: nextQuantity || undefined }
-                    : entry
-            ));
-            const patch = { items: nextItems };
-            if (getChecklistPreset(checklist) && !isCustomChecklistItemId(itemId)) {
-                const overrides = normalizeChecklistItemOverrides(checklist.itemOverrides);
-                overrides[String(itemId)] = {
-                    ...(overrides[String(itemId)] || {}),
-                    text: nextText,
-                    quantity: nextQuantity,
-                };
-                patch.itemOverrides = overrides;
-            }
-            state.updateChecklist(checklist.id, patch);
+            requestPrompt({
+                title: 'Редактировать пункт',
+                confirmLabel: 'Сохранить',
+                fields: [
+                    { key: 'text', label: 'Название', placeholder: 'Название пункта', value: current.text || '' },
+                    { key: 'quantity', label: 'Количество', placeholder: 'Количество (необязательно)', value: current.quantity || '' },
+                ],
+                onSubmit: (values) => {
+                    const nextText = values.text;
+                    if (!nextText) return;
+                    const nextQuantity = values.quantity;
+                    const nextItems = items.map((entry) => (
+                        entry.id === itemId
+                            ? { ...entry, text: nextText, quantity: nextQuantity || undefined }
+                            : entry
+                    ));
+                    const patch = { items: nextItems };
+                    if (getChecklistPreset(checklist) && !isCustomChecklistItemId(itemId)) {
+                        const overrides = normalizeChecklistItemOverrides(checklist.itemOverrides);
+                        overrides[String(itemId)] = {
+                            ...(overrides[String(itemId)] || {}),
+                            text: nextText,
+                            quantity: nextQuantity,
+                        };
+                        patch.itemOverrides = overrides;
+                    }
+                    state.updateChecklist(checklist.id, patch);
+                },
+            });
         };
 
         // Добавление ручного пункта в группу — только этот чеклист. Кастомный id
@@ -297,25 +329,81 @@
             setNewItemQty('');
         };
 
-        const addSavedSection = (checklist) => {
-            if (!checklist || typeof state?.updateChecklist !== 'function') return;
-            if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
-            const nextName = window.prompt('Название раздела', '');
-            if (nextName == null) return;
-            const group = normalizeChecklistGroupName(nextName);
+        const addSavedSection = (checklist, name) => {
+            if (!checklist || typeof state?.updateChecklist !== 'function') return false;
+            const group = normalizeChecklistGroupName(name);
+            if (!String(name || '').trim()) return false;
             const groups = getChecklistCustomGroups(checklist);
             const existingNames = groupChecklistItems(checklist.items, groups)
                 .map((section) => section.group.toLocaleLowerCase('ru-RU'));
-            if (existingNames.includes(group.toLocaleLowerCase('ru-RU'))) return;
+            if (existingNames.includes(group.toLocaleLowerCase('ru-RU'))) return false;
             state.updateChecklist(checklist.id, { customGroups: groups.concat(group) });
+            return true;
         };
 
-        const renameSavedSection = (checklist, groupName) => {
+        const openAddSectionModal = (checklist) => {
+            setAddSectionTarget({ checklistId: checklist.id });
+            setNewSectionName('');
+        };
+
+        const closeAddSectionModal = () => {
+            setAddSectionTarget(null);
+            setNewSectionName('');
+        };
+
+        const handleAddSectionSubmit = () => {
+            if (!addSectionTarget) return;
+            const checklist = checklists.find((entry) => entry.id === addSectionTarget.checklistId);
+            if (!checklist) {
+                closeAddSectionModal();
+                return;
+            }
+            if (addSavedSection(checklist, newSectionName)) closeAddSectionModal();
+        };
+
+        // Общая модалка подтверждения (удаление пунктов, разделов и т.п.).
+        const requestConfirm = (config) => {
+            setConfirmState(config && typeof config === 'object' ? config : null);
+        };
+
+        const closeConfirm = () => setConfirmState(null);
+
+        const handleConfirm = () => {
+            const action = confirmState && typeof confirmState.onConfirm === 'function' ? confirmState.onConfirm : null;
+            setConfirmState(null);
+            if (action) action();
+        };
+
+        // Общая модалка ввода (редактирование пункта, переименование раздела/чек-листа).
+        // config: { title, fields:[{key,label,placeholder,value}], confirmLabel, onSubmit(values) }.
+        const requestPrompt = (config) => {
+            if (!config || !Array.isArray(config.fields)) return;
+            const initial = {};
+            config.fields.forEach((field) => { initial[field.key] = String(field.value || ''); });
+            setPromptValues(initial);
+            setPromptState(config);
+        };
+
+        const closePrompt = () => {
+            setPromptState(null);
+            setPromptValues({});
+        };
+
+        const handlePromptSubmit = () => {
+            if (!promptState) return;
+            const fields = Array.isArray(promptState.fields) ? promptState.fields : [];
+            const values = {};
+            fields.forEach((field) => { values[field.key] = String(promptValues[field.key] || '').trim(); });
+            const first = fields[0];
+            if (first && !values[first.key]) return; // первое поле обязательно
+            const action = typeof promptState.onSubmit === 'function' ? promptState.onSubmit : null;
+            setPromptState(null);
+            setPromptValues({});
+            if (action) action(values);
+        };
+
+        const applySectionRename = (checklist, currentGroup, nextRaw) => {
             if (!checklist || typeof state?.updateChecklist !== 'function') return;
-            if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
-            const currentGroup = normalizeChecklistGroupName(groupName);
-            const nextRaw = window.prompt('Название раздела', currentGroup);
-            if (nextRaw == null) return;
             const nextGroup = normalizeChecklistGroupName(nextRaw);
             if (!nextGroup || nextGroup.toLocaleLowerCase('ru-RU') === currentGroup.toLocaleLowerCase('ru-RU')) return;
             const items = Array.isArray(checklist.items) ? checklist.items : [];
@@ -359,14 +447,55 @@
             state.updateChecklist(checklist.id, patch);
         };
 
+        const renameSavedSection = (checklist, groupName) => {
+            if (!checklist || typeof state?.updateChecklist !== 'function') return;
+            const currentGroup = normalizeChecklistGroupName(groupName);
+            requestPrompt({
+                title: 'Переименовать раздел',
+                confirmLabel: 'Сохранить',
+                fields: [{ key: 'group', placeholder: 'Название раздела', value: currentGroup }],
+                onSubmit: (values) => applySectionRename(checklist, currentGroup, values.group),
+            });
+        };
+
         const closeAddItemModal = () => {
             setAddItemTarget(null);
             setNewItemText('');
             setNewItemQty('');
         };
 
-        const toggleChecklistCollapsed = (checklistId) => {
-            setCollapsedById((current) => ({ ...current, [checklistId]: current[checklistId] !== true }));
+        // Состояние «свёрнут/развёрнут» храним на самом чеклисте → переживает
+        // перезагрузку и едет в облако. Локальный collapsedById — лишь сессионный
+        // оверрайд (если стора нет / для немедленного отклика до синка).
+        const toggleChecklistCollapsed = (checklist) => {
+            const checklistId = typeof checklist === 'object' ? checklist?.id : checklist;
+            if (!checklistId) return;
+            const target = typeof checklist === 'object'
+                ? checklist
+                : checklists.find((entry) => entry.id === checklistId);
+            const wasCollapsed = collapsedById[checklistId] != null
+                ? collapsedById[checklistId] === true
+                : target?.collapsed === true;
+            const next = !wasCollapsed;
+            setCollapsedById((current) => ({ ...current, [checklistId]: next }));
+            if (typeof state?.updateChecklist === 'function') {
+                state.updateChecklist(checklistId, { collapsed: next });
+            }
+        };
+
+        // Свернуть только блок параметров (люди/t°/тумблеры), оставив пункты видимыми.
+        // Состояние храним на чеклисте (paramsCollapsed) → переживает reload и едет в облако.
+        const toggleParamsCollapsed = (checklist) => {
+            const checklistId = checklist?.id;
+            if (!checklistId) return;
+            const wasCollapsed = paramsCollapsedById[checklistId] != null
+                ? paramsCollapsedById[checklistId] === true
+                : checklist?.paramsCollapsed === true;
+            const next = !wasCollapsed;
+            setParamsCollapsedById((current) => ({ ...current, [checklistId]: next }));
+            if (typeof state?.updateChecklist === 'function') {
+                state.updateChecklist(checklistId, { paramsCollapsed: next });
+            }
         };
 
         const handleAddItemSubmit = () => {
@@ -383,13 +512,14 @@
         const archiveSavedChecklist = (checklist) => {
             if (!checklist || typeof state?.updateChecklist !== 'function') return;
             const title = String(checklist.title || 'чек-лист');
-            const shouldArchive = typeof window === 'undefined' || typeof window.confirm !== 'function'
-                ? true
-                : window.confirm('Переместить «' + title + '» в архив?');
-            if (!shouldArchive) return;
-            state.updateChecklist(checklist.id, {
-                status: 'archived',
-                archivedAt: new Date().toISOString(),
+            requestConfirm({
+                title: 'В архив',
+                message: '«' + title + '» переместится в архив. Его можно вернуть оттуда в любой момент.',
+                confirmLabel: 'В архив',
+                onConfirm: () => state.updateChecklist(checklist.id, {
+                    status: 'archived',
+                    archivedAt: new Date().toISOString(),
+                }),
             });
         };
 
@@ -404,23 +534,31 @@
         const deleteArchivedChecklist = (checklist) => {
             if (!checklist || typeof state?.deleteChecklist !== 'function') return;
             const title = String(checklist.title || 'чек-лист');
-            const shouldDelete = typeof window === 'undefined' || typeof window.confirm !== 'function'
-                ? true
-                : window.confirm('Удалить «' + title + '» навсегда?');
-            if (!shouldDelete) return;
-            state.deleteChecklist(checklist.id);
-            if (archivedChecklists.length <= 1) closeArchiveModal();
+            requestConfirm({
+                title: 'Удалить навсегда',
+                message: '«' + title + '» будет удалён без возможности восстановления.',
+                confirmLabel: 'Удалить',
+                danger: true,
+                onConfirm: () => {
+                    state.deleteChecklist(checklist.id);
+                    if (archivedChecklists.length <= 1) closeArchiveModal();
+                },
+            });
         };
 
         const renameSavedChecklist = (checklist) => {
             if (!checklist || typeof state?.updateChecklist !== 'function') return;
-            if (typeof window === 'undefined' || typeof window.prompt !== 'function') return;
             const currentTitle = String(checklist.title || '').trim() || 'Чек-лист';
-            const nextTitle = window.prompt('Название чек-листа', currentTitle);
-            if (nextTitle == null) return;
-            const title = String(nextTitle || '').trim();
-            if (!title || title === currentTitle) return;
-            state.updateChecklist(checklist.id, { title });
+            requestPrompt({
+                title: 'Переименовать чек-лист',
+                confirmLabel: 'Сохранить',
+                fields: [{ key: 'title', placeholder: 'Название чек-листа', value: currentTitle }],
+                onSubmit: (values) => {
+                    const title = values.title;
+                    if (!title || title === currentTitle) return;
+                    state.updateChecklist(checklist.id, { title });
+                },
+            });
         };
 
         const updatePresetChecklistParams = (checklist, patch) => {
@@ -448,11 +586,15 @@
             const nextNightTemp = clampNightTemp(
                 Object.prototype.hasOwnProperty.call(patch || {}, 'nightTemp') ? patch.nightTemp : current.nightTemp,
             );
-            const toggleOptions = {};
+            const nextNights = clampNights(
+                Object.prototype.hasOwnProperty.call(patch || {}, 'nights') ? patch.nights : current.nights,
+            );
+            const toggleOptions = { nights: nextNights };
             preset.toggles.forEach((toggle) => {
-                toggleOptions[toggle.key] = Object.prototype.hasOwnProperty.call(patch || {}, toggle.key)
-                    ? patch[toggle.key] === true
-                    : current[toggle.key] === true;
+                const raw = Object.prototype.hasOwnProperty.call(patch || {}, toggle.key)
+                    ? patch[toggle.key]
+                    : current[toggle.key];
+                toggleOptions[toggle.key] = resolveToggleValue(toggle, raw);
             });
             const nextPreset = preset.build(
                 nextAdults,
@@ -465,7 +607,7 @@
             const removedPresetIds = Array.isArray(checklist.removedPresetIds) ? checklist.removedPresetIds : [];
             const toggleFields = {};
             preset.toggles.forEach((toggle) => {
-                toggleFields[toggle.key] = toggleOptions[toggle.key] === true;
+                toggleFields[toggle.key] = toggleOptions[toggle.key];
             });
             state.updateChecklist(checklist.id, {
                 presetId: preset.id,
@@ -474,6 +616,7 @@
                 childAges: nextPreset.childAges,
                 dayTemp: nextPreset.dayTemp,
                 nightTemp: nextPreset.nightTemp,
+                nights: nextPreset.nights,
                 ...toggleFields,
                 removedPresetIds,
                 itemOverrides: normalizeChecklistItemOverrides(checklist.itemOverrides),
@@ -513,9 +656,13 @@
             }
         };
 
-        const toggleSavedFacility = (checklist, key) => {
+        const updateSavedNights = (checklist, delta) => {
             const params = getPresetChecklistParams(checklist, getChecklistPreset(checklist));
-            updatePresetChecklistParams(checklist, { [key]: !(params[key] === true) });
+            updatePresetChecklistParams(checklist, { nights: params.nights + delta });
+        };
+
+        const setSavedFacility = (checklist, key, value) => {
+            updatePresetChecklistParams(checklist, { [key]: value });
         };
 
         const renderAgeInlineControls = (ages, onAgeDelta, keyPrefix) => {
@@ -535,9 +682,17 @@
             );
         };
 
-        const renderTempControls = (currentDayTemp, currentNightTemp, onDayDelta, onNightDelta) => h(
+        const renderTempControls = (currentNights, currentDayTemp, currentNightTemp, onNightsDelta, onDayDelta, onNightDelta) => h(
             'div',
             { className: 'planning-checklists-screen__counters planning-checklists-screen__counters--temps' },
+            h('div', { className: 'planning-checklists-screen__counter' },
+                h('span', null, 'Ночей'),
+                h('div', { className: 'planning-checklists-screen__stepper planning-checklists-screen__stepper--temp' },
+                    h('button', { type: 'button', onClick: () => onNightsDelta(-1), 'aria-label': 'Меньше ночей' }, '−'),
+                    h('strong', null, currentNights),
+                    h('button', { type: 'button', onClick: () => onNightsDelta(1), 'aria-label': 'Больше ночей' }, '+'),
+                ),
+            ),
             h('div', { className: 'planning-checklists-screen__counter' },
                 h('span', null, 'Днём'),
                 h('div', { className: 'planning-checklists-screen__stepper planning-checklists-screen__stepper--temp' },
@@ -556,20 +711,70 @@
             ),
         );
 
-        // Тумблеры пресета (розетка/душ, приют/палатка, снег…) рисуются из дескриптора.
-        const renderUtilityControls = (preset, values, onToggle) => h(
+        // Тумблеры пресета (розетка/душ, приют/палатка, транспорт…) — взаимозаменяемые
+        // альтернативы друг под другом: активная подсвечена, остальные серые, между ними ⇅.
+        // Бинарный тумблер = 2 варианта; choice-тумблер = N вариантов.
+        const renderUtilityControls = (preset, values, onSet) => h(
             'div',
             { className: 'planning-checklists-screen__facility-toggles' },
             (preset?.toggles || []).map((toggle) => {
-                const active = values[toggle.key] === true;
-                return h('button', {
+                const optionList = Array.isArray(toggle.choices)
+                    ? toggle.choices
+                    : [{ value: true, label: toggle.onLabel }, { value: false, label: toggle.offLabel }];
+                const current = values[toggle.key];
+                const isWide = optionList.length > 2;
+                return h('div', {
                     key: toggle.key,
-                    type: 'button',
-                    className: 'planning-checklists-screen__facility-toggle' + (active ? ' is-active' : ''),
-                    onClick: () => onToggle(toggle.key),
-                    'aria-pressed': active ? 'true' : 'false',
-                }, active ? toggle.onLabel : toggle.offLabel);
+                    className: 'planning-checklists-screen__facility-switch'
+                        + (isWide ? ' planning-checklists-screen__facility-switch--wide' : ''),
+                }, optionList.reduce((nodes, option, index) => {
+                    if (index > 0) {
+                        nodes.push(h('span', {
+                            key: 'arr-' + index,
+                            className: 'planning-checklists-screen__facility-arrow',
+                            'aria-hidden': 'true',
+                        }, '⇅'));
+                    }
+                    const active = current === option.value;
+                    nodes.push(h('button', {
+                        key: String(option.value),
+                        type: 'button',
+                        className: 'planning-checklists-screen__facility-option' + (active ? ' is-active' : ''),
+                        onClick: () => onSet(toggle.key, option.value),
+                        'aria-pressed': active ? 'true' : 'false',
+                    }, option.label));
+                    return nodes;
+                }, []));
             }),
+        );
+
+        const renderPeopleControls = (values) => h('div', { className: 'planning-checklists-screen__counters planning-checklists-screen__counters--saved' },
+            h('div', { className: 'planning-checklists-screen__counter' },
+                h('span', null, 'Взрослые'),
+                h('div', { className: 'planning-checklists-screen__stepper' },
+                    h('button', { type: 'button', onClick: () => values.onAdultsDelta(-1), 'aria-label': 'Уменьшить количество взрослых' }, '−'),
+                    h('strong', null, values.adults),
+                    h('button', { type: 'button', onClick: () => values.onAdultsDelta(1), 'aria-label': 'Увеличить количество взрослых' }, '+'),
+                ),
+            ),
+            h('div', {
+                className: 'planning-checklists-screen__counter planning-checklists-screen__counter--children'
+                    + (values.children > 0 ? ' has-ages' : ''),
+            },
+                h('span', null, 'Дети'),
+                h('div', { className: 'planning-checklists-screen__children-tools' },
+                    h('div', { className: 'planning-checklists-screen__stepper planning-checklists-screen__stepper--count' },
+                        h('button', { type: 'button', onClick: () => values.onChildrenDelta(-1), 'aria-label': 'Уменьшить количество детей' }, '−'),
+                        h('strong', null, values.children),
+                        h('button', { type: 'button', onClick: () => values.onChildrenDelta(1), 'aria-label': 'Увеличить количество детей' }, '+'),
+                    ),
+                    values.children > 0 && renderAgeInlineControls(
+                        normalizeChildAges(values.children, values.childAges),
+                        values.onChildAgeDelta,
+                        values.keyPrefix,
+                    ),
+                ),
+            ),
         );
 
         const renderChecklistMeta = (checklist) => {
@@ -577,7 +782,7 @@
             const preset = getChecklistPreset(checklist);
             if (!preset) return count + ' пунктов';
             const params = getPresetChecklistParams(checklist, preset);
-            const toggleOptions = buildPresetToggleOptions(preset, params);
+            const toggleOptions = { ...buildPresetToggleOptions(preset, params), nights: params.nights };
             const built = preset.build(
                 params.adults,
                 params.children,
@@ -586,7 +791,21 @@
                 params.nightTemp,
                 toggleOptions,
             );
-            return count + ' пунктов · ' + built.audienceLabel + ' · ' + built.tempLabel + ' · ' + built.utilityLabel;
+            return count + ' пунктов · ' + built.audienceLabel + ' · ' + built.nightsLabel + ' · ' + built.tempLabel + ' · ' + built.utilityLabel;
+        };
+
+        // Краткая сводка параметров (без счётчика пунктов) — для свёрнутого блока параметров.
+        const buildParamsSummary = (checklist, preset) => {
+            const params = getPresetChecklistParams(checklist, preset);
+            const built = preset.build(
+                params.adults,
+                params.children,
+                params.childAges,
+                params.dayTemp,
+                params.nightTemp,
+                { ...buildPresetToggleOptions(preset, params), nights: params.nights },
+            );
+            return built.audienceLabel + ' · ' + built.nightsLabel + ' · ' + built.tempLabel + ' · ' + built.utilityLabel;
         };
 
         const renderChecklistProgress = (checklist) => {
@@ -666,46 +885,53 @@
             const preset = getChecklistPreset(checklist);
             if (!preset) return null;
             const params = getPresetChecklistParams(checklist, preset);
+            const paramsCollapsed = paramsCollapsedById[checklist.id] != null
+                ? paramsCollapsedById[checklist.id] === true
+                : checklist.paramsCollapsed === true;
+
+            // Свёрнуто: параметры показаны сводкой, клик разворачивает обратно.
+            if (paramsCollapsed) {
+                return h('button', {
+                    type: 'button',
+                    className: 'planning-checklists-screen__params-summary planning-checklists-screen__saved-controls',
+                    onClick: () => toggleParamsCollapsed(checklist),
+                    'aria-expanded': 'false',
+                    title: 'Развернуть параметры',
+                },
+                    h('span', { className: 'planning-checklists-screen__params-summary-text' }, buildParamsSummary(checklist, preset)),
+                    h('span', { className: 'planning-checklists-screen__params-summary-hint' }, 'изменить'),
+                );
+            }
+
             return h('div', { className: 'planning-checklists-screen__preset-controls planning-checklists-screen__saved-controls' },
-                h('div', { className: 'planning-checklists-screen__counters planning-checklists-screen__counters--saved' },
-                    h('div', { className: 'planning-checklists-screen__counter' },
-                        h('span', null, 'Взрослые'),
-                        h('div', { className: 'planning-checklists-screen__stepper' },
-                            h('button', { type: 'button', onClick: () => updateSavedCount(checklist, 'adults', -1), 'aria-label': 'Уменьшить количество взрослых' }, '−'),
-                            h('strong', null, params.adults),
-                            h('button', { type: 'button', onClick: () => updateSavedCount(checklist, 'adults', 1), 'aria-label': 'Увеличить количество взрослых' }, '+'),
-                        ),
-                    ),
-                    h('div', {
-                        className: 'planning-checklists-screen__counter planning-checklists-screen__counter--children'
-                            + (params.children > 0 ? ' has-ages' : ''),
-                    },
-                        h('span', null, 'Дети'),
-                        h('div', { className: 'planning-checklists-screen__children-tools' },
-                            h('div', { className: 'planning-checklists-screen__stepper planning-checklists-screen__stepper--count' },
-                                h('button', { type: 'button', onClick: () => updateSavedCount(checklist, 'children', -1), 'aria-label': 'Уменьшить количество детей' }, '−'),
-                                h('strong', null, params.children),
-                                h('button', { type: 'button', onClick: () => updateSavedCount(checklist, 'children', 1), 'aria-label': 'Увеличить количество детей' }, '+'),
-                            ),
-                            params.children > 0 && renderAgeInlineControls(
-                                params.childAges,
-                                (index, delta) => updateSavedChildAge(checklist, index, delta),
-                                checklist.id + '-child-age-',
-                            ),
-                        ),
-                    ),
-                ),
+                renderPeopleControls({
+                    adults: params.adults,
+                    children: params.children,
+                    childAges: params.childAges,
+                    keyPrefix: checklist.id + '-child-age-',
+                    onAdultsDelta: (delta) => updateSavedCount(checklist, 'adults', delta),
+                    onChildrenDelta: (delta) => updateSavedCount(checklist, 'children', delta),
+                    onChildAgeDelta: (index, delta) => updateSavedChildAge(checklist, index, delta),
+                }),
                 renderTempControls(
+                    params.nights,
                     params.dayTemp,
                     params.nightTemp,
+                    (delta) => updateSavedNights(checklist, delta),
                     (delta) => updateSavedTemp(checklist, 'day', delta),
                     (delta) => updateSavedTemp(checklist, 'night', delta),
                 ),
                 renderUtilityControls(
                     preset,
                     params,
-                    (key) => toggleSavedFacility(checklist, key),
+                    (key, value) => setSavedFacility(checklist, key, value),
                 ),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-checklists-screen__params-collapse',
+                    onClick: () => toggleParamsCollapsed(checklist),
+                    'aria-expanded': 'true',
+                }, '▴ Свернуть параметры'),
             );
         };
 
@@ -774,49 +1000,36 @@
                                         onClick: () => setSelectedPresetId(preset.id),
                                         'aria-pressed': isActive ? 'true' : 'false',
                                     },
-                                        h('span', null, preset.title),
+                                        h('span', { className: 'planning-checklists-modal__preset-title' }, preset.title),
+                                        h('span', {
+                                            className: 'planning-checklists-modal__preset-emoji',
+                                            'aria-hidden': 'true',
+                                        }, preset.emoji || '🧳'),
                                     );
                                 }),
                             ),
                             h('div', { className: 'planning-checklists-screen__preset-controls planning-checklists-screen__preset-controls--modal' },
-                                h('div', { className: 'planning-checklists-screen__counters planning-checklists-screen__counters--modal' },
-                                    h('div', { className: 'planning-checklists-screen__counter' },
-                                        h('span', null, 'Взрослые'),
-                                        h('div', { className: 'planning-checklists-screen__stepper' },
-                                            h('button', { type: 'button', onClick: () => setCount('adults', -1), 'aria-label': 'Уменьшить количество взрослых' }, '−'),
-                                            h('strong', null, adults),
-                                            h('button', { type: 'button', onClick: () => setCount('adults', 1), 'aria-label': 'Увеличить количество взрослых' }, '+'),
-                                        ),
-                                    ),
-                                    h('div', {
-                                        className: 'planning-checklists-screen__counter planning-checklists-screen__counter--children'
-                                            + (children > 0 ? ' has-ages' : ''),
-                                    },
-                                        h('span', null, 'Дети'),
-                                        h('div', { className: 'planning-checklists-screen__children-tools' },
-                                            h('div', { className: 'planning-checklists-screen__stepper planning-checklists-screen__stepper--count' },
-                                                h('button', { type: 'button', onClick: () => setCount('children', -1), 'aria-label': 'Уменьшить количество детей' }, '−'),
-                                                h('strong', null, children),
-                                                h('button', { type: 'button', onClick: () => setCount('children', 1), 'aria-label': 'Увеличить количество детей' }, '+'),
-                                            ),
-                                            children > 0 && renderAgeInlineControls(
-                                                normalizeChildAges(children, childAges),
-                                                setPreviewChildAge,
-                                                'preview-child-age-',
-                                            ),
-                                        ),
-                                    ),
-                                ),
+                                renderPeopleControls({
+                                    adults,
+                                    children,
+                                    childAges,
+                                    keyPrefix: 'preview-child-age-',
+                                    onAdultsDelta: (delta) => setCount('adults', delta),
+                                    onChildrenDelta: (delta) => setCount('children', delta),
+                                    onChildAgeDelta: setPreviewChildAge,
+                                }),
                                 renderTempControls(
+                                    nights,
                                     dayTemp,
                                     nightTemp,
+                                    setNightsDelta,
                                     (delta) => setTemp('day', delta),
                                     (delta) => setTemp('night', delta),
                                 ),
                                 renderUtilityControls(
                                     selectedPresetDef,
                                     presetToggleOptions,
-                                    (key) => setToggleState((current) => ({ ...current, [key]: current[key] !== true })),
+                                    (key, value) => setToggleState((current) => ({ ...current, [key]: value === true })),
                                 ),
                             ),
                             h('button', {
@@ -824,7 +1037,7 @@
                                 className: 'planning-checklists-modal__primary',
                                 onClick: handleCreatePreset,
                                 disabled: !canCreate,
-                            }, 'Создать из пресета'),
+                            }, 'Добавить чеклист'),
                         ),
                 ),
             );
@@ -883,6 +1096,155 @@
                             onClick: handleAddItemSubmit,
                             disabled: !canAdd,
                         }, 'Добавить'),
+                    ),
+                ),
+            );
+        };
+
+        const renderAddSectionModal = () => {
+            if (!addSectionTarget) return null;
+            const checklist = checklists.find((entry) => entry.id === addSectionTarget.checklistId);
+            if (!checklist) return null;
+            const canAdd = String(newSectionName || '').trim().length > 0;
+            return h('div', {
+                className: 'planning-checklists-modal-overlay',
+                onClick: (event) => {
+                    if (event.target === event.currentTarget) closeAddSectionModal();
+                },
+            },
+                h('div', {
+                    className: 'planning-checklists-modal planning-checklists-modal--compact',
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    'aria-label': 'Новый раздел',
+                },
+                    h('div', { className: 'planning-checklists-modal__head' },
+                        h('h2', null, 'Новый раздел'),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-checklists-modal__close',
+                            onClick: closeAddSectionModal,
+                            'aria-label': 'Закрыть',
+                        }, '×'),
+                    ),
+                    h('div', { className: 'planning-checklists-modal__body' },
+                        h('input', {
+                            className: 'planning-checklists-modal__input',
+                            value: newSectionName,
+                            autoFocus: true,
+                            onChange: (event) => setNewSectionName(event.target.value),
+                            onKeyDown: (event) => {
+                                if (event.key === 'Enter') handleAddSectionSubmit();
+                            },
+                            placeholder: 'Название раздела',
+                        }),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-checklists-modal__primary',
+                            onClick: handleAddSectionSubmit,
+                            disabled: !canAdd,
+                        }, 'Создать раздел'),
+                    ),
+                ),
+            );
+        };
+
+        const renderConfirmModal = () => {
+            if (!confirmState) return null;
+            const danger = confirmState.danger === true;
+            return h('div', {
+                className: 'planning-checklists-modal-overlay',
+                onClick: (event) => {
+                    if (event.target === event.currentTarget) closeConfirm();
+                },
+            },
+                h('div', {
+                    className: 'planning-checklists-modal planning-checklists-modal--compact planning-checklists-modal--confirm',
+                    role: 'alertdialog',
+                    'aria-modal': 'true',
+                    'aria-label': confirmState.title || 'Подтверждение',
+                },
+                    h('div', { className: 'planning-checklists-modal__head' },
+                        h('h2', null, confirmState.title || 'Подтвердите действие'),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-checklists-modal__close',
+                            onClick: closeConfirm,
+                            'aria-label': 'Закрыть',
+                        }, '×'),
+                    ),
+                    confirmState.message && h('div', { className: 'planning-checklists-modal__confirm-text' }, confirmState.message),
+                    h('div', { className: 'planning-checklists-modal__confirm-actions' },
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-checklists-modal__secondary',
+                            onClick: closeConfirm,
+                        }, 'Отмена'),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-checklists-modal__primary'
+                                + (danger ? ' planning-checklists-modal__primary--danger' : ''),
+                            onClick: handleConfirm,
+                        }, confirmState.confirmLabel || 'Подтвердить'),
+                    ),
+                ),
+            );
+        };
+
+        const renderPromptModal = () => {
+            if (!promptState) return null;
+            const fields = Array.isArray(promptState.fields) ? promptState.fields : [];
+            const firstKey = fields[0] && fields[0].key;
+            const canSubmit = !firstKey || String(promptValues[firstKey] || '').trim().length > 0;
+            return h('div', {
+                className: 'planning-checklists-modal-overlay',
+                onClick: (event) => {
+                    if (event.target === event.currentTarget) closePrompt();
+                },
+            },
+                h('div', {
+                    className: 'planning-checklists-modal planning-checklists-modal--compact',
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    'aria-label': promptState.title || 'Изменить',
+                },
+                    h('div', { className: 'planning-checklists-modal__head' },
+                        h('h2', null, promptState.title || 'Изменить'),
+                        h('button', {
+                            type: 'button',
+                            className: 'planning-checklists-modal__close',
+                            onClick: closePrompt,
+                            'aria-label': 'Закрыть',
+                        }, '×'),
+                    ),
+                    h('div', { className: 'planning-checklists-modal__body' },
+                        fields.map((field, index) => h('input', {
+                            key: field.key,
+                            className: 'planning-checklists-modal__input',
+                            value: promptValues[field.key] || '',
+                            autoFocus: index === 0,
+                            onChange: (event) => {
+                                const next = event.target.value;
+                                setPromptValues((current) => ({ ...current, [field.key]: next }));
+                            },
+                            onKeyDown: (event) => {
+                                if (event.key === 'Enter') handlePromptSubmit();
+                            },
+                            placeholder: field.placeholder || field.label || '',
+                        })),
+                        h('div', { className: 'planning-checklists-modal__confirm-actions' },
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-checklists-modal__secondary',
+                                onClick: closePrompt,
+                            }, 'Отмена'),
+                            h('button', {
+                                type: 'button',
+                                className: 'planning-checklists-modal__primary',
+                                onClick: handlePromptSubmit,
+                                disabled: !canSubmit,
+                            }, promptState.confirmLabel || 'Сохранить'),
+                        ),
                     ),
                 ),
             );
@@ -964,7 +1326,9 @@
                 ? h('div', { className: 'planning-empty planning-empty--inline' }, 'Пока нет чеклистов.')
                 : h('div', { className: 'planning-checklists-screen__list' },
                     checklists.map((checklist) => {
-                        const isCollapsed = collapsedById[checklist.id] === true;
+                        const isCollapsed = collapsedById[checklist.id] != null
+                            ? collapsedById[checklist.id] === true
+                            : checklist.collapsed === true;
                         return h('div', {
                             key: checklist.id,
                             className: 'planning-checklists-screen__card widget-shadow-diary-glass widget-outline-diary-glass' + (isCollapsed ? ' is-collapsed' : ''),
@@ -973,7 +1337,7 @@
                                 h('button', {
                                     type: 'button',
                                     className: 'planning-checklists-screen__card-toggle',
-                                    onClick: () => toggleChecklistCollapsed(checklist.id),
+                                    onClick: () => toggleChecklistCollapsed(checklist),
                                     'aria-expanded': isCollapsed ? 'false' : 'true',
                                     'aria-label': isCollapsed ? 'Развернуть чек-лист' : 'Свернуть чек-лист',
                                 },
@@ -1009,7 +1373,7 @@
                             !isCollapsed && h('button', {
                                 type: 'button',
                                 className: 'planning-checklists-screen__empty-add',
-                                onClick: () => addSavedSection(checklist),
+                                onClick: () => openAddSectionModal(checklist),
                                 disabled: typeof state?.updateChecklist !== 'function',
                             }, '+ Добавить раздел'),
                             !isCollapsed && renderGroups(
@@ -1019,7 +1383,18 @@
                                 {
                                     customGroups: getChecklistCustomGroups(checklist),
                                     groupOrder: getChecklistPreset(checklist)?.groups,
-                                    onDelete: (itemId) => deleteSavedItem(checklist, itemId),
+                                    onDelete: (itemId) => {
+                                        const target = (checklist.items || []).find((entry) => entry.id === itemId);
+                                        requestConfirm({
+                                            title: 'Удалить пункт',
+                                            message: target
+                                                ? '«' + (target.text || 'пункт') + '» будет удалён из этого чек-листа.'
+                                                : 'Удалить этот пункт?',
+                                            confirmLabel: 'Удалить',
+                                            danger: true,
+                                            onConfirm: () => deleteSavedItem(checklist, itemId),
+                                        });
+                                    },
                                     onEditItem: (itemId) => editSavedItem(checklist, itemId),
                                     onAddToGroup: (group) => openAddItemModal(checklist, group),
                                     onEditGroup: (group) => renameSavedSection(checklist, group),
@@ -1041,6 +1416,9 @@
             renderCreateModal(),
             renderArchiveModal(),
             renderAddItemModal(),
+            renderAddSectionModal(),
+            renderConfirmModal(),
+            renderPromptModal(),
         );
     }
 
@@ -1218,6 +1596,10 @@
     Planning.buildSeaHotelChecklistPreset = buildSeaHotelChecklistPreset;
     Planning.buildCityRentChecklistPreset = buildCityRentChecklistPreset;
     Planning.buildCityHotelChecklistPreset = buildCityHotelChecklistPreset;
+    Planning.buildSkiChecklistPreset = buildSkiChecklistPreset;
+    Planning.buildBusinessChecklistPreset = buildBusinessChecklistPreset;
+    Planning.buildDachaChecklistPreset = buildDachaChecklistPreset;
+    Planning.buildAbroadChecklistPreset = buildAbroadChecklistPreset;
     Planning.materializeSeaTentItems = materializeSeaTentItems;
     Planning.materializePresetItems = materializeSeaTentItems;
     Planning.getChecklistPreset = getChecklistPreset;

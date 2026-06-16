@@ -16,6 +16,9 @@
     const DAY_TEMP_MAX = 45;
     const NIGHT_TEMP_MIN = -5;
     const NIGHT_TEMP_MAX = 35;
+    const DEFAULT_NIGHTS = 3;
+    const NIGHTS_MIN = 0;
+    const NIGHTS_MAX = 30;
 
     const SEA_TENT_GROUPS = [
         'Документы и деньги',
@@ -111,6 +114,79 @@
         'Перед выходом из дома',
     ];
 
+    const SKI_PRESET_ID = 'ski-resort';
+    const SKI_PRESET_TITLE = 'Горнолыжный отдых';
+
+    const SKI_GROUPS = [
+        'Документы и ски-пассы',
+        'Деньги и связь',
+        'Снаряжение',
+        'Горнолыжная экипировка',
+        'Одежда (слои)',
+        'Защита и безопасность',
+        'Гигиена и уход',
+        'Аптечка',
+        'Техника и зарядки',
+        'Еда и напитки',
+        'Дети на склоне',
+        'Апрески и отдых',
+        'Перед выходом из дома',
+    ];
+
+    const BUSINESS_PRESET_ID = 'business-trip';
+    const BUSINESS_PRESET_TITLE = 'Командировка';
+
+    const BUSINESS_GROUPS = [
+        'Документы и поездка',
+        'Работа и техника',
+        'Одежда',
+        'Деньги и связь',
+        'Гигиена и уход',
+        'Аптечка',
+        'Еда и тонус',
+        'Заселение и быт',
+        'Дети',
+        'Перед выходом из дома',
+    ];
+
+    const DACHA_PRESET_ID = 'dacha-weekend';
+    const DACHA_PRESET_TITLE = 'Дача и загородный дом';
+
+    const DACHA_GROUPS = [
+        'Документы и деньги',
+        'Еда и продукты',
+        'Кухня и быт',
+        'Барбекю и костёр',
+        'Баня',
+        'Одежда',
+        'Обувь',
+        'Гигиена',
+        'Аптечка',
+        'Сад и участок',
+        'Спальное',
+        'Дети и досуг',
+        'Техника',
+        'Перед выходом из дома',
+    ];
+
+    const ABROAD_PRESET_ID = 'abroad-trip';
+    const ABROAD_PRESET_TITLE = 'Поездка за границу';
+
+    const ABROAD_GROUPS = [
+        'Документы и виза',
+        'Деньги и связь',
+        'Здоровье и страховка',
+        'Одежда',
+        'Обувь',
+        'Гигиена и косметика',
+        'Аптечка',
+        'Техника и зарядки',
+        'Пляж и отдых',
+        'Город и экскурсии',
+        'Дети',
+        'Перед выходом из дома',
+    ];
+
     function clampCount(value, min, max) {
         const next = Math.round(Number(value) || 0);
         return Math.max(min, Math.min(max, next));
@@ -178,6 +254,30 @@
 
     function formatTempSummary(dayTemp, nightTemp) {
         return 'днём ' + formatTemp(dayTemp) + ' · ночью ' + formatTemp(nightTemp);
+    }
+
+    function clampNights(value) {
+        const num = Math.round(Number(value));
+        if (!Number.isFinite(num)) return DEFAULT_NIGHTS;
+        return Math.max(NIGHTS_MIN, Math.min(NIGHTS_MAX, num));
+    }
+
+    // Число ночей решает, нужна ли ночёвочная экипировка вообще, и сколько дней
+    // длится поездка (для расходников). Билдеры берут nights из options.
+    function resolveNights(options) {
+        const source = options && typeof options === 'object' ? options : {};
+        return clampNights(source.nights == null ? DEFAULT_NIGHTS : source.nights);
+    }
+
+    function formatDays(count) {
+        const safe = Math.max(1, Math.round(Number(count) || 1));
+        return safe + ' ' + pluralPeople(safe, 'день', 'дня', 'дней');
+    }
+
+    function formatNightsLabel(nights) {
+        const safe = clampNights(nights);
+        if (safe === 0) return 'без ночёвки';
+        return safe + ' ' + pluralPeople(safe, 'ночь', 'ночи', 'ночей');
     }
 
     function normalizeSeaTentFacilities(options) {
@@ -252,6 +352,9 @@
         const safeNightTemp = clampNightTemp(nightTemp);
         const dayBand = getDayTempBand(safeDayTemp);
         const nightBand = getNightTempBand(safeNightTemp);
+        const nights = resolveNights(options);
+        const overnight = nights > 0;
+        const days = nights + 1;
         const sleepBagNote = nightBand === 'warm' ? 'лёгкие, можно вкладыш'
             : nightBand === 'cool' ? 'с запасом по теплу'
                 : nightBand === 'cold' ? 'зимние или демисезонные'
@@ -301,8 +404,8 @@
             item('kitchen-wash', 'Кухня и вода', 'Губка, средство для посуды, кухонное полотенце', '1 набор'),
             item('kitchen-containers', 'Кухня и вода', 'Контейнеры, зип-пакеты, фольга', '1 набор'),
 
-            item('food-breakfast', 'Еда', 'Завтраки: крупы, хлопья, чай', 'по плану дней'),
-            item('food-main', 'Еда', 'Основная еда: консервы, паста, крупы', 'по плану дней'),
+            item('food-breakfast', 'Еда', 'Завтраки: крупы, хлопья, чай', 'на ' + formatDays(days)),
+            item('food-main', 'Еда', 'Основная еда: консервы, паста, крупы', 'на ' + formatDays(days)),
             item('food-snacks', 'Еда', 'Перекусы в дорогу и на пляж', people + ' порций/день'),
             item('food-spices', 'Еда', 'Соль, специи, масло', '1 набор'),
             item('food-extra-day', 'Еда', 'Запас еды на один день', '1 запас'),
@@ -498,6 +601,19 @@
             );
         }
 
+        // При 0 ночей (выезд на день) ночёвочное снаряжение не нужно.
+        const overnightOnly = new Set([
+            'camp-tent', 'camp-groundsheet', 'camp-pegs', 'camp-hammer', 'camp-clothesline', 'camp-test-gear',
+            'repair-tent-mat',
+            'sleep-bags', 'sleep-mats', 'sleep-pillows', 'sleep-blankets', 'sleep-dry-clothes', 'sleep-earplugs',
+            'hygiene-camp-toilet', 'hygiene-portable-shower', 'hygiene-shower-shelter', 'hygiene-biodegradable-soap',
+            'kitchen-shower-water', 'hygiene-shower-shoes', 'hygiene-shower-bag',
+            'electric-camp-string-lights', 'electric-rechargeable-camp-light',
+            'child-sleep', 'child-night-light', 'child-baby-sleep',
+            'night-warm-liner', 'night-warm-bugs', 'night-cool-thermal', 'night-cool-socks',
+            'night-cold-thermal', 'night-cold-insulated-mat', 'night-cold-hot-bottle', 'night-cold-extra-blanket', 'night-cold-socks',
+        ]);
+        const finalItems = overnight ? items : items.filter((entry) => !overnightOnly.has(entry.id));
         return {
             id: SEA_TENT_PRESET_ID,
             title: SEA_TENT_PRESET_TITLE,
@@ -510,9 +626,11 @@
             nightTemp: safeNightTemp,
             hasOutlet,
             hasShower,
+            nights,
+            nightsLabel: formatNightsLabel(nights),
             tempLabel: formatTempSummary(safeDayTemp, safeNightTemp),
             utilityLabel: formatUtilitySummary(hasOutlet, hasShower),
-            items: items.map((entry, index) => ({ ...entry, order: index })),
+            items: finalItems.map((entry, index) => ({ ...entry, order: index })),
         };
     }
 
@@ -549,6 +667,9 @@
         const safeNightTemp = clampNightTemp(nightTemp);
         const dayBand = getDayTempBand(safeDayTemp);
         const nightBand = getNightTempBand(safeNightTemp);
+        const nights = resolveNights(options);
+        const overnight = nights > 0;
+        const days = nights + 1;
         const sleepBagNote = nightBand === 'warm' ? 'лёгкий, можно вкладыш'
             : nightBand === 'cool' ? 'с запасом по теплу'
                 : nightBand === 'cold' ? 'зимний или экспедиционный'
@@ -586,7 +707,7 @@
             item('mtn-kitchen-water-treat', 'Кухня и вода', 'Фильтр или таблетки для очистки воды', '1 набор'),
             item('mtn-kitchen-wash', 'Кухня и вода', 'Губка и биоразлагаемое средство для посуды', '1 набор'),
 
-            item('mtn-food-main', 'Еда и перекусы', 'Раскладка по дням: завтраки и ужины', 'по плану дней'),
+            item('mtn-food-main', 'Еда и перекусы', 'Раскладка по дням: завтраки и ужины', 'на ' + formatDays(days)),
             item('mtn-food-trail', 'Еда и перекусы', 'Перекусы на ходу: орехи, батончики, сухофрукты', people + ' порций/день'),
             item('mtn-food-hot-drinks', 'Еда и перекусы', 'Чай, какао, изотоник в порошке', '1 набор'),
             item('mtn-food-emergency', 'Еда и перекусы', 'Аварийный запас еды на один день', '1 запас'),
@@ -782,6 +903,17 @@
             );
         }
 
+        // При 0 ночей (радиалка/день) ночёвочное снаряжение не нужно.
+        const overnightOnly = new Set([
+            'mtn-sleep-bag', 'mtn-sleep-liner',
+            'mtn-hut-booking', 'mtn-hut-cash-extras', 'mtn-hut-sleep-sheet', 'mtn-hut-earplugs', 'mtn-hut-indoor-shoes', 'mtn-hut-padlock',
+            'mtn-tent', 'mtn-tent-footprint', 'mtn-tent-pegs', 'mtn-tent-repair', 'mtn-tent-camp-light',
+            'mtn-tent-mat', 'mtn-tent-pillow', 'mtn-tent-sit-pad', 'mtn-snow-shovel-tent',
+            'mtn-child-warm-sleep',
+            'mtn-night-warm-liner', 'mtn-night-cool-thermal', 'mtn-night-cool-socks',
+            'mtn-night-cold-thermal', 'mtn-night-cold-insulated-mat', 'mtn-night-cold-hot-bottle', 'mtn-night-cold-socks', 'mtn-night-cold-extra-bag',
+        ]);
+        const finalItems = overnight ? items : items.filter((entry) => !overnightOnly.has(entry.id));
         return {
             id: MOUNTAIN_PRESET_ID,
             title: MOUNTAIN_PRESET_TITLE,
@@ -794,24 +926,38 @@
             nightTemp: safeNightTemp,
             hasShelter,
             hasSnow,
+            nights,
+            nightsLabel: formatNightsLabel(nights),
             tempLabel: formatTempSummary(safeDayTemp, safeNightTemp),
             utilityLabel: formatMountainUtilitySummary(hasShelter, hasSnow),
-            items: items.map((entry, index) => ({ ...entry, order: index })),
+            items: finalItems.map((entry, index) => ({ ...entry, order: index })),
         };
+    }
+
+    // Транспорт — выбор из трёх: самолёт / поезд / машина.
+    function normalizeTransport(source) {
+        const value = source && source.transport;
+        return (value === 'plane' || value === 'train' || value === 'car') ? value : 'plane';
+    }
+
+    function formatTransportLabel(transport) {
+        return transport === 'train' ? 'поезд'
+            : transport === 'car' ? 'на машине'
+                : 'самолёт';
     }
 
     function normalizeSeaHotelOptions(options) {
         const source = options && typeof options === 'object' ? options : {};
         return {
             allInclusive: source.allInclusive === true,
-            flying: source.flying === true,
+            transport: normalizeTransport(source),
         };
     }
 
-    function formatSeaHotelUtilitySummary(allInclusive, flying) {
+    function formatSeaHotelUtilitySummary(allInclusive, transport) {
         return (allInclusive ? 'всё включено' : 'питание сами')
             + ' · '
-            + (flying ? 'летим' : 'на машине');
+            + formatTransportLabel(transport);
     }
 
     function buildSeaHotelChecklistPreset(adults, children, childAges, dayTemp, nightTemp, options) {
@@ -820,7 +966,7 @@
         const ages = normalizeChildAges(childCount, childAges);
         const opts = normalizeSeaHotelOptions(options);
         const allInclusive = opts.allInclusive;
-        const flying = opts.flying;
+        const transport = opts.transport;
         const people = adultCount + childCount;
         const hasChildren = childCount > 0;
         const babyCount = countChildAges(ages, 0, 2);
@@ -832,6 +978,9 @@
         const safeNightTemp = clampNightTemp(nightTemp);
         const dayBand = getDayTempBand(safeDayTemp);
         const nightBand = getNightTempBand(safeNightTemp);
+        const nights = resolveNights(options);
+        const overnight = nights > 0;
+        const days = nights + 1;
         const items = [
             item('hotel-docs-passport', 'Документы и поездка', 'Паспорта или загранпаспорта', people + ' шт.'),
             item('hotel-docs-tickets', 'Документы и поездка', 'Билеты, ваучеры или маршрут', '1 комплект'),
@@ -854,9 +1003,10 @@
             item('hotel-beach-mask', 'Пляж и море', 'Маски или очки для плавания', people + ' шт.'),
             item('hotel-beach-waterproof', 'Пляж и море', 'Гермочехол или непромокаемый кошелёк', Math.max(1, adultCount) + ' шт.'),
 
-            item('hotel-clothes-day', 'Одежда', 'Лёгкая повседневная одежда', 'по числу дней'),
+            item('hotel-clothes-day', 'Одежда', 'Лёгкая повседневная одежда', 'на ' + formatDays(days)),
             item('hotel-clothes-evening', 'Одежда', 'Наряд на вечер или ресторан', people + ' комплектов'),
-            item('hotel-clothes-underwear', 'Одежда', 'Бельё и носки', 'по числу дней'),
+            item('hotel-clothes-underwear', 'Одежда', 'Бельё и носки', 'на ' + formatDays(days)),
+            item('hotel-clothes-sleep', 'Одежда', 'Пижама или одежда для сна', people + ' комплектов'),
             item('hotel-clothes-light-jacket', 'Одежда', 'Лёгкая кофта или ветровка на вечер', people + ' шт.'),
             item('hotel-clothes-cover-up', 'Одежда', 'Парео или туника поверх купальника', 'по ситуации'),
 
@@ -904,21 +1054,29 @@
         } else {
             items.push(
                 item('hotel-food-water', 'Еда и напитки', 'Вода и многоразовые бутылки', people + ' шт.'),
-                item('hotel-food-breakfast', 'Еда и напитки', 'Быстрые завтраки, если нет питания', 'по плану дней'),
+                item('hotel-food-breakfast', 'Еда и напитки', 'Быстрые завтраки, если нет питания', 'на ' + formatDays(days)),
                 item('hotel-food-snacks', 'Еда и напитки', 'Перекусы в дорогу и в номер', people + ' порций/день'),
                 item('hotel-food-utensils', 'Еда и напитки', 'Дорожные приборы, кружка, складной нож', '1 набор'),
                 item('hotel-food-coffee', 'Еда и напитки', 'Чай, кофе, кипятильник — уточнить чайник в номере', '1 набор'),
             );
         }
 
-        // Транспорт: самолёт против машины.
-        if (flying) {
+        // Транспорт: самолёт / поезд / машина.
+        if (transport === 'plane') {
             items.push(
                 item('hotel-fly-boarding', 'Документы и поездка', 'Онлайн-регистрация и посадочные', people + ' шт.'),
                 item('hotel-fly-carryon', 'Документы и поездка', 'Ручная кладь: ценное, лекарства, сменка', people + ' шт.'),
                 item('hotel-fly-luggage', 'Документы и поездка', 'Бирки на чемоданы и весы для багажа', '1 набор'),
                 item('hotel-fly-liquids', 'Гигиена и косметика', 'Жидкости до 100 мл в прозрачном пакете', '1 набор'),
                 item('hotel-fly-comfort', 'Развлечения', 'В дорогу: подушка для шеи, маска, беруши', people + ' наборов'),
+            );
+        } else if (transport === 'train') {
+            items.push(
+                item('hotel-train-tickets', 'Документы и поездка', 'Билеты на поезд и номера мест', people + ' шт.'),
+                item('hotel-train-bag', 'Документы и поездка', 'Небольшая сумка с нужным в вагон', people + ' шт.'),
+                item('hotel-train-slippers', 'Одежда', 'Тапки и удобная одежда в поезд', people + ' наборов'),
+                item('hotel-train-food', 'Еда и напитки', 'Еда, перекусы и вода в дорогу', people + ' порций'),
+                item('hotel-train-comfort', 'Развлечения', 'Плед, подушка, наушники, книга', people + ' наборов'),
             );
         } else {
             items.push(
@@ -1007,6 +1165,12 @@
             items.push(item('hotel-night-cold', 'Одежда', 'Тёплая пижама, носки, тёплый слой на вечер', people + ' комплектов'));
         }
 
+        // При 0 ночей (поездка к морю на день) проживание в отеле не нужно.
+        const overnightOnly = new Set([
+            'hotel-clothes-sleep', 'hotel-money-safe', 'hotel-docs-booking', 'hotel-baby-cot', 'hotel-ai-wristband',
+            'hotel-night-warm', 'hotel-night-cool', 'hotel-night-cold',
+        ]);
+        const finalItems = overnight ? items : items.filter((entry) => !overnightOnly.has(entry.id));
         return {
             id: SEA_HOTEL_PRESET_ID,
             title: SEA_HOTEL_PRESET_TITLE,
@@ -1018,10 +1182,12 @@
             dayTemp: safeDayTemp,
             nightTemp: safeNightTemp,
             allInclusive,
-            flying,
+            transport,
+            nights,
+            nightsLabel: formatNightsLabel(nights),
             tempLabel: formatTempSummary(safeDayTemp, safeNightTemp),
-            utilityLabel: formatSeaHotelUtilitySummary(allInclusive, flying),
-            items: items.map((entry, index) => ({ ...entry, order: index })),
+            utilityLabel: formatSeaHotelUtilitySummary(allInclusive, transport),
+            items: finalItems.map((entry, index) => ({ ...entry, order: index })),
         };
     }
 
@@ -1029,14 +1195,14 @@
         const source = options && typeof options === 'object' ? options : {};
         return {
             selfCooking: source.selfCooking === true,
-            flying: source.flying === true,
+            transport: normalizeTransport(source),
         };
     }
 
-    function formatCityRentUtilitySummary(selfCooking, flying) {
+    function formatCityRentUtilitySummary(selfCooking, transport) {
         return (selfCooking ? 'готовим сами' : 'едим вне дома')
             + ' · '
-            + (flying ? 'летим' : 'на машине');
+            + formatTransportLabel(transport);
     }
 
     function buildCityRentChecklistPreset(adults, children, childAges, dayTemp, nightTemp, options) {
@@ -1045,7 +1211,7 @@
         const ages = normalizeChildAges(childCount, childAges);
         const opts = normalizeCityRentOptions(options);
         const selfCooking = opts.selfCooking;
-        const flying = opts.flying;
+        const transport = opts.transport;
         const people = adultCount + childCount;
         const hasChildren = childCount > 0;
         const babyCount = countChildAges(ages, 0, 2);
@@ -1057,6 +1223,9 @@
         const safeNightTemp = clampNightTemp(nightTemp);
         const dayBand = getDayTempBand(safeDayTemp);
         const nightBand = getNightTempBand(safeNightTemp);
+        const nights = resolveNights(options);
+        const overnight = nights > 0;
+        const days = nights + 1;
         const items = [
             item('city-docs-id', 'Документы и поездка', 'Паспорта или документы', people + ' шт.'),
             item('city-docs-tickets', 'Документы и поездка', 'Билеты туда-обратно или маршрут', '1 комплект'),
@@ -1070,8 +1239,8 @@
             item('city-money-transit', 'Деньги и связь', 'Транспортная карта, приложения такси и метро', '1 набор'),
             item('city-money-deposit', 'Деньги и связь', 'Деньги на залог или депозит за квартиру', 'по ситуации'),
 
-            item('city-clothes-day', 'Одежда', 'Повседневная одежда по числу дней', 'по числу дней'),
-            item('city-clothes-underwear', 'Одежда', 'Бельё и носки', 'по числу дней'),
+            item('city-clothes-day', 'Одежда', 'Повседневная одежда по числу дней', 'на ' + formatDays(days)),
+            item('city-clothes-underwear', 'Одежда', 'Бельё и носки', 'на ' + formatDays(days)),
             item('city-clothes-evening', 'Одежда', 'Наряд для ресторана или театра', people + ' комплектов'),
             item('city-clothes-layer', 'Одежда', 'Кофта или джемпер на смену погоды', people + ' шт.'),
             item('city-clothes-rain', 'Одежда', 'Дождевик или зонт', Math.max(1, Math.ceil(people / 2)) + ' шт.'),
@@ -1141,8 +1310,8 @@
             );
         }
 
-        // Транспорт: самолёт против машины или поезда.
-        if (flying) {
+        // Транспорт: самолёт / поезд / машина.
+        if (transport === 'plane') {
             items.push(
                 item('city-fly-boarding', 'Документы и поездка', 'Онлайн-регистрация и посадочные', people + ' шт.'),
                 item('city-fly-carryon', 'Документы и поездка', 'Ручная кладь: ценное, лекарства, сменка', people + ' шт.'),
@@ -1150,9 +1319,17 @@
                 item('city-fly-liquids', 'Гигиена', 'Жидкости до 100 мл в прозрачном пакете', '1 набор'),
                 item('city-fly-comfort', 'Развлечения', 'В самолёт: подушка для шеи, маска, беруши', people + ' наборов'),
             );
+        } else if (transport === 'train') {
+            items.push(
+                item('city-train-tickets', 'Документы и поездка', 'Билеты на поезд и номера мест', people + ' шт.'),
+                item('city-train-bag', 'Документы и поездка', 'Сумка с нужным в вагон', people + ' шт.'),
+                item('city-train-slippers', 'Одежда', 'Тапки и удобная одежда в поезд', people + ' наборов'),
+                item('city-train-food', 'Кухня и продукты', 'Еда, перекусы и вода в дорогу', people + ' порций'),
+                item('city-train-comfort', 'Развлечения', 'Плед, подушка, наушники, книга', people + ' наборов'),
+            );
         } else {
             items.push(
-                item('city-car-docs', 'Документы и поездка', 'Права, СТС, страховка или билеты на поезд', '1 комплект'),
+                item('city-car-docs', 'Документы и поездка', 'Права, СТС, страховка', '1 комплект'),
                 item('city-car-nav', 'Прогулки и город', 'Навигатор и парковки в городе заранее', '1 набор'),
                 item('city-car-snacks', 'Кухня и продукты', 'Перекусы и вода в дорогу', people + ' порций'),
                 item('city-car-entertainment', 'Развлечения', 'Аудиокниги, музыка, игры в дорогу', '1 набор'),
@@ -1237,6 +1414,16 @@
             items.push(item('city-night-cold', 'Одежда', 'Тёплая пижама, носки, тёплый слой на вечер', people + ' комплектов'));
         }
 
+        // При 0 ночей (поездка в город на день) аренда квартиры и готовка не нужны.
+        const overnightOnly = new Set([
+            'city-docs-booking', 'city-docs-checkin', 'city-money-deposit',
+            'city-clothes-pajamas', 'city-shoes-home', 'city-hyg-shampoo', 'city-hyg-towel-check',
+            'city-apt-checkin-time', 'city-apt-contact', 'city-apt-rules', 'city-apt-essentials',
+            'city-cook-groceries', 'city-cook-spices', 'city-cook-dish-soap', 'city-cook-containers', 'city-cook-bags',
+            'city-baby-cot',
+            'city-night-warm', 'city-night-cool', 'city-night-cold',
+        ]);
+        const finalItems = overnight ? items : items.filter((entry) => !overnightOnly.has(entry.id));
         return {
             id: CITY_RENT_PRESET_ID,
             title: CITY_RENT_PRESET_TITLE,
@@ -1248,10 +1435,12 @@
             dayTemp: safeDayTemp,
             nightTemp: safeNightTemp,
             selfCooking,
-            flying,
+            transport,
+            nights,
+            nightsLabel: formatNightsLabel(nights),
             tempLabel: formatTempSummary(safeDayTemp, safeNightTemp),
-            utilityLabel: formatCityRentUtilitySummary(selfCooking, flying),
-            items: items.map((entry, index) => ({ ...entry, order: index })),
+            utilityLabel: formatCityRentUtilitySummary(selfCooking, transport),
+            items: finalItems.map((entry, index) => ({ ...entry, order: index })),
         };
     }
 
@@ -1259,14 +1448,14 @@
         const source = options && typeof options === 'object' ? options : {};
         return {
             breakfast: source.breakfast === true,
-            flying: source.flying === true,
+            transport: normalizeTransport(source),
         };
     }
 
-    function formatCityHotelUtilitySummary(breakfast, flying) {
+    function formatCityHotelUtilitySummary(breakfast, transport) {
         return (breakfast ? 'завтрак включён' : 'без завтрака')
             + ' · '
-            + (flying ? 'летим' : 'на машине');
+            + formatTransportLabel(transport);
     }
 
     function buildCityHotelChecklistPreset(adults, children, childAges, dayTemp, nightTemp, options) {
@@ -1275,7 +1464,7 @@
         const ages = normalizeChildAges(childCount, childAges);
         const opts = normalizeCityHotelOptions(options);
         const breakfast = opts.breakfast;
-        const flying = opts.flying;
+        const transport = opts.transport;
         const people = adultCount + childCount;
         const hasChildren = childCount > 0;
         const babyCount = countChildAges(ages, 0, 2);
@@ -1287,6 +1476,9 @@
         const safeNightTemp = clampNightTemp(nightTemp);
         const dayBand = getDayTempBand(safeDayTemp);
         const nightBand = getNightTempBand(safeNightTemp);
+        const nights = resolveNights(options);
+        const overnight = nights > 0;
+        const days = nights + 1;
         const items = [
             item('chotel-docs-id', 'Документы и поездка', 'Паспорта или документы', people + ' шт.'),
             item('chotel-docs-tickets', 'Документы и поездка', 'Билеты туда-обратно или маршрут', '1 комплект'),
@@ -1300,8 +1492,8 @@
             item('chotel-money-transit', 'Деньги и связь', 'Транспортная карта, приложения такси и метро', '1 набор'),
             item('chotel-money-tips', 'Деньги и связь', 'Мелочь на чаевые и гардероб', '1 запас'),
 
-            item('chotel-clothes-day', 'Одежда', 'Повседневная одежда по числу дней', 'по числу дней'),
-            item('chotel-clothes-underwear', 'Одежда', 'Бельё и носки', 'по числу дней'),
+            item('chotel-clothes-day', 'Одежда', 'Повседневная одежда по числу дней', 'на ' + formatDays(days)),
+            item('chotel-clothes-underwear', 'Одежда', 'Бельё и носки', 'на ' + formatDays(days)),
             item('chotel-clothes-evening', 'Одежда', 'Наряд для ресторана или театра', people + ' комплектов'),
             item('chotel-clothes-layer', 'Одежда', 'Кофта или джемпер на смену погоды', people + ' шт.'),
             item('chotel-clothes-rain', 'Одежда', 'Дождевик или зонт', Math.max(1, Math.ceil(people / 2)) + ' шт.'),
@@ -1358,15 +1550,15 @@
             );
         } else {
             items.push(
-                item('chotel-nobf-breakfast', 'Еда и перекусы', 'Завтраки или кафе рядом на утро', 'по плану дней'),
+                item('chotel-nobf-breakfast', 'Еда и перекусы', 'Завтраки или кафе рядом на утро', 'на ' + formatDays(days)),
                 item('chotel-nobf-snacks', 'Еда и перекусы', 'Перекусы и вода в номер и в дорогу', people + ' порций/день'),
                 item('chotel-nobf-utensils', 'Еда и перекусы', 'Дорожные приборы, кружка, кипятильник', '1 набор'),
                 item('chotel-nobf-coffee', 'Еда и перекусы', 'Чай, кофе — уточнить чайник в номере', '1 набор'),
             );
         }
 
-        // Транспорт: самолёт против машины или поезда.
-        if (flying) {
+        // Транспорт: самолёт / поезд / машина.
+        if (transport === 'plane') {
             items.push(
                 item('chotel-fly-boarding', 'Документы и поездка', 'Онлайн-регистрация и посадочные', people + ' шт.'),
                 item('chotel-fly-carryon', 'Документы и поездка', 'Ручная кладь: ценное, лекарства, сменка', people + ' шт.'),
@@ -1374,9 +1566,17 @@
                 item('chotel-fly-liquids', 'Гигиена и косметика', 'Жидкости до 100 мл в прозрачном пакете', '1 набор'),
                 item('chotel-fly-comfort', 'Развлечения', 'В самолёт: подушка для шеи, маска, беруши', people + ' наборов'),
             );
+        } else if (transport === 'train') {
+            items.push(
+                item('chotel-train-tickets', 'Документы и поездка', 'Билеты на поезд и номера мест', people + ' шт.'),
+                item('chotel-train-bag', 'Документы и поездка', 'Сумка с нужным в вагон', people + ' шт.'),
+                item('chotel-train-slippers', 'Одежда', 'Тапки и удобная одежда в поезд', people + ' наборов'),
+                item('chotel-train-food', 'Еда и перекусы', 'Еда, перекусы и вода в дорогу', people + ' порций'),
+                item('chotel-train-comfort', 'Развлечения', 'Плед, подушка, наушники, книга', people + ' наборов'),
+            );
         } else {
             items.push(
-                item('chotel-car-docs', 'Документы и поездка', 'Права, СТС, страховка или билеты на поезд', '1 комплект'),
+                item('chotel-car-docs', 'Документы и поездка', 'Права, СТС, страховка', '1 комплект'),
                 item('chotel-car-nav', 'Прогулки и город', 'Навигатор и парковки у отеля заранее', '1 набор'),
                 item('chotel-car-snacks', 'Еда и перекусы', 'Перекусы и вода в дорогу', people + ' порций'),
                 item('chotel-car-entertainment', 'Развлечения', 'Аудиокниги, музыка, игры в дорогу', '1 набор'),
@@ -1461,6 +1661,14 @@
             items.push(item('chotel-night-cold', 'Одежда', 'Тёплая пижама, носки, тёплый слой на вечер', people + ' комплектов'));
         }
 
+        // При 0 ночей (поездка в город на день) отель и завтраки не нужны.
+        const overnightOnly = new Set([
+            'chotel-docs-booking', 'chotel-clothes-pajamas', 'chotel-baby-cot',
+            'chotel-stay-checkin', 'chotel-stay-early', 'chotel-stay-card', 'chotel-stay-safe', 'chotel-stay-laundry',
+            'chotel-bf-hours', 'chotel-bf-snacks', 'chotel-nobf-breakfast', 'chotel-nobf-utensils', 'chotel-nobf-coffee',
+            'chotel-night-warm', 'chotel-night-cool', 'chotel-night-cold',
+        ]);
+        const finalItems = overnight ? items : items.filter((entry) => !overnightOnly.has(entry.id));
         return {
             id: CITY_HOTEL_PRESET_ID,
             title: CITY_HOTEL_PRESET_TITLE,
@@ -1472,10 +1680,885 @@
             dayTemp: safeDayTemp,
             nightTemp: safeNightTemp,
             breakfast,
-            flying,
+            transport,
+            nights,
+            nightsLabel: formatNightsLabel(nights),
             tempLabel: formatTempSummary(safeDayTemp, safeNightTemp),
-            utilityLabel: formatCityHotelUtilitySummary(breakfast, flying),
-            items: items.map((entry, index) => ({ ...entry, order: index })),
+            utilityLabel: formatCityHotelUtilitySummary(breakfast, transport),
+            items: finalItems.map((entry, index) => ({ ...entry, order: index })),
+        };
+    }
+
+    function normalizeSkiOptions(options) {
+        const source = options && typeof options === 'object' ? options : {};
+        return {
+            ownGear: source.ownGear === true,
+            selfCatering: source.selfCatering === true,
+        };
+    }
+
+    function formatSkiUtilitySummary(ownGear, selfCatering) {
+        return (ownGear ? 'своё снаряжение' : 'прокат')
+            + ' · '
+            + (selfCatering ? 'апартаменты' : 'отель');
+    }
+
+    function buildSkiChecklistPreset(adults, children, childAges, dayTemp, nightTemp, options) {
+        const adultCount = clampCount(adults, 1, 12);
+        const childCount = clampCount(children, 0, 12);
+        const ages = normalizeChildAges(childCount, childAges);
+        const opts = normalizeSkiOptions(options);
+        const ownGear = opts.ownGear;
+        const selfCatering = opts.selfCatering;
+        const people = adultCount + childCount;
+        const hasChildren = childCount > 0;
+        const babyCount = countChildAges(ages, 0, 2);
+        const preschoolCount = countChildAges(ages, 3, 6);
+        const schoolCount = countChildAges(ages, 7, 12);
+        const teenCount = countChildAges(ages, 13, 17);
+        const under12Count = babyCount + preschoolCount + schoolCount;
+        const safeDayTemp = clampDayTemp(dayTemp);
+        const safeNightTemp = clampNightTemp(nightTemp);
+        const dayBand = getDayTempBand(safeDayTemp);
+        const nightBand = getNightTempBand(safeNightTemp);
+        const nights = resolveNights(options);
+        const overnight = nights > 0;
+        const days = nights + 1;
+        const items = [
+            item('ski-docs-id', 'Документы и ски-пассы', 'Паспорта или документы', people + ' шт.'),
+            item('ski-docs-insurance', 'Документы и ски-пассы', 'Страховка с покрытием гор и спорта', people + ' шт.'),
+            item('ski-docs-skipass', 'Документы и ски-пассы', 'Ски-пассы или бронь проката заранее', '1 комплект'),
+            item('ski-docs-booking', 'Документы и ски-пассы', 'Бронь жилья и трансфера', '1 подтверждение'),
+            item('ski-docs-emergency', 'Документы и ски-пассы', 'Телефоны спасслужбы и ски-патруля', '1 шт.'),
+
+            item('ski-money-cash', 'Деньги и связь', 'Наличные и банковские карты', '1 запас'),
+            item('ski-money-sim', 'Деньги и связь', 'SIM, eSIM или роуминг', Math.max(1, adultCount) + ' шт.'),
+            item('ski-money-locker', 'Деньги и связь', 'Мелочь на локеры и камеру хранения', '1 запас'),
+
+            item('ski-gear-helmet', 'Горнолыжная экипировка', 'Шлем', people + ' шт.'),
+            item('ski-gear-goggles', 'Горнолыжная экипировка', 'Маска горнолыжная и запасная линза', people + ' шт.'),
+            item('ski-gear-gloves', 'Горнолыжная экипировка', 'Тёплые перчатки или варежки', people + ' пар'),
+            item('ski-gear-thermal', 'Горнолыжная экипировка', 'Термобельё', people + ' комплектов'),
+            item('ski-gear-socks', 'Горнолыжная экипировка', 'Горнолыжные носки', (people * 2) + ' пар'),
+            item('ski-gear-balaclava', 'Горнолыжная экипировка', 'Балаклава или бафф', people + ' шт.'),
+            item('ski-gear-handwarmers', 'Горнолыжная экипировка', 'Химические грелки для рук и ног', (people * 2) + ' шт.'),
+
+            item('ski-clothes-jacket', 'Одежда (слои)', 'Горнолыжная куртка, мембрана', people + ' шт.'),
+            item('ski-clothes-pants', 'Одежда (слои)', 'Горнолыжные штаны, мембрана', people + ' шт.'),
+            item('ski-clothes-midlayer', 'Одежда (слои)', 'Флис или тёплый средний слой', people + ' шт.'),
+            item('ski-clothes-hat', 'Одежда (слои)', 'Тёплая шапка', people + ' шт.'),
+            item('ski-clothes-casual', 'Одежда (слои)', 'Одежда для апре-ски и вечера', people + ' комплектов'),
+            item('ski-clothes-underwear', 'Одежда (слои)', 'Бельё и носки повседневные', 'на ' + formatDays(days)),
+            item('ski-clothes-sleep', 'Одежда (слои)', 'Одежда или термобельё для сна', people + ' комплектов'),
+
+            item('ski-safety-back', 'Защита и безопасность', 'Защита спины или черепаха', 'по ситуации'),
+            item('ski-safety-sunglasses', 'Защита и безопасность', 'Солнцезащитные очки для города', people + ' шт.'),
+            item('ski-safety-whistle', 'Защита и безопасность', 'Свисток и правила поведения на склоне', '1 шт.'),
+
+            item('ski-hyg-toiletries', 'Гигиена и уход', 'Зубные щётки, паста, дезодорант', people + ' наборов'),
+            item('ski-hyg-sunscreen', 'Гигиена и уход', 'Крем SPF и бальзам для губ — горное солнце', people + ' шт.'),
+            item('ski-hyg-cream', 'Гигиена и уход', 'Питательный крем для лица и рук от мороза', '1 набор'),
+            item('ski-hyg-cosmetics', 'Гигиена и уход', 'Косметичка', '1 шт.'),
+            item('ski-hyg-feminine', 'Гигиена и уход', 'Средства личной гигиены', '1 запас'),
+
+            item('ski-aid-personal', 'Аптечка', 'Личные лекарства', 'по назначению'),
+            item('ski-aid-basic', 'Аптечка', 'Пластыри, антисептик, бинт', '1 набор'),
+            item('ski-aid-pain', 'Аптечка', 'Обезболивающее и противовоспалительное', '1 набор'),
+            item('ski-aid-cold', 'Аптечка', 'От простуды и боли в горле', '1 набор'),
+            item('ski-aid-bruise', 'Аптечка', 'Мазь от ушибов и эластичный бинт', '1 набор'),
+            item('ski-aid-blisters', 'Аптечка', 'Пластыри от мозолей — ботинки', '1 набор'),
+
+            item('ski-tech-charger', 'Техника и зарядки', 'Зарядки для телефонов', people + ' шт.'),
+            item('ski-tech-powerbank', 'Техника и зарядки', 'Пауэрбанк — на морозе садится быстрее', Math.max(1, adultCount) + ' шт.'),
+            item('ski-tech-action', 'Техника и зарядки', 'Экшн-камера и крепления', 'по желанию'),
+            item('ski-tech-headphones', 'Техника и зарядки', 'Наушники', people + ' шт.'),
+
+            item('ski-food-thermos', 'Еда и напитки', 'Термос с горячим питьём на склон', Math.max(1, Math.ceil(people / 2)) + ' шт.'),
+            item('ski-food-snacks', 'Еда и напитки', 'Перекусы и батончики в карман', people + ' порций/день'),
+            item('ski-food-water', 'Еда и напитки', 'Вода и изотоник', people + ' шт.'),
+
+            item('ski-apres-boots', 'Апрески и отдых', 'Тёплая обувь после склона', people + ' пар'),
+            item('ski-apres-swimwear', 'Апрески и отдых', 'Купальник для бассейна или спа', 'по ситуации'),
+            item('ski-apres-relax', 'Апрески и отдых', 'Книга, карты, настолка на вечер', '1 набор'),
+
+            item('ski-home-windows', 'Перед выходом из дома', 'Закрыть окна, воду, газ', '1 раз'),
+            item('ski-home-appliances', 'Перед выходом из дома', 'Выключить технику из розеток', '1 раз'),
+            item('ski-home-fridge', 'Перед выходом из дома', 'Убрать скоропорт, вынести мусор', '1 раз'),
+            item('ski-home-keys', 'Перед выходом из дома', 'Ключи и запасные доверенному', '1 раз'),
+            item('ski-home-plants-pets', 'Перед выходом из дома', 'Цветы и питомцы', 'по ситуации'),
+        ];
+
+        // Снаряжение: своё против проката.
+        if (ownGear) {
+            items.push(
+                item('ski-own-skis', 'Снаряжение', 'Лыжи или сноуборд', people + ' шт.'),
+                item('ski-own-boots', 'Снаряжение', 'Горнолыжные ботинки', people + ' пар'),
+                item('ski-own-poles', 'Снаряжение', 'Палки для лыж', 'по ситуации'),
+                item('ski-own-bag', 'Снаряжение', 'Чехол для лыж или борда и ботинок', people + ' шт.'),
+                item('ski-own-tuning', 'Снаряжение', 'Парафин, инструмент, ремнабор креплений', '1 набор'),
+            );
+        } else {
+            items.push(
+                item('ski-rent-book', 'Снаряжение', 'Забронировать прокат: ростовка, размер ноги, уровень', '1 раз'),
+                item('ski-rent-socks', 'Снаряжение', 'Свои носки и стельки для прокатных ботинок', people + ' комплектов'),
+                item('ski-rent-doc', 'Снаряжение', 'Документ или залог для проката', '1 комплект'),
+            );
+        }
+
+        // Жильё: апартаменты с кухней против отеля.
+        if (selfCatering) {
+            items.push(
+                item('ski-cook-groceries', 'Еда и напитки', 'Продукты на завтраки и ужины', '1 запас'),
+                item('ski-cook-basics', 'Еда и напитки', 'Чай, кофе, соль, масло', '1 набор'),
+                item('ski-cook-containers', 'Еда и напитки', 'Контейнеры и термокружки', '1 набор'),
+            );
+        } else {
+            items.push(item('ski-hotel-board', 'Еда и напитки', 'Уточнить питание в отеле и часы', '1 раз'));
+        }
+
+        if (hasChildren) {
+            items.push(
+                item('ski-child-thermal', 'Одежда (слои)', 'Детское термобельё и тёплые слои', childCount + ' комплектов'),
+                item('ski-child-helmet', 'Горнолыжная экипировка', 'Детский шлем и маска', childCount + ' шт.'),
+                item('ski-child-gloves', 'Горнолыжная экипировка', 'Детские варежки и грелки', childCount + ' пар'),
+                item('ski-child-snacks', 'Еда и напитки', 'Привычные перекусы и термос', childCount + ' набора'),
+                item('ski-child-meds', 'Аптечка', 'Детские лекарства по возрасту', '1 набор'),
+            );
+
+            if (under12Count > 0) {
+                items.push(item('ski-child-id', 'Дети на склоне', 'Браслет или карточка с телефоном взрослого', under12Count + ' шт.'));
+            }
+
+            if (babyCount > 0) {
+                items.push(
+                    item('ski-baby-warm', 'Одежда (слои)', 'Тёплый комбинезон, варежки, пинетки', babyCount + ' комплектов'),
+                    item('ski-baby-carrier', 'Дети на склоне', 'Переноска и тёплый конверт', '1 шт.'),
+                    item('ski-baby-diapers', 'Гигиена и уход', 'Подгузники и салфетки', babyCount + ' запас'),
+                    item('ski-baby-food', 'Еда и напитки', 'Питание и бутылочки', babyCount + ' запас'),
+                    item('ski-baby-care', 'Дети на склоне', 'Уточнить ясли или няню на курорте', 'по ситуации'),
+                );
+            }
+
+            if (preschoolCount > 0) {
+                items.push(
+                    item('ski-preschool-school', 'Дети на склоне', 'Детская горнолыжная школа или инструктор', 'по ситуации'),
+                    item('ski-preschool-harness', 'Дети на склоне', 'Страховочные вожжи и буксир для малыша', 'по ситуации'),
+                    item('ski-preschool-clothes', 'Одежда (слои)', 'Запасная сухая одежда', preschoolCount + ' комплекта'),
+                );
+            }
+
+            if (schoolCount > 0) {
+                items.push(
+                    item('ski-school-lessons', 'Дети на склоне', 'Группа или инструктор по уровню', 'по ситуации'),
+                    item('ski-school-calm', 'Апрески и отдых', 'Книги, планшет, игры на вечер', schoolCount + ' наборов'),
+                );
+            }
+
+            if (teenCount > 0) {
+                items.push(
+                    item('ski-teen-docs', 'Документы и ски-пассы', 'Копия документов и контакты взрослых', teenCount + ' комплектов'),
+                    item('ski-teen-power', 'Техника и зарядки', 'Личный кабель и пауэрбанк', teenCount + ' наборов'),
+                    item('ski-teen-plan', 'Защита и безопасность', 'Точки встречи на склоне и правила связи', '1 план'),
+                );
+            }
+        }
+
+        // Дневная температура на склоне.
+        if (dayBand === 'hot') {
+            items.push(item('ski-hot-spring', 'Одежда (слои)', 'Лёгкий слой и крепкий SPF для тёплого склона', people + ' комплектов'));
+        } else if (dayBand === 'cool') {
+            items.push(item('ski-cool-light', 'Одежда (слои)', 'Лёгкая куртка и тонкий флис для тёплого дня', people + ' шт.'));
+        } else if (dayBand === 'cold') {
+            items.push(
+                item('ski-cold-extra', 'Одежда (слои)', 'Дополнительный тёплый слой и грелки', people + ' комплектов'),
+                item('ski-cold-facemask', 'Защита и безопасность', 'Маска для лица от мороза и ветра', people + ' шт.'),
+            );
+        }
+
+        // Ночная температура — сон в номере или апартаментах.
+        if (nightBand === 'warm') {
+            items.push(item('ski-night-warm', 'Одежда (слои)', 'Лёгкая одежда для сна', people + ' комплектов'));
+        } else if (nightBand === 'cool') {
+            items.push(item('ski-night-cool', 'Одежда (слои)', 'Тёплая пижама', people + ' комплектов'));
+        } else if (nightBand === 'cold') {
+            items.push(item('ski-night-cold', 'Одежда (слои)', 'Тёплая пижама и носки', people + ' комплектов'));
+        }
+
+        // При 0 ночей (катание одним днём) проживание и кухня не нужны.
+        const overnightOnly = new Set([
+            'ski-docs-booking', 'ski-clothes-sleep', 'ski-hotel-board',
+            'ski-cook-groceries', 'ski-cook-basics', 'ski-cook-containers',
+            'ski-apres-swimwear',
+            'ski-night-warm', 'ski-night-cool', 'ski-night-cold',
+        ]);
+        const finalItems = overnight ? items : items.filter((entry) => !overnightOnly.has(entry.id));
+        return {
+            id: SKI_PRESET_ID,
+            title: SKI_PRESET_TITLE,
+            audienceLabel: adultCount + ' ' + pluralPeople(adultCount, 'взрослый', 'взрослых', 'взрослых')
+                + (childCount > 0
+                    ? ' · ' + childCount + ' ' + pluralPeople(childCount, 'ребёнок', 'ребёнка', 'детей') + ' (' + childAgesSummary(ages) + ')'
+                    : ''),
+            childAges: ages,
+            dayTemp: safeDayTemp,
+            nightTemp: safeNightTemp,
+            ownGear,
+            selfCatering,
+            nights,
+            nightsLabel: formatNightsLabel(nights),
+            tempLabel: formatTempSummary(safeDayTemp, safeNightTemp),
+            utilityLabel: formatSkiUtilitySummary(ownGear, selfCatering),
+            items: finalItems.map((entry, index) => ({ ...entry, order: index })),
+        };
+    }
+
+    function normalizeBusinessOptions(options) {
+        const source = options && typeof options === 'object' ? options : {};
+        return {
+            transport: normalizeTransport(source),
+            hasEvent: source.hasEvent === true,
+        };
+    }
+
+    function formatBusinessUtilitySummary(transport, hasEvent) {
+        return formatTransportLabel(transport)
+            + ' · '
+            + (hasEvent ? 'с мероприятием' : 'встречи');
+    }
+
+    function buildBusinessChecklistPreset(adults, children, childAges, dayTemp, nightTemp, options) {
+        const adultCount = clampCount(adults, 1, 12);
+        const childCount = clampCount(children, 0, 12);
+        const ages = normalizeChildAges(childCount, childAges);
+        const opts = normalizeBusinessOptions(options);
+        const transport = opts.transport;
+        const hasEvent = opts.hasEvent;
+        const people = adultCount + childCount;
+        const hasChildren = childCount > 0;
+        const babyCount = countChildAges(ages, 0, 2);
+        const teenCount = countChildAges(ages, 13, 17);
+        const under12Count = countChildAges(ages, 0, 12);
+        const safeDayTemp = clampDayTemp(dayTemp);
+        const safeNightTemp = clampNightTemp(nightTemp);
+        const dayBand = getDayTempBand(safeDayTemp);
+        const nightBand = getNightTempBand(safeNightTemp);
+        const nights = resolveNights(options);
+        const overnight = nights > 0;
+        const days = nights + 1;
+        const items = [
+            item('biz-docs-id', 'Документы и поездка', 'Паспорт или документы', people + ' шт.'),
+            item('biz-docs-tickets', 'Документы и поездка', 'Билеты и маршрут', '1 комплект'),
+            item('biz-docs-booking', 'Документы и поездка', 'Бронь отеля и трансфера', '1 подтверждение'),
+            item('biz-docs-orders', 'Документы и поездка', 'Командировочное, приказ, служебное задание', '1 комплект'),
+            item('biz-docs-reports', 'Документы и поездка', 'Бланки отчётности и на что собирать чеки', '1 набор'),
+            item('biz-docs-cards', 'Документы и поездка', 'Визитки', '1 запас'),
+            item('biz-docs-contacts', 'Документы и поездка', 'Список контактов и адреса встреч', '1 шт.'),
+
+            item('biz-work-laptop', 'Работа и техника', 'Ноутбук и зарядка', '1 шт.'),
+            item('biz-work-charger', 'Работа и техника', 'Зарядки для телефона и адаптер', '1 набор'),
+            item('biz-work-powerbank', 'Работа и техника', 'Пауэрбанк', Math.max(1, adultCount) + ' шт.'),
+            item('biz-work-adapter', 'Работа и техника', 'Переходник на местные розетки', '1 шт.'),
+            item('biz-work-peripherals', 'Работа и техника', 'Мышь и наушники для звонков', '1 набор'),
+            item('biz-work-cables', 'Работа и техника', 'Кабели, флешка, переходник HDMI', '1 набор'),
+            item('biz-work-notebook', 'Работа и техника', 'Блокнот и ручки', '1 набор'),
+            item('biz-work-files', 'Работа и техника', 'Доступ к рабочим файлам офлайн', '1 раз'),
+
+            item('biz-clothes-suit', 'Одежда', 'Деловой костюм или комплект', people + ' комплектов'),
+            item('biz-clothes-shirts', 'Одежда', 'Рубашки или блузки по числу дней', 'на ' + formatDays(days)),
+            item('biz-clothes-shoes', 'Одежда', 'Туфли и сменная пара', people + ' пар'),
+            item('biz-clothes-casual', 'Одежда', 'Повседневная одежда на вечер', people + ' комплектов'),
+            item('biz-clothes-underwear', 'Одежда', 'Бельё и носки', 'на ' + formatDays(days)),
+            item('biz-clothes-accessories', 'Одежда', 'Ремень, галстук, аксессуары', '1 набор'),
+            item('biz-clothes-iron', 'Одежда', 'Уточнить утюг или отпариватель в отеле', '1 раз'),
+
+            item('biz-money-cash', 'Деньги и связь', 'Наличные и банковские карты', '1 запас'),
+            item('biz-money-corporate', 'Деньги и связь', 'Корпоративная карта и лимиты', 'по ситуации'),
+            item('biz-money-sim', 'Деньги и связь', 'SIM, eSIM или роуминг', Math.max(1, adultCount) + ' шт.'),
+
+            item('biz-hyg-toiletries', 'Гигиена и уход', 'Зубная щётка, паста, дезодорант', people + ' наборов'),
+            item('biz-hyg-cosmetics', 'Гигиена и уход', 'Косметичка и уход', '1 шт.'),
+            item('biz-hyg-shaver', 'Гигиена и уход', 'Бритва или станки', 'по ситуации'),
+            item('biz-hyg-perfume', 'Гигиена и уход', 'Парфюм', 'по желанию'),
+
+            item('biz-aid-personal', 'Аптечка', 'Личные лекарства', 'по назначению'),
+            item('biz-aid-basic', 'Аптечка', 'Пластыри и антисептик', '1 набор'),
+            item('biz-aid-pain', 'Аптечка', 'Обезболивающее и от головы', '1 набор'),
+            item('biz-aid-stomach', 'Аптечка', 'От ЖКТ и изжоги', '1 набор'),
+            item('biz-aid-tonus', 'Аптечка', 'Витамины или что помогает держать тонус', 'по ситуации'),
+
+            item('biz-food-snacks', 'Еда и тонус', 'Перекусы и батончики между встречами', people + ' порций/день'),
+            item('biz-food-water', 'Еда и тонус', 'Вода, кофе или чай', '1 набор'),
+            item('biz-food-gum', 'Еда и тонус', 'Жвачка или мятные конфеты', '1 запас'),
+
+            item('biz-stay-checkin', 'Заселение и быт', 'Уточнить ранний заезд и поздний выезд', 'по ситуации'),
+            item('biz-stay-wifi', 'Заселение и быт', 'Уточнить Wi-Fi и рабочее место в отеле', '1 раз'),
+            item('biz-stay-laundry', 'Заселение и быт', 'Уточнить прачечную или химчистку', 'по ситуации'),
+            item('biz-stay-card', 'Заселение и быт', 'Визитка отеля с адресом', '1 шт.'),
+
+            item('biz-home-windows', 'Перед выходом из дома', 'Закрыть окна, воду, газ', '1 раз'),
+            item('biz-home-appliances', 'Перед выходом из дома', 'Выключить технику из розеток', '1 раз'),
+            item('biz-home-fridge', 'Перед выходом из дома', 'Убрать скоропорт, вынести мусор', '1 раз'),
+            item('biz-home-keys', 'Перед выходом из дома', 'Ключи и запасные доверенному', '1 раз'),
+            item('biz-home-plants-pets', 'Перед выходом из дома', 'Цветы и питомцы', 'по ситуации'),
+        ];
+
+        // Мероприятие: выставка или доклад против обычных встреч.
+        if (hasEvent) {
+            items.push(
+                item('biz-event-materials', 'Работа и техника', 'Презентация и раздаточные материалы', '1 комплект'),
+                item('biz-event-clicker', 'Работа и техника', 'Презентер, указка, удлинитель', '1 набор'),
+                item('biz-event-samples', 'Работа и техника', 'Образцы, стенд, промо', 'по ситуации'),
+                item('biz-event-badge', 'Документы и поездка', 'Бейдж и регистрация на мероприятие', people + ' шт.'),
+                item('biz-event-formal', 'Одежда', 'Парадный деловой образ для сцены', people + ' комплектов'),
+            );
+        } else {
+            items.push(item('biz-meet-agenda', 'Работа и техника', 'Повестка и материалы встреч', '1 набор'));
+        }
+
+        // Транспорт: самолёт / поезд / машина.
+        if (transport === 'plane') {
+            items.push(
+                item('biz-fly-boarding', 'Документы и поездка', 'Онлайн-регистрация и посадочные', people + ' шт.'),
+                item('biz-fly-carryon', 'Документы и поездка', 'Ручная кладь: ноут, документы, зарядка', people + ' шт.'),
+                item('biz-fly-liquids', 'Гигиена и уход', 'Жидкости до 100 мл в прозрачном пакете', '1 набор'),
+                item('biz-fly-comfort', 'Еда и тонус', 'Подушка для шеи, маска, беруши', people + ' наборов'),
+            );
+        } else if (transport === 'train') {
+            items.push(
+                item('biz-train-tickets', 'Документы и поездка', 'Билеты на поезд и места', people + ' шт.'),
+                item('biz-train-comfort', 'Еда и тонус', 'Тапки, плед, перекус в поезд', people + ' наборов'),
+                item('biz-train-work', 'Работа и техника', 'Наушники и блокнот для работы в дороге', '1 набор'),
+            );
+        } else {
+            items.push(
+                item('biz-car-docs', 'Документы и поездка', 'Права, СТС, страховка', '1 комплект'),
+                item('biz-car-charger', 'Работа и техника', 'Автозарядка и держатель телефона', '1 шт.'),
+                item('biz-car-comfort', 'Еда и тонус', 'Перекусы, вода, аудиокниги в дорогу', '1 набор'),
+                item('biz-car-park', 'Заселение и быт', 'Уточнить парковку у отеля и места встреч', '1 раз'),
+            );
+        }
+
+        if (hasChildren) {
+            items.push(
+                item('biz-child-care', 'Заселение и быт', 'Договориться, кто с детьми в рабочее время', '1 раз'),
+                item('biz-child-clothes', 'Дети', 'Детская одежда и обувь по числу дней', childCount + ' наборов'),
+                item('biz-child-snacks', 'Дети', 'Перекусы, вода, занятия в дорогу', childCount + ' набора'),
+                item('biz-child-meds', 'Аптечка', 'Детские лекарства по возрасту', '1 набор'),
+            );
+
+            if (under12Count > 0) {
+                items.push(item('biz-child-id', 'Дети', 'Браслет или карточка с телефоном взрослого', under12Count + ' шт.'));
+            }
+
+            if (babyCount > 0) {
+                items.push(
+                    item('biz-baby-kit', 'Дети', 'Подгузники, питание, салфетки', babyCount + ' запас'),
+                    item('biz-baby-stroller', 'Дети', 'Коляска или переноска', '1 шт.'),
+                );
+            }
+
+            if (teenCount > 0) {
+                items.push(item('biz-teen-power', 'Работа и техника', 'Личный кабель и пауэрбанк подростка', teenCount + ' наборов'));
+            }
+        }
+
+        // Дневная температура — деловой город.
+        if (dayBand === 'hot') {
+            items.push(
+                item('biz-heat-light', 'Одежда', 'Лёгкие дышащие рубашки', people + ' комплектов'),
+                item('biz-heat-water', 'Гигиена и уход', 'Вода и салфетки от пота', '1 набор'),
+            );
+        } else if (dayBand === 'cool') {
+            items.push(item('biz-cool-coat', 'Одежда', 'Плащ или лёгкое пальто на день', people + ' шт.'));
+        } else if (dayBand === 'cold') {
+            items.push(
+                item('biz-cold-coat', 'Одежда', 'Тёплое пальто и шарф', people + ' шт.'),
+                item('biz-cold-warm', 'Одежда', 'Перчатки и тёплая обувь', people + ' комплектов'),
+            );
+        }
+
+        // Ночная температура — одежда для сна.
+        if (nightBand === 'warm') {
+            items.push(item('biz-night-warm', 'Одежда', 'Лёгкая одежда для сна', people + ' комплектов'));
+        } else if (nightBand === 'cool') {
+            items.push(item('biz-night-cool', 'Одежда', 'Тёплая пижама', people + ' комплектов'));
+        } else if (nightBand === 'cold') {
+            items.push(item('biz-night-cold', 'Одежда', 'Тёплая пижама и носки', people + ' комплектов'));
+        }
+
+        // При 0 ночей (однодневная поездка на встречи) проживание не нужно.
+        const overnightOnly = new Set([
+            'biz-docs-booking', 'biz-clothes-iron',
+            'biz-stay-checkin', 'biz-stay-wifi', 'biz-stay-laundry', 'biz-stay-card',
+            'biz-night-warm', 'biz-night-cool', 'biz-night-cold',
+        ]);
+        const finalItems = overnight ? items : items.filter((entry) => !overnightOnly.has(entry.id));
+        return {
+            id: BUSINESS_PRESET_ID,
+            title: BUSINESS_PRESET_TITLE,
+            audienceLabel: adultCount + ' ' + pluralPeople(adultCount, 'взрослый', 'взрослых', 'взрослых')
+                + (childCount > 0
+                    ? ' · ' + childCount + ' ' + pluralPeople(childCount, 'ребёнок', 'ребёнка', 'детей') + ' (' + childAgesSummary(ages) + ')'
+                    : ''),
+            childAges: ages,
+            dayTemp: safeDayTemp,
+            nightTemp: safeNightTemp,
+            transport,
+            hasEvent,
+            nights,
+            nightsLabel: formatNightsLabel(nights),
+            tempLabel: formatTempSummary(safeDayTemp, safeNightTemp),
+            utilityLabel: formatBusinessUtilitySummary(transport, hasEvent),
+            items: finalItems.map((entry, index) => ({ ...entry, order: index })),
+        };
+    }
+
+    function normalizeDachaOptions(options) {
+        const source = options && typeof options === 'object' ? options : {};
+        const overnight = source.overnight !== false;
+        return {
+            overnight,
+            bbq: source.bbq === true,
+            garden: source.garden === true,
+            banya: source.banya === true,
+            nights: overnight ? resolveNights(source) : 0,
+        };
+    }
+
+    function formatDachaUtilitySummary(bbq, garden, banya) {
+        return (bbq ? 'шашлык' : 'без барбекю')
+            + ' · '
+            + (garden ? 'огород' : 'только отдых')
+            + (banya ? ' · баня' : '');
+    }
+
+    function buildDachaChecklistPreset(adults, children, childAges, dayTemp, nightTemp, options) {
+        const adultCount = clampCount(adults, 1, 12);
+        const childCount = clampCount(children, 0, 12);
+        const ages = normalizeChildAges(childCount, childAges);
+        const dachaOptions = normalizeDachaOptions(options);
+        const bbq = dachaOptions.bbq;
+        const garden = dachaOptions.garden;
+        const banya = dachaOptions.banya;
+        const people = adultCount + childCount;
+        const hasChildren = childCount > 0;
+        const babyCount = countChildAges(ages, 0, 2);
+        const preschoolCount = countChildAges(ages, 3, 6);
+        const schoolCount = countChildAges(ages, 7, 12);
+        const teenCount = countChildAges(ages, 13, 17);
+        const under12Count = babyCount + preschoolCount + schoolCount;
+        const safeDayTemp = clampDayTemp(dayTemp);
+        const safeNightTemp = clampNightTemp(nightTemp);
+        const dayBand = getDayTempBand(safeDayTemp);
+        const nightBand = getNightTempBand(safeNightTemp);
+        const nights = dachaOptions.nights;
+        const overnight = nights > 0;
+        const days = nights + 1;
+        const items = [
+            item('dacha-docs-keys', 'Документы и деньги', 'Ключи от дома, ворот, бытовок', '1 комплект'),
+            item('dacha-docs-car', 'Документы и деньги', 'Документы на машину', '1 комплект'),
+            item('dacha-docs-cash', 'Документы и деньги', 'Наличные на рынок и продукты', '1 запас'),
+            item('dacha-docs-phone', 'Документы и деньги', 'Телефоны соседей и аварийных служб', '1 шт.'),
+
+            item('dacha-food-groceries', 'Еда и продукты', 'Продукты на все приёмы пищи', '1 запас'),
+            item('dacha-food-water', 'Еда и продукты', 'Питьевая вода, если нет на участке', Math.max(3, people * 2) + ' л'),
+            item('dacha-food-drinks', 'Еда и продукты', 'Напитки, чай, кофе', '1 набор'),
+            item('dacha-food-snacks', 'Еда и продукты', 'Перекусы', people + ' порций/день'),
+            item('dacha-food-bread', 'Еда и продукты', 'Хлеб и базовые продукты', '1 набор'),
+
+            item('dacha-kit-dishes', 'Кухня и быт', 'Посуда, приборы, кружки', people + ' наборов'),
+            item('dacha-kit-wash', 'Кухня и быт', 'Средство для посуды, губки', '1 набор'),
+            item('dacha-kit-foil', 'Кухня и быт', 'Фольга, плёнка, пакеты, контейнеры', '1 набор'),
+            item('dacha-kit-trash', 'Кухня и быт', 'Мусорные пакеты', '1 рулон'),
+            item('dacha-kit-towels', 'Кухня и быт', 'Кухонные и хозяйственные полотенца', '1 набор'),
+
+            item('dacha-clothes-casual', 'Одежда', 'Удобная одежда по погоде', 'на ' + formatDays(days)),
+            item('dacha-clothes-work', 'Одежда', 'Рабочая одежда для участка', people + ' комплектов'),
+            item('dacha-clothes-hat', 'Одежда', 'Головной убор от солнца', people + ' шт.'),
+            item('dacha-clothes-rain', 'Одежда', 'Дождевик или зонт', Math.max(1, Math.ceil(people / 2)) + ' шт.'),
+            item('dacha-clothes-warm', 'Одежда', 'Тёплая кофта на вечер', people + ' шт.'),
+
+            item('dacha-shoes-boots', 'Обувь', 'Резиновые сапоги или галоши', people + ' пар'),
+            item('dacha-shoes-comfort', 'Обувь', 'Удобная обувь и тапки', people + ' пар'),
+
+            item('dacha-hyg-toiletries', 'Гигиена', 'Зубные щётки, паста, мыло', people + ' наборов'),
+            item('dacha-hyg-tp', 'Гигиена', 'Туалетная бумага и салфетки', '1 запас'),
+            item('dacha-hyg-towels', 'Гигиена', 'Полотенца', people + ' шт.'),
+            item('dacha-hyg-hand', 'Гигиена', 'Антисептик и влажные салфетки', '1 набор'),
+            item('dacha-hyg-repellent', 'Гигиена', 'Спрей от комаров и мошки', '1 шт.'),
+
+            item('dacha-aid-personal', 'Аптечка', 'Личные лекарства', 'по назначению'),
+            item('dacha-aid-basic', 'Аптечка', 'Пластыри, антисептик, бинт, зелёнка', '1 набор'),
+            item('dacha-aid-pain', 'Аптечка', 'Обезболивающее и жаропонижающее', '1 набор'),
+            item('dacha-aid-allergy', 'Аптечка', 'Антигистаминное — укусы, цветение', '1 упаковка'),
+            item('dacha-aid-bite', 'Аптечка', 'Средство после укусов и ожогов крапивы', '1 шт.'),
+            item('dacha-aid-tick', 'Аптечка', 'Клещ-щипцы и инструкция при укусе клеща', '1 набор'),
+
+            item('dacha-garden-tools', 'Сад и участок', 'Садовый инвентарь по плану работ', 'по ситуации'),
+            item('dacha-garden-gloves', 'Сад и участок', 'Рабочие перчатки', people + ' пар'),
+            item('dacha-garden-seeds', 'Сад и участок', 'Семена, рассада, удобрения', 'по ситуации'),
+            item('dacha-garden-water', 'Сад и участок', 'Шланг, лейка — проверить полив', 'по ситуации'),
+            item('dacha-garden-trash', 'Сад и участок', 'Мешки для травы и мусора', '1 рулон'),
+
+            item('dacha-fun-games', 'Дети и досуг', 'Мяч, бадминтон, настолки', '1 набор'),
+            item('dacha-fun-book', 'Дети и досуг', 'Книга или журнал', '1–2 шт.'),
+            item('dacha-fun-hammock', 'Дети и досуг', 'Гамак или шезлонг', 'по желанию'),
+
+            item('dacha-tech-charger', 'Техника', 'Зарядки и пауэрбанк', Math.max(1, adultCount) + ' шт.'),
+            item('dacha-tech-light', 'Техника', 'Фонарь и запасные батарейки', '1 набор'),
+            item('dacha-tech-ext', 'Техника', 'Удлинитель и тройник', '1 шт.'),
+
+            item('dacha-home-windows', 'Перед выходом из дома', 'Закрыть окна, воду, газ в городской квартире', '1 раз'),
+            item('dacha-home-appliances', 'Перед выходом из дома', 'Выключить технику из розеток', '1 раз'),
+            item('dacha-home-fridge', 'Перед выходом из дома', 'Убрать скоропорт, вынести мусор', '1 раз'),
+            item('dacha-home-keys', 'Перед выходом из дома', 'Ключи и запасные доверенному', '1 раз'),
+            item('dacha-home-pets', 'Перед выходом из дома', 'Питомцы и комнатные цветы', 'по ситуации'),
+        ];
+
+        // Ночёвка: с ночёвкой против поездки на день.
+        if (overnight) {
+            items.push(
+                item('dacha-sleep-bedding', 'Спальное', 'Постельное бельё или спальники', people + ' комплектов'),
+                item('dacha-sleep-pillow', 'Спальное', 'Подушки и пледы', people + ' шт.'),
+                item('dacha-sleep-pajamas', 'Спальное', 'Пижама или одежда для сна', people + ' комплектов'),
+                item('dacha-sleep-night', 'Спальное', 'Ночник или фонарь у кровати', '1 шт.'),
+            );
+        } else {
+            items.push(item('dacha-day-plan', 'Документы и деньги', 'Спланировать выезд засветло', '1 раз'));
+        }
+
+        // Барбекю: шашлык и костёр против обычного выезда.
+        if (bbq) {
+            items.push(
+                item('dacha-bbq-grill', 'Барбекю и костёр', 'Мангал или гриль', '1 шт.'),
+                item('dacha-bbq-coal', 'Барбекю и костёр', 'Уголь и розжиг', '1 запас'),
+                item('dacha-bbq-skewers', 'Барбекю и костёр', 'Шампуры или решётка', '1 набор'),
+                item('dacha-bbq-meat', 'Барбекю и костёр', 'Мясо, овощи и маринад', '1 запас'),
+                item('dacha-bbq-tools', 'Барбекю и костёр', 'Щипцы, нож, разделочная доска', '1 набор'),
+                item('dacha-bbq-fire', 'Барбекю и костёр', 'Спички, зажигалка, средство для розжига', '1 набор'),
+                item('dacha-bbq-extinguish', 'Барбекю и костёр', 'Вода или песок рядом для тушения', '1 раз'),
+            );
+        }
+
+        // Баня — отдельный блок банных принадлежностей.
+        if (banya) {
+            items.push(
+                item('dacha-banya-brooms', 'Баня', 'Веники: берёзовый, дубовый', '2–3 шт.'),
+                item('dacha-banya-hat', 'Баня', 'Банная шапка и рукавицы', people + ' наборов'),
+                item('dacha-banya-sheet', 'Баня', 'Простыня или парео для парной', people + ' шт.'),
+                item('dacha-banya-slippers', 'Баня', 'Резиновые тапки для бани', people + ' пар'),
+                item('dacha-banya-wash', 'Баня', 'Мочалка, мыло, шампунь', '1 набор'),
+                item('dacha-banya-drink', 'Баня', 'Травяной чай, квас или вода после парной', '1 запас'),
+                item('dacha-banya-firewood', 'Баня', 'Дрова и розжиг для печи', 'по ситуации'),
+            );
+        }
+
+        if (hasChildren) {
+            items.push(
+                item('dacha-child-clothes', 'Одежда', 'Детская сменная одежда и обувь', childCount + ' наборов'),
+                item('dacha-child-sun', 'Гигиена', 'Детский SPF, панама, репеллент', '1 набор'),
+                item('dacha-child-snacks', 'Еда и продукты', 'Привычные детские перекусы', childCount + ' набора'),
+                item('dacha-child-meds', 'Аптечка', 'Детские лекарства по возрасту', '1 набор'),
+                item('dacha-child-toys', 'Дети и досуг', 'Игрушки для улицы и песочницы', '1 набор'),
+            );
+
+            if (under12Count > 0) {
+                items.push(item('dacha-child-id', 'Дети и досуг', 'Браслет или карточка с телефоном взрослого', under12Count + ' шт.'));
+            }
+
+            if (babyCount > 0) {
+                items.push(
+                    item('dacha-baby-diapers', 'Гигиена', 'Подгузники и салфетки', babyCount + ' запас'),
+                    item('dacha-baby-food', 'Еда и продукты', 'Питание и бутылочки', babyCount + ' запас'),
+                    item('dacha-baby-bed', 'Спальное', 'Кроватка, манеж или бортики', '1 шт.'),
+                    item('dacha-baby-net', 'Дети и досуг', 'Москитная сетка на кроватку или коляску', '1 шт.'),
+                );
+            }
+
+            if (preschoolCount > 0) {
+                items.push(
+                    item('dacha-preschool-potty', 'Гигиена', 'Горшок', '1 шт.'),
+                    item('dacha-preschool-clothes', 'Одежда', 'Запасная сухая одежда', preschoolCount + ' комплекта'),
+                );
+            }
+
+            if (schoolCount > 0) {
+                items.push(item('dacha-school-bike', 'Дети и досуг', 'Велосипед, самокат, защита', schoolCount + ' наборов'));
+            }
+
+            if (teenCount > 0) {
+                items.push(item('dacha-teen-power', 'Техника', 'Личный кабель и пауэрбанк подростка', teenCount + ' наборов'));
+            }
+        }
+
+        // Дневная температура.
+        if (dayBand === 'hot') {
+            items.push(
+                item('dacha-heat-water', 'Еда и продукты', 'Дополнительная вода на жару', Math.max(3, people * 2) + ' л'),
+                item('dacha-heat-sun', 'Гигиена', 'Крем SPF и навес или зонт', '1 набор'),
+            );
+        } else if (dayBand === 'cool') {
+            items.push(item('dacha-cool-layer', 'Одежда', 'Тёплая кофта и штаны на день', people + ' комплектов'));
+        } else if (dayBand === 'cold') {
+            items.push(
+                item('dacha-cold-jacket', 'Одежда', 'Утеплённая куртка', people + ' шт.'),
+                item('dacha-cold-heat', 'Техника', 'Обогреватель или дрова для печи', 'по ситуации'),
+            );
+        }
+
+        // Ночная температура — только при ночёвке (для выезда на день сон не нужен).
+        if (overnight) {
+            if (nightBand === 'warm') {
+                items.push(item('dacha-night-warm', 'Спальное', 'Лёгкое одеяло и средство от комаров на ночь', '1 набор'));
+            } else if (nightBand === 'cool') {
+                items.push(item('dacha-night-cool', 'Спальное', 'Тёплое одеяло и носки', people + ' комплектов'));
+            } else if (nightBand === 'cold') {
+                items.push(item('dacha-night-cold', 'Спальное', 'Тёплые одеяла, обогреватель, грелка', people + ' комплектов'));
+            }
+        }
+
+        // Спальное и ночной блок уже под if(overnight); при 0 ночей убираем и кроватку.
+        // Без работ в огороде прячем блок «Сад и участок».
+        const overnightOnly = new Set(['dacha-baby-bed']);
+        const gardenOnly = new Set([
+            'dacha-garden-tools', 'dacha-garden-gloves', 'dacha-garden-seeds', 'dacha-garden-water', 'dacha-garden-trash',
+        ]);
+        const finalItems = items.filter((entry) => {
+            if (!overnight && overnightOnly.has(entry.id)) return false;
+            if (!garden && gardenOnly.has(entry.id)) return false;
+            return true;
+        });
+        return {
+            id: DACHA_PRESET_ID,
+            title: DACHA_PRESET_TITLE,
+            audienceLabel: adultCount + ' ' + pluralPeople(adultCount, 'взрослый', 'взрослых', 'взрослых')
+                + (childCount > 0
+                    ? ' · ' + childCount + ' ' + pluralPeople(childCount, 'ребёнок', 'ребёнка', 'детей') + ' (' + childAgesSummary(ages) + ')'
+                    : ''),
+            childAges: ages,
+            dayTemp: safeDayTemp,
+            nightTemp: safeNightTemp,
+            overnight,
+            bbq,
+            garden,
+            banya,
+            nights,
+            nightsLabel: formatNightsLabel(nights),
+            tempLabel: formatTempSummary(safeDayTemp, safeNightTemp),
+            utilityLabel: formatDachaUtilitySummary(bbq, garden, banya),
+            items: finalItems.map((entry, index) => ({ ...entry, order: index })),
+        };
+    }
+
+    function normalizeAbroadOptions(options) {
+        const source = options && typeof options === 'object' ? options : {};
+        return {
+            visaRequired: source.visaRequired === true,
+            beachTrip: source.beachTrip === true,
+        };
+    }
+
+    function formatAbroadUtilitySummary(visaRequired, beachTrip) {
+        return (visaRequired ? 'нужна виза' : 'безвиз')
+            + ' · '
+            + (beachTrip ? 'пляж' : 'город');
+    }
+
+    function buildAbroadChecklistPreset(adults, children, childAges, dayTemp, nightTemp, options) {
+        const adultCount = clampCount(adults, 1, 12);
+        const childCount = clampCount(children, 0, 12);
+        const ages = normalizeChildAges(childCount, childAges);
+        const opts = normalizeAbroadOptions(options);
+        const visaRequired = opts.visaRequired;
+        const beachTrip = opts.beachTrip;
+        const people = adultCount + childCount;
+        const hasChildren = childCount > 0;
+        const babyCount = countChildAges(ages, 0, 2);
+        const preschoolCount = countChildAges(ages, 3, 6);
+        const schoolCount = countChildAges(ages, 7, 12);
+        const teenCount = countChildAges(ages, 13, 17);
+        const under12Count = babyCount + preschoolCount + schoolCount;
+        const safeDayTemp = clampDayTemp(dayTemp);
+        const safeNightTemp = clampNightTemp(nightTemp);
+        const dayBand = getDayTempBand(safeDayTemp);
+        const nightBand = getNightTempBand(safeNightTemp);
+        const nights = resolveNights(options);
+        const overnight = nights > 0;
+        const days = nights + 1;
+        const items = [
+            item('abroad-docs-passport', 'Документы и виза', 'Загранпаспорт — срок действия 6+ месяцев', people + ' шт.'),
+            item('abroad-docs-tickets', 'Документы и виза', 'Авиабилеты туда-обратно', '1 комплект'),
+            item('abroad-docs-booking', 'Документы и виза', 'Бронь отеля и подтверждения', '1 комплект'),
+            item('abroad-docs-copies', 'Документы и виза', 'Копии и фото документов в облаке', '1 комплект'),
+            item('abroad-docs-internal', 'Документы и виза', 'Внутренний паспорт и права', people + ' шт.'),
+            item('abroad-docs-itinerary', 'Документы и виза', 'Маршрут, адреса, обратный билет на руках', '1 шт.'),
+
+            item('abroad-money-currency', 'Деньги и связь', 'Местная валюта и немного наличных', '1 запас'),
+            item('abroad-money-cards', 'Деньги и связь', 'Карты, работающие за границей', '1 набор'),
+            item('abroad-money-esim', 'Деньги и связь', 'eSIM или местная SIM, роуминг', Math.max(1, adultCount) + ' шт.'),
+            item('abroad-money-apps', 'Деньги и связь', 'Офлайн-переводчик и карты', '1 набор'),
+            item('abroad-money-notify', 'Деньги и связь', 'Предупредить банк о поездке', '1 раз'),
+
+            item('abroad-health-insurance', 'Здоровье и страховка', 'Медстраховка с зарубежным покрытием', people + ' шт.'),
+            item('abroad-health-vaccines', 'Здоровье и страховка', 'Прививки и справки по требованиям страны', 'по ситуации'),
+            item('abroad-health-rx', 'Здоровье и страховка', 'Рецепты на латинице для своих лекарств', 'по ситуации'),
+
+            item('abroad-clothes-day', 'Одежда', 'Одежда по погоде и числу дней', 'на ' + formatDays(days)),
+            item('abroad-clothes-underwear', 'Одежда', 'Бельё и носки', 'на ' + formatDays(days)),
+            item('abroad-clothes-sleep', 'Одежда', 'Пижама или одежда для сна', people + ' комплектов'),
+            item('abroad-clothes-evening', 'Одежда', 'Наряд на вечер', people + ' комплектов'),
+            item('abroad-clothes-layer', 'Одежда', 'Кофта или ветровка', people + ' шт.'),
+            item('abroad-clothes-rain', 'Одежда', 'Дождевик или зонт', Math.max(1, Math.ceil(people / 2)) + ' шт.'),
+
+            item('abroad-shoes-walk', 'Обувь', 'Удобная обувь для ходьбы', people + ' пар'),
+            item('abroad-shoes-evening', 'Обувь', 'Обувь под вечерний образ', people + ' пар'),
+
+            item('abroad-hyg-toiletries', 'Гигиена и косметика', 'Зубные щётки, паста, дезодорант', people + ' наборов'),
+            item('abroad-hyg-cosmetics', 'Гигиена и косметика', 'Косметичка', '1 шт.'),
+            item('abroad-hyg-feminine', 'Гигиена и косметика', 'Средства личной гигиены', '1 запас'),
+            item('abroad-hyg-mini', 'Гигиена и косметика', 'Мини-форматы средств на первые дни', '1 набор'),
+
+            item('abroad-aid-personal', 'Аптечка', 'Личные лекарства с запасом', 'по назначению'),
+            item('abroad-aid-basic', 'Аптечка', 'Пластыри, антисептик, бинт', '1 набор'),
+            item('abroad-aid-pain', 'Аптечка', 'Обезболивающее и жаропонижающее', '1 набор'),
+            item('abroad-aid-gastro', 'Аптечка', 'От ЖКТ, отравлений, регидратация', '1 набор'),
+            item('abroad-aid-allergy', 'Аптечка', 'Антигистаминное', '1 упаковка'),
+            item('abroad-aid-motion', 'Аптечка', 'От укачивания', 'по ситуации'),
+
+            item('abroad-tech-charger', 'Техника и зарядки', 'Зарядки для телефонов', people + ' шт.'),
+            item('abroad-tech-adapter', 'Техника и зарядки', 'Переходник на розетки страны', '1–2 шт.'),
+            item('abroad-tech-powerbank', 'Техника и зарядки', 'Пауэрбанк до 100 Втч в ручную кладь', Math.max(1, adultCount) + ' шт.'),
+            item('abroad-tech-headphones', 'Техника и зарядки', 'Наушники', people + ' шт.'),
+            item('abroad-tech-camera', 'Техника и зарядки', 'Камера', 'по желанию'),
+
+            item('abroad-city-daybag', 'Город и экскурсии', 'Рюкзак или сумка на день', Math.max(1, adultCount) + ' шт.'),
+            item('abroad-city-bottle', 'Город и экскурсии', 'Многоразовая бутылка воды', people + ' шт.'),
+            item('abroad-city-guide', 'Город и экскурсии', 'Список мест, билеты в музеи заранее', '1 набор'),
+            item('abroad-city-etiquette', 'Город и экскурсии', 'Местные правила, дресс-код храмов, чаевые', '1 шт.'),
+
+            item('abroad-home-windows', 'Перед выходом из дома', 'Закрыть окна, воду, газ', '1 раз'),
+            item('abroad-home-appliances', 'Перед выходом из дома', 'Выключить технику из розеток', '1 раз'),
+            item('abroad-home-fridge', 'Перед выходом из дома', 'Убрать скоропорт, вынести мусор', '1 раз'),
+            item('abroad-home-keys', 'Перед выходом из дома', 'Ключи и запасные доверенному', '1 раз'),
+            item('abroad-home-plants-pets', 'Перед выходом из дома', 'Цветы и питомцы', 'по ситуации'),
+        ];
+
+        // Виза: нужна виза против безвизового въезда.
+        if (visaRequired) {
+            items.push(
+                item('abroad-visa-visa', 'Документы и виза', 'Виза вклеена или одобрена, проверить срок', people + ' шт.'),
+                item('abroad-visa-invite', 'Документы и виза', 'Приглашение, бронь, подтверждение цели', '1 комплект'),
+                item('abroad-visa-photos', 'Документы и виза', 'Фото на документы и анкеты', '1 набор'),
+                item('abroad-visa-funds', 'Документы и виза', 'Подтверждение средств и обратного билета', '1 комплект'),
+            );
+        } else {
+            items.push(
+                item('abroad-novisa-rules', 'Документы и виза', 'Проверить безвизовые правила и срок пребывания', '1 раз'),
+                item('abroad-novisa-passport', 'Документы и виза', 'Проверить срок действия паспорта', '1 раз'),
+            );
+        }
+
+        // Тип отдыха: пляж против городского осмотра.
+        if (beachTrip) {
+            items.push(
+                item('abroad-beach-swimwear', 'Пляж и отдых', 'Купальники и плавки', (people * 2) + ' комплектов'),
+                item('abroad-beach-sunscreen', 'Пляж и отдых', 'Солнцезащитный крем SPF и after-sun', '1 набор'),
+                item('abroad-beach-hat', 'Пляж и отдых', 'Головные уборы и очки', people + ' наборов'),
+                item('abroad-beach-towel', 'Пляж и отдых', 'Пляжное полотенце или парео', people + ' шт.'),
+                item('abroad-beach-shoes', 'Пляж и отдых', 'Шлёпки и обувь для воды', people + ' пар'),
+                item('abroad-beach-bag', 'Пляж и отдых', 'Пляжная сумка и гермочехол', '1–2 шт.'),
+            );
+        } else {
+            items.push(
+                item('abroad-sight-comfort', 'Город и экскурсии', 'Удобная обувь и пластыри для долгой ходьбы', '1 набор'),
+                item('abroad-sight-museum', 'Город и экскурсии', 'Билеты и аудиогиды в музеи заранее', 'по плану'),
+            );
+        }
+
+        if (hasChildren) {
+            items.push(
+                item('abroad-child-docs', 'Документы и виза', 'Документы детей и согласие на выезд', childCount + ' комплектов'),
+                item('abroad-child-clothes', 'Одежда', 'Детская одежда по числу дней', childCount + ' наборов'),
+                item('abroad-child-snacks', 'Город и экскурсии', 'Привычные перекусы и вода на день', childCount + ' набора'),
+                item('abroad-child-meds', 'Аптечка', 'Детские лекарства по возрасту', '1 набор'),
+                item('abroad-child-entertainment', 'Город и экскурсии', 'Игры, планшет, книги в дорогу', '1 набор'),
+            );
+
+            if (under12Count > 0) {
+                items.push(item('abroad-child-id', 'Дети', 'Браслет или карточка с телефоном и адресом отеля', under12Count + ' шт.'));
+            }
+
+            if (babyCount > 0) {
+                items.push(
+                    item('abroad-baby-kit', 'Гигиена и косметика', 'Подгузники, питание, салфетки', babyCount + ' запас'),
+                    item('abroad-baby-stroller', 'Дети', 'Лёгкая коляска или переноска', '1 шт.'),
+                    item('abroad-baby-firstaid', 'Аптечка', 'Детские дозировки лекарств и шприц-дозатор', '1 набор'),
+                );
+            }
+
+            if (preschoolCount > 0) {
+                items.push(item('abroad-preschool-calm', 'Дети', 'Тихие занятия в самолёт и кафе', preschoolCount + ' набора'));
+            }
+
+            if (schoolCount > 0) {
+                items.push(item('abroad-school-activities', 'Дети', 'Книги, наушники, планшет с играми', schoolCount + ' наборов'));
+            }
+
+            if (teenCount > 0) {
+                items.push(
+                    item('abroad-teen-docs', 'Документы и виза', 'Копия документов и контакты взрослых', teenCount + ' комплектов'),
+                    item('abroad-teen-power', 'Техника и зарядки', 'Личный кабель и пауэрбанк', teenCount + ' наборов'),
+                );
+            }
+        }
+
+        // Дневная температура.
+        if (dayBand === 'hot') {
+            items.push(
+                item('abroad-heat-water', 'Город и экскурсии', 'Вода и солнцезащита на жару', people + ' шт.'),
+                item('abroad-heat-light', 'Одежда', 'Лёгкая дышащая одежда', people + ' комплектов'),
+            );
+        } else if (dayBand === 'cool') {
+            items.push(item('abroad-cool-jacket', 'Одежда', 'Куртка или тёплая кофта', people + ' шт.'));
+        } else if (dayBand === 'cold') {
+            items.push(
+                item('abroad-cold-coat', 'Одежда', 'Тёплое пальто или пуховик', people + ' шт.'),
+                item('abroad-cold-warm', 'Одежда', 'Шапка, перчатки, шарф', people + ' комплектов'),
+            );
+        }
+
+        // Ночная температура.
+        if (nightBand === 'warm') {
+            items.push(item('abroad-night-warm', 'Одежда', 'Лёгкая одежда для сна', people + ' комплектов'));
+        } else if (nightBand === 'cool') {
+            items.push(item('abroad-night-cool', 'Одежда', 'Тёплая пижама', people + ' комплектов'));
+        } else if (nightBand === 'cold') {
+            items.push(item('abroad-night-cold', 'Одежда', 'Тёплая пижама и носки', people + ' комплектов'));
+        }
+
+        // При 0 ночей (однодневная вылазка за границу) проживание не нужно.
+        const overnightOnly = new Set([
+            'abroad-docs-booking', 'abroad-clothes-sleep',
+            'abroad-night-warm', 'abroad-night-cool', 'abroad-night-cold',
+        ]);
+        const finalItems = overnight ? items : items.filter((entry) => !overnightOnly.has(entry.id));
+        return {
+            id: ABROAD_PRESET_ID,
+            title: ABROAD_PRESET_TITLE,
+            audienceLabel: adultCount + ' ' + pluralPeople(adultCount, 'взрослый', 'взрослых', 'взрослых')
+                + (childCount > 0
+                    ? ' · ' + childCount + ' ' + pluralPeople(childCount, 'ребёнок', 'ребёнка', 'детей') + ' (' + childAgesSummary(ages) + ')'
+                    : ''),
+            childAges: ages,
+            dayTemp: safeDayTemp,
+            nightTemp: safeNightTemp,
+            visaRequired,
+            beachTrip,
+            nights,
+            nightsLabel: formatNightsLabel(nights),
+            tempLabel: formatTempSummary(safeDayTemp, safeNightTemp),
+            utilityLabel: formatAbroadUtilitySummary(visaRequired, beachTrip),
+            items: finalItems.map((entry, index) => ({ ...entry, order: index })),
         };
     }
 
@@ -1512,6 +2595,7 @@
         {
             id: SEA_TENT_PRESET_ID,
             title: SEA_TENT_PRESET_TITLE,
+            emoji: '🏕️ 🌊',
             subtitle: 'Палатки у моря: погода, удобства лагеря',
             groups: SEA_TENT_GROUPS,
             toggles: [
@@ -1523,6 +2607,7 @@
         {
             id: MOUNTAIN_PRESET_ID,
             title: MOUNTAIN_PRESET_TITLE,
+            emoji: '⛰️ 🏕️',
             subtitle: 'Треккинг в горах: ночёвка, снег и лёд',
             groups: MOUNTAIN_GROUPS,
             toggles: [
@@ -1534,35 +2619,103 @@
         {
             id: SEA_HOTEL_PRESET_ID,
             title: SEA_HOTEL_PRESET_TITLE,
+            emoji: '🌊 🏨',
             subtitle: 'Море и отель: питание и транспорт',
             groups: SEA_HOTEL_GROUPS,
             toggles: [
                 { key: 'allInclusive', onLabel: 'Всё включено', offLabel: 'Питание сами' },
-                { key: 'flying', onLabel: 'Летим самолётом', offLabel: 'Едем на машине' },
+                { key: 'transport', default: 'plane', choices: [
+                    { value: 'plane', label: 'Самолёт' },
+                    { value: 'train', label: 'Поезд' },
+                    { value: 'car', label: 'Машина' },
+                ] },
             ],
             build: buildSeaHotelChecklistPreset,
         },
         {
             id: CITY_RENT_PRESET_ID,
             title: CITY_RENT_PRESET_TITLE,
+            emoji: '🏙️ 🏠',
             subtitle: 'Город и квартира: готовка и транспорт',
             groups: CITY_RENT_GROUPS,
             toggles: [
                 { key: 'selfCooking', onLabel: 'Готовим в квартире', offLabel: 'Едим вне дома' },
-                { key: 'flying', onLabel: 'Летим самолётом', offLabel: 'Едем на машине' },
+                { key: 'transport', default: 'plane', choices: [
+                    { value: 'plane', label: 'Самолёт' },
+                    { value: 'train', label: 'Поезд' },
+                    { value: 'car', label: 'Машина' },
+                ] },
             ],
             build: buildCityRentChecklistPreset,
         },
         {
             id: CITY_HOTEL_PRESET_ID,
             title: CITY_HOTEL_PRESET_TITLE,
+            emoji: '🏙️ 🏨',
             subtitle: 'Город и отель: завтрак и транспорт',
             groups: CITY_HOTEL_GROUPS,
             toggles: [
                 { key: 'breakfast', onLabel: 'Завтрак включён', offLabel: 'Без завтрака' },
-                { key: 'flying', onLabel: 'Летим самолётом', offLabel: 'Едем на машине' },
+                { key: 'transport', default: 'plane', choices: [
+                    { value: 'plane', label: 'Самолёт' },
+                    { value: 'train', label: 'Поезд' },
+                    { value: 'car', label: 'Машина' },
+                ] },
             ],
             build: buildCityHotelChecklistPreset,
+        },
+        {
+            id: SKI_PRESET_ID,
+            title: SKI_PRESET_TITLE,
+            emoji: '⛷️ 🏔️',
+            subtitle: 'Склон: снаряжение и жильё',
+            groups: SKI_GROUPS,
+            toggles: [
+                { key: 'ownGear', onLabel: 'Своё снаряжение', offLabel: 'Беру прокат' },
+                { key: 'selfCatering', onLabel: 'Апартаменты с кухней', offLabel: 'Отель или пансион' },
+            ],
+            build: buildSkiChecklistPreset,
+        },
+        {
+            id: BUSINESS_PRESET_ID,
+            title: BUSINESS_PRESET_TITLE,
+            emoji: '💼 ✈️',
+            subtitle: 'Деловая поездка: транспорт и мероприятие',
+            groups: BUSINESS_GROUPS,
+            toggles: [
+                { key: 'transport', default: 'plane', choices: [
+                    { value: 'plane', label: 'Самолёт' },
+                    { value: 'train', label: 'Поезд' },
+                    { value: 'car', label: 'Машина' },
+                ] },
+                { key: 'hasEvent', onLabel: 'Выставка или доклад', offLabel: 'Только встречи' },
+            ],
+            build: buildBusinessChecklistPreset,
+        },
+        {
+            id: DACHA_PRESET_ID,
+            title: DACHA_PRESET_TITLE,
+            emoji: '🏡 🔥',
+            subtitle: 'За город: барбекю, огород, баня',
+            groups: DACHA_GROUPS,
+            toggles: [
+                { key: 'bbq', onLabel: 'Шашлык и барбекю', offLabel: 'Без барбекю' },
+                { key: 'garden', onLabel: 'Работа в огороде', offLabel: 'Только отдых' },
+                { key: 'banya', onLabel: 'Есть баня', offLabel: 'Без бани' },
+            ],
+            build: buildDachaChecklistPreset,
+        },
+        {
+            id: ABROAD_PRESET_ID,
+            title: ABROAD_PRESET_TITLE,
+            emoji: '🌍 🧳',
+            subtitle: 'За рубеж: виза и тип отдыха',
+            groups: ABROAD_GROUPS,
+            toggles: [
+                { key: 'visaRequired', onLabel: 'Нужна виза', offLabel: 'Безвизовый въезд' },
+                { key: 'beachTrip', onLabel: 'Пляжный отдых', offLabel: 'Городской осмотр' },
+            ],
+            build: buildAbroadChecklistPreset,
         },
     ];
 
@@ -1576,11 +2729,29 @@
     }
 
     // Собирает options-объект для билдера из значений тумблеров пресета.
+    // Тумблер бывает бинарным ({onLabel,offLabel} → boolean) или выбором из
+    // нескольких ({choices:[{value,label}], default} → строка). Единая нормализация.
+    function toggleDefaultValue(toggle) {
+        if (toggle && Array.isArray(toggle.choices)) {
+            return toggle.default != null
+                ? toggle.default
+                : (toggle.choices[0] && toggle.choices[0].value);
+        }
+        return false;
+    }
+
+    function resolveToggleValue(toggle, raw) {
+        if (toggle && Array.isArray(toggle.choices)) {
+            return toggle.choices.some((choice) => choice.value === raw) ? raw : toggleDefaultValue(toggle);
+        }
+        return raw === true;
+    }
+
     function buildPresetToggleOptions(preset, source) {
         const values = source && typeof source === 'object' ? source : {};
         const options = {};
         (preset?.toggles || []).forEach((toggle) => {
-            options[toggle.key] = values[toggle.key] === true;
+            options[toggle.key] = resolveToggleValue(toggle, values[toggle.key]);
         });
         return options;
     }
@@ -1594,9 +2765,10 @@
             childAges: normalizeChildAges(children, checklist?.childAges),
             dayTemp: clampDayTemp(checklist?.dayTemp),
             nightTemp: clampNightTemp(checklist?.nightTemp),
+            nights: clampNights(checklist?.nights == null ? DEFAULT_NIGHTS : checklist.nights),
         };
         (preset?.toggles || []).forEach((toggle) => {
-            params[toggle.key] = checklist?.[toggle.key] === true;
+            params[toggle.key] = resolveToggleValue(toggle, checklist?.[toggle.key]);
         });
         return params;
     }
@@ -1676,16 +2848,23 @@
         DEFAULT_CHILD_AGE,
         DEFAULT_DAY_TEMP,
         DEFAULT_NIGHT_TEMP,
+        DEFAULT_NIGHTS,
+        NIGHTS_MIN,
+        NIGHTS_MAX,
         CHECKLIST_PRESETS,
         clampCount,
         clampDayTemp,
         clampNightTemp,
+        clampNights,
+        formatNightsLabel,
         formatTemp,
         getDayTempBand,
         getNightTempBand,
         formatChildAgeInline,
         normalizeChildAges,
         buildPresetToggleOptions,
+        resolveToggleValue,
+        toggleDefaultValue,
         getChecklistCustomGroups,
         normalizeChecklistGroupName,
         groupChecklistItems,
@@ -1699,6 +2878,10 @@
         buildSeaHotelChecklistPreset,
         buildCityRentChecklistPreset,
         buildCityHotelChecklistPreset,
+        buildSkiChecklistPreset,
+        buildBusinessChecklistPreset,
+        buildDachaChecklistPreset,
+        buildAbroadChecklistPreset,
         materializeSeaTentItems,
     });
 
@@ -1707,6 +2890,10 @@
     Planning.buildSeaHotelChecklistPreset = buildSeaHotelChecklistPreset;
     Planning.buildCityRentChecklistPreset = buildCityRentChecklistPreset;
     Planning.buildCityHotelChecklistPreset = buildCityHotelChecklistPreset;
+    Planning.buildSkiChecklistPreset = buildSkiChecklistPreset;
+    Planning.buildBusinessChecklistPreset = buildBusinessChecklistPreset;
+    Planning.buildDachaChecklistPreset = buildDachaChecklistPreset;
+    Planning.buildAbroadChecklistPreset = buildAbroadChecklistPreset;
     Planning.materializeSeaTentItems = materializeSeaTentItems;
     Planning.materializePresetItems = materializeSeaTentItems;
     Planning.getChecklistPreset = getChecklistPreset;

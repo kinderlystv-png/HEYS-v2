@@ -275,16 +275,12 @@
 .planning-checklists-screen__counters {
     display: grid;
     grid-template-columns: minmax(88px, 0.78fr) minmax(0, 1.22fr);
-    gap: 0;
+    gap: 6px;
     margin-top: 6px;
     padding: 4px;
     border: 1px solid rgba(148, 163, 184, 0.16);
     border-radius: 8px;
     background: rgba(248, 250, 252, 0.78);
-}
-
-.planning-checklists-screen__counters--modal {
-    margin-top: 0;
 }
 
 .planning-checklists-screen__counters--saved {
@@ -304,6 +300,14 @@
     color: var(--planning-text);
     font-size: 11px;
     font-weight: 600;
+}
+
+.planning-checklists-screen__preset-controls .planning-checklists-screen__counter {
+    min-height: 32px;
+    padding: 5px 7px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.7);
 }
 
 .planning-checklists-screen__counter > span {
@@ -330,14 +334,14 @@
 
 .planning-checklists-screen__stepper {
     display: inline-grid;
-    grid-template-columns: 24px 24px 24px;
+    grid-template-columns: 20px 24px 20px;
     align-items: center;
-    min-width: 72px;
+    min-width: 0;
 }
 
 .planning-checklists-screen__stepper button {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 22px;
     border: 1px solid rgba(148, 163, 184, 0.24);
     background: #fff;
     color: var(--planning-text);
@@ -359,7 +363,7 @@
     display: grid;
     place-items: center;
     width: 24px;
-    height: 24px;
+    height: 22px;
     border-top: 1px solid rgba(148, 163, 184, 0.24);
     border-bottom: 1px solid rgba(148, 163, 184, 0.24);
     background: rgba(241, 245, 249, 0.92);
@@ -381,19 +385,19 @@
 }
 
 .planning-checklists-screen__stepper--age {
-    grid-template-columns: 22px minmax(58px, auto) 22px;
-    min-width: 102px;
+    grid-template-columns: 20px minmax(40px, auto) 20px;
+    min-width: 80px;
 }
 
 .planning-checklists-screen__stepper--age button {
-    width: 22px;
+    width: 20px;
     height: 24px;
 }
 
 .planning-checklists-screen__stepper--age strong {
     width: auto;
-    min-width: 58px;
-    padding: 0 4px;
+    min-width: 40px;
+    padding: 0 3px;
     font-size: 10px;
     white-space: nowrap;
 }
@@ -402,7 +406,7 @@
     display: flex;
     gap: 3px;
     min-width: 0;
-    max-width: 84px;
+    max-width: 78px;
     overflow-x: auto;
     scrollbar-width: none;
 }
@@ -416,30 +420,87 @@
 }
 
 .planning-checklists-screen__stepper--age-inline {
-    grid-template-columns: 17px minmax(42px, auto) 17px;
-    min-width: 76px;
+    grid-template-columns: 20px minmax(34px, auto) 20px;
+    min-width: 0;
 }
 
 .planning-checklists-screen__stepper--age-inline button {
-    width: 17px;
+    width: 20px;
     height: 22px;
     font-size: 12px;
 }
 
 .planning-checklists-screen__stepper--age-inline strong {
-    min-width: 42px;
+    min-width: 34px;
     height: 22px;
-    padding: 0 2px;
-    font-size: 9.5px;
+    padding: 0 3px;
+    font-size: 10.5px;
 }
 
 .planning-checklists-screen__counters--temps {
-    grid-template-columns: 1fr 1fr;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 8px;
     margin-top: 0;
 }
 
+.planning-checklists-screen__counters--temps > .planning-checklists-screen__counter {
+    min-width: 0;
+    gap: 4px;
+}
+
+.planning-checklists-screen__counters--temps > .planning-checklists-screen__counter > span {
+    font-size: 10.5px;
+}
+
+/* Ночей + 2 температуры — единая рамка, без отдельных пилюль у каждого. */
+.planning-checklists-screen__preset-controls .planning-checklists-screen__counters--temps {
+    column-gap: 6px;
+    padding: 4px 8px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.planning-checklists-screen__preset-controls .planning-checklists-screen__counters--temps > .planning-checklists-screen__counter {
+    min-height: 0;
+    padding: 2px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* Взрослые + Дети — единая рамка; flex со space-between даёт максимум воздуха
+   между группой «Взрослые» и группой «Дети». */
+.planning-checklists-screen__preset-controls .planning-checklists-screen__counters--saved {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: 14px;
+    padding: 4px 10px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.planning-checklists-screen__preset-controls .planning-checklists-screen__counters--saved > .planning-checklists-screen__counter {
+    flex: 0 1 auto;
+    min-width: 0;
+    min-height: 0;
+    gap: 5px;
+    padding: 2px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.planning-checklists-screen__preset-controls .planning-checklists-screen__counters--saved > .planning-checklists-screen__counter > span {
+    font-size: 10.5px;
+}
+
 .planning-checklists-screen__preset-controls > .planning-checklists-screen__counters {
-    column-gap: 10px;
     margin-top: 0;
     padding: 0;
     border: 0;
@@ -448,8 +509,8 @@
 }
 
 .planning-checklists-screen__stepper--temp {
-    grid-template-columns: 20px minmax(42px, auto) 20px;
-    min-width: 82px;
+    grid-template-columns: 20px minmax(32px, auto) 20px;
+    min-width: 0;
 }
 
 .planning-checklists-screen__stepper--temp button {
@@ -460,47 +521,90 @@
 
 .planning-checklists-screen__stepper--temp strong {
     width: auto;
-    min-width: 42px;
+    min-width: 32px;
     height: 22px;
-    padding: 0 3px;
+    padding: 0 2px;
     font-size: 11px;
     white-space: nowrap;
+    overflow: visible;
+}
+
+/* Счётчик «Ночей» (первый в строке) — значение 0–30, узкий бокс. */
+.planning-checklists-screen__counters--temps > .planning-checklists-screen__counter:first-child .planning-checklists-screen__stepper--temp {
+    grid-template-columns: 20px minmax(22px, auto) 20px;
+}
+
+.planning-checklists-screen__counters--temps > .planning-checklists-screen__counter:first-child .planning-checklists-screen__stepper--temp strong {
+    min-width: 22px;
 }
 
 .planning-checklists-screen__facility-toggles {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: 10px;
+    align-items: start;
 }
 
-.planning-checklists-screen__facility-toggle {
+/* Один параметр = взаимозаменяемые альтернативы друг под другом + ⇅. */
+.planning-checklists-screen__facility-switch {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
     min-width: 0;
-    min-height: 24px;
-    padding: 0 8px;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.86);
-    color: var(--planning-muted);
-    font-size: 11px;
-    font-weight: 650;
-    line-height: 1;
-    white-space: nowrap;
-    cursor: pointer;
 }
 
-.planning-checklists-screen__facility-toggle.is-active {
-    border-color: rgba(37, 99, 235, 0.28);
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(34, 197, 94, 0.1));
+/* Выбор из 3+ (например транспорт) остаётся в своей колонке — просто выше:
+   третий вариант выступает ниже, сетка всегда в два столбца. */
+
+.planning-checklists-screen__facility-option {
+    min-width: 0;
+    min-height: 26px;
+    padding: 4px 8px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 9px;
+    background: rgba(248, 250, 252, 0.7);
+    color: var(--planning-muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+}
+
+.planning-checklists-screen__facility-option:not(.is-active) {
+    border-color: rgba(100, 116, 139, 0.5);
+    background: rgba(255, 255, 255, 0.8);
+    color: #334155;
+}
+
+.planning-checklists-screen__facility-option:not(.is-active):hover {
+    border-color: rgba(100, 116, 139, 0.7);
+    color: #1e293b;
+}
+
+.planning-checklists-screen__facility-option.is-active {
+    border-color: rgba(37, 99, 235, 0.4);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(34, 197, 94, 0.12));
     color: #1d4ed8;
 }
 
-[data-theme="dark"] .planning-checklists-screen__facility-toggle {
+.planning-checklists-screen__facility-arrow {
+    align-self: center;
+    color: var(--planning-muted, #94a3b8);
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.7;
+}
+
+[data-theme="dark"] .planning-checklists-screen__facility-option {
     border-color: rgba(148, 163, 184, 0.24);
     background: rgba(15, 23, 42, 0.72);
     color: rgba(226, 232, 240, 0.72);
 }
 
-[data-theme="dark"] .planning-checklists-screen__facility-toggle.is-active {
+[data-theme="dark"] .planning-checklists-screen__facility-option.is-active {
     border-color: rgba(96, 165, 250, 0.38);
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.22), rgba(34, 197, 94, 0.16));
     color: #bfdbfe;
@@ -1040,19 +1144,97 @@
 
 .planning-checklists-screen__preset-controls {
     display: grid;
-    gap: 4px;
-    padding: 7px;
-    border: 1px solid rgba(148, 163, 184, 0.14);
-    border-radius: 8px;
-    background: rgba(248, 250, 252, 0.76);
+    gap: 7px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
+/* Блок параметров в сохранённой карточке — отдельная карточка с зеленоватым
+   фоном (как модалка добавления пресета). */
 .planning-checklists-screen__saved-controls {
-    margin: 5px 0 7px;
+    margin: 10px 0 12px;
+    padding: 10px;
+    border: 1px solid rgba(34, 197, 94, 0.18);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.92), rgba(240, 253, 244, 0.76));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Кнопка «Свернуть параметры» под тумблерами. */
+.planning-checklists-screen__params-collapse {
+    justify-self: center;
+    margin-top: 2px;
+    padding: 4px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--planning-muted, #64748b);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.planning-checklists-screen__params-collapse:hover {
+    color: var(--planning-text, #0f172a);
+    background: rgba(148, 163, 184, 0.12);
+}
+
+/* Свёрнутые параметры — компактная кликабельная сводка вместо блока. */
+.planning-checklists-screen__params-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 10px;
+    background: rgba(248, 250, 252, 0.7);
+    color: var(--planning-text, #0f172a);
+    text-align: left;
+    cursor: pointer;
+}
+
+.planning-checklists-screen__params-summary:hover {
+    border-color: rgba(37, 99, 235, 0.32);
+    background: rgba(37, 99, 235, 0.06);
+}
+
+.planning-checklists-screen__params-summary-icon {
+    flex: 0 0 auto;
+    color: var(--planning-muted, #64748b);
+    font-size: 11px;
+}
+
+.planning-checklists-screen__params-summary-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 10.5px;
+    font-weight: 500;
+    line-height: 1.25;
+}
+
+.planning-checklists-screen__params-summary-hint {
+    flex: 0 0 auto;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    font-size: 9.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .planning-checklists-screen__preset-controls--modal {
     margin: 0;
+    padding: 8px;
+    border: 1px solid rgba(34, 197, 94, 0.18);
+    border-radius: 12px;
+    background:
+        linear-gradient(135deg, rgba(236, 253, 245, 0.92), rgba(240, 253, 244, 0.76));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .planning-checklists-screen__age-controls {
@@ -1327,12 +1509,14 @@
 .planning-checklists-modal__preset-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    gap: 8px;
 }
 
 .planning-checklists-modal__preset-option {
     display: grid;
-    gap: 1px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
     width: 100%;
     min-height: 38px;
     padding: 6px 8px;
@@ -1346,13 +1530,23 @@
 }
 
 .planning-checklists-modal__preset-option:hover {
-    border-color: rgba(37, 99, 235, 0.4);
+    border-color: rgba(34, 197, 94, 0.42);
 }
 
 .planning-checklists-modal__preset-option.is-active {
-    border-color: rgba(37, 99, 235, 0.46);
-    background: rgba(37, 99, 235, 0.1);
-    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.12);
+    border-color: rgba(22, 163, 74, 0.74);
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(22, 163, 74, 0.2);
+}
+
+.planning-checklists-modal__preset-option.is-active .planning-checklists-modal__preset-title {
+    color: #fff;
+}
+
+.planning-checklists-modal__preset-option.is-active .planning-checklists-modal__preset-emoji {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.62);
 }
 
 @media (max-width: 420px) {
@@ -1361,10 +1555,26 @@
     }
 }
 
-.planning-checklists-modal__preset-option span {
+.planning-checklists-modal__preset-title {
     font-size: 12px;
     font-weight: 850;
     line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.planning-checklists-modal__preset-emoji {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 54px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.68);
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+    font-size: 20px;
+    line-height: 1;
+    letter-spacing: 1px;
+    white-space: nowrap;
 }
 
 .planning-checklists-modal__preset-option small {
@@ -1399,6 +1609,45 @@
     cursor: not-allowed;
 }
 
+.planning-checklists-modal__primary--danger {
+    background: #dc2626;
+}
+
+.planning-checklists-modal__secondary {
+    min-height: 32px;
+    padding: 0 14px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--planning-text, #0f172a);
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.planning-checklists-modal__secondary:hover {
+    background: rgba(148, 163, 184, 0.1);
+}
+
+.planning-checklists-modal__confirm-text {
+    margin-top: 6px;
+    color: var(--planning-muted, #475569);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.planning-checklists-modal__confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.planning-checklists-modal__confirm-actions .planning-checklists-modal__primary {
+    padding: 0 16px;
+}
+
 @media (max-width: 520px) {
     .planning-checklists-screen__header {
         align-items: center;
@@ -1418,10 +1667,6 @@
     .planning-checklists-screen__create {
         min-height: 29px;
         padding-inline: 9px;
-    }
-
-    .planning-checklists-modal .planning-checklists-screen__counters {
-        grid-template-columns: 1fr;
     }
 
     .planning-subnav__inner {

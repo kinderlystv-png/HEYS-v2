@@ -409,17 +409,22 @@ describe('Sea-hotel checklist preset — parameter-driven rebuild', () => {
         expect(allIn.utilityLabel).toContain('всё включено');
     });
 
-    it('swaps transport gear by the flying toggle', () => {
-        const driving = Planning.buildSeaHotelChecklistPreset(2, 0, [], 30, 22, { flying: false });
-        const flying = Planning.buildSeaHotelChecklistPreset(2, 0, [], 30, 22, { flying: true });
+    it('swaps transport gear across plane / train / car', () => {
+        const car = Planning.buildSeaHotelChecklistPreset(2, 0, [], 30, 22, { transport: 'car' });
+        const plane = Planning.buildSeaHotelChecklistPreset(2, 0, [], 30, 22, { transport: 'plane' });
+        const train = Planning.buildSeaHotelChecklistPreset(2, 0, [], 30, 22, { transport: 'train' });
 
-        expect(ids(driving)).toContain('hotel-car-docs');
-        expect(ids(driving)).toContain('hotel-car-emergency');
-        expect(ids(driving)).not.toContain('hotel-fly-liquids');
+        expect(ids(car)).toContain('hotel-car-docs');
+        expect(ids(car)).toContain('hotel-car-emergency');
+        expect(ids(car)).not.toContain('hotel-fly-liquids');
 
-        expect(ids(flying)).toContain('hotel-fly-liquids');
-        expect(ids(flying)).toContain('hotel-fly-boarding');
-        expect(flying.utilityLabel).toContain('летим');
+        expect(ids(plane)).toContain('hotel-fly-liquids');
+        expect(ids(plane)).toContain('hotel-fly-boarding');
+        expect(plane.utilityLabel).toContain('самолёт');
+
+        expect(ids(train)).toContain('hotel-train-tickets');
+        expect(ids(train)).not.toContain('hotel-fly-boarding');
+        expect(train.utilityLabel).toContain('поезд');
     });
 
     it('rebuilds heat gear on a hot beach day', () => {
@@ -476,17 +481,21 @@ describe('City-apartment checklist preset — parameter-driven rebuild', () => {
         expect(cook.utilityLabel).toContain('готовим сами');
     });
 
-    it('swaps transport gear by the flying toggle', () => {
-        const driving = Planning.buildCityRentChecklistPreset(2, 0, [], 20, 12, { flying: false });
-        const flying = Planning.buildCityRentChecklistPreset(2, 0, [], 20, 12, { flying: true });
+    it('swaps transport gear across plane / train / car', () => {
+        const car = Planning.buildCityRentChecklistPreset(2, 0, [], 20, 12, { transport: 'car' });
+        const plane = Planning.buildCityRentChecklistPreset(2, 0, [], 20, 12, { transport: 'plane' });
+        const train = Planning.buildCityRentChecklistPreset(2, 0, [], 20, 12, { transport: 'train' });
 
-        expect(ids(driving)).toContain('city-car-docs');
-        expect(ids(driving)).toContain('city-car-nav');
-        expect(ids(driving)).not.toContain('city-fly-liquids');
+        expect(ids(car)).toContain('city-car-docs');
+        expect(ids(car)).toContain('city-car-nav');
+        expect(ids(car)).not.toContain('city-fly-liquids');
 
-        expect(ids(flying)).toContain('city-fly-liquids');
-        expect(ids(flying)).toContain('city-fly-boarding');
-        expect(flying.utilityLabel).toContain('летим');
+        expect(ids(plane)).toContain('city-fly-liquids');
+        expect(ids(plane)).toContain('city-fly-boarding');
+        expect(plane.utilityLabel).toContain('самолёт');
+
+        expect(ids(train)).toContain('city-train-tickets');
+        expect(train.utilityLabel).toContain('поезд');
     });
 
     it('rebuilds cold-city layers below the cool threshold', () => {
@@ -543,17 +552,21 @@ describe('City-hotel checklist preset — parameter-driven rebuild', () => {
         expect(withBf.utilityLabel).toContain('завтрак включён');
     });
 
-    it('swaps transport gear by the flying toggle', () => {
-        const driving = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { flying: false });
-        const flying = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { flying: true });
+    it('swaps transport gear across plane / train / car', () => {
+        const car = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { transport: 'car' });
+        const plane = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { transport: 'plane' });
+        const train = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { transport: 'train' });
 
-        expect(ids(driving)).toContain('chotel-car-docs');
-        expect(ids(driving)).toContain('chotel-car-nav');
-        expect(ids(driving)).not.toContain('chotel-fly-liquids');
+        expect(ids(car)).toContain('chotel-car-docs');
+        expect(ids(car)).toContain('chotel-car-nav');
+        expect(ids(car)).not.toContain('chotel-fly-liquids');
 
-        expect(ids(flying)).toContain('chotel-fly-liquids');
-        expect(ids(flying)).toContain('chotel-fly-boarding');
-        expect(flying.utilityLabel).toContain('летим');
+        expect(ids(plane)).toContain('chotel-fly-liquids');
+        expect(ids(plane)).toContain('chotel-fly-boarding');
+        expect(plane.utilityLabel).toContain('самолёт');
+
+        expect(ids(train)).toContain('chotel-train-tickets');
+        expect(train.utilityLabel).toContain('поезд');
     });
 
     it('rebuilds cold-city layers below the cool threshold', () => {
@@ -575,5 +588,235 @@ describe('City-hotel checklist preset — parameter-driven rebuild', () => {
     it('resolves the city-hotel preset from the registry by id and title', () => {
         expect(Planning.getChecklistPreset({ presetId: 'city-hotel' }).id).toBe('city-hotel');
         expect(Planning.getChecklistPreset({ title: 'Поездка в другой город, отель' }).id).toBe('city-hotel');
+    });
+});
+
+describe('Ski / business / dacha / abroad presets', () => {
+    let Planning;
+
+    beforeEach(() => {
+        window.HEYS = {};
+        window.React = { createElement: () => null };
+        window.ReactDOM = {};
+        Planning = loadPlanningModule();
+    });
+
+    afterEach(() => {
+        window.HEYS = originalHEYS;
+        window.React = originalReact;
+        window.ReactDOM = originalReactDOM;
+    });
+
+    it('registers all four new presets in the registry', () => {
+        const ids = Planning.CHECKLIST_PRESETS.map((p) => p.id);
+        expect(ids).toContain('ski-resort');
+        expect(ids).toContain('business-trip');
+        expect(ids).toContain('dacha-weekend');
+        expect(ids).toContain('abroad-trip');
+        expect(Planning.CHECKLIST_PRESETS).toHaveLength(9);
+    });
+
+    it('ski: swaps own gear vs rental and lodging', () => {
+        const own = Planning.buildSkiChecklistPreset(2, 0, [], 5, -8, { ownGear: true, selfCatering: true });
+        const rent = Planning.buildSkiChecklistPreset(2, 0, [], 5, -8, { ownGear: false, selfCatering: false });
+
+        expect(ids(own)).toContain('ski-own-skis');
+        expect(ids(own)).toContain('ski-cook-groceries');
+        expect(ids(own)).not.toContain('ski-rent-book');
+
+        expect(ids(rent)).toContain('ski-rent-book');
+        expect(ids(rent)).toContain('ski-hotel-board');
+        expect(ids(rent)).not.toContain('ski-own-skis');
+        expect(own.utilityLabel).toContain('своё снаряжение');
+        expect(rent.utilityLabel).toContain('прокат');
+    });
+
+    it('ski: cold day adds face mask, base always has helmet', () => {
+        const cold = Planning.buildSkiChecklistPreset(2, 0, [], 8, -8);
+        expect(ids(cold)).toContain('ski-gear-helmet');
+        expect(ids(cold)).toContain('ski-cold-facemask');
+    });
+
+    it('business: swaps event vs meetings and plane / train / car', () => {
+        const eventPlane = Planning.buildBusinessChecklistPreset(1, 0, [], 20, 12, { hasEvent: true, transport: 'plane' });
+        const meetTrain = Planning.buildBusinessChecklistPreset(1, 0, [], 20, 12, { hasEvent: false, transport: 'train' });
+        const car = Planning.buildBusinessChecklistPreset(1, 0, [], 20, 12, { transport: 'car' });
+
+        expect(ids(eventPlane)).toContain('biz-event-materials');
+        expect(ids(eventPlane)).toContain('biz-fly-boarding');
+        expect(ids(eventPlane)).not.toContain('biz-meet-agenda');
+
+        expect(ids(meetTrain)).toContain('biz-meet-agenda');
+        expect(ids(meetTrain)).toContain('biz-train-tickets');
+        expect(ids(meetTrain)).not.toContain('biz-event-materials');
+        expect(eventPlane.utilityLabel).toContain('с мероприятием');
+        expect(meetTrain.utilityLabel).toContain('поезд');
+
+        expect(ids(car)).toContain('biz-car-docs');
+        expect(car.utilityLabel).toContain('на машине');
+    });
+
+    it('business: always packs laptop and command paperwork', () => {
+        const biz = Planning.buildBusinessChecklistPreset(1, 0, [], 20, 12);
+        expect(ids(biz)).toContain('biz-work-laptop');
+        expect(ids(biz)).toContain('biz-docs-orders');
+    });
+
+    it('dacha: swaps overnight bedding and bbq gear', () => {
+        const stay = Planning.buildDachaChecklistPreset(2, 0, [], 24, 14, { overnight: true, bbq: true });
+        const day = Planning.buildDachaChecklistPreset(2, 0, [], 24, 14, { overnight: false, bbq: false });
+
+        expect(ids(stay)).toContain('dacha-sleep-bedding');
+        expect(ids(stay)).toContain('dacha-bbq-grill');
+        expect(ids(day)).not.toContain('dacha-sleep-bedding');
+        expect(ids(day)).not.toContain('dacha-bbq-grill');
+        expect(ids(day)).toContain('dacha-day-plan');
+        expect(stay.nightsLabel).toMatch(/ноч/);
+        expect(stay.utilityLabel).toContain('шашлык');
+    });
+
+    it('dacha: garden and banya toggles gate their blocks', () => {
+        const relax = Planning.buildDachaChecklistPreset(2, 0, [], 24, 14, { garden: false, banya: false });
+        const full = Planning.buildDachaChecklistPreset(2, 0, [], 24, 14, { garden: true, banya: true });
+
+        expect(ids(relax)).not.toContain('dacha-garden-tools');
+        expect(ids(relax)).not.toContain('dacha-banya-brooms');
+
+        expect(ids(full)).toContain('dacha-garden-tools');
+        expect(ids(full)).toContain('dacha-banya-brooms');
+        expect(full.utilityLabel).toContain('огород');
+        expect(full.utilityLabel).toContain('баня');
+    });
+
+    it('dacha: always packs tick tools and repellent', () => {
+        const dacha = Planning.buildDachaChecklistPreset(2, 0, [], 24, 14);
+        expect(ids(dacha)).toContain('dacha-aid-tick');
+        expect(ids(dacha)).toContain('dacha-hyg-repellent');
+    });
+
+    it('dacha: a cold day-trip has no overnight sleep gear', () => {
+        const dayCold = Planning.buildDachaChecklistPreset(2, 0, [], 6, -3, { overnight: false });
+        const stayCold = Planning.buildDachaChecklistPreset(2, 0, [], 6, -3, { overnight: true });
+        // дневной холод одевает в любом случае
+        expect(ids(dayCold)).toContain('dacha-cold-jacket');
+        // но «Спальное» только при ночёвке
+        expect(ids(dayCold)).not.toContain('dacha-night-cold');
+        expect(dayCold.items.some((it) => it.group === 'Спальное')).toBe(false);
+        expect(ids(stayCold)).toContain('dacha-night-cold');
+    });
+
+    it('hotel / abroad / ski carry base sleepwear regardless of mild night', () => {
+        const hotel = Planning.buildSeaHotelChecklistPreset(2, 0, [], 28, 16);
+        const abroad = Planning.buildAbroadChecklistPreset(2, 0, [], 22, 16);
+        const ski = Planning.buildSkiChecklistPreset(2, 0, [], 2, 16);
+        expect(ids(hotel)).toContain('hotel-clothes-sleep');
+        expect(ids(abroad)).toContain('abroad-clothes-sleep');
+        expect(ids(ski)).toContain('ski-clothes-sleep');
+    });
+
+    it('abroad: swaps visa docs and beach vs city', () => {
+        const visaBeach = Planning.buildAbroadChecklistPreset(2, 0, [], 32, 24, { visaRequired: true, beachTrip: true });
+        const noVisaCity = Planning.buildAbroadChecklistPreset(2, 0, [], 18, 10, { visaRequired: false, beachTrip: false });
+
+        expect(ids(visaBeach)).toContain('abroad-visa-visa');
+        expect(ids(visaBeach)).toContain('abroad-beach-swimwear');
+        expect(ids(visaBeach)).not.toContain('abroad-novisa-rules');
+
+        expect(ids(noVisaCity)).toContain('abroad-novisa-rules');
+        expect(ids(noVisaCity)).toContain('abroad-sight-museum');
+        expect(ids(noVisaCity)).not.toContain('abroad-beach-swimwear');
+        expect(visaBeach.utilityLabel).toContain('нужна виза');
+        expect(noVisaCity.utilityLabel).toContain('безвиз');
+    });
+
+    it('abroad: child trip adds consent docs and baby kit by age', () => {
+        const family = Planning.buildAbroadChecklistPreset(2, 2, [1, 9], 28, 20);
+        expect(ids(family)).toContain('abroad-child-docs');
+        expect(ids(family)).toContain('abroad-baby-kit'); // 1 год → малыш
+        expect(ids(family)).toContain('abroad-school-activities'); // 9 лет → школьник
+        expect(ids(family)).toContain('abroad-child-id');
+    });
+});
+
+describe('Nights parameter — overnight gating and day scaling', () => {
+    let Planning;
+
+    beforeEach(() => {
+        window.HEYS = {};
+        window.React = { createElement: () => null };
+        window.ReactDOM = {};
+        Planning = loadPlanningModule();
+    });
+
+    afterEach(() => {
+        window.HEYS = originalHEYS;
+        window.React = originalReact;
+        window.ReactDOM = originalReactDOM;
+    });
+
+    it('sea-tent: 0 nights drops tent and sleeping gear, 1+ keeps it', () => {
+        const day = Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18, { nights: 0 });
+        const trip = Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18, { nights: 3 });
+        expect(ids(day)).not.toContain('camp-tent');
+        expect(ids(day)).not.toContain('sleep-bags');
+        expect(day.items.some((it) => it.group === 'Спальные вещи')).toBe(false);
+        expect(ids(trip)).toContain('camp-tent');
+        expect(ids(trip)).toContain('sleep-bags');
+    });
+
+    it('mountain: 0 nights drops tent, hut and sleeping bag', () => {
+        const day = Planning.buildMountainChecklistPreset(2, 0, [], 10, 2, { hasShelter: false, nights: 0 });
+        const trip = Planning.buildMountainChecklistPreset(2, 0, [], 10, 2, { hasShelter: false, nights: 2 });
+        expect(ids(day)).not.toContain('mtn-tent');
+        expect(ids(day)).not.toContain('mtn-sleep-bag');
+        expect(ids(trip)).toContain('mtn-tent');
+        expect(ids(trip)).toContain('mtn-sleep-bag');
+        // навигация/безопасность остаются и на день
+        expect(ids(day)).toContain('mtn-nav-map');
+    });
+
+    it('dacha: nights replaces the old overnight toggle', () => {
+        const preset = Planning.CHECKLIST_PRESETS.find((p) => p.id === 'dacha-weekend');
+        expect(preset.toggles.map((t) => t.key)).toEqual(['bbq', 'garden', 'banya']);
+        const day = Planning.buildDachaChecklistPreset(2, 0, [], 24, 14, { nights: 0 });
+        const stay = Planning.buildDachaChecklistPreset(2, 0, [], 24, 14, { nights: 2 });
+        expect(day.items.some((it) => it.group === 'Спальное')).toBe(false);
+        expect(ids(day)).toContain('dacha-day-plan');
+        expect(ids(stay)).toContain('dacha-sleep-bedding');
+        expect(ids(stay)).not.toContain('dacha-day-plan');
+    });
+
+    it('hotel: 0 nights drops booking, room safe and pajama', () => {
+        const day = Planning.buildSeaHotelChecklistPreset(2, 0, [], 30, 22, { nights: 0 });
+        expect(ids(day)).not.toContain('hotel-docs-booking');
+        expect(ids(day)).not.toContain('hotel-clothes-sleep');
+        expect(ids(day)).toContain('hotel-beach-swimwear'); // пляж на день остаётся
+    });
+
+    it('produces a human nights label', () => {
+        expect(Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18, { nights: 0 }).nightsLabel).toBe('без ночёвки');
+        expect(Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18, { nights: 1 }).nightsLabel).toBe('1 ночь');
+        expect(Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18, { nights: 3 }).nightsLabel).toBe('3 ночи');
+        expect(Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18, { nights: 5 }).nightsLabel).toBe('5 ночей');
+    });
+
+    it('scales day-based quantities by the number of days (nights + 1)', () => {
+        const short = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { nights: 1 });
+        const long = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { nights: 6 });
+        const qty = (preset, id) => preset.items.find((it) => it.id === id).quantity;
+        expect(qty(short, 'chotel-clothes-day')).toContain('2 дня');
+        expect(qty(long, 'chotel-clothes-day')).toContain('7 дней');
+    });
+
+    it('clamps nights to bounds and defaults when missing', () => {
+        expect(Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18, { nights: 999 }).nights).toBe(30);
+        expect(Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18, { nights: -5 }).nights).toBe(0);
+        expect(Planning.buildSeaTentChecklistPreset(2, 0, [], 27, 18).nights).toBe(3);
+    });
+
+    it('exposes nights in getPresetChecklistParams', () => {
+        const preset = Planning.getChecklistPreset({ presetId: 'sea-tent-camping' });
+        expect(Planning.getPresetChecklistParams({ presetId: 'sea-tent-camping', nights: 4 }, preset).nights).toBe(4);
+        expect(Planning.getPresetChecklistParams({ presetId: 'sea-tent-camping' }, preset).nights).toBe(3);
     });
 });
