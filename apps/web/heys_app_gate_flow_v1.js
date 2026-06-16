@@ -150,6 +150,42 @@
             const botUsername = HEYS.config?.clientBotUsername || 'heyslab_bot';
             return `https://t.me/${botUsername}?start=${pinToken}`;
         };
+        const normalizeAccessLinkResult = (res, fallbackTitle) => {
+            if (!res || !res.success) {
+                return {
+                    title: fallbackTitle || 'Ссылка недоступна',
+                    message: res?.message || res?.error || 'Не удалось получить Telegram-ссылку',
+                    unavailable: true
+                };
+            }
+            if (res.link_available === false) {
+                return {
+                    title: 'Ссылка недоступна',
+                    message: res.message || 'Перевыпустите PIN и ссылку.',
+                    unavailable: true,
+                    reason: res.reason
+                };
+            }
+            const deepLink = res.deep_link || res.deepLink || buildClientBotLink(res.pin_token);
+            return {
+                title: fallbackTitle || 'Ссылка для клиента',
+                message: 'Клиент открывает ссылку в Telegram, бот привяжет его аккаунт.',
+                deepLink,
+                pinTokenExpiresAt: res.pin_token_expires_at
+            };
+        };
+
+        const copyText = async (text, successMessage) => {
+            if (!text) return false;
+            try {
+                await navigator.clipboard?.writeText(text);
+                HEYS.Toast?.success?.(successMessage || 'Скопировано');
+                return true;
+            } catch (e) {
+                console.warn('[HEYS.subs] Clipboard copy failed:', e);
+                return false;
+            }
+        };
 
         // Активировать триал
         const handleActivateTrial = async () => {
@@ -187,6 +223,14 @@
                 const res = await HEYS.TrialQueue?.admin?.clearTelegramBinding?.(client.id);
                 if (res && res.success) {
                     HEYS.Toast?.success?.(res.cleared ? 'Telegram-привязка сброшена' : 'Telegram-привязки не было');
+                    const linkRes = await HEYS.TrialQueue?.admin?.getClientAccessLink?.(client.id);
+                    if (linkRes) {
+                        const access = normalizeAccessLinkResult(linkRes, 'Ссылка для повторной привязки');
+                        setAccessResult(access);
+                        if (access.unavailable) {
+                            HEYS.Toast?.warning?.(access.message || 'Перевыпустите PIN и ссылку');
+                        }
+                    }
                     onUpdate?.();
                 } else {
                     const errorMessage = res?.message || res?.error?.message || res?.error || 'Не удалось сбросить Telegram-привязку';
@@ -199,6 +243,25 @@
             setLoading(false);
         };
 
+        const handleGetClientAccessLink = async () => {
+            setLoading(true);
+            try {
+                const res = await HEYS.TrialQueue?.admin?.getClientAccessLink?.(client.id);
+                const access = normalizeAccessLinkResult(res, 'Ссылка для клиента');
+                setAccessResult(access);
+                if (access.unavailable) {
+                    HEYS.Toast?.warning?.(access.message || 'Перевыпустите PIN и ссылку');
+                } else {
+                    const copied = await copyText(access.deepLink, 'Ссылка скопирована');
+                    if (!copied) HEYS.Toast?.info?.('Ссылка показана ниже');
+                }
+            } catch (e) {
+                console.error('[HEYS.subs] ❌ getClientAccessLink error:', e);
+                HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'Не удалось получить ссылку'));
+            }
+            setLoading(false);
+        };
+
         const handleRegeneratePin = async () => {
             if (!confirm('Перевыпустить PIN и Telegram-ссылку? Старые PIN-сессии будут завершены, Telegram-привязка сброшена.')) return;
             setLoading(true);
@@ -206,7 +269,13 @@
                 const res = await HEYS.TrialQueue?.admin?.regeneratePin?.(client.id);
                 if (res && res.success) {
                     const deepLink = buildClientBotLink(res.pin_token);
-                    setAccessResult({ pin: res.pin, deepLink });
+                    setAccessResult({
+                        title: 'Новый доступ для клиента',
+                        message: 'Передайте PIN и ссылку клиенту. Клиент открывает ссылку в Telegram, бот привяжет его аккаунт.',
+                        pin: res.pin,
+                        deepLink,
+                        pinTokenExpiresAt: res.pin_token_expires_at
+                    });
                     HEYS.Toast?.success?.('PIN и ссылка перевыпущены');
                     onUpdate?.();
                 } else {
@@ -481,17 +550,18 @@
                 pill('Тариф', status === 'active' ? 'Активен' : status === 'trial' ? 'Триал' : status === 'trial_pending' ? 'Ожидание' : status === 'read_only' ? 'Ограничен' : 'Нет'),
                 pill('Telegram', client.has_telegram_binding === true ? 'Привязан' : client.has_telegram_binding === false ? 'Не привязан' : 'Неизвестно')
             ),
-            accessResult && h('div', { style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' } },
-                h('div', { style: { fontSize: 12, fontWeight: 700, color: '#475569' } }, 'Новый доступ для клиента'),
-                h('div', { style: { fontSize: 24, fontWeight: 800, letterSpacing: 8, fontFamily: 'monospace', color: '#111827' } }, accessResult.pin || '—'),
+            accessResult && h('div', { style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: accessResult.unavailable ? '#fff7ed' : '#f8fafc', border: `1px solid ${accessResult.unavailable ? '#fed7aa' : '#e2e8f0'}` } },
+                h('div', { style: { fontSize: 12, fontWeight: 700, color: accessResult.unavailable ? '#c2410c' : '#475569' } }, accessResult.title || 'Ссылка для клиента'),
+                accessResult.message && h('div', { style: { fontSize: 12, color: '#64748b', lineHeight: 1.4 } }, accessResult.message),
+                accessResult.pin && h('div', { style: { fontSize: 24, fontWeight: 800, letterSpacing: 8, fontFamily: 'monospace', color: '#111827' } }, accessResult.pin),
                 accessResult.deepLink && h('div', { style: { fontSize: 11, color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace' } }, accessResult.deepLink),
                 h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 } },
-                    h('button', {
-                        onClick: () => navigator.clipboard?.writeText(accessResult.pin || '').then(() => HEYS.Toast?.success?.('PIN скопирован')),
+                    accessResult.pin && h('button', {
+                        onClick: () => copyText(accessResult.pin, 'PIN скопирован'),
                         style: { ...btnBase, justifyContent: 'center', background: '#fff', color: '#334155', border: '1px solid #cbd5e1' }
                     }, 'Копировать PIN'),
                     h('button', {
-                        onClick: () => navigator.clipboard?.writeText(accessResult.deepLink || '').then(() => HEYS.Toast?.success?.('Ссылка скопирована')),
+                        onClick: () => copyText(accessResult.deepLink, 'Ссылка скопирована'),
                         disabled: !accessResult.deepLink,
                         style: { ...btnBase, justifyContent: 'center', background: '#fff', color: '#334155', border: '1px solid #cbd5e1' }
                     }, 'Копировать ссылку')
@@ -518,6 +588,11 @@
                     onClick: handleRefund, disabled: loading,
                     style: { ...btnBase, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }
                 }, loading ? '⏳ Возврат...' : '💰 Вернуть деньги (последний платёж)'),
+                client.has_telegram_binding !== true && h('button', {
+                    onClick: handleGetClientAccessLink,
+                    disabled: loading || !HEYS.TrialQueue?.admin?.getClientAccessLink,
+                    style: { ...btnBase, background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }
+                }, loading ? '⏳ Получение...' : '🔗 Скопировать ссылку'),
                 h('button', {
                     onClick: handleClearTelegramBinding,
                     disabled: loading || !HEYS.TrialQueue?.admin?.clearTelegramBinding,

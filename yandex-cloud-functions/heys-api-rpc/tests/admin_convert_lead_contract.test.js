@@ -56,6 +56,20 @@ function createMockPool() {
             }],
           };
         }
+        if (sql.includes('admin_get_client_access_link')) {
+          return {
+            rows: [{
+              admin_get_client_access_link: {
+                success: true,
+                client_id: 'client-1',
+                link_available: true,
+                pin_token: '11111111-1111-4111-8111-111111111111',
+                pin_token_expires_at: '2026-06-23T00:00:00.000Z',
+                deep_link: 'https://t.me/heyslab_bot?start=11111111-1111-4111-8111-111111111111',
+              },
+            }],
+          };
+        }
         if (sql.includes('admin_regenerate_pin')) {
           return {
             rows: [{
@@ -159,6 +173,28 @@ async function run() {
     curatorId,
   ]);
   assert.strictEqual(JSON.parse(clearRes.body).admin_clear_telegram_binding.cleared, true);
+
+  const linkRes = await handler({
+    httpMethod: 'POST',
+    path: '/rpc',
+    queryStringParameters: { fn: 'admin_get_client_access_link' },
+    headers: {
+      origin: 'https://app.heyslab.ru',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ p_client_id: '33333333-3333-4333-8333-333333333333' }),
+  });
+
+  assert.strictEqual(linkRes.statusCode, 200);
+  const linkQuery = mockPool.queries.find((q) => q.sql.includes('admin_get_client_access_link'));
+  assert.ok(linkQuery, 'admin_get_client_access_link SQL should run');
+  assert.match(linkQuery.sql, /p_client_id => \$1::uuid/);
+  assert.match(linkQuery.sql, /p_curator_id => \$2::uuid/);
+  assert.deepStrictEqual(linkQuery.values, [
+    '33333333-3333-4333-8333-333333333333',
+    curatorId,
+  ]);
+  assert.strictEqual(JSON.parse(linkRes.body).admin_get_client_access_link.link_available, true);
 
   const regenerateRes = await handler({
     httpMethod: 'POST',

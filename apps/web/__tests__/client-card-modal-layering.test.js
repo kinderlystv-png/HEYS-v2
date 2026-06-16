@@ -16,4 +16,13 @@ describe('client card modal layering', () => {
     expect(source).not.toMatch(/zIndex: 9999/);
     expect(source).not.toMatch(/zIndex: 10000/);
   });
+
+  it('exposes current Telegram link recovery in the subscription modal', () => {
+    expect(source).toContain('handleGetClientAccessLink');
+    expect(source).toContain('getClientAccessLink');
+    expect(source).toContain('Ссылка для клиента');
+    expect(source).toContain('Скопировать ссылку');
+    expect(source).toContain('Перевыпустите PIN и ссылку');
+    expect(source).toContain('link_available === false');
+  });
 });

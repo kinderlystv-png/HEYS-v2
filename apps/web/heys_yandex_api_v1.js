@@ -364,6 +364,7 @@
     'admin_set_client_pin',           // 🆕 plain pin → bcrypt в БД (замена reset_client_pin)
     'admin_regenerate_pin',           // 🆕 авто-перевыпуск PIN+pin_token
     'admin_clear_telegram_binding',    // Сброс chat_id, если ссылку открыл не клиент
+    'admin_get_client_access_link',    // Получение текущей Telegram-ссылки одного клиента
 
     // === GAMIFICATION AUDIT ===
     'log_gamification_event_by_curator',

@@ -76,6 +76,54 @@ describe('HEYS.TrialQueue.admin Telegram recovery', () => {
         });
     });
 
+    it('getClientAccessLink calls curator RPC and unwraps current link payload', async () => {
+        rpc.mockResolvedValue({
+            data: {
+                admin_get_client_access_link: {
+                    success: true,
+                    client_id: 'client-1',
+                    link_available: true,
+                    pin_token: '11111111-1111-4111-8111-111111111111',
+                    pin_token_expires_at: '2026-06-23T00:00:00.000Z',
+                    deep_link: 'https://t.me/heyslab_bot?start=11111111-1111-4111-8111-111111111111',
+                },
+            },
+            error: null,
+        });
+
+        const result = await window.HEYS.TrialQueue.admin.getClientAccessLink('client-1');
+
+        expect(result.success).toBe(true);
+        expect(result.link_available).toBe(true);
+        expect(result.deep_link).toBe('https://t.me/heyslab_bot?start=11111111-1111-4111-8111-111111111111');
+        expect(rpc).toHaveBeenCalledWith('admin_get_client_access_link', {
+            p_client_id: 'client-1',
+        });
+    });
+
+    it('getClientAccessLink keeps expired token response explicit for UI', async () => {
+        rpc.mockResolvedValue({
+            data: {
+                admin_get_client_access_link: {
+                    success: true,
+                    client_id: 'client-1',
+                    link_available: false,
+                    reason: 'token_expired',
+                    message: 'Telegram-ссылка истекла. Перевыпустите PIN и ссылку.',
+                },
+            },
+            error: null,
+        });
+
+        const result = await window.HEYS.TrialQueue.admin.getClientAccessLink('client-1');
+
+        expect(result).toMatchObject({
+            success: true,
+            link_available: false,
+            reason: 'token_expired',
+        });
+    });
+
     it('maps RPC errors to admin error shape', async () => {
         rpc.mockResolvedValue({
             data: null,

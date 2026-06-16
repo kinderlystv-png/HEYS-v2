@@ -1353,6 +1353,33 @@
     },
 
     /**
+     * Получить текущую Telegram-ссылку клиента без раскрытия pin_token
+     * в общем списке клиентов.
+     */
+    async getClientAccessLink(clientId) {
+      const api = HEYS.YandexAPI;
+      if (!api) {
+        return { success: false, error: 'api_not_ready', message: 'API не готов' };
+      }
+
+      try {
+        const res = await api.rpc('admin_get_client_access_link', {
+          p_client_id: clientId
+        });
+
+        if (res.error) {
+          return { success: false, error: res.error.code, message: res.error.message };
+        }
+
+        const fnData = res.data?.admin_get_client_access_link || res.data || res;
+        return fnData.success !== undefined ? fnData : { success: true };
+      } catch (e) {
+        console.error('[TrialQueue.admin] getClientAccessLink error:', e);
+        return { success: false, error: 'request_failed', message: e.message };
+      }
+    },
+
+    /**
      * Перевыпустить PIN и Telegram-ссылку клиента.
      * Сервер также отзывает старые PIN-сессии и очищает Telegram-привязку.
      */

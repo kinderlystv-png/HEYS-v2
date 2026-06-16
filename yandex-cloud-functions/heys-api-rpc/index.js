@@ -832,6 +832,7 @@ const CURATOR_ONLY_FUNCTIONS = [
   'admin_set_client_pin',             // 🆕 Установка PIN с bcrypt (Phase 1 hotfix, замена reset_client_pin)
   'admin_regenerate_pin',             // 🆕 Перевыпуск PIN+pin_token (P0.7)
   'admin_clear_telegram_binding',      // Сброс chat_id, если ссылку открыл не клиент
+  'admin_get_client_access_link',      // Получить текущую Telegram-ссылку клиента без client-list leakage
 
   // === GAMIFICATION AUDIT ===
   'log_gamification_event_by_curator',
@@ -3913,6 +3914,10 @@ module.exports.handler = async function (event, context) {
         'p_curator_id': '::uuid'  // JWT authenticated curator (unused in function but required)
       },
       'admin_clear_telegram_binding': {
+        'p_client_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
+      'admin_get_client_access_link': {
         'p_client_id': '::uuid',
         'p_curator_id': '::uuid'
       },
