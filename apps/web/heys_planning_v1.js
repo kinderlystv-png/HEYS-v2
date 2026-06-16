@@ -1604,7 +1604,7 @@
     Planning.materializePresetItems = materializeSeaTentItems;
     Planning.getChecklistPreset = getChecklistPreset;
     Planning.getPresetChecklistParams = getPresetChecklistParams;
-    Planning.CHECKLIST_PRESETS = CHECKLIST_PRESETS.slice();
+    Planning.CHECKLIST_PRESETS = Array.isArray(CHECKLIST_PRESETS) ? CHECKLIST_PRESETS.slice() : [];
     Planning.getDayTempBand = getDayTempBand;
     Planning.getNightTempBand = getNightTempBand;
     Planning.SUBNAV_ITEMS = SUBNAV_ITEMS.slice();
