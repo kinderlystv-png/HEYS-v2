@@ -7,6 +7,7 @@
     if (!React) return;
 
     const U = HEYS.utils || {};
+    const CLIENT_ACTION_MODAL_Z = 12050;
 
     const tryParseStoredValue = (raw, fallback) => {
         if (raw === null || raw === undefined) return fallback;
@@ -592,7 +593,7 @@
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                zIndex: 10000,
+                zIndex: CLIENT_ACTION_MODAL_Z,
                 padding: '24px'
             },
             onClick: (e) => { if (e.target === e.currentTarget) closeModal(); }
@@ -794,7 +795,7 @@
             React.createElement('div', {
                 style: {
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    zIndex: 9999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+                    zIndex: CLIENT_ACTION_MODAL_Z, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
                 },
                 onClick: closeModal
@@ -1000,7 +1001,7 @@
             React.createElement('div', {
                 style: {
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    zIndex: 9999,
+                    zIndex: CLIENT_ACTION_MODAL_Z,
                     background: 'rgba(15, 23, 42, 0.65)',
                     backdropFilter: 'blur(4px)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
