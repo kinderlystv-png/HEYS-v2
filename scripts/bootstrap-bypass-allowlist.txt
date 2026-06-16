@@ -140,10 +140,10 @@ apps/web/heys_gamification_bar_v1.js:1424
 apps/web/heys_gamification_bar_v1.js:1430
 apps/web/heys_gamification_bar_v1.js:1431
 apps/web/heys_gamification_bar_v1.js:1432
-apps/web/heys_gamification_v1.js:1586
+apps/web/heys_gamification_v1.js:1585
 apps/web/heys_gamification_v1.js:39
 apps/web/heys_gamification_v1.js:41
-apps/web/heys_gamification_v1.js:6026
+apps/web/heys_gamification_v1.js:6024
 apps/web/heys_insulin_wave_v1.js:908
 apps/web/heys_iw_config_loader.js:149
 apps/web/heys_iw_config_loader.js:151
@@ -257,11 +257,11 @@ apps/web/advice/_core.js:3290
 apps/web/heys_planning_chrono_v1.js:2825
 # auth cookie-session hints and bootstrap login writes — intentionally happen
 # before Store/Overlay wrappers are fully available.
-apps/web/heys_app_auth_init_v1.js:386
-apps/web/heys_app_auth_init_v1.js:683
-apps/web/heys_app_auth_init_v1.js:684
-apps/web/heys_app_auth_init_v1.js:686
-apps/web/heys_app_auth_init_v1.js:760
+apps/web/heys_app_auth_init_v1.js:385
+apps/web/heys_app_auth_init_v1.js:701
+apps/web/heys_app_auth_init_v1.js:702
+apps/web/heys_app_auth_init_v1.js:704
+apps/web/heys_app_auth_init_v1.js:778
 apps/web/heys_auth_v1.js:28
 apps/web/heys_auth_v1.js:363
 apps/web/heys_auth_v1.js:371

@@ -179,4 +179,45 @@ describe('HEYS.AppAuthInit session restore', () => {
     expect(setStatus).toHaveBeenCalledWith('offline');
     expect(setIsInitializing).toHaveBeenCalledWith(false);
   });
+
+  it('does not restore stale PIN client markers without a session carrier', async () => {
+    storage._store.heys_pin_auth_client = 'client-stale-1';
+    storage._store.heys_client_current = JSON.stringify('client-stale-1');
+    window.HEYS.YandexAPI.getCurrentClientBySession = vi.fn();
+    window.HEYS.YandexAPI.verifyCuratorToken = vi.fn();
+
+    const setStatus = vi.fn();
+    const setClientId = vi.fn();
+    const setIsInitializing = vi.fn();
+    const cloud = {
+      setPinAuthClient: vi.fn(),
+      syncClient: vi.fn().mockResolvedValue(undefined),
+    };
+    const appAuthInit = loadAppAuthInit();
+
+    appAuthInit.runAuthInit({
+      U: { lsGet: vi.fn((_, fallback) => fallback) },
+      cloud,
+      setProducts: vi.fn(),
+      setClients: vi.fn(),
+      setClientsSource: vi.fn(),
+      setClientId,
+      setSyncVer: vi.fn((fn) => fn(0)),
+      setEmail: vi.fn(),
+      setCloudUser: vi.fn(),
+      setStatus,
+      setIsInitializing,
+    });
+
+    await flushPromises();
+
+    expect(cloud.setPinAuthClient).not.toHaveBeenCalled();
+    expect(cloud.syncClient).not.toHaveBeenCalled();
+    expect(window.HEYS.YandexAPI.getCurrentClientBySession).not.toHaveBeenCalled();
+    expect(storage.removeItem).toHaveBeenCalledWith('heys_pin_auth_client');
+    expect(storage.removeItem).toHaveBeenCalledWith('heys_client_current');
+    expect(setClientId).not.toHaveBeenCalledWith('client-stale-1');
+    expect(setStatus).toHaveBeenCalledWith('offline');
+    expect(setIsInitializing).toHaveBeenCalledWith(false);
+  });
 });

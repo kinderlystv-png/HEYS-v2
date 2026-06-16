@@ -364,7 +364,6 @@
             }
         }
 
-        const hasPinSession = !!pinAuthClient;
         const hasCookieSessionHint = (kind) => {
             try {
                 if (typeof HEYS.YandexAPI?.hasCookieSessionHint === 'function') {
@@ -387,6 +386,25 @@
                 else localStorage.removeItem(key);
             } catch (_) { /* noop */ }
         };
+        const hasReadablePinSessionToken = (() => {
+            if (!pinAuthClient) return false;
+            try {
+                const sessionToken = readGlobalValue('heys_session_token', null);
+                if (sessionToken && (typeof sessionToken !== 'string' || sessionToken.trim().length > 0)) return true;
+                const namespacedRaw = localStorage.getItem(`heys_${pinAuthClient}_session_token`);
+                return !!namespacedRaw;
+            } catch (_) {
+                return false;
+            }
+        })();
+        const hasPinCookieSessionHint = hasCookieSessionHint('pin');
+        const hasPinSession = !!pinAuthClient
+            && (pinRecoveredFromSession || hasReadablePinSessionToken || hasPinCookieSessionHint);
+        if (pinAuthClient && !hasPinSession) {
+            removeGlobalValue('heys_pin_auth_client');
+            removeGlobalValue('heys_client_current');
+            pinAuthClient = null;
+        }
         const finishNoSession = () => {
             console.info('[HEYS.entry] ➡️ Branch: no session (show login)');
             initLocalData();
@@ -396,7 +414,7 @@
         const shouldProbeCookiePinSession = !storedUser
             && !hasCuratorJwtSession
             && !hasPinSession
-            && hasCookieSessionHint('pin')
+            && hasPinCookieSessionHint
             && !!cloudRef
             && typeof HEYS.YandexAPI?.getCurrentClientBySession === 'function';
         const shouldProbeCookieCuratorSession = !storedUser

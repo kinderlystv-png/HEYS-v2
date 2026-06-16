@@ -142,6 +142,23 @@ describe('HEYS.YandexAPI session-safe access', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it('saveKV does not infer a cookie session from a stale PIN client marker', async () => {
+    const api = loadYandexAPI({
+      hostname: 'app.heyslab.ru',
+      storageSeed: {
+        heys_pin_auth_client: 'client-stale-1',
+      },
+    });
+
+    const result = await api.saveKV('ignored-client', 'heys_profile', { calories: 1800 });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'No auth token (neither curator nor session)',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('saveKV uses cookie session RPC when the PIN cookie session hint exists', async () => {
     const api = loadYandexAPI({
       hostname: 'app.heyslab.ru',

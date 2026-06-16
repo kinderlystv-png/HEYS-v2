@@ -1050,7 +1050,6 @@
   function shouldTryCookieSessionRequest() {
     try {
       if (global?.HEYS?.cloud?.isPinAuthClient?.()) return true;
-      if (localStorage.getItem('heys_pin_auth_client')) return true;
       return hasCookieSessionHint('pin');
     } catch (_) {
       return false;
