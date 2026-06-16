@@ -11,7 +11,7 @@
 apps/web/heys_platform_apis_v1.js:98
 
 # Account deletion flow — пользователь удалён, фенс уже не нужен.
-apps/web/heys_consents_v1.js:303
+apps/web/heys_consents_v1.js:302
 
 # Recovery preserve pattern в RecoveryScreen.handleClearCache — clear после
 # сбора `heys_drop_fence_*` в `preserved`, затем restore. L50 — clear фазы
