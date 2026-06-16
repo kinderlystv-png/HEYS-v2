@@ -39,6 +39,11 @@ check_endpoint() {
             -H "Content-Type: application/json" \
             -H "Origin: https://app.heyslab.ru" \
             -d "$payload" 2>&1 || echo -e "\n000")
+    elif [ "$method" == "OPTIONS" ]; then
+        response=$(curl -s -w "\n%{http_code}" -X OPTIONS "$endpoint" \
+            -H "Origin: https://app.heyslab.ru" \
+            -H "Access-Control-Request-Method: POST" \
+            2>&1 || echo -e "\n000")
     else
         response=$(curl -s -w "\n%{http_code}" "$endpoint" \
             -H "Origin: https://app.heyslab.ru" 2>&1 || echo -e "\n000")
@@ -74,6 +79,8 @@ run_checks() {
     # Auth endpoints (expected to reject invalid creds, but should NOT return 502/503)
     echo -e "${BLUE}── Auth endpoints ──${NC}"
     check_endpoint "Auth Login" "POST" "$API_URL/auth/login" '{"email":"test@test.com","password":"test"}' "400,401,403" || FAILED=$((FAILED+1))
+    check_endpoint "Client Logout CORS" "OPTIONS" "$API_URL/auth/client-logout" "" "204" || FAILED=$((FAILED+1))
+    check_endpoint "Curator Logout CORS" "OPTIONS" "$API_URL/auth/curator-logout" "" "204" || FAILED=$((FAILED+1))
     # SMS check disabled: heys-api-sms функция отключена/удалена с прода (Yandex
     # возвращает 404). В клиенте SMS_VERIFICATION_ENABLED=false
     # (heys_consents_v1.js:57), вызовов в live-flow нет. Инфраструктура deploy

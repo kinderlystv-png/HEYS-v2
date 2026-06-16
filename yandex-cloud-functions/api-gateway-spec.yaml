@@ -317,6 +317,267 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ef3c4o67vdg7o4c4d3
 
+  /auth/client-logout:
+    post:
+      summary: Revoke client PIN-session and clear HttpOnly cookie
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for client logout
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  /auth/curator-logout:
+    post:
+      summary: Clear curator HttpOnly cookie
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for curator logout
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ef3c4o67vdg7o4c4d3
+
+  # ═══════════════════════════════════════════════════════════════
+  # Push notifications — heys-api-push
+  # ═══════════════════════════════════════════════════════════════
+  /push/vapid-key:
+    get:
+      summary: Get public VAPID key
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight for push VAPID key
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+
+  /push/subscribe:
+    post:
+      summary: Save push subscription
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight for push subscribe
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+
+  /push/unsubscribe:
+    post:
+      summary: Remove push subscription
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight for push unsubscribe
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+
+  /push/prefs:
+    post:
+      summary: Save notification preferences
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight for push preferences
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+
+  /push/test:
+    post:
+      summary: Send test push
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+    options:
+      summary: CORS preflight for push test
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e2d7p20llki46ctf2b
+
+  # ═══════════════════════════════════════════════════════════════
+  # Messenger — heys-api-messages
+  # ═══════════════════════════════════════════════════════════════
+  /messages/send:
+    post:
+      summary: Send message
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages send
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/thread:
+    get:
+      summary: Get messages thread
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages thread
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/inbox:
+    get:
+      summary: Curator inbox
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages inbox
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/mark-read:
+    post:
+      summary: Mark messages as read
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages mark-read
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/toggle-done:
+    post:
+      summary: Toggle message done state
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages toggle-done
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/toggle-acked:
+    post:
+      summary: Toggle message acked state
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages toggle-acked
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/delete:
+    post:
+      summary: Delete message
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages delete
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/edit:
+    post:
+      summary: Edit message
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages edit
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  /messages/unread-count:
+    get:
+      summary: Get unread message count
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages unread-count
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
+  # ═══════════════════════════════════════════════════════════════
+  # Photos — heys-api-photos
+  # ═══════════════════════════════════════════════════════════════
+  /photos/upload:
+    post:
+      summary: Generate presigned photo upload URL
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e93t0lrfu4ng62pqa1
+    options:
+      summary: CORS preflight for photos upload
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e93t0lrfu4ng62pqa1
+
+  /photos/delete:
+    post:
+      summary: Delete photo
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e93t0lrfu4ng62pqa1
+    options:
+      summary: CORS preflight for photos delete
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4e93t0lrfu4ng62pqa1
+
   # ═══════════════════════════════════════════════════════════════
   # Supabase-compatible routes (для localhost совместимости)
   # ═══════════════════════════════════════════════════════════════

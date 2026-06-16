@@ -615,9 +615,11 @@ module.exports.handler = async function (event, context) {
       if (!token) {
         token = getCookieValue(h.cookie || h.Cookie || '', 'heys_session_token');
       }
-      // Heuristic: JWT (3 dot-separated parts) — это curator JWT (legacy path),
-      // НЕ session_token. Пропускаем — curator auth в hot-fix v1 не покрываем
-      // (отдельная итерация). Defense: warn-log если запрос крос-клиентский.
+      if (!token) {
+        token = getCookieValue(h.cookie || h.Cookie || '', 'heys_curator_jwt');
+      }
+      // Heuristic: JWT (3 dot-separated parts) — это curator JWT, который
+      // может прийти как legacy Authorization bearer или как HttpOnly cookie.
       const isJwt = token && token.split('.').length === 3;
       const sessionToken = (token && !isJwt) ? token : null;
 
@@ -1175,10 +1177,10 @@ module.exports.handler = async function (event, context) {
             const res = writeResult.rows[0]?.result;
             if (res?.success) {
               processed++;
-            } else if (res?.error === 'data_loss_protection') {
+            } else if (res?.error === 'data_loss_protection' || res?.error === 'non_client_data') {
               blocked++;
-              blockedItems.push({ k: row.k, reason: 'data_loss_protection' });
-              console.warn('[REST POST] 🛡️ Data loss protection blocked:', row.k);
+              blockedItems.push({ k: row.k, reason: res.error });
+              console.warn('[REST POST] 🛡️ Protected write blocked:', row.k, res.error);
             } else {
               console.error('[REST POST] Write failed:', res);
             }

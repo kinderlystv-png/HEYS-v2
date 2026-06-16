@@ -32,6 +32,19 @@ let HEYS_START_API = null;
 let configLoaded = false;
 let configPromise = null;
 
+const DEFAULT_TELEGRAM_REQUEST_TIMEOUT_MS = 3000;
+const DEFAULT_CALLBACK_ACK_TIMEOUT_MS = 700;
+const DEFAULT_START_BOT_POLL_WINDOW_MS = 55000;
+
+function isLockboxPlaceholder(value) {
+  return typeof value === 'string' && /^__IN_LOCKBOX__/.test(value);
+}
+
+async function ensureRuntimeConfig() {
+  await initSecrets();
+  await ensureConfig();
+}
+
 async function ensureConfig() {
   if (configLoaded) return;
   if (!configPromise) {
@@ -115,17 +128,134 @@ function getTelegramApi(bot = 'client') {
   };
 }
 
-async function tgRequest(method, payload, bot = 'client') {
+function getTelegramRequestTimeoutMs() {
+  const value = Number(process.env.TELEGRAM_REQUEST_TIMEOUT_MS);
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_TELEGRAM_REQUEST_TIMEOUT_MS;
+}
+
+function getCallbackAckTimeoutMs() {
+  const value = Number(process.env.TELEGRAM_CALLBACK_ACK_TIMEOUT_MS);
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_CALLBACK_ACK_TIMEOUT_MS;
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = getTelegramRequestTimeoutMs()) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function hashSecret(value) {
+  return crypto.createHash('sha256').update(String(value), 'utf8').digest('hex');
+}
+
+function safeEqualStrings(a, b) {
+  if (!a || !b || typeof a !== 'string' || typeof b !== 'string') return false;
+  const left = Buffer.from(a, 'utf8');
+  const right = Buffer.from(b, 'utf8');
+  if (left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
+}
+
+function verifyWebhookSecret(headers, envKey, hashEnvKey, label) {
+  const provided =
+    headers?.['x-telegram-bot-api-secret-token'] ||
+    headers?.['X-Telegram-Bot-Api-Secret-Token'] ||
+    '';
+  if (!provided || typeof provided !== 'string') {
+    console.warn(`[${label}] webhook rejected: missing secret_token header`);
+    return false;
+  }
+
+  const expected = process.env[envKey];
+  if (expected && !isLockboxPlaceholder(expected)) {
+    if (!safeEqualStrings(provided, expected)) {
+      console.warn(`[${label}] webhook rejected: secret_token mismatch`);
+      return false;
+    }
+    return true;
+  }
+
+  const expectedHash = process.env[hashEnvKey];
+  if (expectedHash && !isLockboxPlaceholder(expectedHash)) {
+    if (!safeEqualStrings(hashSecret(provided), expectedHash)) {
+      console.warn(`[${label}] webhook rejected: secret_token hash mismatch`);
+      return false;
+    }
+    return true;
+  }
+
+  console.warn(`[${label}] ${envKey}/${hashEnvKey} not set — webhook accepts ANY caller.`);
+  return true;
+}
+
+function parseMaybeJson(value) {
+  if (!value || typeof value !== 'string') return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function getWarmupPayload(event) {
+  if (!event || typeof event !== 'object') return null;
+  if (event.warmup || event.type === 'warmup') return event;
+  const detailsPayload = event.messages?.[0]?.details?.payload;
+  const parsedDetails = parseMaybeJson(detailsPayload);
+  if (parsedDetails?.warmup || parsedDetails?.type === 'warmup') return parsedDetails;
+  const bodyPayload = parseMaybeJson(event.body);
+  if (bodyPayload?.warmup || bodyPayload?.type === 'warmup') return bodyPayload;
+  return null;
+}
+
+function getStartBotPollPayload(event) {
+  if (!event || typeof event !== 'object') return null;
+  if (event.poll === 'heys-start-bot' || event.target === 'heys-start-bot-poll') return event;
+  const detailsPayload = event.messages?.[0]?.details?.payload;
+  const parsedDetails = parseMaybeJson(detailsPayload);
+  if (parsedDetails?.poll === 'heys-start-bot' || parsedDetails?.target === 'heys-start-bot-poll') {
+    return parsedDetails;
+  }
+  const bodyPayload = parseMaybeJson(event.body);
+  if (bodyPayload?.poll === 'heys-start-bot' || bodyPayload?.target === 'heys-start-bot-poll') {
+    return bodyPayload;
+  }
+  return null;
+}
+
+function getClientBotPollPayload(event) {
+  if (!event || typeof event !== 'object') return null;
+  if (event.poll === 'heys-client-bot' || event.target === 'heys-client-bot-poll') return event;
+  const detailsPayload = event.messages?.[0]?.details?.payload;
+  const parsedDetails = parseMaybeJson(detailsPayload);
+  if (parsedDetails?.poll === 'heys-client-bot' || parsedDetails?.target === 'heys-client-bot-poll') {
+    return parsedDetails;
+  }
+  const bodyPayload = parseMaybeJson(event.body);
+  if (bodyPayload?.poll === 'heys-client-bot' || bodyPayload?.target === 'heys-client-bot-poll') {
+    return bodyPayload;
+  }
+  return null;
+}
+
+async function tgRequest(method, payload, bot = 'client', timeoutMs = getTelegramRequestTimeoutMs()) {
   const { api, tokenName } = getTelegramApi(bot);
   if (!api) {
     throw new Error(`${tokenName} not configured`);
   }
 
-  const res = await fetch(`${api}/${method}`, {
+  const res = await fetchWithTimeout(`${api}/${method}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
-  });
+  }, timeoutMs);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.ok) {
     throw new Error(`Telegram ${method} failed: ${data.description || res.status}`);
@@ -143,6 +273,65 @@ async function sendMessage(chatId, text, opts = {}, bot = 'client') {
   }, bot);
 }
 
+async function answerCallbackQueryFast(queryId, bot = 'start') {
+  if (!queryId) return;
+  const token =
+    bot === 'start'
+      ? process.env.HEYS_START_BOT_TOKEN
+      : process.env.TELEGRAM_CLIENT_BOT_TOKEN;
+  if (!token || isLockboxPlaceholder(token)) return;
+
+  try {
+    const response = await fetchWithTimeout(
+      `https://api.telegram.org/bot${token}/answerCallbackQuery`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callback_query_id: queryId }),
+      },
+      getCallbackAckTimeoutMs(),
+    );
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) {
+      console.warn('[BOT] answerCallbackQuery failed:', result.description || response.status);
+    }
+  } catch (e) {
+    console.warn('[BOT] answerCallbackQuery timeout/error:', e.message);
+  }
+}
+
+async function deliverTelegramMethodResponse(response, bot = 'start') {
+  if (!response || response.statusCode !== 200 || !response.body) return false;
+  let payload = null;
+  try {
+    payload = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
+  } catch {
+    return false;
+  }
+  const method = payload?.method;
+  if (!method || typeof method !== 'string') return false;
+
+  const { method: _method, ...body } = payload;
+  try {
+    await ensureRuntimeConfig();
+    await tgRequest(method, body, bot);
+    return true;
+  } catch (e) {
+    console.warn(`[${bot}] direct ${method} failed:`, e.message);
+    return false;
+  }
+}
+
+function clientBotMessageResponse(chatId, text, opts = {}) {
+  return telegramMethodResponse('sendMessage', {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    ...opts,
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // /start <pin_token> — связывание клиента с chat_id
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,25 +340,19 @@ async function handleStartCommand(chatId, payload) {
   const pinToken = (payload || '').trim();
 
   if (!pinToken) {
-    return telegramMethodResponse('sendMessage', {
-      chat_id: chatId,
-      text:
+    return clientBotMessageResponse(
+      chatId,
         'Привет! Этот бот HEYS используется для получения PIN и уведомлений.\n\n' +
         'Чтобы войти, попросите вашего куратора прислать персональную ссылку.',
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-    });
+    );
   }
 
   // Простая проверка формата UUID
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pinToken)) {
-    return telegramMethodResponse('sendMessage', {
-      chat_id: chatId,
-      text: '⚠️ Ссылка некорректна. Попросите куратора прислать новую.',
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-    });
+    return clientBotMessageResponse(chatId, '⚠️ Ссылка некорректна. Попросите куратора прислать новую.');
   }
+
+  await ensureRuntimeConfig();
 
   const pool = getPool();
   const client = await pool.connect();
@@ -186,21 +369,19 @@ async function handleStartCommand(chatId, payload) {
 
   if (!dbResult.success) {
     if (dbResult.error === 'invalid_token') {
-      await sendMessage(
+      return clientBotMessageResponse(
         chatId,
         '❌ Ссылка не найдена или уже использована другим аккаунтом.\n' +
           'Попросите куратора прислать новую.',
       );
     } else if (dbResult.error === 'token_expired') {
-      await sendMessage(
+      return clientBotMessageResponse(
         chatId,
         '⏰ Ссылка истекла (срок действия — 7 дней).\n' +
           'Попросите куратора прислать новую.',
       );
-    } else {
-      await sendMessage(chatId, '❌ Не удалось обработать ссылку. Свяжитесь с куратором.');
     }
-    return;
+    return clientBotMessageResponse(chatId, '❌ Не удалось обработать ссылку. Свяжитесь с куратором.');
   }
 
   // Сообщение с PLAIN-ссылкой (без inline-keyboard кнопки).
@@ -208,7 +389,7 @@ async function handleStartCommand(chatId, payload) {
   // что нужно для добавления PWA на главный экран. Inline-keyboard кнопки
   // открываются только во встроенном Telegram-браузере, откуда PWA не ставится.
   const name = dbResult.name || 'там';
-  await sendMessage(
+  return clientBotMessageResponse(
     chatId,
     `Привет, <b>${escapeHtml(name)}</b>! 👋\n\n` +
       'Я — бот HEYS. Буду напоминать о триале и важных событиях вашей подписки.\n\n' +
@@ -218,7 +399,6 @@ async function handleStartCommand(chatId, payload) {
       '<i>Android:</i> зажмите ссылку → «Открыть в Chrome» → меню «⋮» → «Установить приложение».\n\n' +
       'Внутри введёте PIN, который вам прислал куратор. Если PIN потерялся — напишите куратору.',
   );
-  return undefined;
 }
 
 function escapeHtml(s) {
@@ -436,6 +616,7 @@ function getQuizSummary(answers) {
 async function recordStartFunnelEvent(eventType, opts = {}) {
   let client = null;
   try {
+    await initSecrets();
     const pool = getPool();
     client = await pool.connect();
     await client.query(
@@ -465,6 +646,7 @@ async function recordStartFunnelEvent(eventType, opts = {}) {
 }
 
 async function sendStartLeadHandoff(lead) {
+  await initSecrets();
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!botToken || !chatId) {
@@ -486,7 +668,7 @@ async function sendStartLeadHandoff(lead) {
   lines.push('', 'ПДн не отправлены в Telegram. Полные данные — в PostgreSQL РФ.');
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    const response = await fetchWithTimeout(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -502,7 +684,16 @@ async function sendStartLeadHandoff(lead) {
   }
 }
 
+function queueStartLeadHandoff(lead) {
+  setTimeout(() => {
+    sendStartLeadHandoff(lead).catch((e) => {
+      console.warn('[HEYS Start] curator handoff async failed:', e.message);
+    });
+  }, 0);
+}
+
 async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram lead') {
+  await ensureRuntimeConfig();
   const pool = getPool();
   const client = await pool.connect();
   const normalizedPhone = normalizePhone(phone);
@@ -624,7 +815,7 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
       barrier: metadata.barrier || null,
       goal: metadata.goal || null,
     };
-    await sendStartLeadHandoff(lead);
+    queueStartLeadHandoff(lead);
     return { success: true, lead };
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
@@ -716,12 +907,6 @@ function sendQuizResult(chatId, answers, source, editMessageId = null) {
 
 function handleStartBotStart(chatId, payload) {
   const source = sanitizeSource(payload);
-  const chatHash = hashTelegramChatId(chatId);
-  queueStartFunnelEvent('quiz_start', {
-    source,
-    metadata: { bot: 'heys_start', start_payload: payload || null },
-    dedupeKey: `quiz_start:start:${chatHash}:${source}`,
-  });
 
   return telegramMethodResponse('sendMessage', {
     chat_id: chatId,
@@ -734,12 +919,13 @@ function handleStartBotStart(chatId, payload) {
   });
 }
 
-function handleStartBotCallback(query) {
+async function handleStartBotCallback(query) {
   const chatId = query?.message?.chat?.id;
   const messageId = query?.message?.message_id;
   const data = query?.data || '';
 
   if (!chatId || !messageId) return jsonResponse(200, { ok: true });
+  await answerCallbackQueryFast(query.id, START_BOT);
 
   if (data.startsWith('qs|')) {
     const state = decodeQuizData(data);
@@ -811,10 +997,15 @@ function handleStartBotCallback(query) {
 }
 
 async function handleStartBotWebhook(body) {
+  const directOk = async (response) => {
+    const delivered = await deliverTelegramMethodResponse(response, START_BOT);
+    return jsonResponse(200, { ok: true, delivered });
+  };
+
   const callbackQuery = body?.callback_query;
   if (callbackQuery) {
     try {
-      return handleStartBotCallback(callbackQuery);
+      return directOk(await handleStartBotCallback(callbackQuery));
     } catch (e) {
       console.error('[HEYS Start] callback error:', e.message);
     }
@@ -832,7 +1023,7 @@ async function handleStartBotWebhook(body) {
   try {
     if (text.startsWith('/start')) {
       const payload = text.replace(/^\/start\s*/, '');
-      return handleStartBotStart(chatId, payload);
+      return directOk(handleStartBotStart(chatId, payload));
     } else if (message.contact?.phone_number || looksLikePhone(text)) {
       const contact = message.contact;
       const phone = contact?.phone_number || text;
@@ -841,49 +1032,172 @@ async function handleStartBotWebhook(body) {
       const displayName = `${firstName} ${lastName}`.trim() || 'Telegram lead';
       const result = await createStartLeadFromContact(chatId, phone, displayName);
       if (!result.success && result.error === 'no_week_request') {
-        return telegramMethodResponse('sendMessage', {
+        return directOk(telegramMethodResponse('sendMessage', {
           chat_id: chatId,
           text: 'Сначала пройдите короткий разбор: отправьте /start.',
           parse_mode: 'HTML',
           disable_web_page_preview: true,
-        });
+        }));
       }
       if (!result.success) {
-        return telegramMethodResponse('sendMessage', {
+        return directOk(telegramMethodResponse('sendMessage', {
           chat_id: chatId,
           text: 'Не удалось сохранить заявку. Попробуйте ещё раз или отправьте /start.',
           parse_mode: 'HTML',
           disable_web_page_preview: true,
-        });
+        }));
       }
-      return telegramMethodResponse('sendMessage', {
+      return directOk(telegramMethodResponse('sendMessage', {
         chat_id: chatId,
         text:
           'Спасибо. Заявка сохранена: куратор знакомится с ней и связывается с вами, когда есть свободное место для старта.',
         parse_mode: 'HTML',
         disable_web_page_preview: true,
         reply_markup: { remove_keyboard: true },
-      });
+      }));
     } else if (text === '/help' || text === '/menu') {
-      return telegramMethodResponse('sendMessage', {
+      return directOk(telegramMethodResponse('sendMessage', {
         chat_id: chatId,
         text: 'HEYS Старт помогает пройти короткий разбор «Твой тип срыва». Отправьте /start, чтобы начать.',
         parse_mode: 'HTML',
         disable_web_page_preview: true,
-      });
+      }));
     } else {
-      return telegramMethodResponse('sendMessage', {
+      return directOk(telegramMethodResponse('sendMessage', {
         chat_id: chatId,
         text: 'Чтобы пройти короткий разбор, отправьте /start.',
         parse_mode: 'HTML',
         disable_web_page_preview: true,
-      });
+      }));
     }
   } catch (e) {
     console.error('[HEYS Start] webhook handler error:', e.message);
   }
 
   return jsonResponse(200, { ok: true });
+}
+
+function getTelegramPollWindowMs(payload = {}, envKey = 'HEYS_START_POLL_WINDOW_MS') {
+  const value = Number(payload.window_ms || process.env[envKey]);
+  if (Number.isFinite(value) && value > 0) return Math.min(value, 55000);
+  return DEFAULT_START_BOT_POLL_WINDOW_MS;
+}
+
+async function handleStartBotPoll(payload = {}) {
+  await ensureRuntimeConfig();
+
+  const startedAt = Date.now();
+  const deadline = startedAt + getTelegramPollWindowMs(payload, 'HEYS_START_POLL_WINDOW_MS');
+  let processed = 0;
+  let delivered = 0;
+  let lastUpdateId = null;
+
+  while (Date.now() + 1500 < deadline) {
+    const remainingMs = deadline - Date.now();
+    const timeoutSec = Math.max(1, Math.min(10, Math.floor((remainingMs - 1000) / 1000)));
+    let updates = [];
+    try {
+      updates = await tgRequest('getUpdates', {
+        timeout: timeoutSec,
+        limit: 20,
+        allowed_updates: ['message', 'callback_query'],
+      }, START_BOT, (timeoutSec + 3) * 1000);
+    } catch (e) {
+      console.warn('[HEYS Start] poll getUpdates failed:', e.message);
+      break;
+    }
+
+    if (!Array.isArray(updates) || updates.length === 0) continue;
+
+    for (const update of updates) {
+      if (Number.isFinite(update?.update_id)) {
+        lastUpdateId = Math.max(lastUpdateId ?? update.update_id, update.update_id);
+      }
+      const result = await handleStartBotWebhook(update);
+      const body = parseMaybeJson(result?.body);
+      processed += 1;
+      if (body?.delivered) delivered += 1;
+    }
+
+    if (lastUpdateId !== null) {
+      try {
+        await tgRequest('getUpdates', {
+          offset: lastUpdateId + 1,
+          timeout: 0,
+          limit: 1,
+          allowed_updates: ['message', 'callback_query'],
+        }, START_BOT);
+      } catch (e) {
+        console.warn('[HEYS Start] poll offset commit failed:', e.message);
+      }
+    }
+  }
+
+  return jsonResponse(200, {
+    ok: true,
+    poll: 'heys-start-bot',
+    processed,
+    delivered,
+    duration_ms: Date.now() - startedAt,
+  });
+}
+
+async function handleClientBotPoll(payload = {}) {
+  await ensureRuntimeConfig();
+
+  const startedAt = Date.now();
+  const deadline = startedAt + getTelegramPollWindowMs(payload, 'TELEGRAM_CLIENT_POLL_WINDOW_MS');
+  let processed = 0;
+  let delivered = 0;
+  let lastUpdateId = null;
+
+  while (Date.now() + 1500 < deadline) {
+    const remainingMs = deadline - Date.now();
+    const timeoutSec = Math.max(1, Math.min(10, Math.floor((remainingMs - 1000) / 1000)));
+    let updates = [];
+    try {
+      updates = await tgRequest('getUpdates', {
+        timeout: timeoutSec,
+        limit: 20,
+        allowed_updates: ['message'],
+      }, 'client', (timeoutSec + 3) * 1000);
+    } catch (e) {
+      console.warn('[BOT] client poll getUpdates failed:', e.message);
+      break;
+    }
+
+    if (!Array.isArray(updates) || updates.length === 0) continue;
+
+    for (const update of updates) {
+      if (Number.isFinite(update?.update_id)) {
+        lastUpdateId = Math.max(lastUpdateId ?? update.update_id, update.update_id);
+      }
+      const result = await handleTelegramWebhook(update);
+      processed += 1;
+      if (await deliverTelegramMethodResponse(result, 'client')) delivered += 1;
+    }
+
+    if (lastUpdateId !== null) {
+      try {
+        await tgRequest('getUpdates', {
+          offset: lastUpdateId + 1,
+          timeout: 0,
+          limit: 1,
+          allowed_updates: ['message'],
+        }, 'client');
+      } catch (e) {
+        console.warn('[BOT] client poll offset commit failed:', e.message);
+      }
+    }
+  }
+
+  return jsonResponse(200, {
+    ok: true,
+    poll: 'heys-client-bot',
+    processed,
+    delivered,
+    duration_ms: Date.now() - startedAt,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -906,23 +1220,15 @@ async function handleTelegramWebhook(body) {
       const response = await handleStartCommand(chatId, payload);
       if (response) return response;
     } else if (text === '/help' || text === '/menu') {
-      return telegramMethodResponse('sendMessage', {
-        chat_id: chatId,
-        text:
+      return clientBotMessageResponse(
+        chatId,
           '<b>Доступные команды:</b>\n' +
           '/start &lt;ссылка&gt; — привязать аккаунт\n' +
           '/help — это сообщение\n\n' +
           'PIN и доступ к приложению выдаёт ваш куратор.',
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-      });
+      );
     } else {
-      return telegramMethodResponse('sendMessage', {
-        chat_id: chatId,
-        text: 'Я не понимаю это сообщение. Используйте /help для списка команд.',
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-      });
+      return clientBotMessageResponse(chatId, 'Я не понимаю это сообщение. Используйте /help для списка команд.');
     }
   } catch (e) {
     console.error('[BOT] webhook handler error:', e.message);
@@ -960,11 +1266,28 @@ async function handleInternalSend(body, headers) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 module.exports.handler = async function (event) {
-  await initSecrets();
-  await ensureConfig();
-
   const path = event?.path || event?.url || '';
   const method = event?.httpMethod || 'GET';
+
+  const warmup = getWarmupPayload(event);
+  if (warmup?.warmup === 'heys-bot-client' || warmup?.target === 'heys-bot-client') {
+    await ensureRuntimeConfig();
+    return jsonResponse(200, {
+      ok: true,
+      warmup: true,
+      service: 'heys-bot-client',
+    });
+  }
+
+  const startBotPoll = getStartBotPollPayload(event);
+  if (startBotPoll) {
+    return await handleStartBotPoll(startBotPoll);
+  }
+
+  const clientBotPoll = getClientBotPollPayload(event);
+  if (clientBotPoll) {
+    return await handleClientBotPoll(clientBotPoll);
+  }
 
   let body = {};
   if (event?.body) {
@@ -976,6 +1299,7 @@ module.exports.handler = async function (event) {
   }
 
   if (method === 'GET' && (path === '/start-bot/health' || path.endsWith('/start-bot/health'))) {
+    await ensureRuntimeConfig();
     return jsonResponse(200, {
       service: 'heys-start-bot',
       ok: true,
@@ -985,6 +1309,7 @@ module.exports.handler = async function (event) {
   }
 
   if (method === 'GET' && (path === '/bot/health' || path.endsWith('/bot/health'))) {
+    await ensureRuntimeConfig();
     return jsonResponse(200, {
       service: 'heys-bot-client',
       ok: true,
@@ -995,25 +1320,13 @@ module.exports.handler = async function (event) {
   }
 
   if (method === 'POST' && (!path || path.includes('/start-bot/webhook'))) {
-    const expected = process.env.HEYS_START_WEBHOOK_SECRET;
-    if (expected) {
-      const headers = event?.headers || {};
-      const provided =
-        headers['x-telegram-bot-api-secret-token'] ||
-        headers['X-Telegram-Bot-Api-Secret-Token'] ||
-        '';
-      if (!provided || typeof provided !== 'string') {
-        console.warn('[HEYS Start] webhook rejected: missing secret_token header');
-        return jsonResponse(403, { error: 'forbidden' });
-      }
-      const a = Buffer.from(provided, 'utf8');
-      const b = Buffer.from(expected, 'utf8');
-      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-        console.warn('[HEYS Start] webhook rejected: secret_token mismatch');
-        return jsonResponse(403, { error: 'forbidden' });
-      }
-    } else {
-      console.warn('[HEYS Start] HEYS_START_WEBHOOK_SECRET not set — webhook accepts ANY caller.');
+    if (!verifyWebhookSecret(
+      event?.headers || {},
+      'HEYS_START_WEBHOOK_SECRET',
+      'HEYS_START_WEBHOOK_SECRET_SHA256',
+      'HEYS Start',
+    )) {
+      return jsonResponse(403, { error: 'forbidden' });
     }
     return await handleStartBotWebhook(body);
   }
@@ -1025,35 +1338,21 @@ module.exports.handler = async function (event) {
     // Без этой проверки любой может слать fake updates (spam users, race
     // claim_pin_token_chat утечённым UUID и т.д.).
     //
-    // Graceful fallback: если TELEGRAM_WEBHOOK_SECRET не настроен в env — warn,
-    // но не блокируем (чтобы не сломать прод до того как user вызовет setWebhook
-    // с правильным secret_token). Когда env-var выставлен и Telegram шлёт
-    // header — проверяем строго.
-    const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
-    if (expected) {
-      const headers = event?.headers || {};
-      const provided =
-        headers['x-telegram-bot-api-secret-token'] ||
-        headers['X-Telegram-Bot-Api-Secret-Token'] ||
-        '';
-      if (!provided || typeof provided !== 'string') {
-        console.warn('[BOT] webhook rejected: missing secret_token header');
-        return jsonResponse(403, { error: 'forbidden' });
-      }
-      const a = Buffer.from(provided, 'utf8');
-      const b = Buffer.from(expected, 'utf8');
-      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-        console.warn('[BOT] webhook rejected: secret_token mismatch');
-        return jsonResponse(403, { error: 'forbidden' });
-      }
-    } else {
-      console.warn('[BOT] TELEGRAM_WEBHOOK_SECRET not set — webhook accepts ANY caller. ' +
-        'Set env-var + setWebhook with secret_token=<same> to enable SEC-020 защиту.');
+    // Fast-path check: in prod we use TELEGRAM_WEBHOOK_SECRET_SHA256 so valid
+    // webhook requests do not need Lockbox before the first response byte.
+    if (!verifyWebhookSecret(
+      event?.headers || {},
+      'TELEGRAM_WEBHOOK_SECRET',
+      'TELEGRAM_WEBHOOK_SECRET_SHA256',
+      'BOT',
+    )) {
+      return jsonResponse(403, { error: 'forbidden' });
     }
     return await handleTelegramWebhook(body);
   }
 
   if (method === 'POST' && path.includes('/send')) {
+    await ensureRuntimeConfig();
     return await handleInternalSend(body, event?.headers || {});
   }
 

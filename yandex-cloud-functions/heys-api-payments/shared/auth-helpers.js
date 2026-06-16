@@ -20,8 +20,9 @@
  */
 
 /**
- * Извлекает Bearer-токен из заголовков event (Yandex Cloud Function format).
- * Поддерживает Authorization / authorization (lowercase, как делают многие proxy).
+ * Извлекает клиентский session_token из заголовков event (Yandex Cloud Function format).
+ * Поддерживает Authorization / authorization, legacy X-Session-Token и
+ * HttpOnly cookie heys_session_token.
  *
  * @param {object} event — Yandex Cloud Function event
  * @returns {string|null} — plain токен или null если отсутствует/невалидный формат
@@ -35,15 +36,63 @@ function extractBearerToken(event) {
     headers['x-session-token'] ||
     null;
 
-  if (!raw || typeof raw !== 'string') return null;
+  if (raw && typeof raw === 'string') {
+    const match = raw.match(/^Bearer\s+(.+)$/i);
+    if (match) return match[1].trim();
 
-  const match = raw.match(/^Bearer\s+(.+)$/i);
-  if (match) return match[1].trim();
+    // Fallback: сырой токен в X-Session-Token (legacy)
+    if (raw.length > 16 && !raw.includes(' ')) return raw.trim();
+  }
 
-  // Fallback: сырой токен в X-Session-Token (legacy)
-  if (raw.length > 16 && !raw.includes(' ')) return raw.trim();
+  const cookieHeader = headers.cookie || headers.Cookie || '';
+  if (typeof cookieHeader === 'string' && cookieHeader) {
+    for (const part of cookieHeader.split(';')) {
+      const eqIdx = part.indexOf('=');
+      if (eqIdx <= 0) continue;
+      if (part.slice(0, eqIdx).trim() !== 'heys_session_token') continue;
+      const encoded = part.slice(eqIdx + 1).trim();
+      if (!encoded) return null;
+      let token = encoded;
+      try {
+        token = decodeURIComponent(encoded);
+      } catch (_) {
+        token = encoded;
+      }
+      if (token.length > 16 && !token.includes(' ')) return token;
+      return null;
+    }
+  }
 
   return null;
+}
+
+function extractCookieToken(event, name) {
+  const headers = event?.headers || {};
+  const cookieHeader = headers.cookie || headers.Cookie || '';
+  if (typeof cookieHeader !== 'string' || !cookieHeader) return null;
+  for (const part of cookieHeader.split(';')) {
+    const eqIdx = part.indexOf('=');
+    if (eqIdx <= 0) continue;
+    if (part.slice(0, eqIdx).trim() !== name) continue;
+    const encoded = part.slice(eqIdx + 1).trim();
+    if (!encoded) return null;
+    try {
+      return decodeURIComponent(encoded);
+    } catch (_) {
+      return encoded;
+    }
+  }
+  return null;
+}
+
+function extractCuratorJwt(event) {
+  const headers = event?.headers || {};
+  const auth = headers.Authorization || headers.authorization || '';
+  if (typeof auth === 'string') {
+    const match = auth.match(/^Bearer\s+(.+)$/i);
+    if (match) return match[1].trim();
+  }
+  return extractCookieToken(event, 'heys_curator_jwt');
 }
 
 /**
@@ -151,6 +200,8 @@ function verifyCuratorJwt(token, jwtSecret) {
 
 module.exports = {
   extractBearerToken,
+  extractCookieToken,
+  extractCuratorJwt,
   verifyClientSession,
   verifyCuratorSession,
   verifyCuratorJwt,

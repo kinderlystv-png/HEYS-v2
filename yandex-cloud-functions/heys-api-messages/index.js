@@ -16,7 +16,7 @@
  *
  * Auth (тот же паттерн что в heys-api-push):
  *   Клиент: Authorization: Bearer <session_token> (валидируется по client_sessions).
- *   Курятор: Authorization: Bearer <jwt> (HS256, role='curator').
+ *   Курятор: Authorization: Bearer <jwt> или HttpOnly cookie heys_curator_jwt.
  *
  * Rate limit:
  *   client → /send: 30 сообщений/минуту/client (in-memory counter, reset on cold start).
@@ -94,17 +94,17 @@ function verifyJwt(token, secret) {
   }
 }
 
-// ── Cookie helper: heys_session_token (HttpOnly) ─────────────────────────
+// ── Cookie helpers: heys_session_token / heys_curator_jwt (HttpOnly) ─────
 // Тот же паттерн что в heys-api-rpc/index.js:1085-1107. PR-C (2026-05-20):
-// session token PIN-клиентов лежит в HttpOnly cookie, JS его не видит,
-// нужно читать на сервере.
-function parseSessionCookie(cookieHeader) {
+// session token PIN-клиентов и curator JWT могут лежать в HttpOnly cookie,
+// JS их не видит, нужно читать на сервере.
+function parseCookieToken(cookieHeader, cookieName) {
   if (!cookieHeader || typeof cookieHeader !== 'string') return null;
   for (const part of cookieHeader.split(';')) {
     const eqIdx = part.indexOf('=');
     if (eqIdx === -1) continue;
     const name = part.slice(0, eqIdx).trim();
-    if (name === 'heys_session_token') {
+    if (name === cookieName) {
       const raw = part.slice(eqIdx + 1).trim();
       try {
         return decodeURIComponent(raw);
@@ -116,20 +116,32 @@ function parseSessionCookie(cookieHeader) {
   return null;
 }
 
+function parseSessionCookie(cookieHeader) {
+  return parseCookieToken(cookieHeader, 'heys_session_token');
+}
+
+function parseCuratorCookie(cookieHeader) {
+  return parseCookieToken(cookieHeader, 'heys_curator_jwt');
+}
+
 // ── Identity resolution: { kind, id, sessionToken? } ─────────────────────
 // Источники token'а (в порядке предпочтения):
 //   1. Authorization: Bearer <jwt>  — куратор
 //   2. Authorization: Bearer <session_token>  — клиент (legacy LS-session)
 //   3. Cookie: heys_session_token=<…>  — клиент (новый PR-C cookie-flow)
+//   4. Cookie: heys_curator_jwt=<…>  — куратор (HttpOnly curator-flow)
 async function resolveIdentity(authHeader, cookieHeader) {
   const bearer = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+  const cookieCuratorJwt = parseCuratorCookie(cookieHeader);
   const cookieSession = parseSessionCookie(cookieHeader);
+  const bearerLooksLikeJwt = bearer.split('.').length === 3 && bearer.includes('.');
+  const curatorJwt = (bearerLooksLikeJwt ? bearer : '') || cookieCuratorJwt;
 
-  // Bearer JWT → курятор
-  if (bearer) {
-    const looksLikeJwt = bearer.split('.').length === 3 && bearer.includes('.');
+  // JWT → куратор
+  if (curatorJwt) {
+    const looksLikeJwt = curatorJwt.split('.').length === 3 && curatorJwt.includes('.');
     if (looksLikeJwt && process.env.JWT_SECRET) {
-      const res = verifyJwt(bearer, process.env.JWT_SECRET);
+      const res = verifyJwt(curatorJwt, process.env.JWT_SECRET);
       if (res.valid && res.payload?.role === 'curator' && res.payload?.sub) {
         return { kind: 'curator', id: res.payload.sub };
       }

@@ -415,6 +415,35 @@ function authenticateCuratorFromHeader(authHeader, jwtSecret) {
   return { valid: true, curatorId: jwtResult.payload.sub, email: jwtResult.payload.email };
 }
 
+function getCookieValue(cookieHeader, name) {
+  if (!cookieHeader || typeof cookieHeader !== 'string') return null;
+  for (const part of cookieHeader.split(';')) {
+    const eqIdx = part.indexOf('=');
+    if (eqIdx === -1) continue;
+    if (part.slice(0, eqIdx).trim() !== name) continue;
+    try {
+      return decodeURIComponent(part.slice(eqIdx + 1).trim());
+    } catch (_) {
+      return part.slice(eqIdx + 1).trim();
+    }
+  }
+  return null;
+}
+
+function getCuratorTokenFromRequest(event) {
+  const authHeader = event.headers?.Authorization || event.headers?.authorization || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    if (token) return token;
+  }
+  return getCookieValue(event.headers?.cookie || event.headers?.Cookie || '', 'heys_curator_jwt');
+}
+
+const CLEAR_CLIENT_SESSION_COOKIE =
+  'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+const CLEAR_CURATOR_JWT_COOKIE =
+  'heys_curator_jwt=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Handlers
 // ═══════════════════════════════════════════════════════════════════════════
@@ -725,15 +754,33 @@ async function handleVerify(body, authHeader, jwtSecret) {
  * client_sessions (heys-api-payments, heys-api-rpc и т.д.).
  */
 async function handleClientLogout(body, authHeader) {
+  const cookieHeader = body?.__cookie_header || '';
+  let cookieToken = null;
+  if (cookieHeader && typeof cookieHeader === 'string') {
+    for (const part of cookieHeader.split(';')) {
+      const eqIdx = part.indexOf('=');
+      if (eqIdx === -1) continue;
+      if (part.slice(0, eqIdx).trim() !== 'heys_session_token') continue;
+      try {
+        cookieToken = decodeURIComponent(part.slice(eqIdx + 1).trim());
+      } catch (_e) {
+        cookieToken = part.slice(eqIdx + 1).trim();
+      }
+      break;
+    }
+  }
+
   const token =
     body?.session_token ||
     body?.token ||
-    (authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : null);
+    (authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : null) ||
+    cookieToken;
 
   if (!token || typeof token !== 'string') {
     return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'session_token required' }),
+      statusCode: 200,
+      headers: { 'Set-Cookie': CLEAR_CLIENT_SESSION_COOKIE },
+      body: JSON.stringify({ ok: true, revoked: false }),
     };
   }
 
@@ -746,6 +793,7 @@ async function handleClientLogout(body, authHeader) {
     const revoked = result.rows?.[0]?.revoked === true;
     return {
       statusCode: 200,
+      headers: { 'Set-Cookie': CLEAR_CLIENT_SESSION_COOKIE },
       body: JSON.stringify({ ok: true, revoked }),
     };
   } catch (e) {
@@ -757,6 +805,14 @@ async function handleClientLogout(body, authHeader) {
   } finally {
     client.release();
   }
+}
+
+function handleCuratorLogout() {
+  return {
+    statusCode: 200,
+    headers: { 'Set-Cookie': CLEAR_CURATOR_JWT_COOKIE },
+    body: JSON.stringify({ ok: true }),
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -771,16 +827,17 @@ async function handleGetClients(curatorId) {
     // Получаем клиентов куратора (включая телефон и подписку для отображения куратору)
     // 🔧 v2.2.0 — добавлен LEFT JOIN с subscriptions для active_until (UI показывает даты подписок)
     const result = await client.query(
-      `SELECT 
-         c.id, 
-         c.name, 
-         c.phone_normalized, 
-         c.updated_at, 
-         c.subscription_status, 
-         c.trial_ends_at,
-         s.active_until,
-         CASE WHEN c.pin_hash IS NOT NULL THEN true ELSE false END AS has_pin
-       FROM clients c
+      `SELECT
+         c.id,
+         c.name,
+         c.phone_normalized,
+         c.updated_at,
+	         c.subscription_status,
+	         c.trial_ends_at,
+	         s.active_until,
+	         CASE WHEN c.pin_hash IS NOT NULL THEN true ELSE false END AS has_pin,
+	         CASE WHEN c.telegram_chat_id IS NOT NULL THEN true ELSE false END AS has_telegram_binding
+	       FROM clients c
        LEFT JOIN subscriptions s ON s.client_id = c.id
        WHERE c.curator_id = $1 
        ORDER BY c.updated_at ASC`,
@@ -1287,6 +1344,8 @@ module.exports.handler = async function (event, context) {
   }
 
   const authHeader = event.headers?.Authorization || event.headers?.authorization;
+  const curatorToken = getCuratorTokenFromRequest(event);
+  const curatorAuthHeader = curatorToken ? `Bearer ${curatorToken}` : '';
   const clientIp = (
     event.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ??
     event.headers?.['X-Forwarded-For']?.split(',')[0]?.trim() ??
@@ -1301,27 +1360,33 @@ module.exports.handler = async function (event, context) {
       result = await handleLogin(body, JWT_SECRET, clientIp);
       break;
     case 'verify':
-      result = await handleVerify(body, authHeader, JWT_SECRET);
+      result = await handleVerify(body, curatorAuthHeader, JWT_SECRET);
       break;
     case 'register':
       result = await handleRegister(body, JWT_SECRET);
       break;
     case 'mfa':
-      result = await handleMfa(mfaAction, body, authHeader, JWT_SECRET);
+      result = await handleMfa(mfaAction, body, curatorAuthHeader, JWT_SECRET);
       break;
     case 'client-logout':
       // P0.15: отзыв клиентской PIN-сессии
-      result = await handleClientLogout(body, authHeader);
+      result = await handleClientLogout({
+        ...body,
+        __cookie_header: event.headers?.cookie || event.headers?.Cookie || '',
+      }, authHeader);
+      break;
+    case 'curator-logout':
+      result = handleCuratorLogout();
       break;
     case 'clients':
       // 🔐 Требует JWT авторизации
-      if (!authHeader) {
+      if (!curatorToken) {
         result = {
           statusCode: 401,
           body: JSON.stringify({ error: 'Authorization required' })
         };
       } else {
-        const jwtResult = verifyJwt(authHeader.replace(/^Bearer\s+/i, ''), JWT_SECRET);
+        const jwtResult = verifyJwt(curatorToken, JWT_SECRET);
         if (!jwtResult.valid) {
           result = {
             statusCode: 401,

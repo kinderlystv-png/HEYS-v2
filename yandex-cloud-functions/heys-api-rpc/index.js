@@ -21,6 +21,9 @@ const NON_CLIENT_DATA_BLACKLIST = [
   'heys_clients',
   'heys_client_current',
   'heys_curator_session',
+  'heys_supabase_auth_token',
+  'heys_pin_auth_client',
+  'heys_session_token',
   'heys_debug_events',
   // 2026-05-31: расширение после incident'а cross-client leak (Poplanton ↔ Aleksandra).
   // Mirror-copy в apps/web/heys_storage_supabase_v1.js. Browser-global UI state:
@@ -772,6 +775,31 @@ const ALLOWED_FUNCTIONS = [
   // 'check_subscription_status(UUID)'  — утечка статуса по чужому client_id
 ];
 
+// Session-token RPCs whose legacy names do not end with `_by_session`, but
+// still accept p_session_token. Cookie injection must include these without
+// falling back to "inject into every RPC" (that caused 42883 on public funcs).
+const COOKIE_SESSION_TOKEN_FUNCTIONS = new Set([
+  'revoke_session',
+  'request_trial',
+  'get_trial_queue_status',
+  'claim_trial_offer',
+  'cancel_trial_queue',
+  'update_shared_product_portions',
+  'get_my_curator_changelog_since',
+  'ack_curator_changelog',
+  'planning_context_ingest',
+  'delete_my_account',
+]);
+
+function acceptsCookieSessionToken(fnName) {
+  return typeof fnName === 'string' &&
+    (fnName.endsWith('_by_session') || COOKIE_SESSION_TOKEN_FUNCTIONS.has(fnName));
+}
+
+function hasAnySessionTokenParam(params) {
+  return !!(params?.p_session_token || params?.sessionToken || params?.input?.sessionToken);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔐 CURATOR_ONLY_FUNCTIONS — требуют JWT токен куратора!
 // ═══════════════════════════════════════════════════════════════════════════
@@ -803,6 +831,7 @@ const CURATOR_ONLY_FUNCTIONS = [
   'admin_update_lead_status',         // Обновление статуса лида (отклонение и т.д.)
   'admin_set_client_pin',             // 🆕 Установка PIN с bcrypt (Phase 1 hotfix, замена reset_client_pin)
   'admin_regenerate_pin',             // 🆕 Перевыпуск PIN+pin_token (P0.7)
+  'admin_clear_telegram_binding',      // Сброс chat_id, если ссылку открыл не клиент
 
   // === GAMIFICATION AUDIT ===
   'log_gamification_event_by_curator',
@@ -1578,12 +1607,12 @@ module.exports.handler = async function (event, context) {
       }
     }
   }
-  // 🔧 FIX 2026-05-21: инъекция только для *_by_session функций.
+  // 🔧 FIX 2026-05-21: инъекция только для session-token функций.
   // Раньше токен прокидывался во все RPC — это ломало функции которые
   // p_session_token не принимают (verify_client_pin_v3, log_consents,
   // check_required_consents и т.д.) с 42883 undefined_function, когда
   // в cookie оставался токен от прошлой сессии.
-  if (cookieSessionToken && !params.p_session_token && fnName.endsWith('_by_session')) {
+  if (cookieSessionToken && !hasAnySessionTokenParam(params) && acceptsCookieSessionToken(fnName)) {
     params.p_session_token = cookieSessionToken;
   }
 
@@ -1591,7 +1620,7 @@ module.exports.handler = async function (event, context) {
   // `heys_session_token`. If neither body nor cookie supplied it, fail before
   // generic SQL dispatch; otherwise Postgres sees only p_items/p_key and
   // reports "function ... does not exist", which surfaced as a misleading 500.
-  if (fnName.endsWith('_by_session') && !params.p_session_token) {
+  if (acceptsCookieSessionToken(fnName) && !hasAnySessionTokenParam(params)) {
     return {
       statusCode: 401,
       headers: corsHeaders,
@@ -3648,6 +3677,25 @@ module.exports.handler = async function (event, context) {
         'p_ip': '::text',
         'p_user_agent': '::text'
       },
+      'revoke_session': {
+        'p_session_token': '::text'
+      },
+      'request_trial': {
+        'p_session_token': '::text',
+        'p_source': '::text'
+      },
+      'get_trial_queue_status': {
+        'p_session_token': '::text'
+      },
+      'claim_trial_offer': {
+        'p_session_token': '::text'
+      },
+      'cancel_trial_queue': {
+        'p_session_token': '::text'
+      },
+      'delete_my_account': {
+        'p_session_token': '::text'
+      },
       // 🔐 P2: KV функции требуют явные типы
       'get_client_kv_by_session': {
         'p_session_token': '::text',
@@ -3856,7 +3904,6 @@ module.exports.handler = async function (event, context) {
       },
       'admin_convert_lead': {
         'p_lead_id': '::uuid',
-        'p_pin': '::text',
         'p_curator_id': '::uuid'
       },
       'admin_update_lead_status': {
@@ -3864,6 +3911,14 @@ module.exports.handler = async function (event, context) {
         'p_status': '::text',
         'p_reason': '::text',
         'p_curator_id': '::uuid'  // JWT authenticated curator (unused in function but required)
+      },
+      'admin_clear_telegram_binding': {
+        'p_client_id': '::uuid',
+        'p_curator_id': '::uuid'
+      },
+      'admin_regenerate_pin': {
+        'p_client_id': '::uuid',
+        'p_curator_id': '::uuid'
       },
       // 🔐 JWT-only: functions that need p_curator_id type hint
       'admin_get_all_clients': {
@@ -4018,9 +4073,7 @@ module.exports.handler = async function (event, context) {
       const tok = encodeURIComponent(inner.session_token);
       finalHeaders['Set-Cookie'] =
         `heys_session_token=${tok}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`;
-    } else if (fnName === 'revoke_session'
-        && inner && typeof inner === 'object'
-        && (inner.success === true || inner.revoked === true)) {
+    } else if (fnName === 'revoke_session') {
       finalHeaders['Set-Cookie'] =
         'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
     }

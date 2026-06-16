@@ -66,6 +66,8 @@ fi
 # Load environment variables from .env
 echo -e "${BLUE}📥 Loading secrets from .env...${NC}"
 source "$ENV_FILE"
+API_GATEWAY_ID="${API_GATEWAY_ID:-d5d7939njvjp27ofsok0}"
+API_GATEWAY_SPEC="${API_GATEWAY_SPEC:-$SCRIPT_DIR/api-gateway-spec.yaml}"
 
 # Validate required variables (fallback if validate-env.sh not found)
 required_vars=("PG_HOST" "PG_PORT" "PG_DATABASE" "PG_USER" "PG_PASSWORD")
@@ -140,7 +142,7 @@ get_function_config() {
         "heys-api-payments")
             echo "nodejs18 index.handler 256m 15s" ;;
         "heys-bot-client")
-            echo "nodejs18 index.handler 256m 15s" ;;
+            echo "nodejs18 index.handler 256m 60s" ;;
         "heys-cron-trial-drip")
             echo "nodejs18 index.handler 256m 60s" ;;
         "heys-cron-security-alerts")
@@ -279,11 +281,15 @@ build_env_flags() {
     # Telegram bots: existing client PIN/notification bot + HEYS Start quiz bot.
     # Keep tokens separate: TELEGRAM_CLIENT_BOT_TOKEN serves /bot/webhook,
     # HEYS_START_BOT_TOKEN serves /start-bot/webhook.
+    # Prefer webhook secret hashes in runtime env: Telegram sends the raw secret
+    # in a header, and the function can verify it without storing the raw value.
     if [[ "$func_name" == "heys-bot-client" ]]; then
         local k
-        for k in TELEGRAM_CLIENT_BOT_TOKEN HEYS_START_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET HEYS_START_WEBHOOK_SECRET INTERNAL_CRON_TOKEN APP_URL; do
+        for k in TELEGRAM_CLIENT_BOT_TOKEN HEYS_START_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET_SHA256 HEYS_START_WEBHOOK_SECRET_SHA256 INTERNAL_CRON_TOKEN APP_URL; do
             _add "$k"
         done
+        if [ -z "$TELEGRAM_WEBHOOK_SECRET_SHA256" ]; then _add TELEGRAM_WEBHOOK_SECRET; fi
+        if [ -z "$HEYS_START_WEBHOOK_SECRET_SHA256" ]; then _add HEYS_START_WEBHOOK_SECRET; fi
     fi
 
     # Web Push (VAPID) — api-push, cron-reminders, api-messages.
@@ -420,18 +426,18 @@ deploy_function() {
         sa_flag="--service-account-id aje85rjgpj4nk9m384ek"
     fi
 
-    # Concurrency: API-функции получают concurrency=4 — один контейнер
+    # Concurrency: API-функции и Telegram bot получают concurrency=4 — один контейнер
     # обслуживает до 4 параллельных запросов. Подняли с 2 → 4 (2026-06-15)
     # для запаса под burst/cold-start: при всплеске (напр. хвост sync-инцидента)
     # YC не успевал масштабировать инстансы → ALB/gateway отдавал 429 Too Many
     # Requests с дефолтным CORS '*', который браузер не читает при
     # credentials:include → клиент видел «CORS/Failed to fetch» и слепо ретраил.
-    # Memory 512m / 4 = 128m на запрос (max used ~110m — ок), DB pool max=5
-    # (см. shared/db-pool.js) — 4 concurrent укладываются с запасом.
-    # PG max_connections=400 (занято ~13) — суммарных коннектов хватает с избытком.
+    # Для heys-bot-client это важно из-за Telegram webhook: быстрые ветки не
+    # должны ждать за одним долгим contact/PIN DB-запросом. DB pool сам ограничит
+    # тяжёлые ветки, а простые webhook responses останутся параллельными.
     # Кроны остаются на default=1 (триггер запускает по одной задаче за раз).
     local concurrency_flag=""
-    if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push|messages|photos)$ ]]; then
+    if [[ "$func_name" =~ ^heys-api-(rpc|rest|auth|leads|push|messages|photos)$ || "$func_name" == "heys-bot-client" ]]; then
         concurrency_flag="--concurrency 4"
     fi
 
@@ -487,16 +493,33 @@ deploy_function() {
     cd "$SCRIPT_DIR"
 }
 
+update_api_gateway() {
+    if [ ! -f "$API_GATEWAY_SPEC" ]; then
+        echo -e "${RED}❌ API Gateway spec not found: $API_GATEWAY_SPEC${NC}"
+        exit 1
+    fi
+
+    echo -e "${BLUE}🌐 Updating API Gateway routes from $(basename "$API_GATEWAY_SPEC")...${NC}"
+    yc serverless api-gateway update \
+        --id "$API_GATEWAY_ID" \
+        --spec "$API_GATEWAY_SPEC"
+    echo -e "${GREEN}✅ API Gateway updated${NC}"
+}
+
 # Main execution
+SHOULD_UPDATE_GATEWAY=false
 if [ -n "$TARGET_FUNC" ]; then
     # Deploy single function
     deploy_function "$TARGET_FUNC"
+    if [ "$TARGET_FUNC" = "heys-api-auth" ]; then
+        SHOULD_UPDATE_GATEWAY=true
+    fi
 else
     # Deploy all functions
     echo -e "${YELLOW}🚀 Deploying all functions...${NC}"
     # heys-api-sms удалён 2026-05-22 (см. apps/web/heys_consents_v1.js:53) — исключён
     # из auto-deploy чтобы CI не падал с "function not found"
-    for func_name in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-health heys-api-payments; do
+    for func_name in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-health heys-api-payments heys-api-push heys-api-messages heys-api-photos; do
         deploy_function "$func_name"
     done
     
@@ -504,6 +527,11 @@ else
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${GREEN}✅ All functions deployed successfully!${NC}"
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    SHOULD_UPDATE_GATEWAY=true
+fi
+
+if [ "$SHOULD_UPDATE_GATEWAY" = true ]; then
+    update_api_gateway
 fi
 
 # ─── Post-deploy: health check ──────────────────────────────────────

@@ -271,6 +271,18 @@ paths:
         type: cloud_functions
         function_id: d4ef3c4o67vdg7o4c4d3
 
+  /auth/curator-logout:
+    post:
+      summary: Clear curator HttpOnly cookie
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+    options:
+      summary: CORS preflight for curator logout
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ef3c4o67vdg7o4c4d3
+
   # ═══════════════════════════════════════════════════════════════
   # Telegram Bot для клиентов (P0.7) — heys-bot-client (d4ednfmrg21i8j1svtqs)
   # ═══════════════════════════════════════════════════════════════

@@ -16,6 +16,7 @@ const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const {
   extractBearerToken,
+  extractCuratorJwt,
   verifyClientSession,
   verifyCuratorJwt,
 } = require('./shared/auth-helpers');
@@ -85,6 +86,7 @@ function getCorsHeaders(requestOrigin) {
   const origin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Id',
     'Content-Type': 'application/json',
@@ -969,7 +971,7 @@ async function getPaymentStatus(paymentId, clientId) {
  * @returns {{curatorId: string} | {error: object}}
  */
 function authenticateCuratorRequest(event) {
-  const token = extractBearerToken(event);
+  const token = extractCuratorJwt(event);
   if (!token) {
     return { error: errorResponse(401, 'Authentication required', 'NO_AUTH') };
   }
@@ -1003,7 +1005,7 @@ function authenticateCuratorRequest(event) {
 async function authenticateClientRequest(event, requestedClientId) {
   const token = extractBearerToken(event);
   if (!token) {
-    console.warn('[PAYMENTS] Missing bearer token');
+    console.warn('[PAYMENTS] Missing client session token');
     return { error: errorResponse(401, 'Authentication required', 'NO_AUTH') };
   }
 
@@ -1087,7 +1089,7 @@ module.exports.handler = async function (event, context) {
   console.log(`[PAYMENTS] ${method} ${path} | requestedClientId: ${requestedClientId || 'none'}`);
 
   try {
-    // Route: POST /payments/create — требует Bearer-токен сессии клиента
+    // Route: POST /payments/create — требует клиентскую сессию (Bearer/header/cookie)
     if (method === 'POST' && path.includes('/create')) {
       const auth = await authenticateClientRequest(event, requestedClientId);
       if (auth.error) return auth.error;
@@ -1106,7 +1108,7 @@ module.exports.handler = async function (event, context) {
       return await refundPayment(body, auth.curatorId);
     }
 
-    // Route: GET /payments/status — требует Bearer-токен сессии клиента
+    // Route: GET /payments/status — требует клиентскую сессию (Bearer/header/cookie)
     if (method === 'GET' && path.includes('/status')) {
       const auth = await authenticateClientRequest(event, requestedClientId);
       if (auth.error) return auth.error;

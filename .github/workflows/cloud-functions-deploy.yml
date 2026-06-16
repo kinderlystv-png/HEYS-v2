@@ -10,6 +10,7 @@ on:
       - "yandex-cloud-functions/heys-api-*/**"
       - "yandex-cloud-functions/shared/**"
       - "yandex-cloud-functions/deploy-all.sh"
+      - "yandex-cloud-functions/api-gateway-spec.yaml"
   workflow_dispatch:
     inputs:
       function_name:
@@ -24,6 +25,9 @@ on:
           - "heys-api-leads"
           - "heys-api-health"
           - "heys-api-payments"
+          - "heys-api-push"
+          - "heys-api-messages"
+          - "heys-api-photos"
 
 jobs:
   deploy:
@@ -67,6 +71,11 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
         run: |
           write_env_var() {
             local key="$1"
@@ -87,6 +96,11 @@ jobs:
           write_env_var TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
           write_env_var TELEGRAM_CHAT_ID "$TELEGRAM_CHAT_ID"
           write_env_var SMS_API_KEY "$SMS_API_KEY"
+          write_env_var VAPID_PUBLIC_KEY "$VAPID_PUBLIC_KEY"
+          write_env_var VAPID_PRIVATE_KEY "$VAPID_PRIVATE_KEY"
+          write_env_var VAPID_SUBJECT "$VAPID_SUBJECT"
+          write_env_var S3_ACCESS_KEY_ID "$S3_ACCESS_KEY_ID"
+          write_env_var S3_SECRET_ACCESS_KEY "$S3_SECRET_ACCESS_KEY"
           write_env_var YC_FOLDER_ID "${{ secrets.YC_FOLDER_ID }}"
 
       - name: Determine deployment target
@@ -104,12 +118,25 @@ jobs:
           if [ -z "$BEFORE" ]; then
             echo "mode=all" >> "$GITHUB_OUTPUT"
             echo "reason=no-previous-commit" >> "$GITHUB_OUTPUT"
+            echo "gateway_spec_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           CHANGED_FILES=$(git diff --name-only "$BEFORE" "$AFTER")
           echo "Changed files:"
           echo "$CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -Eq '^yandex-cloud-functions/api-gateway-spec\.yaml$'; then
+            echo "gateway_spec_changed=true" >> "$GITHUB_OUTPUT"
+            NON_GATEWAY_CHANGED=$(echo "$CHANGED_FILES" | grep -Ev '^yandex-cloud-functions/api-gateway-spec\.yaml$' || true)
+            if [ -z "$NON_GATEWAY_CHANGED" ]; then
+              echo "mode=gateway-only" >> "$GITHUB_OUTPUT"
+              echo "reason=gateway-spec-only" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            echo "gateway_spec_changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
           if echo "$CHANGED_FILES" | grep -Eq '^yandex-cloud-functions/(shared/|deploy-all\.sh$)'; then
             echo "mode=all" >> "$GITHUB_OUTPUT"
@@ -139,6 +166,8 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "$MANUAL_FUNCTION" ] && [ "$MANUAL_FUNCTION" != "all" ]; then
             echo "🎯 Deploying single function: $MANUAL_FUNCTION"
             ./deploy-all.sh "$MANUAL_FUNCTION" --ci --skip-health
+          elif [ "${{ steps.deployment-target.outputs.mode }}" = "gateway-only" ]; then
+            echo "🌐 Gateway spec only — skipping function deploy"
           elif [ "${{ steps.deployment-target.outputs.mode }}" = "selective" ]; then
             IFS=',' read -r -a FUNCTIONS <<< "${{ steps.deployment-target.outputs.functions }}"
             echo "🎯 Selective deploy: ${FUNCTIONS[*]}"
@@ -149,6 +178,15 @@ jobs:
             echo "🚀 Deploying all functions (${{ steps.deployment-target.outputs.reason }})"
             ./deploy-all.sh --ci --skip-health
           fi
+
+      - name: Update API Gateway
+        if: steps.deployment-target.outputs.gateway_spec_changed == 'true' || (github.event_name == 'workflow_dispatch' && (inputs.function_name == '' || inputs.function_name == 'all'))
+        shell: bash
+        working-directory: yandex-cloud-functions
+        run: |
+          yc serverless api-gateway update \
+            --id=d5d7939njvjp27ofsok0 \
+            --spec=api-gateway-spec.yaml
 
       - name: Verify deployment
         run: |
@@ -198,6 +236,20 @@ jobs:
               -H "Origin: https://app.heyslab.ru"
           }
 
+          check_client_logout_preflight() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X OPTIONS "https://api.heyslab.ru/auth/client-logout" \
+              -H "Origin: https://app.heyslab.ru" \
+              -H "Access-Control-Request-Method: POST"
+          }
+
+          check_curator_logout_preflight() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X OPTIONS "https://api.heyslab.ru/auth/curator-logout" \
+              -H "Origin: https://app.heyslab.ru" \
+              -H "Access-Control-Request-Method: POST"
+          }
+
           echo "⏳ Waiting 15s for functions to warm up..."
           sleep 15
 
@@ -205,6 +257,8 @@ jobs:
           retry_http_check "Health check" "200" check_health
           retry_http_check "RPC endpoint" "200" check_rpc
           retry_http_check "REST endpoint" "200" check_rest
+          retry_http_check "Client logout preflight" "204" check_client_logout_preflight
+          retry_http_check "Curator logout preflight" "204" check_curator_logout_preflight
 
           echo "✅ Deployment verified successfully"
 

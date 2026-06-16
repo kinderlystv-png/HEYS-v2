@@ -12,7 +12,7 @@
  *   4. Готово — public URL уже работает (bucket public-read)
  *
  * Auth: JWT (curator) или session_token (client) — паттерн копирует heys-api-messages.
- *       Cookie heys_session_token поддержан для PR-C клиентов.
+ *       Cookies heys_session_token и heys_curator_jwt поддержаны для PR-C/curator flows.
  */
 
 const { getPool } = require('./shared/db-pool');
@@ -100,13 +100,13 @@ function verifyJwt(token, secret) {
   }
 }
 
-function parseSessionCookie(cookieHeader) {
+function parseCookieToken(cookieHeader, cookieName) {
   if (!cookieHeader || typeof cookieHeader !== 'string') return null;
   for (const part of cookieHeader.split(';')) {
     const eqIdx = part.indexOf('=');
     if (eqIdx === -1) continue;
     const name = part.slice(0, eqIdx).trim();
-    if (name === 'heys_session_token') {
+    if (name === cookieName) {
       const raw = part.slice(eqIdx + 1).trim();
       try { return decodeURIComponent(raw); } catch { return raw; }
     }
@@ -114,14 +114,25 @@ function parseSessionCookie(cookieHeader) {
   return null;
 }
 
+function parseSessionCookie(cookieHeader) {
+  return parseCookieToken(cookieHeader, 'heys_session_token');
+}
+
+function parseCuratorCookie(cookieHeader) {
+  return parseCookieToken(cookieHeader, 'heys_curator_jwt');
+}
+
 async function resolveIdentity(authHeader, cookieHeader) {
   const bearer = authHeader ? authHeader.replace(/^Bearer\s+/i, '').trim() : '';
+  const cookieCuratorJwt = parseCuratorCookie(cookieHeader);
   const cookieSession = parseSessionCookie(cookieHeader);
+  const bearerLooksLikeJwt = bearer.split('.').length === 3 && bearer.includes('.');
+  const curatorJwt = (bearerLooksLikeJwt ? bearer : '') || cookieCuratorJwt;
 
-  if (bearer) {
-    const looksLikeJwt = bearer.split('.').length === 3 && bearer.includes('.');
+  if (curatorJwt) {
+    const looksLikeJwt = curatorJwt.split('.').length === 3 && curatorJwt.includes('.');
     if (looksLikeJwt && process.env.JWT_SECRET) {
-      const res = verifyJwt(bearer, process.env.JWT_SECRET);
+      const res = verifyJwt(curatorJwt, process.env.JWT_SECRET);
       if (res.valid && res.payload?.role === 'curator' && res.payload?.sub) {
         return { kind: 'curator', id: res.payload.sub };
       }
