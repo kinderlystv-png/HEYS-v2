@@ -19,7 +19,7 @@
     "@heys/core": "workspace:*"
   },
   "devDependencies": {
-    "tsup": "^7.2.0",
+    "tsup": "^8.5.1",
     "typescript": "^5.2.0",
     "vitest": "^3.2.6"
   }
