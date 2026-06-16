@@ -151,18 +151,24 @@ async function handleStartCommand(chatId, payload) {
   const pinToken = (payload || '').trim();
 
   if (!pinToken) {
-    await sendMessage(
-      chatId,
-      'Привет! Этот бот HEYS используется для получения PIN и уведомлений.\n\n' +
+    return telegramMethodResponse('sendMessage', {
+      chat_id: chatId,
+      text:
+        'Привет! Этот бот HEYS используется для получения PIN и уведомлений.\n\n' +
         'Чтобы войти, попросите вашего куратора прислать персональную ссылку.',
-    );
-    return;
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    });
   }
 
   // Простая проверка формата UUID
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pinToken)) {
-    await sendMessage(chatId, '⚠️ Ссылка некорректна. Попросите куратора прислать новую.');
-    return;
+    return telegramMethodResponse('sendMessage', {
+      chat_id: chatId,
+      text: '⚠️ Ссылка некорректна. Попросите куратора прислать новую.',
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    });
   }
 
   const pool = getPool();
@@ -212,6 +218,7 @@ async function handleStartCommand(chatId, payload) {
       '<i>Android:</i> зажмите ссылку → «Открыть в Chrome» → меню «⋮» → «Установить приложение».\n\n' +
       'Внутри введёте PIN, который вам прислал куратор. Если PIN потерялся — напишите куратору.',
   );
+  return undefined;
 }
 
 function escapeHtml(s) {
@@ -896,20 +903,26 @@ async function handleTelegramWebhook(body) {
   try {
     if (text.startsWith('/start')) {
       const payload = text.replace(/^\/start\s*/, '');
-      await handleStartCommand(chatId, payload);
+      const response = await handleStartCommand(chatId, payload);
+      if (response) return response;
     } else if (text === '/help' || text === '/menu') {
-      await sendMessage(
-        chatId,
-        '<b>Доступные команды:</b>\n' +
+      return telegramMethodResponse('sendMessage', {
+        chat_id: chatId,
+        text:
+          '<b>Доступные команды:</b>\n' +
           '/start &lt;ссылка&gt; — привязать аккаунт\n' +
           '/help — это сообщение\n\n' +
           'PIN и доступ к приложению выдаёт ваш куратор.',
-      );
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      });
     } else {
-      await sendMessage(
-        chatId,
-        'Я не понимаю это сообщение. Используйте /help для списка команд.',
-      );
+      return telegramMethodResponse('sendMessage', {
+        chat_id: chatId,
+        text: 'Я не понимаю это сообщение. Используйте /help для списка команд.',
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      });
     }
   } catch (e) {
     console.error('[BOT] webhook handler error:', e.message);

@@ -53,6 +53,52 @@ function startWebhookEvent(body) {
   };
 }
 
+function clientBotWebhookEvent(body) {
+  return {
+    path: '/bot/webhook',
+    httpMethod: 'POST',
+    headers: {
+      'x-telegram-bot-api-secret-token': 'test-secret',
+    },
+    body: JSON.stringify(body),
+  };
+}
+
+test('client bot simple replies use webhook response without Telegram API roundtrip', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  t.mock.method(console, 'warn', () => {});
+  t.mock.method(console, 'error', () => {});
+  t.mock.method(global, 'fetch', async () => {
+    throw new Error('fetch should not be called');
+  });
+
+  const oldEnv = { ...process.env };
+  t.after(() => {
+    process.env = oldEnv;
+    delete require.cache[MODULE_PATH];
+  });
+
+  process.env.TELEGRAM_WEBHOOK_SECRET = 'test-secret';
+  process.env.TELEGRAM_CLIENT_BOT_TOKEN = 'client-token';
+
+  const { handler, queries } = loadHandlerWithDb([]);
+  const result = await handler(
+    clientBotWebhookEvent({
+      message: {
+        chat: { id: 123456 },
+        text: 'hello',
+      },
+    }),
+  );
+
+  assert.equal(result.statusCode, 200);
+  const response = JSON.parse(result.body);
+  assert.equal(response.method, 'sendMessage');
+  assert.equal(response.chat_id, 123456);
+  assert.match(response.text, /Используйте \/help/);
+  assert.equal(queries.length, 0);
+});
+
 test('HEYS Start contact creates CRM lead and sends PII-free curator handoff', async (t) => {
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});
