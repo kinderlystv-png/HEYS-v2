@@ -37,8 +37,15 @@ apps/web/advice/_outcomes.js:132
 apps/web/advice/_outcomes.js:170
 apps/web/heys_add_product_step_v1.js:71
 apps/web/heys_app_auth_init_v1.js:177
+apps/web/heys_app_auth_init_v1.js:90
+apps/web/heys_app_auth_init_v1.js:181
 apps/web/heys_app_auth_init_v1.js:331
+apps/web/heys_app_auth_init_v1.js:362
 apps/web/heys_app_auth_init_v1.js:518
+apps/web/heys_app_auth_init_v1.js:641
+apps/web/heys_app_auth_init_v1.js:642
+apps/web/heys_app_auth_init_v1.js:644
+apps/web/heys_app_auth_init_v1.js:716
 apps/web/heys_app_gate_flow_v1.js:47
 apps/web/heys_app_hooks_v1.js:202
 apps/web/heys_app_hooks_v1.js:203
