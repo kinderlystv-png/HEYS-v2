@@ -35,13 +35,15 @@
     ];
 
     const DEFAULT_ACTIVITIES = [
-        { name: 'Поиграл с ребёнком', emoji: '👶', category: 'care' },
-        { name: 'Работа на студии', emoji: '🎨', category: 'focus' },
-        { name: 'Залип в телефоне', emoji: '📱', category: 'drain' },
-        { name: 'Программирование', emoji: '💻', category: 'focus' },
+        { name: 'Работа', emoji: '💼', category: 'focus' },
+        { name: 'Учёба', emoji: '🎓', category: 'growth' },
+        { name: 'Домашние дела', emoji: '🧹', category: 'errands' },
+        { name: 'Дорога', emoji: '🚗', category: 'errands' },
+        { name: 'Семья', emoji: '👨‍👩‍👧', category: 'care' },
+        { name: 'Общение', emoji: '💬', category: 'care' },
+        { name: 'Телефон / соцсети', emoji: '📱', category: 'drain' },
         { name: 'Спорт', emoji: '🏃', category: 'health' },
         { name: 'Чтение', emoji: '📚', category: 'growth' },
-        { name: 'Домашние дела', emoji: '🧹', category: 'errands' },
         { name: 'Отдых', emoji: '😴', category: 'recovery' },
     ];
 
@@ -262,15 +264,38 @@
             if (!activity) return;
             const endMs = new Date(entry.createdAt).getTime();
             if (!Number.isFinite(endMs)) return;
-            const groupId = entry.parallelGroupId ? `parallel:${entry.parallelGroupId}` : `entry:${entry.id || index}`;
+            const explicitStartMs = entry.at ? new Date(entry.at).getTime() : NaN;
+            const displayStartMs = entry.displayStartAt ? new Date(entry.displayStartAt).getTime() : NaN;
+            const displayEndMs = entry.displayEndAt ? new Date(entry.displayEndAt).getTime() : NaN;
+            const groupId = entry.displayGroupId
+                ? `display:${entry.displayGroupId}`
+                : (entry.parallelGroupId ? `parallel:${entry.parallelGroupId}` : `entry:${entry.id || index}`);
             const group = groups.get(groupId) || {
                 id: groupId,
+                startMs: Number.isFinite(explicitStartMs) ? explicitStartMs : null,
+                displayStartMs: Number.isFinite(displayStartMs) ? displayStartMs : null,
+                displayEndMs: Number.isFinite(displayEndMs) ? displayEndMs : null,
                 endMs,
                 minutes: 0,
                 entryIds: [],
                 activityIds: [],
                 names: [],
             };
+            if (Number.isFinite(explicitStartMs)) {
+                group.startMs = group.startMs == null
+                    ? explicitStartMs
+                    : Math.min(group.startMs, explicitStartMs);
+            }
+            if (Number.isFinite(displayStartMs)) {
+                group.displayStartMs = group.displayStartMs == null
+                    ? displayStartMs
+                    : Math.min(group.displayStartMs, displayStartMs);
+            }
+            if (Number.isFinite(displayEndMs)) {
+                group.displayEndMs = group.displayEndMs == null
+                    ? displayEndMs
+                    : Math.max(group.displayEndMs, displayEndMs);
+            }
             group.endMs = Math.max(group.endMs, endMs);
             group.minutes = Math.max(group.minutes, Number(entry.minutes) || 0);
             group.entryIds.push(entry.id);
@@ -282,23 +307,31 @@
         return Array.from(groups.values())
             .sort((a, b) => a.endMs - b.endMs)
             .map((group) => {
-                const fallbackStartMs = group.endMs - Math.max(1, group.minutes) * 60000;
-                const startMs = previousEndMs != null ? Math.min(previousEndMs, group.endMs) : fallbackStartMs;
-                previousEndMs = group.endMs;
-                const minutes = Math.max(0, Math.round((group.endMs - startMs) / 60000));
+                const groupEndMs = Number.isFinite(group.displayEndMs) ? group.displayEndMs : group.endMs;
+                const fallbackStartMs = groupEndMs - Math.max(1, group.minutes) * 60000;
+                const explicitStartMs = Number.isFinite(group.startMs) ? group.startMs : null;
+                const displayStartMs = Number.isFinite(group.displayStartMs) ? group.displayStartMs : null;
+                const startMs = displayStartMs != null
+                    ? displayStartMs
+                    : explicitStartMs != null
+                    ? explicitStartMs
+                    : (previousEndMs != null ? Math.min(previousEndMs, groupEndMs) : fallbackStartMs);
+                previousEndMs = groupEndMs;
+                const derivedMinutes = Math.max(0, Math.round((groupEndMs - startMs) / 60000));
+                const displayMinutes = Math.max(1, derivedMinutes);
                 return {
                     id: group.id,
                     startMs,
-                    endMs: group.endMs,
+                    endMs: groupEndMs,
                     entryIds: group.entryIds.slice(),
                     primaryEntryId: group.entryIds[0] || '',
                     activityIds: Array.from(new Set(group.activityIds)),
                     primaryActivityId: group.activityIds[0] || '',
                     minutes: group.minutes,
-                    durationMinutes: Math.max(1, minutes),
-                    timeRange: `${formatClockTime(startMs)}–${formatClockTime(group.endMs)}`,
-                    durationLabel: formatMinutes(minutes),
-                    name: Array.from(new Set(group.names)).join(' + '),
+                    durationMinutes: displayMinutes,
+                    timeRange: `${formatClockTime(startMs)}–${formatClockTime(groupEndMs)}`,
+                    durationLabel: formatMinutes(displayMinutes),
+                    name: Array.from(new Set(group.names)).join(' · '),
                 };
             });
     }
@@ -349,9 +382,76 @@
             minutes: Math.round(untrackedMinutes),
             hoursLabel: formatDecimalHoursFromMinutes(untrackedMinutes),
             wakeLabel: String(wakeClock || ''),
+            startMs,
+            endMs: now,
             sinceLabel: formatClockTime(startMs),
             sinceKind: lastEntryMs != null ? 'last-entry' : 'wake',
         };
+    }
+
+    function distributeUntrackedMinutes(totalMinutes, activityIds, currentAllocations, changedId, changedMinutes) {
+        const ids = Array.from(new Set(Array.isArray(activityIds) ? activityIds.filter(Boolean) : []));
+        const total = Math.max(0, Math.round(Number(totalMinutes) || 0));
+        if (ids.length === 0 || total <= 0) return {};
+        if (ids.length === 1) return { [ids[0]]: total };
+
+        const current = currentAllocations && typeof currentAllocations === 'object' ? currentAllocations : {};
+        if (!changedId || !ids.includes(changedId)) {
+            const base = Math.floor(total / ids.length);
+            let rest = total - base * ids.length;
+            return ids.reduce((acc, id) => {
+                acc[id] = base + (rest > 0 ? 1 : 0);
+                if (rest > 0) rest -= 1;
+                return acc;
+            }, {});
+        }
+
+        const fixed = Math.max(0, Math.min(total, Math.round(Number(changedMinutes) || 0)));
+        const restIds = ids.filter((id) => id !== changedId);
+        const remaining = total - fixed;
+        const oldRestSum = restIds.reduce((sum, id) => sum + Math.max(0, Math.round(Number(current[id]) || 0)), 0);
+        const next = { [changedId]: fixed };
+        if (restIds.length === 0) return next;
+
+        let assigned = 0;
+        const weighted = restIds.map((id, index) => {
+            const raw = oldRestSum > 0
+                ? remaining * (Math.max(0, Number(current[id]) || 0) / oldRestSum)
+                : remaining / restIds.length;
+            const floor = Math.floor(raw);
+            assigned += floor;
+            return { id, floor, frac: raw - floor, index };
+        }).sort((a, b) => (b.frac - a.frac) || (a.index - b.index));
+        let leftover = remaining - assigned;
+        weighted.forEach((item) => {
+            next[item.id] = item.floor + (leftover > 0 ? 1 : 0);
+            if (leftover > 0) leftover -= 1;
+        });
+        return next;
+    }
+
+    function buildUntrackedSteps(draft, activities) {
+        if (!draft || !Array.isArray(draft.selectedIds)) return [];
+        const byId = new Map((Array.isArray(activities) ? activities : []).map((item) => [item.id, item]));
+        let cursor = Number(draft.startMs);
+        const fallbackStart = Number.isFinite(cursor) ? cursor : null;
+        return draft.selectedIds
+            .map((id) => {
+                const activity = byId.get(id);
+                if (!activity) return null;
+                const minutes = Math.max(0, Math.round(Number(draft.allocations && draft.allocations[id]) || 0));
+                const startMs = Number.isFinite(cursor) ? cursor : fallbackStart;
+                const endMs = Number.isFinite(startMs) ? startMs + minutes * 60000 : null;
+                if (Number.isFinite(endMs)) cursor = endMs;
+                return {
+                    id,
+                    activity,
+                    minutes,
+                    startMs,
+                    endMs,
+                };
+            })
+            .filter(Boolean);
     }
 
     function buildSmartSuggestions(activity, entries, activeDate) {
@@ -2125,13 +2225,109 @@
         );
     }
 
+    function ChronoUntrackedAllocationPanel({ draft, activities, onChange, onConfirm, onConfirmNow, onCancel }) {
+        const steps = buildUntrackedSteps(draft, activities);
+        const flowRef = useRef(null);
+        useEffect(() => {
+            const el = flowRef.current;
+            if (!el) return undefined;
+            const stopTouch = (e) => {
+                e.stopPropagation();
+                if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            };
+            el.addEventListener('touchstart', stopTouch, { passive: true });
+            el.addEventListener('touchmove', stopTouch, { passive: true });
+            el.addEventListener('touchend', stopTouch, { passive: true });
+            el.addEventListener('touchcancel', stopTouch, { passive: true });
+            return () => {
+                el.removeEventListener('touchstart', stopTouch);
+                el.removeEventListener('touchmove', stopTouch);
+                el.removeEventListener('touchend', stopTouch);
+                el.removeEventListener('touchcancel', stopTouch);
+            };
+        }, []);
+        if (!draft || steps.length === 0) return null;
+        const total = Math.max(1, Math.round(Number(draft.minutes) || 0));
+        const isSingle = steps.length === 1;
+        return h('div', {
+            ref: flowRef,
+            className: 'chrono-untracked-flow no-swipe-zone',
+            'aria-label': 'Распределение не записанного времени',
+            onPointerDown: (e) => e.stopPropagation(),
+            onPointerUp: (e) => e.stopPropagation(),
+            onPointerCancel: (e) => e.stopPropagation(),
+        },
+            h('div', { className: 'chrono-untracked-flow__head' },
+                h('span', { className: 'chrono-untracked-flow__title' }, 'Не записано'),
+                h('strong', { className: 'chrono-untracked-flow__total' }, formatMinutes(total)),
+                h('button', {
+                    type: 'button',
+                    className: 'chrono-untracked-flow__close',
+                    onClick: onCancel,
+                    'aria-label': 'Отменить распределение',
+                }, '×'),
+            ),
+            steps.length > 1 && h('div', { className: 'chrono-untracked-flow__pills' },
+                steps.map((step) => h('span', {
+                    key: step.id,
+                    className: 'chrono-untracked-flow__pill',
+                }, `${step.activity.emoji || '·'} ${step.activity.name || 'Занятие'}`)),
+            ),
+            isSingle && h('div', { className: 'chrono-untracked-flow__single' },
+                h('div', { className: 'chrono-untracked-flow__single-row' },
+                    h('span', { className: 'chrono-untracked-flow__activity' },
+                        `${steps[0].activity.emoji || '·'} ${steps[0].activity.name || 'Занятие'}`),
+                    h('span', { className: 'chrono-untracked-flow__minutes' }, formatMinutes(total)),
+                ),
+                h('div', { className: 'chrono-untracked-flow__bar', 'aria-hidden': 'true' },
+                    h('span', { className: 'chrono-untracked-flow__bar-fill', style: { width: '100%' } }),
+                ),
+            ),
+            !isSingle && h('div', { className: 'chrono-untracked-flow__sliders' },
+                steps.map((step) => {
+                    const minutes = Math.max(0, Math.round(Number(step.minutes) || 0));
+                    const pct = Math.round((minutes / total) * 100);
+                    return h('label', { key: step.id, className: 'chrono-untracked-flow__slider-row' },
+                        h('span', { className: 'chrono-untracked-flow__slider-top' },
+                            h('span', { className: 'chrono-untracked-flow__activity' },
+                                `${step.activity.emoji || '·'} ${step.activity.name || 'Занятие'}`),
+                            h('span', { className: 'chrono-untracked-flow__minutes' },
+                                `${formatMinutes(minutes)} · ${pct}%`),
+                        ),
+                        h('input', {
+                            className: 'chrono-untracked-flow__range',
+                            type: 'range',
+                            min: 0,
+                            max: total,
+                            step: 1,
+                            value: minutes,
+                            onChange: (e) => onChange && onChange(step.id, Number(e.target.value)),
+                        }),
+                    );
+                }),
+            ),
+            h('div', { className: 'chrono-untracked-flow__actions' },
+                h('button', {
+                    type: 'button',
+                    className: 'planning-btn chrono-untracked-flow__confirm-now',
+                    onClick: onConfirmNow,
+                }, '⚡ Подтвердить'),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-btn planning-btn--primary chrono-untracked-flow__confirm',
+                    onClick: onConfirm,
+                }, steps.length > 1 ? 'Подтвердить по очереди' : 'Подтвердить'),
+            ),
+        );
+    }
+
     function getParallelActivityOptions(activities, currentActivityId) {
         return (Array.isArray(activities) ? activities : [])
             .filter((item) => item && item.id && item.id !== currentActivityId && !item.archived)
             .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
     }
 
-    function ChronoDurationModal({ activity, activities, currentMinutes, scopeLabel, timerRunning, tasks, projects, entries, activeDate, initialMinutes, onAdd, onSetTarget, onCategory, onLink, onStartTimer, onClose }) {
+    function ChronoDurationModal({ activity, activities, currentMinutes, scopeLabel, timerRunning, tasks, projects, entries, activeDate, initialMinutes, confirmationSteps, confirmationIndex, onAdd, onSetTarget, onCategory, onLink, onStartTimer, onClose }) {
         const initialWheelTime = splitMinutesForWheel(initialMinutes || 30);
         const [hourIdx, setHourIdx] = useState(initialWheelTime.hours);
         const [minuteIdx, setMinuteIdx] = useState(initialWheelTime.minutes);
@@ -2146,6 +2342,7 @@
             ? parallelActivityId
             : (parallelOptions[0] && parallelOptions[0].id) || '';
         const effectiveParallelActivityId = parallelEnabled ? selectedParallelActivityId : '';
+        const isConfirmationFlow = Array.isArray(confirmationSteps) && confirmationSteps.length > 0;
 
 
         useEffect(() => {
@@ -2177,15 +2374,15 @@
         }, [parallelEnabled, parallelActivityId, parallelOptions]);
 
         function applyPreset(min) {
-            onAdd(min, { parallelActivityId: effectiveParallelActivityId });
-            onClose();
+            const close = onAdd(min, { parallelActivityId: effectiveParallelActivityId });
+            if (close !== false) onClose();
         }
 
         function applyCustom() {
             const min = hourIdx * 60 + minuteIdx;
             if (min <= 0) return;
-            onAdd(min, { parallelActivityId: effectiveParallelActivityId });
-            onClose();
+            const close = onAdd(min, { parallelActivityId: effectiveParallelActivityId });
+            if (close !== false) onClose();
         }
 
         const WheelColumn = HEYS.WheelColumn;
@@ -2195,6 +2392,15 @@
             ref: overlayRef,
             onClick: (e) => { if (e.target === overlayRef.current) onClose(); },
         },
+            Array.isArray(confirmationSteps) && confirmationSteps.length > 1 && h('div', {
+                className: 'chrono-duration__step-pill',
+                onClick: (e) => e.stopPropagation(),
+            },
+                confirmationSteps.map((step, index) => h('span', {
+                    key: step.id,
+                    className: 'chrono-duration__step-pill-item' + (index === confirmationIndex ? ' active' : ''),
+                }, `${step.activity.emoji || '·'} ${step.activity.name || 'Занятие'}`)),
+            ),
             h('div', { className: 'planning-modal planning-modal--picker chrono-duration', onClick: (e) => e.stopPropagation() },
                 h('div', { className: 'planning-modal__header' },
                     h('span', null,
@@ -2222,7 +2428,7 @@
                         suggestions: smartSuggestions,
                         onPick: applyPreset,
                     }),
-                    h('div', { className: 'chrono-duration__parallel' },
+                    !isConfirmationFlow && h('div', { className: 'chrono-duration__parallel' },
                         h('button', {
                             type: 'button',
                             className: 'chrono-duration__parallel-toggle' + (parallelEnabled ? ' active' : ''),
@@ -3595,7 +3801,15 @@
         }, []);
 
         const activities = state.chronoActivities || [];
-        const visibleActivities = useMemo(() => activities.filter((a) => !a.archived), [activities]);
+        const untrackedSteps = useMemo(() => buildUntrackedSteps(untrackedDraft, activities), [untrackedDraft, activities]);
+        const untrackedSelectedIds = useMemo(() => new Set(
+            untrackedDraft && Array.isArray(untrackedDraft.selectedIds)
+                ? untrackedDraft.selectedIds.filter(Boolean)
+                : []
+        ), [untrackedDraft]);
+        const visibleActivities = useMemo(() => activities.filter((a) =>
+            !a.archived && !untrackedSelectedIds.has(a.id)
+        ), [activities, untrackedSelectedIds]);
         const entries = state.chronoEntries || [];
         const snapshots = state.chronoSnapshots || [];
         const tasks = state.tasks || [];
@@ -3706,6 +3920,22 @@
         }, [deleteTarget, activities]);
 
         const handleBubbleClick = useCallback((activity) => {
+            if (untrackedDraft && !untrackedDraft.confirming && activity && activity.id) {
+                setUntrackedDraft((current) => {
+                    if (!current || current.confirming) return current;
+                    const selected = Array.isArray(current.selectedIds) ? current.selectedIds : [];
+                    const exists = selected.includes(activity.id);
+                    const selectedIds = exists
+                        ? selected.filter((id) => id !== activity.id)
+                        : selected.concat(activity.id);
+                    return {
+                        ...current,
+                        selectedIds,
+                        allocations: distributeUntrackedMinutes(current.minutes, selectedIds, current.allocations),
+                    };
+                });
+                return;
+            }
             setDurationInitialMinutes(untrackedDraft ? untrackedDraft.minutes : null);
             setDurationTarget(activity);
             if (untrackedDraft) setUntrackedDraft(null);
@@ -3715,16 +3945,25 @@
             setHistoryTarget(activity);
         }, []);
 
-        const handleAddMinutes = useCallback((minutes, options = {}) => {
-            if (!durationTarget || minutes <= 0) return;
+        const persistChronoSegment = useCallback((activityId, minutes, options = {}) => {
+            if (!activityId || minutes <= 0) return { entry: null, ids: [] };
             const parallelActivityId = options && options.parallelActivityId;
-            const hasParallel = parallelActivityId && parallelActivityId !== durationTarget.id;
-            const parallelGroupId = hasParallel ? `parallel_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}` : '';
+            const hasParallel = parallelActivityId && parallelActivityId !== activityId;
+            const parallelGroupId = options && options.parallelGroupId
+                ? options.parallelGroupId
+                : (hasParallel ? `parallel_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}` : '');
+            const entryTiming = {};
+            if (options && options.at) entryTiming.at = options.at;
+            if (options && options.createdAt) entryTiming.createdAt = options.createdAt;
+            if (options && options.displayGroupId) entryTiming.displayGroupId = options.displayGroupId;
+            if (options && options.displayStartAt) entryTiming.displayStartAt = options.displayStartAt;
+            if (options && options.displayEndAt) entryTiming.displayEndAt = options.displayEndAt;
             const entry = state.addChronoEntry({
-                activityId: durationTarget.id,
+                activityId,
                 date: activeDate,
                 minutes,
                 parallelGroupId,
+                ...entryTiming,
             });
             const ids = [];
             if (entry && entry.id) ids.push(entry.id);
@@ -3734,15 +3973,115 @@
                     date: activeDate,
                     minutes,
                     parallelGroupId,
+                    ...entryTiming,
                 });
                 if (parallelEntry && parallelEntry.id) ids.push(parallelEntry.id);
             }
+            return { entry, ids };
+        }, [state, activeDate]);
+
+        const handleAddMinutes = useCallback((minutes, options = {}) => {
+            if (!durationTarget || minutes <= 0) return;
+            const isUntrackedConfirming = !!(untrackedDraft && untrackedDraft.confirming);
+            const currentConfirmIndex = Math.max(0, Number(untrackedDraft && untrackedDraft.confirmIndex) || 0);
+            const currentStep = isUntrackedConfirming ? untrackedSteps[currentConfirmIndex] : null;
+            const parallelActivityId = isUntrackedConfirming ? '' : options && options.parallelActivityId;
+            const sharedUntrackedTiming = isUntrackedConfirming
+                && untrackedDraft
+                && Array.isArray(untrackedDraft.selectedIds)
+                && untrackedDraft.selectedIds.length > 1
+                && Number.isFinite(untrackedDraft.startMs)
+                && Number.isFinite(untrackedDraft.endMs)
+                ? {
+                    at: new Date(untrackedDraft.startMs).toISOString(),
+                    createdAt: new Date(untrackedDraft.endMs).toISOString(),
+                    displayGroupId: untrackedDraft.groupId,
+                    displayStartAt: new Date(untrackedDraft.startMs).toISOString(),
+                    displayEndAt: new Date(untrackedDraft.endMs).toISOString(),
+                }
+                : null;
+            const entryTiming = sharedUntrackedTiming || (currentStep && Number.isFinite(currentStep.startMs)
+                ? {
+                    at: new Date(currentStep.startMs).toISOString(),
+                    createdAt: new Date((currentStep.startMs + minutes * 60000)).toISOString(),
+                }
+                : {});
+            const { entry, ids } = persistChronoSegment(durationTarget.id, minutes, {
+                parallelActivityId,
+                ...entryTiming,
+            });
             if (entry && entry.id) {
                 setToast({ id: entry.id, ids, minutes, parallelCount: ids.length });
                 setRecentBadge({ activityId: durationTarget.id, minutes, key: entry.id });
                 setDurationInitialMinutes(null);
             }
-        }, [durationTarget, activeDate, state]);
+            if (isUntrackedConfirming) {
+                const nextStep = untrackedSteps[currentConfirmIndex + 1];
+                if (nextStep && nextStep.activity) {
+                    setUntrackedDraft((current) => current
+                        ? { ...current, confirmIndex: currentConfirmIndex + 1 }
+                        : current);
+                    setDurationInitialMinutes(nextStep.minutes);
+                    setDurationTarget(nextStep.activity);
+                    return false;
+                }
+                setUntrackedDraft(null);
+                setDurationInitialMinutes(null);
+                setDurationTarget(null);
+                return false;
+            }
+            return undefined;
+        }, [durationTarget, untrackedDraft, untrackedSteps, persistChronoSegment]);
+
+        const handleUntrackedApplyNow = useCallback(() => {
+            if (!untrackedSteps.length) return;
+            const sharedTiming = untrackedDraft
+                && Array.isArray(untrackedDraft.selectedIds)
+                && untrackedDraft.selectedIds.length > 1
+                && Number.isFinite(untrackedDraft.startMs)
+                && Number.isFinite(untrackedDraft.endMs)
+                ? {
+                    at: new Date(untrackedDraft.startMs).toISOString(),
+                    createdAt: new Date(untrackedDraft.endMs).toISOString(),
+                    displayGroupId: untrackedDraft.groupId,
+                    displayStartAt: new Date(untrackedDraft.startMs).toISOString(),
+                    displayEndAt: new Date(untrackedDraft.endMs).toISOString(),
+                }
+                : null;
+            const saved = [];
+            untrackedSteps.forEach((step) => {
+                const minutes = Math.max(0, Math.round(Number(step.minutes) || 0));
+                if (!step.activity || !step.activity.id || minutes <= 0) return;
+                const { entry, ids } = persistChronoSegment(step.activity.id, minutes, {
+                    ...(sharedTiming || {
+                        at: Number.isFinite(step.startMs) ? new Date(step.startMs).toISOString() : undefined,
+                        createdAt: Number.isFinite(step.endMs) ? new Date(step.endMs).toISOString() : undefined,
+                    }),
+                });
+                if (entry && entry.id) {
+                    saved.push({ entry, ids, minutes });
+                }
+            });
+            if (saved.length > 0) {
+                const lastSaved = saved[saved.length - 1];
+                const allIds = saved.flatMap((item) => item.ids || []);
+                const totalMinutes = saved.reduce((sum, item) => sum + item.minutes, 0);
+                setToast({
+                    id: lastSaved.entry.id,
+                    ids: allIds,
+                    minutes: totalMinutes,
+                    parallelCount: allIds.length,
+                });
+                setRecentBadge({
+                    activityId: lastSaved.entry.activityId,
+                    minutes: lastSaved.minutes,
+                    key: lastSaved.entry.id,
+                });
+            }
+            setUntrackedDraft(null);
+            setDurationTarget(null);
+            setDurationInitialMinutes(null);
+        }, [untrackedSteps, persistChronoSegment, untrackedDraft]);
 
         const handleUndo = useCallback(() => {
             if (!toast) return;
@@ -3924,14 +4263,57 @@
 
         useEffect(() => {
             if (!untrackedDraft) return;
+            if (untrackedDraft.confirming) return;
             if (!untracked || untrackedDraft.key !== untrackedKey) setUntrackedDraft(null);
         }, [untracked, untrackedKey, untrackedDraft]);
 
         const handleUntrackedBadgeClick = useCallback(() => {
             if (!untracked || !untracked.minutes) return;
-            const next = { key: untrackedKey, minutes: untracked.minutes };
+            const next = {
+                key: untrackedKey,
+                groupId: `untracked_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+                minutes: untracked.minutes,
+                startMs: untracked.startMs,
+                endMs: untracked.endMs,
+                selectedIds: [],
+                allocations: {},
+                confirming: false,
+                confirmIndex: 0,
+            };
             setUntrackedDraft((current) => (current && current.key === next.key ? null : next));
         }, [untracked, untrackedKey]);
+
+        const handleUntrackedAllocationChange = useCallback((activityId, minutes) => {
+            setUntrackedDraft((current) => {
+                if (!current || current.confirming) return current;
+                return {
+                    ...current,
+                    allocations: distributeUntrackedMinutes(
+                        current.minutes,
+                        current.selectedIds,
+                        current.allocations,
+                        activityId,
+                        minutes,
+                    ),
+                };
+            });
+        }, []);
+
+        const handleUntrackedCancel = useCallback(() => {
+            setUntrackedDraft(null);
+            setDurationTarget(null);
+            setDurationInitialMinutes(null);
+        }, []);
+
+        const handleUntrackedConfirm = useCallback(() => {
+            const first = untrackedSteps[0];
+            if (!first || !first.activity || first.minutes <= 0) return;
+            setUntrackedDraft((current) => current
+                ? { ...current, confirming: true, confirmIndex: 0 }
+                : current);
+            setDurationInitialMinutes(first.minutes);
+            setDurationTarget(first.activity);
+        }, [untrackedSteps]);
 
         // Запрещаем листать в будущее: следующий шаг (день или неделя) не должен
         // выходить за «сегодня». Для недельного режима ориентируемся на старт
@@ -3954,10 +4336,15 @@
         const swipeRef = useRef({ x: 0, y: 0, t: 0, active: false });
         const handleScreenPointerDown = useCallback((e) => {
             if (e.pointerType === 'mouse') return; // мышь не используем — есть кнопки
+            if (e.target && typeof e.target.closest === 'function' && e.target.closest('.chrono-untracked-flow')) return;
             swipeRef.current = { x: e.clientX, y: e.clientY, t: Date.now(), active: true };
         }, []);
         const handleScreenPointerUp = useCallback((e) => {
             if (!swipeRef.current.active) return;
+            if (e.target && typeof e.target.closest === 'function' && e.target.closest('.chrono-untracked-flow')) {
+                swipeRef.current.active = false;
+                return;
+            }
             const dx = e.clientX - swipeRef.current.x;
             const dy = Math.abs(e.clientY - swipeRef.current.y);
             const dt = Date.now() - swipeRef.current.t;
@@ -3975,6 +4362,9 @@
         const handleScreenPointerCancel = useCallback(() => {
             swipeRef.current.active = false;
         }, []);
+        const untrackedHasSelection = !!(untrackedDraft
+            && Array.isArray(untrackedDraft.selectedIds)
+            && untrackedDraft.selectedIds.length > 0);
 
         return h('div', {
             className: 'chrono-screen',
@@ -4038,11 +4428,19 @@
                 timeOfDay,
                 lastAdded,
                 loggedRows,
-                untracked,
+                untracked: untrackedHasSelection ? null : untracked,
                 untrackedActive: !!untrackedDraft,
                 onUntrackedClick: handleUntrackedBadgeClick,
                 onLoggedRowClick: setEntryEditTarget,
                 onLoggedRowsReorder: handleLoggedRowsReorder,
+            }),
+            untrackedDraft && !untrackedDraft.confirming && untrackedSteps.length > 0 && h(ChronoUntrackedAllocationPanel, {
+                draft: untrackedDraft,
+                activities,
+                onChange: handleUntrackedAllocationChange,
+                onConfirm: handleUntrackedConfirm,
+                onConfirmNow: handleUntrackedApplyNow,
+                onCancel: handleUntrackedCancel,
             }),
             h(ChronoPlanFactPanel, { facts: planFacts, tasks, projects }),
             chronoSyncing && h('div', { className: 'chrono-empty', role: 'status' }, 'Обновление занятий…'),
@@ -4093,6 +4491,10 @@
                 entries,
                 activeDate,
                 initialMinutes: durationInitialMinutes,
+                confirmationSteps: untrackedDraft && untrackedDraft.confirming ? untrackedSteps : null,
+                confirmationIndex: untrackedDraft && untrackedDraft.confirming
+                    ? Math.max(0, Number(untrackedDraft.confirmIndex) || 0)
+                    : 0,
                 onStartTimer: handleStartTimer,
                 onAdd: handleAddMinutes,
                 onCategory: (category) => state.updateChronoActivity(durationTarget.id, { category }),
@@ -4109,6 +4511,7 @@
                     state.updateChronoActivity(durationTarget.id, { [field]: m });
                 },
                 onClose: () => {
+                    if (untrackedDraft && untrackedDraft.confirming) setUntrackedDraft(null);
                     setDurationTarget(null);
                     setDurationInitialMinutes(null);
                 },
@@ -4178,9 +4581,7 @@
                 activities,
                 onPickActivity: (activity) => {
                     setTimelineOpen(false);
-                    setDurationInitialMinutes(untrackedDraft ? untrackedDraft.minutes : null);
-                    setDurationTarget(activity);
-                    if (untrackedDraft) setUntrackedDraft(null);
+                    handleBubbleClick(activity);
                 },
                 onClose: () => setTimelineOpen(false),
             }),
@@ -4234,6 +4635,8 @@
         buildChronoReorderAssignments,
         buildLastAddedSummary,
         buildUntrackedChronoSummary,
+        distributeUntrackedMinutes,
+        buildUntrackedSteps,
         buildSmartSuggestions,
         getParallelActivityOptions,
         buildWeeklyReport,

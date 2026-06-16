@@ -1157,14 +1157,17 @@
             activityId,
             date: dateStr(input?.date),
             minutes,
-            createdAt: nowISO(),
+            createdAt: input?.createdAt || nowISO(),
             // `at` — ISO момента фактического начала активности (для паттерна
             // времени суток). Таймер передаёт реальный startMs; ручной ввод —
             // дефолт now. Опциональное, backward-compat: читатели берут
             // entry.at || entry.createdAt.
-            at: input?.at || nowISO(),
+            at: input?.at || input?.createdAt || nowISO(),
         };
         if (input?.parallelGroupId) entry.parallelGroupId = String(input.parallelGroupId);
+        if (input?.displayGroupId) entry.displayGroupId = String(input.displayGroupId);
+        if (input?.displayStartAt) entry.displayStartAt = String(input.displayStartAt);
+        if (input?.displayEndAt) entry.displayEndAt = String(input.displayEndAt);
         saveChronoEntries(getChronoEntries().concat(entry));
         return entry;
     }

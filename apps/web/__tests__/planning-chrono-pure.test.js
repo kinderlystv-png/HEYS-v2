@@ -309,6 +309,25 @@ describe('Store — chrono tombstones', () => {
         });
     });
 
+    it('addChronoEntry preserves explicit at and createdAt for pre-scheduled chrono segments', () => {
+        const a = Store.addChronoActivity({ name: 'Code' });
+        const entry = Store.addChronoEntry({
+            activityId: a.id,
+            date: '2026-06-02',
+            minutes: 22,
+            at: '2026-06-02T10:35:00.000Z',
+            createdAt: '2026-06-02T10:57:00.000Z',
+        });
+
+        expect(entry.at).toBe('2026-06-02T10:35:00.000Z');
+        expect(entry.createdAt).toBe('2026-06-02T10:57:00.000Z');
+        expect(Store.getChronoEntries()[0]).toMatchObject({
+            at: '2026-06-02T10:35:00.000Z',
+            createdAt: '2026-06-02T10:57:00.000Z',
+            minutes: 22,
+        });
+    });
+
     it('merges incoming tombstones instead of replacing local delete history', () => {
         const localActivity = Store.addChronoActivity({ name: 'Local delete' });
         Store.deleteChronoActivity(localActivity.id);
@@ -1067,7 +1086,64 @@ describe('chrono analytics helpers', () => {
 
         expect(rows).toMatchObject([
             { id: 'entry:first', entryIds: ['first'], timeRange: '07:00–08:00', durationLabel: '1ч', name: 'Read' },
-            { id: 'parallel:g1', entryIds: ['p1', 'p2'], timeRange: '08:00–10:30', durationLabel: '2ч 30м', name: 'Code + Podcast' },
+            { id: 'parallel:g1', entryIds: ['p1', 'p2'], timeRange: '08:00–10:30', durationLabel: '2ч 30м', name: 'Code · Podcast' },
+        ]);
+    });
+
+    it('buildChronoLoggedRows collapses multi-activity untracked flow into one display row', () => {
+        const rows = Chrono.buildChronoLoggedRows(
+            { sleepEnd: '07:00' },
+            [
+                {
+                    id: 'u1',
+                    activityId: 'a',
+                    date: '2026-06-02',
+                    minutes: 22,
+                    at: '2026-06-02T10:35:00',
+                    createdAt: '2026-06-02T11:24:00',
+                    displayGroupId: 'ug1',
+                    displayStartAt: '2026-06-02T10:35:00',
+                    displayEndAt: '2026-06-02T11:24:00',
+                },
+                {
+                    id: 'u2',
+                    activityId: 'b',
+                    date: '2026-06-02',
+                    minutes: 17,
+                    at: '2026-06-02T10:35:00',
+                    createdAt: '2026-06-02T11:24:00',
+                    displayGroupId: 'ug1',
+                    displayStartAt: '2026-06-02T10:35:00',
+                    displayEndAt: '2026-06-02T11:24:00',
+                },
+                {
+                    id: 'u3',
+                    activityId: 'c',
+                    date: '2026-06-02',
+                    minutes: 10,
+                    at: '2026-06-02T10:35:00',
+                    createdAt: '2026-06-02T11:24:00',
+                    displayGroupId: 'ug1',
+                    displayStartAt: '2026-06-02T10:35:00',
+                    displayEndAt: '2026-06-02T11:24:00',
+                },
+            ],
+            [
+                { id: 'a', name: 'Morning' },
+                { id: 'b', name: 'Game' },
+                { id: 'c', name: 'Routine' },
+            ],
+            '2026-06-02',
+        );
+
+        expect(rows).toMatchObject([
+            {
+                id: 'display:ug1',
+                entryIds: ['u1', 'u2', 'u3'],
+                timeRange: '10:35–11:24',
+                durationLabel: '49м',
+                name: 'Morning · Game · Routine',
+            },
         ]);
     });
 

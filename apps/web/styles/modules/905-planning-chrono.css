@@ -746,6 +746,151 @@ html.chrono-bubble-dragging .chrono-screen {
     margin-left: auto;
 }
 
+.chrono-untracked-flow {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 9px 10px 10px;
+    border: 1px solid rgba(34, 197, 94, 0.28);
+    border-radius: 14px;
+    background:
+        linear-gradient(135deg, rgba(240, 253, 244, 0.94), rgba(255, 255, 255, 0.92)),
+        var(--planning-surface, #fff);
+    box-shadow: 0 10px 24px -18px rgba(22, 163, 74, 0.45);
+}
+
+.chrono-untracked-flow__head,
+.chrono-untracked-flow__single-row,
+.chrono-untracked-flow__slider-top,
+.chrono-untracked-flow__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chrono-untracked-flow__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: #166534;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.chrono-untracked-flow__total,
+.chrono-untracked-flow__minutes {
+    flex: 0 0 auto;
+    color: var(--planning-text, #0f172a);
+    font-size: 12px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.chrono-untracked-flow__close {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--planning-muted, #64748b);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.chrono-untracked-flow__single,
+.chrono-untracked-flow__sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chrono-untracked-flow__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chrono-untracked-flow__pill {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-height: 26px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    color: var(--planning-text, #0f172a);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.chrono-untracked-flow__activity {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--planning-text, #0f172a);
+    font-size: 13px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chrono-untracked-flow__bar {
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.14);
+}
+
+.chrono-untracked-flow__bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.chrono-untracked-flow__slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 9px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+.chrono-untracked-flow__range {
+    width: 100%;
+    accent-color: #16a34a;
+}
+
+.chrono-untracked-flow__actions {
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 2px;
+}
+
+.chrono-untracked-flow__confirm,
+.chrono-untracked-flow__confirm-now {
+    min-height: 34px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.chrono-untracked-flow__confirm-now {
+    background: rgba(250, 204, 21, 0.16);
+    border: 1px solid rgba(202, 138, 4, 0.28);
+    color: #92400e;
+}
+
 .chrono-overview__body {
     display: grid;
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.35fr);
@@ -2118,6 +2263,8 @@ html.chrono-bubble-dragging .chrono-screen {
 /* --- Duration modal --- */
 .chrono-duration-overlay {
     z-index: 1100;
+    flex-direction: column;
+    gap: 8px;
     animation: chrono-duration-overlay-in 0.18s ease-out both;
 }
 
@@ -2155,6 +2302,39 @@ html.chrono-bubble-dragging .chrono-screen {
         0 24px 60px -12px rgba(15, 23, 42, 0.22);
     animation: chrono-duration-modal-in 0.22s cubic-bezier(0.2, 0.7, 0.3, 1) both;
     transform-origin: center center;
+}
+
+.chrono-duration__step-pill {
+    width: calc(100% - 24px);
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px;
+    overflow-x: auto;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 28px -20px rgba(15, 23, 42, 0.35);
+}
+
+.chrono-duration__step-pill-item {
+    flex: 0 0 auto;
+    max-width: 150px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    color: var(--planning-muted, #64748b);
+    background: rgba(15, 23, 42, 0.05);
+    font-size: 12px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chrono-duration__step-pill-item.active {
+    color: #fff;
+    background: var(--planning-text, #0f172a);
 }
 
 .chrono-duration__body {
