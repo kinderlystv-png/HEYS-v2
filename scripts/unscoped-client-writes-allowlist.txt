@@ -17,6 +17,7 @@ apps/web/heys_profile_step_v1.js:1039
 apps/web/heys_profile_step_v1.js:1188
 apps/web/heys_profile_step_v1.js:1635
 apps/web/heys_profile_step_v1.js:1643
+apps/web/heys_profile_step_v1.js:1646
 apps/web/heys_profile_step_v1.js:1710
 
 # heys_morning_checkin_v1.js: fallback path внутри writeDayV2ScopedAndLegacy
