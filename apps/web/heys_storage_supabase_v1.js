@@ -4496,7 +4496,14 @@
    */
   function isAuthFailure(err) {
     if (!err) return false;
-    const msg = String(err.message || err).toLowerCase();
+    const msg = String(
+      err.message ||
+      err.error ||
+      err.reason ||
+      err.raw?.reason ||
+      err.raw?.error ||
+      err
+    ).toLowerCase();
     return msg.includes('invalid_session') || msg.includes('invalid_or_expired_session');
   }
   cloud.isAuthFailure = isAuthFailure;
@@ -11222,6 +11229,9 @@
       if (res?.error || res?.data?.error) {
         const issueError = res?.error || res?.data || {};
         console.warn('[write-context] issue failed:', issueError.message || issueError.code || issueError.error || issueError);
+        if (isAuthFailure(issueError) || isSessionTokenMissing(res)) {
+          dispatchSessionExpiredOnce('write_context_issue', issueError.message || issueError.error || issueError.code || issueError);
+        }
         return finish(null);
       }
       const data = res?.data || {};

@@ -49,6 +49,10 @@ async function run() {
   assert.deepStrictEqual(mockPool.lastQuery.values, ['auth-cookie-session-1']);
   assert.match(res.headers['Set-Cookie'], /heys_session_token=;/);
   assert.match(res.headers['Set-Cookie'], /Max-Age=0/);
+  assert.deepStrictEqual(res.multiValueHeaders['Set-Cookie'], [
+    'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+    'heys_session_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+  ]);
   assert.deepStrictEqual(JSON.parse(res.body), { ok: true, revoked: true });
 
   process.env.JWT_SECRET = prevJwt;

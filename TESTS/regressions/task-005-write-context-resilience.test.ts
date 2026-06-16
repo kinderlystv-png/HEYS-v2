@@ -240,6 +240,11 @@ describe('TASK-005: write-context upload resilience', () => {
     expect(source).toContain("global.dispatchEvent(new CustomEvent('heys:sync-error'");
   });
 
+  it('expires the UI session when write-context issue reports an invalid PIN session', () => {
+    expect(source).toMatch(/function isAuthFailure\(err\)[\s\S]*err\.raw\?\.reason[\s\S]*invalid_session/);
+    expect(source).toMatch(/const issueError = res\?\.error \|\| res\?\.data \|\| \{\};[\s\S]*isAuthFailure\(issueError\)[\s\S]*isSessionTokenMissing\(res\)[\s\S]*dispatchSessionExpiredOnce\('write_context_issue'/);
+  });
+
   // Regression 2026-06-15: PIN-сессии всегда били в curator-RPC → 401.
   // Причина — решение isCurator читало флаги lastIsCuratorAuth/lastIsPinAuth,
   // которые НИКОГДА не выставлялись (мертвы с a08ca222) → всегда true.
@@ -302,7 +307,8 @@ describe('TASK-005: write-context upload resilience', () => {
   it('falls back to HttpOnly curator cookie restore when local curator markers are missing', () => {
     expect(yandexApiSource).toMatch(/async function verifyCuratorToken\(token\)[\s\S]*credentials: 'include'[\s\S]*body: JSON\.stringify\(token \? \{ token \} : \{\}\)/);
     expect(appAuthInitSource).toMatch(/const shouldProbeCookieCuratorSession = !storedUser[\s\S]*typeof HEYS\.YandexAPI\?\.verifyCuratorToken === 'function'/);
-    expect(appAuthInitSource).toMatch(/restoreCookiePinSession\(\)[\s\S]*return restoreCookieCuratorSession\(\)/);
+    expect(appAuthInitSource).toMatch(/const clearInvalidCookiePinSession = \(\) => \{[\s\S]*removeGlobalValue\('heys_pin_auth_client'\);[\s\S]*clientLogout/);
+    expect(appAuthInitSource).toMatch(/restoreCookiePinSession\(\)[\s\S]*const cleanup = isPinRestoreAuthError\(err\)[\s\S]*clearInvalidCookiePinSession\(\)[\s\S]*return cleanup\.then\(\(\) => restoreCookieCuratorSession\(\)\)/);
     expect(appAuthInitSource).toMatch(/const restoreCookieCuratorSession = \(\) => \{[\s\S]*HEYS\.YandexAPI\.verifyCuratorToken\(\)[\s\S]*const user = data\.user[\s\S]*setRestoredCuratorUser\(user\)[\s\S]*initLocalData\(\{ skipClientRestore: false, skipPinAuthRestore: true \}\)/);
   });
 
@@ -370,7 +376,9 @@ describe('TASK-005: write-context upload resilience', () => {
     expect(yandexApiSource).toMatch(/credentials: 'include'[\s\S]*body: JSON\.stringify\(sessionToken \? \{ session_token: sessionToken \} : \{\}\)/);
     expect(authFunctionSource).toContain("part.slice(0, eqIdx).trim() !== 'heys_session_token'");
     expect(authFunctionSource).toContain("'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0'");
-    expect(authFunctionSource).toMatch(/statusCode: 200,[\s\S]*headers: \{ 'Set-Cookie': CLEAR_CLIENT_SESSION_COOKIE \},[\s\S]*revoked: false/);
+    expect(authFunctionSource).toContain("'heys_session_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0'");
+    expect(authFunctionSource).toMatch(/const CLEAR_CLIENT_SESSION_COOKIES = \[[\s\S]*Domain=\.heyslab\.ru[\s\S]*heys_session_token=; HttpOnly/);
+    expect(authFunctionSource).toMatch(/return withClearCookies\(\{[\s\S]*statusCode: 200,[\s\S]*revoked: false[\s\S]*\}, CLEAR_CLIENT_SESSION_COOKIES\)/);
     expect(authFunctionSource).toMatch(/__cookie_header: event\.headers\?\.cookie \|\| event\.headers\?\.Cookie \|\| ''/);
   });
 

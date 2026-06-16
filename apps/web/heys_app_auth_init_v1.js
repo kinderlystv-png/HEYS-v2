@@ -596,6 +596,22 @@
                     setIsInitializing(false);
                 }
             };
+            const clearInvalidCookiePinSession = () => {
+                removeGlobalValue('heys_pin_auth_client');
+                removeGlobalValue('heys_client_current');
+                removeGlobalValue('heys_session_token');
+                setClientId(null);
+                setStatus('offline');
+
+                const yandexApi = window.HEYS?.YandexAPI || HEYS.YandexAPI;
+                const clearCookieSession = yandexApi?.clientLogout;
+                if (typeof clearCookieSession !== 'function') {
+                    return Promise.resolve();
+                }
+                return clearCookieSession.call(yandexApi).catch((logoutErr) => {
+                    devWarn('[App] Failed to clear invalid HttpOnly PIN session:', logoutErr);
+                });
+            };
 
             const restoreCookieCuratorSession = () => {
                 if (!shouldProbeCookieCuratorSession) {
@@ -659,11 +675,7 @@
                             devWarn('[App] ❌ Ошибка восстановления cookie PIN-сессии:', err);
                             trackError(err, { scope: 'AppAuthInit', action: 'restore_cookie_pin_session' });
                             if (isPinRestoreAuthError(err)) {
-                                removeGlobalValue('heys_pin_auth_client');
-                                removeGlobalValue('heys_client_current');
-                                setClientId(null);
-                                setStatus('offline');
-                                throw err;
+                                return clearInvalidCookiePinSession().then(() => { throw err; });
                             } else {
                                 initLocalData();
                                 setStatus('offline');
@@ -676,7 +688,10 @@
             restoreCookiePinSession()
                 .catch((err) => {
                     devLog('[App] HttpOnly PIN session probe did not restore:', err?.message || err);
-                    return restoreCookieCuratorSession()
+                    const cleanup = isPinRestoreAuthError(err)
+                        ? clearInvalidCookiePinSession()
+                        : Promise.resolve();
+                    return cleanup.then(() => restoreCookieCuratorSession())
                         .catch((curatorErr) => {
                             devLog('[App] HttpOnly curator session probe did not restore:', curatorErr?.message || curatorErr);
                             finishNoSession();

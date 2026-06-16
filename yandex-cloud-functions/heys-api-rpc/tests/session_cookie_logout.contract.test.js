@@ -49,6 +49,10 @@ async function run() {
   assert.match(mockPool.lastQuery.sql, /revoke_session\(p_session_token => \$1::text\)/);
   assert.match(res.headers['Set-Cookie'], /heys_session_token=;/);
   assert.match(res.headers['Set-Cookie'], /Max-Age=0/);
+  assert.deepStrictEqual(res.multiValueHeaders['Set-Cookie'], [
+    'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+    'heys_session_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+  ]);
   assert.deepStrictEqual(JSON.parse(res.body), { revoke_session: true });
 
   console.log('session_cookie_logout contract tests: OK');

@@ -4059,6 +4059,7 @@ module.exports.handler = async function (event, context) {
       responseBody = { ...responseBody, identity_blocked: params.__identityBlocked };
     }
     const finalHeaders = { ...corsHeaders };
+    const responseMultiValueHeaders = {};
 
     // pg returns scalar-functions wrapped as `{ <fnName>: <value> }`, so we
     // unwrap once before inspecting `success` / `session_token`.
@@ -4074,13 +4075,18 @@ module.exports.handler = async function (event, context) {
       finalHeaders['Set-Cookie'] =
         `heys_session_token=${tok}; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`;
     } else if (fnName === 'revoke_session') {
-      finalHeaders['Set-Cookie'] =
-        'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+      const clearCookies = [
+        'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+        'heys_session_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+      ];
+      finalHeaders['Set-Cookie'] = clearCookies[0];
+      responseMultiValueHeaders['Set-Cookie'] = clearCookies;
     }
 
     return {
       statusCode: 200,
       headers: finalHeaders,
+      multiValueHeaders: responseMultiValueHeaders,
       body: JSON.stringify(responseBody)
     };
 

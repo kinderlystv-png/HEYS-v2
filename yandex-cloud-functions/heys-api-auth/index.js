@@ -439,10 +439,28 @@ function getCuratorTokenFromRequest(event) {
   return getCookieValue(event.headers?.cookie || event.headers?.Cookie || '', 'heys_curator_jwt');
 }
 
-const CLEAR_CLIENT_SESSION_COOKIE =
-  'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
-const CLEAR_CURATOR_JWT_COOKIE =
-  'heys_curator_jwt=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+const CLEAR_CLIENT_SESSION_COOKIES = [
+  'heys_session_token=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+  'heys_session_token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+];
+const CLEAR_CURATOR_JWT_COOKIES = [
+  'heys_curator_jwt=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+  'heys_curator_jwt=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+];
+
+function withClearCookies(result, cookies) {
+  return {
+    ...result,
+    headers: {
+      ...(result.headers || {}),
+      'Set-Cookie': cookies[0],
+    },
+    multiValueHeaders: {
+      ...(result.multiValueHeaders || {}),
+      'Set-Cookie': cookies,
+    },
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Handlers
@@ -777,11 +795,10 @@ async function handleClientLogout(body, authHeader) {
     cookieToken;
 
   if (!token || typeof token !== 'string') {
-    return {
+    return withClearCookies({
       statusCode: 200,
-      headers: { 'Set-Cookie': CLEAR_CLIENT_SESSION_COOKIE },
       body: JSON.stringify({ ok: true, revoked: false }),
-    };
+    }, CLEAR_CLIENT_SESSION_COOKIES);
   }
 
   const client = await getClient();
@@ -791,11 +808,10 @@ async function handleClientLogout(body, authHeader) {
       [token]
     );
     const revoked = result.rows?.[0]?.revoked === true;
-    return {
+    return withClearCookies({
       statusCode: 200,
-      headers: { 'Set-Cookie': CLEAR_CLIENT_SESSION_COOKIE },
       body: JSON.stringify({ ok: true, revoked }),
-    };
+    }, CLEAR_CLIENT_SESSION_COOKIES);
   } catch (e) {
     console.error('[AUTH] revoke_session error:', e.message);
     return {
@@ -808,11 +824,10 @@ async function handleClientLogout(body, authHeader) {
 }
 
 function handleCuratorLogout() {
-  return {
+  return withClearCookies({
     statusCode: 200,
-    headers: { 'Set-Cookie': CLEAR_CURATOR_JWT_COOKIE },
     body: JSON.stringify({ ok: true }),
-  };
+  }, CLEAR_CURATOR_JWT_COOKIES);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

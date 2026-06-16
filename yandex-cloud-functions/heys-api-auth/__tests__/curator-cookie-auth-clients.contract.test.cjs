@@ -115,6 +115,10 @@ async function run() {
   assert.strictEqual(logoutRes.statusCode, 200);
   assert.match(logoutRes.headers['Set-Cookie'], /heys_curator_jwt=;/);
   assert.match(logoutRes.headers['Set-Cookie'], /Max-Age=0/);
+  assert.deepStrictEqual(logoutRes.multiValueHeaders['Set-Cookie'], [
+    'heys_curator_jwt=; Domain=.heyslab.ru; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+    'heys_curator_jwt=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',
+  ]);
   assert.deepStrictEqual(JSON.parse(logoutRes.body), { ok: true });
 
   process.env.JWT_SECRET = prevJwt;

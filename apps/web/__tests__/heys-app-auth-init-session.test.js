@@ -103,4 +103,47 @@ describe('HEYS.AppAuthInit session restore', () => {
     expect(setStatus).toHaveBeenCalledWith('online');
     expect(setIsInitializing).toHaveBeenCalledWith(false);
   });
+
+  it('clears invalid cookie-only PIN sessions before falling back to login', async () => {
+    window.HEYS.YandexAPI.getCurrentClientBySession = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: 401, message: 'invalid_session' },
+    });
+    window.HEYS.YandexAPI.clientLogout = vi.fn().mockResolvedValue({ ok: true });
+    window.HEYS.YandexAPI.verifyCuratorToken = vi.fn().mockResolvedValue({
+      data: { valid: false },
+      error: { code: 400, message: 'Token required' },
+    });
+
+    const setStatus = vi.fn();
+    const setClientId = vi.fn();
+    const setIsInitializing = vi.fn();
+    const appAuthInit = loadAppAuthInit();
+
+    appAuthInit.runAuthInit({
+      U: { lsGet: vi.fn((_, fallback) => fallback) },
+      cloud: {},
+      setProducts: vi.fn(),
+      setClients: vi.fn(),
+      setClientsSource: vi.fn(),
+      setClientId,
+      setSyncVer: vi.fn((fn) => fn(0)),
+      setEmail: vi.fn(),
+      setCloudUser: vi.fn(),
+      setStatus,
+      setIsInitializing,
+    });
+
+    await flushPromises();
+
+    expect(window.HEYS.YandexAPI.getCurrentClientBySession).toHaveBeenCalledWith();
+    await vi.waitFor(() => {
+      expect(window.HEYS.YandexAPI.clientLogout).toHaveBeenCalledWith();
+    });
+    expect(storage.removeItem).toHaveBeenCalledWith('heys_pin_auth_client');
+    expect(storage.removeItem).toHaveBeenCalledWith('heys_client_current');
+    expect(setClientId).toHaveBeenCalledWith(null);
+    expect(setStatus).toHaveBeenCalledWith('offline');
+    expect(setIsInitializing).toHaveBeenCalledWith(false);
+  });
 });
