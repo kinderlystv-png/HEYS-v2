@@ -808,9 +808,7 @@
             if (!activity || activity.archived) return;
             const goal = getActivityGoalForScope(activity, 'day');
             if (!goal || goal.minutes <= 0) return;
-            const createdDay = activity.createdAt
-                ? (Utils.chronoDateStr?.(activity.createdAt) || Utils.dateStr(activity.createdAt))
-                : floor;
+            const createdDay = activity.createdAt ? Utils.dateStr(activity.createdAt) : floor;
             const start = createdDay > floor ? createdDay : floor;
             if (start > today) return;
             const series = buildDailySeries(entries, snapshots, activity.id, start, today);

@@ -1344,6 +1344,13 @@ describe('chrono.buildGoalStreaks', () => {
         expect(res[0]).toMatchObject({ kind: 'budget', streak: 4 });
     });
 
+    it('uses calendar createdAt date for budget streak instead of chrono day shift', () => {
+        const acts = [{ id: 'c', name: 'Phone', budgetMinutesPerDay: 30, createdAt: '2026-06-01T02:30:00' }];
+        const entries = [{ activityId: 'c', date: '2026-06-04', minutes: 10 }]; // under limit
+        const res = Chrono.buildGoalStreaks(acts, entries, [], '2026-06-04');
+        expect(res[0]).toMatchObject({ kind: 'budget', streak: 4 });
+    });
+
     it('breaks budget streak on an over-limit day', () => {
         const acts = [{ id: 'c', name: 'Phone', budgetMinutesPerDay: 30, createdAt: '2026-06-02T00:00:00Z' }];
         const entries = [{ activityId: 'c', date: '2026-06-03', minutes: 99 }]; // over on 06-03
