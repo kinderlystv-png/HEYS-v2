@@ -47,7 +47,7 @@
   // ============================================================================
 
   // === App Version & Auto-logout on Update ===
-  const APP_VERSION = '2026.06.09.1947.460e91fe'; // synced with build-meta.json on 2026-02-26
+  const APP_VERSION = '2026.06.16.2344.4045c09f'; // synced with build-meta.json on 2026-02-26
 
   HEYS.version = APP_VERSION;
 
