@@ -305,15 +305,18 @@ for m in re.finditer(r'^## (Этап \d[^\n]*)\n(.*?)(?=^## |\Z)', plan_text, re
     tasks = []
     task_by_id = {}
     current_status_idx = None
+    current_owner_idx = None
     for line in m.group(2).splitlines():
         if not line.strip().startswith('|'):
             current_status_idx = None
+            current_owner_idx = None
             continue
         cells = [clean_md_cell(c) for c in line.strip().strip('|').split('|')]
         if len(cells) < 4 or set(cells[0]) <= {'-', ' ', ':'}:
             continue
         if 'Статус' in cells:
             current_status_idx = cells.index('Статус')
+            current_owner_idx = cells.index('Codex/помощь') if 'Codex/помощь' in cells else None
             continue
         tid = parse_task_id(cells[0])
         if not tid:
@@ -324,7 +327,8 @@ for m in re.finditer(r'^## (Этап \d[^\n]*)\n(.*?)(?=^## |\Z)', plan_text, re
         if '✅' not in st and '🟡' not in st and '⬜' not in st:
             continue
         status = '✅' if '✅' in st else ('🟡' if '🟡' in st else '⬜')
-        item = {'id': tid, 'name': cells[1], 'status': status, 'subtasks': []}
+        owner = cells[current_owner_idx] if current_owner_idx is not None and current_owner_idx < len(cells) else ''
+        item = {'id': tid, 'name': cells[1], 'status': status, 'owner': owner, 'subtasks': []}
         if is_top_level_task(tid):
             task_status[tid] = status
             tasks.append(item)
@@ -369,6 +373,18 @@ def status_class(st):
     return 'ok' if st == '✅' else ('mid' if st == '🟡' else 'wait')
 
 
+def task_tone_class(task):
+    if task['status'] == '✅':
+        return 'task-done'
+    owner = task.get('owner', '').lower()
+    needs_user = any(x in owner for x in ('тво', 'тоб', 'оба', 'codex + ты', 'ты'))
+    if needs_user:
+        return 'task-user'
+    if 'codex сам' in owner or owner in ('security', 'codex'):
+        return 'task-codex'
+    return 'task-user'
+
+
 now = datetime.datetime.now()
 today = now.strftime('%Y-%m-%d %H:%M')
 gen_epoch_ms = int(now.timestamp() * 1000)
@@ -399,11 +415,11 @@ for s in stages:
         subitems = ''
         if task['subtasks']:
             subitems = '<ul class="subtask-list">' + ''.join(
-                f'<li><span class="chip {status_class(sub["status"])}">'
+                f'<li class="{task_tone_class(sub)}"><span class="chip {status_class(sub["status"])}">'
                 f'{esc(sub["id"])}</span> {esc(sub["name"])}</li>'
                 for sub in task['subtasks']) + '</ul>'
         task_items.append(
-            f'<li><span class="chip {status_class(task["status"])}">'
+            f'<li class="{task_tone_class(task)}"><span class="chip {status_class(task["status"])}">'
             f'{esc(task["id"])}</span> {esc(task["name"])}{subitems}</li>')
     task_list = ''.join(task_items)
     stage_rows += (
@@ -415,6 +431,148 @@ for s in stages:
         f'<span class="bar-num">{pct}%</span>'
         f'<span class="dim s-count">{s["done"]:g}/{s["total"]}</span></div></summary>'
         f'<ul class="task-list">{task_list}</ul></details>')
+
+
+def md_inline(text):
+    text = html.unescape(str(text))
+    out = esc(text)
+    out = re.sub(r'`([^`]+)`', r'<code>\1</code>', out)
+    out = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', out)
+    out = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', out)
+    return out
+
+
+def task_tone_from_cells(cells, status_idx=None, owner_idx=None):
+    st = cells[status_idx] if status_idx is not None and status_idx < len(cells) else ''
+    if '✅' in st:
+        return 'task-done'
+    owner = cells[owner_idx].lower() if owner_idx is not None and owner_idx < len(cells) else ''
+    needs_user = any(x in owner for x in ('тво', 'тоб', 'оба', 'codex + ты', 'ты'))
+    if needs_user:
+        return 'task-user'
+    if 'codex сам' in owner or owner in ('security', 'codex'):
+        return 'task-codex'
+    return 'task-user' if ('🟡' in st or '⬜' in st) else ''
+
+
+def md_table_separator(cells):
+    return cells and all(re.fullmatch(r':?-{2,}:?', c.strip()) for c in cells if c.strip())
+
+
+def render_plan_table(table_lines):
+    rows = [[c.strip() for c in line.strip().strip('|').split('|')]
+            for line in table_lines]
+    if not rows:
+        return ''
+    head = rows[0]
+    status_idx = head.index('Статус') if 'Статус' in head else None
+    owner_idx = head.index('Codex/помощь') if 'Codex/помощь' in head else None
+    body = rows[2:] if len(rows) > 1 and md_table_separator(rows[1]) else rows[1:]
+    out = ['<div class="plan-md-table-wrap"><table class="plan-md-table"><thead><tr>']
+    out.extend(f'<th>{md_inline(c)}</th>' for c in head)
+    out.append('</tr></thead><tbody>')
+    for row in body:
+        cls = task_tone_from_cells(row, status_idx, owner_idx)
+        out.append(f'<tr class="{cls}">')
+        out.extend(f'<td>{md_inline(c)}</td>' for c in row)
+        out.append('</tr>')
+    out.append('</tbody></table></div>')
+    return ''.join(out)
+
+
+def render_plan_markdown(text):
+    lines = text.splitlines()
+    out, para = [], []
+    list_type = None
+
+    def flush_para():
+        nonlocal para
+        if para:
+            out.append('<p>' + md_inline(' '.join(para)) + '</p>')
+            para = []
+
+    def close_list():
+        nonlocal list_type
+        if list_type:
+            out.append(f'</{list_type}>')
+            list_type = None
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+
+        if not stripped:
+            flush_para()
+            close_list()
+            i += 1
+            continue
+
+        if stripped.startswith('|'):
+            flush_para()
+            close_list()
+            table_lines = []
+            while i < len(lines) and lines[i].strip().startswith('|'):
+                table_lines.append(lines[i])
+                i += 1
+            out.append(render_plan_table(table_lines))
+            continue
+
+        h = re.match(r'^(#{1,6})\s+(.+)$', stripped)
+        if h:
+            flush_para()
+            close_list()
+            level = len(h.group(1))
+            out.append(f'<h{level} class="plan-md-h{level}">{md_inline(h.group(2))}</h{level}>')
+            i += 1
+            continue
+
+        if stripped == '---':
+            flush_para()
+            close_list()
+            out.append('<hr class="plan-md-hr">')
+            i += 1
+            continue
+
+        if stripped.startswith('>'):
+            flush_para()
+            close_list()
+            quote = []
+            while i < len(lines) and lines[i].strip().startswith('>'):
+                quote.append(lines[i].strip().lstrip('>').strip())
+                i += 1
+            out.append('<blockquote>' + ''.join(
+                '<p>' + md_inline(q) + '</p>' for q in quote if q
+            ) + '</blockquote>')
+            continue
+
+        li = re.match(r'^[-*]\s+(.+)$', stripped)
+        oli = re.match(r'^\d+[.]\s+(.+)$', stripped)
+        if li or oli:
+            flush_para()
+            wanted = 'ul' if li else 'ol'
+            if list_type != wanted:
+                close_list()
+                out.append(f'<{wanted}>')
+                list_type = wanted
+            out.append('<li>' + md_inline((li or oli).group(1)) + '</li>')
+            i += 1
+            continue
+
+        if list_type and line.startswith(' ') and out and out[-1].endswith('</li>'):
+            out[-1] = out[-1][:-5] + ' ' + md_inline(stripped) + '</li>'
+            i += 1
+            continue
+
+        para.append(stripped)
+        i += 1
+
+    flush_para()
+    close_list()
+    return ''.join(out)
+
+
+plan_full_html = render_plan_markdown(plan_text)
 
 kpi_rows = ''
 for k in kpi:
@@ -658,6 +816,9 @@ details.stage-d > summary::-webkit-details-marker {{ display:none; }}
 details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .task-list {{ margin:4px 0 10px; padding-left:6px; list-style:none; }}
 .task-list li {{ font-size:12px; padding:3px 0; border-bottom:1px dashed #16203f; }}
+.task-list li.task-done,.subtask-list li.task-done {{ color:var(--dim); opacity:.62; }}
+.task-list li.task-codex,.subtask-list li.task-codex {{ color:var(--ok); }}
+.task-list li.task-user,.subtask-list li.task-user {{ color:var(--txt); }}
 .task-list .chip {{ margin-right:6px; }}
 .subtask-list {{ margin:4px 0 1px 22px; padding-left:0; list-style:none; }}
 .subtask-list li {{ color:var(--dim); font-size:11.5px; padding:2px 0;
@@ -717,6 +878,30 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .p-num {{ font-size:16px; font-weight:800; color:var(--red); line-height:1.3; }}
 .p-num.acc2 {{ color:var(--acc); }}
 .cols2 {{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }}
+.plan-source {{ padding:18px 20px; overflow:auto; }}
+.plan-source h1 {{ font-size:24px; margin:0 0 18px; }}
+.plan-source h2 {{ font-size:20px; margin:28px 0 12px; padding-bottom:8px;
+  border-bottom:1px solid var(--line); }}
+.plan-source h3 {{ font-size:15px; margin:22px 0 10px; color:var(--acc); }}
+.plan-source p {{ margin:0 0 10px; line-height:1.6; font-size:13px; }}
+.plan-source blockquote {{ margin:12px 0; padding:10px 12px; border-left:3px solid var(--acc);
+  background:#4f8cff12; border-radius:8px; color:var(--txt); }}
+.plan-source blockquote p:last-child {{ margin-bottom:0; }}
+.plan-source code {{ font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  background:#ffffff14; border:1px solid #ffffff1c; border-radius:4px; padding:1px 4px;
+  font-size:.92em; color:#dbe7ff; }}
+.plan-source a {{ color:var(--acc); text-decoration:none; border-bottom:1px dashed #4f8cff88; }}
+.plan-source ul,.plan-source ol {{ margin:8px 0 14px; padding-left:22px; }}
+.plan-source li {{ line-height:1.55; }}
+.plan-md-hr {{ border:0; border-top:1px solid var(--line); margin:18px 0; }}
+.plan-md-table-wrap {{ overflow-x:auto; margin:12px 0 20px; border:1px solid var(--line);
+  border-radius:10px; background:#0d1428; }}
+.plan-md-table {{ min-width:860px; font-size:12px; }}
+.plan-md-table th {{ background:#111a33; }}
+.plan-md-table td,.plan-md-table th {{ padding:7px 9px; }}
+.plan-md-table tr.task-done td {{ color:var(--dim); opacity:.62; }}
+.plan-md-table tr.task-codex td {{ color:var(--ok); }}
+.plan-md-table tr.task-user td {{ color:var(--txt); }}
 ul {{ padding-left:18px; }} li {{ margin-bottom:4px; font-size:12.5px; }}
 footer {{ margin-top:26px; color:var(--dim); font-size:11px;
   border-top:1px solid var(--line); padding-top:10px; }}
@@ -729,6 +914,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
     <button class="tab" data-pane="comp">Конкуренты</button>
     <button class="tab" data-pane="imap">Имплемент-мап</button>
     <button class="tab" data-pane="tg">Telegram</button>
+    <button class="tab" data-pane="plan22">План 22</button>
   </div>
   <span class="badge">Фаза 0 · Pro-first · план: {plan_pct}% · собрано {today}</span>
 </div>
@@ -834,6 +1020,13 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 	<section><h2>Библиотека Telegram-каналов (14 §12)</h2>
 	<div class="tg-examples">{tg_channel_cards}</div></section>
 	</div>
+
+<div class="pane" id="plan22">
+<p class="sub"><b>Полный источник:</b> 22_План_реализации_маркетинга.md. Цвет строк задач:
+серый = закрыто, зелёный = Codex может сделать сам, белый = нужно участие основателя / доступ / внешнее решение.</p>
+<section><h2>План реализации маркетинга — полный текст</h2>
+<div class="card plan-source">{plan_full_html}</div></section>
+</div>
 
 <footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 22_План · 25_Roadmap · 29_Аудит ·
 обновление: <b>Обновить_дашборд.command</b> (двойной клик) · авто на каждом коммите источников ·
