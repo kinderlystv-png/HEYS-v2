@@ -2271,12 +2271,6 @@
                     'aria-label': 'Отменить распределение',
                 }, '×'),
             ),
-            steps.length > 1 && h('div', { className: 'chrono-untracked-flow__pills' },
-                steps.map((step) => h('span', {
-                    key: step.id,
-                    className: 'chrono-untracked-flow__pill',
-                }, `${step.activity.emoji || '·'} ${step.activity.name || 'Занятие'}`)),
-            ),
             isSingle && h('div', { className: 'chrono-untracked-flow__single' },
                 h('div', { className: 'chrono-untracked-flow__single-row' },
                     h('span', { className: 'chrono-untracked-flow__activity' },

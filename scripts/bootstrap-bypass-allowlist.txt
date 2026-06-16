@@ -75,8 +75,8 @@ apps/web/heys_auth_v1.js:350
 apps/web/heys_cascade_card_v1.js:1245
 apps/web/heys_cascade_card_v1.js:3627
 apps/web/heys_cascade_card_v1.js:3636
-apps/web/heys_app_backup_import_v1.js:284
-apps/web/heys_app_backup_import_v1.js:294
+apps/web/heys_app_backup_import_v1.js:286
+apps/web/heys_app_backup_import_v1.js:296
 apps/web/heys_cloud_storage_utils_v1.js:108
 apps/web/heys_consents_v1.js:344
 apps/web/heys_consents_v1.js:480
@@ -140,10 +140,10 @@ apps/web/heys_gamification_bar_v1.js:1424
 apps/web/heys_gamification_bar_v1.js:1430
 apps/web/heys_gamification_bar_v1.js:1431
 apps/web/heys_gamification_bar_v1.js:1432
-apps/web/heys_gamification_v1.js:1585
+apps/web/heys_gamification_v1.js:1586
 apps/web/heys_gamification_v1.js:39
 apps/web/heys_gamification_v1.js:41
-apps/web/heys_gamification_v1.js:6023
+apps/web/heys_gamification_v1.js:6026
 apps/web/heys_insulin_wave_v1.js:908
 apps/web/heys_iw_config_loader.js:149
 apps/web/heys_iw_config_loader.js:151
@@ -249,9 +249,9 @@ apps/web/fingers/heys_fingers_records_store_v1.js:56
 apps/web/fingers/heys_fingers_session_persistence_v1.js:60
 apps/web/fingers/heys_fingers_session_persistence_v1.js:140
 apps/web/fingers/heys_fingers_voice_v1.js:167
-apps/web/heys_storage_layer_v1.js:1611
+apps/web/heys_storage_layer_v1.js:1612
 apps/web/advice/_core.js:3290
 # chrono planning UI state (collapsed toggle) — added by parallel agent
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не
 # bootstrap-critical и не data-bearing (UI collapse флаг).
-apps/web/heys_planning_chrono_v1.js:2831
+apps/web/heys_planning_chrono_v1.js:2825
