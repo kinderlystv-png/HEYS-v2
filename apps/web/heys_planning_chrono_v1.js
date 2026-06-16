@@ -48,6 +48,7 @@
     ];
 
     const TOAST_TIMEOUT_MS = 5000;
+    const CHRONO_DAY_START_HOUR = Planning.Constants?.CALENDAR_START_HOUR || 3;
 
     const CHRONO_CATEGORIES = [
         { id: 'focus', label: 'Фокус', short: 'Фокус', tone: 'blue' },
@@ -194,6 +195,9 @@
         const base = new Date(`${date}T00:00:00`);
         if (Number.isNaN(base.getTime())) return null;
         base.setMinutes(minutes);
+        if (minutes < CHRONO_DAY_START_HOUR * 60) {
+            base.setDate(base.getDate() + 1);
+        }
         return base.getTime();
     }
 
@@ -463,7 +467,7 @@
         if (last && Number(last.minutes) > 0) {
             suggestions.push({ id: 'last', label: `Повторить ${formatMinutes(last.minutes)}`, minutes: Number(last.minutes) });
         }
-        const yesterday = Utils.addDays(activeDate || Utils.dateStr(), -1);
+        const yesterday = Utils.addDays(activeDate || Utils.chronoDateStr?.() || Utils.dateStr(), -1);
         const yesterdayTotal = list
             .filter((entry) => entry.date === yesterday)
             .reduce((sum, entry) => sum + (Number(entry.minutes) || 0), 0);
@@ -797,14 +801,16 @@
     // не насчитывал успехи до её появления. target в середине дня не рвём:
     // если сегодня ещё недобор — считаем со вчера (metToday=false).
     function buildGoalStreaks(activities, entries, snapshots, todayStr) {
-        const today = todayStr || Utils.dateStr();
+        const today = todayStr || Utils.chronoDateStr?.() || Utils.dateStr();
         const floor = Utils.addDays(today, -90);
         const out = [];
         (Array.isArray(activities) ? activities : []).forEach((activity) => {
             if (!activity || activity.archived) return;
             const goal = getActivityGoalForScope(activity, 'day');
             if (!goal || goal.minutes <= 0) return;
-            const createdDay = activity.createdAt ? Utils.dateStr(activity.createdAt) : floor;
+            const createdDay = activity.createdAt
+                ? (Utils.chronoDateStr?.(activity.createdAt) || Utils.dateStr(activity.createdAt))
+                : floor;
             const start = createdDay > floor ? createdDay : floor;
             if (start > today) return;
             const series = buildDailySeries(entries, snapshots, activity.id, start, today);
@@ -921,7 +927,7 @@
     // Паттерн времени суток за окно windowDays (по умолчанию 30). Час берём из
     // entry.at || entry.createdAt. Если фокус-записей мало (<3) — focus=null.
     function buildTimeOfDayPattern(activities, entries, todayStr, windowDays) {
-        const today = todayStr || Utils.dateStr();
+        const today = todayStr || Utils.chronoDateStr?.() || Utils.dateStr();
         const win = Math.max(1, Number(windowDays) || 30);
         const cutoff = Utils.addDays(today, -win);
         const catByActivity = new Map(
@@ -1630,7 +1636,7 @@
     const HEATMAP_DAYS = 91; // 13 недель × 7 дней — норм поместится на 390px
 
     function ChronoHeatmap({ activity, entries, snapshots }) {
-        const todayStr = Utils.dateStr();
+        const todayStr = Utils.chronoDateStr?.() || Utils.dateStr();
         const startStr = Utils.addDays(todayStr, -(HEATMAP_DAYS - 1));
 
         const series = useMemo(() => buildDailySeries(entries, snapshots, activity.id, startStr, todayStr),
@@ -3776,7 +3782,7 @@
 
     function ChronoScreen({ state }) {
         const [scope, setScope] = useState('day');
-        const [activeDate, setActiveDate] = useState(() => Utils.dateStr());
+        const [activeDate, setActiveDate] = useState(() => Utils.chronoDateStr?.() || Utils.dateStr());
         const [durationTarget, setDurationTarget] = useState(null);
         const [durationInitialMinutes, setDurationInitialMinutes] = useState(null);
         const [untrackedDraft, setUntrackedDraft] = useState(null);
@@ -3790,7 +3796,7 @@
         const [timerStopOpen, setTimerStopOpen] = useState(false);
         const [timelineOpen, setTimelineOpen] = useState(false);
         const [timerNow, setTimerNow] = useState(() => Date.now());
-        const todayStr = Utils.dateStr();
+        const todayStr = Utils.chronoDateStr?.() || Utils.dateStr();
         const dateLabel = scope === 'week' ? formatWeekLabel(activeDate) : formatDateLabel(activeDate);
 
         useEffect(() => {
@@ -4156,7 +4162,7 @@
             if (!timer) return;
             const entry = state.addChronoEntry({
                 activityId: timer.activityId,
-                date: Utils.dateStr(),
+                date: Utils.chronoDateStr?.(timer.startMs ? new Date(timer.startMs) : undefined) || Utils.dateStr(),
                 minutes,
                 at: timer.startMs ? new Date(timer.startMs).toISOString() : undefined,
             });
@@ -4194,7 +4200,7 @@
             if (!timer) return;
             const entry = state.addChronoEntry({
                 activityId: timer.activityId,
-                date: Utils.dateStr(),
+                date: Utils.chronoDateStr?.(timer.startMs ? new Date(timer.startMs) : undefined) || Utils.dateStr(),
                 minutes,
                 at: timer.startMs ? new Date(timer.startMs).toISOString() : undefined,
             });

@@ -785,8 +785,25 @@
     return {
       sessionToken: sessionToken ? String(sessionToken).replace(/"/g, '') : null,
       curatorToken: curatorToken ? String(curatorToken) : null,
-      clientId: clientIdRaw ? String(clientIdRaw).replace(/"/g, '') : null
+      clientId: clientIdRaw ? String(clientIdRaw).replace(/"/g, '') : null,
+      hasCookieSession: hasCookieSessionCarrier()
     };
+  }
+
+  function hasCookieSessionCarrier() {
+    try {
+      if (HEYS.cloud?.isPinAuthClient?.()) return true;
+      const host = window.location && window.location.hostname || '';
+      return !!host && host !== 'localhost' && host !== '127.0.0.1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function withOptionalSessionToken(params, sessionToken) {
+    const next = { ...(params || {}) };
+    if (sessionToken) next.p_session_token = sessionToken;
+    return next;
   }
 
   // 🔐 Audit RPC feature-flag (auto-disabled on 403, auto-reset after 30s)
@@ -823,7 +840,7 @@
     if (!HEYS.YandexAPI?.rpc) return false;
     if (isAuditRpcBlocked()) return false;
 
-    const { sessionToken, curatorToken, clientId } = getAuditContext();
+    const { sessionToken, curatorToken, clientId, hasCookieSession } = getAuditContext();
     const body = {
       p_action: payload.action,
       p_reason: payload.reason || null,
@@ -845,7 +862,7 @@
       hasClientId: Boolean(clientId)
     });
 
-    const canUseCurator = isCuratorSession && curatorToken && clientId;
+    const canUseCurator = isCuratorSession && clientId;
     if (canUseCurator) {
       logAuditInfo('log:mode', { mode: 'curator' });
       const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
@@ -868,18 +885,17 @@
       return result;
     }
 
-    if (sessionToken) {
+    if (sessionToken || hasCookieSession) {
       logAuditInfo('log:mode', { mode: 'session' });
-      const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_session', {
-        p_session_token: sessionToken,
+      const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_session', withOptionalSessionToken({
         ...body
-      });
+      }, sessionToken));
       if (!result?.error) {
         logAuditInfo('log:session:success', { tookMs: Date.now() - startedAt });
         return result;
       }
 
-      if (curatorToken && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
+      if (isCuratorSession && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
         logAuditWarn('log:session:fallback', { code: result.error?.code, reason: 'session_denied' });
         const curatorResult = await HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
           p_client_id: clientId,
@@ -914,7 +930,7 @@
       return result;
     }
 
-    if (curatorToken && clientId) {
+    if (isCuratorSession && clientId) {
       logAuditInfo('log:mode', { mode: 'curator-fallback' });
       const result = await HEYS.YandexAPI.rpc('log_gamification_event_by_curator', {
         p_client_id: clientId,
@@ -1039,7 +1055,7 @@
     }
 
     const { limit = 50, offset = 0 } = options;
-    const { sessionToken, curatorToken, clientId } = getAuditContext();
+    const { sessionToken, curatorToken, clientId, hasCookieSession } = getAuditContext();
     logAuditInfo('rpc:request', {
       limit,
       offset,
@@ -1048,7 +1064,7 @@
       hasClientId: Boolean(clientId)
     });
 
-    const canUseCurator = isCuratorSession && curatorToken && clientId;
+    const canUseCurator = isCuratorSession && clientId;
     if (canUseCurator) {
       logAuditInfo('rpc:mode', { mode: 'curator' });
       const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
@@ -1078,14 +1094,13 @@
       return { items: payload.items || [], total: payload.total || 0 };
     }
 
-    if (sessionToken) {
+    if (sessionToken || hasCookieSession) {
       logAuditInfo('rpc:mode', { mode: 'session' });
       logAuditInfo('rpc:session:start', { limit, offset });
-      const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_session', {
-        p_session_token: sessionToken,
+      const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_session', withOptionalSessionToken({
         p_limit: limit,
         p_offset: offset
-      });
+      }, sessionToken));
       if (!result?.error) {
         const payload = unwrapPayload(result?.data || {});
         logAuditInfo('rpc:session:payload', { keys: Object.keys(result?.data || {}) });
@@ -1097,7 +1112,7 @@
         return { items: payload.items || [], total: payload.total || 0 };
       }
 
-      if (curatorToken && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
+      if (isCuratorSession && clientId && (result.error?.code === 401 || result.error?.code === 403)) {
         logAuditWarn('rpc:session:fallback', { code: result.error?.code, reason: 'session_denied' });
         const curatorResult = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
           p_client_id: clientId,
@@ -1139,7 +1154,7 @@
       return { items: [], error: result.error };
     }
 
-    if (curatorToken && clientId) {
+    if (isCuratorSession && clientId) {
       logAuditInfo('rpc:mode', { mode: 'curator-fallback' });
       logAuditInfo('rpc:curator:start', { limit, offset });
       const result = await HEYS.YandexAPI.rpc('get_gamification_events_by_curator', {
@@ -4653,8 +4668,9 @@
           }
 
           const sessionToken = this._getSessionTokenForCloud();
+          const hasCookieSession = hasCookieSessionCarrier();
 
-          if (!HEYS.YandexAPI || !sessionToken) {
+          if (!HEYS.YandexAPI || (!sessionToken && !hasCookieSession)) {
             endGameSyncTrace(syncTrace, 'skipped', { reason: 'no_api_or_session' });
             return false;
           }
@@ -4672,10 +4688,9 @@
           // 🛡️ ЗАЩИТА v2.1: Сначала проверяем облако — не перезаписываем если там новее/больше
           try {
             // 🔧 FIX v2.5: p_ prefixed params + proper response unwrap
-            const cloudResult = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
-              p_session_token: sessionToken,
+            const cloudResult = await HEYS.YandexAPI.rpc('get_client_kv_by_session', withOptionalSessionToken({
               p_key: STORAGE_KEY
-            });
+            }, sessionToken));
 
             if (cloudResult?.error) {
               console.warn('[🎮 Gamification] Cloud check RPC error:', cloudResult.error?.message || cloudResult.error);
@@ -4768,11 +4783,10 @@
           };
 
           // 🔧 FIX v2.5: p_ prefixed params + error checking
-          const upsertResult = await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', {
-            p_session_token: sessionToken,
+          const upsertResult = await HEYS.YandexAPI.rpc('upsert_client_kv_by_session', withOptionalSessionToken({
             p_key: STORAGE_KEY,   // 'heys_game'
             p_value: cloudData    // Отправляем объект, не JSON.stringify
-          });
+          }, sessionToken));
 
           if (upsertResult?.error) {
             console.error('[🎮 Gamification] Cloud upsert FAILED:', upsertResult.error?.message || upsertResult.error);
@@ -4872,8 +4886,9 @@
         }
 
         const sessionToken = this._getSessionTokenForCloud();
+        const hasCookieSession = hasCookieSessionCarrier();
 
-        if (!HEYS.YandexAPI || !sessionToken) {
+        if (!HEYS.YandexAPI || (!sessionToken && !hasCookieSession)) {
           console.log('[🎮 Gamification] loadFromCloud: no API or session token');
           _cloudLoaded = true; // Помечаем как загружено даже если нет токена
           if (_pendingCloudSync) {
@@ -4891,10 +4906,9 @@
 
         // 1. Новый ключ
         // 🔧 FIX v2.5: p_ prefixed params + unwrap response
-        const result1 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
-          p_session_token: sessionToken,
+        const result1 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', withOptionalSessionToken({
           p_key: STORAGE_KEY // 'heys_game'
-        });
+        }, sessionToken));
         gameSyncTraceStep(syncTrace, 'rpc:get_heys_game:done', { hasError: Boolean(result1?.error) });
 
         if (result1?.error) {
@@ -4910,10 +4924,9 @@
         // 2. Старый ключ (fallback)
         // FIX v2.4: typeof check — totalXP=0 is valid cloud data, not missing
         if (!cloudData || typeof cloudData.totalXP !== 'number') {
-          const result2 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', {
-            p_session_token: sessionToken,
+          const result2 = await HEYS.YandexAPI.rpc('get_client_kv_by_session', withOptionalSessionToken({
             p_key: 'heys_gamification'
-          });
+          }, sessionToken));
           gameSyncTraceStep(syncTrace, 'rpc:get_heys_gamification:done', { hasError: Boolean(result2?.error) });
           const kv2 = this._unwrapKvResult(result2);
           if (kv2?.value) {
@@ -5977,9 +5990,14 @@
         }
         _lastVisibilitySync = now;
 
-        // Проверяем наличие сессии
+        // Проверяем наличие авторизованного runtime-контекста. В проде PIN session
+        // живёт в HttpOnly cookie, поэтому JS-readable heys_session_token может
+        // отсутствовать даже при рабочей сессии.
         const hasSession = HEYS.cloud?.getSessionToken?.() ||
-          localStorage.getItem('heys_session_token');
+          localStorage.getItem('heys_session_token') ||
+          HEYS.cloud?.isPinAuthClient?.() ||
+          HEYS.auth?.isCuratorSession?.() === true ||
+          localStorage.getItem('heys_curator_session');
         if (!hasSession) {
           return;
         }

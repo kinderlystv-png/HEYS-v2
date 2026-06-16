@@ -287,6 +287,34 @@ body {
   will-change: transform;
 }
 
+body:has(:is(
+  .modal-backdrop,
+  .time-picker-backdrop,
+  .confirm-modal-backdrop,
+  .date-picker-backdrop,
+  .wn-backdrop,
+  .paywall-overlay,
+  .mpr-overlay,
+  .photo-confirm-overlay,
+  .planning-modal-overlay,
+  .planning-checklists-modal-overlay,
+  .planning-slot-delete-overlay,
+  .gantt-quick-edit-backdrop,
+  .widget-relapse-risk__modal-overlay,
+  .widgets-catalog-overlay,
+  .widgets-settings-overlay,
+  .info-modal-overlay,
+  .pattern-debug-modal,
+  .meal-rec-card__products-overlay,
+  .advice-list-overlay,
+  .fingers-fs-rpe-overlay,
+  .drums-ft-modal
+)) :is(.tabs, .crs-bar-container, .theme-fab, .fab-group, #tour-fab-buttons, .widgets-fab-left, .planning-subnav, .planning-tasks-scale-fab, .planning-checklists-archive-badge) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* Tab item */
 .tab {
   display: flex;

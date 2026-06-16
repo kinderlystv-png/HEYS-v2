@@ -2235,6 +2235,7 @@
                     isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
                                   !!localStorage.getItem('heys_session_token') ||
                                   !!localStorage.getItem('heys_last_client_id') ||
+                                  !!localStorage.getItem('heys_curator_session') ||
                                   !!localStorage.getItem('heys_supabase_auth_token');
                 } catch (_) { }
                 return !isReturning;
@@ -2262,6 +2263,7 @@
                             isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
                                           !!localStorage.getItem('heys_session_token') ||
                                           !!localStorage.getItem('heys_last_client_id') ||
+                                          !!localStorage.getItem('heys_curator_session') ||
                                           !!localStorage.getItem('heys_supabase_auth_token');
                         } catch (_) { }
                         if (isReturning) return { adviceSoundEnabled: false };

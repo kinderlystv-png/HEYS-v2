@@ -175,20 +175,17 @@
    */
   async function requestTrial(source = 'app') {
     const sessionToken = HEYS.auth?.getSessionToken?.();
-    if (!sessionToken) {
-      return { success: false, error: 'no_session', message: 'Необходима авторизация' };
-    }
-
     const api = HEYS.YandexAPI;
     if (!api) {
       return { success: false, error: 'api_not_ready', message: 'API не готов' };
     }
 
     try {
-      const res = await api.rpc('request_trial', {
-        p_session_token: sessionToken,
+      const rpcParams = {
         p_source: source
-      });
+      };
+      if (sessionToken) rpcParams.p_session_token = sessionToken;
+      const res = await api.rpc('request_trial', rpcParams);
 
       if (res.error) {
         return {
@@ -226,19 +223,15 @@
     }
 
     const sessionToken = HEYS.auth?.getSessionToken?.();
-    if (!sessionToken) {
-      return { success: true, status: QUEUE_STATUS.NOT_IN_QUEUE };
-    }
-
     const api = HEYS.YandexAPI;
     if (!api) {
       return getCachedStatus() || { success: true, status: QUEUE_STATUS.NOT_IN_QUEUE };
     }
 
     try {
-      const res = await api.rpc('get_trial_queue_status', {
-        p_session_token: sessionToken
-      });
+      const rpcParams = {};
+      if (sessionToken) rpcParams.p_session_token = sessionToken;
+      const res = await api.rpc('get_trial_queue_status', rpcParams);
 
       if (res.error) {
         if (res.error.message?.includes('invalid_session')) {
@@ -277,19 +270,15 @@
    */
   async function cancelQueue() {
     const sessionToken = HEYS.auth?.getSessionToken?.();
-    if (!sessionToken) {
-      return { success: false, error: 'no_session', message: 'Необходима авторизация' };
-    }
-
     const api = HEYS.YandexAPI;
     if (!api) {
       return { success: false, error: 'api_not_ready', message: 'API не готов' };
     }
 
     try {
-      const res = await api.rpc('cancel_trial_queue', {
-        p_session_token: sessionToken
-      });
+      const rpcParams = {};
+      if (sessionToken) rpcParams.p_session_token = sessionToken;
+      const res = await api.rpc('cancel_trial_queue', rpcParams);
 
       if (res.error) {
         return {
@@ -1019,6 +1008,20 @@
   // ADMIN API (только для кураторов)
   // ========================================
 
+  const hasCuratorAuthContext = () => {
+    try {
+      if (HEYS.auth?.isCuratorSession?.() === true) return true;
+    } catch (_) { /* noop */ }
+    try {
+      if (HEYS.cloud?.getUser?.()) return true;
+    } catch (_) { /* noop */ }
+    try {
+      return !!localStorage.getItem('heys_curator_session');
+    } catch (_) {
+      return false;
+    }
+  };
+
   const adminAPI = {
     /**
      * Получить полный список очереди
@@ -1030,8 +1033,7 @@
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
 
-      const curatorSession = localStorage.getItem('heys_curator_session');
-      if (!curatorSession) {
+      if (!hasCuratorAuthContext()) {
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
       }
 
@@ -1067,8 +1069,7 @@
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
 
-      const curatorSession = localStorage.getItem('heys_curator_session');
-      if (!curatorSession) {
+      if (!hasCuratorAuthContext()) {
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
       }
 
@@ -1144,8 +1145,7 @@
 
       // 🔐 v4.0: JWT токен передаётся через Authorization header (YandexAPI.rpc)
       // p_curator_session_token удалён, p_curator_id добавляет cloud function
-      const curatorSession = localStorage.getItem('heys_curator_session');
-      if (!curatorSession) {
+      if (!hasCuratorAuthContext()) {
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
       }
 
@@ -1184,8 +1184,7 @@
         return { success: false, error: 'api_not_ready', message: 'API не готов' };
       }
 
-      const curatorSession = localStorage.getItem('heys_curator_session');
-      if (!curatorSession) {
+      if (!hasCuratorAuthContext()) {
         return { success: false, error: 'no_auth', message: 'Нет сессии куратора' };
       }
 
@@ -1322,6 +1321,60 @@
         return fnData;
       } catch (e) {
         console.error('[TrialQueue.admin] convertLead error:', e);
+        return { success: false, error: 'request_failed', message: e.message };
+      }
+    },
+
+    /**
+     * Сбросить Telegram-привязку клиента.
+     * Используется, если персональную ссылку случайно открыл не клиент.
+     */
+    async clearTelegramBinding(clientId) {
+      const api = HEYS.YandexAPI;
+      if (!api) {
+        return { success: false, error: 'api_not_ready', message: 'API не готов' };
+      }
+
+      try {
+        const res = await api.rpc('admin_clear_telegram_binding', {
+          p_client_id: clientId
+        });
+
+        if (res.error) {
+          return { success: false, error: res.error.code, message: res.error.message };
+        }
+
+        const fnData = res.data?.admin_clear_telegram_binding || res.data || res;
+        return fnData.success !== undefined ? fnData : { success: true };
+      } catch (e) {
+        console.error('[TrialQueue.admin] clearTelegramBinding error:', e);
+        return { success: false, error: 'request_failed', message: e.message };
+      }
+    },
+
+    /**
+     * Перевыпустить PIN и Telegram-ссылку клиента.
+     * Сервер также отзывает старые PIN-сессии и очищает Telegram-привязку.
+     */
+    async regeneratePin(clientId) {
+      const api = HEYS.YandexAPI;
+      if (!api) {
+        return { success: false, error: 'api_not_ready', message: 'API не готов' };
+      }
+
+      try {
+        const res = await api.rpc('admin_regenerate_pin', {
+          p_client_id: clientId
+        });
+
+        if (res.error) {
+          return { success: false, error: res.error.code, message: res.error.message };
+        }
+
+        const fnData = res.data?.admin_regenerate_pin || res.data || res;
+        return fnData.success !== undefined ? fnData : { success: true };
+      } catch (e) {
+        console.error('[TrialQueue.admin] regeneratePin error:', e);
         return { success: false, error: 'request_failed', message: e.message };
       }
     },
@@ -1681,6 +1734,7 @@
             ? `https://t.me/${botUsername}?start=${pinToken}`
             : null;
           setPinResult({
+            clientId: res.client_id,
             name: leadName,
             phone: leadPhone,
             pin: generatedPin,
@@ -2428,14 +2482,13 @@
               }
             }, pinResult.deepLink),
             React.createElement('div', {
-              style: { display: 'flex', gap: '8px', marginBottom: '20px' }
+              style: { display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginBottom: '20px' }
             },
               React.createElement('button', {
                 onClick: () => {
                   navigator.clipboard?.writeText(pinResult.deepLink).then(() => HEYS.Toast?.success?.('Ссылка скопирована'));
                 },
                 style: {
-                  flex: 1,
                   padding: '10px',
                   borderRadius: '8px',
                   border: '1px solid #d1d5db',
@@ -2445,27 +2498,31 @@
                   fontWeight: 600
                 }
               }, '📋 Копировать ссылку'),
-              React.createElement('a', {
-                href: pinResult.deepLink,
-                target: '_blank',
-                rel: 'noopener noreferrer',
+              pinResult.clientId && React.createElement('button', {
+                onClick: async () => {
+                  if (!confirm('Сбросить Telegram-привязку? Используйте это, если ссылку случайно открыл не клиент. После сброса клиент сможет открыть эту же ссылку повторно.')) return;
+                  const res = await adminAPI.clearTelegramBinding(pinResult.clientId);
+                  if (res.success) {
+                    HEYS.Toast?.success?.('Telegram-привязка сброшена');
+                  } else {
+                    alert('Ошибка: ' + (res.message || res.error || 'Не удалось сбросить Telegram-привязку'));
+                  }
+                },
                 style: {
-                  flex: 1,
                   padding: '10px',
                   borderRadius: '8px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                  color: '#fff',
+                  border: '1px solid #fca5a5',
+                  background: '#fff',
+                  color: '#b91c1c',
                   cursor: 'pointer',
                   fontSize: '13px',
                   fontWeight: 600,
                   textAlign: 'center',
-                  textDecoration: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
                 }
-              }, '✈️ Открыть в Telegram')
+              }, 'Сбросить Telegram-привязку')
             )
           ),
 

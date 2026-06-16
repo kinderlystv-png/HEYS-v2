@@ -1286,7 +1286,7 @@
 .planning-checklists-modal-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1200;
+    z-index: 10020;
     display: grid;
     place-items: end center;
     padding: 10px;
@@ -3393,46 +3393,76 @@
     align-items: center;
     justify-content: center;
     padding: max(12px, env(safe-area-inset-top, 0)) 12px max(12px, env(safe-area-inset-bottom, 0));
-    z-index: 1000;
+    z-index: 10020;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
 }
 
-/* Скрываем глобальные FAB и док-панель планировщика, пока открыто быстрое создание события */
+/* Скрываем нижнее меню, CRS-линию и FAB-ы, пока открыт modal/sheet планировщика.
+   На iOS fixed `.tabs` живёт отдельным compositor-слоем и иначе проступает поверх backdrop. */
 body.planning-quick-event-modal-open .fab-group,
 body.planning-quick-event-modal-open #tour-fab-buttons,
 body.planning-quick-event-modal-open .widgets-fab-left,
 body.planning-quick-event-modal-open .planning-subnav,
 body.planning-quick-event-modal-open .planning-tasks-scale-fab,
 body.planning-quick-event-modal-open .planning-checklists-archive-badge,
+body.planning-quick-event-modal-open .theme-fab,
+body.planning-quick-event-modal-open .tabs,
+body.planning-quick-event-modal-open .crs-bar-container,
 body.planning-checklist-modal-open .fab-group,
 body.planning-checklist-modal-open #tour-fab-buttons,
 body.planning-checklist-modal-open .widgets-fab-left,
 body.planning-checklist-modal-open .planning-subnav,
 body.planning-checklist-modal-open .planning-tasks-scale-fab,
-body.planning-checklist-modal-open .planning-checklists-archive-badge {
+body.planning-checklist-modal-open .planning-checklists-archive-badge,
+body.planning-checklist-modal-open .theme-fab,
+body.planning-checklist-modal-open .tabs,
+body.planning-checklist-modal-open .crs-bar-container {
     visibility: hidden !important;
     pointer-events: none !important;
 }
 
-/* Скрываем те же элементы, пока открыта любая модалка планировщика */
 body:has(.planning-modal-overlay) .fab-group,
 body:has(.planning-modal-overlay) #tour-fab-buttons,
 body:has(.planning-modal-overlay) .widgets-fab-left,
 body:has(.planning-modal-overlay) .planning-subnav,
 body:has(.planning-modal-overlay) .planning-tasks-scale-fab,
 body:has(.planning-modal-overlay) .planning-checklists-archive-badge,
+body:has(.planning-modal-overlay) .theme-fab,
+body:has(.planning-modal-overlay) .tabs,
+body:has(.planning-modal-overlay) .crs-bar-container,
 body:has(.planning-checklists-modal-overlay) .fab-group,
 body:has(.planning-checklists-modal-overlay) #tour-fab-buttons,
 body:has(.planning-checklists-modal-overlay) .widgets-fab-left,
 body:has(.planning-checklists-modal-overlay) .planning-subnav,
 body:has(.planning-checklists-modal-overlay) .planning-tasks-scale-fab,
-body:has(.planning-checklists-modal-overlay) .planning-checklists-archive-badge {
+body:has(.planning-checklists-modal-overlay) .planning-checklists-archive-badge,
+body:has(.planning-checklists-modal-overlay) .theme-fab,
+body:has(.planning-checklists-modal-overlay) .tabs,
+body:has(.planning-checklists-modal-overlay) .crs-bar-container,
+body:has(.planning-slot-delete-overlay) .fab-group,
+body:has(.planning-slot-delete-overlay) #tour-fab-buttons,
+body:has(.planning-slot-delete-overlay) .widgets-fab-left,
+body:has(.planning-slot-delete-overlay) .planning-subnav,
+body:has(.planning-slot-delete-overlay) .planning-tasks-scale-fab,
+body:has(.planning-slot-delete-overlay) .planning-checklists-archive-badge,
+body:has(.planning-slot-delete-overlay) .theme-fab,
+body:has(.planning-slot-delete-overlay) .tabs,
+body:has(.planning-slot-delete-overlay) .crs-bar-container,
+body:has(.gantt-quick-edit-backdrop) .fab-group,
+body:has(.gantt-quick-edit-backdrop) #tour-fab-buttons,
+body:has(.gantt-quick-edit-backdrop) .widgets-fab-left,
+body:has(.gantt-quick-edit-backdrop) .planning-subnav,
+body:has(.gantt-quick-edit-backdrop) .planning-tasks-scale-fab,
+body:has(.gantt-quick-edit-backdrop) .planning-checklists-archive-badge,
+body:has(.gantt-quick-edit-backdrop) .theme-fab,
+body:has(.gantt-quick-edit-backdrop) .tabs,
+body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     display: none !important;
 }
 
 .planning-modal-overlay--quick-event {
-    z-index: 1100;
+    z-index: 10020;
     background: rgba(15, 23, 42, 0.48);
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
@@ -6445,7 +6475,7 @@ body:has(.planning-checklists-modal-overlay) .planning-checklists-archive-badge 
 .planning-slot-delete-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1090;
+    z-index: 10020;
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -8052,7 +8082,7 @@ body:has(.planning-checklists-modal-overlay) .planning-checklists-archive-badge 
 .gantt-quick-edit-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    z-index: 10020;
     background: rgba(15, 23, 42, 0.4);
     -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
@@ -9004,7 +9034,7 @@ body:has(.planning-checklists-modal-overlay) .planning-checklists-archive-badge 
 }
 
 .planning-modal-overlay--nested {
-    z-index: 1100;
+    z-index: 10030;
 }
 
 @media (max-width: 420px) {

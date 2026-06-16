@@ -477,15 +477,13 @@
       try {
         const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
           || readStoredValue('heys_session_token', null);
-        if (!sessionToken) {
-          return { data: null, error: 'No session token', status: 'error' };
-        }
-
-        const { data, error } = await YandexAPI.rpc('create_pending_product_by_session', {
-          p_session_token: sessionToken,
+        const rpcParams = {
           p_name: product.name,
           p_product_data: product
-        });
+        };
+        if (sessionToken) rpcParams.p_session_token = sessionToken;
+
+        const { data, error } = await YandexAPI.rpc('create_pending_product_by_session', rpcParams);
 
         if (error) {
           err('[SHARED PRODUCTS] Pending create error:', error);

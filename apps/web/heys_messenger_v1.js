@@ -39,7 +39,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   function isCuratorMode() {
-    // Куратор работает с JWT-токеном из heys_curator_session или supabase_auth_token.
+    // Куратор может быть восстановлен из HttpOnly cookie; сначала runtime context.
+    try {
+      if (HEYS.auth?.isCuratorSession?.() === true) return true;
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (HEYS.cloud?.getUser?.()) return true;
+    } catch {
+      /* ignore */
+    }
     try {
       if (localStorage.getItem('heys_curator_session')) return true;
       const raw = localStorage.getItem('heys_supabase_auth_token');

@@ -2215,12 +2215,12 @@
                         try {
                             HEYS.Toast?.success('Клиент создан! Телефон: ' + created.phone + ', PIN: ' + created.pin) || alert('✅ Клиент создан\n\nТелефон: ' + created.phone + '\nPIN: ' + created.pin);
                         } catch (_) { }
-                        return;
-                    }
-                    if (created && created.error) {
-                        HEYS.Toast?.error('Ошибка создания клиента: ' + created.error) || alert('Ошибка создания клиента: ' + created.error);
-                        return;
-                    }
+	                        return created;
+	                    }
+	                    if (created && created.error) {
+	                        HEYS.Toast?.error('Ошибка создания клиента: ' + created.error) || alert('Ошибка создания клиента: ' + created.error);
+	                        return created;
+	                    }
                 }
             } catch (e) {
                 // Падаем в fallback insert ниже
@@ -2234,13 +2234,14 @@
                     HEYS.Toast?.error('Ошибка создания клиента') || alert('Ошибка создания клиента');
                     return;
                 }
-                const result = await fetchClientsFromCloud(userId);
-                setClients(result.data);
-                setClientId(data.id);
-                writeGlobalValue('heys_client_current', data.id);
-            } catch (error) {
-                console.error('Ошибка создания клиента:', error);
-                HEYS.Toast?.error('Ошибка создания клиента: ' + error.message) || alert('Ошибка создания клиента: ' + error.message);
+	                const result = await fetchClientsFromCloud(userId);
+	                setClients(result.data);
+	                setClientId(data.id);
+	                writeGlobalValue('heys_client_current', data.id);
+	                return data;
+	            } catch (error) {
+	                console.error('Ошибка создания клиента:', error);
+	                HEYS.Toast?.error('Ошибка создания клиента: ' + error.message) || alert('Ошибка создания клиента: ' + error.message);
             }
         }, [clients, cloudUser, fetchClientsFromCloud, setClientId, setClients, U]);
 
@@ -2496,6 +2497,7 @@
             removeGlobalValue('heys_pin_auth_client');
             removeGlobalValue('heys_client_phone');
             removeGlobalValue('heys_supabase_auth_token');
+            removeGlobalValue('heys_curator_session');
             // 🔧 v53 FIX: Очистка session_token для PIN auth
             removeGlobalValue('heys_session_token');
             setCloudUser(null);

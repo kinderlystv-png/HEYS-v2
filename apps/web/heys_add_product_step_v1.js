@@ -438,12 +438,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return { ok: false };
     }
 
-    if (!sessionToken && !curatorId) {
-      HEYS.Toast?.warning('Сессия не авторизована') || alert('Сессия не авторизована');
-      console.warn('[HEYS.portions] ⚠️ Нет авторизации для обновления порций', { productId });
-      return { ok: false };
-    }
-
     const resolvedSharedId = resolveSharedProductId(product) ?? productId;
     if (!isUuidLike(resolvedSharedId)) {
       console.warn('[HEYS.portions] ⚠️ Некорректный shared UUID для RPC порций', {
@@ -463,10 +457,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           p_portions: Array.isArray(portions) ? portions : []
         }
         : {
-          p_session_token: sessionToken,
           p_product_id: resolvedSharedId,
           p_portions: Array.isArray(portions) ? portions : []
         };
+      if (!isCuratorMode && sessionToken) {
+        rpcParams.p_session_token = sessionToken;
+      }
 
       console.info(`[HEYS.portions] 📤 RPC ${rpcFn}`, {
         productId: resolvedSharedId,

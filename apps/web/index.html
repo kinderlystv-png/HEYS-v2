@@ -1612,23 +1612,70 @@
          После успешного входа оверлей скрывается → скелетон/приложение. -->
 
     <!-- Шаг 1: Детекция сессии (выполняется мгновенно при парсинге) -->
-    <script>
-        (function () {
-            try {
-                var hasPinAuth = !!localStorage.getItem('heys_pin_auth_client');
-                var hasCuratorSession = !!localStorage.getItem('heys_curator_session');
-                var hasSupabaseToken = (function () {
-                    try {
-                        var raw = localStorage.getItem('heys_supabase_auth_token');
+	    <script>
+	        (function () {
+	            try {
+	                function decodeCuratorJwtPayload(token) {
+	                    try {
+	                        var part = String(token || '').split('.')[1];
+	                        if (!part || typeof atob !== 'function') return null;
+	                        var normalized = part.replace(/-/g, '+').replace(/_/g, '/');
+	                        var padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+	                        var raw = atob(padded);
+	                        try {
+	                            return JSON.parse(decodeURIComponent(Array.prototype.map.call(raw, function (ch) {
+	                                return '%' + ('00' + ch.charCodeAt(0).toString(16)).slice(-2);
+	                            }).join('')));
+	                        } catch (_) {
+	                            return JSON.parse(raw);
+	                        }
+	                    } catch (_) { return null; }
+	                }
+	                function restoreCompatCuratorAuth(token) {
+	                    try {
+	                        if (!token || token.length <= 10) return false;
+	                        var payload = decodeCuratorJwtPayload(token) || {};
+	                        var nowSec = Math.floor(Date.now() / 1000);
+	                        if (payload.exp && payload.exp < nowSec) {
+	                            localStorage.removeItem('heys_curator_session');
+	                            localStorage.removeItem('heys_supabase_auth_token');
+	                            return false;
+	                        }
+	                        var userId = payload.sub || payload.user_id;
+	                        var user = userId ? {
+	                            id: userId,
+	                            email: payload.email,
+	                            role: payload.role
+	                        } : null;
+	                        var tokenData = {
+	                            access_token: token,
+	                            refresh_token: null,
+	                            expires_at: payload.exp || nowSec + 3600,
+	                            user: user
+	                        };
+	                        localStorage.setItem('heys_supabase_auth_token', JSON.stringify(tokenData));
+	                        localStorage.removeItem('heys_pin_auth_client');
+	                        localStorage.removeItem('heys_session_token');
+	                        return !!(user && user.id);
+	                    } catch (_) { return false; }
+	                }
+	                var curatorSession = localStorage.getItem('heys_curator_session');
+	                var hasCuratorSession = !!(curatorSession && curatorSession.length > 10);
+	                var restoredCuratorCompat = hasCuratorSession ? restoreCompatCuratorAuth(curatorSession) : false;
+	                hasCuratorSession = !!localStorage.getItem('heys_curator_session');
+	                var hasPinAuth = hasCuratorSession ? false : !!localStorage.getItem('heys_pin_auth_client');
+	                var hasSupabaseToken = (function () {
+	                    try {
+	                        var raw = localStorage.getItem('heys_supabase_auth_token');
                         if (!raw) return false;
                         var parsed = JSON.parse(raw);
-                        if (!parsed) return false;
-                        // Проверяем expires_at — если истёк, считаем нет сессии
-                        var expiresAt = parsed.expires_at;
-                        if (expiresAt && expiresAt * 1000 < Date.now()) return false;
-                        return !!(parsed.user && parsed.user.id);
-                    } catch (_) { return false; }
-                })();
+	                        if (!parsed) return false;
+	                        // Проверяем expires_at — если истёк, считаем нет сессии
+	                        var expiresAt = parsed.expires_at;
+	                        if (expiresAt && expiresAt * 1000 < Date.now()) return false;
+	                        return !!(parsed.user && parsed.user.id);
+	                    } catch (_) { return false; }
+	                })();
                 // 🔐 Stage 1: session_token + last_client_id = recoverable PIN session.
                 // Если pin_auth_client потёрт (logout/expiry/race), но session_token жив
                 // и есть запомненный последний клиент — это всё равно returning user,
@@ -1647,7 +1694,7 @@
                         return typeof lastId === 'string' && lastId.length >= 8;
                     } catch (_) { return false; }
                 })();
-                window.__heysHasSession = hasPinAuth || hasCuratorSession || hasSupabaseToken || hasRecoverablePin;
+	                window.__heysHasSession = hasPinAuth || hasCuratorSession || hasSupabaseToken || restoredCuratorCompat || hasRecoverablePin;
                 window.__heysHasRecoverablePin = hasRecoverablePin;
             } catch (_) {
                 window.__heysHasSession = false;
@@ -2107,6 +2154,19 @@
             function lsDel(k) {
                 try { localStorage.removeItem(k); } catch (_) { }
             }
+            function hlgIsLocalBrowserDev() {
+                try {
+                    var host = window.location && window.location.hostname || '';
+                    return host === 'localhost' || host === '127.0.0.1';
+                } catch (_) { return false; }
+            }
+            function hlgStoreClientSessionToken(token) {
+                if (token && hlgIsLocalBrowserDev()) {
+                    lsRaw('heys_session_token', token);
+                } else {
+                    lsDel('heys_session_token');
+                }
+            }
 
             window.__hlgTempCuratorAutoLogin = TEMP_CURATOR_AUTOLOGIN.enabled === true;
             window.__hlgTempCuratorAutologinConfig = TEMP_CURATOR_AUTOLOGIN;
@@ -2519,7 +2579,13 @@
             function hlgHideOverlay(doReload) {
                 var gate = document.getElementById('heys-login-gate');
                 if (!gate) return;
-                console.info('[HEYS.entry] 🚪 hlgHideOverlay start, preAuth:', JSON.stringify(window.__heysPreAuth || {}));
+                var preAuth = window.__heysPreAuth || {};
+                console.info('[HEYS.entry] 🚪 hlgHideOverlay start, preAuth:', JSON.stringify({
+                    mode: preAuth.mode || 'unknown',
+                    clientId: preAuth.clientId || null,
+                    hasUser: !!preAuth.user,
+                    timestamp: preAuth.timestamp || null
+                }));
                 gate.style.animation = 'hlg-fadeout 0.3s ease forwards';
                 setTimeout(function () {
                     gate.style.display = 'none';
@@ -2533,6 +2599,7 @@
                             detail: window.__heysPreAuth || { mode: 'unknown', timestamp: Date.now() }
                         }));
                     } catch (_) { }
+                    window.__heysPreAuth = null;
                     // v11: NO fallback reload — event handoff to React handles fast network case.
                     // React listens to 'heys-auth-ready' in heys_app_auth_init_v1.js.
                     // Slow network (React not yet mounted): runAuthInit reads localStorage on mount.
@@ -2614,7 +2681,8 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ p_phone: phone, p_pin: pin }),
                         mode: 'cors',
-                        cache: 'no-store'
+                        cache: 'no-store',
+                        credentials: 'include'
                     })
                         .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); })
                         .then(function (res) {
@@ -2645,24 +2713,49 @@
                                 return;
                             }
 
-                            // Сохраняем сессию (те же ключи что heys_auth_v1.js:loginClient)
-                            lsDel('heys_supabase_auth_token');
-                            lsRaw('heys_session_token', sessionToken);
-                            lsRaw('heys_pin_auth_client', clientId);
-                            if (clientName) lsRaw('heys_pending_client_name', JSON.stringify(clientName));
+                            var finishClientLogin = function () {
+                                // Сохраняем сессию (те же ключи что heys_auth_v1.js:loginClient)
+                                lsDel('heys_supabase_auth_token');
+                                lsDel('heys_curator_session');
+                                hlgStoreClientSessionToken(sessionToken);
+                                lsRaw('heys_pin_auth_client', clientId);
+                                if (clientName) lsRaw('heys_pending_client_name', JSON.stringify(clientName));
 
-                            // Передаём данные в React через глобальную переменную
-                            window.__heysPreAuth = {
-                                mode: 'client',
-                                clientId: clientId,
-                                sessionToken: sessionToken,
-                                timestamp: Date.now()
+                                // Передаём данные в React через глобальную переменную
+                                window.__heysPreAuth = {
+                                    mode: 'client',
+                                    clientId: clientId,
+                                    timestamp: Date.now()
+                                };
+
+                                window.__heysLog && window.__heysLog('[LoginGate] Client login ok: ' + clientId.slice(0, 8));
+                                console.info('[HEYS.loginGate] ✅ Клиент вошёл: ' + clientId.slice(0, 8) + '***');
+
+                                hlgHideOverlay(true);
                             };
 
-                            window.__heysLog && window.__heysLog('[LoginGate] Client login ok: ' + clientId.slice(0, 8));
-                            console.info('[HEYS.loginGate] ✅ Клиент вошёл: ' + clientId.slice(0, 8) + '***');
-
-                            hlgHideOverlay(true);
+                            return fetch(API + '/auth/curator-logout', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: '{}',
+                                mode: 'cors',
+                                cache: 'no-store',
+                                credentials: 'include'
+                            }).then(function (cleanupRes) {
+                                if (!cleanupRes || !cleanupRes.ok) throw new Error('role_switch_cleanup_failed');
+                                finishClientLogin();
+                            }).catch(function (cleanupErr) {
+                                return fetch(API + '/auth/client-logout', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: '{}',
+                                    mode: 'cors',
+                                    cache: 'no-store',
+                                    credentials: 'include'
+                                }).catch(function () { }).then(function () {
+                                    throw cleanupErr;
+                                });
+                            });
                         })
                         .catch(function (e) {
                             registerFail('login', phone);
@@ -2711,7 +2804,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email, password: password }),
                     mode: 'cors',
-                    cache: 'no-store'
+                    cache: 'no-store',
+                    credentials: 'include'
                 })
                     .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); })
                     .then(function (res) {
@@ -2731,31 +2825,55 @@
                             return;
                         }
 
-                        // Сохраняем (те же ключи что heys_yandex_api_v1.js:curatorLogin)
-                        lsDel('heys_pin_auth_client');
-                        lsDel('heys_session_token');
-                        var tokenData = {
-                            access_token: d.access_token,
-                            expires_in: d.expires_in || 86400,
-                            expires_at: Math.floor(Date.now() / 1000) + (d.expires_in || 86400),
-                            user: d.user
+                        var finishCuratorLogin = function () {
+                            // Сохраняем (те же ключи что heys_yandex_api_v1.js:curatorLogin)
+                            lsDel('heys_pin_auth_client');
+                            lsDel('heys_session_token');
+                            var tokenData = {
+                                access_token: d.access_token,
+                                expires_in: d.expires_in || 86400,
+                                expires_at: Math.floor(Date.now() / 1000) + (d.expires_in || 86400),
+                                user: d.user
+                            };
+                            lsRaw('heys_supabase_auth_token', JSON.stringify(tokenData));
+                            lsRaw('heys_curator_session', d.access_token);
+
+                            // Передаём данные в React
+                            window.__heysPreAuth = {
+                                mode: 'curator',
+                                user: d.user,
+                                timestamp: Date.now()
+                            };
+
+                            window.__heysLog && window.__heysLog('[LoginGate] Curator login ok: ' + (d.user.email || ''));
+                            console.info('[HEYS.loginGate] ✅ Куратор вошёл: ' + (d.user.email || ''));
+
+                            if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('done');
+                            hlgHideOverlay(true);
                         };
-                        lsRaw('heys_supabase_auth_token', JSON.stringify(tokenData));
-                        lsRaw('heys_curator_session', d.access_token);
 
-                        // Передаём данные в React
-                        window.__heysPreAuth = {
-                            mode: 'curator',
-                            accessToken: d.access_token,
-                            user: d.user,
-                            timestamp: Date.now()
-                        };
-
-                        window.__heysLog && window.__heysLog('[LoginGate] Curator login ok: ' + (d.user.email || ''));
-                        console.info('[HEYS.loginGate] ✅ Куратор вошёл: ' + (d.user.email || ''));
-
-                        if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('done');
-                        hlgHideOverlay(true);
+                        return fetch(API + '/auth/client-logout', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: '{}',
+                            mode: 'cors',
+                            cache: 'no-store',
+                            credentials: 'include'
+                        }).then(function (cleanupRes) {
+                            if (!cleanupRes || !cleanupRes.ok) throw new Error('role_switch_cleanup_failed');
+                            finishCuratorLogin();
+                        }).catch(function (cleanupErr) {
+                            return fetch(API + '/auth/curator-logout', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: '{}',
+                                mode: 'cors',
+                                cache: 'no-store',
+                                credentials: 'include'
+                            }).catch(function () { }).then(function () {
+                                throw cleanupErr;
+                            });
+                        });
                     })
                     .catch(function (e) {
                         if (isAutologinAttempt) hlgFinishCuratorAutologinAttempt('');

@@ -1045,22 +1045,25 @@
           }));
 
           // ⚠️ Cloud sync отключен: REST API read-only (см. SECURITY_RUNBOOK.md P3)
-          // Отправляем новое имя в базу через RPC (session-safe) 
+          // Отправляем новое имя в базу через RPC (session-safe).
+          // Post PR-C PIN sessions keep the token in HttpOnly cookie, so a
+          // missing JS-readable token is not a reason to skip the RPC.
           const sessionToken = typeof HEYS !== 'undefined' && HEYS.auth && HEYS.auth.getSessionToken ? HEYS.auth.getSessionToken() : localStorage.getItem('heys_session_token');
-          if (sessionToken) {
-            const tokenStr = typeof sessionToken === 'string' ? sessionToken : JSON.stringify(sessionToken);
-            HEYS.YandexAPI.rpc('update_client_profile_by_session', {
-              p_session_token: tokenStr.replace(/"/g, ''), // на случай если распарсится криво
-              p_name: updatedProfile.firstName
-            }).then(result => {
-              if (result && result.error) {
-                console.error('[ProfileSteps] failed to update profile in cloud:', result.error);
-              } else {
-                console.log('[ProfileSteps] client profile name synced to cloud successfully!');
-              }
-            }).catch(e => console.error('[ProfileSteps] RPC error:', e));
-          } else {
-            console.warn('[ProfileSteps] No session token, cloud sync skipped');
+          if (HEYS.YandexAPI?.rpc) {
+            const rpcParams = { p_name: updatedProfile.firstName };
+            if (sessionToken) {
+              const tokenStr = typeof sessionToken === 'string' ? sessionToken : JSON.stringify(sessionToken);
+              rpcParams.p_session_token = tokenStr.replace(/"/g, ''); // на случай если распарсится криво
+            }
+            HEYS.YandexAPI.rpc('update_client_profile_by_session', rpcParams)
+              .then(result => {
+                if (result && result.error) {
+                  console.error('[ProfileSteps] failed to update profile in cloud:', result.error);
+                } else {
+                  console.log('[ProfileSteps] client profile name synced to cloud successfully!');
+                }
+              })
+              .catch(e => console.error('[ProfileSteps] RPC error:', e));
           }
         } catch (e) {
           console.warn('[ProfileSteps] Failed to sync client name:', e);

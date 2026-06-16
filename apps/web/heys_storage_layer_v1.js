@@ -275,7 +275,7 @@
     } catch (_) { /* noop — fall through to legacy regex below */ }
     // 🎮 Global keys — НЕ добавляем clientId (для совместимости с cloud sync)
     // heys_game теперь client-scoped (иначе XP смешивается между клиентами)
-    if (/^heys_(clients|client_current|sound_settings)$/i.test(k)) return k;
+    if (/^heys_(clients|client_current|last_client_id|session_token|supabase_auth_token|curator_session|pin_auth_client|sound_settings)$/i.test(k)) return k;
 
     // 🐛 FIX: Если ключ уже содержит clientId — не добавляем повторно!
     if (cid && k.includes(cid)) {
@@ -1582,11 +1582,12 @@
   // курaторском свитче. После фикса записи идут в unscoped слот; старые
   // scoped копии остаются мёртвым весом. Чистим один раз.
   //
-  // Marker key heys_cleanup_scoped_uikeys_v1: '1' означает «уже почистили».
+  // Marker key heys_cleanup_scoped_uikeys_v2: '1' означает «уже почистили».
   // ═══════════════════════════════════════════════════════════════════
-  const CLEANUP_MARKER = 'heys_cleanup_scoped_uikeys_v1';
+  const CLEANUP_MARKER = 'heys_cleanup_scoped_uikeys_v2';
   const UI_KEY_TAILS = [
     'heys_clients', 'heys_client_current', 'heys_curator_session',
+    'heys_supabase_auth_token', 'heys_pin_auth_client', 'heys_session_token',
     'heys_debug_events', 'heys_iw_config_cache_v1', 'heys_iw_config_cache_meta_v1',
     'heys_docs_cache_version', 'heys_update_in_progress', 'heys_boot_perf_baseline_v1',
     'heys_last_client_id', 'heys_theme', 'heys_theme_pref', 'heys_theme_explicit',

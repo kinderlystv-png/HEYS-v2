@@ -130,25 +130,23 @@
       return _inflightPromise;
     }
 
-    // Нет session_token — возвращаем 'none'
-    const sessionToken = HEYS.auth?.getSessionToken?.();
-    if (!sessionToken) {
-      return STATUS.NONE;
-    }
-
     const api = HEYS.YandexAPI;
     if (!api) {
       console.warn('[Subscription] API не готов');
       return getCachedStatus() || STATUS.NONE;
     }
 
+    // Legacy sessions still expose a JS token. Post PR-C sessions use the
+    // HttpOnly cookie carrier, so absence of a readable token is not logout.
+    const sessionToken = HEYS.auth?.getSessionToken?.();
+    const rpcParams = {};
+    if (sessionToken) rpcParams.p_session_token = sessionToken;
+
     // Создаём promise и сохраняем его для дедупликации
     _inflightPromise = (async () => {
       try {
         // 🔇 v4.7.0: Логи отключены
-        const res = await api.rpc('get_subscription_status_by_session', {
-          p_session_token: sessionToken,
-        });
+        const res = await api.rpc('get_subscription_status_by_session', rpcParams);
 
         if (res.error) {
           // Если сессия невалидна — возможно logout
@@ -198,10 +196,6 @@
    */
   async function activateTrialTimer() {
     const sessionToken = HEYS.auth?.getSessionToken?.();
-    if (!sessionToken) {
-      console.warn('[Subscription] activateTrialTimer: нет session_token');
-      return { success: false, message: 'no_session' };
-    }
 
     const api = HEYS.YandexAPI;
     if (!api) {
@@ -210,9 +204,9 @@
     }
 
     try {
-      const res = await api.rpc('activate_trial_timer_by_session', {
-        p_session_token: sessionToken,
-      });
+      const rpcParams = {};
+      if (sessionToken) rpcParams.p_session_token = sessionToken;
+      const res = await api.rpc('activate_trial_timer_by_session', rpcParams);
 
       if (res.error) {
         if (res.error.message?.includes('invalid_session') || res.error.message?.includes('invalid_or_expired_session')) {

@@ -34,6 +34,13 @@
         return raw ? String(raw).replace(/"/g, '') : null;
     }
 
+    function _withSessionToken(params) {
+        var next = params || {};
+        var token = _getSessionToken();
+        if (token) next.p_session_token = token;
+        return next;
+    }
+
     function _getDisplayName() {
         try {
             var store = _getStore();
@@ -112,22 +119,16 @@
         // Invalidate cache so next dropdown open fetches fresh data
         _leaderboardCache = null;
 
-        var token = _getSessionToken();
-        if (!token) {
-            console.warn('[HEYS.leaderboard] ⚠️ No session token — sharing saved locally only');
-            return Promise.resolve(null);
-        }
         var api = _getApi();
         if (!api || !api.rpc) {
             console.warn('[HEYS.leaderboard] ⚠️ YandexAPI not available — sharing saved locally only');
             return Promise.resolve(null);
         }
 
-        return api.rpc('toggle_leaderboard_sharing_by_session', {
-            p_session_token: token,
+        return api.rpc('toggle_leaderboard_sharing_by_session', _withSessionToken({
             p_enabled: enabled,
             p_display_name: displayName || _getDisplayName()
-        }).then(function (result) {
+        })).then(function (result) {
             console.info('[HEYS.leaderboard] 🔄 Sharing toggled:', enabled, result);
 
             // If enabling, immediately publish current snapshot
@@ -147,9 +148,8 @@
     function _publishNow() {
         if (!isSharingEnabled()) return;
 
-        var token = _getSessionToken();
         var api = _getApi();
-        if (!token || !api || !api.rpc) return;
+        if (!api || !api.rpc) return;
 
         // Get current CEB from live cascade
         var crs = _getLastCrs();
@@ -172,13 +172,12 @@
             return;
         }
 
-        api.rpc('publish_leaderboard_snapshot_by_session', {
-            p_session_token: token,
+        api.rpc('publish_leaderboard_snapshot_by_session', _withSessionToken({
             p_snapshot_date: dateStr,
             p_display_name: _getDisplayName(),
             p_day_balance: score,
             p_cascade_pct: pct
-        }).then(function (result) {
+        })).then(function (result) {
             _lastPublished = { date: dateStr, score: score, pct: pct };
             _leaderboardCache = null;
             console.info('[HEYS.leaderboard] 📤 Snapshot published:', score, '(' + pct + '%)', dateStr);
@@ -214,16 +213,14 @@
             return Promise.resolve(_leaderboardCache.entries);
         }
 
-        var token = _getSessionToken();
         var api = _getApi();
-        if (!token || !api || !api.rpc) {
+        if (!api || !api.rpc) {
             return Promise.resolve([]);
         }
 
-        return api.rpc('get_leaderboard_by_session', {
-            p_session_token: token,
+        return api.rpc('get_leaderboard_by_session', _withSessionToken({
             p_snapshot_date: date
-        }).then(function (result) {
+        })).then(function (result) {
             var raw = Array.isArray(result)
                 ? result
                 : (result && result.data !== undefined ? result.data : []);
@@ -286,16 +283,14 @@
             return Promise.resolve({ weekDates: weekDates, entries: _weeklyCache.entries });
         }
 
-        var token = _getSessionToken();
         var api = _getApi();
-        if (!token || !api || !api.rpc) {
+        if (!api || !api.rpc) {
             return Promise.resolve({ weekDates: weekDates, entries: [] });
         }
 
-        return api.rpc('get_leaderboard_weekly_by_session', {
-            p_session_token: token,
+        return api.rpc('get_leaderboard_weekly_by_session', _withSessionToken({
             p_today_date: todayStr
-        }).then(function (result) {
+        })).then(function (result) {
             var raw = Array.isArray(result)
                 ? result
                 : (result && result.data !== undefined ? result.data : []);
@@ -338,9 +333,8 @@
             return;
         }
 
-        var token = _getSessionToken();
         var api = _getApi();
-        if (!token || !api || !api.rpc) return;
+        if (!api || !api.rpc) return;
 
         // Find self-entry
         var selfEntry = null;
@@ -459,13 +453,12 @@
             }
             var item = publishQueue.shift();
             var pct = Math.round((item.score / 10) * 10000) / 100;
-            api.rpc('publish_leaderboard_snapshot_by_session', {
-                p_session_token: token,
+            api.rpc('publish_leaderboard_snapshot_by_session', _withSessionToken({
                 p_snapshot_date: item.date,
                 p_display_name: _getDisplayName(),
                 p_day_balance: item.score,
                 p_cascade_pct: pct
-            }).then(function () {
+            })).then(function () {
                 published++;
                 console.info('[HEYS.leaderboard] 📤 Historical CEB published:', item.date, '→', item.score);
                 publishNext();

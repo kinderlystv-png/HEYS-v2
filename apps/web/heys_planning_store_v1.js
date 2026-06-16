@@ -181,6 +181,15 @@
         return localDateISO(normalizeDate(value));
     }
 
+    function chronoDateStr(value) {
+        const raw = value == null ? new Date() : value;
+        if (typeof raw === 'string' && raw.length <= 10) return raw.slice(0, 10);
+        const date = normalizeDate(raw);
+        if (!date || Number.isNaN(date.getTime())) return localDateISO(new Date());
+        date.setHours(date.getHours() - CALENDAR_START_HOUR);
+        return localDateISO(date);
+    }
+
     function nowISO() {
         return new Date().toISOString();
     }
@@ -1152,17 +1161,19 @@
         if (!activityId || minutes <= 0) return null;
         const activity = getChronoActivities().find((a) => a.id === activityId);
         if (!activity) return null;
+        const createdAt = input?.createdAt || nowISO();
+        const at = input?.at || createdAt;
         const entry = {
             id: uid(),
             activityId,
-            date: dateStr(input?.date),
+            date: input?.date ? dateStr(input.date) : chronoDateStr(at),
             minutes,
-            createdAt: input?.createdAt || nowISO(),
+            createdAt,
             // `at` — ISO момента фактического начала активности (для паттерна
             // времени суток). Таймер передаёт реальный startMs; ручной ввод —
             // дефолт now. Опциональное, backward-compat: читатели берут
             // entry.at || entry.createdAt.
-            at: input?.at || input?.createdAt || nowISO(),
+            at,
         };
         if (input?.parallelGroupId) entry.parallelGroupId = String(input.parallelGroupId);
         if (input?.displayGroupId) entry.displayGroupId = String(input.displayGroupId);
@@ -1210,7 +1221,7 @@
             const endMs = Number(item && item.endMs);
             if (minutes <= 0 || !Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) return;
             ids.filter(Boolean).forEach((id) => byEntryId.set(String(id), {
-                date: dateStr(item.date),
+                date: item.date ? dateStr(item.date) : chronoDateStr(new Date(startMs)),
                 minutes,
                 at: new Date(startMs).toISOString(),
                 createdAt: new Date(endMs).toISOString(),
@@ -1324,7 +1335,7 @@
     function compactChronoOlderThan90Once() {
         const entries = getChronoEntries();
         if (!entries.length) return 0;
-        const cutoff = addDays(dateStr(new Date()), -90);
+        const cutoff = addDays(chronoDateStr(new Date()), -90);
         const old = entries.filter((e) => e.date && e.date < cutoff);
         if (!old.length) return 0;
         const fresh = entries.filter((e) => !(e.date && e.date < cutoff));
@@ -1647,6 +1658,7 @@
     Planning.Utils = {
         uid,
         dateStr,
+        chronoDateStr,
         nowISO,
         addDays,
         diffDays,

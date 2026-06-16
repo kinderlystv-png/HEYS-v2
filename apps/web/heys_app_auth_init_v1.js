@@ -86,6 +86,10 @@
             try { localStorage.removeItem(key); } catch (_) { }
         };
 
+        const writeRawLocalStorage = (key, value) => {
+            try { localStorage.setItem(key, value); } catch (_) { }
+        };
+
         const isPinRestoreAuthError = (error) => {
             const code = String(error?.code || error?.status || error?.statusCode || '').toLowerCase();
             const message = String(error?.message || error || '').toLowerCase();
@@ -263,6 +267,24 @@
         const storedUser = readStoredAuthUser();
         const savedEmail = storedUser?.email || readGlobalValue('heys_remember_email', null) || readGlobalValue('heys_saved_email', null);
 
+        const persistCuratorJwtAuth = (token, data) => {
+            const restoredUser = data?.user;
+            if (!token || !restoredUser) return null;
+            const tokenData = {
+                access_token: token,
+                refresh_token: null,
+                expires_at: data.expires_at || Math.floor(Date.now() / 1000) + 86400,
+                user: restoredUser,
+            };
+            writeRawLocalStorage('heys_supabase_auth_token', JSON.stringify(tokenData));
+            return restoredUser;
+        };
+
+        const setRestoredCuratorUser = (restoredUser) => {
+            setCloudUser(restoredUser);
+            try { cloudRef?.setAuthUser?.(restoredUser); } catch (_) { }
+        };
+
         // v12: Helper для авто-закрытия гейта (returning user)
         function __heysDismissGate() {
             var gate = document.getElementById('heys-login-gate');
@@ -310,17 +332,26 @@
             window.__heysReturningUser = false;
         }
 
-        // 🔐 FIX v52: PIN auth имеет ПРИОРИТЕТ над куратором!
-        // Если есть PIN-сессия — НЕ восстанавливаем куратора (предотвращает ререндер)
+        const curatorJwtRaw = readGlobalValue('heys_curator_session', null);
+        const curatorJwt = typeof curatorJwtRaw === 'string' ? curatorJwtRaw.trim() : '';
+        const hasCuratorJwtSession = !!curatorJwt && curatorJwt.length > 10;
+
+        // 🔐 Auth priority:
+        // - explicit curator JWT wins over stale PIN markers;
+        // - otherwise PIN auth keeps priority over legacy compatible curator auth.
         let pinAuthClient = readGlobalValue('heys_pin_auth_client', null);
         let pinRecoveredFromSession = false;
+        if (pinAuthClient && hasCuratorJwtSession) {
+            removeGlobalValue('heys_pin_auth_client');
+            pinAuthClient = null;
+        }
 
         // 🔄 Stage 1: recover PIN session from session_token + last_client_id
         // Если pin_auth_client потёрт но session_token жив — восстанавливаем clientId
         // из last_client_id (пишется при успешном логине). Это закрывает race
         // когда state-drift (logout/expiry/cleanup) убрал маркер pin_auth_client,
         // но активная сессия на сервере ещё валидна.
-        if (!pinAuthClient && !storedUser) {
+        if (!pinAuthClient && !storedUser && !hasCuratorJwtSession) {
             const sessionTokenRaw = readGlobalValue('heys_session_token', null);
             const lastClientIdRaw = readGlobalValue('heys_last_client_id', null);
             const sessionTokenOk = sessionTokenRaw && (typeof sessionTokenRaw === 'string' ? sessionTokenRaw.trim().length > 0 : true);
@@ -334,12 +365,28 @@
         }
 
         const hasPinSession = !!pinAuthClient;
+        const finishNoSession = () => {
+            console.info('[HEYS.entry] ➡️ Branch: no session (show login)');
+            initLocalData();
+            setStatus('offline');
+            setIsInitializing(false);
+        };
+        const shouldProbeCookiePinSession = !storedUser
+            && !hasCuratorJwtSession
+            && !hasPinSession
+            && !!cloudRef
+            && typeof HEYS.YandexAPI?.getCurrentClientBySession === 'function';
+        const shouldProbeCookieCuratorSession = !storedUser
+            && !hasCuratorJwtSession
+            && !hasPinSession
+            && !!cloudRef
+            && typeof HEYS.YandexAPI?.verifyCuratorToken === 'function';
 
         if (storedUser && cloudRef && !hasPinSession) {
             // Есть сохранённая сессия куратора (и нет PIN-сессии) — восстанавливаем.
             // Важно: ставим cloudUser ДО любых восстановлений clientId, чтобы не запускался consent-flow как для клиента.
             if (savedEmail) setEmail(savedEmail);
-            setCloudUser(storedUser);
+            setRestoredCuratorUser(storedUser);
             setStatus('online');
 
             // ✅ FIX 2025-12-25: Восстанавливаем выбранного клиента из localStorage!
@@ -365,6 +412,61 @@
                 .finally(() => {
                     setIsInitializing(false);
                 });
+        } else if (hasCuratorJwtSession && cloudRef && !hasPinSession) {
+            const api = HEYS.YandexAPI || window.YandexAPI;
+            if (!api?.verifyCuratorToken) {
+                devWarn('[App] Curator JWT restore skipped: YandexAPI.verifyCuratorToken unavailable');
+                initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
+                setStatus('offline');
+                __heysDismissGate();
+                setIsInitializing(false);
+            } else {
+                api.verifyCuratorToken(curatorJwt)
+                    .then(({ data, error }) => {
+                        if (data?.valid && data?.user) {
+                            const restoredUser = persistCuratorJwtAuth(curatorJwt, data);
+                            if (!restoredUser) throw new Error('invalid_curator_jwt_payload');
+                            const email = restoredUser.email || readGlobalValue('heys_remember_email', null) || readGlobalValue('heys_saved_email', null) || '';
+                            if (email) setEmail(email);
+                            setRestoredCuratorUser(restoredUser);
+                            setStatus('online');
+                            initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
+                            __heysDismissGate();
+                            return;
+                        }
+
+                        const message = error?.message || 'invalid_curator_jwt';
+                        const authRejected = isPinRestoreAuthError({ message }) || (!data?.valid && !error);
+                        if (authRejected) {
+                            removeGlobalValue('heys_curator_session');
+                            removeGlobalValue('heys_supabase_auth_token');
+                            setStatus('offline');
+                            __heysShowGateLogin();
+                            return;
+                        }
+
+                        initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
+                        setStatus('offline');
+                        __heysDismissGate();
+                    })
+                    .catch((err) => {
+                        devWarn('[App] Curator JWT restore failed:', err);
+                        const message = err?.message || String(err || '');
+                        if (isPinRestoreAuthError({ message })) {
+                            removeGlobalValue('heys_curator_session');
+                            removeGlobalValue('heys_supabase_auth_token');
+                            setStatus('offline');
+                            __heysShowGateLogin();
+                        } else {
+                            initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
+                            setStatus('offline');
+                            __heysDismissGate();
+                        }
+                    })
+                    .finally(() => {
+                        setIsInitializing(false);
+                    });
+            }
         } else if (hasPinSession && cloudRef) {
             // 🔐 PIN auth — приоритет над куратором (клиент вошёл по телефону+PIN)
             devLog('[App] 🔐 Восстановление PIN-сессии:', pinAuthClient.substring(0, 8) + '...', pinRecoveredFromSession ? '(recovered from session_token)' : '');
@@ -485,14 +587,108 @@
                         setIsInitializing(false);
                     }
                 });
+        } else if (shouldProbeCookiePinSession || shouldProbeCookieCuratorSession) {
+            console.info('[HEYS.entry] 🔄 Branch: probing HttpOnly auth cookies');
+            let initFinalized = false;
+            const finishCookieProbe = () => {
+                if (!initFinalized) {
+                    initFinalized = true;
+                    setIsInitializing(false);
+                }
+            };
+
+            const restoreCookieCuratorSession = () => {
+                if (!shouldProbeCookieCuratorSession) {
+                    const e = new Error('cookie_curator_probe_unavailable');
+                    e.code = 'NO_COOKIE_CURATOR_PROBE';
+                    return Promise.reject(e);
+                }
+                console.info('[HEYS.entry] 🔄 Probing HttpOnly curator session cookie');
+                return HEYS.YandexAPI.verifyCuratorToken()
+                    .then(({ data, error }) => {
+                        if (!data?.valid || !data?.user) {
+                            const e = new Error(error?.message || 'cookie_curator_session_missing');
+                            e.code = error?.code || error?.status || '';
+                            throw e;
+                        }
+
+                        const user = data.user;
+                        const email = user.email || readGlobalValue('heys_remember_email', null) || readGlobalValue('heys_saved_email', null) || '';
+                        if (email) setEmail(email);
+                        setRestoredCuratorUser(user);
+                        setStatus('online');
+                        initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
+                        __heysDismissGate();
+                    });
+            };
+
+            const restoreCookiePinSession = () => {
+                if (!shouldProbeCookiePinSession) {
+                    const e = new Error('cookie_pin_probe_unavailable');
+                    e.code = 'NO_COOKIE_PIN_PROBE';
+                    return Promise.reject(e);
+                }
+                console.info('[HEYS.entry] 🔄 Probing HttpOnly PIN session cookie');
+                return HEYS.YandexAPI.getCurrentClientBySession()
+                .then((res) => {
+                    const cid = res?.data?.id;
+                    if (!cid || typeof cid !== 'string') {
+                        const e = new Error(res?.error?.message || 'cookie_session_missing');
+                        e.code = res?.error?.code || res?.error?.status || '';
+                        throw e;
+                    }
+
+                    try { localStorage.setItem('heys_pin_auth_client', cid); } catch (_) { }
+                    try { localStorage.setItem('heys_client_current', JSON.stringify(cid)); } catch (_) { }
+                    if (res?.data?.name) {
+                        try { localStorage.setItem('heys_client_name', res.data.name); } catch (_) { }
+                    }
+                    if (cloudRef.setPinAuthClient) cloudRef.setPinAuthClient(cid);
+                    initLocalData();
+                    setStatus('online');
+                    setClientId(cid);
+                    window.HEYS = window.HEYS || {};
+                    window.HEYS.currentClientId = cid;
+
+                    return cloudRef.syncClient(cid)
+                        .then(() => {
+                            devLog('[App] ✅ PIN-сессия восстановлена из HttpOnly cookie');
+                            __heysDismissGate();
+                        })
+                        .catch((err) => {
+                            devWarn('[App] ❌ Ошибка восстановления cookie PIN-сессии:', err);
+                            trackError(err, { scope: 'AppAuthInit', action: 'restore_cookie_pin_session' });
+                            if (isPinRestoreAuthError(err)) {
+                                removeGlobalValue('heys_pin_auth_client');
+                                removeGlobalValue('heys_client_current');
+                                setClientId(null);
+                                setStatus('offline');
+                                throw err;
+                            } else {
+                                initLocalData();
+                                setStatus('offline');
+                                __heysDismissGate();
+                            }
+                        });
+                });
+            };
+
+            restoreCookiePinSession()
+                .catch((err) => {
+                    devLog('[App] HttpOnly PIN session probe did not restore:', err?.message || err);
+                    return restoreCookieCuratorSession()
+                        .catch((curatorErr) => {
+                            devLog('[App] HttpOnly curator session probe did not restore:', curatorErr?.message || curatorErr);
+                            finishNoSession();
+                            initFinalized = true;
+                        });
+                })
+                .finally(finishCookieProbe);
         } else {
-            console.info('[HEYS.entry] ➡️ Branch: no session (show login)');
             // Нет сохранённой сессии — показываем экран логина. cloudUser в этой ветке не
             // ставится (нет storedUser), так что buildGate уйдёт в `!cloudUser` ветку, удалит
             // скрытый HTML-гейт и смoнтирует React LoginScreen сразу после setIsInitializing(false).
-            initLocalData();
-            setStatus('offline');
-            setIsInitializing(false);
+            finishNoSession();
         }
 
         // ─── Static Login Handoff (v11: no-reload) ──────────────────────────────
@@ -509,6 +705,8 @@
                 // PIN auth: same logic as hasPinSession branch (lines 257-287)
                 var cid = detail.clientId || readGlobalValue('heys_pin_auth_client', null);
                 if (!cid || !cloudRef) return;
+                removeGlobalValue('heys_supabase_auth_token');
+                removeGlobalValue('heys_curator_session');
                 if (cloudRef.setPinAuthClient) cloudRef.setPinAuthClient(cid);
                 initLocalData();
                 setStatus('online');
@@ -541,7 +739,7 @@
                 if (!user || !cloudRef) return;
                 var email = user.email || readGlobalValue('heys_remember_email', null) || '';
                 if (email) setEmail(email);
-                setCloudUser(user);
+                setRestoredCuratorUser(user);
                 setStatus('online');
                 initLocalData({ skipClientRestore: false, skipPinAuthRestore: true });
                 setIsInitializing(false);

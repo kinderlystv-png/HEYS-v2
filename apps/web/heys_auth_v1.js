@@ -250,6 +250,13 @@
     if (!api) {
       return { ok: false, error: 'api_not_ready', _debug: { stage: 'init' } };
     }
+    if (typeof api.curatorLogout !== 'function' || typeof api.clientLogout !== 'function') {
+      return {
+        ok: false,
+        error: 'api_not_ready',
+        _debug: { stage: 'role_switch_cleanup_api' },
+      };
+    }
 
     try {
       // v3: одношаговая авторизация (сервер сам хеширует PIN)
@@ -304,6 +311,26 @@
             rpc: 'verify_client_pin_v3',
             hasClientId: !!clientId,
             hasSessionToken: !!sessionToken,
+          },
+        };
+      }
+
+      // HttpOnly curator cookie cannot be removed through localStorage. After
+      // a successful PIN login clear it server-side, otherwise a stale curator
+      // cookie can coexist with the new client session.
+      try {
+        const cleanup = await api.curatorLogout?.();
+        if (cleanup && cleanup.ok === false) {
+          throw new Error(cleanup.error?.message || cleanup.error?.error || 'role_switch_cleanup_failed');
+        }
+      } catch (cleanupErr) {
+        try { await api.clientLogout?.(); } catch (_) { /* rollback best-effort */ }
+        return {
+          ok: false,
+          error: 'role_switch_cleanup_failed',
+          _debug: {
+            stage: 'clear_curator_cookie',
+            message: cleanupErr?.message || String(cleanupErr || ''),
           },
         };
       }
@@ -371,6 +398,9 @@
 
     const row = Array.isArray(res.data) ? res.data[0] : res.data;
     const clientId = row && (row.client_id || row.id);
+    const pinToken = row && (row.pin_token || row.pinToken);
+    const botUsername = HEYS.config?.clientBotUsername || 'heyslab_bot';
+    const deepLink = pinToken ? `https://t.me/${botUsername}?start=${pinToken}` : null;
 
     // 🔔 Уведомляем компоненты о создании клиента (для RationTab и др.)
     window.dispatchEvent(new Event('heys:auth-changed'));
@@ -381,6 +411,8 @@
       clientId,
       phone: phoneNorm,
       pin,
+      pinToken,
+      deepLink,
     };
   }
 
@@ -500,21 +532,26 @@
    */
   async function logout() {
     const token = getSessionToken();
+    let shouldTryCookieLogout = false;
+    try {
+      const host = window.location && window.location.hostname || '';
+      shouldTryCookieLogout = !!host && host !== 'localhost' && host !== '127.0.0.1';
+    } catch (_) { /* noop */ }
 
-    if (token) {
-      const api = HEYS.YandexAPI;
-      if (api) {
-        try {
-          await api.rpc('revoke_session', { p_session_token: token });
-        } catch (e) {
-          // Revoke failed - continue with local cleanup
-        }
+    const api = HEYS.YandexAPI;
+    if (api && (token || shouldTryCookieLogout)) {
+      try {
+        await api.rpc('revoke_session', token ? { p_session_token: token } : {});
+      } catch (e) {
+        // Revoke failed - continue with local cleanup
       }
     }
 
-    // Очищаем локально
+    // Очищаем локально. Важно убрать и marker PIN-режима: session-expired
+    // handler вызывает именно этот logout, без полного cloudSignOut.
     try {
       localStorage.removeItem('heys_session_token');
+      localStorage.removeItem('heys_pin_auth_client');
       localStorage.removeItem('heys_client_current');
     } catch (_) { }
 

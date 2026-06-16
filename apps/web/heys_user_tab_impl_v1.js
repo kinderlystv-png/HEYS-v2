@@ -2238,6 +2238,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     function HEYS_PushSettingsCard() {
         const isCurator = (() => {
             try {
+                if (HEYS.auth?.isCuratorSession?.() === true) return true;
+            } catch { /* noop */ }
+            try {
+                if (HEYS.cloud?.getUser?.()) return true;
+            } catch { /* noop */ }
+            try {
                 return !!localStorage.getItem('heys_curator_session') ||
                     !!localStorage.getItem('heys_supabase_auth_token');
             } catch { return false; }

@@ -136,13 +136,19 @@
         const [loading, setLoading] = React.useState(false);
         const [trialDate, setTrialDate] = React.useState(() => new Date().toISOString().split('T')[0]);
         const [months, setMonths] = React.useState(1);
+        const [accessResult, setAccessResult] = React.useState(null);
 
         const status = getEffectiveSubscriptionStatus(client);
         const badge = getSubscriptionBadge(client);
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('ru-RU') : '—';
         const h = React.createElement;
 
-        const closeModal = () => { setOpen(false); setView('main'); };
+        const closeModal = () => { setOpen(false); setView('main'); setAccessResult(null); };
+        const buildClientBotLink = (pinToken) => {
+            if (!pinToken) return null;
+            const botUsername = HEYS.config?.clientBotUsername || 'heyslab_bot';
+            return `https://t.me/${botUsername}?start=${pinToken}`;
+        };
 
         // Активировать триал
         const handleActivateTrial = async () => {
@@ -169,6 +175,46 @@
             } catch (e) {
                 console.error('[HEYS.sub] ❌ activateTrial error:', e);
                 HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'Не удалось активировать'));
+            }
+            setLoading(false);
+        };
+
+        const handleClearTelegramBinding = async () => {
+            if (!confirm('Сбросить Telegram-привязку клиента? После этого клиент сможет заново открыть свою Telegram-ссылку и привязаться к правильному аккаунту.')) return;
+            setLoading(true);
+            try {
+                const res = await HEYS.TrialQueue?.admin?.clearTelegramBinding?.(client.id);
+                if (res && res.success) {
+                    HEYS.Toast?.success?.(res.cleared ? 'Telegram-привязка сброшена' : 'Telegram-привязки не было');
+                    onUpdate?.();
+                } else {
+                    const errorMessage = res?.message || res?.error?.message || res?.error || 'Не удалось сбросить Telegram-привязку';
+                    HEYS.Toast?.error?.(errorMessage);
+                }
+            } catch (e) {
+                console.error('[HEYS.subs] ❌ clearTelegramBinding error:', e);
+                HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'Не удалось сбросить Telegram-привязку'));
+            }
+            setLoading(false);
+        };
+
+        const handleRegeneratePin = async () => {
+            if (!confirm('Перевыпустить PIN и Telegram-ссылку? Старые PIN-сессии будут завершены, Telegram-привязка сброшена.')) return;
+            setLoading(true);
+            try {
+                const res = await HEYS.TrialQueue?.admin?.regeneratePin?.(client.id);
+                if (res && res.success) {
+                    const deepLink = buildClientBotLink(res.pin_token);
+                    setAccessResult({ pin: res.pin, deepLink });
+                    HEYS.Toast?.success?.('PIN и ссылка перевыпущены');
+                    onUpdate?.();
+                } else {
+                    const errorMessage = res?.message || res?.error?.message || res?.error || 'Не удалось перевыпустить PIN';
+                    HEYS.Toast?.error?.(errorMessage);
+                }
+            } catch (e) {
+                console.error('[HEYS.subs] ❌ regeneratePin error:', e);
+                HEYS.Toast?.error?.('Ошибка: ' + (e.message || 'Не удалось перевыпустить PIN'));
             }
             setLoading(false);
         };
@@ -431,7 +477,24 @@
             ),
             h('div', { style: { display: 'grid', gap: 8 } },
                 pill('ID клиента', (client.id || '').slice(0, 8) + '…'),
-                pill('Тариф', status === 'active' ? 'Активен' : status === 'trial' ? 'Триал' : status === 'trial_pending' ? 'Ожидание' : status === 'read_only' ? 'Ограничен' : 'Нет')
+                pill('Тариф', status === 'active' ? 'Активен' : status === 'trial' ? 'Триал' : status === 'trial_pending' ? 'Ожидание' : status === 'read_only' ? 'Ограничен' : 'Нет'),
+                pill('Telegram', client.has_telegram_binding === true ? 'Привязан' : client.has_telegram_binding === false ? 'Не привязан' : 'Неизвестно')
+            ),
+            accessResult && h('div', { style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' } },
+                h('div', { style: { fontSize: 12, fontWeight: 700, color: '#475569' } }, 'Новый доступ для клиента'),
+                h('div', { style: { fontSize: 24, fontWeight: 800, letterSpacing: 8, fontFamily: 'monospace', color: '#111827' } }, accessResult.pin || '—'),
+                accessResult.deepLink && h('div', { style: { fontSize: 11, color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace' } }, accessResult.deepLink),
+                h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 } },
+                    h('button', {
+                        onClick: () => navigator.clipboard?.writeText(accessResult.pin || '').then(() => HEYS.Toast?.success?.('PIN скопирован')),
+                        style: { ...btnBase, justifyContent: 'center', background: '#fff', color: '#334155', border: '1px solid #cbd5e1' }
+                    }, 'Копировать PIN'),
+                    h('button', {
+                        onClick: () => navigator.clipboard?.writeText(accessResult.deepLink || '').then(() => HEYS.Toast?.success?.('Ссылка скопирована')),
+                        disabled: !accessResult.deepLink,
+                        style: { ...btnBase, justifyContent: 'center', background: '#fff', color: '#334155', border: '1px solid #cbd5e1' }
+                    }, 'Копировать ссылку')
+                )
             ),
             h('div', { style: { display: 'grid', gap: 8 } },
                 (status === 'none' || status === 'read_only' || status === 'trial_pending') && h('button', {
@@ -454,6 +517,16 @@
                     onClick: handleRefund, disabled: loading,
                     style: { ...btnBase, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }
                 }, loading ? '⏳ Возврат...' : '💰 Вернуть деньги (последний платёж)'),
+                h('button', {
+                    onClick: handleClearTelegramBinding,
+                    disabled: loading || !HEYS.TrialQueue?.admin?.clearTelegramBinding,
+                    style: { ...btnBase, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }
+                }, loading ? '⏳ Сброс...' : '📱 Сбросить Telegram-привязку'),
+                h('button', {
+                    onClick: handleRegeneratePin,
+                    disabled: loading || !HEYS.TrialQueue?.admin?.regeneratePin,
+                    style: { ...btnBase, background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }
+                }, loading ? '⏳ Выпуск...' : '🔐 Перевыпустить PIN и ссылку'),
                 status !== 'none' && h('button', {
                     onClick: handleCancel, disabled: loading,
                     style: { ...btnBase, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }
@@ -741,21 +814,38 @@
             addClientToCloud
         } = props;
         const [open, setOpen] = React.useState(false);
+        const [loading, setLoading] = React.useState(false);
+        const [accessResult, setAccessResult] = React.useState(null);
 
         const closeModal = () => {
             setOpen(false);
             setNewName('');
             setNewPhone('');
             setNewPin('');
+            setAccessResult(null);
         };
 
-        const handleCreate = () => {
-            const canCreate = newName.trim() && newPhone.trim() && newPin.trim();
-            if (!canCreate) return;
-            addClientToCloud({ name: newName, phone: newPhone, pin: newPin }).then(() => {
-                closeModal();
-                HEYS.Toast?.success?.('✅ Клиент создан');
-            });
+        const handleCreate = async () => {
+            const canCreate = newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin);
+            if (!canCreate || loading) return;
+            setLoading(true);
+            try {
+                const created = await addClientToCloud({ name: newName, phone: newPhone, pin: newPin });
+                if (created?.ok && created.clientId) {
+                    setAccessResult({
+                        phone: created.phone,
+                        pin: created.pin,
+                        deepLink: created.deepLink
+                    });
+                    HEYS.Toast?.success?.('Клиент создан');
+                } else if (created?.error) {
+                    HEYS.Toast?.error?.('Ошибка создания: ' + (created.message || created.error));
+                } else {
+                    closeModal();
+                }
+            } finally {
+                setLoading(false);
+            }
         };
 
         // Кнопка открытия
@@ -853,10 +943,10 @@
                 React.createElement('div', null,
                     React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'PIN код (4 цифры)'),
                     React.createElement('input', {
-                        placeholder: '1234',
-                        value: newPin,
-                        maxLength: 4,
-                        onChange: (e) => setNewPin(e.target.value),
+	                        placeholder: '1234',
+	                        value: newPin,
+	                        maxLength: 4,
+	                        onChange: (e) => setNewPin((e.target.value || '').replace(/\D/g, '').slice(0, 4)),
                         onKeyDown: (e) => { if (e.key === 'Enter') handleCreate(); },
                         type: 'tel', /* numeric keyboard */
                         style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', letterSpacing: 4, textAlign: 'center', fontWeight: 700 }
@@ -866,24 +956,43 @@
                 React.createElement('div', { style: { padding: '12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#64748b', lineHeight: 1.4 } },
                     '🔒 Клиент будет входить по этому телефону и PIN-коду. Обязательно сохраните эти данные.'
                 ),
+                accessResult && React.createElement('div', {
+                    style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }
+                },
+                    React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: '#475569' } }, 'Доступ для клиента'),
+                    React.createElement('div', { style: { fontSize: 12, color: '#475569' } }, accessResult.phone || ''),
+                    React.createElement('div', { style: { fontSize: 24, fontWeight: 800, letterSpacing: 8, fontFamily: 'monospace', color: '#111827', textAlign: 'center' } }, accessResult.pin || '—'),
+                    accessResult.deepLink && React.createElement('div', { style: { fontSize: 11, color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace' } }, accessResult.deepLink),
+                    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 } },
+                        React.createElement('button', {
+                            onClick: () => navigator.clipboard?.writeText(accessResult.pin || '').then(() => HEYS.Toast?.success?.('PIN скопирован')),
+                            style: { padding: '10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', cursor: 'pointer', fontSize: 13, fontWeight: 600 }
+                        }, 'Копировать PIN'),
+                        React.createElement('button', {
+                            onClick: () => navigator.clipboard?.writeText(accessResult.deepLink || '').then(() => HEYS.Toast?.success?.('Ссылка скопирована')),
+                            disabled: !accessResult.deepLink,
+                            style: { padding: '10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', cursor: accessResult.deepLink ? 'pointer' : 'default', fontSize: 13, fontWeight: 600 }
+                        }, 'Копировать ссылку')
+                    )
+                ),
                 // Button
                 React.createElement('button', {
-                    onClick: handleCreate,
-                    disabled: !(newName.trim() && newPhone.trim() && newPin.trim().length >= 4),
+                    onClick: accessResult ? closeModal : handleCreate,
+                    disabled: loading || (!accessResult && !(newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin))),
                     style: {
                         marginTop: 8,
                         width: '100%',
                         padding: '14px',
                         borderRadius: 12,
-                        background: (newName.trim() && newPhone.trim() && newPin.trim().length >= 4) ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#e2e8f0',
-                        color: (newName.trim() && newPhone.trim() && newPin.trim().length >= 4) ? '#fff' : '#94a3b8',
+                        background: (!loading && (accessResult || (newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin)))) ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#e2e8f0',
+                        color: (!loading && (accessResult || (newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin)))) ? '#fff' : '#94a3b8',
                         border: 'none',
                         fontWeight: 700,
                         fontSize: 16,
-                        cursor: (newName.trim() && newPhone.trim() && newPin.trim().length >= 4) ? 'pointer' : 'not-allowed',
-                        boxShadow: (newName.trim() && newPhone.trim() && newPin.trim().length >= 4) ? '0 4px 6px -1px rgba(37,99,235,0.2)' : 'none'
+                        cursor: (!loading && (accessResult || (newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin)))) ? 'pointer' : 'not-allowed',
+                        boxShadow: (!loading && (accessResult || (newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin)))) ? '0 4px 6px -1px rgba(37,99,235,0.2)' : 'none'
                     }
-                }, 'Создать клиента')
+                }, accessResult ? 'Готово' : loading ? 'Создание...' : 'Создать клиента')
             )
         );
 
@@ -1944,6 +2053,10 @@
                 onLogout: () => {
                     // Выход из PIN auth
                     removeGlobalValue('heys_pin_auth_client');
+                    removeGlobalValue('heys_session_token');
+                    removeGlobalValue('heys_last_client_id');
+                    removeGlobalValue('heys_client_current');
+                    removeGlobalValue('heys_client_phone');
                     window.HEYS?.cloud?._setPinAuthMode?.(false, null);
                     if (window.HEYS) {
                         window.HEYS.currentClientId = null;
@@ -2035,6 +2148,9 @@
                     // Отмена = выход (нельзя использовать приложение без согласий)
                     console.log('[CONSENTS] ❌ Отказ от согласий — выход');
                     removeGlobalValue('heys_pin_auth_client');
+                    removeGlobalValue('heys_session_token');
+                    removeGlobalValue('heys_last_client_id');
+                    removeGlobalValue('heys_client_current');
                     removeGlobalValue('heys_client_phone');
                     window.HEYS?.cloud?._setPinAuthMode?.(false, null);
                     setClientId(null);

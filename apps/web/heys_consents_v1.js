@@ -280,15 +280,14 @@
       try {
         if (!HEYS.YandexAPI) return { success: false, error: 'No API client' };
 
-        // Тот же паттерн, что в heys_add_product_step_v1.js: HEYS.auth API
-        // как источник session_token для session-safe RPC.
+        // JS-readable token is optional: HttpOnly cookie sessions are verified
+        // inside delete_my_account through the API proxy.
         const sessionToken =
           (HEYS.auth && typeof HEYS.auth.getSessionToken === 'function'
             ? HEYS.auth.getSessionToken()
             : null) || null;
-        if (!sessionToken) return { success: false, error: 'No session token' };
 
-        const res = await HEYS.YandexAPI.deleteMyAccount(sessionToken);
+        const res = await HEYS.YandexAPI.deleteMyAccount(sessionToken || null);
         if (res.error) throw new Error(res.error?.message || res.error);
 
         const success = res.data?.delete_my_account?.success ?? false;

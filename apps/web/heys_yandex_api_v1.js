@@ -227,6 +227,62 @@
     }
   }
 
+  function shouldTryCookieCuratorRequest() {
+    try {
+      const host = global.location && global.location.hostname || '';
+      return !!host && host !== 'localhost' && host !== '127.0.0.1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function buildCuratorRequestHeaders(baseHeaders = {}) {
+    const token = getCuratorToken();
+    const headers = { ...(baseHeaders || {}) };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return {
+      ok: !!token || shouldTryCookieCuratorRequest(),
+      headers,
+      token
+    };
+  }
+
+  function hasCuratorRuntimeContext() {
+    if (getCuratorToken()) return true;
+    try {
+      if (global.HEYS?.auth?.isCuratorSession?.() === true) return true;
+    } catch (_) { /* noop */ }
+    try {
+      if (global.HEYS?.cloud?.getUser?.()) return true;
+    } catch (_) { /* noop */ }
+    return false;
+  }
+
+  function shouldUseCuratorAuthPath() {
+    return !!getCuratorToken() ||
+      (shouldTryCookieCuratorRequest() && hasCuratorRuntimeContext());
+  }
+
+  function decodeJwtPayload(token) {
+    try {
+      const part = String(token || '').split('.')[1];
+      if (!part) return null;
+      const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+      if (typeof atob !== 'function') return null;
+      const raw = atob(padded);
+      try {
+        return JSON.parse(decodeURIComponent(Array.prototype.map.call(raw, ch => {
+          return '%' + ('00' + ch.charCodeAt(0).toString(16)).slice(-2);
+        }).join('')));
+      } catch (_) {
+        return JSON.parse(raw);
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
   /**
    * 🔐 v56: Получить user_id куратора из auth token
    * Используется для REST upsert операций
@@ -235,9 +291,18 @@
   function getCuratorUserId() {
     try {
       const stored = localStorage.getItem('heys_supabase_auth_token');
-      if (!stored) return null;
-      const parsed = JSON.parse(stored);
-      return parsed?.user?.id || null;
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed?.user?.id) return parsed.user.id;
+        } catch (_) {
+          // Malformed legacy-compatible token must not block bare JWT fallback.
+        }
+      }
+
+      const curatorSession = localStorage.getItem('heys_curator_session');
+      const payload = decodeJwtPayload(curatorSession);
+      return payload?.sub || payload?.user_id || null;
     } catch (e) {
       err('getCuratorUserId failed:', e.message);
       return null;
@@ -279,6 +344,7 @@
     // === PIN MANAGEMENT (Phase 1 hotfix — bcrypt в БД) ===
     'admin_set_client_pin',           // 🆕 plain pin → bcrypt в БД (замена reset_client_pin)
     'admin_regenerate_pin',           // 🆕 авто-перевыпуск PIN+pin_token
+    'admin_clear_telegram_binding',    // Сброс chat_id, если ссылку открыл не клиент
 
     // === GAMIFICATION AUDIT ===
     'log_gamification_event_by_curator',
@@ -290,6 +356,7 @@
     // heys-api-rest. rpc() автоматически положит JWT в Authorization.
     'batch_upsert_client_kv_by_curator',
     'merge_save_client_kv_by_curator', // 🔀 Server-side merge для dayv2/norms/profile (curator path)
+    'issue_write_context_by_curator',  // 🛡️ Write context for curator KV uploads
   ];
 
   /**
@@ -311,12 +378,17 @@
 
       if (CURATOR_ONLY_FUNCTIONS.includes(fnName)) {
         const curatorToken = getCuratorToken();
-        if (!curatorToken) {
+        const shouldTryCookieCurator = shouldTryCookieCuratorRequest();
+        if (!curatorToken && !shouldTryCookieCurator) {
           err(`RPC ${fnName} requires curator token, but none found`);
           return { data: null, error: { message: 'Требуется авторизация куратора', code: 'UNAUTHORIZED' } };
         }
-        headers['Authorization'] = `Bearer ${curatorToken}`;
-        log(`RPC: ${fnName} — adding curator JWT`);
+        if (curatorToken) {
+          headers['Authorization'] = `Bearer ${curatorToken}`;
+          log(`RPC: ${fnName} — adding curator JWT`);
+        } else {
+          log(`RPC: ${fnName} — using HttpOnly curator cookie`);
+        }
       }
 
       const response = await fetchWithRetry(url, {
@@ -572,6 +644,23 @@
       } else {
         logInfo('🔐 [HEYS.auth] Вход куратора OK');
       }
+
+      try {
+        const cleanup = await clientLogout();
+        if (cleanup && cleanup.ok === false) {
+          throw new Error(cleanup.error?.message || cleanup.error?.error || 'role_switch_cleanup_failed');
+        }
+      } catch (cleanupErr) {
+        try { await curatorLogout(); } catch (_) { /* rollback best-effort */ }
+        return {
+          data: null,
+          error: {
+            message: cleanupErr?.message || 'role_switch_cleanup_failed',
+            code: 'ROLE_SWITCH_CLEANUP_FAILED',
+          },
+        };
+      }
+
       return {
         data: {
           access_token: data.access_token,
@@ -590,7 +679,7 @@
   /**
    * Верификация JWT токена куратора
    * @param {string} token - JWT токен
-   * @returns {Promise<{data: {valid: boolean, user?: object}, error: any}>}
+   * @returns {Promise<{data: {valid: boolean, user?: object, expires_at?: number}, error: any}>}
    */
   async function verifyCuratorToken(token) {
     const url = `${CONFIG.API_URL}${CONFIG.ENDPOINTS.AUTH_VERIFY}`;
@@ -598,13 +687,14 @@
     try {
       log('Verifying curator token');
 
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
       const response = await fetchWithRetry(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ token })
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(token ? { token } : {})
       });
 
       const data = await response.json();
@@ -623,7 +713,7 @@
         logInfo('🔐 [HEYS.auth] Проверка токена: valid');
       }
 
-      return { data: { valid: true, user: data.user }, error: null };
+      return { data: { valid: true, user: data.user, expires_at: data.expires_at }, error: null };
     } catch (e) {
       err('Token verification failed:', e.message);
       return { data: { valid: false }, error: { message: e.message } };
@@ -857,9 +947,32 @@
   function buildSessionRpcParams(extra = {}) {
     const token = getSessionTokenForKV();
     if (token) return { ok: true, params: { ...extra, p_session_token: token } };
-    const hasCookieSession = !!global?.HEYS?.cloud?.isPinAuthClient?.();
+    const hasCookieSession = !!global?.HEYS?.cloud?.isPinAuthClient?.() ||
+      shouldTryCookieSessionRequest();
     if (hasCookieSession) return { ok: true, params: { ...extra } };
     return { ok: false, params: null };
+  }
+
+  async function getCurrentClientBySession() {
+    try {
+      const { data, error } = await rpc('get_client_data_by_session', {});
+      if (error) return { data: null, error };
+      if (data?.error) return { data: null, error: { message: data.error, raw: data } };
+
+      const clientId = data?.client_id || data?.id || data?.data?.id;
+      if (!clientId) return { data: null, error: { message: 'client_id_missing', raw: data } };
+
+      return {
+        data: {
+          id: clientId,
+          name: data?.name || data?.data?.name || null,
+          raw: data,
+        },
+        error: null,
+      };
+    } catch (e) {
+      return { data: null, error: { message: e.message || String(e) } };
+    }
   }
 
   /**
@@ -914,6 +1027,15 @@
     return null;
   }
 
+  function shouldTryCookieSessionRequest() {
+    try {
+      const host = window.location && window.location.hostname || '';
+      return !!host && host !== 'localhost' && host !== '127.0.0.1';
+    } catch (_) {
+      return false;
+    }
+  }
+
   /**
    * Сохранить данные в client_kv_store (RPC) — 🔐 session-safe!
    * @param {string} clientId - ID клиента (IGNORED для безопасности!)
@@ -928,8 +1050,8 @@
       // client_id из session → save попадал бы не туда. Используем
       // batch_upsert_client_kv_by_curator с одним item — SQL функция уже
       // имеет ownership guard через clients.curator_id = caller.
-      const curatorToken = getCuratorToken();
-      if (curatorToken) {
+      const useCuratorPath = shouldUseCuratorAuthPath();
+      if (useCuratorPath) {
         try {
           if (/^heys_(?:profile|norms|game|hr_zones|dayv2_)/i.test(String(key))) {
             const stack = (new Error()).stack || '';
@@ -1009,8 +1131,8 @@
       // and any subsequent write-back to LS corrupts curator's local state.
       // Real incident vector: Phase 5 polling fetchCloudDay read wrong-client day
       // and wrote it into LS scoped under the "correct" client_id.
-      const curatorToken = getCuratorToken();
-      if (curatorToken && key && clientId) {
+      const useCuratorPath = shouldUseCuratorAuthPath();
+      if (useCuratorPath && key && clientId) {
         const result = await getKVBatchByCurator(clientId, [key]);
         if (result.error) {
           return { data: null, error: result.error };
@@ -1073,8 +1195,8 @@
 
       // 🛡️ CRITICAL FIX (2026-05-17): curator path FIRST.
       // getKVBatchByCurator уже использует REST с явным client_id — безопасно.
-      const curatorToken = getCuratorToken();
-      if (curatorToken && clientId) {
+      const useCuratorPath = shouldUseCuratorAuthPath();
+      if (useCuratorPath && clientId) {
         return await getKVBatchByCurator(clientId, keys);
       }
 
@@ -1134,7 +1256,7 @@
       // 🛡️ Guard: если есть curator token — это значит куратор. Curator должен
       // вызвать getChangeMarkersByCurator явно. Возвращаем early-error чтобы
       // обнаружить misuse в логах и заставить callers переключиться.
-      if (getCuratorToken()) {
+      if (shouldUseCuratorAuthPath()) {
         warn('getChangeMarkers called in curator context — use getChangeMarkersByCurator(clientId, since) instead');
         return { data: null, error: 'curator_should_use_getChangeMarkersByCurator' };
       }
@@ -1299,8 +1421,8 @@
         return { data: subsetRows, error: null, delta: false };
       }
 
-      const curatorToken = getCuratorToken();
-      if (!curatorToken) {
+      const curatorAuth = buildCuratorRequestHeaders({ 'Content-Type': 'application/json' });
+      if (!curatorAuth.ok) {
         return { data: [], error: 'No curator token' };
       }
 
@@ -1311,10 +1433,8 @@
 
       const response = await fetchWithRetry(url, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${curatorToken}`
-        }
+        headers: curatorAuth.headers,
+        credentials: 'include'
       });
 
       const result = await response.json();
@@ -1352,8 +1472,8 @@
       // session token would load wrong-client data into curator's LS during
       // bootstrapClientSync. getAllKVByCurator uses REST with explicit client_id
       // + curator JWT — server validates ownership via clients.curator_id.
-      const curatorToken = getCuratorToken();
-      if (curatorToken) {
+      const useCuratorPath = shouldUseCuratorAuthPath();
+      if (useCuratorPath) {
         return getAllKVByCurator(clientId, options);
       }
 
@@ -1500,8 +1620,8 @@
       // PIN session takes over: server resolves session → wrong client_id →
       // save lands under wrong client. Same incident as mergeSaveKV — see that
       // comment for full context.
-      const curatorToken = getCuratorToken();
-      if (curatorToken) {
+      const useCuratorPath = shouldUseCuratorAuthPath();
+      if (useCuratorPath) {
         try {
           try {
             const guardedItems = items.filter(it => it && typeof it.k === 'string' &&
@@ -1651,13 +1771,6 @@
     try {
       const sessionRpc = buildSessionRpcParams({ p_since });
       if (!sessionRpc.ok) return { ok: false, error: 'No session token', entries: [] };
-      // get_my_curator_changelog_since НЕ заканчивается на _by_session —
-      // серверный cookie-inject (heys-api-rpc/index.js:1068) её не покрывает.
-      // Если в params нет p_session_token (только cookie-fallback от
-      // buildSessionRpcParams), сервер вернёт 400. Skip сетевой запрос.
-      if (!sessionRpc.params?.p_session_token) {
-        return { ok: false, error: 'No session token', entries: [] };
-      }
       const result = await rpc('get_my_curator_changelog_since', sessionRpc.params);
       if (result.error) {
         return { ok: false, error: result.error.message || result.error, entries: [] };
@@ -1686,12 +1799,6 @@
         p_until_ts: p_until_ts || new Date().toISOString(),
       });
       if (!sessionRpc.ok) return { ok: false, error: 'No session token' };
-      // ack_curator_changelog НЕ _by_session — server cookie-inject не покрывает.
-      // Без p_session_token в body сервер 400 → acked_at не обновится →
-      // banner покажется снова. Skip если токена нет.
-      if (!sessionRpc.params?.p_session_token) {
-        return { ok: false, error: 'No session token in params' };
-      }
       const result = await rpc('ack_curator_changelog', sessionRpc.params);
       if (result.error) {
         return { ok: false, error: result.error.message || result.error };
@@ -1743,8 +1850,8 @@
       // ended up in Poplanton's day because Poplanton's old PIN session token
       // was still in LS. Phase 4 made every dayv2 save go through this path,
       // which exposed the latent bug at high frequency.
-      const curatorToken = getCuratorToken();
-      if (curatorToken) {
+      const useCuratorPath = shouldUseCuratorAuthPath();
+      if (useCuratorPath) {
         const result = await rpc('merge_save_client_kv_by_curator', {
           p_client_id: clientId,
           p_key: k,
@@ -1815,8 +1922,8 @@
    */
   async function deleteKVviaREST(userId, clientId, key) {
     try {
-      const curatorToken = getCuratorToken();
-      if (!curatorToken) {
+      const curatorAuth = buildCuratorRequestHeaders({ 'Content-Type': 'application/json' });
+      if (!curatorAuth.ok) {
         return { success: false, error: 'No curator token' };
       }
 
@@ -1824,10 +1931,8 @@
 
       const response = await fetch(url, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${curatorToken}`
-        }
+        headers: curatorAuth.headers,
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -1897,8 +2002,8 @@
     try {
       // 🔐 Используем /auth/clients вместо REST API (clients убран из REST по security)
       // Требует JWT токен куратора
-      const token = getCuratorToken();
-      if (!token) {
+      const curatorAuth = buildCuratorRequestHeaders({ 'Content-Type': 'application/json' });
+      if (!curatorAuth.ok) {
         return { data: null, error: { message: 'Curator not authenticated' } };
       }
 
@@ -1908,10 +2013,8 @@
       const url = `${CONFIG.API_URL}/auth/clients`;
       const response = await fetchWithRetry(url, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+        headers: curatorAuth.headers,
+        credentials: 'include'
       });
 
       const result = await response.json();
@@ -1994,18 +2097,16 @@
     try {
       log(`createClient: name=${name}`);
 
-      const token = getCuratorToken();
-      if (!token) {
+      const curatorAuth = buildCuratorRequestHeaders({ 'Content-Type': 'application/json' });
+      if (!curatorAuth.ok) {
         return { data: null, error: { message: 'Curator not authenticated' } };
       }
 
       const url = `${CONFIG.API_URL}/auth/clients`;
       const response = await fetchWithRetry(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: curatorAuth.headers,
+        credentials: 'include',
         body: JSON.stringify({ name: name || `Клиент ${Date.now()}` })
       });
 
@@ -2042,18 +2143,16 @@
     try {
       log(`updateClient: id=${clientId}`, data);
 
-      const token = getCuratorToken();
-      if (!token) {
+      const curatorAuth = buildCuratorRequestHeaders({ 'Content-Type': 'application/json' });
+      if (!curatorAuth.ok) {
         return { data: null, error: { message: 'Curator not authenticated' } };
       }
 
       const url = `${CONFIG.API_URL}/auth/clients/${clientId}`;
       const response = await fetchWithRetry(url, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: curatorAuth.headers,
+        credentials: 'include',
         body: JSON.stringify(data)
       });
 
@@ -2090,18 +2189,16 @@
     try {
       log(`deleteClient: id=${clientId}`);
 
-      const token = getCuratorToken();
-      if (!token) {
+      const curatorAuth = buildCuratorRequestHeaders({ 'Content-Type': 'application/json' });
+      if (!curatorAuth.ok) {
         return { data: null, error: { message: 'Curator not authenticated' } };
       }
 
       const url = `${CONFIG.API_URL}/auth/clients/${clientId}`;
       const response = await fetchWithRetry(url, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+        headers: curatorAuth.headers,
+        credentials: 'include'
       });
 
       const result = await response.json();
@@ -2134,7 +2231,8 @@
   async function checkSubscriptionStatus(sessionToken = null) {
     try {
       const token = sessionToken || HEYS.auth?.getSessionToken?.();
-      const hasCookieSession = !!global?.HEYS?.cloud?.isPinAuthClient?.();
+      const hasCookieSession = !!global?.HEYS?.cloud?.isPinAuthClient?.() ||
+        shouldTryCookieSessionRequest();
       if (!token && !hasCookieSession) {
         return { data: null, error: { message: 'No session token' } };
       }
@@ -2237,12 +2335,14 @@
     try {
       log('logConsentsBySession (session-safe)', consents);
 
-      const result = await rpc('log_consents_by_session', {
-        p_session_token: getSessionTokenForKV(),
+      const sessionRpc = buildSessionRpcParams({
         p_consents: JSON.stringify(consents),
         p_ip: null,
         p_user_agent: userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : null)
       });
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+
+      const result = await rpc('log_consents_by_session', sessionRpc.params);
 
       return result;
     } catch (e) {
@@ -2311,7 +2411,11 @@
   async function deleteMyAccount(sessionToken) {
     try {
       log('deleteMyAccount');
-      return await rpc('delete_my_account', { p_session_token: sessionToken });
+      const sessionRpc = sessionToken
+        ? { ok: true, params: { p_session_token: sessionToken } }
+        : buildSessionRpcParams();
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+      return await rpc('delete_my_account', sessionRpc.params);
     } catch (e) {
       err('deleteMyAccount failed:', e.message);
       return { data: null, error: { message: e.message } };
@@ -2492,18 +2596,22 @@
       log(`createPayment: clientId=${clientId}, plan=${plan}`);
 
       const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
+      const shouldTryCookieSession = shouldTryCookieSessionRequest();
+      if (!sessionToken && !shouldTryCookieSession) {
         const msg = 'Нет активной сессии клиента. Войдите по PIN, чтобы оформить подписку.';
         err('createPayment: no session token');
         return { data: null, error: { message: msg, code: 'NO_SESSION' } };
       }
 
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
+
       const response = await fetch(`${CONFIG.API_URL}/payments/create`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionToken}`
-        },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           clientId,
           plan,
@@ -2540,28 +2648,42 @@
    * @returns {Promise<{ok: boolean, error?: any}>}
    */
   async function clientLogout() {
+    const clearLocalClientAuth = () => {
+      try { localStorage.removeItem('heys_session_token'); } catch {}
+      try { localStorage.removeItem('heys_pin_auth_client'); } catch {}
+      try { localStorage.removeItem('heys_client_current'); } catch {}
+      try { localStorage.removeItem('heys_last_client_id'); } catch {}
+    };
+
     try {
       const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
+      let shouldTryCookieLogout = false;
+      try {
+        const host = window.location && window.location.hostname || '';
+        shouldTryCookieLogout = !!host && host !== 'localhost' && host !== '127.0.0.1';
+      } catch (_) { /* noop */ }
+
+      if (!sessionToken && !shouldTryCookieLogout) {
         // Нечего отзывать
-        try { localStorage.removeItem('heys_session_token'); } catch {}
+        clearLocalClientAuth();
         return { ok: true };
       }
 
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
+
       const response = await fetch(`${CONFIG.API_URL}/auth/client-logout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionToken}`,
-        },
-        body: JSON.stringify({ session_token: sessionToken }),
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(sessionToken ? { session_token: sessionToken } : {}),
       });
 
       // Удаляем локальный токен независимо от результата сервера —
       // если сервер не ответил, на клиенте всё равно logout.
-      try {
-        localStorage.removeItem('heys_session_token');
-      } catch {}
+      clearLocalClientAuth();
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -2571,7 +2693,36 @@
       return { ok: true };
     } catch (e) {
       err('clientLogout failed:', e.message);
-      try { localStorage.removeItem('heys_session_token'); } catch {}
+      clearLocalClientAuth();
+      return { ok: false, error: { message: e.message } };
+    }
+  }
+
+  async function curatorLogout() {
+    const clearLocalCuratorAuth = () => {
+      try { localStorage.removeItem('heys_curator_session'); } catch {}
+      try { localStorage.removeItem('heys_supabase_auth_token'); } catch {}
+    };
+
+    try {
+      const response = await fetch(`${CONFIG.API_URL}/auth/curator-logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: '{}',
+      });
+
+      clearLocalCuratorAuth();
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return { ok: false, error: data };
+      }
+
+      return { ok: true };
+    } catch (e) {
+      err('curatorLogout failed:', e.message);
+      clearLocalCuratorAuth();
       return { ok: false, error: { message: e.message } };
     }
   }
@@ -2586,8 +2737,8 @@
     try {
       log(`refundPayment: paymentId=${paymentId}, amount=${amount || 'full'}`);
 
-      const curatorToken = getCuratorToken();
-      if (!curatorToken) {
+      const curatorAuth = buildCuratorRequestHeaders({ 'Content-Type': 'application/json' });
+      if (!curatorAuth.ok) {
         const msg = 'Нет токена куратора. Войдите заново.';
         err('refundPayment: no curator token');
         return { data: null, error: { message: msg, code: 'NO_TOKEN' } };
@@ -2595,10 +2746,8 @@
 
       const response = await fetch(`${CONFIG.API_URL}/payments/refund`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${curatorToken}`,
-        },
+        headers: curatorAuth.headers,
+        credentials: 'include',
         body: JSON.stringify({ paymentId, amount }),
       });
 
@@ -2623,20 +2772,24 @@
       log(`getPaymentStatus: paymentId=${paymentId}`);
 
       const sessionToken = getSessionTokenForKV();
-      if (!sessionToken) {
+      const shouldTryCookieSession = shouldTryCookieSessionRequest();
+      if (!sessionToken && !shouldTryCookieSession) {
         const msg = 'Нет активной сессии клиента.';
         err('getPaymentStatus: no session token');
         return { data: null, error: { message: msg, code: 'NO_SESSION' } };
       }
 
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
+
       const response = await fetch(
         `${CONFIG.API_URL}/payments/status?paymentId=${encodeURIComponent(paymentId)}&clientId=${encodeURIComponent(clientId)}`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionToken}`
-          }
+          headers,
+          credentials: 'include',
         }
       );
 
@@ -2699,6 +2852,7 @@
     getPaymentStatus,
     refundPayment,
     clientLogout,
+    curatorLogout,
 
     // �📝 Consents
     logConsents,
@@ -2725,6 +2879,7 @@
     saveKV,
     getKV,
     getKVBatch,
+    getCurrentClientBySession,
     getChangeMarkers,
     getChangeMarkersByCurator,
     getKVBatchByCurator,

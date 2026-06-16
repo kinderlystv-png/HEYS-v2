@@ -1070,6 +1070,24 @@
     // Weekly Progress Tracking (Wave 3.1)
     // ========================================
 
+    function hasWeeklyCookieSessionCarrier() {
+        try {
+            if (HEYS.cloud?.isPinAuthClient?.()) return true;
+            if (HEYS.auth?.isCuratorSession?.() === true) return false;
+            if (HEYS.cloud?.getUser?.()) return false;
+            const host = window.location && window.location.hostname || '';
+            return !!host && host !== 'localhost' && host !== '127.0.0.1';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function withWeeklySessionToken(params, sessionToken) {
+        const next = { ...(params || {}) };
+        if (sessionToken) next.p_session_token = sessionToken;
+        return next;
+    }
+
     /**
      * Load weekly progress data (localStorage + cloud sync)
      * @returns {Object} Weekly progress data structure
@@ -1089,6 +1107,7 @@
                     if (HEYS.auth?.getSessionToken?.()) return true;
                     if (localStorage.getItem('heys_session_token')) return true;
                     if (localStorage.getItem('heys_curator_session')) return true;
+                    if (hasWeeklyCookieSessionCarrier()) return true;
                 } catch (_) { /* noop */ }
                 return false;
             };
@@ -1169,18 +1188,18 @@
                     }
                 }
 
-                if (!sessionToken) {
+                const hasCookieSession = hasWeeklyCookieSessionCarrier();
+                if (!sessionToken && !hasCookieSession) {
                     console.warn('ews / weekly ☁️ load.cloud.skip: no valid session token after 5 attempts');
                     throw new Error('No session token available');
                 }
 
-                console.info('ews / weekly ✅ token.final:', `using token: ${String(sessionToken).slice(0, 16)}...`);
+                console.info('ews / weekly ✅ token.final:', sessionToken ? `using token: ${String(sessionToken).slice(0, 16)}...` : 'using HttpOnly cookie');
                 console.info('ews / weekly ☁️ load.cloud.start');
                 const { data: cloudData, error: cloudError } = await Promise.race([
-                    HEYS.YandexAPI.rpc('get_weekly_snapshots_by_session', {
-                        p_session_token: sessionToken,
+                    HEYS.YandexAPI.rpc('get_weekly_snapshots_by_session', withWeeklySessionToken({
                         p_weeks_count: WEEKLY_CONFIG.WEEKS_TO_TRACK
-                    }),
+                    }, sessionToken)),
                     new Promise((_, reject) => setTimeout(
                         () => reject(new Error('Cloud load timeout')),
                         CLOUD_SYNC_CONFIG.LOAD_TIMEOUT_MS
@@ -1294,9 +1313,9 @@
             console.error('ews / weekly ❌ save.error:', error.message);
         }
 
-        // 2. Sync current week to cloud (if enabled)
-        // PIN auth clients have no user session — upsert_weekly_snapshot_by_session requires full auth
-        if (CLOUD_SYNC_CONFIG.ENABLED && currentWeekSnapshot && typeof HEYS?.YandexAPI?.rpc === 'function' && !HEYS.cloud?.isPinAuthClient?.()) {
+        // 2. Sync current week to cloud (if enabled). Post PR-C PIN sessions
+        // carry auth in HttpOnly cookie, so JS-readable sessionToken is optional.
+        if (CLOUD_SYNC_CONFIG.ENABLED && currentWeekSnapshot && typeof HEYS?.YandexAPI?.rpc === 'function') {
             try {
                 // Helper function: validate token content (not just existence)
                 const isValidToken = (token) => {
@@ -1368,12 +1387,13 @@
                 }
 
                 // Final validation
-                if (!sessionToken) {
+                const hasCookieSession = hasWeeklyCookieSessionCarrier();
+                if (!sessionToken && !hasCookieSession) {
                     console.warn('ews / weekly ☁️ save.cloud.skip: no valid session token after 5 attempts');
                     return;
                 }
 
-                console.info('ews / weekly ✅ token.final: using token:', `${String(sessionToken).slice(0, 16)}...`);
+                console.info('ews / weekly ✅ token.final:', sessionToken ? `using token: ${String(sessionToken).slice(0, 16)}...` : 'using HttpOnly cookie');
                 console.info('ews / weekly ☁️ save.cloud.start:', {
                     weekStart: currentWeekSnapshot.weekStart
                 });
@@ -1389,8 +1409,7 @@
                 } catch (_) { /* noop */ }
 
                 const { data: result, error: saveError } = await Promise.race([
-                    HEYS.YandexAPI.rpc('upsert_weekly_snapshot_by_session', {
-                        p_session_token: sessionToken,
+                    HEYS.YandexAPI.rpc('upsert_weekly_snapshot_by_session', withWeeklySessionToken({
                         p_week_start: currentWeekSnapshot.weekStart,
                         p_week_end: currentWeekSnapshot.weekEnd,
                         p_week_number: currentWeekSnapshot.weekNumber,
@@ -1399,7 +1418,7 @@
                         p_global_score: currentWeekSnapshot.globalScore,
                         p_severity_breakdown: currentWeekSnapshot.severityBreakdown,
                         p_top_warnings: currentWeekSnapshot.topWarnings
-                    }),
+                    }, sessionToken)),
                     new Promise((_, reject) => setTimeout(
                         () => reject(new Error('Cloud save timeout')),
                         saveTimeoutMs
@@ -1710,15 +1729,15 @@
                         }
 
                         // Final validation
-                        if (!sessionToken) {
+                        const hasCookieSession = hasWeeklyCookieSessionCarrier();
+                        if (!sessionToken && !hasCookieSession) {
                             console.warn(`ews / weekly ⚠️ backfill.week_${weekOffset + 1}.skip: no valid session token after 5 attempts`);
                             continue;
                         }
 
-                        console.info('ews / weekly ✅ token.final: using token:', `${String(sessionToken).slice(0, 16)}...`);
+                        console.info('ews / weekly ✅ token.final:', sessionToken ? `using token: ${String(sessionToken).slice(0, 16)}...` : 'using HttpOnly cookie');
 
-                        const { data: result, error: cloudError } = await HEYS.YandexAPI.rpc('upsert_weekly_snapshot_by_session', {
-                            p_session_token: sessionToken,
+                        const { data: result, error: cloudError } = await HEYS.YandexAPI.rpc('upsert_weekly_snapshot_by_session', withWeeklySessionToken({
                             p_week_start: snapshot.weekStart,
                             p_week_end: snapshot.weekEnd,
                             p_week_number: snapshot.weekNumber,
@@ -1727,7 +1746,7 @@
                             p_global_score: snapshot.globalScore,
                             p_severity_breakdown: snapshot.severityBreakdown,
                             p_top_warnings: snapshot.topWarnings
-                        });
+                        }, sessionToken));
 
                         if (cloudError) {
                             throw cloudError;

@@ -8308,6 +8308,75 @@ svg.date-picker-icon {
   transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1), right 1.8s cubic-bezier(0.22, 1, 0.36, 1), width 1.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Any app modal/backdrop must own the screen on iOS. The fixed bottom dock,
+   CRS strip and FABs are promoted compositor layers there, so hide them while
+   an overlay is mounted instead of relying only on z-index. */
+body:has(:is(
+  .modal-backdrop,
+  .time-picker-backdrop,
+  .confirm-modal-backdrop,
+  .date-picker-backdrop,
+  .wn-backdrop,
+  .paywall-overlay,
+  .mpr-overlay,
+  .photo-confirm-overlay,
+  .planning-modal-overlay,
+  .planning-checklists-modal-overlay,
+  .planning-slot-delete-overlay,
+  .gantt-quick-edit-backdrop,
+  .chrono-picker-overlay,
+  .chrono-delete-overlay,
+  .chrono-history-overlay,
+  .chrono-entry-edit-overlay,
+  .chrono-duration-overlay,
+  .chrono-timeline-overlay,
+  .widget-relapse-risk__modal-overlay,
+  .widgets-catalog-overlay,
+  .widgets-settings-overlay,
+  .info-modal-overlay,
+  .pattern-debug-modal,
+  .meal-rec-card__products-overlay,
+  .advice-list-overlay,
+  .fingers-fs-rpe-overlay,
+  .drums-ft-modal
+)) :is(
+  .tabs,
+  .crs-bar-container,
+  .theme-fab,
+  .fab-group,
+  #tour-fab-buttons,
+  .widgets-fab-left,
+  .planning-subnav,
+  .planning-tasks-scale-fab,
+  .planning-checklists-archive-badge
+) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+:is(
+  .modal-backdrop,
+  .time-picker-backdrop,
+  .confirm-modal-backdrop,
+  .date-picker-backdrop,
+  .wn-backdrop,
+  .paywall-overlay,
+  .mpr-overlay,
+  .photo-confirm-overlay,
+  .widget-relapse-risk__modal-overlay,
+  .widgets-catalog-overlay,
+  .widgets-settings-overlay,
+  .info-modal-overlay,
+  .pattern-debug-modal,
+  .meal-rec-card__products-overlay,
+  .advice-list-overlay,
+  .fingers-fs-rpe-overlay,
+  .drums-ft-modal
+) {
+  z-index: 10020;
+}
+
 .crs-bar-orange {
   position: absolute;
   top: 0;
@@ -10024,6 +10093,10 @@ svg.date-picker-icon {
     0 8px 16px -6px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.5);
   animation: pop 0.25s ease;
+}
+
+.modal-backdrop {
+  z-index: 10020;
 }
 
 /* === 35. Login Modal === */

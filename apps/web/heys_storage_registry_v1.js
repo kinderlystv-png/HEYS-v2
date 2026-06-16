@@ -69,6 +69,7 @@
   // «воскрешённые» удалённые продукты, и они вернутся из облака при первом sync.
   const NEVER_TOUCH = [
     /^heys_supabase_auth_token$/,
+    /^heys_curator_session$/,
     /^heys_pin_auth_client$/,
     /^heys_session_token$/,
     /^sb-/,
@@ -366,6 +367,13 @@
     cloudSync: 'never', pruneStrategy: 'manual',
     bootstrapBypass: true,
     description: 'Supabase session token. NEVER auto-touched (hard allowlist).',
+  });
+  register('auth_curator_jwt', {
+    pattern: /^heys_curator_session$/,
+    scope: 'global', maxSize: 0, maxAge: 0,
+    cloudSync: 'never', pruneStrategy: 'manual',
+    bootstrapBypass: true,
+    description: 'Curator JWT session. NEVER auto-touched (hard allowlist).',
   });
   register('auth_pin', {
     pattern: /^heys_pin_auth_client$/,

@@ -5381,8 +5381,8 @@
         try { const raw = localStorage.getItem('heys_client_current'); if (raw) cid = JSON.parse(raw); } catch (e) { cid = ''; }
       }
       // 2) служебные ключи НЕ префиксуем (глобальные)
-      // 🔧 v55 FIX: heys_session_token тоже глобальный (нужен ДО определения clientId)
-      if (/^heys_(clients|client_current|session_token)$/i.test(k)) return k;
+      // 🔧 v55/v71 FIX: auth/session keys are global and must never be client-scoped.
+      if (/^heys_(clients|client_current|last_client_id|session_token|supabase_auth_token|curator_session|pin_auth_client)$/i.test(k)) return k;
       // 3) если клиента нет — работаем как есть
       if (!cid) return k;
       // 3.5) если ключ уже client-scoped — не добавляем clientId повторно.

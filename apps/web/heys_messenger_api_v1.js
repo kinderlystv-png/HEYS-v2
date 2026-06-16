@@ -203,6 +203,16 @@
   let _inboxPolling = false;
 
   function looksLikeCuratorToken() {
+    try {
+      if (HEYS.auth?.isCuratorSession?.() === true) return true;
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (HEYS.cloud?.getUser?.()) return true;
+    } catch {
+      /* ignore */
+    }
     const token = getBearerToken();
     if (!token) return false;
     // JWT имеет 3 точки + длиннее обычного session token
@@ -306,6 +316,7 @@
     getFabUnreadCount,
     refreshFabUnread,
     _getBearerToken: getBearerToken, // exposed for testing/debug
+    _looksLikeCuratorToken: looksLikeCuratorToken,
     _API_URL: API_URL,
   };
 

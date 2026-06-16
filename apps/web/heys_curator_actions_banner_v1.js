@@ -342,6 +342,22 @@
     try { localStorage.setItem(dismissKey(), '1'); } catch (_) {}
   }
 
+  function hasPinSessionContext() {
+    try {
+      if (HEYS.cloud?.isPinAuthClient?.() === true) return true;
+    } catch (_) {}
+    try {
+      if (HEYS.auth?.getSessionToken?.()) return true;
+    } catch (_) {}
+    try {
+      if (localStorage.getItem('heys_session_token')) return true;
+    } catch (_) {}
+    try {
+      if (localStorage.getItem('heys_pin_auth_client')) return true;
+    } catch (_) {}
+    return false;
+  }
+
   // 🛡️ Local-ack guard (2026-05-19): после клика "Понял" сохраняем latestTs
   // СРАЗУ в LS. Если ack-RPC ещё в полёте или вернул стейл-данные при
   // следующем heysSyncCompleted (race), мы фильтруем entries по этому TS
@@ -524,15 +540,14 @@
       // RPC get_my_curator_changelog_since использует heys_session_token (PIN),
       // а не heys_curator_session. С прежним gate'ом banner НИКОГДА не
       // показывался у PIN-клиентов → ack никогда не вызывался → unacked count
-      // постоянно рос (см. nightly KV health alert "169 unacked"). Гейтим
-      // на наличие PIN session token напрямую — то что RPC требует.
-      let _hasPinSession = false;
-      try { _hasPinSession = !!localStorage.getItem('heys_session_token'); } catch (_) { /* noop */ }
-      if (!_hasPinSession) return;
+      // постоянно рос (см. nightly KV health alert "169 unacked"). Post PR-C
+      // token может быть только в HttpOnly cookie, поэтому гейт должен смотреть
+      // на PIN runtime context, а не только на JS-readable heys_session_token.
+      if (!hasPinSessionContext()) return;
       const res = await HEYS.YandexAPI.getMyCuratorChangelogSince();
       if (!res || res.ok === false) {
-        // 'No session token' уже отфильтрован гейтом выше; 'invalid_session'
-        // — by-design (логаут/expire). Любая другая ошибка — реальная.
+        // 'No session token' / 'invalid_session' возможны при stale PIN marker
+        // или истёкшей cookie; это by-design (логаут/expire), не шумим.
         if (res && res.error && res.error !== 'invalid_session' && res.error !== 'No session token') {
           console.warn('[HEYS.curatorBanner] check failed:', res.error);
         }

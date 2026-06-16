@@ -309,6 +309,9 @@
     'heys_clients',           // Список клиентов курaтора (его «записная книжка»)
     'heys_client_current',    // Кого курaтор сейчас смотрит (UI-указатель)
     'heys_curator_session',   // JWT курaтора
+    'heys_supabase_auth_token',
+    'heys_pin_auth_client',
+    'heys_session_token',
     'heys_debug_events',      // Analytics курaторской сессии
     // 2026-05-31: расширение после incident'а cross-client leak (Poplanton ↔ Aleksandra).
     // Browser-global UI state и app-wide markers — не привязаны к клиенту:
@@ -1095,6 +1098,42 @@
     return hasSyncMethod();
   }
 
+  function decodeCuratorJwtPayload(token) {
+    try {
+      const part = String(token || '').split('.')[1];
+      if (!part) return null;
+      const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+      if (typeof global.atob !== 'function') return null;
+      const raw = global.atob(padded);
+      try {
+        return JSON.parse(decodeURIComponent(Array.prototype.map.call(raw, ch => {
+          return '%' + ('00' + ch.charCodeAt(0).toString(16)).slice(-2);
+        }).join('')));
+      } catch (_) {
+        return JSON.parse(raw);
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function buildCuratorAuthFromJwt(token, fallbackUser) {
+    if (!token || token.length <= 10) return null;
+    const payload = decodeCuratorJwtPayload(token) || {};
+    const tokenUser = payload.sub ? {
+      id: payload.sub,
+      email: payload.email,
+      role: payload.role
+    } : null;
+    return {
+      access_token: token,
+      refresh_token: null,
+      expires_at: payload.exp || Math.floor(Date.now() / 1000) + 3600,
+      user: fallbackUser || tokenUser
+    };
+  }
+
   cloud.ensureValidToken = async function () {
     // PIN auth не использует токены куратора
     if (_rpcOnlyMode) {
@@ -1115,6 +1154,19 @@
       storedToken = stored ? JSON.parse(stored) : null;
     } catch (_) {
       storedToken = null;
+    }
+
+    if (!storedToken || !storedToken.access_token) {
+      try {
+        const curatorSession = global.localStorage?.getItem('heys_curator_session');
+        const restoredFromJwt = buildCuratorAuthFromJwt(curatorSession, user);
+        if (restoredFromJwt?.access_token) {
+          storedToken = restoredFromJwt;
+          const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
+          setFn(AUTH_KEY, JSON.stringify(restoredFromJwt));
+          logCritical('🔄 [TOKEN] Совместимый auth восстановлен из heys_curator_session');
+        }
+      } catch (_) { /* noop */ }
     }
 
     if (!storedToken || !storedToken.access_token) {
@@ -1180,7 +1232,7 @@
 
         // Сервер подтвердил токен — обновляем expires_at локально
         // JWT токен на сервере живёт 24ч, так что продлеваем на 1ч локально
-        const freshExpiresAt = Math.floor(Date.now() / 1000) + 3600;
+        const freshExpiresAt = data.expires_at || Math.floor(Date.now() / 1000) + 3600;
         const tokenData = {
           ...storedToken,
           expires_at: freshExpiresAt,
@@ -1190,6 +1242,7 @@
         try {
           const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
           setFn(AUTH_KEY, JSON.stringify(tokenData));
+          setFn('heys_curator_session', storedToken.access_token);
           logCritical('✅ [TOKEN] Токен подтверждён, продлили expires_at до', new Date(freshExpiresAt * 1000).toISOString());
         } catch (e) {
           logCritical('⚠️ [TOKEN] Ошибка сохранения:', e?.message);
@@ -3765,6 +3818,7 @@
       // 🔄 Очистка невалидного токена — предотвращает повторные 401 ошибки
       try {
         localStorage.removeItem('heys_supabase_auth_token');
+        localStorage.removeItem('heys_curator_session');
       } catch (e) { }
       addSyncLogEntry('sync_error', { error: 'auth_required' });
 
@@ -5108,13 +5162,16 @@
       // Иначе при следующей загрузке куратор потеряет список клиентов.
       try {
         const pinAuthClient = global.localStorage.getItem('heys_pin_auth_client');
-        const curatorSession = global.localStorage.getItem('heys_supabase_auth_token');
+        const curatorSession = global.localStorage.getItem('heys_curator_session');
+        const legacyCuratorSession = global.localStorage.getItem('heys_supabase_auth_token');
 
         // Проверяем есть ли валидная сессия куратора
         let hasCuratorSession = false;
-        if (curatorSession) {
+        if (curatorSession && curatorSession.length > 10) {
+          hasCuratorSession = true;
+        } else if (legacyCuratorSession) {
           try {
-            const parsed = JSON.parse(curatorSession);
+            const parsed = JSON.parse(legacyCuratorSession);
             hasCuratorSession = !!(parsed?.user && parsed?.access_token);
           } catch (_) { }
         }
@@ -5204,6 +5261,42 @@
         }
       };
 
+      const persistCuratorSession = (token, data) => {
+        const restoredUser = data?.user;
+        if (!token || !restoredUser) return { user: null };
+        const tokenData = {
+          access_token: token,
+          refresh_token: null,
+          expires_at: data.expires_at || Math.floor(Date.now() / 1000) + 86400,
+          user: restoredUser
+        };
+        const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
+        setFn('heys_supabase_auth_token', JSON.stringify(tokenData));
+        return {
+          user: restoredUser,
+          accessToken: token,
+          refreshToken: null,
+          expiresAt: tokenData.expires_at
+        };
+      };
+
+      const restoreCuratorJwtSessionFromStorage = async () => {
+        try {
+          const token = localStorage.getItem('heys_curator_session');
+          if (!token || token.length <= 10) return { user: null };
+          const api = global.HEYS?.YandexAPI || global.YandexAPI;
+          if (!api?.verifyCuratorToken) return { user: null, error: 'api_not_loaded' };
+
+          const { data, error } = await api.verifyCuratorToken(token);
+          if (error || !data?.valid || !data?.user) {
+            return { user: null, error: error?.message || 'invalid_curator_jwt' };
+          }
+          return persistCuratorSession(token, data);
+        } catch (e) {
+          return { user: null, error: e?.message || String(e) };
+        }
+      };
+
       // ✅ FIX 2025-12-25: Supabase SDK УДАЛЁН — вся эта логика больше не работает.
       // Авторизация теперь через YandexAPI (heys_yandex_api_v1.js).
       // Оставляем только базовое восстановление user/status из localStorage.
@@ -5252,6 +5345,38 @@
               });
             }
           }, 100);
+        } else {
+          const curatorSession = (() => {
+            try { return localStorage.getItem('heys_curator_session'); } catch (_) { return null; }
+          })();
+          const pinAuthClient = (() => {
+            try { return localStorage.getItem('heys_pin_auth_client'); } catch (_) { return null; }
+          })();
+
+          if (curatorSession && !pinAuthClient) {
+            restoreCuratorJwtSessionFromStorage().then(restoredJwt => {
+              if (_signInInProgress || !restoredJwt?.user) {
+                if (restoredJwt?.error && restoredJwt.error !== 'api_not_loaded') {
+                  logCritical('⚠️ Curator JWT restore failed:', restoredJwt.error);
+                }
+                return;
+              }
+
+              user = restoredJwt.user;
+              status = CONNECTION_STATUS.ONLINE;
+              _rpcOnlyMode = true;
+              _pinAuthClientId = null;
+              try { global.localStorage.removeItem('heys_pin_auth_client'); } catch (_) { }
+              logCritical('🔄 Curator JWT session restored:', user.email || user.id);
+
+              const clientId = cloud.getCurrentClientId ? cloud.getCurrentClientId() : null;
+              if (clientId) {
+                cloud.syncClient(clientId).catch(e => {
+                  logCritical('⚠️ Bootstrap sync after curator JWT restore failed:', e?.message || e);
+                });
+              }
+            });
+          }
         }
       }
 
@@ -5386,6 +5511,12 @@
         return { error: { message: 'no user' } };
       }
 
+      try {
+        localStorage.removeItem('heys_pin_auth_client');
+        localStorage.removeItem('heys_session_token');
+      } catch (_) { }
+      _pinAuthClientId = null;
+
       user = data.user;
       logCritical('[AUTH] ✅ user установлен:', user?.email);
 
@@ -5448,6 +5579,17 @@
       global.HEYS = global.HEYS || {};
       global.HEYS._isLoggingOut = true;
     } catch (_) { }
+    const clearAuthCookies = (() => {
+      try {
+        const api = global.HEYS?.YandexAPI;
+        const jobs = [];
+        if (typeof api?.clientLogout === 'function') jobs.push(api.clientLogout());
+        if (typeof api?.curatorLogout === 'function') jobs.push(api.curatorLogout());
+        return jobs.length ? Promise.allSettled(jobs) : Promise.resolve([]);
+      } catch (_) {
+        return Promise.resolve([]);
+      }
+    })();
 
     // scope: 'local' — очищаем только локальную сессию, НЕ инвалидируем refresh token на сервере.
     // Это предотвращает 400 Bad Request если пользователь сразу залогинится обратно,
@@ -5496,9 +5638,22 @@
       } catch (_) { }
     }, 5100);
     logCritical('🚪 Выход из системы');
+    return clearAuthCookies;
   };
 
   cloud.getUser = function () { return user; };
+  cloud.setAuthUser = function (nextUser) {
+    if (!nextUser || !nextUser.id) return false;
+    user = nextUser;
+    status = CONNECTION_STATUS.ONLINE;
+    _rpcOnlyMode = true;
+    _pinAuthClientId = null;
+    try {
+      localStorage.removeItem('heys_pin_auth_client');
+      localStorage.removeItem('heys_session_token');
+    } catch (_) { }
+    return true;
+  };
   cloud.getStatus = function () { return status; };
 
   /**
@@ -10060,6 +10215,19 @@
     return _pinAuthClientId != null && user === null;
   };
 
+  function hasCuratorJwtAuth() {
+    try {
+      const curatorSession = global.localStorage?.getItem?.('heys_curator_session');
+      if (curatorSession && curatorSession.length > 10) return true;
+      const storedToken = global.localStorage?.getItem?.('heys_supabase_auth_token');
+      if (!storedToken) return false;
+      const parsed = JSON.parse(storedToken);
+      return !!(parsed && parsed.user && parsed.access_token);
+    } catch (_) {
+      return false;
+    }
+  }
+
   // Дебаунсинг для клиентских данных
   /** @type {number} */
   let _clientUpload413BackoffUntil = 0;
@@ -11242,7 +11410,8 @@
 
     // 🔐 PIN-авторизация: работаем без user
     const isPinAuth = _pinAuthClientId && _pinAuthClientId === client_id;
-    if (!user && !isPinAuth) {
+    const isCuratorJwtAuth = hasCuratorJwtAuth();
+    if (!user && !isPinAuth && !isCuratorJwtAuth) {
       // Сохранение заблокировано: нет auth-контекста.
       // Данные уже в clientUpsertQueue (через interceptSetItem) или в LS — не потеряются.
       // НЕ диспатчим auth_required: это транзиентное состояние (boot race / client switch),
@@ -11614,7 +11783,7 @@
 
     // 🔐 Curator-авторизация: куратор уже аутентифицирован с JWT
     // clients таблица убрана из REST API — проверяем через кэш или доверяем JWT
-    if (user) {
+    if (user || hasCuratorJwtAuth()) {
       // Если есть кэшированный список клиентов — проверяем в нём
       const cachedClients = window.HEYS?.curatorClients;
       if (cachedClients && Array.isArray(cachedClients)) {
@@ -14035,8 +14204,16 @@
       try {
         const storedToken = global.localStorage.getItem('heys_supabase_auth_token');
         if (storedToken) {
-          const parsed = JSON.parse(storedToken);
-          hasCuratorSession = !!(parsed?.user && parsed?.access_token);
+          try {
+            const parsed = JSON.parse(storedToken);
+            hasCuratorSession = !!(parsed?.user && parsed?.access_token);
+          } catch (_) {
+            hasCuratorSession = false;
+          }
+        }
+        if (!hasCuratorSession) {
+          const curatorSession = global.localStorage.getItem('heys_curator_session');
+          hasCuratorSession = !!(curatorSession && curatorSession.length > 10);
         }
       } catch (_) { }
 
@@ -14057,10 +14234,23 @@
         if (!user && hasCuratorSession) {
           try {
             const storedToken = global.localStorage.getItem('heys_supabase_auth_token');
-            const parsed = JSON.parse(storedToken);
-            user = parsed.user;
-            status = CONNECTION_STATUS.ONLINE;
-            logCritical('🔄 [SWITCH] Восстановлен user из токена:', user.email);
+            let parsed = null;
+            if (storedToken) {
+              try { parsed = JSON.parse(storedToken); } catch (_) { parsed = null; }
+            }
+            if (!parsed?.user) {
+              const curatorSession = global.localStorage.getItem('heys_curator_session');
+              parsed = buildCuratorAuthFromJwt(curatorSession, null);
+              if (parsed?.access_token) {
+                const setFn = originalSetItem || global.localStorage.setItem.bind(global.localStorage);
+                setFn('heys_supabase_auth_token', JSON.stringify(parsed));
+              }
+            }
+            if (parsed?.user) {
+              user = parsed.user;
+              status = CONNECTION_STATUS.ONLINE;
+              logCritical('🔄 [SWITCH] Восстановлен user из токена:', user.email || user.id);
+            }
           } catch (_) { }
         }
         // 🔐 v=37 FIX: После миграции на Yandex API ВСЕГДА RPC режим!
@@ -14953,9 +15143,11 @@
       const sessionToken = (typeof HEYS !== 'undefined' && HEYS.Auth?.getSessionToken?.())
         || HEYS.utils?.lsGet?.('heys_session_token', null)
         || (() => { try { return JSON.parse(localStorage.getItem('heys_session_token')); } catch { return null; } })();
-      // Post-PR-C: в production token в HttpOnly cookie. Если LS пуст, но активна PIN-сессия,
+      // Post-PR-C: в production token в HttpOnly cookie. Если LS пуст,
       // heys-api-rpc сам инжектит токен из cookie в *_by_session функции.
-      const hasCookieSession = !!cloud.isPinAuthClient?.();
+      const host = global.location && global.location.hostname || '';
+      const hasCookieSession = !!cloud.isPinAuthClient?.() ||
+        (!!host && host !== 'localhost' && host !== '127.0.0.1');
       if (!sessionToken && !hasCookieSession) {
         return { data: null, error: 'No session token', status: 'error', message: 'Нет активной сессии PIN-клиента' };
       }

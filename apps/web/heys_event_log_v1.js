@@ -221,17 +221,18 @@
 
       const sessionToken = _getSessionToken();
       const YandexAPI = HEYS.YandexAPI;
-      if (!sessionToken || !YandexAPI?.rpc) {
+      if (!YandexAPI?.rpc) {
         // Нет session или API — сохраняем всё обратно в pending, ретраи позже
         _savePending(remaining.concat(batch));
         _lastFlushFailAt = Date.now();
         return;
       }
 
-      const { data, error } = await YandexAPI.rpc('log_client_event_by_session', {
-        p_session_token: sessionToken,
+      const rpcParams = {
         p_events: batch,
-      });
+      };
+      if (sessionToken) rpcParams.p_session_token = sessionToken;
+      const { data, error } = await YandexAPI.rpc('log_client_event_by_session', rpcParams);
 
       if (error || (data && data.error)) {
         // 🧪 Poison-pill detection: если ОДИН и тот же head event валит batch

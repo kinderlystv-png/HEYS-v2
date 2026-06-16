@@ -1546,7 +1546,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 /* --- Activity picker --- */
 .chrono-picker-overlay {
-    z-index: 1100;
+    z-index: 10030;
 }
 
 .chrono-picker {
@@ -1811,7 +1811,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 /* --- Delete modal --- */
 .chrono-delete-overlay {
-    z-index: 1110;
+    z-index: 10040;
 }
 
 .chrono-delete {
@@ -1888,7 +1888,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 /* --- History modal (long-press на кружок) --- */
 .chrono-history-overlay {
-    z-index: 1105;
+    z-index: 10035;
 }
 
 .chrono-history {
@@ -1982,7 +1982,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 /* --- Entry edit modal (tap on summary ledger row) --- */
 .chrono-entry-edit-overlay {
-    z-index: 1106;
+    z-index: 10036;
 }
 
 .chrono-entry-edit {
@@ -2262,7 +2262,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 /* --- Duration modal --- */
 .chrono-duration-overlay {
-    z-index: 1100;
+    z-index: 10030;
     flex-direction: column;
     gap: 8px;
     animation: chrono-duration-overlay-in 0.18s ease-out both;
@@ -2865,7 +2865,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 /* --- Timeline + weekly report --- */
 .chrono-timeline-overlay {
-    z-index: 1120;
+    z-index: 10050;
 }
 
 .chrono-timeline {

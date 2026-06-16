@@ -228,17 +228,9 @@
       // Используем YandexAPI (session-based)
       if (HEYS.YandexAPI) {
         const sessionToken = HEYS.auth?.getSessionToken?.();
-        if (!sessionToken) {
-          // Нет токена — PIN-flow ещё не завершён ИЛИ в dev cookie не доставлен.
-          // Это нормальное состояние, НЕ ошибка. Возвращаем safe default.
-          // Нормальное состояние во время PIN-flow handshake'а, не предупреждение.
-          devLog('[Subscriptions] no session token yet, returning safe default');
-          return { success: false, status: 'unknown', can_edit: true, _noToken: true };
-        }
-
-        const result = await HEYS.YandexAPI.rpc('get_subscription_status_by_session', {
-          p_session_token: sessionToken
-        });
+        const rpcParams = {};
+        if (sessionToken) rpcParams.p_session_token = sessionToken;
+        const result = await HEYS.YandexAPI.rpc('get_subscription_status_by_session', rpcParams);
 
         if (result.error) throw new Error(result.error.message || result.error);
         // Распаковываем данные: { data: { get_subscription_status_by_session: {...} } }
