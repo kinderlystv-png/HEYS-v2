@@ -255,3 +255,14 @@ apps/web/advice/_core.js:3290
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не
 # bootstrap-critical и не data-bearing (UI collapse флаг).
 apps/web/heys_planning_chrono_v1.js:2825
+# auth cookie-session hints and bootstrap login writes — intentionally happen
+# before Store/Overlay wrappers are fully available.
+apps/web/heys_app_auth_init_v1.js:386
+apps/web/heys_app_auth_init_v1.js:683
+apps/web/heys_app_auth_init_v1.js:684
+apps/web/heys_app_auth_init_v1.js:686
+apps/web/heys_app_auth_init_v1.js:760
+apps/web/heys_auth_v1.js:28
+apps/web/heys_auth_v1.js:363
+apps/web/heys_auth_v1.js:371
+apps/web/heys_yandex_api_v1.js:93
