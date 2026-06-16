@@ -327,6 +327,7 @@ export const LEGACY_BUNDLES = {
         'heys_planning_gantt_quick_edit_v1.js',
         'heys_planning_gantt_v2.js',
         'heys_planning_chrono_v1.js',
+        'heys_planning_checklists_v1.js',
         'heys_planning_v1.js',
     ],
 };

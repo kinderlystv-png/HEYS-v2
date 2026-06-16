@@ -8,9 +8,14 @@ const originalReact = window.React;
 const originalReactDOM = window.ReactDOM;
 
 function loadPlanningModule() {
-    const filePath = path.resolve(__dirname, '../heys_planning_v1.js');
-    const source = fs.readFileSync(filePath, 'utf8');
-    eval(source);
+    [
+        '../heys_planning_checklists_v1.js',
+        '../heys_planning_v1.js',
+    ].forEach((relativePath) => {
+        const filePath = path.resolve(__dirname, relativePath);
+        const source = fs.readFileSync(filePath, 'utf8');
+        eval(source);
+    });
     return window.HEYS.Planning;
 }
 
@@ -498,5 +503,77 @@ describe('City-apartment checklist preset — parameter-driven rebuild', () => {
         expect(ids(family)).toContain('city-baby-stroller'); // 1 год → малыш
         expect(ids(family)).toContain('city-school-daypack'); // 9 лет → школьник
         expect(ids(family)).toContain('city-child-id');
+    });
+});
+
+describe('City-hotel checklist preset — parameter-driven rebuild', () => {
+    let Planning;
+
+    beforeEach(() => {
+        window.HEYS = {};
+        window.React = { createElement: () => null };
+        window.ReactDOM = {};
+        Planning = loadPlanningModule();
+    });
+
+    afterEach(() => {
+        window.HEYS = originalHEYS;
+        window.React = originalReact;
+        window.ReactDOM = originalReactDOM;
+    });
+
+    it('registers the city-hotel preset', () => {
+        expect(Planning.CHECKLIST_PRESETS.map((p) => p.id)).toContain('city-hotel');
+        const preset = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12);
+        expect(preset.id).toBe('city-hotel');
+        expect(preset.title).toBe('Поездка в другой город, отель');
+        expect(ids(preset)).toContain('chotel-stay-checkin');
+    });
+
+    it('swaps food gear by the breakfast toggle', () => {
+        const noBf = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { breakfast: false });
+        const withBf = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { breakfast: true });
+
+        expect(ids(noBf)).toContain('chotel-nobf-breakfast');
+        expect(ids(noBf)).toContain('chotel-nobf-utensils');
+        expect(ids(noBf)).not.toContain('chotel-bf-hours');
+
+        expect(ids(withBf)).toContain('chotel-bf-hours');
+        expect(ids(withBf)).not.toContain('chotel-nobf-breakfast');
+        expect(withBf.utilityLabel).toContain('завтрак включён');
+    });
+
+    it('swaps transport gear by the flying toggle', () => {
+        const driving = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { flying: false });
+        const flying = Planning.buildCityHotelChecklistPreset(2, 0, [], 20, 12, { flying: true });
+
+        expect(ids(driving)).toContain('chotel-car-docs');
+        expect(ids(driving)).toContain('chotel-car-nav');
+        expect(ids(driving)).not.toContain('chotel-fly-liquids');
+
+        expect(ids(flying)).toContain('chotel-fly-liquids');
+        expect(ids(flying)).toContain('chotel-fly-boarding');
+        expect(flying.utilityLabel).toContain('летим');
+    });
+
+    it('rebuilds cold-city layers below the cool threshold', () => {
+        const cold = Planning.buildCityHotelChecklistPreset(2, 0, [], 8, 2);
+        const warm = Planning.buildCityHotelChecklistPreset(2, 0, [], 26, 18);
+        expect(ids(cold)).toContain('chotel-cold-coat');
+        expect(ids(cold)).toContain('chotel-cold-warm-shoes');
+        expect(ids(warm)).not.toContain('chotel-cold-coat');
+    });
+
+    it('adds child-by-age gear', () => {
+        const family = Planning.buildCityHotelChecklistPreset(2, 2, [1, 9], 20, 12);
+        expect(ids(family)).toContain('chotel-child-clothes');
+        expect(ids(family)).toContain('chotel-baby-stroller'); // 1 год → малыш
+        expect(ids(family)).toContain('chotel-school-daypack'); // 9 лет → школьник
+        expect(ids(family)).toContain('chotel-child-id');
+    });
+
+    it('resolves the city-hotel preset from the registry by id and title', () => {
+        expect(Planning.getChecklistPreset({ presetId: 'city-hotel' }).id).toBe('city-hotel');
+        expect(Planning.getChecklistPreset({ title: 'Поездка в другой город, отель' }).id).toBe('city-hotel');
     });
 });
