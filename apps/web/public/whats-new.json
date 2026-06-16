@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.16.c639548a",
+      "buildHash": "c639548a",
+      "date": "2026-06-16",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "чек-листы — параметр ночей, транспорт, секции и расширенное редактирование",
+      "items": [
+        {
+          "type": "feat",
+          "title": "чек-листы — параметр ночей, транспорт, секции и расширенное редактирование",
+          "description": "чек-листы — параметр ночей, транспорт, секции и расширенное редактирование"
+        }
+      ],
+      "coveredCommits": ["c639548a"]
+    },
+    {
       "version": "2026.06.16.ad359aca",
       "buildHash": "ad359aca",
       "date": "2026-06-16",
@@ -153,22 +169,6 @@
         }
       ],
       "coveredCommits": ["4b88047a"]
-    },
-    {
-      "version": "2026.06.15.b72bfc16",
-      "buildHash": "b72bfc16",
-      "date": "2026-06-15",
-      "kind": "user-facing",
-      "profile": "user-facing-general",
-      "title": "route PIN write-context to issue_write_context_by_session — restore PIN cloud-sync",
-      "items": [
-        {
-          "type": "fix",
-          "title": "route PIN write-context to issue_write_context_by_session — restore PIN cloud-sync",
-          "description": "route PIN write-context to issue_write_context_by_session — restore PIN cloud-sync"
-        }
-      ],
-      "coveredCommits": ["b72bfc16"]
     }
   ]
 }
