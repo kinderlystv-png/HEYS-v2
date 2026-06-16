@@ -8374,7 +8374,7 @@ body:has(:is(
   .fingers-fs-rpe-overlay,
   .drums-ft-modal
 ) {
-  z-index: 10020;
+  z-index: 2147483400;
 }
 
 .crs-bar-orange {
