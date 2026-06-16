@@ -10,7 +10,10 @@
  * Создано: 2025-12-12
  */
 
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import fs from 'fs';
+import path from 'path';
+
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ═══════════════════════════════════════════════════════════════════
 // Симуляция localStorage utility из heys_core_v12.js
@@ -23,6 +26,8 @@ const createMockStorage = () => {
     setItem: vi.fn((key, value) => { store[key] = value; }),
     removeItem: vi.fn((key) => { delete store[key]; }),
     clear: vi.fn(() => { store = {}; }),
+    key: vi.fn((index) => Object.keys(store)[index] ?? null),
+    get length() { return Object.keys(store).length; },
     get _store() { return store; }
   };
 };
@@ -278,6 +283,65 @@ describe('normalizeKey — double-clientId protection', () => {
     const result = normalizeKey(globalKey, CLIENT_ID);
     
     expect(result).toBe(globalKey);
+  });
+});
+
+describe('HEYS.store auth/session key scoping guards', () => {
+  const originalLocalStorage = window.localStorage;
+  const originalHEYS = window.HEYS;
+  const CLIENT_ID = '00000000-0000-4000-8000-000000000001';
+
+  let mockStorage;
+
+  function loadStorageLayer() {
+    Object.defineProperty(window, 'localStorage', {
+      value: mockStorage,
+      configurable: true,
+      writable: true,
+    });
+    window.HEYS = { currentClientId: CLIENT_ID };
+    const storageLayerPath = path.resolve(__dirname, '../heys_storage_layer_v1.js');
+    eval(fs.readFileSync(storageLayerPath, 'utf8'));
+    return window.HEYS.store;
+  }
+
+  beforeEach(() => {
+    mockStorage = createMockStorage();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, 'localStorage', {
+      value: originalLocalStorage,
+      configurable: true,
+      writable: true,
+    });
+    window.HEYS = originalHEYS;
+  });
+
+  test('reads and writes auth/session keys globally even when currentClientId exists', () => {
+    mockStorage._store[`heys_${CLIENT_ID}_pin_auth_client`] = JSON.stringify('scoped-stale');
+    mockStorage._store.heys_pin_auth_client = JSON.stringify('global-client');
+
+    const store = loadStorageLayer();
+
+    expect(store.get('heys_pin_auth_client', null)).toBe('global-client');
+    store.set('heys_session_token', 'session-1');
+    expect(mockStorage._store.heys_session_token).toBe(JSON.stringify('session-1'));
+    expect(mockStorage._store[`heys_${CLIENT_ID}_session_token`]).toBeUndefined();
+  });
+
+  test('cleanup v2 removes old scoped auth/session copies', () => {
+    const scopedPinKey = `heys_${CLIENT_ID}_heys_pin_auth_client`;
+    const scopedSessionKey = `heys_${CLIENT_ID}_heys_session_token`;
+    mockStorage._store[scopedPinKey] = JSON.stringify('old-pin');
+    mockStorage._store[scopedSessionKey] = JSON.stringify('old-session');
+
+    loadStorageLayer();
+
+    expect(mockStorage._store[scopedPinKey]).toBeUndefined();
+    expect(mockStorage._store[scopedSessionKey]).toBeUndefined();
+    expect(mockStorage._store.heys_cleanup_scoped_uikeys_v2).toBe('1');
   });
 });
 

@@ -451,9 +451,9 @@ describe('eventLog: failure recovery (real module)', () => {
     expect(isEmpty).toBe(true);
   });
 
-  it('отсутствие sessionToken → events сохраняются в pending', async () => {
+  it('отсутствие JS-readable sessionToken → RPC пробует cookie carrier, error сохраняет events в pending', async () => {
     const { heysCtx, rpcMock, runFlush } = createIsolatedModule({
-      rpcResult: { data: null, error: null },
+      rpcResult: { data: null, error: { message: 'invalid_session' } },
     });
 
     // Убираем session token
@@ -462,9 +462,13 @@ describe('eventLog: failure recovery (real module)', () => {
     heysCtx.HEYS.eventLog.write('meal-remove', 'no-session', { dateKey: '2026-05-24' });
     await runFlush();
 
-    // RPC не должен вызываться без токена
-    expect(rpcMock).not.toHaveBeenCalled();
-    // Но события должны быть в pending
+    // Post PR-C: отсутствие readable token не значит logout. RPC идёт без
+    // p_session_token, а сервер пытается взять HttpOnly cookie.
+    expect(rpcMock).toHaveBeenCalledWith('log_client_event_by_session', expect.objectContaining({
+      p_events: expect.any(Array),
+    }));
+    expect(rpcMock.mock.calls[0][1]).not.toHaveProperty('p_session_token');
+    // Если cookie/сессия на сервере невалидна — события остаются в pending.
     const saved = heysCtx.localStorage._store[PENDING_KEY];
     expect(saved).toBeTruthy();
     expect(JSON.parse(saved).length).toBeGreaterThan(0);

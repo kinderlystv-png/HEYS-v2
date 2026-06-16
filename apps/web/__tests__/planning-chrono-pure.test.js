@@ -219,7 +219,8 @@ describe('chrono.ringColorForProgress', () => {
 
 describe('Store — chrono tombstones', () => {
     let Store;
-    beforeEach(() => { ({ Store } = loadModules()); });
+    let Utils;
+    beforeEach(() => { ({ Store, Utils } = loadModules()); });
 
     it('keeps deleted activities from resurrecting when an old cloud array is saved', () => {
         const activity = Store.addChronoActivity({ name: 'Programming', emoji: '💻' });
@@ -326,6 +327,33 @@ describe('Store — chrono tombstones', () => {
             createdAt: '2026-06-02T10:57:00.000Z',
             minutes: 22,
         });
+    });
+
+    it('chronoDateStr treats 00:00-02:59 as the previous chrono day', () => {
+        expect(Utils.chronoDateStr(new Date(2026, 5, 2, 2, 30))).toBe('2026-06-01');
+        expect(Utils.chronoDateStr(new Date(2026, 5, 2, 3, 0))).toBe('2026-06-02');
+    });
+
+    it('addChronoEntry assigns date by chrono day when explicit date is omitted', () => {
+        const a = Store.addChronoActivity({ name: 'Code' });
+        const beforeBoundary = new Date(2026, 5, 2, 2, 30).toISOString();
+        const afterBoundary = new Date(2026, 5, 2, 3, 0).toISOString();
+
+        const early = Store.addChronoEntry({
+            activityId: a.id,
+            minutes: 20,
+            at: beforeBoundary,
+            createdAt: beforeBoundary,
+        });
+        const current = Store.addChronoEntry({
+            activityId: a.id,
+            minutes: 30,
+            at: afterBoundary,
+            createdAt: afterBoundary,
+        });
+
+        expect(early.date).toBe('2026-06-01');
+        expect(current.date).toBe('2026-06-02');
     });
 
     it('merges incoming tombstones instead of replacing local delete history', () => {
@@ -1223,6 +1251,22 @@ describe('chrono analytics helpers', () => {
             hoursLabel: '3,0ч',
             wakeLabel: '07:00',
             sinceLabel: '07:00',
+            sinceKind: 'wake',
+        });
+    });
+
+    it('buildUntrackedChronoSummary treats 00:00-02:59 as the tail of the selected chrono day', () => {
+        const summary = Chrono.buildUntrackedChronoSummary(
+            { sleepEnd: '02:00' },
+            [],
+            '2026-06-01',
+            new Date(2026, 5, 2, 2, 30).getTime(),
+        );
+
+        expect(summary).toMatchObject({
+            minutes: 30,
+            wakeLabel: '02:00',
+            sinceLabel: '02:00',
             sinceKind: 'wake',
         });
     });

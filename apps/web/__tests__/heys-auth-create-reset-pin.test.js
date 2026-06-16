@@ -95,7 +95,10 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
 
         it('calls create_client_with_pin with normalized phone, salt and pin_hash', async () => {
             rpc.mockResolvedValue({
-                data: { client_id: 'new-client-1' },
+                data: {
+                    client_id: 'new-client-1',
+                    pin_token: '11111111-1111-4111-8111-111111111111',
+                },
                 error: null,
             });
 
@@ -109,6 +112,8 @@ describe('HEYS.auth createClientWithPin / resetClientPin', () => {
             expect(r.clientId).toBe('new-client-1');
             expect(r.phone).toBe('79991112233');
             expect(r.pin).toBe('5827');
+            expect(r.pinToken).toBe('11111111-1111-4111-8111-111111111111');
+            expect(r.deepLink).toBe('https://t.me/heyslab_bot?start=11111111-1111-4111-8111-111111111111');
             expect(rpc).toHaveBeenCalledTimes(1);
             const [fn, params] = rpc.mock.calls[0];
             expect(fn).toBe('create_client_with_pin');

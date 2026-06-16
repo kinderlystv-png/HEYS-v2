@@ -162,6 +162,7 @@ describe('storage registry — Phase 1 surface', () => {
   it('isNeverTouch() refuses auth keys regardless of policy match', () => {
     const HEYS = loadRegistry();
     expect(HEYS.storageRegistry.isNeverTouch('heys_supabase_auth_token')).toBe(true);
+    expect(HEYS.storageRegistry.isNeverTouch('heys_curator_session')).toBe(true);
     expect(HEYS.storageRegistry.isNeverTouch('heys_pin_auth_client')).toBe(true);
     expect(HEYS.storageRegistry.isNeverTouch('sb-auth-token')).toBe(true);
     expect(HEYS.storageRegistry.isNeverTouch('heys_clients')).toBe(false);

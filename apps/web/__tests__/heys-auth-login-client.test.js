@@ -41,6 +41,8 @@ function loadAuthModule() {
 describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     let mockStorage;
     let rpc;
+    let curatorLogout;
+    let clientLogout;
 
     beforeEach(() => {
         vi.useFakeTimers();
@@ -62,8 +64,10 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         });
 
         rpc = vi.fn();
+        curatorLogout = vi.fn().mockResolvedValue({ ok: true });
+        clientLogout = vi.fn().mockResolvedValue({ ok: true });
         window.HEYS = {
-            YandexAPI: { rpc },
+            YandexAPI: { rpc, curatorLogout, clientLogout },
         };
 
         loadAuthModule();
@@ -113,6 +117,19 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         const result = await p;
         expect(result.ok).toBe(false);
         expect(result.error).toBe('api_not_ready');
+    });
+
+    it('returns api_not_ready when role-switch cleanup API is incomplete', async () => {
+        window.HEYS.YandexAPI = { rpc };
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+        expect(result).toMatchObject({
+            ok: false,
+            error: 'api_not_ready',
+            _debug: { stage: 'role_switch_cleanup_api' },
+        });
+        expect(rpc).not.toHaveBeenCalled();
     });
 
     it('maps RPC error rate_limited to rate_limited', async () => {
@@ -174,8 +191,9 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         });
     });
 
-    it('on success persists pin client + name, clears supabase curator token, dispatches event, does NOT write session_token to LS (PR-C cookie-only)', async () => {
+    it('on success persists pin client + name, clears curator tokens, dispatches event, does NOT write session_token to LS (PR-C cookie-only)', async () => {
         mockStorage.setItem('heys_supabase_auth_token', JSON.stringify({ access_token: 'x' }));
+        mockStorage.setItem('heys_curator_session', 'curator-jwt-stale');
 
         rpc.mockResolvedValue({
             data: {
@@ -203,6 +221,8 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         });
 
         expect(mockStorage.removeItem).toHaveBeenCalledWith('heys_supabase_auth_token');
+        expect(mockStorage.removeItem).toHaveBeenCalledWith('heys_curator_session');
+        expect(curatorLogout).toHaveBeenCalledTimes(1);
         expect(mockStorage.setItem).toHaveBeenCalledWith('heys_pin_auth_client', 'client-uuid-1');
         expect(mockStorage.setItem).toHaveBeenCalledWith(
             'heys_pending_client_name',
@@ -217,6 +237,37 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
             expect.anything(),
         );
         expect(window.HEYS.auth.getSessionToken()).toBe(null);
+    });
+
+    it('fails closed and rolls back PIN cookie when stale curator cookie cleanup fails', async () => {
+        curatorLogout.mockResolvedValueOnce({
+            ok: false,
+            error: { message: 'cleanup_failed' },
+        });
+        rpc.mockResolvedValue({
+            data: {
+                verify_client_pin_v3: {
+                    success: true,
+                    client_id: 'client-uuid-1',
+                    session_token: 'session-token-abc',
+                    name: 'Иван',
+                },
+            },
+            error: null,
+        });
+
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+
+        expect(result).toMatchObject({
+            ok: false,
+            error: 'role_switch_cleanup_failed',
+            _debug: { stage: 'clear_curator_cookie' },
+        });
+        expect(curatorLogout).toHaveBeenCalledTimes(1);
+        expect(clientLogout).toHaveBeenCalledTimes(1);
+        expect(mockStorage.setItem).not.toHaveBeenCalledWith('heys_pin_auth_client', 'client-uuid-1');
     });
 
     it('rate limits locally after 10 failed RPC attempts (11th does not call RPC)', async () => {

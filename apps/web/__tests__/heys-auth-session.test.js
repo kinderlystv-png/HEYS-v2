@@ -105,6 +105,7 @@ describe('HEYS.auth session + logout', () => {
 
     it('logout calls revoke_session then clears local keys and dispatches event', async () => {
         mockStorage._store.heys_session_token = JSON.stringify('sess-revoke');
+        mockStorage._store.heys_pin_auth_client = 'client-1';
         mockStorage._store.heys_client_current = 'client-1';
 
         const result = await window.HEYS.auth.logout();
@@ -112,6 +113,7 @@ describe('HEYS.auth session + logout', () => {
         expect(result).toEqual({ ok: true });
         expect(rpc).toHaveBeenCalledWith('revoke_session', { p_session_token: 'sess-revoke' });
         expect(mockStorage.removeItem).toHaveBeenCalledWith('heys_session_token');
+        expect(mockStorage.removeItem).toHaveBeenCalledWith('heys_pin_auth_client');
         expect(mockStorage.removeItem).toHaveBeenCalledWith('heys_client_current');
         expect(window.dispatchEvent).toHaveBeenCalled();
     });
