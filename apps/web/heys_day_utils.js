@@ -1285,7 +1285,24 @@
                             productsMap.set(itemNameLower, freshProduct);
                             if (itemNameNorm) productsMap.set(itemNameNorm, freshProduct);
                             orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower);
-                        } else if (!productCatalogSettling && freshProducts.length > 0) {
+                        }
+                    }
+
+                    // 🌐 Общая база: ссылка на shared id / fingerprint без локального клона
+                    if (!product && itemName) {
+                        const sharedEarly = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
+                        const fromSharedEarly = resolveProductByItem(item, sharedEarly);
+                        if (fromSharedEarly) {
+                            product = fromSharedEarly;
+                            productsMap.set(itemNameLower, fromSharedEarly);
+                            if (itemNameNorm) productsMap.set(itemNameNorm, fromSharedEarly);
+                            orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower);
+                        }
+                    }
+
+                    if (!product && itemName && !isEstimatedSynthetic && !productCatalogSettling && shouldLogOrphanDebug()) {
+                        const freshProducts = global.HEYS?.products?.getAll?.() || [];
+                        if (freshProducts.length > 0) {
                             const similar = freshProducts.filter(p => {
                                 const pName = String(p.name || '').trim().toLowerCase();
                                 return pName.includes(itemNameLower.slice(0, 10)) ||
@@ -1299,18 +1316,6 @@
                                     orphanLoggedRecently.set(itemName, Date.now());
                                 }
                             }
-                        }
-                    }
-
-                    // 🌐 Общая база: ссылка на shared id / fingerprint без локального клона
-                    if (!product && itemName) {
-                        const sharedEarly = global.HEYS?.cloud?.getCachedSharedProducts?.() || [];
-                        const fromSharedEarly = resolveProductByItem(item, sharedEarly);
-                        if (fromSharedEarly) {
-                            product = fromSharedEarly;
-                            productsMap.set(itemNameLower, fromSharedEarly);
-                            if (itemNameNorm) productsMap.set(itemNameNorm, fromSharedEarly);
-                            orphanProductsRemoveKeys(itemName, itemNameNorm, itemNameLower);
                         }
                     }
 

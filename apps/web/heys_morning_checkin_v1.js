@@ -9,6 +9,21 @@
   const HEYS = global.HEYS = global.HEYS || {};
 
   // === Утилиты ===
+  function isMorningActivationDebugEnabled() {
+    try {
+      return global.__heysLogControl?.isEnabled?.('morning-checkin') === true
+        || global.__heysLogControl?.isEnabled?.('ma') === true
+        || global.localStorage?.getItem('heys_debug_ma') === '1'
+        || global.localStorage?.getItem('heys_debug_morning_checkin') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function logMorningActivationTrace(...args) {
+    if (isMorningActivationDebugEnabled()) console.info(...args);
+  }
+
   function getTodayKey() {
     // Используем «эффективную» дату: до 03:00 считаем, что день ещё предыдущий
     // Приоритет: dayUtils.todayISO (учитывает ночной порог) → models.todayISO → локальный fallback
@@ -251,7 +266,7 @@
       return false;
     });
     if (foundTraining) {
-      console.warn('[MA.guard] dayHasMorningActivationSyncedActivity=true via training', {
+      logMorningActivationTrace('[MA.guard] dayHasMorningActivationSyncedActivity=true via training', {
         source: foundTraining.source,
         activityLabel: foundTraining.activityLabel
       });
@@ -260,10 +275,10 @@
     const household = Array.isArray(dayData?.householdActivities) ? dayData.householdActivities : [];
     const foundHousehold = household.find((h) => h && h.source === 'morning_activation');
     if (foundHousehold) {
-      console.warn('[MA.guard] dayHasMorningActivationSyncedActivity=true via household');
+      logMorningActivationTrace('[MA.guard] dayHasMorningActivationSyncedActivity=true via household');
       return true;
     }
-    console.warn('[MA.guard] dayHasMorningActivationSyncedActivity=false', {
+    logMorningActivationTrace('[MA.guard] dayHasMorningActivationSyncedActivity=false', {
       trainings: trainings.map(t => ({ source: t?.source, label: t?.activityLabel })),
       householdSources: household.map(h => h?.source)
     });
@@ -287,7 +302,7 @@
       label: t?.activityLabel,
       zSum: Array.isArray(t?.z) ? t.z.reduce((s, v) => s + (Number(v) || 0), 0) : 0
     }));
-    console.info('[MA.should] CHECK', {
+    logMorningActivationTrace('[MA.should] CHECK', {
       hasMealsWithItems,
       maStatus,
       maClearedByUser,
@@ -296,27 +311,27 @@
       household: (dayData?.householdActivities || []).map(h => ({ source: h?.source, label: h?.label }))
     });
     if (!hasMealsWithItems) {
-      console.info('[MA.should] SKIP — no meals with items');
+      logMorningActivationTrace('[MA.should] SKIP — no meals with items');
       return { ok: false, firstMealTime: null };
     }
     if (maStatus === 'missed') {
-      console.info('[MA.should] SKIP — morningActivation missed');
+      logMorningActivationTrace('[MA.should] SKIP — morningActivation missed');
       return { ok: false, firstMealTime };
     }
     // status=done is authoritative. Reopen only after an explicit user-cleared marker,
     // not from transient absence of the generated training card.
     if (maStatus === 'done' && !maClearedByUser) {
-      console.info('[MA.should] SKIP — morningActivation done');
+      logMorningActivationTrace('[MA.should] SKIP — morningActivation done');
       return { ok: false, firstMealTime };
     }
     if (maStatus === 'done' && maClearedByUser && !hasSynced) {
-      console.info('[MA.should] CONTINUE — done, но пользователь явно удалил MA-карточку');
+      logMorningActivationTrace('[MA.should] CONTINUE — done, но пользователь явно удалил MA-карточку');
     }
     if (hasSynced) {
-      console.info('[MA.should] SKIP — synced MA-like activity in day');
+      logMorningActivationTrace('[MA.should] SKIP — synced MA-like activity in day');
       return { ok: false, firstMealTime };
     }
-    console.info('[MA.should] OPEN — нет MA-активности в дне, maStatus=', maStatus);
+    logMorningActivationTrace('[MA.should] OPEN — нет MA-активности в дне, maStatus=', maStatus);
     return { ok: true, firstMealTime };
   }
 
@@ -327,7 +342,7 @@
       const live = HEYS.Day && typeof HEYS.Day.getDay === 'function' ? HEYS.Day.getDay() : null;
       const liveDate = live && (live.date || todayKey);
       if (!live || String(liveDate) !== String(todayKey)) {
-        console.info('[MA.followup] read: store only (no live day or date mismatch)', {
+        logMorningActivationTrace('[MA.followup] read: store only (no live day or date mismatch)', {
           todayKey,
           liveDate: live ? liveDate : null,
           mealsWithItems: countMealsWithItems(d),
@@ -345,7 +360,7 @@
         householdActivities: Array.isArray(live.householdActivities) ? live.householdActivities : d.householdActivities,
         morningActivation: d.morningActivation || live.morningActivation
       };
-      console.info('[MA.followup] read: merged store+live', {
+      logMorningActivationTrace('[MA.followup] read: merged store+live', {
         todayKey,
         mealsStore: nStore,
         mealsLive: nLive,
@@ -360,7 +375,7 @@
       });
       return merged;
     } catch (e) {
-      console.info('[MA.followup] read: merge failed, store only', e && e.message);
+      logMorningActivationTrace('[MA.followup] read: merge failed, store only', e && e.message);
       return d;
     }
   }
@@ -372,31 +387,31 @@
 
   function maybeOpenMorningActivationSkipReason(trigger = 'unknown', dateKeyArg) {
     const _tag = '[MA.skipReason]';
-    if (skipReasonOpening) { console.info(_tag, 'SKIP: already opening', { trigger }); return; }
-    if (!HEYS.StepModal?.show) { console.info(_tag, 'SKIP: no StepModal', { trigger }); return; }
-    if (!HEYS.StepModal?.registry?.morning_activation_skip_reason) { console.info(_tag, 'SKIP: step not registered', { trigger }); return; }
-    if (document.getElementById('heys-step-modal-root')) { console.info(_tag, 'SKIP: modal root exists', { trigger }); return; }
+    if (skipReasonOpening) { logMorningActivationTrace(_tag, 'SKIP: already opening', { trigger }); return; }
+    if (!HEYS.StepModal?.show) { logMorningActivationTrace(_tag, 'SKIP: no StepModal', { trigger }); return; }
+    if (!HEYS.StepModal?.registry?.morning_activation_skip_reason) { logMorningActivationTrace(_tag, 'SKIP: step not registered', { trigger }); return; }
+    if (document.getElementById('heys-step-modal-root')) { logMorningActivationTrace(_tag, 'SKIP: modal root exists', { trigger }); return; }
 
     const currentClientId = getCurrentClientId();
-    if (!currentClientId) { console.info(_tag, 'SKIP: no clientId', { trigger }); return; }
+    if (!currentClientId) { logMorningActivationTrace(_tag, 'SKIP: no clientId', { trigger }); return; }
 
     const dateKey = (typeof dateKeyArg === 'string' && dateKeyArg) ? dateKeyArg : getTodayKey();
     const dayData = readDayDataMergedForMaFollowup(dateKey);
     const ma = dayData?.morningActivation || {};
 
-    if (ma.status !== 'missed') { console.info(_tag, 'SKIP: not missed', { maStatus: ma.status, trigger }); return; }
-    if (!ma.skipReasonPending) { console.info(_tag, 'SKIP: not pending reason', { trigger }); return; }
-    if (ma.skipReasonId) { console.info(_tag, 'SKIP: reason already set', { trigger }); return; }
-    if (countMealsWithItems(dayData) < 1) { console.info(_tag, 'SKIP: no meals with items yet', { trigger }); return; }
+    if (ma.status !== 'missed') { logMorningActivationTrace(_tag, 'SKIP: not missed', { maStatus: ma.status, trigger }); return; }
+    if (!ma.skipReasonPending) { logMorningActivationTrace(_tag, 'SKIP: not pending reason', { trigger }); return; }
+    if (ma.skipReasonId) { logMorningActivationTrace(_tag, 'SKIP: reason already set', { trigger }); return; }
+    if (countMealsWithItems(dayData) < 1) { logMorningActivationTrace(_tag, 'SKIP: no meals with items yet', { trigger }); return; }
 
     const answeredKey = `heys_ma_skip_reason_answered_${currentClientId}_${dateKey}`;
     try {
-      if (sessionStorage.getItem(answeredKey) === '1') { console.info(_tag, 'SKIP: already answered session', { trigger }); return; }
+      if (sessionStorage.getItem(answeredKey) === '1') { logMorningActivationTrace(_tag, 'SKIP: already answered session', { trigger }); return; }
     } catch (_) {
       // ignore
     }
 
-    console.warn(_tag, 'OPENING skip-reason modal', { trigger, dateKey });
+    logMorningActivationTrace(_tag, 'OPENING skip-reason modal', { trigger, dateKey });
     skipReasonOpening = true;
     try {
       HEYS.StepModal.show({
@@ -428,20 +443,20 @@
 
   function maybeOpenMorningActivationFollowup(reason = 'unknown') {
     const _tag = '[MA.followup]';
-    if (followupOpening) { console.info(_tag, 'SKIP: followupOpening=true', { reason }); return; }
-    if (!HEYS.StepModal?.show) { console.info(_tag, 'SKIP: no StepModal.show', { reason }); return; }
-    if (!HEYS.StepModal?.registry?.morning_activation_followup) { console.info(_tag, 'SKIP: step not registered', { reason }); return; }
-    if (document.getElementById('heys-step-modal-root')) { console.info(_tag, 'SKIP: modal root exists', { reason }); return; }
+    if (followupOpening) { logMorningActivationTrace(_tag, 'SKIP: followupOpening=true', { reason }); return; }
+    if (!HEYS.StepModal?.show) { logMorningActivationTrace(_tag, 'SKIP: no StepModal.show', { reason }); return; }
+    if (!HEYS.StepModal?.registry?.morning_activation_followup) { logMorningActivationTrace(_tag, 'SKIP: step not registered', { reason }); return; }
+    if (document.getElementById('heys-step-modal-root')) { logMorningActivationTrace(_tag, 'SKIP: modal root exists', { reason }); return; }
 
     const currentClientId = getCurrentClientId();
-    if (!currentClientId) { console.info(_tag, 'SKIP: no clientId', { reason }); return; }
+    if (!currentClientId) { logMorningActivationTrace(_tag, 'SKIP: no clientId', { reason }); return; }
     const todayKey = getTodayKey();
     const dayData = readDayDataMergedForMaFollowup(todayKey);
     const check = shouldOpenMorningActivationFollowup(dayData);
 
     const _maStatus = dayData?.morningActivation?.status;
     const _trainingSources = (dayData?.trainings || []).map(t => t?.source).filter(Boolean);
-    console.info(_tag, 'DECISION', {
+    logMorningActivationTrace(_tag, 'DECISION', {
       reason,
       ok: check.ok,
       maStatus: _maStatus,
@@ -469,18 +484,18 @@
       const syncedNow = dayHasMorningActivationSyncedActivity(dayData);
       const hasRealData = actualStatus === 'missed' || (actualStatus === 'done' && !clearedByUser) || syncedNow;
       if (hasRealData) {
-        console.info(_tag, 'GUARD: confirmed by data', { guard: followupSessionGuard, mealCount, actualStatus, clearedByUser, reason });
+        logMorningActivationTrace(_tag, 'GUARD: confirmed by data', { guard: followupSessionGuard, mealCount, actualStatus, clearedByUser, reason });
         return;
       }
       const userActionReasons = ['product-added', 'stepmodal-closed'];
       if (!userActionReasons.includes(reason)) {
-        console.info(_tag, 'GUARD: kept (not user action)', { guard: followupSessionGuard, mealCount, reason });
+        logMorningActivationTrace(_tag, 'GUARD: kept (not user action)', { guard: followupSessionGuard, mealCount, reason });
         return;
       }
       if (reason === 'stepmodal-closed') {
         const signalAgeMs = Date.now() - lastMealSignalAt;
         if (!(Number.isFinite(signalAgeMs) && signalAgeMs >= 0 && signalAgeMs <= 2500)) {
-          console.info(_tag, 'GUARD: kept (stepmodal-closed without recent meal signal)', {
+          logMorningActivationTrace(_tag, 'GUARD: kept (stepmodal-closed without recent meal signal)', {
             guard: followupSessionGuard,
             mealCount,
             signalAgeMs
@@ -493,11 +508,11 @@
     }
     const snoozeAt = dayData?.morningActivation?.followupSnoozeUntilMealCount;
     if (snoozeAt != null && mealCount <= snoozeAt) {
-      console.info(_tag, 'SNOOZE: blocked', { mealCount, snoozeAt, reason });
+      logMorningActivationTrace(_tag, 'SNOOZE: blocked', { mealCount, snoozeAt, reason });
       return;
     }
 
-    console.warn(_tag, 'OPENING MODAL', { reason, mealCount, maStatus: _maStatus, firstMealTime: check.firstMealTime });
+    logMorningActivationTrace(_tag, 'OPENING MODAL', { reason, mealCount, maStatus: _maStatus, firstMealTime: check.firstMealTime });
 
     const currentState = dayData?.morningActivation || {};
     if (currentState.status !== 'pending' || currentState.firstMealTime !== check.firstMealTime) {
@@ -530,7 +545,7 @@
         persistMorningActivationPatch(todayKey, {
           followupSnoozeUntilMealCount: mc
         }, 'morning-activation-followup-dismiss');
-        console.info('[MorningCheckin] morning activation follow-up dismissed (Позже) — repeat after next meal add', {
+        logMorningActivationTrace('[MorningCheckin] morning activation follow-up dismissed (Позже) — repeat after next meal add', {
           mealCount: mc
         });
         try {
@@ -542,7 +557,7 @@
       },
       onComplete: () => {
         const _freshData = readDayV2ScopedFirst(todayKey, {}) || {};
-        console.warn('[MA.followup] onComplete', {
+        logMorningActivationTrace('[MA.followup] onComplete', {
           maStatus: _freshData?.morningActivation?.status,
           trainingSources: (_freshData?.trainings || []).map(t => t?.source).filter(Boolean),
           todayKey
@@ -1288,14 +1303,14 @@
     // Only trigger followup if we are inside an active product-add flow.
     // Background sync (local-write, HOT events) must NOT open the modal on their own.
     if (!pendingFollowupAfterProductFlow) return;
-    console.info('[MA.event] day-updated (product-flow) →', detail?.source, { field: detail?.field });
+    logMorningActivationTrace('[MA.event] day-updated (product-flow) →', detail?.source, { field: detail?.field });
     setTimeout(() => maybeOpenMorningActivationFollowup(detail?.source || 'day-updated'), 60);
   });
 
   window.addEventListener('heysProductAdded', () => {
     lastMealSignalAt = Date.now();
     pendingFollowupAfterProductFlow = true;
-    console.warn('[MA.event] heysProductAdded — pendingFollowupAfterProductFlow=true');
+    logMorningActivationTrace('[MA.event] heysProductAdded — pendingFollowupAfterProductFlow=true');
     setTimeout(() => maybeOpenMorningActivationSkipReason('product-added'), 240);
   });
 
@@ -1305,9 +1320,9 @@
   });
 
   document.addEventListener('heys-stepmodal-closed', () => {
-    console.warn('[MA.event] heys-stepmodal-closed', { pendingFollowupAfterProductFlow });
+    logMorningActivationTrace('[MA.event] heys-stepmodal-closed', { pendingFollowupAfterProductFlow });
     if (!pendingFollowupAfterProductFlow) {
-      console.warn('[MA.event] heys-stepmodal-closed SKIP — not a product-add flow');
+      logMorningActivationTrace('[MA.event] heys-stepmodal-closed SKIP — not a product-add flow');
       return;
     }
     pendingFollowupAfterProductFlow = false;

@@ -5,6 +5,20 @@
 
     const HEYS = global.HEYS = global.HEYS || {};
 
+    function isDayTraceDebugEnabled() {
+        try {
+            return global.__heysLogControl?.isEnabled?.('daytrace') === true
+                || global.__heysLogControl?.isEnabled?.('day-trace') === true
+                || global.localStorage?.getItem('heys_debug_daytrace') === '1';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function logDayTrace(...args) {
+        if (isDayTraceDebugEnabled()) console.info(...args);
+    }
+
     // Phase B diagnostics: ring buffer of day-update apply/skip decisions, read by
     // the Sync Debug Snapshot (React-vs-LS divergence section). Helps explain why
     // the UI did/didn't accept an LS snapshot (render-desync hunting).
@@ -181,7 +195,7 @@
                 try {
                     const _meals = (v && Array.isArray(v.meals)) ? v.meals : [];
                     const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
-                    console.info('[HEYS.day-trace] 7/8 boot LS read', {
+                    logDayTrace('[HEYS.day-trace] 7/8 boot LS read', {
                         date,
                         key,
                         hasStoredData,
@@ -371,7 +385,7 @@
                     const hasMeaningfulPayload = !syncTimestampOnly && _meals != null;
                     if (isForCurrent && hasMeaningfulPayload) {
                         const _totalItems = _meals.reduce((acc, m) => acc + ((m && Array.isArray(m.items)) ? m.items.length : 0), 0);
-                        console.info('[HEYS.day-trace] 8/8 day-updated event', {
+                        logDayTrace('[HEYS.day-trace] 8/8 day-updated event', {
                             currentDate: date,
                             updatedDate,
                             source,
@@ -1033,10 +1047,10 @@
                     const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
                     if (cid) {
                         const s = global.localStorage.getItem('heys_' + cid + '_dayv2_' + date);
-                        if (s !== null) return 's ' + s;
+                        if (s !== null) return 's\x00' + s;
                     }
                     const u = global.localStorage.getItem('heys_dayv2_' + date);
-                    if (u !== null) return 'u ' + u;
+                    if (u !== null) return 'u\x00' + u;
                     return null; // данные в legacy-ключах — fast-path не применяем
                 } catch (_) { return null; }
             };
@@ -1231,6 +1245,7 @@
             addMeal,
             addWater,
             addProductToMeal,
+            addProductsToMeal,
             day,
             pIndex,
             getMealType,
@@ -1305,13 +1320,35 @@
                 }
                 // Добавляем продукт
                 const productWithGrams = grams ? { ...product, grams } : product;
-                addProductToMeal(mi, productWithGrams);
-                return true;
+                const didAdd = addProductToMeal(mi, productWithGrams);
+                return didAdd !== false;
             };
             return () => {
                 if (HEYS.Day) delete HEYS.Day.addProductToMeal;
             };
         }, [addProductToMeal]);
+
+        // Экспорт batch-add API для рекомендаций и готовых наборов:
+        // HEYS.Day.addProductsToMeal(mealIndex, [{ product, grams }], options?)
+        React.useEffect(() => {
+            HEYS.Day = HEYS.Day || {};
+            if (typeof addProductsToMeal !== 'function') return;
+            HEYS.Day.addProductsToMeal = (mi, entries, options) => {
+                if (typeof mi !== 'number' || mi < 0) {
+                    console.warn('[HEYS.Day.addProductsToMeal] Invalid meal index:', mi);
+                    return false;
+                }
+                if (!Array.isArray(entries) || entries.length === 0) {
+                    console.warn('[HEYS.Day.addProductsToMeal] Invalid entries:', entries);
+                    return false;
+                }
+                const didAdd = addProductsToMeal(mi, entries, options || {});
+                return didAdd !== false;
+            };
+            return () => {
+                if (HEYS.Day) delete HEYS.Day.addProductsToMeal;
+            };
+        }, [addProductsToMeal]);
 
         // Экспорт getMealQualityScore и getMealType как публичный API для advice модуля
         // getMealTypeByMeal — wrapper с текущим контекстом (meals и pIndex)

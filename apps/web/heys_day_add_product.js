@@ -14,6 +14,149 @@
   const per100 = U.per100 || ((p) => ({ kcal100: 0, carbs100: 0, prot100: 0, fat100: 0, simple100: 0, complex100: 0, bad100: 0, good100: 0, trans100: 0, fiber100: 0 }));
   const scale = U.scale || ((v, g) => Math.round(((+v || 0) * (+g || 0) / 100) * 10) / 10);
 
+  function isDayTraceDebugEnabled() {
+    try {
+      return global.__heysLogControl?.isEnabled?.('daytrace') === true
+        || global.__heysLogControl?.isEnabled?.('day-trace') === true
+        || global.localStorage?.getItem('heys_debug_daytrace') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function logDayTrace(...args) {
+    if (isDayTraceDebugEnabled()) console.info(...args);
+  }
+
+  function computeTEFKcal100(p) {
+    const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
+    const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
+    // NET Atwater: protein 3 kcal/g (TEF 25% built-in: 4x0.75=3), carbs 4 kcal/g, fat 9 kcal/g
+    return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
+  }
+
+  function resolveProductForMealAdd(product) {
+    if (!product?._oneTime && (product?._fromShared || product?._source === 'shared')) {
+      const cloned = window.HEYS?.products?.addFromShared?.(product);
+      if (cloned) return cloned;
+    }
+    return product;
+  }
+
+  function buildMealItemFromProduct(product, grams) {
+    const finalProduct = resolveProductForMealAdd(product);
+    const additivesList = Array.isArray(finalProduct?.additives) ? finalProduct.additives : undefined;
+    const novaGroup = finalProduct?.nova_group ?? finalProduct?.novaGroup;
+    const nutrientDensity = finalProduct?.nutrient_density ?? finalProduct?.nutrientDensity;
+    const newItem = {
+      id: uid('it_'),
+      product_id: finalProduct?.id ?? finalProduct?.product_id,
+      name: finalProduct?.name,
+      fingerprint: finalProduct?.fingerprint,
+      grams: grams || 100,
+      portions: Array.isArray(finalProduct?.portions) ? finalProduct.portions.map(p => ({ ...p })) : undefined,
+      ...(finalProduct?._oneTime && { _oneTime: true }),
+      ...(finalProduct?.kcal100 !== undefined && {
+        kcal100: computeTEFKcal100(finalProduct),
+        protein100: finalProduct.protein100,
+        carbs100: finalProduct.carbs100,
+        fat100: finalProduct.fat100,
+        simple100: finalProduct.simple100,
+        complex100: finalProduct.complex100,
+        badFat100: finalProduct.badFat100,
+        goodFat100: finalProduct.goodFat100,
+        trans100: finalProduct.trans100,
+        fiber100: finalProduct.fiber100,
+        sodium100: finalProduct.sodium100,
+        omega3_100: finalProduct.omega3_100,
+        omega6_100: finalProduct.omega6_100,
+        nova_group: novaGroup,
+        additives: additivesList,
+        nutrient_density: nutrientDensity,
+        is_organic: finalProduct.is_organic,
+        is_whole_grain: finalProduct.is_whole_grain,
+        is_fermented: finalProduct.is_fermented,
+        is_raw: finalProduct.is_raw,
+        vitamin_a: finalProduct.vitamin_a,
+        vitamin_c: finalProduct.vitamin_c,
+        vitamin_d: finalProduct.vitamin_d,
+        vitamin_e: finalProduct.vitamin_e,
+        vitamin_k: finalProduct.vitamin_k,
+        vitamin_b1: finalProduct.vitamin_b1,
+        vitamin_b2: finalProduct.vitamin_b2,
+        vitamin_b3: finalProduct.vitamin_b3,
+        vitamin_b6: finalProduct.vitamin_b6,
+        vitamin_b9: finalProduct.vitamin_b9,
+        vitamin_b12: finalProduct.vitamin_b12,
+        calcium: finalProduct.calcium,
+        iron: finalProduct.iron,
+        magnesium: finalProduct.magnesium,
+        phosphorus: finalProduct.phosphorus,
+        potassium: finalProduct.potassium,
+        zinc: finalProduct.zinc,
+        selenium: finalProduct.selenium,
+        iodine: finalProduct.iodine,
+        gi: finalProduct.gi,
+        harm: HEYS.models?.normalizeHarm?.(finalProduct)
+      })
+    };
+
+    return {
+      finalProduct,
+      productId: finalProduct?.id ?? finalProduct?.product_id ?? finalProduct?.name,
+      newItem,
+      itemHasNutrients: !!(newItem.kcal100 || newItem.protein100 || newItem.carbs100)
+    };
+  }
+
+  function appendItemsToMeal(day, mealIndex, itemsToAppend) {
+    const mealsList = day?.meals || [];
+    return mealsList.map((m, i) =>
+      i === mealIndex
+        ? { ...m, items: [...(m.items || []), ...(itemsToAppend || [])] }
+        : m
+    );
+  }
+
+  function recordGramsForProduct(productId, grams, finalProduct) {
+    if (!productId || finalProduct?._oneTime) return;
+    try {
+      if (HEYS.store?.set) {
+        HEYS.store.set(`heys_last_grams_${productId}`, grams);
+      } else if (U.lsSet) {
+        U.lsSet(`heys_last_grams_${productId}`, grams);
+      } else {
+        localStorage.setItem(`heys_last_grams_${productId}`, JSON.stringify(grams));
+      }
+
+      const history = HEYS.store?.get
+        ? HEYS.store.get('heys_grams_history', {})
+        : (U.lsGet ? U.lsGet('heys_grams_history', {}) : {});
+      if (!history[productId]) history[productId] = [];
+      history[productId].push(grams);
+      if (history[productId].length > 20) history[productId].shift();
+
+      if (HEYS.store?.set) {
+        HEYS.store.set('heys_grams_history', history);
+      } else if (U.lsSet) {
+        U.lsSet('heys_grams_history', history);
+      } else {
+        localStorage.setItem('heys_grams_history', JSON.stringify(history));
+      }
+    } catch (e) { }
+  }
+
+  function dispatchProductAdded(detail) {
+    try {
+      window.dispatchEvent(new CustomEvent('heysProductAdded', {
+        detail: {
+          source: 'day-add-product-modal',
+          ...(detail || {})
+        }
+      }));
+    } catch (_) { }
+  }
+
   // ✅ Общий helper: summary-модалка для multiProductMode
   async function showMultiProductSummary({
     day,
@@ -445,6 +588,7 @@
             multiProductMode: nextMultiProductMode,
             autoRepeatCount: nextAutoRepeatCount,
             onAdd: handleAdd,
+            onAddMany: handleAddMany,
             onAddPhoto: handleAddPhoto,
             onNewProduct: handleNewProduct
           });
@@ -463,11 +607,179 @@
         console[method](`[HEYS.addTrace] ${event}`, payload);
       };
 
+      const scheduleFlush = (traceId, options = {}) => {
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            // 🔬 [HEYS.day-trace] 4b/8 requestFlush — about to call flush which writes day to LS.
+            try {
+              const _d = HEYS.Day?.getDay?.();
+              const _meals = (_d && Array.isArray(_d.meals)) ? _d.meals : [];
+              const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+              logDayTrace('[HEYS.day-trace] 4b/8 requestFlush', {
+                traceId,
+                hasFlush: !!(HEYS.Day && HEYS.Day.requestFlush),
+                dayDate: _d && _d.date,
+                mealsCount: _meals.length,
+                totalItems: _totalItems,
+                dayUpdatedAt: _d && _d.updatedAt,
+                bulk: !!options.bulk
+              });
+            } catch (_) { /* noop */ }
+            if (HEYS.Day?.requestFlush) {
+              HEYS.Day.requestFlush(options.force ? { force: true } : undefined);
+            }
+          }, 50);
+        });
+      };
+
+      const handleAddMany = ({ entries, mealIndex: targetMealIndex = mi, _traceId, _origin, _presetName } = {}) => {
+        const items = Array.isArray(entries) ? entries : [];
+        const traceId = _traceId || `daybulk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        const prepared = items
+          .map((entry) => {
+            const product = entry?.product || entry;
+            const grams = entry?.grams || product?.grams || 100;
+            if (!product) return null;
+            return { product, grams, ...buildMealItemFromProduct(product, grams) };
+          })
+          .filter(Boolean);
+
+        if (prepared.length === 0) {
+          emitAddTrace('⚠️ bulk add skipped — no valid items', {
+            traceId,
+            origin: _origin || 'unknown',
+            mealIndex: targetMealIndex,
+            presetName: _presetName || null
+          }, 'warn');
+          return;
+        }
+
+        const missingNutrients = prepared
+          .filter((entry) => !entry.itemHasNutrients)
+          .map((entry) => ({
+            name: entry.newItem?.name,
+            product_id: entry.newItem?.product_id,
+            grams: entry.newItem?.grams
+          }));
+        if (missingNutrients.length > 0) {
+          console.error('🚨 [DayTab] CRITICAL: bulk newItems have NO nutrients!', missingNutrients);
+        }
+
+        const currentDay = getLatestDay();
+        const currentMeals = currentDay?.meals || [];
+        if (!currentMeals[targetMealIndex]) {
+          console.warn('[HEYS.day] ❌ Meal index not found for bulk add — aborting', {
+            traceId,
+            mealIndex: targetMealIndex,
+            mealsCount: currentMeals.length,
+            presetName: _presetName || null
+          });
+          if (HEYS.Toast?.error) HEYS.Toast.error('Не удалось добавить — приём не найден, попробуй ещё раз');
+          return;
+        }
+
+        const newItems = prepared.map((entry) => entry.newItem);
+        const newUpdatedAt = Date.now();
+        if (HEYS.Day?.setBlockCloudUpdates) {
+          HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
+        } else {
+          console.warn('[HEYS.day] ⚠️ setBlockCloudUpdates missing');
+        }
+        if (HEYS.Day?.setLastLoadedUpdatedAt) {
+          HEYS.Day.setLastLoadedUpdatedAt(newUpdatedAt);
+        } else {
+          console.warn('[HEYS.day] ⚠️ setLastLoadedUpdatedAt missing');
+        }
+        try {
+          if (HEYS.Day?.markPendingMutation && date) {
+            HEYS.Day.markPendingMutation(date);
+          }
+        } catch (_) { /* noop */ }
+
+        setDay((prevDay = {}) => {
+          const mealsList = prevDay.meals || [];
+          const itemsBefore = mealsList?.[targetMealIndex]?.items?.length || 0;
+          if (!mealsList[targetMealIndex]) {
+            console.warn('[HEYS.day] ❌ Meal index not found for bulk add', {
+              traceId,
+              mealIndex: targetMealIndex,
+              mealsCount: mealsList.length,
+              presetName: _presetName || null
+            });
+          }
+          const meals = appendItemsToMeal(prevDay, targetMealIndex, newItems);
+          const itemsAfter = meals?.[targetMealIndex]?.items?.length || 0;
+          emitAddTrace('🧱 bulk setDay meal update', {
+            traceId,
+            origin: _origin || 'unknown',
+            mealIndex: targetMealIndex,
+            itemsBefore,
+            itemsAfter,
+            expectedDelta: newItems.length,
+            actualDelta: itemsAfter - itemsBefore,
+            addedItemIds: newItems.map((item) => item.id),
+            presetName: _presetName || null
+          });
+          // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
+          try {
+            const _totalItems = meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
+            logDayTrace('[HEYS.day-trace] 4/8 bulk setDay applied', {
+              traceId,
+              date: prevDay.date,
+              mealIndex: targetMealIndex,
+              itemsBefore,
+              itemsAfter,
+              expectedDelta: newItems.length,
+              actualDelta: itemsAfter - itemsBefore,
+              totalItems: _totalItems,
+              updatedAt: newUpdatedAt,
+            });
+          } catch (_) { /* noop */ }
+          return { ...prevDay, meals, updatedAt: newUpdatedAt };
+        });
+
+        scheduleFlush(traceId, { force: true, bulk: true });
+
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            const latestDay = HEYS.Day?.getDay?.();
+            const meal = latestDay?.meals?.[targetMealIndex];
+            const mealItems = Array.isArray(meal?.items) ? meal.items : [];
+            const persistedIds = new Set(mealItems.map((it) => it?.id));
+            const missingIds = newItems.map((it) => it.id).filter((id) => !persistedIds.has(id));
+            emitAddTrace(missingIds.length ? '❌ bulk post-add verify failed' : '🔎 bulk post-add verify', {
+              traceId,
+              mealIndex: targetMealIndex,
+              expectedAdded: newItems.length,
+              missingIds,
+              mealItemsCount: mealItems.length,
+              date: latestDay?.date || date || null
+            }, missingIds.length ? 'error' : 'info');
+          }, 160);
+        });
+
+        try { navigator.vibrate?.(10); } catch (e) { }
+
+        prepared.forEach((entry) => {
+          recordGramsForProduct(entry.productId, entry.grams, entry.finalProduct);
+        });
+
+        dispatchProductAdded({
+          product: prepared[0]?.product,
+          grams: prepared[0]?.grams,
+          products: prepared.map((entry) => entry.product),
+          items: newItems,
+          count: newItems.length,
+          origin: _origin || 'bulk',
+          source: 'day-add-products-bulk'
+        });
+      };
+
       const handleAdd = ({ product, grams, mealIndex, _traceId, _origin, _presetBatch }) => {
         const traceId = _traceId || `dayadd-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         // 🔬 [HEYS.day-trace] 1/8 entry — modal-driven add (handleAdd in heys_day_add_product.js).
         try {
-          console.info('[HEYS.day-trace] 1/8 handleAdd entry', {
+          logDayTrace('[HEYS.day-trace] 1/8 handleAdd entry', {
             traceId,
             origin: _origin || 'unknown',
             date,
@@ -489,16 +801,8 @@
           productName: product?.name || null,
           source: product?._source || (product?._fromShared ? 'shared' : 'personal')
         });
-        // 🌐 Если продукт из общей базы — автоматически клонируем в личную.
-        // ⚡ Разовые продукты (_oneTime) пропускают это — они вообще не должны
-        // попадать в личную базу.
-        let finalProduct = product;
-        if (!product?._oneTime && (product?._fromShared || product?._source === 'shared')) {
-          const cloned = window.HEYS?.products?.addFromShared?.(product);
-          if (cloned) {
-            finalProduct = cloned;
-          }
-        }
+        const built = buildMealItemFromProduct(product, grams);
+        const { finalProduct, productId, newItem, itemHasNutrients } = built;
 
         // 🔍 DEBUG: Подробный лог при добавлении продукта в meal
         const hasNutrients = !!(finalProduct?.kcal100 || finalProduct?.protein100 || finalProduct?.carbs100);
@@ -506,72 +810,6 @@
           console.error('🚨 [DayTab] CRITICAL: Received product with NO nutrients!', finalProduct);
         }
 
-        const productId = finalProduct.id ?? finalProduct.product_id ?? finalProduct.name;
-        const computeTEFKcal100 = (p) => {
-          const carbs = (+p.carbs100) || ((+p.simple100 || 0) + (+p.complex100 || 0));
-          const fat = (+p.fat100) || ((+p.badFat100 || 0) + (+p.goodFat100 || 0) + (+p.trans100 || 0));
-          // NET Atwater: protein 3 kcal/g (TEF 25% built-in: 4×0.75=3), carbs 4 kcal/g, fat 9 kcal/g
-          return Math.round((3 * (+p.protein100 || 0) + 4 * carbs + 9 * fat) * 10) / 10;
-        };
-        const additivesList = Array.isArray(finalProduct.additives) ? finalProduct.additives : undefined;
-        const novaGroup = finalProduct.nova_group ?? finalProduct.novaGroup;
-        const nutrientDensity = finalProduct.nutrient_density ?? finalProduct.nutrientDensity;
-        const newItem = {
-          id: uid('it_'),
-          product_id: finalProduct.id ?? finalProduct.product_id,
-          name: finalProduct.name,
-          fingerprint: finalProduct.fingerprint,
-          grams: grams || 100,
-          portions: Array.isArray(finalProduct.portions) ? finalProduct.portions.map(p => ({ ...p })) : undefined,
-          // ⚡ Разовый продукт — флаг едет с item'ом во все downstream-системы
-          // (cloud sync, orphan-tracking, render). Стамп уже инлайнится ниже.
-          ...(finalProduct._oneTime && { _oneTime: true }),
-          ...(finalProduct.kcal100 !== undefined && {
-            kcal100: computeTEFKcal100(finalProduct),
-            protein100: finalProduct.protein100,
-            carbs100: finalProduct.carbs100,
-            fat100: finalProduct.fat100,
-            simple100: finalProduct.simple100,
-            complex100: finalProduct.complex100,
-            badFat100: finalProduct.badFat100,
-            goodFat100: finalProduct.goodFat100,
-            trans100: finalProduct.trans100,
-            fiber100: finalProduct.fiber100,
-            sodium100: finalProduct.sodium100,
-            omega3_100: finalProduct.omega3_100,
-            omega6_100: finalProduct.omega6_100,
-            nova_group: novaGroup,
-            additives: additivesList,
-            nutrient_density: nutrientDensity,
-            is_organic: finalProduct.is_organic,
-            is_whole_grain: finalProduct.is_whole_grain,
-            is_fermented: finalProduct.is_fermented,
-            is_raw: finalProduct.is_raw,
-            vitamin_a: finalProduct.vitamin_a,
-            vitamin_c: finalProduct.vitamin_c,
-            vitamin_d: finalProduct.vitamin_d,
-            vitamin_e: finalProduct.vitamin_e,
-            vitamin_k: finalProduct.vitamin_k,
-            vitamin_b1: finalProduct.vitamin_b1,
-            vitamin_b2: finalProduct.vitamin_b2,
-            vitamin_b3: finalProduct.vitamin_b3,
-            vitamin_b6: finalProduct.vitamin_b6,
-            vitamin_b9: finalProduct.vitamin_b9,
-            vitamin_b12: finalProduct.vitamin_b12,
-            calcium: finalProduct.calcium,
-            iron: finalProduct.iron,
-            magnesium: finalProduct.magnesium,
-            phosphorus: finalProduct.phosphorus,
-            potassium: finalProduct.potassium,
-            zinc: finalProduct.zinc,
-            selenium: finalProduct.selenium,
-            iodine: finalProduct.iodine,
-            gi: finalProduct.gi,
-            harm: HEYS.models?.normalizeHarm?.(finalProduct)
-          })
-        };
-
-        const itemHasNutrients = !!(newItem.kcal100 || newItem.protein100 || newItem.carbs100);
         if (!itemHasNutrients) {
           console.error('🚨 [DayTab] CRITICAL: newItem has NO nutrients! Will be saved without data.', {
             newItem,
@@ -580,9 +818,22 @@
           });
         }
 
+        const currentDay = getLatestDay();
+        const currentMeals = currentDay?.meals || [];
+        if (!currentMeals[mealIndex]) {
+          console.warn('[HEYS.day] ❌ Meal index not found for add — aborting', {
+            traceId,
+            mealIndex,
+            mealsCount: currentMeals.length,
+            productName: finalProduct?.name || null
+          });
+          if (HEYS.Toast?.error) HEYS.Toast.error('Не удалось добавить — приём не найден, попробуй ещё раз');
+          return;
+        }
+
         // 🔬 [HEYS.day-trace] 3/8 item built — what's actually going into the meal.
         try {
-          console.info('[HEYS.day-trace] 3/8 item built', {
+          logDayTrace('[HEYS.day-trace] 3/8 item built', {
             traceId,
             itemId: newItem.id,
             product_id: newItem.product_id,
@@ -645,7 +896,7 @@
           // 🔬 [HEYS.day-trace] 4/8 setDay applied — items count change in target meal.
           try {
             const _totalItems = meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
-            console.info('[HEYS.day-trace] 4/8 setDay applied', {
+            logDayTrace('[HEYS.day-trace] 4/8 setDay applied', {
               traceId,
               date: prevDay.date,
               mealIndex,
@@ -658,27 +909,7 @@
           return { ...prevDay, meals, updatedAt: newUpdatedAt };
         });
 
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            // 🔬 [HEYS.day-trace] 4b/8 requestFlush — about to call flush which writes day to LS.
-            try {
-              const _d = HEYS.Day?.getDay?.();
-              const _meals = (_d && Array.isArray(_d.meals)) ? _d.meals : [];
-              const _totalItems = _meals.reduce((acc, m) => acc + ((m.items || []).length), 0);
-              console.info('[HEYS.day-trace] 4b/8 requestFlush', {
-                traceId,
-                hasFlush: !!(HEYS.Day && HEYS.Day.requestFlush),
-                dayDate: _d && _d.date,
-                mealsCount: _meals.length,
-                totalItems: _totalItems,
-                dayUpdatedAt: _d && _d.updatedAt,
-              });
-            } catch (_) { /* noop */ }
-            if (HEYS.Day?.requestFlush) {
-              HEYS.Day.requestFlush();
-            }
-          }, 50);
-        });
+        scheduleFlush(traceId);
 
         requestAnimationFrame(() => {
           setTimeout(() => {
@@ -699,39 +930,12 @@
 
         try { navigator.vibrate?.(10); } catch (e) { }
 
-        window.dispatchEvent(new CustomEvent('heysProductAdded', {
-          detail: { product, grams }
-        }));
+        dispatchProductAdded({ product, grams, origin: _origin || 'single' });
 
         // ⚡ Skip grams-tracking для разовых продуктов: их productId уникален и
         // никогда не повторится → запись в last_grams/grams_history засоряет LS
         // и cloud-sync без всякой пользы.
-        if (!finalProduct?._oneTime) {
-          try {
-            if (HEYS.store?.set) {
-              HEYS.store.set(`heys_last_grams_${productId}`, grams);
-            } else if (U.lsSet) {
-              U.lsSet(`heys_last_grams_${productId}`, grams);
-            } else {
-              localStorage.setItem(`heys_last_grams_${productId}`, JSON.stringify(grams));
-            }
-
-            const history = HEYS.store?.get
-              ? HEYS.store.get('heys_grams_history', {})
-              : (U.lsGet ? U.lsGet('heys_grams_history', {}) : {});
-            if (!history[productId]) history[productId] = [];
-            history[productId].push(grams);
-            if (history[productId].length > 20) history[productId].shift();
-
-            if (HEYS.store?.set) {
-              HEYS.store.set('heys_grams_history', history);
-            } else if (U.lsSet) {
-              U.lsSet('heys_grams_history', history);
-            } else {
-              localStorage.setItem('heys_grams_history', JSON.stringify(history));
-            }
-          } catch (e) { }
-        }
+        recordGramsForProduct(productId, grams, finalProduct);
 
         // 🆕 autoRepeat: молчаливое повторение N раз — пропускаем summary, AddProductStep сам делает goToStep(0)
         if (activeAutoRepeatActive) {

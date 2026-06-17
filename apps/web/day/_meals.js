@@ -18,6 +18,20 @@
         return cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
     }
 
+    function isDayTraceDebugEnabled() {
+        try {
+            return global.__heysLogControl?.isEnabled?.('daytrace') === true
+                || global.__heysLogControl?.isEnabled?.('day-trace') === true
+                || global.localStorage?.getItem('heys_debug_daytrace') === '1';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function logDayTrace(...args) {
+        if (isDayTraceDebugEnabled()) console.info(...args);
+    }
+
     // Today's local ISO date (matches heys_app_date_state_v1.js::getTodayISO — <3am = yesterday)
     function _getTodayISO() {
         const d = new Date();
@@ -3923,7 +3937,14 @@
                                         setDay(() => newDayData);
 
                                         try { navigator.vibrate?.(10); } catch (e) { }
-                                        window.dispatchEvent(new CustomEvent('heysProductAdded', { detail: { product: finalProduct, grams } }));
+                                        window.dispatchEvent(new CustomEvent('heysProductAdded', {
+                                            detail: {
+                                                product: finalProduct,
+                                                grams,
+                                                mealIndex: addMealIndex,
+                                                source: 'day-inline-add-product'
+                                            }
+                                        }));
                                         try {
                                             lsSet(`heys_last_grams_${productId}`, grams);
                                             const history = lsGet('heys_grams_history', {});
@@ -4324,45 +4345,14 @@
             });
         }, [haptic, setDay, markUndoWindow, persistDayData, runUndoableDayMutation]);
 
-        const addProductToMeal = React.useCallback((mi, p) => {
-            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
-                HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
-                return;
-            }
-
-            haptic('light');
-
-            // 🔬 [HEYS.day-trace] 1/8 entry — what we're trying to add and to which meal.
-            try {
-                console.info('[HEYS.day-trace] 1/8 addProductToMeal entry', {
-                    date,
-                    mealIndex: mi,
-                    productSource: p?._source || (p?._fromShared ? 'shared' : 'personal'),
-                    productId: p?.id ?? p?.product_id ?? null,
-                    productName: p?.name || null,
-                    productKcal100: p?.kcal100,
-                    gramsHint: p?.grams,
-                });
-            } catch (_) { /* noop */ }
-
+        const buildAddProductItem = React.useCallback((p) => {
             let finalProduct = p;
             if (p?._fromShared || p?._source === 'shared' || p?.is_shared) {
                 const cloned = HEYS.products?.addFromShared?.(p);
-                if (cloned) {
-                    finalProduct = cloned;
-                    try {
-                        console.info('[HEYS.day-trace] 2/8 cloned from shared', {
-                            originalId: p?.id,
-                            clonedId: cloned?.id,
-                            name: cloned?.name,
-                        });
-                    } catch (_) { /* noop */ }
-                }
+                if (cloned) finalProduct = cloned;
             }
 
-            // Use centralized harm normalization
             const harmVal = HEYS.models?.normalizeHarm?.(finalProduct);
-
             const item = {
                 id: uid('it_'),
                 product_id: finalProduct.id ?? finalProduct.product_id,
@@ -4378,11 +4368,45 @@
                 trans100: finalProduct.trans100,
                 fiber100: finalProduct.fiber100,
                 gi: finalProduct.gi ?? finalProduct.gi100,
-                harm: harmVal,  // Normalized harm (0-10)
+                harm: harmVal,
             };
+            return { finalProduct, item };
+        }, []);
+
+        const addProductToMeal = React.useCallback((mi, p) => {
+            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+                HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
+                return false;
+            }
+
+            haptic('light');
+
+            // 🔬 [HEYS.day-trace] 1/8 entry — what we're trying to add and to which meal.
+            try {
+                logDayTrace('[HEYS.day-trace] 1/8 addProductToMeal entry', {
+                    date,
+                    mealIndex: mi,
+                    productSource: p?._source || (p?._fromShared ? 'shared' : 'personal'),
+                    productId: p?.id ?? p?.product_id ?? null,
+                    productName: p?.name || null,
+                    productKcal100: p?.kcal100,
+                    gramsHint: p?.grams,
+                });
+            } catch (_) { /* noop */ }
+
+            const { finalProduct, item } = buildAddProductItem(p);
+            if (finalProduct !== p) {
+                try {
+                    logDayTrace('[HEYS.day-trace] 2/8 cloned from shared', {
+                        originalId: p?.id,
+                        clonedId: finalProduct?.id,
+                        name: finalProduct?.name,
+                    });
+                } catch (_) { /* noop */ }
+            }
             // 🔬 [HEYS.day-trace] 3/8 item built — final shape going into the meal.
             try {
-                console.info('[HEYS.day-trace] 3/8 item built', {
+                logDayTrace('[HEYS.day-trace] 3/8 item built', {
                     itemId: item.id,
                     product_id: item.product_id,
                     name: item.name,
@@ -4417,13 +4441,13 @@
                     baseDayUpdatedAt: baseDay?.updatedAt || null,
                 });
                 if (HEYS.Toast?.error) HEYS.Toast.error('Не удалось добавить — приём не найден, попробуй ещё раз');
-                return;
+                return false;
             }
             const before = (mealsList[mi]?.items || []).length;
             const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
             const newDayData = { ...baseDay, meals, updatedAt: newUpdatedAt };
             try {
-                console.info('[HEYS.day-trace] 4/8 setDay applied', {
+                logDayTrace('[HEYS.day-trace] 4/8 setDay applied', {
                     date: baseDay.date,
                     key,
                     mealIndex: mi,
@@ -4435,7 +4459,7 @@
             } catch (_) { /* noop */ }
             try {
                 try {
-                    console.info('[HEYS.day-trace] 5/8 LS write', {
+                    logDayTrace('[HEYS.day-trace] 5/8 LS write', {
                         key,
                         mealsCount: meals.length,
                         totalItems: meals.reduce((acc, m) => acc + ((m.items || []).length), 0),
@@ -4459,9 +4483,116 @@
                 }, 500);
             }
 
-            window.dispatchEvent(new CustomEvent('heysProductAdded'));
+            window.dispatchEvent(new CustomEvent('heysProductAdded', {
+                detail: {
+                    product: finalProduct,
+                    item,
+                    grams: item.grams,
+                    mealIndex: mi,
+                    source: 'day-add-product-to-meal'
+                }
+            }));
             emitPlannerReplanRequest('PRODUCT_ADDED', { mealIndex: mi, productId: item.product_id });
-        }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest]);
+            return true;
+        }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem]);
+
+        const addProductsToMeal = React.useCallback((mi, entries, options = {}) => {
+            if (HEYS.Paywall && !HEYS.Paywall.canWriteSync()) {
+                HEYS.Paywall.showBlockedToast('Добавление продуктов недоступно');
+                return false;
+            }
+
+            const prepared = (Array.isArray(entries) ? entries : [])
+                .map((entry) => {
+                    const product = entry?.product || entry;
+                    const grams = entry?.grams || product?.grams || 100;
+                    if (!product || !product.name) return null;
+                    return buildAddProductItem({ ...product, grams });
+                })
+                .filter(Boolean);
+
+            if (prepared.length === 0) {
+                console.warn('[HEYS.day] ❌ addProductsToMeal skipped — no valid products', {
+                    mealIndex: mi,
+                    entriesCount: Array.isArray(entries) ? entries.length : 0,
+                    source: options?.source || options?.origin || 'unknown',
+                });
+                return false;
+            }
+
+            haptic('light');
+
+            const newUpdatedAt = Date.now();
+            if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
+            if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
+
+            const key = _scopedDayKey(date);
+            let baseDay = {};
+            try {
+                baseDay = (HEYS.utils && typeof HEYS.utils.lsGet === 'function')
+                    ? (HEYS.utils.lsGet(key, {}) || {})
+                    : (dayRef.current || {});
+            } catch (_) { baseDay = dayRef.current || {}; }
+            const mealsList = (baseDay && baseDay.meals) || [];
+            if (!mealsList[mi]) {
+                console.warn('[HEYS.day] ❌ Meal index out-of-bounds for addProductsToMeal — aborting', {
+                    mealIndex: mi,
+                    mealsCount: mealsList.length,
+                    productsCount: prepared.length,
+                    baseDayUpdatedAt: baseDay?.updatedAt || null,
+                });
+                if (HEYS.Toast?.error) HEYS.Toast.error('Не удалось добавить — приём не найден, попробуй ещё раз');
+                return false;
+            }
+
+            const items = prepared.map((entry) => entry.item);
+            const products = prepared.map((entry) => entry.finalProduct);
+            const before = (mealsList[mi]?.items || []).length;
+            const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), ...items] } : m);
+            const newDayData = { ...baseDay, meals, updatedAt: newUpdatedAt };
+            try {
+                lsSet(key, newDayData);
+            } catch (e) {
+                trackError(e, { source: 'day/_meals.js', action: 'save_products_batch' });
+                return false;
+            }
+            setDay(() => newDayData);
+
+            if (setNewItemIds) {
+                setNewItemIds((prev) => new Set([...(prev || []), ...items.map((item) => item.id)]));
+                setTimeout(() => {
+                    setNewItemIds((prev) => {
+                        const next = new Set(prev || []);
+                        items.forEach((item) => next.delete(item.id));
+                        return next;
+                    });
+                }, 500);
+            }
+
+            window.dispatchEvent(new CustomEvent('heysProductAdded', {
+                detail: {
+                    product: products[0],
+                    products,
+                    item: items[0],
+                    items,
+                    grams: items[0]?.grams,
+                    count: items.length,
+                    mealIndex: mi,
+                    source: options?.source || 'day-add-products-to-meal',
+                    origin: options?.origin || 'batch',
+                }
+            }));
+            emitPlannerReplanRequest('PRODUCT_ADDED', {
+                mealIndex: mi,
+                productId: items[0]?.product_id,
+                productIds: items.map((item) => item.product_id),
+                count: items.length,
+                batch: true,
+                itemsBefore: before,
+                itemsAfter: (newDayData.meals?.[mi]?.items || []).length,
+            });
+            return true;
+        }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem]);
 
         const setGrams = React.useCallback((mi, itId, g) => {
             const grams = +g || 0;
@@ -4498,7 +4629,7 @@
             const nextDayData = { ...baseDay, meals, updatedAt };
 
             try {
-                console.info('[HEYS.day-trace] setGrams applied', {
+                logDayTrace('[HEYS.day-trace] setGrams applied', {
                     date,
                     mealIndex: mi,
                     mealId: sourceMeal.id || null,
@@ -5349,6 +5480,7 @@
             updateMealTime,
             removeMeal,
             addProductToMeal,
+            addProductsToMeal,
             copyItemsToMeal,
             openCopyMealModal,
             saveAsPreset,

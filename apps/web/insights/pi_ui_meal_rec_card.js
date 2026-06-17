@@ -173,12 +173,25 @@
     // [PLANNER, [MEALREC, [mps, [wave, [chrono, [workout, [HEYS.mealRec.
     const PLANNER_LOG_BUFFER_SIZE = 400;
     const plannerLogBuffer = [];
-    function pushPlannerLog(level, args) {
-        if (!args || !args.length) return;
+    function isMealRecDebugEnabled() {
+        try {
+            return global.__HEYS_MEALREC_DEBUG__ === true
+                || global.HEYS?.debug?.mealRec === true
+                || global.__heysLogControl?.isEnabled?.('insights') === true
+                || localStorage.getItem('heys_debug_mealrec') === '1';
+        } catch (_) {
+            return false;
+        }
+    }
+    function isPlannerLogArgs(args) {
+        if (!args || !args.length) return false;
         const first = args[0];
-        if (typeof first !== 'string') return;
-        // Захватываем только релевантные планнеру логи
-        if (!/\[(MEALREC|HEYS\.mealRec|PLANNER\.|mps|wave|workout|chrono|MEALREC\.)/i.test(first)) return;
+        return typeof first === 'string'
+            && /\[(MEALREC|HEYS\.mealRec|PLANNER\.|mps|wave|workout|chrono|MEALREC\.)/i.test(first);
+    }
+    function pushPlannerLog(level, args) {
+        if (!isPlannerLogArgs(args)) return;
+        const first = args[0];
         try {
             const formattedArgs = args.slice(1).map((a) => {
                 if (a === null || a === undefined) return String(a);
@@ -201,9 +214,52 @@
         const origInfo = console.info.bind(console);
         const origWarn = console.warn.bind(console);
         const origError = console.error.bind(console);
-        console.info = function (...args) { pushPlannerLog('info', args); return origInfo(...args); };
+        const origGroup = typeof console.group === 'function' ? console.group.bind(console) : null;
+        const origGroupCollapsed = typeof console.groupCollapsed === 'function' ? console.groupCollapsed.bind(console) : null;
+        const origGroupEnd = typeof console.groupEnd === 'function' ? console.groupEnd.bind(console) : null;
+        const origTable = typeof console.table === 'function' ? console.table.bind(console) : null;
+        let mutedPlannerGroupDepth = 0;
+        console.info = function (...args) {
+            const isPlanner = isPlannerLogArgs(args);
+            pushPlannerLog('info', args);
+            if (isPlanner && !isMealRecDebugEnabled()) return undefined;
+            return origInfo(...args);
+        };
         console.warn = function (...args) { pushPlannerLog('warn', args); return origWarn(...args); };
         console.error = function (...args) { pushPlannerLog('error', args); return origError(...args); };
+        if (origGroup) {
+            console.group = function (...args) {
+                if (isPlannerLogArgs(args) && !isMealRecDebugEnabled()) {
+                    mutedPlannerGroupDepth += 1;
+                    return undefined;
+                }
+                return origGroup(...args);
+            };
+        }
+        if (origGroupCollapsed) {
+            console.groupCollapsed = function (...args) {
+                if (isPlannerLogArgs(args) && !isMealRecDebugEnabled()) {
+                    mutedPlannerGroupDepth += 1;
+                    return undefined;
+                }
+                return origGroupCollapsed(...args);
+            };
+        }
+        if (origGroupEnd) {
+            console.groupEnd = function (...args) {
+                if (mutedPlannerGroupDepth > 0 && !isMealRecDebugEnabled()) {
+                    mutedPlannerGroupDepth -= 1;
+                    return undefined;
+                }
+                return origGroupEnd(...args);
+            };
+        }
+        if (origTable) {
+            console.table = function (...args) {
+                if (mutedPlannerGroupDepth > 0 && !isMealRecDebugEnabled()) return undefined;
+                return origTable(...args);
+            };
+        }
     }
     global.__heysPlannerLogBuffer = plannerLogBuffer; // для отладки через DevTools
 
@@ -1467,6 +1523,241 @@
             });
         };
 
+        const resolveSuggestionProduct = (suggestion) => {
+            if (!suggestion || !pIndex) return null;
+            let product = null;
+            if (suggestion.productId && pIndex.byId) {
+                product = pIndex.byId.get(String(suggestion.productId).toLowerCase());
+            }
+            if (!product && pIndex.byName) {
+                const normalizedName = (suggestion.product || '').toLowerCase().trim();
+                product = pIndex.byName.get(normalizedName);
+            }
+            return product;
+        };
+
+        const showBulkMealPicker = (selectedProducts, onMealSelected) => {
+            const { HEYS } = global;
+            const date = day?.date || new Date().toISOString().slice(0, 10);
+            const count = Array.isArray(selectedProducts) ? selectedProducts.length : 0;
+            if (count <= 0) return;
+
+            const addCreatedMealAndSelect = (newMeal, fallbackIndex) => {
+                if (!HEYS?.Day?.addMealDirect) {
+                    console.error(`${LOG_PREFIX} ❌ HEYS.Day.addMealDirect not available for bulk meal creation`);
+                    if (HEYS?.Toast?.error) HEYS.Toast.error('Не удалось создать приём пищи');
+                    return;
+                }
+                HEYS.Day.addMealDirect(newMeal);
+                const updatedMeals = [...(day.meals || []), newMeal];
+                const mealIndex = updatedMeals.findIndex(m => m.id === newMeal.id);
+                onMealSelected(mealIndex >= 0 ? mealIndex : fallbackIndex);
+            };
+
+            if (!day?.meals || day.meals.length === 0) {
+                if (!HEYS?.MealStep?.showAddMeal) {
+                    console.error(`${LOG_PREFIX} ❌ HEYS.MealStep.showAddMeal not available for bulk add`);
+                    if (HEYS?.Toast?.error) HEYS.Toast.error('Сначала создайте приём пищи');
+                    return;
+                }
+                try {
+                    HEYS.MealStep.showAddMeal({
+                        dateKey: date,
+                        meals: day.meals || [],
+                        pIndex,
+                        getProductFromItem,
+                        trainings: day.trainings || [],
+                        deficitPct: Number(day.deficitPct ?? prof?.deficitPctTarget ?? 0),
+                        prof,
+                        dayData: day,
+                        onComplete: (newMeal) => {
+                            addCreatedMealAndSelect(newMeal, 0);
+                        }
+                    });
+                } catch (err) {
+                    console.error(`${LOG_PREFIX} ❌ MealStep.showAddMeal failed for bulk add:`, err);
+                }
+                return;
+            }
+
+            const lastMeal = day.meals[day.meals.length - 1];
+            const now = new Date();
+            let isActiveMeal = false;
+            let minutesAgo = 0;
+            if (lastMeal?.time) {
+                const [hours, minutes] = lastMeal.time.split(':').map(Number);
+                const lastMealDate = new Date();
+                lastMealDate.setHours(hours, minutes, 0, 0);
+                minutesAgo = (now - lastMealDate) / 1000 / 60;
+                isActiveMeal = minutesAgo < 30 && minutesAgo >= 0;
+            }
+
+            if (!document.getElementById('meal-picker-animations')) {
+                const style = document.createElement('style');
+                style.id = 'meal-picker-animations';
+                style.textContent = `
+                    @keyframes fadeIn { to { opacity: 1; } }
+                    @keyframes slideUp {
+                        from { opacity: 0; transform: translateY(20px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                opacity: 0;
+                animation: fadeIn 0.3s ease-out forwards;
+            `;
+
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: var(--bg-primary, #fff);
+                border-radius: 16px;
+                padding: 24px;
+                max-width: 320px;
+                width: 90%;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+                animation: slideUp 0.3s ease-out;
+            `;
+
+            const title = document.createElement('h3');
+            title.textContent = 'Куда добавить?';
+            title.style.cssText = 'margin:0 0 16px 0;font-size:20px;font-weight:600;color:var(--text-primary,#000);text-align:center;';
+
+            const subtitle = document.createElement('p');
+            subtitle.textContent = `${count} ${count === 1 ? 'продукт' : count < 5 ? 'продукта' : 'продуктов'}`;
+            subtitle.style.cssText = 'margin:0 0 20px 0;font-size:14px;color:var(--text-secondary,#666);text-align:center;';
+
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
+
+            const closeOverlay = () => {
+                if (overlay.parentNode) document.body.removeChild(overlay);
+            };
+            const selectMeal = (mealIndex) => {
+                closeOverlay();
+                onMealSelected(mealIndex);
+            };
+
+            if (isActiveMeal) {
+                const activeBtn = document.createElement('button');
+                const mealName = lastMeal.name || `Приём ${day.meals.length}`;
+                activeBtn.textContent = `${mealName} • ${Math.round(minutesAgo)} мин назад`;
+                activeBtn.style.cssText = `
+                    padding:14px 20px;border:2px solid var(--primary-color,#3b82f6);
+                    border-radius:12px;background:var(--primary-bg,#eff6ff);
+                    color:var(--text-primary,#000);font-size:16px;font-weight:600;
+                    cursor:pointer;text-align:left;
+                `;
+                activeBtn.onclick = () => selectMeal(day.meals.length - 1);
+                buttonsContainer.appendChild(activeBtn);
+            }
+
+            const newBtn = document.createElement('button');
+            newBtn.textContent = 'Создать новый приём';
+            newBtn.style.cssText = `
+                padding:14px 20px;border:2px dashed var(--border-color,#e5e7eb);
+                border-radius:12px;background:transparent;color:var(--text-secondary,#666);
+                font-size:16px;font-weight:500;cursor:pointer;text-align:center;
+            `;
+            newBtn.onclick = () => {
+                closeOverlay();
+                if (!HEYS?.MealStep?.showAddMeal) {
+                    console.error(`${LOG_PREFIX} ❌ HEYS.MealStep.showAddMeal not available for bulk new meal`);
+                    return;
+                }
+                try {
+                    HEYS.MealStep.showAddMeal({
+                        dateKey: date,
+                        meals: day.meals || [],
+                        pIndex,
+                        getProductFromItem,
+                        trainings: day.trainings || [],
+                        deficitPct: Number(day.deficitPct ?? prof?.deficitPctTarget ?? 0),
+                        prof,
+                        dayData: day,
+                        onComplete: (newMeal) => {
+                            addCreatedMealAndSelect(newMeal, (day.meals || []).length);
+                        }
+                    });
+                } catch (err) {
+                    console.error(`${LOG_PREFIX} ❌ MealStep.showAddMeal failed for bulk new meal:`, err);
+                }
+            };
+            buttonsContainer.appendChild(newBtn);
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Отмена';
+            cancelBtn.style.cssText = 'margin-top:8px;padding:12px 20px;border:none;border-radius:12px;background:transparent;color:var(--text-secondary,#666);font-size:16px;cursor:pointer;';
+            cancelBtn.onclick = closeOverlay;
+
+            modal.appendChild(title);
+            modal.appendChild(subtitle);
+            modal.appendChild(buttonsContainer);
+            modal.appendChild(cancelBtn);
+            overlay.appendChild(modal);
+            overlay.onclick = (e) => { if (e.target === overlay) closeOverlay(); };
+            document.body.appendChild(overlay);
+        };
+
+        const addSelectedProductsToMeal = (selectedProducts, mealIndex) => {
+            const { HEYS } = global;
+            if (!HEYS?.Day?.addProductsToMeal) {
+                console.error(`${LOG_PREFIX} ❌ HEYS.Day.addProductsToMeal not available`);
+                if (HEYS?.Toast?.error) HEYS.Toast.error('Групповое добавление пока недоступно');
+                return false;
+            }
+
+            const unresolved = [];
+            const entries = selectedProducts.map((suggestion) => {
+                const product = resolveSuggestionProduct(suggestion);
+                if (!product) {
+                    unresolved.push(suggestion.product || suggestion.productId || '?');
+                    return null;
+                }
+                return { product, grams: suggestion.grams || 100 };
+            }).filter(Boolean);
+
+            if (unresolved.length > 0 || entries.length === 0) {
+                console.warn(`${LOG_PREFIX} [BULK ADD] ⚠️ Products not resolved`, unresolved);
+                if (HEYS?.Toast?.error) {
+                    HEYS.Toast.error('Не удалось найти часть продуктов. Попробуйте добавить их по одному.');
+                }
+                return false;
+            }
+
+            const success = HEYS.Day.addProductsToMeal(mealIndex, entries, {
+                source: 'meal-rec-selected-products',
+                origin: 'meal-rec-bulk-selected'
+            });
+            if (!success) {
+                if (HEYS?.Toast?.error) HEYS.Toast.error('Не удалось добавить выбранные продукты');
+                return false;
+            }
+
+            if (recIdRef.current && !followedRef.current && HEYS?.InsightsPI?.feedbackLoop?.markFollowed) {
+                HEYS.InsightsPI.feedbackLoop.markFollowed(recIdRef.current, true, getProfileWithId());
+                followedRef.current = true;
+            }
+            if (window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred) {
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            }
+            if (HEYS?.Toast?.success) {
+                const mealName = day?.meals?.[mealIndex]?.name || `Приём ${mealIndex + 1}`;
+                HEYS.Toast.success(`Добавлено: ${entries.length} ${entries.length === 1 ? 'продукт' : entries.length < 5 ? 'продукта' : 'продуктов'} → ${mealName}`);
+            }
+            return true;
+        };
+
         /**
          * v27.4: Handle product selection (visual only, no auto-add)
          */
@@ -1513,18 +1804,12 @@
             }
 
             console.info(`${LOG_PREFIX} [BULK ADD] 🎁 Adding ${selectedProducts.length} selected products`);
-
-            // Add each product sequentially (opens smart meal picker for each)
-            selectedProducts.forEach((product, idx) => {
-                setTimeout(() => {
-                    handleAddSuggestion(product);
-                }, idx * 100); // Небольшая задержка между добавлениями
+            showBulkMealPicker(selectedProducts, (mealIndex) => {
+                if (addSelectedProductsToMeal(selectedProducts, mealIndex)) {
+                    setCheckedProducts({});
+                    console.info(`${LOG_PREFIX} [BULK ADD] ✅ Cleared selection`);
+                }
             });
-
-            // Clear selection after adding
-            setCheckedProducts({});
-
-            console.info(`${LOG_PREFIX} [BULK ADD] ✅ Cleared selection`);
         };
 
         const handleAddSelectedSuggestions = (items) => {
@@ -1541,13 +1826,11 @@
             }
 
             console.info(`${LOG_PREFIX} [BULK ADD] 🎁 Adding ${selectedProducts.length} selected products (flat mode)`);
-            selectedProducts.forEach((product, idx) => {
-                setTimeout(() => {
-                    handleAddSuggestion(product);
-                }, idx * 100);
+            showBulkMealPicker(selectedProducts, (mealIndex) => {
+                if (addSelectedProductsToMeal(selectedProducts, mealIndex)) {
+                    setCheckedProducts({});
+                }
             });
-
-            setCheckedProducts({});
         };
 
         const renderSelectableSuggestions = (items) => {
@@ -1813,22 +2096,25 @@
             const handleProductAdded = (event) => {
                 if (followedRef.current) return; // Already tracked
                 if (!recIdRef.current) return;
-                if (!event.detail?.product) return;
-
-                const addedProduct = event.detail.product;
-                const addedName = (addedProduct.name || addedProduct.title || '').toLowerCase().trim();
+                const addedProducts = Array.isArray(event.detail?.products)
+                    ? event.detail.products
+                    : (event.detail?.product ? [event.detail.product] : []);
+                if (addedProducts.length === 0) return;
+                const addedNames = new Set(addedProducts
+                    .map((product) => (product?.name || product?.title || '').toLowerCase().trim())
+                    .filter(Boolean));
 
                 // Check if added product matches any suggestion
                 const matched = recommendation.suggestions.some((s) => {
                     const suggestionName = (s.product || '').toLowerCase().trim();
-                    return suggestionName === addedName;
+                    return addedNames.has(suggestionName);
                 });
 
                 if (matched && global.HEYS?.InsightsPI?.feedbackLoop?.markFollowed) {
                     try {
                         global.HEYS.InsightsPI.feedbackLoop.markFollowed(recIdRef.current, true, getProfileWithId());
                         followedRef.current = true;
-                        console.info(`${LOG_PREFIX} ✅ Auto-tracked: user added recommended product:`, addedName);
+                        console.info(`${LOG_PREFIX} ✅ Auto-tracked: user added recommended product:`, Array.from(addedNames).join(', '));
                     } catch (err) {
                         console.warn(`${LOG_PREFIX} ⚠️ markFollowed failed:`, err?.message);
                     }

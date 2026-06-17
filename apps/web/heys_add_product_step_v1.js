@@ -7,6 +7,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // useDeferredValue (React 18+) — деферим heavy filter под печать.
   const useDeferredValue = React.useDeferredValue || ((v) => v);
 
+  function isDayTraceDebugEnabled() {
+    try {
+      return global.__heysLogControl?.isEnabled?.('daytrace') === true
+        || global.__heysLogControl?.isEnabled?.('day-trace') === true
+        || global.localStorage?.getItem('heys_debug_daytrace') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function logDayTrace(...args) {
+    if (isDayTraceDebugEnabled()) console.info(...args);
+  }
+
   // === ГЛОБАЛЬНЫЙ СЧЁТЧИК ВЕРСИИ ПРОДУКТОВ ===
   // Должен быть доступен всем компонентам внутри модуля
   let globalProductsVersion = 0;
@@ -1450,6 +1464,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [suggestedPresets, setSuggestedPresets] = useState(() => HEYS.store?.getSuggestedPresets?.() || []);
     const [selectedPreset, setSelectedPreset] = useState(null);
     const [previewItems, setPreviewItems] = useState([]);
+    const [isApplyingPreset, setIsApplyingPreset] = useState(false);
     const [createName, setCreateName] = useState(() => {
       if (!autoCreate) return '';
       return context?.day?.meals?.[context?.mealIndex]?.name || 'Набор';
@@ -1601,53 +1616,74 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       console.info('[HEYS.presets] ✅ Preset saved:', { name: preset.name, itemCount: preset.items.length });
     };
 
-    // 🚀 PERF R29: defer bulk add — forEach onAdd() triggers cascading React setState (239ms → ~0ms click)
     const handleAddAll = () => {
       const itemsToAdd = previewItems.filter(item => !item._excluded);
-      if (itemsToAdd.length === 0) return;
+      if (itemsToAdd.length === 0 || isApplyingPreset) return;
+      setIsApplyingPreset(true);
       setTimeout(() => {
-        itemsToAdd.forEach((item, idx) => {
-          const traceId = createAddTraceId(`preset-${idx + 1}`);
-          const product = {
-            id: item.product_id,
-            product_id: item.product_id,
-            name: item.name,
-            grams: item.grams,
-            kcal100: item.kcal100,
-            protein100: item.protein100,
-            fat100: item.fat100,
-            simple100: item.simple100 || 0,
-            complex100: item.complex100 || 0,
-            badFat100: item.badFat100 || 0,
-            goodFat100: item.goodFat100 || 0,
-            trans100: item.trans100 || 0,
-            fiber100: item.fiber100 || 0,
-            gi: item.gi || 0,
-            harm: item.harm || 0,
-          };
-          pushAddTrace('🧩 Preset item -> onAdd', {
-            traceId,
-            mealIndex: context?.mealIndex ?? null,
-            grams: item.grams,
-            productId: product.id ?? product.product_id ?? null,
-            productName: product.name || null,
-            // 🆕 R-INS-PRESET-AS-ONE (2026-05-14): пометка для внешнего onAdd
-            // что элемент пришёл из пресета. Day flow может скрыть summary-модалку
-            // на промежуточных items (показать только после последнего).
-            _presetBatch: { index: idx, total: itemsToAdd.length }
-          });
-          context?.onAdd?.({
-            product,
-            grams: item.grams,
-            mealIndex: context?.mealIndex,
-            _traceId: traceId,
-            _origin: 'preset-apply',
-            _presetBatch: { index: idx, total: itemsToAdd.length }
-          });
-        });
-        const itemCount = itemsToAdd.length;
-        const presetName = selectedPreset?.name;
-        console.info('[HEYS.presets] ✅ Applied preset:', { name: presetName, count: itemCount });
+        try {
+          const entries = itemsToAdd.map((item) => ({
+            product: {
+              id: item.product_id,
+              product_id: item.product_id,
+              name: item.name,
+              grams: item.grams,
+              kcal100: item.kcal100,
+              protein100: item.protein100,
+              fat100: item.fat100,
+              simple100: item.simple100 || 0,
+              complex100: item.complex100 || 0,
+              badFat100: item.badFat100 || 0,
+              goodFat100: item.goodFat100 || 0,
+              trans100: item.trans100 || 0,
+              fiber100: item.fiber100 || 0,
+              gi: item.gi || 0,
+              harm: item.harm || 0,
+            },
+            grams: item.grams
+          }));
+          const traceId = createAddTraceId('preset-bulk');
+          if (typeof context?.onAddMany === 'function') {
+            pushAddTrace('🧩 Preset bulk -> onAddMany', {
+              traceId,
+              mealIndex: context?.mealIndex ?? null,
+              count: entries.length,
+              productIds: entries.map((entry) => entry.product.id ?? entry.product.product_id ?? null),
+              productNames: entries.map((entry) => entry.product.name || null),
+              presetName: selectedPreset?.name || null
+            });
+            context.onAddMany({
+              entries,
+              mealIndex: context?.mealIndex,
+              _traceId: traceId,
+              _origin: 'preset-apply-bulk',
+              _presetName: selectedPreset?.name || null
+            });
+          } else {
+            console.warn('[HEYS.presets] ⚠️ onAddMany missing, falling back to sequential onAdd');
+            entries.forEach((entry, idx) => {
+              const itemTraceId = createAddTraceId(`preset-${idx + 1}`);
+              pushAddTrace('🧩 Preset item -> onAdd (fallback)', {
+                traceId: itemTraceId,
+                mealIndex: context?.mealIndex ?? null,
+                grams: entry.grams,
+                productId: entry.product.id ?? entry.product.product_id ?? null,
+                productName: entry.product.name || null,
+                _presetBatch: { index: idx, total: entries.length }
+              });
+              context?.onAdd?.({
+                product: entry.product,
+                grams: entry.grams,
+                mealIndex: context?.mealIndex,
+                _traceId: itemTraceId,
+                _origin: 'preset-apply',
+                _presetBatch: { index: idx, total: entries.length }
+              });
+            });
+          }
+          const itemCount = itemsToAdd.length;
+          const presetName = selectedPreset?.name;
+          console.info('[HEYS.presets] ✅ Applied preset:', { name: presetName, count: itemCount });
 
         // 🆕 R-INS-PRESET-AS-ONE: набор считается за ОДИН выбор продукта,
         // а не за N (N = items в наборе). Юзер указал «добавить 3» и выбрал
@@ -1659,27 +1695,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         //   3. Если remaining <= 0 — закрываем всю модалку.
         // Для multiProductMode без autoRepeat — тоже возвращаем юзера к выбору
         // (он сам решит когда закрыть через X).
-        const hasAutoRepeat = !!context?.hasAutoRepeat;
-        const isMultiMode = !!context?.multiProductMode;
-        if (hasAutoRepeat && typeof context?.consumeAutoRepeatStep === 'function') {
-          const remaining = context.consumeAutoRepeatStep();
-          if (remaining > 0) {
-            console.info('[HEYS.presets] 🔁 Preset = 1 step, remaining:', remaining);
-            onClose?.(); // закрыть только overlay пресетов, AddProductStep остаётся
+          const hasAutoRepeat = !!context?.hasAutoRepeat;
+          const isMultiMode = !!context?.multiProductMode;
+          if (hasAutoRepeat && typeof context?.consumeAutoRepeatStep === 'function') {
+            const remaining = context.consumeAutoRepeatStep();
+            if (remaining > 0) {
+              console.info('[HEYS.presets] 🔁 Preset = 1 step, remaining:', remaining);
+              onClose?.(); // закрыть только overlay пресетов, AddProductStep остаётся
+              return;
+            }
+          } else if (isMultiMode) {
+            // multi mode без autoRepeat — после набора возвращаем к выбору продукта,
+            // юзер сам закроет модал когда захочет.
+            onClose?.();
             return;
           }
-        } else if (isMultiMode) {
-          // multi mode без autoRepeat — после набора возвращаем к выбору продукта,
-          // юзер сам закроет модал когда захочет.
-          onClose?.();
-          return;
-        }
 
-        // autoRepeat исчерпан ИЛИ обычный режим → закрываем всю модалку
-        if (HEYS.StepModal?.hide) {
-          HEYS.StepModal.hide({ scrollToDiary: true });
-        } else {
-          onClose?.();
+          // autoRepeat исчерпан ИЛИ обычный режим → закрываем всю модалку
+          if (HEYS.StepModal?.hide) {
+            HEYS.StepModal.hide({ scrollToDiary: true });
+          } else {
+            onClose?.();
+          }
+        } catch (error) {
+          setIsApplyingPreset(false);
+          console.error('[HEYS.presets] ❌ Failed to apply preset:', error);
         }
       }, 0);
     };
@@ -1927,9 +1967,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement('button', {
           className: 'mpr-add-all-btn',
           onClick: handleAddAll,
-          disabled: active.length === 0
+          disabled: active.length === 0 || isApplyingPreset
         },
-          `✓ Добавить ${active.length} ${pluralProduct(active.length)} в приём`
+          isApplyingPreset ? 'Добавляем...' : `✓ Добавить ${active.length} ${pluralProduct(active.length)} в приём`
         )
       );
     };
@@ -5926,7 +5966,7 @@ NOVA: 1
     const handleSubmit = useCallback(() => {
       // 🔬 [HEYS.day-trace] 0/8 button click — green «✓ Добавить» pressed in GramsStep modal.
       try {
-        console.info('[HEYS.day-trace] 0/8 GramsStep button click', {
+        logDayTrace('[HEYS.day-trace] 0/8 GramsStep button click', {
           hasProduct: !!product,
           grams,
           mealIndex: context?.mealIndex ?? null,
@@ -6027,9 +6067,7 @@ NOVA: 1
           }
         }
 
-        window.dispatchEvent(new CustomEvent('heysProductAdded', {
-          detail: { product: productForSubmit, grams }
-        }));
+        // Product-add events are emitted by the day mutation after a successful write.
       }
 
       if (HEYS.StepModal?.hide) {
@@ -6593,6 +6631,7 @@ NOVA: 1
       initialGrams = 100, // 🆕 v24: Smart Grams Pre-fill (R6, Sprint 1)
       openPresetsCreate = false, // Открыть сразу в режиме создания набора из текущего приёма
       onAdd,
+      onAddMany,
       onAddPhoto, // Callback для добавления фото к приёму
       onNewProduct,
       onClose
@@ -6713,6 +6752,7 @@ NOVA: 1
         },
         onNewProduct,
         onAdd, // Передаём callback для добавления в приём пищи
+        onAddMany, // Callback для атомарного добавления готового набора
         onAddPhoto, // Callback для добавления фото к приёму
         headerRight: ({ stepData, currentConfig, goToStep }) => {
           const countLabel = `🗃️ ${currentProducts.length}`;
@@ -6806,10 +6846,7 @@ NOVA: 1
             }, 'error');
           }
 
-          // 🔔 Dispatch event для advice module
-          window.dispatchEvent(new CustomEvent('heysProductAdded', {
-            detail: { product: selectedProduct, grams }
-          }));
+          // Product-add events are emitted by the day mutation after a successful write.
         } else {
           console.warn('[HEYS.addProduct] ⚠️ onComplete skipped (missing product or grams)', {
             mealIndex,
