@@ -1,5 +1,8 @@
 # 37 · SEO-калькуляторы — source-ready pass 2026-06-14
 
+> **Статус:** evidence/reference. Это source-ready pass; живой статус
+> SEO-калькуляторов остаётся в `22`.
+
 ## Что сделано
 
 - Добавлена статическая страница `/calculators/` в landing app.

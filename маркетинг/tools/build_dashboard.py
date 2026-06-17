@@ -4,10 +4,11 @@
 
 Читает: 00_Сводная_панель.xlsx (Сводка, Конкуренты, Telegram, KPI-трекер),
 22_План (единый источник статусов задач), 25_Roadmap (гейты), 29_Аудит
-(сводные таблицы конкурентов), 30_Имплемент_мап (эталон; статусы пунктов
-с задачей «22 N.N» подтягиваются из 22), 24_посты (контент-батч).
+(сводные таблицы конкурентов), 30_Конкурентные_решения (конкурентные решения;
+статусы пунктов с задачей «22 N.N» подтягиваются из 22), 24_посты
+(контент-батч).
 Пишет: 00_Дашборд.html (самодостаточный, офлайн; вкладки:
-Обзор / Конкуренты / Имплемент-мап / Telegram).
+Обзор / Конкуренты / Telegram / План 22).
 
 При сломанной структуре источников падает с ненулевым кодом — pre-commit
 хук тогда блокирует коммит рассинхронизированного дашборда.
@@ -22,6 +23,7 @@ from pathlib import Path
 import openpyxl
 
 ROOT = Path(__file__).resolve().parent.parent  # маркетинг/
+README_TEXT = (ROOT / 'README.md').read_text(encoding='utf-8')
 
 
 def esc(v):
@@ -91,6 +93,19 @@ def parse_table_after_heading(text, heading):
     return parse_md_table(lines, table_idx)
 
 
+def parse_table_after_heading_prefix(text, heading_prefix):
+    lines = text.splitlines()
+    start_idx = next((i for i, ln in enumerate(lines)
+                      if ln.strip().startswith(heading_prefix)), None)
+    if start_idx is None:
+        return [], []
+    table_idx = next((i for i in range(start_idx + 1, len(lines))
+                      if lines[i].strip().startswith('|')), None)
+    if table_idx is None:
+        return [], []
+    return parse_md_table(lines, table_idx)
+
+
 def parse_paragraph_after_heading(text, heading):
     lines = text.splitlines()
     start_idx = next((i for i, ln in enumerate(lines) if ln.strip() == heading), None)
@@ -114,10 +129,7 @@ tariffs = [[sv.cell(row=r, column=c).value for c in range(2, 7)]
 tariff_note = sv['B17'].value or ''
 eco = {'base': sv['B21'].value, 'real': sv['D21'].value, 'goal': sv['F21'].value,
        'note': sv['B22'].value or ''}
-priorities = [sv.cell(row=r, column=2).value for r in range(25, 29)
-              if sv.cell(row=r, column=2).value]
 sut, pos = sv['B5'].value or '', sv['B8'].value or ''
-channels, rule = sv['B31'].value or '', sv['B40'].value or ''
 
 kpi = []
 kws = wb['KPI-трекер']
@@ -257,16 +269,18 @@ if audit_path.exists():
     if m:
         no_copy_decided = ' '.join(m.group(1).split())
 
-# ---------- имплемент-мап из 30 ----------
+# ---------- конкурентные решения из 30 ----------
 imap_landing, imap_product = ([], []), ([], [])
 imap_rule = imap_no_copy = ''
-imap_path = ROOT / '30_Имплемент_мап.md'
+imap_path = ROOT / '30_Конкурентные_решения.md'
 if imap_path.exists():
     i_text = imap_path.read_text(encoding='utf-8')
     i_lines = i_text.splitlines()
     cur = None
     for i, ln in enumerate(i_lines):
-        if ln.startswith('## В ЛЕНДИНГ') or ln.startswith('## Что заимствуем'):
+        if (ln.startswith('## В ЛЕНДИНГ')
+                or ln.startswith('## Что заимствуем')
+                or ln.startswith('## Что переносим')):
             cur = 'L'
         elif ln.startswith('## В ПРИЛОЖЕНИЕ') or ln.startswith('## После релиза'):
             cur = 'P'
@@ -299,6 +313,7 @@ def is_top_level_task(tid):
 
 
 plan_text = (ROOT / '22_План_реализации_маркетинга.md').read_text(encoding='utf-8')
+release_steps = parse_table_after_heading_prefix(plan_text, '## Релизные ступени')
 stages = []
 task_status = {}  # '3.7' -> '✅'/'🟡'/'⬜' — единый источник статусов задач
 for m in re.finditer(r'^## (Этап \d[^\n]*)\n(.*?)(?=^## |\Z)', plan_text, re.M | re.S):
@@ -348,7 +363,9 @@ for m in re.finditer(r'^## (Этап \d[^\n]*)\n(.*?)(?=^## |\Z)', plan_text, re
 
 # ---------- гейты из 25 ----------
 gates = []
-lines = (ROOT / '25_Roadmap_Ф0_Ф1.md').read_text(encoding='utf-8').splitlines()
+roadmap_text = (ROOT / '25_Roadmap_Ф0_Ф1.md').read_text(encoding='utf-8')
+release_subgates = parse_table_after_heading_prefix(roadmap_text, '## Подраздел ПДн/RKN release gate')
+lines = roadmap_text.splitlines()
 start = next((i for i, ln in enumerate(lines) if 'Гейт / метрика' in ln), None)
 if start is not None:
     for line in lines[start + 1:]:
@@ -367,22 +384,6 @@ def chip(s):
     if '🟡' in s:
         return '<span class="chip mid">в работе</span>'
     return '<span class="chip wait">ожидает</span>'
-
-
-def status_class(st):
-    return 'ok' if st == '✅' else ('mid' if st == '🟡' else 'wait')
-
-
-def task_tone_class(task):
-    if task['status'] == '✅':
-        return 'task-done'
-    owner = task.get('owner', '').lower()
-    needs_user = any(x in owner for x in ('тво', 'тоб', 'оба', 'codex + ты', 'ты'))
-    if needs_user:
-        return 'task-user'
-    if 'codex сам' in owner or owner in ('security', 'codex'):
-        return 'task-codex'
-    return 'task-user'
 
 
 now = datetime.datetime.now()
@@ -406,31 +407,6 @@ gate_rows = ''.join(
     f'<tr><td>{esc(g["name"])}</td><td class="num">{esc(g["goal"])}</td>'
     f'<td class="dim">{esc(g["trigger"])}</td><td class="dim">{esc(g["action"])}</td>'
     f'<td>{chip(g["status"])}</td></tr>' for g in gates)
-
-stage_rows = ''
-for s in stages:
-    pct = round(s['done'] / s['total'] * 100)
-    task_items = []
-    for task in s['tasks']:
-        subitems = ''
-        if task['subtasks']:
-            subitems = '<ul class="subtask-list">' + ''.join(
-                f'<li class="{task_tone_class(sub)}"><span class="chip {status_class(sub["status"])}">'
-                f'{esc(sub["id"])}</span> {esc(sub["name"])}</li>'
-                for sub in task['subtasks']) + '</ul>'
-        task_items.append(
-            f'<li class="{task_tone_class(task)}"><span class="chip {status_class(task["status"])}">'
-            f'{esc(task["id"])}</span> {esc(task["name"])}{subitems}</li>')
-    task_list = ''.join(task_items)
-    stage_rows += (
-        f'<details class="stage-d"><summary class="stage">'
-        f'<div class="s-head"><b>{esc(s["title"])}</b>'
-        f'<span class="dim">{esc(s["desc"])}</span></div>'
-        f'<div class="s-bar"><div class="bar"><div class="bar-fill" '
-        f'style="width:{pct}%"></div></div>'
-        f'<span class="bar-num">{pct}%</span>'
-        f'<span class="dim s-count">{s["done"]:g}/{s["total"]}</span></div></summary>'
-        f'<ul class="task-list">{task_list}</ul></details>')
 
 
 def md_inline(text):
@@ -574,6 +550,36 @@ def render_plan_markdown(text):
 
 plan_full_html = render_plan_markdown(plan_text)
 
+release_steps_rows = ''
+release_step_by_name = {}
+if release_steps[1]:
+    for r in release_steps[1]:
+        if len(r) < 5:
+            continue
+        step_name = clean_md_cell(r[0])
+        release_step_by_name[step_name] = r
+        release_steps_rows += (
+            f'<tr><td>{md_inline(r[0])}</td>'
+            f'<td>{md_inline(r[1])}</td>'
+            f'<td class="dim">{md_inline(r[2])}</td>'
+            f'<td>{md_inline(r[4])}</td></tr>')
+
+s1_blocker_items = ''
+s1_row = next((r for name, r in release_step_by_name.items()
+               if name.startswith('S1:')), None)
+if s1_row and len(s1_row) >= 3:
+    blockers = [b.strip() for b in re.split(r';\s*', clean_md_cell(s1_row[2])) if b.strip()]
+    s1_blocker_items = ''.join(f'<li>{md_inline(b)}</li>' for b in blockers)
+
+release_subgate_rows = ''
+if release_subgates[1]:
+    for r in release_subgates[1]:
+        if len(r) < 4:
+            continue
+        release_subgate_rows += (
+            f'<tr><td>{md_inline(r[0])}</td><td>{md_inline(r[1])}</td>'
+            f'<td>{md_inline(r[2])}</td><td class="dim">{md_inline(r[3])}</td></tr>')
+
 kpi_rows = ''
 for k in kpi:
     goal = k['goal']
@@ -584,11 +590,6 @@ for k in kpi:
                  f'"><div class="k-name">{esc(k["name"])}</div>'
                  f'<div class="k-val">{esc(fact)}</div>'
                  f'<div class="k-goal">цель {esc(k["dir"] or "")} {esc(goal)}</div></div>')
-
-prio_rows = ''.join(
-    f'<div class="prio"><div class="p-num">{i}</div>'
-    f'<div>{esc(re.sub(r"^[0-9]+[.][ ]*", "", str(p)))}</div></div>'
-    for i, p in enumerate(priorities, 1))
 
 # ---------- фрагменты: Конкуренты ----------
 comp_table = '<tr>' + ''.join(f'<th>{esc(h)}</th>' for h in comp_head) + '</tr>'
@@ -659,11 +660,7 @@ def render_imap(head_rows):
     for r in rows:
         if len(r) < 6:
             continue
-        st = r[5]
-        # live-статус из 22, если в колонке «Задача» есть ссылка `22` N.N
-        tm = re.search(r'22[`»\s]*\s*(\d+\.\d+)', r[3])
-        if tm and tm.group(1) in task_status:
-            st = task_status[tm.group(1)]
+        st = imap_status(r)
         cls = 'ok' if '✅' in st else ('mid' if '🟡' in st else 'wait')
         if '✅' in st:
             done += 1
@@ -673,6 +670,19 @@ def render_imap(head_rows):
                 f'<td class="dim">{esc(r[4])}</td>'
                 f'<td><span class="chip {cls}">{label}</span></td></tr>')
     return out, done, len(rows)
+
+
+def imap_task_id(row):
+    if len(row) < 4:
+        return None
+    tm = re.search(r'22[`»\s]*\s*(\d+\.\d+)', row[3])
+    return tm.group(1) if tm else None
+
+
+def imap_status(row):
+    fallback = row[5] if len(row) > 5 else '⬜'
+    tid = imap_task_id(row)
+    return task_status.get(tid, fallback)
 
 
 imap_landing_table, imap_l_done, imap_l_total = render_imap(imap_landing)
@@ -912,7 +922,6 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
   <div class="tabs">
     <button class="tab active" data-pane="overview">Обзор</button>
     <button class="tab" data-pane="comp">Конкуренты</button>
-    <button class="tab" data-pane="imap">Имплемент-мап</button>
     <button class="tab" data-pane="tg">Telegram</button>
     <button class="tab" data-pane="plan22">План 22</button>
   </div>
@@ -934,31 +943,35 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 </div>
 <p class="label" style="margin-top:6px">{esc(eco['note'])}</p>
 
-<section><h2>Приоритеты сейчас</h2><div class="prios">{prio_rows}</div></section>
+<section><h2>Релизные ступени S0–S4</h2>
+<div class="card scrollx" style="padding:4px 8px"><table>
+<tr><th>Ступень</th><th>Что разрешает</th><th>Что блокирует сейчас</th><th>Статус</th></tr>
+{release_steps_rows}</table></div></section>
+
+<section class="cols2">
+<div class="card"><h2>Блокеры S1 сейчас</h2><ul>{s1_blocker_items}</ul></div>
+<div class="card"><h2>R0–R3 release gate</h2><div class="scrollx" style="padding:4px 0"><table>
+<tr><th>Гейт</th><th>Блокирует</th><th>Статус</th><th>Следующее действие</th></tr>
+{release_subgate_rows}</table></div></div>
+</section>
 
 <section><h2>Гейты Ф0 → Ф1 (roadmap 25)</h2>
 <div class="card" style="padding:4px 8px"><table>
 <tr><th>Гейт</th><th>Цель</th><th>🔴 Триггер</th><th>Действие при провале</th><th>Статус</th></tr>
 {gate_rows}</table></div></section>
 
-<div class="cols2" style="margin-top:18px">
-<div><h2>Этапы плана 22</h2><div class="card">{stage_rows}</div></div>
-<div><h2>Тарифная сетка</h2><div class="grid tariffs">{tariff_cards}</div>
-<p class="label" style="margin-top:6px">{esc(tariff_note)}</p></div>
-</div>
+<section><h2>Экономика и тарифы (xlsx)</h2>
+<div class="grid tariffs">{tariff_cards}</div>
+<p class="label" style="margin-top:6px">{esc(tariff_note)}</p>
+</section>
 
 <section><h2>KPI-трекер (факт — с первого трафика)</h2>
 <div class="grid kpis">{kpi_rows}</div></section>
-
-<section class="cols2">
-<div class="card"><h2>Каналы</h2><p class="sm">{esc(channels)}</p></div>
-<div class="card"><h2>Правило роста</h2><p class="sm">{esc(rule)}</p></div>
-</section>
 </div>
 
 <div class="pane" id="comp">
 <p class="sub"><b>Главный вывод аудита 2026-06-10:</b> {esc(audit_head)}</p>
-<p class="label">Что переносим в лендинг/продукт и статусы — вкладка <b>«Имплемент-мап»</b> (источник: 30).</p>
+<p class="label">Конкурентные решения из 30 встроены сюда; живые статусы подтягиваются из плана 22.</p>
 <section><h2>Карта «живой человек» (кто реально даёт)</h2>
 <div class="card" style="padding:4px 8px"><table>
 <tr><th>Игрок</th><th>Человек</th><th>Частота</th><th>Цена/мес</th><th>РФ-оплата</th></tr>
@@ -978,17 +991,13 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 <section><h2>Лендинги: CalZen vs наш — что перенять</h2>
 <div class="card" style="padding:4px 8px"><table>{land_table}</table></div></section>
 <section><h2>Что оставить из конкурентки</h2>{top5_rows}</section>
-<section class="card"><h2>Чего не копировать</h2><p class="sm">{esc(no_copy)}</p></section>
-<p class="label" style="margin-top:10px">Детали: 12 (CalZen/лендинги) · 06 (позиционирование) · 16 (паттерны) · навигатор — 26.</p>
-</div>
-
-<div class="pane" id="imap">
-<p class="sub"><b>Эталон конкурентной комбинации</b> (источник: 30_Имплемент_мап). {esc(imap_rule)}</p>
-<section><h2>Что заимствуем — {imap_l_done}/{imap_l_total} готово</h2>
+<section><h2>Решения в плане 22 — {imap_l_done}/{imap_l_total} готово</h2>
+<p class="sub">{esc(imap_rule)}</p>
 <div class="card scrollx" style="padding:4px 8px"><table>{imap_landing_table}</table></div></section>
 <section><h2>После релиза — {imap_p_done}/{imap_p_total} готово</h2>
 <div class="card scrollx" style="padding:4px 8px"><table>{imap_product_table}</table></div></section>
-<section class="card"><h2>Не копируем (анти-эталон)</h2><p class="sm">{esc(imap_no_copy)}</p></section>
+<section class="card"><h2>Чего не копировать</h2><p class="sm">{esc(imap_no_copy or no_copy)}</p></section>
+<p class="label" style="margin-top:10px">Детали: 12 (CalZen/лендинги) · 06 (позиционирование) · 16 (паттерны) · навигатор — 26 · решения — 30 · статус — 22.</p>
 </div>
 
 <div class="pane" id="tg">
@@ -1028,7 +1037,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 <div class="card plan-source">{plan_full_html}</div></section>
 </div>
 
-<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 22_План · 25_Roadmap · 29_Аудит ·
+<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 22_План · 25_Roadmap · 29_Аудит · 30_Решения ·
 обновление: <b>Обновить_дашборд.command</b> (двойной клик) · авто на каждом коммите источников ·
 <code>python3 маркетинг/tools/build_dashboard.py</code></footer>
 
@@ -1052,13 +1061,28 @@ document.querySelectorAll('.tab').forEach(function (t) {{
 
 # ---------- sanity-checks: громко падаем при сломанной структуре ----------
 problems = []
+numbered_md_missing_status = []
+for md_path in sorted(ROOT.glob('[0-9][0-9]_*.md')):
+    md_text = md_path.read_text(encoding='utf-8')
+    if not re.search(r'^> \*\*Статус:\*\*', md_text, re.M):
+        numbered_md_missing_status.append(md_path.name)
+
 for cond, msg in [
+    ('## Статус корпуса' in README_TEXT, 'README: нет раздела «Статус корпуса»'),
+    ('Правило: статус задачи меняется только в `22`' in README_TEXT,
+     'README: нет правила, что task-статусы меняются только в 22'),
+    (not numbered_md_missing_status,
+     'маркетинг/*.md: нет статусной шапки в ' + ', '.join(numbered_md_missing_status)),
+    ('data-pane="imap"' not in html_out and 'id="imap"' not in html_out,
+     'дашборд: вернулась отдельная вкладка/панель imap вместо интеграции в «Конкуренты»'),
     (len(tariffs) >= 3, 'Сводка: тарифная сетка < 3 строк (B12:F15)'),
     (eco['real'] and eco['base'], 'Сводка: пустая экономика (B21/D21)'),
-    (len(priorities) >= 3, 'Сводка: приоритеты < 3 (B25:B28)'),
+    (len(release_steps[1]) >= 5, '22: релизные ступени S0–S4 не найдены или < 5 строк'),
     (len(stages) >= 5, '22_План: найдено < 5 этапов'),
     (sum(s['total'] for s in stages) >= 20, '22_План: подозрительно мало задач'),
     (len(gates) >= 7, '25_Roadmap: гейтов < 7'),
+    (len(release_subgates[1]) >= 4, '25_Roadmap: release subgates R0–R3 < 4 строк'),
+    (bool(s1_blocker_items), '22: S1 blockers не собраны из релизных ступеней'),
     (len(kpi) >= 10, 'KPI-трекер: метрик < 10'),
     (len(audit_apps[1]) >= 10, '29 §4: таблица приложений < 10 строк'),
     (len(audit_landings[1]) >= 10, '29 §5: таблица лендингов < 10 строк'),
@@ -1081,12 +1105,20 @@ for cond, msg in [
     if not cond:
         problems.append(msg)
 
-# ВСЕ ссылки «22 N.N» из имплемент-мапа должны существовать в 22
+# ВСЕ исполняемые строки конкурентных решений должны быть привязаны к живой задаче 22.
 for sec_name, (_, rows) in (('Что заимствуем', imap_landing), ('После релиза', imap_product)):
     for r in rows:
         if len(r) < 6:
+            problems.append(
+                f'30 ({sec_name}): строка конкурентных решений должна иметь колонки '
+                '№/Что/Почему/Задача/Очередь/Статус')
             continue
-        for tid in re.findall(r'22[`»\s]*\s*(\d+\.\d+)', r[3]):
+        tids = re.findall(r'22[`»\s]*\s*(\d+\.\d+)', r[3])
+        if not tids:
+            problems.append(
+                f'30 ({sec_name}, {r[0]}): нет ссылки на задачу 22 N.N — '
+                'статус не сможет подтянуться автоматически')
+        for tid in tids:
             if tid not in task_status:
                 problems.append(
                     f'30 ({sec_name}, {r[0]}): ссылка на задачу 22 {tid} — '
