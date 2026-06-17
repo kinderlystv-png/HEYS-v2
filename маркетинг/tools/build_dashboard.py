@@ -312,8 +312,47 @@ def is_top_level_task(tid):
     return re.fullmatch(r'\d+[A-ZА-Я]?\.\d+', tid) is not None
 
 
+def parse_release_step_sections(text):
+    m = re.search(r'^## Релизные ступени[^\n]*\n(.*?)(?=^## |\Z)', text, re.M | re.S)
+    if not m:
+        return [], []
+    lines = m.group(1).splitlines()
+    head = ['Ступень', 'Что можно', 'Конкретный блокер', 'Что уже готово',
+            'Codex/помощь', 'Следующий шаг', 'Статус']
+    rows = []
+    i = 0
+    while i < len(lines):
+        h = re.match(r'^###\s+(S\d\s+[—-]\s+.+)$', lines[i].strip())
+        if not h:
+            i += 1
+            continue
+        step_name = h.group(1).strip()
+        table_idx = next((j for j in range(i + 1, len(lines))
+                          if lines[j].strip().startswith('|')), None)
+        if table_idx is None:
+            i += 1
+            continue
+        table_head, table_rows = parse_md_table(lines, table_idx)
+        if table_rows:
+            row_map = {clean_md_cell(k): table_rows[0][idx] if idx < len(table_rows[0]) else ''
+                       for idx, k in enumerate(table_head)}
+            rows.append([
+                step_name,
+                row_map.get('Что можно', ''),
+                row_map.get('Конкретный блокер', ''),
+                row_map.get('Что уже готово', ''),
+                row_map.get('Codex/помощь', ''),
+                row_map.get('Следующий шаг', ''),
+                row_map.get('Статус', ''),
+            ])
+        i = table_idx + 1
+    return head, rows
+
+
 plan_text = (ROOT / '22_План_реализации_маркетинга.md').read_text(encoding='utf-8')
-release_steps = parse_table_after_heading_prefix(plan_text, '## Релизные ступени')
+release_steps = parse_release_step_sections(plan_text)
+if not release_steps[1]:
+    release_steps = parse_table_after_heading_prefix(plan_text, '## Релизные ступени')
 stages = []
 task_status = {}  # '3.7' -> '✅'/'🟡'/'⬜' — единый источник статусов задач
 for m in re.finditer(r'^## (Этап \d[^\n]*)\n(.*?)(?=^## |\Z)', plan_text, re.M | re.S):
@@ -420,15 +459,93 @@ def md_inline(text):
 
 def task_tone_from_cells(cells, status_idx=None, owner_idx=None):
     st = cells[status_idx] if status_idx is not None and status_idx < len(cells) else ''
-    if '✅' in st:
+    marker_text = f'{cells[0] if cells else ""} {st}'
+    if task_is_done(cells, status_idx, owner_idx):
         return 'task-done'
     owner = cells[owner_idx].lower() if owner_idx is not None and owner_idx < len(cells) else ''
     needs_user = any(x in owner for x in ('тво', 'тоб', 'оба', 'codex + ты', 'ты'))
     if needs_user:
+        if '🟡' in marker_text or '⬜' in marker_text:
+            return 'task-user-blocked'
         return 'task-user'
     if 'codex сам' in owner or owner in ('security', 'codex'):
+        if '🟡' in marker_text or '⬜' in marker_text:
+            return 'task-codex-blocked'
         return 'task-codex'
-    return 'task-user' if ('🟡' in st or '⬜' in st) else ''
+    return 'task-user' if ('🟡' in marker_text or '⬜' in marker_text) else ''
+
+
+def task_is_done(cells, status_idx=None, owner_idx=None):
+    st = cells[status_idx] if status_idx is not None and status_idx < len(cells) else ''
+    owner = cells[owner_idx].lower() if owner_idx is not None and owner_idx < len(cells) else ''
+    return bool(re.match(r'^\s*✅', st)) or 'закрыто' in owner
+
+
+def plain_md(text):
+    text = html.unescape(str(text or ''))
+    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+    text = re.sub(r'[*`]', '', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def trim_blocker(text, limit=220):
+    text = plain_md(text).strip(' .;')
+    if not text:
+        return '—'
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(' ', 1)[0].rstrip(' ,;')
+    return cut + '...'
+
+
+def extract_blocker_from_cells(cells, head, status_idx=None, owner_idx=None):
+    if task_is_done(cells, status_idx, owner_idx):
+        return '—'
+
+    def cell(name):
+        return cells[head.index(name)] if name in head and head.index(name) < len(cells) else ''
+
+    detail = cell('Детали') or cell('Что блокирует сейчас')
+    task = cell('Задача') or cell('Подраздел')
+    status = cell('Статус')
+    estimate = cell('Оценка Codex')
+    sources = [plain_md(x) for x in (detail, status, task) if plain_md(x)]
+
+    patterns = (
+        r'До ✅(?: оста[её]тся)?:\s*(.+)',
+        r'Pending(?: для финального ✅)?:\s*(.+)',
+        r'Live smoke невозможен до\s+(.+)',
+        r'невозможен до\s+(.+)',
+        r'зависит от\s+(.+)',
+        r'только после\s+(.+)',
+        r'до target-env проверки\s+(.+)',
+        r'до проверки\s+(.+)',
+        r'Нужн[аыо]\s+(.+)',
+    )
+    for source in sources:
+        for pattern in patterns:
+            m = re.search(pattern, source, re.I)
+            if m:
+                return trim_blocker(m.group(1))
+
+    estimate_plain = plain_md(estimate)
+    if estimate_plain and estimate_plain not in ('—', '0'):
+        if re.search(r'после|доступ|секрет|creds|legal|review|ожидан|deploy|bundle|commit|2fa', estimate_plain, re.I):
+            return trim_blocker(estimate_plain)
+
+    owner_plain = plain_md(cell('Codex/помощь')).lower()
+    if any(x in owner_plain for x in ('тво', 'оба', 'codex + ты')):
+        return 'требуется участие/доступ основателя'
+    return '—'
+
+
+def table_needs_blocker_column(head):
+    normalized = [plain_md(h).lower() for h in head]
+    if any('блокер' in h for h in normalized):
+        return False
+    if any('блокирует' in h for h in normalized):
+        return False
+    return 'статус' in normalized
 
 
 def md_table_separator(cells):
@@ -443,14 +560,35 @@ def render_plan_table(table_lines):
     head = rows[0]
     status_idx = head.index('Статус') if 'Статус' in head else None
     owner_idx = head.index('Codex/помощь') if 'Codex/помощь' in head else None
+    add_blocker = table_needs_blocker_column(head)
+    blocker_insert_idx = status_idx + 1 if status_idx is not None else len(head)
+    toggle_source_idx = (
+        head.index('Детали') if 'Детали' in head else
+        head.index('Задача') if 'Задача' in head else
+        head.index('Подраздел') if 'Подраздел' in head else
+        0
+    )
+    toggle_idx = toggle_source_idx + 1 if add_blocker and blocker_insert_idx <= toggle_source_idx else toggle_source_idx
     body = rows[2:] if len(rows) > 1 and md_table_separator(rows[1]) else rows[1:]
     out = ['<div class="plan-md-table-wrap"><table class="plan-md-table"><thead><tr>']
-    out.extend(f'<th>{md_inline(c)}</th>' for c in head)
+    render_head = list(head)
+    if add_blocker:
+        render_head.insert(blocker_insert_idx, 'Блокер')
+    out.extend(f'<th>{md_inline(c)}</th>' for c in render_head)
     out.append('</tr></thead><tbody>')
     for row in body:
         cls = task_tone_from_cells(row, status_idx, owner_idx)
+        is_done = cls == 'task-done'
         out.append(f'<tr class="{cls}">')
-        out.extend(f'<td>{md_inline(c)}</td>' for c in row)
+        render_row = list(row)
+        if add_blocker:
+            render_row.insert(blocker_insert_idx, extract_blocker_from_cells(row, head, status_idx, owner_idx))
+        for idx, c in enumerate(render_row):
+            td_class = ' class="blocker"' if add_blocker and idx == blocker_insert_idx else ''
+            body_html = f'<div class="cell-body">{md_inline(c)}</div>' if is_done else md_inline(c)
+            toggle = ('<button class="row-toggle" type="button" aria-expanded="false">'
+                      'Подробнее</button>') if is_done and idx == toggle_idx else ''
+            out.append(f'<td{td_class}>{body_html}{toggle}</td>')
         out.append('</tr>')
     out.append('</tbody></table></div>')
     return ''.join(out)
@@ -558,15 +696,16 @@ if release_steps[1]:
             continue
         step_name = clean_md_cell(r[0])
         release_step_by_name[step_name] = r
+        status_cell = r[6] if len(r) >= 7 else r[4]
         release_steps_rows += (
             f'<tr><td>{md_inline(r[0])}</td>'
             f'<td>{md_inline(r[1])}</td>'
             f'<td class="dim">{md_inline(r[2])}</td>'
-            f'<td>{md_inline(r[4])}</td></tr>')
+            f'<td>{md_inline(status_cell)}</td></tr>')
 
 s1_blocker_items = ''
 s1_row = next((r for name, r in release_step_by_name.items()
-               if name.startswith('S1:')), None)
+               if name.startswith('S1')), None)
 if s1_row and len(s1_row) >= 3:
     blockers = [b.strip() for b in re.split(r';\s*', clean_md_cell(s1_row[2])) if b.strip()]
     s1_blocker_items = ''.join(f'<li>{md_inline(b)}</li>' for b in blockers)
@@ -760,7 +899,7 @@ html_out = f'''<!DOCTYPE html>
 <title>HEYS · Панель управления маркетингом</title>
 <style>
 :root {{ --bg:#0b1020; --card:#121931; --card2:#0f1530; --line:#1f2a4d;
-  --txt:#e8ecf8; --dim:#8b96b8; --acc:#4f8cff; --ok:#2dd4a7; --warn:#f5b14c;
+  --txt:#e8ecf8; --dim:#8b96b8; --acc:#4f8cff; --ok:#2dd4a7; --warn:#f5b14c; --hold:#f8d24a;
   --red:#f0647c; }}
 * {{ box-sizing:border-box; margin:0; }}
 body {{ background:radial-gradient(1100px 500px at 80% -10%,#16224a 0%,var(--bg) 55%);
@@ -828,6 +967,8 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .task-list li {{ font-size:12px; padding:3px 0; border-bottom:1px dashed #16203f; }}
 .task-list li.task-done,.subtask-list li.task-done {{ color:var(--dim); opacity:.62; }}
 .task-list li.task-codex,.subtask-list li.task-codex {{ color:var(--ok); }}
+.task-list li.task-codex-blocked,.subtask-list li.task-codex-blocked {{ color:var(--warn); }}
+.task-list li.task-user-blocked,.subtask-list li.task-user-blocked {{ color:var(--hold); }}
 .task-list li.task-user,.subtask-list li.task-user {{ color:var(--txt); }}
 .task-list .chip {{ margin-right:6px; }}
 .subtask-list {{ margin:4px 0 1px 22px; padding-left:0; list-style:none; }}
@@ -906,11 +1047,20 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .plan-md-hr {{ border:0; border-top:1px solid var(--line); margin:18px 0; }}
 .plan-md-table-wrap {{ overflow-x:auto; margin:12px 0 20px; border:1px solid var(--line);
   border-radius:10px; background:#0d1428; }}
-.plan-md-table {{ min-width:860px; font-size:12px; }}
+.plan-md-table {{ min-width:1040px; font-size:12px; }}
 .plan-md-table th {{ background:#111a33; }}
 .plan-md-table td,.plan-md-table th {{ padding:7px 9px; }}
+.plan-md-table td.blocker {{ min-width:210px; max-width:360px; color:var(--hold); }}
 .plan-md-table tr.task-done td {{ color:var(--dim); opacity:.62; }}
+.plan-md-table tr.task-done:not(.expanded) .cell-body {{ display:-webkit-box;
+  -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
+.plan-md-table tr.task-done.expanded .cell-body {{ display:block; overflow:visible; }}
+.row-toggle {{ display:block; margin-top:4px; padding:0; border:0; background:transparent;
+  color:var(--acc); font:inherit; font-size:11px; cursor:pointer; }}
+.row-toggle:hover {{ text-decoration:underline; }}
 .plan-md-table tr.task-codex td {{ color:var(--ok); }}
+.plan-md-table tr.task-codex-blocked td {{ color:var(--warn); }}
+.plan-md-table tr.task-user-blocked td {{ color:var(--hold); }}
 .plan-md-table tr.task-user td {{ color:var(--txt); }}
 ul {{ padding-left:18px; }} li {{ margin-bottom:4px; font-size:12.5px; }}
 footer {{ margin-top:26px; color:var(--dim); font-size:11px;
@@ -1032,7 +1182,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 
 <div class="pane" id="plan22">
 <p class="sub"><b>Полный источник:</b> 22_План_реализации_маркетинга.md. Цвет строк задач:
-серый = закрыто, зелёный = Codex может сделать сам, белый = нужно участие основателя / доступ / внешнее решение.</p>
+серый = закрыто, зелёный = Codex может сделать сам без текущего блокера, жёлто-оранжевый = Codex может сделать сам, но ждёт блокер/условие, жёлтый = Codex может сделать с твоей помощью, но пункт заблокирован, белый = нужно участие основателя / доступ / внешнее решение.</p>
 <section><h2>План реализации маркетинга — полный текст</h2>
 <div class="card plan-source">{plan_full_html}</div></section>
 </div>
@@ -1054,6 +1204,14 @@ document.querySelectorAll('.tab').forEach(function (t) {{
     document.querySelectorAll('.pane').forEach(function (x) {{ x.classList.remove('active'); }});
     t.classList.add('active');
     document.getElementById(t.dataset.pane).classList.add('active');
+  }});
+}});
+document.querySelectorAll('.row-toggle').forEach(function (btn) {{
+  btn.addEventListener('click', function () {{
+    var row = btn.closest('tr');
+    var expanded = row.classList.toggle('expanded');
+    btn.textContent = expanded ? 'Свернуть' : 'Подробнее';
+    btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
   }});
 }});
 </script>
