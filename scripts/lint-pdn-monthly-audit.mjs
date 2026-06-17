@@ -317,7 +317,7 @@ function checkRknDraft() {
   );
   notePending(
     'RKN submitted-record comparison',
-    'requires фактическая подача/номер/ключ/PDF вне репо; preflight does not mark 1.9.6 complete',
+    'requires publication/check of registry record 26-22-005319; number/key/screenshots stay outside repo',
   );
 }
 
@@ -405,7 +405,7 @@ function checkAnalyticsBoundary() {
 function checkPlanAndDecisionLog() {
   requireIncludes(
     FILES.plan22,
-    ['1.9.6', 'heys-pdn-monthly-audit.md', 'РКН-подачи'],
+    ['1.9.6', 'heys-pdn-monthly-audit.md', 'публикация и сверка записи `26-22-005319`'],
     'marketing plan keeps 1.9.6 external blocker visible',
   );
   requireIncludes(

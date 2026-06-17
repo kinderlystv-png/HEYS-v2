@@ -1,8 +1,9 @@
 # HEYS · R0/R1/R2 sign-off package
 
 Статус: internal package index / external actions pending. Файл не заменяет
-юриста, РКН-подачу, ЮKassa smoke или incident drill. Его задача — собрать в
-одном месте, что именно уже готово в репо и что проверять перед R0, R1 и R2.
+юриста, сверку опубликованной РКН-записи, ЮKassa smoke или incident drill. Его
+задача — собрать в одном месте, что именно уже готово в репо и что проверять
+перед R0, R1 и R2.
 
 Не хранить здесь номера/ключи РКН-уведомлений, скрины ЕСИА, ПДн клиентов,
 секреты YooKassa/Lockbox или юридические комментарии с привилегией. Полные
@@ -10,19 +11,20 @@
 
 ## R0 — заявки и бесплатные триалы
 
-| Проверка                    | Источник                                                                                                       | Статус | Что остается вне репо / в live              |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------- |
-| РКН updateform              | [rkn-notification-heys.md](rkn-notification-heys.md), `маркетинг/31`                                           | 🟡     | подать изменения, сохранить номер/ключ/PDF  |
-| Реестр данных               | [heys-data-register.md](heys-data-register.md)                                                                 | 🟡     | сверить с фактически поданной формой        |
-| ИСПДн gap-list              | [heys-ispdn-gap-list.md](heys-ispdn-gap-list.md)                                                               | 🟡     | финально определить уровень/модель угроз    |
-| Access matrix + break-glass | [heys-access-matrix.md](heys-access-matrix.md), [heys-pdn-incident-playbook.md](heys-pdn-incident-playbook.md) | ✅     | drill перед R2                              |
-| Calendar/reminders          | [heys-pdn-calendar.ics](heys-pdn-calendar.ics)                                                                 | 🟡     | импортировать во внешний календарь          |
-| Monthly audit preflight     | `pnpm pdn:monthly-audit`                                                                                       | 🟡     | первая фактическая запись после РКН/запуска |
-| Telegram lead notification  | `pnpm privacy:marketing`, `yandex-cloud-functions/heys-bot-client/CRM_SMOKE.md`                                | 🟡     | deploy + live smoke без ПДн                 |
-| Security strict readiness   | `pnpm security:strict-readiness`, `pnpm security:l6-watchdogs`                                                 | 🟡     | deploy/reobserve `6Б.3/6Б.4`                |
+| Проверка                    | Источник                                                                                                       | Статус | Что остается вне репо / в live                              |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------- |
+| РКН updateform              | [rkn-notification-heys.md](rkn-notification-heys.md), `маркетинг/31`                                           | 🟡     | принято порталом 2026-06-17; дождаться публикации в реестре |
+| Реестр данных               | [heys-data-register.md](heys-data-register.md)                                                                 | 🟡     | сверить с опубликованной записью 26-22-005319               |
+| ИСПДн gap-list              | [heys-ispdn-gap-list.md](heys-ispdn-gap-list.md)                                                               | 🟡     | финально определить уровень/модель угроз                    |
+| Access matrix + break-glass | [heys-access-matrix.md](heys-access-matrix.md), [heys-pdn-incident-playbook.md](heys-pdn-incident-playbook.md) | ✅     | drill перед R2                                              |
+| Calendar/reminders          | [heys-pdn-calendar.ics](heys-pdn-calendar.ics)                                                                 | 🟡     | импортировать во внешний календарь                          |
+| Monthly audit preflight     | `pnpm pdn:monthly-audit`                                                                                       | 🟡     | первая фактическая запись после РКН/запуска                 |
+| Telegram lead notification  | `pnpm privacy:marketing`, `yandex-cloud-functions/heys-bot-client/CRM_SMOKE.md`                                | 🟡     | deploy + live smoke без ПДн                                 |
+| Security strict readiness   | `pnpm security:strict-readiness`, `pnpm security:l6-watchdogs`                                                 | 🟡     | deploy/reobserve `6Б.3/6Б.4`                                |
 
-R0 нельзя переводить в зеленый только текстом: нужны РКН-подача, live-smoke и
-security observation там, где они явно отмечены.
+R0 нельзя переводить в зеленый только текстом: РКН-подача уже принята порталом,
+но нужны публикация/сверка записи, live-smoke и security observation там, где
+они явно отмечены.
 
 ## R1 — первая оплата
 
