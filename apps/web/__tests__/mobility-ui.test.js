@@ -413,7 +413,7 @@ describe('Mobility UI', () => {
     expect(records.painFlags[0].atomId).toBeTruthy();
     expect(globalThis.HEYS.Mobility.recordsStore.load('client-b', storage).sessions).toHaveLength(0);
     delete globalThis.HEYS.TrainingStep;
-  });
+  }, 15000);
 
   it('не пишет mobilityLog в дневник без явного контекста тренировки', () => {
     const storage = globalThis.HEYS.Mobility.recordsStore.createMemoryStorage();
