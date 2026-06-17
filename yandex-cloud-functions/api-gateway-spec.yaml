@@ -346,6 +346,49 @@ paths:
         function_id: d4ef3c4o67vdg7o4c4d3
 
   # ═══════════════════════════════════════════════════════════════
+  # Telegram Bot для клиентов / HEYS Старт — heys-bot-client
+  # ═══════════════════════════════════════════════════════════════
+  /bot/webhook:
+    post:
+      summary: Telegram client bot webhook — handles /start <pin_token>
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ednfmrg21i8j1svtqs
+
+  /bot/send:
+    post:
+      summary: Internal send endpoint for trial drip messages
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ednfmrg21i8j1svtqs
+
+  /bot/health:
+    get:
+      summary: Client bot service healthcheck
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ednfmrg21i8j1svtqs
+
+  /start-bot/webhook:
+    post:
+      summary: HEYS Start quiz bot webhook
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ednfmrg21i8j1svtqs
+
+  /start-bot/health:
+    get:
+      summary: HEYS Start bot healthcheck
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ednfmrg21i8j1svtqs
+
+  # ═══════════════════════════════════════════════════════════════
   # Push notifications — heys-api-push
   # ═══════════════════════════════════════════════════════════════
   /push/vapid-key:

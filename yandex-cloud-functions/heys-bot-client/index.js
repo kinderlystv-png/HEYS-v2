@@ -35,6 +35,7 @@ let configPromise = null;
 const DEFAULT_TELEGRAM_REQUEST_TIMEOUT_MS = 3000;
 const DEFAULT_CALLBACK_ACK_TIMEOUT_MS = 700;
 const DEFAULT_START_BOT_POLL_WINDOW_MS = 55000;
+const POLL_LEASE_SAFETY_MS = 15000;
 
 function isLockboxPlaceholder(value) {
   return typeof value === 'string' && /^__IN_LOCKBOX__/.test(value);
@@ -297,6 +298,121 @@ async function answerCallbackQueryFast(queryId, bot = 'start') {
     }
   } catch (e) {
     console.warn('[BOT] answerCallbackQuery timeout/error:', e.message);
+  }
+}
+
+function getPollLeaseKey(lockName) {
+  return `runtime_lock:telegram_poll:${lockName}`;
+}
+
+async function queryWithFreshClient(sql, params = []) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const client = await getPool().connect();
+    let released = false;
+    try {
+      const result = await client.query(sql, params);
+      client.release();
+      released = true;
+      return result;
+    } catch (e) {
+      lastError = e;
+      client.release(true);
+      released = true;
+      if (attempt === 0) {
+        console.warn('[DB-Pool] retrying query with fresh client:', e.message);
+        continue;
+      }
+    } finally {
+      if (!released) client.release();
+    }
+  }
+  throw lastError;
+}
+
+async function acquirePollLease(lockName, leaseMs) {
+  const owner = crypto.randomUUID();
+  const leaseKey = getPollLeaseKey(lockName);
+  const res = await queryWithFreshClient(
+    `WITH acquired AS (
+       INSERT INTO public.funnel_events (
+         event_type, source, campaign, segment, metadata, dedupe_key, metrica_status, occurred_at
+       )
+       VALUES (
+         'runtime_lock',
+         'system',
+         'telegram_poll',
+         $1,
+         jsonb_build_object(
+           'owner', $2::text,
+           'lease_until', (NOW() + ($3::text || ' milliseconds')::interval)::text,
+           'acquired_at', NOW()::text
+         ),
+         $4,
+         'skipped',
+         NOW()
+       )
+       ON CONFLICT (dedupe_key) WHERE dedupe_key IS NOT NULL DO UPDATE
+       SET metadata = EXCLUDED.metadata,
+           occurred_at = NOW()
+       WHERE public.funnel_events.event_type = 'runtime_lock'
+         AND COALESCE(
+           (public.funnel_events.metadata->>'lease_until')::timestamptz,
+           'epoch'::timestamptz
+         ) < NOW()
+       RETURNING id
+     )
+     SELECT id FROM acquired`,
+    [lockName, owner, leaseMs, leaseKey],
+  );
+  return res.rows?.[0]?.id ? { acquired: true, owner, leaseKey } : { acquired: false };
+}
+
+async function releasePollLease(lockName, owner) {
+  if (!owner) return;
+  const leaseKey = getPollLeaseKey(lockName);
+  await queryWithFreshClient(
+    `UPDATE public.funnel_events
+        SET metadata = jsonb_set(metadata, '{lease_until}', to_jsonb(NOW()::text), true)
+      WHERE dedupe_key = $1
+        AND event_type = 'runtime_lock'
+        AND metadata->>'owner' = $2`,
+    [leaseKey, owner],
+  );
+}
+
+async function withPollLease(lockName, leaseMs, run) {
+  let lease;
+  try {
+    lease = await acquirePollLease(lockName, leaseMs);
+  } catch (e) {
+    console.warn(`[${lockName}] poll lease acquire failed:`, e.message);
+    return jsonResponse(200, {
+      ok: false,
+      poll: lockName,
+      skipped: 'lease_unavailable',
+      processed: 0,
+      delivered: 0,
+    });
+  }
+
+  if (!lease.acquired) {
+    console.warn(`[${lockName}] poll skipped: previous poll lease is still active`);
+    return jsonResponse(200, {
+      ok: true,
+      poll: lockName,
+      skipped: 'poll_already_running',
+      processed: 0,
+      delivered: 0,
+    });
+  }
+
+  try {
+    return await run();
+  } finally {
+    releasePollLease(lockName, lease.owner).catch((e) => {
+      console.warn(`[${lockName}] poll lease release failed:`, e.message);
+    });
   }
 }
 
@@ -704,7 +820,7 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
     await client.query('BEGIN');
 
     const stateRes = await client.query(
-      `SELECT id, source, campaign, segment, metadata
+      `SELECT id, lead_id, source, campaign, segment, metadata
          FROM public.funnel_events
         WHERE event_type = 'week_request'
           AND metadata->>'chat_hash' = $1
@@ -719,17 +835,21 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
     }
 
     const metadata = state.metadata || {};
-    const existingRes = await client.query(
-      `SELECT id
-         FROM public.leads
-        WHERE phone = $1
-          AND status IN ('new', 'contacted', 'trial_started')
-        ORDER BY created_at DESC
-        LIMIT 1`,
-      [normalizedPhone],
-    );
+    const stateLeadId = state.lead_id || null;
+    let leadId = stateLeadId;
+    if (!leadId) {
+      const existingRes = await client.query(
+        `SELECT id
+           FROM public.leads
+          WHERE phone = $1
+            AND status IN ('new', 'contacted', 'trial_started')
+          ORDER BY created_at DESC
+          LIMIT 1`,
+        [normalizedPhone],
+      );
+      leadId = existingRes.rows?.[0]?.id;
+    }
 
-    let leadId = existingRes.rows?.[0]?.id;
     if (!leadId) {
       const insertRes = await client.query(
         `INSERT INTO public.leads (
@@ -815,7 +935,11 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
       barrier: metadata.barrier || null,
       goal: metadata.goal || null,
     };
-    queueStartLeadHandoff(lead);
+    if (stateLeadId) {
+      console.log('[HEYS Start] curator handoff skipped: week_request already linked to lead');
+    } else {
+      queueStartLeadHandoff(lead);
+    }
     return { success: true, lead };
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
@@ -1085,7 +1209,11 @@ function getTelegramPollWindowMs(payload = {}, envKey = 'HEYS_START_POLL_WINDOW_
 
 async function handleStartBotPoll(payload = {}) {
   await ensureRuntimeConfig();
+  const leaseMs = getTelegramPollWindowMs(payload, 'HEYS_START_POLL_WINDOW_MS') + POLL_LEASE_SAFETY_MS;
+  return withPollLease('heys-start-bot', leaseMs, () => runStartBotPoll(payload));
+}
 
+async function runStartBotPoll(payload = {}) {
   const startedAt = Date.now();
   const deadline = startedAt + getTelegramPollWindowMs(payload, 'HEYS_START_POLL_WINDOW_MS');
   let processed = 0;
@@ -1144,7 +1272,11 @@ async function handleStartBotPoll(payload = {}) {
 
 async function handleClientBotPoll(payload = {}) {
   await ensureRuntimeConfig();
+  const leaseMs = getTelegramPollWindowMs(payload, 'TELEGRAM_CLIENT_POLL_WINDOW_MS') + POLL_LEASE_SAFETY_MS;
+  return withPollLease('heys-client-bot', leaseMs, () => runClientBotPoll(payload));
+}
 
+async function runClientBotPoll(payload = {}) {
   const startedAt = Date.now();
   const deadline = startedAt + getTelegramPollWindowMs(payload, 'TELEGRAM_CLIENT_POLL_WINDOW_MS');
   let processed = 0;

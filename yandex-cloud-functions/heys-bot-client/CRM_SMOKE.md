@@ -122,6 +122,8 @@ Expected:
 - no second active lead for the same normalized phone;
 - existing `week_request` gets the same `lead_id`;
 - `record_funnel_event(... dedupe_key='lead:start:<lead_id>')` stays idempotent.
+- curator Telegram chat does not receive a second handoff for the same linked
+  `week_request`.
 
 ```sql
 SELECT phone, count(*)
@@ -143,4 +145,4 @@ Expected `count = 1`.
 - curator handoff contains no phone/name/raw chat id;
 - DB row in `public.leads` has contact data and qualification fields;
 - `funnel_events` has `lead` event without PII metadata;
-- replay does not create a duplicate active lead.
+- replay does not create a duplicate active lead or duplicate curator handoff.
