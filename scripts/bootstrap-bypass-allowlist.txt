@@ -129,6 +129,9 @@ apps/web/heys_fingers_bundle_v1.js:14911
 apps/web/heys_fingers_bundle_v1.js:16425
 apps/web/heys_fingers_bundle_v1.js:18756
 apps/web/heys_fingers_bundle_v1.js:26848
+# mobility bundle — active-session snapshot is local-only recovery state
+apps/web/heys_mobility_bundle_v1.js:2648
+apps/web/heys_mobility_bundle_v1.js:2730
 apps/web/heys_dev_utils.js:22
 apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
@@ -162,9 +165,7 @@ apps/web/heys_models_v1.js:404
 apps/web/heys_module_perf_v1.js:43
 apps/web/heys_module_perf_v1.js:67
 apps/web/fingers/heys_fingers_entry_v1.js:166
-apps/web/heys_morning_checkin_v1.js:136
-apps/web/heys_morning_checkin_v1.js:157
-apps/web/heys_morning_checkin_v1.js:158
+apps/web/heys_morning_checkin_v1.js:173
 apps/web/heys_perf_main_thread_v1.js:2
 apps/web/heys_planning_schedule_v1.js:3239
 apps/web/heys_planning_schedule_v1.js:4415
