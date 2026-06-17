@@ -2739,13 +2739,13 @@
             return m;
         }, [breakdown, dates]);
 
-        if (maxDayTotal <= 0) return null;
-
         const activitiesById = useMemo(() => {
             const map = new Map();
             activities.forEach((a) => map.set(a.id, a));
             return map;
         }, [activities]);
+
+        if (maxDayTotal <= 0) return null;
 
         return h('div', { className: 'chrono-week-breakdown', 'aria-label': 'Распределение времени по дням недели' },
             dates.map((date, i) => {
@@ -2810,7 +2810,6 @@
             rows: null,
         });
         const pattern = timeOfDay && timeOfDay.headline ? timeOfDay.headline : '';
-        if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern && !lastAdded && rows.length === 0 && !untracked) return null;
 
         // По дефолту свёрнуто; локальный UI-prefs ключ, не client-data (не синкается).
         const [collapsed, setCollapsed] = useState(() => {
@@ -2957,6 +2956,7 @@
         }, [onLoggedRowClick]);
 
         const visibleRows = draggingRowId && dragRows ? dragRows : rows;
+        if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern && !lastAdded && rows.length === 0 && !untracked) return null;
 
         return h('div', {
             className: 'chrono-overview' + (collapsed ? ' is-collapsed' : ''),
@@ -3518,13 +3518,6 @@
     const DRAG_RELEASE_DURATION_MS = 3800;  // медленный liquid-return на новую орбиту
 
     function ChronoCloud({ activities, minutesByActivity, maxMin, scope, recentBadge, onPick, onLongPress, hasInactive, onDragDelete }) {
-        if (!activities.length) {
-            const text = hasInactive
-                ? 'Нажмите на занятие выше, чтобы записать время — кружок появится здесь и будет расти.'
-                : 'Нажмите «+ Новая», чтобы добавить занятие.';
-            return h('div', { className: 'chrono-empty' }, text);
-        }
-
         // Измерение доступной зоны для clamp'а и adaptive scale.
         const cloudRef = useRef(null);
         const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -3711,6 +3704,13 @@
         // (за safe zone, в любую сторону). Clamp применяется только к release-target
         // и к layout/reflow для resting positions. Это даёт ощущение "оттянуть подальше
         // и отпустить — пузырь сам найдёт дорогу домой".
+
+        if (!activities.length) {
+            const text = hasInactive
+                ? 'Нажмите на занятие выше, чтобы записать время — кружок появится здесь и будет расти.'
+                : 'Нажмите «+ Новая», чтобы добавить занятие.';
+            return h('div', { className: 'chrono-empty' }, text);
+        }
 
         return h('div', { className: 'chrono-cloud', ref: cloudRef },
             h('div', {
@@ -4602,6 +4602,8 @@
         ChronoHistoryModal,
         ChronoHeatmap,
         ChronoWeekBreakdown,
+        ChronoOverviewPanel,
+        ChronoCloud,
         ChronoTimerBanner,
         ChronoTimerCompleteModal,
         ChronoTimerStopModal,
