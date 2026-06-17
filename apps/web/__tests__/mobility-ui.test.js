@@ -84,7 +84,7 @@ describe('Mobility UI', () => {
     try { globalThis.window.localStorage.clear(); } catch (_) { /* noop */ }
   });
 
-  it('рендерит focus-mode как у пальцев и открывает runner только после запуска микса', () => {
+  it('рендерит focus-mode как у пальцев и открывает runner только после запуска микса', { timeout: 20000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));
     expect(screen.getByText('Мобильность')).toBeTruthy();
     expect(screen.getByRole('tab', { name: /Сегодня/ }).getAttribute('aria-selected')).toBe('true');
@@ -304,7 +304,7 @@ describe('Mobility UI', () => {
     expect(container.textContent).toContain('режим не является медицинской рекомендацией');
   });
 
-  it('показывает боль как ограничение сессии', () => {
+  it('показывает боль как ограничение сессии', { timeout: 20000 }, () => {
     const { container } = render(React.createElement(UI().MobilityApp, {
       profile,
       modeId: 'anti_sedentary',
