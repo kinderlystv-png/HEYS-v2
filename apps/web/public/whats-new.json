@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "2026.06.17.1fcff1a8",
+      "buildHash": "1fcff1a8",
+      "date": "2026-06-17",
+      "kind": "user-facing",
+      "profile": "user-facing-general",
+      "title": "Хронометраж стал устойчивее",
+      "items": [
+        {
+          "type": "fix",
+          "title": "Хронометраж открывается без сбоя",
+          "description": "Исправили сбой, который мог появляться при открытии хронометража после обновления записей. Теперь экран корректно показывает сводку, записи и круги активностей в таких переходах."
+        }
+      ],
+      "coveredCommits": ["1fcff1a8"]
+    },
+    {
       "version": "2026.06.17.65fcbd6c",
       "buildHash": "65fcbd6c",
       "date": "2026-06-17",
@@ -144,21 +160,6 @@
     {
       "version": "2026.06.16.ae1f6d6b",
       "buildHash": "ae1f6d6b",
-      "date": "2026-06-16",
-      "kind": "technical",
-      "profile": "technical-infra-tests",
-      "title": "Стабильнее вход и синхронизация",
-      "items": [
-        {
-          "type": "fix",
-          "title": "Сессии и облачная синхронизация устойчивее",
-          "description": "Приложение лучше сохраняет PIN- и кураторские сессии между устройствами, а связанные облачные сценарии проверяются перед публикацией."
-        }
-      ]
-    },
-    {
-      "version": "2026.06.16.1c26e7a0",
-      "buildHash": "1c26e7a0",
       "date": "2026-06-16",
       "kind": "technical",
       "profile": "technical-infra-tests",
