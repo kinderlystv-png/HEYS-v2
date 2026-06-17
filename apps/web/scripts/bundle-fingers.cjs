@@ -33,6 +33,8 @@ const MODULES = [
     { file: 'heys_kernel_progression_v1.js', label: 'shared progression primitives (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_session_v1.js', label: 'shared session builder primitives (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_runner_v1.js', label: 'shared runner lifecycle primitives (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_timer_v1.js', label: 'shared timer-core: tick/pause/resume/wakeLock/owner-lock (kernel)', dir: KERNEL_DIR },
+    { file: 'heys_kernel_active_session_v1.js', label: 'shared active-session snapshot persistence (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_router_v1.js', label: 'shared strangler router primitives (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_catalog_v1.js', label: 'shared catalog index: id+groupBy (kernel)', dir: KERNEL_DIR },
     { file: 'heys_kernel_assess_v1.js', label: 'shared assess math: deficit/normalize (kernel)', dir: KERNEL_DIR },
@@ -76,6 +78,7 @@ const MODULES = [
     { file: 'heys_fingers_periodization_engine_v1.js', label: 'periodization planner' },
     { file: 'heys_fingers_session_builder_v1.js', label: 'new engine — block_catalog→session' },
     { file: 'heys_fingers_engine_router_v1.js',   label: 'strangler router (flag-gated)' },
+    { file: 'heys_fingers_run_adapter_v1.js',     label: 'exercises[] → shared RunPlan contract' },
 
     // ── Layer 4: UI (depends on all above) ──
     { file: 'heys_fingers_muscle_detail_v1.js',   label: 'muscle drill-down' },

@@ -198,6 +198,27 @@
     };
   }
 
+  // Канонический build→run контракт: домен материализует свои item'ы (атомы/
+  // упражнения) в плоские шаги через materializeFn, ядро агрегирует в RunPlan.
+  // kindForDoseShape — generic-маппер doseShape → step.kind (домен может дать map).
+  function kindForDoseShape(doseShape, map) {
+    const m = map || {};
+    if (doseShape && m[doseShape]) return m[doseShape];
+    return doseShape || 'unknown';
+  }
+  function buildRunPlanFromAtoms(items, opts) {
+    const o = opts || {};
+    const materialize = typeof o.materializeFn === 'function'
+      ? o.materializeFn
+      : function (it) { return [it]; };
+    const steps = [];
+    (Array.isArray(items) ? items : []).forEach(function (item, idx) {
+      const out = materialize(item, idx);
+      (Array.isArray(out) ? out : [out]).forEach(function (s) { if (s) steps.push(s); });
+    });
+    return createRunPlan(o.session || { mode: o.sessionMode }, steps, o);
+  }
+
   function createPhaseGraph(config) {
     const cfg = config || {};
     const transitions = cfg.transitions || {};
@@ -373,6 +394,8 @@
     num: num,
     avg: avg,
     createRunPlan: createRunPlan,
+    kindForDoseShape: kindForDoseShape,
+    buildRunPlanFromAtoms: buildRunPlanFromAtoms,
     createPhaseGraph: createPhaseGraph,
     readLock: readLock,
     writeLock: writeLock,

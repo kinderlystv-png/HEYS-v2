@@ -42,6 +42,9 @@ beforeAll(() => {
   ensureLocalStorage();
   globalThis.window.HEYS = globalThis.HEYS = {};
   globalThis.React = React;
+  // kernel-timer (useTimerCore) — fingers timer делегирует в него.
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.resolve(__dirname, '..', '_kernel', 'heys_kernel_timer_v1.js'), 'utf8'));
   const file = path.resolve(__dirname, '..', 'fingers', 'heys_fingers_timer_v1.js');
   // eslint-disable-next-line no-eval
   eval(fs.readFileSync(file, 'utf8'));

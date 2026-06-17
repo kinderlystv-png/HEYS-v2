@@ -89,6 +89,16 @@
     } catch (_e) { /* swallow */ }
   }
 
+  // Cues, общие для обоих state-graph (countdown/reps). Раньше жили в ядре
+  // таймера; после выноса useTimerCore в _kernel ядро домен-агностично и звуков
+  // не знает — играем здесь, в доменном onPhaseEnter. Порядок сохранён: для DONE
+  // cue играет до terminal-обработки (core зовёт onPhaseEnter перед release).
+  function _sharedPhaseCue(s) {
+    if (s === STATES.SET_PREP) { _say('cue.countdown_5'); _beep('notify'); }
+    else if (s === STATES.BIG_REST) { _say('cue.big_rest_start'); _beep('caution'); }
+    else if (s === STATES.DONE) { _beep('triumph'); _say('cue.session_done'); }
+  }
+
   function _getCurrentClientId() {
     const cid = (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
     return cid ? String(cid) : '';
@@ -243,344 +253,34 @@
     } catch (_) { /* noop */ }
   }
 
-  // ─── Hook: useCountdownCycle ─────────────────────────────────────────────
-  // ─── INTERNAL: useTimerCore — общее ядро таймера (A4 strangler-консолидация) ─
+  // ─── INTERNAL: useTimerCore — тонкий адаптер на kernel-ядро таймера ────────
   //
-  // Управляет: React-state (state/secondsLeft/totalElapsed), tick-петлёй,
-  // pause/resume, wakeLock, activeTimerLock, fireStateChange, cleanup.
-  // State-graph специфика делегирована caller'у через config-функции:
-  //   - onAdvance(currentState)   — tick-expiry router; вызывается когда тик
-  //     дошёл до 0; обязан вызвать exposed enterPhase для перехода.
-  //   - onPhaseEnter(state, meta) — side-effects state-graph (state-specific
-  //     audio cues, такие как 'cue.go_hang' для HANG). Вызывается ПОСЛЕ того
-  //     как state записан и shared cues (SET_PREP / BIG_REST / DONE) сыграны.
-  //   - getExtraMeta()           — wrapper отдаёт {setIdx, repIdx} для merge
-  //     в state-change meta (pause/resume/phase-enter).
-  //
-  // Опции:
-  //   - manualPhases:    string[]; для них tick НЕ стартует, wakeLock хранится.
-  //   - wakeLockPhases:  string[]; для них wakeLock запрашивается при enter.
-  //   - visibilityWarning: bool; включает HEYS.Toast предупреждение при
-  //     возвращении из фона >5с во время activePhases.
-  //   - activePhases:    string[]; набор active states для visibilityWarning.
-  //
-  // Returns:
-  //   { state, secondsLeft, totalElapsed,
-  //     enterPhase(state, durationSec, meta),
-  //     pause, resume, abort, skipPhase, markSessionStart }
-  //
-  // Контракт: enterPhase + skipPhase + pause/resume — единственный путь
-  // изменения state. activeTimerLock / wakeLock — single-owner (только core
-  // их трогает; wrapper'у нельзя их менять напрямую).
+  // Реализация (тик 100ms / pause-resume / wakeLock / owner-lock heartbeat /
+  // visibility-warning) вынесена в HEYS.TrainingKernel.timer.useTimerCore
+  // (Этап 2 унификации запуска). Здесь — доменная инъекция: имена служебных
+  // фаз (STATES), owner-lock пальцев и флаг Fingers.activeTimerLock. ВСЕ cue фаз
+  // (включая SET_PREP/BIG_REST/DONE) играет caller в onPhaseEnter — см.
+  // _sharedPhaseCue. Публичный контракт возврата неизменён.
   function useTimerCore(coreConfig) {
-    const React = global.React;
+    const kt = HEYS.TrainingKernel && HEYS.TrainingKernel.timer;
+    if (!kt || typeof kt.useTimerCore !== "function") {
+      throw new Error("[Fingers.timer] HEYS.TrainingKernel.timer недоступен — kernel-бандл не загружен до fingers timer");
+    }
     const cfg = coreConfig || {};
-    const manualPhases = Array.isArray(cfg.manualPhases) ? cfg.manualPhases : [];
-    const wakeLockPhases = Array.isArray(cfg.wakeLockPhases) ? cfg.wakeLockPhases : [];
-    const activePhases = Array.isArray(cfg.activePhases) ? cfg.activePhases : [];
-    const visibilityWarning = !!cfg.visibilityWarning;
-
-    const [state, setState] = React.useState(STATES.IDLE);
-    const [secondsLeft, setSecondsLeft] = React.useState(0);
-    const [totalElapsed, setTotalElapsed] = React.useState(0);
-
-    const tickRef = React.useRef(null);
-    const secondsLeftRef = React.useRef(0);
-    const phaseStartedAtRef = React.useRef(0);
-    const phaseDurationMsRef = React.useRef(0);
-    const sessionStartedAtRef = React.useRef(0);
-    const pauseStartedAtRef = React.useRef(0);
-    const pauseTotalMsRef = React.useRef(0);
-    const previousStateRef = React.useRef(STATES.IDLE);
-    // stateRef — immediate state mirror для callbacks (tick читает state до того,
-    // как React зафлашит setState).
-    const stateRef = React.useRef(STATES.IDLE);
-    const lockHeldRef = React.useRef(false);
-    const lockHeartbeatRef = React.useRef(null);
-
-    const wakeLock = HEYS.AppHooks && typeof HEYS.AppHooks.useWakeLock === 'function'
-      ? HEYS.AppHooks.useWakeLock() : null;
-    const wakeLockRef = React.useRef(wakeLock);
-    wakeLockRef.current = wakeLock;
-
-    // State-graph callbacks через refs — wrapper переоткрывает каждый рендер.
-    const onAdvanceRef = React.useRef(cfg.onAdvance);
-    onAdvanceRef.current = cfg.onAdvance;
-    const onPhaseEnterRef = React.useRef(cfg.onPhaseEnter);
-    onPhaseEnterRef.current = cfg.onPhaseEnter;
-    const getExtraMetaRef = React.useRef(cfg.getExtraMeta);
-    getExtraMetaRef.current = cfg.getExtraMeta;
-    const onStateChangeRef = React.useRef(cfg.onStateChange);
-    onStateChangeRef.current = cfg.onStateChange;
-    const onCompleteRef = React.useRef(cfg.onComplete);
-    onCompleteRef.current = cfg.onComplete;
-
-    const fireStateChange = React.useCallback(function (nextState, meta) {
-      const fn = onStateChangeRef.current;
-      if (typeof fn !== 'function') return;
-      const getMeta = getExtraMetaRef.current;
-      const extra = typeof getMeta === 'function' ? (getMeta() || {}) : {};
-      const merged = Object.assign({}, extra, meta || {});
-      try { fn(nextState, merged); } catch (e) {
-        console.warn('[Fingers.timer] onStateChange threw:', e);
-      }
-    }, []);
-
-    const clearTick = React.useCallback(function () {
-      if (tickRef.current) {
-        // setTimeout (рекурсивный) вместо setInterval — clearTimeout работает
-        // одинаково; setInterval тротлится в HEYS-окружении (perf-monitor или
-        // browser policy при mobile-эмуляции в DevTools).
-        clearTimeout(tickRef.current);
-        tickRef.current = null;
-      }
-    }, []);
-
-    const clearLockHeartbeat = React.useCallback(function () {
-      if (lockHeartbeatRef.current) {
-        clearInterval(lockHeartbeatRef.current);
-        lockHeartbeatRef.current = null;
-      }
-    }, []);
-
-    const releaseActiveTimerLock = React.useCallback(function () {
-      clearLockHeartbeat();
-      if (lockHeldRef.current) _removeTimerLock();
-      lockHeldRef.current = false;
-      Fingers.activeTimerLock = false;
-    }, [clearLockHeartbeat]);
-
-    const expireFromLockLoss = React.useCallback(function () {
-      clearTick();
-      clearLockHeartbeat();
-      lockHeldRef.current = false;
-      Fingers.activeTimerLock = false;
-      setState(STATES.EXPIRED);
-      stateRef.current = STATES.EXPIRED;
-      fireStateChange(STATES.EXPIRED, { reason: 'timer_lock_lost' });
-      const wl = wakeLockRef.current;
-      if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
-    }, [clearTick, clearLockHeartbeat, fireStateChange]);
-
-    const startLockHeartbeat = React.useCallback(function () {
-      clearLockHeartbeat();
-      lockHeartbeatRef.current = setInterval(function () {
-        if (!lockHeldRef.current) return;
-        if (!_touchTimerLock()) expireFromLockLoss();
-      }, TIMER_LOCK_HEARTBEAT_MS);
-    }, [clearLockHeartbeat, expireFromLockLoss]);
-
-    const startTick = React.useCallback(function () {
-      clearTick();
-      const tickFn = function () {
-        const elapsedMs = _now() - phaseStartedAtRef.current;
-        const remainingMs = Math.max(0, phaseDurationMsRef.current - elapsedMs);
-        const remainingSec = Math.ceil(remainingMs / 1000);
-        secondsLeftRef.current = remainingSec;
-        setSecondsLeft(remainingSec);
-        setTotalElapsed(Math.floor((_now() - sessionStartedAtRef.current - pauseTotalMsRef.current) / 1000));
-        if (remainingMs <= 0) {
-          tickRef.current = null;
-          if (typeof onAdvanceRef.current === 'function') {
-            try { onAdvanceRef.current(stateRef.current); }
-            catch (e) { console.warn('[Fingers.timer] onAdvance threw:', e); }
-          }
-          return;
-        }
-        tickRef.current = setTimeout(tickFn, TICK_MS);
-      };
-      tickRef.current = setTimeout(tickFn, TICK_MS);
-    }, [clearTick]);
-
-    const enterPhase = React.useCallback(function (nextState, durationSec, meta) {
-      phaseStartedAtRef.current = _now();
-      phaseDurationMsRef.current = Math.max(0, durationSec * 1000);
-      secondsLeftRef.current = durationSec;
-      setSecondsLeft(durationSec);
-      setState(nextState);
-      stateRef.current = nextState; // immediate — tick/skip читают сразу
-      previousStateRef.current = nextState;
-      fireStateChange(nextState, Object.assign({ durationSec: durationSec }, meta || {}));
-
-      // Shared cues (идентичны в обоих state-graph): SET_PREP / BIG_REST.
-      // DONE-cue (триумф) тоже общий — см. ниже terminal-handling.
-      if (nextState === STATES.SET_PREP) {
-        _say('cue.countdown_5');
-        _beep('notify');
-      } else if (nextState === STATES.BIG_REST) {
-        _say('cue.big_rest_start');
-        _beep('caution');
-      }
-
-      // wakeLock — запрашивается на phase enter если фаза в wakeLockPhases.
-      // Используем check !isWakeLockActive чтобы не дублировать.
-      if (wakeLockPhases.indexOf(nextState) >= 0) {
-        const wl = wakeLockRef.current;
-        if (wl && wl.requestWakeLock && !wl.isWakeLockActive) wl.requestWakeLock();
-      }
-
-      // State-graph side effects (HANG cue для countdown, REPS_INPUT cue для reps).
-      // Вызывается ПОСЛЕ shared cues, ДО tick/terminal — wrapper может dispatch
-      // дополнительные audio/vibrate без race c shared.
-      if (typeof onPhaseEnterRef.current === 'function') {
-        try { onPhaseEnterRef.current(nextState, meta || {}); }
-        catch (e) { console.warn('[Fingers.timer] onPhaseEnter threw:', e); }
-      }
-
-      // Terminal: DONE → cue + onComplete + release locks
-      if (nextState === STATES.DONE) {
-        _beep('triumph');
-        _say('cue.session_done');
-        clearTick();
-        releaseActiveTimerLock();
-        const wl = wakeLockRef.current;
-        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
-        if (typeof onCompleteRef.current === 'function') {
-          try { onCompleteRef.current(); }
-          catch (e) { console.warn('[Fingers.timer] onComplete threw:', e); }
-        }
-        return;
-      }
-      // Terminal: ABORTED / EXPIRED / IDLE — release locks без cue
-      if (nextState === STATES.ABORTED || nextState === STATES.EXPIRED || nextState === STATES.IDLE) {
-        clearTick();
-        releaseActiveTimerLock();
-        const wl = wakeLockRef.current;
-        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
-        return;
-      }
-
-      // Manual phase — wakeLock уже запрошен (если в wakeLockPhases), tick НЕ
-      // стартуем. Wrapper сам решает когда advance (e.g. completeSet).
-      if (manualPhases.indexOf(nextState) >= 0) return;
-
-      // Timed phase — стартуем tick.
-      startTick();
-    }, [fireStateChange, startTick, clearTick, manualPhases, wakeLockPhases]);
-
-    const pause = React.useCallback(function () {
-      const currentState = stateRef.current;
-      if (currentState === STATES.PAUSED || currentState === STATES.IDLE
-          || currentState === STATES.DONE || currentState === STATES.ABORTED
-          || currentState === STATES.EXPIRED) return;
-      previousStateRef.current = currentState;
-      pauseStartedAtRef.current = _now();
-      clearTick();
-      setState(STATES.PAUSED);
-      stateRef.current = STATES.PAUSED;
-      fireStateChange(STATES.PAUSED, {
-        resumeTo: previousStateRef.current,
-        secondsLeft: secondsLeftRef.current
-      });
-    }, [clearTick, fireStateChange]);
-
-    const resume = React.useCallback(function () {
-      if (stateRef.current !== STATES.PAUSED) return;
-      const pauseDurMs = _now() - pauseStartedAtRef.current;
-      pauseTotalMsRef.current += pauseDurMs;
-      const restored = previousStateRef.current;
-      const isManual = manualPhases.indexOf(restored) >= 0;
-      // Для timed-фаз adjust phaseStartedAt чтобы remaining time не уехал.
-      // Для manual — нет тика, никаких корректировок.
-      if (!isManual) phaseStartedAtRef.current += pauseDurMs;
-      setState(restored);
-      stateRef.current = restored;
-      fireStateChange(restored, {
-        resumed: true,
-        durationSec: Math.ceil(phaseDurationMsRef.current / 1000)
-      });
-      if (!isManual) startTick();
-    }, [manualPhases, startTick, fireStateChange]);
-
-    const abort = React.useCallback(function () {
-      enterPhase(STATES.ABORTED, 0, {});
-    }, [enterPhase]);
-
-    const skipPhase = React.useCallback(function () {
-      const currentState = stateRef.current;
-      if (currentState === STATES.IDLE || currentState === STATES.DONE
-          || currentState === STATES.ABORTED || currentState === STATES.PAUSED
-          || currentState === STATES.EXPIRED) return;
-      clearTick();
-      if (typeof onAdvanceRef.current === 'function') {
-        try { onAdvanceRef.current(currentState); }
-        catch (e) { console.warn('[Fingers.timer] onAdvance threw:', e); }
-      }
-    }, [clearTick]);
-
-    const getCurrentState = React.useCallback(function () {
-      return stateRef.current;
-    }, []);
-
-    const markSessionStart = React.useCallback(function () {
-      if (!_acquireTimerLock('start')) {
-        _warnTimerLockDenied();
-        return false;
-      }
-      lockHeldRef.current = true;
-      sessionStartedAtRef.current = _now();
-      pauseTotalMsRef.current = 0;
-      setTotalElapsed(0);
-      Fingers.activeTimerLock = true;
-      startLockHeartbeat();
-      return true;
-    }, [startLockHeartbeat]);
-
-    // Cleanup unmount-only — deps=[] (wakeLock объект меняется каждый render,
-    // привязать к deps → cleanup срабатывает на каждый rerender → setTimeout
-    // убит сразу после запуска → таймер не тикает; wakeLockRef хранит свежий).
-    React.useEffect(function () {
-      return function () {
-        clearTick();
-        releaseActiveTimerLock();
-        const wl = wakeLockRef.current;
-        if (wl && wl.releaseWakeLock) wl.releaseWakeLock();
-      };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Visibility warning — если юзер был в фоне >5с во время activePhases,
-    // показать toast (browser throttle setTimeout до 1Hz, voice cues могут
-    // не сработать, юзер не слышит «3,2,1» отказа).
-    React.useEffect(function () {
-      if (!visibilityWarning || typeof document === 'undefined') return undefined;
-      let hiddenAt = 0;
-      const onVis = function () {
-        const isActive = activePhases.indexOf(stateRef.current) >= 0;
-        if (document.visibilityState === 'hidden') {
-          if (isActive) hiddenAt = _now();
-        } else if (document.visibilityState === 'visible') {
-          if (wakeLockPhases.indexOf(stateRef.current) >= 0) {
-            try {
-              const wl = wakeLockRef.current;
-              if (wl && wl.requestWakeLock && !wl.isWakeLockActive) wl.requestWakeLock();
-            } catch (_) {}
-          }
-          const hiddenMs = hiddenAt > 0 ? (_now() - hiddenAt) : 0;
-          hiddenAt = 0;
-          if (hiddenMs > 5000 && isActive) {
-            try {
-              const sec = Math.round(hiddenMs / 1000);
-              const msg = '⚠ Вкладка была в фоне ' + sec +
-                ' сек — звуковые команды могли не сработать, перепроверь данные.';
-              if (HEYS.Toast && typeof HEYS.Toast.warn === 'function') HEYS.Toast.warn(msg);
-              else if (HEYS.Toast && typeof HEYS.Toast.info === 'function') HEYS.Toast.info(msg);
-              else if (HEYS.Toast && typeof HEYS.Toast.show === 'function') HEYS.Toast.show(msg);
-            } catch (_) {}
-          }
-        }
-      };
-      document.addEventListener('visibilitychange', onVis);
-      return function () { document.removeEventListener('visibilitychange', onVis); };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [visibilityWarning, wakeLockPhases]);
-
-    return {
-      state: state, secondsLeft: secondsLeft, totalElapsed: totalElapsed,
-      enterPhase: enterPhase, pause: pause, resume: resume,
-      abort: abort, skipPhase: skipPhase, markSessionStart: markSessionStart,
-      getCurrentState: getCurrentState
-    };
+    return kt.useTimerCore(Object.assign({}, cfg, {
+      states: {
+        idle: STATES.IDLE, paused: STATES.PAUSED, done: STATES.DONE,
+        aborted: STATES.ABORTED, expired: STATES.EXPIRED
+      },
+      lock: {
+        acquire: function (reason) { return _acquireTimerLock(reason); },
+        touch: function () { return _touchTimerLock(); },
+        release: function () { return _removeTimerLock(); },
+        onDenied: function () { _warnTimerLockDenied(); },
+        heartbeatMs: TIMER_LOCK_HEARTBEAT_MS
+      },
+      onActiveLockChange: function (held) { Fingers.activeTimerLock = !!held; }
+    }));
   }
 
   // ─── Hook: useCountdownCycle — hang state-graph через useTimerCore ──────────
@@ -730,8 +430,9 @@
     }, [hangSec, restSec, repsPerSet, setsCount, restBetweenSetsSec, phaseGraph]);
 
     const handlePhaseEnter = React.useCallback(function (s, _meta) {
-      // SET_PREP/BIG_REST/DONE cues — обрабатывает core. Здесь только
-      // hang-state-graph-specific cues.
+      // Общие cue фаз (SET_PREP/BIG_REST/DONE) — после выноса ядра играем здесь.
+      _sharedPhaseCue(s);
+      // Ниже — hang-state-graph-specific cues.
       if (s === STATES.HANG) {
         _fingerSound('fingerStart');
         _say('cue.go_hang');
@@ -823,165 +524,107 @@
     const React = global.React;
     if (!React) return null;
     const h = React.createElement;
+    const Focus = HEYS.TrainingFocus;
+    if (!Focus || typeof Focus.LiveCountdownDisplay !== "function") return null;
 
     const {
       state, secondsLeft, setIdx, totalSets, repIdx, totalReps,
       gripLabel, gripId, equipmentTier, edgeLabel, addedWeightKg, onPause, onAbort, onSkip,
     } = props || {};
 
-    // Tier-aware grip image: для block/door есть отдельные фото с реальным
-    // оборудованием. Если для (grip+tier) нет файла — onError откатывается на
-    // базовый /exercises/<gripId>.webp, если и его нет — wrapper схлопывается.
+    // Tier-aware grip image: block/door имеют отдельные фото; при 404 откат на
+    // базовый /exercises/<gripId>.webp, затем контейнер схлопывается (imageErrorHandler).
     const tieredGripSrc = gripId
-      ? (equipmentTier && equipmentTier !== 'full' && equipmentTier !== 'none'
-          ? '/exercises/' + gripId + '_' + equipmentTier + '.webp'
-          : '/exercises/' + gripId + '.webp')
+      ? (equipmentTier && equipmentTier !== "full" && equipmentTier !== "none"
+          ? "/exercises/" + gripId + "_" + equipmentTier + ".webp"
+          : "/exercises/" + gripId + ".webp")
       : null;
-    const baseGripSrc = gripId ? '/exercises/' + gripId + '.webp' : null;
+    const baseGripSrc = gripId ? "/exercises/" + gripId + ".webp" : null;
 
-    // Phase → CSS data-attr value (используется в .heys-fingers-countdown[data-phase=...])
-    const phaseKey = state === STATES.HANG ? 'hang'
-      : state === STATES.REST ? 'rest'
-      : state === STATES.BIG_REST ? 'big-rest'
-      : state === STATES.SET_PREP ? 'prep'
-      : state === STATES.PAUSED ? 'paused'
-      : state === STATES.DONE ? 'done'
-      : state === STATES.ABORTED ? 'aborted'
-      : 'idle';
+    const phaseKey = state === STATES.HANG ? "hang"
+      : state === STATES.REST ? "rest"
+      : state === STATES.BIG_REST ? "big-rest"
+      : state === STATES.SET_PREP ? "prep"
+      : state === STATES.PAUSED ? "paused"
+      : state === STATES.DONE ? "done"
+      : state === STATES.ABORTED ? "aborted"
+      : "idle";
+    const phaseLabel = state === STATES.HANG ? "ВИС"
+      : state === STATES.REST ? "Отдых"
+      : state === STATES.BIG_REST ? "Большой отдых"
+      : state === STATES.SET_PREP ? "Готовься"
+      : state === STATES.PAUSED ? "Пауза"
+      : state === STATES.DONE ? "Готово!"
+      : state === STATES.ABORTED ? "Прервано"
+      : state === STATES.IDLE ? "Готов к старту" : state;
 
-    const phaseLabel = state === STATES.HANG ? 'ВИС'
-      : state === STATES.REST ? 'Отдых'
-      : state === STATES.BIG_REST ? 'Большой отдых'
-      : state === STATES.SET_PREP ? 'Готовься'
-      : state === STATES.PAUSED ? 'Пауза'
-      : state === STATES.DONE ? 'Готово!'
-      : state === STATES.ABORTED ? 'Прервано'
-      : state === STATES.IDLE ? 'Готов к старту' : state;
-
-    // SVG ring progress — 0..1 based on phase progress.
     const ringRadius = 86;
-    const ringCircum = 2 * Math.PI * ringRadius;
     const phaseMaxSec = state === STATES.HANG ? Math.max(secondsLeft, 7)
       : state === STATES.REST ? Math.max(secondsLeft, 3)
       : state === STATES.BIG_REST ? Math.max(secondsLeft, 180)
       : state === STATES.SET_PREP ? 5
       : 60;
     const ratio = Math.max(0, Math.min(1, secondsLeft / phaseMaxSec));
-    const dashoffset = ringCircum * (1 - ratio);
-
-    // Финальные 3 сек активной фазы — pulse'нем digit. Активно только на работе/
-    // отдыхе (на паузе/done — нет смысла).
     const isCountingActive = state === STATES.HANG || state === STATES.REST
       || state === STATES.BIG_REST || state === STATES.SET_PREP;
     const isFinalCount = isCountingActive && secondsLeft != null && secondsLeft <= 3 && secondsLeft > 0;
-
     const showControls = state !== STATES.IDLE && state !== STATES.DONE && state !== STATES.ABORTED;
 
-    return h('div', {
-      className: 'heys-fingers-countdown',
-      'data-phase': phaseKey
-    },
-      // Set/rep counter — наверху
-      h('div', { className: 'heys-fingers-countdown__counter' },
-        (totalSets && totalReps)
-          ? 'Подход ' + ((setIdx || 0) + 1) + '/' + totalSets +
-            ' · Повтор ' + ((repIdx || 0) + 1) + '/' + totalReps
-          : ''
-      ),
+    const counter = (totalSets && totalReps)
+      ? "Подход " + ((setIdx || 0) + 1) + "/" + totalSets + " · Повтор " + ((repIdx || 0) + 1) + "/" + totalReps
+      : "";
 
-      // Grip name — крупный заголовок
-      gripLabel ? h('h2', { className: 'heys-fingers-countdown__grip' }, gripLabel) : null,
+    const chips = [];
+    if (edgeLabel) chips.push({ id: "edge", label: "Грань", value: edgeLabel });
+    if (addedWeightKg != null) chips.push({
+      id: "weight",
+      className: "heys-fingers-countdown__chip--weight",
+      weightSign: addedWeightKg > 0 ? "plus" : addedWeightKg < 0 ? "minus" : "zero",
+      label: "Доп. вес",
+      value: (addedWeightKg > 0 ? "+" : "") + addedWeightKg + " кг"
+    });
 
-      // Hero image (при 404 откатываемся на базовый файл, потом схлопываемся)
-      gripId ? h('div', { className: 'heys-fingers-countdown__hero' },
-        h('img', {
-          src: tieredGripSrc,
-          alt: gripLabel || gripId,
-          loading: 'eager',
-          decoding: 'async',
-          'data-fallback-tried': tieredGripSrc === baseGripSrc ? 'true' : 'false',
-          onError: function (e) {
-            try {
-              const el = e.target;
-              if (el.getAttribute('data-fallback-tried') !== 'true' && baseGripSrc && baseGripSrc !== tieredGripSrc) {
-                el.setAttribute('data-fallback-tried', 'true');
-                el.src = baseGripSrc;
-                return;
-              }
-              el.parentNode.style.display = 'none';
-            } catch (_) {}
-          }
-        })
-      ) : null,
+    const controls = [];
+    if (showControls) {
+      controls.push({ id: "pause", label: state === STATES.PAUSED ? "▶ Возобновить" : "⏸ Пауза", onClick: onPause });
+      if (typeof onSkip === "function" && state !== STATES.PAUSED) {
+        controls.push({ id: "skip", label: "→", onClick: onSkip, ariaLabel: "Пропустить фазу", title: "Пропустить фазу" });
+      }
+      controls.push({ id: "abort", label: "Прервать", onClick: onAbort, abort: true });
+    }
 
-      // Chips: грань + доп. вес
-      (edgeLabel || addedWeightKg != null) ? h('div', { className: 'heys-fingers-countdown__chips' },
-        edgeLabel ? h('div', { className: 'heys-fingers-countdown__chip' },
-          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Грань'),
-          h('span', { className: 'heys-fingers-countdown__chip-value' }, edgeLabel)
-        ) : null,
-        addedWeightKg != null ? h('div', {
-          className: 'heys-fingers-countdown__chip heys-fingers-countdown__chip--weight',
-          'data-weight-sign': addedWeightKg > 0 ? 'plus' : addedWeightKg < 0 ? 'minus' : 'zero'
-        },
-          h('span', { className: 'heys-fingers-countdown__chip-label' }, 'Доп. вес'),
-          h('span', { className: 'heys-fingers-countdown__chip-value' },
-            (addedWeightKg > 0 ? '+' : '') + addedWeightKg + ' кг')
-        ) : null
-      ) : null,
+    // Tier-fallback фото хвата: block/door → base → схлопнуть. Стейт хранится на
+    // самом <img> через data-fallback-tried.
+    const imageErrorHandler = function (e) {
+      try {
+        const el = e.target;
+        if (el.getAttribute("data-fallback-tried") !== "true" && baseGripSrc && baseGripSrc !== tieredGripSrc) {
+          el.setAttribute("data-fallback-tried", "true");
+          el.src = baseGripSrc;
+          return;
+        }
+        el.parentNode.style.display = "none";
+      } catch (_) {}
+    };
 
-      // Phase badge
-      h('div', { className: 'heys-fingers-countdown__phase-badge' }, phaseLabel),
-
-      // Ring + digit
-      h('div', { className: 'heys-fingers-countdown__ring-wrap' },
-        h('svg', {
-          className: 'heys-fingers-countdown__ring',
-          width: 200, height: 200, viewBox: '0 0 200 200'
-        },
-          h('circle', {
-            className: 'heys-fingers-countdown__ring-track',
-            cx: 100, cy: 100, r: ringRadius, fill: 'none'
-          }),
-          h('circle', {
-            className: 'heys-fingers-countdown__ring-fill',
-            cx: 100, cy: 100, r: ringRadius, fill: 'none',
-            strokeDasharray: ringCircum,
-            strokeDashoffset: dashoffset,
-            transform: 'rotate(-90 100 100)'
-          })
-        ),
-        h('div', {
-          className: 'heys-fingers-countdown__digit'
-            + (isFinalCount ? ' is-final-count' : '')
-        }, String(Math.max(0, secondsLeft | 0)))
-      ),
-
-      // Controls — touch targets ≥44px (iOS HIG, потные пальцы после виса).
-      showControls ? h('div', { className: 'heys-fingers-countdown__controls' },
-        // VoiceMiniControls без inline — 44px чтобы матчиться с .__btn высотой
-        Fingers.VoiceMiniControls
-          ? h(Fingers.VoiceMiniControls, null)
-          : null,
-        h('button', {
-          type: 'button',
-          className: 'heys-fingers-countdown__btn',
-          onClick: onPause
-        }, state === STATES.PAUSED ? '▶ Возобновить' : '⏸ Пауза'),
-        (typeof onSkip === 'function' && state !== STATES.PAUSED) ? h('button', {
-          type: 'button',
-          className: 'heys-fingers-countdown__btn',
-          onClick: onSkip,
-          'aria-label': 'Пропустить фазу',
-          title: 'Пропустить фазу'
-        }, '→') : null,
-        h('button', {
-          type: 'button',
-          className: 'heys-fingers-countdown__btn heys-fingers-countdown__btn--abort',
-          onClick: onAbort
-        }, 'Прервать')
-      ) : null
-    );
+    return h(Focus.LiveCountdownDisplay, {
+      baseClass: "heys-fingers-countdown",
+      phaseKey: phaseKey,
+      phaseLabel: phaseLabel,
+      counter: counter,
+      title: gripLabel || null,
+      image: gripId ? tieredGripSrc : null,
+      imageAlt: gripLabel || gripId || "",
+      imageLoading: "eager",
+      imageErrorHandler: imageErrorHandler,
+      chips: chips,
+      digit: String(Math.max(0, secondsLeft | 0)),
+      ratio: ratio,
+      finalCount: isFinalCount,
+      ringRadius: ringRadius,
+      beforeControls: (showControls && Fingers.VoiceMiniControls) ? h(Fingers.VoiceMiniControls, null) : null,
+      controls: controls
+    });
   }
 
   // ─── Hook: useRepsCycle (Step 2 / ревью #9 scope) ────────────────────────────
@@ -1102,7 +745,8 @@
     }, [phaseGraph]);
 
     const handlePhaseEnter = React.useCallback(function (s, _meta) {
-      // SET_PREP/BIG_REST/DONE cues — обрабатывает core.
+      // Общие cue фаз (SET_PREP/BIG_REST/DONE) — после выноса ядра играем здесь.
+      _sharedPhaseCue(s);
       // REPS_INPUT — manual cue (юзер начинает повторы) + vibrate.
       // wakeLock на REPS_INPUT — запрашивает core (wakeLockPhases ниже).
       if (s === STATES.REPS_INPUT) {

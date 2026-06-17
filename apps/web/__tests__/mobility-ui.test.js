@@ -29,6 +29,8 @@ const setupOnce = () => {
     'heys_kernel_gate_v1.js',
     'heys_kernel_session_v1.js',
     'heys_kernel_runner_v1.js',
+    'heys_kernel_timer_v1.js',
+    'heys_kernel_active_session_v1.js',
     'heys_kernel_records_v1.js',
     'heys_kernel_progression_v1.js',
     'heys_kernel_dates_v1.js',
@@ -43,6 +45,7 @@ const setupOnce = () => {
   ev('heys_mobility_routine_builder_v1.js');
   ev('heys_mobility_breath_runner_v1.js');
   ev('heys_mobility_routine_runner_v1.js');
+  ev('heys_mobility_session_persistence_v1.js');
   ev('heys_mobility_assessment_v1.js');
   ev('heys_mobility_onboarding_v1.js');
   ev('heys_mobility_readiness_v1.js');
@@ -75,6 +78,10 @@ describe('Mobility UI', () => {
     vi.restoreAllMocks();
     delete globalThis.HEYS.TrainingStep;
     delete globalThis.HEYS.ConfirmModal;
+    delete globalThis.HEYS.Toast;
+    delete globalThis.HEYS.currentClientId;
+    delete globalThis.window.__heysSyncCompletedFired;
+    try { globalThis.window.localStorage.clear(); } catch (_) { /* noop */ }
   });
 
   it('рендерит focus-mode как у пальцев и открывает runner только после запуска микса', () => {
@@ -137,6 +144,89 @@ describe('Mobility UI', () => {
     expect(container.querySelector('.mobility-execution')).not.toBeNull();
     expect(container.querySelector('[data-training-runner="guided"]')).not.toBeNull();
     expect(screen.getAllByText('Ведомая тренировка').length).toBeGreaterThan(0);
+  });
+
+  it('resume запускает восстановленный план с choose-экрана и partial-save использует snapshot built', async () => {
+    globalThis.HEYS.Mobility.persistence = globalThis.HEYS.TrainingKernel.activeSession.create({
+      keySuffix: 'routine_active_session',
+      staleMs: 24 * 60 * 60 * 1000,
+      debounceMs: 250
+    });
+    const resumeBuilt = UI()._buildCustomBuilt(['joint_cars_hip', 'breath_box_tonify'], 'morning_tonify', profile, {});
+    const resumePlan = globalThis.HEYS.Mobility.routineRunner.buildRunPlan(resumeBuilt.session);
+    globalThis.window.localStorage.setItem('heys_routine_active_session', JSON.stringify({
+      planSteps: resumePlan.steps,
+      sessionMode: resumePlan.sessionMode,
+      estimatedDurationSec: resumePlan.estimatedDurationSec,
+      built: {
+        ok: resumeBuilt.ok !== false,
+        issues: resumeBuilt.issues || [],
+        session: resumeBuilt.session
+      },
+      index: 1,
+      remainingSec: 12,
+      status: 'running',
+      lastTickAt: Date.now()
+    }));
+    globalThis.window.__heysSyncCompletedFired = true;
+    const savedTrainings = [];
+    globalThis.HEYS.TrainingStep = {
+      saveMobility: (ctx, mobilityLog, meta) => savedTrainings.push({ ctx, mobilityLog, meta })
+    };
+    const storage = globalThis.HEYS.Mobility.recordsStore.createMemoryStorage();
+    const modalQueue = [];
+    globalThis.HEYS.ConfirmModal = {
+      show: vi.fn((options) => {
+        modalQueue.push(options);
+      })
+    };
+
+    const { container } = render(React.createElement(UI().MobilityApp, {
+      profile,
+      modeId: 'evening_relax',
+      clientId: 'client-a',
+      storage,
+      dateKey: '2026-06-13',
+      trainingIndex: 2
+    }));
+
+    await waitFor(() => expect(container.querySelector('[data-resume-banner="1"]')).not.toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
+    await waitFor(() => expect(container.querySelector('.mobility-execution')).not.toBeNull());
+    expect(container.textContent).toContain('Box breathing');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Стоп' }));
+    expect(modalQueue[0].title).toBe('Прервать тренировку?');
+    act(() => modalQueue[0].onConfirm());
+    expect(modalQueue[1].title).toBe('Записать прогресс?');
+    act(() => modalQueue[1].onConfirm());
+
+    expect(savedTrainings).toHaveLength(1);
+    expect(savedTrainings[0].ctx).toEqual({ dateKey: '2026-06-13', trainingIndex: 2 });
+    expect(savedTrainings[0].mobilityLog.mode).toBe('morning_tonify');
+    expect(savedTrainings[0].mobilityLog.partial).toBe(true);
+    expect(savedTrainings[0].mobilityLog.plan.steps.some((step) => step.atomId === 'breath_box_tonify')).toBe(true);
+  });
+
+  it('не стартует второй mobility runner при свежем owner-lock', async () => {
+    globalThis.window.localStorage.setItem('heys_mobility_timer_lock_v1', JSON.stringify({
+      ownerTabId: 'another-tab',
+      acquiredAt: Date.now(),
+      heartbeatAt: Date.now(),
+      reason: 'start'
+    }));
+    const warn = vi.fn();
+    globalThis.HEYS.Toast = { warn };
+
+    render(React.createElement(UI().MobilityApp, { profile, modeId: 'evening_relax' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Запустить микс' }));
+    startGuidedSession();
+
+    await waitFor(() => expect(globalThis.HEYS.Mobility.lastTimerLockDenied).toMatchObject({
+      reason: 'held-by-another-tab'
+    }));
+    expect(globalThis.HEYS.Mobility.activeTimerLock).not.toBe(true);
+    expect(warn).toHaveBeenCalled();
   });
 
   it('выбирает готовый протокол и возвращает в ведомую тренировку', { timeout: 20000 }, () => {

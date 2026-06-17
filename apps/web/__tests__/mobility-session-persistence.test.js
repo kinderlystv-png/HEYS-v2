@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const SRC = readFileSync(
-  resolve(__dirname, '../fingers/heys_fingers_session_persistence_v1.js'),
+  resolve(__dirname, '../mobility/heys_mobility_session_persistence_v1.js'),
   'utf8'
 );
 const KERNEL_SRC = readFileSync(
@@ -38,23 +38,20 @@ function loadPersistence() {
   ensureLocalStorage();
   window.HEYS = {
     currentClientId: CID,
-    Fingers: {},
+    Mobility: {},
     utils: {
       lsSet: vi.fn(),
     },
   };
-  // kernel activeSession (generic persistence) — fingers wrapper делегирует в него.
+  globalThis.HEYS = window.HEYS;
   // eslint-disable-next-line no-new-func
   new Function(KERNEL_SRC)();
   // eslint-disable-next-line no-new-func
   new Function(SRC)();
-  return window.HEYS.Fingers.persistence;
+  return window.HEYS.Mobility.persistence;
 }
 
-describe('Fingers session persistence', () => {
-  // Defensive: в полном прогоне vitest (single-thread, shared globalThis)
-  // соседний файл может обнулить window.localStorage между хуками. Teardown/
-  // setup не должен кидать из-за чужого загрязнения — гардим существование.
+describe('Mobility session persistence', () => {
   const safeClearLS = () => {
     try {
       ensureLocalStorage();
@@ -67,21 +64,23 @@ describe('Fingers session persistence', () => {
     ensureLocalStorage();
     safeClearLS();
     if (typeof window !== 'undefined') delete window.HEYS;
+    delete globalThis.HEYS;
   });
 
   afterEach(() => {
     vi.useRealTimers();
     safeClearLS();
     if (typeof window !== 'undefined') delete window.HEYS;
+    delete globalThis.HEYS;
   });
 
-  it('saves active snapshot as raw localStorage, not through cloud-synced lsSet', () => {
+  it('saves active mobility snapshot as raw localStorage, not through cloud-synced lsSet', () => {
     const persistence = loadPersistence();
     const snapshot = {
-      dateKey: '2026-06-02',
-      trainingIndex: 1,
-      exercises: [{ gripId: 'openhand4' }],
-      state: 'HANG',
+      planSteps: [{ atomId: 'joint_cars_hip' }],
+      sessionMode: 'morning_tonify',
+      index: 0,
+      remainingSec: 20,
       stateEnteredAt: 100,
     };
 
@@ -89,42 +88,37 @@ describe('Fingers session persistence', () => {
     vi.advanceTimersByTime(260);
 
     expect(window.HEYS.utils.lsSet).not.toHaveBeenCalled();
-    const key = `heys_${CID}_finger_active_session`;
+    const key = `heys_${CID}_routine_active_session`;
     const stored = JSON.parse(window.localStorage.getItem(key));
-    expect(stored.dateKey).toBe('2026-06-02');
-    expect(stored.trainingIndex).toBe(1);
+    expect(stored.sessionMode).toBe('morning_tonify');
+    expect(stored.planSteps[0].atomId).toBe('joint_cars_hip');
     expect(stored.lastTickAt).toBeTypeOf('number');
   });
 
-  it('clearForTraining removes only matching active-session snapshots', () => {
+  it('clearForTraining removes only current-client routine snapshots', () => {
     const persistence = loadPersistence();
-    const matchingKey = `heys_${CID}_finger_active_session`;
-    const globalKey = 'heys_finger_active_session';
-    const foreignKey = `heys_${OTHER_CID}_finger_active_session`;
+    const matchingKey = `heys_${CID}_routine_active_session`;
+    const globalKey = 'heys_routine_active_session';
+    const foreignKey = `heys_${OTHER_CID}_routine_active_session`;
 
     window.localStorage.setItem(matchingKey, JSON.stringify({
-      dateKey: '2026-06-02',
+      dateKey: '2026-06-17',
       trainingIndex: 1,
-      exercises: [{}],
+      planSteps: [{}],
     }));
     window.localStorage.setItem(globalKey, JSON.stringify({
-      dateKey: '2026-06-02',
+      dateKey: '2026-06-17',
       trainingIndex: 1,
-      exercises: [{}],
+      planSteps: [{}],
     }));
     window.localStorage.setItem(foreignKey, JSON.stringify({
-      dateKey: '2026-06-02',
+      dateKey: '2026-06-17',
       trainingIndex: 1,
-      exercises: [{}],
-    }));
-    window.localStorage.setItem('heys_unrelated_key', JSON.stringify({
-      dateKey: '2026-06-03',
-      trainingIndex: 0,
-      exercises: [{}],
+      planSteps: [{}],
     }));
 
     const cleared = persistence.clearForTraining({
-      dateKey: '2026-06-02',
+      dateKey: '2026-06-17',
       trainingIndex: 1,
     });
 
@@ -134,13 +128,12 @@ describe('Fingers session persistence', () => {
     expect(window.localStorage.getItem(foreignKey)).not.toBeNull();
   });
 
-  it('load ignores foreign-scoped active-session snapshots', () => {
+  it('load ignores foreign-scoped routine snapshots', () => {
     const persistence = loadPersistence();
-    const foreignKey = `heys_${OTHER_CID}_finger_active_session`;
+    const foreignKey = `heys_${OTHER_CID}_routine_active_session`;
     window.localStorage.setItem(foreignKey, JSON.stringify({
-      dateKey: '2026-06-02',
-      trainingIndex: 1,
-      exercises: [{}],
+      planSteps: [{}],
+      sessionMode: 'evening_relax',
       lastTickAt: Date.now(),
     }));
 

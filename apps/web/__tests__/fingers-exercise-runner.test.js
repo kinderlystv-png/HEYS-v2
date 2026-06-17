@@ -30,10 +30,14 @@ beforeAll(() => {
   globalThis.React = React;
   // Загружаем deps в правильном порядке для session_ui IIFE.
   const FINGERS_DIR = path.resolve(__dirname, '..', 'fingers');
+  const KERNEL_DIR = path.resolve(__dirname, '..', '_kernel');
   const ev = (f) => {
     // eslint-disable-next-line no-eval
     eval(fs.readFileSync(path.join(FINGERS_DIR, f), 'utf8'));
   };
+  // kernel TrainingFocus — CountdownDisplay делегирует в Focus.LiveCountdownDisplay.
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.join(KERNEL_DIR, 'heys_training_focus_ui_v1.js'), 'utf8'));
   ev('heys_fingers_timer_v1.js'); // STATES + useCountdownCycle (заменим стабом)
   // session_ui_v1.js большой — загружаем целиком (включая ExerciseRunner экспорт).
   ev('heys_fingers_session_ui_v1.js');

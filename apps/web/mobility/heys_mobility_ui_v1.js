@@ -24,6 +24,9 @@
   const useState = React.useState;
   const useEffect = React.useEffect;
   const useRef = React.useRef;
+  const useCallback = React.useCallback;
+  const MOBILITY_TIMER_LOCK_TTL_MS = 15000;
+  const MOBILITY_TIMER_LOCK_HEARTBEAT_MS = 2000;
 
   const DEFAULT_PROFILE = {
     age: 30,
@@ -422,11 +425,46 @@
 .mobility-preflight__list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
 .mobility-preflight__item{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;color:#172033;font-size:14px;font-weight:750;line-height:1.35}
 .mobility-preflight__check{display:inline-flex;width:22px;height:22px;border-radius:999px;align-items:center;justify-content:center;background:#dcfce7;color:#16a66a;font-weight:1000}
+/* === Countdown display (ведомая сессия) — самодостаточный нейтральный namespace.
+ * Mobility больше не наследует .heys-fingers-* из бандла пальцев: shared JSX
+ * идёт через TrainingFocus.LiveCountdownDisplay, а visual skin остаётся локальным
+ * namespace без скрытой CSS-зависимости от fingers. */
+.mobility-countdown{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 20px 12px;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;--phase-color:#374151;--phase-color-soft:rgba(55,65,81,.12);--phase-gradient:linear-gradient(135deg,#374151 0%,#1f2937 100%)}
+.mobility-countdown[data-phase='hang']{--phase-color:#dc2626;--phase-color-soft:rgba(220,38,38,.14);--phase-gradient:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%)}
+.mobility-countdown[data-phase='prep']{--phase-color:#ca8a04;--phase-color-soft:rgba(202,138,4,.16);--phase-gradient:linear-gradient(135deg,#facc15 0%,#a16207 100%)}
+.mobility-countdown[data-phase='paused']{--phase-color:#6b7280;--phase-color-soft:rgba(107,114,128,.14);--phase-gradient:linear-gradient(135deg,#9ca3af 0%,#4b5563 100%)}
+.mobility-countdown[data-phase='done']{--phase-color:#10b981;--phase-color-soft:rgba(16,185,129,.14);--phase-gradient:linear-gradient(135deg,#34d399 0%,#047857 100%)}
+.mobility-countdown__counter{font-size:13px;color:rgba(60,60,67,.65);text-align:center;font-weight:600;letter-spacing:-.005em;font-variant-numeric:tabular-nums}
+[data-theme="dark"] .mobility-countdown__counter{color:rgba(235,235,245,.55)}
+.mobility-countdown__grip{margin:0;font-size:22px;font-weight:700;letter-spacing:-.025em;line-height:1.15;text-align:center;color:#0f172a}
+.mobility-countdown__hero{width:184px;height:184px;border-radius:24px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.92) 0%,rgba(255,255,255,.82) 100%),var(--phase-color-soft);border:.5px solid rgba(0,0,0,.06);box-shadow:0 1px 2px rgba(15,23,42,.05),0 10px 26px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center}
+.mobility-countdown__hero img{width:100%;height:100%;object-fit:cover;display:block}
+.mobility-countdown__chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.mobility-countdown__chip{display:inline-flex;flex-direction:column;align-items:center;padding:7px 14px;border-radius:14px;min-width:84px;background:rgba(255,255,255,.82);border:.5px solid rgba(0,0,0,.06);box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.mobility-countdown__chip-label{font-size:10.5px;color:rgba(60,60,67,.6);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.mobility-countdown__chip-value{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-top:2px;color:#0f172a;font-variant-numeric:tabular-nums}
+.mobility-countdown__phase-badge{display:inline-block;padding:7px 22px;margin:2px 0 0;border-radius:999px;font-size:12.5px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:#fff;background:var(--phase-gradient);box-shadow:0 1px 2px rgba(0,0,0,.10),0 8px 22px var(--phase-color-soft),inset 0 1px 0 rgba(255,255,255,.28);min-width:88px;text-align:center}
+.mobility-countdown__ring-wrap{position:relative;width:196px;height:196px;margin-top:0}
+.mobility-countdown__ring{position:absolute;top:0;left:0;width:100%;height:100%}
+.mobility-countdown__ring-track{stroke:rgba(0,0,0,.08);stroke-width:9}
+[data-theme="dark"] .mobility-countdown__ring-track{stroke:rgba(255,255,255,.10)}
+.mobility-countdown__ring-fill{stroke:var(--phase-color);stroke-width:11;stroke-linecap:round;filter:drop-shadow(0 2px 6px var(--phase-color-soft));transition:stroke-dashoffset 240ms cubic-bezier(.3,.7,.3,1)}
+.mobility-countdown__digit{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;width:100%;max-width:100%;box-sizing:border-box;padding:0 18px;text-align:center;overflow:hidden;font-size:clamp(58px,16vw,76px);font-weight:700;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--phase-color);text-shadow:0 2px 8px var(--phase-color-soft);transition:color 240ms ease}
+.mobility-continuous .mobility-countdown__digit{font-size:clamp(52px,15vw,64px)}
+.mobility-countdown__digit.is-final-count{animation:mobility-countdown-pulse 1s cubic-bezier(.4,0,.6,1) infinite}
+@keyframes mobility-countdown-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.mobility-countdown__controls{display:flex;gap:8px;margin-top:6px;flex-wrap:nowrap;justify-content:center;align-items:center;width:min(100% - 24px,360px)}
+.mobility-countdown__btn{height:44px;min-width:44px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;border:.5px solid rgba(0,0,0,.08);background:rgba(255,255,255,.85);color:#0f172a;font-size:13.5px;font-weight:600;letter-spacing:-.005em;cursor:pointer;-webkit-backdrop-filter:blur(14px) saturate(180%);backdrop-filter:blur(14px) saturate(180%);box-shadow:0 1px 2px rgba(0,0,0,.04),0 4px 10px rgba(0,0,0,.04),inset 0 1px 0 rgba(255,255,255,.7);transition:transform 120ms ease,background-color 180ms ease,box-shadow 180ms ease}
+.mobility-countdown__btn:active{transform:translateY(0) scale(.98)}
+[data-theme="dark"] .mobility-countdown__btn{background:rgba(40,40,46,.78);border-color:rgba(255,255,255,.1);color:#f9fafb;box-shadow:0 1px 2px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05)}
+.mobility-countdown__btn--abort{background:linear-gradient(180deg,rgba(254,226,226,.85),rgba(254,202,202,.7));border-color:rgba(220,38,38,.22);color:#b91c1c;min-width:84px;padding-inline:10px;box-shadow:0 1px 2px rgba(220,38,38,.06),0 4px 12px rgba(220,38,38,.10),inset 0 1px 0 rgba(255,255,255,.7)}
+[data-theme="dark"] .mobility-countdown__btn--abort{background:linear-gradient(180deg,rgba(127,29,29,.45),rgba(127,29,29,.30));border-color:rgba(252,165,165,.30);color:#fca5a5}
+@media (prefers-reduced-motion:reduce){.mobility-countdown__digit.is-final-count{animation:none!important}.mobility-countdown__ring-fill{transition:none!important}}
 .mobility-guided-live{position:fixed!important;inset:0!important;z-index:2147483200;width:100vw!important;max-width:none!important;min-height:100vh;min-height:100dvh;margin:0!important;padding:calc(14px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))!important;border:0!important;border-radius:0!important;background:linear-gradient(180deg,#fff 0%,#fbfcfb 100%)!important;box-shadow:none!important;overflow:hidden!important;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .mobility-guided-live .mobility-guided__visual{display:none}
-.mobility-guided-live .heys-fingers-countdown{width:min(100%,430px)}
-.mobility-guided-live .heys-fingers-countdown__grip{max-width:min(100%,360px)}
-.mobility-guided-live .heys-fingers-countdown__digit{width:100%;max-width:100%;padding:0 18px;box-sizing:border-box;text-align:center;font-size:clamp(50px,14vw,64px);letter-spacing:-.035em;white-space:nowrap}
+.mobility-guided-live .mobility-countdown{width:min(100%,430px)}
+.mobility-guided-live .mobility-countdown__grip{max-width:min(100%,360px)}
+.mobility-guided-live .mobility-countdown__digit{width:100%;max-width:100%;padding:0 18px;box-sizing:border-box;text-align:center;font-size:clamp(50px,14vw,64px);letter-spacing:-.035em;white-space:nowrap}
 .mobility-live-roadmap{width:min(100% - 24px,392px);margin:8px auto 0}
 .mobility-live-roadmap .fingers-fs-live-roadmap__list{display:flex;flex-direction:column}
 .mobility-guided-live .fingers-fs-live-roadmap__item{min-width:0}
@@ -471,10 +509,10 @@
   .mobility-guided__hero{display:block}
   .mobility-guided__visual{min-height:220px}
   .mobility-guided-live{min-height:100vh;min-height:100dvh}
-  .mobility-guided-live .heys-fingers-countdown{padding-top:0;gap:7px}
-  .mobility-guided-live .heys-fingers-countdown__ring-wrap{width:166px;height:166px}
-  .mobility-guided-live .heys-fingers-countdown__chip{min-width:96px}
-  .mobility-guided-live .heys-fingers-countdown__controls{width:100%}
+  .mobility-guided-live .mobility-countdown{padding-top:0;gap:7px}
+  .mobility-guided-live .mobility-countdown__ring-wrap{width:166px;height:166px}
+  .mobility-guided-live .mobility-countdown__chip{min-width:96px}
+  .mobility-guided-live .mobility-countdown__controls{width:100%}
 }
 `;
     doc.head.appendChild(style);
@@ -483,6 +521,72 @@
 
   function cx() {
     return Array.prototype.slice.call(arguments).filter(Boolean).join(' ');
+  }
+
+  function _mobilityNow() { return Date.now(); }
+  function _getCurrentClientId() {
+    const cid = (HEYS && HEYS.currentClientId) ? HEYS.currentClientId : '';
+    return cid ? String(cid) : '';
+  }
+  function _mobilityTimerLockKey() {
+    const cid = _getCurrentClientId();
+    return cid ? ('heys_' + cid + '_mobility_timer_lock_v1') : 'heys_mobility_timer_lock_v1';
+  }
+  function _makeTimerTabId() {
+    try {
+      const cryptoObj = global.crypto;
+      if (cryptoObj && typeof cryptoObj.randomUUID === 'function') return cryptoObj.randomUUID();
+    } catch (_) {}
+    return 'mobility_tab_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
+  }
+  const MOBILITY_TIMER_TAB_ID = Mobility.__timerTabId || _makeTimerTabId();
+  Mobility.__timerTabId = MOBILITY_TIMER_TAB_ID;
+  function _runnerKernel() {
+    return HEYS.TrainingKernel && HEYS.TrainingKernel.runner;
+  }
+  function _mobilityTimerOwnerLock() {
+    const kr = _runnerKernel();
+    if (!kr || typeof kr.createOwnerLock !== 'function') return null;
+    return kr.createOwnerLock({
+      storage: global.localStorage || null,
+      key: _mobilityTimerLockKey(),
+      ownerId: MOBILITY_TIMER_TAB_ID,
+      ttlMs: MOBILITY_TIMER_LOCK_TTL_MS,
+      now: _mobilityNow,
+      failOpenOnStorageUnavailable: true
+    });
+  }
+  function _acquireMobilityTimerLock(reason) {
+    const ownerLock = _mobilityTimerOwnerLock();
+    if (!ownerLock || typeof ownerLock.acquire !== 'function') return true;
+    const result = ownerLock.acquire(reason || 'start');
+    if (result.ok) return true;
+    const existing = result.existing || {};
+    Mobility.lastTimerLockDenied = {
+      key: _mobilityTimerLockKey(),
+      ownerTabId: existing.ownerTabId,
+      heartbeatAt: existing.heartbeatAt,
+      deniedAt: result.deniedAt || _mobilityNow(),
+      reason: result.reason === 'held-by-another-owner' ? 'held-by-another-tab' : result.reason
+    };
+    return false;
+  }
+  function _touchMobilityTimerLock() {
+    const ownerLock = _mobilityTimerOwnerLock();
+    if (!ownerLock || typeof ownerLock.touch !== 'function') return true;
+    return ownerLock.touch();
+  }
+  function _releaseMobilityTimerLock() {
+    const ownerLock = _mobilityTimerOwnerLock();
+    if (!ownerLock || typeof ownerLock.release !== 'function') return true;
+    return ownerLock.release();
+  }
+  function _warnMobilityTimerLockDenied() {
+    const msg = 'Уже запущена другая тренировка в этой сессии. Закройте её или подождите несколько секунд.';
+    try {
+      if (HEYS.Toast && typeof HEYS.Toast.warn === 'function') HEYS.Toast.warn(msg);
+      else if (HEYS.Toast && typeof HEYS.Toast.info === 'function') HEYS.Toast.info(msg);
+    } catch (_) {}
   }
   function deps() {
     return {
@@ -1190,6 +1294,14 @@
       })
     });
   }
+  function snapshotMobilityBuilt(built) {
+    if (!built || !built.session) return null;
+    return {
+      ok: built.ok !== false,
+      issues: Array.isArray(built.issues) ? built.issues.slice() : [],
+      session: built.session
+    };
+  }
 
   function MobilityLiveRoadmap(props) {
     const steps = Array.isArray(props.steps) ? props.steps : [];
@@ -1221,17 +1333,79 @@
     const runner = deps().routineRunner;
     const plan = props.plan;
     const steps = plan && Array.isArray(plan.steps) ? plan.steps : [];
-    const [state, setState] = useState(function () {
-      return runner && plan ? runner.createState(plan) : { status: 'idle', index: 0, totalSteps: 0, aborted: false };
+    // Lifecycle/таймер ведёт общее kernel-ядро (Этап 2 унификации запуска):
+    // тик, pause/resume с remaining, wakeLock, visibility-warning. Линейный
+    // раннер (transition/createState) для live-панели больше не нужен — core
+    // единственная машина; индекс шага храним отдельно, а UI-state деривлю в
+    // форме линейного раннера (status/index/totalSteps).
+    const kt = global.HEYS && global.HEYS.TrainingKernel && global.HEYS.TrainingKernel.timer;
+    if (!kt || typeof kt.useTimerCore !== 'function') return null;
+    const RUN = 'run', RUN_MANUAL = 'run_manual';
+    const [index, setIndex] = useState(0);
+    const indexRef = useRef(0); indexRef.current = index;
+    const autoStartedRef = useRef(false);
+    const enterPhaseRef = useRef(null);
+
+    // Шаг истёк (тик дошёл до 0) или пропуск → следующий шаг или завершение.
+    // Таймерные шаги — фаза RUN (тикает); шаги без длительности (reps/cars) —
+    // RUN_MANUAL (без тика, юзер жмёт «→»).
+    const handleAdvance = useCallback(function () {
+      const enterPhase = enterPhaseRef.current;
+      if (!enterPhase) return;
+      const cur = indexRef.current;
+      if (cur >= steps.length - 1) { enterPhase('complete', 0, {}); return; }
+      const next = cur + 1;
+      setIndex(next); indexRef.current = next;
+      const dur = stepDurationSec(steps[next]);
+      enterPhase(dur ? RUN : RUN_MANUAL, dur || 0, {});
+    }, [steps]);
+
+    const core = kt.useTimerCore({
+      states: { idle: 'idle', paused: 'paused', done: 'complete', aborted: 'aborted', expired: 'aborted' },
+      manualPhases: [RUN_MANUAL],
+      wakeLockPhases: [RUN, RUN_MANUAL],
+      activePhases: [RUN],
+      visibilityWarning: true,
+      onAdvance: handleAdvance,
+      lock: {
+        acquire: function (reason) { return _acquireMobilityTimerLock(reason); },
+        touch: function () { return _touchMobilityTimerLock(); },
+        release: function () { return _releaseMobilityTimerLock(); },
+        onDenied: function () { _warnMobilityTimerLockDenied(); },
+        heartbeatMs: MOBILITY_TIMER_LOCK_HEARTBEAT_MS
+      },
+      onActiveLockChange: function (held) { Mobility.activeTimerLock = !!held; }
     });
-    const current = steps[Math.min(state.index, steps.length - 1)] || steps[0] || null;
+    enterPhaseRef.current = core.enterPhase;
+
+    const status = core.state === 'idle' ? 'idle'
+      : core.state === 'paused' ? 'paused'
+      : core.state === 'complete' ? 'complete'
+      : core.state === 'aborted' ? 'aborted'
+      : 'running';
+    const state = { status: status, index: index, totalSteps: steps.length, aborted: core.state === 'aborted' };
+    const current = steps[Math.min(index, steps.length - 1)] || steps[0] || null;
     const currentAtom = atomForStep(current);
     const currentDurationSec = stepDurationSec(current);
-    const [remainingSec, setRemainingSec] = useState(currentDurationSec);
-    const autoStartedRef = useRef(false);
-    const progress = steps.length ? Math.round(((state.index + 1) / steps.length) * 100) : 0;
+    const remainingSec = core.secondsLeft;
+    const progress = steps.length ? Math.round(((index + 1) / steps.length) * 100) : 0;
+
+    function startSession() {
+      if (core.markSessionStart() === false) return;
+      // Resume: старт с сохранённого шага и (для таймерных) с остатка времени.
+      const startIdx = Math.max(0, Math.min(Number(props.initialIndex) || 0, steps.length - 1));
+      setIndex(startIdx); indexRef.current = startIdx;
+      const full = stepDurationSec(steps[startIdx]);
+      const resumeSec = Number(props.initialRemainingSec);
+      const sec = full ? ((isFinite(resumeSec) && resumeSec > 0) ? Math.min(resumeSec, full) : full) : 0;
+      core.enterPhase(full ? RUN : RUN_MANUAL, sec, {});
+    }
     function send(event) {
-      setState(function (s) { return runner.transition(s, event); });
+      if (event === 'start') startSession();
+      else if (event === 'pause') core.pause();
+      else if (event === 'resume') core.resume();
+      else if (event === 'next') core.skipPhase();
+      else if (event === 'abort') core.abort();
     }
     function finalizeAbort(saved) {
       send('abort');
@@ -1284,35 +1458,36 @@
       });
     }
     useEffect(function () {
-      setRemainingSec(currentDurationSec);
-    }, [state.index, currentDurationSec]);
-    useEffect(function () {
-      if (!props.autoStart || autoStartedRef.current || state.status !== 'idle') return;
+      if (!props.autoStart || autoStartedRef.current || status !== 'idle') return;
       autoStartedRef.current = true;
-      if (!runner) return;
-      setState(function (s) { return runner.transition(s, 'start'); });
-    }, [props.autoStart, runner, state.status]);
+      startSession();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.autoStart, status]);
+
+    // Snapshot активной сессии в общий kernel-persistence — переживает reload.
+    // Храним материализованный план + индекс/остаток; на терминале чистим.
     useEffect(function () {
-      if (state.status !== 'running' || !currentDurationSec) return undefined;
-      const id = setInterval(function () {
-        setRemainingSec(function (prev) { return Math.max(0, (Number(prev) || 0) - 1); });
-      }, 1000);
-      return function () { clearInterval(id); };
-    }, [state.status, state.index, currentDurationSec]);
-    useEffect(function () {
-      if (state.status !== 'running' || !currentDurationSec || remainingSec > 0) return;
-      if (!runner) return;
-      setState(function (s) {
-        const atLast = (Number(s.index) || 0) >= Math.max(0, (Number(s.totalSteps) || 0) - 1);
-        return runner.transition(s, atLast ? 'complete' : 'next');
-      });
-    }, [state.status, state.index, currentDurationSec, remainingSec, runner]);
+      const store = Mobility.persistence;
+      if (!store) return;
+      if (status === 'complete' || status === 'aborted') { store.clear(); return; }
+      if (status === 'running' || status === 'paused') {
+        store.save({
+          planSteps: steps,
+          sessionMode: plan && plan.sessionMode,
+          estimatedDurationSec: plan && plan.estimatedDurationSec,
+          built: snapshotMobilityBuilt(props.built),
+          index: index,
+          remainingSec: remainingSec,
+          status: status
+        });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [status, index, remainingSec]);
     if (!runner || !steps.length || !current) return null;
-    const radius = 82;
-    const circumference = 2 * Math.PI * radius;
     const ratio = currentDurationSec ? Math.max(0, Math.min(1, (Number(remainingSec) || 0) / currentDurationSec)) : 1;
     const digit = liveDigit(current, remainingSec);
     const Focus = global.HEYS && global.HEYS.TrainingFocus;
+    if (!Focus || typeof Focus.LiveCountdownDisplay !== 'function') return null;
     const afterRing = current.breath && current.breath.phases
       ? h('ol', { className: 'mobility-breath-phases', 'aria-label': 'Фазы дыхания' },
           current.breath.phases.map(function (p, idx) {
@@ -1338,54 +1513,28 @@
             })
           : h('div', { className: 'mobility-guided__fallback', 'aria-hidden': 'true' }, 'M')
       ),
-      Focus && typeof Focus.LiveCountdownDisplay === 'function'
-        ? h(Focus.LiveCountdownDisplay, {
-            baseClass: 'heys-fingers-countdown',
-            continuousClass: 'heys-fingers-continuous',
-            continuous: true,
-            phaseKey: livePhase(state.status),
-            phaseLabel: livePhaseLabel(state.status),
-            counter: 'Упр ' + (state.index + 1) + '/' + steps.length,
-            title: liveStepTitle(current),
-            image: currentAtom && currentAtom.visualAsset,
-            imageAlt: 'Фото упражнения: ' + (currentAtom && currentAtom.title || current.label || 'упражнение'),
-            digit: digit,
-            ratio: ratio,
-            chips: [
-              {
-                id: 'duration',
-                label: currentDurationSec ? 'Длительность' : 'Доза',
-                value: currentDurationSec ? Math.round(currentDurationSec / 60) + ' мин' : stepMetric(current)
-              }
-            ],
-            afterRing: afterRing,
-            controls: controls
-          })
-        : h('div', { className: 'heys-fingers-countdown heys-fingers-continuous', 'data-phase': livePhase(state.status) },
-            h('div', { className: 'heys-fingers-countdown__counter' }, 'Упр ', state.index + 1, '/', steps.length),
-            h('h2', { className: 'heys-fingers-countdown__grip' }, liveStepTitle(current)),
-            h('div', { className: 'heys-fingers-countdown__phase-badge' }, livePhaseLabel(state.status)),
-            h('div', { className: 'heys-fingers-countdown__ring-wrap' },
-              h('svg', { className: 'heys-fingers-countdown__ring', width: 200, height: 200, viewBox: '0 0 200 200', 'aria-hidden': 'true' },
-                h('circle', { className: 'heys-fingers-countdown__ring-track', cx: 100, cy: 100, r: radius, fill: 'none' }),
-                h('circle', { className: 'heys-fingers-countdown__ring-fill', cx: 100, cy: 100, r: radius, fill: 'none', strokeDasharray: circumference, strokeDashoffset: circumference * (1 - ratio), transform: 'rotate(-90 100 100)' })
-              ),
-              h('div', { className: 'heys-fingers-countdown__digit' }, digit)
-            ),
-            afterRing,
-            h('div', { className: 'heys-fingers-countdown__controls' },
-              controls.map(function (control) {
-                return h('button', {
-                  key: control.id,
-                  type: 'button',
-                  className: 'heys-fingers-countdown__btn' + (control.abort ? ' heys-fingers-countdown__btn--abort' : ''),
-                  onClick: control.onClick,
-                  'aria-label': control.ariaLabel || control.label,
-                  title: control.title
-                }, control.label);
-              })
-            )
-          ),
+      h(Focus.LiveCountdownDisplay, {
+        baseClass: 'mobility-countdown',
+        continuousClass: 'mobility-continuous',
+        continuous: true,
+        phaseKey: livePhase(state.status),
+        phaseLabel: livePhaseLabel(state.status),
+        counter: 'Упр ' + (state.index + 1) + '/' + steps.length,
+        title: liveStepTitle(current),
+        image: currentAtom && currentAtom.visualAsset,
+        imageAlt: 'Фото упражнения: ' + (currentAtom && currentAtom.title || current.label || 'упражнение'),
+        digit: digit,
+        ratio: ratio,
+        chips: [
+          {
+            id: 'duration',
+            label: currentDurationSec ? 'Длительность' : 'Доза',
+            value: currentDurationSec ? Math.round(currentDurationSec / 60) + ' мин' : stepMetric(current)
+          }
+        ],
+        afterRing: afterRing,
+        controls: controls
+      }),
       h('div', { className: 'mobility-execution__status', 'data-status': state.status, style: { display: 'none' } })
     );
     const roadmapItems = steps.map(function (s, idx) {
@@ -1945,6 +2094,34 @@
     const [customRunAtomIds, setCustomRunAtomIds] = useState([]);
     const [showRegistry, setShowRegistry] = useState(false);
     const [showSources, setShowSources] = useState(false);
+    // Resume прерванной сессии (kernel-persistence, Этап 3): на boot ищем свежий
+    // snapshot материализованного плана и предлагаем продолжить с того же шага.
+    const [resumeSnap, setResumeSnap] = useState(null);
+    const [resuming, setResuming] = useState(false);
+    const resumeDetectedRef = useRef(false);
+    useEffect(function () {
+      if (resumeDetectedRef.current) return;
+      resumeDetectedRef.current = true;
+      const store = Mobility.persistence;
+      if (!store || typeof store.detectOnBoot !== 'function') return;
+      store.detectOnBoot(function (result) {
+        if (result && !result.stale && result.snapshot
+            && Array.isArray(result.snapshot.planSteps) && result.snapshot.planSteps.length) {
+          setResumeSnap(result.snapshot);
+        }
+      });
+    }, []);
+    function resumeGuidedSession() {
+      setResuming(true);
+      setActiveTab('today');
+      setFlowMode('resume');
+      setRunnerStarted(true);
+    }
+    function dismissResume() {
+      if (Mobility.persistence) Mobility.persistence.clear();
+      setResumeSnap(null);
+      setResuming(false);
+    }
     const selectedProtocol = d.protocolCatalog && protocolId ? d.protocolCatalog.getProtocol(protocolId) : null;
     const profileForBuild = selectedProtocol && selectedProtocol.profilePatch && Array.isArray(selectedProtocol.profilePatch.populations)
       ? Object.assign({}, profile, {
@@ -2047,6 +2224,29 @@
       if (!d.routineRunner || !activeBuilt || !activeBuilt.session) return null;
       return d.routineRunner.buildRunPlan(activeBuilt.session);
     }, [activeBuilt]);
+    const resumePlan = useMemo(function () {
+      if (!resumeSnap || !Array.isArray(resumeSnap.planSteps) || !resumeSnap.planSteps.length) return null;
+      return {
+        steps: resumeSnap.planSteps,
+        totalSteps: resumeSnap.planSteps.length,
+        sessionMode: resumeSnap.sessionMode,
+        estimatedDurationSec: Number(resumeSnap.estimatedDurationSec) || 0
+      };
+    }, [resumeSnap]);
+    const resumeBuilt = resumeSnap && resumeSnap.built && resumeSnap.built.session
+      ? resumeSnap.built
+      : null;
+    const executionPlan = resuming && resumePlan ? resumePlan : plan;
+    const executionBuilt = resuming && resumeBuilt ? resumeBuilt : activeBuilt;
+    const executionDurationMin = executionPlan && executionPlan.estimatedDurationSec
+      ? Math.round(executionPlan.estimatedDurationSec / 60)
+      : null;
+    const executionIssueCount = executionBuilt && Array.isArray(executionBuilt.issues)
+      ? executionBuilt.issues.length
+      : 0;
+    const executionBlockCount = executionBuilt && executionBuilt.session && Array.isArray(executionBuilt.session.blocks)
+      ? executionBuilt.session.blocks.length
+      : 0;
 
     function persistMobilitySession(result, planOverride, flags) {
       const target = result || activeBuilt;
@@ -2077,15 +2277,17 @@
       return record;
     }
     function saveSession() {
-      const record = persistMobilitySession(activeBuilt, plan, {});
+      const record = persistMobilitySession(executionBuilt, executionPlan, {});
       if (!record) return;
       setSaveStatus('session');
     }
-    function savePartialSession(progress) {
-      if (!activeBuilt || !plan) return;
-      const partial = partialMobilityResult(activeBuilt, plan, progress);
+    function savePartialSession(progress, resultOverride, planOverride) {
+      const targetBuilt = resultOverride || activeBuilt;
+      const targetPlan = planOverride || plan;
+      if (!targetBuilt || !targetPlan) return;
+      const partial = partialMobilityResult(targetBuilt, targetPlan, progress);
       if (!partial) return;
-      const partialPlan = d.routineRunner && partial.session ? d.routineRunner.buildRunPlan(partial.session) : plan;
+      const partialPlan = d.routineRunner && partial.session ? d.routineRunner.buildRunPlan(partial.session) : targetPlan;
       persistMobilitySession(partial, partialPlan, { partial: true });
       setSaveStatus('session');
     }
@@ -2125,7 +2327,7 @@
         modeId: modeId,
         selectedMode: selectedMode,
         issueCount: issueCount,
-        onStart: function () { setRunnerStarted(true); }
+        onStart: function () { setResuming(false); setResumeSnap(null); setRunnerStarted(true); }
       });
     }
 
@@ -2249,16 +2451,35 @@
     function renderToday() {
       const title = flowMode === 'custom'
         ? 'Своя сборка'
+        : flowMode === 'resume'
+          ? 'Прерванная тренировка'
         : flowMode === 'protocol' && selectedProtocol
           ? selectedProtocol.name
           : 'Быстрый микс';
       const text = flowMode === 'custom'
         ? 'Сопровождение по выбранным упражнениям.'
+        : flowMode === 'resume'
+          ? 'Продолжение с сохранённого шага.'
         : flowMode === 'protocol' && selectedProtocol
           ? selectedProtocol.intent
           : 'Автосборка из подходящих упражнений под цель, инвентарь и ограничения.';
+      const renderResumeBanner = function () {
+        return (resumeSnap && !runnerStarted)
+          ? h('div', { className: 'mobility-compact-plan', 'data-resume-banner': '1' },
+              h('div', null,
+                h('strong', null, 'Прерванная тренировка'),
+                h('span', null, 'Шаг ' + ((Number(resumeSnap.index) || 0) + 1) + ' из ' + resumeSnap.planSteps.length + ' — можно продолжить')
+              ),
+              h('div', { style: { display: 'flex', gap: '8px' } },
+                h('button', { type: 'button', className: 'mobility-primary-btn', onClick: resumeGuidedSession }, 'Продолжить'),
+                h('button', { type: 'button', onClick: dismissResume }, 'Отменить')
+              )
+            )
+          : null;
+      };
       if (flowMode === 'choose') {
         return h('div', { className: 'mobility-fs-today' },
+          renderResumeBanner(),
           Focus && Focus.ReadinessCard
             ? h(Focus.ReadinessCard, {
                 classPrefix: 'mobility-fs',
@@ -2292,7 +2513,7 @@
               h('div', { className: 'mobility-today-hero__top' },
                 h('div', null,
                   h('h3', null, title),
-                  h('p', null, activeBuilt && activeBuilt.ok === false
+                  h('p', null, executionBuilt && executionBuilt.ok === false
                     ? 'Есть ограничения: проверьте подсказки перед выполнением.'
                     : text)
                 ),
@@ -2303,27 +2524,35 @@
               ),
               h('div', { className: 'mobility-today-hero__meta' },
                 chip('purpose', PURPOSE_LABEL[selectedMode.purpose] || selectedMode.purpose || 'режим'),
-                durationMin ? chip('duration', durationMin + ' мин') : null,
-                chip('steps', plan ? plan.totalSteps + ' шагов' : 'нет плана'),
-                chip(issueCount ? 'warn' : 'ok', issueCount ? issueCount + ' огранич.' : 'без блокировок')
+                executionDurationMin
+                  ? chip('duration', executionDurationMin + ' мин')
+                  : durationMin ? chip('duration', durationMin + ' мин') : null,
+                chip('steps', executionPlan ? executionPlan.totalSteps + ' шагов' : 'нет плана'),
+                chip(executionIssueCount ? 'warn' : 'ok', executionIssueCount ? executionIssueCount + ' огранич.' : 'без блокировок')
               )
             )
           ),
           h('div', { className: 'mobility-compact-plan' },
             h('div', null,
-              h('strong', null, blockCount || 0, ' упражн.'),
-              h('span', null, durationMin ? durationMin + ' мин · ' + (plan ? plan.totalSteps : 0) + ' шагов' : 'план собирается')
+              h('strong', null, executionBlockCount || blockCount || 0, ' упражн.'),
+              h('span', null, executionDurationMin
+                ? executionDurationMin + ' мин · ' + (executionPlan ? executionPlan.totalSteps : 0) + ' шагов'
+                : durationMin ? durationMin + ' мин · ' + (plan ? plan.totalSteps : 0) + ' шагов' : 'план собирается')
             ),
-            h('button', { type: 'button', onClick: function () { setFlowMode('choose'); setRunnerStarted(false); } }, 'Назад')
+            h('button', { type: 'button', onClick: function () { setFlowMode('choose'); setRunnerStarted(false); setResuming(false); } }, 'Назад')
           ),
+          renderResumeBanner(),
           runnerStarted
             ? h(ExecutionPanel, {
-                key: flowMode + ':' + modeId + ':' + protocolId + ':' + customRunAtomIds.join(',') + ':' + mixSeed + ':' + (plan ? plan.totalSteps : 0),
-                plan: plan,
+                key: (resuming ? 'resume:' : '') + flowMode + ':' + modeId + ':' + protocolId + ':' + customRunAtomIds.join(',') + ':' + mixSeed + ':' + (executionPlan ? executionPlan.totalSteps : 0),
+                plan: executionPlan,
+                built: executionBuilt,
+                initialIndex: (resuming && resumeSnap) ? (Number(resumeSnap.index) || 0) : 0,
+                initialRemainingSec: (resuming && resumeSnap) ? resumeSnap.remainingSec : null,
                 autoStart: true,
                 onPain: savePainFlag,
-                onAbortSave: savePartialSession,
-                onAbortComplete: function () { setRunnerStarted(false); }
+                onAbortSave: function (progress) { savePartialSession(progress, executionBuilt, executionPlan); },
+                onAbortComplete: function () { setRunnerStarted(false); setResuming(false); setResumeSnap(null); }
               })
             : h(GuidedLaunchCard, {
                 built: activeBuilt,

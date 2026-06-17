@@ -54,6 +54,9 @@ beforeAll(() => {
   globalThis.React = React;
   // eslint-disable-next-line no-eval
   eval(fs.readFileSync(path.resolve(__dirname, '..', '_kernel', 'heys_kernel_runner_v1.js'), 'utf8'));
+  // kernel-timer (useTimerCore) — fingers timer делегирует в него.
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.resolve(__dirname, '..', '_kernel', 'heys_kernel_timer_v1.js'), 'utf8'));
   // Загружаем timer-модуль (IIFE регистрирует Fingers.useCountdownCycle).
   const file = path.resolve(__dirname, '..', 'fingers', 'heys_fingers_timer_v1.js');
   // eslint-disable-next-line no-eval

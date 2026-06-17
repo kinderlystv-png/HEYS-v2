@@ -367,9 +367,13 @@
           alt: props.imageAlt || props.title || 'Упражнение',
           loading: props.imageLoading || 'eager',
           decoding: 'async',
-          onError: function (e) {
-            try { e.currentTarget.parentNode.style.display = 'none'; } catch (_) {}
-          }
+          // Домен может передать свой обработчик (напр. tier-fallback фото);
+          // дефолт — схлопнуть контейнер при 404.
+          onError: typeof props.imageErrorHandler === 'function'
+            ? props.imageErrorHandler
+            : function (e) {
+                try { e.currentTarget.parentNode.style.display = 'none'; } catch (_) {}
+              }
         })
       ) : null,
       chips.length ? h('div', { className: base + '__chips' },
@@ -408,7 +412,8 @@
         h('div', { className: base + '__digit' + (finalCount ? ' is-final-count' : '') }, digit)
       ),
       props.afterRing || null,
-      controls.length ? h('div', { className: base + '__controls' },
+      (controls.length || props.beforeControls) ? h('div', { className: base + '__controls' },
+        props.beforeControls || null,
         controls.map(function (control, idx) {
           return h('button', {
             key: control.id || idx,

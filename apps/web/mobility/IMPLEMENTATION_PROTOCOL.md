@@ -354,6 +354,24 @@ runtime-артефакт.
   Browser QA на 390×844 подтвердил две ConfirmModal, `partialProgress` в
   `heys_<clientId>_mobility_records_v1`, `liveStillOpen=false` после записи.
 
+### Shared runner hardening (2026-06-17)
+
+- Mobility resume теперь работает с choose-экрана: баннер виден до запуска,
+  `Продолжить` открывает `ExecutionPanel` в режиме `resume`, а partial
+  abort-save использует восстановленный `built/plan` snapshot, а не текущий
+  quick-mix.
+- Mobility active-session persistence вынесен в отдельный source-wrapper над
+  `HEYS.TrainingKernel.activeSession`: `routine_active_session`, client-scoped
+  local-only `localStorage`, stale 24h.
+- Mobility timer использует общий `HEYS.TrainingKernel.timer.useTimerCore` и
+  owner-lock через `TrainingKernel.runner.createOwnerLock`, чтобы второй live
+  runner не стартовал поверх свежей активной сессии.
+- Проверки: targeted `vitest` для fingers/mobility/kernel runner/timer/
+  persistence/adapter — 12 файлов, 175 тестов; прямые kernel-regression tests
+  добавлены для `activeSession` и `useTimerCore`.
+- Ограничение: generated legacy bundles не пересобраны в этом проходе, потому
+  что `bundle:*` требует отдельной явной команды.
+
 ## Риски / открытые
 
 - atom_catalog покрывает все блоки A–J и у каждого атома есть `title`,

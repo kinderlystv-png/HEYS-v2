@@ -46,6 +46,11 @@ const installTimer = ({ withKernel }) => {
   globalThis.window.HEYS = heys;
   globalThis.React = React;
 
+  // kernel-timer (useTimerCore) нужен ВСЕГДА: fingers timer делегирует в него
+  // независимо от kernel-runner (phaseGraph) — поэтому вне withKernel-ветки.
+  // eslint-disable-next-line no-eval
+  eval(fs.readFileSync(path.resolve(__dirname, '..', '_kernel', 'heys_kernel_timer_v1.js'), 'utf8'));
+
   if (withKernel) {
     // eslint-disable-next-line no-eval
     eval(fs.readFileSync(kernelRunnerFile, 'utf8'));

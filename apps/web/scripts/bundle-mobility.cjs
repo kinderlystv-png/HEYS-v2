@@ -25,6 +25,8 @@ const MODULES = [
   { file: 'heys_kernel_progression_v1.js', label: 'shared progression primitives (kernel)', dir: KERNEL_DIR },
   { file: 'heys_kernel_session_v1.js', label: 'shared session builder primitives (kernel)', dir: KERNEL_DIR },
   { file: 'heys_kernel_runner_v1.js', label: 'shared runner lifecycle primitives (kernel)', dir: KERNEL_DIR },
+  { file: 'heys_kernel_timer_v1.js', label: 'shared timer-core: tick/pause/resume/wakeLock/owner-lock (kernel)', dir: KERNEL_DIR },
+  { file: 'heys_kernel_active_session_v1.js', label: 'shared active-session snapshot persistence (kernel)', dir: KERNEL_DIR },
   { file: 'heys_kernel_router_v1.js', label: 'shared strangler router primitives (kernel)', dir: KERNEL_DIR },
   { file: 'heys_kernel_catalog_v1.js', label: 'shared catalog index: id+groupBy (kernel)', dir: KERNEL_DIR },
   { file: 'heys_kernel_assess_v1.js', label: 'shared assess math: deficit/normalize (kernel)', dir: KERNEL_DIR },
@@ -48,6 +50,7 @@ const MODULES = [
   { file: 'heys_mobility_routine_builder_v1.js', label: 'hybrid routine builder' },
   { file: 'heys_mobility_breath_runner_v1.js', label: 'breath runner' },
   { file: 'heys_mobility_routine_runner_v1.js', label: 'routine runner' },
+  { file: 'heys_mobility_session_persistence_v1.js', label: 'active-session persistence wrapper' },
   { file: 'heys_mobility_ui_v1.js', label: 'React UI source' },
   { file: 'heys_mobility_entry_v1.js', label: 'public API' }
 ];
