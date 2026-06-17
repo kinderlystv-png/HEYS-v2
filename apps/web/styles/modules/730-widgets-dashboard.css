@@ -7468,9 +7468,12 @@ body:has(.page-reports) .hdr::after {
 :root {
   --heys-diary-glass-card-shadow: var(--widget-shadow-card);
   --heys-diary-stack-gap: 18px;
+  --heys-diary-inner-gap: 12px;
+  --heys-diary-card-header-gap: 10px;
   --heys-diary-card-padding-y: 14px;
   --heys-diary-card-padding-x: 16px;
   --heys-diary-card-padding: var(--heys-diary-card-padding-y) var(--heys-diary-card-padding-x);
+  --heys-diary-section-title-padding-x: var(--heys-diary-card-padding-x);
   --heys-diary-card-title-size: 14px;
   --heys-diary-card-title-weight: 600;
   --heys-diary-card-title-color: var(--text, #1e293b);
@@ -7489,6 +7492,301 @@ body:has(.page-reports) .hdr::after {
   --heys-diary-glass-border-dark: var(--heys-diary-outline-border-dark);
   --heys-diary-glass-divider-light: var(--heys-diary-outline-divider-light);
   --heys-diary-glass-divider-dark: var(--heys-diary-outline-divider-dark);
+}
+
+.reports-overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0 0;
+  min-height: 132px;
+  padding: 18px 16px 16px;
+  border: 1px solid rgba(234, 88, 12, 0.26);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 237, 0.98) 0%, rgba(255, 237, 213, 0.96) 56%, rgba(254, 215, 170, 0.94) 100%);
+  box-shadow: 0 10px 28px rgba(234, 88, 12, 0.14);
+  color: #7c2d12;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.reports-overview-card:active {
+  transform: translateY(1px) scale(0.995);
+}
+
+.reports-overview-card:focus-visible {
+  outline: 3px solid rgba(249, 115, 22, 0.35);
+  outline-offset: 3px;
+}
+
+.reports-overview-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.reports-overview-card__icon {
+  flex: 0 0 auto;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.reports-overview-card__title {
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 900;
+  color: #9a3412;
+}
+
+.reports-overview-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: rgba(124, 45, 18, 0.82);
+}
+
+.reports-overview-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reports-overview-card__stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 50px;
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.18),
+    0 6px 14px rgba(154, 52, 18, 0.06);
+}
+
+.reports-overview-card__stat--primary {
+  background: rgba(255, 247, 237, 0.94);
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.28),
+    0 6px 14px rgba(154, 52, 18, 0.08);
+}
+
+.reports-overview-card__stat-value {
+  min-width: 0;
+  color: #c2410c;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.reports-overview-card__stat-label {
+  color: rgba(124, 45, 18, 0.62);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.reports-overview-card__count {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #fff7ed;
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.26);
+  color: #c2410c;
+  font-weight: 900;
+}
+
+.reports-overview-card__text {
+  min-width: 0;
+  display: block;
+  font-weight: 700;
+}
+
+.reports-overview-card__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-height: 30px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22);
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+body.reports-fullscreen-open {
+  overflow: hidden;
+}
+
+.reports-fullscreen-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482400;
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  background:
+    linear-gradient(180deg, rgba(239, 248, 255, 0.98) 0%, rgba(255, 255, 255, 0.98) 38%, rgba(255, 247, 237, 0.98) 100%);
+  color: var(--text, #111827);
+}
+
+.reports-fullscreen-modal__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.reports-fullscreen-modal__close-text,
+.reports-fullscreen-modal__close-icon {
+  border: 1px solid rgba(147, 197, 253, 0.72);
+  background: rgba(255, 255, 255, 0.92);
+  color: #2563eb;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+  cursor: pointer;
+}
+
+.reports-fullscreen-modal__close-text {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.reports-fullscreen-modal__close-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.reports-fullscreen-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 10px calc(24px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+.reports-fullscreen-modal__card {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.reports-fullscreen-modal__loading {
+  margin: 12px 0 0;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #64748b;
+  font-weight: 800;
+  text-align: center;
+}
+
+[data-theme="dark"] .reports-overview-card,
+.theme-dark .reports-overview-card {
+  border-color: rgba(251, 146, 60, 0.24);
+  background:
+    linear-gradient(135deg, rgba(67, 20, 7, 0.92) 0%, rgba(124, 45, 18, 0.78) 100%);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  color: #fed7aa;
+}
+
+[data-theme="dark"] .reports-overview-card__title,
+.theme-dark .reports-overview-card__title {
+  color: #fed7aa;
+}
+
+[data-theme="dark"] .reports-overview-card__body,
+.theme-dark .reports-overview-card__body {
+  color: rgba(255, 237, 213, 0.82);
+}
+
+[data-theme="dark"] .reports-overview-card__stat,
+.theme-dark .reports-overview-card__stat {
+  background: rgba(255, 237, 213, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.16);
+}
+
+[data-theme="dark"] .reports-overview-card__stat--primary,
+.theme-dark .reports-overview-card__stat--primary {
+  background: rgba(154, 52, 18, 0.38);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22);
+}
+
+[data-theme="dark"] .reports-overview-card__stat-value,
+.theme-dark .reports-overview-card__stat-value {
+  color: #ffedd5;
+}
+
+[data-theme="dark"] .reports-overview-card__stat-label,
+.theme-dark .reports-overview-card__stat-label {
+  color: rgba(255, 237, 213, 0.64);
+}
+
+[data-theme="dark"] .reports-overview-card__count,
+.theme-dark .reports-overview-card__count {
+  background: rgba(154, 52, 18, 0.48);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.24);
+  color: #ffedd5;
+}
+
+[data-theme="dark"] .reports-overview-card__action,
+.theme-dark .reports-overview-card__action {
+  background: rgba(255, 237, 213, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.18);
+  color: #fed7aa;
+}
+
+[data-theme="dark"] .reports-fullscreen-modal,
+.theme-dark .reports-fullscreen-modal {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.98) 48%, rgba(67, 20, 7, 0.98) 100%);
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .reports-fullscreen-modal__topbar,
+.theme-dark .reports-fullscreen-modal__topbar {
+  background: rgba(15, 23, 42, 0.88);
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+}
+
+[data-theme="dark"] .reports-fullscreen-modal__close-text,
+[data-theme="dark"] .reports-fullscreen-modal__close-icon,
+.theme-dark .reports-fullscreen-modal__close-text,
+.theme-dark .reports-fullscreen-modal__close-icon {
+  border-color: rgba(96, 165, 250, 0.46);
+  background: rgba(30, 41, 59, 0.88);
+  color: #bfdbfe;
+}
+
+[data-theme="dark"] .reports-fullscreen-modal__loading,
+.theme-dark .reports-fullscreen-modal__loading {
+  background: rgba(30, 41, 59, 0.78);
+  color: #cbd5e1;
 }
 
 [data-theme="dark"] {

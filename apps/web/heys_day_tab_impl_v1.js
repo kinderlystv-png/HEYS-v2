@@ -110,6 +110,179 @@
     const loadMealsForDate = U.loadMealsForDate;
     const productsSignature = U.productsSignature;
     const computePopularProducts = U.computePopularProducts;
+
+    function pluralRu(n, forms) {
+        const value = Math.abs(Number(n) || 0);
+        const mod10 = value % 10;
+        const mod100 = value % 100;
+        if (mod10 === 1 && mod100 !== 11) return forms[0];
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return forms[1];
+        return forms[2];
+    }
+
+    function parseLocalDate(dateStr) {
+        const parts = String(dateStr || '').split('-').map(Number);
+        if (parts.length !== 3 || parts.some((v) => !Number.isFinite(v))) return null;
+        return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0, 0);
+    }
+
+    function getWeekKey(dateStr) {
+        const d = parseLocalDate(dateStr);
+        if (!d || Number.isNaN(d.getTime())) return '';
+        const dayOfWeek = d.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        d.setDate(d.getDate() + mondayOffset);
+        return U.fmtDate ? U.fmtDate(d) : d.toISOString().slice(0, 10);
+    }
+
+    function getReportDateKeysFromStorage() {
+        if (HEYS.dayCache?.getDayDates) {
+            return HEYS.dayCache.getDayDates();
+        }
+
+        const dates = new Set();
+        const clientId = HEYS.utils?.getCurrentClientId?.() || HEYS.currentClientId || '';
+        const scopedPrefix = clientId ? ('heys_' + clientId + '_dayv2_') : '';
+        const legacyPrefix = 'heys_dayv2_';
+
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i) || '';
+                let dateStr = '';
+                if (scopedPrefix && key.startsWith(scopedPrefix) && key.length === scopedPrefix.length + 10) {
+                    dateStr = key.slice(scopedPrefix.length);
+                } else if (key.startsWith(legacyPrefix) && key.length === legacyPrefix.length + 10) {
+                    dateStr = key.slice(legacyPrefix.length);
+                }
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) dates.add(dateStr);
+            }
+        } catch (_) { }
+
+        return Array.from(dates).sort();
+    }
+
+    function readReportDay(dateStr) {
+        return HEYS.dayCache?.getDay?.(dateStr)
+            || HEYS.dayStorage?.lsGet?.('heys_dayv2_' + dateStr, null)
+            || HEYS.utils?.lsGet?.('heys_dayv2_' + dateStr, null)
+            || null;
+    }
+
+    function hasReportMealData(dayData) {
+        const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+        return meals.some((meal) => Array.isArray(meal?.items) ? meal.items.length > 0 : !!meal);
+    }
+
+    function buildReportsOverviewMeta() {
+        const service = HEYS.monthlyReportsService;
+        if (service?.buildMonthlyWeeks) {
+            try {
+                const weeks = service.buildMonthlyWeeks({ weeksCount: 16, useCache: true }) || [];
+                const months = service.buildMonthlyMonths
+                    ? (service.buildMonthlyMonths({ weeksCount: 16, useCache: true }) || [])
+                    : [];
+                const weeksCount = weeks.length;
+                const monthsCount = months.length;
+                const weekUnitText = pluralRu(weeksCount, ['неделя', 'недели', 'недель']);
+                const monthUnitText = pluralRu(monthsCount, ['месяц', 'месяца', 'месяцев']);
+                const weeksText = weeksCount + ' ' + pluralRu(weeksCount, ['неделя', 'недели', 'недель']);
+                const monthsText = monthsCount + ' ' + pluralRu(monthsCount, ['месяц', 'месяца', 'месяцев']);
+
+                if (monthsCount > 0) {
+                    return {
+                        monthsCount,
+                        weeksCount,
+                        monthUnitText,
+                        weekUnitText,
+                        monthsText,
+                        weeksText,
+                        countText: monthsText,
+                        bodyText: 'Доступно ' + monthsText + ' и ' + weeksText + ' статистики для просмотра.',
+                        detailText: 'Периоды с достаточным количеством записей',
+                        actionText: 'Открыть отчёты'
+                    };
+                }
+
+                if (weeksCount > 0) {
+                    return {
+                        monthsCount,
+                        weeksCount,
+                        monthUnitText,
+                        weekUnitText,
+                        monthsText,
+                        weeksText,
+                        countText: weeksText,
+                        bodyText: 'Доступно ' + weeksText + ' статистики для просмотра.',
+                        detailText: 'Периоды с достаточным количеством записей',
+                        actionText: 'Открыть отчёты'
+                    };
+                }
+            } catch (_) { }
+        }
+
+        const weekMap = new Map();
+        const monthMap = new Map();
+
+        getReportDateKeysFromStorage().forEach((dateStr) => {
+            const dayData = readReportDay(dateStr);
+            if (!hasReportMealData(dayData)) return;
+
+            const weekKey = getWeekKey(dateStr);
+            const monthKey = String(dateStr).slice(0, 7);
+            if (weekKey) weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + 1);
+            if (/^\d{4}-\d{2}$/.test(monthKey)) monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
+        });
+
+        const weeksCount = Array.from(weekMap.values()).filter((days) => days >= 2).length;
+        const monthsCount = Array.from(monthMap.values()).filter((days) => days >= 14).length;
+        const weekUnitText = pluralRu(weeksCount, ['неделя', 'недели', 'недель']);
+        const monthUnitText = pluralRu(monthsCount, ['месяц', 'месяца', 'месяцев']);
+        const weeksText = weeksCount + ' ' + pluralRu(weeksCount, ['неделя', 'недели', 'недель']);
+        const monthsText = monthsCount + ' ' + pluralRu(monthsCount, ['месяц', 'месяца', 'месяцев']);
+
+        if (monthsCount > 0) {
+            return {
+                monthsCount,
+                weeksCount,
+                monthUnitText,
+                weekUnitText,
+                monthsText,
+                weeksText,
+                countText: monthsText,
+                bodyText: 'Доступно ' + monthsText + ' и ' + weeksText + ' статистики для просмотра.',
+                detailText: 'Периоды с достаточным количеством записей',
+                actionText: 'Открыть отчёты'
+            };
+        }
+
+        if (weeksCount > 0) {
+            return {
+                monthsCount,
+                weeksCount,
+                monthUnitText,
+                weekUnitText,
+                monthsText,
+                weeksText,
+                countText: weeksText,
+                bodyText: 'Доступно ' + weeksText + ' статистики для просмотра.',
+                detailText: 'Периоды с достаточным количеством записей',
+                actionText: 'Открыть отчёты'
+            };
+        }
+
+        return {
+            monthsCount: 0,
+            weeksCount: 0,
+            monthUnitText: 'месяцев',
+            weekUnitText: 'недель',
+            monthsText: '0 месяцев',
+            weeksText: '0 недель',
+            countText: '0 недель',
+            bodyText: 'Пока мало данных: отчёты появятся после 2 дней с едой за неделю.',
+            detailText: 'Нужно больше дней с записями',
+            actionText: 'Посмотреть раздел'
+        };
+    }
     // Profile and calculation utilities from dayUtils (required)
     const getProfile = U.getProfile;
     const calcBMR = U.calcBMR;
@@ -255,7 +428,7 @@
         const logoutScreen = dayGuards.getLogoutScreen({ React, HEYSRef: window.HEYS });
         if (logoutScreen) return logoutScreen;
 
-        const { useState, useMemo, useEffect, useRef } = React;
+        const { useState, useMemo, useEffect, useRef, useCallback } = React;
 
         const [mealsDepsReady, setMealsDepsReady] = useState(() => {
             return !!(HEYSRef.dayMealExpandState?.useMealExpandState
@@ -365,6 +538,53 @@
         // Теперь subTab приходит из props (из нижнего меню App)
         const mobileSubTab = props.subTab || 'stats';
         const showStatsContent = !isMobile || mobileSubTab === 'stats';
+        const showActivityContent = !isMobile || mobileSubTab === 'activity';
+        const activityContentEnabled = showStatsContent || showActivityContent;
+        const showWaterContent = !isMobile || mobileSubTab === 'diary';
+        const [reportsModalOpen, setReportsModalOpen] = useState(false);
+        const [reportsModuleTick, setReportsModuleTick] = useState(0);
+        const [monthlyReportsMode, setMonthlyReportsMode] = useState('weeks');
+
+        const ensureReportsModules = useCallback(() => {
+            const loader = window.__loadPostboot3Ui;
+            if (typeof loader !== 'function') return;
+            try {
+                const result = loader();
+                if (result && typeof result.then === 'function') {
+                    result.finally(() => setReportsModuleTick((value) => value + 1));
+                } else {
+                    setTimeout(() => setReportsModuleTick((value) => value + 1), 0);
+                }
+            } catch (err) {
+                console.warn('[HEYS.reports] monthly reports lazy load failed', err);
+            }
+        }, []);
+
+        const closeReportsModal = useCallback(() => {
+            setReportsModalOpen(false);
+        }, []);
+
+        const openReportsModal = useCallback(() => {
+            setReportsModalOpen(true);
+            ensureReportsModules();
+            haptic?.('light');
+        }, [ensureReportsModules]);
+
+        useEffect(() => {
+            if (!reportsModalOpen) return undefined;
+            ensureReportsModules();
+            document.body.classList.add('reports-fullscreen-open');
+            const handleKeyDown = (event) => {
+                if (event.key === 'Escape') {
+                    closeReportsModal();
+                }
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => {
+                document.body.classList.remove('reports-fullscreen-open');
+                window.removeEventListener('keydown', handleKeyDown);
+            };
+        }, [reportsModalOpen, ensureReportsModules, closeReportsModal]);
 
         // === СВАЙП ДЛЯ ПОД-ВКЛАДОК УБРАН ===
         // Теперь свайп между stats/diary обрабатывается глобально в App
@@ -1195,8 +1415,8 @@
 
         // Компактные тренировки в SaaS стиле (вынесено в модуль)
         // 🚀 PERF R7: memoize — only rebuild on training data changes
-        const trainingsBlock = useMemo(() => {
-            if (!showStatsContent) return null;
+        const regularTrainingsBlock = useMemo(() => {
+            if (!activityContentEnabled) return null;
             return HEYS.dayTrainings?.renderTrainingsBlock?.({
                 haptic,
                 setDay,
@@ -1213,13 +1433,38 @@
                 kcalPerMin,
                 weight,
                 r0,
-                dateKey: date
+                dateKey: date,
+                trainingFilterMode: 'regular',
+                includeHouseholdEntries: true
             }) || null;
-        }, [showStatsContent, visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
+        }, [activityContentEnabled, visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
+
+        const chargeTrainingBlock = useMemo(() => {
+            if (!activityContentEnabled) return null;
+            return HEYS.dayTrainings?.renderTrainingsBlock?.({
+                haptic,
+                setDay,
+                setVisibleTrainings,
+                visibleTrainings,
+                householdActivities,
+                openTrainingPicker,
+                showZoneFormula,
+                openHouseholdPicker,
+                showHouseholdFormula,
+                trainingTypes,
+                TR,
+                kcalMin,
+                kcalPerMin,
+                weight,
+                r0,
+                dateKey: date,
+                trainingFilterMode: 'morning_activation'
+            }) || null;
+        }, [activityContentEnabled, visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
 
         // Сводка тренировок за 30 дней (чтение из localStorage по префиксу дня)
         const monthTrainingsRows = useMemo(() => {
-            if (!showStatsContent) return [];
+            if (!activityContentEnabled) return [];
             return HEYS.dayActivity?.collectMonthTrainingRows?.({
                 lsGet,
                 kcalMin,
@@ -1230,7 +1475,7 @@
                 parseISO,
                 fmtDate
             }) || [];
-        }, [showStatsContent, lsGet, kcalMin, trainingTypes, r0, day?.date, day?.updatedAt, day?.trainings]);
+        }, [activityContentEnabled, lsGet, kcalMin, trainingTypes, r0, day?.date, day?.updatedAt, day?.trainings]);
 
         const readMaDayForActivityCalendar = React.useCallback((dk) => {
             // Logical key heys_dayv2_* — HEYS.utils.lsGet applies client scope via nsKey (do not pass heys_<cid>_dayv2_* or key doubles).
@@ -1247,7 +1492,7 @@
         }, [lsGet, date, day?.updatedAt]);
 
         const morningActivationCalendarBlock = useMemo(() => {
-            if (!showStatsContent) return null;
+            if (!activityContentEnabled) return null;
             const Cal = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
             if (!Cal || !date) return null;
             return React.createElement(Cal, {
@@ -1256,7 +1501,7 @@
                 headingTitle: '⚡ Календарь зарядки',
                 layoutClass: 'ma-habit-cal--activity'
             });
-        }, [showStatsContent, date, readMaDayForActivityCalendar, day?.updatedAt]);
+        }, [activityContentEnabled, date, readMaDayForActivityCalendar, day?.updatedAt]);
 
         // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
         // 🚀 PERF R7: memoize sideBlock — skip on popup/animation/water changes
@@ -1316,6 +1561,91 @@
                 clearCycleDay
             }) || null)
             : null;
+
+        const reportsOverviewCard = useMemo(() => {
+            if (!showStatsContent) return null;
+            const meta = buildReportsOverviewMeta();
+            return React.createElement('section', {
+                className: 'reports-overview-card',
+                role: 'button',
+                tabIndex: 0,
+                'aria-haspopup': 'dialog',
+                'aria-label': 'Открыть отчёты по месяцам и неделям',
+                onClick: openReportsModal,
+                onKeyDown: (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openReportsModal();
+                    }
+                }
+            },
+                React.createElement('div', { className: 'reports-overview-card__head' },
+                    React.createElement('span', { className: 'reports-overview-card__icon', 'aria-hidden': 'true' }, '📙'),
+                    React.createElement('span', { className: 'reports-overview-card__title' }, 'ОТЧЕТЫ ПО МЕСЯЦАМ И НЕДЕЛЯМ')
+                ),
+                React.createElement('div', { className: 'reports-overview-card__body' },
+                    React.createElement('div', { className: 'reports-overview-card__stats' },
+                        React.createElement('span', { className: 'reports-overview-card__stat reports-overview-card__stat--primary' },
+                            React.createElement('span', { className: 'reports-overview-card__stat-value' }, meta.monthsCount),
+                            React.createElement('span', { className: 'reports-overview-card__stat-label' }, meta.monthUnitText)
+                        ),
+                        React.createElement('span', { className: 'reports-overview-card__stat' },
+                            React.createElement('span', { className: 'reports-overview-card__stat-value' }, meta.weeksCount),
+                            React.createElement('span', { className: 'reports-overview-card__stat-label' }, meta.weekUnitText)
+                        )
+                    ),
+                    React.createElement('span', { className: 'reports-overview-card__text' }, meta.detailText),
+                    React.createElement('span', { className: 'reports-overview-card__action' }, meta.actionText)
+                )
+            );
+        }, [showStatsContent, openReportsModal, date, day?.updatedAt]);
+
+        const reportsFullscreenModal = useMemo(() => {
+            if (!reportsModalOpen) return null;
+            const MonthlyReportsLegend = window.HEYS?.monthlyReports?.MonthlyReportsLegend;
+            const MonthlyReportsContent = window.HEYS?.monthlyReports?.MonthlyReportsContent;
+            return React.createElement('div', {
+                className: 'reports-fullscreen-modal',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'reports-fullscreen-title'
+            },
+                React.createElement('div', { className: 'reports-fullscreen-modal__topbar' },
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'reports-fullscreen-modal__close-text',
+                        onClick: closeReportsModal
+                    }, 'Закрыть'),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'reports-fullscreen-modal__close-icon',
+                        onClick: closeReportsModal,
+                        'aria-label': 'Закрыть отчёты'
+                    }, '×')
+                ),
+                React.createElement('main', { className: 'reports-fullscreen-modal__body' },
+                    React.createElement('div', { className: 'reports-fullscreen-modal__card' },
+                        React.createElement('div', { className: 'reports-title-row reports-title-row--monthly' },
+                            React.createElement('h2', {
+                                id: 'reports-fullscreen-title',
+                                className: 'reports-title'
+                            }, 'Месячные отчёты'),
+                            MonthlyReportsLegend
+                                ? React.createElement(MonthlyReportsLegend, { mode: monthlyReportsMode })
+                                : null
+                        ),
+                        MonthlyReportsContent
+                            ? React.createElement(MonthlyReportsContent, {
+                                mode: monthlyReportsMode,
+                                setMode: setMonthlyReportsMode
+                            })
+                            : React.createElement('div', {
+                                className: 'reports-fullscreen-modal__loading'
+                            }, 'Загружаем модуль месячных отчётов...')
+                    )
+                )
+            );
+        }, [reportsModalOpen, reportsModuleTick, monthlyReportsMode, closeReportsModal]);
 
         // compareBlock удалён по требованию
 
@@ -1784,10 +2114,30 @@
         if (!HEYS.dayStatsBlock?.buildStatsBlock) {
             throw new Error('[heys_day_v12] HEYS.dayStatsBlock not loaded before heys_day_v12.js');
         }
+        const cascadeReady = showStatsContent && !!HEYS.CascadeCard?.renderCard;
+        const cascadeContent = cascadeReady ? (HEYS.CascadeCard.renderCard({
+            React,
+            day,
+            selectedDate: date,
+            prof,
+            pIndex,
+            dayTot,
+            normAbs
+        }) || null) : null;
+        const cascadeSlot = showStatsContent
+            ? React.createElement('div', {
+                className: cascadeReady
+                    ? 'deferred-card-slot deferred-card-slot--loaded no-animate deferred-card-slot--cascade'
+                    : 'deferred-card-slot deferred-card-slot--pending deferred-card-slot--cascade',
+                'aria-hidden': cascadeReady ? undefined : 'true',
+                style: cascadeReady ? undefined : { minHeight: '140px' }
+            }, cascadeContent)
+            : null;
         const statsBlockResult = HEYS.dayStatsBlock.buildStatsBlock({
             React,
             HEYSRef: window.HEYS,
             renderStatsBlock: showStatsContent,
+            cascadeSlot,
             openExclusivePopup,
             haptic,
             setDay,
@@ -1902,7 +2252,7 @@
         // 🚀 PERF R7: memoize waterCard — only rebuild on water-related state changes.
         // Skips rebuild on popup/animation/mood/sleep changes.
         const waterCard = useMemo(() => {
-            if (!showStatsContent) return null;
+            if (!showWaterContent) return null;
             return HEYS.dayWaterCard.buildWaterCard({
                 React,
                 day,
@@ -1927,7 +2277,7 @@
                 addWater,
                 removeWater
             });
-        }, [showStatsContent, day?.waterMl, day?.date, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
+        }, [showWaterContent, day?.waterMl, day?.date, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
 
         // === COMPACT ACTIVITY INPUT ===
         if (!HEYS.dayStepsUI?.useStepsState) {
@@ -1956,7 +2306,7 @@
         // 🚀 PERF R7: memoize compactActivity — only rebuild on activity/energy changes.
         // Skips rebuild on popup/animation/water/mood changes.
         const compactActivity = useMemo(() => {
-            if (!showStatsContent) return null;
+            if (!showActivityContent) return null;
             return HEYS.dayActivityCard.buildActivityCard({
                 React,
                 day,
@@ -1973,7 +2323,8 @@
                 train1k,
                 train2k,
                 visibleTrainings,
-                trainingsBlock,
+                regularTrainingsBlock,
+                chargeTrainingBlock,
                 ndteData,
                 ndteBoostKcal,
                 tefData,
@@ -1994,7 +2345,7 @@
                 openHouseholdPicker,
                 openTrainingPicker
             });
-        }, [showStatsContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, trainingsBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
+        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, regularTrainingsBlock, chargeTrainingBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');
@@ -2016,6 +2367,8 @@
             compactActivity,
             sideBlock,
             cycleCard,
+            reportsOverviewCard,
+            reportsFullscreenModal,
             date,
             day,
             caloricDebt,

@@ -8,6 +8,7 @@
             React,
             HEYSRef,
             renderStatsBlock = true,
+            cascadeSlot,
             // actions deps
             openExclusivePopup,
             haptic,
@@ -200,6 +201,9 @@
         });
 
         const statsData = {
+            slots: {
+                cascade: cascadeSlot
+            },
             helpers: {
                 renderSparkline,
                 renderWeightSparkline

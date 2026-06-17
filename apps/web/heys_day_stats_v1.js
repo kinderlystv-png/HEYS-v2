@@ -83,7 +83,7 @@
     }
 
     const dataSafe = data || {};
-    const { helpers, deps } = dataSafe;
+    const { helpers, deps, slots } = dataSafe;
     if (!helpers || !deps) {
       reportGuardError('deps_container_missing', { hasHelpers: !!helpers, hasDeps: !!deps });
       return renderGuardPlaceholder('Статистика недоступна', 'Не удалось получить зависимости для рендера.');
@@ -125,6 +125,7 @@
       App,
       openProfileModal
     } = deps;
+    const cascadeSlot = slots?.cascade || null;
 
     if (!PopupWithBackdrop || !createSwipeHandlers || !getSmartPopupPosition || !ReactDOM) {
       reportGuardError('deps_missing', {
@@ -507,7 +508,7 @@
       applyDate();
     };
 
-    const statsBlock = React.createElement('div', { className: 'compact-stats compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
+    const statsBlock = React.createElement('div', { className: 'compact-stats stats-section' },
       React.createElement('div', { className: 'compact-card-header stats-header-with-badge' },
         React.createElement('span', null, '📊 СТАТИСТИКА'),
         React.createElement('span', {
@@ -2615,6 +2616,7 @@
           'Добавь вес для анализа связи калорий и веса'
         )
       ),
+      cascadeSlot,
       // === Mini-heatmap недели (скрываем если нет данных — появится как сюрприз) ===
       weekHeatmapData && weekHeatmapData.withData > 0 && (() => {
         const weekHeatmapMeta = vmComputed.weekHeatmapMeta;

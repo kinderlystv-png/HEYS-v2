@@ -61,10 +61,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             orphanAlert,
             lowCalBanner,
             statsBlock,
-            waterCard,
             compactActivity,
             sideBlock,
             cycleCard,
+            reportsOverviewCard,
+            reportsFullscreenModal,
             date,
             day,
             caloricDebt,
@@ -377,10 +378,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 (!isMobile || mobileSubTab === 'stats') && orphanAlert,
                 (!isMobile || mobileSubTab === 'stats') && lowCalBanner,
                 (!isMobile || mobileSubTab === 'stats') && statsBlock,
-                (!isMobile || mobileSubTab === 'stats') && waterCard,
-                (!isMobile || mobileSubTab === 'stats') && compactActivity,
+                (!isMobile || mobileSubTab === 'stats' || mobileSubTab === 'activity') && compactActivity,
                 (!isMobile || mobileSubTab === 'stats') && sideBlock,
                 (!isMobile || mobileSubTab === 'stats') && cycleCard,
+                (!isMobile || mobileSubTab === 'stats') && reportsOverviewCard,
+
+                reportsFullscreenModal,
 
                 isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary') && !offlineColdStart && React.createElement('div', {
                     className: 'fab-group',

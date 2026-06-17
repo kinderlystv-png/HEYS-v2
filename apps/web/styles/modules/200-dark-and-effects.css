@@ -2784,6 +2784,33 @@
   border-color: var(--stats-border);
 }
 
+.compact-stats.stats-section {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--heys-diary-inner-gap, 12px);
+  margin-bottom: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.stats-section .compact-card-header {
+  margin: 0;
+  padding-inline: var(--heys-diary-section-title-padding-x, 16px);
+}
+
+.stats-section .metrics-cards,
+.stats-section .kcal-sparkline-container,
+.stats-section .debt-card,
+.stats-section .week-heatmap {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 .compact-stats .goal-progress-bar {
   background: transparent;
   box-shadow: none;
@@ -2799,15 +2826,42 @@
   border-color: var(--sleep-border);
 }
 
+.compact-sleep.sleep-section,
+.compact-sleep.compact-card {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--heys-diary-inner-gap, 12px);
+  margin-bottom: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.compact-sleep.compact-card.widget-shadow-diary-glass.widget-outline-diary-glass {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 .compact-sleep .compact-card-header {
   color: #be185d;
+}
+
+.sleep-section .compact-card-header,
+.compact-sleep.compact-card .compact-card-header {
+  margin: 0;
+  padding-inline: var(--heys-diary-section-title-padding-x, 16px);
 }
 
 /* Ряд с двумя плашками */
 .sleep-cards-row {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--heys-diary-inner-gap, 12px);
 }
 
 /* Плашка Сон / Оценка дня */
@@ -2816,7 +2870,7 @@
   background: var(--color-white);
   border: 1px solid #fce7f3;
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 12px var(--heys-diary-card-padding-x, 16px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   contain: layout style paint;
 }

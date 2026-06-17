@@ -3,6 +3,7 @@
 window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 ; (function (global) {
     const HEYS = (global.HEYS = global.HEYS || {});
+    const DAY_STATS_LAZY_VERSION = '2026-06-17-charge-hide-zones-v1';
 
     const scripts = [
         'heys_morning_activation_calendar_v1.js',
@@ -32,6 +33,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'hobby/drums-finger-control/heys_drums_ui_v1.js'
     ];
 
+    const cacheBust = (() => {
+        try {
+            const bootDayScript = document.querySelector('script[src*="boot-day.bundle."]');
+            const src = bootDayScript && (bootDayScript.getAttribute('src') || '');
+            const match = src.match(/boot-day\.bundle\.([a-f0-9]+)\.js/);
+            return (match ? match[1] : String(Date.now())) + '-' + DAY_STATS_LAZY_VERSION;
+        } catch (_) {
+            return String(Date.now());
+        }
+    })();
+
     function reportError(error, src) {
         try {
             if (HEYS?.analytics?.trackError) {
@@ -48,7 +60,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
     function loadSequential(index) {
         if (index >= scripts.length) return;
         const script = document.createElement('script');
-        script.src = scripts[index];
+        script.src = scripts[index] + '?v=' + cacheBust;
         script.async = false;
         script.defer = true;
         script.onload = () => loadSequential(index + 1);

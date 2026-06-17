@@ -130,7 +130,8 @@
       train2k,
       r0,
       visibleTrainings,
-      trainingsBlock,
+      regularTrainingsBlock,
+      chargeTrainingBlock,
       ndteData,
       ndteBoostKcal,
       tefData,
@@ -164,6 +165,7 @@
     })();
 
     const showMaSkippedChargeNotice = day?.morningActivation?.status === 'missed' && !hasMorningActivationDone;
+    const showMaDoneChargeNotice = hasMorningActivationDone && !chargeTrainingBlock;
     const maSkipReasonSubtitle = (() => {
       const id = day?.morningActivation?.skipReasonId;
       if (!id) return null;
@@ -174,6 +176,7 @@
       }
       return MA_SKIP_REASON_LABEL_FALLBACK[id] || null;
     })();
+    const showChargeCard = !!chargeTrainingBlock || !!morningActivationCalendarBlock || showMaSkippedChargeNotice;
 
     const openMorningActivationQuickAdd = () => {
       const dateKey = day?.date || day?.dateKey || (HEYS.StepModal?.utils?.getTodayKey?.() || new Date().toISOString().slice(0, 10));
@@ -193,180 +196,105 @@
       openTrainingPicker?.(visibleTrainings || 0);
     };
 
-    return React.createElement('div', { className: 'compact-activity compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
+    return React.createElement('div', { className: 'compact-activity activity-section' },
       React.createElement('div', { className: 'compact-card-header' }, '📏 АКТИВНОСТЬ'),
 
-      // Слайдер шагов с зоной защиты от свайпа
-      React.createElement('div', { className: 'steps-slider-container no-swipe-zone' },
-        React.createElement('div', { className: 'steps-slider-header' },
-          React.createElement('span', { className: 'steps-label' }, '👟 Шаги'),
-          React.createElement('span', { className: 'steps-value' },
-            // Фактические шаги — кликабельные с подсказкой
-            React.createElement('span', {
-              onClick: (e) => {
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                setMetricPopup({
-                  type: 'steps',
-                  x: rect.left + rect.width / 2,
-                  y: rect.top,
-                  data: {
-                    value: stepsValue,
-                    goal: stepsGoal,
-                    ratio: stepsValue / stepsGoal,
-                    kcal: stepsK,
-                    color: stepsColor
-                  }
-                });
-                haptic('light');
-              },
-              style: { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' },
-              title: 'Нажмите для подробностей'
-            },
-              React.createElement('b', { style: { color: stepsColor } }, stepsValue.toLocaleString())
-            ),
-            ' / ',
-            // Цель шагов — с кнопкой редактирования
-            React.createElement('span', {
-              onClick: (e) => {
-                e.stopPropagation();
-                openStepsGoalPicker();
-                haptic('light');
-              },
-              style: { cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' },
-              title: 'Изменить цель'
-            },
-              React.createElement('b', { className: 'steps-goal' }, stepsGoal.toLocaleString()),
-              React.createElement('span', { style: { fontSize: '12px', opacity: 0.7 } }, '✏️')
-            ),
-            React.createElement('span', { className: 'steps-kcal-hint' }, ' / ' + stepsK + ' ккал')
-          )
+      React.createElement('div', { className: 'activity-cards-row activity-cards-row--top' },
+        React.createElement('div', { className: 'formula-card formula-card--activity-top widget-shadow-diary-glass widget-outline-diary-glass' },
+        React.createElement('div', { className: 'formula-card-header' },
+          React.createElement('span', { className: 'formula-card-icon' }, '📊'),
+          React.createElement('span', { className: 'formula-card-title' }, 'Расчёт калорий')
         ),
-        React.createElement('div', {
-          className: 'steps-slider'
-        },
-          React.createElement('div', { className: 'steps-slider-track' }),
-          React.createElement('div', { className: 'steps-slider-goal-mark', style: { left: '80%' } },
-            React.createElement('span', { className: 'steps-goal-label' }, String(stepsGoal))
+        React.createElement('div', { className: 'formula-card-rows' },
+          React.createElement('div', { className: 'formula-row' },
+            React.createElement('span', { className: 'formula-label' }, 'BMR'),
+            React.createElement('span', { className: 'formula-value' }, bmr)
           ),
-          React.createElement('div', {
-            className: 'steps-slider-fill',
-            style: { width: stepsPercent + '%', background: stepsColor }
-          }),
-          React.createElement('div', {
-            className: 'steps-slider-thumb',
-            style: { left: stepsPercent + '%', borderColor: stepsColor },
-            onMouseDown: handleStepsDrag,
-            onTouchStart: handleStepsDrag
-          })
-        )
-      ),
-
-      // Ряд: Формула расчёта + Бытовая активность
-      React.createElement('div', { className: 'activity-cards-row' },
-        // Плашка с формулой расчёта
-        React.createElement('div', { className: 'formula-card widget-shadow-diary-glass widget-outline-diary-glass' },
-          React.createElement('div', { className: 'formula-card-header' },
-            React.createElement('span', { className: 'formula-card-icon' }, '📊'),
-            React.createElement('span', { className: 'formula-card-title' }, 'Расчёт калорий')
+          React.createElement('div', { className: 'formula-row' },
+            React.createElement('span', { className: 'formula-label' }, '+ Шаги'),
+            React.createElement('span', { className: 'formula-value' }, stepsK)
           ),
-          React.createElement('div', { className: 'formula-card-rows' },
-            React.createElement('div', { className: 'formula-row' },
-              React.createElement('span', { className: 'formula-label' }, 'BMR'),
-              React.createElement('span', { className: 'formula-value' }, bmr)
+          householdK > 0 && React.createElement('div', { className: 'formula-row' },
+            React.createElement('span', { className: 'formula-label' }, '+ Быт'),
+            React.createElement('span', { className: 'formula-value' }, householdK)
+          ),
+          (train1k + train2k > 0) && React.createElement('div', { className: 'formula-row' },
+            React.createElement('span', { className: 'formula-label' }, '+ Тренировки'),
+            React.createElement('span', { className: 'formula-value' }, safeR0(train1k + train2k))
+          ),
+          ndteData.active && ndteBoostKcal > 0 && React.createElement('div', { className: 'formula-row ndte-row' },
+            React.createElement('span', { className: 'formula-label' },
+              React.createElement('span', { style: { marginRight: '4px' } }, '🔥'),
+              'Тренировка вчера'
             ),
-            React.createElement('div', { className: 'formula-row' },
-              React.createElement('span', { className: 'formula-label' }, '+ Шаги'),
-              React.createElement('span', { className: 'formula-value' }, stepsK)
+            React.createElement('span', { className: 'formula-value ndte-value' }, '+' + ndteBoostKcal)
+          ),
+          tefKcal > 0 && React.createElement('div', { className: 'formula-row tef-row' },
+            React.createElement('span', {
+              className: 'formula-label',
+              title: tefData.breakdown ? `Б: ${tefData.breakdown.protein} | У: ${tefData.breakdown.carbs} | Ж: ${tefData.breakdown.fat}` : ''
+            },
+              React.createElement('span', { style: { marginRight: '4px' } }, '🔥'),
+              '+ TEF',
+              React.createElement('span', {
+                className: 'tef-help-icon',
+                onClick: (e) => {
+                  e.stopPropagation();
+                  const rect = e.target.getBoundingClientRect();
+                  setTefInfoPopup({ x: rect.left + rect.width / 2, y: rect.bottom });
+                },
+                style: {
+                  marginLeft: '6px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  background: 'rgba(100, 116, 139, 0.15)',
+                  color: '#64748b',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }
+              }, '?')
             ),
-            householdK > 0 && React.createElement('div', { className: 'formula-row' },
-              React.createElement('span', { className: 'formula-label' }, '+ Быт'),
-              React.createElement('span', { className: 'formula-value' }, householdK)
+            React.createElement('span', { className: 'formula-value tef-value' }, tefKcal)
+          ),
+          React.createElement('div', { className: 'formula-row formula-subtotal' },
+            React.createElement('span', { className: 'formula-label' }, '= Затраты'),
+            React.createElement('span', { className: 'formula-value' }, tdee)
+          ),
+          dayTargetDef !== 0 && React.createElement('div', { className: 'formula-row' + (dayTargetDef < 0 ? ' deficit' : ' surplus') },
+            React.createElement('span', { className: 'formula-label' }, dayTargetDef < 0 ? 'Дефицит' : 'Профицит'),
+            React.createElement('span', { className: 'formula-value' }, (dayTargetDef > 0 ? '+' : '') + dayTargetDef + '%')
+          ),
+          caloricDebt?.dailyBoost > 0 && React.createElement('div', { className: 'formula-row debt-row' },
+            React.createElement('span', { className: 'formula-label' },
+              React.createElement('span', { style: { marginRight: '4px' } }, '💰'),
+              'Долг'
             ),
-            (train1k + train2k > 0) && React.createElement('div', { className: 'formula-row' },
-              React.createElement('span', { className: 'formula-label' }, '+ Тренировки'),
-              React.createElement('span', { className: 'formula-value' }, safeR0(train1k + train2k))
-            ),
-            // 🆕 v3.7.0: NDTE — эффект вчерашней тренировки
-            ndteData.active && ndteBoostKcal > 0 && React.createElement('div', { className: 'formula-row ndte-row' },
-              React.createElement('span', { className: 'formula-label' },
-                React.createElement('span', { style: { marginRight: '4px' } }, '🔥'),
-                'Тренировка вчера'
-              ),
-              React.createElement('span', { className: 'formula-value ndte-value' }, '+' + ndteBoostKcal)
-            ),
-            // 🔬 TEF v1.0.0: Затраты на переваривание пищи
-            tefKcal > 0 && React.createElement('div', { className: 'formula-row tef-row' },
-              React.createElement('span', { className: 'formula-label', title: tefData.breakdown ? `Б: ${tefData.breakdown.protein} | У: ${tefData.breakdown.carbs} | Ж: ${tefData.breakdown.fat}` : '' },
-                React.createElement('span', { style: { marginRight: '4px' } }, '🔥'),
-                '+ TEF',
-                // Иконка "?" для открытия popup с научной информацией
-                React.createElement('span', {
-                  className: 'tef-help-icon',
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    const rect = e.target.getBoundingClientRect();
-                    const pos = { x: rect.left + rect.width / 2, y: rect.bottom };
-                    // 2026-05-28: dropped startTransition wrapper (transition discarded в курaторе)
-                    setTefInfoPopup(pos);
-                  },
-                  style: {
-                    marginLeft: '6px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    background: 'rgba(100, 116, 139, 0.15)',
-                    color: '#64748b',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }
-                }, '?')
-              ),
-              React.createElement('span', { className: 'formula-value tef-value' }, tefKcal)
-            ),
-            React.createElement('div', { className: 'formula-row formula-subtotal' },
-              React.createElement('span', { className: 'formula-label' }, '= Затраты'),
-              React.createElement('span', { className: 'formula-value' }, tdee)
-            ),
-            dayTargetDef !== 0 && React.createElement('div', { className: 'formula-row' + (dayTargetDef < 0 ? ' deficit' : ' surplus') },
-              React.createElement('span', { className: 'formula-label' }, dayTargetDef < 0 ? 'Дефицит' : 'Профицит'),
-              React.createElement('span', { className: 'formula-value' }, (dayTargetDef > 0 ? '+' : '') + dayTargetDef + '%')
-            ),
-            // 💰 Калорийный долг (если есть) — показываем всегда для информации
-            caloricDebt?.dailyBoost > 0 && React.createElement('div', { className: 'formula-row debt-row' },
-              React.createElement('span', { className: 'formula-label' },
-                React.createElement('span', { style: { marginRight: '4px' } }, '💰'),
-                'Долг'
-              ),
-              // При refeed долг показываем серым (не добавляется к цели)
-              React.createElement('span', { className: 'formula-value', style: { color: day.isRefeedDay ? '#9ca3af' : '#22c55e' } },
-                (day.isRefeedDay ? '(' : '+') + caloricDebt.dailyBoost + (day.isRefeedDay ? ')' : '')
-              )
-            ),
-            // 🍕 Refeed day boost (Загрузка)
-            day.isRefeedDay && React.createElement('div', { className: 'formula-row refeed-row' },
-              React.createElement('span', { className: 'formula-label' },
-                React.createElement('span', { style: { marginRight: '4px' } }, '🍕'),
-                'Загрузка'
-              ),
-              React.createElement('span', { className: 'formula-value', style: { color: '#f97316' } }, '+35%')
-            ),
-            React.createElement('div', { className: 'formula-row formula-total' },
-              React.createElement('span', { className: 'formula-label' }, 'Цель'),
-              React.createElement('span', { className: 'formula-value' }, displayOptimum)
+            React.createElement('span', { className: 'formula-value', style: { color: day.isRefeedDay ? '#9ca3af' : '#22c55e' } },
+              (day.isRefeedDay ? '(' : '+') + caloricDebt.dailyBoost + (day.isRefeedDay ? ')' : '')
             )
+          ),
+          day.isRefeedDay && React.createElement('div', { className: 'formula-row refeed-row' },
+            React.createElement('span', { className: 'formula-label' },
+              React.createElement('span', { style: { marginRight: '4px' } }, '🍕'),
+              'Загрузка'
+            ),
+            React.createElement('span', { className: 'formula-value', style: { color: '#f97316' } }, '+35%')
+          ),
+          React.createElement('div', { className: 'formula-row formula-total' },
+            React.createElement('span', { className: 'formula-label' }, 'Цель'),
+            React.createElement('span', { className: 'formula-value' }, displayOptimum)
           )
+        )
         ),
-        // Правая колонка: бытовая активность + кнопка тренировки
-        React.createElement('div', { className: 'activity-right-col' },
-          // Бытовая активность - клик открывает статистику
+        React.createElement('div', { className: 'activity-right-col activity-right-col--top' },
           React.createElement('div', {
             className: 'household-activity-card clickable widget-shadow-diary-glass widget-outline-diary-glass',
-            onClick: () => openHouseholdPicker('stats') // Открывает статистику
+            onClick: () => openHouseholdPicker('stats')
           },
             React.createElement('div', { className: 'household-activity-header' },
               React.createElement('span', { className: 'household-activity-icon' }, '🏠'),
@@ -382,71 +310,148 @@
               ' подробнее'
             ),
             householdK > 0 && React.createElement('div', { className: 'household-value-kcal' }, '→ ' + householdK + ' ккал'),
-            // Кнопка добавления внутри карточки
             React.createElement('button', {
               className: 'household-add-btn',
               onClick: (e) => {
-                e.stopPropagation(); // Не открывать stats
-                openHouseholdPicker('add'); // Только ввод
+                e.stopPropagation();
+                openHouseholdPicker('add');
               }
             }, '+ Добавить')
+          )
+        )
+      ),
+
+      // Слайдер шагов с зоной защиты от свайпа
+      React.createElement('div', { className: 'activity-steps-card widget-shadow-diary-glass widget-outline-diary-glass' },
+        React.createElement('div', { className: 'steps-slider-container no-swipe-zone' },
+          React.createElement('div', { className: 'steps-slider-header' },
+            React.createElement('span', { className: 'steps-label' }, '👟 Шаги'),
+            React.createElement('span', { className: 'steps-value' },
+              // Фактические шаги — кликабельные с подсказкой
+              React.createElement('span', {
+                onClick: (e) => {
+                  e.stopPropagation();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setMetricPopup({
+                    type: 'steps',
+                    x: rect.left + rect.width / 2,
+                    y: rect.top,
+                    data: {
+                      value: stepsValue,
+                      goal: stepsGoal,
+                      ratio: stepsValue / stepsGoal,
+                      kcal: stepsK,
+                      color: stepsColor
+                    }
+                  });
+                  haptic('light');
+                },
+                style: { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' },
+                title: 'Нажмите для подробностей'
+              },
+                React.createElement('b', { style: { color: stepsColor } }, stepsValue.toLocaleString())
+              ),
+              ' / ',
+              // Цель шагов — с кнопкой редактирования
+              React.createElement('span', {
+                onClick: (e) => {
+                  e.stopPropagation();
+                  openStepsGoalPicker();
+                  haptic('light');
+                },
+                style: { cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' },
+                title: 'Изменить цель'
+              },
+                React.createElement('b', { className: 'steps-goal' }, stepsGoal.toLocaleString()),
+                React.createElement('span', { style: { fontSize: '12px', opacity: 0.7 } }, '✏️')
+              ),
+              React.createElement('span', { className: 'steps-kcal-hint' }, ' / ' + stepsK + ' ккал')
+            )
           ),
           React.createElement('div', {
-            style: {
-              display: 'flex',
-              gap: '6px',
-              alignItems: 'stretch',
-              marginTop: '6px'
-            }
+            className: 'steps-slider'
           },
-            // Кнопка добавления тренировки
-            visibleTrainings < 3 && React.createElement('button', {
-              className: 'add-training-btn',
-              onClick: () => {
-                const newIndex = visibleTrainings;
-                // НЕ увеличиваем visibleTrainings сразу —
-                // он обновится автоматически когда тренировка сохранится
-                openTrainingPicker(newIndex);
-              },
-              style: {
-                flex: hasMorningActivationDone ? '1 1 100%' : '1 1 auto',
-                minWidth: 0,
-                padding: hasMorningActivationDone ? '14px 12px' : '12px 10px'
-              }
-            }, '+ Тренировка'),
-            !hasMorningActivationDone && React.createElement('button', {
-              className: 'add-training-btn add-charge-btn',
-              type: 'button',
-              onClick: openMorningActivationQuickAdd,
-              title: 'Добавить зарядку'
-            }, '⚡🔋')
+            React.createElement('div', { className: 'steps-slider-track' }),
+            React.createElement('div', { className: 'steps-slider-goal-mark', style: { left: '80%' } },
+              React.createElement('span', { className: 'steps-goal-label' }, String(stepsGoal))
+            ),
+            React.createElement('div', {
+              className: 'steps-slider-fill',
+              style: { width: stepsPercent + '%', background: stepsColor }
+            }),
+            React.createElement('div', {
+              className: 'steps-slider-thumb',
+              style: { left: stepsPercent + '%', borderColor: stepsColor },
+              onMouseDown: handleStepsDrag,
+              onTouchStart: handleStepsDrag
+            })
           )
         )
       ),
 
-      showMaSkippedChargeNotice && React.createElement('div', {
-        className: 'ma-skip-notice-card compact-card widget-shadow-diary-glass widget-outline-diary-glass',
-        role: 'status'
+      React.createElement('div', { className: 'activity-actions-row' },
+        visibleTrainings < 3 && React.createElement('button', {
+          className: 'add-training-btn',
+          onClick: () => {
+            const newIndex = visibleTrainings;
+            // НЕ увеличиваем visibleTrainings сразу —
+            // он обновится автоматически когда тренировка сохранится
+            openTrainingPicker(newIndex);
+          }
+        }, '+ Тренировка'),
+        !hasMorningActivationDone && React.createElement('button', {
+          className: 'add-training-btn add-charge-btn',
+          type: 'button',
+          onClick: openMorningActivationQuickAdd,
+          title: 'Добавить зарядку'
+        }, '⚡🔋')
+      ),
+
+      // Тренировки — обычные выше зарядки
+      regularTrainingsBlock,
+
+      showChargeCard && React.createElement('div', {
+        className: 'activity-charge-card compact-card widget-shadow-diary-glass widget-outline-diary-glass'
       },
-      React.createElement('div', { className: 'ma-skip-notice-row' },
-        React.createElement('span', { className: 'ma-skip-notice-icon', 'aria-hidden': 'true' }, '⚡'),
-        React.createElement('div', { className: 'ma-skip-notice-text' },
-          React.createElement('div', { className: 'ma-skip-notice-title' }, 'Зарядка сегодня не в плане'),
-          React.createElement('div', { className: 'ma-skip-notice-sub' },
-            maSkipReasonSubtitle
-              ? maSkipReasonSubtitle
-              : (day?.morningActivation?.skipReasonPending
-                ? 'После добавления продукта в приём можно коротко отметить причину.'
-                : 'Ты отметил(а), что зарядку сегодня не планируешь.')
+        React.createElement('div', { className: 'activity-charge-card-head' },
+          React.createElement('span', { className: 'activity-charge-card-title' }, '⚡ Зарядка'),
+          showMaSkippedChargeNotice && React.createElement('span', {
+            className: 'activity-charge-card-status activity-charge-card-status--missed'
+          }, 'пропущено'),
+          showMaDoneChargeNotice && React.createElement('span', {
+            className: 'activity-charge-card-status activity-charge-card-status--done'
+          }, 'сделано')
+        ),
+        showMaDoneChargeNotice && React.createElement('div', {
+          className: 'ma-done-notice-card',
+          role: 'status'
+        },
+          React.createElement('span', { className: 'ma-done-notice-icon', 'aria-hidden': 'true' }, '✅'),
+          React.createElement('span', { className: 'ma-done-notice-text' }, 'Сегодня выполнено')
+        ),
+        showMaSkippedChargeNotice && React.createElement('div', {
+          className: 'ma-skip-notice-card',
+          role: 'status'
+        },
+          React.createElement('div', { className: 'ma-skip-notice-row' },
+            React.createElement('span', { className: 'ma-skip-notice-icon', 'aria-hidden': 'true' }, '⚡'),
+            React.createElement('div', { className: 'ma-skip-notice-text' },
+              React.createElement('div', { className: 'ma-skip-notice-title' }, 'Сегодня пропущено'),
+              React.createElement('div', { className: 'ma-skip-notice-sub' },
+                maSkipReasonSubtitle
+                  ? maSkipReasonSubtitle
+                  : (day?.morningActivation?.skipReasonPending
+                    ? 'После добавления продукта в приём можно коротко отметить причину.'
+                    : 'Ты отметил(а), что зарядку сегодня не планируешь.')
+              )
+            )
           )
-        )
-      )
+        ),
+        chargeTrainingBlock,
+        morningActivationCalendarBlock && React.createElement('div', {
+          className: 'activity-charge-calendar'
+        }, morningActivationCalendarBlock)
       ),
-
-      // Тренировки — компактные
-      trainingsBlock,
-
-      morningActivationCalendarBlock,
 
       // Тренировки за последние 30 дней (сводка)
       React.createElement('div', { className: 'month-trainings-card compact-card widget-shadow-diary-glass widget-outline-diary-glass' },

@@ -12457,6 +12457,7 @@
             isMobile,
             mobileSubTab,
             goalProgressBar,
+            waterCard,
             mealsChart,
             insulinWaveData,
             insulinExpanded,
@@ -12526,18 +12527,6 @@
             optimum
         }) || null;
 
-
-        // PERF v8.0: Separate module readiness from content — enables skeleton UX
-        const cascadeReady = !!app.CascadeCard?.renderCard;
-        const cascadeCard = cascadeReady ? (app.CascadeCard.renderCard({
-            React,
-            day,
-            selectedDate: date,
-            prof,
-            pIndex,
-            dayTot,
-            normAbs
-        }) || null) : null;
 
         const mealRecReady = !!app.MealRecCard?.renderCard && !!app.InsightsPI?.mealRecommender?.recommend;
         const mealRecCard = mealRecReady ? (app.MealRecCard.renderCard({
@@ -12732,7 +12721,7 @@
                 }
             }, 'ОСТАЛОСЬ НА СЕГОДНЯ'),
             goalProgressBar,
-            deferredSlot(cascadeReady, cascadeCard, 'slot-cascade', 140, '🔬', 'Анализируем ваши данные, чтобы показать состояние поведенческого каскада'),
+            waterCard,
             refeedCard,
             // R16: lazy-mount below-fold cards — prevent heavy hooks until near viewport
             React.createElement(LazyMount, { key: 'lazy-below-fold', minHeight: 460 },

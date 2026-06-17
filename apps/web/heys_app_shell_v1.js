@@ -3294,7 +3294,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 ),
 
                                    // Кнопки "Вчера" + "Сегодня" + DatePicker
-                (tab === 'stats' || tab === 'diary' || tab === 'insights' || tab === 'month' || tab === 'widgets') && window.HEYS.DatePicker
+                (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker
                     ? React.createElement('div', { className: 'hdr-date-group' },
                         // Кнопка вчера — скрываем когда мы НЕ в сегодняшнем дне
                         // (вернуться можно через капсулу «НЕ СЕГОДНЯ» слева или DatePicker).
@@ -3409,6 +3409,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         } = props;
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
+        React.useEffect(() => {
+            if (tab === 'month') {
+                setTab('stats');
+            }
+        }, [tab, setTab]);
 
         // Bulletproof fallback: document-level capture listener для tab-advice.
         // React synthetic events иногда не доходят до onClick после re-render'ов
@@ -3501,9 +3506,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             const options = [
                 { key: 'widgets', label: 'Виджеты', icon: '🧩' },
                 { key: 'stats', label: 'Отчёты', icon: '📊' },
-                { key: 'diary', label: 'Дневник', icon: '🍽️' },
+                { key: 'diary', label: 'ПИТАНИЕ', icon: '🍽️' },
+                { key: 'activity', label: 'АКТИВНОСТЬ', icon: '🏃' },
                 { key: 'insights', label: 'Советы', icon: '💡' },
-                { key: 'month', label: 'Месяц', icon: '🗓️' },
             ];
             if (canUseTasksAsHome) {
                 options.push({ key: 'tasks', label: 'Задачи', icon: '☑️' });
@@ -3570,7 +3575,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const primaryTabs = React.useMemo(() => {
             const items = [
                 { key: 'stats', label: 'Отчёты', buttonLabel: 'Итоги', icon: '📊', id: 'tour-stats-tab' },
-                { key: 'diary', label: 'Дневник', buttonLabel: 'Еда', icon: '🍴', id: 'tour-diary-tab' },
+                { key: 'diary', label: 'ПИТАНИЕ', buttonLabel: 'ПИТАНИЕ', icon: '🍴', id: 'tour-diary-tab' },
+                { key: 'activity', label: 'АКТИВНОСТЬ', shortLabel: 'АКТИВ', buttonLabel: 'АКТИВ', icon: '🏃', id: 'tour-activity-tab' },
                 { key: 'widgets', label: 'Виджеты', buttonLabel: 'Виджеты', icon: '🎛️', id: 'tour-widgets-tab' },
             ];
 
@@ -3587,7 +3593,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
             items.push(
                 { key: 'insights', label: 'Инсайты', buttonLabel: 'Инсайты', icon: '🔮', id: 'tour-insights-tab' },
-                { key: 'month', label: 'Месяц', buttonLabel: 'Месяц', icon: '📅', id: 'tour-month-tab' },
             );
 
             return items;
@@ -3742,7 +3747,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         className: 'tab-switch-label' + (tab === item.key ? ' active' : ''),
                         title: item.label,
                         onClick: () => switchTabWithUndoCommit(item.key, `tab-label-${item.key}-switch`)
-                    }, item.label)),
+                    }, item.shortLabel || item.label)),
                 ),
             );
             })(),
@@ -4048,17 +4053,17 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             // height:0 + overflow:hidden hides regular content; fixed children are unclipped by overflow.
             React.createElement(
                 'div',
-                { style: (tab === 'stats' || tab === 'diary') ? undefined : { height: 0, overflow: 'hidden' } },
+                { style: (tab === 'stats' || tab === 'diary' || tab === 'activity') ? undefined : { height: 0, overflow: 'hidden' } },
                 wrapReactProfiler('DayTab', React.createElement(DayTabWithCloudSync, {
                     key: 'day_' + String(clientId || ''),
                     products,
                     clientId,
                     selectedDate,
                     setSelectedDate,
-                    subTab: (tab === 'stats' || tab === 'diary') ? tab : 'stats',
+                    subTab: (tab === 'stats' || tab === 'diary' || tab === 'activity') ? tab : 'stats',
                 }))
             ),
-            (tab !== 'stats' && tab !== 'diary') && (
+            (tab !== 'stats' && tab !== 'diary' && tab !== 'activity') && (
                 tab === 'ration'
                     ? wrapReactProfiler('RationTab', React.createElement(RationTabWithCloudSync, {
                         key: 'ration_' + String(clientId || ''),
@@ -4079,18 +4084,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                     selectedDate: selectedDate,
                                 }
                             )))
-                        : tab === 'month'
-                            ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('📊', 'Готовим отчёты…', 280) },
-                                React.createElement(
-                                    _lazyTab('month', '__loadPostboot3Ui', function() { return window.HEYS?.ReportsTab; }),
-                                    {
-                                        key: 'month_' + String(clientId || '') + '_' + selectedDate,
-                                        selectedDate: selectedDate,
-                                        setSelectedDate: setSelectedDate,
-                                        clientId: clientId,
-                                    }
-                                ))
-                            : (tab === 'stats' || tab === 'diary')
+                        : (tab === 'stats' || tab === 'diary' || tab === 'activity')
                                 ? null
                                 : tab === 'user'
                                     ? React.createElement(UserTabWithCloudSync, {

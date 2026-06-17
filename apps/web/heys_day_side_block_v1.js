@@ -131,7 +131,7 @@
     };
 
     return React.createElement('div', { className: 'area-side right-col' },
-      React.createElement('div', { className: 'compact-sleep compact-card widget-shadow-diary-glass widget-outline-diary-glass' },
+      React.createElement('div', { className: 'compact-sleep sleep-section' },
         React.createElement('div', { className: 'compact-card-header' }, '😴 СОН И САМОЧУВСТВИЕ'),
 
         // Ряд с двумя плашками

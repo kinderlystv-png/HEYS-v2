@@ -909,6 +909,7 @@
     const [ssPickFrom, setSsPickFrom] = React.useState(null);
     /** По id упражнения: свёрнут блок под шапкой (название, таблица, RPE…). */
     const [wbExFolded, setWbExFolded] = React.useState({});
+    const hasOwn = Object.prototype.hasOwnProperty;
 
     React.useEffect(function () {
       function clearDnD() {
@@ -1048,6 +1049,14 @@
           for (let j = 0; j < newlyDoneIds.length; j++) next[newlyDoneIds[j]] = true;
           return next;
         });
+        patchTraining(ti, function (t0) {
+          const wl0 = ensureWorkoutLogShape(t0);
+          wl0.exercises = wl0.exercises.map(function (row, i) {
+            if (!allDoneByExi[i] || row.collapsed === true) return row;
+            return { ...row, collapsed: true };
+          });
+          return applyWorkoutLogToTraining(t0, wl0);
+        });
       }
     }, [allDoneByExi.join('|')]);
 
@@ -1151,6 +1160,14 @@
           }
           return next;
         });
+        patchTraining(ti, function (t0) {
+          const wl0 = ensureWorkoutLogShape(t0);
+          wl0.exercises = wl0.exercises.map(function (row, i) {
+            if (i >= n - 1 || row.collapsed === true) return row;
+            return { ...row, collapsed: true };
+          });
+          return applyWorkoutLogToTraining(t0, wl0);
+        });
       }
       prevExLenRef.current = n;
     }, [n]);
@@ -1195,7 +1212,9 @@
       const ssHi = wbDndKind === 'ss' && ssHover === exi;
       const ssPickHint = ssPickFrom != null && ssPickFrom !== exi;
       const exRowStableKey = String(ex.id != null ? ex.id : 'exi-' + exi);
-      const isExFolded = !!wbExFolded[exRowStableKey];
+      const isExFolded = hasOwn.call(wbExFolded, exRowStableKey)
+        ? !!wbExFolded[exRowStableKey]
+        : !!ex.collapsed;
 
       out.push(React.createElement('div', {
         key: ex.id || 'ex' + exi,
@@ -1250,6 +1269,10 @@
               patchTraining(ti, function (t0) {
                 const wl0 = ensureWorkoutLogShape(t0);
                 wl0.exercises = mergeSupersetLinks(wl0.exercises, fromSs, exi);
+                wl0.exercises = wl0.exercises.map(function (row, idx) {
+                  if (idx === fromSs || idx === exi) return { ...row, collapsed: false };
+                  return row;
+                });
                 return applyWorkoutLogToTraining(t0, wl0);
               });
             }
@@ -1311,8 +1334,16 @@
               if (typeof haptic === 'function') haptic('light');
               setWbExFolded(function (prev) {
                 var next = { ...prev };
-                next[exRowStableKey] = !prev[exRowStableKey];
+                next[exRowStableKey] = !isExFolded;
                 return next;
+              });
+              patchTraining(ti, function (t0) {
+                const wl0 = ensureWorkoutLogShape(t0);
+                wl0.exercises = wl0.exercises.map(function (row, idx) {
+                  if (idx !== exi) return row;
+                  return { ...row, collapsed: !isExFolded };
+                });
+                return applyWorkoutLogToTraining(t0, wl0);
               });
             }
           }, isExFolded ? 'Развернуть' : 'Свернуть'),
@@ -1363,6 +1394,10 @@
                 patchTraining(ti, function (t0) {
                   const wl0 = ensureWorkoutLogShape(t0);
                   wl0.exercises = mergeSupersetLinks(wl0.exercises, partner, exi);
+                  wl0.exercises = wl0.exercises.map(function (row, idx) {
+                    if (idx === partner || idx === exi) return { ...row, collapsed: false };
+                    return row;
+                  });
                   return applyWorkoutLogToTraining(t0, wl0);
                 });
                 if (typeof haptic === 'function') haptic('medium');
@@ -1998,9 +2033,39 @@
       rightGroupEl,
       foldedContentEl,
       footerEl,
-      commentEl
+      commentEl,
+      initialCollapsed,
+      collapsedStorageKey,
+      onCollapsedChange
     } = props || {};
-    const [collapsed, setCollapsed] = React.useState(false);
+
+    function readStoredCollapsed() {
+      if (!collapsedStorageKey) return null;
+      try {
+        const raw = global.sessionStorage && global.sessionStorage.getItem(collapsedStorageKey);
+        if (raw === '1') return true;
+        if (raw === '0') return false;
+      } catch (_) { /* noop */ }
+      return null;
+    }
+
+    function writeStoredCollapsed(nextCollapsed) {
+      if (!collapsedStorageKey) return;
+      try {
+        if (global.sessionStorage) {
+          global.sessionStorage.setItem(collapsedStorageKey, nextCollapsed ? '1' : '0');
+        }
+      } catch (_) { /* noop */ }
+    }
+
+    const [collapsed, setCollapsed] = React.useState(function () {
+      const stored = readStoredCollapsed();
+      return stored === null ? !!initialCollapsed : stored;
+    });
+    React.useEffect(function () {
+      const stored = readStoredCollapsed();
+      setCollapsed(stored === null ? !!initialCollapsed : stored);
+    }, [collapsedStorageKey]);
     const startSlot = React.createElement('div', { className: 'compact-train-header-start' },
       React.createElement('span', { className: 'compact-train-icon' }, headerIconChar),
       titleBoxEl
@@ -2013,7 +2078,12 @@
       onClick: (e) => {
         e.stopPropagation();
         if (typeof haptic === 'function') haptic('light');
-        setCollapsed((c) => !c);
+        setCollapsed((c) => {
+          const next = !c;
+          writeStoredCollapsed(next);
+          if (typeof onCollapsedChange === 'function') onCollapsedChange(next);
+          return next;
+        });
       }
     },
       React.createElement('svg', {
@@ -2295,7 +2365,9 @@
       kcalPerMin,
       weight,
       r0,
-      dateKey
+      dateKey,
+      trainingFilterMode,
+      includeHouseholdEntries
     } = params || {};
 
     const safeR0 = typeof r0 === 'function' ? r0 : (v) => Math.round(v || 0);
@@ -2303,6 +2375,9 @@
     const safeHouseholdActivities = Array.isArray(householdActivities) ? householdActivities : [];
     const safeTrainingTypes = Array.isArray(trainingTypes) ? trainingTypes : [];
     const safeTrainings = Array.isArray(TR) ? TR : [];
+    const safeTrainingFilterMode = ['regular', 'morning_activation'].includes(trainingFilterMode)
+      ? trainingFilterMode
+      : 'all';
 
     const MA_ZONE_SIGS = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
     function trainingZoneSig(training) {
@@ -2328,6 +2403,14 @@
         ? training.activityLabel.trim()
         : '';
       return customLabel || trainingType?.label || ('Тренировка ' + (index + 1));
+    }
+
+    function shouldRenderTraining(training) {
+      if (safeTrainingFilterMode === 'all') return true;
+      const isMorningActivation = isMorningActivationTraining(training);
+      return safeTrainingFilterMode === 'morning_activation'
+        ? isMorningActivation
+        : !isMorningActivation;
     }
 
     function getTrainingDisplayMeta(displayLabel, trainingType, training) {
@@ -2587,6 +2670,7 @@
           note: typeof e.note === 'string' ? e.note : '',
           ssGroup: e.ssGroup != null ? Math.max(0, parseInt(e.ssGroup, 10) || 0) : 0,
           rpe: e.rpe != null ? Math.max(0, Math.min(10, parseInt(e.rpe, 10) || 0)) : 0,
+          collapsed: !!e.collapsed,
           restSec: e.restSec != null && REST_PRESETS.indexOf(+e.restSec) >= 0 ? +e.restSec : 90,
           restManual: !!e.restManual
         };
@@ -2816,16 +2900,27 @@
       });
     };
 
+    const trainingEntries = Array.from({ length: safeVisibleTrainings }, (_, ti) => ({
+      ti,
+      rawT: safeTrainings[ti] || {}
+    })).filter(({ rawT }) => shouldRenderTraining(rawT));
+    const householdEntries = (safeTrainingFilterMode === 'all' || includeHouseholdEntries === true)
+      ? safeHouseholdActivities
+      : [];
+
+    if (safeTrainingFilterMode !== 'all' && trainingEntries.length === 0 && householdEntries.length === 0) {
+      return null;
+    }
+
     return React.createElement('div', { className: 'compact-trainings' },
-      safeVisibleTrainings === 0 && safeHouseholdActivities.length === 0 && React.createElement('div', {
+      safeTrainingFilterMode === 'all' && safeVisibleTrainings === 0 && safeHouseholdActivities.length === 0 && React.createElement('div', {
         className: 'empty-trainings',
         title: 'Силовые и другие тренировки при дефиците помогают сохранять мышечную массу и силовые показатели; учёт в HEYS — в калориях и самочувствии. Питание остаётся главным рычагом энергетического баланса.'
       },
         React.createElement('span', { className: 'empty-trainings-icon' }, '🏃‍♂️'),
         React.createElement('span', { className: 'empty-trainings-text' }, 'Нет тренировок')
       ),
-      Array.from({ length: safeVisibleTrainings }, (_, ti) => {
-        const rawT = safeTrainings[ti] || {};
+      trainingEntries.map(({ ti, rawT }) => {
         const T = {
           z: rawT.z || [0, 0, 0, 0],
           time: rawT.time || '',
@@ -2837,6 +2932,7 @@
           stress: rawT.stress ?? 0,
           comment: rawT.comment || '',
           strengthEntryMode: rawT.strengthEntryMode,
+          workoutBuilderCollapsed: !!rawT.workoutBuilderCollapsed,
           workoutLog: rawT.workoutLog,
           fingersLog: rawT.fingersLog || null,
           mobilityLog: rawT.mobilityLog || null,
@@ -2896,11 +2992,12 @@
 
         const totalMinutes = (T.z || []).reduce((sum, m) => sum + (+m || 0), 0);
         const hasDuration = totalMinutes > 0;
+        const isMorningActivation = isMorningActivationTraining(T);
 
         const isBuilder = isStrengthWorkoutBuilder(T);
         const wlLive = isBuilder ? ensureWorkoutLogShape(T) : null;
 
-        const zonesRow = !isBuilder && React.createElement('div', { className: 'compact-train-zones-inline' },
+        const zonesRow = !isBuilder && !isMorningActivation && React.createElement('div', { className: 'compact-train-zones-inline' },
           [0, 1, 2, 3].map((zi) => {
             const hasValue = +T.z[zi] > 0;
             return React.createElement('span', {
@@ -3030,7 +3127,7 @@
           'compact-card compact-train compact-train--minimal widget-shadow-diary-glass widget-outline-diary-glass' +
           (isBuilder ? ' compact-train--workout-builder' : '');
 
-        const headerIconChar = isMorningActivationTraining(T) ? '🧘' : (trainingType ? trainingType.icon : (trainIcons[ti] || '💪'));
+        const headerIconChar = isMorningActivation ? '🧘' : (trainingType ? trainingType.icon : (trainIcons[ti] || '💪'));
         const titleBoxEl = React.createElement('div', { className: 'compact-train-title-box' },
           React.createElement('span', { className: 'compact-train-title' }, displayLabel),
           displayMeta && React.createElement('span', { className: 'compact-train-subtitle' }, displayMeta)
@@ -3074,7 +3171,15 @@
             rightGroupEl,
             foldedContentEl,
             footerEl,
-            commentEl
+            commentEl,
+            initialCollapsed: !!T.workoutBuilderCollapsed,
+            collapsedStorageKey: 'heys_wb_collapsed_' + (dateKey || 'day') + '_' + ti,
+            onCollapsedChange: (nextCollapsed) => {
+              patchTraining(ti, (t0) => ({
+                ...t0,
+                workoutBuilderCollapsed: !!nextCollapsed
+              }));
+            }
           });
         }
 
@@ -3096,7 +3201,7 @@
           commentEl
         );
       }),
-      safeHouseholdActivities.map((h, hi) => {
+      householdEntries.map((h, hi) => {
         const hKcal = safeR0((+h.minutes || 0) * (typeof kcalPerMin === 'function' ? kcalPerMin(2.5, weight) : 0));
         const householdTitle = getHouseholdDisplayTitle(h);
         const isCustomTitle = householdTitle !== 'Бытовая активность';

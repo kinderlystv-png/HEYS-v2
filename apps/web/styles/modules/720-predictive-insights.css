@@ -3463,7 +3463,7 @@ body:has(.insights-tab) .hdr::after {
 
 .tab-switch-labels--sext .tab-switch-label {
   font-size: 8px;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .tabs.tabs--dense-switch {
@@ -3511,7 +3511,7 @@ body:has(.insights-tab) .hdr::after {
   width: auto;
   min-width: 0;
   font-size: 7.5px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 /* =============================================================================
