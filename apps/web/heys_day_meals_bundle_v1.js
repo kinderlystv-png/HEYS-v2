@@ -1869,8 +1869,6 @@
         HEYS.store.set(`heys_last_grams_${productId}`, grams);
       } else if (U.lsSet) {
         U.lsSet(`heys_last_grams_${productId}`, grams);
-      } else {
-        localStorage.setItem(`heys_last_grams_${productId}`, JSON.stringify(grams));
       }
 
       const history = HEYS.store?.get
@@ -1884,8 +1882,6 @@
         HEYS.store.set('heys_grams_history', history);
       } else if (U.lsSet) {
         U.lsSet('heys_grams_history', history);
-      } else {
-        localStorage.setItem('heys_grams_history', JSON.stringify(history));
       }
     } catch (e) { }
   }
