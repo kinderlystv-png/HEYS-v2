@@ -198,8 +198,8 @@ apps/web/heys_step_modal_v1.js:29
 apps/web/heys_steps_v1.js:58
 apps/web/heys_storage_layer_v1.js:169
 apps/web/heys_storage_layer_v1.js:200
-apps/web/heys_storage_photos_v1.js:362
-apps/web/heys_storage_photos_v1.js:502
+apps/web/heys_storage_photos_v1.js:442
+apps/web/heys_storage_photos_v1.js:582
 apps/web/heys_subscription_v1.js:62
 apps/web/heys_subscriptions_v1.js:698
 apps/web/heys_subscriptions_v1.js:1435

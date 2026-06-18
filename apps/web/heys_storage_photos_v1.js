@@ -6,6 +6,7 @@
 
     const PENDING_PHOTOS_KEY = 'heys_pending_photos';
     const DEFAULT_BUCKET = 'meal-photos';
+    const AUDIO_UPLOAD_RETRY_DELAYS_MS = [300, 900];
     let _cloud = null;
 
     const isDebug = () => {
@@ -32,6 +33,23 @@
         try {
             console.info.apply(console, ['[HEYS.photos]'].concat([].slice.call(arguments)));
         } catch (_) { }
+    }
+
+    function warnMedia() {
+        try {
+            console.warn.apply(console, ['[HEYS.media]'].concat([].slice.call(arguments)));
+        } catch (_) { }
+    }
+
+    function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function isRetryableUploadResponse(response, result) {
+        const status = Number(response?.status || 0);
+        if ([408, 425, 429, 500, 502, 503, 504].includes(status)) return true;
+        const error = String(result?.error || result?.message || '').toLowerCase();
+        return /timeout|temporar|cold|proxy|gateway|fetch failed/.test(error);
     }
 
     function getBucket() {
@@ -227,21 +245,56 @@
     }
 
     async function postAudioUpload(apiBase, headers, payload, endpoint) {
-        const response = await fetch(`${apiBase}${endpoint}`, {
-            method: 'POST',
-            headers,
-            credentials: 'include',
-            body: JSON.stringify(payload)
-        });
+        const maxAttempts = AUDIO_UPLOAD_RETRY_DELAYS_MS.length + 1;
+        let lastError = null;
 
-        let result;
-        try {
-            result = await response.json();
-        } catch (_) {
-            result = null;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const response = await fetch(`${apiBase}${endpoint}`, {
+                    method: 'POST',
+                    headers,
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                let result;
+                try {
+                    result = await response.json();
+                } catch (_) {
+                    result = null;
+                }
+
+                if (attempt < maxAttempts && isRetryableUploadResponse(response, result)) {
+                    warnMedia('audio upload retry', {
+                        endpoint,
+                        attempt,
+                        status: response.status,
+                        error: result?.error || result?.message || null,
+                        mime: payload?.content_type,
+                        duration_ms: payload?.duration_ms,
+                        size_bytes: payload?.size_bytes,
+                    });
+                    await sleep(AUDIO_UPLOAD_RETRY_DELAYS_MS[attempt - 1]);
+                    continue;
+                }
+
+                return { response, result };
+            } catch (err) {
+                lastError = err;
+                if (attempt >= maxAttempts) break;
+                warnMedia('audio upload retry', {
+                    endpoint,
+                    attempt,
+                    error: err?.message || String(err),
+                    mime: payload?.content_type,
+                    duration_ms: payload?.duration_ms,
+                    size_bytes: payload?.size_bytes,
+                });
+                await sleep(AUDIO_UPLOAD_RETRY_DELAYS_MS[attempt - 1]);
+            }
         }
 
-        return { response, result };
+        throw lastError || new Error('audio_upload_failed');
     }
 
     function shouldFallbackAudioUpload(response, result, endpoint) {
@@ -284,16 +337,43 @@
         };
 
         let endpoint = '/photos/upload';
+        warnMedia('audio upload start', {
+            endpoint,
+            mime: payload.content_type,
+            duration_ms: payload.duration_ms,
+            size_bytes: payload.size_bytes,
+            client_id: clientId,
+            message_id: messageId,
+        });
         let { response, result } = await postAudioUpload(apiBase, headers, payload, endpoint);
         if (shouldFallbackAudioUpload(response, result, endpoint)) {
             endpoint = '/media/upload';
-            log('🎙 /photos/upload rejected audio, retrying via /media/upload');
+            warnMedia('/photos/upload rejected audio, retrying via /media/upload', {
+                mime: payload.content_type,
+                error: result?.error || null,
+            });
             ({ response, result } = await postAudioUpload(apiBase, headers, payload, endpoint));
         }
 
         if (!response.ok || result?.error) {
+            warnMedia('audio upload failed', {
+                endpoint,
+                status: response.status,
+                error: result?.error || result?.message || null,
+                mime: payload.content_type,
+                duration_ms: payload.duration_ms,
+                size_bytes: payload.size_bytes,
+            });
             return { error: result?.error || `Upload failed (${response.status})` };
         }
+
+        warnMedia('audio upload ok', {
+            endpoint,
+            mime: result?.mime || blob?.type || payload.content_type,
+            media_type: result?.media_type || 'audio',
+            size_bytes: result?.size_bytes || blob?.size || null,
+            path: result?.path || null,
+        });
 
         return {
             url: result?.url || null,

@@ -155,10 +155,13 @@
     return call('/messages/transcription-consent');
   }
 
-  async function setTranscriptionConsent(granted) {
+  async function setTranscriptionConsent(granted, opts = {}) {
     return call('/messages/transcription-consent', {
       method: 'POST',
-      body: { granted: !!granted },
+      body: {
+        granted: !!granted,
+        ...(opts.message_id ? { message_id: opts.message_id } : {}),
+      },
     });
   }
 

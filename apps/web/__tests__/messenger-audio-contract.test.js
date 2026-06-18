@@ -125,6 +125,11 @@ describe('messenger audio media contract', () => {
       mediaType: 'audio',
       ext: 'ogg',
     });
+    expect(api.normalizeUploadMeta({ media_type: 'audio', content_type: 'audio/wav' })).toEqual({
+      contentType: 'audio/wav',
+      mediaType: 'audio',
+      ext: 'wav',
+    });
 
     const key = api.buildKey({
       clientId: 'client_1',
@@ -142,9 +147,14 @@ describe('messenger audio media contract', () => {
       Buffer.from([0x1a, 0x45, 0xdf, 0xa3]),
       Buffer.alloc(api.MIN_AUDIO_BYTES, 0),
     ]);
+    const wavLike = Buffer.concat([
+      Buffer.from('RIFF____WAVEfmt ', 'ascii'),
+      Buffer.alloc(api.MIN_AUDIO_BYTES, 0),
+    ]);
     const emptyDataUrlGarbage = Buffer.from('data:audio/webm;base64,', 'base64');
 
     expect(api.hasAudioSignature(webmLike, 'audio/webm')).toBe(true);
+    expect(api.hasAudioSignature(wavLike, 'audio/wav')).toBe(true);
     expect(api.hasAudioSignature(emptyDataUrlGarbage, 'audio/webm')).toBe(false);
     expect(api.hasAudioSignature(Buffer.alloc(10), 'audio/webm')).toBe(false);
     expect(api.parseUploadData('data:audio/webm;base64,', 'image/jpeg')).toEqual({
@@ -196,7 +206,7 @@ describe('messenger audio media contract', () => {
     });
   });
 
-  it('builds SpeechKit OggOpus recognition payload from object storage path', () => {
+  it('builds SpeechKit recognition payload from object storage path', () => {
     const previousFolderId = process.env.SPEECHKIT_FOLDER_ID;
     const previousBucket = process.env.S3_PHOTOS_BUCKET;
     process.env.SPEECHKIT_FOLDER_ID = 'folder-test';
@@ -205,6 +215,11 @@ describe('messenger audio media contract', () => {
       const worker = loadCloudFunction('../../../yandex-cloud-functions/heys-cron-speechkit-transcribe/index.js')._test;
       const payload = worker.buildRecognitionPayload({
         attachment_path: 'client/date/voice/msg/voice.ogg',
+        mime: 'audio/ogg',
+      });
+      const wavPayload = worker.buildRecognitionPayload({
+        attachment_path: 'client/date/voice/msg/voice.wav',
+        mime: 'audio/wav',
       });
 
       expect(payload).toMatchObject({
@@ -217,6 +232,17 @@ describe('messenger audio media contract', () => {
         },
         audio: {
           uri: 'https://storage.yandexcloud.net/heys-photos/client/date/voice/msg/voice.ogg',
+        },
+      });
+      expect(wavPayload).toMatchObject({
+        config: {
+          specification: {
+            audioEncoding: 'LINEAR16_PCM',
+            sampleRateHertz: 16000,
+          },
+        },
+        audio: {
+          uri: 'https://storage.yandexcloud.net/heys-photos/client/date/voice/msg/voice.wav',
         },
       });
     } finally {

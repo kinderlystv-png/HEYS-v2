@@ -66,14 +66,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   function supportsPilotTranscription(att) {
-    return normalizeMime(att?.mime) === 'audio/ogg';
+    const mime = normalizeMime(att?.mime);
+    return mime === 'audio/ogg' || mime === 'audio/wav' || mime === 'audio/x-wav';
   }
 
-  function transcriptText(attachment) {
+  function transcriptText(attachment, options = {}) {
     const status = attachment?.transcript_status || 'none';
     if (status === 'ready' && attachment?.transcript_text) return attachment.transcript_text;
     if (status === 'queued' || status === 'processing') return 'расшифровываем...';
     if (status === 'failed') return 'не удалось расшифровать';
+    if (status === 'budget_capped') return 'расшифровка временно отключена';
+    if (status === 'unsupported_format') return 'расшифровка недоступна для этого формата';
+    if (status === 'consent_required') return 'расшифровка ждёт согласия';
+    if (options.transcriptionGranted && supportsPilotTranscription(attachment)) return 'готовим расшифровку...';
+    if (options.transcriptionGranted && isAudioAttachment(attachment)) return 'расшифровка недоступна для этого формата';
     return '';
   }
 
@@ -120,6 +126,62 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
   }
 
+  function encodeWavPcm16(audioBuffer, sampleRate = 16000) {
+    const channel = audioBuffer.getChannelData(0);
+    const dataSize = channel.length * 2;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+    const writeString = (offset, str) => {
+      for (let i = 0; i < str.length; i += 1) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, dataSize, true);
+    let offset = 44;
+    for (let i = 0; i < channel.length; i += 1) {
+      const sample = Math.max(-1, Math.min(1, channel[i] || 0));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += 2;
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  async function convertBlobToSpeechkitWav(blob) {
+    if (!blob || supportsPilotTranscription({ mime: blob.type })) return blob;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!AudioCtx || !OfflineCtx || typeof blob.arrayBuffer !== 'function') return blob;
+
+    const sourceBuffer = await blob.arrayBuffer();
+    const audioContext = new AudioCtx();
+    try {
+      const decoded = await audioContext.decodeAudioData(sourceBuffer.slice(0));
+      const targetRate = 16000;
+      const targetFrames = Math.max(1, Math.ceil(decoded.duration * targetRate));
+      const offline = new OfflineCtx(1, targetFrames, targetRate);
+      const source = offline.createBufferSource();
+      source.buffer = decoded;
+      source.connect(offline.destination);
+      source.start(0);
+      const rendered = await offline.startRendering();
+      return encodeWavPcm16(rendered, targetRate);
+    } finally {
+      try {
+        await audioContext.close();
+      } catch { /* ignore */ }
+    }
+  }
+
   function isCuratorMode() {
     // Куратор может быть восстановлен из HttpOnly cookie; сначала runtime context.
     try {
@@ -153,7 +215,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   }
 
-  function AudioAttachment({ attachment, compact }) {
+  function AudioAttachment({ attachment, compact, transcriptionGranted = false }) {
     const audioRef = useRef(null);
     const [playing, setPlaying] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -243,7 +305,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setCurrentMs(durationMs * next);
     };
 
-    const transcript = transcriptText(attachment);
+    const transcript = transcriptText(attachment, { transcriptionGranted });
     return React.createElement(
       'div',
       { className: 'msg-audio-block' },
@@ -289,7 +351,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
       ),
       transcript && React.createElement('div', {
-        className: `msg-audio-transcript${attachment.transcript_status === 'failed' ? ' is-error' : ''}${attachment.transcript_status === 'queued' || attachment.transcript_status === 'processing' ? ' is-pending' : ''}`,
+        className: `msg-audio-transcript${attachment.transcript_status === 'failed' ? ' is-error' : ''}${attachment.transcript_status === 'queued' || attachment.transcript_status === 'processing' || (!attachment.transcript_status && transcriptionGranted) ? ' is-pending' : ''}`,
       }, transcript),
     );
   }
@@ -298,7 +360,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // eager=true для последних сообщений (в viewport при открытии) — грузятся
   // сразу, мгновенный показ. Для остальных — lazy, чтобы не качать тысячи
   // фото из длинной истории при каждом открытии треда.
-  function MessageAttachments({ attachments, onPhotoClick, eager }) {
+  function MessageAttachments({ attachments, onPhotoClick, eager, transcriptionGranted = false }) {
     if (!attachments || attachments.length === 0) return null;
     const audio = attachments.filter(isAudioAttachment);
     const photos = attachments.filter((att) => !isAudioAttachment(att));
@@ -309,6 +371,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement(AudioAttachment, {
           key: attachmentKey(att, idx),
           attachment: att,
+          transcriptionGranted,
         }),
       ),
       photos.length > 0 && React.createElement(
@@ -338,7 +401,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // ── Thread message bubble ────────────────────────────────────────────
-  function MessageBubble({ message, viewerRole, onToggleAck, onDelete, onReply, onEdit, onPhotoClick, eagerPhotos }) {
+  function MessageBubble({
+    message,
+    viewerRole,
+    onToggleAck,
+    onDelete,
+    onReply,
+    onEdit,
+    onPhotoClick,
+    eagerPhotos,
+    transcriptionGranted = false,
+  }) {
     const isMine = message.sender_role === viewerRole;
     const isCurator = viewerRole === 'curator';
     // Курaтор тапает ✓ на client-msg → done_at. Клиент тапает ✓ на curator-msg → acked_at.
@@ -462,6 +535,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           attachments: message.attachments,
           onPhotoClick,
           eager: eagerPhotos,
+          transcriptionGranted,
         }),
       editing
         ? React.createElement(
@@ -789,6 +863,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const recordTickRef = useRef(null);
     const recordStopTimerRef = useRef(null);
     const pendingAudioUrlRef = useRef(null);
+    const pendingTranscriptionMessageRef = useRef(null);
+    const transcriptionConsentRef = useRef(null);
     const optimisticAudioUrlsRef = useRef(new Set());
     const localAudioByRemoteRef = useRef(new Map());
     const isCurator = isCuratorMode();
@@ -829,11 +905,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           revoked_at: res.revoked_at || null,
           version: res.version || '1.0',
         };
+        transcriptionConsentRef.current = next;
         setTranscriptionConsent(next);
         return next;
       }
       return null;
     }, []);
+
+    useEffect(() => {
+      transcriptionConsentRef.current = transcriptionConsent;
+    }, [transcriptionConsent]);
 
     useEffect(() => {
       void refreshTranscriptionConsent();
@@ -1011,6 +1092,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         setError('Голосовое получилось пустым. Проверьте микрофон macOS и попробуйте ещё раз.');
         return;
       }
+      let uploadBlob = blob;
+      let convertedForTranscription = false;
       const localUrl = URL.createObjectURL(blob);
       if (pendingAudioUrlRef.current) URL.revokeObjectURL(pendingAudioUrlRef.current);
       pendingAudioUrlRef.current = localUrl;
@@ -1033,14 +1116,46 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       try {
-        const dataUrl = await blobToDataUrl(blob);
+        const liveConsent = transcriptionConsentRef.current || await refreshTranscriptionConsent();
+        const shouldTranscribe = !!liveConsent?.granted;
+        if (shouldTranscribe && !supportsPilotTranscription({ mime: uploadBlob.type })) {
+          try {
+            const converted = await convertBlobToSpeechkitWav(uploadBlob);
+            if (converted && supportsPilotTranscription({ mime: converted.type })) {
+              uploadBlob = converted;
+              convertedForTranscription = true;
+              setPendingAudio((prev) => prev && prev.tempId === tempId
+                ? {
+                    ...prev,
+                    mime: uploadBlob.type || 'audio/wav',
+                    size_bytes: uploadBlob.size,
+                  }
+                : prev);
+            }
+          } catch (err) {
+            console.warn('[HEYS.messenger.voice] wav conversion failed', {
+              mime: blob.type || 'audio/webm',
+              error: err?.message || String(err),
+            });
+          }
+        }
+        try {
+          console.warn('[HEYS.messenger.voice] upload format', {
+            originalMime: blob.type || 'audio/webm',
+            uploadMime: uploadBlob.type || blob.type || 'audio/webm',
+            consentGranted: shouldTranscribe,
+            convertedForTranscription,
+            supportsTranscription: supportsPilotTranscription({ mime: uploadBlob.type }),
+          });
+        } catch { /* ignore */ }
+        const dataUrl = await blobToDataUrl(uploadBlob);
         const uploadFn = window.HEYS?.StorageMedia?.uploadAudio || window.HEYS?.cloud?.uploadAudio;
         if (typeof uploadFn !== 'function') {
           throw new Error('StorageMedia.uploadAudio unavailable');
         }
         const today = new Date().toISOString().slice(0, 10);
         const result = await uploadFn(dataUrl, targetClientId, today, 'msg-' + tempId, {
-          blob,
+          blob: uploadBlob,
           durationMs,
         });
         if (result?.error || !result?.url) {
@@ -1054,8 +1169,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               status: 'done',
               url: result.url,
               path: result.path,
-              mime: result.mime || blob.type || 'audio/webm',
-              size_bytes: result.size_bytes || blob.size,
+              mime: result.mime || uploadBlob.type || blob.type || 'audio/webm',
+              size_bytes: result.size_bytes || uploadBlob.size || blob.size,
+              converted_for_transcription: convertedForTranscription,
             }
           : prev);
       } catch (err) {
@@ -1240,8 +1356,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const needsTranscriptionConsentPrompt = async (audio) => {
       if (!audio || !supportsPilotTranscription(audio)) return false;
-      const known = transcriptionConsent || await refreshTranscriptionConsent();
+      const known = transcriptionConsentRef.current || transcriptionConsent || await refreshTranscriptionConsent();
       return !known?.decided;
+    };
+
+    const maybePromptTranscriptionConsentAfterSend = (audio, messageId) => {
+      if (!audio || !messageId || !supportsPilotTranscription(audio)) return;
+      if (transcriptionConsent?.decided) return;
+      pendingTranscriptionMessageRef.current = messageId;
+      setTimeout(async () => {
+        try {
+          if (await needsTranscriptionConsentPrompt(audio)) {
+            setTranscriptionPromptOpen(true);
+          } else {
+            pendingTranscriptionMessageRef.current = null;
+          }
+        } catch {
+          pendingTranscriptionMessageRef.current = null;
+          // Consent prompt is optional for message delivery.
+        }
+      }, 0);
     };
 
     const handleSend = async () => {
@@ -1260,10 +1394,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
       // Должно быть хоть что-то: текст, фото или голосовое.
       if (!trimmed && readyAttachments.length === 0 && !readyAudio) return;
-      if (await needsTranscriptionConsentPrompt(readyAudio)) {
-        setTranscriptionPromptOpen(true);
-        return;
-      }
       if (sending) return;
       setSending(true);
       setError(null);
@@ -1281,6 +1411,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         mime: p.mime || 'image/jpeg',
       }));
       if (readyAudio) {
+        const liveConsent = transcriptionConsentRef.current || transcriptionConsent || null;
         const audioAttachment = {
           type: 'audio',
           url: readyAudio.url,
@@ -1292,10 +1423,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           waveform: readyAudio.waveform || getWaveformBars(readyAudio),
         };
         if (supportsPilotTranscription(audioAttachment)) {
-          audioAttachment.transcript_status = transcriptionConsent?.granted ? 'queued' : 'consent_required';
-          if (transcriptionConsent?.granted) audioAttachment.transcript_provider = 'yandex_speechkit';
+          audioAttachment.transcript_status = liveConsent?.granted ? 'queued' : 'consent_required';
+          if (liveConsent?.granted) audioAttachment.transcript_provider = 'yandex_speechkit';
         }
         attachmentsToSend.push(audioAttachment);
+        try {
+          console.warn('[HEYS.messenger.voice] send audio', {
+            mime: audioAttachment.mime,
+            supportsTranscription: supportsPilotTranscription(audioAttachment),
+            consentGranted: !!liveConsent?.granted,
+            consentDecided: !!liveConsent?.decided,
+            transcriptStatus: audioAttachment.transcript_status || 'none',
+            durationMs: audioAttachment.duration_ms,
+            path: audioAttachment.path,
+          });
+        } catch { /* ignore */ }
       }
       const attachmentsForDisplay = attachmentsToSend.map((att) => ({ ...att }));
       if (readyAudio?.localUrl) {
@@ -1319,6 +1461,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
         return;
       }
+      if (readyAudio) {
+        try {
+          console.warn('[HEYS.messenger.voice] sent', {
+            messageId: res.message_id,
+            transcriptStatus: attachmentsToSend.find((att) => isAudioAttachment(att))?.transcript_status || 'none',
+          });
+        } catch { /* ignore */ }
+      }
+      maybePromptTranscriptionConsentAfterSend(readyAudio, res.message_id);
       setInput('');
       setReplyTo(null);
       setPendingPhotos([]);
@@ -1438,30 +1589,42 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const handleTranscriptionConsentChoice = async (granted) => {
       if (!HEYS.MessengerAPI?.setTranscriptionConsent) {
         setTranscriptionPromptOpen(false);
-        setTranscriptionConsent({ granted: false, decided: true, version: '1.0' });
+        const next = { granted: false, decided: true, version: '1.0' };
+        transcriptionConsentRef.current = next;
+        setTranscriptionConsent(next);
         setError('Не удалось сохранить согласие на расшифровку.');
         return;
       }
       setSavingTranscriptionConsent(true);
-      const res = await HEYS.MessengerAPI.setTranscriptionConsent(!!granted);
+      const messageId = granted ? pendingTranscriptionMessageRef.current : null;
+      const res = await HEYS.MessengerAPI.setTranscriptionConsent(!!granted, { message_id: messageId });
       setSavingTranscriptionConsent(false);
       if (!res?.success) {
         setError(res?.error || 'transcription_consent_failed');
         return;
       }
-      setTranscriptionConsent({
+      const next = {
         granted: !!res.granted,
         decided: !!res.decided,
         created_at: res.created_at || null,
         revoked_at: res.revoked_at || null,
         version: res.version || '1.0',
-      });
+      };
+      transcriptionConsentRef.current = next;
+      setTranscriptionConsent(next);
+      try {
+        console.warn('[HEYS.messenger.voice] transcription consent', {
+          granted: !!res.granted,
+          messageId,
+          enqueue: res.transcription_enqueue || null,
+        });
+      } catch { /* ignore */ }
+      pendingTranscriptionMessageRef.current = null;
       setTranscriptionPromptOpen(false);
-      setTimeout(() => { void handleSend(); }, 0);
     };
 
     const handleTranscriptionSettingsToggle = async () => {
-      const currentlyGranted = !!transcriptionConsent?.granted;
+      const currentlyGranted = !!(transcriptionConsentRef.current || transcriptionConsent)?.granted;
       if (currentlyGranted && !window.confirm('Отозвать согласие на расшифровку новых голосовых сообщений?')) return;
       setSavingTranscriptionConsent(true);
       setError(null);
@@ -1471,13 +1634,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         setError(res?.error || 'transcription_consent_failed');
         return;
       }
-      setTranscriptionConsent({
+      const next = {
         granted: !!res.granted,
         decided: !!res.decided,
         created_at: res.created_at || null,
         revoked_at: res.revoked_at || null,
         version: res.version || '1.0',
-      });
+      };
+      transcriptionConsentRef.current = next;
+      setTranscriptionConsent(next);
     };
 
     return React.createElement(
@@ -1585,6 +1750,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         onEdit: handleEditMessage,
                         onPhotoClick: handlePhotoClick,
                         eagerPhotos: msgIdx >= eagerThreshold,
+                        transcriptionGranted: !!transcriptionConsent?.granted,
                       }),
                     );
                     msgIdx++;
