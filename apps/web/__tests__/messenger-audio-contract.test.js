@@ -253,6 +253,47 @@ describe('messenger audio media contract', () => {
     }
   });
 
+  it('classifies retryable SpeechKit start errors without retrying auth/client failures', () => {
+    const worker = loadCloudFunction('../../../yandex-cloud-functions/heys-cron-speechkit-transcribe/index.js')._test;
+
+    expect(worker.isTransientSpeechkitError({ status: 429, message: 'Too Many Requests' })).toBe(true);
+    expect(worker.isTransientSpeechkitError({ status: 503, message: 'Service Unavailable' })).toBe(true);
+    expect(worker.isTransientSpeechkitError(new Error('fetch failed: ECONNRESET'))).toBe(true);
+    expect(worker.isTransientSpeechkitError({ status: 401, message: 'Unauthorized' })).toBe(false);
+    expect(worker.isTransientSpeechkitError({ status: 400, message: 'Bad Request' })).toBe(false);
+  });
+
+  it('claims SpeechKit processing jobs with row locks and a short lease', () => {
+    const workerSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-cron-speechkit-transcribe/index.js'),
+      'utf8',
+    );
+
+    expect(workerSource).toContain('FOR UPDATE SKIP LOCKED');
+    expect(workerSource).toContain('SPEECHKIT_PROCESSING_LEASE_SECONDS');
+    expect(workerSource).toContain('speechkit_operation_timeout');
+  });
+
+  it('locks message rows before rewriting attachment transcripts', () => {
+    const migration = fs.readFileSync(
+      path.resolve(__dirname, '../../../database/2026-06-18_message_transcription_pilot.sql'),
+      'utf8',
+    );
+
+    expect(migration).toContain('WHERE m.id = p_message_id');
+    expect(migration).toContain('FOR UPDATE');
+    expect(migration).toContain('jsonb_array_elements(v_attachments)');
+    expect(migration).toContain('v_attachment_found');
+    expect(migration).toContain('NOT v_attachment_found');
+  });
+
+  it('prepares unsupported recorder audio for SpeechKit before upload independent of consent', () => {
+    const messengerSource = fs.readFileSync(path.resolve(__dirname, '../heys_messenger_v1.js'), 'utf8');
+
+    expect(messengerSource).toContain('const shouldPrepareForTranscription = true;');
+    expect(messengerSource).toContain('convertBlobToSpeechkitWav(uploadBlob)');
+  });
+
   it('StorageMedia.uploadAudio posts to /photos/upload with auth-safe payload', async () => {
     const blob = new Blob(['voice'], { type: 'audio/ogg;codecs=opus' });
     global.fetch = vi.fn().mockResolvedValue({

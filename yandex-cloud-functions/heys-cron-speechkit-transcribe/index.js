@@ -13,6 +13,10 @@ const { initSecrets } = require('./shared/secrets');
 
 const DEFAULT_BUCKET = 'heys-photos';
 const DEFAULT_LIMIT = 5;
+const DEFAULT_START_MAX_ATTEMPTS = 3;
+const DEFAULT_PROCESSING_LEASE_SECONDS = 45;
+const DEFAULT_OPERATION_TIMEOUT_MINUTES = 30;
+const DEFAULT_SPEECHKIT_FETCH_TIMEOUT_MS = 15000;
 const SPEECHKIT_RECOGNIZE_URL = 'https://transcribe.api.cloud.yandex.net/speech/stt/v2/longRunningRecognize';
 const OPERATION_URL = 'https://operation.api.cloud.yandex.net/operations/';
 
@@ -61,6 +65,20 @@ function getPool() {
     });
   }
   return pool;
+}
+
+class SpeechkitHttpError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.name = 'SpeechkitHttpError';
+    this.status = status;
+  }
+}
+
+function envInt(name, fallback, min = 1, max = Number.MAX_SAFE_INTEGER) {
+  const value = parseInt(process.env[name] || '', 10);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(max, value));
 }
 
 async function getMetadataIamToken() {
@@ -145,22 +163,55 @@ function buildRecognitionPayload(job) {
 
 async function speechkitFetch(url, body) {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(url, {
-    method: body ? 'POST' : 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    envInt('SPEECHKIT_FETCH_TIMEOUT_MS', DEFAULT_SPEECHKIT_FETCH_TIMEOUT_MS, 1000, 60000),
+  );
+  let response;
+  try {
+    response = await fetch(url, {
+      method: body ? 'POST' : 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new SpeechkitHttpError('speechkit_fetch_timeout', 408);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
   const text = await response.text();
   let json = null;
   try { json = text ? JSON.parse(text) : null; } catch (_) { /* keep text */ }
   if (!response.ok) {
     const message = json?.message || json?.error || text || `SpeechKit HTTP ${response.status}`;
-    throw new Error(message);
+    throw new SpeechkitHttpError(message, response.status);
   }
   return json || {};
+}
+
+function isTransientSpeechkitError(err) {
+  const status = Number(err?.status || err?.statusCode || 0);
+  if (status === 408 || status === 409 || status === 425 || status === 429 || status >= 500) return true;
+  const msg = String(err?.message || err || '').toLowerCase();
+  return [
+    'fetch failed',
+    'network',
+    'timeout',
+    'timed out',
+    'econnreset',
+    'etimedout',
+    'socket hang up',
+    'temporarily unavailable',
+    'rate limit',
+  ].some((needle) => msg.includes(needle));
 }
 
 async function startRecognition(job) {
@@ -236,14 +287,29 @@ async function claimQueued(limit) {
 }
 
 async function fetchProcessing(limit) {
+  const leaseSeconds = envInt(
+    'SPEECHKIT_PROCESSING_LEASE_SECONDS',
+    DEFAULT_PROCESSING_LEASE_SECONDS,
+    10,
+    300,
+  );
   const r = await getPool().query(
-    `SELECT *
-       FROM message_transcription_jobs
-      WHERE status = 'processing'
-        AND operation_id IS NOT NULL
-      ORDER BY updated_at ASC
-      LIMIT $1`,
-    [limit],
+    `WITH picked AS (
+       SELECT id
+         FROM message_transcription_jobs
+        WHERE status = 'processing'
+          AND operation_id IS NOT NULL
+          AND updated_at < NOW() - ($2::text)::interval
+        ORDER BY updated_at ASC
+        LIMIT $1
+        FOR UPDATE SKIP LOCKED
+     )
+     UPDATE message_transcription_jobs j
+        SET updated_at = NOW()
+       FROM picked
+      WHERE j.id = picked.id
+      RETURNING j.*`,
+    [limit, `${leaseSeconds} seconds`],
   );
   return r.rows;
 }
@@ -273,10 +339,47 @@ async function requeueStaleStartingJobs() {
   return r.rows.length;
 }
 
+async function failExpiredProcessingJobs() {
+  const timeoutMinutes = envInt(
+    'SPEECHKIT_OPERATION_TIMEOUT_MINUTES',
+    DEFAULT_OPERATION_TIMEOUT_MINUTES,
+    5,
+    24 * 60,
+  );
+  const r = await getPool().query(
+    `UPDATE message_transcription_jobs
+        SET status = 'failed',
+            error = 'speechkit_operation_timeout',
+            completed_at = NOW(),
+            updated_at = NOW()
+      WHERE status = 'processing'
+        AND operation_id IS NOT NULL
+        AND COALESCE(started_at, created_at) < NOW() - ($1::text)::interval
+      RETURNING id, message_id, attachment_path, operation_id, error`,
+    [`${timeoutMinutes} minutes`],
+  );
+  for (const job of r.rows) {
+    await setAttachmentTranscript(job, 'failed', null, job.error);
+    trace('job.failed_expired_processing', {
+      job_id: job.id,
+      message_id: job.message_id,
+      attachment_path: job.attachment_path,
+      operation_id: job.operation_id,
+      timeout_minutes: timeoutMinutes,
+    });
+  }
+  return r.rows.length;
+}
+
 async function processStart(job) {
   try {
     const operationId = await startRecognition(job);
-    await updateJob(job.id, { operation_id: operationId, status: 'processing' });
+    await updateJob(job.id, {
+      operation_id: operationId,
+      status: 'processing',
+      started_at: new Date().toISOString(),
+      error: null,
+    });
     trace('job.processing', {
       job_id: job.id,
       message_id: job.message_id,
@@ -286,6 +389,25 @@ async function processStart(job) {
     return { id: job.id, started: true, operation_id: operationId };
   } catch (err) {
     const msg = String(err?.message || err).slice(0, 500);
+    const attempts = Number(job.attempts || 0);
+    const maxAttempts = envInt('SPEECHKIT_START_MAX_ATTEMPTS', DEFAULT_START_MAX_ATTEMPTS, 1, 10);
+    if (isTransientSpeechkitError(err) && attempts < maxAttempts) {
+      await updateJob(job.id, {
+        status: 'queued',
+        operation_id: null,
+        error: msg,
+      });
+      trace('job.start_retry_queued', {
+        job_id: job.id,
+        message_id: job.message_id,
+        attachment_path: job.attachment_path,
+        mime: job.mime,
+        attempts,
+        max_attempts: maxAttempts,
+        error: msg,
+      });
+      return { id: job.id, started: false, retry: true, attempts, error: msg };
+    }
     await updateJob(job.id, {
       status: 'failed',
       error: msg,
@@ -363,10 +485,12 @@ module.exports.handler = async function () {
   await initSecrets();
   const limit = Math.min(parseInt(process.env.SPEECHKIT_WORKER_LIMIT || DEFAULT_LIMIT, 10) || DEFAULT_LIMIT, 20);
   const requeued = await requeueStaleStartingJobs();
+  const expired = await failExpiredProcessingJobs();
   const claimed = await claimQueued(limit);
   trace('worker.claimed', {
     limit,
     requeued,
+    expired,
     claimed: claimed.length,
     jobs: claimed.map((job) => ({
       job_id: job.id,
@@ -398,6 +522,7 @@ module.exports.handler = async function () {
     body: JSON.stringify({
       success: true,
       requeued,
+      expired,
       claimed: claimed.length,
       started,
       polled,
@@ -410,4 +535,5 @@ module.exports._test = {
   buildRecognitionPayload,
   speechkitEncodingForMime,
   estimateObjectUri: objectUri,
+  isTransientSpeechkitError,
 };

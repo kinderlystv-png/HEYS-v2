@@ -173,10 +173,22 @@ SET search_path = public
 AS $$
 DECLARE
   v_attachments JSONB;
+  v_updated_attachments JSONB;
+  v_attachment_found BOOLEAN := false;
 BEGIN
   IF p_status NOT IN ('none', 'queued', 'processing', 'ready', 'failed',
                      'unsupported_format', 'budget_capped', 'consent_required') THEN
     RETURN jsonb_build_object('success', false, 'error', 'invalid_transcript_status');
+  END IF;
+
+  SELECT m.attachments
+    INTO v_attachments
+    FROM public.client_messages m
+   WHERE m.id = p_message_id
+   FOR UPDATE;
+
+  IF v_attachments IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'message_or_attachment_not_found');
   END IF;
 
   SELECT jsonb_agg(
@@ -191,18 +203,17 @@ BEGIN
       ELSE elem
     END
     ORDER BY ord
-  )
-  INTO v_attachments
-  FROM public.client_messages m,
-       jsonb_array_elements(m.attachments) WITH ORDINALITY AS a(elem, ord)
-  WHERE m.id = p_message_id;
+  ),
+  COALESCE(bool_or(elem->>'path' = p_attachment_path), false)
+  INTO v_updated_attachments, v_attachment_found
+  FROM jsonb_array_elements(v_attachments) WITH ORDINALITY AS a(elem, ord);
 
-  IF v_attachments IS NULL THEN
+  IF v_updated_attachments IS NULL OR NOT v_attachment_found THEN
     RETURN jsonb_build_object('success', false, 'error', 'message_or_attachment_not_found');
   END IF;
 
   UPDATE public.client_messages
-     SET attachments = v_attachments
+     SET attachments = v_updated_attachments
    WHERE id = p_message_id;
 
   RETURN jsonb_build_object('success', true, 'message_id', p_message_id, 'status', p_status);

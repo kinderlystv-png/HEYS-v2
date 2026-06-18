@@ -1116,9 +1116,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
 
       try {
-        const liveConsent = transcriptionConsentRef.current || await refreshTranscriptionConsent();
-        const shouldTranscribe = !!liveConsent?.granted;
-        if (shouldTranscribe && !supportsPilotTranscription({ mime: uploadBlob.type })) {
+        const liveConsent = await refreshTranscriptionConsent() || transcriptionConsentRef.current;
+        const shouldPrepareForTranscription = true;
+        if (shouldPrepareForTranscription && !supportsPilotTranscription({ mime: uploadBlob.type })) {
           try {
             const converted = await convertBlobToSpeechkitWav(uploadBlob);
             if (converted && supportsPilotTranscription({ mime: converted.type })) {
@@ -1143,7 +1143,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           console.warn('[HEYS.messenger.voice] upload format', {
             originalMime: blob.type || 'audio/webm',
             uploadMime: uploadBlob.type || blob.type || 'audio/webm',
-            consentGranted: shouldTranscribe,
+            consentGranted: !!liveConsent?.granted,
+            consentDecided: !!liveConsent?.decided,
+            preparedForTranscription: shouldPrepareForTranscription,
             convertedForTranscription,
             supportsTranscription: supportsPilotTranscription({ mime: uploadBlob.type }),
           });
@@ -1355,14 +1357,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const needsTranscriptionConsentPrompt = async (audio) => {
-      if (!audio || !supportsPilotTranscription(audio)) return false;
-      const known = transcriptionConsentRef.current || transcriptionConsent || await refreshTranscriptionConsent();
+      if (!audio || !isAudioAttachment(audio)) return false;
+      const known = await refreshTranscriptionConsent() || transcriptionConsentRef.current || transcriptionConsent;
       return !known?.decided;
     };
 
     const maybePromptTranscriptionConsentAfterSend = (audio, messageId) => {
-      if (!audio || !messageId || !supportsPilotTranscription(audio)) return;
-      if (transcriptionConsent?.decided) return;
+      if (!audio || !messageId || !isAudioAttachment(audio)) return;
+      if ((transcriptionConsentRef.current || transcriptionConsent)?.decided) return;
       pendingTranscriptionMessageRef.current = messageId;
       setTimeout(async () => {
         try {
@@ -1422,15 +1424,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           size_bytes: readyAudio.size_bytes,
           waveform: readyAudio.waveform || getWaveformBars(readyAudio),
         };
-        if (supportsPilotTranscription(audioAttachment)) {
+        const supportsTranscription = supportsPilotTranscription(audioAttachment);
+        if (supportsTranscription) {
           audioAttachment.transcript_status = liveConsent?.granted ? 'queued' : 'consent_required';
           if (liveConsent?.granted) audioAttachment.transcript_provider = 'yandex_speechkit';
+        } else if (liveConsent?.granted) {
+          audioAttachment.transcript_status = 'unsupported_format';
         }
         attachmentsToSend.push(audioAttachment);
         try {
           console.warn('[HEYS.messenger.voice] send audio', {
             mime: audioAttachment.mime,
-            supportsTranscription: supportsPilotTranscription(audioAttachment),
+            supportsTranscription,
             consentGranted: !!liveConsent?.granted,
             consentDecided: !!liveConsent?.decided,
             transcriptStatus: audioAttachment.transcript_status || 'none',
