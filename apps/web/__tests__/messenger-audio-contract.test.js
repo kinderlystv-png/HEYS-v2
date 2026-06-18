@@ -206,6 +206,16 @@ describe('messenger audio media contract', () => {
     });
   });
 
+  it('casts curator transcription-consent IP through nullable text before inet', () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-messages/index.js'),
+      'utf8',
+    );
+
+    expect(source).toContain("NULLIF($5::text, '')::inet");
+    expect(source).not.toContain("$5 <> ''");
+  });
+
   it('builds SpeechKit recognition payload from object storage path', () => {
     const previousFolderId = process.env.SPEECHKIT_FOLDER_ID;
     const previousBucket = process.env.S3_PHOTOS_BUCKET;

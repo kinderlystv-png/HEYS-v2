@@ -131,6 +131,50 @@
     return next;
   }
 
+  // Day-level subjective fields are filled by check-in flows and are easy to
+  // lose when an older day snapshot is re-saved after a meal/water patch.
+  const SUBJECTIVE_DAY_FIELDS = [
+    'sleepStart',
+    'sleepEnd',
+    'sleepHours',
+    'daySleepMinutes',
+    'sleepQuality',
+    'sleepNote',
+    'moodMorning',
+    'wellbeingMorning',
+    'stressMorning',
+    'morningActivation',
+  ];
+
+  const hasSubjectiveValue = (value) => {
+    if (value === undefined || value === null || value === '') return false;
+    if (typeof value === 'object' && !Array.isArray(value)) return Object.keys(value).length > 0;
+    return true;
+  };
+
+  function hasSubjectiveFieldDrop(incoming, current) {
+    if (!incoming || !current || typeof incoming !== 'object' || typeof current !== 'object') return false;
+    return SUBJECTIVE_DAY_FIELDS.some((field) =>
+      hasSubjectiveValue(current[field]) && !hasSubjectiveValue(incoming[field])
+    );
+  }
+
+  function firstSubjectiveValue() {
+    for (let i = 0; i < arguments.length; i += 1) {
+      if (hasSubjectiveValue(arguments[i])) return arguments[i];
+    }
+    return arguments.length ? arguments[arguments.length - 1] : undefined;
+  }
+
+  function terminalMorningActivation(ma) {
+    return ma && (ma.status === 'done' || ma.status === 'missed');
+  }
+
+  function morningActivationTs(ma) {
+    if (!ma || typeof ma !== 'object') return 0;
+    return Number(ma.decidedAt || ma.updatedAt || ma.savedAt || 0) || 0;
+  }
+
   // ─── mergeDayData ────────────────────────────────────────────────────────
   //
   // Options:
@@ -236,11 +280,19 @@
       merged.weightMorning = local.weightMorning || remote.weightMorning || 0;
     }
 
-    // Sleep: non-empty wins
-    merged.sleepStart = local.sleepStart || remote.sleepStart || '';
-    merged.sleepEnd = local.sleepEnd || remote.sleepEnd || '';
-    merged.sleepQuality = local.sleepQuality || remote.sleepQuality || '';
-    merged.sleepNote = local.sleepNote || remote.sleepNote || '';
+    // Check-in subjective fields: incoming side wins when present, otherwise
+    // fill from the other side. Missing fields are not treated as deletes.
+    // Known tradeoff: explicit clear has no tombstone in the current model, so
+    // an older non-empty value from the other side may be restored.
+    merged.sleepStart = firstSubjectiveValue(local.sleepStart, remote.sleepStart, '');
+    merged.sleepEnd = firstSubjectiveValue(local.sleepEnd, remote.sleepEnd, '');
+    merged.sleepHours = firstSubjectiveValue(local.sleepHours, remote.sleepHours, '');
+    merged.daySleepMinutes = firstSubjectiveValue(local.daySleepMinutes, remote.daySleepMinutes, 0);
+    merged.sleepQuality = firstSubjectiveValue(local.sleepQuality, remote.sleepQuality, '');
+    merged.sleepNote = firstSubjectiveValue(local.sleepNote, remote.sleepNote, '');
+    merged.moodMorning = firstSubjectiveValue(local.moodMorning, remote.moodMorning, '');
+    merged.wellbeingMorning = firstSubjectiveValue(local.wellbeingMorning, remote.wellbeingMorning, '');
+    merged.stressMorning = firstSubjectiveValue(local.stressMorning, remote.stressMorning, '');
 
     // Day score: manual override wins
     if (local.dayScoreManual) {
@@ -284,15 +336,20 @@
     const dayLocalTs = local.updatedAt || 0;
     const dayRemoteTs = remote.updatedAt || 0;
 
-    // morningActivation: 'done'/'missed' status takes priority
+    // morningActivation: terminal status wins; if both sides are terminal and
+    // carry action timestamps, keep the later actual activation decision.
     {
       const localMA = local.morningActivation || null;
       const remoteMA = remote.morningActivation || null;
-      const localMAStatus = localMA && localMA.status;
-      const remoteMAStatus = remoteMA && remoteMA.status;
-      if (localMAStatus === 'done' || localMAStatus === 'missed') {
+      const localTerminal = terminalMorningActivation(localMA);
+      const remoteTerminal = terminalMorningActivation(remoteMA);
+      const localMATs = morningActivationTs(localMA);
+      const remoteMATs = morningActivationTs(remoteMA);
+      if (localTerminal && remoteTerminal && localMATs !== remoteMATs && localMATs > 0 && remoteMATs > 0) {
+        merged.morningActivation = localMATs >= remoteMATs ? localMA : remoteMA;
+      } else if (localTerminal) {
         merged.morningActivation = localMA;
-      } else if (remoteMAStatus === 'done' || remoteMAStatus === 'missed') {
+      } else if (remoteTerminal) {
         merged.morningActivation = remoteMA;
       } else if (localIsNewer) {
         merged.morningActivation = localMA != null ? localMA : (remoteMA != null ? remoteMA : null);
@@ -791,6 +848,7 @@
 
   return {
     mergeDayData,
+    hasSubjectiveFieldDrop,
     mergeChronoTombstones,
     mergeItemsById,
     mergeScalarKv,

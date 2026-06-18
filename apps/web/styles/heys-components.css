@@ -5837,7 +5837,8 @@ body.tour-active .ios-pwa-banner {
 .reports-title-row--monthly {
   position: relative;
   align-items: flex-start;
-  margin-bottom: 0;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
 }
 
 .reports-title-row .reports-title {
@@ -5853,15 +5854,15 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-reports-legend--header {
-  position: absolute;
-  top: 0;
-  right: 0;
+  position: static;
   margin: 0;
-  flex-direction: column;
-  flex-wrap: nowrap;
-  justify-content: flex-start;
-  align-items: flex-end;
-  gap: 2px;
+  margin-left: auto;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px 8px;
+  max-width: min(100%, 430px);
   z-index: 1;
 }
 
@@ -5895,6 +5896,21 @@ body.tour-active .ios-pwa-banner {
 .monthly-reports-legend__text {
   font-size: 10px;
   font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .reports-title-row--monthly {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .monthly-reports-legend--header {
+    margin-left: 0;
+    justify-content: flex-start;
+    align-items: flex-start;
+    max-width: 100%;
+  }
 }
 
 .monthly-reports-legend__item--complete {

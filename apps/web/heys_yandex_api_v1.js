@@ -1066,6 +1066,15 @@
    */
   async function saveKV(clientId, key, value, contextId = null) {
     try {
+      if (/^heys_dayv2_\d{4}-\d{2}-\d{2}$/i.test(String(key || ''))) {
+        const lastSeen = Number((value && value.updatedAt) || 0);
+        const merged = await mergeSaveKV(clientId, key, value, lastSeen, contextId || null);
+        if (merged?.success) {
+          invalidateSwKvCache('saveKV_dayv2_merge');
+          return { success: true };
+        }
+        return { success: false, error: merged?.error || 'merge_save_required_for_dayv2' };
+      }
       // 🛡️ CRITICAL FIX (2026-05-17): curator path FIRST.
       // Без этого stale session token от прошлой PIN-сессии резолвил бы
       // client_id из session → save попадал бы не туда. Используем
@@ -1548,6 +1557,9 @@
     if (!curatorUserId || !clientId || !items?.length) {
       return { success: false, saved: 0, error: 'Missing required params for REST save' };
     }
+    if (items.some((item) => /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(item?.k || '')))) {
+      return { success: false, saved: 0, error: 'merge_save_required_for_dayv2' };
+    }
 
     try {
       // Формируем данные для REST upsert
@@ -1626,6 +1638,7 @@
     if (!items || items.length === 0) {
       return { success: true, saved: 0 };
     }
+    let preMergedSaved = 0;
 
     // 🛡️ Phase B2: если top-level contextId не передан — пробуем извлечь из
     // первого items с _ctx (все items в batch обычно из одного React state,
@@ -1636,6 +1649,22 @@
     }
 
     try {
+      const dayv2Items = items.filter((item) => /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(item?.k || '')));
+      if (dayv2Items.length > 0) {
+        for (const item of dayv2Items) {
+          const lastSeen = Number((item.v && item.v.updatedAt) || 0);
+          const merged = await mergeSaveKV(clientId, item.k, item.v, lastSeen, item._ctx || contextId || null);
+          if (!merged?.success) {
+            return { success: false, saved: preMergedSaved, error: merged?.error || 'merge_save_required_for_dayv2' };
+          }
+          preMergedSaved += 1;
+        }
+        items = items.filter((item) => !/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(item?.k || '')));
+        if (items.length === 0) {
+          return { success: true, saved: preMergedSaved };
+        }
+      }
+
       // 🛡️ CRITICAL FIX (2026-05-17): curator JWT path MUST be checked BEFORE
       // session token path. Otherwise stale `heys_session_token` from a previous
       // PIN session takes over: server resolves session → wrong client_id →
@@ -1690,7 +1719,7 @@
               invalidateSwKvCache('batchSaveKV_curator_rpc');
               return {
                 success: true,
-                saved: data?.saved || 0,
+                saved: preMergedSaved + (data?.saved || 0),
               };
             }
             // Если SQL вернул success:false с ownership-ошибкой — это
@@ -1715,10 +1744,15 @@
       // используется если RPC недоступен но curator user_id есть.
       const curatorUserId = getCuratorUserId();
       if (curatorUserId) {
+        if (items.some((item) => /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(item?.k || '')))) {
+          return { success: false, saved: 0, error: 'merge_save_required_for_dayv2' };
+        }
         log(`[v56] Falling back to REST path (curator=${curatorUserId?.slice(0, 8)})`);
         const restResult = await batchSaveKVviaREST(curatorUserId, clientId, items, contextId);
         if (restResult?.success) invalidateSwKvCache('batchSaveKV_curator_rest');
-        return restResult;
+        return restResult?.success
+          ? { ...restResult, saved: preMergedSaved + (restResult.saved || 0) }
+          : { ...restResult, saved: preMergedSaved + (restResult?.saved || 0) };
       }
 
       // 🔐 Path 4: PIN auth client (no curator token at all). Session token
@@ -1757,7 +1791,7 @@
         if (success && !data?.error) invalidateSwKvCache('batchSaveKV_session_rpc');
         return {
           success,
-          saved: data?.saved || 0,
+          saved: preMergedSaved + (data?.saved || 0),
           error: data?.error
         };
       }

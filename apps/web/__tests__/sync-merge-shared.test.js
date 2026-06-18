@@ -11,6 +11,7 @@
  */
 import { describe, test, expect } from 'vitest';
 import { createRequire } from 'module';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -21,6 +22,7 @@ const require = createRequire(import.meta.url);
 const mergeModulePath = path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs');
 const {
   mergeDayData,
+  hasSubjectiveFieldDrop,
   mergeChronoTombstones,
   mergeItemsById,
   mergeScalarKv,
@@ -167,6 +169,116 @@ describe('mergeDayData — lost-update prevention', () => {
     const merged = mergeDayData(local, remote, { forceKeepAll: true });
     expect(merged.meals).toHaveLength(1);
     expect(merged.meals[0].id).toBe('breakfast');
+  });
+
+  test('server-side subjective guard detects stale day losing check-in fields', () => {
+    const incoming = makeDay(3000, [makeMeal('snack', [makeItem('coffee')])]);
+    const current = makeDay(2000, [], {
+      sleepHours: 8.2,
+      moodMorning: 7,
+      wellbeingMorning: 8,
+      stressMorning: 3,
+      morningActivation: { status: 'done', decidedAt: 2000 },
+    });
+
+    expect(hasSubjectiveFieldDrop(incoming, current)).toBe(true);
+    expect(hasSubjectiveFieldDrop({ ...incoming, moodMorning: 7 }, current)).toBe(true);
+    expect(hasSubjectiveFieldDrop({
+      ...incoming,
+      sleepHours: 8.2,
+      moodMorning: 7,
+      wellbeingMorning: 8,
+      stressMorning: 3,
+      morningActivation: current.morningActivation,
+    }, current)).toBe(false);
+  });
+
+  test('server-side merge fills missing check-in fields from current cloud day', () => {
+    const incoming = makeDay(3000, [makeMeal('snack', [makeItem('coffee')])]);
+    const current = makeDay(2000, [makeMeal('breakfast', [makeItem('eggs')])], {
+      sleepStart: '01:00',
+      sleepEnd: '09:10',
+      sleepHours: 8.2,
+      sleepQuality: 7,
+      moodMorning: 7,
+      wellbeingMorning: 8,
+      stressMorning: 3,
+      morningActivation: { status: 'done', decidedAt: 2000, intensity: 5 },
+    });
+
+    const merged = mergeDayData(incoming, current, { forceKeepAll: true });
+
+    expect(merged.sleepHours).toBe(8.2);
+    expect(merged.moodMorning).toBe(7);
+    expect(merged.wellbeingMorning).toBe(8);
+    expect(merged.stressMorning).toBe(3);
+    expect(merged.morningActivation).toEqual(current.morningActivation);
+    expect(merged.meals.map((m) => m.id).sort()).toEqual(['breakfast', 'snack']);
+  });
+
+  test('morningActivation terminal merge uses later decidedAt when both sides are terminal', () => {
+    const incoming = makeDay(4000, [], {
+      morningActivation: { status: 'done', decidedAt: 2000, intensity: 3 },
+    });
+    const current = makeDay(3000, [], {
+      morningActivation: { status: 'done', decidedAt: 3500, intensity: 5 },
+    });
+
+    const merged = mergeDayData(incoming, current, { forceKeepAll: true });
+
+    expect(merged.morningActivation).toEqual(current.morningActivation);
+  });
+});
+
+describe('heys-api-rpc batch dayv2 guard contract', () => {
+  test('batch paths merge existing dayv2 rows before plain SQL upsert', () => {
+    const rpcSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
+      'utf8',
+    );
+
+    expect(rpcSource).toContain('function mergeBatchDayv2ExistingRows(items, currentByKey)');
+    expect(rpcSource).toContain('const dayv2Merged = mergeBatchDayv2ExistingRows(params.p_items, prevMap);');
+    expect(rpcSource).toContain('[batch_upsert_client_kv_by_session] dayv2_guard_merged:');
+    expect(rpcSource).toContain('[batch_upsert_client_kv_by_curator] dayv2_guard_merged:');
+    expect(rpcSource).toContain('const merged = mergeDayData(it.v, currentValue, { forceKeepAll: true });');
+    expect(rpcSource).not.toContain('if (!hasSubjectiveFieldDrop(it.v, currentValue)) continue;');
+    expect(rpcSource).toContain("const hasDayv2BatchKey = keysList.some((key) => /^heys_(?:[0-9a-f-]{36}_)?dayv2_\\d{4}-\\d{2}-\\d{2}$/i.test(key));");
+    expect(rpcSource).toContain("'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + (hasDayv2BatchKey ? ' FOR UPDATE' : '')");
+    expect(rpcSource).toMatch(/mergeBatchDayv2ExistingRows\([\s\S]*?\)\s*;\s+if \(dayv2Merged > 0\)[\s\S]*?SELECT \* FROM batch_upsert_client_kv_by_curator/);
+  });
+
+  test('single session dayv2 upsert is merged before generic SQL dispatch', () => {
+    const rpcSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
+      'utf8',
+    );
+
+    expect(rpcSource).toContain('[upsert_client_kv_by_session] dayv2_guard_merged:');
+    expect(rpcSource).toContain('direct upsert_client_kv_by_session(dayv2) bypasses');
+    expect(rpcSource).toContain('params.p_value = merged;');
+    expect(rpcSource).toContain("console.warn('[upsert_client_kv_by_session] dayv2_guard_merged:', params.p_key);");
+    expect(rpcSource).toContain('const prevMap = await prefetchGuardedCurrentValues(client, resolvedSessionClientId, params.p_items, hasDayv2BatchKey);');
+    expect(rpcSource).toContain("await client.query('COMMIT');");
+    expect(rpcSource.indexOf('direct upsert_client_kv_by_session(dayv2) bypasses')).toBeLessThan(
+      rpcSource.indexOf('const TYPE_HINTS'),
+    );
+  });
+
+  test('REST client_kv_store dayv2 writes merge existing cloud row before safe upsert', () => {
+    const restSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rest/index.js'),
+      'utf8',
+    );
+
+    expect(restSource).toContain("const { mergeDayData } = require('./lib/heys_sync_merge_v1.cjs');");
+    expect(restSource).toContain("[REST POST client_kv_store] dayv2_guard_merged:");
+    expect(restSource).toContain('SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text FOR UPDATE');
+    expect(restSource).toContain('const merged = mergeDayData(row.v, currentValue, { forceKeepAll: true });');
+    expect(restSource).toContain("blockedItems.push({ k: row.k, reason: 'dayv2_merge_failed' });");
+    expect(restSource.indexOf('[REST POST client_kv_store] dayv2_guard_merged:')).toBeLessThan(
+      restSource.indexOf('SELECT safe_upsert_client_kv'),
+    );
   });
 });
 
@@ -547,6 +659,27 @@ describe('item-deletion sync via deletedItemIds', () => {
       const ids = (merged.meals[0]?.items || []).map((it) => it.id);
       expect(ids).toContain('B');
       expect(ids).not.toContain('A');
+    });
+
+    test('subjective guard merge still applies item tombstones', () => {
+      const incoming = dayItems(3000, [], {
+        deletedItemIds: { A: 2500 },
+      });
+      const current = dayItems(2000, [{ id: 'A', grams: 100, updatedAt: 1500 }], {
+        sleepStart: '01:00',
+        sleepEnd: '09:10',
+        sleepHours: 8.2,
+        moodMorning: 7,
+      });
+
+      expect(hasSubjectiveFieldDrop(incoming, current)).toBe(true);
+
+      const merged = mergeDayData(incoming, current, { forceKeepAll: true });
+      const ids = (merged.meals[0]?.items || []).map((it) => it.id);
+      expect(ids).not.toContain('A');
+      expect(merged.deletedItemIds).toEqual({ A: 2500 });
+      expect(merged.sleepHours).toBe(8.2);
+      expect(merged.moodMorning).toBe(7);
     });
   });
 

@@ -18,35 +18,38 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..');
 const ESM_PATH = resolve(repoRoot, 'apps/web/heys_sync_merge_v1.js');
-const CJS_PATH = resolve(
-  repoRoot,
-  'yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs',
-);
+const CJS_PATHS = [
+  resolve(repoRoot, 'yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs'),
+  resolve(repoRoot, 'yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs'),
+];
 
-if (!existsSync(ESM_PATH) || !existsSync(CJS_PATH)) {
+if (!existsSync(ESM_PATH) || CJS_PATHS.some((p) => !existsSync(p))) {
   // Не падаем если файлы отсутствуют (например, на check-out где их вынесли).
   process.exit(0);
 }
 
 const esm = readFileSync(ESM_PATH, 'utf8');
-const cjs = readFileSync(CJS_PATH, 'utf8');
+const stale = CJS_PATHS.filter((p) => readFileSync(p, 'utf8') !== esm);
 
-if (esm === cjs) {
+if (stale.length === 0) {
   process.exit(0);
 }
 
 console.error('[lint-sync-merge-cjs-mirror] ❌ CJS copy is out of sync with ESM source.');
 console.error('');
 console.error(`  ESM: apps/web/heys_sync_merge_v1.js`);
-console.error(`  CJS: yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs`);
+for (const cjsPath of stale) {
+  console.error(`  CJS: ${cjsPath.replace(repoRoot + '/', '')}`);
+}
 console.error('');
 console.error('Fix:');
-console.error('  cp apps/web/heys_sync_merge_v1.js \\');
-console.error('     yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs');
-console.error('  git add yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs');
+console.error('  cp apps/web/heys_sync_merge_v1.js yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs');
+console.error('  cp apps/web/heys_sync_merge_v1.js yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs');
+console.error('  git add yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs \\');
+console.error('          yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs');
 console.error('');
-console.error('Why: merge logic runs on both browser AND Yandex Cloud Function (server-side');
-console.error('merge of dayv2/profile/norms). The .cjs copy is what the function uses at runtime.');
-console.error('Drift between ESM and CJS = silent merge divergence between client and server.');
+console.error('Why: merge logic runs on browser, RPC and REST Yandex Cloud Functions.');
+console.error('The .cjs copies are what cloud functions use at runtime. Drift between');
+console.error('ESM and CJS = silent merge divergence between client and server.');
 
 process.exit(1);

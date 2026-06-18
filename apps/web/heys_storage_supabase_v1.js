@@ -6484,6 +6484,7 @@
       const nonMergeableItems = yandexItems.filter(it => !MERGEABLE_KEY_RE.test(it.k));
 
       let mergeSavedCount = 0;
+      let mergeAbortError = null;
       const lsSetRaw = originalSetItem || (typeof global !== 'undefined' && global.localStorage ? global.localStorage.setItem.bind(global.localStorage) : null);
 
       const fallbackToBatch = []; // items that failed merge — retry via batch path
@@ -6492,6 +6493,11 @@
       const isServerLacksMergeEndpoint = (err) => {
         const msg = String(err || '').toLowerCase();
         return msg.includes('not allowed') || msg.includes('not implemented') || msg.includes('unknown function');
+      };
+      const isDayv2MergeKey = (k) => /^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(String(k || ''));
+      const blockDayv2BatchFallback = (k, err) => {
+        mergeAbortError = `merge_save_required_for_dayv2:${String(err || 'unknown').slice(0, 120)}`;
+        console.warn('[merge-save] dayv2 merge failed for', k, '— keeping pending instead of unsafe batch fallback');
       };
 
       for (const it of mergeableItems) {
@@ -6551,10 +6557,16 @@
             console.warn('[merge-save] auth failure for', it.k, '→', result.error, '— stop retry, dispatch session-expired');
             dispatchSessionExpiredOnce('merge-save', result.error);
             // Прерываем весь loop — последующие items в этом batch'е тоже упадут с тем же auth error.
+            mergeAbortError = result.error || 'merge_save_auth_failed';
             break;
           } else {
-            // Server-side merge unavailable (deploy lag, network blip) → fall back to plain batch upsert.
-            // No data lost: item flows through the existing batch pipeline as before.
+            // Server-side merge unavailable (deploy lag, network blip). For
+            // dayv2, plain batch is unsafe because it cannot preserve
+            // server-side subjective/check-in fields; keep it pending instead.
+            if (isDayv2MergeKey(it.k)) {
+              blockDayv2BatchFallback(it.k, result.error);
+              break;
+            }
             if (isServerLacksMergeEndpoint(result.error)) {
               log('ℹ️ [merge-save] endpoint unavailable, falling back to batch for', it.k);
             } else {
@@ -6566,11 +6578,20 @@
           if (isAuthFailure(e)) {
             console.warn('[merge-save] auth exception for', it.k, '→', e.message, '— stop retry, dispatch session-expired');
             dispatchSessionExpiredOnce('merge-save-exception', e.message);
+            mergeAbortError = e.message || 'merge_save_auth_failed';
+            break;
+          }
+          if (isDayv2MergeKey(it.k)) {
+            blockDayv2BatchFallback(it.k, e.message);
             break;
           }
           console.warn('[merge-save] exception for', it.k, '→', e.message, '— falling back to batch');
           fallbackToBatch.push({ k: it.k, v: it.v, _ctx: it._ctx || null, updated_at: it.updated_at });
         }
+      }
+
+      if (mergeAbortError) {
+        return { success: false, error: mergeAbortError, saved: mergeSavedCount };
       }
 
       // Restore yandexItems with non-mergeable items + any mergeable items that fell back.

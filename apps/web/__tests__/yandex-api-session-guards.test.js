@@ -210,8 +210,60 @@ describe('HEYS.YandexAPI session-safe access', () => {
       expect.anything(),
     );
 
-    const [, options] = global.fetch.mock.calls[0];
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/rpc?fn=merge_save_client_kv_by_session');
     expect(JSON.parse(options.body).p_session_token).toBe('namespaced-token');
+  });
+
+  it('routes direct dayv2 saveKV through merge-save instead of plain upsert', async () => {
+    const api = loadYandexAPI({ sessionToken: 'session-123' });
+    global.fetch.mockResolvedValue(
+      createJsonResponse({ ok: true, v: { meals: [] }, outcome: 'incoming_wins' }),
+    );
+
+    const result = await api.saveKV('client-42', 'heys_dayv2_2026-04-12', { meals: [], updatedAt: 123 });
+
+    expect(result).toEqual({ success: true });
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toContain('/rpc?fn=merge_save_client_kv_by_session');
+    expect(JSON.parse(options.body)).toMatchObject({
+      p_session_token: 'session-123',
+      p_key: 'heys_dayv2_2026-04-12',
+      p_last_seen_updated_at: 123,
+      p_context_id: null,
+    });
+  });
+
+  it('routes dayv2 items inside batchSaveKV through merge-save before batch upsert', async () => {
+    const api = loadYandexAPI({ sessionToken: 'session-123' });
+    global.fetch
+      .mockResolvedValueOnce(createJsonResponse({ ok: true, v: { meals: [] }, outcome: 'incoming_wins' }))
+      .mockResolvedValueOnce(createJsonResponse({ success: true, saved: 1 }));
+
+    const result = await api.batchSaveKV('client-42', [
+      { k: 'heys_dayv2_2026-04-12', v: { meals: [], updatedAt: 123 } },
+      { k: 'heys_profile', v: { targetKcal: 1800 } },
+    ]);
+
+    expect(result).toEqual({ success: true, saved: 2, error: undefined });
+    const [mergeUrl, mergeOptions] = global.fetch.mock.calls[0];
+    expect(mergeUrl).toContain('/rpc?fn=merge_save_client_kv_by_session');
+    expect(JSON.parse(mergeOptions.body)).toMatchObject({
+      p_session_token: 'session-123',
+      p_key: 'heys_dayv2_2026-04-12',
+      p_last_seen_updated_at: 123,
+    });
+
+    const [batchUrl, batchOptions] = global.fetch.mock.calls[1];
+    expect(batchUrl).toContain('/rpc?fn=batch_upsert_client_kv_by_session');
+    expect(JSON.parse(batchOptions.body).p_items).toEqual([
+      { k: 'heys_profile', v: { targetKcal: 1800 } },
+    ]);
+  });
+
+  it('does not send dayv2 through curator REST fallback', () => {
+    expect(moduleSource).toContain("error: 'merge_save_required_for_dayv2'");
+    expect(moduleSource).toMatch(/if \(items\.some\(\(item\) => \/\^heys_dayv2_\\d\{4\}-\\d\{2\}-\\d\{2\}\$\/\.test\(String\(item\?\.k \|\| ''\)\)\)\) \{\s+return \{ success: false, saved: 0, error: 'merge_save_required_for_dayv2' \};\s+\}/);
   });
 
   it('getAllKV falls back to curator JWT path when no session token exists', async () => {

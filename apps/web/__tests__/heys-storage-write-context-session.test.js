@@ -69,3 +69,19 @@ describe('HEYS.cloud write-context session expiry', () => {
     }));
   });
 });
+
+describe('HEYS.cloud dayv2 merge-save fallback contract', () => {
+  it('keeps dayv2 pending instead of falling back to unsafe batch upsert when merge-save fails', () => {
+    const storageSource = fs.readFileSync(
+      path.resolve(__dirname, '../heys_storage_supabase_v1.js'),
+      'utf8',
+    );
+
+    expect(storageSource).toContain('const isDayv2MergeKey = (k) => /^heys_dayv2_\\d{4}-\\d{2}-\\d{2}$/.test(String(k || \'\'));');
+    expect(storageSource).toContain('blockDayv2BatchFallback(it.k, result.error);');
+    expect(storageSource).toContain('blockDayv2BatchFallback(it.k, e.message);');
+    expect(storageSource).toContain('return { success: false, error: mergeAbortError, saved: mergeSavedCount };');
+    expect(storageSource).toMatch(/if \(isDayv2MergeKey\(it\.k\)\) \{\s+blockDayv2BatchFallback\(it\.k, result\.error\);\s+break;\s+\}\s+if \(isServerLacksMergeEndpoint/);
+    expect(storageSource).toMatch(/if \(isDayv2MergeKey\(it\.k\)\) \{\s+blockDayv2BatchFallback\(it\.k, e\.message\);\s+break;\s+\}\s+console\.warn\('\[merge-save\] exception/);
+  });
+});

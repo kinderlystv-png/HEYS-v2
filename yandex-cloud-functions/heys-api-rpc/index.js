@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
-const { mergeDayData, mergeChronoTombstones, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
+const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergeScalarKv } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -210,6 +210,17 @@ function verifyJwt(token, jwtSecret) {
   } catch (e) {
     return { valid: false, error: e.message };
   }
+}
+
+function isUuid(value) {
+  return typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function extractCuratorIdFromJwtPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const candidate = payload.sub || payload.curator_id || payload.curatorId || payload.user_id || payload.id;
+  return isUuid(candidate) ? candidate : null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -525,7 +536,7 @@ async function detectCrossClientDayv2ContentDup(client, curatorId, clientId, k, 
  * Pre-fetch (v, updated_at) для batch items с guarded keys. Возвращает Map<k, {v, updated_at_ms}>.
  * Возвращает пустую Map если в batch нет guarded keys (skip DB roundtrip).
  */
-async function prefetchGuardedCurrentValues(client, clientId, items) {
+async function prefetchGuardedCurrentValues(client, clientId, items, lockRows = false) {
   const guardedKeys = [];
   for (const it of items) {
     if (it && typeof it.k === 'string' && isIdentityGuardKey(it.k)) {
@@ -536,7 +547,7 @@ async function prefetchGuardedCurrentValues(client, clientId, items) {
   if (guardedKeys.length === 0) return map;
   try {
     const r = await client.query(
-      'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])',
+      'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + (lockRows ? ' FOR UPDATE' : ''),
       [clientId, guardedKeys]
     );
     for (const row of r.rows) {
@@ -549,6 +560,23 @@ async function prefetchGuardedCurrentValues(client, clientId, items) {
     console.warn('[identity-guard] prefetch failed:', e.message);
   }
   return map;
+}
+
+function mergeBatchDayv2ExistingRows(items, currentByKey) {
+  if (!Array.isArray(items) || !currentByKey || typeof currentByKey.get !== 'function') return 0;
+  let mergedCount = 0;
+  for (const it of items) {
+    if (!it || typeof it.k !== 'string' || !isIdentityGuardKey(it.k)) continue;
+    if (!/^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(it.k)) continue;
+    const current = currentByKey.get(it.k);
+    const currentValue = current && current.v;
+    if (!currentValue) continue;
+    const merged = mergeDayData(it.v, currentValue, { forceKeepAll: true });
+    if (!merged) continue;
+    it.v = merged;
+    mergedCount += 1;
+  }
+  return mergedCount;
 }
 
 /**
@@ -1549,7 +1577,24 @@ module.exports.handler = async function (event, context) {
       };
     }
 
-    curatorId = jwtResult.payload.sub;
+    if (jwtResult.payload?.role !== 'curator') {
+      console.error('[RPC] ❌ JWT role check failed for curator function:', jwtResult.payload?.role || 'missing');
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Invalid curator token', details: 'role_required' })
+      };
+    }
+
+    curatorId = extractCuratorIdFromJwtPayload(jwtResult.payload);
+    if (!curatorId) {
+      console.error('[RPC] ❌ JWT curator id missing or invalid for curator function');
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Invalid curator token', details: 'curator_id_required' })
+      };
+    }
     debugLog('[RPC] Curator authenticated:', curatorId);
   }
 
@@ -2563,6 +2608,7 @@ module.exports.handler = async function (event, context) {
           // Concurrency conflict if cloud version was modified after the client's last-known timestamp.
           const noConflict = lastSeenUpdatedAt > 0 && lastSeenUpdatedAt >= cloudInternalTs;
           const isDayv2Key = /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(k);
+          const hasSubjectiveDrop = isDayv2Key && hasSubjectiveFieldDrop(incomingValue, currentValue);
           const hasNewerCurrentItemEdit = (() => {
             if (!isDayv2Key || !incomingValue || !currentValue) return false;
             const currentItems = new Map();
@@ -2660,13 +2706,15 @@ module.exports.handler = async function (event, context) {
           } else if (k === 'heys_planning_chrono_tombstones_v1') {
             mergedValue = mergeChronoTombstones(incomingValue, currentValue);
             mergeOutcome = 'chrono_tombstones_merged';
-          } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit)) {
+          } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop)) {
             // forceKeepAll: client may not have seen the latest cloud-side meals yet,
             // so treating absence as "deleted" would lose other side's edits. Conservative: keep both.
             const merged = mergeDayData(incomingValue, currentValue, { forceKeepAll: true });
             if (merged) {
               mergedValue = merged;
-              mergeOutcome = hasNewerCurrentItemEdit ? 'day_item_guard_merged' : 'day_merged';
+              mergeOutcome = hasNewerCurrentItemEdit
+                ? 'day_item_guard_merged'
+                : (hasSubjectiveDrop ? 'day_subjective_guard_merged' : 'day_merged');
             } else {
               mergedValue = incomingValue; // identical content
             }
@@ -3187,6 +3235,10 @@ module.exports.handler = async function (event, context) {
         };
       }
       if (items.length === 0) {
+        if (dayv2BatchTxStarted) {
+          try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+          dayv2BatchTxStarted = false;
+        }
         try { client.release(); } catch (_) { /* ignore */ }
         return {
           statusCode: 200,
@@ -3251,12 +3303,18 @@ module.exports.handler = async function (event, context) {
 
       // 1) Pre-SELECT OLD values одним запросом для diff'a + updated_at для identity-guard.
       const keysList = items.map(it => it && it.k).filter(k => typeof k === 'string');
+      const hasDayv2BatchKey = keysList.some((key) => /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(key));
+      let dayv2BatchTxStarted = false;
       let oldByKey = new Map();
       let oldUpdatedAtByKey = new Map();
       if (keysList.length > 0) {
         try {
+          if (hasDayv2BatchKey) {
+            await client.query('BEGIN');
+            dayv2BatchTxStarted = true;
+          }
           const oldRows = await client.query(
-            'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])',
+            'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + (hasDayv2BatchKey ? ' FOR UPDATE' : ''),
             [targetClientId, keysList]
           );
           for (const row of oldRows.rows) {
@@ -3268,6 +3326,10 @@ module.exports.handler = async function (event, context) {
           }
         } catch (selErr) {
           // Если SELECT упал — продолжаем без OLD (diff покажет всё как added).
+          if (dayv2BatchTxStarted) {
+            try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+            dayv2BatchTxStarted = false;
+          }
           console.warn('[batch_upsert] OLD select failed:', selErr.message);
         }
       }
@@ -3333,6 +3395,13 @@ module.exports.handler = async function (event, context) {
       }
       items.length = 0;
       items.push(...guardKeptItems);
+      const dayv2Merged = mergeBatchDayv2ExistingRows(
+        items,
+        new Map(Array.from(oldByKey.entries()).map(([k, v]) => [k, { v }]))
+      );
+      if (dayv2Merged > 0) {
+        console.warn('[batch_upsert_client_kv_by_curator] dayv2_guard_merged:', dayv2Merged);
+      }
       if (items.length === 0) {
         try { client.release(); } catch (_) { /* ignore */ }
         return {
@@ -3357,6 +3426,10 @@ module.exports.handler = async function (event, context) {
         );
         upsertResult = r.rows[0]?.batch_upsert_client_kv_by_curator || r.rows[0] || {};
       } catch (upsertErr) {
+        if (dayv2BatchTxStarted) {
+          try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+          dayv2BatchTxStarted = false;
+        }
         try { client.release(true); } catch (_) { /* noop */ }
         console.error('[batch_upsert] upsert failed:', upsertErr.message);
         return {
@@ -3368,6 +3441,10 @@ module.exports.handler = async function (event, context) {
 
       // 3) Если ownership упал — не пишем changelog.
       if (upsertResult && upsertResult.success === false) {
+        if (dayv2BatchTxStarted) {
+          try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+          dayv2BatchTxStarted = false;
+        }
         try { client.release(); } catch (_) { /* ignore */ }
         return {
           statusCode: 200,
@@ -3410,6 +3487,22 @@ module.exports.handler = async function (event, context) {
         }
       } catch (changelogErr) {
         console.warn('[batch_upsert] changelog insert failed:', changelogErr.message);
+      }
+
+      if (dayv2BatchTxStarted) {
+        try {
+          await client.query('COMMIT');
+          dayv2BatchTxStarted = false;
+        } catch (commitErr) {
+          try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+          try { client.release(true); } catch (_) { /* noop */ }
+          console.error('[batch_upsert] dayv2 tx commit failed:', commitErr.message);
+          return {
+            statusCode: 500,
+            headers: corsHeaders,
+            body: JSON.stringify({ success: false, saved: 0, error: commitErr.message })
+          };
+        }
       }
 
       try { client.release(); } catch (_) { /* ignore */ }
@@ -3594,6 +3687,47 @@ module.exports.handler = async function (event, context) {
       }
     }
 
+    // Defence-in-depth: a direct upsert_client_kv_by_session(dayv2) bypasses
+    // merge_save_client_kv_by_session. Merge with the current cloud row before
+    // the generic SQL dispatch so single dayv2 upserts cannot clobber meals,
+    // trainings, or subjective fields by whole-blob replacement.
+    if (fnName === 'upsert_client_kv_by_session' &&
+        typeof params.p_key === 'string' &&
+        /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(params.p_key) &&
+        params.p_value && typeof params.p_value === 'object' && params.p_session_token) {
+      let resolvedSessionClientId = null;
+      try {
+        const sr = await client.query(
+          `SELECT client_id FROM client_sessions
+           WHERE token_hash = digest($1, 'sha256')
+             AND expires_at > now()
+             AND revoked_at IS NULL`,
+          [params.p_session_token]
+        );
+        resolvedSessionClientId = sr.rows?.[0]?.client_id || null;
+      } catch (e) {
+        console.warn('[upsert_client_kv_by_session] dayv2 merge session resolve failed:', e.message);
+      }
+      if (resolvedSessionClientId) {
+        try {
+          const cr = await client.query(
+            'SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text',
+            [resolvedSessionClientId, params.p_key]
+          );
+          const currentValue = cr.rows?.[0]?.v || null;
+          if (currentValue) {
+            const merged = mergeDayData(params.p_value, currentValue, { forceKeepAll: true });
+            if (merged) {
+              params.p_value = merged;
+              console.warn('[upsert_client_kv_by_session] dayv2_guard_merged:', params.p_key);
+            }
+          }
+        } catch (e) {
+          console.warn('[upsert_client_kv_by_session] dayv2 merge failed:', e.message);
+        }
+      }
+    }
+
     if (fnName === 'batch_upsert_client_kv_by_session' && Array.isArray(params.p_items)) {
       const _rejected = [];
       const _filtered = [];
@@ -3637,7 +3771,14 @@ module.exports.handler = async function (event, context) {
           console.warn('[batch_upsert_client_kv_by_session] session resolve failed:', e.message);
         }
         if (resolvedSessionClientId) {
-          const prevMap = await prefetchGuardedCurrentValues(client, resolvedSessionClientId, params.p_items);
+          const hasDayv2BatchKey = params.p_items.some((it) =>
+            it && typeof it.k === 'string' && /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(it.k)
+          );
+          if (hasDayv2BatchKey) {
+            await client.query('BEGIN');
+            params.__dayv2BatchTxStarted = true;
+          }
+          const prevMap = await prefetchGuardedCurrentValues(client, resolvedSessionClientId, params.p_items, hasDayv2BatchKey);
           const blockedSessionKeys = [];
           const kept = [];
           for (const it of params.p_items) {
@@ -3656,7 +3797,15 @@ module.exports.handler = async function (event, context) {
             }
           }
           params.p_items = kept;
+          const dayv2Merged = mergeBatchDayv2ExistingRows(params.p_items, prevMap);
+          if (dayv2Merged > 0) {
+            console.warn('[batch_upsert_client_kv_by_session] dayv2_guard_merged:', dayv2Merged);
+          }
           if (params.p_items.length === 0) {
+            if (params.__dayv2BatchTxStarted) {
+              try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+              delete params.__dayv2BatchTxStarted;
+            }
             try { client.release(); } catch (_) { /* ignore */ }
             return {
               statusCode: 200,
@@ -4033,6 +4182,11 @@ module.exports.handler = async function (event, context) {
       infoLog('[RPC] get_curator_clients success', { rows: result.rows?.length || 0 });
     }
 
+    if (params && params.__dayv2BatchTxStarted) {
+      await client.query('COMMIT');
+      delete params.__dayv2BatchTxStarted;
+    }
+
     // 🔐 P2 FIX: Освобождаем клиент в pool ДО return (serverless best practice)
     client.release();
 
@@ -4096,6 +4250,10 @@ module.exports.handler = async function (event, context) {
     };
 
   } catch (error) {
+    if (params && params.__dayv2BatchTxStarted) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+      delete params.__dayv2BatchTxStarted;
+    }
     // Детальное логирование для admin функций и критичных функций.
     // log_* — debug/audit функции, которые сами логируют события клиента.
     // Если ОНИ падают — нужны полные SQLSTATE/detail/hint, иначе мы не

@@ -2034,7 +2034,7 @@
     }
 
     // === Subjective (check-in) field anti-clobber ===
-    // Поля утреннего чекина, которые пишутся одним шагом и редко обнуляются.
+    // Поля утреннего чекина/зарядки, которые пишутся одним шагом и редко обнуляются.
     // Apply этих значений в React может потеряться под троттлингом таба
     // (SKIP_RAF_PENDING в heys_day_effects.js), а последующий снапшот дня
     // (addWater → persistDaySnapshotImmediately) — затереть их в LS.
@@ -2042,7 +2042,8 @@
     const SUBJECTIVE_DAY_FIELDS = [
         'sleepStart', 'sleepEnd', 'sleepHours', 'daySleepMinutes',
         'sleepQuality', 'sleepNote',
-        'moodMorning', 'wellbeingMorning', 'stressMorning'
+        'moodMorning', 'wellbeingMorning', 'stressMorning',
+        'morningActivation'
     ];
 
     const hasDefinedValue = (v) => v !== undefined && v !== null && v !== '';

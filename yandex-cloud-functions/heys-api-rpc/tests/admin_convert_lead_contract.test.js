@@ -251,6 +251,54 @@ async function run() {
   ]);
   assert.strictEqual(JSON.parse(createRes.body).client_id, '55555555-5555-4555-8555-555555555555');
 
+  const legacyCuratorId = '77777777-7777-4777-8777-777777777777';
+  const legacyToken = createJwt({
+    curator_id: legacyCuratorId,
+    email: 'legacy-curator@example.test',
+    role: 'curator',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  }, jwtSecret);
+  const legacyRes = await handler({
+    httpMethod: 'POST',
+    path: '/rpc',
+    queryStringParameters: { fn: 'admin_convert_lead' },
+    headers: {
+      origin: 'https://app.heyslab.ru',
+      Authorization: `Bearer ${legacyToken}`,
+    },
+    body: JSON.stringify({ p_lead_id: '88888888-8888-4888-8888-888888888888' }),
+  });
+
+  assert.strictEqual(legacyRes.statusCode, 200);
+  const legacyQuery = mockPool.queries
+    .filter((q) => q.sql.includes('admin_convert_lead'))
+    .at(-1);
+  assert.deepStrictEqual(legacyQuery.values, [
+    '88888888-8888-4888-8888-888888888888',
+    legacyCuratorId,
+  ]);
+
+  const invalidToken = createJwt({
+    email: 'bad-curator@example.test',
+    role: 'curator',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  }, jwtSecret);
+  const queryCountBeforeInvalid = mockPool.queries.length;
+  const invalidRes = await handler({
+    httpMethod: 'POST',
+    path: '/rpc',
+    queryStringParameters: { fn: 'admin_convert_lead' },
+    headers: {
+      origin: 'https://app.heyslab.ru',
+      Authorization: `Bearer ${invalidToken}`,
+    },
+    body: JSON.stringify({ p_lead_id: '99999999-9999-4999-8999-999999999999' }),
+  });
+
+  assert.strictEqual(invalidRes.statusCode, 403);
+  assert.match(String(invalidRes.body), /curator_id_required/);
+  assert.strictEqual(mockPool.queries.length, queryCountBeforeInvalid, 'invalid curator token must fail before SQL');
+
   process.env.JWT_SECRET = prevJwt;
   console.log('admin client access contract tests: OK');
 }

@@ -3687,18 +3687,41 @@
         // Теперь: ref обновляется на каждый render, но идентичность callbacks стабильна.
         const dayRef = React.useRef(day);
         dayRef.current = day;
+        const addProductsToMealRef = React.useRef(null);
+
+        const readFreshScopedDay = React.useCallback(() => {
+            const key = _scopedDayKey(date);
+            try {
+                if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                    return HEYS.utils.lsGet(key, null);
+                }
+                return lsGet(key, null);
+            } catch (_) {
+                return null;
+            }
+        }, [date]);
+
+        const protectCheckinFields = React.useCallback((snapshot) => {
+            let result = (snapshot && typeof snapshot === 'object') ? snapshot : {};
+            const merge = HEYS.dayUtils && HEYS.dayUtils.mergeSubjectiveFieldsPreferFresh;
+            if (typeof merge !== 'function') return result;
+            try { result = merge(result, readFreshScopedDay()); } catch (_) { /* noop */ }
+            try { result = merge(result, dayRef.current); } catch (_) { /* noop */ }
+            return result;
+        }, [readFreshScopedDay]);
 
         const persistDayData = React.useCallback((nextDayData, action = 'save_day') => {
+            const safeDayData = protectCheckinFields(nextDayData);
             const key = _scopedDayKey(date);
-            const _mCnt = Array.isArray(nextDayData?.meals) ? nextDayData.meals.length : '?';
-            const _iCnt = Array.isArray(nextDayData?.meals) ? nextDayData.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
+            const _mCnt = Array.isArray(safeDayData?.meals) ? safeDayData.meals.length : '?';
+            const _iCnt = Array.isArray(safeDayData?.meals) ? safeDayData.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
             try {
-                console.info('[HEYS.syncTrace] PERSIST_DAY', { key, action, meals: _mCnt, items: _iCnt, updatedAt: nextDayData?.updatedAt });
-                lsSet(key, nextDayData);
+                console.info('[HEYS.syncTrace] PERSIST_DAY', { key, action, meals: _mCnt, items: _iCnt, updatedAt: safeDayData?.updatedAt });
+                lsSet(key, safeDayData);
             } catch (e) {
                 trackError(e, { source: 'day/_meals.js', action });
             }
-        }, [date]);
+        }, [date, protectCheckinFields]);
 
         const markUndoWindow = React.useCallback((durationMs = 5000) => {
             const updatedAt = Date.now();
@@ -3786,9 +3809,9 @@
                         lastLoadedUpdatedAtRef.current = newUpdatedAt;
                         blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
 
-                        const baseDay = dayRef.current || {};
+                        const baseDay = protectCheckinFields(dayRef.current || {});
                         const newMeals = sortMealsByTime([...(baseDay.meals || []), newMeal]);
-                        const newDayData = { ...baseDay, meals: newMeals, updatedAt: newUpdatedAt };
+                        const newDayData = protectCheckinFields({ ...baseDay, meals: newMeals, updatedAt: newUpdatedAt });
                         const key = _scopedDayKey(date);
                         try {
                             lsSet(key, newDayData);
@@ -3905,13 +3928,13 @@
 
                                         // 2026-05-29 anti-loop: pre-compute + persist outside setDay reducer,
                                         // см. fix(day) f23aa6a2 + commit для остальных reducer'ов в этом файле.
-                                        const baseDay = dayRef.current || {};
+                                        const baseDay = protectCheckinFields(dayRef.current || {});
                                         const updatedMeals = (baseDay.meals || []).map((m, i) =>
                                             i === addMealIndex
                                                 ? { ...m, items: [...(m.items || []), newItem] }
                                                 : m,
                                         );
-                                        const newDayData = { ...baseDay, meals: updatedMeals, updatedAt: newUpdatedAt };
+                                        const newDayData = protectCheckinFields({ ...baseDay, meals: updatedMeals, updatedAt: newUpdatedAt });
 
                                         const key = _scopedDayKey(date);
                                         const prevMealItems = ((baseDay?.meals || [])[addMealIndex]?.items || []).length;
@@ -3962,7 +3985,7 @@
                                             // Build updated day inline: setDay is async and
                                             // HEYS.Day.getDay() (dayRef.current) won't reflect
                                             // the new item yet at this point.
-                                            const baseDayForSummary = dayOverride || HEYS.Day?.getDay?.() || day || {};
+                                            const baseDayForSummary = protectCheckinFields(dayOverride || HEYS.Day?.getDay?.() || day || {});
                                             const srcMeals = baseDayForSummary.meals || [];
                                             const mealsWithNewItem = srcMeals.map((m, i) =>
                                                 i === addMealIndex
@@ -3997,6 +4020,23 @@
                                             });
                                         }
                                         if (scrollToDiaryHeading) scrollToDiaryHeading();
+                                    },
+                                    onAddMany: ({ entries, mealIndex: addMealIndex = targetMealIndex, _origin, _presetName } = {}) => {
+                                        const addMany = addProductsToMealRef.current;
+                                        if (typeof addMany !== 'function') {
+                                            console.warn('[HEYS.day] ⚠️ addProductsToMeal unavailable for inline preset bulk add', {
+                                                mealIndex: addMealIndex,
+                                                presetName: _presetName || null
+                                            });
+                                            return false;
+                                        }
+                                        const didAdd = addMany(addMealIndex, entries, {
+                                            source: 'day-inline-add-products-bulk',
+                                            origin: _origin || 'preset-apply-bulk',
+                                            presetName: _presetName || null,
+                                        });
+                                        if (didAdd !== false && scrollToDiaryHeading) scrollToDiaryHeading();
+                                        return didAdd !== false;
                                     },
                                     onNewProduct: () => {
                                         if (window.HEYS?.products?.showAddModal) {
@@ -4217,11 +4257,11 @@
                 let newMealIndex = 0;
                 if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
                 if (blockCloudUpdatesUntilRef) blockCloudUpdatesUntilRef.current = newUpdatedAt + 3000;
-                const baseDay = dayRef.current || {};
+                const baseDay = protectCheckinFields(dayRef.current || {});
                 const baseMeals = baseDay.meals || [];
                 const newMeals = [...baseMeals, newMeal];
                 newMealIndex = newMeals.length - 1;
-                const newDayData = { ...baseDay, meals: newMeals, updatedAt: newUpdatedAt };
+                const newDayData = protectCheckinFields({ ...baseDay, meals: newMeals, updatedAt: newUpdatedAt });
                 const key = _scopedDayKey(date);
                 try {
                     lsSet(key, newDayData);
@@ -4246,7 +4286,7 @@
                     );
                 } catch (_) { /* noop */ }
             }
-        }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef]);
+        }, [date, expandOnlyMeal, isMobile, openTimePickerForNewMeal, products, setDay, day, prof, pIndex, getProductFromItem, scrollToDiaryHeading, lastLoadedUpdatedAtRef, blockCloudUpdatesUntilRef, protectCheckinFields]);
 
         const replanEmitTimersRef = React.useRef({});
 
@@ -4432,6 +4472,7 @@
                     ? (HEYS.utils.lsGet(key, {}) || {})
                     : (dayRef.current || {});
             } catch (_) { baseDay = dayRef.current || {}; }
+            baseDay = protectCheckinFields(baseDay);
             const mealsList = (baseDay && baseDay.meals) || [];
             if (!mealsList[mi]) {
                 console.warn('[HEYS.day] ❌ Meal index out-of-bounds for addProductToMeal — aborting (state race?)', {
@@ -4445,7 +4486,7 @@
             }
             const before = (mealsList[mi]?.items || []).length;
             const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), item] } : m);
-            const newDayData = { ...baseDay, meals, updatedAt: newUpdatedAt };
+            const newDayData = protectCheckinFields({ ...baseDay, meals, updatedAt: newUpdatedAt });
             try {
                 logDayTrace('[HEYS.day-trace] 4/8 setDay applied', {
                     date: baseDay.date,
@@ -4533,6 +4574,7 @@
                     ? (HEYS.utils.lsGet(key, {}) || {})
                     : (dayRef.current || {});
             } catch (_) { baseDay = dayRef.current || {}; }
+            baseDay = protectCheckinFields(baseDay);
             const mealsList = (baseDay && baseDay.meals) || [];
             if (!mealsList[mi]) {
                 console.warn('[HEYS.day] ❌ Meal index out-of-bounds for addProductsToMeal — aborting', {
@@ -4549,7 +4591,7 @@
             const products = prepared.map((entry) => entry.finalProduct);
             const before = (mealsList[mi]?.items || []).length;
             const meals = mealsList.map((m, i) => i === mi ? { ...m, items: [...(m.items || []), ...items] } : m);
-            const newDayData = { ...baseDay, meals, updatedAt: newUpdatedAt };
+            const newDayData = protectCheckinFields({ ...baseDay, meals, updatedAt: newUpdatedAt });
             try {
                 lsSet(key, newDayData);
             } catch (e) {
@@ -4593,6 +4635,7 @@
             });
             return true;
         }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem]);
+        addProductsToMealRef.current = addProductsToMeal;
 
         const setGrams = React.useCallback((mi, itId, g) => {
             const grams = +g || 0;

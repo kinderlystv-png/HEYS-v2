@@ -27,6 +27,14 @@ function readDayMealsSource() {
   return fs.readFileSync(path.resolve(__dirname, '../day/_meals.js'), 'utf8');
 }
 
+function readDayUtilsSource() {
+  return fs.readFileSync(path.resolve(__dirname, '../heys_day_utils.js'), 'utf8');
+}
+
+function readComponentsCssSource() {
+  return fs.readFileSync(path.resolve(__dirname, '../styles/heys-components.css'), 'utf8');
+}
+
 function readDayTabImplSource() {
   return fs.readFileSync(path.resolve(__dirname, '../heys_day_tab_impl_v1.js'), 'utf8');
 }
@@ -215,6 +223,8 @@ describe('Meal preset bulk add', () => {
     const tabSource = readDayTabImplSource();
 
     expect(mealsSource).toContain('const addProductsToMeal = React.useCallback');
+    expect(mealsSource).toContain('addProductsToMealRef.current = addProductsToMeal;');
+    expect(mealsSource).toContain('onAddMany: ({ entries, mealIndex: addMealIndex = targetMealIndex');
     expect(mealsSource).toContain("source: options?.source || 'day-add-products-to-meal'");
     expect(mealsSource).toContain('productIds: items.map((item) => item.product_id)');
     expect(tabSource).toContain('addProductsToMeal,');
@@ -230,5 +240,26 @@ describe('Meal preset bulk add', () => {
     expect(source).toContain("source: 'meal-rec-selected-products'");
     expect(source).not.toContain('selectedProducts.forEach((product, idx) =>');
     expect(source).not.toContain('}, idx * 100)');
+  });
+
+  it('protects check-in and morning activation fields from stale meal writes', () => {
+    const mealsSource = readDayMealsSource();
+    const utilsSource = readDayUtilsSource();
+
+    expect(utilsSource).toContain("'morningActivation'");
+    expect(utilsSource).toContain('mergeSubjectiveFieldsPreferFresh');
+    expect(mealsSource).toContain('const protectCheckinFields = React.useCallback');
+    expect(mealsSource).toContain('const safeDayData = protectCheckinFields(nextDayData);');
+    expect(mealsSource).toContain('lsSet(key, safeDayData);');
+    expect(mealsSource).toContain('baseDay = protectCheckinFields(baseDay);');
+  });
+
+  it('keeps the monthly reports legend in normal layout flow on mobile', () => {
+    const cssSource = readComponentsCssSource();
+
+    expect(cssSource).toContain('.monthly-reports-legend--header');
+    expect(cssSource).toContain('position: static;');
+    expect(cssSource).toContain('@media (max-width: 640px)');
+    expect(cssSource).toContain('flex-direction: column;');
   });
 });

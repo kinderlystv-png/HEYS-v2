@@ -399,10 +399,10 @@ deploy_function() {
         fi
     fi
 
-    # 🔀 Sync shared sync-merge module before deploy (heys-api-rpc only).
+    # 🔀 Sync shared sync-merge module before deploy (heys-api-rpc/heys-api-rest).
     # Source of truth: apps/web/heys_sync_merge_v1.js (UMD; same file runs in browser).
     # Destination uses .cjs extension because Node treats .js as ESM here without it.
-    if [[ "$func_name" == "heys-api-rpc" ]]; then
+    if [[ "$func_name" == "heys-api-rpc" || "$func_name" == "heys-api-rest" ]]; then
         ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
         SRC="$ROOT_DIR/apps/web/heys_sync_merge_v1.js"
         DST_DIR="$SCRIPT_DIR/$func_name/lib"

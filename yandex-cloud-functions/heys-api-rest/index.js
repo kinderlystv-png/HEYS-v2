@@ -5,6 +5,7 @@
 
 const { getPool } = require('./db-pool');
 const { initSecrets } = require('./secrets');
+const { mergeDayData } = require('./lib/heys_sync_merge_v1.cjs');
 const fs = require('fs');
 const path = require('path');
 
@@ -1135,6 +1136,7 @@ module.exports.handler = async function (event, context) {
               continue;
             }
 
+            let dayv2RestTxStarted = false;
             // 🛡️ Content-fingerprint dup check для dayv2 — ловит partial pollution
             // где writer_cid правильный но meals идентичны другому клиенту того же
             // curator (incident #8).
@@ -1166,22 +1168,69 @@ module.exports.handler = async function (event, context) {
                 }
                 continue;
               }
+
+              try {
+                await client.query('BEGIN');
+                dayv2RestTxStarted = true;
+                const currentRes = await client.query(
+                  'SELECT v FROM client_kv_store WHERE client_id = $1::uuid AND k = $2::text FOR UPDATE',
+                  [row.client_id, row.k]
+                );
+                const currentValue = currentRes.rows?.[0]?.v || null;
+                if (currentValue) {
+                  const merged = mergeDayData(row.v, currentValue, { forceKeepAll: true });
+                  if (merged) {
+                    row.v = merged;
+                    console.warn('[REST POST client_kv_store] dayv2_guard_merged:', row.k);
+                  }
+                }
+              } catch (e) {
+                if (dayv2RestTxStarted) {
+                  try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+                  dayv2RestTxStarted = false;
+                }
+                console.warn('[REST POST client_kv_store] dayv2 merge failed:', e.message);
+                blocked++;
+                blockedItems.push({ k: row.k, reason: 'dayv2_merge_failed' });
+                continue;
+              }
             }
 
             // Вызываем защищённую функцию вместо прямого INSERT
-            const writeResult = await client.query(
-              'SELECT safe_upsert_client_kv($1, $2, $3::jsonb) as result',
-              [row.client_id, row.k, JSON.stringify(row.v)]
-            );
+            let writeResult;
+            try {
+              writeResult = await client.query(
+                'SELECT safe_upsert_client_kv($1, $2, $3::jsonb) as result',
+                [row.client_id, row.k, JSON.stringify(row.v)]
+              );
+            } catch (writeErr) {
+              if (dayv2RestTxStarted) {
+                try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+                dayv2RestTxStarted = false;
+              }
+              throw writeErr;
+            }
 
             const res = writeResult.rows[0]?.result;
             if (res?.success) {
+              if (dayv2RestTxStarted) {
+                await client.query('COMMIT');
+                dayv2RestTxStarted = false;
+              }
               processed++;
             } else if (res?.error === 'data_loss_protection' || res?.error === 'non_client_data') {
+              if (dayv2RestTxStarted) {
+                try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+                dayv2RestTxStarted = false;
+              }
               blocked++;
               blockedItems.push({ k: row.k, reason: res.error });
               console.warn('[REST POST] 🛡️ Protected write blocked:', row.k, res.error);
             } else {
+              if (dayv2RestTxStarted) {
+                try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+                dayv2RestTxStarted = false;
+              }
               console.error('[REST POST] Write failed:', res);
             }
           }

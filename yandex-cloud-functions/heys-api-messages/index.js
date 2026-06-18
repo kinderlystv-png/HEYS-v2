@@ -713,7 +713,7 @@ async function setTranscriptionConsent(identity, granted, event) {
          curator_id, consent_type, document_version, granted,
          ip_address, user_agent, consent_method, signature_method, created_at
        )
-       VALUES ($1, $2, $3, $4, CASE WHEN $5 IS NOT NULL AND $5 <> '' THEN $5::inet ELSE NULL END,
+       VALUES ($1, $2, $3, $4, NULLIF($5::text, '')::inet,
                $6, 'checkbox', 'checkbox', NOW())`,
       [identity.id, TRANSCRIPTION_CONSENT_TYPE, TRANSCRIPTION_CONSENT_VERSION, !!granted, ip, userAgent],
     );
