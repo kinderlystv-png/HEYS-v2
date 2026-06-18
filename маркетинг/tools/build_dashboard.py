@@ -8,7 +8,8 @@
 статусы пунктов с задачей «22 N.N» подтягиваются из 22), 24_посты
 (контент-батч).
 Пишет: 00_Дашборд.html (самодостаточный, офлайн; вкладки:
-Обзор / Конкуренты / Telegram / План 22).
+Контроль: Обзор / Конкуренты / TG-штаб / План 22; Позиция: Позиционирование /
+Голос; Промо: TG-стратегия / Куратор / TG-посты).
 
 При сломанной структуре источников падает с ненулевым кодом — pre-commit
 хук тогда блокирует коммит рассинхронизированного дашборда.
@@ -548,6 +549,44 @@ def table_needs_blocker_column(head):
     return 'статус' in normalized
 
 
+def table_col_widths(head):
+    """Ширины колонок для читаемых markdown-таблиц в дашборде.
+
+    Для задачных таблиц основная длинная колонка часто называется «Детали»,
+    а «Подраздел» остаётся коротким названием работы.
+    """
+    normalized = [plain_md(h).lower() for h in head]
+    if normalized == [
+        '#', 'подраздел', 'детали', 'статус', 'блокер', 'codex/помощь', 'оценка codex'
+    ]:
+        return [7, 20, 38, 5, 17, 6, 7]
+    if normalized == ['принцип', 'как применяем в heys', 'как выглядит в telegram', 'guardrail']:
+        return [16, 34, 30, 20]
+    if normalized == ['эмоция', 'как звучит в посте', 'как доказываем продуктом', 'нельзя']:
+        return [13, 35, 32, 20]
+    if normalized == ['источник', 'роль в контуре heys', 'что берём', 'что не берём']:
+        return [22, 20, 29, 29]
+    if normalized == ['слой', 'что делает в heys', 'главный источник', 'как выглядит в канале']:
+        return [14, 27, 18, 41]
+    if normalized == ['неделя', 'тема серии', 'цель серии', 'пример мягкого cta']:
+        return [8, 20, 42, 30]
+
+    n = len(head)
+    presets = {
+        2: [30, 70],
+        3: [20, 55, 25],
+        4: [16, 50, 24, 10],
+        5: [14, 38, 22, 18, 8],
+        6: [12, 34, 18, 12, 17, 7],
+        7: [5, 36, 21, 6, 18, 6, 8],
+    }
+    if n in presets:
+        return presets[n]
+    second = 26
+    rest = (100 - second) / max(1, n - 1)
+    return [second if i == 1 else round(rest, 2) for i in range(n)]
+
+
 def md_table_separator(cells):
     return cells and all(re.fullmatch(r':?-{2,}:?', c.strip()) for c in cells if c.strip())
 
@@ -570,10 +609,14 @@ def render_plan_table(table_lines):
     )
     toggle_idx = toggle_source_idx + 1 if add_blocker and blocker_insert_idx <= toggle_source_idx else toggle_source_idx
     body = rows[2:] if len(rows) > 1 and md_table_separator(rows[1]) else rows[1:]
-    out = ['<div class="plan-md-table-wrap"><table class="plan-md-table"><thead><tr>']
     render_head = list(head)
     if add_blocker:
         render_head.insert(blocker_insert_idx, 'Блокер')
+    table_cls = 'plan-md-table task-table' if plain_md(render_head[0]) == '#' else 'plan-md-table'
+    out = [f'<div class="plan-md-table-wrap"><table class="{table_cls}">']
+    out.append('<colgroup>' + ''.join(
+        f'<col style="width:{w}%">' for w in table_col_widths(render_head)
+    ) + '</colgroup><thead><tr>')
     out.extend(f'<th>{md_inline(c)}</th>' for c in render_head)
     out.append('</tr></thead><tbody>')
     for row in body:
@@ -687,6 +730,46 @@ def render_plan_markdown(text):
 
 
 plan_full_html = render_plan_markdown(plan_text)
+
+source_tabs = [
+    ('doc03', 'Позиционирование', '03 · Каналы и позиционирование',
+     ROOT / '03_Каналы_и_продакт-плейсмент.md', 'position'),
+    ('doc14', 'TG-стратегия', '14 · Telegram-стратегия и плейбук',
+     ROOT / '14_Telegram_плейбук.md', 'telegram'),
+    ('doc23', 'Куратор', '23 · Плейбук куратора',
+     ROOT / '23_Плейбук_куратора.md', 'telegram'),
+    ('doc24', 'TG-посты', '24 · Telegram-посты батч №1',
+     ROOT / '24_Telegram_посты_батч1.md', 'telegram'),
+    ('copyvoice', 'Голос', 'COPY_VOICE · Голос продукта',
+     ROOT.parent / 'apps/landing/COPY_VOICE.md', 'position'),
+]
+
+
+def tab_button(pane_id, label, active=False):
+    cls = 'tab active' if active else 'tab'
+    return f'<button class="{cls}" data-pane="{esc(pane_id)}">{esc(label)}</button>'
+
+
+def source_buttons(group):
+    return ''.join(
+        tab_button(pane_id, tab_label)
+        for pane_id, tab_label, _, _, tab_group in source_tabs
+        if tab_group == group
+    )
+
+
+source_tab_buttons_position = source_buttons('position')
+source_tab_buttons_telegram = source_buttons('telegram')
+source_tab_panes = ''
+for pane_id, _, title, path, _ in source_tabs:
+    rel_path = path.relative_to(ROOT.parent)
+    source_tab_panes += (
+        f'<div class="pane" id="{esc(pane_id)}">'
+        f'<p class="sub"><b>Полный источник:</b> <code>{esc(rel_path)}</code>.</p>'
+        f'<section><h2>{esc(title)} — полный текст</h2>'
+        f'<div class="card plan-source">{render_plan_markdown(path.read_text(encoding="utf-8"))}</div>'
+        f'</section></div>'
+    )
 
 release_steps_rows = ''
 release_step_by_name = {}
@@ -900,11 +983,13 @@ html_out = f'''<!DOCTYPE html>
 <style>
 :root {{ --bg:#0b1020; --card:#121931; --card2:#0f1530; --line:#1f2a4d;
   --txt:#e8ecf8; --dim:#8b96b8; --acc:#4f8cff; --ok:#2dd4a7; --warn:#f5b14c; --hold:#f8d24a;
-  --red:#f0647c; }}
+  --red:#f0647c; --page-pad:clamp(10px,3vw,36px); }}
 * {{ box-sizing:border-box; margin:0; }}
-body {{ background:radial-gradient(1100px 500px at 80% -10%,#16224a 0%,var(--bg) 55%);
+html {{ max-width:100%; overflow-x:hidden; }}
+body {{ width:100%; max-width:100%; overflow-x:hidden;
+  background:radial-gradient(1100px 500px at 80% -10%,#16224a 0%,var(--bg) 55%);
   color:var(--txt); font:13.5px/1.45 -apple-system,'SF Pro Text',Segoe UI,Roboto,sans-serif;
-  padding:18px clamp(12px,3vw,36px) 40px; }}
+  padding:18px var(--page-pad) 40px; }}
 h1 {{ font-size:clamp(17px,2.2vw,23px); letter-spacing:-.4px; }}
 h2 {{ font-size:11px; text-transform:uppercase; letter-spacing:.12em;
   color:var(--dim); margin:0 0 8px; }}
@@ -913,35 +998,49 @@ h2 {{ font-size:11px; text-transform:uppercase; letter-spacing:.12em;
 .badge {{ background:linear-gradient(135deg,#4f8cff33,#2dd4a733);
   border:1px solid #4f8cff55; padding:4px 12px; border-radius:999px; font-size:12px; }}
 .sub {{ color:var(--dim); font-size:12.5px; max-width:1000px; margin-bottom:12px; }}
-.tabs {{ display:flex; gap:6px; margin:4px 0 16px; border-bottom:1px solid var(--line); }}
+.tabs {{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; margin:4px 0 16px;
+  border-bottom:1px solid var(--line); }}
+.tab-group {{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; padding:5px;
+  border:1px solid var(--line); border-radius:10px; background:#0d1428; }}
+.tab-group::before {{ content:attr(data-label); color:var(--dim); font-size:10px;
+  text-transform:uppercase; letter-spacing:.08em; flex:0 0 100%; padding:0 3px 1px;
+  line-height:1; opacity:.78; pointer-events:none; }}
+.tab-group.control {{ background:#4f8cff12; border-color:#4f8cff33; }}
+.tab-group.position {{ background:#2dd4a710; border-color:#2dd4a733; }}
+.tab-group.telegram {{ background:#f5b14c12; border-color:#f5b14c3d; }}
+.tab-group.plan {{ background:#f0647c10; border-color:#f0647c33; }}
 .tab {{ background:none; border:none; color:var(--dim); font:600 13px inherit;
-  padding:8px 14px; cursor:pointer; border-bottom:2px solid transparent; }}
-.tab.active {{ color:var(--txt); border-bottom-color:var(--acc); }}
-.pane {{ display:none; }} .pane.active {{ display:block; }}
-.grid {{ display:grid; gap:12px; }}
-.cards3 {{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }}
-.card {{ background:linear-gradient(180deg,var(--card),var(--card2));
+  padding:7px 11px; cursor:pointer; border:1px solid transparent; border-radius:7px; }}
+.tab.active {{ color:var(--txt); border-color:#ffffff24; background:#ffffff12; }}
+.pane {{ display:none; max-width:100%; min-width:0; }} .pane.active {{ display:block; }}
+.grid {{ display:grid; gap:12px; min-width:0; }}
+.cards3 {{ grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr)); }}
+.card {{ min-width:0; background:linear-gradient(180deg,var(--card),var(--card2));
   border:1px solid var(--line); border-radius:12px; padding:12px 14px; }}
 .big {{ font-size:clamp(24px,3vw,34px); font-weight:700; letter-spacing:-.5px; }}
 .big.ok {{ color:var(--ok); }} .big.acc {{ color:var(--acc); }}
 .label {{ color:var(--dim); font-size:11.5px; }}
 .sm {{ font-size:12.5px; }}
 section {{ margin-top:18px; }}
-table {{ width:100%; border-collapse:collapse; font-size:12.5px; }}
+table {{ width:100%; max-width:100%; border-collapse:collapse; font-size:12.5px;
+  table-layout:auto; }}
 th {{ text-align:left; color:var(--dim); font-weight:500; font-size:10.5px;
   text-transform:uppercase; letter-spacing:.07em; padding:6px 8px;
   border-bottom:1px solid var(--line); }}
 td {{ padding:6px 8px; border-bottom:1px solid #16203f; vertical-align:top; }}
-td.num {{ white-space:nowrap; font-weight:600; }}
+td,th {{ min-width:0; overflow-wrap:break-word; word-break:normal; hyphens:manual; }}
+td.num {{ white-space:normal; font-weight:600; }}
 td.hl {{ color:var(--ok); font-weight:600; }}
 tr.hl-row td {{ color:var(--ok); font-weight:600; background:#2dd4a70d; }}
-.scrollx {{ overflow-x:auto; }} .scrollx table {{ min-width:760px; }}
+.scrollx {{ overflow-x:visible; width:100%; min-width:0; max-width:100%; }}
+.scrollx table {{ min-width:0; table-layout:auto; }}
+.scrollx table th:nth-child(2),.scrollx table td:nth-child(2) {{ width:34%; }}
 .dim {{ color:var(--dim); }}
 .chip {{ padding:2px 9px; border-radius:999px; font-size:11px; white-space:nowrap; }}
 .chip.ok {{ background:#2dd4a722; color:var(--ok); border:1px solid #2dd4a744; }}
 .chip.mid {{ background:#f5b14c22; color:var(--warn); border:1px solid #f5b14c44; }}
 .chip.wait {{ background:#8b96b81e; color:var(--dim); border:1px solid #8b96b833; }}
-.tariffs {{ grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }}
+.tariffs {{ grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr)); }}
 .tariff {{ background:var(--card); border:1px solid var(--line); border-radius:12px;
   padding:10px 12px; }}
 .tariff.featured {{ border-color:var(--acc); box-shadow:0 0 0 1px var(--acc); }}
@@ -975,14 +1074,14 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .subtask-list li {{ color:var(--dim); font-size:11.5px; padding:2px 0;
   border-bottom:0; }}
 .subtask-list .chip {{ margin-right:6px; opacity:.92; }}
-.kpis {{ grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }}
+.kpis {{ grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr)); }}
 .kpi {{ background:var(--card); border:1px solid var(--line); border-radius:10px;
   padding:9px 11px; }}
 .kpi.k-wait .k-val {{ color:var(--dim); }}
 .k-name {{ font-size:11px; color:var(--dim); min-height:26px; }}
 .k-val {{ font-size:19px; font-weight:700; }}
 .k-goal {{ font-size:11px; color:var(--dim); }}
-.prios {{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); }}
+.prios {{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr)); }}
 .prio {{ display:flex; gap:10px; background:var(--card); border:1px solid var(--line);
   border-left:3px solid var(--red); border-radius:10px; padding:9px 12px; font-size:12.5px; }}
 .prio.top5 {{ border-left-color:var(--acc); }}
@@ -1007,8 +1106,9 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .tg-contour {{ display:grid; gap:12px; }}
 .tg-contour-formula {{ border-left:3px solid var(--ok); }}
 .tg-contour-grid {{ display:grid; gap:12px; grid-template-columns:1.1fr .9fr; }}
-.tg-contour .card {{ overflow-x:auto; }}
-.tg-contour table {{ min-width:680px; }}
+.tg-contour .card {{ overflow-x:visible; width:100%; min-width:0; max-width:100%; }}
+.tg-contour table {{ min-width:0; table-layout:auto; }}
+.tg-contour table th:nth-child(2),.tg-contour table td:nth-child(2) {{ width:34%; }}
 .tg-example-cols {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }}
 .tg-example-cols h4 {{ margin:0 0 6px; color:var(--dim); font-size:10.5px; text-transform:uppercase;
   letter-spacing:.08em; }}
@@ -1018,6 +1118,12 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
   border:1px solid #2c3a66; background:#0b1020; transition:transform .12s ease,border-color .12s ease; }}
 .tg-shot-link:hover .tg-shot {{ transform:scale(1.02); border-color:var(--acc); }}
 @media (max-width:760px) {{
+  :root {{ --page-pad:10px; }}
+  body {{ font-size:12.5px; }}
+  .card,.plan-source {{ padding:10px; }}
+  th,td {{ padding:5px 6px; }}
+  .tab-group {{ flex:1 1 min(100%,240px); }}
+  .tab {{ flex:1 1 auto; padding:7px 8px; }}
   .stage {{ grid-template-columns:1fr; }}
   .tg-example-card,.tg-example-head,.tg-example-cols {{ grid-template-columns:1fr; }}
   .tg-contour-grid {{ grid-template-columns:1fr; }}
@@ -1028,8 +1134,8 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
   font-size:12.5px; }}
 .p-num {{ font-size:16px; font-weight:800; color:var(--red); line-height:1.3; }}
 .p-num.acc2 {{ color:var(--acc); }}
-.cols2 {{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }}
-.plan-source {{ padding:18px 20px; overflow:auto; }}
+.cols2 {{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); }}
+.plan-source {{ padding:18px 20px; overflow:visible; }}
 .plan-source h1 {{ font-size:24px; margin:0 0 18px; }}
 .plan-source h2 {{ font-size:20px; margin:28px 0 12px; padding-bottom:8px;
   border-bottom:1px solid var(--line); }}
@@ -1040,17 +1146,23 @@ details.stage-d[open] > summary .s-head b {{ color:var(--acc); }}
 .plan-source blockquote p:last-child {{ margin-bottom:0; }}
 .plan-source code {{ font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
   background:#ffffff14; border:1px solid #ffffff1c; border-radius:4px; padding:1px 4px;
-  font-size:.92em; color:#dbe7ff; }}
+  font-size:.92em; color:#dbe7ff; overflow-wrap:anywhere; word-break:break-word; }}
 .plan-source a {{ color:var(--acc); text-decoration:none; border-bottom:1px dashed #4f8cff88; }}
 .plan-source ul,.plan-source ol {{ margin:8px 0 14px; padding-left:22px; }}
 .plan-source li {{ line-height:1.55; }}
 .plan-md-hr {{ border:0; border-top:1px solid var(--line); margin:18px 0; }}
-.plan-md-table-wrap {{ overflow-x:auto; margin:12px 0 20px; border:1px solid var(--line);
+.plan-md-table-wrap {{ overflow-x:visible; width:100%; min-width:0; max-width:100%;
+  margin:12px 0 20px; border:1px solid var(--line);
   border-radius:10px; background:#0d1428; }}
-.plan-md-table {{ min-width:1040px; font-size:12px; }}
+.plan-md-table {{ min-width:0; font-size:12px; table-layout:fixed; }}
 .plan-md-table th {{ background:#111a33; }}
 .plan-md-table td,.plan-md-table th {{ padding:7px 9px; }}
-.plan-md-table td.blocker {{ min-width:210px; max-width:360px; color:var(--hold); }}
+.plan-md-table td.blocker {{ min-width:0; max-width:none; color:var(--hold); }}
+.plan-md-table code {{ overflow-wrap:anywhere; word-break:break-word; }}
+.plan-md-table.task-table th:first-child,.plan-md-table.task-table td:first-child,
+.plan-md-table.task-table td:first-child .cell-body {{
+  white-space:nowrap; overflow-wrap:normal; word-break:normal;
+}}
 .plan-md-table tr.task-done td {{ color:var(--dim); opacity:.62; }}
 .plan-md-table tr.task-done:not(.expanded) .cell-body {{ display:-webkit-box;
   -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }}
@@ -1070,10 +1182,14 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 <div class="header">
   <h1>HEYS · Панель управления маркетингом</h1>
   <div class="tabs">
-    <button class="tab active" data-pane="overview">Обзор</button>
-    <button class="tab" data-pane="comp">Конкуренты</button>
-    <button class="tab" data-pane="tg">Telegram</button>
-    <button class="tab" data-pane="plan22">План 22</button>
+    <div class="tab-group control" data-label="Контроль">
+      {tab_button('overview', 'Обзор', True)}
+      {tab_button('comp', 'Конкуренты')}
+      {tab_button('tg', 'TG-штаб')}
+      {tab_button('plan22', 'План 22')}
+    </div>
+    <div class="tab-group position" data-label="Позиция">{source_tab_buttons_position}</div>
+    <div class="tab-group telegram" data-label="Промо">{source_tab_buttons_telegram}</div>
   </div>
   <span class="badge">Фаза 0 · Pro-first · план: {plan_pct}% · собрано {today}</span>
 </div>
@@ -1152,7 +1268,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 
 <div class="pane" id="tg">
 <p class="sub">{esc(tg_role)}</p>
-<section><h2>Контент-батч №1 — {len(posts)} постов готово (24)</h2>
+<section><h2>TG-посты: контент-батч №1 — {len(posts)} постов готово (24)</h2>
 <div class="cols2">
 <div class="card" style="padding:4px 8px"><table>{post_calendar}</table>
 <p class="label" style="padding:6px">⚠ {esc(post_prereq)}</p></div>
@@ -1160,7 +1276,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 {''.join(f'<li><span class="chip wait">{esc(pid)}</span> {esc(t.strip())}</li>' for pid, t in posts)}
 </ul></div></div></section>
 	<div class="cols2">
-	<div><h2>Рубрики (банк тем — 14, батч №1 — 24)</h2>
+	<div><h2>TG-штаб: рубрики и промо-контур (14/24)</h2>
 	<div class="card" style="padding:4px 8px"><table>{tg_rubric_rows}</table></div>
 	<section><h2>Продвижение</h2><div class="card"><ul>{tg_promo_list}</ul></div></section></div>
 	<div class="grid" style="align-content:start">{tg_block_cards}</div>
@@ -1180,6 +1296,8 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 	<div class="tg-examples">{tg_channel_cards}</div></section>
 	</div>
 
+{source_tab_panes}
+
 <div class="pane" id="plan22">
 <p class="sub"><b>Полный источник:</b> 22_План_реализации_маркетинга.md. Цвет строк задач:
 серый = закрыто, зелёный = Codex может сделать сам без текущего блокера, жёлто-оранжевый = Codex может сделать сам, но ждёт блокер/условие, жёлтый = Codex может сделать с твоей помощью, но пункт заблокирован, белый = нужно участие основателя / доступ / внешнее решение.</p>
@@ -1187,7 +1305,7 @@ footer {{ margin-top:26px; color:var(--dim); font-size:11px;
 <div class="card plan-source">{plan_full_html}</div></section>
 </div>
 
-<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 22_План · 25_Roadmap · 29_Аудит · 30_Решения ·
+<footer>Сгенерировано {today} · данные: 00_Сводная_панель.xlsx · 03_Позиционирование · 14_Telegram · 22_План · 23_Куратор · 24_Посты · COPY_VOICE · 25_Roadmap · 29_Аудит · 30_Решения ·
 обновление: <b>Обновить_дашборд.command</b> (двойной клик) · авто на каждом коммите источников ·
 <code>python3 маркетинг/tools/build_dashboard.py</code></footer>
 
@@ -1233,6 +1351,13 @@ for cond, msg in [
      'маркетинг/*.md: нет статусной шапки в ' + ', '.join(numbered_md_missing_status)),
     ('data-pane="imap"' not in html_out and 'id="imap"' not in html_out,
      'дашборд: вернулась отдельная вкладка/панель imap вместо интеграции в «Конкуренты»'),
+    (all(f'data-pane="{pane_id}"' in html_out and f'id="{pane_id}"' in html_out
+         for pane_id, _, _, _, _ in source_tabs),
+     'дашборд: не все полные source-вкладки попали в HTML'),
+    ('Review-layer: смена категории и УТП' in html_out,
+     'дашборд: полный 14_Telegram_плейбук не содержит review-layer УТП'),
+    ('внимательная внешняя опора' in html_out.lower(),
+     'дашборд: единая эмоциональная концепция не попала в HTML'),
     (len(tariffs) >= 3, 'Сводка: тарифная сетка < 3 строк (B12:F15)'),
     (eco['real'] and eco['base'], 'Сводка: пустая экономика (B21/D21)'),
     (len(release_steps[1]) >= 5, '22: релизные ступени S0–S4 не найдены или < 5 строк'),
