@@ -16,7 +16,7 @@
  *   PG_*                      — БД (пока только env, не в Lockbox)
  */
 
-const { getPool } = require('./shared/db-pool');
+const { getPool, closePool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const { getSecret } = require('./shared/lockbox-client');
 const crypto = require('crypto');
@@ -325,6 +325,11 @@ async function queryWithFreshClient(sql, params = []) {
       }
     } finally {
       if (!released) client.release();
+      try {
+        await closePool();
+      } catch (closeErr) {
+        console.warn('[DB-Pool] close after short query failed:', closeErr.message);
+      }
     }
   }
   throw lastError;
@@ -410,7 +415,7 @@ async function withPollLease(lockName, leaseMs, run) {
   try {
     return await run();
   } finally {
-    releasePollLease(lockName, lease.owner).catch((e) => {
+    await releasePollLease(lockName, lease.owner).catch((e) => {
       console.warn(`[${lockName}] poll lease release failed:`, e.message);
     });
   }

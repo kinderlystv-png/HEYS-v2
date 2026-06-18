@@ -33,7 +33,7 @@ function loadHandlerWithDb(rowsByQuery) {
 
   const originalLoad = Module._load;
   Module._load = function patchedLoad(request, parent, isMain) {
-    if (request === './shared/db-pool') return { getPool: () => pool };
+    if (request === './shared/db-pool') return { getPool: () => pool, closePool: async () => {} };
     if (request === './shared/secrets') return { initSecrets: async () => {} };
     if (request === './shared/lockbox-client') return { getSecret: async () => null };
     return originalLoad.call(this, request, parent, isMain);
