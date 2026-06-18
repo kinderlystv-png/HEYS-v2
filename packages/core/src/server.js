@@ -85,6 +85,53 @@ app.get('/api/analytics', (req, res) => {
 const PROD_API = (process.env.HEYS_DEV_PROXY_TARGET || 'https://api.heyslab.ru').replace(/\/$/, '');
 const devTranscriptionConsentByAuth = new Map();
 
+function traceDevProxy(event, details = {}) {
+  try {
+    console.log('[Dev Proxy.trace]', JSON.stringify({
+      event,
+      ts: new Date().toISOString(),
+      ...details,
+    }));
+  } catch (_) {
+    console.log('[Dev Proxy.trace]', event);
+  }
+}
+
+function summarizeProxyBody(req) {
+  const path = String(req.originalUrl || '');
+  if (!/^\/(messages|photos|media)\//.test(path)) return null;
+  const body = req.body || {};
+  if (path.startsWith('/messages/send')) {
+    const attachments = Array.isArray(body.attachments) ? body.attachments : [];
+    return {
+      has_body: Boolean(body.body),
+      client_id: body.client_id || null,
+      attachments: attachments.length,
+      audio: attachments
+        .filter((att) => att?.type === 'audio' || att?.media_type === 'audio')
+        .map((att) => ({
+          mime: att?.mime || null,
+          duration_ms: att?.duration_ms || null,
+          size_bytes: att?.size_bytes || null,
+          transcript_status: att?.transcript_status || null,
+          path: att?.path || null,
+        })),
+    };
+  }
+  if (path.startsWith('/photos/upload') || path.startsWith('/media/upload')) {
+    return {
+      media_type: body.media_type || null,
+      client_id: body.client_id || null,
+      meal_id: body.meal_id || null,
+      content_type: body.content_type || null,
+      duration_ms: body.duration_ms || null,
+      size_bytes: body.size_bytes || null,
+      has_data: typeof body.data === 'string',
+    };
+  }
+  return null;
+}
+
 function getDevTranscriptionConsentKey(req) {
   const auth = req.headers.authorization || req.headers.Authorization || '';
   const cookie = req.headers.cookie || '';
@@ -160,6 +207,7 @@ async function proxyToProd(req, res) {
 
   for (let attempt = 0; attempt <= PROXY_RETRIES; attempt++) {
   try {
+    const startedAt = Date.now();
     const url = `${PROD_API}${req.originalUrl}`;
     const method = req.method;
     const headers = buildUpstreamHeaders(req);
@@ -181,6 +229,16 @@ async function proxyToProd(req, res) {
 
     const proxyRes = await fetch(url, init);
     const status = proxyRes.status;
+    if (/^\/(messages|photos|media)\//.test(req.originalUrl || '')) {
+      traceDevProxy('upstream.response', {
+        method,
+        path: req.originalUrl,
+        status,
+        attempt: attempt + 1,
+        ms: Date.now() - startedAt,
+        body: summarizeProxyBody(req),
+      });
+    }
 
     if (res.writableEnded) return;
 
@@ -243,10 +301,24 @@ async function proxyToProd(req, res) {
   } catch (err) {
     const isNetworkError = err.name === 'TypeError' && err.message === 'fetch failed';
     if (isNetworkError && attempt < PROXY_RETRIES) {
+      traceDevProxy('upstream.retry', {
+        method: req.method,
+        path: req.originalUrl,
+        attempt: attempt + 1,
+        error: err.message,
+        body: summarizeProxyBody(req),
+      });
       console.warn(`[Dev Proxy] fetch failed (attempt ${attempt + 1}/${PROXY_RETRIES + 1}), retrying in ${PROXY_RETRY_DELAY_MS}ms...`);
       await new Promise(r => setTimeout(r, PROXY_RETRY_DELAY_MS));
       continue;
     }
+    traceDevProxy('upstream.failed', {
+      method: req.method,
+      path: req.originalUrl,
+      attempt: attempt + 1,
+      error: err?.message || String(err),
+      body: summarizeProxyBody(req),
+    });
     console.error('[Dev Proxy]', req.method, req.originalUrl, err.message);
     if (!res.headersSent) {
       res.status(502).json({ error: 'Dev proxy error', details: err.message });

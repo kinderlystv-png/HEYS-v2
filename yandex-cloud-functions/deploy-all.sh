@@ -521,6 +521,40 @@ update_api_gateway() {
     echo -e "${GREEN}✅ API Gateway updated${NC}"
 }
 
+ensure_speechkit_trigger() {
+    local trigger_name="${SPEECHKIT_TRIGGER_NAME:-heys-cron-speechkit-transcribe-timer}"
+    local cron_expr="${SPEECHKIT_TRIGGER_CRON:-0/1 * * * ? *}"
+    local invoker_sa="${FUNCTION_INVOKER_SA_ID:-aje85rjgpj4nk9m384ek}"
+
+    echo ""
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}⏱️  Ensuring SpeechKit transcription timer${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+    local trigger_id=""
+    trigger_id="$(yc serverless trigger get --name "$trigger_name" --format json 2>/dev/null \
+        | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{try{const j=JSON.parse(s); if (j.id) process.stdout.write(j.id);}catch(_){}})")"
+
+    if [ -n "$trigger_id" ]; then
+        yc serverless trigger update timer \
+            --id "$trigger_id" \
+            --new-cron-expression "$cron_expr" \
+            --new-invoke-function-name heys-cron-speechkit-transcribe \
+            --new-invoke-function-service-account-id "$invoker_sa" \
+            --new-function-retry-attempts 1 \
+            --new-function-retry-interval 30s
+        echo -e "${GREEN}✅ SpeechKit timer updated: $trigger_name ($cron_expr)${NC}"
+    else
+        yc serverless trigger create timer "$trigger_name" \
+            --cron-expression "$cron_expr" \
+            --invoke-function-name heys-cron-speechkit-transcribe \
+            --invoke-function-service-account-id "$invoker_sa" \
+            --retry-attempts 1 \
+            --retry-interval 30s
+        echo -e "${GREEN}✅ SpeechKit timer created: $trigger_name ($cron_expr)${NC}"
+    fi
+}
+
 # Main execution
 SHOULD_UPDATE_GATEWAY=false
 if [ -n "$TARGET_FUNC" ]; then
@@ -528,6 +562,9 @@ if [ -n "$TARGET_FUNC" ]; then
     deploy_function "$TARGET_FUNC"
     if [ "$TARGET_FUNC" = "heys-api-auth" ]; then
         SHOULD_UPDATE_GATEWAY=true
+    fi
+    if [ "$TARGET_FUNC" = "heys-cron-speechkit-transcribe" ]; then
+        ensure_speechkit_trigger
     fi
 else
     # Deploy all functions
@@ -543,6 +580,7 @@ else
     for func_name in heys-cron-speechkit-transcribe; do
         deploy_function "$func_name"
     done
+    ensure_speechkit_trigger
     
     echo ""
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

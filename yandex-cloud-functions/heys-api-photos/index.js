@@ -193,6 +193,18 @@ const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
 const MIN_AUDIO_BYTES = 1024;
 const MAX_AUDIO_DURATION_MS = 5 * 60 * 1000;
 
+function trace(event, details = {}) {
+  try {
+    console.log('[media.trace]', JSON.stringify({
+      event,
+      ts: new Date().toISOString(),
+      ...details,
+    }));
+  } catch (_) {
+    console.log('[media.trace]', event);
+  }
+}
+
 function inferMediaType(contentType, requestedType) {
   if (requestedType === 'audio' || requestedType === 'image') return requestedType;
   if (String(contentType || '').startsWith('audio/')) return 'audio';
@@ -261,19 +273,54 @@ async function handleUpload(identity, body) {
   const date = body?.date || null;
   const mealId = body?.meal_id || null;
   const dataB64 = body?.data;
+  const requestedContentType = String(body?.content_type || '').split(';')[0].trim().toLowerCase();
+  const requestedMediaType = inferMediaType(requestedContentType, body?.media_type);
+
+  trace('upload.request', {
+    actor_role: identity.kind,
+    actor_id: identity.id,
+    client_id: clientId,
+    media_type: requestedMediaType,
+    content_type: requestedContentType || null,
+    duration_ms: Number(body?.duration_ms || 0) || null,
+    declared_size_bytes: Number(body?.size_bytes || 0) || null,
+    meal_id: mealId,
+    has_data: typeof dataB64 === 'string',
+  });
 
   if (!dataB64 || typeof dataB64 !== 'string') {
+    trace('upload.reject', {
+      actor_role: identity.kind,
+      actor_id: identity.id,
+      client_id: clientId,
+      media_type: requestedMediaType,
+      error: 'data_required',
+    });
     return { statusCode: 400, body: { error: 'data_required' } };
   }
 
   const uploadMeta = normalizeUploadMeta(body);
   if (uploadMeta.error) {
+    trace('upload.reject', {
+      actor_role: identity.kind,
+      actor_id: identity.id,
+      client_id: clientId,
+      media_type: uploadMeta.mediaType,
+      content_type: requestedContentType || null,
+      error: uploadMeta.error,
+    });
     return { statusCode: 400, body: { error: uploadMeta.error } };
   }
 
   // Курaтор может грузить от имени клиента — проверим ownership
   if (identity.kind === 'curator') {
     if (!body?.client_id) {
+      trace('upload.reject', {
+        actor_role: identity.kind,
+        actor_id: identity.id,
+        media_type: uploadMeta.mediaType,
+        error: 'client_id_required',
+      });
       return { statusCode: 400, body: { error: 'client_id_required' } };
     }
     const pool = getPool();
@@ -284,6 +331,13 @@ async function handleUpload(identity, body) {
         [body.client_id, identity.id]
       );
       if (!r.rows.length) {
+        trace('upload.reject', {
+          actor_role: identity.kind,
+          actor_id: identity.id,
+          client_id: body.client_id,
+          media_type: uploadMeta.mediaType,
+          error: 'curator_does_not_own_client',
+        });
         return { statusCode: 403, body: { error: 'curator_does_not_own_client' } };
       }
     } finally {
@@ -295,24 +349,68 @@ async function handleUpload(identity, body) {
   const { realB64, realContentType } = parseUploadData(dataB64, uploadMeta.contentType);
   const realMeta = normalizeUploadMeta({ media_type: uploadMeta.mediaType, content_type: realContentType });
   if (realMeta.error) {
+    trace('upload.reject', {
+      actor_role: identity.kind,
+      actor_id: identity.id,
+      client_id: clientId,
+      media_type: uploadMeta.mediaType,
+      content_type: realContentType,
+      error: realMeta.error,
+    });
     return { statusCode: 400, body: { error: realMeta.error } };
   }
 
   const buf = Buffer.from(realB64, 'base64');
   if (buf.length === 0) {
+    trace('upload.reject', {
+      actor_role: identity.kind,
+      actor_id: identity.id,
+      client_id: clientId,
+      media_type: realMeta.mediaType,
+      content_type: realContentType,
+      error: 'invalid_base64',
+    });
     return { statusCode: 400, body: { error: 'invalid_base64' } };
   }
   const maxBytes = realMeta.mediaType === 'audio' ? MAX_AUDIO_BYTES : MAX_IMAGE_BYTES;
   if (buf.length > maxBytes) {
+    trace('upload.reject', {
+      actor_role: identity.kind,
+      actor_id: identity.id,
+      client_id: clientId,
+      media_type: realMeta.mediaType,
+      content_type: realContentType,
+      bytes: buf.length,
+      max_bytes: maxBytes,
+      error: 'too_large',
+    });
     return { statusCode: 413, body: { error: 'too_large', max_bytes: maxBytes } };
   }
 
   if (realMeta.mediaType === 'audio') {
     const durationMs = Number(body?.duration_ms || 0);
     if (!Number.isFinite(durationMs) || durationMs < 250 || durationMs > MAX_AUDIO_DURATION_MS) {
+      trace('upload.reject', {
+        actor_role: identity.kind,
+        actor_id: identity.id,
+        client_id: clientId,
+        media_type: realMeta.mediaType,
+        content_type: realContentType,
+        duration_ms: durationMs,
+        error: 'invalid_audio_duration',
+      });
       return { statusCode: 400, body: { error: 'invalid_audio_duration', max_ms: MAX_AUDIO_DURATION_MS } };
     }
     if (!hasAudioSignature(buf, realContentType)) {
+      trace('upload.reject', {
+        actor_role: identity.kind,
+        actor_id: identity.id,
+        client_id: clientId,
+        media_type: realMeta.mediaType,
+        content_type: realContentType,
+        bytes: buf.length,
+        error: 'invalid_audio_payload',
+      });
       return { statusCode: 400, body: { error: 'invalid_audio_payload' } };
     }
   }
@@ -322,6 +420,15 @@ async function handleUpload(identity, body) {
 
   try {
     const s3 = getS3();
+    trace('upload.s3_put.start', {
+      actor_role: identity.kind,
+      actor_id: identity.id,
+      client_id: clientId,
+      media_type: realMeta.mediaType,
+      content_type: realContentType,
+      bytes: buf.length,
+      path: key,
+    });
     await s3.send(new PutObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -338,8 +445,28 @@ async function handleUpload(identity, body) {
     }));
   } catch (err) {
     console.error('[photos] S3 PutObject failed:', err.message);
+    trace('upload.s3_put.failed', {
+      actor_role: identity.kind,
+      actor_id: identity.id,
+      client_id: clientId,
+      media_type: realMeta.mediaType,
+      content_type: realContentType,
+      bytes: buf.length,
+      path: key,
+      error: err?.message || String(err),
+    });
     return { statusCode: 500, body: { error: 's3_put_failed', detail: err.message } };
   }
+
+  trace('upload.ok', {
+    actor_role: identity.kind,
+    actor_id: identity.id,
+    client_id: clientId,
+    media_type: realMeta.mediaType,
+    content_type: realContentType,
+    bytes: buf.length,
+    path: key,
+  });
 
   return {
     statusCode: 200,

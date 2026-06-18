@@ -219,10 +219,40 @@ const VALID_TRANSCRIPT_STATUSES = new Set([
 const TRANSCRIPTION_CONSENT_TYPE = 'speech_transcription';
 const TRANSCRIPTION_CONSENT_VERSION = '1.0';
 const TRANSCRIPTION_PROVIDER = 'yandex_speechkit';
-const SUPPORTED_TRANSCRIPTION_MIME = new Set(['audio/ogg']);
+const SUPPORTED_TRANSCRIPTION_MIME = new Set(['audio/ogg', 'audio/wav', 'audio/x-wav']);
 const MAX_AUDIO_DURATION_MS = 5 * 60 * 1000;
 const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_TRANSCRIPT_TEXT_LENGTH = 4000;
+
+function trace(event, details = {}) {
+  try {
+    console.log('[messages.trace]', JSON.stringify({
+      event,
+      ts: new Date().toISOString(),
+      ...details,
+    }));
+  } catch (_) {
+    console.log('[messages.trace]', event);
+  }
+}
+
+function compactAttachment(att) {
+  if (!att || typeof att !== 'object') return null;
+  return {
+    type: normalizeAttachmentType(att),
+    mime: normalizeMime(att.mime),
+    duration_ms: Number(att.duration_ms || 0) || null,
+    size_bytes: Number(att.size_bytes || 0) || null,
+    transcript_status: att.transcript_status || null,
+    path: att.path || null,
+  };
+}
+
+function compactAudio(attachments) {
+  return (Array.isArray(attachments) ? attachments : [])
+    .filter((att) => normalizeAttachmentType(att) === 'audio')
+    .map(compactAttachment);
+}
 
 function normalizeMime(mime) {
   return String(mime || '').split(';')[0].trim().toLowerCase();
@@ -399,6 +429,7 @@ async function prepareAttachmentsForSend(identity, attachments) {
   const hasConsent = await hasSpeechTranscriptionConsent(identity);
   const monthlyCap = Number(process.env.SPEECHKIT_PILOT_MONTHLY_CAP_RUB || 500);
   let spend = await getTranscriptionMonthlySpend();
+  const spendBefore = spend;
   const jobs = [];
 
   for (const att of audio) {
@@ -422,6 +453,17 @@ async function prepareAttachmentsForSend(identity, attachments) {
     jobs.push({ attachment: att, estimate });
   }
 
+  trace('transcription.prepare', {
+    actor_role: identity.kind,
+    actor_id: identity.id,
+    consent: hasConsent,
+    monthly_cap_rub: monthlyCap,
+    spend_before_rub: spendBefore,
+    spend_after_rub: spend,
+    jobs: jobs.length,
+    audio: compactAudio(prepared),
+  });
+
   return { attachments: prepared, jobs };
 }
 
@@ -432,7 +474,7 @@ async function enqueueTranscriptionJobs({ messageId, actorRole, clientId, curato
   try {
     for (const job of jobs) {
       const att = job.attachment;
-      await conn.query(
+      const result = await conn.query(
         `INSERT INTO message_transcription_jobs (
            message_id, attachment_path, actor_role, client_id, curator_id,
            status, duration_ms, mime, billable_seconds, estimated_cost_rub
@@ -451,6 +493,18 @@ async function enqueueTranscriptionJobs({ messageId, actorRole, clientId, curato
           job.estimate.estimatedCostRub,
         ],
       );
+      trace('transcription.job.insert', {
+        message_id: messageId,
+        actor_role: actorRole,
+        client_id: clientId,
+        curator_id: curatorId,
+        attachment_path: att.path,
+        mime: normalizeMime(att.mime),
+        duration_ms: Number(att.duration_ms || 0),
+        billable_seconds: job.estimate.billableSeconds,
+        estimated_cost_rub: job.estimate.estimatedCostRub,
+        inserted: result.rowCount > 0,
+      });
     }
   } finally {
     conn.release();
@@ -465,6 +519,98 @@ async function enqueueTranscriptionJobsBestEffort(args) {
       messageId: args?.messageId,
       error: err?.message || String(err),
     });
+  }
+}
+
+async function enqueuePendingTranscriptionForMessage(identity, messageId) {
+  if (!messageId || typeof messageId !== 'string') {
+    return { queued: 0, skipped: 'message_id_missing' };
+  }
+
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    const r = await conn.query(
+      `SELECT id, client_id, curator_id, sender_role, attachments
+         FROM client_messages
+        WHERE id = $1
+          AND created_at >= NOW() - INTERVAL '15 minutes'
+        LIMIT 1`,
+      [messageId],
+    );
+    const row = r.rows[0];
+    if (!row) return { queued: 0, skipped: 'message_not_found_or_too_old' };
+
+    const actorRole = identity.kind === 'client' ? 'client' : 'curator';
+    if (row.sender_role !== actorRole) return { queued: 0, skipped: 'sender_role_mismatch' };
+    if (identity.kind === 'client' && String(row.client_id) !== String(identity.id)) {
+      return { queued: 0, skipped: 'forbidden' };
+    }
+    if (identity.kind === 'curator' && String(row.curator_id) !== String(identity.id)) {
+      return { queued: 0, skipped: 'forbidden' };
+    }
+
+    const attachments = Array.isArray(row.attachments) ? row.attachments : [];
+    const candidates = attachments.filter((att) =>
+      normalizeAttachmentType(att) === 'audio' &&
+      att?.path &&
+      (!att.transcript_status || att.transcript_status === 'consent_required')
+    );
+    if (candidates.length === 0) return { queued: 0, skipped: 'no_pending_audio' };
+
+    const monthlyCap = Number(process.env.SPEECHKIT_PILOT_MONTHLY_CAP_RUB || 500);
+    let spend = await getTranscriptionMonthlySpend();
+    const jobs = [];
+
+    for (const att of candidates) {
+      const mime = normalizeMime(att.mime);
+      if (!SUPPORTED_TRANSCRIPTION_MIME.has(mime)) {
+        await conn.query(
+          `SELECT public.set_message_attachment_transcript($1, $2, 'unsupported_format', NULL, NULL, NULL) AS result`,
+          [messageId, att.path],
+        );
+        continue;
+      }
+      const estimate = estimateSpeechKitCost(att.duration_ms);
+      if (monthlyCap > 0 && estimate.estimatedCostRub > 0 && spend + estimate.estimatedCostRub > monthlyCap) {
+        await conn.query(
+          `SELECT public.set_message_attachment_transcript($1, $2, 'budget_capped', NULL, NULL, NULL) AS result`,
+          [messageId, att.path],
+        );
+        continue;
+      }
+      spend += estimate.estimatedCostRub;
+      await conn.query(
+        `SELECT public.set_message_attachment_transcript($1, $2, 'queued', NULL, $3, NULL) AS result`,
+        [messageId, att.path, TRANSCRIPTION_PROVIDER],
+      );
+      jobs.push({ attachment: att, estimate });
+    }
+
+    await enqueueTranscriptionJobs({
+      messageId,
+      actorRole,
+      clientId: row.client_id,
+      curatorId: row.curator_id,
+      jobs,
+    });
+    trace('transcription.enqueue_after_consent', {
+      message_id: messageId,
+      actor_role: actorRole,
+      client_id: row.client_id,
+      curator_id: row.curator_id,
+      queued: jobs.length,
+      audio: compactAudio(attachments),
+    });
+    return { queued: jobs.length };
+  } catch (err) {
+    console.warn('[messages.transcription] enqueue after consent failed', {
+      messageId,
+      error: err?.message || String(err),
+    });
+    return { queued: 0, error: err?.message || 'enqueue_failed' };
+  } finally {
+    conn.release();
   }
 }
 
@@ -743,6 +889,14 @@ async function handleSend(identity, body) {
 
     const { body: msgBody, intent_type, intent_payload, attachments } = body || {};
     const inputAttachments = Array.isArray(attachments) ? attachments : [];
+    trace('send.request', {
+      actor_role: 'client',
+      client_id: identity.id,
+      has_body: Boolean(msgBody && msgBody.trim()),
+      intent_type: intent_type || null,
+      attachments: inputAttachments.length,
+      audio: compactAudio(inputAttachments),
+    });
     if ((!msgBody || msgBody.trim().length === 0) && !intent_type && inputAttachments.length === 0) {
       return { statusCode: 400, body: { error: 'body_intent_or_attachment_required' } };
     }
@@ -780,8 +934,23 @@ async function handleSend(identity, body) {
     }
 
     if (!rpcResult?.success) {
+      trace('send.rpc_failed', {
+        actor_role: 'client',
+        client_id: identity.id,
+        error: rpcResult?.error || 'rpc_failed',
+        audio: compactAudio(attachmentsArr),
+      });
       return { statusCode: 400, body: rpcResult || { error: 'rpc_failed' } };
     }
+
+    trace('send.saved', {
+      actor_role: 'client',
+      client_id: rpcResult.client_id || identity.id,
+      curator_id: rpcResult.curator_id || null,
+      message_id: rpcResult.message_id,
+      audio: compactAudio(attachmentsArr),
+      transcription_jobs: transcription.jobs.length,
+    });
 
     await enqueueTranscriptionJobsBestEffort({
       messageId: rpcResult.message_id,
@@ -824,6 +993,14 @@ async function handleSend(identity, body) {
   // curator → client
   const { client_id, body: msgBody, attachments: curatorAttachments } = body || {};
   const inputCuratorAttachments = Array.isArray(curatorAttachments) ? curatorAttachments : [];
+  trace('send.request', {
+    actor_role: 'curator',
+    curator_id: identity.id,
+    client_id: client_id || null,
+    has_body: Boolean(msgBody && msgBody.trim()),
+    attachments: inputCuratorAttachments.length,
+    audio: compactAudio(inputCuratorAttachments),
+  });
   if (!client_id || typeof client_id !== 'string') {
     return { statusCode: 400, body: { error: 'client_id_required' } };
   }
@@ -854,8 +1031,24 @@ async function handleSend(identity, body) {
   }
 
   if (!rpcResult?.success) {
+    trace('send.rpc_failed', {
+      actor_role: 'curator',
+      curator_id: identity.id,
+      client_id,
+      error: rpcResult?.error || 'rpc_failed',
+      audio: compactAudio(curatorAttachmentsArr),
+    });
     return { statusCode: 400, body: rpcResult || { error: 'rpc_failed' } };
   }
+
+  trace('send.saved', {
+    actor_role: 'curator',
+    curator_id: identity.id,
+    client_id,
+    message_id: rpcResult.message_id,
+    audio: compactAudio(curatorAttachmentsArr),
+    transcription_jobs: curatorTranscription.jobs.length,
+  });
 
   await enqueueTranscriptionJobsBestEffort({
     messageId: rpcResult.message_id,
@@ -1116,9 +1309,32 @@ async function handleTranscriptionConsent(identity, body, event) {
     return { statusCode: 200, body: await getTranscriptionConsent(identity) };
   }
   const granted = body?.granted !== false;
+  trace('transcription.consent.set', {
+    actor_role: identity.kind,
+    actor_id: identity.id,
+    granted,
+    message_id: body?.message_id || null,
+  });
   const result = await setTranscriptionConsent(identity, granted, event);
   if (!result.success) return { statusCode: 400, body: result };
-  return { statusCode: 200, body: await getTranscriptionConsent(identity) };
+  const enqueueResult = granted
+    ? await enqueuePendingTranscriptionForMessage(identity, body?.message_id)
+    : null;
+  trace('transcription.consent.saved', {
+    actor_role: identity.kind,
+    actor_id: identity.id,
+    granted,
+    message_id: body?.message_id || null,
+    enqueue: enqueueResult || null,
+  });
+  const consent = await getTranscriptionConsent(identity);
+  return {
+    statusCode: 200,
+    body: {
+      ...consent,
+      ...(enqueueResult ? { transcription_enqueue: enqueueResult } : {}),
+    },
+  };
 }
 
 async function handleToggleDone(identity, body) {
