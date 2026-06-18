@@ -1,15 +1,16 @@
 /**
- * heys-api-photos — HEYS Photos API
+ * heys-api-photos — HEYS Photos/Media API
  *
  * Endpoints (mapped via API Gateway):
- *   POST   /photos/upload   — returns presigned PUT URL для прямой загрузки в S3
- *   POST   /photos/delete   — удаляет объект из bucket
+ *   POST   /photos/upload   — upload image bytes to S3
+ *   POST   /photos/delete   — deletes object from bucket
+ *   POST   /media/upload    — upload voice/audio bytes to S3 (same function alias)
+ *   POST   /media/delete    — deletes media object from bucket
  *
  * Flow upload:
- *   1. Клиент шлёт POST /photos/upload с metadata (client_id, date, meal_id?, content_type?)
- *   2. Backend генерирует S3 key, presigned PUT URL (10 мин TTL), возвращает + публичный URL
- *   3. Клиент делает PUT на uploadUrl с binary body
- *   4. Готово — public URL уже работает (bucket public-read)
+ *   1. Client sends POST /photos/upload or /media/upload with metadata + base64 data.
+ *   2. Backend validates owner, mime and size, writes object to Yandex Object Storage.
+ *   3. Public URL is returned for messenger attachments.
  *
  * Auth: JWT (curator) или session_token (client) — паттерн копирует heys-api-messages.
  *       Cookies heys_session_token и heys_curator_jwt поддержаны для PR-C/curator flows.
@@ -172,13 +173,84 @@ function randomId(n = 12) {
   return crypto.randomBytes(n).toString('hex');
 }
 
-function buildKey({ clientId, date, mealId, ext }) {
-  // meal-photos/<client_id>/<date>/<meal_id>/<rnd>.<ext>
-  // Если каких-то полей нет — заменяем 'misc'
+const IMAGE_MIME_TO_EXT = Object.freeze({
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+});
+
+const AUDIO_MIME_TO_EXT = Object.freeze({
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
+  'audio/mp4': 'm4a',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+});
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
+const MIN_AUDIO_BYTES = 1024;
+const MAX_AUDIO_DURATION_MS = 5 * 60 * 1000;
+
+function inferMediaType(contentType, requestedType) {
+  if (requestedType === 'audio' || requestedType === 'image') return requestedType;
+  if (String(contentType || '').startsWith('audio/')) return 'audio';
+  return 'image';
+}
+
+function normalizeUploadMeta(body) {
+  const contentType = body?.content_type || 'image/jpeg';
+  const mediaType = inferMediaType(contentType, body?.media_type);
+  const mimeToExt = mediaType === 'audio' ? AUDIO_MIME_TO_EXT : IMAGE_MIME_TO_EXT;
+  const ext = mimeToExt[contentType];
+  if (!ext) {
+    return {
+      error: mediaType === 'audio' ? 'unsupported_audio_type' : 'unsupported_image_type',
+      mediaType,
+    };
+  }
+  return { contentType, mediaType, ext };
+}
+
+function buildKey({ clientId, date, mealId, ext, mediaType }) {
+  // <client_id>/<date>/<bucket-purpose>/<rnd>.<ext>
+  // Если каких-то полей нет — заменяем 'misc'.
   const cid = sanitizeSegment(clientId) || 'misc';
   const d = sanitizeSegment(date) || 'misc';
-  const mid = sanitizeSegment(mealId) || 'misc';
-  return `${cid}/${d}/${mid}/${randomId()}.${ext}`;
+  const purpose = mediaType === 'audio'
+    ? `voice/${sanitizeSegment(mealId) || 'message'}`
+    : (sanitizeSegment(mealId) || 'misc');
+  return `${cid}/${d}/${purpose}/${randomId()}.${ext}`;
+}
+
+function hasAudioSignature(buf, contentType) {
+  if (!Buffer.isBuffer(buf) || buf.length < MIN_AUDIO_BYTES) return false;
+  switch (contentType) {
+    case 'audio/webm':
+      return buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3;
+    case 'audio/ogg':
+      return buf.subarray(0, 4).toString('ascii') === 'OggS';
+    case 'audio/mp4':
+      return buf.length >= 12 && buf.subarray(4, 8).toString('ascii') === 'ftyp';
+    case 'audio/mpeg':
+      return buf.subarray(0, 3).toString('ascii') === 'ID3' ||
+        (buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0);
+    case 'audio/wav':
+    case 'audio/x-wav':
+      return buf.subarray(0, 4).toString('ascii') === 'RIFF' &&
+        buf.subarray(8, 12).toString('ascii') === 'WAVE';
+    default:
+      return false;
+  }
+}
+
+function parseUploadData(dataB64, fallbackContentType) {
+  const m = String(dataB64 || '').match(/^data:([^;]+);base64,(.*)$/);
+  return {
+    realB64: m ? m[2] : dataB64,
+    realContentType: m ? m[1] : fallbackContentType,
+  };
 }
 
 // ── Endpoints ────────────────────────────────────────────────────────────
@@ -187,11 +259,15 @@ async function handleUpload(identity, body) {
   const clientId = identity.kind === 'client' ? identity.id : (body?.client_id || null);
   const date = body?.date || null;
   const mealId = body?.meal_id || null;
-  const contentType = body?.content_type || 'image/jpeg';
   const dataB64 = body?.data;
 
   if (!dataB64 || typeof dataB64 !== 'string') {
     return { statusCode: 400, body: { error: 'data_required' } };
+  }
+
+  const uploadMeta = normalizeUploadMeta(body);
+  if (uploadMeta.error) {
+    return { statusCode: 400, body: { error: uploadMeta.error } };
   }
 
   // Курaтор может грузить от имени клиента — проверим ownership
@@ -215,23 +291,32 @@ async function handleUpload(identity, body) {
   }
 
   // Парсим base64 (data URL "data:image/jpeg;base64,..." или просто base64)
-  const m = dataB64.match(/^data:([^;]+);base64,(.+)$/);
-  const realB64 = m ? m[2] : dataB64;
-  const realContentType = m ? m[1] : contentType;
+  const { realB64, realContentType } = parseUploadData(dataB64, uploadMeta.contentType);
+  const realMeta = normalizeUploadMeta({ media_type: uploadMeta.mediaType, content_type: realContentType });
+  if (realMeta.error) {
+    return { statusCode: 400, body: { error: realMeta.error } };
+  }
 
   const buf = Buffer.from(realB64, 'base64');
   if (buf.length === 0) {
     return { statusCode: 400, body: { error: 'invalid_base64' } };
   }
-  if (buf.length > 5 * 1024 * 1024) {
-    return { statusCode: 413, body: { error: 'too_large', max_bytes: 5242880 } };
+  const maxBytes = realMeta.mediaType === 'audio' ? MAX_AUDIO_BYTES : MAX_IMAGE_BYTES;
+  if (buf.length > maxBytes) {
+    return { statusCode: 413, body: { error: 'too_large', max_bytes: maxBytes } };
   }
 
-  const ext = realContentType.includes('png') ? 'png'
-    : realContentType.includes('webp') ? 'webp'
-    : 'jpg';
+  if (realMeta.mediaType === 'audio') {
+    const durationMs = Number(body?.duration_ms || 0);
+    if (!Number.isFinite(durationMs) || durationMs < 250 || durationMs > MAX_AUDIO_DURATION_MS) {
+      return { statusCode: 400, body: { error: 'invalid_audio_duration', max_ms: MAX_AUDIO_DURATION_MS } };
+    }
+    if (!hasAudioSignature(buf, realContentType)) {
+      return { statusCode: 400, body: { error: 'invalid_audio_payload' } };
+    }
+  }
 
-  const key = buildKey({ clientId, date, mealId, ext });
+  const key = buildKey({ clientId, date, mealId, ext: realMeta.ext, mediaType: realMeta.mediaType });
   const bucket = getBucket();
 
   try {
@@ -260,6 +345,9 @@ async function handleUpload(identity, body) {
     body: {
       url: `${getPublicBaseUrl()}/${key}`,
       path: key,
+      media_type: realMeta.mediaType,
+      mime: realContentType,
+      size_bytes: buf.length,
     },
   };
 }
@@ -305,6 +393,17 @@ async function handleDelete(identity, body) {
 
   return { statusCode: 200, body: { success: true } };
 }
+
+module.exports._test = {
+  normalizeUploadMeta,
+  buildKey,
+  inferMediaType,
+  MAX_AUDIO_DURATION_MS,
+  MAX_AUDIO_BYTES,
+  MIN_AUDIO_BYTES,
+  hasAudioSignature,
+  parseUploadData,
+};
 
 // ── Main handler ─────────────────────────────────────────────────────────
 module.exports.handler = async function (event) {

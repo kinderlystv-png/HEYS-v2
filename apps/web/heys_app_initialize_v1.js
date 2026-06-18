@@ -181,10 +181,26 @@
                 // При смене clientId React unmount'ит ВСЁ поддерево и mount'ит fresh —
                 // все useState/useRef/useReducer обнуляются. Fallback на случай если
                 // location.reload() отключён через `heys_disable_switch_reload='1'`.
+                function readInitialClientIdForKey() {
+                    try {
+                        if (window.HEYS && window.HEYS.currentClientId) {
+                            return window.HEYS.currentClientId;
+                        }
+                        const raw = window.localStorage && window.localStorage.getItem('heys_client_current');
+                        if (!raw) return null;
+                        try {
+                            const parsed = JSON.parse(raw);
+                            return typeof parsed === 'string' && parsed ? parsed : null;
+                        } catch (_) {
+                            return typeof raw === 'string' && raw ? raw : null;
+                        }
+                    } catch (_) {
+                        return null;
+                    }
+                }
+
                 function RootWithKey() {
-                    const [clientId, setClientId] = React.useState(() => (
-                        (window.HEYS && window.HEYS.currentClientId) || null
-                    ));
+                    const [clientId, setClientId] = React.useState(readInitialClientIdForKey);
                     React.useEffect(() => {
                         const handler = (e) => {
                             const next = (e && e.detail && e.detail.clientId)

@@ -22,8 +22,8 @@
   // ========================================
 
   HEYS.support = HEYS.support || {
-    telegramHandle: '@heyslab_support',
-    telegramUrl: 'https://t.me/heyslab_support',
+    telegramHandle: '@heyslab_support_bot',
+    telegramUrl: 'https://t.me/heyslab_support_bot',
     email: 'pay@heyslab.ru',
   };
 

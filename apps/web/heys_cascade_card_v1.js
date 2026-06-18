@@ -5533,6 +5533,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     VERSION: '3.7.1'
   };
 
+  try {
+    window.dispatchEvent(new CustomEvent('heys:cascade-ready', {
+      detail: { version: HEYS.CascadeCard.VERSION }
+    }));
+  } catch (_) { }
+
   console.info('[HEYS.cascade] ✅ Module loaded v3.7.1 | CRS = raw EMA + todayBoost, then display curve (start 50%, fast to 80%, harder after) | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | resolveCEBForDate + computeHistoricalCEB: shared CEB pipeline for diary/widgets/leaderboard | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
 
 })(typeof window !== 'undefined' ? window : global);

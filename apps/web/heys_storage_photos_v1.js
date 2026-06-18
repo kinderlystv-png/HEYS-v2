@@ -2,6 +2,7 @@
 ; (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
     const Photos = HEYS.StoragePhotos = HEYS.StoragePhotos || {};
+    const Media = HEYS.StorageMedia = HEYS.StorageMedia || {};
 
     const PENDING_PHOTOS_KEY = 'heys_pending_photos';
     const DEFAULT_BUCKET = 'meal-photos';
@@ -10,7 +11,9 @@
     const isDebug = () => {
         try {
             return global.__heysLogControl?.isEnabled?.('photos') === true ||
+                global.__heysLogControl?.isEnabled?.('media') === true ||
                 global.localStorage.getItem('heys_debug_photos') === 'true' ||
+                global.localStorage.getItem('heys_debug_media') === 'true' ||
                 global.localStorage.getItem('heys_debug_sync') === 'true';
         } catch (_) {
             return false;
@@ -82,6 +85,19 @@
         const bytes = new Uint8Array(len);
         for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
         return new Blob([bytes], { type: mime });
+    }
+
+    function extractDataUrlPayload(base64Data) {
+        const str = String(base64Data || '');
+        const commaIdx = str.indexOf(',');
+        const hasMeta = commaIdx !== -1 && /^data:/i.test(str.slice(0, commaIdx));
+        if (!hasMeta) return { data: str, mime: null };
+        const meta = str.slice(0, commaIdx);
+        const mimeMatch = meta.match(/data:([^;]+)/i);
+        return {
+            data: str.slice(commaIdx + 1),
+            mime: (mimeMatch && mimeMatch[1]) || null
+        };
     }
 
     async function uploadViaYandex({ base64Data, clientId, date, mealId, blob }) {
@@ -190,6 +206,125 @@
             headers,
             credentials: 'include',
             body: JSON.stringify(payload)
+        });
+
+        let result;
+        try {
+            result = await response.json();
+        } catch (_) {
+            result = null;
+        }
+
+        if (!response.ok || result?.error) {
+            return { error: result?.error || `Delete failed (${response.status})` };
+        }
+
+        return { success: true };
+    }
+
+    async function postAudioUpload(apiBase, headers, payload, endpoint) {
+        const response = await fetch(`${apiBase}${endpoint}`, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify(payload)
+        });
+
+        let result;
+        try {
+            result = await response.json();
+        } catch (_) {
+            result = null;
+        }
+
+        return { response, result };
+    }
+
+    function shouldFallbackAudioUpload(response, result, endpoint) {
+        if (endpoint === '/photos/upload') {
+            return result?.error === 'unsupported_audio_type';
+        }
+        if (response?.status !== 404) return false;
+        const message = String(result?.error || result?.message || '');
+        return !message || message === 'unknown_action' || /endpoint not found/i.test(message);
+    }
+
+    async function uploadAudioViaYandex({ base64Data, clientId, date, messageId, blob, durationMs }) {
+        const api = HEYS?.YandexAPI;
+        if (!api) {
+            return { error: 'YandexAPI not available' };
+        }
+
+        const apiBase = api.CONFIG?.API_URL || 'https://api.heyslab.ru';
+        const curatorToken = getCuratorToken();
+        const sessionToken = getSessionToken();
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        if (curatorToken) {
+            headers['Authorization'] = `Bearer ${curatorToken}`;
+        }
+
+        const audioPayload = extractDataUrlPayload(base64Data);
+        const payload = {
+            media_type: 'audio',
+            client_id: clientId,
+            date,
+            meal_id: messageId,
+            content_type: blob?.type || audioPayload.mime || 'audio/webm',
+            duration_ms: durationMs,
+            size_bytes: blob?.size || undefined,
+            session_token: sessionToken || undefined,
+            data: audioPayload.data
+        };
+
+        let endpoint = '/photos/upload';
+        let { response, result } = await postAudioUpload(apiBase, headers, payload, endpoint);
+        if (shouldFallbackAudioUpload(response, result, endpoint)) {
+            endpoint = '/media/upload';
+            log('🎙 /photos/upload rejected audio, retrying via /media/upload');
+            ({ response, result } = await postAudioUpload(apiBase, headers, payload, endpoint));
+        }
+
+        if (!response.ok || result?.error) {
+            return { error: result?.error || `Upload failed (${response.status})` };
+        }
+
+        return {
+            url: result?.url || null,
+            path: result?.path || null,
+            mime: result?.mime || blob?.type || 'audio/webm',
+            media_type: result?.media_type || 'audio',
+            size_bytes: result?.size_bytes || blob?.size || null
+        };
+    }
+
+    async function deleteMediaViaYandex(path) {
+        const api = HEYS?.YandexAPI;
+        if (!api) {
+            return { error: 'YandexAPI not available' };
+        }
+
+        const apiBase = api.CONFIG?.API_URL || 'https://api.heyslab.ru';
+        const curatorToken = getCuratorToken();
+        const sessionToken = getSessionToken();
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        if (curatorToken) {
+            headers['Authorization'] = `Bearer ${curatorToken}`;
+        }
+
+        const response = await fetch(`${apiBase}/media/delete`, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({
+                path,
+                session_token: sessionToken || undefined
+            })
         });
 
         let result;
@@ -400,6 +535,63 @@
         }
     };
 
+    Media.uploadAudio = async function (base64Data, clientId, date, messageId, meta = {}) {
+        if (!clientId) {
+            return { error: 'client_id_required' };
+        }
+
+        if (!navigator.onLine) {
+            return { error: 'offline' };
+        }
+
+        try {
+            const blob = meta.blob || await base64ToBlob(base64Data);
+            const durationMs = Number(meta.durationMs || meta.duration_ms || 0);
+            const result = await uploadAudioViaYandex({
+                base64Data,
+                clientId,
+                date,
+                messageId,
+                blob,
+                durationMs
+            });
+
+            if (result?.error) {
+                logCritical('🎙 uploadAudio error:', result.error);
+                return result;
+            }
+
+            log('🎙 Audio uploaded:', result?.path || '(no path)');
+            return {
+                url: result?.url || null,
+                path: result?.path || null,
+                uploaded: true,
+                mime: result?.mime || blob?.type || 'audio/webm',
+                size_bytes: result?.size_bytes || blob?.size || null
+            };
+        } catch (e) {
+            logCritical('🎙 uploadAudio exception:', e?.message || e);
+            return { error: e?.message || 'audio_upload_failed' };
+        }
+    };
+
+    Media.deleteAudio = async function (path) {
+        if (!path) return false;
+        if (!navigator.onLine) return false;
+
+        try {
+            const result = await deleteMediaViaYandex(path);
+            if (result?.error) {
+                logCritical('🎙 deleteAudio error:', result.error);
+                return false;
+            }
+            return true;
+        } catch (e) {
+            logCritical('🎙 deleteAudio exception:', e?.message || e);
+            return false;
+        }
+    };
+
     Photos.getPendingPhotos = function () {
         try {
             return JSON.parse(global.localStorage.getItem(PENDING_PHOTOS_KEY) || '[]');
@@ -415,6 +607,8 @@
         cloud.uploadPendingPhotos = Photos.uploadPendingPhotos;
         cloud.deletePhoto = Photos.deletePhoto;
         cloud.getPendingPhotos = Photos.getPendingPhotos;
+        cloud.uploadAudio = Media.uploadAudio;
+        cloud.deleteAudio = Media.deleteAudio;
     };
 
     if (HEYS.cloud) {

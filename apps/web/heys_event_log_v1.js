@@ -103,6 +103,31 @@
     } catch (_) { return null; }
   }
 
+  function _readGlobalValue(key) {
+    try {
+      const raw = global.localStorage?.getItem?.(key);
+      if (raw === null || raw === undefined) return null;
+      try { return JSON.parse(raw); } catch (_) { return raw; }
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function _isCuratorSession() {
+    try {
+      if (_readGlobalValue('heys_pin_auth_client') || _readGlobalValue('heys_pin_cookie_session_hint')) {
+        return false;
+      }
+      if (_readGlobalValue('heys_curator_session') || _readGlobalValue('heys_curator_cookie_session_hint')) {
+        return true;
+      }
+      const authToken = _readGlobalValue('heys_supabase_auth_token');
+      return !!(authToken && authToken.user);
+    } catch (_) {
+      return false;
+    }
+  }
+
   // Privacy filter для summary: маскирует числовые значения с единицами,
   // которые могут быть health_data (200г, 1200 ккал, 75кг, 8ч сна).
   // Pattern: число + опциональный пробел + единица. Не word-boundary (\b не
@@ -204,6 +229,15 @@
     if (_flushInProgress) return;
     _flushInProgress = true;
     try {
+      if (_isCuratorSession()) {
+        _queue = [];
+        _clearPending();
+        _lastFlushFailAt = 0;
+        _lastFailedFingerprint = null;
+        _consecutiveFailCount = 0;
+        return;
+      }
+
       // Берём pending + текущий queue
       const pending = _loadPending();
       const batch = pending.concat(_queue).slice(0, MAX_BATCH);
@@ -313,6 +347,7 @@
     write(kind, summary, payload, source) {
       try {
         if (!kind || typeof kind !== 'string') return;
+        if (_isCuratorSession()) return;
         if (!_shouldSample(kind)) return;
         const event = {
           ts: new Date().toISOString(),

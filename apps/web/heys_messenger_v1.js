@@ -18,6 +18,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   const { useState, useEffect, useRef, useCallback } = React;
 
+  const MAX_VOICE_DURATION_MS = 5 * 60 * 1000;
+  const MIN_VOICE_BYTES = 1024;
+
   // ── Helpers ──────────────────────────────────────────────────────────
   function formatTime(iso) {
     try {
@@ -36,6 +39,60 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } catch {
       return '';
     }
+  }
+
+  function formatDuration(ms) {
+    const totalSec = Math.max(0, Math.round(Number(ms || 0) / 1000));
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${min}:${String(sec).padStart(2, '0')}`;
+  }
+
+  function isAudioAttachment(att) {
+    return att?.type === 'audio' || att?.media_type === 'audio' || String(att?.mime || '').startsWith('audio/');
+  }
+
+  function attachmentKey(att, idx) {
+    return att?.url || att?.path || att?.localPreview || att?.tempId || idx;
+  }
+
+  function getWaveformBars(att) {
+    if (Array.isArray(att?.waveform) && att.waveform.length >= 12) {
+      return att.waveform.slice(0, 32).map((v) => Math.max(0.18, Math.min(1, Number(v) || 0.18)));
+    }
+    const seed = String(att?.path || att?.url || att?.duration_ms || 'voice');
+    let acc = 0;
+    for (let i = 0; i < seed.length; i++) acc = (acc + seed.charCodeAt(i) * (i + 1)) % 997;
+    return Array.from({ length: 28 }, (_, i) => {
+      const x = Math.sin((acc + i * 17) * 0.37) + Math.cos((acc + i * 11) * 0.19);
+      return 0.22 + Math.abs(x) * 0.34;
+    });
+  }
+
+  function pickRecorderMime() {
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+    ];
+    if (typeof MediaRecorder === 'undefined') return '';
+    return candidates.find((mime) => {
+      try {
+        return MediaRecorder.isTypeSupported(mime);
+      } catch {
+        return false;
+      }
+    }) || '';
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('audio_read_failed'));
+      reader.readAsDataURL(blob);
+    });
   }
 
   function isCuratorMode() {
@@ -71,32 +128,177 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   }
 
+  function AudioAttachment({ attachment, compact }) {
+    const audioRef = useRef(null);
+    const [playing, setPlaying] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [playError, setPlayError] = useState('');
+    const [currentMs, setCurrentMs] = useState(0);
+    const [durationMs, setDurationMs] = useState(Number(attachment?.duration_ms || 0));
+    const bars = getWaveformBars(attachment);
+    const progress = durationMs > 0 ? Math.min(1, currentMs / durationMs) : 0;
+
+    useEffect(() => {
+      const audio = audioRef.current;
+      if (!audio) return undefined;
+      const onTime = () => setCurrentMs(audio.currentTime * 1000);
+      const onMeta = () => {
+        if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          setDurationMs(audio.duration * 1000);
+        }
+      };
+      const onEnd = () => {
+        setPlaying(false);
+        setLoading(false);
+        setCurrentMs(0);
+      };
+      const onPause = () => {
+        setPlaying(false);
+        setLoading(false);
+      };
+      const onPlay = () => {
+        setPlaying(true);
+        setLoading(false);
+        setPlayError('');
+      };
+      const onWaiting = () => setLoading(true);
+      const onCanPlay = () => setLoading(false);
+      const onError = () => {
+        setPlaying(false);
+        setLoading(false);
+        setPlayError('не удалось воспроизвести');
+      };
+      audio.addEventListener('timeupdate', onTime);
+      audio.addEventListener('loadedmetadata', onMeta);
+      audio.addEventListener('ended', onEnd);
+      audio.addEventListener('pause', onPause);
+      audio.addEventListener('play', onPlay);
+      audio.addEventListener('waiting', onWaiting);
+      audio.addEventListener('canplay', onCanPlay);
+      audio.addEventListener('error', onError);
+      return () => {
+        audio.pause();
+        audio.removeEventListener('timeupdate', onTime);
+        audio.removeEventListener('loadedmetadata', onMeta);
+        audio.removeEventListener('ended', onEnd);
+        audio.removeEventListener('pause', onPause);
+        audio.removeEventListener('play', onPlay);
+        audio.removeEventListener('waiting', onWaiting);
+        audio.removeEventListener('canplay', onCanPlay);
+        audio.removeEventListener('error', onError);
+      };
+    }, [attachment?.url, attachment?.localUrl]);
+
+    const toggle = async () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (playing) {
+        audio.pause();
+        return;
+      }
+      try {
+        setLoading(true);
+        setPlayError('');
+        await audio.play();
+        setPlaying(true);
+        setLoading(false);
+      } catch (err) {
+        setPlaying(false);
+        setLoading(false);
+        setPlayError(err?.name === 'NotAllowedError' ? 'нажмите ещё раз' : 'не удалось воспроизвести');
+      }
+    };
+
+    const seek = (e) => {
+      const audio = audioRef.current;
+      if (!audio || !durationMs) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const next = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      audio.currentTime = (durationMs * next) / 1000;
+      setCurrentMs(durationMs * next);
+    };
+
+    return React.createElement(
+      'div',
+      {
+        className: `msg-audio${compact ? ' msg-audio-compact' : ''}${playing ? ' is-playing' : ''}${playError ? ' is-error' : ''}`,
+      },
+      React.createElement('audio', {
+        ref: audioRef,
+        src: attachment.localUrl || attachment.url || '',
+        preload: 'metadata',
+      }),
+      React.createElement('button', {
+        type: 'button',
+        className: 'msg-audio-play',
+        onClick: toggle,
+        'aria-label': playing ? 'Пауза' : loading ? 'Загрузка голосового' : 'Воспроизвести голосовое',
+      }, loading ? '…' : playing ? '❚❚' : '▶'),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          className: 'msg-audio-wave',
+          onClick: seek,
+          'aria-label': 'Перемотать голосовое',
+        },
+        bars.map((h, i) =>
+          React.createElement('span', {
+            key: i,
+            className: i / Math.max(1, bars.length - 1) <= progress ? 'is-played' : '',
+            style: { height: `${Math.round(12 + h * 22)}px` },
+          }),
+        ),
+      ),
+      React.createElement(
+        'div',
+        { className: 'msg-audio-meta' },
+        React.createElement('span', null, formatDuration(currentMs || durationMs)),
+        loading && React.createElement('span', { className: 'msg-audio-pending' }, 'загрузка'),
+        playError && React.createElement('span', { className: 'msg-audio-error' }, playError),
+        attachment.pending && React.createElement('span', { className: 'msg-audio-pending' }, 'загрузка'),
+      ),
+    );
+  }
+
   // ── Attachments grid ─────────────────────────────────────────────────
   // eager=true для последних сообщений (в viewport при открытии) — грузятся
   // сразу, мгновенный показ. Для остальных — lazy, чтобы не качать тысячи
   // фото из длинной истории при каждом открытии треда.
   function MessageAttachments({ attachments, onPhotoClick, eager }) {
     if (!attachments || attachments.length === 0) return null;
+    const audio = attachments.filter(isAudioAttachment);
+    const photos = attachments.filter((att) => !isAudioAttachment(att));
     return React.createElement(
       'div',
-      { className: `msg-attachments msg-attachments-count-${Math.min(attachments.length, 4)}` },
-      attachments.map((att, idx) =>
-        React.createElement('div', {
-          key: att.url || att.path || idx,
-          className: 'msg-attachment-item',
-          onClick: () => onPhotoClick?.(attachments, idx),
-        },
-          att.pending
-            ? React.createElement('div', { className: 'msg-attachment-pending' }, '…')
-            : null,
-          React.createElement('img', {
-            src: att.url || att.localPreview || '',
-            alt: att.filename || 'фото',
-            loading: eager ? 'eager' : 'lazy',
-            decoding: 'async',
-            width: att.width || undefined,
-            height: att.height || undefined,
-          }),
+      { className: 'msg-attachments-wrap' },
+      audio.map((att, idx) =>
+        React.createElement(AudioAttachment, {
+          key: attachmentKey(att, idx),
+          attachment: att,
+        }),
+      ),
+      photos.length > 0 && React.createElement(
+        'div',
+        { className: `msg-attachments msg-attachments-count-${Math.min(photos.length, 4)}` },
+        photos.map((att, idx) =>
+          React.createElement('div', {
+            key: attachmentKey(att, idx),
+            className: 'msg-attachment-item',
+            onClick: () => onPhotoClick?.(photos, idx),
+          },
+            att.pending
+              ? React.createElement('div', { className: 'msg-attachment-pending' }, '…')
+              : null,
+            React.createElement('img', {
+              src: att.url || att.localPreview || '',
+              alt: att.filename || 'фото',
+              loading: eager ? 'eager' : 'lazy',
+              decoding: 'async',
+              width: att.width || undefined,
+              height: att.height || undefined,
+            }),
+          ),
         ),
       ),
     );
@@ -151,7 +353,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const handleDeleteClick = () => {
       if (!canDelete) return;
-      if (!window.confirm('Удалить это сообщение? Восстановить не получится.')) return;
       onDelete?.(message);
     };
 
@@ -195,8 +396,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave(); }
     };
 
-    // Кнопка удаления — вне капсулы, в той же row.
-    // Для mine (справа) ставим слева от bubble, для theirs (слева) — справа.
     const deleteButton = canDelete
       ? React.createElement('button', {
           type: 'button',
@@ -205,6 +404,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           'aria-label': 'Удалить сообщение',
           title: 'Удалить сообщение',
         }, '🗑')
+      : null;
+
+    const ackButton = canMarkAck
+      ? React.createElement('button', {
+          type: 'button',
+          className: `msg-ack-outside ${isAcked ? 'msg-ack-outside-active' : ''}`,
+          onClick: () => onToggleAck?.(message),
+          'aria-label': isAcked ? 'Снять отметку' : (isCurator ? 'Отметить как обработанное' : 'Принять'),
+          title: isAcked
+            ? 'Снять отметку'
+            : (isCurator ? 'Отметить как обработанное' : 'Я прочитал и принял'),
+        }, '✓')
       : null;
 
     const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
@@ -275,16 +486,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'aria-label': 'Редактировать сообщение',
             title: 'Редактировать сообщение',
           }, '✎'),
-        canMarkAck &&
-          React.createElement('button', {
-            type: 'button',
-            className: `msg-done-toggle ${isAcked ? 'msg-done-toggle-active' : ''}`,
-            onClick: () => onToggleAck?.(message),
-            'aria-label': isAcked ? 'Снять отметку' : (isCurator ? 'Отметить как обработанное' : 'Принять'),
-            title: isAcked
-              ? 'Снять отметку'
-              : (isCurator ? 'Отметить как обработанное' : 'Я прочитал и принял'),
-          }, isAcked ? '✓' : '○'),
         message.edited_at &&
           React.createElement('span', {
             className: 'msg-edited-marker',
@@ -294,8 +495,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       ),
     );
 
-    // mine → [🗑] [bubble], theirs → [bubble] [🗑]
-    const children = isMine ? [deleteButton, bubble] : [bubble, deleteButton];
+    const children = isMine ? [deleteButton, bubble] : [bubble, ackButton];
 
     return React.createElement(
       'div',
@@ -382,7 +582,83 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (message.intent_type === 'weight') {
       return `⚖️ ${message.intent_payload?.weight_kg ?? '?'} кг`;
     }
+    if (Array.isArray(message.attachments) && message.attachments.some(isAudioAttachment)) {
+      return 'Голосовое сообщение';
+    }
+    if (Array.isArray(message.attachments) && message.attachments.length > 0) {
+      return 'Вложение';
+    }
     return '...';
+  }
+
+  function DeleteConfirmDialog({ message, busy, onCancel, onConfirm }) {
+    const cancelRef = useRef(null);
+    useEffect(() => {
+      const prevActive = document.activeElement;
+      setTimeout(() => cancelRef.current?.focus(), 30);
+      const onKeyDown = (e) => {
+        if (e.key === 'Escape' && !busy) {
+          e.preventDefault();
+          onCancel?.();
+        }
+      };
+      document.addEventListener('keydown', onKeyDown);
+      return () => {
+        document.removeEventListener('keydown', onKeyDown);
+        if (prevActive && typeof prevActive.focus === 'function') {
+          try { prevActive.focus(); } catch { /* ignore */ }
+        }
+      };
+    }, [busy, onCancel]);
+
+    const preview = messagePreview(message);
+
+    return React.createElement(
+      'div',
+      {
+        className: 'messenger-confirm-backdrop',
+        onMouseDown: (e) => {
+          if (e.target === e.currentTarget && !busy) onCancel?.();
+        },
+      },
+      React.createElement(
+        'div',
+        {
+          className: 'messenger-confirm-dialog',
+          role: 'dialog',
+          'aria-modal': 'true',
+          'aria-labelledby': 'messenger-delete-title',
+          'aria-describedby': 'messenger-delete-desc',
+        },
+        React.createElement('div', { className: 'messenger-confirm-icon' }, '🗑'),
+        React.createElement('div', { className: 'messenger-confirm-kicker' }, 'Удаление сообщения'),
+        React.createElement('h3', { id: 'messenger-delete-title', className: 'messenger-confirm-title' }, 'Удалить это сообщение?'),
+        React.createElement(
+          'p',
+          { id: 'messenger-delete-desc', className: 'messenger-confirm-text' },
+          'Сообщение исчезнет из диалога. Восстановить его не получится.',
+        ),
+        preview && preview !== '...' &&
+          React.createElement('div', { className: 'messenger-confirm-preview' }, preview),
+        React.createElement(
+          'div',
+          { className: 'messenger-confirm-actions' },
+          React.createElement('button', {
+            type: 'button',
+            ref: cancelRef,
+            className: 'messenger-confirm-cancel',
+            onClick: onCancel,
+            disabled: busy,
+          }, 'Отмена'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'messenger-confirm-delete',
+            onClick: onConfirm,
+            disabled: busy,
+          }, busy ? 'Удаляю...' : 'Удалить'),
+        ),
+      ),
+    );
   }
 
   // ── Collapse старых дней ─────────────────────────────────────────────
@@ -443,13 +719,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
   }
 
-  // ── Шаблоны быстрых ответов куратора ─────────────────────────────────
-  const CURATOR_REPLY_TEMPLATES = [
-    'Применено ✓',
-    'Уточни граммы',
-    'Фото пожалуйста',
-    'Спасибо!',
-  ];
+  function getThreadSubtitle(messages, loading) {
+    if (loading) return 'История загружается';
+    if (!Array.isArray(messages) || messages.length === 0) return 'Диалог пока пуст';
+    const last = messages[messages.length - 1];
+    return `Последнее сообщение ${formatTime(last?.created_at)}`;
+  }
 
   // ── Main MessengerModal ──────────────────────────────────────────────
   function MessengerModal({ onClose, curatorViewClientId }) {
@@ -457,16 +732,50 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [input, setInput] = useState('');
+    const [inputFocused, setInputFocused] = useState(false);
     const [error, setError] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [showOldMessages, setShowOldMessages] = useState(false);
     const [pendingPhotos, setPendingPhotos] = useState([]); // [{tempId, localPreview, status:'uploading'|'done'|'error', url?, path?, filename?, width?, height?}]
+    const [pendingAudio, setPendingAudio] = useState(null); // {tempId, status, localUrl, url?, path?, mime, duration_ms, size_bytes}
+    const [recordingState, setRecordingState] = useState('idle'); // idle|recording|stopping
+    const [recordingMs, setRecordingMs] = useState(0);
     const [lightbox, setLightbox] = useState(null); // {attachments, index} | null
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [deletingMessageId, setDeletingMessageId] = useState(null);
     const threadRef = useRef(null);
     const inputRef = useRef(null);
     const fileInputRef = useRef(null);
+    const recorderRef = useRef(null);
+    const recordChunksRef = useRef([]);
+    const recordStreamRef = useRef(null);
+    const recordStartedAtRef = useRef(0);
+    const recordTickRef = useRef(null);
+    const recordStopTimerRef = useRef(null);
+    const pendingAudioUrlRef = useRef(null);
+    const optimisticAudioUrlsRef = useRef(new Set());
+    const localAudioByRemoteRef = useRef(new Map());
     const isCurator = isCuratorMode();
     const viewerRole = isCurator ? 'curator' : 'client';
+
+    const rememberLocalAudio = useCallback((attachment) => {
+      if (!attachment?.localUrl) return;
+      if (attachment.url) localAudioByRemoteRef.current.set(attachment.url, attachment.localUrl);
+      if (attachment.path) localAudioByRemoteRef.current.set(attachment.path, attachment.localUrl);
+    }, []);
+
+    const hydrateLocalAudio = useCallback((message) => {
+      if (!Array.isArray(message?.attachments) || localAudioByRemoteRef.current.size === 0) return message;
+      let changed = false;
+      const attachments = message.attachments.map((att) => {
+        if (!isAudioAttachment(att) || att.localUrl) return att;
+        const localUrl = localAudioByRemoteRef.current.get(att.url) || localAudioByRemoteRef.current.get(att.path);
+        if (!localUrl) return att;
+        changed = true;
+        return { ...att, localUrl };
+      });
+      return changed ? { ...message, attachments } : message;
+    }, []);
 
     // Memo ID самого свежего сообщения с другой стороны (для звука)
     const lastForeignIdRef = useRef(null);
@@ -482,7 +791,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (!silent) setError(res?.error || 'unknown_error');
         return;
       }
-      const sorted = (res.messages || []).slice().reverse();
+      const sorted = (res.messages || []).slice().reverse().map(hydrateLocalAudio);
 
       // Smart merge: если пользователь сейчас редактирует сообщение, мы
       // не перезаписываем его свежим body с сервера (потеряет ввод).
@@ -494,6 +803,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // useState внутри bubble — он привязан к key=m.id, не пересоздаётся).
       setMessages((prev) => {
         // Detect новые foreign сообщения для звука
+        if (prev.length === 0 && lastForeignIdRef.current == null) {
+          const lastForeign = sorted
+            .slice()
+            .reverse()
+            .find((m) => m.sender_role !== viewerRole);
+          lastForeignIdRef.current = lastForeign?.id || null;
+          return sorted;
+        }
         const prevIds = new Set(prev.map((m) => m.id));
         const newForeign = sorted.find(
           (m) => !prevIds.has(m.id) && m.sender_role !== viewerRole
@@ -531,7 +848,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           .then(() => HEYS.MessengerAPI.refreshFabUnread?.())
           .catch(() => {});
       }
-    }, [isCurator, curatorViewClientId, viewerRole]);
+    }, [isCurator, curatorViewClientId, viewerRole, hydrateLocalAudio]);
 
     const loadThread = useCallback(() => fetchAndMerge({ silent: false }), [fetchAndMerge]);
 
@@ -589,17 +906,212 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setTimeout(() => inputRef.current?.focus(), 50);
     };
 
-    const handleTemplateClick = (template) => {
-      setInput((prev) => (prev ? `${prev} ${template}` : template));
-      setTimeout(() => inputRef.current?.focus(), 50);
-    };
-
     const handleAttachClick = () => {
       fileInputRef.current?.click();
     };
 
     const handlePhotoClick = (attachments, index) => {
       setLightbox({ attachments, index });
+    };
+
+    const cleanupRecordingHandles = () => {
+      if (recordTickRef.current) {
+        clearInterval(recordTickRef.current);
+        recordTickRef.current = null;
+      }
+      if (recordStopTimerRef.current) {
+        clearTimeout(recordStopTimerRef.current);
+        recordStopTimerRef.current = null;
+      }
+      const stream = recordStreamRef.current;
+      if (stream?.getTracks) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      recordStreamRef.current = null;
+    };
+
+    useEffect(() => () => {
+      try {
+        if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+          recorderRef.current.stop();
+        }
+      } catch { /* ignore */ }
+      cleanupRecordingHandles();
+      if (pendingAudioUrlRef.current) {
+        URL.revokeObjectURL(pendingAudioUrlRef.current);
+        pendingAudioUrlRef.current = null;
+      }
+      optimisticAudioUrlsRef.current.forEach((url) => {
+        try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+      });
+      optimisticAudioUrlsRef.current.clear();
+      localAudioByRemoteRef.current.clear();
+    }, []);
+
+    const uploadVoiceBlob = async (blob, durationMs, tempId) => {
+      if (!blob || blob.size < MIN_VOICE_BYTES) {
+        setPendingAudio(null);
+        setError('Голосовое получилось пустым. Проверьте микрофон macOS и попробуйте ещё раз.');
+        return;
+      }
+      const localUrl = URL.createObjectURL(blob);
+      if (pendingAudioUrlRef.current) URL.revokeObjectURL(pendingAudioUrlRef.current);
+      pendingAudioUrlRef.current = localUrl;
+      setPendingAudio({
+        tempId,
+        status: 'uploading',
+        localUrl,
+        mime: blob.type || 'audio/webm',
+        duration_ms: durationMs,
+        size_bytes: blob.size,
+      });
+
+      const targetClientId = isCurator
+        ? (curatorViewClientId || getCurrentClientId())
+        : getCurrentClientId();
+      if (!targetClientId) {
+        setPendingAudio((prev) => prev && prev.tempId === tempId ? { ...prev, status: 'error' } : prev);
+        setError('Не найден клиент для отправки голосового.');
+        return;
+      }
+
+      try {
+        const dataUrl = await blobToDataUrl(blob);
+        const uploadFn = window.HEYS?.StorageMedia?.uploadAudio || window.HEYS?.cloud?.uploadAudio;
+        if (typeof uploadFn !== 'function') {
+          throw new Error('StorageMedia.uploadAudio unavailable');
+        }
+        const today = new Date().toISOString().slice(0, 10);
+        const result = await uploadFn(dataUrl, targetClientId, today, 'msg-' + tempId, {
+          blob,
+          durationMs,
+        });
+        if (result?.error || !result?.url) {
+          setPendingAudio((prev) => prev && prev.tempId === tempId ? { ...prev, status: 'error' } : prev);
+          setError(result?.error || 'audio_upload_failed');
+          return;
+        }
+        setPendingAudio((prev) => prev && prev.tempId === tempId
+          ? {
+              ...prev,
+              status: 'done',
+              url: result.url,
+              path: result.path,
+              mime: result.mime || blob.type || 'audio/webm',
+              size_bytes: result.size_bytes || blob.size,
+            }
+          : prev);
+      } catch (err) {
+        setPendingAudio((prev) => prev && prev.tempId === tempId ? { ...prev, status: 'error' } : prev);
+        setError(err?.message || 'audio_upload_failed');
+      }
+    };
+
+    const stopVoiceRecording = () => {
+      const recorder = recorderRef.current;
+      if (!recorder || recorder.state === 'inactive') {
+        cleanupRecordingHandles();
+        setRecordingState('idle');
+        setRecordingMs(0);
+        return;
+      }
+      setRecordingState('stopping');
+      try {
+        recorder.stop();
+      } catch {
+        cleanupRecordingHandles();
+        setRecordingState('idle');
+        setRecordingMs(0);
+      }
+    };
+
+    const startVoiceRecording = async () => {
+      if (recordingState === 'recording') {
+        stopVoiceRecording();
+        return;
+      }
+      if (recordingState !== 'idle' || sending || pendingAudio?.status === 'uploading') return;
+      if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        setError('Запись голосовых не поддерживается в этом браузере.');
+        return;
+      }
+      setError(null);
+      try {
+        if (pendingAudioUrlRef.current) {
+          URL.revokeObjectURL(pendingAudioUrlRef.current);
+          pendingAudioUrlRef.current = null;
+        }
+        setPendingAudio(null);
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          },
+        });
+        const mimeType = pickRecorderMime();
+        const options = mimeType
+          ? { mimeType, audioBitsPerSecond: 48000 }
+          : { audioBitsPerSecond: 48000 };
+        const recorder = new MediaRecorder(stream, options);
+        const tempId = 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        recordChunksRef.current = [];
+        recordStreamRef.current = stream;
+        recorderRef.current = recorder;
+        recordStartedAtRef.current = Date.now();
+
+        recorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) recordChunksRef.current.push(event.data);
+        };
+        recorder.onerror = () => {
+          cleanupRecordingHandles();
+          setRecordingState('idle');
+          setRecordingMs(0);
+          setError('Не удалось записать голосовое.');
+        };
+        recorder.onstop = () => {
+          const durationMs = Math.max(250, Date.now() - recordStartedAtRef.current);
+          const chunks = recordChunksRef.current.slice();
+          const type = recorder.mimeType || mimeType || 'audio/webm';
+          cleanupRecordingHandles();
+          setRecordingState('idle');
+          setRecordingMs(0);
+          if (chunks.length === 0) {
+            setError('Голосовое получилось пустым.');
+            return;
+          }
+          const blob = new Blob(chunks, { type });
+          void uploadVoiceBlob(blob, durationMs, tempId);
+        };
+
+        recorder.start(250);
+        setRecordingState('recording');
+        setRecordingMs(0);
+        recordTickRef.current = setInterval(() => {
+          const elapsed = Date.now() - recordStartedAtRef.current;
+          setRecordingMs(Math.min(elapsed, MAX_VOICE_DURATION_MS));
+        }, 250);
+        recordStopTimerRef.current = setTimeout(() => {
+          stopVoiceRecording();
+        }, MAX_VOICE_DURATION_MS);
+      } catch (err) {
+        cleanupRecordingHandles();
+        setRecordingState('idle');
+        setRecordingMs(0);
+        setError(err?.name === 'NotAllowedError'
+          ? 'Нет доступа к микрофону.'
+          : (err?.message || 'Не удалось включить микрофон.'));
+      }
+    };
+
+    const removePendingAudio = () => {
+      if (recordingState === 'recording') stopVoiceRecording();
+      if (pendingAudioUrlRef.current) {
+        URL.revokeObjectURL(pendingAudioUrlRef.current);
+        pendingAudioUrlRef.current = null;
+      }
+      setPendingAudio(null);
     };
 
     // Загрузка фото: compress на клиенте → uploadPhoto через готовый
@@ -672,13 +1184,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const handleSend = async () => {
       const trimmed = input.trim();
       const readyAttachments = pendingPhotos.filter((p) => p.status === 'done');
-      const hasUploading = pendingPhotos.some((p) => p.status === 'uploading');
+      const readyAudio = pendingAudio && pendingAudio.status === 'done' ? pendingAudio : null;
+      const hasUploading = pendingPhotos.some((p) => p.status === 'uploading') ||
+        pendingAudio?.status === 'uploading' ||
+        recordingState === 'recording' ||
+        recordingState === 'stopping';
       if (hasUploading) {
-        setError('Подожди, фото ещё загружается...');
+        setError(recordingState === 'recording' || recordingState === 'stopping'
+          ? 'Заверши запись голосового перед отправкой.'
+          : 'Подожди, вложение ещё загружается...');
         return;
       }
-      // Должно быть хоть что-то: текст или фото
-      if (!trimmed && readyAttachments.length === 0) return;
+      // Должно быть хоть что-то: текст, фото или голосовое.
+      if (!trimmed && readyAttachments.length === 0 && !readyAudio) return;
       if (sending) return;
       setSending(true);
       setError(null);
@@ -687,6 +1205,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ? (replyTo ? `> ${messagePreview(replyTo)}\n\n${trimmed}` : trimmed)
         : null;
       const attachmentsToSend = readyAttachments.map((p) => ({
+        type: 'image',
         url: p.url,
         path: p.path,
         filename: p.filename,
@@ -694,6 +1213,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         height: p.height,
         mime: p.mime || 'image/jpeg',
       }));
+      if (readyAudio) {
+        attachmentsToSend.push({
+          type: 'audio',
+          url: readyAudio.url,
+          path: readyAudio.path,
+          filename: readyAudio.filename || 'voice-message.webm',
+          mime: readyAudio.mime || 'audio/webm',
+          duration_ms: readyAudio.duration_ms,
+          size_bytes: readyAudio.size_bytes,
+          waveform: readyAudio.waveform || getWaveformBars(readyAudio),
+        });
+      }
+      const attachmentsForDisplay = attachmentsToSend.map((att) => ({ ...att }));
+      if (readyAudio?.localUrl) {
+        const audioDisplay = attachmentsForDisplay.find((att) => isAudioAttachment(att));
+        if (audioDisplay) {
+          audioDisplay.localUrl = readyAudio.localUrl;
+          optimisticAudioUrlsRef.current.add(readyAudio.localUrl);
+          rememberLocalAudio(audioDisplay);
+        }
+      }
       const payload = isCurator
         ? { client_id: curatorViewClientId || getCurrentClientId(), body: finalBody, attachments: attachmentsToSend }
         : { body: finalBody, attachments: attachmentsToSend };
@@ -710,6 +1250,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setInput('');
       setReplyTo(null);
       setPendingPhotos([]);
+      pendingAudioUrlRef.current = null;
+      setPendingAudio(null);
       // Optimistic: добавим в ленту, затем перезагрузим из БД
       const optimistic = {
         id: res.message_id,
@@ -718,7 +1260,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         intent_type: null,
         intent_payload: null,
         applied_at: null,
-        attachments: attachmentsToSend,
+        attachments: attachmentsForDisplay,
         read_at: null,
         created_at: res.created_at || new Date().toISOString(),
       };
@@ -755,17 +1297,35 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return true;
     };
 
+    const requestDeleteMessage = (message) => {
+      setError(null);
+      setDeleteConfirm(message);
+    };
+
+    const cancelDeleteMessage = () => {
+      if (deletingMessageId) return;
+      setDeleteConfirm(null);
+    };
+
     // Удаление своего сообщения (hard delete). Оптимистично убираем из
     // локального state, на ошибку — возвращаем обратно.
-    const handleDeleteMessage = async (message) => {
+    const confirmDeleteMessage = async () => {
+      const message = deleteConfirm;
+      if (!message || deletingMessageId) return;
       const snapshot = messages;
+      setDeletingMessageId(message.id);
       setMessages((prev) => prev.filter((m) => m.id !== message.id));
       const res = await HEYS.MessengerAPI.deleteMessage(message.id);
+      setDeletingMessageId(null);
       if (!res?.success) {
         setMessages(snapshot);
-        setError(res?.error || 'delete_failed');
+        const transientDeleteError = res?.statusCode === 502 || res?.statusCode === 503 || res?.statusCode === 504;
+        setError(transientDeleteError
+          ? 'Не удалось удалить сообщение. Повторите попытку чуть позже.'
+          : (res?.error || 'Не удалось удалить сообщение.'));
         return;
       }
+      setDeleteConfirm(null);
       // Удалили — мог упасть unread (если удалили необработанное сообщение клиента).
       // Тригерим refresh badges во всех местах сразу.
       HEYS.MessengerAPI.refreshFabUnread?.();
@@ -820,9 +1380,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           { className: 'messenger-header' },
           React.createElement(
             'div',
-            { className: 'messenger-title' },
-            '💬 ',
-            isCurator ? 'Сообщения с клиентом' : 'Куратору',
+            { className: 'messenger-title-stack' },
+            React.createElement(
+              'div',
+              { className: 'messenger-title' },
+              '💬 ',
+              isCurator ? 'Сообщения с клиентом' : 'Куратору',
+            ),
+            React.createElement(
+              'div',
+              { className: 'messenger-subtitle' },
+              getThreadSubtitle(messages, loading),
+            ),
           ),
           React.createElement(
             'button',
@@ -842,7 +1411,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   { className: 'messenger-empty' },
                   isCurator
                     ? 'Нет сообщений от этого клиента.'
-                    : 'Напиши куратору что съел или о чём-то ещё.',
+                    : 'Отправьте фото еды, вопрос или контекст по самочувствию.',
                 )
               : (() => {
                   // Collapse: всё что старше RECENT_DAYS_LIMIT дней — скрываем
@@ -894,7 +1463,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         message: m,
                         viewerRole,
                         onToggleAck: handleToggleAck,
-                        onDelete: handleDeleteMessage,
+                        onDelete: requestDeleteMessage,
                         onReply: handleReply,
                         onEdit: handleEditMessage,
                         onPhotoClick: handlePhotoClick,
@@ -959,25 +1528,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               ),
             ),
           ),
-        // Шаблоны быстрых ответов (curator-only)
-        isCurator &&
+        (pendingAudio || recordingState !== 'idle') &&
           React.createElement(
             'div',
-            { className: 'messenger-templates' },
-            CURATOR_REPLY_TEMPLATES.map((tpl) =>
-              React.createElement('button', {
-                key: tpl,
-                type: 'button',
-                className: 'messenger-template-chip',
-                onClick: () => handleTemplateClick(tpl),
-                disabled: sending,
-              }, tpl),
-            ),
+            { className: 'messenger-pending-audio' },
+            recordingState !== 'idle'
+              ? React.createElement(
+                  'div',
+                  { className: 'messenger-recording-live' },
+                  React.createElement('span', { className: 'messenger-recording-dot' }),
+                  React.createElement('span', { className: 'messenger-recording-label' }, recordingState === 'stopping' ? 'Сохраняю...' : 'Идёт запись'),
+                  React.createElement('span', { className: 'messenger-recording-time' }, formatDuration(recordingMs)),
+                  React.createElement('button', {
+                    type: 'button',
+                    className: 'messenger-recording-stop',
+                    onClick: stopVoiceRecording,
+                    disabled: recordingState !== 'recording',
+                    'aria-label': 'Остановить запись',
+                  }, 'Стоп'),
+                )
+              : React.createElement(
+                  'div',
+                  { className: `messenger-audio-draft status-${pendingAudio.status}` },
+                  React.createElement(AudioAttachment, { attachment: pendingAudio, compact: true }),
+                  pendingAudio.status === 'uploading' && React.createElement('span', { className: 'messenger-audio-status' }, 'Загружаю...'),
+                  pendingAudio.status === 'error' && React.createElement('span', { className: 'messenger-audio-status error' }, 'Не загрузилось'),
+                  React.createElement('button', {
+                    type: 'button',
+                    className: 'messenger-pending-audio-remove',
+                    onClick: removePendingAudio,
+                    'aria-label': 'Убрать голосовое',
+                  }, '✕'),
+                ),
           ),
         // Input
         React.createElement(
           'div',
-          { className: 'messenger-input-row' },
+          {
+            className: [
+              'messenger-input-row',
+              inputFocused ? 'messenger-input-row--focused' : '',
+              (input.trim() || pendingPhotos.length > 0 || pendingAudio || recordingState !== 'idle')
+                ? 'messenger-input-row--active'
+                : '',
+            ].filter(Boolean).join(' '),
+          },
           React.createElement('input', {
             ref: fileInputRef,
             type: 'file',
@@ -994,11 +1589,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'aria-label': 'Прикрепить фото',
             title: 'Прикрепить фото',
           }, '📷'),
+          React.createElement('button', {
+            type: 'button',
+            className: `messenger-voice${recordingState === 'recording' ? ' is-recording' : ''}`,
+            onClick: startVoiceRecording,
+            disabled: sending || pendingAudio?.status === 'uploading' || recordingState === 'stopping',
+            'aria-label': recordingState === 'recording' ? 'Остановить запись' : 'Записать голосовое',
+            title: recordingState === 'recording' ? 'Остановить запись' : 'Записать голосовое',
+          }, recordingState === 'recording' ? '■' : '🎙'),
           React.createElement('textarea', {
             className: 'messenger-input',
-            placeholder: isCurator ? 'Ответ клиенту...' : 'Напиши куратору...',
+            placeholder: isCurator ? 'Ответ клиенту...' : 'Сообщение куратору...',
             value: input,
             onChange: (e) => setInput(e.target.value),
+            onFocus: () => setInputFocused(true),
+            onBlur: () => setInputFocused(false),
             onKeyDown: handleKeyDown,
             disabled: sending,
             rows: 2,
@@ -1010,7 +1615,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             {
               className: 'messenger-send',
               onClick: handleSend,
-              disabled: sending || (!input.trim() && pendingPhotos.filter((p) => p.status === 'done').length === 0),
+              disabled: sending ||
+                recordingState !== 'idle' ||
+                pendingAudio?.status === 'uploading' ||
+                (!input.trim() &&
+                  pendingPhotos.filter((p) => p.status === 'done').length === 0 &&
+                  pendingAudio?.status !== 'done'),
               'aria-label': 'Отправить',
             },
             sending ? '...' : '➤',
@@ -1041,6 +1651,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               `${lightbox.index + 1} / ${lightbox.attachments.length}`,
             ),
           ),
+        deleteConfirm &&
+          React.createElement(DeleteConfirmDialog, {
+            message: deleteConfirm,
+            busy: deletingMessageId === deleteConfirm.id,
+            onCancel: cancelDeleteMessage,
+            onConfirm: confirmDeleteMessage,
+          }),
       ),
     );
   }
@@ -1048,6 +1665,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // ── Mount/unmount API ────────────────────────────────────────────────
   let mountNode = null;
   let mountedRoot = null;
+  let inAppToastNode = null;
+  let inAppToastTimer = null;
+  let inAppUnreadBaseline = null;
 
   function openModal(opts = {}) {
     if (mountNode) return; // уже открыт
@@ -1103,6 +1723,80 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     mountedRoot = null;
   }
 
+  function playInAppMessageCue() {
+    try {
+      const audio = window.HEYS?.audio;
+      if (audio?.play) audio.play('notify');
+      else if (audio?.preview) audio.preview('notify');
+    } catch { /* ignore */ }
+    try {
+      if (navigator.vibrate) navigator.vibrate([80, 50, 120]);
+    } catch { /* ignore */ }
+  }
+
+  function hideInAppMessageToast() {
+    if (inAppToastTimer) {
+      clearTimeout(inAppToastTimer);
+      inAppToastTimer = null;
+    }
+    if (!inAppToastNode) return;
+    inAppToastNode.classList.remove('is-visible');
+    const node = inAppToastNode;
+    inAppToastNode = null;
+    setTimeout(() => {
+      try {
+        if (node.parentNode) node.parentNode.removeChild(node);
+      } catch { /* ignore */ }
+    }, 220);
+  }
+
+  function showInAppMessageToast(unreadCount) {
+    if (typeof document === 'undefined' || document.visibilityState !== 'visible') return;
+    if (mountNode) return;
+    hideInAppMessageToast();
+
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.className = 'messenger-inapp-toast';
+    node.setAttribute('aria-label', 'Открыть новое сообщение в мессенджере');
+    node.innerHTML = `
+      <span class="messenger-inapp-toast__icon" aria-hidden="true">💬</span>
+      <span class="messenger-inapp-toast__copy">
+        <strong>Новое сообщение</strong>
+        <span>${unreadCount > 1 ? `${unreadCount} непрочитанных` : 'Нажмите, чтобы открыть диалог'}</span>
+      </span>
+      <span class="messenger-inapp-toast__arrow" aria-hidden="true">›</span>
+    `;
+    node.addEventListener('click', () => {
+      hideInAppMessageToast();
+      openModal();
+    });
+    document.body.appendChild(node);
+    inAppToastNode = node;
+    requestAnimationFrame(() => node.classList.add('is-visible'));
+    inAppToastTimer = setTimeout(hideInAppMessageToast, 6000);
+    playInAppMessageCue();
+  }
+
+  function installInAppMessageToast() {
+    if (typeof window === 'undefined' || window.__heysMessengerInAppToastInstalled) return;
+    window.__heysMessengerInAppToastInstalled = true;
+    try {
+      window.HEYS?.MessengerAPI?.getFabUnreadCount?.();
+    } catch { /* ignore */ }
+    window.addEventListener('heys:messenger-fab-unread', (e) => {
+      const next = Number(e.detail || 0);
+      if (!Number.isFinite(next)) return;
+      if (inAppUnreadBaseline == null) {
+        inAppUnreadBaseline = next;
+        return;
+      }
+      const prev = inAppUnreadBaseline;
+      inAppUnreadBaseline = next;
+      if (next > prev) showInAppMessageToast(next);
+    });
+  }
+
   // ── FAB button с badge непрочитанных ─────────────────────────────────
   function FabButton({ className = 'message-fab', ariaLabel = 'Написать куратору' }) {
     const [unread, setUnread] = useState(() =>
@@ -1140,6 +1834,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // Subscribe to deep-link event from heys_app_shortcuts_v1
   if (typeof window !== 'undefined') {
+    installInAppMessageToast();
     window.addEventListener('heys:open-messenger', (e) => {
       openModal(e.detail || {});
     });

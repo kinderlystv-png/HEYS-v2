@@ -490,6 +490,23 @@ describe('eventLog: failure recovery (real module)', () => {
     expect(saved).toBeTruthy();
   });
 
+  it('curator session → skips session RPC and clears debug pending buffer', async () => {
+    const { heysCtx, rpcMock, runFlush } = createIsolatedModule({
+      rpcResult: { data: null, error: { message: 'invalid_session' } },
+    });
+    heysCtx.localStorage.setItem('heys_curator_session', 'curator.jwt.token');
+    heysCtx.localStorage.setItem(PENDING_KEY, JSON.stringify([
+      { kind: 'meal-add', summary: 'old pending', payload: { dateKey: '2026-05-24' } },
+    ]));
+
+    heysCtx.HEYS.eventLog.write('meal-add', 'curator event', { dateKey: '2026-05-24' });
+    await runFlush();
+
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(heysCtx.localStorage._store[PENDING_KEY]).toBeUndefined();
+    expect(heysCtx.HEYS.eventLog.getPendingBuffer().queue).toHaveLength(0);
+  });
+
   it('flush с пустым queue и пустым pending → RPC не вызывается', async () => {
     const { rpcMock, runFlush } = createIsolatedModule({
       rpcResult: { data: null, error: null },

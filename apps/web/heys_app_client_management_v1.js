@@ -11,13 +11,28 @@
         setClientId,
         clientId,
     }) => {
+        const readSavedClientId = () => {
+            try {
+                const raw = localStorage.getItem('heys_client_current');
+                if (!raw) return '';
+                try {
+                    const parsed = JSON.parse(raw);
+                    return typeof parsed === 'string' ? parsed : '';
+                } catch (_) {
+                    return raw;
+                }
+            } catch (_) {
+                return '';
+            }
+        };
+
         React.useEffect(() => {
             if (cloudUser && cloudUser.id && (clientsSource === 'cache' || clientsSource === '')) {
                 fetchClientsFromCloud(cloudUser.id).then((result) => {
                     if (result.data && result.data.length > 0) {
                         setClients(result.data);
 
-                        const savedClientId = localStorage.getItem('heys_client_current');
+                        const savedClientId = readSavedClientId();
                         if (savedClientId && result.data.some(c => c.id === savedClientId)) {
                             // 🔇 v4.7.1: Лог отключён
                             setClientId(savedClientId);

@@ -2141,7 +2141,10 @@
       if (!item || typeof item !== 'object') return false;
       const itemKey = String(item.k || '');
       const persistKey = getPendingQueueLocalStorageKey(item);
-      return !isLocalOnlyStorageKey(itemKey) && !isLocalOnlyStorageKey(persistKey);
+      return !isLocalOnlyStorageKey(itemKey)
+        && !isLocalOnlyStorageKey(persistKey)
+        && !isNonClientDataKey(itemKey)
+        && !isNonClientDataKey(persistKey);
     });
 
     if (options.mutate && Array.isArray(queue)) {
@@ -2152,7 +2155,7 @@
     if (removedCount > 0) {
       logQuotaThrottled(
         `pending-queue-local-only:${storageKey}`,
-        `🧹 [SYNC] Dropped ${removedCount} local-only pending item(s) from ${storageKey}`
+        `🧹 [SYNC] Dropped ${removedCount} local-only/non-client pending item(s) from ${storageKey}`
       );
     }
 
@@ -2443,6 +2446,48 @@
       } catch (_) { /* noop */ }
       return;
     }
+
+    if (String(reason || '').toLowerCase() === 'non_client_data' && isNonClientDataKey(scopedKey)) {
+      try {
+        logCritical(`[drop-rejected] non_client_data: purging accidental scoped global key ${scopedKey.slice(0, 80)} without reload`);
+      } catch (_) { /* noop */ }
+      try {
+        if (typeof global.localStorage !== 'undefined') {
+          global.localStorage.removeItem(scopedKey);
+        }
+      } catch (_) { /* noop */ }
+      try {
+        if (global.HEYS?.store?.memory?.delete) {
+          global.HEYS.store.memory.delete(scopedKey);
+        }
+      } catch (_) { /* noop */ }
+      try {
+        let purged = 0;
+        if (Array.isArray(clientUpsertQueue)) {
+          for (let i = clientUpsertQueue.length - 1; i >= 0; i--) {
+            const it = clientUpsertQueue[i];
+            if (it && it.client_id === clientId && (it.k === scopedKey || it.k === k || isNonClientDataKey(it.k))) {
+              clientUpsertQueue.splice(i, 1);
+              purged++;
+            }
+          }
+        }
+        if (Array.isArray(clientUpsertInFlightQueue)) {
+          for (let i = clientUpsertInFlightQueue.length - 1; i >= 0; i--) {
+            const it = clientUpsertInFlightQueue[i];
+            if (it && it.client_id === clientId && (it.k === scopedKey || it.k === k || isNonClientDataKey(it.k))) {
+              clientUpsertInFlightQueue.splice(i, 1);
+              purged++;
+            }
+          }
+        }
+        if (purged > 0) {
+          try { savePendingQueueImmediate(PENDING_CLIENT_QUEUE_KEY, clientUpsertQueue); } catch (_) { /* noop */ }
+        }
+      } catch (_) { /* noop */ }
+      return;
+    }
+
     try {
       logCritical(`[drop-rejected] ${reason || 'server_rejected'}: removing LS+queue for ${scopedKey.slice(0, 80)} (client ${String(clientId).slice(0,8)})`);
     } catch (_) { /* noop */ }
@@ -10489,7 +10534,9 @@
       return !gamificationKeys.includes(normalizedKey)
         && !gamificationKeys.includes(item.k)
         && !isLocalOnlyStorageKey(item.k)
-        && !isLocalOnlyStorageKey(getPendingQueueLocalStorageKey(item));
+        && !isLocalOnlyStorageKey(getPendingQueueLocalStorageKey(item))
+        && !isNonClientDataKey(item.k)
+        && !isNonClientDataKey(getPendingQueueLocalStorageKey(item));
     });
 
     // Если отфильтровали всё — выходим

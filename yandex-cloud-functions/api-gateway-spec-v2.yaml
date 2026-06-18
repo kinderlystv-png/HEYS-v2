@@ -581,6 +581,30 @@ paths:
         type: cloud_functions
         function_id: d4e93t0lrfu4ng62pqa1
 
+  /media/upload:
+    post:
+      summary: Upload media attachment to Yandex Object Storage
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e93t0lrfu4ng62pqa1
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e93t0lrfu4ng62pqa1
+
+  /media/delete:
+    post:
+      summary: Delete media attachment from bucket
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e93t0lrfu4ng62pqa1
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4e93t0lrfu4ng62pqa1
+
   # ═══════════════════════════════════════════════════════════════
   # Supabase-compatible routes (для совместимости)
   # ═══════════════════════════════════════════════════════════════

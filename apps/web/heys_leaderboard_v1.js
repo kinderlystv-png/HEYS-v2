@@ -34,6 +34,31 @@
         return raw ? String(raw).replace(/"/g, '') : null;
     }
 
+    function _readGlobalValue(key) {
+        try {
+            var raw = localStorage.getItem(key);
+            if (raw === null || raw === undefined) return null;
+            try { return JSON.parse(raw); } catch (_) { return raw; }
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function _isCuratorSession() {
+        try {
+            if (_readGlobalValue('heys_pin_auth_client') || _readGlobalValue('heys_pin_cookie_session_hint')) {
+                return false;
+            }
+            if (_readGlobalValue('heys_curator_session') || _readGlobalValue('heys_curator_cookie_session_hint')) {
+                return true;
+            }
+            var authToken = _readGlobalValue('heys_supabase_auth_token');
+            return !!(authToken && authToken.user);
+        } catch (_) {
+            return false;
+        }
+    }
+
     function _withSessionToken(params) {
         var next = params || {};
         var token = _getSessionToken();
@@ -124,6 +149,9 @@
             console.warn('[HEYS.leaderboard] ⚠️ YandexAPI not available — sharing saved locally only');
             return Promise.resolve(null);
         }
+        if (_isCuratorSession()) {
+            return Promise.resolve({ success: true, local_only: true, skipped: 'curator_session' });
+        }
 
         return api.rpc('toggle_leaderboard_sharing_by_session', _withSessionToken({
             p_enabled: enabled,
@@ -147,6 +175,7 @@
 
     function _publishNow() {
         if (!isSharingEnabled()) return;
+        if (_isCuratorSession()) return;
 
         var api = _getApi();
         if (!api || !api.rpc) return;
@@ -325,6 +354,7 @@
     function _backfillHistoricalCEB(weekDates, entries) {
         if (_backfillInProgress) return;
         if (!isSharingEnabled()) return;
+        if (_isCuratorSession()) return;
 
         var cascadeCard = _getCascadeCard();
         var resolveCEBForDate = cascadeCard && cascadeCard.resolveCEBForDate;

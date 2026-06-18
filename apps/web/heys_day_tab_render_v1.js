@@ -54,8 +54,8 @@
         // }
 
         // === READ-ONLY BANNER: показываем если триал истёк ===
-        const subscriptionStatus = heysRef.Subscription?.getStatus?.() || {};
-        const isReadOnly = subscriptionStatus.status === 'read_only';
+        const subscriptionStatus = heysRef.Subscription?.getCachedStatus?.() || ctx.prof?.subscription_status || 'none';
+        const isReadOnly = subscriptionStatus === 'read_only';
 
         // === Diary Section (extracted) ===
         // Phase split: render lightweight placeholder first, heavy diary mounts after first paint.

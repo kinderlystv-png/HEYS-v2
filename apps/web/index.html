@@ -18,7 +18,7 @@
          доменов основан на аудите apps/web/heys_*.js (jsdelivr/twemoji, qrserver,
          storage.yandexcloud.net, api.heyslab.ru). -->
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.jsdelivr.net https://api.qrserver.com https://storage.yandexcloud.net https://*.storage.yandexcloud.net; connect-src 'self' https://api.heyslab.ru https://storage.yandexcloud.net https://*.storage.yandexcloud.net http://localhost:4001 ws://localhost:* http://localhost:*; font-src 'self' data:; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://api.heyslab.ru; upgrade-insecure-requests" />
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.jsdelivr.net https://api.qrserver.com https://storage.yandexcloud.net https://*.storage.yandexcloud.net; connect-src 'self' https://api.heyslab.ru https://storage.yandexcloud.net https://*.storage.yandexcloud.net http://localhost:4001 ws://localhost:* http://localhost:*; font-src 'self' data:; media-src 'self' blob: https://storage.yandexcloud.net https://*.storage.yandexcloud.net; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://api.heyslab.ru; upgrade-insecure-requests" />
     <!-- 🛡️ Preconnect: DNS+TCP+TLS ahead of time -->
     <link rel="preconnect" href="https://api.heyslab.ru" crossorigin />
     <!-- 🟦 Telegram in-app browser detection: показывает баннер с инструкцией
@@ -901,11 +901,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.8cb515deabcb.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.456a7bbfaab4.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.32d76d2566c7.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.4d14b537346f.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.0e20d2090d0c.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.6ccbd951db49.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.36f1376b0815.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.6b7e12ad76e9.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.6f476e40b9cc.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
          <script src="react-bundle.js"> (внизу body) бандл уже скачан. Sync execution сохранён
@@ -3185,11 +3185,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.8cb515deabcb.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.456a7bbfaab4.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.32d76d2566c7.js"></script>
-    <script defer src="boot-day.bundle.4d14b537346f.js"></script>
-    <script defer src="boot-app.bundle.0e20d2090d0c.js"></script>
-    <script defer src="boot-init.bundle.6ccbd951db49.js"
+    <script defer src="boot-day.bundle.36f1376b0815.js"></script>
+    <script defer src="boot-app.bundle.6b7e12ad76e9.js"></script>
+    <script defer src="boot-init.bundle.6f476e40b9cc.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- ⚡ PERF 2026-06-13: D1 (solid-шапка на Android вместо frosted glass —
@@ -3249,7 +3249,7 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game-eager.bundle.bb651c659737.js',
-                'postboot-1-game-lazy.bundle.b21b29b16a1c.js',
+                'postboot-1-game-lazy.bundle.3516034ab021.js',
                 'postboot-2-insights-eager.bundle.807cb783ab2f.js',
                 'postboot-2-insights-lazy.bundle.b22e1794d63c.js',
                 'postboot-3-ui-eager.bundle.2da300f79259.js',

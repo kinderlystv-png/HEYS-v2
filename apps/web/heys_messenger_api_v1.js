@@ -15,6 +15,39 @@
 
   // ── Bearer token (клиент session или JWT куратора, копия из heys_push_v1) ──
   function getBearerToken() {
+    let hasPinAuthClient = false;
+    try {
+      hasPinAuthClient = !!localStorage.getItem('heys_pin_auth_client');
+    } catch {
+      /* ignore */
+    }
+
+    // Curator tabs may still contain a stale PIN heys_session_token from a previous
+    // client login. Prefer curator JWTs unless this is an explicit PIN session.
+    if (!hasPinAuthClient) {
+      try {
+        const curatorSession = localStorage.getItem('heys_curator_session');
+        if (curatorSession) {
+          try {
+            return JSON.parse(curatorSession);
+          } catch {
+            return curatorSession;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      try {
+        const raw = localStorage.getItem('heys_supabase_auth_token');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.access_token) return parsed.access_token;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     try {
       if (HEYS.auth && typeof HEYS.auth.getSessionToken === 'function') {
         const t = HEYS.auth.getSessionToken();
@@ -23,6 +56,7 @@
     } catch {
       /* ignore */
     }
+
     try {
       const raw = localStorage.getItem('heys_session_token');
       if (raw) {
@@ -36,21 +70,6 @@
       /* ignore */
     }
 
-    try {
-      const curatorSession = localStorage.getItem('heys_curator_session');
-      if (curatorSession) return curatorSession;
-    } catch {
-      /* ignore */
-    }
-    try {
-      const raw = localStorage.getItem('heys_supabase_auth_token');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.access_token) return parsed.access_token;
-      }
-    } catch {
-      /* ignore */
-    }
     return null;
   }
 
@@ -59,6 +78,9 @@
   // session token лежит в HttpOnly cookie, JS его не видит. В таком случае
   // отправляем БЕЗ Authorization header — credentials:'include' донесёт
   // cookie до cloud function, та прочтёт и подставит session_token.
+  const RETRY_STATUSES = new Set([500, 502, 503, 504]);
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
   async function call(path, opts = {}) {
     const token = getBearerToken();
     const url = API_URL + path;
@@ -67,34 +89,51 @@
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(opts.body ? { 'Content-Type': 'application/json' } : {}),
     };
-    let res;
-    try {
-      res = await fetch(url, {
-        method,
-        headers,
-        body: opts.body ? JSON.stringify(opts.body) : undefined,
-        credentials: 'include',
-      });
-    } catch (err) {
-      return { success: false, error: 'network_error', detail: err.message };
-    }
+    const body = opts.body ? JSON.stringify(opts.body) : undefined;
+    let lastNetworkError = null;
 
-    let json = null;
-    try {
-      json = await res.json();
-    } catch {
-      // empty response
-    }
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      let res;
+      try {
+        res = await fetch(url, {
+          method,
+          headers,
+          body,
+          credentials: 'include',
+        });
+      } catch (err) {
+        lastNetworkError = err;
+        if (attempt < 2) {
+          await sleep(180 * (attempt + 1));
+          continue;
+        }
+        return { success: false, error: 'network_error', detail: err.message };
+      }
 
-    if (!res.ok) {
+      let json = null;
+      try {
+        json = await res.json();
+      } catch {
+        // empty response
+      }
+
+      if (res.ok) return json || { success: true };
+
+      if (RETRY_STATUSES.has(res.status) && attempt < 2) {
+        await sleep(220 * (attempt + 1));
+        continue;
+      }
+
       return {
         success: false,
         error: json?.error || `http_${res.status}`,
+        detail: json?.details || json?.message || null,
         statusCode: res.status,
         retryAfter: json?.retry_after,
       };
     }
-    return json || { success: true };
+
+    return { success: false, error: 'network_error', detail: lastNetworkError?.message || null };
   }
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -103,7 +142,9 @@
    * Отправить сообщение.
    *   client → curator: { body, intent_type?, intent_payload?, attachments? }
    *   curator → client: { client_id, body, attachments? }
-   * attachments — массив {url, path, filename?, mime?, width?, height?}
+   * attachments:
+   *   image — {type:'image', url, path, filename?, mime?, width?, height?}
+   *   audio — {type:'audio', url, path, filename?, mime?, duration_ms, size_bytes?, waveform?}
    */
   async function send(payload) {
     return call('/messages/send', { method: 'POST', body: payload });
@@ -201,6 +242,8 @@
   let _inboxCache = {}; // {client_id → {unread_count, last_message_preview, last_message_at}}
   let _inboxPollTimer = null;
   let _inboxPolling = false;
+  let _inboxBackoffUntil = 0;
+  let _inboxBackoffMs = 0;
 
   function looksLikeCuratorToken() {
     try {
@@ -221,8 +264,12 @@
 
   async function refreshInbox() {
     if (!looksLikeCuratorToken()) return;
+    const now = Date.now();
+    if (_inboxBackoffUntil && now < _inboxBackoffUntil) return;
     const res = await getInbox();
     if (res?.success && Array.isArray(res.inbox)) {
+      _inboxBackoffMs = 0;
+      _inboxBackoffUntil = 0;
       const next = {};
       for (const entry of res.inbox) {
         if (entry?.client_id) next[entry.client_id] = entry;
@@ -231,6 +278,11 @@
       try {
         window.dispatchEvent(new CustomEvent('heys:messenger-inbox-updated', { detail: _inboxCache }));
       } catch { /* ignore */ }
+    } else if (RETRY_STATUSES.has(res?.statusCode) || res?.statusCode === 500) {
+      _inboxBackoffMs = _inboxBackoffMs
+        ? Math.min(_inboxBackoffMs * 2, 5 * 60 * 1000)
+        : 60 * 1000;
+      _inboxBackoffUntil = Date.now() + _inboxBackoffMs;
     }
   }
 
@@ -258,9 +310,13 @@
   let _fabUnread = 0;
   let _fabPollTimer = null;
   let _fabPolling = false;
+  let _fabUnreadBackoffUntil = 0;
+  let _fabUnreadBackoffMs = 0;
 
   async function refreshFabUnread() {
     try {
+      const now = Date.now();
+      if (_fabUnreadBackoffUntil && now < _fabUnreadBackoffUntil) return;
       const isCurator = looksLikeCuratorToken();
       // 🛡️ 2026-05-30 Wave 4 audit: убран fallback на heys_last_client_id —
       // он может содержать stale clientId от прошлой сессии и приведёт к
@@ -278,6 +334,15 @@
         return;
       }
       const res = await getUnreadCount(opts);
+      if (!res?.success && RETRY_STATUSES.has(res?.statusCode)) {
+        _fabUnreadBackoffMs = _fabUnreadBackoffMs
+          ? Math.min(_fabUnreadBackoffMs * 2, 5 * 60 * 1000)
+          : 60 * 1000;
+        _fabUnreadBackoffUntil = Date.now() + _fabUnreadBackoffMs;
+        return;
+      }
+      _fabUnreadBackoffMs = 0;
+      _fabUnreadBackoffUntil = 0;
       const next = res?.success ? (res.unread_count || 0) : 0;
       if (next !== _fabUnread) {
         _fabUnread = next;
@@ -288,6 +353,7 @@
 
   function startFabUnreadPolling() {
     if (_fabPolling) return;
+    if (!getBearerToken()) return;
     _fabPolling = true;
     void refreshFabUnread();
     _fabPollTimer = setInterval(refreshFabUnread, 60000);

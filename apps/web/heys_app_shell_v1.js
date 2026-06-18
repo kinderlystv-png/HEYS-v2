@@ -563,35 +563,34 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const leaderboardRefreshRafRef = React.useRef(0);
 
         // 💬 Messenger inbox (curator-only): unread + preview per client.
-        // Refresh on mount → каждые 30s + при heys:client-changed.
+        // MessengerAPI owns polling/backoff; shell only mirrors its cache.
         const [messengerInbox, setMessengerInbox] = React.useState({});
         React.useEffect(() => {
             if (isRpcMode) return; // только для куратора
+            if (!showClientDropdown) return;
             let cancelled = false;
-            let timer = null;
-            const refresh = async () => {
+            const applyCache = (cache) => {
+                if (cancelled) return;
+                setMessengerInbox(cache && typeof cache === 'object' ? cache : {});
+            };
+            const refresh = () => {
                 try {
-                    const res = await window.HEYS?.MessengerAPI?.getInbox?.();
-                    if (cancelled) return;
-                    if (res?.success && Array.isArray(res.inbox)) {
-                        const map = {};
-                        for (const entry of res.inbox) {
-                            if (entry?.client_id) map[entry.client_id] = entry;
-                        }
-                        setMessengerInbox(map);
-                    }
+                    applyCache(window.HEYS?.MessengerAPI?.getInboxCache?.() || {});
                 } catch { /* ignore */ }
             };
-            void refresh();
-            timer = setInterval(refresh, 30000);
-            const onClientChanged = () => { void refresh(); };
+            const onInboxUpdated = (event) => {
+                applyCache(event?.detail || {});
+            };
+            refresh();
+            window.addEventListener('heys:messenger-inbox-updated', onInboxUpdated);
+            const onClientChanged = () => { refresh(); };
             window.addEventListener('heys:client-changed', onClientChanged);
             return () => {
                 cancelled = true;
-                if (timer) clearInterval(timer);
+                window.removeEventListener('heys:messenger-inbox-updated', onInboxUpdated);
                 window.removeEventListener('heys:client-changed', onClientChanged);
             };
-        }, [isRpcMode]);
+        }, [isRpcMode, showClientDropdown]);
         const totalUnread = React.useMemo(() => {
             return Object.values(messengerInbox).reduce((s, v) => s + (v?.unread_count || 0), 0);
         }, [messengerInbox]);
@@ -3404,11 +3403,13 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             defaultTasksSubtab,
             setDefaultTab,
             clientId,
-            selectedDate,
             cloudUser,
         } = props;
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
+        const settingsWrapRef = React.useRef(null);
+        const keepSettingsMenuOpenOnNextTabRef = React.useRef(false);
+        const [, tickCascadeNav] = React.useReducer((n) => n + 1, 0);
         React.useEffect(() => {
             if (tab === 'month') {
                 setTab('stats');
@@ -3504,15 +3505,15 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const canUseTasksAsHome = !cloudUser && !!clientId;
         const HOME_TAB_OPTIONS = React.useMemo(() => {
             const options = [
-                { key: 'widgets', label: 'Виджеты', icon: '🧩' },
                 { key: 'stats', label: 'Отчёты', icon: '📊' },
-                { key: 'diary', label: 'ПИТАНИЕ', icon: '🍽️' },
-                { key: 'activity', label: 'АКТИВНОСТЬ', icon: '🏃' },
-                { key: 'insights', label: 'Советы', icon: '💡' },
+                { key: 'diary', label: 'Питание', icon: '🍽️' },
+                { key: 'activity', label: 'Актив', icon: '🏃' },
+                { key: 'widgets', label: 'Виджеты', icon: '🧩' },
             ];
             if (canUseTasksAsHome) {
                 options.push({ key: 'tasks', label: 'Задачи', icon: '☑️' });
             }
+            options.push({ key: 'insights', label: 'Инсайты', icon: '🔮' });
             return options;
         }, [canUseTasksAsHome]);
 
@@ -3549,12 +3550,15 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const handlePickHomeTab = (nextTab) => {
             try {
                 if (nextTab === 'tasks') {
+                    keepSettingsMenuOpenOnNextTabRef.current = true;
                     setDefaultTab('tasks', { tasksSubtab: resolvedDefaultTasksSubtab });
+                    switchTabWithUndoCommit('tasks', 'home-picker-tasks-switch');
                     HEYS.dayUtils?.haptic?.('light');
                     return;
                 }
 
                 setDefaultTab(nextTab);
+                switchTabWithUndoCommit(nextTab, `home-picker-${nextTab}-switch`);
                 HEYS.dayUtils?.haptic?.('light');
                 setSettingsMenuOpen(false);
             } catch (e) {
@@ -3565,6 +3569,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const handlePickTasksHomeSubtab = (nextSubtab) => {
             try {
                 setDefaultTab('tasks', { tasksSubtab: nextSubtab });
+                switchTabWithUndoCommit('tasks', `home-picker-tasks-${nextSubtab}-switch`);
                 HEYS.dayUtils?.haptic?.('light');
                 setSettingsMenuOpen(false);
             } catch (e) {
@@ -3574,9 +3579,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
         const primaryTabs = React.useMemo(() => {
             const items = [
-                { key: 'stats', label: 'Отчёты', buttonLabel: 'Итоги', icon: '📊', id: 'tour-stats-tab' },
-                { key: 'diary', label: 'ПИТАНИЕ', buttonLabel: 'ПИТАНИЕ', icon: '🍴', id: 'tour-diary-tab' },
-                { key: 'activity', label: 'АКТИВНОСТЬ', shortLabel: 'АКТИВ', buttonLabel: 'АКТИВ', icon: '🏃', id: 'tour-activity-tab' },
+                { key: 'stats', label: 'Отчёты', buttonLabel: 'Отчёты', icon: '📊', id: 'tour-stats-tab' },
+                { key: 'diary', label: 'Питание', buttonLabel: 'Питание', icon: '🍴', id: 'tour-diary-tab' },
+                { key: 'activity', label: 'Актив', shortLabel: 'Актив', buttonLabel: 'Актив', icon: '🏃', id: 'tour-activity-tab' },
                 { key: 'widgets', label: 'Виджеты', buttonLabel: 'Виджеты', icon: '🎛️', id: 'tour-widgets-tab' },
             ];
 
@@ -3626,53 +3631,158 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         };
 
         React.useEffect(() => {
-            if (settingsMenuOpen) setSettingsMenuOpen(false);
+            if (!settingsMenuOpen) return;
+            if (keepSettingsMenuOpenOnNextTabRef.current) {
+                keepSettingsMenuOpenOnNextTabRef.current = false;
+                return;
+            }
+            setSettingsMenuOpen(false);
         }, [tab]);
 
-        // Инициализация CRS для прогресс-бара, если он еще не был вычислен
         React.useEffect(() => {
-            if (!window.HEYS?._lastCrs && window.HEYS?.CascadeCard?.computeCascadeState && clientId) {
-                try {
-                    // utils.getTodayStr не существует — используем тот же fallback каскад
-                    // что heys_leaderboard_v1.js:_getTodayStr (dayUtils.todayISO →
-                    // models.todayISO → manual). Раньше тут падал TypeError и весь
-                    // CRS init крашился каждый login.
-                    const _todayISO = () => {
-                        try {
-                            if (typeof window.HEYS?.dayUtils?.todayISO === 'function') return window.HEYS.dayUtils.todayISO();
-                            if (typeof window.HEYS?.models?.todayISO === 'function') return window.HEYS.models.todayISO();
-                            if (typeof window.HEYS?.utils?.getTodayKey === 'function') return window.HEYS.utils.getTodayKey();
-                        } catch (_) { /* fallthrough */ }
-                        const d = new Date();
-                        const pad = (n) => (n < 10 ? '0' + n : '' + n);
-                        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-                    };
-                    const dateStr = selectedDate || _todayISO();
-                    const day = window.HEYS.utils.lsGet('heys_dayv2_' + dateStr, {});
-                    const dayTot = window.HEYS.utils.lsGet('heys_dayTot_' + dateStr, {});
-                    const prof = window.HEYS.utils.lsGet('heys_profile', {});
-                    // v3.5.1: compute normAbs properly (same as buildNutritionState in day tab)
-                    // heys_normAbs key is never written → was always {}, causing normKcal fallback
-                    // to 2000 and triggering false deficit_overshoot penalties for users eating
-                    // within their real TDEE-based goal.
-                    const normPerc = window.HEYS.utils.lsGet('heys_norms', {});
-                    const optimumInfo = window.HEYS.dayUtils?.getOptimumForDay?.(day, prof) || {};
-                    const normAbs = (window.HEYS.dayCalculations?.computeDailyNorms && optimumInfo.optimum)
-                        ? window.HEYS.dayCalculations.computeDailyNorms(optimumInfo.optimum, normPerc)
-                        : { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
-                    console.info('[HEYS.AppTabsNav] ✅ CRS init normAbs:', {
-                        optimum: optimumInfo.optimum, normKcal: normAbs.kcal
-                    });
-                    const pIndex = window.HEYS.products?.getIndex ? window.HEYS.products.getIndex() : {};
-                    const todayStr = _todayISO();
-                    window.HEYS.CascadeCard.computeCascadeState(day, dayTot, normAbs, prof, pIndex, {
-                        silent: dateStr !== todayStr
-                    });
-                } catch (e) {
-                    console.warn('[HEYS.AppTabsNav] Failed to init CRS:', e);
-                }
+            if (!settingsMenuOpen) return undefined;
+
+            const handleOutsidePointer = (event) => {
+                const wrap = settingsWrapRef.current;
+                if (!wrap) return;
+                const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+                if (path.includes(wrap) || wrap.contains(event.target)) return;
+                setSettingsMenuOpen(false);
+            };
+
+            const handleEscape = (event) => {
+                if (event.key === 'Escape') setSettingsMenuOpen(false);
+            };
+
+            document.addEventListener('pointerdown', handleOutsidePointer, true);
+            document.addEventListener('keydown', handleEscape, true);
+            return () => {
+                document.removeEventListener('pointerdown', handleOutsidePointer, true);
+                document.removeEventListener('keydown', handleEscape, true);
+            };
+        }, [settingsMenuOpen]);
+
+        const warmCascadeCrsForNav = React.useCallback((reason) => {
+            const lastCrs = window.HEYS?._lastCrs;
+            const lastCrsHistoryCount = Array.isArray(lastCrs?.historicalDays)
+                ? lastCrs.historicalDays.length
+                : Number(lastCrs?.historicalDays || 0);
+            if (
+                lastCrs &&
+                Number.isFinite(Number(lastCrs.crs)) &&
+                lastCrsHistoryCount >= 1
+            ) {
+                return true;
             }
-        }, [clientId, selectedDate]);
+            if (!clientId) return false;
+            if (!window.__heysCascadeBatchSyncReceived && !window.__heysCascadeAllowEmptyHistory) {
+                return false;
+            }
+            if (!window.HEYS?.CascadeCard?.computeCascadeState) return false;
+
+            try {
+                // Нижняя линия каскада всегда показывает сегодняшний CRS. Если брать
+                // selectedDate со стартовой вкладки, можно случайно посчитать прошлый
+                // день в silent-режиме и оставить линию без целевой точки.
+                const _todayISO = () => {
+                    try {
+                        if (typeof window.HEYS?.dayUtils?.todayISO === 'function') return window.HEYS.dayUtils.todayISO();
+                        if (typeof window.HEYS?.models?.todayISO === 'function') return window.HEYS.models.todayISO();
+                        if (typeof window.HEYS?.utils?.getTodayKey === 'function') return window.HEYS.utils.getTodayKey();
+                    } catch (_) { /* fallthrough */ }
+                    const d = new Date();
+                    const pad = (n) => (n < 10 ? '0' + n : '' + n);
+                    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+                };
+
+                const readStored = (key, fallback) => {
+                    try {
+                        const raw = window.HEYS?.store?.get
+                            ? window.HEYS.store.get(key, undefined)
+                            : undefined;
+                        if (raw !== undefined && raw !== null) {
+                            return typeof raw === 'string' ? JSON.parse(raw) : raw;
+                        }
+                    } catch (_) { }
+                    try {
+                        return window.HEYS?.utils?.lsGet ? window.HEYS.utils.lsGet(key, fallback) : fallback;
+                    } catch (_) {
+                        return fallback;
+                    }
+                };
+
+                const dateStr = _todayISO();
+                const scopedPrefix = clientId ? `heys_${clientId}_` : 'heys_';
+                const day = readStored(scopedPrefix + 'dayv2_' + dateStr, null)
+                    || readStored('heys_dayv2_' + dateStr, {});
+                const dayTot = readStored(scopedPrefix + 'dayTot_' + dateStr, null)
+                    || readStored('heys_dayTot_' + dateStr, {});
+                const prof = readStored(scopedPrefix + 'profile', null)
+                    || readStored('heys_profile', {});
+                // v3.5.1: compute normAbs properly (same as buildNutritionState in day tab)
+                // heys_normAbs key is never written → was always {}, causing normKcal fallback
+                // to 2000 and triggering false deficit_overshoot penalties for users eating
+                // within their real TDEE-based goal.
+                const normPerc = readStored(scopedPrefix + 'norms', null)
+                    || readStored('heys_norms', {});
+                const optimumInfo = window.HEYS.dayUtils?.getOptimumForDay?.(day, prof) || {};
+                const normAbs = (window.HEYS.dayCalculations?.computeDailyNorms && optimumInfo.optimum)
+                    ? window.HEYS.dayCalculations.computeDailyNorms(optimumInfo.optimum, normPerc)
+                    : { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
+                console.info('[HEYS.AppTabsNav] ✅ CRS nav warm-up:', {
+                    reason,
+                    date: dateStr,
+                    optimum: optimumInfo.optimum,
+                    normKcal: normAbs.kcal
+                });
+                const pIndex = window.HEYS.products?.getIndex ? window.HEYS.products.getIndex() : {};
+                window.HEYS.CascadeCard.computeCascadeState(day, dayTot, normAbs, prof, pIndex, {
+                    silent: false
+                });
+                return true;
+            } catch (e) {
+                console.warn('[HEYS.AppTabsNav] Failed to warm CRS:', e);
+                return false;
+            }
+        }, [clientId]);
+
+        // Инициализация CRS для прогресс-бара, если он еще не был вычислен.
+        // На не-дневной стартовой вкладке CascadeCard может догрузиться позже nav,
+        // поэтому слушаем готовность lazy-модуля и sync guard unlock.
+        React.useEffect(() => {
+            warmCascadeCrsForNav('mount');
+
+            const handleCascadeReady = () => {
+                tickCascadeNav();
+                warmCascadeCrsForNav('cascade-ready');
+            };
+            const handlePostbootReady = (event) => {
+                if (!event?.detail || event.detail.bundle === 'postboot-1-game') {
+                    handleCascadeReady();
+                }
+            };
+            const handleSyncReady = () => {
+                warmCascadeCrsForNav('sync-ready');
+            };
+            const handleDayUpdated = (event) => {
+                const source = event?.detail?.source;
+                if (source === 'cascade-guard-unlock' || source === 'cloud-sync' || event?.detail?.batch) {
+                    warmCascadeCrsForNav('day-updated');
+                }
+            };
+
+            window.addEventListener('heys:cascade-ready', handleCascadeReady);
+            window.addEventListener('heys:postboot-lazy-ready', handlePostbootReady);
+            window.addEventListener('heysSyncCompleted', handleSyncReady);
+            window.addEventListener('heys:day-updated', handleDayUpdated);
+
+            return () => {
+                window.removeEventListener('heys:cascade-ready', handleCascadeReady);
+                window.removeEventListener('heys:postboot-lazy-ready', handlePostbootReady);
+                window.removeEventListener('heysSyncCompleted', handleSyncReady);
+                window.removeEventListener('heys:day-updated', handleDayUpdated);
+            };
+        }, [warmCascadeCrsForNav]);
 
         return React.createElement(
             'div',
@@ -3754,7 +3864,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             // Настройки — раскрывающееся меню вверх
             React.createElement(
                 'div',
-                { className: 'tab-settings-wrap' },
+                { className: 'tab-settings-wrap', ref: settingsWrapRef },
                 settingsMenuOpen && React.createElement('div', {
                     className: 'tab-settings-backdrop',
                     onClick: () => setSettingsMenuOpen(false)
@@ -3785,7 +3895,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 ),
                 settingsMenuOpen && React.createElement(
                     'div',
-                    { className: 'tab-settings-menu tab-settings-menu--with-home' },
+                    { className: 'tab-settings-menu tab-settings-menu--with-home' + (defaultTab === 'tasks' ? ' tab-settings-menu--tasks-home' : '') },
                     React.createElement(
                         'div',
                         {
@@ -3819,7 +3929,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             onClick: (e) => e.stopPropagation(),
                         },
                         React.createElement('div', {
-                            className: 'widgets-home-tab-picker tab-settings-home-picker',
+                            className: 'widgets-home-tab-picker tab-settings-home-picker' + (defaultTab === 'tasks' ? ' tab-settings-home-picker--tasks-open' : ''),
                         },
                             React.createElement('div', { className: 'widgets-home-tab-picker__title' }, 'Домашняя вкладка'),
                             React.createElement('div', { className: 'widgets-home-tab-picker__hint' },

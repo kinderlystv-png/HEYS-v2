@@ -203,6 +203,11 @@ async function rateLimitCheck(clientId) {
 
 // ── Validation helpers ───────────────────────────────────────────────────
 const VALID_INTENT_TYPES = new Set(['meal', 'training', 'weight']);
+const VALID_ATTACHMENT_TYPES = new Set(['image', 'audio']);
+const VALID_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const VALID_AUDIO_MIME = new Set(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/x-wav']);
+const MAX_AUDIO_DURATION_MS = 5 * 60 * 1000;
+const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
 
 function validateIntent(intentType, intentPayload) {
   if (intentType === null || intentType === undefined) return { ok: true };
@@ -238,6 +243,55 @@ function validateIntent(intentType, intentPayload) {
     }
   }
   return { ok: true };
+}
+
+function normalizeAttachmentType(att) {
+  if (att?.type === 'audio' || att?.media_type === 'audio') return 'audio';
+  return 'image';
+}
+
+function validateAttachments(attachments) {
+  if (!Array.isArray(attachments)) return { ok: false, error: 'invalid_attachments' };
+  if (attachments.length > 10) return { ok: false, error: 'too_many_attachments' };
+  for (const att of attachments) {
+    if (!att || typeof att !== 'object' || Array.isArray(att)) {
+      return { ok: false, error: 'invalid_attachment' };
+    }
+    const type = normalizeAttachmentType(att);
+    if (!VALID_ATTACHMENT_TYPES.has(type)) {
+      return { ok: false, error: 'invalid_attachment_type' };
+    }
+    if (typeof att.url !== 'string' || !/^https:\/\//.test(att.url) || att.url.length > 1200) {
+      return { ok: false, error: 'invalid_attachment_url' };
+    }
+    if (typeof att.path !== 'string' || att.path.length < 3 || att.path.length > 500) {
+      return { ok: false, error: 'invalid_attachment_path' };
+    }
+    const mime = typeof att.mime === 'string' ? att.mime : '';
+    if (type === 'audio') {
+      const durationMs = Number(att.duration_ms || 0);
+      const sizeBytes = Number(att.size_bytes || 0);
+      if (!VALID_AUDIO_MIME.has(mime)) return { ok: false, error: 'invalid_audio_mime' };
+      if (!Number.isFinite(durationMs) || durationMs < 250 || durationMs > MAX_AUDIO_DURATION_MS) {
+        return { ok: false, error: 'invalid_audio_duration' };
+      }
+      if (sizeBytes && (!Number.isFinite(sizeBytes) || sizeBytes > MAX_ATTACHMENT_SIZE_BYTES)) {
+        return { ok: false, error: 'invalid_audio_size' };
+      }
+    } else if (mime && !VALID_IMAGE_MIME.has(mime)) {
+      return { ok: false, error: 'invalid_image_mime' };
+    }
+  }
+  return { ok: true };
+}
+
+function buildAttachmentBadge(attachments) {
+  const imageCount = attachments.filter((att) => normalizeAttachmentType(att) === 'image').length;
+  const audioCount = attachments.filter((att) => normalizeAttachmentType(att) === 'audio').length;
+  const parts = [];
+  if (imageCount > 0) parts.push(`📷${imageCount > 1 ? '×' + imageCount : ''}`);
+  if (audioCount > 0) parts.push(`🎙️${audioCount > 1 ? '×' + audioCount : ''}`);
+  return parts.length ? ' ' + parts.join(' ') : '';
 }
 
 // ── Push delivery (fan-out на все endpoints получателя) ──────────────────
@@ -394,8 +448,9 @@ async function handleSend(identity, body) {
     if (msgBody && msgBody.length > 2000) {
       return { statusCode: 400, body: { error: 'body_too_long' } };
     }
-    if (attachmentsArr.length > 10) {
-      return { statusCode: 400, body: { error: 'too_many_attachments' } };
+    const attachmentsValidation = validateAttachments(attachmentsArr);
+    if (!attachmentsValidation.ok) {
+      return { statusCode: 400, body: { error: attachmentsValidation.error } };
     }
     const intentValidation = validateIntent(intent_type || null, intent_payload || null);
     if (!intentValidation.ok) {
@@ -427,14 +482,15 @@ async function handleSend(identity, body) {
 
     // Push куратору (best-effort, не блокирует ответ)
     const clientName = await fetchClientName(identity.id);
-    const photoCount = attachmentsArr.length;
-    const photoBadge = photoCount > 0 ? ` 📷${photoCount > 1 ? '×' + photoCount : ''}` : '';
+    const attachmentBadge = buildAttachmentBadge(attachmentsArr);
     const baseBody = intent_type
       ? buildIntentPushBody(intent_type, intent_payload)
       : msgBody
         ? (msgBody.length > 80 ? msgBody.slice(0, 77) + '...' : msgBody)
-        : 'фото';
-    const pushBody = baseBody + photoBadge;
+        : attachmentsArr.some((att) => normalizeAttachmentType(att) === 'audio')
+          ? 'голосовое сообщение'
+          : 'фото';
+    const pushBody = baseBody + attachmentBadge;
     // Payload минимальный — match формату cron-reminders payload'а,
     // который реально доезжает до Android в background. requireInteraction
     // и renotify могут тихо подавлять показ при battery saver / minified PWA.
@@ -466,8 +522,9 @@ async function handleSend(identity, body) {
   if (msgBody && msgBody.length > 2000) {
     return { statusCode: 400, body: { error: 'body_too_long' } };
   }
-  if (curatorAttachmentsArr.length > 10) {
-    return { statusCode: 400, body: { error: 'too_many_attachments' } };
+  const curatorAttachmentsValidation = validateAttachments(curatorAttachmentsArr);
+  if (!curatorAttachmentsValidation.ok) {
+    return { statusCode: 400, body: { error: curatorAttachmentsValidation.error } };
   }
 
   const pool = getPool();
@@ -488,13 +545,13 @@ async function handleSend(identity, body) {
   }
 
   // Push клиенту (best-effort)
-  const curatorPhotoBadge = curatorAttachmentsArr.length > 0
-    ? ` 📷${curatorAttachmentsArr.length > 1 ? '×' + curatorAttachmentsArr.length : ''}`
-    : '';
+  const curatorAttachmentBadge = buildAttachmentBadge(curatorAttachmentsArr);
   const baseCuratorBody = msgBody
     ? (msgBody.length > 80 ? msgBody.slice(0, 77) + '...' : msgBody)
-    : 'фото';
-  const pushBody = baseCuratorBody + curatorPhotoBadge;
+    : curatorAttachmentsArr.some((att) => normalizeAttachmentType(att) === 'audio')
+      ? 'голосовое сообщение'
+      : 'фото';
+  const pushBody = baseCuratorBody + curatorAttachmentBadge;
   const pushPayload = {
     title: 'Сообщение от куратора',
     body: pushBody,
@@ -754,6 +811,13 @@ async function handleToggleDone(identity, body) {
     conn.release();
   }
 }
+
+module.exports._test = {
+  validateAttachments,
+  buildAttachmentBadge,
+  normalizeAttachmentType,
+  MAX_AUDIO_DURATION_MS,
+};
 
 // ── Main handler ─────────────────────────────────────────────────────────
 module.exports.handler = async function (event) {

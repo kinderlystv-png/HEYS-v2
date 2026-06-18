@@ -8,6 +8,7 @@
     const KEYBOARD_DISMISS_BOTTOM_VAR = '--heys-keyboard-dismiss-bottom';
     const KEYBOARD_DISMISS_RIGHT_VAR = '--heys-keyboard-dismiss-right';
     const KEYBOARD_DISMISS_SELECTOR = 'input, textarea, [contenteditable=""], [contenteditable="true"], [contenteditable="plaintext-only"]';
+    const KEYBOARD_DISMISS_DISABLED_SELECTOR = '[data-keyboard-dismiss="off"], [data-no-keyboard-dismiss]';
     const KEYBOARD_DISMISS_BLOCKED_INPUT_TYPES = new Set(['button', 'checkbox', 'color', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit']);
 
     function getEditableElement(target) {
@@ -18,6 +19,9 @@
             : target;
 
         if (!candidate || candidate.nodeType !== 1) return null;
+        if (typeof candidate.closest === 'function' && candidate.closest(KEYBOARD_DISMISS_DISABLED_SELECTOR)) {
+            return null;
+        }
 
         if (candidate.matches?.('textarea')) {
             return candidate.disabled || candidate.readOnly ? null : candidate;
@@ -87,19 +91,25 @@
         }
 
         const visualViewport = window.visualViewport;
+        const layoutWidth = Math.max(
+            0,
+            Math.round(window.innerWidth || document.documentElement?.clientWidth || 0),
+        );
         const layoutHeight = Math.max(
             0,
             Math.round(window.innerHeight || document.documentElement?.clientHeight || 0),
         );
+        const viewportWidth = Math.max(0, Math.round(visualViewport?.width || layoutWidth));
         const viewportHeight = Math.max(0, Math.round(visualViewport?.height || layoutHeight));
         const viewportOffsetTop = Math.max(0, Math.round(visualViewport?.offsetTop || 0));
         const viewportOffsetLeft = Math.max(0, Math.round(visualViewport?.offsetLeft || 0));
         const keyboardInset = Math.max(0, layoutHeight - viewportHeight - viewportOffsetTop);
+        const rightInset = Math.max(0, layoutWidth - viewportWidth - viewportOffsetLeft);
         const bottomTabsPx = getBottomTabsOccupiedPx();
 
         return {
             bottom: Math.max(12, Math.max(keyboardInset, bottomTabsPx) + 12),
-            right: Math.max(12, viewportOffsetLeft + 12),
+            right: Math.max(12, rightInset + 12),
         };
     }
 
@@ -211,6 +221,7 @@
 
             const visualViewport = window.visualViewport;
             visualViewport?.addEventListener('resize', scheduleSync);
+            visualViewport?.addEventListener('scroll', scheduleSync);
 
             return () => {
                 if (rafId) cancelAnimationFrame(rafId);
@@ -219,6 +230,7 @@
                 window.removeEventListener('resize', scheduleSync);
                 window.removeEventListener('orientationchange', scheduleSync);
                 visualViewport?.removeEventListener('resize', scheduleSync);
+                visualViewport?.removeEventListener('scroll', scheduleSync);
                 document.documentElement.style.removeProperty(KEYBOARD_DISMISS_BOTTOM_VAR);
                 document.documentElement.style.removeProperty(KEYBOARD_DISMISS_RIGHT_VAR);
             };

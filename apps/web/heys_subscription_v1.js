@@ -63,6 +63,65 @@
     } catch (_) { }
   };
 
+  const readGlobalValue = (key, fallback = null) => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null || raw === undefined) return fallback;
+      return tryParseStoredValue(raw, fallback);
+    } catch (_) {
+      return fallback;
+    }
+  };
+
+  const normalizeClientId = (value) => {
+    if (!value) return '';
+    const parsed = tryParseStoredValue(value, value);
+    return typeof parsed === 'string' ? parsed.replace(/"/g, '') : '';
+  };
+
+  const getCurrentClientId = () => {
+    try {
+      return normalizeClientId(HEYS.currentClientId)
+        || normalizeClientId(localStorage.getItem('heys_client_current'));
+    } catch (_) {
+      return '';
+    }
+  };
+
+  const getLocalSubscriptionStatus = () => {
+    try {
+      const profile = readCacheValue('heys_profile', {}) || {};
+      if (profile.subscription_status) return profile.subscription_status;
+
+      const clientId = getCurrentClientId();
+      const clients = readCacheValue('heys_clients', []) || [];
+      if (clientId && Array.isArray(clients)) {
+        const client = clients.find((c) => c && c.id === clientId);
+        if (client && client.subscription_status) return client.subscription_status;
+      }
+
+      const cached = getCachedStatus();
+      return cached || STATUS.NONE;
+    } catch (_) {
+      return getCachedStatus() || STATUS.NONE;
+    }
+  };
+
+  const isCuratorSession = () => {
+    try {
+      const hasPinAuth = !!readGlobalValue('heys_pin_auth_client', null)
+        || !!readGlobalValue('heys_pin_cookie_session_hint', null);
+      if (hasPinAuth) return false;
+      const hasCuratorJwt = !!readGlobalValue('heys_curator_session', null)
+        || !!readGlobalValue('heys_curator_cookie_session_hint', null);
+      if (hasCuratorJwt) return true;
+      const authToken = readGlobalValue('heys_supabase_auth_token', null);
+      return !!(authToken && authToken.user);
+    } catch (_) {
+      return false;
+    }
+  };
+
   const removeCacheValue = (key) => {
     try {
       if (HEYS.store?.set) HEYS.store.set(key, null);
@@ -133,12 +192,18 @@
     const api = HEYS.YandexAPI;
     if (!api) {
       console.warn('[Subscription] API не готов');
-      return getCachedStatus() || STATUS.NONE;
+      return getLocalSubscriptionStatus();
     }
 
     // Legacy sessions still expose a JS token. Post PR-C sessions use the
     // HttpOnly cookie carrier, so absence of a readable token is not logout.
     const sessionToken = HEYS.auth?.getSessionToken?.();
+    if (isCuratorSession()) {
+      const localStatus = getLocalSubscriptionStatus();
+      setCachedStatus(localStatus);
+      return localStatus;
+    }
+
     const rpcParams = {};
     if (sessionToken) rpcParams.p_session_token = sessionToken;
 
@@ -151,9 +216,7 @@
         if (res.error) {
           // Если сессия невалидна — возможно logout
           if (res.error.message?.includes('invalid_session')) {
-            console.warn('[Subscription] Сессия невалидна');
-            clearCache();
-            return STATUS.NONE;
+            return getLocalSubscriptionStatus();
           }
           throw new Error(res.error.message);
         }
@@ -167,7 +230,9 @@
 
         return status;
       } catch (e) {
-        console.error('[Subscription] getStatus error:', e);
+        if (!/invalid_session|no session token/i.test(String(e?.message || e))) {
+          console.error('[Subscription] getStatus error:', e);
+        }
         return getCachedStatus() || STATUS.NONE;
       } finally {
         // Очищаем in-flight promise после завершения

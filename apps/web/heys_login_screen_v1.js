@@ -628,12 +628,12 @@
           React.createElement(
             'a',
             {
-              href: (window.HEYS && window.HEYS.support && window.HEYS.support.telegramUrl) || 'https://t.me/heyslab_support',
+              href: (window.HEYS && window.HEYS.support && window.HEYS.support.telegramUrl) || 'https://t.me/heyslab_support_bot',
               target: '_blank',
               rel: 'noopener noreferrer',
               className: 'heys-auth-link block',
             },
-            (window.HEYS && window.HEYS.support && window.HEYS.support.telegramHandle) || '@heyslab_support',
+            (window.HEYS && window.HEYS.support && window.HEYS.support.telegramHandle) || '@heyslab_support_bot',
           ),
           React.createElement('div', { className: 'mt-4' }, 'Или позвоните в поддержку:'),
           React.createElement(

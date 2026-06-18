@@ -106,6 +106,105 @@
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }
 
+  function tryParseStoredValue(raw, fallback) {
+    if (raw === null || raw === undefined) return fallback;
+    if (typeof raw !== 'string') return raw;
+    let str = raw;
+    if (str.startsWith('¤Z¤') && HEYS.store?.decompress) {
+      try { str = HEYS.store.decompress(str); } catch (_) { }
+    }
+    try { return JSON.parse(str); } catch (_) { return str; }
+  }
+
+  function readGlobalValue(key, fallback = null) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw === null || raw === undefined ? fallback : tryParseStoredValue(raw, fallback);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function readStoredValue(key, fallback) {
+    try {
+      if (HEYS.store?.get) {
+        const stored = HEYS.store.get(key, null);
+        if (stored !== null && stored !== undefined) return tryParseStoredValue(stored, fallback);
+      }
+      if (HEYS.utils?.lsGet) return HEYS.utils.lsGet(key, fallback);
+      const raw = localStorage.getItem(key);
+      return raw === null || raw === undefined ? fallback : tryParseStoredValue(raw, fallback);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function normalizeClientId(value) {
+    if (!value) return '';
+    const parsed = tryParseStoredValue(value, value);
+    return typeof parsed === 'string' ? parsed.replace(/"/g, '') : '';
+  }
+
+  function getCurrentClientId() {
+    try {
+      return normalizeClientId(HEYS.currentClientId)
+        || normalizeClientId(localStorage.getItem('heys_client_current'));
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function isCuratorSession() {
+    try {
+      const hasPinAuth = !!readGlobalValue('heys_pin_auth_client', null)
+        || !!readGlobalValue('heys_pin_cookie_session_hint', null);
+      if (hasPinAuth) return false;
+      const hasCuratorJwt = !!readGlobalValue('heys_curator_session', null)
+        || !!readGlobalValue('heys_curator_cookie_session_hint', null);
+      if (hasCuratorJwt) return true;
+      const authToken = readGlobalValue('heys_supabase_auth_token', null);
+      return !!(authToken && authToken.user);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getLocalSubscriptionData(clientId) {
+    const cid = normalizeClientId(clientId) || getCurrentClientId();
+    const profile = readStoredValue('heys_profile', {}) || {};
+    let status = profile.subscription_status || '';
+    let plan = profile.subscription_plan || null;
+
+    if (!status && cid) {
+      const clients = readStoredValue('heys_clients', []) || [];
+      if (Array.isArray(clients)) {
+        const client = clients.find((item) => item && normalizeClientId(item.id) === cid);
+        if (client) {
+          status = client.subscription_status || '';
+          plan = plan || client.subscription_plan || null;
+        }
+      }
+    }
+
+    if (!status && HEYS.Subscription?.getCachedStatus) {
+      status = HEYS.Subscription.getCachedStatus() || '';
+    }
+    status = status || 'none';
+
+    return {
+      success: true,
+      status,
+      plan,
+      is_trial: status === 'trial',
+      days_left: daysUntil(profile.trial_ends_at),
+      can_edit: status !== 'read_only',
+      trial_started_at: profile.trial_started_at,
+      trial_ends_at: profile.trial_ends_at,
+      subscription_ends_at: profile.subscription_ends_at,
+      source: isCuratorSession() ? 'local_curator' : 'local_fallback'
+    };
+  }
+
   // =====================================================
   // ПРОВЕРКА PENDING ПЛАТЕЖА
   // =====================================================
@@ -225,6 +324,10 @@
    */
   async function getStatus(clientId) {
     try {
+      if (isCuratorSession()) {
+        return getLocalSubscriptionData(clientId);
+      }
+
       // Используем YandexAPI (session-based)
       if (HEYS.YandexAPI) {
         const sessionToken = HEYS.auth?.getSessionToken?.();
@@ -232,7 +335,13 @@
         if (sessionToken) rpcParams.p_session_token = sessionToken;
         const result = await HEYS.YandexAPI.rpc('get_subscription_status_by_session', rpcParams);
 
-        if (result.error) throw new Error(result.error.message || result.error);
+        if (result.error) {
+          const message = result.error.message || result.error;
+          if (/invalid_session|no session token/i.test(String(message))) {
+            return getLocalSubscriptionData(clientId);
+          }
+          throw new Error(message);
+        }
         // Распаковываем данные: { data: { get_subscription_status_by_session: {...} } }
         const statusData = result.data?.get_subscription_status_by_session || result.data || result;
         devLog('[Subscriptions] getStatus result:', statusData);
@@ -240,22 +349,14 @@
       }
 
       // Fallback: читаем из localStorage
-      const profile = HEYS.utils?.lsGet?.('heys_profile') || {};
-      return {
-        success: true,
-        status: profile.subscription_status || 'trial',
-        plan: profile.subscription_plan || null,
-        is_trial: true,
-        days_left: 7,
-        can_edit: true
-      };
+      return getLocalSubscriptionData(clientId);
     } catch (err) {
       devWarn('[Subscriptions] getStatus error:', err);
       // trackError только для НЕИЗВЕСТНЫХ ошибок (не для "нет токена" — это нормально)
-      if (!/no session token/i.test(err.message || '')) {
+      if (!/invalid_session|no session token/i.test(err.message || '')) {
         trackError(err, { scope: 'Subscriptions', action: 'getStatus' });
       }
-      return { success: false, error: err.message, can_edit: true };
+      return getLocalSubscriptionData(clientId);
     }
   }
 
@@ -1037,7 +1138,7 @@
     HEYS.config.paymentsEnabled = false;
   }
   if (typeof HEYS.config.curatorContactUrl !== 'string') {
-    HEYS.config.curatorContactUrl = (HEYS.support && HEYS.support.telegramUrl) || 'https://t.me/heyslab_support';
+    HEYS.config.curatorContactUrl = (HEYS.support && HEYS.support.telegramUrl) || 'https://t.me/heyslab_support_bot';
   }
 
   /**

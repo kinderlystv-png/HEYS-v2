@@ -868,7 +868,26 @@ html.dark .water-tip-text {
   align-items: flex-end;
   gap: 6px;
   z-index: 1001;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+  transition:
+    opacity 420ms ease 90ms,
+    transform 460ms cubic-bezier(0.22, 1, 0.36, 1) 70ms,
+    filter 360ms ease 90ms;
   /* Выше меню .tabs (z-index: 1000) */
+}
+
+body:has(.advice-list-overlay) .fab-group,
+body:has(.macro-toast.visible) .fab-group {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.96);
+  filter: blur(1px);
+  transition:
+    opacity 150ms ease,
+    transform 190ms cubic-bezier(0.32, 0.72, 0, 1),
+    filter 150ms ease;
 }
 
 body.widgets-edit-mode .fab-group {

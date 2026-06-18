@@ -2468,12 +2468,28 @@
                 // Не автовыбираем клиента — куратор должен выбрать сам через модалку
                 // clientId остаётся null → показывается модалка выбора клиента
 
-                const rawProducts = window.HEYS?.products?.getAll?.() || [];
-                const loadedProducts = migrateProductsKcalNetAtwater(rawProducts);
-                if (loadedProducts !== rawProducts) {
-                    window.HEYS?.products?.setAll?.(loadedProducts, { source: 'atwater-migration' });
+                const activeClientId = (() => {
+                    try {
+                        return window.HEYS?.currentClientId || readGlobalValue('heys_client_current', '') || '';
+                    } catch (_) {
+                        return '';
+                    }
+                })();
+                const hasSelectedClient = !!(activeClientId && loadedResult.data?.some((c) => c?.id === activeClientId));
+
+                // Curator login lands on client selection. Product catalog is client-scoped,
+                // so reading/migrating it before a real clientId can write under the default
+                // placeholder scope and trigger the switch hard-reset loop.
+                if (hasSelectedClient) {
+                    const rawProducts = window.HEYS?.products?.getAll?.() || [];
+                    const loadedProducts = migrateProductsKcalNetAtwater(rawProducts);
+                    if (loadedProducts !== rawProducts) {
+                        window.HEYS?.products?.setAll?.(loadedProducts, { source: 'atwater-migration' });
+                    }
+                    setProducts(loadedProducts);
+                } else {
+                    setProducts([]);
                 }
-                setProducts(loadedProducts);
                 setSyncVer((v) => v + 1);
             } catch (e) {
                 setStatus('offline');
