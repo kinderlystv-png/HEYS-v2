@@ -70,6 +70,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return mime === 'audio/ogg' || mime === 'audio/wav' || mime === 'audio/x-wav';
   }
 
+  function isPendingTranscript(attachment) {
+    const status = attachment?.transcript_status || 'none';
+    return status === 'queued' || status === 'processing';
+  }
+
   function transcriptText(attachment, options = {}) {
     const status = attachment?.transcript_status || 'none';
     if (status === 'ready' && attachment?.transcript_text) return attachment.transcript_text;
@@ -85,6 +90,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function attachmentKey(att, idx) {
     return att?.url || att?.path || att?.localPreview || att?.tempId || idx;
+  }
+
+  function pendingTranscriptKey(messages) {
+    const parts = [];
+    for (const message of Array.isArray(messages) ? messages : []) {
+      const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
+      attachments.forEach((att, idx) => {
+        if (!isAudioAttachment(att) || !isPendingTranscript(att)) return;
+        parts.push(`${message.id || 'message'}:${attachmentKey(att, idx)}`);
+      });
+    }
+    return parts.join('|');
   }
 
   function getWaveformBars(att) {
@@ -1004,17 +1021,54 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       }, 10000);
       // Также refresh при возврате во вкладку (если пропустили несколько polls)
-      const onVisibility = () => {
+      const refreshIfVisible = () => {
         if (document.visibilityState === 'visible') {
           fetchAndMerge({ silent: true });
         }
       };
-      document.addEventListener('visibilitychange', onVisibility);
+      document.addEventListener('visibilitychange', refreshIfVisible);
+      window.addEventListener('focus', refreshIfVisible);
+      window.addEventListener('pageshow', refreshIfVisible);
+      window.addEventListener('online', refreshIfVisible);
       return () => {
         clearInterval(interval);
-        document.removeEventListener('visibilitychange', onVisibility);
+        document.removeEventListener('visibilitychange', refreshIfVisible);
+        window.removeEventListener('focus', refreshIfVisible);
+        window.removeEventListener('pageshow', refreshIfVisible);
+        window.removeEventListener('online', refreshIfVisible);
       };
     }, [fetchAndMerge]);
+
+    const activeTranscriptionKey = React.useMemo(() => pendingTranscriptKey(messages), [messages]);
+
+    // Pending voice transcripts need a tighter watch than ordinary chat polling.
+    // It stops as soon as fresh server data no longer contains queued/processing audio.
+    useEffect(() => {
+      if (!activeTranscriptionKey) return undefined;
+      let stopped = false;
+      let timer = null;
+      let attempts = 0;
+      const schedule = (delayMs) => {
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+          if (stopped) return;
+          try {
+            if (document.visibilityState === 'visible') {
+              attempts += 1;
+              await fetchAndMerge({ silent: true });
+            }
+          } finally {
+            const delay = attempts < 8 ? 3500 : 10000;
+            schedule(delay);
+          }
+        }, delayMs);
+      };
+      schedule(1200);
+      return () => {
+        stopped = true;
+        clearTimeout(timer);
+      };
+    }, [activeTranscriptionKey, fetchAndMerge]);
 
     // Smart scroll: запоминаем был ли в самом низу ДО рендера, потом
     // скроллим только если был внизу (чтобы не утянуть пользователя

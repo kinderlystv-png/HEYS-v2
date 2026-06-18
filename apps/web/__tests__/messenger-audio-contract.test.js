@@ -294,6 +294,16 @@ describe('messenger audio media contract', () => {
     expect(messengerSource).toContain('convertBlobToSpeechkitWav(uploadBlob)');
   });
 
+  it('refreshes pending voice transcripts on foreground and with a tighter watch', () => {
+    const messengerSource = fs.readFileSync(path.resolve(__dirname, '../heys_messenger_v1.js'), 'utf8');
+
+    expect(messengerSource).toContain('function pendingTranscriptKey(messages)');
+    expect(messengerSource).toContain("status === 'queued' || status === 'processing'");
+    expect(messengerSource).toContain("window.addEventListener('focus', refreshIfVisible)");
+    expect(messengerSource).toContain('schedule(1200)');
+    expect(messengerSource).toContain('attempts < 8 ? 3500 : 10000');
+  });
+
   it('StorageMedia.uploadAudio posts to /photos/upload with auth-safe payload', async () => {
     const blob = new Blob(['voice'], { type: 'audio/ogg;codecs=opus' });
     global.fetch = vi.fn().mockResolvedValue({
