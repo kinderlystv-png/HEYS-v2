@@ -241,7 +241,7 @@ user_id, даты и времени, версии документа, спосо
 ## 13. Контакты
 
 - **Email**: support@heys.app
-- **Telegram**: @heyslab_support
+- **Telegram**: @heyslab_support_bot
 
 ---
 

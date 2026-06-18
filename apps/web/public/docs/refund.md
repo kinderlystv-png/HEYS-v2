@@ -104,7 +104,7 @@
 ## 7. Контакты
 
 - **По вопросам возврата:** poplanton@mail.ru
-- **Поддержка в Telegram:** @heyslab_support
+- **Поддержка в Telegram:** @heyslab_support_bot
 - **Регулятор (по защите прав потребителей):** Роспотребнадзор, rpn.gov.ru
 
 ---

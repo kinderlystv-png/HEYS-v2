@@ -48,6 +48,11 @@ Telegram-handle поддержки `@heys_support`. На повторной пр
 - [apps/web/public/docs/v1.2/user-agreement.md:202](../../../apps/web/public/docs/v1.2/user-agreement.md)
 - [docs/legal/user-agreement.md:244](../user-agreement.md)
 
+**Update 2026-06-18:** BotFather показывает фактический username бота поддержки
+как `@heyslab_support_bot`; `@heyslab_support` не является рабочим bot username.
+Текущие и архивные контактные строки обновлены на `@heyslab_support_bot` по тому
+же правилу контактных данных.
+
 **Обоснование правки в архивных снимках (v1.2, v1.5):**
 
 1. Раздел «Контакты» — справочная информация, не предмет акцепта.

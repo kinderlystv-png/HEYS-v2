@@ -40,8 +40,8 @@ export const LEGAL_DOCS = {
 export const SUPPORT_CONTACTS = {
   generalEmail: 'poplanton@mail.ru',
   privacyEmail: 'poplanton@mail.ru',
-  telegramHandle: '@heyslab_support',
-  telegramUrl: 'https://t.me/heyslab_support',
+  telegramHandle: '@heyslab_support_bot',
+  telegramUrl: 'https://t.me/heyslab_support_bot',
 } as const
 
 export const OPERATOR = {

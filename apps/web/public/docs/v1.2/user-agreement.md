@@ -199,7 +199,7 @@
 ## 12. Контакты
 
 - **Email**: support@heys.app
-- **Telegram**: @heyslab_support
+- **Telegram**: @heyslab_support_bot
 
 ---
 
