@@ -19,7 +19,8 @@
     payment_oferta:     '1.3',
     push_notifications: '1.0',
     curator_access:     '1.0',
-    _updatedAt:         '2026-06-10'
+    speech_transcription: '1.0',
+    _updatedAt:         '2026-06-18'
   };
 
   // Required types для check_required_consents_v2 — обязательные согласия,
@@ -38,7 +39,8 @@
     marketing:          'Маркетинговые материалы',
     payment_oferta:     'Оферта на оплату',
     push_notifications: 'Push-уведомления',
-    curator_access:     'Доступ куратора к моим данным'
+    curator_access:     'Доступ куратора к моим данным',
+    speech_transcription: 'Расшифровка голосовых сообщений'
   });
 
   HEYS.LegalVersions = Object.freeze(versions);

@@ -200,7 +200,7 @@ function inferMediaType(contentType, requestedType) {
 }
 
 function normalizeUploadMeta(body) {
-  const contentType = body?.content_type || 'image/jpeg';
+  const contentType = String(body?.content_type || 'image/jpeg').split(';')[0].trim().toLowerCase();
   const mediaType = inferMediaType(contentType, body?.media_type);
   const mimeToExt = mediaType === 'audio' ? AUDIO_MIME_TO_EXT : IMAGE_MIME_TO_EXT;
   const ext = mimeToExt[contentType];
@@ -225,8 +225,9 @@ function buildKey({ clientId, date, mealId, ext, mediaType }) {
 }
 
 function hasAudioSignature(buf, contentType) {
+  const baseContentType = String(contentType || '').split(';')[0].trim().toLowerCase();
   if (!Buffer.isBuffer(buf) || buf.length < MIN_AUDIO_BYTES) return false;
-  switch (contentType) {
+  switch (baseContentType) {
     case 'audio/webm':
       return buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3;
     case 'audio/ogg':

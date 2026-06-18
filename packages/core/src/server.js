@@ -83,6 +83,50 @@ app.get('/api/analytics', (req, res) => {
 
 // Dev proxy: forward /rpc and /rest to production API (server-to-server, no CORS issues)
 const PROD_API = (process.env.HEYS_DEV_PROXY_TARGET || 'https://api.heyslab.ru').replace(/\/$/, '');
+const devTranscriptionConsentByAuth = new Map();
+
+function getDevTranscriptionConsentKey(req) {
+  const auth = req.headers.authorization || req.headers.Authorization || '';
+  const cookie = req.headers.cookie || '';
+  return String(auth || cookie || 'anonymous').slice(0, 240);
+}
+
+function buildDevTranscriptionConsentResponse(stamp) {
+  return {
+    success: true,
+    consent_type: 'speech_transcription',
+    version: stamp?.version || '1.0',
+    granted: !!(stamp?.granted && !stamp?.revoked_at),
+    decided: !!stamp,
+    created_at: stamp?.created_at || null,
+    revoked_at: stamp?.revoked_at || null,
+    dev_local_only: true,
+  };
+}
+
+app.all('/messages/transcription-consent', (req, res) => {
+  const key = getDevTranscriptionConsentKey(req);
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method === 'GET') {
+    return res.json(buildDevTranscriptionConsentResponse(devTranscriptionConsentByAuth.get(key) || null));
+  }
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'method_not_allowed' });
+  }
+
+  const granted = req.body?.granted !== false;
+  const now = new Date().toISOString();
+  const previous = devTranscriptionConsentByAuth.get(key) || null;
+  const stamp = {
+    version: '1.0',
+    granted,
+    created_at: now,
+    revoked_at: granted ? null : now,
+    previous_created_at: previous?.created_at || null,
+  };
+  devTranscriptionConsentByAuth.set(key, stamp);
+  return res.json(buildDevTranscriptionConsentResponse(stamp));
+});
 
 function buildUpstreamHeaders(req) {
   const h = {};

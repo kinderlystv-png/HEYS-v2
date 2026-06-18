@@ -48,8 +48,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return `${min}:${String(sec).padStart(2, '0')}`;
   }
 
+  function formatConsentDate(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleDateString('ru-RU');
+    } catch {
+      return '';
+    }
+  }
+
   function isAudioAttachment(att) {
     return att?.type === 'audio' || att?.media_type === 'audio' || String(att?.mime || '').startsWith('audio/');
+  }
+
+  function normalizeMime(mime) {
+    return String(mime || '').split(';')[0].trim().toLowerCase();
+  }
+
+  function supportsPilotTranscription(att) {
+    return normalizeMime(att?.mime) === 'audio/ogg';
+  }
+
+  function transcriptText(attachment) {
+    const status = attachment?.transcript_status || 'none';
+    if (status === 'ready' && attachment?.transcript_text) return attachment.transcript_text;
+    if (status === 'queued' || status === 'processing') return 'расшифровываем...';
+    if (status === 'failed') return 'не удалось расшифровать';
+    return '';
   }
 
   function attachmentKey(att, idx) {
@@ -71,9 +96,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function pickRecorderMime() {
     const candidates = [
+      'audio/ogg;codecs=opus',
       'audio/webm;codecs=opus',
       'audio/webm',
-      'audio/ogg;codecs=opus',
       'audio/mp4',
     ];
     if (typeof MediaRecorder === 'undefined') return '';
@@ -218,46 +243,54 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setCurrentMs(durationMs * next);
     };
 
+    const transcript = transcriptText(attachment);
     return React.createElement(
       'div',
-      {
-        className: `msg-audio${compact ? ' msg-audio-compact' : ''}${playing ? ' is-playing' : ''}${playError ? ' is-error' : ''}`,
-      },
-      React.createElement('audio', {
-        ref: audioRef,
-        src: attachment.localUrl || attachment.url || '',
-        preload: 'metadata',
-      }),
-      React.createElement('button', {
-        type: 'button',
-        className: 'msg-audio-play',
-        onClick: toggle,
-        'aria-label': playing ? 'Пауза' : loading ? 'Загрузка голосового' : 'Воспроизвести голосовое',
-      }, loading ? '…' : playing ? '❚❚' : '▶'),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          className: 'msg-audio-wave',
-          onClick: seek,
-          'aria-label': 'Перемотать голосовое',
-        },
-        bars.map((h, i) =>
-          React.createElement('span', {
-            key: i,
-            className: i / Math.max(1, bars.length - 1) <= progress ? 'is-played' : '',
-            style: { height: `${Math.round(12 + h * 22)}px` },
-          }),
-        ),
-      ),
+      { className: 'msg-audio-block' },
       React.createElement(
         'div',
-        { className: 'msg-audio-meta' },
-        React.createElement('span', null, formatDuration(currentMs || durationMs)),
-        loading && React.createElement('span', { className: 'msg-audio-pending' }, 'загрузка'),
-        playError && React.createElement('span', { className: 'msg-audio-error' }, playError),
-        attachment.pending && React.createElement('span', { className: 'msg-audio-pending' }, 'загрузка'),
+        {
+          className: `msg-audio${compact ? ' msg-audio-compact' : ''}${playing ? ' is-playing' : ''}${playError ? ' is-error' : ''}`,
+        },
+        React.createElement('audio', {
+          ref: audioRef,
+          src: attachment.localUrl || attachment.url || '',
+          preload: 'metadata',
+        }),
+        React.createElement('button', {
+          type: 'button',
+          className: 'msg-audio-play',
+          onClick: toggle,
+          'aria-label': playing ? 'Пауза' : loading ? 'Загрузка голосового' : 'Воспроизвести голосовое',
+        }, loading ? '…' : playing ? '❚❚' : '▶'),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            className: 'msg-audio-wave',
+            onClick: seek,
+            'aria-label': 'Перемотать голосовое',
+          },
+          bars.map((h, i) =>
+            React.createElement('span', {
+              key: i,
+              className: i / Math.max(1, bars.length - 1) <= progress ? 'is-played' : '',
+              style: { height: `${Math.round(12 + h * 22)}px` },
+            }),
+          ),
+        ),
+        React.createElement(
+          'div',
+          { className: 'msg-audio-meta' },
+          React.createElement('span', null, formatDuration(currentMs || durationMs)),
+          loading && React.createElement('span', { className: 'msg-audio-pending' }, 'загрузка'),
+          playError && React.createElement('span', { className: 'msg-audio-error' }, playError),
+          attachment.pending && React.createElement('span', { className: 'msg-audio-pending' }, 'загрузка'),
+        ),
       ),
+      transcript && React.createElement('div', {
+        className: `msg-audio-transcript${attachment.transcript_status === 'failed' ? ' is-error' : ''}${attachment.transcript_status === 'queued' || attachment.transcript_status === 'processing' ? ' is-pending' : ''}`,
+      }, transcript),
     );
   }
 
@@ -740,6 +773,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [pendingAudio, setPendingAudio] = useState(null); // {tempId, status, localUrl, url?, path?, mime, duration_ms, size_bytes}
     const [recordingState, setRecordingState] = useState('idle'); // idle|recording|stopping
     const [recordingMs, setRecordingMs] = useState(0);
+    const [transcriptionConsent, setTranscriptionConsent] = useState(null); // {granted, decided, created_at, revoked_at, version}
+    const [transcriptionPromptOpen, setTranscriptionPromptOpen] = useState(false);
+    const [savingTranscriptionConsent, setSavingTranscriptionConsent] = useState(false);
     const [lightbox, setLightbox] = useState(null); // {attachments, index} | null
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deletingMessageId, setDeletingMessageId] = useState(null);
@@ -781,6 +817,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const lastForeignIdRef = useRef(null);
     // Was scrolled at bottom при последнем render (для smart scroll)
     const wasAtBottomRef = useRef(true);
+
+    const refreshTranscriptionConsent = useCallback(async () => {
+      if (!HEYS.MessengerAPI?.getTranscriptionConsent) return null;
+      const res = await HEYS.MessengerAPI.getTranscriptionConsent();
+      if (res?.success) {
+        const next = {
+          granted: !!res.granted,
+          decided: !!res.decided,
+          created_at: res.created_at || null,
+          revoked_at: res.revoked_at || null,
+          version: res.version || '1.0',
+        };
+        setTranscriptionConsent(next);
+        return next;
+      }
+      return null;
+    }, []);
+
+    useEffect(() => {
+      void refreshTranscriptionConsent();
+    }, [refreshTranscriptionConsent]);
 
     const fetchAndMerge = useCallback(async ({ silent = false } = {}) => {
       if (!silent) setLoading(true);
@@ -1181,6 +1238,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setPendingPhotos((prev) => prev.filter((p) => p.tempId !== tempId));
     };
 
+    const needsTranscriptionConsentPrompt = async (audio) => {
+      if (!audio || !supportsPilotTranscription(audio)) return false;
+      const known = transcriptionConsent || await refreshTranscriptionConsent();
+      return !known?.decided;
+    };
+
     const handleSend = async () => {
       const trimmed = input.trim();
       const readyAttachments = pendingPhotos.filter((p) => p.status === 'done');
@@ -1197,6 +1260,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
       // Должно быть хоть что-то: текст, фото или голосовое.
       if (!trimmed && readyAttachments.length === 0 && !readyAudio) return;
+      if (await needsTranscriptionConsentPrompt(readyAudio)) {
+        setTranscriptionPromptOpen(true);
+        return;
+      }
       if (sending) return;
       setSending(true);
       setError(null);
@@ -1214,16 +1281,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         mime: p.mime || 'image/jpeg',
       }));
       if (readyAudio) {
-        attachmentsToSend.push({
+        const audioAttachment = {
           type: 'audio',
           url: readyAudio.url,
           path: readyAudio.path,
           filename: readyAudio.filename || 'voice-message.webm',
-          mime: readyAudio.mime || 'audio/webm',
+          mime: normalizeMime(readyAudio.mime || 'audio/webm'),
           duration_ms: readyAudio.duration_ms,
           size_bytes: readyAudio.size_bytes,
           waveform: readyAudio.waveform || getWaveformBars(readyAudio),
-        });
+        };
+        if (supportsPilotTranscription(audioAttachment)) {
+          audioAttachment.transcript_status = transcriptionConsent?.granted ? 'queued' : 'consent_required';
+          if (transcriptionConsent?.granted) audioAttachment.transcript_provider = 'yandex_speechkit';
+        }
+        attachmentsToSend.push(audioAttachment);
       }
       const attachmentsForDisplay = attachmentsToSend.map((att) => ({ ...att }));
       if (readyAudio?.localUrl) {
@@ -1361,6 +1433,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.MessengerAPI.refreshFabUnread?.();
       // Inbox cache актуален только для куратора (он показывает счёт по клиентам)
       if (isCurator) HEYS.MessengerAPI.refreshInbox?.();
+    };
+
+    const handleTranscriptionConsentChoice = async (granted) => {
+      if (!HEYS.MessengerAPI?.setTranscriptionConsent) {
+        setTranscriptionPromptOpen(false);
+        setTranscriptionConsent({ granted: false, decided: true, version: '1.0' });
+        setError('Не удалось сохранить согласие на расшифровку.');
+        return;
+      }
+      setSavingTranscriptionConsent(true);
+      const res = await HEYS.MessengerAPI.setTranscriptionConsent(!!granted);
+      setSavingTranscriptionConsent(false);
+      if (!res?.success) {
+        setError(res?.error || 'transcription_consent_failed');
+        return;
+      }
+      setTranscriptionConsent({
+        granted: !!res.granted,
+        decided: !!res.decided,
+        created_at: res.created_at || null,
+        revoked_at: res.revoked_at || null,
+        version: res.version || '1.0',
+      });
+      setTranscriptionPromptOpen(false);
+      setTimeout(() => { void handleSend(); }, 0);
+    };
+
+    const handleTranscriptionSettingsToggle = async () => {
+      const currentlyGranted = !!transcriptionConsent?.granted;
+      if (currentlyGranted && !window.confirm('Отозвать согласие на расшифровку новых голосовых сообщений?')) return;
+      setSavingTranscriptionConsent(true);
+      setError(null);
+      const res = await HEYS.MessengerAPI?.setTranscriptionConsent?.(!currentlyGranted);
+      setSavingTranscriptionConsent(false);
+      if (!res?.success) {
+        setError(res?.error || 'transcription_consent_failed');
+        return;
+      }
+      setTranscriptionConsent({
+        granted: !!res.granted,
+        decided: !!res.decided,
+        created_at: res.created_at || null,
+        revoked_at: res.revoked_at || null,
+        version: res.version || '1.0',
+      });
     };
 
     return React.createElement(
@@ -1561,6 +1678,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   }, '✕'),
                 ),
           ),
+        HEYS.MessengerAPI?.setTranscriptionConsent &&
+          React.createElement(
+            'div',
+            { className: `messenger-transcription-settings${transcriptionConsent?.granted ? ' is-enabled' : ''}` },
+            React.createElement(
+              'div',
+              { className: 'messenger-transcription-settings__text' },
+              React.createElement('span', { className: 'messenger-transcription-settings__title' }, 'Расшифровка голосовых'),
+              React.createElement(
+                'span',
+                { className: 'messenger-transcription-settings__status' },
+                transcriptionConsent?.granted
+                  ? `включена${formatConsentDate(transcriptionConsent.created_at) ? ' с ' + formatConsentDate(transcriptionConsent.created_at) : ''}`
+                  : transcriptionConsent?.decided
+                    ? 'выключена'
+                    : 'спросим перед первым OggOpus голосовым',
+              ),
+            ),
+            React.createElement('button', {
+              type: 'button',
+              className: 'messenger-transcription-settings__button',
+              disabled: savingTranscriptionConsent,
+              onClick: handleTranscriptionSettingsToggle,
+            }, savingTranscriptionConsent ? '...' : transcriptionConsent?.granted ? 'Отозвать' : 'Включить'),
+          ),
         // Input
         React.createElement(
           'div',
@@ -1626,6 +1768,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             sending ? '...' : '➤',
           ),
         ),
+        transcriptionPromptOpen &&
+          React.createElement(
+            'div',
+            { className: 'messenger-consent-backdrop' },
+            React.createElement(
+              'div',
+              { className: 'messenger-consent-dialog', role: 'dialog', 'aria-label': 'Согласие на расшифровку' },
+              React.createElement('div', { className: 'messenger-consent-title' }, 'Расшифровывать голосовые?'),
+              React.createElement(
+                'div',
+                { className: 'messenger-consent-text' },
+                'Для автоматической расшифровки аудио будет передано в Yandex SpeechKit. Голосовое отправится в любом случае.',
+              ),
+              React.createElement(
+                'div',
+                { className: 'messenger-consent-actions' },
+                React.createElement('button', {
+                  type: 'button',
+                  className: 'messenger-consent-secondary',
+                  disabled: savingTranscriptionConsent,
+                  onClick: () => handleTranscriptionConsentChoice(false),
+                }, 'Без расшифровки'),
+                React.createElement('button', {
+                  type: 'button',
+                  className: 'messenger-consent-primary',
+                  disabled: savingTranscriptionConsent,
+                  onClick: () => handleTranscriptionConsentChoice(true),
+                }, savingTranscriptionConsent ? 'Сохраняю...' : 'Согласен'),
+              ),
+            ),
+          ),
         // Lightbox для фото
         lightbox &&
           React.createElement(

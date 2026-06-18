@@ -100,6 +100,10 @@
         };
     }
 
+    function normalizeMime(mime) {
+        return String(mime || '').split(';')[0].trim().toLowerCase();
+    }
+
     async function uploadViaYandex({ base64Data, clientId, date, mealId, blob }) {
         const api = HEYS?.YandexAPI;
         if (!api) {
@@ -272,7 +276,7 @@
             client_id: clientId,
             date,
             meal_id: messageId,
-            content_type: blob?.type || audioPayload.mime || 'audio/webm',
+            content_type: normalizeMime(blob?.type || audioPayload.mime || 'audio/webm'),
             duration_ms: durationMs,
             size_bytes: blob?.size || undefined,
             session_token: sessionToken || undefined,

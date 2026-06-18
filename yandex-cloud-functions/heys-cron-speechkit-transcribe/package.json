@@ -1,0 +1,9 @@
+{
+  "name": "heys-cron-speechkit-transcribe",
+  "version": "1.0.0",
+  "description": "HEYS Cron — async Yandex SpeechKit transcription jobs for messenger voice messages",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}

@@ -144,10 +144,22 @@
    *   curator → client: { client_id, body, attachments? }
    * attachments:
    *   image — {type:'image', url, path, filename?, mime?, width?, height?}
-   *   audio — {type:'audio', url, path, filename?, mime?, duration_ms, size_bytes?, waveform?}
+   *   audio — {type:'audio', url, path, filename?, mime?, duration_ms, size_bytes?, waveform?,
+   *            transcript_status?, transcript_text?, transcript_provider?, transcript_created_at?, transcript_error?}
    */
   async function send(payload) {
     return call('/messages/send', { method: 'POST', body: payload });
+  }
+
+  async function getTranscriptionConsent() {
+    return call('/messages/transcription-consent');
+  }
+
+  async function setTranscriptionConsent(granted) {
+    return call('/messages/transcription-consent', {
+      method: 'POST',
+      body: { granted: !!granted },
+    });
   }
 
   /**
@@ -369,6 +381,8 @@
 
   HEYS.MessengerAPI = {
     send,
+    getTranscriptionConsent,
+    setTranscriptionConsent,
     getThread,
     getInbox,
     markRead,

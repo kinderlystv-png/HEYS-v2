@@ -18,7 +18,8 @@
     PERSONAL_DATA: 'personal_data',
     HEALTH_DATA: 'health_data',
     MARKETING: 'marketing',
-    PAYMENT_OFERTA: 'payment_oferta'
+    PAYMENT_OFERTA: 'payment_oferta',
+    SPEECH_TRANSCRIPTION: 'speech_transcription'
   };
 
   const CURRENT_VERSIONS = {
@@ -26,7 +27,8 @@
     personal_data: '1.5',
     health_data: '1.3',  // Отдельный документ согласия на данные о здоровье
     marketing: '1.2',
-    payment_oferta: '1.3'  // Акцепт оферты при оплате (ст. 438 ГК РФ). Бамп 1.2→1.3 (2026-06-10): изменены цены (Self/Pro/Pro+) → текст оферты изменился. СИНХРОННО: heys_legal_versions_v1.js + PAYMENT_OFERTA_VERSION в heys-api-payments (+ редеплой функции вместе с фронтендом)
+    payment_oferta: '1.3',  // Акцепт оферты при оплате (ст. 438 ГК РФ). Бамп 1.2→1.3 (2026-06-10): изменены цены (Self/Pro/Pro+) → текст оферты изменился. СИНХРОННО: heys_legal_versions_v1.js + PAYMENT_OFERTA_VERSION в heys-api-payments (+ редеплой функции вместе с фронтендом)
+    speech_transcription: '1.0'
   };
 
   const REQUIRED_CONSENTS = [
@@ -93,6 +95,11 @@
         link: 'https://heyslab.ru/legal/user-agreement',
         secondaryLink: 'https://heyslab.ru/legal/privacy-policy',
         required: true
+      },
+      speech_transcription: {
+        label: 'Согласен на передачу голосовых сообщений в Yandex SpeechKit для автоматической расшифровки',
+        link: null,
+        required: false
       }
     },
 

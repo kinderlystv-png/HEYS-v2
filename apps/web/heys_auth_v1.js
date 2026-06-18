@@ -555,7 +555,9 @@
     const token = getSessionToken();
     let shouldTryCookieLogout = false;
     try {
-      shouldTryCookieLogout = hasCookieSessionHint('pin');
+      const host = global.location?.hostname || '';
+      shouldTryCookieLogout = !!host && host !== 'localhost' && host !== '127.0.0.1';
+      shouldTryCookieLogout = shouldTryCookieLogout || hasCookieSessionHint('pin');
     } catch (_) { /* noop */ }
 
     const api = HEYS.YandexAPI;

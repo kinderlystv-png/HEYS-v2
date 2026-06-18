@@ -542,6 +542,23 @@ paths:
         type: cloud_functions
         function_id: d4ep21a89307vs93b0ns
 
+  /messages/transcription-consent:
+    get:
+      summary: Get SpeechKit transcription consent
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    post:
+      summary: Save SpeechKit transcription consent
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4ep21a89307vs93b0ns
+
   /messages/toggle-acked:
     post:
       summary: Client toggles acked_at on a curator message

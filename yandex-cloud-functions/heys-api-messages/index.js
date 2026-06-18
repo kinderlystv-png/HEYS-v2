@@ -206,8 +206,37 @@ const VALID_INTENT_TYPES = new Set(['meal', 'training', 'weight']);
 const VALID_ATTACHMENT_TYPES = new Set(['image', 'audio']);
 const VALID_IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const VALID_AUDIO_MIME = new Set(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/x-wav']);
+const VALID_TRANSCRIPT_STATUSES = new Set([
+  'none',
+  'queued',
+  'processing',
+  'ready',
+  'failed',
+  'unsupported_format',
+  'budget_capped',
+  'consent_required',
+]);
+const TRANSCRIPTION_CONSENT_TYPE = 'speech_transcription';
+const TRANSCRIPTION_CONSENT_VERSION = '1.0';
+const TRANSCRIPTION_PROVIDER = 'yandex_speechkit';
+const SUPPORTED_TRANSCRIPTION_MIME = new Set(['audio/ogg']);
 const MAX_AUDIO_DURATION_MS = 5 * 60 * 1000;
 const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_TRANSCRIPT_TEXT_LENGTH = 4000;
+
+function normalizeMime(mime) {
+  return String(mime || '').split(';')[0].trim().toLowerCase();
+}
+
+function estimateSpeechKitCost(durationMs, pricePer15s = process.env.SPEECHKIT_ASYNC_PRICE_PER_15S_RUB) {
+  const price = Number(pricePer15s || 0);
+  const seconds = Math.max(15, Math.ceil(Number(durationMs || 0) / 1000));
+  const billableSeconds = Math.ceil(seconds / 15) * 15;
+  return {
+    billableSeconds,
+    estimatedCostRub: Number.isFinite(price) && price > 0 ? (billableSeconds / 15) * price : 0,
+  };
+}
 
 function validateIntent(intentType, intentPayload) {
   if (intentType === null || intentType === undefined) return { ok: true };
@@ -267,7 +296,7 @@ function validateAttachments(attachments) {
     if (typeof att.path !== 'string' || att.path.length < 3 || att.path.length > 500) {
       return { ok: false, error: 'invalid_attachment_path' };
     }
-    const mime = typeof att.mime === 'string' ? att.mime : '';
+    const mime = normalizeMime(att.mime);
     if (type === 'audio') {
       const durationMs = Number(att.duration_ms || 0);
       const sizeBytes = Number(att.size_bytes || 0);
@@ -278,11 +307,283 @@ function validateAttachments(attachments) {
       if (sizeBytes && (!Number.isFinite(sizeBytes) || sizeBytes > MAX_ATTACHMENT_SIZE_BYTES)) {
         return { ok: false, error: 'invalid_audio_size' };
       }
+      const transcriptStatus = att.transcript_status;
+      if (transcriptStatus && !VALID_TRANSCRIPT_STATUSES.has(transcriptStatus)) {
+        return { ok: false, error: 'invalid_transcript_status' };
+      }
+      if (att.transcript_text !== undefined &&
+          (typeof att.transcript_text !== 'string' || att.transcript_text.length > MAX_TRANSCRIPT_TEXT_LENGTH)) {
+        return { ok: false, error: 'invalid_transcript_text' };
+      }
+      if (att.transcript_provider !== undefined &&
+          (typeof att.transcript_provider !== 'string' || att.transcript_provider.length > 80)) {
+        return { ok: false, error: 'invalid_transcript_provider' };
+      }
+      if (att.transcript_error !== undefined &&
+          (typeof att.transcript_error !== 'string' || att.transcript_error.length > 200)) {
+        return { ok: false, error: 'invalid_transcript_error' };
+      }
     } else if (mime && !VALID_IMAGE_MIME.has(mime)) {
       return { ok: false, error: 'invalid_image_mime' };
     }
   }
   return { ok: true };
+}
+
+function stripClientTranscriptFields(att) {
+  if (normalizeAttachmentType(att) !== 'audio') return { ...att };
+  const clean = { ...att };
+  delete clean.transcript_text;
+  delete clean.transcript_provider;
+  delete clean.transcript_created_at;
+  delete clean.transcript_error;
+  clean.transcript_status = 'none';
+  if (clean.mime) clean.mime = normalizeMime(clean.mime);
+  return clean;
+}
+
+async function hasSpeechTranscriptionConsent(identity) {
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    if (identity.kind === 'client') {
+      const r = await conn.query(
+        `SELECT 1 FROM consents
+         WHERE client_id = $1
+           AND consent_type = $2
+           AND granted = true
+           AND revoked_at IS NULL
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [identity.id, TRANSCRIPTION_CONSENT_TYPE],
+      );
+      return r.rows.length > 0;
+    }
+    const r = await conn.query(
+      `SELECT 1 FROM curator_consents
+       WHERE curator_id = $1
+         AND consent_type = $2
+         AND granted = true
+         AND revoked_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [identity.id, TRANSCRIPTION_CONSENT_TYPE],
+    );
+    return r.rows.length > 0;
+  } finally {
+    conn.release();
+  }
+}
+
+async function getTranscriptionMonthlySpend() {
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    const r = await conn.query(
+      `SELECT COALESCE(SUM(estimated_cost_rub), 0)::numeric AS total
+       FROM message_transcription_jobs
+       WHERE created_at >= date_trunc('month', NOW())
+         AND status IN ('queued', 'processing', 'ready')`,
+    );
+    return Number(r.rows[0]?.total || 0);
+  } finally {
+    conn.release();
+  }
+}
+
+async function prepareAttachmentsForSend(identity, attachments) {
+  const prepared = attachments.map(stripClientTranscriptFields);
+  const audio = prepared.filter((att) => normalizeAttachmentType(att) === 'audio');
+  if (audio.length === 0) return { attachments: prepared, jobs: [] };
+
+  const hasConsent = await hasSpeechTranscriptionConsent(identity);
+  const monthlyCap = Number(process.env.SPEECHKIT_PILOT_MONTHLY_CAP_RUB || 500);
+  let spend = await getTranscriptionMonthlySpend();
+  const jobs = [];
+
+  for (const att of audio) {
+    const mime = normalizeMime(att.mime);
+    if (!hasConsent) {
+      att.transcript_status = 'consent_required';
+      continue;
+    }
+    if (!SUPPORTED_TRANSCRIPTION_MIME.has(mime)) {
+      att.transcript_status = 'unsupported_format';
+      continue;
+    }
+    const estimate = estimateSpeechKitCost(att.duration_ms);
+    if (monthlyCap > 0 && estimate.estimatedCostRub > 0 && spend + estimate.estimatedCostRub > monthlyCap) {
+      att.transcript_status = 'budget_capped';
+      continue;
+    }
+    spend += estimate.estimatedCostRub;
+    att.transcript_status = 'queued';
+    att.transcript_provider = TRANSCRIPTION_PROVIDER;
+    jobs.push({ attachment: att, estimate });
+  }
+
+  return { attachments: prepared, jobs };
+}
+
+async function enqueueTranscriptionJobs({ messageId, actorRole, clientId, curatorId, jobs }) {
+  if (!messageId || !jobs?.length) return;
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    for (const job of jobs) {
+      const att = job.attachment;
+      await conn.query(
+        `INSERT INTO message_transcription_jobs (
+           message_id, attachment_path, actor_role, client_id, curator_id,
+           status, duration_ms, mime, billable_seconds, estimated_cost_rub
+         )
+         VALUES ($1, $2, $3, $4, $5, 'queued', $6, $7, $8, $9)
+         ON CONFLICT (message_id, attachment_path) DO NOTHING`,
+        [
+          messageId,
+          att.path,
+          actorRole,
+          clientId,
+          curatorId,
+          Number(att.duration_ms || 0),
+          normalizeMime(att.mime),
+          job.estimate.billableSeconds,
+          job.estimate.estimatedCostRub,
+        ],
+      );
+    }
+  } finally {
+    conn.release();
+  }
+}
+
+async function enqueueTranscriptionJobsBestEffort(args) {
+  try {
+    await enqueueTranscriptionJobs(args);
+  } catch (err) {
+    console.warn('[messages.transcription] enqueue failed', {
+      messageId: args?.messageId,
+      error: err?.message || String(err),
+    });
+  }
+}
+
+function getRequestIp(event) {
+  return event.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
+    event.headers?.['X-Forwarded-For']?.split(',')[0]?.trim() ||
+    event.requestContext?.identity?.sourceIp ||
+    null;
+}
+
+async function getTranscriptionConsent(identity) {
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    if (identity.kind === 'client') {
+      const r = await conn.query(
+        `SELECT granted, document_version, created_at, revoked_at
+           FROM consents
+          WHERE client_id = $1
+            AND consent_type = $2
+          ORDER BY created_at DESC
+          LIMIT 1`,
+        [identity.id, TRANSCRIPTION_CONSENT_TYPE],
+      );
+      const row = r.rows[0] || null;
+      return {
+        success: true,
+        consent_type: TRANSCRIPTION_CONSENT_TYPE,
+        version: row?.document_version || TRANSCRIPTION_CONSENT_VERSION,
+        granted: !!(row?.granted && !row?.revoked_at),
+        decided: !!row,
+        created_at: row?.created_at || null,
+        revoked_at: row?.revoked_at || null,
+      };
+    }
+    const r = await conn.query(
+      `SELECT granted, document_version, created_at, revoked_at
+         FROM curator_consents
+        WHERE curator_id = $1
+          AND consent_type = $2
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [identity.id, TRANSCRIPTION_CONSENT_TYPE],
+    );
+    const row = r.rows[0] || null;
+    return {
+      success: true,
+      consent_type: TRANSCRIPTION_CONSENT_TYPE,
+      version: row?.document_version || TRANSCRIPTION_CONSENT_VERSION,
+      granted: !!(row?.granted && !row?.revoked_at),
+      decided: !!row,
+      created_at: row?.created_at || null,
+      revoked_at: row?.revoked_at || null,
+    };
+  } finally {
+    conn.release();
+  }
+}
+
+async function setTranscriptionConsent(identity, granted, event) {
+  const ip = getRequestIp(event);
+  const userAgent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    if (identity.kind === 'client') {
+      const payload = [{
+        type: TRANSCRIPTION_CONSENT_TYPE,
+        granted: !!granted,
+        version: TRANSCRIPTION_CONSENT_VERSION,
+        signature_method: 'checkbox',
+      }];
+      const r = await conn.query(
+        `SELECT public.log_consents_by_session($1, $2::jsonb, $3, $4) AS result`,
+        [identity.sessionToken, JSON.stringify(payload), ip, userAgent],
+      );
+      const result = r.rows[0]?.result || {};
+      if (!result.success) return result;
+      return {
+        success: true,
+        consent_type: TRANSCRIPTION_CONSENT_TYPE,
+        version: TRANSCRIPTION_CONSENT_VERSION,
+        granted: !!granted,
+      };
+    }
+
+    await conn.query('BEGIN');
+    await conn.query(
+      `UPDATE curator_consents
+          SET granted = false,
+              revoked_at = NOW()
+        WHERE curator_id = $1
+          AND consent_type = $2
+          AND granted = true
+          AND revoked_at IS NULL`,
+      [identity.id, TRANSCRIPTION_CONSENT_TYPE],
+    );
+    await conn.query(
+      `INSERT INTO curator_consents (
+         curator_id, consent_type, document_version, granted,
+         ip_address, user_agent, consent_method, signature_method, created_at
+       )
+       VALUES ($1, $2, $3, $4, CASE WHEN $5 IS NOT NULL AND $5 <> '' THEN $5::inet ELSE NULL END,
+               $6, 'checkbox', 'checkbox', NOW())`,
+      [identity.id, TRANSCRIPTION_CONSENT_TYPE, TRANSCRIPTION_CONSENT_VERSION, !!granted, ip, userAgent],
+    );
+    await conn.query('COMMIT');
+    return {
+      success: true,
+      consent_type: TRANSCRIPTION_CONSENT_TYPE,
+      version: TRANSCRIPTION_CONSENT_VERSION,
+      granted: !!granted,
+    };
+  } catch (err) {
+    try { await conn.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    return { success: false, error: err.message || 'consent_update_failed' };
+  } finally {
+    conn.release();
+  }
 }
 
 function buildAttachmentBadge(attachments) {
@@ -441,14 +742,14 @@ async function handleSend(identity, body) {
     }
 
     const { body: msgBody, intent_type, intent_payload, attachments } = body || {};
-    const attachmentsArr = Array.isArray(attachments) ? attachments : [];
-    if ((!msgBody || msgBody.trim().length === 0) && !intent_type && attachmentsArr.length === 0) {
+    const inputAttachments = Array.isArray(attachments) ? attachments : [];
+    if ((!msgBody || msgBody.trim().length === 0) && !intent_type && inputAttachments.length === 0) {
       return { statusCode: 400, body: { error: 'body_intent_or_attachment_required' } };
     }
     if (msgBody && msgBody.length > 2000) {
       return { statusCode: 400, body: { error: 'body_too_long' } };
     }
-    const attachmentsValidation = validateAttachments(attachmentsArr);
+    const attachmentsValidation = validateAttachments(inputAttachments);
     if (!attachmentsValidation.ok) {
       return { statusCode: 400, body: { error: attachmentsValidation.error } };
     }
@@ -456,6 +757,8 @@ async function handleSend(identity, body) {
     if (!intentValidation.ok) {
       return { statusCode: 400, body: { error: intentValidation.error } };
     }
+    const transcription = await prepareAttachmentsForSend(identity, inputAttachments);
+    const attachmentsArr = transcription.attachments;
 
     const pool = getPool();
     const conn = await pool.connect();
@@ -479,6 +782,14 @@ async function handleSend(identity, body) {
     if (!rpcResult?.success) {
       return { statusCode: 400, body: rpcResult || { error: 'rpc_failed' } };
     }
+
+    await enqueueTranscriptionJobsBestEffort({
+      messageId: rpcResult.message_id,
+      actorRole: 'client',
+      clientId: rpcResult.client_id || identity.id,
+      curatorId: rpcResult.curator_id || null,
+      jobs: transcription.jobs,
+    });
 
     // Push куратору (best-effort, не блокирует ответ)
     const clientName = await fetchClientName(identity.id);
@@ -512,20 +823,22 @@ async function handleSend(identity, body) {
 
   // curator → client
   const { client_id, body: msgBody, attachments: curatorAttachments } = body || {};
-  const curatorAttachmentsArr = Array.isArray(curatorAttachments) ? curatorAttachments : [];
+  const inputCuratorAttachments = Array.isArray(curatorAttachments) ? curatorAttachments : [];
   if (!client_id || typeof client_id !== 'string') {
     return { statusCode: 400, body: { error: 'client_id_required' } };
   }
-  if ((!msgBody || msgBody.trim().length === 0) && curatorAttachmentsArr.length === 0) {
+  if ((!msgBody || msgBody.trim().length === 0) && inputCuratorAttachments.length === 0) {
     return { statusCode: 400, body: { error: 'body_or_attachment_required' } };
   }
   if (msgBody && msgBody.length > 2000) {
     return { statusCode: 400, body: { error: 'body_too_long' } };
   }
-  const curatorAttachmentsValidation = validateAttachments(curatorAttachmentsArr);
+  const curatorAttachmentsValidation = validateAttachments(inputCuratorAttachments);
   if (!curatorAttachmentsValidation.ok) {
     return { statusCode: 400, body: { error: curatorAttachmentsValidation.error } };
   }
+  const curatorTranscription = await prepareAttachmentsForSend(identity, inputCuratorAttachments);
+  const curatorAttachmentsArr = curatorTranscription.attachments;
 
   const pool = getPool();
   const conn = await pool.connect();
@@ -543,6 +856,14 @@ async function handleSend(identity, body) {
   if (!rpcResult?.success) {
     return { statusCode: 400, body: rpcResult || { error: 'rpc_failed' } };
   }
+
+  await enqueueTranscriptionJobsBestEffort({
+    messageId: rpcResult.message_id,
+    actorRole: 'curator',
+    clientId: client_id,
+    curatorId: identity.id,
+    jobs: curatorTranscription.jobs,
+  });
 
   // Push клиенту (best-effort)
   const curatorAttachmentBadge = buildAttachmentBadge(curatorAttachmentsArr);
@@ -790,6 +1111,16 @@ async function handleUnreadCount(identity, query) {
   }
 }
 
+async function handleTranscriptionConsent(identity, body, event) {
+  if (event.httpMethod === 'GET') {
+    return { statusCode: 200, body: await getTranscriptionConsent(identity) };
+  }
+  const granted = body?.granted !== false;
+  const result = await setTranscriptionConsent(identity, granted, event);
+  if (!result.success) return { statusCode: 400, body: result };
+  return { statusCode: 200, body: await getTranscriptionConsent(identity) };
+}
+
 async function handleToggleDone(identity, body) {
   if (identity.kind !== 'curator') {
     return { statusCode: 403, body: { error: 'curator_only' } };
@@ -816,7 +1147,12 @@ module.exports._test = {
   validateAttachments,
   buildAttachmentBadge,
   normalizeAttachmentType,
+  normalizeMime,
+  estimateSpeechKitCost,
+  stripClientTranscriptFields,
   MAX_AUDIO_DURATION_MS,
+  MAX_TRANSCRIPT_TEXT_LENGTH,
+  VALID_TRANSCRIPT_STATUSES,
 };
 
 // ── Main handler ─────────────────────────────────────────────────────────
@@ -892,6 +1228,9 @@ module.exports.handler = async function (event) {
         break;
       case 'toggle-acked':
         res = await handleToggleAcked(identity, body);
+        break;
+      case 'transcription-consent':
+        res = await handleTranscriptionConsent(identity, body, event);
         break;
       default:
         res = { statusCode: 404, body: { error: 'unknown_action', action } };

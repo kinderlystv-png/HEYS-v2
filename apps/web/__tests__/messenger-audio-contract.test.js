@@ -120,6 +120,11 @@ describe('messenger audio media contract', () => {
       mediaType: 'audio',
       ext: 'webm',
     });
+    expect(api.normalizeUploadMeta({ media_type: 'audio', content_type: 'audio/ogg;codecs=opus' })).toEqual({
+      contentType: 'audio/ogg',
+      mediaType: 'audio',
+      ext: 'ogg',
+    });
 
     const key = api.buildKey({
       clientId: 'client_1',
@@ -154,9 +159,10 @@ describe('messenger audio media contract', () => {
       type: 'audio',
       url: 'https://heys-photos.storage.yandexcloud.net/client/voice.webm',
       path: 'client/date/voice/msg/voice.webm',
-      mime: 'audio/webm',
+      mime: 'audio/ogg;codecs=opus',
       duration_ms: 3200,
       size_bytes: 42_000,
+      transcript_status: 'queued',
     };
 
     expect(api.validateAttachments([audio])).toEqual({ ok: true });
@@ -165,10 +171,64 @@ describe('messenger audio media contract', () => {
       ok: false,
       error: 'invalid_audio_duration',
     });
+    expect(api.validateAttachments([{ ...audio, transcript_status: 'done-ish' }])).toEqual({
+      ok: false,
+      error: 'invalid_transcript_status',
+    });
+    expect(api.validateAttachments([{ ...audio, transcript_text: 'x'.repeat(api.MAX_TRANSCRIPT_TEXT_LENGTH + 1) }])).toEqual({
+      ok: false,
+      error: 'invalid_transcript_text',
+    });
+    expect(api.stripClientTranscriptFields({
+      ...audio,
+      transcript_status: 'ready',
+      transcript_text: 'client spoof',
+      transcript_provider: 'other',
+      transcript_error: 'nope',
+    })).toMatchObject({
+      type: 'audio',
+      mime: 'audio/ogg',
+      transcript_status: 'none',
+    });
+    expect(api.estimateSpeechKitCost(1000, 0.25)).toEqual({
+      billableSeconds: 15,
+      estimatedCostRub: 0.25,
+    });
+  });
+
+  it('builds SpeechKit OggOpus recognition payload from object storage path', () => {
+    const previousFolderId = process.env.SPEECHKIT_FOLDER_ID;
+    const previousBucket = process.env.S3_PHOTOS_BUCKET;
+    process.env.SPEECHKIT_FOLDER_ID = 'folder-test';
+    process.env.S3_PHOTOS_BUCKET = 'heys-photos';
+    try {
+      const worker = loadCloudFunction('../../../yandex-cloud-functions/heys-cron-speechkit-transcribe/index.js')._test;
+      const payload = worker.buildRecognitionPayload({
+        attachment_path: 'client/date/voice/msg/voice.ogg',
+      });
+
+      expect(payload).toMatchObject({
+        config: {
+          folderId: 'folder-test',
+          specification: {
+            languageCode: 'ru-RU',
+            audioEncoding: 'OGG_OPUS',
+          },
+        },
+        audio: {
+          uri: 'https://storage.yandexcloud.net/heys-photos/client/date/voice/msg/voice.ogg',
+        },
+      });
+    } finally {
+      if (previousFolderId === undefined) delete process.env.SPEECHKIT_FOLDER_ID;
+      else process.env.SPEECHKIT_FOLDER_ID = previousFolderId;
+      if (previousBucket === undefined) delete process.env.S3_PHOTOS_BUCKET;
+      else process.env.S3_PHOTOS_BUCKET = previousBucket;
+    }
   });
 
   it('StorageMedia.uploadAudio posts to /photos/upload with auth-safe payload', async () => {
-    const blob = new Blob(['voice'], { type: 'audio/webm' });
+    const blob = new Blob(['voice'], { type: 'audio/ogg;codecs=opus' });
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -176,7 +236,7 @@ describe('messenger audio media contract', () => {
         url: 'https://heys-photos.storage.yandexcloud.net/client/date/voice/msg/a.webm',
         path: 'client/date/voice/msg/a.webm',
         media_type: 'audio',
-        mime: 'audio/webm',
+        mime: 'audio/ogg',
         size_bytes: blob.size,
       }),
     });
@@ -201,7 +261,7 @@ describe('messenger audio media contract', () => {
       client_id: 'client-id',
       date: '2026-06-18',
       meal_id: 'msg-a',
-      content_type: 'audio/webm',
+      content_type: 'audio/ogg',
       duration_ms: 1200,
       session_token: 'client-session',
     });

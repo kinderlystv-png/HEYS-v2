@@ -590,6 +590,26 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4ep21a89307vs93b0ns
 
+  /messages/transcription-consent:
+    get:
+      summary: Get SpeechKit transcription consent
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    post:
+      summary: Save SpeechKit transcription consent
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+    options:
+      summary: CORS preflight for messages transcription consent
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4ep21a89307vs93b0ns
+
   # ═══════════════════════════════════════════════════════════════
   # Photos — heys-api-photos
   # ═══════════════════════════════════════════════════════════════

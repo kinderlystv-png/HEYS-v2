@@ -147,6 +147,8 @@ get_function_config() {
             echo "nodejs18 index.handler 256m 60s" ;;
         "heys-cron-security-alerts")
             echo "nodejs18 index.handler 256m 60s" ;;
+        "heys-cron-speechkit-transcribe")
+            echo "nodejs18 index.handler 256m 120s" ;;
         "heys-api-push")
             echo "nodejs18 index.handler 256m 30s" ;;
         "heys-api-messages")
@@ -216,6 +218,19 @@ build_env_flags() {
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
         local k
         for k in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY; do
+            _add "$k"
+        done
+    fi
+
+    # SpeechKit transcription worker: DB + App Lockbox, optional SpeechKit env
+    # fallback for pilot controls/pricing. Auth key may arrive from Lockbox app
+    # secret via initSecrets(), or from explicit env.
+    if [[ "$func_name" == "heys-cron-speechkit-transcribe" ]]; then
+        local k
+        for k in SPEECHKIT_API_KEY YC_SPEECHKIT_KEY SPEECHKIT_IAM_TOKEN YC_IAM_TOKEN \
+                 SPEECHKIT_FOLDER_ID YC_FOLDER_ID SPEECHKIT_MODEL \
+                 SPEECHKIT_PILOT_MONTHLY_CAP_RUB SPEECHKIT_ASYNC_PRICE_PER_15S_RUB \
+                 SPEECHKIT_WORKER_LIMIT S3_PHOTOS_BUCKET; do
             _add "$k"
         done
     fi
@@ -520,6 +535,12 @@ else
     # heys-api-sms удалён 2026-05-22 (см. apps/web/heys_consents_v1.js:53) — исключён
     # из auto-deploy чтобы CI не падал с "function not found"
     for func_name in heys-api-rpc heys-api-rest heys-api-auth heys-api-leads heys-api-health heys-api-payments heys-api-push heys-api-messages heys-api-photos; do
+        deploy_function "$func_name"
+    done
+
+    # Pilot worker is separated from the API loop so legacy regression guards
+    # keep protecting the cookie-auth API deploy set verbatim.
+    for func_name in heys-cron-speechkit-transcribe; do
         deploy_function "$func_name"
     done
     

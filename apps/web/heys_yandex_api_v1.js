@@ -2679,8 +2679,11 @@
 
     try {
       const sessionToken = getSessionTokenForKV();
-      const shouldTryCookieLogout = hasCookieSessionHint('pin')
-        || !!global?.HEYS?.cloud?.isPinAuthClient?.();
+      const host = global.location?.hostname || '';
+      let shouldTryCookieLogout = !!host && host !== 'localhost' && host !== '127.0.0.1';
+      shouldTryCookieLogout = shouldTryCookieLogout ||
+        hasCookieSessionHint('pin') ||
+        !!global?.HEYS?.cloud?.isPinAuthClient?.();
 
       if (!sessionToken && !shouldTryCookieLogout) {
         // Нечего отзывать
