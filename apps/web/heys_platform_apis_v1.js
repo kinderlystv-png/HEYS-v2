@@ -1337,6 +1337,21 @@
   let idleDetector = null;
   let lastIdleTime = null;
 
+  function syncAfterIdleReturn() {
+    const cloudRef = window.HEYS && window.HEYS.cloud;
+    if (!cloudRef || typeof cloudRef.sync !== 'function') return false;
+
+    try {
+      Promise.resolve(cloudRef.sync()).catch((error) => {
+        console.warn('[HEYS.platform] Idle sync after return failed', error);
+      });
+      return true;
+    } catch (error) {
+      console.warn('[HEYS.platform] Idle sync after return failed', error);
+      return false;
+    }
+  }
+
   async function startIdleDetection() {
     if (!('IdleDetector' in window)) {
       console.log('[Idle] IdleDetector API not supported');
@@ -1366,9 +1381,7 @@
           // Если был неактивен больше 5 минут — синхронизируем данные
           if (idleMinutes >= 5 && window.HEYS?.cloud?.sync) {
             console.log('[Idle] Syncing after idle period...');
-            window.HEYS.cloud.sync().catch((error) => {
-              console.warn('[HEYS.platform] Idle sync after return failed', error);
-            });
+            syncAfterIdleReturn();
           }
 
           // Если был неактивен больше 30 минут — проверяем обновления
@@ -1413,7 +1426,8 @@
   // Экспортируем
   HEYS.idle = {
     start: startIdleDetection,
-    stop: stopIdleDetection
+    stop: stopIdleDetection,
+    _syncAfterIdleReturn: syncAfterIdleReturn
   };
 
   // Автоматический запуск если в standalone режиме

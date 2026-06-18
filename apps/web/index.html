@@ -580,6 +580,8 @@
             window.__heysRecoveryBusy = false;
             var BOOT_CRASH_COUNT_KEY = 'heys_boot_crash_count';
             var MAX_SILENT_RESTARTS = 2;
+            var POST_READY_CRITICAL_WINDOW_MS = 30000;
+            var postReadyCriticalErrors = [];
 
             function getBootCrashCount() {
                 try {
@@ -625,6 +627,51 @@
                 var fixBtn = document.getElementById('heys-recovery-fix');
                 if (fixBtn) fixBtn.disabled = !!disabled;
             }
+
+            function getErrorText(msg, stack) {
+                return String(msg || '') + '\n' + String(stack || '');
+            }
+
+            function isRuntimeRecoverableError(msg, stack) {
+                var text = getErrorText(msg, stack);
+                if (/ChunkLoadError|Loading chunk|CRITICAL_SCRIPT_LOAD|DependencyLoader|Bootstrap timeout|Failed to fetch dynamically imported module|Importing a module script failed/i.test(text)) {
+                    return false;
+                }
+                return /\bsync\b|\bnetwork\b|\bidle\b|catch is not a function|auth_required|write_context_unavailable|Failed to fetch|Load failed|ERR_NETWORK|NetworkError/i.test(text);
+            }
+
+            function isBootCriticalError(msg, stack) {
+                var text = getErrorText(msg, stack);
+                return /ReactDOM|React is not defined|createRoot|createElement|root\.render|CRITICAL_SCRIPT_LOAD|ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed|DependencyLoader|Bootstrap timeout|AppRoot|AppRootComponent|AppRootImpl/i.test(text);
+            }
+
+            function shouldShowRecoveryForError(msg, stack, appReady, totalErrorCount, postReadyCriticalCount) {
+                if (isRuntimeRecoverableError(msg, stack)) return false;
+                if (!appReady) return isBootCriticalError(msg, stack) || totalErrorCount >= MAX_ERRORS;
+                return isBootCriticalError(msg, stack) && postReadyCriticalCount >= MAX_ERRORS;
+            }
+
+            function recordPostReadyCriticalError(now) {
+                var cutoff = now - POST_READY_CRITICAL_WINDOW_MS;
+                postReadyCriticalErrors = postReadyCriticalErrors.filter(function (ts) { return ts >= cutoff; });
+                postReadyCriticalErrors.push(now);
+                return postReadyCriticalErrors.length;
+            }
+
+            function shouldShowRecoveryNow(msg, stack, totalErrorCount) {
+                var appReady = window.__heysAppReady === true;
+                var postReadyCriticalCount = 0;
+                if (appReady && isBootCriticalError(msg, stack) && !isRuntimeRecoverableError(msg, stack)) {
+                    postReadyCriticalCount = recordPostReadyCriticalError(Date.now());
+                }
+                return shouldShowRecoveryForError(msg, stack, appReady, totalErrorCount, postReadyCriticalCount);
+            }
+
+            window.__heysRecoveryPolicy = {
+                isBootCriticalError: isBootCriticalError,
+                isRuntimeRecoverableError: isRuntimeRecoverableError,
+                shouldShowRecoveryForError: shouldShowRecoveryForError
+            };
 
             function showRecoveryUI(errorMsg, options) {
                 if (recoveryShown) return;
@@ -746,12 +793,10 @@
             // Global error handler
             window.onerror = function (msg, url, line, col, error) {
                 errorCount++;
+                var stack = error ? error.stack : '';
                 window.__heysLog && window.__heysLog('[ERROR] ' + msg + ' at ' + url + ':' + line);
 
-                // Критические ошибки требуют немедленного recovery
-                var isCritical = /React|ReactDOM|HEYS|createRoot|createElement/.test(msg + (error ? error.stack : ''));
-
-                if (isCritical || errorCount >= MAX_ERRORS) {
+                if (shouldShowRecoveryNow(msg, stack, errorCount)) {
                     showRecoveryUI(msg);
                     return true; // Suppress error
                 }
@@ -762,10 +807,12 @@
             window.onunhandledrejection = function (event) {
                 errorCount++;
                 var reason = event.reason ? (event.reason.message || String(event.reason)) : 'Unknown error';
+                var stack = event.reason && event.reason.stack ? event.reason.stack : '';
                 window.__heysLog && window.__heysLog('[REJECT] ' + reason);
 
-                if (errorCount >= MAX_ERRORS) {
+                if (shouldShowRecoveryNow(reason, stack, errorCount)) {
                     showRecoveryUI(reason);
+                    if (event.preventDefault) event.preventDefault();
                 }
             };
 

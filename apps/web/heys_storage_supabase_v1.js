@@ -12315,7 +12315,7 @@
     isConnected: function () { return status === 'online'; },
     getStatus: function () { return status; },
     getUser: function () { return user; },
-    sync: cloud.pushAll,
+    sync: function () { return cloud.sync.apply(cloud, arguments); },
     client: function () { return client; }
   };
 
@@ -12400,9 +12400,35 @@
     return true;
   };
 
+  function notifyBestEffortSyncError(error) {
+    try {
+      const errorMsg = error?.message || String(error || 'sync_failed');
+      console.warn('[HEYS.cloud] best-effort sync failed:', errorMsg);
+      addSyncLogEntry('sync_error', { error: errorMsg, bestEffort: true });
+      global.dispatchEvent(new CustomEvent('heys:sync-error', {
+        detail: {
+          error: errorMsg,
+          retryIn: 5,
+          persistent: false,
+          source: 'best_effort_sync'
+        }
+      }));
+    } catch (_) { }
+  }
+
+  cloud.sync = function () {
+    return Promise.resolve()
+      .then(function () {
+        return cloud.retrySync();
+      })
+      .catch(function (error) {
+        notifyBestEffortSyncError(error);
+        return false;
+      });
+  };
+
   // Алиасы для внешних вызовов
-  cloud.sync = cloud.retrySync;
-  cloud.pushAll = cloud.retrySync;
+  cloud.pushAll = cloud.sync;
 
   function dropAllPendingSyncState(reason = 'reset') {
     if (clientUpsertTimer) {
