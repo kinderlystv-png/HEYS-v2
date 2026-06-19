@@ -2213,7 +2213,7 @@
                             writeGlobalValue('heys_pending_client_name', clientName);
                         } catch (_) { }
                         try {
-                            HEYS.Toast?.success('Клиент создан! Телефон: ' + created.phone + ', PIN: ' + created.pin) || alert('✅ Клиент создан\n\nТелефон: ' + created.phone + '\nPIN: ' + created.pin);
+                            HEYS.Toast?.success('Клиент создан') || alert('✅ Клиент создан');
                         } catch (_) { }
 	                        return created;
 	                    }

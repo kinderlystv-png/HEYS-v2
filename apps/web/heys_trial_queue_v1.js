@@ -102,6 +102,79 @@
     storeSet(CAPACITY_CACHE_KEY, { data, ts: _capacityCacheAt });
   }
 
+  function resolveCuratorName(explicitName) {
+    const configured = explicitName
+      || HEYS.config?.curatorDisplayName
+      || HEYS.config?.curatorName
+      || HEYS.curatorDisplayName;
+    const value = String(configured || '').trim();
+    return value || 'Антон';
+  }
+
+  function formatWelcomeDate(dateLike) {
+    if (!dateLike) return '';
+    const date = new Date(dateLike);
+    if (Number.isNaN(date.getTime())) return '';
+    const currentYear = new Date().getFullYear();
+    const options = { day: 'numeric', month: 'long' };
+    if (date.getFullYear() !== currentYear) options.year = 'numeric';
+    return date.toLocaleDateString('ru-RU', options);
+  }
+
+  function pluralDays(days) {
+    const n = Math.abs(Number(days) || 0);
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'день';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'дня';
+    return 'дней';
+  }
+
+  function buildClientWelcomeMessage(options = {}) {
+    const curatorName = resolveCuratorName(options.curatorName);
+    const clientName = String(options.clientName || options.name || '').trim();
+    const phone = String(options.phone || '').trim();
+    const pin = String(options.pin || '').trim();
+    const deepLink = String(options.deepLink || options.link || '').trim();
+    const trialDays = Number(options.trialDays || options.trial_days || 7) || 7;
+    const trialEndsLabel = formatWelcomeDate(options.trialEndsAt || options.trial_ends_at);
+    const linkExpiresLabel = formatWelcomeDate(options.pinTokenExpiresAt || options.pin_token_expires_at);
+
+    const greeting = clientName ? `Здравствуйте, ${clientName}.` : 'Здравствуйте.';
+    const accessLines = [
+      'Ссылка для привязки Telegram:',
+      deepLink || '—',
+      '',
+      phone ? `Телефон для входа: ${phone}` : 'Телефон для входа: номер из заявки',
+      `PIN: ${pin || '—'}`,
+    ];
+    const trialLine = trialEndsLabel
+      ? `Первая неделя Pro открыта до ${trialEndsLabel}, без карты и автосписаний.`
+      : `Первая неделя Pro длится ${trialDays} ${pluralDays(trialDays)} с момента активации доступа, без карты и автосписаний.`;
+    const linkLine = linkExpiresLabel
+      ? `Ссылка для привязки Telegram действует до ${linkExpiresLabel}.`
+      : 'Ссылка для привязки Telegram действует 7 дней.';
+
+    return [
+      greeting,
+      '',
+      `Я ${curatorName}, ваш куратор в HEYS. Ниже доступ к приложению на первую неделю Pro.`,
+      '',
+      ...accessLines,
+      '',
+      'Что сделать:',
+      '1. Откройте ссылку в Telegram.',
+      '2. Бот привяжет ваш Telegram и даст ссылку на приложение.',
+      '3. Войдите в приложение по телефону и PIN из этого сообщения.',
+      '',
+      trialLine,
+      'В этот период вы присылаете данные о питании и контексте дня, а я веду дневник в HEYS и смотрю на картину недели.',
+      linkLine,
+      '',
+      'Если ссылка не открылась или PIN не подошёл, напишите мне здесь.',
+    ].join('\n');
+  }
+
   function clearCache() {
     _statusCache = null;
     _statusCacheAt = 0;
@@ -1766,6 +1839,7 @@
             phone: leadPhone,
             pin: generatedPin,
             deepLink,
+            pinTokenExpiresAt: res.pin_token_expires_at,
           });
         }
       } else if (res.error === 'phone_already_has_active' || res.code === 'PHONE_ALREADY_TRIAL') {
@@ -1777,6 +1851,29 @@
         alert(`ℹ️ Этот лид уже был сконвертирован ранее.`);
       } else {
         alert('Ошибка: ' + (res.message || res.error || 'Не удалось создать клиента'));
+      }
+    };
+
+    const buildWelcomeForAccess = (access) => buildClientWelcomeMessage({
+      clientName: access?.name,
+      phone: access?.phone,
+      pin: access?.pin,
+      deepLink: access?.deepLink,
+      pinTokenExpiresAt: access?.pinTokenExpiresAt,
+      trialDays: stats?.limits?.trial_days || 7,
+    });
+
+    const copyToClipboard = async (text, successMessage) => {
+      if (!text) return false;
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('clipboard_unavailable');
+        await navigator.clipboard.writeText(text);
+        HEYS.Toast?.success?.(successMessage || 'Скопировано');
+        return true;
+      } catch (e) {
+        console.warn('[TrialQueueAdmin] Clipboard copy failed:', e);
+        alert('Не удалось скопировать автоматически. Выделите текст и скопируйте вручную.');
+        return false;
       }
     };
 
@@ -2449,6 +2546,8 @@
             padding: '24px',
             width: '420px',
             maxWidth: '92vw',
+            maxHeight: '88vh',
+            overflowY: 'auto',
             boxShadow: '0 20px 60px rgba(0,0,0,0.35)'
           }
         },
@@ -2458,6 +2557,42 @@
           React.createElement('div', {
             style: { fontSize: '13px', color: '#6b7280', marginBottom: '20px' }
           }, `${pinResult.name} · ${pinResult.phone}`),
+
+          pinResult.pin && pinResult.deepLink && React.createElement(React.Fragment, null,
+            React.createElement('div', {
+              style: { fontSize: '12px', color: '#6b7280', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: 0 }
+            }, 'Сообщение клиенту'),
+            React.createElement('div', {
+              style: {
+                fontSize: '12px',
+                padding: '12px',
+                background: '#f8fafc',
+                borderRadius: '10px',
+                border: '1px solid #e2e8f0',
+                color: '#334155',
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.45,
+                maxHeight: '190px',
+                overflowY: 'auto',
+                marginBottom: '8px'
+              }
+            }, buildWelcomeForAccess(pinResult)),
+            React.createElement('button', {
+              onClick: () => copyToClipboard(buildWelcomeForAccess(pinResult), 'Сообщение клиенту скопировано'),
+              style: {
+                width: '100%',
+                padding: '11px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#0f172a',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 700,
+                marginBottom: '18px'
+              }
+            }, 'Скопировать сообщение клиенту')
+          ),
 
           React.createElement('div', {
             style: { fontSize: '12px', color: '#6b7280', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }
@@ -2477,7 +2612,7 @@
           }, pinResult.pin),
           React.createElement('button', {
             onClick: () => {
-              navigator.clipboard?.writeText(pinResult.pin).then(() => HEYS.Toast?.success?.('PIN скопирован'));
+              copyToClipboard(pinResult.pin, 'PIN скопирован');
             },
             style: {
               width: '100%',
@@ -2513,7 +2648,7 @@
             },
               React.createElement('button', {
                 onClick: () => {
-                  navigator.clipboard?.writeText(pinResult.deepLink).then(() => HEYS.Toast?.success?.('Ссылка скопирована'));
+                  copyToClipboard(pinResult.deepLink, 'Ссылка скопирована');
                 },
                 style: {
                   padding: '10px',
@@ -2619,6 +2754,7 @@
     isOfferExpired,
     getQueueStatusMeta,
     getCapacityMeta,
+    buildClientWelcomeMessage,
 
     // React
     useTrialQueue,

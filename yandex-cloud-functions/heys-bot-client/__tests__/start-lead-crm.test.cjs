@@ -479,7 +479,9 @@ test('client bot pin claim success uses webhook response without Telegram API ro
   const response = JSON.parse(result.body);
   assert.equal(response.method, 'sendMessage');
   assert.equal(response.chat_id, 123456);
-  assert.match(response.text, /Привет, <b>Ivan<\/b>/);
+  assert.match(response.text, /Здравствуйте, <b>Ivan<\/b>\./);
+  assert.match(response.text, /привязывает ваш Telegram к приложению/);
+  assert.match(response.text, /PIN из сообщения куратора/);
   assert.match(response.text, /https:\/\/app\.heyslab\.ru/);
   assert.equal(queries.filter((q) => /claim_pin_token_chat/.test(q.sql)).length, 1);
 });

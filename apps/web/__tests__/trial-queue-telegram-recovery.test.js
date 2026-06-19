@@ -124,6 +124,24 @@ describe('HEYS.TrialQueue.admin Telegram recovery', () => {
         });
     });
 
+    it('builds a complete welcome message for curator handoff', () => {
+        const message = window.HEYS.TrialQueue.buildClientWelcomeMessage({
+            clientName: 'Мария',
+            phone: '+7 999 123-45-67',
+            pin: '2290',
+            deepLink: 'https://t.me/heyslab_bot?start=token',
+            trialDays: 7,
+        });
+
+        expect(message).toContain('Здравствуйте, Мария.');
+        expect(message).toContain('Я Антон, ваш куратор в HEYS.');
+        expect(message).toContain('https://t.me/heyslab_bot?start=token');
+        expect(message).toContain('Телефон для входа: +7 999 123-45-67');
+        expect(message).toContain('PIN: 2290');
+        expect(message).toContain('Первая неделя Pro длится 7 дней');
+        expect(message).toContain('без карты и автосписаний');
+    });
+
     it('maps RPC errors to admin error shape', async () => {
         rpc.mockResolvedValue({
             data: null,

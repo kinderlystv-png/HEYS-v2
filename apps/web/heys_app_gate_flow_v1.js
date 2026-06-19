@@ -178,13 +178,26 @@
         const copyText = async (text, successMessage) => {
             if (!text) return false;
             try {
-                await navigator.clipboard?.writeText(text);
+                if (!navigator.clipboard?.writeText) throw new Error('clipboard_unavailable');
+                await navigator.clipboard.writeText(text);
                 HEYS.Toast?.success?.(successMessage || 'Скопировано');
                 return true;
             } catch (e) {
                 console.warn('[HEYS.subs] Clipboard copy failed:', e);
                 return false;
             }
+        };
+
+        const buildWelcomeMessage = (access = {}) => {
+            if (!access.pin || !access.deepLink) return '';
+            return HEYS.TrialQueue?.buildClientWelcomeMessage?.({
+                clientName: client.name,
+                phone: client.phone_normalized || client.phone,
+                pin: access.pin,
+                deepLink: access.deepLink,
+                pinTokenExpiresAt: access.pinTokenExpiresAt,
+                trialEndsAt: client.trial_ends_at,
+            }) || '';
         };
 
         // Активировать триал
@@ -269,12 +282,16 @@
                 const res = await HEYS.TrialQueue?.admin?.regeneratePin?.(client.id);
                 if (res && res.success) {
                     const deepLink = buildClientBotLink(res.pin_token);
-                    setAccessResult({
-                        title: 'Новый доступ для клиента',
-                        message: 'Передайте PIN и ссылку клиенту. Клиент открывает ссылку в Telegram, бот привяжет его аккаунт.',
+                    const nextAccess = {
                         pin: res.pin,
                         deepLink,
                         pinTokenExpiresAt: res.pin_token_expires_at
+                    };
+                    setAccessResult({
+                        title: 'Новый доступ для клиента',
+                        message: 'Скопируйте готовое сообщение и отправьте клиенту в его мессенджере.',
+                        ...nextAccess,
+                        welcomeMessage: buildWelcomeMessage(nextAccess)
                     });
                     HEYS.Toast?.success?.('PIN и ссылка перевыпущены');
                     onUpdate?.();
@@ -553,8 +570,32 @@
             accessResult && h('div', { style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: accessResult.unavailable ? '#fff7ed' : '#f8fafc', border: `1px solid ${accessResult.unavailable ? '#fed7aa' : '#e2e8f0'}` } },
                 h('div', { style: { fontSize: 12, fontWeight: 700, color: accessResult.unavailable ? '#c2410c' : '#475569' } }, accessResult.title || 'Ссылка для клиента'),
                 accessResult.message && h('div', { style: { fontSize: 12, color: '#64748b', lineHeight: 1.4 } }, accessResult.message),
+                accessResult.welcomeMessage && h('div', { style: { display: 'grid', gap: 8 } },
+                    h('div', { style: { fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0 } }, 'Сообщение клиенту'),
+                    h('div', {
+                        style: {
+                            fontSize: 12,
+                            color: '#334155',
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: 1.45,
+                            maxHeight: 180,
+                            overflowY: 'auto',
+                            padding: 10,
+                            borderRadius: 8,
+                            background: '#fff',
+                            border: '1px solid #cbd5e1'
+                        }
+                    }, accessResult.welcomeMessage),
+                    h('button', {
+                        onClick: () => copyText(accessResult.welcomeMessage, 'Сообщение клиенту скопировано'),
+                        style: { ...btnBase, justifyContent: 'center', background: '#0f172a', color: '#fff', border: 'none' }
+                    }, 'Скопировать сообщение клиенту')
+                ),
                 accessResult.pin && h('div', { style: { fontSize: 24, fontWeight: 800, letterSpacing: 8, fontFamily: 'monospace', color: '#111827' } }, accessResult.pin),
                 accessResult.deepLink && h('div', { style: { fontSize: 11, color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace' } }, accessResult.deepLink),
+                accessResult.deepLink && !accessResult.pin && !accessResult.unavailable && h('div', { style: { fontSize: 12, color: '#64748b', lineHeight: 1.4 } },
+                    'Для полного сообщения с PIN перевыпустите PIN и ссылку.'
+                ),
                 h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 } },
                     accessResult.pin && h('button', {
                         onClick: () => copyText(accessResult.pin, 'PIN скопирован'),
@@ -893,6 +934,30 @@
         const [loading, setLoading] = React.useState(false);
         const [accessResult, setAccessResult] = React.useState(null);
 
+        const copyText = async (text, successMessage) => {
+            if (!text) return false;
+            try {
+                if (!navigator.clipboard?.writeText) throw new Error('clipboard_unavailable');
+                await navigator.clipboard.writeText(text);
+                HEYS.Toast?.success?.(successMessage || 'Скопировано');
+                return true;
+            } catch (e) {
+                console.warn('[HEYS.clients] Clipboard copy failed:', e);
+                HEYS.Toast?.error?.('Не удалось скопировать автоматически');
+                return false;
+            }
+        };
+
+        const buildWelcomeMessage = (access = {}) => {
+            if (!access.pin || !access.deepLink) return '';
+            return HEYS.TrialQueue?.buildClientWelcomeMessage?.({
+                clientName: newName,
+                phone: access.phone,
+                pin: access.pin,
+                deepLink: access.deepLink,
+            }) || '';
+        };
+
         const closeModal = () => {
             setOpen(false);
             setNewName('');
@@ -908,10 +973,14 @@
             try {
                 const created = await addClientToCloud({ name: newName, phone: newPhone, pin: newPin });
                 if (created?.ok && created.clientId) {
-                    setAccessResult({
+                    const nextAccess = {
                         phone: created.phone,
                         pin: created.pin,
                         deepLink: created.deepLink
+                    };
+                    setAccessResult({
+                        ...nextAccess,
+                        welcomeMessage: buildWelcomeMessage(nextAccess)
                     });
                     HEYS.Toast?.success?.('Клиент создан');
                 } else if (created?.error) {
@@ -953,6 +1022,7 @@
             style: {
                 width: 440,
                 maxWidth: '92vw',
+                maxHeight: '90vh',
                 background: '#fff',
                 borderRadius: 20,
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -981,7 +1051,7 @@
                 }, '✕')
             ),
             // Body
-            React.createElement('div', { style: { padding: 20, display: 'grid', gap: 16 } },
+            React.createElement('div', { style: { padding: 20, display: 'grid', gap: 16, overflowY: 'auto' } },
                 // Name
                 React.createElement('div', null,
                     React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'Имя клиента'),
@@ -1036,16 +1106,37 @@
                     style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }
                 },
                     React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: '#475569' } }, 'Доступ для клиента'),
+                    accessResult.welcomeMessage && React.createElement(React.Fragment, null,
+                        React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0 } }, 'Сообщение клиенту'),
+                        React.createElement('div', {
+                            style: {
+                                fontSize: 12,
+                                color: '#334155',
+                                whiteSpace: 'pre-wrap',
+                                lineHeight: 1.45,
+                                maxHeight: 180,
+                                overflowY: 'auto',
+                                padding: 10,
+                                borderRadius: 8,
+                                background: '#fff',
+                                border: '1px solid #cbd5e1'
+                            }
+                        }, accessResult.welcomeMessage),
+                        React.createElement('button', {
+                            onClick: () => copyText(accessResult.welcomeMessage, 'Сообщение клиенту скопировано'),
+                            style: { padding: '11px', borderRadius: 8, border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }
+                        }, 'Скопировать сообщение клиенту')
+                    ),
                     React.createElement('div', { style: { fontSize: 12, color: '#475569' } }, accessResult.phone || ''),
                     React.createElement('div', { style: { fontSize: 24, fontWeight: 800, letterSpacing: 8, fontFamily: 'monospace', color: '#111827', textAlign: 'center' } }, accessResult.pin || '—'),
                     accessResult.deepLink && React.createElement('div', { style: { fontSize: 11, color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace' } }, accessResult.deepLink),
                     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 } },
                         React.createElement('button', {
-                            onClick: () => navigator.clipboard?.writeText(accessResult.pin || '').then(() => HEYS.Toast?.success?.('PIN скопирован')),
+                            onClick: () => copyText(accessResult.pin || '', 'PIN скопирован'),
                             style: { padding: '10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', cursor: 'pointer', fontSize: 13, fontWeight: 600 }
                         }, 'Копировать PIN'),
                         React.createElement('button', {
-                            onClick: () => navigator.clipboard?.writeText(accessResult.deepLink || '').then(() => HEYS.Toast?.success?.('Ссылка скопирована')),
+                            onClick: () => copyText(accessResult.deepLink || '', 'Ссылка скопирована'),
                             disabled: !accessResult.deepLink,
                             style: { padding: '10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', cursor: accessResult.deepLink ? 'pointer' : 'default', fontSize: 13, fontWeight: 600 }
                         }, 'Копировать ссылку')

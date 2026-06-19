@@ -24,12 +24,12 @@
     "builtAt": "2026-06-18T12:03:25.560Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.9050ab400497.js",
-    "hash": "9050ab400497",
-    "sourceFingerprint": "61a604922b4a",
+    "file": "boot-app.bundle.0030d913d779.js",
+    "hash": "0030d913d779",
+    "sourceFingerprint": "46ad4aaae310",
     "fileCount": 51,
-    "size": 1043596,
-    "builtAt": "2026-06-18T12:20:15.298Z"
+    "size": 1054393,
+    "builtAt": "2026-06-19T09:24:56.034Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.6f476e40b9cc.js",
