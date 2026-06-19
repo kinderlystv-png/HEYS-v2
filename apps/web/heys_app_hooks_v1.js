@@ -899,6 +899,15 @@
             }
         };
 
+        const shouldUseBlockingSyncOverlay = useCallback(() => {
+            try {
+                return window.__HEYS_FORCE_SYNC_LOCK_OVERLAY__ === true
+                    || window.HEYS?.cloud?._switchClientInProgress === true;
+            } catch (_) {
+                return false;
+            }
+        }, []);
+
         const commitPendingActionItems = useCallback((items) => {
             const safeItems = trimPendingActionQueue(items);
             pendingActionItemsRef.current = safeItems;
@@ -995,12 +1004,12 @@
                     || uploadInProgress
                     || (syncProgressTotalRef.current > 0 && !deadlock);
 
-                if (syncingStartRef.current && syncActive && (uploadInProgress || runtimePending > 0)) {
+                if (shouldUseBlockingSyncOverlay() && syncingStartRef.current && syncActive && (uploadInProgress || runtimePending > 0)) {
                     syncLockShownForCurrentSyncRef.current = true;
                     setShowSyncLockOverlay(true);
                 }
             }, getPinProxySyncOverlayDelaysMs().longSyncLockMs);
-        }, [getRuntimePendingCount, isRuntimeUploadInProgress, showSyncLockOverlay]);
+        }, [getRuntimePendingCount, isRuntimeUploadInProgress, shouldUseBlockingSyncOverlay, showSyncLockOverlay]);
 
         const armSlowInternetHint = useCallback(() => {
             if (slowInternetHintTimeoutRef.current || showSlowInternetHint) return;
@@ -1469,6 +1478,7 @@
             const handleSyncError = (e) => {
                 const code = e.detail?.error;
                 const isPersistent = e.detail?.persistent || false;
+                const eventKind = e.detail?.kind || (isPersistent ? 'blocking_error' : 'sync_error');
 
                 if (code === 'auth_required') {
                     setCloudStatus('session');
@@ -1489,6 +1499,28 @@
                         authErrorTimeoutRef.current = setTimeout(() => {
                             authErrorShownRef.current = false;
                         }, 10000);
+                    }
+                    return;
+                }
+
+                const isTransientWriteContext = window.HEYS?.WriteContextHealth?.isTransientUnavailable
+                    ? window.HEYS.WriteContextHealth.isTransientUnavailable(e.detail)
+                    : code === 'write_context_unavailable'
+                    && (eventKind === 'transient_sync' || e.detail?.transient === true);
+                if (isTransientWriteContext) {
+                    if (retryIntervalRef.current) {
+                        clearInterval(retryIntervalRef.current);
+                        retryIntervalRef.current = null;
+                    }
+                    setRetryCountdown(0);
+                    const runtimePending = getRuntimePendingCount();
+                    const uploadInProgress = isRuntimeUploadInProgress();
+                    if (runtimePending > 0 || uploadInProgress) {
+                        pendingChangesRef.current = true;
+                        ensureFallbackPendingActionItems(getRuntimePendingDetails());
+                        enterBackgroundPendingSync();
+                    } else if (navigator.onLine) {
+                        setCloudStatus('idle');
                     }
                     return;
                 }
@@ -1759,7 +1791,7 @@
                 // 🔥 Очистка таймера auth error debounce
                 if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
             };
-        }, [clearPendingActionItems, ensureFallbackPendingActionItems, getRuntimePendingCount, getRuntimePendingDetails, isRuntimeUploadInProgress, pushPendingActionItem, resetLongSyncFallback, showSyncedWithMinDuration, startSyncingState]);
+        }, [clearPendingActionItems, ensureFallbackPendingActionItems, enterBackgroundPendingSync, getRuntimePendingCount, getRuntimePendingDetails, isRuntimeUploadInProgress, pushPendingActionItem, resetLongSyncFallback, showSyncedWithMinDuration, startSyncingState]);
 
         useEffect(() => {
             if (cloudStatus !== 'syncing' && !showSyncLockOverlay && !showPendingSyncBanner && !syncingStartRef.current) return;

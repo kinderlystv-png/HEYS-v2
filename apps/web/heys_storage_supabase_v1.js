@@ -3806,7 +3806,9 @@
         detail: {
           error: errorMsg,
           retryIn,
-          persistent: true // 🆕 Флаг для UI: не скрывать ошибку само
+          persistent: true, // 🆕 Флаг для UI: не скрывать ошибку само
+          kind: HEYS.WriteContextHealth?.KIND_BLOCKING_ERROR || 'blocking_error',
+          severity: 'error'
         }
       }));
     } catch (e) { }
@@ -3875,7 +3877,9 @@
       global.dispatchEvent(new CustomEvent('heys:sync-error', {
         detail: {
           error: 'auth_required',
-          persistent: true
+          persistent: true,
+          kind: HEYS.WriteContextHealth?.KIND_AUTH_ERROR || 'auth_error',
+          severity: 'blocking'
         }
       }));
 
@@ -10350,6 +10354,7 @@
   let _lastWriteContextUnavailableSignalAt = 0;
   let _writeContextUnavailableUploads = 0;
   let _writeContextIssueTimeouts = 0;
+  let _writeContextRetryTimer = null;
   let _clientUpsertTimerSetAt = 0; // Date.now() когда clientUpsertTimer был выставлен
   let _uploadLogTimer = null;
   let _uploadLogBufferedTotal = 0;
@@ -10402,14 +10407,71 @@
     _lastWriteContextUnavailableSignalAt = now;
 
     try {
-      global.dispatchEvent(new CustomEvent('heys:sync-error', {
-        detail: {
-          error: 'write_context_unavailable',
-          reason,
-          persistent: true
-        }
-      }));
+      const detail = HEYS.WriteContextHealth?.createUnavailableEventDetail
+        ? HEYS.WriteContextHealth.createUnavailableEventDetail({ reason, retryIn: 0 })
+        : {
+            error: 'write_context_unavailable',
+            reason,
+            retryIn: 0,
+            persistent: false,
+            kind: 'transient_sync',
+            severity: 'background',
+            transient: true,
+            background: true
+          };
+      global.dispatchEvent(new CustomEvent('heys:sync-error', { detail }));
     } catch (_) { }
+  }
+
+  function isUsableWriteContextForClient(clientId) {
+    if (!clientId || !cloud._writeContext || cloud._writeContext.clientId !== clientId || !cloud._writeContext.contextId) {
+      return false;
+    }
+    if (!cloud._writeContext.expiresAt) return true;
+    const expiresAtMs = Date.parse(cloud._writeContext.expiresAt);
+    if (!Number.isFinite(expiresAtMs)) return true;
+    return expiresAtMs - Date.now() > 60000;
+  }
+
+  function scheduleWriteContextRetry(clientId, reason) {
+    if (_writeContextRetryTimer || isLogoutSuppressionActive()) return;
+    const targetClientId = clientId || (typeof cloud.getCurrentClientId === 'function' ? cloud.getCurrentClientId() : null);
+    if (!targetClientId) return;
+    try {
+      HEYS.WriteContextHealth?.markRetryPhase?.('scheduled', {
+        reason: reason || 'retry-write-context',
+        clientId: targetClientId,
+        addSyncLogEntry
+      });
+    } catch (_) { }
+    _writeContextRetryTimer = setTimeout(() => {
+      _writeContextRetryTimer = null;
+      if (isLogoutSuppressionActive() || !navigator.onLine) return;
+      try {
+        HEYS.WriteContextHealth?.markRetryPhase?.('attempt', {
+          reason: reason || 'retry-write-context',
+          clientId: targetClientId,
+          addSyncLogEntry
+        });
+      } catch (_) { }
+      Promise.resolve(cloud.ensureWriteContextFresh?.(targetClientId, {
+        reason: reason || 'retry-write-context',
+        retryPending: false,
+      })).then((ctx) => {
+        if (ctx && ctx.contextId) {
+          try {
+            HEYS.WriteContextHealth?.markRetryPhase?.('ready', {
+              reason: reason || 'retry-write-context',
+              clientId: targetClientId,
+              addSyncLogEntry
+            });
+          } catch (_) { }
+        }
+        return ctx;
+      }).catch(() => null).finally(() => {
+        if (clientUpsertQueue.length > 0) scheduleClientPush();
+      });
+    }, 1800);
   }
 
   async function ensureWriteContextForUpload(clientId, items) {
@@ -10422,7 +10484,7 @@
       return { required: true, contextId: null, itemsHaveContext: true };
     }
 
-    if (cloud._writeContext && cloud._writeContext.clientId === clientId && cloud._writeContext.contextId) {
+    if (isUsableWriteContextForClient(clientId)) {
       return { required: true, contextId: cloud._writeContext.contextId };
     }
 
@@ -10437,7 +10499,7 @@
     if (ctx && ctx.clientId === clientId && ctx.contextId) {
       return { required: true, contextId: ctx.contextId };
     }
-    if (cloud._writeContext && cloud._writeContext.clientId === clientId && cloud._writeContext.contextId) {
+    if (isUsableWriteContextForClient(clientId)) {
       return { required: true, contextId: cloud._writeContext.contextId };
     }
 
@@ -10746,11 +10808,16 @@
         }
 
         if (anyError) {
-          logCritical(`[SYNC] ❌ Ошибка отправки: ${anyError}`);
-          addSyncLogEntry('upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
+          const isWriteContextError = anyError === 'write_context_unavailable';
+          if (isWriteContextError) {
+            logCritical(`[SYNC] ⏳ Отправка отложена: write_context_unavailable`);
+          } else {
+            logCritical(`[SYNC] ❌ Ошибка отправки: ${anyError}`);
+          }
+          addSyncLogEntry(isWriteContextError ? 'upload_deferred' : 'upload_error', { keys: _syncKeySummary, err: String(anyError).slice(0, 80), auth: isAuthError });
           _lastUploadFailAt = Date.now();
           recordUploadDiag({
-            kind: isAuthError ? 'auth' : classifyUploadError(anyError),
+            kind: isWriteContextError ? 'write-context' : (isAuthError ? 'auth' : classifyUploadError(anyError)),
             error: String(anyError?.message || anyError || '').slice(0, 240),
             code: anyError?.code || anyError?.status,
             chunkBytes: 0,
@@ -10764,15 +10831,22 @@
             } catch (_) { /* noop */ }
             logCritical(`🧊 [SYNC] 413 backoff: delaying client push ~45s to avoid RPC retry storm`);
           }
-          incrementRetry();
           clearClientInFlightBatch({ notify: false });
           persistClientQueueDurabilityState();
           notifyPendingChange();
 
           // 🔧 v58 FIX: При auth ошибке НЕ планируем retry — бесполезно без токена!
           // Данные останутся в очереди и отправятся когда появится токен (после логина)
+          if (isWriteContextError) {
+            resetRetry();
+            scheduleWriteContextRetry(Object.keys(byClientId)[0], 'upload_write_context_unavailable');
+          } else {
+            incrementRetry();
+          }
           if (isAuthError) {
             console.warn('⚠️ [UPLOAD] Auth error, NOT retrying — waiting for login');
+          } else if (isWriteContextError) {
+            console.info('[HEYS.sync] ⏳ Write context unavailable — local changes stay queued and will retry in background');
           } else if (shouldScheduleRetryAfterRpcError({
             isAuthError,
             retryAttempt,
@@ -10801,9 +10875,11 @@
         _uploadInProgress = false;
         _uploadInFlightCount = 0;
         // 🚀 PERF: Drain remaining queued items (from serialized uploads)
-        if (clientUpsertQueue.length > 0) {
-          scheduleClientPush();
-        }
+        cloud.ensureWriteContextFresh(null, { reason: 'upload-drain', retryPending: false })
+          .catch(() => null)
+          .finally(() => {
+            if (clientUpsertQueue.length > 0) scheduleClientPush();
+          });
         notifySyncCompletedIfDrained();
         // 🔧 v72: PIN/RPC path never hit curator upsert branch — без этого useCloudSyncStatus
         // не получает второй сигнал после heysSyncCompleted (download) и залипает на
@@ -11324,6 +11400,26 @@
     }
   };
 
+  cloud.ensureWriteContextFresh = function (targetClientId, options = {}) {
+    const cid = targetClientId
+      || (typeof cloud.getCurrentClientId === 'function' ? cloud.getCurrentClientId() : null)
+      || global.HEYS?.currentClientId
+      || null;
+    if (!cid || isLogoutSuppressionActive()) return Promise.resolve(null);
+    if (isUsableWriteContextForClient(cid)) return Promise.resolve(cloud._writeContext);
+    return Promise.resolve(cloud._issueWriteContext(cid))
+      .then((ctx) => {
+        if (ctx && ctx.contextId && options.retryPending !== false && clientUpsertQueue.length > 0) {
+          scheduleClientPush();
+        }
+        return ctx;
+      })
+      .catch((e) => {
+        console.warn('[write-context] prewarm failed:', e?.message || e);
+        return null;
+      });
+  };
+
   // Snapshot accessor — React load sites вызывают AT LOAD TIME и хранят
   // результат в state. На save передают этот snapshot через
   // saveClientKey(..., { writeContext, __heys_save_opts: true }).
@@ -11341,15 +11437,14 @@
       try {
         const detail = e?.detail || {};
         if (detail.error) return;
-	        const cid = detail.clientId || global.HEYS?.currentClientId;
-	        if (!cid) return;
-	        // Re-issue только если current context для другого клиента (или нет
-	        // вообще). Hot-syncs того же клиента → no-op (context живёт 24h).
-        if (cloud._writeContext && cloud._writeContext.clientId === cid &&
-            cloud._lastIssuedForClientId === cid) return;
+        const cid = detail.clientId || global.HEYS?.currentClientId;
+        if (!cid) return;
+        // Re-issue только если current context для другого клиента (или нет
+        // вообще). Hot-syncs того же клиента → no-op (context живёт 24h).
+        if (isUsableWriteContextForClient(cid) && cloud._lastIssuedForClientId === cid) return;
         cloud._lastIssuedForClientId = cid;
         // Fire-and-forget — boot/switch progress не должен ждать context issue.
-        cloud._issueWriteContext(cid).catch(() => { /* logged внутри */ });
+        cloud.ensureWriteContextFresh(cid, { reason: 'heysSyncCompleted' }).catch(() => { /* logged внутри */ });
       } catch (_) { /* noop */ }
     });
   }
@@ -12348,7 +12443,11 @@
     const pendingBefore = cloud.getPendingCount();
 
     if (clientUpsertQueue.length > 0) {
-      scheduleClientPush();
+      cloud.ensureWriteContextFresh(null, { reason: 'online', retryPending: false })
+        .catch(() => null)
+        .finally(() => {
+          if (clientUpsertQueue.length > 0) scheduleClientPush();
+        });
     }
     if (upsertQueue.length > 0) {
       schedulePush();
@@ -12431,6 +12530,8 @@
           error: errorMsg,
           retryIn: 5,
           persistent: false,
+          kind: HEYS.WriteContextHealth?.KIND_BEST_EFFORT_ERROR || 'best_effort_error',
+          severity: 'warning',
           source: 'best_effort_sync'
         }
       }));
@@ -13802,6 +13903,7 @@
       return;
     }
     startForegroundAutoSyncLoop();
+    cloud.ensureWriteContextFresh(null, { reason: 'visibility-visible', retryPending: false }).catch(() => null);
     requestForegroundAutoSync('visibility-visible', { minGapMs: 5000 }).catch(() => { });
   }
 
@@ -13814,10 +13916,12 @@
 
   if (global.addEventListener) {
     global.addEventListener('focus', function () {
+      cloud.ensureWriteContextFresh(null, { reason: 'window-focus', retryPending: false }).catch(() => null);
       requestForegroundAutoSync('window-focus', { minGapMs: 5000 }).catch(() => { });
       startForegroundAutoSyncLoop();
     });
     global.addEventListener('pageshow', function () {
+      cloud.ensureWriteContextFresh(null, { reason: 'pageshow', retryPending: false }).catch(() => null);
       requestForegroundAutoSync('pageshow', { minGapMs: 5000 }).catch(() => { });
       startForegroundAutoSyncLoop();
     });

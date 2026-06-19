@@ -212,7 +212,7 @@ apps/web/heys_ui_onboarding_v1.js:1670
 apps/web/heys_ui_onboarding_v1.js:173
 apps/web/heys_ui_onboarding_v1.js:775
 apps/web/heys_user_tab_impl_v1.js:378
-apps/web/heys_user_tab_impl_v1.js:627
+apps/web/heys_user_tab_impl_v1.js:628
 apps/web/heys_user_v12.js:147
 apps/web/heys_user_v12.js:158
 apps/web/heys_weekly_reports_v2.js:36
@@ -253,7 +253,7 @@ apps/web/advice/_core.js:3290
 # chrono planning UI state (collapsed toggle) — added by parallel agent
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не
 # bootstrap-critical и не data-bearing (UI collapse флаг).
-apps/web/heys_planning_chrono_v1.js:2824
+apps/web/heys_planning_chrono_v1.js:2987
 # auth cookie-session hints and bootstrap login writes — intentionally happen
 # before Store/Overlay wrappers are fully available.
 apps/web/heys_app_auth_init_v1.js:385
