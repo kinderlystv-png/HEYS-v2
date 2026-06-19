@@ -219,12 +219,35 @@
             if (!entry || entry.date !== date) return;
             const minutes = Math.max(0, Number(entry.minutes) || 0);
             if (minutes <= 0) return;
-            const groupId = entry.parallelGroupId ? `parallel:${entry.parallelGroupId}` : `entry:${entry.id || index}`;
-            const prev = groups.get(groupId) || 0;
-            groups.set(groupId, Math.max(prev, minutes));
+            const groupId = entry.displayGroupId
+                ? `display:${entry.displayGroupId}`
+                : (entry.parallelGroupId ? `parallel:${entry.parallelGroupId}` : `entry:${entry.id || index}`);
+            const displayStartMs = entry.displayStartAt ? new Date(entry.displayStartAt).getTime() : NaN;
+            const displayEndMs = entry.displayEndAt ? new Date(entry.displayEndAt).getTime() : NaN;
+            const group = groups.get(groupId) || { minutes: 0, displayStartMs: null, displayEndMs: null };
+            group.minutes = Math.max(group.minutes, minutes);
+            if (Number.isFinite(displayStartMs)) {
+                group.displayStartMs = group.displayStartMs == null
+                    ? displayStartMs
+                    : Math.min(group.displayStartMs, displayStartMs);
+            }
+            if (Number.isFinite(displayEndMs)) {
+                group.displayEndMs = group.displayEndMs == null
+                    ? displayEndMs
+                    : Math.max(group.displayEndMs, displayEndMs);
+            }
+            groups.set(groupId, group);
         });
         let total = 0;
-        groups.forEach((minutes) => { total += minutes; });
+        groups.forEach((group) => {
+            const displayMinutes = group
+                && Number.isFinite(group.displayStartMs)
+                && Number.isFinite(group.displayEndMs)
+                && group.displayEndMs > group.displayStartMs
+                ? Math.round((group.displayEndMs - group.displayStartMs) / 60000)
+                : 0;
+            total += Math.max(group.minutes || 0, displayMinutes);
+        });
         (Array.isArray(snapshots) ? snapshots : []).forEach((snapshot) => {
             if (!snapshot || snapshot.date !== date) return;
             total += Math.max(0, Number(snapshot.totalMinutes) || 0);
@@ -258,6 +281,38 @@
     }
 
     function buildChronoLoggedRows(day, entries, activities, date) {
+        const normalizeIds = (ids) => Array.from(new Set(Array.isArray(ids) ? ids.filter(Boolean) : [])).sort();
+        const isSubsetIds = (small, large) => {
+            const largeSet = new Set(large);
+            return small.length > 0 && small.every((id) => largeSet.has(id));
+        };
+        const canMergeLoggedRows = (prev, row) => {
+            if (!prev || !row) return false;
+            const isContiguous = Number.isFinite(prev.endMs)
+                && Number.isFinite(row.startMs)
+                && Math.abs(row.startMs - prev.endMs) <= 60000;
+            if (!isContiguous) return false;
+            const prevIds = normalizeIds(prev.activityIds);
+            const rowIds = normalizeIds(row.activityIds);
+            if (prevIds.length === 0 || rowIds.length === 0) return false;
+            return isSubsetIds(prevIds, rowIds) || isSubsetIds(rowIds, prevIds);
+        };
+        const mergeLoggedRows = (prev, row) => {
+            const prevSegments = Array.isArray(prev.segmentNames) && prev.segmentNames.length > 0
+                ? prev.segmentNames.slice()
+                : [prev.name].filter(Boolean);
+            if (row.name && prevSegments[prevSegments.length - 1] !== row.name) prevSegments.push(row.name);
+            prev.id = `merged:${prev.id}:${row.id}`;
+            prev.endMs = row.endMs;
+            prev.entryIds = prev.entryIds.concat(row.entryIds || []);
+            prev.activityIds = Array.from(new Set([].concat(prev.activityIds || [], row.activityIds || [])));
+            prev.segmentNames = prevSegments;
+            prev.durationMinutes = Math.max(1, Math.round((prev.endMs - prev.startMs) / 60000));
+            prev.minutes = prev.durationMinutes;
+            prev.timeRange = `${formatClockTime(prev.startMs)}–${formatClockTime(prev.endMs)}`;
+            prev.durationLabel = formatMinutes(prev.durationMinutes);
+            prev.name = prevSegments.join(' → ');
+        };
         const activityById = new Map((Array.isArray(activities) ? activities : []).map((a) => [a.id, a]));
         const wakeClock = day && (day.sleepEnd || day.wakeTime || day.wokeAt);
         const wakeMs = buildDateTimeMs(date, wakeClock);
@@ -308,7 +363,7 @@
             groups.set(groupId, group);
         });
         let previousEndMs = Number.isFinite(wakeMs) ? wakeMs : null;
-        return Array.from(groups.values())
+        const rows = Array.from(groups.values())
             .sort((a, b) => a.endMs - b.endMs)
             .map((group) => {
                 const groupEndMs = Number.isFinite(group.displayEndMs) ? group.displayEndMs : group.endMs;
@@ -338,6 +393,15 @@
                     name: Array.from(new Set(group.names)).join(' · '),
                 };
             });
+        return rows.reduce((acc, row) => {
+            const prev = acc[acc.length - 1];
+            if (canMergeLoggedRows(prev, row)) {
+                mergeLoggedRows(prev, row);
+                return acc;
+            }
+            acc.push({ ...row });
+            return acc;
+        }, []);
     }
 
     function buildChronoReorderAssignments(rows, date, anchorMs) {
@@ -434,25 +498,77 @@
         return next;
     }
 
+    function normalizeUntrackedParallelIds(draft, selectedIdsOverride) {
+        if (!draft) return [];
+        const selectedIds = Array.isArray(selectedIdsOverride)
+            ? selectedIdsOverride.filter(Boolean)
+            : (Array.isArray(draft.selectedIds) ? draft.selectedIds.filter(Boolean) : []);
+        const selected = new Set(selectedIds);
+        const raw = Array.isArray(draft.parallelIds) ? draft.parallelIds : [];
+        return Array.from(new Set(raw.filter((id) => id && selected.has(id))));
+    }
+
+    function getSequentialUntrackedIds(selectedIds, parallelIds) {
+        const selected = Array.from(new Set(Array.isArray(selectedIds) ? selectedIds.filter(Boolean) : []));
+        const parallel = new Set(Array.isArray(parallelIds) ? parallelIds.filter(Boolean) : []);
+        return selected.filter((id) => !parallel.has(id));
+    }
+
+    function distributeUntrackedDraftAllocations(totalMinutes, selectedIds, parallelIds, currentAllocations, changedId, changedMinutes) {
+        const sequentialIds = getSequentialUntrackedIds(selectedIds, parallelIds);
+        if (sequentialIds.length === 0) return {};
+        const total = Math.max(0, Math.round(Number(totalMinutes) || 0));
+        const hasParallelAnchor = Array.isArray(parallelIds) && parallelIds.filter(Boolean).length > 0;
+        if (hasParallelAnchor) {
+            const current = currentAllocations && typeof currentAllocations === 'object' ? currentAllocations : {};
+            return sequentialIds.reduce((acc, id) => {
+                const fallback = total;
+                const raw = id === changedId ? changedMinutes : current[id];
+                const value = Number.isFinite(Number(raw)) ? Math.round(Number(raw)) : fallback;
+                acc[id] = Math.max(0, Math.min(total, value));
+                return acc;
+            }, {});
+        }
+        return distributeUntrackedMinutes(totalMinutes, sequentialIds, currentAllocations, changedId, changedMinutes);
+    }
+
     function buildUntrackedSteps(draft, activities) {
         if (!draft || !Array.isArray(draft.selectedIds)) return [];
         const byId = new Map((Array.isArray(activities) ? activities : []).map((item) => [item.id, item]));
+        const selectedIds = Array.from(new Set(draft.selectedIds.filter(Boolean)));
+        const parallelIds = normalizeUntrackedParallelIds(draft, selectedIds);
+        const parallelSet = new Set(parallelIds);
+        const hasParallelAnchor = parallelIds.length > 0;
+        const hasSequential = getSequentialUntrackedIds(selectedIds, parallelIds).length > 0;
+        const total = Math.max(0, Math.round(Number(draft.minutes) || 0));
         let cursor = Number(draft.startMs);
         const fallbackStart = Number.isFinite(cursor) ? cursor : null;
-        return draft.selectedIds
+        return selectedIds
             .map((id) => {
                 const activity = byId.get(id);
                 if (!activity) return null;
-                const minutes = Math.max(0, Math.round(Number(draft.allocations && draft.allocations[id]) || 0));
-                const startMs = Number.isFinite(cursor) ? cursor : fallbackStart;
-                const endMs = Number.isFinite(startMs) ? startMs + minutes * 60000 : null;
-                if (Number.isFinite(endMs)) cursor = endMs;
+                const isParallel = parallelSet.has(id);
+                const rawMinutes = draft.allocations && draft.allocations[id];
+                const parsedMinutes = Number(rawMinutes);
+                const fallbackMinutes = hasParallelAnchor ? total : 0;
+                const minutes = isParallel || !hasSequential
+                    ? total
+                    : Math.max(0, Math.min(total, Math.round(Number.isFinite(parsedMinutes) ? parsedMinutes : fallbackMinutes)));
+                const startMs = isParallel || !hasSequential
+                    ? fallbackStart
+                    : (Number.isFinite(cursor) ? cursor : fallbackStart);
+                const endMs = isParallel || !hasSequential
+                    ? (Number.isFinite(fallbackStart) ? fallbackStart + minutes * 60000 : null)
+                    : (Number.isFinite(startMs) ? startMs + minutes * 60000 : null);
+                if (!isParallel && hasSequential && Number.isFinite(endMs)) cursor = endMs;
                 return {
                     id,
                     activity,
                     minutes,
                     startMs,
                     endMs,
+                    isParallel,
+                    hasParallelAnchor,
                 };
             })
             .filter(Boolean);
@@ -1081,6 +1197,17 @@
 
     // === Toast (undo) ===
 
+    function formatActivityCountSuffix(count) {
+        const safe = Math.max(0, Math.round(Number(count) || 0));
+        if (safe <= 1) return '';
+        const lastTwo = safe % 100;
+        const last = safe % 10;
+        const word = lastTwo >= 11 && lastTwo <= 14
+            ? 'активностей'
+            : (last >= 2 && last <= 4 ? 'активности' : 'активностей');
+        return ` в ${safe} ${word}`;
+    }
+
     function ChronoUndoToast({ toast, onUndo, onDismiss }) {
         useEffect(() => {
             if (!toast) return undefined;
@@ -1096,7 +1223,7 @@
                     ? `Убрано ${toast.scope === 'week' ? 'из недели' : 'из дня'}${toast.minutes > 0 ? ': ' + formatMinutes(toast.minutes) : ''}`
                     : toast.adjusted
                         ? `Изменено ${toast.minutes > 0 ? '+' : '-'}${formatMinutes(Math.abs(toast.minutes))}`
-                        : `Добавлено ${formatMinutes(toast.minutes)}${toast.parallelCount > 1 ? ' в 2 активности' : ''}`),
+                        : `Добавлено ${formatMinutes(toast.minutes)}${formatActivityCountSuffix(toast.activityCount || toast.parallelCount)}`),
             h('button', {
                 type: 'button',
                 className: 'chrono-undo-toast__action',
@@ -2229,7 +2356,7 @@
         );
     }
 
-    function ChronoUntrackedAllocationPanel({ draft, activities, onChange, onConfirm, onConfirmNow, onCancel }) {
+    function ChronoUntrackedAllocationPanel({ draft, activities, onChange, onParallelChange, onConfirm, onConfirmNow, onCancel }) {
         const steps = buildUntrackedSteps(draft, activities);
         const flowRef = useRef(null);
         useEffect(() => {
@@ -2253,6 +2380,7 @@
         if (!draft || steps.length === 0) return null;
         const total = Math.max(1, Math.round(Number(draft.minutes) || 0));
         const isSingle = steps.length === 1;
+        const canToggleParallel = steps.length > 0;
         return h('div', {
             ref: flowRef,
             className: 'chrono-untracked-flow no-swipe-zone',
@@ -2262,7 +2390,7 @@
             onPointerCancel: (e) => e.stopPropagation(),
         },
             h('div', { className: 'chrono-untracked-flow__head' },
-                h('span', { className: 'chrono-untracked-flow__title' }, 'Не записано'),
+                h('span', { className: 'chrono-untracked-flow__title' }, 'Распределить время'),
                 h('strong', { className: 'chrono-untracked-flow__total' }, formatMinutes(total)),
                 h('button', {
                     type: 'button',
@@ -2271,10 +2399,23 @@
                     'aria-label': 'Отменить распределение',
                 }, '×'),
             ),
-            isSingle && h('div', { className: 'chrono-untracked-flow__single' },
+            isSingle && h('div', { className: 'chrono-untracked-flow__single' + (steps[0].isParallel ? ' is-parallel' : '') },
                 h('div', { className: 'chrono-untracked-flow__single-row' },
                     h('span', { className: 'chrono-untracked-flow__activity' },
                         `${steps[0].activity.emoji || '·'} ${steps[0].activity.name || 'Занятие'}`),
+                    canToggleParallel && h('button', {
+                        type: 'button',
+                        className: 'chrono-untracked-flow__parallel-toggle' + (steps[0].isParallel ? ' active' : ''),
+                        role: 'switch',
+                        'aria-checked': steps[0].isParallel ? 'true' : 'false',
+                        'aria-label': `${steps[0].activity.name || 'Занятие'}: параллельно`,
+                        title: steps[0].isParallel ? 'Параллельно' : 'Обычная часть',
+                        onClick: () => onParallelChange && onParallelChange(steps[0].id, !steps[0].isParallel),
+                    },
+                        h('span', { className: 'chrono-untracked-flow__parallel-switch', 'aria-hidden': 'true' },
+                            h('span', { className: 'chrono-untracked-flow__parallel-knob' }),
+                        ),
+                    ),
                     h('span', { className: 'chrono-untracked-flow__minutes' }, formatMinutes(total)),
                 ),
                 h('div', { className: 'chrono-untracked-flow__bar', 'aria-hidden': 'true' },
@@ -2285,12 +2426,30 @@
                 steps.map((step) => {
                     const minutes = Math.max(0, Math.round(Number(step.minutes) || 0));
                     const pct = Math.round((minutes / total) * 100);
-                    return h('label', { key: step.id, className: 'chrono-untracked-flow__slider-row' },
+                    const isParallel = !!step.isParallel;
+                    const showParallelToggle = canToggleParallel && (!step.hasParallelAnchor || isParallel);
+                    return h('div', {
+                        key: step.id,
+                        className: 'chrono-untracked-flow__slider-row' + (isParallel ? ' is-parallel' : ''),
+                    },
                         h('span', { className: 'chrono-untracked-flow__slider-top' },
                             h('span', { className: 'chrono-untracked-flow__activity' },
                                 `${step.activity.emoji || '·'} ${step.activity.name || 'Занятие'}`),
+                            showParallelToggle && h('button', {
+                                type: 'button',
+                                className: 'chrono-untracked-flow__parallel-toggle' + (isParallel ? ' active' : ''),
+                                role: 'switch',
+                                'aria-checked': isParallel ? 'true' : 'false',
+                                'aria-label': `${step.activity.name || 'Занятие'}: параллельно`,
+                                title: isParallel ? 'Параллельно' : 'Обычная часть',
+                                onClick: () => onParallelChange && onParallelChange(step.id, !isParallel),
+                            },
+                                h('span', { className: 'chrono-untracked-flow__parallel-switch', 'aria-hidden': 'true' },
+                                    h('span', { className: 'chrono-untracked-flow__parallel-knob' }),
+                                ),
+                            ),
                             h('span', { className: 'chrono-untracked-flow__minutes' },
-                                `${formatMinutes(minutes)} · ${pct}%`),
+                                isParallel ? formatMinutes(minutes) : `${formatMinutes(minutes)} · ${pct}%`),
                         ),
                         h('input', {
                             className: 'chrono-untracked-flow__range',
@@ -2299,22 +2458,25 @@
                             max: total,
                             step: 1,
                             value: minutes,
+                            style: { '--chrono-range-pct': `${pct}%` },
+                            disabled: isParallel,
+                            'aria-label': `${step.activity.name || 'Занятие'}: минуты`,
                             onChange: (e) => onChange && onChange(step.id, Number(e.target.value)),
                         }),
                     );
                 }),
             ),
             h('div', { className: 'chrono-untracked-flow__actions' },
-                h('button', {
+                steps.length > 1 && h('button', {
                     type: 'button',
-                    className: 'planning-btn chrono-untracked-flow__confirm-now',
-                    onClick: onConfirmNow,
-                }, '⚡ Подтвердить'),
-                h('button', {
-                    type: 'button',
-                    className: 'planning-btn planning-btn--primary chrono-untracked-flow__confirm',
+                    className: 'planning-btn chrono-untracked-flow__confirm',
                     onClick: onConfirm,
-                }, steps.length > 1 ? 'Подтвердить по очереди' : 'Подтвердить'),
+                }, 'По очереди'),
+                h('button', {
+                    type: 'button',
+                    className: 'planning-btn planning-btn--primary chrono-untracked-flow__confirm-now',
+                    onClick: onConfirmNow,
+                }, 'Подтвердить'),
             ),
         );
     }
@@ -2790,13 +2952,14 @@
         );
     }
 
-    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay, lastAdded, loggedRows, untracked, untrackedActive, onUntrackedClick, onLoggedRowClick, onLoggedRowsReorder }) {
+    function ChronoOverviewPanel({ insights, balance, streaks, timeOfDay, lastAdded, loggedRows, untracked, untrackedActive, variant, onUntrackedClick, onLoggedRowClick, onLoggedRowsReorder }) {
         const list = Array.isArray(insights) ? insights : [];
         const top = list.find((item) => item && item.kind === 'top');
         const alerts = list.filter((item) => item && item.kind !== 'top').slice(0, 2);
         const categories = Array.isArray(balance) ? balance.filter((item) => item && item.minutes > 0).slice(0, 4) : [];
         const streakList = Array.isArray(streaks) ? streaks.slice(0, 3) : [];
         const rows = Array.isArray(loggedRows) ? loggedRows : [];
+        const isModal = variant === 'modal';
         const [dragRows, setDragRows] = useState(null);
         const [draggingRowId, setDraggingRowId] = useState('');
         const rowRefs = useRef(new Map());
@@ -2956,23 +3119,16 @@
         }, [onLoggedRowClick]);
 
         const visibleRows = draggingRowId && dragRows ? dragRows : rows;
+        const showBody = isModal;
+        if (!isModal && rows.length === 0 && !lastAdded && !untracked) return null;
         if (!top && categories.length === 0 && alerts.length === 0 && streakList.length === 0 && !pattern && !lastAdded && rows.length === 0 && !untracked) return null;
 
         return h('div', {
-            className: 'chrono-overview' + (collapsed ? ' is-collapsed' : ''),
+            className: 'chrono-overview'
+                + (collapsed && !isModal ? ' is-collapsed' : '')
+                + (isModal ? ' chrono-overview--modal' : ''),
             'aria-label': 'Сводка хронометража',
         },
-            h('button', {
-                type: 'button',
-                className: 'chrono-overview__toggle',
-                onClick: toggle,
-                'aria-expanded': !collapsed,
-                'aria-controls': 'chrono-overview-body',
-            },
-                h('span', { className: 'chrono-overview__toggle-label' }, 'Сводка'),
-                top && collapsed && h('span', { className: 'chrono-overview__toggle-hint' }, top.value),
-                h('span', { className: 'chrono-overview__toggle-chevron', 'aria-hidden': 'true' }, '▾'),
-            ),
             rows.length > 0 && h('div', { className: 'chrono-overview__ledger' },
                 visibleRows.map((row) => h('button', {
                     key: row.id,
@@ -2998,10 +3154,10 @@
                             e.stopPropagation();
                             handleLedgerPointerDown(row, e, true);
                         },
-                    }, '↕️'),
+                    }, '↕'),
                     h('span', { className: 'chrono-overview__ledger-time' }, row.timeRange),
-                    h('span', { className: 'chrono-overview__ledger-duration' }, row.durationLabel),
-                    h('span', { className: 'chrono-overview__ledger-name' }, row.name),
+                    h('span', { className: 'chrono-overview__ledger-duration' }, `· ${row.durationLabel}`),
+                    h('span', { className: 'chrono-overview__ledger-name' }, `· ${row.name}`),
                 )),
             ),
             (lastAdded || untracked) && h('div', {
@@ -3018,9 +3174,9 @@
                     title: untracked.sinceKind === 'last-entry'
                         ? `С последней записи в ${untracked.sinceLabel}`
                         : (untracked.wakeLabel ? `С пробуждения в ${untracked.wakeLabel}` : undefined),
-                }, `не записано ${untracked.hoursLabel}`),
+                }, untrackedActive ? 'Распределить время' : `не записано ${untracked.hoursLabel}`),
             ),
-            !collapsed && h('div', { id: 'chrono-overview-body', className: 'chrono-overview__body' },
+            showBody && h('div', { id: isModal ? undefined : 'chrono-overview-body', className: 'chrono-overview__body' },
                 h('div', { className: 'chrono-overview__top' },
                     h('span', { className: 'chrono-overview__eyebrow' }, 'Топ'),
                     h('strong', { className: 'chrono-overview__top-value' }, top ? top.value : 'Нет записей'),
@@ -3068,6 +3224,41 @@
                 pattern && h('div', { className: 'chrono-overview__pattern' },
                     h('span', { className: 'chrono-overview__pattern-icon', 'aria-hidden': 'true' }, '🕑'),
                     h('span', null, pattern),
+                ),
+            ),
+        );
+    }
+
+    function ChronoOverviewModal({ dateLabel, overviewProps, onClose }) {
+        const overlayRef = useRef(null);
+
+        useEffect(() => {
+            const ModalManager = HEYS.ModalManager;
+            if (!ModalManager || typeof ModalManager.register !== 'function') return undefined;
+            return ModalManager.register('chrono-overview', () => onClose());
+        }, [onClose]);
+
+        useEffect(() => {
+            function onKey(e) { if (e.key === 'Escape') onClose(); }
+            window.addEventListener('keydown', onKey);
+            return () => window.removeEventListener('keydown', onKey);
+        }, [onClose]);
+
+        return h('div', {
+            className: 'planning-modal-overlay planning-modal-overlay--nested chrono-overview-modal-overlay',
+            ref: overlayRef,
+            onClick: (e) => { if (e.target === overlayRef.current) onClose(); },
+        },
+            h('div', { className: 'planning-modal planning-modal--picker chrono-overview-modal', onClick: (e) => e.stopPropagation() },
+                h('div', { className: 'planning-modal__header' },
+                    h('span', null, 'Сводка', dateLabel ? ` · ${dateLabel}` : ''),
+                    h('button', { type: 'button', className: 'planning-modal__close', onClick: onClose, 'aria-label': 'Закрыть' }, '×'),
+                ),
+                h('div', { className: 'planning-modal__body chrono-overview-modal__body' },
+                    h(ChronoOverviewPanel, {
+                        ...(overviewProps || {}),
+                        variant: 'modal',
+                    }),
                 ),
             ),
         );
@@ -3786,7 +3977,7 @@
         const [recentBadge, setRecentBadge] = useState(null);
         const [timerCompleteShown, setTimerCompleteShown] = useState(false);
         const [timerStopOpen, setTimerStopOpen] = useState(false);
-        const [timelineOpen, setTimelineOpen] = useState(false);
+        const [overviewModalOpen, setOverviewModalOpen] = useState(false);
         const [timerNow, setTimerNow] = useState(() => Date.now());
         const todayStr = Utils.chronoDateStr?.() || Utils.dateStr();
         const dateLabel = scope === 'week' ? formatWeekLabel(activeDate) : formatDateLabel(activeDate);
@@ -3926,10 +4117,12 @@
                     const selectedIds = exists
                         ? selected.filter((id) => id !== activity.id)
                         : selected.concat(activity.id);
+                    const parallelIds = normalizeUntrackedParallelIds(current, selectedIds);
                     return {
                         ...current,
                         selectedIds,
-                        allocations: distributeUntrackedMinutes(current.minutes, selectedIds, current.allocations),
+                        parallelIds,
+                        allocations: distributeUntrackedDraftAllocations(current.minutes, selectedIds, parallelIds, current.allocations),
                     };
                 });
                 return;
@@ -4063,11 +4256,15 @@
             if (saved.length > 0) {
                 const lastSaved = saved[saved.length - 1];
                 const allIds = saved.flatMap((item) => item.ids || []);
-                const totalMinutes = saved.reduce((sum, item) => sum + item.minutes, 0);
+                const entryMinutes = saved.reduce((sum, item) => sum + item.minutes, 0);
+                const realMinutes = sharedTiming
+                    ? Math.max(0, Math.round(Number(untrackedDraft.minutes) || 0))
+                    : entryMinutes;
                 setToast({
                     id: lastSaved.entry.id,
                     ids: allIds,
-                    minutes: totalMinutes,
+                    minutes: realMinutes,
+                    activityCount: saved.length,
                     parallelCount: allIds.length,
                 });
                 setRecentBadge({
@@ -4274,6 +4471,7 @@
                 startMs: untracked.startMs,
                 endMs: untracked.endMs,
                 selectedIds: [],
+                parallelIds: [],
                 allocations: {},
                 confirming: false,
                 confirmIndex: 0,
@@ -4284,14 +4482,39 @@
         const handleUntrackedAllocationChange = useCallback((activityId, minutes) => {
             setUntrackedDraft((current) => {
                 if (!current || current.confirming) return current;
+                const parallelIds = normalizeUntrackedParallelIds(current);
                 return {
                     ...current,
-                    allocations: distributeUntrackedMinutes(
+                    parallelIds,
+                    allocations: distributeUntrackedDraftAllocations(
                         current.minutes,
                         current.selectedIds,
+                        parallelIds,
                         current.allocations,
                         activityId,
                         minutes,
+                    ),
+                };
+            });
+        }, []);
+
+        const handleUntrackedParallelChange = useCallback((activityId, enabled) => {
+            setUntrackedDraft((current) => {
+                if (!current || current.confirming || !activityId) return current;
+                const selectedIds = Array.isArray(current.selectedIds) ? current.selectedIds.filter(Boolean) : [];
+                if (!selectedIds.includes(activityId)) return current;
+                const currentParallel = new Set(normalizeUntrackedParallelIds(current, selectedIds));
+                if (enabled) currentParallel.add(activityId);
+                else currentParallel.delete(activityId);
+                const parallelIds = Array.from(currentParallel);
+                return {
+                    ...current,
+                    parallelIds,
+                    allocations: distributeUntrackedDraftAllocations(
+                        current.minutes,
+                        selectedIds,
+                        parallelIds,
+                        current.allocations,
                     ),
                 };
             });
@@ -4405,9 +4628,9 @@
                 h('button', {
                     type: 'button',
                     className: 'chrono-scope-bar__icon-btn',
-                    onClick: () => setTimelineOpen(true),
-                    'aria-label': 'Лента дня',
-                    title: 'Лента дня',
+                    onClick: () => setOverviewModalOpen(true),
+                    'aria-label': 'Сводка',
+                    title: 'Сводка',
                 }, '◷'),
             ),
             timer && timerActivity && h(ChronoTimerBanner, {
@@ -4436,6 +4659,7 @@
                 draft: untrackedDraft,
                 activities,
                 onChange: handleUntrackedAllocationChange,
+                onParallelChange: handleUntrackedParallelChange,
                 onConfirm: handleUntrackedConfirm,
                 onConfirmNow: handleUntrackedApplyNow,
                 onCancel: handleUntrackedCancel,
@@ -4573,15 +4797,25 @@
                 onDiscard: handleTimerStopDiscard,
                 onClose: () => setTimerStopOpen(false),
             }),
-            timelineOpen && h(ChronoTimelineModal, {
-                date: activeDate,
-                entries,
-                activities,
-                onPickActivity: (activity) => {
-                    setTimelineOpen(false);
-                    handleBubbleClick(activity);
+            overviewModalOpen && h(ChronoOverviewModal, {
+                dateLabel,
+                overviewProps: {
+                    insights,
+                    balance: categoryBalance,
+                    streaks,
+                    timeOfDay,
+                    lastAdded,
+                    loggedRows,
+                    untracked: untrackedHasSelection ? null : untracked,
+                    untrackedActive: !!untrackedDraft,
+                    onUntrackedClick: handleUntrackedBadgeClick,
+                    onLoggedRowClick: (row) => {
+                        setOverviewModalOpen(false);
+                        setEntryEditTarget(row);
+                    },
+                    onLoggedRowsReorder: handleLoggedRowsReorder,
                 },
-                onClose: () => setTimelineOpen(false),
+                onClose: () => setOverviewModalOpen(false),
             }),
             totalMinutes > 0 && h('div', {
                 className: 'chrono-bottom-total',

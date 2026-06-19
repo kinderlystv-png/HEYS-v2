@@ -886,6 +886,25 @@ describe('Planning.Store chrono helpers — addChronoEntry + compaction', () => 
         expect(Store.getChronoActivities().length).toBe(1);
     });
 
+    it('emits planning-updated when adding local activity before cloud pull completes', () => {
+        const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+        try {
+            const a = Store.addChronoActivity({ name: 'Local wake add', emoji: '🧠' });
+            expect(a).toBeTruthy();
+
+            const event = dispatchSpy.mock.calls
+                .map(([dispatchedEvent]) => dispatchedEvent)
+                .find((dispatchedEvent) => dispatchedEvent?.type === 'heys:planning-updated');
+            expect(event).toBeTruthy();
+            expect(event.detail).toEqual(expect.objectContaining({
+                kind: 'storage:set',
+                payload: expect.objectContaining({ key: 'heys_planning_chrono_activities' }),
+            }));
+        } finally {
+            dispatchSpy.mockRestore();
+        }
+    });
+
     it('addChronoEntry rejects unknown activityId', () => {
         const e = Store.addChronoEntry({ activityId: 'nope', date: '2026-06-02', minutes: 10 });
         expect(e).toBe(null);
@@ -1175,6 +1194,172 @@ describe('chrono analytics helpers', () => {
         ]);
     });
 
+    it('buildChronoLoggedRows merges adjacent rows with the same visible activity name', () => {
+        const rows = Chrono.buildChronoLoggedRows(
+            { sleepEnd: '07:00' },
+            [
+                {
+                    id: 'first',
+                    activityId: 'code',
+                    date: '2026-06-02',
+                    minutes: 30,
+                    at: '2026-06-02T10:00:00',
+                    createdAt: '2026-06-02T10:30:00',
+                },
+                {
+                    id: 'second',
+                    activityId: 'code',
+                    date: '2026-06-02',
+                    minutes: 30,
+                    at: '2026-06-02T10:30:00',
+                    createdAt: '2026-06-02T11:00:00',
+                },
+            ],
+            [{ id: 'code', name: 'Code' }],
+            '2026-06-02',
+        );
+
+        expect(rows).toMatchObject([
+            {
+                entryIds: ['first', 'second'],
+                timeRange: '10:00–11:00',
+                durationLabel: '1ч',
+                name: 'Code',
+            },
+        ]);
+    });
+
+    it('buildChronoLoggedRows keeps adjacent equal names separate when activity ids differ', () => {
+        const rows = Chrono.buildChronoLoggedRows(
+            { sleepEnd: '07:00' },
+            [
+                {
+                    id: 'first',
+                    activityId: 'studio-a',
+                    date: '2026-06-02',
+                    minutes: 20,
+                    at: '2026-06-02T10:00:00',
+                    createdAt: '2026-06-02T10:20:00',
+                },
+                {
+                    id: 'second',
+                    activityId: 'studio-b',
+                    date: '2026-06-02',
+                    minutes: 20,
+                    at: '2026-06-02T10:20:00',
+                    createdAt: '2026-06-02T10:40:00',
+                },
+            ],
+            [
+                { id: 'studio-a', name: 'Studio' },
+                { id: 'studio-b', name: 'Studio' },
+            ],
+            '2026-06-02',
+        );
+
+        expect(rows).toHaveLength(2);
+        expect(rows.map((row) => row.entryIds)).toEqual([['first'], ['second']]);
+    });
+
+    it('buildChronoLoggedRows appends a single activity continuation to the previous parallel row', () => {
+        const rows = Chrono.buildChronoLoggedRows(
+            { sleepEnd: '07:00' },
+            [
+                {
+                    id: 'code-parallel',
+                    activityId: 'code',
+                    date: '2026-06-02',
+                    minutes: 45,
+                    at: '2026-06-02T10:00:00',
+                    createdAt: '2026-06-02T10:45:00',
+                    displayGroupId: 'parallel-work',
+                    displayStartAt: '2026-06-02T10:00:00',
+                    displayEndAt: '2026-06-02T10:45:00',
+                },
+                {
+                    id: 'studio-parallel',
+                    activityId: 'studio',
+                    date: '2026-06-02',
+                    minutes: 45,
+                    at: '2026-06-02T10:00:00',
+                    createdAt: '2026-06-02T10:45:00',
+                    displayGroupId: 'parallel-work',
+                    displayStartAt: '2026-06-02T10:00:00',
+                    displayEndAt: '2026-06-02T10:45:00',
+                },
+                {
+                    id: 'code-alone',
+                    activityId: 'code',
+                    date: '2026-06-02',
+                    minutes: 15,
+                    at: '2026-06-02T10:45:00',
+                    createdAt: '2026-06-02T11:00:00',
+                },
+            ],
+            [
+                { id: 'code', name: 'Code' },
+                { id: 'studio', name: 'Studio' },
+            ],
+            '2026-06-02',
+        );
+
+        expect(rows).toMatchObject([
+            {
+                entryIds: ['code-parallel', 'studio-parallel', 'code-alone'],
+                timeRange: '10:00–11:00',
+                durationLabel: '1ч',
+                name: 'Code · Studio → Code',
+            },
+        ]);
+    });
+
+    it('buildUntrackedSteps gives parallel selections the full untracked interval', () => {
+        const steps = Chrono.buildUntrackedSteps(
+            {
+                minutes: 60,
+                startMs: new Date('2026-06-02T10:00:00').getTime(),
+                selectedIds: ['studio', 'phone'],
+                parallelIds: ['phone'],
+                allocations: { studio: 60 },
+            },
+            [
+                { id: 'studio', name: 'Studio' },
+                { id: 'phone', name: 'Phone' },
+            ],
+        );
+
+        expect(steps).toMatchObject([
+            { id: 'studio', minutes: 60, isParallel: false },
+            { id: 'phone', minutes: 60, isParallel: true },
+        ]);
+        expect(steps[0].startMs).toBe(new Date('2026-06-02T10:00:00').getTime());
+        expect(steps[1].startMs).toBe(new Date('2026-06-02T10:00:00').getTime());
+        expect(steps[1].endMs).toBe(new Date('2026-06-02T11:00:00').getTime());
+    });
+
+    it('buildUntrackedSteps lets non-anchor parallel companions use a smaller duration', () => {
+        const steps = Chrono.buildUntrackedSteps(
+            {
+                minutes: 41,
+                startMs: new Date('2026-06-02T10:00:00').getTime(),
+                selectedIds: ['programming', 'studio', 'phone'],
+                parallelIds: ['programming'],
+                allocations: { studio: 25, phone: 0 },
+            },
+            [
+                { id: 'programming', name: 'Programming' },
+                { id: 'studio', name: 'Studio' },
+                { id: 'phone', name: 'Phone' },
+            ],
+        );
+
+        expect(steps).toMatchObject([
+            { id: 'programming', minutes: 41, isParallel: true, hasParallelAnchor: true },
+            { id: 'studio', minutes: 25, isParallel: false, hasParallelAnchor: true },
+            { id: 'phone', minutes: 0, isParallel: false, hasParallelAnchor: true },
+        ]);
+    });
+
     it('buildChronoReorderAssignments keeps durations and rewrites contiguous intervals', () => {
         const start = new Date('2026-06-02T07:00:00').getTime();
         const rows = [
@@ -1215,6 +1400,35 @@ describe('chrono analytics helpers', () => {
         );
 
         expect(covered).toBe(90);
+    });
+
+    it('computeChronoCoveredMinutes counts display-grouped untracked entries as one real period', () => {
+        const covered = Chrono.computeChronoCoveredMinutes(
+            [
+                {
+                    id: 'studio',
+                    activityId: 'a',
+                    date: '2026-06-02',
+                    minutes: 60,
+                    displayGroupId: 'ug1',
+                    displayStartAt: '2026-06-02T10:00:00',
+                    displayEndAt: '2026-06-02T11:00:00',
+                },
+                {
+                    id: 'phone',
+                    activityId: 'b',
+                    date: '2026-06-02',
+                    minutes: 60,
+                    displayGroupId: 'ug1',
+                    displayStartAt: '2026-06-02T10:00:00',
+                    displayEndAt: '2026-06-02T11:00:00',
+                },
+            ],
+            [],
+            '2026-06-02',
+        );
+
+        expect(covered).toBe(60);
     });
 
     it('buildUntrackedChronoSummary counts from the last remaining entry', () => {
