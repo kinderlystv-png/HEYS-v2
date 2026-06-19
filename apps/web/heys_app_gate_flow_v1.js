@@ -287,11 +287,12 @@
                         deepLink,
                         pinTokenExpiresAt: res.pin_token_expires_at
                     };
+                    const welcomeMessage = buildWelcomeMessage(nextAccess);
                     setAccessResult({
                         title: 'Новый доступ для клиента',
                         message: 'Скопируйте готовое сообщение и отправьте клиенту в его мессенджере.',
                         ...nextAccess,
-                        welcomeMessage: buildWelcomeMessage(nextAccess)
+                        welcomeMessage
                     });
                     HEYS.Toast?.success?.('PIN и ссылка перевыпущены');
                     onUpdate?.();
@@ -643,7 +644,7 @@
                     onClick: handleRegeneratePin,
                     disabled: loading || !HEYS.TrialQueue?.admin?.regeneratePin,
                     style: { ...btnBase, background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }
-                }, loading ? '⏳ Выпуск...' : '🔐 Перевыпустить PIN и ссылку'),
+                }, loading ? '⏳ Выпуск...' : '🔐 Перевыпустить PIN и приглашение'),
                 status !== 'none' && h('button', {
                     onClick: handleCancel, disabled: loading,
                     style: { ...btnBase, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }
