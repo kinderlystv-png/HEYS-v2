@@ -1,6 +1,38 @@
 // heys_app_client_management_v1.js — client list management
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
+    const CLIENTS_UPDATED_EVENT = 'heys:clients-updated';
+    const CLIENTS_UPDATED_CHANNEL = 'heys_clients_updated';
+
+    const readClientsFromStorage = () => {
+        try {
+            const raw = localStorage.getItem('heys_clients');
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : null;
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const notifyClientsUpdated = (clients, source = 'unknown') => {
+        const safeClients = Array.isArray(clients) ? clients : readClientsFromStorage();
+        if (safeClients) {
+            try {
+                window.dispatchEvent(new CustomEvent(CLIENTS_UPDATED_EVENT, {
+                    detail: { clients: safeClients, source }
+                }));
+            } catch (_) { /* noop */ }
+        }
+
+        const payload = { type: 'clients-updated', source, at: Date.now() };
+        try {
+            const bc = new BroadcastChannel(CLIENTS_UPDATED_CHANNEL);
+            bc.postMessage(payload);
+            setTimeout(() => { try { bc.close(); } catch (_) { /* noop */ } }, 200);
+        } catch (_) { /* BroadcastChannel может отсутствовать */ }
+
+    };
 
     const useClientListSync = ({
         React,
@@ -53,14 +85,35 @@
     };
 
     const useClientsUpdatedListener = ({ React, setClients }) => {
-        React.useEffect(() => {
+        return React.useEffect(() => {
             const handleClientsUpdated = (e) => {
                 if (e.detail && e.detail.clients) {
                     setClients(e.detail.clients);
                 }
             };
-            window.addEventListener('heys:clients-updated', handleClientsUpdated);
-            return () => window.removeEventListener('heys:clients-updated', handleClientsUpdated);
+            const refreshFromStorage = () => {
+                const clients = readClientsFromStorage();
+                if (clients) setClients(clients);
+            };
+            const handleStorage = (e) => {
+                if (e && e.key === 'heys_clients') {
+                    refreshFromStorage();
+                }
+            };
+            let bc = null;
+            try {
+                bc = new BroadcastChannel(CLIENTS_UPDATED_CHANNEL);
+                bc.onmessage = refreshFromStorage;
+            } catch (_) { /* BroadcastChannel может отсутствовать */ }
+            window.addEventListener(CLIENTS_UPDATED_EVENT, handleClientsUpdated);
+            window.addEventListener('storage', handleStorage);
+            return () => {
+                window.removeEventListener(CLIENTS_UPDATED_EVENT, handleClientsUpdated);
+                window.removeEventListener('storage', handleStorage);
+                if (bc) {
+                    try { bc.close(); } catch (_) { /* noop */ }
+                }
+            };
         }, [setClients]);
     };
 
@@ -84,6 +137,8 @@
     HEYS.AppClientManagement = {
         useClientListSync,
         useClientsUpdatedListener,
+        notifyClientsUpdated,
+        readClientsFromStorage,
         createTestClients,
     };
 })();

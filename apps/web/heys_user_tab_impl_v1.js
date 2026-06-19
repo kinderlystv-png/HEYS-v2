@@ -617,19 +617,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 if (currentClientId && currentClientId.startsWith('"')) {
                     try { currentClientId = JSON.parse(currentClientId); } catch (e) { }
                 }
-                if (currentClientId && profile.firstName) {
+                const fullName = HEYS.utils.buildFullName(profile.firstName, profile.lastName) || String(profile.name || '').trim();
+                if (currentClientId && fullName) {
                     try {
                         const clientsRaw = localStorage.getItem('heys_clients');
                         const clients = clientsRaw ? JSON.parse(clientsRaw) : [];
                         const updatedClients = clients.map(c =>
-                            c.id === currentClientId ? { ...c, name: profile.firstName } : c
+                            c.id === currentClientId ? { ...c, name: fullName } : c
                         );
                         localStorage.setItem('heys_clients', JSON.stringify(updatedClients));
 
-                        // Событие для обновления UI
-                        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
-                            detail: { clients: updatedClients, source: 'profile-settings' }
-                        }));
+                        if (window.HEYS?.AppClientManagement?.notifyClientsUpdated) {
+                            window.HEYS.AppClientManagement.notifyClientsUpdated(updatedClients, 'profile-settings');
+                        } else {
+                            window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+                                detail: { clients: updatedClients, source: 'profile-settings' }
+                            }));
+                        }
 
                         // ⚠️ Cloud sync имени отключён:
                         // - REST API read-only (PATCH блокируется CORS)

@@ -2267,13 +2267,16 @@
             console.debug('[CONSENTS GATE] needsConsent=true но baseEligible=false:',
                 { hasGate: !!gate, hasDesktopGate: !!desktopGate, cloudUser: !!cloudUser, clientId: !!clientId, checkingConsent });
         }
-        if (baseEligible && (needsConsent || mustBlockReconsent) && !HEYS.Consents?.ConsentScreen) {
+        const hasOutdatedRequiredConsents = (outdatedTypes || []).length > 0;
+        const shouldBlockForConsents = needsConsent || mustBlockReconsent || hasOutdatedRequiredConsents;
+
+        if (baseEligible && shouldBlockForConsents && !HEYS.Consents?.ConsentScreen) {
             console.debug('[CONSENTS GATE] ConsentScreen компонент ещё не загружен');
         }
 
         // ── Сценарий A: блокирующий ConsentScreen (отсутствуют согласия ИЛИ
-        // grace expired — re-consent обязателен прямо сейчас).
-        if (baseEligible && (needsConsent || mustBlockReconsent) && HEYS.Consents?.ConsentScreen) {
+        // устарели обязательные документы — re-consent обязателен до приложения).
+        if (baseEligible && shouldBlockForConsents && HEYS.Consents?.ConsentScreen) {
             return React.createElement(HEYS.Consents.ConsentScreen, {
                 clientId: clientId,
                 phone: clientPhone,
@@ -2342,9 +2345,8 @@
             });
         }
 
-        // ── Сценарий C: мягкий банан outdated (grace ещё активен).
-        // Не блокирует — добавляет sticky-баннер сверху, по клику открывает
-        // ConsentScreen в re-consent режиме.
+        // ── Сценарий C: fallback-баннер для старого bundle, если ConsentScreen
+        // ещё не загрузился. Нормальный PIN-flow блокируется сценарием A.
         if (baseEligible && (outdatedTypes || []).length > 0 && HEYS.Consents?.ConsentOutdatedBanner) {
             return React.createElement(HEYS.Consents.ConsentOutdatedBanner, {
                 key: 'outdated-banner',

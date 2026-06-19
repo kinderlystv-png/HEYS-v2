@@ -80,4 +80,65 @@ describe('HEYS.AppClientManagement', () => {
     expect(setClientId).toHaveBeenCalledWith(clientId);
     expect(window.HEYS.currentClientId).toBe(clientId);
   });
+
+  it('notifies same-tab and cross-tab listeners when clients change', () => {
+    const storage = createMockStorage({
+      heys_clients: JSON.stringify([{ id: 'client-1', name: 'Анна Петрова' }]),
+    });
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      writable: true,
+      configurable: true,
+    });
+
+    const postedMessages = [];
+    const closedChannels = [];
+    const OriginalBroadcastChannel = window.BroadcastChannel;
+    window.BroadcastChannel = vi.fn(function MockBroadcastChannel(name) {
+      this.name = name;
+      this.postMessage = vi.fn((message) => postedMessages.push({ name, message }));
+      this.close = vi.fn(() => closedChannels.push(name));
+    });
+
+    try {
+      const clientManagement = loadClientManagement();
+      const eventHandler = vi.fn();
+      window.addEventListener('heys:clients-updated', eventHandler);
+
+      clientManagement.notifyClientsUpdated([{ id: 'client-1', name: 'Анна Петрова' }], 'test');
+
+      expect(eventHandler).toHaveBeenCalledTimes(1);
+      expect(eventHandler.mock.calls[0][0].detail.clients).toEqual([{ id: 'client-1', name: 'Анна Петрова' }]);
+      expect(postedMessages[0]).toMatchObject({
+        name: 'heys_clients_updated',
+        message: { type: 'clients-updated', source: 'test' },
+      });
+      window.removeEventListener('heys:clients-updated', eventHandler);
+    } finally {
+      window.BroadcastChannel = OriginalBroadcastChannel;
+    }
+  });
+
+  it('refreshes clients from storage on storage events from another tab', () => {
+    const storage = createMockStorage({
+      heys_clients: JSON.stringify([{ id: 'client-2', name: 'Иван Иванов' }]),
+    });
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      writable: true,
+      configurable: true,
+    });
+
+    const clientManagement = loadClientManagement();
+    const setClients = vi.fn();
+    const cleanup = clientManagement.useClientsUpdatedListener({
+      React: { useEffect: (fn) => fn() },
+      setClients,
+    });
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'heys_clients' }));
+
+    expect(setClients).toHaveBeenCalledWith([{ id: 'client-2', name: 'Иван Иванов' }]);
+    cleanup();
+  });
 });

@@ -48,6 +48,81 @@
     return Math.max(0, age);
   }
 
+  const buildFullName = HEYS.utils && typeof HEYS.utils.buildFullName === 'function'
+    ? HEYS.utils.buildFullName
+    : (firstName, lastName) => [firstName, lastName]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+      .join(' ');
+
+  function splitPendingClientName(name) {
+    const cleanName = String(name || '').trim().replace(/\s+/g, ' ');
+    if (!cleanName) return { firstName: '', lastName: '' };
+    const parts = cleanName.split(' ');
+    return {
+      firstName: parts[0] || '',
+      lastName: parts.slice(1).join(' ')
+    };
+  }
+
+  function getCurrentClientId() {
+    let currentClientId = localStorage.getItem('heys_client_current');
+    if (currentClientId && currentClientId.startsWith('"')) {
+      try { currentClientId = JSON.parse(currentClientId); } catch (e) { }
+    }
+    return currentClientId || '';
+  }
+
+  function syncCurrentClientName(fullName, source, options = {}) {
+    const cleanName = String(fullName || '').trim();
+    const currentClientId = getCurrentClientId();
+    if (!currentClientId || !cleanName) return Promise.resolve(true);
+    try {
+      const clientsRaw = localStorage.getItem('heys_clients');
+      const clients = clientsRaw ? JSON.parse(clientsRaw) : [];
+      const safeClients = Array.isArray(clients) ? clients : [];
+      const updatedClients = safeClients.map(c =>
+        c.id === currentClientId ? { ...c, name: cleanName } : c
+      );
+      localStorage.setItem('heys_clients', JSON.stringify(updatedClients));
+      console.log('[ProfileSteps] Client name synced:', cleanName, 'for clientId:', currentClientId);
+
+      if (HEYS.AppClientManagement && typeof HEYS.AppClientManagement.notifyClientsUpdated === 'function') {
+        HEYS.AppClientManagement.notifyClientsUpdated(updatedClients, source);
+      } else {
+        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+          detail: { clients: updatedClients, source }
+        }));
+      }
+
+      if (options.syncCloud && HEYS.YandexAPI?.rpc) {
+        const sessionToken = typeof HEYS !== 'undefined' && HEYS.auth && HEYS.auth.getSessionToken ? HEYS.auth.getSessionToken() : localStorage.getItem('heys_session_token');
+        const rpcParams = { p_name: cleanName };
+        if (sessionToken) {
+          const tokenStr = typeof sessionToken === 'string' ? sessionToken : JSON.stringify(sessionToken);
+          rpcParams.p_session_token = tokenStr.replace(/"/g, '');
+        }
+        return HEYS.YandexAPI.rpc('update_client_profile_by_session', rpcParams)
+          .then(result => {
+            if (result && result.error) {
+              console.error('[ProfileSteps] failed to update profile in cloud:', result.error);
+            } else {
+              console.log('[ProfileSteps] client profile name synced to cloud successfully!');
+            }
+            return true;
+          })
+          .catch(e => {
+            console.error('[ProfileSteps] RPC error:', e);
+            return true;
+          });
+      }
+      return Promise.resolve(true);
+    } catch (e) {
+      console.warn('[ProfileSteps] Failed to sync client name:', e);
+      return Promise.resolve(true);
+    }
+  }
+
   // Расчёт нормы сна по возрасту и полу (переиспользуем из heys_user_v12.js)
   function calcSleepNorm(age, gender) {
     let baseMin, baseMax, explanation;
@@ -233,7 +308,7 @@
   }
 
   // ============================================================
-  // ШАГ 1: PERSONAL (имя, пол, дата рождения, цикл)
+  // ШАГ 1: PERSONAL (имя, фамилия, пол, дата рождения, цикл)
   // ============================================================
 
   function ProfilePersonalComponent({ data, onChange }) {
@@ -244,6 +319,7 @@
     const WheelPicker = HEYS.StepModal?.WheelPicker;
 
     const firstName = data.firstName || '';
+    const lastName = data.lastName || '';
     const gender = data.gender || 'Мужской';
     const cycleTrackingEnabled = data.cycleTrackingEnabled || false;
 
@@ -274,17 +350,31 @@
     const pad2 = (v) => String(v).padStart(2, '0');
 
     return React.createElement('div', { className: 'flex flex-col gap-6 p-4' },
-      // Имя (обязательно)
-      React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '👤 Как вас зовут? *'),
-        React.createElement('input', {
-          type: 'text',
-          value: firstName,
-          onChange: (e) => onChange({ ...data, firstName: e.target.value }),
-          placeholder: 'Ваше имя',
-          className: `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${!firstName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
-            }`
-        })
+      // Имя и фамилия
+      React.createElement('div', { className: 'grid grid-cols-1 gap-3' },
+        React.createElement('div', { className: 'flex flex-col gap-2' },
+          React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '👤 Имя *'),
+          React.createElement('input', {
+            type: 'text',
+            value: firstName,
+            onChange: (e) => onChange({ ...data, firstName: e.target.value }),
+            placeholder: 'Имя',
+            autoComplete: 'given-name',
+            className: `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${!firstName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`
+          })
+        ),
+        React.createElement('div', { className: 'flex flex-col gap-2' },
+          React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '👤 Фамилия'),
+          React.createElement('input', {
+            type: 'text',
+            value: lastName,
+            onChange: (e) => onChange({ ...data, lastName: e.target.value }),
+            placeholder: 'Фамилия',
+            autoComplete: 'family-name',
+            className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
+          })
+        )
       ),
 
       // Пол (обязательно) - только Мужской/Женский
@@ -466,10 +556,13 @@
         const raw = localStorage.getItem('heys_pending_client_name');
         pendingName = raw ? JSON.parse(raw) : '';
       } catch (e) { }
-      const firstName = profile.firstName || pendingName || '';
+      const pendingNameParts = splitPendingClientName(pendingName);
+      const firstName = profile.firstName || pendingNameParts.firstName || '';
+      const lastName = profile.lastName || pendingNameParts.lastName || '';
 
       return {
         firstName,
+        lastName,
         gender: profile.gender || 'Мужской',
         birthDay,
         birthMonth,
@@ -494,7 +587,13 @@
       // Собираем дату в ISO формат перед сохранением
       const birthDate = `${data.birthYear}-${String(data.birthMonth).padStart(2, '0')}-${String(data.birthDay).padStart(2, '0')}`;
       const profile = lsGet('heys_profile', {}) || {};
-      profile.firstName = data.firstName;
+      const firstName = String(data.firstName || '').trim();
+      const lastName = String(data.lastName || '').trim();
+      const fullName = buildFullName(firstName, lastName);
+      profile.firstName = firstName;
+      profile.lastName = lastName;
+      profile.name = fullName;
+      profile.displayName = fullName;
       profile.gender = data.gender;
       profile.birthDate = birthDate;
       profile.cycleTrackingEnabled = data.cycleTrackingEnabled;
@@ -507,6 +606,7 @@
       if (lsGet('heys_pending_client_name', '')) {
         localStorage.removeItem('heys_pending_client_name');
       }
+      return syncCurrentClientName(fullName, 'profile-personal', { syncCloud: true });
     }
   });
 
@@ -961,11 +1061,17 @@
 
       // Вес из регистрации (целый) — это базовый и изначально текущий
       const registrationWeight = step2.weight || profile.weight || 70;
+      const firstName = String(step1.firstName || profile.firstName || '').trim();
+      const lastName = String(step1.lastName || profile.lastName || '').trim();
+      const fullName = buildFullName(firstName, lastName) || String(profile.name || '').trim();
 
       // Обновляем профиль
       const updatedProfile = {
         ...profile,
-        firstName: step1.firstName || profile.firstName || '',
+        firstName,
+        lastName,
+        name: fullName,
+        displayName: fullName,
         gender: step1.gender || profile.gender || 'Мужской',
         birthDate: step1.birthDate || profile.birthDate || '',
         age: step1.birthDate ? calcAgeFromBirthDate(step1.birthDate) : profile.age || 30,
@@ -1022,53 +1128,7 @@
         console.log('[ProfileSteps] Weight synced to day data:', updatedProfile.weight, 'kg for', todayKey);
       }
 
-      // Синхронизация имени с списком клиентов (глобальный ключ, без namespace!)
-      let currentClientId = localStorage.getItem('heys_client_current');
-      // Убираем кавычки если значение было сохранено как JSON string
-      if (currentClientId && currentClientId.startsWith('"')) {
-        try { currentClientId = JSON.parse(currentClientId); } catch (e) { }
-      }
-      if (currentClientId && updatedProfile.firstName) {
-        try {
-          // heys_clients — глобальный ключ, читаем/пишем напрямую
-          const clientsRaw = localStorage.getItem('heys_clients');
-          const clients = clientsRaw ? JSON.parse(clientsRaw) : [];
-          const updatedClients = clients.map(c =>
-            c.id === currentClientId ? { ...c, name: updatedProfile.firstName } : c
-          );
-          localStorage.setItem('heys_clients', JSON.stringify(updatedClients));
-          console.log('[ProfileSteps] Client name synced:', updatedProfile.firstName, 'for clientId:', currentClientId);
-
-          // Диспатчим событие для обновления UI списка клиентов
-          window.dispatchEvent(new CustomEvent('heys:clients-updated', {
-            detail: { clients: updatedClients, source: 'profile-wizard' }
-          }));
-
-          // ⚠️ Cloud sync отключен: REST API read-only (см. SECURITY_RUNBOOK.md P3)
-          // Отправляем новое имя в базу через RPC (session-safe).
-          // Post PR-C PIN sessions keep the token in HttpOnly cookie, so a
-          // missing JS-readable token is not a reason to skip the RPC.
-          const sessionToken = typeof HEYS !== 'undefined' && HEYS.auth && HEYS.auth.getSessionToken ? HEYS.auth.getSessionToken() : localStorage.getItem('heys_session_token');
-          if (HEYS.YandexAPI?.rpc) {
-            const rpcParams = { p_name: updatedProfile.firstName };
-            if (sessionToken) {
-              const tokenStr = typeof sessionToken === 'string' ? sessionToken : JSON.stringify(sessionToken);
-              rpcParams.p_session_token = tokenStr.replace(/"/g, ''); // на случай если распарсится криво
-            }
-            HEYS.YandexAPI.rpc('update_client_profile_by_session', rpcParams)
-              .then(result => {
-                if (result && result.error) {
-                  console.error('[ProfileSteps] failed to update profile in cloud:', result.error);
-                } else {
-                  console.log('[ProfileSteps] client profile name synced to cloud successfully!');
-                }
-              })
-              .catch(e => console.error('[ProfileSteps] RPC error:', e));
-          }
-        } catch (e) {
-          console.warn('[ProfileSteps] Failed to sync client name:', e);
-        }
-      }
+      syncCurrentClientName(fullName, 'profile-wizard', { syncCloud: true });
 
       console.log('[ProfileSteps] Profile saved:', updatedProfile);
       console.log('[ProfileSteps] Norms calculated:', norms);
@@ -1077,14 +1137,19 @@
       // Без этого при signOut → re-login профиль терялся (localStorage очищается, cloud пуст)
       try {
         if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
-          HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
+          return HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
             console.info('[HEYS.profileSteps] ☁️ Cloud flush after registration:', flushed ? 'OK' : 'timeout');
+            if (!flushed) throw new Error('profile_sync_timeout');
+            return true;
           }).catch((e) => {
             console.warn('[HEYS.profileSteps] ⚠️ Cloud flush failed:', e?.message || e);
+            throw e;
           });
         }
+        return Promise.reject(new Error('profile_sync_unavailable'));
       } catch (e) {
         console.warn('[HEYS.profileSteps] ⚠️ Cloud flush error:', e);
+        return Promise.reject(e);
       }
     }
   });
@@ -1121,11 +1186,17 @@
 
     // Вес из регистрации (целый) — это базовый и изначально текущий
     const registrationWeight = step2.weight || profile.weight || 70;
+    const firstName = String(step1.firstName || profile.firstName || '').trim();
+    const lastName = String(step1.lastName || profile.lastName || '').trim();
+    const fullName = buildFullName(firstName, lastName) || String(profile.name || '').trim();
 
     // Обновляем профиль
     const updatedProfile = {
       ...profile,
-      firstName: step1.firstName || profile.firstName || '',
+      firstName,
+      lastName,
+      name: fullName,
+      displayName: fullName,
       gender: step1.gender || profile.gender || 'Мужской',
       birthDate: step1.birthDate || profile.birthDate || '',
       age: step1.birthDate ? calcAgeFromBirthDate(step1.birthDate) : profile.age || 30,
@@ -1176,27 +1247,7 @@
     // Чек-ин должен спросить вес при следующем запуске
     // (вес мог измениться с момента регистрации)
 
-    // Синхронизация имени с списком клиентов
-    let currentClientId = localStorage.getItem('heys_client_current');
-    if (currentClientId && currentClientId.startsWith('"')) {
-      try { currentClientId = JSON.parse(currentClientId); } catch (e) { }
-    }
-    if (currentClientId && updatedProfile.firstName) {
-      try {
-        const clientsRaw = localStorage.getItem('heys_clients');
-        const clients = clientsRaw ? JSON.parse(clientsRaw) : [];
-        const updatedClients = clients.map(c =>
-          c.id === currentClientId ? { ...c, name: updatedProfile.firstName } : c
-        );
-        localStorage.setItem('heys_clients', JSON.stringify(updatedClients));
-
-        window.dispatchEvent(new CustomEvent('heys:clients-updated', {
-          detail: { clients: updatedClients, source: 'wizard-skip' }
-        }));
-      } catch (e) {
-        console.warn('[saveProfileFromStepData] Failed to sync client name:', e);
-      }
-    }
+    syncCurrentClientName(fullName, 'wizard-skip');
 
     console.log('[saveProfileFromStepData] Profile saved:', updatedProfile);
     console.log('[saveProfileFromStepData] Norms calculated:', norms);
@@ -1204,14 +1255,19 @@
     // 🔐 v1.17: Явный flush в облако (дублирует логику из step-4 save)
     try {
       if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
-        HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
+        return HEYS.cloud.flushPendingQueue(10000).then((flushed) => {
           console.info('[HEYS.profileSteps] ☁️ Cloud flush after saveProfileFromStepData:', flushed ? 'OK' : 'timeout');
+          if (!flushed) throw new Error('profile_sync_timeout');
+          return true;
         }).catch((e) => {
           console.warn('[HEYS.profileSteps] ⚠️ Cloud flush failed:', e?.message || e);
+          throw e;
         });
       }
+      return Promise.reject(new Error('profile_sync_unavailable'));
     } catch (e) {
       console.warn('[HEYS.profileSteps] ⚠️ Cloud flush error:', e);
+      return Promise.reject(e);
     }
   }
 
@@ -1415,54 +1471,7 @@
         }
       }, '☀️ Начать утренний чек-ин'),
 
-      // Кнопка "Пропустить"
-      React.createElement('button', {
-        style: {
-          width: '100%',
-          maxWidth: '320px',
-          padding: '12px 24px',
-          background: 'transparent',
-          color: '#6b7280',
-          border: 'none',
-          borderRadius: '12px',
-          fontSize: '14px',
-          cursor: 'pointer'
-        },
-        onClick: () => {
-          // Сохраняем данные профиля из stepData (регистрация уже пройдена)
-          saveProfileFromStepData(stepData);
-          console.log('[WelcomeStep] Profile saved (skipped checkin)');
-
-          // 🛡️ Очищаем флаг "регистрация в процессе" — регистрация завершена
-          localStorage.removeItem('heys_registration_in_progress');
-          console.log('[WelcomeStep] ✅ Cleared heys_registration_in_progress flag');
-
-          // 🆕 v1.9.1: Помечаем что чек-ин пропущен — чтобы не показывать повторно
-          sessionStorage.setItem('heys_morning_checkin_done', 'true');
-          console.log('[WelcomeStep] ✅ Set heys_morning_checkin_done = true (skip flag)');
-
-          // Закрываем модалку через onClose из контекста
-          if (onClose) {
-            onClose();
-          } else if (window.HEYS?.StepModal?.hide) {
-            window.HEYS.StepModal.hide();
-          }
-
-          // 🆕 v1.9: Запускаем онбординг тур после пропуска чекина
-          // Небольшая задержка чтобы модалка закрылась
-          setTimeout(() => {
-            console.log('[WelcomeStep] 🎓 Triggering onboarding tour after skip checkin');
-            if (window.HEYS?._tour?.tryStart) {
-              window.HEYS._tour.tryStart();
-            } else {
-              // Fallback через событие
-              window.dispatchEvent(new CustomEvent('heys:checkin-complete', {
-                detail: { type: 'skipped', source: 'welcome-step' }
-              }));
-            }
-          }, 300);
-        }
-      }, 'Пока пропустить и ознакомиться с приложением')
+      null
     );
   }
 

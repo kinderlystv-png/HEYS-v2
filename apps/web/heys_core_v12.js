@@ -66,6 +66,12 @@
   /** Генерация короткого уникального ID (8 символов) */
   const uuid = () => Math.random().toString(36).slice(2, 10);
 
+  /** Сборка отображаемого имени из имени и фамилии */
+  const buildFullName = (firstName, lastName) => [firstName, lastName]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .join(' ');
+
   /**
    * Безопасное преобразование в число
    * @param {*} x - Значение для преобразования
@@ -4434,7 +4440,7 @@
     };
   }
 
-  HEYS.utils = { INVIS, NUM_RE, round1, uuid, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput, getEmojiStyle, setEmojiStyle, getCurrentClientId, storageCleanup, getProfile, calcAgeFromBirthDate };
+  HEYS.utils = { INVIS, NUM_RE, round1, uuid, buildFullName, toNum, toNumInput, computeDerived, lsGet, lsSet, parsePasted, validateInput, getEmojiStyle, setEmojiStyle, getCurrentClientId, storageCleanup, getProfile, calcAgeFromBirthDate };
   HEYS.validateInput = validateInput; // Прямой доступ для тестов
   HEYS.core = { validateInput }; // Создаем объект core с валидацией
 

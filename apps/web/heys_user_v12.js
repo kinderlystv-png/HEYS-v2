@@ -634,19 +634,23 @@
         if (currentClientId && currentClientId.startsWith('"')) {
           try { currentClientId = JSON.parse(currentClientId); } catch (e) { }
         }
-        if (currentClientId && profile.firstName) {
+        const fullName = HEYS.utils.buildFullName(profile.firstName, profile.lastName) || String(profile.name || '').trim();
+        if (currentClientId && fullName) {
           try {
             const clients = readGlobalValue('heys_clients', []);
             const safeClients = Array.isArray(clients) ? clients : [];
             const updatedClients = safeClients.map(c =>
-              c.id === currentClientId ? { ...c, name: profile.firstName } : c
+              c.id === currentClientId ? { ...c, name: fullName } : c
             );
             writeGlobalValue('heys_clients', updatedClients);
 
-            // Событие для обновления UI
-            window.dispatchEvent(new CustomEvent('heys:clients-updated', {
-              detail: { clients: updatedClients, source: 'profile-settings' }
-            }));
+            if (window.HEYS?.AppClientManagement?.notifyClientsUpdated) {
+              window.HEYS.AppClientManagement.notifyClientsUpdated(updatedClients, 'profile-settings');
+            } else {
+              window.dispatchEvent(new CustomEvent('heys:clients-updated', {
+                detail: { clients: updatedClients, source: 'profile-settings' }
+              }));
+            }
 
             // ⚠️ Cloud sync имени отключён:
             // - REST API read-only (PATCH блокируется CORS)

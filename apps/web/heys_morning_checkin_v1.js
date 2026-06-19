@@ -991,17 +991,37 @@
           detail: { date: todayKey, type: 'morning' }
         }));
 
-        // ☁️ Принудительный flush pending queue в облако — гарантия что вес/sleep/etc.
-        // не потеряются если пользователь закроет вкладку до debounced 2s flush'a.
+        const finish = () => {
+          if (onComplete) onComplete();
+          return true;
+        };
+
+        // ☁️ Для первого входа это fail-closed: чек-ин считается завершённым
+        // только после cloud ack. Для ежедневного чек-ина оставляем мягкий
+        // background flush, чтобы не блокировать постоянных пользователей.
         try {
           if (HEYS.cloud && typeof HEYS.cloud.flushPendingQueue === 'function') {
-            HEYS.cloud.flushPendingQueue(5000).catch((err) => {
+            const flush = HEYS.cloud.flushPendingQueue(5000).then((flushed) => {
+              if (!flushed && isRegistrationCheckin) throw new Error('checkin_sync_timeout');
+              return flushed;
+            });
+            if (isRegistrationCheckin) {
+              return flush.then(finish).catch((err) => {
+                console.warn('[MorningCheckin] first-login flushPendingQueue failed:', err?.message || err);
+                throw err;
+              });
+            }
+            flush.catch((err) => {
               console.warn('[MorningCheckin] flushPendingQueue failed (non-fatal):', err?.message);
             });
+          } else if (isRegistrationCheckin) {
+            return Promise.reject(new Error('checkin_sync_unavailable'));
           }
-        } catch (e) { /* cloud module недоступен */ }
+        } catch (e) {
+          if (isRegistrationCheckin) return Promise.reject(e);
+        }
 
-        if (onComplete) onComplete();
+        return finish();
       };
 
       // Edge case: после filterCompleted список пуст (race: shouldShow вернул true,
@@ -1024,6 +1044,23 @@
       // Render-time guard (787-803) и wrappedOnComplete вызывают исходный onClose/onComplete
       // напрямую (без обёртки) — это легитимные пути и не нуждаются в confirm.
       const onCloseWithConfirm = () => {
+        if (isRegistrationCheckin) {
+          const cm = HEYS && HEYS.ConfirmModal;
+          if (cm && typeof cm.confirmAction === 'function') {
+            cm.confirmAction({
+              icon: '⚠️',
+              title: 'Завершите первый вход',
+              text: 'Сначала нужно подписать документы, заполнить профиль и пройти обязательный чек-ин.',
+              actions: [
+                { label: 'Продолжить', value: 'continue', style: 'primary', variant: 'fill', isDefault: true }
+              ],
+              onConfirm: () => {},
+            });
+          } else {
+            window.alert('Сначала нужно завершить регистрацию и обязательный чек-ин.');
+          }
+          return;
+        }
         const proceed = () => { if (typeof onClose === 'function') onClose(); };
         const cm = HEYS && HEYS.ConfirmModal;
         if (cm && typeof cm.confirmAction === 'function') {

@@ -496,6 +496,7 @@
     const [stepData, setStepData] = useState({});
     const [validationError, setValidationError] = useState(false);
     const [validationMessage, setValidationMessage] = useState(null);
+    const [savingStep, setSavingStep] = useState(false);
     const [slideInDirection, setSlideInDirection] = useState(null); // Для shake-анимации
     const containerRef = useRef(null);
     const touchStartX = useRef(0);
@@ -586,25 +587,32 @@
       }
     }, [visibleStepConfigs]);
 
-    const saveStepConfig = useCallback((config, allStepData) => {
+    const showSaveError = useCallback((message) => {
+      setValidationMessage(message || 'Не удалось сохранить шаг. Попробуйте ещё раз.');
+      setValidationError(true);
+      setTimeout(() => {
+        setValidationError(false);
+        setValidationMessage(null);
+      }, 2500);
+    }, []);
+
+    const saveStepConfig = useCallback(async (config, allStepData) => {
       if (!config || typeof config.save !== 'function') return true;
       const sig = getStepSaveSignature(config, allStepData);
       if (savedStepSigsRef.current[config.id] === sig) return true;
       try {
-        config.save(allStepData?.[config.id], context, allStepData);
+        const result = config.save(allStepData?.[config.id], context, allStepData);
+        if (result && typeof result.then === 'function') {
+          await result;
+        }
         savedStepSigsRef.current[config.id] = sig;
         return true;
       } catch (e) {
         console.error('[StepModal] step save failed:', config.id, e);
-        setValidationMessage('Не удалось сохранить шаг. Попробуйте ещё раз.');
-        setValidationError(true);
-        setTimeout(() => {
-          setValidationError(false);
-          setValidationMessage(null);
-        }, 2500);
+        showSaveError('Не удалось сохранить шаг. Попробуйте ещё раз.');
         return false;
       }
-    }, [context, getStepSaveSignature]);
+    }, [context, getStepSaveSignature, showSaveError]);
 
     useEffect(() => {
       setCurrentStepIndex((i) => {
@@ -640,7 +648,9 @@
     }, [animating, totalSteps]);
 
     // 🚀 PERF R30: defer step transition/save — validation stays sync for immediate UX feedback
-    const handleNext = useCallback(() => {
+    const handleNext = useCallback(async () => {
+      if (savingStep || animating) return;
+
       // Валидация текущего шага
       if (currentConfig.validate && !currentConfig.validate(stepData[currentConfig.id], stepData)) {
         // Получаем сообщение об ошибке если есть
@@ -666,39 +676,49 @@
       // нажимаешь — а ничего не происходит, нажимаешь снова". Validate тут
       // синхронный, goToStep уже сам управляет анимацией через свой
       // setTimeout(200), второй внешний wrapper избыточен.
-      if (currentStepIndex < totalSteps - 1) {
-        if (!saveStepConfig(currentConfig, stepData)) return;
-        goToStep(currentStepIndex + 1, 'left');
-      } else {
-        // Сохраняем все данные
-        for (const config of visibleStepConfigs) {
-          if (!saveStepConfig(config, stepData)) return;
-        }
+      setSavingStep(true);
+      try {
+        if (currentStepIndex < totalSteps - 1) {
+          if (!(await saveStepConfig(currentConfig, stepData))) return;
+          goToStep(currentStepIndex + 1, 'left');
+        } else {
+          // Сохраняем все данные
+          for (const config of visibleStepConfigs) {
+            if (!(await saveStepConfig(config, stepData))) return;
+          }
 
-        // XP за чек-ин
-        if (HEYS.gamification) {
-          try {
-            visibleStepConfigs.forEach(config => {
-              if (config.xpAction) {
-                HEYS.gamification.addXP(config.xpAction);
-              }
-            });
-          } catch (e) {
-            console.warn('Gamification XP error:', e);
+          // XP за чек-ин
+          if (HEYS.gamification) {
+            try {
+              visibleStepConfigs.forEach(config => {
+                if (config.xpAction) {
+                  HEYS.gamification.addXP(config.xpAction);
+                }
+              });
+            } catch (e) {
+              console.warn('Gamification XP error:', e);
+            }
+          }
+
+          // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
+          // MealStep сам управляет обновлением дня через onComplete
+          if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+              detail: { date: getTodayKey(), source: 'step-modal' }
+            }));
+          }
+
+          if (onComplete) {
+            const completionResult = onComplete(stepData);
+            if (completionResult && typeof completionResult.then === 'function') {
+              await completionResult;
+            }
           }
         }
-
-        // Уведомляем об обновлении (только если это НЕ MealStep — он обрабатывает сам)
-        // MealStep сам управляет обновлением дня через onComplete
-        if (!visibleStepConfigs.some(c => c.id === 'mealName' || c.id === 'mealTime')) {
-          window.dispatchEvent(new CustomEvent('heys:day-updated', {
-            detail: { date: getTodayKey(), source: 'step-modal' }
-          }));
-        }
-
-        onComplete && onComplete(stepData);
+      } finally {
+        setSavingStep(false);
       }
-    }, [currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig]);
+    }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig]);
 
     const handlePrev = useCallback(() => {
       if (currentStepIndex > 0) {
@@ -892,8 +912,11 @@
                 ? React.createElement('span', { className: 'mc-header-right-text' }, headerRightContent)
                 : (!(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
                   className: 'mc-header-btn mc-header-btn--primary',
-                  onClick: handleNext
-                }, currentStepIndex === totalSteps - 1
+                  onClick: handleNext,
+                  disabled: savingStep || animating
+                }, savingStep
+                  ? 'Сохраняю...'
+                  : currentStepIndex === totalSteps - 1
                   ? (currentConfig.nextLabel || finishLabel)
                   : (currentConfig.nextLabel || 'Далее')))
             )

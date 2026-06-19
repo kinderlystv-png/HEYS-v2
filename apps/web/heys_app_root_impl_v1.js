@@ -580,7 +580,7 @@
             const createTestClients = AppClientManagement.createTestClients
                 || (async () => { });
 
-            const fallbackUseAppDerivedState = ({ React: HookReact, pendingDetails: fallbackPendingDetails, clients: fallbackClients, clientId: fallbackClientId, needsConsent: fallbackNeedsConsent, checkingConsent: fallbackCheckingConsent, showMorningCheckin: fallbackShowMorningCheckin, U: fallbackU, cloud: fallbackCloud }) => {
+            const fallbackUseAppDerivedState = ({ React: HookReact, pendingDetails: fallbackPendingDetails, clients: fallbackClients, clientId: fallbackClientId, needsConsent: fallbackNeedsConsent, checkingConsent: fallbackCheckingConsent, complianceState: fallbackComplianceState, showMorningCheckin: fallbackShowMorningCheckin, U: fallbackU, cloud: fallbackCloud }) => {
                 const [clientChangeTick, setClientChangeTick] = HookReact.useState(0);
                 HookReact.useEffect(() => {
                     const handleClientChange = () => setClientChangeTick((v) => v + 1);
@@ -619,7 +619,10 @@
                 }, [isRpcMode, cachedProfile, fallbackClients, fallbackClientId, clientChangeTick]);
 
                 const isMorningCheckinBlocking = fallbackShowMorningCheckin === true && HEYS?.MorningCheckin;
-                const isConsentBlocking = fallbackNeedsConsent || fallbackCheckingConsent;
+                const fallbackHasOutdatedRequiredConsents = (fallbackComplianceState?.outdatedTypes || []).length > 0;
+                const isConsentBlocking = fallbackNeedsConsent || fallbackCheckingConsent
+                    || fallbackComplianceState?.mustBlockReconsent
+                    || fallbackHasOutdatedRequiredConsents;
 
                 return {
                     pendingText,
@@ -638,6 +641,7 @@
                 clientId,
                 needsConsent,
                 checkingConsent,
+                complianceState: runtimeState?.complianceState,
                 showMorningCheckin,
                 U,
                 cloud,
