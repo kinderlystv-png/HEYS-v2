@@ -275,7 +275,7 @@
     } catch (_) { /* noop — fall through to legacy regex below */ }
     // 🎮 Global keys — НЕ добавляем clientId (для совместимости с cloud sync)
     // heys_game теперь client-scoped (иначе XP смешивается между клиентами)
-    if (/^heys_(clients|client_current|last_client_id|session_token|supabase_auth_token|curator_session|pin_auth_client|pin_cookie_session_hint|curator_cookie_session_hint|sound_settings)$/i.test(k)) return k;
+    if (/^heys_(clients|client_current|last_client_id|session_token|supabase_auth_token|curator_session|pin_auth_client|pin_cookie_session_hint|curator_cookie_session_hint|registration_in_progress|sound_settings)$/i.test(k)) return k;
 
     // 🐛 FIX: Если ключ уже содержит clientId — не добавляем повторно!
     if (cid && k.includes(cid)) {
@@ -1589,7 +1589,7 @@
     'heys_clients', 'heys_client_current', 'heys_curator_session',
     'heys_supabase_auth_token', 'heys_pin_auth_client', 'heys_session_token',
     'heys_pin_cookie_session_hint', 'heys_curator_cookie_session_hint',
-    'heys_debug_events', 'heys_iw_config_cache_v1', 'heys_iw_config_cache_meta_v1',
+    'heys_registration_in_progress', 'heys_debug_events', 'heys_iw_config_cache_v1', 'heys_iw_config_cache_meta_v1',
     'heys_docs_cache_version', 'heys_update_in_progress', 'heys_boot_perf_baseline_v1',
     'heys_last_client_id', 'heys_theme', 'heys_theme_pref', 'heys_theme_explicit',
     'heys_whats_new_last_seen', 'heys_whats_new_last_acknowledged', 'heys_push_onboarded',

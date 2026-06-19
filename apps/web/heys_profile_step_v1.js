@@ -84,7 +84,7 @@
       const updatedClients = safeClients.map(c =>
         c.id === currentClientId ? { ...c, name: cleanName } : c
       );
-      localStorage.setItem('heys_clients', JSON.stringify(updatedClients));
+      lsSet('heys_clients', updatedClients);
       console.log('[ProfileSteps] Client name synced:', cleanName, 'for clientId:', currentClientId);
 
       if (HEYS.AppClientManagement && typeof HEYS.AppClientManagement.notifyClientsUpdated === 'function') {
@@ -523,7 +523,7 @@
         isDefaultGender && isDefaultWeight && isDefaultHeight && noBirthDate && isDefaultAge;
 
       if (isProbablyIncomplete) {
-        localStorage.setItem('heys_registration_in_progress', 'true');
+        lsSet('heys_registration_in_progress', 'true');
         console.warn('[ProfileSteps] registrationInProgress set (profile incomplete)', {
           profileCompleted: profile?.profileCompleted,
           hasFirstName: !!profile?.firstName,
@@ -1644,7 +1644,7 @@
               if (window.HEYS?.store?.set) {
                 window.HEYS.store.set(_autoScoped, stamped);
               } else {
-                localStorage.setItem(_autoScoped, JSON.stringify(stamped));
+                lsSet(_autoScoped, stamped);
               }
             } else {
               // Fallback: нет client_id (pre-auth flow) — единственный случай
@@ -1652,7 +1652,7 @@
               if (window.HEYS?.store?.set) {
                 window.HEYS.store.set('heys_profile', profile);
               } else {
-                localStorage.setItem('heys_profile', JSON.stringify(profile));
+                lsSet('heys_profile', profile);
               }
             }
             console.warn('[ProfileSteps] auto-set profileCompleted=true for filled profile', {
@@ -1719,7 +1719,7 @@
           if (window.HEYS?.store?.set) {
             window.HEYS.store.set(scopedKey, stamped);
           } else {
-            localStorage.setItem(scopedKey, JSON.stringify(stamped));
+            lsSet(scopedKey, stamped);
           }
           // Cleanup legacy — removeItem unscoped после успешной migration.
           try { localStorage.removeItem('heys_profile'); } catch (_) { /* noop */ }

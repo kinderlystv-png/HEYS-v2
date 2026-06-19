@@ -314,6 +314,7 @@
     'heys_session_token',
     'heys_pin_cookie_session_hint',
     'heys_curator_cookie_session_hint',
+    'heys_registration_in_progress',
     'heys_debug_events',      // Analytics курaторской сессии
     // 2026-05-31: расширение после incident'а cross-client leak (Poplanton ↔ Aleksandra).
     // Browser-global UI state и app-wide markers — не привязаны к клиенту:
